@@ -57,7 +57,7 @@
   --sp-gold:      #d97706;
 
   /* ── Typography — Merriweather (NLSIU font) ── */
-  --sp-font-family: 'Merriweather Sans', 'Merriweather', Georgia, serif;
+  --sp-font-family: 'Inter', system-ui, sans-serif;
 
   /* ── Layout ── */
   --sp-sidebar-w: 236px;
@@ -90,7 +90,7 @@
 *, *::before, *::after { box-sizing: border-box; }
 
 body {
-  font-weight: 300;
+  font-weight: 400; font-size: 13.5px;
 
   font-family: var(--sp-font-family);
   background: var(--sp-bg);
@@ -153,8 +153,8 @@ header[class*="navbar"], .website-header,
   gap: 10px;
   text-decoration: none;
   color: var(--sp-nav-text);
-  font-weight: 400;
-  font-size: 22px;
+  font-weight: 700;
+  font-size: 15px; text-transform: capitalize;
   letter-spacing: -0.01em;
 }
 .sp-brand-logo {
@@ -236,7 +236,7 @@ header[class*="navbar"], .website-header,
   padding: 9px 12px;
   border-radius: 9px;
   font-size: 13px;
-  font-weight: 300;
+  font-weight: 500; text-transform: capitalize;
   color: var(--sp-text-2);
   text-decoration: none;
   transition: background 0.12s;
@@ -377,7 +377,7 @@ header[class*="navbar"], .website-header,
   border-radius: 8px;
   text-decoration: none;
   font-size: 13px;
-  font-weight: 300;
+  font-weight: 500; text-transform: capitalize;
   color: var(--sp-sidebar-text);
   transition: all 0.15s;
   margin-bottom: 1px;
@@ -392,7 +392,7 @@ header[class*="navbar"], .website-header,
   background: var(--sp-primary) !important;
   border-left-color: transparent !important;
   color: #FFFFFF !important;
-  font-weight: 400;
+  font-weight: 600;
 }
 .sp-nav-item .sp-ms {
   font-family: 'Material Symbols Outlined';
@@ -461,14 +461,14 @@ header[class*="navbar"], .website-header,
 /* ── Page Header ──────────────────────────────────────────── */
 .sp-page-header { margin-bottom: 16px; }
 .sp-page-title {
-  font-size: 19px;
-  font-weight: 400;
+  font-size: 28px;
+  font-weight: 800; text-transform: capitalize;
   color: var(--sp-text-1);
   margin: 0 0 3px;
   line-height: 1.3;
 }
 .sp-page-sub {
-  font-size: 14px;
+  font-size: 13.5px;
   color: var(--sp-text-3);
   margin: 0;
 }
@@ -492,7 +492,7 @@ header[class*="navbar"], .website-header,
 }
 .sp-card-title {
   font-size: 15px;
-  font-weight: 400;
+  font-weight: 700;
   color: var(--sp-text-1);
   display: flex;
   align-items: center;
@@ -512,7 +512,7 @@ header[class*="navbar"], .website-header,
 .sp-card-link:hover { text-decoration: underline; }
 
 .sp-card-body {
-  font-weight: 300;
+  font-weight: 400; font-size: 13.5px;
  padding: 14px 16px; }
 
 /* ── Stat Card ────────────────────────────────────────────── */
@@ -580,7 +580,7 @@ header[class*="navbar"], .website-header,
   padding: 3px 10px;
   border-radius: 20px;
   font-size: 12px;
-  font-weight: 400;
+  font-weight: 600; text-transform: capitalize;
   line-height: 1.5;
   white-space: nowrap;
 }
@@ -691,7 +691,7 @@ header[class*="navbar"], .website-header,
 }
 .sp-section-header .sp-ms { font-family: 'Material Symbols Outlined'; font-size: 24px; color: var(--sp-primary); }
 .sp-section-body {
-  font-weight: 300;
+  font-weight: 400; font-size: 13.5px;
  padding: 14px 16px; }
 
 /* Divider */
@@ -1092,7 +1092,7 @@ header[class*="navbar"], .website-header,
   border-bottom-color: transparent;
 }
 .sp-analytics-body {
-  font-weight: 300;
+  font-weight: 400; font-size: 13.5px;
 
   border-top-left-radius: 0 !important;
   border-top-right-radius: 0 !important;
@@ -1132,7 +1132,7 @@ header[class*="navbar"], .website-header,
 .sp-invoice-header.open { border-bottom-color: var(--sp-border); }
 
 .sp-invoice-body {
-  font-weight: 300;
+  font-weight: 400; font-size: 13.5px;
  padding: 16px 18px; display: none; }
 .sp-invoice-body.open { display: block; }
 
@@ -1443,7 +1443,7 @@ header[class*="navbar"], .website-header,
 .sp-modal-close .sp-ms { font-family: 'Material Symbols Outlined'; font-size: 18px; color: var(--sp-text-3); }
 
 .sp-modal-body {
-  font-weight: 300;
+  font-weight: 400; font-size: 13.5px;
 
   padding: 14px 16px;
   overflow-y: auto;
@@ -2504,7 +2504,7 @@ select.sp-form-control {
 
 /* ── Accordion Body ──────────────────────────────────────────── */
 .sp-acc-body {
-  font-weight: 300;
+  font-weight: 400; font-size: 13.5px;
  background: var(--sp-card); }
 
 /* ── Responsive ──────────────────────────────────────────────── */
@@ -3348,7 +3348,7 @@ select.sp-form-control {
   .sp-cal-cell { min-height: 44px; border-radius: 6px; padding: 4px 2px; }
   .sp-modal-overlay { padding: 8px; }
   .sp-modal-body {
-  font-weight: 300;
+  font-weight: 400; font-size: 13.5px;
  padding: 12px; }
   .sp-tab { padding: 6px 8px; font-size: 11px; gap: 4px; }
   .sp-tab .sp-ms { font-size: 15px; }
@@ -3363,7 +3363,7 @@ select.sp-form-control {
 
 /* Prevent horizontal scroll everywhere */
 html, body {
-  font-weight: 300;
+  font-weight: 400; font-size: 13.5px;
 
   overflow-x: hidden;
 }
@@ -3455,7 +3455,7 @@ html, body {
 
   /* Reduce padding */
   .sp-card-body {
-  font-weight: 300;
+  font-weight: 400; font-size: 13.5px;
 
     padding: 14px;
   }
@@ -3587,7 +3587,7 @@ html, body {
 .sp-notif-icon.success   { background: var(--sp-success-bg); color: var(--sp-success); }
 
 .sp-notif-body {
-  font-weight: 300;
+  font-weight: 400; font-size: 13.5px;
  flex: 1; min-width: 0; }
 .sp-notif-cat {
   display: inline-block;
@@ -3776,7 +3776,7 @@ body.sp-has-marquee .sp-sidebar { top: calc(var(--sp-nav-h) + 34px); }
   background: var(--sp-primary) !important;
   border-left-color: transparent !important;
   color: #FFFFFF !important;
-  font-weight: 400;
+  font-weight: 600;
 }
 
 .sp-nav-item .sp-ms {
@@ -3891,7 +3891,7 @@ body.sp-has-marquee .sp-sidebar { top: calc(var(--sp-nav-h) + 34px); }
 
 /* Scrollable body */
 .sp-settings-body {
-  font-weight: 300;
+  font-weight: 400; font-size: 13.5px;
 
   flex: 1;
   overflow-y: auto;
@@ -4149,7 +4149,7 @@ body.sp-sidebar-dark .sp-nav-item.active {
   background: var(--sp-primary) !important;
   border-left-color: transparent !important;
   color: #FFFFFF !important;
-  font-weight: 400;
+  font-weight: 600;
 }
 body.sp-sidebar-dark .sp-nav-item.active .sp-ms {
   color: var(--sp-secondary);
@@ -5238,7 +5238,7 @@ body .sp-avatar-btn {
 .fee-analytics-wrap[open] .fee-analytics-chevron { transform: rotate(180deg); }
 
 .fee-analytics-body {
-  font-weight: 300;
+  font-weight: 400; font-size: 13.5px;
 
   background: var(--sp-card);
   border: 1px solid var(--sp-border);
@@ -5344,7 +5344,7 @@ body .sp-avatar-btn {
 }
 .fee-modal-header .sp-ms { font-family: 'Material Symbols Outlined'; }
 .fee-modal-body {
-  font-weight: 300;
+  font-weight: 400; font-size: 13.5px;
  padding: 20px 22px; }
 .fee-modal-amount-box {
   background: #f0fdf4;
@@ -5548,7 +5548,7 @@ body .sp-avatar-btn {
 
 /* body wrapper inside payment entry */
 .fee-payment-body {
-  font-weight: 300;
+  font-weight: 400; font-size: 13.5px;
  display: flex; flex-direction: column; gap: 2px; }
 
 /* Transaction reference line */
@@ -5915,7 +5915,7 @@ body.sp-has-marquee.sp-sidebar-mini .sp-sidebar {
   flex-shrink: 0;
 }
 .fee-overdue-banner-body {
-  font-weight: 300;
+  font-weight: 400; font-size: 13.5px;
  flex: 1; min-width: 0; }
 .fee-overdue-banner-title {
   font-size: 13px; font-weight: 400; color: #991b1b; margin-bottom: 3px;
@@ -6205,7 +6205,7 @@ body.sp-has-marquee.sp-sidebar-mini .sp-sidebar {
 }
 details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180deg); }
 .fee-benefits-body {
-  font-weight: 300;
+  font-weight: 400; font-size: 13.5px;
 
   border-top: 1.5px solid var(--sp-border);
   padding: 16px 18px;
@@ -7208,7 +7208,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
 }
 .fee-analytics-toggle:hover { background: var(--sp-bg) !important; }
 .fee-analytics-body {
-  font-weight: 300;
+  font-weight: 400; font-size: 13.5px;
 
   padding: 20px !important;
   border-top: 1px solid var(--sp-border) !important;
@@ -7347,7 +7347,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
 .fee-ben-chip-purple { background: #ede9fe !important; color: #6d28d9 !important; }
 .fee-ben-chip-cyan   { background: #cffafe !important; color: #0e7490 !important; }
 .fee-benefits-body {
-  font-weight: 300;
+  font-weight: 400; font-size: 13.5px;
 
   padding: 16px 18px !important;
   border-top: 1px solid var(--sp-border) !important;
@@ -7465,7 +7465,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   padding: 18px 22px !important;
 }
 .fee-modal-body {
-  font-weight: 300;
+  font-weight: 400; font-size: 13.5px;
  padding: 22px !important; }
 .fee-modal-footer {
   padding: 16px 22px !important;
@@ -8460,7 +8460,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
 .spd-alert-danger .spd-alert-icon { background: #fee2e2; }
 .spd-alert-danger .spd-alert-icon .sp-ms { color: #dc2626; font-size: 20px; }
 .spd-alert-body {
-  font-weight: 300;
+  font-weight: 400; font-size: 13.5px;
  flex: 1; min-width: 0; }
 .spd-alert-title {
   font-size: 13px; font-weight: 400;
@@ -8727,7 +8727,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
 .spd-section-link:hover { background: var(--sp-primary-light); text-decoration: none; }
 .spd-section-link .sp-ms { font-size: 14px; }
 .spd-section-body {
-  font-weight: 300;
+  font-weight: 400; font-size: 13.5px;
  padding: 16px 18px; }
 .spd-section-body-flush { padding: 0; }
 
@@ -9271,7 +9271,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   .spd-upcoming-grid { grid-template-columns: 1fr; }
   .spd-section-hdr { padding: 12px 14px; }
   .spd-section-body {
-  font-weight: 300;
+  font-weight: 400; font-size: 13.5px;
  padding: 12px 14px; }
 }
 

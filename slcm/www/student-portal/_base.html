@@ -41,9 +41,9 @@
       --sp-danger:             {{ sp_settings.danger_color           or '#dc2626' }};
       --sp-info:               {{ sp_settings.info_color             or '#0369a1' }};
       
-      --sp-font-family:        'Merriweather', serif;
+      --sp-font-family:        {{ sp_settings.font_family or "'Inter', system-ui, sans-serif" }};
       --sp-font-size:          {{ '13px' if sp_settings.font_size == 'Small' else '15px' if sp_settings.font_size == 'Large' else '14px' }};
-      --sp-corner-radius:      {{ '6px' if sp_settings.corner_style == 'Sharp' else '20px' if sp_settings.corner_style == 'Pill' else '14px' }};
+      --sp-corner-radius:      {{ '6px' if sp_settings.corner_style == 'Sharp' else '20px' if sp_settings.corner_style == 'Pill' else '6px' }};
       
       --sp-nav-h:              {{ '50px' if sp_settings.nav_height == 'Compact' else '72px' if sp_settings.nav_height == 'Tall' else '60px' }};
       --sp-sidebar-w:          {{ '200px' if sp_settings.sidebar_width == 'Narrow' else '280px' if sp_settings.sidebar_width == 'Wide' else '240px' }};
@@ -62,17 +62,15 @@
     {% endif %}
 
     /* UI Size Adjustments */
-    .sp-brand span { font-size: 20px !important; }
-    .sp-brand-logo { width: 36px !important; height: 36px !important; }
-    .sp-brand-logo img { width: 36px !important; height: 36px !important; object-fit: contain; }
-    .sp-nav-item { font-size: 14px !important; margin-bottom: 4px !important; padding: 8px 9px !important; }
+    .sp-brand span { font-size: 15px !important; font-weight: 700 !important; text-transform: capitalize; }
+    .sp-brand-logo { width: 38px !important; height: 38px !important; }
+    .sp-brand-logo img { width: 32px !important; height: 32px !important; object-fit: contain; }
+    .sp-nav-item.active { font-weight: 600 !important; }
+    .sp-nav-item { font-size: 13px !important; font-weight: 500 !important; text-transform: capitalize; margin-bottom: 2px !important; padding: 9px 12px !important; }
     .sp-nav-item .sp-ms { font-size: 18px !important; }
-    .sp-nav-label { 
-      font-size: 14px !important; 
-      white-space: nowrap !important;
-    }
-    .sp-page-title { font-size: 22px !important; }
-    body, p, .context-text, .sp-nav-item:not(.active), .sp-breadcrumb { font-weight: 400 !important; }
+    .sp-nav-label { font-size: 13px !important; white-space: nowrap !important; }
+    .sp-page-title { font-size: 28px !important; font-weight: 800 !important; text-transform: capitalize; }
+    body, p, .context-text, .sp-breadcrumb { font-weight: 400 !important; font-size: 13.5px; }
     .sp-notif-btn { display: flex !important; align-items: center !important; justify-content: center !important; }
     .sp-notif-btn .sp-ms { font-size: 24px !important; }
   
@@ -84,7 +82,16 @@
       border-radius: var(--sp-corner-radius);
       color: var(--sp-sidebar-text); transition: background 0.15s, color 0.15s;
     }
+    .sp-nav-item-m {
+      isplay: flex; align-items: center; justify-content: space-between;
+      padding: 8px 12px !important; margin: 0 0 4px 0 !important; cursor: pointer;
+      border-radius: var(--sp-corner-radius);
+      color: var(--sp-sidebar-text); transition: background 0.15s, color 0.15s;
+    }
     .sp-nav-group-header:hover { background: var(--sp-primary-light); }
+    .sp-nav-group-header.active { background: var(--sp-primary) !important; color: #FFFFFF !important; }
+    .sp-nav-group-header.active .sp-ms { color: #FFFFFF !important; }
+    .sp-nav-group-header.active .sp-nav-label { font-weight: 600 !important; }
     .sp-nav-group-header .sp-nav-label { 
       font-size: 14px !important; 
       font-weight: 500;
@@ -286,8 +293,11 @@
     <div class="sp-section-items" id="sp-section-main-menu">
 
       {# Dashboard #}
-      <a href="/student-portal" class="sp-nav-item {% if active_page == 'dashboard' %}active{% endif %}" data-label="Dashboard">
-        <span class="sp-ms" style="font-size: 20px !important;">home</span><span class="sp-nav-label">Dashboard</span>
+      <a href="/student-portal" class="sp-nav-group-header {% if active_page == 'dashboard' %}active{% endif %}" data-label="Dashboard" style="text-decoration: none; margin-bottom: 4px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span class="sp-ms">home</span>
+          <span class="sp-nav-label">Dashboard</span>
+        </div>
       </a>
 
       {# Academics #}
@@ -366,16 +376,25 @@
       </div>
 
       {# Fees & Payments #}
-      <a href="/student-portal/fees" class="sp-nav-item {% if active_page == 'fees' %}active{% endif %}" data-label="Fees &amp; Payments">
-        <span class="sp-ms">payments</span><span class="sp-nav-label">Fees &amp; Payments</span>
+      <a href="/student-portal/fees" class="sp-nav-group-header {% if active_page == 'fees' %}active{% endif %}" data-label="Fees &amp; Payments" style="text-decoration: none; margin-bottom: 4px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span class="sp-ms">payments</span>
+          <span class="sp-nav-label">Fees &amp; Payments</span>
+        </div>
       </a>
       {# Helpdesk #}
-      <a href="/student-portal/support" class="sp-nav-item {% if active_page == 'support' %}active{% endif %}" data-label="Fees &amp; Payments">
-        <span class="sp-ms">headset_mic</span><span class="sp-nav-label">Helpdesk / Support</span>
+      <a href="/student-portal/support" class="sp-nav-group-header {% if active_page == 'support' %}active{% endif %}" data-label="Helpdesk / Support" style="text-decoration: none; margin-bottom: 4px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span class="sp-ms">headset_mic</span>
+          <span class="sp-nav-label">Helpdesk / Support</span>
+        </div>
       </a>
       {# My Profile #}
-      <a href="/student-portal/profile" class="sp-nav-item {% if active_page == 'profile' %}active{% endif %}" data-label="My Profile">
-            <span class="sp-ms">person</span><span class="sp-nav-label">My Profile</span>
+      <a href="/student-portal/profile" class="sp-nav-group-header {% if active_page == 'profile' %}active{% endif %}" data-label="My Profile" style="text-decoration: none; margin-bottom: 4px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span class="sp-ms">person</span>
+          <span class="sp-nav-label">My Profile</span>
+        </div>
       </a>
 
       {# Services & Requests #}
@@ -394,9 +413,9 @@
           <a href="/student-portal/hostel" class="sp-nav-item {% if active_page == 'hostel' %}active{% endif %}" data-label="Hostel Management">
             <span class="sp-ms">hotel</span><span class="sp-nav-label">Hostel Management</span>
           </a>
-          <a href="/student-portal/leave-request" class="sp-nav-item {% if active_page == 'leave_request' %}active{% endif %}" data-label="Leave Requests">
+          <!-- <a href="/student-portal/leave-request" class="sp-nav-item {% if active_page == 'leave_request' %}active{% endif %}" data-label="Leave Requests">
             <span class="sp-ms">event_busy</span><span class="sp-nav-label">Leave Requests</span>
-          </a>
+          </a> -->
           <!-- <a href="/student-portal/transcript-request" class="sp-nav-item {% if active_page == 'transcript_request' %}active{% endif %}" data-label="Transcript Requests">
             <span class="sp-ms">description</span><span class="sp-nav-label">Transcript Requests</span>
           </a> -->
