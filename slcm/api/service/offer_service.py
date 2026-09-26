@@ -133,12 +133,13 @@ class OfferService:
         validate_offer_config_fee_deadlines(config, program=program)
 
         # --- PRE-FLIGHT CHECKS (Before Transaction) ---
-        if not config.offer_issued_email:
-            throw(_("Email Template For Offer Issued is missing in Offer Configuration {0}").format(config.name))
-        
-        applicant_email = frappe.db.get_value("Applicant", applicant, "email")
-        if not applicant_email:
-            throw(_("Applicant {0} does not have a valid email address. Cannot send offer letter.").format(applicant))
+        if config.enable_notifications:
+            if not config.offer_issued_email:
+                throw(_("Email Template For Offer Issued is missing in Offer Configuration {0}").format(config.name))
+            
+            applicant_email = frappe.db.get_value("Applicant", applicant, "email")
+            if not applicant_email:
+                throw(_("Applicant {0} does not have a valid email address. Cannot send offer letter.").format(applicant))
         
         if not config.pdf_format:
             throw(_("PDF Print Format is missing in Offer Configuration {0}").format(config.name))
@@ -848,13 +849,15 @@ class OfferService:
             # Workaround for wkhtmltopdf HostNotFoundError/deadlock on single-threaded dev servers
             original_host_name = frappe.conf.get("host_name")
             try:
-                if getattr(frappe.local, "request", None):
-                    from urllib.parse import urlparse
-                    parsed = urlparse(frappe.request.host_url)
-                    port = parsed.port or (443 if parsed.scheme == 'https' else 80)
-                    frappe.conf.host_name = f"{parsed.scheme}://127.0.0.1:{port}"
-                else:
-                    frappe.conf.host_name = "http://127.0.0.1:8000"
+                if frappe.conf.get("developer_mode"):
+                    if getattr(frappe.local, "request", None):
+                        from urllib.parse import urlparse
+                        parsed = urlparse(frappe.request.host_url)
+                        port = parsed.port or (443 if parsed.scheme == 'https' else 80)
+                        frappe.conf.host_name = f"{parsed.scheme}://127.0.0.1:{port}"
+                    else:
+                        port = frappe.conf.get("webserver_port") or 8000
+                        frappe.conf.host_name = f"http://127.0.0.1:{port}"
                 
                 pdf_content = frappe.get_print("Offer Letter", offer_doc.name, print_format, as_pdf=True)
             finally:
