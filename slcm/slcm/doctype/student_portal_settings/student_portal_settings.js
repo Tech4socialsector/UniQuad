@@ -8,9 +8,9 @@ const SP_PRESETS = [
         primary_color: "#920c24", secondary_color: "#c9a84c",
         background_color: "#f0f2f5", card_background: "#ffffff",
         nav_bg_color: "#ffffff", nav_text_color: "#920c24",
-        sidebar_bg_color: "#ffffff", sidebar_text_color: "#920c24",
-        success_color: "#16a34a", warning_color: "#d97706",
-        danger_color: "#dc2626", info_color: "#0369a1",
+        sidebar_bg_color: "#ffffff", sidebar_text_color: "#475569",
+        success_color: "#008000", warning_color: "#920c24",
+        danger_color: "#920c24", info_color: "#0369a1",
     },
     {
         name: "NLSIU Navy",
@@ -18,8 +18,8 @@ const SP_PRESETS = [
         background_color: "#f0f2f5", card_background: "#ffffff",
         nav_bg_color: "#ffffff", nav_text_color: "#920c24",
         sidebar_bg_color: "#ffffff", sidebar_text_color: "#2b2e4a",
-        success_color: "#16a34a", warning_color: "#d97706",
-        danger_color: "#dc2626", info_color: "#0369a1",
+        success_color: "#16a34a", warning_color: "#920c24",
+        danger_color: "#920c24", info_color: "#0369a1",
     },
     {
         name: "Ocean Blue",
@@ -83,13 +83,13 @@ const SP_DEFAULTS = {
     primary_color: "#920c24", secondary_color: "#c9a84c",
     background_color: "#f0f2f5", card_background: "#ffffff",
     nav_bg_color: "#ffffff", nav_text_color: "#920c24",
-    sidebar_bg_color: "#ffffff", sidebar_text_color: "#920c24",
-    success_color: "#16a34a", warning_color: "#d97706",
-    danger_color: "#dc2626", info_color: "#0369a1",
+    sidebar_bg_color: "#ffffff", sidebar_text_color: "#475569",
+    success_color: "#008000", warning_color: "#920c24",
+    danger_color: "#920c24", info_color: "#0369a1",
     grade_excellent_color: "#16a34a", grade_excellent_label: "A+ / A / S",
     grade_good_color: "#920c24", grade_good_label: "B+ / B",
     grade_average_color: "#920c24", grade_average_label: "C+ / C",
-    grade_color: "#000000", grade_fail_color: "#dc2626", grade_fail_label: "D / F",
+    grade_color: "#000000", grade_fail_color: "#920c24", grade_fail_label: "D / F",
     att_good_threshold: 75, att_warn_threshold: 60,
     att_label_good: "Good", att_label_warn: "Low", att_label_danger: "Critical",
     sidebar_position: "Left", sidebar_width: "Normal", nav_height: "Normal",
@@ -388,7 +388,7 @@ function _render_frd_table($wrapper, demands, selected_names) {
         display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
         <span>Found <strong>${total}</strong> demand${total !== 1 ? "s" : ""}.
         ${resend_ct ? `<span style="color:#92400e;margin-left:8px;">${resend_ct} already sent (marked Resend).</span>` : ""}
-        ${no_mail ? `<span style="color:#dc2626;margin-left:6px;">${no_mail} have no email.</span>` : ""}</span>
+        ${no_mail ? `<span style="color:#920c24;margin-left:6px;">${no_mail} have no email.</span>` : ""}</span>
         <div style="display:flex;gap:6px;">
             <button class="btn btn-xs frd-sel-all"
                 style="background:#dbeafe;color:#1e40af;border:none;border-radius:4px;padding:3px 10px;cursor:pointer;">
@@ -405,7 +405,7 @@ function _render_frd_table($wrapper, demands, selected_names) {
         const disabled    = noEmail ? "disabled title='No email address'" : "";
         const opacity     = noEmail ? "opacity:0.5;" : "";
         const status_colors = {
-            "Overdue":        "background:#fee2e2;color:#dc2626",
+            "Overdue":        "background:#fff0f2;color:#920c24",
             "Pending":        "background:#fef9c3;color:#854d0e",
             "Partially Paid": "background:#e0f2fe;color:#0369a1",
         };
@@ -432,7 +432,7 @@ function _render_frd_table($wrapper, demands, selected_names) {
                     ${dem.status}</span>${sent_badge}
             </td>
             <td style="padding:8px 10px;font-size:11px;color:#6b7280;">
-                ${dem.student_email || '<span style="color:#dc2626;">No email</span>'}</td>
+                ${dem.student_email || '<span style="color:#920c24;">No email</span>'}</td>
         </tr>`;
     }).join("");
 
@@ -557,14 +557,14 @@ function _render_color_preview(frm) {
     const sbBgC     = d.sidebar_bg_color   || "#ffffff";
     const sbTextC   = d.sidebar_text_color || "#920c24";
     const success   = d.success_color   || "#16a34a";
-    const warning   = d.warning_color   || "#d97706";
-    const danger    = d.danger_color    || "#dc2626";
+    const warning   = d.warning_color   || "#920c24";
+    const danger    = d.danger_color    || "#920c24";
     const info      = d.info_color      || "#0369a1";
 
     const gExc = d.grade_excellent_color || "#16a34a";
     const gGood= d.grade_good_color      || "#0369a1";
-    const gAvg = d.grade_average_color   || "#d97706";
-    const gFail= d.grade_fail_color      || "#dc2626";
+    const gAvg = d.grade_average_color   || "#920c24";
+    const gFail= d.grade_fail_color      || "#920c24";
 
     const gExcLabel = d.grade_excellent_label || "A+ / A";
     const gGoodLabel= d.grade_good_label      || "B+ / B";

@@ -8,14 +8,14 @@
   .spd-page-title {
     font-size: 28px;
     color: var(--sp-text-1);
-    font-family: "Merriweather", serif;
-    font-weight: 400;
-    margin: 24px 0;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin: 0 0 22px;
   }
   
   /* Alert styling */
   .spd-alert-custom {
-    background: #fffdf5;
+    background: #fff0f2;
     border: 1px solid #fff0f2;
     border-left: 4px solid #920c24;
     border-radius: 8px;
@@ -41,7 +41,7 @@
   .spd-alert-title {
     font-size: 14px;
     font-weight: 700;
-    color: #451a03;
+    color: #920c24;
     margin-bottom: 4px;
   }
   .spd-alert-text {
@@ -65,13 +65,13 @@
   .spd-kpi {
     background: #ffffff;
     border: 1px solid var(--sp-border);
-    border-radius: 12px;
-    padding: 24px;
+    border-radius: 14px;
+    padding: 22px 20px 18px;
     display: flex;
     flex-direction: column;
     text-decoration: none;
     color: inherit;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
   .spd-qa-item:hover {
@@ -86,11 +86,12 @@
     margin-bottom: 16px;
   }
   .spd-kpi-icon-box {
-    background: #fff0f2;
+    background: var(--sp-card);
+    border: 1px solid var(--sp-border);
     color: var(--sp-primary);
-    padding: 10px;
-    border-radius: 8px;
-    display: flex;
+    width: 44px; height: 44px;
+    border-radius: 13px;
+    display: flex; align-items: center; justify-content: center;
   }
   .spd-kpi-badge {
     padding: 4px 10px;
@@ -102,9 +103,9 @@
     gap: 4px;
   }
   .spd-kpi-badge.success {
-    background: #f0fdf4;
-    color: #16a34a;
-    border: 1px solid #bbf7d0;
+    background: transparent;
+    color: var(--sp-success);
+    border: 1px solid rgba(0,128,0,0.35);
   }
   .spd-kpi-badge.warning {
     background: #fff0f2;
@@ -113,19 +114,18 @@
   }
   
   .spd-kpi-value {
-    font-size: 22px;
-    font-weight: 400;
-    font-family: "Merriweather", serif;
+    font-size: 32px;
+    font-weight: 800;
     color: var(--sp-text-1);
     margin-bottom: 8px;
-    line-height: 1.1;
+    line-height: 1;
   }
   .spd-kpi-label {
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--sp-text-3);
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--sp-text-4);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.07em;
     margin-bottom: 12px;
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
@@ -153,13 +153,13 @@
     margin-top: 16px;
   }
   .spd-qa-header-title {
-    font-size: 18px;
-    font-family: "Merriweather", serif;
+    font-size: 16px;
+    font-weight: 700;
     color: var(--sp-text-1);
     margin: 0 0 4px 0;
   }
   .spd-qa-header-sub {
-    font-size: 12px;
+    font-size: 13.5px;
     color: var(--sp-text-3);
     margin: 0 0 20px 0;
   }
@@ -208,6 +208,19 @@
   .spd-qa-item-sub {
     font-size: 12px;
     color: var(--sp-text-4);
+  }
+
+  /* Responsive — KPI and Quick Action grids reflow instead of overflowing */
+  @media (max-width: 1100px) {
+    .spd-qa-container { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (max-width: 768px) {
+    .spd-kpi-row { grid-template-columns: 1fr; gap: 12px; margin-bottom: 24px; }
+    .spd-alert-custom { flex-wrap: wrap; gap: 10px; }
+  }
+  @media (max-width: 520px) {
+    .spd-qa-container { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .spd-page-title { overflow-wrap: anywhere; }
   }
 </style>
 {% endblock %}
@@ -278,7 +291,7 @@
   {# Card 1: Active Courses #}
   <a href="/student-portal/courses" class="spd-kpi">
     <div class="spd-kpi-header">
-      <div class="spd-kpi-icon-box" style="background:#fff0f2;color:var(--sp-primary);">
+      <div class="spd-kpi-icon-box">
         <span class="sp-ms" style="font-size:24px;">menu_book</span>
       </div>
       <div class="spd-kpi-badge success">
@@ -297,7 +310,7 @@
   <a href="/student-portal/exam-schedule" class="spd-kpi">
     {% set eligible_count = courses_eligible if courses_eligible is defined else 0 %}
     <div class="spd-kpi-header">
-      <div class="spd-kpi-icon-box" style="background:#fff0f2;color:#920c24;">
+      <div class="spd-kpi-icon-box">
         <span class="sp-ms" style="font-size:24px;">quiz</span>
       </div>
       <div class="spd-kpi-badge {% if eligible_count == course_count and course_count > 0 %}success{% else %}warning{% endif %}">
@@ -318,7 +331,7 @@
   {# Card 3: Fee Outstanding #}
   <a href="/student-portal/fees" class="spd-kpi">
     <div class="spd-kpi-header">
-      <div class="spd-kpi-icon-box" style="background:#fff0f2;color:var(--sp-primary);">
+      <div class="spd-kpi-icon-box">
         <span class="sp-ms" style="font-size:24px;">payments</span>
       </div>
       <div class="spd-kpi-badge {% if has_dues %}warning{% else %}success{% endif %}">
@@ -326,7 +339,7 @@
         {% if has_dues %}Pending{% else %}Clear{% endif %}
       </div>
     </div>
-    <div class="spd-kpi-value" style="color:var(--sp-success);">
+    <div class="spd-kpi-value" style="color:{% if has_dues %}var(--sp-danger){% else %}var(--sp-success){% endif %};">
       ₹{{ "{:,.0f}".format(total_outstanding) if has_dues else "0" }}
     </div>
     <div class="spd-kpi-label">Fee Outstanding</div>

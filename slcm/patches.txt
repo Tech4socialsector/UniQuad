@@ -61,3 +61,4 @@ slcm.patches.v2_0.fee_certificate_total_labels
 slcm.patches.v2_0.fee_certificate_all_programme_years
 slcm.patches.v2_0.fee_certificate_student_id_and_nil
 slcm.patches.v2_0.split_student_portal_nav_sidebar_colours
+slcm.patches.v2_0.apply_parent_theme_to_student_portal

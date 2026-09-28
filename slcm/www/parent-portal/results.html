@@ -476,7 +476,6 @@
       <div class="ppr-cm"><div class="ppr-cm-val {{ 'ppr-g-fail' if c.attendance_status == 'Absent' else '' }}" style="font-size:13px;" title="{{ (c.attendance_status or '—') | e }}">{{ c.attendance_status or '—' }}</div><div class="ppr-cm-lbl">Attendance</div></div>
     </div>
     <div class="ppr-card-strip">
-      <span><span class="ms" aria-hidden="true">functions</span>In SGPA: <strong class="{{ 'ppr-g-pass' if c.consider_for_sgpa else '' }}">{{ 'Yes' if c.consider_for_sgpa else 'No' }}</strong></span>
       <span><span class="ms" aria-hidden="true">how_to_reg</span>{{ c.enrollment_status or 'Enrollment —' }}</span>
       {% if c.re_exam_grade %}<span><span class="ms" aria-hidden="true">replay</span>Re-exam: <strong>{{ c.re_exam_grade }}</strong></span>{% endif %}
       {% if c.remark %}<span class="ppr-card-remark" title="{{ c.remark | e }}">{{ c.remark }}</span>{% endif %}
@@ -498,11 +497,11 @@
 <div class="ppr-list is-hidden" id="ppr-list">
   <table class="ppr-t">
     <caption class="pp-sr-only">Course results</caption>
-    <colgroup><col><col style="width:180px;"><col style="width:80px;"><col style="width:90px;"><col style="width:120px;"><col style="width:80px;"><col style="width:104px;"><col style="width:128px;"></colgroup>
+    <colgroup><col><col style="width:180px;"><col style="width:80px;"><col style="width:90px;"><col style="width:120px;"><col style="width:104px;"><col style="width:128px;"></colgroup>
     <thead><tr>
       <th scope="col" class="c-text">Course</th><th scope="col" class="c-text">Exam</th>
       <th scope="col" class="c-center">Grade</th><th scope="col" class="c-num">Total</th>
-      <th scope="col" class="c-text">Attendance</th><th scope="col" class="c-center">In SGPA</th>
+      <th scope="col" class="c-text">Attendance</th>
       <th scope="col" class="c-center">Status</th><th scope="col" class="c-action">Action</th>
     </tr></thead>
     <tbody>
@@ -516,7 +515,6 @@
         <td class="c-center" data-label="Grade"><span class="ppr-grade-big {{ grade_cls(c) }}">{{ grade_txt(c) }}</span></td>
         <td class="c-num" data-label="Total">{{ total_txt(c) }}</td>
         <td class="c-text" data-label="Attendance"><span class="{{ 'ppr-g-fail' if c.attendance_status == 'Absent' else '' }}">{{ c.attendance_status or '—' }}</span></td>
-        <td class="c-center" data-label="In SGPA"><span class="{{ 'ppr-g-pass' if c.consider_for_sgpa else 'ppr-g-pend' }}">{{ 'Yes' if c.consider_for_sgpa else 'No' }}</span></td>
         <td class="c-center" data-label="Status">{{ status_pill(st) }}</td>
         <td class="c-action" data-label="Action"><button type="button" class="ppr-btn" data-marks="{{ key }}" aria-haspopup="dialog"><span class="ms" aria-hidden="true">table_view</span>View Marks</button></td>
       </tr>
@@ -554,7 +552,7 @@
         <tr>
           {% for grp in c.regular_groups %}<th scope="colgroup" colspan="{{ grp.components | length }}" class="grp">{{ grp.type_name }}</th>{% endfor %}
           <th scope="colgroup" colspan="{{ 2 if c.show_total else 1 }}" class="grp grp-grade">Grade</th>
-          <th scope="colgroup" colspan="3" class="grp grp-status">Status</th>
+          <th scope="colgroup" colspan="2" class="grp grp-status">Status</th>
           {% for grp in c.reexam_groups %}<th scope="colgroup" colspan="{{ grp.components | length }}" class="grp grp-reexam">{{ grp.type_name }}</th>{% endfor %}
           {% if c.reexam_groups %}<th scope="colgroup" colspan="3" class="grp grp-final">Updated Final</th>{% endif %}
         </tr>
@@ -563,7 +561,7 @@
           <th scope="col">{{ comp.label }}{% if comp.max_marks %}<span class="max">Max {{ comp.max_marks }}</span>{% endif %}</th>
           {% endfor %}{% endfor %}
           {% if c.show_total %}<th scope="col">Total Marks</th>{% endif %}
-          <th scope="col">Grade</th><th scope="col">Enrollment</th><th scope="col">Attendance</th><th scope="col">In SGPA</th>
+          <th scope="col">Grade</th><th scope="col">Enrollment</th><th scope="col">Attendance</th>
           {% for grp in c.reexam_groups %}{% for comp in grp.components %}<th scope="col">{{ comp.label }}</th>{% endfor %}{% endfor %}
           {% if c.reexam_groups %}<th scope="col">Updated Marks</th><th scope="col">Updated Grade</th><th scope="col">Re-Exam Grade</th>{% endif %}
         </tr>
@@ -577,7 +575,6 @@
           <td><span class="ppr-mk-grade {{ 'pend' if (c.attendance_status == 'Absent' or not c.display_grade) else ('fail' if c.is_fail else 'pass') }}">{{ grade_txt(c) }}</span></td>
           <td>{{ c.enrollment_status or '—' }}</td>
           <td class="{{ 'ppr-g-fail' if c.attendance_status == 'Absent' else ('ppr-g-pass' if c.attendance_status else '') }}" style="font-weight:600;">{{ c.attendance_status or '—' }}</td>
-          <td class="{{ 'ppr-g-pass' if c.consider_for_sgpa else 'ppr-g-pend' }}" style="font-weight:600;">{{ 'Yes' if c.consider_for_sgpa else 'No' }}</td>
           {% for grp in c.reexam_groups %}{% for comp in grp.components %}<td>{{ comp.marks or '—' }}</td>{% endfor %}{% endfor %}
           {% if c.reexam_groups %}
           <td style="font-weight:700;">{{ c.display_total if c.display_total is not none else '—' }}</td>

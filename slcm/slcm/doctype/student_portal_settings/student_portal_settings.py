@@ -23,12 +23,12 @@ _DEFAULTS = {
     "nav_bg_color":          "#ffffff",
     "nav_text_color":        "#920c24",
     "sidebar_bg_color":      "#ffffff",
-    "sidebar_text_color":    "#920c24",
-    # Status colors
-    "success_color":         "#16a34a",
+    "sidebar_text_color":    "#475569",   # Slate menu text — same as Parent Portal
+    # Status colors (same as Parent Portal Settings)
+    "success_color":         "#008000",
     "warning_color":         "#920c24",
-    "danger_color":          "#dc2626",
-    "info_color":            "#920c24",
+    "danger_color":          "#920c24",
+    "info_color":            "#0369a1",
     # Grading
     "grade_excellent_color": "#16a34a",
     "grade_excellent_label": "A+ / A / S",
@@ -37,7 +37,7 @@ _DEFAULTS = {
     "grade_average_color":   "#920c24",
     "grade_average_label":   "C+ / C",
     "grade_color": "#000000",
-            "grade_fail_color":      "#dc2626",
+            "grade_fail_color":      "#920c24",
     "grade_fail_label":      "D / F",
     # Attendance thresholds
     "att_good_threshold":    75,
@@ -117,8 +117,8 @@ _FONT_GOOGLE_URL = {
 # ── Nav height mappings ───────────────────────────────────────────────
 _NAV_HEIGHT = {
     "Compact": "50px",
-    "Normal":  "60px",
-    "Tall":    "72px",
+    "Normal":  "62px",
+    "Tall":    "74px",
 }
 
 
@@ -288,7 +288,7 @@ def get_student_portal_settings():
     raw["font_google_url"] = _FONT_GOOGLE_URL.get(raw["font_family"], "")
 
     # ── Nav height CSS value ──────────────────────────────────────
-    raw["nav_height_css"] = _NAV_HEIGHT.get(raw["nav_height"], "60px")
+    raw["nav_height_css"] = _NAV_HEIGHT.get(raw["nav_height"], "62px")
 
     # ── Attendance thresholds as floats ───────────────────────────
     raw["att_good_threshold"] = float(raw["att_good_threshold"] or 75)

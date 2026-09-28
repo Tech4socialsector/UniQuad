@@ -311,7 +311,7 @@
    "fieldname": "sidebar_text_color",
    "fieldtype": "Color",
    "label": "Sidebar Text Color",
-   "default": "#920c24",
+   "default": "#475569",
    "description": "Menu labels and icons in the sidebar (the active item uses the Primary Color)"
   },
   {
@@ -329,14 +329,14 @@
    "label": "Status Colors"
   },
   {
-   "default": "#16a34a",
+   "default": "#008000",
    "description": "Good attendance, paid fees, eligible for exam",
    "fieldname": "success_color",
    "fieldtype": "Color",
    "label": "Success / Good"
   },
   {
-   "default": "#d97706",
+   "default": "#920c24",
    "description": "Borderline attendance, pending status, near-due fees",
    "fieldname": "warning_color",
    "fieldtype": "Color",
@@ -347,7 +347,7 @@
    "fieldtype": "Column Break"
   },
   {
-   "default": "#dc2626",
+   "default": "#920c24",
    "description": "Low attendance, overdue fees, exam ineligible",
    "fieldname": "danger_color",
    "fieldtype": "Color",
@@ -395,7 +395,7 @@
    "fieldtype": "Column Break"
   },
   {
-   "default": "#dc2626",
+   "default": "#920c24",
    "description": "Fail grade band — F, AB, AS",
    "fieldname": "grade_fail_color",
    "fieldtype": "Color",
@@ -418,7 +418,7 @@
    "label": "Good Grade Label"
   },
   {
-   "default": "#d97706",
+   "default": "#920c24",
    "description": "Third grade band — C+, C",
    "fieldname": "grade_average_color",
    "fieldtype": "Color",

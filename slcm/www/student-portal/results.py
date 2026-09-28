@@ -547,7 +547,20 @@ def _set_student_nav(context, student):
     context.department = student.department or ""
     context.batch_year = student.batch_year or ""
     context.academic_year = student.get("academic_year") or ""
-    context.academic_term = student.get("academic_term") or ""
+    context.academic_term = student.get("academic_term") or _current_enrollment_term(student.name)
+
+
+def _current_enrollment_term(student_name):
+    """Current trimester from the latest Enrolled Student Enrollment (same as the Fees page)."""
+    try:
+        return frappe.db.get_value(
+            "Student Enrollment",
+            {"student": student_name, "status": "Enrolled"},
+            "term_name",
+            order_by="creation desc",
+        ) or ""
+    except Exception:
+        return ""
 
 
 def _set_nav_defaults(context):

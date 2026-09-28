@@ -2154,7 +2154,7 @@ def _notify_admin_swap_request(booking_name, requested_room, reason):
             conflict_html = f"""
 <p style="margin-top:16px;"><strong>⚠ The requested room already has conflicting bookings — please contact those in-charges:</strong></p>
 <table style="border-collapse:collapse;font-size:13px;width:100%;margin-top:8px;">
-  <thead style="background:#fef3c7;">
+  <thead style="background:#fff0f2;">
     <tr>
       <th style="padding:6px 12px;text-align:left;">Ref</th>
       <th style="padding:6px 12px;text-align:left;">Event</th>

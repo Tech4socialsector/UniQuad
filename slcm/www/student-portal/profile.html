@@ -57,7 +57,7 @@
 .sp-profile-hero-right p {
   font-size: 14px;
   font-style: italic;
-  font-weight: 300;
+  font-weight: 400;
   margin: 0;
   opacity: 0.8;
 }
@@ -116,7 +116,7 @@
 .sp-info-value {
   font-size: 14px;
   font-weight: 400; /* As requested, standard text is 300, but data values look better at normal. The rule says "everything else 300" but the mockup shows these bolder. I will use 300 for normal text. */
-  font-weight: 300;
+  font-weight: 400;
   color: var(--sp-text-1);
 }
 /* Bank details */
@@ -138,7 +138,7 @@
   background: #fff0f2;
   color: #920c24;
   font-size: 13px;
-  font-weight: 300;
+  font-weight: 400;
 }
 .sp-bank-note .sp-ms { font-size: 18px; }
 .sp-bank-note-locked { background: #ecfdf5; color: #065f46; }
@@ -238,7 +238,7 @@
   font-size: 10px;
   color: var(--sp-nav-text);
   margin: 0;
-  font-weight: 300;
+  font-weight: 400;
 }
 .sp-quick-action-card .sp-ms-chevron {
   position: absolute;
@@ -262,7 +262,7 @@
   border-radius: 8px;
   text-decoration: none;
   color: var(--sp-text-1);
-  font-weight: 300;
+  font-weight: 400;
 }
 .sp-link-item:hover {
   background: #f3f4f6;
@@ -322,14 +322,14 @@
         <span class="sp-status-tag gray" style="background: #e2e8f0; color: #334155; font-weight: 500;">Programme: {{ programme_name }}</span>
         {% endif %}
         {% if profile.student_status %}
-        <span class="sp-status-tag {% if profile.student_status == 'Active' %}green{% else %}red{% endif %}" style="{% if profile.student_status == 'Active' %}background: #0f766e; color: #fff;{% else %}background: #b91c1c; color: #fff;{% endif %} font-weight: 500; padding: 4px 16px;">{{ profile.student_status }}</span>
+        <span class="sp-status-tag {% if profile.student_status == 'Active' %}green{% else %}red{% endif %}" style="{% if profile.student_status == 'Active' %}background: #0f766e; color: #fff;{% else %}background: #920c24; color: #fff;{% endif %} font-weight: 500; padding: 4px 16px;">{{ profile.student_status }}</span>
         {% endif %}
       </div>
     </div>
   </div>
   
   <!-- <div class="sp-profile-hero-right" style="text-align: right; z-index: 2; margin-left: 24px;">
-    <h2 style="font-family: var(--sp-font-family, 'Merriweather', serif); font-size: 22px; font-weight: 600; color: #b91c1c; margin: 0 0 8px 0; line-height: 1.3;">National Law School<br>of India University</h2>
+    <h2 style="font-family: var(--sp-font-family, 'Merriweather', serif); font-size: 22px; font-weight: 600; color: #920c24; margin: 0 0 8px 0; line-height: 1.3;">National Law School<br>of India University</h2>
     <p style="font-size: 14px; font-style: italic; color: #6b7280; margin: 0;">Knowledge for a Just Society</p>
   </div> -->
 </div>
@@ -586,7 +586,7 @@
                 <span style="background:#fff0f2; color:#920c24; padding:2px 8px; border-radius:12px; font-size:12px;">{{ p.relation }}</span>
                 {% endif %}
               </div>
-              <div style="display:flex; flex-wrap:wrap; gap:16px; margin-top:8px; font-size:13px; color:var(--sp-text-3); font-weight:300;">
+              <div style="display:flex; flex-wrap:wrap; gap:16px; margin-top:8px; font-size:13px; color:var(--sp-text-3); font-weight:400;">
                 {% if p.contact_number %}
                 <div style="display:flex; align-items:center; gap:4px;"><span class="sp-ms" style="font-size:16px; color:var(--sp-primary);">call</span> {{ p.contact_number }}</div>
                 {% endif %}
@@ -621,7 +621,7 @@
           <span class="sp-ms" style="color:var(--sp-success); font-size:32px;">apartment</span>
           <div>
             <div style="color:var(--sp-success); font-weight:400; font-size:16px;">Resident</div>
-            <div style="color:var(--sp-text-3); font-size:13px; font-weight:300;">Hostel accommodation allotted</div>
+            <div style="color:var(--sp-text-3); font-size:13px; font-weight:400;">Hostel accommodation allotted</div>
           </div>
         </div>
         
@@ -652,8 +652,8 @@
           {% for ug in ug_degrees %}
           <div style="background:var(--sp-primary-light); padding:16px; border-radius:8px; margin-bottom:12px;">
             <div style="font-family: var(--sp-font-family, 'Merriweather', serif); font-weight:400; font-size:16px; color:var(--sp-text-1);">{{ ug.degree or "—" }}</div>
-            <div style="font-size:13px; color:var(--sp-text-3); font-weight:300; margin-top:4px; text-transform:uppercase;">{{ ug.institution or "—" }}</div>
-            <div style="font-size:13px; color:var(--sp-text-4); font-weight:300; margin-top:8px;">
+            <div style="font-size:13px; color:var(--sp-text-3); font-weight:400; margin-top:4px; text-transform:uppercase;">{{ ug.institution or "—" }}</div>
+            <div style="font-size:13px; color:var(--sp-text-4); font-weight:400; margin-top:8px;">
               {{ ug.year_of_passing or "—" }} <span style="margin:0 8px;">|</span> {{ ug.percentage or "—" }}
             </div>
           </div>
@@ -684,13 +684,13 @@
             <span class="sp-ms sp-ms-chevron">chevron_right</span>
           </a>
           <a href="/student-portal/helpdesk" class="sp-quick-action-card">
-            <div class="icon-wrap" style="background:#fee2e2; color:#ef4444;"><span class="sp-ms">support_agent</span></div>
+            <div class="icon-wrap" style="background:#fff0f2; color:#920c24;"><span class="sp-ms">support_agent</span></div>
             <h3>Raise a Ticket</h3>
             <p>Get support from helpdesk</p>
             <span class="sp-ms sp-ms-chevron">chevron_right</span>
           </a>
           <a href="/student-portal/timetable" class="sp-quick-action-card">
-            <div class="icon-wrap" style="background:#fee2e2; color:#ef4444;"><span class="sp-ms">calendar_today</span></div>
+            <div class="icon-wrap" style="background:#fff0f2; color:#920c24;"><span class="sp-ms">calendar_today</span></div>
             <h3>View Timetable</h3>
             <p>Check your class schedule</p>
             <span class="sp-ms sp-ms-chevron">chevron_right</span>

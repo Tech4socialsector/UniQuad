@@ -57,9 +57,9 @@
   border: 1px solid rgba(255,255,255,0.25);
 }
 .sp-fee-status-paid         { background: rgba(22,163,74,0.30);  border-color: rgba(22,163,74,0.45); }
-.sp-fee-status-partially-paid { background: rgba(217,119,6,0.30); border-color: rgba(217,119,6,0.45); }
-.sp-fee-status-overdue      { background: rgba(220,38,38,0.35);   border-color: rgba(220,38,38,0.45); }
-.sp-fee-status-unpaid       { background: rgba(220,38,38,0.25);   border-color: rgba(220,38,38,0.35); }
+.sp-fee-status-partially-paid { background: rgba(146,12,36,0.30); border-color: rgba(146,12,36,0.45); }
+.sp-fee-status-overdue      { background: rgba(146,12,36,0.35);   border-color: rgba(146,12,36,0.45); }
+.sp-fee-status-unpaid       { background: rgba(146,12,36,0.25);   border-color: rgba(146,12,36,0.35); }
 .sp-fee-hero-lbl {
   font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
   text-transform: uppercase; color: rgba(255,255,255,0.55);
@@ -77,7 +77,7 @@
 .sp-fee-validity-pill {
   font-size: 10.5px; font-weight: 600; padding: 2px 9px; border-radius: 20px;
   background: rgba(200,161,75,0.25); border: 1px solid rgba(200,161,75,0.40);
-  color: #fde68a; letter-spacing: 0.02em;
+  color: #f5c6ce; letter-spacing: 0.02em;
 }
 
 /* Stat row */
@@ -98,7 +98,7 @@
 }
 .sp-fee-stat-label { font-size: 10.5px; color: rgba(255,255,255,0.60); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
 .sp-fee-stat-value { font-size: 17px; font-weight: 800; color: #fff; line-height: 1.2; }
-.sp-fee-stat-value-warn { color: #fde68a; }
+.sp-fee-stat-value-warn { color: #f5c6ce; }
 
 /* Progress bar */
 .sp-fee-progress-wrap { margin-top: 18px; position: relative; z-index: 1; }
@@ -118,7 +118,7 @@
   font-size: 13px; margin-bottom: 16px; border: 1px solid transparent;
 }
 .sp-fee-notice-info    { background: var(--sp-info-bg, #ebf8ff); color: var(--sp-info, #0369a1); border-color: rgba(3,105,161,0.2); }
-.sp-fee-notice-warning { background: var(--sp-warning-bg); color: var(--sp-warning); border-color: rgba(217,119,6,0.25); }
+.sp-fee-notice-warning { background: var(--sp-warning-bg); color: var(--sp-warning); border-color: rgba(146,12,36,0.25); }
 .sp-fee-notice-success { background: #f0fdf4; color: #14532d; border-color: #86efac; }
 
 /* ── Overdue Banner ────────────────────────────────────────────────── */
@@ -129,15 +129,15 @@
 }
 .sp-fee-overdue-banner-icon {
   width: 40px; height: 40px; border-radius: 10px;
-  background: #fee2e2; color: #be123c;
+  background: #fff0f2; color: #920c24;
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
 .sp-fee-overdue-banner-body { flex: 1; }
-.sp-fee-overdue-banner-title { font-size: 13px; font-weight: 700; color: #be123c; }
+.sp-fee-overdue-banner-title { font-size: 13px; font-weight: 700; color: #920c24; }
 .sp-fee-overdue-banner-sub   { font-size: 12px; color: #9f1239; margin-top: 2px; }
 .sp-fee-overdue-banner-btn {
-  font-size: 12px; font-weight: 700; color: #be123c;
-  background: #fff; border: 1px solid #fca5a5;
+  font-size: 12px; font-weight: 700; color: #920c24;
+  background: #fff; border: 1px solid #f5c6ce;
   border-radius: 8px; padding: 6px 14px;
   text-decoration: none; white-space: nowrap; flex-shrink: 0;
 }
@@ -156,7 +156,7 @@
   background: var(--sp-border-light); color: var(--sp-text-3);
   border-radius: 20px; border: 1px solid var(--sp-border);
 }
-.sp-fee-section-count-red { background: #fff1f2; color: #be123c; border-color: #fecdd3; }
+.sp-fee-section-count-red { background: #fff1f2; color: #920c24; border-color: #fecdd3; }
 
 /* ── Fee Structure Card ─────────────────────────────────────────────── */
 .sp-fee-fs-card {
@@ -242,8 +242,8 @@
   display: flex; align-items: center; gap: 6px;
   padding: 7px 16px; font-size: 12px; font-weight: 600;
 }
-.sp-fee-due-overdue  { background: #fff1f2; color: #be123c; }
-.sp-fee-due-urgent   { background: #fffbeb; color: #92400e; }
+.sp-fee-due-overdue  { background: #fff1f2; color: #920c24; }
+.sp-fee-due-urgent   { background: #fff0f2; color: #920c24; }
 .sp-fee-due-upcoming { background: #f0f9ff; color: #0369a1; }
 
 .sp-fee-inv-row {
@@ -419,7 +419,7 @@
 .ppfda-stat-val { font-size: 15px; font-weight: 800; color: #111827; letter-spacing: -.3px; }
 .ppfda-stat-paid   .ppfda-stat-val { color: #16a34a; }
 .ppfda-stat-waived .ppfda-stat-val { color: #7c3aed; }
-.ppfda-stat-overdue .ppfda-stat-val{ color: #be123c; }
+.ppfda-stat-overdue .ppfda-stat-val{ color: #920c24; }
 .ppfda-stat-due    .ppfda-stat-val { color: #1d4ed8; }
 .ppfda-stat-lbl { font-size: 11px; font-weight: 600; color: #374151; margin-top: 2px; }
 .ppfda-stat-sub { font-size: 10px; color: #9ca3af; margin-top: 1px; }
@@ -427,7 +427,7 @@
 .ppfda-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .ppfda-dot-paid    { background: #22c55e; }
 .ppfda-dot-waived  { background: #a78bfa; }
-.ppfda-dot-overdue { background: #f43f5e; }
+.ppfda-dot-overdue { background: #920c24; }
 .ppfda-dot-pending { background: #60a5fa; }
 .ppfda-legend-lbl { font-size: 11px; color: #6b7280; font-weight: 500; margin-right: 8px; }
 @media (max-width: 480px) {
@@ -632,7 +632,7 @@
   font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 10px;
   background: var(--sp-border); color: var(--sp-text-4);
 }
-.sp-fee-tab-badge-red   { background: #fee2e2; color: #be123c; }
+.sp-fee-tab-badge-red   { background: #fff0f2; color: #920c24; }
 .sp-fee-tab-badge-green { background: var(--sp-success-bg); color: var(--sp-success); }
 .sp-fee-tab-panel {
   background: var(--sp-card); border: 1px solid var(--sp-border);
@@ -688,7 +688,7 @@
   {% if has_dues %}
   <div style="flex-shrink:0;margin-left:auto;text-align:right;">
     <div style="font-size:11px;color:rgba(255,255,255,0.7);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Outstanding</div>
-    <div style="font-size:22px;font-weight:800;color:#fde68a;">&#8377;{{ "{:,.0f}".format(total_outstanding) }}</div>
+    <div style="font-size:22px;font-weight:800;color:#f5c6ce;">&#8377;{{ "{:,.0f}".format(total_outstanding) }}</div>
   </div>
   {% endif %}
 </div>
@@ -739,7 +739,7 @@
   <div class="sp-fee-hero-lbl">{% if has_dues %}Amount Due{% else %}Net Programme Fee{% endif %}</div>
   <div class="sp-fee-amount">&#8377;{{ "{:,.2f}".format(total_outstanding if has_dues else total_payable) }}</div>
   {% if has_dues and has_sm_inv_mismatch %}
-  <div style="font-size:12px;color:#fde68a;font-weight:600;margin-top:4px;position:relative;z-index:1;">
+  <div style="font-size:12px;color:#f5c6ce;font-weight:600;margin-top:4px;position:relative;z-index:1;">
     <span class="ms" style="font-size:12px;vertical-align:middle;">workspace_premium</span>
     Scholarship &#8377;{{ "{:,.0f}".format(total_scholarship) }} applied &nbsp;·&nbsp; &#8377;{{ "{:,.0f}".format(inv_outstanding_raw) }} invoice balance
   </div>
@@ -1274,8 +1274,8 @@
       <div class="sp-fee-demand-type-hdr">
         <span class="ms" style="font-size:13px;
           color:{% if demand_type == 'Academic' %}var(--sp-fee-navy)
-                {% elif demand_type == 'Hostel' %}#c2410c
-                {% elif demand_type == 'Fine' %}#b91c1c
+                {% elif demand_type == 'Hostel' %}#920c24
+                {% elif demand_type == 'Fine' %}#920c24
                 {% elif demand_type == 'Examination' %}#7c3aed
                 {% else %}var(--sp-text-3){% endif %};">
           {% if demand_type == 'Academic' %}school
@@ -1594,8 +1594,8 @@
   function toast(title, msg, type) {
     var p = {
       success: { bg: '#f0fff4', bd: '#86efac', tx: '#166534' },
-      error:   { bg: '#fff5f5', bd: '#fca5a5', tx: '#991b1b' },
-      warning: { bg: '#fffbeb', bd: '#fde68a', tx: '#92400e' },
+      error:   { bg: '#fff5f5', bd: '#f5c6ce', tx: '#6b091a' },
+      warning: { bg: '#fff0f2', bd: '#f5c6ce', tx: '#920c24' },
       info:    { bg: '#ebf8ff', bd: '#bae6fd', tx: '#0c4a6e' },
     };
     var c = p[type] || p.info;

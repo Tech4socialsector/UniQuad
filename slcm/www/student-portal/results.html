@@ -24,12 +24,6 @@
 /* ── Page header ────────────────────────────────────────────────────── */
 .spr-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
 .spr-head .sp-page-header { margin: 0; }
-.spr-count-chip {
-  display: inline-flex; align-items: baseline; gap: 6px; padding: 8px 14px; border-radius: 10px;
-  background: var(--sp-card, #fff); border: 1px solid var(--spr-border);
-}
-.spr-count-chip strong { font-size: 18px; color: var(--spr-primary); font-variant-numeric: tabular-nums; }
-.spr-count-chip span { font-size: 12.5px; color: var(--spr-muted); }
 
 /* ── Student strip ──────────────────────────────────────────────────── */
 .spr-student {
@@ -52,8 +46,8 @@
 .spr-facts dd { margin: 2px 0 0; font-size: 13px; font-weight: 600; color: var(--sp-text-1); }
 
 /* ── Summary tiles (reuse the portal stat card) ─────────────────────── */
-.spr-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 16px; }
-@media (max-width: 1100px) { .spr-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.spr-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom: 16px; }
+@media (max-width: 640px) { .spr-metrics { grid-template-columns: minmax(0, 1fr); } }
 .spr-metrics .sp-stat-card { align-items: center; min-width: 0; }
 .spr-metrics .sp-stat-card > div:last-child { min-width: 0; }
 .spr-metrics .sp-stat-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -135,7 +129,7 @@
 .spr-status .sp-ms { font-size: 13px; }
 .spr-status-pass { color: var(--spr-green); border: 1px solid rgba(22,163,74,0.30); background: #fff; }
 .spr-status-fail { color: var(--spr-red);   background: rgba(146,12,36,0.07); }
-.spr-status-pend { color: var(--spr-amber); background: rgba(217,119,6,0.10); }
+.spr-status-pend { color: var(--spr-amber); background: rgba(146,12,36,0.10); }
 .spr-chip-mfa { color: #920c24; background: #fff0f2; border-color: #f5c6ce; }
 
 /* ── Course cards ───────────────────────────────────────────────────── */
@@ -168,7 +162,7 @@
 }
 .spr-card-strip .sp-ms { font-size: 14px; color: var(--spr-primary); vertical-align: -2px; margin-right: 2px; }
 .spr-card-remark { font-style: italic; color: var(--spr-muted); width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.spr-card-actions { margin-top: auto; display: grid; grid-template-columns: 1fr 1fr; }
+.spr-card-actions { margin-top: auto; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
 .spr-action {
   display: flex; align-items: center; justify-content: center; gap: 5px; padding: 11px 8px;
   background: none; border: none; border-right: 1px solid var(--spr-row); cursor: pointer;
@@ -180,8 +174,6 @@
 .spr-action:focus-visible { outline: 2px solid var(--spr-primary); outline-offset: -2px; }
 .spr-action-primary { color: var(--spr-primary); }
 .spr-action-primary:hover { background: var(--spr-soft); }
-.spr-action-info { color: var(--sp-text-1); }
-.spr-action-info:hover { background: #f3f4f6; }
 /* Improvement exam states */
 .spr-improve-open       { color: #920c24; }
 .spr-improve-open:hover { background: #fff0f2; }
@@ -253,7 +245,7 @@
 }
 .spr-modal-overlay.open { display: flex; }
 .spr-modal {
-  background: var(--sp-card, #fff); border-radius: 14px; width: min(1080px, 100%); max-height: calc(100vh - 32px);
+  background: var(--sp-card, #fff); border-radius: 14px; width: min(1600px, calc(100vw - 48px)); max-height: calc(100vh - 32px);
   display: flex; flex-direction: column; box-shadow: 0 24px 64px rgba(0,0,0,0.2); overflow: hidden;
 }
 .spr-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 16px 20px 12px; border-bottom: 1px solid var(--spr-border); border-top: 3px solid var(--spr-primary); }
@@ -265,29 +257,29 @@
 .spr-modal-close:hover { color: var(--spr-primary); border-color: var(--spr-primary); }
 .spr-modal-close .sp-ms { font-size: 18px; }
 .spr-modal-body { overflow: auto; padding: 0 0 8px; overscroll-behavior: contain; }
-.spr-fail-note { display: flex; gap: 8px; align-items: flex-start; padding: 10px 20px; color: var(--spr-red); font-size: 13px; border-bottom: 1px solid rgba(146,12,36,0.15); }
-.spr-fail-note .sp-ms { font-size: 18px; flex-shrink: 0; }
-.spr-remark { padding: 10px 20px 4px; font-size: 12.5px; color: var(--sp-text-3); }
+.spr-remark { padding: 10px 20px 4px; font-size: var(--spr-mk-fs); color: var(--sp-text-3); }
 .spr-remark .sp-ms { font-size: 15px; vertical-align: -3px; margin-right: 4px; color: var(--spr-muted); }
 
 .spr-mk-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-.spr-mk { width: max-content; min-width: 100%; border-collapse: collapse; font-size: 13px; }
-.spr-mk th { padding: 8px 12px; background: var(--spr-head); border-bottom: 1px solid var(--spr-border); text-align: center; font-size: 11px; font-weight: 600; color: var(--spr-muted); text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
-.spr-mk th .max { display: block; font-size: 10px; font-weight: 400; text-transform: none; letter-spacing: 0; }
+/* One text size for everything in the marks dialog */
+.spr-modal-body { --spr-mk-fs: 13px; }
+.spr-mk { width: max-content; min-width: 100%; border-collapse: collapse; font-size: var(--spr-mk-fs); }
+.spr-mk th { padding: 8px 12px; background: var(--spr-head); border-bottom: 1px solid var(--spr-border); text-align: center; font-size: var(--spr-mk-fs); font-weight: 600; color: var(--spr-muted); text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
+.spr-mk th .max { display: block; font-size: var(--spr-mk-fs); font-weight: 400; text-transform: none; letter-spacing: 0; }
 .spr-mk .grp { background: var(--spr-soft); color: var(--spr-primary); border-bottom: none; }
 .spr-mk .grp-grade  { background: rgba(22,163,74,0.06); color: var(--spr-green); }
 .spr-mk .grp-status { background: #f3f4f6; color: var(--sp-text-3); }
-.spr-mk .grp-reexam { background: rgba(217,119,6,0.10); color: var(--spr-amber); }
+.spr-mk .grp-reexam { background: rgba(146,12,36,0.10); color: var(--spr-amber); }
 .spr-mk .grp-improve { background: #f0fdf4; color: #14532d; }
-.spr-mk .grp-final  { background: rgba(124,58,237,0.08); color: #920c24; }
-.spr-mk td { padding: 10px 12px; text-align: center; border-bottom: 1px solid var(--spr-row); white-space: nowrap; font-variant-numeric: tabular-nums; }
-.spr-mk-grade { display: inline-block; font-size: 16px; font-weight: 700; padding: 2px 10px; border-radius: 8px; }
+.spr-mk .grp-final  { background: rgba(146,12,36,0.07); color: #920c24; }
+.spr-mk td { padding: 10px 12px; text-align: center; font-size: var(--spr-mk-fs); border-bottom: 1px solid var(--spr-row); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.spr-mk-grade { display: inline-block; font-size: var(--spr-mk-fs); font-weight: 700; padding: 2px 10px; border-radius: 8px; }
 .spr-mk-grade.pass { color: var(--spr-green); border: 1px solid rgba(22,163,74,0.3); }
 .spr-mk-grade.fail { color: var(--spr-red); background: rgba(146,12,36,0.07); }
 .spr-mk-grade.pend { color: var(--spr-muted); background: #f3f4f6; }
-.spr-mk-grade.reexam  { color: #920c24; background: #fff0f2; font-size: 14px; }
-.spr-mk-grade.improve { color: #14532d; border: 1px solid #4ade80; font-size: 14px; }
-.spr-mk-hint { display: none; font-size: 11px; color: var(--spr-muted); padding: 8px 20px 0; align-items: center; gap: 5px; }
+.spr-mk-grade.reexam  { color: #920c24; background: #fff0f2; }
+.spr-mk-grade.improve { color: #14532d; border: 1px solid #4ade80; }
+.spr-mk-hint { display: none; font-size: var(--spr-mk-fs); color: var(--spr-muted); padding: 8px 20px 0; align-items: center; gap: 5px; }
 .spr-mk-hint .sp-ms { font-size: 14px; }
 @media (max-width: 640px) {
   .spr-mk-hint { display: flex; }
@@ -296,7 +288,7 @@
 }
 @media (prefers-reduced-motion: reduce) { .spr-card, .spr-card:hover { transition: none; transform: none; } }
 
-/* ── Improvement exam dialog (unchanged) ────────────────────────────── */
+/* ── Improvement exam dialog — NLS maroon ────────────────────────────── */
 /* ── Modal overlay ────────────────────────────────────────────── */
 #sp-improv-overlay {
   display: none; position: fixed; inset: 0; z-index: 9999;
@@ -314,7 +306,7 @@
 }
 /* header */
 .sp-improv-hdr {
-  background: linear-gradient(135deg, #920c24 0%, #920c24 55%, #818cf8 100%);
+  background: linear-gradient(135deg, #920c24 0%, #6b091a 100%);
   padding: 22px 24px 20px; display: flex; align-items: flex-start; gap: 14px;
 }
 .sp-improv-hdr-icon {
@@ -351,20 +343,20 @@
   font-size: 22px; font-weight: 900; color: #1e293b;
   font-variant-numeric: tabular-nums;
 }
-.sp-improv-fee-free { font-size: 17px; font-weight: 700; color: #059669; }
+.sp-improv-fee-free { font-size: 17px; font-weight: 700; color: #920c24; }
 .sp-improv-deadline-val { font-size: 15px; font-weight: 700; color: #1e293b; }
 /* note */
 .sp-improv-note {
   background: linear-gradient(135deg, #fff0f2, #fff0f2);
   border-radius: 11px; padding: 12px 14px; margin-bottom: 18px;
-  font-size: 12px; color: #3730a3;
+  font-size: 12px; color: #920c24;
   border: 1px solid #f5c6ce; display: flex; gap: 8px; align-items: flex-start;
 }
 .sp-improv-note-icon { font-family:'Material Symbols Outlined'; font-size:15px; flex-shrink:0; margin-top:1px; }
 /* status msg */
 .sp-improv-msg { display: none; border-radius: 10px; padding: 11px 14px; font-size: 12.5px; font-weight: 600; margin-bottom: 14px; align-items: center; gap: 8px; }
-.sp-improv-msg-ok   { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
-.sp-improv-msg-err  { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+.sp-improv-msg-ok   { background: #fff0f2; color: #920c24; border: 1px solid #f5c6ce; }
+.sp-improv-msg-err  { background: #fff0f2; color: #6b091a; border: 1px solid #f5c6ce; }
 .sp-improv-msg-info { background: #fff0f2; color: #920c24; border: 1px solid #f5c6ce; }
 /* actions */
 .sp-improv-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 4px; }
@@ -376,49 +368,49 @@
 .sp-improv-cancel-btn:hover { border-color: #cbd5e1; background: #f8fafc; color: #334155; }
 .sp-improv-reg-btn {
   height: 42px; padding: 0 22px; border-radius: 11px; border: none;
-  background: linear-gradient(135deg, #920c24, #920c24);
+  background: #920c24;
   color: #fff; font-size: 13px; font-weight: 700; cursor: pointer;
   display: inline-flex; align-items: center; gap: 7px;
-  box-shadow: 0 4px 16px rgba(79,70,229,.4); transition: all .15s;
+  box-shadow: 0 4px 16px rgba(146,12,36,.3); transition: all .15s;
 }
-.sp-improv-reg-btn:hover:not(:disabled) { opacity: .9; box-shadow: 0 6px 20px rgba(79,70,229,.45); transform: translateY(-1px); }
+.sp-improv-reg-btn:hover:not(:disabled) { opacity: .9; box-shadow: 0 6px 20px rgba(146,12,36,.38); transform: translateY(-1px); }
 .sp-improv-reg-btn:disabled { opacity: .5; cursor: default; box-shadow: none; transform: none; }
 /* ── Status wrap (paid / registered / retry) ──────────────── */
 .sp-improv-status-wrap {
   border-radius: 14px; padding: 18px 20px; margin-bottom: 18px;
   display: flex; align-items: flex-start; gap: 14px;
 }
-.sp-improv-status-paid  { background: linear-gradient(135deg, #ecfdf5, #d1fae5); border: 1.5px solid #6ee7b7; }
-.sp-improv-status-reg   { background: linear-gradient(135deg, #f0fdf4, #dcfce7); border: 1.5px solid #86efac; }
-.sp-improv-status-retry { background: linear-gradient(135deg, #fff0f2, #fff0f2); border: 1.5px solid #f5c6ce; }
+.sp-improv-status-paid  { background: #fff0f2; border: 1.5px solid #f5c6ce; }
+.sp-improv-status-reg   { background: #fff0f2; border: 1.5px solid #f5c6ce; }
+.sp-improv-status-retry { background: #fff0f2; border: 1.5px solid #f5c6ce; }
 
 .ix-icon-wrap {
   width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
 }
 .ix-icon-wrap .sp-ms { font-family:'Material Symbols Outlined'; font-size:24px; }
-.ix-icon-paid  { background: #d1fae5; }
-.ix-icon-paid  .sp-ms { color: #059669; }
-.ix-icon-reg   { background: #dcfce7; }
-.ix-icon-reg   .sp-ms { color: #15803d; }
+.ix-icon-paid  { background: #ffffff; border: 1px solid #f5c6ce; }
+.ix-icon-paid  .sp-ms { color: #920c24; }
+.ix-icon-reg   { background: #ffffff; border: 1px solid #f5c6ce; }
+.ix-icon-reg   .sp-ms { color: #920c24; }
 .ix-icon-retry { background: #fff0f2; }
 .ix-icon-retry .sp-ms { color: #920c24; }
 
 .ix-content { flex: 1; }
 .ix-title { font-size: 14px; font-weight: 700; margin-bottom: 5px; }
-.sp-improv-status-paid  .ix-title { color: #065f46; }
-.sp-improv-status-reg   .ix-title { color: #14532d; }
+.sp-improv-status-paid  .ix-title { color: #920c24; }
+.sp-improv-status-reg   .ix-title { color: #920c24; }
 .sp-improv-status-retry .ix-title { color: #920c24; }
 .ix-sub { font-size: 12px; line-height: 1.5; }
-.sp-improv-status-paid  .ix-sub { color: #047857; }
-.sp-improv-status-reg   .ix-sub { color: #166534; }
+.sp-improv-status-paid  .ix-sub { color: #6b091a; }
+.sp-improv-status-reg   .ix-sub { color: #6b091a; }
 .sp-improv-status-retry .ix-sub { color: #920c24; }
 
 .sp-improv-receipt-link {
   display: inline-flex; align-items: center; gap: 5px; margin-top: 12px;
   padding: 8px 16px; border-radius: 9px; font-size: 12px; font-weight: 700;
-  background: linear-gradient(135deg, #059669, #10b981); color: #fff !important;
-  text-decoration: none; box-shadow: 0 3px 10px rgba(5,150,105,.35); transition: all .15s;
+  background: #920c24; color: #fff !important;
+  text-decoration: none; box-shadow: 0 3px 10px rgba(146,12,36,.3); transition: all .15s;
 }
 .sp-improv-receipt-link:hover { opacity: .88; transform: translateY(-1px); }
 .sp-improv-receipt-link .sp-ms { font-family:'Material Symbols Outlined'; font-size:14px; }
@@ -477,7 +469,6 @@
   {% set _ns.failed = _ns.failed + r.fail_count %}
   {% set _ns.pending = _ns.pending + r.pending_count %}
 {% endfor %}
-{% set _latest = published_results[0] if published_results else none %}
 
 {# ═══════════════ Header ═══════════════ #}
 <div class="spr-head fade-in">
@@ -485,9 +476,6 @@
     <h1 class="sp-page-title">My Results</h1>
     <p class="sp-page-sub">Examination results and course grades published by your faculty</p>
   </div>
-  {% if has_results %}
-  <div class="spr-count-chip"><strong>{{ published_results | length }}</strong><span>Result{{ 's' if published_results | length != 1 }} published</span></div>
-  {% endif %}
 </div>
 
 {% if portal_error %}
@@ -553,22 +541,6 @@
       {% if _ns.pending %}<div class="sp-stat-sub">{{ _ns.pending }} pending</div>{% endif %}
     </div>
   </div>
-  <div class="sp-stat-card">
-    <div class="sp-stat-icon" style="background:var(--sp-warning-bg);color:var(--spr-amber);">trending_up</div>
-    <div>
-      {% if _latest.show_sgpa and _latest.term_gpa is not none %}
-      <div class="sp-stat-label">Latest SGPA</div>
-      <div class="sp-stat-value">{{ _latest.term_gpa }}</div>
-      {% elif _latest.term_percentage is not none %}
-      <div class="sp-stat-label">Latest Term %</div>
-      <div class="sp-stat-value">{{ _latest.term_percentage }}%</div>
-      {% else %}
-      <div class="sp-stat-label">Latest SGPA</div>
-      <div class="sp-stat-value spr-g-pend">—</div>
-      {% endif %}
-      <div class="sp-stat-sub" title="{{ _latest.exam_name | e }}">{{ _latest.exam_name }}</div>
-    </div>
-  </div>
 </section>
 
 {# ═══════════════ Exam summaries ═══════════════ #}
@@ -603,13 +575,11 @@
         <div class="spr-cm-lbl">{{ 'Cumul. %' if res.cumulative_percentage is not none else 'Courses' }}</div>
       </div>
     </div>
-    <div class="spr-exam-foot {{ 'spr-g-fail' if res.has_any_fail else 'spr-g-pass' if not res.pending_count else 'spr-g-pend' }}">
-      {% if res.has_any_fail %}
-      <span class="sp-ms" aria-hidden="true">error</span><span>{{ res.fail_count }} course{{ 's' if res.fail_count != 1 }} not cleared — please contact the Registrar's Office for next steps.</span>
-      {% else %}
+    {% if not res.has_any_fail %}
+    <div class="spr-exam-foot {{ 'spr-g-pass' if not res.pending_count else 'spr-g-pend' }}">
       <span class="sp-ms" aria-hidden="true">check_circle</span><span>{{ res.pass_count }} passed{% if res.pending_count %} · {{ res.pending_count }} pending{% endif %}</span>
-      {% endif %}
     </div>
+    {% endif %}
   </button>
   {% endfor %}
 </div>
@@ -680,7 +650,6 @@
       <div class="spr-cm"><div class="spr-cm-val {{ 'spr-g-fail' if c.attendance_status in ('Absent', 'Detained') else '' }}" style="font-size:13px;" title="{{ (c.attendance_status or '—') | e }}">{{ c.attendance_status or '—' }}</div><div class="spr-cm-lbl">Attendance</div></div>
     </div>
     <div class="spr-card-strip">
-      <span><span class="sp-ms" aria-hidden="true">functions</span>In SGPA: <strong class="{{ 'spr-g-pass' if c.consider_for_sgpa else '' }}">{{ 'Yes' if c.consider_for_sgpa else 'No' }}</strong></span>
       <span><span class="sp-ms" aria-hidden="true">how_to_reg</span>{{ c.enrollment_status or 'Enrollment —' }}</span>
       {% if c.re_exam_grade %}<span><span class="sp-ms" aria-hidden="true">replay</span>Re-exam: <strong>{{ c.re_exam_grade }}</strong></span>{% endif %}
       {% if c.improvement_grade %}<span><span class="sp-ms" aria-hidden="true">trending_up</span>Improvement: <strong>{{ c.improvement_grade }}</strong></span>{% endif %}
@@ -693,10 +662,6 @@
       </button>
       {% if c.improvement_available %}
       {{ improve_btn(c, res, 'spr-action') }}
-      {% else %}
-      <button type="button" class="spr-action spr-action-info" data-only-exam="{{ res.exam_plan | e }}">
-        <span class="sp-ms" aria-hidden="true">filter_alt</span>This Exam
-      </button>
       {% endif %}
     </div>
   </article>
@@ -708,11 +673,11 @@
 <div class="spr-list is-hidden" id="spr-list">
   <table class="spr-t">
     <caption class="spr-sr-only">Course results</caption>
-    <colgroup><col><col style="width:170px;"><col style="width:84px;"><col style="width:84px;"><col style="width:120px;"><col style="width:80px;"><col style="width:104px;"><col style="width:170px;"></colgroup>
+    <colgroup><col><col style="width:170px;"><col style="width:84px;"><col style="width:84px;"><col style="width:120px;"><col style="width:104px;"><col style="width:170px;"></colgroup>
     <thead><tr>
       <th scope="col" class="c-text">Course</th><th scope="col" class="c-text">Exam</th>
       <th scope="col" class="c-center">Grade</th><th scope="col" class="c-num">Total</th>
-      <th scope="col" class="c-text">Attendance</th><th scope="col" class="c-center">In SGPA</th>
+      <th scope="col" class="c-text">Attendance</th>
       <th scope="col" class="c-center">Status</th><th scope="col" class="c-action">Action</th>
     </tr></thead>
     <tbody>
@@ -726,7 +691,6 @@
         <td class="c-center" data-label="Grade"><span class="spr-grade-big {{ grade_cls(c) }}">{{ grade_txt(c) }}{% if grade_txt(c) != '—' %}{{ grade_sup(c) }}{% endif %}</span></td>
         <td class="c-num" data-label="Total">{{ total_txt(c) }}</td>
         <td class="c-text" data-label="Attendance"><span class="{{ 'spr-g-fail' if c.attendance_status in ('Absent', 'Detained') else '' }}">{{ c.attendance_status or '—' }}</span></td>
-        <td class="c-center" data-label="In SGPA"><span class="{{ 'spr-g-pass' if c.consider_for_sgpa else 'spr-g-pend' }}">{{ 'Yes' if c.consider_for_sgpa else 'No' }}</span></td>
         <td class="c-center" data-label="Status">{{ status_pill(st) }}</td>
         <td class="c-action" data-label="Action">
           <div class="spr-row-actions">
@@ -758,9 +722,6 @@
 {% set show_improve = c.improvement_setting_exists or c.improvement_marks is not none or c.improvement_grade %}
 {% set show_updated = c.updated_final_marks is not none or c.updated_grade %}
 <template id="spr-marks-{{ key }}" data-title="{{ c.course_name | e }}" data-code="{{ c.course_code | e }}" data-exam="{{ res.exam_name | e }}" data-status="{{ st }}">
-  {% if c.is_fail %}
-  <div class="spr-fail-note"><span class="sp-ms" aria-hidden="true">error</span>You have not cleared this course. Please contact the Registrar's Office for next steps.</div>
-  {% endif %}
   {% if not c.has_comp_marks and not c.display_grade %}
   <div class="spr-state" style="border:none;"><span class="sp-ms" aria-hidden="true">hourglass_empty</span><div><p class="spr-state-title">No marks available yet</p></div></div>
   {% else %}
@@ -772,7 +733,7 @@
         <tr>
           {% for grp in c.regular_groups %}<th scope="colgroup" colspan="{{ grp.components | length }}" class="grp">{{ grp.type_name }}</th>{% endfor %}
           <th scope="colgroup" colspan="{{ 2 if c.show_total else 1 }}" class="grp grp-grade">Grade</th>
-          <th scope="colgroup" colspan="4" class="grp grp-status">Status</th>
+          <th scope="colgroup" colspan="3" class="grp grp-status">Status</th>
           {% for grp in c.reexam_groups %}<th scope="colgroup" colspan="{{ (grp.components | length) + (1 if loop.last else 0) }}" class="grp grp-reexam">{{ grp.type_name }}</th>{% endfor %}
           {% if show_improve %}<th scope="colgroup" colspan="2" class="grp grp-improve">Improvement Exam</th>{% endif %}
           {% if show_updated %}<th scope="colgroup" colspan="2" class="grp grp-final">Updated Final Result</th>{% endif %}
@@ -782,7 +743,7 @@
           <th scope="col">{{ comp.label }}{% if comp.max_marks %}<span class="max">Max {{ comp.max_marks }}</span>{% endif %}</th>
           {% endfor %}{% endfor %}
           {% if c.show_total %}<th scope="col">Total Marks</th>{% endif %}
-          <th scope="col">Grade</th><th scope="col">Enrollment</th><th scope="col">Attendance</th><th scope="col">MFA</th><th scope="col">In SGPA</th>
+          <th scope="col">Grade</th><th scope="col">Enrollment</th><th scope="col">Attendance</th><th scope="col">MFA</th>
           {% for grp in c.reexam_groups %}{% for comp in grp.components %}
           <th scope="col">{{ comp.label }}{% if comp.max_marks %}<span class="max">Max {{ comp.max_marks }}</span>{% endif %}</th>
           {% endfor %}{% endfor %}
@@ -801,7 +762,6 @@
           <td class="{{ 'spr-g-pass' if c.enrollment_status == 'Enrolled' else ('spr-g-fail' if c.enrollment_status in ('Detained', 'Dropped') else '') }}" style="font-weight:600;">{{ c.enrollment_status or '—' }}</td>
           <td class="{{ 'spr-g-fail' if c.attendance_status in ('Absent', 'Detained') else ('spr-g-pass' if c.attendance_status == 'Present' else '') }}" style="font-weight:600;{{ 'color:var(--spr-amber);' if c.attendance_status == 'Low Attendance' }}">{{ c.attendance_status or '—' }}</td>
           <td>{{ c.mfa or '—' }}</td>
-          <td class="{{ 'spr-g-pass' if c.consider_for_sgpa else 'spr-g-pend' }}" style="font-weight:600;">{{ 'Yes' if c.consider_for_sgpa else 'No' }}</td>
           {% for grp in c.reexam_groups %}{% for comp in grp.components %}
           <td>{{ 'Absent' if absent else comp.marks }}</td>
           {% endfor %}{% endfor %}
@@ -814,7 +774,7 @@
           {% endif %}
           {% if show_updated %}
           <td style="font-weight:700;">{{ '—' if (absent or c.updated_final_marks is none) else c.updated_final_marks }}</td>
-          <td>{% if not absent and c.updated_grade %}<span class="spr-mk-grade {{ 'fail' if c.is_fail else 'pass' }}" style="font-size:14px;">{{ c.updated_grade }}{{ grade_sup(c) }}</span>{% else %}—{% endif %}</td>
+          <td>{% if not absent and c.updated_grade %}<span class="spr-mk-grade {{ 'fail' if c.is_fail else 'pass' }}">{{ c.updated_grade }}{{ grade_sup(c) }}</span>{% else %}—{% endif %}</td>
           {% endif %}
         </tr>
       </tbody>
@@ -903,9 +863,6 @@
     if (scroll) document.querySelector('.spr-toolbar').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
   examCards.forEach(function (c) { c.addEventListener('click', function () { onlyExam(c.getAttribute('data-exam'), false); }); });
-  document.querySelectorAll('[data-only-exam]').forEach(function (b) {
-    b.addEventListener('click', function () { onlyExam(b.getAttribute('data-only-exam'), true); });
-  });
 
   /* ── Grid / list toggle (remembered per browser) ─────────────── */
   var viewBtns = document.querySelectorAll('[data-view]');

@@ -57,9 +57,9 @@
   border: 1px solid rgba(255,255,255,0.25);
 }
 .sp-status-paid         { background: rgba(22,163,74,0.30);  border-color: rgba(22,163,74,0.45); }
-.sp-status-partially-paid { background: rgba(217,119,6,0.30); border-color: rgba(217,119,6,0.45); }
-.sp-status-overdue      { background: rgba(220,38,38,0.35);   border-color: rgba(220,38,38,0.45); }
-.sp-status-unpaid       { background: rgba(220,38,38,0.25);   border-color: rgba(220,38,38,0.35); }
+.sp-status-partially-paid { background: rgba(146,12,36,0.30); border-color: rgba(146,12,36,0.45); }
+.sp-status-overdue      { background: rgba(146,12,36,0.35);   border-color: rgba(146,12,36,0.45); }
+.sp-status-unpaid       { background: rgba(146,12,36,0.25);   border-color: rgba(146,12,36,0.35); }
 .sp-hero-lbl {
   font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
   text-transform: uppercase; color: rgba(255,255,255,0.55);
@@ -77,7 +77,7 @@
 .sp-validity-pill {
   font-size: 10.5px; font-weight: 600; padding: 2px 9px; border-radius: 20px;
   background: rgba(200,161,75,0.25); border: 1px solid rgba(200,161,75,0.40);
-  color: #fde68a; letter-spacing: 0.02em;
+  color: #f5c6ce; letter-spacing: 0.02em;
 }
 
 /* Stat row */
@@ -98,7 +98,7 @@
 }
 .sp-stat-label { font-size: 10.5px; color: rgba(255,255,255,0.60); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
 .sp-stat-value { font-size: 17px; font-weight: 800; color: #fff; line-height: 1.2; }
-.sp-stat-value-warn { color: #fde68a; }
+.sp-stat-value-warn { color: #f5c6ce; }
 
 /* Progress bar */
 .sp-progress-wrap { margin-top: 18px; position: relative; z-index: 1; }
@@ -118,7 +118,7 @@
   font-size: 13px; margin-bottom: 16px; border: 1px solid transparent;
 }
 .sp-notice-info    { background: var(--sp-info-bg, #ebf8ff); color: var(--sp-info, #0369a1); border-color: rgba(3,105,161,0.2); }
-.sp-notice-warning { background: var(--sp-warning-bg); color: var(--sp-warning); border-color: rgba(217,119,6,0.25); }
+.sp-notice-warning { background: var(--sp-warning-bg); color: var(--sp-warning); border-color: rgba(146,12,36,0.25); }
 .sp-notice-success { background: #f0fdf4; color: #14532d; border-color: #86efac; }
 
 /* ── Overdue Banner ────────────────────────────────────────────────── */
@@ -129,15 +129,15 @@
 }
 .sp-overdue-banner-icon {
   width: 40px; height: 40px; border-radius: 10px;
-  background: #fee2e2; color: #be123c;
+  background: #fff0f2; color: #920c24;
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
 .sp-overdue-banner-body { flex: 1; }
-.sp-overdue-banner-title { font-size: 13px; font-weight: 700; color: #be123c; }
+.sp-overdue-banner-title { font-size: 13px; font-weight: 700; color: #920c24; }
 .sp-overdue-banner-sub   { font-size: 12px; color: #9f1239; margin-top: 2px; }
 .sp-overdue-banner-btn {
-  font-size: 12px; font-weight: 700; color: #be123c;
-  background: #fff; border: 1px solid #fca5a5;
+  font-size: 12px; font-weight: 700; color: #920c24;
+  background: #fff; border: 1px solid #f5c6ce;
   border-radius: 8px; padding: 6px 14px;
   text-decoration: none; white-space: nowrap; flex-shrink: 0;
 }
@@ -156,7 +156,7 @@
   background: var(--sp-border-light); color: var(--sp-text-3);
   border-radius: 20px; border: 1px solid var(--sp-border);
 }
-.sp-section-count-red { background: #fff1f2; color: #be123c; border-color: #fecdd3; }
+.sp-section-count-red { background: #fff1f2; color: #920c24; border-color: #fecdd3; }
 
 /* ── Fee Structure Card ─────────────────────────────────────────────── */
 .sp-fs-card {
@@ -242,8 +242,8 @@
   display: flex; align-items: center; gap: 6px;
   padding: 7px 16px; font-size: 12px; font-weight: 600;
 }
-.sp-due-overdue  { background: #fff1f2; color: #be123c; }
-.sp-due-urgent   { background: #fffbeb; color: #92400e; }
+.sp-due-overdue  { background: #fff1f2; color: #920c24; }
+.sp-due-urgent   { background: #fff0f2; color: #920c24; }
 .sp-due-upcoming { background: #f0f9ff; color: #0369a1; }
 
 .sp-inv-row {
@@ -419,7 +419,7 @@
 .ppfda-stat-val { font-size: 15px; font-weight: 800; color: #111827; letter-spacing: -.3px; }
 .ppfda-stat-paid   .ppfda-stat-val { color: #16a34a; }
 .ppfda-stat-waived .ppfda-stat-val { color: #7c3aed; }
-.ppfda-stat-overdue .ppfda-stat-val{ color: #be123c; }
+.ppfda-stat-overdue .ppfda-stat-val{ color: #920c24; }
 .ppfda-stat-due    .ppfda-stat-val { color: #1d4ed8; }
 .ppfda-stat-lbl { font-size: 11px; font-weight: 600; color: #374151; margin-top: 2px; }
 .ppfda-stat-sub { font-size: 10px; color: #9ca3af; margin-top: 1px; }
@@ -427,7 +427,7 @@
 .ppfda-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .ppfda-dot-paid    { background: #22c55e; }
 .ppfda-dot-waived  { background: #a78bfa; }
-.ppfda-dot-overdue { background: #f43f5e; }
+.ppfda-dot-overdue { background: #920c24; }
 .ppfda-dot-pending { background: #60a5fa; }
 .ppfda-legend-lbl { font-size: 11px; color: #6b7280; font-weight: 500; margin-right: 8px; }
 @media (max-width: 480px) {
@@ -632,7 +632,7 @@
   font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 10px;
   background: var(--sp-border); color: var(--sp-text-4);
 }
-.sp-tab-badge-red   { background: #fee2e2; color: #be123c; }
+.sp-tab-badge-red   { background: #fff0f2; color: #920c24; }
 .sp-tab-badge-green { background: var(--sp-success-bg); color: var(--sp-success); }
 .sp-tab-panel {
   background: var(--sp-card); border: 1px solid var(--sp-border);
@@ -688,7 +688,7 @@
   {% if has_dues %}
   <div style="flex-shrink:0;margin-left:auto;text-align:right;">
     <div style="font-size:11px;color:rgba(255,255,255,0.7);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Outstanding</div>
-    <div style="font-size:22px;font-weight:800;color:#fde68a;">&#8377;{{ "{:,.0f}".format(total_outstanding) }}</div>
+    <div style="font-size:22px;font-weight:800;color:#f5c6ce;">&#8377;{{ "{:,.0f}".format(total_outstanding) }}</div>
   </div>
   {% endif %}
 </div>
@@ -1385,8 +1385,8 @@
       <div class="sp-demand-type-hdr">
         <span class="ms" style="font-size:13px;
           color:{% if demand_type == 'Academic' %}var(--sp-navy)
-                {% elif demand_type == 'Hostel' %}#c2410c
-                {% elif demand_type == 'Fine' %}#b91c1c
+                {% elif demand_type == 'Hostel' %}#920c24
+                {% elif demand_type == 'Fine' %}#920c24
                 {% elif demand_type == 'Examination' %}#7c3aed
                 {% else %}var(--sp-text-3){% endif %};">
           {% if demand_type == 'Academic' %}school
@@ -1605,7 +1605,7 @@
 {% if has_hostel_fines %}
 <div class="sp-section-hdr fade-in" style="margin-top:24px;" id="sp-hostel-section">
   <div class="sp-section-title">
-    <span class="ms" style="color:#c2410c;">home</span>
+    <span class="ms" style="color:#920c24;">home</span>
     Hostel Fines
   </div>
   <span class="sp-section-count">{{ hostel_fines|length }} fine{{ 's' if hostel_fines|length != 1 else '' }}</span>
@@ -1814,8 +1814,8 @@
 
   /* ── Toast ────────────────────────────────────────────────────── */
   function toast(title,msg,type){
-    var p={success:{bg:'#f0fff4',bd:'#86efac',tx:'#166534'},error:{bg:'#fff5f5',bd:'#fca5a5',tx:'#991b1b'},
-           warning:{bg:'#fffbeb',bd:'#fde68a',tx:'#92400e'},info:{bg:'#ebf8ff',bd:'#bae6fd',tx:'#0c4a6e'}};
+    var p={success:{bg:'#f0fff4',bd:'#86efac',tx:'#166534'},error:{bg:'#fff5f5',bd:'#f5c6ce',tx:'#6b091a'},
+           warning:{bg:'#fff0f2',bd:'#f5c6ce',tx:'#920c24'},info:{bg:'#ebf8ff',bd:'#bae6fd',tx:'#0c4a6e'}};
     var c=p[type]||p.info;
     var t=document.createElement('div');
     t.style.cssText='position:fixed;bottom:20px;right:20px;z-index:10000;max-width:320px;min-width:220px;'
@@ -2493,7 +2493,7 @@
 }
 .spda-stat-paid   .spda-stat-val { color: #16a34a; }
 .spda-stat-waived .spda-stat-val { color: #7c3aed; }
-.spda-stat-overdue .spda-stat-val{ color: #be123c; }
+.spda-stat-overdue .spda-stat-val{ color: #920c24; }
 .spda-stat-due    .spda-stat-val { color: #1d4ed8; }
 .spda-stat-lbl {
   font-size: 11px;
@@ -2520,7 +2520,7 @@
 }
 .spda-dot-paid    { background: #22c55e; }
 .spda-dot-waived  { background: #a78bfa; }
-.spda-dot-overdue { background: #f43f5e; }
+.spda-dot-overdue { background: #920c24; }
 .spda-dot-pending { background: #60a5fa; }
 .spda-legend-lbl {
   font-size: 11px;
@@ -2934,8 +2934,8 @@
 
   /* ── Toast ────────────────────────────────────────────────────── */
   function toast(title,msg,type){
-    var p={success:{bg:'#f0fff4',bd:'#86efac',tx:'#166534'},error:{bg:'#fff5f5',bd:'#fca5a5',tx:'#991b1b'},
-           warning:{bg:'#fffbeb',bd:'#fde68a',tx:'#92400e'},info:{bg:'#ebf8ff',bd:'#bae6fd',tx:'#0c4a6e'}};
+    var p={success:{bg:'#f0fff4',bd:'#86efac',tx:'#166534'},error:{bg:'#fff5f5',bd:'#f5c6ce',tx:'#6b091a'},
+           warning:{bg:'#fff0f2',bd:'#f5c6ce',tx:'#920c24'},info:{bg:'#ebf8ff',bd:'#bae6fd',tx:'#0c4a6e'}};
     var c=p[type]||p.info;
     var t=document.createElement('div');
     t.style.cssText='position:fixed;bottom:20px;right:20px;z-index:10000;max-width:320px;min-width:220px;'
@@ -3613,7 +3613,7 @@
 }
 .spda-stat-paid   .spda-stat-val { color: #16a34a; }
 .spda-stat-waived .spda-stat-val { color: #7c3aed; }
-.spda-stat-overdue .spda-stat-val{ color: #be123c; }
+.spda-stat-overdue .spda-stat-val{ color: #920c24; }
 .spda-stat-due    .spda-stat-val { color: #1d4ed8; }
 .spda-stat-lbl {
   font-size: 11px;
@@ -3640,7 +3640,7 @@
 }
 .spda-dot-paid    { background: #22c55e; }
 .spda-dot-waived  { background: #a78bfa; }
-.spda-dot-overdue { background: #f43f5e; }
+.spda-dot-overdue { background: #920c24; }
 .spda-dot-pending { background: #60a5fa; }
 .spda-legend-lbl {
   font-size: 11px;
@@ -4030,7 +4030,7 @@
             <span class="ms" style="font-size:12px;">warning</span> Overdue
           </span>
           {% else %}
-          <span style="font-size:10px; font-weight:700; color:var(--sp-gold-dark); background:#fef3c7; border:1px solid #fde68a; padding:2px 6px; border-radius:10px; display:inline-flex; align-items:center; gap:4px;">
+          <span style="font-size:10px; font-weight:700; color:var(--sp-gold-dark); background:#fff0f2; border:1px solid #f5c6ce; padding:2px 6px; border-radius:10px; display:inline-flex; align-items:center; gap:4px;">
             <span class="ms" style="font-size:12px;">pending</span> Pending
           </span>
           {% endif %}
@@ -4147,7 +4147,7 @@
             <span class="ms" style="font-size:12px;">warning</span> Overdue
           </span>
           {% else %}
-          <span style="font-size:10px; font-weight:700; color:var(--sp-gold-dark); background:#fef3c7; border:1px solid #fde68a; padding:2px 6px; border-radius:10px; display:inline-flex; align-items:center; gap:4px;">
+          <span style="font-size:10px; font-weight:700; color:var(--sp-gold-dark); background:#fff0f2; border:1px solid #f5c6ce; padding:2px 6px; border-radius:10px; display:inline-flex; align-items:center; gap:4px;">
             <span class="ms" style="font-size:12px;">pending</span> Pending
           </span>
           {% endif %}
@@ -4225,7 +4225,7 @@
 {% if has_hostel_fines %}
 <div class="sp-section-hdr fade-in" style="margin-top:24px;" id="sp-hostel-section">
   <div class="sp-section-title">
-    <span class="ms" style="color:#c2410c;">home</span>
+    <span class="ms" style="color:#920c24;">home</span>
     Hostel Fines
   </div>
   <span class="sp-section-count">{{ hostel_fines|length }} fine{{ 's' if hostel_fines|length != 1 else '' }}</span>
@@ -4434,8 +4434,8 @@
 
   /* ── Toast ────────────────────────────────────────────────────── */
   function toast(title,msg,type){
-    var p={success:{bg:'#f0fff4',bd:'#86efac',tx:'#166534'},error:{bg:'#fff5f5',bd:'#fca5a5',tx:'#991b1b'},
-           warning:{bg:'#fffbeb',bd:'#fde68a',tx:'#92400e'},info:{bg:'#ebf8ff',bd:'#bae6fd',tx:'#0c4a6e'}};
+    var p={success:{bg:'#f0fff4',bd:'#86efac',tx:'#166534'},error:{bg:'#fff5f5',bd:'#f5c6ce',tx:'#6b091a'},
+           warning:{bg:'#fff0f2',bd:'#f5c6ce',tx:'#920c24'},info:{bg:'#ebf8ff',bd:'#bae6fd',tx:'#0c4a6e'}};
     var c=p[type]||p.info;
     var t=document.createElement('div');
     t.style.cssText='position:fixed;bottom:20px;right:20px;z-index:10000;max-width:320px;min-width:220px;'
@@ -5113,7 +5113,7 @@
 }
 .spda-stat-paid   .spda-stat-val { color: #16a34a; }
 .spda-stat-waived .spda-stat-val { color: #7c3aed; }
-.spda-stat-overdue .spda-stat-val{ color: #be123c; }
+.spda-stat-overdue .spda-stat-val{ color: #920c24; }
 .spda-stat-due    .spda-stat-val { color: #1d4ed8; }
 .spda-stat-lbl {
   font-size: 11px;
@@ -5140,7 +5140,7 @@
 }
 .spda-dot-paid    { background: #22c55e; }
 .spda-dot-waived  { background: #a78bfa; }
-.spda-dot-overdue { background: #f43f5e; }
+.spda-dot-overdue { background: #920c24; }
 .spda-dot-pending { background: #60a5fa; }
 .spda-legend-lbl {
   font-size: 11px;
@@ -5554,8 +5554,8 @@
 
   /* ── Toast ────────────────────────────────────────────────────── */
   function toast(title,msg,type){
-    var p={success:{bg:'#f0fff4',bd:'#86efac',tx:'#166534'},error:{bg:'#fff5f5',bd:'#fca5a5',tx:'#991b1b'},
-           warning:{bg:'#fffbeb',bd:'#fde68a',tx:'#92400e'},info:{bg:'#ebf8ff',bd:'#bae6fd',tx:'#0c4a6e'}};
+    var p={success:{bg:'#f0fff4',bd:'#86efac',tx:'#166534'},error:{bg:'#fff5f5',bd:'#f5c6ce',tx:'#6b091a'},
+           warning:{bg:'#fff0f2',bd:'#f5c6ce',tx:'#920c24'},info:{bg:'#ebf8ff',bd:'#bae6fd',tx:'#0c4a6e'}};
     var c=p[type]||p.info;
     var t=document.createElement('div');
     t.style.cssText='position:fixed;bottom:20px;right:20px;z-index:10000;max-width:320px;min-width:220px;'
@@ -6233,7 +6233,7 @@
 }
 .spda-stat-paid   .spda-stat-val { color: #16a34a; }
 .spda-stat-waived .spda-stat-val { color: #7c3aed; }
-.spda-stat-overdue .spda-stat-val{ color: #be123c; }
+.spda-stat-overdue .spda-stat-val{ color: #920c24; }
 .spda-stat-due    .spda-stat-val { color: #1d4ed8; }
 .spda-stat-lbl {
   font-size: 11px;
@@ -6260,7 +6260,7 @@
 }
 .spda-dot-paid    { background: #22c55e; }
 .spda-dot-waived  { background: #a78bfa; }
-.spda-dot-overdue { background: #f43f5e; }
+.spda-dot-overdue { background: #920c24; }
 .spda-dot-pending { background: #60a5fa; }
 .spda-legend-lbl {
   font-size: 11px;
@@ -6650,7 +6650,7 @@
             <span class="ms" style="font-size:12px;">warning</span> Overdue
           </span>
           {% else %}
-          <span style="font-size:10px; font-weight:700; color:var(--sp-gold-dark); background:#fef3c7; border:1px solid #fde68a; padding:2px 6px; border-radius:10px; display:inline-flex; align-items:center; gap:4px;">
+          <span style="font-size:10px; font-weight:700; color:var(--sp-gold-dark); background:#fff0f2; border:1px solid #f5c6ce; padding:2px 6px; border-radius:10px; display:inline-flex; align-items:center; gap:4px;">
             <span class="ms" style="font-size:12px;">pending</span> Pending
           </span>
           {% endif %}
@@ -6897,8 +6897,8 @@
       <div class="sp-demand-type-hdr">
         <span class="ms" style="font-size:13px;
           color:{% if demand_type == 'Academic' %}var(--sp-navy)
-                {% elif demand_type == 'Hostel' %}#c2410c
-                {% elif demand_type == 'Fine' %}#b91c1c
+                {% elif demand_type == 'Hostel' %}#920c24
+                {% elif demand_type == 'Fine' %}#920c24
                 {% elif demand_type == 'Examination' %}#7c3aed
                 {% else %}var(--sp-text-3){% endif %};">
           {% if demand_type == 'Academic' %}school
@@ -7117,7 +7117,7 @@
 {% if has_hostel_fines %}
 <div class="sp-section-hdr fade-in" style="margin-top:24px;" id="sp-hostel-section">
   <div class="sp-section-title">
-    <span class="ms" style="color:#c2410c;">home</span>
+    <span class="ms" style="color:#920c24;">home</span>
     Hostel Fines
   </div>
   <span class="sp-section-count">{{ hostel_fines|length }} fine{{ 's' if hostel_fines|length != 1 else '' }}</span>
@@ -7332,8 +7332,8 @@
 
   /* ── Toast ────────────────────────────────────────────────────── */
   function toast(title,msg,type){
-    var p={success:{bg:'#f0fff4',bd:'#86efac',tx:'#166534'},error:{bg:'#fff5f5',bd:'#fca5a5',tx:'#991b1b'},
-           warning:{bg:'#fffbeb',bd:'#fde68a',tx:'#92400e'},info:{bg:'#ebf8ff',bd:'#bae6fd',tx:'#0c4a6e'}};
+    var p={success:{bg:'#f0fff4',bd:'#86efac',tx:'#166534'},error:{bg:'#fff5f5',bd:'#f5c6ce',tx:'#6b091a'},
+           warning:{bg:'#fff0f2',bd:'#f5c6ce',tx:'#920c24'},info:{bg:'#ebf8ff',bd:'#bae6fd',tx:'#0c4a6e'}};
     var c=p[type]||p.info;
     var t=document.createElement('div');
     t.style.cssText='position:fixed;bottom:20px;right:20px;z-index:10000;max-width:320px;min-width:220px;'
@@ -8011,7 +8011,7 @@
 }
 .spda-stat-paid   .spda-stat-val { color: #16a34a; }
 .spda-stat-waived .spda-stat-val { color: #7c3aed; }
-.spda-stat-overdue .spda-stat-val{ color: #be123c; }
+.spda-stat-overdue .spda-stat-val{ color: #920c24; }
 .spda-stat-due    .spda-stat-val { color: #1d4ed8; }
 .spda-stat-lbl {
   font-size: 11px;
@@ -8038,7 +8038,7 @@
 }
 .spda-dot-paid    { background: #22c55e; }
 .spda-dot-waived  { background: #a78bfa; }
-.spda-dot-overdue { background: #f43f5e; }
+.spda-dot-overdue { background: #920c24; }
 .spda-dot-pending { background: #60a5fa; }
 .spda-legend-lbl {
   font-size: 11px;
