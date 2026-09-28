@@ -859,7 +859,11 @@ class OfferService:
                         port = frappe.conf.get("webserver_port") or 8000
                         frappe.conf.host_name = f"http://127.0.0.1:{port}"
                 
-                pdf_content = frappe.get_print("Offer Letter", offer_doc.name, print_format, as_pdf=True)
+                try:
+                    pdf_content = frappe.get_print("Offer Letter", offer_doc.name, print_format, as_pdf=True)
+                except Exception as pdf_err:
+                    frappe.log_error(f"wkhtmltopdf crashed during Offer Letter generation: {str(pdf_err)}", "PDF Generation Error")
+                    pdf_content = None
             finally:
                 if original_host_name is not None:
                     frappe.conf.host_name = original_host_name
