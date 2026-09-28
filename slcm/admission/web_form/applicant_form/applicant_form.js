@@ -1355,15 +1355,26 @@ function syncTopBarApplyingFor() {
 		label = _slcmProgramLabelCache.label;
 	}
 	if (!label) {
-		try {
-			var $inp = $('.web-form [data-fieldname="program"] input').first();
-			if ($inp.length) {
-				label = ($inp.val() || '').trim();
-			}
-		} catch (e) {}
-	}
-	if (!label) {
 		label = pid;
+		// Fetch actual program name
+		if (window.frappe && frappe.call) {
+			frappe.call({
+				method: 'frappe.client.get_value',
+				args: {
+					doctype: 'Programme',
+					filters: { name: pid },
+					fieldname: 'program_name'
+				},
+				callback: function(r) {
+					if (r && r.message && r.message.program_name) {
+						_slcmProgramLabelCache.id = pid;
+						_slcmProgramLabelCache.label = r.message.program_name;
+						var s = document.getElementById('slcm-applying-for-prog');
+						if (s) s.textContent = r.message.program_name;
+					}
+				}
+			});
+		}
 	}
 	strong.textContent = label;
 }

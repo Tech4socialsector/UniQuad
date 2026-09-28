@@ -17,6 +17,7 @@
   "enable_scholarship",
   "col_break_basic",
   "status",
+  "application_completed_email",
   "max_schemes_per_applicant",
   "cycle_start_date",
   "cycle_end_date",
@@ -259,11 +260,19 @@
    "fieldname": "enable_applicant_register_tab",
    "fieldtype": "Check",
    "label": "Enable Applicant Register Tab"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "application_completed_email",
+   "fieldtype": "Link",
+   "label": "Application Completed Email",
+   "options": "Email Template",
+   "reqd": 1
   }
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2026-09-26 12:55:47.697110",
+ "modified": "2026-09-28 10:31:52.370304",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Admission Cycle",
