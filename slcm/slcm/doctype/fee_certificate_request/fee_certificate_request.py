@@ -394,6 +394,7 @@ def get_fee_certificate_context(request_name):
 		"admit_card_number": student.admit_card_number or "-",
 		"application_number": student.application_number or "-",
 		"registration_id": student.registration_id or student.name,
+		"student_id": student.registration_id or student.name,
 		"programme": programme,
 		"programme_duration": _duration_words(_programme_duration(student)),
 		"academic_year": _short_ay_label(first_ay),
@@ -424,6 +425,7 @@ def get_fee_certificate_context(request_name):
 						"academic_year": label,
 						"fee_amount": _amt(fee) if fee else "0",
 						"paid_amount": _amt(paid) if paid else "0",
+						"is_paid": flt(paid) > 0,
 					},
 				)
 			)

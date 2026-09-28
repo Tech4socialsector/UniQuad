@@ -10,8 +10,7 @@ SINGLE_YEAR_DEMAND = "Single Year Fee Demand"
 SINGLE_YEAR_RECEIPT = "Single Year Fee Receipt"
 
 _APPLIED_FOR = (
-	"<p>This is to certify that <strong>{{ student_name }}</strong> (admit card number : "
-	"<strong>{{ admit_card_number }},</strong> application number : <strong>{{ application_number }}</strong>) "
+	"<p>This is to certify that <strong>{{ student_name }}</strong> (Student ID : <strong>{{ student_id }}</strong>) "
 	"has applied for {{ programme_duration }} {{ programme }} programme for the Academic Year (AY) "
 	"{{ academic_year }} in this University and "
 )
@@ -22,7 +21,10 @@ _BANK_DETAILS = (
 	"Bank &amp; branch - {{ bank_branch }}</p>"
 )
 
-DEFAULT_PAID_LINE = "Academic Year {{ academic_year }} paid amount is Rs. {{ fee_amount }}/-"
+DEFAULT_PAID_LINE = (
+	"Academic Year {{ academic_year }} paid amount is "
+	"{% if is_paid %}Rs. {{ fee_amount }}/-{% else %}NIL{% endif %}"
+)
 
 # Seeded into the Purposes table (by patch, or the "Restore Default Purposes"
 # button). Everything here is editable from the settings form afterwards.

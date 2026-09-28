@@ -59,3 +59,4 @@ slcm.patches.v2_0.fee_certificate_require_full_payment
 slcm.patches.v2_0.fee_certificate_full_payment_for_receipt
 slcm.patches.v2_0.fee_certificate_total_labels
 slcm.patches.v2_0.fee_certificate_all_programme_years
+slcm.patches.v2_0.fee_certificate_student_id_and_nil

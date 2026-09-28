@@ -117,6 +117,7 @@
 
 		table.fee-table th {
 			text-align: center;
+			white-space: nowrap;
 			font-weight: bold;
 			color: #000;
 		}
@@ -144,13 +145,20 @@
 			line-height: 1.3;
 		}
 
+		/* Frappe's print CSS forces "body:last-child .print-format td img
+		   { width: 100% !important }", which outranks these rules, so the width is
+		   also set inline on the <img> tags (inline !important always wins). */
 		.signature-block .signature {
 			height: 24mm;
+			width: auto !important;
+			max-width: none;
 			display: inline-block;
 		}
 
 		.signature-block .seal {
 			height: 24mm;
+			width: auto !important;
+			max-width: none;
 			display: block;
 			margin-left: auto;
 			margin-top: 6px;
@@ -264,12 +272,12 @@
 		{% endif %}
 
 		<div class="signature-block">
-			{% if ctx.signature_image %}<img class="signature" src="data:image/png;base64,{{ ctx.signature_image }}">{% endif %}
+			{% if ctx.signature_image %}<img class="signature" style="width: auto !important; max-width: none !important; height: 24mm;" src="data:image/png;base64,{{ ctx.signature_image }}">{% endif %}
 			{% if not (settings.cfo_signature and settings.signature_includes_designation) %}
 			<div class="designation">{{ settings.cfo_designation or "Chief Finance Officer" }}</div>
 			<div>{{ settings.institute_name or "" }}</div>
 			{% endif %}
-			{% if settings.seal_image %}<img class="seal" src="data:image/png;base64,{{ get_file_b64(settings.seal_image) }}">{% endif %}
+			{% if settings.seal_image %}<img class="seal" style="width: auto !important; max-width: none !important; height: 24mm;" src="data:image/png;base64,{{ get_file_b64(settings.seal_image) }}">{% endif %}
 		</div>
 	</div>
 </td></tr>
