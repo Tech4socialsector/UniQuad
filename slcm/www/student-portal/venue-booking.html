@@ -755,6 +755,8 @@ function submitVenueBooking() {
           document.getElementById('vb-success').style.display = 'flex';
           clearVbForm();
           window.scrollTo({ top: 0, behavior: 'smooth' });
+          var _spMain = document.querySelector('.sp-main');
+          if (_spMain) _spMain.scrollTo({ top: 0, behavior: 'smooth' });
           setTimeout(function() {
             var base = location.href.split('?')[0].split('#')[0];
             location.replace(base + '?_reload=1#vb-history');

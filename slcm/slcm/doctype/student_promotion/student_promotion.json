@@ -36,6 +36,12 @@
   "attendance_result",
   "shortage_course_result",
   "cf_result",
+  "fee_due_result",
+  "section_enrollment",
+  "enrollment_status",
+  "to_enrollment",
+  "col_break_enrollment",
+  "remarks",
   "section_override",
   "manual_override",
   "col_break_override",
@@ -239,6 +245,44 @@
    "read_only": 1
   },
   {
+   "fieldname": "fee_due_result",
+   "fieldtype": "Select",
+   "label": "Fee Due Check",
+   "options": "Pass\nFail\nNot Checked",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_enrollment",
+   "fieldtype": "Section Break",
+   "label": "Promotion Outcome"
+  },
+  {
+   "fieldname": "enrollment_status",
+   "fieldtype": "Select",
+   "label": "Enrollment Status",
+   "options": "\nEnrolled\nFailed\nNot Applicable",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "to_enrollment",
+   "fieldtype": "Link",
+   "label": "New Enrollment",
+   "options": "Student Enrollment",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_break_enrollment",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks",
+   "read_only": 1
+  },
+  {
    "fieldname": "section_override",
    "fieldtype": "Section Break",
    "label": "Manual Override"
@@ -262,7 +306,7 @@
   }
  ],
  "links": [],
- "modified": "2026-06-30 11:22:52.259499",
+ "modified": "2026-09-28 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Student Promotion",

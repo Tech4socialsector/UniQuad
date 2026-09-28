@@ -75,7 +75,23 @@
     body, p, .context-text, .sp-nav-item:not(.active), .sp-breadcrumb { font-weight: 400 !important; }
     .sp-notif-btn { display: flex !important; align-items: center !important; justify-content: center !important; }
     .sp-notif-btn .sp-ms { font-size: 24px !important; }
-  
+
+    /* App shell (desktop): only the content pane scrolls. The page scrollbar
+       no longer runs over the fixed top header, and the header no longer
+       shifts sideways between pages that scroll and pages that don't. */
+    @media screen and (min-width: 769px) {
+      html:has(> body > .sp-layout),
+      body:has(> .sp-layout) { overflow: hidden; }
+      .sp-layout { height: 100vh; min-height: 0; }
+      .sp-main {
+        height: 100%;
+        min-width: 0;
+        overflow-y: auto;
+        scrollbar-gutter: stable;
+        overscroll-behavior: contain;
+      }
+    }
+
     /* Accordion Menu Styles */
     .sp-nav-group { margin-bottom: 4px; }
     .sp-nav-group-header {
@@ -395,9 +411,11 @@
           <a href="/student-portal/leave-request" class="sp-nav-item {% if active_page == 'leave_request' %}active{% endif %}" data-label="Leave Requests">
             <span class="sp-ms">event_busy</span><span class="sp-nav-label">Leave Requests</span>
           </a>
+          {# Transcript Requests — hidden per request; markup kept for easy restore
           <a href="/student-portal/transcript-request" class="sp-nav-item {% if active_page == 'transcript_request' %}active{% endif %}" data-label="Transcript Requests">
             <span class="sp-ms">description</span><span class="sp-nav-label">Transcript Requests</span>
           </a>
+          #}
           <a href="/student-portal/venue-booking" class="sp-nav-item {% if active_page == 'venue_booking' %}active{% endif %}" data-label="Venue Booking">
             <span class="sp-ms">meeting_room</span><span class="sp-nav-label">Venue Booking</span>
           </a>

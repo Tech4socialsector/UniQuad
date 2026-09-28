@@ -5,105 +5,110 @@
 
 <div class="sp-page-header fade-in">
   <h1 class="sp-page-title">Hostel</h1>
-  <p class="sp-page-sub">Room information, complaints, leave requests, and fines</p>
+  <p class="sp-page-sub">Your room, allocation and warden details</p>
 </div>
 
-{% if not is_hosteller %}
+{% if portal_error %}
 <div class="sp-alert sp-alert-warning fade-in">
-  <span class="sp-ms">hotel</span>
-  <div><strong>No active hostel allocation found.</strong> Contact the Hostel Office if you are a resident student.</div>
+  <span class="sp-ms">warning</span>
+  <div>Could not load hostel details. Please refresh the page.</div>
 </div>
 {% endif %}
 
-{# ══════════════════════════ HOSTELLER DETAILS CARD ════════════════════════ #}
-{% if is_hosteller %}
-<div class="sp-section-card fade-in" style="margin-bottom:24px;border-left:4px solid var(--sp-primary);">
-  <div class="sp-section-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+{% if not is_hosteller %}
+{# ── Not a resident ────────────────────────────────────────────── #}
+<div class="sp-card fade-in" style="padding:0;">
+  <div class="sp-empty">
+    <span class="sp-ms">hotel</span>
+    <p class="sp-empty-title">No Hostel Allocation</p>
+    <p class="sp-empty-sub">No active hostel allocation found. Contact the Hostel Office if you are a resident student.</p>
+  </div>
+</div>
+
+{% else %}
+{%- set _hostel = hostel_info.hostel_name or profile.current_hostel or "—" -%}
+{%- set _room   = room_info.room_number or profile.current_room or "—" -%}
+{%- set _bed    = bed_info.bed_no or profile.current_bed or "—" -%}
+
+{# ── Stats ─────────────────────────────────────────────────────── #}
+<div class="sp-stat-grid hostel-stat-grid fade-in">
+
+  <div class="sp-stat-card">
+    <div class="sp-stat-icon" style="background:#eff6ff;color:var(--sp-primary);">apartment</div>
+    <div class="hostel-stat-body">
+      <div class="sp-stat-label">Hostel</div>
+      <div class="sp-stat-value hostel-stat-value" title="{{ _hostel | e }}">{{ _hostel }}</div>
+      {% if hostel_info.hostel_block %}
+      <div class="sp-stat-sub">Block: {{ hostel_info.hostel_block }}</div>
+      {% elif hostel_info.hostel_type %}
+      <div class="sp-stat-sub">{{ hostel_info.hostel_type }}</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="sp-stat-card">
+    <div class="sp-stat-icon" style="background:#f0fdf4;color:var(--sp-success);">door_front</div>
+    <div class="hostel-stat-body">
+      <div class="sp-stat-label">Room</div>
+      <div class="sp-stat-value hostel-stat-value" title="{{ _room | e }}">{{ _room }}</div>
+      {% if room_info.floor %}
+      <div class="sp-stat-sub">Floor {{ room_info.floor }}</div>
+      {% elif room_info.room_type %}
+      <div class="sp-stat-sub">{{ room_info.room_type }}</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="sp-stat-card">
+    <div class="sp-stat-icon" style="background:#faf5ff;color:#7c3aed;">single_bed</div>
+    <div class="hostel-stat-body">
+      <div class="sp-stat-label">Bed / Key</div>
+      <div class="sp-stat-value hostel-stat-value" title="{{ _bed | e }}">{{ _bed }}</div>
+      {% if room_info.room_type and room_info.floor %}
+      <div class="sp-stat-sub">{{ room_info.room_type }}</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="sp-stat-card">
+    <div class="sp-stat-icon" style="background:#fff7ed;color:#ea580c;">event_available</div>
+    <div class="hostel-stat-body">
+      <div class="sp-stat-label">Allotted Since</div>
+      <div class="sp-stat-value hostel-stat-value">{{ frappe.utils.formatdate(allocation.from_date, "d MMM yyyy") if allocation.from_date else "—" }}</div>
+      {% if allocation.status %}
+      <div class="sp-stat-sub">{{ allocation.status }}</div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+{# ── Allocation details ────────────────────────────────────────── #}
+<div class="sp-section-card fade-in" style="margin-bottom:24px;">
+  <div class="sp-section-header" style="justify-content:space-between;flex-wrap:wrap;gap:8px;">
     <span style="display:flex;align-items:center;gap:8px;">
-      <span class="sp-ms">hotel</span> My Accommodation
+      <span class="sp-ms">hotel</span> Allocation Details
     </span>
     <span class="sp-badge sp-badge-pass" style="font-size:11px;padding:4px 12px;">
       <span class="sp-ms" style="font-size:12px;margin-right:3px;">check_circle</span> Active Resident
     </span>
   </div>
-  <div class="sp-section-body" style="padding-top:4px;">
+  <div class="sp-section-body">
 
-    {# ── Row 1 : Hostel / Room / Bed / Type ── #}
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:16px;margin-bottom:16px;">
+    <div class="hostel-info-grid">
 
-      <div class="hostel-detail-tile" style="background:var(--sp-primary-bg,#eff6ff);">
-        <span class="sp-ms" style="color:var(--sp-primary);font-size:22px;">apartment</span>
-        <div>
-          <div class="hostel-tile-label">Hostel</div>
-          <div class="hostel-tile-value">{{ hostel_info.hostel_name or profile.current_hostel or "—" }}</div>
-          {% if hostel_info.hostel_block %}
-          <div class="hostel-tile-sub">Block: {{ hostel_info.hostel_block }}</div>
-          {% elif hostel_info.hostel_type %}
-          <div class="hostel-tile-sub">{{ hostel_info.hostel_type }}</div>
-          {% endif %}
-        </div>
-      </div>
-
-      <div class="hostel-detail-tile" style="background:#f0fdf4;">
-        <span class="sp-ms" style="color:var(--sp-success);font-size:22px;">door_front</span>
-        <div>
-          <div class="hostel-tile-label">Room</div>
-          <div class="hostel-tile-value">{{ room_info.room_number or profile.current_room or "—" }}</div>
-          {% if room_info.floor %}
-          <div class="hostel-tile-sub">Floor {{ room_info.floor }}</div>
-          {% elif room_info.room_type %}
-          <div class="hostel-tile-sub">{{ room_info.room_type }}</div>
-          {% endif %}
-        </div>
-      </div>
-
-      <div class="hostel-detail-tile" style="background:#faf5ff;">
-        <span class="sp-ms" style="color:#7c3aed;font-size:22px;">single_bed</span>
-        <div>
-          <div class="hostel-tile-label">Bed / Key</div>
-          <div class="hostel-tile-value">{{ bed_info.bed_no or profile.current_bed or "—" }}</div>
-          {% if allocation.keys_handed_over %}
-          <div class="hostel-tile-sub" style="color:var(--sp-success);">
-            <span class="sp-ms" style="font-size:11px;vertical-align:middle;">vpn_key</span> Key Issued
-          </div>
-          {% endif %}
-        </div>
-      </div>
-
-      <div class="hostel-detail-tile" style="background:#fff7ed;">
-        <span class="sp-ms" style="color:#ea580c;font-size:22px;">event_available</span>
-        <div>
-          <div class="hostel-tile-label">Allotted Since</div>
-          <div class="hostel-tile-value" style="font-size:13px;">
-            {{ frappe.utils.formatdate(allocation.from_date, "d MMM yyyy") if allocation.from_date else "—" }}
-          </div>
-          {% if allocation.status %}
-          <div class="hostel-tile-sub">{{ allocation.status }}</div>
-          {% endif %}
-        </div>
-      </div>
-
-    </div>
-
-    {# ── Row 2 : Allocation dates + Agreement + Keys + Warden ── #}
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;">
-
-      {% if allocation.from_date %}
       <div class="hostel-info-row">
         <span class="sp-ms hostel-info-icon">calendar_today</span>
         <div>
           <div class="hostel-tile-label">Allocation Period</div>
           <div class="hostel-info-text">
+            {% if allocation.from_date %}
             {{ frappe.utils.formatdate(allocation.from_date, "d MMM yyyy") }}
-            {% if allocation.to_date %}
-            &nbsp;→&nbsp;{{ frappe.utils.formatdate(allocation.to_date, "d MMM yyyy") }}
-            {% else %}
-            &nbsp;→&nbsp;<em style="color:var(--sp-text-4);">Ongoing</em>
-            {% endif %}
+            &nbsp;→&nbsp;{% if allocation.to_date %}{{ frappe.utils.formatdate(allocation.to_date, "d MMM yyyy") }}{% else %}<em style="color:var(--sp-text-4);">Ongoing</em>{% endif %}
+            {% else %}—{% endif %}
           </div>
         </div>
       </div>
-      {% endif %}
 
       <div class="hostel-info-row">
         <span class="sp-ms hostel-info-icon">assignment_turned_in</span>
@@ -111,9 +116,9 @@
           <div class="hostel-tile-label">Agreement</div>
           <div class="hostel-info-text" style="color:{% if allocation.agreement_signed %}var(--sp-success){% else %}var(--sp-warning){% endif %};">
             {% if allocation.agreement_signed %}
-            <span class="sp-ms" style="font-size:13px;vertical-align:middle;">check_circle</span> Signed
+            <span class="sp-ms hostel-inline-icon">check_circle</span> Signed
             {% else %}
-            <span class="sp-ms" style="font-size:13px;vertical-align:middle;">pending</span> Pending
+            <span class="sp-ms hostel-inline-icon">pending</span> Pending
             {% endif %}
           </div>
         </div>
@@ -125,79 +130,40 @@
           <div class="hostel-tile-label">Keys</div>
           <div class="hostel-info-text" style="color:{% if allocation.keys_handed_over %}var(--sp-success){% else %}var(--sp-warning){% endif %};">
             {% if allocation.keys_handed_over %}
-            <span class="sp-ms" style="font-size:13px;vertical-align:middle;">check_circle</span> Handed Over
+            <span class="sp-ms hostel-inline-icon">check_circle</span> Handed Over
             {% else %}
-            <span class="sp-ms" style="font-size:13px;vertical-align:middle;">pending</span> Not Yet Issued
+            <span class="sp-ms hostel-inline-icon">pending</span> Not Yet Issued
             {% endif %}
           </div>
         </div>
       </div>
 
-      {% if hostel_info.warden and hostel_info.warden.warden_name %}
       <div class="hostel-info-row">
         <span class="sp-ms hostel-info-icon">manage_accounts</span>
         <div>
           <div class="hostel-tile-label">Warden</div>
-          <div class="hostel-info-text">{{ hostel_info.warden.warden_name }}</div>
-          {% if hostel_info.warden.warden_contact %}
+          <div class="hostel-info-text">{{ (hostel_info.warden.warden_name if hostel_info.warden else "") or "—" }}</div>
+          {% if hostel_info.warden and hostel_info.warden.warden_contact %}
           <div class="hostel-tile-sub">
-            <span class="sp-ms" style="font-size:11px;vertical-align:middle;">call</span>
-            {{ hostel_info.warden.warden_contact }}
+            <span class="sp-ms hostel-inline-icon" style="font-size:11px;">call</span>
+            <a href="tel:{{ hostel_info.warden.warden_contact | e }}" style="color:inherit;">{{ hostel_info.warden.warden_contact }}</a>
           </div>
           {% endif %}
         </div>
       </div>
-      {% endif %}
 
     </div>
 
     {% if allocation.remarks %}
-    <div style="margin-top:14px;padding:10px 14px;background:#f8f9fa;border-radius:8px;font-size:12px;color:var(--sp-text-3);display:flex;gap:8px;align-items:flex-start;">
-      <span class="sp-ms" style="font-size:15px;flex-shrink:0;margin-top:1px;">info</span>
-      <span>{{ allocation.remarks }}</span>
+    <div class="sp-info-box" style="margin-top:14px;">
+      <span class="sp-ms">info</span>
+      <div>{{ allocation.remarks }}</div>
     </div>
     {% endif %}
 
   </div>
 </div>
-{% endif %}
-
-{# ── Stats ─────────────────────────────────────────────────────── #}
-<div class="sp-stat-grid fade-in" style="margin-bottom:24px;">
-
-  <div class="sp-stat-card">
-    <div class="sp-stat-icon" style="background:#eff6ff;color:var(--sp-primary);">hotel</div>
-    <div>
-      <div class="sp-stat-label">Hostel Block</div>
-      <div class="sp-stat-value" style="font-size:18px;">{{ hostel_info.hostel_name or profile.current_hostel or "—" }}</div>
-    </div>
-  </div>
-
-  <div class="sp-stat-card">
-    <div class="sp-stat-icon" style="background:#f0fdf4;color:var(--sp-success);">door_front</div>
-    <div>
-      <div class="sp-stat-label">Room</div>
-      <div class="sp-stat-value" style="font-size:18px;">{{ room_info.room_number or profile.current_room or "—" }}</div>
-    </div>
-  </div>
-
-  {# <div class="sp-stat-card sp-stat-card-link" onclick="switchTabByName('complaints')" title="View Complaints">
-    <div class="sp-stat-icon" style="background:{% if open_complaints > 0 %}var(--sp-warning-bg){% else %}#f0fdf4{% endif %};color:{% if open_complaints > 0 %}var(--sp-warning){% else %}var(--sp-success){% endif %};">report_problem</div>
-    <div>
-      <div class="sp-stat-label">Open Complaints</div>
-      <div class="sp-stat-value" style="color:{% if open_complaints > 0 %}var(--sp-warning){% endif %};">{{ open_complaints or 0 }}</div>
-    </div>
-  </div>
-
-  <div class="sp-stat-card sp-stat-card-link" onclick="switchTabByName('fines')" title="View Fines">
-    <div class="sp-stat-icon" style="background:{% if total_unpaid_fines > 0 %}var(--sp-danger-bg){% else %}#f0fdf4{% endif %};color:{% if total_unpaid_fines > 0 %}var(--sp-danger){% else %}var(--sp-success){% endif %};">receipt_long</div>
-    <div>
-      <div class="sp-stat-label">Unpaid Fines</div>
-      <div class="sp-stat-value" style="color:{% if total_unpaid_fines > 0 %}var(--sp-danger){% endif %};">₹{{ "{:,.0f}".format(total_unpaid_fines or 0) }}</div>
-    </div>
-  </div> #}
-
-</div>
+{% endif %}{# end is_hosteller #}
 
 {# ── Tabs ──────────────────────────────────────────────────────── #}
 {# <div class="sp-tab-nav fade-in" id="hostel-tab-nav">
@@ -264,6 +230,9 @@
 
   {# List #}
   {% if complaints %}
+  <div class="sp-section-header fade-in" style="background:none;border:none;padding:0 0 10px;">
+    <span class="sp-ms">report_problem</span> My Complaints
+  </div>
   <div style="display:flex;flex-direction:column;gap:10px;">
     {% for c in complaints %}
     <div class="sp-card" style="padding:16px 20px;border-left:3px solid {% if c.status in ('Resolved','Closed') %}var(--sp-success){% elif c.status == 'In Progress' %}var(--sp-info){% else %}var(--sp-warning){% endif %};">
@@ -432,14 +401,26 @@
 
 {% block extra_js %}
 <style>
-/* ── Accommodation detail tiles ── */
-.hostel-detail-tile {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 14px 16px;
-  border-radius: 10px;
+/* ── Stat tiles (same card as the other portal pages) ── */
+.hostel-stat-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 20px; }
+@media (max-width: 1100px) { .hostel-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 420px)  { .hostel-stat-grid { grid-template-columns: minmax(0, 1fr); } }
+.hostel-stat-body { min-width: 0; }
+.hostel-stat-value {
+  font-size: 18px;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
+
+/* ── Allocation details ── */
+.hostel-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+.hostel-inline-icon { font-size: 13px; vertical-align: middle; }
 .hostel-tile-label {
   font-size: 10px;
   font-weight: 600;
@@ -447,12 +428,6 @@
   text-transform: uppercase;
   color: var(--sp-text-4);
   margin-bottom: 2px;
-}
-.hostel-tile-value {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--sp-text-1);
-  line-height: 1.2;
 }
 .hostel-tile-sub {
   font-size: 11px;

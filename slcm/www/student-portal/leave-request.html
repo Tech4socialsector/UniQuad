@@ -291,6 +291,8 @@ function submitLeaveRequest() {
         document.getElementById('lr-success').style.display = 'flex';
         clearLrForm();
         window.scrollTo({ top: 0, behavior: 'smooth' });
+        var _spMain = document.querySelector('.sp-main');
+        if (_spMain) _spMain.scrollTo({ top: 0, behavior: 'smooth' });
         setTimeout(function() { location.reload(); }, 2500);
       }
     },

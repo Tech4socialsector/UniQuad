@@ -478,18 +478,15 @@ function open_promote_dialog_body(listview, selected, batched, student_list, pro
 				fieldtype: "HTML",
 				options: `<div class="promote-dialog-intro">
 					<span class="info-icon">i</span>
-					<span>${__("Promoting {0} selected student(s){1}. Choose where they're being promoted to.", [
+					<span>${__("Promoting {0} selected student(s){1} to the next term. Choose where they're being promoted to.", [
 						`<b>${batched.length}</b>`,
 						program ? __(" in <b>{0}</b>", [frappe.utils.escape_html(program)]) : "",
-					])}</span>
+					])}<br>${__("Term-to-term promotion is automatic — no Promotion Policy is checked. Year-to-year promotion (with policy check) is done from the <b>Promotion Management</b> page.")}</span>
 				</div>`,
 			},
 			{ fieldname: "target_academic_year", label: __("Target Academic Year"), fieldtype: "Link", options: "Academic Year", reqd: 1 },
 			{ fieldname: "target_term", label: __("Target Term"), fieldtype: "Link", options: "Academic Term", reqd: 1,
 				description: __("Required — the target Academic Year can have more than one term (e.g. multiple trimesters), so this pins down exactly which Batch to promote students into.") },
-			{ fieldname: "col_break_1", fieldtype: "Column Break" },
-			{ fieldname: "promotion_policy", label: __("Promotion Policy"), fieldtype: "Link", options: "Promotion Policy",
-				description: __("Optional — evaluates attendance, backlog, CGPA and fee-due rules before promoting. Leave blank to promote all selected students unconditionally.") },
 
 			{ fieldname: "sb_courses", fieldtype: "Section Break", label: `&#128218; ${__("Courses in Target Term")}` },
 			{
@@ -511,7 +508,6 @@ function open_promote_dialog_body(listview, selected, batched, student_list, pro
 							student_list,
 							target_academic_year: values.target_academic_year,
 							target_term: values.target_term,
-							promotion_policy: values.promotion_policy,
 						},
 						freeze: true,
 						freeze_message: __("Queuing promotion run..."),

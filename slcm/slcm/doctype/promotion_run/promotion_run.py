@@ -8,6 +8,7 @@ from frappe.utils import now_datetime, cint
 from slcm.slcm.page.promotion_management.promotion_management import (
 	_evaluate_student,
 	_get_students_raw,
+	_sync_student_master_batch,
 )
 
 BATCH_SIZE = 25
@@ -42,6 +43,30 @@ def _resolve_target_batch(current_batch, target_academic_year, target_term=None)
 	}
 
 	return frappe.db.get_value("Batch", filters, "name")
+
+
+def _move_enrollment(enrollment_name, student, next_batch):
+	"""Complete the current enrollment and create the one in `next_batch`,
+	atomically. Completing the old enrollment flips Student Master to
+	"Graduated" until the new Enrolled one resets it to "Active", so a failed
+	insert must roll back the whole move rather than strand the student."""
+	save_point = "pr_move_" + frappe.generate_hash(length=10)
+	frappe.db.savepoint(save_point)
+	try:
+		old_doc = frappe.get_doc("Student Enrollment", enrollment_name)
+		old_doc.status = "Completed"
+		old_doc.save(ignore_permissions=True)
+
+		new_doc = _new_enrollment_for_batch(student, next_batch)
+		new_doc.insert(ignore_permissions=True)
+
+		# Keep Student Master pointing at the student's current Batch/term.
+		_sync_student_master_batch(student, next_batch)
+	except Exception:
+		frappe.db.rollback(save_point=save_point)
+		raise
+	frappe.db.release_savepoint(save_point)
+	return new_doc.name
 
 
 def _new_enrollment_for_batch(student, batch):
@@ -144,11 +169,15 @@ def get_target_term_courses(student_list, target_academic_year, target_term=None
 
 
 @frappe.whitelist()
-def create_and_queue(student_list, target_academic_year, target_term, promotion_policy=None):
+def create_and_queue(student_list, target_academic_year, target_term):
 	"""Create a Promotion Run in Queued state and enqueue the background job,
 	restricted to exactly the Student Enrollment names the user checked in the
 	list view. Programme / Source Academic Year / Batch / Section are derived
-	from that selection rather than re-asked in the dialog."""
+	from that selection rather than re-asked in the dialog.
+
+	Runs started from Student Enrollment are term-to-term moves and always
+	auto-promote every selected student — no Promotion Policy is applied.
+	Policy-checked promotion is year-to-year only (Promotion Management page)."""
 	_check_permission()
 
 	if isinstance(student_list, str):
@@ -187,7 +216,7 @@ def create_and_queue(student_list, target_academic_year, target_term, promotion_
 	doc.target_academic_year = target_academic_year
 	doc.target_term = target_term
 	doc.section = section
-	doc.promotion_policy = promotion_policy
+	doc.promotion_policy = None
 	doc.status = "Queued"
 	doc.run_by = frappe.session.user
 	doc.run_on = now_datetime()
@@ -323,14 +352,8 @@ def _process_one_student(doc, enrollment, policy_dict, student_eval_map):
 		return
 
 	try:
-		old_doc = frappe.get_doc("Student Enrollment", enrollment.name)
-		old_doc.status = "Completed"
-		old_doc.save(ignore_permissions=True)
-
-		new_doc = _new_enrollment_for_batch(student, next_batch)
-		new_doc.insert(ignore_permissions=True)
-
-		_append_log(doc, enrollment, "Promoted", None, None, to_enrollment=new_doc.name)
+		new_name = _move_enrollment(enrollment.name, student, next_batch)
+		_append_log(doc, enrollment, "Promoted", None, None, to_enrollment=new_name)
 	except Exception:
 		frappe.log_error(
 			title=f"Promotion Run {doc.name}: promote failed for {student}",
@@ -412,13 +435,7 @@ def promote_anyway(promotion_run_name, log_row_name, reason=None):
 	if existing:
 		new_name = existing
 	else:
-		old_doc = frappe.get_doc("Student Enrollment", enrollment.name)
-		old_doc.status = "Completed"
-		old_doc.save(ignore_permissions=True)
-
-		new_doc = _new_enrollment_for_batch(enrollment.student, next_batch)
-		new_doc.insert(ignore_permissions=True)
-		new_name = new_doc.name
+		new_name = _move_enrollment(enrollment.name, enrollment.student, next_batch)
 
 	row.to_enrollment = new_name
 	row.result = "Promoted"
@@ -529,14 +546,16 @@ def retry_unresolved(promotion_run_name):
 			if next_batch and not frappe.db.exists(
 				"Student Enrollment", {"student": enrollment.student, "batch": next_batch, "docstatus": ["<", 2]}
 			):
-				old_doc = frappe.get_doc("Student Enrollment", enrollment.name)
-				old_doc.status = "Completed"
-				old_doc.save(ignore_permissions=True)
+				try:
+					new_name = _move_enrollment(enrollment.name, enrollment.student, next_batch)
+				except Exception:
+					frappe.log_error(
+						title=f"Promotion Run {run.name}: retry failed for {enrollment.student}",
+						message=frappe.get_traceback(),
+					)
+					continue
 
-				new_doc = _new_enrollment_for_batch(enrollment.student, next_batch)
-				new_doc.insert(ignore_permissions=True)
-
-				row.to_enrollment = new_doc.name
+				row.to_enrollment = new_name
 				row.result = "Promoted"
 				row.reason_code = None
 				row.reason_detail = f"Promoted on retry by {frappe.session.user}."

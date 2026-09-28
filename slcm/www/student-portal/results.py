@@ -93,9 +93,11 @@ def get_context(context):
             has_any_fail = False
 
             for m in marks_records:
-                course_name = (
-                    frappe.db.get_value("Course", m.course, "course_name") or m.course
-                )
+                _course = frappe.db.get_value(
+                    "Course", m.course, ["course_name", "course_code"], as_dict=True
+                ) or frappe._dict()
+                course_name = _course.course_name or m.course
+                course_code = _course.course_code or m.course
 
                 # ── Component groups split by regular vs re-exam ──
                 regular_groups, reexam_groups = _get_component_groups(
@@ -152,6 +154,7 @@ def get_context(context):
                 courses_out.append({
                     "course":                   m.course,
                     "course_name":              course_name,
+                    "course_code":              course_code,
                     "display_grade":            display_grade,
                     "display_total":            display_total,
                     "overall_status":           overall_status,
@@ -241,10 +244,12 @@ def get_context(context):
         # ── GPA Trend data for chart (chronological order) ────────
         chart_data = []
         for r in sorted(published_results, key=lambda x: str(x["published_on"] or "")):
-            if r["term_gpa"] is not None or r["term_percentage"] is not None:
+            # Respect the exam's "show SGPA" publish setting in the trend too
+            sgpa = r["term_gpa"] if r["show_sgpa"] else None
+            if sgpa is not None or r["term_percentage"] is not None:
                 chart_data.append({
                     "label": r["term"] or r["exam_name"],
-                    "sgpa":  r["term_gpa"],
+                    "sgpa":  sgpa,
                     "pct":   r["term_percentage"],
                     "cgpa":  r["cumulative_gpa"],
                 })
@@ -541,6 +546,8 @@ def _set_student_nav(context, student):
     )
     context.department = student.department or ""
     context.batch_year = student.batch_year or ""
+    context.academic_year = student.get("academic_year") or ""
+    context.academic_term = student.get("academic_term") or ""
 
 
 def _set_nav_defaults(context):

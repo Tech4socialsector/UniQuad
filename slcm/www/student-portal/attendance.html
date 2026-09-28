@@ -21,6 +21,32 @@
   var SP_CSRF = "{{ frappe.session.csrf_token }}";
 </script>
 <style>
+  /* ── Course-wise attendance panel ── */
+  .att-cw { padding: 16px 20px; margin-bottom: 24px; }
+  .att-cw-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .att-cw-title { font-size: 15px; color: var(--sp-text-1); }
+  .att-cw-legend { margin-left: auto; font-size: 11.5px; color: var(--sp-text-4); display: inline-flex; align-items: center; gap: 6px; }
+  .att-cw-tick-key { width: 2px; height: 12px; background: var(--sp-text-2); border-radius: 1px; }
+  .att-cw-list { display: flex; flex-direction: column; }
+  .att-cw-row {
+    display: grid; grid-template-columns: minmax(160px, 260px) minmax(0, 1fr) 64px 72px;
+    align-items: center; gap: 16px; padding: 10px 0; border-top: 1px solid #f3f4f6;
+  }
+  .att-cw-row:first-child { border-top: none; }
+  .att-cw-name { min-width: 0; }
+  .att-cw-course { font-size: 13.5px; color: var(--sp-text-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .att-cw-meta { font-size: 11px; color: var(--sp-text-4); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .att-cw-bar { position: relative; height: 8px; border-radius: 99px; background: #f1f2f4; }
+  .att-cw-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 99px; min-width: 0; transition: width .4s ease; }
+  .att-cw-tick { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: var(--sp-text-2); border-radius: 1px; }
+  .att-cw-pct { font-size: 15px; text-align: right; font-variant-numeric: tabular-nums; font-family: 'Merriweather', serif; }
+  .att-cw-hrs { font-size: 12px; color: var(--sp-text-4); text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  @media (max-width: 640px) {
+    .att-cw-row { grid-template-columns: minmax(0, 1fr) auto; row-gap: 6px; }
+    .att-cw-bar { grid-column: 1 / -1; grid-row: 2; }
+    .att-cw-hrs { display: none; }
+  }
+
   /* Custom overrides for the exact UI */
   .sp-tab-nav {
     border-bottom: none;
@@ -92,16 +118,8 @@
 </div>
 
 {# ── Summary Stats ─────────────────────────────────────────────── #}
-<div class="sp-att-stat-grid fade-in" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px;">
-  {% set _g = att_good_threshold|default(75) %}{% set _w = att_warn_threshold|default(60) %}
-  {% set avg_col = 'var(--sp-danger)' if avg_attendance < _g else 'var(--sp-success)' %}
-  <div class="sp-card" style="display:flex;align-items:center;gap:12px;text-align:left;padding:16px 20px;">
-    <div style="font-size:32px;color:var(--sp-primary);display:flex;background:#fff0f2;padding:10px;border-radius:8px;"><span class="sp-ms" style="font-size:24px;">bar_chart</span></div>
-    <div>
-      <div class="sp-att-stat-num" style="color:var(--sp-primary);font-size:22px;font-weight:400;font-family:'Merriweather', serif;">{{ avg_attendance }}%</div>
-      <div class="sp-att-stat-lbl" style="font-size:13px;color:var(--sp-text-3);">Overall Average</div>
-    </div>
-  </div>
+{% set _g = att_good_threshold|default(75) %}{% set _w = att_warn_threshold|default(60) %}
+<div class="sp-att-stat-grid fade-in" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 16px;">
   <div class="sp-card" style="display:flex;align-items:center;gap:12px;text-align:left;padding:16px 20px;">
     <div style="font-size:32px;color:var(--sp-primary);display:flex;background:#e0f2fe;padding:10px;border-radius:8px;"><span class="sp-ms" style="font-size:24px;">menu_book</span></div>
     <div>
@@ -113,7 +131,7 @@
     <div style="font-size:32px;color:var(--sp-primary);display:flex;background:#fef3c7;padding:10px;border-radius:8px;"><span class="sp-ms" style="font-size:24px;">warning</span></div>
     <div>
       <div class="sp-att-stat-num" style="color:var(--sp-primary);font-size:22px;font-weight:400;font-family:'Merriweather', serif;">{{ courses_below_75 }}</div>
-      <div class="sp-att-stat-lbl" style="font-size:13px;color:var(--sp-text-3);">Below {{ att_good_threshold|default(75)|int }}%</div>
+      <div class="sp-att-stat-lbl" style="font-size:13px;color:var(--sp-text-3);">Below {{ _g|int }}%</div>
     </div>
   </div>
   <div class="sp-card" style="display:flex;align-items:center;gap:12px;text-align:left;padding:16px 20px;">
@@ -124,6 +142,34 @@
     </div>
   </div>
 </div>
+
+{# ── Course-wise Attendance ────────────────────────────────────── #}
+{% if attendance_summaries %}
+<div class="sp-card att-cw fade-in">
+  <div class="att-cw-head">
+    <span class="sp-ms" style="font-size:20px;color:var(--sp-primary);">leaderboard</span>
+    <span class="att-cw-title">Course-wise Attendance</span>
+    <span class="att-cw-legend"><span class="att-cw-tick-key"></span>Minimum required</span>
+  </div>
+  <div class="att-cw-list">
+    {% for tg in term_groups %}{% for s in tg.summaries %}
+    {% set _min = (s.minimum_required_percentage or _g)|float %}
+    <div class="att-cw-row">
+      <div class="att-cw-name">
+        <div class="att-cw-course" title="{{ s.course_display | e }}">{{ s.course_display }}</div>
+        <div class="att-cw-meta">{{ s.course_code or '' }}{% if s.course_code and tg.term %} · {% endif %}{{ tg.term or '' }}</div>
+      </div>
+      <div class="att-cw-bar" role="img" aria-label="{{ s.course_display | e }}: {{ s.pct }}% attendance, minimum {{ _min|int }}%">
+        <div class="att-cw-fill" style="width:{{ [[s.pct, 0]|max, 100]|min }}%;background:{{ s.status_color }};"></div>
+        <div class="att-cw-tick" style="left:{{ [_min, 100]|min }}%;"></div>
+      </div>
+      <div class="att-cw-pct" style="color:{{ s.status_color }};">{{ s.pct }}%</div>
+      <div class="att-cw-hrs">{{ s.attended_classes|int }} / {{ s.total_class_hours|int }}h</div>
+    </div>
+    {% endfor %}{% endfor %}
+  </div>
+</div>
+{% endif %}
 
 {# ── Alert ─────────────────────────────────────────────────────── #}
 {% if courses_below_75 > 0 %}
