@@ -1,6 +1,9 @@
 {% extends "slcm/www/student-portal/_base.html" %}
 
-{% block title %}Attendance
+{% block title %}Attendance{% endblock %}
+
+
+{% block extra_head %}
 <!-- Flatpickr for Date Inputs -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
@@ -12,10 +15,6 @@
     }
   });
 </script>
-{% endblock %}
-
-
-{% block extra_head %}
 <script>
   /* CSRF token for Frappe API calls */
   var SP_CSRF = "{{ frappe.session.csrf_token }}";
@@ -121,21 +120,21 @@
 {% set _g = att_good_threshold|default(75) %}{% set _w = att_warn_threshold|default(60) %}
 <div class="sp-att-stat-grid fade-in" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 16px;">
   <div class="sp-card" style="display:flex;align-items:center;gap:12px;text-align:left;padding:16px 20px;">
-    <div style="font-size:32px;color:var(--sp-primary);display:flex;background:#e0f2fe;padding:10px;border-radius:8px;"><span class="sp-ms" style="font-size:24px;">menu_book</span></div>
+    <div style="font-size:32px;color:var(--sp-primary);display:flex;background:#fff0f2;padding:10px;border-radius:8px;"><span class="sp-ms" style="font-size:24px;">menu_book</span></div>
     <div>
       <div class="sp-att-stat-num" style="color:var(--sp-primary);font-size:22px;font-weight:400;font-family:'Merriweather', serif;">{{ total_courses }}</div>
       <div class="sp-att-stat-lbl" style="font-size:13px;color:var(--sp-text-3);">Total Courses</div>
     </div>
   </div>
   <div class="sp-card" style="display:flex;align-items:center;gap:12px;text-align:left;padding:16px 20px;">
-    <div style="font-size:32px;color:var(--sp-primary);display:flex;background:#fef3c7;padding:10px;border-radius:8px;"><span class="sp-ms" style="font-size:24px;">warning</span></div>
+    <div style="font-size:32px;color:var(--sp-primary);display:flex;background:#fff0f2;padding:10px;border-radius:8px;"><span class="sp-ms" style="font-size:24px;">warning</span></div>
     <div>
       <div class="sp-att-stat-num" style="color:var(--sp-primary);font-size:22px;font-weight:400;font-family:'Merriweather', serif;">{{ courses_below_75 }}</div>
       <div class="sp-att-stat-lbl" style="font-size:13px;color:var(--sp-text-3);">Below {{ _g|int }}%</div>
     </div>
   </div>
   <div class="sp-card" style="display:flex;align-items:center;gap:12px;text-align:left;padding:16px 20px;">
-    <div style="font-size:32px;color:var(--sp-primary);display:flex;background:#dcfce7;padding:10px;border-radius:8px;"><span class="sp-ms" style="font-size:24px;">check_circle</span></div>
+    <div style="font-size:32px;color:var(--sp-primary);display:flex;background:#fff0f2;padding:10px;border-radius:8px;"><span class="sp-ms" style="font-size:24px;">check_circle</span></div>
     <div>
       <div class="sp-att-stat-num" style="color:var(--sp-primary);font-size:22px;font-weight:400;font-family:'Merriweather', serif;">{{ courses_eligible }}</div>
       <div class="sp-att-stat-lbl" style="font-size:13px;color:var(--sp-text-3);">Exam Eligible</div>
@@ -173,7 +172,7 @@
 
 {# ── Alert ─────────────────────────────────────────────────────── #}
 {% if courses_below_75 > 0 %}
-<div class="fade-in" style="background:#fffbeb;border:1px solid #fef3c7;border-radius:8px;padding:12px 16px;display:flex;align-items:center;gap:12px;margin-bottom:24px;color:#b45309;font-size:13px;">
+<div class="fade-in" style="background:#fff0f2;border:1px solid #f5c6ce;border-radius:8px;padding:12px 16px;display:flex;align-items:center;gap:12px;margin-bottom:24px;color:var(--sp-primary);font-size:13px;">
   <span class="sp-ms" style="font-size:20px;">warning</span>
   <div>
     <strong>{{ courses_below_75 }} course{% if courses_below_75 != 1 %}s{% endif %} below 75%.</strong>
@@ -234,18 +233,18 @@
           <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
             <div style="font-size:18px;font-weight:700;color:var(--sp-text-1);font-family:'Merriweather', serif;">{{ s.course_display }}</div>
             {% if s.course_code %}
-            <span class="sp-badge" style="background:#e0f2fe;color:#0369a1;border-radius:12px;padding:2px 10px;font-size:11px;">{{ s.course_code }}</span>
+            <span class="sp-badge" style="background:#fff0f2;color:#920c24;border-radius:12px;padding:2px 10px;font-size:11px;">{{ s.course_code }}</span>
             {% endif %}
             {% if s.term_name %}
             <span class="sp-badge" style="background:#dcfce7;color:#15803d;border-radius:12px;padding:2px 10px;font-size:11px;">{{ s.term_name }}</span>
             {% endif %}
             {% if s.credits %}
-            <span class="sp-badge" style="background:#f3e8ff;color:#7e22ce;border-radius:12px;padding:2px 10px;font-size:11px;">{{ s.credits }} Credits</span>
+            <span class="sp-badge" style="background:#fff0f2;color:#920c24;border-radius:12px;padding:2px 10px;font-size:11px;">{{ s.credits }} Credits</span>
             {% endif %}
           </div>
           <div style="display:flex;align-items:center;gap:12px;flex-shrink:0;">
             <div style="font-size:22px;font-weight:400;font-family:'Merriweather', serif;color:{{ s.status_color }};line-height:1;">{{ s.pct }}%</div>
-            <span class="sp-badge" style="font-size:11px;border-radius:12px;padding:2px 10px;background:{% if s.status_label == 'Good' %}var(--sp-success-light, #dcfce7);color:var(--sp-success, #15803d){% elif s.status_label == 'Low' %}var(--sp-warning-light, #fef3c7);color:var(--sp-warning, #d97706){% else %}#fee2e2;color:#dc2626{% endif %};">
+            <span class="sp-badge" style="font-size:11px;border-radius:12px;padding:2px 10px;background:{% if s.status_label == 'Good' %}var(--sp-success-light, #dcfce7);color:var(--sp-success, #15803d){% elif s.status_label == 'Low' %}#fff0f2;color:var(--sp-primary){% else %}#fee2e2;color:#dc2626{% endif %};">
               {{ s.status_label }}
             </span>
           </div>
@@ -276,7 +275,7 @@
             
             {% if s.total_office_hours and s.total_office_hours > 0 %}
             <span style="color:#d1d5db;">|</span>
-            <span class="sp-badge" style="border-radius:12px;padding:2px 10px;background:#e0f2fe;color:#0369a1;">
+            <span class="sp-badge" style="border-radius:12px;padding:2px 10px;background:#fff0f2;color:#920c24;">
               <span class="sp-ms" style="font-size:14px;vertical-align:-2px;">schedule</span>Office: {{ s.total_office_hours }}h
             </span>
             {% endif %}
@@ -291,7 +290,7 @@
           
           <div style="display:flex;gap:8px;flex-shrink:0;">
             {% if s.can_apply_condonation %}
-            <button class="sp-btn sp-btn-outline-warning sp-btn-sm" style="border-radius:8px;padding:6px 12px;display:flex;align-items:center;gap:6px;color:#ea580c;border-color:#ea580c;background:transparent;"
+            <button class="sp-btn sp-btn-outline sp-btn-sm" style="border-radius:8px;padding:6px 12px;display:flex;align-items:center;gap:6px;color:var(--sp-primary);border:1px solid var(--sp-primary);background:transparent;"
               onclick="spOpenCondonation('{{ s.course_offering }}', '{{ s.course_display|replace("'", "\'") }}')"
               title="Apply for Attendance Condonation">
               <span class="sp-ms" style="font-size:16px;">person</span>Apply Condonation
@@ -364,7 +363,7 @@
 
   {% if not allow_condonation %}
   <div class="sp-alert sp-alert-info fade-in" style="margin-top:16px;">
-    <span class="sp-ms" style="font-size:24px; color:#0284c7; flex-shrink:0;">info</span>
+    <span class="sp-ms" style="font-size:24px; color:var(--sp-primary); flex-shrink:0;">info</span>
     <div>Condonation Applications are currently <strong>disabled</strong> by the administration.</div>
   </div>
   {% elif not condonation_applications %}
@@ -406,7 +405,7 @@
           <td style="font-size:13px;color:var(--sp-text-3);">{{ app.condonation_reason or "—" }}</td>
           <td>
             {% set rec = app.faculty_recommendation or "Pending" %}
-            <span class="sp-badge" style="font-size:11px;background:{% if rec == 'Recommended' %}var(--sp-success-bg);color:var(--sp-success){% elif rec == 'Not Recommended' %}var(--sp-danger-bg);color:var(--sp-danger){% else %}var(--sp-warning-bg);color:var(--sp-warning){% endif %};">
+            <span class="sp-badge" style="font-size:11px;background:{% if rec == 'Recommended' %}var(--sp-success-bg);color:var(--sp-success){% elif rec == 'Not Recommended' %}var(--sp-danger-bg);color:var(--sp-danger){% else %}#fff0f2;color:var(--sp-primary){% endif %};">
               {{ rec }}
             </span>
           </td>
@@ -433,10 +432,10 @@
   {% endif %}
 
   {# Info box about condonation #}
-  <div class="sp-info-box fade-in" style="margin-top:48px; background-color:#f0f9ff; border:1px solid #bae6fd; border-radius:12px; padding:20px; display:flex; gap:16px; color:#0c4a6e;">
-    <span class="sp-ms" style="font-size:24px; color:#0284c7; flex-shrink:0;">info</span>
+  <div class="sp-info-box fade-in" style="margin-top:48px; background-color:#fff0f2; border:1px solid #f5c6ce; border-radius:12px; padding:20px; display:flex; gap:16px; color:var(--sp-text-1);">
+    <span class="sp-ms" style="font-size:24px; color:var(--sp-primary); flex-shrink:0;">info</span>
     <div>
-      <strong style="color:#0369a1; font-size:14px;">About Condonation:</strong>
+      <strong style="color:var(--sp-primary); font-size:14px;">About Condonation:</strong>
       <ul style="margin:8px 0 0 16px;padding:0;font-size:13px;line-height:1.8;color:#0f172a;">
         <li>Apply anytime during the trimester — your attendance % is only checked at final (Programme Chair) approval, and must be <strong>{{ min_condonation_pct|int }}% or above</strong> at that point</li>
         <li>Requires Faculty recommendation followed by Programme Chair approval</li>
@@ -537,8 +536,8 @@
   {% endif %}
 
   {# Info box #}
-  <div class="sp-info-box fade-in" style="margin-top:48px; background-color:#f0f9ff; border:1px solid #bae6fd; border-radius:12px; padding:20px; display:flex; gap:16px; color:#0c4a6e;">
-    <span class="sp-ms" style="font-size:24px; color:#0284c7; flex-shrink:0;">info</span>
+  <div class="sp-info-box fade-in" style="margin-top:48px; background-color:#fff0f2; border:1px solid #f5c6ce; border-radius:12px; padding:20px; display:flex; gap:16px; color:var(--sp-text-1);">
+    <span class="sp-ms" style="font-size:24px; color:var(--sp-primary); flex-shrink:0;">info</span>
     <div style="font-size:13px;line-height:1.8;">
       <strong>About Office Hours:</strong> Attending office hours sessions counts towards your attendance percentage.
       Click <strong>Register Attendance</strong> to log your participation for a scheduled session.
@@ -1240,9 +1239,9 @@
             + escHtml(s.session_type || 'Lecture') + '</span>';
 
       if (s.from_time || s.to_time) {
-        html += '<span style="font-size:12px;font-weight:600;color:#4f46e5;">'
+        html += '<span style="font-size:12px;font-weight:600;color:#920c24;">'
               + escHtml(s.from_time || '');
-        if (s.to_time) html += '<span style="font-weight:400;color:#a5b4fc;margin:0 4px;">–</span>' + escHtml(s.to_time);
+        if (s.to_time) html += '<span style="font-weight:400;color:#f5c6ce;margin:0 4px;">–</span>' + escHtml(s.to_time);
         html += '</span>';
       }
 

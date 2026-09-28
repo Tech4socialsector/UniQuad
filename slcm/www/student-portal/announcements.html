@@ -10,8 +10,8 @@
   --ann-maroon-mid:  rgba(146,12,36,0.16);
   --ann-urgent:      #b91c1c;
   --ann-urgent-bg:   #fef2f2;
-  --ann-important:   #b45309;
-  --ann-important-bg:#fffbeb;
+  --ann-important:   #920c24;
+  --ann-important-bg:#fff0f2;
   --ann-border:      var(--sp-border, #e2e8f0);
   --ann-row:         #f1f2f4;
 }
@@ -21,14 +21,6 @@
 .ann-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
 .ann-head .sp-page-header { margin: 0; }
 
-/* Stats */
-.ann-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 18px; }
-@media (max-width: 1100px) { .ann-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-.ann-stat-btn { cursor: pointer; font: inherit; text-align: left; width: 100%; }
-.ann-stat-btn:disabled { cursor: default; }
-.ann-stat-btn:disabled:hover { transform: none; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
-.ann-stat-btn[aria-pressed="true"] { border-color: var(--ann-maroon); box-shadow: 0 0 0 1px var(--ann-maroon); }
-.ann-stat-btn:focus-visible { outline: 2px solid var(--ann-maroon); outline-offset: 2px; }
 
 /* Toolbar */
 .ann-toolbar {
@@ -179,38 +171,6 @@
   <div>Could not load announcements. Please refresh the page.</div>
 </div>
 {% endif %}
-
-{# ── Stats (clickable priority filters) ─────────────────────────── #}
-<div class="sp-stat-grid ann-stats fade-in" role="group" aria-label="Filter by priority">
-  <button type="button" class="sp-stat-card ann-stat-btn" data-priority="" aria-pressed="{{ 'true' if announcements else 'false' }}"{{ ' disabled' if not announcements }}>
-    <div class="sp-stat-icon" style="background:var(--ann-maroon-soft);color:var(--ann-maroon);">campaign</div>
-    <div>
-      <div class="sp-stat-label">Active</div>
-      <div class="sp-stat-value">{{ total_count or 0 }}</div>
-    </div>
-  </button>
-  <button type="button" class="sp-stat-card ann-stat-btn" data-priority="Urgent" aria-pressed="false"{{ ' disabled' if not urgent_count }}>
-    <div class="sp-stat-icon" style="background:var(--ann-urgent-bg);color:var(--ann-urgent);">warning</div>
-    <div>
-      <div class="sp-stat-label">Urgent</div>
-      <div class="sp-stat-value" style="color:var(--ann-urgent);">{{ urgent_count or 0 }}</div>
-    </div>
-  </button>
-  <button type="button" class="sp-stat-card ann-stat-btn" data-priority="Important" aria-pressed="false"{{ ' disabled' if not important_count }}>
-    <div class="sp-stat-icon" style="background:var(--ann-important-bg);color:var(--ann-important);">priority_high</div>
-    <div>
-      <div class="sp-stat-label">Important</div>
-      <div class="sp-stat-value" style="color:var(--ann-important);">{{ important_count or 0 }}</div>
-    </div>
-  </button>
-  <div class="sp-stat-card">
-    <div class="sp-stat-icon" style="background:#f3f4f6;color:var(--sp-text-3);">event_busy</div>
-    <div>
-      <div class="sp-stat-label">Expiring This Week</div>
-      <div class="sp-stat-value">{{ expiring_count or 0 }}</div>
-    </div>
-  </div>
-</div>
 
 {# ── Active announcements ─────────────────────────────────────── #}
 {% if announcements %}
@@ -408,19 +368,17 @@
 
   if (!list) return;
 
-  /* ── Filters: search + category + priority (stat cards) ───────── */
+  /* ── Filters: search + category ───────── */
   var q = document.getElementById('ann-q');
   var shown = document.getElementById('ann-shown');
   var noMatch = document.getElementById('ann-no-match');
   var cats = document.querySelectorAll('.ann-cat');
-  var pris = document.querySelectorAll('.ann-stat-btn');
-  var state = { cat: '', pri: '' };
+  var state = { cat: '' };
 
   function apply() {
     var term = (q.value || '').trim().toLowerCase(), n = 0;
     list.querySelectorAll('.ann-card').forEach(function (el) {
       var ok = (!state.cat || el.getAttribute('data-cat') === state.cat)
-            && (!state.pri || el.getAttribute('data-priority') === state.pri)
             && (!term || el.getAttribute('data-q').indexOf(term) > -1);
       el.classList.toggle('is-hidden', !ok);
       if (ok) n++;
@@ -428,19 +386,11 @@
     shown.textContent = n;
     noMatch.classList.toggle('is-hidden', n > 0);
     cats.forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-cat') === state.cat ? 'true' : 'false'); });
-    pris.forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-priority') === state.pri ? 'true' : 'false'); });
   }
   q.addEventListener('input', apply);
   cats.forEach(function (b) { b.addEventListener('click', function () { state.cat = b.getAttribute('data-cat'); apply(); }); });
-  pris.forEach(function (b) {
-    b.addEventListener('click', function () {
-      var p = b.getAttribute('data-priority');
-      state.pri = (state.pri === p) ? '' : p;   /* click again to clear */
-      apply();
-    });
-  });
   document.getElementById('ann-reset').addEventListener('click', function () {
-    q.value = ''; state.cat = ''; state.pri = ''; apply();
+    q.value = ''; state.cat = ''; apply();
   });
 }());
 </script>

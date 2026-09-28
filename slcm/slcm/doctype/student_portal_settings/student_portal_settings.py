@@ -16,7 +16,7 @@ _DEFAULTS = {
     "font_family":           "Merriweather",
     "font_size":             "Normal",
     # Theme — NLSIU Academic palette
-    "primary_color":         "#2b2e4a",   # NLSIU deep navy
+    "primary_color":         "#920c24",   # NLSIU institutional maroon
     "secondary_color":       "#920c24",   # NLSIU institutional maroon
     "background_color":      "#f7f5f0",   # Warm academic off-white
     "card_background":       "#ffffff",
@@ -24,15 +24,15 @@ _DEFAULTS = {
     "nav_text_color":        "#ffffff",
     # Status colors
     "success_color":         "#16a34a",
-    "warning_color":         "#d97706",
+    "warning_color":         "#920c24",
     "danger_color":          "#dc2626",
-    "info_color":            "#0369a1",
+    "info_color":            "#920c24",
     # Grading
     "grade_excellent_color": "#16a34a",
     "grade_excellent_label": "A+ / A / S",
-    "grade_good_color":      "#0369a1",
+    "grade_good_color":      "#920c24",
     "grade_good_label":      "B+ / B",
-    "grade_average_color":   "#d97706",
+    "grade_average_color":   "#920c24",
     "grade_average_label":   "C+ / C",
     "grade_color": "#000000",
             "grade_fail_color":      "#dc2626",

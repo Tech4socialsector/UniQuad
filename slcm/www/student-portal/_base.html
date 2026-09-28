@@ -37,9 +37,9 @@
       --sp-sidebar-text-2:     {{ sp_settings.nav_text_color         or '#920c24' }};
       
       --sp-success:            {{ sp_settings.success_color          or '#16a34a' }};
-      --sp-warning:            {{ sp_settings.warning_color          or '#d97706' }};
+      --sp-warning:            {{ sp_settings.warning_color          or '#920c24' }};
       --sp-danger:             {{ sp_settings.danger_color           or '#dc2626' }};
-      --sp-info:               {{ sp_settings.info_color             or '#0369a1' }};
+      --sp-info:               {{ sp_settings.info_color             or '#920c24' }};
       
       --sp-font-family:        'Merriweather', serif;
       --sp-font-size:          {{ '13px' if sp_settings.font_size == 'Small' else '15px' if sp_settings.font_size == 'Large' else '14px' }};
@@ -51,10 +51,10 @@
             --sp-grade-color:      {{ sp_settings.grade_color            or '#000000' }};
       --sp-grade-fail:         {{ sp_settings.grade_fail_color       or '#85142b' }};
       --sp-grade-excellent:    {{ sp_settings.grade_excellent_color  or '#16a34a' }};
-      --sp-grade-good:         {{ sp_settings.grade_good_color       or '#0369a1' }};
-      --sp-grade-average:      {{ sp_settings.grade_average_color    or '#d97706' }};
+      --sp-grade-good:         {{ sp_settings.grade_good_color       or '#920c24' }};
+      --sp-grade-average:      {{ sp_settings.grade_average_color    or '#920c24' }};
       --sp-att-good:           {{ sp_settings.att_good_color         or '#15803d' }};
-      --sp-att-warn:           {{ sp_settings.att_warn_color         or '#b45309' }};
+      --sp-att-warn:           {{ sp_settings.att_warn_color         or '#920c24' }};
       --sp-att-danger:         {{ sp_settings.att_danger_color       or '#85142b' }};
     }
     {% if sp_settings.custom_css %}
@@ -148,7 +148,7 @@
     </div>
     <h2 style="margin:0 0 10px;color:#0f172a;font-size:22px;font-weight:800;letter-spacing:-0.02em;">Not a Student Account</h2>
     <p style="color:#64748b;font-size:14px;margin:0 0 28px;line-height:1.6;">Your account is not linked to a student record. Please use the correct portal or contact the administrator for access.</p>
-    <button onclick="spNotStudentLogout()" style="display:inline-flex;align-items:center;gap:8px;padding:11px 28px;background:linear-gradient(135deg,#2b2e4a,#920c24);color:#fff;border-radius:10px;border:none;cursor:pointer;font-weight:600;font-size:14px;font-family:inherit;box-shadow:0 4px 16px rgba(43,46,74,0.3);">
+    <button onclick="spNotStudentLogout()" style="display:inline-flex;align-items:center;gap:8px;padding:11px 28px;background:linear-gradient(135deg,#920c24,#920c24);color:#fff;border-radius:10px;border:none;cursor:pointer;font-weight:600;font-size:14px;font-family:inherit;box-shadow:0 4px 16px rgba(43,46,74,0.3);">
       <span style="font-family:'Material Symbols Outlined';font-size:18px;">logout</span>Sign Out &amp; Login Again
     </button>
     <script>
@@ -353,9 +353,11 @@
           <a href="/student-portal/profile" class="sp-nav-item {% if active_page == 'profile' %}active{% endif %}" data-label="My Profile">
             <span class="sp-ms">person</span><span class="sp-nav-label">My Profile</span>
           </a>
+          {% if sp_settings.menu_placement %}
           <a href="/student-portal/placement" class="sp-nav-item {% if active_page == 'placement' %}active{% endif %}" data-label="Placements">
             <span class="sp-ms">work</span><span class="sp-nav-label">Placements</span>
           </a>
+          {% endif %}
         </div>
       </div>
 
@@ -410,9 +412,11 @@
           <a href="/student-portal/hostel" class="sp-nav-item {% if active_page == 'hostel' %}active{% endif %}" data-label="Hostel Management">
             <span class="sp-ms">hotel</span><span class="sp-nav-label">Hostel Management</span>
           </a>
+          {# Leave Requests — hidden per request; markup kept for easy restore
           <a href="/student-portal/leave-request" class="sp-nav-item {% if active_page == 'leave_request' %}active{% endif %}" data-label="Leave Requests">
             <span class="sp-ms">event_busy</span><span class="sp-nav-label">Leave Requests</span>
           </a>
+          #}
           {# Transcript Requests — hidden per request; markup kept for easy restore
           <a href="/student-portal/transcript-request" class="sp-nav-item {% if active_page == 'transcript_request' %}active{% endif %}" data-label="Transcript Requests">
             <span class="sp-ms">description</span><span class="sp-nav-label">Transcript Requests</span>

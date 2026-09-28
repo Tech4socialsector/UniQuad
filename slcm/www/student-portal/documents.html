@@ -124,13 +124,13 @@
         <div>
           <div class="doc-title">{{ student_name }}</div>
           <div class="doc-meta">{{ student_id or active_id_card.name }}</div>
-          <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;margin:12px 0;font-size:12px;color:#92400e;">
+          <div style="background:#fff0f2;border:1px solid #f5c6ce;border-radius:8px;padding:10px 14px;margin:12px 0;font-size:12px;color:#920c24;">
             <span class="sp-ms" style="vertical-align:middle;font-size:16px;margin-right:4px;">schedule</span>
             This ID card expired on <strong>{{ frappe.utils.formatdate(active_id_card.expiry_date, "dd MMM yyyy") if active_id_card.expiry_date else "an unknown date" }}</strong>. Please contact the Registrar's Office to renew.
           </div>
           <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:12px;">
             <div><div class="sp-info-label">Issued</div><div class="sp-info-val">{{ frappe.utils.formatdate(active_id_card.issue_date, "dd MMM yyyy") if active_id_card.issue_date else "—" }}</div></div>
-            <div><div class="sp-info-label">Expired On</div><div class="sp-info-val" style="color:#d97706;">{{ frappe.utils.formatdate(active_id_card.expiry_date, "dd MMM yyyy") if active_id_card.expiry_date else "—" }}</div></div>
+            <div><div class="sp-info-label">Expired On</div><div class="sp-info-val" style="color:#920c24;">{{ frappe.utils.formatdate(active_id_card.expiry_date, "dd MMM yyyy") if active_id_card.expiry_date else "—" }}</div></div>
           </div>
           <a class="sp-btn sp-btn-sm sp-btn-secondary" href="/student-portal/support"><span class="sp-ms">autorenew</span>Request Renewal</a>
         </div>

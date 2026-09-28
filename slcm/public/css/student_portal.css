@@ -5,8 +5,8 @@
 
 /* ── Design Tokens — NLSIU Academic Theme ─────────────────── */
 :root {
-  /* ── Primary palette — NLSIU exact navy #2B2E4A ── */
-  --sp-primary:       #2b2e4a;   /* NLSIU deep navy — exact match */
+  /* ── Primary palette — NLSIU exact navy #920c24 ── */
+  --sp-primary:       #920c24;   /* NLSIU deep navy — exact match */
   --sp-primary-dark:  #1c1e33;   /* Darker for hover/active states */
   --sp-primary-light: rgba(43, 46, 74, 0.07);
   --sp-primary-mid:   rgba(43, 46, 74, 0.14);
@@ -34,27 +34,27 @@
   /* ── Status colours ── */
   --sp-success:    #15803d;
   --sp-success-bg: #f0fdf4;
-  --sp-warning:    #b45309;
-  --sp-warning-bg: #fffbeb;
+  --sp-warning:    #920c24;
+  --sp-warning-bg: #fff0f2;
   --sp-danger:     #920c24;   /* NLSIU maroon as danger */
   --sp-danger-bg:  #fdf0f2;
-  --sp-info:       #2b2e4a;
+  --sp-info:       #920c24;
   --sp-info-bg:    #f0f1f6;
 
   /* ── Grade band colours ── */
   --sp-grade-excellent:    #15803d;
   --sp-grade-excellent-bg: #f0fdf4;
-  --sp-grade-good:         #1d4ed8;
-  --sp-grade-good-bg:      #eff6ff;
-  --sp-grade-average:      #b45309;
-  --sp-grade-average-bg:   #fffbeb;
+  --sp-grade-good:         #920c24;
+  --sp-grade-good-bg:      #fff0f2;
+  --sp-grade-average:      #920c24;
+  --sp-grade-average-bg:   #fff0f2;
   --sp-grade-fail:         #920c24;
   --sp-grade-fail-bg:      #fdf0f2;
 
   /* ── Supplementary ── */
   --sp-purple:    #6b21a8;
-  --sp-purple-bg: #faf5ff;
-  --sp-gold:      #d97706;
+  --sp-purple-bg: #fff0f2;
+  --sp-gold:      #920c24;
 
   /* ── Typography — Merriweather (NLSIU font) ── */
   --sp-font-family: 'Merriweather Sans', 'Merriweather', Georgia, serif;
@@ -262,7 +262,7 @@ header[class*="navbar"], .website-header,
   top: var(--sp-nav-h);
   left: 0; bottom: 0;
   width: var(--sp-sidebar-w);
-  background: var(--sp-sidebar-bg, #2b2e4a);
+  background: var(--sp-sidebar-bg, #920c24);
   border-right: none;
   overflow-y: auto;
   z-index: 100;
@@ -967,9 +967,9 @@ header[class*="navbar"], .website-header,
 }
 .sp-fee-status-paid              { background: rgba(52,211,153,0.22);  color: #6ee7b7; border: 1px solid rgba(52,211,153,0.3); }
 .sp-fee-status-unpaid            { background: rgba(252,165,165,0.22); color: #fca5a5; border: 1px solid rgba(252,165,165,0.3); }
-.sp-fee-status-partially-paid    { background: rgba(253,186,116,0.22); color: #fed7aa; border: 1px solid rgba(253,186,116,0.3); }
+.sp-fee-status-partially-paid    { background: rgba(253,186,116,0.22); color: #f5c6ce; border: 1px solid rgba(253,186,116,0.3); }
 .sp-fee-status-overdue           { background: rgba(248,113,113,0.25); color: #fca5a5; border: 1px solid rgba(248,113,113,0.3); }
-.sp-fee-status-payment-initiated { background: rgba(147,197,253,0.22); color: #93c5fd; border: 1px solid rgba(147,197,253,0.3); }
+.sp-fee-status-payment-initiated { background: rgba(147,197,253,0.22); color: #f5c6ce; border: 1px solid rgba(147,197,253,0.3); }
 .sp-fee-status-authorized        { background: rgba(52,211,153,0.18);  color: #6ee7b7; border: 1px solid rgba(52,211,153,0.25); }
 .sp-fee-status-payment-failed    { background: rgba(252,165,165,0.28); color: #f87171; border: 1px solid rgba(252,165,165,0.35); }
 .sp-fee-status-refunded          { background: rgba(196,181,253,0.22); color: #c4b5fd; border: 1px solid rgba(196,181,253,0.3); }
@@ -1159,7 +1159,7 @@ header[class*="navbar"], .website-header,
 
 /* ── Profile ──────────────────────────────────────────────── */
 .sp-profile-hero {
-  background: #2b2e4a;
+  background: #920c24;
   border-radius: 12px;
   padding: 18px 20px;
   display: flex;
@@ -2074,7 +2074,7 @@ select.sp-form-control {
 /* ── Fee all-clear card ───────────────────────────────────── */
 .sp-fee-clear {
   background: var(--sp-success-bg);
-  border: 1px solid #86efac;
+  border: 1px solid #d1d5db;
   border-radius: 16px;
   padding: 18px 20px;
   display: flex;
@@ -2085,11 +2085,11 @@ select.sp-form-control {
 .sp-fee-clear .sp-ms-lg {
   font-family: 'Material Symbols Outlined';
   font-size: 32px;
-  color: var(--sp-success);
+  color: #000000;
   flex-shrink: 0;
 }
-.sp-fee-clear-title { font-size: 15px; font-weight: 400; color: var(--sp-success); }
-.sp-fee-clear-sub   { font-size: 13px; color: #166534; margin-top: 2px; }
+.sp-fee-clear-title { font-size: 15px; font-weight: 400; color: #000000; }
+.sp-fee-clear-sub   { font-size: 13px; color: #000000; margin-top: 2px; }
 
 /* ── Dashboard alert banner ───────────────────────────────── */
 .sp-dash-alert {
@@ -2349,11 +2349,11 @@ select.sp-form-control {
   letter-spacing: 0.04em;
   border-bottom: 2px solid rgba(0,0,0,0.10);
 }
-.sp-rt-tg-comp    { background: #dbeafe; color: #1d4ed8; }
+.sp-rt-tg-comp    { background: #fff0f2; color: #920c24; }
 .sp-rt-tg-grade   { background: #bbf7d0; color: #15803d; }
-.sp-rt-tg-status  { background: #fef9c3; color: #a16207; }
+.sp-rt-tg-status  { background: #fff0f2; color: #a16207; }
 .sp-rt-tg-reexam  { background: #fce7f3; color: #9d174d; }
-.sp-rt-tg-updated { background: #dbeafe; color: #1d4ed8; }
+.sp-rt-tg-updated { background: #fff0f2; color: #920c24; }
 
 /* ── Row 2: Component / column name ─────────────────────── */
 .sp-rt-th-comp {
@@ -2390,7 +2390,7 @@ select.sp-form-control {
 }
 .sp-rt-data-row:hover td { background: #f8faff; }
 
-.sp-rt-marks  { font-weight: 400; color: #1d4ed8; font-size: 13px; }
+.sp-rt-marks  { font-weight: 400; color: #920c24; font-size: 13px; }
 .sp-rt-reval  { color: #9ca3af; font-size: 12px; }
 .sp-rt-total  { font-size: 14px; font-weight: 400; color: #111827; }
 
@@ -2412,7 +2412,7 @@ select.sp-form-control {
 /* Status cells */
 .sp-rt-status { font-size: 11px; font-weight: 300; color: #374151; }
 .sp-rt-ok     { color: #16a34a; font-weight: 400; }
-.sp-rt-warn   { color: #d97706; font-weight: 400; }
+.sp-rt-warn   { color: #920c24; font-weight: 400; }
 .sp-rt-err    { color: #dc2626; font-weight: 400; }
 
 /* Remark bar below table */
@@ -2420,9 +2420,9 @@ select.sp-form-control {
   display: flex; align-items: flex-start; gap: 7px;
   padding: 8px 16px 8px 14px;
   font-size: 12px;
-  color: #92400e;
-  background: #fffbeb;
-  border-top: 1px solid #fde68a;
+  color: #920c24;
+  background: #fff0f2;
+  border-top: 1px solid #f5c6ce;
 }
 
 /* Mobile */
@@ -2500,7 +2500,7 @@ select.sp-form-control {
 }
 .sp-acc-chip-pass { background: rgba(52,211,153,0.25); color: #6ee7b7; }
 .sp-acc-chip-fail { background: rgba(248,113,113,0.25); color: #fca5a5; }
-.sp-acc-chip-pend { background: rgba(251,191,36,0.20);  color: #fde68a; }
+.sp-acc-chip-pend { background: rgba(251,191,36,0.20);  color: #f5c6ce; }
 
 /* ── Accordion Body ──────────────────────────────────────────── */
 .sp-acc-body {
@@ -2945,12 +2945,12 @@ select.sp-form-control {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  background: var(--sp-info-bg, #e0f2fe);
-  border: 1px solid #bae6fd;
+  background: var(--sp-info-bg, #fff0f2);
+  border: 1px solid #f5c6ce;
   border-radius: 12px;
   padding: 12px 16px;
   font-size: 13px;
-  color: var(--sp-info, #0369a1);
+  color: var(--sp-info, #920c24);
   margin-bottom: 20px;
   line-height: 1.55;
 }
@@ -2995,7 +2995,7 @@ select.sp-form-control {
 }
 .sp-pay-spinner {
   width: 44px; height: 44px;
-  border: 3.5px solid #dbeafe;
+  border: 3.5px solid #fff0f2;
   border-top-color: #2558c1;
   border-radius: 50%;
   animation: sp-spin 0.8s linear infinite;
@@ -3192,8 +3192,8 @@ select.sp-form-control {
 /* ── Dashboard alert — polished style ──────────────────────── */
 .sp-dash-alert {
   background: linear-gradient(135deg, #fff8f0, #fff3e0);
-  border: 1px solid #fbbf24;
-  border-left: 4px solid #f59e0b;
+  border: 1px solid #920c24;
+  border-left: 4px solid #920c24;
   border-radius: 12px;
   font-size: 13.5px;
   padding: 12px 16px;
@@ -3653,7 +3653,7 @@ html, body {
   top: var(--sp-nav-h);
   left: 0; right: 0;
   height: 34px;
-  background: #2b2e4a;
+  background: #920c24;
   border-bottom: 1px solid rgba(255,255,255,0.10);
   display: none;
   align-items: center;
@@ -3708,7 +3708,7 @@ html, body {
 
 /* Priority colours */
 .sp-mq-urgent    { color: #fca5a5; }
-.sp-mq-important { color: #fde68a; }
+.sp-mq-important { color: #f5c6ce; }
 
 /* "View All" button */
 .sp-marquee-view {
@@ -3754,7 +3754,7 @@ body.sp-has-marquee .sp-sidebar { top: calc(var(--sp-nav-h) + 34px); }
    ============================================================= */
 
 .sp-sidebar {
-  background: var(--sp-sidebar-bg, #2b2e4a);
+  background: var(--sp-sidebar-bg, #920c24);
   border-right: 1px solid rgba(0, 0, 0, 0.35);
 }
 
@@ -4227,7 +4227,7 @@ body .sp-avatar-btn {
 }
 
 .fee-overview-card {
-  background: #2b2e4a;
+  background: #920c24;
   border-radius: 20px;
   padding: 24px 24px 20px;
   color: #fff;
@@ -4270,7 +4270,7 @@ body .sp-avatar-btn {
 }
 .fee-overview-shape-2 {
   width: 90px; height: 90px;
-  background: #93c5fd;
+  background: #f5c6ce;
   bottom: 20px; right: 60px;
 }
 
@@ -4308,9 +4308,9 @@ body .sp-avatar-btn {
 }
 .fee-status-paid              { background: rgba(52,211,153,0.22);  color: #6ee7b7;  border: 1px solid rgba(52,211,153,0.35); }
 .fee-status-unpaid            { background: rgba(252,165,165,0.22); color: #fca5a5;  border: 1px solid rgba(252,165,165,0.35); }
-.fee-status-partially-paid    { background: rgba(253,186,116,0.22); color: #fed7aa;  border: 1px solid rgba(253,186,116,0.35); }
+.fee-status-partially-paid    { background: rgba(253,186,116,0.22); color: #f5c6ce;  border: 1px solid rgba(253,186,116,0.35); }
 .fee-status-overdue           { background: rgba(248,113,113,0.25); color: #fca5a5;  border: 1px solid rgba(248,113,113,0.35); }
-.fee-status-payment-initiated { background: rgba(147,197,253,0.22); color: #93c5fd;  border: 1px solid rgba(147,197,253,0.35); }
+.fee-status-payment-initiated { background: rgba(147,197,253,0.22); color: #f5c6ce;  border: 1px solid rgba(147,197,253,0.35); }
 .fee-status-authorized        { background: rgba(52,211,153,0.18);  color: #6ee7b7;  border: 1px solid rgba(52,211,153,0.28); }
 .fee-status-payment-failed    { background: rgba(252,165,165,0.28); color: #f87171;  border: 1px solid rgba(252,165,165,0.4); }
 .fee-status-refunded          { background: rgba(196,181,253,0.22); color: #c4b5fd;  border: 1px solid rgba(196,181,253,0.35); }
@@ -4452,8 +4452,8 @@ body .sp-avatar-btn {
   border: 1px solid transparent;
 }
 .fee-notice-bar .sp-ms { font-family: 'Material Symbols Outlined'; flex-shrink: 0; margin-top: 1px; }
-.fee-notice-info    { background: #eff6ff; color: #1e40af; border-color: #bfdbfe; }
-.fee-notice-warning { background: #fffbeb; color: #78350f; border-color: #fde68a; }
+.fee-notice-info    { background: #fff0f2; color: #920c24; border-color: #f5c6ce; }
+.fee-notice-warning { background: #fff0f2; color: #920c24; border-color: #f5c6ce; }
 
 /* ── Section header ──────────────────────────────────────────────── */
 .fee-section-hdr {
@@ -4532,12 +4532,12 @@ body .sp-avatar-btn {
   color: var(--sp-text-3);
   border: 1px solid var(--sp-border);
 }
-.fee-comp-tuition-fee     { background: #dbeafe; color: #1d4ed8; border-color: #bfdbfe; }
-.fee-comp-hostel-fee      { background: #fef9c3; color: #854d0e; border-color: #fef08a; }
+.fee-comp-tuition-fee     { background: #fff0f2; color: #920c24; border-color: #f5c6ce; }
+.fee-comp-hostel-fee      { background: #fff0f2; color: #920c24; border-color: #f5c6ce; }
 .fee-comp-examination-fee { background: #fce7f3; color: #9d174d; border-color: #fbcfe8; }
-.fee-comp-lab-fee         { background: #dcfce7; color: #166534; border-color: #bbf7d0; }
-.fee-comp-library-fee     { background: #ede9fe; color: #5b21b6; border-color: #ddd6fe; }
-.fee-comp-transport-fee   { background: #fff7ed; color: #9a3412; border-color: #fed7aa; }
+.fee-comp-lab-fee         { background: #f3f4f6; color: #000000; border-color: #f3f4f6; }
+.fee-comp-library-fee     { background: #fff0f2; color: #920c24; border-color: #f5c6ce; }
+.fee-comp-transport-fee   { background: #fff0f2; color: #920c24; border-color: #f5c6ce; }
 .fee-comp-other           { background: var(--sp-bg); color: var(--sp-text-3); }
 
 /* ── Fee component lines in breakdown ───────────────────────────── */
@@ -4626,9 +4626,9 @@ body .sp-avatar-btn {
   flex-shrink: 0;
 }
 .fee-inv-status-icon .sp-ms { font-family: 'Material Symbols Outlined'; }
-.fee-icon-paid      { background: linear-gradient(135deg, #d1fae5, #a7f3d0); color: #065f46; }
+.fee-icon-paid      { background: linear-gradient(135deg, #f3f4f6, #d1d5db); color: #000000; }
 .fee-icon-overdue   { background: linear-gradient(135deg, #fee2e2, #fecaca); color: #991b1b; }
-.fee-icon-pending   { background: linear-gradient(135deg, #fef3c7, #fde68a); color: #92400e; }
+.fee-icon-pending   { background: linear-gradient(135deg, #fff0f2, #f5c6ce); color: #920c24; }
 .fee-icon-cancelled { background: var(--sp-bg); color: var(--sp-text-4); }
 
 /* Term + dates */
@@ -4663,7 +4663,7 @@ body .sp-avatar-btn {
   letter-spacing: -0.01em;
 }
 .fee-inv-amount-due   { color: var(--sp-danger); }
-.fee-inv-amount-clear { color: var(--sp-success); }
+.fee-inv-amount-clear { color: #000000; }
 .fee-inv-amount-label {
   font-size: 9px;
   text-transform: uppercase;
@@ -4685,10 +4685,10 @@ body .sp-avatar-btn {
   gap: 3px;
 }
 .fee-inv-badge .sp-ms { font-family: 'Material Symbols Outlined'; }
-.fee-badge-paid      { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+.fee-badge-paid      { background: #f3f4f6; color: #000000; border: 1px solid #f3f4f6; }
 .fee-badge-unpaid    { background: #fff5f5; color: #b91c1c; border: 1px solid #fecaca; }
 .fee-badge-overdue   { background: #fff1f2; color: #be123c; border: 1px solid #fecdd3; }
-.fee-badge-pending   { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+.fee-badge-pending   { background: #fff0f2; color: #920c24; border: 1px solid #f5c6ce; }
 .fee-badge-cancelled { background: var(--sp-bg); color: var(--sp-text-3); border: 1px solid var(--sp-border); }
 
 /* Pay button — gradient premium */
@@ -4718,7 +4718,7 @@ body .sp-avatar-btn {
 }
 .fee-pay-btn:active { transform: scale(0.97); }
 .fee-pay-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
-.fee-pay-btn-counter { background: linear-gradient(135deg, #0369a1, #0284c7); box-shadow: 0 2px 8px rgba(3,105,161,0.25); }
+.fee-pay-btn-counter { background: linear-gradient(135deg, #920c24, #920c24); box-shadow: 0 2px 8px rgba(3,105,161,0.25); }
 .fee-pay-btn-counter:hover { box-shadow: 0 4px 16px rgba(3,105,161,0.35); }
 
 .fee-inv-chevron {
@@ -4786,8 +4786,8 @@ body .sp-avatar-btn {
 .fee-detail-line-value { font-weight: 400; color: var(--sp-text-1); }
 .fee-detail-line-strong .fee-detail-line-label,
 .fee-detail-line-strong .fee-detail-line-value { font-weight: 400; color: var(--sp-text-1); font-size: 14px; }
-.fee-label-purple { color: #7c3aed !important; }
-.fee-label-green  { color: var(--sp-success) !important; }
+.fee-label-purple { color: #920c24 !important; }
+.fee-label-green  { color: #000000 !important; }
 
 .fee-outstanding-chip {
   display: flex;
@@ -4801,7 +4801,7 @@ body .sp-avatar-btn {
   border: 1px solid transparent;
 }
 .fee-chip-due   { background: #fff5f5; color: #b91c1c; border-color: #fecaca; }
-.fee-chip-clear { background: #f0fdf4; color: #166534; border-color: #bbf7d0; }
+.fee-chip-clear { background: #f3f4f6; color: #000000; border-color: #f3f4f6; }
 
 .fee-download-btn {
   display: flex;
@@ -4825,18 +4825,18 @@ body .sp-avatar-btn {
 }
 .fee-download-btn .sp-ms { font-family: 'Material Symbols Outlined'; }
 .fee-download-btn:hover {
-  background: #eff6ff;
+  background: #fff0f2;
   border-color: var(--sp-primary);
   color: var(--sp-primary);
   box-shadow: 0 2px 8px rgba(74,127,193,0.12);
 }
 .fee-download-receipt-btn {
-  border-color: #a5b4fc;
-  color: #4338ca;
+  border-color: #f5c6ce;
+  color: #920c24;
 }
 .fee-download-receipt-btn:hover {
-  background: #eef2ff;
-  border-color: #4338ca;
+  background: #fff0f2;
+  border-color: #920c24;
   color: #312e81;
 }
 
@@ -4846,7 +4846,7 @@ body .sp-avatar-btn {
   align-items: center;
   gap: 16px;
   background: var(--sp-card-bg, #fff);
-  border: 1.5px solid #ede9fe;
+  border: 1.5px solid #fff0f2;
   border-radius: 14px;
   padding: 14px 18px;
   margin-bottom: 10px;
@@ -4869,13 +4869,13 @@ body .sp-avatar-btn {
   justify-content: center;
   flex-shrink: 0;
   background: rgba(196,181,253,0.18);
-  color: #7c3aed;
+  color: #920c24;
 }
-.fee-con-icon-merit            { background: rgba(251,191,36,0.15); color: #d97706; }
-.fee-con-icon-scholarship      { background: rgba(196,181,253,0.2); color: #7c3aed; }
-.fee-con-icon-sc-st            { background: rgba(96,165,250,0.15); color: #2563eb; }
-.fee-con-icon-ews              { background: rgba(52,211,153,0.15); color: #059669; }
-.fee-con-icon-staff-ward       { background: rgba(251,146,60,0.15); color: #ea580c; }
+.fee-con-icon-merit            { background: rgba(251,191,36,0.15); color: #920c24; }
+.fee-con-icon-scholarship      { background: rgba(196,181,253,0.2); color: #920c24; }
+.fee-con-icon-sc-st            { background: rgba(96,165,250,0.15); color: #920c24; }
+.fee-con-icon-ews              { background: rgba(52,211,153,0.15); color: #000000; }
+.fee-con-icon-staff-ward       { background: rgba(251,146,60,0.15); color: #920c24; }
 .fee-con-icon-other            { background: rgba(148,163,184,0.15); color: #64748b; }
 
 .fee-con-type {
@@ -4937,7 +4937,7 @@ body .sp-avatar-btn {
 .fee-con-amount {
   font-size: 24px;
   font-weight: 400;
-  color: #7c3aed;
+  color: #920c24;
 }
 .fee-con-amount-label {
   font-size: 10px;
@@ -4959,8 +4959,8 @@ body .sp-avatar-btn {
   border-radius: 20px;
   padding: 3px 9px;
 }
-.fee-con-status-approved { background: #f0fdf4; color: #16a34a; border: 1px solid #86efac; }
-.fee-con-status-draft    { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+.fee-con-status-approved { background: #f3f4f6; color: #000000; border: 1px solid #d1d5db; }
+.fee-con-status-draft    { background: #fff0f2; color: #920c24; border: 1px solid #f5c6ce; }
 .fee-con-status-rejected { background: #fff5f5; color: #dc2626; border: 1px solid #fca5a5; }
 .fee-con-status-reversed { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; }
 .fee-con-status .sp-ms   { font-family: 'Material Symbols Outlined'; font-size: 10px; }
@@ -5025,7 +5025,7 @@ body .sp-avatar-btn {
 }
 .fee-txn-amount {
   font-weight: 400;
-  color: #059669;
+  color: #000000;
   text-align: right;
   white-space: nowrap;
 }
@@ -5045,7 +5045,7 @@ body .sp-avatar-btn {
   transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 .fee-txn-dl-btn:hover {
-  background: #eff6ff;
+  background: #fff0f2;
   border-color: var(--sp-primary);
   color: var(--sp-primary);
 }
@@ -5063,16 +5063,16 @@ body .sp-avatar-btn {
   align-items: flex-start;
   gap: 12px;
   padding: 10px 14px;
-  background: #f0fdf4;
+  background: #f3f4f6;
   border-radius: 10px;
   margin-bottom: 8px;
-  border: 1px solid #bbf7d0;
+  border: 1px solid #f3f4f6;
   transition: transform 0.15s;
 }
 .fee-payment-entry:hover { transform: translateX(2px); }
 .fee-payment-tick {
   width: 28px; height: 28px;
-  background: var(--sp-success);
+  background: #000000;
   color: #fff;
   border-radius: 50%;
   display: flex;
@@ -5083,18 +5083,18 @@ body .sp-avatar-btn {
   flex-shrink: 0;
   box-shadow: 0 2px 6px rgba(56,161,105,0.3);
 }
-.fee-payment-amount { font-weight: 400; color: #166534; font-size: 14px; letter-spacing: -0.01em; }
+.fee-payment-amount { font-weight: 400; color: #000000; font-size: 14px; letter-spacing: -0.01em; }
 .fee-payment-meta   { font-size: 11px; color: var(--sp-text-4); margin-top: 2px; font-weight: 300; }
 
 /* Razorpay lifecycle states */
 .fee-payment-cancelled   { background: #fff5f5; border-color: #fecaca; }
 .fee-payment-tick-cancelled { background: var(--sp-danger); box-shadow: 0 2px 6px rgba(224,82,82,0.3); }
-.fee-payment-authorized  { background: #fffbeb; border-color: #fde68a; }
-.fee-payment-tick-authorized { background: #f59e0b; box-shadow: 0 2px 6px rgba(245,158,11,0.3); }
-.fee-payment-refunded    { background: #f0f9ff; border-color: #bae6fd; }
+.fee-payment-authorized  { background: #fff0f2; border-color: #f5c6ce; }
+.fee-payment-tick-authorized { background: #920c24; box-shadow: 0 2px 6px rgba(245,158,11,0.3); }
+.fee-payment-refunded    { background: #fff0f2; border-color: #f5c6ce; }
 .fee-payment-tick-refunded { background: #0ea5e9; box-shadow: 0 2px 6px rgba(14,165,233,0.3); }
-.fee-payment-initiated   { background: #eff6ff; border-color: #bfdbfe; }
-.fee-payment-tick-initiated { background: #1d4ed8; box-shadow: 0 2px 6px rgba(29,78,216,0.3); }
+.fee-payment-initiated   { background: #fff0f2; border-color: #f5c6ce; }
+.fee-payment-tick-initiated { background: #920c24; box-shadow: 0 2px 6px rgba(29,78,216,0.3); }
 
 /* Status text inside payment entries */
 .fee-payment-amount-failed,
@@ -5106,7 +5106,7 @@ body .sp-avatar-btn {
   letter-spacing: 0.05em;
 }
 .fee-payment-amount-authorized {
-  color: #b45309;
+  color: #920c24;
   font-size: 12px;
   font-weight: 400;
   text-transform: uppercase;
@@ -5114,7 +5114,7 @@ body .sp-avatar-btn {
 }
 .fee-payment-amount-refund-initiated,
 .fee-payment-amount-refunded {
-  color: #0284c7;
+  color: #920c24;
   font-size: 12px;
   font-weight: 400;
   text-transform: uppercase;
@@ -5133,7 +5133,7 @@ body .sp-avatar-btn {
   vertical-align: middle;
   margin-left: 6px;
 }
-.fee-rzp-captured { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+.fee-rzp-captured { background: #f3f4f6; color: #000000; border: 1px solid #f3f4f6; }
 
 /* Empty payment history */
 .fee-no-payments {
@@ -5272,7 +5272,7 @@ body .sp-avatar-btn {
   pointer-events: none;
 }
 .fee-donut-label { font-size: 9px; color: var(--sp-text-4); font-weight: 400; text-transform: uppercase; letter-spacing: 0.07em; }
-.fee-donut-pct   { font-size: 24px; font-weight: 400; color: var(--sp-success); letter-spacing: -0.02em; line-height: 1.1; }
+.fee-donut-pct   { font-size: 24px; font-weight: 400; color: #000000; letter-spacing: -0.02em; line-height: 1.1; }
 
 .fee-analytics-legend { display: flex; flex-direction: column; gap: 10px; flex: 1; min-width: 180px; }
 .fee-legend-row {
@@ -5347,8 +5347,8 @@ body .sp-avatar-btn {
   font-weight: 300;
  padding: 20px 22px; }
 .fee-modal-amount-box {
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
+  background: #f3f4f6;
+  border: 1px solid #f3f4f6;
   border-radius: 12px;
   padding: 14px 16px;
   margin-bottom: 16px;
@@ -5359,7 +5359,7 @@ body .sp-avatar-btn {
 .fee-modal-amount-box .sp-ms { font-family: 'Material Symbols Outlined'; }
 .fee-modal-note {
   background: #fefce8;
-  border: 1px solid #fef08a;
+  border: 1px solid #f5c6ce;
   border-radius: 10px;
   padding: 10px 14px;
   font-size: 12px;
@@ -5413,7 +5413,7 @@ body .sp-avatar-btn {
   top: var(--sp-nav-h);
   left: var(--sp-sidebar-w); right: 0;
   z-index: 150;
-  background: #2b2e4a;
+  background: #920c24;
   border-bottom: 1px solid rgba(255,255,255,0.08);
   box-shadow: 0 4px 20px rgba(0,0,0,0.2);
   transform: translateY(-100%);
@@ -5478,7 +5478,7 @@ body .sp-avatar-btn {
   flex-shrink: 0;
   box-shadow: 0 2px 8px rgba(0,0,0,0.12);
 }
-.fee-sticky-pay-btn:hover { background: #dbeafe; box-shadow: 0 3px 12px rgba(0,0,0,0.15); }
+.fee-sticky-pay-btn:hover { background: #fff0f2; box-shadow: 0 3px 12px rgba(0,0,0,0.15); }
 
 @media (max-width: 768px) {
   .fee-sticky-bar { left: 0 !important; }
@@ -5501,36 +5501,36 @@ body .sp-avatar-btn {
   border-bottom-color: #fecdd3;
 }
 .fee-due-alert-urgent {
-  background: linear-gradient(90deg, #fffbeb, #fefce8);
-  color: #92400e;
-  border-bottom-color: #fde68a;
+  background: linear-gradient(90deg, #fff0f2, #fefce8);
+  color: #920c24;
+  border-bottom-color: #f5c6ce;
 }
 .fee-due-alert-upcoming {
-  background: linear-gradient(90deg, #eff6ff, #f0f9ff);
-  color: #1d4ed8;
-  border-bottom-color: #bfdbfe;
+  background: linear-gradient(90deg, #fff0f2, #fff0f2);
+  color: #920c24;
+  border-bottom-color: #f5c6ce;
 }
 
 /* ── Extra status badge colours (full lifecycle) ─────────────────── */
-.fee-badge-partially-paid     { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
-.fee-badge-payment-initiated  { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
-.fee-badge-authorized         { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+.fee-badge-partially-paid     { background: #fff0f2; color: #920c24; border: 1px solid #f5c6ce; }
+.fee-badge-payment-initiated  { background: #fff0f2; color: #920c24; border: 1px solid #f5c6ce; }
+.fee-badge-authorized         { background: #f3f4f6; color: #000000; border: 1px solid #f3f4f6; }
 .fee-badge-payment-failed,
 .fee-badge-failed             { background: #fff1f2; color: #be123c; border: 1px solid #fecdd3; }
 .fee-badge-refunded,
-.fee-badge-refund-initiated   { background: #faf5ff; color: #6d28d9; border: 1px solid #ddd6fe; }
+.fee-badge-refund-initiated   { background: #fff0f2; color: #920c24; border: 1px solid #f5c6ce; }
 .fee-badge-overdue            { background: #fff1f2; color: #be123c; border: 1px solid #fecdd3; }
 
 /* ── Extra status icons ──────────────────────────────────────────── */
-.fee-icon-partial   { background: linear-gradient(135deg, #fff7ed, #fed7aa); color: #c2410c; }
-.fee-icon-initiated { background: linear-gradient(135deg, #eff6ff, #bfdbfe); color: #1d4ed8; }
-.fee-icon-refunded  { background: linear-gradient(135deg, #faf5ff, #ddd6fe); color: #6d28d9; }
+.fee-icon-partial   { background: linear-gradient(135deg, #fff0f2, #f5c6ce); color: #920c24; }
+.fee-icon-initiated { background: linear-gradient(135deg, #fff0f2, #f5c6ce); color: #920c24; }
+.fee-icon-refunded  { background: linear-gradient(135deg, #fff0f2, #f5c6ce); color: #920c24; }
 
 /* ── Payment entry — success variant ────────────────────────────── */
-.fee-payment-success { background: #f0fdf4; border: 1px solid #bbf7d0; }
+.fee-payment-success { background: #f3f4f6; border: 1px solid #f3f4f6; }
 .fee-payment-tick-success {
   width: 28px; height: 28px;
-  background: var(--sp-success);
+  background: #000000;
   color: #fff;
   border-radius: 50%;
   display: flex;
@@ -5543,8 +5543,8 @@ body .sp-avatar-btn {
 }
 
 /* Payment Initiated status entry */
-.fee-payment-initiated { background: #eff6ff; }
-.fee-payment-tick-initiated { background: #1d4ed8; }
+.fee-payment-initiated { background: #fff0f2; }
+.fee-payment-tick-initiated { background: #920c24; }
 
 /* body wrapper inside payment entry */
 .fee-payment-body {
@@ -5567,9 +5567,9 @@ body .sp-avatar-btn {
 .fee-scholarship-line .sp-ms { font-family: 'Material Symbols Outlined'; }
 .fee-scholarship-note {
   font-size: 11px;
-  color: #6d28d9;
-  background: #faf5ff;
-  border: 1px solid #ede9fe;
+  color: #920c24;
+  background: #fff0f2;
+  border: 1px solid #fff0f2;
   border-radius: 7px;
   padding: 5px 10px;
   margin: -2px 0 8px;
@@ -5597,9 +5597,9 @@ body .sp-avatar-btn {
   margin: 8px 0;
 }
 .fee-status-info-box .sp-ms { font-family: 'Material Symbols Outlined'; flex-shrink: 0; }
-.fee-status-box-initiated { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.fee-status-box-initiated { background: #fff0f2; color: #920c24; border: 1px solid #f5c6ce; }
 .fee-status-box-failed    { background: #fff5f5; color: #b91c1c; border: 1px solid #fecaca; }
-.fee-status-box-refunded  { background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe; }
+.fee-status-box-refunded  { background: #fff0f2; color: #920c24; border: 1px solid #f5c6ce; }
 
 /* ── Tooltip box ─────────────────────────────────────────────────── */
 .fee-tooltip-box {
@@ -5667,7 +5667,7 @@ body .sp-avatar-btn {
 }
 
 /* ── Info notice bar (blue) ──────────────────────────────────────── */
-.fee-notice-info { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+.fee-notice-info { background: #fff0f2; color: #920c24; border: 1px solid #f5c6ce; }
 
 /* ── Shimmer skeleton cards ──────────────────────────────────────── */
 @keyframes fee-shimmer {
@@ -5951,8 +5951,8 @@ body.sp-has-marquee.sp-sidebar-mini .sp-sidebar {
   background: rgba(8, 145, 178, 0.12); color: #0891b2;
 }
 .fee-credit-type-icon.fee-credit-icon-advance-deposit { background: rgba(8,145,178,0.12); color:#0891b2; }
-.fee-credit-type-icon.fee-credit-icon-overpayment { background: rgba(5,150,105,0.12); color:#059669; }
-.fee-credit-type-icon.fee-credit-icon-scholarship { background: rgba(124,58,237,0.12); color:#7c3aed; }
+.fee-credit-type-icon.fee-credit-icon-overpayment { background: rgba(0,0,0,0.12); color:#000000; }
+.fee-credit-type-icon.fee-credit-icon-scholarship { background: rgba(124,58,237,0.12); color:#920c24; }
 .fee-credit-type { font-size: 13px; font-weight: 400; color: var(--sp-text-1); }
 .fee-credit-year { font-size: 11px; color: var(--sp-text-4); margin-top: 2px; }
 .fee-credit-mid { flex: 1; min-width: 0; }
@@ -5978,7 +5978,7 @@ body.sp-has-marquee.sp-sidebar-mini .sp-sidebar {
   font-size: 10px; font-weight: 400; padding: 3px 8px;
   border-radius: 99px; letter-spacing: 0.04em;
 }
-.fee-credit-status-active { background: #dcfce7; color: #15803d; }
+.fee-credit-status-active { background: #f3f4f6; color: #000000; }
 .fee-credit-status-exhausted { background: #f1f5f9; color: #64748b; }
 @media (max-width: 600px) {
   .fee-credit-card { flex-wrap: wrap; gap: 12px; }
@@ -6039,16 +6039,16 @@ body.sp-has-marquee.sp-sidebar-mini .sp-sidebar {
 .fee-demand-orig { color: var(--sp-text-2); }
 .fee-demand-outstanding { font-weight: 400; }
 .fee-demand-amt-due { color: #dc2626; }
-.fee-demand-amt-clear { color: #059669; }
+.fee-demand-amt-clear { color: #000000; }
 .fee-demand-badge {
   display: inline-flex; align-items: center; gap: 3px;
   font-size: 10px; font-weight: 400; padding: 3px 8px;
   border-radius: 99px; white-space: nowrap;
 }
-.fee-demand-badge-paid     { background: #dcfce7; color: #15803d; }
+.fee-demand-badge-paid     { background: #f3f4f6; color: #000000; }
 .fee-demand-badge-overdue  { background: #fee2e2; color: #991b1b; }
-.fee-demand-badge-pending  { background: #fffbeb; color: #92400e; }
-.fee-demand-badge-partially-paid { background: #fef3c7; color: #92400e; }
+.fee-demand-badge-pending  { background: #fff0f2; color: #920c24; }
+.fee-demand-badge-partially-paid { background: #fff0f2; color: #920c24; }
 .fee-demand-badge-waived   { background: #f3f4f6; color: #6b7280; }
 @media (max-width: 700px) {
   .fee-demand-table thead th:nth-child(2),
@@ -6072,7 +6072,7 @@ body.sp-has-marquee.sp-sidebar-mini .sp-sidebar {
   width: 38px; height: 38px; border-radius: 10px;
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
-.fee-refund-icon-approved { background: rgba(5,150,105,0.12); color: #059669; }
+.fee-refund-icon-approved { background: rgba(0,0,0,0.12); color: #000000; }
 .fee-refund-icon-pending  { background: rgba(192,122,26,0.12); color: #c07a1a; }
 .fee-refund-type { font-size: 13px; font-weight: 400; color: var(--sp-text-1); }
 .fee-refund-component { font-size: 11px; color: var(--sp-text-4); margin-top: 2px; }
@@ -6093,15 +6093,15 @@ body.sp-has-marquee.sp-sidebar-mini .sp-sidebar {
 }
 .fee-refund-utr { font-weight: 400; }
 .fee-refund-right { text-align: right; flex-shrink: 0; min-width: 110px; }
-.fee-refund-amount { font-size: 18px; font-weight: 400; color: #059669; }
+.fee-refund-amount { font-size: 18px; font-weight: 400; color: #000000; }
 .fee-refund-amount-label { font-size: 10px; color: var(--sp-text-4); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
 .fee-refund-status {
   display: inline-flex; align-items: center; gap: 3px;
   font-size: 10px; font-weight: 400; padding: 3px 8px;
   border-radius: 99px; letter-spacing: 0.04em;
 }
-.fee-refund-status-approved { background: #dcfce7; color: #15803d; }
-.fee-refund-status-pending  { background: #fffbeb; color: #92400e; }
+.fee-refund-status-approved { background: #f3f4f6; color: #000000; }
+.fee-refund-status-pending  { background: #fff0f2; color: #920c24; }
 .fee-refund-status-draft    { background: #f1f5f9; color: #475569; }
 @media (max-width: 600px) {
   .fee-refund-card { flex-wrap: wrap; gap: 12px; }
@@ -6159,7 +6159,7 @@ body.sp-has-marquee.sp-sidebar-mini .sp-sidebar {
   line-height: 1.6;
 }
 .fee-tab-badge-red   { background: #fee2e2; color: #991b1b; }
-.fee-tab-badge-green { background: #dcfce7; color: #15803d; }
+.fee-tab-badge-green { background: #f3f4f6; color: #000000; }
 .fee-tab-panel { display: block; }
 .fee-demand-type-group { padding: 16px; border-bottom: 1px solid var(--sp-border); }
 .fee-demand-type-group:last-child { border-bottom: none; }
@@ -6195,7 +6195,7 @@ body.sp-has-marquee.sp-sidebar-mini .sp-sidebar {
   padding: 3px 10px;
   border-radius: 99px;
 }
-.fee-ben-chip-purple { background: #ede9fe; color: #7c3aed; }
+.fee-ben-chip-purple { background: #fff0f2; color: #920c24; }
 .fee-ben-chip-cyan   { background: #ecfeff; color: #0891b2; }
 .fee-benefits-chevron {
   font-family: 'Material Symbols Outlined';
@@ -6241,8 +6241,8 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   gap: 10px;
   font-size: 13px;
   color: var(--sp-text-3);
-  background: #fffbeb;
-  border: 1px solid #fde68a;
+  background: #fff0f2;
+  border: 1px solid #f5c6ce;
   border-radius: 10px;
   padding: 12px 16px;
   margin-bottom: 8px;
@@ -6274,7 +6274,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
 
 /* ── 1. HERO OVERVIEW CARD — Elevated premium glassmorphism ──────── */
 .fee-overview-card {
-  background: #2b2e4a !important;
+  background: #920c24 !important;
   border-radius: 24px !important;
   padding: 28px 28px 24px !important;
   box-shadow: 0 32px 72px rgba(43, 46, 74, 0.45), 0 8px 24px rgba(0,0,0,0.18) !important;
@@ -6397,7 +6397,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   border-radius: 99px;
   animation: fee-shimmer-pulse 2s ease-in-out infinite;
 }
-.fee-progress-done { background: linear-gradient(90deg, #34d399, #10b981) !important; }
+.fee-progress-done { background: linear-gradient(90deg, #34d399, #000000) !important; }
 .fee-progress-done::after { display: none; }
 .fee-progress-labels {
   display: flex;
@@ -6468,7 +6468,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   top: var(--sp-nav-h) !important;
   left: var(--sp-sidebar-w) !important; right: 0 !important;
   z-index: 150 !important;
-  background: #2b2e4a !important;
+  background: #920c24 !important;
   border-bottom: 1px solid rgba(255,255,255,0.08) !important;
   box-shadow: 0 2px 16px rgba(0,0,0,0.15) !important;
   transform: translateY(-100%) !important;
@@ -6593,12 +6593,12 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   justify-content: center !important;
   flex-shrink: 0 !important;
 }
-.fee-icon-paid      { background: linear-gradient(135deg, #d1fae5, #a7f3d0) !important; color: #065f46 !important; }
+.fee-icon-paid      { background: linear-gradient(135deg, #f3f4f6, #d1d5db) !important; color: #000000 !important; }
 .fee-icon-overdue   { background: linear-gradient(135deg, #fee2e2, #fecaca) !important; color: #991b1b !important; }
-.fee-icon-pending   { background: linear-gradient(135deg, #fef3c7, #fde68a) !important; color: #92400e !important; }
-.fee-icon-partial   { background: linear-gradient(135deg, #fff7ed, #fed7aa) !important; color: #c2410c !important; }
-.fee-icon-initiated { background: linear-gradient(135deg, #eff6ff, #bfdbfe) !important; color: #1d4ed8 !important; }
-.fee-icon-refunded  { background: linear-gradient(135deg, #faf5ff, #ddd6fe) !important; color: #6d28d9 !important; }
+.fee-icon-pending   { background: linear-gradient(135deg, #fff0f2, #f5c6ce) !important; color: #920c24 !important; }
+.fee-icon-partial   { background: linear-gradient(135deg, #fff0f2, #f5c6ce) !important; color: #920c24 !important; }
+.fee-icon-initiated { background: linear-gradient(135deg, #fff0f2, #f5c6ce) !important; color: #920c24 !important; }
+.fee-icon-refunded  { background: linear-gradient(135deg, #fff0f2, #f5c6ce) !important; color: #920c24 !important; }
 .fee-icon-cancelled { background: var(--sp-bg) !important; color: var(--sp-text-4) !important; }
 
 /* Invoice title + dates */
@@ -6633,7 +6633,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   letter-spacing: -0.02em !important;
 }
 .fee-inv-amount-due   { color: #dc2626 !important; }
-.fee-inv-amount-clear { color: #059669 !important; }
+.fee-inv-amount-clear { color: #000000 !important; }
 .fee-inv-amount-label {
   font-size: 9px !important;
   text-transform: uppercase !important;
@@ -6652,14 +6652,14 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   white-space: nowrap !important;
   letter-spacing: 0.02em !important;
 }
-.fee-badge-paid              { background: #dcfce7 !important; color: #166534 !important; border: 1px solid #bbf7d0 !important; }
+.fee-badge-paid              { background: #f3f4f6 !important; color: #000000 !important; border: 1px solid #f3f4f6 !important; }
 .fee-badge-unpaid            { background: #fff5f5 !important; color: #b91c1c !important; border: 1px solid #fecaca !important; }
 .fee-badge-overdue           { background: #fff1f2 !important; color: #be123c !important; border: 1px solid #fecdd3 !important; }
-.fee-badge-pending           { background: #fffbeb !important; color: #b45309 !important; border: 1px solid #fde68a !important; }
+.fee-badge-pending           { background: #fff0f2 !important; color: #920c24 !important; border: 1px solid #f5c6ce !important; }
 .fee-badge-cancelled         { background: #f8fafc !important; color: #94a3b8 !important; border: 1px solid #e2e8f0 !important; }
-.fee-badge-partially-paid    { background: #fff7ed !important; color: #c2410c !important; border: 1px solid #fed7aa !important; }
-.fee-badge-payment-initiated { background: #eff6ff !important; color: #1d4ed8 !important; border: 1px solid #bfdbfe !important; }
-.fee-badge-authorized        { background: #f0fdf4 !important; color: #166534 !important; border: 1px solid #bbf7d0 !important; }
+.fee-badge-partially-paid    { background: #fff0f2 !important; color: #920c24 !important; border: 1px solid #f5c6ce !important; }
+.fee-badge-payment-initiated { background: #fff0f2 !important; color: #920c24 !important; border: 1px solid #f5c6ce !important; }
+.fee-badge-authorized        { background: #f3f4f6 !important; color: #000000 !important; border: 1px solid #f3f4f6 !important; }
 .fee-badge-payment-failed,
 .fee-badge-failed            { background: #fff1f2 !important; color: #be123c !important; border: 1px solid #fecdd3 !important; }
 
@@ -6760,8 +6760,8 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   color: var(--sp-text-1) !important;
   text-align: right !important;
 }
-.fee-label-green { color: #059669 !important; }
-.fee-label-purple { color: #7c3aed !important; }
+.fee-label-green { color: #000000 !important; }
+.fee-label-purple { color: #920c24 !important; }
 
 /* Outstanding chip */
 .fee-outstanding-chip {
@@ -6780,9 +6780,9 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   color: #b91c1c !important;
 }
 .fee-chip-clear {
-  background: linear-gradient(135deg, #f0fdf4, #dcfce7) !important;
-  border: 1.5px solid #bbf7d0 !important;
-  color: #166534 !important;
+  background: linear-gradient(135deg, #f3f4f6, #f3f4f6) !important;
+  border: 1.5px solid #f3f4f6 !important;
+  color: #000000 !important;
 }
 
 /* Download buttons */
@@ -6815,14 +6815,14 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   transform: translateY(-1px) !important;
 }
 .fee-download-receipt-btn {
-  color: #059669 !important;
-  background: rgba(5,150,105,0.07) !important;
-  border-color: rgba(5,150,105,0.2) !important;
+  color: #000000 !important;
+  background: rgba(0,0,0,0.07) !important;
+  border-color: rgba(0,0,0,0.2) !important;
 }
 .fee-download-receipt-btn:hover {
-  background: rgba(5,150,105,0.13) !important;
-  border-color: rgba(5,150,105,0.35) !important;
-  color: #059669 !important;
+  background: rgba(0,0,0,0.13) !important;
+  border-color: rgba(0,0,0,0.35) !important;
+  color: #000000 !important;
 }
 
 /* ── 6. PAYMENT HISTORY TIMELINE ─────────────────────────────────── */
@@ -6848,8 +6848,8 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   margin-top: 2px !important;
 }
 .fee-payment-tick-success {
-  background: #dcfce7 !important;
-  color: #166534 !important;
+  background: #f3f4f6 !important;
+  color: #000000 !important;
 }
 .fee-payment-tick-cancelled {
   background: #fee2e2 !important;
@@ -6857,12 +6857,12 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
 }
 .fee-payment-tick-initiated,
 .fee-payment-tick-authorized {
-  background: #dbeafe !important;
-  color: #1d4ed8 !important;
+  background: #fff0f2 !important;
+  color: #920c24 !important;
 }
 .fee-payment-tick-refunded {
-  background: #ede9fe !important;
-  color: #6d28d9 !important;
+  background: #fff0f2 !important;
+  color: #920c24 !important;
 }
 
 .fee-payment-success { background: transparent !important; border: none !important; }
@@ -6888,7 +6888,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   padding: 2px 8px !important;
   letter-spacing: 0.04em !important;
 }
-.fee-rzp-captured { background: #dcfce7 !important; color: #166534 !important; }
+.fee-rzp-captured { background: #f3f4f6 !important; color: #000000 !important; }
 .fee-payment-txn {
   font-size: 10px !important;
   color: var(--sp-text-4) !important;
@@ -6918,14 +6918,14 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   color: #be123c !important;
 }
 .fee-due-alert-urgent {
-  background: linear-gradient(90deg, #fffbeb, #fefce8) !important;
-  border-bottom-color: #fde68a !important;
-  color: #b45309 !important;
+  background: linear-gradient(90deg, #fff0f2, #fefce8) !important;
+  border-bottom-color: #f5c6ce !important;
+  color: #920c24 !important;
 }
 .fee-due-alert-upcoming {
-  background: linear-gradient(90deg, #eff6ff, #f0f9ff) !important;
-  border-bottom-color: #bfdbfe !important;
-  color: #1d4ed8 !important;
+  background: linear-gradient(90deg, #fff0f2, #fff0f2) !important;
+  border-bottom-color: #f5c6ce !important;
+  color: #920c24 !important;
 }
 
 /* ── 8. OVERDUE BANNER ───────────────────────────────────────────── */
@@ -7029,7 +7029,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   text-align: center !important;
 }
 .fee-tab-badge-red   { background: #fee2e2 !important; color: #b91c1c !important; }
-.fee-tab-badge-green { background: #dcfce7 !important; color: #166534 !important; }
+.fee-tab-badge-green { background: #f3f4f6 !important; color: #000000 !important; }
 .fee-tab-panel { padding: 18px !important; }
 
 /* ── 10. DEMAND TABLE — Clean financial table ────────────────────── */
@@ -7076,7 +7076,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
 .fee-demand-row-settled { opacity: 0.6 !important; }
 .fee-demand-outstanding { font-weight: 800 !important; font-size: 14px !important; }
 .fee-demand-amt-due { color: #dc2626 !important; }
-.fee-demand-amt-clear { color: #059669 !important; }
+.fee-demand-amt-clear { color: #000000 !important; }
 
 /* Demand pay button — outline style to differentiate from primary */
 .fee-demand-pay-btn {
@@ -7113,11 +7113,11 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   letter-spacing: 0.02em !important;
   white-space: nowrap !important;
 }
-.fee-demand-badge-paid     { background: #dcfce7 !important; color: #15803d !important; }
+.fee-demand-badge-paid     { background: #f3f4f6 !important; color: #000000 !important; }
 .fee-demand-badge-overdue  { background: #fee2e2 !important; color: #991b1b !important; }
-.fee-demand-badge-pending  { background: #fffbeb !important; color: #92400e !important; }
+.fee-demand-badge-pending  { background: #fff0f2 !important; color: #920c24 !important; }
 .fee-demand-badge-waived   { background: #f1f5f9 !important; color: #6b7280 !important; }
-.fee-demand-badge-partially-paid { background: #fef3c7 !important; color: #92400e !important; }
+.fee-demand-badge-partially-paid { background: #fff0f2 !important; color: #920c24 !important; }
 
 /* Overdue due date cell */
 .fee-demand-due-overdue {
@@ -7165,7 +7165,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
 }
 .fee-txn-table tbody tr:last-child td { border-bottom: none !important; }
 .fee-txn-table tbody tr:hover { background: rgba(74,127,193,0.03) !important; }
-.fee-txn-amount { font-weight: 800 !important; color: #059669 !important; font-size: 14px !important; }
+.fee-txn-amount { font-weight: 800 !important; color: #000000 !important; font-size: 14px !important; }
 .fee-txn-receipt-no { font-family: monospace !important; font-size: 12px !important; }
 .fee-txn-dl-btn {
   display: inline-flex !important;
@@ -7288,12 +7288,12 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   letter-spacing: 0.04em !important;
   border: 1px solid transparent !important;
 }
-.fee-comp-tuition-fee     { background: #dbeafe !important; color: #1d4ed8 !important; border-color: #bfdbfe !important; }
-.fee-comp-hostel-fee      { background: #fef9c3 !important; color: #854d0e !important; border-color: #fef08a !important; }
+.fee-comp-tuition-fee     { background: #fff0f2 !important; color: #920c24 !important; border-color: #f5c6ce !important; }
+.fee-comp-hostel-fee      { background: #fff0f2 !important; color: #920c24 !important; border-color: #f5c6ce !important; }
 .fee-comp-examination-fee { background: #fce7f3 !important; color: #9d174d !important; border-color: #fbcfe8 !important; }
-.fee-comp-lab-fee         { background: #dcfce7 !important; color: #166534 !important; border-color: #bbf7d0 !important; }
-.fee-comp-library-fee     { background: #ede9fe !important; color: #5b21b6 !important; border-color: #ddd6fe !important; }
-.fee-comp-transport-fee   { background: #fff7ed !important; color: #9a3412 !important; border-color: #fed7aa !important; }
+.fee-comp-lab-fee         { background: #f3f4f6 !important; color: #000000 !important; border-color: #f3f4f6 !important; }
+.fee-comp-library-fee     { background: #fff0f2 !important; color: #920c24 !important; border-color: #f5c6ce !important; }
+.fee-comp-transport-fee   { background: #fff0f2 !important; color: #920c24 !important; border-color: #f5c6ce !important; }
 .fee-comp-other           { background: var(--sp-bg) !important; color: var(--sp-text-3) !important; }
 
 /* ── 15. NOTICE & BENEFIT PANELS ─────────────────────────────────── */
@@ -7308,8 +7308,8 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   border: 1.5px solid transparent !important;
   font-weight: 500 !important;
 }
-.fee-notice-info    { background: #eff6ff !important; color: #1e40af !important; border-color: #bfdbfe !important; }
-.fee-notice-warning { background: #fffbeb !important; color: #78350f !important; border-color: #fde68a !important; }
+.fee-notice-info    { background: #fff0f2 !important; color: #920c24 !important; border-color: #f5c6ce !important; }
+.fee-notice-warning { background: #fff0f2 !important; color: #920c24 !important; border-color: #f5c6ce !important; }
 
 .fee-benefits-panel {
   border: 1.5px solid var(--sp-border) !important;
@@ -7344,7 +7344,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   align-items: center !important;
   gap: 4px !important;
 }
-.fee-ben-chip-purple { background: #ede9fe !important; color: #6d28d9 !important; }
+.fee-ben-chip-purple { background: #fff0f2 !important; color: #920c24 !important; }
 .fee-ben-chip-cyan   { background: #cffafe !important; color: #0e7490 !important; }
 .fee-benefits-body {
   font-weight: 300;
@@ -7373,9 +7373,9 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   justify-content: center !important;
   flex-shrink: 0 !important;
 }
-.fee-refund-icon-approved { background: rgba(5,150,105,0.12) !important; color: #059669 !important; }
+.fee-refund-icon-approved { background: rgba(0,0,0,0.12) !important; color: #000000 !important; }
 .fee-refund-icon-pending  { background: rgba(192,122,26,0.12) !important; color: #c07a1a !important; }
-.fee-refund-amount { font-size: 20px !important; font-weight: 800 !important; color: #059669 !important; }
+.fee-refund-amount { font-size: 20px !important; font-weight: 800 !important; color: #000000 !important; }
 .fee-refund-amount-label { font-size: 10px !important; color: var(--sp-text-4) !important; text-transform: uppercase !important; letter-spacing: 0.05em !important; }
 .fee-refund-status {
   font-size: 11px !important;
@@ -7387,8 +7387,8 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   align-items: center !important;
   gap: 4px !important;
 }
-.fee-refund-status-approved { background: #dcfce7 !important; color: #166534 !important; }
-.fee-refund-status-pending  { background: #fffbeb !important; color: #92400e !important; }
+.fee-refund-status-approved { background: #f3f4f6 !important; color: #000000 !important; }
+.fee-refund-status-pending  { background: #fff0f2 !important; color: #920c24 !important; }
 
 /* ── 17. SUPPORT SECTION ─────────────────────────────────────────── */
 .fee-support-section {
@@ -7513,15 +7513,15 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   margin-top: 12px !important;
   line-height: 1.5 !important;
 }
-.fee-status-box-initiated { background: #eff6ff !important; color: #1d4ed8 !important; border: 1px solid #bfdbfe !important; }
+.fee-status-box-initiated { background: #fff0f2 !important; color: #920c24 !important; border: 1px solid #f5c6ce !important; }
 .fee-status-box-failed    { background: #fff5f5 !important; color: #b91c1c !important; border: 1px solid #fecaca !important; }
-.fee-status-box-refunded  { background: #f5f3ff !important; color: #6d28d9 !important; border: 1px solid #ddd6fe !important; }
+.fee-status-box-refunded  { background: #fff0f2 !important; color: #920c24 !important; border: 1px solid #f5c6ce !important; }
 
 /* ── 22. SCHOLARSHIP LINE ────────────────────────────────────────── */
 .fee-scholarship-line .fee-detail-line-label { display: flex !important; align-items: center !important; gap: 4px !important; }
 .fee-scholarship-note {
   font-size: 11px !important;
-  color: #7c3aed !important;
+  color: #920c24 !important;
   background: rgba(124,58,237,0.06) !important;
   border-radius: 8px !important;
   padding: 6px 10px !important;
@@ -7614,11 +7614,11 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   justify-content: center !important;
   flex-shrink: 0 !important;
   background: rgba(124,58,237,0.1) !important;
-  color: #7c3aed !important;
+  color: #920c24 !important;
 }
 .fee-con-type { font-size: 13px !important; font-weight: 700 !important; color: var(--sp-text-1) !important; }
 .fee-con-component { font-size: 11px !important; color: var(--sp-text-4) !important; margin-top: 2px !important; }
-.fee-con-amount { font-size: 18px !important; font-weight: 800 !important; color: #7c3aed !important; }
+.fee-con-amount { font-size: 18px !important; font-weight: 800 !important; color: #920c24 !important; }
 .fee-con-amount-label { font-size: 10px !important; color: var(--sp-text-4) !important; text-transform: uppercase !important; letter-spacing: 0.05em !important; }
 .fee-con-status {
   font-size: 11px !important;
@@ -7630,8 +7630,8 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   align-items: center !important;
   gap: 3px !important;
 }
-.fee-con-status-approved { background: #dcfce7 !important; color: #166534 !important; }
-.fee-con-status-pending  { background: #fffbeb !important; color: #92400e !important; }
+.fee-con-status-approved { background: #f3f4f6 !important; color: #000000 !important; }
+.fee-con-status-pending  { background: #fff0f2 !important; color: #920c24 !important; }
 
 /* ── 27. BENEFITS PANEL IMPROVEMENTS ────────────────────────────── */
 .fee-benefits-sub-hdr {
@@ -7735,9 +7735,9 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
 }
 .fee-status-paid              { background: rgba(52,211,153,0.22) !important;  color: #6ee7b7 !important;  border: 1px solid rgba(52,211,153,0.35) !important; }
 .fee-status-unpaid            { background: rgba(252,165,165,0.22) !important; color: #fca5a5 !important;  border: 1px solid rgba(252,165,165,0.35) !important; }
-.fee-status-partially-paid    { background: rgba(253,186,116,0.22) !important; color: #fed7aa !important;  border: 1px solid rgba(253,186,116,0.35) !important; }
+.fee-status-partially-paid    { background: rgba(253,186,116,0.22) !important; color: #f5c6ce !important;  border: 1px solid rgba(253,186,116,0.35) !important; }
 .fee-status-overdue           { background: rgba(248,113,113,0.25) !important; color: #fca5a5 !important;  border: 1px solid rgba(248,113,113,0.35) !important; }
-.fee-status-payment-initiated { background: rgba(147,197,253,0.22) !important; color: #93c5fd !important;  border: 1px solid rgba(147,197,253,0.35) !important; }
+.fee-status-payment-initiated { background: rgba(147,197,253,0.22) !important; color: #f5c6ce !important;  border: 1px solid rgba(147,197,253,0.35) !important; }
 .fee-status-authorized        { background: rgba(52,211,153,0.18) !important;  color: #6ee7b7 !important;  border: 1px solid rgba(52,211,153,0.28) !important; }
 .fee-status-payment-failed    { background: rgba(252,165,165,0.28) !important; color: #f87171 !important;  border: 1px solid rgba(252,165,165,0.4) !important; }
 .fee-status-refunded          { background: rgba(196,181,253,0.22) !important; color: #c4b5fd !important;  border: 1px solid rgba(196,181,253,0.35) !important; }
@@ -7761,7 +7761,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
 .fee-overview-shape-2 {
   width: 160px !important;
   height: 160px !important;
-  background: radial-gradient(circle, #93c5fd 0%, transparent 70%) !important;
+  background: radial-gradient(circle, #f5c6ce 0%, transparent 70%) !important;
   bottom: -60px !important;
   left: 80px !important;
   animation: fee-float-2 10s ease-in-out infinite !important;
@@ -7815,7 +7815,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   margin-top: 4px !important;
   display: inline-block !important;
 }
-.fee-credit-status-active    { background: #dcfce7 !important; color: #15803d !important; }
+.fee-credit-status-active    { background: #f3f4f6 !important; color: #000000 !important; }
 .fee-credit-status-exhausted { background: #f1f5f9 !important; color: #64748b !important; }
 .fee-credit-bar-track {
   height: 6px !important;
@@ -7915,7 +7915,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   font-size: 10px !important;
   font-weight: 600 !important;
   background: rgba(99,102,241,0.1) !important;
-  color: #4f46e5 !important;
+  color: #920c24 !important;
   padding: 1px 7px !important;
   border-radius: 99px !important;
   letter-spacing: 0.03em !important;
@@ -7935,7 +7935,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   font-weight: 700 !important;
 }
 .fee-demand-table-v2 .fee-demand-amt-clear {
-  color: #16a34a !important;
+  color: #000000 !important;
   font-weight: 700 !important;
 }
 .fee-demand-table-v2 .fee-demand-due-overdue {
@@ -8130,7 +8130,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   background: rgba(251,191,36,0.08) !important;
   border-radius: 6px !important;
   padding: 6px 8px !important;
-  border-left: 3px solid #fbbf24 !important;
+  border-left: 3px solid #920c24 !important;
   margin: 4px 0 !important;
 }
 
@@ -8368,7 +8368,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   border: 2.5px solid rgba(255,255,255,0.9);
 }
 .spd-hero-status-dot.active { background: #34d399; }
-.spd-hero-status-dot.inactive { background: #fbbf24; }
+.spd-hero-status-dot.inactive { background: #920c24; }
 .spd-hero-status-label {
   display: flex;
   align-items: center;
@@ -8440,8 +8440,8 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   border-left: 4px solid;
 }
 .spd-alert-warning {
-  background: #fffbeb;
-  border-color: #f59e0b;
+  background: #fff0f2;
+  border-color: #920c24;
 }
 .spd-alert-danger {
   background: #fff5f5;
@@ -8455,8 +8455,8 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   justify-content: center;
   flex-shrink: 0;
 }
-.spd-alert-warning .spd-alert-icon { background: #fef3c7; }
-.spd-alert-warning .spd-alert-icon .sp-ms { color: #d97706; font-size: 20px; }
+.spd-alert-warning .spd-alert-icon { background: #fff0f2; }
+.spd-alert-warning .spd-alert-icon .sp-ms { color: #920c24; font-size: 20px; }
 .spd-alert-danger .spd-alert-icon { background: #fee2e2; }
 .spd-alert-danger .spd-alert-icon .sp-ms { color: #dc2626; font-size: 20px; }
 .spd-alert-body {
@@ -8474,7 +8474,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   text-decoration: none; white-space: nowrap;
   flex-shrink: 0;
 }
-.spd-alert-warning .spd-alert-action { color: #b45309; }
+.spd-alert-warning .spd-alert-action { color: #920c24; }
 .spd-alert-danger  .spd-alert-action { color: #dc2626; }
 
 /* ── KPI Cards ────────────────────────────────────────────────────── */
@@ -8519,8 +8519,8 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
 }
 .spd-kpi-card:hover::before { opacity: 1; }
 .spd-kpi-attendance::before { background: linear-gradient(90deg, var(--sp-success), #6ee7b7); }
-.spd-kpi-courses::before    { background: linear-gradient(90deg, var(--sp-primary), #93c5fd); }
-.spd-kpi-exam::before       { background: linear-gradient(90deg, #f59e0b, #fcd34d); }
+.spd-kpi-courses::before    { background: linear-gradient(90deg, var(--sp-primary), #f5c6ce); }
+.spd-kpi-exam::before       { background: linear-gradient(90deg, #920c24, #f5c6ce); }
 .spd-kpi-fees::before       { background: linear-gradient(90deg, #ef4444, #fca5a5); }
 
 .spd-kpi-top {
@@ -8540,8 +8540,8 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
 .spd-kpi-icon .sp-ms { font-size: 20px; color: var(--sp-primary); }
 .spd-kpi-attendance .spd-kpi-icon .sp-ms { color: var(--sp-success); }
 .spd-kpi-attendance .spd-kpi-icon { background: #f0fdf4; }
-.spd-kpi-exam .spd-kpi-icon .sp-ms { color: #d97706; }
-.spd-kpi-exam .spd-kpi-icon { background: #fffbeb; }
+.spd-kpi-exam .spd-kpi-icon .sp-ms { color: #920c24; }
+.spd-kpi-exam .spd-kpi-icon { background: #fff0f2; }
 .spd-kpi-fees .spd-kpi-icon .sp-ms { color: #dc2626; }
 .spd-kpi-fees .spd-kpi-icon { background: #fff5f5; }
 
@@ -8556,7 +8556,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
 }
 .spd-kpi-trend .sp-ms { font-size: 13px; }
 .spd-kpi-trend.up   { background: #f0fdf4; color: #15803d; }
-.spd-kpi-trend.warn { background: #fffbeb; color: #a16207; }
+.spd-kpi-trend.warn { background: #fff0f2; color: #a16207; }
 .spd-kpi-trend.down { background: #fff5f5; color: #b91c1c; }
 
 .spd-kpi-value {
@@ -8593,7 +8593,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
 
 /* ── Quick Actions KPI shortcut card ─────────────────────────────── */
 .spd-kpi-quickactions {
-  background: linear-gradient(145deg, #2b2e4a 0%, #3d4270 100%);
+  background: linear-gradient(145deg, #920c24 0%, #3d4270 100%);
   border: none;
   cursor: pointer;
   position: relative;
@@ -8696,10 +8696,10 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   flex-shrink: 0;
 }
 .spd-section-icon .sp-ms { font-size: 18px; }
-.spd-icon-blue   { background: #eff6ff; } .spd-icon-blue   .sp-ms { color: #1d4ed8; }
+.spd-icon-blue   { background: #fff0f2; } .spd-icon-blue   .sp-ms { color: #920c24; }
 .spd-icon-teal   { background: #f0fdfa; } .spd-icon-teal   .sp-ms { color: #0f766e; }
-.spd-icon-purple { background: #f5f3ff; } .spd-icon-purple .sp-ms { color: #7c3aed; }
-.spd-icon-orange { background: #fff7ed; } .spd-icon-orange .sp-ms { color: #c2410c; }
+.spd-icon-purple { background: #fff0f2; } .spd-icon-purple .sp-ms { color: #920c24; }
+.spd-icon-orange { background: #fff0f2; } .spd-icon-orange .sp-ms { color: #920c24; }
 .spd-icon-green  { background: #f0fdf4; } .spd-icon-green  .sp-ms { color: #15803d; }
 .spd-icon-red    { background: #fff5f5; } .spd-icon-red    .sp-ms { color: #dc2626; }
 
@@ -8858,7 +8858,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   transition: stroke-dasharray 1s cubic-bezier(0.16,1,0.3,1);
 }
 .spd-ring-good   { stroke: var(--sp-success); }
-.spd-ring-warn   { stroke: #f59e0b; }
+.spd-ring-warn   { stroke: #920c24; }
 .spd-ring-danger { stroke: var(--sp-danger); }
 .spd-ring-label {
   position: absolute;
@@ -8870,7 +8870,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   font-weight: 400;
 }
 .spd-ring-lbl-good   { color: var(--sp-success); }
-.spd-ring-lbl-warn   { color: #d97706; }
+.spd-ring-lbl-warn   { color: #920c24; }
 .spd-ring-lbl-danger { color: var(--sp-danger); }
 
 .spd-insight-info { flex: 1; min-width: 0; }
@@ -8894,7 +8894,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
 }
 .spd-health-badge .sp-ms { font-size: 13px; }
 .spd-health-good   { background: #f0fdf4; color: #15803d; }
-.spd-health-warn   { background: #fffbeb; color: #a16207; }
+.spd-health-warn   { background: #fff0f2; color: #a16207; }
 .spd-health-danger { background: #fff5f5; color: #b91c1c; }
 
 /* ── Course Rows ─────────────────────────────────────────────────── */
@@ -8937,7 +8937,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
 }
 .spd-course-pct-lbl { font-size: 10px; color: var(--sp-text-4); }
 .spd-att-good   { color: var(--sp-success); }
-.spd-att-warn   { color: #d97706; }
+.spd-att-warn   { color: #920c24; }
 .spd-att-danger { color: var(--sp-danger); }
 
 /* ── Quick Actions — Accent Card ─────────────────────────────────── */
@@ -8947,7 +8947,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   box-shadow: 0 4px 24px rgba(43,46,74,0.18), 0 1px 4px rgba(0,0,0,0.07);
 }
 .spd-qa-accent-hdr {
-  background: linear-gradient(120deg, #1a1c2e 0%, #2b2e4a 60%, #3d4270 100%);
+  background: linear-gradient(120deg, #1a1c2e 0%, #920c24 60%, #3d4270 100%);
   padding: 18px 20px 16px;
   display: flex;
   align-items: center;
@@ -9108,7 +9108,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
 }
 .spd-prog-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--sp-primary), var(--sp-primary-mid, #93c5fd));
+  background: linear-gradient(90deg, var(--sp-primary), var(--sp-primary-mid, #f5c6ce));
   border-radius: 99px;
   transition: width 1s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -9141,8 +9141,8 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
 }
 .spd-status-paid      { background: #f0fdf4; color: #15803d; }
 .spd-status-overdue   { background: #fff5f5; color: #b91c1c; }
-.spd-status-unpaid    { background: #fffbeb; color: #a16207; }
-.spd-status-submitted { background: #eff6ff; color: #1d4ed8; }
+.spd-status-unpaid    { background: #fff0f2; color: #a16207; }
+.spd-status-submitted { background: #fff0f2; color: #920c24; }
 .spd-status-cancelled { background: #f9fafb; color: #6b7280; }
 
 /* ── Upcoming Grid ───────────────────────────────────────────────── */

@@ -5,22 +5,6 @@
 {% block extra_head %}
 <style>
 /* ── Profile Page ─────────────────────────────────────── */
-.sp-breadcrumb {
-  margin-bottom: 24px;
-  color: var(--sp-nav-text);
-  font-family: var(--sp-font-family, "Merriweather", serif);
-  font-size: 14px;
-  font-weight: 300;
-}
-.sp-breadcrumb a {
-  color: gray;
-  text-decoration: none;
-}
-.sp-breadcrumb .is-current {
-  color: var(--sp-primary);
-  font-weight: 400 !important;
-}
-
 .sp-profile-hero {
   display: flex;
   align-items: center;
@@ -151,8 +135,8 @@
   padding: 10px 14px;
   margin-bottom: 20px;
   border-radius: 8px;
-  background: #fef9c3;
-  color: #854d0e;
+  background: #fff0f2;
+  color: #920c24;
   font-size: 13px;
   font-weight: 300;
 }
@@ -305,10 +289,6 @@
   <div><strong>We couldn't load your profile right now.</strong> Please try again later or contact the Registrar's Office if this continues.</div>
 </div>
 {% else %}
-
-<div class="sp-breadcrumb fade-in">
-  <a href="/student-portal">Dashboard</a> > <span class="is-current">Student Profile</span>
-</div>
 
 {# ── Profile Hero ──────────────────────────────────────────── #}
 <div class="sp-profile-hero fade-in" style="background: #fdf5f5 url('/assets/slcm/images/building-illustration.png') no-repeat right 35% center / contain; justify-content: space-between;">
@@ -603,7 +583,7 @@
               <div style="display:flex; align-items:center; gap:8px;">
                 <div style="font-weight:400; font-family: var(--sp-font-family, 'Merriweather', serif); color:var(--sp-text-1); font-size: 14px;">{{ p.parent_name }}</div>
                 {% if p.relation %}
-                <span style="background:#e0f2fe; color:#0369a1; padding:2px 8px; border-radius:12px; font-size:12px;">{{ p.relation }}</span>
+                <span style="background:#fff0f2; color:#920c24; padding:2px 8px; border-radius:12px; font-size:12px;">{{ p.relation }}</span>
                 {% endif %}
               </div>
               <div style="display:flex; flex-wrap:wrap; gap:16px; margin-top:8px; font-size:13px; color:var(--sp-text-3); font-weight:300;">
@@ -692,13 +672,13 @@
       <div class="sp-section-body">
         <div class="sp-quick-action-grid">
           <a href="/student-portal/fees" class="sp-quick-action-card">
-            <div class="icon-wrap" style="background:#f3e8ff; color:#a855f7;"><span class="sp-ms">receipt_long</span></div>
+            <div class="icon-wrap" style="background:#fff0f2; color:#920c24;"><span class="sp-ms">receipt_long</span></div>
             <h3>Fees & Payments</h3>
             <p>View fee details</p>
             <span class="sp-ms sp-ms-chevron">chevron_right</span>
           </a>
           <a href="/student-portal/hostel" class="sp-quick-action-card">
-            <div class="icon-wrap" style="background:#dbeafe; color:#3b82f6;"><span class="sp-ms">hotel</span></div>
+            <div class="icon-wrap" style="background:#fff0f2; color:#920c24;"><span class="sp-ms">hotel</span></div>
             <h3>Hostel Details</h3>
             <p>View hostel information</p>
             <span class="sp-ms sp-ms-chevron">chevron_right</span>

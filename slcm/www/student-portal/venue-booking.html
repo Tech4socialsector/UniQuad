@@ -23,10 +23,6 @@
     <div>
       <h1 class="sp-page-title" style="font-family: 'Merriweather', serif; font-size: 28px!important; color: var(--sp-text-1); margin: 0 0 6px 0; font-weight: 600;">Venue Booking</h1>
       <p class="sp-page-sub" style="font-size: 15px; color: var(--sp-text-3); margin: 0;">Book rooms and venues for your academic and co-curricular activities.</p>
-      <div style="font-size: 13px; color: var(--sp-text-4); margin-top: 14px;">
-        <a href="/student-portal" style="color: var(--sp-text-4); text-decoration: none;">Dashboard</a> &gt; 
-        <span style="color: var(--sp-primary); font-weight: 600;">Venue Booking</span>
-      </div>
     </div>
   </div>
 </div>
@@ -227,7 +223,7 @@
   <div class="sp-section-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px; font-family: 'Merriweather', serif; font-size: 20px; font-weight: 700; color: #0f172a; border-bottom: 1px solid transparent; padding-bottom: 16px; margin-bottom: 0;">
     <span style="display: flex; align-items: center; gap: 8px;"><span class="sp-ms" style="color: var(--sp-primary);">history</span> My Booking History</span>
     <div style="display:flex;align-items:center;gap:10px;">
-      <span class="sp-badge" id="vb-count-badge" style="background: #fef3c7; color: #d97706; font-size: 14px; padding: 4px 10px; font-weight: 700;">{{ total_count or 0 }}</span>
+      <span class="sp-badge" id="vb-count-badge" style="background: #fff0f2; color: #920c24; font-size: 14px; padding: 4px 10px; font-weight: 700;">{{ total_count or 0 }}</span>
     </div>
   </div>
 
@@ -396,7 +392,7 @@
 <div id="vb-capacity-modal" class="vb-modal-backdrop" style="display:none;">
   <div class="vb-modal-box">
     <div class="vb-modal-icon">
-      <span class="sp-ms" style="font-size:32px;color:#d97706;">group</span>
+      <span class="sp-ms" style="font-size:32px;color:#920c24;">group</span>
     </div>
     <div class="vb-modal-title">Attendees Exceed Room Capacity</div>
     <div class="vb-modal-body" id="vb-capacity-msg"></div>
@@ -1276,7 +1272,7 @@ function showVbToast(msg, success) {
 .vb-admin-remark .sp-ms { font-family: 'Material Symbols Outlined'; margin-top: 1px; }
 .vb-remark-ok   { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
 .vb-remark-err  { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
-.vb-remark-info { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+.vb-remark-info { background: #fff0f2; color: #920c24; border: 1px solid #f5c6ce; }
 
 .vb-td-room { white-space: nowrap; }
 .vb-td-dt { white-space: nowrap; font-size: 12px; }
@@ -1317,10 +1313,10 @@ function showVbToast(msg, success) {
 .vb-action-view:hover { background: var(--sp-primary-light); border-color: var(--sp-primary); }
 .vb-action-upload { color: #059669; }
 .vb-action-upload:hover { background: #f0fdf4; border-color: #bbf7d0; }
-.vb-action-swap { color: #1d4ed8; }
-.vb-action-swap:hover { background: #eff6ff; border-color: #bfdbfe; }
-.vb-action-swap-cancel { color: #d97706; }
-.vb-action-swap-cancel:hover { background: #fffbeb; border-color: #fde68a; }
+.vb-action-swap { color: #920c24; }
+.vb-action-swap:hover { background: #fff0f2; border-color: #f5c6ce; }
+.vb-action-swap-cancel { color: #920c24; }
+.vb-action-swap-cancel:hover { background: #fff0f2; border-color: #f5c6ce; }
 .vb-action-cancel { color: #dc2626; }
 .vb-action-cancel:hover { background: #fef2f2; border-color: #fecaca; }
 
@@ -1336,7 +1332,7 @@ function showVbToast(msg, success) {
   white-space: nowrap;
 }
 .vb-swap-badge .sp-ms { font-family: 'Material Symbols Outlined'; }
-.vb-swap-pending { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+.vb-swap-pending { background: #fff0f2; color: #920c24; border: 1px solid #f5c6ce; }
 .vb-swap-ok      { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
 .vb-swap-err     { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
 
@@ -1350,7 +1346,7 @@ function showVbToast(msg, success) {
   font-size: 12px;
 }
 .vb-info-hint .sp-ms { font-family: 'Material Symbols Outlined'; flex-shrink: 0; margin-top: 1px; }
-.vb-hint-warn { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+.vb-hint-warn { background: #fff0f2; color: #920c24; border: 1px solid #f5c6ce; }
 
 /* Empty state */
 .vb-empty-state {

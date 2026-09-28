@@ -7,9 +7,9 @@
 :root {
   --spf-maroon:  var(--sp-primary, #920c24);
   --spf-maroon-soft: rgba(146,12,36,0.06);
-  --spf-green:   var(--sp-success, #15803d);
+  --spf-green:   #000000;
   --spf-red:     var(--sp-danger, #920c24);
-  --spf-amber:   #b45309;            /* AA-contrast amber for small text */
+  --spf-amber:   #920c24;            /* AA-contrast amber for small text */
   --spf-border:  #e5e7eb;
   --spf-row:     #f1f2f4;
   --spf-head:    #f9fafb;
@@ -27,10 +27,6 @@
 .spf-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin: 4px 0 16px; }
 .spf-title { font-size: 26px; font-weight: 700; color: var(--spf-text); margin: 0 0 2px; letter-spacing: -0.01em; }
 .spf-sub { font-size: 13.5px; color: var(--spf-muted); margin: 0; }
-.spf-crumbs { font-size: 12.5px; color: var(--spf-muted); margin-top: 6px; }
-.spf-crumbs a { color: var(--spf-muted); text-decoration: none; }
-.spf-crumbs a:hover { text-decoration: underline; }
-.spf-crumbs span { color: var(--spf-maroon); font-weight: 600; }
 .spf-ay { display: flex; flex-direction: column; gap: 4px; min-width: 160px; }
 .spf-ay-label { font-size: 11px; font-weight: 700; color: var(--spf-muted); text-transform: uppercase; letter-spacing: 0.06em; }
 .spf-ay-select, .spf-ay-static {
@@ -120,7 +116,7 @@
 .spf-student-status { flex-shrink: 0; display: flex; align-items: center; }
 .spf-status-badge { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; padding: 5px 12px; border-radius: 8px; background: var(--spf-card); font-size: 13px; font-weight: 700; line-height: 1.3; border: 1px solid; }
 .spf-status-badge .sp-ms { font-size: 17px; }
-.spf-status-badge-paid { color: var(--spf-green); border-color: rgba(21,128,61,0.35); }
+.spf-status-badge-paid { color: var(--spf-green); border-color: rgba(0,0,0,0.25); }
 .spf-status-badge-due  { color: var(--spf-red); border-color: rgba(146,12,36,0.35); }
 @media (min-width: 1200px) {
   .spf-student { flex-wrap: nowrap; }
@@ -390,7 +386,6 @@
   <div>
     <h1 class="spf-title">Fees &amp; Payments</h1>
     <p class="spf-sub">View your fee summary, payments and outstanding dues.</p>
-    <div class="spf-crumbs spf-no-print"><a href="/student-portal">Dashboard</a> &rsaquo; <span>Fees &amp; Payments</span></div>
   </div>
   {% if not no_student %}
   <div class="spf-ay">
@@ -1173,8 +1168,8 @@
     </div>
     <div class="fee-trust-badges">
       <div class="fee-trust-badge-item"><span class="sp-ms fee-trust-badge-icon" style="color:#0ea5e9;" aria-hidden="true">lock</span><div><div class="fee-trust-badge-title">256-bit SSL</div><div class="fee-trust-badge-sub">Encrypted</div></div></div>
-      <div class="fee-trust-badge-item"><span class="sp-ms fee-trust-badge-icon" style="color:#7c3aed;" aria-hidden="true">shield</span><div><div class="fee-trust-badge-title">Razorpay</div><div class="fee-trust-badge-sub">Secured</div></div></div>
-      <div class="fee-trust-badge-item"><span class="sp-ms fee-trust-badge-icon" style="color:#059669;" aria-hidden="true">verified_user</span><div><div class="fee-trust-badge-title">PCI DSS</div><div class="fee-trust-badge-sub">Compliant</div></div></div>
+      <div class="fee-trust-badge-item"><span class="sp-ms fee-trust-badge-icon" style="color:#920c24;" aria-hidden="true">shield</span><div><div class="fee-trust-badge-title">Razorpay</div><div class="fee-trust-badge-sub">Secured</div></div></div>
+      <div class="fee-trust-badge-item"><span class="sp-ms fee-trust-badge-icon" style="color:#000000;" aria-hidden="true">verified_user</span><div><div class="fee-trust-badge-title">PCI DSS</div><div class="fee-trust-badge-sub">Compliant</div></div></div>
     </div>
     <p class="fee-trust-modal-note">You will be redirected to Razorpay's secure checkout. Your card or UPI details are never stored on our servers.</p>
     <div class="fee-trust-modal-footer">
@@ -1198,14 +1193,14 @@
     </div>
     <div class="fee-modal-body">
       <div class="fee-modal-amount-box">
-        <span class="sp-ms" style="font-size:20px;color:#16a34a;flex-shrink:0;" aria-hidden="true">payments</span>
+        <span class="sp-ms" style="font-size:20px;color:#000000;flex-shrink:0;" aria-hidden="true">payments</span>
         <div>
-          <div style="font-size:10px;color:#15803d;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px;">Amount Due</div>
-          <div id="sp-fee-counter-amount" style="font-size:1.3rem;font-weight:800;color:#14532d;"></div>
+          <div style="font-size:10px;color:#000000;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px;">Amount Due</div>
+          <div id="sp-fee-counter-amount" style="font-size:1.3rem;font-weight:800;color:#000000;"></div>
         </div>
       </div>
       <p style="font-size:13px;color:#475569;line-height:1.5;margin:0 0 12px;">Visit the <strong style="color:#1e293b;">Bursar's Office</strong> with the exact cash amount and your student ID.</p>
-      <div class="fee-modal-note"><span class="sp-ms" style="font-size:14px;color:#ca8a04;flex-shrink:0;" aria-hidden="true">info</span>Payment will be recorded after cash is received and verified.</div>
+      <div class="fee-modal-note"><span class="sp-ms" style="font-size:14px;color:#920c24;flex-shrink:0;" aria-hidden="true">info</span>Payment will be recorded after cash is received and verified.</div>
     </div>
     <div class="fee-modal-footer">
       <button type="button" onclick="document.getElementById('sp-fee-counter-modal').style.display='none';" class="fee-modal-close-btn">Close</button>
@@ -1258,8 +1253,8 @@
 
   /* ── Toast ──────────────────────────────────────────────────── */
   function toast(title, msg, type) {
-    var p = { success: { bd: 'rgba(21,128,61,0.35)', tx: '#166534' }, error: { bd: 'rgba(146,12,36,0.35)', tx: '#920c24' },
-              warning: { bd: '#fcd34d', tx: '#92400e' }, info: { bd: '#bae6fd', tx: '#0c4a6e' } };
+    var p = { success: { bd: 'rgba(0,0,0,0.25)', tx: '#000000' }, error: { bd: 'rgba(146,12,36,0.35)', tx: '#920c24' },
+              warning: { bd: '#f5c6ce', tx: '#920c24' }, info: { bd: '#f5c6ce', tx: '#920c24' } };
     var c = p[type] || p.info;
     var t = document.createElement('div');
     t.setAttribute('role', type === 'error' ? 'alert' : 'status');

@@ -65,14 +65,14 @@ const SP_DEFAULTS = {
     portal_title: "Student Portal", portal_subtitle: "",
     show_logo: 1, nav_brand_text: "", portal_favicon: "",
     font_family: "Poppins", font_size: "Normal",
-    primary_color: "#1a3c6e", secondary_color: "#c8a14b",
+    primary_color: "#920c24", secondary_color: "#920c24",
     background_color: "#f0f2f5", card_background: "#ffffff",
     sidebar_theme: "Light", nav_text_color: "#ffffff",
-    success_color: "#16a34a", warning_color: "#d97706",
-    danger_color: "#dc2626", info_color: "#0369a1",
+    success_color: "#16a34a", warning_color: "#920c24",
+    danger_color: "#dc2626", info_color: "#920c24",
     grade_excellent_color: "#16a34a", grade_excellent_label: "A+ / A / S",
-    grade_good_color: "#0369a1", grade_good_label: "B+ / B",
-    grade_average_color: "#d97706", grade_average_label: "C+ / C",
+    grade_good_color: "#920c24", grade_good_label: "B+ / B",
+    grade_average_color: "#920c24", grade_average_label: "C+ / C",
     grade_color: "#000000", grade_fail_color: "#dc2626", grade_fail_label: "D / F",
     att_good_threshold: 75, att_warn_threshold: 60,
     att_label_good: "Good", att_label_warn: "Low", att_label_danger: "Critical",
@@ -114,13 +114,16 @@ const form_events = {
     },
 
     select_all_menus(frm) {
-        if (frm.prevent_trigger) return;
-        frm.prevent_trigger = true;
-        const val = frm.doc.select_all_menus;
-        MENU_FIELDS.forEach(field => {
-            frm.set_value(field, val);
-        });
-        frm.prevent_trigger = false;
+        // set_value triggers fire asynchronously, so a sync flag can't tell a
+        // user click from _update_select_all_checkbox unticking this box after
+        // a single menu was unchecked. Infer it from state instead: the user can
+        // only untick "Select All" while every menu is ticked, so an untick with
+        // some menu already off is the automatic sync — leave the menus alone.
+        const val = frm.doc.select_all_menus ? 1 : 0;
+        if (!val && !MENU_FIELDS.every(field => frm.doc[field])) return;
+        const values = {};
+        MENU_FIELDS.forEach(field => { values[field] = val; });
+        frm.set_value(values);
     },
 
     // Theme color triggers
@@ -172,11 +175,10 @@ MENU_FIELDS.forEach(field => {
 frappe.ui.form.on("Student Portal Settings", form_events);
 
 function _update_select_all_checkbox(frm) {
-    if (frm.prevent_trigger) return;
-    const all_selected = MENU_FIELDS.every(field => frm.doc[field]);
-    frm.prevent_trigger = true;
-    frm.set_value("select_all_menus", all_selected ? 1 : 0);
-    frm.prevent_trigger = false;
+    const all_selected = MENU_FIELDS.every(field => frm.doc[field]) ? 1 : 0;
+    if ((frm.doc.select_all_menus ? 1 : 0) !== all_selected) {
+        frm.set_value("select_all_menus", all_selected);
+    }
 }
 
 

@@ -10,7 +10,7 @@
 
 /* ── Hero / Banner ─────────────────────────────── */
 .tr-hero {
-  background: #2b2e4a;
+  background: #920c24;
   border-radius: var(--sp-radius);
   padding: 28px 28px 24px;
   margin-bottom: 20px;
@@ -63,7 +63,7 @@
   font-size: 24px; font-weight: 800;
   color: #fff; line-height: 1;
 }
-.tr-kpi-val.warn { color: #fcd34d; }
+.tr-kpi-val.warn { color: #f5c6ce; }
 .tr-kpi-val.ok   { color: #86efac; }
 
 /* ── Two-column layout ─────────────────────────── */
@@ -208,17 +208,17 @@
   white-space: nowrap; letter-spacing: 0.02em;
 }
 .tr-b-draft      { background: #f1f5f9; color: #64748b; }
-.tr-b-payment    { background: #fef9c3; color: #854d0e; }
-.tr-b-submitted  { background: #dbeafe; color: #1e40af; }
-.tr-b-review     { background: #ede9fe; color: #5b21b6; }
+.tr-b-payment    { background: #fff0f2; color: #920c24; }
+.tr-b-submitted  { background: #fff0f2; color: #920c24; }
+.tr-b-review     { background: #fff0f2; color: #920c24; }
 .tr-b-approved   { background: #dcfce7; color: #166534; }
 .tr-b-generated  { background: #d1fae5; color: #065f46; }
-.tr-b-delivered  { background: #e0f2fe; color: #0c4a6e; }
+.tr-b-delivered  { background: #fff0f2; color: #920c24; }
 .tr-b-rejected   { background: var(--sp-danger-bg); color: var(--sp-danger); }
 .tr-b-cancelled  { background: #f1f5f9; color: #64748b; }
 .tr-b-paid       { background: #dcfce7; color: #166534; }
 .tr-b-failed     { background: var(--sp-danger-bg); color: var(--sp-danger); }
-.tr-b-pending    { background: #fef9c3; color: #854d0e; }
+.tr-b-pending    { background: #fff0f2; color: #920c24; }
 
 .tr-type-chip {
   display: inline-flex; align-items: center; gap: 6px;
@@ -748,7 +748,7 @@
           <span>Delivery: <strong>{{ r.delivery_mode }}</strong></span>
           {% if r.payment_required %}
           <span>
-            Fee: <strong style="color:{{ '#15803d' if r.payment_status=='Paid' else ('#dc2626' if r.payment_status in ('Payment Failed','Payment Cancelled') else '#b45309') }};">
+            Fee: <strong style="color:{{ '#15803d' if r.payment_status=='Paid' else ('#dc2626' if r.payment_status in ('Payment Failed','Payment Cancelled') else '#920c24') }};">
               ₹{{ "{:.0f}".format(r.fee_amount) }}
             </strong>
             <span class="tr-badge tr-b-{{ 'paid' if r.payment_status=='Paid' else ('failed' if r.payment_status in ('Payment Failed','Payment Cancelled') else 'pending') }}" style="font-size:10px;padding:2px 8px;margin-left:2px;">
@@ -1165,7 +1165,7 @@ function _openRzpCheckout(order) {
     name:        'Azim Premji University',
     description: order.description || 'Transcript Fee',
     prefill:     order.prefill || {},
-    theme:       { color: '#2b2e4a' },
+    theme:       { color: '#920c24' },
 
     // Called by Razorpay after the student completes payment in their checkout
     handler: function(resp) {
