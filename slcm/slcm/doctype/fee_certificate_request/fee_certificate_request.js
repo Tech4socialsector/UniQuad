@@ -15,15 +15,22 @@ function load_purpose_options(frm) {
 }
 
 function fetch_years(frm) {
-	if (!frm.doc.student || !frm.doc.from_academic_year || !frm.doc.purpose) {
-		frappe.msgprint(__("Set Student, Purpose and Academic Year first."));
+	const is_applicant = frm.doc.certificate_for === "Admission Stage";
+	const person = is_applicant ? frm.doc.applicant : frm.doc.student;
+	if (!person || !frm.doc.from_academic_year || !frm.doc.purpose) {
+		frappe.msgprint(
+			is_applicant
+				? __("Set Applicant, Purpose and Academic Year first.")
+				: __("Set Student, Purpose and Academic Year first.")
+		);
 		return;
 	}
 
 	frappe.call({
 		method: `${METHOD_BASE}.preview_academic_years`,
 		args: {
-			student: frm.doc.student,
+			student: is_applicant ? null : frm.doc.student,
+			applicant: is_applicant ? frm.doc.applicant : null,
 			from_academic_year: frm.doc.from_academic_year,
 			purpose: frm.doc.purpose,
 		},
@@ -60,11 +67,26 @@ frappe.ui.form.on("Fee Certificate Request", {
 		if (!option) return;
 		frm.set_value("certificate_type", option.certificate_type);
 		frm.set_value("include_bank_details", option.include_bank_details);
-		if (frm.doc.student && frm.doc.from_academic_year) fetch_years(frm);
+		if ((frm.doc.student || frm.doc.applicant) && frm.doc.from_academic_year) fetch_years(frm);
+	},
+
+	certificate_for(frm) {
+		frm.set_value(frm.doc.certificate_for === "Admission Stage" ? "student" : "applicant", null);
+		frm.clear_table("years");
+		frm.refresh_field("years");
+	},
+
+	applicant(frm) {
+		if (!frm.doc.applicant) return;
+		frappe.db.get_value("Applicant", frm.doc.applicant, ["candidate_name", "academic_year"]).then((r) => {
+			const a = r.message || {};
+			frm.set_value("student_name", a.candidate_name || "");
+			if (!frm.doc.from_academic_year && a.academic_year) frm.set_value("from_academic_year", a.academic_year);
+		});
 	},
 
 	from_academic_year(frm) {
-		if (frm.doc.student && frm.doc.purpose && frm.doc.from_academic_year) fetch_years(frm);
+		if ((frm.doc.student || frm.doc.applicant) && frm.doc.purpose && frm.doc.from_academic_year) fetch_years(frm);
 	},
 
 	refresh(frm) {
