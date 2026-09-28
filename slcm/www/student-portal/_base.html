@@ -1,7 +1,8 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
 <head>
-  {% set sp_settings = frappe.get_cached_doc("Student Portal Settings", "Student Portal Settings") %}
+  {# Fully-resolved settings: defaults applied, derived shades and body classes pre-computed #}
+  {% set sp_settings = get_student_portal_settings() %}
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}Student Portal{% endblock %} — SLCM</title>
@@ -25,23 +26,22 @@
       --sp-primary-mid:        {{ sp_settings.primary_mid            or 'rgba(18, 42, 74, 0.12)' }};
       --sp-secondary:          {{ sp_settings.secondary_color        or '#85142b' }};
       
-      --sp-bg:                 {{ sp_settings.background_color       or '#ffffff' }};
+      --sp-bg:                 {{ sp_settings.background_color       or '#f0f2f5' }};
       --sp-card-bg:            {{ sp_settings.card_background        or '#ffffff' }};
       --sp-card:               {{ sp_settings.card_background        or '#ffffff' }};
       
-      --sp-nav-bg:             {{ sp_settings.sidebar_theme          or '#fafafa' }};
-      --sp-sidebar-bg:         {{ sp_settings.sidebar_theme          or '#fafafa' }};
-      
+      --sp-nav-bg:             {{ sp_settings.nav_bg_color           or '#ffffff' }};
       --sp-nav-text:           {{ sp_settings.nav_text_color         or '#920c24' }};
-      --sp-sidebar-text:       {{ sp_settings.nav_text_color         or '#920c24' }};
-      --sp-sidebar-text-2:     {{ sp_settings.nav_text_color         or '#920c24' }};
+      --sp-sidebar-bg:         {{ sp_settings.sidebar_bg_color       or '#ffffff' }};
+      --sp-sidebar-text:       {{ sp_settings.sidebar_text_color     or '#920c24' }};
+      --sp-sidebar-text-2:     {{ sp_settings.sidebar_text_color     or '#920c24' }};
       
       --sp-success:            {{ sp_settings.success_color          or '#16a34a' }};
       --sp-warning:            {{ sp_settings.warning_color          or '#920c24' }};
       --sp-danger:             {{ sp_settings.danger_color           or '#dc2626' }};
       --sp-info:               {{ sp_settings.info_color             or '#920c24' }};
       
-      --sp-font-family:        'Merriweather', serif;
+      --sp-font-family:        {{ sp_settings.font_family_css or "'Merriweather', Georgia, serif" }};
       --sp-font-size:          {{ '13px' if sp_settings.font_size == 'Small' else '15px' if sp_settings.font_size == 'Large' else '14px' }};
       --sp-corner-radius:      {{ '6px' if sp_settings.corner_style == 'Sharp' else '20px' if sp_settings.corner_style == 'Pill' else '14px' }};
       
@@ -75,6 +75,13 @@
     body, p, .context-text, .sp-nav-item:not(.active), .sp-breadcrumb { font-weight: 400 !important; }
     .sp-notif-btn { display: flex !important; align-items: center !important; justify-content: center !important; }
     .sp-notif-btn .sp-ms { font-size: 24px !important; }
+    /* Navbar icons follow "Navbar Text / Icon Color" so they stay visible on any navbar background */
+    .sp-notif-btn, .sp-notif-btn .sp-ms { color: var(--sp-nav-text) !important; }
+    /* Collapse button + divider were hard-coded white (invisible on a light sidebar) */
+    .sp-sidebar-divider { border-top-color: rgba(127, 127, 127, 0.22) !important; }
+    .sp-collapse-btn, .sp-collapse-btn .sp-ms { color: var(--sp-sidebar-text) !important; }
+    .sp-collapse-btn { opacity: 0.7; }
+    .sp-collapse-btn:hover { opacity: 1; background: var(--sp-primary-light) !important; }
 
     /* App shell (desktop): only the content pane scrolls. The page scrollbar
        no longer runs over the fixed top header, and the header no longer

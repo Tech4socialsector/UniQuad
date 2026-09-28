@@ -9322,8 +9322,9 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   transform: translateY(-2px);
 }
 
+/* Follows Student Portal Settings › Font Family (defaults to Merriweather) */
 body, .sp-brand, .sp-nav-item, h1, h2, h3, h4, h5, h6, .spd-qa-header h2, .spd-qa-label, .spd-kpi-label, .spd-kpi-value, .spd-section-name {
-  font-family: 'Merriweather', serif !important;
+  font-family: var(--sp-font-family, 'Merriweather', serif) !important;
 }
 .sp-brand, h1, h2, h3, h4, h5, h6, .spd-qa-header h2, .spd-qa-label, .spd-kpi-value, .spd-section-name, .sp-nav-item.active {
   font-weight: 400 !important;
