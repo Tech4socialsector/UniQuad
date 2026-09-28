@@ -8,11 +8,6 @@
 {# ── Page Header ─────────────────────────────────────────────── #}
 <div class="fp-page-header fade-in">
   <div class="fp-page-header-left">
-    <div class="fp-breadcrumb">
-      <a href="/faculty-portal"><span class="fp-ms">home</span></a>
-      <span class="fp-ms">chevron_right</span>
-      <span>My Classes</span>
-    </div>
     <h1 class="fp-page-title">My Classes</h1>
     <p class="fp-page-sub">Manage your assigned courses, attendance, marks and academic sessions.</p>
   </div>
@@ -100,7 +95,7 @@
       <div class="fp-msf-panel">
         {% for y in filter_years %}
         <label class="fp-msf-option">
-          <input type="checkbox" value="{{ y }}" onchange="fpFilterClasses()">
+          <input type="checkbox" value="{{ y }}" onchange="fpFilterClasses()"{% if y == current_academic_year %} checked{% endif %}>
           <span>{{ y }}</span>
         </label>
         {% endfor %}
@@ -120,9 +115,9 @@
       </button>
       <div class="fp-msf-panel">
         {% for t in filter_terms %}
-        <label class="fp-msf-option">
-          <input type="checkbox" value="{{ t }}" onchange="fpFilterClasses()">
-          <span>{{ t }}</span>
+        <label class="fp-msf-option" data-year="{{ t.year }}">
+          <input type="checkbox" value="{{ t.name }}" onchange="fpFilterClasses()">
+          <span>{{ t.name }}</span>
         </label>
         {% endfor %}
         {% if filter_terms %}
@@ -467,7 +462,10 @@ function _msfRefreshLabel(id) {
 function fpMsfSelectAll(id) {
   var box = document.getElementById(id);
   if (!box) return;
-  box.querySelectorAll('.fp-msf-panel input[type="checkbox"]').forEach(function(cb) { cb.checked = true; });
+  box.querySelectorAll('.fp-msf-panel input[type="checkbox"]').forEach(function(cb) {
+    var opt = cb.closest('.fp-msf-option');
+    if (!opt || opt.style.display !== 'none') cb.checked = true;
+  });
   _msfRefreshLabel(id);
   if (box.classList.contains('fp-msf-open')) _msfPositionPanel(box, true);
   fpFilterClasses();
@@ -566,8 +564,24 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
+/* Apply the default (current academic year) selection on load */
+document.addEventListener('DOMContentLoaded', function() { fpFilterClasses(); });
+
 /* ── Filter logic ── */
+/* Show only the terms that belong to the selected academic year(s);
+   untick any term hidden by a year change. Terms with no year always show. */
+function _syncTermOptions() {
+  var selYears = _msfValues('fp-filter-year');
+  document.querySelectorAll('#fp-filter-term .fp-msf-option').forEach(function(opt) {
+    var y = opt.getAttribute('data-year') || '';
+    var show = !selYears.length || !y || selYears.indexOf(y) !== -1;
+    opt.style.display = show ? '' : 'none';
+    if (!show) { var cb = opt.querySelector('input'); if (cb) cb.checked = false; }
+  });
+}
+
 function fpFilterClasses() {
+  _syncTermOptions();
   ['fp-filter-year', 'fp-filter-term', 'fp-filter-status'].forEach(_msfRefreshLabel);
 
   var search = (document.getElementById('fp-search').value || '').toLowerCase().trim();

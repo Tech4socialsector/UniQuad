@@ -328,7 +328,7 @@ window._fpDashData = {
   var gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
   var textColor = isDark ? '#64748b' : '#94a3b8';
   var primary   = '#920c24';
-  var accent    = '#2563eb';
+  var accent    = '#920c24';
   Chart.defaults.font.family = "'Poppins', system-ui, sans-serif";
   Chart.defaults.font.size   = 11;
 
@@ -349,8 +349,8 @@ window._fpDashData = {
             var chart = context.chart;
             var ctx = chart.ctx;
             var gradient = ctx.createLinearGradient(0, 0, 0, 220);
-            gradient.addColorStop(0, 'rgba(37,99,235,0.20)');
-            gradient.addColorStop(1, 'rgba(37,99,235,0.00)');
+            gradient.addColorStop(0, 'rgba(146,12,36,0.20)');
+            gradient.addColorStop(1, 'rgba(146,12,36,0.00)');
             return gradient;
           },
           borderWidth: 2.5,
@@ -396,7 +396,7 @@ window._fpDashData = {
   var subLabels = {{ course_attendance | map(attribute='course_name') | list | tojson }};
   var subData   = {{ course_attendance | map(attribute='avg_pct')     | list | tojson }};
   var barColors = subData.map(function(v) {
-    return v >= 75 ? 'rgba(22,163,74,0.80)' : v >= 60 ? 'rgba(217,119,6,0.80)' : 'rgba(220,38,38,0.80)';
+    return v >= 75 ? 'rgba(146,12,36,0.80)' : v >= 60 ? 'rgba(146,12,36,0.80)' : 'rgba(220,38,38,0.80)';
   });
   var subCtx = document.getElementById('fpSubjectChart');
   if (subCtx) {
@@ -467,7 +467,7 @@ window._fpDashData = {
       <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
         <button id="fp-drill-export-btn"
                 onclick="fpDrillExport()"
-                style="display:flex;align-items:center;gap:7px;padding:8px 16px;background:var(--fp-success-bg);border:1px solid rgba(22,163,74,0.2);border-radius:var(--fp-radius-sm);font-size:13px;font-weight:600;color:var(--fp-success);cursor:pointer;font-family:inherit;transition:all 0.18s;white-space:nowrap;"
+                style="display:flex;align-items:center;gap:7px;padding:8px 16px;background:var(--fp-success-bg);border:1px solid rgba(146,12,36,0.2);border-radius:var(--fp-radius-sm);font-size:13px;font-weight:600;color:var(--fp-success);cursor:pointer;font-family:inherit;transition:all 0.18s;white-space:nowrap;"
                 onmouseover="this.style.background='var(--fp-success)';this.style.color='#fff';"
                 onmouseout="this.style.background='var(--fp-success-bg)';this.style.color='var(--fp-success)';">
           <span class="fp-ms" style="font-size:17px;">download</span>Export CSV
@@ -510,10 +510,10 @@ window._fpDashData = {
 <style>
 /* Dashboard stat cards — 3 equal columns filling the full row */
 .fp-dash-stat-grid { grid-template-columns: repeat(3, 1fr); }
-.fp-dash-stat-grid .fp-stat-card { background: #F6F3ED; }
+.fp-dash-stat-grid .fp-stat-card { background: var(--fp-card); }
 body.fp-dark .fp-dash-stat-grid .fp-stat-card { background: var(--fp-card); }
-/* Quick actions — same beige surface; all dashboard icons in brand maroon */
-.fp-dash-qa { background: #F6F3ED; color: #920C24; }
+/* Quick actions — plain card surface; all dashboard icons in brand maroon */
+.fp-dash-qa { background: var(--fp-card); color: #920C24; }
 body.fp-dark .fp-dash-qa { background: var(--fp-card); color: var(--fp-primary); }
 .fp-dash-stat-grid .fp-stat-icon,
 .fp-dash-icon { background: rgba(146,12,36,0.08) !important; }
@@ -536,7 +536,7 @@ body.fp-dark .fp-dash-icon .fp-ms { color: var(--fp-primary) !important; }
   opacity: 0; transition: opacity 0.18s;
   pointer-events: none;
 }
-.fp-drill-badge-warn { background: var(--fp-warning-bg) !important; color: var(--fp-warning) !important; border-color: rgba(217,119,6,0.25) !important; }
+.fp-drill-badge-warn { background: var(--fp-warning-bg) !important; color: var(--fp-warning) !important; border-color: rgba(146,12,36,0.25) !important; }
 .fp-stat-drillable:hover .fp-drill-badge { opacity: 1; }
 .fp-drill-hint { transition: color 0.18s; }
 .fp-stat-drillable:hover .fp-drill-hint { color: var(--fp-primary) !important; }

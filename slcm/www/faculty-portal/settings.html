@@ -194,10 +194,10 @@ function fpStrength() {
   if (/[^A-Za-z0-9]/.test(v)) score++;
   var lvls = [
     { w:'20%', c:'#dc2626', t:'Very weak'  },
-    { w:'40%', c:'#f97316', t:'Weak'       },
-    { w:'60%', c:'#eab308', t:'Fair'       },
-    { w:'80%', c:'#22c55e', t:'Strong'     },
-    { w:'100%',c:'#16a34a', t:'Very strong'},
+    { w:'40%', c:'#920c24', t:'Weak'       },
+    { w:'60%', c:'#920c24', t:'Fair'       },
+    { w:'80%', c:'#920c24', t:'Strong'     },
+    { w:'100%',c:'#920c24', t:'Very strong'},
   ];
   var lvl = lvls[Math.max(0, score - 1)];
   if (fill) { fill.style.width = lvl.w; fill.style.background = lvl.c; }

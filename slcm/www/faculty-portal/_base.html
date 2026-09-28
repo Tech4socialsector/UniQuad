@@ -39,10 +39,10 @@
       {% endif %}
       --fp-bg:            {{ s.background_color or "#f0f2f5" }};
       --fp-card:          {{ s.card_background  or "#ffffff" }};
-      --fp-success:       {{ s.success_color or "#16a34a" }};
-      --fp-success-bg:    {{ s.success_bg    or "rgba(22,163,74,0.10)" }};
-      --fp-warning:       {{ s.warning_color or "#d97706" }};
-      --fp-warning-bg:    {{ s.warning_bg    or "rgba(217,119,6,0.10)" }};
+      --fp-success:       {{ s.success_color or "#920c24" }};
+      --fp-success-bg:    {{ s.success_bg    or "rgba(146,12,36,0.08)" }};
+      --fp-warning:       {{ s.warning_color or "#920c24" }};
+      --fp-warning-bg:    {{ s.warning_bg    or "rgba(146,12,36,0.08)" }};
       --fp-danger:        {{ s.danger_color  or "#dc2626" }};
       --fp-danger-bg:     {{ s.danger_bg     or "rgba(220,38,38,0.10)" }};
       --fp-info:          {{ s.info_color    or "#0369a1" }};
@@ -127,7 +127,7 @@
 {# ── Admin preview ribbon — visible only to System Manager / Administrator ── #}
 <div id="fp-admin-preview-bar" style="position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(90deg,#2b2e4a,#920c24);color:#fff;font-family:'Poppins',sans-serif;font-size:12.5px;font-weight:600;padding:7px 16px;display:flex;align-items:center;gap:10px;box-shadow:0 2px 8px rgba(0,0,0,0.25);">
   <span style="font-family:'Material Symbols Outlined';font-size:16px;flex-shrink:0;">preview</span>
-  <span style="flex:1;">Admin Preview Mode — you are viewing the portal as <strong>{{ faculty_name }}</strong>. Your account has no linked Faculty record. <a href="/slcm/faculty" style="color:#fcd34d;text-decoration:underline;">Link one here</a> to log in as yourself.</span>
+  <span style="flex:1;">Admin Preview Mode — you are viewing the portal as <strong>{{ faculty_name }}</strong>. Your account has no linked Faculty record. <a href="/slcm/faculty" style="color:#f5c6ce;text-decoration:underline;">Link one here</a> to log in as yourself.</span>
   <button onclick="document.getElementById('fp-admin-preview-bar').style.display='none'" style="background:rgba(255,255,255,0.15);border:none;color:#fff;border-radius:6px;padding:2px 10px;cursor:pointer;font-size:12px;flex-shrink:0;">✕ Dismiss</button>
 </div>
 <style>body { padding-top: 36px !important; }</style>
@@ -263,8 +263,8 @@
       <a href="/faculty-portal/venue-booking"  class="fp-nav-item {% if active_page == 'venue_booking' %}active{% endif %}" data-label="Venue Booking">
         <span class="fp-ms">meeting_room</span><span class="fp-nav-label">Venue Booking</span>
       </a>
-      <a href="/faculty-portal/communication"  class="fp-nav-item {% if active_page == 'communication' %}active{% endif %}" data-label="Communication">
-        <span class="fp-ms">campaign</span><span class="fp-nav-label">Communication</span>
+      <a href="/faculty-portal/communication"  class="fp-nav-item {% if active_page == 'communication' %}active{% endif %}" data-label="Announcements">
+        <span class="fp-ms">campaign</span><span class="fp-nav-label">Announcements</span>
       </a>
       <a href="/faculty-portal/support"        class="fp-nav-item {% if active_page == 'support'       %}active{% endif %}" data-label="Helpdesk">
         <span class="fp-ms">support_agent</span><span class="fp-nav-label">Helpdesk</span>
@@ -272,9 +272,8 @@
     </div>
 
     <hr class="fp-sidebar-divider">
-    <button class="fp-collapse-btn" onclick="fpToggleMini()" data-label="Expand" style="margin:0 8px;">
+    <button class="fp-collapse-btn" onclick="fpToggleMini()" data-label="Expand" style="margin:0 8px;" title="Collapse sidebar" aria-label="Collapse sidebar">
       <span class="fp-ms">left_panel_close</span>
-      <span class="fp-collapse-label">Collapse Sidebar</span>
     </button>
   </aside>
 
@@ -394,8 +393,11 @@ body.fp-compact .fp-card-header{ padding: 12px 16px !important; }
     document.body.classList.toggle('fp-sidebar-mini', isMini);
     var btn = sidebar.querySelector('.fp-collapse-btn .fp-ms');
     if (btn) btn.textContent = isMini ? 'right_panel_close' : 'left_panel_close';
-    var lbl = sidebar.querySelector('.fp-collapse-label');
-    if (lbl) lbl.textContent = isMini ? 'Expand' : 'Collapse Sidebar';
+    var cbtn = sidebar.querySelector('.fp-collapse-btn');
+    if (cbtn) {
+      var tip = isMini ? 'Expand sidebar' : 'Collapse sidebar';
+      cbtn.title = tip; cbtn.setAttribute('aria-label', tip);
+    }
     try { localStorage.setItem('fp-sidebar-mini', isMini ? '1' : '0'); } catch(e) {}
   }
   (function fpRestoreMini() {
