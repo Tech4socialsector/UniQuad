@@ -1457,6 +1457,12 @@
         {% if active_cycle %} available{% endif %}
       </p>
     </div>
+
+    <!-- Type Toggle Buttons -->
+    <div class="flex items-center gap-1 p-1 rounded-lg" style="background:#f1f5f9; display:inline-flex;">
+       <button class="px-5 py-2 rounded-md font-bold text-sm shadow-sm transition-all text-slate-900 bg-white" id="btn-domestic" onclick="setProgramFilter('Domestic')">Domestic</button>
+       <button class="px-5 py-2 rounded-md font-bold text-sm transition-all text-slate-500 bg-transparent hover:text-slate-900 hover:bg-slate-200/50" id="btn-international" onclick="setProgramFilter('International')">International</button>
+    </div>
   </div>
 
   {% set _cyc = active_cycle.name if active_cycle else '' %}
@@ -1484,6 +1490,7 @@
     {% set _pid = p.get('program') or p.get('name') if p.get else (p.program or p.name or '') %}
 
     <article class="prog-card fade-card flex flex-col overflow-hidden rounded-sm bg-white shadow-2xl"
+      data-open-for="{{ p.get('admission_open_for') if p.get else (p.admission_open_for or '') }}"
       style="height:100%;min-height:420px;border:1.5px solid rgba(26,60,110,0.06);cursor:pointer;box-sizing:border-box;" onclick="window.location='/admission/{{ _slug }}'"
       tabindex="0" role="button" aria-label="View {{ _name }}">
 
@@ -2025,7 +2032,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
   {% else %}
-  document.addEventListener('DOMContentLoaded', function () {
+  (function () {
     // Hero slideshow
     var slides = document.querySelectorAll('.hero-slide');
     if (slides.length > 1) {
@@ -2077,25 +2084,54 @@ document.addEventListener('DOMContentLoaded', function() {
       let batchSize = getBatchSize();
       let visibleCount = batchSize;
 
+      let currentFilter = 'Domestic';
+
+      // Define globally and safely (works with PJAX/DOMContentLoaded)
+      window.setProgramFilter = function(filterVal) {
+        currentFilter = filterVal;
+        let btnDom = document.getElementById('btn-domestic');
+        let btnInt = document.getElementById('btn-international');
+        if (btnDom) {
+          btnDom.className = (filterVal === 'Domestic') ? 'px-5 py-2 rounded-md font-bold text-sm shadow-sm transition-all text-slate-900 bg-white' : 'px-5 py-2 rounded-md font-bold text-sm transition-all text-slate-500 bg-transparent hover:text-slate-900 hover:bg-slate-200/50';
+        }
+        if (btnInt) {
+          btnInt.className = (filterVal === 'International') ? 'px-5 py-2 rounded-md font-bold text-sm shadow-sm transition-all text-slate-900 bg-white' : 'px-5 py-2 rounded-md font-bold text-sm transition-all text-slate-500 bg-transparent hover:text-slate-900 hover:bg-slate-200/50';
+        }
+        visibleCount = batchSize;
+        if (typeof updateCardVisibility === 'function') {
+          updateCardVisibility();
+        }
+      };
+
       function updateCardVisibility() {
-        cards.forEach((card, idx) => {
-          if (idx < visibleCount) {
-            card.style.display = 'flex';
-            // Trigger intersection observer manually for newly visible cards
-            if (typeof obs !== 'undefined') obs.observe(card);
+        let visibleMatching = 0;
+        let totalMatching = 0;
+        cards.forEach((card) => {
+          let openFor = card.getAttribute('data-open-for') || '';
+          let match = !openFor || openFor.includes(currentFilter);
+          
+          if (match) {
+            totalMatching++;
+            if (visibleMatching < visibleCount) {
+              card.style.display = 'flex';
+              if (typeof obs !== 'undefined') obs.observe(card);
+              visibleMatching++;
+            } else {
+              card.style.display = 'none';
+            }
           } else {
             card.style.display = 'none';
           }
         });
 
         if (loadMoreBtn) {
-          if (visibleCount >= cards.length) {
+          if (visibleCount >= totalMatching) {
             loadMoreBtn.style.display = 'none';
           } else {
             loadMoreBtn.style.display = 'inline-block';
           }
         }
-      }
+      } // <-- Close updateCardVisibility
 
       if (loadMoreBtn) {
         loadMoreBtn.onclick = function () {
@@ -2122,7 +2158,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 250);
       };
     }
-  });
+  })();
   {% endif %}
 </script>
 {% endblock %}

@@ -214,7 +214,9 @@ fixtures = [
                 "NLSAT Confirmation Fee Paid",
                 "Admission Full Fee Invoice",
                 "NLSAT Full Fee Paid",
-                "NLSAT Offer Expired / Withdrawn"
+                "NLSAT Offer Expired / Withdrawn",
+                "NLSAT Application Completed Email",
+                "Application Submitted Email"
             ]]
         ]
     },

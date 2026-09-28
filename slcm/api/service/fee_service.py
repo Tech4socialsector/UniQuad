@@ -1224,6 +1224,7 @@ class FeeService:
             pr.reference_doctype = "Applicant"
             pr.reference_name = applicant_doc.name
             pr.amount = amount
+            pr.grand_total = amount
             pr.currency = frappe.defaults.get_global_default("currency") or "INR"
             pr.email_to = email_to
             if gateway:
@@ -1235,6 +1236,7 @@ class FeeService:
                         "FeeService: Gateway Not Found"
                     )
             pr.transaction_id = transaction_id
+            pr.flags.ignore_validate = True
             pr.insert(ignore_permissions=True)
 
         if pr.docstatus > 0:

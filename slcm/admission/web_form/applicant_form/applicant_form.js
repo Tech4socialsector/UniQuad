@@ -1355,15 +1355,26 @@ function syncTopBarApplyingFor() {
 		label = _slcmProgramLabelCache.label;
 	}
 	if (!label) {
-		try {
-			var $inp = $('.web-form [data-fieldname="program"] input').first();
-			if ($inp.length) {
-				label = ($inp.val() || '').trim();
-			}
-		} catch (e) {}
-	}
-	if (!label) {
 		label = pid;
+		// Fetch actual program name
+		if (window.frappe && frappe.call) {
+			frappe.call({
+				method: 'frappe.client.get_value',
+				args: {
+					doctype: 'Programme',
+					filters: { name: pid },
+					fieldname: 'program_name'
+				},
+				callback: function(r) {
+					if (r && r.message && r.message.program_name) {
+						_slcmProgramLabelCache.id = pid;
+						_slcmProgramLabelCache.label = r.message.program_name;
+						var s = document.getElementById('slcm-applying-for-prog');
+						if (s) s.textContent = r.message.program_name;
+					}
+				}
+			});
+		}
 	}
 	strong.textContent = label;
 }
@@ -4576,6 +4587,31 @@ frappe.ready(function () {
 	_injectAdmissionShell();
 	setupSlcmFieldErrorClear();
 	setupSlcmWebFormAwesompletePositionFix();
+
+	// ── FIX: Hydrate Phone fields in Edit mode (Draft) if missing ────────
+	var wf = window.frappe && frappe.web_form;
+	if (wf && wf.doc) {
+		setTimeout(function () {
+			var PHONE_FIELDS = ['mobile_number', 'alternate_contact', 'father_mobile', 'mother_mobile', 'guardian_mobile'];
+			PHONE_FIELDS.forEach(function (fn) {
+				var val = wf.doc[fn];
+				var field = wf.fields_dict && wf.fields_dict[fn];
+				if (val && field) {
+					if (typeof field.set_formatted_input === 'function') {
+						field.set_formatted_input(val);
+					} else if (typeof field.set_value === 'function') {
+						field.set_value(val);
+					}
+					// Fallback if input is still empty
+					if (field.$input && !field.$input.val()) {
+						var parts = String(val).split('-');
+						var num = parts.length > 1 ? parts.slice(1).join('-') : val;
+						field.$input.val(num);
+					}
+				}
+			});
+		}, 800);
+	}
 
 	try {
 		$('#eligibility-alert-box').remove();

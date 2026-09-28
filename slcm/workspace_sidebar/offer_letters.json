@@ -15,20 +15,6 @@
    "label": "Offer letter",
    "link_to": "Offer Letter",
    "link_type": "DocType",
-   "open_in_new_tab": 0,
-   "show_arrow": 0,
-   "type": "Link"
-  },
-  {
-   "child": 0,
-   "collapsible": 1,
-   "icon": "list-todo",
-   "indent": 0,
-   "keep_closed": 0,
-   "label": "Seat allocation",
-   "link_to": "Seat Allocation",
-   "link_type": "DocType",
-   "open_in_new_tab": 0,
    "show_arrow": 0,
    "type": "Link"
   },
@@ -41,7 +27,6 @@
    "label": "Applicant fee assignment",
    "link_to": "Applicant Fee Assignment",
    "link_type": "DocType",
-   "open_in_new_tab": 0,
    "show_arrow": 0,
    "type": "Link"
   },
@@ -54,7 +39,42 @@
    "label": "Payment request",
    "link_to": "Payment Request",
    "link_type": "DocType",
-   "open_in_new_tab": 0,
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "album",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Applicant payment receipt",
+   "link_to": "Applicant Payment Receipt",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "file-pen",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Payment Settlement Report",
+   "link_to": "Payment Settlement Report",
+   "link_type": "Report",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "bow-arrow",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Applicant Fee Payment Status Resport",
+   "link_to": "Applicant Fee Payment Status",
+   "link_type": "Report",
    "show_arrow": 0,
    "type": "Link"
   },
@@ -66,7 +86,6 @@
    "keep_closed": 0,
    "label": "Setup",
    "link_type": "DocType",
-   "open_in_new_tab": 0,
    "show_arrow": 0,
    "type": "Section Break"
   },
@@ -79,7 +98,6 @@
    "label": "Configuration",
    "link_to": "Offer Configuration",
    "link_type": "DocType",
-   "open_in_new_tab": 0,
    "show_arrow": 0,
    "type": "Link"
   },
@@ -92,7 +110,6 @@
    "label": "Fee structure",
    "link_to": "Fee Structure",
    "link_type": "DocType",
-   "open_in_new_tab": 0,
    "show_arrow": 0,
    "type": "Link"
   },
@@ -105,7 +122,6 @@
    "label": "Razorpay settings",
    "link_to": "Razorpay Settings",
    "link_type": "DocType",
-   "open_in_new_tab": 0,
    "show_arrow": 0,
    "type": "Link"
   },
@@ -118,37 +134,11 @@
    "label": "Payment gateway",
    "link_to": "Payment Gateway",
    "link_type": "DocType",
-   "open_in_new_tab": 0,
-   "show_arrow": 0,
-   "type": "Link"
-  },
-  {
-   "child": 0,
-   "collapsible": 1,
-   "icon": "list",
-   "indent": 0,
-   "keep_closed": 0,
-   "label": "Audit logs",
-   "link_type": "DocType",
-   "open_in_new_tab": 0,
-   "show_arrow": 0,
-   "type": "Section Break"
-  },
-  {
-   "child": 1,
-   "collapsible": 1,
-   "icon": "album",
-   "indent": 0,
-   "keep_closed": 0,
-   "label": "Applicant payment receipt",
-   "link_to": "Applicant Payment Receipt",
-   "link_type": "DocType",
-   "open_in_new_tab": 0,
    "show_arrow": 0,
    "type": "Link"
   }
  ],
- "modified": "2026-07-28 17:20:26.956200",
+ "modified": "2026-09-26 12:51:13.503948",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Offer Letters",
