@@ -267,7 +267,7 @@ class StudentFeeManagement {
 		this.list_view = "students";
 		try {
 			const saved = localStorage.getItem("sfm_list_view");
-			if (["students", "due_wise", "outstanding"].includes(saved)) this.list_view = saved;
+			if (["students", "due_wise", "outstanding", "certificates"].includes(saved)) this.list_view = saved;
 		} catch (e) {
 			// storage blocked — start on the Students tab
 		}
@@ -329,6 +329,9 @@ class StudentFeeManagement {
 						<p class="sfm-subtitle">${__("Track student fee payments, pending dues and receipts")}</p>
 					</div>
 					<div class="sfm-actions">
+						<button type="button" class="sfm-btn sfm-btn-secondary" data-act="fee-certificate">
+							${sfm_icon("award", 15)}<span>${__("Fee Certificate")}</span>
+						</button>
 						<button type="button" class="sfm-btn sfm-btn-secondary" data-act="bulk-upload">
 							${sfm_icon("upload", 15)}<span>${__("Bulk Upload")}</span>
 						</button>
@@ -373,6 +376,7 @@ class StudentFeeManagement {
 						["students", "users", __("Students")],
 						["due_wise", "file-text", __("Due Wise Report")],
 						["outstanding", "clock", __("Student Wise Outstanding")],
+						["certificates", "award", __("Fee Certificates")],
 					]
 						.map(
 							([key, icon, label]) =>
@@ -619,6 +623,9 @@ class StudentFeeManagement {
 		});
 		$r.on("click", ".sfm-view-tabs .sfm-tab", (e) => this.set_list_view($(e.currentTarget).data("view")));
 		$r.on("click", '[data-act="export-report"]', () => this.export_report());
+		$r.on("click", "[data-certificate]", (e) => {
+			window.open(`/api/method/${SFM_API}download_fee_certificate?name=${encodeURIComponent($(e.currentTarget).data("certificate"))}`);
+		});
 		$r.on("click", ".sfm-report-student", (e) => {
 			if (e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1) return;
 			e.preventDefault();
@@ -634,6 +641,7 @@ class StudentFeeManagement {
 			this.load_report();
 		});
 		$r.on("click", '[data-act="bulk-upload"]', () => this.bulk_upload_dialog());
+		$r.on("click", '[data-act="fee-certificate"]', () => this.fee_certificate_dialog());
 		$r.on("click", '[data-act="retry"]', () => this.load_students());
 
 		$r.on("change", "#sfm-page-size", (e) => {
@@ -686,6 +694,121 @@ class StudentFeeManagement {
 			if (row.receipt_count === 1) this.download_receipt(row.latest_receipt, $btn);
 			else this.receipts_dialog(row);
 		});
+	}
+
+	// ── Fee Certificate ──────────────────────────────────────────────────
+	// Campus students (Student Master) or admission-stage applicants, who only have an
+	// application number and admit card number. Generates the request, then downloads it.
+	async fee_certificate_dialog(defaults = {}) {
+		if (!this.fc_options) {
+			const r = await frappe.call({ method: SFM_API + "get_fee_certificate_options" });
+			this.fc_options = r.message || { purposes: [], academic_years: [] };
+		}
+		const { purposes, academic_years } = this.fc_options;
+		if (!purposes.length) {
+			frappe.msgprint(__("No certificate purposes are enabled. Set them up in Fee Certificate Settings."));
+			return;
+		}
+		const dialog = new frappe.ui.Dialog({
+			title: __("Generate Fee Certificate"),
+			fields: [
+				{
+					fieldname: "certificate_for",
+					fieldtype: "Select",
+					label: __("Certificate For"),
+					options: [
+						{ value: "Campus Student", label: __("Campus Student (ongoing)") },
+						{ value: "Admission Stage", label: __("Admission Stage (applicant)") },
+					],
+					default: "Campus Student",
+					reqd: 1,
+					description: __("Admission stage: applicants with only an application number and admit card number."),
+				},
+				{
+					fieldname: "student",
+					fieldtype: "Link",
+					options: "Student Master",
+					label: __("Student"),
+					default: defaults.student,
+					depends_on: 'eval:doc.certificate_for=="Campus Student"',
+					mandatory_depends_on: 'eval:doc.certificate_for=="Campus Student"',
+				},
+				{
+					fieldname: "applicant",
+					fieldtype: "Link",
+					options: "Applicant",
+					label: __("Applicant"),
+					depends_on: 'eval:doc.certificate_for=="Admission Stage"',
+					mandatory_depends_on: 'eval:doc.certificate_for=="Admission Stage"',
+					onchange: () => {
+						const applicant = dialog.get_value("applicant");
+						if (!applicant) return;
+						frappe.db.get_value("Applicant", applicant, "academic_year").then((r) => {
+							const ay = r.message && r.message.academic_year;
+							if (ay) dialog.set_value("academic_year", ay);
+						});
+					},
+				},
+				{
+					fieldname: "admit_card_number",
+					fieldtype: "Data",
+					label: __("Admit Card Number"),
+					depends_on: 'eval:doc.certificate_for=="Admission Stage"',
+					description: __("Leave blank to use the one from the applicant's entrance test allocation."),
+				},
+				{ fieldtype: "Column Break" },
+				{
+					fieldname: "purpose",
+					fieldtype: "Select",
+					label: __("Purpose"),
+					options: purposes.map((p) => p.purpose),
+					default: purposes[0].purpose,
+					reqd: 1,
+				},
+				{
+					fieldname: "academic_year",
+					fieldtype: "Select",
+					label: __("Academic Year"),
+					options: academic_years,
+					default: defaults.academic_year && academic_years.includes(defaults.academic_year) ? defaults.academic_year : academic_years[0],
+					reqd: 1,
+				},
+				{
+					fieldname: "has_scholarship",
+					fieldtype: "Check",
+					label: __("Deduct University Scholarship"),
+					default: 1,
+					description: __("Shows the scholarship / waiver on the student's dues as a deduction."),
+				},
+			],
+			primary_action_label: __("Generate & Download"),
+			primary_action: async (values) => {
+				dialog.get_primary_btn().prop("disabled", true);
+				try {
+					const r = await frappe.call({
+						method: SFM_API + "generate_fee_certificate",
+						args: values,
+						freeze: true,
+						freeze_message: __("Generating certificate…"),
+					});
+					if (r.message) {
+						window.open(`/api/method/${SFM_API}download_fee_certificate?name=${encodeURIComponent(r.message)}`);
+						dialog.hide();
+						if (this.list_view === "certificates") this.load_report();
+						frappe.show_alert({
+							message: __("Certificate {0} generated", [
+								`<a href="${frappe.utils.get_form_link("Fee Certificate Request", r.message)}">${sfm_esc(r.message)}</a>`,
+							]),
+							indicator: "green",
+						});
+					}
+				} finally {
+					dialog.get_primary_btn().prop("disabled", false);
+				}
+			},
+		});
+		dialog.$wrapper.addClass("sfm-dialog");
+		dialog.show();
 	}
 
 	// ── Bulk upload (Fee Demand / Fee Payment / Fee Concession) ──────────
@@ -1017,7 +1140,13 @@ class StudentFeeManagement {
 		const req = ++this.report_req;
 		const rs = this.report_state;
 		const $panel = this.$root.find(".sfm-report-panel");
-		$panel.find(".sfm-report-title").text(view === "due_wise" ? __("Due Wise Report") : __("Student Wise Outstanding Fee"));
+		$panel
+			.find(".sfm-report-title")
+			.text(
+				{ due_wise: __("Due Wise Report"), outstanding: __("Student Wise Outstanding Fee"), certificates: __("Fee Certificates") }[view]
+			);
+		// Certificates are PDFs downloaded row by row — no Excel export.
+		$panel.find('[data-act="export-report"]').prop("hidden", view === "certificates");
 		$panel.find(".sfm-report-caption").text(__("Loading…"));
 		$panel.find(".sfm-report-table tbody").html(
 			`<tr><td colspan="40"><div class="sfm-empty-state">${sfm_icon("loader", 22, "sfm-spin")}</div></td></tr>`
@@ -1027,7 +1156,9 @@ class StudentFeeManagement {
 		let result;
 		try {
 			const r = await frappe.call({
-				method: SFM_API + (view === "due_wise" ? "get_due_wise_report" : "get_outstanding_report"),
+				method:
+					SFM_API +
+					{ due_wise: "get_due_wise_report", outstanding: "get_outstanding_report", certificates: "get_fee_certificates" }[view],
 				args: { ...this.report_args(), start: rs.start, page_length: rs.page_length },
 			});
 			result = r.message;
@@ -1046,6 +1177,7 @@ class StudentFeeManagement {
 			return;
 		}
 		if (view === "due_wise") this.render_due_wise(result);
+		else if (view === "certificates") this.render_certificates(result);
 		else this.render_outstanding(result);
 	}
 
@@ -1130,6 +1262,57 @@ class StudentFeeManagement {
 			state: this.report_state,
 			$pager: this.$root.find('.sfm-pager[data-pager="report"]'),
 			$caption: this.$root.find(".sfm-report-caption"),
+		});
+	}
+
+	render_certificates({ rows, count }) {
+		const $t = this.$root.find(".sfm-report-table");
+		$t.find("thead").html(`<tr>
+			<th scope="col">${__("Certificate No.")}</th>
+			<th scope="col">${__("Name")}</th>
+			<th scope="col">${__("Certificate For")}</th>
+			<th scope="col">${__("Purpose")}</th>
+			<th scope="col">${__("Academic Year")}</th>
+			<th scope="col">${__("Generated On")}</th>
+			<th scope="col">${__("Generated By")}</th>
+			<th scope="col" class="center">${__("Download")}</th>
+		</tr>`);
+		$t.find("tfoot").empty();
+		$t.find("tbody").html(
+			rows.length
+				? rows
+						.map((d) => {
+							const name = d.student
+								? `<a href="/desk/${SFM_PAGE}/${encodeURIComponent(d.student)}" class="sfm-report-student" data-student="${sfm_esc(d.student)}">${sfm_esc(d.student_name || d.student)}</a>`
+								: `<a href="${frappe.utils.get_form_link("Applicant", d.applicant)}">${sfm_esc(d.student_name || d.applicant)}</a>`;
+							const ids = [d.person_id, d.admit_card_number ? __("Admit card {0}", [d.admit_card_number]) : ""]
+								.filter(Boolean)
+								.map(sfm_esc)
+								.join(" · ");
+							const is_applicant = d.certificate_for === "Admission Stage";
+							return `<tr>
+								<td><a class="sfm-strong" href="${frappe.utils.get_form_link("Fee Certificate Request", d.name)}">${sfm_esc(d.name)}</a></td>
+								<td>${name}<div class="sfm-sub">${ids}</div></td>
+								<td>${sfm_badge(is_applicant ? "Pending" : "Active", is_applicant ? __("Applicant") : __("Campus Student"))}</td>
+								<td class="sfm-wrap">${sfm_esc(d.purpose)}</td>
+								<td>${sfm_esc(d.academic_year || "—")}</td>
+								<td>${sfm_date(d.generated_on || d.creation)}</td>
+								<td>${sfm_esc(d.source === "Student Portal" ? __("Student (portal)") : d.owner)}</td>
+								<td class="center"><button type="button" class="sfm-icon-btn" data-certificate="${sfm_esc(d.name)}"
+									aria-label="${sfm_esc(__("Download certificate {0}", [d.name]))}" title="${__("Download Certificate")}">${sfm_icon("download", 16)}</button></td>
+							</tr>`;
+						})
+						.join("")
+				: `<tr><td colspan="8"><div class="sfm-empty-state"><span class="sfm-empty-icon">${sfm_icon("search-x", 22)}</span><div class="sfm-empty-title">${__("No certificates found")}</div><div class="sfm-muted">${__("Use the Fee Certificate button above to generate one.")}</div></div></td></tr>`
+		);
+		this.render_pager(cint(count), rows.length, {
+			state: this.report_state,
+			$pager: this.$root.find('.sfm-pager[data-pager="report"]'),
+			$caption: this.$root.find(".sfm-report-caption"),
+			one: __("1 certificate matches the current filters"),
+			many: __("{0} certificates match the current filters"),
+			showing_one: __("Showing 1 of 1 certificate"),
+			showing_many: __("Showing {0} to {1} of {2} certificates"),
 		});
 	}
 
@@ -1253,9 +1436,14 @@ class StudentFeeManagement {
 						<h1 class="sfm-title">${__("Student Due Details")}</h1>
 						<p class="sfm-subtitle">${__("Dues, payments and excess for {0}", [sfm_esc(p.first_name || p.name)])}</p>
 					</div>
-					<button type="button" class="sfm-btn sfm-btn-secondary" data-act="refresh-student">
-						${sfm_icon("refresh", 15)}<span>${__("Refresh")}</span>
-					</button>
+					<div class="sfm-actions">
+						<button type="button" class="sfm-btn sfm-btn-secondary" data-act="fee-certificate-student">
+							${sfm_icon("award", 15)}<span>${__("Fee Certificate")}</span>
+						</button>
+						<button type="button" class="sfm-btn sfm-btn-secondary" data-act="refresh-student">
+							${sfm_icon("refresh", 15)}<span>${__("Refresh")}</span>
+						</button>
+					</div>
 				</header>
 				<div class="sfm-panel sfm-profile">
 					<div class="sfm-avatar">${avatar}</div>
@@ -1298,6 +1486,9 @@ class StudentFeeManagement {
 			frappe.set_route(SFM_PAGE);
 		});
 		this.$root.find('[data-act="refresh-student"]').on("click", () => this.show_student(p.name));
+		this.$root
+			.find('[data-act="fee-certificate-student"]')
+			.on("click", () => this.fee_certificate_dialog({ student: p.name, academic_year: p.academic_year }));
 		this.$root.find(".sfm-tab").on("click", (e) => {
 			this.detail_tab = $(e.currentTarget).data("tab");
 			this.render_tab();

@@ -7,9 +7,13 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "certificate_for",
   "student",
+  "applicant",
   "student_name",
   "registration_id",
+  "application_number",
+  "admit_card_number",
   "column_break_1",
   "programme",
   "level_of_study",
@@ -32,21 +36,41 @@
  ],
  "fields": [
   {
+   "default": "Campus Student",
+   "fieldname": "certificate_for",
+   "fieldtype": "Select",
+   "label": "Certificate For",
+   "options": "Campus Student\nAdmission Stage",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "description": "Campus Student: an ongoing student (Student Master). Admission Stage: an applicant who has only an application number and admit card number."
+  },
+  {
    "fieldname": "student",
    "fieldtype": "Link",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Student",
    "options": "Student Master",
-   "reqd": 1,
+   "search_index": 1,
+   "depends_on": "eval:doc.certificate_for!=\"Admission Stage\"",
+   "mandatory_depends_on": "eval:doc.certificate_for!=\"Admission Stage\""
+  },
+  {
+   "depends_on": "eval:doc.certificate_for==\"Admission Stage\"",
+   "mandatory_depends_on": "eval:doc.certificate_for==\"Admission Stage\"",
+   "fieldname": "applicant",
+   "fieldtype": "Link",
+   "label": "Applicant",
+   "options": "Applicant",
    "search_index": 1
   },
   {
-   "fetch_from": "student.first_name",
    "fieldname": "student_name",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Student Name",
+   "label": "Name",
    "read_only": 1
   },
   {
@@ -54,26 +78,42 @@
    "fieldname": "registration_id",
    "fieldtype": "Data",
    "label": "Student ID",
+   "read_only": 1,
+   "depends_on": "eval:doc.certificate_for!=\"Admission Stage\""
+  },
+  {
+   "depends_on": "eval:doc.certificate_for==\"Admission Stage\"",
+   "fieldname": "application_number",
+   "fieldtype": "Data",
+   "label": "Application Number",
    "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.certificate_for==\"Admission Stage\"",
+   "fieldname": "admit_card_number",
+   "fieldtype": "Data",
+   "label": "Admit Card Number",
+   "description": "From the applicant's entrance-test seat allocation; you can type it if it is missing."
   },
   {
    "fieldname": "column_break_1",
    "fieldtype": "Column Break"
   },
   {
-   "fetch_from": "student.programme_of_study",
    "fieldname": "programme",
    "fieldtype": "Link",
    "label": "Programme",
    "options": "Programme",
-   "read_only": 1
+   "read_only": 1,
+   "description": "Set automatically from the student / applicant."
   },
   {
    "fetch_from": "student.level_of_study",
    "fieldname": "level_of_study",
    "fieldtype": "Data",
    "label": "Level Of Study",
-   "read_only": 1
+   "read_only": 1,
+   "depends_on": "eval:doc.certificate_for!=\"Admission Stage\""
   },
   {
    "fieldname": "section_purpose",
@@ -183,7 +223,7 @@
   }
  ],
  "links": [],
- "modified": "2026-09-25 17:00:00.000000",
+ "modified": "2026-09-28 11:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Fee Certificate Request",

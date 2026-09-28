@@ -9,8 +9,18 @@ MULTI_YEAR = "Multi Year Fee Structure"
 SINGLE_YEAR_DEMAND = "Single Year Fee Demand"
 SINGLE_YEAR_RECEIPT = "Single Year Fee Receipt"
 
-_APPLIED_FOR = (
+_STUDYING = (
 	"<p>This is to certify that <strong>{{ student_name }}</strong> (Student ID : <strong>{{ student_id }}</strong>) "
+	"studying in {{ current_year }} year {{ programme }} programme for the Academic Year (AY) "
+	"{{ academic_year }} in this University "
+)
+_FOR_YEAR = "for {{ current_year }} year i.e. AY {{ academic_year }}.</p>"
+
+# Admission-stage wording (the office's original samples): applicants have only an
+# admit card number and application number.
+_APPLIED_FOR = (
+	"<p>This is to certify that <strong>{{ student_name }}</strong> (admit card number : "
+	"<strong>{{ admit_card_number }},</strong> application number : <strong>{{ application_number }}</strong>) "
 	"has applied for {{ programme_duration }} {{ programme }} programme for the Academic Year (AY) "
 	"{{ academic_year }} in this University and "
 )
@@ -35,9 +45,12 @@ DEFAULT_PURPOSES = [
 		"enabled": 1,
 		"include_bank_details": 1,
 		"heading": "FEE CERTIFICATE",
-		"body_text": _APPLIED_FOR
-		+ "is required to pay following fee.</p>{{ paid_summary }}"
-		+ "<p>The fee structure for {{ programme }} is shown below.</p>",
+		"body_text": _STUDYING
+		+ "is required to pay Rs. {{ year_fee }}/- "
+		+ _FOR_YEAR
+		+ "{{ paid_summary }}<p>The fee structure for {{ programme }} is shown below.</p>",
+		"applicant_body_text": _APPLIED_FOR
+		+ "is required to pay following fee.</p><p>The fee structure for {{ programme }} is shown below.</p>",
 		"total_label": "Total Fee Payable",
 		"bank_details_text": _BANK_DETAILS,
 		"closing_text": "",
@@ -49,7 +62,8 @@ DEFAULT_PURPOSES = [
 		"enabled": 1,
 		"include_bank_details": 1,
 		"heading": "FEE CERTIFICATE",
-		"body_text": _APPLIED_FOR
+		"body_text": _STUDYING + "is required to pay the following course fee " + _FOR_YEAR,
+		"applicant_body_text": _APPLIED_FOR
 		+ "is required to pay following fee.</p><p>The fee structure for {{ programme }} is shown below.</p>",
 		"total_label": "Total",
 		"bank_details_text": _BANK_DETAILS,
@@ -63,7 +77,8 @@ DEFAULT_PURPOSES = [
 		"include_bank_details": 0,
 		"require_full_payment": 1,
 		"heading": "Fee Receipt",
-		"body_text": _APPLIED_FOR + "has paid the following fee.</p>",
+		"body_text": _STUDYING + "and has paid the following course fee " + _FOR_YEAR,
+		"applicant_body_text": _APPLIED_FOR + "has paid the following fee.</p>",
 		"total_label": "Total Fee Paid",
 		"bank_details_text": _BANK_DETAILS,
 		"closing_text": "",

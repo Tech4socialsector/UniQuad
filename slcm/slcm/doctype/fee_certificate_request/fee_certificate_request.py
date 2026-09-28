@@ -14,6 +14,7 @@ from slcm.slcm.doctype.fee_certificate_settings.fee_certificate_settings import 
 	get_purpose_template,
 )
 
+ADMISSION_STAGE = "Admission Stage"
 ORDINALS = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"]
 DURATION_WORDS = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"]
 
@@ -57,17 +58,42 @@ class FeeCertificateRequest(Document):
 		self.certificate_type = template.certificate_type
 		self.certificate_mode = "Multi Year" if self.certificate_type == MULTI_YEAR else "Single Year"
 		self.to_academic_year = None
+		self._set_identity()
 
 		if (
 			not self.years
 			or self.purpose_changed()
 			or self.has_value_changed("from_academic_year")
 			or self.has_value_changed("student")
+			or self.has_value_changed("applicant")
+			or self.has_value_changed("certificate_for")
 		):
 			self.set("years", [])
-			for row in academic_year_rows(self.student, self.from_academic_year, self.purpose):
+			for row in academic_year_rows(get_subject(self), self.from_academic_year, self.purpose):
 				self.append("years", row)
 		self._drop_duplicate_years()
+
+	def _set_identity(self):
+		"""Fill name / programme / numbers from the Student Master or the Applicant."""
+		self.certificate_for = self.certificate_for or "Campus Student"
+		if self.certificate_for == ADMISSION_STAGE:
+			if not self.applicant:
+				frappe.throw(_("Please select the Applicant"))
+			self.student = None
+			self.registration_id = None
+			self.level_of_study = None
+		else:
+			if not self.student:
+				frappe.throw(_("Please select the Student"))
+			self.applicant = None
+			self.application_number = None
+			self.admit_card_number = None
+		subject = get_subject(self)
+		self.student_name = subject.first_name
+		self.programme = subject.programme_of_study
+		if self.certificate_for == ADMISSION_STAGE:
+			self.application_number = subject.application_number
+			self.admit_card_number = self.admit_card_number or subject.admit_card_number
 
 	def _drop_duplicate_years(self):
 		seen = set()
@@ -84,22 +110,64 @@ class FeeCertificateRequest(Document):
 
 
 @frappe.whitelist()
-def preview_academic_years(student, from_academic_year, purpose=None):
+def preview_academic_years(student=None, from_academic_year=None, purpose=None, applicant=None):
 	"""Column rows for the Year-wise Breakdown table: one year for single-year
 	purposes; for a multi-year one, every year of the programme from the student's
 	first year. Pure computation, so the client can fill an unsaved form without
 	clobbering edits."""
 	frappe.has_permission("Fee Certificate Request", ptype="read", throw=True)
-	return academic_year_rows(student, from_academic_year, purpose)
-
-
-def academic_year_rows(student, from_academic_year, purpose=None):
-	if not student or not from_academic_year:
+	if not (student or applicant):
 		return []
+	subject = get_subject(
+		frappe._dict(
+			certificate_for=ADMISSION_STAGE if applicant else "Campus Student", student=student, applicant=applicant
+		)
+	)
+	return academic_year_rows(subject, from_academic_year, purpose)
+
+
+def get_subject(request):
+	"""The person the certificate is about, as one dict whatever their stage.
+	Keys follow Student Master (first_name, registration_id, academic_year = batch
+	start year, programme_of_study, master_programme, fee_structure) plus
+	is_applicant / application_number / admit_card_number."""
+	if (request.get("certificate_for") or "Campus Student") != ADMISSION_STAGE:
+		student = frappe.get_doc("Student Master", request.get("student"))
+		subject = frappe._dict(student.as_dict())
+		subject.is_applicant = False
+		return subject
+
+	applicant = frappe.get_doc("Applicant", request.get("applicant"))
+	admit_card = frappe.db.get_value(
+		"Entrance Test Seat Allocation",
+		{"applicant": applicant.name, "admit_card_number": ["is", "set"]},
+		"admit_card_number",
+		order_by="creation desc",
+	)
+	return frappe._dict(
+		name=applicant.name,
+		is_applicant=True,
+		first_name=applicant.candidate_name or applicant.name,
+		registration_id=applicant.applicant_id or applicant.name,
+		application_number=applicant.applicant_id or applicant.name,
+		admit_card_number=admit_card,
+		academic_year=applicant.academic_year,
+		programme_of_study=applicant.program,
+		master_programme=frappe.db.get_value("Programme", applicant.program, "program_name") if applicant.program else None,
+		nationality=applicant.nationality,
+		fee_structure=None,
+	)
+
+
+def academic_year_rows(student_doc, from_academic_year, purpose=None):
+	"""student_doc: a get_subject() dict (or a Student Master name)."""
+	if not student_doc or not from_academic_year:
+		return []
+	if isinstance(student_doc, str):
+		student_doc = get_subject(frappe._dict(student=student_doc))
 
 	template = get_purpose_template(purpose)
 	first_year = frappe.get_doc("Academic Year", from_academic_year)
-	student_doc = frappe.get_doc("Student Master", student)
 	offset = _year_offset(student_doc, first_year)
 	if not template or template.certificate_type != MULTI_YEAR:
 		return [
@@ -211,6 +279,8 @@ def _component_totals(student, academic_year):
 	"""{component_type: {original, waiver, paid, outstanding}} for one year —
 	from the student's Fee Demands, falling back to their assigned Fee Structure
 	(if it is for this year) when no demands have been raised yet, e.g. an applicant."""
+	if student.get("is_applicant"):
+		return _applicant_component_totals(student, academic_year)
 	totals = {}
 	if academic_year:
 		demands = frappe.get_all(
@@ -255,6 +325,78 @@ def _component_totals(student, academic_year):
 	return totals
 
 
+def _applicant_component_totals(applicant, academic_year):
+	"""Same shape as _component_totals for an admission-stage applicant: their
+	Applicant Fee Assignment(s) for the year, else the programme's Fee Structure;
+	paid amounts from their submitted Applicant Payment Receipts."""
+	totals = {}
+	if not academic_year:
+		return totals
+
+	def row(fee_component, types):
+		return totals.setdefault(
+			types.get(fee_component) or fee_component, {"original": 0, "waiver": 0, "paid": 0, "outstanding": 0}
+		)
+
+	assignments = frappe.get_all(
+		"Applicant Fee Assignment",
+		filters={
+			"applicant": applicant.name,
+			"academic_year": academic_year,
+			"docstatus": ["<", 2],
+			"status": ["not in", ["Cancelled", "Withdrawn"]],
+		},
+		fields=["name", "scholarship_amount"],
+	)
+	components = []
+	if assignments:
+		components = frappe.get_all(
+			"Applicant Fee Component Child",
+			filters={"parenttype": "Applicant Fee Assignment", "parent": ["in", [a.name for a in assignments]]},
+			fields=["fee_component", "amount"],
+		)
+	waiver = sum(flt(a.scholarship_amount) for a in assignments) if components else 0
+	if not components and applicant.programme_of_study:
+		structures = frappe.get_all(
+			"Fee Structure",
+			filters={"program": applicant.programme_of_study, "academic_year": academic_year, "status": "Active"},
+			fields=["name", "applicable"],
+			order_by="creation desc",
+		)
+		structure = next((f for f in structures if f.applicable == "Applicant"), structures[0] if structures else None)
+		if structure:
+			field = "fee_components_for_indian" if (applicant.nationality or "Indian") == "Indian" else "fee_components_for_foreign"
+			components = frappe.get_all(
+				"Fee Component Child",
+				filters={"parenttype": "Fee Structure", "parent": structure.name, "parentfield": field},
+				fields=["fee_component", "amount"],
+			)
+
+	receipts = frappe.get_all(
+		"Applicant Payment Receipt",
+		filters={"applicant": applicant.name, "academic_year": academic_year, "docstatus": 1},
+		pluck="name",
+	)
+	paid = []
+	if receipts:
+		paid = frappe.get_all(
+			"Applicant Receipt Component",
+			filters={"parenttype": "Applicant Payment Receipt", "parent": ["in", receipts]},
+			fields=["fee_component", "amount"],
+		)
+
+	types = _component_types([c.fee_component for c in components + paid])
+	for c in components:
+		row(c.fee_component, types)["original"] += flt(c.amount)
+	for c in paid:
+		row(c.fee_component, types)["paid"] += flt(c.amount)
+	if totals and waiver:
+		next(iter(totals.values()))["waiver"] += waiver
+	for r in totals.values():
+		r["outstanding"] = max(r["original"] - r["waiver"] - r["paid"], 0)
+	return totals
+
+
 def _component_types(fee_components):
 	if not fee_components:
 		return {}
@@ -295,6 +437,8 @@ def _earlier_years(student, before_academic_year, has_scholarship):
 	already studied before the certificate's first year (from their batch start)
 	that has Fee Demands. fee is the year's overall total: original fee, less the
 	scholarship (waiver) when the request has one."""
+	if student.get("is_applicant"):
+		return []
 	if not (student.academic_year and frappe.db.exists("Academic Year", student.academic_year)):
 		return []
 	start = getdate(frappe.db.get_value("Academic Year", student.academic_year, "year_start_date"))
@@ -329,13 +473,13 @@ def get_fee_certificate_context(request_name):
 	request = frappe.get_doc("Fee Certificate Request", request_name)
 	_check_read_access(request)
 
-	student = frappe.get_doc("Student Master", request.student)
+	student = get_subject(request)
 	settings = frappe.get_single("Fee Certificate Settings")
 	template = get_purpose_template(request.purpose)
 	certificate_type = request.certificate_type or (template and template.certificate_type)
 
 	year_rows = request.years or [
-		frappe._dict(row) for row in academic_year_rows(request.student, request.from_academic_year, request.purpose)
+		frappe._dict(row) for row in academic_year_rows(student, request.from_academic_year, request.purpose)
 	]
 
 	seen, unique_rows = set(), []
@@ -391,14 +535,21 @@ def get_fee_certificate_context(request_name):
 	)
 	placeholders = {
 		"student_name": student.first_name or "",
-		"admit_card_number": student.admit_card_number or "-",
-		"application_number": student.application_number or "-",
+		"admit_card_number": request.admit_card_number or student.admit_card_number or "-",
+		"application_number": request.application_number or student.application_number or "-",
 		"registration_id": student.registration_id or student.name,
 		"student_id": student.registration_id or student.name,
 		"programme": programme,
 		"programme_duration": _duration_words(_programme_duration(student)),
 		"academic_year": _short_ay_label(first_ay),
 		"current_year": _ordinal_year_for(student, first_ay),
+		# The certificate year's total as on the table (after any scholarship), for "Rs. ___".
+		"year_fee": _amt(
+			next(
+				(sum(y["amounts"].values()) - y["waiver"] for r, y in zip(unique_rows, years) if r.academic_year == first_ay.name),
+				sum(years[0]["amounts"].values()) - years[0]["waiver"] if years else 0,
+			)
+		),
 		"institute_name": settings.institute_name or "",
 		"bank_account_name": settings.bank_account_name or settings.institute_name or "",
 		"bank_account_no": settings.bank_account_no or "",
@@ -441,7 +592,10 @@ def get_fee_certificate_context(request_name):
 		"settings": settings.as_dict(),
 		"certificate_type": certificate_type,
 		"heading": (template and template.heading) or "FEE CERTIFICATE",
-		"body_html": render(template and template.body_text),
+		"body_html": render(
+			template
+			and ((student.is_applicant and template.get("applicant_body_text")) or template.body_text)
+		),
 		"bank_details_html": render(template and template.bank_details_text) if request.include_bank_details else "",
 		"closing_html": render(template and template.closing_text),
 		"total_label": (template and template.total_label) or "Total",

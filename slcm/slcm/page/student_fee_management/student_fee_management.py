@@ -935,3 +935,127 @@ def export_report(report, academic_year=None, academic_term=None, programme=None
 	frappe.local.response.filename = filename
 	frappe.local.response.filecontent = out.getvalue()
 	frappe.local.response.type = "binary"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Fee Certificate — campus students (Student Master) or admission-stage applicants
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@frappe.whitelist()
+def get_fee_certificate_options():
+	_check_access()
+	from slcm.slcm.doctype.fee_certificate_settings.fee_certificate_settings import get_purpose_options
+
+	return {
+		"purposes": get_purpose_options(),
+		"academic_years": frappe.get_all("Academic Year", pluck="name", order_by="year_start_date desc"),
+	}
+
+
+@frappe.whitelist()
+def generate_fee_certificate(
+	certificate_for, purpose, academic_year, student=None, applicant=None, has_scholarship=1, admit_card_number=None
+):
+	"""Create (or reuse) the Fee Certificate Request and return its name for download."""
+	_check_access()
+	is_applicant = certificate_for == "Admission Stage"
+	person_field = "applicant" if is_applicant else "student"
+	person = applicant if is_applicant else student
+	if not person:
+		frappe.throw(_("Please select the Applicant") if is_applicant else _("Please select the Student"))
+
+	name = frappe.db.get_value(
+		"Fee Certificate Request",
+		{
+			person_field: person,
+			"certificate_for": certificate_for,
+			"purpose": purpose,
+			"from_academic_year": academic_year,
+			"status": ["!=", "Cancelled"],
+		},
+		"name",
+	)
+	doc = (
+		frappe.get_doc("Fee Certificate Request", name)
+		if name
+		else frappe.new_doc("Fee Certificate Request").update(
+			{
+				"certificate_for": certificate_for,
+				person_field: person,
+				"purpose": purpose,
+				"from_academic_year": academic_year,
+				"remarks": _("Generated from Student Fee Management."),
+			}
+		)
+	)
+	doc.has_scholarship = cint(has_scholarship)
+	if is_applicant and admit_card_number:
+		doc.admit_card_number = admit_card_number
+	doc.set("years", [])  # rebuilt from the latest fee data
+	doc.flags.ignore_permissions = True
+	doc.save()
+	doc.db_set({"status": "Generated", "generated_on": frappe.utils.now_datetime()})
+	return doc.name
+
+
+@frappe.whitelist()
+def download_fee_certificate(name):
+	_check_access()
+	request = frappe.get_doc("Fee Certificate Request", name)
+	frappe.flags.ignore_print_permissions = True
+	try:
+		pdf = frappe.get_print(
+			"Fee Certificate Request", name, "Fee Certificate", doc=request, as_pdf=True, no_letterhead=1
+		)
+	finally:
+		frappe.flags.ignore_print_permissions = False
+	who = (request.student_name or name).replace("/", "-")
+	frappe.local.response.filename = f"{request.purpose.replace('/', '-')} - {who}.pdf"
+	frappe.local.response.filecontent = pdf
+	frappe.local.response.type = "pdf"
+
+
+@frappe.whitelist()
+def get_fee_certificates(academic_year=None, programme=None, search=None, start=0, page_length=25):
+	"""Generated fee certificates (campus students and applicants), newest first;
+	Draft requests that were never downloaded are left out.
+	Academic Year / Programme / Search from the page filters apply; Term and Dues
+	Status are student-list filters and don't apply to certificates."""
+	_check_access()
+	conditions = ["fcr.status = 'Generated'"]
+	values = {}
+	for param, column, key in (
+		(academic_year, "fcr.from_academic_year", "academic_year"),
+		(programme, "fcr.programme", "programme"),
+	):
+		selected = _as_list(param)
+		if selected:
+			conditions.append(f"{column} IN %({key})s")
+			values[key] = tuple(selected)
+	if search and search.strip():
+		conditions.append(
+			"(fcr.name LIKE %(search)s OR fcr.student_name LIKE %(search)s OR fcr.student LIKE %(search)s "
+			"OR fcr.applicant LIKE %(search)s OR fcr.registration_id LIKE %(search)s "
+			"OR fcr.application_number LIKE %(search)s OR fcr.purpose LIKE %(search)s)"
+		)
+		values["search"] = f"%{search.strip()}%"
+	where = " AND ".join(conditions)
+
+	count = frappe.db.sql(f"SELECT COUNT(*) FROM `tabFee Certificate Request` fcr WHERE {where}", values)[0][0]
+	values.update(start=cint(start), page_length=min(cint(page_length) or 25, 500))
+	rows = frappe.db.sql(
+		f"""SELECT fcr.name, fcr.certificate_for, fcr.student, fcr.applicant, fcr.student_name,
+			COALESCE(NULLIF(fcr.registration_id, ''), NULLIF(fcr.application_number, ''), fcr.student, fcr.applicant) AS person_id,
+			fcr.admit_card_number, fcr.programme, fcr.purpose, fcr.from_academic_year AS academic_year,
+			fcr.status, fcr.generated_on, fcr.creation, fcr.owner, fcr.remarks
+		FROM `tabFee Certificate Request` fcr
+		WHERE {where}
+		ORDER BY COALESCE(fcr.generated_on, fcr.creation) DESC, fcr.name DESC
+		LIMIT %(start)s, %(page_length)s""",
+		values,
+		as_dict=True,
+	)
+	for r in rows:
+		r["source"] = "Student Portal" if "student portal" in (r.remarks or "").lower() else "Staff"
+	return {"rows": rows, "count": count}
