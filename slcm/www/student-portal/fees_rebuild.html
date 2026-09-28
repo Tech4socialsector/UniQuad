@@ -4,21 +4,21 @@
 {% block extra_css %}
 /* ── NLSIU Brand Overrides ─────────────────────────────────────────── */
 :root {
-  --sp-fee-navy:      var(--sp-primary, #2b2e4a);
-  --sp-fee-gold:      var(--sp-secondary, #c8a14b);
+  --sp-fee-navy:      var(--sp-primary, #6b091a);
+  --sp-fee-gold:      var(--sp-secondary, #b5364a);
   --sp-fee-gold-bg:   rgba(200,161,75,0.12);
-  --sp-fee-gold-dark: #a07830;
+  --sp-fee-gold-dark: #920c24;
   --sp-fee-radius:    var(--sp-radius, 16px);
 }
 
 /* ── Overview Card ─────────────────────────────────────────────────── */
 .sp-fee-overview {
-  background: linear-gradient(135deg, var(--sp-fee-navy) 0%, #3d4170 60%, #4a4f85 100%);
+  background: linear-gradient(135deg, var(--sp-fee-navy) 0%, #920c24 60%, #920c24 100%);
   border-radius: var(--sp-fee-radius);
   padding: 24px 24px 20px;
   color: #fff;
   margin-bottom: 20px;
-  box-shadow: 0 6px 28px rgba(43,46,74,0.30);
+  box-shadow: 0 6px 28px rgba(146,12,36,0.30);
   position: relative;
   overflow: hidden;
 }
@@ -56,7 +56,7 @@
   background: rgba(255,255,255,0.16); color: #fff;
   border: 1px solid rgba(255,255,255,0.25);
 }
-.sp-fee-status-paid         { background: rgba(22,163,74,0.30);  border-color: rgba(22,163,74,0.45); }
+.sp-fee-status-paid         { background: rgba(146,12,36,0.30);  border-color: rgba(146,12,36,0.45); }
 .sp-fee-status-partially-paid { background: rgba(146,12,36,0.30); border-color: rgba(146,12,36,0.45); }
 .sp-fee-status-overdue      { background: rgba(146,12,36,0.35);   border-color: rgba(146,12,36,0.45); }
 .sp-fee-status-unpaid       { background: rgba(146,12,36,0.25);   border-color: rgba(146,12,36,0.35); }
@@ -105,7 +105,7 @@
 .sp-fee-progress-labels { display: flex; justify-content: space-between; font-size: 11px; color: rgba(255,255,255,0.65); margin-bottom: 6px; }
 .sp-fee-progress-track { height: 8px; background: rgba(255,255,255,0.18); border-radius: 6px; overflow: hidden; }
 .sp-fee-progress-fill { height: 100%; border-radius: 6px; background: var(--sp-fee-gold); transition: width 0.7s ease; }
-.sp-fee-progress-fill-done { background: #86efac; }
+.sp-fee-progress-fill-done { background: #f5c6ce; }
 @media (max-width: 520px) {
   .sp-fee-stat-row { grid-template-columns: 1fr 1fr; }
   .sp-fee-amount { font-size: 28px; }
@@ -117,9 +117,9 @@
   padding: 12px 16px; border-radius: 12px;
   font-size: 13px; margin-bottom: 16px; border: 1px solid transparent;
 }
-.sp-fee-notice-info    { background: var(--sp-info-bg, #ebf8ff); color: var(--sp-info, #0369a1); border-color: rgba(3,105,161,0.2); }
+.sp-fee-notice-info    { background: var(--sp-info-bg, #fff0f2); color: var(--sp-info, #920c24); border-color: rgba(146,12,36,0.2); }
 .sp-fee-notice-warning { background: var(--sp-warning-bg); color: var(--sp-warning); border-color: rgba(146,12,36,0.25); }
-.sp-fee-notice-success { background: #f0fdf4; color: #14532d; border-color: #86efac; }
+.sp-fee-notice-success { background: #fff0f2; color: #6b091a; border-color: #f5c6ce; }
 
 /* ── Overdue Banner ────────────────────────────────────────────────── */
 .sp-fee-overdue-banner {
@@ -194,7 +194,7 @@
 }
 .sp-fee-fs-disc-row {
   display: flex; justify-content: space-between; align-items: center;
-  padding: 6px 0; font-size: 13px; color: var(--sp-purple, #7c3aed); font-weight: 600;
+  padding: 6px 0; font-size: 13px; color: var(--sp-purple, #b5364a); font-weight: 600;
 }
 .sp-fee-fs-net-row {
   display: flex; justify-content: space-between; align-items: center;
@@ -244,7 +244,7 @@
 }
 .sp-fee-due-overdue  { background: #fff1f2; color: #920c24; }
 .sp-fee-due-urgent   { background: #fff0f2; color: #920c24; }
-.sp-fee-due-upcoming { background: #f0f9ff; color: #0369a1; }
+.sp-fee-due-upcoming { background: #f0f9ff; color: #920c24; }
 
 .sp-fee-inv-row {
   display: flex; align-items: center; gap: 12px; padding: 14px 16px;
@@ -400,8 +400,8 @@
   border-radius: 99px; overflow: hidden; display: flex;
 }
 .ppfda-progress-fill { height: 100%; transition: width .5s ease; }
-.ppfda-fill-paid   { background: #22c55e; }
-.ppfda-fill-waived { background: #a78bfa; }
+.ppfda-fill-paid   { background: #b5364a; }
+.ppfda-fill-waived { background: #f5c6ce; }
 .ppfda-pct-label { font-size: 11px; font-weight: 700; color: #6b7280; white-space: nowrap; }
 .ppfda-stats {
   display: grid;
@@ -412,23 +412,23 @@
   padding: 10px 12px; border-radius: 10px; border: 1px solid #e5e7eb;
 }
 .ppfda-stat-total  { background: #f9fafb; }
-.ppfda-stat-paid   { background: #f0fdf4; border-color: #bbf7d0; }
-.ppfda-stat-waived { background: #faf5ff; border-color: #e9d5ff; }
-.ppfda-stat-due    { background: #eff6ff; border-color: #bfdbfe; }
+.ppfda-stat-paid   { background: #fff0f2; border-color: #f5c6ce; }
+.ppfda-stat-waived { background: #faf5ff; border-color: #fff0f2; }
+.ppfda-stat-due    { background: #fff0f2; border-color: #f5c6ce; }
 .ppfda-stat-overdue{ background: #fff1f2; border-color: #fecdd3; }
 .ppfda-stat-val { font-size: 15px; font-weight: 800; color: #111827; letter-spacing: -.3px; }
-.ppfda-stat-paid   .ppfda-stat-val { color: #16a34a; }
-.ppfda-stat-waived .ppfda-stat-val { color: #7c3aed; }
+.ppfda-stat-paid   .ppfda-stat-val { color: #920c24; }
+.ppfda-stat-waived .ppfda-stat-val { color: #b5364a; }
 .ppfda-stat-overdue .ppfda-stat-val{ color: #920c24; }
-.ppfda-stat-due    .ppfda-stat-val { color: #1d4ed8; }
+.ppfda-stat-due    .ppfda-stat-val { color: #b5364a; }
 .ppfda-stat-lbl { font-size: 11px; font-weight: 600; color: #374151; margin-top: 2px; }
 .ppfda-stat-sub { font-size: 10px; color: #9ca3af; margin-top: 1px; }
 .ppfda-legend { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .ppfda-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.ppfda-dot-paid    { background: #22c55e; }
-.ppfda-dot-waived  { background: #a78bfa; }
+.ppfda-dot-paid    { background: #b5364a; }
+.ppfda-dot-waived  { background: #f5c6ce; }
 .ppfda-dot-overdue { background: #920c24; }
-.ppfda-dot-pending { background: #60a5fa; }
+.ppfda-dot-pending { background: #b5364a; }
 .ppfda-legend-lbl { font-size: 11px; color: #6b7280; font-weight: 500; margin-right: 8px; }
 @media (max-width: 480px) {
   .ppfda-stats { grid-template-columns: 1fr 1fr; }
@@ -438,24 +438,24 @@
 .sp-fee-pay-all-bar {
   display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;
   margin: 10px 14px 6px; padding: 14px 18px;
-  background: linear-gradient(135deg, #f0f5ff 0%, #e8f0fe 100%);
-  border: 1px solid rgba(43,46,74,0.15);
+  background: linear-gradient(135deg, #f0f5ff 0%, #fff0f2 100%);
+  border: 1px solid rgba(146,12,36,0.15);
   border-radius: 14px;
 }
 .sp-fee-pay-all-info  { display: flex; align-items: center; gap: 10px; }
 .sp-fee-pay-all-label { font-size: 13.5px; font-weight: 700; color: var(--sp-text-1); line-height: 1.3; }
 .sp-fee-pay-all-sub   { font-size: 11.5px; color: var(--sp-text-3); font-weight: 500; margin-top: 1px; }
 .sp-fee-pay-all-right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
-.sp-fee-pay-all-total { font-size: 20px; font-weight: 800; color: var(--sp-primary,#2b2e4a); font-variant-numeric: tabular-nums; letter-spacing: -0.3px; }
+.sp-fee-pay-all-total { font-size: 20px; font-weight: 800; color: var(--sp-primary,#6b091a); font-variant-numeric: tabular-nums; letter-spacing: -0.3px; }
 .sp-fee-pay-all-btn {
   display: inline-flex; align-items: center; gap: 7px;
-  background: var(--sp-primary, #2b2e4a); color: #fff;
+  background: var(--sp-primary, #6b091a); color: #fff;
   border: none; border-radius: 10px; padding: 10px 22px;
   font-size: 13.5px; font-weight: 700; cursor: pointer; font-family: inherit;
   transition: background .15s, box-shadow .15s; white-space: nowrap;
-  box-shadow: 0 2px 8px rgba(43,46,74,0.25);
+  box-shadow: 0 2px 8px rgba(146,12,36,0.25);
 }
-.sp-fee-pay-all-btn:hover:not(:disabled) { opacity: .88; box-shadow: 0 4px 14px rgba(43,46,74,0.35); }
+.sp-fee-pay-all-btn:hover:not(:disabled) { opacity: .88; box-shadow: 0 4px 14px rgba(146,12,36,0.35); }
 .sp-fee-pay-all-btn:disabled { opacity: .55; cursor: not-allowed; box-shadow: none; }
 @media (max-width: 560px) {
   .sp-fee-pay-all-bar { flex-direction: column; align-items: flex-start; }
@@ -491,7 +491,7 @@
 }
 .sp-fee-bulk-sheet-title-icon {
   width: 34px; height: 34px; border-radius: 10px;
-  background: #eef2ff; color: var(--sp-primary, #2b2e4a);
+  background: #fff0f2; color: var(--sp-primary, #6b091a);
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
 .sp-fee-bulk-sheet-close {
@@ -516,29 +516,29 @@
   background: var(--sp-border-light); border: 1px solid var(--sp-border);
   border-radius: 12px; transition: border-color .15s;
 }
-.sp-fee-bulk-item:hover { border-color: var(--sp-primary, #2b2e4a); }
+.sp-fee-bulk-item:hover { border-color: var(--sp-primary, #6b091a); }
 .sp-fee-bulk-item-num {
   width: 28px; height: 28px; border-radius: 8px;
-  background: #eef2ff; color: var(--sp-primary, #2b2e4a);
+  background: #fff0f2; color: var(--sp-primary, #6b091a);
   font-size: 12px; font-weight: 700;
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
 .sp-fee-bulk-item-label { flex: 1; font-size: 13.5px; font-weight: 600; color: var(--sp-text-1); }
 .sp-fee-bulk-item-amt {
-  font-size: 14px; font-weight: 700; color: var(--sp-primary, #2b2e4a);
+  font-size: 14px; font-weight: 700; color: var(--sp-primary, #6b091a);
   font-variant-numeric: tabular-nums; white-space: nowrap;
 }
 .sp-fee-bulk-total-row {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 14px 16px; background: #eef2ff;
-  border: 1px solid rgba(43,46,74,0.15); border-radius: 12px; margin-top: 12px;
+  padding: 14px 16px; background: #fff0f2;
+  border: 1px solid rgba(146,12,36,0.15); border-radius: 12px; margin-top: 12px;
 }
 .sp-fee-bulk-total-label {
   display: flex; align-items: center; gap: 8px;
   font-size: 14px; font-weight: 700; color: var(--sp-text-1);
 }
 .sp-fee-bulk-total-val {
-  font-size: 20px; font-weight: 800; color: var(--sp-primary, #2b2e4a);
+  font-size: 20px; font-weight: 800; color: var(--sp-primary, #6b091a);
   font-variant-numeric: tabular-nums;
 }
 .sp-fee-bulk-sheet-foot {
@@ -553,13 +553,13 @@
 }
 .sp-fee-bulk-sheet-cancel:hover { background: var(--sp-border-light); border-color: var(--sp-text-3); }
 .sp-fee-bulk-sheet-confirm {
-  flex: 2; background: var(--sp-primary, #2b2e4a); color: #fff;
+  flex: 2; background: var(--sp-primary, #6b091a); color: #fff;
   border: none; border-radius: 12px; padding: 13px 20px;
   font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit;
   display: flex; align-items: center; justify-content: center; gap: 8px;
-  box-shadow: 0 4px 14px rgba(43,46,74,0.3); transition: all .15s;
+  box-shadow: 0 4px 14px rgba(146,12,36,0.3); transition: all .15s;
 }
-.sp-fee-bulk-sheet-confirm:not(:disabled):hover { opacity: .88; box-shadow: 0 6px 20px rgba(43,46,74,0.4); transform: translateY(-1px); }
+.sp-fee-bulk-sheet-confirm:not(:disabled):hover { opacity: .88; box-shadow: 0 6px 20px rgba(146,12,36,0.4); transform: translateY(-1px); }
 .sp-fee-bulk-sheet-confirm:disabled { background: var(--sp-border); color: var(--sp-text-4); cursor: not-allowed; box-shadow: none; }
 @keyframes sp-fee-fade-in { from { opacity: 0; } to { opacity: 1; } }
 @media (max-width: 600px) {
@@ -593,7 +593,7 @@
 .sp-fee-con-type   { font-size: 13.5px; font-weight: 700; color: var(--sp-text-1); }
 .sp-fee-con-meta   { font-size: 11.5px; color: var(--sp-text-4); margin-top: 3px; }
 .sp-fee-con-right  { text-align: right; flex-shrink: 0; }
-.sp-fee-con-amount { font-size: 15px; font-weight: 800; color: var(--sp-purple, #7c3aed); }
+.sp-fee-con-amount { font-size: 15px; font-weight: 800; color: var(--sp-purple, #b5364a); }
 .sp-fee-con-status-badge { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
 .sp-fee-con-status-approved { background: var(--sp-success-bg); color: var(--sp-success); }
 .sp-fee-con-status-pending  { background: var(--sp-warning-bg); color: var(--sp-warning); }
@@ -604,7 +604,7 @@
   padding: 14px; border-bottom: 1px solid var(--sp-border-light);
 }
 .sp-fee-refund-card:last-child { border-bottom: none; }
-.sp-fee-refund-icon { width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0; background: #f0fdf4; color: #16a34a; display: flex; align-items: center; justify-content: center; }
+.sp-fee-refund-icon { width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0; background: #fff0f2; color: #920c24; display: flex; align-items: center; justify-content: center; }
 .sp-fee-refund-body { flex: 1; min-width: 0; }
 .sp-fee-refund-type   { font-size: 13.5px; font-weight: 700; color: var(--sp-text-1); }
 .sp-fee-refund-meta   { font-size: 11.5px; color: var(--sp-text-4); margin-top: 3px; display: flex; flex-wrap: wrap; gap: 6px; }
@@ -1043,11 +1043,11 @@
 
           {% if inv.scholarship_amount %}
           <div class="sp-fee-detail-row">
-            <span class="sp-fee-detail-label" style="color:var(--sp-purple, #7c3aed);">
+            <span class="sp-fee-detail-label" style="color:var(--sp-purple, #b5364a);">
               <span class="ms" style="font-size:12px;vertical-align:middle;">workspace_premium</span>
               Scholarship / Discount
             </span>
-            <span class="sp-fee-detail-value" style="color:var(--sp-purple, #7c3aed);">− &#8377;{{ "{:,.0f}".format(inv.scholarship_amount) }}</span>
+            <span class="sp-fee-detail-value" style="color:var(--sp-purple, #b5364a);">− &#8377;{{ "{:,.0f}".format(inv.scholarship_amount) }}</span>
           </div>
           {% endif %}
           <div class="sp-fee-detail-row">
@@ -1148,7 +1148,7 @@
 {% if has_fee_demands or has_transactions or has_fee_refunds %}
 <div class="sp-fee-section-hdr fade-in" id="sp-fee-demands-section" style="margin-top:28px;">
   <div class="sp-fee-section-title">
-    <span class="ms" style="color:#7c3aed;">list_alt</span>
+    <span class="ms" style="color:#b5364a;">list_alt</span>
     Additional Charges &amp; History
   </div>
   {% if has_overdue_demands %}
@@ -1249,7 +1249,7 @@
     {% if ns_pay.count > 0 %}
     <div class="sp-fee-pay-all-bar">
       <div class="sp-fee-pay-all-info">
-        <span class="ms" style="font-size:18px;color:var(--sp-primary,#2b2e4a);">pending_actions</span>
+        <span class="ms" style="font-size:18px;color:var(--sp-primary,#6b091a);">pending_actions</span>
         <div>
           <div class="sp-fee-pay-all-label">{{ ns_pay.count }} outstanding demand{{ 's' if ns_pay.count != 1 else '' }}</div>
           <div class="sp-fee-pay-all-sub">Total due across all unpaid charges</div>
@@ -1276,7 +1276,7 @@
           color:{% if demand_type == 'Academic' %}var(--sp-fee-navy)
                 {% elif demand_type == 'Hostel' %}#920c24
                 {% elif demand_type == 'Fine' %}#920c24
-                {% elif demand_type == 'Examination' %}#7c3aed
+                {% elif demand_type == 'Examination' %}#b5364a
                 {% else %}var(--sp-text-3){% endif %};">
           {% if demand_type == 'Academic' %}school
           {% elif demand_type == 'Hostel' %}home
@@ -1331,13 +1331,13 @@
               <td class="sp-fee-col-hide-sm" style="text-align:right;color:var(--sp-text-2);font-size:13px;font-variant-numeric:tabular-nums;">
                 {{ d.formatted_net }}
                 {% if d.waiver_amount and d.waiver_amount > 0 %}
-                <div style="font-size:10px;color:#059669;font-weight:600;">−{{ d.formatted_waiver }} waiver</div>
+                <div style="font-size:10px;color:#920c24;font-weight:600;">−{{ d.formatted_waiver }} waiver</div>
                 {% endif %}
               </td>
               <td class="sp-fee-col-hide-sm" style="text-align:right;font-variant-numeric:tabular-nums;">
                 {% if d.settled_amount and d.settled_amount > 0 %}
-                <span style="color:#059669;font-weight:600;">{{ d.formatted_settled }}</span>
-                {% if d.has_credit_adj %}<div style="font-size:10px;color:#0891b2;font-weight:600;">incl. credit</div>{% endif %}
+                <span style="color:#920c24;font-weight:600;">{{ d.formatted_settled }}</span>
+                {% if d.has_credit_adj %}<div style="font-size:10px;color:#920c24;font-weight:600;">incl. credit</div>{% endif %}
                 {% else %}<span style="color:var(--sp-text-4);">—</span>{% endif %}
               </td>
               <td class="sp-fee-demand-outstanding" style="text-align:right;font-variant-numeric:tabular-nums;">
@@ -1497,7 +1497,7 @@
 {% if has_concessions %}
 <div class="sp-fee-section-hdr fade-in" style="margin-top:24px;">
   <div class="sp-fee-section-title">
-    <span class="ms" style="color:var(--sp-purple, #7c3aed);">workspace_premium</span>
+    <span class="ms" style="color:var(--sp-purple, #b5364a);">workspace_premium</span>
     Scholarships &amp; Concessions
   </div>
   <span class="sp-fee-section-count">{{ concessions | length }}</span>
@@ -1593,10 +1593,10 @@
   /* ── Toast ───────────────────────────────────────────────────── */
   function toast(title, msg, type) {
     var p = {
-      success: { bg: '#f0fff4', bd: '#86efac', tx: '#166534' },
+      success: { bg: '#f0fff4', bd: '#f5c6ce', tx: '#6b091a' },
       error:   { bg: '#fff5f5', bd: '#f5c6ce', tx: '#6b091a' },
       warning: { bg: '#fff0f2', bd: '#f5c6ce', tx: '#920c24' },
-      info:    { bg: '#ebf8ff', bd: '#bae6fd', tx: '#0c4a6e' },
+      info:    { bg: '#fff0f2', bd: '#f5c6ce', tx: '#6b091a' },
     };
     var c = p[type] || p.info;
     var t = document.createElement('div');
@@ -1733,7 +1733,7 @@
         email:   order.payer_email || (meta.dataset && meta.dataset.payerEmail) || '',
         contact: order.payer_phone || (meta.dataset && meta.dataset.payerPhone) || '',
       },
-      theme: { color: '#2b2e4a' },
+      theme: { color: '#6b091a' },
       modal: {
         confirm_close: true,
         ondismiss: function () {
@@ -1908,7 +1908,7 @@
         email:   order.payer_email || '',
         contact: order.payer_phone || '',
       },
-      theme: { color: '#2b2e4a' },
+      theme: { color: '#6b091a' },
       modal: {
         confirm_close: true,
         ondismiss: function () {

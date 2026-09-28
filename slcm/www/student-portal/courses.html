@@ -89,13 +89,13 @@
           <span style="background:var(--sp-primary-light); color:var(--sp-primary); font-size:12px; font-weight:600; padding:4px 10px; border-radius:20px;">{{ c.course_code }}</span>
           {% endif %}
           {% if c.credits %}
-          <span style="background:#e6f4ea; color:var(--sp-success); font-size:12px; font-weight:600; padding:4px 10px; border-radius:20px;">{{ c.credits }} Credit{% if c.credits != 1 %}s{% endif %}</span>
+          <span style="background:#fff0f2; color:var(--sp-success); font-size:12px; font-weight:600; padding:4px 10px; border-radius:20px;">{{ c.credits }} Credit{% if c.credits != 1 %}s{% endif %}</span>
           {% endif %}
           {% if c.course_type and c.course_type != '—' %}
           <span style="background:#fff0f2; color:#920c24; font-size:12px; font-weight:600; padding:4px 10px; border-radius:20px;">{{ c.course_type }}</span>
           {% endif %}
         </div>
-        <div style="display:flex; align-items:center; gap:6px; background:#e6f4ea; color:var(--sp-success); padding:6px 12px; border-radius:20px; font-size:13px; font-weight:600;">
+        <div style="display:flex; align-items:center; gap:6px; background:#fff0f2; color:var(--sp-success); padding:6px 12px; border-radius:20px; font-size:13px; font-weight:600;">
           <span class="sp-ms" style="font-size:16px;">check_circle</span> {{ c.status }}
         </div>
       </div>

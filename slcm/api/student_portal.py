@@ -1025,6 +1025,26 @@ def get_portal_notifications():
 
 	notifications = []
 
+	def _iso(value):
+		"""Date as YYYY-MM-DD (for sorting / grouping on the page), or ''."""
+		try:
+			return getdate(value).isoformat() if value else ""
+		except Exception:
+			return ""
+
+	def _join(*parts):
+		return " · ".join(str(p) for p in parts if p)
+
+	def _course_name(course):
+		if not course:
+			return ""
+		return frappe.db.get_value("Course", course, "course_name") or course
+
+	def _offering_name(offering):
+		if not offering:
+			return ""
+		return frappe.db.get_value("Course Offering", offering, "course_name") or offering
+
 	try:
 		student = frappe.get_doc("Student Master", student_name, ignore_permissions=True)
 		today_str = nowdate()
@@ -1089,6 +1109,8 @@ def get_portal_notifications():
 					pub_date = str(r.publish_date)
 
 			notifications.append({
+				"id": f"announcement:{r.name}",
+				"date": _iso(r.publish_date),
 				"type": "announcement",
 				"category": r.announcement_type or "General",
 				"priority": r.priority or "Normal",
@@ -1116,7 +1138,7 @@ def get_portal_notifications():
 						["course", "in", enrolled_courses],
 						["exam_date", ">=", today_str],
 					],
-					fields=["course", "exam_date", "start_time", "venue"],
+					fields=["name", "course", "exam_date", "start_time", "venue"],
 					order_by="exam_date asc",
 					limit=5,
 					ignore_permissions=True,
@@ -1128,11 +1150,13 @@ def get_portal_notifications():
 					except Exception:
 						date_str = str(es.exam_date or "")
 					notifications.append({
+						"id": f"exam_schedule:{es.name}",
+						"date": _iso(es.exam_date),
 						"type": "exam_schedule",
 						"category": "Exam Schedule",
 						"priority": "Important",
-						"title": f"Exam: {es.course}",
-						"subtitle": f"{date_str}" + (f" | {es.venue}" if es.venue else ""),
+						"title": f"Exam: {_course_name(es.course)}",
+						"subtitle": _join(date_str, es.venue),
 						"icon": "event_note",
 						"link": "/student-portal/exam-schedule",
 						"sort_key": 1,
@@ -1145,7 +1169,7 @@ def get_portal_notifications():
 			published_results = frappe.get_all(
 				"Student Result Publish",
 				filters={"student": student_name, "is_published": 1},
-				fields=["exam_plan", "term_gpa", "published_on"],
+				fields=["name", "exam_plan", "term_gpa", "published_on"],
 				order_by="published_on desc",
 				limit=3,
 				ignore_permissions=True,
@@ -1157,12 +1181,15 @@ def get_portal_notifications():
 						pub_on = getdate(res.published_on).strftime("%d %b %Y")
 				except Exception:
 					pass
+				exam_label = (frappe.db.get_value("Exam Plan", res.exam_plan, "exam_name") if res.exam_plan else "") or res.exam_plan or "Exam"
 				notifications.append({
+					"id": f"result:{res.name}",
+					"date": _iso(res.published_on),
 					"type": "result",
 					"category": "Exam Result",
 					"priority": "Important",
-					"title": f"Results Published: {res.exam_plan or 'Exam'}",
-					"subtitle": (f"GPA: {res.term_gpa:.2f}" if res.term_gpa else "") + (f" | {pub_on}" if pub_on else ""),
+					"title": f"Results Published: {exam_label}",
+					"subtitle": _join(f"GPA {res.term_gpa:.2f}" if res.term_gpa else "", pub_on),
 					"icon": "assignment_turned_in",
 					"link": "/student-portal/results",
 					"sort_key": 1,
@@ -1175,18 +1202,20 @@ def get_portal_notifications():
 			fa_apps = frappe.get_all(
 				"FA MFA Application",
 				filters={"student": student_name, "status": ["in", ["Approved", "Rejected"]]},
-				fields=["name", "status", "application_type", "course"],
+				fields=["name", "status", "application_type", "course", "modified"],
 				order_by="modified desc",
 				limit=5,
 				ignore_permissions=True,
 			)
 			for app in fa_apps:
 				notifications.append({
+					"id": f"fa_mfa:{app.name}:{app.status}",
+					"date": _iso(app.modified),
 					"type": "fa_mfa",
 					"category": "FA / MFA",
 					"priority": "Important",
 					"title": f"{app.application_type or 'Application'} {app.status}",
-					"subtitle": app.course or "",
+					"subtitle": _course_name(app.course),
 					"icon": "check_circle" if app.status == "Approved" else "cancel",
 					"link": "/student-portal/attendance",
 					"sort_key": 1,
@@ -1199,18 +1228,20 @@ def get_portal_notifications():
 			cond_apps = frappe.get_all(
 				"Student Attendance Condonation",
 				filters={"student": student_name, "final_status": ["in", ["Approved", "Rejected"]]},
-				fields=["name", "final_status", "course_offering"],
+				fields=["name", "final_status", "course_offering", "modified"],
 				order_by="modified desc",
 				limit=5,
 				ignore_permissions=True,
 			)
 			for app in cond_apps:
 				notifications.append({
+					"id": f"condonation:{app.name}:{app.final_status}",
+					"date": _iso(app.modified),
 					"type": "condonation",
 					"category": "Condonation",
 					"priority": "Important",
 					"title": f"Condonation {app.final_status}",
-					"subtitle": app.course_offering or "",
+					"subtitle": _offering_name(app.course_offering),
 					"icon": "check_circle" if app.final_status == "Approved" else "cancel",
 					"link": "/student-portal/attendance",
 					"sort_key": 1,
@@ -1223,7 +1254,7 @@ def get_portal_notifications():
 			leave_apps = frappe.get_all(
 				"Student Leave Applications",
 				filters={"student": student_name, "status": ["in", ["Approved", "Rejected"]]},
-				fields=["name", "status", "from_date", "to_date", "total_leave_days"],
+				fields=["name", "status", "from_date", "to_date", "total_leave_days", "modified"],
 				order_by="modified desc",
 				limit=5,
 				ignore_permissions=True,
@@ -1235,12 +1266,15 @@ def get_portal_notifications():
 						from_str = getdate(app.from_date).strftime("%d %b")
 				except Exception:
 					pass
+				days = int(app.total_leave_days or 0)
 				notifications.append({
+					"id": f"leave:{app.name}:{app.status}",
+					"date": _iso(app.modified),
 					"type": "leave",
 					"category": "Leave Request",
 					"priority": "Important",
 					"title": f"Leave {app.status}: {app.name}",
-					"subtitle": from_str + (f" · {int(app.total_leave_days or 0)} day(s)" if app.total_leave_days else ""),
+					"subtitle": _join(from_str, f"{days} day{'s' if days != 1 else ''}" if days else ""),
 					"icon": "check_circle" if app.status == "Approved" else "cancel",
 					"link": "/student-portal/leave-request",
 					"sort_key": 1,
@@ -1254,7 +1288,7 @@ def get_portal_notifications():
 			appeals = frappe.get_all(
 				"Grade Appeal",
 				filters={"student": student_name, "status": ["in", ["Under Review", "Resolved", "Rejected"]], "modified": [">=", since]},
-				fields=["name", "status", "appeal_type", "course", "exam_plan"],
+				fields=["name", "status", "appeal_type", "course", "exam_plan", "modified"],
 				order_by="modified desc",
 				limit=5,
 				ignore_permissions=True,
@@ -1262,11 +1296,13 @@ def get_portal_notifications():
 			for ap in appeals:
 				course_name = frappe.db.get_value("Course", ap.course, "course_name") or ap.course or ""
 				notifications.append({
+					"id": f"grade_appeal:{ap.name}:{ap.status}",
+					"date": _iso(ap.modified),
 					"type": "grade_appeal",
 					"category": "Grade Appeal",
 					"priority": "Important" if ap.status != "Under Review" else "Normal",
 					"title": f"Grade appeal {ap.status.lower()}: {course_name}",
-					"subtitle": f"{ap.appeal_type or ''} · {ap.exam_plan or ''}".strip(" ·"),
+					"subtitle": _join(ap.appeal_type, ap.exam_plan),
 					"icon": {"Resolved": "check_circle", "Rejected": "cancel"}.get(ap.status, "hourglass_top"),
 					"link": "/student-portal/grade-appeal",
 					"sort_key": 1,
@@ -1304,11 +1340,13 @@ def get_portal_notifications():
 					except Exception:
 						date_str = str(sess.session_date or "")
 					notifications.append({
+						"id": f"office_hours:{sess.name}",
+						"date": _iso(sess.session_date),
 						"type": "office_hours",
 						"category": "Office Hours",
 						"priority": "Normal",
 						"title": "Office Hours Available",
-						"subtitle": f"{sess.course_offering} — {date_str}",
+						"subtitle": _join(_offering_name(sess.course_offering), date_str),
 						"icon": "school",
 						"link": "/student-portal/attendance",
 						"sort_key": 2,

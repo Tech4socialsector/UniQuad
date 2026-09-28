@@ -329,7 +329,7 @@
    "label": "Status Colors"
   },
   {
-   "default": "#008000",
+   "default": "#920c24",
    "description": "Good attendance, paid fees, eligible for exam",
    "fieldname": "success_color",
    "fieldtype": "Color",
@@ -354,7 +354,7 @@
    "label": "Danger / Alert"
   },
   {
-   "default": "#0369a1",
+   "default": "#920c24",
    "description": "Informational highlights and neutral indicators",
    "fieldname": "info_color",
    "fieldtype": "Color",
@@ -375,7 +375,7 @@
    "label": "Grade Color"
   },
   {
-   "default": "#16a34a",
+   "default": "#920c24",
    "description": "Top grade band — Distinction, A+, A, S",
    "fieldname": "grade_excellent_color",
    "fieldtype": "Color",
@@ -402,7 +402,7 @@
    "label": "Fail Grade Color"
   },
   {
-   "default": "#0369a1",
+   "default": "#920c24",
    "description": "Second grade band — B+, B",
    "fieldname": "grade_good_color",
    "fieldtype": "Color",

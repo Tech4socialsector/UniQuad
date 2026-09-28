@@ -30,14 +30,14 @@
   "grade_average_color": "#920c24",
   "grade_average_label": "C+ / C",
   "grade_color": null,
-  "grade_excellent_color": "#16a34a",
+  "grade_excellent_color": "#920c24",
   "grade_excellent_label": "A+ / A / S",
   "grade_fail_color": "#920c24",
   "grade_fail_label": "D / F",
-  "grade_good_color": "#0369a1",
+  "grade_good_color": "#920c24",
   "grade_good_label": "B+ / B",
   "improvement_exam_receipt_print_format": null,
-  "info_color": "#0369a1",
+  "info_color": "#920c24",
   "layout_density": "Normal",
   "login_page_background_image": null,
   "menu_announcements": 1,
@@ -92,7 +92,7 @@
   "sidebar_theme": "#ffffff",
   "sidebar_width": "Normal",
   "student_handbook": null,
-  "success_color": "#008000",
+  "success_color": "#920c24",
   "warning_color": "#920c24"
  }
 ]

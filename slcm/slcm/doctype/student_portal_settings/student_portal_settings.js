@@ -9,8 +9,8 @@ const SP_PRESETS = [
         background_color: "#f0f2f5", card_background: "#ffffff",
         nav_bg_color: "#ffffff", nav_text_color: "#920c24",
         sidebar_bg_color: "#ffffff", sidebar_text_color: "#475569",
-        success_color: "#008000", warning_color: "#920c24",
-        danger_color: "#920c24", info_color: "#0369a1",
+        success_color: "#920c24", warning_color: "#920c24",
+        danger_color: "#920c24", info_color: "#920c24",
     },
     {
         name: "NLSIU Navy",
@@ -18,8 +18,8 @@ const SP_PRESETS = [
         background_color: "#f0f2f5", card_background: "#ffffff",
         nav_bg_color: "#ffffff", nav_text_color: "#920c24",
         sidebar_bg_color: "#ffffff", sidebar_text_color: "#2b2e4a",
-        success_color: "#16a34a", warning_color: "#920c24",
-        danger_color: "#920c24", info_color: "#0369a1",
+        success_color: "#920c24", warning_color: "#920c24",
+        danger_color: "#920c24", info_color: "#920c24",
     },
     {
         name: "Ocean Blue",
@@ -84,9 +84,9 @@ const SP_DEFAULTS = {
     background_color: "#f0f2f5", card_background: "#ffffff",
     nav_bg_color: "#ffffff", nav_text_color: "#920c24",
     sidebar_bg_color: "#ffffff", sidebar_text_color: "#475569",
-    success_color: "#008000", warning_color: "#920c24",
-    danger_color: "#920c24", info_color: "#0369a1",
-    grade_excellent_color: "#16a34a", grade_excellent_label: "A+ / A / S",
+    success_color: "#920c24", warning_color: "#920c24",
+    danger_color: "#920c24", info_color: "#920c24",
+    grade_excellent_color: "#920c24", grade_excellent_label: "A+ / A / S",
     grade_good_color: "#920c24", grade_good_label: "B+ / B",
     grade_average_color: "#920c24", grade_average_label: "C+ / C",
     grade_color: "#000000", grade_fail_color: "#920c24", grade_fail_label: "D / F",
@@ -556,13 +556,13 @@ function _render_color_preview(frm) {
     const navText   = d.nav_text_color     || "#920c24";
     const sbBgC     = d.sidebar_bg_color   || "#ffffff";
     const sbTextC   = d.sidebar_text_color || "#920c24";
-    const success   = d.success_color   || "#16a34a";
+    const success   = d.success_color   || "#920c24";
     const warning   = d.warning_color   || "#920c24";
     const danger    = d.danger_color    || "#920c24";
-    const info      = d.info_color      || "#0369a1";
+    const info      = d.info_color      || "#920c24";
 
-    const gExc = d.grade_excellent_color || "#16a34a";
-    const gGood= d.grade_good_color      || "#0369a1";
+    const gExc = d.grade_excellent_color || "#920c24";
+    const gGood= d.grade_good_color      || "#920c24";
     const gAvg = d.grade_average_color   || "#920c24";
     const gFail= d.grade_fail_color      || "#920c24";
 

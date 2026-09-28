@@ -1,6 +1,86 @@
 {% extends "slcm/www/student-portal/_base.html" %}
 {% block title %}Notifications{% endblock %}
 
+{% block extra_head %}
+<style>
+  /* ── Toolbar ── */
+  .nt-toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+  .nt-summary { font-size: 13.5px; color: var(--sp-text-3); }
+  .nt-summary strong { color: var(--sp-primary); font-weight: 700; }
+  .nt-search { position: relative; flex: 1 1 260px; max-width: 420px; margin-left: auto; }
+  .nt-search .sp-ms { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); font-size: 18px; color: var(--sp-text-4); pointer-events: none; }
+  .nt-search input {
+    width: 100%; height: 38px; padding: 0 12px 0 36px; border-radius: 10px;
+    border: 1px solid var(--sp-border); background: var(--sp-card); font: inherit; font-size: 13.5px; color: var(--sp-text-1);
+  }
+  .nt-search input:focus { outline: 2px solid var(--sp-primary); outline-offset: 1px; border-color: transparent; }
+  .nt-mark-all {
+    display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 14px; border-radius: 10px;
+    border: 1px solid var(--sp-primary); background: var(--sp-card); color: var(--sp-primary);
+    font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: background .15s, color .15s;
+  }
+  .nt-mark-all .sp-ms { font-size: 18px; }
+  .nt-mark-all:hover:not(:disabled) { background: var(--sp-primary); color: #fff; }
+  .nt-mark-all:disabled { opacity: .45; cursor: default; }
+
+  /* ── Filter tabs ── */
+  .nt-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+  .nt-tab {
+    display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 99px;
+    border: 1px solid var(--sp-border); background: var(--sp-card); color: var(--sp-text-2);
+    font: inherit; font-size: 12.5px; font-weight: 500; cursor: pointer; transition: border-color .15s, color .15s;
+  }
+  .nt-tab:hover { border-color: var(--sp-primary); color: var(--sp-primary); }
+  .nt-tab.is-active { background: var(--sp-primary); border-color: var(--sp-primary); color: #fff; }
+  .nt-tab-count { font-size: 11px; font-weight: 700; padding: 0 6px; border-radius: 99px; background: #f1f2f4; color: var(--sp-text-3); }
+  .nt-tab.is-active .nt-tab-count { background: rgba(255,255,255,.22); color: #fff; }
+
+  /* ── Groups + items ── */
+  .nt-group { margin-bottom: 18px; }
+  .nt-group-title { font-size: 12px; font-weight: 700; color: var(--sp-text-3); text-transform: uppercase; letter-spacing: .07em; margin: 0 0 8px; }
+  .nt-list { background: var(--sp-card); border: 1px solid var(--sp-border); border-radius: 14px; box-shadow: 0 1px 4px rgba(0,0,0,.05); overflow: hidden; }
+  .nt-item {
+    position: relative; display: flex; align-items: center; gap: 14px; padding: 14px 18px 14px 22px;
+    border-top: 1px solid var(--sp-border-light, #f1f5f9); text-decoration: none; color: inherit; transition: background .15s;
+  }
+  .nt-item:first-child { border-top: none; }
+  .nt-item:hover { background: #fcf5f6; }
+  .nt-item.is-unread { background: #fffafb; }
+  .nt-item.is-unread::before {
+    content: ''; position: absolute; left: 9px; top: 50%; width: 7px; height: 7px; margin-top: -3.5px;
+    border-radius: 50%; background: var(--sp-primary);
+  }
+  .nt-icon {
+    width: 38px; height: 38px; border-radius: 11px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    background: #fff0f2; color: var(--sp-primary);
+  }
+  .nt-icon .sp-ms { font-size: 20px; }
+  .nt-icon.is-urgent { background: var(--sp-primary); color: #fff; }
+  .nt-body { flex: 1; min-width: 0; }
+  .nt-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 3px; }
+  .nt-cat { font-size: 10.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--sp-primary); }
+  .nt-flag { font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 99px; background: var(--sp-primary); color: #fff; }
+  .nt-title { font-size: 14px; font-weight: 600; color: var(--sp-text-1); line-height: 1.35; }
+  .nt-item.is-unread .nt-title { font-weight: 700; }
+  .nt-sub { font-size: 12.5px; color: var(--sp-text-3); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .nt-when { font-size: 12px; color: var(--sp-text-4); white-space: nowrap; flex-shrink: 0; }
+  .nt-chevron { color: var(--sp-text-4); font-size: 20px; flex-shrink: 0; }
+
+  /* ── Empty states ── */
+  .nt-empty { padding: 48px 20px; text-align: center; color: var(--sp-text-4); background: var(--sp-card); border: 1px solid var(--sp-border); border-radius: 14px; }
+  .nt-empty .sp-ms { font-size: 44px; display: block; margin-bottom: 8px; color: var(--sp-primary); opacity: .5; }
+  .nt-empty-title { font-size: 15px; font-weight: 700; color: var(--sp-text-2); margin: 0 0 4px; }
+  .nt-empty-sub { font-size: 13px; margin: 0; }
+  .nt-hidden { display: none !important; }
+
+  @media (max-width: 640px) {
+    .nt-search { max-width: none; margin-left: 0; order: 3; flex-basis: 100%; }
+    .nt-when { display: none; }
+    .nt-item { padding: 12px 14px 12px 20px; gap: 12px; }
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 
 {% if no_student %}
@@ -19,125 +99,164 @@
 {% if portal_error %}
 <div class="sp-info-box fade-in" style="background:var(--sp-warning-bg);border-color:var(--sp-warning);margin-bottom:20px;">
   <span class="sp-ms">warning</span>
-  <div>{{ portal_error }}</div>
+  <div>Could not load all notifications. Please refresh the page.</div>
 </div>
 {% endif %}
 
-<div class="sp-section-card fade-in" style="animation-delay:0.06s;">
-  <div class="sp-section-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-    <span><span class="sp-ms">notifications</span> All Notifications</span>
-    <span class="sp-badge sp-badge-pend" id="nt-count-badge">{{ notifications|length }}</span>
-  </div>
+{% if not notifications %}
+<div class="nt-empty fade-in">
+  <span class="sp-ms" aria-hidden="true">notifications_none</span>
+  <p class="nt-empty-title">No notifications</p>
+  <p class="nt-empty-sub">You're all caught up.</p>
+</div>
+{% else %}
 
-  {% if categories|length > 1 %}
-  <div style="padding:12px 20px 0;border-bottom:1px solid var(--sp-border);display:flex;gap:4px;flex-wrap:wrap;">
-    <button class="nt-tab nt-tab-active" onclick="filterNotifications(this, '')">
-      All <span class="nt-tab-count">{{ notifications|length }}</span>
-    </button>
-    {% for c in categories %}
-    <button class="nt-tab" data-category="{{ c.name }}" onclick="filterNotifications(this, this.dataset.category)">
-      {{ c.name }} <span class="nt-tab-count">{{ c.count }}</span>
-    </button>
-    {% endfor %}
-  </div>
-  {% endif %}
-
-  {% if not notifications %}
-  <div style="padding:48px 20px;text-align:center;color:var(--sp-text-4);">
-    <div style="font-family:'Material Symbols Outlined';font-size:48px;margin-bottom:8px;opacity:0.35;">notifications_none</div>
-    <div style="font-weight:600;color:var(--sp-text-2);">No notifications</div>
-    <div style="font-size:13px;margin-top:4px;">You're all caught up.</div>
-  </div>
-  {% else %}
-  <div id="nt-list">
-    {% for n in notifications %}
-    {%- set icon_cls = 'normal' -%}
-    {%- if n.priority == 'Urgent' or n.icon == 'cancel' %}{% set icon_cls = 'urgent' %}
-    {%- elif n.icon == 'check_circle' %}{% set icon_cls = 'success' %}
-    {%- elif n.priority == 'Important' %}{% set icon_cls = 'important' %}{% endif -%}
-    <a href="{{ n.link or '#' }}" class="nt-item" data-category="{{ n.category }}">
-      <div class="sp-notif-icon {{ icon_cls }}"><span class="sp-ms">{{ n.icon or 'notifications' }}</span></div>
-      <div style="flex:1;min-width:0;">
-        <div class="sp-notif-cat">{{ n.category }}</div>
-        <div class="nt-title">{{ n.title }}</div>
-        {% if n.subtitle %}<div class="sp-notif-sub">{{ n.subtitle }}</div>{% endif %}
-      </div>
-      <span class="sp-ms nt-chevron">chevron_right</span>
-    </a>
-    {% endfor %}
-  </div>
-  {% endif %}
+{# ── Toolbar: unread summary · search · mark all read ── #}
+<div class="nt-toolbar fade-in">
+  <span class="nt-summary" id="nt-summary" aria-live="polite">{{ notifications|length }} notification{{ 's' if notifications|length != 1 }}</span>
+  <label class="nt-search">
+    <span class="sp-ms" aria-hidden="true">search</span>
+    <span class="sp-sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">Search notifications</span>
+    <input type="search" id="nt-q" placeholder="Search notifications…" autocomplete="off">
+  </label>
+  <button type="button" class="nt-mark-all" id="nt-mark-all" disabled>
+    <span class="sp-ms" aria-hidden="true">done_all</span>Mark all as read
+  </button>
 </div>
 
+{# ── Filter tabs ── #}
+<div class="nt-tabs fade-in" role="tablist" aria-label="Filter notifications">
+  <button type="button" class="nt-tab is-active" data-filter="" role="tab" aria-selected="true">
+    All <span class="nt-tab-count">{{ notifications|length }}</span>
+  </button>
+  <button type="button" class="nt-tab" data-filter="__unread" role="tab" aria-selected="false">
+    Unread <span class="nt-tab-count" id="nt-unread-count">0</span>
+  </button>
+  {% for c in categories %}
+  <button type="button" class="nt-tab" data-filter="{{ c.name | e }}" role="tab" aria-selected="false">
+    {{ c.name }} <span class="nt-tab-count">{{ c.count }}</span>
+  </button>
+  {% endfor %}
+</div>
+
+{# ── Grouped feed ── #}
+<div id="nt-feed">
+  {% for g in groups %}
+  <section class="nt-group fade-in" data-group>
+    <h2 class="nt-group-title">{{ g.label }}</h2>
+    <div class="nt-list">
+      {% for n in g.entries %}
+      <a href="{{ n.link or '#' }}" class="nt-item" data-id="{{ (n.id or (n.type ~ ':' ~ n.title)) | e }}"
+         data-category="{{ n.category | e }}" data-q="{{ (n.title ~ ' ' ~ (n.subtitle or '') ~ ' ' ~ n.category) | lower | e }}">
+        <div class="nt-icon{{ ' is-urgent' if n.priority == 'Urgent' }}"><span class="sp-ms" aria-hidden="true">{{ n.icon or 'notifications' }}</span></div>
+        <div class="nt-body">
+          <div class="nt-meta">
+            <span class="nt-cat">{{ n.category }}</span>
+            {% if n.priority == 'Urgent' %}<span class="nt-flag">Urgent</span>{% endif %}
+          </div>
+          <div class="nt-title">{{ n.title }}</div>
+          {% if n.page_subtitle %}<div class="nt-sub" title="{{ n.page_subtitle | e }}">{{ n.page_subtitle }}</div>{% endif %}
+        </div>
+        {% if n.when %}<span class="nt-when">{{ n.when }}</span>{% endif %}
+        <span class="sp-ms nt-chevron" aria-hidden="true">chevron_right</span>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+  {% endfor %}
+</div>
+
+<div class="nt-empty nt-hidden" id="nt-no-match" role="status">
+  <span class="sp-ms" aria-hidden="true">search_off</span>
+  <p class="nt-empty-title" id="nt-no-match-title">No matching notifications</p>
+  <p class="nt-empty-sub">Try a different filter or search term.</p>
+</div>
+
+{% endif %}
 {% endif %}
 {% endblock %}
 
 {% block extra_js %}
 <script>
-function filterNotifications(btn, category) {
-  document.querySelectorAll('.nt-tab').forEach(function(t) { t.classList.remove('nt-tab-active'); });
-  btn.classList.add('nt-tab-active');
-  var visible = 0;
-  document.querySelectorAll('.nt-item').forEach(function(item) {
-    var show = !category || item.dataset.category === category;
-    item.style.display = show ? '' : 'none';
-    if (show) visible++;
-  });
-  var badge = document.getElementById('nt-count-badge');
-  if (badge) badge.textContent = visible;
-}
-</script>
+(function () {
+  var feed = document.getElementById('nt-feed');
+  if (!feed) return;
 
-<style>
-.nt-item {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 14px 20px;
-  border-bottom: 1px solid var(--sp-border);
-  text-decoration: none;
-  color: inherit;
-  transition: background 0.15s;
-}
-.nt-item:last-child { border-bottom: none; }
-.nt-item:hover { background: var(--sp-primary-light); }
-.nt-title {
-  font-weight: 600;
-  font-size: 14px;
-  color: var(--sp-text-1);
-}
-.nt-chevron { color: var(--sp-text-4); font-size: 20px; }
-.nt-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 6px 14px;
-  border: none;
-  border-bottom: 2px solid transparent;
-  background: none;
-  font-size: 13px;
-  color: var(--sp-text-3);
-  cursor: pointer;
-  border-radius: 6px 6px 0 0;
-  margin-bottom: -1px;
-}
-.nt-tab:hover { color: var(--sp-primary); }
-.nt-tab-active {
-  color: var(--sp-primary);
-  border-bottom-color: var(--sp-primary);
-  font-weight: 600;
-}
-.nt-tab-count {
-  background: var(--sp-border);
-  color: var(--sp-text-3);
-  border-radius: 10px;
-  padding: 1px 6px;
-  font-size: 11px;
-  font-weight: 600;
-}
-.nt-tab-active .nt-tab-count {
-  background: var(--sp-primary-light);
-  color: var(--sp-primary);
-}
-</style>
+  /* Read state lives in this browser only (per user) — see spNotifRead in _base.html */
+  var store = window.spNotifRead;
+  var items = Array.prototype.slice.call(document.querySelectorAll('.nt-item'));
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.nt-tab'));
+  var q = document.getElementById('nt-q');
+  var markAll = document.getElementById('nt-mark-all');
+  var filter = '';
+
+  function isRead(el) { return store ? store.has(el.dataset.id) : false; }
+
+  function paintRead() {
+    var unread = 0;
+    items.forEach(function (el) {
+      var u = !isRead(el);
+      el.classList.toggle('is-unread', u);
+      if (u) unread++;
+    });
+    var uc = document.getElementById('nt-unread-count');
+    if (uc) uc.textContent = unread;
+    var sum = document.getElementById('nt-summary');
+    if (sum) {
+      sum.innerHTML = unread
+        ? '<strong>' + unread + '</strong> unread of ' + items.length
+        : 'All ' + items.length + ' read';
+    }
+    if (markAll) markAll.disabled = unread === 0 || !store;
+    if (window.spRefreshNotifBadge) window.spRefreshNotifBadge();
+  }
+
+  function apply() {
+    var term = (q && q.value || '').trim().toLowerCase();
+    var shown = 0;
+    items.forEach(function (el) {
+      var ok = (!filter || (filter === '__unread' ? !isRead(el) : el.dataset.category === filter))
+            && (!term || el.dataset.q.indexOf(term) !== -1);
+      el.classList.toggle('nt-hidden', !ok);
+      if (ok) shown++;
+    });
+    document.querySelectorAll('[data-group]').forEach(function (g) {
+      g.classList.toggle('nt-hidden', !g.querySelector('.nt-item:not(.nt-hidden)'));
+    });
+    var none = document.getElementById('nt-no-match');
+    if (none) {
+      none.classList.toggle('nt-hidden', shown > 0);
+      var t = document.getElementById('nt-no-match-title');
+      if (t) t.textContent = (filter === '__unread' && !term) ? 'You’re all caught up' : 'No matching notifications';
+    }
+  }
+
+  tabs.forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      filter = tab.dataset.filter || '';
+      tabs.forEach(function (t) {
+        var on = t === tab;
+        t.classList.toggle('is-active', on);
+        t.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      apply();
+    });
+  });
+  if (q) q.addEventListener('input', apply);
+
+  /* Opening a notification marks it read (navigation continues as normal) */
+  items.forEach(function (el) {
+    el.addEventListener('click', function () { if (store) { store.add([el.dataset.id]); paintRead(); } });
+  });
+
+  if (markAll) markAll.addEventListener('click', function () {
+    if (!store) return;
+    store.add(items.map(function (el) { return el.dataset.id; }));
+    paintRead(); apply();
+  });
+
+  paintRead(); apply();
+  window.addEventListener('pageshow', function (e) { if (e.persisted) { paintRead(); apply(); } });
+})();
+</script>
 {% endblock %}

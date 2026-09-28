@@ -25,12 +25,12 @@ _DEFAULTS = {
     "sidebar_bg_color":      "#ffffff",
     "sidebar_text_color":    "#475569",   # Slate menu text — same as Parent Portal
     # Status colors (same as Parent Portal Settings)
-    "success_color":         "#008000",
+    "success_color":         "#920c24",
     "warning_color":         "#920c24",
     "danger_color":          "#920c24",
-    "info_color":            "#0369a1",
+    "info_color":            "#920c24",
     # Grading
-    "grade_excellent_color": "#16a34a",
+    "grade_excellent_color": "#920c24",
     "grade_excellent_label": "A+ / A / S",
     "grade_good_color":      "#920c24",
     "grade_good_label":      "B+ / B",

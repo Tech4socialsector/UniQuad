@@ -1,7 +1,7 @@
 """Student Portal Settings: use the Parent Portal colours.
 
-NLSIU maroon primary, gold accent, slate sidebar menu text, #008000 for
-success and maroon for alerts. Only values that are still at an old default
+NLSIU maroon primary, gold accent, slate sidebar menu text, and NLS maroon
+for every status colour (success, info, warning, danger, grade bands). Only values that are still at an old default
 are replaced, so admin customisations survive.
 """
 
@@ -14,12 +14,15 @@ _THEME = {
 	"primary_color":      ("#920c24", ("#2b2e4a", "")),
 	"secondary_color":    ("#c9a84c", ("#920c24", "#85142b", "#ed0505", "#2b2e4a", "")),
 	"sidebar_text_color": ("#475569", ("#920c24", "#2b2e4a", "")),
-	"success_color":      ("#008000", ("#16a34a", "#15803d", "")),
+	"success_color":      ("#920c24", ("#008000", "#16a34a", "#15803d", "")),
 	"danger_color":       ("#920c24", ("#dc2626", "")),
 	# No orange anywhere — warnings and the average grade band use NLS maroon
 	"warning_color":       ("#920c24", ("#d97706", "")),
 	"grade_average_color": ("#920c24", ("#d97706", "")),
 	"grade_fail_color":    ("#920c24", ("#dc2626", "#85142b", "")),
+	"info_color":            ("#920c24", ("#0369a1", "")),
+	"grade_excellent_color": ("#920c24", ("#16a34a", "#15803d", "")),
+	"grade_good_color":      ("#920c24", ("#0369a1", "")),
 }
 
 

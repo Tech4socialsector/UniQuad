@@ -10,8 +10,8 @@
   --hs-maroon-mid:  rgba(146,12,36,0.16);
   --hs-border:      var(--sp-border, #e2e8f0);
   --hs-row:         #f1f2f4;
-  --hs-ok:          #15803d;
-  --hs-ok-bg:       #f0fdf4;
+  --hs-ok:          #920c24;   /* NLS maroon — no green on this page */
+  --hs-ok-bg:       #fff0f2;
   --hs-warn:        #920c24;
   --hs-warn-bg:     #fff0f2;
 }
@@ -32,7 +32,7 @@
 }
 .hs-chip .sp-ms { font-size: 14px; color: var(--hs-maroon); }
 .hs-side { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; text-align: right; }
-.hs-status { display: inline-flex; align-items: center; gap: 5px; padding: 4px 12px; border-radius: 20px; font-size: 12px; background: var(--hs-ok-bg); color: var(--hs-ok); border: 1px solid #bbf7d0; }
+.hs-status { display: inline-flex; align-items: center; gap: 5px; padding: 4px 12px; border-radius: 20px; font-size: 12px; background: var(--hs-ok-bg); color: var(--hs-ok); border: 1px solid #f5c6ce; }
 .hs-status .sp-ms { font-size: 14px; }
 .hs-side-note { font-size: 11.5px; color: var(--sp-text-4); }
 
@@ -51,7 +51,10 @@
 .hs-fact-val.is-empty { font-size: 13px; color: var(--sp-text-4); }
 
 /* Two-column body */
-.hs-cols { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 18px; margin-bottom: 18px; align-items: start; }
+.hs-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; margin-bottom: 18px; align-items: stretch; }
+/* Each column fills the row height so both columns end level */
+.hs-col { display: flex; flex-direction: column; min-width: 0; }
+.hs-col > .hs-card:last-child { flex: 1 1 auto; }
 @media (max-width: 1000px) { .hs-cols { grid-template-columns: minmax(0, 1fr); } }
 .hs-card { background: var(--sp-card, #fff); border: 1px solid var(--hs-border); border-radius: 12px; overflow: hidden; }
 .hs-card + .hs-card { margin-top: 18px; }
@@ -222,7 +225,7 @@ a.hs-contact:focus-visible { outline: 2px solid var(--hs-maroon); outline-offset
 </section>
 
 <div class="hs-cols">
-  <div>
+  <div class="hs-col">
     {# ── Move-in checklist ─────────────────────────────────────── #}
     {% if _steps %}
     <section class="hs-card fade-in" aria-labelledby="hs-check-title">
@@ -265,7 +268,7 @@ a.hs-contact:focus-visible { outline: 2px solid var(--hs-maroon); outline-offset
     {% endif %}
   </div>
 
-  <div>
+  <div class="hs-col">
     {# ── Room occupancy ─────────────────────────────────────────── #}
     {% if _cap %}
     <section class="hs-card fade-in" aria-labelledby="hs-occ-title">

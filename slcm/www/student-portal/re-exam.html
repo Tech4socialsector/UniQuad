@@ -11,22 +11,22 @@
 .rx-congrats-icon {
   width: 96px;
   height: 96px;
-  background: linear-gradient(135deg, #d1fae5, #6ee7b7);
+  background: linear-gradient(135deg, #fff0f2, #b5364a);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto 24px;
-  box-shadow: 0 8px 24px rgba(16,185,129,.25);
+  box-shadow: 0 8px 24px rgba(146,12,36,.25);
 }
 .rx-congrats-icon .sp-ms {
   font-size: 48px;
-  color: #059669;
+  color: #920c24;
 }
 .rx-congrats-title {
   font-size: 1.7rem;
   font-weight: 700;
-  color: #065f46;
+  color: #6b091a;
   margin-bottom: 10px;
 }
 .rx-congrats-sub {
@@ -40,15 +40,14 @@
 .rx-summary {
   display: flex;
   align-items: center;
-  gap: 10px;
-  background: #fff0f2;
-  border: 1px solid #f5c6ce;
-  border-radius: 12px;
-  padding: 14px 20px;
-  margin-bottom: 24px;
+  gap: 8px;
+  margin: 0 0 18px;
+  color: var(--sp-primary, #920c24);
+  font-size: 13.5px;
+  line-height: 1.4;
 }
-.rx-summary .sp-ms { color: #920c24; font-size: 22px; }
-.rx-summary-text { color: #6b091a; font-size: .95rem; font-weight: 500; }
+.rx-summary .sp-ms { color: var(--sp-primary, #920c24); font-size: 18px; flex-shrink: 0; }
+.rx-summary-text { color: var(--sp-primary, #920c24); font-weight: 700; }
 
 /* ── Failed course cards ──────────────────────────────────────── */
 .rx-grid {
@@ -67,28 +66,27 @@
 }
 .rx-card:hover { box-shadow: 0 6px 24px rgba(0,0,0,.13); }
 .rx-card-top {
-  background: linear-gradient(135deg, #fff0f2, #f5c6ce);
+  background: var(--sp-primary, #920c24);
   padding: 18px 20px 14px;
-  border-bottom: 1px solid #f5c6ce;
 }
 .rx-card-eyebrow {
   font-size: .72rem;
   font-weight: 600;
   letter-spacing: .06em;
   text-transform: uppercase;
-  color: #9ca3af;
+  color: rgba(255,255,255,.75);
   margin-bottom: 4px;
 }
 .rx-card-course-name {
   font-size: 1.05rem;
   font-weight: 700;
-  color: #111827;
+  color: #fff;
   margin-bottom: 6px;
   line-height: 1.3;
 }
 .rx-card-exam {
   font-size: .82rem;
-  color: #6b7280;
+  color: rgba(255,255,255,.85);
 }
 
 .rx-card-body { padding: 16px 20px; flex: 1; }
@@ -101,7 +99,7 @@
   font-size: .88rem;
   color: #374151;
 }
-.rx-meta-row .sp-ms { font-size: 17px; color: #9ca3af; }
+.rx-meta-row .sp-ms { font-size: 17px; color: var(--sp-primary, #920c24); }
 .rx-meta-label { font-weight: 600; min-width: 110px; color: #6b7280; }
 
 .rx-grade-badge {
@@ -110,7 +108,7 @@
   border-radius: 99px;
   font-size: .82rem;
   font-weight: 700;
-  background: #fde8e8;
+  background: #fff0f2;
   color: #920c24;
   border: 1px solid #f5c6ce;
 }
@@ -129,11 +127,12 @@
   padding: 3px 10px;
   border-radius: 99px;
   font-weight: 600;
+  white-space: nowrap;
 }
 .rx-deadline-pill.active {
-  background: #d1fae5;
-  color: #065f46;
-  border: 1px solid #6ee7b7;
+  background: #fff0f2;
+  color: #6b091a;
+  border: 1px solid #b5364a;
 }
 .rx-deadline-pill.passed {
   background: #fff0f2;
@@ -141,9 +140,9 @@
   border: 1px solid #f5c6ce;
 }
 .rx-deadline-pill.none {
-  background: #f3f4f6;
-  color: #6b7280;
-  border: 1px solid #e5e7eb;
+  background: #fff0f2;
+  color: #920c24;
+  border: 1px solid #f5c6ce;
 }
 
 .rx-card-foot {
@@ -161,9 +160,10 @@
   gap: 6px;
   padding: 9px 20px;
   border-radius: 8px;
+  font-family: inherit;
   font-size: .88rem;
   font-weight: 600;
-  background: var(--sp-primary, #1a56db);
+  background: var(--sp-primary, #b5364a);
   color: #fff;
   border: none;
   cursor: pointer;
@@ -171,13 +171,17 @@
   text-decoration: none;
 }
 .rx-btn-pay:hover {
-  background: var(--sp-primary-dark, #1e429f);
+  background: var(--sp-primary-dark, #920c24);
   transform: translateY(-1px);
 }
 .rx-btn-pay:active { transform: translateY(0); }
 .rx-btn-pay:disabled,
-.rx-btn-pay.disabled {
-  background: #9ca3af;
+.rx-btn-pay.disabled,
+.rx-btn-pay:disabled:hover,
+.rx-btn-pay.disabled:hover {
+  background: #fff0f2;
+  color: #920c24;
+  border: 1px solid #f5c6ce;
   cursor: not-allowed;
   transform: none;
 }
@@ -245,13 +249,9 @@
 
 {% else %}
 {# ── Summary strip ──────────────────────────────────────────────── #}
-<div class="rx-summary fade-in">
-  <span class="sp-ms">warning</span>
-  <span class="rx-summary-text">
-    You have <strong>{{ failed_count }}</strong>
-    failed course{{ 's' if failed_count != 1 else '' }} eligible for re-examination.
-    Review the details below and register before the deadline.
-  </span>
+<div class="rx-summary fade-in" role="status">
+  <span class="sp-ms" aria-hidden="true">warning</span>
+  <span class="rx-summary-text">{{ failed_count }} course{{ 's' if failed_count != 1 else '' }} eligible for re-exam</span>
 </div>
 
 {# ── Cards ──────────────────────────────────────────────────────── #}
@@ -325,7 +325,7 @@
               <span class="sp-ms" style="font-size:13px;">schedule</span> {{ fc.days_remaining }} days left
             </span>
             {% else %}
-            <span style="display:inline-flex;align-items:center;gap:4px;background:#f0fdf4;border:1px solid #86efac;color:#16a34a;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;">
+            <span style="display:inline-flex;align-items:center;gap:4px;background:#fff0f2;border:1px solid #f5c6ce;color:#920c24;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;">
               <span class="sp-ms" style="font-size:13px;">schedule</span> {{ fc.days_remaining }} days left
             </span>
             {% endif %}
@@ -384,7 +384,7 @@
         <span class="rx-deadline-pill none" style="margin-right:auto;">
           <span class="sp-ms" style="font-size:13px;">hourglass_top</span> Payment Processing…
         </span>
-        <button class="rx-btn-pay" onclick="window.location.reload();" style="background:#6b7280;">
+        <button type="button" class="rx-btn-pay" onclick="window.location.reload();">
           <span class="sp-ms">refresh</span> Refresh
         </button>
       {% elif fc.payment_status == "Payment Cancelled" %}
@@ -480,14 +480,14 @@
     {# Body #}
     <div style="padding:24px 28px;">
       <div style="
-        background:#f0fdf4;border:1px solid #86efac;border-radius:10px;
+        background:#fff0f2;border:1px solid #f5c6ce;border-radius:10px;
         padding:14px 18px;margin-bottom:20px;
         display:flex;align-items:flex-start;gap:12px;">
-        <span class="sp-ms" style="font-size:22px;color:#16a34a;flex-shrink:0;margin-top:1px;">payments</span>
+        <span class="sp-ms" style="font-size:22px;color:#920c24;flex-shrink:0;margin-top:1px;">payments</span>
         <div>
-          <div style="font-size:.82rem;color:#15803d;font-weight:600;margin-bottom:2px;">Amount Due</div>
-          <div id="rx-counter-amount" style="font-size:1.5rem;font-weight:800;color:#14532d;"></div>
-          <div style="font-size:.75rem;color:#4ade80;margin-top:2px;">Cash payment only</div>
+          <div style="font-size:.82rem;color:#920c24;font-weight:600;margin-bottom:2px;">Amount Due</div>
+          <div id="rx-counter-amount" style="font-size:1.5rem;font-weight:800;color:#6b091a;"></div>
+          <div style="font-size:.75rem;color:#b5364a;margin-top:2px;">Cash payment only</div>
         </div>
       </div>
       <p style="font-size:.88rem;color:#475569;line-height:1.6;margin:0 0 20px;">
@@ -536,7 +536,7 @@
     min-width:260px;">
     <div style="
       width:44px;height:44px;border:4px solid #e5e7eb;
-      border-top-color:var(--sp-primary,#1a56db);
+      border-top-color:var(--sp-primary,#b5364a);
       border-radius:50%;animation:rx-spin 0.7s linear infinite;
       margin:0 auto 18px;"></div>
     <div id="rx-pay-overlay-msg" style="font-size:14px;font-weight:600;color:#374151;">
@@ -640,7 +640,7 @@
   /* ── Toast notifications ────────────────────────────────────────── */
   function spToast(title, message, type) {
     var colors = {
-      success: { bg: '#dcfce7', border: '#86efac', text: '#166534' },
+      success: { bg: '#fff0f2', border: '#f5c6ce', text: '#6b091a' },
       error:   { bg: '#fff0f2', border: '#f5c6ce', text: '#6b091a' },
       warning: { bg: '#fff0f2', border: '#f5c6ce', text: '#920c24' },
       info:    { bg: '#fff0f2', border: '#f5c6ce', text: '#920c24' },

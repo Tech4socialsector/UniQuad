@@ -21,7 +21,7 @@
   <style id="sp-custom-vars">
     :root {
       --sp-primary:            {{ sp_settings.primary_color          or '#920c24' }};
-      --sp-primary-dark:       {{ sp_settings.primary_dark           or '#0a182c' }};
+      --sp-primary-dark:       {{ sp_settings.primary_dark           or '#6b091a' }};
       --sp-primary-light:      {{ sp_settings.primary_light          or 'rgba(18, 42, 74, 0.06)' }};
       --sp-primary-mid:        {{ sp_settings.primary_mid            or 'rgba(18, 42, 74, 0.12)' }};
       --sp-secondary:          {{ sp_settings.secondary_color        or '#85142b' }};
@@ -36,7 +36,7 @@
       --sp-sidebar-text:       {{ sp_settings.sidebar_text_color     or '#920c24' }};
       --sp-sidebar-text-2:     {{ sp_settings.sidebar_text_color     or '#920c24' }};
 
-      --sp-success:            {{ sp_settings.success_color          or '#16a34a' }};
+      --sp-success:            {{ sp_settings.success_color          or '#920c24' }};
       --sp-warning:            {{ sp_settings.warning_color          or '#920c24' }};
       --sp-danger:             {{ sp_settings.danger_color           or '#920c24' }};
       --sp-info:               {{ sp_settings.info_color             or '#920c24' }};
@@ -58,10 +58,10 @@
 
             --sp-grade-color:      {{ sp_settings.grade_color            or '#000000' }};
       --sp-grade-fail:         {{ sp_settings.grade_fail_color       or '#85142b' }};
-      --sp-grade-excellent:    {{ sp_settings.grade_excellent_color  or '#16a34a' }};
+      --sp-grade-excellent:    {{ sp_settings.grade_excellent_color  or '#920c24' }};
       --sp-grade-good:         {{ sp_settings.grade_good_color       or '#920c24' }};
       --sp-grade-average:      {{ sp_settings.grade_average_color    or '#920c24' }};
-      --sp-att-good:           {{ sp_settings.att_good_color         or '#15803d' }};
+      --sp-att-good:           {{ sp_settings.att_good_color         or '#920c24' }};
       --sp-att-warn:           {{ sp_settings.att_warn_color         or '#920c24' }};
       --sp-att-danger:         {{ sp_settings.att_danger_color       or '#85142b' }};
     }
@@ -155,6 +155,13 @@
     .sp-notif-title { font-size: 12.5px; font-weight: 600; }
     .sp-notif-sub { font-size: 11.5px; color: var(--sp-text-3); }
     .sp-notif-footer a { font-weight: 600; }
+    .sp-notif-item { position: relative; }
+    .sp-notif-item.is-unread { background: #fffafb; }
+    .sp-notif-item.is-unread::before {
+      content: ''; position: absolute; left: 6px; top: 50%; width: 6px; height: 6px; margin-top: -3px;
+      border-radius: 50%; background: var(--sp-primary);
+    }
+    .sp-notif-item.is-unread .sp-notif-title { font-weight: 700; }
 
     /* Sidebar */
     .sp-sidebar {
@@ -343,7 +350,7 @@
     </div>
     <h2 style="margin:0 0 10px;color:#0f172a;font-size:22px;font-weight:800;letter-spacing:-0.02em;">Not a Student Account</h2>
     <p style="color:#64748b;font-size:14px;margin:0 0 28px;line-height:1.6;">Your account is not linked to a student record. Please use the correct portal or contact the administrator for access.</p>
-    <button onclick="spNotStudentLogout()" style="display:inline-flex;align-items:center;gap:8px;padding:11px 28px;background:linear-gradient(135deg,#920c24,#920c24);color:#fff;border-radius:10px;border:none;cursor:pointer;font-weight:600;font-size:14px;font-family:inherit;box-shadow:0 4px 16px rgba(43,46,74,0.3);">
+    <button onclick="spNotStudentLogout()" style="display:inline-flex;align-items:center;gap:8px;padding:11px 28px;background:linear-gradient(135deg,#920c24,#920c24);color:#fff;border-radius:10px;border:none;cursor:pointer;font-weight:600;font-size:14px;font-family:inherit;box-shadow:0 4px 16px rgba(146,12,36,0.3);">
       <span style="font-family:'Material Symbols Outlined';font-size:18px;">logout</span>Sign Out &amp; Login Again
     </button>
     <script>
@@ -672,6 +679,27 @@
 <script>
   /* CSRF token embedded from server — used by spCall */
   window._sp_csrf = "{{ frappe.session.csrf_token or '' }}";
+
+  /* ── Notification read-state (this browser only, per user) ── */
+  window.spNotifRead = (function () {
+    var KEY = 'sp-notif-read:' + {{ (frappe.session.user or '') | tojson }};
+    var MAX = 300;
+    function load() {
+      try { var v = JSON.parse(localStorage.getItem(KEY) || '[]'); return Array.isArray(v) ? v : []; }
+      catch (e) { return []; }
+    }
+    function save(list) {
+      try { localStorage.setItem(KEY, JSON.stringify(list.slice(-MAX))); } catch (e) {}
+    }
+    return {
+      has: function (id) { return !!id && load().indexOf(id) !== -1; },
+      add: function (ids) {
+        var list = load(), changed = false;
+        (ids || []).forEach(function (id) { if (id && list.indexOf(id) === -1) { list.push(id); changed = true; } });
+        if (changed) save(list);
+      }
+    };
+  })();
   /* ── Sidebar ── */
   function spToggleSidebar() {
     document.getElementById('sp-sidebar').classList.toggle('open');
@@ -894,10 +922,19 @@
         .catch(function() {});
     }
 
+    var _lastData = null;
+    function notifId(n) { return n.id || ((n.type || '') + ':' + (n.title || '')); }
+    function isRead(n) { return window.spNotifRead ? window.spNotifRead.has(notifId(n)) : false; }
+    /* Lets the Notifications page refresh the bell after "Mark all as read" */
+    window.spRefreshNotifBadge = function () { if (_lastData) render(_lastData); };
+
     function render(data) {
+      _lastData = data;
       var notifications = data.notifications || [];
-      var count         = data.count || 0;
-      var urgentCount   = data.urgent_count || 0;
+      var unreadList    = notifications.filter(function (n) { return !isRead(n); });
+      /* Items beyond the 20 returned can't be marked read here — count them as unread */
+      var count         = unreadList.length + Math.max(0, (data.count || 0) - notifications.length);
+      var urgentCount   = unreadList.filter(function (n) { return n.priority === 'Urgent'; }).length;
 
       /* ── Bell badge ── */
       var badge = document.getElementById('sp-notif-badge');
@@ -916,7 +953,7 @@
       /* ── Panel count ── */
       var countEl = document.getElementById('sp-notif-count');
       if (countEl)
-        countEl.textContent = count ? count + ' notification' + (count > 1 ? 's' : '') : '';
+        countEl.textContent = count ? count + ' unread' : '';
 
       /* ── Panel list ── */
       var list = document.getElementById('sp-notif-list');
@@ -932,8 +969,9 @@
             if (n.icon === 'check_circle')  iconCls = 'success';
             if (n.icon === 'cancel')        iconCls = 'urgent';
             html +=
-              '<a href="' + escHtml(n.link) + '" class="sp-notif-item" ' +
-                 'onclick="document.getElementById(\'sp-notif-panel\').classList.remove(\'open\')">' +
+              '<a href="' + escHtml(n.link) + '" class="sp-notif-item' + (isRead(n) ? '' : ' is-unread') + '" ' +
+                 'data-notif-id="' + escHtml(notifId(n)) + '" ' +
+                 'onclick="window.spNotifRead &amp;&amp; window.spNotifRead.add([this.getAttribute(\'data-notif-id\')]); document.getElementById(\'sp-notif-panel\').classList.remove(\'open\')">' +
                 '<div class="sp-notif-icon ' + iconCls + '">' +
                   '<span class="sp-ms">' + escHtml(n.icon) + '</span>' +
                 '</div>' +

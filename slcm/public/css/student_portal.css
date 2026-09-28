@@ -7,9 +7,9 @@
 :root {
   /* ── Primary palette — NLSIU exact navy #920c24 ── */
   --sp-primary:       #920c24;   /* NLSIU deep navy — exact match */
-  --sp-primary-dark:  #1c1e33;   /* Darker for hover/active states */
-  --sp-primary-light: rgba(43, 46, 74, 0.07);
-  --sp-primary-mid:   rgba(43, 46, 74, 0.14);
+  --sp-primary-dark:  #6b091a;   /* Darker for hover/active states */
+  --sp-primary-light: rgba(146,12,36, 0.07);
+  --sp-primary-mid:   rgba(146,12,36, 0.14);
 
   /* ── Accent — NLSIU Institutional Maroon ── */
   --sp-secondary:     #920c24;   /* NLSIU maroon */
@@ -32,8 +32,8 @@
   --sp-card:   #ffffff;
 
   /* ── Status colours ── */
-  --sp-success:    #15803d;
-  --sp-success-bg: #f0fdf4;
+  --sp-success:    #920c24;
+  --sp-success-bg: #fff0f2;
   --sp-warning:    #920c24;
   --sp-warning-bg: #fff0f2;
   --sp-danger:     #920c24;   /* NLSIU maroon as danger */
@@ -42,8 +42,8 @@
   --sp-info-bg:    #f0f1f6;
 
   /* ── Grade band colours ── */
-  --sp-grade-excellent:    #15803d;
-  --sp-grade-excellent-bg: #f0fdf4;
+  --sp-grade-excellent:    #920c24;
+  --sp-grade-excellent-bg: #fff0f2;
   --sp-grade-good:         #920c24;
   --sp-grade-good-bg:      #fff0f2;
   --sp-grade-average:      #920c24;
@@ -52,7 +52,7 @@
   --sp-grade-fail-bg:      #fdf0f2;
 
   /* ── Supplementary ── */
-  --sp-purple:    #6b21a8;
+  --sp-purple:    #920c24;
   --sp-purple-bg: #fff0f2;
   --sp-gold:      #920c24;
 
@@ -65,10 +65,10 @@
   --sp-radius:    10px;
 
   /* ── Elevation ── */
-  --sp-shadow-xs: 0 1px 2px rgba(43, 46, 74, 0.05);
-  --sp-shadow-sm: 0 2px 6px rgba(43, 46, 74, 0.07);
-  --sp-shadow-md: 0 4px 16px rgba(43, 46, 74, 0.09);
-  --sp-shadow-lg: 0 8px 30px rgba(43, 46, 74, 0.13);
+  --sp-shadow-xs: 0 1px 2px rgba(146,12,36, 0.05);
+  --sp-shadow-sm: 0 2px 6px rgba(146,12,36, 0.07);
+  --sp-shadow-md: 0 4px 16px rgba(146,12,36, 0.09);
+  --sp-shadow-lg: 0 8px 30px rgba(146,12,36, 0.13);
 }
 
 /* ── Global Material Symbols helper ──────────────────────── */
@@ -872,7 +872,7 @@ header[class*="navbar"], .website-header,
 }
 .sp-fee-pay-now-btn:hover {
   background: var(--sp-primary-dark);
-  box-shadow: 0 3px 12px rgba(74,127,193,0.25);
+  box-shadow: 0 3px 12px rgba(146,12,36,0.25);
   transform: translateY(-1px);
 }
 
@@ -965,14 +965,14 @@ header[class*="navbar"], .website-header,
   gap: 3px;
   letter-spacing: 0.02em;
 }
-.sp-fee-status-paid              { background: rgba(52,211,153,0.22);  color: #6ee7b7; border: 1px solid rgba(52,211,153,0.3); }
+.sp-fee-status-paid              { background: rgba(52,211,153,0.22);  color: #b5364a; border: 1px solid rgba(52,211,153,0.3); }
 .sp-fee-status-unpaid            { background: rgba(252,165,165,0.22); color: #f5c6ce; border: 1px solid rgba(252,165,165,0.3); }
 .sp-fee-status-partially-paid    { background: rgba(253,186,116,0.22); color: #f5c6ce; border: 1px solid rgba(253,186,116,0.3); }
 .sp-fee-status-overdue           { background: rgba(248,113,113,0.25); color: #f5c6ce; border: 1px solid rgba(248,113,113,0.3); }
 .sp-fee-status-payment-initiated { background: rgba(147,197,253,0.22); color: #f5c6ce; border: 1px solid rgba(147,197,253,0.3); }
-.sp-fee-status-authorized        { background: rgba(52,211,153,0.18);  color: #6ee7b7; border: 1px solid rgba(52,211,153,0.25); }
+.sp-fee-status-authorized        { background: rgba(52,211,153,0.18);  color: #b5364a; border: 1px solid rgba(52,211,153,0.25); }
 .sp-fee-status-payment-failed    { background: rgba(252,165,165,0.28); color: #f5c6ce; border: 1px solid rgba(252,165,165,0.35); }
-.sp-fee-status-refunded          { background: rgba(196,181,253,0.22); color: #c4b5fd; border: 1px solid rgba(196,181,253,0.3); }
+.sp-fee-status-refunded          { background: rgba(196,181,253,0.22); color: #f5c6ce; border: 1px solid rgba(196,181,253,0.3); }
 .sp-fee-status-cancelled         { background: rgba(209,213,219,0.18); color: #d1d5db; border: 1px solid rgba(209,213,219,0.25); }
 
 .sp-fee-summary-pay-col {
@@ -1241,7 +1241,7 @@ header[class*="navbar"], .website-header,
 }
 .sp-btn-primary:hover:not(:disabled) {
   background: var(--sp-primary-dark);
-  box-shadow: 0 4px 14px rgba(74,127,193,0.2);
+  box-shadow: 0 4px 14px rgba(146,12,36,0.2);
 }
 
 .sp-btn-secondary {
@@ -1316,7 +1316,7 @@ header[class*="navbar"], .website-header,
   background: var(--sp-nav-bg);
   color: #fff;
   font-weight: 400;
-  box-shadow: 0 2px 8px rgba(74,127,193,0.2);
+  box-shadow: 0 2px 8px rgba(146,12,36,0.2);
 }
 .sp-tab.active .sp-ms { color: rgba(255,255,255,0.9); }
 
@@ -1363,7 +1363,7 @@ header[class*="navbar"], .website-header,
 /* ── Info box ─────────────────────────────────────────────── */
 .sp-info-box {
   background: var(--sp-info-bg);
-  border: 1px solid rgba(3,105,161,0.15);
+  border: 1px solid rgba(146,12,36,0.15);
   border-radius: 12px;
   padding: 14px 16px;
   display: flex;
@@ -1500,7 +1500,7 @@ header[class*="navbar"], .website-header,
 .sp-form-control:focus {
   border-color: var(--sp-primary);
   background: #fff;
-  box-shadow: 0 0 0 3px rgba(43,46,74,0.12);
+  box-shadow: 0 0 0 3px rgba(146,12,36,0.12);
 }
 .sp-form-control::placeholder { color: var(--sp-text-4); }
 
@@ -1653,7 +1653,7 @@ select.sp-form-control {
 }
 .sp-toast.open { display: flex; }
 .sp-toast .sp-ms { font-family: 'Material Symbols Outlined'; font-size: 20px; flex-shrink: 0; }
-.sp-toast-success { background: #166534; color: #fff; }
+.sp-toast-success { background: #6b091a; color: #fff; }
 .sp-toast-danger  { background: #6b091a; color: #fff; }
 .sp-toast-info    { background: var(--sp-nav-bg); color: #fff; }
 @keyframes spToastIn {
@@ -2312,7 +2312,7 @@ select.sp-form-control {
   border-left: 4px solid var(--sp-border);
   background: var(--sp-bg);
 }
-.sp-rt-bar-pass { border-left-color: var(--sp-success); background: #f0fdf4; }
+.sp-rt-bar-pass { border-left-color: var(--sp-success); background: #fff0f2; }
 .sp-rt-bar-fail { border-left-color: var(--sp-danger);  background: #fff5f5; }
 .sp-rt-bar-pend { border-left-color: var(--sp-warning); background: #fffbf0; }
 
@@ -2350,9 +2350,9 @@ select.sp-form-control {
   border-bottom: 2px solid rgba(0,0,0,0.10);
 }
 .sp-rt-tg-comp    { background: #fff0f2; color: #920c24; }
-.sp-rt-tg-grade   { background: #bbf7d0; color: #15803d; }
+.sp-rt-tg-grade   { background: #f5c6ce; color: #920c24; }
 .sp-rt-tg-status  { background: #fff0f2; color: #920c24; }
-.sp-rt-tg-reexam  { background: #fce7f3; color: #9d174d; }
+.sp-rt-tg-reexam  { background: #fff0f2; color: #9d174d; }
 .sp-rt-tg-updated { background: #fff0f2; color: #920c24; }
 
 /* ── Row 2: Component / column name ─────────────────────── */
@@ -2411,7 +2411,7 @@ select.sp-form-control {
 
 /* Status cells */
 .sp-rt-status { font-size: 11px; font-weight: 400; color: #374151; }
-.sp-rt-ok     { color: #16a34a; font-weight: 400; }
+.sp-rt-ok     { color: #920c24; font-weight: 400; }
 .sp-rt-warn   { color: #920c24; font-weight: 400; }
 .sp-rt-err    { color: #920c24; font-weight: 400; }
 
@@ -2473,7 +2473,7 @@ select.sp-form-control {
   font-size: 11px; color: var(--sp-sidebar-text); margin-top: 4px;
   display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
 }
-.sp-acc-meta-ok   { color: #6ee7b7; }
+.sp-acc-meta-ok   { color: #b5364a; }
 .sp-acc-meta-fail { color: #f5c6ce; }
 
 /* ── Pills (SGPA / CGPA / %) ─────────────────────────────────── */
@@ -2498,7 +2498,7 @@ select.sp-form-control {
   background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.8);
   border-radius: 20px; padding: 3px 9px; font-size: 11px; font-weight: 400;
 }
-.sp-acc-chip-pass { background: rgba(52,211,153,0.25); color: #6ee7b7; }
+.sp-acc-chip-pass { background: rgba(52,211,153,0.25); color: #b5364a; }
 .sp-acc-chip-fail { background: rgba(248,113,113,0.25); color: #f5c6ce; }
 .sp-acc-chip-pend { background: rgba(146,12,36,0.20);  color: #f5c6ce; }
 
@@ -2878,8 +2878,8 @@ select.sp-form-control {
   letter-spacing: 0.02em;
 }
 .sp-inv-pay-btn:hover:not(:disabled) {
-  background: var(--sp-primary-dark, #3a6aab);
-  box-shadow: 0 4px 14px rgba(74, 127, 193, 0.2);
+  background: var(--sp-primary-dark, #920c24);
+  box-shadow: 0 4px 14px rgba(146,12,36, 0.2);
   transform: translateY(-1px);
 }
 .sp-inv-pay-btn:active:not(:disabled) { transform: scale(0.97); }
@@ -2913,8 +2913,8 @@ select.sp-form-control {
 }
 .sp-inv-download-btn:hover {
   background: var(--sp-bg, #f8fafc);
-  border-color: var(--sp-primary, #4a7fc1);
-  color: var(--sp-primary, #4a7fc1);
+  border-color: var(--sp-primary, #b5364a);
+  color: var(--sp-primary, #b5364a);
   transform: translateY(-1px);
 }
 .sp-inv-download-btn:active { transform: scale(0.97); }
@@ -2996,7 +2996,7 @@ select.sp-form-control {
 .sp-pay-spinner {
   width: 44px; height: 44px;
   border: 3.5px solid #fff0f2;
-  border-top-color: #2558c1;
+  border-top-color: #b5364a;
   border-radius: 50%;
   animation: sp-spin 0.8s linear infinite;
 }
@@ -3087,7 +3087,7 @@ select.sp-form-control {
   transition: background 0.15s, transform 0.1s;
 }
 .sp-doc-btn:hover {
-  background: var(--sp-primary-dark, #3a6aab);
+  background: var(--sp-primary-dark, #920c24);
   transform: translateY(-1px);
   color: #fff;
   text-decoration: none;
@@ -3185,7 +3185,7 @@ select.sp-form-control {
   transition: background 0.15s;
 }
 .sp-section-hdr-link:hover {
-  background: rgba(37,99,235,0.15);
+  background: rgba(146,12,36,0.15);
   text-decoration: none;
 }
 
@@ -3205,7 +3205,7 @@ select.sp-form-control {
 .sp-nav-item:hover:not(.active) {
   background: var(--sp-primary-light);
   color: var(--sp-primary);
-  border-left-color: var(--sp-primary-mid, rgba(74,127,193,0.2));
+  border-left-color: var(--sp-primary-mid, rgba(146,12,36,0.2));
 }
 
 /* ── Bottom nav — active indicator dot ─────────────────────── */
@@ -3230,12 +3230,12 @@ select.sp-form-control {
   border-radius: 10px;
   font-weight: 400;
   letter-spacing: 0.01em;
-  box-shadow: 0 2px 8px rgba(37,99,235,0.3);
+  box-shadow: 0 2px 8px rgba(146,12,36,0.3);
   transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
 }
 .sp-btn-primary:hover {
   background: var(--sp-accent-dark);
-  box-shadow: 0 4px 16px rgba(37,99,235,0.4);
+  box-shadow: 0 4px 16px rgba(146,12,36,0.4);
   transform: translateY(-1px);
 }
 .sp-btn-primary:active { transform: scale(0.98); }
@@ -3309,7 +3309,7 @@ select.sp-form-control {
 }
 .sp-inv-pay-inline:hover {
   background: var(--sp-primary-dark);
-  box-shadow: 0 3px 10px rgba(74,127,193,0.2);
+  box-shadow: 0 3px 10px rgba(146,12,36,0.2);
   transform: translateY(-1px);
 }
 .sp-inv-pay-inline:active  { transform: scale(0.97); }
@@ -3806,7 +3806,7 @@ body.sp-has-marquee .sp-sidebar { top: calc(var(--sp-nav-h) + 34px); }
 
 .sp-sidebar-divider {
   border-top-color: rgba(255, 255, 255, 0.09);
-  color: #166534;
+  color: #6b091a;
 }
 
 /* =============================================================
@@ -4052,7 +4052,7 @@ body.sp-right-sidebar .sp-nav-item {
 }
 body.sp-right-sidebar .sp-nav-item.active {
   border-left: none;
-  border-right: 3px solid #60a5fa;
+  border-right: 3px solid #b5364a;
 }
 body.sp-right-sidebar .sp-nav-item:hover:not(.active) {
   border-left-color: transparent;
@@ -4234,7 +4234,7 @@ body .sp-avatar-btn {
   margin-bottom: 20px;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 24px 60px rgba(43, 46, 74, 0.4), 0 4px 20px rgba(0,0,0,0.15);
+  box-shadow: 0 24px 60px rgba(146,12,36, 0.4), 0 4px 20px rgba(0,0,0,0.15);
   animation: fee-count-in 0.4s ease both;
 }
 .fee-overview-card::before {
@@ -4306,14 +4306,14 @@ body .sp-avatar-btn {
   letter-spacing: 0.03em;
   backdrop-filter: blur(4px);
 }
-.fee-status-paid              { background: rgba(52,211,153,0.22);  color: #6ee7b7;  border: 1px solid rgba(52,211,153,0.35); }
+.fee-status-paid              { background: rgba(52,211,153,0.22);  color: #b5364a;  border: 1px solid rgba(52,211,153,0.35); }
 .fee-status-unpaid            { background: rgba(252,165,165,0.22); color: #f5c6ce;  border: 1px solid rgba(252,165,165,0.35); }
 .fee-status-partially-paid    { background: rgba(253,186,116,0.22); color: #f5c6ce;  border: 1px solid rgba(253,186,116,0.35); }
 .fee-status-overdue           { background: rgba(248,113,113,0.25); color: #f5c6ce;  border: 1px solid rgba(248,113,113,0.35); }
 .fee-status-payment-initiated { background: rgba(147,197,253,0.22); color: #f5c6ce;  border: 1px solid rgba(147,197,253,0.35); }
-.fee-status-authorized        { background: rgba(52,211,153,0.18);  color: #6ee7b7;  border: 1px solid rgba(52,211,153,0.28); }
+.fee-status-authorized        { background: rgba(52,211,153,0.18);  color: #b5364a;  border: 1px solid rgba(52,211,153,0.28); }
 .fee-status-payment-failed    { background: rgba(252,165,165,0.28); color: #f5c6ce;  border: 1px solid rgba(252,165,165,0.4); }
-.fee-status-refunded          { background: rgba(196,181,253,0.22); color: #c4b5fd;  border: 1px solid rgba(196,181,253,0.35); }
+.fee-status-refunded          { background: rgba(196,181,253,0.22); color: #f5c6ce;  border: 1px solid rgba(196,181,253,0.35); }
 .fee-status-cancelled         { background: rgba(209,213,219,0.18); color: #d1d5db;  border: 1px solid rgba(209,213,219,0.28); }
 
 .fee-overview-amount {
@@ -4375,8 +4375,8 @@ body .sp-avatar-btn {
   justify-content: center;
   flex-shrink: 0;
 }
-.fee-stat-icon-green  { background: rgba(52,211,153,0.2);  color: #6ee7b7; }
-.fee-stat-icon-purple { background: rgba(196,181,253,0.2); color: #c4b5fd; }
+.fee-stat-icon-green  { background: rgba(52,211,153,0.2);  color: #b5364a; }
+.fee-stat-icon-purple { background: rgba(196,181,253,0.2); color: #f5c6ce; }
 .fee-stat-icon-red    { background: rgba(248,113,113,0.2); color: #f5c6ce; }
 .fee-stat-box-label {
   font-size: 9px;
@@ -4396,7 +4396,7 @@ body .sp-avatar-btn {
   line-height: 1;
 }
 .fee-val-red   { color: #f5c6ce !important; }
-.fee-val-green { color: #6ee7b7 !important; }
+.fee-val-green { color: #b5364a !important; }
 
 /* Animated progress bar */
 .fee-progress-section {
@@ -4414,7 +4414,7 @@ body .sp-avatar-btn {
 }
 .fee-progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #60a5fa, #a78bfa);
+  background: linear-gradient(90deg, #b5364a, #f5c6ce);
   border-radius: 99px;
   transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
@@ -4429,7 +4429,7 @@ body .sp-avatar-btn {
   filter: blur(2px);
 }
 .fee-progress-done {
-  background: linear-gradient(90deg, #34d399, #6ee7b7);
+  background: linear-gradient(90deg, #b5364a, #b5364a);
 }
 .fee-progress-done::after { display: none; }
 .fee-progress-labels {
@@ -4534,7 +4534,7 @@ body .sp-avatar-btn {
 }
 .fee-comp-tuition-fee     { background: #fff0f2; color: #920c24; border-color: #f5c6ce; }
 .fee-comp-hostel-fee      { background: #fff0f2; color: #920c24; border-color: #f5c6ce; }
-.fee-comp-examination-fee { background: #fce7f3; color: #9d174d; border-color: #fbcfe8; }
+.fee-comp-examination-fee { background: #fff0f2; color: #9d174d; border-color: #fff0f2; }
 .fee-comp-lab-fee         { background: #f3f4f6; color: #000000; border-color: #f3f4f6; }
 .fee-comp-library-fee     { background: #fff0f2; color: #920c24; border-color: #f5c6ce; }
 .fee-comp-transport-fee   { background: #fff0f2; color: #920c24; border-color: #f5c6ce; }
@@ -4696,7 +4696,7 @@ body .sp-avatar-btn {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  background: linear-gradient(135deg, #2558c1, #3a7bd5);
+  background: linear-gradient(135deg, #b5364a, #b5364a);
   color: #fff;
   border: none;
   border-radius: 9px;
@@ -4718,8 +4718,8 @@ body .sp-avatar-btn {
 }
 .fee-pay-btn:active { transform: scale(0.97); }
 .fee-pay-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
-.fee-pay-btn-counter { background: linear-gradient(135deg, #920c24, #920c24); box-shadow: 0 2px 8px rgba(3,105,161,0.25); }
-.fee-pay-btn-counter:hover { box-shadow: 0 4px 16px rgba(3,105,161,0.35); }
+.fee-pay-btn-counter { background: linear-gradient(135deg, #920c24, #920c24); box-shadow: 0 2px 8px rgba(146,12,36,0.25); }
+.fee-pay-btn-counter:hover { box-shadow: 0 4px 16px rgba(146,12,36,0.35); }
 
 .fee-inv-chevron {
   font-family: 'Material Symbols Outlined';
@@ -4828,7 +4828,7 @@ body .sp-avatar-btn {
   background: #fff0f2;
   border-color: var(--sp-primary);
   color: var(--sp-primary);
-  box-shadow: 0 2px 8px rgba(74,127,193,0.12);
+  box-shadow: 0 2px 8px rgba(146,12,36,0.12);
 }
 .fee-download-receipt-btn {
   border-color: #f5c6ce;
@@ -4837,7 +4837,7 @@ body .sp-avatar-btn {
 .fee-download-receipt-btn:hover {
   background: #fff0f2;
   border-color: #920c24;
-  color: #312e81;
+  color: #920c24;
 }
 
 /* ── Scholarship & Concession cards ─────────────────────────────── */
@@ -4852,7 +4852,7 @@ body .sp-avatar-btn {
   margin-bottom: 10px;
   transition: box-shadow 0.18s;
 }
-.fee-con-card:hover { box-shadow: 0 4px 16px rgba(124,58,237,0.08); }
+.fee-con-card:hover { box-shadow: 0 4px 16px rgba(146,12,36,0.08); }
 
 .fee-con-left {
   display: flex;
@@ -4910,7 +4910,7 @@ body .sp-avatar-btn {
   gap: 4px;
   margin-bottom: 6px;
 }
-.fee-con-waiver-detail .sp-ms { font-family: 'Material Symbols Outlined'; color: #a78bfa; }
+.fee-con-waiver-detail .sp-ms { font-family: 'Material Symbols Outlined'; color: #f5c6ce; }
 .fee-con-meta-row {
   display: flex;
   flex-wrap: wrap;
@@ -5092,7 +5092,7 @@ body .sp-avatar-btn {
 .fee-payment-authorized  { background: #fff0f2; border-color: #f5c6ce; }
 .fee-payment-tick-authorized { background: #920c24; box-shadow: 0 2px 6px rgba(146,12,36,0.3); }
 .fee-payment-refunded    { background: #fff0f2; border-color: #f5c6ce; }
-.fee-payment-tick-refunded { background: #0ea5e9; box-shadow: 0 2px 6px rgba(14,165,233,0.3); }
+.fee-payment-tick-refunded { background: #b5364a; box-shadow: 0 2px 6px rgba(146,12,36,0.3); }
 .fee-payment-initiated   { background: #fff0f2; border-color: #f5c6ce; }
 .fee-payment-tick-initiated { background: #920c24; box-shadow: 0 2px 6px rgba(29,78,216,0.3); }
 
@@ -5154,7 +5154,7 @@ body .sp-avatar-btn {
   justify-content: center;
   gap: 8px;
   background: #ffffff;
-  color: #1a3f8a;
+  color: #920c24;
   border: 2px solid rgba(255,255,255,0.9);
   border-radius: 12px;
   padding: 13px 28px;
@@ -5336,7 +5336,7 @@ body .sp-avatar-btn {
   box-shadow: 0 24px 64px rgba(0,0,0,0.2);
 }
 .fee-modal-header {
-  background: linear-gradient(135deg, #0f2a5c, #2558c1);
+  background: linear-gradient(135deg, #6b091a, #b5364a);
   padding: 18px 22px;
   display: flex;
   align-items: center;
@@ -5462,11 +5462,11 @@ body .sp-avatar-btn {
   padding: 4px 11px;
 }
 .fee-sticky-chip .sp-ms { font-family: 'Material Symbols Outlined'; }
-.fee-sticky-chip-paid { background: rgba(52,211,153,0.18); color: #6ee7b7; border: 1px solid rgba(52,211,153,0.25); }
+.fee-sticky-chip-paid { background: rgba(52,211,153,0.18); color: #b5364a; border: 1px solid rgba(52,211,153,0.25); }
 .fee-sticky-chip-due  { background: rgba(248,113,113,0.18); color: #f5c6ce; border: 1px solid rgba(248,113,113,0.25); }
 .fee-sticky-pay-btn {
   background: #fff;
-  color: #0f2a5c;
+  color: #6b091a;
   border: none;
   border-radius: 8px;
   padding: 7px 16px;
@@ -5764,7 +5764,7 @@ body .sp-avatar-btn {
   cursor: pointer;
   transition: background 0.15s, color 0.15s, box-shadow 0.15s;
 }
-.fee-empty-refresh-btn:hover { background: var(--sp-nav-bg); color: #fff; box-shadow: 0 3px 12px rgba(74,127,193,0.25); }
+.fee-empty-refresh-btn:hover { background: var(--sp-nav-bg); color: #fff; box-shadow: 0 3px 12px rgba(146,12,36,0.25); }
 .fee-empty-refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .fee-empty-refresh-btn .sp-ms { font-family: 'Material Symbols Outlined'; }
 
@@ -5932,9 +5932,9 @@ body.sp-has-marquee.sp-sidebar-mini .sp-sidebar {
 /* ── Student Credit Notes ───────────────────────────────────── */
 .fee-credit-summary-bar {
   display: flex; align-items: center; gap: 10px;
-  background: #ecfeff; border: 1.5px solid #67e8f9;
+  background: #fff0f2; border: 1.5px solid #b5364a;
   border-radius: 10px; padding: 10px 16px;
-  font-size: 12.5px; color: #0e7490; margin-bottom: 10px;
+  font-size: 12.5px; color: #920c24; margin-bottom: 10px;
 }
 .fee-credit-card {
   display: flex; align-items: center; gap: 16px;
@@ -5948,11 +5948,11 @@ body.sp-has-marquee.sp-sidebar-mini .sp-sidebar {
 .fee-credit-type-icon {
   width: 38px; height: 38px; border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
-  background: rgba(8, 145, 178, 0.12); color: #0891b2;
+  background: rgba(146,12,36, 0.12); color: #920c24;
 }
-.fee-credit-type-icon.fee-credit-icon-advance-deposit { background: rgba(8,145,178,0.12); color:#0891b2; }
+.fee-credit-type-icon.fee-credit-icon-advance-deposit { background: rgba(146,12,36,0.12); color:#920c24; }
 .fee-credit-type-icon.fee-credit-icon-overpayment { background: rgba(0,0,0,0.12); color:#000000; }
-.fee-credit-type-icon.fee-credit-icon-scholarship { background: rgba(124,58,237,0.12); color:#920c24; }
+.fee-credit-type-icon.fee-credit-icon-scholarship { background: rgba(146,12,36,0.12); color:#920c24; }
 .fee-credit-type { font-size: 13px; font-weight: 400; color: var(--sp-text-1); }
 .fee-credit-year { font-size: 11px; color: var(--sp-text-4); margin-top: 2px; }
 .fee-credit-mid { flex: 1; min-width: 0; }
@@ -5965,13 +5965,13 @@ body.sp-has-marquee.sp-sidebar-mini .sp-sidebar {
   height: 6px; background: #e2e8f0; border-radius: 99px; overflow: hidden;
 }
 .fee-credit-bar-fill {
-  height: 100%; background: #0891b2; border-radius: 99px;
+  height: 100%; background: #920c24; border-radius: 99px;
   transition: width 0.6s ease;
 }
 .fee-credit-bar-fill.fee-credit-bar-exhausted { background: #94a3b8; }
 .fee-credit-remarks { font-size: 11px; color: var(--sp-text-4); margin-top: 4px; }
 .fee-credit-right { text-align: right; flex-shrink: 0; min-width: 110px; }
-.fee-credit-avail { font-size: 18px; font-weight: 400; color: #0891b2; }
+.fee-credit-avail { font-size: 18px; font-weight: 400; color: #920c24; }
 .fee-credit-avail-label { font-size: 10px; color: var(--sp-text-4); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
 .fee-credit-status {
   display: inline-flex; align-items: center; gap: 3px;
@@ -6073,7 +6073,7 @@ body.sp-has-marquee.sp-sidebar-mini .sp-sidebar {
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
 .fee-refund-icon-approved { background: rgba(0,0,0,0.12); color: #000000; }
-.fee-refund-icon-pending  { background: rgba(192,122,26,0.12); color: #c07a1a; }
+.fee-refund-icon-pending  { background: rgba(192,122,26,0.12); color: #920c24; }
 .fee-refund-type { font-size: 13px; font-weight: 400; color: var(--sp-text-1); }
 .fee-refund-component { font-size: 11px; color: var(--sp-text-4); margin-top: 2px; }
 .fee-refund-mid { flex: 1; min-width: 0; }
@@ -6196,7 +6196,7 @@ body.sp-has-marquee.sp-sidebar-mini .sp-sidebar {
   border-radius: 99px;
 }
 .fee-ben-chip-purple { background: #fff0f2; color: #920c24; }
-.fee-ben-chip-cyan   { background: #ecfeff; color: #0891b2; }
+.fee-ben-chip-cyan   { background: #fff0f2; color: #920c24; }
 .fee-benefits-chevron {
   font-family: 'Material Symbols Outlined';
   font-size: 20px;
@@ -6277,7 +6277,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   background: #920c24 !important;
   border-radius: 24px !important;
   padding: 28px 28px 24px !important;
-  box-shadow: 0 32px 72px rgba(43, 46, 74, 0.45), 0 8px 24px rgba(0,0,0,0.18) !important;
+  box-shadow: 0 32px 72px rgba(146,12,36, 0.45), 0 8px 24px rgba(0,0,0,0.18) !important;
   margin-bottom: 24px !important;
 }
 
@@ -6363,10 +6363,10 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   line-height: 1 !important;
   color: #fff !important;
 }
-.fee-val-green { color: #6ee7b7 !important; }
+.fee-val-green { color: #b5364a !important; }
 .fee-val-red   { color: #f5c6ce !important; }
-.fee-stat-icon-green  { background: rgba(52,211,153,0.22) !important; color: #6ee7b7 !important; }
-.fee-stat-icon-purple { background: rgba(196,181,253,0.22) !important; color: #c4b5fd !important; }
+.fee-stat-icon-green  { background: rgba(52,211,153,0.22) !important; color: #b5364a !important; }
+.fee-stat-icon-purple { background: rgba(196,181,253,0.22) !important; color: #f5c6ce !important; }
 .fee-stat-icon-red    { background: rgba(248,113,113,0.22) !important; color: #f5c6ce !important; }
 
 /* ── PROGRESS BAR — Animated, premium ───────────────────────────── */
@@ -6383,7 +6383,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
 }
 .fee-progress-fill {
   height: 100% !important;
-  background: linear-gradient(90deg, #34d399, #6ee7b7) !important;
+  background: linear-gradient(90deg, #b5364a, #b5364a) !important;
   border-radius: 99px !important;
   transition: width 1.2s cubic-bezier(0.4,0,0.2,1) !important;
   position: relative !important;
@@ -6397,7 +6397,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   border-radius: 99px;
   animation: fee-shimmer-pulse 2s ease-in-out infinite;
 }
-.fee-progress-done { background: linear-gradient(90deg, #34d399, #000000) !important; }
+.fee-progress-done { background: linear-gradient(90deg, #b5364a, #000000) !important; }
 .fee-progress-done::after { display: none; }
 .fee-progress-labels {
   display: flex;
@@ -6430,7 +6430,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   justify-content: center !important;
   gap: 10px !important;
   background: #ffffff !important;
-  color: #1a3f8a !important;
+  color: #920c24 !important;
   border: none !important;
   border-radius: 14px !important;
   padding: 15px 36px !important;
@@ -6515,11 +6515,11 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   cursor: pointer !important;
   transition: background 0.18s, box-shadow 0.18s, transform 0.15s !important;
   white-space: nowrap !important;
-  box-shadow: 0 2px 10px rgba(74,127,193,0.3) !important;
+  box-shadow: 0 2px 10px rgba(146,12,36,0.3) !important;
 }
 .fee-sticky-pay-btn:hover {
-  background: #1a5fbf !important;
-  box-shadow: 0 4px 16px rgba(74,127,193,0.4) !important;
+  background: #920c24 !important;
+  box-shadow: 0 4px 16px rgba(146,12,36,0.4) !important;
   transform: translateY(-1px) !important;
 }
 
@@ -6563,7 +6563,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
 }
 .fee-invoice-card:hover {
   box-shadow: 0 10px 32px rgba(0,0,0,0.1), 0 2px 8px rgba(0,0,0,0.06) !important;
-  border-color: rgba(74,127,193,0.25) !important;
+  border-color: rgba(146,12,36,0.25) !important;
 }
 
 /* Invoice row */
@@ -6577,10 +6577,10 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   border-bottom: 1.5px solid transparent !important;
   transition: background 0.15s !important;
 }
-.fee-inv-row:hover { background: rgba(74,127,193,0.03) !important; }
+.fee-inv-row:hover { background: rgba(146,12,36,0.03) !important; }
 .fee-inv-row.open {
   border-bottom-color: var(--sp-border) !important;
-  background: rgba(74,127,193,0.03) !important;
+  background: rgba(146,12,36,0.03) !important;
 }
 
 /* Status icon */
@@ -6668,7 +6668,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   display: inline-flex !important;
   align-items: center !important;
   gap: 5px !important;
-  background: linear-gradient(135deg, #2558c1, #3a7bd5) !important;
+  background: linear-gradient(135deg, #b5364a, #b5364a) !important;
   color: #fff !important;
   border: none !important;
   border-radius: 10px !important;
@@ -6799,8 +6799,8 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   font-size: 12px !important;
   font-weight: 600 !important;
   color: var(--sp-primary) !important;
-  background: rgba(74,127,193,0.08) !important;
-  border: 1px solid rgba(74,127,193,0.2) !important;
+  background: rgba(146,12,36,0.08) !important;
+  border: 1px solid rgba(146,12,36,0.2) !important;
   border-radius: 9px !important;
   padding: 7px 14px !important;
   text-decoration: none !important;
@@ -6809,8 +6809,8 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   white-space: nowrap !important;
 }
 .fee-download-btn:hover {
-  background: rgba(74,127,193,0.14) !important;
-  border-color: rgba(74,127,193,0.35) !important;
+  background: rgba(146,12,36,0.14) !important;
+  border-color: rgba(146,12,36,0.35) !important;
   text-decoration: none !important;
   transform: translateY(-1px) !important;
 }
@@ -7012,10 +7012,10 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   position: relative !important;
   font-family: inherit !important;
 }
-.fee-tab:hover { color: var(--sp-text-1) !important; background: rgba(74,127,193,0.06) !important; }
+.fee-tab:hover { color: var(--sp-text-1) !important; background: rgba(146,12,36,0.06) !important; }
 .fee-tab-active {
   color: var(--sp-primary) !important;
-  background: rgba(74,127,193,0.08) !important;
+  background: rgba(146,12,36,0.08) !important;
   box-shadow: inset 0 -2px 0 var(--sp-primary) !important;
 }
 .fee-tab-badge {
@@ -7087,8 +7087,8 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   font-size: 12px !important;
   font-weight: 700 !important;
   color: var(--sp-primary) !important;
-  background: rgba(74,127,193,0.08) !important;
-  border: 1.5px solid rgba(74,127,193,0.3) !important;
+  background: rgba(146,12,36,0.08) !important;
+  border: 1.5px solid rgba(146,12,36,0.3) !important;
   border-radius: 8px !important;
   cursor: pointer !important;
   transition: all 0.18s !important;
@@ -7100,7 +7100,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   color: #fff !important;
   border-color: var(--sp-primary) !important;
   transform: translateY(-1px) !important;
-  box-shadow: 0 3px 12px rgba(74,127,193,0.3) !important;
+  box-shadow: 0 3px 12px rgba(146,12,36,0.3) !important;
 }
 .fee-demand-pay-btn:disabled { opacity: 0.5 !important; cursor: not-allowed !important; transform: none !important; }
 
@@ -7164,7 +7164,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   vertical-align: middle !important;
 }
 .fee-txn-table tbody tr:last-child td { border-bottom: none !important; }
-.fee-txn-table tbody tr:hover { background: rgba(74,127,193,0.03) !important; }
+.fee-txn-table tbody tr:hover { background: rgba(146,12,36,0.03) !important; }
 .fee-txn-amount { font-weight: 800 !important; color: #000000 !important; font-size: 14px !important; }
 .fee-txn-receipt-no { font-family: monospace !important; font-size: 12px !important; }
 .fee-txn-dl-btn {
@@ -7175,8 +7175,8 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   height: 32px !important;
   border-radius: 8px !important;
   color: var(--sp-primary) !important;
-  background: rgba(74,127,193,0.08) !important;
-  border: 1px solid rgba(74,127,193,0.2) !important;
+  background: rgba(146,12,36,0.08) !important;
+  border: 1px solid rgba(146,12,36,0.2) !important;
   text-decoration: none !important;
   transition: all 0.18s !important;
 }
@@ -7290,7 +7290,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
 }
 .fee-comp-tuition-fee     { background: #fff0f2 !important; color: #920c24 !important; border-color: #f5c6ce !important; }
 .fee-comp-hostel-fee      { background: #fff0f2 !important; color: #920c24 !important; border-color: #f5c6ce !important; }
-.fee-comp-examination-fee { background: #fce7f3 !important; color: #9d174d !important; border-color: #fbcfe8 !important; }
+.fee-comp-examination-fee { background: #fff0f2 !important; color: #9d174d !important; border-color: #fff0f2 !important; }
 .fee-comp-lab-fee         { background: #f3f4f6 !important; color: #000000 !important; border-color: #f3f4f6 !important; }
 .fee-comp-library-fee     { background: #fff0f2 !important; color: #920c24 !important; border-color: #f5c6ce !important; }
 .fee-comp-transport-fee   { background: #fff0f2 !important; color: #920c24 !important; border-color: #f5c6ce !important; }
@@ -7345,7 +7345,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   gap: 4px !important;
 }
 .fee-ben-chip-purple { background: #fff0f2 !important; color: #920c24 !important; }
-.fee-ben-chip-cyan   { background: #cffafe !important; color: #0e7490 !important; }
+.fee-ben-chip-cyan   { background: #fff0f2 !important; color: #920c24 !important; }
 .fee-benefits-body {
   font-weight: 400;
 
@@ -7374,7 +7374,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   flex-shrink: 0 !important;
 }
 .fee-refund-icon-approved { background: rgba(0,0,0,0.12) !important; color: #000000 !important; }
-.fee-refund-icon-pending  { background: rgba(192,122,26,0.12) !important; color: #c07a1a !important; }
+.fee-refund-icon-pending  { background: rgba(192,122,26,0.12) !important; color: #920c24 !important; }
 .fee-refund-amount { font-size: 20px !important; font-weight: 800 !important; color: #000000 !important; }
 .fee-refund-amount-label { font-size: 10px !important; color: var(--sp-text-4) !important; text-transform: uppercase !important; letter-spacing: 0.05em !important; }
 .fee-refund-status {
@@ -7461,7 +7461,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   display: flex !important;
   align-items: center !important;
   gap: 12px !important;
-  background: linear-gradient(135deg, #1a3f8a, #2558c1) !important;
+  background: linear-gradient(135deg, #920c24, #b5364a) !important;
   padding: 18px 22px !important;
 }
 .fee-modal-body {
@@ -7522,7 +7522,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
 .fee-scholarship-note {
   font-size: 11px !important;
   color: #920c24 !important;
-  background: rgba(124,58,237,0.06) !important;
+  background: rgba(146,12,36,0.06) !important;
   border-radius: 8px !important;
   padding: 6px 10px !important;
   margin-top: 4px !important;
@@ -7613,7 +7613,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   align-items: center !important;
   justify-content: center !important;
   flex-shrink: 0 !important;
-  background: rgba(124,58,237,0.1) !important;
+  background: rgba(146,12,36,0.1) !important;
   color: #920c24 !important;
 }
 .fee-con-type { font-size: 13px !important; font-weight: 700 !important; color: var(--sp-text-1) !important; }
@@ -7733,14 +7733,14 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   font-weight: 800 !important;
   letter-spacing: 0.04em !important;
 }
-.fee-status-paid              { background: rgba(52,211,153,0.22) !important;  color: #6ee7b7 !important;  border: 1px solid rgba(52,211,153,0.35) !important; }
+.fee-status-paid              { background: rgba(52,211,153,0.22) !important;  color: #b5364a !important;  border: 1px solid rgba(52,211,153,0.35) !important; }
 .fee-status-unpaid            { background: rgba(252,165,165,0.22) !important; color: #f5c6ce !important;  border: 1px solid rgba(252,165,165,0.35) !important; }
 .fee-status-partially-paid    { background: rgba(253,186,116,0.22) !important; color: #f5c6ce !important;  border: 1px solid rgba(253,186,116,0.35) !important; }
 .fee-status-overdue           { background: rgba(248,113,113,0.25) !important; color: #f5c6ce !important;  border: 1px solid rgba(248,113,113,0.35) !important; }
 .fee-status-payment-initiated { background: rgba(147,197,253,0.22) !important; color: #f5c6ce !important;  border: 1px solid rgba(147,197,253,0.35) !important; }
-.fee-status-authorized        { background: rgba(52,211,153,0.18) !important;  color: #6ee7b7 !important;  border: 1px solid rgba(52,211,153,0.28) !important; }
+.fee-status-authorized        { background: rgba(52,211,153,0.18) !important;  color: #b5364a !important;  border: 1px solid rgba(52,211,153,0.28) !important; }
 .fee-status-payment-failed    { background: rgba(252,165,165,0.28) !important; color: #f5c6ce !important;  border: 1px solid rgba(252,165,165,0.4) !important; }
-.fee-status-refunded          { background: rgba(196,181,253,0.22) !important; color: #c4b5fd !important;  border: 1px solid rgba(196,181,253,0.35) !important; }
+.fee-status-refunded          { background: rgba(196,181,253,0.22) !important; color: #f5c6ce !important;  border: 1px solid rgba(196,181,253,0.35) !important; }
 .fee-status-cancelled         { background: rgba(209,213,219,0.18) !important; color: #d1d5db !important;  border: 1px solid rgba(209,213,219,0.28) !important; }
 
 /* ── 33. FLOATING SHAPES ─────────────────────────────────────────── */
@@ -7780,12 +7780,12 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   display: flex !important;
   align-items: center !important;
   gap: 10px !important;
-  background: #ecfeff !important;
-  border: 1px solid #a5f3fc !important;
+  background: #fff0f2 !important;
+  border: 1px solid #f5c6ce !important;
   border-radius: 10px !important;
   padding: 10px 14px !important;
   font-size: 13px !important;
-  color: #0e7490 !important;
+  color: #920c24 !important;
   font-weight: 500 !important;
 }
 .fee-credit-card {
@@ -7806,7 +7806,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   justify-content: center !important;
   flex-shrink: 0 !important;
 }
-.fee-credit-avail { font-size: 20px !important; font-weight: 800 !important; color: #0891b2 !important; }
+.fee-credit-avail { font-size: 20px !important; font-weight: 800 !important; color: #920c24 !important; }
 .fee-credit-status {
   font-size: 11px !important;
   font-weight: 700 !important;
@@ -7819,13 +7819,13 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
 .fee-credit-status-exhausted { background: #f1f5f9 !important; color: #64748b !important; }
 .fee-credit-bar-track {
   height: 6px !important;
-  background: rgba(8,145,178,0.15) !important;
+  background: rgba(146,12,36,0.15) !important;
   border-radius: 99px !important;
   overflow: hidden !important;
 }
 .fee-credit-bar-fill {
   height: 100% !important;
-  background: linear-gradient(90deg, #0891b2, #22d3ee) !important;
+  background: linear-gradient(90deg, #920c24, #b5364a) !important;
   border-radius: 99px !important;
   transition: width 0.8s ease !important;
 }
@@ -7914,7 +7914,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   margin-top: 3px !important;
   font-size: 10px !important;
   font-weight: 600 !important;
-  background: rgba(99,102,241,0.1) !important;
+  background: rgba(146,12,36,0.1) !important;
   color: #920c24 !important;
   padding: 1px 7px !important;
   border-radius: 99px !important;
@@ -7976,7 +7976,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   background: var(--sp-primary) !important;
   color: #fff !important;
   transform: translateY(-1px) !important;
-  box-shadow: 0 4px 12px rgba(43,46,74,0.3) !important;
+  box-shadow: 0 4px 12px rgba(146,12,36,0.3) !important;
 }
 
 /* Responsive: stack on small screens */
@@ -8019,7 +8019,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   align-items: center !important;
   justify-content: center !important;
   flex-shrink: 0 !important;
-  box-shadow: 0 4px 12px rgba(43,46,74,0.35) !important;
+  box-shadow: 0 4px 12px rgba(146,12,36,0.35) !important;
 }
 .fee-trust-modal-close-x {
   margin-left: auto !important;
@@ -8117,12 +8117,12 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   font-size: 13px !important;
   font-weight: 700 !important;
   cursor: pointer !important;
-  box-shadow: 0 4px 14px rgba(43,46,74,0.35) !important;
+  box-shadow: 0 4px 14px rgba(146,12,36,0.35) !important;
   transition: all 0.18s ease !important;
 }
 .fee-trust-modal-proceed-btn:hover {
   transform: translateY(-1px) !important;
-  box-shadow: 0 6px 20px rgba(43,46,74,0.45) !important;
+  box-shadow: 0 6px 20px rgba(146,12,36,0.45) !important;
 }
 
 /* Scholarship pending note style in invoice breakdown */
@@ -8136,10 +8136,10 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
 
 /* Pending scholarship line — show as positive (green/purple), not warning yellow */
 .fee-scholarship-pending-line {
-  background: rgba(139,92,246,0.06) !important;
+  background: rgba(146,12,36,0.06) !important;
   border-radius: 6px !important;
   padding: 6px 8px !important;
-  border-left: 3px solid #a78bfa !important;
+  border-left: 3px solid #f5c6ce !important;
   margin: 4px 0 !important;
 }
 
@@ -8214,13 +8214,13 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
 /* ── Hero Section ─────────────────────────────────────────────────── */
 .spd-hero {
   position: relative;
-  background: linear-gradient(135deg, var(--sp-primary-dark) 0%, var(--sp-primary) 60%, #3d4270 100%);
+  background: linear-gradient(135deg, var(--sp-primary-dark) 0%, var(--sp-primary) 60%, #920c24 100%);
   border-radius: 20px;
   padding: 28px 28px 0;
   margin-bottom: 18px;
   overflow: hidden;
   color: #fff;
-  box-shadow: 0 12px 40px rgba(43,46,74,0.32), 0 2px 8px rgba(0,0,0,0.12);
+  box-shadow: 0 12px 40px rgba(146,12,36,0.32), 0 2px 8px rgba(0,0,0,0.12);
 }
 
 /* Animated background shapes */
@@ -8367,7 +8367,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   border-radius: 50%;
   border: 2.5px solid rgba(255,255,255,0.9);
 }
-.spd-hero-status-dot.active { background: #34d399; }
+.spd-hero-status-dot.active { background: #b5364a; }
 .spd-hero-status-dot.inactive { background: #920c24; }
 .spd-hero-status-label {
   display: flex;
@@ -8518,7 +8518,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   color: inherit;
 }
 .spd-kpi-card:hover::before { opacity: 1; }
-.spd-kpi-attendance::before { background: linear-gradient(90deg, var(--sp-success), #6ee7b7); }
+.spd-kpi-attendance::before { background: linear-gradient(90deg, var(--sp-success), #b5364a); }
 .spd-kpi-courses::before    { background: linear-gradient(90deg, var(--sp-primary), #f5c6ce); }
 .spd-kpi-exam::before       { background: linear-gradient(90deg, #920c24, #f5c6ce); }
 .spd-kpi-fees::before       { background: linear-gradient(90deg, #920c24, #f5c6ce); }
@@ -8539,7 +8539,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
 }
 .spd-kpi-icon .sp-ms { font-size: 20px; color: var(--sp-primary); }
 .spd-kpi-attendance .spd-kpi-icon .sp-ms { color: var(--sp-success); }
-.spd-kpi-attendance .spd-kpi-icon { background: #f0fdf4; }
+.spd-kpi-attendance .spd-kpi-icon { background: #fff0f2; }
 .spd-kpi-exam .spd-kpi-icon .sp-ms { color: #920c24; }
 .spd-kpi-exam .spd-kpi-icon { background: #fff0f2; }
 .spd-kpi-fees .spd-kpi-icon .sp-ms { color: #920c24; }
@@ -8555,7 +8555,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   border-radius: 20px;
 }
 .spd-kpi-trend .sp-ms { font-size: 13px; }
-.spd-kpi-trend.up   { background: #f0fdf4; color: #15803d; }
+.spd-kpi-trend.up   { background: #fff0f2; color: #920c24; }
 .spd-kpi-trend.warn { background: #fff0f2; color: #920c24; }
 .spd-kpi-trend.down { background: #fff5f5; color: #920c24; }
 
@@ -8593,7 +8593,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
 
 /* ── Quick Actions KPI shortcut card ─────────────────────────────── */
 .spd-kpi-quickactions {
-  background: linear-gradient(145deg, #920c24 0%, #3d4270 100%);
+  background: linear-gradient(145deg, #920c24 0%, #920c24 100%);
   border: none;
   cursor: pointer;
   position: relative;
@@ -8653,7 +8653,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   color: rgba(255,255,255,0.8);
 }
 .spd-kpi-quickactions:hover {
-  box-shadow: 0 8px 28px rgba(43,46,74,0.35);
+  box-shadow: 0 8px 28px rgba(146,12,36,0.35);
   transform: translateY(-3px);
   text-decoration: none;
   color: inherit;
@@ -8697,10 +8697,10 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
 }
 .spd-section-icon .sp-ms { font-size: 18px; }
 .spd-icon-blue   { background: #fff0f2; } .spd-icon-blue   .sp-ms { color: #920c24; }
-.spd-icon-teal   { background: #f0fdfa; } .spd-icon-teal   .sp-ms { color: #0f766e; }
+.spd-icon-teal   { background: #fff0f2; } .spd-icon-teal   .sp-ms { color: #920c24; }
 .spd-icon-purple { background: #fff0f2; } .spd-icon-purple .sp-ms { color: #920c24; }
 .spd-icon-orange { background: #fff0f2; } .spd-icon-orange .sp-ms { color: #920c24; }
-.spd-icon-green  { background: #f0fdf4; } .spd-icon-green  .sp-ms { color: #15803d; }
+.spd-icon-green  { background: #fff0f2; } .spd-icon-green  .sp-ms { color: #920c24; }
 .spd-icon-red    { background: #fff5f5; } .spd-icon-red    .sp-ms { color: #920c24; }
 
 .spd-section-name {
@@ -8797,7 +8797,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
 }
 .spd-timeline-current .spd-timeline-card {
   background: var(--sp-primary-light);
-  border-color: rgba(74,127,193,0.25);
+  border-color: rgba(146,12,36,0.25);
 }
 .spd-tc-name {
   font-size: 14px; font-weight: 400;
@@ -8893,7 +8893,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   flex-shrink: 0;
 }
 .spd-health-badge .sp-ms { font-size: 13px; }
-.spd-health-good   { background: #f0fdf4; color: #15803d; }
+.spd-health-good   { background: #fff0f2; color: #920c24; }
 .spd-health-warn   { background: #fff0f2; color: #920c24; }
 .spd-health-danger { background: #fff5f5; color: #920c24; }
 
@@ -8944,10 +8944,10 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
 .spd-qa-accent-card {
   overflow: hidden;
   border: none;
-  box-shadow: 0 4px 24px rgba(43,46,74,0.18), 0 1px 4px rgba(0,0,0,0.07);
+  box-shadow: 0 4px 24px rgba(146,12,36,0.18), 0 1px 4px rgba(0,0,0,0.07);
 }
 .spd-qa-accent-hdr {
-  background: linear-gradient(120deg, #1a1c2e 0%, #920c24 60%, #3d4270 100%);
+  background: linear-gradient(120deg, #6b091a 0%, #920c24 60%, #920c24 100%);
   padding: 18px 20px 16px;
   display: flex;
   align-items: center;
@@ -9139,7 +9139,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
   border-radius: 20px;
   font-size: 11px; font-weight: 400;
 }
-.spd-status-paid      { background: #f0fdf4; color: #15803d; }
+.spd-status-paid      { background: #fff0f2; color: #920c24; }
 .spd-status-overdue   { background: #fff5f5; color: #920c24; }
 .spd-status-unpaid    { background: #fff0f2; color: #920c24; }
 .spd-status-submitted { background: #fff0f2; color: #920c24; }
@@ -9238,11 +9238,11 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
 .spd-btn-primary {
   background: var(--sp-nav-bg);
   color: #fff;
-  box-shadow: 0 2px 8px rgba(74,127,193,0.25);
+  box-shadow: 0 2px 8px rgba(146,12,36,0.25);
 }
 .spd-btn-primary:hover {
   background: var(--sp-primary-dark);
-  box-shadow: 0 4px 16px rgba(74,127,193,0.35);
+  box-shadow: 0 4px 16px rgba(146,12,36,0.35);
   color: #fff;
 }
 .spd-btn-ghost {

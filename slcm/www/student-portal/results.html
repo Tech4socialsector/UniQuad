@@ -7,7 +7,7 @@
 :root {
   --spr-primary: var(--sp-primary, #920c24);
   --spr-soft:    rgba(146,12,36,0.07);
-  --spr-green:   var(--sp-success, #16a34a);
+  --spr-green:   var(--sp-success, #920c24);
   --spr-red:     var(--sp-grade-fail, #85142b);
   --spr-amber:   #920c24;               /* darker than --sp-warning for AA contrast */
   --spr-border:  var(--sp-border, #e2e8f0);
@@ -127,7 +127,7 @@
 .spr-chip .sp-ms { font-size: 13px; }
 .spr-status { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; }
 .spr-status .sp-ms { font-size: 13px; }
-.spr-status-pass { color: var(--spr-green); border: 1px solid rgba(22,163,74,0.30); background: #fff; }
+.spr-status-pass { color: var(--spr-green); border: 1px solid rgba(146,12,36,0.30); background: #fff; }
 .spr-status-fail { color: var(--spr-red);   background: rgba(146,12,36,0.07); }
 .spr-status-pend { color: var(--spr-amber); background: rgba(146,12,36,0.10); }
 .spr-chip-mfa { color: #920c24; background: #fff0f2; border-color: #f5c6ce; }
@@ -178,9 +178,9 @@
 .spr-improve-open       { color: #920c24; }
 .spr-improve-open:hover { background: #fff0f2; }
 .spr-improve-paid,
-.spr-improve-registered       { color: #15803d; }
+.spr-improve-registered       { color: #920c24; }
 .spr-improve-paid:hover,
-.spr-improve-registered:hover { background: #f0fdf4; }
+.spr-improve-registered:hover { background: #fff0f2; }
 .spr-improve-retry       { color: var(--spr-amber); }
 .spr-improve-retry:hover { background: #fff0f2; }
 .spr-improve-full { color: var(--sp-text-4); cursor: not-allowed; }
@@ -191,7 +191,7 @@
 .spr-g-pend { color: var(--spr-muted) !important; }
 .spr-sup { font-size: 0.55em; font-weight: 700; letter-spacing: 0; margin-left: 1px; vertical-align: super; line-height: 0; }
 .spr-sup-arrear { color: var(--spr-amber); }
-.spr-sup-imp { background: #dcfce7; color: #14532d; border: 1px solid #4ade80; border-radius: 3px; padding: 0 2px; }
+.spr-sup-imp { background: #fff0f2; color: #6b091a; border: 1px solid #b5364a; border-radius: 3px; padding: 0 2px; }
 
 /* ── List view ──────────────────────────────────────────────────────── */
 .spr-list { background: var(--sp-card, #fff); border: 1px solid var(--spr-border); border-radius: 12px; overflow: hidden; margin-bottom: 20px; }
@@ -216,7 +216,7 @@
 .spr-btn .sp-ms { font-size: 15px; }
 .spr-btn.spr-improve-open       { border-color: #f5c6ce; }
 .spr-btn.spr-improve-paid,
-.spr-btn.spr-improve-registered { border-color: #86efac; }
+.spr-btn.spr-improve-registered { border-color: #f5c6ce; }
 .spr-btn.spr-improve-retry      { border-color: #f5c6ce; }
 .spr-btn.spr-improve-full       { border-color: var(--spr-border); }
 .spr-btn.spr-improve-full:hover { background: var(--sp-card, #fff); }
@@ -267,18 +267,18 @@
 /* Group row (Internal / End Term / Grade …) matches the column-label row exactly */
 .spr-mk thead tr:first-child th, .spr-mk thead tr + tr th { font-size: 10px !important; font-weight: 600; letter-spacing: 0.04em; line-height: 1.35; }
 .spr-mk .grp { background: var(--spr-soft); color: var(--spr-primary); border-bottom: none; }
-.spr-mk .grp-grade  { background: rgba(22,163,74,0.06); color: var(--spr-green); }
+.spr-mk .grp-grade  { background: rgba(146,12,36,0.06); color: var(--spr-green); }
 .spr-mk .grp-status { background: #f3f4f6; color: var(--sp-text-3); }
 .spr-mk .grp-reexam { background: rgba(146,12,36,0.10); color: var(--spr-amber); }
-.spr-mk .grp-improve { background: #f0fdf4; color: #14532d; }
+.spr-mk .grp-improve { background: #fff0f2; color: #6b091a; }
 .spr-mk .grp-final  { background: rgba(146,12,36,0.07); color: #920c24; }
 .spr-mk td { padding: 10px 12px; text-align: center; font-size: var(--spr-mk-fs); border-bottom: 1px solid var(--spr-row); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .spr-mk-grade { display: inline-block; font-size: var(--spr-mk-fs); font-weight: 700; padding: 2px 10px; border-radius: 8px; }
-.spr-mk-grade.pass { color: var(--spr-green); border: 1px solid rgba(22,163,74,0.3); }
+.spr-mk-grade.pass { color: var(--spr-green); border: 1px solid rgba(146,12,36,0.3); }
 .spr-mk-grade.fail { color: var(--spr-red); background: rgba(146,12,36,0.07); }
 .spr-mk-grade.pend { color: var(--spr-muted); background: #f3f4f6; }
 .spr-mk-grade.reexam  { color: #920c24; background: #fff0f2; }
-.spr-mk-grade.improve { color: #14532d; border: 1px solid #4ade80; }
+.spr-mk-grade.improve { color: #6b091a; border: 1px solid #b5364a; }
 .spr-mk-hint { display: none; font-size: var(--spr-mk-fs); color: var(--spr-muted); padding: 8px 20px 0; align-items: center; gap: 5px; }
 .spr-mk-hint .sp-ms { font-size: 14px; }
 @media (max-width: 640px) {
@@ -523,7 +523,7 @@
     </div>
   </div>
   <div class="sp-stat-card">
-    <div class="sp-stat-icon" style="background:#f0fdf4;color:var(--sp-success);">check_circle</div>
+    <div class="sp-stat-icon" style="background:#fff0f2;color:var(--sp-success);">check_circle</div>
     <div>
       <div class="sp-stat-label">Courses Passed</div>
       <div class="sp-stat-value" style="color:var(--sp-success);">{{ _ns.passed }}</div>
@@ -533,7 +533,7 @@
     {% if _ns.failed %}
     <div class="sp-stat-icon" style="background:var(--sp-danger-bg);color:var(--spr-red);">cancel</div>
     {% else %}
-    <div class="sp-stat-icon" style="background:#f0fdf4;color:var(--sp-success);">verified</div>
+    <div class="sp-stat-icon" style="background:#fff0f2;color:var(--sp-success);">verified</div>
     {% endif %}
     <div>
       <div class="sp-stat-label">Courses Failed</div>
@@ -769,7 +769,7 @@
           <td>{% if c.re_exam_grade %}<span class="spr-mk-grade reexam">{{ c.re_exam_grade }}</span>{% else %}—{% endif %}</td>
           {% endif %}
           {% if show_improve %}
-          <td style="font-weight:700;color:#15803d;">{{ c.improvement_marks if c.improvement_marks is not none else '—' }}</td>
+          <td style="font-weight:700;color:#920c24;">{{ c.improvement_marks if c.improvement_marks is not none else '—' }}</td>
           <td>{% if c.improvement_grade %}<span class="spr-mk-grade improve">{{ c.improvement_grade }}{% if c.improvement_applied %}<sup class="spr-sup spr-sup-imp" title="Improvement applied">I</sup>{% endif %}</span>{% else %}—{% endif %}</td>
           {% endif %}
           {% if show_updated %}

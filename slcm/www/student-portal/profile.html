@@ -141,7 +141,7 @@
   font-weight: 400;
 }
 .sp-bank-note .sp-ms { font-size: 18px; }
-.sp-bank-note-locked { background: #ecfdf5; color: #065f46; }
+.sp-bank-note-locked { background: #fff0f2; color: #6b091a; }
 .sp-passbook-link, .sp-passbook-upload { display: inline-flex; align-items: center; gap: 4px; color: var(--sp-primary); font-weight: 600; cursor: pointer; text-decoration: none; }
 .sp-passbook-link:hover, .sp-passbook-upload:hover { text-decoration: underline; }
 .sp-passbook-link .sp-ms, .sp-passbook-upload .sp-ms { font-size: 18px; }
@@ -322,7 +322,7 @@
         <span class="sp-status-tag gray" style="background: #e2e8f0; color: #334155; font-weight: 500;">Programme: {{ programme_name }}</span>
         {% endif %}
         {% if profile.student_status %}
-        <span class="sp-status-tag {% if profile.student_status == 'Active' %}green{% else %}red{% endif %}" style="{% if profile.student_status == 'Active' %}background: #0f766e; color: #fff;{% else %}background: #920c24; color: #fff;{% endif %} font-weight: 500; padding: 4px 16px;">{{ profile.student_status }}</span>
+        <span class="sp-status-tag {% if profile.student_status == 'Active' %}green{% else %}red{% endif %}" style="{% if profile.student_status == 'Active' %}background: #920c24; color: #fff;{% else %}background: #920c24; color: #fff;{% endif %} font-weight: 500; padding: 4px 16px;">{{ profile.student_status }}</span>
         {% endif %}
       </div>
     </div>
@@ -617,7 +617,7 @@
         <div class="sp-section-header-title"><span class="sp-ms">hotel</span> Hostel</div>
       </div>
       <div class="sp-section-body">
-        <div style="display:flex; align-items:center; gap:12px; background:#f0fdf4; border:1px solid #bbf7d0; padding:16px; border-radius:8px; margin-bottom:16px;">
+        <div style="display:flex; align-items:center; gap:12px; background:#fff0f2; border:1px solid #f5c6ce; padding:16px; border-radius:8px; margin-bottom:16px;">
           <span class="sp-ms" style="color:var(--sp-success); font-size:32px;">apartment</span>
           <div>
             <div style="color:var(--sp-success); font-weight:400; font-size:16px;">Resident</div>

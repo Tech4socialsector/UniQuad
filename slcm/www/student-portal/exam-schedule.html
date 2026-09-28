@@ -84,7 +84,7 @@
   }
 
   .es-stat-published::before {
-    background: #10b981;
+    background: #920c24;
   }
 
   .es-stat-icon {
@@ -114,8 +114,8 @@
   }
 
   .es-stat-published .es-stat-icon {
-    background: #dcfce7;
-    color: #10b981;
+    background: #fff0f2;
+    color: #920c24;
   }
 
   .es-stat-body {
@@ -281,11 +281,11 @@
   }
 
   .es-table tbody tr:nth-child(even) {
-    background: rgba(43, 46, 74, .025);
+    background: rgba(146,12,36, .025);
   }
 
   .es-table tbody tr:hover {
-    background: rgba(43, 46, 74, .055);
+    background: rgba(146,12,36, .055);
     transition: background .12s;
   }
 
@@ -362,9 +362,9 @@
   }
 
   .es-badge-present {
-    background: #e6f4ea;
-    color: #15803d;
-    border: 1px solid #bbf7d0;
+    background: #fff0f2;
+    color: #920c24;
+    border: 1px solid #f5c6ce;
   }
 
   .es-badge-detained {
@@ -376,7 +376,7 @@
   .es-badge-pending {
     background: #f0f1f6;
     color: var(--sp-primary);
-    border: 1px solid rgba(43, 46, 74, .15);
+    border: 1px solid rgba(146,12,36, .15);
   }
 
   .es-badge-scheduled {
@@ -605,7 +605,7 @@
       </div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;flex-shrink:0;">
-      <span class="es-badge" style="background:#e6f4ea; color:#15803d; border: 1px solid #bbf7d0;">
+      <span class="es-badge" style="background:#fff0f2; color:#920c24; border: 1px solid #f5c6ce;">
         {{ plan.status }}
       </span>
       {% if plan.is_published %}

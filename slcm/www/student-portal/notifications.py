@@ -1,4 +1,5 @@
 import frappe
+from frappe.utils import getdate, nowdate
 
 from slcm.api.fee_certificate import get_student_name
 from slcm.api.student_portal import get_portal_notifications
@@ -10,6 +11,7 @@ def get_context(context):
 	context.no_cache = 1
 	context.notifications = []
 	context.categories = []
+	context.groups = []
 
 	if frappe.session.user == "Guest":
 		context.is_guest = True
@@ -33,6 +35,7 @@ def get_context(context):
 		# Same feed as the bell icon, so the page and the dropdown always agree.
 		notifications = get_portal_notifications().get("notifications") or []
 		context.notifications = notifications
+		context.groups = _group_by_date(notifications)
 		categories = []
 		for n in notifications:
 			if n.get("category") and n["category"] not in categories:
@@ -46,6 +49,47 @@ def get_context(context):
 		_set_nav_defaults(context)
 
 	return context
+
+
+_GROUP_ORDER = ("Upcoming", "Today", "This week", "Earlier")
+
+
+def _group_by_date(notifications):
+	"""Split the feed into Upcoming / Today / This week / Earlier, each with a relative label."""
+	today = getdate(nowdate())
+	buckets = {g: [] for g in _GROUP_ORDER}
+	for n in notifications:
+		try:
+			d = getdate(n.get("date")) if n.get("date") else None
+		except Exception:
+			d = None
+		delta = (d - today).days if d else None
+		if delta is None:
+			group, when = "Earlier", ""
+		elif delta > 0:
+			group = "Upcoming"
+			when = "Tomorrow" if delta == 1 else f"In {delta} days"
+		elif delta == 0:
+			group, when = "Today", "Today"
+		elif delta >= -6:
+			group = "This week"
+			when = "Yesterday" if delta == -1 else f"{-delta} days ago"
+		else:
+			group = "Earlier"
+			when = d.strftime("%d %b %Y")
+		n["when"] = when
+		n["_delta"] = delta if delta is not None else -99999
+		# The date already shows on the right — don't repeat it in the subtitle
+		date_txt = d.strftime("%d %b %Y") if d else ""
+		parts = [p for p in (n.get("subtitle") or "").split(" · ") if p and p != date_txt]
+		n["page_subtitle"] = " · ".join(parts)
+		buckets[group].append(n)
+
+	# Upcoming: soonest first; everything else: newest first
+	buckets["Upcoming"].sort(key=lambda n: n["_delta"])
+	for g in ("Today", "This week", "Earlier"):
+		buckets[g].sort(key=lambda n: n["_delta"], reverse=True)
+	return [{"label": g, "entries": buckets[g]} for g in _GROUP_ORDER if buckets[g]]
 
 
 def _set_student_nav(context, student):

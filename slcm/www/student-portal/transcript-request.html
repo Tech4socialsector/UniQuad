@@ -64,7 +64,7 @@
   color: #fff; line-height: 1;
 }
 .tr-kpi-val.warn { color: #f5c6ce; }
-.tr-kpi-val.ok   { color: #86efac; }
+.tr-kpi-val.ok   { color: #f5c6ce; }
 
 /* ── Two-column layout ─────────────────────────── */
 .tr-layout {
@@ -90,7 +90,7 @@
 }
 .tr-stepper:focus-within {
   border-color: var(--sp-primary);
-  box-shadow: 0 0 0 3px rgba(43,46,74,0.12);
+  box-shadow: 0 0 0 3px rgba(146,12,36,0.12);
 }
 .tr-stepper-btn {
   width: 38px; height: 100%;
@@ -169,7 +169,7 @@
   cursor: pointer; font-family: inherit;
   display: flex; align-items: center; justify-content: center; gap: 8px;
   transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
-  box-shadow: 0 4px 14px rgba(43,46,74,0.28);
+  box-shadow: 0 4px 14px rgba(146,12,36,0.28);
   margin-top: 14px;
 }
 .tr-submit-btn:hover:not(:disabled) { opacity: 0.91; transform: translateY(-1px); }
@@ -211,12 +211,12 @@
 .tr-b-payment    { background: #fff0f2; color: #920c24; }
 .tr-b-submitted  { background: #fff0f2; color: #920c24; }
 .tr-b-review     { background: #fff0f2; color: #920c24; }
-.tr-b-approved   { background: #dcfce7; color: #166534; }
-.tr-b-generated  { background: #d1fae5; color: #065f46; }
+.tr-b-approved   { background: #fff0f2; color: #6b091a; }
+.tr-b-generated  { background: #fff0f2; color: #6b091a; }
 .tr-b-delivered  { background: #fff0f2; color: #920c24; }
 .tr-b-rejected   { background: var(--sp-danger-bg); color: var(--sp-danger); }
 .tr-b-cancelled  { background: #f1f5f9; color: #64748b; }
-.tr-b-paid       { background: #dcfce7; color: #166534; }
+.tr-b-paid       { background: #fff0f2; color: #6b091a; }
 .tr-b-failed     { background: var(--sp-danger-bg); color: var(--sp-danger); }
 .tr-b-pending    { background: #fff0f2; color: #920c24; }
 
@@ -224,7 +224,7 @@
   display: inline-flex; align-items: center; gap: 6px;
   padding: 3px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
   background: var(--sp-info-bg); color: var(--sp-info);
-  border: 1px solid rgba(43,46,74,0.12);
+  border: 1px solid rgba(146,12,36,0.12);
 }
 
 /* Action row buttons */
@@ -238,12 +238,12 @@
 .tr-act-btn:hover { opacity: 0.82; transform: translateY(-1px); }
 .tr-act-btn .sp-ms { font-size: 13px; }
 .tr-act-pay {
-  background: linear-gradient(135deg, #16a34a, #15803d);
-  color: #fff; box-shadow: 0 2px 6px rgba(22,163,74,0.25);
+  background: linear-gradient(135deg, #920c24, #920c24);
+  color: #fff; box-shadow: 0 2px 6px rgba(146,12,36,0.25);
 }
 .tr-act-dl {
   background: var(--sp-info-bg); color: var(--sp-info);
-  border: 1px solid rgba(43,46,74,0.15) !important;
+  border: 1px solid rgba(146,12,36,0.15) !important;
 }
 .tr-act-cancel {
   background: #fff; color: var(--sp-danger);
@@ -748,7 +748,7 @@
           <span>Delivery: <strong>{{ r.delivery_mode }}</strong></span>
           {% if r.payment_required %}
           <span>
-            Fee: <strong style="color:{{ '#15803d' if r.payment_status=='Paid' else ('#920c24' if r.payment_status in ('Payment Failed','Payment Cancelled') else '#920c24') }};">
+            Fee: <strong style="color:{{ '#920c24' if r.payment_status=='Paid' else ('#920c24' if r.payment_status in ('Payment Failed','Payment Cancelled') else '#920c24') }};">
               ₹{{ "{:.0f}".format(r.fee_amount) }}
             </strong>
             <span class="tr-badge tr-b-{{ 'paid' if r.payment_status=='Paid' else ('failed' if r.payment_status in ('Payment Failed','Payment Cancelled') else 'pending') }}" style="font-size:10px;padding:2px 8px;margin-left:2px;">
@@ -952,7 +952,7 @@
         <div style="font-size:13px;color:var(--sp-text-3);line-height:1.7;" id="ps-success-msg">
           Your payment has been confirmed. Your transcript request is now being processed.
         </div>
-        <div style="display:none;margin-top:14px;background:var(--sp-success-bg);border:1px solid #bbf7d0;border-radius:8px;padding:10px 14px;font-size:12px;color:var(--sp-success);align-items:center;gap:6px;" id="ps-txn-row">
+        <div style="display:none;margin-top:14px;background:var(--sp-success-bg);border:1px solid #f5c6ce;border-radius:8px;padding:10px 14px;font-size:12px;color:var(--sp-success);align-items:center;gap:6px;" id="ps-txn-row">
           <span class="sp-ms" style="font-size:14px;">confirmation_number</span>
           <span>Payment ID: <strong id="ps-txn-id" style="font-family:monospace;">—</strong></span>
         </div>
@@ -1261,7 +1261,7 @@ function _formMsg(ok, text) {
   el.style.display = 'block';
   el.style.background = ok ? 'var(--sp-success-bg)' : 'var(--sp-danger-bg)';
   el.style.color      = ok ? 'var(--sp-success)'    : 'var(--sp-danger)';
-  el.style.border     = '1px solid ' + (ok ? '#bbf7d0' : '#f5c6ce');
+  el.style.border     = '1px solid ' + (ok ? '#f5c6ce' : '#f5c6ce');
   el.textContent = text;
   setTimeout(() => { el.style.display = 'none'; }, 5000);
 }

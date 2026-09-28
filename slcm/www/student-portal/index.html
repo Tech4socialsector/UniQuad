@@ -13,48 +13,31 @@
     margin: 0 0 22px;
   }
   
-  /* Alert styling */
+  /* Alert — one short line of NLS maroon text, no background */
   .spd-alert-custom {
-    background: #fff0f2;
-    border: 1px solid #fff0f2;
-    border-left: 4px solid #920c24;
-    border-radius: 8px;
-    padding: 16px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 24px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-  }
-  .spd-alert-content {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 8px;
+    margin: 0 0 16px;
+    padding: 0;
+    background: none;
+    color: var(--sp-primary, #920c24);
+    font-size: 13.5px;
+    line-height: 1.4;
   }
-  .spd-alert-icon-box {
-    background: #fff0f2;
-    color: #920c24;
-    padding: 8px;
-    border-radius: 6px;
-    display: flex;
-  }
-  .spd-alert-title {
-    font-size: 14px;
-    font-weight: 700;
-    color: #920c24;
-    margin-bottom: 4px;
-  }
-  .spd-alert-text {
-    font-size: 13px;
-    color: #920c24;
-  }
+  .spd-alert-custom > .sp-ms { font-size: 18px; flex-shrink: 0; color: var(--sp-primary, #920c24); }
+  .spd-alert-text { min-width: 0; font-weight: 700; color: var(--sp-primary, #920c24); }
   .spd-alert-link {
-    font-size: 13px;
-    font-weight: 600;
-    color: #920c24;
-    text-decoration: none;
+    flex-shrink: 0;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--sp-primary, #920c24);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    white-space: nowrap;
   }
-  
+  .spd-alert-link:hover { color: var(--sp-primary-dark, #6b091a); }
+
   /* KPI Cards Grid */
   .spd-kpi-row {
     display: grid;
@@ -105,7 +88,7 @@
   .spd-kpi-badge.success {
     background: transparent;
     color: var(--sp-success);
-    border: 1px solid rgba(0,128,0,0.35);
+    border: 1px solid rgba(146,12,36,0.35);
   }
   .spd-kpi-badge.warning {
     background: #fff0f2;
@@ -114,8 +97,8 @@
   }
   
   .spd-kpi-value {
-    font-size: 32px;
-    font-weight: 800;
+    font-size: 26px;
+    font-weight: 700;
     color: var(--sp-text-1);
     margin-bottom: 8px;
     line-height: 1;
@@ -259,28 +242,18 @@
 
 <div class="fade-in delay-1">
   {% if ns.low > 0 %}
-  <div class="spd-alert-custom">
-    <div class="spd-alert-content">
-      <div class="spd-alert-icon-box"><span class="sp-ms">warning_amber</span></div>
-      <div>
-        <div class="spd-alert-title">Attendance Warning</div>
-        <div class="spd-alert-text">{{ ns.low }} course{% if ns.low != 1 %}s{% endif %} below 75% — you may be ineligible for examinations.</div>
-      </div>
-    </div>
-    <a href="/student-portal/attendance" class="spd-alert-link">View Details →</a>
+  <div class="spd-alert-custom" role="alert">
+    <span class="sp-ms" aria-hidden="true">warning</span>
+    <span class="spd-alert-text">{{ ns.low }} course{% if ns.low != 1 %}s{% endif %} below 75% attendance</span>
+    <a href="/student-portal/attendance" class="spd-alert-link" aria-label="View attendance">View</a>
   </div>
   {% endif %}
   
   {% if has_dues %}
-  <div class="spd-alert-custom" style="border-left-color:var(--sp-danger);background:#fff0f2;border-color:#ffe4e6;">
-    <div class="spd-alert-content">
-      <div class="spd-alert-icon-box" style="background:#ffe4e6;color:var(--sp-danger);"><span class="sp-ms">account_balance_wallet</span></div>
-      <div>
-        <div class="spd-alert-title" style="color:var(--sp-text-1);">Fee Outstanding</div>
-        <div class="spd-alert-text">₹{{ "{:,.0f}".format(total_outstanding) }} pending — clear dues to avoid restrictions.</div>
-      </div>
-    </div>
-    <a href="/student-portal/fees" class="spd-alert-link" style="color:var(--sp-danger);">Pay Now →</a>
+  <div class="spd-alert-custom" role="alert">
+    <span class="sp-ms" aria-hidden="true">account_balance_wallet</span>
+    <span class="spd-alert-text">₹{{ "{:,.0f}".format(total_outstanding) }} fees pending</span>
+    <a href="/student-portal/fees" class="spd-alert-link" aria-label="Pay pending fees">Pay now</a>
   </div>
   {% endif %}
 </div>
@@ -319,7 +292,7 @@
       </div>
     </div>
     <div class="spd-kpi-value">
-      {{ eligible_count }}<span style="font-size:20px;color:var(--sp-text-3);">/{{ course_count }}</span>
+      {{ eligible_count }}<span style="font-size:18px;color:var(--sp-text-3);">/{{ course_count }}</span>
     </div>
     <div class="spd-kpi-label">Examination Eligible</div>
     <div class="spd-kpi-progress">
