@@ -26,6 +26,8 @@
     font-size: 32px;
     color: var(--sp-primary);
     flex-shrink: 0;
+    background: var(--sp-primary-light, #fff0f2);
+    color: var(--sp-primary);
   }
 
   .es-header-title {
@@ -71,20 +73,8 @@
     border-radius: 14px 14px 0 0;
   }
 
-  .es-stat-upcoming::before {
+  .es-stat::before {
     background: var(--sp-primary);
-  }
-
-  .es-stat-nextdate::before {
-    background: #f59e0b;
-  }
-
-  .es-stat-reexam::before {
-    background: #3b82f6;
-  }
-
-  .es-stat-published::before {
-    background: #10b981;
   }
 
   .es-stat-icon {
@@ -96,26 +86,8 @@
     justify-content: center;
     font-size: 22px;
     flex-shrink: 0;
-  }
-
-  .es-stat-upcoming .es-stat-icon {
-    background: #fee2e2;
+    background: var(--sp-primary-light, #fff0f2);
     color: var(--sp-primary);
-  }
-
-  .es-stat-nextdate .es-stat-icon {
-    background: #fef3c7;
-    color: #f59e0b;
-  }
-
-  .es-stat-reexam .es-stat-icon {
-    background: #dbeafe;
-    color: #3b82f6;
-  }
-
-  .es-stat-published .es-stat-icon {
-    background: #dcfce7;
-    color: #10b981;
   }
 
   .es-stat-body {

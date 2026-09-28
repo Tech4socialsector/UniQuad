@@ -297,7 +297,7 @@
   <a href="/student-portal/exam-schedule" class="spd-kpi">
     {% set eligible_count = courses_eligible if courses_eligible is defined else 0 %}
     <div class="spd-kpi-header">
-      <div class="spd-kpi-icon-box" style="background:#fef3c7;color:#d97706;">
+      <div class="spd-kpi-icon-box">
         <span class="sp-ms" style="font-size:24px;">quiz</span>
       </div>
       <div class="spd-kpi-badge {% if eligible_count == course_count and course_count > 0 %}success{% else %}warning{% endif %}">
@@ -310,7 +310,7 @@
     </div>
     <div class="spd-kpi-label">Examination Eligible</div>
     <div class="spd-kpi-progress">
-      <div class="spd-kpi-progress-fill" style="width: {% if course_count > 0 %}{{ ((eligible_count / course_count) * 100)|round|int }}{% else %}0{% endif %}%; background: #f59e0b;"></div>
+      <div class="spd-kpi-progress-fill" style="width: {% if course_count > 0 %}{{ ((eligible_count / course_count) * 100)|round|int }}{% else %}0{% endif %}%; background: var(--sp-primary);"></div>
     </div>
     <div class="spd-kpi-footer">Courses cleared for examinations</div>
   </a>
@@ -354,13 +354,13 @@
       <div class="spd-qa-item-sub">View your attendance</div>
     </a>
     
-    <a href="/student-portal/documents" class="spd-qa-item">
+    <!-- <a href="/student-portal/documents" class="spd-qa-item">
       <div class="spd-qa-item-icon">
         <span class="sp-ms" style="font-size:28px;">folder</span>
       </div>
       <div class="spd-qa-item-title">Documents</div>
       <div class="spd-qa-item-sub">Downloads &amp; uploads</div>
-    </a>
+    </a> -->
     
     <a href="/student-portal/results" class="spd-qa-item">
       <div class="spd-qa-item-icon">
