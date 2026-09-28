@@ -800,17 +800,17 @@ function _build_progression_html(pg, enc, badge) {
 		for (let t = 1; t <= n; t++) {
 			const done = t < pg.term_no, cur = t === pg.term_no;
 			steps.push(`<div style="flex:1;min-width:90px;text-align:center;">
-				<div style="height:6px;border-radius:4px;background:${done ? "#920c24" : cur ? "#e11d48" : "#e5e7eb"};"></div>
+				<div style="height:8px;border-radius:4px;background:${done || cur ? "#920c24" : "#d1d5db"};${cur ? "box-shadow:0 0 0 2px #fff,0 0 0 4px #920c24;" : ""}"></div>
 				<div style="font-size:11px;margin-top:5px;color:${cur ? "#920c24" : "#6b7280"};font-weight:${cur ? 700 : 500};">
 					Term ${t}${cur ? " · current" : ""}</div></div>`);
 		}
 		steps.push(`<div style="flex:1;min-width:110px;text-align:center;">
-			<div style="height:6px;border-radius:4px;background:repeating-linear-gradient(90deg,#920c24 0 6px,transparent 6px 10px);opacity:.5;"></div>
+			<div style="height:8px;border-radius:4px;background:#fff;border:2px dashed #920c24;box-sizing:border-box;"></div>
 			<div style="font-size:11px;margin-top:5px;color:#6b7280;">Year-end → Year ${enc(String((pg.year || 0) + 1))}</div></div>`);
 		html += box(`
-			<div style="padding:12px 18px;background:#fdf2f4;border-bottom:1px solid #f3d3da;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-				<span style="font-size:13px;font-weight:700;color:#920c24;">${enc(pg.year_label || "")}</span>
-				<span style="font-size:12px;color:#6b7280;">${enc(pg.next_step || "")}</span>
+			<div style="padding:12px 18px;background:#920c24;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+				<span style="font-size:13px;font-weight:700;color:#fff;">${enc(pg.year_label || "")}</span>
+				<span style="font-size:12px;color:#fff;">${enc(pg.next_step || "")}</span>
 			</div>
 			<div style="padding:14px 18px;display:flex;gap:8px;flex-wrap:wrap;">${steps.join("")}</div>
 			<div style="padding:0 18px 12px;font-size:11.5px;color:#6b7280;">

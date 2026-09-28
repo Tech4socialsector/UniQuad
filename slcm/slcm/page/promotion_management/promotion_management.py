@@ -169,7 +169,7 @@ def _failure_summary(row, policy_dict, ev):
 		reasons.append(_("{0} course(s) with attendance shortage, max allowed {1}").format(
 			cint(row.get("shortage_course_count")), _max_shortage(policy_dict)))
 	if ev.get("cf_result") == "Fail":
-		reasons.append(_("{0} carry-forward course(s) still short after FA, max allowed {1}").format(
+		reasons.append(_("{0} course(s) still short of attendance after FA/MFA (carry-forward), max allowed {1}").format(
 			cint(row.get("cf_fa_shortage_count")), cint(policy_dict.get("max_cf_fa_shortage"))))
 	if ev.get("fee_due_result") == "Fail":
 		reasons.append(_("Outstanding fee due"))
@@ -538,6 +538,17 @@ def _get_policy(policy_name, program=None, academic_year=None):
 	return policy
 
 
+def _check_policy_years(policy, from_year, to_year):
+	"""A policy written with year levels (1–10) only applies to that step.
+	Policies holding calendar years (e.g. 2026 → 2027) can't be matched and
+	are allowed as-is (the page warns about them)."""
+	if 1 <= cint(policy.from_year) <= 10 and (
+		cint(from_year) != cint(policy.from_year) or (cint(to_year) and cint(to_year) != cint(policy.to_year))
+	):
+		frappe.throw(_("Promotion Policy {0} is for Year {1} → {2}, not Year {3} → {4}.").format(
+			policy.name, policy.from_year, policy.to_year, cint(from_year), cint(to_year) or "?"))
+
+
 def _validate_years(from_year, to_year):
 	from_year, to_year = cint(from_year), cint(to_year)
 	if from_year < 1:
@@ -674,7 +685,7 @@ def get_student_progression(student):
 	    f"≥ {flt(pd.min_attendance_percent):.1f}%", ev["attendance_result"])
 	add(pd.enable_course_shortage_check, _("Courses with attendance shortage"), cint(row["shortage_course_count"]),
 	    f"≤ {_max_shortage(pd)}", ev["shortage_course_result"])
-	add(pd.enable_cf_check, _("Carry-forward courses short after FA"), cint(row["cf_fa_shortage_count"]),
+	add(pd.enable_cf_check, _("Courses still short after FA/MFA (carry-forward)"), cint(row["cf_fa_shortage_count"]),
 	    f"≤ {cint(pd.max_cf_fa_shortage)}", ev["cf_result"])
 	add(pd.block_on_fee_due, _("Outstanding fee due"), _("Yes") if ev["fee_due_result"] == "Fail" else _("No"),
 	    _("No"), ev["fee_due_result"])
@@ -701,6 +712,7 @@ def fetch_students(program, academic_year, from_year, policy_name=None):
 	Nothing is saved until confirm_promotion()."""
 	frappe.has_permission("Student Promotion", "read", throw=True)
 	policy = _get_policy(policy_name, program, academic_year)
+	_check_policy_years(policy, from_year, 0)
 	policy_dict = policy.as_dict()
 
 	students = _get_students_raw(program, academic_year, from_year)
@@ -730,6 +742,7 @@ def confirm_promotion(program, academic_year, from_year, to_year, policy_name=No
 
 	from_year, to_year = _validate_years(from_year, to_year)
 	policy      = _get_policy(policy_name, program, academic_year)
+	_check_policy_years(policy, from_year, to_year)
 	policy_dict = policy.as_dict()
 	students    = _get_students_raw(program, academic_year, from_year)
 
@@ -943,6 +956,17 @@ def save_override(record_name, new_status, reason):
 	return {"ok": True, "enrollment_status": doc.enrollment_status, "error": error}
 
 
+def _recheck_record(doc, policy):
+	"""Current promotion status of a log row's student under its policy."""
+	academic_year = policy.academic_year
+	cgpa = frappe.db.get_value("Student Master", doc.student, "current_cgpa")
+	row = _attach_metrics([{"student": doc.student, "student_name": doc.student_name,
+	                        "current_cgpa": cgpa}], academic_year)[0]
+	pd = policy.as_dict()
+	fee_due = bool(_fee_due_students([doc.student])) if pd.get("block_on_fee_due") else False
+	return _evaluate_year_promotion(row, pd, fee_due)["promotion_status"]
+
+
 @frappe.whitelist()
 def retry_enrollment(record_names):
 	"""Retry creating the next-year enrollment for promoted students whose
@@ -956,9 +980,19 @@ def retry_enrollment(record_names):
 		doc = frappe.get_doc("Student Promotion", name)
 		if doc.promotion_status not in PROMOTED_STATUSES or doc.enrollment_status == "Enrolled":
 			continue
-		if not cint(frappe.db.get_value("Promotion Policy", doc.promotion_policy, "auto_update_student_year")):
+		policy = frappe.get_doc("Promotion Policy", doc.promotion_policy)
+		if not cint(policy.auto_update_student_year):
 			result["failed"].append({"student": doc.student, "error": _("Auto-update is off on the policy.")})
 			continue
+		# Policy-based "Promoted" rows are re-checked against current data before
+		# moving the student (manual overrides are honoured as they are).
+		if doc.promotion_status == "Promoted" and not doc.manual_override:
+			still = _recheck_record(doc, policy)
+			if still != "Promoted":
+				result["failed"].append({"student": doc.student, "error": _(
+					"No longer meets the policy ({0}). Run Promotion again to re-evaluate, or use Promote Anyway."
+				).format(still)})
+				continue
 		outcome = _apply_year_promotion(doc.student, cint(doc.target_year))
 		doc.enrollment_status = outcome["status"]
 		doc.to_enrollment     = outcome["to_enrollment"]
@@ -1046,8 +1080,8 @@ def download_promotion_list(policy_name, list_type, from_year=None, to_year=None
 	}
 
 	headers = ["#", "Student ID", "Student Name", "Batch", "Current Year", "Target Year",
-	           "CGPA", "Backlogs", "Attendance %", "Shortage Courses", "CF FA+Shortage",
-	           "CGPA Check", "Backlog Check", "Attendance Check", "Shortage Check", "CF Check",
+	           "CGPA", "Backlogs", "Attendance %", "Short Courses", "Short after FA/MFA",
+	           "CGPA Check", "Backlog Check", "Attendance Check", "Shortage Check", "FA/MFA (CF) Check",
 	           "Fee Due Check", "Promotion Status", "Enrollment Status", "New Enrollment",
 	           "Remarks", "Override Reason", "Processed By", "Processed On"]
 	col_widths = [5, 18, 28, 14, 13, 13, 9, 10, 13, 16, 16, 13, 14, 16, 15, 12,

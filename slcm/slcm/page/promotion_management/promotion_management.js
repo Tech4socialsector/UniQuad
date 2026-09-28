@@ -10,61 +10,56 @@ frappe.pages['promotion-management'].on_page_load = function (wrapper) {
 	var NOT = ['Not Promoted', 'Override - Not Promoted'];
 
 	// ── CSS (NLS maroon) ──────────────────────────────────────────────────────
-	if (!document.getElementById('pm-style-v3')) {
+	if (!document.getElementById('pm-style-v4')) {
 		var style = document.createElement('style');
-		style.id = 'pm-style-v3';
+		style.id = 'pm-style-v4';
 		style.textContent = `
+		/* NLS maroon — solid colours only (no gradients / translucent overlays). */
 		.pm-wrap {
-			--pm-maroon:#920c24; --pm-maroon-dark:#6e0919; --pm-maroon-text:#920c24;
-			--pm-maroon-soft:rgba(146,12,36,.06); --pm-maroon-line:rgba(146,12,36,.2);
+			--pm-maroon:#920c24; --pm-maroon-dark:#6e0919; --pm-maroon-deep:#55071a; --pm-maroon-text:#920c24;
 			--pm-card:var(--card-bg,#fff); --pm-text:var(--text-color,#1f2937);
 			--pm-muted:var(--text-muted,#6b7280); --pm-line:var(--border-color,#e5e7eb);
-			--pm-subtle:var(--subtle-fg,#f8f8f8); --pm-control:var(--control-bg,#f4f5f6);
+			--pm-subtle:var(--subtle-fg,#f7f7f7); --pm-control:var(--control-bg,#f4f5f6);
 			--pm-green:#15803d; --pm-red:#b91c1c; --pm-amber:#b45309; --pm-blue:#1d4ed8;
 			font-family:var(--font-stack,'Inter',sans-serif); color:var(--pm-text); padding-bottom:48px;
 		}
-		[data-theme="dark"] .pm-wrap { --pm-maroon-text:#f3a5b3; --pm-maroon-soft:rgba(243,165,179,.08); --pm-maroon-line:rgba(243,165,179,.28);
-			--pm-green:#4ade80; --pm-red:#f87171; --pm-amber:#fbbf24; --pm-blue:#93c5fd; }
+		[data-theme="dark"] .pm-wrap { --pm-maroon-text:#f08a9c; --pm-green:#22c55e; --pm-red:#ef4444; --pm-amber:#f59e0b; --pm-blue:#60a5fa; }
 		.pm-wrap *, .pm-wrap *::before, .pm-wrap *::after { box-sizing:border-box; }
 		.pm-hidden { display:none !important; }
 
 		/* Hero */
-		.pm-hero { position:relative; overflow:hidden; border-radius:16px; padding:22px 26px 18px; margin-bottom:16px; color:#fff;
-			background:radial-gradient(120% 140% at 100% 0%, #b3122f 0%, var(--pm-maroon) 42%, var(--pm-maroon-dark) 100%);
-			box-shadow:0 10px 30px -12px rgba(110,9,25,.55); }
-		.pm-hero::after { content:''; position:absolute; right:-60px; top:-60px; width:220px; height:220px; border-radius:50%;
-			background:rgba(255,255,255,.06); pointer-events:none; }
-		.pm-hero-row { display:flex; align-items:center; gap:16px; flex-wrap:wrap; position:relative; z-index:1; }
-		.pm-hero-icon { width:50px; height:50px; border-radius:14px; flex-shrink:0; background:rgba(255,255,255,.15);
-			border:1px solid rgba(255,255,255,.2); display:flex; align-items:center; justify-content:center; font-size:24px; }
+		.pm-hero { border-radius:14px; padding:22px 26px 18px; margin-bottom:16px; color:#fff; background:var(--pm-maroon); }
+		.pm-hero-row { display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+		.pm-hero-icon { width:50px; height:50px; border-radius:12px; flex-shrink:0; background:var(--pm-maroon-dark);
+			display:flex; align-items:center; justify-content:center; font-size:24px; }
 		.pm-hero-text { flex:1; min-width:240px; }
-		.pm-hero-title { font-size:19px; font-weight:800; letter-spacing:.1px; }
-		.pm-hero-sub { font-size:12.5px; color:rgba(255,255,255,.8); margin-top:3px; }
+		.pm-hero-title { font-size:19px; font-weight:800; }
+		.pm-hero-sub { font-size:12.5px; color:#fff; margin-top:3px; }
 		.pm-hero-actions { display:flex; gap:8px; flex-wrap:wrap; }
-		.pm-hero-btn { height:34px; padding:0 14px; border-radius:9px; border:1px solid rgba(255,255,255,.32);
-			background:rgba(255,255,255,.1); color:#fff; font-size:12.5px; font-weight:600; cursor:pointer;
-			display:inline-flex; align-items:center; gap:6px; text-decoration:none; white-space:nowrap; transition:background .15s; }
-		.pm-hero-btn:hover { background:rgba(255,255,255,.2); color:#fff; text-decoration:none; }
-		.pm-hero-btn.solid { background:#fff; color:var(--pm-maroon); border-color:#fff; }
-		.pm-hero-btn.solid:hover { background:#fdf2f4; color:var(--pm-maroon-dark); }
+		.pm-hero-btn { height:34px; padding:0 14px; border-radius:8px; border:1px solid #fff; background:var(--pm-maroon-dark);
+			color:#fff; font-size:12.5px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px;
+			text-decoration:none; white-space:nowrap; }
+		.pm-hero-btn:hover { background:var(--pm-maroon-deep); color:#fff; text-decoration:none; }
+		.pm-hero-btn.solid { background:#fff; color:#920c24; }
+		.pm-hero-btn.solid:hover { background:#f3f4f6; color:#6e0919; }
 
 		/* Stepper */
-		.pm-stepper { display:flex; gap:6px; margin-top:18px; position:relative; z-index:1; flex-wrap:wrap; }
-		.pm-stp { flex:1; min-width:150px; display:flex; align-items:center; gap:9px; padding:9px 12px; border-radius:10px;
-			background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12); font-size:12.5px; color:rgba(255,255,255,.72); transition:all .2s; }
-		.pm-stp-dot { width:22px; height:22px; border-radius:50%; flex-shrink:0; display:inline-flex; align-items:center; justify-content:center;
-			font-size:11px; font-weight:800; background:rgba(255,255,255,.14); color:#fff; }
+		.pm-stepper { display:flex; gap:8px; margin-top:18px; flex-wrap:wrap; }
+		.pm-stp { flex:1; min-width:150px; display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px;
+			background:var(--pm-maroon-dark); color:#fff; font-size:12.5px; border:2px solid var(--pm-maroon-dark); }
+		.pm-stp-dot { width:24px; height:24px; border-radius:50%; flex-shrink:0; display:inline-flex; align-items:center; justify-content:center;
+			font-size:11px; font-weight:800; background:var(--pm-maroon-deep); color:#fff; border:1px solid #fff; }
 		.pm-stp b { display:block; color:#fff; font-size:12.5px; }
-		.pm-stp small { font-size:11px; }
-		.pm-stp.active { background:rgba(255,255,255,.16); border-color:rgba(255,255,255,.4); color:#fff; }
-		.pm-stp.active .pm-stp-dot { background:#fff; color:var(--pm-maroon); }
-		.pm-stp.done .pm-stp-dot { background:#22c55e; color:#fff; }
-		.pm-hero-note { position:relative; z-index:1; margin-top:12px; font-size:11.5px; color:rgba(255,255,255,.75); }
-		.pm-hero-note a { color:#fff; font-weight:600; text-decoration:underline; }
+		.pm-stp small { font-size:11px; color:#fff; }
+		.pm-stp.active { background:#fff; border-color:#fff; }
+		.pm-stp.active b, .pm-stp.active small { color:#920c24; }
+		.pm-stp.active .pm-stp-dot { background:#920c24; color:#fff; border-color:#920c24; }
+		.pm-stp.done .pm-stp-dot { background:#15803d; border-color:#15803d; color:#fff; }
+		.pm-hero-note { margin-top:12px; font-size:11.5px; color:#fff; }
+		.pm-hero-note a { color:#fff; font-weight:700; text-decoration:underline; }
 
 		/* Cards */
-		.pm-card { background:var(--pm-card); border:1px solid var(--pm-line); border-radius:14px; padding:18px 20px; margin-bottom:16px;
-			box-shadow:0 1px 2px rgba(16,24,40,.04); }
+		.pm-card { background:var(--pm-card); border:1px solid var(--pm-line); border-radius:12px; padding:18px 20px; margin-bottom:16px; }
 		.pm-card.flush { padding:0; overflow:hidden; }
 		.pm-card-head { display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
 		.pm-card-title { font-size:14px; font-weight:700; }
@@ -77,117 +72,122 @@ frappe.pages['promotion-management'].on_page_load = function (wrapper) {
 		@media (max-width:560px)  { .pm-grid { grid-template-columns:1fr; } }
 		.pm-fl { font-size:11px; color:var(--pm-muted); font-weight:700; margin-bottom:6px; text-transform:uppercase; letter-spacing:.5px; }
 		.pm-fl .req { color:var(--pm-maroon-text); }
-		.pm-sel, .pm-inp { height:40px; width:100%; border:1.5px solid var(--pm-line); border-radius:10px;
-			padding:0 12px; font-size:13px; background:var(--pm-control); color:var(--pm-text); outline:none; transition:border-color .15s, box-shadow .15s, background .15s; }
+		.pm-sel, .pm-inp { height:40px; width:100%; border:1.5px solid var(--pm-line); border-radius:8px;
+			padding:0 12px; font-size:13px; background:var(--pm-card); color:var(--pm-text); outline:none; }
 		.pm-sel { cursor:pointer; }
-		.pm-sel:hover, .pm-inp:hover { border-color:var(--pm-maroon-line); }
-		.pm-sel:focus, .pm-inp:focus { border-color:var(--pm-maroon); background:var(--pm-card); box-shadow:0 0 0 4px rgba(146,12,36,.1); }
-		.pm-sel:disabled { opacity:.6; cursor:not-allowed; }
-		.pm-actionbar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:16px; padding-top:14px; border-top:1px dashed var(--pm-line); }
+		.pm-sel:hover, .pm-inp:hover { border-color:var(--pm-muted); }
+		.pm-sel:focus, .pm-inp:focus { border-color:var(--pm-maroon); box-shadow:0 0 0 1px var(--pm-maroon); }
+		.pm-sel:disabled { background:var(--pm-control); cursor:not-allowed; }
+		.pm-actionbar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:16px; padding-top:14px; border-top:1px solid var(--pm-line); }
 		.pm-actionbar .pm-hint { flex:1; min-width:220px; font-size:12px; color:var(--pm-muted); }
 
 		/* Buttons */
-		.pm-btn { height:38px; padding:0 16px; border-radius:10px; border:1.5px solid var(--pm-line); background:var(--pm-card);
+		.pm-btn { height:38px; padding:0 16px; border-radius:8px; border:1.5px solid var(--pm-line); background:var(--pm-card);
 			cursor:pointer; font-size:13px; font-weight:600; color:var(--pm-text); display:inline-flex; align-items:center;
-			justify-content:center; gap:7px; white-space:nowrap; transition:all .15s; }
-		.pm-btn:hover { border-color:var(--pm-maroon-line); color:var(--pm-maroon-text); }
+			justify-content:center; gap:7px; white-space:nowrap; }
+		.pm-btn:hover { border-color:var(--pm-maroon); color:var(--pm-maroon-text); }
 		.pm-btn:active { transform:translateY(1px); }
-		.pm-btn:disabled { opacity:.5; cursor:not-allowed; pointer-events:none; }
-		.pm-btn.primary { background:var(--pm-maroon); border-color:var(--pm-maroon); color:#fff; box-shadow:0 4px 12px -4px rgba(146,12,36,.6); }
-		.pm-btn.primary:hover { background:var(--pm-maroon-dark); border-color:var(--pm-maroon-dark); color:#fff; }
+		.pm-btn:disabled { background:var(--pm-control); color:var(--pm-muted); cursor:not-allowed; pointer-events:none; }
+		.pm-btn.primary { background:#920c24; border-color:#920c24; color:#fff; }
+		.pm-btn.primary:hover { background:#6e0919; border-color:#6e0919; color:#fff; }
+		.pm-btn.primary:disabled { background:#9ca3af; border-color:#9ca3af; color:#fff; }
 		.pm-btn.lg { height:42px; padding:0 20px; font-size:13.5px; }
-		.pm-btn.sm { height:32px; padding:0 12px; font-size:12px; border-radius:8px; }
-		.pm-btn.xs { height:28px; padding:0 10px; font-size:11.5px; border-radius:7px; }
+		.pm-btn.sm { height:32px; padding:0 12px; font-size:12px; border-radius:7px; }
+		.pm-btn.xs { height:28px; padding:0 10px; font-size:11.5px; border-radius:6px; }
 		.pm-btn.green { background:#15803d; border-color:#15803d; color:#fff; }
 		.pm-btn.green:hover { background:#166534; border-color:#166534; color:#fff; }
-		.pm-btn.ghost-red { color:var(--pm-red); }
-		.pm-btn.ghost-red:hover { border-color:#fecaca; }
+		.pm-btn.ghost-red { color:var(--pm-red); border-color:var(--pm-red); }
+		.pm-btn.ghost-red:hover { background:var(--pm-red); color:#fff; }
 
-		/* Policy strip */
-		.pm-policy-strip { margin-top:14px; padding:10px 14px; border-radius:10px; background:var(--pm-maroon-soft);
-			border:1px solid var(--pm-maroon-line); display:flex; gap:7px; flex-wrap:wrap; align-items:center; font-size:12px; }
+		/* Policy checks */
+		.pm-policy-strip { margin-top:14px; padding:10px 14px; border-radius:8px; background:var(--pm-card);
+			border:1px solid var(--pm-line); border-left:4px solid #920c24; display:flex; gap:7px; flex-wrap:wrap; align-items:center; font-size:12px; }
 		.pm-policy-strip .lbl { font-weight:700; color:var(--pm-maroon-text); margin-right:2px; }
-		.pm-crit { display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:20px; font-size:11.5px; font-weight:700; }
-		.pm-crit.on  { background:#dcfce7; color:#166534; }
-		.pm-crit.off { background:var(--pm-control); color:var(--pm-muted); font-weight:600; text-decoration:line-through; opacity:.8; }
-		.pm-crit.warn{ background:#fef3c7; color:#92400e; }
-		.pm-policy-strip a { margin-left:auto; font-size:11.5px; font-weight:600; color:var(--pm-maroon-text); }
+		.pm-crit { display:inline-flex; align-items:center; gap:4px; padding:4px 10px; border-radius:6px; font-size:11.5px; font-weight:700; cursor:help; }
+		.pm-crit.on  { background:#920c24; color:#fff; }
+		.pm-crit.off { background:var(--pm-card); color:var(--pm-muted); border:1px solid var(--pm-line); font-weight:600; }
+		.pm-crit.warn{ background:#b45309; color:#fff; }
+		.pm-policy-strip a, .pm-policy-strip .pm-link { font-size:11.5px; font-weight:700; color:var(--pm-maroon-text); cursor:pointer; text-decoration:underline; }
+		.pm-policy-strip .pm-push { margin-left:auto; display:flex; gap:12px; }
+		.pm-help { margin-top:10px; border:1px solid var(--pm-line); border-radius:8px; overflow:hidden; font-size:12px; }
+		.pm-help table { width:100%; border-collapse:collapse; }
+		.pm-help th { background:#920c24; color:#fff; text-align:left; padding:7px 12px; font-size:11px; text-transform:uppercase; letter-spacing:.4px; }
+		.pm-help td { padding:8px 12px; border-top:1px solid var(--pm-line); vertical-align:top; }
+		.pm-help td:first-child { font-weight:700; white-space:nowrap; color:var(--pm-maroon-text); }
 
-		/* Notices */
-		.pm-notice { border-radius:10px; padding:10px 14px; margin-top:12px; font-size:12.5px; display:flex; gap:9px; align-items:flex-start; line-height:1.5; }
-		.pm-notice.info { background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; }
-		.pm-notice.warn { background:#fffbeb; border:1px solid #fde68a; color:#92400e; }
-		.pm-notice.ok   { background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; }
-		.pm-notice.err  { background:#fef2f2; border:1px solid #fecaca; color:#991b1b; }
-		.pm-notice a, .pm-notice .pm-link { font-weight:700; color:inherit; text-decoration:underline; cursor:pointer; }
+		/* Notices: white body, solid coloured edge */
+		.pm-notice { border-radius:8px; padding:10px 14px; margin-top:12px; font-size:12.5px; display:flex; gap:9px; align-items:flex-start;
+			line-height:1.5; background:var(--pm-card); border:1px solid var(--pm-line); border-left:4px solid; }
+		.pm-notice.info { border-left-color:#1d4ed8; color:var(--pm-text); }
+		.pm-notice.warn { border-left-color:#b45309; color:var(--pm-text); }
+		.pm-notice.ok   { border-left-color:#15803d; color:var(--pm-text); }
+		.pm-notice.err  { border-left-color:#b91c1c; color:var(--pm-text); }
+		.pm-notice a, .pm-notice .pm-link { font-weight:700; color:var(--pm-maroon-text); text-decoration:underline; cursor:pointer; }
 		.pm-notice .pm-notice-body { flex:1; }
 
 		/* Tabs */
-		.pm-views { display:inline-flex; gap:4px; background:var(--pm-control); border:1px solid var(--pm-line); border-radius:12px; padding:4px; margin:2px 0 16px; flex-wrap:wrap; }
-		.pm-view-tab { padding:8px 16px; font-size:13px; font-weight:600; color:var(--pm-muted); cursor:pointer; border-radius:9px;
-			display:inline-flex; align-items:center; gap:8px; user-select:none; transition:all .15s; }
+		.pm-views { display:inline-flex; gap:4px; background:var(--pm-card); border:1px solid var(--pm-line); border-radius:10px; padding:4px; margin:2px 0 16px; flex-wrap:wrap; }
+		.pm-view-tab { padding:8px 16px; font-size:13px; font-weight:600; color:var(--pm-text); cursor:pointer; border-radius:7px;
+			display:inline-flex; align-items:center; gap:8px; user-select:none; }
 		.pm-view-tab:hover { color:var(--pm-maroon-text); }
-		.pm-view-tab.active { background:var(--pm-card); color:var(--pm-maroon-text); box-shadow:0 1px 4px rgba(0,0,0,.08); }
-		.pm-count { min-width:20px; padding:1px 7px; border-radius:10px; font-size:11px; font-weight:700; background:var(--pm-line); color:var(--pm-muted); text-align:center; }
-		.pm-view-tab.active .pm-count { background:var(--pm-maroon); color:#fff; }
+		.pm-view-tab.active { background:#920c24; color:#fff; }
+		.pm-count { min-width:20px; padding:1px 7px; border-radius:10px; font-size:11px; font-weight:700; background:var(--pm-control); color:var(--pm-text); text-align:center; }
+		.pm-view-tab.active .pm-count { background:#fff; color:#920c24; }
 
 		/* KPI tiles */
 		.pm-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin-bottom:16px; }
-		.pm-kpi { background:var(--pm-card); border:1px solid var(--pm-line); border-radius:14px; padding:14px 16px; display:flex; align-items:center; gap:12px; }
-		.pm-kpi-ico { width:40px; height:40px; border-radius:11px; display:flex; align-items:center; justify-content:center; font-size:17px; flex-shrink:0;
-			background:var(--cb); color:var(--c); }
+		.pm-kpi { background:var(--pm-card); border:1px solid var(--pm-line); border-top:4px solid var(--c); border-radius:10px; padding:14px 16px; display:flex; align-items:center; gap:12px; }
+		.pm-kpi-ico { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0;
+			background:var(--c); color:#fff; }
 		.pm-kpi-val { font-size:22px; font-weight:800; line-height:1.1; color:var(--pm-text); }
 		.pm-kpi-lbl { font-size:11px; color:var(--pm-muted); font-weight:600; margin-top:2px; }
 
 		/* Log band */
-		.pm-band { border-radius:16px; padding:20px 22px; margin-bottom:16px; color:#fff;
-			background:radial-gradient(120% 160% at 100% 0%, #b3122f 0%, var(--pm-maroon) 45%, var(--pm-maroon-dark) 100%); }
+		.pm-band { border-radius:14px; padding:20px 22px; margin-bottom:16px; color:#fff; background:#920c24; }
 		.pm-band-top { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
-		.pm-band-kicker { font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:rgba(255,255,255,.7); }
+		.pm-band-kicker { font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:#fff; }
 		.pm-band-title { font-size:16px; font-weight:700; margin-top:3px; }
-		.pm-band-meta { font-size:12px; color:rgba(255,255,255,.78); text-align:right; }
-		.pm-band-meta b { color:#fff; }
+		.pm-band-meta { font-size:12px; color:#fff; text-align:right; }
 		.pm-band-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(110px,1fr)); gap:10px; }
-		.pm-band-stat { background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); border-radius:11px; padding:10px 12px; }
-		.pm-band-stat .v { font-size:22px; font-weight:800; line-height:1.1; }
-		.pm-band-stat .l { font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:rgba(255,255,255,.72); margin-top:3px; }
-		.pm-band-stat.g .v { color:#86efac; } .pm-band-stat.r .v { color:#fca5a5; }
-		.pm-band-stat.a .v { color:#fcd34d; } .pm-band-stat.b .v { color:#93c5fd; }
-		.pm-meter { margin-top:14px; height:8px; border-radius:6px; background:rgba(255,255,255,.14); overflow:hidden; display:flex; }
+		.pm-band-stat { background:#6e0919; border-radius:10px; padding:10px 12px; border-left:4px solid #fff; }
+		.pm-band-stat .v { font-size:22px; font-weight:800; line-height:1.1; color:#fff; }
+		.pm-band-stat .l { font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:#fff; margin-top:3px; }
+		.pm-band-stat.g { border-left-color:#22c55e; } .pm-band-stat.r { border-left-color:#ef4444; }
+		.pm-band-stat.a { border-left-color:#f59e0b; } .pm-band-stat.b { border-left-color:#60a5fa; }
+		.pm-meter { margin-top:14px; height:10px; border-radius:6px; background:#55071a; overflow:hidden; display:flex; }
 		.pm-meter span { height:100%; }
-		.pm-meter-legend { display:flex; gap:14px; flex-wrap:wrap; margin-top:7px; font-size:11px; color:rgba(255,255,255,.78); }
-		.pm-meter-legend i { display:inline-block; width:8px; height:8px; border-radius:2px; margin-right:5px; }
+		.pm-meter-legend { display:flex; gap:14px; flex-wrap:wrap; margin-top:8px; font-size:11px; color:#fff; }
+		.pm-meter-legend i { display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:5px; }
 
 		/* Toolbars */
 		.pm-toolbar { display:flex; gap:10px; flex-wrap:wrap; align-items:center; padding:12px 16px; border-bottom:1px solid var(--pm-line); }
-		.pm-chips { display:inline-flex; gap:3px; background:var(--pm-control); border-radius:10px; padding:3px; flex-wrap:wrap; }
-		.pm-chip { padding:5px 11px; border-radius:8px; font-size:12.5px; font-weight:600; color:var(--pm-muted); cursor:pointer;
-			user-select:none; display:inline-flex; align-items:center; gap:6px; transition:all .15s; }
-		.pm-chip:hover { color:var(--pm-maroon-text); }
-		.pm-chip.active { background:var(--pm-card); color:var(--pm-maroon-text); box-shadow:0 1px 3px rgba(0,0,0,.1); }
-		.pm-chip .n { font-size:10.5px; font-weight:700; padding:0 6px; border-radius:8px; background:var(--pm-line); }
-		.pm-chip.active .n { background:var(--pm-maroon); color:#fff; }
+		.pm-chips { display:inline-flex; gap:4px; flex-wrap:wrap; }
+		.pm-chip { padding:5px 11px; border-radius:7px; font-size:12.5px; font-weight:600; color:var(--pm-text); cursor:pointer;
+			user-select:none; display:inline-flex; align-items:center; gap:6px; border:1px solid var(--pm-line); background:var(--pm-card); }
+		.pm-chip:hover { border-color:#920c24; color:var(--pm-maroon-text); }
+		.pm-chip.active { background:#920c24; border-color:#920c24; color:#fff; }
+		.pm-chip .n { font-size:10.5px; font-weight:700; padding:0 6px; border-radius:8px; background:var(--pm-control); color:var(--pm-text); }
+		.pm-chip.active .n { background:#fff; color:#920c24; }
 		.pm-srch { position:relative; flex:1; min-width:180px; max-width:300px; }
 		.pm-srch input { padding-left:34px; height:36px; }
 		.pm-srch-ico { position:absolute; left:11px; top:9px; color:var(--pm-muted); font-size:13px; pointer-events:none; }
 		.pm-spacer { flex:1; }
-		.pm-dl { display:flex; gap:6px; flex-wrap:wrap; align-items:center; padding:11px 16px; border-bottom:1px solid var(--pm-line); background:var(--pm-maroon-soft); }
+		.pm-dl { display:flex; gap:6px; flex-wrap:wrap; align-items:center; padding:11px 16px; border-bottom:1px solid var(--pm-line); background:var(--pm-card); }
 		.pm-dl-lbl { font-size:11px; font-weight:700; color:var(--pm-maroon-text); text-transform:uppercase; letter-spacing:.6px; margin-right:4px; }
 
 		/* Tables */
 		.pm-table-wrap { overflow-x:auto; }
 		table.pm-tbl { width:100%; border-collapse:collapse; font-size:13px; }
-		table.pm-tbl th { position:sticky; top:0; background:var(--pm-subtle); color:var(--pm-muted); font-size:10.5px; font-weight:700; text-transform:uppercase;
-			letter-spacing:.5px; padding:10px 12px; border-bottom:1px solid var(--pm-line); white-space:nowrap; text-align:left; }
+		table.pm-tbl th { background:#920c24; color:#fff; font-size:10.5px; font-weight:700; text-transform:uppercase;
+			letter-spacing:.5px; padding:10px 12px; white-space:nowrap; text-align:left; cursor:default; }
 		table.pm-tbl td { padding:11px 12px; border-bottom:1px solid var(--pm-line); vertical-align:middle; }
 		table.pm-tbl tr:last-child td { border-bottom:none; }
-		table.pm-tbl tbody tr { transition:background .12s; }
-		table.pm-tbl tbody tr:hover td { background:var(--pm-maroon-soft); }
+		table.pm-tbl tbody tr:hover td { background:var(--pm-subtle); }
 		table.pm-tbl td.c, table.pm-tbl th.c { text-align:center; }
 		.pm-num { color:var(--pm-muted); font-size:12px; }
 		.pm-stu { display:flex; align-items:center; gap:10px; min-width:190px; }
 		.pm-av { width:32px; height:32px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center;
-			font-size:12px; font-weight:700; color:#fff; background:var(--av,#920c24); }
+			font-size:12px; font-weight:700; color:#fff; background:#920c24; }
 		.pm-sname { font-weight:600; color:var(--pm-text); line-height:1.25; }
 		.pm-sid { font-size:11.5px; }
 		.pm-sid a { color:var(--pm-maroon-text); }
@@ -198,43 +198,40 @@ frappe.pages['promotion-management'].on_page_load = function (wrapper) {
 		.pm-ovr { font-size:11.5px; color:var(--pm-blue); margin-top:4px; max-width:360px; }
 		.pm-actions { display:flex; gap:6px; flex-wrap:wrap; }
 
-		.pm-bdg { display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; white-space:nowrap; }
-		.pm-bdg::before { content:''; width:6px; height:6px; border-radius:50%; background:currentColor; }
-		.bdg-pro  { background:#dcfce7; color:#15803d; }
-		.bdg-not  { background:#fee2e2; color:#b91c1c; }
-		.bdg-cond { background:#fef3c7; color:#92400e; }
-		.bdg-ovp  { background:#ccfbf1; color:#0f766e; }
-		.bdg-ovn  { background:#fecaca; color:#7f1d1d; }
-		.bdg-enr  { background:#e0f2fe; color:#075985; }
-		.bdg-fail { background:#fee2e2; color:#b91c1c; }
+		.pm-bdg { display:inline-flex; align-items:center; padding:3px 10px; border-radius:6px; font-size:11px; font-weight:700; white-space:nowrap; color:#fff; }
+		.bdg-pro  { background:#15803d; }
+		.bdg-not  { background:#b91c1c; }
+		.bdg-cond { background:#b45309; }
+		.bdg-ovp  { background:#0f766e; }
+		.bdg-ovn  { background:#7f1d1d; }
+		.bdg-enr  { background:#1d4ed8; }
+		.bdg-fail { background:#b91c1c; }
 		.chk { display:inline-flex; width:22px; height:22px; border-radius:50%; align-items:center; justify-content:center; font-weight:800; font-size:11px; }
-		.chk.pass { background:#dcfce7; color:#15803d; } .chk.fail { background:#fee2e2; color:#b91c1c; }
-		.chk.nc { color:var(--pm-muted); opacity:.5; }
+		.chk.pass { background:#15803d; color:#fff; } .chk.fail { background:#b91c1c; color:#fff; }
+		.chk.nc { color:var(--pm-muted); }
 
 		/* Empty */
 		.pm-empty { text-align:center; padding:52px 20px; color:var(--pm-muted); }
-		.pm-empty-ico { width:64px; height:64px; margin:0 auto 12px; border-radius:18px; display:flex; align-items:center; justify-content:center;
-			font-size:28px; background:var(--pm-maroon-soft); border:1px solid var(--pm-maroon-line); }
+		.pm-empty-ico { width:60px; height:60px; margin:0 auto 12px; border-radius:14px; display:flex; align-items:center; justify-content:center;
+			font-size:26px; background:#920c24; color:#fff; }
 		.pm-empty-title { font-size:15px; font-weight:700; color:var(--pm-text); margin-bottom:4px; }
 		.pm-empty .pm-btn { margin-top:14px; }
 
-		/* Run dialog */
+		/* Dialogs */
 		.pm-run-sum { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:4px 0 14px; }
-		.pm-run-tile { border-radius:12px; padding:12px; text-align:center; border:1px solid var(--border-color); }
+		.pm-run-tile { border-radius:10px; padding:12px; text-align:center; color:#fff; }
 		.pm-run-tile .v { font-size:24px; font-weight:800; line-height:1.1; }
-		.pm-run-tile .l { font-size:11px; color:var(--text-muted); margin-top:3px; font-weight:600; }
-		.pm-run-tile.g { background:#f0fdf4; border-color:#bbf7d0; } .pm-run-tile.g .v { color:#15803d; }
-		.pm-run-tile.r { background:#fef2f2; border-color:#fecaca; } .pm-run-tile.r .v { color:#b91c1c; }
-		.pm-run-tile.a { background:#fffbeb; border-color:#fde68a; } .pm-run-tile.a .v { color:#b45309; }
+		.pm-run-tile .l { font-size:11px; margin-top:3px; font-weight:600; }
+		.pm-run-tile.g { background:#15803d; } .pm-run-tile.r { background:#b91c1c; } .pm-run-tile.a { background:#b45309; }
 		.pm-run-meta { display:grid; grid-template-columns:130px 1fr; gap:6px 10px; font-size:12.5px; padding:12px 14px;
-			border-radius:10px; background:var(--subtle-fg,#f8f8f8); margin-bottom:12px; }
+			border-radius:8px; border:1px solid var(--border-color); margin-bottom:12px; }
 		.pm-run-meta span:nth-child(odd) { color:var(--text-muted); }
 		.pm-run-meta span:nth-child(even) { font-weight:600; }
-		.pm-run-dialog .modal-header { background:linear-gradient(135deg,#920c24,#6e0919); }
+		.pm-run-dialog .modal-header { background:#920c24; }
 		.pm-run-dialog .modal-header .modal-title { color:#fff; }
 		.pm-run-dialog .modal-header .btn-modal-close svg { stroke:#fff; }
 		.pm-run-dialog .modal-footer .btn-primary { background:#920c24; border-color:#920c24; }
-		.pm-run-dialog .modal-footer .btn-primary:hover { background:#6e0919; }
+		.pm-run-dialog .modal-footer .btn-primary:hover { background:#6e0919; border-color:#6e0919; }
 		`;
 		document.head.appendChild(style);
 	}
@@ -352,13 +349,11 @@ frappe.pages['promotion-management'].on_page_load = function (wrapper) {
 		if (v === 'Fail') return '<span class="chk fail" title="Fail">&#10007;</span>';
 		return '<span class="chk nc" title="Not checked">—</span>';
 	}
-	var AV_COLORS = ['#920c24', '#9a3412', '#1d4ed8', '#0f766e', '#6d28d9', '#be185d', '#4d7c0f', '#0369a1'];
 	function studentCell(r) {
 		var name = (r.student_name || r.student || '').trim();
 		var parts = name.split(/\s+/).filter(Boolean);
 		var ini = ((parts[0] || '?')[0] + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
-		var h = 0; for (var i = 0; i < (r.student || '').length; i++) h = (h * 31 + r.student.charCodeAt(i)) >>> 0;
-		return '<div class="pm-stu"><span class="pm-av" style="--av:' + AV_COLORS[h % AV_COLORS.length] + '">' + esc(ini) + '</span>'
+		return '<div class="pm-stu"><span class="pm-av">' + esc(ini) + '</span>'
 			+ '<div><div class="pm-sname">' + esc(name || r.student) + '</div>'
 			+ '<div class="pm-sid"><a href="/app/student-master/' + encodeURIComponent(r.student) + '" target="_blank">' + esc(r.student) + '</a>'
 			+ (r.batch_year ? ' <span class="pm-muted">&middot; ' + esc(r.batch_year) + '</span>' : '') + '</div></div></div>';
@@ -384,7 +379,9 @@ frappe.pages['promotion-management'].on_page_load = function (wrapper) {
 		};
 	}
 	function filtersComplete(f) {
-		return !!(f.program && f.academic_year && f.policy && f.from_year && f.to_year > f.from_year);
+		if (!(f.program && f.academic_year && f.policy && f.from_year && f.to_year > f.from_year)) return false;
+		var prob = policyYearProblem(S.policies[f.policy], f);
+		return !(prob && prob.level === 'block');
 	}
 	function sameKey(a, b) {
 		return !!(a && b && a.program === b.program && a.academic_year === b.academic_year
@@ -458,6 +455,7 @@ frappe.pages['promotion-management'].on_page_load = function (wrapper) {
 		else if (!f.policy) hint = 'Select the Promotion Policy to apply.';
 		else if (!f.from_year) hint = 'Enter the year students are promoted from.';
 		else if (f.to_year <= f.from_year) hint = 'To Year must be greater than From Year.';
+		else if (!s1) hint = 'The selected policy does not match this year — pick the policy for Year ' + esc(f.from_year) + ' or change the years.';
 		else if (s3) hint = '&#10003; Promotion was run for this selection. Run again to re-evaluate students still in Year ' + esc(f.from_year) + '.';
 		else if (s2) hint = 'Preview ready — <b>' + (S.preview.counts.promoted || 0) + '</b> of <b>' + (S.preview.counts.total || 0) + '</b> eligible. Click <b>Run Promotion</b> when ready.';
 		else hint = 'Ready. <b>Preview</b> to check eligibility first, or <b>Run Promotion</b> directly (you will see a summary before anything changes).';
@@ -582,23 +580,82 @@ frappe.pages['promotion-management'].on_page_load = function (wrapper) {
 		}
 	}
 
+	// One definition per policy check — used for the chips, tooltips and help panel.
+	function policyChecks(p) {
+		var maxShort = (p.max_shortage_courses === null || p.max_shortage_courses === undefined || p.max_shortage_courses === '')
+			? 2 : p.max_shortage_courses;
+		return [
+			{ on: p.enable_cgpa_check, name: 'CGPA', rule: 'CGPA ≥ ' + (p.min_cgpa || 0),
+				help: 'Current CGPA from published results must be at least ' + (p.min_cgpa || 0) + '.' },
+			{ on: p.enable_backlog_check, name: 'Backlogs', rule: 'Failed courses ≤ ' + (p.max_backlogs_allowed || 0),
+				help: 'Courses failed in this academic year\'s exams (final grade marked as a fail in the grading schema).' },
+			{ on: p.enable_attendance_check, name: 'Attendance', rule: 'Avg attendance ≥ ' + (p.min_attendance_percent || 0) + '%',
+				help: 'Average attendance across all courses in this academic year.' },
+			{ on: p.enable_course_shortage_check, name: 'Attendance shortage', rule: 'Courses below min. attendance ≤ ' + maxShort,
+				help: 'Number of courses where attendance is below that course\'s required minimum.' },
+			{ on: p.enable_cf_check, name: 'Carry-forward (after FA/MFA)', rule: 'Still short after FA/MFA ≤ ' + (p.max_cf_fa_shortage || 0) + ' courses',
+				help: 'Courses where First Attempt (FA) or Medical First Attempt (MFA) condonation hours were credited, '
+					+ 'but the student is still not exam-eligible. These courses are carried forward (CF).' },
+			{ on: p.block_on_fee_due, name: 'Fee due', rule: 'No outstanding fee',
+				help: 'Blocks promotion if the student has any Fee Demand that is Pending, Partially Paid or Overdue.' },
+		];
+	}
+
+	// A policy whose years are real year levels (1–10) must match the selection.
+	function policyYearProblem(p, f) {
+		if (!p) return null;
+		if (p.from_year > 10) {
+			return { level: 'warn', text: 'This policy\'s years are set as ' + p.from_year + ' → ' + p.to_year
+				+ ' (calendar years). Set them to year levels (e.g. 1 → 2) so the policy applies to the right year.' };
+		}
+		if (f.from_year && (f.from_year !== p.from_year || (f.to_year && f.to_year !== p.to_year))) {
+			return { level: 'block', text: 'This policy is for Year ' + p.from_year + ' → ' + p.to_year
+				+ ', but Year ' + f.from_year + ' → ' + (f.to_year || '?') + ' is selected.' };
+		}
+		return null;
+	}
+
 	function renderPolicyStrip() {
 		var p = S.policies[$('#pm-policy').val()];
 		var $s = $('#pm-policy-strip');
-		if (!p) { $s.addClass('pm-hidden').html(''); return; }
-		var maxShort = (p.max_shortage_courses === null || p.max_shortage_courses === undefined || p.max_shortage_courses === '')
-			? 2 : p.max_shortage_courses;
+		if (!p) { $s.addClass('pm-hidden').html(''); $('#pm-help').remove(); return; }
+		var checks = policyChecks(p);
 		var h = '<span class="lbl">Checks:</span>';
-		h += p.enable_cgpa_check ? '<span class="pm-crit on">&#10003; CGPA &ge; ' + esc(p.min_cgpa || 0) + '</span>' : '<span class="pm-crit off">CGPA</span>';
-		h += p.enable_backlog_check ? '<span class="pm-crit on">&#10003; Backlogs &le; ' + esc(p.max_backlogs_allowed || 0) + '</span>' : '<span class="pm-crit off">Backlogs</span>';
-		h += p.enable_attendance_check ? '<span class="pm-crit on">&#10003; Attendance &ge; ' + esc(p.min_attendance_percent || 0) + '%</span>' : '<span class="pm-crit off">Attendance</span>';
-		h += p.enable_course_shortage_check ? '<span class="pm-crit on">&#10003; Shortage courses &le; ' + esc(maxShort) + '</span>' : '<span class="pm-crit off">Shortage</span>';
-		h += p.enable_cf_check ? '<span class="pm-crit on">&#10003; CF FA+Shortage &le; ' + esc(p.max_cf_fa_shortage || 0) + '</span>' : '<span class="pm-crit off">Carry-forward</span>';
-		h += p.block_on_fee_due ? '<span class="pm-crit on">&#10003; No fee due</span>' : '<span class="pm-crit off">Fee due</span>';
-		if (!p.auto_update_student_year) h += '<span class="pm-crit warn">&#9888; Auto-update OFF — decisions logged only</span>';
-		h += '<a href="/app/promotion-policy/' + encodeURIComponent(p.name) + '" target="_blank">Edit policy &#8599;</a>';
+		checks.forEach(function (c) {
+			h += c.on
+				? '<span class="pm-crit on" title="' + esc(c.help) + '">&#10003; ' + esc(c.rule) + '</span>'
+				: '<span class="pm-crit off" title="Not checked by this policy">' + esc(c.name) + ': off</span>';
+		});
+		if (!checks.some(function (c) { return c.on; })) h += '<span class="pm-crit warn">No checks enabled — everyone is eligible</span>';
+		if (!p.auto_update_student_year) h += '<span class="pm-crit warn">Auto-update OFF — decisions logged only</span>';
+		h += '<span class="pm-push"><span class="pm-link" data-act="toggle-help">What do these checks mean?</span>'
+			+ '<a href="/app/promotion-policy/' + encodeURIComponent(p.name) + '" target="_blank">Edit policy &#8599;</a></span>';
 		$s.html(h).removeClass('pm-hidden');
+
+		$('#pm-help').remove();
+		var help = '<div class="pm-help pm-hidden" id="pm-help"><table><thead><tr><th>Check</th><th>Rule in this policy</th><th>What it means</th></tr></thead><tbody>'
+			+ checks.map(function (c) {
+				return '<tr><td>' + esc(c.name) + '</td><td>' + (c.on ? esc(c.rule) : '<span class="pm-muted">Not checked</span>')
+					+ '</td><td>' + esc(c.help) + '</td></tr>';
+			}).join('') + '</tbody></table></div>';
+		$s.after(help);
+		if (S.helpOpen) $('#pm-help').removeClass('pm-hidden');
+		updatePolicyYearNotice();
 	}
+
+	function updatePolicyYearNotice() {
+		var $n = $('#pm-year-notice');
+		var prob = policyYearProblem(S.policies[$('#pm-policy').val()], currentFilters());
+		if (!prob) { $n.remove(); return; }
+		if (!$n.length) { $n = $('<div id="pm-year-notice"></div>'); $('#pm-policy-strip').nextAll('#pm-help').length ? $('#pm-help').after($n) : $('#pm-policy-strip').after($n); }
+		$n.attr('class', 'pm-notice ' + (prob.level === 'block' ? 'err' : 'warn'))
+			.html('<span class="pm-notice-body">&#9888; ' + esc(prob.text) + '</span>');
+	}
+
+	$root.on('click', '[data-act="toggle-help"]', function () {
+		S.helpOpen = !S.helpOpen;
+		$('#pm-help').toggleClass('pm-hidden', !S.helpOpen);
+	});
 
 	// ── Filter events ─────────────────────────────────────────────────────────
 	$root.on('change', '#pm-prog, #pm-ay', function () {
@@ -624,6 +681,7 @@ frappe.pages['promotion-management'].on_page_load = function (wrapper) {
 			renderEval('stale');
 		}
 		updatePriorRunNotice();
+		updatePolicyYearNotice();
 		updateStepper();
 	}
 
@@ -633,6 +691,8 @@ frappe.pages['promotion-management'].on_page_load = function (wrapper) {
 		if (!f.policy) return __('Please select a Promotion Policy.');
 		if (!f.from_year) return __('Please enter From Year (e.g. 1).');
 		if (f.to_year <= f.from_year) return __('To Year must be greater than From Year.');
+		var prob = policyYearProblem(S.policies[f.policy], f);
+		if (prob && prob.level === 'block') return prob.text;
 		return null;
 	}
 
@@ -707,13 +767,13 @@ frappe.pages['promotion-management'].on_page_load = function (wrapper) {
 
 		$v.html(`
 			<div class="pm-kpis">
-				<div class="pm-kpi" style="--c:var(--pm-maroon-text);--cb:var(--pm-maroon-soft)"><div class="pm-kpi-ico">&#128101;</div>
+				<div class="pm-kpi" style="--c:#920c24"><div class="pm-kpi-ico">&#128101;</div>
 					<div><div class="pm-kpi-val">${c.total || 0}</div><div class="pm-kpi-lbl">Students in Year ${esc(P.key.from_year)}</div></div></div>
-				<div class="pm-kpi" style="--c:#15803d;--cb:#dcfce7"><div class="pm-kpi-ico">&#10003;</div>
+				<div class="pm-kpi" style="--c:#15803d"><div class="pm-kpi-ico">&#10003;</div>
 					<div><div class="pm-kpi-val">${c.promoted || 0}</div><div class="pm-kpi-lbl">Eligible to promote</div></div></div>
-				<div class="pm-kpi" style="--c:#b91c1c;--cb:#fee2e2"><div class="pm-kpi-ico">&#10007;</div>
+				<div class="pm-kpi" style="--c:#b91c1c"><div class="pm-kpi-ico">&#10007;</div>
 					<div><div class="pm-kpi-val">${c.not_promoted || 0}</div><div class="pm-kpi-lbl">Not eligible</div></div></div>
-				<div class="pm-kpi" style="--c:#b45309;--cb:#fef3c7"><div class="pm-kpi-ico">&#9201;</div>
+				<div class="pm-kpi" style="--c:#b45309"><div class="pm-kpi-ico">&#9201;</div>
 					<div><div class="pm-kpi-val">${c.conditional || 0}</div><div class="pm-kpi-lbl">Conditional</div></div></div>
 			</div>
 			<div class="pm-card flush">
@@ -733,9 +793,14 @@ frappe.pages['promotion-management'].on_page_load = function (wrapper) {
 				<div class="pm-table-wrap">
 					<table class="pm-tbl">
 						<thead><tr>
-							<th>#</th><th>Student</th><th class="c">CGPA</th><th class="c">Backlogs</th><th class="c">Att %</th><th class="c">Shortage</th><th class="c">CF</th>
-							<th class="c" title="CGPA check">CGPA</th><th class="c" title="Backlog check">Bklg</th><th class="c" title="Attendance check">Att</th>
-							<th class="c" title="Shortage check">Shrt</th><th class="c" title="Carry-forward check">CF</th><th class="c" title="Fee due check">Fee</th>
+							<th>#</th><th>Student</th><th class="c">CGPA</th>
+							<th class="c" title="Courses failed this academic year">Failed</th>
+							<th class="c" title="Average attendance this academic year">Avg Att</th>
+							<th class="c" title="Courses below their minimum attendance">Short courses</th>
+							<th class="c" title="Courses still short of attendance even after FA/MFA condonation (carried forward)">Short after FA/MFA</th>
+							<th class="c" title="CGPA check">&#10003; CGPA</th><th class="c" title="Backlog (failed courses) check">&#10003; Failed</th>
+							<th class="c" title="Average attendance check">&#10003; Att</th><th class="c" title="Attendance shortage check">&#10003; Short</th>
+							<th class="c" title="Carry-forward (still short after FA/MFA) check">&#10003; FA/MFA</th><th class="c" title="Fee due check">&#10003; Fee</th>
 							<th>Result</th><th>Reason</th>
 						</tr></thead>
 						<tbody id="pm-eval-tbody"></tbody>
@@ -975,14 +1040,14 @@ frappe.pages['promotion-management'].on_page_load = function (wrapper) {
 					<div class="pm-band-stat r"><div class="v">${c.enrollment_failed || 0}</div><div class="l">Enrollment failed</div></div>
 				</div>
 				<div class="pm-meter">
-					<span style="width:${pct(c.promoted)}%;background:#4ade80"></span>
-					<span style="width:${pct(c.conditional)}%;background:#fbbf24"></span>
-					<span style="width:${pct(c.not_promoted)}%;background:#f87171"></span>
+					<span style="width:${pct(c.promoted)}%;background:#22c55e"></span>
+					<span style="width:${pct(c.conditional)}%;background:#f59e0b"></span>
+					<span style="width:${pct(c.not_promoted)}%;background:#ef4444"></span>
 				</div>
 				<div class="pm-meter-legend">
-					<span><i style="background:#4ade80"></i>Promoted ${pct(c.promoted) ? Math.round(pct(c.promoted)) : 0}%</span>
-					<span><i style="background:#fbbf24"></i>Conditional ${pct(c.conditional) ? Math.round(pct(c.conditional)) : 0}%</span>
-					<span><i style="background:#f87171"></i>Not promoted ${pct(c.not_promoted) ? Math.round(pct(c.not_promoted)) : 0}%</span>
+					<span><i style="background:#22c55e"></i>Promoted ${pct(c.promoted) ? Math.round(pct(c.promoted)) : 0}%</span>
+					<span><i style="background:#f59e0b"></i>Conditional ${pct(c.conditional) ? Math.round(pct(c.conditional)) : 0}%</span>
+					<span><i style="background:#ef4444"></i>Not promoted ${pct(c.not_promoted) ? Math.round(pct(c.not_promoted)) : 0}%</span>
 				</div>
 			</div>
 			${autoOff ? '<div class="pm-notice warn" style="margin:0 0 14px;"><span class="pm-notice-body">&#9888; Auto-update is off on this policy — decisions are logged, but student years and enrollments were not changed.</span></div>' : ''}
