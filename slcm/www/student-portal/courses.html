@@ -22,6 +22,19 @@
     background: var(--sp-primary-light);
     transform: translateX(4px);
   }
+
+  /* ── Upcoming classes strip ── */
+  .cs-up { background: var(--sp-bg); border-radius: 10px; padding: 10px 12px 10px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .cs-up-main { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
+  .cs-up-lbl { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; color: var(--sp-text-3); text-transform: uppercase; letter-spacing: .06em; }
+  .cs-up-lbl .sp-ms { font-size: 16px; color: var(--sp-primary); }
+  .cs-up-chip { display: inline-flex; align-items: center; gap: 6px; background: #fff; border: 1px solid var(--sp-border); color: var(--sp-text-1); font-size: 12.5px; font-weight: 600; padding: 4px 10px; border-radius: 99px; white-space: nowrap; }
+  .cs-up-chip .sp-ms { font-size: 14px; color: var(--sp-primary); }
+  .cs-up-chip small { font-size: 12px; font-weight: 400; color: var(--sp-text-3); }
+  .cs-up-empty { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+  .cs-up-empty .sp-ms { font-size: 18px; color: var(--sp-primary); flex-shrink: 0; }
+  .cs-up-empty strong { font-size: 13px; font-weight: 700; color: var(--sp-text-1); }
+  .cs-up-empty span.cs-up-hint { font-size: 12.5px; color: var(--sp-text-3); }
 </style>
 
 {% if no_student %}
@@ -138,22 +151,28 @@
       </div>
 
       {# Bottom Row (Upcoming Classes & Timetable button) #}
-      <div style="background:var(--sp-bg); border-radius:8px; padding:0px 16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
-        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-          <span class="sp-ms" style="color:var(--sp-text-3); font-size:18px;">calendar_today</span>
-          <span style="font-size:13px; color:var(--sp-text-3);">Upcoming Classes (Next 2)</span>
-          
+      <div class="cs-up">
+        <div class="cs-up-main">
           {% if c.upcoming_classes %}
+            <span class="cs-up-lbl"><span class="sp-ms" aria-hidden="true">event_upcoming</span>Upcoming classes</span>
             {% for uc in c.upcoming_classes %}
-            <span style="background:#fff; border:1px solid var(--sp-border); color:var(--sp-text-2); font-size:12px; padding:4px 10px; border-radius:20px; box-shadow:0 1px 2px rgba(0,0,0,0.02);">
-              {{ uc.date }} &nbsp;&middot;&nbsp; {{ uc.time }}
-            </span>
+            <span class="cs-up-chip"><span class="sp-ms" aria-hidden="true">schedule</span>{{ uc.date }} <small>{{ uc.time }}</small></span>
             {% endfor %}
+          {% elif c.next_class %}
+            <span class="cs-up-empty">
+              <span class="sp-ms" aria-hidden="true">event_available</span>
+              <strong>No more classes after the next one</strong>
+              <span class="cs-up-hint">· check the timetable for changes</span>
+            </span>
           {% else %}
-            <span style="font-size:13px; color:var(--sp-text-4);">No upcoming classes</span>
+            <span class="cs-up-empty">
+              <span class="sp-ms" aria-hidden="true">event_busy</span>
+              <strong>No classes scheduled yet</strong>
+              <span class="cs-up-hint">· dates will appear once the timetable is published</span>
+            </span>
           {% endif %}
         </div>
-        
+
         <a href="/student-portal/timetable?course={{ c.course_offering }}" class="sp-course-card-btn">
           View Timetable <span class="sp-ms" style="font-size:16px;">chevron_right</span>
         </a>
