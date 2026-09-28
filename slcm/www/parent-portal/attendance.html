@@ -219,7 +219,7 @@
 
   <div class="pp-stat-card-wrap">
     <div class="pp-stat-card"
-         style="--pp-stat-accent:{% if courses_eligible == total_courses and total_courses > 0 %}var(--pp-success){% else %}var(--pp-warning){% endif %};">
+         style="--pp-stat-accent:{% if courses_eligible == total_courses and total_courses > 0 %}var(--pp-success){% else %}var(--pp-primary){% endif %};">
       <div class="pp-stat-icon"
            style="color:var(--pp-primary);">
         shield
@@ -248,8 +248,8 @@
 <div class="pp-alert pp-alert-danger fade-in" style="margin-bottom:22px;">
   <span class="ms">error</span>
   <div>
-    <strong>{{ courses_below_75 }} course{% if courses_below_75 != 1 %}s{% endif %} below {{ att_good|int }}% attendance.</strong>
-    Your ward risks being ineligible for exams in these courses. Please ensure regular attendance going forward.
+    <strong>{{ courses_below_75 }} course{% if courses_below_75 != 1 %}s{% endif %} below {{ att_good|int }}% attendance</strong>
+    &nbsp;—&nbsp; may affect exam eligibility.
   </div>
 </div>
 {% endif %}
@@ -263,9 +263,10 @@
     <div style="display:flex;align-items:flex-end;gap:10px;min-height:150px;min-width:max-content;" id="pp-att-bar-chart">
       {% for s in attendance_summaries %}
       {% set pct = [s.pct or 0, 100]|min %}
-      {% if pct >= att_good %}{% set bar_color = "var(--pp-success)" %}
-      {% elif pct >= att_warn %}{% set bar_color = "var(--pp-warning)" %}
-      {% else %}{% set bar_color = "var(--pp-danger)" %}{% endif %}
+      {# Maroon shades only: darker = better attendance #}
+      {% if pct >= att_good %}{% set bar_color = "var(--pp-primary)" %}
+      {% elif pct >= att_warn %}{% set bar_color = "color-mix(in srgb, var(--pp-primary) 60%, transparent)" %}
+      {% else %}{% set bar_color = "color-mix(in srgb, var(--pp-primary) 30%, transparent)" %}{% endif %}
       <div style="display:flex;flex-direction:column;align-items:center;gap:5px;flex:1;min-width:60px;max-width:100px;">
         <div style="font-size:11.5px;font-weight:800;color:var(--pp-primary);">{{ pct|round(0)|int }}%</div>
         <div style="width:100%;background:var(--pp-border-light);border-radius:8px 8px 4px 4px;height:110px;display:flex;align-items:flex-end;overflow:hidden;">
@@ -279,9 +280,9 @@
       {% endfor %}
     </div>
     <div style="display:flex;gap:14px;margin-top:10px;flex-wrap:wrap;font-size:11.5px;color:var(--pp-text-4);">
-      <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:18px;height:3px;background:var(--pp-success);border-radius:2px;"></span>≥{{ att_good|int }}% Good</span>
-      <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:18px;height:3px;background:var(--pp-warning);border-radius:2px;"></span>{{ att_warn|int }}–{{ att_good|int }}% Low</span>
-      <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:18px;height:3px;background:var(--pp-danger);border-radius:2px;"></span>&lt;{{ att_warn|int }}% Critical</span>
+      <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:18px;height:3px;background:var(--pp-primary);border-radius:2px;"></span>≥{{ att_good|int }}% Good</span>
+      <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:18px;height:3px;background:color-mix(in srgb, var(--pp-primary) 60%, transparent);border-radius:2px;"></span>{{ att_warn|int }}–{{ att_good|int }}% Low</span>
+      <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:18px;height:3px;background:color-mix(in srgb, var(--pp-primary) 30%, transparent);border-radius:2px;"></span>&lt;{{ att_warn|int }}% Critical</span>
     </div>
   </div>
 </div>
@@ -421,7 +422,7 @@ document.addEventListener('keydown', e => {
   function statusBg(st) {
     if (st === 'Present')    return 'var(--pp-success-bg)';
     if (st === 'Absent')     return 'var(--pp-danger-bg)';
-    if (st === 'Scheduled')  return 'var(--pp-info-bg)';
+    if (st === 'Scheduled')  return 'var(--pp-primary-light)';
     return 'var(--pp-bg)';
   }
   function statusIcon(st) {

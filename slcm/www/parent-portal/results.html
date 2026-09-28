@@ -8,7 +8,6 @@
   --ppr-maroon-soft: rgba(146,12,36,0.07);
   --ppr-green:  var(--pp-success, #008000);
   --ppr-red:    var(--pp-danger, #920c24);
-  --ppr-amber:  #b45309;               /* darker than --pp-warning for AA contrast */
   --ppr-info:   var(--pp-info, #0369a1);
   --ppr-border: #e5e7eb;
   --ppr-row:    #f1f2f4;
@@ -19,12 +18,6 @@
 /* ── Page header ────────────────────────────────────────────────────── */
 .ppr-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
 .ppr-head .pp-page-title { margin: 0 0 2px; font-size: 26px; }
-.ppr-count-chip {
-  display: inline-flex; align-items: baseline; gap: 6px; padding: 8px 14px; border-radius: 10px;
-  background: var(--pp-card, #fff); border: 1px solid var(--ppr-border);
-}
-.ppr-count-chip strong { font-size: 18px; color: var(--ppr-maroon); font-variant-numeric: tabular-nums; }
-.ppr-count-chip span { font-size: 12.5px; font-weight: 600; color: var(--ppr-muted); }
 
 /* ── Student strip ──────────────────────────────────────────────────── */
 .ppr-student {
@@ -48,7 +41,7 @@
 
 /* ── Metric tiles (as in Faculty > My Classes) ──────────────────────── */
 .ppr-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-bottom: 16px; }
-@media (min-width: 1100px) { .ppr-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (min-width: 1100px) { .ppr-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .ppr-metric {
   background: var(--pp-card, #fff); border: 1px solid var(--ppr-border); border-radius: 12px;
   padding: 16px 18px; display: flex; align-items: center; gap: 12px; min-width: 0;
@@ -61,7 +54,6 @@
 .ppr-mi-maroon { background: var(--ppr-maroon-soft); color: var(--ppr-maroon); }
 .ppr-mi-green  { background: rgba(0,128,0,0.08);    color: var(--ppr-green); }
 .ppr-mi-red    { background: rgba(146,12,36,0.08);  color: var(--ppr-red); }
-.ppr-mi-amber  { background: rgba(217,119,6,0.10);  color: var(--ppr-amber); }
 .ppr-metric-val { font-size: 22px; font-weight: 800; color: var(--pp-text-1); letter-spacing: -0.02em; line-height: 1; font-variant-numeric: tabular-nums; }
 .ppr-metric-lbl { font-size: 12px; color: var(--ppr-muted); font-weight: 600; margin-top: 4px; }
 @media (max-width: 420px) { .ppr-metric { padding: 12px; gap: 10px; } .ppr-metric-val { font-size: 19px; } }
@@ -76,7 +68,28 @@
 .ppr-section-sub { font-size: 12.5px; color: var(--ppr-muted); }
 
 /* ── Exam summary cards ─────────────────────────────────────────────── */
-.ppr-exams { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; margin-bottom: 18px; }
+/* One scrollable row, so many exams don't push the page down */
+.ppr-exams-wrap { position: relative; margin-bottom: 18px; }
+.ppr-exams {
+  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(260px, 280px); gap: 14px;
+  overflow-x: auto; scroll-snap-type: x proximity; scroll-behavior: smooth; padding: 2px 2px 8px;
+  scrollbar-width: thin; scrollbar-color: rgba(146,12,36,0.45) transparent;
+}
+.ppr-exams::-webkit-scrollbar { height: 8px; }
+.ppr-exams::-webkit-scrollbar-track { background: transparent; }
+.ppr-exams::-webkit-scrollbar-thumb { background: rgba(146,12,36,0.45); border-radius: 8px; }
+.ppr-exams > .ppr-exam { scroll-snap-align: start; }
+.ppr-rail-btn {
+  position: absolute; top: calc(50% - 4px); transform: translateY(-50%); z-index: 2;
+  width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--ppr-border);
+  background: var(--pp-card, #fff); color: var(--ppr-maroon); box-shadow: 0 2px 8px rgba(16,24,40,0.12);
+  display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.ppr-rail-btn .ms { font-size: 20px; }
+.ppr-rail-btn:hover { border-color: var(--ppr-maroon); }
+.ppr-rail-btn:focus-visible { outline: 2px solid var(--ppr-maroon); outline-offset: 2px; }
+.ppr-rail-prev { left: -12px; } .ppr-rail-next { right: -12px; }
+@media (max-width: 640px) { .ppr-rail-btn { display: none !important; } .ppr-exams { grid-auto-columns: 82%; } }
 .ppr-exam {
   background: var(--pp-card, #fff); border: 1px solid var(--ppr-border); border-radius: 12px;
   display: flex; flex-direction: column; min-width: 0; text-align: left;
@@ -89,7 +102,7 @@
 .ppr-exam-head { padding: 14px 16px 10px; width: 100%; }
 .ppr-exam-eyebrow { font-size: 10.5px; font-weight: 700; color: var(--ppr-muted); letter-spacing: 0.07em; text-transform: uppercase; }
 .ppr-exam-name { font-size: 15px; font-weight: 700; color: var(--pp-text-1); margin: 3px 0 8px; overflow-wrap: anywhere; }
-.ppr-exam-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--ppr-row); width: 100%; }
+.ppr-exam-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--ppr-row); width: 100%; }
 .ppr-exam-stat { padding: 10px 8px; text-align: center; border-right: 1px solid var(--ppr-row); }
 .ppr-exam-stat:last-child { border-right: none; }
 .ppr-exam-foot { padding: 8px 16px 10px; border-top: 1px solid var(--ppr-row); font-size: 12px; font-weight: 600; width: 100%; display: flex; align-items: flex-start; gap: 6px; }
@@ -133,6 +146,14 @@
 
 /* ── Course cards (as in Faculty > My Classes) ──────────────────────── */
 .ppr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-bottom: 20px; }
+.ppr-grid-group {
+  grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  font-size: 14px; font-weight: 700; color: var(--pp-text-1); margin-top: 6px;
+  padding-bottom: 6px; border-bottom: 1px solid var(--ppr-border);
+}
+.ppr-grid-group:first-child { margin-top: 0; }
+.ppr-grid-group .ms { font-size: 18px; color: var(--ppr-maroon); }
+.ppr-grid-group-sub { font-size: 12.5px; font-weight: 500; color: var(--ppr-muted); }
 .ppr-card {
   background: var(--pp-card, #fff); border: 1px solid var(--ppr-border); border-top: 3px solid var(--ppr-maroon);
   border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; min-width: 0;
@@ -163,7 +184,7 @@
 .ppr-status .ms { font-size: 13px; }
 .ppr-status-pass { color: var(--ppr-green); border: 1px solid rgba(0,128,0,0.30); background: #fff; }
 .ppr-status-fail { color: var(--ppr-red);   background: rgba(146,12,36,0.07); }
-.ppr-status-pend { color: var(--ppr-amber); background: rgba(217,119,6,0.10); }
+.ppr-status-pend { color: var(--ppr-muted); background: #f3f4f6; }
 .ppr-card-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--ppr-row); border-bottom: 1px solid var(--ppr-row); }
 .ppr-cm { padding: 11px 8px; text-align: center; border-right: 1px solid var(--ppr-row); min-width: 0; }
 .ppr-cm:last-child { border-right: none; }
@@ -175,7 +196,7 @@
 }
 .ppr-card-strip .ms { font-size: 14px; color: var(--ppr-maroon); vertical-align: -2px; margin-right: 2px; }
 .ppr-card-remark { font-style: italic; color: var(--ppr-muted); width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ppr-card-actions { margin-top: auto; display: grid; grid-template-columns: 1fr 1fr; }
+.ppr-card-actions { margin-top: auto; display: grid; grid-template-columns: 1fr; }
 .ppr-action {
   display: flex; align-items: center; justify-content: center; gap: 5px; padding: 11px 8px;
   background: none; border: none; border-right: 1px solid var(--ppr-row); cursor: pointer;
@@ -186,8 +207,6 @@
 .ppr-action .ms { font-size: 16px; }
 .ppr-action-primary { color: var(--ppr-maroon); }
 .ppr-action-primary:hover { background: var(--ppr-maroon-soft); }
-.ppr-action-info { color: var(--pp-text-1, #0f172a); }
-.ppr-action-info:hover { background: #f3f4f6; }
 .ppr-action:focus-visible { outline: 2px solid var(--ppr-maroon); outline-offset: -2px; }
 
 /* Grade colour */
@@ -244,11 +263,11 @@
 }
 .ppr-modal-overlay.open { display: flex; }
 .ppr-modal {
-  background: var(--pp-card, #fff); border-radius: 14px; width: min(980px, 100%); max-height: calc(100vh - 32px);
+  background: var(--pp-card, #fff); border-radius: 14px; width: min(1240px, 100%); max-height: calc(100vh - 32px);
   display: flex; flex-direction: column; box-shadow: 0 24px 64px rgba(0,0,0,0.2); overflow: hidden;
 }
 .ppr-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 16px 20px 12px; border-bottom: 1px solid var(--ppr-border); border-top: 3px solid var(--ppr-maroon); }
-.ppr-modal-title { font-size: 16px; font-weight: 700; color: var(--pp-text-1); margin: 2px 0 8px; }
+.ppr-modal-title { font-size: 18px; font-weight: 700; color: var(--pp-text-1); margin: 2px 0 8px; }
 .ppr-modal-close {
   width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--ppr-border); background: var(--pp-card, #fff);
   color: var(--ppr-muted); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
@@ -256,28 +275,32 @@
 .ppr-modal-close:hover { color: var(--ppr-maroon); border-color: var(--ppr-maroon); }
 .ppr-modal-close .ms { font-size: 18px; }
 .ppr-modal-body { overflow: auto; padding: 0 0 8px; }
-.ppr-fail-note { display: flex; gap: 8px; align-items: flex-start; padding: 10px 20px; color: var(--ppr-red); font-size: 13px; border-bottom: 1px solid rgba(146,12,36,0.15); }
-.ppr-fail-note .ms { font-size: 18px; flex-shrink: 0; }
-.ppr-remark { padding: 10px 20px 4px; font-size: 12.5px; color: var(--pp-text-3); }
+.ppr-remark { padding: 12px 20px 4px; font-size: 14px; color: var(--pp-text-3); }
 .ppr-remark .ms { font-size: 15px; vertical-align: -3px; margin-right: 4px; color: var(--ppr-muted); }
 
 /* Detailed marks table (unchanged content, restyled) */
 .ppr-mk-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-.ppr-mk { width: max-content; min-width: 100%; border-collapse: collapse; font-size: 13px; }
-.ppr-mk th { padding: 8px 12px; background: var(--ppr-head); border-bottom: 1px solid var(--ppr-border); text-align: center; font-size: 11px; font-weight: 700; color: var(--ppr-muted); text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
-.ppr-mk th .max { display: block; font-size: 10px; font-weight: 500; text-transform: none; letter-spacing: 0; }
+/* Maroon scrollbars in the dialog (otherwise the OS accent colour, e.g. orange, shows on scroll) */
+.ppr-modal-body, .ppr-mk-scroll { scrollbar-width: thin; scrollbar-color: rgba(146,12,36,0.45) transparent; }
+.ppr-modal-body::-webkit-scrollbar, .ppr-mk-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+.ppr-modal-body::-webkit-scrollbar-track, .ppr-mk-scroll::-webkit-scrollbar-track { background: transparent; }
+.ppr-modal-body::-webkit-scrollbar-thumb, .ppr-mk-scroll::-webkit-scrollbar-thumb { background: rgba(146,12,36,0.45); border-radius: 8px; }
+.ppr-modal-body::-webkit-scrollbar-thumb:hover, .ppr-mk-scroll::-webkit-scrollbar-thumb:hover { background: var(--ppr-maroon); }
+.ppr-mk { width: max-content; min-width: 100%; border-collapse: collapse; font-size: 14px; }
+.ppr-mk th { padding: 10px 16px; background: var(--ppr-head); border-bottom: 1px solid var(--ppr-border); text-align: center; font-size: 12.5px; font-weight: 700; color: var(--ppr-muted); text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
+.ppr-mk th .max { display: block; font-size: 12px; font-weight: 500; text-transform: none; letter-spacing: 0; }
 .ppr-mk .grp { background: var(--ppr-maroon-soft); color: var(--ppr-maroon); border-bottom: none; }
 .ppr-mk .grp-grade { background: rgba(0,128,0,0.06); color: var(--ppr-green); }
 .ppr-mk .grp-status { background: #f3f4f6; color: var(--pp-text-3); }
-.ppr-mk .grp-reexam { background: rgba(217,119,6,0.10); color: var(--ppr-amber); }
-.ppr-mk .grp-final { background: rgba(124,58,237,0.08); color: #6d28d9; }
-.ppr-mk td { padding: 10px 12px; text-align: center; border-bottom: 1px solid var(--ppr-row); white-space: nowrap; font-variant-numeric: tabular-nums; }
-.ppr-mk-grade { display: inline-block; font-size: 16px; font-weight: 800; padding: 2px 10px; border-radius: 8px; }
+.ppr-mk .grp-reexam { background: var(--ppr-maroon-soft); color: var(--ppr-maroon); }
+.ppr-mk .grp-final { background: rgba(146,12,36,0.12); color: var(--ppr-maroon); }
+.ppr-mk td { padding: 14px 16px; text-align: center; border-bottom: 1px solid var(--ppr-row); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ppr-mk-grade { display: inline-block; font-size: 17px; font-weight: 800; padding: 2px 10px; border-radius: 8px; }
 .ppr-mk-grade.pass { color: var(--ppr-green); border: 1px solid rgba(0,128,0,0.3); }
 .ppr-mk-grade.fail { color: var(--ppr-red); background: rgba(146,12,36,0.07); }
 .ppr-mk-grade.pend { color: var(--ppr-muted); background: #f3f4f6; }
-.ppr-mk-grade.reexam { color: #9a3412; background: #fff7ed; font-size: 14px; }
-.ppr-mk-hint { display: none; font-size: 11px; color: var(--ppr-muted); padding: 8px 20px 0; align-items: center; gap: 5px; }
+.ppr-mk-grade.reexam { color: var(--ppr-maroon); background: var(--ppr-maroon-soft); font-size: 15px; }
+.ppr-mk-hint { display: none; font-size: 12.5px; color: var(--ppr-muted); padding: 8px 20px 0; align-items: center; gap: 5px; }
 .ppr-mk-hint .ms { font-size: 14px; }
 @media (max-width: 640px) { .ppr-mk-hint { display: flex; } .ppr-modal-overlay { padding: 0; align-items: flex-end; } .ppr-modal { border-radius: 16px 16px 0 0; max-height: 92vh; } }
 @media (prefers-reduced-motion: reduce) { .ppr-card, .ppr-card:hover { transition: none; transform: none; } }
@@ -302,7 +325,6 @@
   {% set _ns.failed = _ns.failed + r.fail_count %}
   {% set _ns.pending = _ns.pending + r.pending_count %}
 {% endfor %}
-{% set _latest = published_results[0] if published_results else none %}
 
 {# ═══════════════ Header ═══════════════ #}
 <header class="ppr-head fade-in">
@@ -310,9 +332,6 @@
     <h1 class="pp-page-title">Results &amp; Grades</h1>
     <p class="pp-page-sub">Published examination results and course grades for your ward.</p>
   </div>
-  {% if has_results %}
-  <div class="ppr-count-chip"><strong>{{ published_results | length }}</strong><span>Result{{ 's' if published_results | length != 1 }} published</span></div>
-  {% endif %}
 </header>
 
 {# ═══════════════ Student strip ═══════════════ #}
@@ -356,24 +375,16 @@
     <span class="ppr-metric-icon {{ 'ppr-mi-red' if _ns.failed else 'ppr-mi-green' }}"><span class="ms" aria-hidden="true">{{ 'cancel' if _ns.failed else 'verified' }}</span></span>
     <div><div class="ppr-metric-val {{ 'ppr-g-fail' if _ns.failed }}">{{ _ns.failed }}</div><div class="ppr-metric-lbl">Courses Failed{% if _ns.pending %} · {{ _ns.pending }} pending{% endif %}</div></div>
   </div>
-  <div class="ppr-metric">
-    <span class="ppr-metric-icon ppr-mi-amber"><span class="ms" aria-hidden="true">trending_up</span></span>
-    {% if _latest.show_sgpa and _latest.term_gpa is not none %}
-    <div><div class="ppr-metric-val">{{ _latest.term_gpa }}</div><div class="ppr-metric-lbl">Latest SGPA · {{ _latest.exam_name }}</div></div>
-    {% elif _latest.term_percentage is not none %}
-    <div><div class="ppr-metric-val">{{ _latest.term_percentage }}%</div><div class="ppr-metric-lbl">Latest Term % · {{ _latest.exam_name }}</div></div>
-    {% else %}
-    <div><div class="ppr-metric-val ppr-g-pend">—</div><div class="ppr-metric-lbl">Latest SGPA</div></div>
-    {% endif %}
-  </div>
 </section>
 
 {# ═══════════════ Exam summaries ═══════════════ #}
 <div class="ppr-section-title fade-in">
   <h2><span class="ms" aria-hidden="true">fact_check</span>Examinations</h2>
-  <span class="ppr-section-sub">Select an exam to show only its courses</span>
+  <span class="ppr-section-sub">{{ published_results | length }} exam{{ 's' if published_results | length != 1 }} · select one to show only its courses</span>
 </div>
-<div class="ppr-exams fade-in" role="group" aria-label="Filter by examination">
+<div class="ppr-exams-wrap fade-in">
+<button type="button" class="ppr-rail-btn ppr-rail-prev is-hidden" id="ppr-rail-prev" aria-label="Previous exams"><span class="ms" aria-hidden="true">chevron_left</span></button>
+<div class="ppr-exams" id="ppr-exams" role="group" aria-label="Filter by examination">
   {% for res in published_results %}
   <button type="button" class="ppr-exam" data-exam="{{ res.exam_plan | e }}" aria-pressed="false">
     <div class="ppr-exam-head">
@@ -388,10 +399,6 @@
     </div>
     <div class="ppr-exam-stats">
       <div class="ppr-exam-stat">
-        <div class="ppr-cm-val">{{ res.term_gpa if (res.show_sgpa and res.term_gpa is not none) else '—' }}</div>
-        <div class="ppr-cm-lbl">SGPA</div>
-      </div>
-      <div class="ppr-exam-stat">
         <div class="ppr-cm-val">{{ (res.term_percentage ~ '%') if res.term_percentage is not none else '—' }}</div>
         <div class="ppr-cm-lbl">Term %</div>
       </div>
@@ -402,7 +409,7 @@
     </div>
     <div class="ppr-exam-foot {{ 'ppr-g-fail' if res.has_any_fail else 'ppr-g-pass' if not res.pending_count else 'ppr-g-pend' }}">
       {% if res.has_any_fail %}
-      <span class="ms" aria-hidden="true">error</span><span>{{ res.fail_count }} course{{ 's' if res.fail_count != 1 }} not cleared — please contact the Registrar's Office for next steps.</span>
+      <span class="ms" aria-hidden="true">cancel</span><span>{{ res.pass_count }} passed · {{ res.fail_count }} failed{% if res.pending_count %} · {{ res.pending_count }} pending{% endif %}</span>
       {% else %}
       <span class="ms" aria-hidden="true">check_circle</span><span>{{ res.pass_count }} passed{% if res.pending_count %} · {{ res.pending_count }} pending{% endif %}</span>
       {% endif %}
@@ -410,15 +417,16 @@
   </button>
   {% endfor %}
 </div>
+<button type="button" class="ppr-rail-btn ppr-rail-next is-hidden" id="ppr-rail-next" aria-label="More exams"><span class="ms" aria-hidden="true">chevron_right</span></button>
+</div>
 
 {# ═══════════════ Trend (only with 2+ real points) ═══════════════ #}
-{% set _sgpa_pts = gpa_chart_data | selectattr('sgpa') | list %}
-{% set _pct_pts = gpa_chart_data | selectattr('pct') | list %}
-{% if _sgpa_pts | length > 1 or _pct_pts | length > 1 %}
+{% set _pct_pts = gpa_chart_data | rejectattr('pct', 'none') | list %}
+{% if _pct_pts | length > 1 %}
 <section class="ppr-chart fade-in" aria-labelledby="ppr-chart-title">
   <div class="ppr-section-title" style="margin:0 0 6px;">
     <h2 id="ppr-chart-title"><span class="ms" aria-hidden="true">trending_up</span>Academic Performance Trend</h2>
-    <span class="ppr-section-sub">{{ 'SGPA' if _sgpa_pts | length > 1 else 'Term %' }} across published exams</span>
+    <span class="ppr-section-sub">Term % across published exams</span>
   </div>
   <div class="ppr-chart-box"><canvas id="gpaChart" role="img" aria-label="Performance trend across published exams"></canvas></div>
 </section>
@@ -437,7 +445,7 @@
   <label for="ppr-exam" class="pp-sr-only">Examination</label>
   <select id="ppr-exam" class="ppr-select">
     <option value="">All Exams</option>
-    {% for res in published_results %}<option value="{{ res.exam_plan | e }}">{{ res.exam_name }}{% if res.term %} · {{ res.term }}{% endif %}</option>{% endfor %}
+    {% for res in published_results %}<option value="{{ res.exam_plan | e }}">{{ res.exam_name }}{% if res.term and res.term != res.exam_name %} · {{ res.term }}{% endif %}</option>{% endfor %}
   </select>
   <label for="ppr-status" class="pp-sr-only">Result status</label>
   <select id="ppr-status" class="ppr-select">
@@ -457,6 +465,12 @@
 {# ═══════════════ Course cards ═══════════════ #}
 <div class="ppr-grid" id="ppr-grid">
   {% for res in published_results %}{% set ri = loop.index0 %}
+  {% if res.courses %}
+  <div class="ppr-grid-group" data-group="{{ res.exam_plan | e }}">
+    <span class="ms" aria-hidden="true">event_note</span>{{ res.exam_name }}
+    <span class="ppr-grid-group-sub">{% if res.term and res.term != res.exam_name %}{{ res.term }} · {% endif %}{{ res.courses | length }} course{{ 's' if res.courses | length != 1 }}</span>
+  </div>
+  {% endif %}
   {% for c in res.courses %}{% set key = ri ~ '-' ~ loop.index0 %}
   {% set st = c.overall_status or 'Pending' %}
   <article class="ppr-card ppr-item" data-exam="{{ res.exam_plan | e }}" data-status="{{ st }}"
@@ -475,17 +489,15 @@
       <div class="ppr-cm"><div class="ppr-cm-val">{{ total_txt(c) }}</div><div class="ppr-cm-lbl">Total Marks</div></div>
       <div class="ppr-cm"><div class="ppr-cm-val {{ 'ppr-g-fail' if c.attendance_status == 'Absent' else '' }}" style="font-size:13px;" title="{{ (c.attendance_status or '—') | e }}">{{ c.attendance_status or '—' }}</div><div class="ppr-cm-lbl">Attendance</div></div>
     </div>
+    {% if c.re_exam_grade or c.remark %}
     <div class="ppr-card-strip">
-      <span><span class="ms" aria-hidden="true">how_to_reg</span>{{ c.enrollment_status or 'Enrollment —' }}</span>
       {% if c.re_exam_grade %}<span><span class="ms" aria-hidden="true">replay</span>Re-exam: <strong>{{ c.re_exam_grade }}</strong></span>{% endif %}
       {% if c.remark %}<span class="ppr-card-remark" title="{{ c.remark | e }}">{{ c.remark }}</span>{% endif %}
     </div>
+    {% endif %}
     <div class="ppr-card-actions">
       <button type="button" class="ppr-action ppr-action-primary" data-marks="{{ key }}" aria-haspopup="dialog">
         <span class="ms" aria-hidden="true">table_view</span>View Marks
-      </button>
-      <button type="button" class="ppr-action ppr-action-info" data-only-exam="{{ res.exam_plan | e }}">
-        <span class="ms" aria-hidden="true">filter_alt</span>This Exam
       </button>
     </div>
   </article>
@@ -538,9 +550,6 @@
 {% for c in res.courses %}{% set key = ri ~ '-' ~ loop.index0 %}
 {% set st = c.overall_status or 'Pending' %}
 <template id="ppr-marks-{{ key }}" data-title="{{ c.course_name | e }}" data-code="{{ c.course | e }}" data-exam="{{ res.exam_name | e }}" data-status="{{ st }}">
-  {% if c.is_fail %}
-  <div class="ppr-fail-note"><span class="ms" aria-hidden="true">error</span>Your ward has not cleared this course. Please contact the Registrar's Office for next steps.</div>
-  {% endif %}
   {% if not c.has_comp_marks and not c.display_grade %}
   <div class="ppr-state" style="border:none;"><span class="ms" aria-hidden="true">hourglass_empty</span><div><p class="ppr-state-title">No marks available yet</p></div></div>
   {% else %}
@@ -552,7 +561,7 @@
         <tr>
           {% for grp in c.regular_groups %}<th scope="colgroup" colspan="{{ grp.components | length }}" class="grp">{{ grp.type_name }}</th>{% endfor %}
           <th scope="colgroup" colspan="{{ 2 if c.show_total else 1 }}" class="grp grp-grade">Grade</th>
-          <th scope="colgroup" colspan="2" class="grp grp-status">Status</th>
+          <th scope="colgroup" class="grp grp-status">Status</th>
           {% for grp in c.reexam_groups %}<th scope="colgroup" colspan="{{ grp.components | length }}" class="grp grp-reexam">{{ grp.type_name }}</th>{% endfor %}
           {% if c.reexam_groups %}<th scope="colgroup" colspan="3" class="grp grp-final">Updated Final</th>{% endif %}
         </tr>
@@ -561,7 +570,7 @@
           <th scope="col">{{ comp.label }}{% if comp.max_marks %}<span class="max">Max {{ comp.max_marks }}</span>{% endif %}</th>
           {% endfor %}{% endfor %}
           {% if c.show_total %}<th scope="col">Total Marks</th>{% endif %}
-          <th scope="col">Grade</th><th scope="col">Enrollment</th><th scope="col">Attendance</th>
+          <th scope="col">Grade</th><th scope="col">Attendance</th>
           {% for grp in c.reexam_groups %}{% for comp in grp.components %}<th scope="col">{{ comp.label }}</th>{% endfor %}{% endfor %}
           {% if c.reexam_groups %}<th scope="col">Updated Marks</th><th scope="col">Updated Grade</th><th scope="col">Re-Exam Grade</th>{% endif %}
         </tr>
@@ -573,12 +582,11 @@
           {% endfor %}{% endfor %}
           {% if c.show_total %}<td style="font-weight:700;">{{ total_txt(c) }}</td>{% endif %}
           <td><span class="ppr-mk-grade {{ 'pend' if (c.attendance_status == 'Absent' or not c.display_grade) else ('fail' if c.is_fail else 'pass') }}">{{ grade_txt(c) }}</span></td>
-          <td>{{ c.enrollment_status or '—' }}</td>
           <td class="{{ 'ppr-g-fail' if c.attendance_status == 'Absent' else ('ppr-g-pass' if c.attendance_status else '') }}" style="font-weight:600;">{{ c.attendance_status or '—' }}</td>
           {% for grp in c.reexam_groups %}{% for comp in grp.components %}<td>{{ comp.marks or '—' }}</td>{% endfor %}{% endfor %}
           {% if c.reexam_groups %}
           <td style="font-weight:700;">{{ c.display_total if c.display_total is not none else '—' }}</td>
-          <td>{% if c.display_grade %}<span class="ppr-mk-grade {{ 'fail' if c.is_fail else 'pass' }}" style="font-size:14px;">{{ c.display_grade }}</span>{% else %}—{% endif %}</td>
+          <td>{% if c.display_grade %}<span class="ppr-mk-grade {{ 'fail' if c.is_fail else 'pass' }}">{{ c.display_grade }}</span>{% else %}—{% endif %}</td>
           <td>{% if c.re_exam_grade %}<span class="ppr-mk-grade reexam">{{ c.re_exam_grade }}</span>{% else %}—{% endif %}</td>
           {% endif %}
         </tr>
@@ -610,9 +618,8 @@
 
 {% block extra_js %}
 {% if has_results %}
-{% set _sgpa_pts = gpa_chart_data | selectattr('sgpa') | list %}
-{% set _pct_pts = gpa_chart_data | selectattr('pct') | list %}
-{% if _sgpa_pts | length > 1 or _pct_pts | length > 1 %}
+{% set _pct_pts = gpa_chart_data | rejectattr('pct', 'none') | list %}
+{% if _pct_pts | length > 1 %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 {% endif %}
 <script>
@@ -647,6 +654,12 @@
             && (!term || el.getAttribute('data-q').indexOf(term) > -1);
       el.classList.toggle('is-hidden', !ok);
     });
+    /* Exam headings in the card grid: only when they have visible cards */
+    grid.querySelectorAll('.ppr-grid-group').forEach(function (g) {
+      var gx = g.getAttribute('data-group'), any = false;
+      grid.querySelectorAll('.ppr-item:not(.is-hidden)').forEach(function (el) { if (el.getAttribute('data-exam') === gx) any = true; });
+      g.classList.toggle('is-hidden', !any);
+    });
     shownEl.textContent = shown;
     noMatch.classList.toggle('is-hidden', shown > 0);
     examSel.classList.toggle('is-active', !!ex);
@@ -666,9 +679,23 @@
     if (scroll) document.querySelector('.ppr-toolbar').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
   examCards.forEach(function (c) { c.addEventListener('click', function () { onlyExam(c.getAttribute('data-exam'), false); }); });
-  document.querySelectorAll('[data-only-exam]').forEach(function (b) {
-    b.addEventListener('click', function () { onlyExam(b.getAttribute('data-only-exam'), true); });
-  });
+
+  /* ── Exam rail arrows (shown only when the row overflows) ────── */
+  var rail = document.getElementById('ppr-exams');
+  var railPrev = document.getElementById('ppr-rail-prev');
+  var railNext = document.getElementById('ppr-rail-next');
+  function railUpdate() {
+    var max = rail.scrollWidth - rail.clientWidth;
+    railPrev.classList.toggle('is-hidden', rail.scrollLeft <= 4);
+    railNext.classList.toggle('is-hidden', rail.scrollLeft >= max - 4);
+  }
+  if (rail && railPrev && railNext) {
+    railPrev.addEventListener('click', function () { rail.scrollBy({ left: -rail.clientWidth * 0.8 }); });
+    railNext.addEventListener('click', function () { rail.scrollBy({ left: rail.clientWidth * 0.8 }); });
+    rail.addEventListener('scroll', railUpdate, { passive: true });
+    window.addEventListener('resize', railUpdate);
+    railUpdate();
+  }
 
   /* ── Grid / list toggle (remembered per browser) ─────────────── */
   var viewBtns = document.querySelectorAll('[data-view]');
@@ -680,6 +707,8 @@
   }
   viewBtns.forEach(function (b) { b.addEventListener('click', function () { setView(b.getAttribute('data-view')); }); });
   setView(store('ppr-view') === 'list' ? 'list' : 'grid');
+  /* Many exams → open on the latest one (cards are newest first); "All Exams" is one click away */
+  if (examCards.length > 3 && !examSel.value) examSel.value = examCards[0].getAttribute('data-exam');
   apply();
 
   /* ── Marks dialog ────────────────────────────────────────────── */
@@ -741,25 +770,33 @@
   var canvas = document.getElementById('gpaChart');
   if (canvas && typeof Chart !== 'undefined') {
     var raw = {{ gpa_chart_data | tojson }};
-    var useSgpa = raw.filter(function (d) { return d.sgpa !== null && d.sgpa !== undefined; }).length > 1;
-    var key = useSgpa ? 'sgpa' : 'pct';
-    var pts = raw.filter(function (d) { return d[key] !== null && d[key] !== undefined; });
+    var pts = raw.filter(function (d) { return d.pct !== null && d.pct !== undefined; });
     new Chart(canvas, {
       type: 'line',
       data: {
         labels: pts.map(function (d) { return d.label; }),
         datasets: [{
-          label: useSgpa ? 'SGPA' : 'Term %', data: pts.map(function (d) { return d[key]; }),
+          label: 'Term %', data: pts.map(function (d) { return d.pct; }),
           borderColor: '#920c24', backgroundColor: 'rgba(146,12,36,0.08)', fill: true,
-          tension: 0.35, pointRadius: 4, pointBackgroundColor: '#920c24', borderWidth: 2,
+          tension: 0.35, pointRadius: pts.length > 12 ? 2 : 4, pointHoverRadius: 6, pointBackgroundColor: '#920c24', borderWidth: 2,
         }],
       },
       options: {
         responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            mode: 'index', intersect: false,
+            callbacks: {
+              title: function (items) { var d = pts[items[0].dataIndex]; return d.term && d.term !== d.label ? d.label + ' · ' + d.term : d.label; },
+              label: function (item) { return ' Term % ' + item.formattedValue + '%'; },
+            },
+          },
+        },
         scales: {
-          y: { beginAtZero: false, grace: '10%', ticks: { font: { size: 11 } }, grid: { color: '#f1f2f4' } },
-          x: { ticks: { font: { size: 11 } }, grid: { display: false } },
+          /* Fixed scale so a long series stays comparable */
+          y: { min: 0, max: 100, ticks: { font: { size: 11 }, stepSize: 20 }, grid: { color: '#f1f2f4' } },
+          x: { ticks: { font: { size: 11 }, autoSkip: true, maxTicksLimit: 10, maxRotation: 0 }, grid: { display: false } },
         },
       },
     });
