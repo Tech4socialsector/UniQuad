@@ -282,7 +282,7 @@ function submitLeaveRequest() {
   }
 
   spCall(
-    'slcm.www.student-portal.leave-request.submit_leave_request',
+    'slcm.www.student-portal.leave_request.submit_leave_request',
     { from_date: from, to_date: to, reason: reason },
     function(msg) {
       if (msg && msg.name) {

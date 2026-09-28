@@ -1,224 +1,459 @@
 {% extends "slcm/www/student-portal/_base.html" %}
 {% block title %}Grade Appeal{% endblock %}
 
+{% block extra_head %}
+<style>
+/* ── Grade appeal (NLS maroon) ──────────────────────────────────────── */
+:root {
+  --ga-maroon:      #920c24;
+  --ga-maroon-soft: rgba(146,12,36,0.07);
+  --ga-maroon-mid:  rgba(146,12,36,0.16);
+  --ga-border:      var(--sp-border, #e2e8f0);
+  --ga-row:         #f1f2f4;
+  --ga-ok:          #15803d;  --ga-ok-bg:   #f0fdf4;
+  --ga-warn:        #b45309;  --ga-warn-bg: #fffbeb;
+  --ga-bad:         #b91c1c;  --ga-bad-bg:  #fef2f2;
+  --ga-info:        #1d4ed8;  --ga-info-bg: #eff6ff;
+}
+.is-hidden { display: none !important; }
+.ga-muted { color: var(--sp-text-4); }
+.ga-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+.ga-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 18px; }
+@media (max-width: 1100px) { .ga-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* How it works */
+.ga-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+@media (max-width: 800px) { .ga-steps { grid-template-columns: 1fr; } }
+.ga-step { display: flex; gap: 12px; align-items: flex-start; background: var(--sp-card, #fff); border: 1px solid var(--ga-border); border-radius: 12px; padding: 14px 16px; }
+.ga-step-num { width: 28px; height: 28px; border-radius: 50%; background: var(--ga-maroon-soft); color: var(--ga-maroon); display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+.ga-step-title { font-size: 13.5px; color: var(--sp-text-1); }
+.ga-step-sub { font-size: 12px; color: var(--sp-text-4); margin-top: 2px; line-height: 1.5; }
+
+/* Layout */
+.ga-cols { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 1100px) { .ga-cols { grid-template-columns: minmax(0, 1fr); } }
+.ga-card { background: var(--sp-card, #fff); border: 1px solid var(--ga-border); border-radius: 12px; overflow: hidden; }
+.ga-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--ga-row); flex-wrap: wrap; }
+.ga-card-title { display: flex; align-items: center; gap: 8px; font-size: 14.5px; color: var(--sp-text-1); margin: 0; font-weight: 400; }
+.ga-card-title .sp-ms { font-size: 20px; color: var(--ga-maroon); }
+.ga-card-body { padding: 16px 18px; }
+
+/* Form */
+.ga-field { margin-bottom: 18px; border: 0; padding: 0; min-width: 0; }
+.ga-label { display: block; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--sp-text-3); margin-bottom: 8px; padding: 0; }
+.ga-label .req { color: var(--ga-bad); }
+.ga-hint { font-size: 11.5px; color: var(--sp-text-4); margin-top: 6px; display: flex; justify-content: space-between; gap: 8px; }
+
+.ga-results { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.ga-opt { position: relative; }
+.ga-opt input { position: absolute; opacity: 0; pointer-events: none; }
+.ga-opt-card {
+  display: block; height: 100%; border: 1px solid var(--ga-border); border-radius: 10px; padding: 12px 14px; cursor: pointer;
+  transition: border-color .15s, box-shadow .15s, background .15s;
+}
+.ga-opt-card:hover { border-color: var(--ga-maroon-mid); }
+.ga-opt input:checked + .ga-opt-card { border-color: var(--ga-maroon); box-shadow: 0 0 0 1px var(--ga-maroon); background: var(--ga-maroon-soft); }
+.ga-opt input:focus-visible + .ga-opt-card { outline: 2px solid var(--ga-maroon); outline-offset: 2px; }
+.ga-opt input:disabled + .ga-opt-card { cursor: not-allowed; opacity: .6; background: #fafbfc; }
+.ga-opt-top { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+.ga-code { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--sp-text-4); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ga-opt-name { font-size: 13.5px; color: var(--sp-text-1); margin: 2px 0 6px; line-height: 1.35; overflow-wrap: anywhere; }
+.ga-opt-meta { display: flex; gap: 6px 12px; flex-wrap: wrap; font-size: 11.5px; color: var(--sp-text-4); }
+.ga-grade { font-size: 18px; line-height: 1; color: var(--ga-maroon); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ga-opt-flag { display: inline-flex; align-items: center; gap: 3px; margin-top: 8px; font-size: 11px; color: var(--ga-warn); }
+.ga-opt-flag .sp-ms { font-size: 13px; }
+
+.ga-types { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 640px) { .ga-types { grid-template-columns: 1fr; } }
+.ga-type-card { display: flex; gap: 10px; align-items: flex-start; }
+.ga-type-card .sp-ms { font-size: 20px; color: var(--ga-maroon); flex-shrink: 0; }
+.ga-type-name { font-size: 13px; color: var(--sp-text-1); }
+.ga-type-hint { font-size: 11.5px; color: var(--sp-text-4); margin-top: 2px; line-height: 1.45; }
+.ga-type-taken { font-size: 11px; color: var(--ga-warn); margin-top: 4px; }
+
+.ga-textarea {
+  width: 100%; min-height: 96px; resize: vertical; border: 1px solid var(--ga-border); border-radius: 10px; padding: 10px 12px;
+  font: inherit; font-size: 13.5px; color: var(--sp-text-1); background: var(--sp-card, #fff); line-height: 1.55;
+}
+.ga-textarea:focus-visible { outline: 2px solid var(--ga-maroon); outline-offset: 1px; border-color: transparent; }
+.ga-textarea.is-invalid { border-color: var(--ga-bad); }
+.ga-count.is-short { color: var(--ga-warn); }
+
+.ga-actions { display: flex; align-items: center; justify-content: flex-end; gap: 12px; flex-wrap: wrap; }
+.ga-msg { flex: 1; min-width: 200px; font-size: 13px; padding: 8px 12px; border-radius: 8px; display: flex; gap: 6px; align-items: flex-start; }
+.ga-msg .sp-ms { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+.ga-msg.is-error { background: var(--ga-bad-bg); color: var(--ga-bad); }
+.ga-msg.is-ok { background: var(--ga-ok-bg); color: var(--ga-ok); }
+.ga-btn {
+  display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 18px; border-radius: 10px; border: none;
+  background: var(--ga-maroon); color: #fff; font: inherit; font-size: 13.5px; cursor: pointer;
+}
+.ga-btn:hover:not(:disabled) { background: #7a0a1e; }
+.ga-btn:disabled { opacity: .6; cursor: default; }
+.ga-btn:focus-visible { outline: 2px solid var(--ga-maroon); outline-offset: 2px; }
+.ga-btn .sp-ms { font-size: 18px; }
+@keyframes ga-spin { to { transform: rotate(360deg); } }
+.ga-spin { animation: ga-spin .8s linear infinite; }
+
+/* Appeals list */
+.ga-filter { display: flex; gap: 6px; flex-wrap: wrap; }
+.ga-chip-btn { height: 28px; padding: 0 11px; border-radius: 20px; border: 1px solid var(--ga-border); background: var(--sp-card, #fff); color: var(--sp-text-3); font: inherit; font-size: 12px; cursor: pointer; }
+.ga-chip-btn[aria-pressed="true"] { background: var(--ga-maroon); border-color: var(--ga-maroon); color: #fff; }
+.ga-chip-btn:focus-visible { outline: 2px solid var(--ga-maroon); outline-offset: 2px; }
+.ga-appeal { padding: 14px 18px; border-top: 1px solid var(--ga-row); }
+.ga-appeal:first-child { border-top: none; }
+.ga-appeal-top { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+.ga-appeal-name { font-size: 13.5px; color: var(--sp-text-1); overflow-wrap: anywhere; }
+.ga-appeal-meta { font-size: 11.5px; color: var(--sp-text-4); margin-top: 2px; overflow-wrap: anywhere; }
+.ga-pill { display: inline-flex; align-items: center; gap: 3px; padding: 2px 9px; border-radius: 20px; font-size: 11px; white-space: nowrap; }
+.ga-pill .sp-ms { font-size: 13px; }
+.ga-pill-sub  { background: var(--ga-warn-bg); color: var(--ga-warn); }
+.ga-pill-rev  { background: var(--ga-info-bg); color: var(--ga-info); }
+.ga-pill-ok   { background: var(--ga-ok-bg); color: var(--ga-ok); }
+.ga-pill-bad  { background: var(--ga-bad-bg); color: var(--ga-bad); }
+.ga-track { display: flex; align-items: center; margin: 12px 0 4px; }
+.ga-track-step { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 10.5px; color: var(--sp-text-4); flex: 0 0 auto; width: 76px; text-align: center; }
+.ga-track-dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #cbd5e1; background: #fff; }
+.ga-track-step.is-done .ga-track-dot { background: var(--ga-maroon); border-color: var(--ga-maroon); }
+.ga-track-step.is-done { color: var(--sp-text-2); }
+.ga-track-step.is-rejected .ga-track-dot { background: var(--ga-bad); border-color: var(--ga-bad); }
+.ga-track-line { flex: 1; height: 2px; background: #eceef1; margin: 0 -26px 16px; }
+.ga-track-line.is-done { background: var(--ga-maroon); }
+.ga-reason { font-size: 12.5px; color: var(--sp-text-2); line-height: 1.55; margin-top: 8px; overflow-wrap: anywhere; }
+.ga-resolution { margin-top: 10px; padding: 8px 12px; border-radius: 8px; font-size: 12.5px; display: flex; gap: 6px; align-items: flex-start; line-height: 1.5; }
+.ga-resolution .sp-ms { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+.ga-resolution.ok  { background: var(--ga-ok-bg); color: var(--ga-ok); }
+.ga-resolution.bad { background: var(--ga-bad-bg); color: var(--ga-bad); }
+
+/* Empty */
+.ga-empty { padding: 32px 20px; text-align: center; }
+.ga-empty-icon { width: 56px; height: 56px; border-radius: 16px; background: var(--ga-maroon-soft); color: var(--ga-maroon); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12px; }
+.ga-empty-icon .sp-ms { font-size: 28px; }
+.ga-empty-title { font-size: 15.5px; color: var(--sp-text-1); margin: 0 0 4px; }
+.ga-empty-sub { font-size: 12.5px; color: var(--sp-text-3); margin: 0 auto; max-width: 360px; line-height: 1.55; }
+.ga-empty a { color: var(--ga-maroon); }
+</style>
+{% endblock %}
+
+{% macro status_pill(s) -%}
+{%- if s == 'Resolved' -%}<span class="ga-pill ga-pill-ok"><span class="sp-ms" aria-hidden="true">check_circle</span>Resolved</span>
+{%- elif s == 'Rejected' -%}<span class="ga-pill ga-pill-bad"><span class="sp-ms" aria-hidden="true">cancel</span>Rejected</span>
+{%- elif s == 'Under Review' -%}<span class="ga-pill ga-pill-rev"><span class="sp-ms" aria-hidden="true">hourglass_top</span>Under Review</span>
+{%- else -%}<span class="ga-pill ga-pill-sub"><span class="sp-ms" aria-hidden="true">schedule</span>{{ s or 'Submitted' }}</span>{%- endif -%}
+{%- endmacro %}
+
 {% block content %}
+
+{% if no_student %}
+<div class="sp-alert sp-alert-warning fade-in">
+  <span class="sp-ms">warning</span>
+  <div><strong>No student record found.</strong> Please contact the Registrar's Office.</div>
+</div>
+
+{% else %}
 
 <div class="sp-page-header fade-in">
   <h1 class="sp-page-title">Grade Appeal</h1>
   <p class="sp-page-sub">Request re-evaluation or correction of published results</p>
 </div>
 
-{# ── Stats ─────────────────────────────────────────────────────── #}
-<div class="sp-stat-grid fade-in" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px;">
-
-  <div class="sp-stat-card">
-    <div class="sp-stat-icon" style="background:#eff6ff;color:var(--sp-primary);">rate_review</div>
-    <div>
-      <div class="sp-stat-label">Total Appeals</div>
-      <div class="sp-stat-value">{{ appeals | length }}</div>
-    </div>
-  </div>
-
-  <div class="sp-stat-card">
-    <div class="sp-stat-icon" style="background:var(--sp-info-bg);color:var(--sp-info);">hourglass_empty</div>
-    <div>
-      <div class="sp-stat-label">Under Review</div>
-      <div class="sp-stat-value" style="color:var(--sp-info);">{{ active_appeals or 0 }}</div>
-    </div>
-  </div>
-
-  <div class="sp-stat-card">
-    <div class="sp-stat-icon" style="background:#f0fdf4;color:var(--sp-success);">assignment_turned_in</div>
-    <div>
-      <div class="sp-stat-label">Eligible Results</div>
-      <div class="sp-stat-value" style="color:var(--sp-success);">{{ eligible_results | length }}</div>
-    </div>
-  </div>
-
-</div>
-
-{# ── Info Box ──────────────────────────────────────────────────── #}
-<div class="sp-info-box fade-in" style="margin-bottom:20px;">
-  <span class="sp-ms">info</span>
-  <div>
-    Appeals can only be submitted for <strong>published results</strong>. Duplicate appeals for the same course and type will be rejected. Resolution typically takes 5–10 working days.
-  </div>
-</div>
-
-{# ── New Appeal Form ───────────────────────────────────────────── #}
-{% if eligible_results %}
-<div class="sp-section-card fade-in" style="margin-bottom:24px;">
-  <div class="sp-section-header">
-    <span class="sp-ms">add_circle</span> Submit New Appeal
-  </div>
-  <div class="sp-section-body">
-    <div class="sp-form-row">
-      <div class="sp-form-group">
-        <label class="sp-form-label">Select Result to Appeal <span class="sp-required">*</span></label>
-        <select id="appeal-result" class="sp-form-control" onchange="onResultSelect(this)">
-          <option value="">— Choose a course result —</option>
-          {% for r in eligible_results %}
-          <option value="{{ r.exam_plan }}|{{ r.course }}" data-grade="{{ r.grade }}" data-marks="{{ r.marks }}">
-            {{ r.course_name }} — {{ r.exam_name }} ({{ r.grade }})
-          </option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="sp-form-group">
-        <label class="sp-form-label">Appeal Type <span class="sp-required">*</span></label>
-        <select id="appeal-type" class="sp-form-control">
-          <option value="Re-evaluation">Re-evaluation</option>
-          <option value="Marks Correction">Marks Correction</option>
-          <option value="Grade Change">Grade Change</option>
-        </select>
-      </div>
-    </div>
-
-    <div id="appeal-current-info" style="display:none;" class="sp-form-group">
-      <div style="padding:12px 16px;background:#f8fafc;border:1px solid var(--sp-border);border-radius:9px;display:flex;gap:24px;flex-wrap:wrap;font-size:13px;">
-        <div><span style="color:var(--sp-text-4);font-weight:600;text-transform:uppercase;font-size:11px;letter-spacing:0.04em;">Current Grade</span><br><strong id="disp-grade" style="font-size:18px;">—</strong></div>
-        <div><span style="color:var(--sp-text-4);font-weight:600;text-transform:uppercase;font-size:11px;letter-spacing:0.04em;">Total Marks</span><br><strong id="disp-marks" style="font-size:18px;">—</strong></div>
-      </div>
-    </div>
-
-    <div class="sp-form-group">
-      <label class="sp-form-label">Reason for Appeal <span class="sp-required">*</span></label>
-      <textarea id="appeal-reason" class="sp-form-control sp-form-textarea" rows="3"
-        placeholder="Clearly explain why you believe your grade or marks need correction..."></textarea>
-    </div>
-    <div class="sp-form-group">
-      <label class="sp-form-label">Supporting Remarks <span style="color:var(--sp-text-4);font-weight:400;">(optional)</span></label>
-      <textarea id="appeal-remarks" class="sp-form-control sp-form-textarea" rows="2"
-        placeholder="Any additional context, references, or supporting information..."></textarea>
-    </div>
-
-    <div style="display:flex;justify-content:flex-end;gap:10px;align-items:center;">
-      <div id="appeal-msg" style="display:none;font-size:13px;"></div>
-      <button onclick="submitAppeal()" class="sp-btn sp-btn-primary">
-        <span class="sp-ms">send</span> Submit Appeal
-      </button>
-    </div>
-  </div>
-</div>
-{% else %}
-<div class="sp-alert sp-alert-warning fade-in" style="margin-bottom:24px;">
-  <span class="sp-ms">info</span>
-  <div>No published results are currently eligible for appeal. Appeals can only be submitted once results have been officially published.</div>
+{% if portal_error %}
+<div class="sp-alert sp-alert-warning fade-in">
+  <span class="sp-ms">warning</span>
+  <div>Could not load your appeals. Please refresh the page.</div>
 </div>
 {% endif %}
 
-{# ── My Appeals ────────────────────────────────────────────────── #}
-{% if appeals %}
-<div class="fade-in">
-  <div class="sp-card-header" style="background:var(--sp-card);border-radius:16px 16px 0 0;border:1px solid var(--sp-border);border-bottom:none;">
-    <div class="sp-card-title">
-      <span class="sp-ms">history</span> My Appeals
+{# ── Stats ─────────────────────────────────────────────────────── #}
+<div class="sp-stat-grid ga-stats fade-in">
+  <div class="sp-stat-card">
+    <div class="sp-stat-icon" style="background:var(--ga-maroon-soft);color:var(--ga-maroon);">rate_review</div>
+    <div><div class="sp-stat-label">Total Appeals</div><div class="sp-stat-value">{{ appeals | length }}</div></div>
+  </div>
+  <div class="sp-stat-card">
+    <div class="sp-stat-icon" style="background:var(--ga-info-bg);color:var(--ga-info);">hourglass_top</div>
+    <div><div class="sp-stat-label">In Progress</div><div class="sp-stat-value" style="color:var(--ga-info);">{{ active_appeals or 0 }}</div></div>
+  </div>
+  <div class="sp-stat-card">
+    <div class="sp-stat-icon" style="background:var(--ga-ok-bg);color:var(--ga-ok);">task_alt</div>
+    <div>
+      <div class="sp-stat-label">Resolved</div><div class="sp-stat-value" style="color:var(--ga-ok);">{{ resolved_appeals or 0 }}</div>
+      {% if rejected_appeals %}<div class="sp-stat-sub">{{ rejected_appeals }} rejected</div>{% endif %}
     </div>
   </div>
-  <div style="border:1px solid var(--sp-border);border-top:none;border-radius:0 0 16px 16px;overflow:hidden;">
-    {% for a in appeals %}
-    <div style="padding:16px 20px;{% if not loop.last %}border-bottom:1px solid var(--sp-border);{% endif %}background:var(--sp-card);">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;">
-        <div style="flex:1;min-width:0;">
-          <div style="font-weight:600;font-size:14px;color:var(--sp-text-1);">{{ a.course_name }}</div>
-          <div style="font-size:12px;color:var(--sp-text-4);margin-top:2px;">
-            {{ a.exam_name }} &nbsp;·&nbsp; {{ a.appeal_type }}
-            {% if a.current_grade %} &nbsp;·&nbsp; Grade: <strong style="color:var(--sp-text-2);">{{ a.current_grade }}</strong>{% endif %}
-          </div>
-          <div style="font-size:12px;color:var(--sp-text-2);margin-top:6px;line-height:1.5;">{{ a.reason | truncate(140) }}</div>
+  <div class="sp-stat-card">
+    <div class="sp-stat-icon" style="background:var(--ga-maroon-soft);color:var(--ga-maroon);">assignment_turned_in</div>
+    <div><div class="sp-stat-label">Open for Appeal</div><div class="sp-stat-value">{{ open_for_appeal or 0 }}</div>
+      <div class="sp-stat-sub">published course result{{ 's' if (open_for_appeal or 0) != 1 }}</div></div>
+  </div>
+</div>
+
+{# ── How it works ─────────────────────────────────────────────── #}
+<div class="ga-steps fade-in">
+  <div class="ga-step"><span class="ga-step-num">1</span><div><div class="ga-step-title">Choose a published result</div><div class="ga-step-sub">Only results that have been officially published can be appealed.</div></div></div>
+  <div class="ga-step"><span class="ga-step-num">2</span><div><div class="ga-step-title">Explain what's wrong</div><div class="ga-step-sub">Pick the appeal type and give a clear reason. One open appeal per type per course.</div></div></div>
+  <div class="ga-step"><span class="ga-step-num">3</span><div><div class="ga-step-title">Track the outcome</div><div class="ga-step-sub">The Examination Office usually resolves appeals within 5–10 working days.</div></div></div>
+</div>
+
+<div class="ga-cols">
+
+  {# ── New appeal ──────────────────────────────────────────── #}
+  <section class="ga-card fade-in" aria-labelledby="ga-form-title">
+    <div class="ga-card-head">
+      <h2 class="ga-card-title" id="ga-form-title"><span class="sp-ms" aria-hidden="true">edit_note</span>Raise an Appeal</h2>
+    </div>
+
+    {% if eligible_results and open_for_appeal %}
+    <form class="ga-card-body" id="ga-form" novalidate>
+      <fieldset class="ga-field">
+        <legend class="ga-label">Result to appeal <span class="req">*</span></legend>
+        <div class="ga-results">
+          {% for r in eligible_results %}
+          <label class="ga-opt">
+            <input type="radio" name="ga-result" value="{{ r.key | e }}" data-active="{{ r.active_types | join('|') | e }}"
+                   data-exam="{{ r.exam_plan | e }}" data-course="{{ r.course | e }}"{{ ' disabled' if r.all_blocked }}>
+            <span class="ga-opt-card">
+              <span class="ga-opt-top">
+                <span style="min-width:0;">
+                  <span class="ga-code" style="display:block;">{{ r.course_code }}</span>
+                  <span class="ga-opt-name" style="display:block;">{{ r.course_name }}</span>
+                </span>
+                <span class="ga-grade" title="Current grade">{{ r.grade }}</span>
+              </span>
+              <span class="ga-opt-meta">
+                <span>{{ r.exam_name }}</span>
+                {% if r.marks is not none %}<span>{{ r.marks }} marks</span>{% endif %}
+              </span>
+              {% if r.active_types %}
+              <span class="ga-opt-flag"><span class="sp-ms" aria-hidden="true">hourglass_top</span>
+                {{ 'All appeal types in progress' if r.all_blocked else ('Open: ' ~ (r.active_types | join(', '))) }}
+              </span>
+              {% endif %}
+            </span>
+          </label>
+          {% endfor %}
         </div>
-        <div style="text-align:right;flex-shrink:0;">
-          <span class="sp-badge {% if a.status == 'Resolved' %}sp-badge-pass{% elif a.status == 'Rejected' %}sp-badge-fail{% elif a.status == 'Under Review' %}{% else %}sp-badge-pend{% endif %}"
-            style="{% if a.status == 'Under Review' %}background:var(--sp-info-bg);color:var(--sp-info);{% endif %}">
-            {{ a.status }}
-          </span>
-          <div style="font-size:11px;color:var(--sp-text-4);margin-top:5px;">{{ frappe.utils.formatdate(a.submitted_on, "d MMM yyyy") }}</div>
+      </fieldset>
+
+      <fieldset class="ga-field">
+        <legend class="ga-label">Appeal type <span class="req">*</span></legend>
+        <div class="ga-types">
+          {% for t in appeal_types %}
+          <label class="ga-opt">
+            <input type="radio" name="ga-type" value="{{ t.value | e }}"{{ ' checked' if loop.first }}>
+            <span class="ga-opt-card ga-type-card">
+              <span class="sp-ms" aria-hidden="true">{{ t.icon }}</span>
+              <span>
+                <span class="ga-type-name" style="display:block;">{{ t.value }}</span>
+                <span class="ga-type-hint" style="display:block;">{{ t.hint }}</span>
+                <span class="ga-type-taken is-hidden" style="display:block;">Already open for this course</span>
+              </span>
+            </span>
+          </label>
+          {% endfor %}
         </div>
+      </fieldset>
+
+      <div class="ga-field">
+        <label class="ga-label" for="ga-reason">Reason for appeal <span class="req">*</span></label>
+        <textarea id="ga-reason" class="ga-textarea" maxlength="2000" placeholder="Explain clearly why you believe the grade or marks need correction — e.g. which question, what was expected, and why."></textarea>
+        <div class="ga-hint"><span>Minimum {{ min_reason_chars }} characters</span><span class="ga-count" id="ga-count" aria-live="polite">0 / 2000</span></div>
       </div>
-      {% if a.resolution %}
-      <div style="margin-top:10px;padding:8px 12px;background:#f0fdf4;border-radius:8px;font-size:12px;color:var(--sp-success);display:flex;gap:6px;">
-        <span style="font-family:'Material Symbols Outlined';font-size:14px;flex-shrink:0;">check_circle</span>
-        <span>{{ a.resolution }}</span>
+
+      <div class="ga-field">
+        <label class="ga-label" for="ga-remarks">Supporting remarks <span class="ga-muted" style="text-transform:none;letter-spacing:0;">(optional)</span></label>
+        <textarea id="ga-remarks" class="ga-textarea" style="min-height:64px;" maxlength="1000" placeholder="Any additional context or references"></textarea>
+      </div>
+
+      <div class="ga-actions">
+        <div class="ga-msg is-hidden" id="ga-msg" role="alert"></div>
+        <button type="submit" class="ga-btn" id="ga-submit"><span class="sp-ms" aria-hidden="true">send</span><span id="ga-submit-lbl">Submit Appeal</span></button>
+      </div>
+    </form>
+
+    {% elif eligible_results %}
+    <div class="ga-empty">
+      <div class="ga-empty-icon"><span class="sp-ms" aria-hidden="true">hourglass_top</span></div>
+      <p class="ga-empty-title">All your results are under appeal</p>
+      <p class="ga-empty-sub">You already have an open appeal of every type for each published result. Track them in My Appeals.</p>
+    </div>
+    {% else %}
+    <div class="ga-empty">
+      <div class="ga-empty-icon"><span class="sp-ms" aria-hidden="true">lock_clock</span></div>
+      <p class="ga-empty-title">No results open for appeal</p>
+      <p class="ga-empty-sub">Appeals open once your results are officially published. Check <a href="/student-portal/results">Results / Grades</a> for updates.</p>
+    </div>
+    {% endif %}
+  </section>
+
+  {# ── My appeals ───────────────────────────────────────────── #}
+  <section class="ga-card fade-in" aria-labelledby="ga-list-title">
+    <div class="ga-card-head">
+      <h2 class="ga-card-title" id="ga-list-title"><span class="sp-ms" aria-hidden="true">history</span>My Appeals</h2>
+      {% if appeals | length > 1 %}
+      <div class="ga-filter" role="group" aria-label="Filter appeals">
+        <button type="button" class="ga-chip-btn" data-filter="" aria-pressed="true">All</button>
+        <button type="button" class="ga-chip-btn" data-filter="active" aria-pressed="false">In progress</button>
+        <button type="button" class="ga-chip-btn" data-filter="closed" aria-pressed="false">Closed</button>
       </div>
       {% endif %}
     </div>
-    {% endfor %}
-  </div>
-</div>
-{% else %}
-{% if not eligible_results %}
-<div class="sp-card" style="padding:0;">
-  <div class="sp-empty">
-    <span class="sp-ms">rate_review</span>
-    <p class="sp-empty-title">No Appeals Yet</p>
-    <p class="sp-empty-sub">You have not submitted any grade appeals.</p>
-  </div>
-</div>
-{% endif %}
-{% endif %}
 
-<div id="sp-toast" class="sp-toast">
-  <span class="sp-ms" id="toast-icon">check_circle</span>
-  <span id="toast-msg"></span>
-</div>
+    {% if appeals %}
+    <div id="ga-appeals">
+      {% for a in appeals %}
+      {% set _s = a.status or 'Submitted' %}
+      <article class="ga-appeal" data-state="{{ 'active' if a.is_active else 'closed' }}">
+        <div class="ga-appeal-top">
+          <div style="min-width:0;">
+            <div class="ga-appeal-name">{{ a.course_name }}</div>
+            <div class="ga-appeal-meta">{{ a.course_code }} · {{ a.exam_name }} · {{ a.appeal_type }}{% if a.current_grade %} · Grade {{ a.current_grade }}{% endif %}</div>
+          </div>
+          {{ status_pill(_s) }}
+        </div>
 
+        <div class="ga-track" aria-label="Progress: {{ _s }}">
+          <div class="ga-track-step is-done"><span class="ga-track-dot"></span>Submitted</div>
+          <div class="ga-track-line{{ ' is-done' if _s != 'Submitted' }}"></div>
+          <div class="ga-track-step{{ ' is-done' if _s != 'Submitted' }}"><span class="ga-track-dot"></span>Review</div>
+          <div class="ga-track-line{{ ' is-done' if _s in ('Resolved', 'Rejected') }}"></div>
+          <div class="ga-track-step{{ ' is-done' if _s == 'Resolved' }}{{ ' is-rejected' if _s == 'Rejected' }}"><span class="ga-track-dot"></span>{{ 'Rejected' if _s == 'Rejected' else 'Resolved' }}</div>
+        </div>
+
+        <div class="ga-appeal-meta">
+          {{ a.name }}{% if a.submitted_on %} · Submitted {{ frappe.utils.formatdate(a.submitted_on, "d MMM yyyy") }}{% endif %}{% if a.resolved_on %} · Closed {{ frappe.utils.formatdate(a.resolved_on, "d MMM yyyy") }}{% endif %}
+        </div>
+        {% if a.reason %}<div class="ga-reason">{{ a.reason | truncate(180) }}</div>{% endif %}
+        {% if a.resolution %}
+        <div class="ga-resolution {{ 'bad' if _s == 'Rejected' else 'ok' }}"><span class="sp-ms" aria-hidden="true">{{ 'cancel' if _s == 'Rejected' else 'check_circle' }}</span><span>{{ a.resolution }}</span></div>
+        {% endif %}
+      </article>
+      {% endfor %}
+    </div>
+    <div class="ga-empty is-hidden" id="ga-appeals-none" role="status"><p class="ga-empty-sub">No appeals in this view.</p></div>
+    {% else %}
+    <div class="ga-empty">
+      <div class="ga-empty-icon"><span class="sp-ms" aria-hidden="true">rate_review</span></div>
+      <p class="ga-empty-title">No appeals yet</p>
+      <p class="ga-empty-sub">Appeals you raise will appear here with their progress and outcome.</p>
+    </div>
+    {% endif %}
+  </section>
+
+</div>
+{% endif %}{# end no_student #}
 {% endblock %}
 
 {% block extra_js %}
 <script>
-function onResultSelect(sel) {
-  var opt  = sel.options[sel.selectedIndex];
-  var info = document.getElementById('appeal-current-info');
-  if (sel.value) {
-    document.getElementById('disp-grade').textContent = opt.dataset.grade || '—';
-    document.getElementById('disp-marks').textContent = opt.dataset.marks || '—';
-    info.style.display = 'block';
-  } else {
-    info.style.display = 'none';
+(function () {
+  'use strict';
+  var MIN = {{ (min_reason_chars or 20) | int }};
+
+  /* ── Appeals filter ───────────────────────────────────────────── */
+  var list = document.getElementById('ga-appeals');
+  if (list) {
+    var chips = document.querySelectorAll('.ga-chip-btn');
+    chips.forEach(function (c) {
+      c.addEventListener('click', function () {
+        var f = c.getAttribute('data-filter'), n = 0;
+        list.querySelectorAll('.ga-appeal').forEach(function (el) {
+          var ok = !f || el.getAttribute('data-state') === f;
+          el.classList.toggle('is-hidden', !ok); if (ok) n++;
+        });
+        chips.forEach(function (b) { b.setAttribute('aria-pressed', b === c ? 'true' : 'false'); });
+        document.getElementById('ga-appeals-none').classList.toggle('is-hidden', n > 0);
+      });
+    });
   }
-}
 
-function submitAppeal() {
-  var result = document.getElementById('appeal-result').value;
-  var type   = document.getElementById('appeal-type').value;
-  var reason = document.getElementById('appeal-reason').value.trim();
-  var remark = document.getElementById('appeal-remarks').value.trim();
-  var msg    = document.getElementById('appeal-msg');
-  if (!result) { showInlineMsg(msg, 'Please select a result.', false); return; }
-  if (!reason) { showInlineMsg(msg, 'Please enter your reason.', false); return; }
-  var parts = result.split('|');
-  frappe.call({
-    method: 'slcm.www.student-portal.grade-appeal.submit_appeal',
-    args: { exam_plan: parts[0], course: parts[1], appeal_type: type, reason: reason, supporting_remarks: remark },
-    callback: function(r) {
-      if (r.message) {
-        showToast('Appeal submitted! Ref: ' + r.message.name, 'ok');
-        setTimeout(() => location.reload(), 1800);
-      }
-    },
-    error: function(r) {
-      var errText = 'Submission failed.';
-      try { errText = JSON.parse(r._server_messages)[0].message || errText; } catch(e) {}
-      showInlineMsg(msg, errText, false);
+  /* ── Form ─────────────────────────────────────────────────────── */
+  var form = document.getElementById('ga-form');
+  if (!form) return;
+  var reason = document.getElementById('ga-reason');
+  var remarks = document.getElementById('ga-remarks');
+  var count = document.getElementById('ga-count');
+  var msg = document.getElementById('ga-msg');
+  var btn = document.getElementById('ga-submit');
+  var btnLbl = document.getElementById('ga-submit-lbl');
+  var typeInputs = form.querySelectorAll('input[name="ga-type"]');
+
+  function showMsg(text, ok) {
+    msg.className = 'ga-msg ' + (ok ? 'is-ok' : 'is-error');
+    msg.innerHTML = '<span class="sp-ms" aria-hidden="true">' + (ok ? 'check_circle' : 'error') + '</span><span></span>';
+    msg.lastChild.textContent = text;
+  }
+  function clearMsg() { msg.className = 'ga-msg is-hidden'; msg.textContent = ''; }
+
+  function selectedResult() { return form.querySelector('input[name="ga-result"]:checked'); }
+
+  /* Disable appeal types that already have an open appeal for the chosen course */
+  function syncTypes() {
+    var r = selectedResult();
+    var taken = r ? (r.getAttribute('data-active') || '').split('|').filter(Boolean) : [];
+    var firstFree = null;
+    typeInputs.forEach(function (t) {
+      var isTaken = taken.indexOf(t.value) > -1;
+      t.disabled = isTaken;
+      t.closest('.ga-opt').querySelector('.ga-type-taken').classList.toggle('is-hidden', !isTaken);
+      if (isTaken && t.checked) t.checked = false;
+      if (!isTaken && !firstFree) firstFree = t;
+    });
+    if (!form.querySelector('input[name="ga-type"]:checked') && firstFree) firstFree.checked = true;
+  }
+  form.querySelectorAll('input[name="ga-result"]').forEach(function (r) { r.addEventListener('change', function () { clearMsg(); syncTypes(); }); });
+  typeInputs.forEach(function (t) { t.addEventListener('change', clearMsg); });
+
+  function updateCount() {
+    var n = reason.value.trim().length;
+    count.textContent = reason.value.length + ' / 2000';
+    count.classList.toggle('is-short', n > 0 && n < MIN);
+    if (n >= MIN) reason.classList.remove('is-invalid');
+  }
+  reason.addEventListener('input', updateCount);
+
+  var busy = false;
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (busy) return;
+    clearMsg();
+    var r = selectedResult();
+    var t = form.querySelector('input[name="ga-type"]:checked');
+    var text = reason.value.trim();
+    if (!r) { showMsg('Please choose the result you want to appeal.', false); return; }
+    if (!t) { showMsg('Please choose an appeal type.', false); return; }
+    if (text.length < MIN) {
+      reason.classList.add('is-invalid'); reason.focus();
+      showMsg('Please describe your reason in at least ' + MIN + ' characters.', false); return;
     }
+
+    busy = true; btn.disabled = true;
+    btn.firstChild.textContent = 'progress_activity'; btn.firstChild.classList.add('ga-spin');
+    btnLbl.textContent = 'Submitting…';
+
+    spCall(
+      'slcm.www.student-portal.grade_appeal.submit_appeal',
+      { exam_plan: r.getAttribute('data-exam'), course: r.getAttribute('data-course'),
+        appeal_type: t.value, reason: text, supporting_remarks: remarks.value.trim() },
+      function (res) {
+        showMsg('Appeal submitted' + (res && res.name ? ' — reference ' + res.name : '') + '. Refreshing…', true);
+        btnLbl.textContent = 'Submitted';
+        btn.firstChild.classList.remove('ga-spin'); btn.firstChild.textContent = 'check';
+        setTimeout(function () { location.reload(); }, 1600);
+      },
+      function (err) {
+        busy = false; btn.disabled = false;
+        btn.firstChild.classList.remove('ga-spin'); btn.firstChild.textContent = 'send';
+        btnLbl.textContent = 'Submit Appeal';
+        var text = String(err || 'Submission failed. Please try again.').replace(/<[^>]+>/g, '');
+        showMsg(text, false);
+      }
+    );
   });
-}
 
-function showToast(msg, type) {
-  var t = document.getElementById('sp-toast');
-  t.className = 'sp-toast sp-toast-' + (type === 'ok' ? 'success' : 'danger') + ' open';
-  document.getElementById('toast-icon').textContent = type === 'ok' ? 'check_circle' : 'error';
-  document.getElementById('toast-msg').textContent = msg;
-  setTimeout(() => t.classList.remove('open'), 3500);
-}
-
-function showInlineMsg(el, text, ok) {
-  el.style.display = 'block';
-  el.style.padding = '6px 10px';
-  el.style.borderRadius = '7px';
-  el.style.background = ok ? 'var(--sp-success-bg)' : 'var(--sp-warning-bg)';
-  el.style.color = ok ? 'var(--sp-success)' : 'var(--sp-warning)';
-  el.textContent = text;
-}
+  updateCount();
+  syncTypes();
+}());
 </script>
 {% endblock %}

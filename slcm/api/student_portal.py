@@ -3,7 +3,7 @@
 
 import frappe
 from frappe import _
-from frappe.utils import flt, cint, today, nowdate, getdate
+from frappe.utils import add_days, flt, cint, today, nowdate, getdate
 from slcm.api.student_payment import _require_parent_for_student
 
 
@@ -1243,6 +1243,32 @@ def get_portal_notifications():
 					"subtitle": from_str + (f" · {int(app.total_leave_days or 0)} day(s)" if app.total_leave_days else ""),
 					"icon": "check_circle" if app.status == "Approved" else "cancel",
 					"link": "/student-portal/leave-request",
+					"sort_key": 1,
+				})
+		except Exception:
+			pass
+
+		# ── 6b. Grade Appeal Updates ───────────────────────────────
+		try:
+			since = add_days(nowdate(), -30)
+			appeals = frappe.get_all(
+				"Grade Appeal",
+				filters={"student": student_name, "status": ["in", ["Under Review", "Resolved", "Rejected"]], "modified": [">=", since]},
+				fields=["name", "status", "appeal_type", "course", "exam_plan"],
+				order_by="modified desc",
+				limit=5,
+				ignore_permissions=True,
+			)
+			for ap in appeals:
+				course_name = frappe.db.get_value("Course", ap.course, "course_name") or ap.course or ""
+				notifications.append({
+					"type": "grade_appeal",
+					"category": "Grade Appeal",
+					"priority": "Important" if ap.status != "Under Review" else "Normal",
+					"title": f"Grade appeal {ap.status.lower()}: {course_name}",
+					"subtitle": f"{ap.appeal_type or ''} · {ap.exam_plan or ''}".strip(" ·"),
+					"icon": {"Resolved": "check_circle", "Rejected": "cancel"}.get(ap.status, "hourglass_top"),
+					"link": "/student-portal/grade-appeal",
 					"sort_key": 1,
 				})
 		except Exception:

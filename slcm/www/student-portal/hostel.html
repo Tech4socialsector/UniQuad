@@ -1,6 +1,138 @@
 {% extends "slcm/www/student-portal/_base.html" %}
 {% block title %}Hostel{% endblock %}
 
+{% block extra_head %}
+<style>
+/* ── Hostel (NLS maroon) ────────────────────────────────────────────── */
+:root {
+  --hs-maroon:      #920c24;
+  --hs-maroon-soft: rgba(146,12,36,0.07);
+  --hs-maroon-mid:  rgba(146,12,36,0.16);
+  --hs-border:      var(--sp-border, #e2e8f0);
+  --hs-row:         #f1f2f4;
+  --hs-ok:          #15803d;
+  --hs-ok-bg:       #f0fdf4;
+  --hs-warn:        #b45309;
+  --hs-warn-bg:     #fffbeb;
+}
+.hs-muted { color: var(--sp-text-4); }
+
+/* Hero */
+.hs-hero {
+  background: var(--sp-card, #fff); border: 1px solid var(--hs-border); border-left: 4px solid var(--hs-maroon);
+  border-radius: 12px; padding: 20px 24px; margin-bottom: 18px;
+}
+.hs-hero-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.hs-eyebrow { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--sp-text-4); margin-bottom: 4px; }
+.hs-hostel { font-size: 20px; color: var(--sp-text-1); margin: 0 0 8px; line-height: 1.3; overflow-wrap: anywhere; }
+.hs-chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.hs-chip {
+  display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px;
+  background: var(--sp-bg, #f8fafc); border: 1px solid #eef0f3; color: var(--sp-text-3); font-size: 11.5px; white-space: nowrap;
+}
+.hs-chip .sp-ms { font-size: 14px; color: var(--hs-maroon); }
+.hs-side { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; text-align: right; }
+.hs-status { display: inline-flex; align-items: center; gap: 5px; padding: 4px 12px; border-radius: 20px; font-size: 12px; background: var(--hs-ok-bg); color: var(--hs-ok); border: 1px solid #bbf7d0; }
+.hs-status .sp-ms { font-size: 14px; }
+.hs-side-note { font-size: 11.5px; color: var(--sp-text-4); }
+
+.hs-facts {
+  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px;
+  margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--hs-row);
+}
+@media (max-width: 1100px) { .hs-facts { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 560px)  { .hs-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.hs-fact { display: flex; gap: 10px; align-items: flex-start; min-width: 0; }
+.hs-fact-icon { width: 34px; height: 34px; border-radius: 9px; background: var(--hs-maroon-soft); color: var(--hs-maroon); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.hs-fact-icon .sp-ms { font-size: 18px; }
+.hs-fact-lbl { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--sp-text-4); }
+.hs-fact-val { font-size: 15px; color: var(--sp-text-1); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hs-fact-sub { font-size: 11.5px; color: var(--sp-text-4); margin-top: 1px; }
+.hs-fact-val.is-empty { font-size: 13px; color: var(--sp-text-4); }
+
+/* Two-column body */
+.hs-cols { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 18px; margin-bottom: 18px; align-items: start; }
+@media (max-width: 1000px) { .hs-cols { grid-template-columns: minmax(0, 1fr); } }
+.hs-card { background: var(--sp-card, #fff); border: 1px solid var(--hs-border); border-radius: 12px; overflow: hidden; }
+.hs-card + .hs-card { margin-top: 18px; }
+.hs-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--hs-row); }
+.hs-card-title { display: flex; align-items: center; gap: 8px; font-size: 14.5px; color: var(--sp-text-1); margin: 0; font-weight: 400; }
+.hs-card-title .sp-ms { font-size: 20px; color: var(--hs-maroon); }
+.hs-card-body { padding: 16px 18px; }
+
+/* Checklist */
+.hs-progress { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--sp-text-3); white-space: nowrap; }
+.hs-progress-bar { width: 120px; height: 6px; border-radius: 99px; background: #eceef1; overflow: hidden; }
+.hs-progress-fill { height: 100%; background: var(--hs-maroon); border-radius: 99px; }
+.hs-steps { list-style: none; margin: 0; padding: 0; }
+.hs-step { display: flex; gap: 12px; align-items: flex-start; padding: 12px 0; border-top: 1px solid var(--hs-row); }
+.hs-step:first-child { border-top: none; padding-top: 2px; }
+.hs-step-mark { width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border: 2px dashed #cbd5e1; color: var(--sp-text-4); }
+.hs-step-mark .sp-ms { font-size: 16px; }
+.hs-step.is-done .hs-step-mark { border: none; background: var(--hs-maroon); color: #fff; }
+.hs-step-body { flex: 1; min-width: 0; }
+.hs-step-label { font-size: 13.5px; color: var(--sp-text-1); }
+.hs-step-note { font-size: 12px; color: var(--sp-text-4); margin-top: 2px; }
+.hs-step:not(.is-done) .hs-step-note { color: var(--hs-warn); }
+.hs-step-tag { font-size: 11px; padding: 2px 9px; border-radius: 20px; white-space: nowrap; align-self: center; }
+.hs-step.is-done .hs-step-tag { background: var(--hs-ok-bg); color: var(--hs-ok); }
+.hs-step:not(.is-done) .hs-step-tag { background: var(--hs-warn-bg); color: var(--hs-warn); }
+.hs-alldone { display: flex; gap: 10px; align-items: center; padding: 10px 12px; margin-top: 6px; border-radius: 10px; background: var(--hs-ok-bg); color: var(--hs-ok); font-size: 13px; }
+
+/* Occupancy */
+.hs-beds { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+.hs-bed { width: 46px; height: 46px; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; border: 1px dashed #cbd5e1; color: var(--sp-text-4); font-size: 9.5px; letter-spacing: .04em; text-transform: uppercase; }
+.hs-bed .sp-ms { font-size: 20px; }
+.hs-bed.is-taken { border: 1px solid var(--hs-maroon-mid); background: var(--hs-maroon-soft); color: var(--hs-maroon); }
+.hs-bed.is-you { border: 1px solid var(--hs-maroon); background: var(--hs-maroon); color: #fff; }
+.hs-occ-note { font-size: 12.5px; color: var(--sp-text-3); }
+
+/* Warden */
+.hs-person { display: flex; gap: 12px; align-items: center; }
+.hs-avatar { width: 44px; height: 44px; border-radius: 50%; background: var(--hs-maroon-soft); color: var(--hs-maroon); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+.hs-person-name { font-size: 15px; color: var(--sp-text-1); }
+.hs-person-role { font-size: 12px; color: var(--sp-text-4); margin-top: 1px; }
+.hs-contacts { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.hs-contact {
+  display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--hs-row);
+  font-size: 13px; color: var(--sp-text-2); text-decoration: none; min-width: 0;
+}
+.hs-contact .sp-ms { font-size: 18px; color: var(--hs-maroon); flex-shrink: 0; }
+.hs-contact span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+a.hs-contact:hover { border-color: var(--hs-maroon-mid); background: var(--hs-maroon-soft); }
+a.hs-contact:focus-visible { outline: 2px solid var(--hs-maroon); outline-offset: 2px; }
+.hs-contact-none { font-size: 12.5px; color: var(--sp-text-4); margin-top: 12px; line-height: 1.5; }
+
+/* Complaints */
+.hs-complaint { padding: 14px 18px; border-top: 1px solid var(--hs-row); }
+.hs-complaint:first-child { border-top: none; }
+.hs-c-top { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: flex-start; }
+.hs-c-type { font-size: 13.5px; color: var(--sp-text-1); }
+.hs-c-desc { font-size: 12.5px; color: var(--sp-text-2); margin-top: 3px; line-height: 1.55; overflow-wrap: anywhere; }
+.hs-c-date { font-size: 11px; color: var(--sp-text-4); margin-top: 5px; }
+.hs-pill { display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 20px; font-size: 11px; white-space: nowrap; background: #f3f4f6; color: var(--sp-text-3); }
+.hs-pill-ok   { background: var(--hs-ok-bg); color: var(--hs-ok); }
+.hs-pill-warn { background: var(--hs-warn-bg); color: var(--hs-warn); }
+.hs-pill-bad  { background: #fef2f2; color: #b91c1c; }
+.hs-pill-info { background: #eff6ff; color: #1d4ed8; }
+.hs-c-res { margin-top: 10px; padding: 8px 12px; border-radius: 8px; background: var(--hs-ok-bg); color: var(--hs-ok); font-size: 12px; display: flex; gap: 6px; align-items: flex-start; }
+.hs-c-res .sp-ms { font-size: 15px; flex-shrink: 0; }
+
+/* Empty */
+.hs-empty { background: var(--sp-card, #fff); border: 1px solid var(--hs-border); border-radius: 12px; padding: 40px 24px; text-align: center; }
+.hs-empty-icon { width: 64px; height: 64px; border-radius: 18px; background: var(--hs-maroon-soft); color: var(--hs-maroon); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 14px; }
+.hs-empty-icon .sp-ms { font-size: 32px; }
+.hs-empty-title { font-size: 17px; color: var(--sp-text-1); margin: 0 0 6px; }
+.hs-empty-sub { font-size: 13px; color: var(--sp-text-3); margin: 0 auto; max-width: 440px; line-height: 1.6; }
+
+@media (max-width: 640px) {
+  .hs-hero { padding: 16px; }
+  .hs-side { align-items: flex-start; text-align: left; }
+  .hs-card-head { flex-wrap: wrap; }
+}
+</style>
+{% endblock %}
+
 {% block content %}
 
 <div class="sp-page-header fade-in">
@@ -17,526 +149,211 @@
 
 {% if not is_hosteller %}
 {# ── Not a resident ────────────────────────────────────────────── #}
-<div class="sp-card fade-in" style="padding:0;">
-  <div class="sp-empty">
-    <span class="sp-ms">hotel</span>
-    <p class="sp-empty-title">No Hostel Allocation</p>
-    <p class="sp-empty-sub">No active hostel allocation found. Contact the Hostel Office if you are a resident student.</p>
-  </div>
+<div class="hs-empty fade-in">
+  <div class="hs-empty-icon"><span class="sp-ms" aria-hidden="true">hotel</span></div>
+  <p class="hs-empty-title">No Hostel Allocation</p>
+  <p class="hs-empty-sub">No active hostel allocation found for your account. If you are a resident student, please contact the Hostel Office.</p>
 </div>
 
 {% else %}
 {%- set _hostel = hostel_info.hostel_name or profile.current_hostel or "—" -%}
 {%- set _room   = room_info.room_number or profile.current_room or "—" -%}
-{%- set _bed    = bed_info.bed_no or profile.current_bed or "—" -%}
+{%- set _bed    = bed_info.bed_no or "" -%}
+{%- set _warden = hostel_info.warden if hostel_info.warden else {} -%}
+{%- set _steps  = checklist or [] -%}
+{%- set _cap    = room_info.capacity or 0 -%}
+{%- set _occ    = room_info.occupied or 0 -%}
 
-{# ── Stats ─────────────────────────────────────────────────────── #}
-<div class="sp-stat-grid hostel-stat-grid fade-in">
-
-  <div class="sp-stat-card">
-    <div class="sp-stat-icon" style="background:#eff6ff;color:var(--sp-primary);">apartment</div>
-    <div class="hostel-stat-body">
-      <div class="sp-stat-label">Hostel</div>
-      <div class="sp-stat-value hostel-stat-value" title="{{ _hostel | e }}">{{ _hostel }}</div>
-      {% if hostel_info.hostel_block %}
-      <div class="sp-stat-sub">Block: {{ hostel_info.hostel_block }}</div>
-      {% elif hostel_info.hostel_type %}
-      <div class="sp-stat-sub">{{ hostel_info.hostel_type }}</div>
+{# ── My accommodation ─────────────────────────────────────────── #}
+<section class="hs-hero fade-in" aria-label="My accommodation">
+  <div class="hs-hero-top">
+    <div style="min-width:0;">
+      <div class="hs-eyebrow">My Accommodation</div>
+      <h2 class="hs-hostel">{{ _hostel }}</h2>
+      <div class="hs-chips">
+        {% if hostel_info.hostel_code %}<span class="hs-chip"><span class="sp-ms" aria-hidden="true">tag</span>{{ hostel_info.hostel_code }}</span>{% endif %}
+        {% if hostel_info.hostel_type %}<span class="hs-chip"><span class="sp-ms" aria-hidden="true">group</span>{{ hostel_info.hostel_type }} hostel</span>{% endif %}
+        {% if hostel_info.hostel_block %}<span class="hs-chip"><span class="sp-ms" aria-hidden="true">domain</span>Block {{ hostel_info.hostel_block }}</span>{% endif %}
+        {% if room_info.room_type %}<span class="hs-chip"><span class="sp-ms" aria-hidden="true">{{ 'ac_unit' if room_info.room_type == 'AC' else 'mode_fan' }}</span>{{ room_info.room_type }}</span>{% endif %}
+      </div>
+    </div>
+    <div class="hs-side">
+      <span class="hs-status"><span class="sp-ms" aria-hidden="true">check_circle</span>Active Resident</span>
+      {% if tenure %}<span class="hs-side-note">Resident for {{ tenure }}</span>{% endif %}
+      {% if days_to_end is defined and days_to_end is not none and days_to_end >= 0 and days_to_end <= 30 %}
+      <span class="hs-side-note" style="color:var(--hs-warn);">Allocation ends in {{ days_to_end }} day{{ 's' if days_to_end != 1 }}</span>
       {% endif %}
     </div>
   </div>
 
-  <div class="sp-stat-card">
-    <div class="sp-stat-icon" style="background:#f0fdf4;color:var(--sp-success);">door_front</div>
-    <div class="hostel-stat-body">
-      <div class="sp-stat-label">Room</div>
-      <div class="sp-stat-value hostel-stat-value" title="{{ _room | e }}">{{ _room }}</div>
-      {% if room_info.floor %}
-      <div class="sp-stat-sub">Floor {{ room_info.floor }}</div>
-      {% elif room_info.room_type %}
-      <div class="sp-stat-sub">{{ room_info.room_type }}</div>
-      {% endif %}
+  <div class="hs-facts">
+    <div class="hs-fact">
+      <span class="hs-fact-icon"><span class="sp-ms" aria-hidden="true">door_front</span></span>
+      <div style="min-width:0;"><div class="hs-fact-lbl">Room</div><div class="hs-fact-val" title="{{ _room | e }}">{{ _room }}</div>{% if room_info.floor %}<div class="hs-fact-sub">Floor {{ room_info.floor }}</div>{% endif %}</div>
+    </div>
+    <div class="hs-fact">
+      <span class="hs-fact-icon"><span class="sp-ms" aria-hidden="true">single_bed</span></span>
+      <div style="min-width:0;"><div class="hs-fact-lbl">Bed</div>
+        {% if _bed %}<div class="hs-fact-val">{{ _bed }}</div>{% else %}<div class="hs-fact-val is-empty">Not assigned yet</div>{% endif %}
+      </div>
+    </div>
+    <div class="hs-fact">
+      <span class="hs-fact-icon"><span class="sp-ms" aria-hidden="true">key</span></span>
+      <div style="min-width:0;"><div class="hs-fact-lbl">Key No.</div>
+        {% if key_number %}<div class="hs-fact-val">{{ key_number }}</div><div class="hs-fact-sub">{{ 'Handed over' if allocation.keys_handed_over else 'Not collected yet' }}</div>
+        {% else %}<div class="hs-fact-val is-empty">Not issued</div>{% endif %}
+      </div>
+    </div>
+    <div class="hs-fact">
+      <span class="hs-fact-icon"><span class="sp-ms" aria-hidden="true">event_available</span></span>
+      <div style="min-width:0;"><div class="hs-fact-lbl">Allotted Since</div>
+        <div class="hs-fact-val">{{ frappe.utils.formatdate(allocation.from_date, "d MMM yyyy") if allocation.from_date else "—" }}</div>
+        {% if allocation.status %}<div class="hs-fact-sub">{{ allocation.status }}</div>{% endif %}
+      </div>
+    </div>
+    <div class="hs-fact">
+      <span class="hs-fact-icon"><span class="sp-ms" aria-hidden="true">date_range</span></span>
+      <div style="min-width:0;"><div class="hs-fact-lbl">Allocation Until</div>
+        {% if allocation.to_date %}<div class="hs-fact-val">{{ frappe.utils.formatdate(allocation.to_date, "d MMM yyyy") }}</div>
+        {% else %}<div class="hs-fact-val is-empty">Ongoing</div>{% endif %}
+      </div>
     </div>
   </div>
+</section>
 
-  <div class="sp-stat-card">
-    <div class="sp-stat-icon" style="background:#faf5ff;color:#7c3aed;">single_bed</div>
-    <div class="hostel-stat-body">
-      <div class="sp-stat-label">Bed / Key</div>
-      <div class="sp-stat-value hostel-stat-value" title="{{ _bed | e }}">{{ _bed }}</div>
-      {% if room_info.room_type and room_info.floor %}
-      <div class="sp-stat-sub">{{ room_info.room_type }}</div>
-      {% endif %}
-    </div>
-  </div>
-
-  <div class="sp-stat-card">
-    <div class="sp-stat-icon" style="background:#fff7ed;color:#ea580c;">event_available</div>
-    <div class="hostel-stat-body">
-      <div class="sp-stat-label">Allotted Since</div>
-      <div class="sp-stat-value hostel-stat-value">{{ frappe.utils.formatdate(allocation.from_date, "d MMM yyyy") if allocation.from_date else "—" }}</div>
-      {% if allocation.status %}
-      <div class="sp-stat-sub">{{ allocation.status }}</div>
-      {% endif %}
-    </div>
-  </div>
-
-</div>
-
-{# ── Allocation details ────────────────────────────────────────── #}
-<div class="sp-section-card fade-in" style="margin-bottom:24px;">
-  <div class="sp-section-header" style="justify-content:space-between;flex-wrap:wrap;gap:8px;">
-    <span style="display:flex;align-items:center;gap:8px;">
-      <span class="sp-ms">hotel</span> Allocation Details
-    </span>
-    <span class="sp-badge sp-badge-pass" style="font-size:11px;padding:4px 12px;">
-      <span class="sp-ms" style="font-size:12px;margin-right:3px;">check_circle</span> Active Resident
-    </span>
-  </div>
-  <div class="sp-section-body">
-
-    <div class="hostel-info-grid">
-
-      <div class="hostel-info-row">
-        <span class="sp-ms hostel-info-icon">calendar_today</span>
-        <div>
-          <div class="hostel-tile-label">Allocation Period</div>
-          <div class="hostel-info-text">
-            {% if allocation.from_date %}
-            {{ frappe.utils.formatdate(allocation.from_date, "d MMM yyyy") }}
-            &nbsp;→&nbsp;{% if allocation.to_date %}{{ frappe.utils.formatdate(allocation.to_date, "d MMM yyyy") }}{% else %}<em style="color:var(--sp-text-4);">Ongoing</em>{% endif %}
-            {% else %}—{% endif %}
+<div class="hs-cols">
+  <div>
+    {# ── Move-in checklist ─────────────────────────────────────── #}
+    {% if _steps %}
+    <section class="hs-card fade-in" aria-labelledby="hs-check-title">
+      <div class="hs-card-head">
+        <h2 class="hs-card-title" id="hs-check-title"><span class="sp-ms" aria-hidden="true">checklist</span>Move-in Checklist</h2>
+        <div class="hs-progress">
+          <div class="hs-progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="{{ _steps | length }}" aria-valuenow="{{ checklist_done }}" aria-label="Checklist progress">
+            <div class="hs-progress-fill" style="width:{{ (checklist_done / (_steps | length) * 100) | round(1) }}%;"></div>
           </div>
+          {{ checklist_done }} of {{ _steps | length }} done
         </div>
       </div>
-
-      <div class="hostel-info-row">
-        <span class="sp-ms hostel-info-icon">assignment_turned_in</span>
-        <div>
-          <div class="hostel-tile-label">Agreement</div>
-          <div class="hostel-info-text" style="color:{% if allocation.agreement_signed %}var(--sp-success){% else %}var(--sp-warning){% endif %};">
-            {% if allocation.agreement_signed %}
-            <span class="sp-ms hostel-inline-icon">check_circle</span> Signed
-            {% else %}
-            <span class="sp-ms hostel-inline-icon">pending</span> Pending
-            {% endif %}
-          </div>
-        </div>
+      <div class="hs-card-body">
+        <ol class="hs-steps">
+          {% for st in _steps %}
+          <li class="hs-step{{ ' is-done' if st.done }}">
+            <span class="hs-step-mark" aria-hidden="true">{% if st.done %}<span class="sp-ms">check</span>{% else %}{{ loop.index }}{% endif %}</span>
+            <div class="hs-step-body">
+              <div class="hs-step-label">{{ st.label }}</div>
+              {% set _note = st.done_note if st.done else st.todo_note %}
+              {% if _note %}<div class="hs-step-note">{{ _note }}</div>{% endif %}
+            </div>
+            <span class="hs-step-tag">{{ 'Done' if st.done else 'Pending' }}</span>
+          </li>
+          {% endfor %}
+        </ol>
+        {% if checklist_done == _steps | length %}
+        <div class="hs-alldone"><span class="sp-ms" aria-hidden="true">celebration</span>You're all set — every move-in step is complete.</div>
+        {% endif %}
       </div>
+    </section>
+    {% endif %}
 
-      <div class="hostel-info-row">
-        <span class="sp-ms hostel-info-icon">key</span>
-        <div>
-          <div class="hostel-tile-label">Keys</div>
-          <div class="hostel-info-text" style="color:{% if allocation.keys_handed_over %}var(--sp-success){% else %}var(--sp-warning){% endif %};">
-            {% if allocation.keys_handed_over %}
-            <span class="sp-ms hostel-inline-icon">check_circle</span> Handed Over
-            {% else %}
-            <span class="sp-ms hostel-inline-icon">pending</span> Not Yet Issued
-            {% endif %}
-          </div>
-        </div>
-      </div>
-
-      <div class="hostel-info-row">
-        <span class="sp-ms hostel-info-icon">manage_accounts</span>
-        <div>
-          <div class="hostel-tile-label">Warden</div>
-          <div class="hostel-info-text">{{ (hostel_info.warden.warden_name if hostel_info.warden else "") or "—" }}</div>
-          {% if hostel_info.warden and hostel_info.warden.warden_contact %}
-          <div class="hostel-tile-sub">
-            <span class="sp-ms hostel-inline-icon" style="font-size:11px;">call</span>
-            <a href="tel:{{ hostel_info.warden.warden_contact | e }}" style="color:inherit;">{{ hostel_info.warden.warden_contact }}</a>
-          </div>
-          {% endif %}
-        </div>
-      </div>
-
-    </div>
-
+    {# ── Remarks ─────────────────────────────────────────────── #}
     {% if allocation.remarks %}
-    <div class="sp-info-box" style="margin-top:14px;">
+    <div class="sp-info-box fade-in" style="margin-top:18px;">
       <span class="sp-ms">info</span>
       <div>{{ allocation.remarks }}</div>
     </div>
     {% endif %}
+  </div>
+
+  <div>
+    {# ── Room occupancy ─────────────────────────────────────────── #}
+    {% if _cap %}
+    <section class="hs-card fade-in" aria-labelledby="hs-occ-title">
+      <div class="hs-card-head">
+        <h2 class="hs-card-title" id="hs-occ-title"><span class="sp-ms" aria-hidden="true">bed</span>Room Occupancy</h2>
+        <span class="hs-muted" style="font-size:12px;">{{ _occ }} / {{ _cap }} beds</span>
+      </div>
+      <div class="hs-card-body">
+        {% if _cap <= 12 %}
+        <div class="hs-beds" role="img" aria-label="{{ _occ }} of {{ _cap }} beds occupied, including you">
+          {% for i in range(_cap) %}
+          {% if i == 0 %}<div class="hs-bed is-you"><span class="sp-ms" aria-hidden="true">person</span>You</div>
+          {% elif i < _occ %}<div class="hs-bed is-taken"><span class="sp-ms" aria-hidden="true">person</span>Taken</div>
+          {% else %}<div class="hs-bed"><span class="sp-ms" aria-hidden="true">bed</span>Free</div>{% endif %}
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="hs-progress-bar" style="width:100%;height:8px;margin-bottom:10px;" role="progressbar" aria-valuemin="0" aria-valuemax="{{ _cap }}" aria-valuenow="{{ _occ }}" aria-label="Room occupancy">
+          <div class="hs-progress-fill" style="width:{{ (_occ / _cap * 100) | round(1) }}%;"></div>
+        </div>
+        {% endif %}
+        <div class="hs-occ-note">
+          {% if _cap - _occ > 0 %}{{ _cap - _occ }} bed{{ 's' if _cap - _occ != 1 }} still free in your room.{% else %}Your room is fully occupied.{% endif %}
+        </div>
+      </div>
+    </section>
+    {% endif %}
+
+    {# ── Warden ─────────────────────────────────────────────────── #}
+    <section class="hs-card fade-in" aria-labelledby="hs-warden-title">
+      <div class="hs-card-head">
+        <h2 class="hs-card-title" id="hs-warden-title"><span class="sp-ms" aria-hidden="true">manage_accounts</span>Your Warden</h2>
+      </div>
+      <div class="hs-card-body">
+        {% if _warden.warden_name %}
+        <div class="hs-person">
+          <div class="hs-avatar" aria-hidden="true">{{ _warden.warden_name[0] | upper }}</div>
+          <div style="min-width:0;">
+            <div class="hs-person-name">{{ _warden.warden_name }}</div>
+            <div class="hs-person-role">Warden · {{ _hostel }}</div>
+          </div>
+        </div>
+        {% if _warden.warden_contact or _warden.warden_email %}
+        <div class="hs-contacts">
+          {% if _warden.warden_contact %}<a class="hs-contact" href="tel:{{ _warden.warden_contact | replace(' ', '') | e }}"><span class="sp-ms" aria-hidden="true">call</span><span>{{ _warden.warden_contact }}</span></a>{% endif %}
+          {% if _warden.warden_email %}<a class="hs-contact" href="mailto:{{ _warden.warden_email | e }}"><span class="sp-ms" aria-hidden="true">mail</span><span>{{ _warden.warden_email }}</span></a>{% endif %}
+        </div>
+        {% else %}
+        <p class="hs-contact-none">Contact details aren't listed yet. Reach your warden through the Hostel Office or the Helpdesk.</p>
+        {% endif %}
+        {% else %}
+        <p class="hs-contact-none" style="margin-top:0;">No warden is assigned to your hostel yet. Contact the Hostel Office for help.</p>
+        {% endif %}
+      </div>
+    </section>
 
   </div>
 </div>
+
+{# ── Complaints (only when the student has any) ─────────────── #}
+{% if complaints %}
+<section class="hs-card fade-in" aria-labelledby="hs-comp-title" style="margin-bottom:18px;">
+  <div class="hs-card-head">
+    <h2 class="hs-card-title" id="hs-comp-title"><span class="sp-ms" aria-hidden="true">report_problem</span>My Complaints</h2>
+    {% if open_complaints %}<span class="hs-pill hs-pill-warn">{{ open_complaints }} open</span>{% endif %}
+  </div>
+  {% for c in complaints %}
+  {% set _st = c.status or 'Open' %}
+  <div class="hs-complaint">
+    <div class="hs-c-top">
+      <div style="min-width:0;flex:1;">
+        <div class="hs-c-type">{{ c.complaint_type or 'Complaint' }}</div>
+        {% if c.description %}<div class="hs-c-desc">{{ c.description | truncate(160) }}</div>{% endif %}
+        <div class="hs-c-date">{{ c.name }} · {{ frappe.utils.formatdate(c.creation, "d MMM yyyy") }}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0;">
+        {% if c.severity %}<span class="hs-pill {{ 'hs-pill-bad' if c.severity in ('Critical', 'High') else '' }}">{{ c.severity }}</span>{% endif %}
+        <span class="hs-pill {{ 'hs-pill-ok' if _st in ('Resolved', 'Closed') else ('hs-pill-info' if _st == 'In Progress' else 'hs-pill-warn') }}">{{ _st }}</span>
+      </div>
+    </div>
+    {% if c.resolution_details %}
+    <div class="hs-c-res"><span class="sp-ms" aria-hidden="true">check_circle</span><span>{{ c.resolution_details }}</span></div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+
 {% endif %}{# end is_hosteller #}
 
-{# ── Tabs ──────────────────────────────────────────────────────── #}
-{# <div class="sp-tab-nav fade-in" id="hostel-tab-nav">
-  <button class="sp-tab active" onclick="switchTab('complaints', this)">
-    <span class="sp-ms">report_problem</span>
-    Complaints
-    {% if open_complaints %}<span class="sp-tab-badge">{{ open_complaints }}</span>{% endif %}
-  </button>
-  <button class="sp-tab" onclick="switchTab('leave', this)">
-    <span class="sp-ms">exit_to_app</span>
-    Leave Requests
-    {% if pending_leaves %}<span class="sp-tab-badge sp-tab-badge-info">{{ pending_leaves }}</span>{% endif %}
-  </button>
-  <button class="sp-tab" onclick="switchTab('fines', this)">
-    <span class="sp-ms">receipt_long</span>
-    Fines
-    {% if unpaid_fine_count %}<span class="sp-tab-badge">{{ unpaid_fine_count }}</span>{% endif %}
-  </button>
-</div> #}
-
-{# ════════════════════════════════════ COMPLAINTS ════════════════ #}
-<div id="tab-complaints" class="sp-tab-panel active">
-
-  {# New Complaint Form #}
-  {# <div class="sp-section-card fade-in" style="margin-bottom:16px;">
-    <div class="sp-section-header">
-      <span class="sp-ms">add_circle</span> New Complaint
-    </div>
-    <div class="sp-section-body">
-      <div class="sp-form-row">
-        <div class="sp-form-group">
-          <label class="sp-form-label">Complaint Type</label>
-          <select id="complaint-type" class="sp-form-control">
-            <option value="Maintenance">Maintenance</option>
-            <option value="Discipline">Discipline</option>
-            <option value="Cleanliness">Cleanliness</option>
-            <option value="Food">Food</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
-        <div class="sp-form-group">
-          <label class="sp-form-label">Severity</label>
-          <select id="complaint-severity" class="sp-form-control">
-            <option value="Low">Low</option>
-            <option value="Medium">Medium</option>
-            <option value="High">High</option>
-            <option value="Critical">Critical</option>
-          </select>
-        </div>
-      </div>
-      <div class="sp-form-group">
-        <label class="sp-form-label">Description <span class="sp-required">*</span></label>
-        <textarea id="complaint-desc" class="sp-form-control sp-form-textarea" rows="3"
-          placeholder="Describe the issue clearly..."></textarea>
-      </div>
-      <div style="display:flex;justify-content:flex-end;gap:10px;align-items:center;">
-        <div id="complaint-msg" style="display:none;font-size:13px;"></div>
-        <button onclick="submitComplaint()" class="sp-btn sp-btn-primary">
-          <span class="sp-ms">send</span> Submit Complaint
-        </button>
-      </div>
-    </div>
-  </div> #}
-
-  {# List #}
-  {% if complaints %}
-  <div class="sp-section-header fade-in" style="background:none;border:none;padding:0 0 10px;">
-    <span class="sp-ms">report_problem</span> My Complaints
-  </div>
-  <div style="display:flex;flex-direction:column;gap:10px;">
-    {% for c in complaints %}
-    <div class="sp-card" style="padding:16px 20px;border-left:3px solid {% if c.status in ('Resolved','Closed') %}var(--sp-success){% elif c.status == 'In Progress' %}var(--sp-info){% else %}var(--sp-warning){% endif %};">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
-        <div style="flex:1;min-width:0;">
-          <div style="font-weight:600;font-size:13px;color:var(--sp-text-1);">{{ c.complaint_type }}</div>
-          <div style="font-size:12px;color:var(--sp-text-2);margin-top:3px;line-height:1.5;">{{ c.description | truncate(120) }}</div>
-          <div style="font-size:11px;color:var(--sp-text-4);margin-top:5px;">{{ frappe.utils.formatdate(c.creation, "d MMM yyyy") }}</div>
-        </div>
-        <div style="display:flex;gap:6px;align-items:flex-start;flex-shrink:0;">
-          <span class="sp-badge {% if c.severity == 'Critical' %}sp-badge-fail{% elif c.severity == 'High' %}sp-badge-pend{% else %}{% endif %}" style="font-size:10px;{% if c.severity not in ('Critical','High') %}background:#f3f4f6;color:var(--sp-text-3);{% endif %}">{{ c.severity }}</span>
-          <span class="sp-badge {% if c.status in ('Resolved','Closed') %}sp-badge-pass{% elif c.status == 'In Progress' %}{% else %}sp-badge-pend{% endif %}" style="font-size:10px;{% if c.status == 'In Progress' %}background:var(--sp-info-bg);color:var(--sp-info);{% endif %}">{{ c.status }}</span>
-        </div>
-      </div>
-      {% if c.resolution_details %}
-      <div style="margin-top:10px;padding:8px 12px;background:#f0fdf4;border-radius:8px;font-size:12px;color:var(--sp-success);display:flex;gap:6px;align-items:flex-start;">
-        <span style="font-family:'Material Symbols Outlined';font-size:14px;flex-shrink:0;margin-top:1px;">check_circle</span>
-        <span>{{ c.resolution_details }}</span>
-      </div>
-      {% endif %}
-    </div>
-    {% endfor %}
-  </div>
-  {# {% else %}
-  <div class="sp-card" style="padding:0;">
-    <div class="sp-empty">
-      <span class="sp-ms">check_circle</span>
-      <p class="sp-empty-title">No Complaints</p>
-      <p class="sp-empty-sub">No complaints filed yet. Use the form above to raise one.</p>
-    </div>
-  </div>
-  #}
-  {% endif %}
-
-</div>
-
-{# ════════════════════════════════════ LEAVE ════════════════════ #}
-<div id="tab-leave" class="sp-tab-panel">
-
-  {# New Leave Form #}
-  <div class="sp-section-card fade-in" style="margin-bottom:16px;">
-    <div class="sp-section-header">
-      <span class="sp-ms">add_circle</span> New Leave Request
-    </div>
-    <div class="sp-section-body">
-      <div class="sp-form-row">
-        <div class="sp-form-group">
-          <label class="sp-form-label">From Date <span class="sp-required">*</span></label>
-          <input type="date" id="leave-from" class="sp-form-control" min="{{ frappe.utils.today() }}">
-        </div>
-        <div class="sp-form-group">
-          <label class="sp-form-label">To Date <span class="sp-required">*</span></label>
-          <input type="date" id="leave-to" class="sp-form-control" min="{{ frappe.utils.today() }}">
-        </div>
-      </div>
-      <div class="sp-form-group">
-        <label class="sp-form-label">Reason <span class="sp-required">*</span></label>
-        <textarea id="leave-reason" class="sp-form-control sp-form-textarea" rows="2"
-          placeholder="State the reason for your leave..."></textarea>
-      </div>
-      <div style="display:flex;justify-content:flex-end;gap:10px;align-items:center;">
-        <div id="leave-msg" style="display:none;font-size:13px;"></div>
-        <button onclick="submitLeave()" class="sp-btn sp-btn-primary">
-          <span class="sp-ms">send</span> Submit Request
-        </button>
-      </div>
-    </div>
-  </div>
-
-  {% if leave_requests %}
-  <div style="display:flex;flex-direction:column;gap:10px;">
-    {% for l in leave_requests %}
-    <div class="sp-card" style="padding:16px 20px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-        <div>
-          <div style="font-weight:600;font-size:13px;color:var(--sp-text-1);">
-            {{ frappe.utils.formatdate(l.from_date, "d MMM yyyy") }}
-            &nbsp;→&nbsp;
-            {{ frappe.utils.formatdate(l.to_date, "d MMM yyyy") }}
-          </div>
-          <div style="font-size:12px;color:var(--sp-text-2);margin-top:3px;">{{ l.reason | truncate(100) }}</div>
-          {% if l.approved_by %}
-          <div style="font-size:11px;color:var(--sp-text-4);margin-top:4px;">
-            <span class="sp-ms" style="font-size:11px;vertical-align:middle;">person</span>
-            {{ l.approved_by }}
-          </div>
-          {% endif %}
-        </div>
-        <div style="text-align:right;">
-          <span class="sp-badge {% if l.status == 'Approved' %}sp-badge-pass{% elif l.status == 'Rejected' %}sp-badge-fail{% else %}sp-badge-pend{% endif %}">
-            {{ l.status }}
-          </span>
-          <div style="font-size:11px;color:var(--sp-text-4);margin-top:4px;">
-            {%- set d1 = frappe.utils.getdate(l.from_date) -%}
-            {%- set d2 = frappe.utils.getdate(l.to_date) -%}
-            {{ (d2 - d1).days + 1 }} day(s)
-          </div>
-        </div>
-      </div>
-    </div>
-    {% endfor %}
-  </div>
-  {% else %}
-  <div class="sp-card" style="padding:0;">
-    <div class="sp-empty">
-      <span class="sp-ms">exit_to_app</span>
-      <p class="sp-empty-title">No Leave Requests</p>
-      <p class="sp-empty-sub">No leave requests submitted yet.</p>
-    </div>
-  </div>
-  {% endif %}
-
-</div>
-
-{# ════════════════════════════════════ FINES ════════════════════ #}
-<div id="tab-fines" class="sp-tab-panel">
-
-  {% if fines %}
-  {# Summary bar #}
-  {% if total_unpaid_fines > 0 %}
-  <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--sp-danger-bg);border-radius:10px;margin-bottom:14px;font-size:13px;color:var(--sp-danger);" class="fade-in">
-    <span class="sp-ms">warning</span>
-    <div>You have <strong>{{ unpaid_fine_count }} unpaid fine{% if unpaid_fine_count > 1 %}s{% endif %}</strong> totalling <strong>₹{{ "{:,.0f}".format(total_unpaid_fines) }}</strong>. Please clear them at the Hostel Office.</div>
-  </div>
-  {% endif %}
-  <div style="display:flex;flex-direction:column;gap:10px;" class="fade-in">
-    {% for f in fines %}
-    <div class="sp-card" style="padding:16px 20px;border-left:3px solid {% if f.status == 'Paid' %}var(--sp-success){% elif f.status == 'Waived' %}var(--sp-info){% else %}var(--sp-danger){% endif %};">
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-        <div>
-          <div style="font-weight:600;font-size:13px;color:var(--sp-text-1);">{{ f.reason }}</div>
-          <div style="font-size:11px;color:var(--sp-text-4);margin-top:3px;">{{ frappe.utils.formatdate(f.fine_date, "d MMM yyyy") }}</div>
-          {% if f.issued_by %}
-          <div style="font-size:11px;color:var(--sp-text-4);margin-top:2px;">
-            <span class="sp-ms" style="font-size:11px;vertical-align:middle;">gavel</span> Issued by {{ f.issued_by }}
-          </div>
-          {% endif %}
-        </div>
-        <div style="display:flex;align-items:center;gap:10px;">
-          <div style="font-weight:800;font-size:16px;color:{% if f.status == 'Unpaid' %}var(--sp-danger){% else %}var(--sp-text-2){% endif %};">₹{{ "{:,.0f}".format(f.amount or 0) }}</div>
-          <span class="sp-badge {% if f.status == 'Paid' %}sp-badge-pass{% elif f.status == 'Waived' %}{% else %}sp-badge-fail{% endif %}" style="font-size:10px;{% if f.status == 'Waived' %}background:var(--sp-info-bg);color:var(--sp-info);{% endif %}">{{ f.status }}</span>
-        </div>
-      </div>
-    </div>
-    {% endfor %}
-  </div>
-  {% else %}
-  <div class="sp-card" style="padding:0;">
-    <div class="sp-empty">
-      <span class="sp-ms">receipt_long</span>
-      <p class="sp-empty-title">No Fines</p>
-      <p class="sp-empty-sub">No fines on record. Keep it up!</p>
-    </div>
-  </div>
-  {% endif %}
-
-</div>
-
-{# ── Toast ─────────────────────────────────────────────────────── #}
-<div id="sp-toast" class="sp-toast">
-  <span class="sp-ms" id="toast-icon">check_circle</span>
-  <span id="toast-msg"></span>
-</div>
-
-{% endblock %}
-
-{% block extra_js %}
-<style>
-/* ── Stat tiles (same card as the other portal pages) ── */
-.hostel-stat-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 20px; }
-@media (max-width: 1100px) { .hostel-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 420px)  { .hostel-stat-grid { grid-template-columns: minmax(0, 1fr); } }
-.hostel-stat-body { min-width: 0; }
-.hostel-stat-value {
-  font-size: 18px;
-  line-height: 1.25;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* ── Allocation details ── */
-.hostel-info-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 12px;
-}
-.hostel-inline-icon { font-size: 13px; vertical-align: middle; }
-.hostel-tile-label {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-  color: var(--sp-text-4);
-  margin-bottom: 2px;
-}
-.hostel-tile-sub {
-  font-size: 11px;
-  color: var(--sp-text-3);
-  margin-top: 2px;
-}
-.hostel-info-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 10px 14px;
-  background: var(--sp-surface, #f9fafb);
-  border-radius: 8px;
-}
-.hostel-info-icon {
-  font-size: 18px;
-  color: var(--sp-text-3);
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-.hostel-info-text {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--sp-text-1);
-  line-height: 1.4;
-}
-.sp-stat-card-link {
-  cursor: pointer;
-  transition: box-shadow .15s, transform .15s;
-}
-.sp-stat-card-link:hover {
-  box-shadow: 0 4px 16px rgba(0,0,0,.10);
-  transform: translateY(-2px);
-}
-</style>
-
-<script>
-function switchTab(name, btn) {
-  document.querySelectorAll('.sp-tab-panel').forEach(p => { p.classList.remove('active'); p.style.display = 'none'; });
-  document.querySelectorAll('#hostel-tab-nav .sp-tab').forEach(b => b.classList.remove('active'));
-  var panel = document.getElementById('tab-' + name);
-  panel.style.display = '';
-  panel.classList.add('active');
-  btn.classList.add('active');
-}
-
-function switchTabByName(name) {
-  var btn = document.querySelector('#hostel-tab-nav .sp-tab[onclick*="\'' + name + '\'"]');
-  if (btn) switchTab(name, btn);
-  document.getElementById('hostel-tab-nav').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-}
-
-function showToast(msg, type) {
-  var t = document.getElementById('sp-toast');
-  var i = document.getElementById('toast-icon');
-  t.className = 'sp-toast sp-toast-' + (type === 'ok' ? 'success' : 'danger') + ' open';
-  i.textContent = type === 'ok' ? 'check_circle' : 'error';
-  document.getElementById('toast-msg').textContent = msg;
-  setTimeout(() => t.classList.remove('open'), 3500);
-}
-
-function showInlineMsg(el, text, ok) {
-  el.style.display = 'block';
-  el.style.padding = '6px 10px';
-  el.style.borderRadius = '7px';
-  el.style.background = ok ? 'var(--sp-success-bg)' : 'var(--sp-warning-bg)';
-  el.style.color = ok ? 'var(--sp-success)' : 'var(--sp-warning)';
-  el.textContent = text;
-}
-
-function submitComplaint() {
-  var type = document.getElementById('complaint-type').value;
-  var sev  = document.getElementById('complaint-severity').value;
-  var desc = document.getElementById('complaint-desc').value.trim();
-  var msg  = document.getElementById('complaint-msg');
-  if (!desc) { showInlineMsg(msg, 'Please enter a description.', false); return; }
-  frappe.call({
-    method: 'slcm.www.student-portal.hostel.submit_complaint',
-    args: { complaint_type: type, severity: sev, description: desc },
-    callback: function(r) {
-      if (r.message) {
-        showToast('Complaint submitted! Ref: ' + r.message.name, 'ok');
-        document.getElementById('complaint-desc').value = '';
-        msg.style.display = 'none';
-        setTimeout(() => location.reload(), 1800);
-      }
-    },
-    error: function() { showInlineMsg(msg, 'Submission failed. Try again.', false); }
-  });
-}
-
-function submitLeave() {
-  var from   = document.getElementById('leave-from').value;
-  var to     = document.getElementById('leave-to').value;
-  var reason = document.getElementById('leave-reason').value.trim();
-  var msg    = document.getElementById('leave-msg');
-  if (!from || !to) { showInlineMsg(msg, 'Please select both dates.', false); return; }
-  if (!reason)      { showInlineMsg(msg, 'Please enter a reason.', false); return; }
-  frappe.call({
-    method: 'slcm.www.student-portal.hostel.submit_leave_request',
-    args: { from_date: from, to_date: to, reason: reason },
-    callback: function(r) {
-      if (r.message) {
-        showToast('Leave request submitted! Ref: ' + r.message.name, 'ok');
-        setTimeout(() => location.reload(), 1800);
-      }
-    },
-    error: function() { showInlineMsg(msg, 'Submission failed. Try again.', false); }
-  });
-}
-</script>
 {% endblock %}
