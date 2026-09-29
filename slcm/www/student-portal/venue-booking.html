@@ -1,4 +1,4 @@
-﻿{% extends "slcm/www/student-portal/_base.html" %}
+{% extends "slcm/www/student-portal/_base.html" %}
 {% block title %}Venue Booking{% endblock %}
 
 {% block extra_head %}
@@ -14,7 +14,7 @@
 
 {% else %}
 
-{# ── Page header ───────────────────────────────────────────────── #}
+{# -- Page header ------------------------------------------------- #}
 <div class="sp-page-header fade-in" style="margin-bottom: 32px; margin-top: 10px; display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:16px;">
   <div style="display:flex; align-items:flex-start; gap:16px;">
     <div style="border: 2px solid var(--sp-primary); border-radius: 8px; width: 42px; height: 34px; display:flex; align-items:center; justify-content:center; color: var(--sp-primary); margin-top: 4px;">
@@ -34,7 +34,7 @@
 </div>
 {% endif %}
 
-{# ── 5-card Stats ─────────────────────────────────────────────────── #}
+{# -- 5-card Stats --------------------------------------------------- #}
 <!-- <div class="vb-stat-row fade-in">
 
   <div class="vb-stat-card vb-stat-total">
@@ -89,7 +89,7 @@
 
 </div> -->
 
-{# ── Flash messages ───────────────────────────────────────────────── #}
+{# -- Flash messages ------------------------------------------------- #}
 <div id="vb-success" style="display:none;margin-bottom:20px;" class="vb-flash vb-flash-ok">
   <span class="sp-ms">check_circle</span>
   <div>Booking submitted successfully! Reference: <strong id="vb-ref"></strong></div>
@@ -99,9 +99,9 @@
   <div id="vb-error-msg"></div>
 </div>
 
-{# ── New Booking Form ─────────────────────────────────────────────── #}
+{# -- New Booking Form ----------------------------------------------- #}
 <div class="sp-section-card fade-in" style="animation-delay:0.06s;margin-bottom:24px;">
-  <div class="sp-section-header" style="font-family: 'Merriweather', serif; font-size: 20px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 16px; margin-bottom: 24px;">
+  <div class="sp-section-header" style="background: #ffffff; font-family: 'Merriweather', serif; font-size: 20px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 16px; margin-bottom: 24px;">
     <span class="sp-ms" style="color: var(--sp-primary);">add_circle</span> New Venue Booking
   </div>
   <div class="sp-section-body" style="padding:0 24px 20px 24px;">
@@ -115,7 +115,7 @@
     <div class="vb-field-block">
       <label class="vb-label">Event / Purpose <span class="vb-req">*</span></label>
       <input type="text" id="vb-event-name" class="vb-input"
-        placeholder="e.g. Study Group, Moot Practice, Club Meeting…">
+        placeholder="e.g. Study Group, Moot Practice, Club Meeting">
     </div>
 
     {# Row 2: Venue Type + Room #}
@@ -124,7 +124,7 @@
         <label class="vb-label">Venue Type <span class="vb-req">*</span></label>
         <div class="vb-select-wrap">
           <select id="vb-venue-type" class="vb-input vb-select" onchange="loadRooms()">
-            <option value="">— Select Type —</option>
+            <option value=""> Select Type </option>
             <option value="Classroom">Classroom</option>
             <option value="Moot Court">Moot Court</option>
             <option value="Open Spaces">Open Spaces</option>
@@ -143,7 +143,7 @@
         <label class="vb-label">Venue / Room <span class="vb-req">*</span></label>
         <div class="vb-select-wrap">
           <select id="vb-room" class="vb-input vb-select" disabled>
-            <option value="">— Select Venue Type first —</option>
+            <option value=""> Select Venue Type first </option>
           </select>
           <span class="sp-ms vb-select-arrow">expand_more</span>
         </div>
@@ -197,7 +197,7 @@
         <label class="vb-dropzone-label" for="vb-attachment">
           <span class="sp-ms" style="font-size:36px;color:#920c24;opacity:1;">cloud_upload</span>
           <span id="vb-attach-name" class="vb-dropzone-text">Click to attach or drop a file here</span>
-          <span class="vb-dropzone-hint">PDF, Image, DOC — max 10 MB</span>
+          <span class="vb-dropzone-hint">PDF, Image, DOC  max 10 MB</span>
         </label>
       </div>
       <div id="vb-upload-progress" style="display:none;height:4px;background:var(--sp-border);border-radius:2px;margin-top:6px;overflow:hidden;">
@@ -217,10 +217,10 @@
   </div>
 </div>
 
-{# ── My Booking History ───────────────────────────────────────────── #}
+{# -- My Booking History --------------------------------------------- #}
 <div class="sp-section-card fade-in" id="vb-history" style="animation-delay:0.12s;">
 
-  <div class="sp-section-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px; font-family: 'Merriweather', serif; font-size: 20px; font-weight: 700; color: #0f172a; border-bottom: 1px solid transparent; padding-bottom: 16px; margin-bottom: 0;">
+  <div class="sp-section-header" style="background: #ffffff; display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px; font-family: 'Merriweather', serif; font-size: 20px; font-weight: 700; color: #0f172a; border-bottom: 1px solid transparent; padding-bottom: 16px; margin-bottom: 0;">
     <span style="display: flex; align-items: center; gap: 8px;"><span class="sp-ms" style="color: var(--sp-primary);">history</span> My Booking History</span>
     <div style="display:flex;align-items:center;gap:10px;">
       <span class="sp-badge" id="vb-count-badge" style="background: #fff0f2; color: #920c24; font-size: 14px; padding: 4px 10px; font-weight: 700;">{{ total_count or 0 }}</span>
@@ -282,9 +282,9 @@
           </td>
 
           <td class="vb-td-event">
-            <div class="vb-event-name">{{ bk.event_name or "—" }}</div>
+            <div class="vb-event-name">{{ bk.event_name or "" }}</div>
             {% if bk.reason %}
-            <div class="vb-event-remark">{{ bk.reason[:80] }}{% if bk.reason|length > 80 %}…{% endif %}</div>
+            <div class="vb-event-remark">{{ bk.reason[:80] }}{% if bk.reason|length > 80 %}{% endif %}</div>
             {% endif %}
             {% if bk.admin_remarks %}
             <div class="vb-admin-remark
@@ -296,18 +296,18 @@
                 {%- elif bk.status == 'Rejected' %}cancel
                 {%- else %}info{%- endif %}
               </span>
-              {{ bk.admin_remarks[:80] }}{% if bk.admin_remarks|length > 80 %}…{% endif %}
+              {{ bk.admin_remarks[:80] }}{% if bk.admin_remarks|length > 80 %}{% endif %}
             </div>
             {% endif %}
           </td>
 
           <td>
-            <span class="sp-badge sp-badge-na">{{ bk.venue_type or "—" }}</span>
+            <span class="sp-badge sp-badge-na">{{ bk.venue_type or "" }}</span>
           </td>
 
           <td class="vb-td-room">
             <span class="sp-ms" style="font-size:13px;color:var(--sp-primary);vertical-align:-2px;">location_on</span>
-            {{ bk.room or "—" }}
+            {{ bk.room or "" }}
             {% if bk.capacity %}
             <div style="font-size:11px;color:var(--sp-text-4);margin-top:2px;">
               <span class="sp-ms" style="font-size:11px;vertical-align:-2px;">people</span> cap. {{ bk.capacity }}
@@ -318,11 +318,11 @@
           <td class="vb-td-dt">
             <div style="white-space:nowrap;">
               <span class="sp-ms" style="font-size:12px;color:var(--sp-primary);vertical-align:-2px;">play_circle</span>
-              {{ frappe.utils.format_datetime(bk.start_datetime, "dd/MM/yyyy hh:mm a") if bk.start_datetime else "—" }}
+              {{ frappe.utils.format_datetime(bk.start_datetime, "dd/MM/yyyy hh:mm a") if bk.start_datetime else "" }}
             </div>
             <div style="white-space:nowrap;color:var(--sp-text-4);margin-top:2px;">
               <span class="sp-ms" style="font-size:12px;color:#920c24;vertical-align:-2px;">stop_circle</span>
-              {{ frappe.utils.format_datetime(bk.end_datetime, "dd/MM/yyyy hh:mm a") if bk.end_datetime else "—" }}
+              {{ frappe.utils.format_datetime(bk.end_datetime, "dd/MM/yyyy hh:mm a") if bk.end_datetime else "" }}
             </div>
           </td>
 
@@ -330,7 +330,7 @@
             {% if bk.expected_attendees %}
             <span style="font-weight:600;color:var(--sp-text-1);">{{ bk.expected_attendees }}</span>
             {% else %}
-            <span style="color:var(--sp-text-4);">—</span>
+            <span style="color:var(--sp-text-4);"></span>
             {% endif %}
           </td>
 
@@ -388,7 +388,7 @@
 
 </div>
 
-{# ── Capacity Warning Modal ───────────────────────────────────────── #}
+{# -- Capacity Warning Modal ----------------------------------------- #}
 <div id="vb-capacity-modal" class="vb-modal-backdrop" style="display:none;">
   <div class="vb-modal-box">
     <div class="vb-modal-icon">
@@ -409,7 +409,7 @@
   </div>
 </div>
 
-{# ── Conflict Warning Modal ───────────────────────────────────────── #}
+{# -- Conflict Warning Modal ----------------------------------------- #}
 <div id="vb-conflict-modal" class="vb-modal-backdrop" style="display:none;">
   <div class="vb-modal-box">
     <div class="vb-modal-icon">
@@ -430,7 +430,7 @@
   </div>
 </div>
 
-{# ── Cancel Confirm Modal ─────────────────────────────────────────── #}
+{# -- Cancel Confirm Modal ------------------------------------------- #}
 <div id="vb-cancel-modal" class="vb-modal-backdrop" style="display:none;">
   <div class="vb-modal-box">
     <div class="vb-modal-icon">
@@ -491,12 +491,12 @@ function loadRooms() {
   var rsel  = document.getElementById('vb-room');
   var capEl = document.getElementById('vb-room-capacity');
 
-  rsel.innerHTML = '<option value="">Loading…</option>';
+  rsel.innerHTML = '<option value="">Loading</option>';
   rsel.disabled  = true;
   capEl.style.display = 'none';
 
   if (!vtype) {
-    rsel.innerHTML = '<option value="">— Select Venue Type first —</option>';
+    rsel.innerHTML = '<option value=""> Select Venue Type first </option>';
     return;
   }
 
@@ -505,7 +505,7 @@ function loadRooms() {
     { venue_type: vtype },
     function(rooms) {
       _roomData = rooms || [];
-      rsel.innerHTML = '<option value="">— Select Room —</option>';
+      rsel.innerHTML = '<option value=""> Select Room </option>';
       if (!_roomData.length) {
         rsel.innerHTML = '<option value="">No rooms available</option>';
         return;
@@ -561,7 +561,7 @@ function clearVbForm() {
   });
   document.getElementById('vb-venue-type').value = '';
   var rsel = document.getElementById('vb-room');
-  rsel.innerHTML = '<option value="">— Select Venue Type first —</option>';
+  rsel.innerHTML = '<option value=""> Select Venue Type first </option>';
   rsel.disabled = true;
   document.getElementById('vb-duration-preview').style.display = 'none';
   document.getElementById('vb-room-capacity').style.display = 'none';
@@ -605,7 +605,7 @@ function vbUploadFile(inputEl, progressId) {
   });
 }
 
-/* ── Capacity modal helpers ── */
+/* -- Capacity modal helpers -- */
 function showCapacityModal(roomCap, entered) {
   return new Promise(function(resolve) {
     _vbCapacityResolve = resolve;
@@ -621,15 +621,15 @@ function closeCapacityModal(changeRoom) {
   if (_vbCapacityResolve) { _vbCapacityResolve(changeRoom); _vbCapacityResolve = null; }
 }
 
-/* ── Conflict modal helpers ── */
+/* -- Conflict modal helpers -- */
 function showConflictModal(conflicts) {
   return new Promise(function(resolve) {
     _vbConflictResolve = resolve;
     var lines = conflicts.map(function(c) {
       var s = c.start_datetime ? c.start_datetime.replace('T', ' ').slice(0, 16) : '';
       var e = c.end_datetime   ? c.end_datetime.replace('T', ' ').slice(0, 16)   : '';
-      return '<li><strong>' + (c.event_name || c.name) + '</strong> — ' +
-             c.status + ' (' + s + ' → ' + e + ')</li>';
+      return '<li><strong>' + (c.event_name || c.name) + '</strong>  ' +
+             c.status + ' (' + s + ' ? ' + e + ')</li>';
     });
     document.getElementById('vb-conflict-msg').innerHTML =
       'This room already has a <strong>' + (conflicts[0].status || 'conflicting') + '</strong> booking that overlaps with your selected time:<br><ul style="text-align:left;margin:10px 0 0 16px;font-size:12px;">' +
@@ -667,7 +667,7 @@ function submitVenueBooking() {
 
   function toFrappeDt(v) { return v.replace('T', ' ') + ':00'; }
 
-  /* ── Step 1: capacity check ── */
+  /* -- Step 1: capacity check -- */
   var roomSel = document.getElementById('vb-room');
   var selOpt  = roomSel.options[roomSel.selectedIndex];
   var roomCap = selOpt ? parseInt(selOpt.dataset.cap, 10) || 0 : 0;
@@ -679,14 +679,14 @@ function submitVenueBooking() {
 
   capacityPromise.then(function(changeRoom) {
     if (changeRoom) {
-      // User chose "Change Room" — reset flag and focus the room dropdown
+      // User chose "Change Room"  reset flag and focus the room dropdown
       _vbSkipCapacity = false;
       document.getElementById('vb-room').focus();
       return;
     }
     _vbSkipCapacity = true; // acknowledged for this submission attempt
 
-    /* ── Step 2: time conflict check ── */
+    /* -- Step 2: time conflict check -- */
     var conflictPromise = new Promise(function(resolve) {
       if (_vbSkipConflict) { resolve([]); return; }
       spCall(
@@ -720,11 +720,11 @@ function submitVenueBooking() {
 
     var btn = document.getElementById('vb-submit-btn');
     btn.disabled = true;
-    btn.innerHTML = '<span class="sp-ms">hourglass_top</span> Uploading…';
+    btn.innerHTML = '<span class="sp-ms">hourglass_top</span> Uploading';
 
     vbUploadFile(document.getElementById('vb-attachment'), 'vb-upload-progress')
       .then(function(fileUrl) {
-        btn.innerHTML = '<span class="sp-ms">hourglass_top</span> Submitting…';
+        btn.innerHTML = '<span class="sp-ms">hourglass_top</span> Submitting';
         return new Promise(function(resolve, reject) {
           spCall(
             'slcm.api.student_portal.submit_venue_booking',
@@ -849,7 +849,7 @@ if (_vbFi) {
   });
 }
 
-/* ── Attachment update for existing Pending bookings ── */
+/* -- Attachment update for existing Pending bookings -- */
 var _vbUpdateTarget = null;
 var _vbUpdateInput  = (function() {
   var inp = document.createElement('input');
@@ -874,7 +874,7 @@ var _vbUpdateInput  = (function() {
     inp.value = '';
 
     // Show a brief toast-style notice
-    showVbToast('Uploading attachment…');
+    showVbToast('Uploading attachment');
 
     fetch('/api/method/upload_file', {
       method: 'POST', credentials: 'same-origin',
@@ -922,7 +922,7 @@ function showVbToast(msg, success) {
 </script>
 
 <style>
-/* ── Stat row (5 cards) ───────────────────────────────────────── */
+/* -- Stat row (5 cards) ----------------------------------------- */
 .vb-stat-row {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
@@ -988,7 +988,7 @@ function showVbToast(msg, success) {
 .vb-stat-cancelled .vb-stat-icon-wrap { background: #6b7280; color: #fff; }
 .vb-stat-cancelled .vb-stat-num       { color: #6b7280; }
 
-/* ── Flash ─────────────────────────────────────────────────────── */
+/* -- Flash ------------------------------------------------------- */
 .vb-flash {
   display: flex;
   align-items: center;
@@ -1004,7 +1004,7 @@ function showVbToast(msg, success) {
 .vb-flash-err { background: #fff0f2; border-color: #f5c6ce; color: #6b091a; }
 .vb-flash-err .sp-ms { color: #920c24; }
 
-/* ── Form ──────────────────────────────────────────────────────── */
+/* -- Form -------------------------------------------------------- */
 .vb-form-info {
   display: flex;
   align-items: center;
@@ -1158,7 +1158,7 @@ function showVbToast(msg, success) {
   margin-top: 10px;
 }
 
-/* ── Filter Tabs ───────────────────────────────────────────────── */
+/* -- Filter Tabs ------------------------------------------------- */
 .vb-tabs-bar {
   display: flex;
   gap: 2px;
@@ -1204,7 +1204,7 @@ function showVbToast(msg, success) {
   color: var(--sp-primary);
 }
 
-/* ── Data Table ────────────────────────────────────────────────── */
+/* -- Data Table -------------------------------------------------- */
 .vb-table-wrap {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
@@ -1369,7 +1369,7 @@ function showVbToast(msg, success) {
 }
 .vb-empty-sub { font-size: 13px; }
 
-/* ── Modal ─────────────────────────────────────────────────────── */
+/* -- Modal ------------------------------------------------------- */
 .vb-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -1415,7 +1415,7 @@ function showVbToast(msg, success) {
 }
 .vb-btn-danger:hover { background: #920c24 !important; border-color: #920c24 !important; }
 
-/* ── Swap History Timeline ── */
+/* -- Swap History Timeline -- */
 .vb-swap-timeline {
   padding: 20px 24px;
   display: flex;
@@ -1555,7 +1555,7 @@ function showVbToast(msg, success) {
   line-height: 1.6;
 }
 
-/* ── VB UI Overrides ─────────────────────────────────── */
+/* -- VB UI Overrides ----------------------------------- */
 .vb-form-info {
   background: #fff0f2 !important;
   color: #920c24 !important;
