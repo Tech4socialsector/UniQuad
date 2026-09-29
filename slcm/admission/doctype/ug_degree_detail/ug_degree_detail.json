@@ -18,27 +18,31 @@
    "fieldname": "year_of_completion",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Year Of Completion (UG degree)"
+   "label": "Year Of Completion (UG degree)",
+   "reqd": 1
   },
   {
    "description": "Max 5MB - Supported formats png, jpeg, jpg, pdf",
    "fieldname": "degree_certificate",
    "fieldtype": "Attach",
    "in_list_view": 1,
-   "label": "UG Degree Certificate / Bonafide"
+   "label": "UG Degree Certificate / Bonafide",
+   "reqd": 1
   },
   {
    "description": "Max 5MB - Supported formats png, jpeg, jpg, pdf",
    "fieldname": "marksheets",
    "fieldtype": "Attach",
    "in_list_view": 1,
-   "label": "Transcripts / Marksheets"
+   "label": "Transcripts / Marksheets",
+   "reqd": 1
   },
   {
    "fieldname": "college",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "College / University (UG degree)"
+   "label": "College / University (UG degree)",
+   "reqd": 1
   },
   {
    "fieldname": "ug_program",
@@ -46,7 +50,8 @@
    "ignore_user_permissions": 1,
    "in_list_view": 1,
    "label": "Name of Degree (UG)",
-   "options": "Programme"
+   "options": "Programme",
+   "reqd": 1
   },
   {
    "fieldname": "ug_cgpa",
@@ -54,14 +59,15 @@
    "in_list_view": 1,
    "label": "CGPA Obtained (UG degree)",
    "non_negative": 1,
-   "precision": "1"
+   "precision": "1",
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-08-03 16:39:27.278277",
+ "modified": "2026-09-29 17:43:50.531194",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "UG Degree Detail",

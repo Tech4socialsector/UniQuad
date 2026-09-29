@@ -405,6 +405,7 @@ function _injectAdmissionShell() {
 					social_links:    d.social_links || [],
 					admission_footer: d.admission_footer || [],
 					footer_text:     d.footer_text || '',
+					portal_active:   d.portal_active || 0,
 				},
 				d.user || 'Guest',
 				{ full_name: d.full_name, user_image: d.user_image }
@@ -423,6 +424,7 @@ function _injectAdmissionShell() {
 					powerd_by: 'boscosoft',
 					admission_footer: [],
 					footer_text: '',
+					portal_active: 0,
 				},
 				'Guest', {});
 		},
@@ -454,6 +456,7 @@ function _buildShell(ws, cfg, user, uinfo) {
 	var programmes = cfg.programmes      || [];
 	var paceOn     = cfg.pace_enabled    ? 1 : 0;
 	var powerd     = cfg.powerd_by       || 'boscosoft';
+	var portalActive = cfg.portal_active ? 1 : 0;
 
 	// Apply CSS variables immediately so ALL var(--slcm-primary) references update at once
 	var fontCss = "";
@@ -713,7 +716,7 @@ function _buildShell(ws, cfg, user, uinfo) {
 			_esc(title) +
 		'</h1>' +
 		'<div class="adm-nav-links">' +
-			'<a href="/admission" style="color:rgba(255,255,255,.85);text-decoration:none;font-size:14px;font-weight:500;white-space:nowrap;" onmouseover="this.style.color=\'#fff\'" onmouseout="this.style.color=\'rgba(255,255,255,.85)\'">Admission</a>' +
+			(portalActive ? '<a href="/admission" style="color:rgba(255,255,255,.85);text-decoration:none;font-size:14px;font-weight:500;white-space:nowrap;" onmouseover="this.style.color=\'#fff\'" onmouseout="this.style.color=\'rgba(255,255,255,.85)\'">Admission</a>' : '') +
 			(isGuest
 				? '<a href="/login" style="display:inline-flex;align-items:center;background:' + primary + ';color:#fff;padding:8px 20px;border-radius:8px;font-weight:400;font-size:14px;text-decoration:none;">Login / Apply</a>'
 				: '<div style="position:relative;display:flex;align-items:center;gap:10px;">' +
@@ -1711,27 +1714,30 @@ function _slcmFormatIneligibilityAlertBodyForModal(rawMsg) {
 	if (parts.length === 1) {
 		return _slcmEscapeHtml(parts[0]);
 	}
-	function bulletRow(p) {
-		var text = p.replace(/^\s*•\s*/, '');
-		return (
-			'<div style="display:flex;gap:8px;margin-bottom:4px;font-size:0.8125rem;color:#991b1b;">' +
-			'<span style="color:#ef4444;font-weight:bold;">•</span>' +
-			'<span>' +
-			_slcmEscapeHtml(text) +
-			'</span></div>'
-		);
+	var title = parts[0].replace(/^\s*•\s*/, '');
+	var subParts = parts.slice(1);
+	var rowsHtml = '';
+	var idx = 1;
+	for (var i = 0; i < subParts.length; i++) {
+		var p1 = subParts[i].replace(/^\s*•\s*/, '');
+		if (p1.indexOf('Minimum required') === 0 && i + 1 < subParts.length) {
+			var p2 = subParts[i+1].replace(/^\s*•\s*/, '');
+			if (p2.indexOf('You secured') === 0) {
+				rowsHtml += '<div style="margin-bottom:4px;font-size:0.8125rem;color:#991b1b;margin-left:8px;">' + idx + '. ' + _slcmEscapeHtml(p1) + ' - ' + _slcmEscapeHtml(p2) + '</div>';
+				i++;
+				idx++;
+				continue;
+			}
+		}
+		rowsHtml += '<div style="margin-bottom:4px;font-size:0.8125rem;color:#991b1b;margin-left:8px;">' + idx + '. ' + _slcmEscapeHtml(p1) + '</div>';
+		idx++;
 	}
-	var allBullets = parts.every(function (p) {
-		return /^\s*•/.test(p);
-	});
-	if (allBullets) {
-		return parts.map(bulletRow).join('');
-	}
+
 	return (
 		'<div style="font-weight:300;margin-bottom:6px;">' +
-		_slcmEscapeHtml(parts[0]) +
+		_slcmEscapeHtml(title) +
 		'</div>' +
-		parts.slice(1).map(bulletRow).join('')
+		rowsHtml
 	);
 }
 
@@ -1865,7 +1871,14 @@ function _slcmWfRenderEligibilityModalContent(applicantName, eligRes, alreadyApp
 			'<tr><td colspan="2" style="padding:16px;text-align:center;color:#888;">No program data available.</td></tr>';
 	}
 
-	var mainHeading = 'In-Eligible for ' + _slcmEscapeHtml(selectedProgram);
+	var selPName = selectedProgram;
+	for (var _i = 0; _i < programs.length; _i++) {
+		if (programs[_i].program === selectedProgram && programs[_i].program_name) {
+			selPName = programs[_i].program_name;
+			break;
+		}
+	}
+	var mainHeading = 'In-Eligible for ' + _slcmEscapeHtml(selPName);
 
 	var rawMsg = ((eligRes && eligRes.message) || (eligRes && eligRes.error) || '').trim();
 	if (!rawMsg) {
@@ -4381,7 +4394,8 @@ function makeInputUppercase() {
 		"class_xii_school",
 		"class_xii_board",
 		"proposed_phd_topic",
-		"other_degree_details"
+		"other_degree_details",
+		"foreigin_city"
 	];
 
 	uppercase_fields.forEach(fieldname => {
@@ -4458,6 +4472,36 @@ function setupPreferenceValidation() {
 			wf.on('first_preference', validatePreferences);
 			wf.on('second_preference', validatePreferences);
 			wf.on('third_preference', validatePreferences);
+
+			function validateNationality() {
+				var nat = wf.get_value('nationality');
+				var fn = wf.get_value('foriegn_national');
+
+				if (nat && nat !== 'Indian') {
+					if (fn !== 'Yes') {
+						wf.set_value('foriegn_national', 'Yes');
+					}
+				} else if (nat === 'Indian') {
+					if (fn === 'Yes') {
+						wf.set_value('foriegn_national', 'No');
+					}
+				}
+			}
+
+			function validateForeignNational() {
+				var nat = wf.get_value('nationality');
+				var fn = wf.get_value('foriegn_national');
+
+				if (fn === 'Yes' && nat === 'Indian') {
+					wf.set_value('nationality', '');
+					frappe.msgprint('If Foreign National is Yes, Nationality cannot be Indian.');
+				} else if (fn === 'No' && nat && nat !== 'Indian') {
+					wf.set_value('nationality', 'Indian');
+				}
+			}
+
+			wf.on('nationality', validateNationality);
+			wf.on('foriegn_national', validateForeignNational);
 		}
 		if (++n > 100) clearInterval(t);
 	}, 200);

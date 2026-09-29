@@ -841,7 +841,7 @@
             {% set _has_applicant = True if frappe.db.get_value("Has Role", {"parent": frappe.session.user, "role": "Applicant"}, "role") else False %}
             {% set _has_pace_applicant = True if frappe.db.get_value("Has Role", {"parent": frappe.session.user, "role": "PACE Applicant"}, "role") else False %}
 
-            {% set _show_admission = _show_adm_page and not (_has_pace_applicant and not _has_applicant) %}
+            {% set _show_admission = _active and not (_has_pace_applicant and not _has_applicant) %}
             {% set _show_pace = not (_has_applicant and not _has_pace_applicant) %}
 
             {% if _show_admission %}
@@ -1055,7 +1055,7 @@
         {% set _has_applicant = True if frappe.db.get_value("Has Role", {"parent": frappe.session.user, "role": "Applicant"}, "role") else False %}
         {% set _has_pace_applicant = True if frappe.db.get_value("Has Role", {"parent": frappe.session.user, "role": "PACE Applicant"}, "role") else False %}
 
-        {% set _show_admission = _show_adm_page and not (_has_pace_applicant and not _has_applicant) %}
+        {% set _show_admission = _active and not (_has_pace_applicant and not _has_applicant) %}
         {% set _show_pace = not (_has_applicant and not _has_pace_applicant) %}
 
         {% if _show_admission %}
@@ -1120,10 +1120,7 @@
     {% if _active == 0 %}
     <main class="adm-main" style="display:flex;align-items:center;justify-content:center;">
         <div style="text-align:center;max-width:500px;padding:40px;">
-            <div style="font-size:48px;margin-bottom:16px;">🔧</div>
-            <h2 style="color:var(--primary);">Portal Under Maintenance</h2>
-            <div style="color:var(--muted);margin-top:12px;">{{ _mmsg | safe if _mmsg else "Temporarily unavailable." }}
-            </div>
+            <h2 style="color:var(--primary); ">{{ _mmsg | safe if _mmsg else "Temporarily unavailable." }}</h2>
         </div>
     </main>
     {% else %}

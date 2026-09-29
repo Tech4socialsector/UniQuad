@@ -499,11 +499,11 @@
    "label": "Reservations"
   },
   {
-   "depends_on": "eval:doc.whether_scstobc_ncl === \"NA\"",
+   "depends_on": "eval:doc.whether_scstobc_ncl === \"NA\" && doc.foriegn_national == \"No\"",
    "fieldname": "ews",
    "fieldtype": "Select",
    "label": "Whether EWS",
-   "mandatory_depends_on": "eval:doc.whether_scstobc_ncl === \"NA\"",
+   "mandatory_depends_on": "eval:doc.whether_scstobc_ncl === \"NA\" && doc.foriegn_national == \"No\"",
    "options": "\nYes\nNo"
   },
   {
@@ -539,7 +539,7 @@
    "options": "\nYes\nNo"
   },
   {
-   "depends_on": "eval:doc.pwd_required_test === \"Yes\"",
+   "depends_on": "eval:doc.pwd_required_test === \"Yes\" && doc.pwd == \"Yes\"",
    "fieldname": "scribe_allotment",
    "fieldtype": "Select",
    "label": "Will you arrange for a scribe yourself or would you require the NLSIU to arrange a scribe for you?",
@@ -1171,7 +1171,7 @@
    "in_standard_filter": 1,
    "label": "Whether SC/ST/OBC-NCL",
    "mandatory_depends_on": "eval:doc.foriegn_national == \"No\"",
-   "options": "NA\nOBC-NCL\nST\nSC"
+   "options": "\nNA\nOBC-NCL\nST\nSC"
   },
   {
    "fieldname": "column_break_mxmh",
@@ -1341,7 +1341,7 @@
   }
  ],
  "make_attachments_public": 1,
- "modified": "2026-08-11 15:57:52.417158",
+ "modified": "2026-09-29 15:55:17.071206",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Applicant",

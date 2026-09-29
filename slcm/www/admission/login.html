@@ -45,14 +45,14 @@
     }
 
     /* ─── LAYOUT ─── */
-    .lp-wrap { display: flex; min-height: 100vh; }
+    .lp-wrap { display: flex; min-height: 100vh; flex-direction: row-reverse; }
 
     /* ─── LEFT — base (desktop ≥1100px) ─── */
     .lp-left {
-      width: 460px; flex: 0 0 460px;
+      width: 40%; flex: 0 0 40%;
       background: #fff; display: flex; flex-direction: column;
       justify-content: center; padding: 52px 48px;
-      box-shadow: 4px 0 24px rgba(0,0,0,.07); position: relative; z-index: 2;
+      box-shadow: -4px 0 24px rgba(0,0,0,.07); position: relative; z-index: 2;
       overflow-y: auto;
     }
 
@@ -165,7 +165,7 @@
     }
     .lp-right-bg {
       position: absolute; inset: 0; width: 100%; height: 100%;
-      object-fit: cover; opacity: .28;
+      object-fit: cover; opacity: .38;
     }
     .lp-right-overlay {
       position: absolute; inset: 0;
@@ -185,38 +185,50 @@
                   margin-bottom: 28px; max-width: 620px; text-align: center;
                   align-self: center; margin-left: auto; margin-right: auto; }
 
-    /* glass card */
+    /* solid card matching Latest Updates style */
     .glass {
-      background: rgba(255,255,255,.08); backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px); border: 1px solid rgba(255,255,255,.15);
-      border-radius: 14px; padding: 20px 22px; margin-bottom: 14px; width: 100%;
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: none;
+      border-radius: 8px; margin-bottom: 24px; width: 100%;
+      overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      color: #111827;
     }
-    .glass-head  { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .glass-head  { 
+      display: flex; align-items: center; justify-content: space-between; 
+      padding: 16px 20px;
+      background: var(--primary);
+      color: #fff;
+      border-bottom: 1px solid rgba(0,0,0,0.1);
+    }
     .glass-title { display: flex; align-items: center; gap: 9px; }
+    .glass-title h2 { font-size: 18px; font-weight: 500; }
     .glass-icon  {
-      width: 26px; height: 26px; border-radius: 50%; background: #fff;
+      width: 26px; height: 26px; border-radius: 50%; background: rgba(255,255,255,0.2);
       display: flex; align-items: center; justify-content: center;
-      color: var(--primary); flex-shrink: 0;
+      color: #fff; flex-shrink: 0;
     }
-    .glass-icon .material-symbols-outlined { font-size: 14px; }
-    .glass-badge { font-size: 9px; font-weight: 400; letter-spacing: .1em;
-                   opacity: .65; }
+    .glass-icon .material-symbols-outlined { font-size: 16px; }
+    .glass-badge { font-size: 10px; font-weight: 500; letter-spacing: .05em;
+                   opacity: .9; }
 
     /* announcement rows */
     .ann-row {
-      display: flex; align-items: flex-start; gap: 10px;
-      padding: 8px 6px; border-radius: 8px; cursor: pointer;
-      border-bottom: 1px solid rgba(255,255,255,.07);
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 14px 20px; cursor: pointer;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.08);
       transition: background .15s;
+      opacity: .7;
     }
     .ann-row:last-child { border-bottom: none; }
-    .ann-row:hover { background: rgba(255,255,255,.07); }
-    .ann-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
-    .ann-text { flex: 1; min-width: 0; }
-    .ann-title { line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .ann-summary {opacity: .6; margin-top: 2px;
+    .ann-row:hover { background: rgba(255, 255, 255, 0.5); }
+    .ann-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 6px; }
+    .ann-text { flex: 1; min-width: 0; color: #000000; font-weight:500; }
+    .ann-title { line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 14px; }
+    .ann-summary {opacity: .7; margin-top: 4px; font-size: 13px;
                    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .ann-row .material-symbols-outlined { font-size: 16px; opacity: .45; margin-top: 3px; }
+    .ann-row .material-symbols-outlined { font-size: 18px; color: #9ca3af; margin-top: 2px; }
 
     .type-General   { background: #60a5fa; }
     .type-Important { background: #f87171; }
@@ -227,26 +239,26 @@
 
     /* date rows in Important Dates */
     .date-item {
-      display: flex; align-items: center; gap: 10px;
-      padding: 8px 6px; border-radius: 8px;
-      border-bottom: 1px solid rgba(255,255,255,.07);
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 20px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.08);
       transition: background .15s;
     }
     .date-item:last-child { border-bottom: none; }
     .date-item.clickable { cursor: pointer; }
-    .date-item.clickable:hover { background: rgba(255,255,255,.07); }
+    .date-item.clickable:hover { background: rgba(255, 255, 255, 0.5); }
     .date-item-icon {
-      width: 38px; height: 38px; border-radius: 8px; flex-shrink: 0;
-      background: rgba(255,255,255,.12);
+      width: 42px; height: 42px; border-radius: 8px; flex-shrink: 0;
+      background: #f3f4f6; color: var(--primary);
       display: flex; flex-direction: column; align-items: center;
-      justify-content: center; font-size: 10px; font-weight: 400;
-      line-height: 1; letter-spacing: .01em;
+      justify-content: center; font-size: 11px; font-weight: 500;
+      line-height: 1; letter-spacing: .02em;
     }
-    .date-item-icon .dim { font-size: 15px; font-weight: 400; }
-    .date-item-body { flex: 1; min-width: 0; }
-    .date-item-label { line-height: 1.4;
+    .date-item-icon .dim { font-size: 16px; font-weight: 500; }
+    .date-item-body { flex: 1; min-width: 0; color: #374151; }
+    .date-item-label { line-height: 1.4; font-size: 14px;
                        white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .date-item-sub { font-size: 10px; opacity: .55; margin-top: 1px; }
+    .date-item-sub { font-size: 12px; opacity: .7; margin-top: 2px; }
     .date-badge {
       font-size: 8px; font-weight: 400; letter-spacing: .08em;
       padding: 2px 6px; border-radius: 99px; flex-shrink: 0;
@@ -267,26 +279,34 @@
     }
     .ev-modal-bg.open { display: flex; }
     .ev-modal {
-      background: #fff; border-radius: 18px; width: 100%; max-width: 500px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-radius: 12px; width: 100%; max-width: 500px;
       max-height: 88vh; overflow-y: auto;
       box-shadow: 0 28px 72px rgba(0,0,0,.28);
       animation: modalIn .22s ease;
+      color: #111827;
     }
     .ev-mhead {
-      padding: 22px 24px 16px; border-bottom: 1px solid #e5e7eb;
+      padding: 20px 24px 16px; 
+      background: var(--primary);
+      color: #fff;
+      border-bottom: 1px solid rgba(0,0,0,0.1);
       display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
     }
-    .ev-mtitle { font-size: 18px; font-weight: 400; color: #111827; line-height: 1.3; }
+    .ev-mtitle { font-size: 18px; font-weight: 500; color: #fff; line-height: 1.3; }
     .ev-mclose {
-      background: #f3f4f6; border: none; border-radius: 50%;
+      background: rgba(255,255,255,0.2); border: none; border-radius: 50%;
       width: 32px; height: 32px; cursor: pointer; flex-shrink: 0;
-      display: flex; align-items: center; justify-content: center; color: #6b7280;
+      display: flex; align-items: center; justify-content: center; color: #fff;
+      transition: background .15s;
     }
-    .ev-mclose:hover { background: #e5e7eb; }
+    .ev-mclose:hover { background: rgba(255,255,255,0.3); }
     .ev-mclose .material-symbols-outlined { font-size: 17px; }
     .ev-mmeta {
-      padding: 10px 24px; background: #f9fafb;
-      display: flex; flex-wrap: wrap; gap: 14px; border-bottom: 1px solid #e5e7eb;
+      padding: 10px 24px; background: rgba(0,0,0,0.03);
+      display: flex; flex-wrap: wrap; gap: 14px; border-bottom: 1px solid rgba(0,0,0,0.08);
     }
     .ev-mmeta-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #6b7280; }
     .ev-mmeta-item .material-symbols-outlined { font-size: 15px; color: var(--primary); }
@@ -307,19 +327,21 @@
     /* pagination controls inside glass cards */
     .card-pager {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 8px 2px 2px; margin-top: 6px;
-      border-top: 1px solid rgba(255,255,255,.08);
+      padding: 12px 20px;
+      border-top: 1px solid rgba(0, 0, 0, 0.08);
+      background: rgba(255, 255, 255, 0.3);
     }
-    .card-pager-info { font-size: 10px; opacity: .55; font-weight: 400; }
-    .card-pager-btns { display: flex; gap: 4px; }
+    .card-pager-info { font-size: 12px; color: #6b7280; font-weight: 500; }
+    .card-pager-btns { display: flex; gap: 6px; }
     .card-pager-btn {
-      background: rgba(255,255,255,.12); border: none; color: #fff;
-      width: 24px; height: 24px; border-radius: 6px; cursor: pointer;
+      background: #fff; border: 1px solid #e5e7eb; color: #374151;
+      width: 28px; height: 28px; border-radius: 6px; cursor: pointer;
       display: flex; align-items: center; justify-content: center;
-      font-size: 14px; transition: background .15s; font-family: inherit;
+      font-size: 14px; transition: all .15s; font-family: inherit;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     }
-    .card-pager-btn:hover:not(:disabled) { background: rgba(255,255,255,.22); }
-    .card-pager-btn:disabled { opacity: .3; cursor: not-allowed; }
+    .card-pager-btn:hover:not(:disabled) { background: #f3f4f6; border-color: #d1d5db; }
+    .card-pager-btn:disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
     .lp-social { display: flex; align-items: center; gap: 12px; margin-top: 18px; }
     .lp-social-icon {
       width: 36px; height: 36px; border-radius: 50%;
@@ -337,30 +359,38 @@
     }
     .ann-modal-bg.open { display: flex; }
     .ann-modal {
-      background: #fff; border-radius: 16px; width: 100%; max-width: 520px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-radius: 12px; width: 100%; max-width: 520px;
       max-height: 85vh; overflow-y: auto;
       box-shadow: 0 24px 64px rgba(0,0,0,.25);
       animation: modalIn .2s ease;
+      color: #111827;
     }
     @keyframes modalIn {
       from { opacity: 0; transform: translateY(14px) scale(.97); }
       to   { opacity: 1; transform: none; }
     }
     .ann-mhead {
-      padding: 20px 22px 16px; border-bottom: 1px solid #e5e7eb;
+      padding: 20px 22px 16px; 
+      background: var(--primary);
+      color: #fff;
+      border-bottom: 1px solid rgba(0,0,0,0.1);
       display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
     }
-    .ann-mtitle { font-size: 17px; font-weight: 400; color: #111827; line-height: 1.3; }
+    .ann-mtitle { font-size: 17px; font-weight: 500; color: #fff; line-height: 1.3; }
     .ann-mclose {
-      background: #f3f4f6; border: none; border-radius: 50%;
+      background: rgba(255,255,255,0.2); border: none; border-radius: 50%;
       width: 30px; height: 30px; cursor: pointer; flex-shrink: 0;
-      display: flex; align-items: center; justify-content: center; color: #6b7280;
+      display: flex; align-items: center; justify-content: center; color: #fff;
+      transition: background .15s;
     }
-    .ann-mclose:hover { background: #e5e7eb; }
+    .ann-mclose:hover { background: rgba(255,255,255,0.3); }
     .ann-mclose .material-symbols-outlined { font-size: 17px; }
     .ann-mmeta {
-      padding: 10px 22px; background: #f9fafb;
-      display: flex; flex-wrap: wrap; gap: 14px; border-bottom: 1px solid #e5e7eb;
+      padding: 10px 22px; background: rgba(0,0,0,0.03);
+      display: flex; flex-wrap: wrap; gap: 14px; border-bottom: 1px solid rgba(0,0,0,0.08);
     }
     .ann-mmeta-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #6b7280; }
     .ann-mmeta-item .material-symbols-outlined { font-size: 15px; color: var(--primary); }
@@ -377,9 +407,9 @@
        right panel shrinks (flex:1 handles it automatically)
     ══════════════════════════════════════════════════ */
 
-    /* 4K / 2K (≥2000px): left = 1/3 of screen */
+    /* 4K / 2K (≥2000px): left = 40% of screen */
     @media (min-width: 2000px) {
-      .lp-left { width: 33.333vw; flex: 0 0 33.333vw; padding: 72px 80px; }
+      .lp-left { padding: 72px 80px; }
       .lp-heading { font-size: 20px; }
       .lp-sub { font-size: 12.5px; }
       .lp-input { font-size: 13.5px; padding: 14px 16px; }
@@ -391,21 +421,19 @@
 
     /* Large desktop (1400px–1999px) */
     @media (min-width: 1400px) and (max-width: 1999px) {
-      .lp-left { width: 520px; flex: 0 0 520px; padding: 60px 56px; }
+      .lp-left { padding: 60px 56px; }
       .lp-right-body { padding: 64px 60px; }
       .lp-tagline { font-size: 21px; max-width: 500px; }
     }
 
     /* Medium desktop (1100px–1399px) — default styles apply */
 
-    /* Small desktop (861px–1099px): left grows to take more space */
+    /* Small desktop (861px–1099px) */
     @media (min-width: 861px) and (max-width: 1099px) {
-      .lp-left { width: 440px; flex: 0 0 440px; padding: 44px 36px; }
+      .lp-left { padding: 44px 36px; }
       .lp-right-body { padding: 36px 28px; }
       .lp-tagline { font-size: 21px; max-width: 340px; }
-      .glass { padding: 16px 18px; }
-      .glass-title { font-size: 13px; }
-      .date-val { font-size: 17px; }
+      .glass-title h2 { font-size: 16px; }
     }
 
     /* Tablet (≤860px): right hidden, left fills full screen */
@@ -679,7 +707,7 @@ src="https://www.facebook.com/tr?id=1279045953496223&ev=PageView&noscript=1"
     {% if _pc and (_pc.hero_image or _pc.portal_hero) %}
     <img src="{{ _pc.hero_image or _pc.portal_hero }}" class="lp-right-bg" alt="">
     {% endif %}
-    <div class="lp-right-overlay"></div>
+    <!-- <div class="lp-right-overlay"></div> -->
     <div class="lp-right-body">
 
       <h2 class="lp-tagline">{{ _tagline }}</h2>
@@ -749,15 +777,15 @@ src="https://www.facebook.com/tr?id=1279045953496223&ev=PageView&noscript=1"
                data-date-idx="{{ loop.index0 }}"
                style="display:none;"
                {% if _is_ev %}onclick="lpEvOpen({{ ev_ns.count }})"{% endif %}>
-            <div class="date-item-icon" style="background: transparent;">
-              <span class="material-symbols-outlined" style="font-size: 25px !important; color: #ffffff !important;">calendar_month</span>
+            <div class="date-item-icon" style="background: rgba(var(--primary-rgb), 0.1); color: var(--primary);">
+              <span class="material-symbols-outlined" style="font-size: 20px !important;">calendar_month</span>
             </div>
             <div class="date-item-body">
               <div class="date-item-label">{{ item.label }} On {{ item.date_display }}</div>
               {% if item.event_venue %}<div class="date-item-sub">{{ item.event_venue }}</div>{% endif %}
             </div>
             {% if _is_ev %}
-              <span class="material-symbols-outlined" style="font-size:14px;opacity:.4;">chevron_right</span>
+              <span class="material-symbols-outlined" style="font-size:16px;color:#01050e;margin-top:2px;">chevron_right</span>
             {% endif %}
           </div>
           {% if _is_ev %}{% set ev_ns.count = ev_ns.count + 1 %}{% endif %}
@@ -774,8 +802,8 @@ src="https://www.facebook.com/tr?id=1279045953496223&ev=PageView&noscript=1"
             </div>
           </div>
         {% else %}
-          <div class="date-item" style="cursor:default;opacity:.6;justify-content:center;">
-            <span style="font-size:12px;">No upcoming dates scheduled.</span>
+          <div class="date-item" style="cursor:default;justify-content:center;color:#000103;padding:24px 20px;">
+            <span style="font-size:14px;">No Important Dates.</span>
           </div>
         {% endif %}
       </div>
