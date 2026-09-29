@@ -109,7 +109,15 @@ function hdInitFrame(basePath) {
     /* Also hide any element with border-r and bg-surface-menu-bar (the sidebar bg token) */
     '[class*="border-r"][class*="bg-surface-menu-bar"] { display: none !important; }',
     /* Hide UserMenu / sidebar toggle buttons that can re-open it */
-    '.sidebar-toggle, [class*="sidebar-toggle"] { display: none !important; }'
+    '.sidebar-toggle, [class*="sidebar-toggle"] { display: none !important; }',
+    /* Match the portal: Merriweather everywhere, portal-sized text */
+    "@font-face { font-family: 'Merriweather'; font-weight: 400; src: url('/assets/slcm/fonts/Merriweather-Regular.ttf') format('truetype'); }",
+    "@font-face { font-family: 'Merriweather'; font-weight: 700; src: url('/assets/slcm/fonts/Merriweather-Bold.ttf') format('truetype'); }",
+    "@font-face { font-family: 'Merriweather'; font-weight: 400; font-style: italic; src: url('/assets/slcm/fonts/Merriweather-Italic.ttf') format('truetype'); }",
+    "html, body, body *:not(svg):not(path) { font-family: 'Merriweather', Georgia, serif !important; }",
+    'body, .text-base, .text-sm, .text-p-sm, .text-p-base, input, select, textarea, button, .ProseMirror { font-size: 14px !important; }',
+    '.text-xs, .text-p-xs, .text-2xs { font-size: 12.5px !important; }',
+    '.text-lg { font-size: 17px !important; }'
   ].join('\n');
 
   var _observer = null;

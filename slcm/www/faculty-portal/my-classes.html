@@ -209,9 +209,6 @@
           <span class="fp-ms">{% if co.status in ('Active','Open') %}radio_button_checked{% else %}pause_circle{% endif %}</span>
           {{ co.status or 'Active' }}
         </span>
-        {% if co.term_name and co.term_name != '—' %}
-        <span class="fp-term-chip"><span class="fp-ms">event_note</span>{{ co.term_name }}</span>
-        {% endif %}
         {% if co.academic_year and co.academic_year != '—' %}
         <span class="fp-term-chip">{{ co.academic_year }}</span>
         {% endif %}
