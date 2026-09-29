@@ -108,8 +108,14 @@
   cursor: pointer; display: flex; align-items: center; justify-content: center;
   flex-shrink: 0; transition: background 0.15s;
 }
-.att-modal-close:hover { background: var(--fp-danger-bg); }
+.att-modal-close:hover { background: var(--fp-border-light); }
 .att-modal-body { padding: 20px 24px; }
+
+/* Absent badge — NLS Maroon outline (no red), distinct from the filled Present badge */
+.att-badge-absent { background: transparent !important; color: var(--fp-primary) !important; border: 1px solid var(--fp-primary-mid); }
+
+/* RFID slot in the SAT toolbar — collapse when empty so it adds no flex gap */
+#sat-rfid:empty { display: none !important; }
 
 /* ── Student Attendance Tool modal — premium design ── */
 .sat-modal-box {
@@ -125,16 +131,10 @@
 
 /* Header band */
 .sat-hdr {
-  background: linear-gradient(135deg, var(--fp-primary) 0%, #2b2e4a 100%);
+  background: #920c24;
   padding: 20px 24px 16px;
   flex-shrink: 0;
   position: relative; overflow: hidden;
-}
-.sat-hdr::before {
-  content: ''; position: absolute; top: -30px; right: -30px;
-  width: 140px; height: 140px; border-radius: 50%;
-  background: rgba(255,255,255,0.06);
-  pointer-events: none;
 }
 .sat-hdr-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; position: relative; z-index: 2; }
 .sat-hdr-title { font-size: 18px; font-weight: 800; color: #fff; letter-spacing: -0.02em; }
@@ -161,7 +161,7 @@
 .sat-counter-val  { font-size: 22px; font-weight: 800; color: #fff; line-height: 1; }
 .sat-counter-lbl  { font-size: 10px; color: rgba(255,255,255,0.65); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 1px; }
 .sat-counter.sat-present .sat-counter-val { color: #f5c6ce; }
-.sat-counter.sat-absent  .sat-counter-val { color: #fca5a5; }
+.sat-counter.sat-absent  .sat-counter-val { color: #f5c6ce; }
 
 /* Progress bar inside header */
 .sat-progress-wrap { margin-top: 12px; }
@@ -195,8 +195,8 @@
 }
 .sat-bulk-present { background: var(--fp-success); color: #fff; }
 .sat-bulk-present:hover { background: #920c24; }
-.sat-bulk-absent  { background: var(--fp-danger);  color: #fff; }
-.sat-bulk-absent:hover  { background: #b91c1c; }
+.sat-bulk-absent  { background: var(--fp-primary);  color: #fff; }
+.sat-bulk-absent:hover  { background: #6e0919; }
 
 /* Search in toolbar */
 .sat-search-wrap { position: relative; }
@@ -226,10 +226,10 @@
 }
 .sat-student-row:last-child { border-bottom: none; }
 .sat-student-row:hover { background: var(--fp-bg); }
-.sat-student-row.is-present { background: rgba(146,12,36,0.04); }
-.sat-student-row.is-absent  { background: rgba(220,38,38,0.03); }
-.sat-student-row.is-present:hover { background: rgba(146,12,36,0.08); }
-.sat-student-row.is-absent:hover  { background: rgba(220,38,38,0.06); }
+.sat-student-row.is-present { background: var(--fp-card); }
+.sat-student-row.is-absent  { background: var(--fp-card); }
+.sat-student-row.is-present:hover { background: var(--fp-bg); }
+.sat-student-row.is-absent:hover  { background: var(--fp-bg); }
 .sat-sno {
   width: 28px; height: 28px; border-radius: 50%;
   background: var(--fp-border-light); color: var(--fp-text-4);
@@ -246,7 +246,7 @@
   font-size: 13px; font-weight: 700;
 }
 .sat-status-badge.present { background: var(--fp-success); color: #fff; }
-.sat-status-badge.absent  { background: var(--fp-danger);  color: #fff; }
+.sat-status-badge.absent  { background: var(--fp-primary);  color: #fff; }
 
 /* Toggle buttons — keyboard-friendly, attribute-driven */
 .sat-toggle-wrap { display: flex; border: 1.5px solid var(--fp-border); border-radius: 8px; overflow: hidden; }
@@ -261,7 +261,7 @@
 .sat-p-btn[data-active="0"] { background: var(--fp-card); color: var(--fp-text-4); }
 .sat-p-btn[data-active="1"] { background: var(--fp-success); color: #fff; }
 .sat-a-btn[data-active="0"] { background: var(--fp-card); color: var(--fp-text-4); }
-.sat-a-btn[data-active="1"] { background: var(--fp-danger);  color: #fff; }
+.sat-a-btn[data-active="1"] { background: var(--fp-primary);  color: #fff; }
 
 /* Footer */
 .sat-footer {
@@ -282,14 +282,9 @@
   overflow: hidden;
 }
 .sp-header {
-  background: linear-gradient(135deg, var(--fp-primary) 0%, #2b2e4a 100%);
+  background: #920c24;
   padding: 18px 22px 16px;
   flex-shrink: 0; position: relative; overflow: hidden;
-}
-.sp-header::before {
-  content: ''; position: absolute; top: -20px; right: -20px;
-  width: 110px; height: 110px; border-radius: 50%;
-  background: rgba(255,255,255,0.06); pointer-events: none;
 }
 .sp-header-row {
   display: flex; align-items: center; justify-content: space-between;
@@ -314,10 +309,10 @@
 .sp-session-card:active { transform: translateY(0); }
 .sp-session-icon {
   width: 44px; height: 44px; border-radius: 12px;
-  background: var(--fp-warning-bg); border: 1px solid rgba(146,12,36,0.2);
+  background: var(--fp-primary); border: 1px solid var(--fp-primary);
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
-.sp-session-icon .fp-ms { font-size: 22px; color: var(--fp-warning); }
+.sp-session-icon .fp-ms { font-size: 22px; color: #fff; }
 .sp-session-body { flex: 1; min-width: 0; }
 .sp-session-name { font-size: 14px; font-weight: 700; color: var(--fp-text-1); margin-bottom: 4px; }
 .sp-session-meta { font-size: 12px; color: var(--fp-text-3); display: flex; flex-wrap: wrap; gap: 10px; }
@@ -328,8 +323,8 @@
 .sp-session-card:hover .sp-session-arrow .fp-ms { color: var(--fp-primary); transform: translateX(3px); }
 .sp-overdue-chip {
   display: inline-flex; align-items: center; gap: 4px;
-  background: var(--fp-danger-bg); color: var(--fp-danger);
-  border: 1px solid rgba(220,38,38,0.2);
+  background: var(--fp-primary); color: #fff;
+  border: 1px solid var(--fp-primary);
   border-radius: 6px; padding: 2px 8px; font-size: 10px; font-weight: 700;
   margin-top: 5px;
 }
@@ -355,10 +350,10 @@
   font-weight: 600; cursor: pointer; border: 1.5px solid transparent;
   font-family: inherit; transition: all 0.15s;
 }
-.att-p-btn[data-active="0"] { background: var(--fp-success-bg); color: var(--fp-success); border-color: rgba(146,12,36,0.2); }
+.att-p-btn[data-active="0"] { background: var(--fp-card); color: var(--fp-primary); border-color: var(--fp-primary-mid); }
 .att-p-btn[data-active="1"] { background: var(--fp-success); color: #fff; border-color: var(--fp-success); }
-.att-a-btn[data-active="0"] { background: var(--fp-danger-bg); color: var(--fp-danger); border-color: rgba(220,38,38,0.2); }
-.att-a-btn[data-active="1"] { background: var(--fp-danger); color: #fff; border-color: var(--fp-danger); }
+.att-a-btn[data-active="0"] { background: var(--fp-card); color: var(--fp-primary); border-color: var(--fp-primary-mid); }
+.att-a-btn[data-active="1"] { background: var(--fp-primary); color: #fff; border-color: var(--fp-primary); }
 
 /* Stat card drill-down */
 .att-stat-drillable { cursor: pointer; transition: all 0.2s; }
@@ -396,7 +391,7 @@
 .fp-sortable-th { cursor: pointer; user-select: none; white-space: nowrap; }
 .fp-sortable-th:hover { color: var(--fp-primary); }
 .fp-sort-arrow { color: var(--fp-primary); font-size: 10px; }
-.att-drill-table tr.clickable-row:hover td { background: var(--fp-primary-light); }
+.att-drill-table tr.clickable-row:hover td { background: var(--fp-bg); }
 
 /* Mark Attendance modal: size to the roster instead of always filling 92vh —
    a short class (e.g. 7 students) shouldn't leave a large empty void below
@@ -476,7 +471,7 @@
              data-session="{{ s.name }}" data-course-name="{{ s.course_name | replace('"','&quot;') }}" data-marked="{{ '1' if s.marked else '0' }}"
              data-from-time="{{ s.from_time }}" data-to-time="{{ s.to_time }}">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-            <div style="font-size:13px;font-weight:700;color:var(--fp-primary);background:var(--fp-primary-light);border-radius:var(--fp-radius-sm);padding:3px 9px;">
+            <div style="font-size:13px;font-weight:700;color:#fff;background:var(--fp-primary);border-radius:var(--fp-radius-sm);padding:3px 9px;">
               {{ s.from_time }}{% if s.to_time %} – {{ s.to_time }}{% endif %}
             </div>
             {% if s.marked %}
@@ -513,36 +508,39 @@
 {# ── Stat Cards (all drillable) ───────────────────────────────── #}
 <div class="fp-stat-grid fp-vb-stat-grid fp-vb-stat-grid-3">
 
-  <div class="fp-stat-card fp-vb-stat-card fp-vb-accent-blue att-stat-drillable fade-in" style="animation-delay:0.04s;"
+  <div class="fp-stat-card fp-vb-stat-card fp-vb-accent-maroon att-stat-drillable fp-stat-drillable fade-in" style="animation-delay:0.04s;"
        onclick="attDrill('all_sessions')" title="View all sessions">
-    <div class="fp-stat-icon fp-c-blue"><span class="fp-ms">event_note</span></div>
+    <div class="fp-stat-icon fp-c-navy"><span class="fp-ms">event_note</span></div>
     <div class="fp-stat-body">
       <div class="fp-stat-val">{{ total_sessions }}</div>
       <div class="fp-stat-lbl">Total Sessions</div>
-      <div class="fp-stat-sub" style="color:var(--fp-accent);"><span class="fp-ms" style="font-size:12px;">open_in_new</span> More info</div>
+      <div class="fp-stat-sub fp-drill-hint"><span class="fp-ms" style="font-size:12px;">open_in_new</span> More info</div>
     </div>
+    <span class="fp-drill-badge">Details</span>
   </div>
 
-  <div class="fp-stat-card fp-vb-stat-card fp-vb-accent-green att-stat-drillable fade-in" style="animation-delay:0.08s;"
+  <div class="fp-stat-card fp-vb-stat-card fp-vb-accent-maroon att-stat-drillable fp-stat-drillable fade-in" style="animation-delay:0.08s;"
        onclick="attDrill('marked_sessions')" title="View marked sessions">
-    <div class="fp-stat-icon fp-c-green"><span class="fp-ms">task_alt</span></div>
+    <div class="fp-stat-icon fp-c-navy"><span class="fp-ms">task_alt</span></div>
     <div class="fp-stat-body">
       <div class="fp-stat-val">{{ marked_sessions }}</div>
       <div class="fp-stat-lbl">Marked</div>
-      <div class="fp-stat-sub" style="color:var(--fp-accent);"><span class="fp-ms" style="font-size:12px;">open_in_new</span> More info</div>
+      <div class="fp-stat-sub fp-drill-hint"><span class="fp-ms" style="font-size:12px;">open_in_new</span> More info</div>
     </div>
+    <span class="fp-drill-badge">Details</span>
   </div>
 
-  <div class="fp-stat-card fp-vb-stat-card {% if pending_sessions > 0 %}fp-vb-accent-orange{% else %}fp-vb-accent-green{% endif %} att-stat-drillable fade-in" style="animation-delay:0.12s;"
+  <div class="fp-stat-card fp-vb-stat-card {% if pending_sessions > 0 %}fp-vb-accent-maroon{% else %}fp-vb-accent-maroon{% endif %} att-stat-drillable fp-stat-drillable fade-in" style="animation-delay:0.12s;"
        onclick="attDrill('pending_sessions')" title="View pending sessions">
-    <div class="fp-stat-icon {% if pending_sessions > 0 %}fp-c-orange{% else %}fp-c-green{% endif %}">
+    <div class="fp-stat-icon {% if pending_sessions > 0 %}fp-c-navy{% else %}fp-c-navy{% endif %}">
       <span class="fp-ms">pending_actions</span>
     </div>
     <div class="fp-stat-body">
       <div class="fp-stat-val {% if pending_sessions > 0 %}" style="color:var(--fp-warning);"{% else %}"{% endif %}>{{ pending_sessions }}</div>
       <div class="fp-stat-lbl">Pending</div>
-      <div class="fp-stat-sub" style="color:var(--fp-accent);"><span class="fp-ms" style="font-size:12px;">open_in_new</span> More info</div>
+      <div class="fp-stat-sub fp-drill-hint"><span class="fp-ms" style="font-size:12px;">open_in_new</span> More info</div>
     </div>
+    <span class="fp-drill-badge">Details</span>
   </div>
 
 </div>
@@ -668,7 +666,7 @@
                 {% if s.pct >= 100 %}<span class="fp-badge fp-badge-success">{{ s.pct }}%</span>
                 {% elif s.pct >= 75 %}<span class="fp-badge fp-badge-success">{{ s.pct }}%</span>
                 {% elif s.pct > 0 %}<span class="fp-badge fp-badge-warning">{{ s.pct }}%</span>
-                {% else %}<span class="fp-badge fp-badge-danger">{{ s.pct }}%</span>{% endif %}
+                {% else %}<span class="fp-badge fp-badge-outline">{{ s.pct }}%</span>{% endif %}
               {% else %}<span class="fp-badge fp-badge-neutral">—</span>{% endif %}
             </td>
             <td data-label="Status">
@@ -728,15 +726,15 @@
             <td>
               <div style="display:flex;align-items:center;gap:10px;">
                 <div class="fp-progress" style="flex:1;min-width:80px;">
-                  <div class="fp-progress-bar" style="width:{{ row.avg_pct }}%;background:{% if row.avg_pct >= 75 %}var(--fp-success){% elif row.avg_pct >= 60 %}var(--fp-warning){% else %}var(--fp-danger){% endif %};"></div>
+                  <div class="fp-progress-bar" style="width:{{ row.avg_pct }}%;background:{% if row.avg_pct >= 75 %}var(--fp-success){% elif row.avg_pct >= 60 %}var(--fp-warning){% else %}var(--fp-primary){% endif %};"></div>
                 </div>
-                <span style="font-size:13px;font-weight:700;min-width:42px;{% if row.avg_pct >= 75 %}color:var(--fp-success){% elif row.avg_pct >= 60 %}color:var(--fp-warning){% else %}color:var(--fp-danger){% endif %}">{{ row.avg_pct }}%</span>
+                <span style="font-size:13px;font-weight:700;min-width:42px;{% if row.avg_pct >= 75 %}color:var(--fp-success){% elif row.avg_pct >= 60 %}color:var(--fp-warning){% else %}color:var(--fp-primary){% endif %}">{{ row.avg_pct }}%</span>
               </div>
             </td>
             <td>
               {% if row.avg_pct >= 75 %}<span class="fp-badge fp-badge-success">Good</span>
               {% elif row.avg_pct >= 60 %}<span class="fp-badge fp-badge-warning">Low</span>
-              {% else %}<span class="fp-badge fp-badge-danger">Critical</span>{% endif %}
+              {% else %}<span class="fp-badge fp-badge-outline">Critical</span>{% endif %}
             </td>
           </tr>
           {% endfor %}
@@ -777,7 +775,7 @@ function fpShowToast(msg, isError) {
   var msgEl = document.getElementById('fp-toast-msg');
   if (!el) return;
   if (msgEl) msgEl.textContent = msg || 'Done';
-  el.style.background = isError ? 'var(--fp-danger)' : 'var(--fp-success)';
+  el.style.background = isError ? 'var(--fp-primary)' : 'var(--fp-success)';
   el.style.display = 'flex';
   clearTimeout(el._t);
   el._t = setTimeout(function() { el.style.display = 'none'; }, 3500);
@@ -823,11 +821,20 @@ document.addEventListener('DOMContentLoaded', function() {
    and then get wiped out when the queued popstate arrives right after. */
 var _attModalSwapping = false;
 
+/* Open modals, bottom → top. Modals can stack (e.g. Attendance History opens
+   over Session Attendance), so closing / Back / Escape must only dismiss the
+   topmost one — never the modal underneath it. */
+var _attModalStack = [];
+
 function _openModal(id) {
   var el = document.getElementById(id);
   if (!el) return;
   el.classList.add('open');
   document.body.style.overflow = 'hidden';
+  if (_attModalStack[_attModalStack.length - 1] !== id) {
+    _attModalStack = _attModalStack.filter(function(m) { return m !== id; });
+    _attModalStack.push(id);
+  }
   if (history.state && history.state.attModal === id) return;
   if (_attModalSwapping) {
     history.replaceState({ attModal: id }, '');
@@ -839,7 +846,9 @@ function _closeModal(id, opts) {
   var el = document.getElementById(id);
   if (!el) return;
   el.classList.remove('open');
-  document.body.style.overflow = '';
+  _attModalStack = _attModalStack.filter(function(m) { return m !== id; });
+  /* Keep the page scroll-locked while a modal underneath is still open */
+  if (!_attModalStack.length) document.body.style.overflow = '';
   var fromPopState = opts && opts.fromPopState;
   var swappingToAnother = opts && opts.swapping;
   if (swappingToAnother) {
@@ -854,10 +863,12 @@ function _closeModal(id, opts) {
   }
 }
 window.addEventListener('popstate', function() {
-  ['att-session-picker','att-mark-modal','att-rec-modal','att-view-modal','att-drill-modal','att-hist-modal'].forEach(function(id) {
-    var el = document.getElementById(id);
-    if (el && el.classList.contains('open')) _closeModal(id, { fromPopState: true });
-  });
+  /* Close modals from the top down until we reach the one this history
+     entry belongs to (none, if we're back at the bare page). */
+  var target = history.state && history.state.attModal;
+  while (_attModalStack.length && _attModalStack[_attModalStack.length - 1] !== target) {
+    _closeModal(_attModalStack[_attModalStack.length - 1], { fromPopState: true });
+  }
 });
 /* Backdrop close */
 document.addEventListener('DOMContentLoaded', function() {
@@ -871,11 +882,8 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 /* Escape key */
 document.addEventListener('keydown', function(e) {
-  if (e.key !== 'Escape') return;
-  ['att-session-picker','att-mark-modal','att-rec-modal','att-view-modal','att-drill-modal','att-hist-modal'].forEach(function(id) {
-    var el = document.getElementById(id);
-    if (el && el.classList.contains('open')) _closeModal(id);
-  });
+  if (e.key !== 'Escape' || !_attModalStack.length) return;
+  _closeModal(_attModalStack[_attModalStack.length - 1]);   /* topmost only */
 });
 
 /* ── Slot tabs (Mark Attendance modal + View Session modal): always-visible
@@ -1162,7 +1170,7 @@ function fpSortSessions(key) {
     if (row) {
       row.style.display = '';
       row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      row.style.background = 'var(--fp-primary-light)';
+      row.style.background = 'var(--fp-bg)';
       setTimeout(function() { row.style.background = ''; }, 2000);
     }
   }
@@ -1202,9 +1210,9 @@ function fpOpenSessionPicker() {
 
   if (!sessions.length) {
     _openSessionPickerModal('<div style="padding:48px 24px;text-align:center;">'
-      + '<div style="width:64px;height:64px;border-radius:18px;background:var(--fp-success-bg);'
+      + '<div style="width:64px;height:64px;border-radius:18px;background:var(--fp-primary);'
       + 'display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">'
-      + '<span class="fp-ms" style="font-size:32px;color:var(--fp-success);">task_alt</span></div>'
+      + '<span class="fp-ms" style="font-size:32px;color:#fff;">task_alt</span></div>'
       + '<div style="font-size:17px;font-weight:700;color:var(--fp-text-1);margin-bottom:8px;">All Caught Up!</div>'
       + '<div style="font-size:13px;color:var(--fp-text-4);">No pending attendance sessions found.</div>'
       + '</div>', 0);
@@ -1450,8 +1458,8 @@ function _renderRfidControl(elId, sessionName) {
       + '<span class="fp-ms" style="font-size:12px;">wifi_off</span>Closed</span>';
   } else {
     el.innerHTML = '<button class="fp-btn fp-btn-sm fp-rfid-btn" onclick="fpActivateRfid(\'' + sessionName + '\', this)" '
-      + 'style="background:var(--fp-primary);color:#fff;font-weight:700;box-shadow:0 2px 8px var(--fp-primary-glow);" '
-      + 'onmouseover="this.style.background=\'var(--fp-primary-dark)\'" onmouseout="this.style.background=\'var(--fp-primary)\'">'
+      + 'style="padding:6px 16px;border:1.5px solid #920c24;border-radius:7px;background:#920c24;color:#fff;font-weight:700;white-space:nowrap;" '
+      + 'onmouseover="this.style.background=\'#6f091b\';this.style.borderColor=\'#6f091b\'" onmouseout="this.style.background=\'#920c24\';this.style.borderColor=\'#920c24\'">'
       + '<span class="fp-ms" style="font-size:14px;">wifi_tethering</span>Activate RFID Attendance</button>';
   }
 }
@@ -1515,15 +1523,15 @@ function satBasedOnChange() {
   if (!rc) return;
 
   if (val === 'Course Schedule') {
-    rc.innerHTML = '<label class="fp-label">Course Schedule <span style="color:var(--fp-danger);">*</span></label>'
+    rc.innerHTML = '<label class="fp-label">Course Schedule <span style="color:var(--fp-primary);">*</span></label>'
       + _satTextInput('sat-course-schedule', 'Enter Course Schedule…');
 
   } else if (val === 'Time Table') {
-    rc.innerHTML = '<label class="fp-label">Time Table <span style="color:var(--fp-danger);">*</span></label>'
+    rc.innerHTML = '<label class="fp-label">Time Table <span style="color:var(--fp-primary);">*</span></label>'
       + _satTextInput('sat-class-schedule', 'Enter Time Table…');
 
   } else if (val === 'Office Hours') {
-    rc.innerHTML = '<label class="fp-label">Office Hours Group <span style="color:var(--fp-danger);">*</span></label>'
+    rc.innerHTML = '<label class="fp-label">Office Hours Group <span style="color:var(--fp-primary);">*</span></label>'
       + _satTextInput('sat-office-hours-group', 'Enter Office Hours Group…');
   }
 }
@@ -1649,23 +1657,23 @@ function _satRenderList(students) {
     var roll    = s.group_roll_number || '';
     var name    = s.student_name || s.student;
     var initial = escHtml((name || '?').trim().charAt(0).toUpperCase());
-    var dotColor = present ? 'var(--fp-success)' : 'var(--fp-danger)';
+    var dotColor = present ? 'var(--fp-primary)' : 'var(--fp-primary-mid)';
     var avatar  = s.student_image
       ? '<img src="' + escHtml(s.student_image) + '" alt="" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid ' + dotColor + ';">'
-      : '<span style="width:40px;height:40px;border-radius:50%;background:var(--fp-primary-light);color:var(--fp-primary);'
+      : '<span style="width:40px;height:40px;border-radius:50%;background:var(--fp-primary);color:#fff;'
         + 'display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0;border:2px solid ' + dotColor + ';">' + initial + '</span>';
     var searchKey = escHtml(((name || '') + ' ' + (roll || '') + ' ' + (s.student || '')).toLowerCase());
     html += '<div class="sat-student-row-toggle" data-idx="' + i + '" data-search="' + searchKey + '" '
       + 'style="display:grid;grid-template-columns:' + COLS + ';gap:14px;align-items:center;'
       + 'padding:12px 20px;border-bottom:1px solid var(--fp-border-light);transition:background 0.12s;'
-      + 'background:' + (present ? 'rgba(146,12,36,0.045)' : 'rgba(220,38,38,0.035)') + ';" '
+      + 'background:' + (present ? 'var(--fp-card)' : 'var(--fp-card)') + ';" '
       + 'onmouseover="this.style.filter=\'brightness(0.97)\'" onmouseout="this.style.filter=\'\'">'
       + avatar
       + '<div style="min-width:0;"><div style="font-size:14px;font-weight:600;color:var(--fp-text-1);">' + escHtml(name) + '</div>'
       + (roll ? '<div style="font-size:11.5px;color:var(--fp-text-4);font-family:monospace;">' + escHtml(roll) + '</div>' : '')
       + '</div>'
       + '<span class="sat-toggle-lbl" data-idx="' + i + '" style="font-size:12px;font-weight:700;min-width:56px;text-align:right;'
-      + 'color:' + (present ? 'var(--fp-success)' : 'var(--fp-danger)') + ';">' + (present ? 'PRESENT' : 'ABSENT') + '</span>'
+      + 'color:' + (present ? 'var(--fp-primary)' : 'var(--fp-text-4)') + ';">' + (present ? 'PRESENT' : 'ABSENT') + '</span>'
       + '<label class="sat-switch" style="position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;cursor:pointer;">'
       + '<input type="checkbox" id="' + uid + '" class="sat-chk" data-student="' + escHtml(s.student) + '" '
       + 'data-idx="' + i + '" onchange="satToggleSwitch(this)" '
@@ -1702,7 +1710,7 @@ function satToggleSwitch(chk) {
   var label = document.querySelector('.sat-toggle-lbl[data-idx="' + idx + '"]');
   if (label) {
     label.textContent = present ? 'PRESENT' : 'ABSENT';
-    label.style.color = present ? 'var(--fp-success)' : 'var(--fp-danger)';
+    label.style.color = present ? 'var(--fp-primary)' : 'var(--fp-text-4)';
   }
   var track = document.querySelector('.sat-switch-track[data-idx="' + idx + '"]');
   if (track) {
@@ -1711,9 +1719,9 @@ function satToggleSwitch(chk) {
     if (thumb) thumb.style.left = present ? '22px' : '2px';
   }
   var row = chk.closest('.sat-student-row-toggle');
-  if (row) row.style.background = present ? 'rgba(146,12,36,0.045)' : 'rgba(220,38,38,0.035)';
+  if (row) row.style.background = present ? 'var(--fp-card)' : 'var(--fp-card)';
   var avatarBox = row ? row.querySelector('img, span[style*="border-radius:50%"]') : null;
-  if (avatarBox) avatarBox.style.borderColor = present ? 'var(--fp-success)' : 'var(--fp-danger)';
+  if (avatarBox) avatarBox.style.borderColor = present ? 'var(--fp-primary)' : 'var(--fp-primary-mid)';
 
   _satRefreshCounters();
 }
@@ -1728,7 +1736,7 @@ function _satSetAllPills(present) {
   document.querySelectorAll('#sat-list .sat-chk').forEach(function(c) { c.checked = present; });
   document.querySelectorAll('#sat-list .sat-toggle-lbl').forEach(function(label) {
     label.textContent = present ? 'PRESENT' : 'ABSENT';
-    label.style.color = present ? 'var(--fp-success)' : 'var(--fp-danger)';
+    label.style.color = present ? 'var(--fp-primary)' : 'var(--fp-text-4)';
   });
   document.querySelectorAll('#sat-list .sat-switch-track').forEach(function(track) {
     track.style.background = present ? 'var(--fp-success)' : 'var(--fp-border)';
@@ -1736,9 +1744,9 @@ function _satSetAllPills(present) {
     if (thumb) thumb.style.left = present ? '22px' : '2px';
   });
   document.querySelectorAll('#sat-list .sat-student-row-toggle').forEach(function(row) {
-    row.style.background = present ? 'rgba(146,12,36,0.045)' : 'rgba(220,38,38,0.035)';
+    row.style.background = present ? 'var(--fp-card)' : 'var(--fp-card)';
     var avatarBox = row.querySelector('img, span[style*="border-radius:50%"]');
-    if (avatarBox) avatarBox.style.borderColor = present ? 'var(--fp-success)' : 'var(--fp-danger)';
+    if (avatarBox) avatarBox.style.borderColor = present ? 'var(--fp-primary)' : 'var(--fp-primary-mid)';
   });
   _satRefreshCounters();
 }
@@ -1952,7 +1960,7 @@ function _fpRenderViewSessionBody(students, audit) {
   var late     = students.filter(function(s) { return s.status === 'Late'; }).length;
   var absent   = students.length - present - late;
   var pct      = students.length ? Math.round(((present + late) / students.length) * 100) : 0;
-  var pctColor = pct >= 75 ? 'var(--fp-success)' : pct >= 60 ? 'var(--fp-warning)' : 'var(--fp-danger)';
+  var pctColor = 'var(--fp-primary)';
 
   /* Summary chips */
   var html = '<div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;">'
@@ -1962,9 +1970,9 @@ function _fpRenderViewSessionBody(students, audit) {
     html += '<span class="fp-badge fp-badge-warning" style="font-size:13px;padding:6px 14px;">'
       + '<span class="fp-ms" style="font-size:15px;">schedule</span>' + late + ' Late</span>';
   }
-  html += '<span class="fp-badge fp-badge-danger" style="font-size:13px;padding:6px 14px;">'
+  html += '<span class="fp-badge att-badge-absent" style="font-size:13px;padding:6px 14px;">'
     + '<span class="fp-ms" style="font-size:15px;">cancel</span>' + absent + ' Absent</span>'
-    + '<span class="fp-badge" style="font-size:13px;padding:6px 14px;background:var(--fp-primary-light);color:' + pctColor + ';font-weight:700;">'
+    + '<span class="fp-badge" style="font-size:13px;padding:6px 14px;background:var(--fp-primary);color:#fff;font-weight:700;">'
     + '<span class="fp-ms" style="font-size:15px;">percent</span>' + pct + '% Attendance</span>'
     + '</div>';
 
@@ -1988,16 +1996,16 @@ function _fpRenderViewSessionBody(students, audit) {
 
     students.forEach(function(s, i) {
       var st = s.status || 'Absent';
-      var dotColor = st === 'Present' ? 'var(--fp-success)' : st === 'Late' ? 'var(--fp-warning)' : 'var(--fp-danger)';
-      var badgeCls = st === 'Present' ? 'fp-badge-success' : st === 'Late' ? 'fp-badge-warning' : 'fp-badge-danger';
-      var rowBg    = st === 'Present' ? 'rgba(146,12,36,0.045)' : st === 'Late' ? 'rgba(146,12,36,0.045)' : 'rgba(220,38,38,0.035)';
+      var dotColor = st === 'Absent' ? 'var(--fp-primary-mid)' : 'var(--fp-primary)';
+      var badgeCls = st === 'Present' ? 'fp-badge-success' : st === 'Late' ? 'fp-badge-warning' : 'att-badge-absent';
+      var rowBg    = st === 'Absent' ? 'var(--fp-card)' : 'var(--fp-card)';
       var typeIcon = (s.source === 'RFID' || s.source === 'QR') ? 'wifi_tethering' : 'edit_note';
       var typeLabel = s.type_label || 'Not marked';
       var name    = s.student_name || s.student;
       var initial = escHtml((name || '?').trim().charAt(0).toUpperCase());
       var avatar  = s.student_image
         ? '<img src="' + escHtml(s.student_image) + '" alt="" style="width:34px;height:34px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid ' + dotColor + ';">'
-        : '<span style="width:34px;height:34px;border-radius:50%;background:var(--fp-primary-light);color:var(--fp-primary);'
+        : '<span style="width:34px;height:34px;border-radius:50%;background:var(--fp-primary);color:#fff;'
           + 'display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;border:2px solid ' + dotColor + ';">' + initial + '</span>';
       html += '<div class="att-view-row" data-search="' + escHtml((s.student_name || '') + ' ' + (s.reg_id || s.student || '')).toLowerCase() + '" '
         + 'style="display:grid;grid-template-columns:' + COLS + ';gap:12px;align-items:center;'
@@ -2089,7 +2097,7 @@ function fpShowAttendanceHistory(idx) {
     function(data) {
       var entries = (data && data.entries) ? data.entries : [];
       var rowsHtml = entries.map(function(e) {
-        var badgeCls = e.status === 'Present' ? 'fp-badge-success' : e.status === 'Late' ? 'fp-badge-warning' : 'fp-badge-danger';
+        var badgeCls = e.status === 'Present' ? 'fp-badge-success' : e.status === 'Late' ? 'fp-badge-warning' : 'fp-badge-dark att-badge-absent';
         var typeIcon = (e.source === 'RFID' || e.source === 'QR') ? 'wifi_tethering' : 'edit_note';
         return '<tr>'
           + '<td style="padding:10px;color:var(--fp-text-2);">' + escHtml(e.date) + '</td>'
@@ -2118,7 +2126,7 @@ function fpShowAttendanceHistory(idx) {
     },
     function(msg) {
       document.getElementById('att-hist-body').innerHTML = header
-        + '<div class="fp-alert fp-alert-danger" style="border-radius:var(--fp-radius-sm);">'
+        + '<div class="fp-alert fp-alert-warning" style="border-radius:var(--fp-radius-sm);">'
         + '<span class="fp-ms">error</span><div>' + escHtml(msg || 'Could not load history.') + '</div></div>';
     }
   );
@@ -2350,7 +2358,7 @@ function _drillCell(val, type) {
   if (type === 'number') return '<strong>' + escHtml(String(val)) + '</strong>';
   if (type === 'pct') {
     var n = parseFloat(val) || 0;
-    var c = n >= 75 ? 'var(--fp-success)' : n >= 60 ? 'var(--fp-warning)' : 'var(--fp-danger)';
+    var c = n >= 75 ? 'var(--fp-success)' : n >= 60 ? 'var(--fp-warning)' : 'var(--fp-primary)';
     return '<span class="fp-badge" style="background:transparent;color:' + c + ';font-weight:700;padding:0;">' + n + '%</span>';
   }
   if (type === 'bool_status') {
@@ -2364,7 +2372,7 @@ function _drillCell(val, type) {
   }
   if (type === 'rec_badge') {
     var v = String(val).toLowerCase();
-    var cls = v === 'recommended' ? 'fp-badge-success' : v === 'not recommended' ? 'fp-badge-danger' : 'fp-badge-warning';
+    var cls = v === 'recommended' ? 'fp-badge-success' : v === 'not recommended' ? 'fp-badge-outline' : 'fp-badge-warning';
     var label = val && val !== '' ? val : 'Awaiting';
     return '<span class="fp-badge ' + cls + '">' + escHtml(label) + '</span>';
   }
@@ -2617,8 +2625,8 @@ document.addEventListener('DOMContentLoaded', function() {
     {# ── Header bar ── #}
     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 22px 12px;border-bottom:1px solid var(--fp-border);flex-shrink:0;">
       <div style="display:flex;align-items:center;gap:10px;">
-        <div style="width:34px;height:34px;border-radius:9px;background:var(--fp-primary-light);display:flex;align-items:center;justify-content:center;">
-          <span class="fp-ms" style="font-size:19px;color:var(--fp-primary);">how_to_reg</span>
+        <div style="width:34px;height:34px;border-radius:9px;background:var(--fp-primary);display:flex;align-items:center;justify-content:center;">
+          <span class="fp-ms" style="font-size:19px;color:#fff;">how_to_reg</span>
         </div>
         <div>
           <div style="font-size:15px;font-weight:800;color:var(--fp-text-1);">Student Attendance Tool</div>
@@ -2627,9 +2635,8 @@ document.addEventListener('DOMContentLoaded', function() {
       </div>
       <div style="display:flex;align-items:center;gap:8px;">
         <div id="sat-slot-picker" style="display:flex;align-items:center;"></div>
-        <div id="sat-rfid" style="display:flex;align-items:center;"></div>
         <button onclick="fpCloseMarkModal()" style="width:32px;height:32px;background:var(--fp-bg);border:1px solid var(--fp-border);border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.15s;" aria-label="Close"
-                onmouseover="this.style.background='var(--fp-danger-bg)'" onmouseout="this.style.background='var(--fp-bg)'">
+                onmouseover="this.style.background='var(--fp-border-light)'" onmouseout="this.style.background='var(--fp-bg)'">
           <span class="fp-ms" style="font-size:18px;color:var(--fp-text-3);">close</span>
         </button>
       </div>
@@ -2641,7 +2648,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         {# Row 1 Left: Based On #}
         <div class="sat-form-cell sat-form-cell-bordered" style="padding:18px 22px 16px;border-right:1px solid var(--fp-border);border-bottom:1px solid var(--fp-border);">
-          <label class="fp-label">Based On <span style="color:var(--fp-danger);">*</span></label>
+          <label class="fp-label">Based On <span style="color:var(--fp-primary);">*</span></label>
           <select id="sat-based-on" onchange="satBasedOnChange()"
                   style="width:100%;padding:9px 12px;border:1.5px solid var(--fp-border);border-radius:var(--fp-radius-sm);font-size:13px;font-family:inherit;color:var(--fp-text-1);background:var(--fp-card);outline:none;cursor:pointer;"
                   onfocus="this.style.borderColor='var(--fp-primary)'" onblur="this.style.borderColor='var(--fp-border)'">
@@ -2658,7 +2665,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         {# Row 2 Left: Date #}
         <div class="sat-form-cell sat-form-cell-bordered" style="padding:18px 22px 16px;border-right:1px solid var(--fp-border);">
-          <label class="fp-label">Date <span style="color:var(--fp-danger);">*</span></label>
+          <label class="fp-label">Date <span style="color:var(--fp-primary);">*</span></label>
           <input type="date" id="sat-date" onchange="satDateChange()"
                  style="width:100%;padding:9px 12px;border:1.5px solid var(--fp-border);border-radius:var(--fp-radius-sm);font-size:13px;font-family:inherit;color:var(--fp-text-1);background:var(--fp-card);outline:none;"
                  onfocus="this.style.borderColor='var(--fp-primary)';this.style.boxShadow='0 0 0 3px var(--fp-primary-light)';"
@@ -2676,7 +2683,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
       </div>
 
-      <div id="sat-form-error" class="fp-alert fp-alert-danger" style="display:none;margin:0 22px 16px;border-radius:var(--fp-radius-sm);">
+      <div id="sat-form-error" class="fp-alert fp-alert-warning" style="display:none;margin:0 22px 16px;border-radius:var(--fp-radius-sm);">
         <span class="fp-ms">error</span><div></div>
       </div>
     </div>
@@ -2695,7 +2702,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <div style="display:flex;align-items:center;gap:14px;font-size:13px;font-weight:600;color:var(--fp-text-2);">
               <span>Total: <span id="sat-cnt-total" style="color:var(--fp-text-1);">0</span></span>
               <span style="color:#920c24;">Present: <span id="sat-cnt-present">0</span></span>
-              <span style="color:#dc2626;">Absent: <span id="sat-cnt-absent">0</span></span>
+              <span style="color:#920c24;">Absent: <span id="sat-cnt-absent">0</span></span>
             </div>
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
               <div class="fp-search-wrap" style="width:260px;max-width:100%;">
@@ -2712,10 +2719,12 @@ document.addEventListener('DOMContentLoaded', function() {
               </button>
               <button onclick="satUncheckAll()"
                       style="padding:6px 16px;border:1.5px solid var(--fp-border);border-radius:7px;background:var(--fp-card);font-size:12px;font-weight:600;color:var(--fp-text-2);cursor:pointer;font-family:inherit;transition:all 0.15s;display:flex;align-items:center;gap:5px;"
-                      onmouseover="this.style.background='#dc2626';this.style.color='#fff';this.style.borderColor='#dc2626';"
+                      onmouseover="this.style.background='#920c24';this.style.color='#fff';this.style.borderColor='#920c24';"
                       onmouseout="this.style.background='var(--fp-card)';this.style.color='var(--fp-text-2)';this.style.borderColor='var(--fp-border)';">
                 Uncheck all
               </button>
+              {# RFID control — filled by _renderRfidControl('sat-rfid', …); empty when no session is known #}
+              <div id="sat-rfid" style="display:flex;align-items:center;"></div>
             </div>
           </div>
         </div>
@@ -2729,7 +2738,7 @@ document.addEventListener('DOMContentLoaded', function() {
       </div>
 
       {# Error #}
-      <div id="sat-error" class="fp-alert fp-alert-danger" style="display:none;margin:0 22px;border-radius:var(--fp-radius-sm);">
+      <div id="sat-error" class="fp-alert fp-alert-warning" style="display:none;margin:0 22px;border-radius:var(--fp-radius-sm);">
         <span class="fp-ms">error</span><div></div>
       </div>
     </div>
@@ -2773,7 +2782,7 @@ document.addEventListener('DOMContentLoaded', function() {
           <option value="Not Recommended">✗ Not Recommended</option>
         </select>
       </div>
-      <div id="att-rec-error" class="fp-alert fp-alert-danger" style="display:none;margin-bottom:12px;">
+      <div id="att-rec-error" class="fp-alert fp-alert-warning" style="display:none;margin-bottom:12px;">
         <span class="fp-ms">error</span><div></div>
       </div>
       <div style="display:flex;gap:10px;">
@@ -2791,8 +2800,7 @@ document.addEventListener('DOMContentLoaded', function() {
   <div class="att-modal-box att-modal-full" style="display:flex;flex-direction:column;">
 
     {# Header — gradient with Edit button #}
-    <div style="background:linear-gradient(135deg,#920c24,#2b2e4a);padding:18px 22px 14px;flex-shrink:0;position:relative;overflow:hidden;border-radius:var(--fp-radius-lg) var(--fp-radius-lg) 0 0;">
-      <div style="position:absolute;top:-30px;right:-30px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,0.06);"></div>
+    <div style="background:#920c24;padding:18px 22px 14px;flex-shrink:0;position:relative;overflow:hidden;border-radius:var(--fp-radius-lg) var(--fp-radius-lg) 0 0;">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;position:relative;z-index:1;">
         <div style="display:flex;align-items:center;gap:10px;">
           <div style="width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,0.14);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
@@ -2841,7 +2849,7 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
 
     {# Error #}
-    <div id="att-view-error" class="fp-alert fp-alert-danger" style="display:none;margin:0 22px;border-radius:var(--fp-radius-sm);">
+    <div id="att-view-error" class="fp-alert fp-alert-warning" style="display:none;margin:0 22px;border-radius:var(--fp-radius-sm);">
       <span class="fp-ms">error</span><div></div>
     </div>
 
@@ -2882,8 +2890,8 @@ document.addEventListener('DOMContentLoaded', function() {
   <div class="att-modal-box att-modal-full" style="display:flex;flex-direction:column;">
     <div class="att-modal-hdr">
       <div style="display:flex;align-items:center;gap:12px;">
-        <div style="width:40px;height:40px;border-radius:10px;background:var(--fp-primary-light);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-          <span class="fp-ms" style="font-size:20px;color:var(--fp-primary);">table_chart</span>
+        <div style="width:40px;height:40px;border-radius:10px;background:var(--fp-primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <span class="fp-ms" style="font-size:20px;color:#fff;">table_chart</span>
         </div>
         <div>
           <div class="att-modal-hdr-title" id="att-drill-title">Details</div>
@@ -2893,9 +2901,9 @@ document.addEventListener('DOMContentLoaded', function() {
       <div style="display:flex;gap:8px;align-items:center;">
         <button id="att-drill-export-btn"
                 onclick="attDrillExport()"
-                style="display:flex;align-items:center;gap:6px;padding:7px 14px;background:var(--fp-success-bg);border:1px solid rgba(146,12,36,0.2);border-radius:var(--fp-radius-sm);font-size:12px;font-weight:600;color:var(--fp-success);cursor:pointer;font-family:inherit;transition:all 0.18s;"
-                onmouseover="this.style.background='var(--fp-success)';this.style.color='#fff';"
-                onmouseout="this.style.background='var(--fp-success-bg)';this.style.color='var(--fp-success)';">
+                style="display:flex;align-items:center;gap:6px;padding:7px 14px;background:var(--fp-primary);border:1px solid var(--fp-primary);border-radius:var(--fp-radius-sm);font-size:12px;font-weight:600;color:#fff;cursor:pointer;font-family:inherit;transition:all 0.18s;"
+                onmouseover="this.style.background='var(--fp-primary-dark)';this.style.color='#fff';"
+                onmouseout="this.style.background='var(--fp-primary)';this.style.color='#fff';">
           <span class="fp-ms" style="font-size:16px;">download</span>Export CSV
         </button>
         <button class="att-modal-close" onclick="_closeModal('att-drill-modal')" aria-label="Close">

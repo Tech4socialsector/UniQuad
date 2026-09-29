@@ -27,6 +27,7 @@
       {% endif %}
     </div>
   </div>
+  {# Top-right Take Attendance / My Classes buttons — commented out (same links are in Quick Actions).
   <div class="fp-page-actions">
     <a href="/faculty-portal/attendance" class="fp-btn fp-btn-primary">
       <span class="fp-ms">how_to_reg</span>
@@ -37,6 +38,7 @@
       My Classes
     </a>
   </div>
+  #}
 </div>
 
 <script>
@@ -50,7 +52,7 @@
 </script>
 
 {% if attendance_pending > 0 %}
-<div class="fp-alert fp-alert-warning fade-in">
+<div class="fp-alert fade-in" style="background:transparent;border:1px solid var(--fp-primary);color:var(--fp-primary);">
   <span class="fp-ms">pending_actions</span>
   <div style="flex:1;">
     <strong>Attendance Action Required</strong> — {{ attendance_pending }} attendance session{{ 's' if attendance_pending > 1 else '' }} pending.
@@ -68,32 +70,32 @@
     </div>
   </div>
   <div class="fp-card-body">
-    <div class="fp-grid-auto">
+    <div class="fp-grid-auto fp-dash-qa-grid">
       <a href="/faculty-portal/attendance" class="fp-quick-action-btn fp-dash-qa" style="flex-direction:row;align-items:center;gap:14px;text-align:left;padding:16px 18px;">
         <span class="fp-ms">how_to_reg</span>
         <div>
-          <div style="font-size:13.5px;font-weight:700;color:var(--fp-text-1);">Take Attendance</div>
+          <div class="fp-qa-title" style="font-size:13.5px;font-weight:700;">Take Attendance</div>
           <div style="font-size:12px;color:var(--fp-text-4);margin-top:2px;">Mark today's session</div>
         </div>
       </a>
       <a href="/faculty-portal/my-classes" class="fp-quick-action-btn fp-dash-qa" style="flex-direction:row;align-items:center;gap:14px;text-align:left;padding:16px 18px;">
         <span class="fp-ms">menu_book</span>
         <div>
-          <div style="font-size:13.5px;font-weight:700;color:var(--fp-text-1);">My Classes</div>
+          <div class="fp-qa-title" style="font-size:13.5px;font-weight:700;">My Classes</div>
           <div style="font-size:12px;color:var(--fp-text-4);margin-top:2px;">View course offerings</div>
         </div>
       </a>
       <a href="/faculty-portal/marks" class="fp-quick-action-btn fp-dash-qa" style="flex-direction:row;align-items:center;gap:14px;text-align:left;padding:16px 18px;">
         <span class="fp-ms">grade</span>
         <div>
-          <div style="font-size:13.5px;font-weight:700;color:var(--fp-text-1);">Marks Entry</div>
+          <div class="fp-qa-title" style="font-size:13.5px;font-weight:700;">Marks Entry</div>
           <div style="font-size:12px;color:var(--fp-text-4);margin-top:2px;">Enter or update marks</div>
         </div>
       </a>
       <a href="/faculty-portal/venue-booking" class="fp-quick-action-btn fp-dash-qa" style="flex-direction:row;align-items:center;gap:14px;text-align:left;padding:16px 18px;">
         <span class="fp-ms">meeting_room</span>
         <div>
-          <div style="font-size:13.5px;font-weight:700;color:var(--fp-text-1);">Venue Booking</div>
+          <div class="fp-qa-title" style="font-size:13.5px;font-weight:700;">Venue Booking</div>
           <div style="font-size:12px;color:var(--fp-text-4);margin-top:2px;">Book a room or venue</div>
         </div>
       </a>
@@ -124,7 +126,7 @@ window._fpDashData = {
       {% if portal_error %}
       <div class="fp-stat-sub"><span class="fp-ms" style="font-size:13px;color:var(--fp-danger);">error_outline</span> <span style="color:var(--fp-danger);">Unavailable</span></div>
       {% else %}
-      <div class="fp-stat-sub fp-drill-hint"><span class="fp-ms" style="font-size:13px;">open_in_new</span> Click to explore</div>
+      <div class="fp-stat-sub fp-drill-hint"><span class="fp-ms" style="font-size:13px;">open_in_new</span> More info</div>
       {% endif %}
     </div>
     {% if not portal_error %}<span class="fp-drill-badge">Details</span>{% endif %}
@@ -141,7 +143,7 @@ window._fpDashData = {
       {% if portal_error %}
       <div class="fp-stat-sub"><span class="fp-ms" style="font-size:13px;color:var(--fp-danger);">error_outline</span> <span style="color:var(--fp-danger);">Unavailable</span></div>
       {% else %}
-      <div class="fp-stat-sub fp-drill-hint"><span class="fp-ms" style="font-size:13px;">open_in_new</span> Click to explore</div>
+      <div class="fp-stat-sub fp-drill-hint"><span class="fp-ms" style="font-size:13px;">open_in_new</span> More info</div>
       {% endif %}
     </div>
     {% if not portal_error %}<span class="fp-drill-badge">Details</span>{% endif %}
@@ -177,7 +179,7 @@ window._fpDashData = {
 
 {# ── Today's Schedule + Upcoming Classes ──────────────────────── #}
 {% if not dp.get('hide_today_schedule') %}
-<div class="fp-grid-2">
+<div class="fp-grid-2 fp-dash-split">
 
   {# Today's Classes #}
   <div class="fp-card fade-in" style="animation-delay:0.10s;">
@@ -209,7 +211,7 @@ window._fpDashData = {
       {% for s in todays_sessions %}
       <div class="fp-schedule-item">
         <div style="min-width:76px;text-align:center;padding-top:2px;">
-          <div style="font-size:13px;font-weight:700;color:var(--fp-primary);background:var(--fp-primary-light);border-radius:var(--fp-radius-sm);padding:4px 8px;display:inline-block;">{{ s.from_time }}</div>
+          <div style="font-size:13px;font-weight:700;color:#fff;background:var(--fp-primary);border-radius:var(--fp-radius-sm);padding:4px 8px;display:inline-block;">{{ s.from_time }}</div>
           <div style="font-size:10px;color:var(--fp-text-4);margin-top:3px;">to {{ s.to_time }}</div>
         </div>
         <div class="fp-schedule-info">
@@ -396,7 +398,7 @@ window._fpDashData = {
   var subLabels = {{ course_attendance | map(attribute='course_name') | list | tojson }};
   var subData   = {{ course_attendance | map(attribute='avg_pct')     | list | tojson }};
   var barColors = subData.map(function(v) {
-    return v >= 75 ? 'rgba(146,12,36,0.80)' : v >= 60 ? 'rgba(146,12,36,0.80)' : 'rgba(220,38,38,0.80)';
+    return v >= 75 ? 'rgba(146,12,36,0.80)' : v >= 60 ? 'rgba(146,12,36,0.80)' : 'rgba(146,12,36,0.80)';
   });
   var subCtx = document.getElementById('fpSubjectChart');
   if (subCtx) {
@@ -456,8 +458,8 @@ window._fpDashData = {
          style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:20px 24px;border-bottom:1px solid var(--fp-border);background:var(--fp-bg);flex-wrap:wrap;">
       <div style="display:flex;align-items:center;gap:12px;min-width:0;flex:1 1 auto;">
         <div id="fp-drill-icon"
-             style="width:42px;height:42px;border-radius:11px;background:var(--fp-primary-light);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-          <span class="fp-ms" style="font-size:22px;color:var(--fp-primary);">table_chart</span>
+             style="width:42px;height:42px;border-radius:11px;background:var(--fp-primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <span class="fp-ms" style="font-size:22px;color:#fff;">table_chart</span>
         </div>
         <div style="min-width:0;">
           <div id="fp-drill-title" style="font-size:17px;font-weight:800;color:var(--fp-text-1);letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Details</div>
@@ -467,9 +469,9 @@ window._fpDashData = {
       <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
         <button id="fp-drill-export-btn"
                 onclick="fpDrillExport()"
-                style="display:flex;align-items:center;gap:7px;padding:8px 16px;background:var(--fp-success-bg);border:1px solid rgba(146,12,36,0.2);border-radius:var(--fp-radius-sm);font-size:13px;font-weight:600;color:var(--fp-success);cursor:pointer;font-family:inherit;transition:all 0.18s;white-space:nowrap;"
-                onmouseover="this.style.background='var(--fp-success)';this.style.color='#fff';"
-                onmouseout="this.style.background='var(--fp-success-bg)';this.style.color='var(--fp-success)';">
+                style="display:flex;align-items:center;gap:7px;padding:8px 16px;background:var(--fp-primary);border:1px solid var(--fp-primary);border-radius:var(--fp-radius-sm);font-size:13px;font-weight:600;color:#fff;cursor:pointer;font-family:inherit;transition:all 0.18s;white-space:nowrap;"
+                onmouseover="this.style.background='var(--fp-primary-dark)';this.style.color='#fff';"
+                onmouseout="this.style.background='var(--fp-primary)';this.style.color='#fff';">
           <span class="fp-ms" style="font-size:17px;">download</span>Export CSV
         </button>
         <button onclick="fpDrillClose()"
@@ -516,30 +518,22 @@ body.fp-dark .fp-dash-stat-grid .fp-stat-card { background: var(--fp-card); }
 .fp-dash-qa { background: var(--fp-card); color: #920C24; }
 body.fp-dark .fp-dash-qa { background: var(--fp-card); color: var(--fp-primary); }
 .fp-dash-stat-grid .fp-stat-icon,
-.fp-dash-icon { background: rgba(146,12,36,0.08) !important; }
-.fp-dash-icon { border-style: solid; border-color: var(--fp-primary-mid); }
+.fp-dash-icon { background: var(--fp-primary) !important; }
+.fp-dash-icon { border-style: solid; border-color: var(--fp-primary); }
 .fp-dash-stat-grid .fp-stat-icon .fp-ms,
-.fp-dash-icon .fp-ms { color: #920C24 !important; }
+.fp-dash-icon .fp-ms { color: #fff !important; }
 body.fp-dark .fp-dash-stat-grid .fp-stat-icon .fp-ms,
-body.fp-dark .fp-dash-icon .fp-ms { color: var(--fp-primary) !important; }
+body.fp-dark .fp-dash-icon .fp-ms { color: #fff !important; }
+/* Today's / Upcoming Classes — equal halves (shared .fp-grid-2 is 3fr/2fr) */
+.fp-dash-split { grid-template-columns: 1fr 1fr; }
+@media (max-width: 1024px) { .fp-dash-split { grid-template-columns: 1fr; } }
+/* Quick actions — 4 equal columns that fill the full card width */
+.fp-dash-qa-grid { grid-template-columns: repeat(4, 1fr); }
+@media (max-width: 1024px) { .fp-dash-qa-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px)  { .fp-dash-qa-grid { grid-template-columns: 1fr; } }
 @media (max-width: 768px) { .fp-dash-stat-grid { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 480px) { .fp-dash-stat-grid { grid-template-columns: 1fr; } }
-.fp-stat-drillable { position: relative; }
-.fp-stat-drillable:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); border-color: var(--fp-primary-mid); }
-.fp-drill-badge {
-  position: absolute; top: 10px; right: 10px;
-  font-size: 9px; font-weight: 700; letter-spacing: 0.06em;
-  text-transform: uppercase;
-  background: var(--fp-primary-light); color: var(--fp-primary);
-  padding: 2px 8px; border-radius: 10px;
-  border: 1px solid var(--fp-primary-mid);
-  opacity: 0; transition: opacity 0.18s;
-  pointer-events: none;
-}
-.fp-drill-badge-warn { background: var(--fp-warning-bg) !important; color: var(--fp-warning) !important; border-color: rgba(146,12,36,0.25) !important; }
-.fp-stat-drillable:hover .fp-drill-badge { opacity: 1; }
-.fp-drill-hint { transition: color 0.18s; }
-.fp-stat-drillable:hover .fp-drill-hint { color: var(--fp-primary) !important; }
+/* KPI card hover (maroon border, "More info" + DETAILS tag) now lives in faculty_portal.css */
 
 /* Drill table */
 .fp-drill-table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -847,12 +841,12 @@ body.fp-dark .fp-dash-icon .fp-ms { color: var(--fp-primary) !important; }
     if (btn) {
       var orig = btn.innerHTML;
       btn.innerHTML = '<span class="fp-ms" style="font-size:17px;">check_circle</span>Exported!';
-      btn.style.background = 'var(--fp-success)';
+      btn.style.background = 'var(--fp-primary-dark)';
       btn.style.color = '#fff';
       setTimeout(function() {
         btn.innerHTML = orig;
-        btn.style.background = 'var(--fp-success-bg)';
-        btn.style.color = 'var(--fp-success)';
+        btn.style.background = 'var(--fp-primary)';
+        btn.style.color = '#fff';
       }, 2000);
     }
   };
