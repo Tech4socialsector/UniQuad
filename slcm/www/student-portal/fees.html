@@ -559,9 +559,7 @@
              href="/api/method/slcm.api.student_portal.download_re_exam_receipt?registration_name={{ r.re_exam_receipt | urlencode }}"
              aria-label="Download receipt for {{ r.component }}"><span class="sp-ms" aria-hidden="true">download</span> Receipt</a>
           {% elif r.kind == 'reexam' and r.can_pay and payment_enabled %}
-          <button type="button" class="spf-btn spf-btn-primary spf-btn-sm" id="pay-btn-rex-{{ r.registration | e }}" data-pay
-                  onclick="spInitiateReExamPayment('{{ r.registration | e }}', '{{ r.exam_plan | e }}', '{{ r.course | e }}', this)"
-                  aria-label="Pay {{ r.amount_fmt }} re-exam fee for {{ r.component }}">Pay</button>
+          <span class="spf-cell-sub">In Pay All</span>
           {% elif r.kind == 'fine' and not r.is_paid %}
           <span class="spf-cell-sub" title="Hostel fines are paid at the Hostel Office or Bursar's Office.">Pay at office</span>
           {% else %}<span class="spf-tone-muted">—</span>{% endif %}
@@ -597,13 +595,23 @@
   {% elif not has_fee_demands and not has_fee_refunds and not _has_sc and not _has_ph and not _has_inv %}
     {% if not summary_rows %}{{ empty('task_alt', 'No outstanding fees', 'You have no pending or overdue payments.', ok=True) }}{% endif %}
   {% else %}
-  {% if has_fee_demands and payment_enabled %}
-  {% set ns_pay = namespace(total=0, count=0, names=[]) %}
+  {# One Pay All for every charge payable online: unpaid Fee Demands and unpaid re-exam fees #}
+  {% if payment_enabled %}
+  {% set ns_pay = namespace(total=0, count=0, names=[], rex=[], items=[]) %}
   {% for d in fee_demands %}
     {% if d.outstanding_amount > 0 and d.status not in ('Paid','Waived','Cancelled') %}
       {% set ns_pay.total = ns_pay.total + d.outstanding_amount %}
       {% set ns_pay.count = ns_pay.count + 1 %}
       {% set ns_pay.names = ns_pay.names + [d.name] %}
+      {% set ns_pay.items = ns_pay.items + [{'label': d.fee_component or d.description or 'Charge', 'amount': d.formatted_outstanding}] %}
+    {% endif %}
+  {% endfor %}
+  {% for r in summary_rows %}
+    {% if r.kind == 'reexam' and r.can_pay %}
+      {% set ns_pay.total = ns_pay.total + r.amount %}
+      {% set ns_pay.count = ns_pay.count + 1 %}
+      {% set ns_pay.rex = ns_pay.rex + [r.registration] %}
+      {% set ns_pay.items = ns_pay.items + [{'label': 'Re-exam: ' ~ r.component, 'amount': r.amount_fmt}] %}
     {% endif %}
   {% endfor %}
   {% if ns_pay.count > 0 %}
@@ -611,9 +619,10 @@
     <div class="spf-payall">
       <div class="spf-payall-text"><strong>{{ _inr.format(ns_pay.total) }}</strong> due across {{ ns_pay.count }} charge{{ 's' if ns_pay.count != 1 }}</div>
       <button type="button" class="spf-btn spf-btn-primary" id="spf-pay-all-btn" data-pay onclick="spPayAll()"
-              data-demands="{{ ns_pay.names | join(',') | e }}" data-total="{{ ns_pay.total }}">
+              data-demands="{{ ns_pay.names | join(',') | e }}" data-reexams="{{ ns_pay.rex | join(',') | e }}" data-total="{{ ns_pay.total }}">
         <span class="sp-ms" aria-hidden="true">payments</span> Pay All
       </button>
+      <script type="application/json" id="spf-pay-all-items">{{ ns_pay.items | tojson }}</script>
     </div>
   </div>
   {% endif %}
@@ -955,7 +964,7 @@
 {% endif %}{# end has_any_fee_records #}
 
 {# ── Demand Pay All: payment summary sheet ───────────────────────────── #}
-{% if payment_enabled and has_fee_demands %}
+{% if payment_enabled %}
 <div id="spf-bulk-overlay" class="spf-bulk-overlay" style="display:none;" onclick="spBulkSheetClose()"></div>
 <div id="spf-bulk-sheet" class="spf-bulk-sheet" role="dialog" aria-modal="true" aria-labelledby="spf-bulk-title">
   <div class="spf-bulk-handle"></div>
@@ -1288,13 +1297,14 @@
   window.spPayAll = function () {
     var btn = payAllBtn(); if (!btn || _active) return;
     var names = (btn.getAttribute('data-demands') || '').split(',').filter(Boolean);
+    var rex = (btn.getAttribute('data-reexams') || '').split(',').filter(Boolean);
     var total = parseFloat(btn.getAttribute('data-total')) || 0;
-    if (!names.length || total <= 0) return;
-    var items = document.getElementById('spf-bulk-items'), html = '', idx = 1;
-    document.querySelectorAll('.spf-demand-row:not(.spf-demand-row-settled)').forEach(function (row) {
-      var comp = row.querySelector('.spf-demand-comp-name'), out = row.querySelector('.spf-demand-outstanding .spf-demand-amt-due');
-      if (comp && out) html += '<div class="spf-bulk-item"><span class="spf-bulk-num">' + idx++ + '</span><span class="spf-bulk-label">' + esc(comp.textContent.trim()) +
-        '</span><span class="spf-bulk-amt">' + esc(out.textContent.trim()) + '</span></div>';
+    if ((!names.length && !rex.length) || total <= 0) return;
+    var items = document.getElementById('spf-bulk-items'), html = '', list = [];
+    try { list = JSON.parse((document.getElementById('spf-pay-all-items') || {}).textContent || '[]'); } catch (e) { list = []; }
+    list.forEach(function (it, i) {
+      html += '<div class="spf-bulk-item"><span class="spf-bulk-num">' + (i + 1) + '</span><span class="spf-bulk-label">' + esc(it.label) +
+        '</span><span class="spf-bulk-amt">' + esc(it.amount) + '</span></div>';
     });
     if (items) items.innerHTML = html || '<div style="padding:12px 0;color:var(--spf-muted);font-size:13px;">No payable charges found.</div>';
     var totEl = document.getElementById('spf-bulk-total-amt'); if (totEl) totEl.textContent = _fmtINR(total);
@@ -1312,40 +1322,42 @@
   window.spBulkConfirmPay = function () {
     var btn = payAllBtn(); if (!btn) return;
     var names = (btn.getAttribute('data-demands') || '').split(',').filter(Boolean);
+    var rex = (btn.getAttribute('data-reexams') || '').split(',').filter(Boolean);
     var confirmBtn = document.getElementById('spf-bulk-confirm-btn');
     if (confirmBtn) confirmBtn.disabled = true;
     spBulkSheetClose();
     if (!lockPay(btn)) return;
     showOverlay('Creating payment order…');
-    spCall('slcm.api.student_payment.create_bulk_demand_payment_order', { fee_demand_names: JSON.stringify(names) },
+    spCall('slcm.api.student_payment.create_bulk_demand_payment_order', { fee_demand_names: JSON.stringify(names), re_exam_registrations: JSON.stringify(rex) },
       function (r) {
         var order = r && r.message;
         if (!order || !order.order_id) { hideOverlay(); unlockPay(); toast('Error', 'Could not create payment order. Please try again.', 'error'); return; }
         ensureRzp(function (le) {
           hideOverlay();
           if (le) { unlockPay(); toast('Unavailable', le, 'error'); return; }
-          _launchBulk(order, names);
+          _launchBulk(order, names, rex);
         });
       },
       function (e) { hideOverlay(); unlockPay(); toast('Error', e || 'Could not create payment order.', 'error'); });
   };
-  function _launchBulk(order, names) {
+  function _launchBulk(order, names, rex) {
+    rex = rex || [];
     var failedAlready = false;
     var rzp = new Razorpay({
       key: order.key_id, amount: order.amount, currency: order.currency || 'INR',
-      name: 'Fee Payment', description: order.components || (names.length + ' charge(s)'), order_id: order.order_id,
+      name: 'Fee Payment', description: order.components || ((names.length + rex.length) + ' charge(s)'), order_id: order.order_id,
       prefill: { name: pName || order.payer_name || '', email: pEmail || order.payer_email || '', contact: order.payer_phone || '' },
       theme: { color: THEME },
       modal: { confirm_close: true, ondismiss: function () {
         if (failedAlready) return;
         unlockPay();
         toast('Cancelled', 'Payment was cancelled. No charges applied.', 'info');
-        spCall('slcm.api.student_payment.cancel_bulk_demand_payment', { fee_demand_names: JSON.stringify(names), integration_request: order.integration_request || '' }, _n, _n);
+        spCall('slcm.api.student_payment.cancel_bulk_demand_payment', { fee_demand_names: JSON.stringify(names), re_exam_registrations: JSON.stringify(rex), integration_request: order.integration_request || '' }, _n, _n);
       } },
       handler: function (resp) {
         showOverlay('Confirming payment…');
         spCall('slcm.api.student_payment.confirm_bulk_demand_payment', {
-          fee_demand_names: JSON.stringify(names), integration_request: order.integration_request,
+          fee_demand_names: JSON.stringify(names), re_exam_registrations: JSON.stringify(rex), integration_request: order.integration_request,
           razorpay_payment_id: resp.razorpay_payment_id, razorpay_order_id: resp.razorpay_order_id, razorpay_signature: resp.razorpay_signature },
           function (r) { hideOverlay(); var d = r && r.message;
             if (d && d.status === 'already_paid') toast('Already Paid', 'These charges are already settled.', 'info');
@@ -1359,7 +1371,7 @@
       var errDesc = (r.error && r.error.description) || 'Payment was not completed.';
       toast('Payment Failed', errDesc, 'error');
       spCall('slcm.api.student_payment.mark_demand_payment_failed', {
-        fee_demand_names: JSON.stringify(names), integration_request: order.integration_request || '',
+        fee_demand_names: JSON.stringify(names), re_exam_registrations: JSON.stringify(rex), integration_request: order.integration_request || '',
         payment_id: (r.error && r.error.metadata && r.error.metadata.payment_id) || '', error_code: (r.error && r.error.code) || '', error_description: errDesc },
         function () { setTimeout(function () { window.location.reload(); }, 2200); },
         function () { setTimeout(function () { window.location.reload(); }, 2200); });
