@@ -1,4 +1,9 @@
 frappe.ui.form.on("Fee Payment", {
+	setup(frm) {
+		// Student ID: search by ID, name, Registration Id, Application Number or email
+		frm.set_query("student", () => ({ query: "slcm.slcm.doctype.fee_concession.fee_concession.student_query" }));
+	},
+
 	refresh(frm) {
 		if (frm.doc.docstatus === 0 && frm.doc.student) {
 			frm.add_custom_button(__("Load Pending Demands"), () => {
@@ -40,8 +45,22 @@ frappe.ui.form.on("Fee Payment", {
 
 	student(frm) {
 		frm.refresh();
-		if (!frm.doc.student) return;
+		if (!frm.doc.student || frm.doc.fee_demand) return;
 		frm.trigger("load_pending_demands");
+	},
+
+	// Voucher Number (one due): its student + dues columns; the Fee Demands Covered row is built on save
+	async fee_demand(frm) {
+		if (!frm.doc.fee_demand) return;
+		const d = (await frappe.db.get_value("Fee Demand", frm.doc.fee_demand, ["student", "outstanding_amount"])).message || {};
+		if (frm.doc.student !== d.student) {
+			frm.doc.student = d.student; // set silently: don't auto-load every pending due into the table
+			frm.refresh_field("student");
+		}
+		frm.clear_table("payment_demands");
+		frm.refresh_field("payment_demands");
+		if (!flt(frm.doc.amount)) frm.set_value("amount", flt(d.outstanding_amount));
+		frm.refresh();
 	},
 
 	load_pending_demands(frm) {
@@ -53,7 +72,7 @@ frappe.ui.form.on("Fee Payment", {
 				doctype: "Fee Demand",
 				filters: [
 					["student", "=", frm.doc.student],
-					["status", "in", ["Pending", "Partially Paid", "Overdue"]],
+					["status", "in", ["Pending", "Partially Paid", "Overdue", "Moved to Excess"]],
 				],
 				fields: ["name", "description", "fee_component", "outstanding_amount", "due_date", "status"],
 				order_by: "due_date asc",

@@ -143,10 +143,12 @@ def get_context(context):
 
         chart_data = []
         for r in sorted(published_results, key=lambda x: str(x["published_on"] or "")):
-            if r["term_gpa"] is not None or r["term_percentage"] is not None:
+            # Respect the exam's "show SGPA" publish setting in the trend too
+            sgpa = r["term_gpa"] if r["show_sgpa"] else None
+            if sgpa is not None or r["term_percentage"] is not None:
                 chart_data.append({
                     "label": r["term"] or r["exam_name"],
-                    "sgpa":  r["term_gpa"],
+                    "sgpa":  sgpa,
                     "pct":   r["term_percentage"],
                     "cgpa":  r["cumulative_gpa"],
                 })

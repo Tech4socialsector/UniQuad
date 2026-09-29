@@ -2329,9 +2329,77 @@ def submit_bank_details(**kwargs):
     # Bank fields are masked, and Frappe resets masked fields on save for users without
     # mask permission (students), so validate via the controller and write them directly.
     student.update(values)
-    student.validate_bank_details()
+    student.validate_bank_details(reveal_owner=False)
     updates = {f: student.get(f) or None for f in BANK_DETAIL_FIELDS}
     updates.update(bank_details_submitted=1, bank_details_submitted_on=frappe.utils.now_datetime())
+
+    # Optional passbook uploads (loan passbook only when a loan was availed)
+    passbooks = {"savings_passbook": kwargs.get("savings_passbook")}
+    if values["availed_education_loan"] == "Yes":
+        passbooks["loan_passbook"] = kwargs.get("loan_passbook")
+    for field, file_url in passbooks.items():
+        if file_url:
+            updates[field] = _claim_passbook_file(student_name, field, file_url)
+
     frappe.db.set_value("Student Master", student_name, updates)
     student.add_comment("Info", _("Bank details submitted by the student from the Student Portal."))
+    return {"status": "success"}
+
+
+PASSBOOK_FIELDS = {"savings": "savings_passbook", "loan": "loan_passbook"}
+PASSBOOK_EXTENSIONS = (".pdf", ".jpg", ".jpeg", ".png")
+
+
+def _claim_passbook_file(student_name, fieldname, file_url):
+    """Attach a passbook the student just uploaded (private, owned by them) to their Student Master."""
+    file_url = (file_url or "").strip()
+    f = frappe.db.get_value(
+        "File",
+        {"file_url": file_url, "owner": frappe.session.user},
+        ["name", "is_private", "attached_to_name", "file_name"],
+        as_dict=True,
+    )
+    if not f:
+        frappe.throw(_("The passbook upload could not be found. Please upload the file again."))
+    if not f.is_private:
+        frappe.throw(_("Passbook files must be uploaded privately. Please upload the file again."))
+    if f.attached_to_name and f.attached_to_name != student_name:
+        frappe.throw(_("This file is already attached to another record. Please upload the file again."))
+    if not (f.file_name or file_url).lower().endswith(PASSBOOK_EXTENSIONS):
+        frappe.throw(_("Passbook must be a PDF, JPG or PNG file."))
+
+    frappe.db.set_value("File", f.name, {
+        "attached_to_doctype": "Student Master",
+        "attached_to_name": student_name,
+        "attached_to_field": fieldname,
+    })
+    return file_url
+
+
+@frappe.whitelist(methods=["POST"])
+def upload_bank_passbook(kind, file_url):
+    """Add a missing savings / loan passbook after bank details were submitted (details stay locked).
+
+    An existing passbook can only be replaced by the administration office.
+    """
+    student_name = _get_student()
+    if not student_name:
+        frappe.throw(_("Student not found"))
+
+    fieldname = PASSBOOK_FIELDS.get(kind)
+    if not fieldname:
+        frappe.throw(_("Invalid passbook type."))
+
+    student = frappe.db.get_value(
+        "Student Master", student_name, ["availed_education_loan", fieldname], as_dict=True
+    )
+    if kind == "loan" and student.availed_education_loan != "Yes":
+        frappe.throw(_("A loan passbook can only be added when an education loan was availed."))
+    if student.get(fieldname):
+        frappe.throw(_("A passbook is already on file. Please contact the administration office to replace it."))
+
+    frappe.db.set_value("Student Master", student_name, fieldname, _claim_passbook_file(student_name, fieldname, file_url))
+    frappe.get_doc("Student Master", student_name).add_comment(
+        "Info", _("{0} passbook uploaded by the student from the Student Portal.").format(kind.title())
+    )
     return {"status": "success"}

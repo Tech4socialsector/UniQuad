@@ -41,7 +41,15 @@ app_include_js = [
 app_include_css = []
 
 doctype_js = {
-    "Notification": "public/js/notification_override.js"
+    "Notification": "public/js/notification_override.js",
+    "Data Import": "public/js/bulk_upload_template.js",
+}
+
+# Bulk-upload templates (Download / Upload buttons) on these lists
+doctype_list_js = {
+    "Fee Concession": "public/js/bulk_upload_template.js",
+    "Fee Payment": "public/js/bulk_upload_template.js",
+    "Fee Demand": "public/js/bulk_upload_template.js",
 }
 
 doctype_calendar_js = {
@@ -444,7 +452,9 @@ doc_events = {
 # ------------------------------
 #
 override_whitelisted_methods = {
-	"frappe.core.doctype.user.user.update_password": "slcm.api.user.custom_update_password"
+	"frappe.core.doctype.user.user.update_password": "slcm.api.user.custom_update_password",
+	# Fee Concession / Fee Payment / Fee Demand: Data Import's blank template = the bulk-upload sheet
+	"frappe.core.doctype.data_import.data_import.download_template": "slcm.slcm.fee.bulk_upload.data_import_download_template",
 }
 
 # each overriding function accepts a `data` argument;

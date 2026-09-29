@@ -148,6 +148,7 @@
   "column_break_atyt",
   "savings_branch_name",
   "savings_ifsc_code",
+  "savings_passbook",
   "bank_details_submitted",
   "bank_details_submitted_on",
   "loan_account_details_section",
@@ -160,6 +161,7 @@
   "loan_bank_name",
   "loan_branch_name",
   "loan_ifsc_code",
+  "loan_passbook",
   "tab_education",
   "class_x_details_section",
   "class_x_completion_year",
@@ -512,6 +514,12 @@
    "description": "11 alphanumeric characters"
   },
   {
+   "fieldname": "savings_passbook",
+   "fieldtype": "Attach",
+   "label": "Savings Account Passbook",
+   "description": "Front page of the passbook or a cancelled cheque showing the account number, holder name and IFSC."
+  },
+  {
    "default": "0",
    "fieldname": "bank_details_submitted",
    "fieldtype": "Check",
@@ -599,6 +607,13 @@
    "description": "11 alphanumeric characters",
    "depends_on": "eval:doc.availed_education_loan=='Yes'",
    "mandatory_depends_on": "eval:doc.availed_education_loan=='Yes'"
+  },
+  {
+   "fieldname": "loan_passbook",
+   "fieldtype": "Attach",
+   "label": "Loan Account Passbook / Statement",
+   "depends_on": "eval:doc.availed_education_loan=='Yes'",
+   "description": "Loan account passbook, statement or sanction letter showing the loan account number."
   },
   {
    "fieldname": "tab_program_mapping",
@@ -1737,7 +1752,7 @@
  ],
  "image_field": "passport_size_photo",
  "links": [],
- "modified": "2026-09-24 14:55:02.965868",
+ "modified": "2026-09-24 20:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Student Master",

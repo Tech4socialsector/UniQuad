@@ -255,7 +255,7 @@ function _show_reminder_dialog(opts) {
                 fieldtype: "Select",
                 fieldname: "demand_type",
                 label:     __("Demand Type"),
-                options:   "\nAcademic\nExamination\nService\nFine\nHostel\nDeposit\nOther",
+                options:   "\nAcademic\nNon Academic",
             },
             { fieldtype: "Section Break", fieldname: "sec_results" },
             // ── Results area ──────────────────────────────────────────

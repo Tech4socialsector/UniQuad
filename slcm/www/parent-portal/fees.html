@@ -971,7 +971,7 @@
         <div class="ppf-payall-text"><strong>{{ _inr.format(ns_pay.total) }}</strong> due across {{ ns_pay.count }} charge{{ 's' if ns_pay.count != 1 }}</div>
         <button type="button" class="ppf-btn ppf-btn-primary" id="ppf-pay-all-demands-btn"
                 onclick="ppfPayAll()" data-demands="{{ ns_pay.names | join(',') | e }}" data-total="{{ ns_pay.total }}">
-          <span class="ms" aria-hidden="true">shopping_cart_checkout</span> Pay All
+          <span class="ms" aria-hidden="true">payments</span> Pay All
         </button>
       </div>
       {% endif %}

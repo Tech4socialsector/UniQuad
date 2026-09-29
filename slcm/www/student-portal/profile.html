@@ -158,6 +158,10 @@
 }
 .sp-bank-note .sp-ms { font-size: 18px; }
 .sp-bank-note-locked { background: #ecfdf5; color: #065f46; }
+.sp-passbook-link, .sp-passbook-upload { display: inline-flex; align-items: center; gap: 4px; color: var(--sp-primary); font-weight: 600; cursor: pointer; text-decoration: none; }
+.sp-passbook-link:hover, .sp-passbook-upload:hover { text-decoration: underline; }
+.sp-passbook-link .sp-ms, .sp-passbook-upload .sp-ms { font-size: 18px; }
+.sp-bank-form input[type=file] { padding: 6px; background: #fff; }
 .sp-bank-form label {
   display: block;
   font-size: 13px;
@@ -512,6 +516,18 @@
             <div class="sp-info-label">IFSC Code</div>
             <div class="sp-info-value">{{ profile.savings_ifsc_code or "—" }}</div>
           </div>
+          <div>
+            <div class="sp-info-label">Passbook</div>
+            <div class="sp-info-value">
+              {% if profile.savings_passbook %}
+              <a class="sp-passbook-link" href="{{ profile.savings_passbook }}" target="_blank" rel="noopener"><span class="sp-ms">description</span> View passbook</a>
+              {% elif profile.bank_details_submitted %}
+              <label class="sp-passbook-upload"><span class="sp-ms">upload_file</span> Upload passbook
+                <input type="file" accept=".pdf,.jpg,.jpeg,.png" onchange="spUploadLaterPassbook('savings', this)" hidden>
+              </label>
+              {% else %}—{% endif %}
+            </div>
+          </div>
         </div>
 
         <div class="sp-bank-subtitle" style="margin-top:24px;">Education Loan</div>
@@ -550,6 +566,18 @@
           <div>
             <div class="sp-info-label">IFSC Code</div>
             <div class="sp-info-value">{{ profile.loan_ifsc_code or "—" }}</div>
+          </div>
+          <div>
+            <div class="sp-info-label">Loan Passbook / Statement</div>
+            <div class="sp-info-value">
+              {% if profile.loan_passbook %}
+              <a class="sp-passbook-link" href="{{ profile.loan_passbook }}" target="_blank" rel="noopener"><span class="sp-ms">description</span> View document</a>
+              {% elif profile.bank_details_submitted %}
+              <label class="sp-passbook-upload"><span class="sp-ms">upload_file</span> Upload document
+                <input type="file" accept=".pdf,.jpg,.jpeg,.png" onchange="spUploadLaterPassbook('loan', this)" hidden>
+              </label>
+              {% else %}—{% endif %}
+            </div>
           </div>
           {% endif %}
         </div>
@@ -820,6 +848,11 @@
             <input type="text" id="b_savings_ifsc_code" maxlength="11" style="text-transform:uppercase;" autocomplete="off">
             <div class="sp-bank-hint">11 alphanumeric characters</div>
           </div>
+          <div>
+            <label for="b_savings_passbook">Passbook (optional)</label>
+            <input type="file" id="b_savings_passbook" accept=".pdf,.jpg,.jpeg,.png">
+            <div class="sp-bank-hint">Front page of the passbook or a cancelled cheque · PDF, JPG or PNG, up to 5 MB</div>
+          </div>
         </div>
 
         <div class="sp-bank-subtitle" style="margin-top:8px;">Education Loan</div>
@@ -870,10 +903,15 @@
           </div>
           <div class="sp-bank-row">
             <div>
-              <label for="b_loan_ifsc_code">IFSC Code *</label>
-              <input type="text" id="b_loan_ifsc_code" maxlength="11" style="text-transform:uppercase;" autocomplete="off">
-              <div class="sp-bank-hint">11 alphanumeric characters</div>
-            </div>
+                <label for="b_loan_ifsc_code">IFSC Code *</label>
+                <input type="text" id="b_loan_ifsc_code" maxlength="11" style="text-transform:uppercase;" autocomplete="off">
+                <div class="sp-bank-hint">11 alphanumeric characters</div>
+              </div>
+              <div>
+                <label for="b_loan_passbook">Loan Passbook / Statement (optional)</label>
+                <input type="file" id="b_loan_passbook" accept=".pdf,.jpg,.jpeg,.png">
+                <div class="sp-bank-hint">Passbook, statement or sanction letter · PDF, JPG or PNG, up to 5 MB</div>
+              </div>
           </div>
         </div>
       </form>
@@ -1042,14 +1080,78 @@ function submitBankDetails() {
     spToast('Loan IFSC Code must be exactly 11 alphanumeric characters', 'danger');
     return;
   }
+  var fileErr = spPassbookError(document.getElementById('b_savings_passbook'))
+             || (loan ? spPassbookError(document.getElementById('b_loan_passbook')) : null);
+  if (fileErr) { spToast(fileErr, 'danger'); return; }
   SP_BANK_PENDING = data;
   spOpenModal('modal-bank-confirm');
+}
+
+/* ── Passbook uploads (private files, attached to the student's record by the server) ── */
+var SP_PASSBOOK_EXT = /\.(pdf|jpe?g|png)$/i;
+var SP_PASSBOOK_MAX = 5 * 1024 * 1024;
+
+function spPassbookError(input) {
+  var file = input && input.files && input.files[0];
+  if (!file) return null;
+  if (!SP_PASSBOOK_EXT.test(file.name)) return 'Passbook must be a PDF, JPG or PNG file';
+  if (file.size > SP_PASSBOOK_MAX) return 'Passbook file must be 5 MB or smaller';
+  return null;
+}
+
+function spUploadPrivate(input) {
+  return new Promise(function (resolve, reject) {
+    var file = input && input.files && input.files[0];
+    if (!file) { resolve(''); return; }
+    var fd = new FormData();
+    fd.append('file', file, file.name);
+    fd.append('is_private', '1');
+    fetch('/api/method/upload_file', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'X-Frappe-CSRF-Token': window._sp_csrf || (window.frappe && frappe.csrf_token) || '' },
+      body: fd,
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        if (res.message && res.message.file_url) resolve(res.message.file_url);
+        else reject(new Error('Passbook upload failed. Please try again.'));
+      })
+      .catch(function () { reject(new Error('Passbook upload failed. Please try again.')); });
+  });
+}
+
+function spUploadLaterPassbook(kind, input) {
+  var err = spPassbookError(input);
+  if (err) { spToast(err, 'danger'); input.value = ''; return; }
+  spToast('Uploading…', 'info');
+  spUploadPrivate(input).then(function (url) {
+    spCall('slcm.api.student_portal.upload_bank_passbook', { kind: kind, file_url: url }, function () {
+      spToast('Passbook uploaded successfully', 'success');
+      setTimeout(function () { window.location.reload(); }, 800);
+    }, function (e) {
+      spToast(spServerMsg(e) || 'Failed to upload passbook', 'danger');
+      input.value = '';
+    });
+  }).catch(function (e) { spToast(e.message, 'danger'); input.value = ''; });
 }
 
 function spConfirmBankDetails() {
   if (!SP_BANK_PENDING) return;
   var data = SP_BANK_PENDING;
   spCloseModal('modal-bank-confirm');
+  var loan = data.availed_education_loan === 'Yes';
+  Promise.all([
+    spUploadPrivate(document.getElementById('b_savings_passbook')),
+    loan ? spUploadPrivate(document.getElementById('b_loan_passbook')) : Promise.resolve(''),
+  ]).then(function (urls) {
+    data.savings_passbook = urls[0];
+    data.loan_passbook = urls[1];
+    spSubmitBankDetails(data);
+  }).catch(function (e) { spToast(e.message, 'danger'); });
+}
+
+function spSubmitBankDetails(data) {
   spCall('slcm.api.student_portal.submit_bank_details', data, function () {
     SP_BANK_PENDING = null;
     spCloseModal('modal-bank-details');

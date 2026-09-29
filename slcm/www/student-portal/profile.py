@@ -99,6 +99,8 @@ def get_context(context):
             "loan_bank_name":      student.loan_bank_name or "",
             "loan_branch_name":    student.loan_branch_name or "",
             "loan_ifsc_code":      _mask_ifsc(student.loan_ifsc_code),
+            "savings_passbook":    student.get("savings_passbook") or "",
+            "loan_passbook":       student.get("loan_passbook") or "",
             "bank_details_submitted": bool(student.bank_details_submitted),
             "bank_details_submitted_on": frappe.utils.format_datetime(student.bank_details_submitted_on, "dd MMM yyyy, hh:mm a") if student.bank_details_submitted_on else "",
         }

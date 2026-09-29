@@ -50,6 +50,7 @@ const SFM_ICON_PATHS = {
 	"file-text": '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>',
 	card: '<rect width="20" height="14" x="2" y="5" rx="2"/><path d="M2 10h20"/>',
 	loader: '<path d="M21 12a9 9 0 1 1-6.219-8.56"/>',
+	upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/>',
 	columns: '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="M15 3v18"/>',
 	award: '<circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/>',
 };
@@ -291,6 +292,7 @@ class StudentFeeManagement {
 		if (student) {
 			if (!this.detail || this.detail.profile.name !== student) {
 				this.dues_filter = "All";
+				this.dues_component = "";
 				this.detail_tab = "dues";
 			}
 			this.show_student(student);
@@ -315,9 +317,14 @@ class StudentFeeManagement {
 						<h1 class="sfm-title">${__("Student Fee Management")}</h1>
 						<p class="sfm-subtitle">${__("Track student fee payments, pending dues and receipts")}</p>
 					</div>
-					<button type="button" class="sfm-btn sfm-btn-secondary" data-act="refresh">
-						${sfm_icon("refresh", 15)}<span>${__("Refresh")}</span>
-					</button>
+					<div class="sfm-actions">
+						<button type="button" class="sfm-btn sfm-btn-secondary" data-act="bulk-upload">
+							${sfm_icon("upload", 15)}<span>${__("Bulk Upload")}</span>
+						</button>
+						<button type="button" class="sfm-btn sfm-btn-secondary" data-act="refresh">
+							${sfm_icon("refresh", 15)}<span>${__("Refresh")}</span>
+						</button>
+					</div>
 				</header>
 
 				<section class="sfm-panel sfm-filter-panel" aria-labelledby="sfm-filter-title">
@@ -552,6 +559,7 @@ class StudentFeeManagement {
 		$r.on("click", '[data-act="apply"]', () => this.apply_filters());
 		$r.on("click", '[data-act="clear"]', () => this.clear_filters());
 		$r.on("click", '[data-act="refresh"]', () => this.load_students());
+		$r.on("click", '[data-act="bulk-upload"]', () => this.bulk_upload_dialog());
 		$r.on("click", '[data-act="retry"]', () => this.load_students());
 
 		$r.on("change", "#sfm-page-size", (e) => {
@@ -604,6 +612,71 @@ class StudentFeeManagement {
 			if (row.receipt_count === 1) this.download_receipt(row.latest_receipt, $btn);
 			else this.receipts_dialog(row);
 		});
+	}
+
+	// ── Bulk upload (Fee Demand / Fee Payment / Fee Concession) ──────────
+	// Download the office's sheet (pre-filled where it applies), then import it through Data Import.
+	async bulk_upload_dialog() {
+		const types = [
+			{
+				doctype: "Fee Demand",
+				icon: "file-text",
+				title: __("Fee Demands"),
+				text: __("Create new dues. The sheet is blank; Voucher No. is assigned by the system. A Students sheet lists every Student ID."),
+				submit: 0,
+			},
+			{
+				doctype: "Fee Payment",
+				icon: "card",
+				title: __("Fee Payments"),
+				text: __("Record payments against open dues. The sheet comes pre-filled with the dues; fill only the yellow payment columns."),
+				submit: 1,
+			},
+			{
+				doctype: "Fee Concession",
+				icon: "award",
+				title: __("Fee Concessions"),
+				text: __("Apply scholarships / waivers to open dues. Pre-filled with the dues; fill only the yellow concession columns."),
+				submit: 1,
+			},
+		].filter((t) => frappe.model.can_create(t.doctype));
+		if (!types.length) return frappe.msgprint(__("You don't have permission to create fee demands, payments or concessions."));
+
+		const dialog = new frappe.ui.Dialog({ title: __("Bulk Upload"), size: "large" });
+		dialog.$wrapper.addClass("sfm-dialog");
+		$(dialog.body).html(`
+			<p class="sfm-muted sfm-bu-intro">${__("1. Download the template  ·  2. Fill the highlighted columns  ·  3. Import it. Headers match the fields, so no column mapping is needed.")}</p>
+			<div class="sfm-bu-grid">
+				${types
+					.map(
+						(t) => `<div class="sfm-bu-card">
+							<div class="sfm-bu-head"><span class="sfm-kpi-icon">${sfm_icon(t.icon, 18)}</span><div class="sfm-bu-title">${t.title}</div></div>
+							<p class="sfm-muted">${t.text}</p>
+							<div class="sfm-bu-actions">
+								<button type="button" class="sfm-btn sfm-btn-secondary sfm-btn-sm" data-bu-download="${t.doctype}">${sfm_icon("download", 14)}<span>${__("Download Template")}</span></button>
+								<button type="button" class="sfm-btn sfm-btn-primary sfm-btn-sm" data-bu-import="${t.doctype}" data-submit="${t.submit}">${sfm_icon("upload", 14)}<span>${__("Import")}</span></button>
+							</div>
+						</div>`
+					)
+					.join("")}
+			</div>
+		`);
+		$(dialog.body).on("click", "[data-bu-download]", async (e) => {
+			const doctype = $(e.currentTarget).data("bu-download");
+			if (!window.slcm_download_bulk_template) await frappe.require("/assets/slcm/js/bulk_upload_template.js");
+			window.slcm_download_bulk_template(doctype);
+		});
+		$(dialog.body).on("click", "[data-bu-import]", (e) => {
+			const doctype = $(e.currentTarget).data("bu-import");
+			dialog.hide();
+			// Data Import, ready for the filled sheet; payments / concessions are submitted after import
+			frappe.new_doc("Data Import", {
+				reference_doctype: doctype,
+				import_type: "Insert New Records",
+				submit_after_import: cint($(e.currentTarget).data("submit")),
+			});
+		});
+		dialog.show();
 	}
 
 	render_sort_indicators() {
@@ -947,7 +1020,6 @@ class StudentFeeManagement {
 						<div class="sfm-name">${sfm_esc(p.first_name || p.name)}</div>
 						<div class="sfm-sub">${sfm_esc(p.registration_id || p.name)}</div>
 						<div class="sfm-pills">
-							<span class="sfm-pill">${__("Student")}</span>
 							${p.student_status ? `<span class="sfm-pill sfm-pill-muted">${sfm_esc(p.student_status)}</span>` : ""}
 						</div>
 						<div class="sfm-sub">${sfm_esc(p.official_email_id || p.email || "")}</div>
@@ -1018,7 +1090,11 @@ class StudentFeeManagement {
 		const all_cols = this.due_columns();
 		const cols = all_cols.filter((c) => !this.hidden_cols.has(c.key));
 		const n_hidden = all_cols.length - cols.length;
-		const demands = this.detail.demands;
+		const components = [...new Set(this.detail.demands.map((d) => d.fee_component).filter(Boolean))].sort();
+		if (this.dues_component && !components.includes(this.dues_component)) this.dues_component = "";
+		const demands = this.dues_component
+			? this.detail.demands.filter((d) => d.fee_component === this.dues_component)
+			: this.detail.demands;
 		const filters = ["All", "Pending", "Overdue", "Partially Paid", "Paid", "Waived", "Moved to Excess", "Cancelled", "Cancelled & Moved to Excess"];
 		const count = (f) => (f === "All" ? demands.length : demands.filter((d) => sfm_demand_status(d) === f).length);
 		const shown = this.dues_filter === "All" ? demands : demands.filter((d) => sfm_demand_status(d) === this.dues_filter);
@@ -1044,6 +1120,17 @@ class StudentFeeManagement {
 									`<button type="button" class="sfm-chip ${f === this.dues_filter ? "active" : ""}" data-filter="${f}" aria-pressed="${f === this.dues_filter}">${__(f)} <span>${count(f)}</span></button>`
 							)
 							.join("")}
+						${
+							components.length > 1
+								? `<div class="sfm-select-wrap sfm-fc-filter">
+									<select class="sfm-control sfm-control-sm ${this.dues_component ? "has-value" : ""}" data-dues-component aria-label="${__("Filter by Fee Component")}">
+										<option value="">${__("All Fee Components")}</option>
+										${components.map((c) => `<option value="${sfm_esc(c)}" ${c === this.dues_component ? "selected" : ""}>${sfm_esc(c)}</option>`).join("")}
+									</select>
+									${sfm_icon("chevron-down", 14, "sfm-select-caret")}
+								</div>`
+								: ""
+						}
 					</div>
 					<div class="sfm-actions">
 						<span class="sfm-muted sfm-sel-count" aria-live="polite"></span>
@@ -1106,6 +1193,10 @@ class StudentFeeManagement {
 
 		$body.on("click", ".sfm-chip", (e) => {
 			this.dues_filter = $(e.currentTarget).data("filter");
+			this.render_tab();
+		});
+		$body.on("change", "[data-dues-component]", (e) => {
+			this.dues_component = $(e.currentTarget).val();
 			this.render_tab();
 		});
 		$body.on("change", ".sfm-row-check", (e) => {
@@ -1217,6 +1308,7 @@ class StudentFeeManagement {
 			<div class="sfm-col-pop-title">${__("Show columns")}</div>
 			<div class="sfm-ms-actions">
 				<button type="button" data-cm="all">${__("Show all")}</button>
+				<button type="button" data-cm="clear" title="${__("Hide every column except Fee Component, then tick the ones you need")}">${__("Clear")}</button>
 			</div>
 			<div class="sfm-ms-list">
 				${all_cols
@@ -1260,6 +1352,11 @@ class StudentFeeManagement {
 		});
 		$pop.on("click", '[data-cm="all"]', () => {
 			this.hidden_cols.clear();
+			apply();
+		});
+		// The table always keeps one column, so Clear leaves Fee Component (it identifies each row).
+		$pop.on("click", '[data-cm="clear"]', () => {
+			this.hidden_cols = new Set(all_cols.map((c) => c.key).filter((k) => k !== "fee_component"));
 			apply();
 		});
 		$pop.on("keydown", (e) => {
@@ -1380,8 +1477,10 @@ class StudentFeeManagement {
 		}
 	}
 
-	payment_dialog(demands) {
+	async payment_dialog(demands) {
 		const student = this.detail.profile.name;
+		await frappe.model.with_doctype("Fee Payment");
+		const bank_accounts = ((frappe.meta.get_docfield("Fee Payment", "university_bank_account") || {}).options || "").split("\n");
 		const dialog = new frappe.ui.Dialog({
 			title: __("Record Payment"),
 			size: "large",
@@ -1397,6 +1496,8 @@ class StudentFeeManagement {
 					default: "Bank Transfer",
 				},
 				{ fieldtype: "Date", fieldname: "payment_date", label: __("Payment Date"), reqd: 1, default: frappe.datetime.get_today() },
+				{ fieldtype: "Date", fieldname: "settlement_date", label: __("Settlement Date") },
+				{ fieldtype: "Select", fieldname: "university_bank_account", label: __("University bank account"), options: bank_accounts },
 				{ fieldtype: "Data", fieldname: "bank_name", label: __("Bank Name") },
 				{ fieldtype: "Column Break" },
 				{ fieldtype: "Data", fieldname: "reference_number", label: __("Reference / UTR No.") },
@@ -1619,7 +1720,7 @@ class StudentFeeManagement {
 				<table class="sfm-table">
 					<thead><tr>
 						<th scope="col">${__("Payment No.")}</th><th scope="col">${__("Date")}</th><th scope="col">${__("Mode")}</th>
-						<th scope="col">${__("Reference")}</th><th scope="col">${__("Allocated To")}</th>
+						<th scope="col">${__("Reference")}</th><th scope="col">${__("Bank Account")}</th><th scope="col">${__("Allocated To")}</th>
 						<th scope="col" class="num">${__("Amount")}</th><th scope="col">${__("Receipt")}</th><th scope="col">${__("Status")}</th>
 					</tr></thead>
 					<tbody>
@@ -1632,6 +1733,7 @@ class StudentFeeManagement {
 							<td>${sfm_date(p.payment_date)}</td>
 							<td>${sfm_esc(p.payment_mode || "—")}</td>
 							<td>${sfm_esc(p.reference_number || "—")}</td>
+							<td class="sfm-wrap">${sfm_esc(p.university_bank_account || "—")}</td>
 							<td>${(p.allocations || []).map((a) => `<div>${sfm_esc(a.fee_demand)} <span class="sfm-sub">· ${sfm_money(a.amount_allocated)}</span></div>`).join("") || "—"}</td>
 							<td class="num sfm-amount-strong">${sfm_money(p.amount)}</td>
 							<td>${
@@ -1647,7 +1749,7 @@ class StudentFeeManagement {
 						</tr>`
 										)
 										.join("")
-								: `<tr><td colspan="8"><div class="sfm-empty-state"><div class="sfm-empty-title">${__("No payments recorded for this student")}</div></div></td></tr>`
+								: `<tr><td colspan="9"><div class="sfm-empty-state"><div class="sfm-empty-title">${__("No payments recorded for this student")}</div></div></td></tr>`
 						}
 					</tbody>
 				</table>
@@ -1800,8 +1902,8 @@ class StudentFeeManagement {
 				<div class="sfm-panel sfm-table-panel"><div class="sfm-table-scroll">
 					<table class="sfm-table">
 						<thead><tr>
-							<th scope="col">${__("Concession No.")}</th><th scope="col">${__("Type")}</th><th scope="col">${__("Scholarship For")}</th>
-							<th scope="col">${__("Due")}</th><th scope="col">${__("Mode")}</th>
+							<th scope="col">${__("Concession No.")}</th><th scope="col">${__("Type")}</th>
+							<th scope="col">${__("Due")}</th>
 							<th scope="col" class="num">${__("Scholarship")}<div class="sfm-th-sub">${__("Waiver")}</div></th>
 							<th scope="col">${__("Status")}</th><th scope="col">${__("Reason")}</th>
 						</tr></thead>
@@ -1813,16 +1915,14 @@ class StudentFeeManagement {
 												(c) => `<tr>
 								<td><a class="sfm-link" href="${frappe.utils.get_form_link("Fee Concession", c.name)}">${sfm_esc(c.name)}</a></td>
 								<td>${sfm_esc(c.concession_type || "—")}</td>
-								<td>${sfm_esc(c.scholarship_for || "—")}</td>
 								<td>${sfm_esc(c.fee_demand || "—")}<div class="sfm-sub">${sfm_esc(c.fee_component || "")}</div></td>
-								<td>${sfm_esc(c.waiver_mode || "—")}${c.waiver_mode === "Percentage" ? `<div class="sfm-sub">${flt(c.waiver_value)}%</div>` : ""}</td>
 								<td class="num sfm-amount-strong">${sfm_money(c.waiver_amount)}</td>
 								<td>${sfm_badge(c.status || ["Draft", "Approved", "Cancelled"][c.docstatus])}</td>
 								<td class="sfm-remark" title="${sfm_esc(c.reason || "")}">${sfm_esc(c.reason || "—")}</td>
 							</tr>`
 											)
 											.join("")
-									: `<tr><td colspan="8"><div class="sfm-empty-state"><div class="sfm-empty-title">${__("No scholarships or waivers for this student")}</div></div></td></tr>`
+									: `<tr><td colspan="6"><div class="sfm-empty-state"><div class="sfm-empty-title">${__("No scholarships or waivers for this student")}</div></div></td></tr>`
 							}
 						</tbody>
 					</table>
@@ -1893,7 +1993,7 @@ class StudentFeeManagement {
 			$body.find(".sfm-subtab").not(e.currentTarget).trigger("click");
 		});
 		$body.find('[data-act="new-scholarship"]').on("click", () =>
-			frappe.new_doc("Fee Concession", { student: p.name, concession_type: "Scholarship" })
+			frappe.new_doc("Fee Concession", { student: p.name })
 		);
 		$body.find('[data-act="new-stipend"]').on("click", () => this.stipend_dialog());
 	}
@@ -2252,6 +2352,17 @@ class StudentFeeManagement {
 		.sfm-kpi-note { font-size: 11px; font-weight: 400; color: var(--sfm-muted); margin-left: 4px; }
 		.sfm-scholar-card { padding: 16px 20px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 12px; }
 		.sfm-scholar-card .sfm-metas { border-right: none; padding-right: 0; }
+		.sfm-bu-intro { margin-bottom: 14px; }
+		.sfm-bu-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+		.sfm-bu-card { display: flex; flex-direction: column; gap: 10px; padding: 16px; border: 1px solid var(--sfm-border); border-radius: var(--sfm-radius); background: var(--sfm-card); }
+		.sfm-bu-card p { margin: 0; flex: 1; }
+		.sfm-bu-head { display: flex; align-items: center; gap: 10px; }
+		.sfm-bu-head .sfm-kpi-icon { background: var(--sfm-primary-soft); color: var(--sfm-primary-text); border-color: var(--sfm-primary-tint); }
+		.sfm-bu-title { font-weight: 700; font-size: 14px; }
+		.sfm-bu-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+		.sfm-fc-filter { display: inline-block; }
+		.sfm-fc-filter select { height: 30px; border-radius: 999px; font-size: 12px; min-width: 190px; max-width: 260px; }
+		.sfm-fc-filter select.has-value { border-color: var(--sfm-primary); background: var(--sfm-primary-tint); color: var(--sfm-primary-text); font-weight: 600; }
 		.sfm-move-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; padding: 12px; margin-bottom: 12px; border: 1px solid var(--sfm-border); border-radius: var(--sfm-radius); background: var(--sfm-subtle); }
 		.sfm-move-summary div { display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
 		.sfm-alloc-table input { max-width: 150px; margin-left: auto; text-align: right; }

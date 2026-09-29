@@ -350,7 +350,7 @@ def get_context(context):
                 "Fee Concession",
                 filters={"student": student_name},
                 fields=[
-                    "name", "concession_type", "waiver_mode", "waiver_value",
+                    "name", "concession_type", "waiver_value",
                     "waiver_amount", "original_amount", "fee_component",
                     "status", "reason", "approved_by", "approved_on",
                 ],

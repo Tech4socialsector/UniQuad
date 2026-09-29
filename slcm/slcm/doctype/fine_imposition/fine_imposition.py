@@ -137,9 +137,12 @@ class FineImposition(Document):
 		filters = {
 			"outstanding_amount": [">", 0],
 			"status": ["not in", ["Paid", "Cancelled", "Waived"]],
-			"demand_type": ["!=", "Fine"],
 			"due_date": ["between", [self.from_date, self.to_date]],
 		}
+		# never fine a fine: exclude dues whose Fee Component is a fine type ("Fine - …")
+		fine_components = frappe.get_all("Fee Component", filters={"component_type": ["like", "Fine%"]}, pluck="name")
+		if fine_components:
+			filters["fee_component"] = ["not in", fine_components]
 		if self.demand_type_filter:
 			filters["demand_type"] = self.demand_type_filter
 		if self.programme:

@@ -15,7 +15,7 @@ _DEMAND_AGG = """
 		SUM(outstanding_amount)                                          AS outstanding_amount,
 		SUM(CASE WHEN status = 'Overdue' THEN outstanding_amount ELSE 0 END) AS overdue_amount
 	FROM `tabFee Demand`
-	WHERE status != 'Cancelled'
+	WHERE status != 'Cancelled' {component_condition}
 	GROUP BY student
 """
 
@@ -57,9 +57,15 @@ def get_filter_options():
 		"""SELECT DISTINCT academic_year FROM `tabStudent Master`
 		WHERE IFNULL(academic_year, '') != '' ORDER BY academic_year DESC"""
 	)
+	# Terms set up in Academic Term plus any term held on a student (students copy theirs from the batch,
+	# so a batch without a term leaves students blank — the master list keeps the filter usable).
 	terms = frappe.db.sql(
-		"""SELECT DISTINCT academic_year, academic_term FROM `tabStudent Master`
-		WHERE IFNULL(academic_term, '') != '' ORDER BY academic_term""",
+		"""SELECT academic_year, name AS academic_term FROM `tabAcademic Term`
+		WHERE IFNULL(status, '') != 'Inactive'
+		UNION
+		SELECT DISTINCT academic_year, academic_term FROM `tabStudent Master`
+		WHERE IFNULL(academic_term, '') != ''
+		ORDER BY academic_term""",
 		as_dict=True,
 	)
 	programmes = frappe.db.sql(
@@ -70,7 +76,11 @@ def get_filter_options():
 		ORDER BY sm.programme_of_study""",
 		as_dict=True,
 	)
-	return {"academic_years": years, "terms": terms, "programmes": programmes}
+	fee_components = frappe.db.sql_list(
+		"""SELECT DISTINCT fee_component FROM `tabFee Demand`
+		WHERE status != 'Cancelled' AND IFNULL(fee_component, '') != '' ORDER BY fee_component"""
+	)
+	return {"academic_years": years, "terms": terms, "programmes": programmes, "fee_components": fee_components}
 
 
 @frappe.whitelist()
@@ -79,6 +89,7 @@ def get_students(
 	academic_term=None,
 	programme=None,
 	dues_status=None,
+	fee_component=None,
 	search=None,
 	start=0,
 	page_length=50,
@@ -119,9 +130,18 @@ def get_students(
 	if chosen:
 		conditions.append("(" + " OR ".join(f"({c})" for c in chosen) + ")")
 
+	# Fee Component: only students with dues for these components, and every amount counts only them
+	components = _as_list(fee_component)
+	component_condition = ""
+	if components:
+		component_condition = "AND fee_component IN %(fee_component)s"
+		values["fee_component"] = tuple(components)
+		conditions.append("IFNULL(fd.demand_count, 0) > 0")
+	demand_agg = _DEMAND_AGG.format(component_condition=component_condition)
+
 	base = f"""
 		FROM `tabStudent Master` sm
-		LEFT JOIN ({_DEMAND_AGG}) fd ON fd.student = sm.name
+		LEFT JOIN ({demand_agg}) fd ON fd.student = sm.name
 		LEFT JOIN ({_CREDIT_AGG}) cn ON cn.student = sm.name
 		WHERE {" AND ".join(conditions)}
 	"""
@@ -333,7 +353,7 @@ def get_student_dues(student):
 		filters={"student": student},
 		fields=[
 			"name", "payment_date", "payment_mode", "amount", "reference_number",
-			"transaction_date", "status", "docstatus", "receipt", "remarks",
+			"transaction_date", "status", "docstatus", "receipt", "remarks", "university_bank_account",
 		],
 		order_by="payment_date desc, creation desc",
 	)
@@ -386,7 +406,7 @@ def get_student_dues(student):
 		"Fee Concession",
 		filters={"student": student, "docstatus": ["!=", 2]},
 		fields=[
-			"name", "fee_demand", "fee_component", "concession_type", "scholarship_for", "waiver_mode",
+			"name", "fee_demand", "fee_component", "concession_type",
 			"waiver_value", "waiver_amount", "status", "docstatus", "reason", "approved_on", "creation",
 		],
 		order_by="creation desc",
@@ -439,6 +459,8 @@ def record_payment(
 	transaction_date=None,
 	bank_name=None,
 	remarks=None,
+	university_bank_account=None,
+	settlement_date=None,
 ):
 	"""
 	Record one Fee Payment against one or more of a student's demands and submit it.
@@ -477,6 +499,8 @@ def record_payment(
 	payment.transaction_date = transaction_date
 	payment.bank_name = bank_name
 	payment.remarks = remarks
+	payment.university_bank_account = university_bank_account
+	payment.settlement_date = settlement_date or None
 	payment.amount = sum(flt(a["amount"]) for a in allocations)
 	for a in allocations:
 		d = demands[a["fee_demand"]]

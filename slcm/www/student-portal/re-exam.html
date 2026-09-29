@@ -40,15 +40,15 @@
 .rx-summary {
   display: flex;
   align-items: center;
-  gap: 10px;
-  background: #fef2f2;
-  border: 1px solid #fca5a5;
-  border-radius: 12px;
+  gap: 12px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 8px;
   padding: 14px 20px;
   margin-bottom: 24px;
 }
-.rx-summary .sp-ms { color: #dc2626; font-size: 22px; }
-.rx-summary-text { color: #7f1d1d; font-size: .95rem; font-weight: 500; }
+.rx-summary .sp-ms { color: #ea580c; font-size: 24px; }
+.rx-summary-text { color: #c2410c; font-size: 13.5px; font-weight: 400; }
 
 /* ── Failed course cards ──────────────────────────────────────── */
 .rx-grid {
@@ -67,59 +67,33 @@
 }
 .rx-card:hover { box-shadow: 0 6px 24px rgba(0,0,0,.13); }
 .rx-card-top {
-  background: linear-gradient(135deg, #fee2e2, #fecaca);
+  background: var(--sp-bg, #f8fafc);
   padding: 18px 20px 14px;
-  border-bottom: 1px solid #fca5a5;
+  border-bottom: 1px solid var(--sp-border);
+  position: relative;
 }
-.rx-card-eyebrow {
-  font-size: .72rem;
-  font-weight: 600;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-  color: #9ca3af;
-  margin-bottom: 4px;
-}
-.rx-card-course-name {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: #111827;
-  margin-bottom: 6px;
-  line-height: 1.3;
-}
-.rx-card-exam {
-  font-size: .82rem;
-  color: #6b7280;
-}
+.rx-card-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--sp-text-4); margin-bottom: 6px; }
+.rx-card-course-name { font-size: 15px; font-weight: 700; color: var(--sp-text-1); margin-bottom: 4px; line-height: 1.3; }
+.rx-card-exam { font-size: 13.5px; color: var(--sp-text-3); }
 
 .rx-card-body { padding: 16px 20px; flex: 1; }
 
-.rx-meta-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
-  font-size: .88rem;
-  color: #374151;
-}
-.rx-meta-row .sp-ms { font-size: 17px; color: #9ca3af; }
-.rx-meta-label { font-weight: 600; min-width: 110px; color: #6b7280; }
+.rx-meta-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; font-size: 13.5px; color: var(--sp-text-2); font-weight: 400; }
+.rx-meta-row .sp-ms { font-size: 20px; color: var(--sp-text-4); }
+.rx-meta-label { font-weight: 400; min-width: 120px; color: var(--sp-text-3); }
 
 .rx-grade-badge {
   display: inline-block;
   padding: 3px 12px;
   border-radius: 99px;
-  font-size: .82rem;
-  font-weight: 700;
-  background: #fde8e8;
-  color: #dc2626;
-  border: 1px solid #fca5a5;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--sp-danger-bg, #fde8e8);
+  color: var(--sp-danger, #dc2626);
+  text-transform: capitalize;
 }
 
-.rx-fee-value {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: #1f2937;
-}
+.rx-fee-value { font-size: 13.5px; font-weight: 600; color: var(--sp-text-1); }
 
 .rx-deadline-pill {
   display: inline-flex;
@@ -158,10 +132,10 @@
 .rx-btn-pay {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 9px 20px;
+  gap: 8px;
+  padding: 10px 20px;
   border-radius: 8px;
-  font-size: .88rem;
+  font-size: 13.5px;
   font-weight: 600;
   background: var(--sp-primary, #1a56db);
   color: #fff;
@@ -182,11 +156,7 @@
   transform: none;
 }
 
-.rx-no-setting {
-  font-size: .82rem;
-  color: #9ca3af;
-  font-style: italic;
-}
+.rx-no-setting { font-size: 13.5px; color: var(--sp-text-4); font-style: italic; }
 .rx-not-allowed {
   display: flex;
   align-items: center;
@@ -218,9 +188,14 @@
 
 {% else %}
 
-<div class="sp-page-header fade-in">
-  <h1 class="sp-page-title">Re Examination</h1>
-  <p class="sp-page-sub">Failed courses eligible for re-examination</p>
+<div class="es-header-wrap fade-in" style="background: var(--sp-bg); border-radius: 16px; padding: 24px 28px; margin-bottom: 22px; display: flex; align-items: center; gap: 16px; border: 1px solid var(--sp-border);">
+  <div class="es-header-icon" style="width: 64px; height: 64px; background: var(--sp-primary-light, #fff0f2); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 32px; color: var(--sp-primary); flex-shrink: 0;">
+    <span class="sp-ms" style="font-size: 32px;">description</span>
+  </div>
+  <div>
+    <h1 class="sp-page-title" style="margin:0; font-size: 28px; font-weight: 800; text-transform: capitalize; color: var(--sp-text-1);">Re Examination</h1>
+    <p class="sp-page-sub" style="margin: 4px 0 0; font-size: 15px; font-weight: 400; color: var(--sp-text-3);">Failed courses eligible for re-examination</p>
+  </div>
 </div>
 
 {% if portal_error %}
@@ -248,9 +223,7 @@
 <div class="rx-summary fade-in">
   <span class="sp-ms">warning</span>
   <span class="rx-summary-text">
-    You have <strong>{{ failed_count }}</strong>
-    failed course{{ 's' if failed_count != 1 else '' }} eligible for re-examination.
-    Review the details below and register before the deadline.
+    You have {{ failed_count }} failed course{{ 's' if failed_count != 1 else '' }} eligible for re-examination. Review the details below and register before the deadline.
   </span>
 </div>
 
@@ -263,11 +236,18 @@
      style="animation-delay:{{ loop.index0 * 0.06 }}s;">
 
   <div class="rx-card-top">
-    {% if fc.term %}
-    <div class="rx-card-eyebrow">{{ fc.term }}</div>
-    {% endif %}
-    <div class="rx-card-course-name">{{ fc.course_name }}</div>
-    <div class="rx-card-exam">{{ fc.exam_name }}</div>
+    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+      <div>
+        {% if fc.term %}
+        <div class="rx-card-eyebrow">{{ fc.term }}</div>
+        {% endif %}
+        <div class="rx-card-course-name">{{ fc.course_name }}</div>
+        <div class="rx-card-exam">{{ fc.exam_name }}</div>
+      </div>
+      <div style="width: 44px; height: 44px; border-radius: 50%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+        <span class="sp-ms" style="color: var(--sp-danger, #dc2626); font-size: 24px;">warning</span>
+      </div>
+    </div>
   </div>
 
   <div class="rx-card-body">
