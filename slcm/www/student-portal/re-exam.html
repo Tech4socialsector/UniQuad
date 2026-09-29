@@ -41,14 +41,14 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  background: #fff7ed;
-  border: 1px solid #fed7aa;
+  background: #fff;
+  border: 1px solid var(--sp-border);
   border-radius: 8px;
   padding: 14px 20px;
   margin-bottom: 24px;
 }
 .rx-summary .sp-ms { color: #ea580c; font-size: 24px; }
-.rx-summary-text { color: #c2410c; font-size: 13.5px; font-weight: 400; }
+.rx-summary-text { color: var(--sp-text-1); font-size: 14px; font-weight: 700; }
 
 /* ── Failed course cards ──────────────────────────────────────── */
 .rx-grid {
@@ -67,7 +67,8 @@
 }
 .rx-card:hover { box-shadow: 0 6px 24px rgba(0,0,0,.13); }
 .rx-card-top {
-  background: var(--sp-primary, #920c24);
+  background: #fff;
+  border-bottom: 1px solid var(--sp-border);
   padding: 18px 20px 14px;
 }
 .rx-card-eyebrow {
@@ -217,12 +218,12 @@
 
 {% else %}
 
-<div class="es-header-wrap fade-in" style="background: var(--sp-bg); border-radius: 16px; padding: 24px 28px; margin-bottom: 22px; display: flex; align-items: center; gap: 16px; border: 1px solid var(--sp-border);">
+<div class="es-header-wrap fade-in" style="background: var(--sp-card, #fff); border-radius: 16px; padding: 24px 28px; margin-bottom: 22px; display: flex; align-items: center; gap: 16px; border: 1px solid var(--sp-border);">
   <div class="es-header-icon" style="width: 64px; height: 64px; background: var(--sp-primary-light, #fff0f2); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 32px; color: var(--sp-primary); flex-shrink: 0;">
     <span class="sp-ms" style="font-size: 32px;">description</span>
   </div>
   <div>
-    <h1 class="sp-page-title" style="margin:0; font-size: 28px; font-weight: 800; text-transform: capitalize; color: var(--sp-text-1);">Re Examination</h1>
+    <h1 class="sp-page-title" style="margin:0; font-size: 28px; font-weight: 800; text-transform: none !important; color: var(--sp-text-1);">Re-examination</h1>
     <p class="sp-page-sub" style="margin: 4px 0 0; font-size: 15px; font-weight: 400; color: var(--sp-text-3);">Failed courses eligible for re-examination</p>
   </div>
 </div>
@@ -252,7 +253,7 @@
 <div class="rx-summary fade-in">
   <span class="sp-ms">warning</span>
   <span class="rx-summary-text">
-    You have {{ failed_count }} failed course{{ 's' if failed_count != 1 else '' }} eligible for re-examination. Review the details below and register before the deadline.
+    Courses eligible for Re-examination - {{ failed_count }}
   </span>
 </div>
 

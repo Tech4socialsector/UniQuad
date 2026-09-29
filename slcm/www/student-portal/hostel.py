@@ -51,7 +51,8 @@ def get_context(context):
 		if resolved_hostel:
 			h = frappe.db.get_value(
 				"Hostel", resolved_hostel,
-				["hostel_name", "hostel_code", "hostel_type", "total_rooms", "total_capacity"],
+				["hostel_name", "hostel_code", "hostel_type", "total_rooms", "total_capacity",
+				 "hall_leader_name", "hall_leader_contact", "hall_leader_email"],
 				as_dict=True,
 			) or frappe._dict()
 			hostel_info.update(h)

@@ -331,33 +331,33 @@
   display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;
 }
 .sp-improv-info-card {
-  background: linear-gradient(135deg, #fff0f2, #fff0f2);
+  background: #fff;
   border-radius: 13px; padding: 14px 16px;
-  border: 1.5px solid #f5c6ce;
+  border: 1.5px solid var(--sp-border, #e5e7eb);
 }
 .sp-improv-info-label {
-  font-size: 10px; font-weight: 700; color: #920c24;
+  font-size: 10px; font-weight: 700; color: #000;
   text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px;
 }
 .sp-improv-fee-val {
   font-size: 22px; font-weight: 900; color: #1e293b;
   font-variant-numeric: tabular-nums;
 }
-.sp-improv-fee-free { font-size: 17px; font-weight: 700; color: #920c24; }
+.sp-improv-fee-free { font-size: 17px; font-weight: 700; color: #000; }
 .sp-improv-deadline-val { font-size: 15px; font-weight: 700; color: #1e293b; }
 /* note */
 .sp-improv-note {
-  background: linear-gradient(135deg, #fff0f2, #fff0f2);
+  background: #fff;
   border-radius: 11px; padding: 12px 14px; margin-bottom: 18px;
-  font-size: 12px; color: #920c24;
-  border: 1px solid #f5c6ce; display: flex; gap: 8px; align-items: flex-start;
+  font-size: 12px; color: #000;
+  border: 1px solid var(--sp-border, #e5e7eb); display: flex; gap: 8px; align-items: flex-start;
 }
 .sp-improv-note-icon { font-family:'Material Symbols Outlined'; font-size:15px; flex-shrink:0; margin-top:1px; }
 /* status msg */
 .sp-improv-msg { display: none; border-radius: 10px; padding: 11px 14px; font-size: 12.5px; font-weight: 600; margin-bottom: 14px; align-items: center; gap: 8px; }
-.sp-improv-msg-ok   { background: #fff0f2; color: #920c24; border: 1px solid #f5c6ce; }
-.sp-improv-msg-err  { background: #fff0f2; color: #6b091a; border: 1px solid #f5c6ce; }
-.sp-improv-msg-info { background: #fff0f2; color: #920c24; border: 1px solid #f5c6ce; }
+.sp-improv-msg-ok   { background: #fff; color: #000; border: 1px solid var(--sp-border, #e5e7eb); }
+.sp-improv-msg-err  { background: #fff; color: #000; border: 1px solid var(--sp-border, #e5e7eb); }
+.sp-improv-msg-info { background: #fff; color: #000; border: 1px solid var(--sp-border, #e5e7eb); }
 /* actions */
 .sp-improv-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 4px; }
 .sp-improv-cancel-btn {
@@ -380,31 +380,31 @@
   border-radius: 14px; padding: 18px 20px; margin-bottom: 18px;
   display: flex; align-items: flex-start; gap: 14px;
 }
-.sp-improv-status-paid  { background: #fff0f2; border: 1.5px solid #f5c6ce; }
-.sp-improv-status-reg   { background: #fff0f2; border: 1.5px solid #f5c6ce; }
-.sp-improv-status-retry { background: #fff0f2; border: 1.5px solid #f5c6ce; }
+.sp-improv-status-paid  { background: #fff; border: 1.5px solid var(--sp-border, #e5e7eb); }
+.sp-improv-status-reg   { background: #fff; border: 1.5px solid var(--sp-border, #e5e7eb); }
+.sp-improv-status-retry { background: #fff; border: 1.5px solid var(--sp-border, #e5e7eb); }
 
 .ix-icon-wrap {
   width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
 }
 .ix-icon-wrap .sp-ms { font-family:'Material Symbols Outlined'; font-size:24px; }
-.ix-icon-paid  { background: #ffffff; border: 1px solid #f5c6ce; }
-.ix-icon-paid  .sp-ms { color: #920c24; }
-.ix-icon-reg   { background: #ffffff; border: 1px solid #f5c6ce; }
-.ix-icon-reg   .sp-ms { color: #920c24; }
-.ix-icon-retry { background: #fff0f2; }
-.ix-icon-retry .sp-ms { color: #920c24; }
+.ix-icon-paid  { background: #ffffff; border: 1px solid var(--sp-border, #e5e7eb); }
+.ix-icon-paid  .sp-ms { color: #000; }
+.ix-icon-reg   { background: #ffffff; border: 1px solid var(--sp-border, #e5e7eb); }
+.ix-icon-reg   .sp-ms { color: #000; }
+.ix-icon-retry { background: #fff; }
+.ix-icon-retry .sp-ms { color: #000; }
 
 .ix-content { flex: 1; }
 .ix-title { font-size: 14px; font-weight: 700; margin-bottom: 5px; }
-.sp-improv-status-paid  .ix-title { color: #920c24; }
-.sp-improv-status-reg   .ix-title { color: #920c24; }
-.sp-improv-status-retry .ix-title { color: #920c24; }
+.sp-improv-status-paid  .ix-title { color: #000; }
+.sp-improv-status-reg   .ix-title { color: #000; }
+.sp-improv-status-retry .ix-title { color: #000; }
 .ix-sub { font-size: 12px; line-height: 1.5; }
-.sp-improv-status-paid  .ix-sub { color: #6b091a; }
-.sp-improv-status-reg   .ix-sub { color: #6b091a; }
-.sp-improv-status-retry .ix-sub { color: #920c24; }
+.sp-improv-status-paid  .ix-sub { color: #000; }
+.sp-improv-status-reg   .ix-sub { color: #000; }
+.sp-improv-status-retry .ix-sub { color: #000; }
 
 .sp-improv-receipt-link {
   display: inline-flex; align-items: center; gap: 5px; margin-top: 12px;
@@ -442,7 +442,7 @@
 {# Improvement exam action; state logic is unchanged from the previous page #}
 {% macro improve_btn(c, res, base) -%}
 {%- set st = improve_state(c) | trim -%}
-{%- set meta = {'paid': ('verified', 'Paid'), 'registered': ('how_to_reg', 'Registered'), 'retry': ('refresh', 'Retry Payment'), 'full': ('block', 'Seats Full'), 'open': ('trending_up', 'Improve My Mark')} -%}
+{%- set meta = {'paid': ('verified', 'Paid'), 'registered': ('how_to_reg', 'Registered'), 'retry': ('refresh', 'Retry Payment'), 'full': ('block', 'Seats Full'), 'open': ('trending_up', 'Improvement Exam')} -%}
 {%- if st == 'full' -%}
 <button type="button" class="{{ base }} spr-improve-full" disabled title="Registration limit reached"><span class="sp-ms" aria-hidden="true">block</span>Seats Full</button>
 {%- else -%}
@@ -988,7 +988,7 @@
         '<span style="font-family:\'Material Symbols Outlined\';font-size:24px;color:#fff;">trending_up</span>' +
       '</div>' +
       '<div class="sp-improv-hdr-text">' +
-        '<div class="sp-improv-hdr-title" id="sp-improv-title">Improve My Mark</div>' +
+        '<div class="sp-improv-hdr-title" id="sp-improv-title">Improvement Exam</div>' +
         '<div class="sp-improv-hdr-sub"   id="sp-improv-sub"></div>' +
       '</div>' +
       '<button class="sp-improv-close" onclick="spCloseImproveModal()">close</button>' +
@@ -1010,7 +1010,7 @@ function spOpenImproveModal(course, courseName, examPlan, fee, deadlineTo, state
     deadline: deadlineTo || '—',
     regName: regName || ''
   };
-  document.getElementById('sp-improv-title').textContent = 'Improve My Mark';
+  document.getElementById('sp-improv-title').textContent = 'Improvement Exam';
   document.getElementById('sp-improv-sub').textContent   = courseName;
   _spImprovRender(state);
   document.getElementById('sp-improv-overlay').style.display = 'flex';

@@ -142,7 +142,7 @@
    "fieldname": "html_appearance_note",
    "fieldtype": "HTML",
    "label": "Appearance Note",
-   "options": "<div class=\"alert alert-primary\" style=\"background:#e8f0fe;border-left:4px solid #4285f4;padding:10px 14px;border-radius:6px;margin-bottom:12px;\"><strong style=\"color:#1a56db;\">&#127912; Appearance</strong> &nbsp;Configure the portal's visual identity \u2014 branding, typography, theme colours, status indicators, and grade colour bands. Changes apply globally to all faculty portal pages.</div>"
+   "options": "<div class=\"alert alert-primary\" style=\"background:#e8f0fe;border-left:4px solid #4285f4;padding:10px 14px;border-radius:6px;margin-bottom:12px;\"><strong style=\"color:#1a56db;\">&#127912; Appearance</strong> &nbsp;Configure the portal's visual identity — branding, typography, theme colours, status indicators, and grade colour bands. Changes apply globally to all faculty portal pages.</div>"
   },
   {
    "fieldname": "branding_section",
@@ -168,7 +168,7 @@
   },
   {
    "default": "1",
-   "description": "Show institution logo in the top navbar (pulled from Website Settings \u203a Banner Image)",
+   "description": "Show institution logo in the top navbar (pulled from Website Settings › Banner Image)",
    "fieldname": "show_logo",
    "fieldtype": "Check",
    "label": "Show Logo in Navbar"
@@ -198,7 +198,7 @@
    "label": "Typography"
   },
   {
-   "default": "Poppins",
+   "default": "Merriweather",
    "description": "Font family used throughout the faculty portal",
    "fieldname": "font_family",
    "fieldtype": "Select",
@@ -357,7 +357,7 @@
   },
   {
    "default": "#16a34a",
-   "description": "Top grade band \u2014 Distinction, A+, A, S",
+   "description": "Top grade band — Distinction, A+, A, S",
    "fieldname": "grade_excellent_color",
    "fieldtype": "Color",
    "label": "Excellent Grade Colour",
@@ -377,7 +377,7 @@
   },
   {
    "default": "#0369a1",
-   "description": "Second grade band \u2014 B+, B",
+   "description": "Second grade band — B+, B",
    "fieldname": "grade_good_color",
    "fieldtype": "Color",
    "label": "Good Grade Colour",
@@ -393,7 +393,7 @@
   },
   {
    "default": "#d97706",
-   "description": "Third grade band \u2014 C+, C",
+   "description": "Third grade band — C+, C",
    "fieldname": "grade_average_color",
    "fieldtype": "Color",
    "label": "Average Grade Colour",
@@ -420,7 +420,7 @@
   },
   {
    "default": "#dc2626",
-   "description": "Fail grade band \u2014 F, AB, AS",
+   "description": "Fail grade band — F, AB, AS",
    "fieldname": "grade_fail_color",
    "fieldtype": "Color",
    "label": "Fail Grade Colour"
@@ -441,7 +441,7 @@
    "fieldname": "html_layout_note",
    "fieldtype": "HTML",
    "label": "Layout Note",
-   "options": "<div class=\"alert\" style=\"background:#fef3c7;border-left:4px solid #f59e0b;padding:10px 14px;border-radius:6px;margin-bottom:12px;\"><strong style=\"color:#b45309;\">&#128461;&#65039; Layout &amp; Navigation</strong> &nbsp;Control the portal's structural layout \u2014 sidebar position and width, navbar height, corner style, density, and attendance colour thresholds. Changes take effect on the next page load for all faculty users.</div>"
+   "options": "<div class=\"alert\" style=\"background:#fef3c7;border-left:4px solid #f59e0b;padding:10px 14px;border-radius:6px;margin-bottom:12px;\"><strong style=\"color:#b45309;\">&#128461;&#65039; Layout &amp; Navigation</strong> &nbsp;Control the portal's structural layout — sidebar position and width, navbar height, corner style, density, and attendance colour thresholds. Changes take effect on the next page load for all faculty users.</div>"
   },
   {
    "collapsible": 1,
@@ -653,7 +653,7 @@
    "fieldname": "html_modules_note",
    "fieldtype": "HTML",
    "label": "Modules Note",
-   "options": "<div class=\"alert\" style=\"background:#fdf4ff;border-left:4px solid #a855f7;padding:10px 14px;border-radius:6px;margin-bottom:12px;\"><strong style=\"color:#7e22ce;\">&#9881;&#65039; Modules</strong> &nbsp;Enable or disable individual faculty modules \u2014 Attendance, Marks &amp; Grading, Assignments, Student Interaction, and Leave &amp; Workload. Disabling a module hides it entirely from the portal navigation. Module-specific restrictions (edit windows, booking limits) are also configured here.</div>"
+   "options": "<div class=\"alert\" style=\"background:#fdf4ff;border-left:4px solid #a855f7;padding:10px 14px;border-radius:6px;margin-bottom:12px;\"><strong style=\"color:#7e22ce;\">&#9881;&#65039; Modules</strong> &nbsp;Enable or disable individual faculty modules — Attendance, Marks &amp; Grading, Assignments, Student Interaction, and Leave &amp; Workload. Disabling a module hides it entirely from the portal navigation. Module-specific restrictions (edit windows, booking limits) are also configured here.</div>"
   },
   {
    "description": "Configure attendance marking behaviour and restrictions for faculty",
@@ -958,7 +958,7 @@
    "fieldname": "html_advanced_note",
    "fieldtype": "HTML",
    "label": "Advanced Note",
-   "options": "<div class=\"alert\" style=\"background:#fefce8;border-left:4px solid #eab308;padding:10px 14px;border-radius:6px;margin-bottom:12px;\"><strong style=\"color:#854d0e;\">&#9888;&#65039; Advanced \u2014 Custom CSS</strong> &nbsp;Inject raw CSS that is appended after all portal stylesheets. Use CSS variables like <code>--fp-primary</code> and <code>--fp-secondary</code> for theme-consistent overrides. Incorrect CSS here can break the portal layout \u2014 test changes carefully before saving.</div>"
+   "options": "<div class=\"alert\" style=\"background:#fefce8;border-left:4px solid #eab308;padding:10px 14px;border-radius:6px;margin-bottom:12px;\"><strong style=\"color:#854d0e;\">&#9888;&#65039; Advanced — Custom CSS</strong> &nbsp;Inject raw CSS that is appended after all portal stylesheets. Use CSS variables like <code>--fp-primary</code> and <code>--fp-secondary</code> for theme-consistent overrides. Incorrect CSS here can break the portal layout — test changes carefully before saving.</div>"
   },
   {
    "description": "Controls the \"Sign in with NLS Google account\" option on the faculty login page",
@@ -984,7 +984,7 @@
    "description": "Inject raw CSS appended after all portal styles. Use CSS variables like --fp-primary for colour consistency.",
    "fieldname": "advanced_section",
    "fieldtype": "Section Break",
-   "label": "Advanced \u2014 Custom CSS"
+   "label": "Advanced — Custom CSS"
   },
   {
    "description": "Raw CSS injected at the end of every faculty portal page. Use CSS variables like --fp-primary, --fp-secondary for theme colour consistency.",
@@ -996,7 +996,7 @@
  ],
  "issingle": 1,
  "links": [],
- "modified": "2026-06-25 12:00:00",
+ "modified": "2026-09-29 15:05:37.362451",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Faculty Portal Settings",

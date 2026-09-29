@@ -51,6 +51,51 @@
 })();
 </script>
 
+{# ── Faculty Details ─────────────────────────────────────── #}
+{% if faculty_details %}
+{% set _fd = faculty_details %}
+<div class="fp-card fp-fd-card fade-in">
+  <div class="fp-fd-main">
+    <div class="fp-fd-avatar" aria-hidden="true">
+      <span>{{ faculty_initial | e }}</span>
+      {% if faculty_photo %}<img src="{{ faculty_photo | e }}" alt="" onerror="this.remove()">{% endif %}
+    </div>
+    <div class="fp-fd-id">
+      <div class="fp-fd-name" title="{{ faculty_name | e }}">{{ faculty_name | e }}</div>
+      {% if faculty_designation or faculty_department %}
+      <div class="fp-fd-role">
+        {{ faculty_designation | e }}{% if faculty_designation and faculty_department %} · {% endif %}{{ faculty_department | e }}
+      </div>
+      {% endif %}
+      {% if faculty_id or _fd.is_hod %}
+      <div class="fp-fd-chips">
+        {% if faculty_id %}<span class="fp-fd-chip"><span class="fp-ms">badge</span>{{ faculty_id | e }}</span>{% endif %}
+        {% if _fd.is_hod %}<span class="fp-fd-chip"><span class="fp-ms">workspace_premium</span>Head of Department</span>{% endif %}
+      </div>
+      {% endif %}
+    </div>
+    <a href="/faculty-portal/profile" class="fp-fd-link">View Profile<span class="fp-ms">arrow_forward</span></a>
+  </div>
+  {% if _fd.rows %}
+  <div class="fp-fd-grid">
+    {% for r in _fd.rows %}
+    <div class="fp-fd-item">
+      <span class="fp-ms">{{ r.icon }}</span>
+      <div class="fp-fd-item-body">
+        <div class="fp-fd-lbl">{{ r.label | e }}</div>
+        <div class="fp-fd-val" title="{{ r.value | e }}">
+          {% if r.label == 'Email' %}<a href="mailto:{{ r.value | e }}">{{ r.value | e }}</a>
+          {% elif r.label == 'Phone' %}<a href="tel:{{ r.value | replace(' ', '') | e }}">{{ r.value | e }}</a>
+          {% else %}{{ r.value | e }}{% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
 {% if attendance_pending > 0 %}
 <div class="fp-alert fade-in" style="background:transparent;border:1px solid var(--fp-primary);color:var(--fp-primary);">
   <span class="fp-ms">pending_actions</span>
@@ -60,120 +105,6 @@
   <a href="/faculty-portal/attendance" style="font-weight:700;color:inherit;text-decoration:none;white-space:nowrap;">View Details →</a>
 </div>
 {% endif %}
-
-{# ── Quick Actions ─────────────────────────────────────── #}
-<div class="fp-card fade-in" style="margin-bottom:20px;">
-  <div class="fp-card-header">
-    <div class="fp-card-title">
-      <span class="fp-ms">bolt</span>
-      Quick Actions
-    </div>
-  </div>
-  <div class="fp-card-body">
-    <div class="fp-grid-auto fp-dash-qa-grid">
-      <a href="/faculty-portal/attendance" class="fp-quick-action-btn fp-dash-qa" style="flex-direction:row;align-items:center;gap:14px;text-align:left;padding:16px 18px;">
-        <span class="fp-ms">how_to_reg</span>
-        <div>
-          <div class="fp-qa-title" style="font-size:13.5px;font-weight:700;">Take Attendance</div>
-          <div style="font-size:12px;color:var(--fp-text-4);margin-top:2px;">Mark today's session</div>
-        </div>
-      </a>
-      <a href="/faculty-portal/my-classes" class="fp-quick-action-btn fp-dash-qa" style="flex-direction:row;align-items:center;gap:14px;text-align:left;padding:16px 18px;">
-        <span class="fp-ms">menu_book</span>
-        <div>
-          <div class="fp-qa-title" style="font-size:13.5px;font-weight:700;">My Classes</div>
-          <div style="font-size:12px;color:var(--fp-text-4);margin-top:2px;">View course offerings</div>
-        </div>
-      </a>
-      <a href="/faculty-portal/marks" class="fp-quick-action-btn fp-dash-qa" style="flex-direction:row;align-items:center;gap:14px;text-align:left;padding:16px 18px;">
-        <span class="fp-ms">grade</span>
-        <div>
-          <div class="fp-qa-title" style="font-size:13.5px;font-weight:700;">Marks Entry</div>
-          <div style="font-size:12px;color:var(--fp-text-4);margin-top:2px;">Enter or update marks</div>
-        </div>
-      </a>
-      <a href="/faculty-portal/venue-booking" class="fp-quick-action-btn fp-dash-qa" style="flex-direction:row;align-items:center;gap:14px;text-align:left;padding:16px 18px;">
-        <span class="fp-ms">meeting_room</span>
-        <div>
-          <div class="fp-qa-title" style="font-size:13.5px;font-weight:700;">Venue Booking</div>
-          <div style="font-size:12px;color:var(--fp-text-4);margin-top:2px;">Book a room or venue</div>
-        </div>
-      </a>
-    </div>
-  </div>
-</div>
-
-<script>
-/* Pass dashboard data to sidebar quick-stats */
-window._fpDashData = {
-  total_courses:     {{ total_courses }},
-  attendance_pending: {{ attendance_pending }},
-  total_students:    {{ total_students }},
-};
-</script>
-
-{# ── Stat Cards ─────────────────────────────────────────────── #}
-<div class="fp-stat-grid fp-dash-stat-grid">
-
-  <div class="fp-stat-card {% if not portal_error %}fp-stat-drillable{% endif %} fade-in" style="animation-delay:0.04s;{% if not portal_error %}cursor:pointer;{% endif %}"
-       {% if not portal_error %}onclick="fpDrilldown('subjects')" title="Click to view details & export"{% endif %}>
-    <div class="fp-stat-icon fp-c-navy">
-      <span class="fp-ms">menu_book</span>
-    </div>
-    <div class="fp-stat-body">
-      <div class="fp-stat-val">{{ total_courses if not portal_error else '—' }}</div>
-      <div class="fp-stat-lbl">Total Courses</div>
-      {% if portal_error %}
-      <div class="fp-stat-sub"><span class="fp-ms" style="font-size:13px;color:var(--fp-danger);">error_outline</span> <span style="color:var(--fp-danger);">Unavailable</span></div>
-      {% else %}
-      <div class="fp-stat-sub fp-drill-hint"><span class="fp-ms" style="font-size:13px;">open_in_new</span> More info</div>
-      {% endif %}
-    </div>
-    {% if not portal_error %}<span class="fp-drill-badge">Details</span>{% endif %}
-  </div>
-
-  <div class="fp-stat-card {% if not portal_error %}fp-stat-drillable{% endif %} fade-in" style="animation-delay:0.08s;{% if not portal_error %}cursor:pointer;{% endif %}"
-       {% if not portal_error %}onclick="fpDrilldown('students')" title="Click to view details & export"{% endif %}>
-    <div class="fp-stat-icon fp-c-green">
-      <span class="fp-ms">groups</span>
-    </div>
-    <div class="fp-stat-body">
-      <div class="fp-stat-val">{{ total_students if not portal_error else '—' }}</div>
-      <div class="fp-stat-lbl">Total Students</div>
-      {% if portal_error %}
-      <div class="fp-stat-sub"><span class="fp-ms" style="font-size:13px;color:var(--fp-danger);">error_outline</span> <span style="color:var(--fp-danger);">Unavailable</span></div>
-      {% else %}
-      <div class="fp-stat-sub fp-drill-hint"><span class="fp-ms" style="font-size:13px;">open_in_new</span> More info</div>
-      {% endif %}
-    </div>
-    {% if not portal_error %}<span class="fp-drill-badge">Details</span>{% endif %}
-  </div>
-
-  <div class="fp-stat-card {% if not portal_error %}fp-stat-drillable{% endif %} fade-in" style="animation-delay:0.12s;{% if not portal_error %}cursor:pointer;{% endif %}"
-       {% if not portal_error %}onclick="fpDrilldown('pending_attendance')" title="Click to view details & export"{% endif %}>
-    <div class="fp-stat-icon {% if portal_error %}fp-c-red{% elif attendance_pending > 0 %}fp-c-orange{% else %}fp-c-green{% endif %}">
-      <span class="fp-ms">pending_actions</span>
-    </div>
-    <div class="fp-stat-body">
-      <div class="fp-stat-val {% if attendance_pending > 0 and not portal_error %}" style="color:var(--fp-warning);"{% else %}"{% endif %}>{{ attendance_pending if not portal_error else '—' }}</div>
-      <div class="fp-stat-lbl">Attendance Pending</div>
-      <div class="fp-stat-sub">
-        {% if portal_error %}
-        <span class="fp-ms" style="font-size:13px;color:var(--fp-danger);">error_outline</span>
-        <span style="color:var(--fp-danger);">Unavailable</span>
-        {% elif attendance_pending > 0 %}
-        <span class="fp-ms" style="font-size:13px;color:var(--fp-warning);">warning</span>
-        <span style="color:var(--fp-warning);">Action needed</span>
-        {% else %}
-        <span class="fp-ms" style="font-size:13px;color:var(--fp-success);">check_circle</span>
-        <span style="color:var(--fp-success);">All clear</span>
-        {% endif %}
-      </div>
-    </div>
-    {% if not portal_error %}<span class="fp-drill-badge {% if attendance_pending > 0 %}fp-drill-badge-warn{% endif %}">Details</span>{% endif %}
-  </div>
-
-</div>
 
 {% set dp = dash_prefs or {} %}
 
@@ -280,6 +211,120 @@ window._fpDashData = {
 
 </div>
 {% endif %}
+
+<script>
+/* Pass dashboard data to sidebar quick-stats */
+window._fpDashData = {
+  total_courses:     {{ total_courses }},
+  attendance_pending: {{ attendance_pending }},
+  total_students:    {{ total_students }},
+};
+</script>
+
+{# ── Stat Cards ─────────────────────────────────────────────── #}
+<div class="fp-stat-grid fp-dash-stat-grid">
+
+  <div class="fp-stat-card {% if not portal_error %}fp-stat-drillable{% endif %} fade-in" style="animation-delay:0.04s;{% if not portal_error %}cursor:pointer;{% endif %}"
+       {% if not portal_error %}onclick="fpDrilldown('subjects')" title="Click to view details & export"{% endif %}>
+    <div class="fp-stat-icon fp-c-navy">
+      <span class="fp-ms">menu_book</span>
+    </div>
+    <div class="fp-stat-body">
+      <div class="fp-stat-val">{{ total_courses if not portal_error else '—' }}</div>
+      <div class="fp-stat-lbl">Total Courses</div>
+      {% if portal_error %}
+      <div class="fp-stat-sub"><span class="fp-ms" style="font-size:13px;color:var(--fp-danger);">error_outline</span> <span style="color:var(--fp-danger);">Unavailable</span></div>
+      {% else %}
+      <div class="fp-stat-sub fp-drill-hint"><span class="fp-ms" style="font-size:13px;">open_in_new</span> More info</div>
+      {% endif %}
+    </div>
+    {% if not portal_error %}<span class="fp-drill-badge">Details</span>{% endif %}
+  </div>
+
+  <div class="fp-stat-card {% if not portal_error %}fp-stat-drillable{% endif %} fade-in" style="animation-delay:0.08s;{% if not portal_error %}cursor:pointer;{% endif %}"
+       {% if not portal_error %}onclick="fpDrilldown('students')" title="Click to view details & export"{% endif %}>
+    <div class="fp-stat-icon fp-c-green">
+      <span class="fp-ms">groups</span>
+    </div>
+    <div class="fp-stat-body">
+      <div class="fp-stat-val">{{ total_students if not portal_error else '—' }}</div>
+      <div class="fp-stat-lbl">Total Students</div>
+      {% if portal_error %}
+      <div class="fp-stat-sub"><span class="fp-ms" style="font-size:13px;color:var(--fp-danger);">error_outline</span> <span style="color:var(--fp-danger);">Unavailable</span></div>
+      {% else %}
+      <div class="fp-stat-sub fp-drill-hint"><span class="fp-ms" style="font-size:13px;">open_in_new</span> More info</div>
+      {% endif %}
+    </div>
+    {% if not portal_error %}<span class="fp-drill-badge">Details</span>{% endif %}
+  </div>
+
+  <div class="fp-stat-card {% if not portal_error %}fp-stat-drillable{% endif %} fade-in" style="animation-delay:0.12s;{% if not portal_error %}cursor:pointer;{% endif %}"
+       {% if not portal_error %}onclick="fpDrilldown('pending_attendance')" title="Click to view details & export"{% endif %}>
+    <div class="fp-stat-icon {% if portal_error %}fp-c-red{% elif attendance_pending > 0 %}fp-c-orange{% else %}fp-c-green{% endif %}">
+      <span class="fp-ms">pending_actions</span>
+    </div>
+    <div class="fp-stat-body">
+      <div class="fp-stat-val {% if attendance_pending > 0 and not portal_error %}" style="color:var(--fp-warning);"{% else %}"{% endif %}>{{ attendance_pending if not portal_error else '—' }}</div>
+      <div class="fp-stat-lbl">Attendance Pending</div>
+      <div class="fp-stat-sub">
+        {% if portal_error %}
+        <span class="fp-ms" style="font-size:13px;color:var(--fp-danger);">error_outline</span>
+        <span style="color:var(--fp-danger);">Unavailable</span>
+        {% elif attendance_pending > 0 %}
+        <span class="fp-ms" style="font-size:13px;color:var(--fp-warning);">warning</span>
+        <span style="color:var(--fp-warning);">Action needed</span>
+        {% else %}
+        <span class="fp-ms" style="font-size:13px;color:var(--fp-success);">check_circle</span>
+        <span style="color:var(--fp-success);">All clear</span>
+        {% endif %}
+      </div>
+    </div>
+    {% if not portal_error %}<span class="fp-drill-badge {% if attendance_pending > 0 %}fp-drill-badge-warn{% endif %}">Details</span>{% endif %}
+  </div>
+
+</div>
+
+{# ── Quick Actions ─────────────────────────────────────── #}
+<div class="fp-card fade-in" style="margin-bottom:20px;">
+  <div class="fp-card-header">
+    <div class="fp-card-title">
+      <span class="fp-ms">bolt</span>
+      Quick Actions
+    </div>
+  </div>
+  <div class="fp-card-body">
+    <div class="fp-grid-auto fp-dash-qa-grid">
+      <a href="/faculty-portal/attendance" class="fp-quick-action-btn fp-dash-qa" style="flex-direction:row;align-items:center;gap:14px;text-align:left;padding:16px 18px;">
+        <span class="fp-ms">how_to_reg</span>
+        <div>
+          <div class="fp-qa-title" style="font-size:13.5px;font-weight:700;">Take Attendance</div>
+          <div style="font-size:12px;color:var(--fp-text-4);margin-top:2px;">Mark today's session</div>
+        </div>
+      </a>
+      <a href="/faculty-portal/my-classes" class="fp-quick-action-btn fp-dash-qa" style="flex-direction:row;align-items:center;gap:14px;text-align:left;padding:16px 18px;">
+        <span class="fp-ms">menu_book</span>
+        <div>
+          <div class="fp-qa-title" style="font-size:13.5px;font-weight:700;">My Classes</div>
+          <div style="font-size:12px;color:var(--fp-text-4);margin-top:2px;">View course offerings</div>
+        </div>
+      </a>
+      <a href="/faculty-portal/marks" class="fp-quick-action-btn fp-dash-qa" style="flex-direction:row;align-items:center;gap:14px;text-align:left;padding:16px 18px;">
+        <span class="fp-ms">grade</span>
+        <div>
+          <div class="fp-qa-title" style="font-size:13.5px;font-weight:700;">Marks Entry</div>
+          <div style="font-size:12px;color:var(--fp-text-4);margin-top:2px;">Enter or update marks</div>
+        </div>
+      </a>
+      <a href="/faculty-portal/venue-booking" class="fp-quick-action-btn fp-dash-qa" style="flex-direction:row;align-items:center;gap:14px;text-align:left;padding:16px 18px;">
+        <span class="fp-ms">meeting_room</span>
+        <div>
+          <div class="fp-qa-title" style="font-size:13.5px;font-weight:700;">Venue Booking</div>
+          <div style="font-size:12px;color:var(--fp-text-4);margin-top:2px;">Book a room or venue</div>
+        </div>
+      </a>
+    </div>
+  </div>
+</div>
 
 {# ── Attendance Trend (temporarily disabled per request) ────────
 <div class="fp-card fade-in" style="animation-delay:0.18s;margin-bottom:24px;">
@@ -524,6 +569,44 @@ body.fp-dark .fp-dash-qa { background: var(--fp-card); color: var(--fp-primary);
 .fp-dash-icon .fp-ms { color: #fff !important; }
 body.fp-dark .fp-dash-stat-grid .fp-stat-icon .fp-ms,
 body.fp-dark .fp-dash-icon .fp-ms { color: #fff !important; }
+/* Faculty Details card */
+.fp-fd-card { padding: 0; margin-bottom: 20px; overflow: hidden; }
+.fp-fd-main { display: flex; align-items: center; gap: 16px; padding: 18px 22px; }
+.fp-fd-card .fp-fd-grid { border-top: 1px solid var(--fp-border-light); }
+.fp-fd-avatar {
+  position: relative; width: 60px; height: 60px; border-radius: 50%; flex-shrink: 0; overflow: hidden;
+  background: var(--fp-primary); color: #fff;
+  display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700;
+}
+.fp-fd-avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.fp-fd-id { flex: 1; min-width: 0; }
+.fp-fd-name { font-size: 18px; font-weight: 800; color: var(--fp-text-1); letter-spacing: -0.01em;
+              white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fp-fd-role { font-size: 13px; color: var(--fp-text-3); margin-top: 2px; }
+.fp-fd-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.fp-fd-chip { display: inline-flex; align-items: center; gap: 4px; background: var(--fp-primary); color: #fff;
+              font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
+.fp-fd-chip .fp-ms { font-size: 13px; }
+.fp-fd-link { flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px;
+              font-size: 13px; font-weight: 700; color: var(--fp-primary); text-decoration: none; }
+.fp-fd-link .fp-ms { font-size: 16px; transition: transform 0.15s; }
+.fp-fd-link:hover .fp-ms { transform: translateX(3px); }
+.fp-fd-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 6px 8px; }
+.fp-fd-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 14px; min-width: 0; }
+.fp-fd-item > .fp-ms { font-size: 18px; color: var(--fp-primary); margin-top: 2px; flex-shrink: 0; }
+.fp-fd-item-body { min-width: 0; }
+.fp-fd-lbl { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--fp-text-4); }
+.fp-fd-val { font-size: 13px; font-weight: 600; color: var(--fp-text-1); margin-top: 2px;
+             white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fp-fd-val a { color: inherit; text-decoration: none; }
+.fp-fd-val a:hover { color: var(--fp-primary); text-decoration: underline; }
+@media (max-width: 1024px) { .fp-fd-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) {
+  .fp-fd-main { flex-wrap: wrap; padding: 16px; }
+  .fp-fd-link { width: 100%; justify-content: flex-end; }
+  .fp-fd-grid { grid-template-columns: 1fr; }
+}
+
 /* Today's / Upcoming Classes — equal halves (shared .fp-grid-2 is 3fr/2fr) */
 .fp-dash-split { grid-template-columns: 1fr 1fr; }
 @media (max-width: 1024px) { .fp-dash-split { grid-template-columns: 1fr; } }
@@ -534,6 +617,15 @@ body.fp-dark .fp-dash-icon .fp-ms { color: #fff !important; }
 @media (max-width: 768px) { .fp-dash-stat-grid { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 480px) { .fp-dash-stat-grid { grid-template-columns: 1fr; } }
 /* KPI card hover (maroon border, "More info" + DETAILS tag) now lives in faculty_portal.css */
+
+/* Drill table: name + avatar cell */
+.fp-drill-person { display: flex; align-items: center; gap: 10px; }
+.fp-drill-av {
+  position: relative; width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; overflow: hidden;
+  background: var(--fp-primary); color: #fff; font-size: 13px; font-weight: 700;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.fp-drill-av img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 
 /* Drill table */
 .fp-drill-table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -705,7 +797,7 @@ body.fp-dark .fp-dash-icon .fp-ms { color: #fff !important; }
       html += '<tr>';
       cols.forEach(function(col) {
         var val = row[col.key];
-        html += '<td>' + _renderCell(val, col.type, col.key, row) + '</td>';
+        html += '<td>' + _renderCell(val, col.type, col.key, row, col) + '</td>';
       });
       html += '</tr>';
     });
@@ -713,8 +805,20 @@ body.fp-dark .fp-dash-icon .fp-ms { color: #fff !important; }
     _setBody(html);
   }
 
-  function _renderCell(val, type, key, row) {
+  function _renderCell(val, type, key, row, col) {
     if (val === null || val === undefined || val === '') return '<span style="color:var(--fp-text-5);">—</span>';
+
+    /* Name with avatar: photo if it loads, otherwise the initial.
+       The image URL comes from a non-column row field (col.image_key). */
+    if (type === 'person') {
+      var name = String(val);
+      var img  = (col && col.image_key && row[col.image_key]) ? String(row[col.image_key]) : '';
+      var safeImg = /^(\/|https?:\/\/)/i.test(img) ? img : '';
+      return '<div class="fp-drill-person">'
+        + '<span class="fp-drill-av" aria-hidden="true">' + _esc(name.trim().charAt(0).toUpperCase() || '?')
+        + (safeImg ? '<img src="' + _esc(safeImg) + '" alt="" loading="lazy" onerror="this.remove()">' : '')
+        + '</span><span>' + _esc(name) + '</span></div>';
+    }
 
     if (type === 'badge') {
       var color = 'neutral';
@@ -727,8 +831,8 @@ body.fp-dark .fp-dash-icon .fp-ms { color: #fff !important; }
 
     if (type === 'percent') {
       var n = parseFloat(val) || 0;
-      var barColor = n >= 75 ? 'var(--fp-success)' : n >= 60 ? 'var(--fp-warning)' : 'var(--fp-danger)';
-      var txtColor = n >= 75 ? 'var(--fp-success)' : n >= 60 ? 'var(--fp-warning)' : 'var(--fp-danger)';
+      var barColor = 'var(--fp-primary)';
+      var txtColor = 'var(--fp-primary)';
       return '<div style="min-width:90px;">'
         + '<div style="display:flex;justify-content:space-between;margin-bottom:3px;">'
         + '<span style="font-size:12px;font-weight:700;color:' + txtColor + ';">' + n + '%</span></div>'
@@ -789,8 +893,9 @@ body.fp-dark .fp-dash-icon .fp-ms { color: #fff !important; }
       _drillRows = _drillData.rows.slice();
     } else {
       _drillRows = _drillData.rows.filter(function(row) {
-        return Object.values(row).some(function(v) {
-          return String(v || '').toLowerCase().includes(q);
+        return Object.keys(row).some(function(k) {
+          if (/_image$/.test(k)) return false;   /* photo URLs aren't searchable text */
+          return String(row[k] || '').toLowerCase().includes(q);
         });
       });
     }

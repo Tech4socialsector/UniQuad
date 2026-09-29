@@ -5,6 +5,19 @@
 {% block extra_head %}
 <style>
   /* Base typography */
+  /* White panels behind the title/alerts and Quick Actions */
+  .spd-hero, .spd-qa-section {
+    background: var(--sp-card, #fff);
+    border: 1px solid var(--sp-border, #e5e7eb);
+    border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(16,24,40,0.04);
+    padding: 20px 24px;
+    margin-bottom: 18px;
+  }
+  .spd-hero .spd-page-title { margin: 0; }
+  .spd-hero-alerts .spd-alert-custom:first-child { margin-top: 12px; }
+  .spd-hero-alerts .spd-alert-custom:last-child { margin-bottom: 0; }
+
   .spd-page-title {
     font-size: 28px;
     color: var(--sp-text-1);
@@ -193,9 +206,40 @@
     color: var(--sp-text-4);
   }
 
+  /* Quick Actions (2×2) + Timetable side by side */
+  .spd-qa-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: stretch; }
+  .spd-qa-row > .spd-qa-section { margin: 0; }
+  .spd-qa-row .spd-qa-container { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .spd-tt { display: flex; flex-direction: column; }
+  .spd-tt-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .spd-tt-link { display: inline-flex; align-items: center; gap: 2px; font-size: 13px; font-weight: 700; color: var(--sp-primary); text-decoration: none; white-space: nowrap; }
+  .spd-tt-link .sp-ms { font-size: 18px; }
+  .spd-tt-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+  .spd-tt-item { display: flex; gap: 14px; align-items: center; border: 1px solid var(--sp-border); border-radius: 10px; padding: 10px 14px; }
+  .spd-tt-when { display: flex; flex-direction: column; min-width: 118px; padding-right: 14px; border-right: 1px solid var(--sp-border); }
+  .spd-tt-date { font-size: 12px; font-weight: 700; color: var(--sp-text-3); text-transform: uppercase; letter-spacing: 0.04em; }
+  .spd-tt-when.is-today .spd-tt-date { color: var(--sp-primary); }
+  .spd-tt-time { font-size: 13.5px; font-weight: 700; color: var(--sp-text-1); margin-top: 2px; white-space: nowrap; }
+  .spd-tt-what { min-width: 0; }
+  .spd-tt-course { font-size: 14px; font-weight: 700; color: var(--sp-text-1); overflow-wrap: anywhere; }
+  .spd-tt-venue { display: flex; align-items: center; gap: 4px; font-size: 12.5px; color: var(--sp-text-3); margin-top: 2px; }
+  .spd-tt-venue .sp-ms { font-size: 15px; }
+  .spd-tt-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; color: var(--sp-text-3); padding: 24px 0; }
+  .spd-tt-empty > .sp-ms { font-size: 30px; color: var(--sp-text-4); }
+  .spd-tt-empty strong { display: block; color: var(--sp-text-1); font-size: 14px; }
+  .spd-tt-empty span { font-size: 12.5px; }
+  @media (max-width: 1000px) { .spd-qa-row { grid-template-columns: minmax(0, 1fr); } }
+  .spd-links-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .spd-link-item { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 1px solid var(--sp-border); border-radius: 10px; text-decoration: none; color: var(--sp-text-1); background: #fff; transition: border-color .15s, box-shadow .15s; }
+  .spd-link-item:hover { border-color: var(--sp-primary); box-shadow: 0 4px 12px rgba(146,12,36,.08); }
+  .spd-link-icon { font-size: 20px; color: var(--sp-primary); flex-shrink: 0; }
+  .spd-link-name { flex: 1; min-width: 0; font-size: 14px; font-weight: 700; }
+  .spd-link-ext { font-size: 18px; color: var(--sp-text-4); flex-shrink: 0; }
+  @media (max-width: 900px) { .spd-links-grid { grid-template-columns: minmax(0, 1fr); } }
+
   /* Responsive — KPI and Quick Action grids reflow instead of overflowing */
   @media (max-width: 1100px) {
-    .spd-qa-container { grid-template-columns: repeat(3, 1fr); }
+    .spd-qa-section:not(.spd-tt) .spd-qa-container { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
   @media (max-width: 768px) {
     .spd-kpi-row { grid-template-columns: 1fr; gap: 12px; margin-bottom: 24px; }
@@ -228,9 +272,8 @@
 {% else %}
 
 {# ── Title ─────────────────────────────────────────────────────── #}
-<div class="fade-in">
+<div class="spd-hero fade-in">
   <h1 class="spd-page-title">{{ student_name }} ({{ student_id }})</h1>
-</div>
 
 {# ── Alerts ────────────────────────────────────────────────────── #}
 {% set ns = namespace(low=0) %}
@@ -240,7 +283,7 @@
   {% endif %}
 {% endfor %}
 
-<div class="fade-in delay-1">
+<div class="spd-hero-alerts">
   {% if ns.low > 0 %}
   <div class="spd-alert-custom" role="alert">
     <span class="sp-ms" aria-hidden="true">warning</span>
@@ -256,6 +299,7 @@
     <a href="/student-portal/fees" class="spd-alert-link" aria-label="Pay pending fees">Pay now</a>
   </div>
   {% endif %}
+</div>
 </div>
 
 {# ── KPI Cards ─────────────────────────────────────────────────── #}
@@ -326,7 +370,8 @@
 
 {# ── Quick Actions ─────────────────────────────────────────────── #}
 {% if not sp_settings or sp_settings.show_quick_actions %}
-<div class="spd-qa-section fade-in delay-2">
+<div class="spd-qa-row fade-in delay-2">
+<div class="spd-qa-section">
   <h2 class="spd-qa-header-title">Quick Actions</h2>
   <p class="spd-qa-header-sub">Everything you need, one tap away</p>
 
@@ -352,7 +397,7 @@
       <div class="spd-qa-item-icon">
         <span class="sp-ms" style="font-size:28px;">workspace_premium</span>
       </div>
-      <div class="spd-qa-item-title">My Results</div>
+      <div class="spd-qa-item-title">Results</div>
       <div class="spd-qa-item-sub">Grades &amp; marks</div>
     </a>
 
@@ -360,8 +405,8 @@
       <div class="spd-qa-item-icon">
         <span class="sp-ms" style="font-size:28px;">campaign</span>
       </div>
-      <div class="spd-qa-item-title">Notices</div>
-      <div class="spd-qa-item-sub">Announcements</div>
+      <div class="spd-qa-item-title">Announcements</div>
+      <div class="spd-qa-item-sub">Notices &amp; updates</div>
     </a>
 
     <a href="/student-portal/venue-booking" class="spd-qa-item">
@@ -374,7 +419,57 @@
 
   </div>
 </div>
+
+<section class="spd-qa-section spd-tt" aria-labelledby="spd-tt-title">
+  <div class="spd-tt-head">
+    <div>
+      <h2 class="spd-qa-header-title" id="spd-tt-title">Timetable</h2>
+      <p class="spd-qa-header-sub">Your classes for the next 7 days</p>
+    </div>
+    <a href="/student-portal/timetable" class="spd-tt-link">View all <span class="sp-ms" aria-hidden="true">chevron_right</span></a>
+  </div>
+  {% if week_classes %}
+  <ul class="spd-tt-list">
+    {% for c in week_classes %}
+    <li class="spd-tt-item">
+      <div class="spd-tt-when{{ ' is-today' if c.is_today }}">
+        <span class="spd-tt-date">{{ 'Today' if c.is_today else c.date }}</span>
+        <span class="spd-tt-time">{{ c.from_time }}{% if c.to_time %} – {{ c.to_time }}{% endif %}</span>
+      </div>
+      <div class="spd-tt-what">
+        <div class="spd-tt-course">{{ c.course_name }}</div>
+        {% if c.venue %}<div class="spd-tt-venue"><span class="sp-ms" aria-hidden="true">location_on</span>{{ c.venue }}</div>{% endif %}
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <div class="spd-tt-empty">
+    <span class="sp-ms" aria-hidden="true">event_busy</span>
+    <div><strong>No classes scheduled</strong><span>No classes found for the next 7 days.</span></div>
+  </div>
+  {% endif %}
+</section>
+</div>
 {% endif %}
+
+{# ── Important Links ───────────────────────────────────────────── #}
+{% set _il = important_links or {} %}
+<section class="spd-qa-section spd-links fade-in delay-2" aria-labelledby="spd-links-title" style="margin-top:18px;">
+  <h2 class="spd-qa-header-title" id="spd-links-title">Important Links</h2>
+  <p class="spd-qa-header-sub">Handy references for the academic year</p>
+  <div class="spd-links-grid">
+    <a href="{{ _il.academic_calendar or '#' }}" target="_blank" rel="noopener" class="spd-link-item">
+      <span class="sp-ms spd-link-icon" aria-hidden="true">calendar_month</span><span class="spd-link-name">Academic Calendar</span><span class="sp-ms spd-link-ext" aria-hidden="true">open_in_new</span>
+    </a>
+    <a href="{{ _il.student_handbook or '#' }}" target="_blank" rel="noopener" class="spd-link-item">
+      <span class="sp-ms spd-link-icon" aria-hidden="true">menu_book</span><span class="spd-link-name">Student Handbook</span><span class="sp-ms spd-link-ext" aria-hidden="true">open_in_new</span>
+    </a>
+    <a href="{{ _il.examination_guidelines or '#' }}" target="_blank" rel="noopener" class="spd-link-item">
+      <span class="sp-ms spd-link-icon" aria-hidden="true">description</span><span class="spd-link-name">Examination Guidelines</span><span class="sp-ms spd-link-ext" aria-hidden="true">open_in_new</span>
+    </a>
+  </div>
+</section>
 
 {% endif %}
 {% endblock %}

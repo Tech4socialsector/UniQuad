@@ -11,7 +11,7 @@
   </div>
   <div>
     <h1 class="sp-page-title" style="margin: 0 0 4px 0; color: var(--sp-primary-dark, #6b091a);">Helpdesk</h1>
-    <p class="context-text" style="margin: 0 0 8px 0; color: var(--sp-text-3, #6b7280);">Raise and track your support tickets</p>
+    <!-- <p class="context-text" style="margin: 0 0 8px 0; color: var(--sp-text-3, #6b7280);">Raise and track your support tickets</p> -->
   </div>
 </div>
 
@@ -106,6 +106,18 @@
     '.flex.h-screen.w-screen > .flex-1 { width: 100% !important; max-width: 100% !important; }',
     /* Hide the Student ID / Year quick filters (portal embed only) */
     '.quick-filters > div:has(input[placeholder="Student ID"]), .quick-filters > div:has(input[placeholder="Year"]) { display: none !important; }',
+    /* Match the portal: Merriweather everywhere, portal-sized text */
+    "@font-face { font-family: 'Merriweather'; font-weight: 400; src: url('/assets/slcm/fonts/Merriweather-Regular.ttf') format('truetype'); }",
+    "@font-face { font-family: 'Merriweather'; font-weight: 700; src: url('/assets/slcm/fonts/Merriweather-Bold.ttf') format('truetype'); }",
+    "@font-face { font-family: 'Merriweather'; font-weight: 400; font-style: italic; src: url('/assets/slcm/fonts/Merriweather-Italic.ttf') format('truetype'); }",
+    "html, body, body *:not(svg):not(path) { font-family: 'Merriweather', Georgia, serif !important; }",
+    'body, .text-base, .text-sm, .text-p-sm, .text-p-base, input, select, textarea, button, .ProseMirror { font-size: 14px !important; }',
+    '.text-xs, .text-p-xs, .text-2xs { font-size: 12.5px !important; }',
+    '.text-lg { font-size: 17px !important; }',
+    /* Transcript fee "Pay" button in NLS maroon */
+    '.rounded-lg.border.bg-surface-gray-1.p-4 > button { background: #920C24 !important; border-color: #920C24 !important; color: #fff !important; }',
+    '.rounded-lg.border.bg-surface-gray-1.p-4 > button:hover:not(:disabled) { background: #6b091a !important; }',
+    '.rounded-lg.border.bg-surface-gray-1.p-4 > button:disabled { opacity: .55; }',
   ].join('\n');
 
   /* Inject CSS into the helpdesk iframe — waits for Vue to mount via MutationObserver */

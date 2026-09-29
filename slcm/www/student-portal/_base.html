@@ -262,7 +262,17 @@
     /* Main content + page header */
     .sp-main { padding: 32px 32px 56px; }
     body.sp-compact .sp-main { padding: 18px 18px 48px; }
-    .sp-page-header { margin-bottom: 22px; }
+    .sp-page-header, .spf-head {
+      margin-bottom: 22px; background: var(--sp-card, #fff);
+      border: 1px solid var(--sp-border, #e5e7eb); border-radius: 14px;
+      padding: 18px 24px; box-shadow: 0 1px 2px rgba(16,24,40,0.04);
+    }
+    .sp-page-header .sp-page-title, .spf-head .spf-title { margin: 0; }
+    /* Page-level empty states also sit on a white panel */
+    .sp-empty.fade-in {
+      background: var(--sp-card, #fff); border: 1px solid var(--sp-border, #e5e7eb);
+      border-radius: 14px; box-shadow: 0 1px 2px rgba(16,24,40,0.04);
+    }
     .sp-page-title, .spd-page-title, .spf-title {
       font-size: 28px !important; font-weight: 800 !important;
       color: var(--sp-text-1) !important; letter-spacing: -0.02em;
@@ -655,31 +665,19 @@
           <span class="sp-nav-label">Fees &amp; Payments</span>
         </div>
       </a>
-      {# Helpdesk #}
-      <a href="/student-portal/support" class="sp-nav-group-header {% if active_page == 'support' %}active{% endif %}" data-label="Helpdesk / Support" style="text-decoration: none; margin-bottom: 4px;">
-        <div style="display:flex;align-items:center;gap:12px;">
-          <span class="sp-ms">headset_mic</span>
-          <span class="sp-nav-label">Helpdesk / Support</span>
-        </div>
-      </a>
-      {# My Profile #}
-      <a href="/student-portal/profile" class="sp-nav-group-header {% if active_page == 'profile' %}active{% endif %}" data-label="My Profile" style="text-decoration: none; margin-bottom: 4px;">
-        <div style="display:flex;align-items:center;gap:12px;">
-          <span class="sp-ms">person</span>
-          <span class="sp-nav-label">My Profile</span>
-        </div>
-      </a>
-
-      {# Services & Requests #}
+      {# Helpdesk / Services #}
       <div class="sp-nav-group" id="sp-group-services">
-        <div class="sp-nav-group-header" onclick="spToggleNavGroup('services')" data-label="Services">
+        <div class="sp-nav-group-header" onclick="spToggleNavGroup('services')" data-label="Helpdesk / Services">
           <div style="display:flex;align-items:center;gap:12px;">
-            <span class="sp-ms">support_agent</span>
-            <span class="sp-nav-label">Services &amp; Requests</span>
+            <span class="sp-ms">headset_mic</span>
+            <span class="sp-nav-label">Helpdesk / Services</span>
           </div>
           <span class="sp-ms sp-nav-group-caret">keyboard_arrow_down</span>
         </div>
         <div class="sp-nav-group-items">
+          <a href="/student-portal/support" class="sp-nav-item {% if active_page == 'support' %}active{% endif %}" data-label="Helpdesk">
+            <span class="sp-ms">support_agent</span><span class="sp-nav-label">Helpdesk</span>
+          </a>
           <!-- <a href="/student-portal/documents" class="sp-nav-item {% if active_page == 'documents' %}active{% endif %}" data-label="Documents">
             <span class="sp-ms">folder_open</span><span class="sp-nav-label">Documents</span>
           </a> -->
@@ -700,6 +698,14 @@
           </a>
         </div>
       </div>
+      {# Announcements #}
+      <a href="/student-portal/announcements" class="sp-nav-group-header {% if active_page == 'announcements' %}active{% endif %}" data-label="Announcements" style="text-decoration: none; margin-bottom: 4px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span class="sp-ms">campaign</span>
+          <span class="sp-nav-label">Announcements</span>
+        </div>
+      </a>
+
 
     </div>
 

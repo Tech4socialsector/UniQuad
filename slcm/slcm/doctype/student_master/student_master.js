@@ -854,11 +854,14 @@ function _build_progression_html(pg, enc, badge) {
 	const ld = pg.last_decision;
 	if (ld) {
 		const colour = /Not Promoted/.test(ld.promotion_status) ? "red" : /Promoted/.test(ld.promotion_status) ? "green" : "orange";
-		const enr = ld.enrollment_status === "Enrolled"
+		const enr = ld.stage === "Draft"
+			? `<span style="color:#b45309;">Not applied yet — the student sees no change until it is published.</span>`
+			: ld.enrollment_status === "Enrolled"
 			? `Enrolled in <a href="/app/student-enrollment/${enc(ld.to_enrollment || "")}">${enc(ld.to_enrollment || "")}</a>`
 			: ld.enrollment_status === "Failed" ? `<span style="color:#b91c1c;">Next-year enrollment failed — use Retry Enrollment in Promotion Management</span>` : "";
 		html += `<div style="border:1px solid #e5e7eb;border-radius:10px;padding:12px 18px;font-size:12.5px;color:#374151;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
 			<b>Last promotion run:</b> ${badge(ld.promotion_status, colour)}
+			${ld.stage === "Draft" ? badge("Draft — not published", "orange") : badge("Published", "blue")}
 			<span>Year ${enc(String(ld.current_year || ""))} → ${enc(String(ld.target_year || ""))}</span>
 			<span style="color:#6b7280;">${ld.processed_on ? enc(frappe.datetime.str_to_user(ld.processed_on)) : ""}</span>
 			${enr ? `<span>${enr}</span>` : ""}

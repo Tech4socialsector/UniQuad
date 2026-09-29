@@ -22,7 +22,7 @@ frappe.ui.form.on("Academic Management System", {
 					"term_start_date",
 					"term_end_date",
 					"system",
-					"sequence",
+					"status",
 					"previous_term",
 				],
 				order_by: "term_start_date desc",
@@ -46,7 +46,7 @@ frappe.ui.form.on("Academic Management System", {
 								<th>Starts</th>
 								<th>Ends</th>
 								<th>System</th>
-								<th>Sequence</th>
+								<th>Status</th>
 								<th>Previous Term</th>
 							</tr>
 						</thead>
@@ -64,7 +64,7 @@ frappe.ui.form.on("Academic Management System", {
 								<td>${frappe.datetime.str_to_user(term.term_start_date)}</td>
 								<td>${frappe.datetime.str_to_user(term.term_end_date)}</td>
 								<td>${term.system || ""}</td>
-								<td>${term.sequence || ""}</td>
+								<td>${term.status || ""}</td>
 								<td>${term.previous_term || ""}</td>
 							</tr>
 						`;
@@ -88,7 +88,8 @@ frappe.ui.form.on("Academic Management System", {
 				{
 					label: "Term Name",
 					fieldname: "term_name",
-					fieldtype: "Data",
+					fieldtype: "Link",
+					options: "Term Master",
 					reqd: 1,
 				},
 				{
@@ -126,9 +127,12 @@ frappe.ui.form.on("Academic Management System", {
 					reqd: 1,
 				},
 				{
-					label: "Sequence",
-					fieldname: "sequence",
-					fieldtype: "Int",
+					label: "Status",
+					fieldname: "status",
+					fieldtype: "Select",
+					options: "Active\nInactive",
+					default: "Active",
+					reqd: 1,
 				},
 				{
 					fieldname: "col_break2",
