@@ -12,10 +12,10 @@
   </div>
   {% if course_offerings %}
   <div class="fp-page-actions">
-    <div style="background:var(--fp-primary-light);border:1px solid var(--fp-primary-mid);border-radius:var(--fp-radius-sm);padding:8px 18px;display:flex;align-items:center;gap:10px;">
-      <span class="fp-ms" style="font-size:20px;color:var(--fp-primary);">library_books</span>
-      <span style="font-size:24px;font-weight:800;color:var(--fp-primary);letter-spacing:-0.03em;">{{ course_offerings | length }}</span>
-      <span style="font-size:12px;color:var(--fp-text-3);font-weight:500;">Course{{ 's' if course_offerings | length != 1 }}</span>
+    <div style="background:var(--fp-primary);border:1px solid var(--fp-primary);border-radius:var(--fp-radius-sm);padding:8px 18px;display:flex;align-items:center;gap:10px;">
+      <span class="fp-ms" style="font-size:20px;color:#fff;">library_books</span>
+      <span style="font-size:24px;font-weight:800;color:#fff;letter-spacing:-0.03em;">{{ course_offerings | length }}</span>
+      <span style="font-size:12px;color:rgba(255,255,255,0.85);font-weight:500;">Course{{ 's' if course_offerings | length != 1 }}</span>
     </div>
   </div>
   {% endif %}
@@ -33,7 +33,7 @@
 {# ── Summary Stats Strip ────────────────────────────────────── #}
 <div class="fco-summary-strip fade-in" style="animation-delay:0.06s;">
   <div class="fco-summary-cell">
-    <div class="fco-summary-icon" style="background:var(--fp-primary-light);color:var(--fp-primary);">
+    <div class="fco-summary-icon" style="background:var(--fp-primary);color:#fff;">
       <span class="fp-ms">library_books</span>
     </div>
     <div>
@@ -42,7 +42,7 @@
     </div>
   </div>
   <div class="fco-summary-cell">
-    <div class="fco-summary-icon" style="background:var(--fp-info-bg);color:var(--fp-info);">
+    <div class="fco-summary-icon" style="background:var(--fp-primary);color:#fff;">
       <span class="fp-ms">groups</span>
     </div>
     <div>
@@ -51,7 +51,7 @@
     </div>
   </div>
   <div class="fco-summary-cell">
-    <div class="fco-summary-icon" style="background:var(--fp-success-bg);color:var(--fp-success);">
+    <div class="fco-summary-icon" style="background:var(--fp-primary);color:#fff;">
       <span class="fp-ms">radio_button_checked</span>
     </div>
     <div>
@@ -60,7 +60,7 @@
     </div>
   </div>
   <div class="fco-summary-cell">
-    <div class="fco-summary-icon" style="background:var(--fp-warning-bg);color:var(--fp-warning);">
+    <div class="fco-summary-icon" style="background:var(--fp-primary);color:#fff;">
       <span class="fp-ms">event_available</span>
     </div>
     <div>
@@ -70,11 +70,11 @@
   </div>
   <div class="fco-summary-cell">
     {% if overall_avg_att >= 75 %}
-      {% set _summ_bg = "var(--fp-success-bg)" %}{% set _summ_c = "var(--fp-success)" %}
+      {% set _summ_bg = "var(--fp-primary)" %}{% set _summ_c = "#fff" %}
     {% elif overall_avg_att >= 60 %}
-      {% set _summ_bg = "var(--fp-warning-bg)" %}{% set _summ_c = "var(--fp-warning)" %}
+      {% set _summ_bg = "var(--fp-primary)" %}{% set _summ_c = "#fff" %}
     {% elif overall_avg_att > 0 %}
-      {% set _summ_bg = "var(--fp-danger-bg)" %}{% set _summ_c = "var(--fp-danger)" %}
+      {% set _summ_bg = "var(--fp-primary)" %}{% set _summ_c = "#fff" %}
     {% else %}
       {% set _summ_bg = "var(--fp-surface-2)" %}{% set _summ_c = "var(--fp-text-4)" %}
     {% endif %}
@@ -269,17 +269,17 @@
       </a>
       <a href="/faculty-portal/marks?course_offering={{ co.name | urlencode }}"
          class="fco-action-btn"
-         style="background:var(--fp-success-bg);color:var(--fp-success);border-left:1px solid var(--fp-border-light);"
-         onmouseover="this.style.background='var(--fp-success)';this.style.color='#fff';"
-         onmouseout="this.style.background='var(--fp-success-bg)';this.style.color='var(--fp-success)';">
+         style="background:var(--fp-primary);color:#fff;border-left:1px solid var(--fp-border-light);"
+         onmouseover="this.style.background='var(--fp-primary-dark)';this.style.color='#fff';"
+         onmouseout="this.style.background='var(--fp-primary)';this.style.color='#fff';">
         <span class="fp-ms">grade</span>Marks
       </a>
       <button class="fco-action-btn"
-              style="background:var(--fp-primary-light);color:var(--fp-primary);border:none;
+              style="background:var(--fp-primary);color:#fff;border:none;
                      cursor:pointer;border-left:1px solid var(--fp-border-light);"
               onclick="fcoShowDetails('{{ co.name | replace("'", "\\'") }}')"
-              onmouseover="this.style.background='var(--fp-primary)';this.style.color='#fff';"
-              onmouseout="this.style.background='var(--fp-primary-light)';this.style.color='var(--fp-primary)';">
+              onmouseover="this.style.background='var(--fp-primary-dark)';this.style.color='#fff';"
+              onmouseout="this.style.background='var(--fp-primary)';this.style.color='#fff';">
         <span class="fp-ms">info</span>Details
       </button>
     </div>
@@ -344,7 +344,7 @@
                 </a>
                 <a href="/faculty-portal/marks?course_offering={{ co.name | urlencode }}"
                    class="fp-btn fp-btn-sm"
-                   style="background:var(--fp-success-bg);color:var(--fp-success);text-decoration:none;">
+                   style="background:var(--fp-primary);color:#fff;text-decoration:none;">
                   <span class="fp-ms">grade</span>Marks
                 </a>
               </div>
@@ -383,7 +383,7 @@
 <div class="fp-card fade-in" style="animation-delay:0.10s;">
   <div style="padding:72px 32px;text-align:center;">
     <div style="width:100px;height:100px;border-radius:28px;
-                background:linear-gradient(135deg,var(--fp-primary-light),var(--fp-accent-light));
+                background:var(--fp-card);
                 border:2px dashed var(--fp-border-mid);display:flex;align-items:center;
                 justify-content:center;margin:0 auto 24px;animation:fpFloat 3s ease-in-out infinite;">
       <span class="fp-ms" style="font-size:48px;color:var(--fp-text-5);">library_books</span>

@@ -45,11 +45,11 @@
     <div class="fp-card-body">
 
       {# Session info #}
-      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--fp-primary-light);border-radius:var(--fp-radius-sm);margin-bottom:24px;">
-        <span class="fp-ms" style="color:var(--fp-primary);font-size:22px;">account_circle</span>
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--fp-primary);border-radius:var(--fp-radius-sm);margin-bottom:24px;">
+        <span class="fp-ms" style="color:#fff;font-size:22px;">account_circle</span>
         <div>
-          <div style="font-size:11px;color:var(--fp-text-4);text-transform:uppercase;letter-spacing:0.05em;">Logged in as</div>
-          <div style="font-size:13px;font-weight:600;color:var(--fp-text-1);">{{ faculty_email or frappe.session.user }}</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.8);text-transform:uppercase;letter-spacing:0.05em;">Logged in as</div>
+          <div style="font-size:13px;font-weight:600;color:#fff;">{{ faculty_email or frappe.session.user }}</div>
         </div>
       </div>
 

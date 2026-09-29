@@ -7,14 +7,45 @@
   /* Make iframe fill available height properly */
   #hd-frame { border: none; }
 </style>
+<script>
+/* ── Helpdesk iframe routing ──────────────────────────────────────
+   The helpdesk SPA navigates inside the iframe (Vue router pushState),
+   which never touches this page's URL — so a refresh used to always
+   drop back to the ticket list. We mirror the iframe's current path
+   into ?hd=<path> and restore it on load. Only same-origin
+   /helpdesk paths are accepted, so ?hd can't point the frame elsewhere. */
+function hdSafePath(p) {
+  if (!p || typeof p !== 'string') return null;
+  if (p.charAt(0) !== '/' || p.charAt(1) === '/' || p.indexOf('\\') !== -1) return null;
+  if (p !== '/helpdesk' && p.indexOf('/helpdesk/') !== 0) return null;
+  return p;
+}
+
+function hdInitFrame(basePath) {
+  var frame = document.getElementById('hd-frame');
+  if (!frame) return;
+  frame.setAttribute('data-hd-base', basePath);
+  var params = new URLSearchParams(window.location.search);
+  var saved  = hdSafePath(params.get('hd'));
+  var ticket = params.get('ticket');
+  if (saved) {
+    frame.src = saved;
+  } else if (ticket) {
+    frame.src = basePath + '/' + encodeURIComponent(ticket);
+  } else {
+    frame.src = basePath;
+  }
+}
+</script>
 {% endblock %}
 
 {% block content %}
 
 {# ── Page Header ────────────────────────────────────────────── #}
 <div class="fp-page-header fade-in" style="margin-bottom:20px;">
-  <div style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--fp-text-4);margin-bottom:4px;">Help Centre</div>
-  <h1 style="margin:0;font-size:24px;font-weight:700;color:var(--fp-text-1);">Helpdesk</h1>
+  <div class="fp-page-header-left">
+    <h1 class="fp-page-title">Helpdesk</h1>
+  </div>
 </div>
 
 {% if is_hd_agent %}
@@ -32,19 +63,7 @@
     allow="same-origin"
     onload="hdFrameReady()"
   ></iframe>
-  <script>
-    (function () {
-      var params = new URLSearchParams(window.location.search);
-      var ticket = params.get('ticket');
-      var frame = document.getElementById('hd-frame');
-      if (!frame) return;
-      if (ticket) {
-        frame.src = '/helpdesk/tickets/' + encodeURIComponent(ticket);
-      } else {
-        frame.src = '/helpdesk/tickets';
-      }
-    })();
-  </script>
+  <script>hdInitFrame('/helpdesk/tickets');</script>
 </div>
 
 {% else %}
@@ -62,18 +81,7 @@
     allow="same-origin"
     onload="hdFrameReady()"
   ></iframe>
-  <script>
-    (function () {
-      var params = new URLSearchParams(window.location.search);
-      var ticket = params.get('ticket');
-      var frame = document.getElementById('hd-frame');
-      if (ticket) {
-        frame.src = '/helpdesk/my-tickets/' + encodeURIComponent(ticket);
-      } else {
-        frame.src = '/helpdesk/my-tickets';
-      }
-    })();
-  </script>
+  <script>hdInitFrame('/helpdesk/my-tickets');</script>
 </div>
 {% endif %}
 
@@ -148,6 +156,29 @@
 
   window.hdFrameReady = hdFrameReady;
 
+  /* ── Mirror the iframe's route into this page's URL (?hd=…) ──
+     Polling is used because SPA route changes fire no event the parent
+     can hear; it's a cheap same-origin location read. */
+  var _lastHdPath = null;
+  function syncFrameRoute() {
+    var frame = document.getElementById('hd-frame');
+    if (!frame) return;
+    var loc;
+    try { loc = frame.contentWindow && frame.contentWindow.location; } catch (e) { return; }
+    if (!loc || loc.href === 'about:blank') return;
+    var path = hdSafePath(loc.pathname + loc.search + loc.hash);
+    if (!path || path === _lastHdPath) return;   /* e.g. login redirect — leave URL alone */
+    _lastHdPath = path;
+
+    var url = new URL(window.location.href);
+    url.searchParams.delete('ticket');            /* ?hd supersedes the one-time ?ticket link */
+    if (path === frame.getAttribute('data-hd-base')) url.searchParams.delete('hd');
+    else url.searchParams.set('hd', path);
+    if (url.href !== window.location.href) {
+      history.replaceState(history.state, '', url.pathname + url.search + url.hash);
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     var frame = document.getElementById('hd-frame');
     if (!frame) return;
@@ -160,6 +191,8 @@
     }
     resizeFrame();
     window.addEventListener('resize', resizeFrame);
+
+    setInterval(syncFrameRoute, 500);
 
     /* If onload already fired */
     if (frame.contentDocument && frame.contentDocument.readyState === 'complete') {

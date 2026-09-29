@@ -46,9 +46,9 @@ def get_context(context):
             b["end_fmt"]   = frappe.utils.format_datetime(b.end_datetime, "hh:mm a") if b.end_datetime else "—"
             status = b.status or "Pending Allotment"
             b["status_class"] = {
-                "Pending Allotment": "fp-badge-warning",
+                "Pending Allotment": "fp-badge-outline",
                 "Allotted": "fp-badge-success",
-                "Rejected": "fp-badge-danger",
+                "Rejected": "fp-badge-dark",
                 "Cancelled": "fp-badge-neutral",
             }.get(status, "fp-badge-neutral")
 
