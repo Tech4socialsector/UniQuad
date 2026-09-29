@@ -297,6 +297,7 @@
 }
 .sp-improv-dialog {
   background: #fff; border-radius: 22px; max-width: 480px; width: 100%;
+  border-top: 4px solid var(--sp-primary, #920c24);
   box-shadow: 0 36px 90px rgba(0,0,0,.3); overflow: hidden;
   animation: sp-improv-in .22s cubic-bezier(.34,1.56,.64,1);
 }
@@ -306,25 +307,27 @@
 }
 /* header */
 .sp-improv-hdr {
-  background: linear-gradient(135deg, #920c24 0%, #6b091a 100%);
-  padding: 22px 24px 20px; display: flex; align-items: flex-start; gap: 14px;
+  background: #fff; border-bottom: 1px solid var(--sp-border, #e5e7eb);
+  padding: 20px 24px 18px; display: flex; align-items: flex-start; gap: 14px;
 }
 .sp-improv-hdr-icon {
   width: 46px; height: 46px; border-radius: 13px;
-  background: rgba(255,255,255,.15); display: flex; align-items: center;
-  justify-content: center; flex-shrink: 0; border: 1.5px solid rgba(255,255,255,.25);
+  background: rgba(146,12,36,.07); display: flex; align-items: center;
+  justify-content: center; flex-shrink: 0; border: 1.5px solid rgba(146,12,36,.18);
 }
+/* the icon's colour is set inline by the script */
+.sp-improv-hdr-icon span { color: var(--sp-primary, #920c24) !important; }
 .sp-improv-hdr-text { flex: 1; }
-.sp-improv-hdr-title { font-size: 17px; font-weight: 800; color: #fff; line-height: 1.2; }
-.sp-improv-hdr-sub   { font-size: 12.5px; color: rgba(255,255,255,.78); margin-top: 4px; line-height: 1.35; }
+.sp-improv-hdr-title { font-size: 17px; font-weight: 800; color: var(--sp-text-1, #1e293b); line-height: 1.2; }
+.sp-improv-hdr-sub   { font-size: 12.5px; font-weight: 700; color: var(--sp-text-2, #334155); margin-top: 4px; line-height: 1.35; }
 .sp-improv-close {
-  width: 30px; height: 30px; border-radius: 9px; border: 1px solid rgba(255,255,255,.22);
-  background: rgba(255,255,255,.12); color: rgba(255,255,255,.9);
+  width: 30px; height: 30px; border-radius: 9px; border: 1px solid var(--sp-border, #e5e7eb);
+  background: #fff; color: var(--sp-text-2, #334155);
   cursor: pointer; display: flex; align-items: center; justify-content: center;
   font-size: 17px; font-family: 'Material Symbols Outlined'; transition: background .15s;
   flex-shrink: 0; margin-top: 2px;
 }
-.sp-improv-close:hover { background: rgba(255,255,255,.26); }
+.sp-improv-close:hover { border-color: var(--sp-primary, #920c24); color: var(--sp-primary, #920c24); }
 /* body */
 .sp-improv-body { padding: 22px 24px 20px; }
 .sp-improv-info-grid {
