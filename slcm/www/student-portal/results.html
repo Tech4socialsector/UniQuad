@@ -245,7 +245,7 @@
 }
 .spr-modal-overlay.open { display: flex; }
 .spr-modal {
-  background: var(--sp-card, #fff); border-radius: 14px; width: min(960px, calc(100vw - 32px)); max-height: calc(100vh - 32px);
+  background: var(--sp-card, #fff); border-radius: 14px; width: min(1200px, calc(100vw - 32px)); max-height: calc(100vh - 32px);
   display: flex; flex-direction: column; box-shadow: 0 24px 64px rgba(0,0,0,0.2); overflow: hidden;
 }
 .spr-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 16px 20px 12px; border-bottom: 1px solid var(--spr-border); border-top: 3px solid var(--spr-primary); }
@@ -266,12 +266,9 @@
 .spr-mk th .max { display: block; font-size: 9.5px; font-weight: 400; text-transform: none; letter-spacing: 0; }
 /* Group row (Internal / End Term / Grade …) matches the column-label row exactly */
 .spr-mk thead tr:first-child th, .spr-mk thead tr + tr th { font-size: 10px !important; font-weight: 600; letter-spacing: 0.04em; line-height: 1.35; }
-.spr-mk .grp { background: var(--spr-soft); color: var(--spr-primary); border-bottom: none; }
-.spr-mk .grp-grade  { background: rgba(146,12,36,0.06); color: var(--spr-green); }
-.spr-mk .grp-status { background: #f3f4f6; color: var(--sp-text-3); }
-.spr-mk .grp-reexam { background: rgba(146,12,36,0.10); color: var(--spr-amber); }
-.spr-mk .grp-improve { background: #fff0f2; color: #6b091a; }
-.spr-mk .grp-final  { background: rgba(146,12,36,0.07); color: #920c24; }
+/* Group heading row: black, bold, on one neutral band */
+.spr-mk .grp { background: #f3f4f6; color: #000; font-weight: 700 !important; border-bottom: none; }
+.spr-mk .grp-grade, .spr-mk .grp-status, .spr-mk .grp-reexam, .spr-mk .grp-improve, .spr-mk .grp-final { background: #f3f4f6; color: #000; }
 .spr-mk td { padding: 10px 12px; text-align: center; font-size: var(--spr-mk-fs); border-bottom: 1px solid var(--spr-row); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .spr-mk-grade { display: inline-block; font-size: var(--spr-mk-fs); font-weight: 700; padding: 2px 10px; border-radius: 8px; }
 .spr-mk-grade.pass { color: var(--spr-green); border: 1px solid rgba(146,12,36,0.3); }
