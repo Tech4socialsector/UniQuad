@@ -160,3 +160,237 @@ def demand_type_cards(demands):
 	for g in groups:
 		g["paid_fmt"] = _fmt_inr(g.paid_amt)
 	return groups
+
+
+def _group(demand_type):
+	return "Academic" if demand_type == "Academic" else "Non Academic"
+
+
+def charge_rows(student, demands, invoices, re_exams, fines):
+	"""Every charge for the fee Summary, paid ones included: Fee Demands, programme fee
+	invoices, re-exam fees and hostel fines. Each row: group ("Academic" / "Non Academic"),
+	kind, component, sub, due_date_fmt, days_overdue, amount, paid, waiver, outstanding
+	(numbers and *_fmt), status, status_key (paid / pending / overdue), receipt (Fee Receipt),
+	re_exam_receipt, invoice, academic_year, plus the re-exam Pay fields. A re-exam fee or
+	hostel fine with a Fee Demand is represented by that demand."""
+	flt_ = flt
+	demands = [d for d in demands or [] if d.status != "Cancelled"]
+	receipts = _receipts_for_demands([d.name for d in demands])
+	rows = []
+
+	for d in demands:
+		status = "Overdue" if (d.get("is_demand_overdue") and d.status == "Pending") else d.status
+		trigger = (d.get("trigger_ref_doctype") or "").replace("Course Reregistration", "Re-registration")
+		rows.append(frappe._dict(
+			group=_group(d.get("demand_type")), kind="demand",
+			component=d.fee_component or d.description or "Charge",
+			sub=(d.description if d.description and d.description != d.fee_component else (trigger or "Additional charge")),
+			due_date=d.due_date, due_date_fmt=d.get("due_date_fmt") or "", days_overdue=d.get("days_overdue") or 0,
+			amount=flt_(d.net_payable), paid=flt_(d.paid_amount) + flt_(d.credit_adjusted),
+			waiver=flt_(d.waiver_amount),
+			outstanding=0 if d.status in ("Paid", "Waived") else flt_(d.outstanding_amount),
+			status=status, receipt=receipts.get(d.name) or "", re_exam_receipt="", invoice="",
+			academic_year=d.get("academic_year") or "", can_pay=False, demand_name=d.name,
+		))
+
+	for inv in invoices or []:
+		if (inv.get("display_status") or inv.status) == "Cancelled":
+			continue
+		rcpts = inv.get("receipts") or []
+		out = flt_(inv.get("eff_outstanding") if inv.get("eff_outstanding") is not None else inv.outstanding_amount)
+		rows.append(frappe._dict(
+			group="Academic", kind="invoice", component=inv.get("label") or "Programme Fee", sub=inv.name,
+			due_date=inv.due_date, due_date_fmt=inv.get("due_date_fmt") or "", days_overdue=0,
+			amount=flt_(inv.get("final_payable_amount") or inv.get("total_amount")), paid=flt_(inv.get("paid_amount")),
+			waiver=flt_(inv.get("scholarship_amount")), outstanding=out,
+			status=inv.get("display_status") or inv.status or "Unpaid",
+			receipt=(rcpts[-1].receipt_name if rcpts else ""), re_exam_receipt="", invoice=inv.name,
+			academic_year=inv.get("academic_year") or "", can_pay=False,
+		))
+
+	linked = set()
+	for doctype, recs in (("Re Exam Registration", re_exams or []), ("Hostel Fine", fines or [])):
+		linked |= set(_linked_demands(student, doctype, [r.name for r in recs]).keys())
+	for r in re_exam_and_fine_rows(student, [x for x in re_exams or [] if x.name not in linked],
+	                               [x for x in fines or [] if x.name not in linked]):
+		amount = flt_(r.get("amount")) or flt_(str(r.amount_fmt).replace("₹", "").replace(",", ""))
+		r.update(
+			group=_group(r.demand_type), amount=amount, paid=amount if r.is_paid else 0, waiver=0,
+			outstanding=0 if r.is_paid else amount, invoice="", academic_year="",
+		)
+		rows.append(r)
+
+	for r in rows:
+		r["status_key"] = "paid" if r.status in ("Paid", "Waived") or (r.outstanding <= 0 and r.paid > 0) else (
+			"overdue" if r.status == "Overdue" else "pending")
+		# Amount before scholarship: Amount − Scholarship − Paid = Outstanding on every row
+		r["gross"] = r.amount + r.waiver
+		for k in ("amount", "paid", "outstanding", "waiver", "gross"):
+			r[k + "_fmt"] = _fmt_inr(r[k])
+	today = frappe.utils.getdate()
+	rows.sort(key=lambda r: (
+		r.group != "Academic", r.status_key == "paid",
+		frappe.utils.getdate(r.due_date) if r.get("due_date") else today,
+	))
+	_attach_details(student, rows, invoices)
+	return rows
+
+
+def _fmt_date(value):
+	return formatdate(value, "dd MMM yyyy") if value else ""
+
+
+def _detail(kind, date, title, sub, amount, status, receipt="", re_exam_receipt="", sign=""):
+	return frappe._dict(
+		kind=kind, date=date, date_fmt=_fmt_date(date), title=title, sub=sub,
+		amount_fmt=sign + _fmt_inr(amount), status=status, receipt=receipt, re_exam_receipt=re_exam_receipt,
+	)
+
+
+def _attach_details(student, rows, invoices):
+	"""Give each Summary row its payments, refunds and scholarships (row.details), so the fee
+	list shows them under the component. Anything not tied to one fee (a receipt with no
+	demand lines, a refund from excess, an unlinked concession, credit notes) goes on an
+	"Other" row at the end."""
+	for r in rows:
+		r["details"] = []
+	demand_rows = {r.demand_name: r for r in rows if r.get("demand_name")}
+	other = []
+
+	# Payments: Fee Receipt lines allocated to each demand
+	for p in frappe.db.sql(
+		"""SELECT fr.name, fr.receipt_date, fr.payment_mode, fr.reference_number, fr.amount AS receipt_amount,
+			rdp.fee_demand, rdp.amount, rdp.description
+		FROM `tabFee Receipt` fr
+		LEFT JOIN `tabFee Receipt Demands Paid` rdp ON rdp.parent = fr.name AND rdp.parenttype = 'Fee Receipt'
+		WHERE fr.student = %s AND IFNULL(fr.status, '') != 'Cancelled'
+		ORDER BY fr.receipt_date DESC, fr.creation DESC""",
+		(student,),
+		as_dict=True,
+	):
+		row = demand_rows.get(p.fee_demand)
+		d = _detail(
+			"payment", p.receipt_date, "Payment", " · ".join(filter(None, [p.payment_mode, p.reference_number, p.name])),
+			p.amount if p.fee_demand else p.receipt_amount, "Paid", receipt=p.name,
+		)
+		if row:
+			row.details.append(d)
+		elif not any(p.name == (r.get("receipt") or "") for r in rows if r.kind == "invoice"):
+			# no demand lines, or paid towards a demand that has since been cancelled
+			d.title = p.description or "Payment"
+			other.append(d)
+
+	# Invoice payments (programme fee) come with the invoice itself
+	inv_rows = {r.invoice: r for r in rows if r.kind == "invoice"}
+	for inv in invoices or []:
+		row = inv_rows.get(inv.name)
+		if not row:
+			continue
+		rcpts = inv.get("receipts") or []
+		for i, pay in enumerate(inv.get("payments") or []):
+			if pay.get("is_rzp_only"):
+				continue
+			rc = rcpts[i].receipt_name if i < len(rcpts) else ""
+			row.details.append(_detail(
+				"payment", pay.get("payment_date"), "Payment",
+				" · ".join(filter(None, [pay.get("payment_mode"), pay.get("reference_number")])),
+				pay.get("amount"), "Paid", receipt=rc,
+			))
+
+	# Re-exam fees paid online: the payment log
+	for r in rows:
+		if r.kind == "reexam" and r.get("re_exam_receipt"):
+			for log in frappe.get_all(
+				"Re Exam Payment Log",
+				filters={"re_exam_registration": r.registration, "payment_status": "Paid"},
+				fields=["transaction_date", "amount", "payment_method", "razorpay_payment_id"],
+				ignore_permissions=True,
+			):
+				r.details.append(_detail(
+					"payment", log.transaction_date, "Payment",
+					" · ".join(filter(None, [(log.payment_method or "Online").title(), log.razorpay_payment_id])),
+					log.amount, "Paid", re_exam_receipt=r.registration,
+				))
+
+	# Refunds
+	for f in frappe.get_all(
+		"Fee Refund",
+		filters={"student": student, "docstatus": ["!=", 2]},
+		fields=["name", "fee_demand", "refund_type", "refund_amount", "refund_date", "refund_mode", "utr_number", "status"],
+		order_by="refund_date desc",
+		ignore_permissions=True,
+	):
+		d = _detail(
+			"refund", f.refund_date, f.refund_type or "Refund",
+			" · ".join(filter(None, [f.refund_mode, f.utr_number and f"UTR {f.utr_number}", f.name])),
+			f.refund_amount, f.status or "Draft", sign="+",
+		)
+		row = demand_rows.get(f.fee_demand)
+		(row.details if row else other).append(d)
+
+	# Scholarships / concessions
+	for c in frappe.get_all(
+		"Fee Concession",
+		filters={"student": student, "docstatus": ["!=", 2]},
+		fields=["name", "fee_demand", "fee_component", "concession_type", "waiver_amount", "status", "approved_on", "reason"],
+		order_by="approved_on desc",
+		ignore_permissions=True,
+	):
+		d = _detail(
+			"scholarship", c.approved_on, c.concession_type or "Concession",
+			" · ".join(filter(None, [c.reason, c.name])), c.waiver_amount, c.status or "Draft", sign="−",
+		)
+		row = demand_rows.get(c.fee_demand) or (
+			None if c.fee_demand else next((r for r in rows if r.kind == "demand" and r.component == c.fee_component), None)
+		)
+		if row:
+			row.details.append(d)
+		else:
+			d.title = f"{d.title} – {c.fee_component}" if c.fee_component else d.title
+			other.append(d)
+
+	# Excess / advance credit
+	for cn in frappe.get_all(
+		"Student Credit Note",
+		filters={"student": student, "docstatus": 1},
+		fields=["name", "credit_type", "credit_amount", "available_credit", "status", "creation"],
+		order_by="creation desc",
+		ignore_permissions=True,
+	):
+		other.append(_detail(
+			"credit", cn.creation, cn.credit_type or "Credit",
+			f"{cn.name} · {_fmt_inr(cn.available_credit)} available", cn.credit_amount, cn.status,
+		))
+
+	for r in rows:
+		r.details.sort(key=lambda d: frappe.utils.getdate(d.date) if d.date else frappe.utils.getdate("1900-01-01"), reverse=True)
+	if other:
+		rows.append(frappe._dict(
+			group="Other", kind="other", component="Payments, refunds and credit",
+			sub="Not tied to a single fee", due_date=None, due_date_fmt="", days_overdue=0,
+			amount=0, paid=0, waiver=0, outstanding=0, status="", status_key="", receipt="", re_exam_receipt="",
+			invoice="", academic_year="", can_pay=False, details=other,
+			amount_fmt="", paid_fmt="", outstanding_fmt="", waiver_fmt="", gross=0, gross_fmt="",
+		))
+
+
+def charge_cards(rows):
+	"""Overall, Academic and Non Academic card figures from the Summary rows."""
+	def card(label, rs):
+		overdue = sum(1 for r in rs if r.status_key == "overdue")
+		pending = sum(1 for r in rs if r.status_key == "pending")
+		outstanding = sum(r.outstanding for r in rs)
+		paid = sum(r.paid for r in rs)
+		return frappe._dict(
+			label=label, count=len(rs), total_fmt=_fmt_inr(sum(r.gross for r in rs)),
+			paid_amt=paid, paid_fmt=_fmt_inr(paid), paid_count=sum(1 for r in rs if r.status_key == "paid"),
+			waived_fmt=_fmt_inr(sum(r.waiver for r in rs)), outstanding=outstanding,
+			outstanding_fmt=_fmt_inr(outstanding), overdue=overdue, pending=pending,
+		)
+	rows = [r for r in rows if r.group != "Other"]  # the "Other" row holds only payments / refunds / credit
+	cards = [card("Overall", rows)] if rows else []
+	for label in ("Academic", "Non Academic"):
+		rs = [r for r in rows if r.group == label]
+		if rs:
+			cards.append(card(label, rs))
+	return cards

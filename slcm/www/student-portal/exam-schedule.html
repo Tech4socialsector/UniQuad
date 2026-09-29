@@ -5,8 +5,11 @@
 <style>
   /* ── Header ── */
   .es-header-wrap {
-    background: #fdf5f5 url('/assets/slcm/images/building-illustration.png') no-repeat right 5% bottom / contain;
-    border-radius: 16px;
+    /* Same white header card as the other portal pages */
+    background: var(--sp-card, #fff);
+    border: 1px solid var(--sp-border, #e5e7eb);
+    border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(16,24,40,0.04);
     padding: 24px 28px;
     margin-bottom: 22px;
     display: flex;
@@ -31,8 +34,11 @@
   }
 
   .es-header-title {
-    font-size: 22px;
-    font-weight: 400;
+    /* same as the other portal page titles */
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.25;
     margin-bottom: 4px;
     color: var(--sp-text-1);
   }

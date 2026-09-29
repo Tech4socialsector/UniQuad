@@ -668,12 +668,14 @@ def _build_view_model(context, errors):
             academic_year=d.academic_year or "",
         ))
     # Re-exam fees and hostel fines, paid ones too (with their receipt)
+    _rex, _fines = [], []
     try:
         from slcm.slcm.fee.portal_charges import get_re_exams_and_fines, re_exam_and_fine_rows
 
-        re_exams, fines = get_re_exams_and_fines(context.ward_student_name)
-        rows += re_exam_and_fine_rows(context.ward_student_name, re_exams, fines)
+        _rex, _fines = get_re_exams_and_fines(context.ward_student_name)
+        rows += re_exam_and_fine_rows(context.ward_student_name, _rex, _fines)
     except Exception:
+        _rex, _fines = [], []
         frappe.log_error(frappe.get_traceback(), "Parent Portal Fees: re-exam / fine rows")
         errors["re_exams"] = True
 
@@ -683,9 +685,17 @@ def _build_view_model(context, errors):
         frappe.utils.getdate(r.due_date) if r.due_date else today,
     ))
     context.summary_rows = rows
-    from slcm.slcm.fee.portal_charges import demand_type_cards
+    from slcm.slcm.fee.portal_charges import charge_cards, charge_rows, demand_type_cards
 
     context.demand_type_cards = demand_type_cards(context.fee_demands)
+    # One list of every charge (paid ones too) and the Overall / Academic / Non Academic cards
+    try:
+        context.charge_rows = charge_rows(context.ward_student_name, context.fee_demands, invoices, _rex, _fines)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "Portal Fees: charge rows")
+        context.charge_rows = []
+        errors["demands"] = True
+    context.charge_cards = charge_cards(context.charge_rows)
     context.outstanding_rows = [r for r in rows if not r.get("is_paid")]
     context.outstanding_overdue_count = sum(1 for r in context.outstanding_rows if r.is_overdue)
     context.outstanding_pending_count = len(context.outstanding_rows) - context.outstanding_overdue_count
@@ -818,6 +828,8 @@ def _set_defaults(context):
     context.outstanding_rows        = []
     context.summary_rows            = []
     context.demand_type_cards       = []
+    context.charge_rows             = []
+    context.charge_cards            = []
     context.outstanding_overdue_count = 0
     context.outstanding_pending_count = 0
     context.payment_history         = []
