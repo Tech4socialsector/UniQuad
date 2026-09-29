@@ -97,6 +97,10 @@ def get_context(context):
         context.fee_structure_valid_until = ""
         context.fee_structure_status      = ""
         context.fs_components             = []
+        # Only the table matching the student's nationality (Indian by default)
+        _fs_parentfield = ("fee_components_for_foreign"
+                           if (student.get("nationality") or "Indian").strip().lower() not in ("indian", "india")
+                           else "fee_components_for_indian")
         if student.fee_structure:
             try:
                 _fs = frappe.db.get_value(
@@ -114,9 +118,10 @@ def get_context(context):
                            fcc.is_taxable, fcc.tax_rate, fcc.tax_amount
                     FROM `tabFee Component Child` fcc
                     WHERE fcc.parent = %s AND fcc.parenttype = 'Fee Structure'
+                      AND fcc.parentfield = %s
                     ORDER BY fcc.idx
                     """,
-                    student.fee_structure,
+                    (student.fee_structure, _fs_parentfield),
                     as_dict=True,
                 )
             except Exception:

@@ -11,15 +11,6 @@
     <h1 class="fp-page-title">My Classes</h1>
     <p class="fp-page-sub">Manage your assigned courses, attendance, marks and academic sessions.</p>
   </div>
-  {% if course_offerings %}
-  <div class="fp-page-actions">
-    <div class="fp-mc-count-chip">
-      <span class="fp-ms">menu_book</span>
-      <strong>{{ course_offerings|length }}</strong>
-      <span class="fp-mc-count-lbl">Course{{ 's' if course_offerings|length != 1 else '' }}</span>
-    </div>
-  </div>
-  {% endif %}
 </div>
 
 {% if portal_error %}
@@ -34,7 +25,7 @@
 <div class="fp-metric-grid fade-in">
 
   <div class="fp-metric-card">
-    <div class="fp-metric-icon" style="background:var(--fp-primary-light);">
+    <div class="fp-metric-icon" style="background:var(--fp-primary);">
       <span class="fp-ms" style="color:var(--fp-primary);">library_books</span>
     </div>
     <div>
@@ -44,8 +35,8 @@
   </div>
 
   <div class="fp-metric-card">
-    <div class="fp-metric-icon" style="background:var(--fp-info-bg);">
-      <span class="fp-ms" style="color:var(--fp-info);">groups</span>
+    <div class="fp-metric-icon" style="background:var(--fp-primary);">
+      <span class="fp-ms" style="color:var(--fp-primary);">groups</span>
     </div>
     <div>
       <div class="fp-metric-val">{{ total_students }}</div>
@@ -54,8 +45,8 @@
   </div>
 
   <div class="fp-metric-card">
-    <div class="fp-metric-icon" style="background:var(--fp-success-bg);">
-      <span class="fp-ms" style="color:var(--fp-success);">check_circle</span>
+    <div class="fp-metric-icon" style="background:var(--fp-primary);">
+      <span class="fp-ms" style="color:var(--fp-primary);">check_circle</span>
     </div>
     <div>
       <div class="fp-metric-val">{{ active_courses }}</div>
@@ -64,7 +55,7 @@
   </div>
 
   <div class="fp-metric-card">
-    <div class="fp-metric-icon" style="background:var(--fp-warning-bg);">
+    <div class="fp-metric-icon" style="background:var(--fp-primary);">
       <span class="fp-ms" style="color:var(--fp-warning);">event_available</span>
     </div>
     <div>
@@ -201,7 +192,7 @@
 <div id="fp-classes-grid" class="fp-mc-grid">
   {% for co in course_offerings %}
 
-  {% set status_class = 'fp-status-active' if co.status == 'Active' else ('fp-status-open' if co.status == 'Open' else ('fp-status-closed' if co.status == 'Closed' else 'fp-status-upcoming')) %}
+  {% set status_class = 'fp-status-active' if co.status == 'Active' else ('fp-status-active' if co.status == 'Open' else ('fp-status-closed' if co.status == 'Closed' else 'fp-status-upcoming')) %}
 
   <div class="fp-card fp-course-card fp-class-card fade-in"
        style="animation-delay:{{ loop.index0 * 0.05 }}s;"
@@ -265,10 +256,10 @@
 
     {# Actions #}
     <div class="fp-course-actions">
-      <a href="/faculty-portal/attendance?course_offering={{ co.name }}" class="fp-course-action fp-course-action-info">
+      <a href="/faculty-portal/attendance?course_offering={{ co.name }}" class="fp-course-action fp-course-action-primary">
         <span class="fp-ms">how_to_reg</span>Attendance
       </a>
-      <a href="/faculty-portal/marks?course_offering={{ co.name }}" class="fp-course-action fp-course-action-success">
+      <a href="/faculty-portal/marks?course_offering={{ co.name }}" class="fp-course-action fp-course-action-primary">
         <span class="fp-ms">grade</span>Marks
       </a>
       <button onclick="fpShowCourseDetails('{{ co.name }}')" class="fp-course-action fp-course-action-primary">
@@ -309,25 +300,25 @@
             <td style="font-weight:600;color:var(--fp-text-1);">{{ co.course_name }}</td>
             <td style="color:var(--fp-text-3);white-space:nowrap;">{{ co.term_name or '—' }}</td>
             <td style="color:var(--fp-text-3);white-space:nowrap;">{{ co.academic_year or '—' }}</td>
-            <td style="font-weight:600;color:var(--fp-info);">{{ co.student_count }}</td>
+            <td style="font-weight:600;color:var(--fp-primary);">{{ co.student_count }}</td>
             <td style="color:var(--fp-text-3);">{{ co.credits or '—' }}</td>
             <td style="color:var(--fp-text-3);">{{ co.total_sessions or 0 }}</td>
             <td>
-              {% if co.status in ('Active', 'Open') %}<span class="fp-badge fp-badge-success">{{ co.status }}</span>
+              {% if co.status in ('Active', 'Open') %}<span class="fp-badge fp-badge-dark">{{ co.status }}</span>
               {% else %}<span class="fp-badge fp-badge-neutral">{{ co.status }}</span>{% endif %}
             </td>
             <td style="text-align:right;">
               <div style="display:flex;gap:6px;justify-content:flex-end;">
                 <a href="/faculty-portal/attendance?course_offering={{ co.name }}"
-                   class="fp-btn fp-btn-sm" style="background:var(--fp-info-bg);color:var(--fp-info);text-decoration:none;">
+                   class="fp-btn fp-btn-sm" style="background:var(--fp-primary);color:#fff;text-decoration:none;">
                   <span class="fp-ms">how_to_reg</span>Attendance
                 </a>
                 <a href="/faculty-portal/marks?course_offering={{ co.name }}"
-                   class="fp-btn fp-btn-sm" style="background:var(--fp-success-bg);color:var(--fp-success);text-decoration:none;">
+                   class="fp-btn fp-btn-sm" style="background:var(--fp-primary);color:#fff;text-decoration:none;">
                   <span class="fp-ms">grade</span>Marks
                 </a>
                 <button onclick="fpShowCourseDetails('{{ co.name }}')"
-                        class="fp-btn fp-btn-sm" style="background:var(--fp-primary-light);color:var(--fp-primary);">
+                        class="fp-btn fp-btn-sm" style="background:var(--fp-primary);color:#fff;">
                   <span class="fp-ms">open_in_new</span>Details
                 </button>
               </div>
@@ -363,8 +354,8 @@
     {# Modal header #}
     <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--fp-border-light);background:var(--fp-bg);position:sticky;top:0;z-index:1;">
       <div style="display:flex;align-items:center;gap:10px;">
-        <div style="width:34px;height:34px;border-radius:9px;background:var(--fp-primary-light);display:flex;align-items:center;justify-content:center;">
-          <span class="fp-ms" style="font-size:17px;color:var(--fp-primary);">menu_book</span>
+        <div style="width:34px;height:34px;border-radius:9px;background:var(--fp-primary);display:flex;align-items:center;justify-content:center;">
+          <span class="fp-ms" style="font-size:17px;color:#fff;">menu_book</span>
         </div>
         <span style="font-size:15px;font-weight:700;color:var(--fp-text-1);">Course Details</span>
       </div>
@@ -664,7 +655,7 @@ function _updateFilterChips(search, years, terms, statuses) {
   });
   var clearAll = document.createElement('button');
   clearAll.className = 'fp-filter-chip';
-  clearAll.style.cssText = 'border-color:var(--fp-danger);color:var(--fp-danger);';
+  clearAll.style.cssText = 'border-color:var(--fp-primary);color:var(--fp-primary);';
   clearAll.innerHTML = '<span class="fp-ms" style="font-size:12px;">clear_all</span> Clear all';
   clearAll.addEventListener('click', fpResetFilters);
   bar.appendChild(clearAll);
@@ -674,17 +665,17 @@ function _updateFilterChips(search, years, terms, statuses) {
 function fpShowCourseDetails(id) {
   var co = _fpCourses[id];
   if (!co) return;
-  var statusColor = (co.status === 'Active' || co.status === 'Open') ? 'fp-badge-success' : 'fp-badge-neutral';
+  var statusColor = (co.status === 'Active' || co.status === 'Open') ? 'fp-badge-dark' : 'fp-badge-neutral';
 
   // Next session block (Quick Statistics: upcoming session)
   var nextBlock = '';
   if (co.next) {
-    nextBlock = '<div style="background:var(--fp-primary-light);border:1px solid var(--fp-primary-mid);border-radius:var(--fp-radius-sm);padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;">'
-      + '<span class="fp-ms" style="font-size:18px;color:var(--fp-primary);">event</span>'
+    nextBlock = '<div style="background:var(--fp-primary);border:1px solid var(--fp-primary);border-radius:var(--fp-radius-sm);padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;">'
+      + '<span class="fp-ms" style="font-size:18px;color:#fff;">event</span>'
       + '<div>'
-      + '<div style="font-size:10px;color:var(--fp-primary);font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px;">Next Session</div>'
-      + '<div style="font-size:13px;font-weight:600;color:var(--fp-text-1);">' + co.next.date + ' &nbsp;·&nbsp; ' + co.next.from_time + (co.next.to_time ? ' – ' + co.next.to_time : '') + '</div>'
-      + (co.next.room && co.next.room !== '—' ? '<div style="font-size:11px;color:var(--fp-text-3);margin-top:2px;">' + co.next.room + '</div>' : '')
+      + '<div style="font-size:10px;color:#fff;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px;">Next Session</div>'
+      + '<div style="font-size:13px;font-weight:600;color:#fff;">' + co.next.date + ' &nbsp;·&nbsp; ' + co.next.from_time + (co.next.to_time ? ' – ' + co.next.to_time : '') + '</div>'
+      + (co.next.room && co.next.room !== '—' ? '<div style="font-size:11px;color:rgba(255,255,255,0.85);margin-top:2px;">' + co.next.room + '</div>' : '')
       + '</div></div>';
   }
 
@@ -720,9 +711,9 @@ function fpShowCourseDetails(id) {
   // Pending badge (used as an at-a-glance warning, part of Quick Statistics)
   var pendingNote = '';
   if (co.pending > 0) {
-    pendingNote = '<div style="background:var(--fp-danger-bg);border:1px solid rgba(220,38,38,0.2);border-radius:var(--fp-radius-sm);padding:8px 12px;margin-bottom:14px;display:flex;align-items:center;gap:8px;">'
-      + '<span class="fp-ms" style="font-size:16px;color:var(--fp-danger);">warning_amber</span>'
-      + '<span style="font-size:12px;color:var(--fp-danger);font-weight:600;">' + co.pending + ' session' + (co.pending > 1 ? 's' : '') + ' pending attendance</span>'
+    pendingNote = '<div style="background:var(--fp-primary);border:1px solid var(--fp-primary);border-radius:var(--fp-radius-sm);padding:8px 12px;margin-bottom:14px;display:flex;align-items:center;gap:8px;">'
+      + '<span class="fp-ms" style="font-size:16px;color:#fff;">warning_amber</span>'
+      + '<span style="font-size:12px;color:#fff;font-weight:600;">' + co.pending + ' session' + (co.pending > 1 ? 's' : '') + ' pending attendance</span>'
       + '</div>';
   }
 
@@ -751,7 +742,7 @@ function fpShowCourseDetails(id) {
       '<a href="/faculty-portal/attendance?course_offering=' + encodeURIComponent(co.id) + '" class="fp-btn fp-btn-primary" style="flex:1;justify-content:center;text-decoration:none;">',
         '<span class="fp-ms">how_to_reg</span>Take Attendance',
       '</a>',
-      '<a href="/faculty-portal/marks?course_offering=' + encodeURIComponent(co.id) + '" class="fp-btn fp-btn-success" style="flex:1;justify-content:center;text-decoration:none;">',
+      '<a href="/faculty-portal/marks?course_offering=' + encodeURIComponent(co.id) + '" class="fp-btn fp-btn-secondary" style="flex:1;justify-content:center;text-decoration:none;">',
         '<span class="fp-ms">grade</span>Enter Marks',
       '</a>',
     '</div>',

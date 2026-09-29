@@ -317,14 +317,14 @@
    "label": "Status Colours"
   },
   {
-   "default": "#16a34a",
+   "default": "#920c24",
    "description": "Good attendance, submitted marks, passed students",
    "fieldname": "success_color",
    "fieldtype": "Color",
    "label": "Success / Good"
   },
   {
-   "default": "#d97706",
+   "default": "#920c24",
    "description": "Borderline attendance, pending evaluations, near-due tasks",
    "fieldname": "warning_color",
    "fieldtype": "Color",
