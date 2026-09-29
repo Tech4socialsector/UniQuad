@@ -21,40 +21,46 @@
    "ignore_user_permissions": 1,
    "in_list_view": 1,
    "label": "Name of Degree (PG)",
-   "options": "Programme"
+   "options": "Programme",
+   "reqd": 1
   },
   {
    "fieldname": "pg_cgpa",
    "fieldtype": "Percent",
    "in_list_view": 1,
    "label": "CGPA Obtained (PG degree)",
-   "non_negative": 1
+   "non_negative": 1,
+   "reqd": 1
   },
   {
    "fieldname": "collegeuniversity",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "College/University (PG degree)"
+   "label": "College/University (PG degree)",
+   "reqd": 1
   },
   {
    "fieldname": "year_of_completion",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Year Of Completion (PG degree)"
+   "label": "Year Of Completion (PG degree)",
+   "reqd": 1
   },
   {
    "description": "Max 5MB - Supported formats png, jpeg, jpg, pdf",
    "fieldname": "pg_degree_certificatebonafide_certificate_to_be_uploaded",
    "fieldtype": "Attach",
    "in_list_view": 1,
-   "label": "PG Degree Certificate / Bonafide"
+   "label": "PG Degree Certificate / Bonafide",
+   "reqd": 1
   },
   {
    "description": "Max 5MB - Supported formats png, jpeg, jpg, pdf",
    "fieldname": "transcriptsmarksheets_to_be_uploaded",
    "fieldtype": "Attach",
    "in_list_view": 1,
-   "label": "Transcripts / Marksheets"
+   "label": "Transcripts / Marksheets",
+   "reqd": 1
   },
   {
    "fieldname": "pg_degree_details_section",
@@ -66,7 +72,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-08-12 09:44:11.020926",
+ "modified": "2026-09-29 17:43:24.881243",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "PG Degree Details",

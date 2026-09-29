@@ -291,6 +291,22 @@ frappe.ui.form.on("Applicant", {
         frm.set_value("city", "");
     },
 
+    nationality: function (frm) {
+        if (frm.doc.nationality && frm.doc.nationality !== "Indian") {
+            frm.set_value("foriegn_national", "Yes");
+        } else if (frm.doc.nationality === "Indian" && frm.doc.foriegn_national === "Yes") {
+            frm.set_value("foriegn_national", "No");
+        }
+    },
+
+    foriegn_national: function (frm) {
+        if (frm.doc.foriegn_national === "Yes" && frm.doc.nationality === "Indian") {
+            frm.set_value("nationality", "");
+        } else if (frm.doc.foriegn_national === "No" && frm.doc.nationality && frm.doc.nationality !== "Indian") {
+            frm.set_value("nationality", "Indian");
+        }
+    },
+
     validate: function (frm) {
         if (frm.doc.status === "Draft") {
             frm.ignore_mandatory = true;
@@ -354,6 +370,15 @@ frappe.ui.form.on("Applicant", {
             .filter(Boolean);
         if (new Set(prefs).size !== prefs.length) {
             errors.push(__("Campus preferences must all be unique. Please remove duplicate selections."));
+        }
+
+        if (frm.doc.nationality && frm.doc.foriegn_national) {
+            if (frm.doc.nationality !== "Indian" && frm.doc.foriegn_national !== "Yes") {
+                errors.push(__("If Nationality is not Indian, then 'Foreign National' must be Yes."));
+            }
+            if (frm.doc.foriegn_national === "Yes" && frm.doc.nationality === "Indian") {
+                errors.push(__("If 'Foreign National' is Yes, Nationality cannot be Indian."));
+            }
         }
 
         if (errors.length) {
