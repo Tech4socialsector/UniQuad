@@ -169,17 +169,28 @@
     <div class="att-kpi-value">{{ total_courses }}</div>
     <div class="att-kpi-sub">{{ term_groups|length }} term{% if term_groups|length != 1 %}s{% endif %}</div>
   </div>
-  <div class="att-kpi">
-    <div class="att-kpi-head"><span class="att-kpi-label">Below {{ _g|int }}%</span><span class="att-kpi-icon"><span class="sp-ms" aria-hidden="true">warning</span></span></div>
-    <div class="att-kpi-value{{ ' is-alert' if courses_below_75 > 0 }}">{{ courses_below_75 }}</div>
-    <div class="att-kpi-sub">{{ 'Need attention' if courses_below_75 > 0 else 'All courses on track' }}</div>
+  <div class="sp-card" style="display:flex;align-items:center;gap:12px;text-align:left;padding:16px 20px;">
+    <div style="font-size:32px;color:var(--sp-primary);display:flex;background:#fff0f2;padding:10px;border-radius:8px;"><span class="sp-ms" style="font-size:24px;">menu_book</span></div>
+    <div>
+      <div class="sp-att-stat-num" style="color:var(--sp-primary);font-size:22px;font-weight:400;font-family:'Merriweather', serif;">{{ total_courses }}</div>
+      <div class="sp-att-stat-lbl" style="font-size:13px;color:var(--sp-text-3);">Total Courses</div>
+    </div>
   </div>
-  <div class="att-kpi">
-    <div class="att-kpi-head"><span class="att-kpi-label">Exam Eligible</span><span class="att-kpi-icon"><span class="sp-ms" aria-hidden="true">task_alt</span></span></div>
-    <div class="att-kpi-value">{{ courses_eligible }}<small> / {{ total_courses }}</small></div>
-    <div class="att-kpi-sub">Cleared for examinations</div>
+  <div class="sp-card" style="display:flex;align-items:center;gap:12px;text-align:left;padding:16px 20px;">
+    <div style="font-size:32px;color:var(--sp-primary);display:flex;background:#fff0f2;padding:10px;border-radius:8px;"><span class="sp-ms" style="font-size:24px;">warning</span></div>
+    <div>
+      <div class="sp-att-stat-num" style="color:var(--sp-primary);font-size:22px;font-weight:400;font-family:'Merriweather', serif;">{{ courses_below_75 }}</div>
+      <div class="sp-att-stat-lbl" style="font-size:13px;color:var(--sp-text-3);">Below {{ att_good_threshold|default(75)|int }}%</div>
+    </div>
   </div>
-</section>
+  <div class="sp-card" style="display:flex;align-items:center;gap:12px;text-align:left;padding:16px 20px;">
+    <div style="font-size:32px;color:var(--sp-primary);display:flex;background:#fff0f2;padding:10px;border-radius:8px;"><span class="sp-ms" style="font-size:24px;">check_circle</span></div>
+    <div>
+      <div class="sp-att-stat-num" style="color:var(--sp-primary);font-size:22px;font-weight:400;font-family:'Merriweather', serif;">{{ courses_eligible }}</div>
+      <div class="sp-att-stat-lbl" style="font-size:13px;color:var(--sp-text-3);">Exam Eligible</div>
+    </div>
+  </div>
+</div>
 
 {# ── Warning ───────────────────────────────────────────────────── #}
 {% if courses_below_75 > 0 %}

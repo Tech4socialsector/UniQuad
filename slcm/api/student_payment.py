@@ -142,6 +142,7 @@ def _ensure_fee_component():
         "doctype":        "Fee Component",
         "component_name": "Program Fee",
         "component_type": "Tuition Fee",
+        "demand_type":    "Academic",
         "amount":         0,
     })
     comp.insert(ignore_permissions=True)

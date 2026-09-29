@@ -12,7 +12,7 @@
     letter-spacing: -0.02em;
     margin: 0 0 22px;
   }
-  
+
   /* Alert — one short line of NLS maroon text, no background */
   .spd-alert-custom {
     display: flex;
@@ -95,7 +95,7 @@
     color: #920c24;
     border: 1px solid #fff0f2;
   }
-  
+
   .spd-kpi-value {
     font-size: 26px;
     font-weight: 700;
@@ -130,7 +130,7 @@
     font-size: 12px;
     color: var(--sp-text-4);
   }
-  
+
   /* Quick Actions Grid */
   .spd-qa-section {
     margin-top: 16px;
@@ -248,7 +248,7 @@
     <a href="/student-portal/attendance" class="spd-alert-link" aria-label="View attendance">View</a>
   </div>
   {% endif %}
-  
+
   {% if has_dues %}
   <div class="spd-alert-custom" role="alert">
     <span class="sp-ms" aria-hidden="true">account_balance_wallet</span>
@@ -260,7 +260,7 @@
 
 {# ── KPI Cards ─────────────────────────────────────────────────── #}
 <div class="spd-kpi-row fade-in delay-2">
-  
+
   {# Card 1: Active Courses #}
   <a href="/student-portal/courses" class="spd-kpi">
     <div class="spd-kpi-header">
@@ -287,7 +287,7 @@
         <span class="sp-ms" style="font-size:24px;">quiz</span>
       </div>
       <div class="spd-kpi-badge {% if eligible_count == course_count and course_count > 0 %}success{% else %}warning{% endif %}">
-        <span class="sp-ms" style="font-size:14px;">{% if eligible_count == course_count and course_count > 0 %}check_circle{% else %}shield{% endif %}</span> 
+        <span class="sp-ms" style="font-size:14px;">{% if eligible_count == course_count and course_count > 0 %}check_circle{% else %}shield{% endif %}</span>
         {% if eligible_count == course_count and course_count > 0 %}Clear{% else %}Partial{% endif %}
       </div>
     </div>
@@ -296,7 +296,7 @@
     </div>
     <div class="spd-kpi-label">Examination Eligible</div>
     <div class="spd-kpi-progress">
-      <div class="spd-kpi-progress-fill" style="width: {% if course_count > 0 %}{{ ((eligible_count / course_count) * 100)|round|int }}{% else %}0{% endif %}%; background: #920c24;"></div>
+      <div class="spd-kpi-progress-fill" style="width: {% if course_count > 0 %}{{ ((eligible_count / course_count) * 100)|round|int }}{% else %}0{% endif %}%; background: var(--sp-primary);"></div>
     </div>
     <div class="spd-kpi-footer">Courses cleared for examinations</div>
   </a>
@@ -308,7 +308,7 @@
         <span class="sp-ms" style="font-size:24px;">payments</span>
       </div>
       <div class="spd-kpi-badge {% if has_dues %}warning{% else %}success{% endif %}">
-        <span class="sp-ms" style="font-size:14px;">{% if has_dues %}error_outline{% else %}check_circle{% endif %}</span> 
+        <span class="sp-ms" style="font-size:14px;">{% if has_dues %}error_outline{% else %}check_circle{% endif %}</span>
         {% if has_dues %}Pending{% else %}Clear{% endif %}
       </div>
     </div>
@@ -329,9 +329,9 @@
 <div class="spd-qa-section fade-in delay-2">
   <h2 class="spd-qa-header-title">Quick Actions</h2>
   <p class="spd-qa-header-sub">Everything you need, one tap away</p>
-  
+
   <div class="spd-qa-container">
-    
+
     <a href="/student-portal/attendance" class="spd-qa-item">
       <div class="spd-qa-item-icon">
         <span class="sp-ms" style="font-size:28px;">calendar_today</span>
@@ -339,15 +339,15 @@
       <div class="spd-qa-item-title">Attendance</div>
       <div class="spd-qa-item-sub">View your attendance</div>
     </a>
-    
-    <a href="/student-portal/documents" class="spd-qa-item">
+
+    <!-- <a href="/student-portal/documents" class="spd-qa-item">
       <div class="spd-qa-item-icon">
         <span class="sp-ms" style="font-size:28px;">folder</span>
       </div>
       <div class="spd-qa-item-title">Documents</div>
       <div class="spd-qa-item-sub">Downloads &amp; uploads</div>
-    </a>
-    
+    </a> -->
+
     <a href="/student-portal/results" class="spd-qa-item">
       <div class="spd-qa-item-icon">
         <span class="sp-ms" style="font-size:28px;">workspace_premium</span>
@@ -355,7 +355,7 @@
       <div class="spd-qa-item-title">My Results</div>
       <div class="spd-qa-item-sub">Grades &amp; marks</div>
     </a>
-    
+
     <a href="/student-portal/announcements" class="spd-qa-item">
       <div class="spd-qa-item-icon">
         <span class="sp-ms" style="font-size:28px;">campaign</span>
@@ -363,7 +363,7 @@
       <div class="spd-qa-item-title">Notices</div>
       <div class="spd-qa-item-sub">Announcements</div>
     </a>
-    
+
     <a href="/student-portal/venue-booking" class="spd-qa-item">
       <div class="spd-qa-item-icon">
         <span class="sp-ms" style="font-size:28px;">meeting_room</span>

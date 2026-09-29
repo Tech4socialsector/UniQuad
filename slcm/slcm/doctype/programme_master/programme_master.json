@@ -13,7 +13,8 @@
   "level_of_study",
   "programme_duration_in_years",
   "graduation_credits",
-  "programme_status"
+  "programme_status",
+  "zoho_course"
  ],
  "fields": [
   {
@@ -61,6 +62,11 @@
    "fieldname": "column_break_dbxx",
    "fieldtype": "Column Break",
    "options": "\nB\nA\nL\nP\nM\nD"
+  },
+  {
+   "fieldname": "zoho_course",
+   "fieldtype": "Data",
+   "label": "Zoho Books Course"
   }
  ],
  "grid_page_length": 50,
