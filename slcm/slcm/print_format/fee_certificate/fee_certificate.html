@@ -50,9 +50,20 @@
 			overflow: hidden;
 		}
 
+		/* Patched-Qt wkhtmltopdf (Frappe Cloud, the official packages) lays CSS out 1:1
+		   instead of shrinking it to about 0.75, so this page would run past one A4 sheet.
+		   ctx.true_scale adds this class there: zooming to 0.75 gives the same page as the
+		   unpatched build (the box is a little taller, or zoom clips the footer text).
+		   Browsers get .fc-browser, which resets it. */
+		.fc-page.fc-true-scale {
+			zoom: 0.75;
+			height: 352mm;
+		}
+
 		.fc-page.fc-browser {
 			height: auto;
 			overflow: visible;
+			zoom: 1;
 		}
 
 		.fc-page {
@@ -213,7 +224,7 @@
 	</style>
 </head>
 <body>
-<div class="fc-page">
+<div class="fc-page{% if ctx.true_scale %} fc-true-scale{% endif %}">
 <script>document.querySelector(".fc-page").classList.add("fc-browser");</script>
 <table class="fc-layout"><tbody><tr><td class="fc-layout-body">
 	{% if ctx.header_image %}

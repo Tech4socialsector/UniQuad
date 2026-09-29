@@ -1,15 +1,17 @@
 // Student Fee Management
 //   /desk/student-fee-management            → student list (year / term / programme filters)
 //   /desk/student-fee-management/<student>  → that student's dues, payments and excess
-// The list view has three tabs sharing one set of filters: Students, Due Wise Report and
-// Student Wise Outstanding (the office's two report sheets, exportable to Excel).
+// Reports (/desk/fee-reports) and Fee Certificates (/desk/fee-certificates) are separate pages.
 
 const SFM_PAGE = "student-fee-management";
 const SFM_API = "slcm.slcm.page.student_fee_management.student_fee_management.";
 const SFM_PAGE_SIZES = [10, 25, 50, 100];
 
 frappe.pages[SFM_PAGE].on_page_load = function (wrapper) {
-	wrapper.sfm = new StudentFeeManagement(wrapper);
+	frappe.require("/assets/slcm/js/sfm_common.js", () => {
+		wrapper.sfm = new StudentFeeManagement(wrapper);
+		wrapper.sfm.route();
+	});
 };
 
 // Fires on first load and every time the user navigates back here (e.g. after saving a
@@ -17,231 +19,6 @@ frappe.pages[SFM_PAGE].on_page_load = function (wrapper) {
 frappe.pages[SFM_PAGE].on_page_show = function (wrapper) {
 	wrapper.sfm && wrapper.sfm.route();
 };
-
-const sfm_esc = (v) => frappe.utils.escape_html(v == null ? "" : String(v));
-// Indian grouping, symbol attached: ₹1,00,000.00
-const sfm_money = (v) => "₹" + format_number(flt(v), "#,##,###.##", 2);
-const sfm_int = (v) => format_number(cint(v), "#,##,###.##", 0);
-const sfm_date = (v) => (v ? frappe.datetime.str_to_user(String(v).slice(0, 10)) : "—");
-// 29-09-2026, 09:02 AM
-const sfm_datetime = (v) => (v ? moment(frappe.datetime.str_to_obj(String(v))).format("DD-MM-YYYY, hh:mm A") : "—");
-
-// Lucide icon set (inlined so every icon on the page comes from one consistent family).
-const SFM_ICON_PATHS = {
-	refresh: '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
-	search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
-	"search-x": '<path d="m13.5 8.5-5 5"/><path d="m8.5 8.5 5 5"/><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
-	filter: '<path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/>',
-	download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>',
-	users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
-	rupee: '<path d="M6 3h12"/><path d="M6 8h12"/><path d="m6 13 8.5 8"/><path d="M6 13h3"/><path d="M9 13c6.667 0 6.667-10 0-10"/>',
-	check: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
-	clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
-	alert: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
-	wallet: '<path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/>',
-	x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
-	"chevron-left": '<path d="m15 18-6-6 6-6"/>',
-	"chevron-right": '<path d="m9 18 6-6-6-6"/>',
-	"chevrons-left": '<path d="m11 17-5-5 5-5"/><path d="m18 17-5-5 5-5"/>',
-	"chevrons-right": '<path d="m6 17 5-5-5-5"/><path d="m13 17 5-5-5-5"/>',
-	"chevron-down": '<path d="m6 9 6 6 6-6"/>',
-	"sort-none": '<path d="m21 16-4 4-4-4"/><path d="M17 20V4"/><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/>',
-	"sort-asc": '<path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>',
-	"sort-desc": '<path d="M12 5v14"/><path d="m19 12-7 7-7-7"/>',
-	"arrow-left": '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
-	plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
-	undo: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
-	"file-text": '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>',
-	card: '<rect width="20" height="14" x="2" y="5" rx="2"/><path d="M2 10h20"/>',
-	loader: '<path d="M21 12a9 9 0 1 1-6.219-8.56"/>',
-	upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/>',
-	columns: '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="M15 3v18"/>',
-	eye: '<path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/>',
-	award: '<circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/>',
-};
-const sfm_icon = (name, size = 16, cls = "") =>
-	`<svg class="sfm-icon ${cls}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${SFM_ICON_PATHS[name] || ""}</svg>`;
-
-const SFM_STATUS_CLASS = {
-	Pending: "pending",
-	Overdue: "overdue",
-	"Partially Paid": "partial",
-	Paid: "paid",
-	Cleared: "paid",
-	Waived: "waived",
-	Cancelled: "muted",
-	"No Demands": "muted",
-	Submitted: "paid",
-	Draft: "pending",
-	Approved: "paid",
-	Reversed: "muted",
-	Active: "paid",
-	Exhausted: "muted",
-	"Moved to Excess": "excess",
-	"Cancelled & Moved to Excess": "excess-cancelled",
-};
-
-// A cancelled due whose paid money went to excess is stored as Cancelled + moved_to_excess_amount.
-const sfm_demand_status = (d) =>
-	d.status === "Cancelled" && flt(d.moved_to_excess_amount) > 0 ? "Cancelled & Moved to Excess" : d.status;
-const sfm_badge = (status, label) =>
-	`<span class="sfm-badge sfm-badge-${SFM_STATUS_CLASS[status] || "muted"}">${sfm_esc(label || status || "—")}</span>`;
-
-const SFM_PAYABLE = (d) => !["Paid", "Cancelled", "Waived"].includes(d.status) && flt(d.outstanding_amount) > 0;
-
-// Pull the human-readable message out of a Frappe error response.
-function sfm_server_message(json) {
-	try {
-		const msgs = JSON.parse(json._server_messages || "[]").map((m) => JSON.parse(m).message);
-		return $("<div>").html(msgs.join("<br>")).text() || json.exception || "";
-	} catch (e) {
-		return json && json.exception;
-	}
-}
-
-function sfm_load_font() {
-	if (document.getElementById("sfm-font")) return;
-	$("head").append(
-		'<link rel="preconnect" href="https://fonts.googleapis.com">' +
-			'<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
-			'<link id="sfm-font" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Merriweather:opsz,wght@18..144,300..900&display=swap">'
-	);
-}
-
-const SFM_DUES_STATUS_OPTIONS = [
-	{ value: "pending", label: __("Has Pending Dues") },
-	{ value: "overdue", label: __("Has Overdue Dues") },
-	{ value: "cleared", label: __("All Dues Cleared") },
-	{ value: "excess", label: __("Has Excess Amount") },
-	{ value: "no_demands", label: __("No Demands") },
-];
-
-// Checkbox dropdown with "Select all" / "Clear". An empty selection means "no filter".
-class SfmMultiSelect {
-	constructor($field, { key, label, all_label, searchable = false, on_change }) {
-		this.all_label = all_label;
-		this.on_change = on_change;
-		this.options = [];
-		this.selected = new Set();
-		this.$field = $field;
-		const id = `sfm-f-${key}`;
-		$field.addClass("sfm-ms").html(`
-			<label id="${id}-label" for="${id}">${label}</label>
-			<button type="button" id="${id}" class="sfm-control sfm-ms-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="${id}-panel">
-				<span class="sfm-ms-text"></span>
-				${sfm_icon("chevron-down", 14, "sfm-ms-caret")}
-			</button>
-			<div class="sfm-ms-panel" id="${id}-panel" role="group" aria-labelledby="${id}-label" hidden>
-				${
-					searchable
-						? `<div class="sfm-ms-search">${sfm_icon("search", 14)}<input type="search" class="sfm-ms-filter" placeholder="${__("Search…")}" aria-label="${sfm_esc(__("Search {0}", [label]))}" autocomplete="off"></div>`
-						: ""
-				}
-				<div class="sfm-ms-actions">
-					<button type="button" data-ms="all">${__("Select all")}</button>
-					<button type="button" data-ms="clear">${__("Clear")}</button>
-				</div>
-				<div class="sfm-ms-list"></div>
-			</div>`);
-		this.$trigger = $field.find(".sfm-ms-trigger");
-		this.$panel = $field.find(".sfm-ms-panel");
-		this.$list = $field.find(".sfm-ms-list");
-		this.$trigger.on("click", () => (this.is_open() ? this.close() : this.open()));
-		$field.on("keydown", (e) => {
-			if (e.key === "Escape" && this.is_open()) {
-				e.stopPropagation();
-				this.close();
-				this.$trigger.trigger("focus");
-			}
-		});
-		this.$list.on("change", "input", (e) => {
-			e.currentTarget.checked ? this.selected.add(e.currentTarget.value) : this.selected.delete(e.currentTarget.value);
-			this.changed();
-		});
-		// "Select all" respects the search box: it adds only the options currently shown.
-		this.$panel.on("click", '[data-ms="all"]', () => {
-			this.visible_options().forEach((o) => this.selected.add(o.value));
-			this.render_list();
-			this.changed();
-		});
-		this.$panel.on("click", '[data-ms="clear"]', () => {
-			this.selected.clear();
-			this.render_list();
-			this.changed();
-		});
-		this.$panel.on("input", ".sfm-ms-filter", () => this.render_list());
-		this.render_list();
-		this.render_trigger();
-	}
-
-	// Replace the option list; selections that no longer exist are dropped.
-	set_options(options, selected = [...this.selected]) {
-		this.options = options;
-		this.selected = new Set(selected.filter((v) => options.some((o) => o.value === v)));
-		this.render_list();
-		this.render_trigger();
-	}
-
-	value() {
-		return this.options.filter((o) => this.selected.has(o.value)).map((o) => o.value);
-	}
-
-	visible_options() {
-		const q = (this.$panel.find(".sfm-ms-filter").val() || "").trim().toLowerCase();
-		return q ? this.options.filter((o) => o.label.toLowerCase().includes(q)) : this.options;
-	}
-
-	render_list() {
-		const shown = this.visible_options();
-		this.$list.html(
-			shown.length
-				? shown
-						.map(
-							(o) => `<label class="sfm-ms-option">
-								<input type="checkbox" value="${sfm_esc(o.value)}" ${this.selected.has(o.value) ? "checked" : ""}>
-								<span>${sfm_esc(o.label)}</span>
-							</label>`
-						)
-						.join("")
-				: `<div class="sfm-ms-empty">${this.options.length ? __("No matches") : __("No options available")}</div>`
-		);
-	}
-
-	render_trigger() {
-		const n = this.selected.size;
-		let text = this.all_label;
-		if (n === 1) text = (this.options.find((o) => this.selected.has(o.value)) || {}).label || this.all_label;
-		else if (n > 1 && n === this.options.length) text = __("All selected ({0})", [n]);
-		else if (n > 1) text = __("{0} selected", [n]);
-		this.$trigger.toggleClass("has-value", n > 0).find(".sfm-ms-text").text(text);
-		this.$trigger.attr("title", n > 1 ? this.value().map((v) => (this.options.find((o) => o.value === v) || {}).label).join(", ") : text);
-	}
-
-	changed() {
-		this.render_trigger();
-		this.on_change(this.value());
-	}
-
-	is_open() {
-		return !this.$panel.prop("hidden");
-	}
-
-	open() {
-		this.$field.closest(".sfm-filter-grid").find(".sfm-ms").not(this.$field).each((_, el) => {
-			$(el).find(".sfm-ms-panel").prop("hidden", true);
-			$(el).find(".sfm-ms-trigger").attr("aria-expanded", "false");
-		});
-		this.$panel.prop("hidden", false);
-		this.$trigger.attr("aria-expanded", "true");
-		const $search = this.$panel.find(".sfm-ms-filter");
-		($search.length ? $search : this.$list.find("input").first()).trigger("focus");
-	}
-
-	close() {
-		this.$panel.prop("hidden", true);
-		this.$trigger.attr("aria-expanded", "false");
-	}
-}
 
 class StudentFeeManagement {
 	constructor(wrapper) {
@@ -267,15 +44,6 @@ class StudentFeeManagement {
 			sort_by: "outstanding_amount",
 			sort_order: "desc",
 		};
-		this.list_view = "students";
-		try {
-			const saved = localStorage.getItem("sfm_list_view");
-			if (["students", "due_wise", "outstanding", "certificates"].includes(saved)) this.list_view = saved;
-		} catch (e) {
-			// storage blocked — start on the Students tab
-		}
-		this.report_state = { start: 0, page_length: 25 };
-		this.report_req = 0;
 		this.filter_options = null;
 		this.last_totals = null;
 		this.list_rows = [];
@@ -296,7 +64,7 @@ class StudentFeeManagement {
 		this.draft = this.applied_filters();
 
 		sfm_load_font();
-		this.inject_styles();
+		sfm_inject_styles();
 		$(wrapper).addClass("sfm-page");
 		this.$root = $(`<div class="sfm"></div>`).appendTo(this.page.main);
 	}
@@ -332,9 +100,12 @@ class StudentFeeManagement {
 						<p class="sfm-subtitle">${__("Track student fee payments, pending dues and receipts")}</p>
 					</div>
 					<div class="sfm-actions">
-						<button type="button" class="sfm-btn sfm-btn-secondary" data-act="fee-certificate">
-							${sfm_icon("award", 15)}<span>${__("Fee Certificate")}</span>
-						</button>
+						<a class="sfm-btn sfm-btn-secondary" href="/desk/fee-reports" data-page-link="fee-reports">
+							${sfm_icon("file-text", 15)}<span>${__("Fee Reports")}</span>
+						</a>
+						<a class="sfm-btn sfm-btn-secondary" href="/desk/fee-certificates" data-page-link="fee-certificates">
+							${sfm_icon("award", 15)}<span>${__("Fee Certificates")}</span>
+						</a>
 						<button type="button" class="sfm-btn sfm-btn-secondary" data-act="bulk-upload">
 							${sfm_icon("upload", 15)}<span>${__("Bulk Upload")}</span>
 						</button>
@@ -373,52 +144,6 @@ class StudentFeeManagement {
 				</section>
 
 				<section class="sfm-kpi-grid" aria-label="${__("Summary")}"></section>
-
-				<div class="sfm-tabs sfm-view-tabs" role="tablist" aria-label="${__("Views")}">
-					${[
-						["students", "users", __("Students")],
-						["due_wise", "file-text", __("Due Wise Report")],
-						["outstanding", "clock", __("Student Wise Outstanding")],
-						["certificates", "award", __("Fee Certificates")],
-					]
-						.map(
-							([key, icon, label]) =>
-								`<button type="button" role="tab" class="sfm-tab" data-view="${key}">${sfm_icon(icon, 16)}<span>${label}</span></button>`
-						)
-						.join("")}
-				</div>
-
-				<section class="sfm-panel sfm-report-panel" hidden>
-					<div class="sfm-table-toolbar">
-						<div>
-							<h2 class="sfm-panel-title sfm-report-title"></h2>
-							<div class="sfm-muted sfm-report-caption" aria-live="polite"></div>
-						</div>
-						<div class="sfm-report-tools">
-							<div class="sfm-search-wrap sfm-cert-search" hidden>
-								${sfm_icon("search", 15, "sfm-search-icon")}
-								<input id="sfm-cert-search" type="search" class="sfm-control sfm-control-sm" autocomplete="off"
-									placeholder="${__("Search student / applicant name, ID…")}" aria-label="${__("Search certificates")}">
-							</div>
-							<div class="sfm-page-size">
-								<label for="sfm-report-size">${__("Rows per page")}</label>
-								<div class="sfm-select-wrap">
-									<select id="sfm-report-size" class="sfm-control sfm-control-sm">
-										${SFM_PAGE_SIZES.map((n) => `<option value="${n}">${n}</option>`).join("")}
-									</select>
-									${sfm_icon("chevron-down", 14, "sfm-select-caret")}
-								</div>
-							</div>
-							<button type="button" class="sfm-btn sfm-btn-primary sfm-btn-sm" data-act="export-report">
-								${sfm_icon("download", 14)}<span>${__("Export Excel")}</span>
-							</button>
-						</div>
-					</div>
-					<div class="sfm-table-scroll">
-						<table class="sfm-table sfm-report-table"><thead></thead><tbody></tbody><tfoot></tfoot></table>
-					</div>
-					<footer class="sfm-pager" data-pager="report"></footer>
-				</section>
 
 				<section class="sfm-panel sfm-table-panel" aria-labelledby="sfm-table-title">
 					<div class="sfm-table-toolbar">
@@ -471,9 +196,7 @@ class StudentFeeManagement {
 		this.bind_list_events();
 		this.render_sort_indicators();
 		this.$root.find("#sfm-page-size").val(this.list_state.page_length);
-		this.$root.find("#sfm-report-size").val(this.report_state.page_length);
 		this.load_students();
-		this.set_list_view(this.list_view);
 
 		if (this.filter_options) {
 			this.render_filter_options();
@@ -574,7 +297,6 @@ class StudentFeeManagement {
 		});
 		this.update_dirty();
 		this.load_students();
-		this.reload_report();
 	}
 
 	// Flag the Search button while the filters on screen differ from the ones the table shows.
@@ -606,7 +328,6 @@ class StudentFeeManagement {
 		this.render_filter_options();
 		this.update_dirty();
 		this.load_students();
-		this.reload_report();
 	}
 
 	bind_list_events() {
@@ -625,49 +346,14 @@ class StudentFeeManagement {
 		});
 		$r.on("click", '[data-act="apply"]', () => this.apply_filters());
 		$r.on("click", '[data-act="clear"]', () => this.clear_filters());
-		$r.on("click", '[data-act="refresh"]', () => {
-			this.load_students();
-			this.load_report();
-		});
-		$r.on("click", ".sfm-view-tabs .sfm-tab", (e) => this.set_list_view($(e.currentTarget).data("view")));
-		$r.on("click", '[data-act="export-report"]', () => this.export_report());
-		$r.on("click", "[data-certificate]", (e) => {
-			const row = (this.certificate_rows || []).find((c) => c.name === $(e.currentTarget).data("certificate"));
-			if (row) this.certificate_download_dialog(row);
-		});
-		$r.on("click", "[data-certificate-preview]", (e) => {
-			// PDFs are served inline, so this opens the browser's viewer; the edited copy wins when uploaded.
-			const params = new URLSearchParams({ name: $(e.currentTarget).data("certificate-preview"), file_format: "pdf" });
-			window.open(`/api/method/${SFM_API}download_fee_certificate?${params.toString()}`, "_blank");
-		});
-		$r.on("click", "[data-certificate-upload]", (e) => {
-			const row = (this.certificate_rows || []).find((c) => c.name === $(e.currentTarget).data("certificate-upload"));
-			if (row) this.certificate_upload(row);
-		});
-		$r.on("input", "#sfm-cert-search", (e) => {
-			clearTimeout(this.cert_search_timer);
-			const value = $(e.currentTarget).val();
-			this.cert_search_timer = setTimeout(() => {
-				this.certificate_search = value.trim();
-				this.reload_report();
-			}, 350);
-		});
-		$r.on("click", ".sfm-report-student", (e) => {
+		$r.on("click", '[data-act="refresh"]', () => this.load_students());
+		// Fee Reports / Fee Certificates are their own pages.
+		$r.on("click", "[data-page-link]", (e) => {
 			if (e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1) return;
 			e.preventDefault();
-			frappe.set_route(SFM_PAGE, $(e.currentTarget).data("student"));
-		});
-		$r.on("change", "#sfm-report-size", (e) => {
-			this.report_state.page_length = cint($(e.currentTarget).val()) || 25;
-			this.reload_report();
-		});
-		$r.on("click", '.sfm-pager[data-pager="report"] [data-page]', (e) => {
-			const rs = this.report_state;
-			rs.start = Math.max(0, (cint($(e.currentTarget).data("page")) - 1) * rs.page_length);
-			this.load_report();
+			frappe.set_route($(e.currentTarget).data("page-link"));
 		});
 		$r.on("click", '[data-act="bulk-upload"]', () => this.bulk_upload_dialog());
-		$r.on("click", '[data-act="fee-certificate"]', () => this.fee_certificate_dialog());
 		$r.on("click", '[data-act="retry"]', () => this.load_students());
 
 		$r.on("change", "#sfm-page-size", (e) => {
@@ -720,134 +406,6 @@ class StudentFeeManagement {
 			if (row.receipt_count === 1) this.download_receipt(row.latest_receipt, $btn);
 			else this.receipts_dialog(row);
 		});
-	}
-
-	// ── Fee Certificate ──────────────────────────────────────────────────
-	// Campus students (Student Master) or admission-stage applicants, who only have an
-	// application number and admit card number. Generates the request, then downloads it.
-	async fee_certificate_dialog(defaults = {}) {
-		if (!this.fc_options) {
-			const r = await frappe.call({ method: SFM_API + "get_fee_certificate_options" });
-			this.fc_options = r.message || { purposes: [], academic_years: [] };
-		}
-		const { purposes, academic_years } = this.fc_options;
-		if (!purposes.length) {
-			frappe.msgprint(__("No certificate purposes are enabled. Set them up in Fee Certificate Settings."));
-			return;
-		}
-		const dialog = new frappe.ui.Dialog({
-			title: __("Generate Fee Certificate"),
-			fields: [
-				{
-					fieldname: "certificate_for",
-					fieldtype: "Select",
-					label: __("Certificate For"),
-					options: [
-						{ value: "Campus Student", label: __("Campus Student (ongoing)") },
-						{ value: "Admission Stage", label: __("Admission Stage (applicant)") },
-					],
-					default: "Campus Student",
-					reqd: 1,
-					description: __("Admission stage: applicants with only an application number and admit card number."),
-				},
-				{
-					fieldname: "student",
-					fieldtype: "Link",
-					options: "Student Master",
-					label: __("Student"),
-					default: defaults.student,
-					depends_on: 'eval:doc.certificate_for=="Campus Student"',
-					mandatory_depends_on: 'eval:doc.certificate_for=="Campus Student"',
-				},
-				{
-					fieldname: "applicant",
-					fieldtype: "Link",
-					options: "Applicant",
-					label: __("Applicant"),
-					depends_on: 'eval:doc.certificate_for=="Admission Stage"',
-					mandatory_depends_on: 'eval:doc.certificate_for=="Admission Stage"',
-					onchange: () => {
-						const applicant = dialog.get_value("applicant");
-						if (!applicant) return;
-						frappe.db.get_value("Applicant", applicant, "academic_year").then((r) => {
-							const ay = r.message && r.message.academic_year;
-							if (ay) dialog.set_value("academic_year", ay);
-						});
-					},
-				},
-				{
-					fieldname: "admit_card_number",
-					fieldtype: "Data",
-					label: __("Admit Card Number"),
-					depends_on: 'eval:doc.certificate_for=="Admission Stage"',
-					description: __("Leave blank to use the one from the applicant's entrance test allocation."),
-				},
-				{ fieldtype: "Column Break" },
-				{
-					fieldname: "purpose",
-					fieldtype: "Select",
-					label: __("Purpose"),
-					options: ["", ...purposes.map((p) => p.purpose)],
-					reqd: 1,
-					description: __("The heading and wording of the certificate follow the purpose."),
-				},
-				{
-					fieldname: "academic_year",
-					fieldtype: "Select",
-					label: __("Academic Year"),
-					options: academic_years,
-					default: defaults.academic_year && academic_years.includes(defaults.academic_year) ? defaults.academic_year : academic_years[0],
-					reqd: 1,
-				},
-				{
-					fieldname: "file_format",
-					fieldtype: "Select",
-					label: __("Download As"),
-					options: [
-						{ value: "pdf", label: __("PDF") },
-						{ value: "docx", label: __("Word (.docx) — to edit") },
-					],
-					default: "pdf",
-					reqd: 1,
-					description: __("Edit the Word file, then upload it from the Fee Certificates tab; it is saved as PDF."),
-				},
-				{
-					fieldname: "has_scholarship",
-					fieldtype: "Check",
-					label: __("Deduct University Scholarship"),
-					default: 1,
-					description: __("Shows the scholarship / waiver on the student's dues as a deduction."),
-				},
-			],
-			primary_action_label: __("Generate & Download"),
-			primary_action: async (values) => {
-				dialog.get_primary_btn().prop("disabled", true);
-				try {
-					const { file_format, ...args } = values;
-					const r = await frappe.call({
-						method: SFM_API + "generate_fee_certificate",
-						args,
-						freeze: true,
-						freeze_message: __("Generating certificate…"),
-					});
-					if (r.message) {
-						this.download_certificate_file(r.message, file_format === "docx" ? "docx" : "generated");
-						dialog.hide();
-						if (this.list_view === "certificates") this.load_report();
-						frappe.show_alert({
-							message: __("Certificate {0} generated", [
-								`<a href="${frappe.utils.get_form_link("Fee Certificate Request", r.message)}">${sfm_esc(r.message)}</a>`,
-							]),
-							indicator: "green",
-						});
-					}
-				} finally {
-					dialog.get_primary_btn().prop("disabled", false);
-				}
-			},
-		});
-		dialog.$wrapper.addClass("sfm-dialog");
-		dialog.show();
 	}
 
 	// ── Bulk upload (Fee Demand / Fee Payment / Fee Concession) ──────────
@@ -1085,396 +643,14 @@ class StudentFeeManagement {
 		);
 	}
 
-	// `opts` lets the report tabs reuse this with their own state, pager and wording.
+	// `opts` lets the report views reuse this with their own state, pager and wording.
 	render_pager(total, shown, opts = {}) {
-		const s = opts.state || this.list_state;
-		const $pager = opts.$pager || this.$root.find('.sfm-pager:not([data-pager="report"])');
-		const $caption = opts.$caption || this.$root.find(".sfm-table-caption");
-		const one = opts.one || __("1 student matches the current filters");
-		const many = opts.many || __("{0} students match the current filters");
-		const showing_one = opts.showing_one || __("Showing 1 of 1 student");
-		const showing_many = opts.showing_many || __("Showing {0} to {1} of {2} students");
-		const pages = Math.max(1, Math.ceil(total / s.page_length));
-		const current = Math.floor(s.start / s.page_length) + 1;
-		const from = total ? s.start + 1 : 0;
-		const to = Math.min(s.start + shown, total);
-
-		$caption.text(total ? (total === 1 ? one : many.replace("{0}", sfm_int(total))) : "");
-
-		if (!total) {
-			$pager.empty();
-			return;
-		}
-
-		// 1 … 4 5 [6] 7 8 … 20
-		const nums = new Set([1, pages, current - 1, current, current + 1]);
-		if (current <= 3) [2, 3, 4].forEach((n) => nums.add(n));
-		if (current >= pages - 2) [pages - 1, pages - 2, pages - 3].forEach((n) => nums.add(n));
-		const list = [...nums].filter((n) => n >= 1 && n <= pages).sort((a, b) => a - b);
-
-		let prev = 0;
-		const page_btns = list
-			.map((n) => {
-				const gap = n - prev > 1 ? '<span class="sfm-page-gap" aria-hidden="true">…</span>' : "";
-				prev = n;
-				return (
-					gap +
-					`<button type="button" class="sfm-page-btn ${n === current ? "is-active" : ""}" data-page="${n}"
-						aria-label="${__("Page {0}", [n])}" ${n === current ? 'aria-current="page"' : ""}>${n}</button>`
-				);
-			})
-			.join("");
-		const nav = (page, icon, label, disabled) =>
-			`<button type="button" class="sfm-page-btn sfm-page-nav" data-page="${page}" aria-label="${label}" title="${label}" ${disabled ? "disabled" : ""}>${icon}</button>`;
-
-		$pager.html(`
-			<div class="sfm-muted">${total === 1 ? showing_one : showing_many.replace("{0}", sfm_int(from)).replace("{1}", sfm_int(to)).replace("{2}", sfm_int(total))}</div>
-			<nav class="sfm-pages" aria-label="${__("Pagination")}">
-				${nav(1, sfm_icon("chevrons-left", 15), __("First page"), current === 1)}
-				${nav(current - 1, sfm_icon("chevron-left", 15) + `<span class="sfm-page-label">${__("Previous")}</span>`, __("Previous page"), current === 1)}
-				${page_btns}
-				${nav(current + 1, `<span class="sfm-page-label">${__("Next")}</span>` + sfm_icon("chevron-right", 15), __("Next page"), current === pages)}
-				${nav(pages, sfm_icon("chevrons-right", 15), __("Last page"), current === pages)}
-			</nav>
-		`);
-	}
-
-	// ── Reports (Due Wise / Student Wise Outstanding) ────────────────────
-	set_list_view(view) {
-		this.list_view = view;
-		try {
-			localStorage.setItem("sfm_list_view", view);
-		} catch (e) {
-			// storage blocked — the tab just won't be remembered
-		}
-		this.$root.find(".sfm-view-tabs .sfm-tab").each((_, t) => {
-			const active = $(t).data("view") === view;
-			$(t).toggleClass("active", active).attr("aria-selected", active);
+		sfm_render_pager(total, shown, {
+			state: this.list_state,
+			$pager: this.$root.find('.sfm-pager:not([data-pager="report"])'),
+			$caption: this.$root.find(".sfm-table-caption"),
+			...opts,
 		});
-		const is_report = view !== "students";
-		this.$root.find(".sfm-table-panel").prop("hidden", is_report);
-		this.$root.find(".sfm-report-panel").prop("hidden", !is_report);
-		if (is_report) this.reload_report();
-	}
-
-	reload_report() {
-		this.report_state.start = 0;
-		this.load_report();
-	}
-
-	report_args() {
-		const s = this.list_state;
-		return {
-			academic_year: s.academic_year,
-			academic_term: s.academic_term,
-			programme: s.programme,
-			dues_status: s.dues_status,
-			search: s.search,
-		};
-	}
-
-	async load_report() {
-		const view = this.list_view;
-		if (view === "students" || !this.$root.find(".sfm-report-panel").length) return;
-		const req = ++this.report_req;
-		const rs = this.report_state;
-		const $panel = this.$root.find(".sfm-report-panel");
-		$panel
-			.find(".sfm-report-title")
-			.text(
-				{ due_wise: __("Due Wise Report"), outstanding: __("Student Wise Outstanding Fee"), certificates: __("Fee Certificates") }[view]
-			);
-		// Certificates are PDFs downloaded row by row — no Excel export.
-		$panel.find('[data-act="export-report"]').prop("hidden", view === "certificates");
-		$panel.find(".sfm-cert-search").prop("hidden", view !== "certificates");
-		$panel.find("#sfm-cert-search").val(this.certificate_search || "");
-		$panel.find(".sfm-report-caption").text(__("Loading…"));
-		$panel.find(".sfm-report-table tbody").html(
-			`<tr><td colspan="40"><div class="sfm-empty-state">${sfm_icon("loader", 22, "sfm-spin")}</div></td></tr>`
-		);
-		$panel.find(".sfm-report-table tfoot").empty();
-
-		let result;
-		try {
-			const r = await frappe.call({
-				method:
-					SFM_API +
-					{ due_wise: "get_due_wise_report", outstanding: "get_outstanding_report", certificates: "get_fee_certificates" }[view],
-				args: {
-					...this.report_args(),
-					...(view === "certificates" ? { certificate_search: this.certificate_search || "" } : {}),
-					start: rs.start,
-					page_length: rs.page_length,
-				},
-			});
-			result = r.message;
-		} catch (e) {
-			result = null;
-		}
-		if (req !== this.report_req || view !== this.list_view) return;
-
-		if (!result) {
-			$panel.find(".sfm-report-caption").text("");
-			$panel.find(".sfm-report-table thead").empty();
-			$panel.find(".sfm-report-table tbody").html(
-				`<tr><td><div class="sfm-empty-state"><span class="sfm-empty-icon">${sfm_icon("alert", 22)}</span><div class="sfm-empty-title">${__("Couldn't load the report")}</div></div></td></tr>`
-			);
-			$panel.find('.sfm-pager[data-pager="report"]').empty();
-			return;
-		}
-		if (view === "due_wise") this.render_due_wise(result);
-		else if (view === "certificates") this.render_certificates(result);
-		else this.render_outstanding(result);
-	}
-
-	render_due_wise({ columns, rows, totals }) {
-		const $t = this.$root.find(".sfm-report-table");
-		const cell = (key, is_amount, d) => {
-			const v = d[key];
-			if (is_amount) return `<td class="num">${sfm_money(v)}</td>`;
-			if (key === "student_name")
-				return `<td><a href="/desk/${SFM_PAGE}/${encodeURIComponent(d.student)}" class="sfm-report-student" data-student="${sfm_esc(d.student)}">${sfm_esc(v || d.student)}</a></td>`;
-			if (key === "voucher_number")
-				return `<td><a href="${frappe.utils.get_form_link("Fee Demand", v)}">${sfm_esc(v)}</a></td>`;
-			if (key === "due_status") return `<td>${sfm_badge(v)}</td>`;
-			if (key.endsWith("_date")) return `<td>${sfm_date(v)}</td>`;
-			return `<td class="${key === "remarks" || key === "email" ? "sfm-wrap" : ""}">${sfm_esc(v || "—")}</td>`;
-		};
-		$t.find("thead").html(
-			`<tr>${columns.map(([_k, label, a]) => `<th scope="col" class="${a ? "num" : ""}">${sfm_esc(label)}</th>`).join("")}</tr>`
-		);
-		$t.find("tbody").html(
-			rows.length
-				? rows.map((d) => `<tr>${columns.map(([k, _l, a]) => cell(k, a, d)).join("")}</tr>`).join("")
-				: `<tr><td colspan="${columns.length}"><div class="sfm-empty-state"><span class="sfm-empty-icon">${sfm_icon("search-x", 22)}</span><div class="sfm-empty-title">${__("No dues found")}</div></div></td></tr>`
-		);
-		const first_amount = columns.findIndex((c) => c[2]);
-		$t.find("tfoot").html(
-			rows.length
-				? `<tr class="sfm-report-total"><td colspan="${first_amount}">${__("Total (all matching dues)")}</td>${columns
-						.slice(first_amount)
-						.map(([k, _l, a]) => (a ? `<td class="num">${sfm_money(totals[k])}</td>` : "<td></td>"))
-						.join("")}</tr>`
-				: ""
-		);
-		this.render_pager(cint(totals.row_count), rows.length, {
-			state: this.report_state,
-			$pager: this.$root.find('.sfm-pager[data-pager="report"]'),
-			$caption: this.$root.find(".sfm-report-caption"),
-			one: __("1 due matches the current filters"),
-			many: __("{0} dues match the current filters"),
-			showing_one: __("Showing 1 of 1 due"),
-			showing_many: __("Showing {0} to {1} of {2} dues"),
-		});
-	}
-
-	render_outstanding({ components, rows, count, totals }) {
-		const $t = this.$root.find(".sfm-report-table");
-		const amount = (v) => (flt(v) ? sfm_money(v) : '<span class="sfm-sub">0</span>');
-		$t.find("thead").html(`<tr>
-			<th scope="col" class="num">${__("Sl. No.")}</th>
-			<th scope="col">${__("Student ID")}</th>
-			<th scope="col">${__("Student Name")}</th>
-			<th scope="col">${__("Student Email ID")}</th>
-			<th scope="col">${__("Academic Status")}</th>
-			${components.map((c) => `<th scope="col" class="num">${sfm_esc(c)}</th>`).join("")}
-			<th scope="col" class="num">${__("Total Outstanding Fee")}</th>
-		</tr>`);
-		$t.find("tbody").html(
-			rows.length
-				? rows
-						.map(
-							(d, i) => `<tr>
-					<td class="num">${this.report_state.start + i + 1}</td>
-					<td>${sfm_esc(d.student_id)}</td>
-					<td><a href="/desk/${SFM_PAGE}/${encodeURIComponent(d.student)}" class="sfm-report-student" data-student="${sfm_esc(d.student)}">${sfm_esc(d.student_name || d.student)}</a></td>
-					<td class="sfm-wrap">${sfm_esc(d.email || "—")}</td>
-					<td>${sfm_esc(d.academic_status || "—")}</td>
-					${components.map((c) => `<td class="num">${amount(d.amounts[c])}</td>`).join("")}
-					<td class="num sfm-amount-strong">${sfm_money(d.total)}</td>
-				</tr>`
-						)
-						.join("")
-				: `<tr><td colspan="${components.length + 6}"><div class="sfm-empty-state"><span class="sfm-empty-icon">${sfm_icon("search-x", 22)}</span><div class="sfm-empty-title">${__("No students found")}</div></div></td></tr>`
-		);
-		$t.find("tfoot").html(
-			rows.length
-				? `<tr class="sfm-report-total"><td colspan="5">${__("Total (all matching students)")}</td>${components
-						.map((c) => `<td class="num">${sfm_money(totals[c])}</td>`)
-						.join("")}<td class="num">${sfm_money(totals.total)}</td></tr>`
-				: ""
-		);
-		this.render_pager(cint(count), rows.length, {
-			state: this.report_state,
-			$pager: this.$root.find('.sfm-pager[data-pager="report"]'),
-			$caption: this.$root.find(".sfm-report-caption"),
-		});
-	}
-
-	render_certificates({ rows, count }) {
-		this.certificate_rows = rows;
-		const $t = this.$root.find(".sfm-report-table");
-		$t.find("thead").html(`<tr>
-			<th scope="col">${__("Certificate No.")}</th>
-			<th scope="col">${__("Name")}</th>
-			<th scope="col">${__("Certificate For")}</th>
-			<th scope="col">${__("Purpose")}</th>
-			<th scope="col">${__("Academic Year")}</th>
-			<th scope="col">${__("Generated On")}</th>
-			<th scope="col">${__("Generated By")}</th>
-			<th scope="col" class="center">${__("Preview")}</th>
-			<th scope="col" class="center">${__("Download")}</th>
-			<th scope="col" class="center">${__("Upload Edited")}</th>
-		</tr>`);
-		$t.find("tfoot").empty();
-		$t.find("tbody").html(
-			rows.length
-				? rows
-						.map((d) => {
-							const name = d.student
-								? `<a href="/desk/${SFM_PAGE}/${encodeURIComponent(d.student)}" class="sfm-report-student" data-student="${sfm_esc(d.student)}">${sfm_esc(d.student_name || d.student)}</a>`
-								: `<a href="${frappe.utils.get_form_link("Applicant", d.applicant)}">${sfm_esc(d.student_name || d.applicant)}</a>`;
-							const ids = [d.person_id, d.admit_card_number ? __("Admit card {0}", [d.admit_card_number]) : ""]
-								.filter(Boolean)
-								.map(sfm_esc)
-								.join(" · ");
-							const is_applicant = d.certificate_for === "Admission Stage";
-							return `<tr>
-								<td><a class="sfm-strong" href="${frappe.utils.get_form_link("Fee Certificate Request", d.name)}">${sfm_esc(d.name)}</a></td>
-								<td>${name}<div class="sfm-sub">${ids}</div></td>
-								<td>${sfm_badge(is_applicant ? "Pending" : "Active", is_applicant ? __("Applicant") : __("Campus Student"))}</td>
-								<td class="sfm-wrap">${sfm_esc(d.purpose)}</td>
-								<td>${sfm_esc(d.academic_year || "—")}</td>
-								<td class="sfm-nowrap">${sfm_datetime(d.generated_on || d.creation)}</td>
-								<td>${sfm_esc(d.source === "Student Portal" ? __("Student (portal)") : d.owner)}</td>
-								<td class="center"><button type="button" class="sfm-icon-btn" data-certificate-preview="${sfm_esc(d.name)}"
-									aria-label="${sfm_esc(__("Preview certificate {0}", [d.name]))}"
-									title="${sfm_esc(d.edited_certificate ? __("Preview (edited PDF)") : __("Preview"))}">${sfm_icon("eye", 16)}</button></td>
-								<td class="center"><button type="button" class="sfm-icon-btn" data-certificate="${sfm_esc(d.name)}"
-									aria-label="${sfm_esc(__("Download certificate {0}", [d.name]))}" title="${__("Download Certificate")}">${sfm_icon("download", 16)}</button></td>
-								<td class="center">
-									<button type="button" class="sfm-icon-btn" data-certificate-upload="${sfm_esc(d.name)}"
-										aria-label="${sfm_esc(__("Upload edited PDF for {0}", [d.name]))}"
-										title="${sfm_esc(d.edited_certificate ? __("Edited certificate uploaded {0} — click to replace or remove", [sfm_datetime(d.edited_on)]) : __("Upload edited certificate (Word or PDF — saved as PDF)"))}">${sfm_icon("upload", 16)}</button>
-									${d.edited_certificate ? `<div class="sfm-sub">${sfm_badge("Paid", __("Edited"))}</div>` : ""}
-								</td>
-							</tr>`;
-						})
-						.join("")
-				: `<tr><td colspan="10"><div class="sfm-empty-state"><span class="sfm-empty-icon">${sfm_icon("search-x", 22)}</span><div class="sfm-empty-title">${__("No certificates found")}</div><div class="sfm-muted">${__("Use the Fee Certificate button above to generate one.")}</div></div></td></tr>`
-		);
-		this.render_pager(cint(count), rows.length, {
-			state: this.report_state,
-			$pager: this.$root.find('.sfm-pager[data-pager="report"]'),
-			$caption: this.$root.find(".sfm-report-caption"),
-			one: __("1 certificate matches the current filters"),
-			many: __("{0} certificates match the current filters"),
-			showing_one: __("Showing 1 of 1 certificate"),
-			showing_many: __("Showing {0} to {1} of {2} certificates"),
-		});
-	}
-
-	// Saves the file (a PDF would otherwise just open in the browser's viewer).
-	download_certificate_file(name, file_format = "pdf") {
-		const params = new URLSearchParams({ name, file_format });
-		const a = document.createElement("a");
-		a.href = `/api/method/${SFM_API}download_fee_certificate?${params.toString()}`;
-		a.download = "";
-		document.body.appendChild(a);
-		a.click();
-		a.remove();
-	}
-
-	// Pick PDF / Word; when an edited PDF was uploaded it is the default.
-	certificate_download_dialog(row) {
-		const options = [
-			...(row.edited_certificate ? [{ value: "pdf", label: __("Edited PDF (uploaded {0})", [sfm_date(row.edited_on)]) }] : []),
-			{ value: "generated", label: row.edited_certificate ? __("Generated PDF (without edits)") : __("PDF") },
-			{ value: "docx", label: __("Word (.docx) — to edit") },
-		];
-		const dialog = new frappe.ui.Dialog({
-			title: __("Download {0}", [row.name]),
-			fields: [
-				{ fieldname: "file_format", fieldtype: "Select", label: __("Download As"), options, default: options[0].value, reqd: 1 },
-			],
-			primary_action_label: __("Download"),
-			primary_action: ({ file_format }) => {
-				dialog.hide();
-				this.download_certificate_file(row.name, file_format);
-			},
-		});
-		dialog.$wrapper.addClass("sfm-dialog");
-		dialog.show();
-	}
-
-	// Staff edit the Word version, save it as PDF and attach it here; it then replaces
-	// the generated certificate on every download (desk and student portal).
-	certificate_upload(row) {
-		const save = (file_url) =>
-			frappe
-				.call({
-					method: SFM_API + "set_edited_certificate",
-					args: { name: row.name, file_url },
-					freeze: true,
-					freeze_message: __("Saving certificate as PDF…"),
-				})
-				.then((r) => {
-					frappe.show_alert({
-						message: !file_url
-							? __("Edited certificate removed from {0}", [row.name])
-							: r.message && r.message.converted
-							? __("Word file converted and saved as PDF for {0}", [row.name])
-							: __("Edited PDF attached to {0}", [row.name]),
-						indicator: "green",
-					});
-					this.load_report();
-				});
-		const upload = () =>
-			new frappe.ui.FileUploader({
-				doctype: "Fee Certificate Request",
-				docname: row.name,
-				folder: "Home/Attachments",
-				make_attachments_public: 0,
-				restrictions: { allowed_file_types: [".pdf", ".docx"], max_number_of_files: 1 },
-				on_success: (file) => {
-					const url = (file.file_url || "").toLowerCase();
-					if (!url.endsWith(".pdf") && !url.endsWith(".docx")) {
-						frappe.msgprint(__("Please upload the certificate as a PDF or Word (.docx) file."));
-						return;
-					}
-					save(file.file_url);
-				},
-			});
-		if (!row.edited_certificate) return upload();
-		const dialog = new frappe.ui.Dialog({
-			title: __("Edited PDF — {0}", [row.name]),
-			fields: [
-				{
-					fieldtype: "HTML",
-					options: `<p class="sfm-muted">${__("An edited PDF was uploaded on {0}. Downloads give this file instead of the generated certificate.", [sfm_date(row.edited_on)])}</p>`,
-				},
-			],
-			primary_action_label: __("Replace PDF"),
-			primary_action: () => {
-				dialog.hide();
-				upload();
-			},
-			secondary_action_label: __("Remove Edited PDF"),
-			secondary_action: () => {
-				dialog.hide();
-				frappe.confirm(__("Remove the edited PDF? Downloads will go back to the generated certificate."), () => save(null));
-			},
-		});
-		dialog.$wrapper.addClass("sfm-dialog");
-		dialog.show();
-	}
-
-	export_report() {
-		const params = new URLSearchParams({ report: this.list_view });
-		Object.entries(this.report_args()).forEach(([k, v]) => {
-			if (Array.isArray(v) ? v.length : v) params.append(k, Array.isArray(v) ? JSON.stringify(v) : v);
-		});
-		window.open(`/api/method/${SFM_API}export_report?${params.toString()}`);
 	}
 
 	// ── Receipts ─────────────────────────────────────────────────────────
@@ -1641,7 +817,11 @@ class StudentFeeManagement {
 		this.$root.find('[data-act="refresh-student"]').on("click", () => this.show_student(p.name));
 		this.$root
 			.find('[data-act="fee-certificate-student"]')
-			.on("click", () => this.fee_certificate_dialog({ student: p.name, academic_year: p.academic_year }));
+			.on("click", () => {
+				// The Fee Certificates page opens its Generate dialog for this student.
+				frappe.route_options = { generate_for: p.name, academic_year: p.academic_year };
+				frappe.set_route("fee-certificates");
+			});
 		this.$root.find(".sfm-tab").on("click", (e) => {
 			this.detail_tab = $(e.currentTarget).data("tab");
 			this.render_tab();
@@ -1694,6 +874,8 @@ class StudentFeeManagement {
 				<h2 class="sfm-section-title sfm-sr-only">${__("Manage Dues")}</h2>
 				<div class="sfm-actions">
 					<button type="button" class="sfm-btn sfm-btn-secondary" data-act="refund">${sfm_icon("undo", 15)}<span>${__("Issue Refund")}</span></button>
+					<button type="button" class="sfm-btn sfm-btn-secondary" data-act="refund-excess"
+						title="${sfm_esc(__("Available excess: {0}", [sfm_money(this.detail.summary.excess_amount)]))}">${sfm_icon("wallet", 15)}<span>${__("Refund from Excess")}</span></button>
 					<button type="button" class="sfm-btn sfm-btn-primary" data-act="create">${sfm_icon("plus", 15)}<span>${__("Create a due")}</span></button>
 				</div>
 			</div>
@@ -2012,6 +1194,10 @@ class StudentFeeManagement {
 				frappe.new_doc("Fee Refund", { student: p.name, refund_date: frappe.datetime.get_today() });
 				break;
 
+			case "refund-excess":
+				this.refund_excess_dialog();
+				break;
+
 			case "multi-pay": {
 				const payable = (sel.length ? sel : this.detail.demands).filter(SFM_PAYABLE);
 				if (!payable.length) {
@@ -2228,6 +1414,71 @@ class StudentFeeManagement {
 	}
 
 	// Paid money on a due → student's excess (a new Student Credit Note).
+	// Pay the student back out of their excess (active credit notes, oldest first).
+	async refund_excess_dialog() {
+		const p = this.detail.profile;
+		const excess = flt(this.detail.summary.excess_amount);
+		if (excess <= 0) return frappe.msgprint(__("{0} has no excess amount to refund.", [sfm_esc(p.first_name || p.name)]));
+
+		const bank = (await frappe.call({ method: SFM_API + "get_refund_bank_details", args: { student: p.name } })).message || {};
+		const needs_bank = (mode) => ["NEFT", "Cheque", "Online"].includes(mode);
+		const dialog = new frappe.ui.Dialog({
+			title: __("Refund from Excess"),
+			fields: [
+				{
+					fieldtype: "HTML",
+					fieldname: "info",
+					options: `<div class="sfm-move-summary">
+						<div><span class="sfm-muted">${__("Student")}</span><b>${sfm_esc(p.first_name || p.name)}</b></div>
+						<div><span class="sfm-muted">${__("Available Excess")}</span><b>${sfm_money(excess)}</b></div>
+					</div>
+					<p class="sfm-muted">${__("The refund is taken from the student's excess, oldest credit first. Cancelling the Fee Refund later puts the amount back into excess.")}</p>`,
+				},
+				{ fieldtype: "Currency", fieldname: "amount", label: __("Refund Amount"), reqd: 1, default: excess, options: "INR" },
+				{ fieldtype: "Date", fieldname: "refund_date", label: __("Refund Date"), reqd: 1, default: frappe.datetime.get_today() },
+				{
+					fieldtype: "Select",
+					fieldname: "refund_mode",
+					label: __("Refund Mode"),
+					reqd: 1,
+					options: ["NEFT", "Online", "Cheque", "Cash"],
+					default: "NEFT",
+					onchange: () => {
+						const req = needs_bank(dialog.get_value("refund_mode"));
+						["bank_name", "account_number", "ifsc_code"].forEach((f) => dialog.set_df_property(f, "reqd", req));
+					},
+				},
+				{ fieldtype: "Column Break" },
+				{ fieldtype: "Data", fieldname: "bank_name", label: __("Bank Name"), default: bank.bank_name, reqd: 1 },
+				{ fieldtype: "Data", fieldname: "account_number", label: __("Account Number"), default: bank.account_number, reqd: 1 },
+				{ fieldtype: "Data", fieldname: "ifsc_code", label: __("IFSC Code"), default: bank.ifsc_code, reqd: 1 },
+				{ fieldtype: "Data", fieldname: "utr_number", label: __("UTR / Reference No.") },
+				{ fieldtype: "Date", fieldname: "transaction_date", label: __("Transaction Date") },
+				{ fieldtype: "Section Break" },
+				{ fieldtype: "Small Text", fieldname: "remarks", label: __("Remarks"), reqd: 1 },
+			],
+			primary_action_label: __("Refund"),
+			primary_action: (v) => {
+				const amount = flt(v.amount);
+				if (amount <= 0 || amount > excess) return frappe.msgprint(__("Amount must be between 0 and {0}.", [sfm_money(excess)]));
+				if (!(v.remarks || "").trim()) return frappe.msgprint(__("Remarks are mandatory."));
+				frappe.confirm(__("Refund <b>{0}</b> from {1}'s excess?", [sfm_money(amount), sfm_esc(p.first_name || p.name)]), async () => {
+					const r = await frappe.call({
+						method: SFM_API + "refund_from_excess",
+						args: { student: p.name, ...v },
+						freeze: true,
+						freeze_message: __("Recording refund…"),
+					});
+					dialog.hide();
+					frappe.show_alert({ message: __("{0} refunded from excess · {1}", [sfm_money(amount), r.message.fee_refund]), indicator: "green" }, 7);
+					this.show_student(p.name);
+				});
+			},
+		});
+		dialog.$wrapper.addClass("sfm-dialog");
+		dialog.show();
+	}
+
 	move_to_excess_dialog(d) {
 		const paid = flt(d.paid_amount);
 		if (d.status === "Cancelled") return frappe.msgprint(__("{0} is cancelled.", [d.name]));
@@ -2623,377 +1874,5 @@ class StudentFeeManagement {
 		});
 		dialog.$wrapper.addClass("sfm-dialog");
 		dialog.show();
-	}
-
-	// ─────────────────────────────────────────────────────────────────────
-	inject_styles() {
-		if (document.getElementById("sfm-styles")) return;
-		const css = `
-		/* ── Tokens ── */
-		.sfm, .sfm-dialog {
-			--sfm-primary: #920C24;
-			--sfm-primary-hover: #7A0A1E;
-			--sfm-primary-text: #920C24;
-			--sfm-primary-soft: rgba(146, 12, 36, .05);
-			--sfm-primary-tint: rgba(146, 12, 36, .09);
-			--sfm-bg: #F8F8F8;
-			--sfm-card: #FFFFFF;
-			--sfm-subtle: #FAFAFA;
-			--sfm-border: #E5E5E5;
-			--sfm-border-strong: #D4D4D4;
-			--sfm-text: #222222;
-			--sfm-muted: #6B7280;
-			--sfm-success: #15803D; --sfm-success-bg: #F0FDF4; --sfm-success-bd: #BBF7D0;
-			--sfm-warning: #C2410C; --sfm-warning-bg: #FFF7ED; --sfm-warning-bd: #FED7AA;
-			--sfm-amber: #854D0E;   --sfm-amber-bg: #FEFCE8;   --sfm-amber-bd: #FDE68A;
-			--sfm-danger: #B42318;  --sfm-danger-bg: #FEF3F2;  --sfm-danger-bd: #FECDCA;
-			--sfm-violet: #6B21A8;  --sfm-violet-bg: #FAF5FF;  --sfm-violet-bd: #E9D5FF;
-			--sfm-font: 'Merriweather', Georgia, 'Times New Roman', serif;
-			--sfm-radius: 8px;
-			--sfm-shadow: 0 1px 2px rgba(16, 24, 40, .04);
-		}
-		[data-theme="dark"] .sfm, [data-theme="dark"] .sfm-dialog {
-			--sfm-primary-text: #F2899B;
-			--sfm-primary-soft: rgba(242, 137, 155, .07);
-			--sfm-primary-tint: rgba(242, 137, 155, .13);
-			--sfm-bg: #141414; --sfm-card: #1C1C1C; --sfm-subtle: #232323;
-			--sfm-border: #2E2E2E; --sfm-border-strong: #3A3A3A;
-			--sfm-text: #EDEDED; --sfm-muted: #A1A1AA;
-			--sfm-success: #4ADE80; --sfm-success-bg: rgba(74,222,128,.08); --sfm-success-bd: rgba(74,222,128,.3);
-			--sfm-warning: #FB923C; --sfm-warning-bg: rgba(251,146,60,.08); --sfm-warning-bd: rgba(251,146,60,.3);
-			--sfm-amber: #FACC15;   --sfm-amber-bg: rgba(250,204,21,.08);   --sfm-amber-bd: rgba(250,204,21,.3);
-			--sfm-danger: #F87171;  --sfm-danger-bg: rgba(248,113,113,.08); --sfm-danger-bd: rgba(248,113,113,.3);
-			--sfm-violet: #C084FC;  --sfm-violet-bg: rgba(192,132,252,.08); --sfm-violet-bd: rgba(192,132,252,.3);
-		}
-
-		/* ── Page frame: let the dashboard use the width, centred at 1600px ── */
-		.sfm-page .page-head .container, .sfm-page .page-body.container { max-width: 1664px; }
-		.sfm-page .page-body, .sfm-page .layout-main-section-wrapper, .sfm-page .layout-main-section { background: transparent; }
-		.sfm-page .layout-main-section { border: none; box-shadow: none; }
-		.sfm-page .navbar-breadcrumbs, .sfm-page .title-area .title-text { font-family: var(--sfm-font, 'Merriweather', Georgia, serif); font-size: 13px; font-weight: 400; }
-
-		.sfm { font-family: var(--sfm-font); color: var(--sfm-text); font-size: 13px; line-height: 1.55; }
-		.sfm button, .sfm input, .sfm select, .sfm-dialog, .sfm-dialog button, .sfm-dialog input, .sfm-dialog select, .sfm-dialog textarea { font-family: var(--sfm-font); }
-		.sfm-shell { max-width: 1600px; margin: 0 auto; padding: 8px 16px 40px; display: flex; flex-direction: column; gap: 20px; container: sfm / inline-size; }
-		.sfm-icon { flex: none; display: inline-block; vertical-align: middle; }
-		.sfm-spin { animation: sfm-spin .8s linear infinite; }
-		@keyframes sfm-spin { to { transform: rotate(360deg); } }
-
-		/* ── Header ── */
-		.sfm-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-		.sfm-title { font-family: var(--sfm-font); font-size: 24px; font-weight: 700; line-height: 1.3; margin: 0; color: var(--sfm-text); letter-spacing: -.01em; }
-		.sfm-subtitle { margin: 4px 0 0; font-size: 13px; color: var(--sfm-muted); }
-		.sfm-back { align-self: flex-start; margin-bottom: -4px; text-decoration: none !important; color: var(--sfm-primary-text) !important; }
-
-		/* ── Buttons ── */
-		.sfm-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 36px; padding: 0 16px; border-radius: 6px; font-size: 13px; font-weight: 500; line-height: 1; border: 1px solid transparent; cursor: pointer; white-space: nowrap; transition: background-color .15s, border-color .15s, color .15s, box-shadow .15s; }
-		.sfm-btn:focus-visible, .sfm-icon-btn:focus-visible, .sfm-page-btn:focus-visible, .sfm-sort:focus-visible, .sfm-chip:focus-visible, .sfm-tab:focus-visible, .sfm-student-link:focus-visible { outline: 2px solid var(--sfm-primary); outline-offset: 2px; }
-		.sfm-btn:disabled { opacity: .6; cursor: default; }
-		.sfm-btn-primary { background: var(--sfm-primary); border-color: var(--sfm-primary); color: #fff !important; }
-		.sfm-btn-primary:hover:not(:disabled) { background: var(--sfm-primary-hover); border-color: var(--sfm-primary-hover); }
-		.sfm-btn-secondary { background: var(--sfm-card); border-color: var(--sfm-primary); color: var(--sfm-primary-text); }
-		.sfm-btn-secondary:hover:not(:disabled) { background: var(--sfm-primary-soft); }
-		.sfm-btn-ghost { background: transparent; color: var(--sfm-primary-text); border-color: var(--sfm-border); }
-		.sfm-btn-ghost:hover { background: var(--sfm-primary-soft); border-color: var(--sfm-primary); }
-		.sfm-btn-sm { height: 30px; padding: 0 12px; font-size: 12px; gap: 6px; }
-		.sfm-btn.dropdown-toggle::after { margin-left: 2px; }
-
-		/* ── Panels ── */
-		.sfm-panel { background: var(--sfm-card); border: 1px solid var(--sfm-border); border-radius: var(--sfm-radius); box-shadow: var(--sfm-shadow); }
-		.sfm-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 20px; border-bottom: 1px solid var(--sfm-border); }
-		.sfm-panel-title { display: flex; align-items: center; gap: 8px; margin: 0; font-family: var(--sfm-font); font-size: 15px; font-weight: 600; color: var(--sfm-text); }
-		.sfm-panel-title .sfm-icon { color: var(--sfm-primary-text); }
-		.sfm-muted { color: var(--sfm-muted); font-size: 12px; }
-		.sfm-sub { color: var(--sfm-muted); font-size: 12px; line-height: 1.5; }
-		.sfm-strong { font-weight: 600; }
-		.sfm-link { color: var(--sfm-primary-text) !important; font-weight: 500; }
-		.sfm-link:hover { text-decoration: underline; }
-
-		/* ── Filters ── */
-		.sfm-filter-grid { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(0,1.6fr) minmax(0,1fr) minmax(0,1.6fr) auto; gap: 16px; padding: 16px 20px 20px; }
-		.sfm-search-action { justify-content: flex-end; }
-		.sfm-search-btn { height: 38px; position: relative; }
-		.sfm-search-btn.is-dirty::after { content: ""; position: absolute; top: -4px; right: -4px; width: 10px; height: 10px; border-radius: 50%; background: #F59E0B; border: 2px solid var(--sfm-card); }
-		.sfm-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-		.sfm-field label, .sfm-page-size label { font-size: 12px; font-weight: 600; color: var(--sfm-text); margin: 0; }
-		.sfm-control { width: 100%; height: 38px; border: 1px solid var(--sfm-border-strong); border-radius: 6px; padding: 0 12px; font-size: 13px; background: var(--sfm-card); color: var(--sfm-text); transition: border-color .15s, box-shadow .15s; }
-		.sfm-control:hover { border-color: #A3A3A3; }
-		.sfm-control:focus { outline: none; border-color: var(--sfm-primary); box-shadow: 0 0 0 3px var(--sfm-primary-tint); }
-		.sfm-control-sm { height: 32px; width: auto; min-width: 72px; }
-		.sfm-select-wrap, .sfm-search-wrap { position: relative; }
-		.sfm-select-wrap select { appearance: none; -webkit-appearance: none; padding-right: 32px; text-overflow: ellipsis; }
-		.sfm-select-caret { position: absolute; right: 11px; top: 50%; transform: translateY(-50%); color: var(--sfm-muted); pointer-events: none; }
-		.sfm-search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--sfm-muted); pointer-events: none; }
-		.sfm-search-wrap input { padding-left: 36px; }
-
-		/* ── Multi-select ── */
-		.sfm-ms { position: relative; }
-		.sfm-ms-trigger { display: flex; align-items: center; gap: 8px; text-align: left; cursor: pointer; }
-		.sfm-ms-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-		.sfm-ms-trigger.has-value { border-color: var(--sfm-primary); background: var(--sfm-primary-soft); color: var(--sfm-primary-text); font-weight: 600; }
-		.sfm-ms-caret { color: var(--sfm-muted); transition: transform .15s; }
-		.sfm-ms-trigger[aria-expanded="true"] .sfm-ms-caret { transform: rotate(180deg); }
-		.sfm-ms-trigger[aria-expanded="true"] { border-color: var(--sfm-primary); box-shadow: 0 0 0 3px var(--sfm-primary-tint); }
-		.sfm-ms-panel { position: absolute; top: calc(100% + 4px); left: 0; width: 100%; min-width: 240px; z-index: 40; background: var(--sfm-card); border: 1px solid var(--sfm-border); border-radius: var(--sfm-radius); box-shadow: 0 10px 28px rgba(16, 24, 40, .14); padding: 8px; }
-		.sfm-ms-panel[hidden] { display: none; }
-		.sfm-ms-search { position: relative; margin-bottom: 8px; }
-		.sfm-ms-search .sfm-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--sfm-muted); pointer-events: none; }
-		.sfm-ms-filter { width: 100%; height: 32px; border: 1px solid var(--sfm-border-strong); border-radius: 6px; padding: 0 10px 0 30px; font-size: 12px; background: var(--sfm-card); color: var(--sfm-text); }
-		.sfm-ms-filter:focus { outline: none; border-color: var(--sfm-primary); box-shadow: 0 0 0 3px var(--sfm-primary-tint); }
-		.sfm-ms-actions { display: flex; justify-content: space-between; gap: 8px; padding: 0 4px 8px; margin-bottom: 4px; border-bottom: 1px solid var(--sfm-border); }
-		.sfm-ms-actions button { background: none; border: none; padding: 2px 4px; border-radius: 4px; font-size: 12px; font-weight: 600; color: var(--sfm-primary-text); cursor: pointer; }
-		.sfm-ms-actions button:hover { background: var(--sfm-primary-soft); }
-		.sfm-ms-actions button:focus-visible { outline: 2px solid var(--sfm-primary); outline-offset: 1px; }
-		.sfm-ms-list { max-height: 240px; overflow-y: auto; }
-		.sfm-field .sfm-ms-option { display: flex; align-items: flex-start; gap: 8px; padding: 8px; margin: 0; border-radius: 6px; font-size: 13px; font-weight: 400; color: var(--sfm-text); cursor: pointer; }
-		.sfm-ms-option:hover { background: var(--sfm-primary-soft); }
-		.sfm-ms-option input { accent-color: var(--sfm-primary); width: 15px; height: 15px; margin-top: 2px; flex: none; }
-		.sfm-ms-empty { padding: 12px 8px; text-align: center; font-size: 12px; color: var(--sfm-muted); }
-
-		/* ── KPI cards ── */
-		.sfm-kpi-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px; transition: opacity .15s; }
-		.sfm-kpi-grid.is-refreshing { opacity: .6; }
-		.sfm-kpi-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 16px; }
-		.sfm-kpi { display: flex; align-items: center; gap: 12px; min-height: 84px; padding: 16px; background: var(--sfm-card); border: 1px solid var(--sfm-border); border-radius: var(--sfm-radius); box-shadow: var(--sfm-shadow); transition: border-color .15s, box-shadow .15s; min-width: 0; }
-		.sfm-kpi:hover { border-color: var(--sfm-border-strong); box-shadow: 0 4px 12px rgba(16, 24, 40, .06); }
-		.sfm-kpi-icon { width: 40px; height: 40px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; flex: none; background: var(--sfm-subtle); color: var(--sfm-muted); border: 1px solid var(--sfm-border); }
-		.sfm-kpi-body { min-width: 0; }
-		.sfm-kpi-label { font-size: 12px; color: var(--sfm-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-		.sfm-kpi-value { font-size: 18px; font-weight: 700; line-height: 1.35; margin-top: 2px; color: var(--sfm-text); font-variant-numeric: tabular-nums lining-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-		.sfm-kpi-primary .sfm-kpi-icon { background: var(--sfm-primary-soft); color: var(--sfm-primary-text); border-color: var(--sfm-primary-tint); }
-		.sfm-kpi-primary .sfm-kpi-value { color: var(--sfm-primary-text); }
-		.sfm-kpi-success .sfm-kpi-icon { background: var(--sfm-success-bg); color: var(--sfm-success); border-color: var(--sfm-success-bd); }
-		.sfm-kpi-success .sfm-kpi-value { color: var(--sfm-success); }
-		.sfm-kpi-warning .sfm-kpi-icon { background: var(--sfm-warning-bg); color: var(--sfm-warning); border-color: var(--sfm-warning-bd); }
-		.sfm-kpi-warning .sfm-kpi-value { color: var(--sfm-warning); }
-		.sfm-kpi-danger .sfm-kpi-icon { background: var(--sfm-danger-bg); color: var(--sfm-danger); border-color: var(--sfm-danger-bd); }
-		.sfm-kpi-danger .sfm-kpi-value { color: var(--sfm-danger); }
-
-		/* ── Skeletons ── */
-		.sfm-skel { display: block; height: 12px; border-radius: 4px; background: linear-gradient(90deg, var(--sfm-border) 25%, var(--sfm-subtle) 50%, var(--sfm-border) 75%); background-size: 200% 100%; animation: sfm-shimmer 1.2s ease-in-out infinite; }
-		.sfm-skel + .sfm-skel { margin-top: 8px; }
-		.sfm-skel-sm { height: 9px; }
-		.sfm-skel-value { width: 110px; height: 18px; margin-top: 4px; }
-		td.num .sfm-skel { margin-left: auto; }
-		td.center .sfm-skel { margin: 0 auto; height: 28px; border-radius: 6px; }
-		@keyframes sfm-shimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
-		@media (prefers-reduced-motion: reduce) { .sfm-skel, .sfm-spin { animation: none; } }
-
-		/* ── Table ── */
-		.sfm-table-panel { overflow: visible; }
-		.sfm-table-panel > .sfm-table-scroll:last-child { border-radius: 0 0 var(--sfm-radius) var(--sfm-radius); }
-		.sfm-table-panel > .sfm-table-scroll:first-child { border-radius: var(--sfm-radius) var(--sfm-radius) 0 0; }
-		.sfm-table-panel > .sfm-table-scroll:only-child { border-radius: var(--sfm-radius); }
-		.sfm .dropdown-menu { z-index: 1050; }
-		.sfm-table-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 20px; border-bottom: 1px solid var(--sfm-border); }
-		.sfm-table-caption { margin-top: 2px; }
-		.sfm-page-size { display: flex; align-items: center; gap: 8px; }
-		.sfm-page-size label { font-weight: 400; color: var(--sfm-muted); }
-		.sfm-table-scroll { overflow: auto; max-height: min(72vh, 920px); }
-		.sfm-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; }
-		.sfm-student-table { min-width: 1080px; }
-		.sfm-student-table td:first-child { min-width: 200px; max-width: 250px; }
-		.sfm-student-table td.sfm-wrap { min-width: 130px; }
-		.sfm-student-table td.sfm-batch { min-width: 70px; }
-		.sfm-student-table th, .sfm-student-table td { padding-left: 12px; padding-right: 12px; }
-		.sfm-student-table .sfm-sort { gap: 4px; }
-		/* Receipt column stays pinned to the right edge while the table scrolls sideways */
-		.sfm-student-table th:last-child, .sfm-student-table td:last-child { position: sticky; right: 0; background: var(--sfm-card); box-shadow: -1px 0 0 var(--sfm-border); }
-		.sfm-student-table thead th:last-child { z-index: 2; background: var(--sfm-subtle); }
-		.sfm-dues-table th.sfm-receipt-th, .sfm-dues-table td.sfm-receipt-cell { position: sticky; right: 0; background: var(--sfm-card); box-shadow: -1px 0 0 var(--sfm-border); }
-		.sfm-dues-table thead th.sfm-receipt-th { z-index: 2; background: var(--sfm-subtle); }
-		.sfm-dues-table tbody tr[data-name]:hover td.sfm-receipt-cell { background: linear-gradient(var(--sfm-primary-soft), var(--sfm-primary-soft)), var(--sfm-card); }
-		.sfm-dues-table tr.selected td.sfm-receipt-cell { background: linear-gradient(var(--sfm-primary-tint), var(--sfm-primary-tint)), var(--sfm-card); }
-		.sfm-student-row:hover td:last-child { background: linear-gradient(var(--sfm-primary-soft), var(--sfm-primary-soft)), var(--sfm-card); }
-		.sfm-table thead th { position: sticky; top: 0; z-index: 1; background: var(--sfm-subtle); color: var(--sfm-text); font-family: var(--sfm-font); font-weight: 600; font-size: 12px; padding: 12px 14px; text-align: left; white-space: nowrap; border-bottom: 2px solid var(--sfm-primary); }
-		.sfm-table td { padding: 14px; border-bottom: 1px solid var(--sfm-border); vertical-align: top; color: var(--sfm-text); }
-		.sfm-table tbody tr:last-child td { border-bottom: none; }
-		.sfm-table .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums lining-nums; }
-		.sfm-table .center { text-align: center; }
-		.sfm-table thead th.num .sfm-sort { flex-direction: row-reverse; }
-		.sfm-sort { display: inline-flex; align-items: center; gap: 6px; background: none; border: none; padding: 0; font: inherit; color: inherit; cursor: pointer; border-radius: 4px; }
-		.sfm-sort-icon { display: inline-flex; color: var(--sfm-muted); opacity: .55; }
-		.sfm-sort:hover .sfm-sort-icon { opacity: 1; }
-		th.is-sorted { color: var(--sfm-primary-text) !important; }
-		th.is-sorted .sfm-sort-icon { color: var(--sfm-primary-text); opacity: 1; }
-		.sfm-wrap { white-space: normal; overflow-wrap: break-word; }
-		.sfm-ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-		.sfm-amount-strong { font-weight: 700; }
-		.sfm-student-row { cursor: pointer; transition: background-color .12s; }
-		.sfm-student-row:hover td, .sfm-dues-table tbody tr[data-name]:hover td { background: var(--sfm-primary-soft); }
-		.sfm-student-link { font-weight: 700; font-size: 13.5px; color: var(--sfm-text) !important; text-decoration: none !important; }
-		.sfm-student-row:hover .sfm-student-link { color: var(--sfm-primary-text) !important; }
-		.sfm-dues-table tbody tr[data-name] { cursor: pointer; }
-		.sfm-dues-table tr.selected td { background: var(--sfm-primary-tint); }
-		.sfm-dues-table td { white-space: nowrap; }
-		/* Text-heavy cells wrap (numbers/dates stay on one line) so more columns fit without side-scrolling */
-		.sfm-dues-table td.sfm-wrap-cell { white-space: normal; }
-		.sfm-dues-table td.sfm-fc-cell { min-width: 150px; max-width: 200px; }
-		.sfm-dues-table td.sfm-status-cell { max-width: 150px; }
-		.sfm-dues-table td.sfm-status-cell .sfm-badge { white-space: normal; height: auto; min-height: 22px; padding: 3px 10px; line-height: 1.35; text-align: center; }
-		.sfm-dues-table td.sfm-remark-cell { min-width: 150px; max-width: 200px; }
-		.sfm-clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
-		.sfm-check { width: 44px; text-align: center !important; }
-		.sfm-check input { accent-color: var(--sfm-primary); width: 15px; height: 15px; }
-		.sfm-remark { max-width: 240px; overflow: hidden; text-overflow: ellipsis; }
-
-		/* ── Badges ── */
-		.sfm-badge { display: inline-flex; align-items: center; height: 22px; padding: 0 10px; border-radius: 999px; border: 1px solid; font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
-		.sfm-badge-pending { color: var(--sfm-warning); background: var(--sfm-warning-bg); border-color: var(--sfm-warning-bd); }
-		.sfm-badge-overdue { color: var(--sfm-danger);  background: var(--sfm-danger-bg);  border-color: var(--sfm-danger-bd); }
-		.sfm-badge-partial { color: var(--sfm-amber);   background: var(--sfm-amber-bg);   border-color: var(--sfm-amber-bd); }
-		.sfm-badge-paid    { color: var(--sfm-success); background: var(--sfm-success-bg); border-color: var(--sfm-success-bd); }
-		.sfm-badge-waived  { color: var(--sfm-violet);  background: var(--sfm-violet-bg);  border-color: var(--sfm-violet-bd); }
-		.sfm-badge-excess  { color: #0E7490; background: #ECFEFF; border-color: #A5F3FC; }
-		.sfm-badge-excess-cancelled { color: var(--sfm-muted); background: var(--sfm-subtle); border-color: #A5F3FC; }
-		[data-theme="dark"] .sfm .sfm-badge-excess { color: #67E8F9; background: rgba(103,232,249,.08); border-color: rgba(103,232,249,.3); }
-		.sfm-badge-muted   { color: var(--sfm-muted);   background: var(--sfm-subtle);     border-color: var(--sfm-border); }
-
-		/* ── Icon buttons (receipt) ── */
-		.sfm-icon-btn { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 6px; border: 1px solid var(--sfm-border); background: var(--sfm-card); color: var(--sfm-primary-text); cursor: pointer; transition: background-color .15s, border-color .15s; }
-		.sfm-icon-btn:hover:not(:disabled) { background: var(--sfm-primary-tint); border-color: var(--sfm-primary); }
-		.sfm-icon-btn:disabled { color: var(--sfm-border-strong); background: var(--sfm-subtle); cursor: not-allowed; }
-		.sfm-icon-btn.is-busy { cursor: progress; }
-		.sfm-icon-btn-sm { width: 26px; height: 26px; }
-		.sfm-disabled-wrap { display: inline-block; cursor: not-allowed; }
-		.sfm-disabled-wrap .sfm-icon-btn { pointer-events: none; }
-		.sfm-count { position: absolute; top: -6px; right: -6px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--sfm-primary); color: #fff; font-size: 10px; font-weight: 700; line-height: 16px; }
-		.sfm-receipt-inline { display: inline-flex; align-items: center; gap: 8px; }
-
-		/* ── Pagination ── */
-		.sfm-pager { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 20px; border-top: 1px solid var(--sfm-border); }
-		.sfm-pager:empty { display: none; }
-		.sfm-pages { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
-		.sfm-page-btn { display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-width: 32px; height: 32px; padding: 0 8px; border-radius: 6px; border: 1px solid var(--sfm-border); background: var(--sfm-card); color: var(--sfm-text); font-size: 13px; cursor: pointer; transition: background-color .15s, border-color .15s, color .15s; }
-		.sfm-page-btn:hover:not(:disabled):not(.is-active) { border-color: var(--sfm-primary); color: var(--sfm-primary-text); background: var(--sfm-primary-soft); }
-		.sfm-page-btn.is-active { background: var(--sfm-primary); border-color: var(--sfm-primary); color: #fff; font-weight: 700; cursor: default; }
-		.sfm-page-btn:disabled { opacity: .45; cursor: default; }
-		.sfm-page-gap { color: var(--sfm-muted); padding: 0 4px; }
-
-		/* ── Empty / error ── */
-		.sfm-empty-state { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 48px 16px; text-align: center; }
-		.sfm-empty-icon { width: 48px; height: 48px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: var(--sfm-primary-soft); color: var(--sfm-primary-text); margin-bottom: 4px; }
-		.sfm-empty-title { font-size: 15px; font-weight: 600; color: var(--sfm-text); }
-		.sfm-empty-state .sfm-btn { margin-top: 8px; }
-
-		/* ── Student detail ── */
-		.sfm-view-tabs { margin-bottom: -8px; }
-		.sfm-report-tools { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-		.sfm-cert-search { min-width: 260px; }
-		.sfm-nowrap { white-space: nowrap; }
-		.sfm-report-table tfoot td { font-weight: 700; background: var(--sfm-subtle); border-top: 2px solid var(--sfm-primary); padding: 12px 14px; white-space: nowrap; }
-		.sfm-report-table td { white-space: nowrap; }
-		.sfm-report-table td.sfm-wrap { white-space: normal; min-width: 180px; }
-		.sfm-tabs { display: flex; gap: 4px; box-shadow: inset 0 -1px 0 var(--sfm-border); overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
-		.sfm-tab { display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; background: none; border: none; border-bottom: 2px solid transparent; font-size: 13px; font-weight: 500; color: var(--sfm-muted); white-space: nowrap; cursor: pointer; transition: color .15s, border-color .15s, background-color .15s; border-radius: 6px 6px 0 0; }
-		.sfm-tab:hover { color: var(--sfm-text); background: var(--sfm-primary-soft); }
-		.sfm-tab.active { color: var(--sfm-primary-text); border-bottom-color: var(--sfm-primary); font-weight: 600; }
-		.sfm-tab-count { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: var(--sfm-subtle); border: 1px solid var(--sfm-border); color: var(--sfm-muted); font-size: 11px; font-weight: 600; line-height: 18px; text-align: center; }
-		.sfm-tab.active .sfm-tab-count { background: var(--sfm-primary); border-color: var(--sfm-primary); color: #fff; }
-		.sfm-profile { display: flex; flex-wrap: wrap; gap: 20px; align-items: center; padding: 20px; }
-		.sfm-avatar { width: 56px; height: 56px; border-radius: 50%; background: var(--sfm-primary-tint); color: var(--sfm-primary-text); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; overflow: hidden; flex: none; }
-		.sfm-avatar img { width: 100%; height: 100%; object-fit: cover; }
-		.sfm-identity { min-width: 180px; display: flex; flex-direction: column; gap: 4px; }
-		.sfm-name { font-size: 16px; font-weight: 700; }
-		.sfm-pills { display: flex; gap: 6px; }
-		.sfm-pill { font-size: 11px; font-weight: 600; padding: 1px 10px; border-radius: 999px; background: var(--sfm-primary-soft); color: var(--sfm-primary-text); border: 1px solid var(--sfm-primary-tint); }
-		.sfm-pill-muted { background: var(--sfm-subtle); color: var(--sfm-muted); border-color: var(--sfm-border); }
-		.sfm-metas { display: flex; flex-wrap: wrap; gap: 16px 24px; flex: 1; padding-right: 20px; border-right: 1px solid var(--sfm-border); min-width: 260px; }
-		.sfm-meta { max-width: 320px; }
-		.sfm-meta-value { overflow-wrap: break-word; }
-		.sfm-sr-only { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
-		.sfm-section-head:has(> .sfm-sr-only) { justify-content: flex-end; }
-		.sfm-meta-label { font-size: 12px; font-weight: 600; }
-		.sfm-meta-value { font-size: 12px; color: var(--sfm-muted); margin-top: 4px; }
-		.sfm-tiles { display: flex; flex-wrap: wrap; gap: 12px; }
-		.sfm-tile { display: flex; gap: 12px; align-items: center; border: 1px solid var(--sfm-border); border-radius: var(--sfm-radius); padding: 12px 16px; min-width: 180px; }
-		.sfm-tile .sfm-kpi-icon { width: 34px; height: 34px; }
-		.sfm-tile-value { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums lining-nums; }
-		.sfm-section-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
-		.sfm-section-title { margin: 0; font-family: var(--sfm-font); font-size: 17px; font-weight: 600; color: var(--sfm-text); }
-		.sfm-tab-body .sfm-section-head { margin-bottom: 12px; }
-		.sfm-tab-body .sfm-panel + .sfm-section-head { margin-top: 24px; }
-		.sfm-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-		.sfm-chips { display: flex; gap: 6px; flex-wrap: wrap; }
-		.sfm-chip { height: 30px; border: 1px solid var(--sfm-border); background: var(--sfm-card); color: var(--sfm-text); border-radius: 999px; padding: 0 12px; font-size: 12px; cursor: pointer; transition: background-color .15s, border-color .15s; }
-		.sfm-chip:hover { border-color: var(--sfm-primary); }
-		.sfm-chip span { color: var(--sfm-muted); margin-left: 2px; }
-		.sfm-chip.active { border-color: var(--sfm-primary); color: var(--sfm-primary-text); background: var(--sfm-primary-tint); font-weight: 600; }
-		.sfm-chip.active span { color: var(--sfm-primary-text); }
-		.sfm .dropdown-menu { font-family: var(--sfm-font); font-size: 13px; }
-		.sfm-dialog .modal-footer .btn-primary { background: var(--sfm-primary); border-color: var(--sfm-primary); color: #fff; font-family: var(--sfm-font); }
-		.sfm-dialog .modal-footer .btn-primary:hover { background: var(--sfm-primary-hover); border-color: var(--sfm-primary-hover); }
-		/* Columns menu */
-		.sfm-col-pop { position: fixed; z-index: 1060; width: 260px; background: var(--sfm-card); color: var(--sfm-text); border: 1px solid var(--sfm-border); border-radius: var(--sfm-radius); box-shadow: 0 12px 32px rgba(16, 24, 40, .16); padding: 12px; font-family: var(--sfm-font); font-size: 13px; }
-		.sfm-col-pop-title { font-weight: 600; font-size: 13px; margin-bottom: 8px; }
-		.sfm-col-pop .sfm-ms-option { display: flex; align-items: flex-start; gap: 8px; padding: 7px 8px; margin: 0; border-radius: 6px; font-size: 13px; font-weight: 400; cursor: pointer; }
-		.sfm-col-pop .sfm-ms-option > span:nth-child(2) { flex: 1; overflow-wrap: anywhere; }
-		.sfm-col-pop .sfm-ms-list { max-height: 232px; overflow-y: auto; overscroll-behavior: contain; }
-		.sfm-col-pop-foot { display: flex; justify-content: space-between; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--sfm-border); }
-		.sfm-col-pop-note { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--sfm-border); font-size: 11px; }
-		.sfm-cols-btn.has-hidden { background: var(--sfm-primary-soft); }
-		.sfm-cols-badge { margin-left: 2px; padding: 1px 6px; border-radius: 999px; background: var(--sfm-primary); color: #fff; font-size: 10.5px; font-weight: 700; }
-		.sfm-th-sub { font-size: 10.5px; font-weight: 400; color: var(--sfm-muted); line-height: 1.2; margin-top: 1px; }
-		.sfm-th-sub.sfm-inline { display: inline; margin: 0; }
-		.sfm-subtab-bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
-		.sfm-subtabs { display: inline-flex; gap: 4px; padding: 4px; background: var(--sfm-subtle); border: 1px solid var(--sfm-border); border-radius: 10px; }
-		.sfm-subtab { display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px; border: none; border-radius: 7px; background: none; color: var(--sfm-muted); font-size: 13px; font-weight: 500; cursor: pointer; transition: background-color .15s, color .15s; }
-		.sfm-subtab:hover { color: var(--sfm-text); }
-		.sfm-subtab.active { background: var(--sfm-card); color: var(--sfm-primary-text); font-weight: 600; box-shadow: 0 1px 3px rgba(16, 24, 40, .12); }
-		.sfm-subtab.active .sfm-tab-count { background: var(--sfm-primary); border-color: var(--sfm-primary); color: #fff; }
-		.sfm-subtab:focus-visible { outline: 2px solid var(--sfm-primary); outline-offset: 1px; }
-		.sfm-kpi-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom: 16px; }
-		.sfm-kpi-note { font-size: 11px; font-weight: 400; color: var(--sfm-muted); margin-left: 4px; }
-		.sfm-scholar-card { padding: 16px 20px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 12px; }
-		.sfm-scholar-card .sfm-metas { border-right: none; padding-right: 0; }
-		.sfm-bu-intro { margin-bottom: 14px; }
-		.sfm-bu-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
-		.sfm-bu-card { display: flex; flex-direction: column; gap: 10px; padding: 16px; border: 1px solid var(--sfm-border); border-radius: var(--sfm-radius); background: var(--sfm-card); }
-		.sfm-bu-card p { margin: 0; flex: 1; }
-		.sfm-bu-head { display: flex; align-items: center; gap: 10px; }
-		.sfm-bu-head .sfm-kpi-icon { background: var(--sfm-primary-soft); color: var(--sfm-primary-text); border-color: var(--sfm-primary-tint); }
-		.sfm-bu-title { font-weight: 700; font-size: 14px; }
-		.sfm-bu-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-		.sfm-fc-filter { display: inline-block; }
-		.sfm-fc-filter select { height: 30px; border-radius: 999px; font-size: 12px; min-width: 190px; max-width: 260px; }
-		.sfm-fc-filter select.has-value { border-color: var(--sfm-primary); background: var(--sfm-primary-tint); color: var(--sfm-primary-text); font-weight: 600; }
-		.sfm-move-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; padding: 12px; margin-bottom: 12px; border: 1px solid var(--sfm-border); border-radius: var(--sfm-radius); background: var(--sfm-subtle); }
-		.sfm-move-summary div { display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
-		.sfm-alloc-table input { max-width: 150px; margin-left: auto; text-align: right; }
-		.sfm-dialog .sfm-table-scroll { max-height: 60vh; }
-
-		/* ── Responsive (container width = space beside the desk sidebar) ── */
-		@container sfm (max-width: 1239px) {
-			.sfm-kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-			.sfm-kpi-grid.sfm-kpi-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-			.sfm-kpi-grid.sfm-kpi-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-		}
-		@container sfm (max-width: 1099px) {
-			.sfm-filter-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-			.sfm-search-btn { width: 100%; }
-			.sfm-metas { border-right: none; padding-right: 0; }
-		}
-		@container sfm (max-width: 899px) {
-			.sfm-kpi-grid.sfm-kpi-grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-		}
-		@container sfm (max-width: 699px) {
-			.sfm-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-			.sfm-kpi-grid.sfm-kpi-grid-3 { grid-template-columns: minmax(0, 1fr); }
-			.sfm-filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-			.sfm-page-label { display: none; }
-		}
-		@container sfm (max-width: 459px) {
-			.sfm-kpi-grid, .sfm-kpi-grid.sfm-kpi-grid-4, .sfm-kpi-grid.sfm-kpi-grid-3 { grid-template-columns: minmax(0, 1fr); }
-			.sfm-filter-grid { grid-template-columns: minmax(0, 1fr); padding: 16px; }
-			.sfm-panel-head, .sfm-table-toolbar, .sfm-pager { padding: 12px 16px; }
-			.sfm-pager { justify-content: center; }
-			.sfm-title { font-size: 20px; }
-			.sfm-head .sfm-btn { width: 100%; }
-			.sfm-tiles, .sfm-tile { width: 100%; }
-		}
-		@media (max-width: 600px) {
-			.sfm-shell { padding: 8px 16px 32px; gap: 16px; }
-		}}`;
-		$(`<style id="sfm-styles">${css}</style>`).appendTo("head");
 	}
 }

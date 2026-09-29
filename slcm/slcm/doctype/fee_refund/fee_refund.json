@@ -8,12 +8,15 @@
  "field_order": [
   "student",
   "student_name",
+  "refund_source",
   "fee_demand",
+  "available_excess",
   "column_break_1",
   "fee_component",
   "original_amount",
   "paid_amount",
   "status",
+  "excess_allocation",
   "section_refund_details",
   "refund_type",
   "refund_amount",
@@ -57,7 +60,9 @@
    "in_list_view": 1,
    "label": "Fee Demand",
    "options": "Fee Demand",
-   "reqd": 1
+   "reqd": 0,
+   "mandatory_depends_on": "eval:doc.refund_source!='Excess Amount'",
+   "depends_on": "eval:doc.refund_source!='Excess Amount'"
   },
   {
    "fieldname": "column_break_1",
@@ -68,21 +73,24 @@
    "fieldname": "fee_component",
    "fieldtype": "Data",
    "label": "Fee Component",
-   "read_only": 1
+   "read_only": 1,
+   "depends_on": "eval:doc.refund_source!='Excess Amount'"
   },
   {
    "fetch_from": "fee_demand.original_amount",
    "fieldname": "original_amount",
    "fieldtype": "Currency",
    "label": "Original Amount",
-   "read_only": 1
+   "read_only": 1,
+   "depends_on": "eval:doc.refund_source!='Excess Amount'"
   },
   {
    "fetch_from": "fee_demand.paid_amount",
    "fieldname": "paid_amount",
    "fieldtype": "Currency",
    "label": "Amount Paid",
-   "read_only": 1
+   "read_only": 1,
+   "depends_on": "eval:doc.refund_source!='Excess Amount'"
   },
   {
    "default": "Draft",
@@ -103,7 +111,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Refund Type",
-   "options": "\nOverpayment\nWithdrawal\nDeposit Refund\nOther",
+   "options": "\nOverpayment\nWithdrawal\nDeposit Refund\nExcess Refund\nOther",
    "reqd": 1
   },
   {
@@ -198,11 +206,40 @@
    "options": "Fee Refund",
    "print_hide": 1,
    "read_only": 1
+  },
+  {
+   "default": "Fee Demand",
+   "fieldname": "refund_source",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Refund Source",
+   "options": "Fee Demand\nExcess Amount",
+   "reqd": 1,
+   "description": "Fee Demand: refund money paid against one due. Excess Amount: refund the student's unused excess (active Student Credit Notes, oldest first)."
+  },
+  {
+   "depends_on": "eval:doc.refund_source=='Excess Amount'",
+   "fieldname": "available_excess",
+   "fieldtype": "Currency",
+   "label": "Available Excess",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "excess_allocation",
+   "fieldtype": "Code",
+   "label": "Excess Allocation",
+   "options": "JSON",
+   "read_only": 1,
+   "hidden": 1,
+   "no_copy": 1,
+   "description": "Credit notes (and amounts) this refund was taken from; restored on cancel."
   }
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2026-08-28 10:28:42.458145",
+ "modified": "2026-09-29 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Fee Refund",
