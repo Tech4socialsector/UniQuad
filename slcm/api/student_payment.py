@@ -667,14 +667,94 @@ def cancel_demand_payment(fee_demand_name, integration_request=None):
     return {"status": "cancelled"}
 
 
+# ── Re-exam fees inside the fee page's single "Pay All" order ─────────────────
+# The student fee page pays unpaid Fee Demands and unpaid re-exam fees together in one
+# Razorpay order. Re-exam registrations are passed alongside the demands; on confirmation
+# each one is marked Paid with its own Re Exam Payment Log, as the re-exam flow does.
+
+def _parse_name_list(value):
+    import json as _j
+    if not value:
+        return []
+    try:
+        names = _j.loads(value) if isinstance(value, str) else list(value)
+    except Exception:
+        frappe.throw(_("Invalid list."), frappe.ValidationError)
+    return [n for n in names if n]
+
+
+def _payable_re_exams(registration_names, student_name):
+    """The student's re-exam registrations that can be paid now (IDOR guard included)."""
+    regs = []
+    for n in registration_names:
+        reg = _get_owned_registration(n, student_name)
+        if reg.status != "Registered":
+            frappe.throw(_("Re-exam registration {0} is {1}.").format(n, reg.status), frappe.ValidationError)
+        if reg.payment_status in ("Paid", "Captured"):
+            frappe.throw(_("Re-exam fee {0} is already paid.").format(n), frappe.ValidationError)
+        if reg.payment_status == "Refunded":
+            frappe.throw(_("Re-exam registration {0} was refunded. Please contact the administration.").format(n))
+        if flt(reg.re_exam_fee) <= 0:
+            frappe.throw(_("Re-exam registration {0} has no fee.").format(n), frappe.ValidationError)
+        regs.append(reg)
+    return regs
+
+
+def _mark_re_exams_paid(registration_names, student_name, razorpay_payment_id, razorpay_order_id):
+    """Mark each re-exam registration paid by this combined payment (idempotent)."""
+    paid = []
+    for n in registration_names:
+        reg = frappe.db.get_value(
+            "Re Exam Registration", {"name": n, "student": student_name},
+            ["name", "re_exam_fee", "payment_status"], as_dict=True,
+        )
+        if not reg or reg.payment_status in ("Paid", "Captured"):
+            continue
+        if not frappe.db.exists("Re Exam Payment Log", {"re_exam_registration": n, "razorpay_payment_id": razorpay_payment_id}):
+            try:
+                frappe.get_doc({
+                    "doctype":              "Re Exam Payment Log",
+                    "re_exam_registration": n,
+                    "razorpay_payment_id":  razorpay_payment_id,
+                    "razorpay_order_id":    razorpay_order_id,
+                    "payment_status":       "Paid",
+                    "amount":               flt(reg.re_exam_fee),
+                    "settlement_amount":    flt(reg.re_exam_fee),
+                    "transaction_date":     frappe.utils.now_datetime(),
+                    "gateway_response":     _json.dumps({
+                        "razorpay_payment_id": razorpay_payment_id,
+                        "razorpay_order_id":   razorpay_order_id,
+                        "source":              "fee_page_pay_all",
+                    }, indent=2),
+                }).insert(ignore_permissions=True)
+            except Exception:
+                frappe.log_error(frappe.get_traceback(), "Pay All: re-exam payment log (non-fatal)")
+        frappe.db.set_value(
+            "Re Exam Registration", n,
+            {"payment_status": "Paid", "payment_reference": razorpay_payment_id},
+            update_modified=True,
+        )
+        paid.append({"name": n, "amount": flt(reg.re_exam_fee)})
+    return paid
+
+
+def _reset_re_exams(registration_names, student_name, status):
+    """Put re-exams that were in this order back to Pending (cancelled) or Payment Failed."""
+    for n in registration_names:
+        current = frappe.db.get_value("Re Exam Registration", {"name": n, "student": student_name}, "payment_status")
+        if current == "Payment Initiated":
+            frappe.db.set_value("Re Exam Registration", n, "payment_status", status, update_modified=False)
+
+
 @frappe.whitelist()
-def create_bulk_demand_payment_order(fee_demand_names):
+def create_bulk_demand_payment_order(fee_demand_names, re_exam_registrations=None):
     """Create a single Razorpay order that covers multiple Fee Demands at once.
 
-    ``fee_demand_names`` is a JSON-encoded list of Fee Demand names.
+    ``fee_demand_names`` is a JSON-encoded list of Fee Demand names; ``re_exam_registrations``
+    an optional JSON list of the student's unpaid Re Exam Registrations paid in the same order.
 
     Security:
-    * Every demand must belong to the calling student (IDOR guard).
+    * Every demand / registration must belong to the calling student (IDOR guard).
     * Only Pending / Overdue demands with outstanding > 0 are accepted.
     * Total amount is computed server-side; the client cannot influence it.
     """
@@ -682,11 +762,12 @@ def create_bulk_demand_payment_order(fee_demand_names):
     student_name = _require_student()
 
     try:
-        names = _j.loads(fee_demand_names) if isinstance(fee_demand_names, str) else list(fee_demand_names)
+        names = _j.loads(fee_demand_names) if isinstance(fee_demand_names, str) else list(fee_demand_names or [])
     except Exception:
         frappe.throw(_("Invalid demand list."), frappe.ValidationError)
+    rex_names = _parse_name_list(re_exam_registrations)
 
-    if not names:
+    if not names and not rex_names:
         frappe.throw(_("No fee demands provided."), frappe.ValidationError)
     if len(names) > 50:
         frappe.throw(_("Too many demands in a single payment (max 50)."), frappe.ValidationError)
@@ -710,6 +791,9 @@ def create_bulk_demand_payment_order(fee_demand_names):
         total += out
         demands.append(d)
 
+    re_exams = _payable_re_exams(rex_names, student_name)
+    total += sum(flt(r.re_exam_fee) for r in re_exams)
+
     if total <= 0:
         frappe.throw(_("Total outstanding amount is zero."), frappe.ValidationError)
 
@@ -722,20 +806,25 @@ def create_bulk_demand_payment_order(fee_demand_names):
     payer_email = sm.get("official_email_id") or sm.get("email") or frappe.session.user
     payer_phone = sm.get("phone") or ""
 
-    components = ", ".join(d.fee_component or d.description or "Fee" for d in demands[:3])
-    if len(demands) > 3:
-        components += f" +{len(demands) - 3} more"
+    labels = [d.fee_component or d.description or "Fee" for d in demands] + [
+        _("Re-exam: {0}").format(frappe.db.get_value("Course", r.course, "course_name") or r.course) for r in re_exams
+    ]
+    item_count = len(labels)
+    components = ", ".join(labels[:3])
+    if item_count > 3:
+        components += f" +{item_count - 3} more"
 
     controller = _get_razorpay_controller()
-    receipt_ref = demands[0].name  # Razorpay receipt field (first demand)
+    # Razorpay receipt field: the first demand, else the first re-exam registration
+    ref_doctype, receipt_ref = ("Fee Demand", demands[0].name) if demands else ("Re Exam Registration", re_exams[0].name)
 
     try:
         order = controller.create_order(
             amount=total,
             currency="INR",
-            title=_("Fee Payment – {0} item(s)").format(len(demands)),
+            title=_("Fee Payment – {0} item(s)").format(item_count),
             description=_("Fee payment for {0}").format(payer_name),
-            reference_doctype="Fee Demand",
+            reference_doctype=ref_doctype,
             reference_docname=receipt_ref,
             payer_email=payer_email,
             payer_name=payer_name,
@@ -760,6 +849,10 @@ def create_bulk_demand_payment_order(fee_demand_names):
             paid_by_name=payer_name,
             remarks=f"Bulk Razorpay order for {len(demands)} demands: {', '.join(x.name for x in demands)}",
         )
+    for r in re_exams:
+        frappe.db.set_value("Re Exam Registration", r.name, "payment_status", "Payment Initiated", update_modified=False)
+    if re_exams:
+        frappe.db.commit()
 
     return {
         "order_id":            order.get("id"),
@@ -773,23 +866,27 @@ def create_bulk_demand_payment_order(fee_demand_names):
         "total":               total,
         "components":          components,
         "demand_names":        [d.name for d in demands],
+        "re_exam_registrations": [r.name for r in re_exams],
     }
 
 
 @frappe.whitelist()
 def confirm_bulk_demand_payment(fee_demand_names, integration_request,
-                                razorpay_payment_id, razorpay_order_id, razorpay_signature):
-    """Verify HMAC signature and record a single Fee Payment covering all demands.
+                                razorpay_payment_id, razorpay_order_id, razorpay_signature,
+                                re_exam_registrations=None):
+    """Verify HMAC signature and record a single Fee Payment covering all demands; re-exam
+    registrations paid in the same order are marked Paid with their own payment log.
 
-    ``fee_demand_names`` is a JSON-encoded list.
+    ``fee_demand_names`` / ``re_exam_registrations`` are JSON-encoded lists.
     """
     import json as _j
     student_name = _require_student()
 
     try:
-        names = _j.loads(fee_demand_names) if isinstance(fee_demand_names, str) else list(fee_demand_names)
+        names = _j.loads(fee_demand_names) if isinstance(fee_demand_names, str) else list(fee_demand_names or [])
     except Exception:
         frappe.throw(_("Invalid demand list."), frappe.ValidationError)
+    rex_names = _parse_name_list(re_exam_registrations)
 
     # ── Signature verification ────────────────────────────────────────
     try:
@@ -820,6 +917,12 @@ def confirm_bulk_demand_payment(fee_demand_names, integration_request,
         )
     except Exception:
         frappe.log_error(frappe.get_traceback(), "confirm_bulk_demand_payment: IR update (non-fatal)")
+
+    # ── Re-exam fees in this order (idempotent on its own) ────────────
+    re_exams_paid = _mark_re_exams_paid(rex_names, student_name, razorpay_payment_id, razorpay_order_id)
+    if re_exams_paid:
+        frappe.db.commit()
+    re_exam_total = sum(r["amount"] for r in re_exams_paid)
 
     # ── Idempotency check ─────────────────────────────────────────────
     existing_fp = frappe.db.get_value(
@@ -856,6 +959,13 @@ def confirm_bulk_demand_payment(fee_demand_names, integration_request,
         total += out
 
     if not demand_rows:
+        if re_exams_paid:
+            return {
+                "status":          "success",
+                "demands_paid":    len(re_exams_paid),
+                "total_paid":      re_exam_total,
+                "formatted_total": "₹{:,.0f}".format(re_exam_total),
+            }
         return {"status": "already_paid"}
 
     # ── Create single Fee Payment covering all demands ────────────────
@@ -890,14 +1000,14 @@ def confirm_bulk_demand_payment(fee_demand_names, integration_request,
 
     return {
         "status":        "success",
-        "demands_paid":  len(demand_rows),
-        "total_paid":    total,
-        "formatted_total": "₹{:,.0f}".format(total),
+        "demands_paid":  len(demand_rows) + len(re_exams_paid),
+        "total_paid":    total + re_exam_total,
+        "formatted_total": "₹{:,.0f}".format(total + re_exam_total),
     }
 
 
 @frappe.whitelist()
-def cancel_bulk_demand_payment(fee_demand_names, integration_request=None):
+def cancel_bulk_demand_payment(fee_demand_names, integration_request=None, re_exam_registrations=None):
     """Log a 'Payment Cancelled' entry when the student closes the Razorpay modal.
 
     The JS _failedAlready flag ensures this is only called for true user cancels —
@@ -906,9 +1016,13 @@ def cancel_bulk_demand_payment(fee_demand_names, integration_request=None):
     import json as _j
     student_name = _require_student()
     try:
-        names = _j.loads(fee_demand_names) if isinstance(fee_demand_names, str) else list(fee_demand_names)
+        names = _j.loads(fee_demand_names) if isinstance(fee_demand_names, str) else list(fee_demand_names or [])
     except Exception:
         return {"status": "noop"}
+    try:
+        _reset_re_exams(_parse_name_list(re_exam_registrations), student_name, "Pending")
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "cancel_bulk_demand_payment: re-exam reset (non-fatal)")
 
     if integration_request:
         try:
@@ -2309,7 +2423,8 @@ def get_invoice_summary(invoice_name):
 
 @frappe.whitelist()
 def mark_demand_payment_failed(fee_demand_names, integration_request=None,
-                               payment_id=None, error_code=None, error_description=None):
+                               payment_id=None, error_code=None, error_description=None,
+                               re_exam_registrations=None):
     """Record a 'Payment Failed' audit log entry for one or more Fee Demands.
 
     Called from the browser ``payment.failed`` Razorpay callback for student
@@ -2328,8 +2443,17 @@ def mark_demand_payment_failed(fee_demand_names, integration_request=None,
     except Exception:
         names = [fee_demand_names] if fee_demand_names else []
 
+    try:
+        rex_names = _parse_name_list(re_exam_registrations)
+        _reset_re_exams(rex_names, student_name, "Payment Failed")
+    except Exception:
+        rex_names = []
+        frappe.log_error(frappe.get_traceback(), "mark_demand_payment_failed: re-exam status (non-fatal)")
+
     if not names:
-        return {"status": "noop"}
+        if rex_names:
+            frappe.db.commit()
+        return {"status": "logged" if rex_names else "noop", "demands": names}
 
     pid      = (payment_id or "").strip()
     err_code = (error_code or "N/A")
