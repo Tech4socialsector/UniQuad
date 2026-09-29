@@ -5,10 +5,10 @@
 	--uq-brand-strong: #6f0919;
 	--uq-brand-tint: #fbf1f3;
 	--uq-brand-tint-2: #f4dde2;
-	--uq-bg: #f6f5f3;
+	--uq-bg: #f0f2f5; /* matches Student Portal Settings.background_color */
 	--uq-surface: #ffffff;
-	--uq-surface-2: #faf9f7;
-	--uq-border: #e6e2de;
+	--uq-surface-2: #f8fafc;
+	--uq-border: #e2e8f0;
 	--uq-border-strong: #d3cdc7;
 	--uq-ink: #1f1a17;
 	--uq-ink-2: #3b342f;

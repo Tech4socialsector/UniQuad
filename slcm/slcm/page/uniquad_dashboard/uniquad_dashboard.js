@@ -216,7 +216,7 @@ const UQ_SHORT = {
 	marks_all: __("Marks entries"), results_published: __("Results published"), marks_draft: __("Marks in draft"),
 };
 // Headline figures on the home Overview (shown only when the user can read them).
-const UQ_HOME_KPIS = ["students", "active_students", "applications", "active_offerings", "avg_attendance", "todays_classes", "fee_collected", "fee_outstanding"];
+const UQ_HOME_KPIS = ["students", "applications", "active_offerings", "avg_attendance", "todays_classes", "fee_collected", "fee_outstanding"];
 // Modules whose open items feed the cross-module Pending Operations list (server whitelist mirrors this).
 const PENDING_MODULES = ["attendance", "registration", "venue", "exams", "fees", "idcard", "pace", "fle"];
 // Home analytics panel → the module it belongs to (hidden when that module is unticked in Customize).
@@ -1303,7 +1303,7 @@ class UniquadDashboard {
 			this.$dash.find(".uq-title").text(__("Uniquad Dashboard"));
 			this.$dash.find(".uq-subtitle").text(__("SLCM Operations Overview — choose a module to see its details"));
 			$v.html(
-				this.section("uq-home-overview", "pulse", __("Overview"), __("The headline numbers across SLCM for the selected scope. Open any figure to see the records behind it."), `<div data-home-kpis>${this.skel_cards(8, "uq-grid-home-kpi")}</div>`) +
+				this.section("uq-home-overview", "pulse", __("Overview"), __("The headline numbers across SLCM for the selected scope. Open any figure to see the records behind it."), `<div data-home-kpis>${this.skel_cards(UQ_HOME_KPIS.length, "uq-grid-home-kpi")}</div>`) +
 				this.section("uq-home-modules", "dashboard", __("Modules"), __("Every SLCM module at a glance. Open one to see its figures, what needs attention and the records behind them."), `<div class="uq-mod-grid" data-tiles>${this.skel_cards(6, "uq-grid-hero")}</div>`) +
 					this.section(
 						"uq-home-analytics",
