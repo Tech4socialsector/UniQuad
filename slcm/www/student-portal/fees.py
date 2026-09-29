@@ -637,7 +637,7 @@ def get_context(context):
                 cn["formatted_used"]      = "₹{:,.0f}".format(frappe.utils.flt(cn.used_credit or 0))
                 amt = frappe.utils.flt(cn.credit_amount or 0)
                 used = frappe.utils.flt(cn.used_credit or 0)
-                cn["used_pct"] = int(min((used / amt * 100), 100)) if amt > 0 else 0
+                cn["used_pct"] = int(max(min(used / amt * 100, 100), 0)) if amt > 0 else 0
             context.credit_notes     = credit_notes_raw
             context.has_credit_notes = bool(credit_notes_raw)
             context.total_available_credit = sum(
