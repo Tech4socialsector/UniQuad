@@ -206,6 +206,7 @@ const UQ_MODULES = [
 const UQ_SHORT = {
 	applications: __("Applications"), applications_in_progress: __("In progress"), applications_enrolled: __("Enrolled"),
 	students: __("Students"), active_students: __("Active"), registration_pending: __("Pending registration"),
+	students_on_campus: __("On campus"), students_off_campus: __("Off campus"), admission_current: __("Registered (current)"),
 	programmes: __("Programmes"), active_offerings: __("Courses running"), todays_classes: __("Classes today"),
 	avg_attendance: __("Avg attendance"), entry_rate: __("Entry rate"), below_threshold: __("Below threshold"),
 	idcards_generated: __("Cards generated"), id_card_pending: __("Without ID card"), idcards_error: __("Card errors"),
@@ -216,7 +217,7 @@ const UQ_SHORT = {
 	marks_all: __("Marks entries"), results_published: __("Results published"), marks_draft: __("Marks in draft"),
 };
 // Headline figures on the home Overview (shown only when the user can read them).
-const UQ_HOME_KPIS = ["students", "active_offerings"];
+const UQ_HOME_KPIS = ["students", "students_on_campus", "students_off_campus", "admission_current", "active_offerings"];
 // Modules whose open items feed the cross-module Pending Operations list (server whitelist mirrors this).
 const PENDING_MODULES = ["attendance", "registration", "venue", "exams", "fees", "idcard", "pace", "fle"];
 // Home analytics panel → the module it belongs to (hidden when that module is unticked in Customize).

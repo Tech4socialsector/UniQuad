@@ -433,6 +433,27 @@ def _threshold():
 	return value or 75.0
 
 
+def _active_admission_cycles():
+	"""Admission Cycles with status Active — the admission that is currently running."""
+	return frappe.get_all("Admission Cycle", filters={"status": "Active"}, pluck="name", order_by="cycle_start_date desc")
+
+
+def f_current_admission(ctx):
+	f = [_in("admission_cycle", _active_admission_cycles())]
+	progs = ctx.programmes()
+	if progs is not None:
+		f.append(_in("program", progs))
+	return f
+
+
+def _current_admission_sub(ctx):
+	cycles = _active_admission_cycles()
+	if not cycles:
+		return _("No admission cycle is active")
+	submitted = _count("Applicant", f_current_admission(ctx) + [["status", "!=", "Draft"]])
+	return _("{0} · {1} submitted").format(", ".join(cycles), submitted)
+
+
 def _applicant_status_map():
 	return {
 		r.name: r
@@ -693,6 +714,10 @@ DRILLDOWNS = {
 	"faculty": _drill("Active Faculty", "Faculty", [("name", "Faculty", "form", True), ("faculty_id", "Faculty ID", "text", True), ("first_name", "First Name", "text", True), ("last_name", "Last Name", "text", True), ("designation", "Designation", "text", True), ("is_hod", "HoD", "int", True), ("status", "Status", "badge", True)], lambda c, p: f_faculty(c) + [["status", "=", "Active"]], ["faculty_id", "first_name", "last_name"], ("first_name", "asc"), "faculty"),
 	"batches": _drill("Active Batches", "Batch", [("name", "Batch", "form", True), ("program", "Programme", "text", True), ("academic_year", "Academic Year", "text", True), ("start_date", "Start", "date", True), ("end_date", "End", "date", True), ("total_enrolled_count", "Enrolled", "int", True), ("status", "Status", "badge", True)], lambda c, p: f_batches(c) + [["status", "=", "Active"]], ["name", "program", "batch_code"], ("name", "asc"), "batches"),
 	# Admissions
+	"admission_current": _drill("Registered in the Current Admission", "Applicant", APPLICANT_COLUMNS, lambda c, p: f_current_admission(c), APPLICANT_SEARCH, ("creation", "desc"), "current_admission", post=_post_applicants),
+	# Campus residence (Student Master.campus)
+	"students_on_campus": _drill("Active Students On Campus", "Student Master", STUDENT_COLUMNS, lambda c, p: f_students(c) + [["student_status", "=", "Active"], ["campus", "=", "On Campus"]], STUDENT_SEARCH, ("first_name", "asc"), "students"),
+	"students_off_campus": _drill("Active Students Off Campus", "Student Master", STUDENT_COLUMNS, lambda c, p: f_students(c) + [["student_status", "=", "Active"], ["campus", "=", "Off Campus"]], STUDENT_SEARCH, ("first_name", "asc"), "students"),
 	"applications": _drill("Applications", "Applicant", APPLICANT_COLUMNS, lambda c, p: f_applicants(c), APPLICANT_SEARCH, ("modified", "desc"), "applicants", post=_post_applicants),
 	"applications_in_progress": _drill("Applications in Progress", "Applicant", APPLICANT_COLUMNS, lambda c, p: f_applicants(c) + [_in("status", _applicant_statuses("in_progress"))], APPLICANT_SEARCH, ("modified", "desc"), "applicants", post=_post_applicants),
 	"applications_enrolled": _drill("Enrolled Applicants", "Applicant", APPLICANT_COLUMNS, lambda c, p: f_applicants(c) + [_in("status", _applicant_statuses("enrolled"))], APPLICANT_SEARCH, ("modified", "desc"), "applicants", post=_post_applicants),
@@ -1098,6 +1123,7 @@ SCOPE.update({
 	"years": [Y],
 	"venues": [DR],
 	"tickets": [DR],
+	"current_admission": [P],
 	"pending": [Y, T, P, B, S, C, F, ST, G, DR],
 	"activity": [Y, T, P, B, S, C, F, ST, G],
 })
@@ -1128,6 +1154,14 @@ def _card(key, section, title, description, doctype, scope, value_fn, *, drill=N
 		all_time=all_time,
 		icon=icon,
 	)
+
+
+def _campus_share(ctx, campus):
+	active = _count("Student Master", f_students(ctx) + [["student_status", "=", "Active"]])
+	n = _count("Student Master", f_students(ctx) + [["student_status", "=", "Active"], ["campus", "=", campus]])
+	unset = _count("Student Master", f_students(ctx) + [["student_status", "=", "Active"], ["campus", "is", "not set"]])
+	text = _("{0}% of active students").format(round(100.0 * n / active)) if active else _("no active students")
+	return text + (" · " + _("{0} not recorded").format(unset) if unset else "")
 
 
 def _drill_count(key):
@@ -1184,6 +1218,7 @@ def _sum(doctype, filters, field):
 M = dict(admission="admission", registration="registration", programme="programme", attendance="attendance", idcard="idcard", fees="fees", venue="venue", pace="pace", fle="fle", exams="exams")
 CARDS = [
 	# ── Admission
+	_card("admission_current", "admission", "Registered — Current Admission", "Applicants registered in the admission cycle that is currently active (any status).", "Applicant", "current_admission", _drill_count("admission_current"), drill="admission_current", icon="user-plus", action="View applicants", headline=True, sub_fn=_current_admission_sub),
 	_card("applications", "admission", "Applications", "Admission applications for the selected year and programme.", "Applicant", "applicants", _drill_count("applications"), drill="applications", icon="inbox", action="View applications", headline=True),
 	_card("applications_in_progress", "admission", "In Progress", "Submitted applications still moving through the pipeline.", "Applicant", "applicants", _drill_count("applications_in_progress"), drill="applications_in_progress", icon="loader", headline=True),
 	_card("applications_enrolled", "admission", "Enrolled", "Applicants who completed enrolment.", "Applicant", "applicants", _drill_count("applications_enrolled"), drill="applications_enrolled", icon="user-check", headline=True),
@@ -1193,6 +1228,8 @@ CARDS = [
 	_card("students", "registration", "Total Students", "All students matching the filters, any status.", "Student Master", "students", _drill_count("students"), drill="students", icon="users", action="View students", headline=True),
 	_card("active_students", "registration", "Active Students", "Students with status Active in the selected scope.", "Student Master", "students", _drill_count("students_active"), drill="students_active", icon="user-check", action="View students", headline=True,
 		sub_fn=lambda c: _("{0}% of students in scope").format(round(100.0 * _count("Student Master", f_students(c) + [["student_status", "=", "Active"]]) / max(_count("Student Master", f_students(c)), 1)))),
+	_card("students_on_campus", "registration", "On Campus Students", "Active students whose campus is On Campus.", "Student Master", "students", _drill_count("students_on_campus"), drill="students_on_campus", icon="home", action="View students", headline=True, sub_fn=lambda c: _campus_share(c, "On Campus")),
+	_card("students_off_campus", "registration", "Off Campus Students", "Active students whose campus is Off Campus.", "Student Master", "students", _drill_count("students_off_campus"), drill="students_off_campus", icon="building", action="View students", headline=True, sub_fn=lambda c: _campus_share(c, "Off Campus")),
 	_card("students_new", "registration", "Newly Registered", "Students whose registration date falls within the date range.", "Student Master", "registered", _drill_count("students_new"), drill="students_new", compare=True, icon="user-plus", action="View students"),
 	_card("students_graduated", "registration", "Graduated / Alumni", "Students with status Graduated or Alumni.", "Student Master", "students", _drill_count("students_graduated"), drill="students_graduated", icon="award", action="View students"),
 	_card("students_inactive", "registration", "Inactive / Dropped", "Students who are Inactive, Dropped, Dormant or Withdrawn.", "Student Master", "students", _drill_count("students_inactive"), drill="students_inactive", icon="user-x", action="View students"),
