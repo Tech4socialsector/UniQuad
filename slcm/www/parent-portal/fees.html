@@ -222,6 +222,9 @@
 .ppf-t .c-num    { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .ppf-t .c-status { text-align: center; }
 .ppf-t .c-action { text-align: right; white-space: nowrap; }
+.ppf-summary-cards { padding-bottom: 0; }
+.ppf-cards-group + .ppf-cards-group { margin-top: 14px; }
+.ppf-cards-group-hd { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ppf-maroon, #920c24); margin: 0 0 8px; }
 .ppf-t td.c-num  { font-weight: 600; color: var(--pp-text-1); }
 .ppf-cell-main { font-weight: 600; color: var(--pp-text-1); }
 .ppf-cell-sub  { font-size: 11.5px; color: var(--ppf-muted); margin-top: 1px; }
@@ -507,7 +510,7 @@
         <span class="ms" aria-hidden="true">lock</span> Pay Now · {{ _pi.formatted_outstanding }}
       </button>
       {% else %}
-      <a class="ppf-btn ppf-btn-primary ppf-btn-sm" href="#ppf-invoices-section" onclick="ppfTab('invoices')"><span class="ms" aria-hidden="true">receipt_long</span> View invoices to pay</a>
+      <a class="ppf-btn ppf-btn-primary ppf-btn-sm" href="#ppf-dm-details" onclick="ppfShowTab('invoices'); return false;"><span class="ms" aria-hidden="true">receipt_long</span> View invoices to pay</a>
       {% endif %}
     {% endif %}
     {% else %}
@@ -547,96 +550,85 @@
 </section>
 {% else %}
 
-{# ═══════════════ Row 1 — KPI cards ═══════════════ #}
-<section class="ppf-kpis fade-in" aria-label="Fee summary">
-  {# Total fees #}
-  <div class="ppf-kpi">
-    <div class="ppf-kpi-head"><span class="ppf-kpi-label">Total Fees</span><span class="ppf-kpi-icon"><span class="ms" aria-hidden="true">account_balance</span></span></div>
-    {% if _err.summary %}
-      <div class="ppf-kpi-value is-empty">—</div><div class="ppf-kpi-sub">Unable to load</div>
-    {% elif not has_fee_data %}
-      <div class="ppf-kpi-value is-empty">—</div><div class="ppf-kpi-sub">No programme fee set up yet</div>
-    {% else %}
-      <div class="ppf-kpi-value">{{ _inr.format(total_payable) }}</div>
-      <div class="ppf-kpi-sub">{% if total_scholarship > 0 %}Net programme fee after {{ _inr.format(total_scholarship) }} scholarship{% else %}Net programme fee{% endif %}</div>
-    {% endif %}
-  </div>
-
-  {# Paid #}
-  <div class="ppf-kpi">
-    <div class="ppf-kpi-head"><span class="ppf-kpi-label">Paid</span><span class="ppf-kpi-icon"><span class="ms" aria-hidden="true">check_circle</span></span></div>
-    {% if not _summary_ok %}
-      <div class="ppf-kpi-value is-empty">—</div><div class="ppf-kpi-sub">{{ 'Unable to load' if _err.summary else 'No payments yet' }}</div>
-    {% else %}
-      <div class="ppf-kpi-value">{{ _inr.format(total_paid) }}</div>
-      <div class="ppf-kpi-sub {{ 'ppf-tone-success' if paid_pct == 100 }}">{% if paid_pct is none %}—{% else %}{{ paid_pct }}% paid{% endif %}</div>
-    {% endif %}
-  </div>
-
-  {# Outstanding #}
-  <div class="ppf-kpi">
-    <div class="ppf-kpi-head"><span class="ppf-kpi-label">Balance</span><span class="ppf-kpi-icon"><span class="ms" aria-hidden="true">pending_actions</span></span></div>
-    {% if not _summary_ok %}
-      <div class="ppf-kpi-value is-empty">—</div><div class="ppf-kpi-sub">{{ 'Unable to load' if _err.summary else 'Nothing due' }}</div>
-    {% else %}
-      <div class="ppf-kpi-value {{ 'ppf-tone-danger' if has_dues }}">{{ _inr.format(total_outstanding) }}</div>
-      {% if has_dues %}
-      <div class="ppf-kpi-sub">Programme fees due{% if payable_invoices %} across {{ payable_invoices | length }} invoice{{ 's' if payable_invoices | length != 1 }}{% endif %}{% if not payment_enabled %} · contact the Bursar's Office{% endif %}</div>
-      {% else %}
-      <div class="ppf-kpi-sub">No pending programme dues</div>
-      {% endif %}
-    {% endif %}
-    {% if demand_outstanding > 0 %}
-      <div class="ppf-kpi-note ppf-tone-danger"><a href="#ppf-outstanding">+ {{ _inr.format(demand_outstanding) }} additional charges due</a></div>
-    {% endif %}
-  </div>
-
-  {# Overdue #}
-  <div class="ppf-kpi">
-    <div class="ppf-kpi-head"><span class="ppf-kpi-label">Overdue</span><span class="ppf-kpi-icon"><span class="ms" aria-hidden="true">event_busy</span></span></div>
-    {% if not _summary_ok %}
-      <div class="ppf-kpi-value is-empty">—</div><div class="ppf-kpi-sub">{{ 'Unable to load' if _err.summary else 'Nothing overdue' }}</div>
-    {% else %}
-      <div class="ppf-kpi-value {{ 'ppf-tone-danger' if programme_overdue > 0 }}">{{ _inr.format(programme_overdue) }}</div>
-      {% if programme_overdue > 0 %}
-      <div class="ppf-kpi-sub ppf-tone-danger">{{ programme_overdue_count }} invoice{{ 's' if programme_overdue_count != 1 }} past due date</div>
-      {% else %}
-      <div class="ppf-kpi-sub">All clear</div>
-      {% endif %}
-    {% endif %}
-    {% if demand_overdue > 0 %}
-      <div class="ppf-kpi-note ppf-tone-danger"><a href="#ppf-outstanding">+ {{ _inr.format(demand_overdue) }} additional charges overdue</a></div>
-    {% endif %}
-  </div>
-</section>
-
 {# ═══════════════ Row 2 — Summary (additional charges & history) ═══════════════ #}
+{% set _has_sc = has_concessions or _err.concessions %}
+{% set _has_ph = payment_history or _err.payments or _err.receipts %}
+{% set _has_inv = has_invoices or _err.invoices %}
+{# Detail tabs: Fee Demands / Payment History / Fee Invoices / Refunds / Scholarships & Concessions; the first one present is open #}
+{% set _ntabs = (1 if has_fee_demands else 0) + (1 if _has_ph else 0) + (1 if _has_inv else 0) + (1 if has_fee_refunds else 0) + (1 if _has_sc else 0) %}
+{% set _first = 'demands' if has_fee_demands else ('payments' if _has_ph else ('invoices' if _has_inv else ('refunds' if has_fee_refunds else 'scholarships'))) %}
 <section class="ppf-card fade-in" id="ppf-demands-section" style="margin-bottom:16px;" aria-labelledby="ppf-dm-title">
   <div class="ppf-card-hd">
     <h2 class="ppf-card-title" id="ppf-dm-title"><span class="ms" aria-hidden="true">list_alt</span>Summary</h2>
-    {% if has_fee_demands %}
+    {% if outstanding_rows or has_fee_demands %}
     <div class="ppf-card-meta">
-      {% if has_overdue_demands %}<span class="ppf-tone-danger">{{ overdue_demand_count }} overdue</span><span aria-hidden="true" style="color:#cbd5e1;">|</span>{% endif %}
-      <span>{{ da_pct }}% settled</span>
+      <span class="{{ 'ppf-tone-danger' if outstanding_pending_count }}">{{ outstanding_pending_count }} pending</span>
+      <span aria-hidden="true" style="color:#cbd5e1;">|</span>
+      <span class="{{ 'ppf-tone-danger' if outstanding_overdue_count }}">{{ outstanding_overdue_count }} overdue</span>
+      {% if has_fee_demands %}<span aria-hidden="true" style="color:#cbd5e1;">|</span><span>{{ da_pct }}% settled</span>{% endif %}
     </div>
     {% endif %}
   </div>
+  {% if demand_type_cards and not _err.demands %}
+  <div class="ppf-card-bd ppf-summary-cards">
+    {% for g in demand_type_cards %}
+    <div class="ppf-cards-group">
+      <div class="ppf-cards-group-hd">{{ g.label }}</div>
+      <div class="ppf-mini-grid">
+        <div class="ppf-mini"><div class="ppf-mini-lbl">Total Levied</div><div class="ppf-mini-val">{{ g.total_fmt }}</div><div class="ppf-mini-sub">{{ g.count }} charge{{ 's' if g.count != 1 }}</div></div>
+        <div class="ppf-mini"><div class="ppf-mini-lbl">Settled</div><div class="ppf-mini-val ">{{ g.paid_fmt }}</div><div class="ppf-mini-sub">{{ g.paid_count }} paid</div></div>
+        <div class="ppf-mini"><div class="ppf-mini-lbl">Scholarship</div><div class="ppf-mini-val">{{ g.waived_fmt }}</div><div class="ppf-mini-sub">Applied to charges</div></div>
+        <div class="ppf-mini"><div class="ppf-mini-lbl">Outstanding</div><div class="ppf-mini-val {{ 'ppf-tone-danger' if g.outstanding > 0 }}">{{ g.outstanding_fmt }}</div><div class="ppf-mini-sub">{% if g.overdue > 0 %}{{ g.overdue }} overdue{% elif g.pending > 0 %}{{ g.pending }} pending{% else %}all clear{% endif %}</div></div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% if (_err.invoices or _err.re_exams) and summary_rows %}<div class="ppf-notice ppf-notice-danger" style="margin:12px 20px 0;"><span class="ms" aria-hidden="true">error</span><div>Some fee records could not be loaded, so this list may be incomplete. <button type="button" class="ppf-link" onclick="window.location.reload()">Retry</button></div></div>{% endif %}
+  {# Every charge still to pay, plus paid re-exam fees and hostel fines with their receipt #}
+  {% if summary_rows %}
+  <table class="ppf-t ppf-summary-t">
+    <caption class="pp-sr-only">Outstanding fees, re-examination fees and hostel fines</caption>
+    <colgroup><col style="width:30%;"><col style="width:15%;"><col style="width:15%;"><col style="width:12%;"><col style="width:13%;"><col style="width:15%;"></colgroup>
+    <thead><tr>
+      <th scope="col" class="c-text">Component</th><th scope="col" class="c-text">Demand Type</th><th scope="col" class="c-date">Due Date</th>
+      <th scope="col" class="c-num">Amount</th><th scope="col" class="c-status">Status</th><th scope="col" class="c-action">Receipt</th>
+    </tr></thead>
+    <tbody>
+      {% for r in summary_rows %}
+      <tr class="ppf-row-data">
+        <td class="c-text c-primary"><div class="ppf-cell-main">{{ r.component }}</div><div class="ppf-cell-sub">{{ r.sub }}</div></td>
+        <td class="c-text" data-label="Demand Type">{% if r.demand_type %}<span class="ppf-badge {{ 'ppf-badge-academic' if r.demand_type == 'Academic' else 'ppf-badge-neutral' }}">{{ r.demand_type }}</span>{% else %}<span class="ppf-tone-muted">—</span>{% endif %}</td>
+        <td class="c-date" data-label="Due Date">
+          <div>
+            <div>{{ r.due_date_fmt or '—' }}</div>
+            {% if r.kind == 'demand' and r.is_overdue and r.days_overdue %}<div class="ppf-cell-hint ppf-tone-danger">{{ r.days_overdue }}d overdue</div>{% endif %}
+          </div>
+        </td>
+        <td class="c-num {{ 'ppf-tone-danger' if r.is_overdue }}" data-label="Amount">{{ r.amount_fmt }}</td>
+        <td class="c-status" data-label="Status">{{ badge(r.status) }}</td>
+        <td class="c-action" data-label="Receipt">
+          {% if r.receipt %}
+          <a class="ppf-btn ppf-btn-ghost ppf-btn-sm" target="_blank" rel="noopener noreferrer"
+             href="/api/method/slcm.api.student_portal.parent_download_fee_receipt?receipt_name={{ r.receipt | urlencode }}&student_name={{ ward_student_name | urlencode }}"
+             aria-label="Download receipt for {{ r.component }}"><span class="ms" aria-hidden="true">download</span> Receipt</a>
+          {% elif r.re_exam_receipt %}
+          <a class="ppf-btn ppf-btn-ghost ppf-btn-sm" target="_blank" rel="noopener noreferrer"
+             href="/api/method/slcm.api.student_portal.parent_download_re_exam_receipt?registration_name={{ r.re_exam_receipt | urlencode }}&student_name={{ ward_student_name | urlencode }}"
+             aria-label="Download receipt for {{ r.component }}"><span class="ms" aria-hidden="true">download</span> Receipt</a>
+          {% else %}<span class="ppf-tone-muted">—</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
   {% if _err.demands %}
     {{ section_error('additional charges') }}
-  {% elif not has_fee_demands and not has_fee_refunds %}
-    {{ empty('list_alt', 'No additional charges', 'Charges such as hostel, examination or development fees will appear here.') }}
+  {% elif not has_fee_demands and not has_fee_refunds and not _has_sc and not _has_ph and not _has_inv %}
+    {% if not summary_rows %}{{ empty('task_alt', 'No outstanding fees', 'Your ward has no pending or overdue payments.', ok=True) }}{% endif %}
   {% else %}
-  {% if has_fee_demands %}
-  <div class="ppf-card-bd">
-    <div class="ppf-mini-grid">
-      <div class="ppf-mini"><div class="ppf-mini-lbl">Total Levied</div><div class="ppf-mini-val">{{ da_fmt_total }}</div><div class="ppf-mini-sub">{{ da_total }} charge{{ 's' if da_total != 1 }}</div></div>
-      <div class="ppf-mini"><div class="ppf-mini-lbl">Settled</div><div class="ppf-mini-val">{{ da_fmt_paid }}</div><div class="ppf-mini-sub">{{ da_paid }} paid</div></div>
-      <div class="ppf-mini"><div class="ppf-mini-lbl">Scholarship</div><div class="ppf-mini-val">{{ da_fmt_waived }}</div><div class="ppf-mini-sub">Applied to charges</div></div>
-      <div class="ppf-mini"><div class="ppf-mini-lbl">Outstanding</div><div class="ppf-mini-val {{ 'ppf-tone-danger' if da_outstanding > 0 }}">{{ da_fmt_outstanding }}</div><div class="ppf-mini-sub">{% if da_overdue > 0 %}{{ da_overdue }} overdue{% elif da_pending > 0 %}{{ da_pending }} pending{% else %}all clear{% endif %}</div></div>
-    </div>
-
-    {# Pay All — only when payment is enabled and there are payable demands #}
-    {% if payment_enabled %}
+  {% if has_fee_demands and payment_enabled %}
     {% set ns_pay = namespace(total=0, count=0, names=[]) %}
     {% for d in fee_demands %}
       {% if d.outstanding_amount > 0 and d.status not in ('Paid','Waived','Cancelled') %}
@@ -646,6 +638,7 @@
       {% endif %}
     {% endfor %}
     {% if ns_pay.count > 0 %}
+    <div class="ppf-card-bd" style="padding-top:0;">
     <div class="ppf-payall">
       <div class="ppf-payall-text"><strong>{{ _inr.format(ns_pay.total) }}</strong> due across {{ ns_pay.count }} charge{{ 's' if ns_pay.count != 1 }}</div>
       <button type="button" class="ppf-btn ppf-btn-primary" id="ppf-pay-all-demands-btn"
@@ -653,12 +646,11 @@
         <span class="ms" aria-hidden="true">payments</span> Pay All
       </button>
     </div>
+    </div>
     {% endif %}
-    {% endif %}
-  </div>
   {% endif %}
 
-  <div class="ppf-card-ft" style="{{ 'border-top:none;padding-top:0;' if has_fee_demands else '' }}">
+  <div class="ppf-card-ft" style="border-top:none;padding-top:0;">
     <button type="button" class="ppf-btn ppf-btn-ghost ppf-btn-sm ppf-details-toggle" id="ppf-dm-toggle"
             aria-expanded="false" aria-controls="ppf-dm-details" onclick="ppfToggleDetails(this)">
       View Details <span class="ms" aria-hidden="true">expand_more</span>
@@ -666,15 +658,18 @@
   </div>
 
   <div class="ppf-details is-hidden" id="ppf-dm-details">
-    {% if has_fee_demands and has_fee_refunds %}
-    <div class="ppf-tabs" role="tablist" aria-label="Additional charge history">
-      <button type="button" class="ppf-tab" role="tab" id="ppf-tabbtn-demands" aria-selected="true" aria-controls="ppf-tab-demands" onclick="ppfTab('demands')">Fee Demands <span class="ppf-tab-count">{{ fee_demands | length }}</span></button>
-      <button type="button" class="ppf-tab" role="tab" id="ppf-tabbtn-refunds" aria-selected="false" aria-controls="ppf-tab-refunds" onclick="ppfTab('refunds')" tabindex="-1">Refunds <span class="ppf-tab-count">{{ fee_refunds | length }}</span></button>
+    {% if _ntabs > 1 %}
+    <div class="ppf-tabs" role="tablist" aria-label="Fee details">
+      {% if has_fee_demands %}<button type="button" class="ppf-tab" role="tab" id="ppf-tabbtn-demands" aria-selected="{{ 'true' if _first == 'demands' else 'false' }}" aria-controls="ppf-tab-demands" onclick="ppfTab('demands')" {% if _first != 'demands' %}tabindex="-1"{% endif %}>Fee Demands <span class="ppf-tab-count">{{ fee_demands | length }}</span></button>{% endif %}
+      {% if _has_ph %}<button type="button" class="ppf-tab" role="tab" id="ppf-tabbtn-payments" aria-selected="{{ 'true' if _first == 'payments' else 'false' }}" aria-controls="ppf-tab-payments" onclick="ppfTab('payments')" {% if _first != 'payments' %}tabindex="-1"{% endif %}>Payment History <span class="ppf-tab-count">{{ payment_history | length }}</span></button>{% endif %}
+      {% if _has_inv %}<button type="button" class="ppf-tab" role="tab" id="ppf-tabbtn-invoices" aria-selected="{{ 'true' if _first == 'invoices' else 'false' }}" aria-controls="ppf-tab-invoices" onclick="ppfTab('invoices')" {% if _first != 'invoices' %}tabindex="-1"{% endif %}>Fee Invoices <span class="ppf-tab-count">{{ _ns.inv_count }}</span></button>{% endif %}
+      {% if has_fee_refunds %}<button type="button" class="ppf-tab" role="tab" id="ppf-tabbtn-refunds" aria-selected="{{ 'true' if _first == 'refunds' else 'false' }}" aria-controls="ppf-tab-refunds" onclick="ppfTab('refunds')" {% if _first != 'refunds' %}tabindex="-1"{% endif %}>Refunds <span class="ppf-tab-count">{{ fee_refunds | length }}</span></button>{% endif %}
+      {% if _has_sc %}<button type="button" class="ppf-tab" role="tab" id="ppf-tabbtn-scholarships" aria-selected="{{ 'true' if _first == 'scholarships' else 'false' }}" aria-controls="ppf-tab-scholarships" onclick="ppfTab('scholarships')" {% if _first != 'scholarships' %}tabindex="-1"{% endif %}>Scholarships &amp; Concessions <span class="ppf-tab-count">{{ concessions | length }}</span></button>{% endif %}
     </div>
     {% endif %}
 
     {% if has_fee_demands %}
-    <div id="ppf-tab-demands" {% if has_fee_refunds %}role="tabpanel" aria-labelledby="ppf-tabbtn-demands"{% endif %}>
+    <div id="ppf-tab-demands" {% if _ntabs > 1 %}role="tabpanel" aria-labelledby="ppf-tabbtn-demands"{% endif %} {% if _first != 'demands' %}class="is-hidden"{% endif %}>
       <table class="ppf-t" id="ppf-dm-table">
         <caption class="pp-sr-only">Additional charges by type</caption>
         <colgroup><col style="width:26%;"><col style="width:14%;"><col style="width:14%;"><col style="width:14%;"><col style="width:14%;"><col style="width:18%;"></colgroup>
@@ -704,7 +699,7 @@
               </div>
             </td>
             <td class="c-num" data-label="Net">
-              <div>{{ d.formatted_net }}{% if d.waiver_amount and d.waiver_amount > 0 %}<div class="ppf-cell-sub">−{{ d.formatted_waiver }} waiver</div>{% endif %}</div>
+              <div>{{ d.formatted_net }}</div>
             </td>
             <td class="c-num" data-label="Settled">
               {% if d.settled_amount and d.settled_amount > 0 %}<div><span>{{ d.formatted_settled }}</span>{% if d.has_credit_adj %}<div class="ppf-cell-sub">incl. credit</div>{% endif %}</div>
@@ -723,9 +718,161 @@
     </div>
     {% endif %}
 
+    {% if _has_ph %}
+    <div id="ppf-tab-payments" {% if _ntabs > 1 %}role="tabpanel" aria-labelledby="ppf-tabbtn-payments"{% endif %} {% if _first != 'payments' %}class="is-hidden"{% endif %}>
+      {% if (_err.payments or _err.receipts or _err.invoices) and not payment_history %}
+        {{ section_error('payment history') }}
+      {% elif not payment_history %}
+        {{ empty('account_balance_wallet', 'No payments recorded yet', 'Payments made towards invoices and charges will be listed here.') }}
+      {% else %}
+      <table class="ppf-t" id="ppf-ph-table">
+        <caption class="pp-sr-only">Payment history, newest first</caption>
+        <colgroup><col style="width:12%;"><col style="width:24%;"><col style="width:11%;"><col style="width:13%;"><col style="width:13%;"><col style="width:11%;"><col style="width:16%;"></colgroup>
+        <thead><tr>
+          <th scope="col" class="c-date">Date</th><th scope="col" class="c-text">Description</th>
+          <th scope="col" class="c-num">Amount</th><th scope="col" class="c-text">Payment Method</th>
+          <th scope="col" class="c-text">Reference</th><th scope="col" class="c-status">Status</th>
+          <th scope="col" class="c-action"><span class="pp-sr-only">Download</span></th>
+        </tr></thead>
+        <tbody>
+          {% for h in payment_history %}
+          <tr class="ppf-row-data" data-ay="{{ h.academic_year | e }}">
+            <td class="c-date" data-label="Date">{{ h.date_fmt or '—' }}</td>
+            <td class="c-text c-primary"><div class="ppf-cell-main">{{ h.description }}</div>{% if h.sub %}<div class="ppf-cell-sub">{{ h.sub }}</div>{% endif %}</td>
+            <td class="c-num" data-label="Amount">{{ h.amount_fmt or '—' }}</td>
+            <td class="c-text" data-label="Method">{{ h.method or '—' }}</td>
+            <td class="c-text" data-label="Reference"><span class="ppf-ellip" title="{{ h.reference | e }}">{{ h.reference or '—' }}</span></td>
+            <td class="c-status" data-label="Status">{{ badge(h.status) }}</td>
+            <td class="c-action" data-label="Receipt">
+              {% if h.receipt %}
+              <a class="ppf-dl-btn" target="_blank" rel="noopener noreferrer"
+                 href="/api/method/slcm.api.student_portal.parent_download_fee_receipt?receipt_name={{ h.receipt | urlencode }}&student_name={{ ward_student_name | urlencode }}"
+                 title="Download receipt {{ h.receipt }}" aria-label="Download receipt {{ h.receipt }}">
+                <span class="ms" aria-hidden="true">download</span> Download Invoice
+              </a>
+              {% else %}<span class="ppf-tone-muted" style="display:inline-block;min-width:34px;text-align:center;" title="No receipt for this payment" aria-label="No receipt">—</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+          <tr class="ppf-filter-empty is-hidden"><td colspan="7" class="c-empty">{{ empty('filter_alt', 'No payments for this academic year') }}</td></tr>
+        </tbody>
+      </table>
+      {% endif %}
+    </div>
+    {% endif %}
+    {% if _has_inv %}
+    <div id="ppf-tab-invoices" {% if _ntabs > 1 %}role="tabpanel" aria-labelledby="ppf-tabbtn-invoices"{% endif %} {% if _first != 'invoices' %}class="is-hidden"{% endif %}>
+      {% if _err.invoices %}
+        {{ section_error('fee invoices') }}
+      {% elif not has_invoices %}
+        {% if has_fee_data %}
+        {{ empty('schedule', 'No invoices yet', 'Invoices are being prepared by the Finance Office. The summary above is from your ward\'s fee record.') }}
+        {% else %}
+        {{ empty('receipt_long', 'No invoices yet') }}
+        {% endif %}
+      {% else %}
+      <table class="ppf-t" id="ppf-inv-table">
+        <caption class="pp-sr-only">Fee invoices by term</caption>
+        <colgroup><col style="width:26%;"><col style="width:14%;"><col style="width:14%;"><col style="width:13%;"><col style="width:14%;"><col style="width:19%;"></colgroup>
+        <thead><tr>
+          <th scope="col" class="c-text">Description</th><th scope="col" class="c-date">Invoice Date</th>
+          <th scope="col" class="c-date">Due Date</th><th scope="col" class="c-num">Amount</th>
+          <th scope="col" class="c-status">Status</th><th scope="col" class="c-action">Action</th>
+        </tr></thead>
+        <tbody>
+          {% for tg in term_groups %}
+          {% set gid = 'g' ~ loop.index %}
+          <tr class="ppf-group-row" data-group="{{ gid }}" data-ay="{{ tg.academic_year | e }}">
+            <th scope="colgroup" colspan="6">
+              <div class="ppf-group-inner">
+                <span>{{ tg.term }}</span>
+                <span class="ppf-group-meta">{% if tg.term_has_dues %}<span class="ppf-tone-danger">{{ tg.formatted_term_outstanding }} due</span> · {% endif %}{{ ay(tg.academic_year) }}</span>
+              </div>
+            </th>
+          </tr>
+          {% for inv in tg.invoices %}
+          {% set iid = inv.name | e %}
+          <tr class="ppf-row-data" data-group="{{ gid }}" data-ay="{{ (inv.academic_year or tg.academic_year) | e }}" data-detail="ppf-det-{{ iid }}">
+            <td class="c-text c-primary"><div class="ppf-cell-main">{{ inv.label }}</div><div class="ppf-cell-sub">{{ inv.name }}</div></td>
+            <td class="c-date" data-label="Invoice Date">{{ inv.invoice_date_fmt or '—' }}</td>
+            <td class="c-date" data-label="Due Date">
+              <div>
+                <div>{{ inv.due_date_fmt or '—' }}</div>
+                {% if inv.due_hint %}<div class="ppf-cell-hint ppf-tone-{{ inv.due_hint_tone }}">{{ inv.due_hint }}</div>{% endif %}
+              </div>
+            </td>
+            <td class="c-num" data-label="Amount">{{ inv.formatted_payable }}</td>
+            <td class="c-status" data-label="Status">{{ badge(inv.display_status, 'ppf-badge-' ~ iid) }}</td>
+            <td class="c-action" data-label="Action">
+              <span style="display:inline-flex;gap:6px;justify-content:flex-end;">
+                {% if inv.can_pay and payment_enabled %}
+                <button type="button" class="ppf-btn ppf-btn-primary ppf-btn-sm" id="ppf-pay-btn-{{ iid }}" data-pay-invoice="{{ iid }}"
+                        onclick="ppfInitiatePayment('{{ iid }}')" aria-label="Pay {{ inv.formatted_outstanding }} for {{ inv.name }}">Pay</button>
+                {% endif %}
+                <button type="button" class="ppf-btn ppf-btn-ghost ppf-btn-sm" id="ppf-view-{{ iid }}"
+                        aria-expanded="false" aria-controls="ppf-det-{{ iid }}" onclick="ppfToggle('{{ iid }}')"
+                        aria-label="View details of {{ inv.name }}">View</button>
+              </span>
+            </td>
+          </tr>
+          <tr class="ppf-detail-tr is-hidden" id="ppf-det-{{ iid }}">
+            <td colspan="6">
+              {% if inv.display_status == 'Cancelled' %}
+              <p style="margin:0;font-size:13px;color:var(--pp-text-3);">This invoice has been cancelled. No payment is required.</p>
+              {% else %}
+              <div class="ppf-detail-grid">
+                <div>
+                  <div class="ppf-detail-hd">Fee Breakdown</div>
+                  {% for comp in inv.fee_components %}
+                  <div class="ppf-kv"><span>{{ comp.component_name }}</span><span>{{ _inr.format(comp.total_amount or comp.amount or 0) }}</span></div>
+                  {% endfor %}
+                  {% if inv.scholarship_amount %}
+                  <div class="ppf-kv"><span>Scholarship / Discount</span><span>−{{ _inr.format(inv.scholarship_amount) }}</span></div>
+                  {% endif %}
+                  <div class="ppf-kv"><span>Net Payable</span><span>{{ inv.formatted_payable }}</span></div>
+                  <div class="ppf-kv"><span>Amount Paid</span><span id="ppf-paid-{{ iid }}">{{ inv.formatted_paid }}</span></div>
+                  <div class="ppf-kv"><span>Outstanding Balance</span><span class="{{ 'ppf-tone-danger' if inv.outstanding_amount > 0 }}" id="ppf-outstanding-{{ iid }}">{{ inv.formatted_outstanding }}</span></div>
+                </div>
+                <div>
+                  <div class="ppf-detail-hd">Payments for this invoice</div>
+                  {% for p in inv.payments %}
+                  <div class="ppf-kv">
+                    <span>{{ frappe.utils.formatdate(p.payment_date, "dd MMM yyyy") if p.payment_date else '—' }}{% if not p.is_rzp_only and p.payment_mode %} · {{ p.payment_mode }}{% endif %}{% if p.reference_number %}<span class="ppf-cell-sub">Ref: {{ p.reference_number }}</span>{% endif %}</span>
+                    {% if p.is_rzp_only %}<span class="ppf-tone-danger">{{ p.rzp_status or 'Failed' }}</span>
+                    {% else %}<span>{{ _inr.format(p.amount or 0) }}</span>{% endif %}
+                  </div>
+                  {% else %}
+                  <p style="margin:4px 0 0;font-size:12.5px;color:var(--ppf-muted);">No payments recorded yet.</p>
+                  {% endfor %}
+                </div>
+              </div>
+              {% endif %}
+              <div class="ppf-detail-actions">
+                <a class="ppf-btn ppf-btn-ghost ppf-btn-sm" target="_blank" rel="noopener noreferrer"
+                   href="/api/method/slcm.api.student_portal.parent_download_fee_invoice?invoice_name={{ inv.name | urlencode }}&student_name={{ ward_student_name | urlencode }}">
+                  <span class="ms" aria-hidden="true">picture_as_pdf</span> Download Invoice
+                </a>
+                {% for rc in inv.receipts %}
+                <a class="ppf-btn ppf-btn-ghost ppf-btn-sm" target="_blank" rel="noopener noreferrer" title="Ref: {{ rc.reference_number or rc.receipt_name }}"
+                   href="/api/method/slcm.api.student_portal.parent_download_fee_receipt?receipt_name={{ rc.receipt_name | urlencode }}&student_name={{ ward_student_name | urlencode }}">
+                  <span class="ms" aria-hidden="true">receipt</span> Download Receipt{% if inv.receipts | length > 1 %} {{ loop.index }}{% endif %}
+                </a>
+                {% endfor %}
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+          {% endfor %}
+          <tr class="ppf-filter-empty is-hidden"><td colspan="6" class="c-empty">{{ empty('filter_alt', 'No invoices for this academic year') }}</td></tr>
+        </tbody>
+      </table>
+      {% endif %}
+    </div>
+    {% endif %}
+
     {% if has_fee_refunds %}
-    <div id="ppf-tab-refunds" {% if has_fee_demands %}role="tabpanel" aria-labelledby="ppf-tabbtn-refunds" class="is-hidden"{% endif %}>
-      {% if not has_fee_demands %}<div class="ppf-detail-hd" style="padding:12px 20px 0;">Refunds</div>{% endif %}
+    <div id="ppf-tab-refunds" {% if _ntabs > 1 %}role="tabpanel" aria-labelledby="ppf-tabbtn-refunds"{% endif %} {% if _first != 'refunds' %}class="is-hidden"{% endif %}>
+      {% if _ntabs == 1 %}<div class="ppf-detail-hd" style="padding:12px 20px 0;">Refunds</div>{% endif %}
       {% for r in fee_refunds %}
       {% if r.demand_paid_amount and r.demand_paid_amount > 0 %}
       <div class="ppf-refund">
@@ -760,261 +907,42 @@
     {% elif _err.refunds %}
     {{ section_error('refunds') }}
     {% endif %}
-  </div>
-  {% endif %}
-</section>
 
-{# ═══════════════ Row 3 — Upcoming / outstanding ═══════════════ #}
-<section class="ppf-card fade-in" id="ppf-outstanding" style="margin-bottom:16px;" aria-labelledby="ppf-out-title">
-  <div class="ppf-card-hd">
-    <h2 class="ppf-card-title" id="ppf-out-title"><span class="ms" aria-hidden="true">pending_actions</span>Upcoming / Outstanding Fees</h2>
-    {% if outstanding_rows %}
-    <div class="ppf-card-meta">
-      <span class="{{ 'ppf-tone-danger' if outstanding_pending_count }}">{{ outstanding_pending_count }} pending</span>
-      <span aria-hidden="true" style="color:#cbd5e1;">|</span>
-      <span class="{{ 'ppf-tone-danger' if outstanding_overdue_count }}">{{ outstanding_overdue_count }} overdue</span>
-    </div>
-    {% elif not (_err.invoices or _err.demands) %}
-    <div class="ppf-card-meta">0 pending <span aria-hidden="true" style="color:#cbd5e1;">|</span> 0 overdue</div>
-    {% endif %}
-  </div>
-  {% if (_err.invoices or _err.demands) and not outstanding_rows %}
-    {{ section_error('outstanding fees') }}
-  {% elif not outstanding_rows %}
-    {{ empty('task_alt', 'No outstanding fees', 'Your ward has no pending or overdue payments.', ok=True) }}
+    {% if _has_sc %}
+    <div id="ppf-tab-scholarships" {% if _ntabs > 1 %}role="tabpanel" aria-labelledby="ppf-tabbtn-scholarships"{% endif %} {% if _first != 'scholarships' %}class="is-hidden"{% endif %}>
+      {% if _ntabs == 1 %}<div class="ppf-detail-hd" style="padding:12px 20px 0;">Scholarships &amp; Concessions</div>{% endif %}
+  {% if _err.concessions %}
+    {{ section_error('scholarships and concessions') }}
+  {% elif not has_concessions %}
+    {{ empty('workspace_premium', 'No scholarships or concessions', 'Approved scholarships and fee concessions will be listed here.') }}
   {% else %}
-  {% if _err.invoices or _err.demands %}<div class="ppf-notice ppf-notice-danger" style="margin:12px 20px 0;"><span class="ms" aria-hidden="true">error</span><div>Some fee records could not be loaded, so this list may be incomplete. <button type="button" class="ppf-link" onclick="window.location.reload()">Retry</button></div></div>{% endif %}
   <table class="ppf-t">
-    <caption class="pp-sr-only">Upcoming and outstanding fees</caption>
-    <colgroup><col style="width:34%;"><col style="width:18%;"><col style="width:16%;"><col style="width:14%;"><col style="width:18%;"></colgroup>
+    <caption class="pp-sr-only">Scholarships and concessions</caption>
+    <colgroup><col style="width:40%;"><col style="width:20%;"><col style="width:20%;"><col style="width:20%;"></colgroup>
     <thead><tr>
-      <th scope="col" class="c-text">Component</th><th scope="col" class="c-text">Demand Type</th><th scope="col" class="c-date">Due Date</th>
-      <th scope="col" class="c-num">Amount</th><th scope="col" class="c-status">Status</th>
+      <th scope="col" class="c-text">Description</th><th scope="col" class="c-num">Amount</th>
+      <th scope="col" class="c-status">Status</th><th scope="col" class="c-date">Approved On</th>
     </tr></thead>
     <tbody>
-      {% for r in outstanding_rows %}
+      {% for c in concessions %}
       <tr class="ppf-row-data">
-        <td class="c-text c-primary"><div class="ppf-cell-main">{{ r.component }}</div><div class="ppf-cell-sub">{{ r.sub }}</div></td>
-        <td class="c-text" data-label="Demand Type">{% if r.demand_type %}<span class="ppf-badge {{ 'ppf-badge-academic' if r.demand_type == 'Academic' else 'ppf-badge-neutral' }}">{{ r.demand_type }}</span>{% else %}<span class="ppf-tone-muted">—</span>{% endif %}</td>
-        <td class="c-date" data-label="Due Date">
-          <div>
-            <div>{{ r.due_date_fmt or '—' }}</div>
-            {% if r.kind == 'demand' and r.is_overdue and r.days_overdue %}<div class="ppf-cell-hint ppf-tone-danger">{{ r.days_overdue }}d overdue</div>{% endif %}
-          </div>
+        <td class="c-text c-primary">
+          <div class="ppf-cell-main">{{ c.concession_type or "Concession" }}{% if c.fee_component %} – {{ c.fee_component }}{% endif %}</div>
+          {% if c.reason or c.approved_by_name %}<div class="ppf-cell-sub">{{ c.reason or '' }}{% if c.reason and c.approved_by_name %} · {% endif %}{% if c.approved_by_name %}Approved by {{ c.approved_by_name }}{% endif %}</div>{% endif %}
         </td>
-        <td class="c-num {{ 'ppf-tone-danger' if r.is_overdue }}" data-label="Amount">{{ r.amount_fmt }}</td>
-        <td class="c-status" data-label="Status">{{ badge(r.status) }}</td>
+        <td class="c-num" data-label="Amount">−{{ c.formatted_waiver }}</td>
+        <td class="c-status" data-label="Status">{{ badge(c.status or 'Pending') }}</td>
+        <td class="c-date" data-label="Approved On">{{ c.approved_on_fmt or '—' }}</td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
   {% endif %}
-</section>
-
-{# ═══════════════ Row 4 — Invoices & payments (tabbed) ═══════════════ #}
-<section class="ppf-card fade-in" id="ppf-invoices-section" aria-labelledby="ppf-ip-title" style="margin-bottom:16px;">
-  <div class="ppf-card-hd">
-    <h2 class="ppf-card-title" id="ppf-ip-title"><span class="ms" aria-hidden="true">receipt_long</span>Invoices &amp; Payments</h2>
-    <div class="ppf-card-meta">
-      <span data-tab-meta="payments">
-        {% if payment_history %}<span data-count-for="ppf-ph-table" data-noun="payment">{{ payment_history | length }} payment{{ 's' if payment_history | length != 1 }}</span>{% endif %}
-        <button type="button" class="ppf-link is-hidden" data-viewall-for="ppf-ph-table" aria-controls="ppf-ph-table" aria-expanded="false">View All <span class="ms" aria-hidden="true">arrow_forward</span></button>
-      </span>
-      <span data-tab-meta="invoices" class="is-hidden">
-        {% if has_invoices %}<span data-count-for="ppf-inv-table" data-noun="invoice">{{ _ns.inv_count }} invoice{{ 's' if _ns.inv_count != 1 }}</span>{% endif %}
-        <button type="button" class="ppf-link is-hidden" data-viewall-for="ppf-inv-table" aria-controls="ppf-inv-table" aria-expanded="false">View All <span class="ms" aria-hidden="true">arrow_forward</span></button>
-      </span>
     </div>
-  </div>
-  <div class="ppf-tabs" role="tablist" aria-label="Invoices and payments">
-    <button type="button" class="ppf-tab" role="tab" id="ppf-tabbtn-payments" aria-selected="true" aria-controls="ppf-tab-payments" onclick="ppfTab('payments')">Payment History <span class="ppf-tab-count">{{ payment_history | length }}</span></button>
-    <button type="button" class="ppf-tab" role="tab" id="ppf-tabbtn-invoices" aria-selected="false" aria-controls="ppf-tab-invoices" onclick="ppfTab('invoices')" tabindex="-1">Fee Invoices <span class="ppf-tab-count">{{ _ns.inv_count }}</span></button>
-  </div>
-  <div id="ppf-tab-payments" role="tabpanel" aria-labelledby="ppf-tabbtn-payments">
-    {% if (_err.payments or _err.receipts or _err.invoices) and not payment_history %}
-      {{ section_error('payment history') }}
-    {% elif not payment_history %}
-      {{ empty('account_balance_wallet', 'No payments recorded yet', 'Payments made towards invoices and charges will be listed here.') }}
-    {% else %}
-    <table class="ppf-t" id="ppf-ph-table" data-limit="5">
-      <caption class="pp-sr-only">Payment history, newest first</caption>
-      <colgroup><col style="width:12%;"><col style="width:24%;"><col style="width:11%;"><col style="width:13%;"><col style="width:13%;"><col style="width:11%;"><col style="width:16%;"></colgroup>
-      <thead><tr>
-        <th scope="col" class="c-date">Date</th><th scope="col" class="c-text">Description</th>
-        <th scope="col" class="c-num">Amount</th><th scope="col" class="c-text">Payment Method</th>
-        <th scope="col" class="c-text">Reference</th><th scope="col" class="c-status">Status</th>
-        <th scope="col" class="c-action"><span class="pp-sr-only">Download</span></th>
-      </tr></thead>
-      <tbody>
-        {% for h in payment_history %}
-        <tr class="ppf-row-data" data-ay="{{ h.academic_year | e }}">
-          <td class="c-date" data-label="Date">{{ h.date_fmt or '—' }}</td>
-          <td class="c-text c-primary"><div class="ppf-cell-main">{{ h.description }}</div>{% if h.sub %}<div class="ppf-cell-sub">{{ h.sub }}</div>{% endif %}</td>
-          <td class="c-num" data-label="Amount">{{ h.amount_fmt or '—' }}</td>
-          <td class="c-text" data-label="Method">{{ h.method or '—' }}</td>
-          <td class="c-text" data-label="Reference"><span class="ppf-ellip" title="{{ h.reference | e }}">{{ h.reference or '—' }}</span></td>
-          <td class="c-status" data-label="Status">{{ badge(h.status) }}</td>
-          <td class="c-action" data-label="Receipt">
-            {% if h.receipt %}
-            <a class="ppf-dl-btn" target="_blank" rel="noopener noreferrer"
-               href="/api/method/slcm.api.student_portal.parent_download_fee_receipt?receipt_name={{ h.receipt | urlencode }}&student_name={{ ward_student_name | urlencode }}"
-               title="Download receipt {{ h.receipt }}" aria-label="Download receipt {{ h.receipt }}">
-              <span class="ms" aria-hidden="true">download</span> Download Invoice
-            </a>
-            {% else %}<span class="ppf-tone-muted" style="display:inline-block;min-width:34px;text-align:center;" title="No receipt for this payment" aria-label="No receipt">—</span>{% endif %}
-          </td>
-        </tr>
-        {% endfor %}
-        <tr class="ppf-filter-empty is-hidden"><td colspan="7" class="c-empty">{{ empty('filter_alt', 'No payments for this academic year') }}</td></tr>
-      </tbody>
-    </table>
     {% endif %}
   </div>
-  <div id="ppf-tab-invoices" role="tabpanel" aria-labelledby="ppf-tabbtn-invoices" class="is-hidden">
-    {% if _err.invoices %}
-      {{ section_error('fee invoices') }}
-    {% elif not has_invoices %}
-      {% if has_fee_data %}
-      {{ empty('schedule', 'No invoices yet', 'Invoices are being prepared by the Finance Office. The summary above is from your ward\'s fee record.') }}
-      {% else %}
-      {{ empty('receipt_long', 'No invoices yet') }}
-      {% endif %}
-    {% else %}
-    <table class="ppf-t" id="ppf-inv-table" data-limit="5">
-      <caption class="pp-sr-only">Fee invoices by term</caption>
-      <colgroup><col style="width:26%;"><col style="width:14%;"><col style="width:14%;"><col style="width:13%;"><col style="width:14%;"><col style="width:19%;"></colgroup>
-      <thead><tr>
-        <th scope="col" class="c-text">Description</th><th scope="col" class="c-date">Invoice Date</th>
-        <th scope="col" class="c-date">Due Date</th><th scope="col" class="c-num">Amount</th>
-        <th scope="col" class="c-status">Status</th><th scope="col" class="c-action">Action</th>
-      </tr></thead>
-      <tbody>
-        {% for tg in term_groups %}
-        {% set gid = 'g' ~ loop.index %}
-        <tr class="ppf-group-row" data-group="{{ gid }}" data-ay="{{ tg.academic_year | e }}">
-          <th scope="colgroup" colspan="6">
-            <div class="ppf-group-inner">
-              <span>{{ tg.term }}</span>
-              <span class="ppf-group-meta">{% if tg.term_has_dues %}<span class="ppf-tone-danger">{{ tg.formatted_term_outstanding }} due</span> · {% endif %}{{ ay(tg.academic_year) }}</span>
-            </div>
-          </th>
-        </tr>
-        {% for inv in tg.invoices %}
-        {% set iid = inv.name | e %}
-        <tr class="ppf-row-data" data-group="{{ gid }}" data-ay="{{ (inv.academic_year or tg.academic_year) | e }}" data-detail="ppf-det-{{ iid }}">
-          <td class="c-text c-primary"><div class="ppf-cell-main">{{ inv.label }}</div><div class="ppf-cell-sub">{{ inv.name }}</div></td>
-          <td class="c-date" data-label="Invoice Date">{{ inv.invoice_date_fmt or '—' }}</td>
-          <td class="c-date" data-label="Due Date">
-            <div>
-              <div>{{ inv.due_date_fmt or '—' }}</div>
-              {% if inv.due_hint %}<div class="ppf-cell-hint ppf-tone-{{ inv.due_hint_tone }}">{{ inv.due_hint }}</div>{% endif %}
-            </div>
-          </td>
-          <td class="c-num" data-label="Amount">{{ inv.formatted_payable }}</td>
-          <td class="c-status" data-label="Status">{{ badge(inv.display_status, 'ppf-badge-' ~ iid) }}</td>
-          <td class="c-action" data-label="Action">
-            <span style="display:inline-flex;gap:6px;justify-content:flex-end;">
-              {% if inv.can_pay and payment_enabled %}
-              <button type="button" class="ppf-btn ppf-btn-primary ppf-btn-sm" id="ppf-pay-btn-{{ iid }}" data-pay-invoice="{{ iid }}"
-                      onclick="ppfInitiatePayment('{{ iid }}')" aria-label="Pay {{ inv.formatted_outstanding }} for {{ inv.name }}">Pay</button>
-              {% endif %}
-              <button type="button" class="ppf-btn ppf-btn-ghost ppf-btn-sm" id="ppf-view-{{ iid }}"
-                      aria-expanded="false" aria-controls="ppf-det-{{ iid }}" onclick="ppfToggle('{{ iid }}')"
-                      aria-label="View details of {{ inv.name }}">View</button>
-            </span>
-          </td>
-        </tr>
-        <tr class="ppf-detail-tr is-hidden" id="ppf-det-{{ iid }}">
-          <td colspan="6">
-            {% if inv.display_status == 'Cancelled' %}
-            <p style="margin:0;font-size:13px;color:var(--pp-text-3);">This invoice has been cancelled. No payment is required.</p>
-            {% else %}
-            <div class="ppf-detail-grid">
-              <div>
-                <div class="ppf-detail-hd">Fee Breakdown</div>
-                {% for comp in inv.fee_components %}
-                <div class="ppf-kv"><span>{{ comp.component_name }}</span><span>{{ _inr.format(comp.total_amount or comp.amount or 0) }}</span></div>
-                {% endfor %}
-                {% if inv.scholarship_amount %}
-                <div class="ppf-kv"><span>Scholarship / Discount</span><span>−{{ _inr.format(inv.scholarship_amount) }}</span></div>
-                {% endif %}
-                <div class="ppf-kv"><span>Net Payable</span><span>{{ inv.formatted_payable }}</span></div>
-                <div class="ppf-kv"><span>Amount Paid</span><span id="ppf-paid-{{ iid }}">{{ inv.formatted_paid }}</span></div>
-                <div class="ppf-kv"><span>Outstanding Balance</span><span class="{{ 'ppf-tone-danger' if inv.outstanding_amount > 0 }}" id="ppf-outstanding-{{ iid }}">{{ inv.formatted_outstanding }}</span></div>
-              </div>
-              <div>
-                <div class="ppf-detail-hd">Payments for this invoice</div>
-                {% for p in inv.payments %}
-                <div class="ppf-kv">
-                  <span>{{ frappe.utils.formatdate(p.payment_date, "dd MMM yyyy") if p.payment_date else '—' }}{% if not p.is_rzp_only and p.payment_mode %} · {{ p.payment_mode }}{% endif %}{% if p.reference_number %}<span class="ppf-cell-sub">Ref: {{ p.reference_number }}</span>{% endif %}</span>
-                  {% if p.is_rzp_only %}<span class="ppf-tone-danger">{{ p.rzp_status or 'Failed' }}</span>
-                  {% else %}<span>{{ _inr.format(p.amount or 0) }}</span>{% endif %}
-                </div>
-                {% else %}
-                <p style="margin:4px 0 0;font-size:12.5px;color:var(--ppf-muted);">No payments recorded yet.</p>
-                {% endfor %}
-              </div>
-            </div>
-            {% endif %}
-            <div class="ppf-detail-actions">
-              <a class="ppf-btn ppf-btn-ghost ppf-btn-sm" target="_blank" rel="noopener noreferrer"
-                 href="/api/method/slcm.api.student_portal.parent_download_fee_invoice?invoice_name={{ inv.name | urlencode }}&student_name={{ ward_student_name | urlencode }}">
-                <span class="ms" aria-hidden="true">picture_as_pdf</span> Download Invoice
-              </a>
-              {% for rc in inv.receipts %}
-              <a class="ppf-btn ppf-btn-ghost ppf-btn-sm" target="_blank" rel="noopener noreferrer" title="Ref: {{ rc.reference_number or rc.receipt_name }}"
-                 href="/api/method/slcm.api.student_portal.parent_download_fee_receipt?receipt_name={{ rc.receipt_name | urlencode }}&student_name={{ ward_student_name | urlencode }}">
-                <span class="ms" aria-hidden="true">receipt</span> Download Receipt{% if inv.receipts | length > 1 %} {{ loop.index }}{% endif %}
-              </a>
-              {% endfor %}
-            </div>
-          </td>
-        </tr>
-        {% endfor %}
-        {% endfor %}
-        <tr class="ppf-filter-empty is-hidden"><td colspan="6" class="c-empty">{{ empty('filter_alt', 'No invoices for this academic year') }}</td></tr>
-      </tbody>
-    </table>
-    {% endif %}
-  </div>
+  {% endif %}
 </section>
-
-{# ═══════════════ Row 5 — Scholarships ═══════════════ #}
-<div class="ppf-row ppf-row-extra fade-in">
-  <section class="ppf-card" aria-labelledby="ppf-sc-title">
-    <div class="ppf-card-hd">
-      <h2 class="ppf-card-title" id="ppf-sc-title"><span class="ms" aria-hidden="true">workspace_premium</span>Scholarships &amp; Concessions</h2>
-      {% if has_concessions %}<span class="ppf-card-meta">{{ concessions | length }}</span>{% endif %}
-    </div>
-    {% if _err.concessions %}
-      {{ section_error('scholarships and concessions') }}
-    {% elif not has_concessions %}
-      {{ empty('workspace_premium', 'No scholarships or concessions', 'Approved scholarships and fee concessions will be listed here.') }}
-    {% else %}
-    <table class="ppf-t">
-      <caption class="pp-sr-only">Scholarships and concessions</caption>
-      <colgroup><col style="width:40%;"><col style="width:20%;"><col style="width:20%;"><col style="width:20%;"></colgroup>
-      <thead><tr>
-        <th scope="col" class="c-text">Description</th><th scope="col" class="c-num">Amount</th>
-        <th scope="col" class="c-status">Status</th><th scope="col" class="c-date">Approved On</th>
-      </tr></thead>
-      <tbody>
-        {% for c in concessions %}
-        <tr class="ppf-row-data">
-          <td class="c-text c-primary">
-            <div class="ppf-cell-main">{{ c.concession_type or "Concession" }}{% if c.fee_component %} – {{ c.fee_component }}{% endif %}</div>
-            {% if c.reason or c.approved_by_name %}<div class="ppf-cell-sub">{{ c.reason or '' }}{% if c.reason and c.approved_by_name %} · {% endif %}{% if c.approved_by_name %}Approved by {{ c.approved_by_name }}{% endif %}</div>{% endif %}
-          </td>
-          <td class="c-num" data-label="Amount">−{{ c.formatted_waiver }}</td>
-          <td class="c-status" data-label="Status">{{ badge(c.status or 'Pending') }}</td>
-          <td class="c-date" data-label="Approved On">{{ c.approved_on_fmt or '—' }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    {% endif %}
-  </section>
-</div>
 
 {% endif %}{# end has_any_fee_records #}
 </div>{# end .ppf-page #}
@@ -1152,6 +1080,14 @@
   };
 
   /* ── Additional charges: details + tabs ──────────────────────── */
+  // Open the Summary's details on one tab (payments, invoices…) and bring it into view.
+  window.ppfShowTab = function (tab) {
+    var btn = document.getElementById('ppf-dm-toggle'), panel = document.getElementById('ppf-dm-details');
+    if (panel && btn && panel.classList.contains('is-hidden')) ppfToggleDetails(btn);
+    ppfTab(tab);
+    var target = document.getElementById('ppf-tab-' + tab) || panel;
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
   window.ppfToggleDetails = function (btn) {
     var panel = document.getElementById(btn.getAttribute('aria-controls'));
     if (!panel) return;

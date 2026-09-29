@@ -667,10 +667,28 @@ def _build_view_model(context, errors):
             is_overdue=bool(overdue), days_overdue=d.days_overdue,
             academic_year=d.academic_year or "",
         ))
-    rows.sort(key=lambda r: (r.due_date is None, frappe.utils.getdate(r.due_date) if r.due_date else today))
-    context.outstanding_rows = rows
-    context.outstanding_overdue_count = sum(1 for r in rows if r.is_overdue)
-    context.outstanding_pending_count = len(rows) - context.outstanding_overdue_count
+    # Re-exam fees and hostel fines, paid ones too (with their receipt)
+    try:
+        from slcm.slcm.fee.portal_charges import get_re_exams_and_fines, re_exam_and_fine_rows
+
+        re_exams, fines = get_re_exams_and_fines(context.ward_student_name)
+        rows += re_exam_and_fine_rows(context.ward_student_name, re_exams, fines)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "Parent Portal Fees: re-exam / fine rows")
+        errors["re_exams"] = True
+
+    # Unpaid first (by due date), then paid re-exam fees / hostel fines
+    rows.sort(key=lambda r: (
+        bool(r.get("is_paid")), r.due_date is None,
+        frappe.utils.getdate(r.due_date) if r.due_date else today,
+    ))
+    context.summary_rows = rows
+    from slcm.slcm.fee.portal_charges import demand_type_cards
+
+    context.demand_type_cards = demand_type_cards(context.fee_demands)
+    context.outstanding_rows = [r for r in rows if not r.get("is_paid")]
+    context.outstanding_overdue_count = sum(1 for r in context.outstanding_rows if r.is_overdue)
+    context.outstanding_pending_count = len(context.outstanding_rows) - context.outstanding_overdue_count
 
     # ── Payment history: invoice payments + receipts, de-duplicated ─────────
     history = []
@@ -798,6 +816,8 @@ def _set_defaults(context):
     context.demand_outstanding      = 0.0
     context.demand_overdue          = 0.0
     context.outstanding_rows        = []
+    context.summary_rows            = []
+    context.demand_type_cards       = []
     context.outstanding_overdue_count = 0
     context.outstanding_pending_count = 0
     context.payment_history         = []
