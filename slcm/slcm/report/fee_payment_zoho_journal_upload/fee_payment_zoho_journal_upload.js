@@ -18,32 +18,32 @@ frappe.query_reports["Fee Payment Zoho Journal Upload"] = {
 			fieldtype: "Link",
 			options: "Programme Master"
 		},
-		{
-			fieldname: "academic_year",
-			label: __("Academic Year"),
-			fieldtype: "Link",
-			options: "Academic Year",
-			on_change: function () {
-				frappe.query_report.set_filter_value("academic_term", "");
-				frappe.query_report.refresh();
-			}
-		},
-		{
-			fieldname: "academic_term",
-			label: __("Academic Term"),
-			fieldtype: "Link",
-			options: "Academic Term",
-			get_query: function() {
-				var year = frappe.query_report.get_filter_value("academic_year");
-				if (year) {
-					return {
-						filters: {
-							"academic_year": year
-						}
-					};
-				}
-			}
-		},
+		// {
+		// 	fieldname: "academic_year",
+		// 	label: __("Academic Year"),
+		// 	fieldtype: "Link",
+		// 	options: "Academic Year",
+		// 	on_change: function () {
+		// 		frappe.query_report.set_filter_value("academic_term", "");
+		// 		frappe.query_report.refresh();
+		// 	}
+		// },
+		// {
+		// 	fieldname: "academic_term",
+		// 	label: __("Academic Term"),
+		// 	fieldtype: "Link",
+		// 	options: "Academic Term",
+		// 	get_query: function() {
+		// 		var year = frappe.query_report.get_filter_value("academic_year");
+		// 		if (year) {
+		// 			return {
+		// 				filters: {
+		// 					"academic_year": year
+		// 				}
+		// 			};
+		// 		}
+		// 	}
+		// },
 		{
 			fieldname: "transaction_type",
 			label: __("Transaction Type"),
