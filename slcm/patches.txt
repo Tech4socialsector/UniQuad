@@ -8,6 +8,7 @@ slcm.patches.v2_0.stash_attendance_edit_log_for_consolidation
 slcm.patches.v2_0.dedupe_city_records
 slcm.patches.v2_0.stash_type_of_issue_assignment_rules
 slcm.patches.v2_0.rename_student_bank_fields_to_savings
+slcm.patches.v2_0.student_promotion_stage
 
 [post_model_sync]
 
@@ -67,3 +68,4 @@ slcm.patches.v2_0.fee_certificate_admission_stage
 slcm.patches.v2_0.fee_certificate_demand_letter_format
 slcm.patches.v2_0.fee_certificate_demand_letter_wording
 slcm.patches.v2_0.fee_certificate_office_documents
+slcm.patches.v2_0.group_helpdesk_desktop_icon

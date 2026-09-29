@@ -1,0 +1,110 @@
+{
+ "app": "slcm",
+ "creation": "2026-04-14 19:19:23.329758",
+ "docstatus": 0,
+ "doctype": "Workspace Sidebar",
+ "header_icon": "monitor",
+ "idx": 0,
+ "items": [
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "home",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Home",
+   "link_to": "Student Portal",
+   "link_type": "Workspace",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "monitor",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Portal",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Section Break"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "icon": "external-link",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Open Student Portal",
+   "link_type": "URL",
+   "show_arrow": 0,
+   "type": "Link",
+   "url": "/student-portal"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "icon": "setting-gear",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Portal Settings",
+   "link_to": "Student Portal Settings",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "megaphone",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Communication",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Section Break"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "icon": "megaphone",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Student Announcement",
+   "link_to": "Student Announcement",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "inbox",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Requests",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Section Break"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "icon": "calendar-x",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Student Leave Applications",
+   "link_to": "Student Leave Applications",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-09-29 16:46:31.759650",
+ "modified_by": "Administrator",
+ "module": "SLCM",
+ "name": "Student Portal",
+ "owner": "Administrator",
+ "standard": 1,
+ "title": "Student Portal"
+}

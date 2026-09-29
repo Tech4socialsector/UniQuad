@@ -92,6 +92,7 @@
 .spf-badge-paid { color: var(--spf-paid); padding-left: 0; padding-right: 0; }
 .spf-badge-warning { color: var(--spf-amber); background: rgba(146,12,36,0.10); }
 .spf-badge-danger  { color: var(--spf-red); background: rgba(146,12,36,0.07); }
+.spf-badge-academic { color: #920C24; background: #fff0f2; }
 .spf-badge-neutral { color: var(--spf-muted); background: var(--spf-row); }
 .spf-tone-success { color: var(--spf-green) !important; }
 .spf-tone-danger  { color: var(--spf-red) !important; }
@@ -181,6 +182,10 @@
 .spf-t .c-num    { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .spf-t .c-status { text-align: center; }
 .spf-t .c-action { text-align: right; white-space: nowrap; }
+.spf-sc-hd { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.spf-summary-cards { padding-bottom: 0; }
+.spf-cards-group + .spf-cards-group { margin-top: 14px; }
+.spf-cards-group-hd { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--spf-maroon, #920c24); margin: 0 0 8px; }
 .spf-t td.c-num  { font-weight: 600; color: var(--spf-text); }
 .spf-cell-main { font-weight: 600; color: var(--spf-text); }
 .spf-cell-sub  { font-size: 11.5px; color: var(--spf-muted); margin-top: 1px; }
@@ -494,36 +499,83 @@
 </section>
 {% else %}
 
-{# ═══════════════ KPI cards ═══════════════ #}
-<section class="spf-kpis fade-in" aria-label="Fee summary">
-  <div class="spf-kpi">
-    <div class="spf-kpi-head"><span class="spf-kpi-label">Total Fees</span><span class="spf-kpi-icon"><span class="sp-ms" aria-hidden="true">account_balance</span></span></div>
-    {% if _err.summary %}<div class="spf-kpi-value is-empty">—</div><div class="spf-kpi-sub">Unable to load</div>
-    {% elif not has_fee_data %}<div class="spf-kpi-value is-empty">—</div><div class="spf-kpi-sub">No programme fee set up yet</div>
-    {% else %}
-    <div class="spf-kpi-value">{{ _inr.format(total_payable) }}</div>
-    <div class="spf-kpi-sub">{% if total_scholarship > 0 %}Net programme fee after {{ _inr.format(total_scholarship) }} scholarship{% if primary_concession_type %} ({{ primary_concession_type }}){% endif %}{% else %}Net programme fee{% endif %}</div>
+{# ═══════════════ Summary ═══════════════ #}
+{% set _has_sc = has_concessions or has_credit_notes or _err.concessions or _err.credits %}
+{% set _has_ph = payment_history or _err.payments or _err.receipts %}
+{% set _has_inv = has_invoices or _err.invoices %}
+{# Detail tabs: Fee Demands / Payment History / Fee Invoices / Refunds / Scholarships & Concessions; the first one present is open #}
+{% set _ntabs = (1 if has_fee_demands else 0) + (1 if _has_ph else 0) + (1 if _has_inv else 0) + (1 if has_fee_refunds else 0) + (1 if _has_sc else 0) %}
+{% set _first = 'demands' if has_fee_demands else ('payments' if _has_ph else ('invoices' if _has_inv else ('refunds' if has_fee_refunds else 'scholarships'))) %}
+<section class="spf-card fade-in" id="sp-demand-ledger" aria-labelledby="spf-dm-title" style="margin-bottom:16px;">
+  <div class="spf-card-hd">
+    <h2 class="spf-card-title" id="spf-dm-title"><span class="sp-ms" aria-hidden="true">list_alt</span>Summary</h2>
+    {% if outstanding_rows or has_fee_demands %}
+    <div class="spf-card-meta">
+      <span class="{{ 'spf-tone-warning' if outstanding_pending_count else 'spf-tone-success' }}">{{ outstanding_pending_count }} pending</span>
+      <span aria-hidden="true" class="spf-sep">|</span>
+      <span class="{{ 'spf-tone-danger' if outstanding_overdue_count else 'spf-tone-success' }}">{{ outstanding_overdue_count }} overdue</span>
+      {% if has_fee_demands %}<span aria-hidden="true" class="spf-sep">|</span><span>{{ da_pct }}% settled</span>{% endif %}
+    </div>
     {% endif %}
   </div>
-  <div class="spf-kpi">
-    <div class="spf-kpi-head"><span class="spf-kpi-label">Paid</span><span class="spf-kpi-icon"><span class="sp-ms" aria-hidden="true">check_circle</span></span></div>
-    {% if not _summary_ok %}<div class="spf-kpi-value is-empty">—</div><div class="spf-kpi-sub">{{ 'Unable to load' if _err.summary else 'No payments yet' }}</div>
-    {% else %}
-    <div class="spf-kpi-value {{ 'spf-tone-success' if total_paid > 0 }}">{{ _inr.format(total_paid) }}</div>
-    <div class="spf-kpi-sub {{ 'spf-tone-success' if paid_pct == 100 }}">{% if paid_pct is none %}—{% else %}{{ paid_pct }}% paid{% endif %}</div>
-    {% endif %}
+  {% if demand_type_cards and not _err.demands %}
+  <div class="spf-card-bd spf-summary-cards">
+    {% for g in demand_type_cards %}
+    <div class="spf-cards-group">
+      <div class="spf-cards-group-hd">{{ g.label }}</div>
+      <div class="spf-mini-grid">
+        <div class="spf-mini"><div class="spf-mini-lbl">Total Levied</div><div class="spf-mini-val spf-tone-maroon">{{ g.total_fmt }}</div><div class="spf-mini-sub">{{ g.count }} charge{{ 's' if g.count != 1 }}</div></div>
+        <div class="spf-mini"><div class="spf-mini-lbl">Settled</div><div class="spf-mini-val {{ 'spf-tone-success' if g.paid_amt > 0 }}">{{ g.paid_fmt }}</div><div class="spf-mini-sub">{{ g.paid_count }} paid</div></div>
+        <div class="spf-mini"><div class="spf-mini-lbl">Scholarship</div><div class="spf-mini-val">{{ g.waived_fmt }}</div><div class="spf-mini-sub">Applied to charges</div></div>
+        <div class="spf-mini"><div class="spf-mini-lbl">Outstanding</div><div class="spf-mini-val {{ 'spf-tone-danger' if g.outstanding > 0 }}">{{ g.outstanding_fmt }}</div><div class="spf-mini-sub">{% if g.overdue > 0 %}{{ g.overdue }} overdue{% elif g.pending > 0 %}{{ g.pending }} pending{% else %}all clear{% endif %}</div></div>
+      </div>
+    </div>
+    {% endfor %}
   </div>
-  <div class="spf-kpi">
-    <div class="spf-kpi-head"><span class="spf-kpi-label">Balance</span><span class="spf-kpi-icon"><span class="sp-ms" aria-hidden="true">pending_actions</span></span></div>
-    {% if not _summary_ok %}<div class="spf-kpi-value is-empty">—</div><div class="spf-kpi-sub">{{ 'Unable to load' if _err.summary else 'Nothing due' }}</div>
-    {% else %}
-    <div class="spf-kpi-value {{ 'spf-tone-danger' if has_dues }}">{{ _inr.format(total_outstanding) }}</div>
-    {% if has_dues %}<div class="spf-kpi-sub">Programme fees due{% if payable_invoices %} across {{ payable_invoices | length }} invoice{{ 's' if payable_invoices | length != 1 }}{% endif %}</div>
-    {% else %}<div class="spf-kpi-sub spf-tone-success">No pending programme dues</div>{% endif %}
-    {% endif %}
-    {% if other_outstanding > 0 %}<div class="spf-kpi-note spf-tone-danger"><a href="#spf-outstanding">+ {{ _inr.format(other_outstanding) }} in other dues</a></div>{% endif %}
-    {% if _summary_ok and has_dues %}
-    <div class="spf-kpi-action">
+  {% endif %}
+  {% if (_err.invoices or _err.re_exams or _err.hostel_fines) and summary_rows %}<div class="spf-notice spf-notice-danger" style="margin:12px 20px 0;"><span class="sp-ms" aria-hidden="true">error</span><div>Some fee records could not be loaded, so this list may be incomplete. <button type="button" class="spf-link" onclick="window.location.reload()">Retry</button></div></div>{% endif %}
+  {# Every charge still to pay, plus paid re-exam fees and hostel fines with their receipt #}
+  {% if summary_rows %}
+  <div class="spf-t-scroll" data-rows="6" tabindex="0" role="region" aria-label="Fees (scrollable)">
+  <table class="spf-t spf-summary-t">
+    <caption class="spf-sr-only">Outstanding fees, re-examination fees and hostel fines</caption>
+    <colgroup><col style="width:30%;"><col style="width:15%;"><col style="width:15%;"><col style="width:12%;"><col style="width:13%;"><col style="width:15%;"></colgroup>
+    <thead><tr><th scope="col" class="c-text">Component</th><th scope="col" class="c-text">Demand Type</th><th scope="col" class="c-date">Due Date</th><th scope="col" class="c-num">Amount</th><th scope="col" class="c-status">Status</th><th scope="col" class="c-action">Action</th></tr></thead>
+    <tbody>
+      {% for r in summary_rows %}
+      <tr class="spf-row-data">
+        <td class="c-text c-primary"><div class="spf-cell-main">{{ r.component }}</div><div class="spf-cell-sub">{{ r.sub }}</div></td>
+        <td class="c-text" data-label="Demand Type">{% if r.demand_type %}<span class="spf-badge {{ 'spf-badge-academic' if r.demand_type == 'Academic' else 'spf-badge-neutral' }}">{{ r.demand_type }}</span>{% else %}<span class="spf-tone-muted">—</span>{% endif %}</td>
+        <td class="c-date" data-label="Due Date"><div><div>{{ r.due_date_fmt or '—' }}</div>{% if r.kind == 'demand' and r.is_overdue and r.days_overdue %}<div class="spf-cell-hint spf-tone-danger">{{ r.days_overdue }}d overdue</div>{% endif %}</div></td>
+        <td class="c-num {{ 'spf-tone-danger' if r.is_overdue }}" data-label="Amount">{{ r.amount_fmt }}</td>
+        <td class="c-status" data-label="Status">{{ badge(r.status) }}</td>
+        <td class="c-action" data-label="Action">
+          {% if r.receipt %}
+          <a class="spf-btn spf-btn-ghost spf-btn-sm" target="_blank" rel="noopener noreferrer"
+             href="/api/method/slcm.api.student_portal.download_fee_receipt?receipt_name={{ r.receipt | urlencode }}"
+             aria-label="Download receipt for {{ r.component }}"><span class="sp-ms" aria-hidden="true">download</span> Receipt</a>
+          {% elif r.re_exam_receipt %}
+          <a class="spf-btn spf-btn-ghost spf-btn-sm" target="_blank" rel="noopener noreferrer"
+             href="/api/method/slcm.api.student_portal.download_re_exam_receipt?registration_name={{ r.re_exam_receipt | urlencode }}"
+             aria-label="Download receipt for {{ r.component }}"><span class="sp-ms" aria-hidden="true">download</span> Receipt</a>
+          {% elif r.kind == 'reexam' and r.can_pay and payment_enabled %}
+          <button type="button" class="spf-btn spf-btn-primary spf-btn-sm" id="pay-btn-rex-{{ r.registration | e }}" data-pay
+                  onclick="spInitiateReExamPayment('{{ r.registration | e }}', '{{ r.exam_plan | e }}', '{{ r.course | e }}', this)"
+                  aria-label="Pay {{ r.amount_fmt }} re-exam fee for {{ r.component }}">Pay</button>
+          {% elif r.kind == 'fine' and not r.is_paid %}
+          <span class="spf-cell-sub" title="Hostel fines are paid at the Hostel Office or Bursar's Office.">Pay at office</span>
+          {% else %}<span class="spf-tone-muted">—</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% endif %}
+  {% if _summary_ok and has_dues %}
+  <div class="spf-card-bd" style="padding-top:0;">
+    <div class="spf-payall spf-payall-programme">
+      <div class="spf-payall-text"><strong>{{ _inr.format(total_outstanding) }}</strong> programme fees due</div>
       {% if payment_enabled %}
       {% set _hero_amt = _inr.format(total_outstanding) %}
       <button type="button" class="spf-btn spf-btn-primary spf-btn-sm" id="sp-sm-pay-btn" data-pay
@@ -538,54 +590,24 @@
       <span class="spf-offline-note"><span class="sp-ms" aria-hidden="true">info</span>Visit the Bursar's Office to pay {{ _inr.format(total_outstanding) }}</span>
       {% endif %}
     </div>
-    {% endif %}
   </div>
-  <div class="spf-kpi">
-    <div class="spf-kpi-head"><span class="spf-kpi-label">Overdue</span><span class="spf-kpi-icon"><span class="sp-ms" aria-hidden="true">event_busy</span></span></div>
-    {% if not _summary_ok %}<div class="spf-kpi-value is-empty">—</div><div class="spf-kpi-sub">{{ 'Unable to load' if _err.summary else 'Nothing overdue' }}</div>
-    {% else %}
-    <div class="spf-kpi-value {{ 'spf-tone-danger' if programme_overdue > 0 }}">{{ _inr.format(programme_overdue) }}</div>
-    {% if programme_overdue > 0 %}<div class="spf-kpi-sub spf-tone-danger">{{ programme_overdue_count }} invoice{{ 's' if programme_overdue_count != 1 }} past due date</div>
-    {% else %}<div class="spf-kpi-sub spf-tone-success">All clear</div>{% endif %}
-    {% endif %}
-    {% if demand_overdue > 0 %}<div class="spf-kpi-note spf-tone-danger"><a href="#spf-outstanding">+ {{ _inr.format(demand_overdue) }} additional charges overdue</a></div>{% endif %}
-  </div>
-</section>
-
-{# ═══════════════ Summary ═══════════════ #}
-<section class="spf-card fade-in" id="sp-demand-ledger" aria-labelledby="spf-dm-title" style="margin-bottom:16px;">
-  <div class="spf-card-hd">
-    <h2 class="spf-card-title" id="spf-dm-title"><span class="sp-ms" aria-hidden="true">list_alt</span>Summary</h2>
-    {% if has_fee_demands %}
-    <div class="spf-card-meta">
-      {% if has_overdue_demands %}<span class="spf-tone-danger">{{ overdue_demand_count }} overdue</span><span aria-hidden="true" class="spf-sep">|</span>{% endif %}
-      <span>{{ da_pct }}% settled</span>
-    </div>
-    {% endif %}
-  </div>
+  {% endif %}
   {% if _err.demands %}
     {{ section_error('additional charges') }}
-  {% elif not has_fee_demands and not has_fee_refunds %}
-    {{ empty('list_alt', 'No additional charges', 'Charges such as development, hostel or examination fees will appear here, separate from your programme fee.') }}
+  {% elif not has_fee_demands and not has_fee_refunds and not _has_sc and not _has_ph and not _has_inv %}
+    {% if not summary_rows %}{{ empty('task_alt', 'No outstanding fees', 'You have no pending or overdue payments.', ok=True) }}{% endif %}
   {% else %}
-  {% if has_fee_demands %}
-  <div class="spf-card-bd">
-    <div class="spf-mini-grid">
-      <div class="spf-mini"><div class="spf-mini-lbl">Total Levied</div><div class="spf-mini-val spf-tone-maroon">{{ da_fmt_total }}</div><div class="spf-mini-sub">{{ da_total }} charge{{ 's' if da_total != 1 }}</div></div>
-      <div class="spf-mini"><div class="spf-mini-lbl">Settled</div><div class="spf-mini-val {{ 'spf-tone-success' if da_paid_amt > 0 }}">{{ da_fmt_paid }}</div><div class="spf-mini-sub">{{ da_paid }} paid</div></div>
-      <div class="spf-mini"><div class="spf-mini-lbl">Scholarship</div><div class="spf-mini-val">{{ da_fmt_waived }}</div><div class="spf-mini-sub">Applied to charges</div></div>
-      <div class="spf-mini"><div class="spf-mini-lbl">Outstanding</div><div class="spf-mini-val {{ 'spf-tone-danger' if da_outstanding > 0 else 'spf-tone-success' }}">{{ da_fmt_outstanding }}</div><div class="spf-mini-sub">{% if da_overdue > 0 %}{{ da_overdue }} overdue{% elif da_pending > 0 %}{{ da_pending }} pending{% else %}all clear{% endif %}</div></div>
-    </div>
-    {% if payment_enabled %}
-    {% set ns_pay = namespace(total=0, count=0, names=[]) %}
-    {% for d in fee_demands %}
-      {% if d.outstanding_amount > 0 and d.status not in ('Paid','Waived','Cancelled') %}
-        {% set ns_pay.total = ns_pay.total + d.outstanding_amount %}
-        {% set ns_pay.count = ns_pay.count + 1 %}
-        {% set ns_pay.names = ns_pay.names + [d.name] %}
-      {% endif %}
-    {% endfor %}
-    {% if ns_pay.count > 0 %}
+  {% if has_fee_demands and payment_enabled %}
+  {% set ns_pay = namespace(total=0, count=0, names=[]) %}
+  {% for d in fee_demands %}
+    {% if d.outstanding_amount > 0 and d.status not in ('Paid','Waived','Cancelled') %}
+      {% set ns_pay.total = ns_pay.total + d.outstanding_amount %}
+      {% set ns_pay.count = ns_pay.count + 1 %}
+      {% set ns_pay.names = ns_pay.names + [d.name] %}
+    {% endif %}
+  {% endfor %}
+  {% if ns_pay.count > 0 %}
+  <div class="spf-card-bd" style="padding-top:0;">
     <div class="spf-payall">
       <div class="spf-payall-text"><strong>{{ _inr.format(ns_pay.total) }}</strong> due across {{ ns_pay.count }} charge{{ 's' if ns_pay.count != 1 }}</div>
       <button type="button" class="spf-btn spf-btn-primary" id="spf-pay-all-btn" data-pay onclick="spPayAll()"
@@ -593,25 +615,27 @@
         <span class="sp-ms" aria-hidden="true">payments</span> Pay All
       </button>
     </div>
-    {% endif %}
-    {% endif %}
   </div>
   {% endif %}
+  {% endif %}
 
-  <div class="spf-card-ft" style="{{ 'border-top:none;padding-top:0;' if has_fee_demands else '' }}">
+  <div class="spf-card-ft" style="border-top:none;padding-top:0;">
     <button type="button" class="spf-btn spf-btn-ghost spf-btn-sm spf-details-toggle" id="spf-dm-toggle" aria-expanded="false" aria-controls="spf-dm-details" onclick="spfToggleDetails(this)">View Details <span class="sp-ms" aria-hidden="true">expand_more</span></button>
   </div>
 
   <div class="spf-details is-hidden" id="spf-dm-details">
-    {% if has_fee_demands and has_fee_refunds %}
-    <div class="spf-tabs" role="tablist" aria-label="Additional charge history">
-      <button type="button" class="spf-tab" role="tab" id="spf-tabbtn-demands" aria-selected="true" aria-controls="spf-tab-demands" onclick="spfTab('demands')">Fee Demands <span class="spf-tab-count">{{ fee_demands | length }}</span></button>
-      <button type="button" class="spf-tab" role="tab" id="spf-tabbtn-refunds" aria-selected="false" aria-controls="spf-tab-refunds" onclick="spfTab('refunds')" tabindex="-1">Refunds <span class="spf-tab-count">{{ fee_refunds | length }}</span></button>
+    {% if _ntabs > 1 %}
+    <div class="spf-tabs" role="tablist" aria-label="Fee details">
+      {% if has_fee_demands %}<button type="button" class="spf-tab" role="tab" id="spf-tabbtn-demands" aria-selected="{{ 'true' if _first == 'demands' else 'false' }}" aria-controls="spf-tab-demands" onclick="spfTab('demands')" {% if _first != 'demands' %}tabindex="-1"{% endif %}>Fee Demands <span class="spf-tab-count">{{ fee_demands | length }}</span></button>{% endif %}
+      {% if _has_ph %}<button type="button" class="spf-tab" role="tab" id="spf-tabbtn-payments" aria-selected="{{ 'true' if _first == 'payments' else 'false' }}" aria-controls="spf-tab-payments" onclick="spfTab('payments')" {% if _first != 'payments' %}tabindex="-1"{% endif %}>Payment History <span class="spf-tab-count">{{ payment_history | length }}</span></button>{% endif %}
+      {% if _has_inv %}<button type="button" class="spf-tab" role="tab" id="spf-tabbtn-invoices" aria-selected="{{ 'true' if _first == 'invoices' else 'false' }}" aria-controls="spf-tab-invoices" onclick="spfTab('invoices')" {% if _first != 'invoices' %}tabindex="-1"{% endif %}>Fee Invoices <span class="spf-tab-count">{{ invoice_count or 0 }}</span></button>{% endif %}
+      {% if has_fee_refunds %}<button type="button" class="spf-tab" role="tab" id="spf-tabbtn-refunds" aria-selected="{{ 'true' if _first == 'refunds' else 'false' }}" aria-controls="spf-tab-refunds" onclick="spfTab('refunds')" {% if _first != 'refunds' %}tabindex="-1"{% endif %}>Refunds <span class="spf-tab-count">{{ fee_refunds | length }}</span></button>{% endif %}
+      {% if _has_sc %}<button type="button" class="spf-tab" role="tab" id="spf-tabbtn-scholarships" aria-selected="{{ 'true' if _first == 'scholarships' else 'false' }}" aria-controls="spf-tab-scholarships" onclick="spfTab('scholarships')" {% if _first != 'scholarships' %}tabindex="-1"{% endif %}>Scholarships &amp; Concessions <span class="spf-tab-count">{{ (concessions | length) + (credit_notes | length) }}</span></button>{% endif %}
     </div>
     {% endif %}
 
     {% if has_fee_demands %}
-    <div id="spf-tab-demands" {% if has_fee_refunds %}role="tabpanel" aria-labelledby="spf-tabbtn-demands"{% endif %}>
+    <div id="spf-tab-demands" {% if _ntabs > 1 %}role="tabpanel" aria-labelledby="spf-tabbtn-demands"{% endif %} {% if _first != 'demands' %}class="is-hidden"{% endif %}>
       <table class="spf-t" id="spf-dm-table">
         <caption class="spf-sr-only">Additional charges by type</caption>
         <colgroup><col style="width:26%;"><col style="width:14%;"><col style="width:14%;"><col style="width:14%;"><col style="width:14%;"><col style="width:18%;"></colgroup>
@@ -633,7 +657,7 @@
               {% elif d.trigger_ref_doctype %}<div class="spf-cell-sub">{{ d.trigger_ref_doctype | replace('Course Reregistration','Re-registration') | replace('Convocation Registration','Convocation') | replace('_',' ') }}</div>{% endif %}
             </td>
             <td class="c-date" data-label="Due Date"><div><div>{{ d.due_date_fmt or '—' }}</div>{% if _d_over and d.status not in ('Paid','Waived') and d.days_overdue %}<div class="spf-cell-hint spf-tone-danger">{{ d.days_overdue }}d overdue</div>{% endif %}</div></td>
-            <td class="c-num" data-label="Net"><div>{{ d.formatted_net }}{% if d.waiver_amount and d.waiver_amount > 0 %}<div class="spf-cell-sub spf-tone-success">−{{ d.formatted_waiver }} waiver</div>{% endif %}</div></td>
+            <td class="c-num" data-label="Net"><div>{{ d.formatted_net }}</div></td>
             <td class="c-num" data-label="Settled">
               {% if d.settled_amount and d.settled_amount > 0 %}<div><span class="spf-tone-success">{{ d.formatted_settled }}</span>{% if d.has_credit_adj %}<div class="spf-cell-sub">incl. credit</div>{% endif %}</div>
               {% else %}<span class="spf-tone-muted">—</span>{% endif %}
@@ -649,9 +673,176 @@
     </div>
     {% endif %}
 
+    {% if _has_ph %}
+    <div id="spf-tab-payments" {% if _ntabs > 1 %}role="tabpanel" aria-labelledby="spf-tabbtn-payments"{% endif %} {% if _first != 'payments' %}class="is-hidden"{% endif %}>
+      {% if (_err.payments or _err.receipts or _err.invoices) and not payment_history %}
+        {{ section_error('payment history') }}
+      {% elif not payment_history %}
+        {{ empty('account_balance_wallet', 'No payments recorded yet', 'Payments towards invoices and charges will be listed here.') }}
+      {% else %}
+      {% if _err.receipts or _err.payments %}<div class="spf-notice spf-notice-danger" style="margin:12px 20px 0;"><span class="sp-ms" aria-hidden="true">error</span><div>Some receipts could not be loaded, so this list may be incomplete. <button type="button" class="spf-link" onclick="window.location.reload()">Retry</button></div></div>{% endif %}
+      <table class="spf-t spf-dense" id="spf-ph-table">
+        <caption class="spf-sr-only">Payment history, newest first</caption>
+        <colgroup><col style="width:12%;"><col style="width:24%;"><col style="width:11%;"><col style="width:13%;"><col style="width:13%;"><col style="width:11%;"><col style="width:16%;"></colgroup>
+        <thead><tr>
+          <th scope="col" class="c-date">Date</th><th scope="col" class="c-text">Description</th><th scope="col" class="c-num">Amount</th>
+          <th scope="col" class="c-text">Payment Method</th><th scope="col" class="c-text">Reference</th><th scope="col" class="c-status">Status</th>
+          <th scope="col" class="c-action"><span class="spf-sr-only">Download</span></th>
+        </tr></thead>
+        <tbody>
+          {% for h in payment_history %}
+          <tr class="spf-row-data" data-ay="{{ h.academic_year | e }}">
+            <td class="c-date" data-label="Date">{{ h.date_fmt or '—' }}</td>
+            <td class="c-text c-primary"><div class="spf-cell-main">{{ h.description }}</div>{% if h.sub %}<div class="spf-cell-sub">{{ h.sub }}</div>{% endif %}</td>
+            <td class="c-num {{ 'spf-tone-success' if h.ok }}" data-label="Amount">{{ h.amount_fmt or '—' }}</td>
+            <td class="c-text" data-label="Method">{{ h.method or '—' }}</td>
+            <td class="c-text" data-label="Reference"><span class="spf-ellip" title="{{ h.reference | e }}">{{ h.reference or '—' }}</span></td>
+            <td class="c-status" data-label="Status">{{ badge(h.status) }}</td>
+            <td class="c-action" data-label="Receipt">
+              {% if h.receipt %}
+              <a class="spf-dl-btn" target="_blank" rel="noopener noreferrer"
+                 href="/api/method/slcm.api.student_portal.download_fee_receipt?receipt_name={{ h.receipt | urlencode }}"
+                 title="Download receipt {{ h.receipt }}" aria-label="Download receipt {{ h.receipt }}"><span class="sp-ms" aria-hidden="true">download</span> Download Invoice</a>
+              {% else %}<span class="spf-tone-muted" style="display:inline-block;min-width:34px;text-align:center;" title="No receipt for this payment" aria-label="No receipt">—</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+          <tr class="spf-filter-empty is-hidden"><td colspan="7" class="c-empty">{{ empty('filter_alt', 'No payments for this academic year') }}</td></tr>
+        </tbody>
+      </table>
+      {% endif %}
+    </div>
+    {% endif %}
+    {% if _has_inv %}
+    <div id="spf-tab-invoices" {% if _ntabs > 1 %}role="tabpanel" aria-labelledby="spf-tabbtn-invoices"{% endif %} {% if _first != 'invoices' %}class="is-hidden"{% endif %}>
+      {% if _err.invoices %}
+        {{ section_error('fee invoices') }}
+      {% elif not has_invoices %}
+      <div class="spf-state">
+        <span class="sp-ms" aria-hidden="true">description</span>
+        <div>
+          <p class="spf-state-title">No fee invoices yet</p>
+          <p class="spf-state-sub">Invoices are generated by the Finance Office after your admission is confirmed. If you believe this is an error, refresh or contact the Bursar's Office.</p>
+          <div class="spf-state-actions">
+            <button type="button" class="spf-btn spf-btn-ghost spf-btn-sm" id="sp-refresh-inv-btn" onclick="spRefreshInvoices()"><span class="sp-ms" aria-hidden="true">refresh</span> Refresh Invoices</button>
+            {% if has_dues and payment_enabled %}
+            <button type="button" class="spf-btn spf-btn-primary spf-btn-sm" id="sp-sm-pay-btn-empty" data-pay
+                    onclick="spShowTrustThenPay('sm', '', '{{ _inr.format(total_outstanding) | e }}', '', this)">
+              <span class="sp-ms" aria-hidden="true">lock</span> Pay Outstanding · {{ _inr.format(total_outstanding) }}
+            </button>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <table class="spf-t spf-dense" id="spf-inv-table">
+        <caption class="spf-sr-only">Fee invoices by term</caption>
+        <colgroup><col style="width:26%;"><col style="width:14%;"><col style="width:14%;"><col style="width:13%;"><col style="width:14%;"><col style="width:19%;"></colgroup>
+        <thead><tr>
+          <th scope="col" class="c-text">Description</th><th scope="col" class="c-date">Invoice Date</th><th scope="col" class="c-date">Due Date</th>
+          <th scope="col" class="c-num">Amount</th><th scope="col" class="c-status">Status</th><th scope="col" class="c-action">Action</th>
+        </tr></thead>
+        <tbody>
+          {% for term, term_invoices in invoices | groupby('academic_term') %}
+          {% set gid = 'g' ~ loop.index %}
+          {% set _tlist = term_invoices | list %}
+          {% set _tyear = _tlist[0].academic_year %}
+          {% set _tns = namespace(due=0) %}{% for i in _tlist %}{% set _tns.due = _tns.due + (i.eff_outstanding or 0) %}{% endfor %}
+          <tr class="spf-group-row" data-group="{{ gid }}" data-ay="{{ (_tyear or '') | e }}">
+            <th scope="colgroup" colspan="6"><div class="spf-group-inner"><span>{{ term or 'General' }}</span><span class="spf-group-meta">{% if _tns.due > 0 %}<span class="spf-tone-danger">{{ _inr.format(_tns.due) }} due</span> · {% endif %}{{ ay(_tyear) }}</span></div></th>
+          </tr>
+          {% for inv in _tlist %}
+          {% set iid = inv.name | e %}
+          <tr class="spf-row-data" data-group="{{ gid }}" data-ay="{{ (inv.academic_year or '') | e }}" data-detail="spf-det-{{ iid }}">
+            <td class="c-text c-primary"><div class="spf-cell-main">{{ inv.label }}</div><div class="spf-cell-sub">{{ inv.name }}</div></td>
+            <td class="c-date" data-label="Invoice Date">{{ inv.invoice_date_fmt or '—' }}</td>
+            <td class="c-date" data-label="Due Date"><div><div>{{ inv.due_date_fmt or '—' }}</div>{% if inv.due_hint %}<div class="spf-cell-hint spf-tone-{{ inv.due_hint_tone }}">{{ inv.due_hint }}</div>{% endif %}</div></td>
+            <td class="c-num" data-label="Amount">{{ inv.eff_formatted_payable }}</td>
+            <td class="c-status" data-label="Status">{{ badge(inv.display_status, 'spf-badge-' ~ iid) }}</td>
+            <td class="c-action" data-label="Action">
+              <span style="display:inline-flex;gap:6px;justify-content:flex-end;align-items:center;">
+                {% if inv.can_pay and payment_enabled and not has_sm_inv_mismatch %}
+                <button type="button" class="spf-btn spf-btn-primary spf-btn-sm" id="pay-btn-{{ iid }}" data-pay data-pay-invoice="{{ iid }}"
+                        onclick="spShowTrustThenPay('invoice', '{{ iid }}', '{{ inv.eff_formatted_outstanding | e }}', '', this)"
+                        aria-label="Pay {{ inv.eff_formatted_outstanding }} for {{ inv.name }}">Pay</button>
+                {% elif inv.can_pay and has_sm_inv_mismatch and payment_enabled %}
+                <span class="spf-hint-chip" title="Use Pay Outstanding in the Summary above to pay the scholarship-adjusted amount."><span class="sp-ms" aria-hidden="true">arrow_upward</span>Pay above</span>
+                {% elif inv.can_pay and _counter %}
+                <button type="button" class="spf-btn spf-btn-ghost spf-btn-sm" onclick="spFeePayAtCounter('{{ iid }}', '{{ inv.formatted_outstanding | e }}')"
+                        aria-label="Pay {{ inv.formatted_outstanding }} at the counter"><span class="sp-ms" aria-hidden="true">store</span>Counter</button>
+                {% endif %}
+                <button type="button" class="spf-btn spf-btn-ghost spf-btn-sm" id="spf-view-{{ iid }}" aria-expanded="false" aria-controls="spf-det-{{ iid }}"
+                        onclick="spfToggle('{{ iid }}')" aria-label="View details of {{ inv.name }}">View</button>
+              </span>
+            </td>
+          </tr>
+          <tr class="spf-detail-tr is-hidden" id="spf-det-{{ iid }}">
+            <td colspan="6">
+              {% if inv.display_status == 'Cancelled' %}
+              <p style="margin:0;font-size:13px;color:var(--spf-muted);">This invoice has been cancelled. No payment is required.</p>
+              {% else %}
+              <div class="spf-detail-grid">
+                <div>
+                  <div class="spf-detail-hd">Fee Breakdown</div>
+                  {% for c in inv.fee_components %}
+                  <div class="spf-kv"><span>{{ c.component_name }}</span><span>{{ _inr.format(c.total_amount or c.amount or 0) }}</span></div>
+                  {% else %}
+                  <div class="spf-kv"><span>Total Fee</span><span>{{ _inr.format(inv.total_amount or 0) }}</span></div>
+                  {% endfor %}
+                  {% if inv.scholarship_amount and inv.scholarship_amount > 0 %}
+                  <div class="spf-kv"><span>Scholarship Concession</span><span class="spf-tone-success">−{{ _inr.format(inv.scholarship_amount) }}</span></div>
+                  {% elif has_sm_inv_mismatch %}
+                  <div class="spf-kv"><span>Scholarship Applied</span><span class="spf-tone-success">−{{ _inr.format(mismatch_diff) }}</span></div>
+                  <div class="spf-detail-note">Deducted from your fee; Finance will update the invoice shortly.</div>
+                  {% endif %}
+                  <div class="spf-kv"><span>Net Payable</span><span>{{ inv.eff_formatted_payable }}</span></div>
+                  <div class="spf-kv"><span>Amount Paid</span><span class="spf-tone-success" id="spf-paid-{{ iid }}">{{ inv.formatted_paid }}</span></div>
+                  <div class="spf-kv"><span>{{ 'Balance Outstanding' if inv.eff_outstanding > 0 else 'Fully Settled' }}</span><span class="{{ 'spf-tone-danger' if inv.eff_outstanding > 0 else 'spf-tone-success' }}" id="spf-out-{{ iid }}">{{ inv.eff_formatted_outstanding }}</span></div>
+                </div>
+                <div>
+                  <div class="spf-detail-hd">Payments for this invoice</div>
+                  {% for p in inv.payments %}
+                  {% set rzp_st = p.rzp_status or 'Captured' %}
+                  <div class="spf-kv">
+                    <span>
+                      {{ frappe.utils.formatdate(p.payment_date, "dd MMM yyyy") if p.payment_date else '—' }}{% if not p.is_rzp_only and p.payment_mode %} · {{ p.payment_mode }}{% endif %}
+                      {% if p.is_rzp_only and p.payment %}<span class="spf-cell-sub">Ref: {{ p.payment }}</span>{% elif p.reference_number %}<span class="spf-cell-sub">Ref: {{ p.reference_number }}</span>{% endif %}
+                    </span>
+                    {% if p.is_rzp_only %}<span class="{{ 'spf-tone-warning' if rzp_st in ('Authorized', 'Payment Initiated') else ('spf-tone-success' if rzp_st in ('Refunded', 'Refund Initiated') else 'spf-tone-danger') }}">{{ 'Authorised' if rzp_st == 'Authorized' else rzp_st }}</span>
+                    {% else %}<span class="spf-tone-success">{{ _inr.format(p.amount or 0) }}</span>{% endif %}
+                  </div>
+                  {% else %}
+                  <p style="margin:4px 0 0;font-size:12.5px;color:var(--spf-muted);">No payments recorded yet. Once a payment is made online or at the counter, it will appear here.</p>
+                  {% endfor %}
+                </div>
+              </div>
+              {% endif %}
+              <div class="spf-detail-actions">
+                <a class="spf-btn spf-btn-ghost spf-btn-sm" target="_blank" rel="noopener noreferrer"
+                   href="/api/method/slcm.api.student_portal.download_fee_invoice?invoice_name={{ inv.name | urlencode }}">
+                  <span class="sp-ms" aria-hidden="true">picture_as_pdf</span> Download Invoice
+                </a>
+                {% for rc in inv.receipts %}
+                <a class="spf-btn spf-btn-ghost spf-btn-sm" target="_blank" rel="noopener noreferrer" title="Ref: {{ rc.reference_number or rc.receipt_name }}"
+                   href="/api/method/slcm.api.student_portal.download_fee_receipt?receipt_name={{ rc.receipt_name | urlencode }}">
+                  <span class="sp-ms" aria-hidden="true">receipt</span> Download Receipt{% if inv.receipts | length > 1 %} {{ loop.index }}{% endif %}
+                </a>
+                {% endfor %}
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+          {% endfor %}
+          <tr class="spf-filter-empty is-hidden"><td colspan="6" class="c-empty">{{ empty('filter_alt', 'No invoices for this academic year') }}</td></tr>
+        </tbody>
+      </table>
+      {% endif %}
+    </div>
+    {% endif %}
+
     {% if has_fee_refunds %}
-    <div id="spf-tab-refunds" {% if has_fee_demands %}role="tabpanel" aria-labelledby="spf-tabbtn-refunds" class="is-hidden"{% endif %}>
-      {% if not has_fee_demands %}<div class="spf-detail-hd" style="padding:12px 20px 0;">Refunds</div>{% endif %}
+    <div id="spf-tab-refunds" {% if _ntabs > 1 %}role="tabpanel" aria-labelledby="spf-tabbtn-refunds"{% endif %} {% if _first != 'refunds' %}class="is-hidden"{% endif %}>
+      {% if _ntabs == 1 %}<div class="spf-detail-hd" style="padding:12px 20px 0;">Refunds</div>{% endif %}
       {% for r in fee_refunds %}
       {% if r.demand_paid_amount and r.demand_paid_amount > 0 %}
       <div class="spf-refund">
@@ -683,363 +874,18 @@
     {% elif _err.refunds %}
     {{ section_error('refunds') }}
     {% endif %}
-  </div>
-  {% endif %}
-</section>
 
-{# ═══════════════ Fee structure + outstanding ═══════════════ #}
-<div class="spf-row spf-row-detail fade-in">
-  <section class="spf-card" aria-labelledby="spf-fs-title">
-    <div class="spf-card-hd">
-      <div style="min-width:0;">
-        <h2 class="spf-card-title" id="spf-fs-title"><span class="sp-ms" aria-hidden="true">description</span>Fee Structure
-          {% if fee_structure_status %}<span class="spf-badge {{ 'spf-badge-success' if fee_structure_status == 'Active' else 'spf-badge-neutral' }}">{{ fee_structure_status }}</span>{% endif %}
-        </h2>
-        {% if fee_structure_name %}<div class="spf-card-sub">{{ fee_structure_name }}</div>{% endif %}
-      </div>
-      {% if fee_structure_valid_from %}
-      <div class="spf-card-meta"><span>Validity: <span style="color:var(--spf-text);">{{ frappe.utils.formatdate(fee_structure_valid_from, "dd MMM yyyy") }}{% if fee_structure_valid_until %} – {{ frappe.utils.formatdate(fee_structure_valid_until, "dd MMM yyyy") }}{% endif %}</span></span></div>
-      {% endif %}
-    </div>
-    {% if _err.fee_structure %}
-      {{ section_error('the fee structure') }}
-    {% elif not fs_components %}
-      {{ empty('description', 'No fee structure linked', 'The component-wise fee structure will appear here once assigned.') }}
-    {% else %}
-    <table class="spf-t spf-t-kv">
-      <caption class="spf-sr-only">Fee structure components</caption>
-      <colgroup><col style="width:65%;"><col style="width:35%;"></colgroup>
-      <thead><tr><th scope="col" class="c-text">Fee Component</th><th scope="col" class="c-num">Amount</th></tr></thead>
-      <tbody>
-        {% set fs_total = namespace(val=0) %}
-        {% for comp in fs_components %}
-        {% set comp_amt = comp.total_amount or comp.amount or 0 %}
-        {% set fs_total.val = fs_total.val + comp_amt %}
-        <tr class="spf-row-data">
-          <td class="c-text c-primary">{{ comp.component_name or '—' }}{% if comp.is_taxable and comp.tax_rate %}<span class="spf-tax-pill">{{ comp.tax_rate | int }}% tax</span>{% endif %}</td>
-          <td class="c-num" data-label="Amount">{{ _inr.format(comp_amt) }}</td>
-        </tr>
-        {% endfor %}
-        {% if total_scholarship > 0 %}
-        <tr class="spf-total-row"><td class="c-text c-primary">Total Programme Fee</td><td class="c-num" data-label="Amount">{{ _inr.format(fs_total.val) }}</td></tr>
-        <tr class="spf-disc-row"><td class="c-text c-primary">Scholarship / Discount</td><td class="c-num spf-tone-success" data-label="Amount">−{{ _inr.format(total_scholarship) }}</td></tr>
-        <tr class="spf-net-row"><td class="c-text c-primary">Net Payable</td><td class="c-num" data-label="Amount">{{ '—' if _err.summary else _inr.format(total_payable) }}</td></tr>
-        {% else %}
-        <tr class="spf-net-row"><td class="c-text c-primary">Total Programme Fee</td><td class="c-num" data-label="Amount">{{ _inr.format(fs_total.val) }}</td></tr>
-        {% endif %}
-      </tbody>
-    </table>
-    {% endif %}
-  </section>
-
-  <section class="spf-card" id="spf-outstanding" aria-labelledby="spf-out-title">
-    <div class="spf-card-hd">
-      <h2 class="spf-card-title" id="spf-out-title"><span class="sp-ms" aria-hidden="true">pending_actions</span>Upcoming / Outstanding Fees</h2>
-      {% set _out_err = _err.invoices or _err.demands or _err.re_exams or _err.hostel_fines %}
-      {% if outstanding_rows %}
-      <div class="spf-card-meta">
-        <span class="{{ 'spf-tone-warning' if outstanding_pending_count else 'spf-tone-success' }}">{{ outstanding_pending_count }} pending</span>
-        <span aria-hidden="true" class="spf-sep">|</span>
-        <span class="{{ 'spf-tone-danger' if outstanding_overdue_count else 'spf-tone-success' }}">{{ outstanding_overdue_count }} overdue</span>
-      </div>
-      {% elif not _out_err %}
-      <div class="spf-card-meta spf-tone-success">0 pending <span aria-hidden="true" class="spf-sep">|</span> 0 overdue</div>
-      {% endif %}
-    </div>
-    {% if _out_err and not outstanding_rows %}
-      {{ section_error('outstanding fees') }}
-    {% elif not outstanding_rows %}
-      {{ empty('task_alt', 'No outstanding fees', 'You have no pending or overdue payments.', ok=True) }}
-    {% else %}
-    {% if _out_err %}<div class="spf-notice spf-notice-danger" style="margin:12px 20px 0;"><span class="sp-ms" aria-hidden="true">error</span><div>Some fee records could not be loaded, so this list may be incomplete. <button type="button" class="spf-link" onclick="window.location.reload()">Retry</button></div></div>{% endif %}
-    <div class="spf-t-scroll" data-rows="5" tabindex="0" role="region" aria-label="Upcoming and outstanding fees (scrollable)">
-    <table class="spf-t">
-      <caption class="spf-sr-only">Upcoming and outstanding fees</caption>
-      <colgroup><col style="width:40%;"><col style="width:22%;"><col style="width:16%;"><col style="width:22%;"></colgroup>
-      <thead><tr><th scope="col" class="c-text">Component</th><th scope="col" class="c-date">Due Date</th><th scope="col" class="c-num">Amount</th><th scope="col" class="c-status">Status</th></tr></thead>
-      <tbody>
-        {% for r in outstanding_rows %}
-        <tr class="spf-row-data">
-          <td class="c-text c-primary"><div class="spf-cell-main">{{ r.component }}</div><div class="spf-cell-sub">{{ r.sub }}</div></td>
-          <td class="c-date" data-label="Due Date"><div><div>{{ r.due_date_fmt or '—' }}</div>{% if r.kind == 'demand' and r.is_overdue and r.days_overdue %}<div class="spf-cell-hint spf-tone-danger">{{ r.days_overdue }}d overdue</div>{% endif %}</div></td>
-          <td class="c-num {{ 'spf-tone-danger' if r.is_overdue }}" data-label="Amount">{{ r.amount_fmt }}</td>
-          <td class="c-status" data-label="Status">{{ badge(r.status) }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    </div>
-    {% endif %}
-  </section>
-</div>
-
-{# ═══════════════ Invoices & payments (tabbed) ═══════════════ #}
-<section class="spf-card fade-in" id="spf-invoices" aria-labelledby="spf-ip-title" style="margin-bottom:16px;">
-  <div class="spf-card-hd">
-    <h2 class="spf-card-title" id="spf-ip-title"><span class="sp-ms" aria-hidden="true">receipt_long</span>Invoices &amp; Payments</h2>
-    <div class="spf-card-meta">
-      <span data-tab-meta="payments">
-        {% if payment_history %}<span data-count-for="spf-ph-table" data-noun="payment">{{ payment_history | length }} payment{{ 's' if payment_history | length != 1 }}</span>{% endif %}
-        <button type="button" class="spf-link is-hidden" data-viewall-for="spf-ph-table" aria-controls="spf-ph-table" aria-expanded="false">View All <span class="sp-ms" aria-hidden="true">arrow_forward</span></button>
-      </span>
-      <span data-tab-meta="invoices" class="is-hidden">
-        {% if has_invoices %}<span data-count-for="spf-inv-table" data-noun="invoice">{{ invoice_count }} invoice{{ 's' if invoice_count != 1 }}</span>{% endif %}
-        <button type="button" class="spf-link is-hidden" data-viewall-for="spf-inv-table" aria-controls="spf-inv-table" aria-expanded="false">View All <span class="sp-ms" aria-hidden="true">arrow_forward</span></button>
-      </span>
-    </div>
-  </div>
-  <div class="spf-tabs" role="tablist" aria-label="Invoices and payments">
-    <button type="button" class="spf-tab" role="tab" id="spf-tabbtn-payments" aria-selected="true" aria-controls="spf-tab-payments" onclick="spfTab('payments')">Payment History <span class="spf-tab-count">{{ payment_history | length }}</span></button>
-    <button type="button" class="spf-tab" role="tab" id="spf-tabbtn-invoices" aria-selected="false" aria-controls="spf-tab-invoices" onclick="spfTab('invoices')" tabindex="-1">Fee Invoices <span class="spf-tab-count">{{ invoice_count or 0 }}</span></button>
-  </div>
-  <div id="spf-tab-payments" role="tabpanel" aria-labelledby="spf-tabbtn-payments">
-    {% if (_err.payments or _err.receipts or _err.invoices) and not payment_history %}
-      {{ section_error('payment history') }}
-    {% elif not payment_history %}
-      {{ empty('account_balance_wallet', 'No payments recorded yet', 'Payments towards invoices and charges will be listed here.') }}
-    {% else %}
-    {% if _err.receipts or _err.payments %}<div class="spf-notice spf-notice-danger" style="margin:12px 20px 0;"><span class="sp-ms" aria-hidden="true">error</span><div>Some receipts could not be loaded, so this list may be incomplete. <button type="button" class="spf-link" onclick="window.location.reload()">Retry</button></div></div>{% endif %}
-    <table class="spf-t spf-dense" id="spf-ph-table" data-limit="5">
-      <caption class="spf-sr-only">Payment history, newest first</caption>
-      <colgroup><col style="width:12%;"><col style="width:24%;"><col style="width:11%;"><col style="width:13%;"><col style="width:13%;"><col style="width:11%;"><col style="width:16%;"></colgroup>
-      <thead><tr>
-        <th scope="col" class="c-date">Date</th><th scope="col" class="c-text">Description</th><th scope="col" class="c-num">Amount</th>
-        <th scope="col" class="c-text">Payment Method</th><th scope="col" class="c-text">Reference</th><th scope="col" class="c-status">Status</th>
-        <th scope="col" class="c-action"><span class="spf-sr-only">Download</span></th>
-      </tr></thead>
-      <tbody>
-        {% for h in payment_history %}
-        <tr class="spf-row-data" data-ay="{{ h.academic_year | e }}">
-          <td class="c-date" data-label="Date">{{ h.date_fmt or '—' }}</td>
-          <td class="c-text c-primary"><div class="spf-cell-main">{{ h.description }}</div>{% if h.sub %}<div class="spf-cell-sub">{{ h.sub }}</div>{% endif %}</td>
-          <td class="c-num {{ 'spf-tone-success' if h.ok }}" data-label="Amount">{{ h.amount_fmt or '—' }}</td>
-          <td class="c-text" data-label="Method">{{ h.method or '—' }}</td>
-          <td class="c-text" data-label="Reference"><span class="spf-ellip" title="{{ h.reference | e }}">{{ h.reference or '—' }}</span></td>
-          <td class="c-status" data-label="Status">{{ badge(h.status) }}</td>
-          <td class="c-action" data-label="Receipt">
-            {% if h.receipt %}
-            <a class="spf-dl-btn" target="_blank" rel="noopener noreferrer"
-               href="/api/method/slcm.api.student_portal.download_fee_receipt?receipt_name={{ h.receipt | urlencode }}"
-               title="Download receipt {{ h.receipt }}" aria-label="Download receipt {{ h.receipt }}"><span class="sp-ms" aria-hidden="true">download</span> Download Invoice</a>
-            {% else %}<span class="spf-tone-muted" style="display:inline-block;min-width:34px;text-align:center;" title="No receipt for this payment" aria-label="No receipt">—</span>{% endif %}
-          </td>
-        </tr>
-        {% endfor %}
-        <tr class="spf-filter-empty is-hidden"><td colspan="7" class="c-empty">{{ empty('filter_alt', 'No payments for this academic year') }}</td></tr>
-      </tbody>
-    </table>
-    {% endif %}
-  </div>
-  <div id="spf-tab-invoices" role="tabpanel" aria-labelledby="spf-tabbtn-invoices" class="is-hidden">
-    {% if _err.invoices %}
-      {{ section_error('fee invoices') }}
-    {% elif not has_invoices %}
-    <div class="spf-state">
-      <span class="sp-ms" aria-hidden="true">description</span>
-      <div>
-        <p class="spf-state-title">No fee invoices yet</p>
-        <p class="spf-state-sub">Invoices are generated by the Finance Office after your admission is confirmed. If you believe this is an error, refresh or contact the Bursar's Office.</p>
-        <div class="spf-state-actions">
-          <button type="button" class="spf-btn spf-btn-ghost spf-btn-sm" id="sp-refresh-inv-btn" onclick="spRefreshInvoices()"><span class="sp-ms" aria-hidden="true">refresh</span> Refresh Invoices</button>
-          {% if has_dues and payment_enabled %}
-          <button type="button" class="spf-btn spf-btn-primary spf-btn-sm" id="sp-sm-pay-btn-empty" data-pay
-                  onclick="spShowTrustThenPay('sm', '', '{{ _inr.format(total_outstanding) | e }}', '', this)">
-            <span class="sp-ms" aria-hidden="true">lock</span> Pay Outstanding · {{ _inr.format(total_outstanding) }}
-          </button>
-          {% endif %}
-        </div>
-      </div>
-    </div>
-    {% else %}
-    <table class="spf-t spf-dense" id="spf-inv-table" data-limit="5">
-      <caption class="spf-sr-only">Fee invoices by term</caption>
-      <colgroup><col style="width:26%;"><col style="width:14%;"><col style="width:14%;"><col style="width:13%;"><col style="width:14%;"><col style="width:19%;"></colgroup>
-      <thead><tr>
-        <th scope="col" class="c-text">Description</th><th scope="col" class="c-date">Invoice Date</th><th scope="col" class="c-date">Due Date</th>
-        <th scope="col" class="c-num">Amount</th><th scope="col" class="c-status">Status</th><th scope="col" class="c-action">Action</th>
-      </tr></thead>
-      <tbody>
-        {% for term, term_invoices in invoices | groupby('academic_term') %}
-        {% set gid = 'g' ~ loop.index %}
-        {% set _tlist = term_invoices | list %}
-        {% set _tyear = _tlist[0].academic_year %}
-        {% set _tns = namespace(due=0) %}{% for i in _tlist %}{% set _tns.due = _tns.due + (i.eff_outstanding or 0) %}{% endfor %}
-        <tr class="spf-group-row" data-group="{{ gid }}" data-ay="{{ (_tyear or '') | e }}">
-          <th scope="colgroup" colspan="6"><div class="spf-group-inner"><span>{{ term or 'General' }}</span><span class="spf-group-meta">{% if _tns.due > 0 %}<span class="spf-tone-danger">{{ _inr.format(_tns.due) }} due</span> · {% endif %}{{ ay(_tyear) }}</span></div></th>
-        </tr>
-        {% for inv in _tlist %}
-        {% set iid = inv.name | e %}
-        <tr class="spf-row-data" data-group="{{ gid }}" data-ay="{{ (inv.academic_year or '') | e }}" data-detail="spf-det-{{ iid }}">
-          <td class="c-text c-primary"><div class="spf-cell-main">{{ inv.label }}</div><div class="spf-cell-sub">{{ inv.name }}</div></td>
-          <td class="c-date" data-label="Invoice Date">{{ inv.invoice_date_fmt or '—' }}</td>
-          <td class="c-date" data-label="Due Date"><div><div>{{ inv.due_date_fmt or '—' }}</div>{% if inv.due_hint %}<div class="spf-cell-hint spf-tone-{{ inv.due_hint_tone }}">{{ inv.due_hint }}</div>{% endif %}</div></td>
-          <td class="c-num" data-label="Amount">{{ inv.eff_formatted_payable }}</td>
-          <td class="c-status" data-label="Status">{{ badge(inv.display_status, 'spf-badge-' ~ iid) }}</td>
-          <td class="c-action" data-label="Action">
-            <span style="display:inline-flex;gap:6px;justify-content:flex-end;align-items:center;">
-              {% if inv.can_pay and payment_enabled and not has_sm_inv_mismatch %}
-              <button type="button" class="spf-btn spf-btn-primary spf-btn-sm" id="pay-btn-{{ iid }}" data-pay data-pay-invoice="{{ iid }}"
-                      onclick="spShowTrustThenPay('invoice', '{{ iid }}', '{{ inv.eff_formatted_outstanding | e }}', '', this)"
-                      aria-label="Pay {{ inv.eff_formatted_outstanding }} for {{ inv.name }}">Pay</button>
-              {% elif inv.can_pay and has_sm_inv_mismatch and payment_enabled %}
-              <span class="spf-hint-chip" title="Use Pay Outstanding in the Balance card above to pay the scholarship-adjusted amount."><span class="sp-ms" aria-hidden="true">arrow_upward</span>Pay above</span>
-              {% elif inv.can_pay and _counter %}
-              <button type="button" class="spf-btn spf-btn-ghost spf-btn-sm" onclick="spFeePayAtCounter('{{ iid }}', '{{ inv.formatted_outstanding | e }}')"
-                      aria-label="Pay {{ inv.formatted_outstanding }} at the counter"><span class="sp-ms" aria-hidden="true">store</span>Counter</button>
-              {% endif %}
-              <button type="button" class="spf-btn spf-btn-ghost spf-btn-sm" id="spf-view-{{ iid }}" aria-expanded="false" aria-controls="spf-det-{{ iid }}"
-                      onclick="spfToggle('{{ iid }}')" aria-label="View details of {{ inv.name }}">View</button>
-            </span>
-          </td>
-        </tr>
-        <tr class="spf-detail-tr is-hidden" id="spf-det-{{ iid }}">
-          <td colspan="6">
-            {% if inv.display_status == 'Cancelled' %}
-            <p style="margin:0;font-size:13px;color:var(--spf-muted);">This invoice has been cancelled. No payment is required.</p>
-            {% else %}
-            <div class="spf-detail-grid">
-              <div>
-                <div class="spf-detail-hd">Fee Breakdown</div>
-                {% for c in inv.fee_components %}
-                <div class="spf-kv"><span>{{ c.component_name }}</span><span>{{ _inr.format(c.total_amount or c.amount or 0) }}</span></div>
-                {% else %}
-                <div class="spf-kv"><span>Total Fee</span><span>{{ _inr.format(inv.total_amount or 0) }}</span></div>
-                {% endfor %}
-                {% if inv.scholarship_amount and inv.scholarship_amount > 0 %}
-                <div class="spf-kv"><span>Scholarship Concession</span><span class="spf-tone-success">−{{ _inr.format(inv.scholarship_amount) }}</span></div>
-                {% elif has_sm_inv_mismatch %}
-                <div class="spf-kv"><span>Scholarship Applied</span><span class="spf-tone-success">−{{ _inr.format(mismatch_diff) }}</span></div>
-                <div class="spf-detail-note">Deducted from your fee; Finance will update the invoice shortly.</div>
-                {% endif %}
-                <div class="spf-kv"><span>Net Payable</span><span>{{ inv.eff_formatted_payable }}</span></div>
-                <div class="spf-kv"><span>Amount Paid</span><span class="spf-tone-success" id="spf-paid-{{ iid }}">{{ inv.formatted_paid }}</span></div>
-                <div class="spf-kv"><span>{{ 'Balance Outstanding' if inv.eff_outstanding > 0 else 'Fully Settled' }}</span><span class="{{ 'spf-tone-danger' if inv.eff_outstanding > 0 else 'spf-tone-success' }}" id="spf-out-{{ iid }}">{{ inv.eff_formatted_outstanding }}</span></div>
-              </div>
-              <div>
-                <div class="spf-detail-hd">Payments for this invoice</div>
-                {% for p in inv.payments %}
-                {% set rzp_st = p.rzp_status or 'Captured' %}
-                <div class="spf-kv">
-                  <span>
-                    {{ frappe.utils.formatdate(p.payment_date, "dd MMM yyyy") if p.payment_date else '—' }}{% if not p.is_rzp_only and p.payment_mode %} · {{ p.payment_mode }}{% endif %}
-                    {% if p.is_rzp_only and p.payment %}<span class="spf-cell-sub">Ref: {{ p.payment }}</span>{% elif p.reference_number %}<span class="spf-cell-sub">Ref: {{ p.reference_number }}</span>{% endif %}
-                  </span>
-                  {% if p.is_rzp_only %}<span class="{{ 'spf-tone-warning' if rzp_st in ('Authorized', 'Payment Initiated') else ('spf-tone-success' if rzp_st in ('Refunded', 'Refund Initiated') else 'spf-tone-danger') }}">{{ 'Authorised' if rzp_st == 'Authorized' else rzp_st }}</span>
-                  {% else %}<span class="spf-tone-success">{{ _inr.format(p.amount or 0) }}</span>{% endif %}
-                </div>
-                {% else %}
-                <p style="margin:4px 0 0;font-size:12.5px;color:var(--spf-muted);">No payments recorded yet. Once a payment is made online or at the counter, it will appear here.</p>
-                {% endfor %}
-              </div>
-            </div>
-            {% endif %}
-            <div class="spf-detail-actions">
-              <a class="spf-btn spf-btn-ghost spf-btn-sm" target="_blank" rel="noopener noreferrer"
-                 href="/api/method/slcm.api.student_portal.download_fee_invoice?invoice_name={{ inv.name | urlencode }}">
-                <span class="sp-ms" aria-hidden="true">picture_as_pdf</span> Download Invoice
-              </a>
-              {% for rc in inv.receipts %}
-              <a class="spf-btn spf-btn-ghost spf-btn-sm" target="_blank" rel="noopener noreferrer" title="Ref: {{ rc.reference_number or rc.receipt_name }}"
-                 href="/api/method/slcm.api.student_portal.download_fee_receipt?receipt_name={{ rc.receipt_name | urlencode }}">
-                <span class="sp-ms" aria-hidden="true">receipt</span> Download Receipt{% if inv.receipts | length > 1 %} {{ loop.index }}{% endif %}
-              </a>
-              {% endfor %}
-            </div>
-          </td>
-        </tr>
-        {% endfor %}
-        {% endfor %}
-        <tr class="spf-filter-empty is-hidden"><td colspan="6" class="c-empty">{{ empty('filter_alt', 'No invoices for this academic year') }}</td></tr>
-      </tbody>
-    </table>
-    {% endif %}
-  </div>
-</section>
-
-{# ═══════════════ Re-exam fees + hostel fines ═══════════════ #}
-{% if has_re_exam_fees or has_hostel_fines or _err.re_exams or _err.hostel_fines %}
-<div class="spf-row spf-row-pair fade-in">
-  {% if has_re_exam_fees or _err.re_exams %}
-  <section class="spf-card" aria-labelledby="spf-rex-title">
-    <div class="spf-card-hd">
-      <h2 class="spf-card-title" id="spf-rex-title"><span class="sp-ms" aria-hidden="true">edit_note</span>Re-Examination Fees</h2>
-      {% if has_re_exam_fees %}<span class="spf-card-meta">{{ re_exam_fees | length }} registration{{ 's' if re_exam_fees | length != 1 }}</span>{% endif %}
-    </div>
-    {% if _err.re_exams %}{{ section_error('re-examination fees') }}
-    {% else %}
-    <table class="spf-t">
-      <caption class="spf-sr-only">Re-examination fees</caption>
-      <colgroup><col style="width:40%;"><col style="width:20%;"><col style="width:20%;"><col style="width:20%;"></colgroup>
-      <thead><tr><th scope="col" class="c-text">Course</th><th scope="col" class="c-num">Amount</th><th scope="col" class="c-status">Status</th><th scope="col" class="c-action">Action</th></tr></thead>
-      <tbody>
-        {% for rex in re_exam_fees %}
-        {% set rex_status = rex.payment_status or 'Pending' %}
-        <tr class="spf-row-data">
-          <td class="c-text c-primary"><div class="spf-cell-main">{{ rex.course_name or rex.course }}</div><div class="spf-cell-sub">{{ rex.exam_plan_name }} · {{ rex.name }}</div></td>
-          <td class="c-num {{ 'spf-tone-danger' if rex.can_pay }}" data-label="Amount">{{ '₹0' if rex_status == 'Paid' else rex.formatted_fee }}</td>
-          <td class="c-status" data-label="Status">
-            <div>{{ badge(rex_status) }}
-              {% if rex_status in ('Payment Initiated', 'Authorized') %}<div class="spf-cell-hint spf-tone-warning">In progress, refresh shortly</div>
-              {% elif rex_status in ('Payment Failed', 'Failed') %}<div class="spf-cell-hint spf-tone-danger">Last attempt failed</div>
-              {% elif rex_status == 'Refunded' %}<div class="spf-cell-hint spf-tone-muted">Refunded</div>{% endif %}
-            </div>
-          </td>
-          <td class="c-action" data-label="Action">
-            {% if rex.can_pay and payment_enabled %}
-            <button type="button" class="spf-btn spf-btn-primary spf-btn-sm" id="pay-btn-rex-{{ rex.name | e }}" data-pay
-                    onclick="spInitiateReExamPayment('{{ rex.name | e }}', '{{ rex.exam_plan | e }}', '{{ rex.course | e }}', this)"
-                    aria-label="Pay {{ rex.formatted_fee }} re-exam fee for {{ rex.course_name }}">Pay</button>
-            {% else %}<span class="spf-tone-muted">—</span>{% endif %}
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    {% endif %}
-  </section>
-  {% endif %}
-
-  {% if has_hostel_fines or _err.hostel_fines %}
-  <section class="spf-card" aria-labelledby="spf-fine-title">
-    <div class="spf-card-hd">
-      <h2 class="spf-card-title" id="spf-fine-title"><span class="sp-ms" aria-hidden="true">home</span>Hostel Fines</h2>
-      {% if has_hostel_fines %}<span class="spf-card-meta">{{ hostel_fines | length }} fine{{ 's' if hostel_fines | length != 1 }}</span>{% endif %}
-    </div>
-    {% if _err.hostel_fines %}{{ section_error('hostel fines') }}
-    {% else %}
-    <table class="spf-t">
-      <caption class="spf-sr-only">Hostel fines</caption>
-      <colgroup><col style="width:40%;"><col style="width:20%;"><col style="width:20%;"><col style="width:20%;"></colgroup>
-      <thead><tr><th scope="col" class="c-text">Reason</th><th scope="col" class="c-date">Date</th><th scope="col" class="c-num">Amount</th><th scope="col" class="c-status">Status</th></tr></thead>
-      <tbody>
-        {% for fine in hostel_fines %}
-        <tr class="spf-row-data">
-          <td class="c-text c-primary"><div class="spf-cell-main">{{ fine.reason or 'Hostel fine' }}</div><div class="spf-cell-sub">{{ fine.name }}</div></td>
-          <td class="c-date" data-label="Date">{{ frappe.utils.formatdate(fine.fine_date, "dd MMM yyyy") if fine.fine_date else '—' }}</td>
-          <td class="c-num {{ 'spf-tone-danger' if fine.status == 'Unpaid' }}" data-label="Amount">{{ fine.formatted_amount }}</td>
-          <td class="c-status" data-label="Status">{{ badge(fine.status) }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    {% if hostel_fines | selectattr('status', 'equalto', 'Unpaid') | list %}
-    <div class="spf-card-ft"><span class="spf-offline-note"><span class="sp-ms" aria-hidden="true">info</span>Hostel fines are paid at the Hostel Office or Bursar's Office.</span></div>
-    {% endif %}
-    {% endif %}
-  </section>
-  {% endif %}
-</div>
-{% endif %}
-
-{# ═══════════════ Scholarships, concessions & credit ═══════════════ #}
-<section class="spf-card fade-in" aria-labelledby="spf-sc-title" style="margin-bottom:16px;">
-  <div class="spf-card-hd">
-    <h2 class="spf-card-title" id="spf-sc-title"><span class="sp-ms" aria-hidden="true">workspace_premium</span>Scholarships &amp; Concessions</h2>
-    <div class="spf-card-meta">
+    {% if _has_sc %}
+    <div id="spf-tab-scholarships" {% if _ntabs > 1 %}role="tabpanel" aria-labelledby="spf-tabbtn-scholarships"{% endif %} {% if _first != 'scholarships' %}class="is-hidden"{% endif %}>
+      {% if total_scholarship > 0 or total_available_credit > 0 or _ntabs == 1 %}
+      <div class="spf-detail-hd spf-sc-hd" style="padding:12px 20px 0;">
+        {% if _ntabs == 1 %}<span>Scholarships &amp; Concessions</span>{% endif %}
+        <div class="spf-card-meta">
       {% if total_scholarship > 0 %}<span class="spf-tone-success">{{ _inr.format(total_scholarship) }} scholarship</span>{% endif %}
       {% if total_available_credit > 0 %}{% if total_scholarship > 0 %}<span aria-hidden="true" class="spf-sep">|</span>{% endif %}<span>{{ formatted_total_credit }} credit available</span>{% endif %}
     </div>
-  </div>
+      </div>
+      {% endif %}
   {% if _err.concessions %}
     {{ section_error('scholarships and concessions') }}
   {% elif not has_concessions %}
@@ -1085,6 +931,10 @@
     </tbody>
   </table>
   {% endif %}
+  {% endif %}
+    </div>
+    {% endif %}
+  </div>
   {% endif %}
 </section>
 
@@ -1572,6 +1422,14 @@
     var open = det.classList.contains('is-hidden');
     det.classList.toggle('is-hidden', !open);
     if (btn) { btn.setAttribute('aria-expanded', open ? 'true' : 'false'); btn.textContent = open ? 'Hide' : 'View'; }
+  };
+  // Open the Summary's details on one tab (payments, invoices…) and bring it into view.
+  window.spfShowTab = function (tab) {
+    var btn = document.getElementById('spf-dm-toggle'), panel = document.getElementById('spf-dm-details');
+    if (panel && btn && panel.classList.contains('is-hidden')) spfToggleDetails(btn);
+    spfTab(tab);
+    var target = document.getElementById('spf-tab-' + tab) || panel;
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
   window.spfToggleDetails = function (btn) {
     var panel = document.getElementById(btn.getAttribute('aria-controls')); if (!panel) return;

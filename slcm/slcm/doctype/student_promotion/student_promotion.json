@@ -7,9 +7,13 @@
  "field_order": [
   "section_policy",
   "promotion_policy",
+  "stage",
   "col_break_policy",
   "processed_by",
   "processed_on",
+  "published_by",
+  "published_on",
+  "notified_on",
   "section_student",
   "student",
   "student_name",
@@ -63,6 +67,17 @@
    "reqd": 1
   },
   {
+   "fieldname": "stage",
+   "fieldtype": "Select",
+   "label": "Stage",
+   "options": "Draft\nPublished\nSuperseded",
+   "default": "Draft",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "description": "Draft: decision recorded, not yet applied or visible to the student. Published: applied (year/enrollment) and released. Superseded: replaced by a later published decision."
+  },
+  {
    "fieldname": "col_break_policy",
    "fieldtype": "Column Break"
   },
@@ -77,6 +92,25 @@
    "fieldname": "processed_on",
    "fieldtype": "Datetime",
    "label": "Processed On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "published_by",
+   "fieldtype": "Link",
+   "label": "Published By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "published_on",
+   "fieldtype": "Datetime",
+   "label": "Published On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "notified_on",
+   "fieldtype": "Datetime",
+   "label": "Student Notified On",
    "read_only": 1
   },
   {
@@ -260,10 +294,11 @@
    "fieldname": "enrollment_status",
    "fieldtype": "Select",
    "label": "Enrollment Status",
-   "options": "\nEnrolled\nFailed\nNot Applicable",
+   "options": "\nPending\nEnrolled\nFailed\nNot Applicable",
    "read_only": 1,
    "in_list_view": 1,
-   "in_standard_filter": 1
+   "in_standard_filter": 1,
+   "description": "Pending: will be enrolled into next year's Batch when the decision is published."
   },
   {
    "fieldname": "to_enrollment",
@@ -306,7 +341,7 @@
   }
  ],
  "links": [],
- "modified": "2026-09-28 12:00:00.000000",
+ "modified": "2026-09-29 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Student Promotion",

@@ -292,8 +292,8 @@ def _libreoffice_pdf(soffice, content):
 
 
 _ALIGN = {0: "left", 1: "center", 2: "right", 3: "justify"}
-# wkhtmltopdf here renders CSS at ~0.75 scale (see the Fee Certificate print
-# format), so real millimetres from the .docx are divided by this.
+# wkhtmltopdf renders CSS at ~0.75 scale (see the Fee Certificate print format; the
+# patched-Qt build is zoomed to match), so real millimetres from the .docx are divided by this.
 _SCALE = 0.75
 
 
@@ -402,10 +402,14 @@ def _docx_html(content):
 	body = block_html(doc.element.body, doc._body, doc.part)
 	# One A4 page inside the 15mm margins: 267mm high on paper, 346mm in CSS here
 	# (same box as the Fee Certificate print format); the footer sits at its bottom.
+	# The patched-Qt build lays CSS out 1:1, so it is zoomed to the same 0.75.
+	from slcm.slcm.doctype.fee_certificate_request.fee_certificate_request import pdf_true_scale
+
+	zoom = "zoom:0.75; height:352mm;" if pdf_true_scale() else ""
 	return f"""<!DOCTYPE html><html><head><meta charset="utf-8"><style>
 		html, body {{ margin:0; padding:0; }}
 		body {{ font-family: Cambria, Georgia, "Times New Roman", serif; font-size:12pt; line-height:1.5; color:#000; }}
-		.page {{ position:relative; height:346mm; overflow:hidden; }}
+		.page {{ position:relative; height:346mm; overflow:hidden; {zoom} }}
 		.page img {{ max-width:100%; }}
 		p {{ margin:0 0 6pt; }}
 		table {{ border-collapse:collapse; width:100%; margin:0 0 8pt; line-height:1.3; }}

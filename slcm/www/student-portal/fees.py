@@ -739,7 +739,7 @@ def get_context(context):
             or ""
         )
 
-        _build_view_model(context, errors)
+        _build_view_model(context, errors, student_name)
 
     except Exception as e:
         frappe.log_error(f"Student Portal Fees error: {e}", "Student Portal")
@@ -758,7 +758,7 @@ def _fmt_date(value):
     return frappe.utils.formatdate(value, "dd MMM yyyy") if value else ""
 
 
-def _build_view_model(context, errors):
+def _build_view_model(context, errors, student_name):
     """Display-only shaping of the figures computed above for the page layout.
 
     Nothing here changes a fee calculation: it regroups this student's
@@ -847,7 +847,7 @@ def _build_view_model(context, errors):
     rows = []
     for inv in payable_invoices:
         rows.append(frappe._dict(
-            component=inv.label, sub=inv.name, kind="invoice",
+            component=inv.label, sub=inv.name, kind="invoice", demand_type="Academic",
             due_date=inv.due_date, due_date_fmt=inv.due_date_fmt,
             amount_fmt=inv.eff_formatted_outstanding, status=inv.display_status,
             is_overdue=bool(inv.is_overdue), days_overdue=0,
@@ -857,31 +857,33 @@ def _build_view_model(context, errors):
             continue
         rows.append(frappe._dict(
             component=d.fee_component or d.description or "Additional charge",
-            sub="Additional charge", kind="demand",
+            sub="Additional charge", kind="demand", demand_type=d.demand_type or "",
             due_date=d.due_date, due_date_fmt=d.due_date_fmt,
             amount_fmt=d.formatted_outstanding,
             status="Overdue" if (d.is_demand_overdue and d.status == "Pending") else d.status,
             is_overdue=bool(d.status == "Overdue" or d.is_demand_overdue),
             days_overdue=d.days_overdue,
         ))
-    for r in reexam_due:
-        rows.append(frappe._dict(
-            component=r.course_name or "Re-examination fee", sub="Re-examination fee",
-            kind="reexam", due_date=None, due_date_fmt="",
-            amount_fmt=r.formatted_fee, status=r.payment_status or "Pending",
-            is_overdue=False, days_overdue=0,
-        ))
-    for f in fines_due:
-        rows.append(frappe._dict(
-            component=f.reason or "Hostel fine",
-            sub="Hostel fine" + (f" · {_fmt_date(f.fine_date)}" if f.fine_date else ""),
-            kind="fine", due_date=None, due_date_fmt="",
-            amount_fmt=f.formatted_amount, status="Unpaid", is_overdue=False, days_overdue=0,
-        ))
-    rows.sort(key=lambda r: (r.due_date is None, frappe.utils.getdate(r.due_date) if r.due_date else today))
-    context.outstanding_rows = rows
-    context.outstanding_overdue_count = sum(1 for r in rows if r.is_overdue)
-    context.outstanding_pending_count = len(rows) - context.outstanding_overdue_count
+    # Re-exam fees and hostel fines, paid ones too (with their receipt)
+    try:
+        from slcm.slcm.fee.portal_charges import re_exam_and_fine_rows
+
+        rows += re_exam_and_fine_rows(student_name, context.re_exam_fees, context.hostel_fines)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "Student Portal Fees: re-exam / fine rows")
+        errors["re_exams"] = True
+    # Unpaid first (by due date), then paid re-exam fees / hostel fines
+    rows.sort(key=lambda r: (
+        bool(r.get("is_paid")), r.due_date is None,
+        frappe.utils.getdate(r.due_date) if r.due_date else today,
+    ))
+    context.summary_rows = rows
+    from slcm.slcm.fee.portal_charges import demand_type_cards
+
+    context.demand_type_cards = demand_type_cards(context.fee_demands)
+    context.outstanding_rows = [r for r in rows if not r.get("is_paid")]
+    context.outstanding_overdue_count = sum(1 for r in context.outstanding_rows if r.is_overdue)
+    context.outstanding_pending_count = len(context.outstanding_rows) - context.outstanding_overdue_count
 
     # ── Payment history: invoice payments + receipts, de-duplicated ─────────
     history = []
@@ -987,7 +989,7 @@ def _set_defaults(context):
         "programme_overdue": 0.0, "programme_overdue_count": 0,
         "demand_outstanding": 0.0, "demand_overdue": 0.0, "reexam_due_total": 0.0,
         "fines_due_total": 0.0, "other_outstanding": 0.0,
-        "outstanding_rows": [], "outstanding_overdue_count": 0, "outstanding_pending_count": 0,
+        "outstanding_rows": [], "summary_rows": [], "demand_type_cards": [], "outstanding_overdue_count": 0, "outstanding_pending_count": 0,
         "payment_history": [], "fee_academic_years": [], "has_fee_data": False,
     }
     for k, v in defaults.items():

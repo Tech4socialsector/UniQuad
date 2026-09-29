@@ -13,7 +13,7 @@ _DEFAULTS = {
     "nav_brand_text":        "",
     "portal_favicon":        "",
     # Typography
-    "font_family":           "Poppins",
+    "font_family":           "Merriweather",
     "font_size":             "Normal",
     # Theme
     "primary_color":         "#920c24",
@@ -284,7 +284,7 @@ def get_faculty_portal_settings():
     raw["nav_text_rgba_80"] = _hex_to_rgba(raw["nav_text_color"], 0.8)
 
     # ── Font family CSS value + optional Google Fonts URL ──────────
-    raw["font_family_css"] = _FONT_CSS.get(raw["font_family"], _FONT_CSS["Poppins"])
+    raw["font_family_css"] = _FONT_CSS.get(raw["font_family"], _FONT_CSS["Merriweather"])
     raw["font_google_url"] = _FONT_GOOGLE_URL.get(raw["font_family"], "")
 
     # ── Nav height CSS value ───────────────────────────────────────

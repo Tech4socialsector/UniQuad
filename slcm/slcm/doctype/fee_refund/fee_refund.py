@@ -1,27 +1,121 @@
+import json
+
 import frappe
 from frappe.model.document import Document
 from frappe.utils import flt, today
+
+EXCESS = "Excess Amount"
+
+
+def get_available_excess(student, for_update=False):
+	"""Active Student Credit Notes with unused balance, oldest first."""
+	return frappe.db.sql(
+		f"""SELECT name, available_credit, used_credit FROM `tabStudent Credit Note`
+		WHERE student = %s AND docstatus = 1 AND status = 'Active' AND available_credit > 0
+		ORDER BY creation ASC {"FOR UPDATE" if for_update else ""}""",
+		(student,),
+		as_dict=True,
+	)
 
 
 class FeeRefund(Document):
 
 	def validate(self):
-		self._validate_refund_amount()
+		if flt(self.refund_amount) <= 0:
+			frappe.throw("Refund Amount must be greater than zero.")
+		if self.refund_source == EXCESS:
+			self._validate_excess_refund()
+		else:
+			self._validate_refund_amount()
 
 	def on_submit(self):
-		self._apply_refund()
+		if self.refund_source == EXCESS:
+			self._apply_excess_refund()
+		else:
+			self._apply_refund()
 		self.db_set("status", "Approved")
 		self.db_set("approved_by", frappe.session.user)
 		self.db_set("approved_on", today())
 
 	def on_cancel(self):
-		self._reverse_refund()
+		if self.refund_source == EXCESS:
+			self._reverse_excess_refund()
+		else:
+			self._reverse_refund()
 		self.db_set("status", "Reversed")
 
+	# ── Refund of the student's excess (Student Credit Notes) ───────────────
+	def _validate_excess_refund(self):
+		self.fee_demand = None
+		self.fee_component = None
+		self.original_amount = 0
+		self.paid_amount = 0
+		available = sum(flt(n.available_credit) for n in get_available_excess(self.student))
+		if self.docstatus == 0:
+			self.available_excess = available
+		if flt(self.refund_amount) > available:
+			frappe.throw(
+				f"Refund Amount (₹{flt(self.refund_amount):,.2f}) cannot exceed the student's "
+				f"available excess (₹{available:,.2f})."
+			)
+
+	def _apply_excess_refund(self):
+		"""Take the refund from the student's active credit notes, oldest first."""
+		notes = get_available_excess(self.student, for_update=True)
+		remaining = flt(self.refund_amount)
+		if remaining > sum(flt(n.available_credit) for n in notes):
+			frappe.throw("The student's available excess changed and no longer covers this refund.")
+
+		allocation = []
+		for n in notes:
+			if remaining <= 0:
+				break
+			take = min(remaining, flt(n.available_credit))
+			new_available = flt(n.available_credit) - take
+			frappe.db.set_value("Student Credit Note", n.name, {
+				"available_credit": new_available,
+				"used_credit": flt(n.used_credit) + take,
+				"status": "Exhausted" if new_available <= 0 else "Active",
+			})
+			# Audit row on the credit note, same table the due adjustments use
+			frappe.get_doc({
+				"doctype": "Credit Adjustment Row",
+				"parent": n.name,
+				"parenttype": "Student Credit Note",
+				"parentfield": "adjustments",
+				"idx": frappe.db.count("Credit Adjustment Row", {"parent": n.name}) + 1,
+				"fee_component": f"Refund {self.name}",
+				"amount_adjusted": take,
+				"adjusted_on": today(),
+				"adjusted_by": frappe.session.user,
+			}).insert(ignore_permissions=True)
+			allocation.append({"credit_note": n.name, "amount": take})
+			remaining -= take
+
+		self.db_set("excess_allocation", json.dumps(allocation))
+
+	def _reverse_excess_refund(self):
+		for a in json.loads(self.excess_allocation or "[]"):
+			note = frappe.db.get_value(
+				"Student Credit Note", a["credit_note"], ["available_credit", "used_credit"], as_dict=True
+			)
+			if not note:
+				continue
+			frappe.db.set_value("Student Credit Note", a["credit_note"], {
+				"available_credit": flt(note.available_credit) + flt(a["amount"]),
+				"used_credit": max(0, flt(note.used_credit) - flt(a["amount"])),
+				"status": "Active",
+			})
+			frappe.db.delete(
+				"Credit Adjustment Row",
+				{"parent": a["credit_note"], "parenttype": "Student Credit Note", "fee_component": f"Refund {self.name}"},
+			)
+
+	# ── Refund of money paid against one Fee Demand ─────────────────────────
 	def _validate_refund_amount(self):
 		refund = flt(self.refund_amount)
-		if refund <= 0:
-			frappe.throw("Refund Amount must be greater than zero.")
+		if not self.fee_demand:
+			frappe.throw("Fee Demand is required when the Refund Source is Fee Demand.")
 
 		paid = flt(frappe.db.get_value("Fee Demand", self.fee_demand, "paid_amount"))
 		if paid <= 0:

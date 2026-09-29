@@ -197,7 +197,7 @@ const UQ_MODULES = [
 	{ key: "attendance", title: __("Attendance"), icon: "check", desc: __("Attendance levels, entry completeness, shortfalls and condonation."), charts: ["attendance_trend", "course_attendance"], tables: ["attendance_exceptions"] },
 	{ key: "idcard", title: __("ID Card"), icon: "card", desc: __("Student ID card generation, printing and RFID coverage."), charts: [], tables: ["idcards"] },
 	{ key: "fees", title: __("Fees"), icon: "rupee", desc: __("Dues, collections, payments, refunds and concessions."), charts: [], tables: ["fee_payments", "fee_overdue"] },
-	{ key: "venue", title: __("Venue Booking"), icon: "building", desc: __("Venue requests, allotments and venue availability."), charts: [], tables: ["venue_bookings_all"] },
+	{ key: "venue", title: __("Venue Booking"), icon: "building", desc: __("Venue requests, allotments and venue availability."), charts: ["venue_by_status", "venue_by_approver", "venue_by_requester", "venue_swaps"], tables: ["venue_bookings_all"] },
 	{ key: "pace", title: __("PACE"), icon: "layers", desc: __("PACE enquiries, applications and document verification."), charts: [], tables: ["pace_applications"] },
 	{ key: "fle", title: __("FLE"), icon: "scale", desc: __("Foundations for a Legal Education registrations, payments and enrolment."), charts: [], tables: ["fle_registrations"] },
 	{ key: "exams", title: __("Examinations"), icon: "award", desc: __("Marks entry progress and published results."), charts: [], tables: ["marks_all"] },
@@ -206,6 +206,7 @@ const UQ_MODULES = [
 const UQ_SHORT = {
 	applications: __("Applications"), applications_in_progress: __("In progress"), applications_enrolled: __("Enrolled"),
 	students: __("Students"), active_students: __("Active"), registration_pending: __("Pending registration"),
+	students_on_campus: __("On campus"), students_off_campus: __("Off campus"), admission_current: __("Registered (current)"),
 	programmes: __("Programmes"), active_offerings: __("Courses running"), todays_classes: __("Classes today"),
 	avg_attendance: __("Avg attendance"), entry_rate: __("Entry rate"), below_threshold: __("Below threshold"),
 	idcards_generated: __("Cards generated"), id_card_pending: __("Without ID card"), idcards_error: __("Card errors"),
@@ -216,7 +217,7 @@ const UQ_SHORT = {
 	marks_all: __("Marks entries"), results_published: __("Results published"), marks_draft: __("Marks in draft"),
 };
 // Headline figures on the home Overview (shown only when the user can read them).
-const UQ_HOME_KPIS = ["students", "active_students", "applications", "active_offerings", "avg_attendance", "todays_classes", "fee_collected", "fee_outstanding"];
+const UQ_HOME_KPIS = ["students", "students_on_campus", "students_off_campus", "admission_current", "active_offerings"];
 // Modules whose open items feed the cross-module Pending Operations list (server whitelist mirrors this).
 const PENDING_MODULES = ["attendance", "registration", "venue", "exams", "fees", "idcard", "pace", "fle"];
 // Home analytics panel → the module it belongs to (hidden when that module is unticked in Customize).
@@ -845,6 +846,15 @@ const UQ_CHART_PANELS = {
 	classes_weekly: { title: __("Classes Scheduled"), q: __("Is the teaching load steady across the date range? (per week, or per day for short ranges)"), kind: "chart" },
 	attendance_trend: { title: __("Presence Trend"), q: __("Is attendance improving or slipping? (per week, or per day for short ranges)"), kind: "chart" },
 	course_attendance: { title: __("Lowest Course Attendance"), q: __("Which courses have the weakest average attendance? Select one to see its students."), kind: "bars" },
+	tickets_open_status: { title: __("Open Tickets"), q: __("Helpdesk tickets not yet resolved or closed, by status (all dates). Select a bar to list them."), kind: "bars" },
+	tickets_open_team: { title: __("Open Tickets by Team"), q: __("Which helpdesk team is holding the unresolved tickets? (all dates)"), kind: "bars" },
+	tickets_raised_kind: { title: __("Tickets Raised By"), q: __("Are students, faculty or others raising the tickets opened in the date range?"), kind: "bars" },
+	tickets_top_raisers: { title: __("Top Ticket Raisers"), q: __("Who raised the most tickets in the date range? Select one to see their tickets."), kind: "bars" },
+	tickets_by_type: { title: __("Tickets by Type"), q: __("What are tickets opened in the date range about?"), kind: "bars" },
+	venue_by_status: { title: __("Venue Bookings by Status"), q: __("Pending, allotted, rejected and cancelled bookings starting in the date range."), kind: "bars" },
+	venue_by_approver: { title: __("Venue Approvals & Rejections"), q: __("Who approved (allotted) or rejected venue requests in the date range?"), kind: "bars" },
+	venue_by_requester: { title: __("Venue Requests by Requester"), q: __("Students, faculty or staff — and how their requests were decided."), kind: "bars" },
+	venue_swaps: { title: __("Venue Swap Requests"), q: __("Venue swap requests in the date range, by outcome."), kind: "bars" },
 };
 
 class UniquadDashboard {
@@ -1303,8 +1313,7 @@ class UniquadDashboard {
 			this.$dash.find(".uq-title").text(__("Uniquad Dashboard"));
 			this.$dash.find(".uq-subtitle").text(__("SLCM Operations Overview — choose a module to see its details"));
 			$v.html(
-				this.section("uq-home-overview", "pulse", __("Overview"), __("The headline numbers across SLCM for the selected scope. Open any figure to see the records behind it."), `<div data-home-kpis>${this.skel_cards(8, "uq-grid-home-kpi")}</div>`) +
-				this.section("uq-home-modules", "dashboard", __("Modules"), __("Every SLCM module at a glance. Open one to see its figures, what needs attention and the records behind them."), `<div class="uq-mod-grid" data-tiles>${this.skel_cards(6, "uq-grid-hero")}</div>`) +
+				this.section("uq-home-overview", "pulse", __("Overview"), __("The headline numbers across SLCM for the selected scope. Open any figure to see the records behind it."), `<div data-home-kpis>${this.skel_cards(UQ_HOME_KPIS.length, "uq-grid-home-kpi")}</div>`) +
 					this.section(
 						"uq-home-analytics",
 						"chart",
@@ -1319,6 +1328,31 @@ class UniquadDashboard {
 							${this.chart_panel("course_attendance")}
 							${this.chart_panel("application_stages")}
 							${this.chart_panel("students_by_stage")}
+						</div>`
+					) +
+					this.section(
+						"uq-home-helpdesk",
+						"inbox",
+						__("Helpdesk Tickets"),
+						__("Open tickets and who is raising them. Open-ticket charts ignore the filters; the rest follow the date range."),
+						`<div class="uq-grid uq-grid-2">
+							${this.chart_panel("tickets_open_status")}
+							${this.chart_panel("tickets_raised_kind")}
+							${this.chart_panel("tickets_top_raisers")}
+							${this.chart_panel("tickets_open_team")}
+							${this.chart_panel("tickets_by_type")}
+						</div>`
+					) +
+					this.section(
+						"uq-home-venue",
+						"building",
+						__("Venue Bookings"),
+						__("How venue requests in the date range were decided, and by whom."),
+						`<div class="uq-grid uq-grid-2">
+							${this.chart_panel("venue_by_status")}
+							${this.chart_panel("venue_by_approver")}
+							${this.chart_panel("venue_by_requester")}
+							${this.chart_panel("venue_swaps")}
 						</div>`
 					) +
 					this.section("uq-home-action", "alert", __("Action Required"), __("Open items across all modules, most urgent first."), `<div data-home-alerts>${this.skel_cards(4, "uq-grid-alert")}</div><div class="uq-stack">${this.table_panel("pending_operations")}</div>`) +
@@ -1542,11 +1576,6 @@ class UniquadDashboard {
 				$(e.currentTarget).trigger("click");
 			}
 		});
-		$d.on("click", ".uq-mod-tile", (e) => {
-			if ($(e.target).closest("[data-drill]").length) return;
-			if ($(e.target).closest("button, a").length) return;
-			this.open_module($(e.currentTarget).attr("data-tile"));
-		});
 		$d.on("click", "[data-jump]", (e) => {
 			e.preventDefault();
 			const go = () => this.scroll_to(document.getElementById("uq-home-action"));
@@ -1555,7 +1584,11 @@ class UniquadDashboard {
 		});
 		$d.on("click", "[data-bar-drill]", (e) => {
 			const $b = $(e.currentTarget);
-			const filters = { ...this.applied, [$b.attr("data-bar-filter")]: [$b.attr("data-bar-value")] };
+			const value = $b.attr("data-bar-value");
+			const param = $b.attr("data-bar-param");
+			// a param bar narrows the drilldown itself; a filter bar adds a dashboard filter
+			if (param) return this.modal.open({ key: $b.attr("data-bar-drill"), filters: this.applied, params: { [param]: value }, subtitle: $b.attr("data-bar-label") });
+			const filters = { ...this.applied, [$b.attr("data-bar-filter")]: [value] };
 			this.modal.open({ key: $b.attr("data-bar-drill"), filters, subtitle: $b.attr("data-bar-label") });
 		});
 		$d.on("click", "[data-table-export]", (e) => this.tables[$(e.currentTarget).attr("data-table-export")]?.export_csv());
@@ -1673,29 +1706,6 @@ class UniquadDashboard {
 		this.update_timestamp();
 	}
 
-	tile(m, cards) {
-		const head = cards.filter((c) => c.headline);
-		const stats = (head.length ? head : cards).slice(0, 3);
-		const attention = this.attention_of(cards);
-		const state = attention.length
-			? `<span class="uq-state attention">${uq_icon("alert", 11)} ${__("{0} need attention", [attention.length])}</span>`
-			: `<span class="uq-state clear">${uq_icon("check", 11)} ${__("All clear")}</span>`;
-		const stat = (c) => {
-			const warn = c.alert && flt(c.value) > 0;
-			const label = UQ_SHORT[c.key] || c.title;
-			return `<div class="uq-mod-stat ${warn ? "warn" : ""} ${c.drill ? "is-link" : ""}" title="${uq_esc(c.title)}" ${c.drill ? `data-drill="${uq_esc(c.drill)}" role="button" tabindex="0" aria-label="${uq_esc(c.title + ": " + uq_format(c.value, c.fmt) + ". " + __("View records"))}"` : ""}><dd>${c.error ? "—" : uq_esc(uq_format(c.value, c.fmt))}${warn ? uq_icon("alert", 13) : ""}</dd><dt>${uq_esc(label)}${warn ? `<span class="uq-sr"> — ${__("needs attention")}</span>` : ""}</dt></div>`;
-		};
-		return `
-			<article class="uq-mod-tile ${attention.length ? "has-attention" : ""}" data-tile="${m.key}">
-				<div class="uq-mod-head">
-					<span class="uq-mod-icon" aria-hidden="true">${uq_icon(m.icon, 20)}</span>
-					<div class="uq-mod-titles"><h3 class="uq-mod-title">${uq_esc(m.title)}</h3><p class="uq-mod-desc">${uq_esc(m.desc)}</p></div>
-				</div>
-				<dl class="uq-mod-stats">${stats.map(stat).join("")}</dl>
-				<div class="uq-mod-foot">${state}<a href="/desk/${UQ_PAGE}/module/${m.key}" class="uq-card-link" data-module-link="${m.key}">${__("Open")} ${uq_icon("arrow-right", 12)}</a></div>
-			</article>`;
-	}
-
 	render_home(by) {
 		const mods = UQ_MODULES.filter((m) => this.home_modules.has(m.key) && (by[m.key] || []).length);
 		// Overview: headline figures across modules (only those the user can read)
@@ -1746,9 +1756,6 @@ class UniquadDashboard {
 		});
 		const $an = this.$dash.find("#uq-home-analytics");
 		$an.toggle($an.find(".uq-panel").filter((_, el) => $(el).css("display") !== "none").length > 0);
-		this.$dash.find("[data-tiles]").html(
-			mods.length ? `<div class="uq-mod-grid-inner">${mods.map((m) => this.tile(m, by[m.key])).join("")}</div>` : `<div class="uq-empty">${uq_icon("lock", 24)}<strong>${__("No modules available for your role.")}</strong></div>`
-		);
 		// Action Required: items needing attention as cards; the all-clear ones summarised in one line.
 		const alerts = mods.flatMap((m) => (by[m.key] || []).filter((c) => c.alert).map((c) => ({ ...c, module: m })));
 		const hot = alerts.filter((c) => flt(c.value) > 0);
@@ -2140,6 +2147,36 @@ class UniquadDashboard {
 		if (ca && !ca.restricted) this.bars("course_attendance", ca.items, { drill: "attendance_summary", filter: "course", pct: true, threshold: ca.threshold, empty: __("No attendance summaries for the selected scope.") });
 		const st = ch.application_stages;
 		if (st && !st.restricted) this.bars("application_stages", st, { empty: __("No applications for the selected year and programme.") });
+
+		const tk = ch.tickets || {};
+		this.$dash.find("#uq-home-helpdesk").toggle(!tk.restricted && !tk.error);
+		if (!tk.restricted) {
+			const none_open = __("No open tickets — all clear.");
+			const none_raised = __("No tickets were raised in the selected date range.");
+			this.bars("tickets_open_status", tk.error ? tk : tk.tickets_open_status, { drill: "tickets_open", param: "status", empty: none_open });
+			this.bars("tickets_open_team", tk.error ? tk : tk.tickets_open_team, { drill: "tickets_open", param: "agent_group", empty: none_open });
+			this.bars("tickets_raised_kind", tk.error ? tk : tk.tickets_raised_kind, { drill: "tickets_range", param: "kind", empty: none_raised });
+			this.bars("tickets_top_raisers", tk.error ? tk : tk.tickets_top_raisers, { drill: "tickets_range", param: "raised_by", empty: none_raised });
+			this.bars("tickets_by_type", tk.error ? tk : tk.tickets_by_type, { drill: "tickets_range", param: "ticket_type", empty: none_raised });
+			this.panel_total("tickets_open_status", tk.open_total, __("open"));
+			this.panel_total("tickets_raised_kind", tk.raised_total, __("raised in range"));
+		}
+		const vd = ch.venue_decisions || {};
+		this.$dash.find("#uq-home-venue").toggle(!vd.restricted && !vd.error && this.home_modules.has("venue"));
+		if (!vd.restricted) {
+			const none = __("No venue bookings in the selected date range.");
+			this.bars("venue_by_status", vd.error ? vd : vd.venue_by_status, { drill: "venue_bookings_all", param: "status", empty: none });
+			this.bars("venue_by_approver", vd.error ? vd : vd.venue_by_approver, { drill: "venue_bookings_all", param: "replied_by", empty: __("No venue requests were approved or rejected in the selected date range.") });
+			this.bars("venue_by_requester", vd.error ? vd : vd.venue_by_requester, { drill: "venue_bookings_all", param: "requester_type", empty: none });
+			this.bars("venue_swaps", vd.error ? vd : vd.venue_swaps, { drill: "venue_bookings_all", param: "swap_status", empty: __("No venue swap requests in the selected date range.") });
+		}
+	}
+
+	// headline count shown beside a panel title, e.g. "12 open"
+	panel_total(id, n, label) {
+		const $h = this.$dash.find(`[data-panel="${id}"]`).find(".uq-panel-title").first();
+		$h.find(".uq-panel-total").remove();
+		if (n != null) $h.append(` <span class="uq-panel-total">${uq_int(n)} ${uq_esc(label)}</span>`);
 	}
 
 	time_chart(id, d, o) {
@@ -2190,16 +2227,18 @@ class UniquadDashboard {
 			.map((it) => {
 				const w = Math.max(1, (100 * it.value) / max);
 				const below = o.pct && it.value < o.threshold;
+				// decision bars (venue) break the count into approved / rejected instead of a share
+				const decided = it.approved != null ? __("{0} approved · {1} rejected", [uq_int(it.approved), uq_int(it.rejected)]) : "";
 				const value = o.pct
 					? `${uq_num(it.value, 1)}%${below ? ` <small>${__("below")}</small>` : ""}`
-					: `${uq_int(it.value)} <small>${total ? Math.round((100 * it.value) / total) + "%" : ""}</small>`;
+					: `${uq_int(it.value)} <small>${decided ? uq_esc(decided) : total ? Math.round((100 * it.value) / total) + "%" : ""}</small>`;
 				const marker = o.pct ? `<span class="uq-bar-marker" style="left:${o.threshold}%" aria-hidden="true"></span>` : "";
-				const inner = `<span class="uq-bar-label" title="${uq_esc(it.label)}">${uq_esc(it.label)}</span>
+				const inner = `<span class="uq-bar-label" title="${uq_esc(it.label)}">${uq_esc(it.label)}${it.sub ? ` <small>${uq_esc(__(it.sub))}</small>` : ""}</span>
 					<span class="uq-bar-track" aria-hidden="true"><span class="uq-bar-fill" style="width:${w}%;display:block"></span>${marker}</span>
 					<span class="uq-bar-value">${value}</span>`;
-				const aria = `${it.label}: ${o.pct ? uq_num(it.value, 1) + "%" : uq_int(it.value)}${below ? ", " + __("below threshold") : ""}`;
+				const aria = `${it.label}: ${o.pct ? uq_num(it.value, 1) + "%" : uq_int(it.value)}${decided ? ", " + decided : ""}${below ? ", " + __("below threshold") : ""}`;
 				return o.drill && it.key
-					? `<li><button type="button" class="uq-bar" data-bar-drill="${o.drill}" data-bar-filter="${o.filter}" data-bar-value="${uq_esc(it.key)}" data-bar-label="${uq_esc(it.label)}" aria-label="${uq_esc(aria + ". " + __("View records"))}">${inner}</button></li>`
+					? `<li><button type="button" class="uq-bar" data-bar-drill="${o.drill}" ${o.param ? `data-bar-param="${o.param}"` : `data-bar-filter="${o.filter}"`} data-bar-value="${uq_esc(it.key)}" data-bar-label="${uq_esc(it.label)}" aria-label="${uq_esc(aria + ". " + __("View records"))}">${inner}</button></li>`
 					: `<li><div class="uq-bar" aria-label="${uq_esc(aria)}">${inner}</div></li>`;
 			})
 			.join("");

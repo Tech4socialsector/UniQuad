@@ -26,6 +26,7 @@ def get_context(context):
     try:
         faculty = frappe.get_doc("Faculty", faculty_name)
         set_faculty_nav(context, faculty)
+        context.faculty_details = _build_faculty_details(faculty, context)
 
         today = frappe.utils.today()
 
@@ -353,6 +354,47 @@ def get_context(context):
         _set_defaults(context)
 
     return context
+
+
+def _build_faculty_details(faculty, context):
+    """Faculty Details card on the dashboard.
+
+    Isolated in its own try/except so a bad value in an optional field
+    (e.g. a dangling Reporting To link) can never break the dashboard.
+    Rows with no value are dropped rather than shown as dashes.
+    """
+    try:
+        reporting_to = ""
+        if faculty.reporting_to:
+            rt = frappe.db.get_value(
+                "Faculty", faculty.reporting_to, ["first_name", "last_name"], as_dict=True
+            )
+            if rt:
+                reporting_to = " ".join(filter(None, [rt.first_name, rt.last_name]))
+            reporting_to = reporting_to or faculty.reporting_to
+
+        experience = ""
+        if faculty.experience_years:
+            yrs = int(faculty.experience_years)
+            experience = f"{yrs} year{'s' if yrs != 1 else ''}"
+
+        rows = [
+            ("mail",              "Email",          faculty.official_email_id or faculty.email or ""),
+            ("call",              "Phone",          faculty.phone or ""),
+            ("supervisor_account","Reporting To",   reporting_to),
+            ("event",             "Joined",         frappe.utils.formatdate(faculty.joining_date, "dd MMM yyyy") if faculty.joining_date else ""),
+            ("work_history",      "Experience",     experience),
+            ("school",            "Qualification",  faculty.qualification or ""),
+            ("psychology",        "Specialization", faculty.specialization or ""),
+        ]
+        return {
+            "is_hod": bool(faculty.is_hod),
+            "status": faculty.status or "",
+            "rows": [{"icon": i, "label": l, "value": str(v)} for i, l, v in rows if v],
+        }
+    except Exception as e:
+        frappe.log_error(f"Faculty Portal Dashboard – faculty details: {e}", "Faculty Portal")
+        return None
 
 
 def _set_defaults(context):

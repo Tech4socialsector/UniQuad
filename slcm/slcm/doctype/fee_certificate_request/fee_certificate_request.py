@@ -481,6 +481,24 @@ def _earlier_years(student, before_academic_year, has_scholarship):
 	return result
 
 
+def pdf_true_scale():
+	"""True when wkhtmltopdf is the patched-Qt build (Frappe Cloud, the official packages): it
+	honours --disable-smart-shrinking and lays CSS out 1:1. The unpatched build (e.g. Ubuntu's
+	apt package) shrinks CSS to about 0.75, which the certificate was designed at, so on the
+	patched build the certificate is zoomed to 0.75 to get the same page."""
+	patched = frappe.cache.get_value("slcm_wkhtmltopdf_patched_qt")
+	if patched is None:
+		import subprocess
+
+		try:
+			out = subprocess.check_output(["wkhtmltopdf", "--version"], timeout=10).decode().lower()
+			patched = int("patched qt" in out)
+		except Exception:
+			patched = 0
+		frappe.cache.set_value("slcm_wkhtmltopdf_patched_qt", patched)
+	return bool(cint(patched))
+
+
 @frappe.whitelist()
 def get_fee_certificate_context(request_name):
 	request = frappe.get_doc("Fee Certificate Request", request_name)
@@ -636,6 +654,8 @@ def get_fee_certificate_context(request_name):
 	return {
 		"request": request.as_dict(),
 		"settings": settings.as_dict(),
+		# Picks the page-box heights that fit one A4 page for this server's wkhtmltopdf
+		"true_scale": pdf_true_scale(),
 		"certificate_type": certificate_type,
 		"heading": (template and template.heading) or "FEE CERTIFICATE",
 		"body_html": render(

@@ -1715,7 +1715,9 @@ def get_promotion_analytics(academic_year=None, term=None, program=None, cohort=
 	"""Student promotion decisions, criteria checks, and policy analytics."""
 	_require_dashboard_access()
 
-	sp_where_parts = []
+	# Only published decisions count; Drafts are unreleased and Superseded
+	# rows are history replaced by a later decision.
+	sp_where_parts = ["IFNULL(sp.stage, 'Published') = 'Published'"]
 	sp_params = {}
 	if academic_year:
 		sp_where_parts.append(
@@ -1747,8 +1749,7 @@ def get_promotion_analytics(academic_year=None, term=None, program=None, cohort=
 		f"""
 		SELECT COALESCE(NULLIF(sp.promotion_status, ''), 'Unknown') AS label, COUNT(*) AS value
 		FROM `tabStudent Promotion` sp
-		{sp_where}
-		WHERE sp.manual_override = 1
+		{sp_where} AND sp.manual_override = 1
 		GROUP BY sp.promotion_status ORDER BY value DESC
 		""",
 		sp_params,
@@ -3087,6 +3088,7 @@ def get_drilldown_data(module, dimension, value, academic_year=None, term=None, 
 				filters["manual_override"] = 1
 			if cohort:
 				filters["programme"] = cohort
+			filters["stage"] = "Published"
 
 			rows = frappe.db.get_all(
 				"Student Promotion", filters=filters,
@@ -3105,13 +3107,13 @@ def get_drilldown_data(module, dimension, value, academic_year=None, term=None, 
 		if dimension == "cohort":
 			cohort_id = frappe.db.get_value("Batch", {"cohort_name": value}, "name") or value
 			rows = frappe.db.get_all(
-				"Student Promotion", filters={"programme": cohort_id},
+				"Student Promotion", filters={"programme": cohort_id, "stage": "Published"},
 				fields=["name", "student", "student_name", "programme", "promotion_policy",
 						"current_year", "target_year", "promotion_status",
 						"current_cgpa", "backlog_count"],
 				limit_start=offset, limit_page_length=page_size, order_by="processed_on desc",
 			)
-			total = frappe.db.count("Student Promotion", filters={"programme": cohort_id})
+			total = frappe.db.count("Student Promotion", filters={"programme": cohort_id, "stage": "Published"})
 			return {"rows": rows, "total": total,
 					"columns": ["student_name", "programme", "current_year", "target_year",
 								"promotion_status", "current_cgpa", "backlog_count"]}

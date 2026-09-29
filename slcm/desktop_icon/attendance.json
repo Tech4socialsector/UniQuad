@@ -1,0 +1,39 @@
+{
+ "app": "slcm",
+ "bg_color": "blue",
+ "creation": "2026-03-02 14:50:43.469969",
+ "docstatus": 0,
+ "doctype": "Desktop Icon",
+ "hidden": 0,
+ "icon": "customization",
+ "icon_type": "Link",
+ "idx": 0,
+ "label": "Attendance",
+ "link_to": "Attendance",
+ "link_type": "Workspace Sidebar",
+ "modified": "2026-09-29 16:08:42.888777",
+ "modified_by": "Administrator",
+ "name": "Attendance",
+ "owner": "Administrator",
+ "parent_icon": "Academics",
+ "restrict_removal": 0,
+ "roles": [
+  {
+   "role": "slcm_Registrar"
+  },
+  {
+   "role": "slcm_Registration Officer"
+  },
+  {
+   "role": "Campus Admin"
+  },
+  {
+   "role": "Admission Admin"
+  },
+  {
+   "role": "slcm_Faculty"
+  }
+ ],
+ "sidebar": "Attendance",
+ "standard": 1
+}

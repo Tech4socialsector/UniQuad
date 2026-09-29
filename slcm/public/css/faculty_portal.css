@@ -2172,3 +2172,51 @@ body.fp-sidebar-dark .fp-sidebar-divider { border-color: rgba(255,255,255,0.08);
 .fp-quick-action-btn:focus-visible { box-shadow: 0 4px 16px rgba(0,0,0,0.1); border-color: var(--fp-primary-mid); outline: none; }
 .fp-quick-action-btn:hover .fp-qa-title,
 .fp-quick-action-btn:focus-visible .fp-qa-title { color: var(--fp-primary); }
+
+/* ── Dark Mode — readable chrome, accents and hard-coded light surfaces ──
+   Portal settings set nav / sidebar / accent colours on :root; redefining
+   them on body.fp-dark wins because custom properties inherit from body. */
+body.fp-dark {
+  --fp-nav-bg:                  #0f172a;
+  --fp-nav-text:                #f1f5f9;
+  --fp-sidebar-menu-text:       #cbd5e1;
+  --fp-sidebar-menu-hover-bg:   #1a2540;
+  --fp-sidebar-menu-hover-text: #ffffff;
+  /* NLS maroon is too dark to read on navy — use a lifted rose for accents */
+  --fp-primary:                 #d64a66;
+  --fp-primary-dark:            #b8354f;
+  --fp-success:                 #e0708a;
+  --fp-warning:                 #f2b36a;
+  --fp-danger:                  #f87171;
+  --fp-info:                    #7cc4f2;
+  --fp-success-bg:              rgba(214,74,102,0.16);
+  --fp-warning-bg:              rgba(242,179,106,0.14);
+  --fp-danger-bg:               rgba(248,113,113,0.14);
+  --fp-info-bg:                 rgba(124,196,242,0.14);
+  color-scheme: dark;
+}
+body.fp-dark .fp-nav { border-bottom-color: var(--fp-border); }
+body.fp-dark .fp-sidebar { background: var(--fp-bg-2); border-right-color: var(--fp-border); }
+
+/* Inline maroon text written as a literal colour */
+body.fp-dark [style*="color:#920c24"], body.fp-dark [style*="color: #920c24"],
+body.fp-dark [style*="color:#920C24"], body.fp-dark [style*="color: #920C24"],
+body.fp-dark [style*="color:#6b091a"], body.fp-dark [style*="color:#6e0919"] { color: #f08da0 !important; }
+
+/* Inline white / near-white surfaces become dark cards */
+body.fp-dark [style*="background:#fff;"], body.fp-dark [style*="background: #fff;"],
+body.fp-dark [style*="background:#fff\""], body.fp-dark [style*="background:#ffffff"],
+body.fp-dark [style*="background: #ffffff"], body.fp-dark [style*="background:white"],
+body.fp-dark [style*="background:#f8fafc"], body.fp-dark [style*="background: #f8fafc"],
+body.fp-dark [style*="background:#f9fafb"], body.fp-dark [style*="background:#f1f5f9"],
+body.fp-dark [style*="background:#fafafa"] { background: var(--fp-card) !important; }
+body.fp-dark [style*="background:#fff0f2"], body.fp-dark [style*="background: #fff0f2"],
+body.fp-dark [style*="background:#fdf2f4"], body.fp-dark [style*="background:#fef2f2"] { background: var(--fp-primary-light) !important; }
+
+/* Common light-only text colours */
+body.fp-dark [style*="color:#1e293b"], body.fp-dark [style*="color:#0f172a"],
+body.fp-dark [style*="color:#111"], body.fp-dark [style*="color:#000"] { color: var(--fp-text-1) !important; }
+
+/* Form controls */
+body.fp-dark input, body.fp-dark select, body.fp-dark textarea { background-color: var(--fp-card-2); color: var(--fp-text-1); border-color: var(--fp-border-mid); }
+body.fp-dark input::placeholder, body.fp-dark textarea::placeholder { color: var(--fp-text-3); }

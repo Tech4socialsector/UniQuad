@@ -5,10 +5,10 @@
 	--uq-brand-strong: #6f0919;
 	--uq-brand-tint: #fbf1f3;
 	--uq-brand-tint-2: #f4dde2;
-	--uq-bg: #f6f5f3;
+	--uq-bg: #f0f2f5; /* matches Student Portal Settings.background_color */
 	--uq-surface: #ffffff;
-	--uq-surface-2: #faf9f7;
-	--uq-border: #e6e2de;
+	--uq-surface-2: #f8fafc;
+	--uq-border: #e2e8f0;
 	--uq-border-strong: #d3cdc7;
 	--uq-ink: #1f1a17;
 	--uq-ink-2: #3b342f;
@@ -2735,8 +2735,8 @@ button.uq-pv-tile:hover {
 /* ════════════════════════════════════════════════ v6: fresh, calmer look + new home pieces */
 
 .uq {
-	--uq-bg: #f5f4f2;
-	--uq-border: #e9e5e1;
+	--uq-bg: #f0f2f5; /* Student Portal background */
+	--uq-border: #e2e8f0;
 	--uq-shadow: 0 1px 2px rgba(31, 26, 23, 0.04);
 }
 [data-theme="dark"] .uq {
@@ -3111,4 +3111,25 @@ button.uq-pv-tile:hover {
 .uq-sb-group.uq-sb-hidden,
 .uq-sb-group.uq-sb-nomatch {
 	display: none;
+}
+
+/* ════════════════════════════════════════════════ v7: helpdesk + venue decision charts */
+
+/* the home Overview has only a couple of headline figures — let them share the row */
+.uq-grid-home-kpi {
+	grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+.uq-bar-label small {
+	color: var(--uq-muted);
+	font-size: 11px;
+}
+.uq-panel-total {
+	margin-left: 6px;
+	padding: 1px 8px;
+	border-radius: 999px;
+	background: var(--uq-brand-tint);
+	color: var(--uq-brand);
+	font-size: 11.5px;
+	font-weight: 700;
+	white-space: nowrap;
 }

@@ -6,7 +6,6 @@
 
 <div class="fp-page-header fade-in">
   <h1 class="fp-page-title">Marks Entry</h1>
-  <p class="fp-page-sub">View and manage student marks for your courses</p>
 </div>
 
 {% if portal_error %}
@@ -32,9 +31,6 @@
         {% endfor %}
         {% endif %}
       </select>
-      {% if selected_co %}
-      <span style="font-size:12px;color:var(--fp-text-4);">{{ marks_stats.total }} students</span>
-      {% endif %}
     </div>
   </div>
 </div>

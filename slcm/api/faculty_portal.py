@@ -939,6 +939,7 @@ def drilldown_students():
                 sm.first_name, sm.last_name,
                 sm.registration_id,
                 sm.gender,
+                sm.passport_size_photo,
                 se.program,
                 sec.course_offering,
                 co.course_name,
@@ -964,6 +965,9 @@ def drilldown_students():
         rows.append({
             "student_id": r.get("registration_id") or r.get("student", ""),
             "student_name": full_name,
+            # Not a column: used only to draw the avatar beside the name
+            # (so it stays out of the CSV export).
+            "student_image": r.get("passport_size_photo") or "",
             "gender": r.get("gender") or "—",
             "program": r.get("program") or "—",
             "course_name": r.get("course_name") or r.get("course_offering", ""),
@@ -975,7 +979,7 @@ def drilldown_students():
         "title": "Enrolled Students",
         "columns": [
             {"key": "student_id",   "label": "Student ID",    "type": "text"},
-            {"key": "student_name", "label": "Name",          "type": "text"},
+            {"key": "student_name", "label": "Name",          "type": "person", "image_key": "student_image"},
             {"key": "gender",       "label": "Gender",        "type": "text"},
             {"key": "program",      "label": "Programme",       "type": "text"},
             {"key": "course_name",  "label": "Course",        "type": "text"},

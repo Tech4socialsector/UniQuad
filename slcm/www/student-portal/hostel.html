@@ -177,7 +177,6 @@ a.hs-contact:focus-visible { outline: 2px solid var(--hs-maroon); outline-offset
         {% if hostel_info.hostel_code %}<span class="hs-chip"><span class="sp-ms" aria-hidden="true">tag</span>{{ hostel_info.hostel_code }}</span>{% endif %}
         {% if hostel_info.hostel_type %}<span class="hs-chip"><span class="sp-ms" aria-hidden="true">group</span>{{ hostel_info.hostel_type }} hostel</span>{% endif %}
         {% if hostel_info.hostel_block %}<span class="hs-chip"><span class="sp-ms" aria-hidden="true">domain</span>Block {{ hostel_info.hostel_block }}</span>{% endif %}
-        {% if room_info.room_type %}<span class="hs-chip"><span class="sp-ms" aria-hidden="true">{{ 'ac_unit' if room_info.room_type == 'AC' else 'mode_fan' }}</span>{{ room_info.room_type }}</span>{% endif %}
       </div>
     </div>
     <div class="hs-side">
@@ -226,77 +225,37 @@ a.hs-contact:focus-visible { outline: 2px solid var(--hs-maroon); outline-offset
 
 <div class="hs-cols">
   <div class="hs-col">
-    {# ── Move-in checklist ─────────────────────────────────────── #}
-    {% if _steps %}
-    <section class="hs-card fade-in" aria-labelledby="hs-check-title">
+    {# ── Hall Leader ───────────────────────────────────────────── #}
+    {% set _hl = hostel_info or {} %}
+    <section class="hs-card fade-in" aria-labelledby="hs-hl-title">
       <div class="hs-card-head">
-        <h2 class="hs-card-title" id="hs-check-title"><span class="sp-ms" aria-hidden="true">checklist</span>Move-in Checklist</h2>
-        <div class="hs-progress">
-          <div class="hs-progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="{{ _steps | length }}" aria-valuenow="{{ checklist_done }}" aria-label="Checklist progress">
-            <div class="hs-progress-fill" style="width:{{ (checklist_done / (_steps | length) * 100) | round(1) }}%;"></div>
-          </div>
-          {{ checklist_done }} of {{ _steps | length }} done
-        </div>
+        <h2 class="hs-card-title" id="hs-hl-title"><span class="sp-ms" aria-hidden="true">diversity_3</span>Your Hall Leader</h2>
       </div>
       <div class="hs-card-body">
-        <ol class="hs-steps">
-          {% for st in _steps %}
-          <li class="hs-step{{ ' is-done' if st.done }}">
-            <span class="hs-step-mark" aria-hidden="true">{% if st.done %}<span class="sp-ms">check</span>{% else %}{{ loop.index }}{% endif %}</span>
-            <div class="hs-step-body">
-              <div class="hs-step-label">{{ st.label }}</div>
-              {% set _note = st.done_note if st.done else st.todo_note %}
-              {% if _note %}<div class="hs-step-note">{{ _note }}</div>{% endif %}
-            </div>
-            <span class="hs-step-tag">{{ 'Done' if st.done else 'Pending' }}</span>
-          </li>
-          {% endfor %}
-        </ol>
-        {% if checklist_done == _steps | length %}
-        <div class="hs-alldone"><span class="sp-ms" aria-hidden="true">celebration</span>You're all set — every move-in step is complete.</div>
+        {% if _hl.hall_leader_name %}
+        <div class="hs-person">
+          <div class="hs-avatar" aria-hidden="true">{{ _hl.hall_leader_name[0] | upper }}</div>
+          <div style="min-width:0;">
+            <div class="hs-person-name">{{ _hl.hall_leader_name }}</div>
+            <div class="hs-person-role">Hall Leader · {{ _hostel }}</div>
+          </div>
+        </div>
+        {% if _hl.hall_leader_contact or _hl.hall_leader_email %}
+        <div class="hs-contacts">
+          {% if _hl.hall_leader_contact %}<a class="hs-contact" href="tel:{{ _hl.hall_leader_contact | replace(' ', '') | e }}"><span class="sp-ms" aria-hidden="true">call</span><span>{{ _hl.hall_leader_contact }}</span></a>{% endif %}
+          {% if _hl.hall_leader_email %}<a class="hs-contact" href="mailto:{{ _hl.hall_leader_email | e }}"><span class="sp-ms" aria-hidden="true">mail</span><span>{{ _hl.hall_leader_email }}</span></a>{% endif %}
+        </div>
+        {% else %}
+        <p class="hs-contact-none">Contact details aren't listed yet. Reach your hall leader through the Hostel Office.</p>
+        {% endif %}
+        {% else %}
+        <p class="hs-contact-none" style="margin-top:0;">No hall leader is listed for your hostel yet. Contact the Hostel Office for help.</p>
         {% endif %}
       </div>
     </section>
-    {% endif %}
-
-    {# ── Remarks ─────────────────────────────────────────────── #}
-    {% if allocation.remarks %}
-    <div class="sp-info-box fade-in" style="margin-top:18px;">
-      <span class="sp-ms">info</span>
-      <div>{{ allocation.remarks }}</div>
-    </div>
-    {% endif %}
   </div>
 
   <div class="hs-col">
-    {# ── Room occupancy ─────────────────────────────────────────── #}
-    {% if _cap %}
-    <section class="hs-card fade-in" aria-labelledby="hs-occ-title">
-      <div class="hs-card-head">
-        <h2 class="hs-card-title" id="hs-occ-title"><span class="sp-ms" aria-hidden="true">bed</span>Room Occupancy</h2>
-        <span class="hs-muted" style="font-size:12px;">{{ _occ }} / {{ _cap }} beds</span>
-      </div>
-      <div class="hs-card-body">
-        {% if _cap <= 12 %}
-        <div class="hs-beds" role="img" aria-label="{{ _occ }} of {{ _cap }} beds occupied, including you">
-          {% for i in range(_cap) %}
-          {% if i == 0 %}<div class="hs-bed is-you"><span class="sp-ms" aria-hidden="true">person</span>You</div>
-          {% elif i < _occ %}<div class="hs-bed is-taken"><span class="sp-ms" aria-hidden="true">person</span>Taken</div>
-          {% else %}<div class="hs-bed"><span class="sp-ms" aria-hidden="true">bed</span>Free</div>{% endif %}
-          {% endfor %}
-        </div>
-        {% else %}
-        <div class="hs-progress-bar" style="width:100%;height:8px;margin-bottom:10px;" role="progressbar" aria-valuemin="0" aria-valuemax="{{ _cap }}" aria-valuenow="{{ _occ }}" aria-label="Room occupancy">
-          <div class="hs-progress-fill" style="width:{{ (_occ / _cap * 100) | round(1) }}%;"></div>
-        </div>
-        {% endif %}
-        <div class="hs-occ-note">
-          {% if _cap - _occ > 0 %}{{ _cap - _occ }} bed{{ 's' if _cap - _occ != 1 }} still free in your room.{% else %}Your room is fully occupied.{% endif %}
-        </div>
-      </div>
-    </section>
-    {% endif %}
-
     {# ── Warden ─────────────────────────────────────────────────── #}
     <section class="hs-card fade-in" aria-labelledby="hs-warden-title">
       <div class="hs-card-head">
@@ -324,9 +283,16 @@ a.hs-contact:focus-visible { outline: 2px solid var(--hs-maroon); outline-offset
         {% endif %}
       </div>
     </section>
-
   </div>
 </div>
+
+    {# ── Remarks ─────────────────────────────────────────────── #}
+    {% if allocation.remarks %}
+    <div class="sp-info-box fade-in" style="margin:0 0 18px;">
+      <span class="sp-ms">info</span>
+      <div>{{ allocation.remarks }}</div>
+    </div>
+    {% endif %}
 
 {# ── Complaints (only when the student has any) ─────────────── #}
 {% if complaints %}

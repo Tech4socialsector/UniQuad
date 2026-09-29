@@ -146,6 +146,8 @@
   color: rgba(255,255,255,0.8); flex-shrink: 0; transition: background 0.15s;
 }
 .sat-hdr-close:hover { background: rgba(255,255,255,0.22); color: #fff; }
+.sat-hdr-close-light { background: var(--fp-bg); border-color: var(--fp-border); color: var(--fp-text-3); }
+.sat-hdr-close-light:hover { background: var(--fp-border-light); color: var(--fp-text-1); }
 
 /* Live counter chips */
 .sat-counters {
@@ -1379,6 +1381,30 @@ function fpChooseModalSlot(sessionName) {
   _satLoadSessionRoster(sessionName, chosen ? chosen.courseName : null);
 }
 
+/* Course heading meta line (date · time) for the mark-attendance modal */
+function _satSetMeta(date, time) {
+  var el = document.getElementById('sat-course-meta');
+  if (!el) return;
+  var parts = [];
+  if (date) parts.push('<span style="display:inline-flex;align-items:center;gap:5px;"><span class="fp-ms" style="font-size:16px;color:var(--fp-primary);">calendar_today</span>' + escHtml(date) + '</span>');
+  if (time) parts.push('<span style="display:inline-flex;align-items:center;gap:5px;"><span class="fp-ms" style="font-size:16px;color:var(--fp-primary);">schedule</span>' + escHtml(time) + '</span>');
+  el.innerHTML = parts.join('');
+  el.style.display = parts.length ? 'flex' : 'none';
+}
+function _satSessionMeta(sessionName) {
+  var s = (typeof _attSessions !== 'undefined' ? _attSessions : []).filter(function(x) { return x.name === sessionName; })[0];
+  if (s) {
+    return { date: s.session_date_fmt || s.session_date || '', time: (s.from_time || '') + (s.to_time ? ' – ' + s.to_time : '') };
+  }
+  var slot = document.querySelector('.fp-today-slot[data-session="' + sessionName + '"]');
+  if (slot) {
+    var ft = slot.getAttribute('data-from-time') || '', tt = slot.getAttribute('data-to-time') || '';
+    var d = new Date();
+    return { date: d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }), time: ft + (tt && tt !== 'None' ? ' – ' + tt : '') };
+  }
+  return { date: '', time: '' };
+}
+
 /* ── Load a known session's roster straight into step 2 ──
    Cached per session name so switching between slot tabs after the first
    load is instant instead of re-fetching from the server every click. */
@@ -1394,6 +1420,8 @@ function _satLoadSessionRoster(sessionName, courseName) {
   }
   var cn = document.getElementById('sat-course-name');
   if (cn) cn.textContent = courseName || 'Loading…';
+  var _m = _satSessionMeta(sessionName);
+  _satSetMeta(_m.date, _m.time);
 
   if (_satRosterCache[sessionName]) {
     _sat.students = _satRosterCache[sessionName];
@@ -1480,7 +1508,8 @@ function _satResetForm() {
   if (dt) dt.value = _todayIso();
 
   var cn = document.getElementById('sat-course-name');
-  if (cn) cn.textContent = 'Not Saved';
+  if (cn) cn.textContent = 'Attendance';
+  _satSetMeta('', '');
 
   /* Show step 1 only */
   var step1 = document.getElementById('sat-step-form');
@@ -1616,7 +1645,8 @@ function satGetStudents() {
       if (step2) { step2.style.display = 'flex'; step2.style.flexDirection = 'column'; step2.style.flex = '1'; step2.style.overflow = 'hidden'; }
 
       var cn = document.getElementById('sat-course-name');
-      if (cn) cn.textContent = labelText;
+      if (cn) cn.textContent = (labelText || '').split('  ·  ')[0];
+      _satSetMeta(_sat.date, '');
       _satRenderList(_sat.students);
       _satRefreshCounters();
     },
@@ -1641,11 +1671,11 @@ function _satRenderList(students) {
       + 'No students found.</div>';
     return;
   }
-  var COLS = '44px 1fr auto auto';
+  var COLS = '64px 1fr auto auto';
   var html = '<div style="border:1px solid var(--fp-border);border-radius:var(--fp-radius-sm);overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,0.03);">'
-    + '<div style="display:grid;grid-template-columns:' + COLS + ';gap:14px;padding:12px 20px;'
+    + '<div style="display:grid;grid-template-columns:' + COLS + ';gap:14px;padding:12px 24px;'
     + 'background:var(--fp-bg);border-bottom:2px solid var(--fp-border);'
-    + 'font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--fp-text-4);">'
+    + 'font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--fp-text-4);">'
     + '<span></span><span>Student</span><span>Attendance</span><span></span></div>';
 
   students.forEach(function(s, i) {
@@ -1659,20 +1689,20 @@ function _satRenderList(students) {
     var initial = escHtml((name || '?').trim().charAt(0).toUpperCase());
     var dotColor = present ? 'var(--fp-primary)' : 'var(--fp-primary-mid)';
     var avatar  = s.student_image
-      ? '<img src="' + escHtml(s.student_image) + '" alt="" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid ' + dotColor + ';">'
-      : '<span style="width:40px;height:40px;border-radius:50%;background:var(--fp-primary);color:#fff;'
-        + 'display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0;border:2px solid ' + dotColor + ';">' + initial + '</span>';
+      ? '<img src="' + escHtml(s.student_image) + '" alt="" style="width:58px;height:58px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid ' + dotColor + ';">'
+      : '<span style="width:58px;height:58px;border-radius:50%;background:var(--fp-primary);color:#fff;'
+        + 'display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;flex-shrink:0;border:2px solid ' + dotColor + ';">' + initial + '</span>';
     var searchKey = escHtml(((name || '') + ' ' + (roll || '') + ' ' + (s.student || '')).toLowerCase());
     html += '<div class="sat-student-row-toggle" data-idx="' + i + '" data-search="' + searchKey + '" '
       + 'style="display:grid;grid-template-columns:' + COLS + ';gap:14px;align-items:center;'
-      + 'padding:12px 20px;border-bottom:1px solid var(--fp-border-light);transition:background 0.12s;'
+      + 'padding:14px 24px;border-bottom:1px solid var(--fp-border-light);transition:background 0.12s;'
       + 'background:' + (present ? 'var(--fp-card)' : 'var(--fp-card)') + ';" '
       + 'onmouseover="this.style.filter=\'brightness(0.97)\'" onmouseout="this.style.filter=\'\'">'
       + avatar
-      + '<div style="min-width:0;"><div style="font-size:14px;font-weight:600;color:var(--fp-text-1);">' + escHtml(name) + '</div>'
-      + (roll ? '<div style="font-size:11.5px;color:var(--fp-text-4);font-family:monospace;">' + escHtml(roll) + '</div>' : '')
+      + '<div style="min-width:0;"><div style="font-size:16px;font-weight:700;color:var(--fp-text-1);">' + escHtml(name) + '</div>'
+      + (roll ? '<div style="font-size:13px;color:var(--fp-text-3);font-family:monospace;margin-top:2px;">' + escHtml(roll) + '</div>' : '')
       + '</div>'
-      + '<span class="sat-toggle-lbl" data-idx="' + i + '" style="font-size:12px;font-weight:700;min-width:56px;text-align:right;'
+      + '<span class="sat-toggle-lbl" data-idx="' + i + '" style="font-size:13.5px;font-weight:700;min-width:64px;text-align:right;'
       + 'color:' + (present ? 'var(--fp-primary)' : 'var(--fp-text-4)') + ';">' + (present ? 'PRESENT' : 'ABSENT') + '</span>'
       + '<label class="sat-switch" style="position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;cursor:pointer;">'
       + '<input type="checkbox" id="' + uid + '" class="sat-chk" data-student="' + escHtml(s.student) + '" '
@@ -1924,14 +1954,14 @@ function _renderViewSlotPicker(slots, activeSessionName) {
     var isActive = s.session === activeSessionName;
     var slotLabel = s.fromTime + (s.toTime ? ' – ' + s.toTime : '');
     return '<button type="button" class="fp-slot-tab" data-session="' + escHtml(s.session) + '" '
-      + 'style="padding:6px 12px;font-size:12px;font-weight:700;border:1px solid rgba(255,255,255,0.3);'
+      + 'style="padding:6px 12px;font-size:12px;font-weight:700;border:1.5px solid var(--fp-border);border-radius:var(--fp-radius-sm);'
       + 'cursor:pointer;font-family:inherit;white-space:nowrap;display:flex;align-items:center;gap:5px;'
       + (isActive
-          ? 'background:#fff;color:var(--fp-primary);'
-          : 'background:rgba(255,255,255,0.12);color:#fff;')
+          ? 'background:var(--fp-primary);color:#fff;border-color:var(--fp-primary);'
+          : 'background:var(--fp-card);color:var(--fp-text-2);')
       + '">'
       + escHtml(slotLabel)
-      + (s.marked ? '<span class="fp-ms" style="font-size:13px;color:' + (isActive ? 'var(--fp-success)' : '#f5c6ce') + ';">check_circle</span>' : '')
+      + (s.marked ? '<span class="fp-ms" style="font-size:13px;color:' + (isActive ? '#f5c6ce' : 'var(--fp-success)') + ';">check_circle</span>' : '')
       + '</button>';
   }).join('');
 
@@ -2630,7 +2660,7 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
         <div>
           <div style="font-size:15px;font-weight:800;color:var(--fp-text-1);">Student Attendance Tool</div>
-          <div style="font-size:11px;color:var(--fp-text-4);margin-top:1px;" id="sat-course-name">Not Saved</div>
+          <div style="font-size:11px;color:var(--fp-text-4);margin-top:1px;">Attendance</div>
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;">
@@ -2695,11 +2725,14 @@ document.addEventListener('DOMContentLoaded', function() {
          the student list below it, so the whole step-2 layout reads as one
          column instead of a full-bleed bar sitting above a narrow card. #}
       <div style="padding:16px 22px;border-bottom:1px solid var(--fp-border-light);flex-shrink:0;background:var(--fp-card);">
-        <div style="max-width:900px;margin:0 auto;">
-          <div style="font-size:16px;font-weight:700;color:var(--fp-text-1);margin-bottom:12px;">Attendance</div>
+        <div style="max-width:1280px;margin:0 auto;">
+          <div style="margin-bottom:12px;">
+            <div style="font-size:18px;font-weight:700;color:var(--fp-text-1);" id="sat-course-name">Attendance</div>
+            <div id="sat-course-meta" style="display:none;align-items:center;gap:14px;flex-wrap:wrap;margin-top:4px;font-size:13.5px;color:var(--fp-text-3);"></div>
+          </div>
           {# Counts on the left; search + bulk actions grouped on the right #}
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
-            <div style="display:flex;align-items:center;gap:14px;font-size:13px;font-weight:600;color:var(--fp-text-2);">
+            <div style="display:flex;align-items:center;gap:16px;font-size:14.5px;font-weight:600;color:var(--fp-text-2);">
               <span>Total: <span id="sat-cnt-total" style="color:var(--fp-text-1);">0</span></span>
               <span style="color:#920c24;">Present: <span id="sat-cnt-present">0</span></span>
               <span style="color:#920c24;">Absent: <span id="sat-cnt-absent">0</span></span>
@@ -2734,7 +2767,7 @@ document.addEventListener('DOMContentLoaded', function() {
          either stretching edge-to-edge or sitting flush-left in a
          full-screen modal. #}
       <div style="flex:1;overflow-y:auto;padding:18px 22px;" id="sat-list-wrap">
-        <div style="max-width:900px;margin:0 auto;" id="sat-list"></div>
+        <div style="max-width:1280px;margin:0 auto;" id="sat-list"></div>
       </div>
 
       {# Error #}
@@ -2800,20 +2833,20 @@ document.addEventListener('DOMContentLoaded', function() {
   <div class="att-modal-box att-modal-full" style="display:flex;flex-direction:column;">
 
     {# Header — gradient with Edit button #}
-    <div style="background:#920c24;padding:18px 22px 14px;flex-shrink:0;position:relative;overflow:hidden;border-radius:var(--fp-radius-lg) var(--fp-radius-lg) 0 0;">
+    <div style="background:#fff;padding:18px 22px 14px;flex-shrink:0;position:relative;overflow:hidden;border-bottom:1px solid var(--fp-border);border-radius:var(--fp-radius-lg) var(--fp-radius-lg) 0 0;">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;position:relative;z-index:1;">
         <div style="display:flex;align-items:center;gap:10px;">
-          <div style="width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,0.14);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <div style="width:38px;height:38px;border-radius:10px;background:var(--fp-primary);border:1px solid var(--fp-primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
             <span class="fp-ms" style="font-size:20px;color:#fff;">event_available</span>
           </div>
           <div>
-            <div style="font-size:16px;font-weight:800;color:#fff;letter-spacing:-0.02em;">Session Attendance</div>
-            <div style="font-size:12px;color:rgba(255,255,255,0.65);margin-top:2px;" id="att-view-course">—</div>
+            <div style="font-size:16px;font-weight:800;color:var(--fp-text-1);letter-spacing:-0.02em;">Session Attendance</div>
+            <div style="font-size:12.5px;color:var(--fp-text-3);margin-top:2px;" id="att-view-course">—</div>
           </div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
           <div id="att-view-rfid" style="display:flex;align-items:center;"></div>
-          <button class="sat-hdr-close" onclick="_closeModal('att-view-modal')" aria-label="Close">
+          <button class="sat-hdr-close sat-hdr-close-light" onclick="_closeModal('att-view-modal')" aria-label="Close">
             <span class="fp-ms" style="font-size:18px;">close</span>
           </button>
         </div>
@@ -2822,7 +2855,7 @@ document.addEventListener('DOMContentLoaded', function() {
          right when this course has multiple slots today — own row, so it
          never crowds or overlaps the top-right action buttons. #}
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;position:relative;z-index:1;flex-wrap:wrap;">
-        <div style="font-size:11px;color:rgba(255,255,255,0.5);display:flex;align-items:center;gap:6px;">
+        <div style="font-size:12px;color:var(--fp-text-3);display:flex;align-items:center;gap:6px;">
           <span class="fp-ms" style="font-size:14px;">schedule</span>
           <span id="att-view-meta">—</span>
         </div>

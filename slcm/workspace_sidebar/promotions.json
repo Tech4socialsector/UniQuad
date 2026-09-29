@@ -1,0 +1,122 @@
+{
+ "app": "slcm",
+ "creation": "2026-05-12 07:10:07.021819",
+ "docstatus": 0,
+ "doctype": "Workspace Sidebar",
+ "header_icon": "trending-up",
+ "idx": 0,
+ "items": [
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "home",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Home",
+   "link_to": "Promotions",
+   "link_type": "Workspace",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "play",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Run Promotions",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Section Break"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "icon": "rocket",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Promotion Management",
+   "link_to": "promotion-management",
+   "link_type": "Page",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "icon": "download",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Download Report",
+   "link_type": "URL",
+   "show_arrow": 0,
+   "type": "Link",
+   "url": "/desk/promotion-management?action=download_report"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "settings-2",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Setup",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Section Break"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "icon": "sliders-horizontal",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Promotion Policy",
+   "link_to": "Promotion Policy",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "file-text",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Records",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Section Break"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "icon": "user-check",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Student Promotion",
+   "link_to": "Student Promotion",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "icon": "history",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Promotion Run",
+   "link_to": "Promotion Run",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-09-29 16:18:00.957129",
+ "modified_by": "Administrator",
+ "module": "SLCM",
+ "name": "Promotions",
+ "owner": "Administrator",
+ "standard": 1,
+ "title": "Promotions"
+}
