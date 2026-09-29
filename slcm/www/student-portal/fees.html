@@ -195,6 +195,11 @@
 .spf-t .spf-net-row td.c-num { color: var(--spf-maroon); }
 .spf-tax-pill { font-size: 10.5px; font-weight: 600; padding: 1px 6px; border-radius: 6px; background: var(--spf-row); color: var(--spf-muted); margin-left: 6px; }
 .spf-t tr.spf-detail-tr > td { background: #fbfbfc; padding: 14px 20px 16px; }
+/* Fixed-row scroll box: height is capped to data-rows rows by JS (CSS max-height is the no-JS fallback). */
+.spf-t-scroll { overflow: auto; max-height: 420px; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.spf-t-scroll:focus-visible { outline: 2px solid var(--spf-maroon); outline-offset: -2px; }
+.spf-t-scroll > .spf-t { min-width: 540px; }
+.spf-t-scroll > .spf-t thead th { position: sticky; top: 0; z-index: 1; border-bottom: none; box-shadow: inset 0 -1px 0 var(--spf-border); }
 .spf-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
 @media (max-width: 700px) { .spf-detail-grid { grid-template-columns: 1fr; } }
 .spf-detail-hd { font-size: 11px; font-weight: 700; color: var(--spf-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
@@ -241,6 +246,8 @@
 .spf-refund-right { text-align: right; flex-shrink: 0; }
 .spf-refund-amt { font-size: 14px; font-weight: 700; color: var(--spf-green); font-variant-numeric: tabular-nums; }
 .spf-subhead { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 12px 20px 8px; font-size: 12px; font-weight: 700; color: var(--spf-muted); text-transform: uppercase; letter-spacing: 0.05em; border-top: 1px solid var(--spf-border); }
+.spf-credit-cell { width: 100%; max-width: 180px; }
+.spf-credit-amt { font-weight: 600; color: var(--spf-text); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .spf-credit-bar { height: 5px; border-radius: 99px; background: var(--spf-row); overflow: hidden; margin-top: 5px; }
 .spf-credit-bar > div { height: 100%; background: var(--spf-maroon); border-radius: 99px; }
 
@@ -278,6 +285,8 @@
   .spf-t-kv tr { display: flex !important; flex-direction: row !important; justify-content: space-between; align-items: center; gap: 12px; }
   .spf-t-kv td[data-label]::before { content: none !important; }
   .spf-t-kv td { width: auto !important; }
+  .spf-t-scroll > .spf-t { min-width: 0; }
+  .spf-t td[data-label] > .spf-credit-cell { width: 140px; text-align: right; }
   .spf-card-hd, .spf-card-bd { padding-left: 16px; padding-right: 16px; }
   .spf-tabs { padding: 10px 16px 0; }
   .spf-refund { padding: 12px 16px; }
@@ -743,6 +752,7 @@
       {{ empty('task_alt', 'No outstanding fees', 'You have no pending or overdue payments.', ok=True) }}
     {% else %}
     {% if _out_err %}<div class="spf-notice spf-notice-danger" style="margin:12px 20px 0;"><span class="sp-ms" aria-hidden="true">error</span><div>Some fee records could not be loaded, so this list may be incomplete. <button type="button" class="spf-link" onclick="window.location.reload()">Retry</button></div></div>{% endif %}
+    <div class="spf-t-scroll" data-rows="5" tabindex="0" role="region" aria-label="Upcoming and outstanding fees (scrollable)">
     <table class="spf-t">
       <caption class="spf-sr-only">Upcoming and outstanding fees</caption>
       <colgroup><col style="width:40%;"><col style="width:22%;"><col style="width:16%;"><col style="width:22%;"></colgroup>
@@ -758,6 +768,7 @@
         {% endfor %}
       </tbody>
     </table>
+    </div>
     {% endif %}
   </section>
 </div>
@@ -1037,7 +1048,7 @@
   <table class="spf-t">
     <caption class="spf-sr-only">Scholarships and concessions</caption>
     <colgroup><col style="width:40%;"><col style="width:20%;"><col style="width:20%;"><col style="width:20%;"></colgroup>
-    <thead><tr><th scope="col" class="c-text">Description</th><th scope="col" class="c-num">Amount</th><th scope="col" class="c-status">Status</th><th scope="col" class="c-date">Approved On</th></tr></thead>
+    <thead><tr><th scope="col" class="c-text">Description</th><th scope="col" class="c-date">Approved On</th><th scope="col" class="c-num">Amount</th><th scope="col" class="c-status">Status</th></tr></thead>
     <tbody>
       {% for c in concessions %}
       <tr class="spf-row-data">
@@ -1045,9 +1056,9 @@
           <div class="spf-cell-main">{{ c.concession_type or "Concession" }}{% if c.fee_component %} – {{ c.fee_component }}{% endif %}</div>
           {% if c.reason or c.approved_by_name %}<div class="spf-cell-sub">{{ c.reason or '' }}{% if c.reason and c.approved_by_name %} · {% endif %}{% if c.approved_by_name %}Approved by {{ c.approved_by_name }}{% endif %}</div>{% endif %}
         </td>
-        <td class="c-num" data-label="Amount">−{{ c.formatted_waiver }}</td>
-        <td class="c-status" data-label="Status">{{ badge(c.status or 'Draft') }}</td>
         <td class="c-date" data-label="Approved On">{{ c.approved_on_fmt or '—' }}</td>
+        <td class="c-num" data-label="Amount">{{ '−' if (c.waiver_amount or 0) > 0 }}{{ c.formatted_waiver }}</td>
+        <td class="c-status" data-label="Status">{{ badge(c.status or 'Draft') }}</td>
       </tr>
       {% endfor %}
     </tbody>
@@ -1061,12 +1072,12 @@
   <table class="spf-t">
     <caption class="spf-sr-only">Credit and advance deposits</caption>
     <colgroup><col style="width:40%;"><col style="width:20%;"><col style="width:20%;"><col style="width:20%;"></colgroup>
-    <thead><tr><th scope="col" class="c-text">Credit</th><th scope="col" class="c-num">Used / Total</th><th scope="col" class="c-num">Available</th><th scope="col" class="c-status">Status</th></tr></thead>
+    <thead><tr><th scope="col" class="c-text">Credit</th><th scope="col" class="c-text">Used / Total</th><th scope="col" class="c-num">Available</th><th scope="col" class="c-status">Status</th></tr></thead>
     <tbody>
       {% for cn in credit_notes %}
       <tr class="spf-row-data">
         <td class="c-text c-primary"><div class="spf-cell-main">{{ cn.credit_type or 'Credit' }}</div><div class="spf-cell-sub">{{ cn.academic_year or '—' }}{% if cn.remarks %} · {{ cn.remarks }}{% endif %}</div></td>
-        <td class="c-num" data-label="Used / Total"><div><div>{{ cn.formatted_used }} / {{ cn.formatted_credit }}</div><div class="spf-credit-bar" aria-hidden="true"><div style="width:{{ cn.used_pct }}%;"></div></div></div></td>
+        <td class="c-text" data-label="Used / Total"><div class="spf-credit-cell"><div class="spf-credit-amt">{{ cn.formatted_used }} / {{ cn.formatted_credit }}</div><div class="spf-credit-bar" role="progressbar" aria-label="Credit used" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ cn.used_pct or 0 }}"><div style="width:{{ cn.used_pct or 0 }}%;"></div></div></div></td>
         <td class="c-num {{ 'spf-tone-success' if cn.available_credit and cn.available_credit > 0 }}" data-label="Available">{{ cn.formatted_available }}</td>
         <td class="c-status" data-label="Status">{{ badge(cn.status) }}</td>
       </tr>
@@ -1633,6 +1644,22 @@
     _printOpened.forEach(function (d) { d.classList.add('is-hidden'); }); _printOpened = [];
     expanded = {}; AY = aySel ? (aySel.value || 'all') : 'all'; applyAll();
   });
+
+  /* Fixed-row scroll boxes: cap height at header + first N rows; beyond that the box scrolls */
+  function sizeScrollBoxes() {
+    document.querySelectorAll('.spf-t-scroll[data-rows]').forEach(function (box) {
+      var n = parseInt(box.getAttribute('data-rows'), 10) || 5;
+      var rows = box.querySelectorAll('tbody tr.spf-row-data');
+      if (rows.length <= n) { box.style.maxHeight = 'none'; return; }
+      var thead = box.querySelector('thead'), h = thead ? thead.offsetHeight : 0;
+      for (var i = 0; i < n; i++) h += rows[i].offsetHeight;
+      box.style.maxHeight = (h + 1) + 'px';
+    });
+  }
+  sizeScrollBoxes();
+  var _sbT; window.addEventListener('resize', function () { clearTimeout(_sbT); _sbT = setTimeout(sizeScrollBoxes, 120); });
+  window.addEventListener('beforeprint', function () { document.querySelectorAll('.spf-t-scroll').forEach(function (b) { b.style.maxHeight = 'none'; }); });
+  window.addEventListener('afterprint', sizeScrollBoxes);
 
   /* Broken photo → initial */
   document.querySelectorAll('.spf-avatar img').forEach(function (img) {
