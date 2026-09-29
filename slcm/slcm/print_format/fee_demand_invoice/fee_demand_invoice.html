@@ -1,0 +1,117 @@
+{% set logo = "/files/nlsiu-logo.jpg" %}
+{% set sm = frappe.get_doc("Student Master", doc.student, ignore_permissions=True) if doc.student else None %}
+{% set student_full = ([sm.first_name, sm.middle_name, sm.last_name] | select | join(" ")) if sm else (doc.student_name or "—") %}
+{% set original = frappe.utils.flt(doc.original_amount or 0) %}
+{% set penalty = frappe.utils.flt(doc.penalty_amount or 0) %}
+{% set waiver = frappe.utils.flt(doc.waiver_amount or 0) %}
+{% set net_payable = frappe.utils.flt(doc.net_payable or (original + penalty - waiver)) %}
+{% set paid = frappe.utils.flt(doc.paid_amount or 0) + frappe.utils.flt(doc.credit_adjusted or 0) %}
+{% set outstanding = [frappe.utils.flt(doc.outstanding_amount), 0] | max %}
+{% macro inr(v) %}INR {{ "{:,.2f}".format(frappe.utils.flt(v)) }}{% endmacro %}
+
+{% include "slcm/templates/print/nls_receipt_style.html" %}
+<div class="nls-doc">
+<div class="nls-copy is-page">
+
+  <div class="nls-head">
+    <img src="{{ logo }}" alt="NLS Logo">
+    <div class="nls-inst">National Law School of India University</div>
+  </div>
+
+  <div class="nls-title">Fee Invoice</div>
+
+  <table class="nls-meta">
+    <tr>
+      <td class="lbl">Registration Id:</td>
+      <td class="val">{{ sm.registration_id if sm and sm.registration_id else doc.student }}</td>
+      <td class="lbl">Student Name:</td>
+      <td class="val">{{ student_full }}</td>
+    </tr>
+    <tr>
+      <td class="lbl">Invoice Number:</td>
+      <td class="val"><span class="nls-boxed">{{ doc.name }}</span></td>
+      <td class="lbl">Invoice Date:</td>
+      <td class="val">{{ frappe.utils.formatdate(doc.demand_date, "dd-MM-yyyy") if doc.demand_date else "—" }}</td>
+    </tr>
+  </table>
+
+  <hr class="nls-divider">
+
+  <table class="nls-meta">
+    <tr>
+      <td class="lbl">Academic Year:</td>
+      <td class="val">{{ doc.academic_year or "—" }}</td>
+      <td class="lbl">Fee Type:</td>
+      <td class="val">{{ doc.demand_type or "—" }}</td>
+    </tr>
+    <tr>
+      <td class="lbl">Programme:</td>
+      <td class="val">{{ (sm.programme_of_study if sm else "") or doc.program or "—" }}</td>
+      <td class="lbl">Due Date:</td>
+      <td class="val">{{ frappe.utils.formatdate(doc.due_date, "dd-MM-yyyy") if doc.due_date else "—" }}</td>
+    </tr>
+  </table>
+
+  <table class="nls-table">
+    <thead>
+      <tr>
+        <th style="width:9%">Sl No.</th>
+        <th>Particulars</th>
+        <th style="width:24%">Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1</td>
+        <td>{{ doc.fee_component or "Fee" }}{% if doc.description and doc.description != doc.fee_component %}<br><span style="font-size:11px;">{{ doc.description }}</span>{% endif %}</td>
+        <td>{{ inr(original) }}</td>
+      </tr>
+      {% if penalty > 0 %}
+      <tr>
+        <td>2</td>
+        <td>Penalty</td>
+        <td>{{ inr(penalty) }}</td>
+      </tr>
+      {% endif %}
+    </tbody>
+    <tfoot>
+      {% if waiver > 0 %}
+      <tr class="muted-row">
+        <td colspan="2">Scholarship / Waiver</td>
+        <td>− {{ inr(waiver) }}</td>
+      </tr>
+      {% endif %}
+      <tr>
+        <td colspan="2">Net Payable</td>
+        <td>{{ inr(net_payable) }}</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <div class="nls-words">
+    {{ frappe.utils.money_in_words(net_payable, "INR") | replace("INR ", "Rupees ") }}
+  </div>
+
+  <hr class="nls-divider">
+
+  <table class="nls-meta">
+    <tr>
+      <td class="lbl">Amount Paid:</td>
+      <td class="val">{{ inr(paid) }}</td>
+      <td class="lbl">Outstanding:</td>
+      <td class="val">{{ inr(outstanding) }}</td>
+    </tr>
+    <tr>
+      <td class="lbl">Status:</td>
+      <td class="val">{{ doc.status or "—" }}</td>
+      <td class="lbl"></td>
+      <td class="val"></td>
+    </tr>
+  </table>
+
+  <div class="nls-note">
+    This is a computer generated invoice, hence it does not require signature/seal.
+  </div>
+
+</div>
+</div>

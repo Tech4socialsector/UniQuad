@@ -878,9 +878,17 @@ def _build_view_model(context, errors, student_name):
         frappe.utils.getdate(r.due_date) if r.due_date else today,
     ))
     context.summary_rows = rows
-    from slcm.slcm.fee.portal_charges import demand_type_cards
+    from slcm.slcm.fee.portal_charges import charge_cards, charge_rows, demand_type_cards
 
     context.demand_type_cards = demand_type_cards(context.fee_demands)
+    # One list of every charge (paid ones too) and the Overall / Academic / Non Academic cards
+    try:
+        context.charge_rows = charge_rows(student_name, context.fee_demands, invoices, context.re_exam_fees, context.hostel_fines)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "Portal Fees: charge rows")
+        context.charge_rows = []
+        errors["demands"] = True
+    context.charge_cards = charge_cards(context.charge_rows)
     context.outstanding_rows = [r for r in rows if not r.get("is_paid")]
     context.outstanding_overdue_count = sum(1 for r in context.outstanding_rows if r.is_overdue)
     context.outstanding_pending_count = len(context.outstanding_rows) - context.outstanding_overdue_count
@@ -989,7 +997,7 @@ def _set_defaults(context):
         "programme_overdue": 0.0, "programme_overdue_count": 0,
         "demand_outstanding": 0.0, "demand_overdue": 0.0, "reexam_due_total": 0.0,
         "fines_due_total": 0.0, "other_outstanding": 0.0,
-        "outstanding_rows": [], "summary_rows": [], "demand_type_cards": [], "outstanding_overdue_count": 0, "outstanding_pending_count": 0,
+        "outstanding_rows": [], "summary_rows": [], "demand_type_cards": [], "charge_rows": [], "charge_cards": [], "outstanding_overdue_count": 0, "outstanding_pending_count": 0,
         "payment_history": [], "fee_academic_years": [], "has_fee_data": False,
     }
     for k, v in defaults.items():

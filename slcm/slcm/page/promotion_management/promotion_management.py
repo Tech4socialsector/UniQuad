@@ -1096,7 +1096,7 @@ def get_promotion_history(program, academic_year):
 
 
 @frappe.whitelist()
-def save_override(record_name, new_status, reason):
+def save_override(record_name, new_status, reason, notify=0):
 	"""Manual override from the log.
 
 	- Override - Promoted: actually promotes the student (year + next-year
@@ -1166,7 +1166,16 @@ def save_override(record_name, new_status, reason):
 	doc.remarks          = error or (_("Manually overridden: {0}").format(reason))
 	doc.save(ignore_permissions=True)
 	frappe.db.commit()
-	return {"ok": True, "enrollment_status": doc.enrollment_status, "error": error, "stage": doc.stage}
+	# A published result changed — tell the student (the job skips failed moves).
+	queued = 0
+	if cint(notify) and not error and frappe.db.get_value("Student Master", doc.student, "email"):
+		frappe.enqueue(
+			"slcm.slcm.page.promotion_management.promotion_management._notify_promotion_results",
+			queue="short", timeout=300, record_names=[doc.name],
+		)
+		queued = 1
+	return {"ok": True, "enrollment_status": doc.enrollment_status, "error": error, "stage": doc.stage,
+	        "notified_queued": queued}
 
 
 def _recheck_record(doc, policy):
@@ -1181,14 +1190,17 @@ def _recheck_record(doc, policy):
 
 
 @frappe.whitelist()
-def retry_enrollment(record_names):
+def retry_enrollment(record_names, notify=0):
 	"""Retry creating the next-year enrollment for promoted students whose
-	enrollment failed (e.g. after the target Batch has been created)."""
+	enrollment failed (e.g. after the target Batch has been created).
+	With notify, students who are now moved (and weren't emailed yet) get
+	their result email — publish holds it back while the move is failing."""
 	frappe.has_permission("Student Promotion", "write", throw=True)
 	if isinstance(record_names, str):
 		record_names = frappe.parse_json(record_names) if record_names.startswith("[") else [record_names]
 
 	result = {"enrolled": [], "failed": []}
+	to_notify = []
 	for name in record_names or []:
 		doc = frappe.get_doc("Student Promotion", name)
 		if doc.promotion_status not in PROMOTED_STATUSES or doc.enrollment_status == "Enrolled":
@@ -1218,7 +1230,20 @@ def retry_enrollment(record_names):
 			result["failed"].append({"student": doc.student, "error": outcome["error"]})
 		else:
 			result["enrolled"].append(doc.student)
+			if not doc.notified_on:
+				to_notify.append(doc.name)
 	frappe.db.commit()
+	result["notified_queued"] = 0
+	if cint(notify) and to_notify:
+		to_notify = [n for n in to_notify
+		             if frappe.db.get_value("Student Master",
+		                                    frappe.db.get_value("Student Promotion", n, "student"), "email")]
+		if to_notify:
+			frappe.enqueue(
+				"slcm.slcm.page.promotion_management.promotion_management._notify_promotion_results",
+				queue="short", timeout=1500, record_names=to_notify,
+			)
+		result["notified_queued"] = len(to_notify)
 	return result
 
 

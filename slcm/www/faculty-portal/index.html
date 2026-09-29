@@ -14,42 +14,6 @@
 </div>
 {% endif %}
 
-{# ── Context Bar (welcome heading removed per request) ────── #}
-<div class="fp-page-header fp-context-bar fade-in">
-  <div class="fp-page-header-left">
-    <div class="fp-context-date">
-      <span class="fp-ms">today</span>
-      <span id="fp-live-date">—</span>
-      {% if current_academic_year %}
-      <span class="fp-context-sep">·</span>
-      <span class="fp-ms">school</span>
-      {{ current_academic_year }}
-      {% endif %}
-    </div>
-  </div>
-  {# Top-right Take Attendance / My Classes buttons — commented out (same links are in Quick Actions).
-  <div class="fp-page-actions">
-    <a href="/faculty-portal/attendance" class="fp-btn fp-btn-primary">
-      <span class="fp-ms">how_to_reg</span>
-      Take Attendance
-    </a>
-    <a href="/faculty-portal/my-classes" class="fp-btn fp-btn-secondary">
-      <span class="fp-ms">menu_book</span>
-      My Classes
-    </a>
-  </div>
-  #}
-</div>
-
-<script>
-(function() {
-  var el = document.getElementById('fp-live-date');
-  if (!el) return;
-  var d = new Date();
-  var opts = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-  el.textContent = d.toLocaleDateString('en-IN', opts);
-})();
-</script>
 
 {# ── Faculty Details ─────────────────────────────────────── #}
 {% if faculty_details %}
@@ -76,23 +40,6 @@
     </div>
     <a href="/faculty-portal/profile" class="fp-fd-link">View Profile<span class="fp-ms">arrow_forward</span></a>
   </div>
-  {% if _fd.rows %}
-  <div class="fp-fd-grid">
-    {% for r in _fd.rows %}
-    <div class="fp-fd-item">
-      <span class="fp-ms">{{ r.icon }}</span>
-      <div class="fp-fd-item-body">
-        <div class="fp-fd-lbl">{{ r.label | e }}</div>
-        <div class="fp-fd-val" title="{{ r.value | e }}">
-          {% if r.label == 'Email' %}<a href="mailto:{{ r.value | e }}">{{ r.value | e }}</a>
-          {% elif r.label == 'Phone' %}<a href="tel:{{ r.value | replace(' ', '') | e }}">{{ r.value | e }}</a>
-          {% else %}{{ r.value | e }}{% endif %}
-        </div>
-      </div>
-    </div>
-    {% endfor %}
-  </div>
-  {% endif %}
 </div>
 {% endif %}
 
@@ -496,7 +443,7 @@ window._fpDashData = {
      style="display:none;position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);align-items:flex-start;justify-content:center;padding-top:60px;overflow-y:auto;"
      role="dialog" aria-modal="true" aria-label="Details">
   <div id="fp-drill-box"
-       style="background:var(--fp-card);border-radius:var(--fp-radius-lg);width:96%;max-width:960px;box-shadow:var(--fp-shadow-xl);overflow:hidden;animation:fpModalIn 0.22s var(--fp-ease);margin-bottom:40px;">
+       style="background:var(--fp-card);border-radius:var(--fp-radius-lg);width:96%;max-width:1400px;box-shadow:var(--fp-shadow-xl);overflow:hidden;animation:fpModalIn 0.22s var(--fp-ease);margin-bottom:40px;">
 
     {# Modal header #}
     <div id="fp-drill-header"
@@ -572,7 +519,6 @@ body.fp-dark .fp-dash-icon .fp-ms { color: #fff !important; }
 /* Faculty Details card */
 .fp-fd-card { padding: 0; margin-bottom: 20px; overflow: hidden; }
 .fp-fd-main { display: flex; align-items: center; gap: 16px; padding: 18px 22px; }
-.fp-fd-card .fp-fd-grid { border-top: 1px solid var(--fp-border-light); }
 .fp-fd-avatar {
   position: relative; width: 60px; height: 60px; border-radius: 50%; flex-shrink: 0; overflow: hidden;
   background: var(--fp-primary); color: #fff;
@@ -591,20 +537,9 @@ body.fp-dark .fp-dash-icon .fp-ms { color: #fff !important; }
               font-size: 13px; font-weight: 700; color: var(--fp-primary); text-decoration: none; }
 .fp-fd-link .fp-ms { font-size: 16px; transition: transform 0.15s; }
 .fp-fd-link:hover .fp-ms { transform: translateX(3px); }
-.fp-fd-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 6px 8px; }
-.fp-fd-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 14px; min-width: 0; }
-.fp-fd-item > .fp-ms { font-size: 18px; color: var(--fp-primary); margin-top: 2px; flex-shrink: 0; }
-.fp-fd-item-body { min-width: 0; }
-.fp-fd-lbl { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--fp-text-4); }
-.fp-fd-val { font-size: 13px; font-weight: 600; color: var(--fp-text-1); margin-top: 2px;
-             white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.fp-fd-val a { color: inherit; text-decoration: none; }
-.fp-fd-val a:hover { color: var(--fp-primary); text-decoration: underline; }
-@media (max-width: 1024px) { .fp-fd-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 560px) {
   .fp-fd-main { flex-wrap: wrap; padding: 16px; }
   .fp-fd-link { width: 100%; justify-content: flex-end; }
-  .fp-fd-grid { grid-template-columns: 1fr; }
 }
 
 /* Today's / Upcoming Classes — equal halves (shared .fp-grid-2 is 3fr/2fr) */
@@ -642,7 +577,8 @@ body.fp-dark .fp-dash-icon .fp-ms { color: #fff !important; }
 .fp-drill-table th .fp-sort-icon { font-size: 13px; margin-left: 3px; opacity: 0.4; vertical-align: -2px; }
 .fp-drill-table th.sorted-asc .fp-sort-icon,
 .fp-drill-table th.sorted-desc .fp-sort-icon { opacity: 1; color: var(--fp-primary); }
-.fp-drill-table td { padding: 12px 16px; border-bottom: 1px solid var(--fp-border-light); color: var(--fp-text-2); vertical-align: middle; }
+.fp-drill-table td { padding: 12px 16px; border-bottom: 1px solid var(--fp-border-light); color: var(--fp-text-2); vertical-align: middle; white-space: nowrap; }
+/* One line per row; the body (#fp-drill-body) scrolls sideways on narrow screens */
 .fp-drill-table tr:last-child td { border-bottom: none; }
 .fp-drill-table tr:hover td { background: var(--fp-bg); }
 .fp-drill-empty { padding: 48px 24px; text-align: center; color: var(--fp-text-4); font-size: 13px; }

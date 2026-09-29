@@ -259,46 +259,57 @@
 /* ── Marks dialog ───────────────────────────────────────────────────── */
 .ppr-modal-overlay {
   position: fixed; inset: 0; z-index: 9000; background: rgba(15,23,42,0.5); backdrop-filter: blur(2px);
-  display: none; align-items: center; justify-content: center; padding: 16px;
+  display: none; align-items: center; justify-content: center; padding: 16px; overscroll-behavior: contain;
 }
 .ppr-modal-overlay.open { display: flex; }
 .ppr-modal {
-  background: var(--pp-card, #fff); border-radius: 14px; width: min(1240px, 100%); max-height: calc(100vh - 32px);
+  background: var(--pp-card, #fff); border-radius: 14px; width: min(1200px, calc(100vw - 32px)); max-height: calc(100vh - 32px);
   display: flex; flex-direction: column; box-shadow: 0 24px 64px rgba(0,0,0,0.2); overflow: hidden;
 }
 .ppr-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 16px 20px 12px; border-bottom: 1px solid var(--ppr-border); border-top: 3px solid var(--ppr-maroon); }
-.ppr-modal-title { font-size: 18px; font-weight: 700; color: var(--pp-text-1); margin: 2px 0 8px; }
+.ppr-modal-title { font-size: 16px; font-weight: 600; color: var(--pp-text-1); margin: 2px 0 8px; }
 .ppr-modal-close {
   width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--ppr-border); background: var(--pp-card, #fff);
   color: var(--ppr-muted); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
 .ppr-modal-close:hover { color: var(--ppr-maroon); border-color: var(--ppr-maroon); }
 .ppr-modal-close .ms { font-size: 18px; }
-.ppr-modal-body { overflow: auto; padding: 0 0 8px; }
-.ppr-remark { padding: 12px 20px 4px; font-size: 14px; color: var(--pp-text-3); }
+.ppr-modal-body { overflow: auto; padding: 0 0 8px; overscroll-behavior: contain; }
+.ppr-remark { padding: 10px 20px 4px; font-size: var(--ppr-mk-fs); color: var(--pp-text-3); }
 .ppr-remark .ms { font-size: 15px; vertical-align: -3px; margin-right: 4px; color: var(--ppr-muted); }
 
-/* Detailed marks table (unchanged content, restyled) */
 .ppr-mk-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-/* Maroon scrollbars in the dialog (otherwise the OS accent colour, e.g. orange, shows on scroll) */
-.ppr-modal-body, .ppr-mk-scroll { scrollbar-width: thin; scrollbar-color: rgba(146,12,36,0.45) transparent; }
-.ppr-modal-body::-webkit-scrollbar, .ppr-mk-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
-.ppr-modal-body::-webkit-scrollbar-track, .ppr-mk-scroll::-webkit-scrollbar-track { background: transparent; }
-.ppr-modal-body::-webkit-scrollbar-thumb, .ppr-mk-scroll::-webkit-scrollbar-thumb { background: rgba(146,12,36,0.45); border-radius: 8px; }
-.ppr-modal-body::-webkit-scrollbar-thumb:hover, .ppr-mk-scroll::-webkit-scrollbar-thumb:hover { background: var(--ppr-maroon); }
-.ppr-mk { width: max-content; min-width: 100%; border-collapse: collapse; font-size: 14px; }
-.ppr-mk th { padding: 10px 16px; background: var(--ppr-head); border-bottom: 1px solid var(--ppr-border); text-align: center; font-size: 12.5px; font-weight: 700; color: var(--ppr-muted); text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
-.ppr-mk th .max { display: block; font-size: 12px; font-weight: 500; text-transform: none; letter-spacing: 0; }
-.ppr-mk .grp { background: #fff; color: #000; font-weight: 700; border-bottom: none; }
-.ppr-mk td { padding: 14px 16px; text-align: center; border-bottom: 1px solid var(--ppr-row); white-space: nowrap; font-variant-numeric: tabular-nums; }
-.ppr-mk-grade { display: inline-block; font-size: 17px; font-weight: 800; padding: 2px 10px; border-radius: 8px; }
-.ppr-mk-grade.pass { color: var(--ppr-green); border: 1px solid rgba(0,128,0,0.3); }
-.ppr-mk-grade.fail { color: var(--ppr-red); background: rgba(146,12,36,0.07); }
+.ppr-mk { width: max-content; min-width: 100%; border-collapse: collapse; font-size: 13px; }
+.ppr-mk th { padding: 7px 10px; background: var(--ppr-head); border-bottom: 1px solid var(--ppr-border); text-align: center; font-size: 10px; font-weight: 600; color: var(--ppr-muted); text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
+.ppr-mk th .max { display: block; font-size: 9.5px; font-weight: 400; text-transform: none; letter-spacing: 0; }
+/* Group row (Internal / End Term / Grade …) matches the column-label row exactly */
+.ppr-mk thead tr:first-child th, .ppr-mk thead tr + tr th { font-size: 10px !important; font-weight: 600; letter-spacing: 0.04em; line-height: 1.35; }
+/* Group heading row: black, bold, on one neutral band */
+.ppr-mk .grp { background: #f3f4f6; color: #000; font-weight: 700 !important; border-bottom: none; }
+.ppr-mk .grp-grade, .ppr-mk .grp-status, .ppr-mk .grp-reexam, .ppr-mk .grp-improve, .ppr-mk .grp-final { background: #f3f4f6; color: #000; }
+.ppr-mk td { padding: 10px 12px; text-align: center; font-size: var(--ppr-mk-fs); border-bottom: 1px solid var(--ppr-row); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ppr-mk-grade { display: inline-block; font-size: var(--ppr-mk-fs); font-weight: 700; padding: 2px 10px; border-radius: 8px; }
+.ppr-mk-grade.pass { color: var(--ppr-mk-pass); border: 1px solid rgba(146,12,36,0.3); }
+.ppr-mk-grade.fail { color: var(--ppr-mk-fail); background: rgba(146,12,36,0.07); }
 .ppr-mk-grade.pend { color: var(--ppr-muted); background: #f3f4f6; }
-.ppr-mk-grade.reexam { color: var(--ppr-maroon); background: var(--ppr-maroon-soft); font-size: 15px; }
-.ppr-mk-hint { display: none; font-size: 12.5px; color: var(--ppr-muted); padding: 8px 20px 0; align-items: center; gap: 5px; }
+.ppr-mk-grade.reexam  { color: #920c24; background: #fff0f2; }
+.ppr-mk-grade.improve { color: #6b091a; border: 1px solid #b5364a; }
+.ppr-mk-hint { display: none; font-size: var(--ppr-mk-fs); color: var(--ppr-muted); padding: 8px 20px 0; align-items: center; gap: 5px; }
 .ppr-mk-hint .ms { font-size: 14px; }
-@media (max-width: 640px) { .ppr-mk-hint { display: flex; } .ppr-modal-overlay { padding: 0; align-items: flex-end; } .ppr-modal { border-radius: 16px 16px 0 0; max-height: 92vh; } }
+@media (max-width: 640px) {
+  .ppr-mk-hint { display: flex; }
+  .ppr-modal-overlay { padding: 0; align-items: flex-end; }
+  .ppr-modal { border-radius: 16px 16px 0 0; max-height: 92vh; }
+}
+@media (prefers-reduced-motion: reduce) { .ppr-card, .ppr-card:hover { transition: none; transform: none; } }
+/* Same palette as the student portal's marks dialog */
+.ppr-modal { --ppr-mk-pass: var(--pp-primary, #920c24); --ppr-mk-fail: #85142b; --ppr-mk-fs: 13px; }
+.ppr-modal .ppr-g-pass { color: var(--ppr-mk-pass) !important; }
+.ppr-modal .ppr-g-fail { color: var(--ppr-mk-fail) !important; }
+.ppr-modal .ppr-code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; font-weight: 700; color: var(--ppr-muted); letter-spacing: .04em; }
+.ppr-sup { font-size: 0.55em; font-weight: 700; letter-spacing: 0; margin-left: 1px; vertical-align: super; line-height: 0; }
+.ppr-sup-arrear { color: var(--ppr-maroon); }
+.ppr-sup-imp { background: #fff0f2; color: #6b091a; border: 1px solid #b5364a; border-radius: 3px; padding: 0 2px; }
 @media (prefers-reduced-motion: reduce) { .ppr-card, .ppr-card:hover { transition: none; transform: none; } }
 {% endblock %}
 
@@ -312,6 +323,13 @@
 {% macro grade_cls(c) -%}{{ 'ppr-g-pend' if (c.attendance_status == 'Absent' or not c.display_grade) else ('ppr-g-fail' if c.is_fail else 'ppr-g-pass') }}{%- endmacro %}
 {% macro grade_txt(c) -%}{{ '—' if (c.attendance_status == 'Absent' or not c.display_grade) else c.display_grade }}{%- endmacro %}
 {% macro total_txt(c) -%}{{ '—' if (not c.show_total or c.attendance_status == 'Absent' or c.display_total is none) else c.display_total }}{%- endmacro %}
+
+{# MFA / arrear (R, RR) / improvement-applied (I) markers shown next to a grade #}
+{% macro grade_sup(c) -%}
+{%- if c.mfa == "Yes" -%}<sup class="ppr-sup" title="MFA">MFA</sup>
+{%- elif c.arrear_marker -%}<sup class="ppr-sup ppr-sup-arrear" title="Arrear">{{ c.arrear_marker }}</sup>{%- endif -%}
+{%- if c.improvement_applied -%}<sup class="ppr-sup ppr-sup-imp" title="Improvement applied">I</sup>{%- endif -%}
+{%- endmacro %}
 
 {% block content %}
 {% set _ns = namespace(courses=0, passed=0, failed=0, pending=0) %}
@@ -545,7 +563,10 @@
 {% for res in published_results %}{% set ri = loop.index0 %}
 {% for c in res.courses %}{% set key = ri ~ '-' ~ loop.index0 %}
 {% set st = c.overall_status or 'Pending' %}
-<template id="ppr-marks-{{ key }}" data-title="{{ c.course_name | e }}" data-code="{{ c.course | e }}" data-exam="{{ res.exam_name | e }}" data-status="{{ st }}">
+{% set absent = c.attendance_status == 'Absent' %}
+{% set show_improve = c.improvement_setting_exists or c.improvement_marks is not none or c.improvement_grade %}
+{% set show_updated = c.updated_final_marks is not none or c.updated_grade %}
+<template id="ppr-marks-{{ key }}" data-title="{{ c.course_name | e }}" data-code="{{ c.course_code | e }}" data-exam="{{ res.exam_name | e }}" data-status="{{ st }}">
   {% if not c.has_comp_marks and not c.display_grade %}
   <div class="ppr-state" style="border:none;"><span class="ms" aria-hidden="true">hourglass_empty</span><div><p class="ppr-state-title">No marks available yet</p></div></div>
   {% else %}
@@ -557,33 +578,48 @@
         <tr>
           {% for grp in c.regular_groups %}<th scope="colgroup" colspan="{{ grp.components | length }}" class="grp">{{ grp.type_name }}</th>{% endfor %}
           <th scope="colgroup" colspan="{{ 2 if c.show_total else 1 }}" class="grp grp-grade">Grade</th>
-          <th scope="colgroup" class="grp grp-status">Status</th>
-          {% for grp in c.reexam_groups %}<th scope="colgroup" colspan="{{ grp.components | length }}" class="grp grp-reexam">{{ grp.type_name }}</th>{% endfor %}
-          {% if c.reexam_groups %}<th scope="colgroup" colspan="3" class="grp grp-final">Updated Final</th>{% endif %}
+          <th scope="colgroup" colspan="3" class="grp grp-status">Status</th>
+          {% for grp in c.reexam_groups %}<th scope="colgroup" colspan="{{ (grp.components | length) + (1 if loop.last else 0) }}" class="grp grp-reexam">{{ grp.type_name }}</th>{% endfor %}
+          {% if show_improve %}<th scope="colgroup" colspan="2" class="grp grp-improve">Improvement Exam</th>{% endif %}
+          {% if show_updated %}<th scope="colgroup" colspan="2" class="grp grp-final">Updated Final Result</th>{% endif %}
         </tr>
         <tr>
           {% for grp in c.regular_groups %}{% for comp in grp.components %}
           <th scope="col">{{ comp.label }}{% if comp.max_marks %}<span class="max">Max {{ comp.max_marks }}</span>{% endif %}</th>
           {% endfor %}{% endfor %}
           {% if c.show_total %}<th scope="col">Total Marks</th>{% endif %}
-          <th scope="col">Grade</th><th scope="col">Attendance</th>
-          {% for grp in c.reexam_groups %}{% for comp in grp.components %}<th scope="col">{{ comp.label }}</th>{% endfor %}{% endfor %}
-          {% if c.reexam_groups %}<th scope="col">Updated Marks</th><th scope="col">Updated Grade</th><th scope="col">Re-Exam Grade</th>{% endif %}
+          <th scope="col">Grade</th><th scope="col">Enrollment</th><th scope="col">Attendance</th><th scope="col">MFA</th>
+          {% for grp in c.reexam_groups %}{% for comp in grp.components %}
+          <th scope="col">{{ comp.label }}{% if comp.max_marks %}<span class="max">Max {{ comp.max_marks }}</span>{% endif %}</th>
+          {% endfor %}{% endfor %}
+          {% if c.reexam_groups %}<th scope="col">Re-Exam Grade</th>{% endif %}
+          {% if show_improve %}<th scope="col">Improvement Marks</th><th scope="col">Improvement Grade</th>{% endif %}
+          {% if show_updated %}<th scope="col">Updated Final Marks</th><th scope="col">Updated Grade</th>{% endif %}
         </tr>
       </thead>
       <tbody>
         <tr>
           {% for grp in c.regular_groups %}{% for comp in grp.components %}
-          <td>{{ comp.marks if c.attendance_status != 'Absent' else '—' }}</td>
+          <td>{{ 'Absent' if absent else comp.marks }}</td>
           {% endfor %}{% endfor %}
           {% if c.show_total %}<td style="font-weight:700;">{{ total_txt(c) }}</td>{% endif %}
-          <td><span class="ppr-mk-grade {{ 'pend' if (c.attendance_status == 'Absent' or not c.display_grade) else ('fail' if c.is_fail else 'pass') }}">{{ grade_txt(c) }}</span></td>
-          <td class="{{ 'ppr-g-fail' if c.attendance_status == 'Absent' else ('ppr-g-pass' if c.attendance_status else '') }}" style="font-weight:600;">{{ c.attendance_status or '—' }}</td>
-          {% for grp in c.reexam_groups %}{% for comp in grp.components %}<td>{{ comp.marks or '—' }}</td>{% endfor %}{% endfor %}
+          <td><span class="ppr-mk-grade {{ 'pend' if (absent or not c.display_grade) else ('fail' if c.is_fail else 'pass') }}">{{ grade_txt(c) }}{% if grade_txt(c) != '—' %}{{ grade_sup(c) }}{% endif %}</span></td>
+          <td class="{{ 'ppr-g-pass' if c.enrollment_status == 'Enrolled' else ('ppr-g-fail' if c.enrollment_status in ('Detained', 'Dropped') else '') }}" style="font-weight:600;">{{ c.enrollment_status or '—' }}</td>
+          <td class="{{ 'ppr-g-fail' if c.attendance_status in ('Absent', 'Detained') else ('ppr-g-pass' if c.attendance_status == 'Present' else '') }}" style="font-weight:600;{{ 'color:var(--ppr-maroon);' if c.attendance_status == 'Low Attendance' }}">{{ c.attendance_status or '—' }}</td>
+          <td>{{ c.mfa or '—' }}</td>
+          {% for grp in c.reexam_groups %}{% for comp in grp.components %}
+          <td>{{ 'Absent' if absent else comp.marks }}</td>
+          {% endfor %}{% endfor %}
           {% if c.reexam_groups %}
-          <td style="font-weight:700;">{{ c.display_total if c.display_total is not none else '—' }}</td>
-          <td>{% if c.display_grade %}<span class="ppr-mk-grade {{ 'fail' if c.is_fail else 'pass' }}">{{ c.display_grade }}</span>{% else %}—{% endif %}</td>
           <td>{% if c.re_exam_grade %}<span class="ppr-mk-grade reexam">{{ c.re_exam_grade }}</span>{% else %}—{% endif %}</td>
+          {% endif %}
+          {% if show_improve %}
+          <td style="font-weight:700;color:#920c24;">{{ c.improvement_marks if c.improvement_marks is not none else '—' }}</td>
+          <td>{% if c.improvement_grade %}<span class="ppr-mk-grade improve">{{ c.improvement_grade }}{% if c.improvement_applied %}<sup class="ppr-sup ppr-sup-imp" title="Improvement applied">I</sup>{% endif %}</span>{% else %}—{% endif %}</td>
+          {% endif %}
+          {% if show_updated %}
+          <td style="font-weight:700;">{{ '—' if (absent or c.updated_final_marks is none) else c.updated_final_marks }}</td>
+          <td>{% if not absent and c.updated_grade %}<span class="ppr-mk-grade {{ 'fail' if c.is_fail else 'pass' }}">{{ c.updated_grade }}{{ grade_sup(c) }}</span>{% else %}—{% endif %}</td>
           {% endif %}
         </tr>
       </tbody>
@@ -599,7 +635,7 @@
   <div class="ppr-modal" role="dialog" aria-modal="true" aria-labelledby="ppr-modal-title">
     <div class="ppr-modal-head">
       <div style="min-width:0;">
-        <div class="ppr-card-code" id="ppr-modal-code"></div>
+        <div class="ppr-code" id="ppr-modal-code"></div>
         <h2 class="ppr-modal-title" id="ppr-modal-title"></h2>
         <div class="ppr-chips" id="ppr-modal-chips"></div>
       </div>
