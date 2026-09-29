@@ -326,7 +326,7 @@ fixtures = [
         # A fixture copy would be force-imported after it on every migrate and win.
         "filters": [
             ["module", "in", ["SLCM", "Admission", "PACE"]],
-            ["name", "not in", ["Student Portal"]],
+            ["name", "not in", ["Student Portal", "Master"]],
         ]
     },
     # --- Workspace Sidebars ---

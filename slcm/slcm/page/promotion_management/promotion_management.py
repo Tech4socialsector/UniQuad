@@ -30,6 +30,7 @@ LOG_FIELDS = [
 	"shortage_course_result", "cf_result", "fee_due_result",
 	"enrollment_status", "to_enrollment", "remarks",
 	"manual_override", "override_reason", "processed_by", "processed_on",
+	"stage", "published_by", "published_on", "notified_on",
 ]
 
 
@@ -575,7 +576,7 @@ def _fill_missing_remarks(records, policy_name):
 
 def _count_statuses(rows):
 	c = {"total": len(rows), "promoted": 0, "not_promoted": 0, "conditional": 0,
-	     "enrolled": 0, "enrollment_failed": 0}
+	     "enrolled": 0, "enrollment_failed": 0, "pending": 0}
 	for r in rows:
 		st = r.get("promotion_status")
 		if st in PROMOTED_STATUSES:
@@ -588,6 +589,8 @@ def _count_statuses(rows):
 			c["enrolled"] += 1
 		elif r.get("enrollment_status") == "Failed":
 			c["enrollment_failed"] += 1
+		elif r.get("enrollment_status") == "Pending":
+			c["pending"] += 1
 	return c
 
 
@@ -641,9 +644,10 @@ def get_student_progression(student):
 
 	# Latest confirmed decision from the Promotion Log
 	last = frappe.get_all(
-		"Student Promotion", filters={"student": student},
+		"Student Promotion", filters={"student": student, "stage": ["!=", "Superseded"]},
 		fields=["name", "promotion_policy", "promotion_status", "current_year", "target_year",
-		        "enrollment_status", "to_enrollment", "remarks", "processed_on", "manual_override"],
+		        "enrollment_status", "to_enrollment", "remarks", "processed_on", "manual_override",
+		        "stage", "published_on"],
 		order_by="processed_on desc, modified desc", limit=1,
 	)
 	out["last_decision"] = last[0] if last else None
@@ -732,11 +736,13 @@ def fetch_students(program, academic_year, from_year, policy_name=None):
 @frappe.whitelist()
 def confirm_promotion(program, academic_year, from_year, to_year, policy_name=None):
 	"""
-	Evaluate and save promotion decisions for the students currently in `from_year`:
-	- Replaces earlier log rows for *these* students only (students already moved
-	  to the next year keep their log rows).
-	- Promoted students get their year updated and a Student Enrollment in the
-	  next year's Batch (when the policy allows auto-update).
+	Run Promotion: evaluate the students currently in `from_year` and save the
+	decisions as **Draft**. Nothing is applied to students yet — no year change,
+	no enrollment move, nothing visible on the portal, no notification.
+	publish_promotion() applies and releases the drafts.
+
+	Re-running replaces this step's earlier *Draft* rows for these students;
+	Published rows stay until a new decision for the student is published.
 	"""
 	frappe.has_permission("Student Promotion", "create", throw=True)
 
@@ -759,6 +765,7 @@ def confirm_promotion(program, academic_year, from_year, to_year, policy_name=No
 			"student": ["in", student_ids],
 			"current_year": str(from_year),
 			"target_year": str(to_year),
+			"stage": "Draft",
 		},
 		pluck="name",
 	)
@@ -767,7 +774,6 @@ def confirm_promotion(program, academic_year, from_year, to_year, policy_name=No
 
 	now = now_datetime()
 	rows = []
-	enrollment_failures = []
 
 	for s in students:
 		ev     = _evaluate_year_promotion(s, policy_dict, s["student"] in fee_due)
@@ -794,20 +800,12 @@ def confirm_promotion(program, academic_year, from_year, to_year, policy_name=No
 		doc.fee_due_result          = ev["fee_due_result"]
 		doc.promotion_status        = status
 		doc.remarks                 = ev["remarks"]
-		doc.enrollment_status       = "Not Applicable"
+		doc.stage                   = "Draft"
+		doc.enrollment_status       = _pending_enrollment_status(status, policy)
 		doc.processed_by            = frappe.session.user
 		doc.processed_on            = now
-
-		if status == "Promoted":
-			if policy.auto_update_student_year:
-				outcome = _apply_year_promotion(s["student"], to_year)
-				doc.enrollment_status = outcome["status"]
-				doc.to_enrollment     = outcome["to_enrollment"]
-				if outcome["error"]:
-					doc.remarks = outcome["error"]
-					enrollment_failures.append({"student": s["student"], "error": outcome["error"]})
-			else:
-				doc.remarks = _("Auto-update of student year is off on the policy — year and enrollment unchanged.")
+		if status == "Promoted" and not policy.auto_update_student_year:
+			doc.remarks = _("Auto-update of student year is off on the policy — year and enrollment will not change.")
 
 		doc.insert(ignore_permissions=True)
 		rows.append(doc.as_dict())
@@ -816,14 +814,213 @@ def confirm_promotion(program, academic_year, from_year, to_year, policy_name=No
 
 	counts = _count_statuses(rows)
 	return {
-		"policy_name":         policy.name,
-		"total":               counts["total"],
+		"policy_name":  policy.name,
+		"stage":        "Draft",
+		"total":        counts["total"],
+		"promoted":     counts["promoted"],
+		"not_promoted": counts["not_promoted"],
+		"conditional":  counts["conditional"],
+	}
+
+
+def _pending_enrollment_status(status, policy):
+	"""Enrollment status a Draft row carries until it is published."""
+	if status in PROMOTED_STATUSES and cint(policy.auto_update_student_year):
+		return "Pending"
+	return "Not Applicable"
+
+
+def _log_records(policy_name, from_year=None, to_year=None, include_draft=True):
+	"""Current log rows for a policy (optionally one year step): one row per
+	student, the Draft winning over the Published row it will replace.
+	Superseded rows are history and are left out."""
+	filters = {"promotion_policy": policy_name, "stage": ["!=", "Superseded"]}
+	if not include_draft:
+		filters["stage"] = "Published"
+	if cint(from_year):
+		filters["current_year"] = str(cint(from_year))
+	if cint(to_year):
+		filters["target_year"] = str(cint(to_year))
+	rows = frappe.get_all(
+		"Student Promotion", filters=filters, fields=LOG_FIELDS,
+		order_by="student_name asc", limit_page_length=0,
+	)
+	import datetime as _dt
+	when = lambda r: r.processed_on or _dt.datetime.min
+	best = {}
+	for r in rows:
+		key = (r.student, r.current_year, r.target_year)
+		cur = best.get(key)
+		if cur is None or (r.stage == "Draft" and cur.stage != "Draft") or (
+			r.stage == cur.stage and when(r) > when(cur)
+		):
+			best[key] = r
+	kept = set(id(v) for v in best.values())
+	records = [r for r in rows if id(r) in kept]
+	_fill_missing_remarks(records, policy_name)
+	return records
+
+
+def _stage_counts(records):
+	return {
+		"draft":     sum(1 for r in records if r.stage == "Draft"),
+		"published": sum(1 for r in records if r.stage == "Published"),
+	}
+
+
+@frappe.whitelist()
+def publish_promotion(policy_name, from_year, to_year, notify=0):
+	"""Publish this step's Draft decisions:
+	  - Promoted students move to the next year and are enrolled into next
+	    year's Batch (atomically per student; failures stay in the current
+	    year and can be retried from the log).
+	  - Rows become Published; a Published row they replace is Superseded.
+	  - Optionally emails each student their result (queued in background).
+	"""
+	frappe.has_permission("Student Promotion", "write", throw=True)
+	from_year, to_year = _validate_years(from_year, to_year)
+	policy = frappe.get_doc("Promotion Policy", policy_name)
+
+	# Row locks: a second, simultaneous publish waits here and then finds none.
+	drafts = [r[0] for r in frappe.db.sql(
+		"""SELECT name FROM `tabStudent Promotion`
+		   WHERE promotion_policy = %s AND current_year = %s AND target_year = %s AND stage = 'Draft'
+		   ORDER BY student_name FOR UPDATE""",
+		(policy.name, str(from_year), str(to_year)),
+	)]
+	if not drafts:
+		frappe.throw(_("There are no Draft decisions to publish for this selection."))
+
+	now = now_datetime()
+	auto_update = cint(policy.auto_update_student_year)
+	published, failures = [], []
+
+	for name in drafts:
+		doc = frappe.get_doc("Student Promotion", name)
+
+		# The Published decision this Draft replaces becomes history.
+		for old in frappe.get_all(
+			"Student Promotion",
+			filters={"promotion_policy": doc.promotion_policy, "student": doc.student,
+			         "current_year": doc.current_year, "target_year": doc.target_year,
+			         "stage": "Published", "name": ["!=", doc.name]},
+			pluck="name",
+		):
+			frappe.db.set_value("Student Promotion", old, "stage", "Superseded", update_modified=False)
+
+		if doc.promotion_status in PROMOTED_STATUSES and auto_update:
+			current = str(frappe.db.get_value("Student Master", doc.student, "current_year") or "").strip()
+			if current not in _year_variants(doc.current_year):
+				doc.enrollment_status = "Failed"
+				doc.remarks = _("Not moved: student is no longer in Year {0} (now {1}).").format(
+					doc.current_year, current or "—")
+				failures.append({"student": doc.student, "error": doc.remarks})
+			else:
+				outcome = _apply_year_promotion(doc.student, cint(doc.target_year))
+				doc.enrollment_status = outcome["status"]
+				doc.to_enrollment     = outcome["to_enrollment"]
+				if outcome["error"]:
+					doc.remarks = outcome["error"]
+					failures.append({"student": doc.student, "error": outcome["error"]})
+		elif doc.promotion_status not in PROMOTED_STATUSES:
+			doc.enrollment_status = "Not Applicable"
+
+		doc.stage        = "Published"
+		doc.published_by = frappe.session.user
+		doc.published_on = now
+		doc.save(ignore_permissions=True)
+		published.append(doc.as_dict())
+
+	frappe.db.commit()
+
+	queued, held = 0, 0
+	if cint(notify):
+		# A promoted student whose move failed is not told "promoted" yet.
+		to_notify = []
+		for r in published:
+			if r.promotion_status in PROMOTED_STATUSES and r.enrollment_status == "Failed":
+				held += 1
+			elif frappe.db.get_value("Student Master", r.student, "email"):
+				to_notify.append(r.name)
+		queued = len(to_notify)
+		if to_notify:
+			frappe.enqueue(
+				"slcm.slcm.page.promotion_management.promotion_management._notify_promotion_results",
+				queue="short", timeout=1500, record_names=to_notify,
+			)
+
+	counts = _count_statuses(published)
+	return {
+		"published":           counts["total"],
 		"promoted":            counts["promoted"],
 		"not_promoted":        counts["not_promoted"],
 		"conditional":         counts["conditional"],
 		"enrolled":            counts["enrolled"],
-		"enrollment_failures": enrollment_failures,
+		"enrollment_failures": failures,
+		"notified_queued":     queued,
+		"notify_held":         held,
 	}
+
+
+@frappe.whitelist()
+def discard_draft(policy_name, from_year, to_year):
+	"""Delete this step's Draft decisions (nothing was applied, so nothing to undo)."""
+	frappe.has_permission("Student Promotion", "delete", throw=True)
+	names = frappe.get_all(
+		"Student Promotion",
+		filters={"promotion_policy": policy_name, "current_year": str(cint(from_year)),
+		         "target_year": str(cint(to_year)), "stage": "Draft"},
+		pluck="name",
+	)
+	for name in names:
+		frappe.delete_doc("Student Promotion", name, ignore_permissions=True, force=True)
+	frappe.db.commit()
+	return {"discarded": len(names)}
+
+
+def _notify_promotion_results(record_names):
+	"""Background job: email each student the published promotion result."""
+	for name in record_names:
+		try:
+			rec = frappe.db.get_value(
+				"Student Promotion", name,
+				["name", "student", "promotion_status", "current_year", "target_year", "remarks",
+				 "promotion_policy", "stage"], as_dict=True,
+			)
+			if not rec or rec.stage != "Published":
+				continue
+			if rec.promotion_status in PROMOTED_STATUSES and frappe.db.get_value(
+				"Student Promotion", rec.name, "enrollment_status") == "Failed":
+				continue  # not actually moved — don't announce a promotion
+			sm = frappe.db.get_value("Student Master", rec.student, ["first_name", "email"], as_dict=True)
+			if not sm or not sm.email:
+				continue
+			prog = frappe.db.get_value("Promotion Policy", rec.promotion_policy, "program") or ""
+			prog = frappe.db.get_value("Programme", prog, "program_name") or prog
+			to_ord, from_ord = _ordinal(rec.target_year), _ordinal(rec.current_year)
+			if rec.promotion_status in PROMOTED_STATUSES:
+				subject = _("Promotion result: promoted to {0} Year").format(to_ord)
+				body = _("We are pleased to inform you that you have been promoted to <b>{0} Year</b> of {1}.").format(to_ord, prog)
+			elif rec.promotion_status == "Conditional":
+				subject = _("Promotion result: under review")
+				body = _("Your promotion from {0} Year of {1} is under review. The office will contact you with the outcome.").format(from_ord, prog)
+			else:
+				reasons = "".join(f"<li>{frappe.utils.escape_html(x.strip())}</li>" for x in (rec.remarks or "").split(";") if x.strip())
+				subject = _("Promotion result: not promoted")
+				body = _("You have not met the promotion criteria for moving from {0} Year of {1}.").format(from_ord, prog) + (
+					f"<ul>{reasons}</ul>" if reasons else "") + _("Please contact the office for the next steps.")
+			frappe.sendmail(
+				recipients=[sm.email],
+				subject=subject,
+				message=f"<p>{_('Dear {0},').format(frappe.utils.escape_html(sm.first_name or ''))}</p><p>{body}</p><p>{_('Regards,')}<br>{_('Office of the Registrar')}</p>",
+				reference_doctype="Student Promotion",
+				reference_name=rec.name,
+			)
+			frappe.db.set_value("Student Promotion", rec.name, "notified_on", now_datetime(), update_modified=False)
+			frappe.db.commit()
+		except Exception:
+			frappe.db.rollback()
+			frappe.log_error(title=f"Promotion result email failed: {name}", message=frappe.get_traceback())
 
 
 @frappe.whitelist()
@@ -833,27 +1030,20 @@ def get_promotion_log(policy_name, from_year=None, to_year=None):
 	if not policy_name:
 		return {"records": [], "counts": _count_statuses([]), "policy": None}
 
-	filters = {"promotion_policy": policy_name}
-	if cint(from_year):
-		filters["current_year"] = str(cint(from_year))
-	if cint(to_year):
-		filters["target_year"] = str(cint(to_year))
-
-	records = frappe.get_all(
-		"Student Promotion", filters=filters, fields=LOG_FIELDS,
-		order_by="student_name asc", limit_page_length=0,
-	)
-	_fill_missing_remarks(records, policy_name)
+	records = _log_records(policy_name, from_year, to_year)
 	policy = frappe.db.get_value(
 		"Promotion Policy", policy_name,
 		["name", "title", "program", "academic_year", "auto_update_student_year"], as_dict=True,
 	)
 	last = max((r.processed_on for r in records if r.processed_on), default=None)
+	last_pub = max((r.published_on for r in records if r.published_on), default=None)
 	return {
 		"records": records,
 		"counts": _count_statuses(records),
+		"stages": _stage_counts(records),
 		"policy": policy,
 		"last_processed_on": last,
+		"last_published_on": last_pub,
 	}
 
 
@@ -878,26 +1068,31 @@ def get_promotion_history(program, academic_year):
 	frappe.has_permission("Student Promotion", "read", throw=True)
 	if not program or not academic_year:
 		return []
-	return frappe.db.sql(
+	steps = frappe.db.sql(
 		"""
-		SELECT sp.promotion_policy, pp.title AS policy_title,
-		       sp.current_year, sp.target_year,
-		       COUNT(*) AS total,
-		       SUM(sp.promotion_status IN %(pro)s)   AS promoted,
-		       SUM(sp.promotion_status IN %(notp)s)  AS not_promoted,
-		       SUM(sp.promotion_status = 'Conditional') AS conditional,
-		       SUM(sp.enrollment_status = 'Failed')  AS enrollment_failed,
-		       MAX(sp.processed_on) AS last_processed_on
+		SELECT DISTINCT sp.promotion_policy, pp.title AS policy_title, sp.current_year, sp.target_year
 		FROM `tabStudent Promotion` sp
 		INNER JOIN `tabPromotion Policy` pp ON pp.name = sp.promotion_policy
 		WHERE pp.program = %(program)s AND pp.academic_year = %(ay)s
-		GROUP BY sp.promotion_policy, pp.title, sp.current_year, sp.target_year
-		ORDER BY last_processed_on DESC
+		  AND IFNULL(sp.stage, '') != 'Superseded'
 		""",
-		{"program": program, "ay": academic_year,
-		 "pro": PROMOTED_STATUSES, "notp": NOT_PROMOTED_STATUSES},
-		as_dict=True,
+		{"program": program, "ay": academic_year}, as_dict=True,
 	)
+	out = []
+	for st in steps:
+		recs = _log_records(st.promotion_policy, st.current_year, st.target_year)
+		if not recs:
+			continue
+		c, g = _count_statuses(recs), _stage_counts(recs)
+		out.append({
+			**st, **c,
+			"drafts": g["draft"], "published_count": g["published"],
+			"last_processed_on": max((r.processed_on for r in recs if r.processed_on), default=None),
+			"last_published_on": max((r.published_on for r in recs if r.published_on), default=None),
+		})
+	import datetime as _dt
+	out.sort(key=lambda x: x["last_processed_on"] or _dt.datetime.min, reverse=True)
+	return out
 
 
 @frappe.whitelist()
@@ -917,9 +1112,28 @@ def save_override(record_name, new_status, reason):
 		frappe.throw(_("A reason is required for a manual override."))
 
 	doc = frappe.get_doc("Student Promotion", record_name)
+	if doc.stage == "Superseded":
+		frappe.throw(_("This decision has been superseded by a later one and can't be changed."))
 	auto_update = cint(frappe.db.get_value("Promotion Policy", doc.promotion_policy, "auto_update_student_year"))
 	was_promoted = doc.promotion_status in PROMOTED_STATUSES
 	error = None
+	stamp = f"[{frappe.utils.format_datetime(now_datetime())} · {frappe.session.user}]"
+
+	if doc.stage == "Draft":
+		# Draft: only the decision changes — it is applied on publish.
+		if new_status == "Override - Promoted" and was_promoted:
+			frappe.throw(_("{0} is already promoted.").format(doc.student_name or doc.student))
+		if new_status == "Override - Not Promoted" and doc.promotion_status in NOT_PROMOTED_STATUSES:
+			frappe.throw(_("{0} is already not promoted.").format(doc.student_name or doc.student))
+		doc.promotion_status  = new_status
+		doc.enrollment_status = "Pending" if (new_status == "Override - Promoted" and auto_update) else "Not Applicable"
+		doc.to_enrollment     = None
+		doc.manual_override   = 1
+		doc.override_reason   = f"{stamp} {reason}"
+		doc.remarks           = _("Manually overridden: {0}").format(reason)
+		doc.save(ignore_permissions=True)
+		frappe.db.commit()
+		return {"ok": True, "enrollment_status": doc.enrollment_status, "error": None, "stage": "Draft"}
 
 	if new_status == "Override - Promoted":
 		if was_promoted:
@@ -946,14 +1160,13 @@ def save_override(record_name, new_status, reason):
 		doc.enrollment_status = "Not Applicable"
 		doc.to_enrollment     = None
 
-	stamp = f"[{frappe.utils.format_datetime(now_datetime())} · {frappe.session.user}]"
 	doc.promotion_status = new_status
 	doc.manual_override  = 1
 	doc.override_reason  = f"{stamp} {reason}"
 	doc.remarks          = error or (_("Manually overridden: {0}").format(reason))
 	doc.save(ignore_permissions=True)
 	frappe.db.commit()
-	return {"ok": True, "enrollment_status": doc.enrollment_status, "error": error}
+	return {"ok": True, "enrollment_status": doc.enrollment_status, "error": error, "stage": doc.stage}
 
 
 def _recheck_record(doc, policy):
@@ -979,6 +1192,9 @@ def retry_enrollment(record_names):
 	for name in record_names or []:
 		doc = frappe.get_doc("Student Promotion", name)
 		if doc.promotion_status not in PROMOTED_STATUSES or doc.enrollment_status == "Enrolled":
+			continue
+		if doc.stage != "Published":
+			result["failed"].append({"student": doc.student, "error": _("Not published yet — publish the draft first.")})
 			continue
 		policy = frappe.get_doc("Promotion Policy", doc.promotion_policy)
 		if not cint(policy.auto_update_student_year):
@@ -1039,22 +1255,13 @@ def download_promotion_list(policy_name, list_type, from_year=None, to_year=None
 		frappe.throw(_("Unknown list type {0}.").format(list_type))
 
 	policy  = frappe.get_doc("Promotion Policy", policy_name)
-	filters = [
-		["promotion_policy", "=", policy_name],
-		["promotion_status", "in", status_map[list_type]],
+	wanted  = set(status_map[list_type])
+	records = [
+		r for r in _log_records(policy_name, from_year, to_year)
+		if r.promotion_status in wanted and (list_type != "enrollment_failed" or r.enrollment_status == "Failed")
 	]
-	if list_type == "enrollment_failed":
-		filters.append(["enrollment_status", "=", "Failed"])
-	if cint(from_year):
-		filters.append(["current_year", "=", str(cint(from_year))])
-	if cint(to_year):
-		filters.append(["target_year", "=", str(cint(to_year))])
-
-	records = frappe.get_all(
-		"Student Promotion", filters=filters, fields=LOG_FIELDS,
-		order_by="promotion_status asc, student_name asc", limit_page_length=0,
-	)
-	_fill_missing_remarks(records, policy_name)
+	records.sort(key=lambda r: (r.promotion_status or "", (r.student_name or "").lower()))
+	has_draft = any(r.stage == "Draft" for r in records)
 
 	yr_from = cint(from_year) or policy.from_year
 	yr_to   = cint(to_year) or policy.to_year
@@ -1079,18 +1286,18 @@ def download_promotion_list(policy_name, list_type, from_year=None, to_year=None
 		"Conditional":             "FEF3C7",
 	}
 
-	headers = ["#", "Student ID", "Student Name", "Batch", "Current Year", "Target Year",
+	headers = ["#", "Stage", "Student ID", "Student Name", "Batch", "Current Year", "Target Year",
 	           "CGPA", "Backlogs", "Attendance %", "Short Courses", "Short after FA/MFA",
 	           "CGPA Check", "Backlog Check", "Attendance Check", "Shortage Check", "FA/MFA (CF) Check",
 	           "Fee Due Check", "Promotion Status", "Enrollment Status", "New Enrollment",
 	           "Remarks", "Override Reason", "Processed By", "Processed On"]
-	col_widths = [5, 18, 28, 14, 13, 13, 9, 10, 13, 16, 16, 13, 14, 16, 15, 12,
+	col_widths = [5, 11, 18, 28, 14, 13, 13, 9, 10, 13, 16, 16, 13, 14, 16, 15, 12,
 	              14, 22, 17, 20, 45, 35, 26, 20]
 	last_col = get_column_letter(len(headers))
 
 	ws.merge_cells(f"A1:{last_col}1")
 	t = ws["A1"]
-	t.value = (f"{label_map[list_type]} — {policy.title}  "
+	t.value = (("DRAFT (not published) — " if has_draft else "") + f"{label_map[list_type]} — {policy.title}  "
 	           f"({policy.program} | {policy.academic_year} | Year {yr_from} → Year {yr_to})")
 	t.font      = Font(bold=True, size=13, color="6E0919")
 	t.alignment = ctr
@@ -1121,6 +1328,7 @@ def download_promotion_list(policy_name, list_type, from_year=None, to_year=None
 		rfil = PatternFill("solid", fgColor=row_colors.get(rec.promotion_status, "FFFFFF"))
 		vals = [
 			ri,
+			rec.stage or "",
 			rec.student,
 			rec.student_name,
 			rec.batch_year or "",
@@ -1151,7 +1359,7 @@ def download_promotion_list(policy_name, list_type, from_year=None, to_year=None
 			cell.border = bdr
 			cell.alignment = ctr if ci == 1 else wrap
 
-	ws.freeze_panes = "D4"
+	ws.freeze_panes = "E4"
 
 	output = io.BytesIO()
 	wb.save(output)
@@ -1163,7 +1371,7 @@ def download_promotion_list(policy_name, list_type, from_year=None, to_year=None
 
 
 @frappe.whitelist()
-def download_formatted_promotion_list(program, academic_year, university_name=None):
+def download_formatted_promotion_list(program, academic_year, university_name=None, include_draft=0):
 	"""
 	Official (NLS-style) promotion list for a Programme + Academic Year:
 	  - One sheet per year level, taken from the confirmed promotion log
@@ -1206,13 +1414,21 @@ def download_formatted_promotion_list(program, academic_year, university_name=No
 		filters={"program": program, "academic_year": academic_year, "status": ["in", ["Active", "Draft"]]},
 		pluck="name",
 	)
+	include_draft = cint(include_draft)
+	stages = ["Published", "Draft"] if include_draft else ["Published"]
 	records = frappe.get_all(
 		"Student Promotion",
-		filters={"promotion_policy": ["in", policy_names]},
+		filters={"promotion_policy": ["in", policy_names], "stage": ["in", stages]},
 		fields=LOG_FIELDS + ["promotion_policy"],
 		order_by="processed_on desc, modified desc",
 		limit_page_length=0,
 	) if policy_names else []
+	# Drafts first (stable sort keeps newest-first) so a pending re-decision
+	# wins over the published one it will replace.
+	records.sort(key=lambda r: 0 if r.stage == "Draft" else 1)
+	drafts_pending = bool(policy_names) and not include_draft and bool(frappe.db.exists(
+		"Student Promotion", {"promotion_policy": ["in", policy_names], "stage": "Draft"}))
+	has_draft_rows = any(r.stage == "Draft" for r in records)
 	for pol in {r.promotion_policy for r in records}:
 		_fill_missing_remarks([r for r in records if r.promotion_policy == pol], pol)
 
@@ -1351,7 +1567,10 @@ def download_formatted_promotion_list(program, academic_year, university_name=No
 			return r + 2
 		for si, rec in enumerate(recs, 1):
 			sid = rec.student
-			vals = [si, sid, name_map.get(sid) or rec.get("student_name") or sid,
+			sname = name_map.get(sid) or rec.get("student_name") or sid
+			if rec.get("stage") == "Draft":
+				sname = f"{sname}  [DRAFT]"
+			vals = [si, sid, sname,
 			        email_map.get(sid, ""), round(flt(rec.current_cgpa), 2)]
 			lines = 1
 			for tn in term_cols:
@@ -1413,12 +1632,16 @@ def download_formatted_promotion_list(program, academic_year, university_name=No
 			r = banner(ws, r, univ, ncols, size=14, height=24)
 		if raw_mode:
 			r = banner(ws, r, f"Student List — {prog_name} — {from_ord} Year ({academic_year})", ncols, size=12)
-			r = banner(ws, r, "(Promotion not yet run — showing currently enrolled students)", ncols,
+			r = banner(ws, r, "(Promotion drafted but not yet published — showing currently enrolled students)"
+			           if drafts_pending else "(Promotion not yet run — showing currently enrolled students)", ncols,
 			           size=10, color="92400E", bold=False, height=15)
 		else:
 			r = banner(ws, r, f"Promotion List of {prog_name} — {from_ord} Year ({academic_year})", ncols, size=12)
 			r = banner(ws, r, f"(Promoted to {to_ord} Year{next_ay_txt})", ncols,
 			           size=10, color="374151", bold=False, height=15)
+		if has_draft_rows and any(x.stage == "Draft" for x in recs):
+			r = banner(ws, r, "DRAFT — includes decisions that are NOT yet published. Not an official list.",
+			           ncols, size=11, color="FFFFFF", fill=PatternFill("solid", fgColor="B91C1C"), height=20)
 		r = banner(ws, r, "(F) Failed   ·   (AS) Attendance shortage   ·   Improvement = C / C+ grades",
 		           ncols, size=9, color="64748B", bold=False, height=14)
 		freeze_row = r

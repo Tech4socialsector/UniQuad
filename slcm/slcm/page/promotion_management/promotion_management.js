@@ -206,6 +206,22 @@ frappe.pages['promotion-management'].on_page_load = function (wrapper) {
 		.bdg-ovn  { background:#7f1d1d; }
 		.bdg-enr  { background:#1d4ed8; }
 		.bdg-fail { background:#b91c1c; }
+		.bdg-draft { background:#b45309; }
+		.bdg-pub  { background:#920c24; }
+		.bdg-pend { background:#475569; }
+		.pm-stagebar { display:flex; gap:12px; align-items:center; flex-wrap:wrap; padding:14px 18px; border-radius:12px;
+			margin-bottom:16px; color:#fff; }
+		.pm-stagebar.draft { background:#b45309; }
+		.pm-stagebar.pub { background:#15803d; }
+		.pm-stagebar .t { font-size:14px; font-weight:800; }
+		.pm-stagebar .d { font-size:12.5px; flex:1; min-width:240px; }
+		.pm-stagebar .pm-btn { border-color:#fff; }
+		.pm-stagebar .pm-btn.solid-w { background:#fff; color:#920c24; }
+		.pm-stagebar .pm-btn.solid-w:hover { background:#f3f4f6; color:#6e0919; }
+		.pm-stagebar .pm-btn.out-w { background:transparent; color:#fff; }
+		.pm-stagebar .pm-btn.out-w:hover { background:#fff; color:#b45309; }
+		.pm-check { display:flex; gap:10px; align-items:flex-start; padding:12px 14px; border:1px solid var(--border-color); border-radius:8px; cursor:pointer; margin:0; }
+		.pm-check input { margin-top:3px; }
 		.chk { display:inline-flex; width:22px; height:22px; border-radius:50%; align-items:center; justify-content:center; font-weight:800; font-size:11px; }
 		.chk.pass { background:#15803d; color:#fff; } .chk.fail { background:#b91c1c; color:#fff; }
 		.chk.nc { color:var(--pm-muted); }
@@ -270,8 +286,8 @@ frappe.pages['promotion-management'].on_page_load = function (wrapper) {
 			<div class="pm-stepper">
 				<div class="pm-stp" data-step="1"><span class="pm-stp-dot">1</span><span><b>Select</b><small>Cohort &amp; policy</small></span></div>
 				<div class="pm-stp" data-step="2"><span class="pm-stp-dot">2</span><span><b>Preview</b><small>Who is eligible</small></span></div>
-				<div class="pm-stp" data-step="3"><span class="pm-stp-dot">3</span><span><b>Run Promotion</b><small>Manual, on your click</small></span></div>
-				<div class="pm-stp" data-step="4"><span class="pm-stp-dot">4</span><span><b>Review Log</b><small>Download &amp; resolve</small></span></div>
+				<div class="pm-stp" data-step="3"><span class="pm-stp-dot">3</span><span><b>Run (Draft)</b><small>Saved, not applied</small></span></div>
+				<div class="pm-stp" data-step="4"><span class="pm-stp-dot">4</span><span><b>Publish</b><small>Apply &amp; notify students</small></span></div>
 			</div>
 			<div class="pm-hero-note">&#9432; Term &rarr; Term moves are done from
 				<a href="/app/student-enrollment" target="_blank">Student Enrollment &rarr; Promote Students</a> (automatic, no policy check).</div>
@@ -440,11 +456,18 @@ frappe.pages['promotion-management'].on_page_load = function (wrapper) {
 		var f = currentFilters();
 		var s1 = filtersComplete(f);
 		var s2 = s1 && S.preview && sameKey(S.preview.key, f);
-		var s3 = s1 && S.lastRun && sameKey(S.lastRun.key, f);
-		var active = !s1 ? 1 : (S.view === 'log' && S.log ? 4 : (s3 ? 4 : (s2 ? 3 : 2)));
+		// Step 3/4 state comes from the log of *this* selection (or History).
+		var logHere = s1 && S.log && S.logKey && S.logKey.policy === f.policy
+			&& S.logKey.from_year === f.from_year && S.logKey.to_year === f.to_year ? S.log : null;
+		var hist = s1 ? historyEntry(f) : null;
+		var drafts = logHere ? (logHere.stages || {}).draft || 0 : (hist ? hist.drafts || 0 : 0);
+		var pubs = logHere ? (logHere.stages || {}).published || 0 : (hist ? hist.published_count || 0 : 0);
+		var s3 = s1 && (drafts > 0 || pubs > 0);
+		var s4 = s1 && pubs > 0 && drafts === 0;
+		var active = !s1 ? 1 : (drafts > 0 ? 4 : (s4 ? 0 : (s2 ? 3 : 2)));
 		$root.find('.pm-stp').each(function () {
 			var n = parseInt($(this).data('step'), 10);
-			var done = (n === 1 && s1) || (n === 2 && s2) || (n === 3 && s3) || (n === 4 && S.view === 'log' && S.log && S.log.counts && S.log.counts.total);
+			var done = (n === 1 && s1) || (n === 2 && (s2 || s3)) || (n === 3 && s3) || (n === 4 && s4);
 			$(this).toggleClass('done', !!done && n !== active).toggleClass('active', n === active);
 			$(this).find('.pm-stp-dot').html(done && n !== active ? '&#10003;' : n);
 		});
@@ -456,9 +479,10 @@ frappe.pages['promotion-management'].on_page_load = function (wrapper) {
 		else if (!f.from_year) hint = 'Enter the year students are promoted from.';
 		else if (f.to_year <= f.from_year) hint = 'To Year must be greater than From Year.';
 		else if (!s1) hint = 'The selected policy does not match this year — pick the policy for Year ' + esc(f.from_year) + ' or change the years.';
-		else if (s3) hint = '&#10003; Promotion was run for this selection. Run again to re-evaluate students still in Year ' + esc(f.from_year) + '.';
+		else if (drafts > 0) hint = '<b>Draft saved</b> — ' + drafts + ' decision(s) waiting. Review them in the Promotion Log, then click <b>Publish</b>. Nothing has changed for students yet.';
+		else if (s4) hint = '&#10003; Published for this selection. Run again to draft new decisions for students still in Year ' + esc(f.from_year) + '.';
 		else if (s2) hint = 'Preview ready — <b>' + (S.preview.counts.promoted || 0) + '</b> of <b>' + (S.preview.counts.total || 0) + '</b> eligible. Click <b>Run Promotion</b> when ready.';
-		else hint = 'Ready. <b>Preview</b> to check eligibility first, or <b>Run Promotion</b> directly (you will see a summary before anything changes).';
+		else hint = 'Ready. <b>Preview</b> to check eligibility, or <b>Run Promotion</b> to save the decisions as a Draft (nothing changes for students until you publish).';
 		$('#pm-action-hint').html(hint);
 	}
 
@@ -474,9 +498,16 @@ frappe.pages['promotion-management'].on_page_load = function (wrapper) {
 			return;
 		}
 		var when = h.last_processed_on ? frappe.datetime.str_to_user(h.last_processed_on) : '';
-		filterNotice('info', '&#128339; This selection was already run' + (when ? ' on <b>' + esc(when) + '</b>' : '')
-			+ ' — ' + (h.promoted || 0) + ' promoted, ' + (h.not_promoted || 0) + ' not promoted of ' + (h.total || 0) + '. '
-			+ '<span class="pm-link" data-act="open-prior">View that log</span>. Running again only re-evaluates students still in Year ' + esc(f.from_year) + '.');
+		if (h.drafts) {
+			filterNotice('warn', '&#9998; A <b>Draft</b> exists for this selection (' + h.drafts + ' decision(s), saved '
+				+ esc(when) + ') — not yet published, students are unaffected. '
+				+ '<span class="pm-link" data-act="open-prior">Review &amp; publish it</span>. Running again replaces the draft.');
+		} else {
+			var pub = h.last_published_on ? frappe.datetime.str_to_user(h.last_published_on) : when;
+			filterNotice('info', '&#128339; Already published' + (pub ? ' on <b>' + esc(pub) + '</b>' : '')
+				+ ' — ' + (h.promoted || 0) + ' promoted, ' + (h.not_promoted || 0) + ' not promoted of ' + (h.total || 0) + '. '
+				+ '<span class="pm-link" data-act="open-prior">View that log</span>. Running again drafts new decisions for students still in Year ' + esc(f.from_year) + '.');
+		}
 		$('#pm-filter-notice').addClass('prior');
 	}
 
@@ -902,19 +933,18 @@ frappe.pages['promotion-management'].on_page_load = function (wrapper) {
 			+ '<span>Policy</span><span>' + esc(policy.title || k.policy) + '</span>'
 			+ '<span>Promotion</span><span>Year ' + esc(k.from_year) + ' &rarr; Year ' + esc(k.to_year) + ' &middot; ' + (c.total || 0) + ' student(s)</span>'
 			+ '</div>'
-			+ (policy.auto_update_student_year
-				? '<div class="pm-notice info" style="margin-top:0"><span class="pm-notice-body">Eligible students will be moved to <b>Year ' + esc(k.to_year)
-					+ '</b> and enrolled into next year\'s Batch. Every decision is saved to the Promotion Log.</span></div>'
-				: '<div class="pm-notice warn" style="margin-top:0"><span class="pm-notice-body"><b>Auto-update is off on this policy</b> — decisions will be logged, but student years and enrollments will not change.</span></div>')
-			+ (prior
-				? '<div class="pm-notice warn"><span class="pm-notice-body">This selection was run before. Log entries for these ' + (c.total || 0)
-					+ ' student(s) will be replaced; students already promoted keep theirs.</span></div>'
-				: '');
+			+ '<div class="pm-notice info" style="margin-top:0"><span class="pm-notice-body">Decisions are saved as a <b>Draft</b>. '
+				+ '<b>Nothing changes for students</b> — no year change, no enrollment, nothing on the portal, no email — until you review and <b>Publish</b>.</span></div>'
+			+ (policy.auto_update_student_year ? ''
+				: '<div class="pm-notice warn"><span class="pm-notice-body"><b>Auto-update is off on this policy</b> — even after publishing, student years and enrollments will not change.</span></div>')
+			+ (prior && prior.drafts
+				? '<div class="pm-notice warn"><span class="pm-notice-body">The existing Draft for this selection will be replaced.</span></div>'
+				: (prior ? '<div class="pm-notice warn"><span class="pm-notice-body">Published decisions stay as they are until this new Draft is published.</span></div>' : ''));
 
 		var d = new frappe.ui.Dialog({
 			title: __('Run Promotion'),
 			fields: [{ fieldtype: 'HTML', fieldname: 'summary', options: html }],
-			primary_action_label: __('Run Promotion for {0} student(s)', [c.total || 0]),
+			primary_action_label: __('Save Draft for {0} student(s)', [c.total || 0]),
 			primary_action: function () {
 				d.hide();
 				runPromotion(k);
@@ -944,27 +974,15 @@ frappe.pages['promotion-management'].on_page_load = function (wrapper) {
 				from_year: k.from_year, to_year: k.to_year, policy_name: k.policy,
 			},
 			freeze: true,
-			freeze_message: __('Running promotion…'),
+			freeze_message: __('Evaluating and saving draft…'),
 			callback: function (r) {
 				if (!r.message) return;
 				var m = r.message;
 				S.lastRun = { key: k, result: m };
 				frappe.show_alert({
-					message: __('Promotion complete: {0} promoted, {1} not promoted, {2} conditional', [m.promoted, m.not_promoted, m.conditional]),
-					indicator: 'green',
+					message: __('Draft saved: {0} promoted, {1} not promoted, {2} conditional — review and publish', [m.promoted, m.not_promoted, m.conditional]),
+					indicator: 'orange',
 				}, 7);
-				if (m.enrollment_failures && m.enrollment_failures.length) {
-					frappe.msgprint({
-						title: __('{0} promoted student(s) could not be enrolled in next year\'s Batch', [m.enrollment_failures.length]),
-						indicator: 'orange',
-						message: m.enrollment_failures.map(function (f) {
-							return '<b>' + esc(f.student) + '</b>: ' + esc(f.error);
-						}).join('<br>') + '<br><br>' + __('They are marked Promoted but stay in their current year and Batch until enrollment succeeds. Fix the cause (e.g. create the target Batch) and use <b>Retry Enrollment</b> in the Promotion Log.'),
-					});
-				}
-				// Promoted students have left Year k.from_year; the preview is now out of date.
-				S.preview = null;
-				renderEval();
 				openLog({ policy: k.policy, from_year: k.from_year, to_year: k.to_year });
 				loadHistory();
 			},
@@ -1023,27 +1041,33 @@ frappe.pages['promotion-management'].on_page_load = function (wrapper) {
 		var last = L.last_processed_on ? frappe.datetime.str_to_user(L.last_processed_on) : '—';
 		var autoOff = L.policy && !L.policy.auto_update_student_year;
 		var pct = function (n) { return c.total ? (100 * (n || 0) / c.total).toFixed(2) : 0; };
-		var justRan = S.lastRun && S.lastRun.key.policy === k.policy
-			&& S.lastRun.key.from_year === k.from_year && S.lastRun.key.to_year === k.to_year;
+		var g = L.stages || {};
+		var pubAt = L.last_published_on ? frappe.datetime.str_to_user(L.last_published_on) : '';
+		var stageBar = g.draft
+			? '<div class="pm-stagebar draft"><span class="t">&#9998; DRAFT — not published</span>'
+				+ '<span class="d">' + g.draft + ' decision(s) are saved but <b>not applied</b>. Students see no change and receive nothing until you publish. '
+				+ 'Promote Anyway / Mark Not Promoted only change the draft.</span>'
+				+ '<button class="pm-btn sm out-w" data-act="discard-draft">Discard Draft</button>'
+				+ '<button class="pm-btn lg solid-w" data-act="publish">&#10148; Publish Promotion</button></div>'
+			: '<div class="pm-stagebar pub"><span class="t">&#10003; PUBLISHED</span>'
+				+ '<span class="d">Applied to students' + (pubAt ? ' on <b>' + esc(pubAt) + '</b>' : '') + '. Changes you make now take effect immediately.</span></div>';
 
 		$v.html(`
-			${justRan ? '<div class="pm-notice ok" style="margin:0 0 14px;"><span class="pm-notice-body">&#10003; <b>Promotion run completed.</b> '
-				+ (S.lastRun.result.promoted || 0) + ' promoted, ' + (S.lastRun.result.not_promoted || 0) + ' not promoted, '
-				+ (S.lastRun.result.conditional || 0) + ' conditional. Resolve exceptions below or download the lists.</span></div>' : ''}
+			${stageBar}
 			<div class="pm-band">
 				<div class="pm-band-top">
 					<div>
 						<div class="pm-band-kicker">Promotion Log &middot; ${esc(k.policy)}</div>
 						<div class="pm-band-title">${esc(title)} &nbsp;&middot;&nbsp; Year ${esc(k.from_year)} &rarr; Year ${esc(k.to_year)}</div>
 					</div>
-					<div class="pm-band-meta">Last processed<br><b>${esc(last)}</b></div>
+					<div class="pm-band-meta">Last run<br><b>${esc(last)}</b>${pubAt ? `<br>Published <b>${esc(pubAt)}</b>` : ''}</div>
 				</div>
 				<div class="pm-band-stats">
 					<div class="pm-band-stat"><div class="v">${c.total || 0}</div><div class="l">Total</div></div>
 					<div class="pm-band-stat g"><div class="v">${c.promoted || 0}</div><div class="l">Promoted</div></div>
 					<div class="pm-band-stat r"><div class="v">${c.not_promoted || 0}</div><div class="l">Not Promoted</div></div>
 					<div class="pm-band-stat a"><div class="v">${c.conditional || 0}</div><div class="l">Conditional</div></div>
-					<div class="pm-band-stat b"><div class="v">${c.enrolled || 0}</div><div class="l">Enrolled next year</div></div>
+					<div class="pm-band-stat b"><div class="v">${g.draft ? (c.pending || 0) : (c.enrolled || 0)}</div><div class="l">${g.draft ? 'To be enrolled on publish' : 'Enrolled next year'}</div></div>
 					<div class="pm-band-stat r"><div class="v">${c.enrollment_failed || 0}</div><div class="l">Enrollment failed</div></div>
 				</div>
 				<div class="pm-meter">
@@ -1078,7 +1102,7 @@ frappe.pages['promotion-management'].on_page_load = function (wrapper) {
 				<div class="pm-table-wrap">
 					<table class="pm-tbl">
 						<thead><tr>
-							<th>#</th><th>Student</th><th class="c">CGPA</th><th>Result</th><th>Reason</th><th>Next-year Enrollment</th><th>Processed</th><th>Action</th>
+							<th>#</th><th>Student</th><th class="c">CGPA</th><th>Stage</th><th>Result</th><th>Reason</th><th>Next-year Enrollment</th><th>Processed</th><th>Action</th>
 						</tr></thead>
 						<tbody id="pm-log-tbody"></tbody>
 					</table>
@@ -1095,6 +1119,7 @@ frappe.pages['promotion-management'].on_page_load = function (wrapper) {
 					+ encodeURIComponent(r.to_enrollment) + '" target="_blank">' + esc(r.to_enrollment) + '</a></div>' : '');
 		}
 		if (r.enrollment_status === 'Failed') return '<span class="pm-bdg bdg-fail">Failed</span>';
+		if (r.enrollment_status === 'Pending') return '<span class="pm-bdg bdg-pend" title="Created when the draft is published">On publish</span>';
 		return '<span class="pm-muted">—</span>';
 	}
 
@@ -1107,7 +1132,7 @@ frappe.pages['promotion-management'].on_page_load = function (wrapper) {
 		if (b === 'conditional' || (b === 'promoted' && r.enrollment_status !== 'Enrolled')) {
 			out.push('<button class="pm-btn xs ghost-red" data-row-act="hold" data-row="' + esc(r.name) + '">Mark Not Promoted</button>');
 		}
-		if (b === 'promoted' && r.enrollment_status === 'Failed') {
+		if (b === 'promoted' && r.enrollment_status === 'Failed' && r.stage === 'Published') {
 			out.push('<button class="pm-btn xs" data-row-act="retry" data-row="' + esc(r.name) + '">&#8635; Retry Enrollment</button>');
 		}
 		return out.length ? '<div class="pm-actions">' + out.join('') + '</div>' : '<span class="pm-muted">—</span>';
@@ -1120,10 +1145,13 @@ frappe.pages['promotion-management'].on_page_load = function (wrapper) {
 		var tb = document.getElementById('pm-log-tbody');
 		if (!tb) return;
 		if (!rows.length) {
-			tb.innerHTML = '<tr><td colspan="8"><div class="pm-empty"><div>No students match this filter.</div></div></td></tr>';
+			tb.innerHTML = '<tr><td colspan="9"><div class="pm-empty"><div>No students match this filter.</div></div></td></tr>';
 			return;
 		}
 		tb.innerHTML = rows.map(function (r, i) {
+			var stageB = r.stage === 'Draft' ? '<span class="pm-bdg bdg-draft">Draft</span>'
+				: '<span class="pm-bdg bdg-pub">Published</span>'
+				+ (r.notified_on ? '<div class="pm-muted" style="margin-top:3px;">&#9993; notified</div>' : '');
 			var ovr = r.manual_override && r.override_reason
 				? '<div class="pm-ovr">&#9998; ' + esc(r.override_reason) + '</div>' : '';
 			var reason = r.enrollment_status === 'Failed'
@@ -1133,6 +1161,7 @@ frappe.pages['promotion-management'].on_page_load = function (wrapper) {
 				+ '<td class="pm-num">' + (i + 1) + '</td>'
 				+ '<td>' + studentCell(r) + '</td>'
 				+ '<td class="c"><b>' + num(r.current_cgpa, 2) + '</b></td>'
+				+ '<td>' + stageB + '</td>'
 				+ '<td>' + badge(r.promotion_status) + '</td>'
 				+ '<td>' + reason + ovr + '</td>'
 				+ '<td>' + enrollmentCell(r) + '</td>'
@@ -1185,9 +1214,13 @@ frappe.pages['promotion-management'].on_page_load = function (wrapper) {
 				{
 					fieldtype: 'HTML', fieldname: 'info',
 					options: '<div class="pm-notice ' + (promote ? 'info' : 'warn') + '" style="margin:0 0 12px;"><span class="pm-notice-body">'
-						+ (promote
-							? __('<b>{0}</b> will be promoted to Year {1}, overriding the policy result. Their year is updated and they are enrolled in next year\'s Batch (if the policy has auto-update on).', [esc(r.student_name || r.student), esc(r.target_year)])
-							: __('<b>{0}</b> will be kept in Year {1}.', [esc(r.student_name || r.student), esc(r.current_year)]))
+						+ (r.stage === 'Draft'
+							? (promote
+								? __('The draft decision for <b>{0}</b> changes to <b>Promoted</b> (Year {1}). Nothing is applied until the draft is published.', [esc(r.student_name || r.student), esc(r.target_year)])
+								: __('The draft decision for <b>{0}</b> changes to <b>Not Promoted</b>. Nothing is applied until the draft is published.', [esc(r.student_name || r.student)]))
+							: (promote
+								? __('<b>{0}</b> is promoted to Year {1} <b>now</b>, overriding the policy result: their year is updated and they are enrolled in next year\'s Batch (if the policy has auto-update on).', [esc(r.student_name || r.student), esc(r.target_year)])
+								: __('<b>{0}</b> will be kept in Year {1}.', [esc(r.student_name || r.student), esc(r.current_year)])))
 						+ '</span></div>',
 				},
 				{ label: __('Reason'), fieldname: 'reason', fieldtype: 'Small Text', reqd: 1 },
@@ -1233,6 +1266,85 @@ frappe.pages['promotion-management'].on_page_load = function (wrapper) {
 		});
 	});
 	$root.on('click', '[data-act="reload-log"]', function () { loadLog(); });
+	$root.on('click', '[data-act="publish"]', function () { openPublishDialog(); });
+	$root.on('click', '[data-act="discard-draft"]', function () {
+		if (!S.logKey || !S.log) return;
+		var n = (S.log.stages || {}).draft || 0;
+		frappe.confirm(__('Discard the Draft ({0} decision(s))? Nothing was applied to students, so nothing else changes.', [n]), function () {
+			frappe.call({
+				method: API + 'discard_draft',
+				args: { policy_name: S.logKey.policy, from_year: S.logKey.from_year, to_year: S.logKey.to_year },
+				freeze: true,
+				callback: function (r) {
+					frappe.show_alert({ message: __('{0} draft decision(s) discarded', [(r.message || {}).discarded || 0]), indicator: 'orange' });
+					afterLogChange();
+				},
+			});
+		});
+	});
+
+	function openPublishDialog() {
+		if (!S.logKey || !S.log) return;
+		var k = S.logKey, L = S.log;
+		var drafts = (L.records || []).filter(function (r) { return r.stage === 'Draft'; });
+		if (!drafts.length) { frappe.msgprint(__('There is no Draft to publish.')); return; }
+		var cnt = { pro: 0, not: 0, cond: 0 };
+		drafts.forEach(function (r) { var b = bucket(r.promotion_status); if (b === 'promoted') cnt.pro++; else if (b === 'not_promoted') cnt.not++; else cnt.cond++; });
+		var auto = L.policy && L.policy.auto_update_student_year;
+		var html = '<div class="pm-run-sum">'
+			+ '<div class="pm-run-tile g"><div class="v">' + cnt.pro + '</div><div class="l">' + (auto ? 'Move to Year ' + esc(k.to_year) : 'Promoted') + '</div></div>'
+			+ '<div class="pm-run-tile r"><div class="v">' + cnt.not + '</div><div class="l">Stay in Year ' + esc(k.from_year) + '</div></div>'
+			+ '<div class="pm-run-tile a"><div class="v">' + cnt.cond + '</div><div class="l">Conditional (held)</div></div>'
+			+ '</div>'
+			+ '<div class="pm-run-meta">'
+			+ '<span>Policy</span><span>' + esc((L.policy && L.policy.title) || k.policy) + '</span>'
+			+ '<span>Promotion</span><span>Year ' + esc(k.from_year) + ' &rarr; Year ' + esc(k.to_year) + ' &middot; ' + drafts.length + ' decision(s)</span>'
+			+ '<span>Draft saved</span><span>' + esc(L.last_processed_on ? frappe.datetime.str_to_user(L.last_processed_on) : '—') + '</span>'
+			+ '</div>'
+			+ (auto
+				? '<div class="pm-notice warn" style="margin-top:0"><span class="pm-notice-body">Publishing <b>applies</b> the decisions: promoted students move to Year '
+					+ esc(k.to_year) + ' and are enrolled into next year\'s Batch. This is what students will see.</span></div>'
+				: '<div class="pm-notice warn" style="margin-top:0"><span class="pm-notice-body">Auto-update is off on this policy — publishing releases the decisions but does not change student years or enrollments.</span></div>')
+			+ '<label class="pm-check" style="margin-top:12px;"><input type="checkbox" id="pm-notify" checked>'
+			+ '<span><b>Email each student their result</b><br><span style="color:var(--text-muted);font-size:12px;">'
+			+ 'Promoted / not promoted (with reasons) / under review. Sent in the background to the email on Student Master.</span></span></label>';
+		var d = new frappe.ui.Dialog({
+			title: __('Publish Promotion'),
+			fields: [{ fieldtype: 'HTML', fieldname: 'summary', options: html }],
+			primary_action_label: __('Publish {0} decision(s)', [drafts.length]),
+			primary_action: function () {
+				var notify = d.$wrapper.find('#pm-notify').is(':checked') ? 1 : 0;
+				d.hide();
+				frappe.call({
+					method: API + 'publish_promotion',
+					args: { policy_name: k.policy, from_year: k.from_year, to_year: k.to_year, notify: notify },
+					freeze: true,
+					freeze_message: __('Publishing and applying decisions…'),
+					callback: function (r) {
+						if (!r.message) return;
+						var m = r.message;
+						frappe.show_alert({
+							message: __('Published {0}: {1} promoted, {2} not promoted, {3} conditional', [m.published, m.promoted, m.not_promoted, m.conditional])
+								+ (notify ? ' · ' + __('{0} email(s) queued', [m.notified_queued])
+									+ (m.notify_held ? ' · ' + __('{0} held (move failed)', [m.notify_held]) : '') : ''),
+							indicator: 'green',
+						}, 8);
+						if (m.enrollment_failures && m.enrollment_failures.length) {
+							frappe.msgprint({
+								title: __('{0} promoted student(s) could not be moved', [m.enrollment_failures.length]),
+								indicator: 'orange',
+								message: m.enrollment_failures.map(function (f) { return '<b>' + esc(f.student) + '</b>: ' + esc(f.error); }).join('<br>')
+									+ '<br><br>' + __('They stay in their current year and Batch and were <b>not</b> emailed. Fix the cause (e.g. create the target Batch) and use <b>Retry Enrollment</b>.'),
+							});
+						}
+						afterLogChange();
+					},
+				});
+			},
+		});
+		d.$wrapper.addClass('pm-run-dialog');
+		d.show();
+	}
 	$root.on('click', '[data-act="goto-hist"]', function () { switchView('hist'); });
 	$root.on('click', '[data-act="open-prior"]', function () {
 		var f = currentFilters();
@@ -1295,13 +1407,14 @@ frappe.pages['promotion-management'].on_page_load = function (wrapper) {
 		$v.html('<div class="pm-card flush"><div class="pm-toolbar"><div><div class="pm-card-title">Promotion runs</div>'
 			+ '<div class="pm-card-sub">' + esc(f.program) + ' &middot; ' + esc(f.academic_year) + '</div></div></div>'
 			+ '<div class="pm-table-wrap"><table class="pm-tbl"><thead><tr>'
-			+ '<th>Policy</th><th>Year step</th><th class="c">Total</th><th class="c">Promoted</th><th class="c">Not Promoted</th><th class="c">Conditional</th><th class="c">Enr. Failed</th><th>Last run</th><th></th>'
+			+ '<th>Policy</th><th>Year step</th><th>Stage</th><th class="c">Total</th><th class="c">Promoted</th><th class="c">Not Promoted</th><th class="c">Conditional</th><th class="c">Enr. Failed</th><th>Last run</th><th></th>'
 			+ '</tr></thead><tbody>'
 			+ H.map(function (h) {
 				return '<tr>'
 					+ '<td><div class="pm-sname">' + esc(h.policy_title || h.promotion_policy) + '</div><div class="pm-sid">'
 					+ '<a href="/app/promotion-policy/' + encodeURIComponent(h.promotion_policy) + '" target="_blank">' + esc(h.promotion_policy) + '</a></div></td>'
 					+ '<td>Year ' + esc(h.current_year) + ' &rarr; ' + esc(h.target_year) + '</td>'
+					+ '<td>' + (h.drafts ? '<span class="pm-bdg bdg-draft">Draft · ' + h.drafts + '</span>' : '<span class="pm-bdg bdg-pub">Published</span>') + '</td>'
 					+ '<td class="c"><b>' + (h.total || 0) + '</b></td>'
 					+ '<td class="c"><span class="pm-bdg bdg-pro">' + (h.promoted || 0) + '</span></td>'
 					+ '<td class="c"><span class="pm-bdg bdg-not">' + (h.not_promoted || 0) + '</span></td>'
@@ -1309,7 +1422,7 @@ frappe.pages['promotion-management'].on_page_load = function (wrapper) {
 					+ '<td class="c">' + (h.enrollment_failed ? '<span class="pm-bdg bdg-fail">' + h.enrollment_failed + '</span>' : '<span class="pm-muted">0</span>') + '</td>'
 					+ '<td class="pm-muted">' + (h.last_processed_on ? esc(frappe.datetime.str_to_user(h.last_processed_on)) : '—') + '</td>'
 					+ '<td><button class="pm-btn xs primary" data-hist-open="' + esc(h.promotion_policy) + '" data-fy="' + esc(h.current_year)
-					+ '" data-ty="' + esc(h.target_year) + '">Open Log &rarr;</button></td>'
+					+ '" data-ty="' + esc(h.target_year) + '">' + (h.drafts ? 'Review &amp; Publish' : 'Open Log') + ' &rarr;</button></td>'
 					+ '</tr>';
 			}).join('')
 			+ '</tbody></table></div></div>');
@@ -1351,11 +1464,15 @@ frappe.pages['promotion-management'].on_page_load = function (wrapper) {
 					label: __('Academic Year'), fieldname: 'academic_year', fieldtype: 'Select', reqd: 1,
 					options: [''].concat(ayOptions).join('\n'), default: f.academic_year,
 				},
+				{
+					label: __('Include Draft (unpublished) decisions'), fieldname: 'include_draft', fieldtype: 'Check', default: 0,
+					description: __('For review only — draft rows are marked [DRAFT]. Leave unticked for the official list.'),
+				},
 				{ fieldtype: 'Column Break' },
 				{
 					fieldname: 'info', fieldtype: 'HTML',
 					options: '<div style="font-size:12px;color:var(--text-muted);padding-top:18px;">'
-						+ '&#9432; One sheet per year level, from the confirmed Promotion Log.<br>'
+						+ '&#9432; One sheet per year level, from the <b>published</b> Promotion Log.<br>'
 						+ 'Sections: Promoted &middot; Conditional &middot; Re-admitted (with reason),<br>'
 						+ 'term-wise Failed (F) / Attendance-shortage (AS) and C/C+ improvement courses.</div>',
 				},
@@ -1370,7 +1487,8 @@ frappe.pages['promotion-management'].on_page_load = function (wrapper) {
 				window.open('/api/method/' + API + 'download_formatted_promotion_list'
 					+ '?program=' + encodeURIComponent(vals.program)
 					+ '&academic_year=' + encodeURIComponent(vals.academic_year)
-					+ '&university_name=' + encodeURIComponent(vals.university_name || ''), '_blank');
+					+ '&university_name=' + encodeURIComponent(vals.university_name || '')
+					+ '&include_draft=' + (vals.include_draft ? 1 : 0), '_blank');
 			},
 		});
 		dlDialog.$wrapper.addClass('pm-run-dialog');

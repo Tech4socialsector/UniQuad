@@ -830,7 +830,7 @@
   "doctype": "Dashboard Chart",
   "document_type": "Promotion Run Log",
   "dynamic_filters_json": null,
-  "filters_json": "[[\"Promotion Run Log\", \"result\", \"!=\", \"Promoted\", false]]",
+  "filters_json": "[[\"Promotion Run Log\", \"result\", \"!=\", \"Promoted\"]]",
   "from_date": null,
   "group_by_based_on": "reason_code",
   "group_by_type": "Count",

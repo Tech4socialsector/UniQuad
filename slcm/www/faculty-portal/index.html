@@ -618,6 +618,15 @@ body.fp-dark .fp-dash-icon .fp-ms { color: #fff !important; }
 @media (max-width: 480px) { .fp-dash-stat-grid { grid-template-columns: 1fr; } }
 /* KPI card hover (maroon border, "More info" + DETAILS tag) now lives in faculty_portal.css */
 
+/* Drill table: name + avatar cell */
+.fp-drill-person { display: flex; align-items: center; gap: 10px; }
+.fp-drill-av {
+  position: relative; width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; overflow: hidden;
+  background: var(--fp-primary); color: #fff; font-size: 13px; font-weight: 700;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.fp-drill-av img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+
 /* Drill table */
 .fp-drill-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .fp-drill-table th {
@@ -788,7 +797,7 @@ body.fp-dark .fp-dash-icon .fp-ms { color: #fff !important; }
       html += '<tr>';
       cols.forEach(function(col) {
         var val = row[col.key];
-        html += '<td>' + _renderCell(val, col.type, col.key, row) + '</td>';
+        html += '<td>' + _renderCell(val, col.type, col.key, row, col) + '</td>';
       });
       html += '</tr>';
     });
@@ -796,8 +805,20 @@ body.fp-dark .fp-dash-icon .fp-ms { color: #fff !important; }
     _setBody(html);
   }
 
-  function _renderCell(val, type, key, row) {
+  function _renderCell(val, type, key, row, col) {
     if (val === null || val === undefined || val === '') return '<span style="color:var(--fp-text-5);">—</span>';
+
+    /* Name with avatar: photo if it loads, otherwise the initial.
+       The image URL comes from a non-column row field (col.image_key). */
+    if (type === 'person') {
+      var name = String(val);
+      var img  = (col && col.image_key && row[col.image_key]) ? String(row[col.image_key]) : '';
+      var safeImg = /^(\/|https?:\/\/)/i.test(img) ? img : '';
+      return '<div class="fp-drill-person">'
+        + '<span class="fp-drill-av" aria-hidden="true">' + _esc(name.trim().charAt(0).toUpperCase() || '?')
+        + (safeImg ? '<img src="' + _esc(safeImg) + '" alt="" loading="lazy" onerror="this.remove()">' : '')
+        + '</span><span>' + _esc(name) + '</span></div>';
+    }
 
     if (type === 'badge') {
       var color = 'neutral';
@@ -810,8 +831,8 @@ body.fp-dark .fp-dash-icon .fp-ms { color: #fff !important; }
 
     if (type === 'percent') {
       var n = parseFloat(val) || 0;
-      var barColor = n >= 75 ? 'var(--fp-success)' : n >= 60 ? 'var(--fp-warning)' : 'var(--fp-danger)';
-      var txtColor = n >= 75 ? 'var(--fp-success)' : n >= 60 ? 'var(--fp-warning)' : 'var(--fp-danger)';
+      var barColor = 'var(--fp-primary)';
+      var txtColor = 'var(--fp-primary)';
       return '<div style="min-width:90px;">'
         + '<div style="display:flex;justify-content:space-between;margin-bottom:3px;">'
         + '<span style="font-size:12px;font-weight:700;color:' + txtColor + ';">' + n + '%</span></div>'
@@ -872,8 +893,9 @@ body.fp-dark .fp-dash-icon .fp-ms { color: #fff !important; }
       _drillRows = _drillData.rows.slice();
     } else {
       _drillRows = _drillData.rows.filter(function(row) {
-        return Object.values(row).some(function(v) {
-          return String(v || '').toLowerCase().includes(q);
+        return Object.keys(row).some(function(k) {
+          if (/_image$/.test(k)) return false;   /* photo URLs aren't searchable text */
+          return String(row[k] || '').toLowerCase().includes(q);
         });
       });
     }
