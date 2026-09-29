@@ -55,6 +55,7 @@ def get_context(context):
                 fields=[
                     "name", "course", "total_marks", "grade", "moderated_grade",
                     "updated_final_marks", "updated_grade", "re_exam_grade",
+                    "improvement_marks", "improvement_grade", "improvement_applied",
                     "enrollment_status", "attendance_status",
                     "mfa", "remark", "consider_for_sgpa",
                 ],
@@ -65,7 +66,8 @@ def get_context(context):
             has_any_fail = False
 
             for m in marks_records:
-                course_name = frappe.db.get_value("Course", m.course, "course_name") or m.course
+                _course = frappe.db.get_value("Course", m.course, ["course_name", "course_code"], as_dict=True) or frappe._dict()
+                course_name = _course.course_name or m.course
                 regular_groups, reexam_groups = _get_component_groups(m.name, ep_name, m.course, allowed_components)
 
                 raw_total = m.updated_final_marks or m.total_marks or sum(
@@ -102,6 +104,17 @@ def get_context(context):
                     "has_comp_marks":    bool(regular_groups or reexam_groups),
                     "show_total":        show_total,
                     "re_exam_grade":     m.re_exam_grade or "",
+                    # Same fields as the student portal, so the marks dialog shows the same table
+                    "course_code":                _course.course_code or m.course,
+                    "updated_final_marks":        round(float(m.updated_final_marks), 2) if m.updated_final_marks else None,
+                    "updated_grade":              m.updated_grade or "",
+                    "improvement_marks":          round(float(m.improvement_marks), 2) if m.improvement_marks else None,
+                    "improvement_grade":          m.improvement_grade or "",
+                    "improvement_applied":        int(m.improvement_applied or 0),
+                    "improvement_setting_exists": bool(frappe.db.exists(
+                        "Improvement Exam Course Setting", {"exam_plan": ep_name, "course": m.course}
+                    )),
+                    "arrear_marker":              _get_arrear_marker(student_name, m.course, is_currently_failing=is_fail),
                 })
 
             courses_out.sort(key=lambda c: c["course_name"])
@@ -295,3 +308,21 @@ def _get_enrollment_fallback(student_name, course):
         return row or ""
     except Exception:
         return ""
+
+
+def _get_arrear_marker(student_name, course, is_currently_failing=False):
+    """Arrear marker next to the grade, as on the student portal: re-exam registrations
+    (non-cancelled) + 1 if currently failing; >= 3 → RR, >= 1 → R."""
+    try:
+        reg_count = frappe.db.count(
+            "Re Exam Registration",
+            filters={"student": student_name, "course": course, "status": ["!=", "Cancelled"]},
+        )
+        total = reg_count + (1 if is_currently_failing else 0)
+        if total >= 3:
+            return "RR"
+        elif total >= 1:
+            return "R"
+    except Exception:
+        pass
+    return ""
