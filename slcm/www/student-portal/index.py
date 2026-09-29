@@ -208,6 +208,38 @@ def get_context(context):
                     })
             except Exception:
                 context.todays_classes = []
+        # Next 7 days of timetable entries for the dashboard Timetable panel
+        context.week_classes = []
+        if enrolled_co_set:
+            try:
+                week_raw = frappe.get_all(
+                    "Time Table",
+                    filters=[
+                        ["course_offering", "in", list(enrolled_co_set)],
+                        ["schedule_date", "between", [today, frappe.utils.add_days(today, 6)]],
+                    ],
+                    fields=["course", "course_offering", "schedule_date",
+                            "from_time", "to_time", "venue", "title"],
+                    order_by="schedule_date asc, from_time asc",
+                    limit=8,
+                    ignore_permissions=True,
+                )
+                wk_cos = list({r.course_offering for r in week_raw if r.course_offering})
+                wk_names = dict(frappe.get_all(
+                    "Course Offering", filters={"name": ["in", wk_cos]},
+                    fields=["name", "course_name"], as_list=True, ignore_permissions=True,
+                )) if wk_cos else {}
+                for r in week_raw:
+                    context.week_classes.append({
+                        "course_name": wk_names.get(r.course_offering) or r.title or r.course or "Class",
+                        "date": frappe.utils.formatdate(r.schedule_date, "EEE, dd MMM"),
+                        "is_today": str(r.schedule_date) == str(today),
+                        "from_time": _fmt_time(r.from_time),
+                        "to_time": _fmt_time(r.to_time),
+                        "venue": r.venue or "",
+                    })
+            except Exception:
+                context.week_classes = []
         try:
             upcoming_sessions = frappe.get_all(
                 "Attendance Session",

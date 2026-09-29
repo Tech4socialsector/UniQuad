@@ -262,7 +262,17 @@
     /* Main content + page header */
     .sp-main { padding: 32px 32px 56px; }
     body.sp-compact .sp-main { padding: 18px 18px 48px; }
-    .sp-page-header { margin-bottom: 22px; }
+    .sp-page-header, .spf-head {
+      margin-bottom: 22px; background: var(--sp-card, #fff);
+      border: 1px solid var(--sp-border, #e5e7eb); border-radius: 14px;
+      padding: 18px 24px; box-shadow: 0 1px 2px rgba(16,24,40,0.04);
+    }
+    .sp-page-header .sp-page-title, .spf-head .spf-title { margin: 0; }
+    /* Page-level empty states also sit on a white panel */
+    .sp-empty.fade-in {
+      background: var(--sp-card, #fff); border: 1px solid var(--sp-border, #e5e7eb);
+      border-radius: 14px; box-shadow: 0 1px 2px rgba(16,24,40,0.04);
+    }
     .sp-page-title, .spd-page-title, .spf-title {
       font-size: 28px !important; font-weight: 800 !important;
       color: var(--sp-text-1) !important; letter-spacing: -0.02em;

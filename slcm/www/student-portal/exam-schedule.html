@@ -267,7 +267,7 @@
     font-weight: 700;
     letter-spacing: .07em;
     text-transform: uppercase;
-    color: var(--sp-primary);
+    color: #000;
     text-align: left;
     white-space: nowrap;
     border: none;
@@ -382,9 +382,9 @@
   }
 
   .es-badge-scheduled {
-    background: #fff0f2;
-    color: #920c24;
-    border: 1px solid #f5c6ce;
+    background: #f0fdf4;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
   }
 
   /* Table footer — row count + summary */
@@ -689,9 +689,7 @@
 
   <!-- Table footer summary -->
   <div class="es-table-footer">
-    <span class="row-count-display">Showing <strong>{{ plan.course_count }}</strong> course paper{{ "s" if
-      plan.course_count != 1 else "" }}</span>
-    <div class="es-pagination">
+    <div class="es-pagination" style="margin-left:auto;">
       <span class="sp-ms" style="font-size:16px;">chevron_left</span>
       <div class="es-page-btn active">1</div>
       <span class="sp-ms" style="font-size:16px;">chevron_right</span>

@@ -206,9 +206,33 @@
     color: var(--sp-text-4);
   }
 
+  /* Quick Actions (2×2) + Timetable side by side */
+  .spd-qa-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: stretch; }
+  .spd-qa-row > .spd-qa-section { margin: 0; }
+  .spd-qa-row .spd-qa-container { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .spd-tt { display: flex; flex-direction: column; }
+  .spd-tt-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .spd-tt-link { display: inline-flex; align-items: center; gap: 2px; font-size: 13px; font-weight: 700; color: var(--sp-primary); text-decoration: none; white-space: nowrap; }
+  .spd-tt-link .sp-ms { font-size: 18px; }
+  .spd-tt-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+  .spd-tt-item { display: flex; gap: 14px; align-items: center; border: 1px solid var(--sp-border); border-radius: 10px; padding: 10px 14px; }
+  .spd-tt-when { display: flex; flex-direction: column; min-width: 118px; padding-right: 14px; border-right: 1px solid var(--sp-border); }
+  .spd-tt-date { font-size: 12px; font-weight: 700; color: var(--sp-text-3); text-transform: uppercase; letter-spacing: 0.04em; }
+  .spd-tt-when.is-today .spd-tt-date { color: var(--sp-primary); }
+  .spd-tt-time { font-size: 13.5px; font-weight: 700; color: var(--sp-text-1); margin-top: 2px; white-space: nowrap; }
+  .spd-tt-what { min-width: 0; }
+  .spd-tt-course { font-size: 14px; font-weight: 700; color: var(--sp-text-1); overflow-wrap: anywhere; }
+  .spd-tt-venue { display: flex; align-items: center; gap: 4px; font-size: 12.5px; color: var(--sp-text-3); margin-top: 2px; }
+  .spd-tt-venue .sp-ms { font-size: 15px; }
+  .spd-tt-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; color: var(--sp-text-3); padding: 24px 0; }
+  .spd-tt-empty > .sp-ms { font-size: 30px; color: var(--sp-text-4); }
+  .spd-tt-empty strong { display: block; color: var(--sp-text-1); font-size: 14px; }
+  .spd-tt-empty span { font-size: 12.5px; }
+  @media (max-width: 1000px) { .spd-qa-row { grid-template-columns: minmax(0, 1fr); } }
+
   /* Responsive — KPI and Quick Action grids reflow instead of overflowing */
   @media (max-width: 1100px) {
-    .spd-qa-container { grid-template-columns: repeat(3, 1fr); }
+    .spd-qa-section:not(.spd-tt) .spd-qa-container { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
   @media (max-width: 768px) {
     .spd-kpi-row { grid-template-columns: 1fr; gap: 12px; margin-bottom: 24px; }
@@ -339,7 +363,8 @@
 
 {# ── Quick Actions ─────────────────────────────────────────────── #}
 {% if not sp_settings or sp_settings.show_quick_actions %}
-<div class="spd-qa-section fade-in delay-2">
+<div class="spd-qa-row fade-in delay-2">
+<div class="spd-qa-section">
   <h2 class="spd-qa-header-title">Quick Actions</h2>
   <p class="spd-qa-header-sub">Everything you need, one tap away</p>
 
@@ -365,7 +390,7 @@
       <div class="spd-qa-item-icon">
         <span class="sp-ms" style="font-size:28px;">workspace_premium</span>
       </div>
-      <div class="spd-qa-item-title">My Results</div>
+      <div class="spd-qa-item-title">Results</div>
       <div class="spd-qa-item-sub">Grades &amp; marks</div>
     </a>
 
@@ -386,6 +411,38 @@
     </a>
 
   </div>
+</div>
+
+<section class="spd-qa-section spd-tt" aria-labelledby="spd-tt-title">
+  <div class="spd-tt-head">
+    <div>
+      <h2 class="spd-qa-header-title" id="spd-tt-title">Timetable</h2>
+      <p class="spd-qa-header-sub">Your classes for the next 7 days</p>
+    </div>
+    <a href="/student-portal/timetable" class="spd-tt-link">View all <span class="sp-ms" aria-hidden="true">chevron_right</span></a>
+  </div>
+  {% if week_classes %}
+  <ul class="spd-tt-list">
+    {% for c in week_classes %}
+    <li class="spd-tt-item">
+      <div class="spd-tt-when{{ ' is-today' if c.is_today }}">
+        <span class="spd-tt-date">{{ 'Today' if c.is_today else c.date }}</span>
+        <span class="spd-tt-time">{{ c.from_time }}{% if c.to_time %} – {{ c.to_time }}{% endif %}</span>
+      </div>
+      <div class="spd-tt-what">
+        <div class="spd-tt-course">{{ c.course_name }}</div>
+        {% if c.venue %}<div class="spd-tt-venue"><span class="sp-ms" aria-hidden="true">location_on</span>{{ c.venue }}</div>{% endif %}
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <div class="spd-tt-empty">
+    <span class="sp-ms" aria-hidden="true">event_busy</span>
+    <div><strong>No classes scheduled</strong><span>No classes found for the next 7 days.</span></div>
+  </div>
+  {% endif %}
+</section>
 </div>
 {% endif %}
 
