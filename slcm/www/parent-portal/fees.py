@@ -65,6 +65,10 @@ def get_context(context):
 
         # Fee structure components for programme-level breakdown card
         fs_components = []
+        # Only the table matching the student's nationality (Indian by default)
+        _fs_parentfield = ("fee_components_for_foreign"
+                           if (sm.get("nationality") or "Indian").strip().lower() not in ("indian", "india")
+                           else "fee_components_for_indian")
         if sm.fee_structure:
             try:
                 fs_components = frappe.db.sql(
@@ -73,9 +77,10 @@ def get_context(context):
                            fcc.is_taxable, fcc.tax_rate, fcc.tax_amount
                     FROM `tabFee Component Child` fcc
                     WHERE fcc.parent = %s AND fcc.parenttype = 'Fee Structure'
+                      AND fcc.parentfield = %s
                     ORDER BY fcc.idx
                     """,
-                    sm.fee_structure,
+                    (sm.fee_structure, _fs_parentfield),
                     as_dict=True,
                 )
             except Exception:

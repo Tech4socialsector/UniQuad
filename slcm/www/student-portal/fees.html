@@ -541,6 +541,141 @@
   </div>
 </section>
 
+{# ═══════════════ Summary ═══════════════ #}
+<section class="spf-card fade-in" id="sp-demand-ledger" aria-labelledby="spf-dm-title" style="margin-bottom:16px;">
+  <div class="spf-card-hd">
+    <h2 class="spf-card-title" id="spf-dm-title"><span class="sp-ms" aria-hidden="true">list_alt</span>Summary</h2>
+    {% if has_fee_demands %}
+    <div class="spf-card-meta">
+      {% if has_overdue_demands %}<span class="spf-tone-danger">{{ overdue_demand_count }} overdue</span><span aria-hidden="true" class="spf-sep">|</span>{% endif %}
+      <span>{{ da_pct }}% settled</span>
+    </div>
+    {% endif %}
+  </div>
+  {% if _err.demands %}
+    {{ section_error('additional charges') }}
+  {% elif not has_fee_demands and not has_fee_refunds %}
+    {{ empty('list_alt', 'No additional charges', 'Charges such as development, hostel or examination fees will appear here, separate from your programme fee.') }}
+  {% else %}
+  {% if has_fee_demands %}
+  <div class="spf-card-bd">
+    <div class="spf-mini-grid">
+      <div class="spf-mini"><div class="spf-mini-lbl">Total Levied</div><div class="spf-mini-val spf-tone-maroon">{{ da_fmt_total }}</div><div class="spf-mini-sub">{{ da_total }} charge{{ 's' if da_total != 1 }}</div></div>
+      <div class="spf-mini"><div class="spf-mini-lbl">Settled</div><div class="spf-mini-val {{ 'spf-tone-success' if da_paid_amt > 0 }}">{{ da_fmt_paid }}</div><div class="spf-mini-sub">{{ da_paid }} paid</div></div>
+      <div class="spf-mini"><div class="spf-mini-lbl">Scholarship</div><div class="spf-mini-val">{{ da_fmt_waived }}</div><div class="spf-mini-sub">Applied to charges</div></div>
+      <div class="spf-mini"><div class="spf-mini-lbl">Outstanding</div><div class="spf-mini-val {{ 'spf-tone-danger' if da_outstanding > 0 else 'spf-tone-success' }}">{{ da_fmt_outstanding }}</div><div class="spf-mini-sub">{% if da_overdue > 0 %}{{ da_overdue }} overdue{% elif da_pending > 0 %}{{ da_pending }} pending{% else %}all clear{% endif %}</div></div>
+    </div>
+    {% if payment_enabled %}
+    {% set ns_pay = namespace(total=0, count=0, names=[]) %}
+    {% for d in fee_demands %}
+      {% if d.outstanding_amount > 0 and d.status not in ('Paid','Waived','Cancelled') %}
+        {% set ns_pay.total = ns_pay.total + d.outstanding_amount %}
+        {% set ns_pay.count = ns_pay.count + 1 %}
+        {% set ns_pay.names = ns_pay.names + [d.name] %}
+      {% endif %}
+    {% endfor %}
+    {% if ns_pay.count > 0 %}
+    <div class="spf-payall">
+      <div class="spf-payall-text"><strong>{{ _inr.format(ns_pay.total) }}</strong> due across {{ ns_pay.count }} charge{{ 's' if ns_pay.count != 1 }}</div>
+      <button type="button" class="spf-btn spf-btn-primary" id="spf-pay-all-btn" data-pay onclick="spPayAll()"
+              data-demands="{{ ns_pay.names | join(',') | e }}" data-total="{{ ns_pay.total }}">
+        <span class="sp-ms" aria-hidden="true">payments</span> Pay All
+      </button>
+    </div>
+    {% endif %}
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <div class="spf-card-ft" style="{{ 'border-top:none;padding-top:0;' if has_fee_demands else '' }}">
+    <button type="button" class="spf-btn spf-btn-ghost spf-btn-sm spf-details-toggle" id="spf-dm-toggle" aria-expanded="false" aria-controls="spf-dm-details" onclick="spfToggleDetails(this)">View Details <span class="sp-ms" aria-hidden="true">expand_more</span></button>
+  </div>
+
+  <div class="spf-details is-hidden" id="spf-dm-details">
+    {% if has_fee_demands and has_fee_refunds %}
+    <div class="spf-tabs" role="tablist" aria-label="Additional charge history">
+      <button type="button" class="spf-tab" role="tab" id="spf-tabbtn-demands" aria-selected="true" aria-controls="spf-tab-demands" onclick="spfTab('demands')">Fee Demands <span class="spf-tab-count">{{ fee_demands | length }}</span></button>
+      <button type="button" class="spf-tab" role="tab" id="spf-tabbtn-refunds" aria-selected="false" aria-controls="spf-tab-refunds" onclick="spfTab('refunds')" tabindex="-1">Refunds <span class="spf-tab-count">{{ fee_refunds | length }}</span></button>
+    </div>
+    {% endif %}
+
+    {% if has_fee_demands %}
+    <div id="spf-tab-demands" {% if has_fee_refunds %}role="tabpanel" aria-labelledby="spf-tabbtn-demands"{% endif %}>
+      <table class="spf-t" id="spf-dm-table">
+        <caption class="spf-sr-only">Additional charges by type</caption>
+        <colgroup><col style="width:26%;"><col style="width:14%;"><col style="width:14%;"><col style="width:14%;"><col style="width:14%;"><col style="width:18%;"></colgroup>
+        <thead><tr>
+          <th scope="col" class="c-text">Component</th><th scope="col" class="c-date">Due Date</th><th scope="col" class="c-num">Net</th>
+          <th scope="col" class="c-num">Settled</th><th scope="col" class="c-num">Outstanding</th><th scope="col" class="c-status">Status</th>
+        </tr></thead>
+        <tbody>
+          {% for demand_type, type_demands in fee_demands | groupby('demand_type', default='Other') %}
+          {% set dgid = 'd' ~ loop.index %}
+          <tr class="spf-group-row" data-group="{{ dgid }}"><th scope="colgroup" colspan="6"><div class="spf-group-inner"><span>{{ demand_type }}</span><span class="spf-group-meta">{{ type_demands | list | length }}</span></div></th></tr>
+          {% for d in type_demands %}
+          {% set _d_over = d.status == 'Overdue' or d.is_demand_overdue %}
+          {% set _d_status = 'Overdue' if (d.is_demand_overdue and d.status == 'Pending') else d.status %}
+          <tr class="spf-row-data spf-demand-row {% if d.status in ('Paid','Waived') %}spf-demand-row-settled{% endif %}" data-group="{{ dgid }}" data-ay="{{ (d.academic_year or '') | e }}">
+            <td class="c-text c-primary">
+              <div class="spf-cell-main spf-demand-comp-name">{{ d.fee_component or d.description or "—" }}</div>
+              {% if d.description and d.description != d.fee_component %}<div class="spf-cell-sub">{{ d.description }}</div>
+              {% elif d.trigger_ref_doctype %}<div class="spf-cell-sub">{{ d.trigger_ref_doctype | replace('Course Reregistration','Re-registration') | replace('Convocation Registration','Convocation') | replace('_',' ') }}</div>{% endif %}
+            </td>
+            <td class="c-date" data-label="Due Date"><div><div>{{ d.due_date_fmt or '—' }}</div>{% if _d_over and d.status not in ('Paid','Waived') and d.days_overdue %}<div class="spf-cell-hint spf-tone-danger">{{ d.days_overdue }}d overdue</div>{% endif %}</div></td>
+            <td class="c-num" data-label="Net"><div>{{ d.formatted_net }}{% if d.waiver_amount and d.waiver_amount > 0 %}<div class="spf-cell-sub spf-tone-success">−{{ d.formatted_waiver }} waiver</div>{% endif %}</div></td>
+            <td class="c-num" data-label="Settled">
+              {% if d.settled_amount and d.settled_amount > 0 %}<div><span class="spf-tone-success">{{ d.formatted_settled }}</span>{% if d.has_credit_adj %}<div class="spf-cell-sub">incl. credit</div>{% endif %}</div>
+              {% else %}<span class="spf-tone-muted">—</span>{% endif %}
+            </td>
+            <td class="c-num spf-demand-outstanding" data-label="Outstanding"><span class="{% if d.outstanding_amount > 0 and d.status not in ('Paid','Waived') %}spf-demand-amt-due spf-tone-danger{% else %}spf-demand-amt-clear{% endif %}">{{ d.formatted_outstanding }}</span></td>
+            <td class="c-status" data-label="Status">{{ badge(_d_status) }}</td>
+          </tr>
+          {% endfor %}
+          {% endfor %}
+          <tr class="spf-filter-empty is-hidden"><td colspan="6" class="c-empty">{{ empty('filter_alt', 'No charges for this academic year') }}</td></tr>
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+    {% if has_fee_refunds %}
+    <div id="spf-tab-refunds" {% if has_fee_demands %}role="tabpanel" aria-labelledby="spf-tabbtn-refunds" class="is-hidden"{% endif %}>
+      {% if not has_fee_demands %}<div class="spf-detail-hd" style="padding:12px 20px 0;">Refunds</div>{% endif %}
+      {% for r in fee_refunds %}
+      {% if r.demand_paid_amount and r.demand_paid_amount > 0 %}
+      <div class="spf-refund">
+        <div class="spf-refund-body">
+          <div class="spf-refund-title">{{ r.refund_type or "Refund" }}</div>
+          {% if r.fee_component %}<div>{{ r.fee_component }}</div>{% endif %}
+          {% if r.reason %}<div style="margin-top:2px;">{{ r.reason }}</div>{% endif %}
+          <div class="spf-chips">
+            {% if r.refund_date_fmt %}<span class="spf-chip"><span class="sp-ms" aria-hidden="true">event</span>{{ r.refund_date_fmt }}</span>{% endif %}
+            {% if r.refund_mode %}<span class="spf-chip"><span class="sp-ms" aria-hidden="true">payments</span>{{ r.refund_mode }}</span>{% endif %}
+            {% if r.approved_by_name %}<span class="spf-chip"><span class="sp-ms" aria-hidden="true">person</span>{{ r.approved_by_name }}</span>{% endif %}
+            {% if r.status == 'Approved' %}
+              {% if r.bank_name %}<span class="spf-chip"><span class="sp-ms" aria-hidden="true">account_balance</span>{{ r.bank_name }}</span>{% endif %}
+              {% if r.masked_account %}<span class="spf-chip">{{ r.masked_account }}</span>{% endif %}
+              {% if r.utr_number %}<span class="spf-chip">UTR: {{ r.utr_number }}</span>{% endif %}
+            {% endif %}
+          </div>
+        </div>
+        <div class="spf-refund-right"><div class="spf-refund-amt">+{{ r.formatted_amount }}</div><div style="margin-top:4px;">{{ badge(r.status) }}</div></div>
+      </div>
+      {% else %}
+      <div class="spf-notice spf-notice-warning" style="margin:10px 20px;">
+        <span class="sp-ms" aria-hidden="true">info</span>
+        <div>Refund <strong>{{ r.name }}</strong> ({{ r.formatted_amount }}) cannot be processed: no payment has been recorded for the linked demand. Please contact the Bursar's Office.</div>
+      </div>
+      {% endif %}
+      {% endfor %}
+    </div>
+    {% elif _err.refunds %}
+    {{ section_error('refunds') }}
+    {% endif %}
+  </div>
+  {% endif %}
+</section>
+
 {# ═══════════════ Fee structure + outstanding ═══════════════ #}
 <div class="spf-row spf-row-detail fade-in">
   <section class="spf-card" aria-labelledby="spf-fs-title">
@@ -562,7 +697,7 @@
     {% else %}
     <table class="spf-t spf-t-kv">
       <caption class="spf-sr-only">Fee structure components</caption>
-      <colgroup><col><col style="width:150px;"></colgroup>
+      <colgroup><col style="width:65%;"><col style="width:35%;"></colgroup>
       <thead><tr><th scope="col" class="c-text">Fee Component</th><th scope="col" class="c-num">Amount</th></tr></thead>
       <tbody>
         {% set fs_total = namespace(val=0) %}
@@ -608,7 +743,7 @@
     {% if _out_err %}<div class="spf-notice spf-notice-danger" style="margin:12px 20px 0;"><span class="sp-ms" aria-hidden="true">error</span><div>Some fee records could not be loaded, so this list may be incomplete. <button type="button" class="spf-link" onclick="window.location.reload()">Retry</button></div></div>{% endif %}
     <table class="spf-t">
       <caption class="spf-sr-only">Upcoming and outstanding fees</caption>
-      <colgroup><col><col style="width:116px;"><col style="width:100px;"><col style="width:140px;"></colgroup>
+      <colgroup><col style="width:40%;"><col style="width:22%;"><col style="width:16%;"><col style="width:22%;"></colgroup>
       <thead><tr><th scope="col" class="c-text">Component</th><th scope="col" class="c-date">Due Date</th><th scope="col" class="c-num">Amount</th><th scope="col" class="c-status">Status</th></tr></thead>
       <tbody>
         {% for r in outstanding_rows %}
@@ -657,7 +792,7 @@
     {% else %}
     <table class="spf-t spf-dense" id="spf-inv-table" data-limit="5">
       <caption class="spf-sr-only">Fee invoices by term</caption>
-      <colgroup><col><col style="width:100px;"><col style="width:108px;"><col style="width:88px;"><col style="width:100px;"><col style="width:120px;"></colgroup>
+      <colgroup><col style="width:26%;"><col style="width:14%;"><col style="width:14%;"><col style="width:13%;"><col style="width:14%;"><col style="width:19%;"></colgroup>
       <thead><tr>
         <th scope="col" class="c-text">Description</th><th scope="col" class="c-date">Invoice Date</th><th scope="col" class="c-date">Due Date</th>
         <th scope="col" class="c-num">Amount</th><th scope="col" class="c-status">Status</th><th scope="col" class="c-action">Action</th>
@@ -775,7 +910,7 @@
     {% if _err.receipts or _err.payments %}<div class="spf-notice spf-notice-danger" style="margin:12px 20px 0;"><span class="sp-ms" aria-hidden="true">error</span><div>Some receipts could not be loaded, so this list may be incomplete. <button type="button" class="spf-link" onclick="window.location.reload()">Retry</button></div></div>{% endif %}
     <table class="spf-t spf-dense" id="spf-ph-table" data-limit="5">
       <caption class="spf-sr-only">Payment history, newest first</caption>
-      <colgroup><col style="width:100px;"><col><col style="width:88px;"><col style="width:96px;"><col style="width:104px;"><col style="width:84px;"><col style="width:62px;"></colgroup>
+      <colgroup><col style="width:12%;"><col style="width:27%;"><col style="width:12%;"><col style="width:14%;"><col style="width:14%;"><col style="width:12%;"><col style="width:9%;"></colgroup>
       <thead><tr>
         <th scope="col" class="c-date">Date</th><th scope="col" class="c-text">Description</th><th scope="col" class="c-num">Amount</th>
         <th scope="col" class="c-text">Payment Method</th><th scope="col" class="c-text">Reference</th><th scope="col" class="c-status">Status</th>
@@ -819,7 +954,7 @@
     {% else %}
     <table class="spf-t">
       <caption class="spf-sr-only">Re-examination fees</caption>
-      <colgroup><col><col style="width:96px;"><col style="width:132px;"><col style="width:96px;"></colgroup>
+      <colgroup><col style="width:40%;"><col style="width:20%;"><col style="width:20%;"><col style="width:20%;"></colgroup>
       <thead><tr><th scope="col" class="c-text">Course</th><th scope="col" class="c-num">Amount</th><th scope="col" class="c-status">Status</th><th scope="col" class="c-action">Action</th></tr></thead>
       <tbody>
         {% for rex in re_exam_fees %}
@@ -859,7 +994,7 @@
     {% else %}
     <table class="spf-t">
       <caption class="spf-sr-only">Hostel fines</caption>
-      <colgroup><col><col style="width:108px;"><col style="width:96px;"><col style="width:104px;"></colgroup>
+      <colgroup><col style="width:40%;"><col style="width:20%;"><col style="width:20%;"><col style="width:20%;"></colgroup>
       <thead><tr><th scope="col" class="c-text">Reason</th><th scope="col" class="c-date">Date</th><th scope="col" class="c-num">Amount</th><th scope="col" class="c-status">Status</th></tr></thead>
       <tbody>
         {% for fine in hostel_fines %}
@@ -881,141 +1016,6 @@
 </div>
 {% endif %}
 
-{# ═══════════════ Additional charges & history ═══════════════ #}
-<section class="spf-card fade-in" id="sp-demand-ledger" aria-labelledby="spf-dm-title" style="margin-bottom:16px;">
-  <div class="spf-card-hd">
-    <h2 class="spf-card-title" id="spf-dm-title"><span class="sp-ms" aria-hidden="true">list_alt</span>Additional Charges &amp; History</h2>
-    {% if has_fee_demands %}
-    <div class="spf-card-meta">
-      {% if has_overdue_demands %}<span class="spf-tone-danger">{{ overdue_demand_count }} overdue</span><span aria-hidden="true" class="spf-sep">|</span>{% endif %}
-      <span>{{ da_pct }}% settled</span>
-    </div>
-    {% endif %}
-  </div>
-  {% if _err.demands %}
-    {{ section_error('additional charges') }}
-  {% elif not has_fee_demands and not has_fee_refunds %}
-    {{ empty('list_alt', 'No additional charges', 'Charges such as development, hostel or examination fees will appear here, separate from your programme fee.') }}
-  {% else %}
-  {% if has_fee_demands %}
-  <div class="spf-card-bd">
-    <div class="spf-mini-grid">
-      <div class="spf-mini"><div class="spf-mini-lbl">Total Levied</div><div class="spf-mini-val spf-tone-maroon">{{ da_fmt_total }}</div><div class="spf-mini-sub">{{ da_total }} charge{{ 's' if da_total != 1 }}</div></div>
-      <div class="spf-mini"><div class="spf-mini-lbl">Settled</div><div class="spf-mini-val {{ 'spf-tone-success' if da_paid_amt > 0 }}">{{ da_fmt_paid }}</div><div class="spf-mini-sub">{{ da_paid }} paid</div></div>
-      <div class="spf-mini"><div class="spf-mini-lbl">Waived Off</div><div class="spf-mini-val">{{ da_fmt_waived }}</div><div class="spf-mini-sub">{{ da_waived }} waived</div></div>
-      <div class="spf-mini"><div class="spf-mini-lbl">Outstanding</div><div class="spf-mini-val {{ 'spf-tone-danger' if da_outstanding > 0 else 'spf-tone-success' }}">{{ da_fmt_outstanding }}</div><div class="spf-mini-sub">{% if da_overdue > 0 %}{{ da_overdue }} overdue{% elif da_pending > 0 %}{{ da_pending }} pending{% else %}all clear{% endif %}</div></div>
-    </div>
-    {% if payment_enabled %}
-    {% set ns_pay = namespace(total=0, count=0, names=[]) %}
-    {% for d in fee_demands %}
-      {% if d.outstanding_amount > 0 and d.status not in ('Paid','Waived','Cancelled') %}
-        {% set ns_pay.total = ns_pay.total + d.outstanding_amount %}
-        {% set ns_pay.count = ns_pay.count + 1 %}
-        {% set ns_pay.names = ns_pay.names + [d.name] %}
-      {% endif %}
-    {% endfor %}
-    {% if ns_pay.count > 0 %}
-    <div class="spf-payall">
-      <div class="spf-payall-text"><strong>{{ _inr.format(ns_pay.total) }}</strong> due across {{ ns_pay.count }} charge{{ 's' if ns_pay.count != 1 }}</div>
-      <button type="button" class="spf-btn spf-btn-primary" id="spf-pay-all-btn" data-pay onclick="spPayAll()"
-              data-demands="{{ ns_pay.names | join(',') | e }}" data-total="{{ ns_pay.total }}">
-        <span class="sp-ms" aria-hidden="true">payments</span> Pay All
-      </button>
-    </div>
-    {% endif %}
-    {% endif %}
-  </div>
-  {% endif %}
-
-  <div class="spf-card-ft" style="{{ 'border-top:none;padding-top:0;' if has_fee_demands else '' }}">
-    <button type="button" class="spf-btn spf-btn-ghost spf-btn-sm spf-details-toggle" id="spf-dm-toggle" aria-expanded="false" aria-controls="spf-dm-details" onclick="spfToggleDetails(this)">View Details <span class="sp-ms" aria-hidden="true">expand_more</span></button>
-  </div>
-
-  <div class="spf-details is-hidden" id="spf-dm-details">
-    {% if has_fee_demands and has_fee_refunds %}
-    <div class="spf-tabs" role="tablist" aria-label="Additional charge history">
-      <button type="button" class="spf-tab" role="tab" id="spf-tabbtn-demands" aria-selected="true" aria-controls="spf-tab-demands" onclick="spfTab('demands')">Fee Demands <span class="spf-tab-count">{{ fee_demands | length }}</span></button>
-      <button type="button" class="spf-tab" role="tab" id="spf-tabbtn-refunds" aria-selected="false" aria-controls="spf-tab-refunds" onclick="spfTab('refunds')" tabindex="-1">Refunds <span class="spf-tab-count">{{ fee_refunds | length }}</span></button>
-    </div>
-    {% endif %}
-
-    {% if has_fee_demands %}
-    <div id="spf-tab-demands" {% if has_fee_refunds %}role="tabpanel" aria-labelledby="spf-tabbtn-demands"{% endif %}>
-      <table class="spf-t" id="spf-dm-table">
-        <caption class="spf-sr-only">Additional charges by type</caption>
-        <colgroup><col><col style="width:112px;"><col style="width:96px;"><col style="width:92px;"><col style="width:104px;"><col style="width:132px;"></colgroup>
-        <thead><tr>
-          <th scope="col" class="c-text">Component</th><th scope="col" class="c-date">Due Date</th><th scope="col" class="c-num">Net</th>
-          <th scope="col" class="c-num">Settled</th><th scope="col" class="c-num">Outstanding</th><th scope="col" class="c-status">Status</th>
-        </tr></thead>
-        <tbody>
-          {% for demand_type, type_demands in fee_demands | groupby('demand_type', default='Other') %}
-          {% set dgid = 'd' ~ loop.index %}
-          <tr class="spf-group-row" data-group="{{ dgid }}"><th scope="colgroup" colspan="6"><div class="spf-group-inner"><span>{{ demand_type }}</span><span class="spf-group-meta">{{ type_demands | list | length }}</span></div></th></tr>
-          {% for d in type_demands %}
-          {% set _d_over = d.status == 'Overdue' or d.is_demand_overdue %}
-          {% set _d_status = 'Overdue' if (d.is_demand_overdue and d.status == 'Pending') else d.status %}
-          <tr class="spf-row-data spf-demand-row {% if d.status in ('Paid','Waived') %}spf-demand-row-settled{% endif %}" data-group="{{ dgid }}" data-ay="{{ (d.academic_year or '') | e }}">
-            <td class="c-text c-primary">
-              <div class="spf-cell-main spf-demand-comp-name">{{ d.fee_component or d.description or "—" }}</div>
-              {% if d.description and d.description != d.fee_component %}<div class="spf-cell-sub">{{ d.description }}</div>
-              {% elif d.trigger_ref_doctype %}<div class="spf-cell-sub">{{ d.trigger_ref_doctype | replace('Course Reregistration','Re-registration') | replace('Convocation Registration','Convocation') | replace('_',' ') }}</div>{% endif %}
-            </td>
-            <td class="c-date" data-label="Due Date"><div><div>{{ d.due_date_fmt or '—' }}</div>{% if _d_over and d.status not in ('Paid','Waived') and d.days_overdue %}<div class="spf-cell-hint spf-tone-danger">{{ d.days_overdue }}d overdue</div>{% endif %}</div></td>
-            <td class="c-num" data-label="Net"><div>{{ d.formatted_net }}{% if d.waiver_amount and d.waiver_amount > 0 %}<div class="spf-cell-sub spf-tone-success">−{{ d.formatted_waiver }} waiver</div>{% endif %}</div></td>
-            <td class="c-num" data-label="Settled">
-              {% if d.settled_amount and d.settled_amount > 0 %}<div><span class="spf-tone-success">{{ d.formatted_settled }}</span>{% if d.has_credit_adj %}<div class="spf-cell-sub">incl. credit</div>{% endif %}</div>
-              {% else %}<span class="spf-tone-muted">—</span>{% endif %}
-            </td>
-            <td class="c-num spf-demand-outstanding" data-label="Outstanding"><span class="{% if d.outstanding_amount > 0 and d.status not in ('Paid','Waived') %}spf-demand-amt-due spf-tone-danger{% else %}spf-demand-amt-clear{% endif %}">{{ d.formatted_outstanding }}</span></td>
-            <td class="c-status" data-label="Status">{{ badge(_d_status) }}</td>
-          </tr>
-          {% endfor %}
-          {% endfor %}
-          <tr class="spf-filter-empty is-hidden"><td colspan="6" class="c-empty">{{ empty('filter_alt', 'No charges for this academic year') }}</td></tr>
-        </tbody>
-      </table>
-    </div>
-    {% endif %}
-
-    {% if has_fee_refunds %}
-    <div id="spf-tab-refunds" {% if has_fee_demands %}role="tabpanel" aria-labelledby="spf-tabbtn-refunds" class="is-hidden"{% endif %}>
-      {% if not has_fee_demands %}<div class="spf-detail-hd" style="padding:12px 20px 0;">Refunds</div>{% endif %}
-      {% for r in fee_refunds %}
-      {% if r.demand_paid_amount and r.demand_paid_amount > 0 %}
-      <div class="spf-refund">
-        <div class="spf-refund-body">
-          <div class="spf-refund-title">{{ r.refund_type or "Refund" }}</div>
-          {% if r.fee_component %}<div>{{ r.fee_component }}</div>{% endif %}
-          {% if r.reason %}<div style="margin-top:2px;">{{ r.reason }}</div>{% endif %}
-          <div class="spf-chips">
-            {% if r.refund_date_fmt %}<span class="spf-chip"><span class="sp-ms" aria-hidden="true">event</span>{{ r.refund_date_fmt }}</span>{% endif %}
-            {% if r.refund_mode %}<span class="spf-chip"><span class="sp-ms" aria-hidden="true">payments</span>{{ r.refund_mode }}</span>{% endif %}
-            {% if r.approved_by_name %}<span class="spf-chip"><span class="sp-ms" aria-hidden="true">person</span>{{ r.approved_by_name }}</span>{% endif %}
-            {% if r.status == 'Approved' %}
-              {% if r.bank_name %}<span class="spf-chip"><span class="sp-ms" aria-hidden="true">account_balance</span>{{ r.bank_name }}</span>{% endif %}
-              {% if r.masked_account %}<span class="spf-chip">{{ r.masked_account }}</span>{% endif %}
-              {% if r.utr_number %}<span class="spf-chip">UTR: {{ r.utr_number }}</span>{% endif %}
-            {% endif %}
-          </div>
-        </div>
-        <div class="spf-refund-right"><div class="spf-refund-amt">+{{ r.formatted_amount }}</div><div style="margin-top:4px;">{{ badge(r.status) }}</div></div>
-      </div>
-      {% else %}
-      <div class="spf-notice spf-notice-warning" style="margin:10px 20px;">
-        <span class="sp-ms" aria-hidden="true">info</span>
-        <div>Refund <strong>{{ r.name }}</strong> ({{ r.formatted_amount }}) cannot be processed: no payment has been recorded for the linked demand. Please contact the Bursar's Office.</div>
-      </div>
-      {% endif %}
-      {% endfor %}
-    </div>
-    {% elif _err.refunds %}
-    {{ section_error('refunds') }}
-    {% endif %}
-  </div>
-  {% endif %}
-</section>
-
 {# ═══════════════ Scholarships, concessions & credit ═══════════════ #}
 <section class="spf-card fade-in" aria-labelledby="spf-sc-title" style="margin-bottom:16px;">
   <div class="spf-card-hd">
@@ -1032,7 +1032,7 @@
   {% else %}
   <table class="spf-t">
     <caption class="spf-sr-only">Scholarships and concessions</caption>
-    <colgroup><col><col style="width:96px;"><col style="width:120px;"><col style="width:112px;"></colgroup>
+    <colgroup><col style="width:40%;"><col style="width:20%;"><col style="width:20%;"><col style="width:20%;"></colgroup>
     <thead><tr><th scope="col" class="c-text">Description</th><th scope="col" class="c-num">Amount</th><th scope="col" class="c-status">Status</th><th scope="col" class="c-date">Approved On</th></tr></thead>
     <tbody>
       {% for c in concessions %}
@@ -1056,7 +1056,7 @@
   {% else %}
   <table class="spf-t">
     <caption class="spf-sr-only">Credit and advance deposits</caption>
-    <colgroup><col><col style="width:150px;"><col style="width:104px;"><col style="width:112px;"></colgroup>
+    <colgroup><col style="width:40%;"><col style="width:20%;"><col style="width:20%;"><col style="width:20%;"></colgroup>
     <thead><tr><th scope="col" class="c-text">Credit</th><th scope="col" class="c-num">Used / Total</th><th scope="col" class="c-num">Available</th><th scope="col" class="c-status">Status</th></tr></thead>
     <tbody>
       {% for cn in credit_notes %}
