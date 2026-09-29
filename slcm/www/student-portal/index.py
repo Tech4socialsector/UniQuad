@@ -259,6 +259,17 @@ def get_context(context):
         except Exception:
             context.upcoming_sessions = []
 
+        # ── Important links (Student Portal Settings) ─────────
+        try:
+            _ps = frappe.get_single("Student Portal Settings")
+            context.important_links = {
+                "academic_calendar": _ps.get("academic_calendar") or "#",
+                "student_handbook": _ps.get("student_handbook") or "#",
+                "examination_guidelines": _ps.get("examination_guidelines") or "#",
+            }
+        except Exception:
+            context.important_links = {"academic_calendar": "#", "student_handbook": "#", "examination_guidelines": "#"}
+
         # ── Student status info ────────────────────────────────
         context.student_status = student.student_status or "Active"
         context.registration_status = student.registration_status or ""

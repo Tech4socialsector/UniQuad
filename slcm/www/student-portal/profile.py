@@ -173,21 +173,6 @@ def get_context(context):
         except Exception:
             context.ug_degrees = []
 
-        # Fetch important links from Student Portal Settings
-        try:
-            settings = frappe.get_single("Student Portal Settings")
-            context.important_links = {
-                "academic_calendar": settings.get("academic_calendar") or "#",
-                "student_handbook": settings.get("student_handbook") or "#",
-                "examination_guidelines": settings.get("examination_guidelines") or "#"
-            }
-        except Exception:
-            context.important_links = {
-                "academic_calendar": "#",
-                "student_handbook": "#",
-                "examination_guidelines": "#"
-            }
-
     except Exception as e:
         frappe.log_error(f"Student Portal Profile error: {e}", "Student Portal")
         context.portal_error = str(e)

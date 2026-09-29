@@ -18,56 +18,19 @@
 {% set receipt_name = (doc.receipt or doc.name) %}
 {% set receipt_date = (fr.receipt_date if fr and fr.receipt_date else doc.payment_date) %}
 
-<style>
-  @font-face { font-family: 'Merriweather'; font-weight: 400; font-style: normal; src: url('{{ frappe.utils.get_url() }}/assets/slcm/fonts/Merriweather-Regular.ttf') format('truetype'); }
-  @font-face { font-family: 'Merriweather'; font-weight: 700; font-style: normal; src: url('{{ frappe.utils.get_url() }}/assets/slcm/fonts/Merriweather-Bold.ttf') format('truetype'); }
-  @font-face { font-family: 'Merriweather'; font-weight: 400; font-style: italic; src: url('{{ frappe.utils.get_url() }}/assets/slcm/fonts/Merriweather-Italic.ttf') format('truetype'); }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Merriweather', Georgia, serif; font-size: 12pt; color: #000; }
+{% include "slcm/templates/print/nls_receipt_style.html" %}
+<div class="nls-doc">
 
-  .copy-block { max-width: 760px; margin: 0 auto; padding: 20px 28px 24px; border: 1.5px solid #000; min-height: 330mm; }
+<div class="nls-copy is-page">
 
-  .receipt-header { display: flex; align-items: center; border-bottom: 2px solid #000; padding-bottom: 12px; margin-bottom: 14px; }
-  .receipt-header img { height: 72px; width: 72px; object-fit: contain; margin-right: 16px; flex-shrink: 0; }
-  .inst-name { font-size: 16pt; font-weight: bold; color: #000; letter-spacing: 0.3px; }
-
-  .copy-label { text-align: center; font-size: 12.5pt; font-weight: bold; margin-bottom: 14px; }
-
-  .meta-grid { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
-  .meta-grid td { padding: 4px 6px; font-size: 11.5pt; vertical-align: top; }
-  .meta-grid td.lbl { color: #000; width: 22%; }
-  .meta-grid td.val { font-weight: 500; color: #000; width: 28%; }
-
-  .divider { border: none; border-top: 1px solid #000; margin: 10px 0; }
-
-  .part-table { width: 100%; border-collapse: collapse; margin: 12px 0; }
-  .part-table thead th { padding: 6px 10px; text-align: left; font-size: 11.5pt; font-weight: bold; color: #000; border-top: 1px solid #000; border-bottom: 1px solid #000; }
-  .part-table thead th:last-child { text-align: right; }
-  .part-table tbody td { padding: 6px 10px; border-bottom: 1px solid #000; font-size: 11.5pt; }
-  .part-table tbody td:last-child { text-align: right; }
-  .part-table tfoot td { padding: 6px 10px; font-weight: bold; font-size: 12pt; border-top: 2px solid #000; }
-  .part-table tfoot td:last-child { text-align: right; }
-
-  .amount-words { text-align: right; font-style: italic; font-size: 11pt; color: #000; margin-top: 2px; }
-
-  .pay-grid { width: 100%; border-collapse: collapse; margin-top: 10px; }
-  .pay-grid td { padding: 4px 6px; font-size: 11.5pt; }
-  .pay-grid td.lbl { color: #000; width: 22%; }
-  .pay-grid td.val { color: #000; font-weight: 500; width: 28%; }
-
-  .footer-note { margin-top: 16px; font-size: 11pt; color: #000; }
-</style>
-
-<div class="copy-block">
-
-  <div class="receipt-header">
+  <div class="nls-head">
     <img src="{{ logo }}" alt="NLS Logo">
-    <div class="inst-name">{{ org_name }}</div>
+    <div class="nls-inst">{{ org_name }}</div>
   </div>
 
-  <div class="copy-label">{{ copy_label }}</div>
+  <div class="nls-title">{{ copy_label }}</div>
 
-  <table class="meta-grid">
+  <table class="nls-meta">
     <tr>
       <td class="lbl">Registration Id:</td>
       <td class="val">{{ registration_id }}</td>
@@ -77,16 +40,16 @@
     <tr>
       <td class="lbl">Receipt Number:</td>
       <td style="padding:4px 6px; font-size:11.5pt;">
-        <span style="color:#000; font-weight:600; border:1px solid #000; padding:1px 8px;">{{ receipt_name }}</span>
+        <span class="nls-boxed">{{ receipt_name }}</span>
       </td>
       <td class="lbl">Date:</td>
       <td class="val">{{ frappe.utils.formatdate(receipt_date, "dd-MM-yyyy") }}</td>
     </tr>
   </table>
 
-  <hr class="divider">
+  <hr class="nls-divider">
 
-  <table class="meta-grid">
+  <table class="nls-meta">
     <tr>
       <td class="lbl">Academic Year:</td>
       <td class="val">{{ academic_yr }}</td>
@@ -103,7 +66,7 @@
 
   
 
-  <table class="part-table">
+  <table class="nls-table">
     <thead>
       <tr>
         <th style="width:10%">Sl No.</th>
@@ -136,13 +99,13 @@
     </tfoot>
   </table>
 
-  <div class="amount-words">
+  <div class="nls-words">
     {{ frappe.utils.money_in_words(doc.amount or 0, "INR") | replace("INR ", "Rupees ") }}
   </div>
 
-  <hr class="divider">
+  <hr class="nls-divider">
 
-  <table class="pay-grid">
+  <table class="nls-meta">
     <tr>
       <td class="lbl">Payment Mode:</td>
       <td class="val">{{ doc.payment_mode or "—" }}</td>
@@ -157,8 +120,9 @@
     </tr>
   </table>
 
-  <div class="footer-note">
+  <div class="nls-note">
     This is a computer generated receipt, hence it does not require signature/seal.
   </div>
 
+</div>
 </div>

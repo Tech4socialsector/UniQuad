@@ -229,6 +229,13 @@
   .spd-tt-empty strong { display: block; color: var(--sp-text-1); font-size: 14px; }
   .spd-tt-empty span { font-size: 12.5px; }
   @media (max-width: 1000px) { .spd-qa-row { grid-template-columns: minmax(0, 1fr); } }
+  .spd-links-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .spd-link-item { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 1px solid var(--sp-border); border-radius: 10px; text-decoration: none; color: var(--sp-text-1); background: #fff; transition: border-color .15s, box-shadow .15s; }
+  .spd-link-item:hover { border-color: var(--sp-primary); box-shadow: 0 4px 12px rgba(146,12,36,.08); }
+  .spd-link-icon { font-size: 20px; color: var(--sp-primary); flex-shrink: 0; }
+  .spd-link-name { flex: 1; min-width: 0; font-size: 14px; font-weight: 700; }
+  .spd-link-ext { font-size: 18px; color: var(--sp-text-4); flex-shrink: 0; }
+  @media (max-width: 900px) { .spd-links-grid { grid-template-columns: minmax(0, 1fr); } }
 
   /* Responsive — KPI and Quick Action grids reflow instead of overflowing */
   @media (max-width: 1100px) {
@@ -398,8 +405,8 @@
       <div class="spd-qa-item-icon">
         <span class="sp-ms" style="font-size:28px;">campaign</span>
       </div>
-      <div class="spd-qa-item-title">Notices</div>
-      <div class="spd-qa-item-sub">Announcements</div>
+      <div class="spd-qa-item-title">Announcements</div>
+      <div class="spd-qa-item-sub">Notices &amp; updates</div>
     </a>
 
     <a href="/student-portal/venue-booking" class="spd-qa-item">
@@ -445,6 +452,24 @@
 </section>
 </div>
 {% endif %}
+
+{# ── Important Links ───────────────────────────────────────────── #}
+{% set _il = important_links or {} %}
+<section class="spd-qa-section spd-links fade-in delay-2" aria-labelledby="spd-links-title" style="margin-top:18px;">
+  <h2 class="spd-qa-header-title" id="spd-links-title">Important Links</h2>
+  <p class="spd-qa-header-sub">Handy references for the academic year</p>
+  <div class="spd-links-grid">
+    <a href="{{ _il.academic_calendar or '#' }}" target="_blank" rel="noopener" class="spd-link-item">
+      <span class="sp-ms spd-link-icon" aria-hidden="true">calendar_month</span><span class="spd-link-name">Academic Calendar</span><span class="sp-ms spd-link-ext" aria-hidden="true">open_in_new</span>
+    </a>
+    <a href="{{ _il.student_handbook or '#' }}" target="_blank" rel="noopener" class="spd-link-item">
+      <span class="sp-ms spd-link-icon" aria-hidden="true">menu_book</span><span class="spd-link-name">Student Handbook</span><span class="sp-ms spd-link-ext" aria-hidden="true">open_in_new</span>
+    </a>
+    <a href="{{ _il.examination_guidelines or '#' }}" target="_blank" rel="noopener" class="spd-link-item">
+      <span class="sp-ms spd-link-icon" aria-hidden="true">description</span><span class="spd-link-name">Examination Guidelines</span><span class="sp-ms spd-link-ext" aria-hidden="true">open_in_new</span>
+    </a>
+  </div>
+</section>
 
 {% endif %}
 {% endblock %}
