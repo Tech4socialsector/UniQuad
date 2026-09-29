@@ -83,7 +83,7 @@ def re_exam_and_fine_rows(student, re_exams, fines):
 			component=r.get("course_name") or r.course or "Re-examination fee",
 			sub="Re-examination fee" + (f" · {r.exam_plan}" if r.get("exam_plan") else ""),
 			kind="reexam", demand_type="Academic", due_date=None, due_date_fmt="",
-			amount_fmt=_fmt_inr(r.re_exam_fee),
+			amount=flt(r.re_exam_fee), amount_fmt=_fmt_inr(r.re_exam_fee),
 			status="Paid" if paid else (r.payment_status or "Pending"),
 			is_paid=bool(paid), is_overdue=False, days_overdue=0,
 			receipt=receipt or "",
