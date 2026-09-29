@@ -286,5 +286,23 @@
   "sent_at": "2026-07-29 14:26:11.187049",
   "status": "Sent",
   "subject": "Regarding Your Application — NLS Admissions"
+ },
+ {
+  "admission_cycle": null,
+  "docstatus": 0,
+  "doctype": "Applicant Reminder Email Log",
+  "email_account": null,
+  "email_template": "Applicant Draft Application Reminder",
+  "error_log": null,
+  "modified": "2026-09-29 10:02:03.681796",
+  "name": "u5450n4dbk",
+  "recipient": "jenifar@gmail.com",
+  "reference_doctype": "Applicant",
+  "reference_name": "APP-2026-00017",
+  "reminder_type": "Draft Application Reminder",
+  "sender": null,
+  "sent_at": "2026-09-29 10:02:03.681332",
+  "status": "Sent",
+  "subject": "Action Required: Submit Your Application Before 30-09-2026 — APP-2026-00017"
  }
 ]
