@@ -28,6 +28,12 @@
   "from_academic_year",
   "to_academic_year",
   "years",
+  "section_edited",
+  "edited_certificate",
+  "edited_word_file",
+  "column_break_edited",
+  "edited_by",
+  "edited_on",
   "section_status",
   "status",
   "generated_on",
@@ -220,10 +226,46 @@
    "fieldname": "remarks",
    "fieldtype": "Small Text",
    "label": "Remarks"
+  },
+  {
+   "collapsible": 0,
+   "fieldname": "section_edited",
+   "fieldtype": "Section Break",
+   "label": "Edited Certificate"
+  },
+  {
+   "fieldname": "edited_certificate",
+   "fieldtype": "Attach",
+   "label": "Edited Certificate (PDF)",
+   "description": "Optional. Download the Word version, make your changes and upload it from the Student Fee Management page (Fee Certificates tab); a Word file is converted to PDF automatically, or upload a PDF directly. While a file is attached, every download of this certificate (desk and student portal) gives this PDF; remove it to go back to the generated certificate."
+  },
+  {
+   "fieldname": "column_break_edited",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "edited_by",
+   "fieldtype": "Link",
+   "label": "Uploaded By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "edited_on",
+   "fieldtype": "Datetime",
+   "label": "Uploaded On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "edited_word_file",
+   "fieldtype": "Attach",
+   "label": "Edited Word File",
+   "read_only": 1,
+   "description": "The Word file the edited PDF was converted from, kept for further edits."
   }
  ],
  "links": [],
- "modified": "2026-09-28 11:00:00.000000",
+ "modified": "2026-09-29 11:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Fee Certificate Request",

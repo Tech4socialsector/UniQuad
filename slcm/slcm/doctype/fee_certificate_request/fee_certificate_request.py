@@ -59,6 +59,7 @@ class FeeCertificateRequest(Document):
 		self.certificate_mode = "Multi Year" if self.certificate_type == MULTI_YEAR else "Single Year"
 		self.to_academic_year = None
 		self._set_identity()
+		self._validate_edited_certificate()
 
 		if (
 			not self.years
@@ -94,6 +95,16 @@ class FeeCertificateRequest(Document):
 		if self.certificate_for == ADMISSION_STAGE:
 			self.application_number = subject.application_number
 			self.admit_card_number = self.admit_card_number or subject.admit_card_number
+
+	def _validate_edited_certificate(self):
+		if self.edited_certificate and not self.edited_certificate.lower().endswith(".pdf"):
+			frappe.throw(_("The edited certificate must be a PDF file."))
+		if self.has_value_changed("edited_certificate"):
+			if self.edited_certificate:
+				self.edited_by, self.edited_on = frappe.session.user, frappe.utils.now_datetime()
+			else:
+				self.edited_by = self.edited_on = None
+				self.edited_word_file = None
 
 	def _drop_duplicate_years(self):
 		seen = set()
@@ -209,8 +220,10 @@ def mark_generated(name):
 
 def _check_read_access(request):
 	"""Desk users need read permission; a student may read their own requests
-	(the student portal renders certificates for the logged-in student)."""
-	if request.has_permission("read"):
+	(the student portal renders certificates for the logged-in student). Callers
+	that already checked access (page roles, portal ownership) set
+	frappe.flags.ignore_print_permissions."""
+	if frappe.flags.ignore_print_permissions or request.has_permission("read"):
 		return
 	user = frappe.session.user
 	if user != "Guest":
@@ -527,9 +540,33 @@ def get_fee_certificate_context(request_name):
 				for t in FIRST_YEAR_ONLY_TYPES:
 					y["amounts"].pop(t, None)
 
-	table = _build_table(years)
-
 	first_ay = frappe.get_doc("Academic Year", request.from_academic_year)
+	table = _build_table(years)
+	if (
+		certificate_type == MULTI_YEAR
+		and not student.is_applicant
+		and template
+		and cint(template.get("show_paid_rows"))
+	):
+		nets = [sum(y["amounts"].values()) - y["waiver"] for y in years]
+		table["show_paid_rows"] = True
+		table["paid_row_label"] = template.get("paid_row_label") or "Total Fee paid"
+		table["outstanding_row_label"] = template.get("outstanding_row_label") or "Outstanding fee"
+		table["paid_row"] = [f"({_amt(y['paid'])})" if flt(y["paid"]) else "-" for y in years]
+		table["outstanding_row"] = [_amt(max(n - flt(y["paid"]), 0)) for n, y in zip(nets, years)]
+
+	# First year from the certificate's year onward that still has fee to pay
+	# (the "now required to pay the course fee for III year i.e. AY 2027-28" year).
+	cert_index = next((i for i, r in enumerate(unique_rows) if r.academic_year == first_ay.name), 0)
+	due = next(
+		(
+			y
+			for y in years[cert_index:]
+			if sum(y["amounts"].values()) - y["waiver"] - flt(y["paid"]) > 0
+		),
+		years[cert_index] if years else None,
+	)
+
 	programme = (
 		frappe.db.get_value("Programme", student.programme_of_study, "program_name") or student.programme_of_study or ""
 	)
@@ -543,6 +580,12 @@ def get_fee_certificate_context(request_name):
 		"programme_duration": _duration_words(_programme_duration(student)),
 		"academic_year": _short_ay_label(first_ay),
 		"current_year": _ordinal_year_for(student, first_ay),
+		"due_year": (
+			(ORDINALS[due["programme_year"] - 1] if 0 < due["programme_year"] <= len(ORDINALS) else str(due["programme_year"]))
+			if due and due["programme_year"]
+			else _ordinal_year_for(student, first_ay)
+		),
+		"due_academic_year": (due["label"] if due else _short_ay_label(first_ay)),
 		# The certificate year's total as on the table (after any scholarship), for "Rs. ___".
 		"year_fee": _amt(
 			next(
@@ -555,6 +598,9 @@ def get_fee_certificate_context(request_name):
 		"bank_account_no": settings.bank_account_no or "",
 		"bank_ifsc_code": settings.bank_ifsc_code or "",
 		"bank_branch": settings.bank_branch or "",
+		"bank_name": settings.get("bank_name") or "",
+		"bank_account_type": settings.get("bank_account_type") or "",
+		"bank_table": _bank_table(settings),
 	}
 
 	# One line per year: years already studied before the table's first column,
@@ -597,6 +643,7 @@ def get_fee_certificate_context(request_name):
 			and ((student.is_applicant and template.get("applicant_body_text")) or template.body_text)
 		),
 		"bank_details_html": render(template and template.bank_details_text) if request.include_bank_details else "",
+		"bank_details_source": (template and template.bank_details_text) or "",
 		"closing_html": render(template and template.closing_text),
 		"total_label": (template and template.total_label) or "Total",
 		"generation_date": formatdate(today(), "dd.mm.yyyy"),
@@ -605,6 +652,27 @@ def get_fee_certificate_context(request_name):
 		"signature_image": _trimmed_image_b64(settings.cfo_signature),
 		"table": table,
 	}
+
+
+def _bank_table(settings):
+	"""University bank account as a two-column label / value list (blank rows skipped)."""
+	from frappe.utils import escape_html
+
+	rows = [
+		("Account Holder Name", settings.bank_account_name or settings.institute_name),
+		("Account Number", settings.bank_account_no),
+		("IFSC", settings.bank_ifsc_code),
+		("Bank Name", settings.get("bank_name")),
+		("Branch", settings.bank_branch),
+		("Account Type", settings.get("bank_account_type")),
+	]
+	body = "".join(
+		f'<tr><td style="padding:0 24px 0 0;border:none;white-space:nowrap;">{label}</td>'
+		f'<td style="padding:0;border:none;">{escape_html(value)}</td></tr>'
+		for label, value in rows
+		if value
+	)
+	return Markup(f'<table class="bank-table" style="border-collapse:collapse;line-height:1.4;">{body}</table>') if body else ""
 
 
 def _trimmed_image_b64(file_url):
@@ -659,3 +727,43 @@ def _build_table(years):
 		"scholarship_row": [_amt(y["waiver"]) for y in years] if show_scholarship else [],
 		"net_row": [_amt(t - y["waiver"]) for t, y in zip(totals, years)] if show_scholarship else [],
 	}
+
+
+def certificate_file(request, file_format="pdf"):
+	"""(filename, content, response type) for a certificate download.
+
+	file_format: "pdf" gives the uploaded edited PDF when one is attached, else the
+	generated PDF; "generated" always gives the generated PDF; "docx" the Word version.
+	Callers do their own permission check."""
+	base = f"{(request.purpose or 'Fee Certificate').replace('/', '-')} - {(request.student_name or request.name).replace('/', '-')}"
+	if file_format == "docx":
+		from slcm.slcm.doctype.fee_certificate_request.fee_certificate_docx import build_certificate_docx
+
+		frappe.flags.ignore_print_permissions = True
+		try:
+			ctx = get_fee_certificate_context(request.name)
+		finally:
+			frappe.flags.ignore_print_permissions = False
+		return f"{base}.docx", build_certificate_docx(ctx), "binary"
+
+	if file_format == "pdf" and request.edited_certificate:
+		file_doc = frappe.get_doc("File", {"file_url": request.edited_certificate})
+		return f"{base}.pdf", file_doc.get_content(), "pdf"
+
+	frappe.flags.ignore_print_permissions = True
+	try:
+		pdf = frappe.get_print(
+			"Fee Certificate Request", request.name, "Fee Certificate", doc=request, as_pdf=True, no_letterhead=1
+		)
+	finally:
+		frappe.flags.ignore_print_permissions = False
+	return f"{base}.pdf", pdf, "pdf"
+
+
+@frappe.whitelist()
+def download(name, file_format="pdf"):
+	"""Desk download (form button): needs read permission on the request."""
+	request = frappe.get_doc("Fee Certificate Request", name)
+	request.check_permission("read")
+	filename, content, response_type = certificate_file(request, file_format)
+	frappe.local.response.update(filename=filename, filecontent=content, type=response_type)

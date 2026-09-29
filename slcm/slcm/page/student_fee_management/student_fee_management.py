@@ -1000,24 +1000,68 @@ def generate_fee_certificate(
 
 
 @frappe.whitelist()
-def download_fee_certificate(name):
+def download_fee_certificate(name, file_format="pdf"):
+	"""file_format: pdf (the uploaded edited copy if any, else generated), generated, docx."""
 	_check_access()
-	request = frappe.get_doc("Fee Certificate Request", name)
-	frappe.flags.ignore_print_permissions = True
-	try:
-		pdf = frappe.get_print(
-			"Fee Certificate Request", name, "Fee Certificate", doc=request, as_pdf=True, no_letterhead=1
-		)
-	finally:
-		frappe.flags.ignore_print_permissions = False
-	who = (request.student_name or name).replace("/", "-")
-	frappe.local.response.filename = f"{request.purpose.replace('/', '-')} - {who}.pdf"
-	frappe.local.response.filecontent = pdf
-	frappe.local.response.type = "pdf"
+	from slcm.slcm.doctype.fee_certificate_request.fee_certificate_request import certificate_file
+
+	filename, content, response_type = certificate_file(frappe.get_doc("Fee Certificate Request", name), file_format)
+	frappe.local.response.update(filename=filename, filecontent=content, type=response_type)
 
 
 @frappe.whitelist()
-def get_fee_certificates(academic_year=None, programme=None, search=None, start=0, page_length=25):
+def set_edited_certificate(name, file_url=None):
+	"""Attach (or, with no file_url, remove) the staff-edited certificate. A Word
+	(.docx) upload is converted to PDF; the Word file is kept for later edits."""
+	_check_access()
+	doc = frappe.get_doc("Fee Certificate Request", name)
+	word_url = None
+	if file_url:
+		lower = file_url.lower()
+		if not lower.endswith((".pdf", ".docx")):
+			frappe.throw(_("Please upload the certificate as a PDF or Word (.docx) file."))
+		uploaded = frappe.db.get_value(
+			"File",
+			{"file_url": file_url, "attached_to_doctype": "Fee Certificate Request", "attached_to_name": name},
+			"name",
+		)
+		if not uploaded:
+			frappe.throw(_("The uploaded file is not attached to {0}.").format(name))
+		# Tag the file with its field, so saving the request doesn't register it a second time.
+		frappe.db.set_value(
+			"File", uploaded, "attached_to_field", "edited_word_file" if lower.endswith(".docx") else "edited_certificate"
+		)
+		if lower.endswith(".docx"):
+			from slcm.slcm.doctype.fee_certificate_request.fee_certificate_docx import docx_to_pdf
+
+			try:
+				pdf = docx_to_pdf(frappe.get_doc("File", uploaded).get_content())
+			except Exception:
+				frappe.log_error(title=f"Fee certificate Word to PDF failed: {name}")
+				frappe.throw(_("The Word file could not be converted to PDF. Please save it as PDF in Word and upload the PDF."))
+			pdf_file = frappe.get_doc(
+				{
+					"doctype": "File",
+					"file_name": f"{name} - edited.pdf",
+					"content": pdf,
+					"is_private": 1,
+					"attached_to_doctype": "Fee Certificate Request",
+					"attached_to_name": name,
+					"attached_to_field": "edited_certificate",
+				}
+			).insert(ignore_permissions=True)
+			word_url, file_url = file_url, pdf_file.file_url
+	doc.edited_certificate = file_url or None
+	doc.edited_word_file = word_url
+	doc.flags.ignore_permissions = True
+	doc.save()
+	return {"edited_certificate": doc.edited_certificate, "edited_on": doc.edited_on, "converted": bool(word_url)}
+
+
+@frappe.whitelist()
+def get_fee_certificates(
+	academic_year=None, programme=None, search=None, certificate_search=None, start=0, page_length=25
+):
 	"""Generated fee certificates (campus students and applicants), newest first;
 	Draft requests that were never downloaded are left out.
 	Academic Year / Programme / Search from the page filters apply; Term and Dues
@@ -1040,6 +1084,14 @@ def get_fee_certificates(academic_year=None, programme=None, search=None, start=
 			"OR fcr.application_number LIKE %(search)s OR fcr.purpose LIKE %(search)s)"
 		)
 		values["search"] = f"%{search.strip()}%"
+	# The tab's own box: student / applicant name, ID or application number.
+	if certificate_search and certificate_search.strip():
+		conditions.append(
+			"(fcr.student_name LIKE %(cert_search)s OR fcr.student LIKE %(cert_search)s "
+			"OR fcr.applicant LIKE %(cert_search)s OR fcr.registration_id LIKE %(cert_search)s "
+			"OR fcr.application_number LIKE %(cert_search)s OR fcr.name LIKE %(cert_search)s)"
+		)
+		values["cert_search"] = f"%{certificate_search.strip()}%"
 	where = " AND ".join(conditions)
 
 	count = frappe.db.sql(f"SELECT COUNT(*) FROM `tabFee Certificate Request` fcr WHERE {where}", values)[0][0]
@@ -1048,7 +1100,8 @@ def get_fee_certificates(academic_year=None, programme=None, search=None, start=
 		f"""SELECT fcr.name, fcr.certificate_for, fcr.student, fcr.applicant, fcr.student_name,
 			COALESCE(NULLIF(fcr.registration_id, ''), NULLIF(fcr.application_number, ''), fcr.student, fcr.applicant) AS person_id,
 			fcr.admit_card_number, fcr.programme, fcr.purpose, fcr.from_academic_year AS academic_year,
-			fcr.status, fcr.generated_on, fcr.creation, fcr.owner, fcr.remarks
+			fcr.status, fcr.generated_on, fcr.creation, fcr.owner, fcr.remarks,
+			fcr.edited_certificate, fcr.edited_on, fcr.edited_by
 		FROM `tabFee Certificate Request` fcr
 		WHERE {where}
 		ORDER BY COALESCE(fcr.generated_on, fcr.creation) DESC, fcr.name DESC

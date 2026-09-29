@@ -5,6 +5,22 @@ frappe.pages['term-result'].on_page_load = function (wrapper) {
 		single_column: true,
 	});
 
+	// Shared brand theme (#920C24 + Merriweather) for all Examination Result tabs
+	$(wrapper).addClass('er-theme');
+	if (!document.getElementById('er-theme-font')) {
+		$('head').append(
+			'<link rel="preconnect" href="https://fonts.googleapis.com">' +
+			'<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
+			'<link id="er-theme-font" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Merriweather:opsz,wght@18..144,300..900&display=swap">'
+		);
+	}
+	frappe.require('/assets/slcm/css/exam_results_theme.css');
+	// On narrow screens the tab strip scrolls sideways — bring the active tab into view
+	setTimeout(function () {
+		var $nav = $(wrapper).find('.er2-page-nav'), $act = $nav.find('.er2-pnav-btn.active');
+		if ($nav.length && $act.length) $nav.scrollLeft($act.position().left + $nav.scrollLeft() - 12);
+	}, 0);
+
 	// ── CSS ───────────────────────────────────────────────────────────────────
 	if (!document.getElementById('tr-style')) {
 		var style = document.createElement('style');
@@ -24,8 +40,8 @@ frappe.pages['term-result'].on_page_load = function (wrapper) {
 		                   color:#64748b; border-radius:7px; transition:all .2s; user-select:none;
 		                   letter-spacing:.1px; border:none; background:transparent;
 		                   display:inline-flex; align-items:center; gap:5px; }
-		.er2-pnav-btn:hover  { color:#4f46e5; background:rgba(79,70,229,.08); }
-		.er2-pnav-btn.active { background:#fff; color:#4f46e5; box-shadow:0 1px 4px rgba(0,0,0,.12); }
+		.er2-pnav-btn:hover  { color:#920C24; background:rgba(146,12,36,.08); }
+		.er2-pnav-btn.active { background:#fff; color:#920C24; box-shadow:0 1px 4px rgba(0,0,0,.12); }
 
 		/* Filter card */
 		.tr-filter-card  { background:#fff; border-radius:12px; padding:14px 20px; margin-bottom:14px;
@@ -37,7 +53,7 @@ frappe.pages['term-result'].on_page_load = function (wrapper) {
 		.tr-select       { height:36px; border:1.5px solid #e2e8f0; border-radius:8px;
 		                   padding:0 12px; font-size:13px; background:#fff; color:#1e293b;
 		                   outline:none; cursor:pointer; transition:border-color .2s; }
-		.tr-select:focus { border-color:#4f46e5; box-shadow:0 0 0 3px rgba(79,70,229,.1); }
+		.tr-select:focus { border-color:#920C24; box-shadow:0 0 0 3px rgba(146,12,36,.1); }
 
 		/* Action bar */
 		.tr-actbar       { display:flex; align-items:center; gap:8px; flex-wrap:wrap;
@@ -46,18 +62,18 @@ frappe.pages['term-result'].on_page_load = function (wrapper) {
 		.tr-srch input   { width:100%; height:36px; border:1.5px solid #e2e8f0; border-radius:8px;
 		                   padding:0 12px 0 36px; font-size:13px; outline:none; color:#1e293b;
 		                   background:#fff; transition:border-color .2s; box-sizing:border-box; }
-		.tr-srch input:focus { border-color:#4f46e5; box-shadow:0 0 0 3px rgba(79,70,229,.1); }
+		.tr-srch input:focus { border-color:#920C24; box-shadow:0 0 0 3px rgba(146,12,36,.1); }
 		.tr-srch-ico     { position:absolute; left:10px; top:10px; color:#94a3b8; }
 		.tr-btn          { height:36px; padding:0 14px; border-radius:7px; border:1.5px solid #e2e8f0;
 		                   background:#fff; cursor:pointer; font-size:12.5px; font-weight:600;
 		                   color:#475569; display:inline-flex; align-items:center; gap:5px;
 		                   white-space:nowrap; transition:all .15s; }
 		.tr-btn:hover    { background:#f8fafc; border-color:#cbd5e1; color:#1e293b; }
-		.tr-btn.primary  { background:linear-gradient(135deg,#4f46e5,#6366f1);
+		.tr-btn.primary  { background:#920C24;
 		                   border-color:transparent; color:#fff; }
 		.tr-btn.primary:hover { opacity:.9; }
-		.tr-btn.outline-indigo { border-color:#c7d2fe; color:#4f46e5; background:#eef2ff; }
-		.tr-btn.outline-indigo:hover { background:#e0e7ff; }
+		.tr-btn.outline-indigo { border-color:#E8B4BE; color:#920C24; background:#FBEEF0; }
+		.tr-btn.outline-indigo:hover { background:#F5D9DE; }
 
 		/* Dropdown buttons */
 		.tr-btn-dd       { position:relative; display:inline-flex; }
@@ -73,12 +89,12 @@ frappe.pages['term-result'].on_page_load = function (wrapper) {
 		.tr-stat-cards   { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
 		.tr-stat-card    { background:#fff; border-radius:12px; padding:14px 18px; flex:1;
 		                   min-width:140px; box-shadow:0 1px 3px rgba(0,0,0,.06);
-		                   border-top:3px solid var(--sc-color,#4f46e5); display:flex;
+		                   border-top:3px solid var(--sc-color,#920C24); display:flex;
 		                   align-items:center; gap:12px; }
 		.tr-sc-icon      { width:38px; height:38px; border-radius:9px; flex-shrink:0;
 		                   display:flex; align-items:center; justify-content:center;
-		                   font-size:17px; background:var(--sc-bg,#eef2ff); }
-		.tr-sc-val       { font-size:22px; font-weight:800; color:var(--sc-color,#4f46e5); line-height:1.1; }
+		                   font-size:17px; background:var(--sc-bg,#FBEEF0); }
+		.tr-sc-val       { font-size:22px; font-weight:800; color:var(--sc-color,#920C24); line-height:1.1; }
 		.tr-sc-lbl       { font-size:10px; color:#94a3b8; font-weight:700; text-transform:uppercase;
 		                   letter-spacing:.6px; margin-top:2px; }
 
@@ -102,15 +118,15 @@ frappe.pages['term-result'].on_page_load = function (wrapper) {
 		                   color:#475569; border-bottom:1.5px solid #e2e8f0; white-space:nowrap;
 		                   text-transform:uppercase; letter-spacing:.4px; cursor:pointer;
 		                   user-select:none; background:#f8fafc; position:sticky; top:0; z-index:5; }
-		.tr-table th:hover { color:#4f46e5; background:#f1f5f9; }
+		.tr-table th:hover { color:#920C24; background:#f1f5f9; }
 		.tr-table th.center { text-align:center; }
 		.tr-table th .sort-ico { font-size:10px; margin-left:3px; opacity:.4; }
-		.tr-table th.sort-active { color:#4f46e5; }
-		.tr-table th.sort-active .sort-ico { opacity:1; color:#4f46e5; }
+		.tr-table th.sort-active { color:#920C24; }
+		.tr-table th.sort-active .sort-ico { opacity:1; color:#920C24; }
 		.tr-table td     { padding:0 14px; border-bottom:1.5px solid #f1f5f9; vertical-align:middle;
 		                   white-space:nowrap; }
 		.tr-table tbody tr { height:72px; }
-		.tr-table tbody tr:hover td { background:#fafbff; }
+		.tr-table tbody tr:hover td { background:#FDF8F9; }
 		.tr-table tbody tr:last-child td { border-bottom:none; }
 
 		/* Student cell */
@@ -120,26 +136,26 @@ frappe.pages['term-result'].on_page_load = function (wrapper) {
 		.tr-savatar img  { width:100%; height:100%; object-fit:cover; }
 		.tr-sinfo        { min-width:0; }
 		.tr-sname        { font-size:13px; font-weight:700; color:#0f172a; }
-		.tr-sreg         { font-size:11px; color:#4f46e5; font-weight:600; margin-top:2px;
-		                   background:#eef2ff; border-radius:4px; padding:1px 6px;
+		.tr-sreg         { font-size:11px; color:#920C24; font-weight:600; margin-top:2px;
+		                   background:#FBEEF0; border-radius:4px; padding:1px 6px;
 		                   display:inline-block; }
 		.tr-semail       { font-size:11px; color:#94a3b8; font-weight:400; margin-top:3px; }
 
 		/* GPA / percentage values */
 		.tr-val-pill     { display:inline-flex; align-items:center; gap:5px; }
 		.tr-val-num      { font-size:13px; font-weight:700; color:#0f172a; }
-		.tr-val-ng       { font-size:12.5px; color:#ef4444; font-weight:600; }
+		.tr-val-ng       { font-size:12.5px; color:#920C24; font-weight:600; }
 		.tr-val-na       { font-size:12.5px; color:#cbd5e1; font-weight:500; }
 
 		/* View link */
-		.tr-view-link    { font-size:12px; font-weight:700; color:#4f46e5; cursor:pointer;
-		                   border-bottom:1px dashed #c7d2fe; text-decoration:none; }
-		.tr-view-link:hover { color:#3730a3; }
+		.tr-view-link    { font-size:12px; font-weight:700; color:#920C24; cursor:pointer;
+		                   border-bottom:1px dashed #E8B4BE; text-decoration:none; }
+		.tr-view-link:hover { color:#6E091B; }
 
 		/* Badge */
 		.tr-badge        { font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px; }
 		.tr-badge.active   { background:#d1fae5; color:#065f46; }
-		.tr-badge.inactive { background:#fee2e2; color:#991b1b; }
+		.tr-badge.inactive { background:#F5D9DE; color:#6E091B; }
 
 		/* Pagination */
 		.tr-pag-bar      { display:flex; align-items:center; justify-content:space-between;
@@ -150,7 +166,7 @@ frappe.pages['term-result'].on_page_load = function (wrapper) {
 		                   background:#fff; cursor:pointer; font-size:14px; display:inline-flex;
 		                   align-items:center; justify-content:center; color:#64748b;
 		                   transition:all .15s; }
-		.tr-pag-btn:hover:not(:disabled) { background:#eef2ff; border-color:#c7d2fe; color:#4f46e5; }
+		.tr-pag-btn:hover:not(:disabled) { background:#FBEEF0; border-color:#E8B4BE; color:#920C24; }
 		.tr-pag-btn:disabled { opacity:.35; cursor:default; }
 
 		/* Empty state */
@@ -165,27 +181,27 @@ frappe.pages['term-result'].on_page_load = function (wrapper) {
 		.tr-loading      { padding:60px; text-align:center; color:#94a3b8; font-size:13px; }
 
 		/* Avatar colours */
-		.av-0{background:linear-gradient(135deg,#4f46e5,#818cf8);}
-		.av-1{background:linear-gradient(135deg,#0ea5e9,#38bdf8);}
-		.av-2{background:linear-gradient(135deg,#10b981,#34d399);}
-		.av-3{background:linear-gradient(135deg,#f59e0b,#fbbf24);}
-		.av-4{background:linear-gradient(135deg,#ef4444,#f87171);}
-		.av-5{background:linear-gradient(135deg,#8b5cf6,#a78bfa);}
-		.av-6{background:linear-gradient(135deg,#ec4899,#f472b6);}
-		.av-7{background:linear-gradient(135deg,#14b8a6,#2dd4bf);}
+		.av-0{background:#920C24;}
+		.av-1{background:#920C24;}
+		.av-2{background:#920C24;}
+		.av-3{background:#920C24;}
+		.av-4{background:#920C24;}
+		.av-5{background:#920C24;}
+		.av-6{background:#920C24;}
+		.av-7{background:#920C24;}
 
 		/* Courses dialog */
 		.tr-dlg-profile  { display:flex; align-items:center; gap:14px; padding:14px 18px;
 		                   background:#f8fafc; border-radius:10px; margin-bottom:16px; }
 		.tr-dlg-avatar   { width:56px; height:56px; border-radius:12px; flex-shrink:0;
 		                   object-fit:cover; border:2px solid #e2e8f0; background:#e2e8f0; }
-		.tr-dlg-sname    { font-size:15px; font-weight:800; color:#4f46e5; }
+		.tr-dlg-sname    { font-size:15px; font-weight:800; color:#920C24; }
 		.tr-dlg-sreg     { font-size:12px; color:#64748b; font-weight:600; margin-top:1px; }
 		.tr-dlg-semail   { font-size:12px; color:#94a3b8; margin-top:1px; }
 		.tr-dlg-sprog    { font-size:12px; color:#475569; font-weight:500; margin-top:1px; }
 		.tr-dlg-section  { font-size:13px; font-weight:800; color:#0f172a; margin:14px 0 8px; }
-		.tr-dlg-section .tr-dlg-cnt { color:#ef4444; margin-left:4px; }
-		.tr-dlg-section .tr-dlg-cnt.regular { color:#10b981; }
+		.tr-dlg-section .tr-dlg-cnt { color:#920C24; margin-left:4px; }
+		.tr-dlg-section .tr-dlg-cnt.regular { color:#920C24; }
 		.tr-cdlg-table   { width:100%; border-collapse:collapse; font-size:12.5px; }
 		.tr-cdlg-table th { background:#f8fafc; padding:8px 10px; text-align:center; font-size:10.5px;
 		                    font-weight:700; color:#475569; border-bottom:1.5px solid #e2e8f0;
@@ -195,15 +211,15 @@ frappe.pages['term-result'].on_page_load = function (wrapper) {
 		                    vertical-align:middle; color:#334155; text-align:center; }
 		.tr-cdlg-table td.left { text-align:left; }
 		.tr-cdlg-table tbody tr:last-child td { border-bottom:none; }
-		.tr-cdlg-table tbody tr:hover td { background:#fafbff; }
+		.tr-cdlg-table tbody tr:hover td { background:#FDF8F9; }
 		.tr-cdlg-cname   { font-size:13px; font-weight:700; color:#0f172a; }
 		.tr-cdlg-code    { font-size:11px; color:#64748b; margin-top:1px; }
-		.tr-cdlg-backlog { font-size:10px; font-weight:700; color:#ef4444; background:#fff5f5;
-		                   border:1px solid #fca5a5; border-radius:4px; padding:1px 6px;
+		.tr-cdlg-backlog { font-size:10px; font-weight:700; color:#920C24; background:#FBEEF0;
+		                   border:1px solid #E8B4BE; border-radius:4px; padding:1px 6px;
 		                   display:inline-block; margin-top:3px; }
 		.tr-cdlg-result  { line-height:1.5; }
 		.tr-cdlg-grade-pill { font-size:12px; font-weight:800; }
-		.tr-cdlg-grade-pill.fail  { color:#ef4444; }
+		.tr-cdlg-grade-pill.fail  { color:#920C24; }
 		.tr-cdlg-grade-pill.pass  { color:#059669; }
 		.tr-cdlg-marks   { font-size:11px; color:#64748b; }
 		.tr-cdlg-dash    { color:#cbd5e1; font-size:13px; font-weight:600; }
@@ -222,17 +238,17 @@ frappe.pages['term-result'].on_page_load = function (wrapper) {
 		               background:#f1f5f9; cursor:pointer; display:flex;
 		               align-items:center; justify-content:center; color:#64748b;
 		               font-size:16px; transition:all .15s; }
-		.xif-close:hover { background:#fee2e2; color:#ef4444; }
+		.xif-close:hover { background:#F5D9DE; color:#920C24; }
 		.xif-body    { display:flex; flex:1; overflow:hidden; }
 		.xif-types   { width:190px; flex-shrink:0; border-right:1.5px solid #f1f5f9;
-		               padding:8px; background:#fafbff; }
+		               padding:8px; background:#FDF8F9; }
 		.xif-type    { padding:10px 14px; border-radius:8px; font-size:13px; font-weight:600;
 		               color:#475569; cursor:pointer; margin-bottom:2px;
 		               transition:all .15s; display:flex; align-items:center; gap:8px; }
 		.xif-type:hover { background:#f1f5f9; color:#1e293b; }
-		.xif-type.active { background:#eef2ff; color:#4f46e5; }
+		.xif-type.active { background:#FBEEF0; color:#920C24; }
 		.xif-type-badge { min-width:18px; height:18px; border-radius:20px;
-		                  background:#4f46e5; color:#fff; font-size:10px; font-weight:700;
+		                  background:#920C24; color:#fff; font-size:10px; font-weight:700;
 		                  display:inline-flex; align-items:center; justify-content:center;
 		                  padding:0 5px; margin-left:auto; }
 		.xif-panel   { flex:1; display:flex; flex-direction:column; overflow:hidden; }
@@ -242,31 +258,31 @@ frappe.pages['term-result'].on_page_load = function (wrapper) {
 		               padding:0 10px 0 30px; font-size:12.5px; outline:none; color:#1e293b;
 		               background:#f8fafc url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E") no-repeat 9px center;
 		               box-sizing:border-box; transition:border-color .2s; }
-		.xif-search:focus { border-color:#4f46e5; background-color:#fff; }
+		.xif-search:focus { border-color:#920C24; background-color:#fff; }
 		.xif-opts    { flex:1; overflow-y:auto; padding:8px; }
 		.xif-opt     { display:flex; align-items:center; gap:10px; padding:9px 12px;
 		               border-radius:8px; cursor:pointer; font-size:13px; font-weight:500;
 		               color:#334155; transition:background .12s; }
 		.xif-opt:hover { background:#f8fafc; }
-		.xif-opt.checked { background:#eef2ff; color:#3730a3; }
-		.xif-opt input[type="checkbox"] { width:15px; height:15px; accent-color:#4f46e5;
+		.xif-opt.checked { background:#FBEEF0; color:#6E091B; }
+		.xif-opt input[type="checkbox"] { width:15px; height:15px; accent-color:#920C24;
 		                                  cursor:pointer; flex-shrink:0; }
 		.xif-empty-opts { padding:32px; text-align:center; color:#cbd5e1; font-size:13px; }
 		.xif-footer  { display:flex; align-items:center; justify-content:space-between;
-		               padding:12px 16px; border-top:1.5px solid #f1f5f9; background:#fafbff; }
+		               padding:12px 16px; border-top:1.5px solid #f1f5f9; background:#FDF8F9; }
 		.xif-status  { font-size:12.5px; color:#64748b; font-weight:500; }
-		.xif-status strong { color:#4f46e5; }
+		.xif-status strong { color:#920C24; }
 		.xif-actions { display:flex; gap:8px; }
 		.xif-clear   { padding:0 14px; height:32px; border-radius:7px;
 		               border:1.5px solid #e2e8f0; background:#fff; color:#64748b;
 		               font-size:12.5px; font-weight:600; cursor:pointer; transition:all .15s; }
-		.xif-clear:hover { border-color:#ef4444; color:#ef4444; background:#fff5f5; }
+		.xif-clear:hover { border-color:#920C24; color:#920C24; background:#FBEEF0; }
 		.xif-apply   { padding:0 18px; height:32px; border-radius:7px; border:none;
-		               background:linear-gradient(135deg,#4f46e5,#6366f1); color:#fff;
+		               background:#920C24; color:#fff;
 		               font-size:12.5px; font-weight:700; cursor:pointer; transition:opacity .15s; }
 		.xif-apply:hover { opacity:.88; }
-		.xif-btn-active { background:linear-gradient(135deg,#eef2ff,#e0e7ff) !important;
-		                  border-color:#c7d2fe !important; color:#4338ca !important; }
+		.xif-btn-active { background:linear-gradient(135deg,#FBEEF0,#F5D9DE) !important;
+		                  border-color:#E8B4BE !important; color:#6E091B !important; }
 		`;
 		document.head.appendChild(style);
 	}
@@ -296,7 +312,7 @@ frappe.pages['term-result'].on_page_load = function (wrapper) {
 
 			<!-- Page header -->
 			<div class="er2-page-header">
-				<div class="er2-page-icon" style="background:linear-gradient(135deg,#0ea5e9,#38bdf8);">
+				<div class="er2-page-icon" style="background:#920C24;">
 					<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2">
 						<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
 						<path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
@@ -411,7 +427,7 @@ frappe.pages['term-result'].on_page_load = function (wrapper) {
 
 				<!-- Table (horizontally scrollable) -->
 				<div class="tr-table-card">
-					<div class="tr-select-banner" id="tr-select-banner" style="display:none;padding:8px 16px;background:#eef2ff;border-bottom:1px solid #e0e7ff;font-size:12.5px;color:#4338ca;align-items:center;gap:6px;">
+					<div class="tr-select-banner" id="tr-select-banner" style="display:none;padding:8px 16px;background:#FBEEF0;border-bottom:1px solid #F5D9DE;font-size:12.5px;color:#6E091B;align-items:center;gap:6px;">
 						<span id="tr-select-banner-text"></span>
 						<a href="javascript:void(0)" id="tr-select-all-link" style="font-weight:700;text-decoration:underline;"></a>
 						<a href="javascript:void(0)" id="tr-select-clear-link" style="margin-left:auto;font-weight:700;text-decoration:underline;">Clear selection</a>
@@ -792,7 +808,7 @@ frappe.pages['term-result'].on_page_load = function (wrapper) {
 	function loadStats() {
 		if (!S.exam_plan) return;
 		$statCards.html(
-			'<div class="tr-stat-card" style="--sc-color:#4f46e5;--sc-bg:#eef2ff;">' +
+			'<div class="tr-stat-card" style="--sc-color:#920C24;--sc-bg:#FBEEF0;">' +
 			'<div class="tr-sc-icon">👥</div>' +
 			'<div><div class="tr-sc-val">…</div><div class="tr-sc-lbl">Total Students</div></div></div>'
 		).show();
@@ -813,31 +829,31 @@ frappe.pages['term-result'].on_page_load = function (wrapper) {
 				label: 'Total Students',
 				value: stats.total_students || 0,
 				icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
-				color: '#4f46e5', bg: '#eef2ff',
+				color: '#920C24', bg: '#FBEEF0',
 			},
 			{
 				label: 'Total Courses',
 				value: stats.total_courses || 0,
 				icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>',
-				color: '#0ea5e9', bg: '#e0f2fe',
+				color: '#920C24', bg: '#F5D9DE',
 			},
 			{
 				label: 'Graded',
 				value: stats.graded || 0,
 				icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>',
-				color: '#10b981', bg: '#d1fae5',
+				color: '#920C24', bg: '#F5D9DE',
 			},
 			{
 				label: 'Not Graded',
 				value: stats.not_graded || 0,
 				icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
-				color: '#f59e0b', bg: '#fef3c7',
+				color: '#920C24', bg: '#F5D9DE',
 			},
 			{
 				label: 'Avg CGPA',
 				value: stats.avg_cgpa != null ? stats.avg_cgpa : '—',
 				icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>',
-				color: '#8b5cf6', bg: '#ede9fe',
+				color: '#920C24', bg: '#F5D9DE',
 			},
 		];
 
@@ -932,7 +948,7 @@ frappe.pages['term-result'].on_page_load = function (wrapper) {
 			var rowChecked = S.select_all_matching && !S.excluded_students[s.student];
 
 			return '<tr>' +
-				'<td style="width:40px;"><input type="checkbox" class="tr-row-chk" data-student="' + frappe.utils.escape_html(s.student) + '"' + (rowChecked ? ' checked' : '') + ' style="accent-color:#4f46e5;cursor:pointer;"></td>' +
+				'<td style="width:40px;"><input type="checkbox" class="tr-row-chk" data-student="' + frappe.utils.escape_html(s.student) + '"' + (rowChecked ? ' checked' : '') + ' style="accent-color:#920C24;cursor:pointer;"></td>' +
 				'<td style="min-width:200px;">' +
 					'<div style="display:flex;align-items:center;gap:10px;">' +
 					'<div class="tr-savatar ' + avClass + '">' + avatar + '</div>' +
@@ -958,7 +974,7 @@ frappe.pages['term-result'].on_page_load = function (wrapper) {
 
 		var thead = '<table class="tr-table">' +
 			'<thead><tr>' +
-			'<th style="width:40px;"><input type="checkbox" id="tr-chk-all"' + (allOnPageChecked ? ' checked' : '') + ' style="accent-color:#4f46e5;cursor:pointer;"></th>' +
+			'<th style="width:40px;"><input type="checkbox" id="tr-chk-all"' + (allOnPageChecked ? ' checked' : '') + ' style="accent-color:#920C24;cursor:pointer;"></th>' +
 			'<th>Student</th>' +
 			'<th>Programme</th>' +
 			'<th class="center">Courses</th>' +
@@ -1092,7 +1108,7 @@ frappe.pages['term-result'].on_page_load = function (wrapper) {
 				var initials = ((sm.first_name || 'S')[0] + (sm.last_name || '')[0]).toUpperCase();
 				var avatarHtml = sm.passport_size_photo
 					? '<img class="tr-dlg-avatar" src="' + frappe.utils.escape_html(sm.passport_size_photo) + '">'
-					: '<div class="tr-dlg-avatar" style="display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#fff;background:linear-gradient(135deg,#4f46e5,#6366f1);">' + initials + '</div>';
+					: '<div class="tr-dlg-avatar" style="display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#fff;background:#920C24;">' + initials + '</div>';
 
 				var fullName = [sm.first_name, sm.middle_name, sm.last_name].filter(Boolean).join(' ');
 				var prog     = sm.programme ? frappe.utils.escape_html(sm.programme) : '';
@@ -1111,8 +1127,8 @@ frappe.pages['term-result'].on_page_load = function (wrapper) {
 				// ── Moderation Logs button ─────────────────────────────────
 				var modBtn = '<div style="display:flex;justify-content:flex-end;margin-bottom:10px;">' +
 					'<button onclick="frappe.show_alert({message:\'Moderation Logs – coming soon\',indicator:\'blue\'})" ' +
-					'style="height:30px;padding:0 12px;border:1.5px solid #c7d2fe;border-radius:7px;background:#eef2ff;' +
-					'color:#4f46e5;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;">' +
+					'style="height:30px;padding:0 12px;border:1.5px solid #E8B4BE;border-radius:7px;background:#FBEEF0;' +
+					'color:#920C24;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;">' +
 					'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">' +
 					'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>' +
 					'<line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>' +
@@ -1154,7 +1170,7 @@ frappe.pages['term-result'].on_page_load = function (wrapper) {
 							? resultCell(c.reexam_grade, c.reexam_marks, c.max_marks, false)
 							: '<div class="tr-cdlg-result">' + dash() + '<div class="tr-cdlg-marks">-- /\u200B' + (c.max_marks || 100) + '</div></div>';
 						var sgpa   = '<input type="checkbox" disabled ' + (c.consider_for_sgpa ? 'checked' : '') +
-							' style="width:15px;height:15px;accent-color:#4f46e5;cursor:default;">';
+							' style="width:15px;height:15px;accent-color:#920C24;cursor:default;">';
 
 						return '<tr>' +
 							'<td class="left" style="min-width:200px;">' + courseCell + '</td>' +
@@ -1274,7 +1290,7 @@ frappe.pages['term-result'].on_page_load = function (wrapper) {
 		}
 
 		var $overlay = $('<div class="xif-overlay"></div>');
-		var $modal = $('<div class="xif-modal"><div class="xif-header"><span class="xif-title"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.5" style="vertical-align:-3px;margin-right:6px;"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>Institutional Filter</span><button class="xif-close">&#10005;</button></div><div class="xif-body"><div class="xif-types"></div><div class="xif-panel"><div class="xif-ph"><div class="xif-ph-title"></div><input class="xif-search" type="text" placeholder="Search\u2026"></div><div class="xif-opts"></div></div></div><div class="xif-footer"><span class="xif-status">No Filters Applied</span><div class="xif-actions"><button class="xif-clear">Clear All</button><button class="xif-apply">Apply</button></div></div></div>');
+		var $modal = $('<div class="xif-modal"><div class="xif-header"><span class="xif-title"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#920C24" stroke-width="2.5" style="vertical-align:-3px;margin-right:6px;"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>Institutional Filter</span><button class="xif-close">&#10005;</button></div><div class="xif-body"><div class="xif-types"></div><div class="xif-panel"><div class="xif-ph"><div class="xif-ph-title"></div><input class="xif-search" type="text" placeholder="Search\u2026"></div><div class="xif-opts"></div></div></div><div class="xif-footer"><span class="xif-status">No Filters Applied</span><div class="xif-actions"><button class="xif-clear">Clear All</button><button class="xif-apply">Apply</button></div></div></div>');
 		$overlay.append($modal);
 		$('body').append($overlay);
 		render_types(); render_panel(); update_footer();
@@ -1292,7 +1308,7 @@ frappe.pages['term-result'].on_page_load = function (wrapper) {
 			var $btn = $body.find('#tr-inst-filter-btn');
 			if (total) {
 				$btn.addClass('xif-btn-active').find('.xif-count').remove();
-				$btn.append('<span class="xif-count" style="background:#4f46e5;color:#fff;border-radius:20px;font-size:10px;font-weight:700;padding:1px 6px;margin-left:4px;">' + total + '</span>');
+				$btn.append('<span class="xif-count" style="background:#920C24;color:#fff;border-radius:20px;font-size:10px;font-weight:700;padding:1px 6px;margin-left:4px;">' + total + '</span>');
 			} else {
 				$btn.removeClass('xif-btn-active').find('.xif-count').remove();
 			}

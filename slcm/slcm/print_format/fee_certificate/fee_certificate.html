@@ -43,6 +43,18 @@
 			vertical-align: bottom;
 		}
 
+		/* Exactly one A4 page in the PDF (about 0.75 scale there, see below): anything
+		   past the footer is clipped, so wkhtmltopdf can't add a blank second page. */
+		.fc-page {
+			height: 346mm;
+			overflow: hidden;
+		}
+
+		.fc-page.fc-browser {
+			height: auto;
+			overflow: visible;
+		}
+
 		.fc-page {
 			font-family: Cambria, Georgia, "Times New Roman", serif;
 			font-size: 12pt;
@@ -133,6 +145,21 @@
 
 		table.fee-table tr.total-row td, table.fee-table tr.net-row td {
 			font-weight: bold;
+		}
+
+		/* Bank account label / value list. Frappe's print CSS pads and borders every
+		   td, so this is overridden with the same specificity plus !important. */
+		.fc-page table.bank-table {
+			margin: 0 0 4px 0 !important;
+			border-collapse: collapse !important;
+		}
+
+		.fc-page table.bank-table td {
+			padding: 0 28px 0 0 !important;
+			border: none !important;
+			line-height: 1.45 !important;
+			vertical-align: top !important;
+			font-size: 11pt !important;
 		}
 
 		.bank-details, .closing-text {
@@ -256,6 +283,22 @@
 					<td></td>
 					<td>{{ ctx.total_label }}</td>
 					{% for amount in table.net_row %}
+					<td class="amount">{{ amount }}</td>
+					{% endfor %}
+				</tr>
+				{% endif %}
+				{% if table.show_paid_rows %}
+				<tr class="total-row">
+					<td></td>
+					<td>{{ table.paid_row_label }}</td>
+					{% for amount in table.paid_row %}
+					<td class="amount">{{ amount }}</td>
+					{% endfor %}
+				</tr>
+				<tr class="total-row">
+					<td></td>
+					<td>{{ table.outstanding_row_label }}</td>
+					{% for amount in table.outstanding_row %}
 					<td class="amount">{{ amount }}</td>
 					{% endfor %}
 				</tr>

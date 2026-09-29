@@ -66,17 +66,11 @@ def download_certificate(name):
 	if option:
 		_check_fully_paid(student_name, option)
 
-	frappe.flags.ignore_print_permissions = True
-	try:
-		pdf = frappe.get_print(
-			"Fee Certificate Request", name, "Fee Certificate", doc=request, as_pdf=True, no_letterhead=1
-		)
-	finally:
-		frappe.flags.ignore_print_permissions = False
+	from slcm.slcm.doctype.fee_certificate_request.fee_certificate_request import certificate_file
 
-	frappe.local.response.filename = f"{request.purpose.replace('/', '-')} - {name}.pdf"
-	frappe.local.response.filecontent = pdf
-	frappe.local.response.type = "pdf"
+	# The staff-edited PDF when one was uploaded, else the generated certificate.
+	filename, content, response_type = certificate_file(request, "pdf")
+	frappe.local.response.update(filename=filename, filecontent=content, type=response_type)
 
 
 def outstanding_fee(student_name):

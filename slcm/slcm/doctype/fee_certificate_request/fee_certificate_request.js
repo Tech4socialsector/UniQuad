@@ -47,14 +47,24 @@ function fetch_years(frm) {
 	});
 }
 
+function open_download(frm, file_format) {
+	const params = new URLSearchParams({ name: frm.doc.name, file_format });
+	window.open(`/api/method/${METHOD_BASE}.download?${params.toString()}`);
+}
+
+// PDF or Word; an uploaded edited PDF (if any) is offered first.
 function download_certificate(frm) {
-	const params = new URLSearchParams({
-		doctype: frm.doc.doctype,
-		name: frm.doc.name,
-		format: "Fee Certificate",
-		no_letterhead: 1,
-	});
-	window.open(`/api/method/frappe.utils.print_format.download_pdf?${params.toString()}`);
+	const options = [
+		...(frm.doc.edited_certificate ? [{ value: "pdf", label: __("Edited PDF (uploaded)") }] : []),
+		{ value: "generated", label: frm.doc.edited_certificate ? __("Generated PDF (without edits)") : __("PDF") },
+		{ value: "docx", label: __("Word (.docx) — to edit") },
+	];
+	frappe.prompt(
+		[{ fieldname: "file_format", fieldtype: "Select", label: __("Download As"), options, default: options[0].value, reqd: 1 }],
+		({ file_format }) => open_download(frm, file_format),
+		__("Download Certificate"),
+		__("Download")
+	);
 }
 
 frappe.ui.form.on("Fee Certificate Request", {

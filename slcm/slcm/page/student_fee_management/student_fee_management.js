@@ -23,6 +23,8 @@ const sfm_esc = (v) => frappe.utils.escape_html(v == null ? "" : String(v));
 const sfm_money = (v) => "₹" + format_number(flt(v), "#,##,###.##", 2);
 const sfm_int = (v) => format_number(cint(v), "#,##,###.##", 0);
 const sfm_date = (v) => (v ? frappe.datetime.str_to_user(String(v).slice(0, 10)) : "—");
+// 29-09-2026, 09:02 AM
+const sfm_datetime = (v) => (v ? moment(frappe.datetime.str_to_obj(String(v))).format("DD-MM-YYYY, hh:mm A") : "—");
 
 // Lucide icon set (inlined so every icon on the page comes from one consistent family).
 const SFM_ICON_PATHS = {
@@ -54,6 +56,7 @@ const SFM_ICON_PATHS = {
 	loader: '<path d="M21 12a9 9 0 1 1-6.219-8.56"/>',
 	upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/>',
 	columns: '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="M15 3v18"/>',
+	eye: '<path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/>',
 	award: '<circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/>',
 };
 const sfm_icon = (name, size = 16, cls = "") =>
@@ -392,6 +395,11 @@ class StudentFeeManagement {
 							<div class="sfm-muted sfm-report-caption" aria-live="polite"></div>
 						</div>
 						<div class="sfm-report-tools">
+							<div class="sfm-search-wrap sfm-cert-search" hidden>
+								${sfm_icon("search", 15, "sfm-search-icon")}
+								<input id="sfm-cert-search" type="search" class="sfm-control sfm-control-sm" autocomplete="off"
+									placeholder="${__("Search student / applicant name, ID…")}" aria-label="${__("Search certificates")}">
+							</div>
 							<div class="sfm-page-size">
 								<label for="sfm-report-size">${__("Rows per page")}</label>
 								<div class="sfm-select-wrap">
@@ -624,7 +632,25 @@ class StudentFeeManagement {
 		$r.on("click", ".sfm-view-tabs .sfm-tab", (e) => this.set_list_view($(e.currentTarget).data("view")));
 		$r.on("click", '[data-act="export-report"]', () => this.export_report());
 		$r.on("click", "[data-certificate]", (e) => {
-			window.open(`/api/method/${SFM_API}download_fee_certificate?name=${encodeURIComponent($(e.currentTarget).data("certificate"))}`);
+			const row = (this.certificate_rows || []).find((c) => c.name === $(e.currentTarget).data("certificate"));
+			if (row) this.certificate_download_dialog(row);
+		});
+		$r.on("click", "[data-certificate-preview]", (e) => {
+			// PDFs are served inline, so this opens the browser's viewer; the edited copy wins when uploaded.
+			const params = new URLSearchParams({ name: $(e.currentTarget).data("certificate-preview"), file_format: "pdf" });
+			window.open(`/api/method/${SFM_API}download_fee_certificate?${params.toString()}`, "_blank");
+		});
+		$r.on("click", "[data-certificate-upload]", (e) => {
+			const row = (this.certificate_rows || []).find((c) => c.name === $(e.currentTarget).data("certificate-upload"));
+			if (row) this.certificate_upload(row);
+		});
+		$r.on("input", "#sfm-cert-search", (e) => {
+			clearTimeout(this.cert_search_timer);
+			const value = $(e.currentTarget).val();
+			this.cert_search_timer = setTimeout(() => {
+				this.certificate_search = value.trim();
+				this.reload_report();
+			}, 350);
 		});
 		$r.on("click", ".sfm-report-student", (e) => {
 			if (e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1) return;
@@ -761,9 +787,9 @@ class StudentFeeManagement {
 					fieldname: "purpose",
 					fieldtype: "Select",
 					label: __("Purpose"),
-					options: purposes.map((p) => p.purpose),
-					default: purposes[0].purpose,
+					options: ["", ...purposes.map((p) => p.purpose)],
 					reqd: 1,
+					description: __("The heading and wording of the certificate follow the purpose."),
 				},
 				{
 					fieldname: "academic_year",
@@ -772,6 +798,18 @@ class StudentFeeManagement {
 					options: academic_years,
 					default: defaults.academic_year && academic_years.includes(defaults.academic_year) ? defaults.academic_year : academic_years[0],
 					reqd: 1,
+				},
+				{
+					fieldname: "file_format",
+					fieldtype: "Select",
+					label: __("Download As"),
+					options: [
+						{ value: "pdf", label: __("PDF") },
+						{ value: "docx", label: __("Word (.docx) — to edit") },
+					],
+					default: "pdf",
+					reqd: 1,
+					description: __("Edit the Word file, then upload it from the Fee Certificates tab; it is saved as PDF."),
 				},
 				{
 					fieldname: "has_scholarship",
@@ -785,14 +823,15 @@ class StudentFeeManagement {
 			primary_action: async (values) => {
 				dialog.get_primary_btn().prop("disabled", true);
 				try {
+					const { file_format, ...args } = values;
 					const r = await frappe.call({
 						method: SFM_API + "generate_fee_certificate",
-						args: values,
+						args,
 						freeze: true,
 						freeze_message: __("Generating certificate…"),
 					});
 					if (r.message) {
-						window.open(`/api/method/${SFM_API}download_fee_certificate?name=${encodeURIComponent(r.message)}`);
+						this.download_certificate_file(r.message, file_format === "docx" ? "docx" : "generated");
 						dialog.hide();
 						if (this.list_view === "certificates") this.load_report();
 						frappe.show_alert({
@@ -1147,6 +1186,8 @@ class StudentFeeManagement {
 			);
 		// Certificates are PDFs downloaded row by row — no Excel export.
 		$panel.find('[data-act="export-report"]').prop("hidden", view === "certificates");
+		$panel.find(".sfm-cert-search").prop("hidden", view !== "certificates");
+		$panel.find("#sfm-cert-search").val(this.certificate_search || "");
 		$panel.find(".sfm-report-caption").text(__("Loading…"));
 		$panel.find(".sfm-report-table tbody").html(
 			`<tr><td colspan="40"><div class="sfm-empty-state">${sfm_icon("loader", 22, "sfm-spin")}</div></td></tr>`
@@ -1159,7 +1200,12 @@ class StudentFeeManagement {
 				method:
 					SFM_API +
 					{ due_wise: "get_due_wise_report", outstanding: "get_outstanding_report", certificates: "get_fee_certificates" }[view],
-				args: { ...this.report_args(), start: rs.start, page_length: rs.page_length },
+				args: {
+					...this.report_args(),
+					...(view === "certificates" ? { certificate_search: this.certificate_search || "" } : {}),
+					start: rs.start,
+					page_length: rs.page_length,
+				},
 			});
 			result = r.message;
 		} catch (e) {
@@ -1266,6 +1312,7 @@ class StudentFeeManagement {
 	}
 
 	render_certificates({ rows, count }) {
+		this.certificate_rows = rows;
 		const $t = this.$root.find(".sfm-report-table");
 		$t.find("thead").html(`<tr>
 			<th scope="col">${__("Certificate No.")}</th>
@@ -1275,7 +1322,9 @@ class StudentFeeManagement {
 			<th scope="col">${__("Academic Year")}</th>
 			<th scope="col">${__("Generated On")}</th>
 			<th scope="col">${__("Generated By")}</th>
+			<th scope="col" class="center">${__("Preview")}</th>
 			<th scope="col" class="center">${__("Download")}</th>
+			<th scope="col" class="center">${__("Upload Edited")}</th>
 		</tr>`);
 		$t.find("tfoot").empty();
 		$t.find("tbody").html(
@@ -1296,14 +1345,23 @@ class StudentFeeManagement {
 								<td>${sfm_badge(is_applicant ? "Pending" : "Active", is_applicant ? __("Applicant") : __("Campus Student"))}</td>
 								<td class="sfm-wrap">${sfm_esc(d.purpose)}</td>
 								<td>${sfm_esc(d.academic_year || "—")}</td>
-								<td>${sfm_date(d.generated_on || d.creation)}</td>
+								<td class="sfm-nowrap">${sfm_datetime(d.generated_on || d.creation)}</td>
 								<td>${sfm_esc(d.source === "Student Portal" ? __("Student (portal)") : d.owner)}</td>
+								<td class="center"><button type="button" class="sfm-icon-btn" data-certificate-preview="${sfm_esc(d.name)}"
+									aria-label="${sfm_esc(__("Preview certificate {0}", [d.name]))}"
+									title="${sfm_esc(d.edited_certificate ? __("Preview (edited PDF)") : __("Preview"))}">${sfm_icon("eye", 16)}</button></td>
 								<td class="center"><button type="button" class="sfm-icon-btn" data-certificate="${sfm_esc(d.name)}"
 									aria-label="${sfm_esc(__("Download certificate {0}", [d.name]))}" title="${__("Download Certificate")}">${sfm_icon("download", 16)}</button></td>
+								<td class="center">
+									<button type="button" class="sfm-icon-btn" data-certificate-upload="${sfm_esc(d.name)}"
+										aria-label="${sfm_esc(__("Upload edited PDF for {0}", [d.name]))}"
+										title="${sfm_esc(d.edited_certificate ? __("Edited certificate uploaded {0} — click to replace or remove", [sfm_datetime(d.edited_on)]) : __("Upload edited certificate (Word or PDF — saved as PDF)"))}">${sfm_icon("upload", 16)}</button>
+									${d.edited_certificate ? `<div class="sfm-sub">${sfm_badge("Paid", __("Edited"))}</div>` : ""}
+								</td>
 							</tr>`;
 						})
 						.join("")
-				: `<tr><td colspan="8"><div class="sfm-empty-state"><span class="sfm-empty-icon">${sfm_icon("search-x", 22)}</span><div class="sfm-empty-title">${__("No certificates found")}</div><div class="sfm-muted">${__("Use the Fee Certificate button above to generate one.")}</div></div></td></tr>`
+				: `<tr><td colspan="10"><div class="sfm-empty-state"><span class="sfm-empty-icon">${sfm_icon("search-x", 22)}</span><div class="sfm-empty-title">${__("No certificates found")}</div><div class="sfm-muted">${__("Use the Fee Certificate button above to generate one.")}</div></div></td></tr>`
 		);
 		this.render_pager(cint(count), rows.length, {
 			state: this.report_state,
@@ -1314,6 +1372,101 @@ class StudentFeeManagement {
 			showing_one: __("Showing 1 of 1 certificate"),
 			showing_many: __("Showing {0} to {1} of {2} certificates"),
 		});
+	}
+
+	// Saves the file (a PDF would otherwise just open in the browser's viewer).
+	download_certificate_file(name, file_format = "pdf") {
+		const params = new URLSearchParams({ name, file_format });
+		const a = document.createElement("a");
+		a.href = `/api/method/${SFM_API}download_fee_certificate?${params.toString()}`;
+		a.download = "";
+		document.body.appendChild(a);
+		a.click();
+		a.remove();
+	}
+
+	// Pick PDF / Word; when an edited PDF was uploaded it is the default.
+	certificate_download_dialog(row) {
+		const options = [
+			...(row.edited_certificate ? [{ value: "pdf", label: __("Edited PDF (uploaded {0})", [sfm_date(row.edited_on)]) }] : []),
+			{ value: "generated", label: row.edited_certificate ? __("Generated PDF (without edits)") : __("PDF") },
+			{ value: "docx", label: __("Word (.docx) — to edit") },
+		];
+		const dialog = new frappe.ui.Dialog({
+			title: __("Download {0}", [row.name]),
+			fields: [
+				{ fieldname: "file_format", fieldtype: "Select", label: __("Download As"), options, default: options[0].value, reqd: 1 },
+			],
+			primary_action_label: __("Download"),
+			primary_action: ({ file_format }) => {
+				dialog.hide();
+				this.download_certificate_file(row.name, file_format);
+			},
+		});
+		dialog.$wrapper.addClass("sfm-dialog");
+		dialog.show();
+	}
+
+	// Staff edit the Word version, save it as PDF and attach it here; it then replaces
+	// the generated certificate on every download (desk and student portal).
+	certificate_upload(row) {
+		const save = (file_url) =>
+			frappe
+				.call({
+					method: SFM_API + "set_edited_certificate",
+					args: { name: row.name, file_url },
+					freeze: true,
+					freeze_message: __("Saving certificate as PDF…"),
+				})
+				.then((r) => {
+					frappe.show_alert({
+						message: !file_url
+							? __("Edited certificate removed from {0}", [row.name])
+							: r.message && r.message.converted
+							? __("Word file converted and saved as PDF for {0}", [row.name])
+							: __("Edited PDF attached to {0}", [row.name]),
+						indicator: "green",
+					});
+					this.load_report();
+				});
+		const upload = () =>
+			new frappe.ui.FileUploader({
+				doctype: "Fee Certificate Request",
+				docname: row.name,
+				folder: "Home/Attachments",
+				make_attachments_public: 0,
+				restrictions: { allowed_file_types: [".pdf", ".docx"], max_number_of_files: 1 },
+				on_success: (file) => {
+					const url = (file.file_url || "").toLowerCase();
+					if (!url.endsWith(".pdf") && !url.endsWith(".docx")) {
+						frappe.msgprint(__("Please upload the certificate as a PDF or Word (.docx) file."));
+						return;
+					}
+					save(file.file_url);
+				},
+			});
+		if (!row.edited_certificate) return upload();
+		const dialog = new frappe.ui.Dialog({
+			title: __("Edited PDF — {0}", [row.name]),
+			fields: [
+				{
+					fieldtype: "HTML",
+					options: `<p class="sfm-muted">${__("An edited PDF was uploaded on {0}. Downloads give this file instead of the generated certificate.", [sfm_date(row.edited_on)])}</p>`,
+				},
+			],
+			primary_action_label: __("Replace PDF"),
+			primary_action: () => {
+				dialog.hide();
+				upload();
+			},
+			secondary_action_label: __("Remove Edited PDF"),
+			secondary_action: () => {
+				dialog.hide();
+				frappe.confirm(__("Remove the edited PDF? Downloads will go back to the generated certificate."), () => save(null));
+			},
+		});
+		dialog.$wrapper.addClass("sfm-dialog");
+		dialog.show();
 	}
 
 	export_report() {
@@ -2726,6 +2879,8 @@ class StudentFeeManagement {
 		/* ── Student detail ── */
 		.sfm-view-tabs { margin-bottom: -8px; }
 		.sfm-report-tools { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+		.sfm-cert-search { min-width: 260px; }
+		.sfm-nowrap { white-space: nowrap; }
 		.sfm-report-table tfoot td { font-weight: 700; background: var(--sfm-subtle); border-top: 2px solid var(--sfm-primary); padding: 12px 14px; white-space: nowrap; }
 		.sfm-report-table td { white-space: nowrap; }
 		.sfm-report-table td.sfm-wrap { white-space: normal; min-width: 180px; }

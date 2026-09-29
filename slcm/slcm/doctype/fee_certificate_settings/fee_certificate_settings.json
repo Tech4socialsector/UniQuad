@@ -27,9 +27,11 @@
   "section_bank",
   "bank_account_name",
   "bank_account_no",
+  "bank_name",
   "column_break_bank",
   "bank_ifsc_code",
   "bank_branch",
+  "bank_account_type",
   "section_purposes",
   "purposes"
  ],
@@ -149,12 +151,17 @@
   {
    "fieldname": "bank_account_name",
    "fieldtype": "Data",
-   "label": "Account Name"
+   "label": "Account Holder Name"
   },
   {
    "fieldname": "bank_account_no",
    "fieldtype": "Data",
    "label": "Account Number"
+  },
+  {
+   "fieldname": "bank_name",
+   "fieldtype": "Data",
+   "label": "Bank Name"
   },
   {
    "fieldname": "column_break_bank",
@@ -168,7 +175,13 @@
   {
    "fieldname": "bank_branch",
    "fieldtype": "Data",
-   "label": "Bank & Branch"
+   "label": "Branch"
+  },
+  {
+   "default": "Savings",
+   "fieldname": "bank_account_type",
+   "fieldtype": "Data",
+   "label": "Account Type"
   },
   {
    "fieldname": "section_purposes",
@@ -185,7 +198,7 @@
  ],
  "issingle": 1,
  "links": [],
- "modified": "2026-09-25 00:00:00.000000",
+ "modified": "2026-09-28 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Fee Certificate Settings",

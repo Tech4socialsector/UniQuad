@@ -23,7 +23,9 @@ DEFAULT_BANK = {
 	"bank_account_name": "National Law School of India University",
 	"bank_account_no": "50100508244465",
 	"bank_ifsc_code": "HDFC0000361",
-	"bank_branch": "HDFC, Basaveshwaranagar, Bengaluru",
+	"bank_name": "HDFC BANK",
+	"bank_branch": "Basaveshwaranagar Branch, Bengaluru- 560079",
+	"bank_account_type": "Savings",
 }
 
 
