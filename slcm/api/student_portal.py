@@ -688,6 +688,35 @@ def download_re_exam_receipt(registration_name):
             frappe.ValidationError,
         )
 
+    _send_re_exam_receipt(registration_name)
+
+
+@frappe.whitelist()
+def parent_download_re_exam_receipt(registration_name, student_name):
+    """Same receipt as download_re_exam_receipt, for a parent viewing their ward's record."""
+    if frappe.session.user == "Guest":
+        frappe.throw(frappe._("Please log in."), frappe.AuthenticationError)
+
+    _require_parent_for_student(student_name)
+
+    reg = frappe.db.get_value(
+        "Re Exam Registration",
+        {"name": registration_name, "student": student_name},
+        ["name", "payment_status"],
+        as_dict=True,
+    )
+    if not reg:
+        frappe.throw(frappe._("Registration not found or access denied."), frappe.PermissionError)
+    if reg.payment_status not in ("Paid", "Captured"):
+        frappe.throw(
+            frappe._("Receipt is only available after payment is confirmed."),
+            frappe.ValidationError,
+        )
+
+    _send_re_exam_receipt(registration_name)
+
+
+def _send_re_exam_receipt(registration_name):
     # Resolve print format from Student Portal Settings
     try:
         pf_setting = frappe.db.get_single_value(
