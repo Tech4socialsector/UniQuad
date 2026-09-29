@@ -1,21 +1,21 @@
 {
  "app": "slcm",
  "bg_color": "blue",
- "creation": "2026-07-27 14:53:59.384685",
+ "creation": "2026-05-15 01:39:03.076257",
  "docstatus": 0,
  "doctype": "Desktop Icon",
  "hidden": 0,
- "icon": "education",
+ "icon": "calendar",
  "icon_type": "Link",
  "idx": 0,
- "label": "Student Registration",
- "link_to": "Student Registration",
+ "label": "Venue Bookings",
+ "link_to": "Venue Bookings",
  "link_type": "Workspace Sidebar",
- "modified": "2026-09-29 16:08:42.877337",
+ "modified": "2026-09-29 16:08:42.940056",
  "modified_by": "Administrator",
- "name": "Student Registration",
+ "name": "Venue Bookings",
  "owner": "Administrator",
- "parent_icon": "Academics",
+ "parent_icon": "Campus & Support",
  "restrict_removal": 0,
  "roles": [
   {
@@ -25,20 +25,15 @@
    "role": "slcm_Registration Officer"
   },
   {
-   "role": "slcm_Registration User"
-  },
-  {
-   "role": "slcm_Documentation Officer"
-  },
-  {
    "role": "Campus Admin"
   },
   {
    "role": "Admission Admin"
   },
   {
-   "role": "System Manager"
+   "role": "slcm_Faculty"
   }
  ],
+ "sidebar": "Venue Bookings",
  "standard": 1
 }
