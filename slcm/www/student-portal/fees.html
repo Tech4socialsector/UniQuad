@@ -92,6 +92,7 @@
 .spf-badge-paid { color: var(--spf-paid); padding-left: 0; padding-right: 0; }
 .spf-badge-warning { color: var(--spf-amber); background: rgba(146,12,36,0.10); }
 .spf-badge-danger  { color: var(--spf-red); background: rgba(146,12,36,0.07); }
+.spf-badge-academic { color: #920C24; background: #fff0f2; }
 .spf-badge-neutral { color: var(--spf-muted); background: var(--spf-row); }
 .spf-tone-success { color: var(--spf-green) !important; }
 .spf-tone-danger  { color: var(--spf-red) !important; }
@@ -687,91 +688,47 @@
   {% endif %}
 </section>
 
-{# ═══════════════ Fee structure + outstanding ═══════════════ #}
-<div class="spf-row spf-row-detail fade-in">
-  <section class="spf-card" aria-labelledby="spf-fs-title">
-    <div class="spf-card-hd">
-      <div style="min-width:0;">
-        <h2 class="spf-card-title" id="spf-fs-title"><span class="sp-ms" aria-hidden="true">description</span>Fee Structure
-          {% if fee_structure_status %}<span class="spf-badge {{ 'spf-badge-success' if fee_structure_status == 'Active' else 'spf-badge-neutral' }}">{{ fee_structure_status }}</span>{% endif %}
-        </h2>
-        {% if fee_structure_name %}<div class="spf-card-sub">{{ fee_structure_name }}</div>{% endif %}
-      </div>
-      {% if fee_structure_valid_from %}
-      <div class="spf-card-meta"><span>Validity: <span style="color:var(--spf-text);">{{ frappe.utils.formatdate(fee_structure_valid_from, "dd MMM yyyy") }}{% if fee_structure_valid_until %} – {{ frappe.utils.formatdate(fee_structure_valid_until, "dd MMM yyyy") }}{% endif %}</span></span></div>
-      {% endif %}
+{# ═══════════════ Upcoming / outstanding ═══════════════ #}
+<section class="spf-card fade-in" id="spf-outstanding" style="margin-bottom:16px;" aria-labelledby="spf-out-title">
+  <div class="spf-card-hd">
+    <h2 class="spf-card-title" id="spf-out-title"><span class="sp-ms" aria-hidden="true">pending_actions</span>Upcoming / Outstanding Fees</h2>
+    {% set _out_err = _err.invoices or _err.demands or _err.re_exams or _err.hostel_fines %}
+    {% if outstanding_rows %}
+    <div class="spf-card-meta">
+      <span class="{{ 'spf-tone-warning' if outstanding_pending_count else 'spf-tone-success' }}">{{ outstanding_pending_count }} pending</span>
+      <span aria-hidden="true" class="spf-sep">|</span>
+      <span class="{{ 'spf-tone-danger' if outstanding_overdue_count else 'spf-tone-success' }}">{{ outstanding_overdue_count }} overdue</span>
     </div>
-    {% if _err.fee_structure %}
-      {{ section_error('the fee structure') }}
-    {% elif not fs_components %}
-      {{ empty('description', 'No fee structure linked', 'The component-wise fee structure will appear here once assigned.') }}
-    {% else %}
-    <table class="spf-t spf-t-kv">
-      <caption class="spf-sr-only">Fee structure components</caption>
-      <colgroup><col style="width:65%;"><col style="width:35%;"></colgroup>
-      <thead><tr><th scope="col" class="c-text">Fee Component</th><th scope="col" class="c-num">Amount</th></tr></thead>
-      <tbody>
-        {% set fs_total = namespace(val=0) %}
-        {% for comp in fs_components %}
-        {% set comp_amt = comp.total_amount or comp.amount or 0 %}
-        {% set fs_total.val = fs_total.val + comp_amt %}
-        <tr class="spf-row-data">
-          <td class="c-text c-primary">{{ comp.component_name or '—' }}{% if comp.is_taxable and comp.tax_rate %}<span class="spf-tax-pill">{{ comp.tax_rate | int }}% tax</span>{% endif %}</td>
-          <td class="c-num" data-label="Amount">{{ _inr.format(comp_amt) }}</td>
-        </tr>
-        {% endfor %}
-        {% if total_scholarship > 0 %}
-        <tr class="spf-total-row"><td class="c-text c-primary">Total Programme Fee</td><td class="c-num" data-label="Amount">{{ _inr.format(fs_total.val) }}</td></tr>
-        <tr class="spf-disc-row"><td class="c-text c-primary">Scholarship / Discount</td><td class="c-num spf-tone-success" data-label="Amount">−{{ _inr.format(total_scholarship) }}</td></tr>
-        <tr class="spf-net-row"><td class="c-text c-primary">Net Payable</td><td class="c-num" data-label="Amount">{{ '—' if _err.summary else _inr.format(total_payable) }}</td></tr>
-        {% else %}
-        <tr class="spf-net-row"><td class="c-text c-primary">Total Programme Fee</td><td class="c-num" data-label="Amount">{{ _inr.format(fs_total.val) }}</td></tr>
-        {% endif %}
-      </tbody>
-    </table>
+    {% elif not _out_err %}
+    <div class="spf-card-meta spf-tone-success">0 pending <span aria-hidden="true" class="spf-sep">|</span> 0 overdue</div>
     {% endif %}
-  </section>
-
-  <section class="spf-card" id="spf-outstanding" aria-labelledby="spf-out-title">
-    <div class="spf-card-hd">
-      <h2 class="spf-card-title" id="spf-out-title"><span class="sp-ms" aria-hidden="true">pending_actions</span>Upcoming / Outstanding Fees</h2>
-      {% set _out_err = _err.invoices or _err.demands or _err.re_exams or _err.hostel_fines %}
-      {% if outstanding_rows %}
-      <div class="spf-card-meta">
-        <span class="{{ 'spf-tone-warning' if outstanding_pending_count else 'spf-tone-success' }}">{{ outstanding_pending_count }} pending</span>
-        <span aria-hidden="true" class="spf-sep">|</span>
-        <span class="{{ 'spf-tone-danger' if outstanding_overdue_count else 'spf-tone-success' }}">{{ outstanding_overdue_count }} overdue</span>
-      </div>
-      {% elif not _out_err %}
-      <div class="spf-card-meta spf-tone-success">0 pending <span aria-hidden="true" class="spf-sep">|</span> 0 overdue</div>
-      {% endif %}
-    </div>
-    {% if _out_err and not outstanding_rows %}
-      {{ section_error('outstanding fees') }}
-    {% elif not outstanding_rows %}
-      {{ empty('task_alt', 'No outstanding fees', 'You have no pending or overdue payments.', ok=True) }}
-    {% else %}
-    {% if _out_err %}<div class="spf-notice spf-notice-danger" style="margin:12px 20px 0;"><span class="sp-ms" aria-hidden="true">error</span><div>Some fee records could not be loaded, so this list may be incomplete. <button type="button" class="spf-link" onclick="window.location.reload()">Retry</button></div></div>{% endif %}
-    <div class="spf-t-scroll" data-rows="5" tabindex="0" role="region" aria-label="Upcoming and outstanding fees (scrollable)">
-    <table class="spf-t">
-      <caption class="spf-sr-only">Upcoming and outstanding fees</caption>
-      <colgroup><col style="width:40%;"><col style="width:22%;"><col style="width:16%;"><col style="width:22%;"></colgroup>
-      <thead><tr><th scope="col" class="c-text">Component</th><th scope="col" class="c-date">Due Date</th><th scope="col" class="c-num">Amount</th><th scope="col" class="c-status">Status</th></tr></thead>
-      <tbody>
-        {% for r in outstanding_rows %}
-        <tr class="spf-row-data">
-          <td class="c-text c-primary"><div class="spf-cell-main">{{ r.component }}</div><div class="spf-cell-sub">{{ r.sub }}</div></td>
-          <td class="c-date" data-label="Due Date"><div><div>{{ r.due_date_fmt or '—' }}</div>{% if r.kind == 'demand' and r.is_overdue and r.days_overdue %}<div class="spf-cell-hint spf-tone-danger">{{ r.days_overdue }}d overdue</div>{% endif %}</div></td>
-          <td class="c-num {{ 'spf-tone-danger' if r.is_overdue }}" data-label="Amount">{{ r.amount_fmt }}</td>
-          <td class="c-status" data-label="Status">{{ badge(r.status) }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    </div>
-    {% endif %}
-  </section>
-</div>
+  </div>
+  {% if _out_err and not outstanding_rows %}
+    {{ section_error('outstanding fees') }}
+  {% elif not outstanding_rows %}
+    {{ empty('task_alt', 'No outstanding fees', 'You have no pending or overdue payments.', ok=True) }}
+  {% else %}
+  {% if _out_err %}<div class="spf-notice spf-notice-danger" style="margin:12px 20px 0;"><span class="sp-ms" aria-hidden="true">error</span><div>Some fee records could not be loaded, so this list may be incomplete. <button type="button" class="spf-link" onclick="window.location.reload()">Retry</button></div></div>{% endif %}
+  <div class="spf-t-scroll" data-rows="5" tabindex="0" role="region" aria-label="Upcoming and outstanding fees (scrollable)">
+  <table class="spf-t">
+    <caption class="spf-sr-only">Upcoming and outstanding fees</caption>
+    <colgroup><col style="width:34%;"><col style="width:18%;"><col style="width:16%;"><col style="width:14%;"><col style="width:18%;"></colgroup>
+    <thead><tr><th scope="col" class="c-text">Component</th><th scope="col" class="c-text">Demand Type</th><th scope="col" class="c-date">Due Date</th><th scope="col" class="c-num">Amount</th><th scope="col" class="c-status">Status</th></tr></thead>
+    <tbody>
+      {% for r in outstanding_rows %}
+      <tr class="spf-row-data">
+        <td class="c-text c-primary"><div class="spf-cell-main">{{ r.component }}</div><div class="spf-cell-sub">{{ r.sub }}</div></td>
+        <td class="c-text" data-label="Demand Type">{% if r.demand_type %}<span class="spf-badge {{ 'spf-badge-academic' if r.demand_type == 'Academic' else 'spf-badge-neutral' }}">{{ r.demand_type }}</span>{% else %}<span class="spf-tone-muted">—</span>{% endif %}</td>
+        <td class="c-date" data-label="Due Date"><div><div>{{ r.due_date_fmt or '—' }}</div>{% if r.kind == 'demand' and r.is_overdue and r.days_overdue %}<div class="spf-cell-hint spf-tone-danger">{{ r.days_overdue }}d overdue</div>{% endif %}</div></td>
+        <td class="c-num {{ 'spf-tone-danger' if r.is_overdue }}" data-label="Amount">{{ r.amount_fmt }}</td>
+        <td class="c-status" data-label="Status">{{ badge(r.status) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% endif %}
+</section>
 
 {# ═══════════════ Invoices & payments (tabbed) ═══════════════ #}
 <section class="spf-card fade-in" id="spf-invoices" aria-labelledby="spf-ip-title" style="margin-bottom:16px;">

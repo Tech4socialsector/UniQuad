@@ -293,8 +293,7 @@
   <span class="ms" aria-hidden="true">warning</span>
   <div>
     <strong>{{ courses_below_75 }} course{% if courses_below_75 != 1 %}s{% endif %} below {{ att_good|int }}% attendance</strong>
-    &nbsp;—&nbsp; may affect exam eligibility.
-    <a href="/parent-portal/attendance{{ _q }}" style="color:inherit;font-weight:700;text-decoration:underline;">View details →</a>
+    &nbsp;<a href="/parent-portal/attendance{{ _q }}" style="color:inherit;font-weight:700;text-decoration:underline;">View details →</a>
   </div>
 </div>
 {% endif %}

@@ -847,7 +847,7 @@ def _build_view_model(context, errors):
     rows = []
     for inv in payable_invoices:
         rows.append(frappe._dict(
-            component=inv.label, sub=inv.name, kind="invoice",
+            component=inv.label, sub=inv.name, kind="invoice", demand_type="Academic",
             due_date=inv.due_date, due_date_fmt=inv.due_date_fmt,
             amount_fmt=inv.eff_formatted_outstanding, status=inv.display_status,
             is_overdue=bool(inv.is_overdue), days_overdue=0,
@@ -857,7 +857,7 @@ def _build_view_model(context, errors):
             continue
         rows.append(frappe._dict(
             component=d.fee_component or d.description or "Additional charge",
-            sub="Additional charge", kind="demand",
+            sub="Additional charge", kind="demand", demand_type=d.demand_type or "",
             due_date=d.due_date, due_date_fmt=d.due_date_fmt,
             amount_fmt=d.formatted_outstanding,
             status="Overdue" if (d.is_demand_overdue and d.status == "Pending") else d.status,
@@ -866,7 +866,7 @@ def _build_view_model(context, errors):
         ))
     for r in reexam_due:
         rows.append(frappe._dict(
-            component=r.course_name or "Re-examination fee", sub="Re-examination fee",
+            component=r.course_name or "Re-examination fee", sub="Re-examination fee", demand_type="Academic",
             kind="reexam", due_date=None, due_date_fmt="",
             amount_fmt=r.formatted_fee, status=r.payment_status or "Pending",
             is_overdue=False, days_overdue=0,
@@ -875,7 +875,7 @@ def _build_view_model(context, errors):
         rows.append(frappe._dict(
             component=f.reason or "Hostel fine",
             sub="Hostel fine" + (f" · {_fmt_date(f.fine_date)}" if f.fine_date else ""),
-            kind="fine", due_date=None, due_date_fmt="",
+            kind="fine", demand_type="Non Academic", due_date=None, due_date_fmt="",
             amount_fmt=f.formatted_amount, status="Unpaid", is_overdue=False, days_overdue=0,
         ))
     rows.sort(key=lambda r: (r.due_date is None, frappe.utils.getdate(r.due_date) if r.due_date else today))

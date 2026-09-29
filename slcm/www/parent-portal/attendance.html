@@ -198,58 +198,12 @@
 
 {% else %}
 
-{# ── Summary Stats ─────────────────────────────────────────────── #}
-<div class="pp-stat-grid fade-in" style="animation-delay:0.05s;grid-template-columns:repeat(3,1fr);">
-
-  <div class="pp-stat-card-wrap">
-    <div class="pp-stat-card"
-         style="--pp-stat-accent:{% if courses_below_75 == 0 %}var(--pp-success){% else %}var(--pp-danger){% endif %};">
-      <div class="pp-stat-icon"
-           style="background:{% if courses_below_75 == 0 %}var(--pp-success-bg);color:var(--pp-success){% else %}var(--pp-danger-bg);color:var(--pp-danger){% endif %};">
-        {% if courses_below_75 == 0 %}verified{% else %}warning{% endif %}
-      </div>
-      <div class="pp-stat-label">Below {{ att_good|int }}%</div>
-      <div class="pp-stat-value"
-           style="color:{% if courses_below_75 == 0 %}var(--pp-success){% else %}var(--pp-danger){% endif %};">
-        {{ courses_below_75 }}
-      </div>
-      <div class="pp-stat-sub">{% if courses_below_75 == 0 %}All on track{% else %}Need attention{% endif %}</div>
-    </div>
-  </div>
-
-  <div class="pp-stat-card-wrap">
-    <div class="pp-stat-card"
-         style="--pp-stat-accent:{% if courses_eligible == total_courses and total_courses > 0 %}var(--pp-success){% else %}var(--pp-primary){% endif %};">
-      <div class="pp-stat-icon"
-           style="color:var(--pp-primary);">
-        shield
-      </div>
-      <div class="pp-stat-label">Exam Eligible</div>
-      <div class="pp-stat-value"
-           style="color:var(--pp-primary);">
-        {{ courses_eligible }}/{{ total_courses }}
-      </div>
-      <div class="pp-stat-sub">Courses cleared</div>
-    </div>
-  </div>
-
-  <div class="pp-stat-card-wrap">
-    <div class="pp-stat-card" style="--pp-stat-accent:var(--pp-primary);">
-      <div class="pp-stat-icon" style="background:var(--pp-primary-light);color:var(--pp-primary);">menu_book</div>
-      <div class="pp-stat-label">Total Courses</div>
-      <div class="pp-stat-value" style="color:var(--pp-primary);">{{ total_courses }}</div>
-      <div class="pp-stat-sub">Enrolled</div>
-    </div>
-  </div>
-</div>
-
 {# ── Low Attendance Alert ───────────────────────────────────────── #}
 {% if courses_below_75 > 0 %}
 <div class="pp-alert pp-alert-danger fade-in" style="margin-bottom:22px;">
   <span class="ms">error</span>
   <div>
     <strong>{{ courses_below_75 }} course{% if courses_below_75 != 1 %}s{% endif %} below {{ att_good|int }}% attendance</strong>
-    &nbsp;—&nbsp; may affect exam eligibility.
   </div>
 </div>
 {% endif %}

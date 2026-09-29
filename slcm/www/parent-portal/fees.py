@@ -649,7 +649,7 @@ def _build_view_model(context, errors):
     rows = []
     for inv in payable_invoices:
         rows.append(frappe._dict(
-            component=inv.label, sub=inv.name, kind="invoice",
+            component=inv.label, sub=inv.name, kind="invoice", demand_type="Academic",
             due_date=inv.due_date, due_date_fmt=inv.due_date_fmt,
             amount_fmt=inv.formatted_outstanding, status=inv.display_status,
             is_overdue=bool(inv.is_overdue), academic_year=inv.academic_year or "",
@@ -660,7 +660,7 @@ def _build_view_model(context, errors):
         overdue = d.status == "Overdue" or d.is_demand_overdue
         rows.append(frappe._dict(
             component=d.fee_component or d.description or "Additional charge",
-            sub="Additional charge", kind="demand",
+            sub="Additional charge", kind="demand", demand_type=d.demand_type or "",
             due_date=d.due_date, due_date_fmt=d.due_date_fmt,
             amount_fmt=d.formatted_outstanding,
             status="Overdue" if (d.is_demand_overdue and d.status == "Pending") else d.status,
