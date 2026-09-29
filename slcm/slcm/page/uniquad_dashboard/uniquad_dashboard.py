@@ -1002,6 +1002,60 @@ PAYMENT_COLUMNS = [("name", "Payment", "form", True), ("student", "Student ID", 
 VENUE_COLUMNS = [("name", "Booking", "form", True), ("event_name", "Event", "text", True), ("venue", "Venue", "text", True), ("building", "Building", "text", True), ("start_datetime", "Starts", "datetime", True), ("end_datetime", "Ends", "datetime", True), ("requester_type", "Requested By", "text", True), ("requester_name", "Requester", "text", True), ("status", "Status", "badge", True)]
 PACE_COLUMNS = [("name", "Application", "form", True), ("applicant_name", "Applicant", "text", True), ("programme", "PACE Programme", "text", True), ("academic_year", "Academic Year", "text", True), ("submission_date", "Submitted", "date", True), ("status", "Status", "badge", True), ("modified", "Updated On", "datetime", True)]
 FLE_COLUMNS = [("name", "Registration", "form", True), ("candidate_name", "Candidate", "text", True), ("candidate_email_id", "Email", "text", True), ("last_class_attended", "Last Class", "text", True), ("timestamp", "Registered", "datetime", True), ("enrollment_status", "Enrolment", "badge", True), ("payment_status", "Payment", "badge", True), ("paid_amount", "Paid", "currency", True)]
+TICKET_COLUMNS = [("name", "Ticket", "form", True), ("subject", "Subject", "text", True), ("raised_by", "Raised By", "text", True), ("ticket_type", "Type", "text", True), ("agent_group", "Team", "text", True), ("priority", "Priority", "text", True), ("opening_date", "Opened", "date", True), ("status", "Status", "badge", True)]
+TICKET_SEARCH = ["name", "subject", "raised_by"]
+# Chart bars pass one of these as a drilldown param; each maps 1:1 to an equality filter on that field.
+TICKET_PARAMS = ("status", "agent_group", "ticket_type", "raised_by")
+VENUE_PARAMS = ("status", "requester_type", "replied_by", "swap_status")
+TICKET_CLOSED_CATEGORIES = ("Resolved", "Closed")
+REQUESTER_KINDS = ("Student", "Faculty", "Other")
+
+
+def _param_filters(p, names):
+	return [[k, "=", p[k]] for k in names if p.get(k)]
+
+
+def f_tickets(ctx):
+	return _date_range_on(ctx, "opening_date")
+
+
+def _open_tickets():
+	return [["status_category", "not in", TICKET_CLOSED_CATEGORIES]]
+
+
+def _people_emails():
+	"""(student emails, faculty emails), lower-cased. Used only to classify who raised a ticket —
+	never returned. Cached per request."""
+	if not getattr(frappe.local, "uq_people_emails", None):
+		def collect(doctype, fields):
+			out = set()
+			for r in frappe.get_all(doctype, fields=fields):
+				out.update((r.get(f) or "").strip().lower() for f in fields)
+			out.discard("")
+			return out
+
+		frappe.local.uq_people_emails = (
+			collect("Student Master", ["email", "official_email_id", "personal_email", "user"]),
+			collect("Faculty", ["email", "official_email_id", "user_id"]),
+		)
+	return frappe.local.uq_people_emails
+
+
+def _requester_kind(email):
+	email = (email or "").strip().lower()
+	students, faculty = _people_emails()
+	return "Student" if email in students else "Faculty" if email in faculty else "Other"
+
+
+def _ticket_kind_filter(p):
+	kind = p.get("kind")
+	if kind not in REQUESTER_KINDS:
+		return []
+	students, faculty = _people_emails()
+	if kind == "Other":
+		known = sorted(students | faculty)
+		return [["raised_by", "not in", known]] if known else []
+	return [["raised_by", "in", sorted(students if kind == "Student" else faculty) or [NONE]]]
 
 DRILLDOWNS.update({
 	# ID Card
@@ -1016,7 +1070,10 @@ DRILLDOWNS.update({
 	"fee_refunds": _drill("Approved Fee Refunds", "Fee Refund", [("name", "Refund", "form", True), ("student", "Student ID", "student", True), ("student_name", "Student", "text", True), ("fee_component", "Fee Component", "text", True), ("refund_type", "Type", "text", True), ("refund_amount", "Amount", "currency", True), ("refund_mode", "Mode", "text", True), ("refund_date", "Refunded On", "date", True), ("status", "Status", "badge", True)], lambda c, p: f_refunds(c), ["name", "student", "student_name"], ("refund_date", "desc"), "refunds"),
 	"fee_concessions": _drill("Approved Fee Concessions", "Fee Concession", [("name", "Concession", "form", True), ("student", "Student ID", "student", True), ("fee_component", "Fee Component", "text", True), ("concession_type", "Type", "text", True), ("waiver_value", "Waiver", "currency", True), ("concession_date", "Date", "date", True), ("status", "Status", "badge", True)], lambda c, p: f_concessions(c), ["name", "student", "registration_id"], ("concession_date", "desc"), "payments"),
 	# Venue booking
-	"venue_bookings_all": _drill("Venue Bookings in Date Range", "Venue Booking", VENUE_COLUMNS, lambda c, p: _venue_range(c), ["name", "event_name", "venue", "requester_name"], ("start_datetime", "desc"), "venues"),
+	"venue_bookings_all": _drill("Venue Bookings in Date Range", "Venue Booking", VENUE_COLUMNS + [("replied_by", "Decided By", "text", True), ("swap_status", "Swap", "badge", True)], lambda c, p: _venue_range(c) + _param_filters(p, VENUE_PARAMS), ["name", "event_name", "venue", "requester_name"], ("start_datetime", "desc"), "venues", params={k: "optional" for k in VENUE_PARAMS}),
+	# Helpdesk
+	"tickets_open": _drill("Open Tickets", "HD Ticket", TICKET_COLUMNS, lambda c, p: _open_tickets() + _param_filters(p, TICKET_PARAMS) + _ticket_kind_filter(p), TICKET_SEARCH, ("opening_date", "asc"), "all_time", params={k: "optional" for k in TICKET_PARAMS + ("kind",)}, all_time=True),
+	"tickets_range": _drill("Tickets Raised in Date Range", "HD Ticket", TICKET_COLUMNS, lambda c, p: f_tickets(c) + _param_filters(p, TICKET_PARAMS) + _ticket_kind_filter(p), TICKET_SEARCH, ("opening_date", "desc"), "tickets", params={k: "optional" for k in TICKET_PARAMS + ("kind",)}),
 	"venue_bookings_closed": _drill("Rejected / Cancelled Venue Bookings", "Venue Booking", VENUE_COLUMNS + [("admin_remarks", "Remarks", "text", False)], lambda c, p: _venue_range(c) + [["status", "in", ["Rejected", "Cancelled"]]], ["name", "event_name", "venue"], ("start_datetime", "desc"), "venues"),
 	"venues_active": _drill("Active Venues", "Venue Master", [("name", "Venue", "form", True), ("venue_code", "Code", "text", True), ("venue_type", "Type", "text", True), ("building", "Building", "text", True), ("floor", "Floor", "text", True), ("capacity", "Capacity", "int", True)], lambda c, p: [["is_active", "=", 1]], ["name", "venue_code", "building"], ("name", "asc"), "all_time"),
 	# PACE
@@ -1040,6 +1097,7 @@ SCOPE.update({
 	"fle": [DR],
 	"years": [Y],
 	"venues": [DR],
+	"tickets": [DR],
 	"pending": [Y, T, P, B, S, C, F, ST, G, DR],
 	"activity": [Y, T, P, B, S, C, F, ST, G],
 })
@@ -1340,8 +1398,76 @@ def _chart_application_stages(ctx):
 	return _bars([frappe._dict(stage=k, v=v) for k, v in stages.items()], "stage", order=APPLICATION_STAGE_ORDER + ("Unclassified",), limit=12)
 
 
+def _chart_tickets(ctx):
+	open_f = _open_tickets()
+	range_f = f_tickets(ctx)
+	# who raised them: label each email with the person's name only when the user can read that record
+	raisers = _bars(_group("HD Ticket", range_f, "raised_by"), "raised_by", limit=10, empty_label="Unknown")
+	emails = [i["key"] for i in raisers if i["key"]]
+	names = {}
+	for dt, fields, name_fields in (
+		("Faculty", ["email", "official_email_id", "user_id"], ["first_name", "last_name"]),
+		("Student Master", ["email", "official_email_id", "personal_email", "user"], ["first_name"]),
+	):
+		if not emails or not _can(dt):
+			continue
+		for r in frappe.get_list(dt, or_filters=[[f, "in", emails] for f in fields], fields=name_fields + fields, limit_page_length=0):
+			name = " ".join(filter(None, (r.get(n) for n in name_fields)))
+			names.update({r.get(f).strip().lower(): name for f in fields if r.get(f)})
+	for i in raisers:
+		if i["key"]:
+			who = names.get(i["key"].strip().lower())
+			i["sub"] = _requester_kind(i["key"])
+			if who:
+				i["label"] = f"{who} ({i['key']})"
+	kinds = {}
+	for r in _group("HD Ticket", range_f, "raised_by"):
+		k = _requester_kind(r.raised_by)
+		kinds[k] = kinds.get(k, 0) + cint(r.v)
+	return {
+		"open_total": frappe.get_list("HD Ticket", filters=open_f, fields=[{"COUNT": "*", "as": "v"}], order_by=None)[0].v or 0,
+		"raised_total": frappe.get_list("HD Ticket", filters=range_f, fields=[{"COUNT": "*", "as": "v"}], order_by=None)[0].v or 0,
+		"tickets_open_status": _bars(_group("HD Ticket", open_f, "status"), "status"),
+		"tickets_open_team": _bars(_group("HD Ticket", open_f, "agent_group"), "agent_group", empty_label="Unassigned"),
+		"tickets_raised_kind": _bars([frappe._dict(kind=k, v=v) for k, v in kinds.items()], "kind", order=REQUESTER_KINDS),
+		"tickets_top_raisers": raisers,
+		"tickets_by_type": _bars(_group("HD Ticket", range_f, "ticket_type"), "ticket_type", empty_label="Uncategorised"),
+	}
+
+
+def _chart_venue_decisions(ctx):
+	f = _venue_range(ctx)
+	rows = frappe.get_list("Venue Booking", filters=f, fields=["status", "requester_type", "replied_by", {"COUNT": "*", "as": "v"}], group_by="status, requester_type, replied_by", order_by=None)
+
+	def split(field, empty_label):
+		out = {}
+		for r in rows:
+			k = r.get(field) or ""
+			e = out.setdefault(k, {"key": k, "label": r.get(field) or empty_label, "value": 0, "approved": 0, "rejected": 0, "pending": 0})
+			e["value"] += cint(r.v)
+			if r.status == "Allotted":
+				e["approved"] += cint(r.v)
+			elif r.status == "Rejected":
+				e["rejected"] += cint(r.v)
+			elif r.status == "Pending Allotment":
+				e["pending"] += cint(r.v)
+		return sorted(out.values(), key=lambda i: -i["value"])[:10]
+
+	approvers = split("replied_by", "Not recorded")
+	for a in approvers:
+		a["value"] = a["approved"] + a["rejected"]  # an approver's bar is the decisions they made
+	return {
+		"venue_by_status": _bars(_group("Venue Booking", f, "status"), "status", order=("Pending Allotment", "Allotted", "Rejected", "Cancelled")),
+		"venue_by_requester": split("requester_type", "Not set"),
+		"venue_by_approver": sorted((a for a in approvers if a["value"]), key=lambda a: -a["value"]),
+		"venue_swaps": _bars(_group("Venue Booking", f + [["swap_status", "is", "set"]], "swap_status"), "swap_status", order=("Pending", "Approved", "Rejected")),
+	}
+
+
 CHARTS = [
 	("attendance_trend", "Student Attendance", _chart_attendance_trend),
+	("tickets", "HD Ticket", _chart_tickets),
+	("venue_decisions", "Venue Booking", _chart_venue_decisions),
 	("classes_weekly", "Time Table", _chart_classes_weekly),
 	("student_breakdowns", "Student Master", _chart_student_breakdowns),
 	("course_attendance", "Attendance Summary", _chart_course_attendance),
