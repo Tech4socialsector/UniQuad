@@ -69,23 +69,35 @@ def get_razorpay_settlements(filters):
         
     if getattr(frappe.conf, "developer_mode", False) and frappe.conf.get("zoho_report_mock_path"):
         import json
-        with open(frappe.conf.get("zoho_report_mock_path"), "r") as f:
-            mock_data = json.load(f)
-            
-        settlements = []
-        for s in mock_data.get("settlements", []):
-            s_ts = s.get("settlement_time") or s.get("created_at")
-            if start_ts and s_ts < start_ts: continue
-            if end_ts and s_ts > end_ts: continue
-            settlements.append(s)
-            
-        return settlements, mock_data.get("recon_items", [])
-        
+        import os
+        mock_path = frappe.conf.get("zoho_report_mock_path")
+        if os.path.exists(mock_path):
+            try:
+                with open(mock_path, "r") as f:
+                    mock_data = json.load(f)
+                    
+                settlements = []
+                for s in mock_data.get("settlements", []):
+                    s_ts = s.get("settlement_time") or s.get("created_at")
+                    if start_ts and s_ts < start_ts: continue
+                    if end_ts and s_ts > end_ts: continue
+                    settlements.append(s)
+                    
+                return settlements, mock_data.get("recon_items", [])
+            except Exception as e:
+                frappe.log_error(title="Fee Payment Zoho Journal Upload Mock Error", message=f"Failed to load mock data from {mock_path}: {str(e)}")
+
     if filters.get("mock_settlements_json") and getattr(frappe.conf, "developer_mode", False):
         import json
-        with open(filters.get("mock_settlements_json"), "r") as f:
-            mock_data = json.load(f)
-        return mock_data.get("settlements", []), mock_data.get("recon_items", [])
+        import os
+        mock_path = filters.get("mock_settlements_json")
+        if os.path.exists(mock_path):
+            try:
+                with open(mock_path, "r") as f:
+                    mock_data = json.load(f)
+                return mock_data.get("settlements", []), mock_data.get("recon_items", [])
+            except Exception as e:
+                frappe.log_error(title="Fee Payment Zoho Journal Upload Mock Error", message=f"Failed to load mock data from {mock_path}: {str(e)}")
     
     settings = frappe.get_doc("Razorpay Settings", "Razorpay Settings")
     
