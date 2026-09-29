@@ -4,50 +4,65 @@
 // ── Built-in theme presets ────────────────────────────────────────────
 const SP_PRESETS = [
     {
-        name: "Ocean Blue (Default)",
+        name: "NLSIU Maroon (Default)",
+        primary_color: "#920c24", secondary_color: "#c9a84c",
+        background_color: "#f0f2f5", card_background: "#ffffff",
+        nav_bg_color: "#ffffff", nav_text_color: "#920c24",
+        sidebar_bg_color: "#ffffff", sidebar_text_color: "#475569",
+        success_color: "#920c24", warning_color: "#920c24",
+        danger_color: "#920c24", info_color: "#920c24",
+    },
+    {
+        name: "NLSIU Navy",
+        primary_color: "#2b2e4a", secondary_color: "#920c24",
+        background_color: "#f0f2f5", card_background: "#ffffff",
+        nav_bg_color: "#ffffff", nav_text_color: "#920c24",
+        sidebar_bg_color: "#ffffff", sidebar_text_color: "#2b2e4a",
+        success_color: "#920c24", warning_color: "#920c24",
+        danger_color: "#920c24", info_color: "#920c24",
+    },
+    {
+        name: "Ocean Blue",
         primary_color: "#1a3c6e", secondary_color: "#c8a14b",
         background_color: "#f0f2f5", card_background: "#ffffff",
-        nav_text_color: "#ffffff", sidebar_theme: "Light",
+        nav_bg_color: "#1a3c6e", nav_text_color: "#ffffff",
+        sidebar_bg_color: "#ffffff", sidebar_text_color: "#1a3c6e",
         success_color: "#16a34a", warning_color: "#d97706",
         danger_color: "#dc2626", info_color: "#0369a1",
     },
     {
         name: "Forest Green",
-        primary_color: "#14532d", secondary_color: "#f59e0b",
+        primary_color: "#15803d", secondary_color: "#f59e0b",
         background_color: "#f0f4f1", card_background: "#ffffff",
-        nav_text_color: "#ffffff", sidebar_theme: "Dark",
+        nav_bg_color: "#ffffff", nav_text_color: "#14532d",
+        sidebar_bg_color: "#14301f", sidebar_text_color: "#e6f0ea",
         success_color: "#15803d", warning_color: "#b45309",
         danger_color: "#dc2626", info_color: "#0369a1",
     },
     {
         name: "Slate Dark",
-        primary_color: "#1e293b", secondary_color: "#38bdf8",
+        primary_color: "#0284c7", secondary_color: "#38bdf8",
         background_color: "#f1f5f9", card_background: "#ffffff",
-        nav_text_color: "#ffffff", sidebar_theme: "Dark",
+        nav_bg_color: "#0f172a", nav_text_color: "#ffffff",
+        sidebar_bg_color: "#0f172a", sidebar_text_color: "#e2e8f0",
         success_color: "#16a34a", warning_color: "#d97706",
         danger_color: "#dc2626", info_color: "#0284c7",
     },
     {
         name: "Deep Purple",
-        primary_color: "#4c1d95", secondary_color: "#f59e0b",
+        primary_color: "#6d28d9", secondary_color: "#f59e0b",
         background_color: "#f5f3ff", card_background: "#ffffff",
-        nav_text_color: "#ffffff", sidebar_theme: "Dark",
+        nav_bg_color: "#ffffff", nav_text_color: "#4c1d95",
+        sidebar_bg_color: "#2e1065", sidebar_text_color: "#ede9fe",
         success_color: "#16a34a", warning_color: "#d97706",
         danger_color: "#dc2626", info_color: "#7c3aed",
     },
     {
-        name: "Rose Gold",
-        primary_color: "#881337", secondary_color: "#f59e0b",
-        background_color: "#fff1f2", card_background: "#ffffff",
-        nav_text_color: "#ffffff", sidebar_theme: "Light",
-        success_color: "#16a34a", warning_color: "#d97706",
-        danger_color: "#be123c", info_color: "#0369a1",
-    },
-    {
         name: "Teal Modern",
-        primary_color: "#0f4c5c", secondary_color: "#06b6d4",
+        primary_color: "#0e7490", secondary_color: "#06b6d4",
         background_color: "#f0f9ff", card_background: "#ffffff",
-        nav_text_color: "#ffffff", sidebar_theme: "Dark",
+        nav_bg_color: "#ffffff", nav_text_color: "#0f4c5c",
+        sidebar_bg_color: "#082f3a", sidebar_text_color: "#e0f2f8",
         success_color: "#0d9488", warning_color: "#d97706",
         danger_color: "#dc2626", info_color: "#0284c7",
     },
@@ -62,18 +77,19 @@ const MENU_FIELDS = [
 ];
 
 const SP_DEFAULTS = {
-    portal_title: "Student Portal", portal_subtitle: "",
+    portal_title: "National Law School of India University", portal_subtitle: "",
     show_logo: 1, nav_brand_text: "", portal_favicon: "",
-    font_family: "Poppins", font_size: "Normal",
-    primary_color: "#1a3c6e", secondary_color: "#c8a14b",
+    font_family: "Merriweather", font_size: "Normal",
+    primary_color: "#920c24", secondary_color: "#c9a84c",
     background_color: "#f0f2f5", card_background: "#ffffff",
-    sidebar_theme: "Light", nav_text_color: "#ffffff",
-    success_color: "#16a34a", warning_color: "#d97706",
-    danger_color: "#dc2626", info_color: "#0369a1",
-    grade_excellent_color: "#16a34a", grade_excellent_label: "A+ / A / S",
-    grade_good_color: "#0369a1", grade_good_label: "B+ / B",
-    grade_average_color: "#d97706", grade_average_label: "C+ / C",
-    grade_color: "#000000", grade_fail_color: "#dc2626", grade_fail_label: "D / F",
+    nav_bg_color: "#ffffff", nav_text_color: "#920c24",
+    sidebar_bg_color: "#ffffff", sidebar_text_color: "#475569",
+    success_color: "#920c24", warning_color: "#920c24",
+    danger_color: "#920c24", info_color: "#920c24",
+    grade_excellent_color: "#920c24", grade_excellent_label: "A+ / A / S",
+    grade_good_color: "#920c24", grade_good_label: "B+ / B",
+    grade_average_color: "#920c24", grade_average_label: "C+ / C",
+    grade_color: "#000000", grade_fail_color: "#920c24", grade_fail_label: "D / F",
     att_good_threshold: 75, att_warn_threshold: 60,
     att_label_good: "Good", att_label_warn: "Low", att_label_danger: "Critical",
     sidebar_position: "Left", sidebar_width: "Normal", nav_height: "Normal",
@@ -114,13 +130,16 @@ const form_events = {
     },
 
     select_all_menus(frm) {
-        if (frm.prevent_trigger) return;
-        frm.prevent_trigger = true;
-        const val = frm.doc.select_all_menus;
-        MENU_FIELDS.forEach(field => {
-            frm.set_value(field, val);
-        });
-        frm.prevent_trigger = false;
+        // set_value triggers fire asynchronously, so a sync flag can't tell a
+        // user click from _update_select_all_checkbox unticking this box after
+        // a single menu was unchecked. Infer it from state instead: the user can
+        // only untick "Select All" while every menu is ticked, so an untick with
+        // some menu already off is the automatic sync — leave the menus alone.
+        const val = frm.doc.select_all_menus ? 1 : 0;
+        if (!val && !MENU_FIELDS.every(field => frm.doc[field])) return;
+        const values = {};
+        MENU_FIELDS.forEach(field => { values[field] = val; });
+        frm.set_value(values);
     },
 
     // Theme color triggers
@@ -128,8 +147,10 @@ const form_events = {
     secondary_color:  (frm) => _render_all_previews(frm),
     background_color: (frm) => _render_color_preview(frm),
     card_background:  (frm) => _render_color_preview(frm),
-    sidebar_theme:    (frm) => _render_all_previews(frm),
-    nav_text_color:   (frm) => _render_color_preview(frm),
+    nav_bg_color:       (frm) => _render_all_previews(frm),
+    nav_text_color:     (frm) => _render_all_previews(frm),
+    sidebar_bg_color:   (frm) => _render_all_previews(frm),
+    sidebar_text_color: (frm) => _render_all_previews(frm),
     success_color:    (frm) => _render_color_preview(frm),
     warning_color:    (frm) => _render_color_preview(frm),
     danger_color:     (frm) => _render_color_preview(frm),
@@ -172,11 +193,10 @@ MENU_FIELDS.forEach(field => {
 frappe.ui.form.on("Student Portal Settings", form_events);
 
 function _update_select_all_checkbox(frm) {
-    if (frm.prevent_trigger) return;
-    const all_selected = MENU_FIELDS.every(field => frm.doc[field]);
-    frm.prevent_trigger = true;
-    frm.set_value("select_all_menus", all_selected ? 1 : 0);
-    frm.prevent_trigger = false;
+    const all_selected = MENU_FIELDS.every(field => frm.doc[field]) ? 1 : 0;
+    if ((frm.doc.select_all_menus ? 1 : 0) !== all_selected) {
+        frm.set_value("select_all_menus", all_selected);
+    }
 }
 
 
@@ -368,7 +388,7 @@ function _render_frd_table($wrapper, demands, selected_names) {
         display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
         <span>Found <strong>${total}</strong> demand${total !== 1 ? "s" : ""}.
         ${resend_ct ? `<span style="color:#92400e;margin-left:8px;">${resend_ct} already sent (marked Resend).</span>` : ""}
-        ${no_mail ? `<span style="color:#dc2626;margin-left:6px;">${no_mail} have no email.</span>` : ""}</span>
+        ${no_mail ? `<span style="color:#920c24;margin-left:6px;">${no_mail} have no email.</span>` : ""}</span>
         <div style="display:flex;gap:6px;">
             <button class="btn btn-xs frd-sel-all"
                 style="background:#dbeafe;color:#1e40af;border:none;border-radius:4px;padding:3px 10px;cursor:pointer;">
@@ -385,7 +405,7 @@ function _render_frd_table($wrapper, demands, selected_names) {
         const disabled    = noEmail ? "disabled title='No email address'" : "";
         const opacity     = noEmail ? "opacity:0.5;" : "";
         const status_colors = {
-            "Overdue":        "background:#fee2e2;color:#dc2626",
+            "Overdue":        "background:#fff0f2;color:#920c24",
             "Pending":        "background:#fef9c3;color:#854d0e",
             "Partially Paid": "background:#e0f2fe;color:#0369a1",
         };
@@ -412,7 +432,7 @@ function _render_frd_table($wrapper, demands, selected_names) {
                     ${dem.status}</span>${sent_badge}
             </td>
             <td style="padding:8px 10px;font-size:11px;color:#6b7280;">
-                ${dem.student_email || '<span style="color:#dc2626;">No email</span>'}</td>
+                ${dem.student_email || '<span style="color:#920c24;">No email</span>'}</td>
         </tr>`;
     }).join("");
 
@@ -532,16 +552,19 @@ function _render_color_preview(frm) {
     const secondary = d.secondary_color || "#c8a14b";
     const bg        = d.background_color || "#f0f2f5";
     const card      = d.card_background  || "#ffffff";
-    const navText   = d.nav_text_color   || "#ffffff";
-    const success   = d.success_color   || "#16a34a";
-    const warning   = d.warning_color   || "#d97706";
-    const danger    = d.danger_color    || "#dc2626";
-    const info      = d.info_color      || "#0369a1";
+    const navBg     = d.nav_bg_color       || "#ffffff";
+    const navText   = d.nav_text_color     || "#920c24";
+    const sbBgC     = d.sidebar_bg_color   || "#ffffff";
+    const sbTextC   = d.sidebar_text_color || "#920c24";
+    const success   = d.success_color   || "#920c24";
+    const warning   = d.warning_color   || "#920c24";
+    const danger    = d.danger_color    || "#920c24";
+    const info      = d.info_color      || "#920c24";
 
-    const gExc = d.grade_excellent_color || "#16a34a";
-    const gGood= d.grade_good_color      || "#0369a1";
-    const gAvg = d.grade_average_color   || "#d97706";
-    const gFail= d.grade_fail_color      || "#dc2626";
+    const gExc = d.grade_excellent_color || "#920c24";
+    const gGood= d.grade_good_color      || "#920c24";
+    const gAvg = d.grade_average_color   || "#920c24";
+    const gFail= d.grade_fail_color      || "#920c24";
 
     const gExcLabel = d.grade_excellent_label || "A+ / A";
     const gGoodLabel= d.grade_good_label      || "B+ / B";
@@ -554,10 +577,17 @@ function _render_color_preview(frm) {
         <div class="sp-preview-group">
           <div class="sp-preview-label">Theme Palette</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
-            ${_swatch(primary,   "Primary", false, navText)}
+            ${_swatch(primary,   "Primary")}
             ${_swatch(secondary, "Accent")}
             ${_swatch(bg,        "Background", true)}
             ${_swatch(card,      "Card", true)}
+          </div>
+        </div>
+        <div class="sp-preview-group">
+          <div class="sp-preview-label">Navbar &amp; Sidebar</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
+            ${_swatch(navBg,  "Navbar", true, navText)}
+            ${_swatch(sbBgC,  "Sidebar", true, sbTextC)}
           </div>
         </div>
         <div class="sp-preview-group">
@@ -573,14 +603,14 @@ function _render_color_preview(frm) {
       <div class="sp-preview-group" style="margin-top:12px;">
         <div class="sp-preview-label">Grade Bands</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
-                    
-          
+
+
           <span style="font-size:10px;color:#9ca3af;margin-left:4px;">← shown on Results page</span>
         </div>
       </div>
       <div class="sp-preview-group" style="margin-top:12px;">
         <div class="sp-preview-label">Mini Portal Card</div>
-        ${_mini_portal_card(primary, secondary, bg, card, navText, d.sidebar_theme)}
+        ${_mini_portal_card(primary, secondary, bg, card, navBg, navText, sbBgC, sbTextC)}
       </div>
     </div>`;
 
@@ -608,10 +638,11 @@ function _render_layout_preview(frm) {
     const size    = d.font_size        || "Normal";
     const corners = d.corner_style     || "Normal";
     const density = d.layout_density   || "Normal";
-    const primary = d.primary_color    || "#1a3c6e";
-    const dark    = d.sidebar_theme    === "Dark";
+    const primary = d.primary_color    || "#920c24";
+    const navBgL  = d.nav_bg_color       || "#ffffff";
+    const navTxtL = d.nav_text_color     || "#920c24";
     const navH    = d.nav_height       || "Normal";
-    const font    = d.font_family      || "Poppins";
+    const font    = d.font_family      || "Merriweather";
 
     const sbW    = width   === "Narrow" ? 54  : width   === "Wide" ? 76  : 66;
     const navPx  = navH    === "Compact" ? 14 : navH    === "Tall"  ? 20 : 16;
@@ -619,11 +650,11 @@ function _render_layout_preview(frm) {
     const isRight= pos === "Right";
     const navPad = density === "Compact" ? "3px 6px" : "5px 8px";
     const fsPx   = size    === "Small"   ? "9px" : size === "Large" ? "11px" : "10px";
-    const sbBg   = dark ? primary : "#ffffff";
-    const sbText = dark ? "rgba(255,255,255,0.75)" : "#6b7280";
-    const sbActiveBg = dark ? "rgba(255,255,255,0.16)" : "rgba(26,60,110,0.1)";
-    const sbActiveText = dark ? "#fff" : primary;
-    const fontLabel = { "Poppins": "Poppins", "Inter": "Inter", "Roboto": "Roboto", "System Default": "System" }[font] || font;
+    const sbBg   = d.sidebar_bg_color   || "#ffffff";
+    const sbText = d.sidebar_text_color || "#920c24";
+    const sbActiveBg = primary;
+    const sbActiveText = "#ffffff";
+    const fontLabel = { "Merriweather": "Merriweather", "Poppins": "Poppins", "Inter": "Inter", "Roboto": "Roboto", "System Default": "System" }[font] || font;
 
     const navItems = [
         ["dashboard", "Dashboard", true],
@@ -634,16 +665,14 @@ function _render_layout_preview(frm) {
         <div style="padding:${navPad};background:${active ? sbActiveBg : "transparent"};
              border-radius:${radius};font-size:${fsPx};color:${active ? sbActiveText : sbText};
              margin-bottom:2px;display:flex;align-items:center;gap:4px;
-             border-left:2px solid ${active ? (dark ? "#c8a14b" : primary) : "transparent"};">
+             border-left:2px solid transparent;">
           <span style="font-family:'Material Symbols Outlined';font-size:12px;opacity:0.6;">${icon}</span>
           ${label}
         </div>`).join("");
 
     const sidebarEl = `
         <div style="width:${sbW}px;background:${sbBg};padding:5px 3px;border-radius:${radius};
-             flex-shrink:0;border:1px solid ${dark ? "rgba(255,255,255,0.1)" : "#e5e7eb"};">
-          <div style="height:20px;background:linear-gradient(135deg,${primary},${primary}cc);
-               border-radius:${radius};margin-bottom:5px;"></div>
+             flex-shrink:0;border:1px solid #e5e7eb;">
           ${navItems}
         </div>`;
 
@@ -674,16 +703,16 @@ function _render_layout_preview(frm) {
       <div class="sp-preview-label">Layout Preview</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">${tags}</div>
       <div style="background:#f0f2f5;border-radius:8px;overflow:hidden;border:1px solid #e5e7eb;">
-        <div style="height:${navPx + 14}px;background:${primary};display:flex;align-items:center;
+        <div style="height:${navPx + 14}px;background:${navBgL};border-bottom:1px solid #e5e7eb;display:flex;align-items:center;
              padding:0 8px;gap:6px;">
           <div style="display:flex;gap:2px;flex-direction:column;">
-            <div style="width:14px;height:1.5px;background:rgba(255,255,255,0.8);border-radius:1px;"></div>
-            <div style="width:10px;height:1.5px;background:rgba(255,255,255,0.8);border-radius:1px;"></div>
-            <div style="width:14px;height:1.5px;background:rgba(255,255,255,0.8);border-radius:1px;"></div>
+            <div style="width:14px;height:1.5px;background:${navTxtL};border-radius:1px;"></div>
+            <div style="width:10px;height:1.5px;background:${navTxtL};border-radius:1px;"></div>
+            <div style="width:14px;height:1.5px;background:${navTxtL};border-radius:1px;"></div>
           </div>
-          <div style="width:22px;height:22px;background:rgba(255,255,255,0.15);border-radius:5px;"></div>
+          <div style="width:22px;height:22px;background:${navTxtL}22;border-radius:5px;"></div>
           <div style="flex:1;"></div>
-          <div style="width:18px;height:18px;background:rgba(255,255,255,0.2);border-radius:50%;"></div>
+          <div style="width:18px;height:18px;background:${navTxtL}33;border-radius:50%;"></div>
         </div>
         <div style="padding:5px;display:flex;gap:4px;flex-direction:${isRight ? "row-reverse" : "row"};">
           ${sidebarEl}${contentEl}
@@ -696,34 +725,28 @@ function _render_layout_preview(frm) {
 
 
 // ── Mini portal card (shown inside color preview) ─────────────────────
-function _mini_portal_card(primary, secondary, bg, card, navText, sidebarTheme) {
-    const dark = sidebarTheme === "Dark";
-    const sbBg = dark ? primary : card;
-    const sbText = dark ? "rgba(255,255,255,0.75)" : "#6b7280";
-
+function _mini_portal_card(primary, secondary, bg, card, navBg, navText, sbBg, sbText) {
     return `
-    <div style="width:280px;border-radius:10px;overflow:hidden;border:1px solid #e5e7eb;font-family:'Poppins',sans-serif;">
-      <div style="background:${primary};height:32px;display:flex;align-items:center;
-           padding:0 10px;gap:8px;">
-        <div style="width:18px;height:18px;background:rgba(255,255,255,0.2);border-radius:4px;"></div>
-        <div style="width:60px;height:6px;background:${navText}33;border-radius:3px;"></div>
+    <div style="width:280px;border-radius:10px;overflow:hidden;border:1px solid #e5e7eb;font-family:'Merriweather',Georgia,serif;">
+      <div style="background:${navBg};height:32px;display:flex;align-items:center;
+           padding:0 10px;gap:8px;border-bottom:1px solid rgba(0,0,0,0.06);">
+        <div style="width:18px;height:18px;background:${navText}22;border-radius:4px;"></div>
+        <div style="font-size:9px;color:${navText};white-space:nowrap;">Student Portal</div>
         <div style="flex:1;"></div>
-        <div style="width:16px;height:16px;background:rgba(255,255,255,0.2);border-radius:50%;"></div>
+        <div style="width:16px;height:16px;background:${navText}33;border-radius:50%;"></div>
       </div>
       <div style="display:flex;background:${bg};">
-        <div style="width:64px;background:${sbBg};padding:6px 4px;border-right:1px solid rgba(0,0,0,0.06);">
-          <div style="height:16px;background:linear-gradient(135deg,${primary},${primary}cc);border-radius:5px;margin-bottom:5px;"></div>
+        <div style="width:72px;background:${sbBg};padding:6px 4px;border-right:1px solid rgba(0,0,0,0.06);">
           ${["Dashboard","Courses","Fees"].map((l, i) => `
           <div style="padding:3px 5px;margin-bottom:2px;border-radius:4px;font-size:8px;
-               color:${i===0 ? (dark ? "#fff" : primary) : sbText};
-               background:${i===0 ? (dark ? "rgba(255,255,255,0.16)" : "rgba(26,60,110,0.1)") : "transparent"};
-               border-left:2px solid ${i===0 ? (dark ? secondary : primary) : "transparent"};">
+               color:${i === 0 ? "#ffffff" : sbText};
+               background:${i === 0 ? primary : "transparent"};">
             ${l}
           </div>`).join("")}
         </div>
         <div style="flex:1;padding:6px;">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:4px;">
-            <div style="height:28px;background:${card};border:1px solid #e5e7eb;border-radius:6px;"></div>
+            <div style="height:28px;background:${card};border:1px solid #e5e7eb;border-radius:6px;border-top:2px solid ${secondary};"></div>
             <div style="height:28px;background:${card};border:1px solid #e5e7eb;border-radius:6px;"></div>
           </div>
           <div style="height:36px;background:${card};border:1px solid #e5e7eb;border-radius:6px;"></div>

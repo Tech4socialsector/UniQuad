@@ -27,8 +27,8 @@ _DEFAULTS = {
     "sidebar_menu_hover_bg_color":     "#f0f4f8",
     "sidebar_menu_hover_text_color":   "#0f172a",
     # Status colors
-    "success_color":         "#16a34a",
-    "warning_color":         "#d97706",
+    "success_color":         "#920c24",
+    "warning_color":         "#920c24",
     "danger_color":          "#dc2626",
     "info_color":            "#0369a1",
     # Grading

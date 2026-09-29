@@ -10,12 +10,8 @@
     <span class="sp-ms" style="font-size: 28px;">headset_mic</span>
   </div>
   <div>
-    <h1 class="sp-page-title" style="margin: 0 0 4px 0; color: var(--sp-primary-dark, #0a182c);">Helpdesk</h1>
+    <h1 class="sp-page-title" style="margin: 0 0 4px 0; color: var(--sp-primary-dark, #6b091a);">Helpdesk</h1>
     <p class="context-text" style="margin: 0 0 8px 0; color: var(--sp-text-3, #6b7280);">Raise and track your support tickets</p>
-    <div style="font-size: 13px; color: var(--sp-text-4); margin-top: 14px;">
-        <a href="/student-portal" style="color: var(--sp-text-4); text-decoration: none;">Dashboard</a> &gt; 
-        <span style="color: var(--sp-primary); font-weight: 600;">Helpdesk</span>
-      </div>
   </div>
 </div>
 
@@ -108,6 +104,8 @@
     '.flex.h-screen.w-screen > div:first-child:not(.flex-1) { display: none !important; }',
     /* Expand the content panel to full width */
     '.flex.h-screen.w-screen > .flex-1 { width: 100% !important; max-width: 100% !important; }',
+    /* Hide the Student ID / Year quick filters (portal embed only) */
+    '.quick-filters > div:has(input[placeholder="Student ID"]), .quick-filters > div:has(input[placeholder="Year"]) { display: none !important; }',
   ].join('\n');
 
   /* Inject CSS into the helpdesk iframe — waits for Vue to mount via MutationObserver */

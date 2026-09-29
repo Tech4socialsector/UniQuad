@@ -7,9 +7,10 @@
 :root {
   --spf-maroon:  var(--sp-primary, #920c24);
   --spf-maroon-soft: rgba(146,12,36,0.06);
-  --spf-green:   var(--sp-success, #15803d);
+  --spf-green:   #000000;            /* amounts & other 'ok' values stay black */
+  --spf-paid:    #008000;            /* only the word "Paid" is green */
   --spf-red:     var(--sp-danger, #920c24);
-  --spf-amber:   #b45309;            /* AA-contrast amber for small text */
+  --spf-amber:   #920c24;            /* AA-contrast amber for small text */
   --spf-border:  #e5e7eb;
   --spf-row:     #f1f2f4;
   --spf-head:    #f9fafb;
@@ -27,10 +28,6 @@
 .spf-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin: 4px 0 16px; }
 .spf-title { font-size: 26px; font-weight: 700; color: var(--spf-text); margin: 0 0 2px; letter-spacing: -0.01em; }
 .spf-sub { font-size: 13.5px; color: var(--spf-muted); margin: 0; }
-.spf-crumbs { font-size: 12.5px; color: var(--spf-muted); margin-top: 6px; }
-.spf-crumbs a { color: var(--spf-muted); text-decoration: none; }
-.spf-crumbs a:hover { text-decoration: underline; }
-.spf-crumbs span { color: var(--spf-maroon); font-weight: 600; }
 .spf-ay { display: flex; flex-direction: column; gap: 4px; min-width: 160px; }
 .spf-ay-label { font-size: 11px; font-weight: 700; color: var(--spf-muted); text-transform: uppercase; letter-spacing: 0.06em; }
 .spf-ay-select, .spf-ay-static {
@@ -90,7 +87,8 @@
 .spf-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 700; white-space: nowrap; line-height: 1.5; }
 .spf-badge .sp-ms { font-size: 14px; }
 .spf-badge-success { color: var(--spf-green); padding-left: 0; padding-right: 0; }
-.spf-badge-warning { color: var(--spf-amber); background: rgba(217,119,6,0.10); }
+.spf-badge-paid { color: var(--spf-paid); padding-left: 0; padding-right: 0; }
+.spf-badge-warning { color: var(--spf-amber); background: rgba(146,12,36,0.10); }
 .spf-badge-danger  { color: var(--spf-red); background: rgba(146,12,36,0.07); }
 .spf-badge-neutral { color: var(--spf-muted); background: var(--spf-row); }
 .spf-tone-success { color: var(--spf-green) !important; }
@@ -120,7 +118,7 @@
 .spf-student-status { flex-shrink: 0; display: flex; align-items: center; }
 .spf-status-badge { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; padding: 5px 12px; border-radius: 8px; background: var(--spf-card); font-size: 13px; font-weight: 700; line-height: 1.3; border: 1px solid; }
 .spf-status-badge .sp-ms { font-size: 17px; }
-.spf-status-badge-paid { color: var(--spf-green); border-color: rgba(21,128,61,0.35); }
+.spf-status-badge-paid { color: var(--spf-paid); border-color: rgba(0,128,0,0.35); }
 .spf-status-badge-due  { color: var(--spf-red); border-color: rgba(146,12,36,0.35); }
 @media (min-width: 1200px) {
   .spf-student { flex-wrap: nowrap; }
@@ -158,25 +156,12 @@
 .spf-kpi-note a { color: inherit; }
 
 /* ── Payment status (full width) ────────────────────────────────────── */
-.spf-ps { margin-bottom: 16px; }
-.spf-ps-body { padding-top: 14px; padding-bottom: 14px; }
-.spf-ps-grid { display: grid; grid-template-columns: 1fr auto 1fr; align-items: end; gap: 12px; margin-bottom: 10px; }
-.spf-ps-mid { text-align: center; }
-.spf-ps-right { text-align: right; }
-.spf-ps-amt { font-size: 22px; font-weight: 700; color: var(--spf-text); font-variant-numeric: tabular-nums; line-height: 1.2; }
-.spf-ps-lbl { font-size: 12px; font-weight: 600; color: var(--spf-muted); margin-top: 2px; }
-.spf-ps-pct { font-size: 30px; font-weight: 800; color: var(--spf-maroon); line-height: 1; font-variant-numeric: tabular-nums; }
 .spf-bar { height: 8px; border-radius: 99px; background: var(--spf-row); overflow: hidden; }
 .spf-bar-fill { height: 100%; border-radius: 99px; background: var(--spf-maroon); transition: width .6s ease; }
-.spf-ps-foot { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 10px; font-size: 12px; color: var(--spf-muted); }
+.spf-kpi-action { margin-top: 12px; }
+.spf-kpi-action .spf-btn { max-width: 100%; white-space: normal; text-align: left; }
 .spf-offline-note { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: var(--spf-muted); }
 .spf-offline-note .sp-ms { font-size: 16px; }
-@media (max-width: 560px) {
-  .spf-ps-grid { grid-template-columns: 1fr; gap: 10px; }
-  .spf-ps-left, .spf-ps-mid, .spf-ps-right { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; text-align: left; }
-  .spf-ps-left .spf-ps-lbl, .spf-ps-mid .spf-ps-lbl, .spf-ps-right .spf-ps-lbl { order: -1; margin: 0; }
-  .spf-ps-amt { font-size: 18px; } .spf-ps-pct { font-size: 22px; }
-}
 
 /* ── Tables ─────────────────────────────────────────────────────────── */
 .spf-t { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 13px; }
@@ -347,7 +332,8 @@
 
 {% macro badge(status, id='') -%}
 {%- set s = status or '—' -%}
-{%- if s in ('Paid', 'Approved', 'Settled', 'Completed', 'Captured', 'Active') -%}{%- set tone, icon = 'success', 'check_circle' -%}
+{%- if s in ('Paid', 'Settled', 'Completed', 'Captured') -%}{%- set tone, icon = 'paid', 'check_circle' -%}
+{%- elif s in ('Approved', 'Active') -%}{%- set tone, icon = 'success', 'check_circle' -%}
 {%- elif s in ('Overdue', 'Unpaid', 'Failed', 'Payment Failed', 'Rejected') -%}{%- set tone, icon = 'danger', 'error' -%}
 {%- elif s in ('Partially Paid', 'Pending', 'Payment Initiated', 'Authorized', 'Queued', 'Under Review') -%}{%- set tone, icon = 'warning', 'schedule' -%}
 {%- else -%}{%- set tone, icon = 'neutral', '' -%}{%- endif -%}
@@ -390,7 +376,6 @@
   <div>
     <h1 class="spf-title">Fees &amp; Payments</h1>
     <p class="spf-sub">View your fee summary, payments and outstanding dues.</p>
-    <div class="spf-crumbs spf-no-print"><a href="/student-portal">Dashboard</a> &rsaquo; <span>Fees &amp; Payments</span></div>
   </div>
   {% if not no_student %}
   <div class="spf-ay">
@@ -526,25 +511,8 @@
     {% else %}<div class="spf-kpi-sub spf-tone-success">No pending programme dues</div>{% endif %}
     {% endif %}
     {% if other_outstanding > 0 %}<div class="spf-kpi-note spf-tone-danger"><a href="#spf-outstanding">+ {{ _inr.format(other_outstanding) }} in other dues</a></div>{% endif %}
-  </div>
-  <div class="spf-kpi">
-    <div class="spf-kpi-head"><span class="spf-kpi-label">Overdue</span><span class="spf-kpi-icon"><span class="sp-ms" aria-hidden="true">event_busy</span></span></div>
-    {% if not _summary_ok %}<div class="spf-kpi-value is-empty">—</div><div class="spf-kpi-sub">{{ 'Unable to load' if _err.summary else 'Nothing overdue' }}</div>
-    {% else %}
-    <div class="spf-kpi-value {{ 'spf-tone-danger' if programme_overdue > 0 }}">{{ _inr.format(programme_overdue) }}</div>
-    {% if programme_overdue > 0 %}<div class="spf-kpi-sub spf-tone-danger">{{ programme_overdue_count }} invoice{{ 's' if programme_overdue_count != 1 }} past due date</div>
-    {% else %}<div class="spf-kpi-sub spf-tone-success">All clear</div>{% endif %}
-    {% endif %}
-    {% if demand_overdue > 0 %}<div class="spf-kpi-note spf-tone-danger"><a href="#spf-outstanding">+ {{ _inr.format(demand_overdue) }} additional charges overdue</a></div>{% endif %}
-  </div>
-</section>
-
-{# ═══════════════ Payment status (full width) ═══════════════ #}
-<section class="spf-card spf-ps fade-in" aria-labelledby="spf-ps-title">
-  <div class="spf-card-hd">
-    <h2 class="spf-card-title" id="spf-ps-title"><span class="sp-ms" aria-hidden="true">donut_large</span>Payment Status</h2>
     {% if _summary_ok and has_dues %}
-    <div class="spf-card-meta">
+    <div class="spf-kpi-action">
       {% if payment_enabled %}
       {% set _hero_amt = _inr.format(total_outstanding) %}
       <button type="button" class="spf-btn spf-btn-primary spf-btn-sm" id="sp-sm-pay-btn" data-pay
@@ -561,29 +529,16 @@
     </div>
     {% endif %}
   </div>
-  {% if _err.summary %}
-    {{ section_error('payment status') }}
-  {% elif not has_fee_data or paid_pct is none %}
-    {{ empty('donut_large', 'No programme fee to track yet', 'Payment progress will appear here once programme fees are invoiced.') }}
-  {% else %}
-  <div class="spf-card-bd spf-ps-body">
-    <div class="spf-ps-grid">
-      <div class="spf-ps-left"><div class="spf-ps-amt {{ 'spf-tone-success' if total_paid > 0 }}">{{ _inr.format(total_paid) }}</div><div class="spf-ps-lbl">Paid</div></div>
-      <div class="spf-ps-mid"><div class="spf-ps-pct">{{ paid_pct }}%</div><div class="spf-ps-lbl">Paid of total</div></div>
-      <div class="spf-ps-right"><div class="spf-ps-amt">{{ _inr.format(total_payable) }}</div><div class="spf-ps-lbl">Total Fees</div></div>
-    </div>
-    <div class="spf-bar" role="progressbar" aria-label="Programme fees paid" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ paid_pct }}" aria-valuetext="{{ paid_pct }}% paid, {{ _inr.format(total_paid) }} of {{ _inr.format(total_payable) }}">
-      <div class="spf-bar-fill" style="width:{{ paid_pct }}%;"></div>
-    </div>
-    <div class="spf-ps-foot">
-      <span>{{ fee_structure_name or 'Programme fees' }}{% if current_enrollment and current_enrollment.term_name %} · {{ current_enrollment.term_name }}{% endif %}</span>
-      <span>
-        {% if has_dues %}<strong class="spf-tone-danger">{{ _inr.format(total_outstanding) }} balance</strong>{% if programme_overdue > 0 %} · <span class="spf-tone-danger">{{ _inr.format(programme_overdue) }} overdue</span>{% endif %}
-        {% else %}<span class="spf-tone-success">{{ _inr.format(0) }} balance</span>{% endif %}
-      </span>
-    </div>
+  <div class="spf-kpi">
+    <div class="spf-kpi-head"><span class="spf-kpi-label">Overdue</span><span class="spf-kpi-icon"><span class="sp-ms" aria-hidden="true">event_busy</span></span></div>
+    {% if not _summary_ok %}<div class="spf-kpi-value is-empty">—</div><div class="spf-kpi-sub">{{ 'Unable to load' if _err.summary else 'Nothing overdue' }}</div>
+    {% else %}
+    <div class="spf-kpi-value {{ 'spf-tone-danger' if programme_overdue > 0 }}">{{ _inr.format(programme_overdue) }}</div>
+    {% if programme_overdue > 0 %}<div class="spf-kpi-sub spf-tone-danger">{{ programme_overdue_count }} invoice{{ 's' if programme_overdue_count != 1 }} past due date</div>
+    {% else %}<div class="spf-kpi-sub spf-tone-success">All clear</div>{% endif %}
+    {% endif %}
+    {% if demand_overdue > 0 %}<div class="spf-kpi-note spf-tone-danger"><a href="#spf-outstanding">+ {{ _inr.format(demand_overdue) }} additional charges overdue</a></div>{% endif %}
   </div>
-  {% endif %}
 </section>
 
 {# ═══════════════ Fee structure + outstanding ═══════════════ #}
@@ -731,7 +686,7 @@
                       onclick="spShowTrustThenPay('invoice', '{{ iid }}', '{{ inv.eff_formatted_outstanding | e }}', '', this)"
                       aria-label="Pay {{ inv.eff_formatted_outstanding }} for {{ inv.name }}">Pay</button>
               {% elif inv.can_pay and has_sm_inv_mismatch and payment_enabled %}
-              <span class="spf-hint-chip" title="Use Pay Outstanding in Payment Status to pay the scholarship-adjusted amount."><span class="sp-ms" aria-hidden="true">arrow_upward</span>Pay above</span>
+              <span class="spf-hint-chip" title="Use Pay Outstanding in the Balance card above to pay the scholarship-adjusted amount."><span class="sp-ms" aria-hidden="true">arrow_upward</span>Pay above</span>
               {% elif inv.can_pay and _counter %}
               <button type="button" class="spf-btn spf-btn-ghost spf-btn-sm" onclick="spFeePayAtCounter('{{ iid }}', '{{ inv.formatted_outstanding | e }}')"
                       aria-label="Pay {{ inv.formatted_outstanding }} at the counter"><span class="sp-ms" aria-hidden="true">store</span>Counter</button>
@@ -1172,9 +1127,9 @@
       <div id="sp-trust-modal-amount" style="font-size:1.9rem;font-weight:900;color:#1e293b;letter-spacing:-0.02em;"></div>
     </div>
     <div class="fee-trust-badges">
-      <div class="fee-trust-badge-item"><span class="sp-ms fee-trust-badge-icon" style="color:#0ea5e9;" aria-hidden="true">lock</span><div><div class="fee-trust-badge-title">256-bit SSL</div><div class="fee-trust-badge-sub">Encrypted</div></div></div>
-      <div class="fee-trust-badge-item"><span class="sp-ms fee-trust-badge-icon" style="color:#7c3aed;" aria-hidden="true">shield</span><div><div class="fee-trust-badge-title">Razorpay</div><div class="fee-trust-badge-sub">Secured</div></div></div>
-      <div class="fee-trust-badge-item"><span class="sp-ms fee-trust-badge-icon" style="color:#059669;" aria-hidden="true">verified_user</span><div><div class="fee-trust-badge-title">PCI DSS</div><div class="fee-trust-badge-sub">Compliant</div></div></div>
+      <div class="fee-trust-badge-item"><span class="sp-ms fee-trust-badge-icon" style="color:#b5364a;" aria-hidden="true">lock</span><div><div class="fee-trust-badge-title">256-bit SSL</div><div class="fee-trust-badge-sub">Encrypted</div></div></div>
+      <div class="fee-trust-badge-item"><span class="sp-ms fee-trust-badge-icon" style="color:#920c24;" aria-hidden="true">shield</span><div><div class="fee-trust-badge-title">Razorpay</div><div class="fee-trust-badge-sub">Secured</div></div></div>
+      <div class="fee-trust-badge-item"><span class="sp-ms fee-trust-badge-icon" style="color:#000000;" aria-hidden="true">verified_user</span><div><div class="fee-trust-badge-title">PCI DSS</div><div class="fee-trust-badge-sub">Compliant</div></div></div>
     </div>
     <p class="fee-trust-modal-note">You will be redirected to Razorpay's secure checkout. Your card or UPI details are never stored on our servers.</p>
     <div class="fee-trust-modal-footer">
@@ -1198,14 +1153,14 @@
     </div>
     <div class="fee-modal-body">
       <div class="fee-modal-amount-box">
-        <span class="sp-ms" style="font-size:20px;color:#16a34a;flex-shrink:0;" aria-hidden="true">payments</span>
+        <span class="sp-ms" style="font-size:20px;color:#000000;flex-shrink:0;" aria-hidden="true">payments</span>
         <div>
-          <div style="font-size:10px;color:#15803d;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px;">Amount Due</div>
-          <div id="sp-fee-counter-amount" style="font-size:1.3rem;font-weight:800;color:#14532d;"></div>
+          <div style="font-size:10px;color:#000000;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px;">Amount Due</div>
+          <div id="sp-fee-counter-amount" style="font-size:1.3rem;font-weight:800;color:#000000;"></div>
         </div>
       </div>
       <p style="font-size:13px;color:#475569;line-height:1.5;margin:0 0 12px;">Visit the <strong style="color:#1e293b;">Bursar's Office</strong> with the exact cash amount and your student ID.</p>
-      <div class="fee-modal-note"><span class="sp-ms" style="font-size:14px;color:#ca8a04;flex-shrink:0;" aria-hidden="true">info</span>Payment will be recorded after cash is received and verified.</div>
+      <div class="fee-modal-note"><span class="sp-ms" style="font-size:14px;color:#920c24;flex-shrink:0;" aria-hidden="true">info</span>Payment will be recorded after cash is received and verified.</div>
     </div>
     <div class="fee-modal-footer">
       <button type="button" onclick="document.getElementById('sp-fee-counter-modal').style.display='none';" class="fee-modal-close-btn">Close</button>
@@ -1258,8 +1213,8 @@
 
   /* ── Toast ──────────────────────────────────────────────────── */
   function toast(title, msg, type) {
-    var p = { success: { bd: 'rgba(21,128,61,0.35)', tx: '#166534' }, error: { bd: 'rgba(146,12,36,0.35)', tx: '#920c24' },
-              warning: { bd: '#fcd34d', tx: '#92400e' }, info: { bd: '#bae6fd', tx: '#0c4a6e' } };
+    var p = { success: { bd: 'rgba(0,0,0,0.25)', tx: '#000000' }, error: { bd: 'rgba(146,12,36,0.35)', tx: '#920c24' },
+              warning: { bd: '#f5c6ce', tx: '#920c24' }, info: { bd: '#f5c6ce', tx: '#920c24' } };
     var c = p[type] || p.info;
     var t = document.createElement('div');
     t.setAttribute('role', type === 'error' ? 'alert' : 'status');
@@ -1324,7 +1279,7 @@
   };
 
   /* ── Refresh one invoice row after cancel / failure ─────────── */
-  var TONE = { Paid: ['success', 'check_circle'], 'Partially Paid': ['warning', 'schedule'], Unpaid: ['danger', 'error'], Overdue: ['danger', 'error'] };
+  var TONE = { Paid: ['paid', 'check_circle'], 'Partially Paid': ['warning', 'schedule'], Unpaid: ['danger', 'error'], Overdue: ['danger', 'error'] };
   function refreshCard(name) {
     spCall('slcm.api.student_payment.get_invoice_summary', { invoice_name: name }, function (r) {
       var d = r && r.message; if (!d) return;

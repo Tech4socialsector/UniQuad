@@ -1,0 +1,172 @@
+{% extends "slcm/www/student-portal/_base.html" %}
+{% block title %}Fee Certificate{% endblock %}
+
+{% block content %}
+
+{% if no_student %}
+<div class="sp-info-box fade-in" style="background:var(--sp-warning-bg);border-color:var(--sp-warning);">
+  <span class="sp-ms">warning</span>
+  <div><strong>No student record found.</strong> Please contact the Registrar's Office.</div>
+</div>
+
+{% else %}
+
+<div class="sp-page-header fade-in">
+  <h1 class="sp-page-title">Fee Certificate</h1>
+  <p class="sp-page-sub">Download your fee certificate, fee demand letter or fee receipt for loans and scholarships</p>
+</div>
+
+{% if portal_error %}
+<div class="sp-info-box fade-in" style="background:var(--sp-warning-bg);border-color:var(--sp-warning);margin-bottom:20px;">
+  <span class="sp-ms">warning</span>
+  <div>{{ portal_error }}</div>
+</div>
+{% endif %}
+
+{% if not fc_purposes %}
+<div class="sp-info-box fade-in">
+  <span class="sp-ms">info</span>
+  <div>Fee certificates are not available right now. Please contact the Accounts Office.</div>
+</div>
+
+{% elif not fc_academic_years %}
+<div class="sp-info-box fade-in">
+  <span class="sp-ms">info</span>
+  <div>No academic year is set up yet. Please contact the Accounts Office.</div>
+</div>
+
+{% else %}
+
+{# ── Download ───────────────────────────────────────────────────── #}
+<div class="sp-section-card fade-in" style="animation-delay:0.06s;margin-bottom:24px;">
+  <div class="sp-section-header">
+    <span class="sp-ms">download</span> Download a Certificate
+  </div>
+  <div class="sp-section-body">
+
+    <div class="sp-form-row" style="max-width:360px;">
+      <div class="sp-form-group">
+        <label class="sp-form-label">Academic Year <span class="sp-required">*</span></label>
+        <select id="fc-academic-year" class="sp-form-control">
+          {% for ay in fc_academic_years %}
+          <option value="{{ ay.name }}" {% if ay.name == fc_default_academic_year %}selected{% endif %}>{{ ay.academic_year_name or ay.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="fc-grid">
+      {% for p in fc_purposes %}
+      <div class="fc-card">
+        <div class="fc-card-icon">
+          {%- if p.certificate_type == 'Single Year Fee Receipt' %}receipt_long
+          {%- elif p.certificate_type == 'Multi Year Fee Structure' %}account_balance
+          {%- else %}request_quote{%- endif -%}
+        </div>
+        <div class="fc-card-title">{{ p.purpose }}</div>
+        <div class="fc-card-desc">
+          {%- if p.certificate_type == 'Single Year Fee Receipt' %}
+          The fee you have paid for the selected academic year.
+          {%- elif p.certificate_type == 'Multi Year Fee Structure' %}
+          Year-wise fee structure for every year of your programme, with the University bank details.
+          {%- else %}
+          The fee to be paid for the selected academic year, with the University bank details.
+          {%- endif %}
+        </div>
+        {% if p.require_full_payment and fc_outstanding > 0 %}
+        <div class="fc-locked">
+          <span class="sp-ms">lock</span>
+          <span>Available once your fees are fully paid. Outstanding: <strong>{{ frappe.utils.fmt_money(fc_outstanding, currency="INR") }}</strong></span>
+        </div>
+        <button class="sp-btn sp-btn-primary fc-download" disabled style="opacity:0.5;cursor:not-allowed;">
+          <span class="sp-ms">download</span> Download PDF
+        </button>
+        {% else %}
+        <button class="sp-btn sp-btn-primary fc-download" data-purpose="{{ p.purpose }}" onclick="downloadFeeCertificate(this)">
+          <span class="sp-ms">download</span> Download PDF
+        </button>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+
+  </div>
+</div>
+
+{% endif %}
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function downloadFeeCertificate(btn) {
+  var academicYear = document.getElementById('fc-academic-year').value;
+  if (!academicYear) { alert('Please select an Academic Year.'); return; }
+
+  spCall(
+    'slcm.api.fee_certificate.generate_certificate',
+    { purpose: btn.dataset.purpose, academic_year: academicYear },
+    function(name) {
+      window.location.href = '/api/method/slcm.api.fee_certificate.download_certificate?name='
+        + encodeURIComponent(name);
+    },
+    function(err) { alert(err); }
+  );
+}
+</script>
+
+<style>
+.fc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-top: 8px;
+}
+.fc-card {
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-corner-radius, 14px);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--sp-surface, #fff);
+}
+.fc-card-icon {
+  font-family: 'Material Symbols Outlined';
+  font-size: 26px;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--sp-primary-light);
+  color: var(--sp-primary);
+}
+.fc-card-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--sp-text-1);
+}
+.fc-card-desc {
+  font-size: 12px;
+  color: var(--sp-text-3);
+  flex: 1;
+}
+.fc-locked {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--sp-warning);
+  background: var(--sp-warning-bg);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.fc-locked .sp-ms { font-size: 16px; }
+.fc-download {
+  align-self: flex-start;
+  margin-top: 4px;
+}
+</style>
+{% endblock %}

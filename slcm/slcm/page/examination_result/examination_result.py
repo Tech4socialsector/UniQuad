@@ -3311,7 +3311,7 @@ def send_results_email(course, exam_plan):
 		  <tr><td style="padding:6px 12px;border:1px solid #e2e8f0;font-weight:600;">Total Marks</td>
 		      <td style="padding:6px 12px;border:1px solid #e2e8f0;">{total}</td></tr>
 		  <tr><td style="padding:6px 12px;border:1px solid #e2e8f0;font-weight:600;">Grade</td>
-		      <td style="padding:6px 12px;border:1px solid #e2e8f0;font-size:18px;font-weight:700;color:#4f46e5;">{grade}</td></tr>
+		      <td style="padding:6px 12px;border:1px solid #e2e8f0;font-size:18px;font-weight:700;color:#920C24;">{grade}</td></tr>
 		</table>
 		<p>Please contact your faculty for any queries.</p>
 		"""

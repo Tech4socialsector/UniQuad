@@ -1,7 +1,8 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
 <head>
-  {% set sp_settings = frappe.get_cached_doc("Student Portal Settings", "Student Portal Settings") %}
+  {# Fully-resolved settings: defaults applied, derived shades and body classes pre-computed #}
+  {% set sp_settings = get_student_portal_settings() %}
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}Student Portal{% endblock %} — SLCM</title>
@@ -11,7 +12,7 @@
   {% if sp_settings and sp_settings.font_google_url %}
   <link href="{{ sp_settings.font_google_url }}" rel="stylesheet">
   {% else %}
-  <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;1,300;1,400&family=Inter:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,300;1,400&family=Inter:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   {% endif %}
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20,400,0,0&display=block" rel="stylesheet">
 
@@ -20,43 +21,307 @@
   <style id="sp-custom-vars">
     :root {
       --sp-primary:            {{ sp_settings.primary_color          or '#920c24' }};
-      --sp-primary-dark:       {{ sp_settings.primary_dark           or '#0a182c' }};
+      --sp-primary-dark:       {{ sp_settings.primary_dark           or '#6b091a' }};
       --sp-primary-light:      {{ sp_settings.primary_light          or 'rgba(18, 42, 74, 0.06)' }};
       --sp-primary-mid:        {{ sp_settings.primary_mid            or 'rgba(18, 42, 74, 0.12)' }};
       --sp-secondary:          {{ sp_settings.secondary_color        or '#85142b' }};
-      
-      --sp-bg:                 {{ sp_settings.background_color       or '#ffffff' }};
+
+      --sp-bg:                 {{ sp_settings.background_color       or '#f0f2f5' }};
       --sp-card-bg:            {{ sp_settings.card_background        or '#ffffff' }};
       --sp-card:               {{ sp_settings.card_background        or '#ffffff' }};
-      
-      --sp-nav-bg:             {{ sp_settings.sidebar_theme          or '#fafafa' }};
-      --sp-sidebar-bg:         {{ sp_settings.sidebar_theme          or '#fafafa' }};
-      
+
+      --sp-nav-bg:             {{ sp_settings.nav_bg_color           or '#ffffff' }};
       --sp-nav-text:           {{ sp_settings.nav_text_color         or '#920c24' }};
-      --sp-sidebar-text:       {{ sp_settings.nav_text_color         or '#920c24' }};
-      --sp-sidebar-text-2:     {{ sp_settings.nav_text_color         or '#920c24' }};
-      
-      --sp-success:            {{ sp_settings.success_color          or '#16a34a' }};
-      --sp-warning:            {{ sp_settings.warning_color          or '#d97706' }};
-      --sp-danger:             {{ sp_settings.danger_color           or '#dc2626' }};
-      --sp-info:               {{ sp_settings.info_color             or '#0369a1' }};
-      
-      --sp-font-family:        {{ sp_settings.font_family or "'Inter', system-ui, sans-serif" }};
+      --sp-sidebar-bg:         {{ sp_settings.sidebar_bg_color       or '#ffffff' }};
+      --sp-sidebar-text:       {{ sp_settings.sidebar_text_color     or '#920c24' }};
+      --sp-sidebar-text-2:     {{ sp_settings.sidebar_text_color     or '#920c24' }};
+
+      --sp-success:            {{ sp_settings.success_color          or '#920c24' }};
+      --sp-warning:            {{ sp_settings.warning_color          or '#920c24' }};
+      --sp-danger:             {{ sp_settings.danger_color           or '#920c24' }};
+      --sp-info:               {{ sp_settings.info_color             or '#920c24' }};
+
+      --sp-font-family:        {{ sp_settings.font_family_css or "'Merriweather', Georgia, serif" }};
       --sp-font-size:          {{ '13px' if sp_settings.font_size == 'Small' else '15px' if sp_settings.font_size == 'Large' else '14px' }};
-      --sp-corner-radius:      {{ '6px' if sp_settings.corner_style == 'Sharp' else '20px' if sp_settings.corner_style == 'Pill' else '6px' }};
-      
-      --sp-nav-h:              {{ '50px' if sp_settings.nav_height == 'Compact' else '72px' if sp_settings.nav_height == 'Tall' else '60px' }};
-      --sp-sidebar-w:          {{ '200px' if sp_settings.sidebar_width == 'Narrow' else '280px' if sp_settings.sidebar_width == 'Wide' else '240px' }};
-      
+      --sp-corner-radius:      {{ '6px' if sp_settings.corner_style == 'Sharp' else '20px' if sp_settings.corner_style == 'Pill' else '14px' }};
+
+      --sp-nav-h:              {{ '50px' if sp_settings.nav_height == 'Compact' else '74px' if sp_settings.nav_height == 'Tall' else '62px' }};
+      --sp-sidebar-w:          {{ '200px' if sp_settings.sidebar_width == 'Narrow' else '300px' if sp_settings.sidebar_width == 'Wide' else '256px' }};
+
+      /* Text + surface tokens — same as the Parent Portal */
+      --sp-text-1:             #0f172a;
+      --sp-text-2:             #1e293b;
+      --sp-text-3:             #475569;
+      --sp-text-4:             #94a3b8;
+      --sp-border:             #e2e8f0;
+      --sp-border-light:       #f1f5f9;
+
             --sp-grade-color:      {{ sp_settings.grade_color            or '#000000' }};
       --sp-grade-fail:         {{ sp_settings.grade_fail_color       or '#85142b' }};
-      --sp-grade-excellent:    {{ sp_settings.grade_excellent_color  or '#16a34a' }};
-      --sp-grade-good:         {{ sp_settings.grade_good_color       or '#0369a1' }};
-      --sp-grade-average:      {{ sp_settings.grade_average_color    or '#d97706' }};
-      --sp-att-good:           {{ sp_settings.att_good_color         or '#15803d' }};
-      --sp-att-warn:           {{ sp_settings.att_warn_color         or '#b45309' }};
+      --sp-grade-excellent:    {{ sp_settings.grade_excellent_color  or '#920c24' }};
+      --sp-grade-good:         {{ sp_settings.grade_good_color       or '#920c24' }};
+      --sp-grade-average:      {{ sp_settings.grade_average_color    or '#920c24' }};
+      --sp-att-good:           {{ sp_settings.att_good_color         or '#920c24' }};
+      --sp-att-warn:           {{ sp_settings.att_warn_color         or '#920c24' }};
       --sp-att-danger:         {{ sp_settings.att_danger_color       or '#85142b' }};
     }
+
+    /* ═══ Parent Portal look ════════════════════════════════════
+       Navbar, sidebar, typography and cards use the same sizes,
+       weights and colours as www/parent-portal/_base.html.
+       Colours still come from Student Portal Settings. */
+    body.sp-sidebar-narrow { --sp-sidebar-w: 200px; }
+    body.sp-sidebar-wide   { --sp-sidebar-w: 300px; }
+    body.sp-nav-compact    { --sp-nav-h: 50px; }
+    body.sp-nav-tall       { --sp-nav-h: 74px; }
+
+    body { font-weight: 400; color: var(--sp-text-1); }
+    .sp-card-body, .sp-modal-body, .sp-notif-body { font-weight: 400; }
+
+    /* Top navbar */
+    .sp-nav {
+      padding: 0 20px; gap: 12px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.10);
+    }
+    .sp-nav-left { min-width: 0; flex: 1; }
+    .sp-nav-right { gap: 8px; flex-shrink: 0; }
+    .sp-hamburger {
+      width: 40px; height: 40px; padding: 9px;
+      border: none; background: none;
+      justify-content: center; flex-shrink: 0;
+    }
+    .sp-hamburger:hover { background: var(--sp-primary-light); }
+    .sp-hamburger span { background: var(--sp-nav-text); }
+    .sp-brand {
+      gap: 10px; min-width: 0;
+      color: var(--sp-nav-text);
+      font-size: 15px; font-weight: 700 !important;
+    }
+    .sp-brand-logo {
+      width: 38px; height: 38px; border-radius: 11px;
+      overflow: hidden; flex-shrink: 0;
+      font-weight: 800; font-size: 15px; color: var(--sp-nav-text);
+    }
+    .sp-brand-logo img { width: 32px; height: 32px; object-fit: contain; }
+    .sp-brand-text { display: flex; flex-direction: column; min-width: 0; }
+    .sp-brand-name {
+      font-weight: 700; font-size: 15px; line-height: 1.2; letter-spacing: -0.01em;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .sp-brand-sub { font-size: 10px; font-weight: 400; color: var(--sp-text-3); letter-spacing: 0.04em; }
+
+    /* Notification bell */
+    .sp-notif-btn {
+      width: 38px; height: 38px; border-radius: 10px;
+      background: var(--sp-primary-light);
+      border: 1px solid var(--sp-primary-mid);
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    body .sp-notif-btn:hover { background: var(--sp-primary-mid); }
+    .sp-notif-btn .sp-ms {
+      font-size: 20px; color: var(--sp-nav-text) !important;
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+    }
+    .sp-notif-badge {
+      top: 3px; right: 3px;
+      background: var(--sp-primary);
+      border: 2px solid var(--sp-nav-bg);
+      font-family: inherit; font-weight: 700;
+    }
+
+    /* Avatar + account dropdown */
+    body .sp-avatar-btn {
+      width: 38px; height: 38px; color: #fff;
+      font-weight: 700; font-size: 15px; letter-spacing: -0.02em;
+      border: 2px solid rgba(255,255,255,0.6);
+    }
+    body .sp-avatar-btn:hover { border-color: var(--sp-primary); box-shadow: 0 0 0 3px var(--sp-primary-light); }
+    .sp-dropdown {
+      border-radius: 14px; min-width: 230px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.14);
+    }
+    .sp-dropdown-name  { font-weight: 600; font-size: 13.5px; }
+    .sp-dropdown-email { font-size: 11px; margin-top: 1px; }
+    .sp-dropdown-item  { font-size: 13px; font-weight: 500; }
+    .sp-dropdown-item.sp-danger { color: var(--sp-primary); }
+    .sp-dropdown-item.sp-danger .sp-ms { color: var(--sp-primary); }
+    .sp-dropdown-item.sp-danger:hover { background: var(--sp-primary-light); }
+
+    /* Notification panel */
+    .sp-notif-panel { border-radius: 14px; box-shadow: 0 10px 40px rgba(0,0,0,0.14); }
+    .sp-notif-header { padding: 14px 16px 12px; }
+    .sp-notif-header-title { font-size: 13px; font-weight: 700; }
+    .sp-notif-title { font-size: 12.5px; font-weight: 600; }
+    .sp-notif-sub { font-size: 11.5px; color: var(--sp-text-3); }
+    .sp-notif-footer a { font-weight: 600; }
+    .sp-notif-item { position: relative; }
+    .sp-notif-item.is-unread { background: #fffafb; }
+    .sp-notif-item.is-unread::before {
+      content: ''; position: absolute; left: 6px; top: 50%; width: 6px; height: 6px; margin-top: -3px;
+      border-radius: 50%; background: var(--sp-primary);
+    }
+    .sp-notif-item.is-unread .sp-notif-title { font-weight: 700; }
+
+    /* Sidebar */
+    .sp-sidebar {
+      background: var(--sp-sidebar-bg);
+      border-right: 1px solid var(--sp-border);
+      box-shadow: none;
+      padding: 16px 8px 24px;
+      overflow-x: hidden;
+      scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent;
+    }
+    .sp-sidebar .sp-sidebar-section {
+      font-size: 9.5px; font-weight: 700; letter-spacing: 0.10em;
+      text-transform: uppercase; color: var(--sp-text-4);
+      padding: 0 10px; margin: 0 0 6px;
+    }
+    .sp-sidebar .sp-nav-item {
+      gap: 10px; padding: 9px 12px; border-radius: 10px;
+      font-size: 13px; font-weight: 500;
+      color: var(--sp-sidebar-text);
+      margin-bottom: 2px; border-left: 3px solid transparent;
+      transition: background 0.15s, color 0.15s;
+    }
+    .sp-sidebar .sp-nav-item .sp-ms {
+      font-size: 20px !important; color: var(--sp-sidebar-text);
+      transition: color 0.15s;
+    }
+    .sp-sidebar .sp-nav-item:hover:not(.active) {
+      background: #f0f4f8; color: #0f172a; border-left-color: transparent;
+    }
+    .sp-sidebar .sp-nav-item:hover:not(.active) .sp-ms { color: #0f172a !important; }
+    .sp-sidebar .sp-nav-item.active {
+      background: var(--sp-primary) !important;
+      border-left-color: transparent !important;
+      color: #ffffff !important; font-weight: 500;
+    }
+    .sp-sidebar .sp-nav-item.active .sp-ms {
+      color: #ffffff !important;
+    }
+    .sp-nav-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* Accordion groups — header looks like a menu item */
+    .sp-nav-group { margin-bottom: 2px; }
+    .sp-sidebar .sp-nav-group-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 9px 12px; margin: 0 0 2px; cursor: pointer; user-select: none;
+      border-radius: 10px; border-left: 3px solid transparent;
+      font-size: 13px; font-weight: 500;
+      color: var(--sp-sidebar-text);
+      transition: background 0.15s, color 0.15s;
+    }
+    .sp-nav-group-header > div { gap: 10px !important; min-width: 0; }
+    .sp-nav-group-header .sp-ms {
+      font-size: 20px; color: var(--sp-sidebar-text);
+      flex-shrink: 0; transition: color 0.15s, transform 0.2s ease;
+    }
+    .sp-nav-group-header .sp-nav-group-caret { font-size: 18px; }
+    .sp-sidebar .sp-nav-group-header:hover { background: #f0f4f8; color: #0f172a; }
+    .sp-nav-group-header:hover .sp-ms { color: #0f172a; }
+    .sp-nav-group-items {
+      max-height: 0; overflow: hidden; opacity: 0;
+      padding-left: 14px; padding-right: 0;
+      transition: max-height 0.3s ease, padding 0.3s ease, opacity 0.3s ease;
+    }
+    .sp-nav-group.open .sp-nav-group-items {
+      max-height: 500px; opacity: 1; padding-top: 0; padding-bottom: 6px;
+    }
+    .sp-nav-group.open .sp-nav-group-caret { transform: rotate(180deg); }
+
+    /* Divider + collapse button */
+    .sp-sidebar .sp-sidebar-divider { border: none; border-top: 1px solid var(--sp-border) !important; margin: 12px 8px; }
+    .sp-sidebar .sp-collapse-btn {
+      gap: 10px; padding: 9px 12px; border-radius: 10px;
+      font-size: 13px; font-weight: 500;
+      color: var(--sp-sidebar-text); opacity: 1;
+    }
+    .sp-sidebar .sp-collapse-btn .sp-ms { font-size: 20px; color: var(--sp-sidebar-text); }
+    .sp-sidebar .sp-collapse-btn:hover { background: #f0f4f8; color: #0f172a; }
+    .sp-sidebar .sp-collapse-btn:hover .sp-ms { color: #0f172a; }
+
+    /* Mini (icon-only) sidebar */
+    .sp-sidebar.sp-mini .sp-nav-item,
+    .sp-sidebar.sp-mini .sp-collapse-btn { padding: 9px 0; justify-content: center; gap: 0; }
+    .sp-sidebar.sp-mini .sp-nav-group-header { padding: 9px 0; justify-content: center; }
+    .sp-sidebar.sp-mini .sp-nav-group-header .sp-nav-label,
+    .sp-sidebar.sp-mini .sp-nav-group-caret { display: none; }
+    .sp-sidebar.sp-mini .sp-nav-group-items { display: none !important; }
+    .sp-sidebar.sp-mini .sp-sidebar-divider { margin: 8px 4px; }
+
+    /* Settings › Layout Density / Font Size keep working */
+    body.sp-compact .sp-sidebar { padding: 10px 8px 24px; }
+    body.sp-compact .sp-sidebar .sp-nav-item,
+    body.sp-compact .sp-sidebar .sp-nav-group-header { padding-top: 7px; padding-bottom: 7px; }
+    body.sp-font-sm .sp-sidebar .sp-nav-item,
+    body.sp-font-sm .sp-sidebar .sp-nav-group-header { font-size: 12.5px; }
+    body.sp-font-lg .sp-sidebar .sp-nav-item,
+    body.sp-font-lg .sp-sidebar .sp-nav-group-header { font-size: 14px; }
+
+    /* Main content + page header */
+    .sp-main { padding: 32px 32px 56px; }
+    body.sp-compact .sp-main { padding: 18px 18px 48px; }
+    .sp-page-header { margin-bottom: 22px; }
+    .sp-page-title, .spd-page-title, .spf-title {
+      font-size: 28px !important; font-weight: 800 !important;
+      color: var(--sp-text-1) !important; letter-spacing: -0.02em;
+      font-family: var(--sp-font-family) !important;
+      line-height: 1.25;
+    }
+    .sp-page-sub { font-size: 13.5px; color: var(--sp-text-3); }
+
+    /* Cards */
+    .sp-card {
+      border-radius: 14px; border: 1px solid var(--sp-border);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+    .sp-card:hover { box-shadow: 0 4px 12px rgba(16,24,40,0.08); }
+    .sp-card-header { border-bottom: 1px solid var(--sp-border-light); background: var(--sp-card); }
+    .sp-card-title { font-size: 16px; font-weight: 700; color: var(--sp-text-1); }
+    .sp-card-title .sp-ms { font-size: 18px; color: var(--sp-primary); }
+    .sp-card-link { font-size: 12px; font-weight: 600; }
+    @media screen and (min-width: 769px) {
+      .sp-card-header { padding: 18px 22px 14px; }
+      .sp-card-body   { padding: 20px 22px; }
+      body.sp-compact .sp-card-header { padding: 12px 15px; }
+      body.sp-compact .sp-card-body   { padding: 14px; }
+    }
+
+    /* Focus + text selection, as in the Parent Portal */
+    a:focus-visible, button:focus-visible, [role="button"]:focus-visible {
+      outline: 2px solid var(--sp-primary); outline-offset: 2px;
+    }
+    ::selection      { background: #b3d4fc; color: #0f172a; }
+    ::-moz-selection { background: #b3d4fc; color: #0f172a; }
+
+    @media (max-width: 768px) {
+      .sp-sidebar { width: 270px; }
+      .sp-sidebar.open { box-shadow: 4px 0 24px rgba(0,0,0,0.12); }
+      .sp-main { padding: 18px 14px 56px; }
+      .sp-page-title, .spd-page-title, .spf-title { font-size: 24px !important; }
+    }
+    @media (max-width: 480px) {
+      .sp-brand-sub { display: none; }
+    }
+
+    /* App shell (desktop): only the content pane scrolls. The page scrollbar
+       no longer runs over the fixed top header, and the header no longer
+       shifts sideways between pages that scroll and pages that don't. */
+    @media screen and (min-width: 769px) {
+      html:has(> body > .sp-layout),
+      body:has(> .sp-layout) { overflow: hidden; }
+      .sp-layout { height: 100vh; min-height: 0; }
+      .sp-main {
+        height: 100%;
+        min-width: 0;
+        overflow-y: auto;
+        scrollbar-gutter: stable;
+        overscroll-behavior: contain;
+      }
+    }
+
+    /* Admin CSS from Student Portal Settings › Advanced — applied last so it can override the above */
     {% if sp_settings.custom_css %}
     {{ sp_settings.custom_css }}
     {% endif %}
@@ -73,7 +338,7 @@
     body, p, .context-text, .sp-breadcrumb { font-weight: 400 !important; font-size: 13.5px; }
     .sp-notif-btn { display: flex !important; align-items: center !important; justify-content: center !important; }
     .sp-notif-btn .sp-ms { font-size: 24px !important; }
-  
+
     /* Accordion Menu Styles */
     .sp-nav-group { margin-bottom: 4px; }
     .sp-nav-group-header {
@@ -92,10 +357,10 @@
     .sp-nav-group-header.active { background: var(--sp-primary) !important; color: #FFFFFF !important; }
     .sp-nav-group-header.active .sp-ms { color: #FFFFFF !important; }
     .sp-nav-group-header.active .sp-nav-label { font-weight: 600 !important; }
-    .sp-nav-group-header .sp-nav-label { 
-      font-size: 14px !important; 
+    .sp-nav-group-header .sp-nav-label {
+      font-size: 14px !important;
       font-weight: 500;
-      white-space: nowrap !important; 
+      white-space: nowrap !important;
     }
     .sp-nav-group-header .sp-ms { font-size: 18px; transition: transform 0.2s ease; flex-shrink: 0; }
     .sp-nav-group-items {
@@ -107,7 +372,7 @@
       max-height: 500px; opacity: 1; padding-top: 2px; padding-bottom: 6px;
     }
     .sp-nav-group.open .sp-nav-group-caret { transform: rotate(180deg); }
-    
+
     /* Handle mini sidebar */
     .sp-sidebar.sp-mini .sp-nav-group-header { padding: 10px; justify-content: center; }
     .sp-sidebar.sp-mini .sp-nav-group-header .sp-nav-label { display: none; }
@@ -116,7 +381,7 @@
 
   </style>
 
-  {% block extra_head %}{% endblock %} 
+  {% block extra_head %}{% endblock %}
 </head>
 
 <body class="{{ sp_settings.body_classes | default('') }}">
@@ -139,7 +404,7 @@
     </div>
     <h2 style="margin:0 0 10px;color:#0f172a;font-size:22px;font-weight:800;letter-spacing:-0.02em;">Not a Student Account</h2>
     <p style="color:#64748b;font-size:14px;margin:0 0 28px;line-height:1.6;">Your account is not linked to a student record. Please use the correct portal or contact the administrator for access.</p>
-    <button onclick="spNotStudentLogout()" style="display:inline-flex;align-items:center;gap:8px;padding:11px 28px;background:linear-gradient(135deg,#2b2e4a,#920c24);color:#fff;border-radius:10px;border:none;cursor:pointer;font-weight:600;font-size:14px;font-family:inherit;box-shadow:0 4px 16px rgba(43,46,74,0.3);">
+    <button onclick="spNotStudentLogout()" style="display:inline-flex;align-items:center;gap:8px;padding:11px 28px;background:linear-gradient(135deg,#920c24,#920c24);color:#fff;border-radius:10px;border:none;cursor:pointer;font-weight:600;font-size:14px;font-family:inherit;box-shadow:0 4px 16px rgba(146,12,36,0.3);">
       <span style="font-family:'Material Symbols Outlined';font-size:18px;">logout</span>Sign Out &amp; Login Again
     </button>
     <script>
@@ -163,9 +428,9 @@
 {# ── Top Navbar ──────────────────────────────────────────────── #}
 <nav class="sp-nav">
   <div class="sp-nav-left">
-    <div class="sp-hamburger" id="sp-hamburger" onclick="spToggleSidebar()">
+    <button type="button" class="sp-hamburger" id="sp-hamburger" onclick="spToggleSidebar()" aria-label="Open menu" aria-controls="sp-sidebar">
       <span></span><span></span><span></span>
-    </div>
+    </button>
     <a href="/student-portal" class="sp-brand">
       {% if sp_settings.show_logo | default(1) %}
       <div class="sp-brand-logo">
@@ -179,7 +444,10 @@
         {% endif %}
       </div>
       {% endif %}
-      <span>{{ sp_settings.nav_brand_text or sp_settings.portal_title or 'Student Portal' }}</span>
+      <div class="sp-brand-text">
+        <span class="sp-brand-name">{{ sp_settings.nav_brand_text or sp_settings.portal_title or 'Student Portal' }}</span>
+        <span class="sp-brand-sub">{{ sp_settings.portal_subtitle or 'Student Portal' }}</span>
+      </div>
     </a>
   </div>
 
@@ -250,7 +518,7 @@
     </div>
   </div>
   <div class="sp-notif-footer">
-    <a href="/student-portal/announcements">View All Announcements ›</a>
+    <a href="/student-portal/notifications">View All Notifications ›</a>
   </div>
 </div>
 
@@ -287,9 +555,7 @@
     ────────────────────────────────────────────────────────────────── #}
 
     {# ── MAIN MENU ── #}
-    <div class="sp-sidebar-section">
-      <!-- Main Menu -->
-    </div>
+    <div class="sp-sidebar-section">Menu</div>
     <div class="sp-section-items" id="sp-section-main-menu">
 
       {# Dashboard #}
@@ -335,6 +601,9 @@
           <span class="sp-ms sp-nav-group-caret">keyboard_arrow_down</span>
         </div>
         <div class="sp-nav-group-items">
+          <a href="/student-portal/notifications" class="sp-nav-item {% if active_page == 'notifications' %}active{% endif %}" data-label="Notifications">
+            <span class="sp-ms">notifications</span><span class="sp-nav-label">Notifications</span>
+          </a>
           <a href="/student-portal/announcements" class="sp-nav-item {% if active_page == 'announcements' %}active{% endif %}" data-label="Announcements">
             <span class="sp-ms">campaign</span><span class="sp-nav-label">Announcements</span>
           </a>
@@ -344,9 +613,11 @@
           <a href="/student-portal/profile" class="sp-nav-item {% if active_page == 'profile' %}active{% endif %}" data-label="My Profile">
             <span class="sp-ms">person</span><span class="sp-nav-label">My Profile</span>
           </a>
+          {% if sp_settings.menu_placement %}
           <a href="/student-portal/placement" class="sp-nav-item {% if active_page == 'placement' %}active{% endif %}" data-label="Placements">
             <span class="sp-ms">work</span><span class="sp-nav-label">Placements</span>
           </a>
+          {% endif %}
         </div>
       </div> -->
 
@@ -363,9 +634,11 @@
           <a href="/student-portal/exam-schedule" class="sp-nav-item {% if active_page == 'exam_schedule' %}active{% endif %}" data-label="Exam Schedule">
             <span class="sp-ms">event_note</span><span class="sp-nav-label">Exam Schedule</span>
           </a>
+          {# Grade Appeal — hidden per request; markup kept for easy restore
           <a href="/student-portal/grade-appeal" class="sp-nav-item {% if active_page == 'grade_appeal' %}active{% endif %}" data-label="Grade Appeal">
             <span class="sp-ms">balance</span><span class="sp-nav-label">Grade Appeal</span>
           </a>
+          #}
           <a href="/student-portal/re-exam" class="sp-nav-item {% if active_page == 're_exam' %}active{% endif %}" data-label="Re-exam Application">
             <span class="sp-ms">assignment_late</span><span class="sp-nav-label">Re-exam Application</span>
           </a>
@@ -410,6 +683,9 @@
           <!-- <a href="/student-portal/documents" class="sp-nav-item {% if active_page == 'documents' %}active{% endif %}" data-label="Documents">
             <span class="sp-ms">folder_open</span><span class="sp-nav-label">Documents</span>
           </a> -->
+          <a href="/student-portal/fee-certificate" class="sp-nav-item {% if active_page == 'fee_certificate' %}active{% endif %}" data-label="Fee Certificate">
+            <span class="sp-ms">workspace_premium</span><span class="sp-nav-label">Fee Certificate</span>
+          </a>
           <a href="/student-portal/hostel" class="sp-nav-item {% if active_page == 'hostel' %}active{% endif %}" data-label="Hostel Management">
             <span class="sp-ms">hotel</span><span class="sp-nav-label">Hostel Management</span>
           </a>
@@ -426,11 +702,11 @@
       </div>
 
     </div>
-    
+
     <hr class="sp-sidebar-divider">
     <button class="sp-collapse-btn" onclick="spToggleMini()" data-label="Expand">
       <span class="sp-ms">left_panel_close</span>
-      <span class="sp-collapse-label">Collapse</span>
+      <span class="sp-collapse-label"></span>
     </button>
     {# Sign Out — hidden per request; markup kept for easy restore
     <a href="javascript:void(0)" onclick="spLogout()" class="sp-nav-item sp-danger" data-label="Sign Out">
@@ -461,7 +737,7 @@
       <button onclick="spCancelLogout()" style="flex:1;padding:11px;border:1.5px solid var(--sp-border);background:transparent;border-radius:8px;font-size:14px;font-weight:600;color:var(--sp-text-2);cursor:pointer;font-family:inherit;transition:background 0.15s;" onmouseover="this.style.background='var(--sp-bg)'" onmouseout="this.style.background='transparent'">
         Cancel
       </button>
-      <button id="sp-logout-confirm-btn" onclick="spConfirmLogout()" style="flex:1;padding:11px;border:none;background:linear-gradient(135deg,var(--sp-danger),#c01010);border-radius:8px;font-size:14px;font-weight:600;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;font-family:inherit;box-shadow:0 4px 12px rgba(224,82,82,0.35);">
+      <button id="sp-logout-confirm-btn" onclick="spConfirmLogout()" style="flex:1;padding:11px;border:none;background:linear-gradient(135deg,var(--sp-danger),#920c24);border-radius:8px;font-size:14px;font-weight:600;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;font-family:inherit;box-shadow:0 4px 12px rgba(146,12,36,0.35);">
         <span class="sp-ms" style="font-size:17px;">logout</span>Sign Out
       </button>
     </div>
@@ -473,6 +749,27 @@
 <script>
   /* CSRF token embedded from server — used by spCall */
   window._sp_csrf = "{{ frappe.session.csrf_token or '' }}";
+
+  /* ── Notification read-state (this browser only, per user) ── */
+  window.spNotifRead = (function () {
+    var KEY = 'sp-notif-read:' + {{ (frappe.session.user or '') | tojson }};
+    var MAX = 300;
+    function load() {
+      try { var v = JSON.parse(localStorage.getItem(KEY) || '[]'); return Array.isArray(v) ? v : []; }
+      catch (e) { return []; }
+    }
+    function save(list) {
+      try { localStorage.setItem(KEY, JSON.stringify(list.slice(-MAX))); } catch (e) {}
+    }
+    return {
+      has: function (id) { return !!id && load().indexOf(id) !== -1; },
+      add: function (ids) {
+        var list = load(), changed = false;
+        (ids || []).forEach(function (id) { if (id && list.indexOf(id) === -1) { list.push(id); changed = true; } });
+        if (changed) save(list);
+      }
+    };
+  })();
   /* ── Sidebar ── */
   function spToggleSidebar() {
     document.getElementById('sp-sidebar').classList.toggle('open');
@@ -583,7 +880,7 @@
   function spToggleNavGroup(groupId) {
     var el = document.getElementById('sp-group-' + groupId);
     if (!el) return;
-    
+
     if (!el.classList.contains('open')) {
       document.querySelectorAll('.sp-nav-group.open').forEach(function(other) {
         if (other !== el) {
@@ -592,7 +889,7 @@
         }
       });
     }
-    
+
     var isOpen = el.classList.toggle('open');
     try { localStorage.setItem('sp-navgroup-' + groupId, isOpen ? '1' : '0'); } catch(e) {}
   }
@@ -695,10 +992,19 @@
         .catch(function() {});
     }
 
+    var _lastData = null;
+    function notifId(n) { return n.id || ((n.type || '') + ':' + (n.title || '')); }
+    function isRead(n) { return window.spNotifRead ? window.spNotifRead.has(notifId(n)) : false; }
+    /* Lets the Notifications page refresh the bell after "Mark all as read" */
+    window.spRefreshNotifBadge = function () { if (_lastData) render(_lastData); };
+
     function render(data) {
+      _lastData = data;
       var notifications = data.notifications || [];
-      var count         = data.count || 0;
-      var urgentCount   = data.urgent_count || 0;
+      var unreadList    = notifications.filter(function (n) { return !isRead(n); });
+      /* Items beyond the 20 returned can't be marked read here — count them as unread */
+      var count         = unreadList.length + Math.max(0, (data.count || 0) - notifications.length);
+      var urgentCount   = unreadList.filter(function (n) { return n.priority === 'Urgent'; }).length;
 
       /* ── Bell badge ── */
       var badge = document.getElementById('sp-notif-badge');
@@ -717,7 +1023,7 @@
       /* ── Panel count ── */
       var countEl = document.getElementById('sp-notif-count');
       if (countEl)
-        countEl.textContent = count ? count + ' notification' + (count > 1 ? 's' : '') : '';
+        countEl.textContent = count ? count + ' unread' : '';
 
       /* ── Panel list ── */
       var list = document.getElementById('sp-notif-list');
@@ -733,8 +1039,9 @@
             if (n.icon === 'check_circle')  iconCls = 'success';
             if (n.icon === 'cancel')        iconCls = 'urgent';
             html +=
-              '<a href="' + escHtml(n.link) + '" class="sp-notif-item" ' +
-                 'onclick="document.getElementById(\'sp-notif-panel\').classList.remove(\'open\')">' +
+              '<a href="' + escHtml(n.link) + '" class="sp-notif-item' + (isRead(n) ? '' : ' is-unread') + '" ' +
+                 'data-notif-id="' + escHtml(notifId(n)) + '" ' +
+                 'onclick="window.spNotifRead &amp;&amp; window.spNotifRead.add([this.getAttribute(\'data-notif-id\')]); document.getElementById(\'sp-notif-panel\').classList.remove(\'open\')">' +
                 '<div class="sp-notif-icon ' + iconCls + '">' +
                   '<span class="sp-ms">' + escHtml(n.icon) + '</span>' +
                 '</div>' +

@@ -23,10 +23,6 @@
     <div>
       <h1 class="sp-page-title" style="font-family: 'Merriweather', serif; font-size: 28px!important; color: var(--sp-text-1); margin: 0 0 6px 0; font-weight: 600;">Venue Booking</h1>
       <p class="sp-page-sub" style="font-size: 15px; color: var(--sp-text-3); margin: 0;">Book rooms and venues for your academic and co-curricular activities.</p>
-      <div style="font-size: 13px; color: var(--sp-text-4); margin-top: 14px;">
-        <a href="/student-portal" style="color: var(--sp-text-4); text-decoration: none;">Dashboard</a> &gt; 
-        <span style="color: var(--sp-primary); font-weight: 600;">Venue Booking</span>
-      </div>
     </div>
   </div>
 </div>
@@ -199,7 +195,7 @@
         <input type="file" class="vb-file-input" id="vb-attachment"
           accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
         <label class="vb-dropzone-label" for="vb-attachment">
-          <span class="sp-ms" style="font-size:36px;color:#dc2626;opacity:1;">cloud_upload</span>
+          <span class="sp-ms" style="font-size:36px;color:#920c24;opacity:1;">cloud_upload</span>
           <span id="vb-attach-name" class="vb-dropzone-text">Click to attach or drop a file here</span>
           <span class="vb-dropzone-hint">PDF, Image, DOC — max 10 MB</span>
         </label>
@@ -227,7 +223,7 @@
   <div class="sp-section-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px; font-family: 'Merriweather', serif; font-size: 20px; font-weight: 700; color: #0f172a; border-bottom: 1px solid transparent; padding-bottom: 16px; margin-bottom: 0;">
     <span style="display: flex; align-items: center; gap: 8px;"><span class="sp-ms" style="color: var(--sp-primary);">history</span> My Booking History</span>
     <div style="display:flex;align-items:center;gap:10px;">
-      <span class="sp-badge" id="vb-count-badge" style="background: #fef3c7; color: #d97706; font-size: 14px; padding: 4px 10px; font-weight: 700;">{{ total_count or 0 }}</span>
+      <span class="sp-badge" id="vb-count-badge" style="background: #fff0f2; color: #920c24; font-size: 14px; padding: 4px 10px; font-weight: 700;">{{ total_count or 0 }}</span>
     </div>
   </div>
 
@@ -325,7 +321,7 @@
               {{ frappe.utils.format_datetime(bk.start_datetime, "dd/MM/yyyy hh:mm a") if bk.start_datetime else "—" }}
             </div>
             <div style="white-space:nowrap;color:var(--sp-text-4);margin-top:2px;">
-              <span class="sp-ms" style="font-size:12px;color:#dc2626;vertical-align:-2px;">stop_circle</span>
+              <span class="sp-ms" style="font-size:12px;color:#920c24;vertical-align:-2px;">stop_circle</span>
               {{ frappe.utils.format_datetime(bk.end_datetime, "dd/MM/yyyy hh:mm a") if bk.end_datetime else "—" }}
             </div>
           </td>
@@ -396,7 +392,7 @@
 <div id="vb-capacity-modal" class="vb-modal-backdrop" style="display:none;">
   <div class="vb-modal-box">
     <div class="vb-modal-icon">
-      <span class="sp-ms" style="font-size:32px;color:#d97706;">group</span>
+      <span class="sp-ms" style="font-size:32px;color:#920c24;">group</span>
     </div>
     <div class="vb-modal-title">Attendees Exceed Room Capacity</div>
     <div class="vb-modal-body" id="vb-capacity-msg"></div>
@@ -417,7 +413,7 @@
 <div id="vb-conflict-modal" class="vb-modal-backdrop" style="display:none;">
   <div class="vb-modal-box">
     <div class="vb-modal-icon">
-      <span class="sp-ms" style="font-size:32px;color:#dc2626;">event_busy</span>
+      <span class="sp-ms" style="font-size:32px;color:#920c24;">event_busy</span>
     </div>
     <div class="vb-modal-title">Room Already Booked</div>
     <div class="vb-modal-body" id="vb-conflict-msg"></div>
@@ -438,7 +434,7 @@
 <div id="vb-cancel-modal" class="vb-modal-backdrop" style="display:none;">
   <div class="vb-modal-box">
     <div class="vb-modal-icon">
-      <span class="sp-ms" style="font-size:32px;color:#dc2626;">warning</span>
+      <span class="sp-ms" style="font-size:32px;color:#920c24;">warning</span>
     </div>
     <div class="vb-modal-title">Cancel Booking?</div>
     <div class="vb-modal-body">
@@ -755,6 +751,8 @@ function submitVenueBooking() {
           document.getElementById('vb-success').style.display = 'flex';
           clearVbForm();
           window.scrollTo({ top: 0, behavior: 'smooth' });
+          var _spMain = document.querySelector('.sp-main');
+          if (_spMain) _spMain.scrollTo({ top: 0, behavior: 'smooth' });
           setTimeout(function() {
             var base = location.href.split('?')[0].split('#')[0];
             location.replace(base + '?_reload=1#vb-history');
@@ -916,7 +914,7 @@ function showVbToast(msg, success) {
     document.body.appendChild(t);
   }
   t.textContent = msg;
-  t.style.background = success ? '#059669' : '#1e293b';
+  t.style.background = success ? '#920c24' : '#1e293b';
   t.style.opacity = '1';
   clearTimeout(t._hide);
   t._hide = setTimeout(function() { t.style.opacity = '0'; }, 2500);
@@ -982,9 +980,9 @@ function showVbToast(msg, success) {
 .vb-stat-approved .vb-stat-icon-wrap { background: var(--sp-success); color: #fff; }
 .vb-stat-approved .vb-stat-num       { color: var(--sp-success); }
 
-.vb-stat-rejected { background: #fef2f2;                  border-color: rgba(220,38,38,0.2);  color: #dc2626; }
-.vb-stat-rejected .vb-stat-icon-wrap { background: #dc2626; color: #fff; }
-.vb-stat-rejected .vb-stat-num       { color: #dc2626; }
+.vb-stat-rejected { background: #fff0f2;                  border-color: rgba(146,12,36,0.2);  color: #920c24; }
+.vb-stat-rejected .vb-stat-icon-wrap { background: #920c24; color: #fff; }
+.vb-stat-rejected .vb-stat-num       { color: #920c24; }
 
 .vb-stat-cancelled { background: #f3f4f6;                 border-color: rgba(107,114,128,0.2); color: #6b7280; }
 .vb-stat-cancelled .vb-stat-icon-wrap { background: #6b7280; color: #fff; }
@@ -1001,10 +999,10 @@ function showVbToast(msg, success) {
   border: 1px solid;
 }
 .vb-flash .sp-ms { font-family: 'Material Symbols Outlined'; font-size: 18px; flex-shrink: 0; }
-.vb-flash-ok  { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
-.vb-flash-ok  .sp-ms { color: #059669; }
-.vb-flash-err { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
-.vb-flash-err .sp-ms { color: #dc2626; }
+.vb-flash-ok  { background: #fff0f2; border-color: #f5c6ce; color: #6b091a; }
+.vb-flash-ok  .sp-ms { color: #920c24; }
+.vb-flash-err { background: #fff0f2; border-color: #f5c6ce; color: #6b091a; }
+.vb-flash-err .sp-ms { color: #920c24; }
 
 /* ── Form ──────────────────────────────────────────────────────── */
 .vb-form-info {
@@ -1012,7 +1010,7 @@ function showVbToast(msg, success) {
   align-items: center;
   gap: 8px;
   background: var(--sp-primary-light);
-  border: 1px solid rgba(59,130,246,0.2);
+  border: 1px solid rgba(146,12,36,0.2);
   border-radius: 8px;
   padding: 10px 14px;
   font-size: 13px;
@@ -1039,7 +1037,7 @@ function showVbToast(msg, success) {
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
-.vb-req { color: #dc2626; }
+.vb-req { color: #920c24; }
 
 .vb-input {
   width: 100%;
@@ -1272,9 +1270,9 @@ function showVbToast(msg, success) {
   max-width: 220px;
 }
 .vb-admin-remark .sp-ms { font-family: 'Material Symbols Outlined'; margin-top: 1px; }
-.vb-remark-ok   { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
-.vb-remark-err  { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
-.vb-remark-info { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+.vb-remark-ok   { background: #fff0f2; color: #6b091a; border: 1px solid #f5c6ce; }
+.vb-remark-err  { background: #fff0f2; color: #6b091a; border: 1px solid #f5c6ce; }
+.vb-remark-info { background: #fff0f2; color: #920c24; border: 1px solid #f5c6ce; }
 
 .vb-td-room { white-space: nowrap; }
 .vb-td-dt { white-space: nowrap; font-size: 12px; }
@@ -1292,7 +1290,7 @@ function showVbToast(msg, success) {
 }
 .vb-status-pill .sp-ms { font-family: 'Material Symbols Outlined'; }
 .vb-status-ok   { background: var(--sp-success-bg); color: var(--sp-success); }
-.vb-status-err  { background: #fef2f2; color: #dc2626; }
+.vb-status-err  { background: #fff0f2; color: #920c24; }
 .vb-status-na   { background: #f3f4f6; color: #6b7280; }
 .vb-status-pend { background: var(--sp-warning-bg); color: var(--sp-warning); }
 
@@ -1313,14 +1311,14 @@ function showVbToast(msg, success) {
 .vb-action-btn .sp-ms { font-family: 'Material Symbols Outlined'; }
 .vb-action-view { color: var(--sp-primary); }
 .vb-action-view:hover { background: var(--sp-primary-light); border-color: var(--sp-primary); }
-.vb-action-upload { color: #059669; }
-.vb-action-upload:hover { background: #f0fdf4; border-color: #bbf7d0; }
-.vb-action-swap { color: #1d4ed8; }
-.vb-action-swap:hover { background: #eff6ff; border-color: #bfdbfe; }
-.vb-action-swap-cancel { color: #d97706; }
-.vb-action-swap-cancel:hover { background: #fffbeb; border-color: #fde68a; }
-.vb-action-cancel { color: #dc2626; }
-.vb-action-cancel:hover { background: #fef2f2; border-color: #fecaca; }
+.vb-action-upload { color: #920c24; }
+.vb-action-upload:hover { background: #fff0f2; border-color: #f5c6ce; }
+.vb-action-swap { color: #920c24; }
+.vb-action-swap:hover { background: #fff0f2; border-color: #f5c6ce; }
+.vb-action-swap-cancel { color: #920c24; }
+.vb-action-swap-cancel:hover { background: #fff0f2; border-color: #f5c6ce; }
+.vb-action-cancel { color: #920c24; }
+.vb-action-cancel:hover { background: #fff0f2; border-color: #f5c6ce; }
 
 /* Swap status badges */
 .vb-swap-badge {
@@ -1334,9 +1332,9 @@ function showVbToast(msg, success) {
   white-space: nowrap;
 }
 .vb-swap-badge .sp-ms { font-family: 'Material Symbols Outlined'; }
-.vb-swap-pending { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
-.vb-swap-ok      { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
-.vb-swap-err     { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+.vb-swap-pending { background: #fff0f2; color: #920c24; border: 1px solid #f5c6ce; }
+.vb-swap-ok      { background: #fff0f2; color: #6b091a; border: 1px solid #f5c6ce; }
+.vb-swap-err     { background: #fff0f2; color: #6b091a; border: 1px solid #f5c6ce; }
 
 /* Swap modal info hints */
 .vb-info-hint {
@@ -1348,7 +1346,7 @@ function showVbToast(msg, success) {
   font-size: 12px;
 }
 .vb-info-hint .sp-ms { font-family: 'Material Symbols Outlined'; flex-shrink: 0; margin-top: 1px; }
-.vb-hint-warn { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+.vb-hint-warn { background: #fff0f2; color: #920c24; border: 1px solid #f5c6ce; }
 
 /* Empty state */
 .vb-empty-state {
@@ -1412,10 +1410,10 @@ function showVbToast(msg, success) {
   flex-wrap: wrap;
 }
 .vb-btn-danger {
-  background: #dc2626 !important;
-  border-color: #dc2626 !important;
+  background: #920c24 !important;
+  border-color: #920c24 !important;
 }
-.vb-btn-danger:hover { background: #b91c1c !important; border-color: #b91c1c !important; }
+.vb-btn-danger:hover { background: #920c24 !important; border-color: #920c24 !important; }
 
 /* ── Swap History Timeline ── */
 .vb-swap-timeline {
@@ -1454,7 +1452,7 @@ function showVbToast(msg, success) {
 .vb-swt-dot .sp-ms { font-family: 'Material Symbols Outlined'; }
 .vb-swt-dot-pend { background: var(--sp-warning-bg);  color: var(--sp-warning); border: 2px solid var(--sp-warning); }
 .vb-swt-dot-ok   { background: var(--sp-success-bg);  color: var(--sp-success); border: 2px solid var(--sp-success); }
-.vb-swt-dot-err  { background: #fef2f2;                color: #dc2626;           border: 2px solid #dc2626; }
+.vb-swt-dot-err  { background: #fff0f2;                color: #920c24;           border: 2px solid #920c24; }
 .vb-swt-dot-na   { background: #f3f4f6;                color: #6b7280;           border: 2px solid #d1d5db; }
 
 .vb-swt-card {
@@ -1543,7 +1541,7 @@ function showVbToast(msg, success) {
 }
 .vb-swt-note .sp-ms { font-family: 'Material Symbols Outlined'; }
 .vb-swt-note-reason { background: var(--sp-bg); color: var(--sp-text-2); }
-.vb-swt-note-admin  { background: #fef2f2; color: #991b1b; }
+.vb-swt-note-admin  { background: #fff0f2; color: #6b091a; }
 
 /* withdrawn badge */
 .vb-swap-na { background: #f3f4f6; color: #6b7280; border: 1px solid #d1d5db; }
@@ -1559,9 +1557,9 @@ function showVbToast(msg, success) {
 
 /* ── VB UI Overrides ─────────────────────────────────── */
 .vb-form-info {
-  background: #fef2f2 !important;
-  color: #b91c1c !important;
-  border: 1px solid #fca5a5 !important;
+  background: #fff0f2 !important;
+  color: #920c24 !important;
+  border: 1px solid #f5c6ce !important;
   border-radius: 6px !important;
   display: flex !important;
   align-items: center !important;
@@ -1570,7 +1568,7 @@ function showVbToast(msg, success) {
   margin-bottom: 24px !important;
 }
 .vb-form-info .sp-ms {
-  color: #b91c1c !important;
+  color: #920c24 !important;
 }
 .vb-label {
   font-size: 11px !important;
@@ -1581,7 +1579,7 @@ function showVbToast(msg, success) {
   margin-bottom: 6px !important;
   display: inline-block !important;
 }
-.vb-req { color: #dc2626 !important; }
+.vb-req { color: #920c24 !important; }
 .vb-input, .vb-select {
   border: 1px solid #cbd5e1 !important;
   border-radius: 6px !important;
@@ -1655,15 +1653,15 @@ function showVbToast(msg, success) {
   gap: 6px !important;
 }
 .vb-tab-active {
-  border-bottom-color: #dc2626 !important;
-  color: #dc2626 !important;
+  border-bottom-color: #920c24 !important;
+  color: #920c24 !important;
 }
 .vb-tab-active .sp-ms {
-  color: #dc2626 !important;
+  color: #920c24 !important;
 }
 .vb-tab-active .vb-tab-count {
-  background: #fee2e2 !important;
-  color: #b91c1c !important;
+  background: #fff0f2 !important;
+  color: #920c24 !important;
 }
 .vb-tab-count {
   background: #f1f5f9 !important;

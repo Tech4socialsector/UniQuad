@@ -4,21 +4,21 @@
 {% block extra_css %}
 /* ── NLSIU Brand Overrides ─────────────────────────────────────────── */
 :root {
-  --sp-navy:      var(--sp-primary, #2b2e4a);
-  --sp-gold:      var(--sp-secondary, #c8a14b);
+  --sp-navy:      var(--sp-primary, #6b091a);
+  --sp-gold:      var(--sp-secondary, #b5364a);
   --sp-gold-bg:   rgba(200,161,75,0.12);
-  --sp-gold-dark: #a07830;
+  --sp-gold-dark: #920c24;
   --sp-radius:    var(--sp-radius, 16px);
 }
 
 /* ── Overview Card ─────────────────────────────────────────────────── */
 .sp-overview {
-  background: linear-gradient(135deg, var(--sp-navy) 0%, #3d4170 60%, #4a4f85 100%);
+  background: linear-gradient(135deg, var(--sp-navy) 0%, #920c24 60%, #920c24 100%);
   border-radius: var(--sp-radius);
   padding: 24px 24px 20px;
   color: #fff;
   margin-bottom: 20px;
-  box-shadow: 0 6px 28px rgba(43,46,74,0.30);
+  box-shadow: 0 6px 28px rgba(146,12,36,0.30);
   position: relative;
   overflow: hidden;
 }
@@ -56,10 +56,10 @@
   background: rgba(255,255,255,0.16); color: #fff;
   border: 1px solid rgba(255,255,255,0.25);
 }
-.sp-status-paid         { background: rgba(22,163,74,0.30);  border-color: rgba(22,163,74,0.45); }
-.sp-status-partially-paid { background: rgba(217,119,6,0.30); border-color: rgba(217,119,6,0.45); }
-.sp-status-overdue      { background: rgba(220,38,38,0.35);   border-color: rgba(220,38,38,0.45); }
-.sp-status-unpaid       { background: rgba(220,38,38,0.25);   border-color: rgba(220,38,38,0.35); }
+.sp-status-paid         { background: rgba(146,12,36,0.30);  border-color: rgba(146,12,36,0.45); }
+.sp-status-partially-paid { background: rgba(146,12,36,0.30); border-color: rgba(146,12,36,0.45); }
+.sp-status-overdue      { background: rgba(146,12,36,0.35);   border-color: rgba(146,12,36,0.45); }
+.sp-status-unpaid       { background: rgba(146,12,36,0.25);   border-color: rgba(146,12,36,0.35); }
 .sp-hero-lbl {
   font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
   text-transform: uppercase; color: rgba(255,255,255,0.55);
@@ -77,7 +77,7 @@
 .sp-validity-pill {
   font-size: 10.5px; font-weight: 600; padding: 2px 9px; border-radius: 20px;
   background: rgba(200,161,75,0.25); border: 1px solid rgba(200,161,75,0.40);
-  color: #fde68a; letter-spacing: 0.02em;
+  color: #f5c6ce; letter-spacing: 0.02em;
 }
 
 /* Stat row */
@@ -98,14 +98,14 @@
 }
 .sp-stat-label { font-size: 10.5px; color: rgba(255,255,255,0.60); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
 .sp-stat-value { font-size: 17px; font-weight: 800; color: #fff; line-height: 1.2; }
-.sp-stat-value-warn { color: #fde68a; }
+.sp-stat-value-warn { color: #f5c6ce; }
 
 /* Progress bar */
 .sp-progress-wrap { margin-top: 18px; position: relative; z-index: 1; }
 .sp-progress-labels { display: flex; justify-content: space-between; font-size: 11px; color: rgba(255,255,255,0.65); margin-bottom: 6px; }
 .sp-progress-track { height: 8px; background: rgba(255,255,255,0.18); border-radius: 6px; overflow: hidden; }
 .sp-progress-fill { height: 100%; border-radius: 6px; background: var(--sp-gold); transition: width 0.7s ease; }
-.sp-progress-fill-done { background: #86efac; }
+.sp-progress-fill-done { background: #f5c6ce; }
 @media (max-width: 520px) {
   .sp-stat-row { grid-template-columns: 1fr 1fr; }
   .sp-amount { font-size: 28px; }
@@ -117,9 +117,9 @@
   padding: 12px 16px; border-radius: 12px;
   font-size: 13px; margin-bottom: 16px; border: 1px solid transparent;
 }
-.sp-notice-info    { background: var(--sp-info-bg, #ebf8ff); color: var(--sp-info, #0369a1); border-color: rgba(3,105,161,0.2); }
-.sp-notice-warning { background: var(--sp-warning-bg); color: var(--sp-warning); border-color: rgba(217,119,6,0.25); }
-.sp-notice-success { background: #f0fdf4; color: #14532d; border-color: #86efac; }
+.sp-notice-info    { background: var(--sp-info-bg, #fff0f2); color: var(--sp-info, #920c24); border-color: rgba(146,12,36,0.2); }
+.sp-notice-warning { background: var(--sp-warning-bg); color: var(--sp-warning); border-color: rgba(146,12,36,0.25); }
+.sp-notice-success { background: #fff0f2; color: #6b091a; border-color: #f5c6ce; }
 
 /* ── Overdue Banner ────────────────────────────────────────────────── */
 .sp-overdue-banner {
@@ -129,15 +129,15 @@
 }
 .sp-overdue-banner-icon {
   width: 40px; height: 40px; border-radius: 10px;
-  background: #fee2e2; color: #be123c;
+  background: #fff0f2; color: #920c24;
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
 .sp-overdue-banner-body { flex: 1; }
-.sp-overdue-banner-title { font-size: 13px; font-weight: 700; color: #be123c; }
+.sp-overdue-banner-title { font-size: 13px; font-weight: 700; color: #920c24; }
 .sp-overdue-banner-sub   { font-size: 12px; color: #9f1239; margin-top: 2px; }
 .sp-overdue-banner-btn {
-  font-size: 12px; font-weight: 700; color: #be123c;
-  background: #fff; border: 1px solid #fca5a5;
+  font-size: 12px; font-weight: 700; color: #920c24;
+  background: #fff; border: 1px solid #f5c6ce;
   border-radius: 8px; padding: 6px 14px;
   text-decoration: none; white-space: nowrap; flex-shrink: 0;
 }
@@ -156,7 +156,7 @@
   background: var(--sp-border-light); color: var(--sp-text-3);
   border-radius: 20px; border: 1px solid var(--sp-border);
 }
-.sp-section-count-red { background: #fff1f2; color: #be123c; border-color: #fecdd3; }
+.sp-section-count-red { background: #fff1f2; color: #920c24; border-color: #fecdd3; }
 
 /* ── Fee Structure Card ─────────────────────────────────────────────── */
 .sp-fs-card {
@@ -194,7 +194,7 @@
 }
 .sp-fs-disc-row {
   display: flex; justify-content: space-between; align-items: center;
-  padding: 6px 0; font-size: 13px; color: var(--sp-purple, #7c3aed); font-weight: 600;
+  padding: 6px 0; font-size: 13px; color: var(--sp-purple, #b5364a); font-weight: 600;
 }
 .sp-fs-net-row {
   display: flex; justify-content: space-between; align-items: center;
@@ -242,9 +242,9 @@
   display: flex; align-items: center; gap: 6px;
   padding: 7px 16px; font-size: 12px; font-weight: 600;
 }
-.sp-due-overdue  { background: #fff1f2; color: #be123c; }
-.sp-due-urgent   { background: #fffbeb; color: #92400e; }
-.sp-due-upcoming { background: #f0f9ff; color: #0369a1; }
+.sp-due-overdue  { background: #fff1f2; color: #920c24; }
+.sp-due-urgent   { background: #fff0f2; color: #920c24; }
+.sp-due-upcoming { background: #f0f9ff; color: #920c24; }
 
 .sp-inv-row {
   display: flex; align-items: center; gap: 12px; padding: 14px 16px;
@@ -400,8 +400,8 @@
   border-radius: 99px; overflow: hidden; display: flex;
 }
 .ppfda-progress-fill { height: 100%; transition: width .5s ease; }
-.ppfda-fill-paid   { background: #22c55e; }
-.ppfda-fill-waived { background: #a78bfa; }
+.ppfda-fill-paid   { background: #b5364a; }
+.ppfda-fill-waived { background: #f5c6ce; }
 .ppfda-pct-label { font-size: 11px; font-weight: 700; color: #6b7280; white-space: nowrap; }
 .ppfda-stats {
   display: grid;
@@ -412,23 +412,23 @@
   padding: 10px 12px; border-radius: 10px; border: 1px solid #e5e7eb;
 }
 .ppfda-stat-total  { background: #f9fafb; }
-.ppfda-stat-paid   { background: #f0fdf4; border-color: #bbf7d0; }
-.ppfda-stat-waived { background: #faf5ff; border-color: #e9d5ff; }
-.ppfda-stat-due    { background: #eff6ff; border-color: #bfdbfe; }
+.ppfda-stat-paid   { background: #fff0f2; border-color: #f5c6ce; }
+.ppfda-stat-waived { background: #faf5ff; border-color: #fff0f2; }
+.ppfda-stat-due    { background: #fff0f2; border-color: #f5c6ce; }
 .ppfda-stat-overdue{ background: #fff1f2; border-color: #fecdd3; }
 .ppfda-stat-val { font-size: 15px; font-weight: 800; color: #111827; letter-spacing: -.3px; }
-.ppfda-stat-paid   .ppfda-stat-val { color: #16a34a; }
-.ppfda-stat-waived .ppfda-stat-val { color: #7c3aed; }
-.ppfda-stat-overdue .ppfda-stat-val{ color: #be123c; }
-.ppfda-stat-due    .ppfda-stat-val { color: #1d4ed8; }
+.ppfda-stat-paid   .ppfda-stat-val { color: #920c24; }
+.ppfda-stat-waived .ppfda-stat-val { color: #b5364a; }
+.ppfda-stat-overdue .ppfda-stat-val{ color: #920c24; }
+.ppfda-stat-due    .ppfda-stat-val { color: #b5364a; }
 .ppfda-stat-lbl { font-size: 11px; font-weight: 600; color: #374151; margin-top: 2px; }
 .ppfda-stat-sub { font-size: 10px; color: #9ca3af; margin-top: 1px; }
 .ppfda-legend { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .ppfda-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.ppfda-dot-paid    { background: #22c55e; }
-.ppfda-dot-waived  { background: #a78bfa; }
-.ppfda-dot-overdue { background: #f43f5e; }
-.ppfda-dot-pending { background: #60a5fa; }
+.ppfda-dot-paid    { background: #b5364a; }
+.ppfda-dot-waived  { background: #f5c6ce; }
+.ppfda-dot-overdue { background: #920c24; }
+.ppfda-dot-pending { background: #b5364a; }
 .ppfda-legend-lbl { font-size: 11px; color: #6b7280; font-weight: 500; margin-right: 8px; }
 @media (max-width: 480px) {
   .ppfda-stats { grid-template-columns: 1fr 1fr; }
@@ -438,24 +438,24 @@
 .sp-pay-all-bar {
   display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;
   margin: 10px 14px 6px; padding: 14px 18px;
-  background: linear-gradient(135deg, #f0f5ff 0%, #e8f0fe 100%);
-  border: 1px solid rgba(43,46,74,0.15);
+  background: linear-gradient(135deg, #f0f5ff 0%, #fff0f2 100%);
+  border: 1px solid rgba(146,12,36,0.15);
   border-radius: 14px;
 }
 .sp-pay-all-info  { display: flex; align-items: center; gap: 10px; }
 .sp-pay-all-label { font-size: 13.5px; font-weight: 700; color: var(--sp-text-1); line-height: 1.3; }
 .sp-pay-all-sub   { font-size: 11.5px; color: var(--sp-text-3); font-weight: 500; margin-top: 1px; }
 .sp-pay-all-right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
-.sp-pay-all-total { font-size: 20px; font-weight: 800; color: var(--sp-primary,#2b2e4a); font-variant-numeric: tabular-nums; letter-spacing: -0.3px; }
+.sp-pay-all-total { font-size: 20px; font-weight: 800; color: var(--sp-primary,#6b091a); font-variant-numeric: tabular-nums; letter-spacing: -0.3px; }
 .sp-pay-all-btn {
   display: inline-flex; align-items: center; gap: 7px;
-  background: var(--sp-primary, #2b2e4a); color: #fff;
+  background: var(--sp-primary, #6b091a); color: #fff;
   border: none; border-radius: 10px; padding: 10px 22px;
   font-size: 13.5px; font-weight: 700; cursor: pointer; font-family: inherit;
   transition: background .15s, box-shadow .15s; white-space: nowrap;
-  box-shadow: 0 2px 8px rgba(43,46,74,0.25);
+  box-shadow: 0 2px 8px rgba(146,12,36,0.25);
 }
-.sp-pay-all-btn:hover:not(:disabled) { opacity: .88; box-shadow: 0 4px 14px rgba(43,46,74,0.35); }
+.sp-pay-all-btn:hover:not(:disabled) { opacity: .88; box-shadow: 0 4px 14px rgba(146,12,36,0.35); }
 .sp-pay-all-btn:disabled { opacity: .55; cursor: not-allowed; box-shadow: none; }
 @media (max-width: 560px) {
   .sp-pay-all-bar { flex-direction: column; align-items: flex-start; }
@@ -491,7 +491,7 @@
 }
 .sp-bulk-sheet-title-icon {
   width: 34px; height: 34px; border-radius: 10px;
-  background: #eef2ff; color: var(--sp-primary, #2b2e4a);
+  background: #fff0f2; color: var(--sp-primary, #6b091a);
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
 .sp-bulk-sheet-close {
@@ -516,29 +516,29 @@
   background: var(--sp-border-light); border: 1px solid var(--sp-border);
   border-radius: 12px; transition: border-color .15s;
 }
-.sp-bulk-item:hover { border-color: var(--sp-primary, #2b2e4a); }
+.sp-bulk-item:hover { border-color: var(--sp-primary, #6b091a); }
 .sp-bulk-item-num {
   width: 28px; height: 28px; border-radius: 8px;
-  background: #eef2ff; color: var(--sp-primary, #2b2e4a);
+  background: #fff0f2; color: var(--sp-primary, #6b091a);
   font-size: 12px; font-weight: 700;
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
 .sp-bulk-item-label { flex: 1; font-size: 13.5px; font-weight: 600; color: var(--sp-text-1); }
 .sp-bulk-item-amt {
-  font-size: 14px; font-weight: 700; color: var(--sp-primary, #2b2e4a);
+  font-size: 14px; font-weight: 700; color: var(--sp-primary, #6b091a);
   font-variant-numeric: tabular-nums; white-space: nowrap;
 }
 .sp-bulk-total-row {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 14px 16px; background: #eef2ff;
-  border: 1px solid rgba(43,46,74,0.15); border-radius: 12px; margin-top: 12px;
+  padding: 14px 16px; background: #fff0f2;
+  border: 1px solid rgba(146,12,36,0.15); border-radius: 12px; margin-top: 12px;
 }
 .sp-bulk-total-label {
   display: flex; align-items: center; gap: 8px;
   font-size: 14px; font-weight: 700; color: var(--sp-text-1);
 }
 .sp-bulk-total-val {
-  font-size: 20px; font-weight: 800; color: var(--sp-primary, #2b2e4a);
+  font-size: 20px; font-weight: 800; color: var(--sp-primary, #6b091a);
   font-variant-numeric: tabular-nums;
 }
 .sp-bulk-sheet-foot {
@@ -553,13 +553,13 @@
 }
 .sp-bulk-sheet-cancel:hover { background: var(--sp-border-light); border-color: var(--sp-text-3); }
 .sp-bulk-sheet-confirm {
-  flex: 2; background: var(--sp-primary, #2b2e4a); color: #fff;
+  flex: 2; background: var(--sp-primary, #6b091a); color: #fff;
   border: none; border-radius: 12px; padding: 13px 20px;
   font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit;
   display: flex; align-items: center; justify-content: center; gap: 8px;
-  box-shadow: 0 4px 14px rgba(43,46,74,0.3); transition: all .15s;
+  box-shadow: 0 4px 14px rgba(146,12,36,0.3); transition: all .15s;
 }
-.sp-bulk-sheet-confirm:not(:disabled):hover { opacity: .88; box-shadow: 0 6px 20px rgba(43,46,74,0.4); transform: translateY(-1px); }
+.sp-bulk-sheet-confirm:not(:disabled):hover { opacity: .88; box-shadow: 0 6px 20px rgba(146,12,36,0.4); transform: translateY(-1px); }
 .sp-bulk-sheet-confirm:disabled { background: var(--sp-border); color: var(--sp-text-4); cursor: not-allowed; box-shadow: none; }
 @keyframes sp-fade-in { from { opacity: 0; } to { opacity: 1; } }
 @media (max-width: 600px) {
@@ -593,7 +593,7 @@
 .sp-con-type   { font-size: 13.5px; font-weight: 700; color: var(--sp-text-1); }
 .sp-con-meta   { font-size: 11.5px; color: var(--sp-text-4); margin-top: 3px; }
 .sp-con-right  { text-align: right; flex-shrink: 0; }
-.sp-con-amount { font-size: 15px; font-weight: 800; color: var(--sp-purple, #7c3aed); }
+.sp-con-amount { font-size: 15px; font-weight: 800; color: var(--sp-purple, #b5364a); }
 .sp-con-status-badge { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
 .sp-con-status-approved { background: var(--sp-success-bg); color: var(--sp-success); }
 .sp-con-status-pending  { background: var(--sp-warning-bg); color: var(--sp-warning); }
@@ -604,7 +604,7 @@
   padding: 14px; border-bottom: 1px solid var(--sp-border-light);
 }
 .sp-refund-card:last-child { border-bottom: none; }
-.sp-refund-icon { width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0; background: #f0fdf4; color: #16a34a; display: flex; align-items: center; justify-content: center; }
+.sp-refund-icon { width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0; background: #fff0f2; color: #920c24; display: flex; align-items: center; justify-content: center; }
 .sp-refund-body { flex: 1; min-width: 0; }
 .sp-refund-type   { font-size: 13.5px; font-weight: 700; color: var(--sp-text-1); }
 .sp-refund-meta   { font-size: 11.5px; color: var(--sp-text-4); margin-top: 3px; display: flex; flex-wrap: wrap; gap: 6px; }
@@ -632,7 +632,7 @@
   font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 10px;
   background: var(--sp-border); color: var(--sp-text-4);
 }
-.sp-tab-badge-red   { background: #fee2e2; color: #be123c; }
+.sp-tab-badge-red   { background: #fff0f2; color: #920c24; }
 .sp-tab-badge-green { background: var(--sp-success-bg); color: var(--sp-success); }
 .sp-tab-panel {
   background: var(--sp-card); border: 1px solid var(--sp-border);
@@ -688,7 +688,7 @@
   {% if has_dues %}
   <div style="flex-shrink:0;margin-left:auto;text-align:right;">
     <div style="font-size:11px;color:rgba(255,255,255,0.7);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Outstanding</div>
-    <div style="font-size:22px;font-weight:800;color:#fde68a;">&#8377;{{ "{:,.0f}".format(total_outstanding) }}</div>
+    <div style="font-size:22px;font-weight:800;color:#f5c6ce;">&#8377;{{ "{:,.0f}".format(total_outstanding) }}</div>
   </div>
   {% endif %}
 </div>
@@ -1110,11 +1110,11 @@
 
           {% if inv.scholarship_amount %}
           <div class="sp-detail-row">
-            <span class="sp-detail-label" style="color:var(--sp-purple, #7c3aed);">
+            <span class="sp-detail-label" style="color:var(--sp-purple, #b5364a);">
               <span class="ms" style="font-size:12px;vertical-align:middle;">workspace_premium</span>
               Scholarship / Discount
             </span>
-            <span class="sp-detail-value" style="color:var(--sp-purple, #7c3aed);">− &#8377;{{ "{:,.0f}".format(inv.scholarship_amount) }}</span>
+            <span class="sp-detail-value" style="color:var(--sp-purple, #b5364a);">− &#8377;{{ "{:,.0f}".format(inv.scholarship_amount) }}</span>
           </div>
           {% endif %}
           <div class="sp-detail-row">
@@ -1360,7 +1360,7 @@
     {% if ns_pay.count > 0 %}
     <div class="sp-pay-all-bar">
       <div class="sp-pay-all-info">
-        <span class="ms" style="font-size:18px;color:var(--sp-primary,#2b2e4a);">pending_actions</span>
+        <span class="ms" style="font-size:18px;color:var(--sp-primary,#6b091a);">pending_actions</span>
         <div>
           <div class="sp-pay-all-label">{{ ns_pay.count }} outstanding demand{{ 's' if ns_pay.count != 1 else '' }}</div>
           <div class="sp-pay-all-sub">Total due across all unpaid charges</div>
@@ -1385,9 +1385,9 @@
       <div class="sp-demand-type-hdr">
         <span class="ms" style="font-size:13px;
           color:{% if demand_type == 'Academic' %}var(--sp-navy)
-                {% elif demand_type == 'Hostel' %}#c2410c
-                {% elif demand_type == 'Fine' %}#b91c1c
-                {% elif demand_type == 'Examination' %}#7c3aed
+                {% elif demand_type == 'Hostel' %}#920c24
+                {% elif demand_type == 'Fine' %}#920c24
+                {% elif demand_type == 'Examination' %}#b5364a
                 {% else %}var(--sp-text-3){% endif %};">
           {% if demand_type == 'Academic' %}school
           {% elif demand_type == 'Hostel' %}home
@@ -1442,13 +1442,13 @@
               <td class="sp-col-hide-sm" style="text-align:right;color:var(--sp-text-2);font-size:13px;font-variant-numeric:tabular-nums;">
                 {{ d.formatted_net }}
                 {% if d.waiver_amount and d.waiver_amount > 0 %}
-                <div style="font-size:10px;color:#059669;font-weight:600;">−{{ d.formatted_waiver }} waiver</div>
+                <div style="font-size:10px;color:#920c24;font-weight:600;">−{{ d.formatted_waiver }} waiver</div>
                 {% endif %}
               </td>
               <td class="sp-col-hide-sm" style="text-align:right;font-variant-numeric:tabular-nums;">
                 {% if d.settled_amount and d.settled_amount > 0 %}
-                <span style="color:#059669;font-weight:600;">{{ d.formatted_settled }}</span>
-                {% if d.has_credit_adj %}<div style="font-size:10px;color:#0891b2;font-weight:600;">incl. credit</div>{% endif %}
+                <span style="color:#920c24;font-weight:600;">{{ d.formatted_settled }}</span>
+                {% if d.has_credit_adj %}<div style="font-size:10px;color:#920c24;font-weight:600;">incl. credit</div>{% endif %}
                 {% else %}<span style="color:var(--sp-text-4);">—</span>{% endif %}
               </td>
               <td class="sp-demand-outstanding" style="text-align:right;font-variant-numeric:tabular-nums;">
@@ -1605,7 +1605,7 @@
 {% if has_hostel_fines %}
 <div class="sp-section-hdr fade-in" style="margin-top:24px;" id="sp-hostel-section">
   <div class="sp-section-title">
-    <span class="ms" style="color:#c2410c;">home</span>
+    <span class="ms" style="color:#920c24;">home</span>
     Hostel Fines
   </div>
   <span class="sp-section-count">{{ hostel_fines|length }} fine{{ 's' if hostel_fines|length != 1 else '' }}</span>
@@ -1814,8 +1814,8 @@
 
   /* ── Toast ────────────────────────────────────────────────────── */
   function toast(title,msg,type){
-    var p={success:{bg:'#f0fff4',bd:'#86efac',tx:'#166534'},error:{bg:'#fff5f5',bd:'#fca5a5',tx:'#991b1b'},
-           warning:{bg:'#fffbeb',bd:'#fde68a',tx:'#92400e'},info:{bg:'#ebf8ff',bd:'#bae6fd',tx:'#0c4a6e'}};
+    var p={success:{bg:'#f0fff4',bd:'#f5c6ce',tx:'#6b091a'},error:{bg:'#fff5f5',bd:'#f5c6ce',tx:'#6b091a'},
+           warning:{bg:'#fff0f2',bd:'#f5c6ce',tx:'#920c24'},info:{bg:'#fff0f2',bd:'#f5c6ce',tx:'#6b091a'}};
     var c=p[type]||p.info;
     var t=document.createElement('div');
     t.style.cssText='position:fixed;bottom:20px;right:20px;z-index:10000;max-width:320px;min-width:220px;'
@@ -2084,7 +2084,7 @@
       key:order.key_id,amount:order.amount,currency:order.currency||'INR',
       name:'Student Fee Payment',description:'Invoice: '+(name||''),order_id:order.order_id,
       prefill:{name:pName||order.payer_name||'',email:pEmail||order.payer_email||'',contact:order.payer_phone||''},
-      theme:{color:'#4a7fc1'},
+      theme:{color:'#b5364a'},
       modal:{confirm_close:true,
         ondismiss:function(){
           cancelFeePayment(name, order);
@@ -2150,7 +2150,7 @@
       name:'Re-Examination Fee',description:'Re-Exam Registration: '+(regName||''),
       order_id:order.order_id,
       prefill:{name:pName||order.payer_name||'',email:pEmail||order.payer_email||'',contact:order.payer_phone||''},
-      theme:{color:'#7c3aed'},
+      theme:{color:'#b5364a'},
       modal:{confirm_close:true,
         ondismiss:function(){
           toast('Cancelled','Re-exam payment was cancelled.','info');
@@ -2291,7 +2291,7 @@
       description: order.components || (names.length + ' demand(s)'),
       order_id:    order.order_id,
       prefill:     { name: pName||order.payer_name||'', email: pEmail||order.payer_email||'', contact: order.payer_phone||'' },
-      theme:       { color: '#4a7fc1' },
+      theme:       { color: '#b5364a' },
       modal: {
         confirm_close: true,
         ondismiss: function(){
@@ -2389,7 +2389,7 @@
       description: component + ' — ' + displayAmt,
       order_id: order.order_id,
       prefill: {name: pName||order.payer_name||'', email: pEmail||order.payer_email||'', contact: order.payer_phone||''},
-      theme: {color: '#1a6ef5'},
+      theme: {color: '#b5364a'},
       modal: {
         confirm_close: true,
         ondismiss: function(){
@@ -2461,8 +2461,8 @@
   height: 100%;
   transition: width .5s ease;
 }
-.spda-fill-paid   { background: #22c55e; }
-.spda-fill-waived { background: #a78bfa; }
+.spda-fill-paid   { background: #b5364a; }
+.spda-fill-waived { background: #f5c6ce; }
 .spda-pct-label {
   font-size: 11px;
   font-weight: 700;
@@ -2481,9 +2481,9 @@
   border: 1px solid #e5e7eb;
 }
 .spda-stat-total  { background: #f9fafb; }
-.spda-stat-paid   { background: #f0fdf4; border-color: #bbf7d0; }
-.spda-stat-waived { background: #faf5ff; border-color: #e9d5ff; }
-.spda-stat-due    { background: #eff6ff; border-color: #bfdbfe; }
+.spda-stat-paid   { background: #fff0f2; border-color: #f5c6ce; }
+.spda-stat-waived { background: #faf5ff; border-color: #fff0f2; }
+.spda-stat-due    { background: #fff0f2; border-color: #f5c6ce; }
 .spda-stat-overdue{ background: #fff1f2; border-color: #fecdd3; }
 .spda-stat-val {
   font-size: 15px;
@@ -2491,10 +2491,10 @@
   color: #111827;
   letter-spacing: -.3px;
 }
-.spda-stat-paid   .spda-stat-val { color: #16a34a; }
-.spda-stat-waived .spda-stat-val { color: #7c3aed; }
-.spda-stat-overdue .spda-stat-val{ color: #be123c; }
-.spda-stat-due    .spda-stat-val { color: #1d4ed8; }
+.spda-stat-paid   .spda-stat-val { color: #920c24; }
+.spda-stat-waived .spda-stat-val { color: #b5364a; }
+.spda-stat-overdue .spda-stat-val{ color: #920c24; }
+.spda-stat-due    .spda-stat-val { color: #b5364a; }
 .spda-stat-lbl {
   font-size: 11px;
   font-weight: 600;
@@ -2518,10 +2518,10 @@
   border-radius: 50%;
   flex-shrink: 0;
 }
-.spda-dot-paid    { background: #22c55e; }
-.spda-dot-waived  { background: #a78bfa; }
-.spda-dot-overdue { background: #f43f5e; }
-.spda-dot-pending { background: #60a5fa; }
+.spda-dot-paid    { background: #b5364a; }
+.spda-dot-waived  { background: #f5c6ce; }
+.spda-dot-overdue { background: #920c24; }
+.spda-dot-pending { background: #b5364a; }
 .spda-legend-lbl {
   font-size: 11px;
   color: #6b7280;
@@ -2537,8 +2537,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  background: linear-gradient(135deg, #f0f5ff 0%, #e8f0fe 100%);
-  border: 1px solid rgba(74,127,193,0.2);
+  background: linear-gradient(135deg, #f0f5ff 0%, #fff0f2 100%);
+  border: 1px solid rgba(146,12,36,0.2);
   border-radius: 14px;
   padding: 14px 18px;
   margin-bottom: 16px;
@@ -2589,9 +2589,9 @@
   font-family: inherit;
   transition: background 0.15s, box-shadow 0.15s;
   white-space: nowrap;
-  box-shadow: 0 2px 8px rgba(74,127,193,0.3);
+  box-shadow: 0 2px 8px rgba(146,12,36,0.3);
 }
-.spd-pay-all-btn:hover { background: #1a5fbf; box-shadow: 0 4px 14px rgba(74,127,193,0.4); }
+.spd-pay-all-btn:hover { background: #920c24; box-shadow: 0 4px 14px rgba(146,12,36,0.4); }
 
 @media (max-width: 560px) {
   .spd-pay-all-bar { flex-direction: column; align-items: flex-start; gap: 12px; }
@@ -2826,7 +2826,7 @@
 
   /* Overview card — print-friendly flat style */
   .fee-overview-card {
-    background: #0f2a5c !important;
+    background: #6b091a !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
     border-radius: 10px !important;
@@ -2934,8 +2934,8 @@
 
   /* ── Toast ────────────────────────────────────────────────────── */
   function toast(title,msg,type){
-    var p={success:{bg:'#f0fff4',bd:'#86efac',tx:'#166534'},error:{bg:'#fff5f5',bd:'#fca5a5',tx:'#991b1b'},
-           warning:{bg:'#fffbeb',bd:'#fde68a',tx:'#92400e'},info:{bg:'#ebf8ff',bd:'#bae6fd',tx:'#0c4a6e'}};
+    var p={success:{bg:'#f0fff4',bd:'#f5c6ce',tx:'#6b091a'},error:{bg:'#fff5f5',bd:'#f5c6ce',tx:'#6b091a'},
+           warning:{bg:'#fff0f2',bd:'#f5c6ce',tx:'#920c24'},info:{bg:'#fff0f2',bd:'#f5c6ce',tx:'#6b091a'}};
     var c=p[type]||p.info;
     var t=document.createElement('div');
     t.style.cssText='position:fixed;bottom:20px;right:20px;z-index:10000;max-width:320px;min-width:220px;'
@@ -3204,7 +3204,7 @@
       key:order.key_id,amount:order.amount,currency:order.currency||'INR',
       name:'Student Fee Payment',description:'Invoice: '+(name||''),order_id:order.order_id,
       prefill:{name:pName||order.payer_name||'',email:pEmail||order.payer_email||'',contact:order.payer_phone||''},
-      theme:{color:'#4a7fc1'},
+      theme:{color:'#b5364a'},
       modal:{confirm_close:true,
         ondismiss:function(){
           cancelFeePayment(name, order);
@@ -3270,7 +3270,7 @@
       name:'Re-Examination Fee',description:'Re-Exam Registration: '+(regName||''),
       order_id:order.order_id,
       prefill:{name:pName||order.payer_name||'',email:pEmail||order.payer_email||'',contact:order.payer_phone||''},
-      theme:{color:'#7c3aed'},
+      theme:{color:'#b5364a'},
       modal:{confirm_close:true,
         ondismiss:function(){
           toast('Cancelled','Re-exam payment was cancelled.','info');
@@ -3411,7 +3411,7 @@
       description: order.components || (names.length + ' demand(s)'),
       order_id:    order.order_id,
       prefill:     { name: pName||order.payer_name||'', email: pEmail||order.payer_email||'', contact: order.payer_phone||'' },
-      theme:       { color: '#4a7fc1' },
+      theme:       { color: '#b5364a' },
       modal: {
         confirm_close: true,
         ondismiss: function(){
@@ -3509,7 +3509,7 @@
       description: component + ' — ' + displayAmt,
       order_id: order.order_id,
       prefill: {name: pName||order.payer_name||'', email: pEmail||order.payer_email||'', contact: order.payer_phone||''},
-      theme: {color: '#1a6ef5'},
+      theme: {color: '#b5364a'},
       modal: {
         confirm_close: true,
         ondismiss: function(){
@@ -3581,8 +3581,8 @@
   height: 100%;
   transition: width .5s ease;
 }
-.spda-fill-paid   { background: #22c55e; }
-.spda-fill-waived { background: #a78bfa; }
+.spda-fill-paid   { background: #b5364a; }
+.spda-fill-waived { background: #f5c6ce; }
 .spda-pct-label {
   font-size: 11px;
   font-weight: 700;
@@ -3601,9 +3601,9 @@
   border: 1px solid #e5e7eb;
 }
 .spda-stat-total  { background: #f9fafb; }
-.spda-stat-paid   { background: #f0fdf4; border-color: #bbf7d0; }
-.spda-stat-waived { background: #faf5ff; border-color: #e9d5ff; }
-.spda-stat-due    { background: #eff6ff; border-color: #bfdbfe; }
+.spda-stat-paid   { background: #fff0f2; border-color: #f5c6ce; }
+.spda-stat-waived { background: #faf5ff; border-color: #fff0f2; }
+.spda-stat-due    { background: #fff0f2; border-color: #f5c6ce; }
 .spda-stat-overdue{ background: #fff1f2; border-color: #fecdd3; }
 .spda-stat-val {
   font-size: 15px;
@@ -3611,10 +3611,10 @@
   color: #111827;
   letter-spacing: -.3px;
 }
-.spda-stat-paid   .spda-stat-val { color: #16a34a; }
-.spda-stat-waived .spda-stat-val { color: #7c3aed; }
-.spda-stat-overdue .spda-stat-val{ color: #be123c; }
-.spda-stat-due    .spda-stat-val { color: #1d4ed8; }
+.spda-stat-paid   .spda-stat-val { color: #920c24; }
+.spda-stat-waived .spda-stat-val { color: #b5364a; }
+.spda-stat-overdue .spda-stat-val{ color: #920c24; }
+.spda-stat-due    .spda-stat-val { color: #b5364a; }
 .spda-stat-lbl {
   font-size: 11px;
   font-weight: 600;
@@ -3638,10 +3638,10 @@
   border-radius: 50%;
   flex-shrink: 0;
 }
-.spda-dot-paid    { background: #22c55e; }
-.spda-dot-waived  { background: #a78bfa; }
-.spda-dot-overdue { background: #f43f5e; }
-.spda-dot-pending { background: #60a5fa; }
+.spda-dot-paid    { background: #b5364a; }
+.spda-dot-waived  { background: #f5c6ce; }
+.spda-dot-overdue { background: #920c24; }
+.spda-dot-pending { background: #b5364a; }
 .spda-legend-lbl {
   font-size: 11px;
   color: #6b7280;
@@ -3657,8 +3657,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  background: linear-gradient(135deg, #f0f5ff 0%, #e8f0fe 100%);
-  border: 1px solid rgba(74,127,193,0.2);
+  background: linear-gradient(135deg, #f0f5ff 0%, #fff0f2 100%);
+  border: 1px solid rgba(146,12,36,0.2);
   border-radius: 14px;
   padding: 14px 18px;
   margin-bottom: 16px;
@@ -3709,9 +3709,9 @@
   font-family: inherit;
   transition: background 0.15s, box-shadow 0.15s;
   white-space: nowrap;
-  box-shadow: 0 2px 8px rgba(74,127,193,0.3);
+  box-shadow: 0 2px 8px rgba(146,12,36,0.3);
 }
-.spd-pay-all-btn:hover { background: #1a5fbf; box-shadow: 0 4px 14px rgba(74,127,193,0.4); }
+.spd-pay-all-btn:hover { background: #920c24; box-shadow: 0 4px 14px rgba(146,12,36,0.4); }
 
 @media (max-width: 560px) {
   .spd-pay-all-bar { flex-direction: column; align-items: flex-start; gap: 12px; }
@@ -3946,7 +3946,7 @@
 
   /* Overview card — print-friendly flat style */
   .fee-overview-card {
-    background: #0f2a5c !important;
+    background: #6b091a !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
     border-radius: 10px !important;
@@ -4030,7 +4030,7 @@
             <span class="ms" style="font-size:12px;">warning</span> Overdue
           </span>
           {% else %}
-          <span style="font-size:10px; font-weight:700; color:var(--sp-gold-dark); background:#fef3c7; border:1px solid #fde68a; padding:2px 6px; border-radius:10px; display:inline-flex; align-items:center; gap:4px;">
+          <span style="font-size:10px; font-weight:700; color:var(--sp-gold-dark); background:#fff0f2; border:1px solid #f5c6ce; padding:2px 6px; border-radius:10px; display:inline-flex; align-items:center; gap:4px;">
             <span class="ms" style="font-size:12px;">pending</span> Pending
           </span>
           {% endif %}
@@ -4147,7 +4147,7 @@
             <span class="ms" style="font-size:12px;">warning</span> Overdue
           </span>
           {% else %}
-          <span style="font-size:10px; font-weight:700; color:var(--sp-gold-dark); background:#fef3c7; border:1px solid #fde68a; padding:2px 6px; border-radius:10px; display:inline-flex; align-items:center; gap:4px;">
+          <span style="font-size:10px; font-weight:700; color:var(--sp-gold-dark); background:#fff0f2; border:1px solid #f5c6ce; padding:2px 6px; border-radius:10px; display:inline-flex; align-items:center; gap:4px;">
             <span class="ms" style="font-size:12px;">pending</span> Pending
           </span>
           {% endif %}
@@ -4225,7 +4225,7 @@
 {% if has_hostel_fines %}
 <div class="sp-section-hdr fade-in" style="margin-top:24px;" id="sp-hostel-section">
   <div class="sp-section-title">
-    <span class="ms" style="color:#c2410c;">home</span>
+    <span class="ms" style="color:#920c24;">home</span>
     Hostel Fines
   </div>
   <span class="sp-section-count">{{ hostel_fines|length }} fine{{ 's' if hostel_fines|length != 1 else '' }}</span>
@@ -4434,8 +4434,8 @@
 
   /* ── Toast ────────────────────────────────────────────────────── */
   function toast(title,msg,type){
-    var p={success:{bg:'#f0fff4',bd:'#86efac',tx:'#166534'},error:{bg:'#fff5f5',bd:'#fca5a5',tx:'#991b1b'},
-           warning:{bg:'#fffbeb',bd:'#fde68a',tx:'#92400e'},info:{bg:'#ebf8ff',bd:'#bae6fd',tx:'#0c4a6e'}};
+    var p={success:{bg:'#f0fff4',bd:'#f5c6ce',tx:'#6b091a'},error:{bg:'#fff5f5',bd:'#f5c6ce',tx:'#6b091a'},
+           warning:{bg:'#fff0f2',bd:'#f5c6ce',tx:'#920c24'},info:{bg:'#fff0f2',bd:'#f5c6ce',tx:'#6b091a'}};
     var c=p[type]||p.info;
     var t=document.createElement('div');
     t.style.cssText='position:fixed;bottom:20px;right:20px;z-index:10000;max-width:320px;min-width:220px;'
@@ -4704,7 +4704,7 @@
       key:order.key_id,amount:order.amount,currency:order.currency||'INR',
       name:'Student Fee Payment',description:'Invoice: '+(name||''),order_id:order.order_id,
       prefill:{name:pName||order.payer_name||'',email:pEmail||order.payer_email||'',contact:order.payer_phone||''},
-      theme:{color:'#4a7fc1'},
+      theme:{color:'#b5364a'},
       modal:{confirm_close:true,
         ondismiss:function(){
           cancelFeePayment(name, order);
@@ -4770,7 +4770,7 @@
       name:'Re-Examination Fee',description:'Re-Exam Registration: '+(regName||''),
       order_id:order.order_id,
       prefill:{name:pName||order.payer_name||'',email:pEmail||order.payer_email||'',contact:order.payer_phone||''},
-      theme:{color:'#7c3aed'},
+      theme:{color:'#b5364a'},
       modal:{confirm_close:true,
         ondismiss:function(){
           toast('Cancelled','Re-exam payment was cancelled.','info');
@@ -4911,7 +4911,7 @@
       description: order.components || (names.length + ' demand(s)'),
       order_id:    order.order_id,
       prefill:     { name: pName||order.payer_name||'', email: pEmail||order.payer_email||'', contact: order.payer_phone||'' },
-      theme:       { color: '#4a7fc1' },
+      theme:       { color: '#b5364a' },
       modal: {
         confirm_close: true,
         ondismiss: function(){
@@ -5009,7 +5009,7 @@
       description: component + ' — ' + displayAmt,
       order_id: order.order_id,
       prefill: {name: pName||order.payer_name||'', email: pEmail||order.payer_email||'', contact: order.payer_phone||''},
-      theme: {color: '#1a6ef5'},
+      theme: {color: '#b5364a'},
       modal: {
         confirm_close: true,
         ondismiss: function(){
@@ -5081,8 +5081,8 @@
   height: 100%;
   transition: width .5s ease;
 }
-.spda-fill-paid   { background: #22c55e; }
-.spda-fill-waived { background: #a78bfa; }
+.spda-fill-paid   { background: #b5364a; }
+.spda-fill-waived { background: #f5c6ce; }
 .spda-pct-label {
   font-size: 11px;
   font-weight: 700;
@@ -5101,9 +5101,9 @@
   border: 1px solid #e5e7eb;
 }
 .spda-stat-total  { background: #f9fafb; }
-.spda-stat-paid   { background: #f0fdf4; border-color: #bbf7d0; }
-.spda-stat-waived { background: #faf5ff; border-color: #e9d5ff; }
-.spda-stat-due    { background: #eff6ff; border-color: #bfdbfe; }
+.spda-stat-paid   { background: #fff0f2; border-color: #f5c6ce; }
+.spda-stat-waived { background: #faf5ff; border-color: #fff0f2; }
+.spda-stat-due    { background: #fff0f2; border-color: #f5c6ce; }
 .spda-stat-overdue{ background: #fff1f2; border-color: #fecdd3; }
 .spda-stat-val {
   font-size: 15px;
@@ -5111,10 +5111,10 @@
   color: #111827;
   letter-spacing: -.3px;
 }
-.spda-stat-paid   .spda-stat-val { color: #16a34a; }
-.spda-stat-waived .spda-stat-val { color: #7c3aed; }
-.spda-stat-overdue .spda-stat-val{ color: #be123c; }
-.spda-stat-due    .spda-stat-val { color: #1d4ed8; }
+.spda-stat-paid   .spda-stat-val { color: #920c24; }
+.spda-stat-waived .spda-stat-val { color: #b5364a; }
+.spda-stat-overdue .spda-stat-val{ color: #920c24; }
+.spda-stat-due    .spda-stat-val { color: #b5364a; }
 .spda-stat-lbl {
   font-size: 11px;
   font-weight: 600;
@@ -5138,10 +5138,10 @@
   border-radius: 50%;
   flex-shrink: 0;
 }
-.spda-dot-paid    { background: #22c55e; }
-.spda-dot-waived  { background: #a78bfa; }
-.spda-dot-overdue { background: #f43f5e; }
-.spda-dot-pending { background: #60a5fa; }
+.spda-dot-paid    { background: #b5364a; }
+.spda-dot-waived  { background: #f5c6ce; }
+.spda-dot-overdue { background: #920c24; }
+.spda-dot-pending { background: #b5364a; }
 .spda-legend-lbl {
   font-size: 11px;
   color: #6b7280;
@@ -5157,8 +5157,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  background: linear-gradient(135deg, #f0f5ff 0%, #e8f0fe 100%);
-  border: 1px solid rgba(74,127,193,0.2);
+  background: linear-gradient(135deg, #f0f5ff 0%, #fff0f2 100%);
+  border: 1px solid rgba(146,12,36,0.2);
   border-radius: 14px;
   padding: 14px 18px;
   margin-bottom: 16px;
@@ -5209,9 +5209,9 @@
   font-family: inherit;
   transition: background 0.15s, box-shadow 0.15s;
   white-space: nowrap;
-  box-shadow: 0 2px 8px rgba(74,127,193,0.3);
+  box-shadow: 0 2px 8px rgba(146,12,36,0.3);
 }
-.spd-pay-all-btn:hover { background: #1a5fbf; box-shadow: 0 4px 14px rgba(74,127,193,0.4); }
+.spd-pay-all-btn:hover { background: #920c24; box-shadow: 0 4px 14px rgba(146,12,36,0.4); }
 
 @media (max-width: 560px) {
   .spd-pay-all-bar { flex-direction: column; align-items: flex-start; gap: 12px; }
@@ -5446,7 +5446,7 @@
 
   /* Overview card — print-friendly flat style */
   .fee-overview-card {
-    background: #0f2a5c !important;
+    background: #6b091a !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
     border-radius: 10px !important;
@@ -5554,8 +5554,8 @@
 
   /* ── Toast ────────────────────────────────────────────────────── */
   function toast(title,msg,type){
-    var p={success:{bg:'#f0fff4',bd:'#86efac',tx:'#166534'},error:{bg:'#fff5f5',bd:'#fca5a5',tx:'#991b1b'},
-           warning:{bg:'#fffbeb',bd:'#fde68a',tx:'#92400e'},info:{bg:'#ebf8ff',bd:'#bae6fd',tx:'#0c4a6e'}};
+    var p={success:{bg:'#f0fff4',bd:'#f5c6ce',tx:'#6b091a'},error:{bg:'#fff5f5',bd:'#f5c6ce',tx:'#6b091a'},
+           warning:{bg:'#fff0f2',bd:'#f5c6ce',tx:'#920c24'},info:{bg:'#fff0f2',bd:'#f5c6ce',tx:'#6b091a'}};
     var c=p[type]||p.info;
     var t=document.createElement('div');
     t.style.cssText='position:fixed;bottom:20px;right:20px;z-index:10000;max-width:320px;min-width:220px;'
@@ -5824,7 +5824,7 @@
       key:order.key_id,amount:order.amount,currency:order.currency||'INR',
       name:'Student Fee Payment',description:'Invoice: '+(name||''),order_id:order.order_id,
       prefill:{name:pName||order.payer_name||'',email:pEmail||order.payer_email||'',contact:order.payer_phone||''},
-      theme:{color:'#4a7fc1'},
+      theme:{color:'#b5364a'},
       modal:{confirm_close:true,
         ondismiss:function(){
           cancelFeePayment(name, order);
@@ -5890,7 +5890,7 @@
       name:'Re-Examination Fee',description:'Re-Exam Registration: '+(regName||''),
       order_id:order.order_id,
       prefill:{name:pName||order.payer_name||'',email:pEmail||order.payer_email||'',contact:order.payer_phone||''},
-      theme:{color:'#7c3aed'},
+      theme:{color:'#b5364a'},
       modal:{confirm_close:true,
         ondismiss:function(){
           toast('Cancelled','Re-exam payment was cancelled.','info');
@@ -6031,7 +6031,7 @@
       description: order.components || (names.length + ' demand(s)'),
       order_id:    order.order_id,
       prefill:     { name: pName||order.payer_name||'', email: pEmail||order.payer_email||'', contact: order.payer_phone||'' },
-      theme:       { color: '#4a7fc1' },
+      theme:       { color: '#b5364a' },
       modal: {
         confirm_close: true,
         ondismiss: function(){
@@ -6129,7 +6129,7 @@
       description: component + ' — ' + displayAmt,
       order_id: order.order_id,
       prefill: {name: pName||order.payer_name||'', email: pEmail||order.payer_email||'', contact: order.payer_phone||''},
-      theme: {color: '#1a6ef5'},
+      theme: {color: '#b5364a'},
       modal: {
         confirm_close: true,
         ondismiss: function(){
@@ -6201,8 +6201,8 @@
   height: 100%;
   transition: width .5s ease;
 }
-.spda-fill-paid   { background: #22c55e; }
-.spda-fill-waived { background: #a78bfa; }
+.spda-fill-paid   { background: #b5364a; }
+.spda-fill-waived { background: #f5c6ce; }
 .spda-pct-label {
   font-size: 11px;
   font-weight: 700;
@@ -6221,9 +6221,9 @@
   border: 1px solid #e5e7eb;
 }
 .spda-stat-total  { background: #f9fafb; }
-.spda-stat-paid   { background: #f0fdf4; border-color: #bbf7d0; }
-.spda-stat-waived { background: #faf5ff; border-color: #e9d5ff; }
-.spda-stat-due    { background: #eff6ff; border-color: #bfdbfe; }
+.spda-stat-paid   { background: #fff0f2; border-color: #f5c6ce; }
+.spda-stat-waived { background: #faf5ff; border-color: #fff0f2; }
+.spda-stat-due    { background: #fff0f2; border-color: #f5c6ce; }
 .spda-stat-overdue{ background: #fff1f2; border-color: #fecdd3; }
 .spda-stat-val {
   font-size: 15px;
@@ -6231,10 +6231,10 @@
   color: #111827;
   letter-spacing: -.3px;
 }
-.spda-stat-paid   .spda-stat-val { color: #16a34a; }
-.spda-stat-waived .spda-stat-val { color: #7c3aed; }
-.spda-stat-overdue .spda-stat-val{ color: #be123c; }
-.spda-stat-due    .spda-stat-val { color: #1d4ed8; }
+.spda-stat-paid   .spda-stat-val { color: #920c24; }
+.spda-stat-waived .spda-stat-val { color: #b5364a; }
+.spda-stat-overdue .spda-stat-val{ color: #920c24; }
+.spda-stat-due    .spda-stat-val { color: #b5364a; }
 .spda-stat-lbl {
   font-size: 11px;
   font-weight: 600;
@@ -6258,10 +6258,10 @@
   border-radius: 50%;
   flex-shrink: 0;
 }
-.spda-dot-paid    { background: #22c55e; }
-.spda-dot-waived  { background: #a78bfa; }
-.spda-dot-overdue { background: #f43f5e; }
-.spda-dot-pending { background: #60a5fa; }
+.spda-dot-paid    { background: #b5364a; }
+.spda-dot-waived  { background: #f5c6ce; }
+.spda-dot-overdue { background: #920c24; }
+.spda-dot-pending { background: #b5364a; }
 .spda-legend-lbl {
   font-size: 11px;
   color: #6b7280;
@@ -6277,8 +6277,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  background: linear-gradient(135deg, #f0f5ff 0%, #e8f0fe 100%);
-  border: 1px solid rgba(74,127,193,0.2);
+  background: linear-gradient(135deg, #f0f5ff 0%, #fff0f2 100%);
+  border: 1px solid rgba(146,12,36,0.2);
   border-radius: 14px;
   padding: 14px 18px;
   margin-bottom: 16px;
@@ -6329,9 +6329,9 @@
   font-family: inherit;
   transition: background 0.15s, box-shadow 0.15s;
   white-space: nowrap;
-  box-shadow: 0 2px 8px rgba(74,127,193,0.3);
+  box-shadow: 0 2px 8px rgba(146,12,36,0.3);
 }
-.spd-pay-all-btn:hover { background: #1a5fbf; box-shadow: 0 4px 14px rgba(74,127,193,0.4); }
+.spd-pay-all-btn:hover { background: #920c24; box-shadow: 0 4px 14px rgba(146,12,36,0.4); }
 
 @media (max-width: 560px) {
   .spd-pay-all-bar { flex-direction: column; align-items: flex-start; gap: 12px; }
@@ -6566,7 +6566,7 @@
 
   /* Overview card — print-friendly flat style */
   .fee-overview-card {
-    background: #0f2a5c !important;
+    background: #6b091a !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
     border-radius: 10px !important;
@@ -6650,7 +6650,7 @@
             <span class="ms" style="font-size:12px;">warning</span> Overdue
           </span>
           {% else %}
-          <span style="font-size:10px; font-weight:700; color:var(--sp-gold-dark); background:#fef3c7; border:1px solid #fde68a; padding:2px 6px; border-radius:10px; display:inline-flex; align-items:center; gap:4px;">
+          <span style="font-size:10px; font-weight:700; color:var(--sp-gold-dark); background:#fff0f2; border:1px solid #f5c6ce; padding:2px 6px; border-radius:10px; display:inline-flex; align-items:center; gap:4px;">
             <span class="ms" style="font-size:12px;">pending</span> Pending
           </span>
           {% endif %}
@@ -6872,7 +6872,7 @@
     {% if ns_pay.count > 0 %}
     <div class="sp-pay-all-bar">
       <div class="sp-pay-all-info">
-        <span class="ms" style="font-size:18px;color:var(--sp-primary,#2b2e4a);">pending_actions</span>
+        <span class="ms" style="font-size:18px;color:var(--sp-primary,#6b091a);">pending_actions</span>
         <div>
           <div class="sp-pay-all-label">{{ ns_pay.count }} outstanding demand{{ 's' if ns_pay.count != 1 else '' }}</div>
           <div class="sp-pay-all-sub">Total due across all unpaid charges</div>
@@ -6897,9 +6897,9 @@
       <div class="sp-demand-type-hdr">
         <span class="ms" style="font-size:13px;
           color:{% if demand_type == 'Academic' %}var(--sp-navy)
-                {% elif demand_type == 'Hostel' %}#c2410c
-                {% elif demand_type == 'Fine' %}#b91c1c
-                {% elif demand_type == 'Examination' %}#7c3aed
+                {% elif demand_type == 'Hostel' %}#920c24
+                {% elif demand_type == 'Fine' %}#920c24
+                {% elif demand_type == 'Examination' %}#b5364a
                 {% else %}var(--sp-text-3){% endif %};">
           {% if demand_type == 'Academic' %}school
           {% elif demand_type == 'Hostel' %}home
@@ -6954,13 +6954,13 @@
               <td class="sp-col-hide-sm" style="text-align:right;color:var(--sp-text-2);font-size:13px;font-variant-numeric:tabular-nums;">
                 {{ d.formatted_net }}
                 {% if d.waiver_amount and d.waiver_amount > 0 %}
-                <div style="font-size:10px;color:#059669;font-weight:600;">−{{ d.formatted_waiver }} waiver</div>
+                <div style="font-size:10px;color:#920c24;font-weight:600;">−{{ d.formatted_waiver }} waiver</div>
                 {% endif %}
               </td>
               <td class="sp-col-hide-sm" style="text-align:right;font-variant-numeric:tabular-nums;">
                 {% if d.settled_amount and d.settled_amount > 0 %}
-                <span style="color:#059669;font-weight:600;">{{ d.formatted_settled }}</span>
-                {% if d.has_credit_adj %}<div style="font-size:10px;color:#0891b2;font-weight:600;">incl. credit</div>{% endif %}
+                <span style="color:#920c24;font-weight:600;">{{ d.formatted_settled }}</span>
+                {% if d.has_credit_adj %}<div style="font-size:10px;color:#920c24;font-weight:600;">incl. credit</div>{% endif %}
                 {% else %}<span style="color:var(--sp-text-4);">—</span>{% endif %}
               </td>
               <td class="sp-demand-outstanding" style="text-align:right;font-variant-numeric:tabular-nums;">
@@ -7117,7 +7117,7 @@
 {% if has_hostel_fines %}
 <div class="sp-section-hdr fade-in" style="margin-top:24px;" id="sp-hostel-section">
   <div class="sp-section-title">
-    <span class="ms" style="color:#c2410c;">home</span>
+    <span class="ms" style="color:#920c24;">home</span>
     Hostel Fines
   </div>
   <span class="sp-section-count">{{ hostel_fines|length }} fine{{ 's' if hostel_fines|length != 1 else '' }}</span>
@@ -7332,8 +7332,8 @@
 
   /* ── Toast ────────────────────────────────────────────────────── */
   function toast(title,msg,type){
-    var p={success:{bg:'#f0fff4',bd:'#86efac',tx:'#166534'},error:{bg:'#fff5f5',bd:'#fca5a5',tx:'#991b1b'},
-           warning:{bg:'#fffbeb',bd:'#fde68a',tx:'#92400e'},info:{bg:'#ebf8ff',bd:'#bae6fd',tx:'#0c4a6e'}};
+    var p={success:{bg:'#f0fff4',bd:'#f5c6ce',tx:'#6b091a'},error:{bg:'#fff5f5',bd:'#f5c6ce',tx:'#6b091a'},
+           warning:{bg:'#fff0f2',bd:'#f5c6ce',tx:'#920c24'},info:{bg:'#fff0f2',bd:'#f5c6ce',tx:'#6b091a'}};
     var c=p[type]||p.info;
     var t=document.createElement('div');
     t.style.cssText='position:fixed;bottom:20px;right:20px;z-index:10000;max-width:320px;min-width:220px;'
@@ -7602,7 +7602,7 @@
       key:order.key_id,amount:order.amount,currency:order.currency||'INR',
       name:'Student Fee Payment',description:'Invoice: '+(name||''),order_id:order.order_id,
       prefill:{name:pName||order.payer_name||'',email:pEmail||order.payer_email||'',contact:order.payer_phone||''},
-      theme:{color:'#4a7fc1'},
+      theme:{color:'#b5364a'},
       modal:{confirm_close:true,
         ondismiss:function(){
           cancelFeePayment(name, order);
@@ -7668,7 +7668,7 @@
       name:'Re-Examination Fee',description:'Re-Exam Registration: '+(regName||''),
       order_id:order.order_id,
       prefill:{name:pName||order.payer_name||'',email:pEmail||order.payer_email||'',contact:order.payer_phone||''},
-      theme:{color:'#7c3aed'},
+      theme:{color:'#b5364a'},
       modal:{confirm_close:true,
         ondismiss:function(){
           toast('Cancelled','Re-exam payment was cancelled.','info');
@@ -7809,7 +7809,7 @@
       description: order.components || (names.length + ' demand(s)'),
       order_id:    order.order_id,
       prefill:     { name: pName||order.payer_name||'', email: pEmail||order.payer_email||'', contact: order.payer_phone||'' },
-      theme:       { color: '#4a7fc1' },
+      theme:       { color: '#b5364a' },
       modal: {
         confirm_close: true,
         ondismiss: function(){
@@ -7907,7 +7907,7 @@
       description: component + ' — ' + displayAmt,
       order_id: order.order_id,
       prefill: {name: pName||order.payer_name||'', email: pEmail||order.payer_email||'', contact: order.payer_phone||''},
-      theme: {color: '#1a6ef5'},
+      theme: {color: '#b5364a'},
       modal: {
         confirm_close: true,
         ondismiss: function(){
@@ -7979,8 +7979,8 @@
   height: 100%;
   transition: width .5s ease;
 }
-.spda-fill-paid   { background: #22c55e; }
-.spda-fill-waived { background: #a78bfa; }
+.spda-fill-paid   { background: #b5364a; }
+.spda-fill-waived { background: #f5c6ce; }
 .spda-pct-label {
   font-size: 11px;
   font-weight: 700;
@@ -7999,9 +7999,9 @@
   border: 1px solid #e5e7eb;
 }
 .spda-stat-total  { background: #f9fafb; }
-.spda-stat-paid   { background: #f0fdf4; border-color: #bbf7d0; }
-.spda-stat-waived { background: #faf5ff; border-color: #e9d5ff; }
-.spda-stat-due    { background: #eff6ff; border-color: #bfdbfe; }
+.spda-stat-paid   { background: #fff0f2; border-color: #f5c6ce; }
+.spda-stat-waived { background: #faf5ff; border-color: #fff0f2; }
+.spda-stat-due    { background: #fff0f2; border-color: #f5c6ce; }
 .spda-stat-overdue{ background: #fff1f2; border-color: #fecdd3; }
 .spda-stat-val {
   font-size: 15px;
@@ -8009,10 +8009,10 @@
   color: #111827;
   letter-spacing: -.3px;
 }
-.spda-stat-paid   .spda-stat-val { color: #16a34a; }
-.spda-stat-waived .spda-stat-val { color: #7c3aed; }
-.spda-stat-overdue .spda-stat-val{ color: #be123c; }
-.spda-stat-due    .spda-stat-val { color: #1d4ed8; }
+.spda-stat-paid   .spda-stat-val { color: #920c24; }
+.spda-stat-waived .spda-stat-val { color: #b5364a; }
+.spda-stat-overdue .spda-stat-val{ color: #920c24; }
+.spda-stat-due    .spda-stat-val { color: #b5364a; }
 .spda-stat-lbl {
   font-size: 11px;
   font-weight: 600;
@@ -8036,10 +8036,10 @@
   border-radius: 50%;
   flex-shrink: 0;
 }
-.spda-dot-paid    { background: #22c55e; }
-.spda-dot-waived  { background: #a78bfa; }
-.spda-dot-overdue { background: #f43f5e; }
-.spda-dot-pending { background: #60a5fa; }
+.spda-dot-paid    { background: #b5364a; }
+.spda-dot-waived  { background: #f5c6ce; }
+.spda-dot-overdue { background: #920c24; }
+.spda-dot-pending { background: #b5364a; }
 .spda-legend-lbl {
   font-size: 11px;
   color: #6b7280;
@@ -8055,8 +8055,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  background: linear-gradient(135deg, #f0f5ff 0%, #e8f0fe 100%);
-  border: 1px solid rgba(74,127,193,0.2);
+  background: linear-gradient(135deg, #f0f5ff 0%, #fff0f2 100%);
+  border: 1px solid rgba(146,12,36,0.2);
   border-radius: 14px;
   padding: 14px 18px;
   margin-bottom: 16px;
@@ -8107,9 +8107,9 @@
   font-family: inherit;
   transition: background 0.15s, box-shadow 0.15s;
   white-space: nowrap;
-  box-shadow: 0 2px 8px rgba(74,127,193,0.3);
+  box-shadow: 0 2px 8px rgba(146,12,36,0.3);
 }
-.spd-pay-all-btn:hover { background: #1a5fbf; box-shadow: 0 4px 14px rgba(74,127,193,0.4); }
+.spd-pay-all-btn:hover { background: #920c24; box-shadow: 0 4px 14px rgba(146,12,36,0.4); }
 
 @media (max-width: 560px) {
   .spd-pay-all-bar { flex-direction: column; align-items: flex-start; gap: 12px; }
@@ -8344,7 +8344,7 @@
 
   /* Overview card — print-friendly flat style */
   .fee-overview-card {
-    background: #0f2a5c !important;
+    background: #6b091a !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
     border-radius: 10px !important;

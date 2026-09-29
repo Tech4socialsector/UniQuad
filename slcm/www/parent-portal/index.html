@@ -14,6 +14,15 @@
     align-items: start; margin-bottom: 20px;
   }
   @media (max-width: 1000px) { .pp-dash-two-col { grid-template-columns: 1fr; } }
+  /* Side-by-side cards share the row height; bodies fill the extra space */
+  .pp-dash-two-col.is-stretch { align-items: stretch; }
+  .pp-dash-two-col.is-stretch > .pp-card { display: flex; flex-direction: column; }
+  .pp-dash-two-col.is-stretch > .pp-card > :not(.pp-card-header) { flex: 1 1 auto; }
+  .pp-dash-two-col.is-stretch > .pp-card > .pp-state {
+    flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; min-height: 160px;
+  }
+  .pp-dash-two-col.is-stretch > .pp-card > .pp-state > .ms { font-size: 32px; }
 
   /* ── Profile header extras ────────────────────────────────── */
   .pp-profile-status { margin-left: auto; align-self: flex-start; flex-shrink: 0; }
@@ -24,6 +33,35 @@
   .pp-profile-fact { font-size: 13px; color: var(--pp-text-2); min-width: 0; }
   .pp-profile-fact-key { font-size: 11px; font-weight: 600; color: var(--pp-text-4); text-transform: uppercase; letter-spacing: 0.05em; display: block; }
   .pp-profile-fact-val { font-weight: 600; color: var(--pp-text-1); overflow-wrap: anywhere; }
+  /* ── Hostel strip (inside profile banner) ─────────────────── */
+  .pp-hostel-strip {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 16px 32px;
+    margin-top: 16px; padding: 18px 22px; border-radius: 12px;
+    border: 1px solid var(--pp-border);
+    border-left: 4px solid var(--pp-primary);
+  }
+  .pp-hostel-strip-head { display: flex; align-items: center; gap: 14px; min-width: 0; }
+  .pp-hostel-strip-icon {
+    width: 50px; height: 50px; border-radius: 12px; flex-shrink: 0;
+    background: var(--pp-primary); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .pp-hostel-strip-icon .ms { font-size: 26px; }
+  .pp-hostel-strip-eyebrow { font-size: 12.5px; font-weight: 700; color: var(--pp-primary); text-transform: uppercase; letter-spacing: 0.06em; }
+  .pp-hostel-strip-name { font-size: 20px; font-weight: 700; color: var(--pp-text-1); margin-top: 2px; }
+  .pp-hostel-strip-items { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; flex: 1 1 auto; }
+  .pp-hostel-item {
+    border: 1px solid var(--pp-border); border-radius: 10px;
+    padding: 10px 18px; min-width: 130px; text-align: center;
+  }
+  .pp-hostel-item-key { display: flex; align-items: center; justify-content: center; gap: 5px; font-size: 12.5px; font-weight: 600; color: var(--pp-text-3); text-transform: uppercase; letter-spacing: 0.05em; }
+  .pp-hostel-item-key .ms { font-size: 17px; color: var(--pp-primary); text-transform: none; letter-spacing: 0; }
+  .pp-hostel-item-val { display: block; font-size: 19px; font-weight: 700; color: var(--pp-text-1); margin-top: 4px; white-space: nowrap; }
+  @media (max-width: 700px) {
+    .pp-hostel-strip-items { width: 100%; }
+    .pp-hostel-item { flex: 1 1 calc(50% - 12px); min-width: 0; }
+    .pp-hostel-item-val { font-size: 17px; }
+  }
   @media (max-width: 560px) {
     .pp-ward-banner { flex-wrap: wrap; padding: 16px; }
     .pp-ward-banner-avatar { width: 46px; height: 46px; font-size: 18px; }
@@ -155,8 +193,6 @@
     .pp-card-body { padding: 16px 14px; }
   }
 
-  /* ── Hostel ───────────────────────────────────────────────── */
-  .pp-hostel-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; }
 {% endblock %}
 
 {# ── Reusable states ──────────────────────────────────────────── #}
@@ -186,7 +222,6 @@
 {% block content %}
 {% set _err = load_errors or {} %}
 {% set _q = ward_qs | default('') %}
-{% set _first = ward_name.split()[0] if ward_name else 'your ward' %}
 
 {# ── Student profile header ────────────────────────────────────── #}
 <section class="pp-ward-banner fade-in" aria-label="Selected student">
@@ -218,6 +253,25 @@
       <div class="pp-profile-fact"><span class="pp-profile-fact-key">Current Term</span><span class="pp-profile-fact-val">{{ ward_term }}</span></div>
       {% endif %}
     </div>
+    {% if is_hosteller and hostel_details %}
+    {% set _hd = hostel_details %}
+    <div class="pp-hostel-strip" aria-label="Hostel details">
+      <div class="pp-hostel-strip-head">
+        <span class="pp-hostel-strip-icon" aria-hidden="true"><span class="ms">apartment</span></span>
+        <div style="min-width:0;">
+          <div class="pp-hostel-strip-eyebrow">Hostel</div>
+          <div class="pp-hostel-strip-name">{{ _hd.hostel_name or "Hostel" }}{% if _hd.hostel_block %} · {{ _hd.hostel_block }}{% endif %}</div>
+        </div>
+      </div>
+      <div class="pp-hostel-strip-items">
+        {% if _hd.room_number %}<div class="pp-hostel-item"><span class="pp-hostel-item-key"><span class="ms" aria-hidden="true">meeting_room</span> Room</span><span class="pp-hostel-item-val">{{ _hd.room_number }}</span></div>{% endif %}
+        {% if _hd.bed_no %}<div class="pp-hostel-item"><span class="pp-hostel-item-key"><span class="ms" aria-hidden="true">bed</span> Bed</span><span class="pp-hostel-item-val">{{ _hd.bed_no }}</span></div>{% endif %}
+        {% if _hd.key_number %}<div class="pp-hostel-item"><span class="pp-hostel-item-key"><span class="ms" aria-hidden="true">key</span> Key</span><span class="pp-hostel-item-val">{{ _hd.key_number }}</span></div>{% endif %}
+        {% if _hd.meal_plan %}<div class="pp-hostel-item"><span class="pp-hostel-item-key"><span class="ms" aria-hidden="true">restaurant</span> Meal Plan</span><span class="pp-hostel-item-val">{{ _hd.meal_plan }}</span></div>{% endif %}
+        {% if _hd.allocation_date %}<div class="pp-hostel-item"><span class="pp-hostel-item-key"><span class="ms" aria-hidden="true">calendar_today</span> Allotted On</span><span class="pp-hostel-item-val">{{ _hd.allocation_date }}</span></div>{% endif %}
+      </div>
+    </div>
+    {% endif %}
   </div>
   {% if ward_status %}
   <div class="pp-profile-status">
@@ -230,7 +284,7 @@
 {% if ward_status and ward_status not in ('Active', 'Graduated', 'Alumni') %}
 <div class="pp-alert pp-alert-warning fade-in" style="margin-bottom:14px;" role="status">
   <span class="ms" aria-hidden="true">info</span>
-  <div>{{ _first }}'s enrolment status is currently <strong>{{ ward_status }}</strong>. Contact the Registrar's Office for details.</div>
+  <div>Enrolment status: <strong>{{ ward_status }}</strong>&nbsp;—&nbsp;contact the Registrar's Office.</div>
 </div>
 {% endif %}
 
@@ -239,7 +293,7 @@
   <span class="ms" aria-hidden="true">warning</span>
   <div>
     <strong>{{ courses_below_75 }} course{% if courses_below_75 != 1 %}s{% endif %} below {{ att_good|int }}% attendance</strong>
-    &nbsp;—&nbsp; {{ _first }} may be ineligible for exams in {{ 'this course' if courses_below_75 == 1 else 'these courses' }}.
+    &nbsp;—&nbsp; may affect exam eligibility.
     <a href="/parent-portal/attendance{{ _q }}" style="color:inherit;font-weight:700;text-decoration:underline;">View details →</a>
   </div>
 </div>
@@ -314,45 +368,10 @@
 
 </section>
 
-{# ── Row: Attendance summary + Fees ────────────────────────────── #}
-{% set _show_att  = not pp_settings or pp_settings.show_attendance_overview %}
+{# ── Row: Fees summary ─────────────────────────────────────────── #}
 {% set _show_fees = not pp_settings or pp_settings.show_fee_summary %}
-{% if _show_att or _show_fees %}
-<div class="pp-dash-two-col fade-in" style="animation-delay:0.1s;{% if not (_show_att and _show_fees) %}grid-template-columns:1fr;{% endif %}">
-
-  {% if _show_att %}
-  <section class="pp-card" aria-labelledby="pp-att-title">
-    <div class="pp-card-header">
-      <h2 class="pp-card-title" id="pp-att-title"><span class="ms" aria-hidden="true">event_available</span> Attendance</h2>
-      <a href="/parent-portal/attendance{{ _q }}" class="pp-card-link">View attendance <span class="ms" style="font-size:15px;" aria-hidden="true">arrow_forward</span></a>
-    </div>
-    {% if _err.attendance %}
-      {{ error_state("attendance data") }}
-    {% elif avg_attendance is not none %}
-      {% set _ac = 'var(--pp-primary)' %}
-      <div class="pp-card-body">
-        <div class="pp-att-headline">
-          <span class="pp-att-big" style="color:{{ _ac }};">{{ avg_attendance }}%</span>
-          <span class="pp-att-caption">Overall attendance · {{ att_good|int }}% required</span>
-        </div>
-        <div class="pp-progress" role="progressbar" aria-label="Overall attendance" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ [avg_attendance, 100]|min }}" style="margin-bottom:16px;">
-          <div class="pp-progress-bar" style="width:{{ [avg_attendance, 100]|min }}%;background:{{ _ac }};"></div>
-        </div>
-        <div class="pp-metric-row">
-          <div class="pp-metric"><div class="pp-metric-key">Sessions</div><div class="pp-metric-val">{{ att_sessions if att_sessions is not none else "—" }}</div></div>
-          <div class="pp-metric"><div class="pp-metric-key">Present</div><div class="pp-metric-val" style="color:var(--pp-success);">{{ att_present if att_present is not none else "—" }}</div></div>
-          <div class="pp-metric"><div class="pp-metric-key">Absent</div><div class="pp-metric-val" style="color:{% if att_absent %}var(--pp-danger){% else %}var(--pp-text-1){% endif %};">{{ att_absent if att_absent is not none else "—" }}</div></div>
-        </div>
-        <div class="pp-card-foot">
-          <span class="ms" aria-hidden="true" style="color:{% if courses_eligible == attendance_summaries|length %}var(--pp-success){% else %}var(--pp-warning){% endif %};">shield</span>
-          Exam eligible in {{ courses_eligible }} of {{ attendance_summaries|length }} course{% if attendance_summaries|length != 1 %}s{% endif %}
-        </div>
-      </div>
-    {% else %}
-      {{ empty_state("event_busy", "No attendance data yet", "Attendance will appear once sessions are recorded.") }}
-    {% endif %}
-  </section>
-  {% endif %}
+{% if _show_fees %}
+<div class="pp-dash-two-col fade-in" style="animation-delay:0.1s;grid-template-columns:1fr;">
 
   {% if _show_fees %}
   <section class="pp-card" aria-labelledby="pp-fees-title">
@@ -387,11 +406,12 @@
   </section>
   {% endif %}
 
+
 </div>
 {% endif %}
 
 {# ── Row: Time Table + RFID ────────────────────────────────────── #}
-<div class="pp-dash-two-col fade-in" style="animation-delay:0.12s;">
+<div class="pp-dash-two-col is-stretch fade-in" style="animation-delay:0.12s;">
 
   <section class="pp-card" id="pp-schedule-section" aria-labelledby="pp-tt-title">
     <div class="pp-card-header">
@@ -462,11 +482,10 @@
 
 </div>
 
-{# ── Row: Results & Grades (+ Hostel) ──────────────────────────── #}
+{# ── Row: Results & Grades ─────────────────────────────────────── #}
 {% set _show_res = not pp_settings or pp_settings.show_latest_result %}
-{% set _show_hostel = is_hosteller and hostel_details %}
-{% if _show_res or _show_hostel %}
-<div class="pp-dash-two-col fade-in" style="animation-delay:0.14s;{% if not (_show_res and _show_hostel) %}grid-template-columns:1fr;{% endif %}">
+{% if _show_res %}
+<div class="pp-dash-two-col fade-in" style="animation-delay:0.14s;grid-template-columns:1fr;">
 
   {% if _show_res %}
   <section class="pp-card" aria-labelledby="pp-res-title">
@@ -509,29 +528,6 @@
   </section>
   {% endif %}
 
-  {% if _show_hostel %}
-  <section class="pp-card" aria-labelledby="pp-hostel-title">
-    <div class="pp-card-header">
-      <h2 class="pp-card-title" id="pp-hostel-title"><span class="ms" aria-hidden="true">apartment</span> Hostel</h2>
-      {% if hostel_details.hostel_status %}
-      <span class="pp-pill {{ 'pp-pill-success' if hostel_details.hostel_status|lower == 'active' else 'pp-pill-neutral' }}">{{ hostel_details.hostel_status }}</span>
-      {% endif %}
-    </div>
-    <div class="pp-card-body">
-      <div style="font-size:14px;font-weight:600;color:var(--pp-text-1);">{{ hostel_details.hostel_name or "Hostel" }}</div>
-      {% if hostel_details.hostel_block %}<div class="pp-att-caption" style="margin-top:2px;">{{ hostel_details.hostel_block }}</div>{% endif %}
-      <div class="pp-hostel-grid" style="margin-top:14px;">
-        {% if hostel_details.room_number %}<div class="pp-metric"><div class="pp-metric-key">Room</div><div class="pp-metric-val">{{ hostel_details.room_number }}</div></div>{% endif %}
-        {% if hostel_details.bed_no %}<div class="pp-metric"><div class="pp-metric-key">Bed</div><div class="pp-metric-val">{{ hostel_details.bed_no }}</div></div>{% endif %}
-        {% if hostel_details.key_number %}<div class="pp-metric"><div class="pp-metric-key">Key</div><div class="pp-metric-val">{{ hostel_details.key_number }}</div></div>{% endif %}
-        {% if hostel_details.meal_plan %}<div class="pp-metric"><div class="pp-metric-key">Meal Plan</div><div class="pp-metric-val" style="font-size:15px;">{{ hostel_details.meal_plan }}</div></div>{% endif %}
-      </div>
-      {% if hostel_details.allocation_date %}
-      <div class="pp-card-foot"><span class="ms" aria-hidden="true">calendar_today</span> Allotted on <strong style="color:var(--pp-text-2);">{{ hostel_details.allocation_date }}</strong></div>
-      {% endif %}
-    </div>
-  </section>
-  {% endif %}
 
 </div>
 {% endif %}

@@ -27,9 +27,13 @@
   "col_break_theme",
   "background_color",
   "card_background",
-  "sidebar_theme",
   "col_break_theme2",
+  "nav_bg_color",
   "nav_text_color",
+  "col_break_theme3",
+  "sidebar_bg_color",
+  "sidebar_text_color",
+  "sidebar_theme",
   "status_colors_section",
   "success_color",
   "warning_color",
@@ -162,12 +166,27 @@
    "label": "Portal Subtitle / Tagline"
   },
   {
+   "fieldname": "academic_calendar",
+   "fieldtype": "Attach",
+   "label": "Academic Calendar"
+  },
+  {
+   "fieldname": "student_handbook",
+   "fieldtype": "Attach",
+   "label": "Student Handbook"
+  },
+  {
+   "fieldname": "examination_guidelines",
+   "fieldtype": "Attach",
+   "label": "Examination Guidelines"
+  },
+  {
    "fieldname": "col_break_brand",
    "fieldtype": "Column Break"
   },
   {
    "default": "1",
-   "description": "Show institution logo in the top navbar (pulled from Website Settings \u203a Banner Image)",
+   "description": "Show institution logo in the top navbar (pulled from Website Settings › Banner Image)",
    "fieldname": "show_logo",
    "fieldtype": "Check",
    "label": "Show Logo in Navbar"
@@ -228,18 +247,17 @@
    "label": "Theme Colors"
   },
   {
-   "default": "#2b2e4a",
-   "description": "Main color for the portal (buttons, titles, active items)",
+   "default": "#920c24",
+   "description": "Active menu item, buttons, links and highlights",
    "fieldname": "primary_color",
    "fieldtype": "Color",
    "label": "Primary Color"
   },
   {
-   "default": "#920c24",
-   "description": "Accent color used for active nav items, badges, and key highlights",
+   "default": "#c9a84c",
+   "description": "Accent used in gradients and badges",
    "fieldname": "secondary_color",
    "fieldtype": "Color",
-   "hidden": 1,
    "label": "Secondary / Accent Color"
   },
   {
@@ -247,36 +265,61 @@
    "fieldtype": "Column Break"
   },
   {
-   "default": "#f7f5f0",
-   "description": "Main page content background color",
+   "default": "#f0f2f5",
+   "description": "Page background behind the cards",
    "fieldname": "background_color",
    "fieldtype": "Color",
    "label": "Page Background Color"
   },
   {
    "default": "#ffffff",
-   "description": "Background color for cards and panels in the main content",
+   "description": "Background of cards and panels",
    "fieldname": "card_background",
    "fieldtype": "Color",
    "label": "Card Background Color"
-  },
-  {
-   "default": "#FAFAFA",
-   "description": "Background color for both the top navbar and side navigation",
-   "fieldname": "sidebar_theme",
-   "fieldtype": "Color",
-   "label": "Navbar & Sidebar Background Color"
   },
   {
    "fieldname": "col_break_theme2",
    "fieldtype": "Column Break"
   },
   {
+   "fieldname": "nav_bg_color",
+   "fieldtype": "Color",
+   "label": "Navbar Background Color",
    "default": "#ffffff",
-   "description": "Color of text and icons in the top navbar and sidebar",
+   "description": "Background of the top navbar"
+  },
+  {
+   "default": "#920c24",
+   "description": "Portal name, bell and icons in the top navbar",
    "fieldname": "nav_text_color",
    "fieldtype": "Color",
-   "label": "Navbar & Sidebar Text / Icon Color"
+   "label": "Navbar Text / Icon Color"
+  },
+  {
+   "fieldname": "col_break_theme3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sidebar_bg_color",
+   "fieldtype": "Color",
+   "label": "Sidebar Background Color",
+   "default": "#ffffff",
+   "description": "Background of the left navigation sidebar"
+  },
+  {
+   "fieldname": "sidebar_text_color",
+   "fieldtype": "Color",
+   "label": "Sidebar Text Color",
+   "default": "#475569",
+   "description": "Menu labels and icons in the sidebar (the active item uses the Primary Color)"
+  },
+  {
+   "description": "Replaced by Navbar Background and Sidebar Background — kept for existing data",
+   "fieldname": "sidebar_theme",
+   "fieldtype": "Color",
+   "label": "Legacy Navbar & Sidebar Background",
+   "hidden": 1
   },
   {
    "collapsible": 1,
@@ -286,14 +329,14 @@
    "label": "Status Colors"
   },
   {
-   "default": "#16a34a",
+   "default": "#920c24",
    "description": "Good attendance, paid fees, eligible for exam",
    "fieldname": "success_color",
    "fieldtype": "Color",
    "label": "Success / Good"
   },
   {
-   "default": "#d97706",
+   "default": "#920c24",
    "description": "Borderline attendance, pending status, near-due fees",
    "fieldname": "warning_color",
    "fieldtype": "Color",
@@ -304,14 +347,14 @@
    "fieldtype": "Column Break"
   },
   {
-   "default": "#dc2626",
+   "default": "#920c24",
    "description": "Low attendance, overdue fees, exam ineligible",
    "fieldname": "danger_color",
    "fieldtype": "Color",
    "label": "Danger / Alert"
   },
   {
-   "default": "#0369a1",
+   "default": "#920c24",
    "description": "Informational highlights and neutral indicators",
    "fieldname": "info_color",
    "fieldtype": "Color",
@@ -325,8 +368,15 @@
    "label": "Grading Colors"
   },
   {
-   "default": "#16a34a",
-   "description": "Top grade band \u2014 Distinction, A+, A, S",
+   "default": "#000000",
+   "description": "Default color for passing grades",
+   "fieldname": "grade_color",
+   "fieldtype": "Color",
+   "label": "Grade Color"
+  },
+  {
+   "default": "#920c24",
+   "description": "Top grade band — Distinction, A+, A, S",
    "fieldname": "grade_excellent_color",
    "fieldtype": "Color",
    "hidden": 1,
@@ -345,8 +395,15 @@
    "fieldtype": "Column Break"
   },
   {
-   "default": "#0369a1",
-   "description": "Second grade band \u2014 B+, B",
+   "default": "#920c24",
+   "description": "Fail grade band — F, AB, AS",
+   "fieldname": "grade_fail_color",
+   "fieldtype": "Color",
+   "label": "Fail Grade Color"
+  },
+  {
+   "default": "#920c24",
+   "description": "Second grade band — B+, B",
    "fieldname": "grade_good_color",
    "fieldtype": "Color",
    "hidden": 1,
@@ -361,8 +418,8 @@
    "label": "Good Grade Label"
   },
   {
-   "default": "#d97706",
-   "description": "Third grade band \u2014 C+, C",
+   "default": "#920c24",
+   "description": "Third grade band — C+, C",
    "fieldname": "grade_average_color",
    "fieldtype": "Color",
    "hidden": 1,
@@ -379,20 +436,6 @@
   {
    "fieldname": "col_break_grade2",
    "fieldtype": "Column Break"
-  },
-  {
-   "default": "#000000",
-   "description": "Default color for passing grades",
-   "fieldname": "grade_color",
-   "fieldtype": "Color",
-   "label": "Grade Color"
-  },
-  {
-   "default": "#dc2626",
-   "description": "Fail grade band \u2014 F, AB, AS",
-   "fieldname": "grade_fail_color",
-   "fieldtype": "Color",
-   "label": "Fail Grade Color"
   },
   {
    "default": "F / AB / AS",
@@ -596,7 +639,7 @@
   },
   {
    "default": "1",
-   "description": "Show the Dashboard link in the sidebar (recommended \u2014 it is the portal home page)",
+   "description": "Show the Dashboard link in the sidebar (recommended — it is the portal home page)",
    "fieldname": "menu_dashboard",
    "fieldtype": "Check",
    "label": "Dashboard"
@@ -836,7 +879,7 @@
   },
   {
    "default": "1",
-   "description": "Master switch \u2014 uncheck to disable all fee reminder emails. Individual reminders below can also be toggled independently.",
+   "description": "Master switch — uncheck to disable all fee reminder emails. Individual reminders below can also be toggled independently.",
    "fieldname": "enable_fee_reminders",
    "fieldtype": "Check",
    "label": "Enable Fee Reminders"
@@ -963,26 +1006,11 @@
    "fieldtype": "Code",
    "label": "Custom CSS",
    "options": "CSS"
-  },
-  {
-   "fieldname": "academic_calendar",
-   "fieldtype": "Attach",
-   "label": "Academic Calendar"
-  },
-  {
-   "fieldname": "student_handbook",
-   "fieldtype": "Attach",
-   "label": "Student Handbook"
-  },
-  {
-   "fieldname": "examination_guidelines",
-   "fieldtype": "Attach",
-   "label": "Examination Guidelines"
   }
  ],
  "issingle": 1,
  "links": [],
- "modified": "2026-09-23 10:09:25.150375",
+ "modified": "2026-09-28 11:59:11.546509",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Student Portal Settings",

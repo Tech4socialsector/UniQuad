@@ -165,7 +165,7 @@ def get_context(context):
 
         # Status → colour mapping
         STATUS_STYLE = {
-            "Paid":           {"color": "var(--sp-success)", "bg": "var(--sp-success-bg)"},
+            "Paid":           {"color": "#000000",           "bg": "#f3f4f6"},
             "Partially Paid": {"color": "var(--sp-warning)", "bg": "var(--sp-warning-bg)"},
             "Unpaid":         {"color": "var(--sp-danger)",  "bg": "var(--sp-danger-bg)"},
             "Overdue":        {"color": "var(--sp-danger)",  "bg": "var(--sp-danger-bg)"},

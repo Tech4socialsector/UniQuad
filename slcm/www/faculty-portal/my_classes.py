@@ -23,6 +23,8 @@ def get_context(context):
         return context
 
     context.not_a_faculty = False
+    _set_year_options(context)
+    _set_term_options(context)
 
     try:
         faculty = frappe.get_doc("Faculty", faculty_name)
@@ -67,8 +69,8 @@ def get_context(context):
         context.course_offerings = enriched
 
         # ── Filter options ─────────────────────────────────────────
-        context.filter_terms = sorted(set(c["term_name"] for c in enriched if c["term_name"] != "—"))
-        context.filter_years = sorted(set(c["academic_year"] for c in enriched if c["academic_year"] != "—"), reverse=True)
+        _set_term_options(context, [(c["term_name"], c["academic_year"]) for c in enriched])
+        _set_year_options(context, [c["academic_year"] for c in enriched])
 
         # ── Summary stats ──────────────────────────────────────────
         context.total_courses = len(enriched)
@@ -167,10 +169,57 @@ def _get_students(co_name):
         return []
 
 
+def _set_year_options(context, course_years=()):
+    """All Academic Years (newest first) plus any year found on the courses,
+    with the year covering today pre-selected in the filter."""
+    try:
+        rows = frappe.get_all(
+            "Academic Year",
+            fields=["name", "year_start_date", "year_end_date"],
+            order_by="year_start_date desc",
+        )
+    except Exception:
+        rows = []
+    years = [r.name for r in rows]
+    extra = sorted({y for y in course_years if y and y != "—" and y not in years}, reverse=True)
+    context.filter_years = years + extra
+
+    today = frappe.utils.getdate()
+    current = next(
+        (r.name for r in rows
+         if r.year_start_date and r.year_end_date
+         and r.year_start_date <= today <= r.year_end_date),
+        None,
+    )
+    context.current_academic_year = current or (years[0] if years else "")
+
+
+def _set_term_options(context, course_terms=()):
+    """All Academic Terms (newest first) plus any term found on the courses.
+    filter_terms is a list of {name, year} so the page can show only the
+    terms of the selected academic year(s)."""
+    try:
+        rows = frappe.get_all(
+            "Academic Term",
+            fields=["name", "academic_year"],
+            order_by="term_start_date desc, name asc",
+        )
+    except Exception:
+        rows = []
+    seen = {r.name for r in rows}
+    terms = [{"name": r.name, "year": r.academic_year or ""} for r in rows]
+    for name, year in course_terms:
+        if name and name != "—" and name not in seen:
+            seen.add(name)
+            terms.append({"name": name, "year": year if year and year != "—" else ""})
+    context.filter_terms = terms
+
+
 def _set_defaults(context):
     context.course_offerings = []
     context.filter_terms = []
     context.filter_years = []
+    context.current_academic_year = ""
     context.total_courses = 0
     context.total_students = 0
     context.total_sessions = 0

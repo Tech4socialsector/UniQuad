@@ -7,7 +7,7 @@ from frappe.model.document import Document
 # ── Defaults ─────────────────────────────────────────────────────────
 _DEFAULTS = {
     # Branding
-    "portal_title":          "Student Portal",
+    "portal_title":          "National Law School of India University",
     "portal_subtitle":       "",
     "show_logo":             1,
     "nav_brand_text":        "",
@@ -15,27 +15,29 @@ _DEFAULTS = {
     # Typography
     "font_family":           "Merriweather",
     "font_size":             "Normal",
-    # Theme — NLSIU Academic palette
-    "primary_color":         "#2b2e4a",   # NLSIU deep navy
-    "secondary_color":       "#920c24",   # NLSIU institutional maroon
-    "background_color":      "#f7f5f0",   # Warm academic off-white
+    # Theme — NLSIU palette (mirrors Parent Portal Settings › Theme Colors)
+    "primary_color":         "#920c24",   # NLSIU maroon — active menu, buttons
+    "secondary_color":       "#c9a84c",   # NLSIU gold accent
+    "background_color":      "#f0f2f5",   # Light grey — same as Parent & Faculty portals
     "card_background":       "#ffffff",
-    "sidebar_theme":         "Light",
-    "nav_text_color":        "#ffffff",
-    # Status colors
-    "success_color":         "#16a34a",
-    "warning_color":         "#d97706",
-    "danger_color":          "#dc2626",
-    "info_color":            "#0369a1",
+    "nav_bg_color":          "#ffffff",
+    "nav_text_color":        "#920c24",
+    "sidebar_bg_color":      "#ffffff",
+    "sidebar_text_color":    "#475569",   # Slate menu text — same as Parent Portal
+    # Status colors (same as Parent Portal Settings)
+    "success_color":         "#920c24",
+    "warning_color":         "#920c24",
+    "danger_color":          "#920c24",
+    "info_color":            "#920c24",
     # Grading
-    "grade_excellent_color": "#16a34a",
+    "grade_excellent_color": "#920c24",
     "grade_excellent_label": "A+ / A / S",
-    "grade_good_color":      "#0369a1",
+    "grade_good_color":      "#920c24",
     "grade_good_label":      "B+ / B",
-    "grade_average_color":   "#d97706",
+    "grade_average_color":   "#920c24",
     "grade_average_label":   "C+ / C",
     "grade_color": "#000000",
-            "grade_fail_color":      "#dc2626",
+            "grade_fail_color":      "#920c24",
     "grade_fail_label":      "D / F",
     # Attendance thresholds
     "att_good_threshold":    75,
@@ -100,36 +102,50 @@ _DEFAULTS = {
 
 # ── Font mappings ─────────────────────────────────────────────────────
 _FONT_CSS = {
-    "Merriweather":   "'Merriweather Sans', 'Merriweather', Georgia, serif",
+    "Merriweather":   "'Merriweather', Georgia, serif",
     "Poppins":        "'Poppins', system-ui, -apple-system, sans-serif",
     "Inter":          "'Inter', system-ui, -apple-system, sans-serif",
     "Roboto":         "'Roboto', system-ui, -apple-system, sans-serif",
     "System Default": "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
 }
 
+# Only fonts NOT already in the base template's default Google Fonts link
 _FONT_GOOGLE_URL = {
-    "Merriweather":   "https://fonts.googleapis.com/css2?family=Merriweather+Sans:wght@300;400;500;600;700;800&family=Merriweather:wght@300;400;700&display=swap",
-    "Inter":          "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap",
     "Roboto":         "https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap",
 }
 
 # ── Nav height mappings ───────────────────────────────────────────────
 _NAV_HEIGHT = {
     "Compact": "50px",
-    "Normal":  "60px",
-    "Tall":    "72px",
+    "Normal":  "62px",
+    "Tall":    "74px",
 }
 
 
 class StudentPortalSettings(Document):
     def validate(self):
         self._validate_colors()
+        self._validate_contrast()
         self._validate_thresholds()
+
+    def on_update(self):
+        frappe.clear_document_cache(self.doctype, self.name)
+
+    def _validate_contrast(self):
+        """Text identical to its background would make the navbar/sidebar unreadable."""
+        for bg, fg, where in (
+            ("nav_bg_color", "nav_text_color", "Navbar"),
+            ("sidebar_bg_color", "sidebar_text_color", "Sidebar"),
+        ):
+            b = (self.get(bg) or _DEFAULTS[bg]).strip().lower()
+            f = (self.get(fg) or _DEFAULTS[fg]).strip().lower()
+            if _is_valid_hex(b) and _is_valid_hex(f) and _expand_hex(b) == _expand_hex(f):
+                frappe.throw(f"{where} text colour is the same as the {where.lower()} background — the text would be invisible.")
 
     def _validate_colors(self):
         color_fields = [
             "primary_color", "secondary_color", "background_color", "card_background",
-            "nav_text_color",
+            "nav_bg_color", "nav_text_color", "sidebar_bg_color", "sidebar_text_color",
             "success_color", "warning_color", "danger_color", "info_color",
             "grade_color", "grade_fail_color",
         ]
@@ -155,6 +171,11 @@ class StudentPortalSettings(Document):
 def _is_valid_hex(color):
     import re
     return bool(re.match(r"^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$", color.strip()))
+
+
+def _expand_hex(color):
+    h = color.strip().lstrip("#").lower()
+    return "#" + ("".join(c * 2 for c in h) if len(h) == 3 else h)
 
 
 def _hex_to_rgba(hex_color, alpha):
@@ -216,7 +237,9 @@ def get_student_portal_settings():
         # We query tabSingles directly so we can fall back to _DEFAULTS for fields
         # that were never saved (instead of treating the Frappe-injected 0 as intent).
         saved = frappe.db.get_singles_dict("Student Portal Settings")
-        raw = {}
+        # Fields without a coded default (logo, attachments, print formats …)
+        raw = {f.fieldname: doc.get(f.fieldname) for f in doc.meta.fields
+               if f.fieldtype not in ("Section Break", "Column Break", "Tab Break", "HTML")}
         for k, default_val in _DEFAULTS.items():
             v = getattr(doc, k, None)
             if k in _CHECK_FIELDS:
@@ -225,8 +248,23 @@ def get_student_portal_settings():
                 raw[k] = int(saved[k]) if k in saved else default_val
             else:
                 raw[k] = v if v not in (None, "") else default_val
+        # Sites saved before the Navbar/Sidebar split only have `sidebar_theme`
+        legacy = (raw.get("sidebar_theme") or "").strip()
+        if _is_valid_hex(legacy):
+            for k in ("nav_bg_color", "sidebar_bg_color"):
+                if not saved.get(k):
+                    raw[k] = legacy
     except Exception:
         raw = dict(_DEFAULTS)
+
+    # Never hand the template an invalid colour (e.g. a stray "Dark")
+    for k in ("primary_color", "secondary_color", "background_color", "card_background",
+              "nav_bg_color", "nav_text_color", "sidebar_bg_color", "sidebar_text_color",
+              "success_color", "warning_color", "danger_color", "info_color",
+              "grade_color", "grade_fail_color", "grade_excellent_color",
+              "grade_good_color", "grade_average_color"):
+        if not _is_valid_hex(str(raw.get(k) or "")):
+            raw[k] = _DEFAULTS[k]
 
     # ── Derived primary palette ───────────────────────────────────
     primary = raw["primary_color"]
@@ -246,11 +284,11 @@ def get_student_portal_settings():
     raw["nav_text_rgba_80"] = _hex_to_rgba(raw["nav_text_color"], 0.8)
 
     # ── Font family CSS value + optional Google Fonts URL ─────────
-    raw["font_family_css"] = _FONT_CSS.get(raw["font_family"], _FONT_CSS["Poppins"])
+    raw["font_family_css"] = _FONT_CSS.get(raw["font_family"], _FONT_CSS["Merriweather"])
     raw["font_google_url"] = _FONT_GOOGLE_URL.get(raw["font_family"], "")
 
     # ── Nav height CSS value ──────────────────────────────────────
-    raw["nav_height_css"] = _NAV_HEIGHT.get(raw["nav_height"], "60px")
+    raw["nav_height_css"] = _NAV_HEIGHT.get(raw["nav_height"], "62px")
 
     # ── Attendance thresholds as floats ───────────────────────────
     raw["att_good_threshold"] = float(raw["att_good_threshold"] or 75)
@@ -279,9 +317,6 @@ def get_student_portal_settings():
 
     if raw["sidebar_position"] == "Right":
         body_classes.append("sp-right-sidebar")
-
-    if raw["sidebar_theme"] == "Dark":
-        body_classes.append("sp-sidebar-dark")
 
     if raw["nav_height"] == "Compact":
         body_classes.append("sp-nav-compact")

@@ -160,7 +160,7 @@
 }
 .sat-counter-val  { font-size: 22px; font-weight: 800; color: #fff; line-height: 1; }
 .sat-counter-lbl  { font-size: 10px; color: rgba(255,255,255,0.65); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 1px; }
-.sat-counter.sat-present .sat-counter-val { color: #86efac; }
+.sat-counter.sat-present .sat-counter-val { color: #f5c6ce; }
 .sat-counter.sat-absent  .sat-counter-val { color: #fca5a5; }
 
 /* Progress bar inside header */
@@ -169,7 +169,7 @@
   background: rgba(255,255,255,0.15); border-radius: 6px; height: 8px; overflow: hidden;
 }
 .sat-progress-bar-fill {
-  height: 100%; border-radius: 6px; background: #86efac;
+  height: 100%; border-radius: 6px; background: #f5c6ce;
   transition: width 0.3s ease; position: relative;
 }
 .sat-progress-bar-fill::after {
@@ -194,7 +194,7 @@
   letter-spacing: 0.01em;
 }
 .sat-bulk-present { background: var(--fp-success); color: #fff; }
-.sat-bulk-present:hover { background: #15803d; }
+.sat-bulk-present:hover { background: #920c24; }
 .sat-bulk-absent  { background: var(--fp-danger);  color: #fff; }
 .sat-bulk-absent:hover  { background: #b91c1c; }
 
@@ -226,9 +226,9 @@
 }
 .sat-student-row:last-child { border-bottom: none; }
 .sat-student-row:hover { background: var(--fp-bg); }
-.sat-student-row.is-present { background: rgba(22,163,74,0.04); }
+.sat-student-row.is-present { background: rgba(146,12,36,0.04); }
 .sat-student-row.is-absent  { background: rgba(220,38,38,0.03); }
-.sat-student-row.is-present:hover { background: rgba(22,163,74,0.08); }
+.sat-student-row.is-present:hover { background: rgba(146,12,36,0.08); }
 .sat-student-row.is-absent:hover  { background: rgba(220,38,38,0.06); }
 .sat-sno {
   width: 28px; height: 28px; border-radius: 50%;
@@ -314,7 +314,7 @@
 .sp-session-card:active { transform: translateY(0); }
 .sp-session-icon {
   width: 44px; height: 44px; border-radius: 12px;
-  background: var(--fp-warning-bg); border: 1px solid rgba(217,119,6,0.2);
+  background: var(--fp-warning-bg); border: 1px solid rgba(146,12,36,0.2);
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
 .sp-session-icon .fp-ms { font-size: 22px; color: var(--fp-warning); }
@@ -355,7 +355,7 @@
   font-weight: 600; cursor: pointer; border: 1.5px solid transparent;
   font-family: inherit; transition: all 0.15s;
 }
-.att-p-btn[data-active="0"] { background: var(--fp-success-bg); color: var(--fp-success); border-color: rgba(22,163,74,0.2); }
+.att-p-btn[data-active="0"] { background: var(--fp-success-bg); color: var(--fp-success); border-color: rgba(146,12,36,0.2); }
 .att-p-btn[data-active="1"] { background: var(--fp-success); color: #fff; border-color: var(--fp-success); }
 .att-a-btn[data-active="0"] { background: var(--fp-danger-bg); color: var(--fp-danger); border-color: rgba(220,38,38,0.2); }
 .att-a-btn[data-active="1"] { background: var(--fp-danger); color: #fff; border-color: var(--fp-danger); }
@@ -417,11 +417,6 @@
 {# ── Page Header ──────────────────────────────────────────────── #}
 <div class="fp-page-header fade-in">
   <div class="fp-page-header-left">
-    <div class="fp-breadcrumb">
-      <a href="/faculty-portal"><span class="fp-ms">home</span></a>
-      <span class="fp-ms">chevron_right</span>
-      <span>Attendance</span>
-    </div>
     <h1 class="fp-page-title">Attendance Management</h1>
     <p class="fp-page-sub">View, manage and record attendance sessions for your courses.</p>
   </div>
@@ -524,7 +519,7 @@
     <div class="fp-stat-body">
       <div class="fp-stat-val">{{ total_sessions }}</div>
       <div class="fp-stat-lbl">Total Sessions</div>
-      <div class="fp-stat-sub" style="color:var(--fp-accent);"><span class="fp-ms" style="font-size:12px;">open_in_new</span> Drill down</div>
+      <div class="fp-stat-sub" style="color:var(--fp-accent);"><span class="fp-ms" style="font-size:12px;">open_in_new</span> More info</div>
     </div>
   </div>
 
@@ -534,7 +529,7 @@
     <div class="fp-stat-body">
       <div class="fp-stat-val">{{ marked_sessions }}</div>
       <div class="fp-stat-lbl">Marked</div>
-      <div class="fp-stat-sub" style="color:var(--fp-accent);"><span class="fp-ms" style="font-size:12px;">open_in_new</span> Drill down</div>
+      <div class="fp-stat-sub" style="color:var(--fp-accent);"><span class="fp-ms" style="font-size:12px;">open_in_new</span> More info</div>
     </div>
   </div>
 
@@ -546,7 +541,7 @@
     <div class="fp-stat-body">
       <div class="fp-stat-val {% if pending_sessions > 0 %}" style="color:var(--fp-warning);"{% else %}"{% endif %}>{{ pending_sessions }}</div>
       <div class="fp-stat-lbl">Pending</div>
-      <div class="fp-stat-sub" style="color:var(--fp-accent);"><span class="fp-ms" style="font-size:12px;">open_in_new</span> Drill down</div>
+      <div class="fp-stat-sub" style="color:var(--fp-accent);"><span class="fp-ms" style="font-size:12px;">open_in_new</span> More info</div>
     </div>
   </div>
 
@@ -1355,7 +1350,7 @@ function _satRenderModalSlotPicker(slots, activeSessionName) {
           : 'background:var(--fp-card);color:var(--fp-text-2);border:1.5px solid var(--fp-border);')
       + '">'
       + escHtml(slotLabel)
-      + (s.marked ? '<span class="fp-ms" style="font-size:13px;color:' + (isActive ? '#86efac' : 'var(--fp-success)') + ';">check_circle</span>' : '')
+      + (s.marked ? '<span class="fp-ms" style="font-size:13px;color:' + (isActive ? '#f5c6ce' : 'var(--fp-success)') + ';">check_circle</span>' : '')
       + '</button>';
   }).join('');
 
@@ -1638,12 +1633,12 @@ function _satRenderList(students) {
       + 'No students found.</div>';
     return;
   }
-  var COLS = '36px 44px 1fr auto auto';
+  var COLS = '44px 1fr auto auto';
   var html = '<div style="border:1px solid var(--fp-border);border-radius:var(--fp-radius-sm);overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,0.03);">'
     + '<div style="display:grid;grid-template-columns:' + COLS + ';gap:14px;padding:12px 20px;'
     + 'background:var(--fp-bg);border-bottom:2px solid var(--fp-border);'
     + 'font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--fp-text-4);">'
-    + '<span>#</span><span></span><span>Student</span><span>Attendance</span><span></span></div>';
+    + '<span></span><span>Student</span><span>Attendance</span><span></span></div>';
 
   students.forEach(function(s, i) {
     var uid     = 'sat-chk-' + i;
@@ -1663,9 +1658,8 @@ function _satRenderList(students) {
     html += '<div class="sat-student-row-toggle" data-idx="' + i + '" data-search="' + searchKey + '" '
       + 'style="display:grid;grid-template-columns:' + COLS + ';gap:14px;align-items:center;'
       + 'padding:12px 20px;border-bottom:1px solid var(--fp-border-light);transition:background 0.12s;'
-      + 'background:' + (present ? 'rgba(22,163,74,0.045)' : 'rgba(220,38,38,0.035)') + ';" '
+      + 'background:' + (present ? 'rgba(146,12,36,0.045)' : 'rgba(220,38,38,0.035)') + ';" '
       + 'onmouseover="this.style.filter=\'brightness(0.97)\'" onmouseout="this.style.filter=\'\'">'
-      + '<span style="font-size:12px;color:var(--fp-text-5);font-weight:600;">' + (i + 1) + '</span>'
       + avatar
       + '<div style="min-width:0;"><div style="font-size:14px;font-weight:600;color:var(--fp-text-1);">' + escHtml(name) + '</div>'
       + (roll ? '<div style="font-size:11.5px;color:var(--fp-text-4);font-family:monospace;">' + escHtml(roll) + '</div>' : '')
@@ -1717,7 +1711,7 @@ function satToggleSwitch(chk) {
     if (thumb) thumb.style.left = present ? '22px' : '2px';
   }
   var row = chk.closest('.sat-student-row-toggle');
-  if (row) row.style.background = present ? 'rgba(22,163,74,0.045)' : 'rgba(220,38,38,0.035)';
+  if (row) row.style.background = present ? 'rgba(146,12,36,0.045)' : 'rgba(220,38,38,0.035)';
   var avatarBox = row ? row.querySelector('img, span[style*="border-radius:50%"]') : null;
   if (avatarBox) avatarBox.style.borderColor = present ? 'var(--fp-success)' : 'var(--fp-danger)';
 
@@ -1742,7 +1736,7 @@ function _satSetAllPills(present) {
     if (thumb) thumb.style.left = present ? '22px' : '2px';
   });
   document.querySelectorAll('#sat-list .sat-student-row-toggle').forEach(function(row) {
-    row.style.background = present ? 'rgba(22,163,74,0.045)' : 'rgba(220,38,38,0.035)';
+    row.style.background = present ? 'rgba(146,12,36,0.045)' : 'rgba(220,38,38,0.035)';
     var avatarBox = row.querySelector('img, span[style*="border-radius:50%"]');
     if (avatarBox) avatarBox.style.borderColor = present ? 'var(--fp-success)' : 'var(--fp-danger)';
   });
@@ -1789,7 +1783,7 @@ function fpSaveAttendance() {
   function onSaved() {
     btn.disabled = false;
     btn.innerHTML = '<span class="fp-ms">check_circle</span>Saved!';
-    btn.style.background = '#16a34a';
+    btn.style.background = '#920c24';
     setTimeout(function() {
       _closeModal('att-mark-modal');
       fpReloadPreservingScroll('Attendance marked successfully');
@@ -1929,7 +1923,7 @@ function _renderViewSlotPicker(slots, activeSessionName) {
           : 'background:rgba(255,255,255,0.12);color:#fff;')
       + '">'
       + escHtml(slotLabel)
-      + (s.marked ? '<span class="fp-ms" style="font-size:13px;color:' + (isActive ? 'var(--fp-success)' : '#86efac') + ';">check_circle</span>' : '')
+      + (s.marked ? '<span class="fp-ms" style="font-size:13px;color:' + (isActive ? 'var(--fp-success)' : '#f5c6ce') + ';">check_circle</span>' : '')
       + '</button>';
   }).join('');
 
@@ -1984,19 +1978,19 @@ function _fpRenderViewSessionBody(students, audit) {
        and every body row — each a separate CSS grid — line up consistently
        regardless of how long any one row's content happens to be. A photo
        column sits right after # so faculty can visually spot a student. */
-    var COLS = '32px 40px 1fr 100px 150px 70px';
+    var COLS = '40px 1fr 100px 150px 70px';
     html += '<div style="border:1px solid var(--fp-border);border-radius:var(--fp-radius-sm);overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,0.03);">'
       + '<div style="display:grid;grid-template-columns:' + COLS + ';gap:12px;padding:11px 16px;'
       + 'background:var(--fp-bg);border-bottom:2px solid var(--fp-border);'
       + 'font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--fp-text-4);">'
-      + '<span>#</span><span></span><span>Student</span><span>Status</span><span>Type</span><span>History</span></div>'
+      + '<span></span><span>Student</span><span>Status</span><span>Type</span><span>History</span></div>'
       + '<div style="max-height:400px;overflow-y:auto;">';
 
     students.forEach(function(s, i) {
       var st = s.status || 'Absent';
       var dotColor = st === 'Present' ? 'var(--fp-success)' : st === 'Late' ? 'var(--fp-warning)' : 'var(--fp-danger)';
       var badgeCls = st === 'Present' ? 'fp-badge-success' : st === 'Late' ? 'fp-badge-warning' : 'fp-badge-danger';
-      var rowBg    = st === 'Present' ? 'rgba(22,163,74,0.045)' : st === 'Late' ? 'rgba(217,119,6,0.045)' : 'rgba(220,38,38,0.035)';
+      var rowBg    = st === 'Present' ? 'rgba(146,12,36,0.045)' : st === 'Late' ? 'rgba(146,12,36,0.045)' : 'rgba(220,38,38,0.035)';
       var typeIcon = (s.source === 'RFID' || s.source === 'QR') ? 'wifi_tethering' : 'edit_note';
       var typeLabel = s.type_label || 'Not marked';
       var name    = s.student_name || s.student;
@@ -2009,7 +2003,6 @@ function _fpRenderViewSessionBody(students, audit) {
         + 'style="display:grid;grid-template-columns:' + COLS + ';gap:12px;align-items:center;'
         + 'padding:9px 16px;border-bottom:1px solid var(--fp-border-light);background:' + rowBg + ';transition:background 0.12s;" '
         + 'onmouseover="this.style.filter=\'brightness(0.97)\'" onmouseout="this.style.filter=\'\'">'
-        + '<span style="font-size:11px;color:var(--fp-text-5);font-weight:600;">' + (i+1) + '</span>'
         + avatar
         + '<div style="min-width:0;"><div style="font-size:13px;font-weight:600;color:var(--fp-text-1);">' + escHtml(name) + '</div>'
         + '<div style="font-size:11px;color:var(--fp-text-4);font-family:monospace;">' + escHtml(s.reg_id || s.student) + '</div></div>'
@@ -2697,11 +2690,23 @@ document.addEventListener('DOMContentLoaded', function() {
       <div style="padding:16px 22px;border-bottom:1px solid var(--fp-border-light);flex-shrink:0;background:var(--fp-card);">
         <div style="max-width:900px;margin:0 auto;">
           <div style="font-size:16px;font-weight:700;color:var(--fp-text-1);margin-bottom:12px;">Attendance</div>
+          {# Counts on the left; search + bulk actions grouped on the right #}
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
-            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <div style="display:flex;align-items:center;gap:14px;font-size:13px;font-weight:600;color:var(--fp-text-2);">
+              <span>Total: <span id="sat-cnt-total" style="color:var(--fp-text-1);">0</span></span>
+              <span style="color:#920c24;">Present: <span id="sat-cnt-present">0</span></span>
+              <span style="color:#dc2626;">Absent: <span id="sat-cnt-absent">0</span></span>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+              <div class="fp-search-wrap" style="width:260px;max-width:100%;">
+                <span class="fp-ms">search</span>
+                <input type="text" class="fp-input fp-search-input" id="sat-search"
+                       placeholder="Search students…" oninput="satFilterStudents()"
+                       style="padding-top:8px;padding-bottom:8px;" autocomplete="off">
+              </div>
               <button onclick="satCheckAll()"
                       style="padding:6px 16px;border:1.5px solid var(--fp-border);border-radius:7px;background:var(--fp-card);font-size:12px;font-weight:600;color:var(--fp-text-2);cursor:pointer;font-family:inherit;transition:all 0.15s;display:flex;align-items:center;gap:5px;"
-                      onmouseover="this.style.background='#16a34a';this.style.color='#fff';this.style.borderColor='#16a34a';"
+                      onmouseover="this.style.background='#920c24';this.style.color='#fff';this.style.borderColor='#920c24';"
                       onmouseout="this.style.background='var(--fp-card)';this.style.color='var(--fp-text-2)';this.style.borderColor='var(--fp-border)';">
                 Check all
               </button>
@@ -2712,17 +2717,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 Uncheck all
               </button>
             </div>
-            <div style="display:flex;align-items:center;gap:14px;font-size:13px;font-weight:600;color:var(--fp-text-2);">
-              <span>Total: <span id="sat-cnt-total" style="color:var(--fp-text-1);">0</span></span>
-              <span style="color:#16a34a;">Present: <span id="sat-cnt-present">0</span></span>
-              <span style="color:#dc2626;">Absent: <span id="sat-cnt-absent">0</span></span>
-            </div>
-          </div>
-          <div class="fp-search-wrap" style="max-width:360px;margin-top:12px;">
-            <span class="fp-ms">search</span>
-            <input type="text" class="fp-input fp-search-input" id="sat-search"
-                   placeholder="Search students…" oninput="satFilterStudents()"
-                   style="padding-top:8px;padding-bottom:8px;" autocomplete="off">
           </div>
         </div>
       </div>
@@ -2899,7 +2893,7 @@ document.addEventListener('DOMContentLoaded', function() {
       <div style="display:flex;gap:8px;align-items:center;">
         <button id="att-drill-export-btn"
                 onclick="attDrillExport()"
-                style="display:flex;align-items:center;gap:6px;padding:7px 14px;background:var(--fp-success-bg);border:1px solid rgba(22,163,74,0.2);border-radius:var(--fp-radius-sm);font-size:12px;font-weight:600;color:var(--fp-success);cursor:pointer;font-family:inherit;transition:all 0.18s;"
+                style="display:flex;align-items:center;gap:6px;padding:7px 14px;background:var(--fp-success-bg);border:1px solid rgba(146,12,36,0.2);border-radius:var(--fp-radius-sm);font-size:12px;font-weight:600;color:var(--fp-success);cursor:pointer;font-family:inherit;transition:all 0.18s;"
                 onmouseover="this.style.background='var(--fp-success)';this.style.color='#fff';"
                 onmouseout="this.style.background='var(--fp-success-bg)';this.style.color='var(--fp-success)';">
           <span class="fp-ms" style="font-size:16px;">download</span>Export CSV

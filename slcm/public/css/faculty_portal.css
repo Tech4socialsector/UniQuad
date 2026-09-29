@@ -11,8 +11,8 @@
   --fp-primary-mid:    rgba(146,12,36,0.16);
   --fp-primary-glow:   rgba(146,12,36,0.25);
   --fp-secondary:      #c9a84c;
-  --fp-accent:         #2563eb;
-  --fp-accent-light:   rgba(37,99,235,0.10);
+  --fp-accent:         #920c24;
+  --fp-accent-light:   rgba(146,12,36,0.10);
   --fp-nav-bg:         #fafafa;
   --fp-nav-text:       #920c24;
   --fp-sidebar-active-text: #ffffff;
@@ -28,7 +28,7 @@
   --fp-text-5:         #cbd5e1;
 
   /* Surfaces */
-  --fp-bg:             #f0f4f8;
+  --fp-bg:             #f0f2f5;
   --fp-bg-2:           #e8edf3;
   --fp-card:           #ffffff;
   --fp-card-2:         #f8fafc;
@@ -41,12 +41,12 @@
   --fp-border-mid:     #cbd5e1;
 
   /* Semantic */
-  --fp-success:        #16a34a;
-  --fp-success-bg:     rgba(22,163,74,0.10);
-  --fp-success-mid:    rgba(22,163,74,0.20);
-  --fp-warning:        #d97706;
-  --fp-warning-bg:     rgba(217,119,6,0.10);
-  --fp-warning-mid:    rgba(217,119,6,0.20);
+  --fp-success:        #920c24;
+  --fp-success-bg:     rgba(146,12,36,0.10);
+  --fp-success-mid:    rgba(146,12,36,0.20);
+  --fp-warning:        #920c24;
+  --fp-warning-bg:     rgba(146,12,36,0.10);
+  --fp-warning-mid:    rgba(146,12,36,0.20);
   --fp-danger:         #dc2626;
   --fp-danger-bg:      rgba(220,38,38,0.10);
   --fp-danger-mid:     rgba(220,38,38,0.20);
@@ -56,7 +56,7 @@
   --fp-purple:         #7c3aed;
   --fp-purple-bg:      rgba(124,58,237,0.10);
   --fp-purple-mid:     rgba(124,58,237,0.20);
-  --fp-teal:           #0d9488;
+  --fp-teal:           #920c24;
   --fp-teal-bg:        rgba(13,148,136,0.10);
   --fp-teal-mid:       rgba(13,148,136,0.20);
   --fp-rose:           #e11d48;
@@ -109,10 +109,10 @@ body.fp-dark {
   --fp-border:         #1e2d4a;
   --fp-border-light:   #131d35;
   --fp-border-mid:     #263352;
-  --fp-primary-light:  rgba(37,99,235,0.15);
-  --fp-primary-mid:    rgba(37,99,235,0.25);
-  --fp-primary-glow:   rgba(37,99,235,0.35);
-  --fp-accent-light:   rgba(37,99,235,0.18);
+  --fp-primary-light:  rgba(146,12,36,0.15);
+  --fp-primary-mid:    rgba(146,12,36,0.25);
+  --fp-primary-glow:   rgba(146,12,36,0.35);
+  --fp-accent-light:   rgba(146,12,36,0.18);
   --fp-shadow-sm:      0 1px 3px rgba(0,0,0,0.3);
   --fp-shadow:         0 4px 16px rgba(0,0,0,0.4);
   --fp-shadow-md:      0 8px 32px rgba(0,0,0,0.5);
@@ -521,7 +521,7 @@ header[class*="navbar"], .website-header,
   position: absolute;
   bottom: 2px; right: 2px;
   width: 12px; height: 12px;
-  background: #22c55e;
+  background: #920c24;
   border-radius: 50%;
   border: 2px solid var(--fp-card);
 }

@@ -6,8 +6,8 @@ no_cache = 1
 
 # Palette – one colour per enrolled course_offering (cycles if > 10)
 _PALETTE = [
-    "#c84630", "#3b82f6", "#10b981", "#f59e0b", "#8b5cf6",
-    "#ec4899", "#06b6d4", "#84cc16", "#f97316", "#6366f1",
+    "#920c24", "#3b82f6", "#10b981", "#6b091a", "#8b5cf6",
+    "#ec4899", "#06b6d4", "#84cc16", "#b5364a", "#6366f1",
 ]
 
 

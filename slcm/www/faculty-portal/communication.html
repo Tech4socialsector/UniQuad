@@ -4,9 +4,6 @@
 
 {% block content %}
 
-<div class="fp-breadcrumb fade-in" style="margin-bottom:6px;">
-  <span>Home</span> <span class="fp-ms" style="font-size:13px;">chevron_right</span> <span>Communication</span>
-</div>
 
 <div class="fp-page-header fade-in">
   <div>
@@ -21,41 +18,6 @@
   <div>Some data could not be loaded. Please refresh.</div>
 </div>
 {% endif %}
-
-{# ── Stats row ──────────────────────────────────────────────── #}
-<div class="fp-stat-grid fp-vb-stat-grid fp-vb-stat-grid-3">
-
-  <div class="fp-stat-card fp-vb-stat-card fp-vb-accent-blue fade-in" style="animation-delay:0.04s;cursor:default;">
-    <div class="fp-stat-icon fp-c-blue">
-      <span class="fp-ms">campaign</span>
-    </div>
-    <div class="fp-stat-body">
-      <div class="fp-stat-val">{{ total_count }}</div>
-      <div class="fp-stat-lbl">Total</div>
-    </div>
-  </div>
-
-  <div class="fp-stat-card fp-vb-stat-card {% if urgent_count > 0 %}fp-vb-accent-red{% else %}fp-vb-accent-green{% endif %} fade-in" style="animation-delay:0.08s;cursor:default;">
-    <div class="fp-stat-icon {% if urgent_count > 0 %}fp-c-red{% else %}fp-c-green{% endif %}">
-      <span class="fp-ms">priority_high</span>
-    </div>
-    <div class="fp-stat-body">
-      <div class="fp-stat-val">{{ urgent_count }}</div>
-      <div class="fp-stat-lbl">Urgent</div>
-    </div>
-  </div>
-
-  <div class="fp-stat-card fp-vb-stat-card {% if important_count > 0 %}fp-vb-accent-orange{% else %}fp-vb-accent-green{% endif %} fade-in" style="animation-delay:0.12s;cursor:default;">
-    <div class="fp-stat-icon {% if important_count > 0 %}fp-c-orange{% else %}fp-c-green{% endif %}">
-      <span class="fp-ms">info</span>
-    </div>
-    <div class="fp-stat-body">
-      <div class="fp-stat-val">{{ important_count }}</div>
-      <div class="fp-stat-lbl">Important</div>
-    </div>
-  </div>
-
-</div>
 
 {# ── Filter bar ─────────────────────────────────────────────── #}
 <div class="fp-card fade-in" style="margin-bottom:20px;animation-delay:0.16s;">
