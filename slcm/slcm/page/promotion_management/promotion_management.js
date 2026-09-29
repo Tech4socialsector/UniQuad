@@ -486,9 +486,16 @@ frappe.pages['promotion-management'].on_page_load = function (wrapper) {
 		if (!_loaded.programs || !_loaded.years) return;
 		var urlParams = new URLSearchParams(window.location.search);
 		if (urlParams.get('action') === 'download_report') {
+			// Drop the param so Back / re-visits don't reopen the dialog.
+			urlParams.delete('action');
+			var qs = urlParams.toString();
+			window.history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : ''));
 			setTimeout(openOfficialDownload, 400);
 		}
 	}
+	// Frappe caches loaded pages, so on_page_load runs once; re-check on every show
+	// so the workspace "Download Promotion Report" shortcut works more than once.
+	wrapper.pm_check_auto_action = _checkAutoAction;
 
 	frappe.call({
 		method: API + 'get_programs',
@@ -1377,4 +1384,8 @@ frappe.pages['promotion-management'].on_page_load = function (wrapper) {
 	renderLog();
 	renderHistory();
 	updateStepper();
+};
+
+frappe.pages['promotion-management'].on_page_show = function (wrapper) {
+	if (wrapper.pm_check_auto_action) wrapper.pm_check_auto_action();
 };

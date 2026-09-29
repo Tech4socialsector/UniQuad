@@ -275,6 +275,10 @@ fixtures = [
             # Venue Bookings
             "Total Venue Bookings", "Pending Venue Bookings", "Approved Venue Bookings",
             "Rejected Venue Bookings", "Cancelled Venue Bookings", "Total Rooms",
+            # Promotions
+            "Active Promotion Policies", "Students Promoted", "Students Not Promoted",
+            "Promotions Pending Review", "Promotion Enrollment Failures",
+            "Promotion Runs with Errors",
         ]]]
     },
     # --- Dashboard: Charts ---
@@ -297,6 +301,9 @@ fixtures = [
             # Venue Bookings
             "Venue Bookings Trend Over Time", "Venue Booking Status Distribution",
             "Venue Bookings by Venue Type",
+            # Promotions
+            "Promotion Outcome Distribution", "Promotions Over Time",
+            "Promotion Runs by Status", "Promotion Exceptions by Reason",
         ]]]
     },
     {
