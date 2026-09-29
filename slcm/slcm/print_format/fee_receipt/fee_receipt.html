@@ -2,54 +2,57 @@
 {% set nls_logo = "/files/nlsiu-logo.jpg" %}
 
 <style>
-  body { font-family: Arial, sans-serif; font-size: 11pt; color: #111; }
-  .receipt-wrapper { max-width: 780px; margin: 0 auto; padding: 20px 30px; }
+  @font-face { font-family: 'Merriweather'; font-weight: 400; font-style: normal; src: url('{{ frappe.utils.get_url() }}/assets/slcm/fonts/Merriweather-Regular.ttf') format('truetype'); }
+  @font-face { font-family: 'Merriweather'; font-weight: 700; font-style: normal; src: url('{{ frappe.utils.get_url() }}/assets/slcm/fonts/Merriweather-Bold.ttf') format('truetype'); }
+  @font-face { font-family: 'Merriweather'; font-weight: 400; font-style: italic; src: url('{{ frappe.utils.get_url() }}/assets/slcm/fonts/Merriweather-Italic.ttf') format('truetype'); }
+  body { font-family: 'Merriweather', Georgia, serif; font-size: 12pt; color: #000; }
+  .receipt-wrapper { max-width: 780px; margin: 0 auto; padding: 20px 30px; border: 1.5px solid #000; min-height: 330mm; }
 
   /* Header */
-  .receipt-header { display: flex; align-items: center; border-bottom: 2px solid #c00; padding-bottom: 12px; margin-bottom: 14px; }
+  .receipt-header { display: flex; align-items: center; border-bottom: 2px solid #000; padding-bottom: 12px; margin-bottom: 14px; }
   .receipt-header img { height: 75px; width: 75px; object-fit: contain; margin-right: 18px; }
-  .receipt-header .inst-name { font-size: 15pt; font-weight: bold; color: #111; }
+  .receipt-header .inst-name { font-size: 16pt; font-weight: bold; color: #000; }
 
   /* Title */
-  .receipt-title { text-align: center; font-size: 12pt; font-weight: bold; margin-bottom: 14px; }
+  .receipt-title { text-align: center; font-size: 13pt; font-weight: bold; margin-bottom: 14px; }
 
   /* Meta grid */
   .meta-grid { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
-  .meta-grid td { padding: 4px 6px; font-size: 10.5pt; vertical-align: top; }
-  .meta-grid td.label { color: #111; width: 20%; }
-  .meta-grid td.value { font-weight: 500; color: #c00; width: 30%; }
+  .meta-grid td { padding: 4px 6px; font-size: 11.5pt; vertical-align: top; }
+  .meta-grid td.label { color: #000; width: 20%; }
+  .meta-grid td.value { font-weight: 500; color: #000; width: 30%; }
   .meta-grid td.value.receipt-num {
     font-weight: 600;
-    color: #c00;
-    border: 1px solid #c00;
+    color: #000;
+    border: 1px solid #000;
     padding: 2px 8px;
     display: inline-block;
   }
 
   /* Divider */
-  .divider { border: none; border-top: 1px solid #999; margin: 10px 0; }
+  .divider { border: none; border-top: 1px solid #000; margin: 10px 0; }
 
   /* Particulars table */
   .particulars-table { width: 100%; border-collapse: collapse; margin: 12px 0; }
   .particulars-table thead tr { background: #fff; }
-  .particulars-table thead th { padding: 7px 10px; text-align: left; font-size: 10.5pt; font-weight: bold; color: #111; border-bottom: 1px solid #111; }
+  .particulars-table thead th { padding: 7px 10px; text-align: left; font-size: 11.5pt; font-weight: bold; color: #000; border-bottom: 1px solid #000; }
   .particulars-table thead th:last-child { text-align: right; }
-  .particulars-table tbody td { padding: 7px 10px; border-bottom: 1px solid #ddd; font-size: 10.5pt; }
+  .particulars-table tbody td { padding: 7px 10px; border-bottom: 1px solid #000; font-size: 11.5pt; }
   .particulars-table tbody td:last-child { text-align: right; }
-  .particulars-table tfoot td { padding: 7px 10px; font-weight: bold; font-size: 11pt; border-top: 2px solid #111; }
+  .particulars-table tfoot td { padding: 7px 10px; font-weight: bold; font-size: 12pt; border-top: 2px solid #000; }
   .particulars-table tfoot td:last-child { text-align: right; }
 
   /* Amount in words */
-  .amount-words { text-align: right; font-style: italic; font-size: 10pt; color: #111; margin-top: 4px; }
+  .amount-words { text-align: right; font-style: italic; font-size: 11pt; color: #000; margin-top: 4px; }
 
   /* Payment info */
   .payment-grid { width: 100%; border-collapse: collapse; margin-top: 12px; }
-  .payment-grid td { padding: 4px 6px; font-size: 10.5pt; }
-  .payment-grid td.label { color: #111; width: 20%; }
-  .payment-grid td.value { color: #c00; font-weight: 500; width: 30%; }
+  .payment-grid td { padding: 4px 6px; font-size: 11.5pt; }
+  .payment-grid td.label { color: #000; width: 20%; }
+  .payment-grid td.value { color: #000; font-weight: 500; width: 30%; }
 
   /* Footer */
-  .receipt-footer { margin-top: 18px; font-size: 10pt; color: #111; }
+  .receipt-footer { margin-top: 18px; font-size: 11pt; color: #000; }
 </style>
 
 <div class="receipt-wrapper">
@@ -73,15 +76,15 @@
     </tr>
     <tr>
       <td class="label">Receipt Number:</td>
-      <td style="padding: 4px 6px; font-size: 10.5pt;">
-        <span style="color:#c00; font-weight:600; border:1px solid #c00; padding:1px 8px;">{{ doc.name }}</span>
+      <td style="padding: 4px 6px; font-size: 11.5pt;">
+        <span style="color:#000; font-weight:600; border:1px solid #000; padding:1px 8px;">{{ doc.name }}</span>
       </td>
       <td class="label">Date:</td>
       <td class="value">{{ frappe.utils.formatdate(doc.receipt_date, "dd-MM-yyyy") }}</td>
     </tr>
   </table>
 
-  <hr class="divider">
+  
 
   <!-- Meta row 2: Academic Year + Application Number, Programme + Year -->
   <table class="meta-grid">
@@ -105,7 +108,7 @@
   <table class="particulars-table">
     <thead>
       <tr>
-        <th style="width:10%">S No.</th>
+        <th style="width:10%">Sl No.</th>
         <th>Particulars</th>
         <th style="width:25%">Amount</th>
       </tr>

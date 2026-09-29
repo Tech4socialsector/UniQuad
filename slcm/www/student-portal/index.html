@@ -5,6 +5,19 @@
 {% block extra_head %}
 <style>
   /* Base typography */
+  /* White panels behind the title/alerts and Quick Actions */
+  .spd-hero, .spd-qa-section {
+    background: var(--sp-card, #fff);
+    border: 1px solid var(--sp-border, #e5e7eb);
+    border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(16,24,40,0.04);
+    padding: 20px 24px;
+    margin-bottom: 18px;
+  }
+  .spd-hero .spd-page-title { margin: 0; }
+  .spd-hero-alerts .spd-alert-custom:first-child { margin-top: 12px; }
+  .spd-hero-alerts .spd-alert-custom:last-child { margin-bottom: 0; }
+
   .spd-page-title {
     font-size: 28px;
     color: var(--sp-text-1);
@@ -228,9 +241,8 @@
 {% else %}
 
 {# ── Title ─────────────────────────────────────────────────────── #}
-<div class="fade-in">
+<div class="spd-hero fade-in">
   <h1 class="spd-page-title">{{ student_name }} ({{ student_id }})</h1>
-</div>
 
 {# ── Alerts ────────────────────────────────────────────────────── #}
 {% set ns = namespace(low=0) %}
@@ -240,7 +252,7 @@
   {% endif %}
 {% endfor %}
 
-<div class="fade-in delay-1">
+<div class="spd-hero-alerts">
   {% if ns.low > 0 %}
   <div class="spd-alert-custom" role="alert">
     <span class="sp-ms" aria-hidden="true">warning</span>
@@ -256,6 +268,7 @@
     <a href="/student-portal/fees" class="spd-alert-link" aria-label="Pay pending fees">Pay now</a>
   </div>
   {% endif %}
+</div>
 </div>
 
 {# ── KPI Cards ─────────────────────────────────────────────────── #}
