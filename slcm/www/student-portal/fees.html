@@ -23,6 +23,7 @@
 .spf-page { min-width: 0; color: var(--spf-text); }
 .spf-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 .is-hidden { display: none !important; }
+[data-tab-meta] { display: inline-flex; align-items: center; gap: 10px; }
 
 /* ── Page header ────────────────────────────────────────────────────── */
 .spf-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin: 4px 0 16px; }
@@ -75,10 +76,11 @@
 .spf-link:hover { text-decoration: underline; }
 .spf-link .sp-ms { font-size: 16px; }
 .spf-dl-btn {
-  display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 8px; text-decoration: none;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 34px; padding: 0 12px; border-radius: 8px; text-decoration: none;
+  white-space: nowrap; font-size: 12.5px; font-weight: 600;
   color: var(--spf-maroon); background: var(--spf-maroon-soft); border: 1px solid rgba(146,12,36,0.35); transition: background .15s, color .15s;
 }
-.spf-dl-btn .sp-ms { font-size: 19px; }
+.spf-dl-btn .sp-ms { font-size: 17px; }
 .spf-dl-btn:hover { background: var(--spf-maroon); border-color: var(--spf-maroon); color: #fff; }
 .spf-hint-chip { display: inline-flex; align-items: center; gap: 3px; font-size: 11.5px; font-weight: 600; color: var(--spf-muted); white-space: nowrap; }
 .spf-hint-chip .sp-ms { font-size: 14px; }
@@ -760,16 +762,64 @@
   </section>
 </div>
 
-{# ═══════════════ Invoices + payment history ═══════════════ #}
-<div class="spf-row spf-row-tables fade-in">
-  <section class="spf-card" id="spf-invoices" aria-labelledby="spf-inv-title">
-    <div class="spf-card-hd">
-      <h2 class="spf-card-title" id="spf-inv-title"><span class="sp-ms" aria-hidden="true">receipt_long</span>Fee Invoices</h2>
-      <div class="spf-card-meta">
+{# ═══════════════ Invoices & payments (tabbed) ═══════════════ #}
+<section class="spf-card fade-in" id="spf-invoices" aria-labelledby="spf-ip-title" style="margin-bottom:16px;">
+  <div class="spf-card-hd">
+    <h2 class="spf-card-title" id="spf-ip-title"><span class="sp-ms" aria-hidden="true">receipt_long</span>Invoices &amp; Payments</h2>
+    <div class="spf-card-meta">
+      <span data-tab-meta="payments">
+        {% if payment_history %}<span data-count-for="spf-ph-table" data-noun="payment">{{ payment_history | length }} payment{{ 's' if payment_history | length != 1 }}</span>{% endif %}
+        <button type="button" class="spf-link is-hidden" data-viewall-for="spf-ph-table" aria-controls="spf-ph-table" aria-expanded="false">View All <span class="sp-ms" aria-hidden="true">arrow_forward</span></button>
+      </span>
+      <span data-tab-meta="invoices" class="is-hidden">
         {% if has_invoices %}<span data-count-for="spf-inv-table" data-noun="invoice">{{ invoice_count }} invoice{{ 's' if invoice_count != 1 }}</span>{% endif %}
         <button type="button" class="spf-link is-hidden" data-viewall-for="spf-inv-table" aria-controls="spf-inv-table" aria-expanded="false">View All <span class="sp-ms" aria-hidden="true">arrow_forward</span></button>
-      </div>
+      </span>
     </div>
+  </div>
+  <div class="spf-tabs" role="tablist" aria-label="Invoices and payments">
+    <button type="button" class="spf-tab" role="tab" id="spf-tabbtn-payments" aria-selected="true" aria-controls="spf-tab-payments" onclick="spfTab('payments')">Payment History <span class="spf-tab-count">{{ payment_history | length }}</span></button>
+    <button type="button" class="spf-tab" role="tab" id="spf-tabbtn-invoices" aria-selected="false" aria-controls="spf-tab-invoices" onclick="spfTab('invoices')" tabindex="-1">Fee Invoices <span class="spf-tab-count">{{ invoice_count or 0 }}</span></button>
+  </div>
+  <div id="spf-tab-payments" role="tabpanel" aria-labelledby="spf-tabbtn-payments">
+    {% if (_err.payments or _err.receipts or _err.invoices) and not payment_history %}
+      {{ section_error('payment history') }}
+    {% elif not payment_history %}
+      {{ empty('account_balance_wallet', 'No payments recorded yet', 'Payments towards invoices and charges will be listed here.') }}
+    {% else %}
+    {% if _err.receipts or _err.payments %}<div class="spf-notice spf-notice-danger" style="margin:12px 20px 0;"><span class="sp-ms" aria-hidden="true">error</span><div>Some receipts could not be loaded, so this list may be incomplete. <button type="button" class="spf-link" onclick="window.location.reload()">Retry</button></div></div>{% endif %}
+    <table class="spf-t spf-dense" id="spf-ph-table" data-limit="5">
+      <caption class="spf-sr-only">Payment history, newest first</caption>
+      <colgroup><col style="width:12%;"><col style="width:24%;"><col style="width:11%;"><col style="width:13%;"><col style="width:13%;"><col style="width:11%;"><col style="width:16%;"></colgroup>
+      <thead><tr>
+        <th scope="col" class="c-date">Date</th><th scope="col" class="c-text">Description</th><th scope="col" class="c-num">Amount</th>
+        <th scope="col" class="c-text">Payment Method</th><th scope="col" class="c-text">Reference</th><th scope="col" class="c-status">Status</th>
+        <th scope="col" class="c-action"><span class="spf-sr-only">Download</span></th>
+      </tr></thead>
+      <tbody>
+        {% for h in payment_history %}
+        <tr class="spf-row-data" data-ay="{{ h.academic_year | e }}">
+          <td class="c-date" data-label="Date">{{ h.date_fmt or '—' }}</td>
+          <td class="c-text c-primary"><div class="spf-cell-main">{{ h.description }}</div>{% if h.sub %}<div class="spf-cell-sub">{{ h.sub }}</div>{% endif %}</td>
+          <td class="c-num {{ 'spf-tone-success' if h.ok }}" data-label="Amount">{{ h.amount_fmt or '—' }}</td>
+          <td class="c-text" data-label="Method">{{ h.method or '—' }}</td>
+          <td class="c-text" data-label="Reference"><span class="spf-ellip" title="{{ h.reference | e }}">{{ h.reference or '—' }}</span></td>
+          <td class="c-status" data-label="Status">{{ badge(h.status) }}</td>
+          <td class="c-action" data-label="Receipt">
+            {% if h.receipt %}
+            <a class="spf-dl-btn" target="_blank" rel="noopener noreferrer"
+               href="/api/method/slcm.api.student_portal.download_fee_receipt?receipt_name={{ h.receipt | urlencode }}"
+               title="Download receipt {{ h.receipt }}" aria-label="Download receipt {{ h.receipt }}"><span class="sp-ms" aria-hidden="true">download</span> Download Invoice</a>
+            {% else %}<span class="spf-tone-muted" style="display:inline-block;min-width:34px;text-align:center;" title="No receipt for this payment" aria-label="No receipt">—</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+        <tr class="spf-filter-empty is-hidden"><td colspan="7" class="c-empty">{{ empty('filter_alt', 'No payments for this academic year') }}</td></tr>
+      </tbody>
+    </table>
+    {% endif %}
+  </div>
+  <div id="spf-tab-invoices" role="tabpanel" aria-labelledby="spf-tabbtn-invoices" class="is-hidden">
     {% if _err.invoices %}
       {{ section_error('fee invoices') }}
     {% elif not has_invoices %}
@@ -892,54 +942,8 @@
       </tbody>
     </table>
     {% endif %}
-  </section>
-
-  <section class="spf-card" aria-labelledby="spf-ph-title">
-    <div class="spf-card-hd">
-      <h2 class="spf-card-title" id="spf-ph-title"><span class="sp-ms" aria-hidden="true">history</span>Payment History</h2>
-      <div class="spf-card-meta">
-        {% if payment_history %}<span data-count-for="spf-ph-table" data-noun="payment">{{ payment_history | length }} payment{{ 's' if payment_history | length != 1 }}</span>{% endif %}
-        <button type="button" class="spf-link is-hidden" data-viewall-for="spf-ph-table" aria-controls="spf-ph-table" aria-expanded="false">View All <span class="sp-ms" aria-hidden="true">arrow_forward</span></button>
-      </div>
-    </div>
-    {% if (_err.payments or _err.receipts or _err.invoices) and not payment_history %}
-      {{ section_error('payment history') }}
-    {% elif not payment_history %}
-      {{ empty('account_balance_wallet', 'No payments recorded yet', 'Payments towards invoices and charges will be listed here.') }}
-    {% else %}
-    {% if _err.receipts or _err.payments %}<div class="spf-notice spf-notice-danger" style="margin:12px 20px 0;"><span class="sp-ms" aria-hidden="true">error</span><div>Some receipts could not be loaded, so this list may be incomplete. <button type="button" class="spf-link" onclick="window.location.reload()">Retry</button></div></div>{% endif %}
-    <table class="spf-t spf-dense" id="spf-ph-table" data-limit="5">
-      <caption class="spf-sr-only">Payment history, newest first</caption>
-      <colgroup><col style="width:12%;"><col style="width:27%;"><col style="width:12%;"><col style="width:14%;"><col style="width:14%;"><col style="width:12%;"><col style="width:9%;"></colgroup>
-      <thead><tr>
-        <th scope="col" class="c-date">Date</th><th scope="col" class="c-text">Description</th><th scope="col" class="c-num">Amount</th>
-        <th scope="col" class="c-text">Payment Method</th><th scope="col" class="c-text">Reference</th><th scope="col" class="c-status">Status</th>
-        <th scope="col" class="c-action"><span class="spf-sr-only">Receipt</span></th>
-      </tr></thead>
-      <tbody>
-        {% for h in payment_history %}
-        <tr class="spf-row-data" data-ay="{{ h.academic_year | e }}">
-          <td class="c-date" data-label="Date">{{ h.date_fmt or '—' }}</td>
-          <td class="c-text c-primary"><div class="spf-cell-main">{{ h.description }}</div>{% if h.sub %}<div class="spf-cell-sub">{{ h.sub }}</div>{% endif %}</td>
-          <td class="c-num {{ 'spf-tone-success' if h.ok }}" data-label="Amount">{{ h.amount_fmt or '—' }}</td>
-          <td class="c-text" data-label="Method">{{ h.method or '—' }}</td>
-          <td class="c-text" data-label="Reference"><span class="spf-ellip" title="{{ h.reference | e }}">{{ h.reference or '—' }}</span></td>
-          <td class="c-status" data-label="Status">{{ badge(h.status) }}</td>
-          <td class="c-action" data-label="Receipt">
-            {% if h.receipt %}
-            <a class="spf-dl-btn" target="_blank" rel="noopener noreferrer"
-               href="/api/method/slcm.api.student_portal.download_fee_receipt?receipt_name={{ h.receipt | urlencode }}"
-               title="Download receipt {{ h.receipt }}" aria-label="Download receipt {{ h.receipt }}"><span class="sp-ms" aria-hidden="true">download</span></a>
-            {% else %}<span class="spf-tone-muted" style="display:inline-block;width:34px;text-align:center;" title="No receipt for this payment" aria-label="No receipt">—</span>{% endif %}
-          </td>
-        </tr>
-        {% endfor %}
-        <tr class="spf-filter-empty is-hidden"><td colspan="7" class="c-empty">{{ empty('filter_alt', 'No payments for this academic year') }}</td></tr>
-      </tbody>
-    </table>
-    {% endif %}
-  </section>
-</div>
+  </div>
+</section>
 
 {# ═══════════════ Re-exam fees + hostel fines ═══════════════ #}
 {% if has_re_exam_fees or has_hostel_fines or _err.re_exams or _err.hostel_fines %}
@@ -1566,10 +1570,15 @@
     btn.firstChild.textContent = open ? 'Hide Details ' : 'View Details ';
   };
   window.spfTab = function (tab) {
-    ['demands', 'refunds'].forEach(function (t) {
-      var panel = document.getElementById('spf-tab-' + t), b = document.getElementById('spf-tabbtn-' + t);
-      if (panel) panel.classList.toggle('is-hidden', t !== tab);
-      if (b) { b.setAttribute('aria-selected', t === tab ? 'true' : 'false'); b.tabIndex = t === tab ? 0 : -1; }
+    var cur = document.getElementById('spf-tabbtn-' + tab);
+    var list = cur && cur.closest('.spf-tabs');
+    if (!list) return;
+    list.querySelectorAll('[role="tab"]').forEach(function (b) {
+      var t = b.id.replace('spf-tabbtn-', ''), on = t === tab;
+      var panel = document.getElementById('spf-tab-' + t);
+      if (panel) panel.classList.toggle('is-hidden', !on);
+      b.setAttribute('aria-selected', on ? 'true' : 'false'); b.tabIndex = on ? 0 : -1;
+      document.querySelectorAll('[data-tab-meta="' + t + '"]').forEach(function (m) { m.classList.toggle('is-hidden', !on); });
     });
   };
   document.querySelectorAll('.spf-tabs').forEach(function (list) {
