@@ -84,7 +84,7 @@
     <div>
       <div style="font-size:18px;font-weight:400;color:var(--sp-text-1);">{{ ed.term_label }}</div>
       <div style="font-size:14px;color:var(--sp-text-4);margin-top:2px;">
-        {{ ed.enrollment.academic_year }} &nbsp;|&nbsp; {{ ed.cohort_display }}
+        {{ ed.enrollment.academic_year }}
       </div>
     </div>
   </div>
@@ -112,7 +112,7 @@
 
       {# Middle Row (Next Class Info) #}
       {% set _has_sched = c.upcoming_classes or c.next_class %}
-      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:20px;{% if _has_sched %} margin-bottom:16px; padding-bottom:16px; border-bottom:1px solid var(--sp-border);{% endif %}">
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:20px;{% if c.upcoming_classes %} margin-bottom:16px; padding-bottom:16px; border-bottom:1px solid var(--sp-border);{% endif %}">
 
         {# Next Class #}
         <div style="display:flex; gap:12px;">
@@ -148,8 +148,8 @@
 
       </div>
 
-      {# Bottom Row (Upcoming Classes & Timetable button) #}
-      {% if _has_sched %}
+      {# Bottom Row (Upcoming Classes & Timetable button); left out when nothing follows the next class #}
+      {% if c.upcoming_classes %}
       <div class="cs-up">
         <div class="cs-up-main">
           {% if c.upcoming_classes %}
@@ -157,12 +157,6 @@
             {% for uc in c.upcoming_classes %}
             <span class="cs-up-chip"><span class="sp-ms" aria-hidden="true">schedule</span>{{ uc.date }} <small>{{ uc.time }}</small></span>
             {% endfor %}
-          {% elif c.next_class %}
-            <span class="cs-up-empty">
-              <span class="sp-ms" aria-hidden="true">event_available</span>
-              <strong>No more classes after the next one</strong>
-              <span class="cs-up-hint">· check the timetable for changes</span>
-            </span>
           {% endif %}
         </div>
 

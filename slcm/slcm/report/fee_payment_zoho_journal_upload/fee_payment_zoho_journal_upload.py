@@ -71,7 +71,7 @@ def get_razorpay_settlements(filters):
         import json
         import os
         mock_path = frappe.conf.get("zoho_report_mock_path")
-        if os.path.exists(mock_path):
+        if mock_path and os.path.exists(mock_path):
             try:
                 with open(mock_path, "r") as f:
                     mock_data = json.load(f)
@@ -91,7 +91,7 @@ def get_razorpay_settlements(filters):
         import json
         import os
         mock_path = filters.get("mock_settlements_json")
-        if os.path.exists(mock_path):
+        if mock_path and os.path.exists(mock_path):
             try:
                 with open(mock_path, "r") as f:
                     mock_data = json.load(f)
@@ -250,7 +250,7 @@ def get_data(filters):
                     "course": course,
                     "student_name": fp.student_name,
                     "student_id": fp.student,
-                    "batch_id": f"online_{date_str}" if is_online else f"offline_{utr}",
+                    "batch_id": f"online_{utr}_{date_str}" if is_online else f"offline_{utr}",
                     "is_credit": True,
                     "is_online": is_online,
                     "raw_date": s_date,
@@ -275,7 +275,7 @@ def get_data(filters):
                 "course": course,
                 "student_name": fp.student_name,
                 "student_id": fp.student,
-                "batch_id": f"online_{date_str}" if is_online else f"offline_{utr}",
+                "batch_id": f"online_{utr}_{date_str}" if is_online else f"offline_{utr}",
                 "is_credit": False,
                 "is_online": is_online,
                 "raw_date": s_date,
@@ -429,9 +429,6 @@ def group_data(data):
             new_r["student_name"] = ""
             new_r["department"] = "ACADEMICS - TEACHING"
             new_r["contact_name"] = "CollPoll"
-            
-            if is_online:
-                new_r["reference_number"] = ""
                 
             grouped_rows.append(new_r)
             
@@ -445,9 +442,6 @@ def group_data(data):
             new_r["debit"] = total_debit
             new_r["credit"] = 0.0
             new_r["contact_name"] = "CollPoll"
-            
-            if is_online:
-                new_r["reference_number"] = ""
                 
             grouped_rows.append(new_r)
             
