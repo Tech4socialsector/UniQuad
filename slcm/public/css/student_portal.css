@@ -461,8 +461,8 @@ header[class*="navbar"], .website-header,
 /* ── Page Header ──────────────────────────────────────────── */
 .sp-page-header { margin-bottom: 16px; }
 .sp-page-title {
-  font-size: 28px;
-  font-weight: 800; text-transform: capitalize;
+  font-size: 18px;
+  font-weight: 700; text-transform: capitalize;
   color: var(--sp-text-1);
   margin: 0 0 3px;
   line-height: 1.3;
