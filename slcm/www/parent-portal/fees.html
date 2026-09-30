@@ -802,6 +802,10 @@
           {% elif r.re_exam_receipt %}
           <a class="ppf-btn ppf-btn-ghost ppf-btn-sm" target="_blank" rel="noopener noreferrer" href="/api/method/slcm.api.student_portal.parent_download_re_exam_receipt?registration_name={{ r.re_exam_receipt | urlencode }}&student_name={{ ward_student_name | urlencode }}"
              aria-label="Download receipt for {{ r.component }}"><span class="ms" aria-hidden="true">download</span> Receipt</a>
+          {% elif r.receipt_kind == 'transcript' and r.receipt_doc %}<a class="ppf-btn ppf-btn-ghost ppf-btn-sm" target="_blank" rel="noopener noreferrer" href="/api/method/slcm.api.student_portal.parent_download_transcript_receipt?request_name={{ r.receipt_doc | urlencode }}&student_name={{ ward_student_name | urlencode }}"
+             aria-label="Download receipt for {{ r.component }}"><span class="ms" aria-hidden="true">download</span> Receipt</a>
+          {% elif r.receipt_kind == 'improvement' and r.receipt_doc %}<a class="ppf-btn ppf-btn-ghost ppf-btn-sm" target="_blank" rel="noopener noreferrer" href="/api/method/slcm.api.student_portal.parent_download_improvement_exam_receipt?registration_name={{ r.receipt_doc | urlencode }}&student_name={{ ward_student_name | urlencode }}"
+             aria-label="Download receipt for {{ r.component }}"><span class="ms" aria-hidden="true">download</span> Receipt</a>
           {% elif r.kind == 'fine' and not r.is_paid %}
           <span class="ppf-cell-sub" title="Hostel fines are paid at the Hostel Office or Bursar's Office.">Pay at office</span>
           {% else %}<span class="ppf-tone-muted">—</span>{% endif %}
@@ -818,6 +822,10 @@
           {% if d.receipt %}<a class="ppf-btn ppf-btn-ghost ppf-btn-sm" target="_blank" rel="noopener noreferrer" href="/api/method/slcm.api.student_portal.parent_download_fee_receipt?receipt_name={{ d.receipt | urlencode }}&student_name={{ ward_student_name | urlencode }}"
              aria-label="Download receipt {{ d.receipt }}"><span class="ms" aria-hidden="true">download</span> Receipt</a>
           {% elif d.re_exam_receipt %}<a class="ppf-btn ppf-btn-ghost ppf-btn-sm" target="_blank" rel="noopener noreferrer" href="/api/method/slcm.api.student_portal.parent_download_re_exam_receipt?registration_name={{ d.re_exam_receipt | urlencode }}&student_name={{ ward_student_name | urlencode }}"
+             aria-label="Download receipt"><span class="ms" aria-hidden="true">download</span> Receipt</a>
+          {% elif d.receipt_kind == 'transcript' and d.receipt_doc %}<a class="ppf-btn ppf-btn-ghost ppf-btn-sm" target="_blank" rel="noopener noreferrer" href="/api/method/slcm.api.student_portal.parent_download_transcript_receipt?request_name={{ d.receipt_doc | urlencode }}&student_name={{ ward_student_name | urlencode }}"
+             aria-label="Download receipt"><span class="ms" aria-hidden="true">download</span> Receipt</a>
+          {% elif d.receipt_kind == 'improvement' and d.receipt_doc %}<a class="ppf-btn ppf-btn-ghost ppf-btn-sm" target="_blank" rel="noopener noreferrer" href="/api/method/slcm.api.student_portal.parent_download_improvement_exam_receipt?registration_name={{ d.receipt_doc | urlencode }}&student_name={{ ward_student_name | urlencode }}"
              aria-label="Download receipt"><span class="ms" aria-hidden="true">download</span> Receipt</a>
           {% else %}<span class="ppf-tone-muted">—</span>{% endif %}
         </td>
