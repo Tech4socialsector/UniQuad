@@ -751,6 +751,10 @@
           {% elif r.re_exam_receipt %}
           <a class="spf-btn spf-btn-ghost spf-btn-sm" target="_blank" rel="noopener noreferrer" href="/api/method/slcm.api.student_portal.download_re_exam_receipt?registration_name={{ r.re_exam_receipt | urlencode }}"
              aria-label="Download receipt for {{ r.component }}"><span class="sp-ms" aria-hidden="true">download</span> Receipt</a>
+          {% elif r.receipt_kind == 'transcript' and r.receipt_doc %}<a class="spf-btn spf-btn-ghost spf-btn-sm" target="_blank" rel="noopener noreferrer" href="/api/method/slcm.api.student_portal.download_transcript_receipt?request_name={{ r.receipt_doc | urlencode }}"
+             aria-label="Download receipt for {{ r.component }}"><span class="sp-ms" aria-hidden="true">download</span> Receipt</a>
+          {% elif r.receipt_kind == 'improvement' and r.receipt_doc %}<a class="spf-btn spf-btn-ghost spf-btn-sm" target="_blank" rel="noopener noreferrer" href="/api/method/slcm.api.student_portal.download_improvement_exam_receipt?registration_name={{ r.receipt_doc | urlencode }}"
+             aria-label="Download receipt for {{ r.component }}"><span class="sp-ms" aria-hidden="true">download</span> Receipt</a>
           {% elif r.kind == 'reexam' and r.can_pay and payment_enabled %}
           <span class="spf-cell-sub">In Pay All</span>
           {% elif r.kind == 'fine' and not r.is_paid %}
@@ -769,6 +773,10 @@
           {% if d.receipt %}<a class="spf-btn spf-btn-ghost spf-btn-sm" target="_blank" rel="noopener noreferrer" href="/api/method/slcm.api.student_portal.download_fee_receipt?receipt_name={{ d.receipt | urlencode }}"
              aria-label="Download receipt {{ d.receipt }}"><span class="sp-ms" aria-hidden="true">download</span> Receipt</a>
           {% elif d.re_exam_receipt %}<a class="spf-btn spf-btn-ghost spf-btn-sm" target="_blank" rel="noopener noreferrer" href="/api/method/slcm.api.student_portal.download_re_exam_receipt?registration_name={{ d.re_exam_receipt | urlencode }}"
+             aria-label="Download receipt"><span class="sp-ms" aria-hidden="true">download</span> Receipt</a>
+          {% elif d.receipt_kind == 'transcript' and d.receipt_doc %}<a class="spf-btn spf-btn-ghost spf-btn-sm" target="_blank" rel="noopener noreferrer" href="/api/method/slcm.api.student_portal.download_transcript_receipt?request_name={{ d.receipt_doc | urlencode }}"
+             aria-label="Download receipt"><span class="sp-ms" aria-hidden="true">download</span> Receipt</a>
+          {% elif d.receipt_kind == 'improvement' and d.receipt_doc %}<a class="spf-btn spf-btn-ghost spf-btn-sm" target="_blank" rel="noopener noreferrer" href="/api/method/slcm.api.student_portal.download_improvement_exam_receipt?registration_name={{ d.receipt_doc | urlencode }}"
              aria-label="Download receipt"><span class="sp-ms" aria-hidden="true">download</span> Receipt</a>
           {% else %}<span class="spf-tone-muted">—</span>{% endif %}
         </td>

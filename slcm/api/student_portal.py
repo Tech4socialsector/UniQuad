@@ -793,6 +793,35 @@ def download_improvement_exam_receipt(registration_name):
             frappe.ValidationError,
         )
 
+    _send_improvement_exam_receipt(registration_name)
+
+
+@frappe.whitelist()
+def parent_download_improvement_exam_receipt(registration_name, student_name):
+    """Same receipt as download_improvement_exam_receipt, for a parent viewing their ward's record."""
+    if frappe.session.user == "Guest":
+        frappe.throw(frappe._("Please log in."), frappe.AuthenticationError)
+
+    _require_parent_for_student(student_name)
+
+    reg = frappe.db.get_value(
+        "Improvement Exam Registration",
+        {"name": registration_name, "student": student_name},
+        ["name", "payment_status"],
+        as_dict=True,
+    )
+    if not reg:
+        frappe.throw(frappe._("Registration not found or access denied."), frappe.PermissionError)
+    if reg.payment_status not in ("Paid", "Captured"):
+        frappe.throw(
+            frappe._("Receipt is only available after payment is confirmed."),
+            frappe.ValidationError,
+        )
+
+    _send_improvement_exam_receipt(registration_name)
+
+
+def _send_improvement_exam_receipt(registration_name):
     try:
         pf_setting = frappe.db.get_single_value(
             "Student Portal Settings", "improvement_exam_receipt_print_format"
@@ -808,6 +837,57 @@ def download_improvement_exam_receipt(registration_name):
 
     safe = registration_name.replace("/", "-").replace(" ", "_")
     frappe.local.response.filename    = f"ImprovementExam_Receipt_{safe}.pdf"
+    frappe.local.response.filecontent = pdf_bytes
+    frappe.local.response.type        = "pdf"
+
+
+@frappe.whitelist()
+def download_transcript_receipt(request_name):
+    """Stream a PDF receipt for the student's own paid Transcript Request."""
+    if frappe.session.user == "Guest":
+        frappe.throw(frappe._("Please log in."), frappe.AuthenticationError)
+
+    student_name = _get_student()
+    if not student_name:
+        frappe.throw(frappe._("No student record found for your account."), frappe.PermissionError)
+
+    _check_transcript_receipt(request_name, student_name)
+    _send_transcript_receipt(request_name)
+
+
+@frappe.whitelist()
+def parent_download_transcript_receipt(request_name, student_name):
+    """Same receipt as download_transcript_receipt, for a parent viewing their ward's record."""
+    if frappe.session.user == "Guest":
+        frappe.throw(frappe._("Please log in."), frappe.AuthenticationError)
+
+    _require_parent_for_student(student_name)
+    _check_transcript_receipt(request_name, student_name)
+    _send_transcript_receipt(request_name)
+
+
+def _check_transcript_receipt(request_name, student_name):
+    """IDOR guard: the request must belong to student_name and its fee must be paid."""
+    req = frappe.db.get_value(
+        "Transcript Request",
+        {"name": request_name, "student": student_name},
+        ["name", "payment_required", "payment_status"],
+        as_dict=True,
+    )
+    if not req:
+        frappe.throw(frappe._("Transcript request not found or access denied."), frappe.PermissionError)
+    if not req.payment_required or req.payment_status != "Paid":
+        frappe.throw(
+            frappe._("Receipt is only available after payment is confirmed."),
+            frappe.ValidationError,
+        )
+
+
+def _send_transcript_receipt(request_name):
+    pdf_bytes = _generate_pdf("Transcript Request", request_name, "Transcript Fee Receipt")
+
+    safe = request_name.replace("/", "-").replace(" ", "_")
+    frappe.local.response.filename    = f"Transcript_Receipt_{safe}.pdf"
     frappe.local.response.filecontent = pdf_bytes
     frappe.local.response.type        = "pdf"
 

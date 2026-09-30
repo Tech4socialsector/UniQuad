@@ -132,6 +132,97 @@ def get_re_exams_and_fines(student):
 	return re_exams, fines
 
 
+# Transcript Request stores "Final Transcript" but students see "Provisional Transcript"
+_TRANSCRIPT_LABELS = {"Final Transcript": "Provisional Transcript"}
+
+
+def transcript_and_improvement_rows(student):
+	"""Paid transcript request fees and paid improvement exam fees as Summary rows.
+
+	Both are paid online (Razorpay) without a Fee Demand, so they would otherwise be missing
+	from the fee list. Each row carries receipt_kind ("transcript" / "improvement") and
+	receipt_doc for its generated receipt, and a payment detail. Unpaid ones are left out: an
+	unpaid transcript request or improvement registration is an abandoned or cancelled checkout,
+	not a due. One that has a Fee Demand is left to that demand."""
+	requests = frappe.get_all(
+		"Transcript Request",
+		filters={"student": student, "payment_required": 1, "payment_status": "Paid", "fee_amount": [">", 0]},
+		fields=["name", "transcript_type", "num_copies", "fee_amount", "payment_date", "payment_reference",
+		        "requested_on", "academic_year"],
+		order_by="creation desc",
+		ignore_permissions=True,
+	)
+	improvements = frappe.get_all(
+		"Improvement Exam Registration",
+		filters={"student": student, "status": "Registered", "payment_status": ["in", ["Paid", "Captured"]],
+		         "improvement_fee": [">", 0]},
+		fields=["name", "exam_plan", "course", "improvement_fee", "payment_reference"],
+		order_by="creation desc",
+		ignore_permissions=True,
+	)
+	linked = set(_linked_demands(student, "Transcript Request", [r.name for r in requests]).keys())
+	linked |= set(_linked_demands(student, "Improvement Exam Registration", [r.name for r in improvements]).keys())
+
+	logs = {}
+	if improvements:
+		for log in frappe.get_all(
+			"Improvement Exam Payment Log",
+			filters={"improvement_exam_registration": ["in", [r.name for r in improvements]], "payment_status": "Paid"},
+			fields=["improvement_exam_registration", "transaction_date", "amount", "payment_method", "razorpay_payment_id"],
+			order_by="creation asc",
+			ignore_permissions=True,
+		):
+			logs.setdefault(log.improvement_exam_registration, []).append(log)
+
+	def row(group, kind, component, sub, amount, doc, details):
+		return frappe._dict(
+			group=group, kind=kind, component=component, sub=sub,
+			due_date=None, due_date_fmt="", days_overdue=0,
+			amount=flt(amount), paid=flt(amount), waiver=0, outstanding=0, status="Paid",
+			receipt="", re_exam_receipt="", receipt_kind=kind, receipt_doc=doc, invoice="",
+			academic_year="", can_pay=False, is_paid=True, details=details,
+		)
+
+	rows = []
+	for r in requests:
+		if r.name in linked:
+			continue
+		label = _TRANSCRIPT_LABELS.get(r.transcript_type, r.transcript_type) or "Transcript"
+		copies = int(r.num_copies or 1)
+		ref = r.payment_reference or ""
+		pay = _detail(
+			"payment", r.payment_date, "Payment",
+			" · ".join(filter(None, ["Online" if ref.startswith("pay_") else "", ref, r.name])),
+			r.fee_amount, "Paid", receipt_kind="transcript", receipt_doc=r.name,
+		)
+		rows.append(row(
+			"Non Academic", "transcript", label,
+			"Transcript request · " + r.name + (f" · {copies} copies" if copies > 1 else ""),
+			r.fee_amount, r.name, [pay],
+		))
+
+	course_names = {}
+	for r in improvements:
+		if r.name in linked:
+			continue
+		if r.course and r.course not in course_names:
+			course_names[r.course] = frappe.db.get_value("Course", r.course, "course_name") or r.course
+		details = [
+			_detail(
+				"payment", log.transaction_date, "Payment",
+				" · ".join(filter(None, [(log.payment_method or "Online").title(), log.razorpay_payment_id])),
+				log.amount or r.improvement_fee, "Paid", receipt_kind="improvement", receipt_doc=r.name,
+			)
+			for log in logs.get(r.name, [])
+		]
+		rows.append(row(
+			"Academic", "improvement", course_names.get(r.course) or "Improvement examination fee",
+			"Improvement examination fee" + (f" · {r.exam_plan}" if r.exam_plan else ""),
+			r.improvement_fee, r.name, details,
+		))
+	return rows
+
+
 
 def demand_type_cards(demands):
 	"""The Summary cards (Total Levied / Settled / Scholarship / Outstanding) split into Academic
@@ -220,6 +311,11 @@ def charge_rows(student, demands, invoices, re_exams, fines):
 		)
 		rows.append(r)
 
+	try:
+		rows += transcript_and_improvement_rows(student)
+	except Exception:
+		frappe.log_error(frappe.get_traceback(), "Portal Fees: transcript / improvement rows")
+
 	for r in rows:
 		r["status_key"] = "paid" if r.status in ("Paid", "Waived") or (r.outstanding <= 0 and r.paid > 0) else (
 			"overdue" if r.status == "Overdue" else "pending")
@@ -240,10 +336,12 @@ def _fmt_date(value):
 	return formatdate(value, "dd MMM yyyy") if value else ""
 
 
-def _detail(kind, date, title, sub, amount, status, receipt="", re_exam_receipt="", sign=""):
+def _detail(kind, date, title, sub, amount, status, receipt="", re_exam_receipt="", sign="",
+            receipt_kind="", receipt_doc=""):
 	return frappe._dict(
 		kind=kind, date=date, date_fmt=_fmt_date(date), title=title, sub=sub,
 		amount_fmt=sign + _fmt_inr(amount), status=status, receipt=receipt, re_exam_receipt=re_exam_receipt,
+		receipt_kind=receipt_kind, receipt_doc=receipt_doc,
 	)
 
 
@@ -253,7 +351,7 @@ def _attach_details(student, rows, invoices):
 	demand lines, a refund from excess, an unlinked concession, credit notes) goes on an
 	"Other" row at the end."""
 	for r in rows:
-		r["details"] = []
+		r["details"] = r.get("details") or []
 	demand_rows = {r.demand_name: r for r in rows if r.get("demand_name")}
 	other = []
 

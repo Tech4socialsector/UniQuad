@@ -1,0 +1,112 @@
+{% set logo = "/files/nlsiu-logo.jpg" %}
+
+{% set sm = frappe.get_doc("Student Master", doc.student, ignore_permissions=True) if doc.student else None %}
+{% set student_full = ([sm.first_name, sm.middle_name, sm.last_name] | select | join(" ")) if sm else (doc.student_name or doc.student or "—") %}
+{% set student_id   = (sm.registration_id if sm and sm.registration_id else doc.student) %}
+{% set student_email = (sm.official_email_id or sm.email) if sm else "—" %}
+
+{# Stored "Final Transcript" is shown to students as "Provisional Transcript" #}
+{% set type_label = "Provisional Transcript" if doc.transcript_type == "Final Transcript" else (doc.transcript_type or "Transcript") %}
+{% set fee = frappe.utils.flt(doc.fee_amount or 0) %}
+{% set copies = frappe.utils.cint(doc.num_copies or 1) %}
+{% set ref = doc.payment_reference or "" %}
+
+{% include "slcm/templates/print/nls_receipt_style.html" %}
+<div class="nls-doc">
+<div class="nls-copy is-page">
+
+  <div class="nls-head">
+    <img src="{{ logo }}" alt="NLS Logo">
+    <div class="nls-inst">National Law School of India University</div>
+  </div>
+
+  <div class="nls-title">Transcript Fee Receipt</div>
+
+  <table class="nls-meta">
+    <tr>
+      <td class="lbl">Registration Id:</td>
+      <td class="val">{{ student_id or "—" }}</td>
+      <td class="lbl">Student Name:</td>
+      <td class="val">{{ student_full }}</td>
+    </tr>
+    <tr>
+      <td class="lbl">Receipt Number:</td>
+      <td class="val"><span class="nls-boxed">{{ doc.name }}</span></td>
+      <td class="lbl">Date:</td>
+      <td class="val">{{ frappe.utils.formatdate(doc.payment_date or doc.requested_on or frappe.utils.today(), "dd-MM-yyyy") }}</td>
+    </tr>
+  </table>
+
+  <hr class="nls-divider">
+
+  <table class="nls-meta">
+    <tr>
+      <td class="lbl">Document:</td>
+      <td class="val">{{ type_label }}</td>
+      <td class="lbl">Copies:</td>
+      <td class="val">{{ copies }}</td>
+    </tr>
+    <tr>
+      <td class="lbl">Delivery Mode:</td>
+      <td class="val">{{ doc.delivery_mode or "—" }}</td>
+      <td class="lbl">Status:</td>
+      <td class="val">{{ doc.payment_status or "—" }}</td>
+    </tr>
+    <tr>
+      <td class="lbl">Email:</td>
+      <td class="val">{{ student_email or "—" }}</td>
+      <td class="lbl">Urgency:</td>
+      <td class="val">{{ doc.urgency or "Normal" }}</td>
+    </tr>
+  </table>
+
+  <table class="nls-table">
+    <thead>
+      <tr>
+        <th style="width:10%">Sl No.</th>
+        <th>Particulars</th>
+        <th style="width:26%">Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1</td>
+        <td>{{ type_label }} Fee{% if copies > 1 %} ({{ copies }} copies){% endif %}</td>
+        <td>INR {{ "{:,.2f}".format(fee) }}</td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="2">Total Paid</td>
+        <td>INR {{ "{:,.2f}".format(fee) }}</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <div class="nls-words">
+    {{ frappe.utils.money_in_words(fee, "INR") | replace("INR ", "Rupees ") }}
+  </div>
+
+  <hr class="nls-divider">
+
+  <table class="nls-meta">
+    <tr>
+      <td class="lbl">Payment Mode:</td>
+      <td class="val">{{ "Online" if ref.startswith("pay_") else "—" }}</td>
+      <td class="lbl">Transaction Id:</td>
+      <td class="val">{{ ref or "N/A" }}</td>
+    </tr>
+    <tr>
+      <td class="lbl">Transaction Date:</td>
+      <td class="val">{{ frappe.utils.formatdate(doc.payment_date, "yyyy-MM-dd") if doc.payment_date else "—" }}</td>
+      <td class="lbl">Amount Paid:</td>
+      <td class="val">INR {{ "{:,.0f}".format(fee) }}</td>
+    </tr>
+  </table>
+
+  <div class="nls-note">
+    This is a computer generated receipt, hence it does not require signature/seal.
+  </div>
+
+</div>
+</div>
