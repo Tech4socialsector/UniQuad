@@ -4395,7 +4395,9 @@ function makeInputUppercase() {
 		"class_xii_board",
 		"proposed_phd_topic",
 		"other_degree_details",
-		"foreigin_city"
+		"foreigin_city",
+		"board_uni_pg",
+		"board_uni_ug"
 	];
 
 	uppercase_fields.forEach(fieldname => {
@@ -4423,7 +4425,7 @@ function makeInputUppercase() {
 	});
 
 	// For child table fields (UG/PG details) which are rendered dynamically
-	$('body').on('input', '[data-fieldname="ug_program"] input, [data-fieldname="college"] input, [data-fieldname="pg_program"] input, [data-fieldname="collegeuniversity"] input', function() {
+	$('body').on('input', '[data-fieldname="ug_program"] input, [data-fieldname="college"] input, [data-fieldname="board_uni_ug"] input, [data-fieldname="pg_program"] input, [data-fieldname="collegeuniversity"] input, [data-fieldname="board_uni_pg"] input, [data-fieldname="country"] input', function() {
 		let start = this.selectionStart;
 		let end = this.selectionEnd;
 		this.value = this.value.toUpperCase();
@@ -4431,7 +4433,7 @@ function makeInputUppercase() {
 	});
 
 	const display_uppercase_fields = [
-		"country", "state", "city", "hsc_group", "national_test_name","first_preference","second_preference","third_preference"
+		"country", "state", "city", "hsc_group", "national_test_name","first_preference","second_preference","third_preference", "x_country", "xii_country"
 	];
 
 	let parent_display_selectors = display_uppercase_fields.map(f => 

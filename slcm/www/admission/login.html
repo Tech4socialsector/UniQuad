@@ -165,7 +165,7 @@
     }
     .lp-right-bg {
       position: absolute; inset: 0; width: 100%; height: 100%;
-      object-fit: cover; opacity: .38;
+      object-fit: cover; opacity: .68;
     }
     .lp-right-overlay {
       position: absolute; inset: 0;
@@ -176,7 +176,7 @@
     .lp-right-body {
       position: relative; z-index: 2;
       display: flex; flex-direction: column;
-      justify-content: center; align-items: flex-start;
+      justify-content: end; align-items: flex-start;
       height: 100%; min-height: 100vh;
       padding: 48px 44px; color: #fff;
       overflow-y: auto;
@@ -184,6 +184,18 @@
     .lp-tagline { font-size: 21px; font-weight: 400; line-height: 1.2;
                   margin-bottom: 28px; max-width: 620px; text-align: center;
                   align-self: center; margin-left: auto; margin-right: auto; }
+
+    /* grid for cards */
+    .lp-cards-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      width: 100%;
+      align-items: start;
+    }
+    @media (max-width: 1200px) {
+      .lp-cards-grid { grid-template-columns: 1fr; }
+    }
 
     /* solid card matching Latest Updates style */
     .glass {
@@ -204,14 +216,6 @@
     }
     .glass-title { display: flex; align-items: center; gap: 9px; }
     .glass-title h2 { font-size: 18px; font-weight: 500; }
-    .glass-icon  {
-      width: 26px; height: 26px; border-radius: 50%; background: rgba(255,255,255,0.2);
-      display: flex; align-items: center; justify-content: center;
-      color: #fff; flex-shrink: 0;
-    }
-    .glass-icon .material-symbols-outlined { font-size: 16px; }
-    .glass-badge { font-size: 10px; font-weight: 500; letter-spacing: .05em;
-                   opacity: .9; }
 
     /* announcement rows */
     .ann-row {
@@ -240,7 +244,7 @@
     /* date rows in Important Dates */
     .date-item {
       display: flex; align-items: center; gap: 12px;
-      padding: 14px 20px;
+      padding: 2.4px 20px;
       border-bottom: 1px solid rgba(0, 0, 0, 0.08);
       transition: background .15s;
     }
@@ -327,7 +331,6 @@
     /* pagination controls inside glass cards */
     .card-pager {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 12px 20px;
       border-top: 1px solid rgba(0, 0, 0, 0.08);
       background: rgba(255, 255, 255, 0.3);
     }
@@ -698,97 +701,91 @@ src="https://www.facebook.com/tr?id=1279045953496223&ev=PageView&noscript=1"
 
       <h2 class="lp-tagline">{{ _tagline }}</h2>
 
-      <!-- Announcements -->
-      <div class="glass">
-        <div class="glass-head">
-          <div class="glass-title">
-            <div class="glass-icon">
-              <span class="material-symbols-outlined">campaign</span>
+      <div class="lp-cards-grid">
+        <!-- Important Dates -->
+        <div class="glass">
+          <div class="glass-head">
+            <div class="glass-title">
+              <h2>Important Dates</h2>
             </div>
-            <h2>Campus Announcements</h2>
           </div>
-          <span class="glass-badge">Latest Updates</span>
-        </div>
-        {% if announcements %}
-          {% for ann in announcements %}
-          {% set _t = ann.announcement_type or "General" %}
-          <div class="ann-row" data-ann-idx="{{ loop.index0 }}" onclick="lpAnnOpen({{ loop.index0 }})" style="display:none;">
-            <div class="ann-dot type-{{ _t }}"></div>
-            <div class="ann-text">
-              <div class="ann-title">{{ ann.title }}</div>
-              {% if ann.summary %}<div class="ann-summary">{{ ann.summary }}</div>{% endif %}
+          {% if important_dates %}
+            {% set ev_ns = namespace(count=0) %}
+            {% for item in important_dates %}
+            {% set _is_ev = item.type == 'event' %}
+            <div class="date-item {% if _is_ev %}clickable{% endif %}"
+                 data-date-idx="{{ loop.index0 }}"
+                 style="display:none;"
+                 {% if _is_ev %}onclick="lpEvOpen({{ ev_ns.count }})"{% endif %}>
+              <div class="date-item-icon" style="background: rgba(var(--primary-rgb), 0.1); color: var(--primary);">
+                <span class="material-symbols-outlined" style="font-size: 20px !important;">calendar_month</span>
+              </div>
+              <div class="date-item-body">
+                <div class="date-item-label"><strong>{{ item.date_display }}:</strong> {{ item.label }}</div>
+                {% if item.event_venue %}<div class="date-item-sub">{{ item.event_venue }}</div>{% endif %}
+              </div>
+              {% if _is_ev %}
+                <span class="material-symbols-outlined" style="font-size:16px;color:#01050e;margin-top:2px;">chevron_right</span>
+              {% endif %}
             </div>
-            <span class="material-symbols-outlined">chevron_right</span>
-          </div>
-          {% endfor %}
-        {% else %}
-          <div class="ann-row" style="cursor:default;justify-content:center;color:#000103 !important;padding:24px 20px;">
-            <span style="font-size:14px;">No announcements have been announced yet.</span>
-          </div>
-        {% endif %}
-        {% if announcements|length > 3 %}
-        <div class="card-pager" id="ann-pager">
-          <span class="card-pager-info" id="ann-pager-info"></span>
-          <div class="card-pager-btns">
-            <button class="card-pager-btn" id="ann-prev" onclick="annPage(-1)" title="Previous">
-              <span class="material-symbols-outlined" style="font-size:16px;">chevron_left</span>
-            </button>
-            <button class="card-pager-btn" id="ann-next" onclick="annPage(1)" title="Next">
-              <span class="material-symbols-outlined" style="font-size:16px;">chevron_right</span>
-            </button>
-          </div>
+            {% if _is_ev %}{% set ev_ns.count = ev_ns.count + 1 %}{% endif %}
+            {% endfor %}
+            <div class="card-pager" id="date-pager">
+              <span class="card-pager-info" id="date-pager-info"></span>
+              <div class="card-pager-btns">
+                <button class="card-pager-btn" id="date-prev" onclick="datePage(-1)" title="Previous">
+                  <span class="material-symbols-outlined" style="font-size:16px;">chevron_left</span>
+                </button>
+                <button class="card-pager-btn" id="date-next" onclick="datePage(1)" title="Next">
+                  <span class="material-symbols-outlined" style="font-size:16px;">chevron_right</span>
+                </button>
+              </div>
+            </div>
+          {% else %}
+            <div class="date-item" style="cursor:default;justify-content:center;color:#000103;padding:24px 20px;">
+              <span style="font-size:14px;">No Important Dates.</span>
+            </div>
+          {% endif %}
         </div>
-        {% endif %}
-      </div>
 
-      <!-- Important Dates -->
-      <div class="glass">
-        <div class="glass-head">
-          <div class="glass-title">
-            <div class="glass-icon">
-              <span class="material-symbols-outlined">event</span>
+        <!-- Announcements -->
+        <div class="glass">
+          <div class="glass-head">
+            <div class="glass-title">
+              <h2>Campus Announcements</h2>
             </div>
-            <h2>Important Dates</h2>
           </div>
-          <span class="glass-badge">Deadlines &amp; Events</span>
-        </div>
-        {% if important_dates %}
-          {% set ev_ns = namespace(count=0) %}
-          {% for item in important_dates %}
-          {% set _is_ev = item.type == 'event' %}
-          <div class="date-item {% if _is_ev %}clickable{% endif %}"
-               data-date-idx="{{ loop.index0 }}"
-               style="display:none;"
-               {% if _is_ev %}onclick="lpEvOpen({{ ev_ns.count }})"{% endif %}>
-            <div class="date-item-icon" style="background: rgba(var(--primary-rgb), 0.1); color: var(--primary);">
-              <span class="material-symbols-outlined" style="font-size: 20px !important;">calendar_month</span>
+          {% if announcements %}
+            {% for ann in announcements %}
+            {% set _t = ann.announcement_type or "General" %}
+            <div class="ann-row" data-ann-idx="{{ loop.index0 }}" onclick="lpAnnOpen({{ loop.index0 }})" style="display:none;">
+              <div class="ann-dot type-{{ _t }}"></div>
+              <div class="ann-text">
+                <div class="ann-title">{{ ann.title }}</div>
+                {% if ann.summary %}<div class="ann-summary">{{ ann.summary }}</div>{% endif %}
+              </div>
+              <span class="material-symbols-outlined">chevron_right</span>
             </div>
-            <div class="date-item-body">
-              <div class="date-item-label">{{ item.label }} On {{ item.date_display }}</div>
-              {% if item.event_venue %}<div class="date-item-sub">{{ item.event_venue }}</div>{% endif %}
+            {% endfor %}
+          {% else %}
+            <div class="ann-row" style="cursor:default;justify-content:center;color:#000103 !important;padding:24px 20px;">
+              <span style="font-size:14px;">No announcements have been announced yet.</span>
             </div>
-            {% if _is_ev %}
-              <span class="material-symbols-outlined" style="font-size:16px;color:#01050e;margin-top:2px;">chevron_right</span>
-            {% endif %}
-          </div>
-          {% if _is_ev %}{% set ev_ns.count = ev_ns.count + 1 %}{% endif %}
-          {% endfor %}
-          <div class="card-pager" id="date-pager">
-            <span class="card-pager-info" id="date-pager-info"></span>
+          {% endif %}
+          {% if announcements|length > 3 %}
+          <div class="card-pager" id="ann-pager">
+            <span class="card-pager-info" id="ann-pager-info"></span>
             <div class="card-pager-btns">
-              <button class="card-pager-btn" id="date-prev" onclick="datePage(-1)" title="Previous">
+              <button class="card-pager-btn" id="ann-prev" onclick="annPage(-1)" title="Previous">
                 <span class="material-symbols-outlined" style="font-size:16px;">chevron_left</span>
               </button>
-              <button class="card-pager-btn" id="date-next" onclick="datePage(1)" title="Next">
+              <button class="card-pager-btn" id="ann-next" onclick="annPage(1)" title="Next">
                 <span class="material-symbols-outlined" style="font-size:16px;">chevron_right</span>
               </button>
             </div>
           </div>
-        {% else %}
-          <div class="date-item" style="cursor:default;justify-content:center;color:#000103;padding:24px 20px;">
-            <span style="font-size:14px;">No Important Dates.</span>
-          </div>
-        {% endif %}
+          {% endif %}
+        </div>
       </div>
 
       <!-- Social proof -->

@@ -74,31 +74,29 @@
   {
    "fieldname": "if_pg_cgpa",
    "fieldtype": "Float",
+   "in_list_view": 1,
    "label": "If CGPA, Maximum CPGA (PG Degree)",
    "non_negative": 1,
-   "precision": "2",
-   "reqd": 1
+   "precision": "2"
   },
   {
-   "depends_on": "eval:parent.foriegn_national == \"Yes\"",
    "fieldname": "country",
    "fieldtype": "Data",
-   "label": "Country",
-   "mandatory_depends_on": "eval:parent.foriegn_national == \"Yes\""
+   "in_list_view": 1,
+   "label": "Country"
   },
   {
-   "depends_on": "eval:parent.foriegn_national == \"Yes\"",
    "fieldname": "board_uni_pg",
    "fieldtype": "Data",
-   "label": "Board/University (PG Degree)",
-   "mandatory_depends_on": "eval:parent.foriegn_national == \"Yes\""
+   "in_list_view": 1,
+   "label": "Board/University (PG Degree)"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-09-30 10:21:30.831389",
+ "modified": "2026-09-30 15:14:58.136909",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "PG Degree Details",
