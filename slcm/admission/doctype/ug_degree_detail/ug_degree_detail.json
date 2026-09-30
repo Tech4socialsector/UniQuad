@@ -7,9 +7,12 @@
  "engine": "InnoDB",
  "field_order": [
   "ug_program",
-  "ug_cgpa",
   "year_of_completion",
   "college",
+  "board_uni_ug",
+  "country",
+  "ug_cgpa",
+  "if_ug_cgpa",
   "degree_certificate",
   "marksheets"
  ],
@@ -55,11 +58,34 @@
   },
   {
    "fieldname": "ug_cgpa",
-   "fieldtype": "Percent",
+   "fieldtype": "Float",
    "in_list_view": 1,
-   "label": "CGPA Obtained (UG degree)",
+   "label": "Percentage/CGPA Obtained (UG degree)",
+   "length": 4,
    "non_negative": 1,
    "precision": "1",
+   "reqd": 1
+  },
+  {
+   "fieldname": "board_uni_ug",
+   "fieldtype": "Data",
+   "label": "Board/University (UG Degree)",
+   "depends_on": "eval:parent.foriegn_national == \"Yes\"",
+   "mandatory_depends_on": "eval:parent.foriegn_national == \"Yes\""
+  },
+  {
+   "fieldname": "country",
+   "fieldtype": "Data",
+   "label": "Country",
+   "depends_on": "eval:parent.foriegn_national == \"Yes\"",
+   "mandatory_depends_on": "eval:parent.foriegn_national == \"Yes\""
+  },
+  {
+   "fieldname": "if_ug_cgpa",
+   "fieldtype": "Float",
+   "label": "If CGPA, Maximum CPGA (UG Degree)",
+   "non_negative": 1,
+   "precision": "2",
    "reqd": 1
   }
  ],
@@ -67,7 +93,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-09-29 17:43:50.531194",
+ "modified": "2026-09-29 18:18:25.154282",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "UG Degree Detail",

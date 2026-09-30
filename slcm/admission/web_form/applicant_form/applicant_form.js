@@ -4410,14 +4410,16 @@ function makeInputUppercase() {
 			});
 		}
 
-		frappe.web_form.on(fieldname, (field, value) => {
-			if (value) {
-				frappe.web_form.set_value(
-					fieldname,
-					value.toUpperCase()
-				);
-			}
-		});
+		if (field) {
+			frappe.web_form.on(fieldname, (f, value) => {
+				if (value) {
+					frappe.web_form.set_value(
+						fieldname,
+						value.toUpperCase()
+					);
+				}
+			});
+		}
 	});
 
 	// For child table fields (UG/PG details) which are rendered dynamically
