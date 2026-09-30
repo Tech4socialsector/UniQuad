@@ -96,9 +96,8 @@ def get_context(context):
                 "application_end_date":    getdate(row.get("application_end_date"))    if row.get("application_end_date")    else None,
             })
             context.is_closed = False
-            active_year_display = row.get("admission_year") or row.get("academic_year")
-            context.display_year = active_year_display
-            context.admission_closed_message = _("Admission for the Academic year AY {0} is closed now.").format(active_year_display)
+            active_year = row.get("academic_year") or row.get("admission_year") or ""
+            
             context.show_register_tab = (
                 not context.is_closed
                 and cint(row.get("enable_applicant_register_tab"))
@@ -108,25 +107,24 @@ def get_context(context):
             context.is_closed = True
             context.show_register_tab = False
             
-            # Fetch the most recent admission cycle to get its academic year
-            recent_cycle = frappe.get_all("Admission Cycle", fields=["academic_year", "admission_year"], order_by="creation desc", limit=1)
-            
-            if recent_cycle and (recent_cycle[0].academic_year or recent_cycle[0].admission_year):
-                active_year = recent_cycle[0].academic_year or recent_cycle[0].admission_year
-            else:
-                active_year = frappe.db.get_value("Academic Year", {"status": "Active"}, "name")
-                if not active_year:
-                    recent = frappe.get_all("Academic Year", fields=["name"], order_by="creation desc", limit=1)
-                    active_year = recent[0].name if recent else "2026-2027"
+            active_year = frappe.db.get_value("Academic Year", {"status": "Active"}, "name")
+            if not active_year:
+                recent = frappe.get_all("Academic Year", fields=["name"], order_by="creation desc", limit=1)
+                active_year = recent[0].name if recent else ""
 
-            context.admission_closed_message = _("Admission for the Academic year AY {0} is closed now.").format(active_year)
-            
+        if active_year:
+            # Format year from 2026-2027 to 2026-27 for display
             display_year = active_year
-            if len(display_year) == 9 and display_year[4] == '-':
+            if display_year and len(display_year) == 9 and display_year[4] == '-':
                 parts = display_year.split('-')
                 if len(parts) == 2 and len(parts[1]) == 4:
                     display_year = f"{parts[0]}-{parts[1][2:]}"
+            
             context.display_year = display_year
+            context.admission_closed_message = _("Admission for the Academic year {0} is closed now.").format(display_year)
+        else:
+            context.display_year = ""
+            context.admission_closed_message = _("Admission is Closed Now")
     except Exception:
         frappe.log_error(frappe.get_traceback(), "login: active_cycle fetch")
 
