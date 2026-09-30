@@ -69,6 +69,7 @@
   "class_x_details_section",
   "class_x_year_of_completion",
   "class_x_percentage",
+  "x_country",
   "column_break_ivlp",
   "class_x_school",
   "class_x_cgpa",
@@ -79,6 +80,7 @@
   "class_xii_name_of_examination",
   "class_xii_board",
   "hsc_group",
+  "xii_country",
   "column_break_mlet",
   "class_xii_year_of_completion",
   "hsc_percentage",
@@ -1123,7 +1125,7 @@
    "fieldtype": "Select",
    "label": "PhD Programme Selection",
    "mandatory_depends_on": "eval:doc.program_level == \"Research Course\"",
-   "options": "\nLaw\nInterdisciplinary"
+   "options": "\nPh.D (Law)\nPh.D (Social Sciences, Humanities and Public Policy)"
   },
   {
    "fieldname": "column_break_nkbo",
@@ -1306,6 +1308,22 @@
    "fieldtype": "Data",
    "label": "City",
    "mandatory_depends_on": "eval:doc.country != \"India\""
+  },
+  {
+   "depends_on": "eval:doc.foriegn_national == \"Yes\"",
+   "fieldname": "x_country",
+   "fieldtype": "Link",
+   "label": "Country",
+   "mandatory_depends_on": "eval:doc.foriegn_national == \"Yes\"",
+   "options": "Country"
+  },
+  {
+   "depends_on": "eval:doc.foriegn_national == \"Yes\"",
+   "fieldname": "xii_country",
+   "fieldtype": "Link",
+   "label": "Country",
+   "mandatory_depends_on": "eval:doc.foriegn_national == \"Yes\"",
+   "options": "Country"
   }
  ],
  "grid_page_length": 50,
@@ -1341,7 +1359,7 @@
   }
  ],
  "make_attachments_public": 1,
- "modified": "2026-09-29 15:55:17.071206",
+ "modified": "2026-09-30 15:57:07.241798",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Applicant",

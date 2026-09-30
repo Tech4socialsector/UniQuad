@@ -8,9 +8,12 @@
  "field_order": [
   "pg_degree_details_section",
   "pg_program",
-  "pg_cgpa",
   "year_of_completion",
   "collegeuniversity",
+  "board_uni_pg",
+  "country",
+  "pg_cgpa",
+  "if_pg_cgpa",
   "pg_degree_certificatebonafide_certificate_to_be_uploaded",
   "transcriptsmarksheets_to_be_uploaded"
  ],
@@ -28,8 +31,9 @@
    "fieldname": "pg_cgpa",
    "fieldtype": "Percent",
    "in_list_view": 1,
-   "label": "CGPA Obtained (PG degree)",
+   "label": "Percentage/CGPA Obtained (PG degree)",
    "non_negative": 1,
+   "precision": "2",
    "reqd": 1
   },
   {
@@ -66,13 +70,33 @@
    "fieldname": "pg_degree_details_section",
    "fieldtype": "Section Break",
    "label": "PG Degree Details"
+  },
+  {
+   "fieldname": "if_pg_cgpa",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "If CGPA, Maximum CPGA (PG Degree)",
+   "non_negative": 1,
+   "precision": "2"
+  },
+  {
+   "fieldname": "country",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Country"
+  },
+  {
+   "fieldname": "board_uni_pg",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Board/University (PG Degree)"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-09-29 17:43:24.881243",
+ "modified": "2026-09-30 15:14:58.136909",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "PG Degree Details",
