@@ -685,21 +685,7 @@ src="https://www.facebook.com/tr?id=1279045953496223&ev=PageView&noscript=1"
       </p>
     </div>
 
-    <!-- Support -->
-    <div class="lp-support">
-      <div class="lp-support-title">Support &amp; Links</div>
-      <div class="lp-support-grid">
-        <a href="{% if _support %}mailto:{{ _support }}{% else %}/admission{% endif %}"
-           class="lp-support-link">
-          <span class="material-symbols-outlined">help_outline</span>
-          Help &amp; Support
-        </a>
-        <a href="{% if _pc and _pc.admission_website_url %}{{ _pc.admission_website_url }}{% else %}#{% endif %}" class="lp-support-link">
-          <span class="material-symbols-outlined">public</span>
-          Website
-        </a>
-      </div>
-    </div>
+    
   </div><!-- end left -->
 
   <!-- ══════════ RIGHT ══════════ -->
@@ -736,11 +722,8 @@ src="https://www.facebook.com/tr?id=1279045953496223&ev=PageView&noscript=1"
           </div>
           {% endfor %}
         {% else %}
-          <div class="ann-row" style="cursor:default;">
-            <div class="ann-dot type-default"></div>
-            <div class="ann-text">
-              <div class="ann-title">No announcements have been announced yet.</div>
-            </div>
+          <div class="ann-row" style="cursor:default;justify-content:center;color:#000103 !important;padding:24px 20px;">
+            <span style="font-size:14px;">No announcements have been announced yet.</span>
           </div>
         {% endif %}
         {% if announcements|length > 3 %}
