@@ -734,12 +734,12 @@ frappe.pages["transcript-management-page"].on_page_load = function (wrapper) {
 								<span class="tm-sort-icon" data-col="cgpa">↕</span>
 							</th>
 							<th class="tm-col-accent" style="text-align:center; width:120px;">${__("Interim")}</th>
-							<th style="text-align:center; width:120px;">${__("Final")}</th>
+							<!-- FINAL column hidden: <th style="text-align:center; width:120px;">\${__("Final")}</th> -->
 						</tr>
 					</thead>
 					<tbody id="tm-tbody">
 						<tr>
-							<td colspan="8" style="text-align:center; padding:48px; color:#aaa;">
+							<td colspan="7" style="text-align:center; padding:48px; color:#aaa;">
 								<div class="tm-spinner"></div>
 								${__("Loading students...")}
 							</td>
@@ -1283,7 +1283,7 @@ frappe.pages["transcript-management-page"].on_page_load = function (wrapper) {
 
 		$(wrapper).find("#tm-tbody").html(`
 			<tr>
-				<td colspan="8" style="text-align:center; padding:48px; color:#aaa;">
+				<td colspan="7" style="text-align:center; padding:48px; color:#aaa;">
 					<div class="tm-spinner"></div>
 					${__("Loading students...")}
 				</td>
@@ -1316,7 +1316,7 @@ frappe.pages["transcript-management-page"].on_page_load = function (wrapper) {
 			error: function () {
 				state.loading = false;
 				$(wrapper).find("#tm-tbody").html(`
-					<tr><td colspan="8" style="text-align:center; padding:32px; color:#c84630;">
+					<tr><td colspan="7" style="text-align:center; padding:32px; color:#c84630;">
 						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
 							fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
 							style="display:block;margin:0 auto 8px;opacity:.6;">
@@ -1334,7 +1334,7 @@ frappe.pages["transcript-management-page"].on_page_load = function (wrapper) {
 
 		if (!students || students.length === 0) {
 			tbody.html(`
-				<tr><td colspan="8" style="text-align:center; padding:56px; color:#bbb;">
+				<tr><td colspan="7" style="text-align:center; padding:56px; color:#bbb;">
 					<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24"
 						fill="none" stroke="#ddd" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
 						style="display:block;margin:0 auto 12px;">
@@ -1423,7 +1423,7 @@ frappe.pages["transcript-management-page"].on_page_load = function (wrapper) {
 					<td style="text-align:center;">${credHtml}</td>
 					<td style="text-align:center;">${cgpaHtml}</td>
 					<td style="text-align:center;">${interactive_badge(s.interim_transcript, s.student, "Interim")}</td>
-					<td style="text-align:center;">${interactive_badge(s.final_transcript, s.student, "Final")}</td>
+					<!-- FINAL column hidden: <td style="text-align:center;">\${interactive_badge(s.final_transcript, s.student, "Final")}</td> -->
 				</tr>`;
 		});
 

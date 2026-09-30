@@ -11,8 +11,8 @@
   --fp-primary-mid:    rgba(146,12,36,0.16);
   --fp-primary-glow:   rgba(146,12,36,0.25);
   --fp-secondary:      #c9a84c;
-  --fp-accent:         #2563eb;
-  --fp-accent-light:   rgba(37,99,235,0.10);
+  --fp-accent:         #920c24;
+  --fp-accent-light:   rgba(146,12,36,0.10);
   --fp-nav-bg:         #fafafa;
   --fp-nav-text:       #920c24;
   --fp-sidebar-active-text: #ffffff;
@@ -28,7 +28,7 @@
   --fp-text-5:         #cbd5e1;
 
   /* Surfaces */
-  --fp-bg:             #f0f4f8;
+  --fp-bg:             #f0f2f5;
   --fp-bg-2:           #e8edf3;
   --fp-card:           #ffffff;
   --fp-card-2:         #f8fafc;
@@ -41,12 +41,12 @@
   --fp-border-mid:     #cbd5e1;
 
   /* Semantic */
-  --fp-success:        #16a34a;
-  --fp-success-bg:     rgba(22,163,74,0.10);
-  --fp-success-mid:    rgba(22,163,74,0.20);
-  --fp-warning:        #d97706;
-  --fp-warning-bg:     rgba(217,119,6,0.10);
-  --fp-warning-mid:    rgba(217,119,6,0.20);
+  --fp-success:        #920c24;
+  --fp-success-bg:     rgba(146,12,36,0.10);
+  --fp-success-mid:    rgba(146,12,36,0.20);
+  --fp-warning:        #920c24;
+  --fp-warning-bg:     rgba(146,12,36,0.10);
+  --fp-warning-mid:    rgba(146,12,36,0.20);
   --fp-danger:         #dc2626;
   --fp-danger-bg:      rgba(220,38,38,0.10);
   --fp-danger-mid:     rgba(220,38,38,0.20);
@@ -56,7 +56,7 @@
   --fp-purple:         #7c3aed;
   --fp-purple-bg:      rgba(124,58,237,0.10);
   --fp-purple-mid:     rgba(124,58,237,0.20);
-  --fp-teal:           #0d9488;
+  --fp-teal:           #920c24;
   --fp-teal-bg:        rgba(13,148,136,0.10);
   --fp-teal-mid:       rgba(13,148,136,0.20);
   --fp-rose:           #e11d48;
@@ -109,10 +109,10 @@ body.fp-dark {
   --fp-border:         #1e2d4a;
   --fp-border-light:   #131d35;
   --fp-border-mid:     #263352;
-  --fp-primary-light:  rgba(37,99,235,0.15);
-  --fp-primary-mid:    rgba(37,99,235,0.25);
-  --fp-primary-glow:   rgba(37,99,235,0.35);
-  --fp-accent-light:   rgba(37,99,235,0.18);
+  --fp-primary-light:  rgba(146,12,36,0.15);
+  --fp-primary-mid:    rgba(146,12,36,0.25);
+  --fp-primary-glow:   rgba(146,12,36,0.35);
+  --fp-accent-light:   rgba(146,12,36,0.18);
   --fp-shadow-sm:      0 1px 3px rgba(0,0,0,0.3);
   --fp-shadow:         0 4px 16px rgba(0,0,0,0.4);
   --fp-shadow-md:      0 8px 32px rgba(0,0,0,0.5);
@@ -521,7 +521,7 @@ header[class*="navbar"], .website-header,
   position: absolute;
   bottom: 2px; right: 2px;
   width: 12px; height: 12px;
-  background: #22c55e;
+  background: #920c24;
   border-radius: 50%;
   border: 2px solid var(--fp-card);
 }
@@ -831,6 +831,7 @@ header[class*="navbar"], .website-header,
 .fp-badge-neutral  { background: var(--fp-border-light); color: var(--fp-text-3); }
 .fp-badge-dark     { background: var(--fp-primary-mid);  color: var(--fp-primary); }
 .fp-badge-gold     { background: rgba(200,161,75,0.15); color: #b27d1a; }
+.fp-badge-outline  { background: transparent; color: var(--fp-primary); border: 1px solid var(--fp-primary-mid); }
 
 /* ══════════════════════════════════════════════════════════
    TABLES
@@ -1171,8 +1172,8 @@ header[class*="navbar"], .website-header,
   border-radius: 20px; letter-spacing: 0.01em;
 }
 .fp-status-badge .fp-ms { font-size: 12px; }
-.fp-status-active  { background: var(--fp-success-bg); color: var(--fp-success); }
-.fp-status-open    { background: var(--fp-info-bg);    color: var(--fp-info); }
+.fp-status-active  { background: var(--fp-primary-light); color: var(--fp-primary); }
+.fp-status-open    { background: var(--fp-primary-light); color: var(--fp-primary); }
 .fp-status-closed  { background: var(--fp-bg);          color: var(--fp-text-3); border: 1px solid var(--fp-border-mid); }
 .fp-status-upcoming{ background: var(--fp-warning-bg);  color: var(--fp-warning); }
 
@@ -1911,6 +1912,7 @@ body.fp-sidebar-dark .fp-sidebar-divider { border-color: rgba(255,255,255,0.08);
 .fp-vb-accent-red::before    { background: var(--fp-danger); }
 .fp-vb-accent-teal::before   { background: var(--fp-teal); }
 .fp-vb-accent-purple::before { background: var(--fp-purple); }
+.fp-vb-accent-maroon::before { background: var(--fp-primary); }
 
 .fp-vb-toolbar {
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
@@ -2079,3 +2081,142 @@ body.fp-sidebar-dark .fp-sidebar-divider { border-color: rgba(255,255,255,0.08);
 .fp-profile-quick-tile .fp-ms { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
 .fp-profile-quick-title { font-size: 13px; font-weight: 600; color: var(--fp-text-1); }
 .fp-profile-quick-sub { font-size: 11.5px; color: var(--fp-text-4); margin-top: 2px; }
+
+/* ══════════════════════════════════════════════════════════════════
+   NLS MAROON — SOLID FILLS
+   Light-pink tints (primary-light / success-bg / warning-bg) are not
+   used as backgrounds anywhere in the portal. Chips, badges, icon boxes
+   and tinted buttons are solid NLS Maroon with white content; hover
+   washes are neutral grey. Focus rings and borders are left as-is.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* Icon boxes (stat cards, empty states, suggestion cards, notifications) */
+.fp-c-navy, .fp-c-green, .fp-c-orange, .fp-c-red, .fp-c-blue, .fp-c-teal,
+.fp-c-purple, .fp-c-indigo, .fp-c-rose, .fp-c-gold,
+.fp-empty-icon.fp-c-navy, .fp-sg-icon, .fp-notif-icon.success,
+.fp-ann-icon-important { background: var(--fp-primary) !important; border-color: var(--fp-primary) !important; }
+.fp-c-navy .fp-ms, .fp-c-green .fp-ms, .fp-c-orange .fp-ms, .fp-c-red .fp-ms, .fp-c-blue .fp-ms,
+.fp-c-teal .fp-ms, .fp-c-purple .fp-ms, .fp-c-indigo .fp-ms, .fp-c-rose .fp-ms, .fp-c-gold .fp-ms,
+.fp-empty-icon.fp-c-navy .fp-ms, .fp-sg-icon .fp-ms, .fp-notif-icon.success .fp-ms,
+.fp-ann-icon-important .fp-ms { color: #fff !important; }
+/* Metric icons carry their tint inline — force solid, icon white */
+.fp-metric-icon { background: var(--fp-primary) !important; }
+.fp-metric-icon .fp-ms { color: #fff !important; }
+
+/* Badges & status pills */
+.fp-badge-success, .fp-badge-warning, .fp-badge-dark, .fp-badge-info,
+.fp-badge-teal, .fp-badge-purple, .fp-badge-danger,
+.fp-status-active, .fp-status-open, .fp-status-upcoming { background: var(--fp-primary); color: #fff; }
+
+/* Tinted buttons → solid */
+.fp-btn-success, .fp-btn-warning { background: var(--fp-primary); color: #fff; }
+.fp-btn-success:hover, .fp-btn-warning:hover { background: var(--fp-primary-dark); color: #fff; }
+
+/* Alerts */
+.fp-alert-warning, .fp-alert-success { background: var(--fp-primary); color: #fff; }
+.fp-alert-warning .fp-ms, .fp-alert-success .fp-ms { color: #fff !important; }
+
+/* Chips */
+.fp-mc-count-chip { background: var(--fp-primary); border-color: var(--fp-primary); color: #fff; }
+.fp-mc-count-chip .fp-ms, .fp-mc-count-chip strong, .fp-mc-count-chip span.fp-mc-count-lbl { color: #fff; }
+.fp-filter-chip { background: var(--fp-card); }
+.fp-filter-chip.active, .fp-filter-chips .fp-filter-chip { background: var(--fp-primary); border-color: var(--fp-primary); color: #fff; }
+.fp-msf.fp-msf-active .fp-msf-btn { background: var(--fp-primary); color: #fff; }
+.fp-msf.fp-msf-active .fp-msf-btn .fp-ms { color: #fff; }
+
+/* Navbar icon buttons (notifications etc.) */
+.fp-nav-badge, .fp-nav-icon-btn, .fp-notif-btn { background: var(--fp-primary); border-color: var(--fp-primary); color: #fff; }
+.fp-nav-icon-btn:hover, .fp-notif-btn:hover { background: var(--fp-primary-dark); }
+.fp-nav-icon-btn .fp-ms, .fp-notif-btn .fp-ms { color: #fff; }
+
+/* Hover washes → neutral grey */
+.fp-hamburger:hover, .fp-theme-btn:hover, .fp-filter-chip:hover,
+.fp-msf-footer-btn:hover, .fp-multiselect-selectall:hover,
+.fp-course-action-success:hover, .fp-course-action-primary:hover { background: var(--fp-bg); }
+.fp-filter-chip.active:hover, .fp-filter-chips .fp-filter-chip:hover { background: var(--fp-primary-dark); color: #fff; }
+
+/* Profile banner: plain card instead of pink wash */
+.fp-profile-banner-inner { background: var(--fp-card); }
+
+/* ══════════════════════════════════════════════════════════════════
+   KPI CARD HOVER — one NLS Maroon hover style for every KPI card
+   (dashboard, attendance, marks, venue booking, my classes).
+   Clickable cards (.fp-stat-drillable) additionally turn their
+   "More info" hint maroon and reveal a DETAILS tag.
+   ══════════════════════════════════════════════════════════════════ */
+.fp-stat-card:hover,
+.fp-metric-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); border-color: var(--fp-primary-mid); }
+.fp-metric-card { transition: box-shadow 0.2s var(--fp-ease), border-color 0.2s; }
+
+.fp-stat-drillable { position: relative; cursor: pointer; }
+.fp-drill-badge {
+  position: absolute; top: 10px; right: 10px;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: var(--fp-primary); color: #fff;
+  padding: 2px 8px; border-radius: 10px;
+  border: 1px solid var(--fp-primary);
+  opacity: 0; transition: opacity 0.18s;
+  pointer-events: none;
+}
+.fp-drill-badge-warn { background: var(--fp-primary) !important; color: #fff !important; border-color: var(--fp-primary) !important; }
+.fp-stat-drillable:hover .fp-drill-badge { opacity: 1; }
+.fp-drill-hint { transition: color 0.18s; }
+.fp-stat-drillable:hover .fp-drill-hint { color: var(--fp-primary) !important; }
+
+/* Quick Actions — same NLS Maroon hover as the KPI cards
+   (also on keyboard focus). Title colour lives here, not inline,
+   so the hover rule can change it. */
+.fp-qa-title { color: var(--fp-text-1); transition: color 0.18s; }
+.fp-quick-action-btn:hover,
+.fp-quick-action-btn:focus-visible { box-shadow: 0 4px 16px rgba(0,0,0,0.1); border-color: var(--fp-primary-mid); outline: none; }
+.fp-quick-action-btn:hover .fp-qa-title,
+.fp-quick-action-btn:focus-visible .fp-qa-title { color: var(--fp-primary); }
+
+/* ── Dark Mode — readable chrome, accents and hard-coded light surfaces ──
+   Portal settings set nav / sidebar / accent colours on :root; redefining
+   them on body.fp-dark wins because custom properties inherit from body. */
+body.fp-dark {
+  --fp-nav-bg:                  #0f172a;
+  --fp-nav-text:                #f1f5f9;
+  --fp-sidebar-menu-text:       #cbd5e1;
+  --fp-sidebar-menu-hover-bg:   #1a2540;
+  --fp-sidebar-menu-hover-text: #ffffff;
+  /* NLS maroon is too dark to read on navy — use a lifted rose for accents */
+  --fp-primary:                 #d64a66;
+  --fp-primary-dark:            #b8354f;
+  --fp-success:                 #e0708a;
+  --fp-warning:                 #f2b36a;
+  --fp-danger:                  #f87171;
+  --fp-info:                    #7cc4f2;
+  --fp-success-bg:              rgba(214,74,102,0.16);
+  --fp-warning-bg:              rgba(242,179,106,0.14);
+  --fp-danger-bg:               rgba(248,113,113,0.14);
+  --fp-info-bg:                 rgba(124,196,242,0.14);
+  color-scheme: dark;
+}
+body.fp-dark .fp-nav { border-bottom-color: var(--fp-border); }
+body.fp-dark .fp-sidebar { background: var(--fp-bg-2); border-right-color: var(--fp-border); }
+
+/* Inline maroon text written as a literal colour */
+body.fp-dark [style*="color:#920c24"], body.fp-dark [style*="color: #920c24"],
+body.fp-dark [style*="color:#920C24"], body.fp-dark [style*="color: #920C24"],
+body.fp-dark [style*="color:#6b091a"], body.fp-dark [style*="color:#6e0919"] { color: #f08da0 !important; }
+
+/* Inline white / near-white surfaces become dark cards */
+body.fp-dark [style*="background:#fff;"], body.fp-dark [style*="background: #fff;"],
+body.fp-dark [style*="background:#fff\""], body.fp-dark [style*="background:#ffffff"],
+body.fp-dark [style*="background: #ffffff"], body.fp-dark [style*="background:white"],
+body.fp-dark [style*="background:#f8fafc"], body.fp-dark [style*="background: #f8fafc"],
+body.fp-dark [style*="background:#f9fafb"], body.fp-dark [style*="background:#f1f5f9"],
+body.fp-dark [style*="background:#fafafa"] { background: var(--fp-card) !important; }
+body.fp-dark [style*="background:#fff0f2"], body.fp-dark [style*="background: #fff0f2"],
+body.fp-dark [style*="background:#fdf2f4"], body.fp-dark [style*="background:#fef2f2"] { background: var(--fp-primary-light) !important; }
+
+/* Common light-only text colours */
+body.fp-dark [style*="color:#1e293b"], body.fp-dark [style*="color:#0f172a"],
+body.fp-dark [style*="color:#111"], body.fp-dark [style*="color:#000"] { color: var(--fp-text-1) !important; }
+
+/* Form controls */
+body.fp-dark input, body.fp-dark select, body.fp-dark textarea { background-color: var(--fp-card-2); color: var(--fp-text-1); border-color: var(--fp-border-mid); }
+body.fp-dark input::placeholder, body.fp-dark textarea::placeholder { color: var(--fp-text-3); }

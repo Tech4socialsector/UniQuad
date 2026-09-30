@@ -4,14 +4,10 @@
 
 {% block content %}
 
-<div class="fp-breadcrumb fade-in" style="margin-bottom:6px;">
-  <span>Home</span> <span class="fp-ms" style="font-size:13px;">chevron_right</span> <span>Communication</span>
-</div>
 
-<div class="fp-page-header fade-in">
+<div class="fp-page-header fade-in" style="background: var(--fp-card, #fff); border: 1px solid var(--fp-border, #e5e7eb); border-radius: 14px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
   <div>
-    <h1 class="fp-page-title">Announcements</h1>
-    <p class="fp-page-sub">Faculty circulars, academic notices, and institutional updates.</p>
+    <h1 class="fp-page-title" style="margin: 0; font-size: 18px !important; font-weight: 700 !important;">Announcements</h1>
   </div>
 </div>
 
@@ -22,45 +18,11 @@
 </div>
 {% endif %}
 
-{# ── Stats row ──────────────────────────────────────────────── #}
-<div class="fp-stat-grid fp-vb-stat-grid fp-vb-stat-grid-3">
-
-  <div class="fp-stat-card fp-vb-stat-card fp-vb-accent-blue fade-in" style="animation-delay:0.04s;cursor:default;">
-    <div class="fp-stat-icon fp-c-blue">
-      <span class="fp-ms">campaign</span>
-    </div>
-    <div class="fp-stat-body">
-      <div class="fp-stat-val">{{ total_count }}</div>
-      <div class="fp-stat-lbl">Total</div>
-    </div>
-  </div>
-
-  <div class="fp-stat-card fp-vb-stat-card {% if urgent_count > 0 %}fp-vb-accent-red{% else %}fp-vb-accent-green{% endif %} fade-in" style="animation-delay:0.08s;cursor:default;">
-    <div class="fp-stat-icon {% if urgent_count > 0 %}fp-c-red{% else %}fp-c-green{% endif %}">
-      <span class="fp-ms">priority_high</span>
-    </div>
-    <div class="fp-stat-body">
-      <div class="fp-stat-val">{{ urgent_count }}</div>
-      <div class="fp-stat-lbl">Urgent</div>
-    </div>
-  </div>
-
-  <div class="fp-stat-card fp-vb-stat-card {% if important_count > 0 %}fp-vb-accent-orange{% else %}fp-vb-accent-green{% endif %} fade-in" style="animation-delay:0.12s;cursor:default;">
-    <div class="fp-stat-icon {% if important_count > 0 %}fp-c-orange{% else %}fp-c-green{% endif %}">
-      <span class="fp-ms">info</span>
-    </div>
-    <div class="fp-stat-body">
-      <div class="fp-stat-val">{{ important_count }}</div>
-      <div class="fp-stat-lbl">Important</div>
-    </div>
-  </div>
-
-</div>
-
 {# ── Filter bar ─────────────────────────────────────────────── #}
 <div class="fp-card fade-in" style="margin-bottom:20px;animation-delay:0.16s;">
   <div class="fp-card-body" style="padding:14px 20px;">
     <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;">
+      {# Type / Priority filters — commented out; global search below stays active.
       <span class="fp-ms" style="font-size:18px;color:var(--fp-text-4);">filter_list</span>
 
       <div class="fp-multiselect" id="fp-type-multiselect">
@@ -102,13 +64,16 @@
           </div>
         </div>
       </div>
+      #}
 
       <input type="text" class="fp-input" id="fp-ann-search" placeholder="Search announcements…"
              oninput="fpFilterAnn()"
              style="flex:1;min-width:180px;max-width:300px;padding:6px 12px;font-size:13px;">
+      {# Reset — commented out along with the Type / Priority filters.
       <button class="fp-btn fp-btn-secondary fp-btn-sm" onclick="fpResetAnnFilters()">
         <span class="fp-ms">restart_alt</span>Reset
       </button>
+      #}
     </div>
   </div>
 </div>

@@ -1,11 +1,167 @@
 {% extends "slcm/www/student-portal/_base.html" %}
 {% block title %}Announcements{% endblock %}
 
+{% block extra_head %}
+<style>
+/* ── Announcements (NLS maroon) ─────────────────────────────────────── */
+:root {
+  --ann-maroon:      #920c24;
+  --ann-maroon-soft: rgba(146,12,36,0.07);
+  --ann-maroon-mid:  rgba(146,12,36,0.16);
+  --ann-urgent:      #920c24;
+  --ann-urgent-bg:   #fff0f2;
+  --ann-important:   #920c24;
+  --ann-important-bg:#fff0f2;
+  --ann-border:      var(--sp-border, #e2e8f0);
+  --ann-row:         #f1f2f4;
+}
+.is-hidden { display: none !important; }
+.ann-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+.ann-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+.ann-head .sp-page-header { margin: 0; width: 100%; }
+
+
+/* Toolbar */
+.ann-toolbar {
+  background: var(--sp-card, #fff); border: 1px solid var(--ann-border); border-radius: 12px;
+  padding: 12px 16px; margin-bottom: 16px; display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center;
+}
+.ann-search { flex: 1 1 260px; position: relative; min-width: 0; }
+.ann-search .sp-ms { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 18px; color: var(--sp-text-4); pointer-events: none; }
+.ann-input {
+  height: 38px; width: 100%; border-radius: 8px; border: 1px solid var(--ann-border); background: var(--sp-card, #fff);
+  font: inherit; font-size: 13px; color: var(--sp-text-1); padding: 0 12px 0 34px;
+}
+.ann-input:focus-visible { outline: 2px solid var(--ann-maroon); outline-offset: 1px; }
+.ann-cats { display: flex; gap: 6px; flex-wrap: wrap; }
+.ann-cat {
+  display: inline-flex; align-items: center; gap: 5px; height: 32px; padding: 0 12px; border-radius: 20px;
+  border: 1px solid var(--ann-border); background: var(--sp-card, #fff); color: var(--sp-text-3);
+  font: inherit; font-size: 12.5px; cursor: pointer; white-space: nowrap;
+}
+.ann-cat .sp-ms { font-size: 15px; }
+.ann-cat:hover { border-color: var(--ann-maroon-mid); color: var(--ann-maroon); }
+.ann-cat[aria-pressed="true"] { background: var(--ann-maroon); border-color: var(--ann-maroon); color: #fff; }
+.ann-cat:focus-visible { outline: 2px solid var(--ann-maroon); outline-offset: 2px; }
+.ann-count { font-size: 12.5px; color: var(--sp-text-4); white-space: nowrap; margin-left: auto; }
+.ann-count strong { color: var(--ann-maroon); font-weight: 400; }
+
+/* Section title */
+.ann-section-title { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: 6px 0 10px; }
+.ann-section-title h2 { font-size: 15px; font-weight: 400; color: var(--sp-text-1); margin: 0; display: flex; align-items: center; gap: 8px; }
+.ann-section-title h2 .sp-ms { font-size: 20px; color: var(--ann-maroon); }
+.ann-section-sub { font-size: 12.5px; color: var(--sp-text-4); }
+
+/* Announcement card */
+.ann-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; }
+.ann-card {
+  background: var(--sp-card, #fff); border: 1px solid var(--ann-border); border-left: 4px solid var(--ann-maroon);
+  border-radius: 12px; padding: 18px 20px; display: flex; gap: 16px; align-items: flex-start;
+  transition: box-shadow .2s;
+}
+.ann-card:hover { box-shadow: 0 6px 18px rgba(16,24,40,0.06); }
+.ann-card.p-urgent    { border-left-color: var(--ann-urgent); }
+.ann-card.p-important { border-left-color: var(--ann-important); }
+.ann-icon {
+  width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  background: var(--ann-maroon-soft); color: var(--ann-maroon);
+}
+.ann-icon .sp-ms { font-size: 22px; }
+.p-urgent .ann-icon    { background: var(--ann-urgent-bg); color: var(--ann-urgent); }
+.p-important .ann-icon { background: var(--ann-important-bg); color: var(--ann-important); }
+.ann-body { flex: 1; min-width: 0; }
+.ann-title-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+.ann-title { font-size: 15.5px; color: var(--sp-text-1); margin: 0; line-height: 1.35; overflow-wrap: anywhere; }
+.ann-tag { display: inline-flex; align-items: center; gap: 3px; padding: 2px 9px; border-radius: 20px; font-size: 11px; white-space: nowrap; }
+.ann-tag .sp-ms { font-size: 13px; }
+.ann-tag-urgent    { background: var(--ann-urgent-bg); color: var(--ann-urgent); }
+.ann-tag-important { background: var(--ann-important-bg); color: var(--ann-important); }
+.ann-tag-type      { background: var(--ann-maroon-soft); color: var(--ann-maroon); }
+.ann-tag-new       { background: var(--ann-maroon); color: #fff; }
+.ann-text { font-size: 13.5px; color: var(--sp-text-2); line-height: 1.7; margin: 0 0 10px; overflow-wrap: anywhere; }
+.ann-full { font-size: 13.5px; color: var(--sp-text-2); line-height: 1.7; margin: 0 0 10px; overflow-wrap: anywhere; }
+.ann-full p { margin: 0 0 8px; }
+.ann-full img { max-width: 100%; height: auto; }
+.ann-full a { color: var(--ann-maroon); }
+.ann-full table { max-width: 100%; display: block; overflow-x: auto; }
+.ann-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px 14px; flex-wrap: wrap; }
+.ann-meta { display: flex; align-items: center; gap: 6px 16px; flex-wrap: wrap; font-size: 12px; color: var(--sp-text-4); }
+.ann-meta span { display: inline-flex; align-items: center; gap: 4px; }
+.ann-meta .sp-ms { font-size: 14px; }
+.ann-meta .soon { color: var(--ann-urgent); }
+.ann-more {
+  display: inline-flex; align-items: center; gap: 4px; height: 30px; padding: 0 12px; border-radius: 8px;
+  border: 1px solid var(--ann-maroon-mid); background: var(--sp-card, #fff); color: var(--ann-maroon);
+  font: inherit; font-size: 12.5px; cursor: pointer;
+}
+.ann-more:hover { background: var(--ann-maroon-soft); }
+.ann-more:focus-visible { outline: 2px solid var(--ann-maroon); outline-offset: 2px; }
+.ann-more .sp-ms { font-size: 16px; transition: transform .2s; }
+.ann-more[aria-expanded="true"] .sp-ms { transform: rotate(180deg); }
+
+/* Past */
+.ann-past { background: var(--sp-card, #fff); border: 1px solid var(--ann-border); border-radius: 12px; overflow: hidden; margin-bottom: 24px; }
+.ann-past-item { border-top: 1px solid var(--ann-row); }
+.ann-past-item:first-child { border-top: none; }
+.ann-past-sum { display: flex; align-items: center; gap: 12px; padding: 12px 18px; cursor: pointer; list-style: none; }
+.ann-past-sum::-webkit-details-marker { display: none; }
+.ann-past-sum:focus-visible { outline: 2px solid var(--ann-maroon); outline-offset: -2px; }
+.ann-past-sum:hover { background: #fafbfc; }
+.ann-past-icon { font-size: 18px; color: var(--sp-text-4); flex-shrink: 0; }
+.ann-past-title { flex: 1; min-width: 0; font-size: 13.5px; color: var(--sp-text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ann-past-date { font-size: 12px; color: var(--sp-text-4); white-space: nowrap; }
+.ann-past-caret { font-size: 20px; color: var(--sp-text-4); transition: transform .2s; }
+.ann-past-item[open] .ann-past-caret { transform: rotate(180deg); }
+.ann-past-body { padding: 0 18px 14px 48px; }
+.ann-past { margin-bottom: 12px; }
+.ann-past-month {
+  padding: 8px 18px; background: #fafbfc; border-top: 1px solid var(--ann-row);
+  font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--sp-text-4);
+}
+.ann-past-month:first-child { border-top: none; }
+.ann-past-month + .ann-past-item { border-top: 1px solid var(--ann-row); }
+.ann-past-empty { padding: 18px; text-align: center; font-size: 13px; color: var(--sp-text-4); }
+.ann-past-more { display: flex; justify-content: center; gap: 8px; margin-bottom: 24px; }
+
+/* States */
+.ann-empty { background: var(--sp-card, #fff); border: 1px solid var(--ann-border); border-radius: 12px; padding: 40px 24px; text-align: center; margin-bottom: 24px; }
+.ann-empty-icon { width: 64px; height: 64px; border-radius: 18px; background: var(--ann-maroon-soft); color: var(--ann-maroon); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 14px; }
+.ann-empty-icon .sp-ms { font-size: 32px; }
+.ann-empty-title { font-size: 17px; color: var(--sp-text-1); margin: 0 0 6px; }
+.ann-empty-sub { font-size: 13px; color: var(--sp-text-3); margin: 0 auto; max-width: 440px; line-height: 1.6; }
+.ann-empty .ann-more { margin-top: 14px; }
+
+@media (max-width: 640px) {
+  .ann-card { padding: 14px; gap: 12px; }
+  .ann-icon { width: 36px; height: 36px; border-radius: 10px; }
+  .ann-icon .sp-ms { font-size: 18px; }
+  .ann-count { margin-left: 0; }
+  .ann-past-sum { flex-wrap: wrap; }
+  .ann-past-title { white-space: normal; }
+  .ann-past-body { padding-left: 18px; }
+}
+</style>
+{% endblock %}
+
+{% macro when(days) -%}
+{{ 'Today' if days == 0 else ('Yesterday' if days == 1 else (days ~ ' days ago' if days < 7 else '')) }}
+{%- endmacro %}
+
 {% block content %}
 
-<div class="sp-page-header fade-in">
-  <h1 class="sp-page-title">Announcements</h1>
-  <p class="sp-page-sub">University notices and updates for you</p>
+{% if no_student %}
+<div class="sp-alert sp-alert-warning fade-in">
+  <span class="sp-ms">warning</span>
+  <div><strong>No student record found.</strong> Please contact the Registrar's Office.</div>
+</div>
+
+{% else %}
+
+<div class="ann-head fade-in" style="margin-bottom: 32px; margin-top: 10px; display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:16px;">
+  <div class="sp-page-header">
+    <h1 class="sp-page-title" style="font-size: 18px !important; font-weight: 700 !important;">Announcements</h1>
+  </div>
 </div>
 
 {% if portal_error %}
@@ -15,142 +171,226 @@
 </div>
 {% endif %}
 
-{# ── Stats ─────────────────────────────────────────────────────── #}
-<div class="sp-stat-grid fade-in" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px;">
-
-  <div class="sp-stat-card">
-    <div class="sp-stat-icon" style="background:#eff6ff;color:var(--sp-primary);">campaign</div>
-    <div>
-      <div class="sp-stat-label">Total</div>
-      <div class="sp-stat-value">{{ total_count or 0 }}</div>
-    </div>
+{# ── Active announcements ─────────────────────────────────────── #}
+{% if announcements %}
+<div class="ann-toolbar fade-in" role="search">
+  <div class="ann-search">
+    <span class="sp-ms" aria-hidden="true">search</span>
+    <label for="ann-q" class="ann-sr-only">Search announcements</label>
+    <input id="ann-q" class="ann-input" type="search" placeholder="Search announcements…" autocomplete="off">
   </div>
-
-  <div class="sp-stat-card">
-    <div class="sp-stat-icon" style="background:var(--sp-danger-bg);color:var(--sp-danger);">warning</div>
-    <div>
-      <div class="sp-stat-label">Urgent</div>
-      <div class="sp-stat-value" style="color:var(--sp-danger);">{{ urgent_count or 0 }}</div>
-    </div>
+  {% if categories | length > 1 %}
+  <div class="ann-cats" role="group" aria-label="Filter by category">
+    <button type="button" class="ann-cat" data-cat="" aria-pressed="true">All</button>
+    {% for c in categories %}<button type="button" class="ann-cat" data-cat="{{ c | e }}" aria-pressed="false">{{ c }}</button>{% endfor %}
   </div>
-
-  <div class="sp-stat-card">
-    <div class="sp-stat-icon" style="background:var(--sp-warning-bg);color:var(--sp-warning);">priority_high</div>
-    <div>
-      <div class="sp-stat-label">Important</div>
-      <div class="sp-stat-value" style="color:var(--sp-warning);">{{ important_count or 0 }}</div>
-    </div>
-  </div>
-
+  {% endif %}
+  <span class="ann-count" aria-live="polite"><strong id="ann-shown">{{ announcements | length }}</strong> / {{ announcements | length }} shown</span>
 </div>
 
-{# ── Announcement List ─────────────────────────────────────────── #}
-{% if announcements %}
-
-<div style="display:flex;flex-direction:column;gap:14px;" class="fade-in">
+<div class="ann-list" id="ann-list">
   {% for a in announcements %}
-
-  {% set border_color = "var(--sp-danger)" if a.priority == "Urgent" else ("var(--sp-warning)" if a.priority == "Important" else "var(--sp-primary)") %}
-  {% set icon_bg = "var(--sp-danger-bg)" if a.priority == "Urgent" else ("var(--sp-warning-bg)" if a.priority == "Important" else "#eff6ff") %}
-
-  <div class="sp-card" style="padding:20px;border-left:4px solid {{ border_color }};">
-    <div style="display:flex;align-items:flex-start;gap:16px;">
-
-      {# Icon #}
-      <div style="width:44px;height:44px;border-radius:12px;background:{{ icon_bg }};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-        <span style="font-family:'Material Symbols Outlined';font-size:22px;color:{{ border_color }};">{{ a.type_icon }}</span>
+  {% set pcls = 'p-urgent' if a.priority == 'Urgent' else ('p-important' if a.priority == 'Important' else '') %}
+  <article class="ann-card {{ pcls }} fade-in" data-priority="{{ a.priority }}" data-cat="{{ a.announcement_type | e }}" data-q="{{ a.search_text | e }}">
+    <div class="ann-icon"><span class="sp-ms" aria-hidden="true">{{ a.type_icon }}</span></div>
+    <div class="ann-body">
+      <div class="ann-title-row">
+        <h2 class="ann-title">{{ a.title }}</h2>
+        {% if a.is_new %}<span class="ann-tag ann-tag-new">New</span>{% endif %}
+        {% if a.priority == 'Urgent' %}<span class="ann-tag ann-tag-urgent"><span class="sp-ms" aria-hidden="true">warning</span>Urgent</span>
+        {% elif a.priority == 'Important' %}<span class="ann-tag ann-tag-important"><span class="sp-ms" aria-hidden="true">priority_high</span>Important</span>{% endif %}
+        <span class="ann-tag ann-tag-type">{{ a.announcement_type }}</span>
       </div>
 
-      {# Content #}
-      <div style="flex:1;min-width:0;">
+      {% if a.preview %}<p class="ann-text" id="ann-prev-{{ loop.index }}">{{ a.preview }}</p>{% endif %}
+      {% if a.has_more %}<div class="ann-full is-hidden" id="ann-full-{{ loop.index }}">{{ a.content }}</div>{% endif %}
 
-        {# Title row #}
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
-          <div style="font-weight:700;font-size:15px;color:var(--sp-text-1);">{{ a.title }}</div>
-          {% if a.priority == "Urgent" %}
-            <span class="sp-badge sp-badge-fail" style="font-size:10px;padding:2px 8px;">URGENT</span>
-          {% elif a.priority == "Important" %}
-            <span class="sp-badge sp-badge-pend" style="font-size:10px;padding:2px 8px;">IMPORTANT</span>
+      <div class="ann-foot">
+        <div class="ann-meta">
+          <span title="{{ frappe.utils.formatdate(a.publish_date, 'd MMM yyyy') }}"><span class="sp-ms" aria-hidden="true">calendar_today</span>
+            {{ frappe.utils.formatdate(a.publish_date, "d MMM yyyy") }}{% if when(a.days_ago) %} · {{ when(a.days_ago) }}{% endif %}
+          </span>
+          {% if a.days_left is not none %}
+          <span class="{{ 'soon' if a.days_left <= 2 }}"><span class="sp-ms" aria-hidden="true">event_busy</span>
+            {% if a.days_left == 0 %}Expires today{% elif a.days_left == 1 %}Expires tomorrow{% elif a.days_left <= 7 %}Expires in {{ a.days_left }} days{% else %}Until {{ frappe.utils.formatdate(a.expiry_date, "d MMM yyyy") }}{% endif %}
+          </span>
           {% endif %}
-          <span class="sp-badge" style="background:#eff6ff;color:var(--sp-primary);font-size:10px;padding:2px 8px;">{{ a.announcement_type or "General" }}</span>
-        </div>
-
-        {# Preview text #}
-        <div id="preview-{{ loop.index }}" style="font-size:13px;color:var(--sp-text-2);line-height:1.65;margin-bottom:10px;">
-          {{ a.content | striptags | truncate(250) }}
-        </div>
-
-        {# Full content (hidden) #}
-        <div id="full-{{ loop.index }}" style="display:none;font-size:13px;color:var(--sp-text-2);line-height:1.7;margin-bottom:10px;">
-          {{ a.content }}
-        </div>
-
-        {# Footer row #}
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-          <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
-            <span style="font-size:12px;color:var(--sp-text-4);display:flex;align-items:center;gap:4px;">
-              <span style="font-family:'Material Symbols Outlined';font-size:14px;">calendar_today</span>
-              {{ frappe.utils.formatdate(a.publish_date, "d MMM yyyy") }}
-            </span>
-            {% if a.expiry_date %}
-            <span style="font-size:12px;color:var(--sp-text-4);display:flex;align-items:center;gap:4px;">
-              <span style="font-family:'Material Symbols Outlined';font-size:14px;">event_busy</span>
-              Expires {{ frappe.utils.formatdate(a.expiry_date, "d MMM yyyy") }}
-            </span>
-            {% endif %}
-            {% if a.target_audience != "All Students" %}
-            <span style="font-size:12px;color:var(--sp-primary);display:flex;align-items:center;gap:4px;">
-              <span style="font-family:'Material Symbols Outlined';font-size:14px;">group</span>
-              {{ a.target_audience }}
-            </span>
-            {% endif %}
-          </div>
-          {% if a.content | length > 250 %}
-          <button onclick="toggleAnn({{ loop.index }})" id="btn-{{ loop.index }}"
-            class="sp-btn sp-btn-outline sp-btn-sm">
-            <span style="font-family:'Material Symbols Outlined';font-size:14px;" id="btn-icon-{{ loop.index }}">expand_more</span>
-            <span id="btn-text-{{ loop.index }}">Read More</span>
-          </button>
+          {% if a.target_audience and a.target_audience != 'All Students' %}
+          <span><span class="sp-ms" aria-hidden="true">group</span>{{ 'For you' if a.target_audience == 'Specific Student(s)' else a.target_audience }}</span>
           {% endif %}
         </div>
-
+        {% if a.has_more %}
+        <button type="button" class="ann-more" data-toggle="{{ loop.index }}" aria-expanded="false" aria-controls="ann-full-{{ loop.index }}">
+          <span class="ann-more-lbl">Read more</span><span class="sp-ms" aria-hidden="true">expand_more</span>
+        </button>
+        {% endif %}
       </div>
     </div>
-  </div>
-
+  </article>
   {% endfor %}
 </div>
 
+<div class="ann-empty is-hidden" id="ann-no-match" role="status">
+  <div class="ann-empty-icon"><span class="sp-ms" aria-hidden="true">filter_alt_off</span></div>
+  <p class="ann-empty-title">No announcements match</p>
+  <p class="ann-empty-sub">Try a different search term or category.</p>
+  <button type="button" class="ann-more" id="ann-reset"><span class="sp-ms" aria-hidden="true">restart_alt</span>Reset filters</button>
+</div>
+
 {% else %}
-<div class="sp-card fade-in" style="padding:0;overflow:hidden;">
-  <div class="sp-empty">
-    <span class="sp-ms">campaign</span>
-    <p class="sp-empty-title">No Announcements</p>
-    <p class="sp-empty-sub">There are no active announcements at this time. Check back later.</p>
-  </div>
+<div class="ann-empty fade-in">
+  <div class="ann-empty-icon"><span class="sp-ms" aria-hidden="true">notifications_off</span></div>
+  <p class="ann-empty-title">You're all caught up</p>
+  <p class="ann-empty-sub">There are no active announcements right now. New notices from the University will appear here{% if past_announcements %}, and recent ones are listed below{% endif %}.</p>
 </div>
 {% endif %}
 
+{# ── Past announcements (grouped by month, paged) ─────────────── #}
+{% if past_announcements %}
+{% set _paged = past_announcements | length > past_page_size %}
+<div class="ann-section-title fade-in">
+  <h2><span class="sp-ms" aria-hidden="true">history</span>Past Announcements</h2>
+  <span class="ann-section-sub">{{ past_announcements | length }} expired in the last {{ archive_days }} days</span>
+</div>
+
+{% if _paged %}
+<div class="ann-toolbar fade-in" role="search" style="padding:10px 14px;">
+  <div class="ann-search">
+    <span class="sp-ms" aria-hidden="true">search</span>
+    <label for="ann-past-q" class="ann-sr-only">Search past announcements</label>
+    <input id="ann-past-q" class="ann-input" type="search" placeholder="Search past announcements…" autocomplete="off">
+  </div>
+  <span class="ann-count" aria-live="polite">Showing <strong id="ann-past-shown">{{ past_page_size }}</strong> of <span id="ann-past-total">{{ past_announcements | length }}</span></span>
+</div>
+{% endif %}
+
+<div class="ann-past fade-in" id="ann-past">
+  {% set _ns = namespace(month='') %}
+  {% for a in past_announcements %}
+  {% if a.month_label != _ns.month %}{% set _ns.month = a.month_label %}
+  <div class="ann-past-month" data-month="{{ a.month_label | e }}">{{ a.month_label }}</div>
+  {% endif %}
+  <details class="ann-past-item{{ ' is-hidden' if loop.index > past_page_size }}" data-month="{{ a.month_label | e }}" data-q="{{ a.search_text | e }}">
+    <summary class="ann-past-sum">
+      <span class="sp-ms ann-past-icon" aria-hidden="true">{{ a.type_icon }}</span>
+      <span class="ann-past-title">{{ a.title }}</span>
+      {% if a.priority != 'Normal' %}<span class="ann-tag {{ 'ann-tag-urgent' if a.priority == 'Urgent' else 'ann-tag-important' }}">{{ a.priority }}</span>{% endif %}
+      <span class="ann-past-date">{{ frappe.utils.formatdate(a.publish_date, "d MMM") }} – {{ frappe.utils.formatdate(a.expiry_date, "d MMM yyyy") }}</span>
+      <span class="sp-ms ann-past-caret" aria-hidden="true">expand_more</span>
+    </summary>
+    <div class="ann-past-body">
+      <div class="ann-full" style="margin:0;">{{ a.content or a.preview or '—' }}</div>
+    </div>
+  </details>
+  {% endfor %}
+  <div class="ann-past-empty is-hidden" id="ann-past-none" role="status">No past announcements match your search.</div>
+</div>
+
+{% if _paged %}
+<div class="ann-past-more fade-in">
+  <button type="button" class="ann-more" id="ann-past-more">
+    <span class="sp-ms" aria-hidden="true">expand_more</span><span id="ann-past-more-lbl">Show more</span>
+  </button>
+  <button type="button" class="ann-more is-hidden" id="ann-past-less">
+    <span class="sp-ms" aria-hidden="true" style="transform:rotate(180deg);">expand_more</span>Show less
+  </button>
+</div>
+{% endif %}
+{% endif %}
+
+{% endif %}{# end no_student #}
 {% endblock %}
 
 {% block extra_js %}
 <script>
-function toggleAnn(i) {
-  var preview = document.getElementById('preview-' + i);
-  var full    = document.getElementById('full-' + i);
-  var icon    = document.getElementById('btn-icon-' + i);
-  var text    = document.getElementById('btn-text-' + i);
-  if (full.style.display === 'none') {
-    preview.style.display = 'none';
-    full.style.display = 'block';
-    icon.textContent = 'expand_less';
-    text.textContent = 'Show Less';
-  } else {
-    preview.style.display = 'block';
-    full.style.display = 'none';
-    icon.textContent = 'expand_more';
-    text.textContent = 'Read More';
+(function () {
+  'use strict';
+  var list = document.getElementById('ann-list');
+
+  /* ── Read more / less ─────────────────────────────────────────── */
+  document.querySelectorAll('[data-toggle]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var i = btn.getAttribute('data-toggle');
+      var prev = document.getElementById('ann-prev-' + i);
+      var full = document.getElementById('ann-full-' + i);
+      if (!full) return;
+      var open = btn.getAttribute('aria-expanded') === 'true';
+      full.classList.toggle('is-hidden', open);
+      if (prev) prev.classList.toggle('is-hidden', !open);
+      btn.setAttribute('aria-expanded', open ? 'false' : 'true');
+      btn.querySelector('.ann-more-lbl').textContent = open ? 'Read more' : 'Show less';
+    });
+  });
+
+  /* ── Past: paging ("Show more") + search ──────────────────────── */
+  (function () {
+    var box = document.getElementById('ann-past');
+    var more = document.getElementById('ann-past-more');
+    if (!box || !more) return;
+    var PAGE = {{ past_page_size | int }};
+    var items = Array.prototype.slice.call(box.querySelectorAll('.ann-past-item'));
+    var months = box.querySelectorAll('.ann-past-month');
+    var less = document.getElementById('ann-past-less');
+    var lbl = document.getElementById('ann-past-more-lbl');
+    var pq = document.getElementById('ann-past-q');
+    var shownEl = document.getElementById('ann-past-shown');
+    var totalEl = document.getElementById('ann-past-total');
+    var none = document.getElementById('ann-past-none');
+    var limit = PAGE;
+
+    function render() {
+      var term = (pq && pq.value || '').trim().toLowerCase();
+      var matches = items.filter(function (el) { return !term || el.getAttribute('data-q').indexOf(term) > -1; });
+      var visibleMonths = {};
+      items.forEach(function (el) { el.classList.add('is-hidden'); });
+      matches.slice(0, limit).forEach(function (el) {
+        el.classList.remove('is-hidden');
+        visibleMonths[el.getAttribute('data-month')] = true;
+      });
+      months.forEach(function (m) { m.classList.toggle('is-hidden', !visibleMonths[m.getAttribute('data-month')]); });
+      var shown = Math.min(limit, matches.length), left = matches.length - shown;
+      shownEl.textContent = shown;
+      totalEl.textContent = matches.length;
+      none.classList.toggle('is-hidden', matches.length > 0);
+      more.classList.toggle('is-hidden', left <= 0);
+      lbl.textContent = 'Show ' + Math.min(PAGE * 2, left) + ' more';
+      less.classList.toggle('is-hidden', limit <= PAGE || matches.length <= PAGE);
+    }
+    more.addEventListener('click', function () { limit += PAGE * 2; render(); });
+    less.addEventListener('click', function () {
+      limit = PAGE; render();
+      box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    if (pq) pq.addEventListener('input', function () { limit = PAGE; render(); });
+    render();
+  }());
+
+  if (!list) return;
+
+  /* ── Filters: search + category ───────── */
+  var q = document.getElementById('ann-q');
+  var shown = document.getElementById('ann-shown');
+  var noMatch = document.getElementById('ann-no-match');
+  var cats = document.querySelectorAll('.ann-cat');
+  var state = { cat: '' };
+
+  function apply() {
+    var term = (q.value || '').trim().toLowerCase(), n = 0;
+    list.querySelectorAll('.ann-card').forEach(function (el) {
+      var ok = (!state.cat || el.getAttribute('data-cat') === state.cat)
+            && (!term || el.getAttribute('data-q').indexOf(term) > -1);
+      el.classList.toggle('is-hidden', !ok);
+      if (ok) n++;
+    });
+    shown.textContent = n;
+    noMatch.classList.toggle('is-hidden', n > 0);
+    cats.forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-cat') === state.cat ? 'true' : 'false'); });
   }
-}
+  q.addEventListener('input', apply);
+  cats.forEach(function (b) { b.addEventListener('click', function () { state.cat = b.getAttribute('data-cat'); apply(); }); });
+  document.getElementById('ann-reset').addEventListener('click', function () {
+    q.value = ''; state.cat = ''; apply();
+  });
+}());
 </script>
 {% endblock %}

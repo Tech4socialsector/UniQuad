@@ -1,5 +1,5 @@
 import frappe
-from frappe.utils import today
+from frappe.utils import getdate, nowdate
 
 no_cache = 1
 
@@ -51,7 +51,8 @@ def get_context(context):
 		if resolved_hostel:
 			h = frappe.db.get_value(
 				"Hostel", resolved_hostel,
-				["hostel_name", "hostel_code", "hostel_type", "total_rooms", "total_capacity"],
+				["hostel_name", "hostel_code", "hostel_type", "total_rooms", "total_capacity",
+				 "hall_leader_name", "hall_leader_contact", "hall_leader_email"],
 				as_dict=True,
 			) or frappe._dict()
 			hostel_info.update(h)
@@ -74,10 +75,27 @@ def get_context(context):
 		if resolved_room:
 			r = frappe.db.get_value(
 				"Hostel Room", resolved_room,
-				["room_number", "floor", "room_type", "capacity"],
+				["room_number", "floor", "room_type", "capacity", "occupied"],
 				as_dict=True,
 			) or frappe._dict()
 			room_info.update(r)
+			residents = set(frappe.get_all(
+				"Student Master",
+				filters={"hostel_room": resolved_room, "is_hosteller": 1},
+				pluck="name",
+				ignore_permissions=True,
+			))
+			residents.update(frappe.get_all(
+				"Student Hostel Profile",
+				filters={"current_room": resolved_room, "status": "Active"},
+				pluck="student",
+				ignore_permissions=True,
+			))
+			residents.add(student_name)
+			capacity = int(room_info.get("capacity") or 0)
+			occupied = max(int(room_info.get("occupied") or 0), len(residents))
+			room_info.capacity = capacity
+			room_info.occupied = min(occupied, capacity) if capacity else occupied
 		context.room_info = room_info
 
 		# ── Bed Details ───────────────────────────────────────────
@@ -89,10 +107,8 @@ def get_context(context):
 				as_dict=True,
 			) or frappe._dict()
 			bed_info.update(b)
-		# Fall back to key_number from Student Master if bed name not resolved
-		if not bed_info.get("bed_no") and student.get("key_number"):
-			bed_info.bed_no = student.key_number
 		context.bed_info = bed_info
+		context.key_number = student.get("key_number") or ""
 
 		# ── Active Allocation ─────────────────────────────────────
 		allocation = frappe._dict()
@@ -113,6 +129,29 @@ def get_context(context):
 			allocation.status            = student.hostel_status or ""
 			allocation.remarks           = student.hostel_remarks or ""
 		context.allocation = allocation
+
+		# ── Tenure + move-in checklist ────────────────────────────
+		today = getdate(nowdate())
+		start = getdate(allocation.from_date) if allocation.from_date else None
+		context.tenure = _tenure(start, today) if start and start <= today else ""
+		end = getdate(allocation.to_date) if allocation.to_date else None
+		context.days_to_end = (end - today).days if end else None
+
+		steps = [
+			{"label": "Room allotted", "done": bool(resolved_room),
+			 "done_note": frappe.utils.formatdate(allocation.from_date, "d MMM yyyy") if allocation.from_date else "",
+			 "todo_note": "Awaiting room allotment from the Hostel Office"},
+			{"label": "Residence agreement signed", "done": bool(allocation.agreement_signed),
+			 "done_note": "Signed", "todo_note": "Sign the residence agreement at the Hostel Office"},
+			{"label": "Keys handed over", "done": bool(allocation.keys_handed_over),
+			 "done_note": f"Key no. {context.key_number}" if context.key_number else "Collected",
+			 "todo_note": "Collect your room keys from the warden"},
+			{"label": "Bed assigned", "done": bool(bed_info.get("bed_no")),
+			 "done_note": f"Bed {bed_info.get('bed_no')}" if bed_info.get("bed_no") else "",
+			 "todo_note": "Your bed will be assigned by the warden"},
+		]
+		context.checklist = steps
+		context.checklist_done = sum(1 for st in steps if st["done"])
 
 		# ── Complaints ────────────────────────────────────────────
 		complaints = frappe.get_all(
@@ -154,9 +193,35 @@ def get_context(context):
 	except Exception as e:
 		frappe.log_error(f"Hostel portal error: {e}", "Student Portal")
 		context.portal_error = str(e)
+		# Keep the template safe if we failed part-way through
+		for key in ("profile", "hostel_info", "room_info", "bed_info", "allocation"):
+			if not context.get(key):
+				context[key] = frappe._dict()
+		context.setdefault("checklist", [])
+		context.setdefault("checklist_done", 0)
+		context.setdefault("complaints", [])
+		context.setdefault("key_number", "")
+		context.setdefault("tenure", "")
+		context.setdefault("days_to_end", None)
 		_set_nav_defaults(context)
 
 	return context
+
+
+
+def _tenure(start, today):
+	"""'3 months', '1 year 2 months', '12 days' — how long the student has been a resident."""
+	months = (today.year - start.year) * 12 + (today.month - start.month) - (1 if today.day < start.day else 0)
+	if months <= 0:
+		days = (today - start).days
+		return f"{days} day{'s' if days != 1 else ''}" if days else "Since today"
+	years, months = divmod(months, 12)
+	parts = []
+	if years:
+		parts.append(f"{years} year{'s' if years != 1 else ''}")
+	if months:
+		parts.append(f"{months} month{'s' if months != 1 else ''}")
+	return " ".join(parts)
 
 
 @frappe.whitelist()

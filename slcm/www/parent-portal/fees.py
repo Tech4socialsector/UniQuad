@@ -65,6 +65,10 @@ def get_context(context):
 
         # Fee structure components for programme-level breakdown card
         fs_components = []
+        # Only the table matching the student's nationality (Indian by default)
+        _fs_parentfield = ("fee_components_for_foreign"
+                           if (sm.get("nationality") or "Indian").strip().lower() not in ("indian", "india")
+                           else "fee_components_for_indian")
         if sm.fee_structure:
             try:
                 fs_components = frappe.db.sql(
@@ -73,9 +77,10 @@ def get_context(context):
                            fcc.is_taxable, fcc.tax_rate, fcc.tax_amount
                     FROM `tabFee Component Child` fcc
                     WHERE fcc.parent = %s AND fcc.parenttype = 'Fee Structure'
+                      AND fcc.parentfield = %s
                     ORDER BY fcc.idx
                     """,
-                    sm.fee_structure,
+                    (sm.fee_structure, _fs_parentfield),
                     as_dict=True,
                 )
             except Exception:
@@ -350,7 +355,7 @@ def get_context(context):
                 "Fee Concession",
                 filters={"student": student_name},
                 fields=[
-                    "name", "concession_type", "waiver_mode", "waiver_value",
+                    "name", "concession_type", "waiver_value",
                     "waiver_amount", "original_amount", "fee_component",
                     "status", "reason", "approved_by", "approved_on",
                 ],
@@ -644,7 +649,7 @@ def _build_view_model(context, errors):
     rows = []
     for inv in payable_invoices:
         rows.append(frappe._dict(
-            component=inv.label, sub=inv.name, kind="invoice",
+            component=inv.label, sub=inv.name, kind="invoice", demand_type="Academic",
             due_date=inv.due_date, due_date_fmt=inv.due_date_fmt,
             amount_fmt=inv.formatted_outstanding, status=inv.display_status,
             is_overdue=bool(inv.is_overdue), academic_year=inv.academic_year or "",
@@ -655,17 +660,45 @@ def _build_view_model(context, errors):
         overdue = d.status == "Overdue" or d.is_demand_overdue
         rows.append(frappe._dict(
             component=d.fee_component or d.description or "Additional charge",
-            sub="Additional charge", kind="demand",
+            sub="Additional charge", kind="demand", demand_type=d.demand_type or "",
             due_date=d.due_date, due_date_fmt=d.due_date_fmt,
             amount_fmt=d.formatted_outstanding,
             status="Overdue" if (d.is_demand_overdue and d.status == "Pending") else d.status,
             is_overdue=bool(overdue), days_overdue=d.days_overdue,
             academic_year=d.academic_year or "",
         ))
-    rows.sort(key=lambda r: (r.due_date is None, frappe.utils.getdate(r.due_date) if r.due_date else today))
-    context.outstanding_rows = rows
-    context.outstanding_overdue_count = sum(1 for r in rows if r.is_overdue)
-    context.outstanding_pending_count = len(rows) - context.outstanding_overdue_count
+    # Re-exam fees and hostel fines, paid ones too (with their receipt)
+    _rex, _fines = [], []
+    try:
+        from slcm.slcm.fee.portal_charges import get_re_exams_and_fines, re_exam_and_fine_rows
+
+        _rex, _fines = get_re_exams_and_fines(context.ward_student_name)
+        rows += re_exam_and_fine_rows(context.ward_student_name, _rex, _fines)
+    except Exception:
+        _rex, _fines = [], []
+        frappe.log_error(frappe.get_traceback(), "Parent Portal Fees: re-exam / fine rows")
+        errors["re_exams"] = True
+
+    # Unpaid first (by due date), then paid re-exam fees / hostel fines
+    rows.sort(key=lambda r: (
+        bool(r.get("is_paid")), r.due_date is None,
+        frappe.utils.getdate(r.due_date) if r.due_date else today,
+    ))
+    context.summary_rows = rows
+    from slcm.slcm.fee.portal_charges import charge_cards, charge_rows, demand_type_cards
+
+    context.demand_type_cards = demand_type_cards(context.fee_demands)
+    # One list of every charge (paid ones too) and the Overall / Academic / Non Academic cards
+    try:
+        context.charge_rows = charge_rows(context.ward_student_name, context.fee_demands, invoices, _rex, _fines)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "Portal Fees: charge rows")
+        context.charge_rows = []
+        errors["demands"] = True
+    context.charge_cards = charge_cards(context.charge_rows)
+    context.outstanding_rows = [r for r in rows if not r.get("is_paid")]
+    context.outstanding_overdue_count = sum(1 for r in context.outstanding_rows if r.is_overdue)
+    context.outstanding_pending_count = len(context.outstanding_rows) - context.outstanding_overdue_count
 
     # ── Payment history: invoice payments + receipts, de-duplicated ─────────
     history = []
@@ -793,6 +826,10 @@ def _set_defaults(context):
     context.demand_outstanding      = 0.0
     context.demand_overdue          = 0.0
     context.outstanding_rows        = []
+    context.summary_rows            = []
+    context.demand_type_cards       = []
+    context.charge_rows             = []
+    context.charge_cards            = []
     context.outstanding_overdue_count = 0
     context.outstanding_pending_count = 0
     context.payment_history         = []

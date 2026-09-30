@@ -2,43 +2,44 @@
  "actions": [],
  "allow_import": 1,
  "autoname": "FD-.YYYY.-.#####",
- "creation": "2026-06-02 16:51:46.498830",
+ "creation": "2026-09-25 09:28:43.806257",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "section_demand",
   "student",
+  "student_email",
   "student_name",
-  "programme",
-  "program",
-  "column_break_1",
   "academic_year",
-  "demand_type",
   "fee_component",
-  "description",
-  "section_dates",
-  "demand_date",
-  "due_date",
-  "column_break_2",
-  "status",
-  "is_refundable",
-  "trigger_ref_doctype",
-  "trigger_ref_name",
-  "section_amounts",
+  "column_break_1",
   "original_amount",
   "waiver_amount",
   "penalty_amount",
   "net_payable",
-  "column_break_3",
+  "column_break_2",
+  "demand_date",
+  "due_date",
+  "status",
+  "description",
+  "section_amounts",
   "paid_amount",
   "credit_adjusted",
   "outstanding_amount",
+  "column_break_3",
+  "refunded_amount",
   "moved_to_excess_amount",
-  "section_reminders",
-  "reminder_1_sent",
-  "reminder_2_sent",
-  "overdue_notice_sent",
-  "section_payment_details",
   "last_payment_date",
+  "section_additional",
+  "programme",
+  "program",
+  "demand_type",
+  "is_refundable",
+  "column_break_additional",
+  "trigger_ref_doctype",
+  "trigger_ref_name",
+  "remarks",
+  "section_payment_details",
   "payment_mode",
   "column_break_pay",
   "transaction_number",
@@ -48,19 +49,33 @@
   "account_number",
   "column_break_bank",
   "ifsc_code",
-  "section_remarks",
-  "remarks"
+  "section_reminders",
+  "reminder_1_sent",
+  "reminder_2_sent",
+  "overdue_notice_sent"
  ],
  "fields": [
+  {
+   "fieldname": "section_demand",
+   "fieldtype": "Section Break",
+   "label": "Fee Demand"
+  },
   {
    "fieldname": "student",
    "fieldtype": "Link",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Student",
+   "label": "Student ID",
    "options": "Student Master",
    "reqd": 1,
    "search_index": 1
+  },
+  {
+   "fieldname": "student_email",
+   "fieldtype": "Data",
+   "label": "Student Email ID",
+   "options": "Email",
+   "read_only": 1
   },
   {
    "fetch_from": "student.first_name",
@@ -71,41 +86,14 @@
    "read_only": 1
   },
   {
-   "fieldname": "programme",
-   "fieldtype": "Link",
-   "in_standard_filter": 1,
-   "label": "Batch",
-   "options": "Batch"
-  },
-  {
-   "fieldname": "program",
-   "fieldtype": "Link",
-   "in_standard_filter": 1,
-   "label": "Programme",
-   "options": "Programme"
-  },
-  {
-   "fieldname": "column_break_1",
-   "fieldtype": "Column Break"
-  },
-  {
+   "description": "Defaults to the student's academic year.",
    "fieldname": "academic_year",
    "fieldtype": "Link",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Academic Year",
    "options": "Academic Year",
-   "reqd": 1,
    "search_index": 1
-  },
-  {
-   "fieldname": "demand_type",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Demand Type",
-   "options": "\nAcademic\nExamination\nService\nFine\nHostel\nDeposit\nOther",
-   "reqd": 1
   },
   {
    "fieldname": "fee_component",
@@ -118,15 +106,41 @@
    "search_index": 1
   },
   {
-   "fieldname": "description",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Description"
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
   },
   {
-   "fieldname": "section_dates",
-   "fieldtype": "Section Break",
-   "label": "Dates & Status"
+   "fieldname": "original_amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Original Amount",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "waiver_amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Waiver Amount"
+  },
+  {
+   "default": "0",
+   "description": "Fine/late fee amount added on top of the Original Amount.",
+   "fieldname": "penalty_amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Penalty Amount"
+  },
+  {
+   "fieldname": "net_payable",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Net Payable",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
   },
   {
    "default": "Today",
@@ -145,10 +159,6 @@
    "search_index": 1
   },
   {
-   "fieldname": "column_break_2",
-   "fieldtype": "Column Break"
-  },
-  {
    "default": "Pending",
    "fieldname": "status",
    "fieldtype": "Select",
@@ -160,62 +170,17 @@
    "search_index": 1
   },
   {
-   "default": "0",
-   "fieldname": "is_refundable",
-   "fieldtype": "Check",
-   "label": "Is Refundable"
+   "fieldname": "description",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Description"
   },
   {
-   "fieldname": "trigger_ref_doctype",
-   "fieldtype": "Link",
-   "label": "Source DocType",
-   "options": "DocType",
-   "read_only": 1
-  },
-  {
-   "fieldname": "trigger_ref_name",
-   "fieldtype": "Dynamic Link",
-   "label": "Source Document",
-   "options": "trigger_ref_doctype",
-   "read_only": 1
-  },
-  {
+   "collapsible": 1,
+   "collapsible_depends_on": "eval:!doc.__islocal",
    "fieldname": "section_amounts",
    "fieldtype": "Section Break",
-   "label": "Amount Details"
-  },
-  {
-   "fieldname": "original_amount",
-   "fieldtype": "Currency",
-   "in_list_view": 1,
-   "label": "Original Amount",
-   "reqd": 1
-  },
-  {
-   "default": "0",
-   "fieldname": "waiver_amount",
-   "fieldtype": "Currency",
-   "label": "Waiver Amount",
-   "in_list_view": 1
-  },
-  {
-   "default": "0",
-   "description": "Fine/late fee amount added on top of the Original Amount.",
-   "fieldname": "penalty_amount",
-   "fieldtype": "Currency",
-   "in_list_view": 1,
-   "label": "Penalty Amount"
-  },
-  {
-   "fieldname": "net_payable",
-   "fieldtype": "Currency",
-   "in_list_view": 1,
-   "label": "Net Payable",
-   "read_only": 1
-  },
-  {
-   "fieldname": "column_break_3",
-   "fieldtype": "Column Break"
+   "label": "Payment Summary"
   },
   {
    "default": "0",
@@ -240,31 +205,96 @@
    "read_only": 1
   },
   {
-   "fieldname": "refunded_amount",
-   "fieldtype": "Currency",
-   "label": "Refunded Amount",
-   "read_only": 1,
-   "default": "0",
-   "in_list_view": 1
+   "fieldname": "column_break_3",
+   "fieldtype": "Column Break"
   },
   {
+   "default": "0",
+   "fieldname": "refunded_amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Refunded Amount",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "description": "Amount paid on this demand that was later moved to the student's excess (Student Credit Note).",
    "fieldname": "moved_to_excess_amount",
    "fieldtype": "Currency",
    "label": "Moved to Excess",
-   "read_only": 1,
-   "default": "0",
-   "description": "Amount paid on this demand that was later moved to the student's excess (Student Credit Note)."
-  },
-  {
-   "fieldname": "section_payment_details",
-   "fieldtype": "Section Break",
-   "label": "Payment Details"
+   "read_only": 1
   },
   {
    "fieldname": "last_payment_date",
    "fieldtype": "Date",
    "label": "Last Payment Date",
    "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_additional",
+   "fieldtype": "Section Break",
+   "label": "Additional Details"
+  },
+  {
+   "fieldname": "programme",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Batch",
+   "options": "Batch"
+  },
+  {
+   "fieldname": "program",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Programme",
+   "options": "Programme"
+  },
+  {
+   "description": "From the Fee Component's Demand Type.",
+   "fieldname": "demand_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Demand Type",
+   "options": "\nAcademic\nNon Academic",
+   "fetch_from": "fee_component.demand_type",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_refundable",
+   "fieldtype": "Check",
+   "label": "Is Refundable"
+  },
+  {
+   "fieldname": "column_break_additional",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "trigger_ref_doctype",
+   "fieldtype": "Link",
+   "label": "Source DocType",
+   "options": "DocType",
+   "read_only": 1
+  },
+  {
+   "fieldname": "trigger_ref_name",
+   "fieldtype": "Dynamic Link",
+   "label": "Source Document",
+   "options": "trigger_ref_doctype",
+   "read_only": 1
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_payment_details",
+   "fieldtype": "Section Break",
+   "label": "Payment Details"
   },
   {
    "fieldname": "payment_mode",
@@ -289,6 +319,7 @@
    "read_only": 1
   },
   {
+   "collapsible": 1,
    "fieldname": "section_bank_details",
    "fieldtype": "Section Break",
    "label": "Bank Details"
@@ -341,20 +372,10 @@
    "fieldtype": "Check",
    "label": "Overdue Notice Sent",
    "read_only": 1
-  },
-  {
-   "fieldname": "section_remarks",
-   "fieldtype": "Section Break",
-   "label": "Remarks"
-  },
-  {
-   "fieldname": "remarks",
-   "fieldtype": "Small Text",
-   "label": "Remarks"
   }
  ],
  "links": [],
- "modified": "2026-09-24 18:00:00.000000",
+ "modified": "2026-09-25 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Fee Demand",

@@ -11,22 +11,22 @@
 .rx-congrats-icon {
   width: 96px;
   height: 96px;
-  background: linear-gradient(135deg, #d1fae5, #6ee7b7);
+  background: linear-gradient(135deg, #fff0f2, #b5364a);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto 24px;
-  box-shadow: 0 8px 24px rgba(16,185,129,.25);
+  box-shadow: 0 8px 24px rgba(146,12,36,.25);
 }
 .rx-congrats-icon .sp-ms {
   font-size: 48px;
-  color: #059669;
+  color: #920c24;
 }
 .rx-congrats-title {
   font-size: 1.7rem;
   font-weight: 700;
-  color: #065f46;
+  color: #6b091a;
   margin-bottom: 10px;
 }
 .rx-congrats-sub {
@@ -40,15 +40,15 @@
 .rx-summary {
   display: flex;
   align-items: center;
-  gap: 10px;
-  background: #fef2f2;
-  border: 1px solid #fca5a5;
-  border-radius: 12px;
+  gap: 12px;
+  background: #fff;
+  border: 1px solid var(--sp-border);
+  border-radius: 8px;
   padding: 14px 20px;
   margin-bottom: 24px;
 }
-.rx-summary .sp-ms { color: #dc2626; font-size: 22px; }
-.rx-summary-text { color: #7f1d1d; font-size: .95rem; font-weight: 500; }
+.rx-summary .sp-ms { color: #ea580c; font-size: 24px; }
+.rx-summary-text { color: var(--sp-text-1); font-size: 14px; font-weight: 700; }
 
 /* ── Failed course cards ──────────────────────────────────────── */
 .rx-grid {
@@ -67,29 +67,32 @@
 }
 .rx-card:hover { box-shadow: 0 6px 24px rgba(0,0,0,.13); }
 .rx-card-top {
-  background: linear-gradient(135deg, #fee2e2, #fecaca);
+  background: #fff;
+  border-bottom: 1px solid var(--sp-border);
   padding: 18px 20px 14px;
-  border-bottom: 1px solid #fca5a5;
 }
 .rx-card-eyebrow {
   font-size: .72rem;
   font-weight: 600;
   letter-spacing: .06em;
   text-transform: uppercase;
-  color: #9ca3af;
+  color: rgba(255,255,255,.75);
   margin-bottom: 4px;
 }
 .rx-card-course-name {
   font-size: 1.05rem;
   font-weight: 700;
-  color: #111827;
+  color: #fff;
   margin-bottom: 6px;
   line-height: 1.3;
 }
 .rx-card-exam {
   font-size: .82rem;
-  color: #6b7280;
+  color: rgba(255,255,255,.85);
 }
+.rx-card-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--sp-text-4); margin-bottom: 6px; }
+.rx-card-course-name { font-size: 15px; font-weight: 700; color: var(--sp-text-1); margin-bottom: 4px; line-height: 1.3; }
+.rx-card-exam { font-size: 13.5px; color: var(--sp-text-3); }
 
 .rx-card-body { padding: 16px 20px; flex: 1; }
 
@@ -101,25 +104,21 @@
   font-size: .88rem;
   color: #374151;
 }
-.rx-meta-row .sp-ms { font-size: 17px; color: #9ca3af; }
+.rx-meta-row .sp-ms { font-size: 17px; color: var(--sp-primary, #920c24); }
 .rx-meta-label { font-weight: 600; min-width: 110px; color: #6b7280; }
 
 .rx-grade-badge {
   display: inline-block;
   padding: 3px 12px;
   border-radius: 99px;
-  font-size: .82rem;
-  font-weight: 700;
-  background: #fde8e8;
-  color: #dc2626;
-  border: 1px solid #fca5a5;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--sp-danger-bg, #fde8e8);
+  color: var(--sp-danger, #dc2626);
+  text-transform: capitalize;
 }
 
-.rx-fee-value {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: #1f2937;
-}
+.rx-fee-value { font-size: 13.5px; font-weight: 600; color: var(--sp-text-1); }
 
 .rx-deadline-pill {
   display: inline-flex;
@@ -129,21 +128,22 @@
   padding: 3px 10px;
   border-radius: 99px;
   font-weight: 600;
+  white-space: nowrap;
 }
 .rx-deadline-pill.active {
-  background: #d1fae5;
-  color: #065f46;
-  border: 1px solid #6ee7b7;
+  background: #fff0f2;
+  color: #6b091a;
+  border: 1px solid #b5364a;
 }
 .rx-deadline-pill.passed {
-  background: #fef3c7;
-  color: #92400e;
-  border: 1px solid #fde68a;
+  background: #fff0f2;
+  color: #920c24;
+  border: 1px solid #f5c6ce;
 }
 .rx-deadline-pill.none {
-  background: #f3f4f6;
-  color: #6b7280;
-  border: 1px solid #e5e7eb;
+  background: #fff0f2;
+  color: #920c24;
+  border: 1px solid #f5c6ce;
 }
 
 .rx-card-foot {
@@ -158,12 +158,12 @@
 .rx-btn-pay {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 9px 20px;
+  gap: 8px;
+  padding: 10px 20px;
   border-radius: 8px;
-  font-size: .88rem;
+  font-size: 13.5px;
   font-weight: 600;
-  background: var(--sp-primary, #1a56db);
+  background: var(--sp-primary, #b5364a);
   color: #fff;
   border: none;
   cursor: pointer;
@@ -171,38 +171,38 @@
   text-decoration: none;
 }
 .rx-btn-pay:hover {
-  background: var(--sp-primary-dark, #1e429f);
+  background: var(--sp-primary-dark, #920c24);
   transform: translateY(-1px);
 }
 .rx-btn-pay:active { transform: translateY(0); }
 .rx-btn-pay:disabled,
-.rx-btn-pay.disabled {
-  background: #9ca3af;
+.rx-btn-pay.disabled,
+.rx-btn-pay:disabled:hover,
+.rx-btn-pay.disabled:hover {
+  background: #fff0f2;
+  color: #920c24;
+  border: 1px solid #f5c6ce;
   cursor: not-allowed;
   transform: none;
 }
 
-.rx-no-setting {
-  font-size: .82rem;
-  color: #9ca3af;
-  font-style: italic;
-}
+.rx-no-setting { font-size: 13.5px; color: var(--sp-text-4); font-style: italic; }
 .rx-not-allowed {
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: .85rem;
   font-weight: 600;
-  color: #b45309;
-  background: #fef3c7;
-  border: 1px solid #fde68a;
+  color: #920c24;
+  background: #fff0f2;
+  border: 1px solid #f5c6ce;
   border-radius: 8px;
   padding: 8px 14px;
   width: 100%;
 }
 .rx-not-allowed .sp-ms {
   font-size: 18px;
-  color: #d97706;
+  color: #920c24;
   flex-shrink: 0;
 }
 </style>
@@ -218,9 +218,10 @@
 
 {% else %}
 
-<div class="sp-page-header fade-in">
-  <h1 class="sp-page-title">Re Examination</h1>
-  <p class="sp-page-sub">Failed courses eligible for re-examination</p>
+<div class="es-header-wrap fade-in" style="background: var(--sp-card, #fff); border-radius: 16px; padding: 24px 28px; margin-bottom: 22px; display: flex; align-items: center; gap: 16px; border: 1px solid var(--sp-border);">
+  <div>
+    <h1 class="sp-page-title" style="margin:0; font-size: 18px !important; font-weight: 700 !important; text-transform: none !important; color: var(--sp-text-1);">Re-examination</h1>
+  </div>
 </div>
 
 {% if portal_error %}
@@ -248,9 +249,7 @@
 <div class="rx-summary fade-in">
   <span class="sp-ms">warning</span>
   <span class="rx-summary-text">
-    You have <strong>{{ failed_count }}</strong>
-    failed course{{ 's' if failed_count != 1 else '' }} eligible for re-examination.
-    Review the details below and register before the deadline.
+    Courses eligible for Re-examination - {{ failed_count }}
   </span>
 </div>
 
@@ -263,11 +262,18 @@
      style="animation-delay:{{ loop.index0 * 0.06 }}s;">
 
   <div class="rx-card-top">
-    {% if fc.term %}
-    <div class="rx-card-eyebrow">{{ fc.term }}</div>
-    {% endif %}
-    <div class="rx-card-course-name">{{ fc.course_name }}</div>
-    <div class="rx-card-exam">{{ fc.exam_name }}</div>
+    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+      <div>
+        {% if fc.term %}
+        <div class="rx-card-eyebrow">{{ fc.term }}</div>
+        {% endif %}
+        <div class="rx-card-course-name">{{ fc.course_name }}</div>
+        <div class="rx-card-exam">{{ fc.exam_name }}</div>
+      </div>
+      <div style="width: 44px; height: 44px; border-radius: 50%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+        <span class="sp-ms" style="color: var(--sp-danger, #dc2626); font-size: 24px;">warning</span>
+      </div>
+    </div>
   </div>
 
   <div class="rx-card-body">
@@ -313,19 +319,19 @@
           {% if fc.days_remaining is defined and fc.days_remaining is not none %}
           <div style="margin-top:4px;">
             {% if fc.days_remaining == 0 %}
-            <span style="display:inline-flex;align-items:center;gap:4px;background:#fef2f2;border:1px solid #fecaca;color:#dc2626;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;">
+            <span style="display:inline-flex;align-items:center;gap:4px;background:#fff0f2;border:1px solid #f5c6ce;color:#920c24;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;">
               <span class="sp-ms" style="font-size:13px;">schedule</span> Closing Today!
             </span>
             {% elif fc.days_remaining == 1 %}
-            <span style="display:inline-flex;align-items:center;gap:4px;background:#fff7ed;border:1px solid #fed7aa;color:#ea580c;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;">
+            <span style="display:inline-flex;align-items:center;gap:4px;background:#fff0f2;border:1px solid #f5c6ce;color:#920c24;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;">
               <span class="sp-ms" style="font-size:13px;">schedule</span> Closes Tomorrow
             </span>
             {% elif fc.days_remaining <= 3 %}
-            <span style="display:inline-flex;align-items:center;gap:4px;background:#fff7ed;border:1px solid #fed7aa;color:#ea580c;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;">
+            <span style="display:inline-flex;align-items:center;gap:4px;background:#fff0f2;border:1px solid #f5c6ce;color:#920c24;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;">
               <span class="sp-ms" style="font-size:13px;">schedule</span> {{ fc.days_remaining }} days left
             </span>
             {% else %}
-            <span style="display:inline-flex;align-items:center;gap:4px;background:#f0fdf4;border:1px solid #86efac;color:#16a34a;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;">
+            <span style="display:inline-flex;align-items:center;gap:4px;background:#fff0f2;border:1px solid #f5c6ce;color:#920c24;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;">
               <span class="sp-ms" style="font-size:13px;">schedule</span> {{ fc.days_remaining }} days left
             </span>
             {% endif %}
@@ -384,12 +390,12 @@
         <span class="rx-deadline-pill none" style="margin-right:auto;">
           <span class="sp-ms" style="font-size:13px;">hourglass_top</span> Payment Processing…
         </span>
-        <button class="rx-btn-pay" onclick="window.location.reload();" style="background:#6b7280;">
+        <button type="button" class="rx-btn-pay" onclick="window.location.reload();">
           <span class="sp-ms">refresh</span> Refresh
         </button>
       {% elif fc.payment_status == "Payment Cancelled" %}
         {# Student cancelled the payment modal — allow retry #}
-        <span class="rx-deadline-pill none" style="margin-right:auto;color:#d97706;">
+        <span class="rx-deadline-pill none" style="margin-right:auto;color:#920c24;">
           <span class="sp-ms" style="font-size:13px;">cancel</span> Payment Cancelled
         </span>
         {% if fc.re_exam_fee %}
@@ -400,7 +406,7 @@
         {% endif %}
       {% elif fc.payment_status == "Pending" %}
         {# Cash payment registered — awaiting admin confirmation #}
-        <span class="rx-deadline-pill none" style="margin-right:auto;color:#0369a1;">
+        <span class="rx-deadline-pill none" style="margin-right:auto;color:#920c24;">
           <span class="sp-ms" style="font-size:13px;">store</span> Pay at Counter
         </span>
         <span style="font-size:11px;color:#64748b;">Visit admin office with ₹ {{ "{:,.0f}".format(fc.re_exam_fee) }} cash</span>
@@ -435,7 +441,7 @@
         </button>
         {% if sp_settings.enable_counter_payment_re_exam %}
         <button class="rx-btn-pay"
-                style="background:#0369a1;font-size:12px;padding:8px 14px;"
+                style="background:#920c24;font-size:12px;padding:8px 14px;"
                 onclick="rxPayAtCounter('{{ fc.exam_plan }}', '{{ fc.course }}', '{{ fc.course_name | replace("'", "\\'") }}', {{ fc.re_exam_fee }}, this)">
           <span class="sp-ms">store</span> Pay at Counter (Cash)
         </button>
@@ -480,14 +486,14 @@
     {# Body #}
     <div style="padding:24px 28px;">
       <div style="
-        background:#f0fdf4;border:1px solid #86efac;border-radius:10px;
+        background:#fff0f2;border:1px solid #f5c6ce;border-radius:10px;
         padding:14px 18px;margin-bottom:20px;
         display:flex;align-items:flex-start;gap:12px;">
-        <span class="sp-ms" style="font-size:22px;color:#16a34a;flex-shrink:0;margin-top:1px;">payments</span>
+        <span class="sp-ms" style="font-size:22px;color:#920c24;flex-shrink:0;margin-top:1px;">payments</span>
         <div>
-          <div style="font-size:.82rem;color:#15803d;font-weight:600;margin-bottom:2px;">Amount Due</div>
-          <div id="rx-counter-amount" style="font-size:1.5rem;font-weight:800;color:#14532d;"></div>
-          <div style="font-size:.75rem;color:#4ade80;margin-top:2px;">Cash payment only</div>
+          <div style="font-size:.82rem;color:#920c24;font-weight:600;margin-bottom:2px;">Amount Due</div>
+          <div id="rx-counter-amount" style="font-size:1.5rem;font-weight:800;color:#6b091a;"></div>
+          <div style="font-size:.75rem;color:#b5364a;margin-top:2px;">Cash payment only</div>
         </div>
       </div>
       <p style="font-size:.88rem;color:#475569;line-height:1.6;margin:0 0 20px;">
@@ -496,10 +502,10 @@
         with the exact cash amount to complete your payment.
       </p>
       <div style="
-        background:#fefce8;border:1px solid #fde047;border-radius:8px;
-        padding:10px 14px;font-size:.8rem;color:#713f12;
+        background:#fff0f2;border:1px solid #f5c6ce;border-radius:8px;
+        padding:10px 14px;font-size:.8rem;color:#920c24;
         display:flex;align-items:flex-start;gap:8px;margin-bottom:4px;">
-        <span class="sp-ms" style="font-size:17px;color:#ca8a04;flex-shrink:0;">info</span>
+        <span class="sp-ms" style="font-size:17px;color:#920c24;flex-shrink:0;">info</span>
         <span>Your re-examination slot will be reserved only after the cash is received and confirmed by the administration.</span>
       </div>
     </div>
@@ -536,7 +542,7 @@
     min-width:260px;">
     <div style="
       width:44px;height:44px;border:4px solid #e5e7eb;
-      border-top-color:var(--sp-primary,#1a56db);
+      border-top-color:var(--sp-primary,#b5364a);
       border-radius:50%;animation:rx-spin 0.7s linear infinite;
       margin:0 auto 18px;"></div>
     <div id="rx-pay-overlay-msg" style="font-size:14px;font-weight:600;color:#374151;">
@@ -640,10 +646,10 @@
   /* ── Toast notifications ────────────────────────────────────────── */
   function spToast(title, message, type) {
     var colors = {
-      success: { bg: '#dcfce7', border: '#86efac', text: '#166534' },
-      error:   { bg: '#fee2e2', border: '#fca5a5', text: '#991b1b' },
-      warning: { bg: '#fef3c7', border: '#fde68a', text: '#92400e' },
-      info:    { bg: '#e0f2fe', border: '#bae6fd', text: '#0c4a6e' },
+      success: { bg: '#fff0f2', border: '#f5c6ce', text: '#6b091a' },
+      error:   { bg: '#fff0f2', border: '#f5c6ce', text: '#6b091a' },
+      warning: { bg: '#fff0f2', border: '#f5c6ce', text: '#920c24' },
+      info:    { bg: '#fff0f2', border: '#f5c6ce', text: '#920c24' },
     };
     var c = colors[type] || colors.info;
     var t = document.createElement('div');
@@ -749,7 +755,7 @@
         email:   order.payer_email || '',
         contact: order.payer_phone || '',
       },
-      theme: { color: '#1a3c6e' },
+      theme: { color: '#920c24' },
       modal: {
         confirm_close: true,
         ondismiss: function () {
@@ -912,7 +918,7 @@
         var foot = card.querySelector('.rx-card-foot');
         if (!foot) continue;
         foot.innerHTML =
-          '<span class="rx-deadline-pill none" style="margin-right:auto;color:#0369a1;">' +
+          '<span class="rx-deadline-pill none" style="margin-right:auto;color:#920c24;">' +
             '<span class="sp-ms" style="font-size:13px;">store</span> Pay at Counter' +
           '</span>' +
           '<span style="font-size:11px;color:#64748b;">Visit the Accounts Office with ' + _esc(feeStr) + ' cash</span>';

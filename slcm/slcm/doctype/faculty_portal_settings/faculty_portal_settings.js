@@ -76,7 +76,7 @@ const FP_DEFAULTS = {
     primary_color: "#1e3a5f", secondary_color: "#e8a020",
     background_color: "#f0f2f5", card_background: "#ffffff",
     sidebar_theme: "Light", nav_text_color: "#ffffff",
-    success_color: "#16a34a", warning_color: "#d97706",
+    success_color: "#920c24", warning_color: "#920c24",
     danger_color: "#dc2626", info_color: "#0369a1",
     grade_excellent_color: "#16a34a", grade_excellent_label: "A+ / A / S",
     grade_good_color: "#0369a1",      grade_good_label: "B+ / B",

@@ -5,8 +5,11 @@
 <style>
   /* ── Header ── */
   .es-header-wrap {
-    background: #fdf5f5 url('/assets/slcm/images/building-illustration.png') no-repeat right 5% bottom / contain;
-    border-radius: 16px;
+    /* Same white header card as the other portal pages */
+    background: var(--sp-card, #fff);
+    border: 1px solid var(--sp-border, #e5e7eb);
+    border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(16,24,40,0.04);
     padding: 24px 28px;
     margin-bottom: 22px;
     display: flex;
@@ -26,11 +29,16 @@
     font-size: 32px;
     color: var(--sp-primary);
     flex-shrink: 0;
+    background: var(--sp-primary-light, #fff0f2);
+    color: var(--sp-primary);
   }
 
   .es-header-title {
-    font-size: 22px;
-    font-weight: 400;
+    /* same as the other portal page titles */
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.25;
     margin-bottom: 4px;
     color: var(--sp-text-1);
   }
@@ -71,20 +79,20 @@
     border-radius: 14px 14px 0 0;
   }
 
-  .es-stat-upcoming::before {
+  .es-stat::before {
     background: var(--sp-primary);
   }
 
   .es-stat-nextdate::before {
-    background: #f59e0b;
+    background: #920c24;
   }
 
   .es-stat-reexam::before {
-    background: #3b82f6;
+    background: #920c24;
   }
 
   .es-stat-published::before {
-    background: #10b981;
+    background: #920c24;
   }
 
   .es-stat-icon {
@@ -99,23 +107,23 @@
   }
 
   .es-stat-upcoming .es-stat-icon {
-    background: #fee2e2;
+    background: #fff0f2;
     color: var(--sp-primary);
   }
 
   .es-stat-nextdate .es-stat-icon {
-    background: #fef3c7;
-    color: #f59e0b;
+    background: #fff0f2;
+    color: #920c24;
   }
 
   .es-stat-reexam .es-stat-icon {
-    background: #dbeafe;
-    color: #3b82f6;
+    background: #fff0f2;
+    color: #920c24;
   }
 
   .es-stat-published .es-stat-icon {
-    background: #dcfce7;
-    color: #10b981;
+    background: #fff0f2;
+    color: #920c24;
   }
 
   .es-stat-body {
@@ -265,7 +273,7 @@
     font-weight: 700;
     letter-spacing: .07em;
     text-transform: uppercase;
-    color: var(--sp-primary);
+    color: #000;
     text-align: left;
     white-space: nowrap;
     border: none;
@@ -281,11 +289,11 @@
   }
 
   .es-table tbody tr:nth-child(even) {
-    background: rgba(43, 46, 74, .025);
+    background: rgba(146,12,36, .025);
   }
 
   .es-table tbody tr:hover {
-    background: rgba(43, 46, 74, .055);
+    background: rgba(146,12,36, .055);
     transition: background .12s;
   }
 
@@ -362,9 +370,9 @@
   }
 
   .es-badge-present {
-    background: #e6f4ea;
-    color: #15803d;
-    border: 1px solid #bbf7d0;
+    background: #fff0f2;
+    color: #920c24;
+    border: 1px solid #f5c6ce;
   }
 
   .es-badge-detained {
@@ -376,13 +384,13 @@
   .es-badge-pending {
     background: #f0f1f6;
     color: var(--sp-primary);
-    border: 1px solid rgba(43, 46, 74, .15);
+    border: 1px solid rgba(146,12,36, .15);
   }
 
   .es-badge-scheduled {
-    background: #fef3c7;
-    color: #b45309;
-    border: 1px solid #fde68a;
+    background: #f0fdf4;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
   }
 
   /* Table footer — row count + summary */
@@ -499,17 +507,9 @@
 {% block content %}
 <!-- Page Header -->
 <div class="es-header-wrap fade-in">
-  <div class="es-header-icon">
-    <span class="sp-ms">event_note</span>
-  </div>
   <div>
-    <div class="es-header-title">Exam Schedule</div>
-    <div class="es-header-sub">Your examination timetable, seat assignments and result updates</div>
+    <div class="es-header-title" style="font-size: 18px !important; font-weight: 700 !important;">Exam Schedule</div>
   </div>
-</div>
-<div style="font-size: 13px; color: var(--sp-text-4); margin: 14px 0px;">
-  <a href="/student-portal" style="color: var(--sp-text-4); text-decoration: none;">Dashboard</a> &gt;
-  <span style="color: var(--sp-primary); font-weight: 600;">Exam Schedule</span>
 </div>
 
 {% if no_student %}
@@ -609,7 +609,7 @@
       </div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;flex-shrink:0;">
-      <span class="es-badge" style="background:#e6f4ea; color:#15803d; border: 1px solid #bbf7d0;">
+      <span class="es-badge" style="background:#fff0f2; color:#920c24; border: 1px solid #f5c6ce;">
         {{ plan.status }}
       </span>
       {% if plan.is_published %}
@@ -691,9 +691,7 @@
 
   <!-- Table footer summary -->
   <div class="es-table-footer">
-    <span class="row-count-display">Showing <strong>{{ plan.course_count }}</strong> course paper{{ "s" if
-      plan.course_count != 1 else "" }}</span>
-    <div class="es-pagination">
+    <div class="es-pagination" style="margin-left:auto;">
       <span class="sp-ms" style="font-size:16px;">chevron_left</span>
       <div class="es-page-btn active">1</div>
       <span class="sp-ms" style="font-size:16px;">chevron_right</span>

@@ -26,6 +26,7 @@ def get_context(context):
     try:
         faculty = frappe.get_doc("Faculty", faculty_name)
         set_faculty_nav(context, faculty)
+        context.faculty_details = _build_faculty_details(faculty, context)
 
         today = frappe.utils.today()
 
@@ -353,6 +354,16 @@ def get_context(context):
         _set_defaults(context)
 
     return context
+
+
+def _build_faculty_details(faculty, context):
+    """Extra data for the dashboard's Faculty Details card (name, photo,
+    designation, department and ID come from set_faculty_nav)."""
+    try:
+        return {"is_hod": bool(faculty.is_hod)}
+    except Exception as e:
+        frappe.log_error(f"Faculty Portal Dashboard – faculty details: {e}", "Faculty Portal")
+        return None
 
 
 def _set_defaults(context):

@@ -374,15 +374,24 @@ function render_hero(frm) {
  * FLOW GUIDE — explains the process to the user
  *****************************************************/
 function render_flow_guide(frm) {
+	// Runs started from Student Enrollment carry no policy: term-to-term
+	// promotion is automatic. Older runs may still reference a policy.
+	const has_policy = !!frm.doc.promotion_policy;
 	const html = `
 		<div class="pr-flow-guide">
 			<div class="pr-flow-guide-title">${__("How this works")}</div>
 			<div class="pr-flow-steps">
-				<span class="pr-flow-step"><span class="num">1</span>${__("System evaluates every enrolled student against the policy")}</span>
+				<span class="pr-flow-step"><span class="num">1</span>${has_policy
+					? __("System evaluates every enrolled student against the policy")
+					: __("Term-to-term promotion — no policy check is applied")}</span>
 				<span class="pr-flow-arrow">&#8594;</span>
-				<span class="pr-flow-step"><span class="num">2</span>${__("Eligible students are promoted automatically")}</span>
+				<span class="pr-flow-step"><span class="num">2</span>${has_policy
+					? __("Eligible students are promoted automatically")
+					: __("Every selected student is moved to the next term's Batch")}</span>
 				<span class="pr-flow-arrow">&#8594;</span>
-				<span class="pr-flow-step"><span class="num">3</span>${__("Ineligible students are listed below as Skipped, with a reason")}</span>
+				<span class="pr-flow-step"><span class="num">3</span>${has_policy
+					? __("Ineligible students are listed below as Skipped, with a reason")
+					: __("Students who couldn't be moved (e.g. no target Batch) are listed as Skipped")}</span>
 				<span class="pr-flow-arrow">&#8594;</span>
 				<span class="pr-flow-step"><span class="num">4</span>${__("You decide: Promote Anyway, Mark as Exempt, or fix data and Retry")}</span>
 			</div>

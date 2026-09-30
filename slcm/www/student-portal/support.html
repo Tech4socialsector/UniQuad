@@ -6,16 +6,8 @@
 
 {# ── Page Header ────────────────────────────────────────────── #}
 <div class="sp-page-header fade-in" style="display: flex; align-items: flex-start; gap: 20px; margin-bottom: 32px;">
-  <div style="width: 42px; height: 40px; border: 2px solid var(--sp-primary, #920c24); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--sp-primary, #920c24); flex-shrink: 0; margin-top: 4px;">
-    <span class="sp-ms" style="font-size: 28px;">headset_mic</span>
-  </div>
   <div>
-    <h1 class="sp-page-title" style="margin: 0 0 4px 0; color: var(--sp-primary-dark, #0a182c);">Helpdesk</h1>
-    <p class="context-text" style="margin: 0 0 8px 0; color: var(--sp-text-3, #6b7280);">Raise and track your support tickets</p>
-    <div style="font-size: 13px; color: var(--sp-text-4); margin-top: 14px;">
-        <a href="/student-portal" style="color: var(--sp-text-4); text-decoration: none;">Dashboard</a> &gt; 
-        <span style="color: var(--sp-primary); font-weight: 600;">Helpdesk</span>
-      </div>
+    <h1 class="sp-page-title" style="margin: 0 0 4px 0; color: var(--sp-primary-dark, #6b091a); font-size: 18px !important; font-weight: 700 !important;">Helpdesk</h1>
   </div>
 </div>
 
@@ -108,6 +100,20 @@
     '.flex.h-screen.w-screen > div:first-child:not(.flex-1) { display: none !important; }',
     /* Expand the content panel to full width */
     '.flex.h-screen.w-screen > .flex-1 { width: 100% !important; max-width: 100% !important; }',
+    /* Hide the Student ID / Year quick filters (portal embed only) */
+    '.quick-filters > div:has(input[placeholder="Student ID"]), .quick-filters > div:has(input[placeholder="Year"]) { display: none !important; }',
+    /* Match the portal: Merriweather everywhere, portal-sized text */
+    "@font-face { font-family: 'Merriweather'; font-weight: 400; src: url('/assets/slcm/fonts/Merriweather-Regular.ttf') format('truetype'); }",
+    "@font-face { font-family: 'Merriweather'; font-weight: 700; src: url('/assets/slcm/fonts/Merriweather-Bold.ttf') format('truetype'); }",
+    "@font-face { font-family: 'Merriweather'; font-weight: 400; font-style: italic; src: url('/assets/slcm/fonts/Merriweather-Italic.ttf') format('truetype'); }",
+    "html, body, body *:not(svg):not(path) { font-family: 'Merriweather', Georgia, serif !important; }",
+    'body, .text-base, .text-sm, .text-p-sm, .text-p-base, input, select, textarea, button, .ProseMirror { font-size: 14px !important; }',
+    '.text-xs, .text-p-xs, .text-2xs { font-size: 12.5px !important; }',
+    '.text-lg { font-size: 17px !important; }',
+    /* Transcript fee "Pay" button in NLS maroon */
+    '.rounded-lg.border.bg-surface-gray-1.p-4 > button { background: #920C24 !important; border-color: #920C24 !important; color: #fff !important; }',
+    '.rounded-lg.border.bg-surface-gray-1.p-4 > button:hover:not(:disabled) { background: #6b091a !important; }',
+    '.rounded-lg.border.bg-surface-gray-1.p-4 > button:disabled { opacity: .55; }',
   ].join('\n');
 
   /* Inject CSS into the helpdesk iframe — waits for Vue to mount via MutationObserver */

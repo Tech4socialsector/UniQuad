@@ -1,0 +1,13 @@
+{
+    "doctype": "Print Format",
+    "doc_type": "Transcript Request",
+    "format_data": "",
+    "line_breaks": 0,
+    "module": "SLCM",
+    "name": "Transcript Fee Receipt",
+    "print_format_builder": 0,
+    "print_format_type": "Jinja",
+    "raw_printing": 0,
+    "show_section_headings": 0,
+    "standard": "Yes"
+}

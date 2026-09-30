@@ -5,6 +5,22 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 		single_column: true,
 	});
 
+	// Shared brand theme (#920C24 + Merriweather) for all Examination Result tabs
+	$(wrapper).addClass('er-theme');
+	if (!document.getElementById('er-theme-font')) {
+		$('head').append(
+			'<link rel="preconnect" href="https://fonts.googleapis.com">' +
+			'<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
+			'<link id="er-theme-font" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Merriweather:opsz,wght@18..144,300..900&display=swap">'
+		);
+	}
+	frappe.require('/assets/slcm/css/exam_results_theme.css');
+	// On narrow screens the tab strip scrolls sideways — bring the active tab into view
+	setTimeout(function () {
+		var $nav = $(wrapper).find('.er2-page-nav'), $act = $nav.find('.er2-pnav-btn.active');
+		if ($nav.length && $act.length) $nav.scrollLeft($act.position().left + $nav.scrollLeft() - 12);
+	}, 0);
+
 	// ── State ─────────────────────────────────────────────────────────────────
 	var S = {
 		exam_plan:       null,
@@ -51,8 +67,8 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 		.er2-tab  { padding:8px 20px; cursor:pointer; font-size:13px; font-weight:600;
 		            color:#64748b; border-radius:7px; transition:all .2s;
 		            user-select:none; letter-spacing:.1px; }
-		.er2-tab:hover { color:#4f46e5; background:rgba(79,70,229,.08); }
-		.er2-tab.active { background:#fff; color:#4f46e5;
+		.er2-tab:hover { color:#920C24; background:rgba(146,12,36,.08); }
+		.er2-tab.active { background:#fff; color:#920C24;
 		                  box-shadow:0 1px 4px rgba(0,0,0,.12); }
 
 		/* ── Top filter card ── */
@@ -65,35 +81,35 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 		.er2-select  { height:36px; border:1.5px solid #e2e8f0; border-radius:8px;
 		               padding:0 12px; font-size:13px; background:#fff; color:#1e293b;
 		               outline:none; cursor:pointer; transition:border-color .2s; }
-		.er2-select:focus { border-color:#4f46e5; box-shadow:0 0 0 3px rgba(79,70,229,.1); }
+		.er2-select:focus { border-color:#920C24; box-shadow:0 0 0 3px rgba(146,12,36,.1); }
 
 		/* ── Info panel (stat cards) ── */
 		.er2-info    { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
 		.er2-icard   { background:#fff; border-radius:12px; padding:14px 18px; flex:1;
 		               min-width:160px; box-shadow:0 1px 3px rgba(0,0,0,.06);
-		               border-top:3px solid #4f46e5; position:relative; overflow:hidden; }
+		               border-top:3px solid #920C24; position:relative; overflow:hidden; }
 		.er2-icard::after { content:''; position:absolute; right:-12px; top:-12px;
 		                    width:60px; height:60px; border-radius:50%;
-		                    background:rgba(79,70,229,.05); }
-		.er2-icard.teal  { border-top-color:#0ea5e9; }
-		.er2-icard.teal::after  { background:rgba(14,165,233,.05); }
-		.er2-icard.green { border-top-color:#10b981; }
-		.er2-icard.green::after { background:rgba(16,185,129,.05); }
-		.er2-icard.amber { border-top-color:#f59e0b; }
-		.er2-icard.amber::after { background:rgba(245,158,11,.05); }
-		.er2-icard.rose  { border-top-color:#ef4444; }
-		.er2-icard.rose::after  { background:rgba(239,68,68,.05); }
+		                    background:rgba(146,12,36,.05); }
+		.er2-icard.teal  { border-top-color:#920C24; }
+		.er2-icard.teal::after  { background:rgba(146,12,36,.05); }
+		.er2-icard.green { border-top-color:#920C24; }
+		.er2-icard.green::after { background:rgba(146,12,36,.05); }
+		.er2-icard.amber { border-top-color:#920C24; }
+		.er2-icard.amber::after { background:rgba(146,12,36,.05); }
+		.er2-icard.rose  { border-top-color:#920C24; }
+		.er2-icard.rose::after  { background:rgba(146,12,36,.05); }
 		.er2-icard.slate { border-top-color:#64748b; }
 		.er2-icard.slate::after { background:rgba(100,116,139,.05); }
-		.er2-icard.violet{ border-top-color:#7c3aed; }
-		.er2-icard.violet::after{ background:rgba(124,58,237,.05); }
+		.er2-icard.violet{ border-top-color:#920C24; }
+		.er2-icard.violet::after{ background:rgba(146,12,36,.05); }
 		.er2-ilabel  { font-size:10px; color:#94a3b8; text-transform:uppercase;
 		               letter-spacing:.7px; font-weight:700; margin-bottom:5px; }
 		.er2-ival    { font-size:13px; color:#1e293b; font-weight:600; line-height:1.4; }
-		.er2-ival a  { color:#4f46e5; text-decoration:none; border-bottom:1px dashed #c7d2fe; }
-		.er2-ival a:hover { color:#3730a3; }
+		.er2-ival a  { color:#920C24; text-decoration:none; border-bottom:1px dashed #E8B4BE; }
+		.er2-ival a:hover { color:#6E091B; }
 		.er2-ival.green { color:#059669; }
-		.er2-ival.orange { color:#d97706; }
+		.er2-ival.orange { color:#920C24; }
 		.er2-irow    { display:flex; flex-direction:column; gap:2px; }
 
 		/* ── Action bar ── */
@@ -104,8 +120,8 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 		.er2-srch input { width:100%; height:34px; border:1.5px solid #e2e8f0; border-radius:20px;
 		                  padding:0 14px 0 36px; font-size:13px; outline:none; color:#1e293b;
 		                  background:#f8fafc; transition:border-color .2s, background .2s; }
-		.er2-srch input:focus { border-color:#4f46e5; background:#fff;
-		                        box-shadow:0 0 0 3px rgba(79,70,229,.1); }
+		.er2-srch input:focus { border-color:#920C24; background:#fff;
+		                        box-shadow:0 0 0 3px rgba(146,12,36,.1); }
 		.er2-srch-ico { position:absolute; left:11px; top:9px; color:#94a3b8; }
 
 		/* ── Buttons ── */
@@ -114,13 +130,13 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 		               color:#475569; display:inline-flex; align-items:center; gap:5px;
 		               white-space:nowrap; transition:all .15s; }
 		.er2-btn:hover { background:#f8fafc; border-color:#cbd5e1; color:#1e293b; }
-		.er2-btn.primary { background:linear-gradient(135deg,#4f46e5,#6366f1);
+		.er2-btn.primary { background:#920C24;
 		                   border-color:transparent; color:#fff; }
-		.er2-btn.primary:hover { background:linear-gradient(135deg,#4338ca,#4f46e5); }
-		.er2-btn.outline-red { border-color:#fca5a5; color:#ef4444; background:#fff5f5; }
-		.er2-btn.outline-red:hover { background:#fee2e2; border-color:#f87171; }
-		.er2-btn.outline-indigo { border-color:#c7d2fe; color:#4f46e5; background:#eef2ff; }
-		.er2-btn.outline-indigo:hover { background:#e0e7ff; }
+		.er2-btn.primary:hover { background:linear-gradient(135deg,#6E091B,#920C24); }
+		.er2-btn.outline-red { border-color:#E8B4BE; color:#920C24; background:#FBEEF0; }
+		.er2-btn.outline-red:hover { background:#F5D9DE; border-color:#C4566A; }
+		.er2-btn.outline-indigo { border-color:#E8B4BE; color:#920C24; background:#FBEEF0; }
+		.er2-btn.outline-indigo:hover { background:#F5D9DE; }
 
 		/* ── Dropdowns ── */
 		.er2-btn-dd  { position:relative; display:inline-flex; }
@@ -150,13 +166,13 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 		.er2-paglen  { height:30px; border:1.5px solid #e2e8f0; border-radius:7px;
 		               padding:0 8px; font-size:12px; background:#fff; color:#1e293b;
 		               outline:none; cursor:pointer; transition:border-color .2s; }
-		.er2-paglen:focus { border-color:#4f46e5; box-shadow:0 0 0 3px rgba(79,70,229,.1); }
+		.er2-paglen:focus { border-color:#920C24; box-shadow:0 0 0 3px rgba(146,12,36,.1); }
 		.er2-paglen-info { font-size:12px; font-weight:600; color:#475569; white-space:nowrap; padding:0 4px; }
 		.er2-pag-btn { width:28px; height:28px; border:1.5px solid #e2e8f0; border-radius:7px;
 		               background:#fff; cursor:pointer; font-size:14px; display:inline-flex;
 		               align-items:center; justify-content:center; color:#64748b;
 		               transition:all .15s; }
-		.er2-pag-btn:hover:not(:disabled) { background:#eef2ff; border-color:#c7d2fe; color:#4f46e5; }
+		.er2-pag-btn:hover:not(:disabled) { background:#FBEEF0; border-color:#E8B4BE; color:#920C24; }
 		.er2-pag-btn:disabled { opacity:.35; cursor:default; }
 
 		/* ── Split panel ── */
@@ -169,7 +185,7 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 
 		/* ── Left panel header ── */
 		.er2-lhdr    { display:flex; align-items:center; gap:8px; padding:11px 13px;
-		               background:linear-gradient(135deg,#4f46e5 0%,#6366f1 100%);
+		               background:#920C24;
 		               border-bottom:none; position:sticky; top:0; z-index:10; }
 		.er2-lhdr-title { font-size:13px; font-weight:700; color:#fff; flex:1; }
 		.er2-lhdr input[type="checkbox"] { accent-color:#fff; width:14px; height:14px; cursor:pointer; }
@@ -187,7 +203,7 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 		               height:64px; min-height:64px; flex-shrink:0; box-sizing:border-box;
 		               border-bottom:1.5px solid #f8fafc; cursor:pointer; transition:background .15s; }
 		.er2-srow:hover { background:#f8fafc; }
-		.er2-srow.selected { background:#eef2ff; }
+		.er2-srow.selected { background:#FBEEF0; }
 		.er2-savatar { width:38px; height:38px; border-radius:10px; flex-shrink:0;
 		               display:flex; align-items:center; justify-content:center;
 		               font-size:15px; font-weight:700; color:#fff; overflow:hidden; }
@@ -200,10 +216,10 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 		.er2-badge   { font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px;
 		               letter-spacing:.2px; }
 		.er2-badge.active   { background:#d1fae5; color:#065f46; }
-		.er2-badge.inactive { background:#fee2e2; color:#991b1b; }
-		.er2-badge.blocked  { background:#fee2e2; color:#991b1b; }
-		.er2-badge.regular  { background:#e0e7ff; color:#3730a3; }
-		.er2-badge.dropped  { background:#fef3c7; color:#92400e; }
+		.er2-badge.inactive { background:#F5D9DE; color:#6E091B; }
+		.er2-badge.blocked  { background:#F5D9DE; color:#6E091B; }
+		.er2-badge.regular  { background:#F5D9DE; color:#6E091B; }
+		.er2-badge.dropped  { background:#F5D9DE; color:#6E091B; }
 
 		/* ── Marks table ── */
 		.er2-rtable  { border-collapse:separate; border-spacing:0; min-width:100%; font-size:12px; }
@@ -217,22 +233,22 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 		.er2-rtable th.type-hdr { font-size:12px; font-weight:800; letter-spacing:.4px; }
 		.er2-rtable td { text-align:center; color:#1e293b; border-bottom:1px solid #eef2f9;
 		                 vertical-align:middle; transition:background .12s; }
-		.er2-rtable tbody tr:hover td { background:#f0f4ff; }
+		.er2-rtable tbody tr:hover td { background:#FBEEF0; }
 		.er2-rtable tbody tr:nth-child(even) td { background:#f8fafd; }
-		.er2-rtable tbody tr:nth-child(even):hover td { background:#e8eeff; }
+		.er2-rtable tbody tr:nth-child(even):hover td { background:#F5D9DE; }
 		.er2-mrow    { height:60px; max-height:60px; }
 
 		/* ── Annotation badges (MFA / AS superscripts) ── */
 		.er2-ann-badge { display:inline-block; font-size:9px; font-weight:800;
 		                 padding:1px 5px; border-radius:4px; vertical-align:super;
 		                 line-height:1.3; letter-spacing:.3px; margin-left:2px; }
-		.er2-mfa-badge    { background:#fef3c7; color:#92400e; border:1px solid #fde68a; }
-		.er2-as-badge     { background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; }
-		.er2-arrear-badge { background:#fff7ed; color:#9a3412; border:1px solid #fed7aa; font-style:italic; cursor:pointer; }
-		.er2-arrear-badge:hover { background:#fed7aa; }
-		.er2-improved-badge { background:#dcfce7; color:#14532d; border:1px solid #4ade80; font-style:normal; font-weight:800; cursor:pointer; }
-		.er2-improved-badge:hover { background:#bbf7d0; }
-		.er2-improv-badge { background:#dcfce7; color:#14532d; border:1px solid #4ade80; font-weight:800; }
+		.er2-mfa-badge    { background:#F5D9DE; color:#6E091B; border:1px solid #E8B4BE; }
+		.er2-as-badge     { background:#F5D9DE; color:#6E091B; border:1px solid #E8B4BE; }
+		.er2-arrear-badge { background:#FBEEF0; color:#6E091B; border:1px solid #E8B4BE; font-style:italic; cursor:pointer; }
+		.er2-arrear-badge:hover { background:#E8B4BE; }
+		.er2-improved-badge { background:#F5D9DE; color:#6E091B; border:1px solid #C4566A; font-style:normal; font-weight:800; cursor:pointer; }
+		.er2-improved-badge:hover { background:#E8B4BE; }
+		.er2-improv-badge { background:#F5D9DE; color:#6E091B; border:1px solid #C4566A; font-weight:800; }
 
 		/* Repeat exam dialog */
 		#er2-repeat-overlay {
@@ -249,7 +265,7 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 			padding:20px 24px 16px;
 			display:flex;align-items:flex-start;gap:12px;
 		}
-		#er2-repeat-dialog .rp-hdr-icon { font-size:26px;color:#f59e0b;flex-shrink:0; }
+		#er2-repeat-dialog .rp-hdr-icon { font-size:26px;color:#920C24;flex-shrink:0; }
 		#er2-repeat-dialog .rp-hdr-title { font-size:1rem;font-weight:700;color:#f8fafc; }
 		#er2-repeat-dialog .rp-hdr-sub { font-size:.78rem;color:#94a3b8;margin-top:3px; }
 		#er2-repeat-dialog .rp-body { padding:20px 24px; }
@@ -260,7 +276,7 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 		}
 		#er2-repeat-dialog .rp-step-num {
 			width:24px;height:24px;border-radius:50%;
-			background:#f59e0b;color:#fff;
+			background:#920C24;color:#fff;
 			font-size:12px;font-weight:800;
 			display:flex;align-items:center;justify-content:center;flex-shrink:0;
 		}
@@ -273,13 +289,13 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 			flex:1;border:1.5px solid #d1d5db;border-radius:8px;
 			padding:8px 10px;font-size:13px;color:#1f2937;outline:none;
 		}
-		#er2-repeat-dialog .rp-ep-select:focus { border-color:#f59e0b;box-shadow:0 0 0 2px rgba(245,158,11,.15); }
+		#er2-repeat-dialog .rp-ep-select:focus { border-color:#920C24;box-shadow:0 0 0 2px rgba(146,12,36,.15); }
 		#er2-repeat-dialog .rp-enroll-btn {
 			padding:9px 18px;border:none;border-radius:8px;
-			background:#f59e0b;color:#fff;font-size:.85rem;font-weight:700;
+			background:#920C24;color:#fff;font-size:.85rem;font-weight:700;
 			cursor:pointer;white-space:nowrap;transition:background .15s;
 		}
-		#er2-repeat-dialog .rp-enroll-btn:hover { background:#d97706; }
+		#er2-repeat-dialog .rp-enroll-btn:hover { background:#920C24; }
 		#er2-repeat-dialog .rp-enroll-btn:disabled { background:#9ca3af;cursor:not-allowed; }
 		#er2-repeat-dialog .rp-footer {
 			padding:12px 24px 18px;display:flex;justify-content:flex-end;gap:8px;
@@ -292,63 +308,63 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 			margin-top:10px;padding:10px 12px;border-radius:8px;font-size:.82rem;font-weight:600;display:none;
 		}
 		#er2-repeat-dialog .rp-status-msg.success { background:#d1fae5;color:#065f46;border:1px solid #6ee7b7; }
-		#er2-repeat-dialog .rp-status-msg.error   { background:#fee2e2;color:#991b1b;border:1px solid #fca5a5; }
+		#er2-repeat-dialog .rp-status-msg.error   { background:#F5D9DE;color:#6E091B;border:1px solid #E8B4BE; }
 
 		/* ── Project column highlight ── */
-		.er2-rtable td.er2-proj-total-cell { background:#f0fdf4; border-left:2px solid #86efac; font-weight:700; }
-		.er2-rtable tbody tr:hover td.er2-proj-total-cell { background:#dcfce7; }
+		.er2-rtable td.er2-proj-total-cell { background:#FBEEF0; border-left:2px solid #E8B4BE; font-weight:700; }
+		.er2-rtable tbody tr:hover td.er2-proj-total-cell { background:#F5D9DE; }
 
 		/* ── Grade cell ── */
-		.er2-rtable td.er2-grade-cell { background:#f0fdf4; border-left:2px solid #6ee7b7; }
-		.er2-rtable tbody tr:hover td.er2-grade-cell { background:#dcfce7; }
+		.er2-rtable td.er2-grade-cell { background:#FBEEF0; border-left:2px solid #E8B4BE; }
+		.er2-rtable tbody tr:hover td.er2-grade-cell { background:#F5D9DE; }
 
 		/* ── Total marks cell ── */
-		.er2-rtable td.er2-total-cell { background:#eff6ff; border-left:2px solid #93c5fd; font-weight:800; color:#1d4ed8; }
-		.er2-rtable tbody tr:hover td.er2-total-cell { background:#dbeafe; }
+		.er2-rtable td.er2-total-cell { background:#FBEEF0; border-left:2px solid #E8B4BE; font-weight:800; color:#920C24; }
+		.er2-rtable tbody tr:hover td.er2-total-cell { background:#F5D9DE; }
 
 		/* ── Status column inputs ── */
 		.er2-ss { font-size:11px; border:1px solid #e2e8f0 !important; border-radius:5px !important;
 		          background:#fff; color:#374151; transition:border-color .15s; }
-		.er2-ss:focus { border-color:#6366f1 !important; outline:none; box-shadow:0 0 0 2px rgba(99,102,241,.12); }
+		.er2-ss:focus { border-color:#920C24 !important; outline:none; box-shadow:0 0 0 2px rgba(146,12,36,.12); }
 
 		/* ── Grade inputs ── */
-		.er2-grade-input:focus { border-color:#059669 !important; box-shadow:0 0 0 2px rgba(5,150,105,.15); }
+		.er2-grade-input:focus { border-color:#920C24 !important; box-shadow:0 0 0 2px rgba(146,12,36,.15); }
 		.er2-ug-input   { transition:border-color .15s, box-shadow .15s; }
-		.er2-ug-input:focus { border-color:#4f46e5 !important; box-shadow:0 0 0 2px rgba(79,70,229,.15); }
+		.er2-ug-input:focus { border-color:#920C24 !important; box-shadow:0 0 0 2px rgba(146,12,36,.15); }
 
 		/* ── Updated Final Result cells ── */
-		.er2-rtable td.er2-ufm-cell { background:#eff6ff; border-left:2px solid #93c5fd; font-weight:800; color:#1d4ed8; }
-		.er2-rtable tbody tr:hover td.er2-ufm-cell { background:#dbeafe; }
-		.er2-rtable td.er2-ug-cell  { background:#eef2ff; border-left:1px solid #c7d2fe; font-weight:700; color:#3730a3; }
-		.er2-rtable tbody tr:hover td.er2-ug-cell { background:#e0e7ff; }
+		.er2-rtable td.er2-ufm-cell { background:#FBEEF0; border-left:2px solid #E8B4BE; font-weight:800; color:#920C24; }
+		.er2-rtable tbody tr:hover td.er2-ufm-cell { background:#F5D9DE; }
+		.er2-rtable td.er2-ug-cell  { background:#FBEEF0; border-left:1px solid #E8B4BE; font-weight:700; color:#6E091B; }
+		.er2-rtable tbody tr:hover td.er2-ug-cell { background:#F5D9DE; }
 
 		/* ── Marks input ── */
 		.er2-mi { transition:border-color .15s, box-shadow .15s; }
-		.er2-mi:focus { box-shadow:0 0 0 2px rgba(79,70,229,.12); }
+		.er2-mi:focus { box-shadow:0 0 0 2px rgba(146,12,36,.12); }
 
 		/* ── Re-Exam Grade (read-only, boxed like the other grade/marks inputs) ── */
 		.er2-rxg-box {
 			display:inline-block; min-width:60px; height:26px; line-height:24px;
-			border:1.5px solid #fbcfe8; border-radius:6px; padding:0 6px;
-			background:#fdf2f8; font-size:12px; font-weight:700; text-align:center;
-			color:#be185d;
+			border:1.5px solid #E8B4BE; border-radius:6px; padding:0 6px;
+			background:#FBEEF0; font-size:12px; font-weight:700; text-align:center;
+			color:#920C24;
 		}
 
 		/* ── Overall status col header accent ── */
-		.er2-rtable th.er2-status-hdr { background:linear-gradient(90deg,#fffbeb,#fef3c7) !important; }
+		.er2-rtable th.er2-status-hdr { background:#FBEEF0 !important; }
 
 		/* ── Remark cell ── */
 		.er2-remark-cell textarea { font-size:11px; border:1px solid #e2e8f0; border-radius:5px;
 		                            background:#fff; resize:vertical; transition:border-color .15s; }
-		.er2-remark-cell textarea:focus { border-color:#6366f1; outline:none;
-		                                  box-shadow:0 0 0 2px rgba(99,102,241,.1); }
+		.er2-remark-cell textarea:focus { border-color:#920C24; outline:none;
+		                                  box-shadow:0 0 0 2px rgba(146,12,36,.1); }
 
 		/* ── Collapse button ── */
 		.er2-collapse-btn { width:18px; cursor:pointer; display:flex; align-items:center;
 		                    justify-content:center; background:#f1f5f9; border:none;
 		                    border-left:1.5px solid #e2e8f0; color:#94a3b8; font-size:12px;
 		                    align-self:stretch; flex-shrink:0; transition:all .15s; }
-		.er2-collapse-btn:hover { background:#e0e7ff; color:#4f46e5; }
+		.er2-collapse-btn:hover { background:#F5D9DE; color:#920C24; }
 
 		/* ── Hover popup ── */
 		#er2-popup   { display:none; position:fixed; z-index:9999; background:#fff;
@@ -356,7 +372,7 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 		               box-shadow:0 16px 40px rgba(0,0,0,.16); padding:0;
 		               min-width:310px; max-width:400px; pointer-events:none;
 		               overflow:hidden; }
-		.er2-pop-head { background:linear-gradient(135deg,#4f46e5,#6366f1); padding:14px 16px; }
+		.er2-pop-head { background:#920C24; padding:14px 16px; }
 		.er2-pop-name { font-size:14px; font-weight:700; color:#fff; }
 		.er2-pop-sub  { font-size:11px; color:rgba(255,255,255,.75); margin-top:2px; font-weight:500; }
 		.er2-pop-body { padding:12px 16px; }
@@ -375,18 +391,18 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 		.er2-pop-mark-chip .chip-val { color:#1e293b; font-size:13px; font-weight:700;
 		                               display:block; margin-top:2px; }
 		.er2-pop-total-row { display:flex; justify-content:space-between; align-items:center;
-		                     background:#eef2ff; border-radius:8px; padding:8px 12px; margin-top:8px; }
-		.er2-pop-total-lbl { font-size:11px; color:#4f46e5; font-weight:700;
+		                     background:#FBEEF0; border-radius:8px; padding:8px 12px; margin-top:8px; }
+		.er2-pop-total-lbl { font-size:11px; color:#920C24; font-weight:700;
 		                     text-transform:uppercase; letter-spacing:.4px; }
-		.er2-pop-total-val { font-size:18px; font-weight:800; color:#4f46e5; }
-		.er2-pop-grade-badge { background:#4f46e5; color:#fff; font-size:11px; font-weight:700;
+		.er2-pop-total-val { font-size:18px; font-weight:800; color:#920C24; }
+		.er2-pop-grade-badge { background:#920C24; color:#fff; font-size:11px; font-weight:700;
 		                       padding:2px 10px; border-radius:20px; margin-left:8px; }
 
 		/* ── Sync btn ── */
-		.er2-sync-btn { font-size:10px; background:linear-gradient(135deg,#4f46e5,#6366f1);
+		.er2-sync-btn { font-size:10px; background:#920C24;
 		                color:#fff; border:none; border-radius:5px; padding:3px 8px;
 		                cursor:pointer; margin-top:3px; font-weight:600; }
-		.er2-sync-btn:hover { background:linear-gradient(135deg,#4338ca,#4f46e5); }
+		.er2-sync-btn:hover { background:linear-gradient(135deg,#6E091B,#920C24); }
 
 		/* ── Toggle wrap ── */
 		.er2-toggle-wrap { display:flex; align-items:center; gap:8px; padding:8px 13px;
@@ -401,7 +417,7 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 		                     left:3px; top:3px; border-radius:50%; background:#fff;
 		                     transition:transform .2s;
 		                     box-shadow:0 1px 3px rgba(0,0,0,.2); }
-		.er2-toggle input:checked + .er2-slider { background:#4f46e5; }
+		.er2-toggle input:checked + .er2-slider { background:#920C24; }
 		.er2-toggle input:checked + .er2-slider:before { transform:translateX(16px); }
 
 		/* ── Empty state ── */
@@ -412,14 +428,14 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 		.er2-empty-sub { font-size:12.5px; color:#cbd5e1; margin-top:6px; }
 
 		/* ── Avatar colour palette ── */
-		.av-0{background:linear-gradient(135deg,#4f46e5,#818cf8);}
-		.av-1{background:linear-gradient(135deg,#0ea5e9,#38bdf8);}
-		.av-2{background:linear-gradient(135deg,#10b981,#34d399);}
-		.av-3{background:linear-gradient(135deg,#f59e0b,#fbbf24);}
-		.av-4{background:linear-gradient(135deg,#ef4444,#f87171);}
-		.av-5{background:linear-gradient(135deg,#8b5cf6,#a78bfa);}
-		.av-6{background:linear-gradient(135deg,#ec4899,#f472b6);}
-		.av-7{background:linear-gradient(135deg,#14b8a6,#2dd4bf);}
+		.av-0{background:#920C24;}
+		.av-1{background:#920C24;}
+		.av-2{background:#920C24;}
+		.av-3{background:#920C24;}
+		.av-4{background:#920C24;}
+		.av-5{background:#920C24;}
+		.av-6{background:#920C24;}
+		.av-7{background:#920C24;}
 
 		/* ── Institutional Filter Modal ── */
 		.xif-overlay { position:fixed; inset:0; background:rgba(15,23,42,.35);
@@ -435,17 +451,17 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 		               background:#f1f5f9; cursor:pointer; display:flex;
 		               align-items:center; justify-content:center; color:#64748b;
 		               font-size:16px; transition:all .15s; }
-		.xif-close:hover { background:#fee2e2; color:#ef4444; }
+		.xif-close:hover { background:#F5D9DE; color:#920C24; }
 		.xif-body    { display:flex; flex:1; overflow:hidden; }
 		.xif-types   { width:190px; flex-shrink:0; border-right:1.5px solid #f1f5f9;
-		               padding:8px; background:#fafbff; }
+		               padding:8px; background:#FDF8F9; }
 		.xif-type    { padding:10px 14px; border-radius:8px; font-size:13px; font-weight:600;
 		               color:#475569; cursor:pointer; margin-bottom:2px;
 		               transition:all .15s; display:flex; align-items:center; gap:8px; }
 		.xif-type:hover { background:#f1f5f9; color:#1e293b; }
-		.xif-type.active { background:#eef2ff; color:#4f46e5; }
+		.xif-type.active { background:#FBEEF0; color:#920C24; }
 		.xif-type-badge { min-width:18px; height:18px; border-radius:20px;
-		                  background:#4f46e5; color:#fff; font-size:10px; font-weight:700;
+		                  background:#920C24; color:#fff; font-size:10px; font-weight:700;
 		                  display:inline-flex; align-items:center; justify-content:center;
 		                  padding:0 5px; margin-left:auto; }
 		.xif-panel   { flex:1; display:flex; flex-direction:column; overflow:hidden; }
@@ -455,32 +471,32 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 		               padding:0 10px 0 30px; font-size:12.5px; outline:none; color:#1e293b;
 		               background:#f8fafc url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E") no-repeat 9px center;
 		               box-sizing:border-box; transition:border-color .2s; }
-		.xif-search:focus { border-color:#4f46e5; background-color:#fff; }
+		.xif-search:focus { border-color:#920C24; background-color:#fff; }
 		.xif-opts    { flex:1; overflow-y:auto; padding:8px; }
 		.xif-opt     { display:flex; align-items:center; gap:10px; padding:9px 12px;
 		               border-radius:8px; cursor:pointer; font-size:13px; font-weight:500;
 		               color:#334155; transition:background .12s; }
 		.xif-opt:hover { background:#f8fafc; }
-		.xif-opt.checked { background:#eef2ff; color:#3730a3; }
-		.xif-opt input[type="checkbox"] { width:15px; height:15px; accent-color:#4f46e5;
+		.xif-opt.checked { background:#FBEEF0; color:#6E091B; }
+		.xif-opt input[type="checkbox"] { width:15px; height:15px; accent-color:#920C24;
 		                                  cursor:pointer; flex-shrink:0; }
 		.xif-empty-opts { padding:32px; text-align:center; color:#cbd5e1; font-size:13px; }
 		.xif-footer  { display:flex; align-items:center; justify-content:space-between;
-		               padding:12px 16px; border-top:1.5px solid #f1f5f9; background:#fafbff; }
+		               padding:12px 16px; border-top:1.5px solid #f1f5f9; background:#FDF8F9; }
 		.xif-status  { font-size:12.5px; color:#64748b; font-weight:500; }
-		.xif-status strong { color:#4f46e5; }
+		.xif-status strong { color:#920C24; }
 		.xif-actions { display:flex; gap:8px; }
 		.xif-clear   { padding:0 14px; height:32px; border-radius:7px;
 		               border:1.5px solid #e2e8f0; background:#fff; color:#64748b;
 		               font-size:12.5px; font-weight:600; cursor:pointer; transition:all .15s; }
-		.xif-clear:hover { border-color:#ef4444; color:#ef4444; background:#fff5f5; }
+		.xif-clear:hover { border-color:#920C24; color:#920C24; background:#FBEEF0; }
 		.xif-apply   { padding:0 18px; height:32px; border-radius:7px; border:none;
-		               background:linear-gradient(135deg,#4f46e5,#6366f1); color:#fff;
+		               background:#920C24; color:#fff;
 		               font-size:12.5px; font-weight:700; cursor:pointer; transition:opacity .15s; }
 		.xif-apply:hover { opacity:.88; }
 		/* Active filter badge on button */
-		.xif-btn-active { background:linear-gradient(135deg,#eef2ff,#e0e7ff) !important;
-		                  border-color:#c7d2fe !important; color:#4338ca !important; }
+		.xif-btn-active { background:linear-gradient(135deg,#FBEEF0,#F5D9DE) !important;
+		                  border-color:#E8B4BE !important; color:#6E091B !important; }
 
 		/* ── Stat cards (drilldown) ── */
 		.er2-stats-panel { background:#fff; border-radius:12px; padding:16px 20px;
@@ -491,13 +507,13 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 		                   cursor:pointer; transition:all .18s; border:2px solid transparent;
 		                   display:flex; align-items:center; gap:12px; }
 		.er2-stat-card:hover { box-shadow:0 4px 12px rgba(0,0,0,.1); transform:translateY(-1px); }
-		.er2-stat-card.er2-sc-active { border-color:var(--sc-color,#4f46e5);
-		                               background:var(--sc-bg,#eef2ff); }
+		.er2-stat-card.er2-sc-active { border-color:var(--sc-color,#920C24);
+		                               background:var(--sc-bg,#FBEEF0); }
 		.er2-stat-icon   { width:38px; height:38px; border-radius:9px; flex-shrink:0;
 		                   display:flex; align-items:center; justify-content:center;
-		                   font-size:17px; background:var(--sc-bg,#eef2ff); }
+		                   font-size:17px; background:var(--sc-bg,#FBEEF0); }
 		.er2-stat-body   { flex:1; min-width:0; }
-		.er2-stat-val    { font-size:22px; font-weight:800; color:var(--sc-color,#4f46e5);
+		.er2-stat-val    { font-size:22px; font-weight:800; color:var(--sc-color,#920C24);
 		                   line-height:1.1; }
 		.er2-stat-lbl    { font-size:10px; color:#94a3b8; font-weight:700; text-transform:uppercase;
 		                   letter-spacing:.6px; margin-top:2px; }
@@ -507,19 +523,19 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 		.er2-gd-badge    { font-size:11px; font-weight:700; padding:3px 10px; border-radius:20px;
 		                   background:#f1f5f9; color:#475569; cursor:pointer; transition:all .15s;
 		                   border:1.5px solid transparent; }
-		.er2-gd-badge:hover  { background:#eef2ff; color:#4f46e5; }
-		.er2-gd-badge.er2-gd-active { background:#eef2ff; color:#4f46e5; border-color:#c7d2fe; }
+		.er2-gd-badge:hover  { background:#FBEEF0; color:#920C24; }
+		.er2-gd-badge.er2-gd-active { background:#FBEEF0; color:#920C24; border-color:#E8B4BE; }
 
 		/* ── Editable marks input ── */
 		.er2-mi { width:68px; height:26px; border:1.5px solid #e2e8f0; border-radius:6px;
 		          padding:0 5px; font-size:12px; color:#334155; text-align:center;
 		          background:#fff; outline:none; transition:border-color .15s; }
-		.er2-mi:focus   { border-color:#4f46e5; box-shadow:0 0 0 2px rgba(79,70,229,.12); }
+		.er2-mi:focus   { border-color:#920C24; box-shadow:0 0 0 2px rgba(146,12,36,.12); }
 		.er2-mi:disabled { background:#f8fafc; color:#94a3b8; cursor:not-allowed; }
 
 		/* ── Lock button states ── */
-		.er2-btn.outline-green { border-color:#a7f3d0; color:#059669; background:#f0fdf4; }
-		.er2-btn.outline-green:hover { background:#dcfce7; border-color:#6ee7b7; }
+		.er2-btn.outline-green { border-color:#E8B4BE; color:#920C24; background:#FBEEF0; }
+		.er2-btn.outline-green:hover { background:#F5D9DE; border-color:#E8B4BE; }
 
 		/* ── Page header ── */
 		.er2-page-header { background:#fff; border-radius:12px; padding:20px 24px;
@@ -537,8 +553,8 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 		                   color:#64748b; border-radius:7px; transition:all .2s;
 		                   user-select:none; letter-spacing:.1px; border:none;
 		                   background:transparent; display:inline-flex; align-items:center; gap:5px; }
-		.er2-pnav-btn:hover  { color:#4f46e5; background:rgba(79,70,229,.08); }
-		.er2-pnav-btn.active { background:#fff; color:#4f46e5;
+		.er2-pnav-btn:hover  { color:#920C24; background:rgba(146,12,36,.08); }
+		.er2-pnav-btn.active { background:#fff; color:#920C24;
 		                       box-shadow:0 1px 4px rgba(0,0,0,.12); }
 
 		/* ── Add Student Modal ── */
@@ -555,14 +571,14 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 		.xas-close   { width:30px; height:30px; border-radius:8px; border:none;
 		               background:#f1f5f9; cursor:pointer; display:flex; align-items:center;
 		               justify-content:center; color:#64748b; font-size:18px; transition:all .15s; flex-shrink:0; }
-		.xas-close:hover { background:#fee2e2; color:#ef4444; }
+		.xas-close:hover { background:#F5D9DE; color:#920C24; }
 		.xas-tabs    { display:flex; gap:3px; padding:10px 16px 0; border-bottom:1.5px solid #f1f5f9; }
 		.xas-tab     { padding:8px 18px; border:none; border-radius:7px 7px 0 0;
 		               background:transparent; font-size:13px; font-weight:600; color:#64748b;
 		               cursor:pointer; display:inline-flex; align-items:center; gap:6px;
 		               transition:all .15s; border-bottom:2.5px solid transparent; margin-bottom:-1.5px; }
-		.xas-tab:hover  { color:#10b981; background:rgba(16,185,129,.06); }
-		.xas-tab.active { color:#10b981; border-bottom-color:#10b981; background:#fff; }
+		.xas-tab:hover  { color:#920C24; background:rgba(146,12,36,.06); }
+		.xas-tab.active { color:#920C24; border-bottom-color:#920C24; background:#fff; }
 		.xas-panel   { flex:1; display:flex; flex-direction:column; overflow:hidden; min-height:0; }
 		.xas-search-bar { display:flex; gap:8px; padding:12px 16px; border-bottom:1.5px solid #f1f5f9;
 		                  flex-wrap:wrap; align-items:center; }
@@ -570,11 +586,11 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 		.xas-sinput  { width:100%; height:34px; border:1.5px solid #e2e8f0; border-radius:8px;
 		               padding:0 10px 0 34px; font-size:13px; outline:none; color:#1e293b;
 		               background:#fff; transition:border-color .2s; box-sizing:border-box; }
-		.xas-sinput:focus { border-color:#10b981; box-shadow:0 0 0 3px rgba(16,185,129,.1); }
+		.xas-sinput:focus { border-color:#920C24; box-shadow:0 0 0 3px rgba(146,12,36,.1); }
 		.xas-sselect { height:34px; border:1.5px solid #e2e8f0; border-radius:8px;
 		               padding:0 10px; font-size:12.5px; color:#1e293b; background:#fff;
 		               outline:none; cursor:pointer; transition:border-color .2s; }
-		.xas-sselect:focus { border-color:#10b981; }
+		.xas-sselect:focus { border-color:#920C24; }
 		.xas-list    { flex:1; overflow-y:auto; padding:8px; min-height:0; max-height:360px; }
 		.xas-loading, .xas-empty-list { display:flex; flex-direction:column; align-items:center;
 		               justify-content:center; padding:40px 20px; color:#94a3b8; gap:10px;
@@ -582,32 +598,32 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 		.xas-student-row { display:flex; align-items:center; gap:10px; padding:9px 10px;
 		                   border-radius:8px; cursor:pointer; margin-bottom:2px;
 		                   transition:background .12s; }
-		.xas-student-row:hover { background:#f0fdf4; }
+		.xas-student-row:hover { background:#FBEEF0; }
 		.xas-footer  { display:flex; align-items:center; justify-content:space-between;
-		               padding:12px 16px; border-top:1.5px solid #f1f5f9; background:#fafbff; }
+		               padding:12px 16px; border-top:1.5px solid #f1f5f9; background:#FDF8F9; }
 		.xas-sel-count { font-size:12.5px; font-weight:600; color:#64748b; }
 		.xas-cancel-btn { padding:0 16px; height:34px; border-radius:8px;
 		                  border:1.5px solid #e2e8f0; background:#fff; color:#475569;
 		                  font-size:13px; font-weight:600; cursor:pointer; transition:all .15s; }
 		.xas-cancel-btn:hover { border-color:#94a3b8; color:#1e293b; }
 		.xas-add-btn { height:34px; padding:0 18px; border-radius:8px; border:none;
-		               background:linear-gradient(135deg,#10b981,#34d399); color:#fff;
+		               background:#920C24; color:#fff;
 		               font-size:13px; font-weight:700; cursor:pointer;
 		               display:inline-flex; align-items:center; gap:6px; transition:opacity .15s; }
 		.xas-add-btn:hover { opacity:.88; }
 		.xas-add-btn:disabled { opacity:.5; cursor:default; }
 		.xas-csv-body { flex:1; padding:16px; overflow-y:auto; }
 		.xas-csv-hint { display:flex; align-items:flex-start; gap:8px; padding:10px 14px;
-		                background:#eff6ff; border:1.5px solid #bfdbfe; border-radius:8px;
-		                font-size:12.5px; color:#1e40af; margin-bottom:14px; }
-		.xas-dl-btn   { height:34px; padding:0 14px; border-radius:8px; border:1.5px solid #10b981;
-		                background:#fff; color:#10b981; font-size:12px; font-weight:700; cursor:pointer;
+		                background:#FBEEF0; border:1.5px solid #E8B4BE; border-radius:8px;
+		                font-size:12.5px; color:#6E091B; margin-bottom:14px; }
+		.xas-dl-btn   { height:34px; padding:0 14px; border-radius:8px; border:1.5px solid #920C24;
+		                background:#fff; color:#920C24; font-size:12px; font-weight:700; cursor:pointer;
 		                display:inline-flex; align-items:center; gap:6px; transition:all .15s; }
-		.xas-dl-btn:hover { background:#d1fae5; }
+		.xas-dl-btn:hover { background:#F5D9DE; }
 		.xas-drop-zone { border:2px dashed #e2e8f0; border-radius:10px; padding:24px 20px;
-		                 text-align:center; cursor:pointer; transition:all .18s; background:#fafbff;
+		                 text-align:center; cursor:pointer; transition:all .18s; background:#FDF8F9;
 		                 display:flex; flex-direction:column; align-items:center; gap:4px; }
-		.xas-drop-zone:hover, .xas-dz-active { border-color:#10b981; background:#f0fdf4; }
+		.xas-drop-zone:hover, .xas-dz-active { border-color:#920C24; background:#FBEEF0; }
 		`;
 		document.head.appendChild(style);
 	}
@@ -619,7 +635,7 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 
 			<!-- Page header -->
 			<div class="er2-page-header">
-				<div class="er2-page-icon" style="background:linear-gradient(135deg,#4f46e5,#6366f1);">
+				<div class="er2-page-icon" style="background:#920C24;">
 					<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2">
 						<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
 						<rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
@@ -704,11 +720,11 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 							</button>
 							<div class="dd-menu">
 								<div class="dd-item" id="er2-sync-enroll">
-									<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;vertical-align:-2px;color:#4f46e5;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+									<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;vertical-align:-2px;color:#920C24;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
 									Sync from Enrollment
 								</div>
 								<div class="dd-item" id="er2-sync-class">
-									<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;vertical-align:-2px;color:#0ea5e9;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+									<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;vertical-align:-2px;color:#920C24;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
 									Add Class Students
 								</div>
 							</div>
@@ -758,15 +774,15 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 						</button>
 						<div class="dd-menu">
 							<div class="dd-item" id="er2-marks-import">
-								<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" style="margin-right:6px;vertical-align:-2px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+								<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#920C24" stroke-width="2" style="margin-right:6px;vertical-align:-2px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
 								Import Marks
 							</div>
 							<div class="dd-item" id="er2-reexam-import">
-								<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" style="margin-right:6px;vertical-align:-2px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+								<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#920C24" stroke-width="2" style="margin-right:6px;vertical-align:-2px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
 								Import Re-Exam Marks
 							</div>
 							<div class="dd-item" id="er2-marks-export">
-								<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2" style="margin-right:6px;vertical-align:-2px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+								<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#920C24" stroke-width="2" style="margin-right:6px;vertical-align:-2px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
 								Export Marks (Excel)
 							</div>
 						</div>
@@ -816,13 +832,13 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 				<!-- Empty state -->
 				<div id="er2-empty" class="er2-empty">
 					<svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-						<circle cx="60" cy="60" r="56" fill="#eef2ff" stroke="#c7d2fe" stroke-width="2"/>
-						<rect x="35" y="30" width="50" height="60" rx="6" fill="#fff" stroke="#c7d2fe" stroke-width="2"/>
-						<rect x="43" y="44" width="34" height="3" rx="1.5" fill="#c7d2fe"/>
-						<rect x="43" y="53" width="26" height="3" rx="1.5" fill="#e0e7ff"/>
-						<rect x="43" y="62" width="30" height="3" rx="1.5" fill="#e0e7ff"/>
-						<rect x="43" y="71" width="20" height="3" rx="1.5" fill="#e0e7ff"/>
-						<circle cx="84" cy="84" r="18" fill="#4f46e5"/>
+						<circle cx="60" cy="60" r="56" fill="#FBEEF0" stroke="#E8B4BE" stroke-width="2"/>
+						<rect x="35" y="30" width="50" height="60" rx="6" fill="#fff" stroke="#E8B4BE" stroke-width="2"/>
+						<rect x="43" y="44" width="34" height="3" rx="1.5" fill="#E8B4BE"/>
+						<rect x="43" y="53" width="26" height="3" rx="1.5" fill="#F5D9DE"/>
+						<rect x="43" y="62" width="30" height="3" rx="1.5" fill="#F5D9DE"/>
+						<rect x="43" y="71" width="20" height="3" rx="1.5" fill="#F5D9DE"/>
+						<circle cx="84" cy="84" r="18" fill="#920C24"/>
 						<path d="M76 84h16M84 76v16" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
 					</svg>
 					<div class="er2-empty-txt">Select a Programme &amp; Course</div>
@@ -843,11 +859,11 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 								</span>
 								<div class="dd-menu" style="min-width:220px;">
 									<div class="dd-item" id="er2-sel-page">
-										<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2" style="margin-right:6px;vertical-align:-2px;"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+										<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#920C24" stroke-width="2" style="margin-right:6px;vertical-align:-2px;"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
 										Select All For This Page
 									</div>
 									<div class="dd-item" id="er2-sel-all">
-										<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" stroke-width="2" style="margin-right:6px;vertical-align:-2px;"><polyline points="20 6 9 17 4 12"/></svg>
+										<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#920C24" stroke-width="2" style="margin-right:6px;vertical-align:-2px;"><polyline points="20 6 9 17 4 12"/></svg>
 										Select All Across All Pages
 									</div>
 									<div class="dd-item" id="er2-sel-none">
@@ -1451,7 +1467,7 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 				{
 					fieldname: 'note',
 					fieldtype: 'HTML',
-					options: '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:10px 14px;margin-top:6px;font-size:12px;color:#14532d;">' +
+					options: '<div style="background:#FBEEF0;border:1px solid #E8B4BE;border-radius:6px;padding:10px 14px;margin-top:6px;font-size:12px;color:#6E091B;">' +
 						'Rows are matched by Registration ID or Email. Existing marks will be overwritten.' +
 						'</div>',
 				},
@@ -1506,7 +1522,7 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 				{
 					fieldname: 'note',
 					fieldtype: 'HTML',
-					options: '<div style="background:#fef3c7;border:1px solid#fde68a;border-radius:6px;padding:10px 14px;margin-top:6px;font-size:12px;color:#78350f;">' +
+					options: '<div style="background:#F5D9DE;border:1px solid #E8B4BE;border-radius:6px;padding:10px 14px;margin-top:6px;font-size:12px;color:#6E091B;">' +
 						'<strong>Re-Exam Marks Import:</strong> Enter marks in the "Re Exam Marks" column. Students are matched by Registration ID or Email.' +
 						'</div>',
 				},
@@ -1689,13 +1705,13 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 
 				$statsPanel.html(
 					'<div class="er2-stats-cards">' +
-					_stat_card('#4f46e5', '&#127979;', st.total || 0,    'Total Students') +
-					_stat_card('#0ea5e9', '&#9998;',   graded,            'Graded') +
-					_stat_card('#10b981', '&#10003;',  st.passed || 0,    'Passed') +
-					_stat_card('#ef4444', '&#10007;',  st.failed || 0,    'Failed') +
-					_stat_card('#f59e0b', '&#8987;',   st.not_graded || 0,'Not Graded') +
-					(distHtml ? '<div class="er2-stat-card" style="--sc-color:#7c3aed;flex:2.5;">' +
-						'<div class="er2-stat-icon" style="background:#ede9fe;color:#7c3aed;font-size:16px;">&#127775;</div>' +
+					_stat_card('#920C24', '&#127979;', st.total || 0,    'Total Students') +
+					_stat_card('#920C24', '&#9998;',   graded,            'Graded') +
+					_stat_card('#920C24', '&#10003;',  st.passed || 0,    'Passed') +
+					_stat_card('#920C24', '&#10007;',  st.failed || 0,    'Failed') +
+					_stat_card('#920C24', '&#8987;',   st.not_graded || 0,'Not Graded') +
+					(distHtml ? '<div class="er2-stat-card" style="--sc-color:#920C24;flex:2.5;">' +
+						'<div class="er2-stat-icon" style="background:#F5D9DE;color:#920C24;font-size:16px;">&#127775;</div>' +
 						'<div class="er2-stat-body">' +
 						'<div class="er2-stat-lbl">Grade Distribution</div>' +
 						'<div style="display:flex;flex-wrap:wrap;gap:2px;margin-top:4px;">' + distHtml + '</div>' +
@@ -1810,7 +1826,7 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 				'</div>';
 		}
 
-		var on_badge  = '<span style="display:inline-flex;align-items:center;gap:4px;background:#d1fae5;color:#065f46;font-weight:700;padding:2px 9px;border-radius:20px;font-size:11px;">&#9679; ON</span>';
+		var on_badge  = '<span style="display:inline-flex;align-items:center;gap:4px;background:#F5D9DE;color:#6E091B;font-weight:700;padding:2px 9px;border-radius:20px;font-size:11px;">&#9679; ON</span>';
 		var off_badge = '<span style="display:inline-flex;align-items:center;gap:4px;background:#f1f5f9;color:#94a3b8;font-weight:700;padding:2px 9px;border-radius:20px;font-size:11px;">&#9675; OFF</span>';
 
 		var view_val = o.view_access ? on_badge : off_badge;
@@ -1828,7 +1844,7 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 			? '<a href="#" class="er2-schema-link" data-schema="grade" data-name="' + frappe.utils.escape_html(o.grade_schema) + '">' + frappe.utils.escape_html(o.grade_schema) + '</a>'
 			: '<span style="color:#94a3b8;">—</span>';
 		var calc_link = o.evaluation_schema
-			? '<a href="#" id="er2-calc-settings-link" style="color:#4f46e5;font-size:12px;font-weight:600;text-decoration:none;border-bottom:1px dashed #c7d2fe;">Calculation Settings</a>'
+			? '<a href="#" id="er2-calc-settings-link" style="color:#920C24;font-size:12px;font-weight:600;text-decoration:none;border-bottom:1px dashed #E8B4BE;">Calculation Settings</a>'
 			: '<span style="color:#94a3b8;">—</span>';
 
 		var course_lbl = frappe.utils.escape_html((o.course_name || '') + (o.course_code ? ' [' + o.course_code + ']' : ''));
@@ -1836,9 +1852,9 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 		$info.html(
 			'<div class="er2-info">' +
 			card('', '&#128100;', 'Students Enrolled',
-				'<span style="font-size:22px;font-weight:800;color:#4f46e5;line-height:1.1;">' + (o.student_count || 0) + '</span>') +
+				'<span style="font-size:22px;font-weight:800;color:#920C24;line-height:1.1;">' + (o.student_count || 0) + '</span>') +
 			card('teal', '&#128218;', 'Course',
-				'<span style="font-weight:700;color:#0369a1;">' + course_lbl + '</span>' +
+				'<span style="font-weight:700;color:#920C24;">' + course_lbl + '</span>' +
 				'<span style="display:block;font-size:11px;color:#94a3b8;margin-top:2px;font-weight:500;">' +
 				(o.credit_value ? o.credit_value + ' Credits' : '') + '</span>') +
 			card('green', '&#9999;&#65039;', 'Evaluation Schema', eval_link +
@@ -1886,23 +1902,23 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 			var status_txt = s.student_status || 'Active';
 			var initials   = (s.student_name || 'S').charAt(0).toUpperCase();
 			var av_cls     = 'av-' + (idx % 8);
-			var dot_color  = status_cls === 'active' ? '#10b981' : status_cls === 'dropped' ? '#f59e0b' : '#ef4444';
+			var dot_color  = status_cls === 'active' ? '#10b981' : status_cls === 'dropped' ? '#920C24' : '#920C24';
 			var avatarContent = s.passport_size_photo
 				? '<img src="' + frappe.utils.escape_html(s.passport_size_photo) + '" alt="">'
 				: initials;
 			var isManual  = s.manually_added ? true : false;
-			var rowStyle  = isManual ? ' style="background:#f0fdf4;border-left:3px solid #86efac;"' : '';
+			var rowStyle  = isManual ? ' style="background:#FBEEF0;border-left:3px solid #E8B4BE;"' : '';
 			var removeBtn = isManual
 				? '<button class="er2-remove-student" data-student="' + frappe.utils.escape_html(s.student) + '" ' +
 				  'title="Remove this manually added student" ' +
-				  'style="flex-shrink:0;margin-left:auto;padding:3px 8px;font-size:11px;border:1px solid #fca5a5;' +
-				  'border-radius:4px;background:#fff;color:#dc2626;cursor:pointer;line-height:1.4;">' +
+				  'style="flex-shrink:0;margin-left:auto;padding:3px 8px;font-size:11px;border:1px solid #E8B4BE;' +
+				  'border-radius:4px;background:#fff;color:#920C24;cursor:pointer;line-height:1.4;">' +
 				  'Remove</button>'
 				: '';
 			var manualBadge = '';
 			html +=
 				'<div class="er2-srow" data-student="' + frappe.utils.escape_html(s.student) + '"' + rowStyle + '>' +
-				'  <input type="checkbox" class="er2-chk" style="flex-shrink:0;accent-color:#4f46e5;width:14px;height:14px;cursor:pointer;">' +
+				'  <input type="checkbox" class="er2-chk" style="flex-shrink:0;accent-color:#920C24;width:14px;height:14px;cursor:pointer;">' +
 				'  <div class="er2-savatar ' + av_cls + '">' + avatarContent + '</div>' +
 				'  <div class="er2-sinfo">' +
 				'    <div class="er2-sname">' + frappe.utils.escape_html(s.student_name || s.student) + '</div>' +
@@ -2012,12 +2028,12 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 		var total_cols = (cols.length - proj_col_count) * 1 + proj_col_count * 3 + 2 + 6 + reexam_cols.length * 1 + (reexam_cols.length ? 1 : 0) + 2 + 2;
 
 		// ── CSS colours ──────────────────────────────────────────────────────────
-		var C_COMP   = 'background:linear-gradient(90deg,#eef2ff,#e0e7ff);color:#3730a3;border-bottom:2px solid #818cf8;';
-		var C_GRADE  = 'background:linear-gradient(90deg,#ecfdf5,#d1fae5);color:#065f46;border-bottom:2px solid #34d399;';
-		var C_STATUS = 'background:linear-gradient(90deg,#fffbeb,#fef3c7);color:#92400e;border-bottom:2px solid #fbbf24;';
-		var C_REEXAM = 'background:linear-gradient(90deg,#fdf2f8,#fce7f3);color:#9d174d;border-bottom:2px solid #f472b6;';
-		var C_FINAL  = 'background:linear-gradient(90deg,#eff6ff,#dbeafe);color:#1e40af;border-bottom:2px solid #60a5fa;';
-		var C_IMPROV = 'background:linear-gradient(90deg,#f0fdf4,#dcfce7);color:#14532d;border-bottom:2px solid #4ade80;';
+		var C_COMP   = 'background:#FBEEF0;color:#6E091B;border-bottom:2px solid #C4566A;';
+		var C_GRADE  = 'background:#FBEEF0;color:#6E091B;border-bottom:2px solid #C4566A;';
+		var C_STATUS = 'background:#FBEEF0;color:#6E091B;border-bottom:2px solid #C4566A;';
+		var C_REEXAM = 'background:#FBEEF0;color:#6E091B;border-bottom:2px solid #C4566A;';
+		var C_FINAL  = 'background:#FBEEF0;color:#6E091B;border-bottom:2px solid #C4566A;';
+		var C_IMPROV = 'background:#FBEEF0;color:#6E091B;border-bottom:2px solid #C4566A;';
 
 		// ── Header row 1: section-level group headers ────────────────────────────
 		var th1 = '';
@@ -2167,14 +2183,14 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 								'<input type="number" step="0.01" min="0" class="er2-mi" data-is-project="1" ' +
 								'data-student="' + stu + '" data-comp="' + comp + '" data-atype="' + atyp + '" data-field="revaluation_marks" ' +
 								'value="' + frappe.utils.escape_html(rvVal) + '" placeholder="—" ' +
-								'style="width:70px;height:26px;border:1.5px solid #fef3c7;border-radius:6px;padding:0 6px;font-size:12px;font-weight:600;text-align:center;outline:none;">' +
+								'style="width:70px;height:26px;border:1.5px solid #F5D9DE;border-radius:6px;padding:0 6px;font-size:12px;font-weight:600;text-align:center;outline:none;">' +
 								'</td>' +
 								'<td class="er2-proj-total-cell" data-comp="' + comp + '" data-atype="' + atyp + '" data-student="' + stu + '" ' +
-								'style="font-weight:700;text-align:center;color:#047857;min-width:80px;">' + projTot + '</td>';
+								'style="font-weight:700;text-align:center;color:#920C24;min-width:80px;">' + projTot + '</td>';
 						} else {
 							cells += '<td>' + (mVal || '—') + '</td>' +
 								'<td>' + (rvVal || '—') + '</td>' +
-								'<td style="font-weight:700;color:#047857;">' + projTot + '</td>';
+								'<td style="font-weight:700;color:#920C24;">' + projTot + '</td>';
 						}
 					} else {
 						if (canEdit) {
@@ -2202,15 +2218,15 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 			var isAS       = !isAbsent && (!!sm.attendance_shortage || sm.attendance_status === 'Attendance Shortage');
 			var gradeVal   = isAbsent ? 'Ab' : (isAS ? 'AS' : (sm.grade || ''));
 			var isFailed   = gradeVal && (S.failed_grades || []).indexOf(gradeVal) !== -1;
-			var gradeColor = isAS ? '#b45309' : (isFailed ? '#dc2626' : '#059669');
-			var gradeBorderColor = isAS ? '#fde68a' : (isFailed ? '#fca5a5' : '#a7f3d0');
+			var gradeColor = isAS ? '#920C24' : (isFailed ? '#920C24' : '#059669');
+			var gradeBorderColor = isAS ? '#E8B4BE' : (isFailed ? '#E8B4BE' : '#a7f3d0');
 			cells += '<td style="font-weight:700;" class="er2-total-cell" data-student="' + frappe.utils.escape_html(s.student) + '">' + total + '</td>';
 			if (canEdit) {
 				cells += '<td style="padding:4px 6px;" class="er2-grade-cell" data-student="' + frappe.utils.escape_html(s.student) + '">' +
 					'<span style="white-space:nowrap;">' +
 					'<input type="text" class="er2-grade-input" data-student="' + frappe.utils.escape_html(s.student) + '" ' +
 					'value="' + frappe.utils.escape_html(gradeVal) + '" placeholder="—" ' + (isAS ? 'readonly title="Grade withheld — attendance below the required minimum (see Attendance Settings)"' : '') + ' ' +
-					'style="width:60px;height:26px;border:1.5px solid ' + gradeBorderColor + ';border-radius:6px;padding:0 6px;font-size:12px;font-weight:700;text-align:center;outline:none;color:' + gradeColor + ';' + (isAS ? 'background:#fffbeb;' : '') + '">' +
+					'style="width:60px;height:26px;border:1.5px solid ' + gradeBorderColor + ';border-radius:6px;padding:0 6px;font-size:12px;font-weight:700;text-align:center;outline:none;color:' + gradeColor + ';' + (isAS ? 'background:#FBEEF0;' : '') + '">' +
 					(sm.mfa === 'Yes' ? '<sup class="er2-ann-badge er2-mfa-badge">MFA</sup>' : '') +
 					(sm.arrear_marker && sm.arrear_marker !== 'I' && sm.mfa !== 'Yes' ? '<sup class="er2-ann-badge er2-arrear-badge">' + frappe.utils.escape_html(sm.arrear_marker) + '</sup>' : '') +
 					'</span></td>';
@@ -2254,7 +2270,7 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 				'border-radius:3px;padding:3px 5px;resize:vertical;min-height:36px;background:#fff;" ' + (canEdit ? '':'readonly') + '>' +
 				rmk + '</textarea>' +
 				(canEdit ? '<span class="er2-remark-save" data-student="' + frappe.utils.escape_html(s.student) + '" ' +
-				'style="font-size:10px;color:#e63946;cursor:pointer;display:none;">&#9998; Save</span>' : '') +
+				'style="font-size:10px;color:#920C24;cursor:pointer;display:none;">&#9998; Save</span>' : '') +
 				'</td>';
 
 			// Notes cell — explains arrear/MFA override situation
@@ -2265,8 +2281,8 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 				notesTxt = 'Arrear (' + frappe.utils.escape_html(sm.arrear_marker) + ') pending';
 			}
 			cells += '<td class="er2-status-col" style="text-align:left;min-width:160px;font-size:11px;color:' +
-				(sm.arrear_marker && sm.arrear_marker !== 'I' && sm.mfa === 'Yes' ? '#92400e' : (sm.arrear_marker && sm.arrear_marker !== 'I') ? '#9a3412' : '#64748b') + ';' +
-				(sm.arrear_marker && sm.arrear_marker !== 'I' && sm.mfa === 'Yes' ? 'background:#fef9c3;' : (sm.arrear_marker && sm.arrear_marker !== 'I') ? 'background:#fff7ed;' : '') +
+				(sm.arrear_marker && sm.arrear_marker !== 'I' && sm.mfa === 'Yes' ? '#6E091B' : (sm.arrear_marker && sm.arrear_marker !== 'I') ? '#6E091B' : '#64748b') + ';' +
+				(sm.arrear_marker && sm.arrear_marker !== 'I' && sm.mfa === 'Yes' ? 'background:#F5D9DE;' : (sm.arrear_marker && sm.arrear_marker !== 'I') ? 'background:#FBEEF0;' : '') +
 				'">' + notesTxt + '</td>';
 
 			// Re-Exam cells
@@ -2282,7 +2298,7 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 						'<td style="padding:4px 6px;"><input type="number" step="0.01" min="0" class="er2-mi" ' +
 						'data-student="' + stu + '" data-comp="' + comp + '" data-atype="' + atyp + '" data-field="marks" ' +
 						'value="' + frappe.utils.escape_html(mVal) + '" placeholder="—" ' +
-						'style="width:70px;height:26px;border:1.5px solid #fce7f3;border-radius:6px;padding:0 6px;font-size:12px;font-weight:600;text-align:center;outline:none;"></td>';
+						'style="width:70px;height:26px;border:1.5px solid #F5D9DE;border-radius:6px;padding:0 6px;font-size:12px;font-weight:600;text-align:center;outline:none;"></td>';
 				} else {
 					cells += '<td>' + (mVal || '—') + '</td>';
 				}
@@ -2309,14 +2325,14 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 				cells += '<td style="padding:4px 6px;text-align:center;" class="er2-imp-marks-cell" data-student="' + stu_ug + '">' +
 					'<input type="number" step="0.01" min="0" class="er2-imp-mi" data-student="' + stu_ug + '" ' +
 					'value="' + frappe.utils.escape_html(impMarksVal) + '" placeholder="—" ' +
-					'style="width:70px;height:26px;border:1.5px solid #bbf7d0;border-radius:6px;padding:0 6px;font-size:12px;font-weight:600;text-align:center;outline:none;color:#15803d;">' +
+					'style="width:70px;height:26px;border:1.5px solid #E8B4BE;border-radius:6px;padding:0 6px;font-size:12px;font-weight:600;text-align:center;outline:none;color:#920C24;">' +
 					'</td>';
-				cells += '<td style="padding:4px 6px;font-weight:700;text-align:center;color:#14532d;" class="er2-imp-grade-cell" data-student="' + stu_ug + '">' +
+				cells += '<td style="padding:4px 6px;font-weight:700;text-align:center;color:#6E091B;" class="er2-imp-grade-cell" data-student="' + stu_ug + '">' +
 					frappe.utils.escape_html(impGradeVal || '—') + impStr +
 					'</td>';
 			} else {
-				cells += '<td style="font-weight:700;text-align:center;color:#15803d;">' + frappe.utils.escape_html(impMarksVal || '—') + '</td>';
-				cells += '<td style="font-weight:700;text-align:center;color:#14532d;">' + frappe.utils.escape_html(impGradeVal || '—') + impStr + '</td>';
+				cells += '<td style="font-weight:700;text-align:center;color:#920C24;">' + frappe.utils.escape_html(impMarksVal || '—') + '</td>';
+				cells += '<td style="font-weight:700;text-align:center;color:#6E091B;">' + frappe.utils.escape_html(impGradeVal || '—') + impStr + '</td>';
 			}
 
 			// Updated Final Result
@@ -2331,11 +2347,11 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 					'<span style="white-space:nowrap;">' +
 					'<input type="text" class="er2-ug-input" data-student="' + stu_ug + '" ' +
 					'value="' + frappe.utils.escape_html(ugRaw) + '" placeholder="—" ' + (isAS ? 'readonly' : '') + ' ' +
-					'style="width:60px;height:26px;border:1.5px solid #c7d2fe;border-radius:6px;padding:0 6px;font-size:12px;font-weight:700;text-align:center;outline:none;color:#3730a3;' + (isAS ? 'background:#fffbeb;' : '') + '">' +
+					'style="width:60px;height:26px;border:1.5px solid #E8B4BE;border-radius:6px;padding:0 6px;font-size:12px;font-weight:700;text-align:center;outline:none;color:#6E091B;' + (isAS ? 'background:#FBEEF0;' : '') + '">' +
 					mfaStr + arrearStr + impStr + improvedStr +
 					'</span></td>';
 			} else {
-				cells += '<td style="font-weight:700;color:#3730a3;text-align:center;" class="er2-ug-cell" data-student="' + stu_ug + '">' + frappe.utils.escape_html(ugVal) + mfaStr + arrearStr + impStr + improvedStr + '</td>';
+				cells += '<td style="font-weight:700;color:#6E091B;text-align:center;" class="er2-ug-cell" data-student="' + stu_ug + '">' + frappe.utils.escape_html(ugVal) + mfaStr + arrearStr + impStr + improvedStr + '</td>';
 			}
 
 			rows += '<tr class="er2-mrow" data-student="' + frappe.utils.escape_html(s.student) + '">' + cells + '</tr>';
@@ -2358,10 +2374,10 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 
 		// ── Inline marks entry ─────────────────────────────────────────────────
 		$mtable.find('.er2-mi').on('focus', function () {
-			$(this).css('border-color', '#4f46e5');
+			$(this).css('border-color', '#920C24');
 		}).on('blur', function () {
 			var $self = $(this);
-			var defaultBorder = $self.data('field') === 'revaluation_marks' && $self.data('is-project') ? '#fef3c7' : '#e2e8f0';
+			var defaultBorder = $self.data('field') === 'revaluation_marks' && $self.data('is-project') ? '#F5D9DE' : '#e2e8f0';
 			$self.css('border-color', defaultBorder);
 		}).on('change', function () {
 			var $inp    = $(this);
@@ -2382,18 +2398,18 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 				// Deduction cannot exceed marks — cap and warn
 				if (dNum > mNum) {
 					$dInp.val(mNum.toFixed(2));
-					$dInp.css('border-color', '#ef4444');
+					$dInp.css('border-color', '#920C24');
 					frappe.show_alert({ message: 'Deduction cannot exceed Marks (' + mNum.toFixed(2) + '). Capped automatically.', indicator: 'orange' });
 					dNum = mNum;
 					// Restore border after 2 s
-					setTimeout(function () { $dInp.css('border-color', '#fef3c7'); }, 2000);
+					setTimeout(function () { $dInp.css('border-color', '#F5D9DE'); }, 2000);
 				}
 				var pTotal = (mNum - dNum).toFixed(2);
 				$tr.find('.er2-proj-total-cell[data-comp="' + comp + '"][data-atype="' + atype + '"]').text(pTotal);
 			}
 
 			// Yellow flash while pending
-			$tr.css('background', '#fefce8');
+			$tr.css('background', '#FBEEF0');
 			clearTimeout(_saveTimer[key]);
 
 			// Store the save function so we can flush it immediately on demand
@@ -2484,7 +2500,7 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 							resolve();
 						},
 						error: function () {
-							$tr.css('background', '#fff1f2');
+							$tr.css('background', '#FBEEF0');
 							resolve();
 						},
 					});
@@ -2504,7 +2520,7 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 			var val     = $select.val();
 			var $tr     = $mtable.find('tr[data-student="' + student + '"]');
 
-			$tr.css('background', '#fefce8');
+			$tr.css('background', '#FBEEF0');
 			frappe.call({
 				method: 'slcm.slcm.page.examination_result.examination_result.save_status',
 				args: {
@@ -2563,7 +2579,7 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 					}
 				},
 				error: function() {
-					$tr.css('background', '#fff1f2');
+					$tr.css('background', '#FBEEF0');
 				}
 			});
 		});
@@ -2574,7 +2590,7 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 			var student = $inp.data('student');
 			var val     = $inp.val().trim();
 			var $tr     = $mtable.find('tr[data-student="' + student + '"]');
-			$tr.css('background', '#f0fdf4');
+			$tr.css('background', '#FBEEF0');
 			frappe.call({
 				method: 'slcm.slcm.page.examination_result.examination_result.save_improvement_marks',
 				args: {
@@ -2628,7 +2644,7 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 						frappe.show_alert({ message: 'Improvement marks saved.', indicator: 'green' }, 2);
 					}
 				},
-				error: function () { $tr.css('background', '#fff1f2'); },
+				error: function () { $tr.css('background', '#FBEEF0'); },
 			});
 		});
 
@@ -2711,15 +2727,15 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 
 		// ── Inline Grade Edit ──────────────────────────────────────────────────
 		$mtable.find('.er2-grade-input').on('focus', function () {
-			$(this).css('border-color', '#059669');
+			$(this).css('border-color', '#920C24');
 		}).on('blur', function () {
-			$(this).css('border-color', '#a7f3d0');
+			$(this).css('border-color', '#E8B4BE');
 		}).on('change', function () {
 			var $inp    = $(this);
 			var student = $inp.data('student');
 			var val     = $inp.val().trim();
 			var $tr     = $mtable.find('tr[data-student="' + student + '"]');
-			$tr.css('background', '#fefce8');
+			$tr.css('background', '#FBEEF0');
 			frappe.call({
 				method: 'slcm.slcm.page.examination_result.examination_result.save_status',
 				args: {
@@ -2738,7 +2754,7 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 					}
 				},
 				error: function () {
-					$tr.css('background', '#fff1f2');
+					$tr.css('background', '#FBEEF0');
 					frappe.show_alert({ message: 'Failed to save grade', indicator: 'red' });
 				},
 			});
@@ -2746,15 +2762,15 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 
 		// ── Inline Updated Grade Edit ─────────────────────────────────────────────
 		$mtable.find('.er2-ug-input').on('focus', function () {
-			$(this).css('border-color', '#4f46e5');
+			$(this).css('border-color', '#920C24');
 		}).on('blur', function () {
-			$(this).css('border-color', '#c7d2fe');
+			$(this).css('border-color', '#E8B4BE');
 		}).on('change', function () {
 			var $inp    = $(this);
 			var student = $inp.data('student');
 			var val     = $inp.val().trim();
 			var $tr     = $mtable.find('tr[data-student="' + student + '"]');
-			$tr.css('background', '#fefce8');
+			$tr.css('background', '#FBEEF0');
 			frappe.call({
 				method: 'slcm.slcm.page.examination_result.examination_result.save_status',
 				args: {
@@ -2773,7 +2789,7 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 					}
 				},
 				error: function () {
-					$tr.css('background', '#fff1f2');
+					$tr.css('background', '#FBEEF0');
 					frappe.show_alert({ message: 'Failed to save updated grade', indicator: 'red' });
 				},
 			});
@@ -3053,7 +3069,7 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 						'</tr></thead><tbody>';
 					(s.grades || []).forEach(function (g) {
 						var range      = (g.from_operator || '>=') + ' ' + (g.marks_from || 0) + ' &amp; ' + (g.to_operator || '<') + ' ' + (g.marks_to || 0);
-						var failedBadge = g.failed ? '<span style="color:#dc3545;font-weight:600;">Yes</span>' : '<span style="color:#28a745;">No</span>';
+						var failedBadge = g.failed ? '<span style="color:#920C24;font-weight:600;">Yes</span>' : '<span style="color:#920C24;">No</span>';
 						var sgpaBadge   = g.consider_for_sgpa ? '<span style="color:#28a745;">Yes</span>' : '<span style="color:#6c757d;">No</span>';
 						html += '<tr>' +
 							'<td style="padding:5px 8px;border:1px solid #dee2e6;font-weight:700;">' + frappe.utils.escape_html(g.grade || '') + '</td>' +
@@ -3170,7 +3186,7 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 			<div class="xif-modal">
 				<div class="xif-header">
 					<span class="xif-title">
-						<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.5" style="vertical-align:-3px;margin-right:6px;"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+						<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#920C24" stroke-width="2.5" style="vertical-align:-3px;margin-right:6px;"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
 						Filter by
 					</span>
 					<button class="xif-close">&#10005;</button>
@@ -3226,7 +3242,7 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 			var $btn = $body.find('#er2-inst-filter');
 			if (total) {
 				$btn.addClass('xif-btn-active').find('.xif-count').remove();
-				$btn.append('<span class="xif-count" style="background:#4f46e5;color:#fff;border-radius:20px;font-size:10px;font-weight:700;padding:1px 6px;margin-left:4px;">' + total + '</span>');
+				$btn.append('<span class="xif-count" style="background:#920C24;color:#fff;border-radius:20px;font-size:10px;font-weight:700;padding:1px 6px;margin-left:4px;">' + total + '</span>');
 			} else {
 				$btn.removeClass('xif-btn-active').find('.xif-count').remove();
 			}
@@ -3274,7 +3290,7 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 				'<div class="xas-modal">' +
 					'<div class="xas-header">' +
 						'<div style="display:flex;align-items:center;gap:10px;">' +
-							'<div style="width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg,#10b981,#34d399);display:flex;align-items:center;justify-content:center;flex-shrink:0;">' +
+							'<div style="width:36px;height:36px;border-radius:9px;background:#920C24;display:flex;align-items:center;justify-content:center;flex-shrink:0;">' +
 								'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>' +
 							'</div>' +
 							'<div>' +
@@ -3322,7 +3338,7 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 					'<div id="xas-panel-csv" class="xas-panel" style="display:none;">' +
 						'<div class="xas-csv-body">' +
 							'<div class="xas-csv-hint">' +
-								'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.5" style="flex-shrink:0;margin-top:1px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
+								'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#920C24" stroke-width="2.5" style="flex-shrink:0;margin-top:1px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
 								'Download the template, fill in the <b>Registration ID</b> for each student, then upload.' +
 							'</div>' +
 							'<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap;">' +
@@ -3335,12 +3351,12 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 							'<div class="xas-drop-zone" id="xas-drop-zone">' +
 								'<input type="file" id="xas-csv-input" accept=".csv" style="display:none;">' +
 								'<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>' +
-								'<div style="font-size:13px;font-weight:600;color:#475569;margin-top:6px;">Drop CSV here or <span style="color:#10b981;text-decoration:underline;cursor:pointer;">Browse file</span></div>' +
+								'<div style="font-size:13px;font-weight:600;color:#475569;margin-top:6px;">Drop CSV here or <span style="color:#920C24;text-decoration:underline;cursor:pointer;">Browse file</span></div>' +
 								'<div style="font-size:11px;color:#94a3b8;margin-top:3px;">Accepted: .csv — use the template above</div>' +
 							'</div>' +
 							'<div id="xas-csv-preview" style="display:none;margin-top:14px;">' +
 								'<div id="xas-csv-info" style="font-size:12.5px;font-weight:700;color:#1e293b;margin-bottom:8px;display:flex;align-items:center;gap:6px;">' +
-									'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>' +
+									'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#920C24" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>' +
 									'<span id="xas-csv-info-txt"></span>' +
 								'</div>' +
 								'<div id="xas-csv-table-wrap" style="max-height:200px;overflow-y:auto;border:1.5px solid #e2e8f0;border-radius:8px;"></div>' +
@@ -3424,7 +3440,7 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 					' data-student="' + frappe.utils.escape_html(s.student) + '"' +
 					' data-sname="'  + frappe.utils.escape_html(s.student_name || '') + '"' +
 					' data-regid="'  + frappe.utils.escape_html(s.registration_id || '') + '"' +
-					' style="width:15px;height:15px;accent-color:#10b981;cursor:pointer;flex-shrink:0;">' +
+					' style="width:15px;height:15px;accent-color:#920C24;cursor:pointer;flex-shrink:0;">' +
 					avatar +
 					'<div style="flex:1;min-width:0;">' +
 						'<div style="font-size:13px;font-weight:700;color:#0f172a;">' + frappe.utils.escape_html(s.student_name || '—') + '</div>' +

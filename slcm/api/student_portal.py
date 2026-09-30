@@ -3,7 +3,7 @@
 
 import frappe
 from frappe import _
-from frappe.utils import flt, cint, today, nowdate, getdate
+from frappe.utils import add_days, flt, cint, today, nowdate, getdate
 from slcm.api.student_payment import _require_parent_for_student
 
 
@@ -591,6 +591,37 @@ def download_fee_receipt(receipt_name):
 
 
 @frappe.whitelist()
+def download_fee_demand_invoice(fee_demand):
+    """Invoice PDF for one of the logged-in student's Fee Demands (IDOR guard)."""
+    if frappe.session.user == "Guest":
+        frappe.throw(frappe._("Please log in."), frappe.AuthenticationError)
+    student_name = _get_student()
+    if not student_name:
+        frappe.throw(frappe._("No student record found for your account."), frappe.PermissionError)
+    _send_fee_demand_invoice(fee_demand, student_name)
+
+
+@frappe.whitelist()
+def parent_download_fee_demand_invoice(fee_demand, student_name):
+    """Same invoice, for a parent viewing their ward's record."""
+    if frappe.session.user == "Guest":
+        frappe.throw(frappe._("Please log in."), frappe.AuthenticationError)
+    _require_parent_for_student(student_name)
+    _send_fee_demand_invoice(fee_demand, student_name)
+
+
+def _send_fee_demand_invoice(fee_demand, student_name):
+    owner, status = frappe.db.get_value("Fee Demand", fee_demand, ["student", "status"]) or (None, None)
+    if not owner or owner != student_name or status == "Cancelled":
+        frappe.throw(frappe._("Invoice not found or access denied."), frappe.PermissionError)
+    pdf_bytes = _generate_pdf("Fee Demand", fee_demand, "Fee Demand Invoice")
+    safe = fee_demand.replace("/", "-").replace(" ", "_")
+    frappe.local.response.filename    = f"Fee_Invoice_{safe}.pdf"
+    frappe.local.response.filecontent = pdf_bytes
+    frappe.local.response.type        = "pdf"
+
+
+@frappe.whitelist()
 def parent_download_fee_invoice(invoice_name, student_name):
     """Stream a PDF of a Fee Invoice for a parent viewing their ward's record.
 
@@ -688,6 +719,35 @@ def download_re_exam_receipt(registration_name):
             frappe.ValidationError,
         )
 
+    _send_re_exam_receipt(registration_name)
+
+
+@frappe.whitelist()
+def parent_download_re_exam_receipt(registration_name, student_name):
+    """Same receipt as download_re_exam_receipt, for a parent viewing their ward's record."""
+    if frappe.session.user == "Guest":
+        frappe.throw(frappe._("Please log in."), frappe.AuthenticationError)
+
+    _require_parent_for_student(student_name)
+
+    reg = frappe.db.get_value(
+        "Re Exam Registration",
+        {"name": registration_name, "student": student_name},
+        ["name", "payment_status"],
+        as_dict=True,
+    )
+    if not reg:
+        frappe.throw(frappe._("Registration not found or access denied."), frappe.PermissionError)
+    if reg.payment_status not in ("Paid", "Captured"):
+        frappe.throw(
+            frappe._("Receipt is only available after payment is confirmed."),
+            frappe.ValidationError,
+        )
+
+    _send_re_exam_receipt(registration_name)
+
+
+def _send_re_exam_receipt(registration_name):
     # Resolve print format from Student Portal Settings
     try:
         pf_setting = frappe.db.get_single_value(
@@ -733,6 +793,35 @@ def download_improvement_exam_receipt(registration_name):
             frappe.ValidationError,
         )
 
+    _send_improvement_exam_receipt(registration_name)
+
+
+@frappe.whitelist()
+def parent_download_improvement_exam_receipt(registration_name, student_name):
+    """Same receipt as download_improvement_exam_receipt, for a parent viewing their ward's record."""
+    if frappe.session.user == "Guest":
+        frappe.throw(frappe._("Please log in."), frappe.AuthenticationError)
+
+    _require_parent_for_student(student_name)
+
+    reg = frappe.db.get_value(
+        "Improvement Exam Registration",
+        {"name": registration_name, "student": student_name},
+        ["name", "payment_status"],
+        as_dict=True,
+    )
+    if not reg:
+        frappe.throw(frappe._("Registration not found or access denied."), frappe.PermissionError)
+    if reg.payment_status not in ("Paid", "Captured"):
+        frappe.throw(
+            frappe._("Receipt is only available after payment is confirmed."),
+            frappe.ValidationError,
+        )
+
+    _send_improvement_exam_receipt(registration_name)
+
+
+def _send_improvement_exam_receipt(registration_name):
     try:
         pf_setting = frappe.db.get_single_value(
             "Student Portal Settings", "improvement_exam_receipt_print_format"
@@ -748,6 +837,57 @@ def download_improvement_exam_receipt(registration_name):
 
     safe = registration_name.replace("/", "-").replace(" ", "_")
     frappe.local.response.filename    = f"ImprovementExam_Receipt_{safe}.pdf"
+    frappe.local.response.filecontent = pdf_bytes
+    frappe.local.response.type        = "pdf"
+
+
+@frappe.whitelist()
+def download_transcript_receipt(request_name):
+    """Stream a PDF receipt for the student's own paid Transcript Request."""
+    if frappe.session.user == "Guest":
+        frappe.throw(frappe._("Please log in."), frappe.AuthenticationError)
+
+    student_name = _get_student()
+    if not student_name:
+        frappe.throw(frappe._("No student record found for your account."), frappe.PermissionError)
+
+    _check_transcript_receipt(request_name, student_name)
+    _send_transcript_receipt(request_name)
+
+
+@frappe.whitelist()
+def parent_download_transcript_receipt(request_name, student_name):
+    """Same receipt as download_transcript_receipt, for a parent viewing their ward's record."""
+    if frappe.session.user == "Guest":
+        frappe.throw(frappe._("Please log in."), frappe.AuthenticationError)
+
+    _require_parent_for_student(student_name)
+    _check_transcript_receipt(request_name, student_name)
+    _send_transcript_receipt(request_name)
+
+
+def _check_transcript_receipt(request_name, student_name):
+    """IDOR guard: the request must belong to student_name and its fee must be paid."""
+    req = frappe.db.get_value(
+        "Transcript Request",
+        {"name": request_name, "student": student_name},
+        ["name", "payment_required", "payment_status"],
+        as_dict=True,
+    )
+    if not req:
+        frappe.throw(frappe._("Transcript request not found or access denied."), frappe.PermissionError)
+    if not req.payment_required or req.payment_status != "Paid":
+        frappe.throw(
+            frappe._("Receipt is only available after payment is confirmed."),
+            frappe.ValidationError,
+        )
+
+
+def _send_transcript_receipt(request_name):
+    pdf_bytes = _generate_pdf("Transcript Request", request_name, "Transcript Fee Receipt")
+
+    safe = request_name.replace("/", "-").replace(" ", "_")
+    frappe.local.response.filename    = f"Transcript_Receipt_{safe}.pdf"
     frappe.local.response.filecontent = pdf_bytes
     frappe.local.response.type        = "pdf"
 
@@ -1025,6 +1165,26 @@ def get_portal_notifications():
 
 	notifications = []
 
+	def _iso(value):
+		"""Date as YYYY-MM-DD (for sorting / grouping on the page), or ''."""
+		try:
+			return getdate(value).isoformat() if value else ""
+		except Exception:
+			return ""
+
+	def _join(*parts):
+		return " · ".join(str(p) for p in parts if p)
+
+	def _course_name(course):
+		if not course:
+			return ""
+		return frappe.db.get_value("Course", course, "course_name") or course
+
+	def _offering_name(offering):
+		if not offering:
+			return ""
+		return frappe.db.get_value("Course Offering", offering, "course_name") or offering
+
 	try:
 		student = frappe.get_doc("Student Master", student_name, ignore_permissions=True)
 		today_str = nowdate()
@@ -1089,6 +1249,8 @@ def get_portal_notifications():
 					pub_date = str(r.publish_date)
 
 			notifications.append({
+				"id": f"announcement:{r.name}",
+				"date": _iso(r.publish_date),
 				"type": "announcement",
 				"category": r.announcement_type or "General",
 				"priority": r.priority or "Normal",
@@ -1116,7 +1278,7 @@ def get_portal_notifications():
 						["course", "in", enrolled_courses],
 						["exam_date", ">=", today_str],
 					],
-					fields=["course", "exam_date", "start_time", "venue"],
+					fields=["name", "course", "exam_date", "start_time", "venue"],
 					order_by="exam_date asc",
 					limit=5,
 					ignore_permissions=True,
@@ -1128,11 +1290,13 @@ def get_portal_notifications():
 					except Exception:
 						date_str = str(es.exam_date or "")
 					notifications.append({
+						"id": f"exam_schedule:{es.name}",
+						"date": _iso(es.exam_date),
 						"type": "exam_schedule",
 						"category": "Exam Schedule",
 						"priority": "Important",
-						"title": f"Exam: {es.course}",
-						"subtitle": f"{date_str}" + (f" | {es.venue}" if es.venue else ""),
+						"title": f"Exam: {_course_name(es.course)}",
+						"subtitle": _join(date_str, es.venue),
 						"icon": "event_note",
 						"link": "/student-portal/exam-schedule",
 						"sort_key": 1,
@@ -1145,7 +1309,7 @@ def get_portal_notifications():
 			published_results = frappe.get_all(
 				"Student Result Publish",
 				filters={"student": student_name, "is_published": 1},
-				fields=["exam_plan", "term_gpa", "published_on"],
+				fields=["name", "exam_plan", "term_gpa", "published_on"],
 				order_by="published_on desc",
 				limit=3,
 				ignore_permissions=True,
@@ -1157,12 +1321,15 @@ def get_portal_notifications():
 						pub_on = getdate(res.published_on).strftime("%d %b %Y")
 				except Exception:
 					pass
+				exam_label = (frappe.db.get_value("Exam Plan", res.exam_plan, "exam_name") if res.exam_plan else "") or res.exam_plan or "Exam"
 				notifications.append({
+					"id": f"result:{res.name}",
+					"date": _iso(res.published_on),
 					"type": "result",
 					"category": "Exam Result",
 					"priority": "Important",
-					"title": f"Results Published: {res.exam_plan or 'Exam'}",
-					"subtitle": (f"GPA: {res.term_gpa:.2f}" if res.term_gpa else "") + (f" | {pub_on}" if pub_on else ""),
+					"title": f"Results Published: {exam_label}",
+					"subtitle": _join(f"GPA {res.term_gpa:.2f}" if res.term_gpa else "", pub_on),
 					"icon": "assignment_turned_in",
 					"link": "/student-portal/results",
 					"sort_key": 1,
@@ -1175,18 +1342,20 @@ def get_portal_notifications():
 			fa_apps = frappe.get_all(
 				"FA MFA Application",
 				filters={"student": student_name, "status": ["in", ["Approved", "Rejected"]]},
-				fields=["name", "status", "application_type", "course"],
+				fields=["name", "status", "application_type", "course", "modified"],
 				order_by="modified desc",
 				limit=5,
 				ignore_permissions=True,
 			)
 			for app in fa_apps:
 				notifications.append({
+					"id": f"fa_mfa:{app.name}:{app.status}",
+					"date": _iso(app.modified),
 					"type": "fa_mfa",
 					"category": "FA / MFA",
 					"priority": "Important",
 					"title": f"{app.application_type or 'Application'} {app.status}",
-					"subtitle": app.course or "",
+					"subtitle": _course_name(app.course),
 					"icon": "check_circle" if app.status == "Approved" else "cancel",
 					"link": "/student-portal/attendance",
 					"sort_key": 1,
@@ -1199,18 +1368,20 @@ def get_portal_notifications():
 			cond_apps = frappe.get_all(
 				"Student Attendance Condonation",
 				filters={"student": student_name, "final_status": ["in", ["Approved", "Rejected"]]},
-				fields=["name", "final_status", "course_offering"],
+				fields=["name", "final_status", "course_offering", "modified"],
 				order_by="modified desc",
 				limit=5,
 				ignore_permissions=True,
 			)
 			for app in cond_apps:
 				notifications.append({
+					"id": f"condonation:{app.name}:{app.final_status}",
+					"date": _iso(app.modified),
 					"type": "condonation",
 					"category": "Condonation",
 					"priority": "Important",
 					"title": f"Condonation {app.final_status}",
-					"subtitle": app.course_offering or "",
+					"subtitle": _offering_name(app.course_offering),
 					"icon": "check_circle" if app.final_status == "Approved" else "cancel",
 					"link": "/student-portal/attendance",
 					"sort_key": 1,
@@ -1223,7 +1394,7 @@ def get_portal_notifications():
 			leave_apps = frappe.get_all(
 				"Student Leave Applications",
 				filters={"student": student_name, "status": ["in", ["Approved", "Rejected"]]},
-				fields=["name", "status", "from_date", "to_date", "total_leave_days"],
+				fields=["name", "status", "from_date", "to_date", "total_leave_days", "modified"],
 				order_by="modified desc",
 				limit=5,
 				ignore_permissions=True,
@@ -1235,14 +1406,45 @@ def get_portal_notifications():
 						from_str = getdate(app.from_date).strftime("%d %b")
 				except Exception:
 					pass
+				days = int(app.total_leave_days or 0)
 				notifications.append({
+					"id": f"leave:{app.name}:{app.status}",
+					"date": _iso(app.modified),
 					"type": "leave",
 					"category": "Leave Request",
 					"priority": "Important",
 					"title": f"Leave {app.status}: {app.name}",
-					"subtitle": from_str + (f" · {int(app.total_leave_days or 0)} day(s)" if app.total_leave_days else ""),
+					"subtitle": _join(from_str, f"{days} day{'s' if days != 1 else ''}" if days else ""),
 					"icon": "check_circle" if app.status == "Approved" else "cancel",
 					"link": "/student-portal/leave-request",
+					"sort_key": 1,
+				})
+		except Exception:
+			pass
+
+		# ── 6b. Grade Appeal Updates ───────────────────────────────
+		try:
+			since = add_days(nowdate(), -30)
+			appeals = frappe.get_all(
+				"Grade Appeal",
+				filters={"student": student_name, "status": ["in", ["Under Review", "Resolved", "Rejected"]], "modified": [">=", since]},
+				fields=["name", "status", "appeal_type", "course", "exam_plan", "modified"],
+				order_by="modified desc",
+				limit=5,
+				ignore_permissions=True,
+			)
+			for ap in appeals:
+				course_name = frappe.db.get_value("Course", ap.course, "course_name") or ap.course or ""
+				notifications.append({
+					"id": f"grade_appeal:{ap.name}:{ap.status}",
+					"date": _iso(ap.modified),
+					"type": "grade_appeal",
+					"category": "Grade Appeal",
+					"priority": "Important" if ap.status != "Under Review" else "Normal",
+					"title": f"Grade appeal {ap.status.lower()}: {course_name}",
+					"subtitle": _join(ap.appeal_type, ap.exam_plan),
+					"icon": {"Resolved": "check_circle", "Rejected": "cancel"}.get(ap.status, "hourglass_top"),
+					"link": "/student-portal/grade-appeal",
 					"sort_key": 1,
 				})
 		except Exception:
@@ -1278,11 +1480,13 @@ def get_portal_notifications():
 					except Exception:
 						date_str = str(sess.session_date or "")
 					notifications.append({
+						"id": f"office_hours:{sess.name}",
+						"date": _iso(sess.session_date),
 						"type": "office_hours",
 						"category": "Office Hours",
 						"priority": "Normal",
 						"title": "Office Hours Available",
-						"subtitle": f"{sess.course_offering} — {date_str}",
+						"subtitle": _join(_offering_name(sess.course_offering), date_str),
 						"icon": "school",
 						"link": "/student-portal/attendance",
 						"sort_key": 2,
@@ -2128,7 +2332,7 @@ def _notify_admin_swap_request(booking_name, requested_room, reason):
             conflict_html = f"""
 <p style="margin-top:16px;"><strong>⚠ The requested room already has conflicting bookings — please contact those in-charges:</strong></p>
 <table style="border-collapse:collapse;font-size:13px;width:100%;margin-top:8px;">
-  <thead style="background:#fef3c7;">
+  <thead style="background:#fff0f2;">
     <tr>
       <th style="padding:6px 12px;text-align:left;">Ref</th>
       <th style="padding:6px 12px;text-align:left;">Event</th>
@@ -2329,9 +2533,77 @@ def submit_bank_details(**kwargs):
     # Bank fields are masked, and Frappe resets masked fields on save for users without
     # mask permission (students), so validate via the controller and write them directly.
     student.update(values)
-    student.validate_bank_details()
+    student.validate_bank_details(reveal_owner=False)
     updates = {f: student.get(f) or None for f in BANK_DETAIL_FIELDS}
     updates.update(bank_details_submitted=1, bank_details_submitted_on=frappe.utils.now_datetime())
+
+    # Optional passbook uploads (loan passbook only when a loan was availed)
+    passbooks = {"savings_passbook": kwargs.get("savings_passbook")}
+    if values["availed_education_loan"] == "Yes":
+        passbooks["loan_passbook"] = kwargs.get("loan_passbook")
+    for field, file_url in passbooks.items():
+        if file_url:
+            updates[field] = _claim_passbook_file(student_name, field, file_url)
+
     frappe.db.set_value("Student Master", student_name, updates)
     student.add_comment("Info", _("Bank details submitted by the student from the Student Portal."))
+    return {"status": "success"}
+
+
+PASSBOOK_FIELDS = {"savings": "savings_passbook", "loan": "loan_passbook"}
+PASSBOOK_EXTENSIONS = (".pdf", ".jpg", ".jpeg", ".png")
+
+
+def _claim_passbook_file(student_name, fieldname, file_url):
+    """Attach a passbook the student just uploaded (private, owned by them) to their Student Master."""
+    file_url = (file_url or "").strip()
+    f = frappe.db.get_value(
+        "File",
+        {"file_url": file_url, "owner": frappe.session.user},
+        ["name", "is_private", "attached_to_name", "file_name"],
+        as_dict=True,
+    )
+    if not f:
+        frappe.throw(_("The passbook upload could not be found. Please upload the file again."))
+    if not f.is_private:
+        frappe.throw(_("Passbook files must be uploaded privately. Please upload the file again."))
+    if f.attached_to_name and f.attached_to_name != student_name:
+        frappe.throw(_("This file is already attached to another record. Please upload the file again."))
+    if not (f.file_name or file_url).lower().endswith(PASSBOOK_EXTENSIONS):
+        frappe.throw(_("Passbook must be a PDF, JPG or PNG file."))
+
+    frappe.db.set_value("File", f.name, {
+        "attached_to_doctype": "Student Master",
+        "attached_to_name": student_name,
+        "attached_to_field": fieldname,
+    })
+    return file_url
+
+
+@frappe.whitelist(methods=["POST"])
+def upload_bank_passbook(kind, file_url):
+    """Add a missing savings / loan passbook after bank details were submitted (details stay locked).
+
+    An existing passbook can only be replaced by the administration office.
+    """
+    student_name = _get_student()
+    if not student_name:
+        frappe.throw(_("Student not found"))
+
+    fieldname = PASSBOOK_FIELDS.get(kind)
+    if not fieldname:
+        frappe.throw(_("Invalid passbook type."))
+
+    student = frappe.db.get_value(
+        "Student Master", student_name, ["availed_education_loan", fieldname], as_dict=True
+    )
+    if kind == "loan" and student.availed_education_loan != "Yes":
+        frappe.throw(_("A loan passbook can only be added when an education loan was availed."))
+    if student.get(fieldname):
+        frappe.throw(_("A passbook is already on file. Please contact the administration office to replace it."))
+
+    frappe.db.set_value("Student Master", student_name, fieldname, _claim_passbook_file(student_name, fieldname, file_url))
+    frappe.get_doc("Student Master", student_name).add_comment(
+        "Info", _("{0} passbook uploaded by the student from the Student Portal.").format(kind.title())
+    )
     return {"status": "success"}

@@ -7,29 +7,49 @@
   /* Make iframe fill available height properly */
   #hd-frame { border: none; }
 </style>
+<script>
+/* ── Helpdesk iframe routing ──────────────────────────────────────
+   The helpdesk SPA navigates inside the iframe (Vue router pushState),
+   which never touches this page's URL — so a refresh used to always
+   drop back to the ticket list. We mirror the iframe's current path
+   into ?hd=<path> and restore it on load. Only same-origin
+   /helpdesk paths are accepted, so ?hd can't point the frame elsewhere. */
+function hdSafePath(p) {
+  if (!p || typeof p !== 'string') return null;
+  if (p.charAt(0) !== '/' || p.charAt(1) === '/' || p.indexOf('\\') !== -1) return null;
+  if (p !== '/helpdesk' && p.indexOf('/helpdesk/') !== 0) return null;
+  return p;
+}
+
+function hdInitFrame(basePath) {
+  var frame = document.getElementById('hd-frame');
+  if (!frame) return;
+  frame.setAttribute('data-hd-base', basePath);
+  var params = new URLSearchParams(window.location.search);
+  var saved  = hdSafePath(params.get('hd'));
+  var ticket = params.get('ticket');
+  if (saved) {
+    frame.src = saved;
+  } else if (ticket) {
+    frame.src = basePath + '/' + encodeURIComponent(ticket);
+  } else {
+    frame.src = basePath;
+  }
+}
+</script>
 {% endblock %}
 
 {% block content %}
 
 {# ── Page Header ────────────────────────────────────────────── #}
-<div class="fp-page-header fade-in" style="margin-bottom:20px;">
-  <div style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--fp-text-4);margin-bottom:4px;">Help Centre</div>
-  <h1 style="margin:0;font-size:24px;font-weight:700;color:var(--fp-text-1);">Helpdesk</h1>
+<div class="fp-page-header fade-in" style="background: var(--fp-card, #fff); border: 1px solid var(--fp-border, #e5e7eb); border-radius: 14px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
+  <div>
+    <h1 class="fp-page-title" style="margin: 0; font-size: 18px !important; font-weight: 700 !important;">Helpdesk</h1>
+  </div>
 </div>
 
 {% if is_hd_agent %}
 {# ── Agent View: open full helpdesk in iframe ─────────────────── #}
-<div class="fp-alert fp-alert-info fade-in" style="margin-bottom:16px;gap:14px;align-items:flex-start;">
-  <span class="fp-ms" style="font-size:22px;flex-shrink:0;color:var(--fp-info);">support_agent</span>
-  <div>
-    <div style="font-weight:700;margin-bottom:3px;">You have Agent access</div>
-    <div style="font-size:13px;color:var(--fp-text-3);">
-      You can manage and respond to support tickets below.
-      To raise a personal ticket, click <strong>New Ticket</strong> inside the helpdesk and set yourself as the requester.
-      Alternatively, <a href="/helpdesk" target="_blank" style="color:var(--fp-info);font-weight:600;">open the full Helpdesk</a> in a new tab.
-    </div>
-  </div>
-</div>
 <div class="fp-card fade-in" style="padding:0;overflow:hidden;border-radius:16px;margin-bottom:24px;min-height:80vh;display:flex;flex-direction:column;">
   <div id="hd-loading" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 24px;gap:16px;flex:1;">
     <span class="fp-ms" style="font-size:48px;color:var(--fp-primary);animation:fp-spin 1.2s linear infinite;">progress_activity</span>
@@ -43,19 +63,7 @@
     allow="same-origin"
     onload="hdFrameReady()"
   ></iframe>
-  <script>
-    (function () {
-      var params = new URLSearchParams(window.location.search);
-      var ticket = params.get('ticket');
-      var frame = document.getElementById('hd-frame');
-      if (!frame) return;
-      if (ticket) {
-        frame.src = '/helpdesk/tickets/' + encodeURIComponent(ticket);
-      } else {
-        frame.src = '/helpdesk/tickets';
-      }
-    })();
-  </script>
+  <script>hdInitFrame('/helpdesk/tickets');</script>
 </div>
 
 {% else %}
@@ -73,18 +81,7 @@
     allow="same-origin"
     onload="hdFrameReady()"
   ></iframe>
-  <script>
-    (function () {
-      var params = new URLSearchParams(window.location.search);
-      var ticket = params.get('ticket');
-      var frame = document.getElementById('hd-frame');
-      if (ticket) {
-        frame.src = '/helpdesk/my-tickets/' + encodeURIComponent(ticket);
-      } else {
-        frame.src = '/helpdesk/my-tickets';
-      }
-    })();
-  </script>
+  <script>hdInitFrame('/helpdesk/my-tickets');</script>
 </div>
 {% endif %}
 
@@ -112,7 +109,15 @@
     /* Also hide any element with border-r and bg-surface-menu-bar (the sidebar bg token) */
     '[class*="border-r"][class*="bg-surface-menu-bar"] { display: none !important; }',
     /* Hide UserMenu / sidebar toggle buttons that can re-open it */
-    '.sidebar-toggle, [class*="sidebar-toggle"] { display: none !important; }'
+    '.sidebar-toggle, [class*="sidebar-toggle"] { display: none !important; }',
+    /* Match the portal: Merriweather everywhere, portal-sized text */
+    "@font-face { font-family: 'Merriweather'; font-weight: 400; src: url('/assets/slcm/fonts/Merriweather-Regular.ttf') format('truetype'); }",
+    "@font-face { font-family: 'Merriweather'; font-weight: 700; src: url('/assets/slcm/fonts/Merriweather-Bold.ttf') format('truetype'); }",
+    "@font-face { font-family: 'Merriweather'; font-weight: 400; font-style: italic; src: url('/assets/slcm/fonts/Merriweather-Italic.ttf') format('truetype'); }",
+    "html, body, body *:not(svg):not(path) { font-family: 'Merriweather', Georgia, serif !important; }",
+    'body, .text-base, .text-sm, .text-p-sm, .text-p-base, input, select, textarea, button, .ProseMirror { font-size: 14px !important; }',
+    '.text-xs, .text-p-xs, .text-2xs { font-size: 12.5px !important; }',
+    '.text-lg { font-size: 17px !important; }'
   ].join('\n');
 
   var _observer = null;
@@ -159,6 +164,29 @@
 
   window.hdFrameReady = hdFrameReady;
 
+  /* ── Mirror the iframe's route into this page's URL (?hd=…) ──
+     Polling is used because SPA route changes fire no event the parent
+     can hear; it's a cheap same-origin location read. */
+  var _lastHdPath = null;
+  function syncFrameRoute() {
+    var frame = document.getElementById('hd-frame');
+    if (!frame) return;
+    var loc;
+    try { loc = frame.contentWindow && frame.contentWindow.location; } catch (e) { return; }
+    if (!loc || loc.href === 'about:blank') return;
+    var path = hdSafePath(loc.pathname + loc.search + loc.hash);
+    if (!path || path === _lastHdPath) return;   /* e.g. login redirect — leave URL alone */
+    _lastHdPath = path;
+
+    var url = new URL(window.location.href);
+    url.searchParams.delete('ticket');            /* ?hd supersedes the one-time ?ticket link */
+    if (path === frame.getAttribute('data-hd-base')) url.searchParams.delete('hd');
+    else url.searchParams.set('hd', path);
+    if (url.href !== window.location.href) {
+      history.replaceState(history.state, '', url.pathname + url.search + url.hash);
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     var frame = document.getElementById('hd-frame');
     if (!frame) return;
@@ -171,6 +199,8 @@
     }
     resizeFrame();
     window.addEventListener('resize', resizeFrame);
+
+    setInterval(syncFrameRoute, 500);
 
     /* If onload already fired */
     if (frame.contentDocument && frame.contentDocument.readyState === 'complete') {

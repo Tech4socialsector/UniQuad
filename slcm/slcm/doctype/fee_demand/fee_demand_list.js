@@ -63,8 +63,12 @@ frappe.listview_settings["Fee Demand"] = {
 };
 
 /* ── Apply Fee Concession / Waiver (bulk) ────────────────────────────────── */
-function _fd_list_open_bulk_concession_dialog(demand_names, on_done) {
+async function _fd_list_open_bulk_concession_dialog(demand_names, on_done) {
 	if (!demand_names || !demand_names.length) return;
+
+	// Concession types come from the Fee Concession doctype, so edits there show up here.
+	await frappe.model.with_doctype("Fee Concession");
+	const type_options = ((frappe.meta.get_docfield("Fee Concession", "concession_type") || {}).options || "").split("\n");
 
 	const dialog = new frappe.ui.Dialog({
 		title: __("Apply Fee Concession / Waiver — {0} Demand(s)", [demand_names.length]),
@@ -82,31 +86,18 @@ function _fd_list_open_bulk_concession_dialog(demand_names, on_done) {
 				fieldtype: "Select",
 				fieldname: "concession_type",
 				label: __("Concession Type"),
-				options: ["", "Scholarship", "Merit", "SC/ST", "EWS", "Staff Ward", "Other"],
+				options: type_options,
 				reqd: 1,
-			},
-			{
-				fieldtype: "Select",
-				fieldname: "scholarship_for",
-				label: __("Scholarship For"),
-				options: ["", "Tuition", "Accommodation", "Stipend", "Mess/Food", "Transport", "Books & Stationery", "Other"],
-				depends_on: 'eval:doc.concession_type=="Scholarship"',
 			},
 			{
 				fieldtype: "Column Break",
 			},
 			{
-				fieldtype: "Select",
-				fieldname: "waiver_mode",
-				label: __("Waiver Mode"),
-				options: ["Fixed Amount", "Percentage"],
-				default: "Percentage",
-				reqd: 1,
-			},
-			{
-				fieldtype: "Float",
+				fieldtype: "Currency",
 				fieldname: "waiver_value",
 				label: __("Waiver Value"),
+				options: "INR",
+				description: __("Amount (₹) waived on each selected demand"),
 				reqd: 1,
 			},
 			{
@@ -118,11 +109,6 @@ function _fd_list_open_bulk_concession_dialog(demand_names, on_done) {
 				label: __("Reason"),
 				reqd: 1,
 			},
-			{
-				fieldtype: "Small Text",
-				fieldname: "remarks",
-				label: __("Remarks"),
-			},
 		],
 		primary_action_label: __("Apply"),
 		primary_action(values) {
@@ -132,11 +118,8 @@ function _fd_list_open_bulk_concession_dialog(demand_names, on_done) {
 				args: {
 					demand_names: demand_names,
 					concession_type: values.concession_type,
-					scholarship_for: values.scholarship_for,
-					waiver_mode: values.waiver_mode,
 					waiver_value: values.waiver_value,
 					reason: values.reason,
-					remarks: values.remarks,
 				},
 				callback(r) {
 					dialog.hide();

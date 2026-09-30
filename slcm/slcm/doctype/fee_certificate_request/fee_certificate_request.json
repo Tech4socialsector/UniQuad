@@ -7,14 +7,19 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "certificate_for",
   "student",
+  "applicant",
   "student_name",
   "registration_id",
+  "application_number",
+  "admit_card_number",
   "column_break_1",
   "programme",
   "level_of_study",
   "section_purpose",
   "purpose",
+  "certificate_type",
   "certificate_mode",
   "column_break_purpose",
   "include_bank_details",
@@ -23,6 +28,12 @@
   "from_academic_year",
   "to_academic_year",
   "years",
+  "section_edited",
+  "edited_certificate",
+  "edited_word_file",
+  "column_break_edited",
+  "edited_by",
+  "edited_on",
   "section_status",
   "status",
   "generated_on",
@@ -31,21 +42,41 @@
  ],
  "fields": [
   {
+   "default": "Campus Student",
+   "fieldname": "certificate_for",
+   "fieldtype": "Select",
+   "label": "Certificate For",
+   "options": "Campus Student\nAdmission Stage",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "description": "Campus Student: an ongoing student (Student Master). Admission Stage: an applicant who has only an application number and admit card number."
+  },
+  {
    "fieldname": "student",
    "fieldtype": "Link",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Student",
    "options": "Student Master",
-   "reqd": 1,
+   "search_index": 1,
+   "depends_on": "eval:doc.certificate_for!=\"Admission Stage\"",
+   "mandatory_depends_on": "eval:doc.certificate_for!=\"Admission Stage\""
+  },
+  {
+   "depends_on": "eval:doc.certificate_for==\"Admission Stage\"",
+   "mandatory_depends_on": "eval:doc.certificate_for==\"Admission Stage\"",
+   "fieldname": "applicant",
+   "fieldtype": "Link",
+   "label": "Applicant",
+   "options": "Applicant",
    "search_index": 1
   },
   {
-   "fetch_from": "student.first_name",
    "fieldname": "student_name",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Student Name",
+   "label": "Name",
    "read_only": 1
   },
   {
@@ -53,26 +84,42 @@
    "fieldname": "registration_id",
    "fieldtype": "Data",
    "label": "Student ID",
+   "read_only": 1,
+   "depends_on": "eval:doc.certificate_for!=\"Admission Stage\""
+  },
+  {
+   "depends_on": "eval:doc.certificate_for==\"Admission Stage\"",
+   "fieldname": "application_number",
+   "fieldtype": "Data",
+   "label": "Application Number",
    "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.certificate_for==\"Admission Stage\"",
+   "fieldname": "admit_card_number",
+   "fieldtype": "Data",
+   "label": "Admit Card Number",
+   "description": "From the applicant's entrance-test seat allocation; you can type it if it is missing."
   },
   {
    "fieldname": "column_break_1",
    "fieldtype": "Column Break"
   },
   {
-   "fetch_from": "student.programme_of_study",
    "fieldname": "programme",
    "fieldtype": "Link",
    "label": "Programme",
    "options": "Programme",
-   "read_only": 1
+   "read_only": 1,
+   "description": "Set automatically from the student / applicant."
   },
   {
    "fetch_from": "student.level_of_study",
    "fieldname": "level_of_study",
    "fieldtype": "Data",
    "label": "Level Of Study",
-   "read_only": 1
+   "read_only": 1,
+   "depends_on": "eval:doc.certificate_for!=\"Admission Stage\""
   },
   {
    "fieldname": "section_purpose",
@@ -81,20 +128,31 @@
   },
   {
    "fieldname": "purpose",
-   "fieldtype": "Select",
+   "fieldtype": "Autocomplete",
    "in_list_view": 1,
    "label": "Purpose",
-   "options": "Scholarship\nBank Loan\nEducation Loan\nDetained Student Fee Structure\nOther",
-   "reqd": 1
+   "options": "Fee Certificate for Education Loan\nFee Demand Letter for Education Loan/others\nFee Certificate/ Receipt for Scholarship/others",
+   "reqd": 1,
+   "description": "Options come from Fee Certificate Settings \u2192 Purposes & Templates."
+  },
+  {
+   "fieldname": "certificate_type",
+   "fieldtype": "Select",
+   "label": "Certificate Type",
+   "options": "\nMulti Year Fee Structure\nSingle Year Fee Demand\nSingle Year Fee Receipt",
+   "read_only": 1,
+   "in_standard_filter": 1,
+   "description": "Set from the Purpose's template in Fee Certificate Settings."
   },
   {
    "default": "Single Year",
    "fieldname": "certificate_mode",
    "fieldtype": "Select",
-   "in_list_view": 1,
    "label": "Certificate Mode",
    "options": "Single Year\nMulti Year",
-   "reqd": 1
+   "reqd": 1,
+   "read_only": 1,
+   "hidden": 1
   },
   {
    "fieldname": "column_break_purpose",
@@ -110,7 +168,8 @@
    "default": "0",
    "fieldname": "has_scholarship",
    "fieldtype": "Check",
-   "label": "Has University Scholarship"
+   "label": "Has University Scholarship",
+   "depends_on": "eval:doc.certificate_type!=\"Single Year Fee Receipt\""
   },
   {
    "fieldname": "section_years",
@@ -122,18 +181,18 @@
    "fieldtype": "Link",
    "label": "Academic Year",
    "options": "Academic Year",
-   "reqd": 1
+   "reqd": 1,
+   "description": "The academic year the certificate is for. A Multi Year Fee Structure shows every year of the programme from the student's first year; the Admission Fee appears only in the first year."
   },
   {
-   "depends_on": "eval:doc.certificate_mode==\"Multi Year\"",
    "fieldname": "to_academic_year",
    "fieldtype": "Link",
    "label": "To Academic Year",
-   "mandatory_depends_on": "eval:doc.certificate_mode==\"Multi Year\"",
-   "options": "Academic Year"
+   "options": "Academic Year",
+   "hidden": 1
   },
   {
-   "description": "Click \"Fetch Academic Years\" to populate this from the range above, then edit the Year Label for any row (e.g. a detained/repeated year) before generating the certificate.",
+   "description": "Filled automatically on save (or click \"Fetch Academic Years\"). Edit a row's Year Label to change its column heading on the certificate, e.g. for a detained/repeated year.",
    "fieldname": "years",
    "fieldtype": "Table",
    "label": "Year-wise Breakdown",
@@ -167,10 +226,46 @@
    "fieldname": "remarks",
    "fieldtype": "Small Text",
    "label": "Remarks"
+  },
+  {
+   "collapsible": 0,
+   "fieldname": "section_edited",
+   "fieldtype": "Section Break",
+   "label": "Edited Certificate"
+  },
+  {
+   "fieldname": "edited_certificate",
+   "fieldtype": "Attach",
+   "label": "Edited Certificate (PDF)",
+   "description": "Optional. Download the Word version, make your changes and upload it from the Student Fee Management page (Fee Certificates tab); a Word file is converted to PDF automatically, or upload a PDF directly. While a file is attached, every download of this certificate (desk and student portal) gives this PDF; remove it to go back to the generated certificate."
+  },
+  {
+   "fieldname": "column_break_edited",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "edited_by",
+   "fieldtype": "Link",
+   "label": "Uploaded By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "edited_on",
+   "fieldtype": "Datetime",
+   "label": "Uploaded On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "edited_word_file",
+   "fieldtype": "Attach",
+   "label": "Edited Word File",
+   "read_only": 1,
+   "description": "The Word file the edited PDF was converted from, kept for further edits."
   }
  ],
  "links": [],
- "modified": "2026-09-08 00:00:00.000000",
+ "modified": "2026-09-29 11:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Fee Certificate Request",
