@@ -163,13 +163,13 @@ def get_context(context):
             entry.update(extra)
         date_items.append(entry)
 
-    if active_cycle:
-        if active_cycle.cycle_end_date:
-            _add("Admission Cycle Closes", active_cycle.cycle_end_date, badge="Cycle")
-        if active_cycle.application_start_date:
-            _add("Application Form Opens", active_cycle.application_start_date, badge="Applications")
-        if active_cycle.application_end_date:
-            _add("Application Form Closes", active_cycle.application_end_date, badge="Deadline")
+    # if active_cycle:
+    #     if active_cycle.cycle_end_date:
+    #         _add("Admission Cycle Closes", active_cycle.cycle_end_date, badge="Cycle")
+    #     if active_cycle.application_start_date:
+    #         _add("Application Form Opens", active_cycle.application_start_date, badge="Applications")
+    #     if active_cycle.application_end_date:
+    #         _add("Application Form Closes", active_cycle.application_end_date, badge="Deadline")
 
     # ── Events from Portal Announcement ──────────────────────────────
     event_items = []
@@ -186,20 +186,20 @@ def get_context(context):
         )
         for ev in raw_events:
             ev_date = getdate(str(ev.event_date)[:10]) if ev.event_date else None
-            _add(
-                label=ev.title or "Event",
-                date_obj=ev_date,
-                badge="Event",
-                item_type="event",
-                extra={
-                    "name":        ev.name,
-                    "summary":     ev.summary or "",
-                    "event_venue": ev.event_venue or "",
-                    "reg_url":     ev.event_registration_url or "",
-                    "image":       ev.featured_image or "",
-                    "content":     ev.content or "",
-                },
-            )
+            # _add(
+            #     label=ev.title or "Event",
+            #     date_obj=ev_date,
+            #     badge="Event",
+            #     item_type="event",
+            #     extra={
+            #         "name":        ev.name,
+            #         "summary":     ev.summary or "",
+            #         "event_venue": ev.event_venue or "",
+            #         "reg_url":     ev.event_registration_url or "",
+            #         "image":       ev.featured_image or "",
+            #         "content":     ev.content or "",
+            #     },
+            # )
             event_items.append(ev)
     except Exception as ex:
         frappe.log_error(title="Portal", message=f"login events (Portal Announcement) failed: {ex}")

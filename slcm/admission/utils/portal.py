@@ -521,7 +521,7 @@ def api_get_my_application():
     apps = frappe.get_all(
         "Applicant",
         filters={"owner": user, "admission_cycle": active_cycle},
-        fields=["name", "candidate_name", "program", "campus", "admission_cycle", "status", "application_fee_status", "application_fee_amount", "creation"],
+        fields=["name", "candidate_name", "program", "campus", "admission_open_for", "admission_cycle", "status", "application_fee_status", "application_fee_amount", "creation"],
         limit=1
     )
     return apps[0] if apps else None
@@ -829,7 +829,7 @@ def get_active_programs():
                 "program", "program_name", "seats", "eligibility_hint",
                 "brochure_url", "program_image", "desciption",
                 "program_media", "reservation_policy", "max_applications",
-                "application_count", "program_level", "intake_type", "campus",
+                "application_count", "program_level", "intake_type", "campus", "admission_open_for",
             ],
             order_by="program_name asc"
         )

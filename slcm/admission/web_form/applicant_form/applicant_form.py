@@ -147,6 +147,7 @@ def get_portal_shell_data():
         admission_footer = []
 
     pace_enabled = int(pc.get("enable_pace_admission") or 0) if pc else 0
+    portal_active = int(pc.get("portal_active") or 0) if pc else 0
     powerd_by = (pc.get("powerd_by") or "boscosoft") if pc else "boscosoft"
 
     return {
@@ -172,6 +173,7 @@ def get_portal_shell_data():
         "admission_footer": admission_footer,
         "admission_website_url": pc.get("admission_website_url") or "/",
         "pace_enabled":    pace_enabled,
+        "portal_active":   portal_active,
         "powerd_by":       powerd_by,
         "user":            user,
         "full_name":       full_name,
@@ -433,9 +435,6 @@ def save_applicant_draft(data, ignore_mandatory=True):
         try:
             file_name = frappe.db.get_value("File", {"file_url": file_url}, "name")
             if file_name:
-                # Some Frappe versions call get_doc inside has_permission which throws PermissionError
-                if not frappe.has_permission("File", "read", file_name):
-                    return False
                 import os
                 file_path = frappe.get_site_path(file_url.lstrip("/"))
                 return os.path.exists(file_path)

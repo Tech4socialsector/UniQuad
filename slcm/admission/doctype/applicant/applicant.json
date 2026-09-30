@@ -69,6 +69,7 @@
   "class_x_details_section",
   "class_x_year_of_completion",
   "class_x_percentage",
+  "x_country",
   "column_break_ivlp",
   "class_x_school",
   "class_x_cgpa",
@@ -79,6 +80,7 @@
   "class_xii_name_of_examination",
   "class_xii_board",
   "hsc_group",
+  "xii_country",
   "column_break_mlet",
   "class_xii_year_of_completion",
   "hsc_percentage",
@@ -499,11 +501,11 @@
    "label": "Reservations"
   },
   {
-   "depends_on": "eval:doc.whether_scstobc_ncl === \"NA\"",
+   "depends_on": "eval:doc.whether_scstobc_ncl === \"NA\" && doc.foriegn_national == \"No\"",
    "fieldname": "ews",
    "fieldtype": "Select",
    "label": "Whether EWS",
-   "mandatory_depends_on": "eval:doc.whether_scstobc_ncl === \"NA\"",
+   "mandatory_depends_on": "eval:doc.whether_scstobc_ncl === \"NA\" && doc.foriegn_national == \"No\"",
    "options": "\nYes\nNo"
   },
   {
@@ -539,7 +541,7 @@
    "options": "\nYes\nNo"
   },
   {
-   "depends_on": "eval:doc.pwd_required_test === \"Yes\"",
+   "depends_on": "eval:doc.pwd_required_test === \"Yes\" && doc.pwd == \"Yes\"",
    "fieldname": "scribe_allotment",
    "fieldtype": "Select",
    "label": "Will you arrange for a scribe yourself or would you require the NLSIU to arrange a scribe for you?",
@@ -1123,7 +1125,7 @@
    "fieldtype": "Select",
    "label": "PhD Programme Selection",
    "mandatory_depends_on": "eval:doc.program_level == \"Research Course\"",
-   "options": "\nLaw\nInterdisciplinary"
+   "options": "\nPh.D (Law)\nPh.D (Social Sciences, Humanities and Public Policy)"
   },
   {
    "fieldname": "column_break_nkbo",
@@ -1171,7 +1173,7 @@
    "in_standard_filter": 1,
    "label": "Whether SC/ST/OBC-NCL",
    "mandatory_depends_on": "eval:doc.foriegn_national == \"No\"",
-   "options": "NA\nOBC-NCL\nST\nSC"
+   "options": "\nNA\nOBC-NCL\nST\nSC"
   },
   {
    "fieldname": "column_break_mxmh",
@@ -1306,6 +1308,22 @@
    "fieldtype": "Data",
    "label": "City",
    "mandatory_depends_on": "eval:doc.country != \"India\""
+  },
+  {
+   "depends_on": "eval:doc.foriegn_national == \"Yes\"",
+   "fieldname": "x_country",
+   "fieldtype": "Link",
+   "label": "Country",
+   "mandatory_depends_on": "eval:doc.foriegn_national == \"Yes\"",
+   "options": "Country"
+  },
+  {
+   "depends_on": "eval:doc.foriegn_national == \"Yes\"",
+   "fieldname": "xii_country",
+   "fieldtype": "Link",
+   "label": "Country",
+   "mandatory_depends_on": "eval:doc.foriegn_national == \"Yes\"",
+   "options": "Country"
   }
  ],
  "grid_page_length": 50,
@@ -1341,7 +1359,7 @@
   }
  ],
  "make_attachments_public": 1,
- "modified": "2026-08-11 15:57:52.417158",
+ "modified": "2026-09-30 15:57:07.241798",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Applicant",

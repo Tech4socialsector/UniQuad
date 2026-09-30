@@ -1224,6 +1224,7 @@ class FeeService:
             pr.reference_doctype = "Applicant"
             pr.reference_name = applicant_doc.name
             pr.amount = amount
+            pr.grand_total = amount
             pr.currency = frappe.defaults.get_global_default("currency") or "INR"
             pr.email_to = email_to
             if gateway:
@@ -1235,6 +1236,7 @@ class FeeService:
                         "FeeService: Gateway Not Found"
                     )
             pr.transaction_id = transaction_id
+            pr.flags.ignore_validate = True
             pr.insert(ignore_permissions=True)
 
         if pr.docstatus > 0:
@@ -1658,6 +1660,13 @@ class FeeService:
 
             receipt = frappe.new_doc("Applicant Payment Receipt")
             receipt.applicant = applicant_doc.name
+            receipt.fee_type = "Application Fee"
+            
+            from slcm.api.service.application_fee_service import sync_application_fee_assignment_for_applicant
+            assignment_name = sync_application_fee_assignment_for_applicant(applicant_doc.name)
+            if assignment_name:
+                receipt.assignment = assignment_name
+                
             receipt.program = applicant_doc.program
             receipt.academic_year = getattr(applicant_doc, "academic_year", None) or None
             tpl = get_payment_receipt_template_for_policy(

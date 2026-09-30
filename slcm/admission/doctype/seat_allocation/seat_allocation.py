@@ -1704,3 +1704,39 @@ def download_results_pdf(name):
     frappe.response['filename'] = filename
     frappe.response['filecontent'] = pdf_content
     frappe.response['type'] = 'pdf'
+
+@frappe.whitelist()
+def pull_from_merit_list(docname=None):
+    if not docname: return
+    doc = frappe.get_doc("Seat Allocation", docname) if isinstance(docname, str) else docname
+    return doc.pull_from_merit_list()
+
+@frappe.whitelist()
+def allocate_seats(docname=None):
+    if not docname: return
+    doc = frappe.get_doc("Seat Allocation", docname) if isinstance(docname, str) else docname
+    return doc.allocate_seats()
+
+@frappe.whitelist()
+def publish_allocation(docname=None):
+    if not docname: return
+    doc = frappe.get_doc("Seat Allocation", docname) if isinstance(docname, str) else docname
+    return doc.publish_allocation()
+
+@frappe.whitelist()
+def unpublish_allocation(docname=None):
+    if not docname: return
+    doc = frappe.get_doc("Seat Allocation", docname) if isinstance(docname, str) else docname
+    return doc.unpublish_allocation()
+
+@frappe.whitelist()
+def get_waitlist_promotion_preview(docname=None):
+    if not docname: return {}
+    doc = frappe.get_doc("Seat Allocation", docname) if isinstance(docname, str) else docname
+    return doc.get_waitlist_promotion_preview()
+
+@frappe.whitelist()
+def run_promotion(promoted_applicants=None, docname=None):
+    if not docname: return
+    doc = frappe.get_doc("Seat Allocation", docname) if isinstance(docname, str) else docname
+    return doc.run_promotion(promoted_applicants=promoted_applicants)

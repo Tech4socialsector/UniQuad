@@ -459,3 +459,25 @@ def download_merit_list(name, download_type, category=None):
     frappe.response['filename'] = fname
     frappe.response['filecontent'] = output.getvalue()
     frappe.response['type'] = 'binary'
+
+@frappe.whitelist()
+def clear_generation_progress(docname=None):
+    if not docname:
+        return
+    doc = frappe.get_doc("Shortlisting Merit List", docname) if isinstance(docname, str) else docname
+    cache_key = f"merit_generation_{doc.admission_cycle}_{doc.campus}_{doc.program_level}_{doc.program or ''}".replace(" ", "_")
+    frappe.cache().delete_value(cache_key)
+    frappe.cache().set_value(cache_key, {
+        "percent": 0,
+        "status": "In Progress",
+        "description": "Starting Final Merit List generation...",
+        "current": 0,
+        "total": 100
+    }, expires_in_sec=300)
+
+@frappe.whitelist()
+def generate_final_merit_list(docname=None):
+    if not docname:
+        frappe.throw("Document Name is required.")
+    doc = frappe.get_doc("Shortlisting Merit List", docname) if isinstance(docname, str) else docname
+    return doc.generate_final_merit_list()

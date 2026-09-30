@@ -140,7 +140,7 @@ def create_seat_allocation(merit_list_name, selected_applicants):
             "interview_score": row.interview_score if row else 0,
             "nlsat_part_a_score": row.entrance_score if row else 0,
             "nlsat_part_b_score": row.interview_score if row else 0,
-            "hsc_percentage": row.hsc_percentage if row else 0,
+            "hsc_percentage": getattr(row, "hsc_percentage", 0) if row else 0,
             "overall_rank": row.overall_rank if row else None,
             "shortlist_rank": row.overall_rank if row and merit.merit_processing_stage == "Part A Ranking" else None,
             "admission_rank": row.overall_rank if row and merit.merit_processing_stage == "Final Allotment Ranking" else None,

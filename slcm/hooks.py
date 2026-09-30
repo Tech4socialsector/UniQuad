@@ -222,7 +222,9 @@ fixtures = [
                 "NLSAT Confirmation Fee Paid",
                 "Admission Full Fee Invoice",
                 "NLSAT Full Fee Paid",
-                "NLSAT Offer Expired / Withdrawn"
+                "NLSAT Offer Expired / Withdrawn",
+                "NLSAT Application Completed Email",
+                "Application Submitted Email"
             ]]
         ]
     },
@@ -641,11 +643,11 @@ website_route_rules = [
     {"from_route": "/portal-login", "to_route": "portal-login/login"},
     {"from_route": "/admission/login", "to_route": "admission/login"},
     {"from_route": "/applicant-dashboard", "to_route": "applicant_dashboard"},
+    {"from_route": "/admission/application-form", "to_route": "admission/application-form"},
     {"from_route": "/admission/<name>", "to_route": "admission/program_detail"},
     {"from_route": "/announcement/<name>", "to_route": "announcement/announcement_detail"},
     {"from_route": "/admission-dashboard", "to_route": "merit-and-scholarship/admission_dashboard"},
     {"from_route": "/apply", "to_route": "merit-and-scholarship/apply"},
-    # {"from_route": "/application-form", "to_route": "application_form"},
     # Student Portal
     {"from_route": "/student-portal", "to_route": "student-portal/index"},
     {"from_route": "/student-portal/courses", "to_route": "student-portal/courses"},

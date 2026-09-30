@@ -25,6 +25,7 @@ class TestSeatAllocation(unittest.TestCase):
         # - Suresh Das gets APP-2026-00460 (smallest ID)
         # - Vikram Joshi gets APP-2026-01378 (middle ID)
         # - Anjali Reddy gets APP-2026-01674 (largest ID)
+        applicants[0].applicant_id = "APP-2026-01674"
         applicants[0].candidate_name = "Anjali Reddy"
         applicants[0].nlsat_part_a_score = 50.0
         applicants[0].nlsat_part_b_score = 50.0
@@ -32,6 +33,7 @@ class TestSeatAllocation(unittest.TestCase):
         applicants[0].total_score = 100.0
         applicants[0].selection_status = "Selected"
         
+        applicants[1].applicant_id = "APP-2026-00460"
         applicants[1].candidate_name = "Suresh Das"
         applicants[1].nlsat_part_a_score = 50.0
         applicants[1].nlsat_part_b_score = 50.0
@@ -39,6 +41,7 @@ class TestSeatAllocation(unittest.TestCase):
         applicants[1].total_score = 100.0
         applicants[1].selection_status = "Selected"
         
+        applicants[2].applicant_id = "APP-2026-01378"
         applicants[2].candidate_name = "Vikram Joshi"
         applicants[2].nlsat_part_a_score = 50.0
         applicants[2].nlsat_part_b_score = 50.0
@@ -46,7 +49,7 @@ class TestSeatAllocation(unittest.TestCase):
         applicants[2].total_score = 100.0
         applicants[2].selection_status = "Selected"
         
-        doc.set("selection_applicant", [applicants[0], applicants[1], applicants[2]])
+        doc.set("selection_applicant", [applicants[1], applicants[2], applicants[0]])
         
         # Mock doc.save to prevent database writes and name overwriting from database records
         doc.save = lambda *args, **kwargs: doc
