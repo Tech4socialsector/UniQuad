@@ -1486,6 +1486,7 @@
     {% set _pid = p.get('program') or p.get('name') if p.get else (p.program or p.name or '') %}
 
     <article class="prog-card fade-card flex flex-col overflow-hidden rounded-sm bg-white shadow-2xl"
+      data-open-for="{{ p.get('admission_open_for') or '' }}"
       style="height:100%;min-height:420px;border:1.5px solid rgba(26,60,110,0.06);cursor:pointer;box-sizing:border-box;" onclick="window.open('{{ portal_config.get('admission_website_url') or 'https://www.nls.ac.in/admissions' if portal_config else 'https://www.nls.ac.in/admissions' }}', '_blank')"
       tabindex="0" role="button" aria-label="View {{ _name }}">
 
