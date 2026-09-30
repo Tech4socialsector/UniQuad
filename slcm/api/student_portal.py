@@ -591,6 +591,37 @@ def download_fee_receipt(receipt_name):
 
 
 @frappe.whitelist()
+def download_fee_demand_invoice(fee_demand):
+    """Invoice PDF for one of the logged-in student's Fee Demands (IDOR guard)."""
+    if frappe.session.user == "Guest":
+        frappe.throw(frappe._("Please log in."), frappe.AuthenticationError)
+    student_name = _get_student()
+    if not student_name:
+        frappe.throw(frappe._("No student record found for your account."), frappe.PermissionError)
+    _send_fee_demand_invoice(fee_demand, student_name)
+
+
+@frappe.whitelist()
+def parent_download_fee_demand_invoice(fee_demand, student_name):
+    """Same invoice, for a parent viewing their ward's record."""
+    if frappe.session.user == "Guest":
+        frappe.throw(frappe._("Please log in."), frappe.AuthenticationError)
+    _require_parent_for_student(student_name)
+    _send_fee_demand_invoice(fee_demand, student_name)
+
+
+def _send_fee_demand_invoice(fee_demand, student_name):
+    owner, status = frappe.db.get_value("Fee Demand", fee_demand, ["student", "status"]) or (None, None)
+    if not owner or owner != student_name or status == "Cancelled":
+        frappe.throw(frappe._("Invoice not found or access denied."), frappe.PermissionError)
+    pdf_bytes = _generate_pdf("Fee Demand", fee_demand, "Fee Demand Invoice")
+    safe = fee_demand.replace("/", "-").replace(" ", "_")
+    frappe.local.response.filename    = f"Fee_Invoice_{safe}.pdf"
+    frappe.local.response.filecontent = pdf_bytes
+    frappe.local.response.type        = "pdf"
+
+
+@frappe.whitelist()
 def parent_download_fee_invoice(invoice_name, student_name):
     """Stream a PDF of a Fee Invoice for a parent viewing their ward's record.
 
