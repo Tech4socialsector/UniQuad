@@ -791,7 +791,7 @@
     var btn = document.getElementById('pp-so-confirm-btn');
     btn.classList.add('pp-loading');
     btn.textContent = 'Signing out…';
-    var baseLogin = '/parent/login';
+    var baseLogin = '/portal-login';
     var currentUrl = encodeURIComponent(window.location.pathname + window.location.search);
     fetch('/api/method/logout', {
       method: 'POST',
