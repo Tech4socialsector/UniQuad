@@ -401,15 +401,15 @@ class Applicant(Document):
                         os.makedirs(os.path.dirname(new_path), exist_ok=True)
                         shutil.move(old_path, new_path)
 
-                    file_doc.file_name = new_file_name
-                    file_doc.file_url = new_file_url
-                    file_doc.is_private = 1
-                    file_doc.attached_to_doctype = self.doctype
-                    file_doc.attached_to_name = self.name
-                    file_doc.attached_to_field = df.fieldname
-                    file_doc.save(ignore_permissions=True)
+                        file_doc.file_name = new_file_name
+                        file_doc.file_url = new_file_url
+                        file_doc.is_private = 1
+                        file_doc.attached_to_doctype = self.doctype
+                        file_doc.attached_to_name = self.name
+                        file_doc.attached_to_field = df.fieldname
+                        file_doc.save(ignore_permissions=True)
 
-                    self.set(df.fieldname, new_file_url)
+                        self.set(df.fieldname, new_file_url)
                 except Exception:
                     frappe.log_error(title="handle_file_name error", message=frappe.get_traceback())
 
@@ -492,6 +492,15 @@ class Applicant(Document):
                 frappe.log_error(
                     frappe.get_traceback(),
                     f"Auto entrance test allocation failed for Applicant {self.name}",
+                )
+
+            # Send completion confirmation with receipt
+            try:
+                self.send_completion_confirmation()
+            except Exception:
+                frappe.log_error(
+                    frappe.get_traceback(),
+                    f"Completion confirmation email failed — {self.name}"
                 )
 
         # If current_stage changed, notify applicant
@@ -838,7 +847,7 @@ class Applicant(Document):
             or "Admissions Office"
         )
 
-        admission_portal_url = frappe.utils.get_url("/admission")
+        admission_portal_url = frappe.utils.get_url("/admission/login#login")
 
         # ── Institution logo ──────────────────────────────────────────────────
         institution_logo = frappe.db.get_single_value("Institution Settings", "logo") or ""
@@ -849,10 +858,10 @@ class Applicant(Document):
         doc_dict = self.as_dict() if hasattr(self, "as_dict") else self
         template_context = {
             "doc": doc_dict,
-            "applicant_id": self.applicant_id or self.name,
+            "applicant_id": self.name,
             "candidate_name": self.candidate_name or "",
             "first_name": (self.candidate_name or "").split()[0] if self.candidate_name else "",
-            "program": self.program or "—",
+            "program": frappe.db.get_value("Programme", self.program, "program_name") if self.program else "—",
             "program_level": self.program_level or "—",
             "application_type": self.application_type or "—",
             "admission_cycle": self.admission_cycle or "—",
@@ -1286,6 +1295,150 @@ class Applicant(Document):
 </html>
 """
         return frappe.render_template(html_template, ctx)
+
+    def send_completion_confirmation(self):
+        """
+        Sends a formatted confirmation email when the application is completely processed (fee paid).
+        - Uses the template from the Admission Cycle's `application_completed_email` field.
+        - Falls back to 'Application Completed Email' template.
+        - Generates and attaches PDF application form.
+        - Fetches and attaches Applicant Payment Receipt PDF if it exists.
+        """
+        recipient = self.email
+        if not recipient:
+            return False
+
+        # ── Resolve email template name ────────────────────────────────────────
+        email_template_name = "Application Completed Email"
+        if self.admission_cycle:
+            cycle_template = frappe.db.get_value("Admission Cycle", self.admission_cycle, "application_completed_email")
+            if cycle_template:
+                email_template_name = cycle_template
+
+        # ── Context dict for template rendering ──────────────────────────────
+        doc_dict = self.as_dict() if hasattr(self, "as_dict") else self
+        institution_name = frappe.db.get_single_value("Institution Settings", "institution_name") or "Admissions Office"
+        institution_logo = frappe.db.get_single_value("Institution Settings", "logo") or ""
+        if institution_logo and not institution_logo.startswith("http"):
+            institution_logo = frappe.utils.get_url(institution_logo)
+        admission_portal_url = frappe.utils.get_url("/admission/login#login")
+
+        template_context = {
+            "doc": doc_dict,
+            "applicant_id": self.applicant_id or self.name,
+            "applicant_document_id": self.name,
+            "candidate_name": self.candidate_name or "",
+            "program": self.program or "—",
+            "program_name": frappe.db.get_value("Programme", self.program, "program_name") if self.program else "—",
+            "admission_cycle": self.admission_cycle or "—",
+            "campus": self.campus or "—",
+            "application_fee_amount": frappe.utils.fmt_money(self.application_fee_amount, currency="INR") if self.application_fee_amount else "—",
+            "institution_name": institution_name,
+            "institution_logo": institution_logo,
+            "admission_portal_url": admission_portal_url,
+            "generated_on": frappe.utils.now_datetime().strftime("%d %b %Y, %I:%M %p"),
+        }
+
+        email_subject = f"Application Completed — {self.applicant_id or self.name} | {self.program or 'Admissions'}"
+        html_body = None
+        email_template = None
+
+        if frappe.db.exists("Email Template", email_template_name):
+            try:
+                email_template = frappe.get_doc("Email Template", email_template_name)
+                if email_template.get("subject"):
+                    email_subject = frappe.render_template(email_template.subject, template_context)
+                
+                if email_template.get("use_html") and email_template.get("response_html"):
+                    html_body = frappe.render_template(email_template.response_html, template_context)
+                elif email_template.get("response"):
+                    html_body = frappe.render_template(email_template.response, template_context)
+
+                if not html_body:
+                    html_body = frappe.render_template(email_template.get("message") or "", template_context)
+            except Exception:
+                frappe.log_error(frappe.get_traceback(), f"Email template render failed for {self.name}, falling back")
+                html_body = None
+
+        if not html_body:
+            return False
+
+        # ── Attachments (Application Form + Receipt) ─────────────────────────
+        attachments = []
+        
+        # 1. Application Form PDF
+        try:
+            pdf_content = read_stored_application_form_pdf(self.name)
+            if not pdf_content and not self.flags.get("in_pdf_generation"):
+                pdf_content = self.generate_application_pdf()
+            if pdf_content:
+                attachments.append({
+                    "fname": f"Application_Form_{self.applicant_id or self.name}.pdf",
+                    "fcontent": pdf_content
+                })
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), "Application PDF generation failed in completion email")
+
+        # 2. Payment Receipt PDF
+        try:
+            receipt_name = frappe.db.get_value(
+                "Applicant Payment Receipt",
+                {"applicant": self.name, "fee_type": "Application Fee", "docstatus": ["<", 2]},
+                "name",
+                order_by="creation desc"
+            )
+            if receipt_name:
+                receipt = frappe.get_doc("Applicant Payment Receipt", receipt_name)
+                receipt_pdf_content = None
+                if receipt.receipt_pdf:
+                    from frappe.utils.file_manager import get_file_path
+                    import os
+                    file_path = get_file_path(receipt.receipt_pdf)
+                    if file_path and os.path.exists(file_path):
+                        with open(file_path, "rb") as f:
+                            receipt_pdf_content = f.read()
+                
+                if not receipt_pdf_content:
+                    print_format = receipt.get("payment_receipt_template") or "Applicant Payment Receipt"
+                    receipt_pdf_content = frappe.get_print(
+                        "Applicant Payment Receipt",
+                        receipt.name,
+                        print_format,
+                        as_pdf=True,
+                    )
+                
+                if receipt_pdf_content:
+                    attachments.append({
+                        "fname": f"Payment_Receipt_{self.applicant_id or self.name}.pdf",
+                        "fcontent": receipt_pdf_content
+                    })
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), "Receipt PDF generation failed in completion email")
+
+        # ── Send email ────────────────────────────────────────────────────────
+        sender = None
+        if email_template and email_template.get("email_account"):
+            sender = frappe.db.get_value("Email Account", email_template.get("email_account"), "email_id") or email_template.get("email_account")
+
+        cc_list = []
+        if email_template and email_template.get("cc"):
+            cc_val = email_template.get("cc")
+            cc_list = [c.strip() for c in cc_val.replace(";", ",").split(",") if c.strip()]
+
+        frappe.sendmail(
+            recipients=[recipient],
+            sender=sender,
+            cc=cc_list if cc_list else None,
+            subject=email_subject,
+            message=html_body,
+            attachments=attachments,
+            reference_doctype=self.doctype,
+            reference_name=self.name,
+            now=True
+        )
+        return True
+
+
     # ──────────────────────────────────────────────
     # APPLICANT CATEGORY HELPER
     # ──────────────────────────────────────────────

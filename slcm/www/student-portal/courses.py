@@ -1,4 +1,4 @@
-﻿import frappe
+import frappe
 
 no_cache = 1
 

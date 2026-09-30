@@ -291,6 +291,22 @@ frappe.ui.form.on("Applicant", {
         frm.set_value("city", "");
     },
 
+    nationality: function (frm) {
+        if (frm.doc.nationality && frm.doc.nationality !== "Indian") {
+            frm.set_value("foriegn_national", "Yes");
+        } else if (frm.doc.nationality === "Indian" && frm.doc.foriegn_national === "Yes") {
+            frm.set_value("foriegn_national", "No");
+        }
+    },
+
+    foriegn_national: function (frm) {
+        if (frm.doc.foriegn_national === "Yes" && frm.doc.nationality === "Indian") {
+            frm.set_value("nationality", "");
+        } else if (frm.doc.foriegn_national === "No" && frm.doc.nationality && frm.doc.nationality !== "Indian") {
+            frm.set_value("nationality", "Indian");
+        }
+    },
+
     validate: function (frm) {
         if (frm.doc.status === "Draft") {
             frm.ignore_mandatory = true;
@@ -314,9 +330,17 @@ frappe.ui.form.on("Applicant", {
         if (frm.doc.ug_degree_details && frm.doc.ug_degree_details.length) {
             frm.doc.ug_degree_details.forEach(row => {
                 if (row.ug_cgpa !== undefined && row.ug_cgpa !== null && row.ug_cgpa !== "") {
-                    if (row.ug_cgpa < 4 || row.ug_cgpa > 10) {
-                        errors.push(__("UG CGPA for degree \"{0}\" should be between 4 and 10",
-                            [row.degree || __("(unnamed)")]));
+                    let is_cgpa = !!row.if_ug_cgpa;
+                    let max_val = is_cgpa ? row.if_ug_cgpa : 100;
+                    
+                    if (row.ug_cgpa < (is_cgpa ? 4 : 35) || row.ug_cgpa > max_val) {
+                        if (is_cgpa) {
+                            errors.push(__("UG CGPA for degree \"{0}\" should be between 4 and {1}",
+                                [row.ug_program || __("(unnamed)"), max_val]));
+                        } else {
+                            errors.push(__("UG Percentage for degree \"{0}\" should be between 35 and 100",
+                                [row.ug_program || __("(unnamed)")]));
+                        }
                     }
                 }
             });
@@ -326,9 +350,17 @@ frappe.ui.form.on("Applicant", {
         if (frm.doc.pg_degree_details && frm.doc.pg_degree_details.length) {
             frm.doc.pg_degree_details.forEach(row => {
                 if (row.pg_cgpa !== undefined && row.pg_cgpa !== null && row.pg_cgpa !== "") {
-                    if (row.pg_cgpa < 4 || row.pg_cgpa > 10) {
-                        errors.push(__("PG CGPA for degree \"{0}\" should be between 4 and 10",
-                            [row.degree || __("(unnamed)")]));
+                    let is_cgpa = !!row.if_pg_cgpa;
+                    let max_val = is_cgpa ? row.if_pg_cgpa : 100;
+                    
+                    if (row.pg_cgpa < (is_cgpa ? 4 : 35) || row.pg_cgpa > max_val) {
+                        if (is_cgpa) {
+                            errors.push(__("PG CGPA for degree \"{0}\" should be between 4 and {1}",
+                                [row.pg_program || __("(unnamed)"), max_val]));
+                        } else {
+                            errors.push(__("PG Percentage for degree \"{0}\" should be between 35 and 100",
+                                [row.pg_program || __("(unnamed)")]));
+                        }
                     }
                 }
             });
@@ -354,6 +386,15 @@ frappe.ui.form.on("Applicant", {
             .filter(Boolean);
         if (new Set(prefs).size !== prefs.length) {
             errors.push(__("Campus preferences must all be unique. Please remove duplicate selections."));
+        }
+
+        if (frm.doc.nationality && frm.doc.foriegn_national) {
+            if (frm.doc.nationality !== "Indian" && frm.doc.foriegn_national !== "Yes") {
+                errors.push(__("If Nationality is not Indian, then 'Foreign National' must be Yes."));
+            }
+            if (frm.doc.foriegn_national === "Yes" && frm.doc.nationality === "Indian") {
+                errors.push(__("If 'Foreign National' is Yes, Nationality cannot be Indian."));
+            }
         }
 
         if (errors.length) {

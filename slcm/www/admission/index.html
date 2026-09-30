@@ -1453,12 +1453,18 @@
     <div>
       <h2 class="text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">Programmes</h2>
     </div>
+
+    <!-- Type Toggle Buttons -->
+    <div class="flex items-center gap-1 p-1 rounded-lg" style="background:#f1f5f9; display:inline-flex;">
+       <button class="px-5 py-2 rounded-md font-bold text-sm shadow-sm transition-all text-slate-900 bg-white" id="btn-domestic" onclick="setProgramFilter('Domestic')">Indian Nationals</button>
+       <button class="px-5 py-2 rounded-md font-bold text-sm transition-all text-slate-500 bg-transparent hover:text-slate-900 hover:bg-slate-200/50" id="btn-international" onclick="setProgramFilter('International')">International</button>
+    </div>
   </div>
 
   {% set _cyc = active_cycle.name if active_cycle else '' %}
   {% set _ay = active_cycle.admission_year if active_cycle else '' %}
   {% set _aac = active_cycle.academic_year if active_cycle else '' %}
-  <div class="programs-grid gap-8">
+  <div class="programs-grid gap-4">
     {% for p in programs %}
     {% set _slug = p.get('program_slug') if p.get else (p.program_slug or '') %}
     {% set _img = p.get('program_image') if p.get else (p.program_image or '') %}
@@ -1555,14 +1561,14 @@
           </a>
           {% else %}
           <a href="{{ (p.application_form_link or build_applicant_form_new_url(_slug, p.admission_cycle or (active_cycle.name if active_cycle else ''), campus=(p.campus or ''), intake_type=(p.intake_type or ''), admission_year=(active_cycle.admission_year if active_cycle else ''), academic_year=(active_cycle.academic_year if active_cycle else ''), program_level=(p.program_level or ''))) if (_is_cycle_active and not _is_full) else 'javascript:void(0)' }}"
-            style="display:inline-flex;align-items:center;justify-content:center;gap:6px;
+            style="display:inline-flex;align-items:center;justify-content:center;gap:2px;
                         padding:8px 18px;border-radius:8px;font-size:12px;font-weight:700;
                         text-decoration:none;color:#fff;
                         background:var(--primary,#CB2929);transition:opacity .2s;
                         {{ 'opacity: 0.6; cursor: not-allowed; pointer-events: none;' if (not _is_cycle_active or _is_full) else '' }}"
             {% if _is_cycle_active and not _is_full %} onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'" {%
             endif %} onclick="event.stopPropagation()">
-            <span class="material-symbols-outlined" style="font-size:16px;">{{ 'edit_square' if not _is_full else 'block' }}</span>
+
             {{ 'Closed' if _is_full else ('Apply now' if _is_cycle_active else 'Closed') }}
           </a>
           {% endif %}
@@ -1887,7 +1893,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
   {% else %}
-  document.addEventListener('DOMContentLoaded', function () {
+  (function () {
     // Hero slideshow
     var slides = document.querySelectorAll('.hero-slide');
     if (slides.length > 1) {
@@ -1939,25 +1945,54 @@ document.addEventListener('DOMContentLoaded', function() {
       let batchSize = getBatchSize();
       let visibleCount = batchSize;
 
+      let currentFilter = 'Domestic';
+
+      // Define globally and safely (works with PJAX/DOMContentLoaded)
+      window.setProgramFilter = function(filterVal) {
+        currentFilter = filterVal;
+        let btnDom = document.getElementById('btn-domestic');
+        let btnInt = document.getElementById('btn-international');
+        if (btnDom) {
+          btnDom.className = (filterVal === 'Domestic') ? 'px-5 py-2 rounded-md font-bold text-sm shadow-sm transition-all text-slate-900 bg-white' : 'px-5 py-2 rounded-md font-bold text-sm transition-all text-slate-500 bg-transparent hover:text-slate-900 hover:bg-slate-200/50';
+        }
+        if (btnInt) {
+          btnInt.className = (filterVal === 'International') ? 'px-5 py-2 rounded-md font-bold text-sm shadow-sm transition-all text-slate-900 bg-white' : 'px-5 py-2 rounded-md font-bold text-sm transition-all text-slate-500 bg-transparent hover:text-slate-900 hover:bg-slate-200/50';
+        }
+        visibleCount = batchSize;
+        if (typeof updateCardVisibility === 'function') {
+          updateCardVisibility();
+        }
+      };
+
       function updateCardVisibility() {
-        cards.forEach((card, idx) => {
-          if (idx < visibleCount) {
-            card.style.display = 'flex';
-            // Trigger intersection observer manually for newly visible cards
-            if (typeof obs !== 'undefined') obs.observe(card);
+        let visibleMatching = 0;
+        let totalMatching = 0;
+        cards.forEach((card) => {
+          let openFor = card.getAttribute('data-open-for') || '';
+          let match = !openFor || openFor.includes(currentFilter);
+          
+          if (match) {
+            totalMatching++;
+            if (visibleMatching < visibleCount) {
+              card.style.display = 'flex';
+              if (typeof obs !== 'undefined') obs.observe(card);
+              visibleMatching++;
+            } else {
+              card.style.display = 'none';
+            }
           } else {
             card.style.display = 'none';
           }
         });
 
         if (loadMoreBtn) {
-          if (visibleCount >= cards.length) {
+          if (visibleCount >= totalMatching) {
             loadMoreBtn.style.display = 'none';
           } else {
             loadMoreBtn.style.display = 'inline-block';
           }
         }
-      }
+      } // <-- Close updateCardVisibility
 
       if (loadMoreBtn) {
         loadMoreBtn.onclick = function () {
@@ -1984,7 +2019,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 250);
       };
     }
-  });
+  })();
   {% endif %}
 </script>
 {% endblock %}

@@ -131,7 +131,7 @@ frappe.ui.form.on("Seat Allocation", {
                     () => {
                         frm.call({
                             method: "pull_from_merit_list",
-                            doc: frm.doc,
+                            args: { docname: frm.doc.name },
                             freeze: true,
                             freeze_message: __("Pulling applicants from Merit List..."),
                             callback(r) {
@@ -156,7 +156,7 @@ frappe.ui.form.on("Seat Allocation", {
 
                 frm.call({
                     method: "allocate_seats",
-                    doc: frm.doc,
+                    args: { docname: frm.doc.name },
                     callback(r) {
                         if (frm._progress_interval) {
                             clearInterval(frm._progress_interval);
@@ -205,7 +205,7 @@ frappe.ui.form.on("Seat Allocation", {
 
                         frm.call({
                             method: "publish_allocation",
-                            doc: frm.doc,
+                            args: { docname: frm.doc.name },
                             callback(r) {
                                 frappe.realtime.off("publish_seat_allocation_progress");
                                 frappe.hide_progress();
@@ -513,9 +513,9 @@ frappe.ui.form.on("Seat Allocation", {
 
         if (frm.doc.status === "Allocated" || frm.doc.status === "Published") {
             frm.add_custom_button(__("Promote Waitlist"), () => {
-                frappe.call({
+                frm.call({
                     method: "get_waitlist_promotion_preview",
-                    doc: frm.doc,
+                    args: { docname: frm.doc.name },
                     freeze: true,
                     freeze_message: __("Calculating promotion preview..."),
                     callback: (r) => {
@@ -645,8 +645,8 @@ frappe.ui.form.on("Seat Allocation", {
                                 frappe.confirm(__("Are you sure you want to promote {0} candidates? This will generate offer letters immediately.", [selected.length]), () => {
                                     frm.call({
                                         method: "run_promotion",
-                                        doc: frm.doc,
                                         args: {
+                                            docname: frm.doc.name,
                                             promoted_applicants: selected
                                         },
                                         freeze: true,
@@ -700,7 +700,7 @@ frappe.ui.form.on("Seat Allocation", {
                     () => {
                         frm.call({
                             method: "unpublish_allocation",
-                            doc: frm.doc,
+                            args: { docname: frm.doc.name },
                             callback(r) {
                                 if (!r.exc) {
                                     frm.reload_doc();
