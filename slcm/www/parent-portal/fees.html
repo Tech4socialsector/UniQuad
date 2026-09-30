@@ -508,10 +508,9 @@
 <div class="ppf-page" data-ward="{{ ward_student_name | e }}">
 
 {# ═══════════════ Page header ═══════════════ #}
-<header class="ppf-head fade-in">
+<header class="ppf-head fade-in" style="background: var(--pp-card, #fff); border: 1px solid var(--pp-border, #e5e7eb); border-radius: 14px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin: 0 0 16px;">
   <div>
-    <h1 class="pp-page-title">Fees &amp; Payments</h1>
-    <p class="pp-page-sub">View your ward's fee summary, payments and outstanding dues.</p>
+    <h1 class="pp-page-title" style="margin: 0; font-size: 18px !important; font-weight: 700 !important;">Fees &amp; Payments</h1>
   </div>
   <div class="ppf-ay">
     {% if fee_academic_years | length > 1 %}

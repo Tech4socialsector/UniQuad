@@ -301,15 +301,7 @@
 </div>
 {% endif %}
 
-{% if courses_below_75 > 0 %}
-<div class="pp-alert pp-alert-danger fade-in" style="margin-bottom:14px;" role="status">
-  <span class="ms" aria-hidden="true">warning</span>
-  <div>
-    <strong>{{ courses_below_75 }} course{% if courses_below_75 != 1 %}s{% endif %} below {{ att_good|int }}% attendance</strong>
-    &nbsp;-&nbsp;<a href="/parent-portal/attendance{{ _q }}" style="color:#1d4ed8;font-weight:700;text-decoration:none;">View details</a>
-  </div>
-</div>
-{% endif %}
+
 
 {# ── Key metrics ───────────────────────────────────────────────── #}
 <section class="pp-kpi-grid fade-in" aria-label="Key metrics" style="animation-delay:0.04s;">
