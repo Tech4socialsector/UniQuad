@@ -508,10 +508,9 @@
 <div class="ppf-page" data-ward="{{ ward_student_name | e }}">
 
 {# ═══════════════ Page header ═══════════════ #}
-<header class="ppf-head fade-in">
+<header class="ppf-head fade-in" style="background: var(--pp-card, #fff); border: 1px solid var(--pp-border, #e5e7eb); border-radius: 14px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin: 0 0 16px;">
   <div>
-    <h1 class="pp-page-title">Fees &amp; Payments</h1>
-    <p class="pp-page-sub">View your ward's fee summary, payments and outstanding dues.</p>
+    <h1 class="pp-page-title" style="margin: 0; font-size: 18px !important; font-weight: 700 !important;">Fees &amp; Payments</h1>
   </div>
   <div class="ppf-ay">
     {% if fee_academic_years | length > 1 %}
@@ -556,7 +555,7 @@
   {% if _summary_ok %}
   <div class="ppf-student-status">
     {% if has_dues %}
-    <span class="ppf-status-badge ppf-status-badge-due"><span class="ms" aria-hidden="true">error</span>{{ 'Payment Overdue' if programme_overdue > 0 else 'Payment Due' }}</span>
+    <span class="ppf-status-badge ppf-status-badge-due"><span class="ms" aria-hidden="true">error</span>Pending</span>
     {% if payment_enabled and payable_invoices %}
       {% if payable_invoices | length == 1 %}
       {% set _pi = payable_invoices[0] %}
@@ -569,7 +568,7 @@
       {% endif %}
     {% endif %}
     {% else %}
-    <span class="ppf-status-badge ppf-status-badge-paid"><span class="ms" aria-hidden="true">check_circle</span>All Fees Paid</span>
+    <span class="ppf-status-badge ppf-status-badge-paid"><span class="ms" aria-hidden="true">check_circle</span>No Dues</span>
     {% endif %}
   </div>
   {% endif %}
@@ -846,115 +845,7 @@
 
   <div class="ppf-sum-sections">
 
-    {% if _has_inv %}
-    <div id="ppf-sec-invoices" class="ppf-sum-sec"><div class="ppf-subhead"><span>Fee Invoices</span></div>
-      {% if _err.invoices %}
-        {{ section_error('fee invoices') }}
-      {% elif not has_invoices %}
-        {% if has_fee_data %}
-        {{ empty('schedule', 'No invoices yet', 'Invoices are being prepared by the Finance Office. The summary above is from your ward\'s fee record.') }}
-        {% else %}
-        {{ empty('receipt_long', 'No invoices yet') }}
-        {% endif %}
-      {% else %}
-      <table class="ppf-t" id="ppf-inv-table">
-        <caption class="pp-sr-only">Fee invoices by term</caption>
-        <colgroup><col style="width:26%;"><col style="width:14%;"><col style="width:14%;"><col style="width:13%;"><col style="width:14%;"><col style="width:19%;"></colgroup>
-        <thead><tr>
-          <th scope="col" class="c-text">Description</th><th scope="col" class="c-date">Invoice Date</th>
-          <th scope="col" class="c-date">Due Date</th><th scope="col" class="c-num">Amount</th>
-          <th scope="col" class="c-status">Status</th><th scope="col" class="c-action">Action</th>
-        </tr></thead>
-        <tbody>
-          {% for tg in term_groups %}
-          {% set gid = 'g' ~ loop.index %}
-          <tr class="ppf-group-row" data-group="{{ gid }}" data-ay="{{ tg.academic_year | e }}">
-            <th scope="colgroup" colspan="6">
-              <div class="ppf-group-inner">
-                <span>{{ tg.term }}</span>
-                <span class="ppf-group-meta">{% if tg.term_has_dues %}<span class="ppf-tone-danger">{{ tg.formatted_term_outstanding }} due</span> · {% endif %}{{ ay(tg.academic_year) }}</span>
-              </div>
-            </th>
-          </tr>
-          {% for inv in tg.invoices %}
-          {% set iid = inv.name | e %}
-          <tr class="ppf-row-data" data-group="{{ gid }}" data-ay="{{ (inv.academic_year or tg.academic_year) | e }}" data-detail="ppf-det-{{ iid }}">
-            <td class="c-text c-primary"><div class="ppf-cell-main">{{ inv.label }}</div><div class="ppf-cell-sub">{{ inv.name }}</div></td>
-            <td class="c-date" data-label="Invoice Date">{{ inv.invoice_date_fmt or '—' }}</td>
-            <td class="c-date" data-label="Due Date">
-              <div>
-                <div>{{ inv.due_date_fmt or '—' }}</div>
-                {% if inv.due_hint %}<div class="ppf-cell-hint ppf-tone-{{ inv.due_hint_tone }}">{{ inv.due_hint }}</div>{% endif %}
-              </div>
-            </td>
-            <td class="c-num" data-label="Amount">{{ inv.formatted_payable }}</td>
-            <td class="c-status" data-label="Status">{{ badge(inv.display_status, 'ppf-badge-' ~ iid) }}</td>
-            <td class="c-action" data-label="Action">
-              <span style="display:inline-flex;gap:6px;justify-content:flex-end;">
-                {% if inv.can_pay and payment_enabled %}
-                <button type="button" class="ppf-btn ppf-btn-primary ppf-btn-sm" id="ppf-pay-btn-{{ iid }}" data-pay-invoice="{{ iid }}"
-                        onclick="ppfInitiatePayment('{{ iid }}')" aria-label="Pay {{ inv.formatted_outstanding }} for {{ inv.name }}">Pay</button>
-                {% endif %}
-                <button type="button" class="ppf-btn ppf-btn-ghost ppf-btn-sm" id="ppf-view-{{ iid }}"
-                        aria-expanded="false" aria-controls="ppf-det-{{ iid }}" onclick="ppfToggle('{{ iid }}')"
-                        aria-label="View details of {{ inv.name }}">View</button>
-              </span>
-            </td>
-          </tr>
-          <tr class="ppf-detail-tr is-hidden" id="ppf-det-{{ iid }}">
-            <td colspan="6">
-              {% if inv.display_status == 'Cancelled' %}
-              <p style="margin:0;font-size:13px;color:var(--pp-text-3);">This invoice has been cancelled. No payment is required.</p>
-              {% else %}
-              <div class="ppf-detail-grid">
-                <div>
-                  <div class="ppf-detail-hd">Fee Breakdown</div>
-                  {% for comp in inv.fee_components %}
-                  <div class="ppf-kv"><span>{{ comp.component_name }}</span><span>{{ _inr.format(comp.total_amount or comp.amount or 0) }}</span></div>
-                  {% endfor %}
-                  {% if inv.scholarship_amount %}
-                  <div class="ppf-kv"><span>Scholarship / Discount</span><span>−{{ _inr.format(inv.scholarship_amount) }}</span></div>
-                  {% endif %}
-                  <div class="ppf-kv"><span>Net Payable</span><span>{{ inv.formatted_payable }}</span></div>
-                  <div class="ppf-kv"><span>Amount Paid</span><span id="ppf-paid-{{ iid }}">{{ inv.formatted_paid }}</span></div>
-                  <div class="ppf-kv"><span>Outstanding Balance</span><span class="{{ 'ppf-tone-danger' if inv.outstanding_amount > 0 }}" id="ppf-outstanding-{{ iid }}">{{ inv.formatted_outstanding }}</span></div>
-                </div>
-                <div>
-                  <div class="ppf-detail-hd">Payments for this invoice</div>
-                  {% for p in inv.payments %}
-                  <div class="ppf-kv">
-                    <span>{{ frappe.utils.formatdate(p.payment_date, "dd MMM yyyy") if p.payment_date else '—' }}{% if not p.is_rzp_only and p.payment_mode %} · {{ p.payment_mode }}{% endif %}{% if p.reference_number %}<span class="ppf-cell-sub">Ref: {{ p.reference_number }}</span>{% endif %}</span>
-                    {% if p.is_rzp_only %}<span class="ppf-tone-danger">{{ p.rzp_status or 'Failed' }}</span>
-                    {% else %}<span>{{ _inr.format(p.amount or 0) }}</span>{% endif %}
-                  </div>
-                  {% else %}
-                  <p style="margin:4px 0 0;font-size:12.5px;color:var(--ppf-muted);">No payments recorded yet.</p>
-                  {% endfor %}
-                </div>
-              </div>
-              {% endif %}
-              <div class="ppf-detail-actions">
-                <a class="ppf-btn ppf-btn-ghost ppf-btn-sm" target="_blank" rel="noopener noreferrer"
-                   href="/api/method/slcm.api.student_portal.parent_download_fee_invoice?invoice_name={{ inv.name | urlencode }}&student_name={{ ward_student_name | urlencode }}">
-                  <span class="ms" aria-hidden="true">picture_as_pdf</span> Download Invoice
-                </a>
-                {% for rc in inv.receipts %}
-                <a class="ppf-btn ppf-btn-ghost ppf-btn-sm" target="_blank" rel="noopener noreferrer" title="Ref: {{ rc.reference_number or rc.receipt_name }}"
-                   href="/api/method/slcm.api.student_portal.parent_download_fee_receipt?receipt_name={{ rc.receipt_name | urlencode }}&student_name={{ ward_student_name | urlencode }}">
-                  <span class="ms" aria-hidden="true">receipt</span> Download Receipt{% if inv.receipts | length > 1 %} {{ loop.index }}{% endif %}
-                </a>
-                {% endfor %}
-              </div>
-            </td>
-          </tr>
-          {% endfor %}
-          {% endfor %}
-          <tr class="ppf-filter-empty is-hidden"><td colspan="6" class="c-empty">{{ empty('filter_alt', 'No invoices for this academic year') }}</td></tr>
-        </tbody>
-      </table>
-      {% endif %}
-    </div>
-    {% endif %}
+    
 
   </div>
   {% endif %}

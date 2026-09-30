@@ -352,7 +352,11 @@ def _set_student_nav(context, student):
     context.student_id = student.registration_id or student.name
     context.student_photo = student.passport_size_photo or ""
     context.student_initial = (context.student_name[0]).upper() if context.student_name else "S"
-    context.programme_name = frappe.db.get_value("Batch", student.programme, "cohort_name") or student.programme or ""
+    prog_name = frappe.db.get_value("Batch", student.programme, "cohort_name") if student.programme else None
+    if not prog_name and student.programme_of_study:
+        prog_name = frappe.db.get_value("Programme", student.programme_of_study, "program_name")
+    context.programme_name = prog_name or student.programme or student.programme_of_study or ""
+
     context.department = student.department or ""
     context.batch_year = student.batch_year or ""
 

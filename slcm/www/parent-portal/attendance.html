@@ -165,6 +165,11 @@
 
 {% block content %}
 
+{# ── Page Header ───────────────────────────────────────────────── #}
+<div class="pp-page-header fade-in" style="background: var(--pp-card, #fff); border: 1px solid var(--pp-border, #e5e7eb); border-radius: 14px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
+  <h1 class="pp-page-title" style="margin: 0; font-size: 18px !important; font-weight: 700 !important;">Attendance</h1>
+</div>
+
 {# ── Ward Banner ───────────────────────────────────────────────── #}
 <div class="pp-ward-banner fade-in">
   <div class="pp-ward-banner-avatar">
@@ -181,11 +186,7 @@
   </div>
 </div>
 
-{# ── Page Header ───────────────────────────────────────────────── #}
-<div class="pp-page-header fade-in">
-  <h1 class="pp-page-title">Attendance</h1>
-  <p class="pp-page-sub">Your ward's attendance record across all enrolled courses this semester</p>
-</div>
+
 
 {% if not attendance_summaries %}
 <div class="pp-card fade-in" style="padding:0;">

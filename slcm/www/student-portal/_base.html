@@ -426,7 +426,7 @@
         method: 'POST', credentials: 'same-origin',
         headers: { 'X-Frappe-CSRF-Token': window._sp_csrf || decodeURIComponent((document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/) || [])[1] || '') }
       }).finally(function() {
-        window.location.href = '/student/login';
+        window.location.href = '/portal-login';
       });
     }
     </script>
@@ -809,7 +809,7 @@
       method: 'POST',
       headers: { 'X-Frappe-CSRF-Token': window._sp_csrf || '' }
     }).finally(function() {
-      window.location.href = '/student/login?redirect-to=' + currentUrl;
+      window.location.href = '/portal-login?redirect-to=' + currentUrl;
     });
   }
   document.addEventListener('DOMContentLoaded', function() {
