@@ -1660,6 +1660,13 @@ class FeeService:
 
             receipt = frappe.new_doc("Applicant Payment Receipt")
             receipt.applicant = applicant_doc.name
+            receipt.fee_type = "Application Fee"
+            
+            from slcm.api.service.application_fee_service import sync_application_fee_assignment_for_applicant
+            assignment_name = sync_application_fee_assignment_for_applicant(applicant_doc.name)
+            if assignment_name:
+                receipt.assignment = assignment_name
+                
             receipt.program = applicant_doc.program
             receipt.academic_year = getattr(applicant_doc, "academic_year", None) or None
             tpl = get_payment_receipt_template_for_policy(

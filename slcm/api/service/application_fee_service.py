@@ -18,28 +18,43 @@ def get_application_fee_for_category(program, admission_cycle, category, is_fore
 	if not program or not admission_cycle:
 		return 0
 
-	policy = frappe.db.get_value(
+	acp = frappe.db.get_value(
+		"Admission Cycle Program",
+		{"parent": admission_cycle, "program": program},
+		["reservation_applicable", "application_fee_indian", "application_fee_foreign"],
+		as_dict=True
+	)
+	if acp and not acp.reservation_applicable:
+		return flt(acp.application_fee_foreign if is_foreign else acp.application_fee_indian, 2)
+
+	policy_data = frappe.db.get_value(
 		"Programme Reservation Policy",
 		{"program": program, "admission_cycle": admission_cycle, "status": "Active"},
-		"name"
+		["name", "application_fee_for_foreign"],
+		as_dict=True
 	)
-	if not policy:
-		policy = frappe.db.get_value(
+	if not policy_data:
+		policy_data = frappe.db.get_value(
 			"Programme Reservation Policy",
 			{"program": program, "admission_cycle": admission_cycle},
-			"name"
+			["name", "application_fee_for_foreign"],
+			as_dict=True
 		)
-	if not policy:
+	if not policy_data:
 		return 0
+
+	policy = policy_data.name
 
 	rows = frappe.get_all(
 		"Programme Reservation Category",
 		filters={"parent": policy, "parenttype": "Programme Reservation Policy"},
-		fields=["category_name", "application_fee_for_indian", "application_fee_for_foreign"]
+		fields=["category_name", "application_fee_for_indian"]
 	)
 
 	def _get_fee(row):
-		return flt(row.application_fee_for_foreign if is_foreign else row.application_fee_for_indian, 2)
+		if is_foreign:
+			return flt(policy_data.application_fee_for_foreign, 2)
+		return flt(row.application_fee_for_indian, 2)
 
 	category_str = (category or "").strip()
 	for row in rows:
@@ -60,6 +75,16 @@ def get_payment_gateway_for_application_fee(program, admission_cycle):
 	"""
 	if not program or not admission_cycle:
 		return None
+
+	acp = frappe.db.get_value(
+		"Admission Cycle Program",
+		{"parent": admission_cycle, "program": program},
+		["reservation_applicable", "payment_gateway"],
+		as_dict=True
+	)
+	if acp and not acp.reservation_applicable:
+		return acp.payment_gateway
+
 	gateway = frappe.db.get_value(
 		"Programme Reservation Policy",
 		{"program": program, "admission_cycle": admission_cycle, "status": "Active"},
@@ -80,6 +105,16 @@ def get_payment_receipt_template_for_policy(program, admission_cycle):
 	"""
 	if not program or not admission_cycle:
 		return None
+
+	acp = frappe.db.get_value(
+		"Admission Cycle Program",
+		{"parent": admission_cycle, "program": program},
+		["reservation_applicable", "payment_receipt_template"],
+		as_dict=True
+	)
+	if acp and not acp.reservation_applicable:
+		return acp.payment_receipt_template
+
 	template = frappe.db.get_value(
 		"Programme Reservation Policy",
 		{"program": program, "admission_cycle": admission_cycle, "status": "Active"},
