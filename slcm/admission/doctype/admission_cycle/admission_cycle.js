@@ -109,13 +109,13 @@ frappe.ui.form.on("Admission Cycle", {
                 slcm_apply_program_campus_field_rules(frm);
             });
 
-        frm.set_query("academic_year", function () {
-            return {
-                filters: {
-                    status: "Active"
-                }
-            };
-        });
+        // frm.set_query("academic_year", function () {
+        //     return {
+        //         filters: {
+        //             status: "Active"
+        //         }
+        //     };
+        // });
         frm.set_query("admission_year", function () {
             return {
                 filters: {

@@ -1,4 +1,4 @@
-{% set logo = "/files/nlsiu-logo.jpg" %}
+{% set logo = frappe.get_doc("Institution Settings").logo %}
 {% set prog_doc = frappe.get_doc("Programme", doc.program) if doc.program and frappe.db.exists("Programme", doc.program) else None %}
 {% set net_amount = frappe.utils.flt(doc.net_amount or 0) %}
 

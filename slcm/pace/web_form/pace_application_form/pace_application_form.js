@@ -907,7 +907,6 @@ function _paceOpenPickerModal(programmes, wf, onConfirm) {
 			'</div>' +
 			// Buttons
 			'<div style="display:flex;gap:10px">' +
-				'<button id="pace-prog-cancel-btn" style="flex:1;padding:11px;border-radius:10px;border:1.5px solid #e2e8f0;background:#f8fafc;color:#475569;font-size:14px;font-weight:500;cursor:pointer">Cancel</button>' +
 				'<button id="pace-prog-confirm-btn" style="flex:1;padding:11px;border-radius:10px;border:none;background:' + primary + ';color:#fff;font-size:14px;font-weight:600;cursor:pointer;opacity:0.45;pointer-events:none">Confirm & Proceed</button>' +
 			'</div>' +
 		'</div>';
@@ -917,7 +916,6 @@ function _paceOpenPickerModal(programmes, wf, onConfirm) {
 	var sel     = document.getElementById('pace-prog-select');
 	var warning = document.getElementById('pace-prog-warning');
 	var warnName= document.getElementById('pace-prog-warning-name');
-	var cancelBtn  = document.getElementById('pace-prog-cancel-btn');
 	var confirmBtn = document.getElementById('pace-prog-confirm-btn');
 
 	sel.addEventListener('change', function () {
@@ -945,10 +943,7 @@ function _paceOpenPickerModal(programmes, wf, onConfirm) {
 		onConfirm(chosen);
 	});
 
-	cancelBtn.addEventListener('click', function () {
-		overlay.remove();
-		// Leave the banner button visible so user can re-open
-	});
+
 }
 
 /** Sticky banner button at top of web form — shown when programme not yet chosen. */

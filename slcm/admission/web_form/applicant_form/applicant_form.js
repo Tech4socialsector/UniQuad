@@ -3848,7 +3848,6 @@ function _slcmOpenPickerModal(programmes, wf, onConfirm) {
 				'<strong>⚠ Please confirm:</strong> You are applying for <strong id="slcm-prog-warning-name"></strong>. Once you proceed, the programme cannot be changed.' +
 			'</div>' +
 			'<div style="display:flex;gap:10px">' +
-				'<button id="slcm-prog-cancel-btn" style="flex:1;padding:11px;border-radius:10px;border:1.5px solid #e2e8f0;background:#f8fafc;color:#475569;font-size:14px;font-weight:500;cursor:pointer">Cancel</button>' +
 				'<button id="slcm-prog-confirm-btn" style="flex:1;padding:11px;border-radius:10px;border:none;background:' + primary + ';color:#fff;font-size:14px;font-weight:600;cursor:pointer;opacity:0.45;pointer-events:none">Confirm &amp; Proceed</button>' +
 			'</div>' +
 		'</div>';
@@ -3858,7 +3857,6 @@ function _slcmOpenPickerModal(programmes, wf, onConfirm) {
 	var sel        = document.getElementById('slcm-prog-select');
 	var warning    = document.getElementById('slcm-prog-warning');
 	var warnName   = document.getElementById('slcm-prog-warning-name');
-	var cancelBtn  = document.getElementById('slcm-prog-cancel-btn');
 	var confirmBtn = document.getElementById('slcm-prog-confirm-btn');
 
 	sel.addEventListener('change', function () {
@@ -3884,9 +3882,7 @@ function _slcmOpenPickerModal(programmes, wf, onConfirm) {
 		onConfirm(chosen);
 	});
 
-	cancelBtn.addEventListener('click', function () {
-		overlay.remove();
-	});
+
 }
 
 function _slcmRenderSelectProgrammeButton(wf, onConfirm) {
