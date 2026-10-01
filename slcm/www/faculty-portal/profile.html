@@ -50,8 +50,8 @@
 
     {% macro fp_info_row(icon, label, value) %}
     <div style="display:flex;align-items:flex-start;gap:12px;">
-      <div style="width:34px;height:34px;border-radius:8px;background:var(--fp-primary-light);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-        <span class="fp-ms" style="font-size:16px;color:var(--fp-primary);">{{ icon }}</span>
+      <div style="width:34px;height:34px;border-radius:8px;background:var(--fp-primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <span class="fp-ms" style="font-size:16px;color:#fff;">{{ icon }}</span>
       </div>
       <div>
         <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:var(--fp-text-4);margin-bottom:2px;">{{ label }}</div>
@@ -430,10 +430,10 @@ function fpCpStrength() {
   if (/[^A-Za-z0-9]/.test(val))    score++;
   var levels = [
     { pct:'20%', color:'#dc2626', text:'Very weak' },
-    { pct:'40%', color:'#f97316', text:'Weak' },
-    { pct:'60%', color:'#eab308', text:'Fair' },
-    { pct:'80%', color:'#22c55e', text:'Strong' },
-    { pct:'100%',color:'#16a34a', text:'Very strong' },
+    { pct:'40%', color:'#920c24', text:'Weak' },
+    { pct:'60%', color:'#920c24', text:'Fair' },
+    { pct:'80%', color:'#920c24', text:'Strong' },
+    { pct:'100%',color:'#920c24', text:'Very strong' },
   ];
   var lvl = levels[Math.max(0, score - 1)];
   fill.style.width      = lvl.pct;

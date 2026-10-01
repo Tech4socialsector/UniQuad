@@ -14,43 +14,37 @@
 </div>
 {% endif %}
 
-{# ── Context Bar (welcome heading removed per request) ────── #}
-<div class="fp-page-header fp-context-bar fade-in">
-  <div class="fp-page-header-left">
-    <div class="fp-context-date">
-      <span class="fp-ms">today</span>
-      <span id="fp-live-date">—</span>
-      {% if current_academic_year %}
-      <span class="fp-context-sep">·</span>
-      <span class="fp-ms">school</span>
-      {{ current_academic_year }}
+
+{# ── Faculty Details ─────────────────────────────────────── #}
+{% if faculty_details %}
+{% set _fd = faculty_details %}
+<div class="fp-card fp-fd-card fade-in">
+  <div class="fp-fd-main">
+    <div class="fp-fd-avatar" aria-hidden="true">
+      <span>{{ faculty_initial | e }}</span>
+      {% if faculty_photo %}<img src="{{ faculty_photo | e }}" alt="" onerror="this.remove()">{% endif %}
+    </div>
+    <div class="fp-fd-id">
+      <div class="fp-fd-name" title="{{ faculty_name | e }}">{{ faculty_name | e }}</div>
+      {% if faculty_designation or faculty_department %}
+      <div class="fp-fd-role">
+        {{ faculty_designation | e }}{% if faculty_designation and faculty_department %} · {% endif %}{{ faculty_department | e }}
+      </div>
+      {% endif %}
+      {% if faculty_id or _fd.is_hod %}
+      <div class="fp-fd-chips">
+        {% if faculty_id %}<span class="fp-fd-chip"><span class="fp-ms">badge</span>{{ faculty_id | e }}</span>{% endif %}
+        {% if _fd.is_hod %}<span class="fp-fd-chip"><span class="fp-ms">workspace_premium</span>Head of Department</span>{% endif %}
+      </div>
       {% endif %}
     </div>
-  </div>
-  <div class="fp-page-actions">
-    <a href="/faculty-portal/attendance" class="fp-btn fp-btn-primary">
-      <span class="fp-ms">how_to_reg</span>
-      Take Attendance
-    </a>
-    <a href="/faculty-portal/my-classes" class="fp-btn fp-btn-secondary">
-      <span class="fp-ms">menu_book</span>
-      My Classes
-    </a>
+    <a href="/faculty-portal/profile" class="fp-fd-link">View Profile<span class="fp-ms">arrow_forward</span></a>
   </div>
 </div>
-
-<script>
-(function() {
-  var el = document.getElementById('fp-live-date');
-  if (!el) return;
-  var d = new Date();
-  var opts = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-  el.textContent = d.toLocaleDateString('en-IN', opts);
-})();
-</script>
+{% endif %}
 
 {% if attendance_pending > 0 %}
-<div class="fp-alert fp-alert-warning fade-in">
+<div class="fp-alert fade-in" style="background:transparent;border:1px solid var(--fp-primary);color:var(--fp-primary);">
   <span class="fp-ms">pending_actions</span>
   <div style="flex:1;">
     <strong>Attendance Action Required</strong> — {{ attendance_pending }} attendance session{{ 's' if attendance_pending > 1 else '' }} pending.
@@ -59,125 +53,11 @@
 </div>
 {% endif %}
 
-{# ── Quick Actions ─────────────────────────────────────── #}
-<div class="fp-card fade-in" style="margin-bottom:20px;">
-  <div class="fp-card-header">
-    <div class="fp-card-title">
-      <span class="fp-ms">bolt</span>
-      Quick Actions
-    </div>
-  </div>
-  <div class="fp-card-body">
-    <div class="fp-grid-auto">
-      <a href="/faculty-portal/attendance" class="fp-quick-action-btn fp-dash-qa" style="flex-direction:row;align-items:center;gap:14px;text-align:left;padding:16px 18px;">
-        <span class="fp-ms">how_to_reg</span>
-        <div>
-          <div style="font-size:13.5px;font-weight:700;color:var(--fp-text-1);">Take Attendance</div>
-          <div style="font-size:12px;color:var(--fp-text-4);margin-top:2px;">Mark today's session</div>
-        </div>
-      </a>
-      <a href="/faculty-portal/my-classes" class="fp-quick-action-btn fp-dash-qa" style="flex-direction:row;align-items:center;gap:14px;text-align:left;padding:16px 18px;">
-        <span class="fp-ms">menu_book</span>
-        <div>
-          <div style="font-size:13.5px;font-weight:700;color:var(--fp-text-1);">My Classes</div>
-          <div style="font-size:12px;color:var(--fp-text-4);margin-top:2px;">View course offerings</div>
-        </div>
-      </a>
-      <a href="/faculty-portal/marks" class="fp-quick-action-btn fp-dash-qa" style="flex-direction:row;align-items:center;gap:14px;text-align:left;padding:16px 18px;">
-        <span class="fp-ms">grade</span>
-        <div>
-          <div style="font-size:13.5px;font-weight:700;color:var(--fp-text-1);">Marks Entry</div>
-          <div style="font-size:12px;color:var(--fp-text-4);margin-top:2px;">Enter or update marks</div>
-        </div>
-      </a>
-      <a href="/faculty-portal/venue-booking" class="fp-quick-action-btn fp-dash-qa" style="flex-direction:row;align-items:center;gap:14px;text-align:left;padding:16px 18px;">
-        <span class="fp-ms">meeting_room</span>
-        <div>
-          <div style="font-size:13.5px;font-weight:700;color:var(--fp-text-1);">Venue Booking</div>
-          <div style="font-size:12px;color:var(--fp-text-4);margin-top:2px;">Book a room or venue</div>
-        </div>
-      </a>
-    </div>
-  </div>
-</div>
-
-<script>
-/* Pass dashboard data to sidebar quick-stats */
-window._fpDashData = {
-  total_courses:     {{ total_courses }},
-  attendance_pending: {{ attendance_pending }},
-  total_students:    {{ total_students }},
-};
-</script>
-
-{# ── Stat Cards ─────────────────────────────────────────────── #}
-<div class="fp-stat-grid fp-dash-stat-grid">
-
-  <div class="fp-stat-card {% if not portal_error %}fp-stat-drillable{% endif %} fade-in" style="animation-delay:0.04s;{% if not portal_error %}cursor:pointer;{% endif %}"
-       {% if not portal_error %}onclick="fpDrilldown('subjects')" title="Click to view details & export"{% endif %}>
-    <div class="fp-stat-icon fp-c-navy">
-      <span class="fp-ms">menu_book</span>
-    </div>
-    <div class="fp-stat-body">
-      <div class="fp-stat-val">{{ total_courses if not portal_error else '—' }}</div>
-      <div class="fp-stat-lbl">Total Courses</div>
-      {% if portal_error %}
-      <div class="fp-stat-sub"><span class="fp-ms" style="font-size:13px;color:var(--fp-danger);">error_outline</span> <span style="color:var(--fp-danger);">Unavailable</span></div>
-      {% else %}
-      <div class="fp-stat-sub fp-drill-hint"><span class="fp-ms" style="font-size:13px;">open_in_new</span> Click to explore</div>
-      {% endif %}
-    </div>
-    {% if not portal_error %}<span class="fp-drill-badge">Details</span>{% endif %}
-  </div>
-
-  <div class="fp-stat-card {% if not portal_error %}fp-stat-drillable{% endif %} fade-in" style="animation-delay:0.08s;{% if not portal_error %}cursor:pointer;{% endif %}"
-       {% if not portal_error %}onclick="fpDrilldown('students')" title="Click to view details & export"{% endif %}>
-    <div class="fp-stat-icon fp-c-green">
-      <span class="fp-ms">groups</span>
-    </div>
-    <div class="fp-stat-body">
-      <div class="fp-stat-val">{{ total_students if not portal_error else '—' }}</div>
-      <div class="fp-stat-lbl">Total Students</div>
-      {% if portal_error %}
-      <div class="fp-stat-sub"><span class="fp-ms" style="font-size:13px;color:var(--fp-danger);">error_outline</span> <span style="color:var(--fp-danger);">Unavailable</span></div>
-      {% else %}
-      <div class="fp-stat-sub fp-drill-hint"><span class="fp-ms" style="font-size:13px;">open_in_new</span> Click to explore</div>
-      {% endif %}
-    </div>
-    {% if not portal_error %}<span class="fp-drill-badge">Details</span>{% endif %}
-  </div>
-
-  <div class="fp-stat-card {% if not portal_error %}fp-stat-drillable{% endif %} fade-in" style="animation-delay:0.12s;{% if not portal_error %}cursor:pointer;{% endif %}"
-       {% if not portal_error %}onclick="fpDrilldown('pending_attendance')" title="Click to view details & export"{% endif %}>
-    <div class="fp-stat-icon {% if portal_error %}fp-c-red{% elif attendance_pending > 0 %}fp-c-orange{% else %}fp-c-green{% endif %}">
-      <span class="fp-ms">pending_actions</span>
-    </div>
-    <div class="fp-stat-body">
-      <div class="fp-stat-val {% if attendance_pending > 0 and not portal_error %}" style="color:var(--fp-warning);"{% else %}"{% endif %}>{{ attendance_pending if not portal_error else '—' }}</div>
-      <div class="fp-stat-lbl">Attendance Pending</div>
-      <div class="fp-stat-sub">
-        {% if portal_error %}
-        <span class="fp-ms" style="font-size:13px;color:var(--fp-danger);">error_outline</span>
-        <span style="color:var(--fp-danger);">Unavailable</span>
-        {% elif attendance_pending > 0 %}
-        <span class="fp-ms" style="font-size:13px;color:var(--fp-warning);">warning</span>
-        <span style="color:var(--fp-warning);">Action needed</span>
-        {% else %}
-        <span class="fp-ms" style="font-size:13px;color:var(--fp-success);">check_circle</span>
-        <span style="color:var(--fp-success);">All clear</span>
-        {% endif %}
-      </div>
-    </div>
-    {% if not portal_error %}<span class="fp-drill-badge {% if attendance_pending > 0 %}fp-drill-badge-warn{% endif %}">Details</span>{% endif %}
-  </div>
-
-</div>
-
 {% set dp = dash_prefs or {} %}
 
 {# ── Today's Schedule + Upcoming Classes ──────────────────────── #}
 {% if not dp.get('hide_today_schedule') %}
-<div class="fp-grid-2">
+<div class="fp-grid-2 fp-dash-split">
 
   {# Today's Classes #}
   <div class="fp-card fade-in" style="animation-delay:0.10s;">
@@ -209,7 +89,7 @@ window._fpDashData = {
       {% for s in todays_sessions %}
       <div class="fp-schedule-item">
         <div style="min-width:76px;text-align:center;padding-top:2px;">
-          <div style="font-size:13px;font-weight:700;color:var(--fp-primary);background:var(--fp-primary-light);border-radius:var(--fp-radius-sm);padding:4px 8px;display:inline-block;">{{ s.from_time }}</div>
+          <div style="font-size:13px;font-weight:700;color:#fff;background:var(--fp-primary);border-radius:var(--fp-radius-sm);padding:4px 8px;display:inline-block;">{{ s.from_time }}</div>
           <div style="font-size:10px;color:var(--fp-text-4);margin-top:3px;">to {{ s.to_time }}</div>
         </div>
         <div class="fp-schedule-info">
@@ -279,6 +159,120 @@ window._fpDashData = {
 </div>
 {% endif %}
 
+<script>
+/* Pass dashboard data to sidebar quick-stats */
+window._fpDashData = {
+  total_courses:     {{ total_courses }},
+  attendance_pending: {{ attendance_pending }},
+  total_students:    {{ total_students }},
+};
+</script>
+
+{# ── Stat Cards ─────────────────────────────────────────────── #}
+<div class="fp-stat-grid fp-dash-stat-grid">
+
+  <div class="fp-stat-card {% if not portal_error %}fp-stat-drillable{% endif %} fade-in" style="animation-delay:0.04s;{% if not portal_error %}cursor:pointer;{% endif %}"
+       {% if not portal_error %}onclick="fpDrilldown('subjects')" title="Click to view details & export"{% endif %}>
+    <div class="fp-stat-icon fp-c-navy">
+      <span class="fp-ms">menu_book</span>
+    </div>
+    <div class="fp-stat-body">
+      <div class="fp-stat-val">{{ total_courses if not portal_error else '—' }}</div>
+      <div class="fp-stat-lbl">Total Courses</div>
+      {% if portal_error %}
+      <div class="fp-stat-sub"><span class="fp-ms" style="font-size:13px;color:var(--fp-danger);">error_outline</span> <span style="color:var(--fp-danger);">Unavailable</span></div>
+      {% else %}
+      <div class="fp-stat-sub fp-drill-hint"><span class="fp-ms" style="font-size:13px;">open_in_new</span> More info</div>
+      {% endif %}
+    </div>
+    {% if not portal_error %}<span class="fp-drill-badge">Details</span>{% endif %}
+  </div>
+
+  <div class="fp-stat-card {% if not portal_error %}fp-stat-drillable{% endif %} fade-in" style="animation-delay:0.08s;{% if not portal_error %}cursor:pointer;{% endif %}"
+       {% if not portal_error %}onclick="fpDrilldown('students')" title="Click to view details & export"{% endif %}>
+    <div class="fp-stat-icon fp-c-green">
+      <span class="fp-ms">groups</span>
+    </div>
+    <div class="fp-stat-body">
+      <div class="fp-stat-val">{{ total_students if not portal_error else '—' }}</div>
+      <div class="fp-stat-lbl">Total Students</div>
+      {% if portal_error %}
+      <div class="fp-stat-sub"><span class="fp-ms" style="font-size:13px;color:var(--fp-danger);">error_outline</span> <span style="color:var(--fp-danger);">Unavailable</span></div>
+      {% else %}
+      <div class="fp-stat-sub fp-drill-hint"><span class="fp-ms" style="font-size:13px;">open_in_new</span> More info</div>
+      {% endif %}
+    </div>
+    {% if not portal_error %}<span class="fp-drill-badge">Details</span>{% endif %}
+  </div>
+
+  <div class="fp-stat-card {% if not portal_error %}fp-stat-drillable{% endif %} fade-in" style="animation-delay:0.12s;{% if not portal_error %}cursor:pointer;{% endif %}"
+       {% if not portal_error %}onclick="fpDrilldown('pending_attendance')" title="Click to view details & export"{% endif %}>
+    <div class="fp-stat-icon {% if portal_error %}fp-c-red{% elif attendance_pending > 0 %}fp-c-orange{% else %}fp-c-green{% endif %}">
+      <span class="fp-ms">pending_actions</span>
+    </div>
+    <div class="fp-stat-body">
+      <div class="fp-stat-val {% if attendance_pending > 0 and not portal_error %}" style="color:var(--fp-warning);"{% else %}"{% endif %}>{{ attendance_pending if not portal_error else '—' }}</div>
+      <div class="fp-stat-lbl">Attendance Pending</div>
+      <div class="fp-stat-sub">
+        {% if portal_error %}
+        <span class="fp-ms" style="font-size:13px;color:var(--fp-danger);">error_outline</span>
+        <span style="color:var(--fp-danger);">Unavailable</span>
+        {% elif attendance_pending > 0 %}
+        <span class="fp-ms" style="font-size:13px;color:var(--fp-warning);">warning</span>
+        <span style="color:var(--fp-warning);">Action needed</span>
+        {% else %}
+        <span class="fp-ms" style="font-size:13px;color:var(--fp-success);">check_circle</span>
+        <span style="color:var(--fp-success);">All clear</span>
+        {% endif %}
+      </div>
+    </div>
+    {% if not portal_error %}<span class="fp-drill-badge {% if attendance_pending > 0 %}fp-drill-badge-warn{% endif %}">Details</span>{% endif %}
+  </div>
+
+</div>
+
+{# ── Quick Actions ─────────────────────────────────────── #}
+<div class="fp-card fade-in" style="margin-bottom:20px;">
+  <div class="fp-card-header">
+    <div class="fp-card-title">
+      <span class="fp-ms">bolt</span>
+      Quick Actions
+    </div>
+  </div>
+  <div class="fp-card-body">
+    <div class="fp-grid-auto fp-dash-qa-grid">
+      <a href="/faculty-portal/attendance" class="fp-quick-action-btn fp-dash-qa" style="flex-direction:row;align-items:center;gap:14px;text-align:left;padding:16px 18px;">
+        <span class="fp-ms">how_to_reg</span>
+        <div>
+          <div class="fp-qa-title" style="font-size:13.5px;font-weight:700;">Take Attendance</div>
+          <div style="font-size:12px;color:var(--fp-text-4);margin-top:2px;">Mark today's session</div>
+        </div>
+      </a>
+      <a href="/faculty-portal/my-classes" class="fp-quick-action-btn fp-dash-qa" style="flex-direction:row;align-items:center;gap:14px;text-align:left;padding:16px 18px;">
+        <span class="fp-ms">menu_book</span>
+        <div>
+          <div class="fp-qa-title" style="font-size:13.5px;font-weight:700;">My Classes</div>
+          <div style="font-size:12px;color:var(--fp-text-4);margin-top:2px;">View course offerings</div>
+        </div>
+      </a>
+      <a href="/faculty-portal/marks" class="fp-quick-action-btn fp-dash-qa" style="flex-direction:row;align-items:center;gap:14px;text-align:left;padding:16px 18px;">
+        <span class="fp-ms">grade</span>
+        <div>
+          <div class="fp-qa-title" style="font-size:13.5px;font-weight:700;">Marks Entry</div>
+          <div style="font-size:12px;color:var(--fp-text-4);margin-top:2px;">Enter or update marks</div>
+        </div>
+      </a>
+      <a href="/faculty-portal/venue-booking" class="fp-quick-action-btn fp-dash-qa" style="flex-direction:row;align-items:center;gap:14px;text-align:left;padding:16px 18px;">
+        <span class="fp-ms">meeting_room</span>
+        <div>
+          <div class="fp-qa-title" style="font-size:13.5px;font-weight:700;">Venue Booking</div>
+          <div style="font-size:12px;color:var(--fp-text-4);margin-top:2px;">Book a room or venue</div>
+        </div>
+      </a>
+    </div>
+  </div>
+</div>
+
 {# ── Attendance Trend (temporarily disabled per request) ────────
 <div class="fp-card fade-in" style="animation-delay:0.18s;margin-bottom:24px;">
   <div class="fp-card-header">
@@ -328,7 +322,7 @@ window._fpDashData = {
   var gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
   var textColor = isDark ? '#64748b' : '#94a3b8';
   var primary   = '#920c24';
-  var accent    = '#2563eb';
+  var accent    = '#920c24';
   Chart.defaults.font.family = "'Poppins', system-ui, sans-serif";
   Chart.defaults.font.size   = 11;
 
@@ -349,8 +343,8 @@ window._fpDashData = {
             var chart = context.chart;
             var ctx = chart.ctx;
             var gradient = ctx.createLinearGradient(0, 0, 0, 220);
-            gradient.addColorStop(0, 'rgba(37,99,235,0.20)');
-            gradient.addColorStop(1, 'rgba(37,99,235,0.00)');
+            gradient.addColorStop(0, 'rgba(146,12,36,0.20)');
+            gradient.addColorStop(1, 'rgba(146,12,36,0.00)');
             return gradient;
           },
           borderWidth: 2.5,
@@ -396,7 +390,7 @@ window._fpDashData = {
   var subLabels = {{ course_attendance | map(attribute='course_name') | list | tojson }};
   var subData   = {{ course_attendance | map(attribute='avg_pct')     | list | tojson }};
   var barColors = subData.map(function(v) {
-    return v >= 75 ? 'rgba(22,163,74,0.80)' : v >= 60 ? 'rgba(217,119,6,0.80)' : 'rgba(220,38,38,0.80)';
+    return v >= 75 ? 'rgba(146,12,36,0.80)' : v >= 60 ? 'rgba(146,12,36,0.80)' : 'rgba(146,12,36,0.80)';
   });
   var subCtx = document.getElementById('fpSubjectChart');
   if (subCtx) {
@@ -449,15 +443,15 @@ window._fpDashData = {
      style="display:none;position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);align-items:flex-start;justify-content:center;padding-top:60px;overflow-y:auto;"
      role="dialog" aria-modal="true" aria-label="Details">
   <div id="fp-drill-box"
-       style="background:var(--fp-card);border-radius:var(--fp-radius-lg);width:96%;max-width:960px;box-shadow:var(--fp-shadow-xl);overflow:hidden;animation:fpModalIn 0.22s var(--fp-ease);margin-bottom:40px;">
+       style="background:var(--fp-card);border-radius:var(--fp-radius-lg);width:96%;max-width:1400px;box-shadow:var(--fp-shadow-xl);overflow:hidden;animation:fpModalIn 0.22s var(--fp-ease);margin-bottom:40px;">
 
     {# Modal header #}
     <div id="fp-drill-header"
          style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:20px 24px;border-bottom:1px solid var(--fp-border);background:var(--fp-bg);flex-wrap:wrap;">
       <div style="display:flex;align-items:center;gap:12px;min-width:0;flex:1 1 auto;">
         <div id="fp-drill-icon"
-             style="width:42px;height:42px;border-radius:11px;background:var(--fp-primary-light);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-          <span class="fp-ms" style="font-size:22px;color:var(--fp-primary);">table_chart</span>
+             style="width:42px;height:42px;border-radius:11px;background:var(--fp-primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <span class="fp-ms" style="font-size:22px;color:#fff;">table_chart</span>
         </div>
         <div style="min-width:0;">
           <div id="fp-drill-title" style="font-size:17px;font-weight:800;color:var(--fp-text-1);letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Details</div>
@@ -467,9 +461,9 @@ window._fpDashData = {
       <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
         <button id="fp-drill-export-btn"
                 onclick="fpDrillExport()"
-                style="display:flex;align-items:center;gap:7px;padding:8px 16px;background:var(--fp-success-bg);border:1px solid rgba(22,163,74,0.2);border-radius:var(--fp-radius-sm);font-size:13px;font-weight:600;color:var(--fp-success);cursor:pointer;font-family:inherit;transition:all 0.18s;white-space:nowrap;"
-                onmouseover="this.style.background='var(--fp-success)';this.style.color='#fff';"
-                onmouseout="this.style.background='var(--fp-success-bg)';this.style.color='var(--fp-success)';">
+                style="display:flex;align-items:center;gap:7px;padding:8px 16px;background:var(--fp-primary);border:1px solid var(--fp-primary);border-radius:var(--fp-radius-sm);font-size:13px;font-weight:600;color:#fff;cursor:pointer;font-family:inherit;transition:all 0.18s;white-space:nowrap;"
+                onmouseover="this.style.background='var(--fp-primary-dark)';this.style.color='#fff';"
+                onmouseout="this.style.background='var(--fp-primary)';this.style.color='#fff';">
           <span class="fp-ms" style="font-size:17px;">download</span>Export CSV
         </button>
         <button onclick="fpDrillClose()"
@@ -510,36 +504,63 @@ window._fpDashData = {
 <style>
 /* Dashboard stat cards — 3 equal columns filling the full row */
 .fp-dash-stat-grid { grid-template-columns: repeat(3, 1fr); }
-.fp-dash-stat-grid .fp-stat-card { background: #F6F3ED; }
+.fp-dash-stat-grid .fp-stat-card { background: var(--fp-card); }
 body.fp-dark .fp-dash-stat-grid .fp-stat-card { background: var(--fp-card); }
-/* Quick actions — same beige surface; all dashboard icons in brand maroon */
-.fp-dash-qa { background: #F6F3ED; color: #920C24; }
+/* Quick actions — plain card surface; all dashboard icons in brand maroon */
+.fp-dash-qa { background: var(--fp-card); color: #920C24; }
 body.fp-dark .fp-dash-qa { background: var(--fp-card); color: var(--fp-primary); }
 .fp-dash-stat-grid .fp-stat-icon,
-.fp-dash-icon { background: rgba(146,12,36,0.08) !important; }
-.fp-dash-icon { border-style: solid; border-color: var(--fp-primary-mid); }
+.fp-dash-icon { background: var(--fp-primary) !important; }
+.fp-dash-icon { border-style: solid; border-color: var(--fp-primary); }
 .fp-dash-stat-grid .fp-stat-icon .fp-ms,
-.fp-dash-icon .fp-ms { color: #920C24 !important; }
+.fp-dash-icon .fp-ms { color: #fff !important; }
 body.fp-dark .fp-dash-stat-grid .fp-stat-icon .fp-ms,
-body.fp-dark .fp-dash-icon .fp-ms { color: var(--fp-primary) !important; }
+body.fp-dark .fp-dash-icon .fp-ms { color: #fff !important; }
+/* Faculty Details card */
+.fp-fd-card { padding: 0; margin-bottom: 20px; overflow: hidden; }
+.fp-fd-main { display: flex; align-items: center; gap: 16px; padding: 18px 22px; }
+.fp-fd-avatar {
+  position: relative; width: 60px; height: 60px; border-radius: 50%; flex-shrink: 0; overflow: hidden;
+  background: var(--fp-primary); color: #fff;
+  display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700;
+}
+.fp-fd-avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.fp-fd-id { flex: 1; min-width: 0; }
+.fp-fd-name { font-size: 18px; font-weight: 700; color: var(--fp-text-1); letter-spacing: -0.01em;
+              white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fp-fd-role { font-size: 13px; color: var(--fp-text-3); margin-top: 2px; }
+.fp-fd-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.fp-fd-chip { display: inline-flex; align-items: center; gap: 4px; background: var(--fp-primary); color: #fff;
+              font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
+.fp-fd-chip .fp-ms { font-size: 13px; }
+.fp-fd-link { flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px;
+              font-size: 13px; font-weight: 700; color: var(--fp-primary); text-decoration: none; }
+.fp-fd-link .fp-ms { font-size: 16px; transition: transform 0.15s; }
+.fp-fd-link:hover .fp-ms { transform: translateX(3px); }
+@media (max-width: 560px) {
+  .fp-fd-main { flex-wrap: wrap; padding: 16px; }
+  .fp-fd-link { width: 100%; justify-content: flex-end; }
+}
+
+/* Today's / Upcoming Classes — equal halves (shared .fp-grid-2 is 3fr/2fr) */
+.fp-dash-split { grid-template-columns: 1fr 1fr; }
+@media (max-width: 1024px) { .fp-dash-split { grid-template-columns: 1fr; } }
+/* Quick actions — 4 equal columns that fill the full card width */
+.fp-dash-qa-grid { grid-template-columns: repeat(4, 1fr); }
+@media (max-width: 1024px) { .fp-dash-qa-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px)  { .fp-dash-qa-grid { grid-template-columns: 1fr; } }
 @media (max-width: 768px) { .fp-dash-stat-grid { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 480px) { .fp-dash-stat-grid { grid-template-columns: 1fr; } }
-.fp-stat-drillable { position: relative; }
-.fp-stat-drillable:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); border-color: var(--fp-primary-mid); }
-.fp-drill-badge {
-  position: absolute; top: 10px; right: 10px;
-  font-size: 9px; font-weight: 700; letter-spacing: 0.06em;
-  text-transform: uppercase;
-  background: var(--fp-primary-light); color: var(--fp-primary);
-  padding: 2px 8px; border-radius: 10px;
-  border: 1px solid var(--fp-primary-mid);
-  opacity: 0; transition: opacity 0.18s;
-  pointer-events: none;
+/* KPI card hover (maroon border, "More info" + DETAILS tag) now lives in faculty_portal.css */
+
+/* Drill table: name + avatar cell */
+.fp-drill-person { display: flex; align-items: center; gap: 10px; }
+.fp-drill-av {
+  position: relative; width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; overflow: hidden;
+  background: var(--fp-primary); color: #fff; font-size: 13px; font-weight: 700;
+  display: inline-flex; align-items: center; justify-content: center;
 }
-.fp-drill-badge-warn { background: var(--fp-warning-bg) !important; color: var(--fp-warning) !important; border-color: rgba(217,119,6,0.25) !important; }
-.fp-stat-drillable:hover .fp-drill-badge { opacity: 1; }
-.fp-drill-hint { transition: color 0.18s; }
-.fp-stat-drillable:hover .fp-drill-hint { color: var(--fp-primary) !important; }
+.fp-drill-av img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 
 /* Drill table */
 .fp-drill-table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -556,7 +577,8 @@ body.fp-dark .fp-dash-icon .fp-ms { color: var(--fp-primary) !important; }
 .fp-drill-table th .fp-sort-icon { font-size: 13px; margin-left: 3px; opacity: 0.4; vertical-align: -2px; }
 .fp-drill-table th.sorted-asc .fp-sort-icon,
 .fp-drill-table th.sorted-desc .fp-sort-icon { opacity: 1; color: var(--fp-primary); }
-.fp-drill-table td { padding: 12px 16px; border-bottom: 1px solid var(--fp-border-light); color: var(--fp-text-2); vertical-align: middle; }
+.fp-drill-table td { padding: 12px 16px; border-bottom: 1px solid var(--fp-border-light); color: var(--fp-text-2); vertical-align: middle; white-space: nowrap; }
+/* One line per row; the body (#fp-drill-body) scrolls sideways on narrow screens */
 .fp-drill-table tr:last-child td { border-bottom: none; }
 .fp-drill-table tr:hover td { background: var(--fp-bg); }
 .fp-drill-empty { padding: 48px 24px; text-align: center; color: var(--fp-text-4); font-size: 13px; }
@@ -711,7 +733,7 @@ body.fp-dark .fp-dash-icon .fp-ms { color: var(--fp-primary) !important; }
       html += '<tr>';
       cols.forEach(function(col) {
         var val = row[col.key];
-        html += '<td>' + _renderCell(val, col.type, col.key, row) + '</td>';
+        html += '<td>' + _renderCell(val, col.type, col.key, row, col) + '</td>';
       });
       html += '</tr>';
     });
@@ -719,8 +741,20 @@ body.fp-dark .fp-dash-icon .fp-ms { color: var(--fp-primary) !important; }
     _setBody(html);
   }
 
-  function _renderCell(val, type, key, row) {
+  function _renderCell(val, type, key, row, col) {
     if (val === null || val === undefined || val === '') return '<span style="color:var(--fp-text-5);">—</span>';
+
+    /* Name with avatar: photo if it loads, otherwise the initial.
+       The image URL comes from a non-column row field (col.image_key). */
+    if (type === 'person') {
+      var name = String(val);
+      var img  = (col && col.image_key && row[col.image_key]) ? String(row[col.image_key]) : '';
+      var safeImg = /^(\/|https?:\/\/)/i.test(img) ? img : '';
+      return '<div class="fp-drill-person">'
+        + '<span class="fp-drill-av" aria-hidden="true">' + _esc(name.trim().charAt(0).toUpperCase() || '?')
+        + (safeImg ? '<img src="' + _esc(safeImg) + '" alt="" loading="lazy" onerror="this.remove()">' : '')
+        + '</span><span>' + _esc(name) + '</span></div>';
+    }
 
     if (type === 'badge') {
       var color = 'neutral';
@@ -733,8 +767,8 @@ body.fp-dark .fp-dash-icon .fp-ms { color: var(--fp-primary) !important; }
 
     if (type === 'percent') {
       var n = parseFloat(val) || 0;
-      var barColor = n >= 75 ? 'var(--fp-success)' : n >= 60 ? 'var(--fp-warning)' : 'var(--fp-danger)';
-      var txtColor = n >= 75 ? 'var(--fp-success)' : n >= 60 ? 'var(--fp-warning)' : 'var(--fp-danger)';
+      var barColor = 'var(--fp-primary)';
+      var txtColor = 'var(--fp-primary)';
       return '<div style="min-width:90px;">'
         + '<div style="display:flex;justify-content:space-between;margin-bottom:3px;">'
         + '<span style="font-size:12px;font-weight:700;color:' + txtColor + ';">' + n + '%</span></div>'
@@ -795,8 +829,9 @@ body.fp-dark .fp-dash-icon .fp-ms { color: var(--fp-primary) !important; }
       _drillRows = _drillData.rows.slice();
     } else {
       _drillRows = _drillData.rows.filter(function(row) {
-        return Object.values(row).some(function(v) {
-          return String(v || '').toLowerCase().includes(q);
+        return Object.keys(row).some(function(k) {
+          if (/_image$/.test(k)) return false;   /* photo URLs aren't searchable text */
+          return String(row[k] || '').toLowerCase().includes(q);
         });
       });
     }
@@ -847,12 +882,12 @@ body.fp-dark .fp-dash-icon .fp-ms { color: var(--fp-primary) !important; }
     if (btn) {
       var orig = btn.innerHTML;
       btn.innerHTML = '<span class="fp-ms" style="font-size:17px;">check_circle</span>Exported!';
-      btn.style.background = 'var(--fp-success)';
+      btn.style.background = 'var(--fp-primary-dark)';
       btn.style.color = '#fff';
       setTimeout(function() {
         btn.innerHTML = orig;
-        btn.style.background = 'var(--fp-success-bg)';
-        btn.style.color = 'var(--fp-success)';
+        btn.style.background = 'var(--fp-primary)';
+        btn.style.color = '#fff';
       }, 2000);
     }
   };

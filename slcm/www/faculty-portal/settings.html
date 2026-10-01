@@ -45,11 +45,11 @@
     <div class="fp-card-body">
 
       {# Session info #}
-      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--fp-primary-light);border-radius:var(--fp-radius-sm);margin-bottom:24px;">
-        <span class="fp-ms" style="color:var(--fp-primary);font-size:22px;">account_circle</span>
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--fp-primary);border-radius:var(--fp-radius-sm);margin-bottom:24px;">
+        <span class="fp-ms" style="color:#fff;font-size:22px;">account_circle</span>
         <div>
-          <div style="font-size:11px;color:var(--fp-text-4);text-transform:uppercase;letter-spacing:0.05em;">Logged in as</div>
-          <div style="font-size:13px;font-weight:600;color:var(--fp-text-1);">{{ faculty_email or frappe.session.user }}</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.8);text-transform:uppercase;letter-spacing:0.05em;">Logged in as</div>
+          <div style="font-size:13px;font-weight:600;color:#fff;">{{ faculty_email or frappe.session.user }}</div>
         </div>
       </div>
 
@@ -194,10 +194,10 @@ function fpStrength() {
   if (/[^A-Za-z0-9]/.test(v)) score++;
   var lvls = [
     { w:'20%', c:'#dc2626', t:'Very weak'  },
-    { w:'40%', c:'#f97316', t:'Weak'       },
-    { w:'60%', c:'#eab308', t:'Fair'       },
-    { w:'80%', c:'#22c55e', t:'Strong'     },
-    { w:'100%',c:'#16a34a', t:'Very strong'},
+    { w:'40%', c:'#920c24', t:'Weak'       },
+    { w:'60%', c:'#920c24', t:'Fair'       },
+    { w:'80%', c:'#920c24', t:'Strong'     },
+    { w:'100%',c:'#920c24', t:'Very strong'},
   ];
   var lvl = lvls[Math.max(0, score - 1)];
   if (fill) { fill.style.width = lvl.w; fill.style.background = lvl.c; }

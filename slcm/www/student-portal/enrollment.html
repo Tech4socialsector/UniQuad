@@ -1,37 +1,223 @@
 {% extends "slcm/www/student-portal/_base.html" %}
 {% block title %}My Enrolment{% endblock %}
 
+{% block extra_head %}
+<style>
+/* ── Enrolment page (NLS maroon) ────────────────────────────────────── */
+:root {
+  --enr-maroon:      #920c24;              /* NLS maroon */
+  --enr-maroon-2:    #c26479;              /* lighter maroon for electives */
+  --enr-maroon-soft: rgba(146,12,36,0.07);
+  --enr-maroon-mid:  rgba(146,12,36,0.14);
+}
+.enr-muted { color: var(--sp-text-4); }
+
+/* Hero */
+.enr-hero {
+  background: var(--sp-card, #fff); border: 1px solid var(--sp-border); border-left: 4px solid var(--enr-maroon);
+  border-radius: 12px; padding: 20px 24px; margin-bottom: 18px;
+}
+.enr-hero-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.enr-eyebrow { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--sp-text-4); margin-bottom: 4px; }
+.enr-prog { font-size: 20px; color: var(--sp-text-1); margin: 0 0 8px; line-height: 1.3; overflow-wrap: anywhere; }
+.enr-chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.enr-chip {
+  display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px;
+  background: var(--sp-bg, #f8fafc); border: 1px solid #eef0f3; color: var(--sp-text-3); font-size: 11.5px; white-space: nowrap;
+}
+.enr-chip .sp-ms { font-size: 14px; }
+.enr-hero-side { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.enr-status { display: inline-flex; align-items: center; gap: 5px; padding: 4px 12px; border-radius: 20px; font-size: 12px; }
+.enr-status .sp-ms { font-size: 14px; }
+.enr-status-ok   { background: #fff0f2; color: #920c24; border: 1px solid #f5c6ce; }
+.enr-status-done { background: #fff0f2; color: #920c24; border: 1px solid #f5c6ce; }
+.enr-status-bad  { background: #fff0f2; color: #920c24; border: 1px solid #f5c6ce; }
+.enr-side-note { font-size: 11.5px; color: var(--sp-text-4); }
+.enr-facts { display: flex; gap: 8px 32px; flex-wrap: wrap; margin: 16px 0 0; padding-top: 14px; border-top: 1px solid #f1f2f4; }
+.enr-facts dt { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--sp-text-4); }
+.enr-facts dd { margin: 3px 0 0; font-size: 13.5px; color: var(--sp-text-1); }
+
+/* Credit split */
+.enr-split { margin-top: 16px; }
+.enr-split-bar { display: flex; height: 10px; border-radius: 99px; overflow: hidden; background: #f1f2f4; }
+.enr-split-core { background: var(--enr-maroon); }
+.enr-split-elec { background: var(--enr-maroon-2); }
+.enr-split-legend { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 8px; font-size: 12px; color: var(--sp-text-3); }
+.enr-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+
+/* Stats */
+.enr-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 22px; }
+@media (max-width: 1100px) { .enr-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Section title */
+.enr-section-title { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: 0 0 12px; }
+.enr-section-title h2 { font-size: 15px; font-weight: 400; color: var(--sp-text-1); margin: 0; display: flex; align-items: center; gap: 8px; }
+.enr-section-title h2 .sp-ms { font-size: 20px; color: var(--enr-maroon); }
+.enr-section-sub { font-size: 12.5px; color: var(--sp-text-4); }
+
+/* Course cards */
+.enr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.enr-card {
+  background: var(--sp-card, #fff); border: 1px solid var(--sp-border); border-top: 3px solid var(--enr-maroon);
+  border-radius: 12px; display: flex; flex-direction: column; min-width: 0; overflow: hidden;
+  transition: box-shadow .2s, transform .2s;
+}
+.enr-card.is-elective { border-top-color: var(--enr-maroon-2); }
+.enr-card:hover { box-shadow: 0 6px 18px rgba(16,24,40,0.08); transform: translateY(-2px); }
+.enr-card-head { padding: 14px 16px 12px; }
+.enr-code {
+  font-size: 10.5px; color: var(--sp-text-4); letter-spacing: .06em; text-transform: uppercase;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; margin-bottom: 4px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.enr-card-name {
+  font-size: 15px; color: var(--sp-text-1); line-height: 1.35; margin: 0 0 10px; min-height: 2.7em;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.enr-type-core { background: var(--enr-maroon-soft); color: var(--enr-maroon); border-color: var(--enr-maroon-mid); }
+.enr-type-elec { background: #fff; color: var(--enr-maroon-2); border-color: var(--enr-maroon-mid); }
+.enr-card-fac { padding: 10px 16px; border-top: 1px solid #f1f2f4; font-size: 12.5px; color: var(--sp-text-2); display: flex; align-items: center; gap: 6px; min-width: 0; }
+.enr-card-fac .sp-ms { font-size: 16px; color: var(--sp-text-4); flex-shrink: 0; }
+.enr-card-fac span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.enr-card-att { margin-top: auto; padding: 12px 16px 14px; border-top: 1px solid #f1f2f4; background: #fafbfc; }
+.enr-att-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
+.enr-att-lbl { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--sp-text-4); }
+.enr-att-pct { font-size: 15px; font-variant-numeric: tabular-nums; }
+.enr-bar { position: relative; height: 7px; border-radius: 99px; background: #eceef1; }
+.enr-bar-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 99px; }
+.enr-bar-tick { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; background: var(--sp-text-2); border-radius: 1px; }
+.enr-att-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 10px; }
+.enr-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border-radius: 20px; font-size: 11px; white-space: nowrap; }
+.enr-pill .sp-ms { font-size: 13px; }
+.enr-pill-ok   { background: #fff0f2; color: #920c24; }
+.enr-pill-bad  { background: #fff0f2; color: #920c24; }
+.enr-pill-pend { background: #f3f4f6; color: var(--sp-text-3); }
+
+/* Dropped */
+.enr-dropped { background: var(--sp-card, #fff); border: 1px dashed var(--sp-border); border-radius: 12px; margin-bottom: 24px; }
+.enr-dropped-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 18px; border-top: 1px solid #f1f2f4; }
+.enr-dropped-row:first-child { border-top: none; }
+.enr-dropped-name { font-size: 13.5px; color: var(--sp-text-3); text-decoration: line-through; text-decoration-color: #cbd5e1; }
+
+/* History timeline (expandable) */
+.enr-timeline { background: var(--sp-card, #fff); border: 1px solid var(--sp-border); border-radius: 12px; padding: 4px 20px; }
+.enr-tl-item { position: relative; }
+.enr-tl-item + .enr-tl-item { border-top: 1px solid #f1f2f4; }
+.enr-tl-item::before { content: ""; position: absolute; left: 5px; top: 0; bottom: 0; width: 2px; background: #eceef1; }
+.enr-tl-item:first-child::before { top: 30px; }
+.enr-tl-item:last-child::before { bottom: auto; height: 30px; }
+.enr-tl-item:first-child:last-child::before { display: none; }
+.enr-tl-item:only-child::before { display: none; }
+.enr-tl-sum {
+  position: relative; display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  padding: 14px 0 14px 28px; cursor: pointer; list-style: none;
+}
+.enr-tl-sum::-webkit-details-marker { display: none; }
+.enr-tl-sum:focus-visible { outline: 2px solid var(--enr-maroon); outline-offset: 2px; border-radius: 6px; }
+.enr-tl-dot { position: absolute; left: 0; top: 50%; width: 12px; height: 12px; margin-top: -6px; border-radius: 50%; background: #fff; border: 2px solid #cbd5e1; }
+.enr-tl-item.is-current .enr-tl-dot { border-color: var(--enr-maroon); background: var(--enr-maroon); box-shadow: 0 0 0 3px var(--enr-maroon-mid); }
+.enr-tl-item.is-upcoming .enr-tl-dot { border-color: var(--enr-maroon); border-style: dashed; }
+.enr-tl-title { font-size: 13.5px; color: var(--sp-text-1); }
+.enr-tl-meta { font-size: 11.5px; color: var(--sp-text-4); margin-top: 2px; overflow-wrap: anywhere; }
+.enr-tl-side { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.enr-tl-caret { font-size: 20px; color: var(--sp-text-4); transition: transform .2s; }
+.enr-tl-item[open] .enr-tl-caret { transform: rotate(180deg); }
+.enr-tl-body { padding: 0 0 14px 28px; }
+.enr-tl-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.enr-tl-table th { text-align: left; font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--sp-text-4); font-weight: 400; padding: 6px 10px; background: #fafbfc; border-bottom: 1px solid #f1f2f4; }
+.enr-tl-table td { padding: 8px 10px; border-bottom: 1px solid #f5f6f8; color: var(--sp-text-2); vertical-align: middle; }
+.enr-tl-table tr:last-child td { border-bottom: none; }
+.enr-tl-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.enr-tl-table tr.is-dropped .enr-tl-cname { text-decoration: line-through; color: var(--sp-text-4); }
+.enr-tl-cname { color: var(--sp-text-1); }
+.enr-status-up { background: var(--enr-maroon-soft); color: var(--enr-maroon); border: 1px solid var(--enr-maroon-mid); }
+@media (max-width: 640px) {
+  .enr-tl-sum { flex-direction: column; align-items: flex-start; }
+  .enr-tl-body { padding-left: 0; overflow-x: auto; }
+}
+.enr-current-tag { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--enr-maroon); }
+.enr-stat-icon { background: var(--enr-maroon-soft) !important; color: var(--enr-maroon) !important; }
+.enr-hero .enr-chip .sp-ms { color: var(--enr-maroon); }
+
+@media (max-width: 640px) {
+  .enr-hero { padding: 16px; }
+  .enr-hero-side { align-items: flex-start; text-align: left; }
+}
+@media (prefers-reduced-motion: reduce) { .enr-card, .enr-card:hover { transition: none; transform: none; } }
+</style>
+{% endblock %}
+
+{% macro status_cls(s) -%}
+{{ 'enr-status-ok' if s == 'Enrolled' else ('enr-status-bad' if s in ('Withdrawn', 'Terminated', 'Cancelled') else 'enr-status-done') }}
+{%- endmacro %}
+
 {% block content %}
+
+{% if no_student %}
+<div class="sp-alert sp-alert-warning fade-in">
+  <span class="sp-ms">warning</span>
+  <div><strong>No student record found.</strong> Please contact the Registrar's Office.</div>
+</div>
+
+{% else %}
 
 <div class="sp-page-header fade-in">
   <h1 class="sp-page-title">My Enrolment</h1>
   <p class="sp-page-sub">Current enrolment status, courses, and credit summary</p>
 </div>
 
-{# ── Active Enrollment Banner ──────────────────────────────────── #}
-{% if active_enrollment %}
-<div class="fade-in" style="background:var(--sp-royal-gradient);border-radius:18px;padding:24px 28px;color:#fff;margin-bottom:24px;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:16px;">
-  <div>
-    <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;opacity:0.7;text-transform:uppercase;margin-bottom:5px;">Active Enrolment</div>
-    <div style="font-size:20px;font-weight:700;margin-bottom:4px;">{{ programme_name or active_enrollment.program or "Programme" }}</div>
-    <div style="font-size:13px;opacity:0.8;">
-      {% if active_enrollment.term_name %}{{ active_enrollment.term_name }}{% endif %}
-      {% if active_enrollment.academic_year %} &nbsp;·&nbsp; {{ active_enrollment.academic_year }}{% endif %}
-    </div>
-    {% if active_enrollment.faculty_advisor %}
-    <div style="font-size:12px;opacity:0.65;margin-top:8px;display:flex;align-items:center;gap:5px;">
-      <span style="font-family:'Material Symbols Outlined';font-size:14px;">person</span>
-      Adviser: {{ active_enrollment.faculty_advisor }}
-    </div>
-    {% endif %}
-  </div>
-  <div style="text-align:right;">
-    <div style="background:rgba(255,255,255,0.2);border-radius:20px;padding:4px 14px;font-size:12px;font-weight:600;display:inline-block;">{{ active_enrollment.status }}</div>
-    {% if active_enrollment.enrollment_date %}
-    <div style="font-size:11px;opacity:0.6;margin-top:6px;">Enrolled {{ frappe.utils.formatdate(active_enrollment.enrollment_date, "d MMM yyyy") }}</div>
-    {% endif %}
-  </div>
+{% if portal_error %}
+<div class="sp-alert sp-alert-warning fade-in">
+  <span class="sp-ms">warning</span>
+  <div>Could not load your enrolment. Please refresh the page.</div>
 </div>
+{% endif %}
+
+{# ── Active enrolment ─────────────────────────────────────────── #}
+{% if active_enrollment %}
+{% set _total = total_credits or 0 %}
+<section class="enr-hero fade-in" aria-label="Active enrolment">
+  <div class="enr-hero-top">
+    <div style="min-width:0;">
+      <div class="enr-eyebrow">Active Enrolment</div>
+      <h2 class="enr-prog">{{ programme_name or active_enrollment.program or "Programme" }}</h2>
+      <div class="enr-chips">
+        {% if active_enrollment.term_name %}<span class="enr-chip"><span class="sp-ms" aria-hidden="true">calendar_month</span>{{ active_enrollment.term_name }}</span>{% endif %}
+        {% if active_enrollment.academic_year %}<span class="enr-chip"><span class="sp-ms" aria-hidden="true">event</span>{{ active_enrollment.academic_year }}</span>{% endif %}
+        <span class="enr-chip"><span class="sp-ms" aria-hidden="true">tag</span>{{ active_enrollment.name }}</span>
+      </div>
+    </div>
+    <div class="enr-hero-side">
+      <span class="enr-status {{ status_cls(active_enrollment.status) }}"><span class="sp-ms" aria-hidden="true">check_circle</span>{{ active_enrollment.status }}</span>
+      {% if active_enrollment.enrollment_date %}
+      <span class="enr-side-note">Enrolled {{ frappe.utils.formatdate(active_enrollment.enrollment_date, "d MMM yyyy") }}</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <dl class="enr-facts">
+    <div><dt>Registration No.</dt><dd>{{ student_id or '—' }}</dd></div>
+    {% if department %}<div><dt>Department</dt><dd>{{ department }}</dd></div>{% endif %}
+    {% if batch_year %}<div><dt>Batch</dt><dd>{{ batch_year }}</dd></div>{% endif %}
+    <div><dt>Faculty Adviser</dt><dd>{{ active_enrollment.faculty_advisor_name or 'Not assigned' }}</dd></div>
+  </dl>
+
+  {% if _total > 0 %}
+  <div class="enr-split" aria-label="Credit split: {{ core_credits or 0 }} core, {{ elective_credits or 0 }} elective of {{ _total }}">
+    <div class="enr-split-bar">
+      <div class="enr-split-core" style="width:{{ ((core_credits or 0) / _total * 100) | round(2) }}%;"></div>
+      <div class="enr-split-elec" style="width:{{ ((elective_credits or 0) / _total * 100) | round(2) }}%;"></div>
+    </div>
+    <div class="enr-split-legend">
+      <span><span class="enr-dot" style="background:var(--enr-maroon);"></span>Core · {{ core_credits or 0 }} credits</span>
+      <span><span class="enr-dot" style="background:var(--enr-maroon-2);"></span>Elective · {{ elective_credits or 0 }} credits</span>
+      {% set _other = _total - (core_credits or 0) - (elective_credits or 0) %}
+      {% if _other > 0 %}<span><span class="enr-dot" style="background:#eceef1;"></span>Other · {{ _other }} credits</span>{% endif %}
+      <span style="margin-left:auto;">Total · <strong style="color:var(--sp-text-1);font-weight:400;">{{ _total }}</strong> credits</span>
+    </div>
+  </div>
+  {% endif %}
+</section>
 {% else %}
 <div class="sp-alert sp-alert-warning fade-in">
   <span class="sp-ms">warning</span>
@@ -40,136 +226,173 @@
 {% endif %}
 
 {# ── Stats ─────────────────────────────────────────────────────── #}
-<div class="sp-stat-grid fade-in" style="margin-bottom:24px;">
-
+{% if active_enrollment %}
+<div class="sp-stat-grid enr-stats fade-in">
   <div class="sp-stat-card">
-    <div class="sp-stat-icon" style="background:#eff6ff;color:var(--sp-primary);">menu_book</div>
+    <div class="sp-stat-icon enr-stat-icon">menu_book</div>
     <div>
       <div class="sp-stat-label">Active Courses</div>
       <div class="sp-stat-value">{{ active_courses | length }}</div>
+      {% if dropped_courses %}<div class="sp-stat-sub">{{ dropped_courses | length }} dropped</div>{% endif %}
     </div>
   </div>
-
   <div class="sp-stat-card">
-    <div class="sp-stat-icon" style="background:#f0fdf4;color:var(--sp-success);">stars</div>
+    <div class="sp-stat-icon enr-stat-icon">stars</div>
     <div>
       <div class="sp-stat-label">Total Credits</div>
       <div class="sp-stat-value">{{ total_credits or 0 }}</div>
     </div>
   </div>
-
   <div class="sp-stat-card">
-    <div class="sp-stat-icon" style="background:var(--sp-info-bg);color:var(--sp-info);">school</div>
+    <div class="sp-stat-icon enr-stat-icon">school</div>
     <div>
       <div class="sp-stat-label">Core Credits</div>
-      <div class="sp-stat-value" style="color:var(--sp-info);">{{ core_credits or 0 }}</div>
+      <div class="sp-stat-value" style="color:var(--enr-maroon);">{{ core_credits or 0 }}</div>
     </div>
   </div>
-
   <div class="sp-stat-card">
-    <div class="sp-stat-icon" style="background:var(--sp-warning-bg);color:var(--sp-warning);">auto_stories</div>
+    <div class="sp-stat-icon enr-stat-icon">auto_stories</div>
     <div>
       <div class="sp-stat-label">Elective Credits</div>
-      <div class="sp-stat-value" style="color:var(--sp-warning);">{{ elective_credits or 0 }}</div>
+      <div class="sp-stat-value" style="color:var(--enr-maroon-2);">{{ elective_credits or 0 }}</div>
     </div>
-  </div>
-
-</div>
-
-{# ── Active Courses Table ──────────────────────────────────────── #}
-{% if active_courses %}
-<div class="sp-section-card fade-in" style="margin-bottom:20px;">
-  <div class="sp-section-header">
-    <span class="sp-ms">menu_book</span> Enrolled Courses
-  </div>
-  <div style="overflow-x:auto;">
-    <table class="sp-table">
-      <thead>
-        <tr>
-          <th>Course</th>
-          <th style="text-align:center;">Type</th>
-          <th style="text-align:center;">Credits</th>
-          <th>Faculty</th>
-          <th style="text-align:center;">Attendance</th>
-          <th style="text-align:center;">Eligibility</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for c in active_courses %}
-        <tr>
-          <td>
-            <div style="font-weight:600;font-size:13px;">{{ c.course_name }}</div>
-            <div style="font-size:11px;color:var(--sp-text-4);">{{ c.course }}</div>
-          </td>
-          <td style="text-align:center;">
-            <span class="sp-badge" style="font-size:10px;{% if c.course_type == 'Core' %}background:var(--sp-info-bg);color:var(--sp-info);{% else %}background:var(--sp-warning-bg);color:var(--sp-warning);{% endif %}">
-              {{ c.course_type or "—" }}
-            </span>
-          </td>
-          <td style="text-align:center;font-weight:700;">{{ c.credits }}</td>
-          <td style="font-size:13px;color:var(--sp-text-2);">{{ c.faculty }}</td>
-          <td style="text-align:center;">
-            <span style="font-weight:700;font-size:13px;color:{% if c.attendance_pct >= 75 %}var(--sp-success){% else %}var(--sp-danger){% endif %};">
-              {{ c.attendance_pct }}%
-            </span>
-          </td>
-          <td style="text-align:center;">
-            {% if c.eligible %}
-            <span class="sp-badge sp-badge-pass" style="font-size:10px;">Eligible</span>
-            {% else %}
-            <span class="sp-badge sp-badge-fail" style="font-size:10px;">Ineligible</span>
-            {% endif %}
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
   </div>
 </div>
 {% endif %}
 
-{# ── Dropped Courses ───────────────────────────────────────────── #}
+{# ── Enrolled courses ─────────────────────────────────────────── #}
+{% if active_courses %}
+<div class="enr-section-title fade-in">
+  <h2><span class="sp-ms" aria-hidden="true">menu_book</span>Enrolled Courses</h2>
+  <span class="enr-section-sub">Minimum attendance for exam eligibility: 75%</span>
+</div>
+<div class="enr-grid fade-in">
+  {% for c in active_courses %}
+  {% set _elec = c.course_type == 'Elective' %}
+  <article class="enr-card{{ ' is-elective' if _elec }}">
+    <div class="enr-card-head">
+      <div class="enr-code" title="{{ c.course_code | e }}">{{ c.course_code }}</div>
+      <h3 class="enr-card-name" title="{{ c.course_name | e }}">{{ c.course_name }}</h3>
+      <div class="enr-chips">
+        <span class="enr-chip {{ 'enr-type-elec' if _elec else 'enr-type-core' }}">{{ c.course_type or '—' }}</span>
+        <span class="enr-chip"><span class="sp-ms" aria-hidden="true">stars</span>{{ c.credits }} credit{{ 's' if c.credits != 1 }}</span>
+        {% if c.term %}<span class="enr-chip" title="{{ c.term | e }}">{{ c.term }}</span>{% endif %}
+      </div>
+    </div>
+    <div class="enr-card-fac">
+      <span class="sp-ms" aria-hidden="true">person</span>
+      <span class="{{ '' if c.faculty else 'enr-muted' }}" title="{{ (c.faculty or '') | e }}">{{ c.faculty or 'Faculty not assigned' }}</span>
+    </div>
+    <div class="enr-card-att">
+      <div class="enr-att-row">
+        <span class="enr-att-lbl">Attendance</span>
+        {% if c.attendance_pct is none %}
+        <span class="enr-att-pct enr-muted" style="font-size:12.5px;">Not recorded yet</span>
+        {% else %}
+        <span class="enr-att-pct" style="color:{{ 'var(--sp-success)' if c.attendance_pct >= 75 else 'var(--sp-danger)' }};">{{ c.attendance_pct }}%</span>
+        {% endif %}
+      </div>
+      <div class="enr-bar" role="img" aria-label="Attendance {{ c.attendance_pct if c.attendance_pct is not none else 'not recorded' }}{{ '%' if c.attendance_pct is not none }}, minimum 75%">
+        {% if c.attendance_pct is not none %}
+        <div class="enr-bar-fill" style="width:{{ [[c.attendance_pct, 0] | max, 100] | min }}%;background:{{ 'var(--sp-success)' if c.attendance_pct >= 75 else 'var(--sp-danger)' }};"></div>
+        {% endif %}
+        <div class="enr-bar-tick" style="left:75%;"></div>
+      </div>
+      <div class="enr-att-foot">
+        {% if c.eligible is none %}
+        <span class="enr-pill enr-pill-pend"><span class="sp-ms" aria-hidden="true">schedule</span>Eligibility pending</span>
+        {% elif c.eligible %}
+        <span class="enr-pill enr-pill-ok"><span class="sp-ms" aria-hidden="true">check_circle</span>Exam eligible</span>
+        {% else %}
+        <span class="enr-pill enr-pill-bad"><span class="sp-ms" aria-hidden="true">cancel</span>Not eligible</span>
+        {% endif %}
+        <a href="/student-portal/attendance" class="enr-muted" style="font-size:11.5px;text-decoration:none;">Details ›</a>
+      </div>
+    </div>
+  </article>
+  {% endfor %}
+</div>
+{% elif active_enrollment %}
+<div class="sp-card fade-in" style="padding:0;margin-bottom:24px;">
+  <div class="sp-empty">
+    <span class="sp-ms">menu_book</span>
+    <p class="sp-empty-title">No Courses Yet</p>
+    <p class="sp-empty-sub">Courses will appear here once they are added to your enrolment.</p>
+  </div>
+</div>
+{% endif %}
+
+{# ── Dropped courses ──────────────────────────────────────────── #}
 {% if dropped_courses %}
-<div class="sp-section-card fade-in" style="margin-bottom:20px;opacity:0.8;">
-  <div class="sp-section-header" style="background:#fafafa;">
-    <span class="sp-ms">remove_circle</span> Dropped Courses
+<div class="enr-section-title fade-in">
+  <h2><span class="sp-ms" aria-hidden="true">remove_circle</span>Dropped Courses</h2>
+</div>
+<div class="enr-dropped fade-in">
+  {% for c in dropped_courses %}
+  <div class="enr-dropped-row">
+    <div style="min-width:0;">
+      <div class="enr-dropped-name">{{ c.course_name }}</div>
+      <div class="enr-muted" style="font-size:11px;">{{ c.course_code }} · {{ c.course_type }} · {{ c.credits }} credit{{ 's' if c.credits != 1 }}</div>
+    </div>
+    <span class="enr-pill enr-pill-bad">Dropped</span>
   </div>
-  <div style="overflow-x:auto;">
-    <table class="sp-table">
-      <thead><tr><th>Course</th><th style="text-align:center;">Type</th><th style="text-align:center;">Credits</th><th style="text-align:center;">Status</th></tr></thead>
-      <tbody>
-        {% for c in dropped_courses %}
-        <tr>
-          <td style="font-weight:600;font-size:13px;">{{ c.course_name }}</td>
-          <td style="text-align:center;font-size:12px;color:var(--sp-text-4);">{{ c.course_type }}</td>
-          <td style="text-align:center;font-weight:700;">{{ c.credits }}</td>
-          <td style="text-align:center;"><span class="sp-badge sp-badge-fail" style="font-size:10px;">Dropped</span></td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+  {% endfor %}
 </div>
 {% endif %}
 
 {# ── History ───────────────────────────────────────────────────── #}
 {% if enrollments | length > 1 %}
-<div class="sp-section-card fade-in">
-  <div class="sp-section-header">
-    <span class="sp-ms">history</span> Enrolment History
-  </div>
-  <div class="sp-section-body" style="display:flex;flex-direction:column;gap:8px;">
-    {% for e in enrollments %}
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;{% if not loop.last %}border-bottom:1px solid var(--sp-border);{% endif %}">
-      <div>
-        <div style="font-size:13px;font-weight:600;">{{ e.term_name or e.academic_year or "Enrolment" }}</div>
-        <div style="font-size:11px;color:var(--sp-text-4);">{{ e.name }}</div>
+<div class="enr-section-title fade-in">
+  <h2><span class="sp-ms" aria-hidden="true">history</span>Enrolment History</h2>
+  <span class="enr-section-sub">{{ enrollments | length }} enrolments · select one to see its courses</span>
+</div>
+<div class="enr-timeline fade-in">
+  {% for e in enrollments %}
+  {% set _cur = active_enrollment and e.name == active_enrollment.name %}
+  <details class="enr-tl-item{{ ' is-current' if _cur }}{{ ' is-upcoming' if e.is_upcoming }}">
+    <summary class="enr-tl-sum">
+      <span class="enr-tl-dot" aria-hidden="true"></span>
+      <div style="min-width:0;">
+        <div class="enr-tl-title">{{ e.term_name or e.academic_year or "Enrolment" }}{% if e.term_name and e.academic_year and e.academic_year not in e.term_name %} <span class="enr-muted">· {{ e.academic_year }}</span>{% endif %}</div>
+        <div class="enr-tl-meta">
+          {{ e.name }}
+          · {{ e.courses | length }} course{{ 's' if e.courses | length != 1 }}
+          {% if e.total_credits %}· {{ e.total_credits }} credits{% endif %}
+          {% if e.term_start_date %}· Term starts {{ frappe.utils.formatdate(e.term_start_date, "d MMM yyyy") }}{% elif e.enrollment_date %}· Enrolled {{ frappe.utils.formatdate(e.enrollment_date, "d MMM yyyy") }}{% endif %}
+        </div>
       </div>
-      <span class="sp-badge {% if e.status == 'Enrolled' %}sp-badge-pass{% elif e.status in ('Withdrawn','Terminated') %}sp-badge-fail{% else %}sp-badge-pend{% endif %}" style="font-size:10px;">{{ e.status }}</span>
+      <div class="enr-tl-side">
+        {% if _cur %}<span class="enr-current-tag">Current</span>{% endif %}
+        {% if e.is_upcoming %}<span class="enr-status enr-status-up" style="font-size:11px;padding:2px 10px;"><span class="sp-ms" aria-hidden="true">upcoming</span>Upcoming</span>
+        {% else %}<span class="enr-status {{ status_cls(e.status) }}" style="font-size:11px;padding:2px 10px;">{{ e.status }}</span>{% endif %}
+        <span class="sp-ms enr-tl-caret" aria-hidden="true">expand_more</span>
+      </div>
+    </summary>
+    <div class="enr-tl-body">
+      {% if e.courses %}
+      <table class="enr-tl-table">
+        <thead><tr><th>Course</th><th>Type</th><th class="num">Credits</th><th>Grade</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for c in e.courses %}
+          <tr class="{{ 'is-dropped' if c.status == 'Dropped' }}">
+            <td><div class="enr-tl-cname">{{ c.course_name }}</div><div class="enr-code" style="margin:0;">{{ c.course_code }}</div></td>
+            <td><span class="enr-chip {{ 'enr-type-elec' if c.course_type == 'Elective' else 'enr-type-core' }}">{{ c.course_type }}</span></td>
+            <td class="num">{{ c.credits }}</td>
+            <td>{{ c.grade or '—' }}</td>
+            <td><span class="enr-pill {{ 'enr-pill-bad' if c.status == 'Dropped' else 'enr-pill-ok' }}">{{ c.status }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="enr-muted" style="font-size:12.5px;padding:4px 0 8px;">No courses recorded for this enrolment.</div>
+      {% endif %}
+      {% if e.faculty_advisor_name %}<div class="enr-muted" style="font-size:12px;margin-top:8px;">Faculty adviser: {{ e.faculty_advisor_name }}</div>{% endif %}
     </div>
-    {% endfor %}
-  </div>
+  </details>
+  {% endfor %}
 </div>
 {% endif %}
 
+{% endif %}{# end no_student #}
 {% endblock %}

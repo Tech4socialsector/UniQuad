@@ -9,6 +9,8 @@ from frappe.utils import flt
 
 class FeePayment(Document):
 	def validate(self):
+		self._apply_voucher()
+		self._fill_student_details()
 		if self.fee_invoice:
 			self.validate_payment_amount()
 		# Validate multi-demand allocation if demands table is used
@@ -34,6 +36,62 @@ class FeePayment(Document):
 			self._reverse_demand_payments()
 		# Cancel linked receipt
 		self._cancel_fee_receipt()
+
+	def _apply_voucher(self):
+		"""Single-due payment (Voucher Number, as in the bulk-upload sheet): the student and dues columns
+		come from the voucher and the Fee Demands Covered row is built from the payment amount."""
+		if not self.fee_demand:
+			return
+		d = frappe.db.get_value(
+			"Fee Demand",
+			self.fee_demand,
+			["student", "fee_component", "description", "demand_date", "academic_year", "due_date", "remarks",
+			 "original_amount", "penalty_amount", "waiver_amount", "net_payable", "paid_amount", "outstanding_amount"],
+			as_dict=True,
+		)
+		if not d:
+			frappe.throw(_("Voucher Number {0} was not found. It must be an existing Fee Demand ID.").format(self.fee_demand))
+		if self.student and d.student and self.student != d.student:
+			frappe.throw(
+				_("Voucher {0} belongs to student {1}, not the selected Student ID {2}.").format(self.fee_demand, d.student, self.student)
+			)
+		self.student = d.student or self.student
+		self.update({
+			"fee_component": d.fee_component,
+			"demand_date": d.demand_date,
+			"academic_year": d.academic_year or self.academic_year,
+			"due_date": d.due_date,
+			"demand_remark": d.remarks or d.description,
+			"original_amount": d.original_amount,
+			"penalty_amount": d.penalty_amount,
+			"waiver_amount": d.waiver_amount,
+			"total_payable": d.net_payable,
+			"paid_amount": d.paid_amount,
+			"pending_amount": d.outstanding_amount,
+		})
+
+		others = [r.fee_demand for r in self.payment_demands if r.fee_demand != self.fee_demand]
+		if others:
+			frappe.throw(
+				_("Voucher Number {0} is set, but Fee Demands Covered also lists {1}. Use either the Voucher Number "
+				  "(one due) or the Fee Demands Covered table (several dues).").format(self.fee_demand, ", ".join(others))
+			)
+		if not self.payment_demands:
+			self.append("payment_demands", {"fee_demand": self.fee_demand})
+		row = self.payment_demands[0]
+		row.demand_description = d.description or d.fee_component
+		row.outstanding_amount = d.outstanding_amount
+		row.amount_allocated = flt(self.amount)
+
+	def _fill_student_details(self):
+		if not self.student:
+			return
+		sm = frappe.db.get_value(
+			"Student Master", self.student, ["registration_id", "application_number", "official_email_id", "email"], as_dict=True
+		)
+		if sm:
+			self.registration_id = sm.registration_id or sm.application_number
+			self.student_email = sm.official_email_id or sm.email
 
 	def _validate_demand_allocation(self):
 		total_allocated = sum(flt(row.amount_allocated) for row in self.payment_demands)

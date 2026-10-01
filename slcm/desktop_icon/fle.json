@@ -1,7 +1,7 @@
 {
  "app": "slcm",
  "bg_color": "blue",
- "creation": "2026-05-05 21:40:40.388379",
+ "creation": "2026-07-27 14:53:59.425782",
  "docstatus": 0,
  "doctype": "Desktop Icon",
  "hidden": 0,
@@ -11,10 +11,11 @@
  "label": "FLE",
  "link_to": "FLE",
  "link_type": "Workspace Sidebar",
- "modified": "2026-05-22 12:25:18.142941",
+ "modified": "2026-09-29 16:08:42.842230",
  "modified_by": "Administrator",
  "name": "FLE",
  "owner": "Administrator",
+ "parent_icon": "Admission",
  "restrict_removal": 0,
  "roles": [
   {

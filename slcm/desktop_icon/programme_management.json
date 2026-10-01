@@ -1,0 +1,36 @@
+{
+ "app": "slcm",
+ "bg_color": "gray",
+ "creation": "2026-03-02 14:50:43.471297",
+ "docstatus": 0,
+ "doctype": "Desktop Icon",
+ "hidden": 0,
+ "icon": "",
+ "icon_type": "Link",
+ "idx": 0,
+ "label": "Programme Management",
+ "link_to": "Programme Management",
+ "link_type": "Workspace Sidebar",
+ "modified": "2026-09-29 16:08:42.862301",
+ "modified_by": "Administrator",
+ "name": "Programme Management",
+ "owner": "Administrator",
+ "parent_icon": "Academics",
+ "restrict_removal": 0,
+ "roles": [
+  {
+   "role": "slcm_Registrar"
+  },
+  {
+   "role": "slcm_Programme Chair"
+  },
+  {
+   "role": "Campus Admin"
+  },
+  {
+   "role": "Admission Admin"
+  }
+ ],
+ "sidebar": "Programme Management",
+ "standard": 1
+}

@@ -99,6 +99,8 @@ def get_context(context):
             "loan_bank_name":      student.loan_bank_name or "",
             "loan_branch_name":    student.loan_branch_name or "",
             "loan_ifsc_code":      _mask_ifsc(student.loan_ifsc_code),
+            "savings_passbook":    student.get("savings_passbook") or "",
+            "loan_passbook":       student.get("loan_passbook") or "",
             "bank_details_submitted": bool(student.bank_details_submitted),
             "bank_details_submitted_on": frappe.utils.format_datetime(student.bank_details_submitted_on, "dd MMM yyyy, hh:mm a") if student.bank_details_submitted_on else "",
         }
@@ -170,21 +172,6 @@ def get_context(context):
             ]
         except Exception:
             context.ug_degrees = []
-
-        # Fetch important links from Student Portal Settings
-        try:
-            settings = frappe.get_single("Student Portal Settings")
-            context.important_links = {
-                "academic_calendar": settings.get("academic_calendar") or "#",
-                "student_handbook": settings.get("student_handbook") or "#",
-                "examination_guidelines": settings.get("examination_guidelines") or "#"
-            }
-        except Exception:
-            context.important_links = {
-                "academic_calendar": "#",
-                "student_handbook": "#",
-                "examination_guidelines": "#"
-            }
 
     except Exception as e:
         frappe.log_error(f"Student Portal Profile error: {e}", "Student Portal")

@@ -14,7 +14,12 @@
   "warden_details",
   "capacity_section",
   "total_rooms",
-  "total_capacity"
+  "total_capacity",
+  "section_hall_leader",
+  "hall_leader_name",
+  "hall_leader_contact",
+  "column_break_hall_leader",
+  "hall_leader_email"
  ],
  "fields": [
   {
@@ -67,12 +72,37 @@
    "fieldtype": "Table",
    "label": "Warden Details",
    "options": "Hostel Warden"
+  },
+  {
+   "fieldname": "section_hall_leader",
+   "fieldtype": "Section Break",
+   "label": "Hall Leader"
+  },
+  {
+   "fieldname": "hall_leader_name",
+   "fieldtype": "Data",
+   "label": "Hall Leader Name"
+  },
+  {
+   "fieldname": "hall_leader_contact",
+   "fieldtype": "Phone",
+   "label": "Hall Leader Contact"
+  },
+  {
+   "fieldname": "column_break_hall_leader",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "hall_leader_email",
+   "fieldtype": "Data",
+   "label": "Hall Leader Email",
+   "options": "Email"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-01-05 17:47:11.347620",
+ "modified": "2026-09-29 14:51:54.322071",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Hostel",

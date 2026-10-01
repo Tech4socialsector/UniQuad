@@ -16,7 +16,7 @@ frappe.query_reports["Fee Demand Register"] = {
 			fieldname: "demand_type",
 			label: __("Demand Type"),
 			fieldtype: "Select",
-			options: "\nAcademic\nHostel\nExamination\nDeposit\nFine\nService",
+			options: "\nAcademic\nNon Academic",
 		},
 		{
 			fieldname: "from_date",

@@ -4,15 +4,63 @@ from frappe import _
 from frappe.utils import flt, today, now_datetime, getdate
 
 
+# Fee Component types that count as "Academic" — used only as a fallback when a Fee Component has no
+# Demand Type of its own (the Fee Component's Demand Type is the source of truth).
+ACADEMIC_COMPONENT_TYPES = {
+	"Admission Fee", "Re-admission Fee", "Tuition and Facilities Fee", "Tuition Fee",
+	"Re-registration Tuition Fee", "Annual Fee (PhD)", "Continuation Fee (PhD)", "Course Work Fee (PhD)",
+	"Registration Fee (PhD)", "Gap Year Fee",
+}
+
+
+def demand_type_for_component_type(component_type):
+	return "Academic" if component_type in ACADEMIC_COMPONENT_TYPES else "Non Academic"
+
+
 class FeeDemand(Document):
 
 	def validate(self):
+		self._fill_from_student()
+		self._set_demand_type()
 		self._calculate_amounts()
 		self._validate_waiver()
 		self._auto_set_description()
 
 	def before_save(self):
 		self._update_status()
+
+	def _fill_from_student(self):
+		"""Student Email ID (and Academic Year when blank) come from the student. A supplied email is
+		checked only when the demand is created, so later email changes never block saving."""
+		if not self.student:
+			return
+		sm = frappe.db.get_value(
+			"Student Master", self.student, ["official_email_id", "email", "personal_email", "academic_year"], as_dict=True
+		)
+		if not sm:
+			return
+		given = (self.student_email or "").strip().lower()
+		known = {(e or "").strip().lower() for e in (sm.official_email_id, sm.email, sm.personal_email)} - {""}
+		if self.is_new() and given and known and given not in known:
+			frappe.throw(_("Student Email ID {0} does not match student {1}.").format(self.student_email, self.student))
+		self.student_email = sm.official_email_id or sm.email or self.student_email
+		if not self.academic_year and sm.academic_year and frappe.db.exists("Academic Year", sm.academic_year):
+			self.academic_year = sm.academic_year
+		if self.is_new() and not self.academic_year:
+			frappe.throw(_("Academic Year is required (the student has none to default from)."))
+
+	def _set_demand_type(self):
+		"""Demand Type always follows the Fee Component's Demand Type, whatever a caller passed in (event
+		hooks, integrations and the bulk upload included), so every demand uses the current Academic /
+		Non Academic types."""
+		if not self.fee_component:
+			return
+		comp = frappe.db.get_value("Fee Component", self.fee_component, ["demand_type", "component_type"], as_dict=True) or {}
+		options = [o for o in (self.meta.get_field("demand_type").options or "").split("\n") if o]
+		if comp.get("demand_type"):
+			self.demand_type = comp["demand_type"]
+		elif self.demand_type not in options:
+			self.demand_type = demand_type_for_component_type(comp.get("component_type"))
 
 	def _calculate_amounts(self):
 		self.original_amount = flt(self.original_amount)

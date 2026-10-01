@@ -681,9 +681,15 @@ function _build_academic_progress_html(d) {
 		? frappe.datetime.str_to_user(e.term_start) + " – " + frappe.datetime.str_to_user(e.term_end)
 		: "";
 
-	const semester_label = e.term_sequence
-		? `Semester ${e.term_sequence}` + (e.ay_system ? ` · ${e.ay_system}` : "")
-		: (e.ay_system || "");
+	// Year is the promotion unit; terms inside a year advance automatically.
+	const pg = d.progression || {};
+	const year_label = pg.year_label || (d.current_year ? _ordinal_year(d.current_year) : "");
+	const term_pos = pg.term_no
+		? (pg.terms_in_year ? `Term ${pg.term_no} of ${pg.terms_in_year}` : `Term ${pg.term_no}`)
+		: (e.cohort_term_year ? `Term ${e.cohort_term_year}` : "");
+	const term_pos_sub = term_pos
+		? enc(term_pos) + (pg.is_last_term ? " · final term of the year" : "")
+		: "";
 
 	const cards_html = `
 	<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
@@ -691,16 +697,15 @@ function _build_academic_progress_html(d) {
 		            ay_date_range + (e.ay_status ? " &nbsp;" + badge(e.ay_status, ay_color[e.ay_status] || "gray") : ""))}
 		${info_card("📖", "Current Term", e.term_name || "—",
 		            term_date_range + (e.term_status ? " &nbsp;" + badge(e.term_status, term_color[e.term_status] || "gray") : ""))}
-		${info_card("🎓", "Year / Semester No.", semester_label || d.current_year || "—",
-		            d.current_year ? `Year ${enc(d.current_year)}` + (d.current_term ? ` · Term ${enc(d.current_term)}` : "") : "")}
+		${info_card("🎓", "Year of Study", year_label || "—", term_pos_sub)}
 		${info_card("🏫", "Enrollment Status", e.status,
 		            e.enrollment_date ? "Since " + frappe.datetime.str_to_user(e.enrollment_date) : "")}
 	</div>
 	<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
 		${info_card("📚", "Programme", e.program_name || e.program || "—", e.program && e.program_name && e.program !== e.program_name ? enc(e.program) : "")}
-		${info_card("👥", "Section / Cohort", e.cohort_name || e.cohort || "—",
-		            e.cohort_code ? enc(e.cohort_code) + (e.cohort_status ? " &nbsp;" + badge(e.cohort_status, e.cohort_status === "Active" ? "green" : "gray") : "") : (e.cohort_status ? badge(e.cohort_status, e.cohort_status === "Active" ? "green" : "gray") : ""))}
-		${info_card("🗂️", "Batch", e.batch_year || d.batch_year || "—", e.cohort_term_year ? `Term Year ${enc(String(e.cohort_term_year))}` : "")}
+		${info_card("🗂️", "Batch", e.cohort_name || e.cohort || "—",
+		            [e.cohort_code ? enc(e.cohort_code) : "", e.cohort_status ? badge(e.cohort_status, e.cohort_status === "Active" ? "green" : "gray") : ""].filter(Boolean).join(" &nbsp;"))}
+		${info_card("👥", "Section", e.cohort_section || d.batch_year || e.batch_year || "—", "")}
 		${info_card("🧑‍🏫", "Faculty Advisor", e.faculty_advisor_name || e.faculty_advisor || "—", "")}
 	</div>
 	<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
@@ -708,7 +713,8 @@ function _build_academic_progress_html(d) {
 			<span style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:0.04em;font-weight:600;">Current CGPA</span>
 			<span style="font-size:20px;font-weight:800;color:#1a3c6e;">${d.current_cgpa ? d.current_cgpa.toFixed(2) : "—"}</span>
 			<span style="margin-left:16px;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:0.04em;font-weight:600;">Attendance percentage</span>
-			<span style="font-size:20px;font-weight:800;color:#166534;">${d.attendance_status ? enc(d.attendance_status) : "—"}</span>
+			<span style="font-size:20px;font-weight:800;color:${d.term_attendance != null && d.term_attendance < 75 ? "#b91c1c" : "#166534"};">${d.term_attendance != null ? d.term_attendance.toFixed(1) + "%" : (d.attendance_status ? enc(d.attendance_status) : "—")}</span>
+			<span style="font-size:11px;color:#9ca3af;">this term's courses</span>
 		</div>
 	</div>`;
 
@@ -771,85 +777,100 @@ function _build_academic_progress_html(d) {
 		</div>`;
 	}
 
-	// ── Promotion Policy ─────────────────────────────────────────────────────
-	let promo_html = "";
-	if (d.promotion) {
-		const p = d.promotion;
-
-		function criterion_row(enabled, label, student_val, required_val, passed) {
-			if (!enabled) return "";
-			const icon = passed ? "✅" : "❌";
-			return `
-			<tr>
-				<td style="padding:7px 12px;color:#374151;">${label}</td>
-				<td style="padding:7px 12px;font-weight:600;color:#111827;">${student_val}</td>
-				<td style="padding:7px 12px;color:#6b7280;">${required_val}</td>
-				<td style="padding:7px 12px;text-align:center;font-size:16px;">${icon}</td>
-			</tr>`;
-		}
-
-		const cgpa_row = criterion_row(
-			p.cgpa_check, "CGPA",
-			p.student_cgpa.toFixed(2), `≥ ${p.min_cgpa.toFixed(2)}`, p.cgpa_pass
-		);
-		const backlog_row = criterion_row(
-			p.backlog_check, "Backlogs",
-			p.backlog_count, `≤ ${p.max_backlogs}`, p.backlog_pass
-		);
-		const attendance_row = criterion_row(
-			p.attendance_check, "Attendance",
-			`${p.attendance_pct.toFixed(1)}%`, `≥ ${p.min_attendance.toFixed(1)}%`, p.attendance_pass
-		);
-
-		const has_criteria = p.cgpa_check || p.backlog_check || p.attendance_check;
-		const criteria_table = has_criteria ? `
-		<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:10px;">
-			<thead>
-				<tr style="background:#f3f4f6;">
-					<th style="padding:7px 12px;text-align:left;font-size:11px;font-weight:700;color:#374151;
-					           text-transform:uppercase;letter-spacing:0.04em;">Criterion</th>
-					<th style="padding:7px 12px;text-align:left;font-size:11px;font-weight:700;color:#374151;
-					           text-transform:uppercase;letter-spacing:0.04em;">Student</th>
-					<th style="padding:7px 12px;text-align:left;font-size:11px;font-weight:700;color:#374151;
-					           text-transform:uppercase;letter-spacing:0.04em;">Required</th>
-					<th style="padding:7px 12px;text-align:center;font-size:11px;font-weight:700;color:#374151;
-					           text-transform:uppercase;letter-spacing:0.04em;">Result</th>
-				</tr>
-			</thead>
-			<tbody>${cgpa_row}${backlog_row}${attendance_row}</tbody>
-		</table>` : `<div style="color:#6b7280;font-size:13px;margin-top:8px;">No criteria checks configured in this policy.</div>`;
-
-		const eligible_color = p.eligible ? "green" : "red";
-		const eligible_label = p.eligible ? "Eligible for Promotion" : "Not Eligible for Promotion";
-
-		promo_html = `
-		<div style="border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;">
-			<div style="background:#f9fafb;padding:12px 18px;border-bottom:1px solid #e5e7eb;
-			            display:flex;align-items:center;gap:12px;">
-				<span style="font-size:13px;font-weight:700;color:#374151;">
-					Promotion Policy: <a href="/app/promotion-policy/${enc(p.policy_name)}"
-					style="color:#1a3c6e;">${enc(p.policy_name)}</a>
-				</span>
-				<span style="color:#6b7280;font-size:12px;">Year ${p.from_year} → Year ${p.to_year}</span>
-				<span style="margin-left:auto;">${badge(eligible_label, eligible_color)}</span>
-			</div>
-			<div style="padding:12px 18px;">${criteria_table}</div>
-		</div>`;
-	} else {
-		promo_html = `
-		<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;
-		            padding:14px 18px;color:#6b7280;font-size:13px;">
-			No active Promotion Policy found for this program and academic year.
-		</div>`;
-	}
+	// ── Progression: automatic term moves + year-end policy check ────────────
+	const promo_html = _build_progression_html(pg, enc, badge);
 
 	return `
 	<div style="font-family:inherit;padding:4px 0;">
 		${cards_html}
 		${courses_html}
-		<div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:8px;">Promotion Eligibility</div>
+		<div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:8px;">Progression &amp; Promotion</div>
 		${promo_html}
 	</div>`;
+}
+
+function _build_progression_html(pg, enc, badge) {
+	const box = (inner) => `<div style="border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;margin-bottom:12px;">${inner}</div>`;
+	let html = "";
+
+	// 1. Where the student is and what happens next
+	if (pg.next_step || pg.term_no) {
+		const steps = [];
+		const n = pg.terms_in_year || pg.term_no || 0;
+		for (let t = 1; t <= n; t++) {
+			const done = t < pg.term_no, cur = t === pg.term_no;
+			steps.push(`<div style="flex:1;min-width:90px;text-align:center;">
+				<div style="height:8px;border-radius:4px;background:${done || cur ? "#920c24" : "#d1d5db"};${cur ? "box-shadow:0 0 0 2px #fff,0 0 0 4px #920c24;" : ""}"></div>
+				<div style="font-size:11px;margin-top:5px;color:${cur ? "#920c24" : "#6b7280"};font-weight:${cur ? 700 : 500};">
+					Term ${t}${cur ? " · current" : ""}</div></div>`);
+		}
+		steps.push(`<div style="flex:1;min-width:110px;text-align:center;">
+			<div style="height:8px;border-radius:4px;background:#fff;border:2px dashed #920c24;box-sizing:border-box;"></div>
+			<div style="font-size:11px;margin-top:5px;color:#6b7280;">Year-end → Year ${enc(String((pg.year || 0) + 1))}</div></div>`);
+		html += box(`
+			<div style="padding:12px 18px;background:#920c24;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+				<span style="font-size:13px;font-weight:700;color:#fff;">${enc(pg.year_label || "")}</span>
+				<span style="font-size:12px;color:#fff;">${enc(pg.next_step || "")}</span>
+			</div>
+			<div style="padding:14px 18px;display:flex;gap:8px;flex-wrap:wrap;">${steps.join("")}</div>
+			<div style="padding:0 18px 12px;font-size:11.5px;color:#6b7280;">
+				Term-to-term moves within a year are automatic (Student Enrollment → Promote Students, no policy check).
+				The Promotion Policy is applied only for Year → Year promotion (Promotion Management).
+			</div>`);
+	}
+
+	// 2. Year-end eligibility (same engine as Promotion Management)
+	const el = pg.eligibility;
+	if (el) {
+		const colour = { "Promoted": "green", "Not Promoted": "red", "Conditional": "orange" }[el.status] || "gray";
+		const label = { "Promoted": "Eligible", "Not Promoted": "Not Eligible", "Conditional": "Conditional" }[el.status] || el.status;
+		const rows = (el.criteria || []).map((c) => `
+			<tr>
+				<td style="padding:7px 12px;color:#374151;">${enc(c.label)}</td>
+				<td style="padding:7px 12px;font-weight:600;color:#111827;">${enc(String(c.value))}</td>
+				<td style="padding:7px 12px;color:#6b7280;">${enc(c.required)}</td>
+				<td style="padding:7px 12px;text-align:center;font-size:15px;">${c.result === "Pass" ? "✅" : c.result === "Fail" ? "❌" : "—"}</td>
+			</tr>`).join("");
+		const th = (t, al) => `<th style="padding:7px 12px;text-align:${al || "left"};font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.04em;">${t}</th>`;
+		html += box(`
+			<div style="background:#f9fafb;padding:12px 18px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+				<span style="font-size:13px;font-weight:700;color:#374151;">Year-end eligibility · Year ${enc(String(el.from_year))} → Year ${enc(String(el.to_year))}</span>
+				<a href="/app/promotion-policy/${enc(el.policy)}" style="color:#920c24;font-size:12px;">${enc(el.policy_title || el.policy)}</a>
+				<span style="margin-left:auto;">${badge(label + (el.projected ? " (projected)" : ""), colour)}</span>
+			</div>
+			<div style="padding:12px 18px;">
+				${rows ? `<table style="width:100%;border-collapse:collapse;font-size:13px;">
+					<thead><tr style="background:#f3f4f6;">${th("Criterion")}${th("Student")}${th("Required")}${th("Result", "center")}</tr></thead>
+					<tbody>${rows}</tbody></table>`
+					: `<div style="color:#6b7280;font-size:13px;">This policy has no criteria enabled — every student is eligible.</div>`}
+				${el.projected ? `<div style="font-size:11.5px;color:#6b7280;margin-top:10px;">Projected from data so far — the decision is made when Year ${enc(String(el.from_year))} promotion is run at year end.</div>` : ""}
+			</div>`);
+	} else if (pg.year) {
+		html += `<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:14px 18px;color:#6b7280;font-size:13px;margin-bottom:12px;">
+			No Active Promotion Policy for Year ${enc(String(pg.year))} of this programme and academic year.</div>`;
+	}
+
+	// 3. Latest confirmed decision from the Promotion Log
+	const ld = pg.last_decision;
+	if (ld) {
+		const colour = /Not Promoted/.test(ld.promotion_status) ? "red" : /Promoted/.test(ld.promotion_status) ? "green" : "orange";
+		const enr = ld.stage === "Draft"
+			? `<span style="color:#b45309;">Not applied yet — the student sees no change until it is published.</span>`
+			: ld.enrollment_status === "Enrolled"
+			? `Enrolled in <a href="/app/student-enrollment/${enc(ld.to_enrollment || "")}">${enc(ld.to_enrollment || "")}</a>`
+			: ld.enrollment_status === "Failed" ? `<span style="color:#b91c1c;">Next-year enrollment failed — use Retry Enrollment in Promotion Management</span>` : "";
+		html += `<div style="border:1px solid #e5e7eb;border-radius:10px;padding:12px 18px;font-size:12.5px;color:#374151;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+			<b>Last promotion run:</b> ${badge(ld.promotion_status, colour)}
+			${ld.stage === "Draft" ? badge("Draft — not published", "orange") : badge("Published", "blue")}
+			<span>Year ${enc(String(ld.current_year || ""))} → ${enc(String(ld.target_year || ""))}</span>
+			<span style="color:#6b7280;">${ld.processed_on ? enc(frappe.datetime.str_to_user(ld.processed_on)) : ""}</span>
+			${enr ? `<span>${enr}</span>` : ""}
+			<a href="/app/promotion-management" style="margin-left:auto;color:#920c24;font-weight:600;">Open Promotion Management →</a>
+		</div>`;
+	}
+
+	return html || `<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:14px 18px;color:#6b7280;font-size:13px;">
+		No progression data available for this student.</div>`;
 }
 
 function setDarkButtonStyle(btn) {

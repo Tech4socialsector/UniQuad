@@ -89,7 +89,7 @@ def _calculate_discount(total_fee, applying_scholarship, scholarship_percentage,
 IFSC_PATTERN = re.compile(r"^[A-Z0-9]{11}$")
 LOAN_ACCOUNT_FIELDS = (
     "education_loan_scheme", "other_loan_scheme", "loan_account_number", "loan_account_holder_name",
-    "loan_bank_name", "loan_branch_name", "loan_ifsc_code",
+    "loan_bank_name", "loan_branch_name", "loan_ifsc_code", "loan_passbook",
 )
 
 
@@ -102,8 +102,13 @@ class StudentMaster(Document):
         self.validate_status_transition()
         self.validate_bank_details()
 
-    def validate_bank_details(self):
-        """Normalise IFSC codes and drop loan details when no education loan was availed."""
+    def validate_bank_details(self, reveal_owner=True):
+        """Normalise IFSC codes, drop loan details when no education loan was availed, and keep
+        savings / loan account numbers unique across students.
+
+        reveal_owner: include the other student's ID in the duplicate message (office users);
+        the Student Portal passes False so one student never learns another's record.
+        """
         if self.availed_education_loan != "Yes":
             for f in LOAN_ACCOUNT_FIELDS:
                 self.set(f, None)
@@ -115,6 +120,43 @@ class StudentMaster(Document):
             self.set(f, value or None)
             if value and not IFSC_PATTERN.match(value):
                 frappe.throw(_("{0} must be exactly 11 alphanumeric characters.").format(label))
+
+        self.validate_unique_bank_accounts(reveal_owner)
+
+    def validate_unique_bank_accounts(self, reveal_owner=True):
+        """A savings or loan account number may belong to only one student, and a student's
+        savings and loan account numbers must differ."""
+        accounts = {}
+        for f, label in (
+            ("savings_account_number", _("Savings Bank Account Number")),
+            ("loan_account_number", _("Loan Account Number")),
+        ):
+            value = re.sub(r"\s+", "", self.get(f) or "").upper()
+            self.set(f, value or None)
+            if value:
+                accounts[f] = (value, label)
+
+        if len(accounts) == 2 and accounts["savings_account_number"][0] == accounts["loan_account_number"][0]:
+            frappe.throw(_("Savings Bank Account Number and Loan Account Number cannot be the same."))
+
+        for f, (value, label) in accounts.items():
+            # Match against both columns: one student's savings number can't be another's loan number.
+            owner = frappe.db.sql(
+                """SELECT name FROM `tabStudent Master`
+                WHERE name != %(name)s AND (savings_account_number = %(v)s OR loan_account_number = %(v)s)
+                LIMIT 1""",
+                {"name": self.name or "", "v": value},
+            )
+            if owner:
+                if reveal_owner:
+                    frappe.throw(
+                        _("{0} {1} is already registered for student {2}.").format(label, value, owner[0][0]),
+                        title=_("Duplicate Bank Account"),
+                    )
+                frappe.throw(
+                    _("This {0} is already registered to another student. Please check the number, or contact the administration office.").format(label.lower()),
+                    title=_("Duplicate Bank Account"),
+                )
 
     def before_insert(self):
         """Auto-populate fee details from the currently valid Fee Structure on new record."""
@@ -885,7 +927,7 @@ def get_academic_progress(student_name, enrollment_name=None):
             {"student": student_name, "docstatus": ["<", 2], "name": enrollment_name},
             [
                 "name", "academic_year", "term_name", "status",
-                "program", "batch", "batch_year_ref", "enrollment_date",
+                "program", "batch", "batch_year_ref", "enrollment_date", "faculty_advisor",
             ],
             as_dict=True,
         )
@@ -898,7 +940,7 @@ def get_academic_progress(student_name, enrollment_name=None):
                 recent[0].name,
                 [
                     "name", "academic_year", "term_name", "status",
-                    "program", "batch", "batch_year_ref", "enrollment_date",
+                    "program", "batch", "batch_year_ref", "enrollment_date", "faculty_advisor",
                 ],
                 as_dict=True,
             )
@@ -912,7 +954,8 @@ def get_academic_progress(student_name, enrollment_name=None):
         "batch_year": batch_year or "",
         "enrollment": None,
         "courses": [],
-        "promotion": None,
+        "progression": None,
+        "term_attendance": None,
     }
 
     if not enrollment:
@@ -944,7 +987,7 @@ def get_academic_progress(student_name, enrollment_name=None):
         cohort_doc = frappe.db.get_value(
             "Batch",
             enrollment.batch,
-            ["batch_name", "batch_code", "term_year", "status"],
+            ["batch_name", "batch_code", "term_year", "status", "section"],
             as_dict=True,
         )
 
@@ -981,6 +1024,7 @@ def get_academic_progress(student_name, enrollment_name=None):
         "cohort_code":          cohort_doc.batch_code if cohort_doc else "",
         "cohort_term_year":     cohort_doc.term_year if cohort_doc else "",
         "cohort_status":        cohort_doc.status if cohort_doc else "",
+        "cohort_section":       cohort_doc.section if cohort_doc else "",
         "batch_year":           enrollment.batch_year_ref or "",
         "faculty_advisor":      enrollment.faculty_advisor or "",
         "faculty_advisor_name": faculty_advisor_name,
@@ -1037,77 +1081,15 @@ def get_academic_progress(student_name, enrollment_name=None):
         })
     result["courses"] = courses
 
-    # ── Promotion Policy check ────────────────────────────────────────────────
-    if enrollment.program and enrollment.academic_year:
-        policy = frappe.db.get_value(
-            "Promotion Policy",
-            {
-                "program": enrollment.program,
-                "academic_year": enrollment.academic_year,
-                "status": "Active",
-            },
-            [
-                "name", "from_year", "to_year",
-                "enable_cgpa_check", "min_cgpa",
-                "enable_backlog_check", "max_backlogs_allowed",
-                "enable_attendance_check", "min_attendance_percent",
-                "conditional_promotion_action",
-            ],
-            order_by="creation desc",
-            as_dict=True,
-        )
+    # Attendance for this term = average over the enrolled courses that have data
+    att_vals = [flt(c["attendance_percentage"]) for c in courses if c["attendance_percentage"] is not None]
+    result["term_attendance"] = round(sum(att_vals) / len(att_vals), 1) if att_vals else None
 
-        if policy:
-            cgpa_pass = True
-            backlog_pass = True
-            attendance_pass = True
-
-            student_cgpa = flt(sm.current_cgpa or 0)
-
-            # Count backlogs from promotion records
-            backlog_count = frappe.db.count(
-                "Student Promotion",
-                {"student": student_name, "promotion_status": "Not Promoted"},
-            )
-
-            # Parse attendance percent
-            attendance_str = sm.attendance_status or "0"
-            try:
-                attendance_pct = flt(attendance_str.replace("%", "").strip())
-            except Exception:
-                attendance_pct = 0.0
-
-            if policy.enable_cgpa_check:
-                cgpa_pass = student_cgpa >= flt(policy.min_cgpa or 0)
-
-            if policy.enable_backlog_check:
-                backlog_pass = backlog_count <= int(policy.max_backlogs_allowed or 0)
-
-            if policy.enable_attendance_check:
-                attendance_pass = attendance_pct >= flt(policy.min_attendance_percent or 0)
-
-            all_pass = cgpa_pass and backlog_pass and attendance_pass
-
-            result["promotion"] = {
-                "policy_name":        policy.name,
-                "from_year":          policy.from_year,
-                "to_year":            policy.to_year,
-                "cgpa_check":         bool(policy.enable_cgpa_check),
-                "min_cgpa":           flt(policy.min_cgpa or 0),
-                "student_cgpa":       student_cgpa,
-                "cgpa_pass":          cgpa_pass,
-                "backlog_check":      bool(policy.enable_backlog_check),
-                "max_backlogs":       int(policy.max_backlogs_allowed or 0),
-                "backlog_count":      backlog_count,
-                "backlog_pass":       backlog_pass,
-                "attendance_check":   bool(policy.enable_attendance_check),
-                "min_attendance":     flt(policy.min_attendance_percent or 0),
-                "attendance_pct":     attendance_pct,
-                "attendance_pass":    attendance_pass,
-                "eligible":           all_pass,
-                "conditional_action": policy.conditional_promotion_action or "",
-            }
-
+    # ── Year / term position + year-end promotion eligibility ─────────────────
+    # Same engine as the Promotion Management page, so both always agree.
+    # Always reflects the student's current standing.
+    from slcm.slcm.page.promotion_management.promotion_management import get_student_progression
+    result["progression"] = get_student_progression(student_name)
     return result
 
 

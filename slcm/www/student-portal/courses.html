@@ -1,4 +1,4 @@
-﻿{% extends "slcm/www/student-portal/_base.html" %}
+{% extends "slcm/www/student-portal/_base.html" %}
 
 {% block title %}My Courses{% endblock %}
 
@@ -22,6 +22,19 @@
     background: var(--sp-primary-light);
     transform: translateX(4px);
   }
+
+  /* ── Upcoming classes strip ── */
+  .cs-up { background: var(--sp-card, #fff); border: 1px solid var(--sp-border); border-radius: 10px; padding: 10px 12px 10px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .cs-up-main { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
+  .cs-up-lbl { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; color: var(--sp-text-3); text-transform: uppercase; letter-spacing: .06em; }
+  .cs-up-lbl .sp-ms { font-size: 16px; color: var(--sp-primary); }
+  .cs-up-chip { display: inline-flex; align-items: center; gap: 6px; background: #fff; border: 1px solid var(--sp-border); color: var(--sp-text-1); font-size: 12.5px; font-weight: 600; padding: 4px 10px; border-radius: 99px; white-space: nowrap; }
+  .cs-up-chip .sp-ms { font-size: 14px; color: var(--sp-primary); }
+  .cs-up-chip small { font-size: 12px; font-weight: 400; color: var(--sp-text-3); }
+  .cs-up-empty { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+  .cs-up-empty .sp-ms { font-size: 18px; color: var(--sp-primary); flex-shrink: 0; }
+  .cs-up-empty strong { font-size: 13px; font-weight: 700; color: var(--sp-text-1); }
+  .cs-up-empty span.cs-up-hint { font-size: 12.5px; color: var(--sp-text-3); }
 </style>
 
 {% if no_student %}
@@ -34,11 +47,7 @@
 
 <div class="sp-page-header fade-in" style="display:flex; justify-content:space-between; align-items:flex-end;">
   <div>
-    <h1 class="sp-page-title">My Courses</h1>
-    <div style="font-size: 13px; color: var(--sp-text-4); margin-top: 14px;">
-        <a href="/student-portal" style="color: var(--sp-text-4); text-decoration: none;">Dashboard</a> &gt; 
-        <span style="color: var(--sp-primary); font-weight: 600;">Fees &amp; Payments</span>
-    </div>
+    <h1 class="sp-page-title" style="font-size: 18px !important; font-weight: 700 !important;">Courses</h1>
   </div>
 </div>
 
@@ -70,12 +79,12 @@
 <div class="sp-term-section fade-in" style="margin-bottom:32px;">
 
   {# Term Header #}
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;background:var(--sp-card,#fff);border:1px solid var(--sp-border);border-radius:12px;padding:14px 20px;">
     <span class="sp-ms" style="font-size:24px;color:var(--sp-primary);">school</span>
     <div>
       <div style="font-size:18px;font-weight:400;color:var(--sp-text-1);">{{ ed.term_label }}</div>
       <div style="font-size:14px;color:var(--sp-text-4);margin-top:2px;">
-        {{ ed.enrollment.academic_year }} &nbsp;|&nbsp; {{ ed.cohort_display }}
+        {{ ed.enrollment.academic_year }}
       </div>
     </div>
   </div>
@@ -93,20 +102,18 @@
           <span style="background:var(--sp-primary-light); color:var(--sp-primary); font-size:12px; font-weight:600; padding:4px 10px; border-radius:20px;">{{ c.course_code }}</span>
           {% endif %}
           {% if c.credits %}
-          <span style="background:#e6f4ea; color:var(--sp-success); font-size:12px; font-weight:600; padding:4px 10px; border-radius:20px;">{{ c.credits }} Credit{% if c.credits != 1 %}s{% endif %}</span>
+          <span style="background:#fff0f2; color:var(--sp-success); font-size:12px; font-weight:600; padding:4px 10px; border-radius:20px;">{{ c.credits }} Credit{% if c.credits != 1 %}s{% endif %}</span>
           {% endif %}
           {% if c.course_type and c.course_type != '—' %}
-          <span style="background:#fee2e2; color:#ef4444; font-size:12px; font-weight:600; padding:4px 10px; border-radius:20px;">{{ c.course_type }}</span>
+          <span style="background:#fff0f2; color:#920c24; font-size:12px; font-weight:600; padding:4px 10px; border-radius:20px;">{{ c.course_type }}</span>
           {% endif %}
-        </div>
-        <div style="display:flex; align-items:center; gap:6px; background:#e6f4ea; color:var(--sp-success); padding:6px 12px; border-radius:20px; font-size:13px; font-weight:600;">
-          <span class="sp-ms" style="font-size:16px;">check_circle</span> {{ c.status }}
         </div>
       </div>
 
       {# Middle Row (Next Class Info) #}
-      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:20px; margin-bottom:16px; padding-bottom:16px; border-bottom:1px solid var(--sp-border);">
-        
+      {% set _has_sched = c.upcoming_classes or c.next_class %}
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:20px;{% if c.upcoming_classes %} margin-bottom:16px; padding-bottom:16px; border-bottom:1px solid var(--sp-border);{% endif %}">
+
         {# Next Class #}
         <div style="display:flex; gap:12px;">
           <span class="sp-ms" style="color:var(--sp-text-3); font-size:20px; margin-top:2px;">calendar_today</span>
@@ -141,27 +148,23 @@
 
       </div>
 
-      {# Bottom Row (Upcoming Classes & Timetable button) #}
-      <div style="background:var(--sp-bg); border-radius:8px; padding:0px 16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
-        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-          <span class="sp-ms" style="color:var(--sp-text-3); font-size:18px;">calendar_today</span>
-          <span style="font-size:13px; color:var(--sp-text-3);">Upcoming Classes (Next 2)</span>
-          
+      {# Bottom Row (Upcoming Classes & Timetable button); left out when nothing follows the next class #}
+      {% if c.upcoming_classes %}
+      <div class="cs-up">
+        <div class="cs-up-main">
           {% if c.upcoming_classes %}
+            <span class="cs-up-lbl"><span class="sp-ms" aria-hidden="true">event_upcoming</span>Upcoming classes</span>
             {% for uc in c.upcoming_classes %}
-            <span style="background:#fff; border:1px solid var(--sp-border); color:var(--sp-text-2); font-size:12px; padding:4px 10px; border-radius:20px; box-shadow:0 1px 2px rgba(0,0,0,0.02);">
-              {{ uc.date }} &nbsp;&middot;&nbsp; {{ uc.time }}
-            </span>
+            <span class="cs-up-chip"><span class="sp-ms" aria-hidden="true">schedule</span>{{ uc.date }} <small>{{ uc.time }}</small></span>
             {% endfor %}
-          {% else %}
-            <span style="font-size:13px; color:var(--sp-text-4);">No upcoming classes</span>
           {% endif %}
         </div>
-        
+
         <a href="/student-portal/timetable?course={{ c.course_offering }}" class="sp-course-card-btn">
           View Timetable <span class="sp-ms" style="font-size:16px;">chevron_right</span>
         </a>
       </div>
+      {% endif %}
 
     </div>
     {% endfor %}
@@ -174,7 +177,7 @@
 {# Bottom CTA #}
 <div class="fade-in" style="margin-top:32px; margin-bottom:32px; background:var(--sp-bg); border:1px solid var(--sp-border); border-radius:12px; padding:24px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px;">
   <div style="display:flex; align-items:flex-start; gap:16px;">
-    <div style="background:#fee2e2; color:var(--sp-primary); width:48px; height:48px; border-radius:8px; display:flex; align-items:center; justify-content:center;">
+    <div style="background:#fff0f2; color:var(--sp-primary); width:48px; height:48px; border-radius:8px; display:flex; align-items:center; justify-content:center;">
       <span class="sp-ms" style="font-size:24px;">calendar_today</span>
     </div>
     <div>

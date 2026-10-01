@@ -4,9 +4,10 @@
 
 {% block content %}
 
-<div class="fp-page-header fade-in">
-  <h1 class="fp-page-title">Marks Entry</h1>
-  <p class="fp-page-sub">View and manage student marks for your courses</p>
+<div class="fp-page-header fade-in" style="background: var(--fp-card, #fff); border: 1px solid var(--fp-border, #e5e7eb); border-radius: 14px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
+  <div>
+    <h1 class="fp-page-title" style="margin: 0; font-size: 18px !important; font-weight: 700 !important;">Marks Entry</h1>
+  </div>
 </div>
 
 {% if portal_error %}
@@ -32,9 +33,6 @@
         {% endfor %}
         {% endif %}
       </select>
-      {% if selected_co %}
-      <span style="font-size:12px;color:var(--fp-text-4);">{{ marks_stats.total }} students</span>
-      {% endif %}
     </div>
   </div>
 </div>
@@ -45,7 +43,7 @@
 {% if result_view_blocked %}
 <div class="fp-card fade-in">
   <div class="fp-empty">
-    <span class="fp-ms" style="font-size:48px;color:var(--fp-danger);">lock</span>
+    <span class="fp-ms" style="font-size:48px;color:var(--fp-primary);">lock</span>
     <p class="fp-empty-title">Results Not Available</p>
     {% if view_deadline_expired %}
     <p class="fp-empty-sub">The view access deadline for this course has passed. Please contact your Programme Chair.</p>
@@ -60,7 +58,7 @@
 {# ── Locked banner ───────────────────────────────────────────── #}
 {% if result_locked %}
 <div class="fp-alert fp-alert-warning fade-in" style="margin-bottom:16px;display:flex;align-items:center;gap:10px;">
-  <span class="fp-ms" style="font-size:20px;color:var(--fp-warning);">lock</span>
+  <span class="fp-ms" style="font-size:20px;color:var(--fp-primary);">lock</span>
   <div>
     {% if edit_deadline_expired %}
     <strong>Edit deadline has passed</strong> for this course. You can view marks but the edit window is now closed.
@@ -74,7 +72,7 @@
 {# ── Mask notice ─────────────────────────────────────────────── #}
 {% if mask_student_info %}
 <div class="fp-alert fp-alert-warning fade-in" style="margin-bottom:16px;display:flex;align-items:center;gap:10px;">
-  <span class="fp-ms" style="font-size:20px;color:var(--fp-warning);">visibility_off</span>
+  <span class="fp-ms" style="font-size:20px;color:var(--fp-primary);">visibility_off</span>
   <div>
     <strong>Student identity is masked</strong> for this course. Names and registration IDs are hidden as per assessment policy.
   </div>
@@ -83,22 +81,22 @@
 
 {# ── Stats ──────────────────────────────────────────────────── #}
 <div class="fp-stat-grid fp-vb-stat-grid" style="margin-bottom:20px;">
-  <div class="fp-stat-card fp-vb-stat-card fp-vb-accent-blue fade-in" style="animation-delay:0.04s;">
-    <div class="fp-stat-icon fp-c-blue"><span class="fp-ms">groups</span></div>
+  <div class="fp-stat-card fp-vb-stat-card fp-vb-accent-maroon fade-in" style="animation-delay:0.04s;">
+    <div class="fp-stat-icon fp-c-navy"><span class="fp-ms">groups</span></div>
     <div class="fp-stat-body">
       <div class="fp-stat-val">{{ marks_stats.total }}</div>
       <div class="fp-stat-lbl">Total Students</div>
     </div>
   </div>
-  <div class="fp-stat-card fp-vb-stat-card fp-vb-accent-teal fade-in" style="animation-delay:0.08s;">
-    <div class="fp-stat-icon fp-c-teal"><span class="fp-ms">grading</span></div>
+  <div class="fp-stat-card fp-vb-stat-card fp-vb-accent-maroon fade-in" style="animation-delay:0.08s;">
+    <div class="fp-stat-icon fp-c-navy"><span class="fp-ms">grading</span></div>
     <div class="fp-stat-body">
       <div class="fp-stat-val">{{ marks_stats.graded }}</div>
       <div class="fp-stat-lbl">Graded</div>
     </div>
   </div>
-  <div class="fp-stat-card fp-vb-stat-card fp-vb-accent-green fade-in" style="animation-delay:0.12s;">
-    <div class="fp-stat-icon fp-c-green"><span class="fp-ms">check_circle</span></div>
+  <div class="fp-stat-card fp-vb-stat-card fp-vb-accent-maroon fade-in" style="animation-delay:0.12s;">
+    <div class="fp-stat-icon fp-c-navy"><span class="fp-ms">check_circle</span></div>
     <div class="fp-stat-body">
       <div class="fp-stat-val">{{ marks_stats.passed }}</div>
       <div class="fp-stat-lbl">Passed</div>
@@ -107,8 +105,8 @@
       {% endif %}
     </div>
   </div>
-  <div class="fp-stat-card fp-vb-stat-card fp-vb-accent-red fade-in" style="animation-delay:0.16s;">
-    <div class="fp-stat-icon fp-c-red"><span class="fp-ms">cancel</span></div>
+  <div class="fp-stat-card fp-vb-stat-card fp-vb-accent-maroon fade-in" style="animation-delay:0.16s;">
+    <div class="fp-stat-icon fp-c-navy"><span class="fp-ms">cancel</span></div>
     <div class="fp-stat-body">
       <div class="fp-stat-val">{{ marks_stats.failed }}</div>
       <div class="fp-stat-lbl">Failed</div>
@@ -130,11 +128,11 @@
     <div style="flex:1;min-width:180px;">
       <div style="display:flex;flex-direction:column;gap:12px;">
         <div style="display:flex;align-items:center;gap:10px;">
-          <div style="width:12px;height:12px;border-radius:50%;background:var(--fp-success);flex-shrink:0;"></div>
+          <div style="width:12px;height:12px;border-radius:50%;background:var(--fp-primary);flex-shrink:0;"></div>
           <span style="font-size:13px;color:var(--fp-text-2);">Passed: <strong>{{ marks_stats.passed }}</strong></span>
         </div>
         <div style="display:flex;align-items:center;gap:10px;">
-          <div style="width:12px;height:12px;border-radius:50%;background:var(--fp-danger);flex-shrink:0;"></div>
+          <div style="width:12px;height:12px;border-radius:50%;background:#d49aa5;flex-shrink:0;"></div>
           <span style="font-size:13px;color:var(--fp-text-2);">Failed: <strong>{{ marks_stats.failed }}</strong></span>
         </div>
         <div style="display:flex;align-items:center;gap:10px;">
@@ -202,7 +200,7 @@
             </td>
             <td style="text-align:center;">
               {% if m.grade and m.grade != '—' %}
-              <span class="fp-badge fp-badge-info">{{ m.grade }}</span>
+              <span class="fp-badge fp-badge-dark">{{ m.grade }}</span>
               {% else %}
               <span style="color:var(--fp-text-4);">—</span>
               {% endif %}
@@ -211,7 +209,7 @@
               {% if m.status == 'Pass' %}
               <span class="fp-badge fp-badge-success">Pass</span>
               {% elif m.status == 'Fail' %}
-              <span class="fp-badge fp-badge-danger">Fail</span>
+              <span class="fp-badge fp-badge-outline">Fail</span>
               {% else %}
               <span class="fp-badge fp-badge-neutral">{{ m.status }}</span>
               {% endif %}
@@ -330,13 +328,13 @@ document.addEventListener('click', function(e) {
     { scm_name: d.name },
     function(m) {
       if (!m) {
-        content.innerHTML = '<div style="color:var(--fp-danger);padding:16px;">Could not load details. Please try again.</div>';
+        content.innerHTML = '<div style="color:var(--fp-primary);padding:16px;">Could not load details. Please try again.</div>';
         return;
       }
       content.innerHTML = fpBuildModalContent(m, d);
     },
     function() {
-      content.innerHTML = '<div style="color:var(--fp-danger);padding:16px;">Could not load details. Please try again.</div>';
+      content.innerHTML = '<div style="color:var(--fp-primary);padding:16px;">Could not load details. Please try again.</div>';
     }
   );
 });
@@ -348,7 +346,7 @@ function fpBuildModalContent(m, d) {
   html += '<div id="fp-marks-summary" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px;">';
   html += fpSummaryChip('Total Marks', m.total_marks != null ? m.total_marks : '—', '');
   html += fpSummaryChip('Grade', m.moderated_grade || m.grade || '—', '');
-  html += fpSummaryChip('Status', d.status || '—', d.status === 'Pass' ? 'var(--fp-success)' : d.status === 'Fail' ? 'var(--fp-danger)' : '');
+  html += fpSummaryChip('Status', d.status || '—', (d.status === 'Pass' || d.status === 'Fail') ? 'var(--fp-primary)' : '');
   if (m.enrollment_status) html += fpSummaryChip('Enrollment', m.enrollment_status, '');
   if (m.attendance_status) html += fpSummaryChip('Attendance', m.attendance_status, '');
   html += '</div>';
@@ -467,7 +465,7 @@ function fpSaveMarksEntry(input) {
         if (cells[3]) {
           var g = result.grade || '—';
           cells[3].innerHTML = (g && g !== '—')
-            ? '<span class="fp-badge fp-badge-info">' + fpEsc(g) + '</span>'
+            ? '<span class="fp-badge fp-badge-dark">' + fpEsc(g) + '</span>'
             : '<span style="color:var(--fp-text-4);">—</span>';
         }
       });
@@ -485,7 +483,7 @@ function fpSetSaveStatus(msg, isError) {
   var el = document.getElementById('fp-save-status');
   if (!el) return;
   el.textContent = msg;
-  el.style.color = isError ? 'var(--fp-danger)' : 'var(--fp-text-4)';
+  el.style.color = isError ? 'var(--fp-primary)' : 'var(--fp-text-4)';
 }
 
 function fpSummaryChip(label, value, color) {
@@ -511,7 +509,7 @@ function fpEsc(s) {
     chart: { type: 'donut', height: 200, background: 'transparent' },
     series: [passed, failed, pending],
     labels: ['Passed', 'Failed', 'Pending'],
-    colors: ['#16a34a', '#dc2626', '#e2e8f0'],
+    colors: ['#920c24', '#d49aa5', '#e2e8f0'],
     legend: { show: false },
     dataLabels: { enabled: false },
     plotOptions: { pie: { donut: { size: '65%', labels: { show: true, total: { show: true, label: 'Total', fontSize: '12px', color: '#64748b' } } } } },

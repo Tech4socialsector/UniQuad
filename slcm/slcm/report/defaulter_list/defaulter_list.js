@@ -10,7 +10,7 @@ frappe.query_reports["Defaulter List"] = {
 			fieldname: "demand_type",
 			label: __("Demand Type"),
 			fieldtype: "Select",
-			options: "\nAcademic\nHostel\nExamination\nDeposit\nFine\nService",
+			options: "\nAcademic\nNon Academic",
 		},
 		{
 			fieldname: "student",

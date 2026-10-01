@@ -5,6 +5,22 @@ frappe.pages['result-settings'].on_page_load = function (wrapper) {
 		single_column: true,
 	});
 
+	// Shared brand theme (#920C24 + Merriweather) for all Examination Result tabs
+	$(wrapper).addClass('er-theme');
+	if (!document.getElementById('er-theme-font')) {
+		$('head').append(
+			'<link rel="preconnect" href="https://fonts.googleapis.com">' +
+			'<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
+			'<link id="er-theme-font" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Merriweather:opsz,wght@18..144,300..900&display=swap">'
+		);
+	}
+	frappe.require('/assets/slcm/css/exam_results_theme.css');
+	// On narrow screens the tab strip scrolls sideways — bring the active tab into view
+	setTimeout(function () {
+		var $nav = $(wrapper).find('.er2-page-nav'), $act = $nav.find('.er2-pnav-btn.active');
+		if ($nav.length && $act.length) $nav.scrollLeft($act.position().left + $nav.scrollLeft() - 12);
+	}, 0);
+
 	// ── CSS ───────────────────────────────────────────────────────────────────
 	if (!document.getElementById('rs-style')) {
 		var style = document.createElement('style');
@@ -24,8 +40,8 @@ frappe.pages['result-settings'].on_page_load = function (wrapper) {
 		                   color:#64748b; border-radius:7px; transition:all .2s; user-select:none;
 		                   letter-spacing:.1px; border:none; background:transparent;
 		                   display:inline-flex; align-items:center; gap:5px; }
-		.er2-pnav-btn:hover  { color:#4f46e5; background:rgba(79,70,229,.08); }
-		.er2-pnav-btn.active { background:#fff; color:#4f46e5; box-shadow:0 1px 4px rgba(0,0,0,.12); }
+		.er2-pnav-btn:hover  { color:#920C24; background:rgba(146,12,36,.08); }
+		.er2-pnav-btn.active { background:#fff; color:#920C24; box-shadow:0 1px 4px rgba(0,0,0,.12); }
 
 		/* ── Plan selector ── */
 		.rs-plan-card  { background:#fff; border-radius:12px; padding:14px 20px; margin-bottom:16px;
@@ -36,7 +52,7 @@ frappe.pages['result-settings'].on_page_load = function (wrapper) {
 		.rs-select     { height:36px; border:1.5px solid #e2e8f0; border-radius:8px;
 		                 padding:0 12px; font-size:13px; background:#fff; color:#1e293b;
 		                 outline:none; cursor:pointer; transition:border-color .2s; }
-		.rs-select:focus { border-color:#f59e0b; box-shadow:0 0 0 3px rgba(245,158,11,.1); }
+		.rs-select:focus { border-color:#920C24; box-shadow:0 0 0 3px rgba(146,12,36,.1); }
 
 		/* ── Sub-tab bar ── */
 		.rs-subtab-bar { display:flex; align-items:center; border-bottom:2px solid #e2e8f0;
@@ -45,24 +61,24 @@ frappe.pages['result-settings'].on_page_load = function (wrapper) {
 		                 border-bottom:2px solid transparent; margin-bottom:-2px; cursor:pointer;
 		                 white-space:nowrap; transition:all .18s; user-select:none; }
 		.rs-subtab:hover  { color:#1e293b; }
-		.rs-subtab.active { color:#e11d48; border-bottom-color:#e11d48; }
+		.rs-subtab.active { color:#920C24; border-bottom-color:#920C24; }
 
 		/* ── Generic buttons ── */
 		.rs-btn        { height:34px; padding:0 18px; border-radius:7px; border:1.5px solid #e2e8f0;
 		                 background:#fff; cursor:pointer; font-size:13px; font-weight:600;
 		                 color:#475569; transition:all .15s; white-space:nowrap; }
 		.rs-btn:hover  { background:#f8fafc; border-color:#cbd5e1; color:#1e293b; }
-		.rs-btn.primary{ background:linear-gradient(135deg,#f59e0b,#fbbf24);
+		.rs-btn.primary{ background:#920C24;
 		                 border-color:transparent; color:#fff; }
 		.rs-btn.primary:hover { opacity:.9; }
-		.rs-btn.danger { background:linear-gradient(135deg,#ef4444,#f87171);
+		.rs-btn.danger { background:#920C24;
 		                 border-color:transparent; color:#fff; }
 		.rs-btn.danger:hover { opacity:.9; }
 		.rs-btn:disabled { opacity:.5; cursor:default; }
 		.rs-icon-btn   { width:30px; height:30px; border-radius:7px; border:1.5px solid #e2e8f0;
 		                 background:#fff; cursor:pointer; display:inline-flex; align-items:center;
 		                 justify-content:center; color:#64748b; transition:all .15s; flex-shrink:0; }
-		.rs-icon-btn:hover { background:#f5f3ff; border-color:#ddd6fe; color:#7c3aed; }
+		.rs-icon-btn:hover { background:#FBEEF0; border-color:#E8B4BE; color:#920C24; }
 
 		/* ── Publish section cards ── */
 		.rs-section     { background:#fff; border-radius:12px; padding:24px 28px;
@@ -85,7 +101,7 @@ frappe.pages['result-settings'].on_page_load = function (wrapper) {
 		                border-radius:20px; border:1.5px dashed #cbd5e1; background:#fff;
 		                cursor:pointer; font-size:12.5px; font-weight:600; color:#64748b;
 		                transition:all .15s; }
-		.rs-add-btn:hover { border-color:#f59e0b; color:#92400e; background:#fffbeb; }
+		.rs-add-btn:hover { border-color:#920C24; color:#6E091B; background:#FBEEF0; }
 		.rs-add-dd    { display:none; position:absolute; top:calc(100% + 6px); left:0; z-index:999;
 		                background:#fff; border:1.5px solid #e2e8f0; border-radius:10px;
 		                box-shadow:0 8px 24px rgba(0,0,0,.12); min-width:200px; padding:5px; }
@@ -110,11 +126,11 @@ frappe.pages['result-settings'].on_page_load = function (wrapper) {
 		.rs-toggle-sl:before { content:''; position:absolute; width:18px; height:18px;
 		                       left:3px; bottom:3px; background:#fff; border-radius:50%;
 		                       transition:transform .2s; box-shadow:0 1px 3px rgba(0,0,0,.2); }
-		.rs-toggle input:checked + .rs-toggle-sl { background:#10b981; }
+		.rs-toggle input:checked + .rs-toggle-sl { background:#920C24; }
 		.rs-toggle input:checked + .rs-toggle-sl:before { transform:translateX(20px); }
 		.rs-inline-chk   { display:flex; align-items:center; gap:6px; font-size:12.5px;
 		                   color:#475569; font-weight:500; cursor:pointer; user-select:none; }
-		.rs-inline-chk input { width:15px; height:15px; accent-color:#10b981; cursor:pointer; flex-shrink:0; }
+		.rs-inline-chk input { width:15px; height:15px; accent-color:#920C24; cursor:pointer; flex-shrink:0; }
 
 		/* ── Access Results table ── */
 		.rs-ar-toolbar { display:flex; align-items:center; gap:10px; margin-bottom:12px; flex-wrap:wrap; }
@@ -122,7 +138,7 @@ frappe.pages['result-settings'].on_page_load = function (wrapper) {
 		.rs-ar-search input { width:100%; height:34px; border:1.5px solid #e2e8f0; border-radius:8px;
 		                      padding:0 10px 0 34px; font-size:13px; outline:none; color:#1e293b;
 		                      background:#fff; transition:border-color .2s; box-sizing:border-box; }
-		.rs-ar-search input:focus { border-color:#f59e0b; box-shadow:0 0 0 3px rgba(245,158,11,.1); }
+		.rs-ar-search input:focus { border-color:#920C24; box-shadow:0 0 0 3px rgba(146,12,36,.1); }
 		.rs-ar-search-ico { position:absolute; left:9px; top:9px; color:#94a3b8; pointer-events:none; }
 		.rs-ar-count   { font-size:13px; font-weight:700; color:#0f172a; margin-right:auto; }
 
@@ -137,14 +153,14 @@ frappe.pages['result-settings'].on_page_load = function (wrapper) {
 		.rs-ar-tbl th.center { text-align:center; }
 		.rs-ar-tbl td  { padding:12px 14px; border-bottom:1.5px solid #f1f5f9;
 		                 vertical-align:middle; white-space:nowrap; }
-		.rs-ar-tbl tbody tr:hover td { background:#fafbff; }
+		.rs-ar-tbl tbody tr:hover td { background:#FDF8F9; }
 		.rs-ar-tbl tbody tr:last-child td { border-bottom:none; }
 		.rs-ar-tbl tbody tr.rs-ar-saving td { opacity:.6; pointer-events:none; }
 
 		/* course name cell */
 		.rs-cname      { font-size:13px; font-weight:700; color:#0f172a; }
 		.rs-ccode      { display:inline-block; margin-top:3px; font-size:11px; font-weight:700;
-		                 color:#8b5cf6; background:#f5f3ff; border-radius:4px; padding:1px 6px; }
+		                 color:#920C24; background:#FBEEF0; border-radius:4px; padding:1px 6px; }
 
 		/* status pill */
 		.rs-status-pill { display:inline-flex; align-items:center; gap:5px; padding:4px 10px;
@@ -152,8 +168,8 @@ frappe.pages['result-settings'].on_page_load = function (wrapper) {
 		                  transition:all .15s; user-select:none; border:none; }
 		.rs-status-pill.unlocked { background:#d1fae5; color:#065f46; }
 		.rs-status-pill.unlocked:hover { background:#a7f3d0; }
-		.rs-status-pill.locked   { background:#fee2e2; color:#991b1b; }
-		.rs-status-pill.locked:hover { background:#fecaca; }
+		.rs-status-pill.locked   { background:#F5D9DE; color:#6E091B; }
+		.rs-status-pill.locked:hover { background:#E8B4BE; }
 
 		/* small toggle (inline table) */
 		.rs-sm-toggle  { position:relative; display:inline-block; width:38px; height:20px; cursor:pointer; }
@@ -162,21 +178,21 @@ frappe.pages['result-settings'].on_page_load = function (wrapper) {
 		.rs-sm-toggle-sl:before { content:''; position:absolute; width:15px; height:15px;
 		                          left:2.5px; bottom:2.5px; background:#fff; border-radius:50%;
 		                          transition:transform .2s; box-shadow:0 1px 2px rgba(0,0,0,.2); }
-		.rs-sm-toggle input:checked + .rs-sm-toggle-sl { background:#10b981; }
+		.rs-sm-toggle input:checked + .rs-sm-toggle-sl { background:#920C24; }
 		.rs-sm-toggle input:checked + .rs-sm-toggle-sl:before { transform:translateX(18px); }
 
 		/* deadline input */
 		.rs-deadline   { height:28px; border:1.5px solid #e2e8f0; border-radius:6px; padding:0 8px;
 		                 font-size:12px; color:#1e293b; outline:none; background:#fff;
 		                 transition:border-color .18s; max-width:160px; }
-		.rs-deadline:focus { border-color:#f59e0b; }
-		.rs-deadline.rs-dirty { border-color:#f59e0b; background:#fffbeb; }
+		.rs-deadline:focus { border-color:#920C24; }
+		.rs-deadline.rs-dirty { border-color:#920C24; background:#FBEEF0; }
 
 		/* grade access mini-badges */
 		.rs-ga-wrap    { display:flex; gap:3px; flex-wrap:wrap; min-width:110px; }
 		.rs-ga-chip    { display:inline-flex; padding:2px 6px; border-radius:4px; font-size:10px;
 		                 font-weight:800; letter-spacing:.3px; }
-		.rs-ga-chip.on  { background:#d1fae5; color:#065f46; }
+		.rs-ga-chip.on  { background:#F5D9DE; color:#6E091B; }
 		.rs-ga-chip.off { background:#f1f5f9; color:#cbd5e1; }
 
 		/* empty state */
@@ -193,8 +209,8 @@ frappe.pages['result-settings'].on_page_load = function (wrapper) {
 		.rs-spin       { animation:rs-spin 1s linear infinite; display:inline-block; vertical-align:-6px; margin-right:6px; }
 
 		/* dirty row indicator */
-		.rs-row-dirty  { background:linear-gradient(90deg,rgba(245,158,11,.07) 0, transparent 6px) !important; }
-		.rs-row-dirty td:first-child { border-left:3px solid #f59e0b; }
+		.rs-row-dirty  { background:linear-gradient(90deg,rgba(146,12,36,.07) 0, transparent 6px) !important; }
+		.rs-row-dirty td:first-child { border-left:3px solid #920C24; }
 
 		/* ── Configure Modal ── */
 		.rs-modal-overlay { position:fixed; inset:0; background:rgba(15,23,42,.35);
@@ -210,11 +226,11 @@ frappe.pages['result-settings'].on_page_load = function (wrapper) {
 		.rs-modal-close { width:28px; height:28px; border-radius:7px; border:none; background:#f1f5f9;
 		                  cursor:pointer; display:flex; align-items:center; justify-content:center;
 		                  color:#64748b; font-size:15px; transition:all .15s; flex-shrink:0; }
-		.rs-modal-close:hover { background:#fee2e2; color:#ef4444; }
+		.rs-modal-close:hover { background:#F5D9DE; color:#920C24; }
 		.rs-modal-body { flex:1; overflow-y:auto; padding:18px 22px; }
 		.rs-modal-ftr  { display:flex; align-items:center; justify-content:flex-end; gap:8px;
 		                 padding:14px 22px; border-top:1.5px solid #f1f5f9; flex-shrink:0;
-		                 background:#fafbff; }
+		                 background:#FDF8F9; }
 
 		/* modal sections */
 		.rs-msec       { margin-bottom:22px; }
@@ -226,7 +242,7 @@ frappe.pages['result-settings'].on_page_load = function (wrapper) {
 		.rs-chk-row    { display:flex; align-items:flex-start; gap:8px; padding:8px 10px;
 		                 border-radius:8px; transition:background .12s; cursor:pointer; }
 		.rs-chk-row:hover { background:#f8fafc; }
-		.rs-chk-row input { width:15px; height:15px; accent-color:#10b981; cursor:pointer;
+		.rs-chk-row input { width:15px; height:15px; accent-color:#920C24; cursor:pointer;
 		                    flex-shrink:0; margin-top:1px; }
 		.rs-chk-row-lbl { font-size:12.5px; color:#334155; font-weight:500; line-height:1.4; }
 
@@ -236,20 +252,20 @@ frappe.pages['result-settings'].on_page_load = function (wrapper) {
 		.rs-ev-sel     { height:30px; border:1.5px solid #e2e8f0; border-radius:6px; padding:0 8px;
 		                 font-size:12.5px; color:#1e293b; outline:none; background:#fff;
 		                 transition:border-color .15s; width:100%; }
-		.rs-ev-sel:focus { border-color:#8b5cf6; }
+		.rs-ev-sel:focus { border-color:#920C24; }
 		.rs-ev-inp     { height:30px; border:1.5px solid #e2e8f0; border-radius:6px; padding:0 8px;
 		                 font-size:12.5px; color:#1e293b; outline:none; background:#fff;
 		                 transition:border-color .15s; width:100%; box-sizing:border-box; }
-		.rs-ev-inp:focus { border-color:#8b5cf6; }
-		.rs-ev-del     { width:24px; height:24px; border-radius:5px; border:none; background:#fee2e2;
-		                 cursor:pointer; color:#ef4444; font-size:13px; display:flex;
+		.rs-ev-inp:focus { border-color:#920C24; }
+		.rs-ev-del     { width:24px; height:24px; border-radius:5px; border:none; background:#F5D9DE;
+		                 cursor:pointer; color:#920C24; font-size:13px; display:flex;
 		                 align-items:center; justify-content:center; flex-shrink:0; transition:background .12s; }
-		.rs-ev-del:hover { background:#fecaca; }
+		.rs-ev-del:hover { background:#E8B4BE; }
 		.rs-add-row-btn { display:inline-flex; align-items:center; gap:5px; margin-top:8px;
 		                  padding:5px 12px; border-radius:6px; border:1.5px dashed #cbd5e1;
 		                  background:#fff; cursor:pointer; font-size:12px; font-weight:600;
 		                  color:#64748b; transition:all .15s; }
-		.rs-add-row-btn:hover { border-color:#8b5cf6; color:#7c3aed; background:#f5f3ff; }
+		.rs-add-row-btn:hover { border-color:#920C24; color:#920C24; background:#FBEEF0; }
 
 		/* faculty autocomplete */
 		.rs-ac-wrap    { position:relative; width:100%; }
@@ -259,7 +275,7 @@ frappe.pages['result-settings'].on_page_load = function (wrapper) {
 		.rs-ac-wrap.open .rs-ac-dd { display:block; }
 		.rs-ac-opt     { padding:8px 12px; font-size:12.5px; cursor:pointer; color:#334155;
 		                 transition:background .1s; }
-		.rs-ac-opt:hover { background:#f5f3ff; color:#7c3aed; }
+		.rs-ac-opt:hover { background:#FBEEF0; color:#920C24; }
 
 		/* visible exams checkboxes */
 		.rs-ve-grid    { display:flex; flex-wrap:wrap; gap:6px; }
@@ -267,9 +283,9 @@ frappe.pages['result-settings'].on_page_load = function (wrapper) {
 		                 border-radius:8px; border:1.5px solid #e2e8f0; font-size:12.5px;
 		                 font-weight:500; color:#475569; cursor:pointer; transition:all .15s;
 		                 user-select:none; }
-		.rs-ve-chip:hover { border-color:#8b5cf6; color:#7c3aed; }
-		.rs-ve-chip.selected { border-color:#8b5cf6; background:#f5f3ff; color:#7c3aed; font-weight:700; }
-		.rs-ve-chip input { width:13px; height:13px; accent-color:#8b5cf6; cursor:pointer; }
+		.rs-ve-chip:hover { border-color:#920C24; color:#920C24; }
+		.rs-ve-chip.selected { border-color:#920C24; background:#FBEEF0; color:#920C24; font-weight:700; }
+		.rs-ve-chip input { width:13px; height:13px; accent-color:#920C24; cursor:pointer; }
 
 		/* ── Coming soon ── */
 		.rs-coming-card  { background:#fff; border-radius:16px; padding:60px 40px;
@@ -311,7 +327,7 @@ frappe.pages['result-settings'].on_page_load = function (wrapper) {
 	$body.html(`
 		<div class="er2-wrap" style="padding:20px 24px;">
 			<div class="er2-page-header">
-				<div class="er2-page-icon" style="background:linear-gradient(135deg,#f59e0b,#fbbf24);">
+				<div class="er2-page-icon" style="background:#920C24;">
 					<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2">
 						<circle cx="12" cy="12" r="3"/>
 						<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
@@ -1245,9 +1261,9 @@ frappe.pages['result-settings'].on_page_load = function (wrapper) {
 	}
 
 	function componentColor(type) {
-		if (type === 'Re Exam') return '#ef4444';
-		if (type === 'Makeup')  return '#f97316';
-		return '#059669';
+		if (type === 'Re Exam') return '#920C24';
+		if (type === 'Makeup')  return '#920C24';
+		return '#920C24';
 	}
 
 	// ── Shared helpers ────────────────────────────────────────────────────────

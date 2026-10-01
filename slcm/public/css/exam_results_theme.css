@@ -1,0 +1,143 @@
+/* Examination Result family (Course Results, Term Results, Publish Results, Result Settings,
+   Re Exam, Improvement Exam) — brand #920C24, Merriweather throughout.
+   Loaded by each page via frappe.require; `.er-theme` is added to the page wrapper so these
+   rules outrank the per-page <style> blocks, which reuse the same .er2-* class names. */
+
+:root {
+	--er-brand: #920C24;
+	--er-brand-dark: #6E091B;
+	--er-brand-light: #C4566A;
+	--er-brand-border: #E8B4BE;
+	--er-brand-soft: #F5D9DE;
+	--er-brand-softest: #FBEEF0;
+	--er-font: "Merriweather", Georgia, "Times New Roman", serif;
+}
+
+/* ── Typography ─────────────────────────────────────────────────────────── */
+.er-theme,
+.er-theme .page-head .title-text,
+.er-theme .navbar-breadcrumbs,
+.er-theme input, .er-theme select, .er-theme textarea, .er-theme button,
+.xif-overlay, .xif-overlay input, .xif-overlay button,
+.xas-overlay, .xas-overlay input, .xas-overlay select, .xas-overlay button,
+.rs-modal-overlay, .rs-modal-overlay input, .rs-modal-overlay select, .rs-modal-overlay button,
+#er2-popup, #er2-repeat-overlay, #er2-repeat-overlay select, #er2-repeat-overlay button {
+	font-family: var(--er-font);
+}
+.er-theme .er2-wrap { font-family: var(--er-font); background: #f6f4f4; }
+/* Merriweather runs wide and heavy — keep numbers aligned and headings from shouting */
+.er-theme table { font-variant-numeric: tabular-nums; }
+.er-theme .er2-page-title { font-weight: 700; letter-spacing: 0; }
+
+/* ── Brand accents ──────────────────────────────────────────────────────── */
+.er-theme .er2-page-icon { background: var(--er-brand) !important; }
+.er-theme ::selection { background: var(--er-brand-soft); color: var(--er-brand-dark); }
+.er-theme input[type="checkbox"], .er-theme input[type="radio"] { accent-color: var(--er-brand); }
+.er-theme .er2-lhdr input[type="checkbox"] { accent-color: #fff; }
+.er-theme a { color: var(--er-brand); }
+.er-theme :focus-visible { outline: 2px solid var(--er-brand); outline-offset: 1px; }
+.er-theme select:focus, .er-theme input:focus, .er-theme textarea:focus { outline: none; }
+.er-theme .er2-pnav-btn.active { box-shadow: 0 1px 4px rgba(146, 12, 36, .18); }
+
+/* Thin brand-tinted scrollbars for the wide results tables */
+.er-theme *::-webkit-scrollbar { height: 8px; width: 8px; }
+.er-theme *::-webkit-scrollbar-thumb { background: var(--er-brand-border); border-radius: 8px; }
+.er-theme *::-webkit-scrollbar-thumb:hover { background: var(--er-brand-light); }
+.er-theme *::-webkit-scrollbar-track { background: transparent; }
+
+/* ── Layout robustness (all widths) ─────────────────────────────────────── */
+/* Tab strips: never overflow the page — scroll sideways instead */
+.er-theme .er2-page-nav,
+.er-theme .er2-tabs {
+	max-width: 100%;
+	flex-wrap: nowrap;
+	overflow-x: auto;
+	scrollbar-width: none;
+	-webkit-overflow-scrolling: touch;
+}
+.er-theme .er2-page-nav::-webkit-scrollbar,
+.er-theme .er2-tabs::-webkit-scrollbar { display: none; }
+.er-theme .er2-pnav-btn, .er-theme .er2-tab { flex-shrink: 0; white-space: nowrap; }
+
+/* Result Settings sub-tabs: the -2px underline overlap made the bar scroll vertically */
+.er-theme .rs-subtab-bar { overflow-y: hidden; border-bottom: none; box-shadow: inset 0 -2px 0 #e2e8f0; scrollbar-width: none; }
+.er-theme .rs-subtab-bar::-webkit-scrollbar { display: none; }
+.er-theme .rs-subtab { margin-bottom: 0; }
+
+/* Empty states were grey-on-grey (#cbd5e1 on #f1f5f9) — lift to readable contrast */
+.er-theme [class*="-empty-txt"] { color: #64748b; }
+.er-theme [class*="-empty-sub"] { color: #94a3b8; }
+
+.er-theme .er2-filterrow { flex-wrap: wrap; }
+.er-theme .er2-select { text-overflow: ellipsis; }
+.er-theme .er2-wrap img, .er-theme .er2-wrap svg { max-width: 100%; }
+
+/* ── Tablet ≤ 1100px ────────────────────────────────────────────────────── */
+@media (max-width: 1100px) {
+	.er-theme .er2-left { width: 260px; }
+	.er-theme .er2-filter-card > div[style*="margin-left:auto"] { margin-left: 0 !important; width: 100%; flex-wrap: wrap; }
+}
+
+/* ── Phone / narrow ≤ 768px ─────────────────────────────────────────────── */
+@media (max-width: 768px) {
+	.er-theme .er2-wrap { padding: 12px 12px 24px !important; }
+	.er-theme .er2-page-header { padding: 14px 16px; gap: 12px; }
+	.er-theme .er2-page-icon { width: 38px; height: 38px; }
+	.er-theme .er2-page-title { font-size: 15px; }
+
+	/* Filter cards stack: every group full width, ignore inline max-widths */
+	.er-theme .er2-filter-card,
+	.er-theme .tr-filter-card, .er-theme .pr-filter-card,
+	.er-theme .rx-filter-card, .er-theme .ix-filter-card {
+		padding: 12px 14px; gap: 10px;
+	}
+	.er-theme .er2-fgroup, .er-theme .tr-fgroup, .er-theme .pr-fgroup,
+	.er-theme .rx-fgroup, .er-theme .ix-fgroup, .er-theme .rs-fgroup,
+	.er-theme .rx-field-group, .er-theme .ix-field-group {
+		min-width: 100% !important; max-width: 100% !important; flex: 1 1 100%;
+	}
+	.er-theme .er2-srch, .er-theme .tr-srch, .er-theme .pr-srch, .er-theme .rs-ar-search {
+		min-width: 100%; max-width: 100%;
+	}
+	.er-theme .er2-actbar, .er-theme .tr-actbar, .er-theme .pr-actbar { padding: 10px; }
+	/* "→" separators between stacked filters make no sense vertically (JS shows them inline) */
+	.er-theme [class*="-filter-arrow"] { display: none !important; }
+	/* Right-aligned button clusters wrap onto their own full-width row */
+	.er-theme [class*="-actbar"] > div[style*="margin-left:auto"],
+	.er-theme [class*="-filter-card"] > div[style*="margin-left:auto"] {
+		margin-left: 0 !important; width: 100%; flex-wrap: wrap;
+	}
+	.er-theme .er2-paglen-wrap { margin-left: 0; }
+	/* Re Exam / Improvement Exam table headers: title, filters and search wrap */
+	.er-theme .ix-table-topbar, .er-theme .rx-table-topbar { flex-wrap: wrap; gap: 8px; }
+	.er-theme .ix-table-topbar > *, .er-theme .rx-table-topbar > * { flex-wrap: wrap; }
+	.er-theme .ix-srch, .er-theme .rx-srch { flex: 1 1 100%; }
+	.er-theme .ix-srch input, .er-theme .rx-srch input { width: 100% !important; }
+
+	/* Stat cards two per row */
+	.er-theme .er2-icard, .er-theme .er2-stat-card { min-width: calc(50% - 6px); flex: 1 1 calc(50% - 6px); }
+
+	/* Course Results split: student list on top, marks below */
+	.er-theme .er2-split { flex-direction: column; }
+	.er-theme .er2-left { width: 100% !important; max-height: 320px; border-right: none; border-bottom: 1.5px solid #f1f5f9; }
+	.er-theme .er2-left.collapsed { max-height: 0; }
+	.er-theme .er2-collapse-btn { display: none; }
+
+	/* Modals fill the screen width */
+	/* (overlay-prefixed so they outrank the per-page <style> blocks injected later) */
+	.xif-overlay .xif-modal, .xas-overlay .xas-modal, .rs-modal-overlay .rs-modal, #er2-repeat-overlay #er2-repeat-dialog {
+		width: 100% !important; max-width: calc(100vw - 24px) !important;
+	}
+	.xif-overlay .xif-body { flex-direction: column; }
+	.xif-overlay .xif-types { width: 100%; display: flex; gap: 4px; overflow-x: auto; border-right: none; border-bottom: 1.5px solid #f1f5f9; }
+	.xif-overlay .xif-type { flex-shrink: 0; margin-bottom: 0; }
+	.rs-modal-overlay .rs-chk-grid { grid-template-columns: 1fr !important; }
+	#er2-popup { display: none !important; } /* hover card is unusable on touch */
+}
+
+/* ── Print: drop chrome, keep tables ────────────────────────────────────── */
+@media print {
+	.er-theme .er2-page-nav, .er-theme .er2-filter-card, .er-theme .er2-actbar,
+	.er-theme .er2-filterrow { display: none !important; }
+	.er-theme .er2-wrap { background: #fff; padding: 0 !important; }
+}

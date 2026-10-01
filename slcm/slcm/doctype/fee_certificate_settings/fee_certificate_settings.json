@@ -13,18 +13,27 @@
   "institute_email",
   "institute_website",
   "footer_note",
+  "section_letterhead",
+  "letterhead_header_image",
+  "column_break_letterhead",
+  "letterhead_footer_image",
   "section_cfo",
   "cfo_name",
   "cfo_designation",
   "column_break_cfo",
   "cfo_signature",
   "seal_image",
+  "signature_includes_designation",
   "section_bank",
   "bank_account_name",
   "bank_account_no",
+  "bank_name",
   "column_break_bank",
   "bank_ifsc_code",
-  "bank_branch"
+  "bank_branch",
+  "bank_account_type",
+  "section_purposes",
+  "purposes"
  ],
  "fields": [
   {
@@ -71,7 +80,30 @@
   {
    "fieldname": "footer_note",
    "fieldtype": "Small Text",
-   "label": "Footer Note"
+   "label": "Footer Note",
+   "description": "Used only when no Letter Head Footer Image is set."
+  },
+  {
+   "fieldname": "section_letterhead",
+   "fieldtype": "Section Break",
+   "label": "Letter Head",
+   "description": "When a header image is set it replaces the text header built from the Institute Details above; likewise the footer image replaces the Footer Note."
+  },
+  {
+   "fieldname": "letterhead_header_image",
+   "fieldtype": "Attach Image",
+   "label": "Letter Head Header Image",
+   "description": "Full-width banner printed at the top of every certificate (logo, name, address, contact)."
+  },
+  {
+   "fieldname": "column_break_letterhead",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "letterhead_footer_image",
+   "fieldtype": "Attach Image",
+   "label": "Letter Head Footer Image",
+   "description": "Full-width strip printed at the bottom of every certificate."
   },
   {
    "fieldname": "section_cfo",
@@ -105,6 +137,13 @@
    "label": "Seal / Stamp Image"
   },
   {
+   "default": "1",
+   "fieldname": "signature_includes_designation",
+   "fieldtype": "Check",
+   "label": "Signature Image Includes Designation",
+   "description": "Tick when the signature image already carries the designation/address text, so it is not printed a second time below the image."
+  },
+  {
    "fieldname": "section_bank",
    "fieldtype": "Section Break",
    "label": "Bank Account Details"
@@ -112,12 +151,17 @@
   {
    "fieldname": "bank_account_name",
    "fieldtype": "Data",
-   "label": "Account Name"
+   "label": "Account Holder Name"
   },
   {
    "fieldname": "bank_account_no",
    "fieldtype": "Data",
    "label": "Account Number"
+  },
+  {
+   "fieldname": "bank_name",
+   "fieldtype": "Data",
+   "label": "Bank Name"
   },
   {
    "fieldname": "column_break_bank",
@@ -131,12 +175,30 @@
   {
    "fieldname": "bank_branch",
    "fieldtype": "Data",
-   "label": "Bank & Branch"
+   "label": "Branch"
+  },
+  {
+   "default": "Savings",
+   "fieldname": "bank_account_type",
+   "fieldtype": "Data",
+   "label": "Account Type"
+  },
+  {
+   "fieldname": "section_purposes",
+   "fieldtype": "Section Break",
+   "label": "Certificate Purposes"
+  },
+  {
+   "fieldname": "purposes",
+   "fieldtype": "Table",
+   "label": "Purposes & Templates",
+   "options": "Fee Certificate Purpose Template",
+   "description": "Each row is one Purpose option on the Fee Certificate Request, with the heading and text printed for it. Rename or edit the text freely; open a row to edit its content."
   }
  ],
  "issingle": 1,
  "links": [],
- "modified": "2026-09-08 00:00:00.000000",
+ "modified": "2026-09-28 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Fee Certificate Settings",

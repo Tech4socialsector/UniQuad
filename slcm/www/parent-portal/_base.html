@@ -585,7 +585,7 @@
     .pp-ward-banner-avatar img { width: 100%; height: 100%; object-fit: cover; }
     .pp-ward-banner-info { flex: 1; min-width: 0; }
     .pp-ward-banner-eyebrow { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--pp-text-3); margin-bottom: 4px; }
-    .pp-ward-banner-name { font-size: 24px; font-weight: 700; margin: 0 0 6px; letter-spacing: -0.02em; color: var(--pp-text-1); overflow-wrap: anywhere; }
+    .pp-ward-banner-name { font-size: 18px; font-weight: 700; margin: 0 0 6px; letter-spacing: -0.02em; color: var(--pp-text-1); overflow-wrap: anywhere; }
     .pp-ward-banner-meta { font-size: 13px; color: var(--pp-text-2); display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; }
     .pp-ward-banner-pill {
       background: var(--pp-border-light); color: var(--pp-text-2);
@@ -791,7 +791,7 @@
     var btn = document.getElementById('pp-so-confirm-btn');
     btn.classList.add('pp-loading');
     btn.textContent = 'Signing out…';
-    var baseLogin = '/parent/login';
+    var baseLogin = '/portal-login';
     var currentUrl = encodeURIComponent(window.location.pathname + window.location.search);
     fetch('/api/method/logout', {
       method: 'POST',
@@ -812,7 +812,7 @@
 </script>
 
 {% if is_guest %}
-<script>window.location.href = "/parent/login?redirect-to=/parent-portal";</script>
+<script>window.location.href = "/portal-login?redirect-to=/parent-portal";</script>
 {% elif not_a_parent %}
 <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f3f6f5;">
   <div style="text-align:center;max-width:420px;padding:48px 28px;background:#fff;border-radius:20px;box-shadow:0 4px 24px rgba(0,0,0,0.08);border:1px solid #e5e7eb;">

@@ -3,419 +3,1483 @@
 
 {% block extra_head %}
 <style>
+/* ── Tokens (student fees page) ─────────────────────────────────────── */
 :root {
-  --sp-primary: #2b2e4a;
-  --sp-border: #e5e7eb;
-  --sp-border-light: #f3f4f6;
-  --sp-text-1: #111827;
-  --sp-text-2: #374151;
-  --sp-text-3: #6b7280;
-  --sp-text-4: #9ca3af;
-  --sp-success: #16a34a;
-  --sp-success-bg: #dcfce7;
-  --sp-danger: #dc2626;
-  --sp-danger-bg: #fee2e2;
-  --sp-warning: #d97706;
-  --sp-warning-bg: #fef3c7;
-  --sp-radius: 12px;
-  --sp-card: #ffffff;
+  --spf-maroon:  var(--sp-primary, #920c24);
+  --spf-maroon-soft: rgba(146,12,36,0.06);
+  --spf-green:   #000000;            /* amounts & other 'ok' values stay black */
+  --spf-paid:    #008000;            /* only the word "Paid" is green */
+  --spf-red:     var(--sp-danger, #920c24);
+  --spf-amber:   #920c24;            /* AA-contrast amber for small text */
+  --spf-border:  #e5e7eb;
+  --spf-row:     #f1f2f4;
+  --spf-head:    #f9fafb;
+  --spf-muted:   #64748b;
+  --spf-text:    var(--sp-text-1, #111827);
+  --spf-text-2:  var(--sp-text-2, #374151);
+  --spf-card:    var(--sp-card, #ffffff);
+  --spf-radius:  12px;
 }
-body { background-color: #f8fafc; font-family: 'Inter', sans-serif; }
+.spf-page { min-width: 0; color: var(--spf-text); }
+.spf-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+.is-hidden { display: none !important; }
+[data-tab-meta] { display: inline-flex; align-items: center; gap: 10px; }
 
-/* Utility */
-.flex { display: flex; }
-.items-center { align-items: center; }
-.justify-between { justify-content: space-between; }
-.gap-2 { gap: 8px; }
-.gap-4 { gap: 16px; }
-.text-sm { font-size: 14px; }
-.text-xs { font-size: 12px; }
-.font-semibold { font-weight: 600; }
-.font-bold { font-weight: 700; }
-.text-gray-500 { color: #6b7280; }
-.text-gray-900 { color: #111827; }
-.text-danger { color: #dc2626; }
-.text-success { color: #16a34a; }
-.text-warning { color: #d97706; }
-
-/* Page Header */
-.sp-page-header { margin-bottom: 24px; }
-.sp-page-title { font-size: 24px; font-weight: 700; color: var(--sp-text-1); margin: 0 0 4px; }
-.sp-page-sub { font-size: 14px; color: var(--sp-text-3); margin: 0; }
-
-/* Cards */
-.card { background: var(--sp-card); border: 1px solid var(--sp-border); border-radius: var(--sp-radius); padding: 16px; margin-bottom: 16px; }
-
-/* Student Card */
-.student-photo { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; background: #e5e7eb; }
-.status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--sp-success); display: inline-block; margin-right: 4px; }
-
-/* Stat Cards */
-.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 16px; }
-.stat-card { background: var(--sp-card); border: 1px solid var(--sp-border); border-radius: var(--sp-radius); padding: 16px; position: relative; }
-.stat-icon { position: absolute; top: 16px; right: 16px; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 6px; }
-.stat-icon.red { background: var(--sp-danger-bg); color: var(--sp-danger); }
-.stat-icon.green { background: var(--sp-success-bg); color: var(--sp-success); }
-.stat-title { font-size: 11px; font-weight: 700; color: var(--sp-text-3); text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
-.stat-amount { font-size: 24px; font-weight: 800; color: var(--sp-text-1); margin-bottom: 4px; }
-.stat-sub { font-size: 11px; color: var(--sp-text-4); }
-.stat-sub.green { color: var(--sp-success); font-weight: 600; }
-.stat-sub.red { color: var(--sp-danger); font-weight: 600; }
-
-/* Progress Bar */
-.progress-container { margin: 24px 0 12px 0; }
-.progress-bar { height: 8px; background: var(--sp-border-light); border-radius: 4px; overflow: hidden; margin: 8px 0; }
-.progress-fill { height: 100%; background: #991b1b; transition: width 0.3s; }
-
-/* Grids */
-.section-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
-.section-title { font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--sp-border); padding-bottom: 12px; margin-bottom: 12px; }
-
-/* Tables */
-.table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.table th { text-align: left; padding: 8px 0; color: var(--sp-text-4); font-size: 11px; text-transform: uppercase; border-bottom: 1px solid var(--sp-border-light); }
-.table td { padding: 12px 0; border-bottom: 1px solid var(--sp-border-light); }
-.table tr:last-child td { border-bottom: none; }
-
-/* Pills */
-.pill { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
-.pill.green { background: var(--sp-success-bg); color: var(--sp-success); border: 1px solid var(--sp-success); }
-.pill.orange { background: var(--sp-warning-bg); color: var(--sp-warning); border: 1px solid var(--sp-warning); }
-.pill.red { background: var(--sp-danger-bg); color: var(--sp-danger); border: 1px solid var(--sp-danger); }
-
-/* Custom icons */
-.svg-icon { width: 16px; height: 16px; fill: currentColor; }
-
-@media (max-width: 900px) {
-  .stat-grid { grid-template-columns: repeat(2, 1fr) !important; }
-  .section-grid { grid-template-columns: 1fr !important; }
+/* ── Page header ────────────────────────────────────────────────────── */
+.spf-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin: 0 0 16px; background: var(--spf-card); border: 1px solid var(--spf-border); border-radius: 14px; padding: 16px 20px; }
+.spf-title { font-size: 26px; font-weight: 700; color: var(--spf-text); letter-spacing: -0.01em; }
+.spf-sub { font-size: 13.5px; color: var(--spf-muted); margin: 0; }
+.spf-ay { display: flex; flex-direction: column; gap: 4px; min-width: 160px; }
+.spf-ay-label { font-size: 11px; font-weight: 700; color: var(--spf-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.spf-ay-select, .spf-ay-static {
+  height: 38px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--spf-border); background: var(--spf-card);
+  font: inherit; font-size: 13.5px; font-weight: 600; color: var(--spf-text); display: flex; align-items: center;
 }
-@media (max-width: 500px) {
-  .stat-grid { grid-template-columns: 1fr !important; }
-  .card.flex { flex-direction: column; align-items: flex-start; }
-  .card.flex > div.text-right { text-align: left; margin-top: 16px; flex-wrap: wrap; justify-content: flex-start; }
+.spf-ay-select { cursor: pointer; padding-right: 32px; appearance: none; -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%2364748b' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center; background-size: 16px; }
+.spf-ay-select:focus-visible { outline: 2px solid var(--spf-maroon); outline-offset: 2px; }
+.spf-ay-hint { font-size: 12px; color: var(--spf-muted); margin: -8px 0 14px; display: none; }
+.spf-ay-hint.show { display: block; }
+@media (max-width: 560px) { .spf-ay { width: 100%; } }
+
+/* ── Cards / rows ───────────────────────────────────────────────────── */
+.spf-card { background: var(--spf-card); border: 1px solid var(--spf-border); border-radius: var(--spf-radius); min-width: 0; display: flex; flex-direction: column; }
+.spf-card-hd { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 20px; min-height: 56px; border-bottom: 1px solid var(--spf-border); flex-wrap: wrap; }
+.spf-card-title { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 15px; font-weight: 700; color: var(--spf-text); }
+.spf-card-title .sp-ms { font-size: 19px; color: var(--spf-maroon); }
+.spf-card-sub { font-size: 12px; color: var(--spf-muted); margin-top: 2px; font-weight: 500; }
+.spf-card-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 12.5px; color: var(--spf-muted); font-weight: 600; }
+.spf-card-bd { padding: 16px 20px; }
+.spf-card-ft { padding: 12px 20px; border-top: 1px solid var(--spf-border); margin-top: auto; }
+.spf-sep { color: #cbd5e1; }
+.spf-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; margin-bottom: 16px; }
+@media (min-width: 1280px) { .spf-row-detail { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1600px) { .spf-row-tables { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1280px) { .spf-row-pair { grid-template-columns: repeat(2, minmax(0, 1fr)); } .spf-row-pair > :only-child { grid-column: 1 / -1; } }
+
+/* ── Buttons ────────────────────────────────────────────────────────── */
+.spf-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 34px; padding: 6px 14px;
+  border-radius: 8px; cursor: pointer; font: inherit; font-size: 13px; font-weight: 600; white-space: nowrap; text-decoration: none;
+  border: 1px solid var(--spf-maroon); transition: background .15s, opacity .15s;
+}
+.spf-btn .sp-ms { font-size: 16px; }
+.spf-btn-primary { background: var(--spf-maroon); color: #fff; }
+.spf-btn-primary:hover:not(:disabled) { opacity: .9; }
+.spf-btn-ghost { background: var(--spf-card); color: var(--spf-maroon); }
+.spf-btn-ghost:hover:not(:disabled) { background: var(--spf-maroon-soft); }
+.spf-btn-sm { min-height: 30px; padding: 4px 10px; font-size: 12.5px; }
+.spf-btn:disabled { opacity: .55; cursor: not-allowed; }
+.spf-btn:focus-visible, .spf-link:focus-visible, .spf-dl-btn:focus-visible, .spf-tab:focus-visible { outline: 2px solid var(--spf-maroon); outline-offset: 2px; }
+.spf-link { display: inline-flex; align-items: center; gap: 3px; background: none; border: none; padding: 2px 0; font: inherit; font-size: 12.5px; font-weight: 700; color: var(--spf-maroon); cursor: pointer; text-decoration: none; }
+.spf-link:hover { text-decoration: underline; }
+.spf-link .sp-ms { font-size: 16px; }
+.spf-dl-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 34px; padding: 0 12px; border-radius: 8px; text-decoration: none;
+  white-space: nowrap; font-size: 12.5px; font-weight: 600;
+  color: var(--spf-maroon); background: var(--spf-maroon-soft); border: 1px solid rgba(146,12,36,0.35); transition: background .15s, color .15s;
+}
+.spf-dl-btn .sp-ms { font-size: 17px; }
+.spf-dl-btn:hover { background: var(--spf-maroon); border-color: var(--spf-maroon); color: #fff; }
+.spf-hint-chip { display: inline-flex; align-items: center; gap: 3px; font-size: 11.5px; font-weight: 600; color: var(--spf-muted); white-space: nowrap; }
+.spf-hint-chip .sp-ms { font-size: 14px; }
+
+/* ── Status badges & tones ──────────────────────────────────────────── */
+.spf-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 700; white-space: nowrap; line-height: 1.5; }
+.spf-badge .sp-ms { font-size: 14px; }
+.spf-badge-success { color: var(--spf-green); padding-left: 0; padding-right: 0; }
+.spf-badge-paid { color: var(--spf-paid); padding-left: 0; padding-right: 0; }
+.spf-badge-warning { color: var(--spf-amber); background: rgba(146,12,36,0.10); }
+.spf-badge-danger  { color: var(--spf-red); background: rgba(146,12,36,0.07); }
+.spf-badge-academic { color: #920C24; background: #fff0f2; }
+.spf-badge-neutral { color: var(--spf-muted); background: var(--spf-row); }
+.spf-tone-success { color: var(--spf-green) !important; }
+.spf-tone-danger  { color: var(--spf-red) !important; }
+.spf-tone-warning { color: var(--spf-amber) !important; }
+.spf-tone-maroon  { color: var(--spf-maroon) !important; }
+.spf-tone-muted   { color: var(--spf-muted) !important; }
+
+/* ── Student card ───────────────────────────────────────────────────── */
+.spf-student { flex-direction: row; align-items: center; gap: 16px; padding: 16px 20px; margin-bottom: 16px; flex-wrap: wrap; }
+.spf-avatar {
+  width: 52px; height: 52px; border-radius: 50%; flex-shrink: 0; overflow: hidden; background: var(--spf-maroon-soft);
+  color: var(--spf-maroon); border: 1px solid rgba(146,12,36,0.15); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700;
+}
+.spf-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.spf-student-main { flex: 1 1 240px; min-width: 0; }
+.spf-student-name-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.spf-student-name { font-size: 18px; font-weight: 700; color: var(--spf-text); margin: 0; overflow-wrap: anywhere; }
+.spf-dot-status { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; }
+.spf-dot-status::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.spf-student-meta { font-size: 13px; color: var(--spf-muted); margin-top: 3px; overflow-wrap: anywhere; }
+.spf-student-meta .spf-sep { margin: 0 6px; }
+.spf-facts { display: grid; grid-template-columns: repeat(3, auto); gap: 4px 28px; margin: 0; }
+.spf-facts > div { min-width: 0; }
+.spf-facts dt { font-size: 11px; font-weight: 700; color: var(--spf-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.spf-facts dd { margin: 2px 0 0; font-size: 13.5px; font-weight: 600; color: var(--spf-text); overflow-wrap: anywhere; }
+.spf-student-status { flex-shrink: 0; display: flex; align-items: center; }
+.spf-status-badge { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; padding: 5px 12px; border-radius: 8px; background: var(--spf-card); font-size: 13px; font-weight: 700; line-height: 1.3; border: 1px solid; }
+.spf-status-badge .sp-ms { font-size: 17px; }
+.spf-status-badge-paid { color: var(--spf-paid); border-color: rgba(0,128,0,0.35); }
+.spf-status-badge-due  { color: var(--spf-red); border-color: rgba(146,12,36,0.35); }
+@media (min-width: 1200px) {
+  .spf-student { flex-wrap: nowrap; }
+  .spf-student-main { flex: 1 1 200px; }
+  .spf-facts { flex: 0 1 auto; min-width: 0; gap: 4px 22px; }
+}
+@media (max-width: 1199px) {
+  .spf-student-main { order: 1; }
+  .spf-student-status { order: 2; align-self: flex-start; margin-left: auto; }
+  .spf-facts { order: 3; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; padding-top: 12px; border-top: 1px solid var(--spf-row); }
+}
+@media (max-width: 480px) { .spf-facts { grid-template-columns: 1fr 1fr; } }
+
+/* ── Notices ────────────────────────────────────────────────────────── */
+.spf-notice { display: flex; align-items: flex-start; gap: 10px; padding: 11px 16px; margin-bottom: 12px; border-radius: 10px; background: var(--spf-card); border: 1px solid var(--spf-border); font-size: 13px; color: var(--spf-text-2); }
+.spf-notice > .sp-ms { font-size: 19px; flex-shrink: 0; }
+.spf-notice-warning > .sp-ms { color: var(--spf-amber); }
+.spf-notice-success > .sp-ms { color: var(--spf-green); }
+.spf-notice-danger  > .sp-ms { color: var(--spf-red); }
+.spf-notice-info    > .sp-ms { color: var(--spf-muted); }
+
+/* ── KPI cards ──────────────────────────────────────────────────────── */
+.spf-kpis { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; margin-bottom: 16px; }
+@media (min-width: 641px)  { .spf-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1100px) { .spf-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.spf-kpi { background: var(--spf-card); border: 1px solid var(--spf-border); border-radius: var(--spf-radius); padding: 16px 18px; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.spf-kpi-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.spf-kpi-label { font-size: 11.5px; font-weight: 700; color: var(--spf-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.spf-kpi-icon { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--spf-border); display: flex; align-items: center; justify-content: center; color: var(--spf-maroon); flex-shrink: 0; }
+.spf-kpi-icon .sp-ms { font-size: 18px; }
+.spf-kpi-value { font-size: 26px; font-weight: 700; color: var(--spf-text); line-height: 1.15; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.spf-kpi-value.is-empty { color: var(--spf-muted); }
+.spf-kpi-sub { font-size: 12.5px; color: var(--spf-muted); line-height: 1.4; }
+.spf-kpi-note { font-size: 12px; font-weight: 600; line-height: 1.4; }
+.spf-kpi-note a { color: inherit; }
+
+/* ── Payment status (full width) ────────────────────────────────────── */
+.spf-bar { height: 8px; border-radius: 99px; background: var(--spf-row); overflow: hidden; }
+.spf-bar-fill { height: 100%; border-radius: 99px; background: var(--spf-maroon); transition: width .6s ease; }
+.spf-kpi-action { margin-top: 12px; }
+.spf-kpi-action .spf-btn { max-width: 100%; white-space: normal; text-align: left; }
+.spf-offline-note { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: var(--spf-muted); }
+.spf-offline-note .sp-ms { font-size: 16px; }
+
+/* ── Tables ─────────────────────────────────────────────────────────── */
+.spf-t { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 13px; }
+.spf-t th { padding: 9px 12px; background: var(--spf-head); border-bottom: 1px solid var(--spf-border); font-size: 11px; font-weight: 700; color: var(--spf-muted); text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.spf-t td { padding: 11px 12px; border-bottom: 1px solid var(--spf-row); vertical-align: middle; color: var(--spf-text-2); overflow-wrap: anywhere; }
+.spf-t th:first-child, .spf-t td:first-child { padding-left: 20px; }
+.spf-t th:last-child,  .spf-t td:last-child  { padding-right: 20px; }
+.spf-t.spf-dense th, .spf-t.spf-dense td { padding-left: 8px; padding-right: 8px; }
+.spf-t.spf-dense th:first-child, .spf-t.spf-dense td:first-child { padding-left: 20px; }
+.spf-t.spf-dense th:last-child, .spf-t.spf-dense td:last-child { padding-right: 20px; }
+.spf-t tbody tr:last-child td { border-bottom: none; }
+.spf-t tr.spf-row-data:hover td { background: #fafbfc; }
+.spf-t .c-text   { text-align: left; }
+.spf-t .c-date   { text-align: left; white-space: nowrap; }
+.spf-t .c-num    { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.spf-t .c-status { text-align: center; }
+.spf-t .c-action { text-align: right; white-space: nowrap; }
+.spf-sc-hd { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.spf-summary-cards { padding-bottom: 0; }
+.spf-mini-drill { font: inherit; color: inherit; text-align: left; background: var(--spf-card, #fff); display: flex; flex-direction: column; cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+.spf-mini-drill:hover { border-color: var(--spf-maroon, #920c24); box-shadow: 0 2px 10px rgba(146,12,36,.08); }
+.spf-mini-drill:focus-visible { outline: 2px solid var(--spf-maroon, #920c24); outline-offset: 2px; }
+.spf-mini-drill .spf-mini-lbl { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.spf-drill-caret { font-size: 15px; opacity: .6; }
+.spf-dd-overlay { position: fixed; inset: 0; z-index: 2000; background: rgba(15,23,42,.45); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.spf-dd-overlay[hidden] { display: none; }
+.spf-dd-box { background: #fff; border-radius: 12px; width: min(560px, 100%); max-height: min(80vh, 720px); display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,.25); font-family: var(--sp-font-family, 'Merriweather', Georgia, serif); color: var(--spf-text, #1f2937); font-size: 13px; }
+.spf-dd-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--spf-border, #e5e7eb); }
+.spf-dd-title { margin: 0; font-size: 16px; font-weight: 700; color: var(--spf-maroon, #920c24); font-family: inherit; }
+.spf-dd-close { font: inherit; background: none; border: 1px solid var(--spf-border, #e5e7eb); border-radius: 8px; width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; color: inherit; }
+.spf-dd-close:hover { border-color: var(--spf-maroon, #920c24); }
+.spf-dd-body { padding: 8px 20px 20px; overflow-y: auto; }
+.spf-dd-group { padding-top: 12px; }
+.spf-dd-group + .spf-dd-group { margin-top: 12px; }
+.spf-dd-group-hd { display: flex; justify-content: space-between; gap: 12px; font-size: 13.5px; font-weight: 700; color: var(--spf-maroon, #920c24); background: rgba(146,12,36,.07); border-left: 3px solid var(--spf-maroon, #920c24); border-radius: 6px; padding: 8px 12px; }
+.spf-dd-group-val { font-variant-numeric: tabular-nums; }
+.spf-dd-group-sub { font-size: 11.5px; color: var(--spf-maroon, #920c24); opacity: .8; margin: 4px 0 6px 15px; }
+.spf-dd-list { list-style: none; margin: 0; padding: 0; }
+.spf-dd-list li { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 8px 0; border-top: 1px dashed var(--spf-border, #e5e7eb); font-size: 13px; }
+.spf-dd-item { display: flex; flex-direction: column; min-width: 0; }
+.spf-dd-name { font-weight: 600; }
+.spf-dd-meta { font-size: 11.5px; color: var(--spf-muted, #6b7280); }
+.spf-dd-amt { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; display: inline-flex; gap: 6px; align-items: center; }
+.spf-dd-empty { color: var(--spf-muted, #6b7280); font-size: 12.5px; }
+.spf-filters { display: flex; flex-wrap: wrap; gap: 10px 28px; align-items: center; padding: 14px 20px 10px; }
+.spf-fchips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.spf-flabel { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--spf-muted, #6b7280); margin-right: 4px; }
+.spf-fchip { font: inherit; font-size: 12.5px; line-height: 1.4; border: 1px solid var(--spf-border, #e5e7eb); background: #fff; color: inherit; border-radius: 999px; padding: 4px 12px; cursor: pointer; }
+.spf-fchip:hover { border-color: var(--spf-maroon, #920c24); }
+.spf-fchip.is-active { background: var(--spf-maroon, #920c24); border-color: var(--spf-maroon, #920c24); color: #fff; font-weight: 600; }
+.spf-fchip:focus-visible { outline: 2px solid var(--spf-maroon, #920c24); outline-offset: 2px; }
+.spf-cards-group.is-hidden { display: none; }
+.spf-sum-sec { margin-top: 4px; }
+.spf-card-pay { align-self: flex-start; margin: 6px 0 4px; }
+.spf-dd-pay { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 12px 0 4px; padding: 10px 12px; border-radius: 8px; background: rgba(146,12,36,.06); font-size: 13px; }
+.spf-c-center { text-align: center !important; }
+.spf-icon-dl { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--spf-border, #e5e7eb); color: var(--spf-maroon, #920c24); text-decoration: none; }
+.spf-icon-dl:hover { border-color: var(--spf-maroon, #920c24); background: rgba(146,12,36,.06); }
+.spf-icon-dl .sp-ms { font-size: 18px; }
+.spf-row-toggle { font: inherit; font-size: 11.5px; font-weight: 600; margin-left: 6px; display: inline-flex; align-items: center; gap: 2px; padding: 0 6px 0 2px; height: 20px; border-radius: 999px; border: 1px solid var(--spf-border, #e5e7eb); background: #fff; color: var(--spf-maroon, #920c24); cursor: pointer; vertical-align: middle; }
+.spf-row-toggle .sp-ms { font-size: 16px; transition: transform .15s; }
+.spf-row-toggle[aria-expanded="true"] .sp-ms { transform: rotate(180deg); }
+.spf-row-toggle:focus-visible { outline: 2px solid var(--spf-maroon, #920c24); outline-offset: 1px; }
+.spf-t tr.spf-sub-row td { background: rgba(146,12,36,.035); font-size: 12.5px; padding-top: 7px; padding-bottom: 7px; }
+.spf-t tr.spf-sub-row td:first-child { padding-left: 32px; }
+.spf-t tr.spf-sub-row.is-hidden { display: none; }
+.spf-sub-main { font-weight: 600; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.spf-sub-kind { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 1px 7px; border-radius: 999px; background: #fff; border: 1px solid var(--spf-border, #e5e7eb); color: var(--spf-muted, #6b7280); }
+.spf-sub-kind-payment { color: #166534; border-color: #bbf7d0; }
+.spf-sub-kind-refund { color: #1e40af; border-color: #bfdbfe; }
+.spf-sub-kind-scholarship { color: var(--spf-maroon, #920c24); border-color: rgba(146,12,36,.25); }
+.spf-sub-kind-credit { color: #92400e; border-color: #fde68a; }
+.spf-schip.is-active { background: rgba(146,12,36,.08); border-color: var(--spf-maroon, #920c24); color: var(--spf-maroon, #920c24); font-weight: 600; }
+.spf-cards-group + .spf-cards-group { margin-top: 14px; }
+.spf-cards-group-hd { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--spf-maroon, #920c24); margin: 0 0 8px; }
+.spf-t td.c-num  { font-weight: 600; color: var(--spf-text); }
+.spf-cell-main { font-weight: 600; color: var(--spf-text); }
+.spf-cell-sub  { font-size: 11.5px; color: var(--spf-muted); margin-top: 1px; }
+.spf-cell-hint { font-size: 11.5px; font-weight: 600; margin-top: 1px; white-space: nowrap; }
+.spf-ellip { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.spf-t .spf-group-row th { background: var(--spf-card); color: var(--spf-maroon); text-transform: none; letter-spacing: 0; font-size: 12.5px; padding-top: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--spf-border); border-left: 3px solid var(--spf-maroon); }
+.spf-t .spf-group-row th:first-child { padding-left: 17px; }
+.spf-group-inner { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+.spf-group-meta { font-weight: 600; color: var(--spf-muted); font-size: 12px; }
+.spf-t .spf-total-row td { border-top: 1px solid var(--spf-border); font-weight: 700; color: var(--spf-text); }
+.spf-t .spf-net-row td { font-weight: 800; color: var(--spf-maroon); border-top: 2px solid var(--spf-maroon); font-size: 14px; }
+.spf-t .spf-net-row td.c-num { color: var(--spf-maroon); }
+.spf-tax-pill { font-size: 10.5px; font-weight: 600; padding: 1px 6px; border-radius: 6px; background: var(--spf-row); color: var(--spf-muted); margin-left: 6px; }
+.spf-t tr.spf-detail-tr > td { background: #fbfbfc; padding: 14px 20px 16px; }
+/* Fixed-row scroll box: height is capped to data-rows rows by JS (CSS max-height is the no-JS fallback). */
+.spf-t-scroll { overflow: auto; max-height: 420px; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.spf-t-scroll:focus-visible { outline: 2px solid var(--spf-maroon); outline-offset: -2px; }
+.spf-t-scroll > .spf-t { min-width: 540px; }
+.spf-t-scroll > .spf-t thead th { position: sticky; top: 0; z-index: 1; border-bottom: none; box-shadow: inset 0 -1px 0 var(--spf-border); }
+.spf-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+@media (max-width: 700px) { .spf-detail-grid { grid-template-columns: 1fr; } }
+.spf-detail-hd { font-size: 11px; font-weight: 700; color: var(--spf-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+.spf-kv { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px dashed var(--spf-border); font-size: 13px; }
+.spf-kv:last-child { border-bottom: none; }
+.spf-kv > span:last-child { font-weight: 600; color: var(--spf-text); text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.spf-detail-note { font-size: 12px; color: var(--spf-muted); margin: 2px 0 6px; }
+.spf-detail-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+
+/* ── States ─────────────────────────────────────────────────────────── */
+.spf-state { display: flex; align-items: flex-start; gap: 12px; padding: 18px 20px; }
+.spf-state > .sp-ms { font-size: 22px; color: var(--spf-muted); flex-shrink: 0; }
+.spf-state-ok > .sp-ms { color: var(--spf-green); }
+.spf-state-error > .sp-ms { color: var(--spf-red); }
+.spf-state-title { font-size: 13.5px; font-weight: 600; color: var(--spf-text-2); margin: 0; }
+.spf-state-sub { font-size: 12.5px; color: var(--spf-muted); margin: 2px 0 0; }
+.spf-state-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+
+/* ── Additional charges ─────────────────────────────────────────────── */
+.spf-mini-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 560px) { .spf-mini-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.spf-mini { border: 1px solid var(--spf-border); border-radius: 10px; padding: 10px 12px; min-width: 0; }
+.spf-mini-lbl { font-size: 11px; font-weight: 700; color: var(--spf-muted); text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.spf-mini-val { font-size: 17px; font-weight: 700; color: var(--spf-text); font-variant-numeric: tabular-nums; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.spf-mini-sub { font-size: 11.5px; color: var(--spf-muted); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.spf-payall { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 12px; padding: 10px 14px; border: 1px solid rgba(146,12,36,0.2); border-radius: 10px; }
+.spf-payall-text { font-size: 13px; color: var(--spf-text-2); }
+.spf-payall-text strong { color: var(--spf-maroon); font-variant-numeric: tabular-nums; }
+.spf-details-toggle .sp-ms { transition: transform .2s; }
+.spf-details-toggle[aria-expanded="true"] .sp-ms { transform: rotate(180deg); }
+.spf-details { border-top: 1px solid var(--spf-border); }
+.spf-tabs { display: flex; gap: 4px; padding: 10px 20px 0; border-bottom: 1px solid var(--spf-border); }
+.spf-tab { display: inline-flex; align-items: center; gap: 6px; padding: 8px 10px 9px; margin-bottom: -1px; background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; font: inherit; font-size: 13px; font-weight: 600; color: var(--spf-muted); }
+.spf-tab[aria-selected="true"] { color: var(--spf-maroon); border-bottom-color: var(--spf-maroon); }
+.spf-tab-count { font-size: 11px; font-weight: 700; padding: 0 6px; border-radius: 99px; background: var(--spf-row); color: var(--spf-muted); }
+.spf-demand-row-settled td { color: var(--spf-muted); }
+.spf-refund { display: flex; gap: 12px; padding: 12px 20px; border-bottom: 1px solid var(--spf-row); }
+.spf-refund:last-child { border-bottom: none; }
+.spf-refund-body { flex: 1; min-width: 0; font-size: 12.5px; color: var(--spf-muted); }
+.spf-refund-title { font-size: 13.5px; font-weight: 700; color: var(--spf-text); }
+.spf-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.spf-chip { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 6px; background: var(--spf-row); color: var(--spf-muted); }
+.spf-chip .sp-ms { font-size: 12px; }
+.spf-refund-right { text-align: right; flex-shrink: 0; }
+.spf-refund-amt { font-size: 14px; font-weight: 700; color: var(--spf-green); font-variant-numeric: tabular-nums; }
+.spf-subhead { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 12px 20px 8px; font-size: 12px; font-weight: 700; color: var(--spf-muted); text-transform: uppercase; letter-spacing: 0.05em; border-top: 1px solid var(--spf-border); }
+.spf-credit-cell { width: 100%; max-width: 180px; }
+.spf-credit-amt { font-weight: 600; color: var(--spf-text); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.spf-credit-bar { height: 5px; border-radius: 99px; background: var(--spf-row); overflow: hidden; margin-top: 5px; }
+.spf-credit-bar > div { height: 100%; background: var(--spf-maroon); border-radius: 99px; }
+
+/* ── Support row ────────────────────────────────────────────────────── */
+.spf-support { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin-bottom: 16px; }
+@media (min-width: 720px) { .spf-support { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.spf-support-item {
+  display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-radius: var(--spf-radius); border: 1px solid var(--spf-border);
+  background: var(--spf-card); color: var(--spf-text); text-decoration: none; cursor: pointer; font: inherit; text-align: left; width: 100%;
+}
+.spf-support-item:hover { border-color: rgba(146,12,36,0.35); }
+.spf-support-item:focus-visible { outline: 2px solid var(--spf-maroon); outline-offset: 2px; }
+.spf-support-icon { width: 36px; height: 36px; border-radius: 9px; background: var(--spf-maroon-soft); color: var(--spf-maroon); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.spf-support-icon .sp-ms { font-size: 19px; }
+.spf-support-title { display: block; font-size: 13.5px; font-weight: 700; }
+.spf-support-sub { display: block; font-size: 12px; color: var(--spf-muted); margin-top: 1px; }
+.spf-support-item > .sp-ms:last-child { margin-left: auto; color: var(--spf-muted); font-size: 20px; }
+
+/* ── Tables → stacked rows on phones ────────────────────────────────── */
+@media (max-width: 640px) {
+  .spf-t, .spf-t tbody, .spf-t tr, .spf-t td, .spf-t th { display: block; width: 100%; }
+  .spf-t colgroup, .spf-t thead { display: none; }
+  .spf-t tr.spf-row-data { display: flex; flex-direction: column; padding: 10px 16px; border-bottom: 1px solid var(--spf-row); }
+  .spf-t tr.spf-total-row, .spf-t tr.spf-net-row, .spf-t tr.spf-disc-row { padding: 10px 16px; border-bottom: 1px solid var(--spf-row); }
+  .spf-t td.c-primary { order: -1; }
+  .spf-t tr td { padding: 3px 0 !important; border: none !important; text-align: right; }
+  .spf-t tr.spf-detail-tr > td { padding: 12px 16px !important; text-align: left; }
+  .spf-t td[data-label] { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .spf-t td[data-label]::before { content: attr(data-label); flex-shrink: 0; text-align: left; font-size: 11px; font-weight: 700; color: var(--spf-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .spf-t td[data-label] > * { min-width: 0; }
+  .spf-t td.c-primary { text-align: left; padding-bottom: 4px !important; }
+  .spf-t .spf-group-row th { padding: 9px 16px 8px 13px; }
+  .spf-t td.c-empty { padding: 0 !important; text-align: left; }
+  .spf-t .spf-cell-hint { white-space: normal; }
+  .spf-t-kv tr { display: flex !important; flex-direction: row !important; justify-content: space-between; align-items: center; gap: 12px; }
+  .spf-t-kv td[data-label]::before { content: none !important; }
+  .spf-t-kv td { width: auto !important; }
+  .spf-t-scroll > .spf-t { min-width: 0; }
+  .spf-t td[data-label] > .spf-credit-cell { width: 140px; text-align: right; }
+  .spf-card-hd, .spf-card-bd { padding-left: 16px; padding-right: 16px; }
+  .spf-tabs { padding: 10px 16px 0; }
+  .spf-refund { padding: 12px 16px; }
+}
+
+/* ── Payment Summary bottom sheet (demand Pay All) ──────────────────── */
+.spf-bulk-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(3px); z-index: 8000; }
+.spf-bulk-sheet {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 8001; background: var(--spf-card); border-radius: 20px 20px 0 0;
+  display: none; flex-direction: column; max-height: 85vh; transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  box-shadow: 0 -12px 48px rgba(0,0,0,0.18); max-width: 640px; margin: 0 auto;
+}
+.spf-bulk-sheet-open { transform: translateY(0) !important; }
+.spf-bulk-handle { width: 36px; height: 4px; background: var(--spf-border); border-radius: 4px; margin: 10px auto 0; flex-shrink: 0; }
+.spf-bulk-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px 12px; border-bottom: 1px solid var(--spf-border); flex-shrink: 0; }
+.spf-bulk-title { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 700; color: var(--spf-text); }
+.spf-bulk-title .sp-ms { color: var(--spf-maroon); font-size: 20px; }
+.spf-icon-btn { width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--spf-border); background: var(--spf-card); color: var(--spf-muted); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+.spf-icon-btn:hover { color: var(--spf-maroon); border-color: var(--spf-maroon); }
+.spf-icon-btn .sp-ms { font-size: 18px; }
+.spf-bulk-body { flex: 1; overflow-y: auto; padding: 16px 20px 10px; overscroll-behavior: contain; }
+.spf-bulk-note { font-size: 12.5px; color: var(--spf-muted); margin: 0 0 12px; }
+.spf-bulk-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--spf-row); }
+.spf-bulk-num { width: 24px; height: 24px; border-radius: 6px; background: var(--spf-maroon-soft); color: var(--spf-maroon); font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.spf-bulk-label { flex: 1; font-size: 13.5px; font-weight: 600; color: var(--spf-text); min-width: 0; }
+.spf-bulk-amt { font-size: 13.5px; font-weight: 700; color: var(--spf-text); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.spf-bulk-total { display: flex; align-items: center; justify-content: space-between; padding: 12px 0 4px; font-size: 14px; font-weight: 700; color: var(--spf-text); }
+.spf-bulk-total-val { font-size: 20px; font-weight: 800; color: var(--spf-maroon); font-variant-numeric: tabular-nums; }
+.spf-bulk-foot { display: flex; gap: 10px; padding: 12px 20px 22px; flex-shrink: 0; border-top: 1px solid var(--spf-border); }
+.spf-bulk-foot .spf-btn { flex: 1; min-height: 44px; font-size: 14px; }
+@media (max-width: 600px) { .spf-bulk-foot { padding-bottom: max(22px, env(safe-area-inset-bottom)); } }
+@media (prefers-reduced-motion: reduce) { .spf-bar-fill, .spf-bulk-sheet { transition: none; } }
+
+/* ── Print summary ──────────────────────────────────────────────────── */
+.spf-print-only { display: none; }
+@media print {
+  .sp-sidebar, .sp-topbar, .sp-nav, .sp-sidebar-overlay, .spf-no-print, .spf-btn, .spf-link, .spf-dl-btn,
+  .spf-ay, .spf-ay-hint, .spf-support, #sp-pay-overlay, #sp-trust-modal, #sp-fee-counter-modal,
+  .spf-bulk-overlay, .spf-bulk-sheet, .spf-card-ft, .spf-filter-empty { display: none !important; }
+  body, .sp-main { margin: 0 !important; padding: 0 !important; background: #fff !important; }
+  .spf-print-only { display: block; font-size: 12px; color: #334155; margin-bottom: 10px; }
+  .spf-card, .spf-kpi { break-inside: avoid; box-shadow: none !important; }
+  .spf-details.is-hidden { display: block !important; }
+  .spf-row, .spf-kpis { display: block !important; }
+  .spf-row > *, .spf-kpis > * { margin-bottom: 10px; }
+  .spf-bar-fill { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  @page { margin: 14mm; }
 }
 </style>
 {% endblock %}
 
+{# ── Macros ──────────────────────────────────────────────────────────── #}
+{% macro ay(v) -%}{{ (v or '') | replace('-', ' – ') }}{%- endmacro %}
+
+{% macro badge(status, id='') -%}
+{%- set s = status or '—' -%}
+{%- if s in ('Paid', 'Settled', 'Completed', 'Captured') -%}{%- set tone, icon = 'paid', 'check_circle' -%}
+{%- elif s in ('Approved', 'Active') -%}{%- set tone, icon = 'success', 'check_circle' -%}
+{%- elif s in ('Overdue', 'Unpaid', 'Failed', 'Payment Failed', 'Rejected') -%}{%- set tone, icon = 'danger', 'error' -%}
+{%- elif s in ('Partially Paid', 'Pending', 'Payment Initiated', 'Authorized', 'Queued', 'Under Review') -%}{%- set tone, icon = 'warning', 'schedule' -%}
+{%- else -%}{%- set tone, icon = 'neutral', '' -%}{%- endif -%}
+<span class="spf-badge spf-badge-{{ tone }}"{% if id %} id="{{ id }}"{% endif %}>{% if icon %}<span class="sp-ms" aria-hidden="true">{{ icon }}</span>{% endif %}{{ s }}</span>
+{%- endmacro %}
+
+{% macro section_error(what) %}
+<div class="spf-state spf-state-error" role="alert">
+  <span class="sp-ms" aria-hidden="true">error</span>
+  <div>
+    <p class="spf-state-title">Unable to load {{ what }}.</p>
+    <p class="spf-state-sub">The rest of the page is unaffected.</p>
+    <div class="spf-state-actions">
+      <button type="button" class="spf-btn spf-btn-ghost spf-btn-sm" onclick="window.location.reload()"><span class="sp-ms" aria-hidden="true">refresh</span> Retry</button>
+    </div>
+  </div>
+</div>
+{% endmacro %}
+
+{% macro empty(icon, title, sub='', ok=False) %}
+<div class="spf-state{% if ok %} spf-state-ok{% endif %}">
+  <span class="sp-ms" aria-hidden="true">{{ icon }}</span>
+  <div>
+    <p class="spf-state-title">{{ title }}</p>
+    {% if sub %}<p class="spf-state-sub">{{ sub }}</p>{% endif %}
+  </div>
+</div>
+{% endmacro %}
+
 {% block content %}
-<div class="sp-page-header flex justify-between items-center">
+{% set _err = load_errors or {} %}
+{% set _inr = "₹{:,.0f}" %}
+{% set _summary_ok = has_fee_data and not _err.summary %}
+{% set _counter = sp_settings and sp_settings.enable_counter_payment_fees %}
+
+<div class="spf-page">
+
+{# ═══════════════ Header ═══════════════ #}
+<header class="spf-head fade-in">
   <div>
-    <h1 class="sp-page-title">Fees &amp; Payments</h1>
-    <p class="sp-page-sub">View your ward's fee summary, payments and outstanding dues.</p>
+    <h1 class="spf-title" style="font-size: 18px !important; font-weight: 700 !important; margin: 0;">Fees &amp; Payments</h1>
   </div>
-  <div>
-    <div class="text-xs font-bold text-gray-500 mb-1" style="text-align:right;">ACADEMIC YEAR</div>
-    <select class="form-control" style="border: 1px solid #e5e7eb; border-radius: 6px; padding: 6px 12px; font-size:12px; font-weight:700;">
-      {% if fee_academic_years %}
-        {% for ay in fee_academic_years %}
-          <option value="{{ ay.name }}" {% if ay.name == current_academic_year %}selected{% endif %}>{{ ay.name }}</option>
-        {% endfor %}
-      {% else %}
-        <option>{{ current_academic_year or '2025 - 2026' }}</option>
-      {% endif %}
+  {% if not no_student %}
+  <div class="spf-ay">
+    {% if fee_academic_years | length > 1 %}
+    <label class="spf-ay-label" for="spf-ay-select">Academic Year</label>
+    <select id="spf-ay-select" class="spf-ay-select" aria-describedby="spf-ay-hint">
+      <option value="all">All academic years</option>
+      {% for y in fee_academic_years %}<option value="{{ y | e }}">{{ ay(y) }}</option>{% endfor %}
     </select>
+    {% else %}
+    <span class="spf-ay-label">Academic Year</span>
+    <span class="spf-ay-static">{{ ay(fee_academic_years[0]) if fee_academic_years else '—' }}</span>
+    {% endif %}
+  </div>
+  {% endif %}
+</header>
+
+{% if no_student %}
+<div class="spf-card fade-in">
+  <div class="spf-state spf-state-error" role="alert">
+    <span class="sp-ms" aria-hidden="true">warning</span>
+    <div>
+      <p class="spf-state-title">No student record found.</p>
+      <p class="spf-state-sub">Please contact the Registrar's Office.</p>
+    </div>
   </div>
 </div>
+{% else %}
 
-<div class="card flex justify-between items-center">
-  <div class="flex items-center gap-4">
-    <img src="{{ student_photo or '/assets/frappe/images/default-avatar.png' }}" class="student-photo" alt="Student">
-    <div>
-      <div class="font-bold text-gray-900" style="font-size:16px;">
-        {{ student_name }} <span class="text-xs text-gray-500" style="margin-left: 8px;"><span class="status-dot"></span>Active</span>
-      </div>
-      <div class="text-xs text-gray-500" style="margin-top: 4px;">
-        {{ programme_name }} {% if batch_year %}| Batch {{ batch_year }}{% endif %}
-      </div>
-    </div>
+{% if fee_academic_years | length > 1 %}
+<p class="spf-ay-hint" id="spf-ay-hint" aria-live="polite">Summary figures and outstanding dues cover all academic years; invoice, payment and charge lists are filtered.</p>
+{% endif %}
+<div class="spf-print-only">Fee summary for {{ student_name }} ({{ student_id }}) · printed {{ frappe.utils.formatdate(frappe.utils.today(), "dd MMM yyyy") }}</div>
+
+<div id="sp-fee-meta" data-payer-name="{{ payer_name | e }}" data-payer-email="{{ payer_email | e }}" style="display:none;"></div>
+
+{# ═══════════════ Student card ═══════════════ #}
+<section class="spf-card spf-student fade-in" aria-label="Student">
+  <div class="spf-avatar">
+    {% if student_photo %}<img src="{{ student_photo }}" alt="" data-fallback="{{ student_initial }}">
+    {% else %}<span aria-hidden="true">{{ student_initial }}</span>{% endif %}
   </div>
-  <div class="flex gap-4 text-right items-center">
-    <div>
-      <div class="text-xs font-bold text-gray-500">ENROLLMENT NO.</div>
-      <div class="text-sm font-semibold text-gray-900">{{ student_id }}</div>
-    </div>
-    <div style="margin-left:24px;">
-      <div class="text-xs font-bold text-gray-500">ACADEMIC YEAR</div>
-      <div class="text-sm font-semibold text-gray-900">{{ current_academic_year or '2025 - 2026' }}</div>
-    </div>
-    <div style="margin-left:24px;">
-      <div class="text-xs font-bold text-gray-500">PROGRAMME</div>
-      <div class="text-sm font-semibold text-gray-900">{{ programme_name }}</div>
-    </div>
-    <div class="flex items-center" style="margin-left: 32px;">
-      {% if sm_fee_status == 'Paid' %}
-        <span class="pill green" style="background:#fff;"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> All Fees Paid</span>
-      {% else %}
-        <span class="pill red">{{ sm_fee_status }}</span>
+  <div class="spf-student-main">
+    <div class="spf-student-name-row">
+      <h2 class="spf-student-name">{{ student_name or '—' }}</h2>
+      {% if student_status %}
+      <span class="spf-dot-status {{ 'spf-tone-success' if student_status == 'Active' else ('spf-tone-muted' if student_status in ('Graduated', 'Alumni') else 'spf-tone-warning') }}">{{ student_status }}</span>
       {% endif %}
     </div>
+    {% set _term = student_term or (current_enrollment.term_name if current_enrollment else '') %}
+    {% set _meta = [programme_name, _term, ('Batch ' ~ batch_year) if batch_year else ''] | select | list %}
+    {% if _meta %}<div class="spf-student-meta">{% for m in _meta %}{% if not loop.first %}<span class="spf-sep" aria-hidden="true">|</span>{% endif %}{{ m }}{% endfor %}</div>{% endif %}
+  </div>
+  <dl class="spf-facts">
+    <div><dt>Enrollment No.</dt><dd>{{ student_id or '—' }}</dd></div>
+    <div><dt>Academic Year</dt><dd>{{ ay(student_academic_year) or '—' }}</dd></div>
+    <div><dt>Programme</dt><dd>{{ programme_name or '—' }}</dd></div>
+  </dl>
+  {% if _summary_ok %}
+  <div class="spf-student-status">
+    {% if has_dues or other_outstanding > 0 or _err.demands or _err.re_exams or _err.hostel_fines %}
+    <span class="spf-status-badge spf-status-badge-due"><span class="sp-ms" aria-hidden="true">error</span>Pending</span>
+    {% else %}
+    <span class="spf-status-badge spf-status-badge-paid"><span class="sp-ms" aria-hidden="true">check_circle</span>No Dues</span>
+    {% endif %}
+  </div>
+  {% endif %}
+</section>
+
+{# ═══════════════ Notices ═══════════════ #}
+{% if portal_error %}
+<div class="spf-notice spf-notice-danger fade-in" role="alert">
+  <span class="sp-ms" aria-hidden="true">error</span>
+  <div><strong>Could not load fee data.</strong> Please <button type="button" class="spf-link" onclick="window.location.reload()">retry</button> or contact support.</div>
+</div>
+{% endif %}
+{% if use_sm_fallback and not _err.summary %}
+<div class="spf-notice spf-notice-warning fade-in">
+  <span class="sp-ms" aria-hidden="true">schedule</span>
+  <div><strong>Invoices pending.</strong> The figures below are from your student fee record. Your fee invoices are being prepared, so amounts may change. Contact the Bursar's Office to confirm your payment schedule.</div>
+</div>
+{% endif %}
+{% if has_sm_inv_mismatch and not _err.summary %}
+<div class="spf-notice spf-notice-success fade-in">
+  <span class="sp-ms" aria-hidden="true">workspace_premium</span>
+  <div>
+    <strong>Scholarship of {{ _inr.format(mismatch_diff) }} applied to your fee.</strong>
+    Your outstanding balance is <strong>{{ _inr.format(total_outstanding) }}</strong> after this deduction ({{ _inr.format(inv_outstanding_raw) }} invoice balance).
+    Finance will update your invoice shortly; until then, use <strong>Pay Outstanding</strong> to pay the adjusted amount.
   </div>
 </div>
-
-<div class="stat-grid">
-  <div class="stat-card">
-    <div class="stat-icon red" style="background:#fef2f2; border:1px solid #fee2e2; color:#ef4444;"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg></div>
-    <div class="stat-title">TOTAL FEES</div>
-    <div class="stat-amount">₹{{ "{:,.0f}".format(total_fee | default(0)) }}</div>
-    <div class="stat-sub">Net programme fee after ₹{{ "{:,.0f}".format(total_scholarship | default(0)) }} scholarship</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-icon green" style="background:#f0fdf4; border:1px solid #dcfce7; color:#22c55e;"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg></div>
-    <div class="stat-title">PAID</div>
-    <div class="stat-amount" style="color:#16a34a;">₹{{ "{:,.0f}".format(total_paid | default(0)) }}</div>
-    <div class="stat-sub green">{{ paid_pct or 0 }}% paid</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-icon red" style="background:#fef2f2; border:1px solid #fee2e2; color:#ef4444;"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 7H3c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2zm0 12H3V9h18v10zm-9-8h-2v2H8v2h2v2h2v-2h2v-2h-2z"/></svg></div>
-    <div class="stat-title">BALANCE</div>
-    <div class="stat-amount">₹{{ "{:,.0f}".format(total_outstanding | default(0)) }}</div>
-    <div class="stat-sub" style="line-height:1.6;">
-      {% if total_outstanding > 0 %}Pending programme dues{% else %}<span class="green">No pending programme dues</span>{% endif %}<br>
-      <a href="#" style="color:#ef4444; text-decoration:none;">+ {{ da_fmt_outstanding | default('₹0') }} additional charges due</a>
-    </div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-icon red" style="background:#fef2f2; border:1px solid #fee2e2; color:#ef4444;"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z"/></svg></div>
-    <div class="stat-title">OVERDUE</div>
-    <div class="stat-amount">₹{{ "{:,.0f}".format(overdue_total | default(0)) }}</div>
-    <div class="stat-sub" style="line-height:1.6;">
-      {% if (overdue_total | default(0)) > 0 %}<span class="red">Overdue fees</span>{% else %}<span class="green">All clear</span>{% endif %}<br>
-      <a href="#" style="color:#ef4444; text-decoration:none;">+ ₹{{ "{:,.0f}".format(overdue_total | default(0)) }} additional charges overdue</a>
-    </div>
-  </div>
+{% endif %}
+{% if has_overpayment_flag and not _err.summary %}
+<div class="spf-notice spf-notice-info fade-in">
+  <span class="sp-ms" aria-hidden="true">info</span>
+  <div><strong>Payment record note:</strong> our system shows a payment larger than the fee on record, so your balance is shown as ₹0. Please contact the Bursar's Office if you need a reconciliation statement or refund.</div>
 </div>
+{% endif %}
 
-<div class="card">
-  <div class="flex justify-between items-center mb-1">
-    <div class="text-sm font-semibold flex items-center gap-2">
-      <svg class="svg-icon" style="color: #991b1b;" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg> Payment Status
-    </div>
-  </div>
-  <div class="progress-container">
-    <div class="flex justify-between text-xs font-bold" style="margin-bottom:8px;">
-      <span class="text-success text-sm">₹{{ "{:,.0f}".format(total_paid | default(0)) }}<br><span style="font-weight:normal; font-size:11px;" class="text-gray-500">Paid</span></span>
-      <span class="text-center text-gray-900 text-lg" style="color:#991b1b;">{{ paid_pct or 0 }}%<br><span style="font-weight:normal; font-size:11px;" class="text-gray-500">Paid of total</span></span>
-      <span class="text-right text-gray-900 text-sm">₹{{ "{:,.0f}".format(total_fee | default(0)) }}<br><span style="font-weight:normal; font-size:11px;" class="text-gray-500">Total Fees</span></span>
-    </div>
-    <div class="progress-bar">
-      <div class="progress-fill" style="width: {{ paid_pct or 0 }}%;"></div>
-    </div>
-    <div class="flex justify-between text-xs text-gray-500 mt-2">
-      <span>CS</span>
-      <span class="text-success font-semibold">₹{{ "{:,.0f}".format(total_outstanding | default(0)) }} balance</span>
-    </div>
-  </div>
-</div>
+{% if not has_any_fee_records %}
+<section class="spf-card fade-in">
+  {{ empty('receipt_long', 'No fee details yet', 'Your programme fee will appear here once the Finance Office has set up your record.') }}
+</section>
+{% else %}
 
-<div class="section-grid">
-  <!-- Fee Structure -->
-  <div class="card" style="margin-bottom:0;">
-    <div class="section-title">
-      <svg class="svg-icon text-gray-500" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg> Fee Structure <span class="pill green" style="font-size:9px; padding:2px 6px;">Active</span>
-      <span class="text-xs text-gray-500" style="margin-left: auto; font-weight:normal;">Validity: <b>{{ fee_structure_valid_from }} – {{ fee_structure_valid_until }}</b></span>
+{# ═══════════════ Summary ═══════════════ #}
+{% set _has_sc = has_concessions or has_credit_notes or _err.concessions or _err.credits %}
+{% set _has_ph = payment_history or _err.payments or _err.receipts %}
+{% set _has_inv = has_invoices or _err.invoices %}
+{# Detail tabs: Fee Demands / Payment History / Fee Invoices / Refunds / Scholarships & Concessions; the first one present is open #}
+{% set _ntabs = (1 if has_fee_demands else 0) + (1 if _has_ph else 0) + (1 if _has_inv else 0) + (1 if has_fee_refunds else 0) + (1 if _has_sc else 0) %}
+{% set _first = 'demands' if has_fee_demands else ('payments' if _has_ph else ('invoices' if _has_inv else ('refunds' if has_fee_refunds else 'scholarships'))) %}
+<section class="spf-card fade-in" id="sp-demand-ledger" aria-labelledby="spf-dm-title" style="margin-bottom:16px;">
+  <div class="spf-card-hd">
+    <h2 class="spf-card-title" id="spf-dm-title"><span class="sp-ms" aria-hidden="true">list_alt</span>Summary</h2>
+    {% if outstanding_rows or has_fee_demands %}
+    <div class="spf-card-meta">
+      <span class="{{ 'spf-tone-warning' if outstanding_pending_count else 'spf-tone-success' }}">{{ outstanding_pending_count }} pending</span>
+      <span aria-hidden="true" class="spf-sep">|</span>
+      <span class="{{ 'spf-tone-danger' if outstanding_overdue_count else 'spf-tone-success' }}">{{ outstanding_overdue_count }} overdue</span>
+      {% if has_fee_demands %}<span aria-hidden="true" class="spf-sep">|</span><span>{{ da_pct }}% settled</span>{% endif %}
+      {% if total_available_credit and total_available_credit > 0 %}<span aria-hidden="true" class="spf-sep">|</span><span>{{ formatted_total_credit }} credit available</span>{% endif %}
     </div>
-    <table class="table">
-      <thead><tr><th>FEE COMPONENT</th><th style="text-align:right;">AMOUNT</th></tr></thead>
-      <tbody>
-        {% for comp in fs_components %}
-        <tr>
-          <td class="font-semibold text-gray-900">{{ comp.component_name }}</td>
-          <td style="text-align:right;" class="font-bold text-gray-900">₹{{ "{:,.0f}".format(comp.amount | default(0)) }}</td>
-        </tr>
-        {% endfor %}
-        <tr style="border-top: 1px solid #e5e7eb;">
-          <td class="font-bold text-gray-900">Total Programme Fee</td>
-          <td style="text-align:right;" class="font-bold text-gray-900">₹{{ "{:,.0f}".format(sm_total_fee | default(0)) }}</td>
-        </tr>
-        <tr>
-          <td class="font-bold text-gray-500">Scholarship / Discount</td>
-          <td style="text-align:right;" class="font-bold text-success">-₹{{ "{:,.0f}".format(total_scholarship | default(0)) }}</td>
-        </tr>
-        <tr style="border-top: 2px solid #e5e7eb;">
-          <td class="font-bold" style="color: #991b1b; padding-top:16px;">Net Payable</td>
-          <td style="text-align:right; color: #991b1b; padding-top:16px;" class="font-bold">₹{{ "{:,.0f}".format(total_net | default(0)) }}</td>
-        </tr>
-      </tbody>
-    </table>
+    {% endif %}
   </div>
-
-  <!-- Upcoming / Outstanding Fees -->
-  <div class="card" style="margin-bottom:0;">
-    <div class="section-title">
-      <svg class="svg-icon text-gray-500" viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z"/></svg> Upcoming / Outstanding Fees
-      <span class="text-xs font-semibold text-gray-500" style="margin-left: auto;">
-        <span class="text-warning">{{ da_pending }} pending</span> <span style="margin:0 4px; color:#e5e7eb;">|</span> <span class="text-danger">{{ overdue_demand_count }} overdue</span>
-      </span>
-    </div>
-    <table class="table">
-      <thead><tr><th>COMPONENT</th><th>DUE DATE</th><th style="text-align:right;">AMOUNT</th><th>STATUS</th></tr></thead>
-      <tbody>
-        {% for row in outstanding_rows %}
-        <tr>
-          <td>
-            <div class="font-bold text-gray-900">{{ row.component }}</div>
-            <div class="text-xs text-gray-500">{{ row.sub_label }}</div>
-          </td>
-          <td>
-            <div class="text-sm text-gray-900">{{ row.due_date_fmt }}</div>
-            {% if row.is_overdue %}<div class="text-xs text-danger font-semibold"><strike>29d overdue</strike></div>{% endif %}
-          </td>
-          <td style="text-align:right;" class="font-bold text-gray-900">{{ row.formatted_amount }}</td>
-          <td>
-            {% if row.status == 'Overdue' %}
-              <span class="pill red" style="color: #991b1b; border-color: #fca5a5;"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg> Overdue</span>
-            {% elif row.status == 'Pending' %}
-              <span class="pill orange"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg> Pending</span>
-            {% else %}
-              <span class="pill orange"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg> {{ row.status }}</span>
-            {% endif %}
-          </td>
-        </tr>
-        {% else %}
-        <tr>
-          <td colspan="4" class="text-center text-gray-500 py-4">No upcoming or outstanding fees.</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</div>
-
-<div class="section-grid">
-  <!-- Fee Invoices -->
-  <div class="card" style="margin-bottom:0;">
-    <div class="section-title">
-      <svg class="svg-icon text-gray-500" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg> Fee Invoices
-      <span class="text-xs text-gray-500 font-semibold" style="margin-left: auto;">{{ invoices | length }} invoices</span>
-    </div>
-    <table class="table">
-      <thead><tr><th>DESCRIPTION</th><th>INVOICE DA...</th><th>DUE DATE</th><th style="text-align:right;">AMOUNT</th><th>STATUS</th><th>ACTION</th></tr></thead>
-      <tbody>
-        {% for inv in invoices %}
-        {% if loop.first %}
-        <tr><td colspan="6" class="text-xs font-bold" style="color:#991b1b; padding:4px 0; border:none;">Semester 1 <span style="float:right; color:#6b7280; font-weight:normal;">2025 - 2026</span></td></tr>
-        {% endif %}
-        <tr>
-          <td>
-            <div class="font-bold text-gray-900">Program Fee</div>
-            <div class="text-xs text-gray-500">{{ inv.name }}</div>
-          </td>
-          <td class="text-gray-900">{{ inv.invoice_date.strftime('%d %b %Y') if inv.invoice_date else '' }}</td>
-          <td class="text-gray-900">{{ inv.due_date.strftime('%d %b %Y') if inv.due_date else '' }}</td>
-          <td style="text-align:right;" class="font-bold text-gray-900">₹{{ "{:,.0f}".format(inv.final_payable_amount) }}</td>
-          <td><span class="pill green"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> Paid</span></td>
-          <td><a href="#" style="color:#991b1b; border:1px solid #fca5a5; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:700; text-decoration:none; display:inline-block;">View</a></td>
-        </tr>
-        {% else %}
-        <tr>
-          <td colspan="6" class="text-center text-gray-500 py-4">No invoices yet.</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-
-  <!-- Payment History -->
-  <div class="card" style="margin-bottom:0;">
-    <div class="section-title">
-      <svg class="svg-icon text-gray-500" viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg> Payment History
-      <span class="text-xs text-gray-500 font-semibold" style="margin-left: auto;">{{ payment_history | length }} payments <a href="#" style="color:#991b1b; text-decoration:none; margin-left:8px; font-weight:700;">View All &rarr;</a></span>
-    </div>
-    <table class="table">
-      <thead><tr><th>DATE</th><th>DESCRIPTION</th><th style="text-align:right;">AMOUNT</th><th>PAYMENT ...</th><th>REFERENCE</th><th>STATUS</th></tr></thead>
-      <tbody>
-        {% for hist in payment_history[:5] %}
-        <tr>
-          <td class="text-gray-900" style="white-space:nowrap;">{{ hist.date_fmt }}</td>
-          <td>
-            <div class="font-bold text-gray-900">{{ hist.description }}</div>
-            <div class="text-xs text-gray-500">{{ hist.receipt or '—' }}</div>
-          </td>
-          <td style="text-align:right;" class="font-bold text-success">{{ hist.formatted_amount }}</td>
-          <td class="text-gray-900">{{ hist.mode }}</td>
-          <td class="text-gray-500 text-xs">{{ hist.reference or '—' }}</td>
-          <td>
-            <div class="flex items-center gap-2">
-              <span class="pill green"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> Paid</span>
-              <a href="#" style="color:#991b1b; padding:4px; border-radius:4px; border:1px solid #fca5a5; display:inline-flex; align-items:center;"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg></a>
-            </div>
-          </td>
-        </tr>
-        {% else %}
-        <tr>
-          <td colspan="6" class="text-center text-gray-500 py-4">No payments recorded yet.</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</div>
-
-<!-- Additional Charges & History -->
-<div class="card">
-  <div class="section-title">
-    <svg class="svg-icon text-gray-500" viewBox="0 0 24 24"><path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg> Additional Charges &amp; History
-    <span class="text-xs font-semibold text-gray-500" style="margin-left: auto;"><span class="text-danger">{{ overdue_demand_count }} overdue</span> <span style="margin:0 4px; color:#e5e7eb;">|</span> {{ da_pct }}% settled</span>
-  </div>
-  <div class="stat-grid" style="grid-template-columns: repeat(4, 1fr); margin-top:16px;">
-    <div style="border:1px solid var(--sp-border); border-radius:8px; padding:12px;">
-      <div class="text-xs font-bold text-gray-500 mb-1">TOTAL LEVIED</div>
-      <div class="text-lg font-bold text-gray-900">{{ da_fmt_total | default('₹0') }}</div>
-      <div class="text-xs text-gray-500">{{ da_total | default(0) }} charges</div>
-    </div>
-    <div style="border:1px solid var(--sp-border); border-radius:8px; padding:12px;">
-      <div class="text-xs font-bold text-gray-500 mb-1">SETTLED</div>
-      <div class="text-lg font-bold text-success">{{ da_fmt_paid | default('₹0') }}</div>
-      <div class="text-xs text-gray-500">{{ da_paid | default(0) }} paid</div>
-    </div>
-    <div style="border:1px solid var(--sp-border); border-radius:8px; padding:12px;">
-      <div class="text-xs font-bold text-gray-500 mb-1">WAIVED OFF</div>
-      <div class="text-lg font-bold" style="color:#7c3aed;">{{ da_fmt_waived | default('₹0') }}</div>
-      <div class="text-xs text-gray-500">{{ da_waived | default(0) }} waived</div>
-    </div>
-    <div style="border:1px solid var(--sp-border); border-radius:8px; padding:12px;">
-      <div class="text-xs font-bold text-gray-500 mb-1">OUTSTANDING</div>
-      <div class="text-lg font-bold text-danger">{{ da_fmt_outstanding | default('₹0') }}</div>
-      <div class="text-xs text-gray-500">{{ (da_pending | default(0)) + (da_overdue | default(0)) }} overdue</div>
-    </div>
-  </div>
-  <div class="flex justify-between items-center" style="background: #fef2f2; border: 1px solid #fca5a5; padding: 12px 16px; border-radius: 8px; margin-top: 16px;">
-    <div class="text-sm font-semibold text-danger">{{ da_fmt_outstanding | default('₹0') }} due across {{ (da_pending | default(0)) + (da_overdue | default(0)) }} charges</div>
-    <button style="background:#991b1b; color:#fff; padding:8px 16px; border-radius:6px; border:none; font-weight:700; font-size:12px; display:inline-flex; align-items:center; gap:6px; cursor:pointer;"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg> Pay All</button>
-  </div>
-  <div class="mt-4" style="margin-top:16px;"><a href="#" style="color:#111827; text-decoration:none; border:1px solid #e5e7eb; padding:6px 12px; border-radius:6px; font-size:12px; font-weight:600; display:inline-block;">View Details &or;</a></div>
-</div>
-
-<!-- Scholarships & Concessions -->
-<div class="card" style="margin-bottom:0;">
-  <div class="section-title">
-    <svg class="svg-icon text-gray-500" viewBox="0 0 24 24"><path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2.12-1.15V17h2V8.12L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/></svg> Scholarships &amp; Concessions
-    <span class="text-xs text-gray-500 font-semibold" style="margin-left: auto;">{{ concessions | length }}</span>
-  </div>
-  <table class="table">
-    <thead><tr><th>DESCRIPTION</th><th style="text-align:right;">AMOUNT</th><th>STATUS</th><th>APPROVED...</th></tr></thead>
-    <tbody>
-      {% for con in concessions %}
-      <tr>
-        <td>
-          <div class="font-bold text-gray-900">{{ con.concession_type }}</div>
-          <div class="text-xs text-gray-500">{{ con.name }} - Approved by Administrator</div>
-        </td>
-        <td style="text-align:right;" class="font-bold text-gray-900">- {{ con.formatted_amount }}</td>
-        <td>
-          {% if con.status == 'Approved' %}
-            <span class="pill green"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> Approved</span>
-          {% else %}
-            <span class="pill orange">{{ con.status }}</span>
-          {% endif %}
-        </td>
-        <td class="text-gray-900">{{ con.approved_on_fmt }}</td>
-      </tr>
-      {% else %}
-      <tr><td colspan="4" class="text-center text-gray-500 py-4">No scholarships or concessions yet.</td></tr>
+  {# Overall cards; click one for a popup with its Academic / Non Academic split (Scholarship: Academic only) #}
+  {% if charge_cards %}
+  {% set _ov = charge_cards[0] %}
+  {% set _grp = charge_cards[1:] %}
+  {# Pay All: every unpaid Fee Demand, paid together in one order #}
+  {% set ns_pay = namespace(total=0, count=0, names=[], items=[]) %}
+  {% for d in fee_demands %}
+    {% if d.outstanding_amount > 0 and d.status not in ('Paid','Waived','Cancelled') %}
+      {% set ns_pay.total = ns_pay.total + d.outstanding_amount %}
+      {% set ns_pay.count = ns_pay.count + 1 %}
+      {% set ns_pay.names = ns_pay.names + [d.name] %}
+      {% set ns_pay.items = ns_pay.items + [{'label': d.fee_component or d.description or 'Charge', 'amount': d.formatted_outstanding}] %}
+    {% endif %}
+  {% endfor %}
+  {# Without an online gateway the button explains how to pay instead of opening Razorpay #}
+  {% set _pay_click = 'spPayAll()' if payment_enabled else 'spfPayUnavailable()' %}
+  <div class="spf-card-bd spf-summary-cards">
+  <div class="spf-mini-grid">
+    <button type="button" class="spf-mini spf-mini-drill" aria-haspopup="dialog" data-drill="spf-drill-total" data-title="Total Levied" onclick="spfDrill(this)">
+      <span class="spf-mini-lbl">Total Levied<span class="sp-ms spf-drill-caret" aria-hidden="true">open_in_new</span></span>
+      <span class="spf-mini-val spf-tone-maroon">{{ _ov.total_fmt }}</span>
+      <span class="spf-mini-sub">{{ _ov.count }} charge{{ 's' if _ov.count != 1 }}</span>
+    </button>
+    <template id="spf-drill-total">
+      {% for g in _grp %}
+      <section class="spf-dd-group">
+        <div class="spf-dd-group-hd"><span>{{ g.label }}</span><span class="spf-dd-group-val">{{ g.total_fmt }}</span></div>
+        <div class="spf-dd-group-sub">{{ g.count }} charge{{ 's' if g.count != 1 }}</div>
+        {% set _items = charge_rows | selectattr('group', 'equalto', g.label) | list %}
+        {% set _ns = namespace(n=0) %}
+        <ul class="spf-dd-list">
+          {% for r in _items %}{% if true %}{% set _ns.n = _ns.n + 1 %}
+          <li><span class="spf-dd-item"><span class="spf-dd-name">{{ r.component }}</span><span class="spf-dd-meta">{{ r.sub }}{% if r.due_date_fmt %} · Due {{ r.due_date_fmt }}{% endif %}</span></span><span class="spf-dd-amt">{{ r.gross_fmt }}</span></li>
+          {% endif %}{% endfor %}
+          {% if _ns.n == 0 %}<li class="spf-dd-empty">Nothing here</li>{% endif %}
+        </ul>
+      </section>
       {% endfor %}
+    </template>
+    <button type="button" class="spf-mini spf-mini-drill" aria-haspopup="dialog" data-drill="spf-drill-settled" data-title="Settled" onclick="spfDrill(this)">
+      <span class="spf-mini-lbl">Settled<span class="sp-ms spf-drill-caret" aria-hidden="true">open_in_new</span></span>
+      <span class="spf-mini-val">{{ _ov.paid_fmt }}</span>
+      <span class="spf-mini-sub">{{ _ov.paid_count }} paid</span>
+    </button>
+    <template id="spf-drill-settled">
+      {% for g in _grp %}
+      <section class="spf-dd-group">
+        <div class="spf-dd-group-hd"><span>{{ g.label }}</span><span class="spf-dd-group-val">{{ g.paid_fmt }}</span></div>
+        <div class="spf-dd-group-sub">{{ g.paid_count }} fully paid</div>
+        {% set _items = charge_rows | selectattr('group', 'equalto', g.label) | list %}
+        {% set _ns = namespace(n=0) %}
+        <ul class="spf-dd-list">
+          {% for r in _items %}{% if r.paid > 0 %}{% set _ns.n = _ns.n + 1 %}
+          <li><span class="spf-dd-item"><span class="spf-dd-name">{{ r.component }}</span><span class="spf-dd-meta">{{ r.sub }}{% if r.due_date_fmt %} · Due {{ r.due_date_fmt }}{% endif %}</span></span><span class="spf-dd-amt">{{ r.paid_fmt }}</span></li>
+          {% endif %}{% endfor %}
+          {% if _ns.n == 0 %}<li class="spf-dd-empty">No payments yet</li>{% endif %}
+        </ul>
+      </section>
+      {% endfor %}
+    </template>
+    <button type="button" class="spf-mini spf-mini-drill" aria-haspopup="dialog" data-drill="spf-drill-scholarship" data-title="Scholarship" onclick="spfDrill(this)">
+      <span class="spf-mini-lbl">Scholarship<span class="sp-ms spf-drill-caret" aria-hidden="true">open_in_new</span></span>
+      <span class="spf-mini-val">{{ _ov.waived_fmt }}</span>
+      <span class="spf-mini-sub">Applied to academic fees</span>
+    </button>
+    <template id="spf-drill-scholarship">
+      {% for g in _grp %}{% if g.label == 'Academic' %}
+      <section class="spf-dd-group">
+        <div class="spf-dd-group-hd"><span>{{ g.label }}</span><span class="spf-dd-group-val">{{ g.waived_fmt }}</span></div>
+        <div class="spf-dd-group-sub">Applied to academic fees</div>
+        {% set _items = charge_rows | selectattr('group', 'equalto', g.label) | list %}
+        {% set _ns = namespace(n=0) %}
+        <ul class="spf-dd-list">
+          {% for r in _items %}{% if r.waiver > 0 %}{% set _ns.n = _ns.n + 1 %}
+          <li><span class="spf-dd-item"><span class="spf-dd-name">{{ r.component }}</span><span class="spf-dd-meta">{{ r.sub }}{% if r.due_date_fmt %} · Due {{ r.due_date_fmt }}{% endif %}</span></span><span class="spf-dd-amt">−{{ r.waiver_fmt }}</span></li>
+          {% endif %}{% endfor %}
+          {% if _ns.n == 0 %}<li class="spf-dd-empty">No scholarship applied</li>{% endif %}
+        </ul>
+      </section>
+      {% endif %}{% endfor %}
+    </template>
+    <div class="spf-mini spf-mini-drill" role="button" tabindex="0" aria-haspopup="dialog" data-drill="spf-drill-outstanding" data-title="Outstanding"
+         onclick="spfDrill(this)" onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); spfDrill(this); }">
+      <span class="spf-mini-lbl">Outstanding<span class="sp-ms spf-drill-caret" aria-hidden="true">open_in_new</span></span>
+      {% if ns_pay.count > 0 %}
+      <button type="button" class="spf-btn spf-btn-primary spf-btn-sm spf-card-pay" id="spf-pay-all-btn" data-pay onclick="event.stopPropagation(); {{ _pay_click }}"
+              data-demands="{{ ns_pay.names | join(',') | e }}" data-total="{{ ns_pay.total }}"
+              aria-label="Pay all {{ _inr.format(ns_pay.total) }} due across {{ ns_pay.count }} charges"><span class="sp-ms" aria-hidden="true">payments</span> Pay All · {{ _inr.format(ns_pay.total) }}</button>
+      <script type="application/json" id="spf-pay-all-items">{{ ns_pay.items | tojson }}</script>
+      {% endif %}
+      <span class="spf-mini-val {{ 'spf-tone-danger' if _ov.outstanding > 0 }}">{{ _ov.outstanding_fmt }}</span>
+      <span class="spf-mini-sub">{% if _ov.overdue > 0 %}{{ _ov.overdue }} overdue{% elif _ov.pending > 0 %}{{ _ov.pending }} pending{% else %}all clear{% endif %}</span>
+    </div>
+    <template id="spf-drill-outstanding">
+      {% if ns_pay.count > 0 %}
+      <div class="spf-dd-pay">
+        <span><strong>{{ _inr.format(ns_pay.total) }}</strong> due across {{ ns_pay.count }} charge{{ 's' if ns_pay.count != 1 }}</span>
+        <button type="button" class="spf-btn spf-btn-primary spf-btn-sm" onclick="spfDrillClose(); {{ _pay_click }}"><span class="sp-ms" aria-hidden="true">payments</span> Pay All</button>
+      </div>
+      {% endif %}
+      {% for g in _grp %}
+      <section class="spf-dd-group">
+        <div class="spf-dd-group-hd"><span>{{ g.label }}</span><span class="spf-dd-group-val">{{ g.outstanding_fmt }}</span></div>
+        <div class="spf-dd-group-sub">{% if g.overdue > 0 %}{{ g.overdue }} overdue{% elif g.pending > 0 %}{{ g.pending }} pending{% else %}all clear{% endif %}</div>
+        {% set _items = charge_rows | selectattr('group', 'equalto', g.label) | list %}
+        {% set _ns = namespace(n=0) %}
+        <ul class="spf-dd-list">
+          {% for r in _items %}{% if r.outstanding > 0 %}{% set _ns.n = _ns.n + 1 %}
+          <li><span class="spf-dd-item"><span class="spf-dd-name">{{ r.component }}</span><span class="spf-dd-meta">{{ r.sub }}{% if r.due_date_fmt %} · Due {{ r.due_date_fmt }}{% endif %}</span></span><span class="spf-dd-amt">{{ r.outstanding_fmt }} {{ badge(r.status) }}</span></li>
+          {% endif %}{% endfor %}
+          {% if _ns.n == 0 %}<li class="spf-dd-empty">Nothing outstanding</li>{% endif %}
+        </ul>
+      </section>
+      {% endfor %}
+    </template>
+  </div>
+  </div>
+  {% endif %}
+  <div class="spf-dd-overlay" id="spf-dd" hidden onclick="if (event.target === this) spfDrillClose()">
+    <div class="spf-dd-box" role="dialog" aria-modal="true" aria-labelledby="spf-dd-title">
+      <div class="spf-dd-head">
+        <h3 class="spf-dd-title" id="spf-dd-title"></h3>
+        <button type="button" class="spf-dd-close" onclick="spfDrillClose()" aria-label="Close"><span class="sp-ms" aria-hidden="true">close</span></button>
+      </div>
+      <div class="spf-dd-body" id="spf-dd-body"></div>
+    </div>
+  </div>
+  {% if (_err.invoices or _err.re_exams or _err.hostel_fines) and summary_rows %}<div class="spf-notice spf-notice-danger" style="margin:12px 20px 0;"><span class="sp-ms" aria-hidden="true">error</span><div>Some fee records could not be loaded, so this list may be incomplete. <button type="button" class="spf-link" onclick="window.location.reload()">Retry</button></div></div>{% endif %}
+  {# Every charge (paid ones too), Academic then Non Academic, with type / status filters #}
+  {% if charge_rows %}
+  <div class="spf-filters" role="group" aria-label="Filter fees">
+    <div class="spf-fchips" role="group" aria-label="Fee type">
+      <span class="spf-flabel">Type</span>
+      <button type="button" class="spf-fchip is-active" data-filter="type" data-value="all" aria-pressed="true">All</button><button type="button" class="spf-fchip" data-filter="type" data-value="Academic" aria-pressed="false">Academic</button><button type="button" class="spf-fchip" data-filter="type" data-value="Non Academic" aria-pressed="false">Non Academic</button>
+    </div>
+    <div class="spf-fchips" role="group" aria-label="Payment status">
+      <span class="spf-flabel">Status</span>
+      <button type="button" class="spf-fchip is-active" data-filter="status" data-value="all" aria-pressed="true">All</button><button type="button" class="spf-fchip" data-filter="status" data-value="pending" aria-pressed="false">Pending</button><button type="button" class="spf-fchip" data-filter="status" data-value="overdue" aria-pressed="false">Overdue</button><button type="button" class="spf-fchip" data-filter="status" data-value="paid" aria-pressed="false">Paid</button>
+    </div>
+  </div>
+  <table class="spf-t spf-summary-t" id="spf-charges-table">
+    <caption class="spf-sr-only">All fees: Academic and Non Academic, paid and unpaid</caption>
+    <colgroup><col style="width:21%;"><col style="width:11%;"><col style="width:9%;"><col style="width:9%;"><col style="width:10%;"><col style="width:9%;"><col style="width:9%;"><col style="width:10%;"><col style="width:12%;"></colgroup>
+    <thead><tr><th scope="col" class="c-text">Component</th><th scope="col" class="c-date">Due Date</th><th scope="col" class="c-num">Amount</th><th scope="col" class="c-num">Scholarship</th><th scope="col" class="c-num">Outstanding</th><th scope="col" class="c-action spf-c-center">Invoice</th><th scope="col" class="c-num">Paid</th><th scope="col" class="c-status">Status</th><th scope="col" class="c-action">Receipt</th></tr></thead>
+    <tbody>
+      {% for grp, grp_rows in charge_rows | groupby('group') %}
+      {% set gid = 'cg' ~ loop.index %}
+      <tr class="spf-group-row" data-group="{{ gid }}"><th scope="colgroup" colspan="9"><div class="spf-group-inner"><span>{{ grp }}</span><span class="spf-group-meta">{{ grp_rows | list | length }}</span></div></th></tr>
+      {% set gix = loop.index %}
+      {% for r in grp_rows %}
+      {% set rid = 'spf-cr-' ~ gix ~ '-' ~ loop.index %}
+      <tr class="spf-row-data" id="{{ rid }}" data-group="{{ gid }}" data-type="{{ r.group }}" data-status="{{ r.status_key }}" data-ay="{{ (r.academic_year or '') | e }}">
+        <td class="c-text c-primary">
+          <div class="spf-cell-main">{{ r.component }}{% if r.details %}
+            <button type="button" class="spf-row-toggle" aria-expanded="false" aria-controls="{{ rid }}-d" data-row="{{ rid }}" onclick="spfRowToggle(this)"
+                    title="Payments, refunds and scholarships for this fee"><span class="sp-ms" aria-hidden="true">expand_more</span>{{ r.details | length }}</button>{% endif %}</div>
+          <div class="spf-cell-sub">{{ r.sub }}</div>
+        </td>
+        <td class="c-date" data-label="Due Date"><div><div>{{ r.due_date_fmt or '—' }}</div>{% if r.status_key == 'overdue' and r.days_overdue %}<div class="spf-cell-hint spf-tone-danger">{{ r.days_overdue }}d overdue</div>{% endif %}</div></td>
+        <td class="c-num" data-label="Amount">{{ r.gross_fmt }}</td>
+        <td class="c-num" data-label="Scholarship">{% if r.waiver > 0 %}−{{ r.waiver_fmt }}{% else %}<span class="spf-tone-muted">—</span>{% endif %}</td>
+        <td class="c-num {{ 'spf-tone-danger' if r.outstanding > 0 }}" data-label="Outstanding">{{ r.outstanding_fmt }}</td>
+        <td class="c-action spf-c-center" data-label="Invoice">
+          {% if r.kind == 'demand' and r.demand_name %}<a class="spf-icon-dl" target="_blank" rel="noopener noreferrer" href="/api/method/slcm.api.student_portal.download_fee_demand_invoice?fee_demand={{ r.demand_name | urlencode }}"
+             title="Download invoice" aria-label="Download invoice for {{ r.component }}"><span class="sp-ms" aria-hidden="true">picture_as_pdf</span></a>
+          {% elif r.invoice %}<a class="spf-icon-dl" target="_blank" rel="noopener noreferrer" href="/api/method/slcm.api.student_portal.download_fee_invoice?invoice_name={{ r.invoice | urlencode }}"
+             title="Download invoice" aria-label="Download invoice {{ r.invoice }}"><span class="sp-ms" aria-hidden="true">picture_as_pdf</span></a>
+          {% else %}<span class="spf-tone-muted">—</span>{% endif %}
+        </td>
+        <td class="c-num" data-label="Paid">{% if r.paid > 0 %}{{ r.paid_fmt }}{% else %}<span class="spf-tone-muted">—</span>{% endif %}</td>
+        <td class="c-status" data-label="Status">{{ badge(r.status) if r.status else '' }}</td>
+        <td class="c-action" data-label="Receipt">
+          {% if r.receipt %}
+          <a class="spf-btn spf-btn-ghost spf-btn-sm" target="_blank" rel="noopener noreferrer" href="/api/method/slcm.api.student_portal.download_fee_receipt?receipt_name={{ r.receipt | urlencode }}"
+             aria-label="Download receipt for {{ r.component }}"><span class="sp-ms" aria-hidden="true">download</span> Receipt</a>
+          {% elif r.re_exam_receipt %}
+          <a class="spf-btn spf-btn-ghost spf-btn-sm" target="_blank" rel="noopener noreferrer" href="/api/method/slcm.api.student_portal.download_re_exam_receipt?registration_name={{ r.re_exam_receipt | urlencode }}"
+             aria-label="Download receipt for {{ r.component }}"><span class="sp-ms" aria-hidden="true">download</span> Receipt</a>
+          {% elif r.receipt_kind == 'transcript' and r.receipt_doc %}<a class="spf-btn spf-btn-ghost spf-btn-sm" target="_blank" rel="noopener noreferrer" href="/api/method/slcm.api.student_portal.download_transcript_receipt?request_name={{ r.receipt_doc | urlencode }}"
+             aria-label="Download receipt for {{ r.component }}"><span class="sp-ms" aria-hidden="true">download</span> Receipt</a>
+          {% elif r.receipt_kind == 'improvement' and r.receipt_doc %}<a class="spf-btn spf-btn-ghost spf-btn-sm" target="_blank" rel="noopener noreferrer" href="/api/method/slcm.api.student_portal.download_improvement_exam_receipt?registration_name={{ r.receipt_doc | urlencode }}"
+             aria-label="Download receipt for {{ r.component }}"><span class="sp-ms" aria-hidden="true">download</span> Receipt</a>
+          {% elif r.kind == 'reexam' and r.can_pay and payment_enabled %}
+          <span class="spf-cell-sub">In Pay All</span>
+          {% elif r.kind == 'fine' and not r.is_paid %}
+          <span class="spf-cell-sub" title="Hostel fines are paid at the Hostel Office or Bursar's Office.">Pay at office</span>
+          {% else %}<span class="spf-tone-muted">—</span>{% endif %}
+        </td>
+      </tr>
+      {% for d in r.details %}
+      <tr class="spf-sub-row is-hidden" data-parent="{{ rid }}" data-dkind="{{ d.kind }}"{% if loop.first %} id="{{ rid }}-d"{% endif %}>
+        <td class="c-text"><div class="spf-sub-main"><span class="spf-sub-kind spf-sub-kind-{{ d.kind }}">{{ {'payment': 'Payment', 'refund': 'Refund', 'scholarship': 'Scholarship', 'credit': 'Credit'}[d.kind] }}</span>{{ d.title }}</div><div class="spf-cell-sub">{{ d.sub }}</div></td>
+        <td class="c-date" data-label="Date">{{ d.date_fmt or '—' }}</td>
+        <td class="c-num" data-label="Amount">{{ d.amount_fmt }}</td>
+        <td></td><td></td><td></td><td></td>
+        <td class="c-status" data-label="Status">{{ badge(d.status) if d.status else '' }}</td>
+        <td class="c-action" data-label="Receipt">
+          {% if d.receipt %}<a class="spf-btn spf-btn-ghost spf-btn-sm" target="_blank" rel="noopener noreferrer" href="/api/method/slcm.api.student_portal.download_fee_receipt?receipt_name={{ d.receipt | urlencode }}"
+             aria-label="Download receipt {{ d.receipt }}"><span class="sp-ms" aria-hidden="true">download</span> Receipt</a>
+          {% elif d.re_exam_receipt %}<a class="spf-btn spf-btn-ghost spf-btn-sm" target="_blank" rel="noopener noreferrer" href="/api/method/slcm.api.student_portal.download_re_exam_receipt?registration_name={{ d.re_exam_receipt | urlencode }}"
+             aria-label="Download receipt"><span class="sp-ms" aria-hidden="true">download</span> Receipt</a>
+          {% elif d.receipt_kind == 'transcript' and d.receipt_doc %}<a class="spf-btn spf-btn-ghost spf-btn-sm" target="_blank" rel="noopener noreferrer" href="/api/method/slcm.api.student_portal.download_transcript_receipt?request_name={{ d.receipt_doc | urlencode }}"
+             aria-label="Download receipt"><span class="sp-ms" aria-hidden="true">download</span> Receipt</a>
+          {% elif d.receipt_kind == 'improvement' and d.receipt_doc %}<a class="spf-btn spf-btn-ghost spf-btn-sm" target="_blank" rel="noopener noreferrer" href="/api/method/slcm.api.student_portal.download_improvement_exam_receipt?registration_name={{ d.receipt_doc | urlencode }}"
+             aria-label="Download receipt"><span class="sp-ms" aria-hidden="true">download</span> Receipt</a>
+          {% else %}<span class="spf-tone-muted">—</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+      {% endfor %}
+      {% endfor %}
+      <tr class="spf-filter-empty is-hidden"><td colspan="9" class="c-empty">{{ empty('filter_alt', 'No fees match these filters') }}</td></tr>
     </tbody>
   </table>
+  {% endif %}
+  {% if _summary_ok and has_dues %}
+  <div class="spf-card-bd" style="padding-top:0;">
+    <div class="spf-payall spf-payall-programme">
+      <div class="spf-payall-text"><strong>{{ _inr.format(total_outstanding) }}</strong> programme fees due</div>
+      {% if payment_enabled %}
+      {% set _hero_amt = _inr.format(total_outstanding) %}
+      <button type="button" class="spf-btn spf-btn-primary spf-btn-sm" id="sp-sm-pay-btn" data-pay
+              onclick="spShowTrustThenPay('sm', '', '{{ _hero_amt | e }}', '', this)">
+        <span class="sp-ms" aria-hidden="true">lock</span> Pay Outstanding · {{ _hero_amt }}
+      </button>
+      {% elif _counter %}
+      <button type="button" class="spf-btn spf-btn-ghost spf-btn-sm" onclick="spFeePayAtCounter('', '{{ _inr.format(total_outstanding) | e }}')">
+        <span class="sp-ms" aria-hidden="true">store</span> Pay at Counter
+      </button>
+      {% else %}
+      <span class="spf-offline-note"><span class="sp-ms" aria-hidden="true">info</span>Visit the Bursar's Office to pay {{ _inr.format(total_outstanding) }}</span>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+  {% if _err.demands %}
+    {{ section_error('additional charges') }}
+  {% elif not has_fee_demands and not has_fee_refunds and not _has_sc and not _has_ph and not _has_inv %}
+    {% if not summary_rows %}{{ empty('task_alt', 'No outstanding fees', 'You have no pending or overdue payments.', ok=True) }}{% endif %}
+  {% else %}
+
+
+  <div class="spf-sum-sections">
+
+    
+
+  </div>
+  {% endif %}
+</section>
+
+{# ═══════════════ Support ═══════════════ #}
+<div class="spf-support fade-in">
+  <button type="button" class="spf-support-item" onclick="window.print()">
+    <span class="spf-support-icon"><span class="sp-ms" aria-hidden="true">print</span></span>
+    <span><span class="spf-support-title">Print Summary</span><span class="spf-support-sub">Save or print as a payment record</span></span>
+    <span class="sp-ms" aria-hidden="true">chevron_right</span>
+  </button>
+  <a href="/student-portal/support" class="spf-support-item">
+    <span class="spf-support-icon"><span class="sp-ms" aria-hidden="true">support_agent</span></span>
+    <span><span class="spf-support-title">Help &amp; Support</span><span class="spf-support-sub">Submit a payment query or ticket</span></span>
+    <span class="sp-ms" aria-hidden="true">chevron_right</span>
+  </a>
 </div>
+
+{% endif %}{# end has_any_fee_records #}
+
+{# ── Demand Pay All: payment summary sheet ───────────────────────────── #}
+{% if payment_enabled %}
+<div id="spf-bulk-overlay" class="spf-bulk-overlay" style="display:none;" onclick="spBulkSheetClose()"></div>
+<div id="spf-bulk-sheet" class="spf-bulk-sheet" role="dialog" aria-modal="true" aria-labelledby="spf-bulk-title">
+  <div class="spf-bulk-handle"></div>
+  <div class="spf-bulk-head">
+    <div class="spf-bulk-title" id="spf-bulk-title"><span class="sp-ms" aria-hidden="true">receipt_long</span>Payment Summary</div>
+    <button type="button" class="spf-icon-btn" onclick="spBulkSheetClose()" aria-label="Close" title="Close"><span class="sp-ms" aria-hidden="true">close</span></button>
+  </div>
+  <div class="spf-bulk-body">
+    <p class="spf-bulk-note">Review the charges below before proceeding to payment.</p>
+    <div id="spf-bulk-items"></div>
+    <div class="spf-bulk-total"><span>Total Payable</span><span id="spf-bulk-total-amt" class="spf-bulk-total-val"></span></div>
+  </div>
+  <div class="spf-bulk-foot">
+    <button type="button" class="spf-btn spf-btn-ghost" onclick="spBulkSheetClose()">Cancel</button>
+    <button type="button" class="spf-btn spf-btn-primary" id="spf-bulk-confirm-btn" onclick="spBulkConfirmPay()"><span class="sp-ms" aria-hidden="true">lock</span> Proceed to Pay</button>
+  </div>
+</div>
+{% endif %}
+
+{# ── Secure Payment Trust Modal (unchanged) ─────────────────────────── #}
+<div id="sp-trust-modal" onclick="if(event.target===this)spCloseTrustModal();"
+     style="display:none;position:fixed;inset:0;z-index:9997;background:rgba(15,23,42,0.55);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:16px;">
+  <div class="fee-trust-modal-box" role="dialog" aria-modal="true" aria-labelledby="sp-trust-title">
+    <div class="fee-trust-modal-header">
+      <div class="fee-trust-modal-lock"><span class="sp-ms" style="font-size:26px;color:#fff;" aria-hidden="true">lock</span></div>
+      <div>
+        <div id="sp-trust-title" style="font-size:15px;font-weight:800;color:#1e293b;">Secure Payment</div>
+        <div style="font-size:11px;color:#64748b;margin-top:2px;">Your transaction is protected</div>
+      </div>
+      <button type="button" onclick="spCloseTrustModal();" class="fee-trust-modal-close-x" aria-label="Close">&times;</button>
+    </div>
+    <div class="fee-trust-modal-amount-row">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#64748b;margin-bottom:4px;">Amount to Pay</div>
+      <div id="sp-trust-modal-amount" style="font-size:1.9rem;font-weight:900;color:#1e293b;letter-spacing:-0.02em;"></div>
+    </div>
+    <div class="fee-trust-badges">
+      <div class="fee-trust-badge-item"><span class="sp-ms fee-trust-badge-icon" style="color:#b5364a;" aria-hidden="true">lock</span><div><div class="fee-trust-badge-title">256-bit SSL</div><div class="fee-trust-badge-sub">Encrypted</div></div></div>
+      <div class="fee-trust-badge-item"><span class="sp-ms fee-trust-badge-icon" style="color:#920c24;" aria-hidden="true">shield</span><div><div class="fee-trust-badge-title">Razorpay</div><div class="fee-trust-badge-sub">Secured</div></div></div>
+      <div class="fee-trust-badge-item"><span class="sp-ms fee-trust-badge-icon" style="color:#000000;" aria-hidden="true">verified_user</span><div><div class="fee-trust-badge-title">PCI DSS</div><div class="fee-trust-badge-sub">Compliant</div></div></div>
+    </div>
+    <p class="fee-trust-modal-note">You will be redirected to Razorpay's secure checkout. Your card or UPI details are never stored on our servers.</p>
+    <div class="fee-trust-modal-footer">
+      <button type="button" class="fee-trust-modal-cancel-btn" onclick="spCloseTrustModal();">Cancel</button>
+      <button type="button" class="fee-trust-modal-proceed-btn" id="sp-trust-proceed-btn" onclick="spTrustProceed();"><span class="sp-ms" style="font-size:16px;" aria-hidden="true">payments</span> Proceed to Pay</button>
+    </div>
+  </div>
+</div>
+
+{# ── Counter Payment Modal (unchanged) ──────────────────────────────── #}
+{% if _counter %}
+<div id="sp-fee-counter-modal" onclick="if(event.target===this)this.style.display='none';"
+     style="display:none;position:fixed;inset:0;z-index:9998;background:rgba(15,23,42,0.5);backdrop-filter:blur(3px);align-items:center;justify-content:center;padding:16px;">
+  <div class="fee-modal-box" role="dialog" aria-modal="true" aria-labelledby="sp-counter-title">
+    <div class="fee-modal-header">
+      <span class="sp-ms" style="font-size:22px;color:rgba(255,255,255,0.85);" aria-hidden="true">store</span>
+      <div>
+        <div id="sp-counter-title" style="font-size:14px;font-weight:700;color:#fff;">Pay at Counter</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.6);margin-top:1px;">Cash · Bursar's Office</div>
+      </div>
+    </div>
+    <div class="fee-modal-body">
+      <div class="fee-modal-amount-box">
+        <span class="sp-ms" style="font-size:20px;color:#000000;flex-shrink:0;" aria-hidden="true">payments</span>
+        <div>
+          <div style="font-size:10px;color:#000000;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px;">Amount Due</div>
+          <div id="sp-fee-counter-amount" style="font-size:1.3rem;font-weight:800;color:#000000;"></div>
+        </div>
+      </div>
+      <p style="font-size:13px;color:#475569;line-height:1.5;margin:0 0 12px;">Visit the <strong style="color:#1e293b;">Bursar's Office</strong> with the exact cash amount and your student ID.</p>
+      <div class="fee-modal-note"><span class="sp-ms" style="font-size:14px;color:#920c24;flex-shrink:0;" aria-hidden="true">info</span>Payment will be recorded after cash is received and verified.</div>
+    </div>
+    <div class="fee-modal-footer">
+      <button type="button" onclick="document.getElementById('sp-fee-counter-modal').style.display='none';" class="fee-modal-close-btn">Close</button>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% endif %}{# end no_student #}
+
+{# ── Payment Overlay (unchanged) ─────────────────────────────────────── #}
+<div id="sp-pay-overlay" class="sp-pay-overlay" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Payment in progress">
+  <div class="sp-pay-overlay-box">
+    <div class="sp-pay-spinner"></div>
+    <div class="sp-pay-overlay-msg" id="sp-pay-overlay-msg" role="status">Preparing payment&hellip;</div>
+  </div>
+</div>
+
+</div>{# end .spf-page #}
+{% endblock %}
+
+{% block extra_js %}
+<script>var SP_CSRF = "{{ frappe.session.csrf_token }}";</script>
+<script>
+(function () {
+  'use strict';
+  var CSRF = (typeof SP_CSRF !== 'undefined') ? SP_CSRF : '';
+
+  /* ── API helper ─────────────────────────────────────────────── */
+  function spCall(method, args, ok, err) {
+    var b = new URLSearchParams(); b.set('cmd', method);
+    if (args) Object.keys(args).forEach(function (k) { var v = args[k]; b.set(k, typeof v === 'object' ? JSON.stringify(v) : v); });
+    fetch('/api/method/' + method, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Frappe-CSRF-Token': CSRF },
+      body: b.toString(), credentials: 'same-origin'
+    })
+    .then(function (r) { return r.json().then(function (d) {
+      if (!r.ok) {
+        var m = (d && d._server_messages) ? JSON.parse(d._server_messages)[0] : ((d && d.exception) || ('HTTP ' + r.status));
+        try { m = JSON.parse(m).message || m; } catch (e) {}
+        (err || _n)(m); return;
+      }
+      (ok || _n)(d);
+    }); })
+    .catch(function (e) { (err || _n)(e && e.message || 'Network error'); });
+  }
+  function _n() {}
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+  /* ── Toast ──────────────────────────────────────────────────── */
+  function toast(title, msg, type) {
+    var p = { success: { bd: 'rgba(0,0,0,0.25)', tx: '#000000' }, error: { bd: 'rgba(146,12,36,0.35)', tx: '#920c24' },
+              warning: { bd: '#f5c6ce', tx: '#920c24' }, info: { bd: '#f5c6ce', tx: '#920c24' } };
+    var c = p[type] || p.info;
+    var t = document.createElement('div');
+    t.setAttribute('role', type === 'error' ? 'alert' : 'status');
+    t.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:10000;max-width:320px;min-width:220px;background:#fff;border:1.5px solid ' + c.bd +
+      ';color:' + c.tx + ';border-radius:10px;padding:11px 14px;box-shadow:0 6px 24px rgba(0,0,0,0.12);font-family:inherit;font-size:13px;line-height:1.5;';
+    t.innerHTML = (title ? '<div style="font-weight:700;margin-bottom:2px;">' + esc(title) + '</div>' : '') + '<div>' + esc(msg) + '</div>';
+    document.body.appendChild(t);
+    setTimeout(function () { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; setTimeout(function () { t.remove(); }, 320); }, 4500);
+  }
+
+  /* ── Payment overlay ────────────────────────────────────────── */
+  function showOverlay(m) { var o = document.getElementById('sp-pay-overlay'), x = document.getElementById('sp-pay-overlay-msg'); if (x) x.textContent = m || 'Processing…'; if (o) { o.classList.add('active'); o.setAttribute('aria-hidden', 'false'); } }
+  function hideOverlay() { var o = document.getElementById('sp-pay-overlay'); if (o) { o.classList.remove('active'); o.setAttribute('aria-hidden', 'true'); } }
+
+  /* ── One payment at a time: every [data-pay] button is locked while
+        a payment is being prepared or the Razorpay window is open. ── */
+  var _active = null;
+  function lockPay(btn) {
+    if (_active) return false;
+    _active = { btn: btn || null };
+    document.querySelectorAll('[data-pay]').forEach(function (b) { b.disabled = true; });
+    if (btn) { btn.dataset.orig = btn.innerHTML; btn.innerHTML = 'Processing…'; btn.setAttribute('aria-busy', 'true'); }
+    return true;
+  }
+  function unlockPay() {
+    if (!_active) return;
+    var b = _active.btn; _active = null;
+    document.querySelectorAll('[data-pay]').forEach(function (x) { x.disabled = false; });
+    if (b && b.dataset.orig) { b.innerHTML = b.dataset.orig; delete b.dataset.orig; b.removeAttribute('aria-busy'); }
+  }
+  var meta = document.getElementById('sp-fee-meta') || { dataset: {} };
+  var pName = meta.dataset.payerName || '', pEmail = meta.dataset.payerEmail || '';
+  var THEME = '#920c24';
+
+  /* ── Trust modal → then the chosen payment ──────────────────── */
+  var _trust = { type: 'sm', name: '', amount: '', component: '', btn: null };
+  window.spShowTrustThenPay = function (type, name, amount, component, btn) {
+    if (_active) return;
+    _trust = { type: type, name: name || '', amount: amount || '', component: component || '', btn: btn || null };
+    var amtEl = document.getElementById('sp-trust-modal-amount'); if (amtEl) amtEl.textContent = amount || '';
+    var modal = document.getElementById('sp-trust-modal'); if (!modal) return;
+    modal.style.display = 'flex';
+    var box = modal.querySelector('.fee-trust-modal-box');
+    if (box) { box.style.opacity = '0'; box.style.transform = 'scale(0.94) translateY(12px)';
+      requestAnimationFrame(function () { requestAnimationFrame(function () { box.style.transition = 'opacity .2s ease, transform .2s ease'; box.style.opacity = '1'; box.style.transform = 'none'; }); }); }
+    var go = document.getElementById('sp-trust-proceed-btn'); if (go) setTimeout(function () { go.focus(); }, 60);
+  };
+  window.spCloseTrustModal = function () {
+    var modal = document.getElementById('sp-trust-modal'); if (!modal || modal.style.display === 'none') return;
+    var box = modal.querySelector('.fee-trust-modal-box');
+    if (box) { box.style.transition = 'opacity .16s ease, transform .16s ease'; box.style.opacity = '0'; box.style.transform = 'scale(0.96) translateY(8px)'; }
+    setTimeout(function () { modal.style.display = 'none'; }, 170);
+  };
+  window.spTrustProceed = function () {
+    var ctx = _trust;
+    spCloseTrustModal();
+    setTimeout(function () {
+      if (ctx.type === 'sm') spPayFromStudentMaster(ctx.btn);
+      else if (ctx.type === 'invoice') spInitiatePayment(ctx.name, ctx.btn);
+      else if (ctx.type === 'demand') spPayDemand(ctx.name, ctx.component, ctx.amount, ctx.btn);
+    }, 200);
+  };
+
+  /* ── Refresh one invoice row after cancel / failure ─────────── */
+  var TONE = { Paid: ['paid', 'check_circle'], 'Partially Paid': ['warning', 'schedule'], Unpaid: ['danger', 'error'], Overdue: ['danger', 'error'] };
+  function refreshCard(name) {
+    spCall('slcm.api.student_payment.get_invoice_summary', { invoice_name: name }, function (r) {
+      var d = r && r.message; if (!d) return;
+      var outstanding = d.outstanding_amount || 0, disp = d.status;
+      if (disp !== 'Paid' && disp !== 'Cancelled') disp = outstanding <= 0 ? 'Paid' : ((d.paid_amount || 0) > 0 ? 'Partially Paid' : 'Unpaid');
+      var badge = document.getElementById('spf-badge-' + name);
+      if (badge) { var t = TONE[disp] || ['neutral', '']; badge.className = 'spf-badge spf-badge-' + t[0];
+        badge.innerHTML = (t[1] ? '<span class="sp-ms" aria-hidden="true">' + t[1] + '</span>' : '') + esc(disp); }
+      var out = document.getElementById('spf-out-' + name);
+      if (out && d.formatted_outstanding) { out.textContent = d.formatted_outstanding; out.className = outstanding > 0 ? 'spf-tone-danger' : 'spf-tone-success'; }
+      if (disp === 'Paid') document.querySelectorAll('[data-pay-invoice="' + name + '"]').forEach(function (b) { b.remove(); });
+    });
+  }
+
+  /* ── Razorpay loader ────────────────────────────────────────── */
+  var _rzpLoading = false, _rzpQ = [];
+  function ensureRzp(cb) {
+    if (typeof Razorpay !== 'undefined') { cb(null); return; }
+    _rzpQ.push(cb); if (_rzpLoading) return; _rzpLoading = true;
+    var s = document.createElement('script'); s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    s.onload = function () { _rzpLoading = false; _rzpQ.forEach(function (f) { f(null); }); _rzpQ = []; };
+    s.onerror = function () { _rzpLoading = false; var e = 'Payment gateway unavailable. Check your connection.'; _rzpQ.forEach(function (f) { f(e); }); _rzpQ = []; };
+    document.head.appendChild(s);
+  }
+
+  /* ── Programme fee: Pay Outstanding (creates/uses the invoice) ─ */
+  window.spPayFromStudentMaster = function (btn) {
+    btn = btn || document.getElementById('sp-sm-pay-btn') || document.getElementById('sp-sm-pay-btn-empty');
+    if (!lockPay(btn)) return;
+    showOverlay('Creating your invoice…');
+    spCall('slcm.api.student_payment.ensure_invoice_and_create_order', {},
+      function (r) { hideOverlay();
+        if (!r || !r.message) { unlockPay(); toast('Error', 'Could not create invoice. Please try again.', 'error'); return; }
+        openRzp(r.message, r.message.invoice_name); },
+      function (e) { hideOverlay(); unlockPay(); toast('Error', e || 'Something went wrong.', 'error'); });
+  };
+
+  /* ── Programme fee: pay a specific invoice ───────────────────── */
+  window.spInitiatePayment = function (name, btn) {
+    if (!name) return;
+    btn = btn || document.getElementById('pay-btn-' + name);
+    if (!lockPay(btn)) return;
+    showOverlay('Preparing payment…');
+    spCall('slcm.api.student_payment.create_payment_order', { invoice_name: name },
+      function (r) { hideOverlay();
+        if (!r || !r.message) { unlockPay(); toast('Error', 'Could not initiate payment.', 'error'); return; }
+        openRzp(r.message, name); },
+      function (e) { hideOverlay(); unlockPay(); toast('Error', e || 'Something went wrong.', 'error'); });
+  };
+
+  function openRzp(order, name) {
+    ensureRzp(function (le) {
+      if (le || typeof Razorpay === 'undefined') { hideOverlay(); unlockPay(); toast('Unavailable', le || 'Payment gateway could not load.', 'error'); return; }
+      _launch(order, name);
+    });
+  }
+
+  function cancelFeePayment(name, order) {
+    unlockPay();
+    toast('Cancelled', 'Payment was cancelled. Your fee status is unchanged.', 'info');
+    spCall('slcm.api.student_payment.cancel_fee_payment', { invoice_name: name, integration_request: order.integration_request || '' },
+      function () { refreshCard(name); }, function () { refreshCard(name); });
+  }
+
+  function _launch(order, name) {
+    var rzp = new Razorpay({
+      key: order.key_id, amount: order.amount, currency: order.currency || 'INR',
+      name: 'Student Fee Payment', description: 'Invoice: ' + (name || ''), order_id: order.order_id,
+      prefill: { name: pName || order.payer_name || '', email: pEmail || order.payer_email || '', contact: order.payer_phone || '' },
+      theme: { color: THEME },
+      modal: { confirm_close: true, ondismiss: function () { cancelFeePayment(name, order); } },
+      handler: function (resp) {
+        showOverlay('Confirming payment…');
+        spCall('slcm.api.student_payment.confirm_fee_payment', {
+          invoice_name: name, integration_request: order.integration_request,
+          razorpay_payment_id: resp.razorpay_payment_id, razorpay_order_id: resp.razorpay_order_id, razorpay_signature: resp.razorpay_signature },
+          function (r) { hideOverlay(); var d = r && r.message;
+            if (d && d.status === 'already_paid') toast('Already Paid', 'This invoice is already fully settled.', 'info');
+            else toast('Payment Successful', 'Your payment has been recorded successfully.', 'success');
+            setTimeout(function () { window.location.reload(); }, 2800); },
+          /* Pay stays locked: the payment may already be captured */
+          function (e) { hideOverlay(); toast('Pending', e || 'Payment captured but confirmation is pending. Refresh in a few minutes.', 'warning'); });
+      }
+    });
+    rzp.on('payment.failed', function (r) {
+      var errDesc = (r.error && r.error.description) || 'Payment was not completed.';
+      var pid = (r.error && r.error.metadata && r.error.metadata.payment_id) || '', errCode = (r.error && r.error.code) || '';
+      toast('Payment Failed', errDesc, 'error');
+      spCall('slcm.api.student_payment.mark_payment_failed',
+        { invoice_name: name, integration_request: order.integration_request || '', payment_id: pid, error_code: errCode, error_description: errDesc },
+        function () { refreshCard(name); setTimeout(function () { window.location.reload(); }, 2200); },
+        function () {
+          spCall('slcm.api.student_payment.sync_payment_status', { invoice_name: name, integration_request: order.integration_request || '', payment_id: pid },
+            function () { refreshCard(name); setTimeout(function () { window.location.reload(); }, 2200); },
+            function () { refreshCard(name); });
+        });
+    });
+    rzp.open();
+  }
+
+  /* ── Re-examination fee ─────────────────────────────────────── */
+  window.spInitiateReExamPayment = function (regName, examPlan, course, btn) {
+    if (!examPlan || !course) return;
+    btn = btn || document.getElementById('pay-btn-rex-' + regName);
+    if (!lockPay(btn)) return;
+    showOverlay('Preparing re-exam payment…');
+    spCall('slcm.api.student_payment.create_re_exam_payment_order', { exam_plan: examPlan, course: course },
+      function (r) { hideOverlay();
+        if (!r || !r.message) { unlockPay(); toast('Error', 'Could not initiate payment.', 'error'); return; }
+        var order = r.message;
+        ensureRzp(function (le) {
+          if (le || typeof Razorpay === 'undefined') { unlockPay(); toast('Unavailable', le || 'Payment gateway could not load.', 'error'); return; }
+          var rzp = new Razorpay({
+            key: order.key_id, amount: order.amount, currency: order.currency || 'INR',
+            name: 'Re-Examination Fee', description: 'Re-Exam Registration: ' + (regName || ''), order_id: order.order_id,
+            prefill: { name: pName || order.payer_name || '', email: pEmail || order.payer_email || '', contact: order.payer_phone || '' },
+            theme: { color: THEME },
+            modal: { confirm_close: true, ondismiss: function () { unlockPay(); toast('Cancelled', 'Re-exam payment was cancelled.', 'info'); } },
+            handler: function (resp) {
+              showOverlay('Confirming re-exam payment…');
+              spCall('slcm.api.student_payment.confirm_re_exam_payment', {
+                registration_name: regName, integration_request: order.integration_request,
+                razorpay_payment_id: resp.razorpay_payment_id, razorpay_order_id: resp.razorpay_order_id, razorpay_signature: resp.razorpay_signature },
+                function () { hideOverlay(); toast('Payment Successful', 'Your re-exam payment has been recorded.', 'success'); setTimeout(function () { window.location.reload(); }, 2500); },
+                function (e) { hideOverlay(); toast('Pending', e || 'Payment captured but confirmation pending. Refresh in a few minutes.', 'warning'); });
+            }
+          });
+          rzp.on('payment.failed', function (fr) {
+            toast('Payment Failed', (fr.error && fr.error.description) || 'Re-exam payment was not completed.', 'error');
+            setTimeout(function () { window.location.reload(); }, 1800);
+          });
+          rzp.open();
+        });
+      },
+      function (e) { hideOverlay(); unlockPay(); toast('Error', e || 'Something went wrong.', 'error'); });
+  };
+
+  /* ── Additional charges: Pay All (one Razorpay order) ───────── */
+  function _fmtINR(n) { return '₹' + Number(n).toLocaleString('en-IN', { maximumFractionDigits: 0 }); }
+  function payAllBtn() { return document.getElementById('spf-pay-all-btn'); }
+  window.spPayAll = function () {
+    var btn = payAllBtn(); if (!btn || _active) return;
+    var names = (btn.getAttribute('data-demands') || '').split(',').filter(Boolean);
+    var rex = (btn.getAttribute('data-reexams') || '').split(',').filter(Boolean);
+    var total = parseFloat(btn.getAttribute('data-total')) || 0;
+    if (!names.length || total <= 0) return;
+    var items = document.getElementById('spf-bulk-items'), html = '', list = [];
+    try { list = JSON.parse((document.getElementById('spf-pay-all-items') || {}).textContent || '[]'); } catch (e) { list = []; }
+    list.forEach(function (it, i) {
+      html += '<div class="spf-bulk-item"><span class="spf-bulk-num">' + (i + 1) + '</span><span class="spf-bulk-label">' + esc(it.label) +
+        '</span><span class="spf-bulk-amt">' + esc(it.amount) + '</span></div>';
+    });
+    if (items) items.innerHTML = html || '<div style="padding:12px 0;color:var(--spf-muted);font-size:13px;">No payable charges found.</div>';
+    var totEl = document.getElementById('spf-bulk-total-amt'); if (totEl) totEl.textContent = _fmtINR(total);
+    var confirmBtn = document.getElementById('spf-bulk-confirm-btn'); if (confirmBtn) confirmBtn.disabled = false;
+    var sheet = document.getElementById('spf-bulk-sheet'), overlay = document.getElementById('spf-bulk-overlay');
+    if (overlay) overlay.style.display = 'block';
+    if (sheet) { sheet.style.display = 'flex'; requestAnimationFrame(function () { sheet.classList.add('spf-bulk-sheet-open'); }); if (confirmBtn) setTimeout(function () { confirmBtn.focus(); }, 60); }
+    document.body.style.overflow = 'hidden';
+  };
+  window.spBulkSheetClose = function () {
+    var sheet = document.getElementById('spf-bulk-sheet'), overlay = document.getElementById('spf-bulk-overlay');
+    if (sheet) sheet.classList.remove('spf-bulk-sheet-open');
+    setTimeout(function () { if (sheet) sheet.style.display = 'none'; if (overlay) overlay.style.display = 'none'; document.body.style.overflow = ''; }, 280);
+  };
+  window.spBulkConfirmPay = function () {
+    var btn = payAllBtn(); if (!btn) return;
+    var names = (btn.getAttribute('data-demands') || '').split(',').filter(Boolean);
+    var rex = (btn.getAttribute('data-reexams') || '').split(',').filter(Boolean);
+    var confirmBtn = document.getElementById('spf-bulk-confirm-btn');
+    if (confirmBtn) confirmBtn.disabled = true;
+    spBulkSheetClose();
+    if (!lockPay(btn)) return;
+    showOverlay('Creating payment order…');
+    spCall('slcm.api.student_payment.create_bulk_demand_payment_order', { fee_demand_names: JSON.stringify(names), re_exam_registrations: JSON.stringify(rex) },
+      function (r) {
+        var order = r && r.message;
+        if (!order || !order.order_id) { hideOverlay(); unlockPay(); toast('Error', 'Could not create payment order. Please try again.', 'error'); return; }
+        ensureRzp(function (le) {
+          hideOverlay();
+          if (le) { unlockPay(); toast('Unavailable', le, 'error'); return; }
+          _launchBulk(order, names, rex);
+        });
+      },
+      function (e) { hideOverlay(); unlockPay(); toast('Error', e || 'Could not create payment order.', 'error'); });
+  };
+  function _launchBulk(order, names, rex) {
+    rex = rex || [];
+    var failedAlready = false;
+    var rzp = new Razorpay({
+      key: order.key_id, amount: order.amount, currency: order.currency || 'INR',
+      name: 'Fee Payment', description: order.components || ((names.length + rex.length) + ' charge(s)'), order_id: order.order_id,
+      prefill: { name: pName || order.payer_name || '', email: pEmail || order.payer_email || '', contact: order.payer_phone || '' },
+      theme: { color: THEME },
+      modal: { confirm_close: true, ondismiss: function () {
+        if (failedAlready) return;
+        unlockPay();
+        toast('Cancelled', 'Payment was cancelled. No charges applied.', 'info');
+        spCall('slcm.api.student_payment.cancel_bulk_demand_payment', { fee_demand_names: JSON.stringify(names), re_exam_registrations: JSON.stringify(rex), integration_request: order.integration_request || '' }, _n, _n);
+      } },
+      handler: function (resp) {
+        showOverlay('Confirming payment…');
+        spCall('slcm.api.student_payment.confirm_bulk_demand_payment', {
+          fee_demand_names: JSON.stringify(names), re_exam_registrations: JSON.stringify(rex), integration_request: order.integration_request,
+          razorpay_payment_id: resp.razorpay_payment_id, razorpay_order_id: resp.razorpay_order_id, razorpay_signature: resp.razorpay_signature },
+          function (r) { hideOverlay(); var d = r && r.message;
+            if (d && d.status === 'already_paid') toast('Already Paid', 'These charges are already settled.', 'info');
+            else toast('Payment Successful', (d && d.demands_paid ? d.demands_paid + ' charge(s) cleared — ' : '') + (d && d.formatted_total || ''), 'success');
+            setTimeout(function () { window.location.reload(); }, 2800); },
+          function (e) { hideOverlay(); toast('Pending', e || 'Payment captured but confirmation pending. Refresh in a few minutes.', 'warning'); });
+      }
+    });
+    rzp.on('payment.failed', function (r) {
+      failedAlready = true;
+      var errDesc = (r.error && r.error.description) || 'Payment was not completed.';
+      toast('Payment Failed', errDesc, 'error');
+      spCall('slcm.api.student_payment.mark_demand_payment_failed', {
+        fee_demand_names: JSON.stringify(names), re_exam_registrations: JSON.stringify(rex), integration_request: order.integration_request || '',
+        payment_id: (r.error && r.error.metadata && r.error.metadata.payment_id) || '', error_code: (r.error && r.error.code) || '', error_description: errDesc },
+        function () { setTimeout(function () { window.location.reload(); }, 2200); },
+        function () { setTimeout(function () { window.location.reload(); }, 2200); });
+    });
+    rzp.open();
+  }
+
+  /* ── Single additional charge (kept for the trust-modal 'demand' path) ── */
+  window.spPayDemand = function (demandName, component, displayAmt, btn) {
+    if (!demandName || !lockPay(btn || null)) return;
+    spCall('slcm.api.student_payment.create_demand_payment_order', { fee_demand_name: demandName },
+      function (r) {
+        var order = r && r.message;
+        if (!order || !order.order_id) { unlockPay(); toast('Error', 'Could not create payment order.', 'error'); return; }
+        ensureRzp(function (err) {
+          if (err) { unlockPay(); toast('Error', 'Could not load payment gateway.', 'error'); return; }
+          var rzp = new Razorpay({
+            key: order.key_id, amount: order.amount, currency: order.currency || 'INR',
+            name: 'Fee Payment', description: component + ' — ' + displayAmt, order_id: order.order_id,
+            prefill: { name: pName || order.payer_name || '', email: pEmail || order.payer_email || '', contact: order.payer_phone || '' },
+            theme: { color: THEME },
+            modal: { confirm_close: true, ondismiss: function () {
+              unlockPay(); toast('Cancelled', 'Payment was cancelled.', 'info');
+              spCall('slcm.api.student_payment.cancel_demand_payment', { fee_demand_name: demandName, integration_request: order.integration_request || '' }, _n, _n);
+            } },
+            handler: function (resp) {
+              showOverlay('Confirming payment…');
+              spCall('slcm.api.student_payment.confirm_demand_payment', {
+                fee_demand_name: demandName, integration_request: order.integration_request,
+                razorpay_payment_id: resp.razorpay_payment_id, razorpay_order_id: resp.razorpay_order_id, razorpay_signature: resp.razorpay_signature },
+                function () { hideOverlay(); toast('Payment Successful', component + ' payment has been recorded.', 'success'); setTimeout(function () { window.location.reload(); }, 2500); },
+                function (e) { hideOverlay(); toast('Pending', e || 'Payment captured but confirmation pending. Refresh in a few minutes.', 'warning'); });
+            }
+          });
+          rzp.on('payment.failed', function (fr) { unlockPay(); toast('Payment Failed', (fr.error && fr.error.description) || 'Payment was not completed.', 'error'); });
+          rzp.open();
+        });
+      },
+      function (e) { unlockPay(); toast('Error', e || 'Could not create payment order.', 'error'); });
+  };
+
+  /* ── Pay at counter (information only) ───────────────────────── */
+  window.spFeePayAtCounter = function (n, amt) {
+    var modal = document.getElementById('sp-fee-counter-modal'); if (!modal) return;
+    var a = document.getElementById('sp-fee-counter-amount'); if (a) a.textContent = amt || '';
+    modal.style.display = 'flex';
+  };
+
+  /* ── Refresh invoices (empty state) ──────────────────────────── */
+  window.spRefreshInvoices = function () {
+    var btn = document.getElementById('sp-refresh-inv-btn');
+    if (btn) { btn.disabled = true; btn.innerHTML = 'Checking…'; }
+    setTimeout(function () { window.location.reload(); }, 600);
+  };
+
+  /* ── Invoice detail row, additional-charge details and tabs ──── */
+  window.spfToggle = function (invName) {
+    var det = document.getElementById('spf-det-' + invName), btn = document.getElementById('spf-view-' + invName);
+    if (!det) return;
+    var open = det.classList.contains('is-hidden');
+    det.classList.toggle('is-hidden', !open);
+    if (btn) { btn.setAttribute('aria-expanded', open ? 'true' : 'false'); btn.textContent = open ? 'Hide' : 'View'; }
+  };
+  // Open the Summary's details on one tab (payments, invoices…) and bring it into view.
+  // Pay All when no online gateway is configured on this site
+  window.spfPayUnavailable = function () {
+    toast('Online payment unavailable', 'Online payment is not set up yet. Please contact the Finance Office.', 'info');
+  };
+  // Summary card drill-down: popup with the Academic / Non Academic split
+  var _ddFrom = null;
+  window.spfDrill = function (btn) {
+    var tpl = document.getElementById(btn.getAttribute('data-drill')), dd = document.getElementById('spf-dd');
+    if (!tpl || !dd) return;
+    // The Summary card animates in with a transform, which would pin a fixed overlay to the card;
+    // living directly under <body> keeps the popup centred on the screen.
+    if (dd.parentNode !== document.body) document.body.appendChild(dd);
+    document.getElementById('spf-dd-title').textContent = btn.getAttribute('data-title') || '';
+    var body = document.getElementById('spf-dd-body'); body.innerHTML = '';
+    body.appendChild(tpl.content.cloneNode(true));
+    _ddFrom = btn; dd.hidden = false; document.body.style.overflow = 'hidden';
+    dd.querySelector('.spf-dd-close').focus();
+  };
+  window.spfDrillClose = function () {
+    var dd = document.getElementById('spf-dd'); if (!dd || dd.hidden) return;
+    dd.hidden = true; document.body.style.overflow = '';
+    if (_ddFrom) _ddFrom.focus();
+  };
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') spfDrillClose(); });
+  window.spfShowTab = function (tab) {
+    var target = document.getElementById('spf-sec-' + tab);
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+  window.spfToggleDetails = function (btn) {
+    var panel = document.getElementById(btn.getAttribute('aria-controls')); if (!panel) return;
+    var open = panel.classList.contains('is-hidden');
+    panel.classList.toggle('is-hidden', !open);
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    btn.firstChild.textContent = open ? 'Hide Details ' : 'View Details ';
+  };
+  window.spfTab = function (tab) {
+    var cur = document.getElementById('spf-tabbtn-' + tab);
+    var list = cur && cur.closest('.spf-tabs');
+    if (!list) return;
+    list.querySelectorAll('[role="tab"]').forEach(function (b) {
+      var t = b.id.replace('spf-tabbtn-', ''), on = t === tab;
+      var panel = document.getElementById('spf-tab-' + t);
+      if (panel) panel.classList.toggle('is-hidden', !on);
+      b.setAttribute('aria-selected', on ? 'true' : 'false'); b.tabIndex = on ? 0 : -1;
+      document.querySelectorAll('[data-tab-meta="' + t + '"]').forEach(function (m) { m.classList.toggle('is-hidden', !on); });
+    });
+  };
+  document.querySelectorAll('.spf-tabs').forEach(function (list) {
+    list.addEventListener('keydown', function (e) {
+      if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+      var tabs = Array.prototype.slice.call(list.querySelectorAll('[role="tab"]')), i = tabs.indexOf(document.activeElement);
+      if (i < 0) return;
+      var next = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; next.focus(); next.click();
+    });
+  });
+
+  /* ── Academic-year filter + "View All" on long tables ────────── */
+  var AY = 'all', expanded = {};
+  /* Type / status chips over the Summary list; card groups follow the type */
+  var FF = { type: 'all', status: 'all' };
+  function feeFilterMatch(tr) {
+    var t = tr.getAttribute('data-type'), st = tr.getAttribute('data-status');
+    return (FF.type === 'all' || !t || t === FF.type) && (FF.status === 'all' || !st || st === FF.status);
+  }
+  document.querySelectorAll('.spf-fchip:not(.spf-schip)').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var f = b.getAttribute('data-filter');
+      FF[f] = b.getAttribute('data-value');
+      document.querySelectorAll('.spf-fchip[data-filter="' + f + '"]').forEach(function (o) {
+        var on = o === b; o.classList.toggle('is-active', on); o.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
+      document.querySelectorAll('[data-card-group]').forEach(function (g) {
+        var lbl = g.getAttribute('data-card-group');
+        g.classList.toggle('is-hidden', FF.type !== 'all' && lbl !== 'Overall' && lbl !== FF.type);
+      });
+      applyAll();
+    });
+  });
+  function applyTable(table) {
+    var limit = parseInt(table.getAttribute('data-limit'), 10) || 0, shown = 0, matched = 0, groups = {};
+    table.querySelectorAll('tr.spf-row-data').forEach(function (tr) {
+      var ay = tr.getAttribute('data-ay') || '', match = (AY === 'all' || !ay || ay === AY) && feeFilterMatch(tr);
+      if (match) matched++;
+      var visible = match && (!limit || expanded[table.id] || shown < limit);
+      if (visible) { shown++; groups[tr.getAttribute('data-group')] = true; }
+      tr.classList.toggle('is-hidden', !visible);
+      var detId = tr.getAttribute('data-detail');
+      if (!visible && detId) { var det = document.getElementById(detId); if (det && !det.classList.contains('is-hidden')) spfToggle(detId.replace('spf-det-', '')); }
+    });
+    table.querySelectorAll('tr.spf-group-row').forEach(function (g) { g.classList.toggle('is-hidden', !groups[g.getAttribute('data-group')]); });
+    var emptyRow = table.querySelector('tr.spf-filter-empty'); if (emptyRow) emptyRow.classList.toggle('is-hidden', matched > 0);
+    var btn = document.querySelector('[data-viewall-for="' + table.id + '"]');
+    if (btn) { btn.classList.toggle('is-hidden', !limit || matched <= limit); btn.setAttribute('aria-expanded', expanded[table.id] ? 'true' : 'false'); btn.firstChild.textContent = expanded[table.id] ? 'Show Less ' : 'View All '; }
+    var cnt = document.querySelector('[data-count-for="' + table.id + '"]');
+    if (cnt) cnt.textContent = matched + ' ' + cnt.getAttribute('data-noun') + (matched === 1 ? '' : 's');
+  }
+  /* Payments / refunds / scholarships under each fee: its toggle, or the "Show" chips */
+  var SHOW = {}, EXP = {};
+  function applyDetails() {
+    document.querySelectorAll('#spf-charges-table tr.spf-sub-row').forEach(function (tr) {
+      var pid = tr.getAttribute('data-parent'), parentRow = document.getElementById(pid);
+      var on = !!parentRow && !parentRow.classList.contains('is-hidden') && (EXP[pid] || SHOW[tr.getAttribute('data-dkind')]);
+      tr.classList.toggle('is-hidden', !on);
+    });
+  }
+  window.spfRowToggle = function (btn) {
+    var id = btn.getAttribute('data-row'); EXP[id] = !EXP[id];
+    btn.setAttribute('aria-expanded', EXP[id] ? 'true' : 'false');
+    applyDetails();
+  };
+  document.querySelectorAll('.spf-schip').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var k = b.getAttribute('data-show'); SHOW[k] = !SHOW[k];
+      b.classList.toggle('is-active', SHOW[k]); b.setAttribute('aria-pressed', SHOW[k] ? 'true' : 'false');
+      applyDetails();
+    });
+  });
+  function applyAll() { ['spf-charges-table', 'spf-inv-table', 'spf-ph-table', 'spf-dm-table'].forEach(function (id) { var t = document.getElementById(id); if (t) applyTable(t); }); }
+  document.querySelectorAll('[data-viewall-for]').forEach(function (btn) {
+    btn.addEventListener('click', function () { var id = btn.getAttribute('data-viewall-for'); expanded[id] = !expanded[id]; applyTable(document.getElementById(id)); });
+  });
+  var aySel = document.getElementById('spf-ay-select');
+  if (aySel) aySel.addEventListener('change', function () {
+    AY = aySel.value || 'all';
+    var hint = document.getElementById('spf-ay-hint'); if (hint) hint.classList.toggle('show', AY !== 'all');
+    applyAll();
+  });
+  applyAll();
+
+  /* Print: show every row and invoice detail, then restore the view */
+  var _printOpened = [];
+  window.addEventListener('beforeprint', function () {
+    expanded = { 'spf-inv-table': true, 'spf-ph-table': true, 'spf-dm-table': true }; AY = 'all'; applyAll();
+    _printOpened = [];
+    document.querySelectorAll('tr.spf-detail-tr.is-hidden').forEach(function (d) { d.classList.remove('is-hidden'); _printOpened.push(d); });
+  });
+  window.addEventListener('afterprint', function () {
+    _printOpened.forEach(function (d) { d.classList.add('is-hidden'); }); _printOpened = [];
+    expanded = {}; AY = aySel ? (aySel.value || 'all') : 'all'; applyAll();
+  });
+
+  /* Fixed-row scroll boxes: cap height at header + first N rows; beyond that the box scrolls */
+  function sizeScrollBoxes() {
+    document.querySelectorAll('.spf-t-scroll[data-rows]').forEach(function (box) {
+      var n = parseInt(box.getAttribute('data-rows'), 10) || 5;
+      var rows = box.querySelectorAll('tbody tr.spf-row-data');
+      if (rows.length <= n) { box.style.maxHeight = 'none'; return; }
+      var thead = box.querySelector('thead'), h = thead ? thead.offsetHeight : 0;
+      for (var i = 0; i < n; i++) h += rows[i].offsetHeight;
+      box.style.maxHeight = (h + 1) + 'px';
+    });
+    applyDetails();
+  }
+  sizeScrollBoxes();
+  var _sbT; window.addEventListener('resize', function () { clearTimeout(_sbT); _sbT = setTimeout(sizeScrollBoxes, 120); });
+  window.addEventListener('beforeprint', function () { document.querySelectorAll('.spf-t-scroll').forEach(function (b) { b.style.maxHeight = 'none'; }); });
+  window.addEventListener('afterprint', sizeScrollBoxes);
+
+  /* Broken photo → initial */
+  document.querySelectorAll('.spf-avatar img').forEach(function (img) {
+    function fb() { if (img.parentNode) img.parentNode.textContent = img.getAttribute('data-fallback') || ''; }
+    if (img.complete && img.naturalWidth === 0) fb(); else img.addEventListener('error', fb);
+  });
+
+  /* Escape closes whichever dialog is open */
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    spCloseTrustModal();
+    var cm = document.getElementById('sp-fee-counter-modal'); if (cm) cm.style.display = 'none';
+    var sheet = document.getElementById('spf-bulk-sheet'); if (sheet && sheet.classList.contains('spf-bulk-sheet-open')) spBulkSheetClose();
+  });
+}());
+</script>
 {% endblock %}
