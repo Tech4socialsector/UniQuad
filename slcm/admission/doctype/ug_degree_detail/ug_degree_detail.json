@@ -61,7 +61,6 @@
    "fieldtype": "Float",
    "in_list_view": 1,
    "label": "Percentage/CGPA Obtained (UG degree)",
-   "length": 4,
    "non_negative": 1,
    "precision": "1",
    "reqd": 1
