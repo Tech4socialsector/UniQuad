@@ -87,12 +87,13 @@ def get_pace_status(application_name):
     admission_closed_message = ""
     active_adm = frappe.db.get_value("PACE Admission", {"status": "Active"}, "name")
     if active_adm:
-        close_date = frappe.db.get_value("PACE Admission", active_adm, "admission_close_date")
+        adm_data = frappe.db.get_value("PACE Admission", active_adm, ["admission_close_date", "academic_year"], as_dict=True) or {}
+        close_date = adm_data.get("admission_close_date")
         if close_date:
             from frappe.utils import getdate, today
             if getdate(today()) > getdate(close_date):
                 admission_closed = True
-                admission_closed_message = _("The admission cycle closed on {0}. You can no longer edit or submit your application.").format(frappe.utils.formatdate(close_date))
+                admission_closed_message = _("The application window for the {0} academic year is now closed.<br>New applications are no longer being accepted.<br>Thank you for your interest in our programme.").format(adm_data.get("academic_year") or "")
                 
     return {
         "status": status, 
@@ -319,20 +320,24 @@ def validate_new_application_access(programme=None):
     Returns: {"allowed": True} or {"allowed": False, "message": "..."}
     """
     active_adm = frappe.db.get_value("PACE Admission", {"status": "Active"}, "name")
+    
     if not active_adm:
+        latest_adm = frappe.db.get_all("PACE Admission", fields=["academic_year"], order_by="creation desc", limit=1)
+        academic_year = latest_adm[0].academic_year if latest_adm else ""
         return {
             "allowed": False,
-            "message": _("There is no active PACE Admission cycle at this time. New applications cannot be created.")
+            "message": _("The application window for the {0} academic year is now closed. Thank you for your interest in our programme.").format(academic_year)
         }
 
     # Check Close Date
-    close_date = frappe.db.get_value("PACE Admission", active_adm, "admission_close_date")
+    adm_data = frappe.db.get_value("PACE Admission", active_adm, ["admission_close_date", "academic_year"], as_dict=True) or {}
+    close_date = adm_data.get("admission_close_date")
     if close_date:
         from frappe.utils import getdate, today
         if getdate(today()) > getdate(close_date):
             return {
                 "allowed": False,
-                "message": _("The admission cycle closed on {0}. New applications cannot be created.").format(frappe.utils.formatdate(close_date))
+                "message": _("The application window for the {0} academic year is now closed. Thank you for your interest in our programme.").format(adm_data.get("academic_year") or "")
             }
 
     if programme:
