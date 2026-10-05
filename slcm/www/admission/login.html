@@ -51,13 +51,13 @@
     .lp-left {
       width: 40%; flex: 0 0 40%;
       background: #fff; display: flex; flex-direction: column;
-      justify-content: center; padding: 52px 48px;
+      justify-content: center; padding: 40px 48px;
       box-shadow: -4px 0 24px rgba(0,0,0,.07); position: relative; z-index: 2;
       overflow-y: auto;
     }
 
     /* brand */
-    .lp-brand { display: flex; align-items: center; gap: 14px; margin-bottom: 44px; }
+    .lp-brand { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
     .lp-brand-icon {
       width: 50px; height: 50px;
       background: var(--primary); display: flex; align-items: center;
@@ -69,10 +69,10 @@
     .lp-brand-sub  { font-size: 10px; font-weight: 400; letter-spacing: .12em;
                      color: #9ca3af; margin-top: 2px; }
     .lp-heading { font-size: 20px; font-weight: 400; color: #111827; margin-bottom: 6px; }
-    .lp-sub     { font-size: 12.5px; color: #6b7280; margin-bottom: 30px; line-height: 1.5; }
+    .lp-sub     { font-size: 12.5px; color: #6b7280; margin-bottom: 20px; line-height: 1.5; }
 
     /* tabs */
-    .lp-tabs { display: flex; border-bottom: 2px solid #e5e7eb; margin-bottom: 28px; }
+    .lp-tabs { display: flex; border-bottom: 2px solid #e5e7eb; margin-bottom: 20px; }
     .lp-tab {
       padding: 9px 22px; font-size: 11.5px; font-weight: 400;
       background: none; border: none; cursor: pointer; color: #9ca3af;
@@ -82,7 +82,7 @@
     .lp-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
 
     /* form fields */
-    .lp-field { margin-bottom: 18px; }
+    .lp-field { margin-bottom: 16px; }
     .lp-label { display: block; font-weight: 400;
                 color: #374151; margin-bottom: 6px; letter-spacing: .02em; }
     .lp-label .mandatory { color: #ef4444; margin-left: 2px; }
@@ -178,11 +178,11 @@
       display: flex; flex-direction: column;
       justify-content: end; align-items: flex-start;
       height: 100%; min-height: 100vh;
-      padding: 48px 44px; color: #fff;
+      padding: 20px 20px; color: #fff;
       overflow-y: auto;
     }
-    .lp-tagline { font-size: 21px; font-weight: 400; line-height: 1.2;
-                  margin-bottom: 28px; max-width: 620px; text-align: center;
+    .lp-tagline { font-size: 26px !important; font-weight: 600 !important; line-height: 1.2;
+                  margin-bottom: 20px; max-width: 620px; text-align: center;
                   align-self: center; margin-left: auto; margin-right: auto; }
 
     /* grid for cards */
@@ -203,7 +203,7 @@
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
       border: none;
-      border-radius: 8px; margin-bottom: 24px; width: 100%;
+      border-radius: 8px; width: 100%;
       overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
       color: #111827;
     }
@@ -215,15 +215,14 @@
       border-bottom: 1px solid rgba(0,0,0,0.1);
     }
     .glass-title { display: flex; align-items: center; gap: 9px; }
-    .glass-title h2 { font-size: 18px; font-weight: 500; }
+    .glass-title h2 { font-size: 16px !important; font-weight: 400 !important; }
 
     /* announcement rows */
     .ann-row {
-      display: flex; align-items: flex-start; gap: 12px;
-      padding: 14px 20px; cursor: pointer;
+      display: flex; align-items: center;
+      padding: 5px 5px; cursor: pointer;
       border-bottom: 1px solid rgba(0, 0, 0, 0.08);
       transition: background .15s;
-      opacity: .7;
     }
     .ann-row:last-child { border-bottom: none; }
     .ann-row:hover { background: rgba(255, 255, 255, 0.5); }
@@ -232,7 +231,7 @@
     .ann-title { line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 14px; }
     .ann-summary {opacity: .7; margin-top: 4px; font-size: 13px;
                    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .ann-row .material-symbols-outlined { font-size: 18px; color: #9ca3af; margin-top: 2px; }
+    .ann-row .material-symbols-outlined { font-size: 18px; color: #9ca3af;}
 
     .type-General   { background: #60a5fa; }
     .type-Important { background: #f87171; }
@@ -243,8 +242,8 @@
 
     /* date rows in Important Dates */
     .date-item {
-      display: flex; align-items: center; gap: 12px;
-      padding: 2.4px 20px;
+      display: flex; align-items: center;
+      padding: 5px 5px;
       border-bottom: 1px solid rgba(0, 0, 0, 0.08);
       transition: background .15s;
     }
@@ -262,7 +261,7 @@
     .date-item-body { flex: 1; min-width: 0; color: #374151; }
     .date-item-label { line-height: 1.4; font-size: 14px;
                        white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .date-item-sub { font-size: 12px; opacity: .7; margin-top: 2px; }
+    .date-item-sub { font-size: 12px; margin-top: 2px; }
     .date-badge {
       font-size: 8px; font-weight: 400; letter-spacing: .08em;
       padding: 2px 6px; border-radius: 99px; flex-shrink: 0;
@@ -418,14 +417,14 @@
       .lp-input { font-size: 13.5px; padding: 14px 16px; }
       .lp-btn { font-size: 12px; padding: 16px; }
       .lp-brand-name { font-size: 26px; }
-      .lp-right-body { padding: 80px 72px; }
+      .lp-right-body { padding: 20px 20px; }
       .lp-tagline { font-size: 21px; max-width: 560px; }
     }
 
     /* Large desktop (1400px–1999px) */
     @media (min-width: 1400px) and (max-width: 1999px) {
       .lp-left { padding: 60px 56px; }
-      .lp-right-body { padding: 64px 60px; }
+      .lp-right-body { padding: 20px 20px; }
       .lp-tagline { font-size: 21px; max-width: 500px; }
     }
 
@@ -434,7 +433,7 @@
     /* Small desktop (861px–1099px) */
     @media (min-width: 861px) and (max-width: 1099px) {
       .lp-left { padding: 44px 36px; }
-      .lp-right-body { padding: 36px 28px; }
+      .lp-right-body { padding: 20px 20px; }
       .lp-tagline { font-size: 21px; max-width: 340px; }
       .glass-title h2 { font-size: 16px; }
     }
@@ -702,6 +701,38 @@ src="https://www.facebook.com/tr?id=1279045953496223&ev=PageView&noscript=1"
       <h2 class="lp-tagline">{{ _tagline }}</h2>
 
       <div class="lp-cards-grid">
+
+        <!-- Announcements -->
+        <div class="glass">
+          <div class="glass-head">
+            <div class="glass-title">
+              <h2>Announcements</h2>
+            </div>
+          </div>
+          {% if announcements %}
+          <div style="max-height: 168px; overflow-y: auto; overflow-x: hidden;">
+            {% for ann in announcements %}
+            {% set _t = ann.announcement_type or "General" %}
+            <div class="ann-row" data-ann-idx="{{ loop.index0 }}" onclick="lpAnnOpen({{ loop.index0 }})" title="{{ ann.title }}">
+              <div class="date-item-icon" style="background: rgba(var(--primary-rgb), 0.1); color: var(--primary);">
+                <span class="material-symbols-outlined" style="font-size: 20px !important; color: var(--primary) !important;">campaign</span>
+              </div>
+              <div class="ann-text">
+                <div class="ann-title">{{ ann.title }}</div>
+                {% if ann.summary %}<div class="ann-summary">{{ ann.summary }}</div>{% endif %}
+              </div>
+              <span class="material-symbols-outlined">chevron_right</span>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+            <div class="ann-row" style="cursor:default;justify-content:center;color:#000103 !important;padding:24px 20px;">
+              <span style="font-size:14px;">No announcements have been announced yet.</span>
+            </div>
+          {% endif %}
+
+        </div>
+
         <!-- Important Dates -->
         <div class="glass">
           <div class="glass-head">
@@ -710,18 +741,19 @@ src="https://www.facebook.com/tr?id=1279045953496223&ev=PageView&noscript=1"
             </div>
           </div>
           {% if important_dates %}
+          <div style="max-height: 168px; overflow-y: auto; overflow-x: hidden;">
             {% set ev_ns = namespace(count=0) %}
             {% for item in important_dates %}
             {% set _is_ev = item.type == 'event' %}
             <div class="date-item {% if _is_ev %}clickable{% endif %}"
                  data-date-idx="{{ loop.index0 }}"
-                 style="display:none;"
+                 title="{{ item.label }}"
                  {% if _is_ev %}onclick="lpEvOpen({{ ev_ns.count }})"{% endif %}>
               <div class="date-item-icon" style="background: rgba(var(--primary-rgb), 0.1); color: var(--primary);">
-                <span class="material-symbols-outlined" style="font-size: 20px !important;">calendar_month</span>
+                <span class="material-symbols-outlined" style="font-size: 20px !important; color: var(--primary) !important;">calendar_month</span>
               </div>
               <div class="date-item-body">
-                <div class="date-item-label"><strong>{{ item.date_display }}:</strong> {{ item.label }}</div>
+                <div class="date-item-label" style="font-weight: 500; color: #000000;">{{ item.label }}</div>
                 {% if item.event_venue %}<div class="date-item-sub">{{ item.event_venue }}</div>{% endif %}
               </div>
               {% if _is_ev %}
@@ -730,17 +762,7 @@ src="https://www.facebook.com/tr?id=1279045953496223&ev=PageView&noscript=1"
             </div>
             {% if _is_ev %}{% set ev_ns.count = ev_ns.count + 1 %}{% endif %}
             {% endfor %}
-            <div class="card-pager" id="date-pager">
-              <span class="card-pager-info" id="date-pager-info"></span>
-              <div class="card-pager-btns">
-                <button class="card-pager-btn" id="date-prev" onclick="datePage(-1)" title="Previous">
-                  <span class="material-symbols-outlined" style="font-size:16px;">chevron_left</span>
-                </button>
-                <button class="card-pager-btn" id="date-next" onclick="datePage(1)" title="Next">
-                  <span class="material-symbols-outlined" style="font-size:16px;">chevron_right</span>
-                </button>
-              </div>
-            </div>
+          </div>
           {% else %}
             <div class="date-item" style="cursor:default;justify-content:center;color:#000103;padding:24px 20px;">
               <span style="font-size:14px;">No Important Dates.</span>
@@ -748,44 +770,7 @@ src="https://www.facebook.com/tr?id=1279045953496223&ev=PageView&noscript=1"
           {% endif %}
         </div>
 
-        <!-- Announcements -->
-        <div class="glass">
-          <div class="glass-head">
-            <div class="glass-title">
-              <h2>Campus Announcements</h2>
-            </div>
-          </div>
-          {% if announcements %}
-            {% for ann in announcements %}
-            {% set _t = ann.announcement_type or "General" %}
-            <div class="ann-row" data-ann-idx="{{ loop.index0 }}" onclick="lpAnnOpen({{ loop.index0 }})" style="display:none;">
-              <div class="ann-dot type-{{ _t }}"></div>
-              <div class="ann-text">
-                <div class="ann-title">{{ ann.title }}</div>
-                {% if ann.summary %}<div class="ann-summary">{{ ann.summary }}</div>{% endif %}
-              </div>
-              <span class="material-symbols-outlined">chevron_right</span>
-            </div>
-            {% endfor %}
-          {% else %}
-            <div class="ann-row" style="cursor:default;justify-content:center;color:#000103 !important;padding:24px 20px;">
-              <span style="font-size:14px;">No announcements have been announced yet.</span>
-            </div>
-          {% endif %}
-          {% if announcements|length > 3 %}
-          <div class="card-pager" id="ann-pager">
-            <span class="card-pager-info" id="ann-pager-info"></span>
-            <div class="card-pager-btns">
-              <button class="card-pager-btn" id="ann-prev" onclick="annPage(-1)" title="Previous">
-                <span class="material-symbols-outlined" style="font-size:16px;">chevron_left</span>
-              </button>
-              <button class="card-pager-btn" id="ann-next" onclick="annPage(1)" title="Next">
-                <span class="material-symbols-outlined" style="font-size:16px;">chevron_right</span>
-              </button>
-            </div>
-          </div>
-          {% endif %}
-        </div>
+        
       </div>
 
       <!-- Social proof -->
@@ -1588,8 +1573,6 @@ function datePage(dir) {
 
 /* ── INIT ON LOAD ── */
 document.addEventListener('DOMContentLoaded', function() {
-  initAnnPager();
-  initDatePager();
   
   function checkHash() {
     var isClosed = {{ 'true' if not show_register_tab else 'false' }};

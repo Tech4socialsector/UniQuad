@@ -175,6 +175,8 @@ def _load_program_detail(context, slug):
                 "admission_year": active_cycle_doc.admission_year,
                 "cycle_start_date": frappe.utils.getdate(active_cycle_doc.cycle_start_date) if active_cycle_doc.cycle_start_date else None,
                 "cycle_end_date": frappe.utils.getdate(active_cycle_doc.cycle_end_date) if active_cycle_doc.cycle_end_date else None,
+            "application_start_date": frappe.utils.getdate(active_cycle_doc.application_start_date) if active_cycle_doc.application_start_date else None,
+            "application_end_date": frappe.utils.getdate(active_cycle_doc.application_end_date) if active_cycle_doc.application_end_date else None,
                 "application_end": active_cycle_doc.application_end_date
             })
             context.admission_cycle = active_cycle_doc.name
@@ -546,6 +548,8 @@ def get_context(context):
             "name": active_cycle_doc.name,
             "cycle_start_date": frappe.utils.getdate(active_cycle_doc.cycle_start_date) if active_cycle_doc.cycle_start_date else None,
             "cycle_end_date": frappe.utils.getdate(active_cycle_doc.cycle_end_date) if active_cycle_doc.cycle_end_date else None,
+            "application_start_date": frappe.utils.getdate(active_cycle_doc.application_start_date) if active_cycle_doc.application_start_date else None,
+            "application_end_date": frappe.utils.getdate(active_cycle_doc.application_end_date) if active_cycle_doc.application_end_date else None,
             "application_end": active_cycle_doc.application_end_date
         })
     else:
@@ -556,8 +560,8 @@ def get_context(context):
     # ── 4. Is application window open? ───────────────────────────────
     app_open = False
     if active_cycle:
-        _start = active_cycle.get('cycle_start_date')
-        _end = active_cycle.get('cycle_end_date')
+        _start = active_cycle.get('application_start_date') or active_cycle.get('cycle_start_date')
+        _end = active_cycle.get('application_end_date') or active_cycle.get('cycle_end_date')
         if (not _start or context.today >= _start) and (not _end or context.today <= _end):
             app_open = True
 
