@@ -28,6 +28,7 @@
  "x_field": "program",
  "y_axis": [
   {
+   "color": "#2490EF",
    "y_field": "allocated_count"
   }
  ]
