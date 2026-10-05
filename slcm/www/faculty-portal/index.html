@@ -648,8 +648,7 @@ body.fp-dark .fp-dash-icon .fp-ms { color: #fff !important; }
         if (!data) { _setBody('<div class="fp-drill-empty"><span class="fp-ms">inbox</span>No data returned.</div>'); return; }
         _drillData = data;
         _drillRows = (data.rows || []).slice();
-        var subtitleText = data.hide_count ? '' : (data.count || 0) + ' record' + ((data.count !== 1) ? 's' : '');
-        _setModalHeader(data.title || 'Details', subtitleText);
+        _setModalHeader(data.title || 'Details', '');
         _buildFilters();
         _renderTable();
         // Fire search to apply defaults
@@ -706,14 +705,25 @@ body.fp-dark .fp-dash-icon .fp-ms { color: #fff !important; }
   }
 
   function _updateCountLabel(visible, total) {
+    if (_drillData && _drillData.hide_count) return;
+    
+    var unit = 'record';
+    var title = _drillData ? _drillData.title : '';
+    if (title === 'Enrolled Students' || title === 'Students') unit = 'Student';
+    else if (title === 'Courses' || title === 'My Courses') unit = 'Course';
+    else if (title === 'Attendance Tasks') unit = 'Task';
+    else if (title === 'Venue Bookings') unit = 'Booking';
+    
+    var unitPlural = unit + 's';
+    var text = visible === total
+      ? total + ' ' + (total !== 1 ? unitPlural : unit)
+      : visible + ' of ' + total + ' ' + unitPlural;
+
+    var s = document.getElementById('fp-drill-subtitle');
+    if (s) s.textContent = text;
+    
     var el = document.getElementById('fp-drill-count-label');
-    if (el) {
-      var unit = (_drillData && _drillData.title === 'Courses') ? 'course' : 'record';
-      var unitPlural = unit + 's';
-      el.textContent = visible === total
-        ? total + ' ' + (total !== 1 ? unitPlural : unit)
-        : visible + ' of ' + total + ' ' + unitPlural;
-    }
+    if (el) el.textContent = text;
   }
 
   /* ── Table renderer ── */

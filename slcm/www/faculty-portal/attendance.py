@@ -57,7 +57,7 @@ def get_context(context):
                 "Attendance Session",
                 filters=session_filters,
                 fields=["name", "course_offering", "session_date", "session_type",
-                        "session_start_time", "session_end_time", "room",
+                        "session_start_time", "session_end_time", "room", "course_schedule", "class_schedule",
                         "session_status", "total_students", "present_count",
                         "absent_count", "attendance_percentage", "attendance_marked",
                         "rfid_activated_by", "rfid_activation_time", "rfid_active_until"],
@@ -65,6 +65,20 @@ def get_context(context):
                 ignore_permissions=True,
             )
             now = frappe.utils.now_datetime()
+            
+            # Pre-fetch rooms from course schedules or time tables if they are missing on the session
+            cs_names = [s.course_schedule for s in raw_sessions if s.course_schedule and not s.room]
+            cs_room_map = {}
+            if cs_names:
+                cs_data = frappe.get_all("Course Schedule", filters={"name": ("in", list(set(cs_names)))}, fields=["name", "room"])
+                cs_room_map = {d.name: d.room for d in cs_data}
+                
+            tt_names = [s.class_schedule for s in raw_sessions if s.class_schedule and not s.room]
+            tt_venue_map = {}
+            if tt_names:
+                tt_data = frappe.get_all("Time Table", filters={"name": ("in", list(set(tt_names)))}, fields=["name", "venue"])
+                tt_venue_map = {d.name: d.venue for d in tt_data}
+
             for s in raw_sessions:
                 co = co_map.get(s.course_offering, frappe._dict())
                 pct = round(float(s.attendance_percentage or 0), 1)
@@ -83,7 +97,7 @@ def get_context(context):
                     "from_time": fmt_time(s.session_start_time),
                     "to_time": fmt_time(s.session_end_time),
                     "from_time_sort": str(s.session_start_time) if s.session_start_time else "",
-                    "venue": s.room or "—",
+                    "venue": s.room or cs_room_map.get(s.course_schedule) or tt_venue_map.get(s.class_schedule) or "—",
                     "status": s.session_status or "Active",
                     "total": s.total_students or 0,
                     "present": s.present_count or 0,
@@ -135,6 +149,10 @@ def get_context(context):
         if not selected_term or selected_term not in terms:
             selected_term = terms[0] if terms else ""
         context.selected_term = selected_term
+        if selected_term:
+            parts = selected_term.split("|")
+            context.active_term_name = parts[0]
+            context.active_academic_year = parts[1] if len(parts) > 1 else ""
 
         sessions = [s for s in all_sessions if not selected_term or s["term_key"] == selected_term]
         context.sessions = sessions
@@ -165,14 +183,41 @@ def get_context(context):
         context.todays_courses = todays_courses
 
         # ── Stats ───────────────────────────────────────────────────
-        context.total_sessions = len(sessions)
-        context.marked_sessions = sum(1 for s in sessions if s["marked"])
-        context.pending_sessions = sum(1 for s in sessions if not s["marked"])
-        avg_pct = 0.0
-        marked = [s["pct"] for s in sessions if s["marked"]]
-        if marked:
-            avg_pct = round(sum(marked) / len(marked), 1)
-        context.avg_attendance_pct = avg_pct
+        now = frappe.utils.now_datetime()
+        today_date_str = str(now.date())
+        current_time_str = str(now.time())
+
+        completed_sessions = 0
+        marked_sessions = 0
+        pending_sessions = 0
+        upcoming_sessions = 0
+        
+        for s in sessions:
+            is_completed = False
+            # Check if date is in the past
+            if s["session_date"] < today_date_str:
+                is_completed = True
+            elif s["session_date"] == today_date_str:
+                # If today, check if time has passed or if it's already marked
+                if s["marked"] or s["from_time_sort"] < current_time_str:
+                    is_completed = True
+
+            if is_completed:
+                completed_sessions += 1
+                if s["marked"]:
+                    marked_sessions += 1
+                    s["computed_status"] = "Marked"
+                else:
+                    pending_sessions += 1
+                    s["computed_status"] = "Pending"
+            else:
+                upcoming_sessions += 1
+                s["computed_status"] = "Upcoming"
+
+        context.completed_sessions = completed_sessions
+        context.marked_sessions = marked_sessions
+        context.pending_sessions = pending_sessions
+        context.upcoming_sessions = upcoming_sessions
 
         # ── Condonation requests pending faculty recommendation ─────
         condonation_requests = []
@@ -245,10 +290,20 @@ def _set_defaults(context):
     context.todays_courses = []
     context.terms = []
     context.selected_term = ""
-    context.total_sessions = 0
+    context.completed_sessions = 0
     context.marked_sessions = 0
     context.pending_sessions = 0
-    context.avg_attendance_pct = 0.0
+    context.upcoming_sessions = 0
     context.condonation_requests = []
     context.pending_condonation = 0
     context.monthly_summary = []
+
+@frappe.whitelist(allow_guest=True)
+def debug_venue():
+    import json
+    sessions = frappe.get_all("Attendance Session", fields=["name", "room", "course_schedule"], limit=5)
+    cs_names = [s.course_schedule for s in sessions if s.course_schedule]
+    cs_data = []
+    if cs_names:
+        cs_data = frappe.get_all("Course Schedule", filters={"name": ["in", cs_names]}, fields=["name", "room"])
+    return {"sessions": sessions, "cs_data": cs_data}
