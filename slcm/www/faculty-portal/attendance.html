@@ -518,9 +518,9 @@
        onclick="attDrill('completed_sessions')" title="View completed sessions">
     <div class="fp-stat-icon fp-c-navy"><span class="fp-ms">calendar_today</span></div>
     <div class="fp-stat-body">
-      <div class="fp-stat-val">{{ completed_sessions }}</div>
+      <div class="fp-stat-val" style="display:flex;align-items:baseline;gap:4px;">{{ completed_sessions }} <span style="font-size:18px;color:var(--fp-text-4);font-weight:600;">/ {{ total_sessions }}</span></div>
       <div class="fp-stat-lbl">Completed Sessions</div>
-      <div class="fp-stat-sub fp-drill-hint"><span class="fp-ms" style="font-size:12px;">open_in_new</span> More info</div>
+      <div class="fp-stat-sub fp-drill-hint"><span class="fp-ms" style="font-size:12px;">open_in_new</span> More</div>
     </div>
     <span class="fp-drill-badge">Details</span>
   </div>
@@ -531,7 +531,7 @@
     <div class="fp-stat-body">
       <div class="fp-stat-val">{{ marked_sessions }}</div>
       <div class="fp-stat-lbl">Marked</div>
-      <div class="fp-stat-sub fp-drill-hint"><span class="fp-ms" style="font-size:12px;">open_in_new</span> More info</div>
+      <div class="fp-stat-sub fp-drill-hint"><span class="fp-ms" style="font-size:12px;">open_in_new</span> More</div>
     </div>
     <span class="fp-drill-badge">Details</span>
   </div>
@@ -544,7 +544,7 @@
     <div class="fp-stat-body">
       <div class="fp-stat-val">{{ pending_sessions }}</div>
       <div class="fp-stat-lbl">Pending</div>
-      <div class="fp-stat-sub fp-drill-hint"><span class="fp-ms" style="font-size:12px;">open_in_new</span> More info</div>
+      <div class="fp-stat-sub fp-drill-hint"><span class="fp-ms" style="font-size:12px;">open_in_new</span> More</div>
     </div>
     <span class="fp-drill-badge">Details</span>
   </div>
@@ -557,7 +557,7 @@
     <div class="fp-stat-body">
       <div class="fp-stat-val">{{ upcoming_sessions }}</div>
       <div class="fp-stat-lbl">Upcoming</div>
-      <div class="fp-stat-sub fp-drill-hint"><span class="fp-ms" style="font-size:12px;">open_in_new</span> More info</div>
+      <div class="fp-stat-sub fp-drill-hint"><span class="fp-ms" style="font-size:12px;">open_in_new</span> More</div>
     </div>
     <span class="fp-drill-badge">Details</span>
   </div>
@@ -590,11 +590,6 @@
         <input type="text" class="sat-search" id="fp-sessions-search" placeholder="Search by course, date or venue…"
                oninput="fpFilterSessions()" aria-label="Search sessions" style="width:240px;">
       </div>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <input type="text" class="fp-input" id="fp-date-filter-from" placeholder="DD/MM/YYYY" onchange="fpFilterSessions()" aria-label="From date" style="width:140px;padding:7px 10px;font-size:13px;">
-        <span style="font-size:13px;color:var(--fp-text-4);font-weight:600;">to</span>
-        <input type="text" class="fp-input" id="fp-date-filter-to" placeholder="DD/MM/YYYY" onchange="fpFilterSessions()" aria-label="To date" style="width:140px;padding:7px 10px;font-size:13px;">
-      </div>
       <div class="fp-msf" id="fp-co-filter" data-label-all="All Courses" data-label-one="Course" data-label-many="Courses">
         <button type="button" class="fp-msf-btn" onclick="fpToggleMsf('fp-co-filter')" aria-haspopup="true" aria-expanded="false" aria-label="Filter by course">
           <span class="fp-msf-btn-label">All Courses</span>
@@ -615,6 +610,11 @@
           {% endif %}
         </div>
       </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <input type="text" class="fp-input" id="fp-date-filter-from" placeholder="DD/MM/YYYY" onchange="fpFilterSessions()" aria-label="From date" style="width:140px;padding:7px 10px;font-size:13px;">
+        <span style="font-size:13px;color:var(--fp-text-4);font-weight:600;">to</span>
+        <input type="text" class="fp-input" id="fp-date-filter-to" placeholder="DD/MM/YYYY" onchange="fpFilterSessions()" aria-label="To date" style="width:140px;padding:7px 10px;font-size:13px;">
+      </div>      
       <div class="fp-msf" id="fp-status-filter" data-label-all="All Status" data-label-one="Status" data-label-many="Statuses">
         <button type="button" class="fp-msf-btn" onclick="fpToggleMsf('fp-status-filter')" aria-haspopup="true" aria-expanded="false" aria-label="Filter by status">
           <span class="fp-msf-btn-label">All Status</span>

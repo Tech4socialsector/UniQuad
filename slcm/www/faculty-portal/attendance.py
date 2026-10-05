@@ -218,6 +218,7 @@ def get_context(context):
         context.marked_sessions = marked_sessions
         context.pending_sessions = pending_sessions
         context.upcoming_sessions = upcoming_sessions
+        context.total_sessions = len(sessions)
 
         # ── Condonation requests pending faculty recommendation ─────
         condonation_requests = []
