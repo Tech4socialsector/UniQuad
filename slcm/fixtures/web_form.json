@@ -9712,7 +9712,7 @@
     "fieldname": "whether_scstobc_ncl",
     "fieldtype": "Select",
     "hidden": 0,
-    "label": "Whether SC/ST/OBC-NCL",
+    "label": "Candidate Category",
     "mandatory_depends_on": "eval:doc.foriegn_national == \"No\"",
     "max_length": 0,
     "max_value": 0,

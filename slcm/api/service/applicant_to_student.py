@@ -197,8 +197,6 @@ def _map_applicant_to_student(student, applicant, program, admission_cycle, offe
     
     if is_international:
         student.quota = "NA"
-    elif str(applicant.get("ews")).strip() == "Yes":
-        student.quota = "EWS"
     else:
         sc_st_obc = (applicant.get("whether_scstobc_ncl") or "").strip()
         if sc_st_obc == "OBC-NCL":
@@ -243,8 +241,9 @@ def _map_applicant_to_student(student, applicant, program, admission_cycle, offe
     student.needs_accommodation = applicant.get("needs_accommodation")
     student.id_proof_govt_issued_photo_id = applicant.get("id_proof")
     student.caste_certificate = applicant.get("caste_certificate")
-    student.whether_ews = applicant.get("ews")
-    student.ews_certificate = applicant.get("ews_certificate")
+    student.whether_ews = "Yes" if applicant.get("whether_scstobc_ncl") == "EWS" else "No"
+    if applicant.get("whether_scstobc_ncl") == "EWS":
+        student.ews_certificate = applicant.get("caste_certificate")
     student.pwd_required_test = applicant.get("pwd_required_test")
     student.scribe_allotment = applicant.get("scribe_allotment")
     student.karnataka_category = applicant.get("karnataka_category")

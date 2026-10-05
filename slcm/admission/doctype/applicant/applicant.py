@@ -193,20 +193,14 @@ class Applicant(Document):
                 )
 
     def validate_reservation_documents(self):
-        if getattr(self, "whether_scstobc_ncl", None) == "EWS" and not self.ews_certificate:
-            frappe.throw(
-                "EWS Certificate is mandatory for EWS category.",
-                title="Missing Document"
-            )
-
         # Derive caste categories from the whether_scstobc_ncl field
-        caste_categories = {"SC", "ST", "OBC-NCL"}
+        caste_categories = {"SC", "ST", "OBC-NCL", "EWS"}
         applicant_cats = self._get_applicant_categories()
         matched_caste = applicant_cats & caste_categories
 
-        if matched_caste and not self.caste_certificate:
+        if matched_caste and not getattr(self, "caste_certificate", None):
             frappe.throw(
-                f"Caste Certificate is mandatory for {', '.join(sorted(matched_caste))} category.",
+                f"Category Certificate is mandatory for {', '.join(sorted(matched_caste))} category.",
                 title="Missing Document"
             )
 

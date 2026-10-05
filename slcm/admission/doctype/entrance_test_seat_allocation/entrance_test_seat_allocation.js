@@ -204,7 +204,6 @@ frappe.ui.form.on("Entrance Test Seat Allocation", {
         if (app.karnataka_category === "Yes") {
           frm.add_child("category", { category: "Karnataka" });
         }
-        }
         frm.refresh_field("category");
         frm.set_df_property("category", "hidden", 0);
       }

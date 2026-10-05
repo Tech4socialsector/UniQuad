@@ -2634,7 +2634,7 @@ function _doFinalSubmit(applicantName, targetStatus) {
 					// ── Use "After Submission" settings ──────────────────────
 					var wf = frappe.web_form || {};
 					var title = wf.success_title || 'Application Submitted Successfully';
-					var message = wf.success_message || 'Your application has been submitted successfully.';
+					var message = wf.success_message || '';
 					var nextUrl = wf.success_url || '';
 					_showSuccessModal(title, message, nextUrl);
 				} else {
