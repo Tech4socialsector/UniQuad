@@ -236,6 +236,14 @@
 
 			refresh_entrance_test_widgets(dashboard);
 		});
+
+		$(`<button class="btn btn-secondary btn-sm" style="height: 36px; margin-left: 8px;">
+			<i class="fa fa-wheelchair mr-1"></i> ${__('PWD Candidate Report')}
+		</button>`).appendTo(dashboard.$filter_bar).on('click', () => {
+			const route_filters = Object.assign({}, frappe._entrance_test_dashboard_filters || {});
+			route_filters.pwd_only = 1;
+			frappe.set_route('query-report', 'Test Center-wise PWD Candidate Report', route_filters);
+		});
 	}
 
 	function refresh_entrance_test_widgets(dashboard) {
