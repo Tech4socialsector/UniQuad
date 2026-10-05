@@ -1006,7 +1006,7 @@ header[class*="navbar"], .website-header,
 /* Legacy compat */
 .fp-empty .fp-ms { font-size: 40px; display: block; margin-bottom: 12px; color: var(--fp-border-mid); }
 .fp-empty-title, .fp-empty p.fp-empty-title { font-size: 15px; font-weight: 600; color: var(--fp-text-3); margin: 0 0 6px; }
-.fp-empty p.fp-empty-sub { font-size: 13px; margin: 0; }
+.fp-empty p.fp-empty-sub { font-size: 13px; margin: 0 auto; }
 
 /* ══════════════════════════════════════════════════════════
    ALERTS

@@ -683,9 +683,10 @@ def get_dashboard_stats():
 
 def _get_faculty_co_names(faculty_name):
     """Return list of active course offering names for the faculty."""
+    active_ays = frappe.get_all("Academic Year", filters={"status": "Active"}, pluck="name")
     return frappe.get_all(
         "Course Offering",
-        filters={"faculty": faculty_name, "status": ["in", ["Open", "Active"]]},
+        filters={"faculty": faculty_name, "status": "Active", "academic_year": ["in", active_ays]},
         pluck="name",
         ignore_permissions=True,
     )
@@ -853,9 +854,11 @@ def drilldown_subjects():
     if not faculty_name:
         frappe.throw("No faculty record found", frappe.DoesNotExistError)
 
+    active_ays = frappe.get_all("Academic Year", filters={"status": "Active"}, pluck="name")
+
     offerings = frappe.get_all(
         "Course Offering",
-        filters={"faculty": faculty_name, "status": ["in", ["Open", "Active"]]},
+        filters={"faculty": faculty_name, "status": "Active", "academic_year": ["in", active_ays]},
         fields=["name", "course_name", "term_name", "academic_year",
                 "credit_value", "status"],
         order_by="academic_year desc, term_name asc, course_name asc",
@@ -889,9 +892,11 @@ def drilldown_subjects():
             avg_pct = 0.0
             sessions = 0
 
+        import urllib.parse
         rows.append({
             "course_offering": co.name,
             "course_name": co.course_name or co.name,
+            "course_link": f"/faculty-portal/my-classes?course_offering={urllib.parse.quote(co.name)}",
             "term": co.term_name or "—",
             "academic_year": co.academic_year or "—",
             "credits": co.credit_value or 0,
@@ -899,12 +904,15 @@ def drilldown_subjects():
             "sessions": sessions,
             "avg_attendance": avg_pct,
             "status": co.status or "Active",
+            "action_btn": "Mark Attendance",
+            "action_link": f"/faculty-portal/attendance?course_offering={urllib.parse.quote(co.name)}#attendance-sessions-card",
         })
 
     return {
-        "title": "My Subjects",
+        "title": "Courses",
+        "hide_count": True,
         "columns": [
-            {"key": "course_name",    "label": "Course Name",      "type": "text"},
+            {"key": "course_name",    "label": "Course Name",      "type": "link", "link_key": "course_link"},
             {"key": "term",           "label": "Term",             "type": "text"},
             {"key": "academic_year",  "label": "Academic Year",    "type": "text"},
             {"key": "credits",        "label": "Credits",          "type": "number"},
@@ -912,6 +920,7 @@ def drilldown_subjects():
             {"key": "sessions",       "label": "Sessions Held",    "type": "number"},
             {"key": "avg_attendance", "label": "Avg Attendance %", "type": "percent"},
             {"key": "status",         "label": "Status",           "type": "badge"},
+            {"key": "action_btn",     "label": "Action",           "type": "button", "link_key": "action_link"},
         ],
         "rows": rows,
         "count": len(rows),

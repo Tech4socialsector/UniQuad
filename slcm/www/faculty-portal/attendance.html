@@ -433,7 +433,7 @@
 </div>
 {% endif %}
 
-{# ── Today's Classes ──────────────────────────────────────────── #}
+{# ── Today's Sessions ──────────────────────────────────────────── #}
 {# One card per course. A course with multiple time slots today (e.g. two
    lecture sections) gets a slot picker inside the card instead of a
    separate card per slot. #}
@@ -441,7 +441,7 @@
   <div class="fp-card-header">
     <div class="fp-card-title">
       <span class="fp-ms">today</span>
-      Today's Classes
+      Today's Sessions
     </div>
     <span class="fp-badge fp-badge-neutral">{{ todays_courses | length }} course{{ 's' if todays_courses | length != 1 else '' }}</span>
   </div>
@@ -449,7 +449,7 @@
     {% if not todays_courses %}
     <div class="fp-empty">
       <div class="fp-empty-icon"><span class="fp-ms">event_busy</span></div>
-      <p class="fp-empty-title">No classes scheduled today</p>
+      <p class="fp-empty-title">No sessions scheduled today</p>
       <p class="fp-empty-sub">Your schedule is clear for today.</p>
     </div>
     {% else %}
@@ -553,7 +553,7 @@
    `transform`) becomes the containing block for fixed-position
    descendants and silently mispositions them; see the fp-msf
    helper functions in extra_js for the full explanation. #}
-<div class="fp-card" style="margin-bottom:24px;">
+<div class="fp-card" id="attendance-sessions-card" style="margin-bottom:24px;">
   <div class="fp-card-header" style="align-items:flex-start;flex-wrap:wrap;">
     <div>
       <div class="fp-card-title">
@@ -717,7 +717,7 @@
     <div class="fp-table-wrap">
       <table class="fp-table">
         <thead>
-          <tr><th>Course</th><th>Total Classes</th><th>Attendance</th><th></th></tr>
+          <tr><th>Course</th><th>Total Sessions</th><th>Attendance</th><th></th></tr>
         </thead>
         <tbody>
           {% for row in monthly_summary %}
@@ -1293,7 +1293,7 @@ function fpOpenMarkModal(sessionName, courseName, slots) {
   _openModal('att-mark-modal');
 }
 
-/* ── Collect a Today's Classes course card's sibling time slots from its
+/* ── Collect a Today's Sessions course card's sibling time slots from its
    own DOM, so the modal can show the same slots and let faculty switch
    between them without leaving the modal. ── */
 function _fpCollectTodaySlots(card) {
@@ -1316,7 +1316,7 @@ function fpOpenMarkModalFromToday(btn) {
   fpOpenMarkModal(slotDiv.getAttribute('data-session'), slotDiv.getAttribute('data-course-name'), slots);
 }
 
-/* ── Clicking anywhere on a Today's Classes card (outside its Mark/View
+/* ── Clicking anywhere on a Today's Sessions card (outside its Mark/View
    buttons, which stop propagation) opens the modal for the currently
    visible slot — Mark if pending, View if already marked. ── */
 function fpTodayCardClick(card, evt) {
@@ -1881,8 +1881,8 @@ var _viewSessionName = null;
 /* Sibling slots for a session = other Attendance Sessions for the same
    course offering, on the same date — sourced from _attSessions (already
    embedded for the current term), so this works whether the session was
-   opened from the main table or a Today's Classes card.
-   Falls back to scraping a matching Today's Classes card if _attSessions
+   opened from the main table or a Today's Sessions card.
+   Falls back to scraping a matching Today's Sessions card if _attSessions
    doesn't have the sibling (e.g. term-filtered out, or opened from a
    session outside the currently loaded page of sessions). */
 function _fpFindSiblingSlots(sessionName) {
@@ -1898,7 +1898,7 @@ function _fpFindSiblingSlots(sessionName) {
     }
   }
 
-  /* Fallback: look for a Today's Classes card containing this session */
+  /* Fallback: look for a Today's Sessions card containing this session */
   var slotDiv = document.querySelector('.fp-today-slot[data-session="' + sessionName + '"]');
   var card = slotDiv ? slotDiv.closest('.fp-today-course-card') : null;
   if (card) {
