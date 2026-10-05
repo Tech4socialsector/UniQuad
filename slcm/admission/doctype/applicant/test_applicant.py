@@ -44,7 +44,7 @@ class TestApplicant(FrappeTestCase):
                 "first_name": "Domestic",
                 "last_name": "Test",
                 "foriegn_national": "No",
-                "whether_scstobc_ncl": "NA",
+                "whether_scstobc_ncl": "General",
                 "email": "domestic@test.com",
                 "program": "TPA-2026-27-SEMESTER-1",
                 "annual_house_hold_income": "₹ 0 - ₹ 3,00,000",
@@ -81,7 +81,7 @@ class TestApplicant(FrappeTestCase):
                 "first_name": "EWS",
                 "last_name": "Test",
                 "foriegn_national": "No",
-                "whether_scstobc_ncl": "NA",
+                "whether_scstobc_ncl": "General",
                 "email": "ews@test.com",
                 "program": "TPA-2026-27-SEMESTER-1",
                 "status": "Applied",
@@ -204,7 +204,7 @@ class TestApplicant(FrappeTestCase):
         student = frappe.get_doc("Student Master", student_name)
         
         # Verify international specific mapping (Quota should be NA)
-        self.assertEqual(student.quota, "NA")
+        self.assertEqual(student.quota, "General")
         self.assertEqual(student.annual_income, "More than ₹ 50,00,000")
         
         # Verify applicant status is correctly updated to Enrolled

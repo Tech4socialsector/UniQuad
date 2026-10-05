@@ -107,6 +107,7 @@
   "proposed_phd_topic",
   "others_section",
   "other_degree",
+  "degree_certificate_bonafide",
   "column_break_hwbd",
   "other_degree_details",
   "employment_history_tab",
@@ -116,13 +117,11 @@
   "eligibility_for_reservation_tab",
   "information_relating_to_eligibility_for_reservations_section",
   "whether_scstobc_ncl",
-  "ews",
   "pwd",
   "pwd_required_test",
   "karnataka_category",
   "column_break_nwjz",
   "caste_certificate",
-  "ews_certificate",
   "scribe_allotment",
   "column_break_udvt",
   "pwd_certificate",
@@ -151,7 +150,6 @@
   "column_break_jgzl",
   "please_mention",
   "section_break_quvd",
-  "cv",
   "authorisation_information",
   "agreement_to_communications",
   "agreement_withdrawal_conditions",
@@ -280,57 +278,58 @@
    "fieldtype": "Attach",
    "label": "ID Proof (Govt. issued photo ID)",
    "options": "png,jpeg,jpg,pdf",
-   "reqd": 1
+   "reqd": 1,
+   "show_description_on_click": 1
   },
   {
    "fieldname": "father_name",
    "fieldtype": "Data",
    "label": "Father's Name",
-   "reqd": 1
+   "mandatory_depends_on": "eval:doc.guardian_required == \"No\""
   },
   {
    "fieldname": "father_mobile",
    "fieldtype": "Phone",
    "label": "Father's Mobile Number",
-   "reqd": 1
+   "mandatory_depends_on": "eval:doc.guardian_required == \"No\""
   },
   {
    "fieldname": "father_email",
    "fieldtype": "Data",
    "label": "Father's Email",
-   "options": "Email",
-   "reqd": 1
+   "mandatory_depends_on": "eval:doc.guardian_required == \"No\"",
+   "options": "Email"
   },
   {
    "fieldname": "father_occupation",
    "fieldtype": "Data",
    "label": "Father's Occupation",
-   "reqd": 1
+   "mandatory_depends_on": "eval:doc.guardian_required == \"No\""
   },
   {
    "fieldname": "mother_name",
    "fieldtype": "Data",
    "label": "Mother's Name",
-   "reqd": 1
+   "mandatory_depends_on": "eval:doc.guardian_required == \"No\""
   },
   {
    "fieldname": "mother_mobile",
    "fieldtype": "Phone",
    "label": "Mother's Mobile Number",
-   "reqd": 1
+   "mandatory_depends_on": "eval:doc.guardian_required == \"No\""
   },
   {
    "fieldname": "mother_email",
    "fieldtype": "Data",
    "label": "Mother's Email",
-   "options": "Email",
-   "reqd": 1
+   "mandatory_depends_on": "eval:doc.guardian_required == \"No\"",
+   "options": "Email"
   },
   {
    "fieldname": "mother_occupation",
    "fieldtype": "Data",
    "label": "Mother's Occupation",
-   "reqd": 1
+   "mandatory_depends_on": "eval:doc.guardian_required == \"No\""
   },
   {
    "default": "No",
@@ -417,7 +416,7 @@
   {
    "fieldname": "class_x_board",
    "fieldtype": "Data",
-   "label": "Board (Class X)",
+   "label": "Board of  Examination (Class X)",
    "reqd": 1
   },
   {
@@ -462,14 +461,14 @@
   {
    "fieldname": "class_xii_board",
    "fieldtype": "Data",
-   "label": "Board (Class XII/Equivalent)",
+   "label": "Board of  Examination (Class XII/Equivalent)",
    "reqd": 1
   },
   {
    "description": "Max 5MB - Supported formats png, jpeg, jpg, pdf",
    "fieldname": "class_xii_marksheet",
    "fieldtype": "Attach",
-   "label": "Class XII Marksheet To Be Upload",
+   "label": "Class XII Marksheet / Bonafide Certificate To Be Upload",
    "reqd": 1
   },
   {
@@ -501,28 +500,12 @@
    "label": "Reservations"
   },
   {
-   "depends_on": "eval:doc.whether_scstobc_ncl === \"NA\" && doc.foriegn_national == \"No\"",
-   "fieldname": "ews",
-   "fieldtype": "Select",
-   "label": "Whether EWS",
-   "mandatory_depends_on": "eval:doc.whether_scstobc_ncl === \"NA\" && doc.foriegn_national == \"No\"",
-   "options": "\nYes\nNo"
-  },
-  {
-   "depends_on": "eval:doc.ews === \"Yes\"",
+   "depends_on": "eval:doc.whether_scstobc_ncl && doc.whether_scstobc_ncl !== \"General\"",
    "description": "Max 5MB - Supported formats png, jpeg, jpg, pdf",
-   "fieldname": "ews_certificate",
-   "fieldtype": "Attach",
-   "label": "EWS Certificate",
-   "mandatory_depends_on": "eval:doc.ews === \"Yes\""
-  },
-  {
-   "depends_on": "eval:doc.whether_scstobc_ncl && doc.whether_scstobc_ncl !== \"NA\"",
-   "description": "Max 5MB - Supported formats png, jpeg, jpg",
    "fieldname": "caste_certificate",
    "fieldtype": "Attach",
-   "label": "Caste Certificate",
-   "mandatory_depends_on": "eval:doc.whether_scstobc_ncl && doc.whether_scstobc_ncl !== \"NA\""
+   "label": "Category Certificate",
+   "mandatory_depends_on": "eval:doc.whether_scstobc_ncl && doc.whether_scstobc_ncl !== \"General\""
   },
   {
    "depends_on": "eval:doc.foriegn_national == \"No\"",
@@ -550,7 +533,7 @@
   },
   {
    "depends_on": "eval:doc.pwd === \"Yes\"",
-   "description": "Max 5MB - Supported formats png, jpeg, jpg",
+   "description": "Max 5MB - Supported formats png, jpeg, jpg, pdf",
    "fieldname": "pwd_certificate",
    "fieldtype": "Attach",
    "label": "PWD Certificate",
@@ -573,7 +556,7 @@
   },
   {
    "depends_on": "eval:doc.ka_study_7yrs",
-   "description": "Max 5MB - Supported formats png, jpeg, jpg",
+   "description": "Max 5MB - Supported formats png, jpeg, jpg, pdf",
    "fieldname": "ka_study_7yrs_certificate",
    "fieldtype": "Attach",
    "label": "Certificate",
@@ -589,7 +572,7 @@
   },
   {
    "depends_on": "eval:doc.ka_defence_child",
-   "description": "Max 5MB - Supported formats png, jpeg, jpg",
+   "description": "Max 5MB - Supported formats png, jpeg, jpg, pdf",
    "fieldname": "ka_defence_child_certificate",
    "fieldtype": "Attach",
    "label": "Certificate",
@@ -605,7 +588,7 @@
   },
   {
    "depends_on": "eval:doc.ka_govt_child",
-   "description": "Max 5MB - Supported formats png, jpeg, jpg",
+   "description": "Max 5MB - Supported formats png, jpeg, jpg, pdf",
    "fieldname": "ka_govt_child_certificate",
    "fieldtype": "Attach",
    "label": "Certificate",
@@ -621,7 +604,7 @@
   },
   {
    "depends_on": "eval:doc.ka_ais_child",
-   "description": "Max 5MB - Supported formats png, jpeg, jpg",
+   "description": "Max 5MB - Supported formats png, jpeg, jpg, pdf",
    "fieldname": "ka_ais_child_certificate",
    "fieldtype": "Attach",
    "label": "Certificate",
@@ -637,7 +620,7 @@
   },
   {
    "depends_on": "eval:doc.ka_capf_child",
-   "description": "Max 5MB - Supported formats png, jpeg, jpg",
+   "description": "Max 5MB - Supported formats png, jpeg, jpg, pdf",
    "fieldname": "ka_capf_child_certificate",
    "fieldtype": "Attach",
    "label": "Certificate",
@@ -684,14 +667,6 @@
    "fieldtype": "Select",
    "label": "Where did you hear about the programme?",
    "options": "\nNLSIU Website\nNLSIU Students, Faculty or Alumni\nYoutube\nFacebook / Meta\nLinkedin\nX (Twitter)\nInstagram\nEmail\nNewspaper Advertisement\nOthers",
-   "reqd": 1
-  },
-  {
-   "description": "Curriculum Vitae (Max 5MB - Supported formats doc, docx pdf) Declaration.",
-   "fieldname": "cv",
-   "fieldtype": "Attach",
-   "in_list_view": 1,
-   "label": "Please upload a current Curriculum Vitae (CV) not exceeding two pages",
    "reqd": 1
   },
   {
@@ -1171,9 +1146,9 @@
    "fieldname": "whether_scstobc_ncl",
    "fieldtype": "Select",
    "in_standard_filter": 1,
-   "label": "Whether SC/ST/OBC-NCL",
+   "label": "Candidate Category",
    "mandatory_depends_on": "eval:doc.foriegn_national == \"No\"",
-   "options": "\nNA\nOBC-NCL\nST\nSC"
+   "options": "\nGeneral\nOBC-NCL\nST\nSC\nEWS"
   },
   {
    "fieldname": "column_break_mxmh",
@@ -1324,6 +1299,15 @@
    "label": "Country",
    "mandatory_depends_on": "eval:doc.foriegn_national == \"Yes\"",
    "options": "Country"
+  },
+  {
+   "depends_on": "eval: doc.other_degree == \"Yes\"",
+   "description": "Max 5MB - Supported formats png, jpeg, jpg, pdf",
+   "fieldname": "degree_certificate_bonafide",
+   "fieldtype": "Attach",
+   "label": "Degree Certificate / Bonafide",
+   "mandatory_depends_on": "eval: doc.other_degree == \"Yes\"",
+   "options": "png, jpeg, jpg, pdf"
   }
  ],
  "grid_page_length": 50,
@@ -1359,7 +1343,7 @@
   }
  ],
  "make_attachments_public": 1,
- "modified": "2026-09-30 15:57:07.241798",
+ "modified": "2026-10-05 11:13:40.951490",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Applicant",

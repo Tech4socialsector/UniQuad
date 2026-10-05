@@ -193,7 +193,7 @@ frappe.ui.form.on("Entrance Test Seat Allocation", {
 
         // Show the category table and populate it from reservation fields
         frm.clear_table("category");
-        if (app.whether_scstobc_ncl && app.whether_scstobc_ncl.toUpperCase() !== "NA") {
+        if (app.whether_scstobc_ncl && app.whether_scstobc_ncl.toUpperCase() !== "General") {
           frm.add_child("category", { category: app.whether_scstobc_ncl });
         } else {
           frm.add_child("category", { category: "General" });
@@ -204,8 +204,6 @@ frappe.ui.form.on("Entrance Test Seat Allocation", {
         if (app.karnataka_category === "Yes") {
           frm.add_child("category", { category: "Karnataka" });
         }
-        if (app.ews === "Yes") {
-          frm.add_child("category", { category: "EWS" });
         }
         frm.refresh_field("category");
         frm.set_df_property("category", "hidden", 0);

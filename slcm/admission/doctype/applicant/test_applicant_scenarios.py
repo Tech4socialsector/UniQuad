@@ -148,7 +148,7 @@ class TestApplicantScenarios(FrappeTestCase):
             "academic_year": "2026-27",
             "campus": "Main Campus",
             "foriegn_national": "No",
-            "whether_scstobc_ncl": "NA",
+            "whether_scstobc_ncl": "General",
             "gender": "Male",
             "status": "Draft",
             "nationality": "Indian",
@@ -191,7 +191,7 @@ class TestApplicantScenarios(FrappeTestCase):
     def test_tc03_fee_for_general_category(self):
         """TC03: Verify General Category Fee."""
         applicant = self.get_base_applicant("gen@example.com")
-        applicant.whether_scstobc_ncl = "NA"
+        applicant.whether_scstobc_ncl = "General"
         applicant.insert(ignore_permissions=True, ignore_links=True, ignore_mandatory=True)
         
         # Trigger fee calc via application_fee_service

@@ -1,119 +1,303 @@
-{% set logo = "/files/nlsiu-logo.jpg" %}
-{% set prog_doc = frappe.get_doc("Programme", doc.program) if doc.program and frappe.db.exists("Programme", doc.program) else None %}
-{% set net_amount = frappe.utils.flt(doc.net_amount or 0) %}
+{% set app_doc = frappe.get_doc("Applicant", doc.applicant) if doc.applicant else None %}
+{% set campus_id = app_doc.campus if app_doc else doc.campus %}
+{% set campus = frappe.get_doc("Campus", campus_id) if campus_id else None %}
+{% set prog_doc = frappe.get_doc("Programme", doc.program) if doc.program else None %}
 
-{% include "slcm/templates/print/nls_receipt_style.html" %}
-<div class="nls-doc">
-<div class="nls-copy is-page">
+<style>
+    @media print {
+        @page { size: auto; margin: 10mm; }
+        .receipt-container { padding: 5mm; border: none; }
+    }
 
-  <div class="nls-head">
-    <img src="{{ logo }}" alt="NLS Logo">
-    <div class="nls-inst">National Law School of India University</div>
-  </div>
+    .receipt-container {
+        font-family: Arial, Helvetica, sans-serif;
+        color: #000;
+        font-size: 11.5px;
+        line-height: 1.4;
+        width: 100%;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+    }
 
-  <div class="nls-title">Fees Receipt</div>
+    .receipt-header {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-bottom: 30px;
+        position: relative;
+        min-height: 100px;
+    }
 
-  <table class="nls-meta">
-    <tr>
-      <td class="lbl">Application No:</td>
-      <td class="val">{{ doc.applicant or "—" }}</td>
-      <td class="lbl">Applicant Name:</td>
-      <td class="val">{{ doc.applicant_name or "—" }}</td>
-    </tr>
-    <tr>
-      <td class="lbl">Receipt Number:</td>
-      <td class="val"><span class="nls-boxed">{{ doc.name }}</span></td>
-      <td class="lbl">Date:</td>
-      <td class="val">{{ frappe.utils.formatdate(doc.payment_date, "dd-MM-yyyy") if doc.payment_date else "—" }}</td>
-    </tr>
-  </table>
+    .header-logo {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100px;
+        height: 100px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
 
-  <hr class="nls-divider">
+    .header-logo img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+    }
 
-  <table class="nls-meta">
-    <tr>
-      <td class="lbl">Academic Year:</td>
-      <td class="val">{{ doc.academic_year or "—" }}</td>
-      <td class="lbl">Programme:</td>
-      <td class="val">{{ prog_doc.program_name if prog_doc and prog_doc.program_name else (doc.program or "—") }}</td>
-    </tr>
-  </table>
+    .header-info {
+        text-align: center;
+        width: 100%;
+        padding: 0 110px;
+    }
 
-  <table class="nls-table">
-    <thead>
-      <tr>
-        <th style="width:10%">Sl No.</th>
-        <th>Particulars</th>
-        <th style="width:26%">Amount</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% set ns = namespace(index=1) %}
-      {% if doc.confirmation_fee and doc.confirmation_fee > 0 %}
-      <tr>
-        <td>{{ ns.index }}</td>
-        <td>Confirmation Fee</td>
-        <td>INR {{ "{:,.2f}".format(frappe.utils.flt(doc.confirmation_fee)) }}</td>
-      </tr>
-      {% set ns.index = ns.index + 1 %}
-      {% endif %}
-      {% for row in doc.fee_components %}
-      {% if "scholarship" not in ((row.component_name or "") | lower) %}
-      <tr>
-        <td>{{ ns.index }}</td>
-        <td>{{ row.component_name }}</td>
-        <td>INR {{ "{:,.2f}".format(frappe.utils.flt(row.total_amount or row.amount or 0)) }}</td>
-      </tr>
-      {% set ns.index = ns.index + 1 %}
-      {% endif %}
-      {% endfor %}
-    </tbody>
-    <tfoot>
-      {% if doc.scholarship_amount and doc.scholarship_amount > 0 %}
-      <tr>
-        <td colspan="2">Gross Total</td>
-        <td>INR {{ "{:,.2f}".format(frappe.utils.flt(doc.total_amount or 0)) }}</td>
-      </tr>
-      <tr class="muted-row">
-        <td colspan="2">Scholarship Benefit</td>
-        <td>− INR {{ "{:,.2f}".format(frappe.utils.flt(doc.scholarship_amount)) }}</td>
-      </tr>
-      {% endif %}
-      <tr>
-        <td colspan="2">Total Paid</td>
-        <td>INR {{ "{:,.2f}".format(net_amount) }}</td>
-      </tr>
-    </tfoot>
-  </table>
+    .college-name {
+        font-size: 19px;
+        font-weight: bold;
+        text-transform: uppercase;
+        margin-bottom: 6px;
+    }
 
-  <div class="nls-words">
-    {{ frappe.utils.money_in_words(net_amount, doc.currency or "INR") | replace("INR ", "Rupees ") }}
-  </div>
+    .college-address {
+        font-size: 13.5px;
+        font-weight: bold;
+        color: #000;
+        margin-bottom: 8px;
+        line-height: 1.3;
+    }
 
-  <hr class="nls-divider">
+    .college-phone {
+        font-size: 12.5px;
+        font-weight: bold;
+    }
 
-  <table class="nls-meta">
-    <tr>
-      <td class="lbl">Payment Mode:</td>
-      <td class="val">{{ doc.payment_mode or "Online" }}</td>
-      <td class="lbl">Transaction Id:</td>
-      <td class="val">{{ doc.transaction_id or "N/A" }}</td>
-    </tr>
-    <tr>
-      <td class="lbl">Amount Paid:</td>
-      <td class="val">INR {{ "{:,.0f}".format(net_amount) }}</td>
-      <td class="lbl">Due Amount:</td>
-      <td class="val">INR 0</td>
-    </tr>
-  </table>
+    .title-bar {
+        text-align: center;
+        margin-bottom: 35px;
+        font-size: 14px;
+        font-weight: bold;
+        text-transform: uppercase;
+    }
 
-  <div class="nls-note">
-    <strong>Note:</strong> Transaction fee charges are non-refundable and non-reversible under any circumstances.
-    All transaction fees will be borne by the account/card holder.
-  </div>
-  <div class="nls-note">
-    This is a computer generated receipt, hence it does not require signature/seal.
-  </div>
+    .receipt-meta {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 25px;
+        font-weight: bold;
+    }
 
-</div>
+    .info-grid {
+        margin-bottom: 35px;
+        padding-left: 60px;
+    }
+
+    .info-row {
+        display: flex;
+        margin-bottom: 6px;
+    }
+
+    .info-label {
+        width: 160px;
+        text-align: left;
+    }
+
+    .info-dots {
+        width: 20px;
+        text-align: center;
+    }
+
+    .info-value {
+        font-weight: normal;
+        flex: 1;
+    }
+
+    .particulars-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 5px;
+    }
+
+    .particulars-table th, .particulars-table td {
+        border: 1px solid #ccc;
+        padding: 8px 10px;
+    }
+
+    .particulars-table th {
+        font-weight: bold;
+        background: #fdfdfd;
+    }
+
+    .text-right { text-align: right !important; }
+    .text-center { text-align: center !important; }
+
+    .grand-total-row {
+        background-color: #f9f9f9;
+        font-weight: bold;
+    }
+
+    .receipt-footer {
+        margin-top: 15px;
+        font-size: 11px;
+    }
+
+    .amount-words {
+        margin-bottom: 40px;
+        font-weight: bold;
+    }
+
+    .receipt-note {
+        margin-top: auto;
+        padding-bottom: 20px;
+    }
+
+    .receipt-note strong {
+        text-decoration: underline;
+        font-style: italic;
+    }
+
+    .receipt-note ul {
+        margin: 5px 0;
+        padding-left: 20px;
+        list-style-type: disc;
+    }
+
+    .receipt-note li {
+        margin-bottom: 4px;
+        font-style: italic;
+        font-weight: bold;
+    }
+
+    .footer-disclaimer {
+        border-top: 1.5px solid #000;
+        padding-top: 8px;
+        text-align: center;
+        font-weight: bold;
+        font-style: italic;
+        font-size: 12px;
+    }
+</style>
+
+<div class="receipt-container">
+    <div>
+        <!-- Header -->
+        <div class="receipt-header" style="justify-content: space-between; border-bottom: 1.5px solid #333; padding-bottom: 15px; margin-bottom: 25px;">
+            {% set pf_logo = frappe.db.get_value('Print Format', 'Applicant Payment Receipt', 'logo') %}
+            {% if pf_logo %}
+                {% set pf_logo_url = (frappe.utils.get_url() ~ pf_logo) if pf_logo.startswith('/') else pf_logo %}
+                <div style="width: 100%; text-align: center;">
+                    <img src="{{ pf_logo_url }}" alt="Logo" style="max-height: 100px; max-width: 100%;">
+                </div>
+            {% else %}
+                <table style="width: 100%; border-collapse: collapse; border: none;">
+                    <tr>
+                        <td style="width: 20%; text-align: left; vertical-align: middle; padding: 0;">
+                            {% if campus and campus.logo %}
+                                {% set campus_logo_url = (frappe.utils.get_url() ~ campus.logo) if campus.logo.startswith('/') else campus.logo %}
+                                <img src="{{ campus_logo_url }}" alt="Logo" style="max-width: 100px; height: auto;">
+                            {% endif %}
+                        </td>
+                        <td style="width: 80%; text-align: center; vertical-align: middle; padding: 0;">
+                            <p style="font-size: 16pt; font-weight: bold; margin: 0 0 5px; text-transform: uppercase;">{{ campus.campus_name if campus else "Institution Name" }}</p>
+                            <p style="font-size: 10pt; margin: 0 0 5px;">{{ (campus.address ~ ", " if campus and campus.address else "") }}{{ campus.city if campus else "" }}{{ " - " ~ campus.pincode if campus and campus.pincode else "" }}</p>
+                            <p style="font-size: 9.5pt; margin: 0;">
+                                {% if campus and campus.phone_number %}Phone: {{ campus.phone_number }}{% endif %}
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            {% endif %}
+        </div>
+
+        <div class="title-bar">FEES RECEIPT</div>
+
+        <!-- Meta -->
+        <div class="receipt-meta">
+            <div>Receipt No : {{ doc.name }}</div>
+            <div>Date : {{ frappe.utils.formatdate(doc.payment_date, 'dd/MM/yyyy') }}</div>
+        </div>
+
+        <!-- Info Grid -->
+        <div class="info-grid">
+            <div class="info-row"><span class="info-label">Name</span><span class="info-dots">:</span><span class="info-value">{{ doc.applicant_name }}</span></div>
+            <div class="info-row"><span class="info-label">Programme</span><span class="info-dots">:</span><span class="info-value">{{ prog_doc.program_name if prog_doc else doc.program }}</span></div>
+            <div class="info-row"><span class="info-label">Application No</span><span class="info-dots">:</span><span class="info-value">{{ doc.applicant }}</span></div>
+            <div class="info-row"><span class="info-label">Payment Mode</span><span class="info-dots">:</span><span class="info-value">{{ doc.payment_mode or "Online" }}</span></div>
+            {% if doc.transaction_id %}
+            <div class="info-row"><span class="info-label">Transaction No</span><span class="info-dots">:</span><span class="info-value">{{ doc.transaction_id }}</span></div>
+            {% endif %}
+        </div>
+
+        <!-- Table -->
+        <table class="particulars-table">
+            <thead>
+                <tr>
+                    <th style="width: 60px;" class="text-center">S.No</th>
+                    <th>Particulars</th>
+                    <th style="width: 160px;" class="text-right">Amount (₹)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% set ns = namespace(index=1) %}
+                
+                {% if doc.confirmation_fee and doc.confirmation_fee > 0 %}
+                <tr>
+                    <td class="text-center">{{ ns.index }}</td>
+                    <td>{{ doc.academic_year or "" }} - Confirmation Fee</td>
+                    <td class="text-right">{{ doc.get_formatted("confirmation_fee") }}</td>
+                </tr>
+                {% set ns.index = ns.index + 1 %}
+                {% endif %}
+
+                {% for row in doc.fee_components %}
+                {% if "scholarship" not in (row.component_name | lower) %}
+                <tr>
+                    <td class="text-center">{{ ns.index }}</td>
+                    <td>{{ doc.academic_year or "" }} - {{ row.component_name }}</td>
+                    <td class="text-right">{{ row.get_formatted("total_amount") }}</td>
+                </tr>
+                {% set ns.index = ns.index + 1 %}
+                {% endif %}
+                {% endfor %}
+                
+                <tr class="grand-total-row">
+                    <td colspan="2" class="text-right">Gross Total</td>
+                    <td class="text-right">{{ doc.get_formatted("total_amount") }}</td>
+                </tr>
+                
+                {% if doc.scholarship_amount > 0 %}
+                <tr>
+                    <td colspan="2" class="text-right">Scholarship Benefit (-)</td>
+                    <td class="text-right">{{ doc.get_formatted("scholarship_amount") }}</td>
+                </tr>
+                {% endif %}
+
+                <tr class="grand-total-row">
+                    <td colspan="2" class="text-right">Net Paid Amount</td>
+                    <td class="text-right">{{ doc.get_formatted("net_amount") }}</td>
+                </tr>
+                <tr>
+                    <td colspan="2" class="text-right">Due Amount</td>
+                    <td class="text-right">0.00</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Footer -->
+        <div class="receipt-footer">
+            <div class="amount-words">
+                (Amount in words : {{ frappe.utils.money_in_words(doc.net_amount, doc.currency or "INR") }})
+            </div>
+        </div>
+
+        <!--<div class="receipt-note">-->
+        <!--    <strong>Note:</strong>-->
+        <!--    <ul>-->
+        <!--        <li>Transaction fee charges are non-refundable and non-reversible under any circumstances.</li>-->
+        <!--        <li>All transaction fees will be borne by the account/card holder.</li>-->
+        <!--    </ul>-->
+        <!--</div>-->
+
+        <div class="footer-disclaimer">This is a system-generated receipt and does not require a signature.</div>
+    </div>
 </div>

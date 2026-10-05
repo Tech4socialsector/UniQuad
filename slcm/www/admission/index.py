@@ -298,7 +298,7 @@ def _load_program_detail(context, slug):
         acp = frappe.db.get_value(
             "Admission Cycle Program",
             {"parent": context.active_cycle.name, "program": prog_name, "is_active": 1},
-            ["campus", "intake_type", "program_level", "max_applications", "application_count"],
+            ["campus", "intake_type", "program_level", "max_applications", "application_count", "admission_open_for"],
             as_dict=True,
         )
         if acp:
@@ -339,6 +339,22 @@ def _load_program_detail(context, slug):
         academic_year=_aac,
         program_level=ac_prog_level,
     )
+
+    if prog_name and context.active_cycle:
+        acp = frappe.db.get_value(
+            "Admission Cycle Program",
+            {"parent": context.active_cycle.name, "program": prog_name, "is_active": 1},
+            ["admission_open_for"],
+            as_dict=True,
+        )
+        if acp:
+            _open_for = (acp.get("admission_open_for") if acp else "") or ""
+            if _open_for == "International":
+                context.apply_web_form_url += "&foriegn_national=Yes"
+                context.apply_web_form_login_url += "%26foriegn_national%3DYes"
+            elif _open_for == "Domestic":
+                context.apply_web_form_url += "&foriegn_national=No&nationality=Indian"
+                context.apply_web_form_login_url += "%26foriegn_national%3DNo%26nationality%3DIndian"
 
 
 def _pf(obj, field):
