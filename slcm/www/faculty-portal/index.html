@@ -479,14 +479,17 @@ window._fpDashData = {
     {# Search + summary bar #}
     <div id="fp-drill-bar"
          style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 24px;border-bottom:1px solid var(--fp-border-light);flex-wrap:wrap;">
-      <div class="fp-search-wrap" style="flex:1;min-width:180px;max-width:320px;">
-        <span class="fp-ms">search</span>
-        <input type="text" class="fp-input fp-search-input" id="fp-drill-search"
-               placeholder="Search…" oninput="fpDrillSearch()" autocomplete="off"
-               style="padding-top:7px;padding-bottom:7px;">
+      <div style="display:flex;align-items:flex-end;gap:16px;flex:1;flex-wrap:wrap;" id="fp-drill-filters-container">
+        <div class="fp-search-wrap" style="min-width:180px;max-width:320px;">
+          <span class="fp-ms">search</span>
+          <input type="text" class="fp-input fp-search-input" id="fp-drill-search"
+                 placeholder="Search…" oninput="fpDrillSearch()" autocomplete="off"
+                 style="padding-top:7px;padding-bottom:7px;">
+        </div>
+        <div id="fp-drill-filters-area" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;"></div>
       </div>
       <span id="fp-drill-count-label"
-            style="font-size:12px;color:var(--fp-text-4);white-space:nowrap;flex-shrink:0;"></span>
+            style="display:none;font-size:12px;color:var(--fp-text-4);white-space:nowrap;flex-shrink:0;"></span>
     </div>
 
     {# Table body #}
@@ -647,7 +650,10 @@ body.fp-dark .fp-dash-icon .fp-ms { color: #fff !important; }
         _drillRows = (data.rows || []).slice();
         var subtitleText = data.hide_count ? '' : (data.count || 0) + ' record' + ((data.count !== 1) ? 's' : '');
         _setModalHeader(data.title || 'Details', subtitleText);
+        _buildFilters();
         _renderTable();
+        // Fire search to apply defaults
+        fpDrillSearch();
       },
       function(err) {
         _setBody('<div class="fp-drill-empty"><span class="fp-ms">error_outline</span>'
@@ -838,19 +844,63 @@ body.fp-dark .fp-dash-icon .fp-ms { color: #fff !important; }
   };
 
   /* ── Search/filter ── */
+
+  function _buildFilters() {
+    var area = document.getElementById('fp-drill-filters-area');
+    if (!area) return;
+    if (!_drillData.filters || _drillData.filters.length === 0) {
+        area.innerHTML = '';
+        return;
+    }
+    var filtersHtml = '';
+    _drillData.filters.forEach(function(f) {
+        var options = ['<option value="">All ' + f.label + 's</option>'];
+        var vals = [];
+        _drillData.rows.forEach(function(r) { if (r[f.key] && vals.indexOf(r[f.key]) === -1 && r[f.key] !== '—') vals.push(r[f.key]); });
+        vals.sort();
+        vals.forEach(function(v) { options.push('<option value="' + _esc(v) + '">' + _esc(v) + '</option>'); });
+        
+        filtersHtml += '<div style="display:flex;flex-direction:column;gap:4px;">'
+                     + '<label style="font-size:10px;color:var(--fp-text-4);font-weight:600;margin-left:2px;letter-spacing:0.02em;">' + _esc(f.label) + '</label>'
+                     + '<select class="fp-input fp-drill-filter-select" style="padding:6px 24px 6px 12px;min-width:130px;font-size:13px;height:auto;" onchange="fpDrillSearch()" data-filter-key="' + _esc(f.key) + '">'
+                     + options.join('')
+                     + '</select></div>';
+    });
+    area.innerHTML = filtersHtml;
+    
+    if (_drillData.default_ay) {
+        var aySelect = area.querySelector('select[data-filter-key="academic_year"]');
+        if (aySelect) {
+            var exists = Array.from(aySelect.options).some(function(o) { return o.value === _drillData.default_ay; });
+            if (exists) aySelect.value = _drillData.default_ay;
+        }
+    }
+  }
+
   window.fpDrillSearch = function() {
     if (!_drillData) return;
     var q = (document.getElementById('fp-drill-search').value || '').toLowerCase().trim();
-    if (!q) {
-      _drillRows = _drillData.rows.slice();
-    } else {
-      _drillRows = _drillData.rows.filter(function(row) {
-        return Object.keys(row).some(function(k) {
-          if (/_image$/.test(k)) return false;   /* photo URLs aren't searchable text */
-          return String(row[k] || '').toLowerCase().includes(q);
-        });
-      });
-    }
+    
+    var activeFilters = {};
+    document.querySelectorAll('.fp-drill-filter-select').forEach(function(sel) {
+        if (sel.value) activeFilters[sel.getAttribute('data-filter-key')] = sel.value;
+    });
+
+    _drillRows = _drillData.rows.filter(function(row) {
+      // Check select filters
+      for (var k in activeFilters) {
+         if (row[k] !== activeFilters[k]) return false;
+      }
+      
+      // Check search query
+      if (q) {
+          return Object.keys(row).some(function(k) {
+            if (/_image$/.test(k)) return false;
+            return String(row[k] || '').toLowerCase().includes(q);
+          });
+      }
+      return true;
+    });
     if (_sortCol !== null) {
       var key  = _drillData.columns[_sortCol].key;
       var type = _drillData.columns[_sortCol].type;

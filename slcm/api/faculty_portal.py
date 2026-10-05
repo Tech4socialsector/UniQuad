@@ -949,7 +949,8 @@ def drilldown_students():
                 sm.registration_id,
                 sm.gender,
                 sm.passport_size_photo,
-                se.program,
+                sm.section as student_section,
+                pm.program_name,
                 sec.course_offering,
                 co.course_name,
                 co.term_name,
@@ -958,6 +959,7 @@ def drilldown_students():
             JOIN `tabStudent Enrollment` se ON se.name = sec.parent
             JOIN `tabCourse Offering` co ON co.name = sec.course_offering
             LEFT JOIN `tabStudent Master` sm ON sm.name = se.student
+            LEFT JOIN `tabProgramme` pm ON pm.name = se.program
             WHERE sec.course_offering IN %s
               AND sec.status = 'Enrolled'
             ORDER BY co.course_name, sm.last_name, sm.first_name
@@ -974,15 +976,16 @@ def drilldown_students():
         rows.append({
             "student_id": r.get("registration_id") or r.get("student", ""),
             "student_name": full_name,
-            # Not a column: used only to draw the avatar beside the name
-            # (so it stays out of the CSV export).
             "student_image": r.get("passport_size_photo") or "",
             "gender": r.get("gender") or "—",
-            "program": r.get("program") or "—",
+            "program": r.get("program_name") or r.get("program") or "—",
             "course_name": r.get("course_name") or r.get("course_offering", ""),
             "term": r.get("term_name") or "—",
             "academic_year": r.get("academic_year") or "—",
+            "section": r.get("student_section") or "—",
         })
+        
+    active_ay = frappe.get_cached_value("Academic Year", {"status": "Active"}, "name")
 
     return {
         "title": "Enrolled Students",
@@ -992,11 +995,18 @@ def drilldown_students():
             {"key": "gender",       "label": "Gender",        "type": "text"},
             {"key": "program",      "label": "Programme",       "type": "text"},
             {"key": "course_name",  "label": "Course",        "type": "text"},
-            {"key": "term",         "label": "Term",          "type": "text"},
-            {"key": "academic_year","label": "Academic Year", "type": "text"},
+            {"key": "section",      "label": "Section",       "type": "text"},
         ],
         "rows": rows,
         "count": len(rows),
+        "filters": [
+            {"key": "academic_year", "label": "Academic Year"},
+            {"key": "term", "label": "Term"},
+            {"key": "program", "label": "Programme"},
+            {"key": "course_name", "label": "Course"},
+            {"key": "section", "label": "Section"},
+        ],
+        "default_ay": active_ay
     }
 
 
