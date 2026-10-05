@@ -29,7 +29,34 @@ def execute(filters: dict | None = None):
 		else _("No allocated students found.")
 	)
 
-	return columns, data, message, None, summary
+	chart = get_chart_data(data)
+
+	return columns, data, message, chart, summary
+
+
+def get_chart_data(data: list[dict]) -> dict | None:
+	if not data:
+		return None
+
+	chart_rows = data[:15]
+	labels = [r.get("center_name") or r.get("entrance_test_provider") for r in chart_rows]
+	values = [r.get("allocated_count", 0) for r in chart_rows]
+
+	return {
+		"data": {
+			"labels": labels,
+			"datasets": [
+				{
+					"name": _("Allocated Count"),
+					"values": values,
+				}
+			],
+		},
+		"type": "bar",
+		"barOptions": {"horizontal": True, "stacked": False},
+		"height": max(280, len(chart_rows) * 28 + 80),
+		"colors": ["#2490EF"],
+	}
 
 
 def get_columns() -> list[dict]:

@@ -79,7 +79,66 @@ def execute(filters: dict | None = None):
 		else _("No candidates found matching the selected filters.")
 	)
 
-	return columns, data, message, None, summary
+	chart = get_chart_data(data)
+
+	return columns, data, message, chart, summary
+
+
+def get_chart_data(data: list[dict]) -> dict | None:
+	if not data:
+		return None
+
+	centre_map = {}
+	for row in data:
+		centre = row.get("test_centre") or _("Unknown")
+		if centre not in centre_map:
+			centre_map[centre] = {"univ_scribe": 0, "self_scribe": 0, "no_scribe": 0}
+
+		req = row.get("pwd_required_test")
+		details = str(row.get("scribe_details", "")).lower()
+
+		if req == "Yes":
+			if "myself" in details or "self" in details:
+				centre_map[centre]["self_scribe"] += 1
+			else:
+				centre_map[centre]["univ_scribe"] += 1
+		else:
+			centre_map[centre]["no_scribe"] += 1
+
+	sorted_centres = sorted(
+		centre_map.keys(),
+		key=lambda c: centre_map[c]["univ_scribe"] + centre_map[c]["self_scribe"] + centre_map[c]["no_scribe"],
+		reverse=True,
+	)[:15]
+
+	labels = sorted_centres
+	univ_vals = [centre_map[c]["univ_scribe"] for c in sorted_centres]
+	self_vals = [centre_map[c]["self_scribe"] for c in sorted_centres]
+	no_vals = [centre_map[c]["no_scribe"] for c in sorted_centres]
+
+	return {
+		"data": {
+			"labels": labels,
+			"datasets": [
+				{
+					"name": _("University Scribe Required"),
+					"values": univ_vals,
+				},
+				{
+					"name": _("Self Scribe Arranged"),
+					"values": self_vals,
+				},
+				{
+					"name": _("No Scribe Required"),
+					"values": no_vals,
+				},
+			],
+		},
+		"type": "bar",
+		"barOptions": {"stacked": True},
+		"height": 300,
+		"colors": ["#f39c12", "#27ae60", "#2980b9"],
+	}
 
 
 def get_columns() -> list[dict]:
