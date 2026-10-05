@@ -292,19 +292,17 @@ frappe.ui.form.on("Applicant", {
     },
 
     nationality: function (frm) {
-        if (frm.doc.nationality && frm.doc.nationality !== "Indian") {
-            frm.set_value("foriegn_national", "Yes");
-        } else if (frm.doc.nationality === "Indian" && frm.doc.foriegn_national === "Yes") {
-            frm.set_value("foriegn_national", "No");
+        if (frm.doc.foriegn_national === "No" && frm.doc.nationality && frm.doc.nationality !== "Indian") {
+            frappe.show_alert({ message: __("For Domestic applications, Nationality must be Indian."), indicator: "orange" });
+            frm.set_value("nationality", "Indian");
+        } else if (frm.doc.foriegn_national === "Yes" && frm.doc.nationality === "Indian") {
+            frappe.show_alert({ message: __("For International applications, Nationality cannot be Indian."), indicator: "orange" });
+            frm.set_value("nationality", "");
         }
     },
 
     foriegn_national: function (frm) {
-        if (frm.doc.foriegn_national === "Yes" && frm.doc.nationality === "Indian") {
-            frm.set_value("nationality", "");
-        } else if (frm.doc.foriegn_national === "No" && frm.doc.nationality && frm.doc.nationality !== "Indian") {
-            frm.set_value("nationality", "Indian");
-        }
+        frm.trigger("nationality");
     },
 
     validate: function (frm) {
@@ -319,10 +317,12 @@ frappe.ui.form.on("Applicant", {
 
         // HSC Percentage
         if (frm.doc.hsc_percentage !== undefined && frm.doc.hsc_percentage !== null && frm.doc.hsc_percentage !== "") {
-            if (frm.doc.hsc_percentage < 35) {
-                errors.push(__("HSC percentage should be above 35%"));
-            } else if (frm.doc.hsc_percentage > 100) {
-                errors.push(__("HSC percentage cannot be more than 100%"));
+            let max_val = frm.doc.if_cgpa_maximum_cgpa_class_xii ? frm.doc.if_cgpa_maximum_cgpa_class_xii : 100;
+            let is_cgpa = !!frm.doc.if_cgpa_maximum_cgpa_class_xii;
+            if (frm.doc.hsc_percentage < (is_cgpa ? 4 : 35)) {
+                errors.push(is_cgpa ? __("HSC CGPA should be at least 4") : __("HSC percentage should be above 35%"));
+            } else if (frm.doc.hsc_percentage > max_val) {
+                errors.push(is_cgpa ? __(`HSC CGPA cannot be more than ${max_val}`) : __("HSC percentage cannot be more than 100%"));
             }
         }
 
@@ -449,11 +449,14 @@ frappe.ui.form.on("Applicant", {
         const val = frm.doc.hsc_percentage;
         if (val === null || val === undefined || val === "") return;
 
-        if (val < 35) {
-            frappe.show_alert({ message: __("HSC percentage must be at least 35%."), indicator: "orange" });
+        let max_val = frm.doc.if_cgpa_maximum_cgpa_class_xii ? frm.doc.if_cgpa_maximum_cgpa_class_xii : 100;
+        let is_cgpa = !!frm.doc.if_cgpa_maximum_cgpa_class_xii;
+
+        if (val < (is_cgpa ? 4 : 35)) {
+            frappe.show_alert({ message: is_cgpa ? __("HSC CGPA must be at least 4.") : __("HSC percentage must be at least 35%."), indicator: "orange" });
             frm.set_value("hsc_percentage", null);
-        } else if (val > 100) {
-            frappe.show_alert({ message: __("HSC percentage cannot exceed 100%."), indicator: "orange" });
+        } else if (val > max_val) {
+            frappe.show_alert({ message: is_cgpa ? __(`HSC CGPA cannot exceed ${max_val}.`) : __("HSC percentage cannot exceed 100%."), indicator: "orange" });
             frm.set_value("hsc_percentage", null);
         }
     },

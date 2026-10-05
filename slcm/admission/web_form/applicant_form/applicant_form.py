@@ -517,7 +517,7 @@ def save_applicant_draft(data, ignore_mandatory=True):
             from slcm.api.service.application_fee_service import get_application_fee_for_category
 
             raw_cat = (getattr(doc, "whether_scstobc_ncl", "") or "").strip()
-            cat     = raw_cat if raw_cat and raw_cat.upper() != "NA" else None
+            cat     = raw_cat if raw_cat and raw_cat.upper() != "GENERAL" else None
             foriegn_national = getattr(doc, "foriegn_national", "") or ""
             is_foreign = foriegn_national == "Yes" if foriegn_national else False
             computed = flt(get_application_fee_for_category(doc.program, doc.admission_cycle, cat, is_foreign=is_foreign), 2)
@@ -1068,7 +1068,7 @@ def switch_applicant_program(applicant_name, program):
             from slcm.api.service.application_fee_service import get_application_fee_for_category
 
             raw_cat = (getattr(doc, "whether_scstobc_ncl", "") or "").strip()
-            cat = raw_cat if raw_cat and raw_cat.upper() != "NA" else None
+            cat = raw_cat if raw_cat and raw_cat.upper() != "GENERAL" else None
             fee_status = (getattr(doc, "application_fee_status", "") or "").strip()
             foriegn_national = getattr(doc, "foriegn_national", "") or ""
             is_foreign = foriegn_national == "Yes" if foriegn_national else False

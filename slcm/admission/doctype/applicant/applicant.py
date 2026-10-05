@@ -193,20 +193,14 @@ class Applicant(Document):
                 )
 
     def validate_reservation_documents(self):
-        if self.ews == "Yes" and not self.ews_certificate:
-            frappe.throw(
-                "EWS Certificate is mandatory for EWS category.",
-                title="Missing Document"
-            )
-
         # Derive caste categories from the whether_scstobc_ncl field
-        caste_categories = {"SC", "ST", "OBC-NCL"}
+        caste_categories = {"SC", "ST", "OBC-NCL", "EWS"}
         applicant_cats = self._get_applicant_categories()
         matched_caste = applicant_cats & caste_categories
 
-        if matched_caste and not self.caste_certificate:
+        if matched_caste and not getattr(self, "caste_certificate", None):
             frappe.throw(
-                f"Caste Certificate is mandatory for {', '.join(sorted(matched_caste))} category.",
+                f"Category Certificate is mandatory for {', '.join(sorted(matched_caste))} category.",
                 title="Missing Document"
             )
 
@@ -344,74 +338,6 @@ class Applicant(Document):
             self.flags.old_admission_cycle = None
             self.flags.old_program = None
             self.flags.old_campus = None
-
-        self.handle_file_name()
-
-    def handle_file_name(self):
-        doc_before = self.get_doc_before_save()
-        for df in self.meta.fields:
-            if df.fieldtype in ["Attach", "Attach Image"]:
-                file_url = self.get(df.fieldname)
-                if not file_url:
-                    continue
-                    
-                # Skip if the file was not changed in this transaction
-                if doc_before:
-                    prev_url = doc_before.get(df.fieldname)
-                    if prev_url == file_url:
-                        continue
-                    
-                file_name_from_url = file_url.split("/")[-1]
-                is_uuid = False
-                if len(file_name_from_url) > 13 and file_name_from_url[12] == "_" and file_name_from_url[:12].isalnum():
-                    is_uuid = True
-                
-                if is_uuid:
-                    try:
-                        file_doc = frappe.get_doc("File", {"file_url": file_url})
-                        if not file_doc.is_private:
-                            file_doc.is_private = 1
-                            file_doc.save(ignore_permissions=True)
-                            self.set(df.fieldname, file_doc.file_url)
-                    except Exception:
-                        pass
-                    continue
-                
-                # Check for stale frontend state sending the old URL
-                if doc_before:
-                    prev_url = doc_before.get(df.fieldname)
-                    if prev_url and prev_url != file_url:
-                        prev_name = prev_url.split("/")[-1]
-                        if len(prev_name) > 13 and prev_name[12] == "_" and prev_name[13:] == file_name_from_url:
-                            self.set(df.fieldname, prev_url)
-                            continue
-                
-                # It's a genuine new upload, generate a UUID
-                try:
-                    import uuid, os, shutil
-                    file_doc = frappe.get_doc("File", {"file_url": file_url})
-                    
-                    new_file_name = f"{uuid.uuid4().hex[:12]}_{file_doc.file_name}"
-                    new_file_url = f"/private/files/{new_file_name}"
-                    
-                    old_path = file_doc.get_full_path()
-                    new_path = frappe.get_site_path("private", "files", new_file_name)
-
-                    if os.path.exists(old_path):
-                        os.makedirs(os.path.dirname(new_path), exist_ok=True)
-                        shutil.move(old_path, new_path)
-
-                        file_doc.file_name = new_file_name
-                        file_doc.file_url = new_file_url
-                        file_doc.is_private = 1
-                        file_doc.attached_to_doctype = self.doctype
-                        file_doc.attached_to_name = self.name
-                        file_doc.attached_to_field = df.fieldname
-                        file_doc.save(ignore_permissions=True)
-
-                        self.set(df.fieldname, new_file_url)
-                except Exception:
-                    frappe.log_error(title="handle_file_name error", message=frappe.get_traceback())
 
     def on_update(self):
         if not self.user_id:
@@ -808,8 +734,6 @@ class Applicant(Document):
         reservation_parts = []
         if self.whether_scstobc_ncl:
             reservation_parts.append(self.whether_scstobc_ncl)
-        if self.ews == "Yes":
-            reservation_parts.append("EWS")
         if self.pwd == "Yes":
             reservation_parts.append("PwD")
         if self.karnataka_category:
@@ -1449,7 +1373,7 @@ class Applicant(Document):
         reservation fields in the eligibility_for_reservation_tab.
 
         Field → Admission Category mapping (static, matches DB records):
-          whether_scstobc_ncl  (not "NA")  →  OBC-NCL / ST / SC
+          whether_scstobc_ncl  (not "General")  →  OBC-NCL / ST / SC
           pwd == "Yes"                     →  PWD
           karnataka_category == "Yes"      →  Karnataka
 
@@ -1457,11 +1381,8 @@ class Applicant(Document):
         """
         cats = set()
 
-        if (getattr(self, "ews", None) or "").strip() == "Yes":
-            cats.add("EWS")
-
         sc_st_obc = (getattr(self, "whether_scstobc_ncl", None) or "").strip()
-        if sc_st_obc and sc_st_obc.lower() != "na":
+        if sc_st_obc and sc_st_obc.lower() != "general":
             cats.add(sc_st_obc)  # Only include real categories like "OBC-NCL", "ST", or "SC"
         else:
             cats.add("General")

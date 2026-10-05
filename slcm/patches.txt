@@ -69,3 +69,4 @@ slcm.patches.v2_0.fee_certificate_demand_letter_format
 slcm.patches.v2_0.fee_certificate_demand_letter_wording
 slcm.patches.v2_0.fee_certificate_office_documents
 slcm.patches.v2_0.group_helpdesk_desktop_icon
+slcm.patches.v2_0.migrate_ews_and_category

@@ -2634,7 +2634,7 @@ function _doFinalSubmit(applicantName, targetStatus) {
 					// ── Use "After Submission" settings ──────────────────────
 					var wf = frappe.web_form || {};
 					var title = wf.success_title || 'Application Submitted Successfully';
-					var message = wf.success_message || 'Your application has been submitted successfully.';
+					var message = wf.success_message || '';
 					var nextUrl = wf.success_url || '';
 					_showSuccessModal(title, message, nextUrl);
 				} else {
@@ -3450,8 +3450,15 @@ function _slcmApplicantFormatError(fieldname, rawVal, label) {
 		if (n100 < 0) {
 			return lbl + ': ' + __('Cannot be negative');
 		}
-		if (n100 > 100) {
-			return lbl + ': ' + __('Cannot be greater than 100');
+		var max_val = 100;
+		if (fieldname === 'hsc_percentage' && window.frappe && frappe.web_form) {
+			var cgpa_max = parseFloat(frappe.web_form.get_value('if_cgpa_maximum_cgpa_class_xii'));
+			if (!Number.isNaN(cgpa_max) && cgpa_max > 0) {
+				max_val = cgpa_max;
+			}
+		}
+		if (n100 > max_val) {
+			return lbl + ': ' + __('Cannot be greater than ' + max_val);
 		}
 		var rounded100 = Math.round(n100 * 100) / 100;
 		if (Math.abs(n100 - rounded100) > 1e-6) {
@@ -4481,31 +4488,41 @@ function setupPreferenceValidation() {
 				var nat = wf.get_value('nationality');
 				var fn = wf.get_value('foriegn_national');
 
-				if (nat && nat !== 'Indian') {
-					if (fn !== 'Yes') {
-						wf.set_value('foriegn_national', 'Yes');
-					}
-				} else if (nat === 'Indian') {
-					if (fn === 'Yes') {
-						wf.set_value('foriegn_national', 'No');
-					}
+				if (fn === 'No' && nat && nat !== 'Indian') {
+					frappe.msgprint('For Domestic applications, Nationality must be Indian.');
+					wf.set_value('nationality', 'Indian');
+				} else if (fn === 'Yes' && nat === 'Indian') {
+					frappe.msgprint('For International applications, Nationality cannot be Indian.');
+					wf.set_value('nationality', '');
 				}
 			}
 
 			function validateForeignNational() {
-				var nat = wf.get_value('nationality');
-				var fn = wf.get_value('foriegn_national');
-
-				if (fn === 'Yes' && nat === 'Indian') {
-					wf.set_value('nationality', '');
-					frappe.msgprint('If Foreign National is Yes, Nationality cannot be Indian.');
-				} else if (fn === 'No' && nat && nat !== 'Indian') {
-					wf.set_value('nationality', 'Indian');
-				}
+				validateNationality();
 			}
 
 			wf.on('nationality', validateNationality);
 			wf.on('foriegn_national', validateForeignNational);
+			function validateHscPercentage() {
+				var hsc = parseFloat(wf.get_value('hsc_percentage'));
+				var cgpa_max = parseFloat(wf.get_value('if_cgpa_maximum_cgpa_class_xii'));
+				if (!Number.isNaN(hsc)) {
+					var max_val = (!Number.isNaN(cgpa_max) && cgpa_max > 0) ? cgpa_max : 100;
+					var is_cgpa = (!Number.isNaN(cgpa_max) && cgpa_max > 0);
+					var min_val = is_cgpa ? 4 : 35;
+					
+					if (hsc < min_val) {
+						frappe.msgprint(is_cgpa ? 'HSC CGPA must be at least 4.' : 'HSC percentage must be at least 35%.');
+						wf.set_value('hsc_percentage', '');
+					} else if (hsc > max_val) {
+						frappe.msgprint(is_cgpa ? 'HSC CGPA cannot exceed ' + max_val + '.' : 'HSC percentage cannot exceed 100%.');
+						wf.set_value('hsc_percentage', '');
+					}
+				}
+			}
+
+			wf.on('hsc_percentage', validateHscPercentage);
+			wf.on('if_cgpa_maximum_cgpa_class_xii', validateHscPercentage);
 		}
 		if (++n > 100) clearInterval(t);
 	}, 200);
