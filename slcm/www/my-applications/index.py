@@ -243,7 +243,7 @@ def get_context(context):
                 {"label": "12th Certificate", "field": "class_xii_marksheet", "required": True, "accept": ".pdf,.jpg,.jpeg,.png", "max_size_mb": 5},
                 {"label": "ID Proof", "field": "id_proof", "required": True, "accept": ".pdf,.jpg,.jpeg,.png", "max_size_mb": 5},
                 {"label": "Photo", "field": "candidate_photo", "required": True, "accept": ".jpg,.jpeg,.png", "max_size_mb": 1},
-                {"label": "CV", "field": "cv", "required": True, "accept": ".doc,.docx,.pdf", "max_size_mb": 5},
+
             ]
 
             # Optional / Conditional fields

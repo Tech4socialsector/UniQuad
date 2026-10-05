@@ -238,8 +238,8 @@ def validate_new_application_access(program=None):
     if end_date and today_date > getdate(end_date):
         return {
             "allowed": False,
-            "message": _("The application window closed on {0}. New applications cannot be submitted.").format(
-                formatdate(end_date)
+            "message": _("The application window for the {0} academic year is now closed. Thank you for your interest in our programme.").format(
+                cycle_data.get("academic_year") or ""
             ),
         }
 
