@@ -38,7 +38,6 @@ class TestReservationReport(FrappeTestCase):
             "admission_cycle": "TEST-CYCLE-RESERVATION",
             "academic_year": "2026-2027",
             "whether_scstobc_ncl": "SC",
-            "ews": "No",
             "pwd": "Yes",
             "karnataka_category": "Yes"
         })
@@ -74,7 +73,6 @@ class TestReservationReport(FrappeTestCase):
             "admission_cycle": "TEST-CYCLE-RESERVATION",
             "academic_year": "2026-2027",
             "whether_scstobc_ncl": "ST",
-            "ews": "No",
             "pwd": "No",
             "karnataka_category": "No"
         })

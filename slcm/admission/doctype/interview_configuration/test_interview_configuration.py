@@ -133,8 +133,7 @@ class IntegrationTestInterviewConfiguration(IntegrationTestCase):
             "candidate_name": "Test General Applicant",
             "email": "general@test.com",
             "gender": "Male",
-            "ews": "No",
-            "whether_scstobc_ncl": "NA",
+            "whether_scstobc_ncl": "General",
             "pwd": "No",
             "karnataka_category": "No"
         })

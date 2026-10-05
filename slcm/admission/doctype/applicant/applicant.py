@@ -193,20 +193,14 @@ class Applicant(Document):
                 )
 
     def validate_reservation_documents(self):
-        if self.ews == "Yes" and not self.ews_certificate:
-            frappe.throw(
-                "EWS Certificate is mandatory for EWS category.",
-                title="Missing Document"
-            )
-
         # Derive caste categories from the whether_scstobc_ncl field
-        caste_categories = {"SC", "ST", "OBC-NCL"}
+        caste_categories = {"SC", "ST", "OBC-NCL", "EWS"}
         applicant_cats = self._get_applicant_categories()
         matched_caste = applicant_cats & caste_categories
 
-        if matched_caste and not self.caste_certificate:
+        if matched_caste and not getattr(self, "caste_certificate", None):
             frappe.throw(
-                f"Caste Certificate is mandatory for {', '.join(sorted(matched_caste))} category.",
+                f"Category Certificate is mandatory for {', '.join(sorted(matched_caste))} category.",
                 title="Missing Document"
             )
 
@@ -740,8 +734,6 @@ class Applicant(Document):
         reservation_parts = []
         if self.whether_scstobc_ncl:
             reservation_parts.append(self.whether_scstobc_ncl)
-        if self.ews == "Yes":
-            reservation_parts.append("EWS")
         if self.pwd == "Yes":
             reservation_parts.append("PwD")
         if self.karnataka_category:
@@ -1381,7 +1373,7 @@ class Applicant(Document):
         reservation fields in the eligibility_for_reservation_tab.
 
         Field → Admission Category mapping (static, matches DB records):
-          whether_scstobc_ncl  (not "NA")  →  OBC-NCL / ST / SC
+          whether_scstobc_ncl  (not "General")  →  OBC-NCL / ST / SC
           pwd == "Yes"                     →  PWD
           karnataka_category == "Yes"      →  Karnataka
 
@@ -1389,11 +1381,8 @@ class Applicant(Document):
         """
         cats = set()
 
-        if (getattr(self, "ews", None) or "").strip() == "Yes":
-            cats.add("EWS")
-
         sc_st_obc = (getattr(self, "whether_scstobc_ncl", None) or "").strip()
-        if sc_st_obc and sc_st_obc.lower() != "na":
+        if sc_st_obc and sc_st_obc.lower() != "general":
             cats.add(sc_st_obc)  # Only include real categories like "OBC-NCL", "ST", or "SC"
         else:
             cats.add("General")
