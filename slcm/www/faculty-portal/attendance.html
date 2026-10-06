@@ -3,6 +3,7 @@
 {% block title %}Attendance Management{% endblock %}
 
 {% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <style>
 .fp-att-page .fp-page-title { letter-spacing: -0.02em; }
 
@@ -399,6 +400,10 @@
    a short class (e.g. 7 students) shouldn't leave a large empty void below
    the list, while a long roster still scrolls within the same cap. */
 #att-mark-modal .att-modal-box.att-modal-full { height: auto; max-height: 92vh; }
+
+.fp-vb-stat-grid-4 { grid-template-columns: repeat(4, 1fr); }
+@media (max-width: 1024px) { .fp-vb-stat-grid-4 { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) { .fp-vb-stat-grid-4 { grid-template-columns: 1fr; } }
 </style>
 {% endblock %}
 
@@ -414,7 +419,7 @@
 {# ── Page Header ──────────────────────────────────────────────── #}
 <div class="fp-page-header fade-in" style="background: var(--fp-card, #fff); border: 1px solid var(--fp-border, #e5e7eb); border-radius: 14px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
   <div>
-    <h1 class="fp-page-title" style="margin: 0; font-size: 18px !important; font-weight: 700 !important;">Attendance Management</h1>
+    <h1 class="fp-page-title" style="margin: 0; font-size: 18px !important; font-weight: 700 !important;">Attendance</h1>
   </div>
   {% if selected_term and terms %}
   <div class="fp-page-actions">
@@ -433,7 +438,7 @@
 </div>
 {% endif %}
 
-{# ── Today's Classes ──────────────────────────────────────────── #}
+{# ── Today's Sessions ──────────────────────────────────────────── #}
 {# One card per course. A course with multiple time slots today (e.g. two
    lecture sections) gets a slot picker inside the card instead of a
    separate card per slot. #}
@@ -441,7 +446,7 @@
   <div class="fp-card-header">
     <div class="fp-card-title">
       <span class="fp-ms">today</span>
-      Today's Classes
+      Today's Sessions
     </div>
     <span class="fp-badge fp-badge-neutral">{{ todays_courses | length }} course{{ 's' if todays_courses | length != 1 else '' }}</span>
   </div>
@@ -449,7 +454,7 @@
     {% if not todays_courses %}
     <div class="fp-empty">
       <div class="fp-empty-icon"><span class="fp-ms">event_busy</span></div>
-      <p class="fp-empty-title">No classes scheduled today</p>
+      <p class="fp-empty-title">No sessions scheduled today</p>
       <p class="fp-empty-sub">Your schedule is clear for today.</p>
     </div>
     {% else %}
@@ -507,39 +512,52 @@
 </div>
 
 {# ── Stat Cards (all drillable) ───────────────────────────────── #}
-<div class="fp-stat-grid fp-vb-stat-grid fp-vb-stat-grid-3">
+<div class="fp-stat-grid fp-vb-stat-grid fp-vb-stat-grid-4">
 
   <div class="fp-stat-card fp-vb-stat-card fp-vb-accent-maroon att-stat-drillable fp-stat-drillable fade-in" style="animation-delay:0.04s;"
-       onclick="attDrill('all_sessions')" title="View all sessions">
-    <div class="fp-stat-icon fp-c-navy"><span class="fp-ms">event_note</span></div>
+       onclick="attDrill('completed_sessions')" title="View completed sessions">
+    <div class="fp-stat-icon fp-c-navy"><span class="fp-ms">calendar_today</span></div>
     <div class="fp-stat-body">
-      <div class="fp-stat-val">{{ total_sessions }}</div>
-      <div class="fp-stat-lbl">Total Sessions</div>
-      <div class="fp-stat-sub fp-drill-hint"><span class="fp-ms" style="font-size:12px;">open_in_new</span> More info</div>
+      <div class="fp-stat-val" style="display:flex;align-items:baseline;gap:4px;">{{ completed_sessions }} <span style="font-size:18px;color:var(--fp-text-4);font-weight:600;">/ {{ total_sessions }}</span></div>
+      <div class="fp-stat-lbl">Completed Sessions</div>
+      <div class="fp-stat-sub fp-drill-hint"><span class="fp-ms" style="font-size:12px;">open_in_new</span> More</div>
     </div>
     <span class="fp-drill-badge">Details</span>
   </div>
 
   <div class="fp-stat-card fp-vb-stat-card fp-vb-accent-maroon att-stat-drillable fp-stat-drillable fade-in" style="animation-delay:0.08s;"
        onclick="attDrill('marked_sessions')" title="View marked sessions">
-    <div class="fp-stat-icon fp-c-navy"><span class="fp-ms">task_alt</span></div>
+    <div class="fp-stat-icon fp-c-navy"><span class="fp-ms">check_circle</span></div>
     <div class="fp-stat-body">
       <div class="fp-stat-val">{{ marked_sessions }}</div>
       <div class="fp-stat-lbl">Marked</div>
-      <div class="fp-stat-sub fp-drill-hint"><span class="fp-ms" style="font-size:12px;">open_in_new</span> More info</div>
+      <div class="fp-stat-sub fp-drill-hint"><span class="fp-ms" style="font-size:12px;">open_in_new</span> More</div>
     </div>
     <span class="fp-drill-badge">Details</span>
   </div>
 
-  <div class="fp-stat-card fp-vb-stat-card {% if pending_sessions > 0 %}fp-vb-accent-maroon{% else %}fp-vb-accent-maroon{% endif %} att-stat-drillable fp-stat-drillable fade-in" style="animation-delay:0.12s;"
+  <div class="fp-stat-card fp-vb-stat-card fp-vb-accent-maroon att-stat-drillable fp-stat-drillable fade-in" style="animation-delay:0.12s;"
        onclick="attDrill('pending_sessions')" title="View pending sessions">
-    <div class="fp-stat-icon {% if pending_sessions > 0 %}fp-c-navy{% else %}fp-c-navy{% endif %}">
+    <div class="fp-stat-icon fp-c-navy">
       <span class="fp-ms">pending_actions</span>
     </div>
     <div class="fp-stat-body">
-      <div class="fp-stat-val {% if pending_sessions > 0 %}" style="color:var(--fp-warning);"{% else %}"{% endif %}>{{ pending_sessions }}</div>
+      <div class="fp-stat-val">{{ pending_sessions }}</div>
       <div class="fp-stat-lbl">Pending</div>
-      <div class="fp-stat-sub fp-drill-hint"><span class="fp-ms" style="font-size:12px;">open_in_new</span> More info</div>
+      <div class="fp-stat-sub fp-drill-hint"><span class="fp-ms" style="font-size:12px;">open_in_new</span> More</div>
+    </div>
+    <span class="fp-drill-badge">Details</span>
+  </div>
+  
+  <div class="fp-stat-card fp-vb-stat-card fp-vb-accent-maroon att-stat-drillable fp-stat-drillable fade-in" style="animation-delay:0.16s;"
+       onclick="attDrill('upcoming_sessions')" title="View upcoming sessions">
+    <div class="fp-stat-icon fp-c-navy">
+      <span class="fp-ms">event_upcoming</span>
+    </div>
+    <div class="fp-stat-body">
+      <div class="fp-stat-val">{{ upcoming_sessions }}</div>
+      <div class="fp-stat-lbl">Upcoming</div>
+      <div class="fp-stat-sub fp-drill-hint"><span class="fp-ms" style="font-size:12px;">open_in_new</span> More</div>
     </div>
     <span class="fp-drill-badge">Details</span>
   </div>
@@ -553,15 +571,18 @@
    `transform`) becomes the containing block for fixed-position
    descendants and silently mispositions them; see the fp-msf
    helper functions in extra_js for the full explanation. #}
-<div class="fp-card" style="margin-bottom:24px;">
+<div class="fp-card" id="attendance-sessions-card" style="margin-bottom:24px;">
   <div class="fp-card-header" style="align-items:flex-start;flex-wrap:wrap;">
     <div>
       <div class="fp-card-title">
         <span class="fp-ms">event_available</span>
         Attendance Sessions
-        {% if selected_term %}<span class="fp-badge fp-badge-neutral" style="margin-left:6px;font-weight:600;">{{ terms | selectattr('key','equalto',selected_term) | map(attribute='label') | first }}</span>{% endif %}
+        {% if selected_term %}
+        <span class="fp-badge fp-badge-neutral" style="margin-left:6px;font-weight:600;">Term : {{ active_term_name }}</span>
+        <span class="fp-badge fp-badge-neutral" style="margin-left:6px;font-weight:600;">Academic Year : {{ active_academic_year }}</span>
+        {% endif %}
       </div>
-      <p style="font-size:12.5px;color:var(--fp-text-4);margin:4px 0 0;">Manage attendance records for your assigned courses.</p>
+      <br>
     </div>
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
       <div class="sat-search-wrap">
@@ -569,15 +590,6 @@
         <input type="text" class="sat-search" id="fp-sessions-search" placeholder="Search by course, date or venue…"
                oninput="fpFilterSessions()" aria-label="Search sessions" style="width:240px;">
       </div>
-      {% if terms | length > 1 %}
-      <select class="fp-select" id="fp-term-filter" onchange="fpChangeTerm(this.value)"
-              title="Switch trimester / term"
-              style="width:auto;min-width:170px;padding:7px 10px;font-size:13px;font-weight:600;">
-        {% for t in terms %}
-        <option value="{{ t.key }}" {% if selected_term == t.key %}selected{% endif %}>{{ t.label }}</option>
-        {% endfor %}
-      </select>
-      {% endif %}
       <div class="fp-msf" id="fp-co-filter" data-label-all="All Courses" data-label-one="Course" data-label-many="Courses">
         <button type="button" class="fp-msf-btn" onclick="fpToggleMsf('fp-co-filter')" aria-haspopup="true" aria-expanded="false" aria-label="Filter by course">
           <span class="fp-msf-btn-label">All Courses</span>
@@ -598,6 +610,11 @@
           {% endif %}
         </div>
       </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <input type="text" class="fp-input" id="fp-date-filter-from" placeholder="DD/MM/YYYY" onchange="fpFilterSessions()" aria-label="From date" style="width:140px;padding:7px 10px;font-size:13px;">
+        <span style="font-size:13px;color:var(--fp-text-4);font-weight:600;">to</span>
+        <input type="text" class="fp-input" id="fp-date-filter-to" placeholder="DD/MM/YYYY" onchange="fpFilterSessions()" aria-label="To date" style="width:140px;padding:7px 10px;font-size:13px;">
+      </div>      
       <div class="fp-msf" id="fp-status-filter" data-label-all="All Status" data-label-one="Status" data-label-many="Statuses">
         <button type="button" class="fp-msf-btn" onclick="fpToggleMsf('fp-status-filter')" aria-haspopup="true" aria-expanded="false" aria-label="Filter by status">
           <span class="fp-msf-btn-label">All Status</span>
@@ -606,13 +623,14 @@
         <div class="fp-msf-panel">
           <label class="fp-msf-option"><input type="checkbox" value="marked" onchange="fpFilterSessions()"><span>Marked</span></label>
           <label class="fp-msf-option"><input type="checkbox" value="pending" onchange="fpFilterSessions()"><span>Pending</span></label>
+          <label class="fp-msf-option"><input type="checkbox" value="upcoming" onchange="fpFilterSessions()"><span>Upcoming</span></label>
           <div class="fp-msf-footer">
             <button type="button" class="fp-msf-footer-btn" onclick="fpMsfSelectAll('fp-status-filter')">Select all</button>
             <button type="button" class="fp-msf-footer-btn fp-msf-clear" onclick="fpMsfClearAll('fp-status-filter')">Clear all</button>
           </div>
         </div>
       </div>
-      <button class="fp-btn fp-btn-primary fp-btn-sm" onclick="fpOpenSessionPicker()" id="fp-mark-btn" title="Mark attendance for a pending session">
+      <button class="fp-btn fp-btn-primary fp-btn-sm" onclick="fpOpenSessionPicker()" id="fp-mark-btn" title="Mark attendance for a pending session" style="display:none;">
         <span class="fp-ms">add</span>Mark Attendance
       </button>
     </div>
@@ -645,7 +663,7 @@
           {% for s in sessions %}
           <tr class="fp-session-row"
               data-co="{{ s.course_offering }}"
-              data-marked="{{ 'marked' if s.marked else 'pending' }}"
+              data-marked="{{ s.computed_status | lower }}"
               data-session="{{ s.name }}"
               data-session-date="{{ s.session_date }}"
               data-total="{{ s.total }}"
@@ -654,7 +672,7 @@
               data-rfid-active-until="{{ s.rfid_active_until }}"
               data-rfid-activated="{{ '1' if s.rfid_activated else '0' }}"
               style="cursor:pointer;"
-              onclick="attRowClick(this, '{{ s.name }}', '{{ s.course_name | replace("'","\\x27") }}', {{ 'true' if s.marked else 'false' }})">
+              onclick='attRowClick(this, {{ s.name | tojson }}, {{ s.course_name | tojson }}, {{ s.computed_status | tojson }})'>
             <td data-label="Course" style="font-weight:600;color:var(--fp-text-1);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ s.course_name }}">{{ s.course_name }}</td>
             <td data-label="Date" style="white-space:nowrap;color:var(--fp-text-2);">{{ s.session_date_fmt }}</td>
             <td data-label="Time" style="white-space:nowrap;font-size:12px;color:var(--fp-text-3);">{{ s.from_time }}{% if s.to_time %} – {{ s.to_time }}{% endif %}</td>
@@ -671,21 +689,26 @@
               {% else %}<span class="fp-badge fp-badge-neutral">—</span>{% endif %}
             </td>
             <td data-label="Status">
-              {% if s.marked %}<span class="fp-badge fp-badge-success"><span class="fp-ms" style="font-size:12px;">check</span>Marked</span>
-              {% else %}<span class="fp-badge fp-badge-warning"><span class="fp-ms" style="font-size:12px;">pending</span>Pending</span>{% endif %}
+              {% if s.computed_status == 'Marked' %}
+                <span class="fp-badge fp-badge-success"><span class="fp-ms" style="font-size:12px;">check_circle</span>Marked</span>
+              {% elif s.computed_status == 'Pending' %}
+                <span class="fp-badge fp-badge-warning"><span class="fp-ms" style="font-size:12px;">schedule</span>Pending</span>
+              {% else %}
+                <span class="fp-badge fp-badge-neutral"><span class="fp-ms" style="font-size:12px;">schedule</span>Upcoming</span>
+              {% endif %}
             </td>
             <td data-label="Actions" class="fp-col-actions" style="text-align:center;" onclick="event.stopPropagation()">
-              {% if not s.marked %}
-              <button class="fp-btn fp-btn-success fp-btn-sm"
-                      onclick="fpOpenMarkModal('{{ s.name }}','{{ s.course_name | replace("'","\\x27") }}')"
+              {% if s.computed_status == 'Pending' %}
+              <button class="fp-btn fp-btn-primary fp-btn-sm"
+                      onclick='fpOpenMarkModal({{ s.name | tojson }}, {{ s.course_name | tojson }})'
                       title="Mark attendance" aria-label="Mark attendance for {{ s.course_name }}">
                 <span class="fp-ms">how_to_reg</span><span class="fp-btn-label">Mark</span>
               </button>
               {% else %}
-              <button class="fp-btn fp-btn-secondary fp-btn-sm"
+              <button class="fp-btn fp-btn-secondary fp-btn-sm" style="color:var(--fp-primary); border-color:var(--fp-primary);"
                       onclick="fpViewSession('{{ s.name }}')"
                       title="View session details" aria-label="View session details for {{ s.course_name }}">
-                <span class="fp-ms">visibility</span><span class="fp-btn-label fp-btn-label-sr">View</span>
+                <span class="fp-ms">visibility</span><span class="fp-btn-label">View</span>
               </button>
               {% endif %}
             </td>
@@ -717,7 +740,7 @@
     <div class="fp-table-wrap">
       <table class="fp-table">
         <thead>
-          <tr><th>Course</th><th>Total Classes</th><th>Attendance</th><th></th></tr>
+          <tr><th>Course</th><th>Total Sessions</th><th>Attendance</th><th></th></tr>
         </thead>
         <tbody>
           {% for row in monthly_summary %}
@@ -751,6 +774,16 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    flatpickr("#fp-date-filter-from", { altInput: true, altFormat: "d/m/Y", dateFormat: "Y-m-d" });
+    flatpickr("#fp-date-filter-to", { altInput: true, altFormat: "d/m/Y", dateFormat: "Y-m-d" });
+    if(document.getElementById('sat-date')) {
+      flatpickr("#sat-date", { altInput: true, altFormat: "d/m/Y", dateFormat: "Y-m-d" });
+    }
+  });
+</script>
 
 {# ── All session data for drill-down (embedded at render time) ── #}
 <script>
@@ -1069,13 +1102,21 @@ function _fpApplySessionsView() {
   var statuses = _msfValues('fp-status-filter').map(function(v) { return v.toLowerCase(); });
   var searchEl = document.getElementById('fp-sessions-search');
   var q = searchEl ? searchEl.value.toLowerCase().trim() : '';
+  var fromDate = (document.getElementById('fp-date-filter-from') || {}).value || '';
+  var toDate = (document.getElementById('fp-date-filter-to') || {}).value || '';
   var allRows = Array.prototype.slice.call(document.querySelectorAll('.fp-session-row'));
 
   var matched = allRows.filter(function(row) {
     var matchesFilters = (!cos.length || cos.indexOf(row.getAttribute('data-co')) !== -1)
       && (!statuses.length || statuses.indexOf((row.getAttribute('data-marked') || '').toLowerCase()) !== -1);
     var matchesSearch = !q || row.textContent.toLowerCase().includes(q);
-    return matchesFilters && matchesSearch;
+    
+    var rowDate = row.getAttribute('data-session-date') || '';
+    var matchesDate = true;
+    if (fromDate && rowDate < fromDate) matchesDate = false;
+    if (toDate && rowDate > toDate) matchesDate = false;
+
+    return matchesFilters && matchesSearch && matchesDate;
   });
 
   /* Hide everything that doesn't match, first */
@@ -1180,11 +1221,11 @@ function fpSortSessions(key) {
 /* ══════════════════════════════════════════════════════════
    ROW CLICK — open mark or view based on session state
 ══════════════════════════════════════════════════════════ */
-function attRowClick(row, sessionName, courseName, isMarked) {
-  if (isMarked) {
-    fpViewSession(sessionName);
-  } else {
+function attRowClick(row, sessionName, courseName, status) {
+  if (status === 'Pending') {
     fpOpenMarkModal(sessionName, courseName);
+  } else {
+    fpViewSession(sessionName);
   }
 }
 
@@ -1293,7 +1334,7 @@ function fpOpenMarkModal(sessionName, courseName, slots) {
   _openModal('att-mark-modal');
 }
 
-/* ── Collect a Today's Classes course card's sibling time slots from its
+/* ── Collect a Today's Sessions course card's sibling time slots from its
    own DOM, so the modal can show the same slots and let faculty switch
    between them without leaving the modal. ── */
 function _fpCollectTodaySlots(card) {
@@ -1316,7 +1357,7 @@ function fpOpenMarkModalFromToday(btn) {
   fpOpenMarkModal(slotDiv.getAttribute('data-session'), slotDiv.getAttribute('data-course-name'), slots);
 }
 
-/* ── Clicking anywhere on a Today's Classes card (outside its Mark/View
+/* ── Clicking anywhere on a Today's Sessions card (outside its Mark/View
    buttons, which stop propagation) opens the modal for the currently
    visible slot — Mark if pending, View if already marked. ── */
 function fpTodayCardClick(card, evt) {
@@ -1881,8 +1922,8 @@ var _viewSessionName = null;
 /* Sibling slots for a session = other Attendance Sessions for the same
    course offering, on the same date — sourced from _attSessions (already
    embedded for the current term), so this works whether the session was
-   opened from the main table or a Today's Classes card.
-   Falls back to scraping a matching Today's Classes card if _attSessions
+   opened from the main table or a Today's Sessions card.
+   Falls back to scraping a matching Today's Sessions card if _attSessions
    doesn't have the sibling (e.g. term-filtered out, or opened from a
    session outside the currently loaded page of sessions). */
 function _fpFindSiblingSlots(sessionName) {
@@ -1898,7 +1939,7 @@ function _fpFindSiblingSlots(sessionName) {
     }
   }
 
-  /* Fallback: look for a Today's Classes card containing this session */
+  /* Fallback: look for a Today's Sessions card containing this session */
   var slotDiv = document.querySelector('.fp-today-slot[data-session="' + sessionName + '"]');
   var card = slotDiv ? slotDiv.closest('.fp-today-course-card') : null;
   if (card) {
@@ -1911,6 +1952,10 @@ function _fpFindSiblingSlots(sessionName) {
 
 function fpViewSession(sessionName) {
   _viewSessionName = sessionName;
+  var sessionObj = (_attSessions || []).filter(function(s) { return s.name === sessionName; })[0];
+  var isUpcoming = sessionObj && sessionObj.computed_status === 'Upcoming';
+  var editBtn = document.getElementById('att-view-edit-btn');
+  if (editBtn) editBtn.style.display = isUpcoming ? 'none' : 'flex';
 
   /* Find meta from row */
   var row  = document.querySelector('.fp-session-row[data-session="' + sessionName + '"]');
@@ -2270,13 +2315,17 @@ function fpSaveRecommendation() {
 function attDrill(type) {
   var title, rows, cols;
 
-  if (type === 'all_sessions' || type === 'marked_sessions' || type === 'pending_sessions') {
+  if (type === 'all_sessions' || type === 'marked_sessions' || type === 'pending_sessions' || type === 'completed_sessions' || type === 'upcoming_sessions') {
     var filtered = _attSessions;
-    if (type === 'marked_sessions')  filtered = _attSessions.filter(function(s) { return s.marked; });
-    if (type === 'pending_sessions') filtered = _attSessions.filter(function(s) { return !s.marked; });
+    if (type === 'marked_sessions')    filtered = _attSessions.filter(function(s) { return s.computed_status === 'Marked'; });
+    if (type === 'pending_sessions')   filtered = _attSessions.filter(function(s) { return s.computed_status === 'Pending'; });
+    if (type === 'completed_sessions') filtered = _attSessions.filter(function(s) { return s.computed_status === 'Marked' || s.computed_status === 'Pending'; });
+    if (type === 'upcoming_sessions')  filtered = _attSessions.filter(function(s) { return s.computed_status === 'Upcoming'; });
 
     title = type === 'all_sessions' ? 'All Sessions'
-          : type === 'marked_sessions' ? 'Marked Sessions' : 'Pending Sessions';
+          : type === 'marked_sessions' ? 'Marked Sessions'
+          : type === 'completed_sessions' ? 'Completed Sessions'
+          : type === 'upcoming_sessions' ? 'Upcoming Sessions' : 'Pending Sessions';
 
     cols = [
       { key: 'course_name',       label: 'Course' },
@@ -2287,7 +2336,7 @@ function attDrill(type) {
       { key: 'total',             label: 'Students', type: 'number' },
       { key: 'present',           label: 'Present',  type: 'number' },
       { key: 'pct',               label: 'Att %',    type: 'pct' },
-      { key: 'marked',            label: 'Status',   type: 'bool_status' },
+      { key: 'computed_status',   label: 'Status',   type: 'bool_status' },
     ];
 
     rows = filtered.map(function(s) {
@@ -2301,6 +2350,7 @@ function attDrill(type) {
         present:          s.marked ? s.present : '—',
         pct:              s.marked ? s.pct : null,
         marked:           s.marked,
+        computed_status:  s.computed_status,
         _session:         s.name,
         _course:          s.course_name,
       };
@@ -2391,9 +2441,9 @@ function _drillCell(val, type) {
     return '<span class="fp-badge" style="background:transparent;color:' + c + ';font-weight:700;padding:0;">' + n + '%</span>';
   }
   if (type === 'bool_status') {
-    return val
-      ? '<span class="fp-badge fp-badge-success"><span class="fp-ms" style="font-size:12px;">check</span>Marked</span>'
-      : '<span class="fp-badge fp-badge-warning"><span class="fp-ms" style="font-size:12px;">pending</span>Pending</span>';
+    if (val === 'Marked') return '<span class="fp-badge fp-badge-success"><span class="fp-ms" style="font-size:12px;">check_circle</span>Marked</span>';
+    if (val === 'Pending') return '<span class="fp-badge fp-badge-warning"><span class="fp-ms" style="font-size:12px;">schedule</span>Pending</span>';
+    return '<span class="fp-badge fp-badge-neutral"><span class="fp-ms" style="font-size:12px;">schedule</span>Upcoming</span>';
   }
   if (type === 'badge') {
     var cls = String(val).toLowerCase() === 'pending' ? 'fp-badge-warning' : 'fp-badge-neutral';
@@ -2410,13 +2460,15 @@ function _drillCell(val, type) {
 
 function attDrillRowClick(tr) {
   var sessionName = tr.getAttribute('data-session');
+  var status      = tr.getAttribute('data-status');
   var isMarked    = tr.getAttribute('data-marked') === '1';
   var course      = tr.getAttribute('data-course');
   _closeModal('att-drill-modal');
-  if (isMarked) {
-    fpViewSession(sessionName);
-  } else {
+  
+  if (status === 'Pending') {
     fpOpenMarkModal(sessionName, course);
+  } else {
+    fpViewSession(sessionName);
   }
 }
 
@@ -2431,7 +2483,7 @@ function attDrillSort(idx) {
       va = parseFloat(va) || 0; vb = parseFloat(vb) || 0;
       return _drillSortDir * (va - vb);
     }
-    if (type === 'bool_status') { return _drillSortDir * ((va ? 1 : 0) - (vb ? 1 : 0)); }
+    if (type === 'bool_status') { return _drillSortDir * String(va || '').localeCompare(String(vb || '')); }
     return _drillSortDir * String(va || '').localeCompare(String(vb || ''));
   });
   _renderDrillTable();
@@ -2462,7 +2514,7 @@ function attDrillExport() {
     csv += _drillCols.map(function(c) {
       var v = row[c.key];
       if (v === null || v === undefined) v = '';
-      if (c.type === 'bool_status') v = row[c.key] ? 'Marked' : 'Pending';
+      if (c.type === 'bool_status') v = row[c.key];
       return _csvEsc(String(v));
     }).join(',') + '\n';
   });
@@ -2890,7 +2942,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     {# Footer #}
     <div style="padding:14px 22px;border-top:1px solid var(--fp-border);display:flex;gap:10px;flex-shrink:0;">
-      <button onclick="fpEditFromView()" class="fp-btn fp-btn-primary" style="flex:1;justify-content:center;font-size:14px;padding:10px 18px;">
+      <button id="att-view-edit-btn" onclick="fpEditFromView()" class="fp-btn fp-btn-primary" style="flex:1;justify-content:center;font-size:14px;padding:10px 18px;">
         <span class="fp-ms">edit</span>Edit Attendance
       </button>
       <button class="fp-btn fp-btn-secondary" onclick="_closeModal('att-view-modal')" style="padding:10px 18px;">

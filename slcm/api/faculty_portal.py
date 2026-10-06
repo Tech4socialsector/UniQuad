@@ -683,9 +683,10 @@ def get_dashboard_stats():
 
 def _get_faculty_co_names(faculty_name):
     """Return list of active course offering names for the faculty."""
+    active_ays = frappe.get_all("Academic Year", filters={"status": "Active"}, pluck="name")
     return frappe.get_all(
         "Course Offering",
-        filters={"faculty": faculty_name, "status": ["in", ["Open", "Active"]]},
+        filters={"faculty": faculty_name, "status": "Active", "academic_year": ["in", active_ays]},
         pluck="name",
         ignore_permissions=True,
     )
@@ -853,9 +854,11 @@ def drilldown_subjects():
     if not faculty_name:
         frappe.throw("No faculty record found", frappe.DoesNotExistError)
 
+    active_ays = frappe.get_all("Academic Year", filters={"status": "Active"}, pluck="name")
+
     offerings = frappe.get_all(
         "Course Offering",
-        filters={"faculty": faculty_name, "status": ["in", ["Open", "Active"]]},
+        filters={"faculty": faculty_name, "status": "Active", "academic_year": ["in", active_ays]},
         fields=["name", "course_name", "term_name", "academic_year",
                 "credit_value", "status"],
         order_by="academic_year desc, term_name asc, course_name asc",
@@ -889,9 +892,11 @@ def drilldown_subjects():
             avg_pct = 0.0
             sessions = 0
 
+        import urllib.parse
         rows.append({
             "course_offering": co.name,
             "course_name": co.course_name or co.name,
+            "course_link": f"/faculty-portal/my-classes?course_offering={urllib.parse.quote(co.name)}",
             "term": co.term_name or "—",
             "academic_year": co.academic_year or "—",
             "credits": co.credit_value or 0,
@@ -899,12 +904,15 @@ def drilldown_subjects():
             "sessions": sessions,
             "avg_attendance": avg_pct,
             "status": co.status or "Active",
+            "action_btn": "Mark Attendance",
+            "action_link": f"/faculty-portal/attendance?course_offering={urllib.parse.quote(co.name)}#attendance-sessions-card",
         })
 
     return {
-        "title": "My Subjects",
+        "title": "Courses",
+        "hide_count": True,
         "columns": [
-            {"key": "course_name",    "label": "Course Name",      "type": "text"},
+            {"key": "course_name",    "label": "Course Name",      "type": "link", "link_key": "course_link"},
             {"key": "term",           "label": "Term",             "type": "text"},
             {"key": "academic_year",  "label": "Academic Year",    "type": "text"},
             {"key": "credits",        "label": "Credits",          "type": "number"},
@@ -912,6 +920,7 @@ def drilldown_subjects():
             {"key": "sessions",       "label": "Sessions Held",    "type": "number"},
             {"key": "avg_attendance", "label": "Avg Attendance %", "type": "percent"},
             {"key": "status",         "label": "Status",           "type": "badge"},
+            {"key": "action_btn",     "label": "Action",           "type": "button", "link_key": "action_link"},
         ],
         "rows": rows,
         "count": len(rows),
@@ -940,7 +949,8 @@ def drilldown_students():
                 sm.registration_id,
                 sm.gender,
                 sm.passport_size_photo,
-                se.program,
+                sm.section as student_section,
+                pm.program_name,
                 sec.course_offering,
                 co.course_name,
                 co.term_name,
@@ -949,6 +959,7 @@ def drilldown_students():
             JOIN `tabStudent Enrollment` se ON se.name = sec.parent
             JOIN `tabCourse Offering` co ON co.name = sec.course_offering
             LEFT JOIN `tabStudent Master` sm ON sm.name = se.student
+            LEFT JOIN `tabProgramme` pm ON pm.name = se.program
             WHERE sec.course_offering IN %s
               AND sec.status = 'Enrolled'
             ORDER BY co.course_name, sm.last_name, sm.first_name
@@ -965,15 +976,16 @@ def drilldown_students():
         rows.append({
             "student_id": r.get("registration_id") or r.get("student", ""),
             "student_name": full_name,
-            # Not a column: used only to draw the avatar beside the name
-            # (so it stays out of the CSV export).
             "student_image": r.get("passport_size_photo") or "",
             "gender": r.get("gender") or "—",
-            "program": r.get("program") or "—",
+            "program": r.get("program_name") or r.get("program") or "—",
             "course_name": r.get("course_name") or r.get("course_offering", ""),
             "term": r.get("term_name") or "—",
             "academic_year": r.get("academic_year") or "—",
+            "section": r.get("student_section") or "—",
         })
+        
+    active_ay = frappe.get_cached_value("Academic Year", {"status": "Active"}, "name")
 
     return {
         "title": "Enrolled Students",
@@ -983,11 +995,18 @@ def drilldown_students():
             {"key": "gender",       "label": "Gender",        "type": "text"},
             {"key": "program",      "label": "Programme",       "type": "text"},
             {"key": "course_name",  "label": "Course",        "type": "text"},
-            {"key": "term",         "label": "Term",          "type": "text"},
-            {"key": "academic_year","label": "Academic Year", "type": "text"},
+            {"key": "section",      "label": "Section",       "type": "text"},
         ],
         "rows": rows,
         "count": len(rows),
+        "filters": [
+            {"key": "academic_year", "label": "Academic Year"},
+            {"key": "term", "label": "Term"},
+            {"key": "program", "label": "Programme"},
+            {"key": "course_name", "label": "Course"},
+            {"key": "section", "label": "Section"},
+        ],
+        "default_ay": active_ay
     }
 
 

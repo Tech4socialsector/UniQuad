@@ -31,9 +31,10 @@ def get_context(context):
         today = frappe.utils.today()
 
         # ── Course Offerings assigned to this faculty ──────────────
+        active_ays = frappe.get_all("Academic Year", filters={"status": "Active"}, pluck="name")
         course_offerings = frappe.get_all(
             "Course Offering",
-            filters={"faculty": faculty_name, "status": ["in", ["Open", "Active"]]},
+            filters={"faculty": faculty_name, "status": "Active", "academic_year": ["in", active_ays]},
             fields=["name", "course_name", "course_title", "term_name",
                     "academic_year", "credit_value", "status"],
             order_by="academic_year desc, term_name asc, course_name asc",
