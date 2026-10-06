@@ -5,366 +5,507 @@
 <!-- Flatpickr for date inputs -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <style>
-/* ── Timetable page ─────────────────────────────────── */
+  /* ── Timetable page ─────────────────────────────────── */
 
-/* Filters */
-.tt-filters-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  background: var(--sp-surface);
-  border: 1px solid var(--sp-border);
-  border-radius: 12px;
-  padding: 16px 20px;
-  margin-bottom: 24px;
-  flex-wrap: wrap;
-}
-.tt-filter-inputs {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-.tt-input-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.tt-input-group label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--sp-text-2);
-}
-.tt-input-wrap {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-.tt-input-wrap .sp-ms {
-  position: absolute;
-  right: 12px;
-  font-size: 18px;
-  color: var(--sp-text-3);
-  pointer-events: none;
-}
-.tt-input-wrap select, .tt-input-wrap input {
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
-  padding: 8px 36px 8px 12px;
-  border: 1px solid var(--sp-border);
-  border-radius: 8px;
-  font-family: inherit;
-  font-size: 14px;
-  color: var(--sp-text-1);
-  background: #fff;
-  min-width: 160px;
-}
-.tt-input-wrap select:focus, .tt-input-wrap input:focus {
-  outline: none;
-  border-color: var(--sp-primary);
-}
+  /* Filters */
+  .tt-filters-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    background: var(--sp-surface);
+    border: 1px solid var(--sp-border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
 
-.tt-view-toggles {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.tt-toggle-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border-radius: 8px;
-  border: 1px solid var(--sp-border);
-  background: #fff;
-  color: var(--sp-text-2);
-  font-size: 14px;
-  font-weight: 600;
-  text-decoration: none;
-  transition: all .15s;
-}
-.tt-toggle-btn.active {
-  background: var(--sp-primary);
-  color: #fff;
-  border-color: var(--sp-primary);
-}
-.tt-toggle-btn:not(.active):hover {
-  background: var(--sp-primary-light);
-  color: var(--sp-primary);
-  border-color: var(--sp-primary);
-}
+  .tt-filter-inputs {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
 
-/* Week navigation header */
-.tt-nav-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: #fff;
-  border: 1px solid var(--sp-border);
-  border-radius: 12px 12px 0 0;
-  padding: 14px 20px;
-  border-bottom: none;
-}
-.tt-nav-arrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 6px 12px;
-  border-radius: 20px;
-  border: 1px solid var(--sp-border);
-  background: #fff;
-  color: var(--sp-text-2);
-  font-size: 13px;
-  font-weight: 600;
-  text-decoration: none;
-  transition: all .15s;
-}
-.tt-nav-arrow:hover {
-  background: var(--sp-primary-light);
-  color: var(--sp-primary);
-  border-color: var(--sp-primary);
-}
-.tt-date-title {
-  text-align: center;
-}
-.tt-date-title h2 {
-  font-family: 'Merriweather', serif;
-  font-size: 20px;
-  color: var(--sp-text-1);
-  margin: 0;
-  font-weight: 700;
-}
+  .tt-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
 
-/* ── Graphical Grid Layout ── */
-.tt-grid-container {
-  border: 1px solid var(--sp-border);
-  border-radius: 0 0 12px 12px;
-  background: #fff;
-  overflow-x: auto;
-}
-@media (max-width: 768px) {
-  .tt-grid-inner { min-width: 800px !important; }
-  .tt-grid-container { scroll-snap-type: x mandatory; }
-  .tt-grid-col-header, .tt-day-col { scroll-snap-align: start; }
-}
-.tt-grid-inner {
-  
-  display: flex;
-  flex-direction: column;
-}
+  .tt-input-group label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--sp-text-2);
+  }
 
-/* Header Row */
-.tt-grid-header {
-  display: grid;
-  
-  border-bottom: 1px solid var(--sp-border);
-}
-.tt-grid-col-header {
-  padding: 12px;
-  text-align: center;
-  border-left: 1px solid var(--sp-border);
-}
-.tt-grid-col-header:first-child { border-left: none; }
-.tt-day-name { font-size: 13px; color: var(--sp-text-3); margin-bottom: 4px; }
-.tt-day-date { font-size: 15px; font-weight: 600; color: var(--sp-text-1); }
-.tt-grid-col-header.tt-today { background: rgba(146,12,36, 0.06); }
-.tt-grid-col-header.tt-today .tt-day-name, .tt-grid-col-header.tt-today .tt-day-date { color: #920c24; font-weight: 700; }
+  .tt-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
 
-/* Body Layout */
-.tt-grid-body {
-  display: grid;
-  
-  position: relative;
-  /* Min height assuming 8am to 4pm = 8 hours * 60px = 480px */
-  min-height: 480px;
-}
+  .tt-input-wrap .sp-ms {
+    position: absolute;
+    right: 12px;
+    font-size: 18px;
+    color: var(--sp-text-3);
+    pointer-events: none;
+  }
 
-/* Time Column */
-.tt-time-col {
-  border-right: 1px solid var(--sp-border);
-  position: relative;
-}
-.tt-time-slot {
-  height: 60px;
-  border-bottom: 1px solid var(--sp-border);
-  padding-right: 8px;
-  text-align: right;
-  font-size: 12px;
-  color: var(--sp-text-3);
-  box-sizing: border-box;
-  position: relative;
-}
-.tt-time-slot span {
-  position: absolute;
-  top: -8px;
-  right: 8px;
-  background: #fff;
-  padding: 0 4px;
-  z-index: 20;
-  line-height: 1;
-}
+  .tt-input-wrap select,
+  .tt-input-wrap input {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    padding: 8px 36px 8px 12px;
+    border: 1px solid var(--sp-border);
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--sp-text-1);
+    background: #fff;
+    min-width: 160px;
+  }
 
-/* Day Columns (Events area) */
-.tt-day-col {
-  border-right: 1px solid var(--sp-border);
-  position: relative;
-  
-}
-.tt-day-col:last-child {
-  border-right: none;
-}
+  .tt-input-wrap select:focus,
+  .tt-input-wrap input:focus {
+    outline: none;
+    border-color: var(--sp-primary);
+  }
 
-/* Absolute Event Cards */
-.tt-event-card {
-  position: absolute;
-  
-  border-radius: 6px;
-  padding: 6px;
-  border-left: 4px solid;
-  font-size: 11px;
-  line-height: 1.3;
-  cursor: pointer;
-  transition: transform .1s;
-  z-index: 10;
-  display: flex;
-  flex-direction: column;
-  min-height: 50px; /* Ensure content is visible even if backend height is small */
-  /* Remove overflow:hidden so tooltip can pop out */
-}
-.tt-event-card:hover {
-  z-index: 20;
-  transform: scale(1.02);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
-.tt-event-title { font-weight: 700; color: var(--sp-text-1); margin-bottom: 2px; }
-.tt-event-time { color: var(--sp-text-3); font-size: 10px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tt-event-room { color: var(--sp-text-3); font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tt-view-toggles {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
 
-/* Popover Tooltip */
-.tt-popover {
-  visibility: hidden;
-  opacity: 0;
-  position: absolute;
-  background: #fff;
-  border: 1px solid var(--sp-border);
-  border-radius: 8px;
-  padding: 16px;
-  min-width: 240px;
-  width: max-content;
-  max-width: 320px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-  z-index: 100;
-  transition: opacity 0.2s;
-  left: calc(100% + 14px); /* Make room for arrow */
-  top: -10px;
-  white-space: normal;
-}
-.tt-popover::before {
-  content: "";
-  position: absolute;
-  top: 16px;
-  left: -6px;
-  width: 10px;
-  height: 10px;
-  background: #fff;
-  border-left: 1px solid var(--sp-border);
-  border-bottom: 1px solid var(--sp-border);
-  transform: rotate(45deg);
-}
-.tt-popover.pop-left {
-  left: auto;
-  right: calc(100% + 14px);
-}
-.tt-popover.pop-left::before {
-  left: auto;
-  right: -6px;
-  border-left: none;
-  border-bottom: none;
-  border-right: 1px solid var(--sp-border);
-  border-top: 1px solid var(--sp-border);
-}
-/* hover visibility handled by JS reparenting */
-.tt-pop-title { font-size: 14px; font-weight: 700; color: var(--sp-text-1); margin-bottom: 12px; }
-.tt-pop-row { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px; font-size: 12px; color: var(--sp-text-2); }
-.tt-pop-row .sp-ms { font-size: 16px; color: var(--sp-primary); margin-top: 1px; }
-.tt-pop-link { display: inline-block; margin-top: 12px; font-size: 13px; font-weight: 600; color: var(--sp-primary); text-decoration: none; }
-.tt-pop-link:hover { text-decoration: underline; }
+  .tt-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--sp-border);
+    background: #fff;
+    color: var(--sp-text-2);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all .15s;
+  }
 
-/* No Schedule */
-.tt-no-schedule {
-  text-align: center;
-  padding: 48px 24px;
-  color: var(--sp-text-4);
-}
-.tt-no-schedule .sp-ms { font-size: 48px; opacity: .3; display: block; margin-bottom: 12px; }
+  .tt-toggle-btn.active {
+    background: var(--sp-primary);
+    color: #fff;
+    border-color: var(--sp-primary);
+  }
+
+  .tt-toggle-btn:not(.active):hover {
+    background: var(--sp-primary-light);
+    color: var(--sp-primary);
+    border-color: var(--sp-primary);
+  }
+
+  /* Week navigation header */
+  .tt-nav-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #fff;
+    border: 1px solid var(--sp-border);
+    border-radius: 12px 12px 0 0;
+    padding: 14px 20px;
+    border-bottom: none;
+  }
+
+  .tt-nav-arrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--sp-border);
+    background: #fff;
+    color: var(--sp-text-2);
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all .15s;
+  }
+
+  .tt-nav-arrow:hover {
+    background: var(--sp-primary-light);
+    color: var(--sp-primary);
+    border-color: var(--sp-primary);
+  }
+
+  .tt-date-title {
+    text-align: center;
+  }
+
+  .tt-date-title h2 {
+    font-family: 'Merriweather', serif;
+    font-size: 20px;
+    color: var(--sp-text-1);
+    margin: 0;
+    font-weight: 700;
+  }
+
+  /* ── Graphical Grid Layout ── */
+  .tt-grid-container {
+    border: 1px solid var(--sp-border);
+    border-radius: 0 0 12px 12px;
+    background: #fff;
+    overflow-x: auto;
+  }
+
+  @media (max-width: 768px) {
+    .tt-grid-inner {
+      min-width: 800px !important;
+    }
+
+    .tt-grid-container {
+      scroll-snap-type: x mandatory;
+    }
+
+    .tt-grid-col-header,
+    .tt-day-col {
+      scroll-snap-align: start;
+    }
+  }
+
+  .tt-grid-inner {
+
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Header Row */
+  .tt-grid-header {
+    display: grid;
+
+    border-bottom: 1px solid var(--sp-border);
+  }
+
+  .tt-grid-col-header {
+    padding: 12px;
+    text-align: center;
+    border-left: 1px solid var(--sp-border);
+  }
+
+  .tt-grid-col-header:first-child {
+    border-left: none;
+  }
+
+  .tt-day-name {
+    font-size: 13px;
+    color: var(--sp-text-3);
+    margin-bottom: 4px;
+  }
+
+  .tt-day-date {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--sp-text-1);
+  }
+
+  .tt-grid-col-header.tt-today {
+    background: rgba(146, 12, 36, 0.06);
+  }
+
+  .tt-grid-col-header.tt-today .tt-day-name,
+  .tt-grid-col-header.tt-today .tt-day-date {
+    color: #920c24;
+    font-weight: 700;
+  }
+
+  /* Body Layout */
+  .tt-grid-body {
+    display: grid;
+
+    position: relative;
+    /* Min height assuming 8am to 4pm = 8 hours * 60px = 480px */
+    min-height: 480px;
+  }
+
+  /* Time Column */
+  .tt-time-col {
+    border-right: 1px solid var(--sp-border);
+    position: relative;
+  }
+
+  .tt-time-slot {
+    height: 60px;
+    border-bottom: 1px solid var(--sp-border);
+    padding-right: 8px;
+    text-align: right;
+    font-size: 12px;
+    color: var(--sp-text-3);
+    box-sizing: border-box;
+    position: relative;
+  }
+
+  .tt-time-slot span {
+    position: absolute;
+    top: -8px;
+    right: 8px;
+    background: #fff;
+    padding: 0 4px;
+    z-index: 20;
+    line-height: 1;
+  }
+
+  /* Day Columns (Events area) */
+  .tt-day-col {
+    border-right: 1px solid var(--sp-border);
+    position: relative;
+
+  }
+
+  .tt-day-col:last-child {
+    border-right: none;
+  }
+
+  /* Absolute Event Cards */
+  .tt-event-card {
+    position: absolute;
+
+    border-radius: 6px;
+    padding: 6px;
+    border-left: 4px solid;
+    font-size: 11px;
+    line-height: 1.3;
+    cursor: pointer;
+    transition: transform .1s;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    min-height: 50px;
+    /* Ensure content is visible even if backend height is small */
+    /* Remove overflow:hidden so tooltip can pop out */
+  }
+
+  .tt-event-card:hover {
+    z-index: 20;
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  .tt-event-title {
+    font-weight: 700;
+    color: var(--sp-text-1);
+    margin-bottom: 2px;
+  }
+
+  .tt-event-time {
+    color: var(--sp-text-3);
+    font-size: 10px;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .tt-event-room {
+    color: var(--sp-text-3);
+    font-size: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Popover Tooltip */
+  .tt-popover {
+    visibility: hidden;
+    opacity: 0;
+    position: absolute;
+    background: #fff;
+    border: 1px solid var(--sp-border);
+    border-radius: 8px;
+    padding: 16px;
+    min-width: 240px;
+    width: max-content;
+    max-width: 320px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    z-index: 100;
+    transition: opacity 0.2s;
+    left: calc(100% + 14px);
+    /* Make room for arrow */
+    top: -10px;
+    white-space: normal;
+  }
+
+  .tt-popover::before {
+    content: "";
+    position: absolute;
+    top: 16px;
+    left: -6px;
+    width: 10px;
+    height: 10px;
+    background: #fff;
+    border-left: 1px solid var(--sp-border);
+    border-bottom: 1px solid var(--sp-border);
+    transform: rotate(45deg);
+  }
+
+  .tt-popover.pop-left {
+    left: auto;
+    right: calc(100% + 14px);
+  }
+
+  .tt-popover.pop-left::before {
+    left: auto;
+    right: -6px;
+    border-left: none;
+    border-bottom: none;
+    border-right: 1px solid var(--sp-border);
+    border-top: 1px solid var(--sp-border);
+  }
+
+  /* hover visibility handled by JS reparenting */
+  .tt-pop-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--sp-text-1);
+    margin-bottom: 12px;
+  }
+
+  .tt-pop-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-size: 12px;
+    color: var(--sp-text-2);
+  }
+
+  .tt-pop-row .sp-ms {
+    font-size: 16px;
+    color: var(--sp-primary);
+    margin-top: 1px;
+  }
+
+  .tt-pop-link {
+    display: inline-block;
+    margin-top: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--sp-primary);
+    text-decoration: none;
+  }
+
+  .tt-pop-link:hover {
+    text-decoration: underline;
+  }
+
+  /* No Schedule */
+  .tt-no-schedule {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--sp-text-4);
+  }
+
+  .tt-no-schedule .sp-ms {
+    font-size: 48px;
+    opacity: .3;
+    display: block;
+    margin-bottom: 12px;
+  }
 
 
-/* Month Grid */
-.month-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-}
-.month-header-cell {
-  padding: 12px;
-  text-align: center;
-  font-weight: 600;
-  border-bottom: 1px solid var(--sp-border);
-  border-right: 1px solid var(--sp-border);
-  color: var(--sp-text-2);
-}
-.month-header-cell:last-child { border-right: none; }
+  /* Month Grid */
+  .month-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+  }
 
-.month-cell {
-  min-height: 120px;
-  border-bottom: 1px solid var(--sp-border);
-  border-right: 1px solid var(--sp-border);
-  padding: 8px;
-}
-.month-cell:nth-child(7n) { border-right: none; }
-.month-cell.not-current { background: #f9fafb; opacity: 0.6; }
-.month-date-num { font-weight: 600; font-size: 14px; color: var(--sp-text-2); margin-bottom: 8px; text-align: right; }
-.month-cell.is-today .month-date-num { color: var(--sp-primary); }
+  .month-header-cell {
+    padding: 12px;
+    text-align: center;
+    font-weight: 600;
+    border-bottom: 1px solid var(--sp-border);
+    border-right: 1px solid var(--sp-border);
+    color: var(--sp-text-2);
+  }
 
-.month-event {
-  padding: 4px 6px;
-  border-radius: 4px;
-  font-size: 11px;
-  margin-bottom: 4px;
-  border-left: 3px solid;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+  .month-header-cell:last-child {
+    border-right: none;
+  }
 
-.tt-popover.pop-down {
-  left: 0;
-  top: calc(100% + 14px);
-}
-.tt-popover.pop-down::before {
-  top: -6px;
-  left: 16px;
-  border-left: 1px solid var(--sp-border);
-  border-top: 1px solid var(--sp-border);
-  border-bottom: none;
-  border-right: none;
-}
+  .month-cell {
+    min-height: 120px;
+    border-bottom: 1px solid var(--sp-border);
+    border-right: 1px solid var(--sp-border);
+    padding: 8px;
+  }
 
+  .month-cell:nth-child(7n) {
+    border-right: none;
+  }
+
+  .month-cell.not-current {
+    background: #f9fafb;
+    opacity: 0.6;
+  }
+
+  .month-date-num {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--sp-text-2);
+    margin-bottom: 8px;
+    text-align: right;
+  }
+
+  .month-cell.is-today .month-date-num {
+    color: var(--sp-primary);
+  }
+
+  .month-event {
+    padding: 4px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    margin-bottom: 4px;
+    border-left: 3px solid;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .tt-popover.pop-down {
+    left: 0;
+    top: calc(100% + 14px);
+  }
+
+  .tt-popover.pop-down::before {
+    top: -6px;
+    left: 16px;
+    border-left: 1px solid var(--sp-border);
+    border-top: 1px solid var(--sp-border);
+    border-bottom: none;
+    border-right: none;
+  }
 </style>
 {% endblock %}
 
 {% block content %}
 
 {# ── Page header ───────────────────────────────────────────────── #}
-<div class="sp-page-header fade-in" style="margin-bottom: 24px; margin-top: 10px; display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:16px;">
+<div class="sp-page-header fade-in"
+  style="margin-bottom: 24px; margin-top: 10px; display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:16px;">
   <div style="display:flex; align-items:flex-start; gap:16px;">
     <div style="padding-top: 8px;">
-      <h1 class="sp-page-title" style="font-family: 'Merriweather', serif; font-size: 18px!important; color: var(--sp-text-1); margin: 0 0 6px 0; font-weight: 700 !important;">Timetable</h1>
+      <h1 class="sp-page-title"
+        style="font-family: 'Merriweather', serif; font-size: 18px!important; color: var(--sp-text-1); margin: 0 0 6px 0; font-weight: 700 !important;">
+        Timetable</h1>
     </div>
   </div>
   {% if not no_student %}
-  <button class="sp-btn" style="border: 1px solid var(--sp-primary); color: var(--sp-primary); background: transparent; font-weight: 600; padding: 8px 16px; border-radius: 8px; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s; margin-top: 4px;" onclick="spOpenModal('modal-gcal-sync')" onmouseover="this.style.background='rgba(146,12,36,0.05)'" onmouseout="this.style.background='transparent'">
+  <button class="sp-btn"
+    style="border: 1px solid var(--sp-primary); color: var(--sp-primary); background: transparent; font-weight: 600; padding: 8px 16px; border-radius: 8px; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s; margin-top: 4px;"
+    onclick="spOpenModal('modal-gcal-sync')" onmouseover="this.style.background='rgba(146,12,36,0.05)'"
+    onmouseout="this.style.background='transparent'">
     <span class="sp-ms">sync</span> Sync to My Calendar
   </button>
   {% endif %}
@@ -382,15 +523,15 @@
         <label>Course</label>
         <div class="tt-input-wrap">
           <select name="course" onchange="document.getElementById('tt-form').submit()">
-            <option value="all" {% if selected_course == 'all' %}selected{% endif %}>All Courses</option>
+            <option value="all" {% if selected_course=='all' %}selected{% endif %}>All Courses</option>
             {% for c in all_courses %}
-            <option value="{{ c.id }}" {% if selected_course == c.id %}selected{% endif %}>{{ c.name }}</option>
+            <option value="{{ c.id }}" {% if selected_course==c.id %}selected{% endif %}>{{ c.name }}</option>
             {% endfor %}
           </select>
           <span class="sp-ms">expand_more</span>
         </div>
       </div>
-      
+
       {% if view == 'week' or view == 'day' %}
       <div class="tt-input-group">
         <label>From Date</label>
@@ -427,33 +568,39 @@
 {# ── Calendar Grid ───────────────────────────────────────────────── #}
 <div class="tt-nav-header fade-in">
   {% if view == 'month' %}
-  <a href="/student-portal/timetable?view=month&from_date={{ prev_date }}&course={{ selected_course }}" class="tt-nav-arrow">
+  <a href="/student-portal/timetable?view=month&from_date={{ prev_date }}&course={{ selected_course }}"
+    class="tt-nav-arrow">
     <span class="sp-ms">chevron_left</span> Previous
   </a>
   <div class="tt-date-title">
     <h2>{{ month_name }}</h2>
   </div>
-  <a href="/student-portal/timetable?view=month&from_date={{ next_date }}&course={{ selected_course }}" class="tt-nav-arrow">
+  <a href="/student-portal/timetable?view=month&from_date={{ next_date }}&course={{ selected_course }}"
+    class="tt-nav-arrow">
     Next <span class="sp-ms">chevron_right</span>
   </a>
   {% elif view == 'day' %}
-  <a href="/student-portal/timetable?view=day&from_date={{ prev_date }}&course={{ selected_course }}" class="tt-nav-arrow">
+  <a href="/student-portal/timetable?view=day&from_date={{ prev_date }}&course={{ selected_course }}"
+    class="tt-nav-arrow">
     <span class="sp-ms">chevron_left</span> Previous
   </a>
   <div class="tt-date-title">
     <h2>{{ date_label }}</h2>
   </div>
-  <a href="/student-portal/timetable?view=day&from_date={{ next_date }}&course={{ selected_course }}" class="tt-nav-arrow">
+  <a href="/student-portal/timetable?view=day&from_date={{ next_date }}&course={{ selected_course }}"
+    class="tt-nav-arrow">
     Next <span class="sp-ms">chevron_right</span>
   </a>
   {% else %}
-  <a href="/student-portal/timetable?view=week&from_date={{ prev_date }}&course={{ selected_course }}" class="tt-nav-arrow">
+  <a href="/student-portal/timetable?view=week&from_date={{ prev_date }}&course={{ selected_course }}"
+    class="tt-nav-arrow">
     <span class="sp-ms">chevron_left</span> Previous
   </a>
   <div class="tt-date-title">
     <h2>{{ date_label }}</h2>
   </div>
-  <a href="/student-portal/timetable?view=week&from_date={{ next_date }}&course={{ selected_course }}" class="tt-nav-arrow">
+  <a href="/student-portal/timetable?view=week&from_date={{ next_date }}&course={{ selected_course }}"
+    class="tt-nav-arrow">
     Next <span class="sp-ms">chevron_right</span>
   </a>
   {% endif %}
@@ -471,17 +618,19 @@
     <div class="month-header-cell">Fri</div>
     <div class="month-header-cell">Sat</div>
     <div class="month-header-cell">Sun</div>
-    
+
     {% for day in days %}
-    <div class="month-cell {% if not day.is_current_month %}not-current{% endif %} {% if day.is_today %}is-today{% endif %}">
+    <div
+      class="month-cell {% if not day.is_current_month %}not-current{% endif %} {% if day.is_today %}is-today{% endif %}">
       <div class="month-date-num">{{ day.num }}</div>
       {% for cls in schedules_by_day.get(day.date, []) %}
-      <div class="month-event tt-event-card-month" style="position:relative; background:{{ cls.color }}18; border-color:{{ cls.color }}; color:var(--sp-text-1); cursor:pointer;">
-        {{ cls.from_time }} &middot; {{ cls.course_name }} &middot; {{ cls.venue }}
-        
+      <div class="month-event tt-event-card-month"
+        style="position:relative; background:{{ cls.color }}18; border-color:{{ cls.color }}; color:var(--sp-text-1); cursor:pointer;">
+        {{ cls.from_time }} &middot; {{ cls.course_name | replace("Office Hours", "OH") | replace("Office Hour", "OH") }} &middot; {{ cls.venue }}
+
         <!-- Popover -->
         <div class="tt-popover" style="top: 0; left: 100%; margin-left: 14px; font-weight: normal;">
-          <div class="tt-pop-title">{{ cls.course_name }}</div>
+          <div class="tt-pop-title">{{ cls.course_name | replace("Office Hours", "OH") | replace("Office Hour", "OH") }}</div>
           <div class="tt-pop-row">
             <span class="sp-ms">schedule</span>
             <div>{{ cls.from_time }} – {{ cls.to_time }}</div>
@@ -498,7 +647,7 @@
             <span class="sp-ms">person</span>
             <div>Faculty: {{ cls.instructor }}</div>
           </div>
-          
+
         </div>
       </div>
       {% endfor %}
@@ -511,7 +660,7 @@
 {# ── WEEK VIEW (Time Grid) ── #}
 <div class="tt-grid-container fade-in">
   <div class="tt-grid-inner" style="width: 100%;">
-    
+
     <!-- Grid Header -->
     <div class="tt-grid-header" style="grid-template-columns: 80px repeat({{ days|length }}, 1fr);">
       <div class="tt-grid-col-header" style="border:none;">Time</div>
@@ -525,11 +674,13 @@
 
     <!-- Grid Body -->
     <div class="tt-grid-body" style="grid-template-columns: 80px repeat({{ days|length }}, 1fr);">
-      
+
       <!-- Horizontal Alignment Lines -->
-      <div style="position: absolute; top: 0; left: 80px; right: 0; bottom: 0; pointer-events: none; z-index: 0; display: flex; flex-direction: column;">
+      <div
+        style="position: absolute; top: 0; left: 80px; right: 0; bottom: 0; pointer-events: none; z-index: 0; display: flex; flex-direction: column;">
         {% for hour in range(8, 21) %}
-        <div style="height: 60px; border-bottom: 1px solid var(--sp-border); box-sizing: border-box; width: 100%;"></div>
+        <div style="height: 60px; border-bottom: 1px solid var(--sp-border); box-sizing: border-box; width: 100%;">
+        </div>
         {% endfor %}
       </div>
       <!-- Times -->
@@ -545,14 +696,15 @@
       {% for day in days %}
       <div class="tt-day-col">
         {% for cls in schedules_by_day.get(day.date, []) %}
-        <div class="tt-event-card" style="top: {{ cls.top_px }}px; height: {{ cls.height_px }}px; background: {{ cls.color }}18; border-color: {{ cls.color }}; left: calc({{ cls.left_pct|default(0) }}% + 4px); width: calc({{ cls.width_pct|default(100) }}% - 8px);">
-          <div class="tt-event-title">{{ cls.course_name }}</div>
+        <div class="tt-event-card"
+          style="top: {{ cls.top_px }}px; height: {{ cls.height_px }}px; background: {{ cls.color }}18; border-color: {{ cls.color }}; left: calc({{ cls.left_pct|default(0) }}% + 4px); width: calc({{ cls.width_pct|default(100) }}% - 8px);">
+          <div class="tt-event-title">{{ cls.course_name | replace("Office Hours", "OH") | replace("Office Hour", "OH") }}</div>
           <div class="tt-event-time">{{ cls.from_time }} – {{ cls.to_time }}</div>
           <div class="tt-event-room">{{ cls.venue }}</div>
 
           <!-- Popover -->
           <div class="tt-popover">
-            <div class="tt-pop-title">{{ cls.course_name }}</div>
+            <div class="tt-pop-title">{{ cls.course_name | replace("Office Hours", "OH") | replace("Office Hour", "OH") }}</div>
             <div class="tt-pop-row">
               <span class="sp-ms">schedule</span>
               <div>{{ cls.from_time }} – {{ cls.to_time }}</div>
@@ -569,7 +721,7 @@
               <span class="sp-ms">person</span>
               <div>Faculty: {{ cls.instructor }}</div>
             </div>
-            
+
           </div>
         </div>
         {% endfor %}
@@ -595,11 +747,13 @@
     </div>
     <div class="sp-modal-body">
       <p style="font-size:13px;color:var(--sp-text-3);margin-bottom:14px;">
-        Choose which email to send your class schedule invites to. You'll receive a Google Calendar invite for each upcoming class — accept it once and it stays synced.
+        Choose which email to send your class schedule invites to. You'll receive a Google Calendar invite for each
+        upcoming session — accept it once and it stays synced.
       </p>
       <div style="display:flex;flex-direction:column;gap:10px;">
         {% if official_email_id %}
-        <label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--sp-border);border-radius:8px;cursor:pointer;">
+        <label
+          style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--sp-border);border-radius:8px;cursor:pointer;">
           <input type="radio" name="gcal-email" value="{{ official_email_id }}" checked>
           <span>
             <strong>Official Email</strong><br>
@@ -608,8 +762,10 @@
         </label>
         {% endif %}
         {% if personal_email %}
-        <label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--sp-border);border-radius:8px;cursor:pointer;">
-          <input type="radio" name="gcal-email" value="{{ personal_email }}" {% if not official_email_id %}checked{% endif %}>
+        <label
+          style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--sp-border);border-radius:8px;cursor:pointer;">
+          <input type="radio" name="gcal-email" value="{{ personal_email }}" {% if not official_email_id %}checked{%
+            endif %}>
           <span>
             <strong>Personal Email</strong><br>
             <span style="font-size:12px;color:var(--sp-text-4);">{{ personal_email }}</span>
@@ -626,8 +782,8 @@
     </div>
     <div class="sp-modal-footer">
       <button class="sp-btn sp-btn-secondary" onclick="spCloseModal('modal-gcal-sync')">Cancel</button>
-      <button class="sp-btn sp-btn-primary" id="gcal-sync-btn" onclick="ttSyncToCalendar()"
-        {% if not official_email_id and not personal_email %}disabled{% endif %}>
+      <button class="sp-btn sp-btn-primary" id="gcal-sync-btn" onclick="ttSyncToCalendar()" {% if not official_email_id
+        and not personal_email %}disabled{% endif %}>
         <span class="sp-ms">sync</span> Sync Now
       </button>
     </div>
@@ -639,146 +795,146 @@
 <!-- Flatpickr JS -->
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-  // Initialize date pickers if they exist
-  var fdp = document.getElementById('from-date-picker');
-  var tdp = document.getElementById('to-date-picker');
-  var form = document.getElementById('tt-form');
+  document.addEventListener('DOMContentLoaded', function () {
+    // Initialize date pickers if they exist
+    var fdp = document.getElementById('from-date-picker');
+    var tdp = document.getElementById('to-date-picker');
+    var form = document.getElementById('tt-form');
 
-  if (fdp && tdp) {
-        flatpickr(fdp, {
-      dateFormat: "d/m/Y",
-      onChange: function(selectedDates, dateStr, instance) {
-        if(selectedDates[0]) {
-          var iso = selectedDates[0].toISOString().split('T')[0];
-          var view = document.getElementById('view-input').value;
-          var params = new URLSearchParams(window.location.search);
-          params.set('from_date', iso);
-          
-          if (view === 'week') {
-            var toDate = new Date(selectedDates[0]);
-            toDate.setDate(toDate.getDate() + 5);
-            params.set('to_date', toDate.toISOString().split('T')[0]);
+    if (fdp && tdp) {
+      flatpickr(fdp, {
+        dateFormat: "d/m/Y",
+        onChange: function (selectedDates, dateStr, instance) {
+          if (selectedDates[0]) {
+            var iso = selectedDates[0].toISOString().split('T')[0];
+            var view = document.getElementById('view-input').value;
+            var params = new URLSearchParams(window.location.search);
+            params.set('from_date', iso);
+
+            if (view === 'week') {
+              var toDate = new Date(selectedDates[0]);
+              toDate.setDate(toDate.getDate() + 5);
+              params.set('to_date', toDate.toISOString().split('T')[0]);
+            }
+
+            window.location.href = window.location.pathname + '?' + params.toString();
           }
-          
-          window.location.href = window.location.pathname + '?' + params.toString();
         }
-      }
-    });
+      });
 
-    flatpickr(tdp, {
-      dateFormat: "d/m/Y",
-      onChange: function(selectedDates, dateStr, instance) {
-        if(selectedDates[0]) {
-          var iso = selectedDates[0].toISOString().split('T')[0];
-          var params = new URLSearchParams(window.location.search);
-          params.set('to_date', iso);
-          window.location.href = window.location.pathname + '?' + params.toString();
+      flatpickr(tdp, {
+        dateFormat: "d/m/Y",
+        onChange: function (selectedDates, dateStr, instance) {
+          if (selectedDates[0]) {
+            var iso = selectedDates[0].toISOString().split('T')[0];
+            var params = new URLSearchParams(window.location.search);
+            params.set('to_date', iso);
+            window.location.href = window.location.pathname + '?' + params.toString();
+          }
         }
-      }
-    });
-  }
+      });
+    }
 
-  // Advanced Tooltip Reparenting to avoid overflow clipping
-  let activePopover = null;
-  document.querySelectorAll('.tt-event-card, .tt-event-card-month').forEach(function(card) {
-    card.addEventListener('mouseenter', function(e) {
-      if(activePopover) {
-         activePopover.remove();
-         activePopover = null;
-      }
-      var popover = this.querySelector('.tt-popover');
-      if(popover) {
-        activePopover = popover.cloneNode(true);
-        activePopover.style.position = 'fixed';
-        activePopover.style.visibility = 'visible';
-        activePopover.style.opacity = '1';
-        activePopover.style.zIndex = '9999';
-        activePopover.classList.remove('pop-left', 'pop-down');
-        
-        document.body.appendChild(activePopover);
-        
-        var cardRect = this.getBoundingClientRect();
-        // default right
-        var top = cardRect.top;
-        var left = cardRect.right + 14;
-        
-        activePopover.style.top = top + 'px';
-        activePopover.style.left = left + 'px';
-        
-        var rect = activePopover.getBoundingClientRect();
-        if (rect.right > window.innerWidth) {
-           activePopover.classList.add('pop-left');
-           left = cardRect.left - rect.width - 14;
-           activePopover.style.left = left + 'px';
-           rect = activePopover.getBoundingClientRect();
-           
-           if (rect.left < 0) {
+    // Advanced Tooltip Reparenting to avoid overflow clipping
+    let activePopover = null;
+    document.querySelectorAll('.tt-event-card, .tt-event-card-month').forEach(function (card) {
+      card.addEventListener('mouseenter', function (e) {
+        if (activePopover) {
+          activePopover.remove();
+          activePopover = null;
+        }
+        var popover = this.querySelector('.tt-popover');
+        if (popover) {
+          activePopover = popover.cloneNode(true);
+          activePopover.style.position = 'fixed';
+          activePopover.style.visibility = 'visible';
+          activePopover.style.opacity = '1';
+          activePopover.style.zIndex = '9999';
+          activePopover.classList.remove('pop-left', 'pop-down');
+
+          document.body.appendChild(activePopover);
+
+          var cardRect = this.getBoundingClientRect();
+          // default right
+          var top = cardRect.top;
+          var left = cardRect.right + 14;
+
+          activePopover.style.top = top + 'px';
+          activePopover.style.left = left + 'px';
+
+          var rect = activePopover.getBoundingClientRect();
+          if (rect.right > window.innerWidth) {
+            activePopover.classList.add('pop-left');
+            left = cardRect.left - rect.width - 14;
+            activePopover.style.left = left + 'px';
+            rect = activePopover.getBoundingClientRect();
+
+            if (rect.left < 0) {
               activePopover.classList.remove('pop-left');
               activePopover.classList.add('pop-down');
               top = cardRect.bottom + 14;
               left = cardRect.left;
               activePopover.style.top = top + 'px';
               activePopover.style.left = left + 'px';
-           }
+            }
+          }
         }
-      }
-    });
-    card.addEventListener('mouseleave', function(e) {
-      if(activePopover) {
-         activePopover.remove();
-         activePopover = null;
-      }
+      });
+      card.addEventListener('mouseleave', function (e) {
+        if (activePopover) {
+          activePopover.remove();
+          activePopover = null;
+        }
+      });
     });
   });
-});
 </script>
 
 <script>
-function ttSyncToCalendar() {
-  var selected = document.querySelector('input[name="gcal-email"]:checked');
-  if (!selected) { return; }
-  var email = selected.value;
-  var btn = document.getElementById('gcal-sync-btn');
-  btn.disabled = true;
+  function ttSyncToCalendar() {
+    var selected = document.querySelector('input[name="gcal-email"]:checked');
+    if (!selected) { return; }
+    var email = selected.value;
+    var btn = document.getElementById('gcal-sync-btn');
+    btn.disabled = true;
 
-  spCall('slcm.slcm.doctype.time_table.google_calendar_sync.sync_student_calendar',
-    { email: email },
-    function (result) {
-      btn.disabled = false;
-      spCloseModal('modal-gcal-sync');
-      var msg = result.synced
-        ? 'Calendar invites sent for ' + result.synced + ' class(es) to ' + email + '.'
-        : (result.message || 'No upcoming classes to sync.');
-      spToast(msg, result.synced ? 'success' : 'info');
-    },
-    function (err) {
-      btn.disabled = false;
-      spToast(err || 'Sync failed. Please try again.', 'danger');
-    }
-  );
-}
+    spCall('slcm.slcm.doctype.time_table.google_calendar_sync.sync_student_calendar',
+      { email: email },
+      function (result) {
+        btn.disabled = false;
+        spCloseModal('modal-gcal-sync');
+        var msg = result.synced
+          ? 'Calendar invites sent for ' + result.synced + ' session(s) to ' + email + '.'
+          : (result.message || 'No upcoming sessions to sync.');
+        spToast(msg, result.synced ? 'success' : 'info');
+      },
+      function (err) {
+        btn.disabled = false;
+        spToast(err || 'Sync failed. Please try again.', 'danger');
+      }
+    );
+  }
 
-window.spOpenModal = window.spOpenModal || function (id) {
-  var el = document.getElementById(id);
-  if (el) { el.classList.add('open'); document.body.style.overflow = 'hidden'; }
-};
-window.spCloseModal = window.spCloseModal || function (id) {
-  var el = document.getElementById(id);
-  if (el) { el.classList.remove('open'); document.body.style.overflow = ''; }
-};
-window.spCloseModalIf = window.spCloseModalIf || function (evt, id) {
-  if (evt.target === document.getElementById(id)) { spCloseModal(id); }
-};
-window.spToast = window.spToast || function (msg, type) {
-  var el = document.getElementById('sp-toast');
-  if (!el) return;
-  el.className = 'sp-toast sp-toast-' + (type || 'info') + ' open';
-  el.innerHTML = '<span class="sp-ms">' +
-    (type === 'success' ? 'check_circle' : type === 'danger' ? 'error' : 'info') +
-    '</span><span>' + msg + '</span>';
-  clearTimeout(el._t);
-  el._t = setTimeout(function () { el.classList.remove('open'); }, 5000);
-};
+  window.spOpenModal = window.spOpenModal || function (id) {
+    var el = document.getElementById(id);
+    if (el) { el.classList.add('open'); document.body.style.overflow = 'hidden'; }
+  };
+  window.spCloseModal = window.spCloseModal || function (id) {
+    var el = document.getElementById(id);
+    if (el) { el.classList.remove('open'); document.body.style.overflow = ''; }
+  };
+  window.spCloseModalIf = window.spCloseModalIf || function (evt, id) {
+    if (evt.target === document.getElementById(id)) { spCloseModal(id); }
+  };
+  window.spToast = window.spToast || function (msg, type) {
+    var el = document.getElementById('sp-toast');
+    if (!el) return;
+    el.className = 'sp-toast sp-toast-' + (type || 'info') + ' open';
+    el.innerHTML = '<span class="sp-ms">' +
+      (type === 'success' ? 'check_circle' : type === 'danger' ? 'error' : 'info') +
+      '</span><span>' + msg + '</span>';
+    clearTimeout(el._t);
+    el._t = setTimeout(function () { el.classList.remove('open'); }, 5000);
+  };
 </script>
 {% endblock %}

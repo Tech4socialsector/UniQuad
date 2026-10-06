@@ -1,5 +1,5 @@
 {% extends "slcm/www/student-portal/_base.html" %}
-{% block title %}My Results{% endblock %}
+{% block title %}My Grades{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -473,14 +473,14 @@
 {# ═══════════════ Header ═══════════════ #}
 <div class="spr-head fade-in">
   <div class="sp-page-header">
-    <h1 class="sp-page-title" style="font-size: 18px !important; font-weight: 700 !important;">Results</h1>
+    <h1 class="sp-page-title" style="font-size: 18px !important; font-weight: 700 !important;">Grades</h1>
   </div>
 </div>
 
 {% if portal_error %}
 <div class="sp-alert sp-alert-warning fade-in">
   <span class="sp-ms">warning</span>
-  <div>Could not load your results. Please refresh the page.</div>
+  <div>Could not load your grades. Please refresh the page.</div>
 </div>
 {% endif %}
 
@@ -505,19 +505,19 @@
 <div class="sp-card fade-in" style="padding:0;">
   <div class="sp-empty">
     <span class="sp-ms">assignment</span>
-    <p class="sp-empty-title">No Results Published Yet</p>
-    <p class="sp-empty-sub">Results will appear here once your faculty publishes them.</p>
+    <p class="sp-empty-title">No Grades Published Yet</p>
+    <p class="sp-empty-sub">Grades will appear here once your faculty publishes them.</p>
   </div>
 </div>
 
 {% else %}
 
 {# ═══════════════ Summary tiles ═══════════════ #}
-<section class="sp-stat-grid spr-metrics fade-in" aria-label="Results summary">
+<section class="sp-stat-grid spr-metrics fade-in" aria-label="Grades summary">
   <div class="sp-stat-card">
     <div class="sp-stat-icon" style="background:#fff0f2;color:var(--sp-primary);">school</div>
     <div>
-      <div class="sp-stat-label">Results Published</div>
+      <div class="sp-stat-label">Grades Published</div>
       <div class="sp-stat-value">{{ published_results | length }}</div>
     </div>
   </div>
@@ -544,14 +544,14 @@
 
 {# ═══════════════ Exam summaries ═══════════════ #}
 <div class="spr-section-title fade-in">
-  <h2><span class="sp-ms" aria-hidden="true">fact_check</span>Examinations</h2>
+  <h2><span class="sp-ms" aria-hidden="true">fact_check</span>Assessments</h2>
   <span class="spr-section-sub">Select an exam to show only its courses</span>
 </div>
-<div class="spr-exams fade-in" role="group" aria-label="Filter by examination">
+<div class="spr-exams fade-in" role="group" aria-label="Filter by assessment">
   {% for res in published_results %}
   <button type="button" class="spr-exam" data-exam="{{ res.exam_plan | e }}" aria-pressed="false">
     <div class="spr-exam-head">
-      <div class="spr-eyebrow">{{ res.term or 'Examination' }}</div>
+      <div class="spr-eyebrow">{{ res.term or 'Assessment' }}</div>
       <div class="spr-exam-name">{{ res.exam_name }}</div>
       <div class="spr-chips">
         <span class="spr-chip"><span class="sp-ms" aria-hidden="true">event</span>Published {{ frappe.utils.formatdate(res.published_on, "dd MMM yyyy") if res.published_on else '—' }}</span>
@@ -598,7 +598,7 @@
 
 {# ═══════════════ Toolbar ═══════════════ #}
 <div class="spr-section-title fade-in" style="margin-top:6px;">
-  <h2><span class="sp-ms" aria-hidden="true">menu_book</span>Course Results</h2>
+  <h2><span class="sp-ms" aria-hidden="true">menu_book</span>Course Grades</h2>
 </div>
 <div class="spr-toolbar fade-in" role="search">
   <div class="spr-search">
@@ -606,12 +606,12 @@
     <label for="spr-q" class="spr-sr-only">Search courses</label>
     <input id="spr-q" class="spr-input" type="search" placeholder="Search by course name or code…" autocomplete="off">
   </div>
-  <label for="spr-exam" class="spr-sr-only">Examination</label>
+  <label for="spr-exam" class="spr-sr-only">Assessment</label>
   <select id="spr-exam" class="spr-select">
     <option value="">All Exams</option>
     {% for res in published_results %}<option value="{{ res.exam_plan | e }}">{{ res.exam_name }}{% if res.term %} · {{ res.term }}{% endif %}</option>{% endfor %}
   </select>
-  <label for="spr-status" class="spr-sr-only">Result status</label>
+  <label for="spr-status" class="spr-sr-only">Grade status</label>
   <select id="spr-status" class="spr-select">
     <option value="">All Status</option>
     <option value="Pass">Passed</option>
@@ -671,7 +671,7 @@
 {# ═══════════════ List view ═══════════════ #}
 <div class="spr-list is-hidden" id="spr-list">
   <table class="spr-t">
-    <caption class="spr-sr-only">Course results</caption>
+    <caption class="spr-sr-only">Course grades</caption>
     <colgroup><col><col style="width:170px;"><col style="width:84px;"><col style="width:84px;"><col style="width:120px;"><col style="width:104px;"><col style="width:170px;"></colgroup>
     <thead><tr>
       <th scope="col" class="c-text">Course</th><th scope="col" class="c-text">Exam</th>
@@ -735,7 +735,7 @@
           <th scope="colgroup" colspan="3" class="grp grp-status">Status</th>
           {% for grp in c.reexam_groups %}<th scope="colgroup" colspan="{{ (grp.components | length) + (1 if loop.last else 0) }}" class="grp grp-reexam">{{ grp.type_name }}</th>{% endfor %}
           {% if show_improve %}<th scope="colgroup" colspan="2" class="grp grp-improve">Improvement Exam</th>{% endif %}
-          {% if show_updated %}<th scope="colgroup" colspan="2" class="grp grp-final">Updated Final Result</th>{% endif %}
+          {% if show_updated %}<th scope="colgroup" colspan="2" class="grp grp-final">Updated Final Grade</th>{% endif %}
         </tr>
         <tr>
           {% for grp in c.regular_groups %}{% for comp in grp.components %}

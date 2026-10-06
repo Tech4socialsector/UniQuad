@@ -1,5 +1,5 @@
-﻿{% extends "slcm/www/student-portal/_base.html" %}
-{% block title %}Exam Schedule{% endblock %}
+{% extends "slcm/www/student-portal/_base.html" %}
+{% block title %}Assessment Schedule{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -508,7 +508,7 @@
 <!-- Page Header -->
 <div class="es-header-wrap fade-in">
   <div>
-    <div class="es-header-title" style="font-size: 18px !important; font-weight: 700 !important;">Exam Schedule</div>
+    <div class="es-header-title" style="font-size: 18px !important; font-weight: 700 !important;">Assessment Schedule</div>
   </div>
 </div>
 
@@ -525,7 +525,7 @@
   <div class="es-stat es-stat-upcoming">
     <div class="es-stat-icon"><span class="sp-ms">upcoming</span></div>
     <div class="es-stat-body">
-      <div class="es-stat-label">Upcoming Exams</div>
+      <div class="es-stat-label">Upcoming Assessments</div>
       <div class="es-stat-value">{{ upcoming_exams or 0 }}</div>
       <div class="es-stat-sub">scheduled ahead</div>
     </div>
@@ -534,7 +534,7 @@
   <div class="es-stat es-stat-nextdate">
     <div class="es-stat-icon"><span class="sp-ms">today</span></div>
     <div class="es-stat-body">
-      <div class="es-stat-label">Next Exam Date</div>
+      <div class="es-stat-label">Next Assessment Date</div>
       {% if next_exam_date and next_exam_date != "–" %}
       <div class="es-stat-value" style="font-size:18px;margin-top:2px;">{{ next_exam_date }}</div>
       {% if next_exam_course %}
@@ -547,21 +547,13 @@
     </div>
   </div>
 
-  <div class="es-stat es-stat-reexam">
-    <div class="es-stat-icon"><span class="sp-ms">replay_circle_filled</span></div>
-    <div class="es-stat-body">
-      <div class="es-stat-label">Re-Exam Requests</div>
-      <div class="es-stat-value">{{ reexam_requests or 0 }}</div>
-      <div class="es-stat-sub">active requests</div>
-    </div>
-  </div>
 
   <div class="es-stat es-stat-published">
     <div class="es-stat-icon"><span class="sp-ms">task_alt</span></div>
     <div class="es-stat-body">
       <div class="es-stat-label">Results Published</div>
       <div class="es-stat-value">{{ results_published or 0 }}</div>
-      <div class="es-stat-sub">of {{ total_exams or 0 }} exam plan{{ "s" if (total_exams or 0) != 1 else "" }}</div>
+      <div class="es-stat-sub">of {{ total_exams or 0 }} assessment plan{{ "s" if (total_exams or 0) != 1 else "" }}</div>
     </div>
   </div>
 
@@ -571,8 +563,8 @@
 <div class="sp-card fade-in">
   <div class="exam-empty">
     <span class="sp-ms">event_busy</span>
-    <div class="exam-empty-title">No Exam Schedule Yet</div>
-    <div class="exam-empty-sub">Exam plans mapped to your courses will appear here once published by the Examinations
+    <div class="exam-empty-title">No Assessment Schedule Yet</div>
+    <div class="exam-empty-sub">Assessment plans mapped to your courses will appear here once published by the Examinations
       Office.</div>
   </div>
 </div>
@@ -586,7 +578,7 @@
     <div>
       <div class="es-section-title-text">{{ plan.term or "Term" }} {% if plan.academic_year %}({{ plan.academic_year
         }}){% endif %}</div>
-      <div class="es-section-title-sub">Examination timetable for this trimester</div>
+      <div class="es-section-title-sub">Assessment timetable for this trimester</div>
     </div>
   </div>
   <input type="text" class="es-search-input" placeholder="Search by course code or title..."
@@ -627,7 +619,7 @@
         <tr>
           <th class="es-col-sno">#</th>
           <th>Course / Paper</th>
-          <th>Exam Date</th>
+          <th>Assessment Date</th>
           <th>Time</th>
           <th>Venue / Hall</th>
           <th>Attendance</th>
@@ -701,7 +693,7 @@
   {% else %}
   <div class="exam-empty" style="padding:32px 20px;">
     <span class="sp-ms" style="font-size:36px;opacity:.25;display:block;margin-bottom:10px;">pending_actions</span>
-    <div style="font-size:13px;">Course papers for this exam plan have not been mapped yet.</div>
+    <div style="font-size:13px;">Course papers for this assessment plan have not been mapped yet.</div>
   </div>
   {% endif %}
 

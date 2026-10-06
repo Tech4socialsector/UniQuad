@@ -344,7 +344,7 @@
 {# ── KPI Cards ─────────────────────────────────────────────────── #}
 <div class="spd-kpi-row fade-in delay-2">
 
-  {# Card 1: Active Courses #}
+  {# Card 1: Current Courses #}
   <a href="/student-portal/courses" class="spd-kpi">
     <div class="spd-kpi-header">
       <div class="spd-kpi-icon-box">
@@ -355,14 +355,14 @@
       </div>
     </div>
     <div class="spd-kpi-value" id="spd-course-val">{{ course_count|int }}</div>
-    <div class="spd-kpi-label">Active Courses</div>
+    <div class="spd-kpi-label">Current Courses</div>
     <div class="spd-kpi-progress">
       <div class="spd-kpi-progress-fill" style="width: 100%; background: var(--sp-primary);"></div>
     </div>
     <div class="spd-kpi-footer">This semester</div>
   </a>
 
-  {# Card 2: Examination Eligible #}
+  {# Card 2: Assessment Eligible #}
   <a href="/student-portal/exam-schedule" class="spd-kpi">
     {% set eligible_count = courses_eligible if courses_eligible is defined else 0 %}
     <div class="spd-kpi-header">
@@ -377,11 +377,11 @@
     <div class="spd-kpi-value">
       {{ eligible_count }}<span style="font-size:18px;color:var(--sp-text-3);">/{{ course_count }}</span>
     </div>
-    <div class="spd-kpi-label">Examination Eligible</div>
+    <div class="spd-kpi-label">Assessment Eligible</div>
     <div class="spd-kpi-progress">
       <div class="spd-kpi-progress-fill" style="width: {% if course_count > 0 %}{{ ((eligible_count / course_count) * 100)|round|int }}{% else %}0{% endif %}%; background: var(--sp-primary);"></div>
     </div>
-    <div class="spd-kpi-footer">Courses cleared for examinations</div>
+    <div class="spd-kpi-footer">Courses cleared for assessments</div>
   </a>
 
   {# Card 3: Fee Outstanding #}
@@ -505,7 +505,7 @@
       <span class="sp-ms spd-link-icon" aria-hidden="true">menu_book</span><span class="spd-link-name">Student Handbook</span><span class="sp-ms spd-link-ext" aria-hidden="true">open_in_new</span>
     </a>
     <a href="{{ _il.examination_guidelines or '#' }}" target="_blank" rel="noopener" class="spd-link-item">
-      <span class="sp-ms spd-link-icon" aria-hidden="true">description</span><span class="spd-link-name">Examination Guidelines</span><span class="sp-ms spd-link-ext" aria-hidden="true">open_in_new</span>
+      <span class="sp-ms spd-link-icon" aria-hidden="true">description</span><span class="spd-link-name">Assessment Guidelines</span><span class="sp-ms spd-link-ext" aria-hidden="true">open_in_new</span>
     </a>
   </div>
 </section>
