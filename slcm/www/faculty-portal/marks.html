@@ -1,12 +1,12 @@
 {% extends "slcm/www/faculty-portal/_base.html" %}
 
-{% block title %}Marks Entry{% endblock %}
+{% block title %}Grades{% endblock %}
 
 {% block content %}
 
 <div class="fp-page-header fade-in" style="background: var(--fp-card, #fff); border: 1px solid var(--fp-border, #e5e7eb); border-radius: 14px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
   <div>
-    <h1 class="fp-page-title" style="margin: 0; font-size: 18px !important; font-weight: 700 !important;">Marks Entry</h1>
+    <h1 class="fp-page-title" style="margin: 0; font-size: 18px !important; font-weight: 700 !important;">Grades</h1>
   </div>
 </div>
 
@@ -61,9 +61,9 @@
   <span class="fp-ms" style="font-size:20px;color:var(--fp-primary);">lock</span>
   <div>
     {% if edit_deadline_expired %}
-    <strong>Edit deadline has passed</strong> for this course. You can view marks but the edit window is now closed.
+    <strong>Edit deadline has passed</strong> for this course. You can view grades but the edit window is now closed.
     {% else %}
-    <strong>Result entry is locked</strong> for this course. You can view marks but cannot make any changes. Contact your Programme Chair to unlock.
+    <strong>Result entry is locked</strong> for this course. You can view grades but cannot make any changes. Contact your Programme Chair to unlock.
     {% endif %}
   </div>
 </div>
@@ -150,7 +150,7 @@
   <div class="fp-card-header">
     <div class="fp-card-title">
       <span class="fp-ms" style="font-size:18px;vertical-align:-4px;color:var(--fp-primary);margin-right:6px;">table_view</span>
-      Student Marks — {{ selected_co_name }}
+      Student Grades — {{ selected_co_name }}
       {% if result_locked %}
       <span class="fp-badge fp-badge-warning" style="margin-left:10px;vertical-align:middle;font-size:11px;">
         <span class="fp-ms" style="font-size:13px;vertical-align:-3px;">lock</span> Locked
@@ -166,8 +166,8 @@
     {% if not marks_list %}
     <div class="fp-empty">
       <span class="fp-ms">grading</span>
-      <p class="fp-empty-title">No marks records found</p>
-      <p class="fp-empty-sub">Marks records for this course will appear here once created.</p>
+      <p class="fp-empty-title">No grades records found</p>
+      <p class="fp-empty-sub">Grades records for this course will appear here once created.</p>
     </div>
     {% else %}
     <div class="fp-table-wrap">
@@ -176,7 +176,7 @@
           <tr>
             <th>Reg. ID</th>
             <th>Student Name</th>
-            <th>Total Marks</th>
+            <th>Total Grades</th>
             <th>Grade</th>
             <th>Status</th>
             <th>Remarks</th>
@@ -241,7 +241,7 @@
   <div class="fp-empty">
     <span class="fp-ms">grade</span>
     <p class="fp-empty-title">Select a course</p>
-    <p class="fp-empty-sub">Choose a course from the dropdown above to view student marks.</p>
+    <p class="fp-empty-sub">Choose a course from the dropdown above to view student grades.</p>
   </div>
 </div>
 
@@ -253,7 +253,7 @@
     <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 22px 14px;border-bottom:1px solid var(--fp-border);flex-shrink:0;">
       <div>
         <div style="font-size:15px;font-weight:700;color:var(--fp-text-1);">
-          {% if result_locked %}Student Marks Detail{% else %}Edit Student Marks{% endif %}
+          {% if result_locked %}Student Grades Detail{% else %}Edit Student Grades{% endif %}
         </div>
         <div id="fp-modal-student-label" style="font-size:12px;color:var(--fp-text-4);margin-top:2px;"></div>
       </div>
@@ -344,7 +344,7 @@ function fpBuildModalContent(m, d) {
 
   /* ── Summary chips ── */
   html += '<div id="fp-marks-summary" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px;">';
-  html += fpSummaryChip('Total Marks', m.total_marks != null ? m.total_marks : '—', '');
+  html += fpSummaryChip('Total Grades', m.total_marks != null ? m.total_marks : '—', '');
   html += fpSummaryChip('Grade', m.moderated_grade || m.grade || '—', '');
   html += fpSummaryChip('Status', d.status || '—', (d.status === 'Pass' || d.status === 'Fail') ? 'var(--fp-primary)' : '');
   if (m.enrollment_status) html += fpSummaryChip('Enrollment', m.enrollment_status, '');
@@ -353,12 +353,12 @@ function fpBuildModalContent(m, d) {
 
   /* ── Component marks (editable or read-only) ── */
   if (m.components && m.components.length > 0) {
-    html += '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--fp-text-4);margin-bottom:8px;">Component-wise Marks</div>';
+    html += '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--fp-text-4);margin-bottom:8px;">Component-wise Grades</div>';
     html += '<div style="border:1px solid var(--fp-border);border-radius:8px;overflow:hidden;margin-bottom:16px;">';
     html += '<table style="width:100%;border-collapse:collapse;font-size:13px;">';
     html += '<thead><tr style="background:var(--fp-bg-2);">'
       + '<th style="text-align:left;padding:8px 12px;font-weight:600;color:var(--fp-text-3);">Component</th>'
-      + '<th style="text-align:center;padding:8px 12px;font-weight:600;color:var(--fp-text-3);">Marks'
+      + '<th style="text-align:center;padding:8px 12px;font-weight:600;color:var(--fp-text-3);">Grades'
       + (FP_EDIT_MODE ? ' <span style="font-weight:400;font-size:11px;color:var(--fp-text-4);">(click to edit)</span>' : '')
       + '</th></tr></thead><tbody>';
 
@@ -398,13 +398,13 @@ function fpBuildModalContent(m, d) {
     });
     html += '</tbody></table></div>';
   } else {
-    html += '<div style="padding:16px 0;color:var(--fp-text-4);font-size:13px;text-align:center;">No component marks entered yet.</div>';
+    html += '<div style="padding:16px 0;color:var(--fp-text-4);font-size:13px;text-align:center;">No component grades entered yet.</div>';
   }
 
   /* ── Updated/improvement marks ── */
   if (m.updated_final_marks || m.updated_grade) {
     html += '<div style="background:var(--fp-bg-2);border-radius:8px;padding:12px 14px;margin-bottom:12px;display:flex;gap:16px;">';
-    if (m.updated_final_marks) html += '<div><div style="font-size:10px;text-transform:uppercase;color:var(--fp-text-4);">Updated Marks</div><div style="font-weight:700;font-size:15px;">' + m.updated_final_marks + '</div></div>';
+    if (m.updated_final_marks) html += '<div><div style="font-size:10px;text-transform:uppercase;color:var(--fp-text-4);">Updated Grades</div><div style="font-weight:700;font-size:15px;">' + m.updated_final_marks + '</div></div>';
     if (m.updated_grade) html += '<div><div style="font-size:10px;text-transform:uppercase;color:var(--fp-text-4);">Updated Grade</div><div style="font-weight:700;font-size:15px;">' + m.updated_grade + '</div></div>';
     html += '</div>';
   }
@@ -420,7 +420,7 @@ function fpBuildModalContent(m, d) {
   return html;
 }
 
-/* ── Save a single marks entry on blur ── */
+/* ── Save a single grades on blur ── */
 function fpSaveMarksEntry(input) {
   var scmName   = input.dataset.scm;
   var component = input.dataset.component;
@@ -429,13 +429,13 @@ function fpSaveMarksEntry(input) {
   var val       = input.value.trim();
   var fval      = val === '' ? null : parseFloat(val);
 
-  if (fval !== null && isNaN(fval)) { fpSetSaveStatus('Invalid marks value', true); return; }
+  if (fval !== null && isNaN(fval)) { fpSetSaveStatus('Invalid grades value', true); return; }
   if (maxMarks !== null && fval !== null && fval > maxMarks) {
-    fpSetSaveStatus('Exceeds maximum marks (' + maxMarks + ')', true);
+    fpSetSaveStatus('Exceeds maximum grades (' + maxMarks + ')', true);
     input.value = maxMarks;
     fval = maxMarks;
   }
-  if (fval !== null && fval < 0) { fpSetSaveStatus('Marks cannot be negative', true); input.value = 0; fval = 0; }
+  if (fval !== null && fval < 0) { fpSetSaveStatus('Grades cannot be negative', true); input.value = 0; fval = 0; }
 
   fpSetSaveStatus('Saving…', false);
   input.disabled = true;
