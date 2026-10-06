@@ -117,7 +117,11 @@ function hdInitFrame(basePath) {
     "html, body, body *:not(svg):not(path) { font-family: 'Merriweather', Georgia, serif !important; }",
     'body, .text-base, .text-sm, .text-p-sm, .text-p-base, input, select, textarea, button, .ProseMirror { font-size: 14px !important; }',
     '.text-xs, .text-p-xs, .text-2xs { font-size: 12.5px !important; }',
-    '.text-lg { font-size: 17px !important; }'
+    '.text-lg { font-size: 17px !important; }',
+    /* Hide helpdesk's generic "Type something" fallback placeholder (UniInput.vue).
+       Matched on the exact text so real placeholders ("A short description",
+       "Select an option", custom field placeholders) still show. */
+    '[placeholder="Type something"]::placeholder { color: transparent !important; opacity: 0 !important; }'
   ].join('\n');
 
   var _observer = null;
