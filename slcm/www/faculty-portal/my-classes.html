@@ -199,8 +199,18 @@
        data-name="{{ co.course_name | lower }}">
 
     <div class="fp-course-card-head">
-      <div class="fp-course-code">{{ co.name }}</div>
-      <div class="fp-course-name">{{ co.course_name }}</div>
+      <div class="fp-course-code">
+        {% if co.programme %}
+        <span style="display:inline-block;padding:2px 8px;background:var(--fp-primary-light);color:var(--fp-primary);border-radius:12px;font-size:11px;font-family:'Merriweather', serif;font-weight:400;margin-bottom:4px;">{{ co.programme }}</span>
+        {% endif %}
+      </div>
+      <div class="fp-course-name">
+        {% set course_link = co.lms_url if co.lms_url else (fp_settings.lms_url if fp_settings and fp_settings.lms_url else '#') %}
+        <a href="{{ course_link }}" target="_blank" style="color:var(--fp-text-1);text-decoration:none;display:inline-flex;align-items:center;vertical-align:middle;" title="Open in LMS">
+          {{ co.course_name }}
+          <span class="fp-ms" style="font-size:16px;color:var(--fp-primary);margin-left:6px;vertical-align:middle;">open_in_new</span>
+        </a>
+      </div>
       <div class="fp-course-meta-row">
         <span class="fp-status-badge {{ status_class }}">
           <span class="fp-ms">{% if co.status in ('Active','Open') %}radio_button_checked{% else %}pause_circle{% endif %}</span>
@@ -291,7 +301,13 @@
               data-status="{{ co.status }}"
               data-name="{{ co.course_name | lower }}">
             <td style="font-family:var(--fp-mono);font-size:11px;color:var(--fp-text-4);white-space:nowrap;">{{ co.name }}</td>
-            <td style="font-weight:600;color:var(--fp-text-1);">{{ co.course_name }}</td>
+            <td style="font-weight:600;color:var(--fp-text-1);">
+              {% set course_link = co.lms_url if co.lms_url else (fp_settings.lms_url if fp_settings and fp_settings.lms_url else '#') %}
+              <a href="{{ course_link }}" target="_blank" style="color:var(--fp-text-1);text-decoration:none;display:inline-flex;align-items:center;vertical-align:middle;" title="Open in LMS">
+                {{ co.course_name }}
+                <span class="fp-ms" style="font-size:16px;color:var(--fp-primary);margin-left:6px;vertical-align:middle;">open_in_new</span>
+              </a>
+            </td>
             <td style="color:var(--fp-text-3);white-space:nowrap;">{{ co.term_name or '—' }}</td>
             <td style="color:var(--fp-text-3);white-space:nowrap;">{{ co.academic_year or '—' }}</td>
             <td style="font-weight:600;color:var(--fp-primary);">{{ co.student_count }}</td>

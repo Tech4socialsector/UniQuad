@@ -18,6 +18,7 @@
   "term_name",
   "section",
   "year",
+  "lms_url",
   "section_break_eyoj",
   "faculty_table",
   "status"
@@ -135,10 +136,17 @@
   {
    "fieldname": "section_break_eyoj",
    "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "lms_url",
+   "fieldtype": "Data",
+   "label": "LMS URL",
+   "options": "URL",
+   "reqd": 1
   }
  ],
  "links": [],
- "modified": "2026-08-03 12:16:55.371375",
+ "modified": "2026-10-06 15:42:37.152486",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Course Offering",

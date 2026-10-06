@@ -250,6 +250,9 @@
       <a href="/faculty-portal"                class="fp-nav-item {% if active_page == 'dashboard'     %}active{% endif %}" data-label="Dashboard">
         <span class="fp-ms">dashboard</span><span class="fp-nav-label">Dashboard</span>
       </a>
+      <a href="/faculty-portal/communication"  class="fp-nav-item {% if active_page == 'communication' %}active{% endif %}" data-label="Announcements">
+        <span class="fp-ms">campaign</span><span class="fp-nav-label">Announcements</span>
+      </a>
       <a href="/faculty-portal/my-classes"     class="fp-nav-item {% if active_page == 'my_classes'    %}active{% endif %}" data-label="My Courses">
         <span class="fp-ms">menu_book</span><span class="fp-nav-label">My Courses</span>
       </a>
@@ -263,9 +266,11 @@
       <a href="/faculty-portal/venue-booking"  class="fp-nav-item {% if active_page == 'venue_booking' %}active{% endif %}" data-label="Venue Booking">
         <span class="fp-ms">meeting_room</span><span class="fp-nav-label">Venue Booking</span>
       </a>
-      <a href="/faculty-portal/communication"  class="fp-nav-item {% if active_page == 'communication' %}active{% endif %}" data-label="Announcements">
-        <span class="fp-ms">campaign</span><span class="fp-nav-label">Announcements</span>
+      {% if fp_settings and fp_settings.enable_lms_navigation %}
+      <a href="{{ fp_settings.lms_url or '#' }}" target="_blank" class="fp-nav-item" data-label="LMS">
+        <span class="fp-ms">school</span><span class="fp-nav-label">LMS</span>
       </a>
+      {% endif %}
       <a href="/faculty-portal/support"        class="fp-nav-item {% if active_page == 'support'       %}active{% endif %}" data-label="Helpdesk">
         <span class="fp-ms">support_agent</span><span class="fp-nav-label">Helpdesk</span>
       </a>

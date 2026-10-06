@@ -37,7 +37,7 @@ def get_context(context):
             "Course Offering",
             filters={"faculty": faculty_name},
             fields=["name", "course_name", "course_title", "term_name",
-                    "academic_year", "credit_value", "status"],
+                    "academic_year", "credit_value", "status", "lms_url", "program"],
             order_by="academic_year desc, term_name asc, course_name asc",
             ignore_permissions=True,
         )
@@ -64,6 +64,8 @@ def get_context(context):
                 "next_session": next_session,
                 "students": students,
                 "group_count": 0,
+                "lms_url": co.lms_url or "",
+                "programme": frappe.db.get_value("Programme", co.program, "program_name") if co.program else "",
             })
 
         context.course_offerings = enriched
