@@ -21,7 +21,7 @@
 </script>
 <style>
   /* ── KPI tiles (same look as the Dashboard / Fees pages) ── */
-  .att-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 18px; }
+  .att-kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 18px; }
   .att-kpi {
     background: var(--sp-card); border: 1px solid var(--sp-border); border-radius: 14px;
     box-shadow: 0 1px 4px rgba(0,0,0,0.05); padding: 18px 20px; min-width: 0;
@@ -173,11 +173,11 @@
     <div class="att-kpi-value{{ ' is-alert' if courses_below_75 > 0 }}">{{ courses_below_75 }}</div>
     <div class="att-kpi-sub">{{ 'Need attention' if courses_below_75 > 0 else 'All courses on track' }}</div>
   </div>
-  <div class="att-kpi">
+  <!-- <div class="att-kpi">
     <div class="att-kpi-head"><span class="att-kpi-label">Exam Eligible</span><span class="att-kpi-icon"><span class="sp-ms" aria-hidden="true">task_alt</span></span></div>
     <div class="att-kpi-value">{{ courses_eligible }}<small> / {{ total_courses }}</small></div>
     <div class="att-kpi-sub">Cleared for examinations</div>
-  </div>
+  </div> -->
 </section>
 
 {# ── Warning ───────────────────────────────────────────────────── #}

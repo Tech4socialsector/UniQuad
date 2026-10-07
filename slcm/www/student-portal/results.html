@@ -151,7 +151,7 @@
   font-size: 15px; font-weight: 600; color: var(--sp-text-1); line-height: 1.35; margin: 0 0 10px;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
-.spr-card-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--spr-row); border-bottom: 1px solid var(--spr-row); }
+.spr-card-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--spr-row); border-bottom: 1px solid var(--spr-row); }
 .spr-cm { padding: 11px 8px; text-align: center; border-right: 1px solid var(--spr-row); min-width: 0; }
 .spr-cm:last-child { border-right: none; }
 .spr-cm-val { font-size: 16px; font-weight: 700; color: var(--sp-text-1); line-height: 1.1; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -608,7 +608,7 @@
   </div>
   <label for="spr-exam" class="spr-sr-only">Assessment</label>
   <select id="spr-exam" class="spr-select">
-    <option value="">All Exams</option>
+    <option value="">All Assessments</option>
     {% for res in published_results %}<option value="{{ res.exam_plan | e }}">{{ res.exam_name }}{% if res.term %} · {{ res.term }}{% endif %}</option>{% endfor %}
   </select>
   <label for="spr-status" class="spr-sr-only">Grade status</label>
@@ -646,7 +646,6 @@
     <div class="spr-card-metrics">
       <div class="spr-cm"><div class="spr-cm-val {{ grade_cls(c) }}">{{ grade_txt(c) }}{% if grade_txt(c) != '—' %}{{ grade_sup(c) }}{% endif %}</div><div class="spr-cm-lbl">Grade</div></div>
       <div class="spr-cm"><div class="spr-cm-val">{{ total_txt(c) }}</div><div class="spr-cm-lbl">Total Marks</div></div>
-      <div class="spr-cm"><div class="spr-cm-val {{ 'spr-g-fail' if c.attendance_status in ('Absent', 'Detained') else '' }}" style="font-size:13px;" title="{{ (c.attendance_status or '—') | e }}">{{ c.attendance_status or '—' }}</div><div class="spr-cm-lbl">Attendance</div></div>
     </div>
     <div class="spr-card-strip">
       <span><span class="sp-ms" aria-hidden="true">how_to_reg</span>{{ c.enrollment_status or 'Enrollment —' }}</span>
@@ -672,11 +671,10 @@
 <div class="spr-list is-hidden" id="spr-list">
   <table class="spr-t">
     <caption class="spr-sr-only">Course grades</caption>
-    <colgroup><col><col style="width:170px;"><col style="width:84px;"><col style="width:84px;"><col style="width:120px;"><col style="width:104px;"><col style="width:170px;"></colgroup>
+    <colgroup><col><col style="width:170px;"><col style="width:84px;"><col style="width:84px;"><col style="width:104px;"><col style="width:170px;"></colgroup>
     <thead><tr>
       <th scope="col" class="c-text">Course</th><th scope="col" class="c-text">Exam</th>
       <th scope="col" class="c-center">Grade</th><th scope="col" class="c-num">Total</th>
-      <th scope="col" class="c-text">Attendance</th>
       <th scope="col" class="c-center">Status</th><th scope="col" class="c-action">Action</th>
     </tr></thead>
     <tbody>
@@ -689,7 +687,6 @@
         <td class="c-text" data-label="Exam"><div><div>{{ res.exam_name }}</div>{% if res.term and res.term != res.exam_name %}<div class="spr-cell-sub">{{ res.term }}</div>{% endif %}</div></td>
         <td class="c-center" data-label="Grade"><span class="spr-grade-big {{ grade_cls(c) }}">{{ grade_txt(c) }}{% if grade_txt(c) != '—' %}{{ grade_sup(c) }}{% endif %}</span></td>
         <td class="c-num" data-label="Total">{{ total_txt(c) }}</td>
-        <td class="c-text" data-label="Attendance"><span class="{{ 'spr-g-fail' if c.attendance_status in ('Absent', 'Detained') else '' }}">{{ c.attendance_status or '—' }}</span></td>
         <td class="c-center" data-label="Status">{{ status_pill(st) }}</td>
         <td class="c-action" data-label="Action">
           <div class="spr-row-actions">
@@ -732,7 +729,7 @@
         <tr>
           {% for grp in c.regular_groups %}<th scope="colgroup" colspan="{{ grp.components | length }}" class="grp">{{ grp.type_name }}</th>{% endfor %}
           <th scope="colgroup" colspan="{{ 2 if c.show_total else 1 }}" class="grp grp-grade">Grade</th>
-          <th scope="colgroup" colspan="3" class="grp grp-status">Status</th>
+          <th scope="colgroup" colspan="2" class="grp grp-status">Status</th>
           {% for grp in c.reexam_groups %}<th scope="colgroup" colspan="{{ (grp.components | length) + (1 if loop.last else 0) }}" class="grp grp-reexam">{{ grp.type_name }}</th>{% endfor %}
           {% if show_improve %}<th scope="colgroup" colspan="2" class="grp grp-improve">Improvement Exam</th>{% endif %}
           {% if show_updated %}<th scope="colgroup" colspan="2" class="grp grp-final">Updated Final Grade</th>{% endif %}
@@ -742,7 +739,7 @@
           <th scope="col">{{ comp.label }}{% if comp.max_marks %}<span class="max">Max {{ comp.max_marks }}</span>{% endif %}</th>
           {% endfor %}{% endfor %}
           {% if c.show_total %}<th scope="col">Total Marks</th>{% endif %}
-          <th scope="col">Grade</th><th scope="col">Enrollment</th><th scope="col">Attendance</th><th scope="col">MFA</th>
+          <th scope="col">Grade</th><th scope="col">Enrollment</th><th scope="col">MFA</th>
           {% for grp in c.reexam_groups %}{% for comp in grp.components %}
           <th scope="col">{{ comp.label }}{% if comp.max_marks %}<span class="max">Max {{ comp.max_marks }}</span>{% endif %}</th>
           {% endfor %}{% endfor %}
@@ -759,7 +756,6 @@
           {% if c.show_total %}<td style="font-weight:700;">{{ total_txt(c) }}</td>{% endif %}
           <td><span class="spr-mk-grade {{ 'pend' if (absent or not c.display_grade) else ('fail' if c.is_fail else 'pass') }}">{{ grade_txt(c) }}{% if grade_txt(c) != '—' %}{{ grade_sup(c) }}{% endif %}</span></td>
           <td class="{{ 'spr-g-pass' if c.enrollment_status == 'Enrolled' else ('spr-g-fail' if c.enrollment_status in ('Detained', 'Dropped') else '') }}" style="font-weight:600;">{{ c.enrollment_status or '—' }}</td>
-          <td class="{{ 'spr-g-fail' if c.attendance_status in ('Absent', 'Detained') else ('spr-g-pass' if c.attendance_status == 'Present' else '') }}" style="font-weight:600;{{ 'color:var(--spr-amber);' if c.attendance_status == 'Low Attendance' }}">{{ c.attendance_status or '—' }}</td>
           <td>{{ c.mfa or '—' }}</td>
           {% for grp in c.reexam_groups %}{% for comp in grp.components %}
           <td>{{ 'Absent' if absent else comp.marks }}</td>

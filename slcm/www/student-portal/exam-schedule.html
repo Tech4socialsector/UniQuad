@@ -51,7 +51,7 @@
   /* ── Overview Stats ── */
   .es-overview {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 14px;
     margin-bottom: 24px;
   }
@@ -547,16 +547,6 @@
     </div>
   </div>
 
-
-  <div class="es-stat es-stat-published">
-    <div class="es-stat-icon"><span class="sp-ms">task_alt</span></div>
-    <div class="es-stat-body">
-      <div class="es-stat-label">Results Published</div>
-      <div class="es-stat-value">{{ results_published or 0 }}</div>
-      <div class="es-stat-sub">of {{ total_exams or 0 }} assessment plan{{ "s" if (total_exams or 0) != 1 else "" }}</div>
-    </div>
-  </div>
-
 </div>
 
 {% if not has_exam_plans %}
@@ -620,8 +610,6 @@
           <th class="es-col-sno">#</th>
           <th>Course / Paper</th>
           <th>Assessment Date</th>
-          <th>Time</th>
-          <th>Venue / Hall</th>
           <th>Attendance</th>
           <th>Status</th>
         </tr>
@@ -642,20 +630,7 @@
             <span class="es-tba">To be announced</span>
             {% endif %}
           </td>
-          <td>
-            {% if course.exam_time and course.exam_time != "To be announced" %}
-            <div class="es-time-sub">{{ course.exam_time }}</div>
-            {% else %}
-            <span class="es-tba">–</span>
-            {% endif %}
-          </td>
-          <td>
-            {% if course.venue and course.venue != "To be announced" %}
-            <span class="es-venue">{{ course.venue }}</span>
-            {% else %}
-            <span class="es-tba">To be announced</span>
-            {% endif %}
-          </td>
+
           <td>
             {% if course.attendance_status in ['Present', 'Eligible'] %}
             <span class="es-badge es-badge-present"><span class="sp-ms" style="font-size:12px;">check_circle</span>{{
