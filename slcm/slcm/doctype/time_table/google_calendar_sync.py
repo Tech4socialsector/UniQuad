@@ -217,27 +217,18 @@ def _add_contact_to_time_tables(schedule_names, contact_name, error_title):
 	return {"synced": synced, "failed": failed, "error": first_error}
 
 
-@frappe.whitelist()
-def sync_faculty_calendar(email):
-	"""Add the requesting faculty member as a Google Calendar attendee on every
-	upcoming class they teach — Time Table entries where they are the
-	instructor or that belong to a Course Offering assigned to them."""
+def _get_faculty_for_session_user():
 	from slcm.utils.faculty_portal import get_faculty_name
 
 	faculty_name = get_faculty_name()
 	if not faculty_name:
 		frappe.throw("No faculty record found for your account.")
-	faculty = frappe.get_doc("Faculty", faculty_name)
+	return frappe.get_doc("Faculty", faculty_name)
 
-	allowed_emails = {e for e in [faculty.email, faculty.official_email_id] if e}
-	if email not in allowed_emails:
-		frappe.throw("You can only sync using your own registered email address.")
 
-	_ensure_google_calendar_ready()
-
-	full_name = " ".join(filter(None, [faculty.first_name, faculty.last_name]))
-	contact_name = _get_or_create_contact_for_email(email, full_name)
-
+def _get_faculty_upcoming_schedule_names(faculty_name):
+	"""Upcoming Time Table entries the faculty teaches — as instructor or via
+	a Course Offering assigned to them."""
 	course_offerings = frappe.get_all(
 		"Course Offering", filters={"faculty": faculty_name}, pluck="name", ignore_permissions=True
 	)
@@ -263,13 +254,46 @@ def sync_faculty_calendar(email):
 				ignore_permissions=True,
 			)
 		)
+	return sorted(schedule_names)
 
-	if not schedule_names:
+
+@frappe.whitelist()
+def get_faculty_sync_classes():
+	"""List the upcoming classes `sync_faculty_calendar` would sync, so the
+	portal can sync them in batches and show progress."""
+	faculty = _get_faculty_for_session_user()
+	_ensure_google_calendar_ready()
+	return {"names": _get_faculty_upcoming_schedule_names(faculty.name)}
+
+
+@frappe.whitelist()
+def sync_faculty_calendar(email, schedule_names=None):
+	"""Add the requesting faculty member as a Google Calendar attendee on every
+	upcoming class they teach — Time Table entries where they are the
+	instructor or that belong to a Course Offering assigned to them.
+
+	`schedule_names` (JSON list) limits the run to that batch; names outside
+	the faculty's own upcoming classes are ignored."""
+	faculty = _get_faculty_for_session_user()
+
+	allowed_emails = {e for e in [faculty.email, faculty.official_email_id] if e}
+	if email not in allowed_emails:
+		frappe.throw("You can only sync using your own registered email address.")
+
+	_ensure_google_calendar_ready()
+
+	full_name = " ".join(filter(None, [faculty.first_name, faculty.last_name]))
+	contact_name = _get_or_create_contact_for_email(email, full_name)
+
+	names = _get_faculty_upcoming_schedule_names(faculty.name)
+	if schedule_names is not None:
+		requested = set(frappe.parse_json(schedule_names) or [])
+		names = [n for n in names if n in requested]
+
+	if not names:
 		return {"synced": 0, "failed": 0, "message": "No upcoming classes found."}
 
-	return _add_contact_to_time_tables(
-		sorted(schedule_names), contact_name, "Faculty Calendar Sync Failed"
-	)
+	return _add_contact_to_time_tables(names, contact_name, "Faculty Calendar Sync Failed")
 
 
 def delete_linked_google_event(doc, method=None):
