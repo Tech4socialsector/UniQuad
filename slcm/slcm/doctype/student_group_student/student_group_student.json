@@ -1,0 +1,206 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "creation": "2026-10-08 16:42:39.520194",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "student",
+  "column_break_ottz",
+  "student_id",
+  "class_participation_section",
+  "class_participation_1st_hour",
+  "1st_cp_grade",
+  "column_break_asqe",
+  "class_participation_2nd_hour",
+  "2nd_cp_grade",
+  "column_break_eklm",
+  "class_participation_3rd_hour",
+  "3rd_cp_grade",
+  "column_break_ryxd",
+  "class_participation_4th_hour",
+  "4th_cp_grade",
+  "column_break_swbl",
+  "class_participation_5th_hour",
+  "5th_cp_grade",
+  "column_break_ajmt",
+  "class_participation_6th_hour",
+  "6th_cp_grade",
+  "office_hours_section",
+  "office_hour_1st_hour",
+  "1st_oh_grade",
+  "column_break_fodt",
+  "office_hour_2nd_hour",
+  "2nd_oh_grade"
+ ],
+ "fields": [
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Student",
+   "options": "Student Master",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "student.registration_id",
+   "fieldname": "student_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Student ID",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "class_participation_section",
+   "fieldtype": "Section Break",
+   "label": "Class Participation"
+  },
+  {
+   "default": "0",
+   "fieldname": "class_participation_1st_hour",
+   "fieldtype": "Check",
+   "label": "1st Hour"
+  },
+  {
+   "fieldname": "column_break_asqe",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "class_participation_2nd_hour",
+   "fieldtype": "Check",
+   "label": "2nd Hour"
+  },
+  {
+   "fieldname": "column_break_eklm",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "class_participation_3rd_hour",
+   "fieldtype": "Check",
+   "label": "3rd Hour"
+  },
+  {
+   "fieldname": "column_break_ryxd",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "class_participation_4th_hour",
+   "fieldtype": "Check",
+   "label": "4th Hour"
+  },
+  {
+   "fieldname": "column_break_swbl",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "class_participation_5th_hour",
+   "fieldtype": "Check",
+   "label": "5th Hour"
+  },
+  {
+   "fieldname": "column_break_ajmt",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "class_participation_6th_hour",
+   "fieldtype": "Check",
+   "label": "6th Hour"
+  },
+  {
+   "fieldname": "office_hours_section",
+   "fieldtype": "Section Break",
+   "label": "Office Hours"
+  },
+  {
+   "default": "0",
+   "fieldname": "office_hour_1st_hour",
+   "fieldtype": "Check",
+   "label": "1st Hour"
+  },
+  {
+   "fieldname": "column_break_fodt",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "office_hour_2nd_hour",
+   "fieldtype": "Check",
+   "label": "2nd Hour"
+  },
+  {
+   "depends_on": "eval: doc.office_hour_1st_hour",
+   "fieldname": "1st_oh_grade",
+   "fieldtype": "Float",
+   "label": "1st OH Grade"
+  },
+  {
+   "depends_on": "eval: doc.office_hour_2nd_hour",
+   "fieldname": "2nd_oh_grade",
+   "fieldtype": "Float",
+   "label": "2nd OH Grade"
+  },
+  {
+   "fieldname": "column_break_ottz",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval: doc.class_participation_1st_hour",
+   "fieldname": "1st_cp_grade",
+   "fieldtype": "Float",
+   "label": "1st CP Grade"
+  },
+  {
+   "depends_on": "eval: doc.class_participation_2nd_hour",
+   "fieldname": "2nd_cp_grade",
+   "fieldtype": "Float",
+   "label": "2nd CP Grade"
+  },
+  {
+   "depends_on": "eval: doc.class_participation_3rd_hour",
+   "fieldname": "3rd_cp_grade",
+   "fieldtype": "Float",
+   "label": "3rd CP Grade"
+  },
+  {
+   "depends_on": "eval: doc.class_participation_4th_hour",
+   "fieldname": "4th_cp_grade",
+   "fieldtype": "Float",
+   "label": "4th CP Grade"
+  },
+  {
+   "depends_on": "eval: doc.class_participation_5th_hour",
+   "fieldname": "5th_cp_grade",
+   "fieldtype": "Float",
+   "label": "5th CP Grade"
+  },
+  {
+   "depends_on": "eval: doc.class_participation_6th_hour",
+   "fieldname": "6th_cp_grade",
+   "fieldtype": "Float",
+   "label": "6th CP Grade"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-10-08 17:07:23.113850",
+ "modified_by": "Administrator",
+ "module": "SLCM",
+ "name": "Student Group Student",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

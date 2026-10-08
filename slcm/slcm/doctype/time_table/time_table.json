@@ -8,18 +8,18 @@
  "engine": "InnoDB",
  "field_order": [
   "naming_series",
-  "class_configuration",
+  "based_on",
   "column_break_1",
   "instructor",
-  "based_on",
-  "course_schedule",
-  "office_hours_group",
+  "class_configuration",
   "section_break_details",
   "term",
   "programme",
   "course_offering",
   "course",
   "column_break_2",
+  "office_hours_group",
+  "course_schedule",
   "section",
   "section_break_schedule",
   "schedule_date",
@@ -39,7 +39,9 @@
   "color",
   "column_break_4",
   "class_schedule_color",
-  "linked_google_event"
+  "linked_google_event",
+  "class_participation_tab",
+  "class_participation_week_group"
  ],
  "fields": [
   {
@@ -49,11 +51,13 @@
    "options": "CSH-.YYYY.-\nCLS-.YYYY.-"
   },
   {
+   "depends_on": "eval: doc.based_on == \"Course Schedule\"",
    "fieldname": "class_configuration",
    "fieldtype": "Link",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Class Configuration",
+   "mandatory_depends_on": "eval: doc.based_on == \"Course Schedule\"",
    "options": "Class Configuration"
   },
   {
@@ -67,7 +71,7 @@
    "options": "Faculty"
   },
   {
-   "default": "Time Table",
+   "default": "Course Schedule",
    "fieldname": "based_on",
    "fieldtype": "Select",
    "in_list_view": 1,
@@ -76,9 +80,9 @@
    "reqd": 1
   },
   {
-   "depends_on": "eval:doc.based_on=='Course Schedule'",
    "fieldname": "course_schedule",
    "fieldtype": "Link",
+   "hidden": 1,
    "label": "Course Schedule",
    "options": "Course Schedule"
   },
@@ -255,10 +259,22 @@
    "label": "Linked Google Calendar Event",
    "options": "Event",
    "read_only": 1
+  },
+  {
+   "depends_on": "eval: doc.based_on == \"Course Schedule\"",
+   "fieldname": "class_participation_tab",
+   "fieldtype": "Tab Break",
+   "label": "Class Participation"
+  },
+  {
+   "fieldname": "class_participation_week_group",
+   "fieldtype": "Table",
+   "label": "Class Participation Week Group",
+   "options": "Class Participation Week"
   }
  ],
  "links": [],
- "modified": "2026-08-03 12:53:19.709187",
+ "modified": "2026-10-08 17:53:43.246380",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Time Table",
