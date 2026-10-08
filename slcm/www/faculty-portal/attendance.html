@@ -1609,8 +1609,8 @@ function satBasedOnChange() {
       + _satTextInput('sat-class-schedule', 'Enter Time Table…');
 
   } else if (val === 'Office Hours') {
-    rc.innerHTML = '<label class="fp-label">Office Hours Group <span style="color:var(--fp-primary);">*</span></label>'
-      + _satTextInput('sat-office-hours-group', 'Enter Office Hours Group…');
+    rc.innerHTML = '<label class="fp-label">OH Group <span style="color:var(--fp-primary);">*</span></label>'
+      + _satTextInput('sat-office-hours-group', 'Enter OH Group…');
   }
 }
 
@@ -1662,7 +1662,7 @@ function satGetStudents() {
 
   } else if (basedOn === 'Office Hours') {
     _sat.officeHoursGroup = ((document.getElementById('sat-office-hours-group') || {}).value || '').trim();
-    if (!_sat.officeHoursGroup) { _showError('sat-form-error', 'Please enter an Office Hours Group.'); return; }
+    if (!_sat.officeHoursGroup) { _showError('sat-form-error', 'Please enter an OH Group.'); return; }
     apiMethod = 'slcm.api.bulk_attendance.get_students_from_office_hours';
     apiArgs   = { office_hours_group: _sat.officeHoursGroup, attendance_date: _sat.date };
     labelText = _sat.officeHoursGroup + '  ·  ' + _sat.date;
@@ -2745,7 +2745,7 @@ document.addEventListener('DOMContentLoaded', function() {
                   onfocus="this.style.borderColor='var(--fp-primary)'" onblur="this.style.borderColor='var(--fp-border)'">
             <option value="Course Schedule">Course Schedule</option>
             <option value="Time Table">Time Table</option>
-            <option value="Office Hours">Office Hours</option>
+            <option value="Office Hours">OH</option>
           </select>
         </div>
 
