@@ -1944,9 +1944,9 @@ def _get_compressed_photo_b64(file_url):
         img = Image.open(io.BytesIO(raw_bytes))
         if img.mode in ("RGBA", "P"):
             img = img.convert("RGB")
-        img.thumbnail((90, 115), Image.Resampling.LANCZOS)
+        img.thumbnail((160, 200), Image.Resampling.LANCZOS)
         buf = io.BytesIO()
-        img.save(buf, format="JPEG", quality=60, optimize=True)
+        img.save(buf, format="JPEG", quality=70, optimize=True)
         return base64.b64encode(buf.getvalue()).decode("utf-8")
     except Exception:
         return raw_b64
