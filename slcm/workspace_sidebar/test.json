@@ -131,8 +131,8 @@
    "icon": "align-horizontal-justify-end",
    "indent": 0,
    "keep_closed": 0,
-   "label": "Test Center-wise PWD Candidate Report",
-   "link_to": "Test Center-wise PWD Candidate Report",
+   "label": "Test Center-wise Candidate Report",
+   "link_to": "Test Center-wise Candidate Detail Report",
    "link_type": "Report",
    "show_arrow": 0,
    "type": "Link"
@@ -209,7 +209,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-05 16:52:13.096360",
+ "modified": "2026-10-07 12:09:45.854725",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Test",

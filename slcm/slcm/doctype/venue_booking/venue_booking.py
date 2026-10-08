@@ -14,6 +14,8 @@ STATUS_ALLOTTED = "Allotted"
 STATUS_REJECTED = "Rejected"
 STATUS_CANCELLED = "Cancelled"
 
+BLOCKING_STATUSES = (STATUS_PENDING, STATUS_ALLOTTED)
+
 
 class VenueBooking(Document):
 	def before_insert(self):
@@ -86,25 +88,24 @@ class VenueBooking(Document):
 		if not is_active:
 			frappe.throw(_("Booking is not allowed for this Venue: {0} (Not Active)").format(self.venue))
 
+		# Lock the venue row to prevent concurrent double-booking of the same venue.
+		# The lock is held until the end of the transaction.
+		frappe.db.sql("SELECT name FROM `tabVenue Master` WHERE name = %s FOR UPDATE", (self.venue,))
+
 		overlap = frappe.db.sql("""
 			SELECT name FROM `tabVenue Booking`
 			WHERE venue = %s
 			AND docstatus < 2
 			AND name != %s
-			AND status NOT IN ('Cancelled', 'Rejected')
-			AND (
-				(start_datetime > %s AND start_datetime < %s) OR
-				(end_datetime > %s AND end_datetime < %s) OR
-				(start_datetime <= %s AND end_datetime >= %s)
-			)
-		""", (self.venue, self.name or "New Venue Booking",
-			self.start_datetime, self.end_datetime,
-			self.start_datetime, self.end_datetime,
-			self.start_datetime, self.end_datetime))
+			AND status IN %s
+			AND start_datetime < %s 
+			AND end_datetime > %s
+		""", (self.venue, self.name or "New Venue Booking", BLOCKING_STATUSES, self.end_datetime, self.start_datetime))
 
 		if overlap:
 			frappe.throw(_("Venue {0} is already booked during this period (Ref: {1})").format(
 				self.venue, overlap[0][0]))
+
 
 	def create_recurring_bookings(self):
 		"""Generate the remaining occurrences of a recurring series. Each occurrence
@@ -141,13 +142,16 @@ class VenueBooking(Document):
 
 		# Batch-fetch existing bookings for this venue across the whole range up
 		# front, instead of one query per candidate date.
+		# Lock the venue master row once for the entire series generation
+		frappe.db.sql("SELECT name FROM `tabVenue Master` WHERE name = %s FOR UPDATE", (self.venue,))
+
 		existing = frappe.get_all(
 			"Venue Booking",
 			filters={
 				"venue": self.venue,
 				"name": ["!=", self.name],
 				"docstatus": ["<", 2],
-				"status": ["not in", ["Cancelled", "Rejected"]],
+				"status": ["in", BLOCKING_STATUSES],
 				"start_datetime": ["<", max(c + duration for c in candidate_starts)],
 				"end_datetime": [">", min(candidate_starts)],
 			},
@@ -264,6 +268,21 @@ def get_venue_query(doctype, txt, searchfield, start, page_len, filters):
 		filters_dict = json.loads(filters)
 
 	venue_type = filters_dict.get("venue_type")
+	expected_attendees = filters_dict.get("expected_attendees")
+	include_booked = filters_dict.get("include_booked") in [1, "1", True, "true"]
+	sort_order = filters_dict.get("sort_order", "asc")
+	exclude_booking = filters_dict.get("exclude_booking")
+
+	start_datetime = filters_dict.get("start_datetime")
+	end_datetime = filters_dict.get("end_datetime")
+
+	if expected_attendees is not None:
+		try:
+			expected_attendees = int(expected_attendees)
+			if expected_attendees <= 0:
+				frappe.throw(_("Expected attendees must be greater than 0"))
+		except ValueError:
+			pass
 	
 	conditions = ["`tabVenue Master`.is_active = 1"]
 	values = []
@@ -271,6 +290,10 @@ def get_venue_query(doctype, txt, searchfield, start, page_len, filters):
 	if venue_type:
 		conditions.append("`tabVenue Master`.venue_type = %s")
 		values.append(venue_type)
+
+	if expected_attendees and isinstance(expected_attendees, int):
+		conditions.append("`tabVenue Master`.capacity >= %s")
+		values.append(expected_attendees)
 
 	if txt:
 		conditions.append("`tabVenue Master`.name LIKE %s")
@@ -286,17 +309,117 @@ def get_venue_query(doctype, txt, searchfield, start, page_len, filters):
 			conditions.append("1=0")
 
 	where_clause = " AND ".join(conditions)
+	order_dir = "DESC" if str(sort_order).lower() == "desc" else "ASC"
 
 	query = f"""
-		SELECT `tabVenue Master`.name
+		SELECT `tabVenue Master`.name AS value, `tabVenue Master`.venue_name_or_number AS description, `tabVenue Master`.capacity
 		FROM `tabVenue Master`
 		WHERE {where_clause}
-		ORDER BY `tabVenue Master`.name
+		ORDER BY `tabVenue Master`.capacity {order_dir}, `tabVenue Master`.name {order_dir}
 		LIMIT %s, %s
 	"""
 	
 	values.extend([start, page_len])
-	return frappe.db.sql(query, tuple(values))
+	venues = frappe.db.sql(query, tuple(values), as_dict=True)
+
+	# If datetimes are provided, check availability
+	if start_datetime and end_datetime and venues:
+		is_recurring = filters_dict.get("is_recurring") in [1, "1", True, "true"]
+		candidate_dates = []
+		
+		s_dt = get_datetime(start_datetime)
+		e_dt = get_datetime(end_datetime)
+		duration = e_dt - s_dt
+		
+		if is_recurring:
+			frequency = filters_dict.get("recurrence_frequency")
+			range_end = filters_dict.get("recurrence_end_date")
+			if frequency and range_end:
+				range_end_date = getdate(range_end)
+				if frequency == "Daily":
+					step = timedelta(days=1)
+					selected_weekdays = None
+				elif frequency == "Weekly":
+					step = timedelta(days=1)
+					selected_weekdays = {i for i, f in enumerate(WEEKDAY_FIELDS) if filters_dict.get(f) in [1, "1", True, "true"]}
+				elif frequency == "Monthly":
+					step = relativedelta(months=1)
+					selected_weekdays = None
+				else:
+					step = None
+
+				if step:
+					candidate_starts = []
+					current = s_dt
+					while getdate(current) <= range_end_date:
+						if selected_weekdays is None or current.weekday() in selected_weekdays:
+							candidate_starts.append(current)
+						current += step
+					candidate_dates = [(c, c + duration) for c in candidate_starts]
+		
+		if not candidate_dates:
+			candidate_dates = [(s_dt, e_dt)]
+			
+		venue_names = [v.value for v in venues]
+		min_start = min(c[0] for c in candidate_dates)
+		max_end = max(c[1] for c in candidate_dates)
+		
+		overlap_cond = " AND name != %s" if exclude_booking else ""
+		overlap_val = [exclude_booking] if exclude_booking else []
+		
+		format_strings = ','.join(['%s'] * len(venue_names))
+		status_strings = ','.join(['%s'] * len(BLOCKING_STATUSES))
+		
+		overlap_query = f"""
+			SELECT name, venue, status, start_datetime, end_datetime 
+			FROM `tabVenue Booking`
+			WHERE venue IN ({format_strings})
+			AND docstatus < 2
+			AND status IN ({status_strings})
+			AND start_datetime < %s 
+			AND end_datetime > %s
+			{overlap_cond}
+		"""
+		
+		q_values = venue_names + list(BLOCKING_STATUSES) + [max_end, min_start] + overlap_val
+		
+		existing_bookings = frappe.db.sql(overlap_query, tuple(q_values), as_dict=True)
+		
+		venue_bookings_map = {}
+		for b in existing_bookings:
+			venue_bookings_map.setdefault(b.venue, []).append(b)
+
+		filtered_venues = []
+		for v in venues:
+			is_booked = False
+			booked_booking_name = None
+			booked_booking_status = None
+			
+			ex_bookings = venue_bookings_map.get(v.value, [])
+			for eb in ex_bookings:
+				eb_start = get_datetime(eb.start_datetime)
+				eb_end = get_datetime(eb.end_datetime)
+				
+				# check overlap with any candidate date
+				for c_start, c_end in candidate_dates:
+					if eb_start < c_end and eb_end > c_start:
+						is_booked = True
+						booked_booking_name = eb.name
+						booked_booking_status = eb.status
+						break
+				if is_booked:
+					break
+			
+			v.is_booked = is_booked
+			v.booked_booking_name = booked_booking_name
+			v.booked_booking_status = booked_booking_status
+			
+			if not is_booked or include_booked:
+				filtered_venues.append(v)
+				
+		return filtered_venues
+
+	return venues
 
 
 @frappe.whitelist()
@@ -530,16 +653,11 @@ def check_conflict(booking_doc, new_venue, exclude_booking=None):
 		AND docstatus < 2
 		AND name != %s
 		AND name != %s
-		AND status NOT IN ('Cancelled', 'Rejected')
-		AND (
-			(start_datetime > %s AND start_datetime < %s) OR
-			(end_datetime > %s AND end_datetime < %s) OR
-			(start_datetime <= %s AND end_datetime >= %s)
-		)
-	""", (new_venue, booking_doc.name, exclude_booking or "",
-		booking_doc.start_datetime, booking_doc.end_datetime,
-		booking_doc.start_datetime, booking_doc.end_datetime,
-		booking_doc.start_datetime, booking_doc.end_datetime))
+		AND status IN %s
+		AND start_datetime < %s 
+		AND end_datetime > %s
+	""", (new_venue, booking_doc.name, exclude_booking or "", BLOCKING_STATUSES,
+		booking_doc.end_datetime, booking_doc.start_datetime))
 
 	if existing:
 		frappe.throw(_("Booking {0} conflicts with existing booking {1} in {2}").format(
@@ -705,3 +823,48 @@ def _notify_requester(booking_name, new_status, admin_remarks=None):
 		)
 	except Exception:
 		frappe.log_error(frappe.get_traceback(), "Venue Booking — Requester Notification Error")
+
+	@frappe.whitelist()
+	def override_booking(self, target_booking_name, reason):
+		if "AAD" not in frappe.get_roles(frappe.session.user):
+			frappe.throw(_("Only AAD members can override bookings."))
+
+		if not target_booking_name:
+			frappe.throw(_("Target booking to override is required."))
+
+		target = frappe.get_doc("Venue Booking", target_booking_name)
+		if target.status not in BLOCKING_STATUSES:
+			frappe.throw(_("Target booking is not active, so it cannot be overridden."))
+
+		if target.venue != self.venue:
+			frappe.throw(_("Target booking venue does not match this booking venue."))
+
+		# Check 24 hour notice
+		now = frappe.utils.now_datetime()
+		s_dt = get_datetime(target.start_datetime)
+		if (s_dt - now).total_seconds() < 24 * 3600:
+			frappe.throw(_("Cannot override booking. Must provide at least 24 hours notice before the event."))
+
+		# Perform override
+		target.db_set("status", "Cancelled")
+		target.db_set("admin_remarks", f"Overridden by AAD ({frappe.session.user}). Reason: {reason}")
+		
+		# Set on self
+		self.db_set("overridden_booking", target.name)
+		self.db_set("overridden_by", frappe.session.user)
+		self.db_set("override_reason", reason)
+		self.db_set("override_notice_sent_on", frappe.utils.now_datetime())
+
+		# Notify target owner
+		owner_email = frappe.db.get_value("User", target.owner, "email")
+		if owner_email:
+			frappe.sendmail(
+				recipients=[owner_email],
+				subject=f"Notice: Venue Booking {target.name} Overridden",
+				message=f"""
+				<p>Dear {target.requester_name or 'User'},</p>
+				<p>Your booking <strong>{target.name}</strong> for event <strong>{target.event_name}</strong> has been cancelled and the venue overridden by the Academic Affairs Department (AAD).</p>
+				<p><strong>Reason provided:</strong> {reason}</p>
+				"""
+			)
+		frappe.msgprint(_("Booking {0} has been overridden and cancelled.").format(target.name), alert=True)

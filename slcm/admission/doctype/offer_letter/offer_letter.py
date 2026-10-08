@@ -26,7 +26,6 @@ class OfferLetter(Document):
                     self.admission_cycle = None
 
     def validate(self):
-        print("VALIDATE TRIGGERED")
         if self.status == "Draft" and self.fee_structure:
             from slcm.api.service.fee_service import FeeService
             is_foreign = frappe.db.get_value("Applicant", self.applicant, "foriegn_national") == "Yes"
@@ -64,7 +63,6 @@ class OfferLetter(Document):
     def on_update(self):
         # Deterministic logging after successful update
         # We use flags to pass audit data from validate to on_update to avoid redundant logic
-        print("on update called for offer letter")
 
         old_doc = self.get_doc_before_save()
         old_status = old_doc.status if old_doc else None

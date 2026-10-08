@@ -1,13 +1,13 @@
 {% extends "slcm/www/faculty-portal/_base.html" %}
 
-{% block title %}My Classes{% endblock %}
+{% block title %}My Courses{% endblock %}
 
 {% block content %}
 <div class="fp-mc-page">
 
 {# ── Page Header ─────────────────────────────────────────────── #}
 <div class="fp-page-header fade-in" style="background: var(--fp-card, #fff); border: 1px solid var(--fp-border, #e5e7eb); border-radius: 14px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
-  <h1 class="fp-page-title" style="margin: 0; font-size: 18px !important; font-weight: 700 !important;">Classes</h1>
+  <h1 class="fp-page-title" style="margin: 0; font-size: 18px !important; font-weight: 700 !important;">Courses</h1>
 </div>
 
 {% if portal_error %}
@@ -254,7 +254,7 @@
         <span class="fp-ms">how_to_reg</span>Attendance
       </a>
       <a href="/faculty-portal/marks?course_offering={{ co.name }}" class="fp-course-action fp-course-action-primary">
-        <span class="fp-ms">grade</span>Marks
+        <span class="fp-ms">grade</span>Grades
       </a>
       <button onclick="fpShowCourseDetails('{{ co.name }}')" class="fp-course-action fp-course-action-primary">
         <span class="fp-ms">open_in_new</span>Details
@@ -309,7 +309,7 @@
                 </a>
                 <a href="/faculty-portal/marks?course_offering={{ co.name }}"
                    class="fp-btn fp-btn-sm" style="background:var(--fp-primary);color:#fff;text-decoration:none;">
-                  <span class="fp-ms">grade</span>Marks
+                  <span class="fp-ms">grade</span>Grades
                 </a>
                 <button onclick="fpShowCourseDetails('{{ co.name }}')"
                         class="fp-btn fp-btn-sm" style="background:var(--fp-primary);color:#fff;">
@@ -737,7 +737,7 @@ function fpShowCourseDetails(id) {
         '<span class="fp-ms">how_to_reg</span>Take Attendance',
       '</a>',
       '<a href="/faculty-portal/marks?course_offering=' + encodeURIComponent(co.id) + '" class="fp-btn fp-btn-secondary" style="flex:1;justify-content:center;text-decoration:none;">',
-        '<span class="fp-ms">grade</span>Enter Marks',
+        '<span class="fp-ms">grade</span>Enter Grades',
       '</a>',
     '</div>',
   ].join('');

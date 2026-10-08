@@ -7,6 +7,8 @@ from frappe.utils import now_datetime, get_url, get_datetime, nowdate, format_da
 from frappe.utils.pdf import get_pdf
 import os
 import base64
+import re
+
 
 
 class EntranceTestSeatAllocation(Document):
@@ -379,28 +381,31 @@ def download_centre_list_excel(
     elif applicant_type == "International Applicants":
         filters["is_international_applicant"] = 1
 
-    # If city filter is set, resolve the set of centres belonging to that city
-    if entrance_test_city and entrance_test_city not in ("(All Cities)", ""):
+    # Resolve city → centres filter supporting multi-select
+    cities = _parse_multi_arg(entrance_test_city)
+    centres = _parse_multi_arg(center_name)
+
+    if cities:
         city_providers = frappe.get_all(
             "Entrance Test Provider",
-            filters={"city": entrance_test_city},
+            filters={"city": ["in", cities]},
             fields=["center_name"],
             limit_page_length=0
         )
-        city_centres = [p.center_name for p in city_providers if p.center_name]
+        city_centres = list({p.center_name for p in city_providers if p.center_name})
         if city_centres:
-            if center_name:
-                # Intersect: specific centre must also be in that city
-                if center_name in city_centres:
-                    filters["center_name"] = center_name
+            if centres:
+                valid_centres = [c for c in centres if c in city_centres]
+                if valid_centres:
+                    filters["center_name"] = ["in", valid_centres] if len(valid_centres) > 1 else valid_centres[0]
                 else:
-                    frappe.throw(_("The selected Centre does not belong to the selected City."))
+                    filters["center_name"] = "__none__"
             else:
-                filters["center_name"] = ["in", city_centres]
+                filters["center_name"] = ["in", city_centres] if len(city_centres) > 1 else city_centres[0]
         else:
-            frappe.throw(_("No centres found for the selected Entrance Test City."))
-    elif center_name:
-        filters["center_name"] = center_name
+            filters["center_name"] = "__none__"
+    elif centres:
+        filters["center_name"] = ["in", centres] if len(centres) > 1 else centres[0]
 
     # ── Fetch Records ──────────────────────────────────────────────────────────
     records = frappe.get_all(
@@ -640,17 +645,24 @@ def get_centre_list_preview(
         filters["is_international_applicant"] = 1
 
     # Resolve city → centres filter
-    if entrance_test_city and entrance_test_city not in ("(All Cities)", ""):
-        city_providers = [p.center_name for p in all_providers if (p.city or "").strip() == entrance_test_city and p.center_name]
+    cities = _parse_multi_arg(entrance_test_city)
+    centres = _parse_multi_arg(center_name)
+
+    if cities:
+        city_providers = [p.center_name for p in all_providers if (p.city or "").strip() in cities and p.center_name]
         if city_providers:
-            if center_name and center_name not in ("(All Centres)", ""):
-                filters["center_name"] = center_name if center_name in city_providers else "__none__"
+            if centres:
+                valid_centres = [c for c in centres if c in city_providers]
+                if valid_centres:
+                    filters["center_name"] = ["in", valid_centres] if len(valid_centres) > 1 else valid_centres[0]
+                else:
+                    filters["center_name"] = "__none__"
             else:
-                filters["center_name"] = ["in", city_providers]
+                filters["center_name"] = ["in", city_providers] if len(city_providers) > 1 else city_providers[0]
         else:
             return {"total_applicants": 0, "total_cities": 0, "centres": []}
-    elif center_name and center_name not in ("(All Centres)", ""):
-        filters["center_name"] = center_name
+    elif centres:
+        filters["center_name"] = ["in", centres] if len(centres) > 1 else centres[0]
 
     records = frappe.get_all(
         "Entrance Test Seat Allocation",
@@ -1882,4 +1894,571 @@ def check_reallocation_seat_availability(providers, selected_applicants, allocat
         "pwd_conflict": pwd_conflict,
         "pwd_applicants": pwd_applicants
     }
+
+
+def _parse_multi_arg(val):
+    if not val:
+        return []
+    if isinstance(val, (list, tuple)):
+        return [str(v).strip() for v in val if v and str(v).strip() not in ("(All Cities)", "(All Centres)")]
+    if isinstance(val, str):
+        val = val.strip()
+        if not val or val in ("(All Cities)", "(All Centres)"):
+            return []
+        if val.startswith("[") and val.endswith("]"):
+            try:
+                parsed = json.loads(val)
+                if isinstance(parsed, list):
+                    return [str(v).strip() for v in parsed if v and str(v).strip() not in ("(All Cities)", "(All Centres)")]
+            except Exception:
+                pass
+        if "," in val:
+            return [v.strip() for v in val.split(",") if v.strip() and v.strip() not in ("(All Cities)", "(All Centres)")]
+        return [val]
+    return []
+
+
+def _safe_path_component(name):
+    import re
+    if not name:
+        return "Unknown"
+    cleaned = re.sub(r'[/\\:*?"<>|]', '_', str(name)).strip()
+    return cleaned or "Unknown"
+
+
+def _get_compressed_photo_b64(file_url):
+    import io
+    import base64
+    from PIL import Image
+    from slcm.admission.utils.jinja import get_file_b64
+
+    if not file_url:
+        return ""
+    
+    raw_b64 = get_file_b64(file_url)
+    if not raw_b64:
+        return ""
+    
+    try:
+        raw_bytes = base64.b64decode(raw_b64)
+        img = Image.open(io.BytesIO(raw_bytes))
+        if img.mode in ("RGBA", "P"):
+            img = img.convert("RGB")
+        img.thumbnail((90, 115), Image.Resampling.LANCZOS)
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=60, optimize=True)
+        return base64.b64encode(buf.getvalue()).decode("utf-8")
+    except Exception:
+        return raw_b64
+
+
+
+def _save_generated_file(filename, content, dt, dn, is_private=0):
+    from frappe.utils.file_manager import save_file, save_file_on_filesystem
+    try:
+        return save_file(filename, content, dt, dn, is_private=is_private)
+    except Exception as e:
+        if "MaxFileSizeReachedError" in type(e).__name__ or "exceeded" in str(e).lower():
+            res = save_file_on_filesystem(filename, content, is_private=is_private)
+            file_doc = frappe.get_doc({
+                "doctype": "File",
+                "file_name": res.get("file_name") or filename,
+                "file_url": res.get("file_url"),
+                "attached_to_doctype": dt,
+                "attached_to_name": dn,
+                "is_private": is_private
+            })
+            file_doc.flags.ignore_permissions = True
+            file_doc.insert()
+            return file_doc
+        raise e
+
+
+def _build_attendance_sheet_filters(
+    academic_year=None,
+    admission_cycle=None,
+    program_level=None,
+    program=None,
+    applicant_type=None,
+    entrance_test_city=None,
+    center_name=None,
+    filters=None
+):
+    if filters:
+        if isinstance(filters, str):
+            try:
+                filters = json.loads(filters)
+            except Exception:
+                filters = {}
+        if isinstance(filters, dict):
+            academic_year = filters.get("academic_year") or academic_year
+            admission_cycle = filters.get("admission_cycle") or admission_cycle
+            program_level = filters.get("program_level") or program_level
+            program = filters.get("program") or program
+            applicant_type = filters.get("applicant_type") or applicant_type
+            entrance_test_city = filters.get("entrance_test_city") or entrance_test_city
+            center_name = filters.get("center_name") or center_name
+
+    query_filters = {}
+    if academic_year:
+        query_filters["academic_year"] = academic_year
+    if admission_cycle:
+        query_filters["admission_cycle"] = admission_cycle
+    if program_level:
+        query_filters["program_level"] = program_level
+    if program:
+        query_filters["program"] = program
+
+    if applicant_type == "Domestic Applicants":
+        query_filters["is_international_applicant"] = 0
+    elif applicant_type == "International Applicants":
+        query_filters["is_international_applicant"] = 1
+
+    cities = _parse_multi_arg(entrance_test_city)
+    centres = _parse_multi_arg(center_name)
+
+    if cities:
+        city_providers = frappe.get_all(
+            "Entrance Test Provider",
+            filters={"city": ["in", cities]},
+            fields=["center_name"],
+            limit_page_length=0
+        )
+        city_centres = list({p.center_name for p in city_providers if p.center_name})
+        if city_centres:
+            if centres:
+                valid_centres = [c for c in centres if c in city_centres]
+                if valid_centres:
+                    query_filters["center_name"] = ["in", valid_centres] if len(valid_centres) > 1 else valid_centres[0]
+                else:
+                    query_filters["center_name"] = "__none__"
+            else:
+                query_filters["center_name"] = ["in", city_centres] if len(city_centres) > 1 else city_centres[0]
+        else:
+            query_filters["center_name"] = "__none__"
+    elif centres:
+        query_filters["center_name"] = ["in", centres] if len(centres) > 1 else centres[0]
+
+    return query_filters
+
+
+@frappe.whitelist()
+def get_attendance_sheet_preview_count(
+    academic_year=None,
+    admission_cycle=None,
+    program_level=None,
+    program=None,
+    applicant_type=None,
+    entrance_test_city=None,
+    center_name=None,
+    filters=None
+):
+    query_filters = _build_attendance_sheet_filters(
+        academic_year=academic_year,
+        admission_cycle=admission_cycle,
+        program_level=program_level,
+        program=program,
+        applicant_type=applicant_type,
+        entrance_test_city=entrance_test_city,
+        center_name=center_name,
+        filters=filters
+    )
+    count = frappe.db.count("Entrance Test Seat Allocation", filters=query_filters)
+
+    records = frappe.get_all(
+        "Entrance Test Seat Allocation",
+        filters=query_filters,
+        fields=["center_name"],
+        distinct=True,
+        limit_page_length=0
+    )
+    total_centres = len({r.center_name for r in records if r.center_name})
+
+    return {"count": count, "total_centres": total_centres}
+
+
+@frappe.whitelist()
+def download_attendance_sheet_pdf(
+    academic_year=None,
+    admission_cycle=None,
+    program_level=None,
+    program=None,
+    applicant_type=None,
+    entrance_test_city=None,
+    center_name=None,
+    download_mode=None,
+    filters=None
+):
+    from frappe.utils.pdf import get_pdf
+    from collections import OrderedDict
+    import zipfile
+    import io
+    import re
+
+    query_filters = _build_attendance_sheet_filters(
+        academic_year=academic_year,
+        admission_cycle=admission_cycle,
+        program_level=program_level,
+        program=program,
+        applicant_type=applicant_type,
+        entrance_test_city=entrance_test_city,
+        center_name=center_name,
+        filters=filters
+    )
+
+    records = frappe.get_all(
+        "Entrance Test Seat Allocation",
+        filters=query_filters,
+        fields=[
+            "name", "applicant", "candidate_name", "program",
+            "center_name", "center_address", "admit_card_number",
+            "profile", "father_name", "mother_name", "allocation_date",
+            "start_time", "end_time", "entrance_test_name", "academic_year"
+        ],
+        order_by="center_name asc, program asc, admit_card_number asc, candidate_name asc",
+        limit_page_length=0
+    )
+
+    if not records:
+        frappe.throw(_("No applicant records found matching the selected filters."))
+
+    total_candidates = len(records)
+    frappe.publish_realtime("attendance_sheet_progress", {
+        "progress": 5,
+        "description": _("Prefetching candidate records and photos..."),
+        "current": 0,
+        "total": total_candidates
+    })
+
+    # Bulk fetch applicant photos and father names in ONE query
+    applicant_ids = list({rec.applicant for rec in records if rec.applicant})
+    applicant_data = {}
+    if applicant_ids:
+        app_list = frappe.get_all(
+            "Applicant",
+            filters={"name": ["in", applicant_ids]},
+            fields=["name", "candidate_photo", "father_name"],
+            limit_page_length=0
+        )
+        applicant_data = {a.name: a for a in app_list}
+
+    # Fetch centre to city map for ZIP folder structure
+    all_providers = frappe.get_all(
+        "Entrance Test Provider",
+        fields=["center_name", "city"],
+        limit_page_length=0
+    )
+    centre_to_city = {p.center_name: (p.city or "Centres").strip() for p in all_providers if p.center_name}
+
+    b64_cache = {}
+
+    centre_records_map = OrderedDict()
+    for rec in records:
+        cn = (rec.center_name or "Unknown Centre").strip()
+        if cn not in centre_records_map:
+            centre_records_map[cn] = OrderedDict()
+        prog_key = rec.program or "Unknown Programme"
+        if prog_key not in centre_records_map[cn]:
+            centre_records_map[cn][prog_key] = []
+        centre_records_map[cn][prog_key].append(rec)
+
+    total_centres = len(centre_records_map)
+    is_zip = False
+    if download_mode == "Single Combined PDF File":
+        is_zip = False
+    elif total_centres > 1:
+        is_zip = True
+    elif download_mode and "ZIP" in download_mode:
+        is_zip = True
+
+    inst_name = frappe.db.get_single_value("Institution Settings", "institution_name") or "National Law School of India University"
+
+    template_path = frappe.get_app_path(
+        "slcm", "admission", "print_format",
+        "entrance_test_attendance_sheet",
+        "entrance_test_attendance_sheet.html"
+    )
+    with open(template_path, "r", encoding="utf-8") as f:
+        template_str = f.read()
+
+    pdf_options = {
+        "page-size": "A4",
+        "orientation": "Portrait",
+        "margin-top": "8mm",
+        "margin-bottom": "8mm",
+        "margin-left": "10mm",
+        "margin-right": "10mm",
+        "encoding": "UTF-8",
+        "no-outline": None,
+        "disable-smart-shrinking": None
+    }
+
+    def _build_sheets_for_groups(groups_dict, processed_counter_ref):
+        sheets = []
+        for (c_name, prog_key), cand_list in groups_dict.items():
+            first_rec = cand_list[0]
+            c_address = first_rec.center_address or ""
+            course_display = frappe.db.get_value("Programme", prog_key, "program_name") or prog_key
+
+            exam_date_str = ""
+            if first_rec.allocation_date:
+                try:
+                    exam_date_str = frappe.utils.format_date(first_rec.allocation_date, "EEEE, MMMM d, yyyy")
+                except Exception:
+                    exam_date_str = str(first_rec.allocation_date)
+
+            s_time = first_rec.start_time
+            e_time = first_rec.end_time
+            if not s_time or not e_time:
+                t_details = frappe.db.get_value(
+                    "Entrance Test Details",
+                    {"parent": first_rec.academic_year or admission_cycle},
+                    ["start_time", "end_time"],
+                    as_dict=True
+                )
+                if t_details:
+                    s_time = s_time or t_details.start_time
+                    e_time = e_time or t_details.end_time
+
+            fmt_start = frappe.utils.format_time(s_time, "hh:mm a") if s_time else "10:00 AM"
+            fmt_end = frappe.utils.format_time(e_time, "hh:mm a") if e_time else "12:30 PM"
+            exam_time_str = f"{fmt_start} to {fmt_end}"
+
+            test_title = first_rec.entrance_test_name
+            if not test_title or test_title.lower() == "test":
+                ay_str = first_rec.academic_year or academic_year or "2026"
+                y_part = ay_str.split("-")[0].strip() if "-" in ay_str else ay_str[:4]
+                test_title = f"NLSAT {y_part}"
+
+            processed_candidates = []
+            for idx, c in enumerate(cand_list):
+                processed_counter_ref[0] += 1
+                curr_count = processed_counter_ref[0]
+                if curr_count % max(1, total_candidates // 40) == 0 or curr_count == total_candidates:
+                    pct = int(5 + (curr_count / total_candidates) * 65)
+                    frappe.publish_realtime("attendance_sheet_progress", {
+                        "progress": pct,
+                        "description": _("Processing candidates ({0}/{1})...").format(curr_count, total_candidates),
+                        "current": curr_count,
+                        "total": total_candidates
+                    })
+
+                p_src = ""
+                app_info = applicant_data.get(c.applicant) if c.applicant else None
+                profile_path = app_info.candidate_photo if app_info else None
+                if not profile_path:
+                    profile_path = c.profile
+
+                pb64 = ""
+                if profile_path:
+                    if profile_path not in b64_cache:
+                        try:
+                            b64_cache[profile_path] = _get_compressed_photo_b64(profile_path)
+                        except Exception:
+                            b64_cache[profile_path] = ""
+                    pb64 = b64_cache[profile_path]
+
+                if not pb64 and c.profile and c.profile != profile_path:
+                    if c.profile not in b64_cache:
+                        try:
+                            b64_cache[c.profile] = _get_compressed_photo_b64(c.profile)
+                        except Exception:
+                            b64_cache[c.profile] = ""
+                    pb64 = b64_cache[c.profile]
+
+                if pb64:
+                    p_src = f"data:image/jpeg;base64,{pb64}"
+
+                p_name = c.father_name or c.mother_name
+                if not p_name and app_info:
+                    p_name = app_info.father_name
+
+                processed_candidates.append({
+                    "sl_no": idx + 1,
+                    "photo_src": p_src,
+                    "admit_card_no": c.admit_card_number or "",
+                    "student_name": (c.candidate_name or "").upper(),
+                    "parent_name": (p_name or "").upper()
+                })
+
+            pages = []
+            for i in range(0, len(processed_candidates), 10):
+                pages.append({
+                    "page_number": len(pages) + 1,
+                    "candidates": processed_candidates[i:i + 10]
+                })
+
+            sheets.append({
+                "institution_name": (inst_name or "").upper(),
+                "center_name": c_name,
+                "center_address": c_address,
+                "course_name": course_display,
+                "exam_date": exam_date_str,
+                "exam_time": exam_time_str,
+                "test_title": test_title,
+                "pages": pages
+            })
+        return sheets
+
+    processed_counter = [0]
+
+    if not is_zip:
+        all_groups = OrderedDict()
+        for cn, progs in centre_records_map.items():
+            for p_key, recs in progs.items():
+                all_groups[(cn, p_key)] = recs
+
+        sheets = _build_sheets_for_groups(all_groups, processed_counter)
+
+        frappe.publish_realtime("attendance_sheet_progress", {
+            "progress": 75,
+            "description": _("Rendering HTML layout..."),
+            "current": total_candidates,
+            "total": total_candidates
+        })
+
+        rendered_html = frappe.render_template(template_str, {"sheets": sheets})
+
+        frappe.publish_realtime("attendance_sheet_progress", {
+            "progress": 85,
+            "description": _("Generating PDF document structure..."),
+            "current": total_candidates,
+            "total": total_candidates
+        })
+
+        pdf_content = get_pdf(rendered_html, options=pdf_options)
+
+    ts = frappe.utils.now_datetime().strftime("%Y%m%d_%H%M%S")
+
+    parsed_centres = _parse_multi_arg(center_name)
+    parsed_cities = _parse_multi_arg(entrance_test_city)
+
+    if parsed_centres:
+        if len(parsed_centres) == 1:
+            c_slug = frappe.scrub(parsed_centres[0])[:25]
+        else:
+            c_slug = f"{len(parsed_centres)}_Centres"
+    elif parsed_cities:
+        if len(parsed_cities) == 1:
+            c_slug = frappe.scrub(parsed_cities[0])[:25]
+        else:
+            c_slug = f"{len(parsed_cities)}_Cities"
+    else:
+        c_slug = "All_Centres"
+
+    c_slug = (c_slug or "Centres").strip("_")
+
+    if not is_zip:
+        all_groups = OrderedDict()
+        for cn, progs in centre_records_map.items():
+            for p_key, recs in progs.items():
+                all_groups[(cn, p_key)] = recs
+
+        sheets = _build_sheets_for_groups(all_groups, processed_counter)
+
+        frappe.publish_realtime("attendance_sheet_progress", {
+            "progress": 75,
+            "description": _("Rendering HTML layout..."),
+            "current": total_candidates,
+            "total": total_candidates
+        })
+
+        rendered_html = frappe.render_template(template_str, {"sheets": sheets})
+
+        frappe.publish_realtime("attendance_sheet_progress", {
+            "progress": 85,
+            "description": _("Generating PDF document structure..."),
+            "current": total_candidates,
+            "total": total_candidates
+        })
+
+        pdf_content = get_pdf(rendered_html, options=pdf_options)
+        filename = f"Attendance_Sheet_{c_slug}_{ts}.pdf"
+
+        anchor = records[0].name if records else "Entrance Test Seat Allocation"
+        saved = _save_generated_file(
+            filename,
+            pdf_content,
+            "Entrance Test Seat Allocation",
+            anchor,
+            is_private=0
+        )
+
+        frappe.publish_realtime("attendance_sheet_progress", {
+            "progress": 100,
+            "description": _("PDF Generation Complete!"),
+            "current": total_candidates,
+            "total": total_candidates
+        })
+
+        return {
+            "file_url": saved.file_url,
+            "filename": filename,
+            "total_candidates": total_candidates,
+            "total_pages": sum(len(s["pages"]) for s in sheets),
+            "is_zip": False
+        }
+
+    else:
+        zip_buffer = io.BytesIO()
+        total_sheets_count = 0
+        total_pages_count = 0
+        centre_idx = 0
+
+        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as zip_file:
+            for c_name, progs in centre_records_map.items():
+                centre_idx += 1
+                c_groups = OrderedDict()
+                for p_key, recs in progs.items():
+                    c_groups[(c_name, p_key)] = recs
+
+                c_sheets = _build_sheets_for_groups(c_groups, processed_counter)
+                total_sheets_count += len(c_sheets)
+                total_pages_count += sum(len(s["pages"]) for s in c_sheets)
+
+                pct = int(70 + (centre_idx / total_centres) * 25)
+                frappe.publish_realtime("attendance_sheet_progress", {
+                    "progress": pct,
+                    "description": _("Generating PDF for Centre {0}/{1}: {2}...").format(centre_idx, total_centres, c_name),
+                    "current": processed_counter[0],
+                    "total": total_candidates
+                })
+
+                rendered_html = frappe.render_template(template_str, {"sheets": c_sheets})
+                pdf_bytes = get_pdf(rendered_html, options=pdf_options)
+
+                city_name = centre_to_city.get(c_name, "Centres")
+                safe_city = _safe_path_component(city_name)
+                safe_centre = _safe_path_component(c_name)
+                zip_entry = f"{safe_city}/{safe_centre}.pdf"
+
+                zip_file.writestr(zip_entry, pdf_bytes)
+
+        zip_filename = f"Attendance_Sheets_{c_slug}_{ts}.zip"
+
+        anchor = records[0].name if records else "Entrance Test Seat Allocation"
+        saved = _save_generated_file(
+            zip_filename,
+            zip_buffer.getvalue(),
+            "Entrance Test Seat Allocation",
+            anchor,
+            is_private=0
+        )
+
+        frappe.publish_realtime("attendance_sheet_progress", {
+            "progress": 100,
+            "description": _("ZIP Generation Complete!"),
+            "current": total_candidates,
+            "total": total_candidates
+        })
+
+        return {
+            "file_url": saved.file_url,
+            "filename": zip_filename,
+            "total_candidates": total_candidates,
+            "total_pages": total_pages_count,
+            "total_centres": total_centres,
+            "is_zip": True
+        }
+
 

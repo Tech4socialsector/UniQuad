@@ -55,16 +55,16 @@
 
 {% set dp = dash_prefs or {} %}
 
-{# ── Today's Schedule + Upcoming Classes ──────────────────────── #}
+{# ── Today's Schedule + Upcoming Sessions ──────────────────────── #}
 {% if not dp.get('hide_today_schedule') %}
 <div class="fp-grid-2 fp-dash-split">
 
-  {# Today's Classes #}
+  {# Today's Sessions #}
   <div class="fp-card fade-in" style="animation-delay:0.10s;">
     <div class="fp-card-header">
       <div class="fp-card-title">
         <span class="fp-ms">today</span>
-        Today's Classes
+        Today’s Sessions
       </div>
       <a href="/faculty-portal/attendance" style="font-size:12px;color:var(--fp-accent);text-decoration:none;font-weight:600;display:flex;align-items:center;gap:3px;">
         View All <span class="fp-ms" style="font-size:14px;">arrow_forward</span>
@@ -74,7 +74,7 @@
       {% if portal_error %}
       <div class="fp-section-error">
         <span class="fp-ms">error_outline</span>
-        <div>Unable to load today's classes.</div>
+        <div>Unable to load today's Sessions.</div>
         <button onclick="window.location.reload()" class="fp-section-error-retry">
           <span class="fp-ms">refresh</span>Try Again
         </button>
@@ -82,7 +82,7 @@
       {% elif not todays_sessions %}
       <div class="fp-empty">
         <div class="fp-empty-icon fp-dash-icon"><span class="fp-ms">event_busy</span></div>
-        <p class="fp-empty-title">No classes today</p>
+        <p class="fp-empty-title">No Sessions today</p>
         <p class="fp-empty-sub">Your schedule is clear. Enjoy your day!</p>
       </div>
       {% else %}
@@ -113,12 +113,12 @@
     </div>
   </div>
 
-  {# Upcoming Classes #}
+  {# Upcoming Sessions #}
   <div class="fp-card fade-in" style="animation-delay:0.14s;">
     <div class="fp-card-header">
       <div class="fp-card-title">
         <span class="fp-ms">calendar_month</span>
-        Upcoming Classes
+        Upcoming Sessions
       </div>
       <span class="fp-badge fp-badge-neutral">Next 7 days</span>
     </div>
@@ -126,7 +126,7 @@
       {% if portal_error %}
       <div class="fp-section-error">
         <span class="fp-ms">error_outline</span>
-        <div>Unable to load upcoming classes.</div>
+        <div>Unable to load upcoming Sessions.</div>
         <button onclick="window.location.reload()" class="fp-section-error-retry">
           <span class="fp-ms">refresh</span>Try Again
         </button>
@@ -178,11 +178,11 @@ window._fpDashData = {
     </div>
     <div class="fp-stat-body">
       <div class="fp-stat-val">{{ total_courses if not portal_error else '—' }}</div>
-      <div class="fp-stat-lbl">Total Courses</div>
+      <div class="fp-stat-lbl">Courses</div>
       {% if portal_error %}
       <div class="fp-stat-sub"><span class="fp-ms" style="font-size:13px;color:var(--fp-danger);">error_outline</span> <span style="color:var(--fp-danger);">Unavailable</span></div>
       {% else %}
-      <div class="fp-stat-sub fp-drill-hint"><span class="fp-ms" style="font-size:13px;">open_in_new</span> More info</div>
+      <div class="fp-stat-sub fp-drill-hint"><span class="fp-ms" style="font-size:13px;">open_in_new</span>More</div>
       {% endif %}
     </div>
     {% if not portal_error %}<span class="fp-drill-badge">Details</span>{% endif %}
@@ -195,11 +195,11 @@ window._fpDashData = {
     </div>
     <div class="fp-stat-body">
       <div class="fp-stat-val">{{ total_students if not portal_error else '—' }}</div>
-      <div class="fp-stat-lbl">Total Students</div>
+      <div class="fp-stat-lbl">Students</div>
       {% if portal_error %}
       <div class="fp-stat-sub"><span class="fp-ms" style="font-size:13px;color:var(--fp-danger);">error_outline</span> <span style="color:var(--fp-danger);">Unavailable</span></div>
       {% else %}
-      <div class="fp-stat-sub fp-drill-hint"><span class="fp-ms" style="font-size:13px;">open_in_new</span> More info</div>
+      <div class="fp-stat-sub fp-drill-hint"><span class="fp-ms" style="font-size:13px;">open_in_new</span>More</div>
       {% endif %}
     </div>
     {% if not portal_error %}<span class="fp-drill-badge">Details</span>{% endif %}
@@ -212,7 +212,7 @@ window._fpDashData = {
     </div>
     <div class="fp-stat-body">
       <div class="fp-stat-val {% if attendance_pending > 0 and not portal_error %}" style="color:var(--fp-warning);"{% else %}"{% endif %}>{{ attendance_pending if not portal_error else '—' }}</div>
-      <div class="fp-stat-lbl">Attendance Pending</div>
+      <div class="fp-stat-lbl">Attendance Tasks</div>
       <div class="fp-stat-sub">
         {% if portal_error %}
         <span class="fp-ms" style="font-size:13px;color:var(--fp-danger);">error_outline</span>
@@ -251,15 +251,15 @@ window._fpDashData = {
       <a href="/faculty-portal/my-classes" class="fp-quick-action-btn fp-dash-qa" style="flex-direction:row;align-items:center;gap:14px;text-align:left;padding:16px 18px;">
         <span class="fp-ms">menu_book</span>
         <div>
-          <div class="fp-qa-title" style="font-size:13.5px;font-weight:700;">My Classes</div>
+          <div class="fp-qa-title" style="font-size:13.5px;font-weight:700;">My Courses</div>
           <div style="font-size:12px;color:var(--fp-text-4);margin-top:2px;">View course offerings</div>
         </div>
       </a>
       <a href="/faculty-portal/marks" class="fp-quick-action-btn fp-dash-qa" style="flex-direction:row;align-items:center;gap:14px;text-align:left;padding:16px 18px;">
         <span class="fp-ms">grade</span>
         <div>
-          <div class="fp-qa-title" style="font-size:13.5px;font-weight:700;">Marks Entry</div>
-          <div style="font-size:12px;color:var(--fp-text-4);margin-top:2px;">Enter or update marks</div>
+          <div class="fp-qa-title" style="font-size:13.5px;font-weight:700;">Grades</div>
+          <div style="font-size:12px;color:var(--fp-text-4);margin-top:2px;">Enter or update grades</div>
         </div>
       </a>
       <a href="/faculty-portal/venue-booking" class="fp-quick-action-btn fp-dash-qa" style="flex-direction:row;align-items:center;gap:14px;text-align:left;padding:16px 18px;">
@@ -479,14 +479,17 @@ window._fpDashData = {
     {# Search + summary bar #}
     <div id="fp-drill-bar"
          style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 24px;border-bottom:1px solid var(--fp-border-light);flex-wrap:wrap;">
-      <div class="fp-search-wrap" style="flex:1;min-width:180px;max-width:320px;">
-        <span class="fp-ms">search</span>
-        <input type="text" class="fp-input fp-search-input" id="fp-drill-search"
-               placeholder="Search…" oninput="fpDrillSearch()" autocomplete="off"
-               style="padding-top:7px;padding-bottom:7px;">
+      <div style="display:flex;align-items:flex-end;gap:16px;flex:1;flex-wrap:wrap;" id="fp-drill-filters-container">
+        <div class="fp-search-wrap" style="min-width:180px;max-width:320px;">
+          <span class="fp-ms">search</span>
+          <input type="text" class="fp-input fp-search-input" id="fp-drill-search"
+                 placeholder="Search…" oninput="fpDrillSearch()" autocomplete="off"
+                 style="padding-top:7px;padding-bottom:7px;">
+        </div>
+        <div id="fp-drill-filters-area" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;"></div>
       </div>
       <span id="fp-drill-count-label"
-            style="font-size:12px;color:var(--fp-text-4);white-space:nowrap;flex-shrink:0;"></span>
+            style="display:none;font-size:12px;color:var(--fp-text-4);white-space:nowrap;flex-shrink:0;"></span>
     </div>
 
     {# Table body #}
@@ -542,7 +545,7 @@ body.fp-dark .fp-dash-icon .fp-ms { color: #fff !important; }
   .fp-fd-link { width: 100%; justify-content: flex-end; }
 }
 
-/* Today's / Upcoming Classes — equal halves (shared .fp-grid-2 is 3fr/2fr) */
+/* Today's / Upcoming Sessions — equal halves (shared .fp-grid-2 is 3fr/2fr) */
 .fp-dash-split { grid-template-columns: 1fr 1fr; }
 @media (max-width: 1024px) { .fp-dash-split { grid-template-columns: 1fr; } }
 /* Quick actions — 4 equal columns that fill the full card width */
@@ -645,8 +648,11 @@ body.fp-dark .fp-dash-icon .fp-ms { color: #fff !important; }
         if (!data) { _setBody('<div class="fp-drill-empty"><span class="fp-ms">inbox</span>No data returned.</div>'); return; }
         _drillData = data;
         _drillRows = (data.rows || []).slice();
-        _setModalHeader(data.title || 'Details', (data.count || 0) + ' record' + ((data.count !== 1) ? 's' : ''));
+        _setModalHeader(data.title || 'Details', '');
+        _buildFilters();
         _renderTable();
+        // Fire search to apply defaults
+        fpDrillSearch();
       },
       function(err) {
         _setBody('<div class="fp-drill-empty"><span class="fp-ms">error_outline</span>'
@@ -699,10 +705,25 @@ body.fp-dark .fp-dash-icon .fp-ms { color: #fff !important; }
   }
 
   function _updateCountLabel(visible, total) {
+    if (_drillData && _drillData.hide_count) return;
+    
+    var unit = 'record';
+    var title = _drillData ? _drillData.title : '';
+    if (title === 'Enrolled Students' || title === 'Students') unit = 'Student';
+    else if (title === 'Courses' || title === 'My Courses') unit = 'Course';
+    else if (title === 'Attendance Tasks') unit = 'Task';
+    else if (title === 'Venue Bookings') unit = 'Booking';
+    
+    var unitPlural = unit + 's';
+    var text = visible === total
+      ? total + ' ' + (total !== 1 ? unitPlural : unit)
+      : visible + ' of ' + total + ' ' + unitPlural;
+
+    var s = document.getElementById('fp-drill-subtitle');
+    if (s) s.textContent = text;
+    
     var el = document.getElementById('fp-drill-count-label');
-    if (el) el.textContent = visible === total
-      ? total + ' record' + (total !== 1 ? 's' : '')
-      : visible + ' of ' + total + ' records';
+    if (el) el.textContent = text;
   }
 
   /* ── Table renderer ── */
@@ -788,9 +809,20 @@ body.fp-dark .fp-dash-icon .fp-ms { color: #fff !important; }
       return '<span class="fp-badge fp-badge-neutral">—</span>';
     }
 
-    if (type === 'link' && row.action_link) {
-      return '<a href="' + _esc(row.action_link) + '" style="color:var(--fp-accent);text-decoration:none;font-weight:500;">'
-        + _esc(String(val)) + '</a>';
+    if (type === 'link') {
+      var href = col.link_key ? row[col.link_key] : row.action_link;
+      if (href) {
+        return '<a href="' + _esc(href) + '" style="color:var(--fp-accent);text-decoration:none;font-weight:600;">'
+          + _esc(String(val)) + '</a>';
+      }
+    }
+
+    if (type === 'button') {
+      var href = col.link_key ? row[col.link_key] : row.action_link;
+      if (href) {
+        return '<a href="' + _esc(href) + '" style="background:var(--fp-primary);color:#fff;padding:6px 12px;border-radius:4px;text-decoration:none;font-weight:600;font-size:12px;display:inline-block;">'
+          + _esc(String(val)) + '</a>';
+      }
     }
 
     return _esc(String(val));
@@ -822,19 +854,63 @@ body.fp-dark .fp-dash-icon .fp-ms { color: #fff !important; }
   };
 
   /* ── Search/filter ── */
+
+  function _buildFilters() {
+    var area = document.getElementById('fp-drill-filters-area');
+    if (!area) return;
+    if (!_drillData.filters || _drillData.filters.length === 0) {
+        area.innerHTML = '';
+        return;
+    }
+    var filtersHtml = '';
+    _drillData.filters.forEach(function(f) {
+        var options = ['<option value="">All ' + f.label + 's</option>'];
+        var vals = [];
+        _drillData.rows.forEach(function(r) { if (r[f.key] && vals.indexOf(r[f.key]) === -1 && r[f.key] !== '—') vals.push(r[f.key]); });
+        vals.sort();
+        vals.forEach(function(v) { options.push('<option value="' + _esc(v) + '">' + _esc(v) + '</option>'); });
+        
+        filtersHtml += '<div style="display:flex;flex-direction:column;gap:4px;">'
+                     + '<label style="font-size:10px;color:var(--fp-text-4);font-weight:600;margin-left:2px;letter-spacing:0.02em;">' + _esc(f.label) + '</label>'
+                     + '<select class="fp-input fp-drill-filter-select" style="padding:6px 24px 6px 12px;min-width:130px;font-size:13px;height:auto;" onchange="fpDrillSearch()" data-filter-key="' + _esc(f.key) + '">'
+                     + options.join('')
+                     + '</select></div>';
+    });
+    area.innerHTML = filtersHtml;
+    
+    if (_drillData.default_ay) {
+        var aySelect = area.querySelector('select[data-filter-key="academic_year"]');
+        if (aySelect) {
+            var exists = Array.from(aySelect.options).some(function(o) { return o.value === _drillData.default_ay; });
+            if (exists) aySelect.value = _drillData.default_ay;
+        }
+    }
+  }
+
   window.fpDrillSearch = function() {
     if (!_drillData) return;
     var q = (document.getElementById('fp-drill-search').value || '').toLowerCase().trim();
-    if (!q) {
-      _drillRows = _drillData.rows.slice();
-    } else {
-      _drillRows = _drillData.rows.filter(function(row) {
-        return Object.keys(row).some(function(k) {
-          if (/_image$/.test(k)) return false;   /* photo URLs aren't searchable text */
-          return String(row[k] || '').toLowerCase().includes(q);
-        });
-      });
-    }
+    
+    var activeFilters = {};
+    document.querySelectorAll('.fp-drill-filter-select').forEach(function(sel) {
+        if (sel.value) activeFilters[sel.getAttribute('data-filter-key')] = sel.value;
+    });
+
+    _drillRows = _drillData.rows.filter(function(row) {
+      // Check select filters
+      for (var k in activeFilters) {
+         if (row[k] !== activeFilters[k]) return false;
+      }
+      
+      // Check search query
+      if (q) {
+          return Object.keys(row).some(function(k) {
+            if (/_image$/.test(k)) return false;
+            return String(row[k] || '').toLowerCase().includes(q);
+          });
+      }
+      return true;
+    });
     if (_sortCol !== null) {
       var key  = _drillData.columns[_sortCol].key;
       var type = _drillData.columns[_sortCol].type;

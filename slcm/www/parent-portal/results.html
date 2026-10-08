@@ -1,5 +1,5 @@
 {% extends "slcm/www/parent-portal/_base.html" %}
-{% block title %}Results &amp; Grades{% endblock %}
+{% block title %}Grades{% endblock %}
 
 {% block extra_css %}
 /* ── Tokens (results page) ──────────────────────────────────────────── */
@@ -185,7 +185,7 @@
 .ppr-status-pass { color: var(--ppr-green); border: 1px solid rgba(0,128,0,0.30); background: #fff; }
 .ppr-status-fail { color: var(--ppr-red);   background: rgba(146,12,36,0.07); }
 .ppr-status-pend { color: var(--ppr-muted); background: #f3f4f6; }
-.ppr-card-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--ppr-row); border-bottom: 1px solid var(--ppr-row); }
+.ppr-card-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--ppr-row); border-bottom: 1px solid var(--ppr-row); }
 .ppr-cm { padding: 11px 8px; text-align: center; border-right: 1px solid var(--ppr-row); min-width: 0; }
 .ppr-cm:last-child { border-right: none; }
 .ppr-cm-val { font-size: 16px; font-weight: 800; color: var(--pp-text-1); line-height: 1.1; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -343,7 +343,7 @@
 {# ═══════════════ Header ═══════════════ #}
 <header class="ppr-head fade-in" style="background: var(--pp-card, #fff); border: 1px solid var(--pp-border, #e5e7eb); border-radius: 14px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
   <div>
-    <h1 class="pp-page-title" style="margin: 0; font-size: 18px !important; font-weight: 700 !important;">Results &amp; Grades</h1>
+    <h1 class="pp-page-title" style="margin: 0; font-size: 18px !important; font-weight: 700 !important;">Grades</h1>
   </div>
 </header>
 
@@ -368,17 +368,17 @@
 <div class="ppr-state fade-in">
   <span class="ms" aria-hidden="true">assignment</span>
   <div>
-    <p class="ppr-state-title">No results published yet</p>
-    <p class="ppr-state-sub">Results will appear here once the faculty publishes examination results. Check back after the exam cycle.</p>
+    <p class="ppr-state-title">No grades published yet</p>
+    <p class="ppr-state-sub">Grades will appear here once the faculty publishes assessment results. Check back after the assessment cycle.</p>
   </div>
 </div>
 {% else %}
 
 {# ═══════════════ Metric tiles ═══════════════ #}
-<section class="ppr-metrics fade-in" aria-label="Results summary">
+<section class="ppr-metrics fade-in" aria-label="Grades summary">
   <div class="ppr-metric">
     <span class="ppr-metric-icon ppr-mi-maroon"><span class="ms" aria-hidden="true">school</span></span>
-    <div><div class="ppr-metric-val">{{ published_results | length }}</div><div class="ppr-metric-lbl">Results Published</div></div>
+    <div><div class="ppr-metric-val">{{ published_results | length }}</div><div class="ppr-metric-lbl">Grades Published</div></div>
   </div>
   <div class="ppr-metric">
     <span class="ppr-metric-icon ppr-mi-green"><span class="ms" aria-hidden="true">check_circle</span></span>
@@ -390,18 +390,18 @@
   </div>
 </section>
 
-{# ═══════════════ Exam summaries ═══════════════ #}
+{# ═══════════════ Assessment summaries ═══════════════ #}
 <div class="ppr-section-title fade-in">
-  <h2><span class="ms" aria-hidden="true">fact_check</span>Examinations</h2>
-  <span class="ppr-section-sub">{{ published_results | length }} exam{{ 's' if published_results | length != 1 }} · select one to show only its courses</span>
+  <h2><span class="ms" aria-hidden="true">fact_check</span>Assessments</h2>
+  <span class="ppr-section-sub">{{ published_results | length }} assessment{{ 's' if published_results | length != 1 }} · select one to show only its courses</span>
 </div>
 <div class="ppr-exams-wrap fade-in">
-<button type="button" class="ppr-rail-btn ppr-rail-prev is-hidden" id="ppr-rail-prev" aria-label="Previous exams"><span class="ms" aria-hidden="true">chevron_left</span></button>
-<div class="ppr-exams" id="ppr-exams" role="group" aria-label="Filter by examination">
+<button type="button" class="ppr-rail-btn ppr-rail-prev is-hidden" id="ppr-rail-prev" aria-label="Previous assessments"><span class="ms" aria-hidden="true">chevron_left</span></button>
+<div class="ppr-exams" id="ppr-exams" role="group" aria-label="Filter by assessment">
   {% for res in published_results %}
   <button type="button" class="ppr-exam" data-exam="{{ res.exam_plan | e }}" aria-pressed="false">
     <div class="ppr-exam-head">
-      <div class="ppr-exam-eyebrow">{{ res.term or 'Examination' }}</div>
+      <div class="ppr-exam-eyebrow">{{ res.term or 'Assessment' }}</div>
       <div class="ppr-exam-name">{{ res.exam_name }}</div>
       <div class="ppr-chips">
         <span class="ppr-chip"><span class="ms" aria-hidden="true">event</span>Published {{ frappe.utils.formatdate(res.published_on, "dd MMM yyyy") if res.published_on else '—' }}</span>
@@ -430,7 +430,7 @@
   </button>
   {% endfor %}
 </div>
-<button type="button" class="ppr-rail-btn ppr-rail-next is-hidden" id="ppr-rail-next" aria-label="More exams"><span class="ms" aria-hidden="true">chevron_right</span></button>
+<button type="button" class="ppr-rail-btn ppr-rail-next is-hidden" id="ppr-rail-next" aria-label="More assessments"><span class="ms" aria-hidden="true">chevron_right</span></button>
 </div>
 
 {# ═══════════════ Trend (only with 2+ real points) ═══════════════ #}
@@ -439,15 +439,15 @@
 <section class="ppr-chart fade-in" aria-labelledby="ppr-chart-title">
   <div class="ppr-section-title" style="margin:0 0 6px;">
     <h2 id="ppr-chart-title"><span class="ms" aria-hidden="true">trending_up</span>Academic Performance Trend</h2>
-    <span class="ppr-section-sub">Term % across published exams</span>
+    <span class="ppr-section-sub">Term % across published assessments</span>
   </div>
-  <div class="ppr-chart-box"><canvas id="gpaChart" role="img" aria-label="Performance trend across published exams"></canvas></div>
+  <div class="ppr-chart-box"><canvas id="gpaChart" role="img" aria-label="Performance trend across published assessments"></canvas></div>
 </section>
 {% endif %}
 
 {# ═══════════════ Toolbar ═══════════════ #}
 <div class="ppr-section-title fade-in" style="margin-top:6px;">
-  <h2><span class="ms" aria-hidden="true">menu_book</span>Course Results</h2>
+  <h2><span class="ms" aria-hidden="true">menu_book</span>Course Grades</h2>
 </div>
 <div class="ppr-toolbar fade-in" role="search">
   <div class="ppr-search">
@@ -455,12 +455,12 @@
     <label for="ppr-q" class="pp-sr-only">Search courses</label>
     <input id="ppr-q" class="ppr-input" type="search" placeholder="Search by course name or code…" autocomplete="off">
   </div>
-  <label for="ppr-exam" class="pp-sr-only">Examination</label>
+  <label for="ppr-exam" class="pp-sr-only">Assessment</label>
   <select id="ppr-exam" class="ppr-select">
-    <option value="">All Exams</option>
+    <option value="">All Assessments</option>
     {% for res in published_results %}<option value="{{ res.exam_plan | e }}">{{ res.exam_name }}{% if res.term and res.term != res.exam_name %} · {{ res.term }}{% endif %}</option>{% endfor %}
   </select>
-  <label for="ppr-status" class="pp-sr-only">Result status</label>
+  <label for="ppr-status" class="pp-sr-only">Grade status</label>
   <select id="ppr-status" class="ppr-select">
     <option value="">All Status</option>
     <option value="Pass">Passed</option>
@@ -500,7 +500,6 @@
     <div class="ppr-card-metrics">
       <div class="ppr-cm"><div class="ppr-cm-val {{ grade_cls(c) }}">{{ grade_txt(c) }}</div><div class="ppr-cm-lbl">Grade</div></div>
       <div class="ppr-cm"><div class="ppr-cm-val">{{ total_txt(c) }}</div><div class="ppr-cm-lbl">Total Marks</div></div>
-      <div class="ppr-cm"><div class="ppr-cm-val {{ 'ppr-g-fail' if c.attendance_status == 'Absent' else '' }}" style="font-size:13px;" title="{{ (c.attendance_status or '—') | e }}">{{ c.attendance_status or '—' }}</div><div class="ppr-cm-lbl">Attendance</div></div>
     </div>
     {% if c.re_exam_grade or c.remark %}
     <div class="ppr-card-strip">
@@ -521,12 +520,11 @@
 {# ═══════════════ List view ═══════════════ #}
 <div class="ppr-list is-hidden" id="ppr-list">
   <table class="ppr-t">
-    <caption class="pp-sr-only">Course results</caption>
-    <colgroup><col><col style="width:180px;"><col style="width:80px;"><col style="width:90px;"><col style="width:120px;"><col style="width:104px;"><col style="width:128px;"></colgroup>
+    <caption class="pp-sr-only">Course grades</caption>
+    <colgroup><col><col style="width:180px;"><col style="width:80px;"><col style="width:90px;"><col style="width:104px;"><col style="width:128px;"></colgroup>
     <thead><tr>
-      <th scope="col" class="c-text">Course</th><th scope="col" class="c-text">Exam</th>
+      <th scope="col" class="c-text">Course</th><th scope="col" class="c-text">Assessment</th>
       <th scope="col" class="c-center">Grade</th><th scope="col" class="c-num">Total</th>
-      <th scope="col" class="c-text">Attendance</th>
       <th scope="col" class="c-center">Status</th><th scope="col" class="c-action">Action</th>
     </tr></thead>
     <tbody>
@@ -536,10 +534,9 @@
       <tr class="ppr-item" data-exam="{{ res.exam_plan | e }}" data-status="{{ st }}"
           data-q="{{ (c.course_name ~ ' ' ~ c.course ~ ' ' ~ res.exam_name) | lower | e }}">
         <td class="c-text c-primary"><div class="ppr-cell-main">{{ c.course_name }}</div><div class="ppr-cell-sub">{{ c.course }}</div></td>
-        <td class="c-text" data-label="Exam"><div><div>{{ res.exam_name }}</div>{% if res.term and res.term != res.exam_name %}<div class="ppr-cell-sub">{{ res.term }}</div>{% endif %}</div></td>
+        <td class="c-text" data-label="Assessment"><div><div>{{ res.exam_name }}</div>{% if res.term and res.term != res.exam_name %}<div class="ppr-cell-sub">{{ res.term }}</div>{% endif %}</div></td>
         <td class="c-center" data-label="Grade"><span class="ppr-grade-big {{ grade_cls(c) }}">{{ grade_txt(c) }}</span></td>
         <td class="c-num" data-label="Total">{{ total_txt(c) }}</td>
-        <td class="c-text" data-label="Attendance"><span class="{{ 'ppr-g-fail' if c.attendance_status == 'Absent' else '' }}">{{ c.attendance_status or '—' }}</span></td>
         <td class="c-center" data-label="Status">{{ status_pill(st) }}</td>
         <td class="c-action" data-label="Action"><button type="button" class="ppr-btn" data-marks="{{ key }}" aria-haspopup="dialog"><span class="ms" aria-hidden="true">table_view</span>View Marks</button></td>
       </tr>
@@ -553,7 +550,7 @@
   <span class="ms" aria-hidden="true">filter_alt_off</span>
   <div>
     <p class="ppr-state-title">No courses match these filters</p>
-    <p class="ppr-state-sub">Try a different exam, status or search term.</p>
+    <p class="ppr-state-sub">Try a different assessment, status or search term.</p>
     <button type="button" class="ppr-btn" id="ppr-reset-2"><span class="ms" aria-hidden="true">restart_alt</span>Reset filters</button>
   </div>
 </div>
@@ -577,17 +574,17 @@
         <tr>
           {% for grp in c.regular_groups %}<th scope="colgroup" colspan="{{ grp.components | length }}" class="grp">{{ grp.type_name }}</th>{% endfor %}
           <th scope="colgroup" colspan="{{ 2 if c.show_total else 1 }}" class="grp grp-grade">Grade</th>
-          <th scope="colgroup" colspan="3" class="grp grp-status">Status</th>
+          <th scope="colgroup" colspan="2" class="grp grp-status">Status</th>
           {% for grp in c.reexam_groups %}<th scope="colgroup" colspan="{{ (grp.components | length) + (1 if loop.last else 0) }}" class="grp grp-reexam">{{ grp.type_name }}</th>{% endfor %}
           {% if show_improve %}<th scope="colgroup" colspan="2" class="grp grp-improve">Improvement Exam</th>{% endif %}
-          {% if show_updated %}<th scope="colgroup" colspan="2" class="grp grp-final">Updated Final Result</th>{% endif %}
+          {% if show_updated %}<th scope="colgroup" colspan="2" class="grp grp-final">Updated Final Grade</th>{% endif %}
         </tr>
         <tr>
           {% for grp in c.regular_groups %}{% for comp in grp.components %}
           <th scope="col">{{ comp.label }}{% if comp.max_marks %}<span class="max">Max {{ comp.max_marks }}</span>{% endif %}</th>
           {% endfor %}{% endfor %}
           {% if c.show_total %}<th scope="col">Total Marks</th>{% endif %}
-          <th scope="col">Grade</th><th scope="col">Enrollment</th><th scope="col">Attendance</th><th scope="col">MFA</th>
+          <th scope="col">Grade</th><th scope="col">Enrollment</th><th scope="col">MFA</th>
           {% for grp in c.reexam_groups %}{% for comp in grp.components %}
           <th scope="col">{{ comp.label }}{% if comp.max_marks %}<span class="max">Max {{ comp.max_marks }}</span>{% endif %}</th>
           {% endfor %}{% endfor %}
@@ -604,7 +601,6 @@
           {% if c.show_total %}<td style="font-weight:700;">{{ total_txt(c) }}</td>{% endif %}
           <td><span class="ppr-mk-grade {{ 'pend' if (absent or not c.display_grade) else ('fail' if c.is_fail else 'pass') }}">{{ grade_txt(c) }}{% if grade_txt(c) != '—' %}{{ grade_sup(c) }}{% endif %}</span></td>
           <td class="{{ 'ppr-g-pass' if c.enrollment_status == 'Enrolled' else ('ppr-g-fail' if c.enrollment_status in ('Detained', 'Dropped') else '') }}" style="font-weight:600;">{{ c.enrollment_status or '—' }}</td>
-          <td class="{{ 'ppr-g-fail' if c.attendance_status in ('Absent', 'Detained') else ('ppr-g-pass' if c.attendance_status == 'Present' else '') }}" style="font-weight:600;{{ 'color:var(--ppr-maroon);' if c.attendance_status == 'Low Attendance' }}">{{ c.attendance_status or '—' }}</td>
           <td>{{ c.mfa or '—' }}</td>
           {% for grp in c.reexam_groups %}{% for comp in grp.components %}
           <td>{{ 'Absent' if absent else comp.marks }}</td>
