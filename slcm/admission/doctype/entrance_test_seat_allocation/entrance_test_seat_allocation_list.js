@@ -1500,11 +1500,13 @@ function _update_attendance_preview(ad) {
             const total_centres = (r.message && r.message.total_centres != null) ? r.message.total_centres : 0;
             const pages = Math.ceil(count / 10);
 
-            let format_text = "NLSAT Attendance Sheet (A4 PDF)";
-            if (download_mode.includes("ZIP") || (total_centres > 1 && download_mode !== "Single Combined PDF File")) {
+            let format_text = "Single PDF File";
+            if (total_centres > 1 && download_mode !== "Single Combined PDF File") {
                 format_text = `ZIP Archive (${total_centres} Centre PDF files)`;
             } else if (download_mode === "Single Combined PDF File") {
                 format_text = `Single Combined PDF (${count} Candidates, ${pages} Pages)`;
+            } else {
+                format_text = `Single PDF File (${count} Candidates, ${pages} Pages)`;
             }
 
             preview_el.innerHTML = `
