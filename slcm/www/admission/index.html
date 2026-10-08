@@ -1539,7 +1539,7 @@
         </div>
 
         <!-- Buttons -->
-        <div class="mt-6 flex gap-3">
+        <div class="mt-6 flex gap-3" style="justify-content: space-between;">
           {% set _ua = user_app_map.get(_pid) or user_app_map.get(_name) or {} %}
           {% if frappe.session.user != "Guest" %}
           {% set _is_full = p.get('seats_full') if p.get else p.seats_full %}
@@ -1561,7 +1561,10 @@
             Apply now
           </a>
           {% else %}
-          <a href="{{ (p.application_form_link or build_applicant_form_new_url(_slug, p.admission_cycle or (active_cycle.name if active_cycle else ''), campus=(p.campus or ''), intake_type=(p.intake_type or ''), admission_year=(active_cycle.admission_year if active_cycle else ''), academic_year=(active_cycle.academic_year if active_cycle else ''), program_level=(p.program_level or ''))) if (_is_cycle_active and not _is_full) else 'javascript:void(0)' }}"
+          {% set _base_app_link = (p.application_form_link or build_applicant_form_new_url(_slug, p.admission_cycle or (active_cycle.name if active_cycle else ''), campus=(p.campus or ''), intake_type=(p.intake_type or ''), admission_year=(active_cycle.admission_year if active_cycle else ''), academic_year=(active_cycle.academic_year if active_cycle else ''), program_level=(p.program_level or ''))) %}
+          <a href="{{ _base_app_link if (_is_cycle_active and not _is_full) else 'javascript:void(0)' }}"
+             data-base-url="{{ _base_app_link }}"
+             class="prog-apply-btn"
             style="display:inline-flex;align-items:center;justify-content:center;gap:2px;
                         padding:8px 18px;border-radius:8px;font-size:12px;font-weight:700;
                         text-decoration:none;color:#fff;
@@ -1575,7 +1578,12 @@
           {% endif %}
           {% else %}
           {% set _is_full = p.get('seats_full') if p.get else p.seats_full %}
-          <a href="{{ (p.application_form_link or build_login_redirect_to_applicant_form_new(_slug, p.admission_cycle or (active_cycle.name if active_cycle else ''), campus=(p.campus or ''), intake_type=(p.intake_type or ''), admission_year=(active_cycle.admission_year if active_cycle else ''), academic_year=(active_cycle.academic_year if active_cycle else ''), program_level=(p.program_level or ''))) if (_is_cycle_active and not _is_full) else 'javascript:void(0)' }}" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;
+          {% set _base_login_link = (p.application_form_link or build_login_redirect_to_applicant_form_new(_slug, p.admission_cycle or (active_cycle.name if active_cycle else ''), campus=(p.campus or ''), intake_type=(p.intake_type or ''), admission_year=(active_cycle.admission_year if active_cycle else ''), academic_year=(active_cycle.academic_year if active_cycle else ''), program_level=(p.program_level or ''))) %}
+          <a href="{{ _base_login_link if (_is_cycle_active and not _is_full) else 'javascript:void(0)' }}"
+             data-base-url="{{ _base_login_link }}"
+             data-is-login="1"
+             class="prog-apply-btn"
+             style="display:inline-flex;align-items:center;justify-content:center;gap:6px;
                       padding:8px 18px;border-radius:2px;font-size:12px;font-weight:700;
                       text-decoration:none;color:#fff;
                       background:var(--primary,#CB2929);transition:opacity .2s;
@@ -1973,6 +1981,27 @@ document.addEventListener('DOMContentLoaded', function() {
           let match = !openFor || openFor.includes(currentFilter);
           
           if (match) {
+            let applyBtns = card.querySelectorAll('.prog-apply-btn');
+            applyBtns.forEach(btn => {
+              let baseUrl = btn.getAttribute('data-base-url');
+              if (baseUrl && btn.getAttribute('href') !== 'javascript:void(0)') {
+                 let isLogin = btn.getAttribute('data-is-login');
+                 if (currentFilter === 'International') {
+                    if (isLogin) {
+                       btn.href = baseUrl + '%26foriegn_national%3DYes';
+                    } else {
+                       btn.href = baseUrl + '&foriegn_national=Yes';
+                    }
+                 } else if (currentFilter === 'Domestic') {
+                    if (isLogin) {
+                       btn.href = baseUrl + '%26foriegn_national%3DNo%26nationality%3DIndian';
+                    } else {
+                       btn.href = baseUrl + '&foriegn_national=No&nationality=Indian';
+                    }
+                 }
+              }
+            });
+
             totalMatching++;
             if (visibleMatching < visibleCount) {
               card.style.display = 'flex';

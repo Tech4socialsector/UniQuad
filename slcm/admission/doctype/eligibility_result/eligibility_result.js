@@ -29,7 +29,7 @@ frappe.ui.form.on("Eligibility Result", {
                 // Populate the category child table from Applicant's reservation fields
                 frm.clear_table("category");
                 
-                if (app.whether_scstobc_ncl && app.whether_scstobc_ncl !== "NA") {
+                if (app.whether_scstobc_ncl && app.whether_scstobc_ncl !== "General") {
                     frm.add_child("category", { category: app.whether_scstobc_ncl });
                 }
                 if (app.pwd === "Yes") {
@@ -38,8 +38,6 @@ frappe.ui.form.on("Eligibility Result", {
                 if (app.karnataka_category === "Yes") {
                     frm.add_child("category", { category: "Karnataka" });
                 }
-                if (app.ews === "Yes") {
-                    frm.add_child("category", { category: "EWS" });
                 }
                 
                 frm.refresh_field("category");

@@ -117,6 +117,54 @@
   {
    "child": 0,
    "collapsible": 1,
+   "icon": "chart-bar-big",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Reports",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Section Break"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "icon": "align-horizontal-justify-end",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Test Center-wise Candidate Report",
+   "link_to": "Test Center-wise Candidate Detail Report",
+   "link_type": "Report",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "icon": "align-start-vertical",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Allocated Students by City",
+   "link_to": "Allocated Students by City",
+   "link_type": "Report",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "icon": "align-vertical-justify-center",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Allocated Students by Centre",
+   "link_to": "Allocated Students by Centre",
+   "link_type": "Report",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "align-vertical-space-around",
    "indent": 0,
    "keep_closed": 0,
    "label": "Helpers",
@@ -161,7 +209,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-08-05 15:13:43.376700",
+ "modified": "2026-10-07 12:09:45.854725",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Test",
