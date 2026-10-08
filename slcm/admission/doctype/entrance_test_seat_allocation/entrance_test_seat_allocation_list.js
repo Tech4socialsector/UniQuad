@@ -7,7 +7,7 @@ if (typeof window.etl_allocation_parent_dialog === 'undefined') {
 }
 
 if (!window.show_etl_allocation_success_toast) {
-    window.show_etl_allocation_success_toast = function(count, unallocated) {
+    window.show_etl_allocation_success_toast = function (count, unallocated) {
         if (!document.getElementById("etg-toast-style")) {
             const style = document.createElement("style");
             style.id = "etg-toast-style";
@@ -98,11 +98,11 @@ if (!window.show_etl_allocation_success_toast) {
 }
 
 frappe.listview_settings['Entrance Test Seat Allocation'] = {
-    onload: function(listview) {
+    onload: function (listview) {
         // Add to the 'Actions' menu that appears when records are selected
-        listview.page.add_actions_menu_item(__('Bulk Records Download'), function() {
+        listview.page.add_actions_menu_item(__('Bulk Records Download'), function () {
             const selected_items = listview.get_checked_items();
-            
+
             if (selected_items.length === 0) {
                 frappe.msgprint(__('Please select at least one record to download.'));
                 return;
@@ -141,7 +141,7 @@ frappe.listview_settings['Entrance Test Seat Allocation'] = {
             });
 
             // Listen for realtime progress from backend
-            frappe.realtime.on('progress', function(data) {
+            frappe.realtime.on('progress', function (data) {
                 if (data.title !== 'Bulk Download') return;
                 const pct = Math.min(Math.round(data.percent || 0), 100);
                 const desc = data.description || '';
@@ -157,7 +157,7 @@ frappe.listview_settings['Entrance Test Seat Allocation'] = {
             frappe.call({
                 method: 'slcm.admission.doctype.entrance_test_seat_allocation.entrance_test_seat_allocation.bulk_download_all_records',
                 args: { names: names },
-                callback: function(r) {
+                callback: function (r) {
                     frappe.realtime.off('progress');
                     progress_dialog.hide();
                     if (r.message) {
@@ -168,14 +168,14 @@ frappe.listview_settings['Entrance Test Seat Allocation'] = {
                         document.body.appendChild(link);
                         link.click();
                         document.body.removeChild(link);
-                        
+
                         frappe.show_alert({
                             message: __('ZIP download started successfully.'),
                             indicator: 'green'
                         });
                     }
                 },
-                error: function() {
+                error: function () {
                     frappe.realtime.off('progress');
                     progress_dialog.hide();
                 }
@@ -219,37 +219,42 @@ frappe.listview_settings['Entrance Test Seat Allocation'] = {
         const is_admin = frappe.user_roles.includes("Administrator") || frappe.user_roles.includes("System Manager");
 
         if (!is_applicant || is_admin) {
-            // 1. Update Entrance Test Rank
+            // 1. Download Attendance Sheet (placed on the left)
+            listview.page.add_inner_button(__("Download Attendance Sheet"), function () {
+                open_download_attendance_sheet_dialog(listview);
+            });
+
+            // 2. Update Entrance Test Rank
             listview.page.add_inner_button(__("Update Entrance Test Rank"), function () {
                 open_update_rank_dialog(listview);
             }, __("Actions"));
 
-            // 2. Generate Result Card
+            // 3. Generate Result Card
             listview.page.add_inner_button(__("Generate Result Card"), function () {
                 open_generate_result_card_dialog(listview);
             }, __("Actions"));
 
-            // 3. Publish Result
+            // 4. Publish Result
             listview.page.add_inner_button(__("Publish Result"), function () {
                 open_publish_result_dialog(listview);
             }, __("Actions"));
 
-            // 4. Reject and Allocate Centre
+            // 5. Reject and Allocate Centre
             listview.page.add_inner_button(__("Reject and Allocate Centre"), function () {
                 open_reject_and_allocate_dialog(listview);
             }, __("Actions"));
 
-            // 5. Export Marks Template
+            // 6. Export Marks Template
             listview.page.add_inner_button(__("Export Marks Template"), function () {
                 open_export_marks_dialog_for_list(listview);
             }, __("Actions"));
 
-            // 6. Reschedule
+            // 7. Reschedule
             listview.page.add_inner_button(__("Reschedule"), function () {
                 open_reschedule_dialog(listview);
             }, __("Actions"));
 
-            // 7. Centre List Download
+            // 8. Centre List Download
             listview.page.add_inner_button(__("Centre List Download"), function () {
                 open_centre_list_download_dialog(listview);
             }, __("Actions"));
@@ -274,14 +279,14 @@ function get_listview_filter_val(listview, fieldname) {
                     return f.value;
                 }
             }
-        } catch (e) {}
+        } catch (e) { }
     }
     try {
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.has(fieldname)) {
             return urlParams.get(fieldname);
         }
-    } catch (e) {}
+    } catch (e) { }
     return "";
 }
 
@@ -436,8 +441,8 @@ function open_publish_result_dialog(listview) {
                 options: "Academic Year",
                 default: default_ay,
                 reqd: 1,
-                change() { 
-                    update_dialog_applicant_count(pd); 
+                change() {
+                    update_dialog_applicant_count(pd);
                     update_unpublished_applicants_table(pd, false);
                 }
             },
@@ -449,8 +454,8 @@ function open_publish_result_dialog(listview) {
                 options: "Admission Cycle",
                 default: default_ac,
                 reqd: 1,
-                change() { 
-                    update_dialog_applicant_count(pd); 
+                change() {
+                    update_dialog_applicant_count(pd);
                     update_unpublished_applicants_table(pd, false);
                 }
             },
@@ -475,8 +480,8 @@ function open_publish_result_dialog(listview) {
                 options: "Domestic Applicants\nInternational Applicants\nBoth",
                 default: "Domestic Applicants",
                 reqd: 1,
-                change() { 
-                    update_dialog_applicant_count(pd); 
+                change() {
+                    update_dialog_applicant_count(pd);
                     update_unpublished_applicants_table(pd, false);
                 }
             },
@@ -487,8 +492,8 @@ function open_publish_result_dialog(listview) {
                 fieldtype: "Link",
                 options: "Programme",
                 depends_on: "eval:doc.program_level",
-                change() { 
-                    update_dialog_applicant_count(pd); 
+                change() {
+                    update_dialog_applicant_count(pd);
                     update_unpublished_applicants_table(pd, false);
                 }
             },
@@ -508,14 +513,14 @@ function open_publish_result_dialog(listview) {
                 fieldname: "send_email",
                 fieldtype: "Check",
                 default: 0,
-                onchange: function() {
+                onchange: function () {
                     let is_send = pd.get_value("send_email");
                     let format = pd.get_value("email_format");
-                    
+
                     if (pd.fields_dict.email_format) {
                         pd.fields_dict.email_format.$wrapper.toggle(!!is_send);
                     }
-                    
+
                     if (pd.fields_dict.custom_email_content) {
                         let show_editor = !!(is_send && format === "Custom");
                         pd.fields_dict.custom_email_content.$wrapper.toggle(show_editor);
@@ -532,10 +537,10 @@ function open_publish_result_dialog(listview) {
                 fieldtype: "Select",
                 options: "Default\nCustom",
                 default: "Default",
-                onchange: function() {
+                onchange: function () {
                     let is_send = pd.get_value("send_email");
                     let format = pd.get_value("email_format");
-                    
+
                     if (pd.fields_dict.custom_email_content) {
                         let show_editor = !!(is_send && format === "Custom");
                         pd.fields_dict.custom_email_content.$wrapper.toggle(show_editor);
@@ -949,6 +954,395 @@ function open_export_marks_dialog_for_list(listview) {
 // ──────────────────────────────────────────────────────────────────────────────
 
 // ──────────────────────────────────────────────────────────────────────────────
+//  open_download_attendance_sheet_dialog
+//  Shows a filter dialog then triggers an Attendance Sheet PDF download matching LLB.pdf.
+// ──────────────────────────────────────────────────────────────────────────────
+function open_download_attendance_sheet_dialog(listview) {
+    const default_ay = get_listview_filter_val(listview, "academic_year");
+    const default_ac = get_listview_filter_val(listview, "admission_cycle");
+    const default_pl = get_listview_filter_val(listview, "program_level");
+    const default_prog = get_listview_filter_val(listview, "program");
+    const default_cn = get_listview_filter_val(listview, "center_name");
+
+    let ad = new frappe.ui.Dialog({
+        title: __("Download Attendance Sheet"),
+        size: "extra-large",
+        fields: [
+            // ── Row 1: Academic Year | Admission Cycle | Programme Level | Programme ──
+            { fieldtype: "Section Break", label: __("Filters") },
+            {
+                label: __("Academic Year"),
+                fieldname: "academic_year",
+                fieldtype: "Link",
+                options: "Academic Year",
+                default: default_ay,
+                reqd: 1,
+                change() { _refresh_city_select(ad); _refresh_centre_select(ad); _update_attendance_preview(ad); }
+            },
+            { fieldtype: "Column Break" },
+            {
+                label: __("Admission Cycle"),
+                fieldname: "admission_cycle",
+                fieldtype: "Link",
+                options: "Admission Cycle",
+                default: default_ac,
+                reqd: 1,
+                change() { _refresh_city_select(ad); _refresh_centre_select(ad); _update_attendance_preview(ad); }
+            },
+            { fieldtype: "Column Break" },
+            {
+                label: __("Programme Level"),
+                fieldname: "program_level",
+                fieldtype: "Select",
+                options: "\nUndergraduate\nPostgraduate\nResearch Course",
+                default: default_pl,
+                description: __("Leave blank for all Programme levels"),
+                change() {
+                    ad.set_value("program", "");
+                    _refresh_centre_select(ad);
+                    _update_attendance_preview(ad);
+                }
+            },
+            { fieldtype: "Column Break" },
+            {
+                label: __("Programme"),
+                fieldname: "program",
+                fieldtype: "Link",
+                options: "Programme",
+                default: default_prog,
+                depends_on: "eval:doc.program_level",
+                change() {
+                    _refresh_city_select(ad);
+                    _refresh_centre_select(ad);
+                    _update_attendance_preview(ad);
+                }
+            },
+            // ── Row 2: Applicant Type | Entrance Test City | Centre Name ─────
+            { fieldtype: "Section Break" },
+            {
+                label: __("Applicant Type"),
+                fieldname: "applicant_type",
+                fieldtype: "Select",
+                options: "Domestic Applicants\nInternational Applicants\nBoth",
+                default: "Domestic Applicants",
+                reqd: 1,
+                change() { _refresh_city_select(ad); _refresh_centre_select(ad); _update_attendance_preview(ad); }
+            },
+            { fieldtype: "Column Break" },
+            {
+                label: __("Entrance Test City"),
+                fieldname: "entrance_test_city",
+                fieldtype: "Select",
+                options: "\nLoading cities...",
+                description: __("Leave blank for all cities"),
+                change() { _refresh_centre_select(ad); _update_attendance_preview(ad); }
+            },
+            { fieldtype: "Column Break" },
+            {
+                label: __("Centre Name"),
+                fieldname: "center_name",
+                fieldtype: "Select",
+                options: "\nLoading centres...",
+                description: __("Leave blank for all centres"),
+                change() { _update_attendance_preview(ad); }
+            },
+            // ── Preview section ────────────────────────────────────────────────
+            { fieldtype: "Section Break", label: __("Preview") },
+            {
+                fieldname: "attendance_preview_html",
+                fieldtype: "HTML",
+                options: `<div id="att-preview" style="min-height:50px; display:flex; align-items:center; justify-content:center; color:#718096; font-size:13px;">
+                    Fill the filters above to preview the data.
+                </div>`
+            }
+        ],
+        primary_action_label: `<span style="display:flex;align-items:center;gap:6px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Download Attendance Sheet PDF
+        </span>`,
+        primary_action(values) {
+            if (!values.academic_year || !values.admission_cycle) {
+                frappe.msgprint(__("Academic Year and Admission Cycle are required."));
+                return;
+            }
+
+            ad.disable_primary_action();
+            ad.get_primary_btn().text(__("Generating PDF..."));
+
+            if (!document.getElementById("att-progress-style")) {
+                const st = document.createElement("style");
+                st.id = "att-progress-style";
+                st.textContent = `
+                    @keyframes attPulse {
+                        0%, 100% { transform: scale(0.8); opacity: 0.5; }
+                        50% { transform: scale(1.2); opacity: 1; }
+                    }
+                `;
+                document.head.appendChild(st);
+            }
+
+            const preview_el = ad.$wrapper.find("#att-preview")[0];
+            if (preview_el) {
+                preview_el.innerHTML = `
+                    <div style="width:100%; padding:14px 18px; background:#f8fafc; border:1.5px solid #cbd5e1; border-radius:10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; font-size:13px; font-weight:600; color:#1e293b;">
+                            <span id="att-pdf-status" style="display:flex; align-items:center; gap:8px;">
+                                <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#2563eb; animation: attPulse 1.2s infinite ease-in-out;"></span>
+                                ${__("Generating Attendance Sheet PDF...")}
+                            </span>
+                            <span id="att-pdf-pct" style="color:#2563eb; font-weight:700; font-size:14px;">0%</span>
+                        </div>
+                        <div style="background:#e2e8f0; border-radius:8px; height:16px; overflow:hidden; position:relative; margin-bottom:6px;">
+                            <div id="att-pdf-bar" style="background: linear-gradient(90deg, #3b82f6, #1d4ed8); height:100%; width:0%; border-radius:8px; transition: width 0.3s ease;"></div>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; font-size:12px; color:#64748b;">
+                            <span id="att-pdf-counter">${__("Initializing PDF layout...")}</span>
+                            <span id="att-pdf-sub">${__("Please wait while PDF is created...")}</span>
+                        </div>
+                    </div>`;
+            }
+
+            let target_pct = 5;
+            let current_pct = 0;
+            let current_desc = __("Initializing PDF layout...");
+            let current_counter = __("Preparing candidate records...");
+            let is_completed = false;
+
+            const pdf_rendering_messages = [
+                __("Generating PDF document structure..."),
+                __("Formatting candidate pages and photo embeds..."),
+                __("Applying print layout and page breaks..."),
+                __("Compiling pages for download..."),
+                __("Optimizing document stream..."),
+                __("Finalizing PDF file creation..."),
+                __("Preparing download file...")
+            ];
+            let msg_idx = 0;
+
+            const updateAttProgressUI = function (pct, status, counter) {
+                const bar_el = ad.$wrapper.find("#att-pdf-bar")[0];
+                const pct_el = ad.$wrapper.find("#att-pdf-pct")[0];
+                const status_el = ad.$wrapper.find("#att-pdf-status")[0];
+                const counter_el = ad.$wrapper.find("#att-pdf-counter")[0];
+
+                const rounded_pct = Math.min(Math.round(pct), 100);
+                if (bar_el) bar_el.style.width = rounded_pct + "%";
+                if (pct_el) pct_el.textContent = rounded_pct + "%";
+                if (status_el && status) {
+                    status_el.innerHTML = `
+                        <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#2563eb; animation: attPulse 1.2s infinite ease-in-out;"></span>
+                        ${status}
+                    `;
+                }
+                if (counter_el && counter) counter_el.textContent = counter;
+            };
+
+            // Main smooth ticker running every 150ms: NEVER STOPS OR GETS STUCK!
+            const progress_ticker = setInterval(() => {
+                if (is_completed) return;
+
+                if (current_pct < target_pct) {
+                    current_pct += Math.max(0.4, (target_pct - current_pct) * 0.15);
+                } else if (current_pct >= 75 && current_pct < 99) {
+                    // Continuous smooth creep while generating PDF so it never stays stuck
+                    current_pct += 0.12;
+                    if (current_pct > 99) current_pct = 99;
+                }
+
+                updateAttProgressUI(current_pct, current_desc, current_counter);
+            }, 150);
+
+            // Dynamic description message rotator every 2 seconds during rendering phase
+            const msg_timer = setInterval(() => {
+                if (is_completed) return;
+                if (current_pct >= 70) {
+                    current_desc = pdf_rendering_messages[msg_idx % pdf_rendering_messages.length];
+                    msg_idx++;
+                }
+            }, 2000);
+
+            frappe.realtime.on("attendance_sheet_progress", function (data) {
+                if (is_completed) return;
+                const backend_pct = data.progress || 0;
+                if (backend_pct > target_pct) {
+                    target_pct = backend_pct;
+                }
+                if (data.description && backend_pct < 75) {
+                    current_desc = data.description;
+                }
+                if (data.total) {
+                    current_counter = __("{0} of {1} candidates processed", [data.current || 0, data.total]);
+                }
+            });
+
+            // Notify user if dialog is closed during processing
+            ad.onhide = function () {
+                if (!is_completed) {
+                    frappe.show_alert({
+                        message: __("PDF generation is running in background. Your download will start automatically once ready."),
+                        indicator: "blue"
+                    }, 6);
+                }
+            };
+            const cn_val = (values.center_name && values.center_name !== "(All Centres)") ? values.center_name : "";
+            const city_val = (values.entrance_test_city && values.entrance_test_city !== "(All Cities)") ? values.entrance_test_city : "";
+
+            frappe.call({
+                method: "slcm.admission.doctype.entrance_test_seat_allocation.entrance_test_seat_allocation.download_attendance_sheet_pdf",
+                args: {
+                    academic_year: values.academic_year,
+                    admission_cycle: values.admission_cycle,
+                    program_level: values.program_level || "",
+                    program: values.program || "",
+                    applicant_type: values.applicant_type || "Domestic Applicants",
+                    entrance_test_city: city_val,
+                    center_name: cn_val
+                },
+                callback(r) {
+                    is_completed = true;
+                    clearInterval(progress_ticker);
+                    clearInterval(msg_timer);
+                    frappe.realtime.off("attendance_sheet_progress");
+
+                    updateAttProgressUI(100, __("✅ Attendance Sheet PDF generated!"), __("Starting download..."));
+
+                    setTimeout(() => {
+                        ad.enable_primary_action();
+                        ad.get_primary_btn().html(ad.primary_action_label);
+
+                        if (r.message && r.message.file_url) {
+                            const { file_url, filename, total_candidates, total_pages } = r.message;
+
+                            const a = document.createElement("a");
+                            a.href = file_url;
+                            a.download = filename;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+
+                            ad.hide();
+
+                            frappe.show_alert({
+                                message: __(
+                                    `✅ Downloaded Attendance Sheet (<b>${total_pages}</b> pages) for <b>${total_candidates}</b> candidate(s).`
+                                ),
+                                indicator: "green"
+                            }, 7);
+                        }
+                    }, 400);
+                },
+                error() {
+                    is_completed = true;
+                    clearInterval(progress_ticker);
+                    clearInterval(msg_timer);
+                    frappe.realtime.off("attendance_sheet_progress");
+                    ad.enable_primary_action();
+                    ad.get_primary_btn().html(ad.primary_action_label);
+                    _update_attendance_preview(ad);
+                }
+            });
+        }
+    });
+
+    ad.set_query("admission_cycle", () => ({ filters: { status: "Active" } }));
+    ad.set_query("program", () => ({
+        query: "slcm.admission.doctype.entrance_test_generation.entrance_test_generation.get_program_query",
+        filters: {
+            program_level: ad.get_value("program_level"),
+            admission_cycle: ad.get_value("admission_cycle")
+        }
+    }));
+
+    ad.show();
+
+    if (default_ay || default_ac || default_pl || default_prog) {
+        ad.set_values({
+            academic_year: default_ay,
+            admission_cycle: default_ac,
+            program_level: default_pl,
+            program: default_prog,
+            applicant_type: "Domestic Applicants"
+        });
+    }
+
+    setTimeout(() => {
+        _refresh_city_select(ad);
+        _refresh_centre_select(ad, default_cn);
+        _update_attendance_preview(ad);
+    }, 300);
+
+    ["academic_year", "admission_cycle"].forEach(fn => {
+        const f = ad.fields_dict[fn];
+        if (f && f.$input) {
+            f.$input.on("change blur", () => {
+                _refresh_centre_select(ad);
+                _update_attendance_preview(ad);
+            });
+        }
+    });
+
+    const prog_f = ad.fields_dict["program"];
+    if (prog_f && prog_f.$input) {
+        prog_f.$input.on("change blur", () => {
+            _refresh_centre_select(ad);
+            _update_attendance_preview(ad);
+        });
+    }
+}
+
+function _update_attendance_preview(ad) {
+    const ay = ad.get_value("academic_year") || "";
+    const ac = ad.get_value("admission_cycle") || "";
+    const pl = ad.get_value("program_level") || "";
+    const at = ad.get_value("applicant_type") || "Domestic Applicants";
+    const prog = ad.get_value("program") || "";
+    const city_raw = ad.get_value("entrance_test_city") || "";
+    const city = (city_raw === "(All Cities)") ? "" : city_raw;
+    const cn_raw = ad.get_value("center_name") || "";
+    const cn = (cn_raw === "(All Centres)") ? "" : cn_raw;
+
+    const preview_el = ad.$wrapper.find("#att-preview")[0];
+    if (!preview_el) return;
+
+    if (!ay || !ac) {
+        preview_el.innerHTML = `<div style="min-height:50px; display:flex; align-items:center; justify-content:center; color:#718096; font-size:13px;">
+            Select Academic Year and Admission Cycle to preview attendance sheet.
+        </div>`;
+        return;
+    }
+
+    frappe.call({
+        method: "slcm.admission.doctype.entrance_test_seat_allocation.entrance_test_seat_allocation.get_attendance_sheet_preview_count",
+        args: {
+            academic_year: ay,
+            admission_cycle: ac,
+            program_level: pl,
+            program: prog,
+            applicant_type: at,
+            entrance_test_city: city,
+            center_name: cn
+        },
+        callback(r) {
+            const count = (r.message && r.message.count != null) ? r.message.count : 0;
+            const pages = Math.ceil(count / 10);
+            preview_el.innerHTML = `
+                <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:12px 18px; display:flex; align-items:center; justify-content:space-between;">
+                    <div>
+                        <span style="font-size:14px; font-weight:600; color:#166534;">Total Candidates: <b>${count}</b></span>
+                        <span style="font-size:12px; color:#15803d; margin-left:12px;">(${pages} page${pages === 1 ? '' : 's'} &bull; 10 candidates/page)</span>
+                    </div>
+                    <div style="font-size:12px; color:#374151;">
+                        Format: <b>NLSAT Attendance Sheet (A4 PDF)</b>
+                    </div>
+                </div>
+            `;
+        }
+    });
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
 //  open_centre_list_download_dialog
 //  Shows a filter dialog then triggers a per-centre Excel download (ZIP).
 // ──────────────────────────────────────────────────────────────────────────────
@@ -1064,24 +1458,65 @@ function open_centre_list_download_dialog(listview) {
             cd.disable_primary_action();
             cd.get_primary_btn().text(__("Generating..."));
 
-            // Show progress inside the dialog
+            if (!document.getElementById("att-progress-style")) {
+                const st = document.createElement("style");
+                st.id = "att-progress-style";
+                st.textContent = `
+                    @keyframes attPulse {
+                        0%, 100% { transform: scale(0.8); opacity: 0.5; }
+                        50% { transform: scale(1.2); opacity: 1; }
+                    }
+                `;
+                document.head.appendChild(st);
+            }
+
             const preview_el = cd.$wrapper.find("#cldd-preview")[0];
             if (preview_el) {
                 preview_el.innerHTML = `
-                    <div style="width:100%; text-align:center; padding:16px 0;">
-                        <div style="display:inline-flex; align-items:center; gap:10px; background:#EFF6FF; border:1px solid #BFDBFE; border-radius:8px; padding:12px 20px;">
-                            <div class="cldd-spinner" style="width:20px;height:20px;border:2px solid #BFDBFE;border-top-color:#1E40AF;border-radius:50%;animation:clddSpin 0.7s linear infinite;"></div>
-                            <span style="font-size:13px;color:#1E40AF;font-weight:600;">Building Excel sheets per centre...</span>
+                    <div style="width:100%; padding:14px 18px; background:#f8fafc; border:1.5px solid #cbd5e1; border-radius:10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; font-size:13px; font-weight:600; color:#1e293b;">
+                            <span id="cldd-excel-status" style="display:flex; align-items:center; gap:8px;">
+                                <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#2563eb; animation: attPulse 1.2s infinite ease-in-out;"></span>
+                                ${__("Building Excel sheets per centre...")}
+                            </span>
+                            <span id="cldd-excel-pct" style="color:#2563eb; font-weight:700; font-size:14px;">0%</span>
+                        </div>
+                        <div style="background:#e2e8f0; border-radius:8px; height:16px; overflow:hidden; position:relative; margin-bottom:6px;">
+                            <div id="cldd-excel-bar" style="background: linear-gradient(90deg, #3b82f6, #1d4ed8); height:100%; width:0%; border-radius:8px; transition: width 0.3s ease;"></div>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; font-size:12px; color:#64748b;">
+                            <span id="cldd-excel-counter">${__("Processing records...")}</span>
+                            <span id="cldd-excel-sub">${__("Please wait while ZIP is created...")}</span>
                         </div>
                     </div>`;
-                // Inject spinner keyframe once
-                if (!document.getElementById("cldd-spin-style")) {
-                    const st = document.createElement("style");
-                    st.id = "cldd-spin-style";
-                    st.textContent = "@keyframes clddSpin { to { transform: rotate(360deg); } }";
-                    document.head.appendChild(st);
-                }
             }
+
+            const updateClddProgress = function (pct, status, counter) {
+                const bar_el = cd.$wrapper.find("#cldd-excel-bar")[0];
+                const pct_el = cd.$wrapper.find("#cldd-excel-pct")[0];
+                const status_el = cd.$wrapper.find("#cldd-excel-status")[0];
+                const counter_el = cd.$wrapper.find("#cldd-excel-counter")[0];
+
+                const rounded_pct = Math.min(Math.round(pct), 100);
+                if (bar_el) bar_el.style.width = rounded_pct + "%";
+                if (pct_el) pct_el.textContent = rounded_pct + "%";
+                if (status_el && status) {
+                    status_el.innerHTML = `
+                        <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#2563eb; animation: attPulse 1.2s infinite ease-in-out;"></span>
+                        ${status}
+                    `;
+                }
+                if (counter_el && counter) counter_el.textContent = counter;
+            };
+
+            let sim_pct = 5;
+            const sim_timer = setInterval(() => {
+                if (sim_pct < 85) {
+                    sim_pct += Math.floor(Math.random() * 7) + 4;
+                    if (sim_pct > 85) sim_pct = 85;
+                    updateClddProgress(sim_pct, __("Formatting Excel workbooks per centre..."), __("Packing files into ZIP..."));
+                }
+            }, 350);
 
             const cn_val = (values.center_name && values.center_name !== "(All Centres)") ? values.center_name : "";
             const city_val = (values.entrance_test_city && values.entrance_test_city !== "(All Cities)") ? values.entrance_test_city : "";
@@ -1098,32 +1533,36 @@ function open_centre_list_download_dialog(listview) {
                     center_name: cn_val
                 },
                 callback(r) {
-                    cd.enable_primary_action();
-                    cd.get_primary_btn().html(cd.primary_action_label);
+                    clearInterval(sim_timer);
+                    updateClddProgress(100, __("Excel ZIP generated!"), __("Starting download..."));
 
-                    if (r.message && r.message.file_url) {
-                        const { file_url, filename, total_centres, total_applicants } = r.message;
+                    setTimeout(() => {
+                        cd.enable_primary_action();
+                        cd.get_primary_btn().html(cd.primary_action_label);
 
-                        // Trigger browser download
-                        const a = document.createElement("a");
-                        a.href = file_url;
-                        a.download = filename;
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
+                        if (r.message && r.message.file_url) {
+                            const { file_url, filename, total_centres, total_applicants } = r.message;
 
-                        cd.hide();
+                            const a = document.createElement("a");
+                            a.href = file_url;
+                            a.download = filename;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
 
-                        // Success toast
-                        frappe.show_alert({
-                            message: __(
-                                `✅ Downloaded <b>${total_centres}</b> centre sheet(s) for <b>${total_applicants}</b> applicant(s).`
-                            ),
-                            indicator: "green"
-                        }, 7);
-                    }
+                            cd.hide();
+
+                            frappe.show_alert({
+                                message: __(
+                                    `✅ Downloaded <b>${total_centres}</b> centre sheet(s) for <b>${total_applicants}</b> applicant(s).`
+                                ),
+                                indicator: "green"
+                            }, 7);
+                        }
+                    }, 400);
                 },
                 error() {
+                    clearInterval(sim_timer);
                     cd.enable_primary_action();
                     cd.get_primary_btn().html(cd.primary_action_label);
                     if (preview_el) _render_centre_preview_error(preview_el);
@@ -1216,11 +1655,11 @@ function _refresh_city_select(cd, pre_select_value) {
  * Optionally pre-select a value after loading.
  */
 function _refresh_centre_select(cd, pre_select_value) {
-    const ay   = cd.get_value("academic_year")        || "";
-    const ac   = cd.get_value("admission_cycle")      || "";
-    const pl   = cd.get_value("program_level")        || "";
-    const at   = cd.get_value("applicant_type")       || "Domestic Applicants";
-    const prog = cd.get_value("program")              || "";
+    const ay = cd.get_value("academic_year") || "";
+    const ac = cd.get_value("admission_cycle") || "";
+    const pl = cd.get_value("program_level") || "";
+    const at = cd.get_value("applicant_type") || "Domestic Applicants";
+    const prog = cd.get_value("program") || "";
     const city_raw = cd.get_value("entrance_test_city") || "";
     const city = (city_raw === "(All Cities)") ? "" : city_raw;
 
@@ -1240,7 +1679,7 @@ function _refresh_centre_select(cd, pre_select_value) {
             cn_field.refresh();
             // Restore previously selected value if still valid
             const current = cn_field.get_value();
-            const target  = pre_select_value || current || "";
+            const target = pre_select_value || current || "";
             const target_clean = target === "(All Centres)" ? "" : target;
             const valid_names = centres.map(c => c.name);
             if (target_clean && valid_names.includes(target_clean)) {
@@ -1256,15 +1695,15 @@ function _refresh_centre_select(cd, pre_select_value) {
  * Fetch and render a preview tile: total applicants + list of centres in the selection.
  */
 function _update_centre_preview(cd) {
-    const ay      = cd.get_value("academic_year")         || "";
-    const ac      = cd.get_value("admission_cycle")       || "";
-    const pl      = cd.get_value("program_level")         || "";
-    const at      = cd.get_value("applicant_type")        || "Domestic Applicants";
-    const prog    = cd.get_value("program")               || "";
-    const cn_raw  = cd.get_value("center_name")           || "";
-    const cn      = (cn_raw === "(All Centres)") ? "" : cn_raw;
-    const city_raw = cd.get_value("entrance_test_city")   || "";
-    const city    = (city_raw === "(All Cities)")  ? "" : city_raw;
+    const ay = cd.get_value("academic_year") || "";
+    const ac = cd.get_value("admission_cycle") || "";
+    const pl = cd.get_value("program_level") || "";
+    const at = cd.get_value("applicant_type") || "Domestic Applicants";
+    const prog = cd.get_value("program") || "";
+    const cn_raw = cd.get_value("center_name") || "";
+    const cn = (cn_raw === "(All Centres)") ? "" : cn_raw;
+    const city_raw = cd.get_value("entrance_test_city") || "";
+    const city = (city_raw === "(All Cities)") ? "" : city_raw;
 
     const preview_el = cd.$wrapper.find("#cldd-preview")[0];
     if (!preview_el) return;
@@ -1351,7 +1790,7 @@ function open_reschedule_dialog(listview) {
         method: 'frappe.client.get_list',
         args: {
             doctype: 'Entrance Test Provider',
-            filters: { 
+            filters: {
                 active: 1,
                 available_capacity: [">", 0]
             },
@@ -1875,7 +2314,7 @@ function _show_reschedule_dialog(listview, all_providers) {
                             <tbody id="reschedule-applicant-table-body"></tbody>
                         </table>
                     </div>`;
-                
+
                 d.get_field('applicants_html').$wrapper.html(html);
                 render_applicant_page();
             }
@@ -1973,7 +2412,7 @@ function _show_reject_and_allocate_dialog(listview, initial_providers) {
     }
 
     function render_center_page() {
-        if(!d || !d.$wrapper) return;
+        if (!d || !d.$wrapper) return;
         const filtered = get_filtered_providers();
         const total_pages = Math.ceil(filtered.length / center_page_size) || 1;
         if (center_current_page > total_pages) center_current_page = total_pages;
@@ -2036,7 +2475,7 @@ function _show_reject_and_allocate_dialog(listview, initial_providers) {
     }
 
     function update_center_counts() {
-        if(!d || !d.$wrapper) return;
+        if (!d || !d.$wrapper) return;
         const sel_count = selected_provider_names.size;
         const total_count = all_providers.length;
         const filtered_count = get_filtered_providers().length;
@@ -2066,7 +2505,7 @@ function _show_reject_and_allocate_dialog(listview, initial_providers) {
     }
 
     function render_applicant_page() {
-        if(!d || !d.$wrapper) return;
+        if (!d || !d.$wrapper) return;
         const filtered = get_filtered_applicants();
         const total_pages = Math.ceil(filtered.length / applicant_page_size) || 1;
         if (applicant_current_page > total_pages) applicant_current_page = total_pages;
@@ -2108,7 +2547,7 @@ function _show_reject_and_allocate_dialog(listview, initial_providers) {
     }
 
     function update_applicant_counts(filtered_length) {
-        if(!d || !d.$wrapper) return;
+        if (!d || !d.$wrapper) return;
         const sel_count = selected_applicant_names.size;
         const total_count = applicants.length;
         if (filtered_length !== undefined && filtered_length !== total_count) {
@@ -2121,7 +2560,7 @@ function _show_reject_and_allocate_dialog(listview, initial_providers) {
     }
 
     function update_allocation_type_ui() {
-        if(!d || !d.$wrapper) return;
+        if (!d || !d.$wrapper) return;
         const alloc_type = d.get_value("allocation_type");
         if (alloc_type === "Allocate Directly") {
             if (selected_provider_names.size > 1) {
@@ -2160,7 +2599,7 @@ function _show_reject_and_allocate_dialog(listview, initial_providers) {
                 options: ["Allocate Directly", "Allow Applicant Selection"],
                 default: "Allocate Directly",
                 reqd: 1,
-                onchange: function() {
+                onchange: function () {
                     update_allocation_type_ui();
                 }
             },
@@ -2176,7 +2615,7 @@ function _show_reject_and_allocate_dialog(listview, initial_providers) {
                 fieldname: "entrance_test_city",
                 fieldtype: "Link",
                 options: "Entrance Test City",
-                onchange: function() {
+                onchange: function () {
                     fetch_and_render_providers();
                 }
             },
@@ -2185,7 +2624,7 @@ function _show_reject_and_allocate_dialog(listview, initial_providers) {
                 fieldname: "check_available_seats_by_programme",
                 fieldtype: "Link",
                 options: "Programme",
-                onchange: function() {
+                onchange: function () {
                     fetch_and_render_providers();
                 }
             },
@@ -2278,7 +2717,7 @@ function _show_reject_and_allocate_dialog(listview, initial_providers) {
             if (values.allocation_type === "Allocate Directly" && selected_providers_array.length) {
                 const selected_provider = all_providers.find(p => p.name === selected_providers_array[0]);
                 if (selected_provider) {
-                    const same_centre_applicants = applicants.filter(a => 
+                    const same_centre_applicants = applicants.filter(a =>
                         selected_applicant_names.has(a.name) && a.center_name === selected_provider.center_name
                     );
                     if (same_centre_applicants.length > 0) {
@@ -2352,7 +2791,7 @@ function _show_reject_and_allocate_dialog(listview, initial_providers) {
     d.$wrapper.on("change", ".provider-checkbox", function () {
         const name = $(this).data("name");
         const alloc_type = d.get_value("allocation_type");
-        
+
         if (alloc_type === "Allocate Directly") {
             if (this.checked) {
                 selected_provider_names.clear();
@@ -2396,7 +2835,7 @@ function _show_reject_and_allocate_dialog(listview, initial_providers) {
     d.$wrapper.on("change", "#select-all-chk", function () { const filtered = get_filtered_applicants(); if (this.checked) filtered.forEach(a => selected_applicant_names.add(a.name)); else filtered.forEach(a => selected_applicant_names.delete(a.name)); render_applicant_page(); });
 
     // Handle auto select count
-    d.fields_dict.auto_select_count.df.onchange = function() {
+    d.fields_dict.auto_select_count.df.onchange = function () {
         const count = d.get_value("auto_select_count") || 0;
         const filtered = get_filtered_applicants();
         selected_applicant_names.clear();
@@ -2423,14 +2862,14 @@ function _show_reject_and_allocate_dialog(listview, initial_providers) {
                 applicants = r.message || [];
                 selected_applicant_names.clear();
                 applicant_current_page = 1;
-                
+
                 const unique_programme_levels = [...new Set(applicants.map(a => a.program_level).filter(Boolean))].sort();
                 const unique_programmes = [...new Set(applicants.map(a => a.program).filter(Boolean))].sort();
 
-                const prog_level_options = `<option value="">${__("All Levels")}</option>` + 
+                const prog_level_options = `<option value="">${__("All Levels")}</option>` +
                     unique_programme_levels.map(l => `<option value="${l}" ${applicant_filters.programme_level === l.toLowerCase().trim() ? 'selected' : ''}>${l}</option>`).join("");
-                    
-                const prog_options = `<option value="">${__("All Programmes")}</option>` + 
+
+                const prog_options = `<option value="">${__("All Programmes")}</option>` +
                     unique_programmes.map(p => `<option value="${p}" ${applicant_filters.programme === p.toLowerCase().trim() ? 'selected' : ''}>${p}</option>`).join("");
 
                 let html = `
@@ -2500,7 +2939,7 @@ function _show_reject_and_allocate_dialog(listview, initial_providers) {
                             <tbody id="rej-applicant-table-body"></tbody>
                         </table>
                     </div>`;
-                
+
                 d.get_field('applicants_html').$wrapper.html(html);
                 render_applicant_page();
             }
@@ -2697,7 +3136,7 @@ function _show_reallocation_confirmation(parent_dialog, listview, result, select
     centres.forEach(cd => {
         const avail_pct = cd.total_capacity > 0 ? Math.round((cd.available_capacity / cd.total_capacity) * 100) : 0;
         const bar_color = avail_pct > 50 ? "#22c55e" : avail_pct > 20 ? "#eab308" : "#ef4444";
-        
+
         let prog_details_html = '';
         if (cd.programme_capacities && Object.keys(cd.programme_capacities).length > 0) {
             prog_details_html = `<div style="margin-top:8px; border-top:1px dashed #e2e8f0; padding-top:6px;">`;
@@ -2823,7 +3262,7 @@ function _show_reallocation_confirmation(parent_dialog, listview, result, select
             etl_allocation_progress_dialog.$wrapper.find("#etg-progress-percent").text(`0%`);
             etl_allocation_progress_dialog.$wrapper.find("#etg-current-applicant").html("Initializing seat allocation...");
             etl_allocation_progress_dialog.$wrapper.find("#etg-counter-text").text(`Processing 0 of ${total_count}`);
-            
+
             etl_allocation_progress_dialog.show();
 
             frappe.call({
@@ -2867,31 +3306,31 @@ function _show_reallocation_confirmation(parent_dialog, listview, result, select
 
     setTimeout(() => {
         const $wrapper = confirm_dialog.$wrapper;
-        
-        $wrapper.find(".centre-cell-click").on("click", function() {
+
+        $wrapper.find(".centre-cell-click").on("click", function () {
             const provider = $(this).attr("data-center-id");
             if (!provider) return;
-            
+
             $wrapper.find(".centre-cell-click").css("background", "transparent");
-            $(this).css("background", "#fef9c3").delay(500).queue(function(next) {
+            $(this).css("background", "#fef9c3").delay(500).queue(function (next) {
                 $(this).css("background", "transparent");
                 next();
             });
 
             $wrapper.find(".centre-summary-card").hide();
             $wrapper.find(`.centre-summary-card[data-center-id="${provider}"]`).show();
-            
+
             $wrapper.find(".show-all-centres").show();
         });
 
-        $wrapper.find(".show-all-centres").on("click", function() {
+        $wrapper.find(".show-all-centres").on("click", function () {
             $wrapper.find(".centre-summary-card").show();
             $(this).hide();
         });
-        
+
         $wrapper.find(".centre-cell-click").hover(
-            function() { $(this).css("background-color", "#f1f5f9"); },
-            function() { $(this).css("background-color", "transparent"); }
+            function () { $(this).css("background-color", "#f1f5f9"); },
+            function () { $(this).css("background-color", "transparent"); }
         );
     }, 100);
 }
@@ -3045,27 +3484,27 @@ function render_unpublished_applicants_table(pd, html_field, records, total_coun
 
     // Event listeners
     let timeout = null;
-    html_field.$wrapper.find('.unpub-filter').on('input change', function() {
+    html_field.$wrapper.find('.unpub-filter').on('input change', function () {
         let filter_name = $(this).attr('data-filter');
         let val = $(this).val();
         state[filter_name] = val;
-        
+
         clearTimeout(timeout);
         timeout = setTimeout(() => {
             update_unpublished_applicants_table(pd, false);
         }, 500);
     });
 
-    html_field.$wrapper.find('.unpub-clear-all').on('click', function() {
+    html_field.$wrapper.find('.unpub-clear-all').on('click', function () {
         state.selected_names = [];
         html_field.$wrapper.find('.unpub-select-row').prop('checked', false);
         html_field.$wrapper.find('.unpub-select-all').prop('checked', false);
         html_field.$wrapper.find('.unpub-selected-count').text(0);
     });
 
-    html_field.$wrapper.find('.unpub-select-all').on('change', function() {
+    html_field.$wrapper.find('.unpub-select-all').on('change', function () {
         let is_checked = $(this).is(':checked');
-        
+
         if (!is_checked) {
             state.selected_names = [];
             html_field.$wrapper.find('.unpub-select-row').prop('checked', false);
@@ -3074,7 +3513,7 @@ function render_unpublished_applicants_table(pd, html_field, records, total_coun
             html_field.$wrapper.find('.unpub-select-row').prop('checked', true);
             let btn = $(this);
             btn.prop('disabled', true);
-            
+
             frappe.call({
                 method: "slcm.admission.doctype.entrance_test_seat_allocation.entrance_test_seat_allocation.get_unpublished_applicants_for_dialog",
                 args: {
@@ -3102,28 +3541,28 @@ function render_unpublished_applicants_table(pd, html_field, records, total_coun
         }
     });
 
-    html_field.$wrapper.find('.unpub-select-row').on('change', function() {
+    html_field.$wrapper.find('.unpub-select-row').on('change', function () {
         let name = $(this).attr('data-name');
         if ($(this).is(':checked')) {
             if (!state.selected_names.includes(name)) state.selected_names.push(name);
         } else {
             state.selected_names = state.selected_names.filter(n => n !== name);
         }
-        
+
         html_field.$wrapper.find('.unpub-selected-count').text(state.selected_names.length);
-        
+
         let all_checked = html_field.$wrapper.find('.unpub-select-row:not(:checked)').length === 0;
         html_field.$wrapper.find('.unpub-select-all').prop('checked', all_checked && records.length > 0);
     });
 
-    html_field.$wrapper.find('.unpub-prev').on('click', function() {
+    html_field.$wrapper.find('.unpub-prev').on('click', function () {
         if (state.page > 1) {
             state.page--;
             update_unpublished_applicants_table(pd, true);
         }
     });
 
-    html_field.$wrapper.find('.unpub-next').on('click', function() {
+    html_field.$wrapper.find('.unpub-next').on('click', function () {
         if (state.page < total_pages) {
             state.page++;
             update_unpublished_applicants_table(pd, true);
