@@ -193,16 +193,7 @@ def get_context(context):
         upcoming_sessions = 0
         
         for s in sessions:
-            is_completed = False
-            # Check if date is in the past
             if s["session_date"] < today_date_str:
-                is_completed = True
-            elif s["session_date"] == today_date_str:
-                # If today, check if time has passed or if it's already marked
-                if s["marked"] or s["from_time_sort"] < current_time_str:
-                    is_completed = True
-
-            if is_completed:
                 completed_sessions += 1
                 if s["marked"]:
                     marked_sessions += 1
@@ -210,6 +201,14 @@ def get_context(context):
                 else:
                     pending_sessions += 1
                     s["computed_status"] = "Pending"
+            elif s["session_date"] == today_date_str:
+                if s["marked"]:
+                    completed_sessions += 1
+                    marked_sessions += 1
+                    s["computed_status"] = "Marked"
+                else:
+                    pending_sessions += 1
+                    s["computed_status"] = "Active"
             else:
                 upcoming_sessions += 1
                 s["computed_status"] = "Upcoming"

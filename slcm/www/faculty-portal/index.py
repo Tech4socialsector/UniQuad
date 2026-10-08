@@ -27,8 +27,11 @@ def get_context(context):
         faculty = frappe.get_doc("Faculty", faculty_name)
         set_faculty_nav(context, faculty)
         context.faculty_details = _build_faculty_details(faculty, context)
+        context.faculty_official_email = faculty.official_email_id
+        context.faculty_email = faculty.email if faculty.email != faculty.official_email_id else None
 
         today = frappe.utils.today()
+        context.calendar_today = today
 
         # ── Course Offerings assigned to this faculty ──────────────
         active_ays = frappe.get_all("Academic Year", filters={"status": "Active"}, pluck="name")

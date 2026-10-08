@@ -194,11 +194,41 @@ frappe.ui.form.on('Time Table', {
 
     course_offering: function (frm) {
         if (frm.doc.course_offering) {
-            frappe.db.get_value("Course Offering", frm.doc.course_offering, ["course_title", "program", "faculty"], (r) => {
+            frappe.db.get_value("Course Offering", frm.doc.course_offering, ["course_title", "program", "faculty", "term_name"], (r) => {
                 if (r) {
                     frm.set_value("course", r.course_title);
                     frm.set_value("programme", r.program);
                     if (r.faculty) frm.set_value("instructor", r.faculty);
+                    if (r.term_name) frm.set_value("term", r.term_name);
+                }
+            });
+        }
+    },
+
+    course_schedule: function (frm) {
+        if (frm.doc.course_schedule) {
+            frappe.db.get_value("Course Schedule", frm.doc.course_schedule, ["schedule_date", "from_time", "to_time", "room", "course_offering", "instructor"], (r) => {
+                if (r) {
+                    frm.set_value("schedule_date", r.schedule_date);
+                    frm.set_value("from_time", r.from_time);
+                    frm.set_value("to_time", r.to_time);
+                    frm.set_value("venue", r.room);
+                    if (r.course_offering) frm.set_value("course_offering", r.course_offering);
+                    if (r.instructor) frm.set_value("instructor", r.instructor);
+                }
+            });
+        }
+    },
+
+    office_hours_group: function (frm) {
+        if (frm.doc.office_hours_group) {
+            frappe.db.get_value("Office Hours Group", frm.doc.office_hours_group, ["date", "from_time", "to_time", "course_offering", "instructor"], (r) => {
+                if (r) {
+                    frm.set_value("schedule_date", r.date);
+                    frm.set_value("from_time", r.from_time);
+                    frm.set_value("to_time", r.to_time);
+                    if (r.course_offering) frm.set_value("course_offering", r.course_offering);
+                    if (r.instructor) frm.set_value("instructor", r.instructor);
                 }
             });
         }

@@ -621,6 +621,7 @@
           <span class="fp-ms fp-msf-chevron">expand_more</span>
         </button>
         <div class="fp-msf-panel">
+          <label class="fp-msf-option"><input type="checkbox" value="active" onchange="fpFilterSessions()"><span>Active</span></label>
           <label class="fp-msf-option"><input type="checkbox" value="marked" onchange="fpFilterSessions()"><span>Marked</span></label>
           <label class="fp-msf-option"><input type="checkbox" value="pending" onchange="fpFilterSessions()"><span>Pending</span></label>
           <label class="fp-msf-option"><input type="checkbox" value="upcoming" onchange="fpFilterSessions()"><span>Upcoming</span></label>
@@ -693,6 +694,8 @@
                 <span class="fp-badge fp-badge-success"><span class="fp-ms" style="font-size:12px;">check_circle</span>Marked</span>
               {% elif s.computed_status == 'Pending' %}
                 <span class="fp-badge fp-badge-warning"><span class="fp-ms" style="font-size:12px;">schedule</span>Pending</span>
+              {% elif s.computed_status == 'Active' %}
+                <span class="fp-badge fp-badge-success"><span class="fp-ms" style="font-size:12px;">play_circle</span>Active</span>
               {% else %}
                 <span class="fp-badge fp-badge-neutral"><span class="fp-ms" style="font-size:12px;">schedule</span>Upcoming</span>
               {% endif %}
@@ -700,6 +703,12 @@
             <td data-label="Actions" class="fp-col-actions" style="text-align:center;" onclick="event.stopPropagation()">
               {% if s.computed_status == 'Pending' %}
               <button class="fp-btn fp-btn-primary fp-btn-sm"
+                      onclick='fpOpenMarkModal({{ s.name | tojson }}, {{ s.course_name | tojson }})'
+                      title="Mark attendance" aria-label="Mark attendance for {{ s.course_name }}">
+                <span class="fp-ms">how_to_reg</span><span class="fp-btn-label">Mark</span>
+              </button>
+              {% elif s.computed_status == 'Active' %}
+              <button class="fp-btn fp-btn-success fp-btn-sm"
                       onclick='fpOpenMarkModal({{ s.name | tojson }}, {{ s.course_name | tojson }})'
                       title="Mark attendance" aria-label="Mark attendance for {{ s.course_name }}">
                 <span class="fp-ms">how_to_reg</span><span class="fp-btn-label">Mark</span>
@@ -2443,6 +2452,7 @@ function _drillCell(val, type) {
   if (type === 'bool_status') {
     if (val === 'Marked') return '<span class="fp-badge fp-badge-success"><span class="fp-ms" style="font-size:12px;">check_circle</span>Marked</span>';
     if (val === 'Pending') return '<span class="fp-badge fp-badge-warning"><span class="fp-ms" style="font-size:12px;">schedule</span>Pending</span>';
+    if (val === 'Active') return '<span class="fp-badge fp-badge-success"><span class="fp-ms" style="font-size:12px;">play_circle</span>Active</span>';
     return '<span class="fp-badge fp-badge-neutral"><span class="fp-ms" style="font-size:12px;">schedule</span>Upcoming</span>';
   }
   if (type === 'badge') {
@@ -2465,7 +2475,7 @@ function attDrillRowClick(tr) {
   var course      = tr.getAttribute('data-course');
   _closeModal('att-drill-modal');
   
-  if (status === 'Pending') {
+  if (status === 'Pending' || status === 'Active') {
     fpOpenMarkModal(sessionName, course);
   } else {
     fpViewSession(sessionName);

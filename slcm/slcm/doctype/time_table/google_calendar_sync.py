@@ -17,6 +17,35 @@ def get_active_google_calendar_account():
 	)
 
 
+def _ensure_google_calendar_ready():
+	"""Throw a user-readable error if Google Calendar sync can't work yet,
+	instead of letting every class fail later with a raw traceback."""
+	account = get_active_google_calendar_account()
+	if not account:
+		frappe.throw(
+			"Google Calendar sync is not configured yet. Contact the administrator.",
+			title="Calendar Sync Unavailable",
+		)
+
+	settings = frappe.get_cached_doc("Google Settings")
+	if not settings.enable or not settings.client_id:
+		frappe.throw(
+			"Google API is not enabled in Google Settings. Contact the administrator.",
+			title="Calendar Sync Unavailable",
+		)
+
+	# refresh_token is a Password field: the stored value is masked but non-empty
+	# once Google access has been granted.
+	if not frappe.db.get_value("Google Calendar", account, "refresh_token"):
+		frappe.throw(
+			f"The Google Calendar account <b>{account}</b> has not been authorized yet. "
+			"An administrator must open it and click <b>Allow Google Calendar Access</b>.",
+			title="Calendar Sync Unavailable",
+		)
+
+	return account
+
+
 def build_event_fields(doc):
 	subject = doc.title or doc.course or "Class"
 	if doc.venue:
@@ -29,7 +58,7 @@ def build_event_fields(doc):
 	}
 
 
-def sync_time_table_to_google_calendar(doc, method=None):
+def sync_time_table_to_google_calendar(doc, method=None, raise_error=False):
 	"""Create/update a linked Event so this Time Table entry pushes to Google
 	Calendar via Frappe's existing Event -> Google Calendar sync hooks."""
 	if not (doc.schedule_date and doc.from_time and doc.to_time):
@@ -39,6 +68,9 @@ def sync_time_table_to_google_calendar(doc, method=None):
 	if not account:
 		return
 
+	# If the Google push in Event.after_insert fails, the Event row is already
+	# written — roll back to here so we don't leave orphan Events behind.
+	frappe.db.savepoint("tt_gcal_sync")
 	try:
 		event_fields = build_event_fields(doc)
 
@@ -62,9 +94,12 @@ def sync_time_table_to_google_calendar(doc, method=None):
 				"Time Table", doc.name, "linked_google_event", event.name, update_modified=False
 			)
 	except Exception:
+		frappe.db.rollback(save_point="tt_gcal_sync")
 		frappe.log_error(
 			message=frappe.get_traceback(), title="Time Table Google Calendar Sync Failed"
 		)
+		if raise_error:
+			raise
 
 
 def _get_student_for_session_user():
@@ -120,8 +155,7 @@ def sync_student_calendar(email):
 	if email not in allowed_emails:
 		frappe.throw("You can only sync using your own registered email address.")
 
-	if not get_active_google_calendar_account():
-		frappe.throw("Google Calendar sync is not configured yet. Contact the administrator.")
+	_ensure_google_calendar_ready()
 
 	full_name = " ".join(filter(None, [student.first_name, student.last_name]))
 	contact_name = _get_or_create_contact_for_email(email, full_name)
@@ -142,13 +176,23 @@ def sync_student_calendar(email):
 		limit_page_length=0,
 	)
 
-	synced, failed = 0, 0
+	return _add_contact_to_time_tables(schedule_names, contact_name, "Student Calendar Sync Failed")
+
+
+def _error_text(exc):
+	return frappe.utils.strip_html(str(exc)).strip() or exc.__class__.__name__
+
+
+def _add_contact_to_time_tables(schedule_names, contact_name, error_title):
+	"""Returns {"synced", "failed", "error"} — `error` is the first failure
+	reason, so the portal can show why classes could not be synced."""
+	synced, failed, first_error = 0, 0, None
 	for tt_name in schedule_names:
 		try:
 			tt = frappe.get_doc("Time Table", tt_name)
 
 			if not tt.linked_google_event:
-				sync_time_table_to_google_calendar(tt)
+				sync_time_table_to_google_calendar(tt, raise_error=True)
 				tt.reload()
 
 			if not tt.linked_google_event:
@@ -165,11 +209,67 @@ def sync_student_calendar(email):
 				event.set_participants_email()
 				event.save(ignore_permissions=True)
 			synced += 1
-		except Exception:
+		except Exception as e:
 			failed += 1
-			frappe.log_error(message=frappe.get_traceback(), title="Student Calendar Sync Failed")
+			first_error = first_error or _error_text(e)
+			frappe.log_error(message=frappe.get_traceback(), title=error_title)
 
-	return {"synced": synced, "failed": failed}
+	return {"synced": synced, "failed": failed, "error": first_error}
+
+
+@frappe.whitelist()
+def sync_faculty_calendar(email):
+	"""Add the requesting faculty member as a Google Calendar attendee on every
+	upcoming class they teach — Time Table entries where they are the
+	instructor or that belong to a Course Offering assigned to them."""
+	from slcm.utils.faculty_portal import get_faculty_name
+
+	faculty_name = get_faculty_name()
+	if not faculty_name:
+		frappe.throw("No faculty record found for your account.")
+	faculty = frappe.get_doc("Faculty", faculty_name)
+
+	allowed_emails = {e for e in [faculty.email, faculty.official_email_id] if e}
+	if email not in allowed_emails:
+		frappe.throw("You can only sync using your own registered email address.")
+
+	_ensure_google_calendar_ready()
+
+	full_name = " ".join(filter(None, [faculty.first_name, faculty.last_name]))
+	contact_name = _get_or_create_contact_for_email(email, full_name)
+
+	course_offerings = frappe.get_all(
+		"Course Offering", filters={"faculty": faculty_name}, pluck="name", ignore_permissions=True
+	)
+
+	today = str(frappe.utils.getdate())
+	base_filters = [["schedule_date", ">=", today], ["docstatus", "<", 2]]
+	schedule_names = set(
+		frappe.get_all(
+			"Time Table",
+			filters=base_filters + [["instructor", "=", faculty_name]],
+			pluck="name",
+			limit_page_length=0,
+			ignore_permissions=True,
+		)
+	)
+	if course_offerings:
+		schedule_names.update(
+			frappe.get_all(
+				"Time Table",
+				filters=base_filters + [["course_offering", "in", course_offerings]],
+				pluck="name",
+				limit_page_length=0,
+				ignore_permissions=True,
+			)
+		)
+
+	if not schedule_names:
+		return {"synced": 0, "failed": 0, "message": "No upcoming classes found."}
+
+	return _add_contact_to_time_tables(
+		sorted(schedule_names), contact_name, "Faculty Calendar Sync Failed"
+	)
 
 
 def delete_linked_google_event(doc, method=None):
