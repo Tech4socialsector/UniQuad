@@ -142,6 +142,9 @@ body.fp-dark {
 /* ── Reset ────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 
+/* Form controls don't inherit font by default — make them follow the portal font */
+button, input, select, textarea, optgroup { font-family: inherit; }
+
 body {
   font-family: var(--fp-font-family);
   background: var(--fp-bg);

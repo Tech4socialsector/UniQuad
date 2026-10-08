@@ -241,7 +241,7 @@
 }
 .sat-student-info { flex: 1; min-width: 0; }
 .sat-student-name { font-size: 13px; font-weight: 600; color: var(--fp-text-1); }
-.sat-student-id   { font-size: 11px; color: var(--fp-text-4); font-family: monospace; margin-top: 1px; }
+.sat-student-id   { font-size: 11px; color: var(--fp-text-4); font-family: var(--fp-mono); margin-top: 1px; }
 .sat-status-badge {
   width: 26px; height: 26px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
@@ -786,8 +786,10 @@
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
-    flatpickr("#fp-date-filter-from", { altInput: true, altFormat: "d/m/Y", dateFormat: "Y-m-d" });
-    flatpickr("#fp-date-filter-to", { altInput: true, altFormat: "d/m/Y", dateFormat: "Y-m-d" });
+    /* Default the session date range to today */
+    flatpickr("#fp-date-filter-from", { altInput: true, altFormat: "d/m/Y", dateFormat: "Y-m-d", defaultDate: "today" });
+    flatpickr("#fp-date-filter-to", { altInput: true, altFormat: "d/m/Y", dateFormat: "Y-m-d", defaultDate: "today" });
+    if (document.getElementById('fp-date-filter-from')) fpFilterSessions();
     if(document.getElementById('sat-date')) {
       flatpickr("#sat-date", { altInput: true, altFormat: "d/m/Y", dateFormat: "Y-m-d" });
     }
@@ -1227,11 +1229,29 @@ function fpSortSessions(key) {
   }
 })();
 
+/* ?mark=<session> (e.g. from the dashboard's "Pending" badge) — open the
+   Mark Attendance modal for that session straight away. Waits for
+   DOMContentLoaded because the modal markup is rendered after this script. */
+document.addEventListener('DOMContentLoaded', function() {
+  var p = new URLSearchParams(window.location.search);
+  var markSession = p.get('mark');
+  if (!markSession) return;
+  /* Drop the param so a reload / Back doesn't reopen the modal */
+  p.delete('mark');
+  var qs = p.toString();
+  history.replaceState(history.state, '', window.location.pathname + (qs ? '?' + qs : '') + window.location.hash);
+  var row = document.querySelector('.fp-session-row[data-session="' + CSS.escape(markSession) + '"]');
+  var courseCell = row && row.querySelector('[data-label="Course"]');
+  fpOpenMarkModal(markSession, courseCell ? courseCell.textContent.trim() : '');
+});
+
 /* ══════════════════════════════════════════════════════════
    ROW CLICK — open mark or view based on session state
 ══════════════════════════════════════════════════════════ */
 function attRowClick(row, sessionName, courseName, status) {
-  if (status === 'Pending') {
+  /* data-present is only filled in once attendance has been marked */
+  var isMarked = !!(row && row.getAttribute('data-present'));
+  if (status === 'Pending' || (status === 'Active' && !isMarked)) {
     fpOpenMarkModal(sessionName, courseName);
   } else {
     fpViewSession(sessionName);
@@ -1749,7 +1769,7 @@ function _satRenderList(students) {
       + 'onmouseover="this.style.filter=\'brightness(0.97)\'" onmouseout="this.style.filter=\'\'">'
       + avatar
       + '<div style="min-width:0;"><div style="font-size:16px;font-weight:700;color:var(--fp-text-1);">' + escHtml(name) + '</div>'
-      + (roll ? '<div style="font-size:13px;color:var(--fp-text-3);font-family:monospace;margin-top:2px;">' + escHtml(roll) + '</div>' : '')
+      + (roll ? '<div style="font-size:13px;color:var(--fp-text-3);font-family:var(--fp-mono);margin-top:2px;">' + escHtml(roll) + '</div>' : '')
       + '</div>'
       + '<span class="sat-toggle-lbl" data-idx="' + i + '" style="font-size:13.5px;font-weight:700;min-width:64px;text-align:right;'
       + 'color:' + (present ? 'var(--fp-primary)' : 'var(--fp-text-4)') + ';">' + (present ? 'PRESENT' : 'ABSENT') + '</span>'
@@ -2096,7 +2116,7 @@ function _fpRenderViewSessionBody(students, audit) {
         + 'onmouseover="this.style.filter=\'brightness(0.97)\'" onmouseout="this.style.filter=\'\'">'
         + avatar
         + '<div style="min-width:0;"><div style="font-size:13px;font-weight:600;color:var(--fp-text-1);">' + escHtml(name) + '</div>'
-        + '<div style="font-size:11px;color:var(--fp-text-4);font-family:monospace;">' + escHtml(s.reg_id || s.student) + '</div></div>'
+        + '<div style="font-size:11px;color:var(--fp-text-4);font-family:var(--fp-mono);">' + escHtml(s.reg_id || s.student) + '</div></div>'
         + '<span class="fp-badge ' + badgeCls + '" style="justify-self:start;">' + escHtml(st) + '</span>'
         + '<span style="font-size:11px;color:var(--fp-text-4);display:flex;align-items:center;gap:4px;white-space:nowrap;">'
         + '<span class="fp-ms" style="font-size:15px;flex-shrink:0;">' + typeIcon + '</span>' + escHtml(typeLabel) + '</span>'
@@ -2160,7 +2180,7 @@ function fpShowAttendanceHistory(idx) {
   if (!s) return;
 
   var header = '<div style="font-size:13px;font-weight:700;color:var(--fp-text-1);margin-bottom:2px;">' + escHtml(s.student_name) + '</div>'
-    + '<div style="font-size:11px;color:var(--fp-text-4);font-family:monospace;margin-bottom:16px;">' + escHtml(s.reg_id || s.student) + '</div>';
+    + '<div style="font-size:11px;color:var(--fp-text-4);font-family:var(--fp-mono);margin-bottom:16px;">' + escHtml(s.reg_id || s.student) + '</div>';
 
   if (!s.attendance_record) {
     document.getElementById('att-hist-body').innerHTML = header

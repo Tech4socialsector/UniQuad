@@ -4,6 +4,25 @@ from slcm.utils.faculty_portal import get_faculty_name, set_faculty_nav, set_nav
 no_cache = 1
 
 
+def _session_venue_map(sessions):
+    """Resolve each session's venue the same way the Attendance page does:
+    session room → linked Course Schedule room → linked Time Table venue."""
+    cs_names = list({s.course_schedule for s in sessions if s.course_schedule and not s.room})
+    tt_names = list({s.class_schedule for s in sessions if s.class_schedule and not s.room})
+    cs_room_map = {}
+    tt_venue_map = {}
+    if cs_names:
+        cs_room_map = dict(frappe.get_all("Course Schedule", filters={"name": ("in", cs_names)},
+                                          fields=["name", "room"], as_list=True))
+    if tt_names:
+        tt_venue_map = dict(frappe.get_all("Time Table", filters={"name": ("in", tt_names)},
+                                           fields=["name", "venue"], as_list=True))
+    return {
+        s.name: s.room or cs_room_map.get(s.course_schedule) or tt_venue_map.get(s.class_schedule) or "—"
+        for s in sessions
+    }
+
+
 def get_context(context):
     context.no_cache = 1
     set_portal_settings(context)
@@ -32,6 +51,10 @@ def get_context(context):
 
         today = frappe.utils.today()
         context.calendar_today = today
+        # "8th October" — shown beside the Today's Sessions title
+        _d = frappe.utils.getdate(today)
+        _suffix = "th" if 11 <= _d.day <= 13 else {1: "st", 2: "nd", 3: "rd"}.get(_d.day % 10, "th")
+        context.today_label = f"{_d.day}{_suffix} {_d.strftime('%B')}"
 
         # ── Course Offerings assigned to this faculty ──────────────
         active_ays = frappe.get_all("Academic Year", filters={"status": "Active"}, pluck="name")
@@ -117,12 +140,14 @@ def get_context(context):
                     ],
                     fields=["name", "course_offering", "session_date",
                             "session_start_time", "session_end_time",
-                            "room", "session_status", "total_students",
-                            "present_count", "attendance_percentage"],
+                            "room", "course_schedule", "class_schedule",
+                            "session_status", "total_students",
+                            "present_count", "attendance_percentage", "attendance_marked"],
                     order_by="session_start_time asc",
                     ignore_permissions=True,
                 )
                 co_map = {c.name: c for c in course_offerings}
+                venue_map = _session_venue_map(raw)
                 for s in raw:
                     co = co_map.get(s.course_offering, frappe._dict())
                     todays_sessions.append({
@@ -130,7 +155,7 @@ def get_context(context):
                         "course_name": co.get("course_name") or s.course_offering,
                         "from_time": fmt_time(s.session_start_time),
                         "to_time": fmt_time(s.session_end_time),
-                        "venue": s.room or "—",
+                        "venue": venue_map.get(s.name, "—"),
                         "status": s.session_status or "Active",
                         "total_students": s.total_students or 0,
                         "present_count": s.present_count or 0,
@@ -170,12 +195,14 @@ def get_context(context):
                         ["session_date", "<=", next_week],
                     ],
                     fields=["name", "course_offering", "session_date",
-                            "session_start_time", "session_end_time", "room"],
+                            "session_start_time", "session_end_time", "room",
+                            "course_schedule", "class_schedule"],
                     order_by="session_date asc, session_start_time asc",
                     limit=8,
                     ignore_permissions=True,
                 )
                 co_map = {c.name: c for c in course_offerings}
+                venue_map = _session_venue_map(upcoming_raw)
                 for s in upcoming_raw:
                     co = co_map.get(s.course_offering, frappe._dict())
                     upcoming_classes.append({
@@ -183,7 +210,7 @@ def get_context(context):
                         "session_date": frappe.utils.formatdate(s.session_date, "dd MMM"),
                         "from_time": fmt_time(s.session_start_time),
                         "to_time": fmt_time(s.session_end_time),
-                        "venue": s.room or "—",
+                        "venue": venue_map.get(s.name, "—"),
                     })
             except Exception:
                 upcoming_classes = []

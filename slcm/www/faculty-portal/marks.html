@@ -193,7 +193,7 @@
               data-grade="{{ m.grade }}"
               data-status="{{ m.status }}"
               data-remark="{{ m.remark | e }}">
-            <td style="font-family:monospace;font-size:12px;color:var(--fp-text-3);">{{ m.reg_id }}</td>
+            <td style="font-family:var(--fp-mono);font-size:12px;color:var(--fp-text-3);">{{ m.reg_id }}</td>
             <td style="font-weight:500;color:var(--fp-text-1);">{{ m.student_name }}</td>
             <td style="text-align:center;font-weight:600;">
               {{ m.total_marks if m.total_marks else '—' }}

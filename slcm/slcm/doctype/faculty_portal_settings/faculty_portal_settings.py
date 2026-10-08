@@ -11,6 +11,7 @@ _DEFAULTS = {
     "portal_subtitle":       "",
     "show_logo":             1,
     "nav_brand_text":        "",
+    "portal_logo":           "",
     "portal_favicon":        "",
     # Typography
     "font_family":           "Merriweather",

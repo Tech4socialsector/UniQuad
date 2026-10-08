@@ -57,10 +57,8 @@
       <div class="fp-card-title">
         <span class="fp-ms">today</span>
         Today’s Sessions
+        {% if today_label %}<span class="fp-badge fp-badge-neutral" style="margin-left:6px;font-weight:600;">{{ today_label }}</span>{% endif %}
       </div>
-      <a href="/faculty-portal/attendance" style="font-size:12px;color:var(--fp-accent);text-decoration:none;font-weight:600;display:flex;align-items:center;gap:3px;">
-        View All <span class="fp-ms" style="font-size:14px;">arrow_forward</span>
-      </a>
     </div>
     <div class="fp-card-body" style="padding:0;">
       {% if portal_error %}
@@ -97,7 +95,10 @@
           {% if s.attendance_marked %}
           <span class="fp-badge fp-badge-success"><span class="fp-ms" style="font-size:12px;">check</span>Marked</span>
           {% else %}
-          <span class="fp-badge fp-badge-warning"><span class="fp-ms" style="font-size:12px;">pending</span>Pending</span>
+          <a href="/faculty-portal/attendance?mark={{ s.name | urlencode }}" class="fp-badge fp-badge-warning"
+             style="text-decoration:none;cursor:pointer;" title="Mark attendance for {{ s.course_name }}">
+            <span class="fp-ms" style="font-size:12px;">pending</span>Pending
+          </a>
           {% endif %}
         </div>
       </div>
@@ -694,7 +695,7 @@ function fpSyncToCalendar() {
   var textColor = isDark ? '#64748b' : '#94a3b8';
   var primary   = '#920c24';
   var accent    = '#920c24';
-  Chart.defaults.font.family = "'Poppins', system-ui, sans-serif";
+  Chart.defaults.font.family = getComputedStyle(document.documentElement).getPropertyValue('--fp-font-family').trim() || "'Merriweather', Georgia, serif";
   Chart.defaults.font.size   = 11;
 
   {% if attendance_trend %}

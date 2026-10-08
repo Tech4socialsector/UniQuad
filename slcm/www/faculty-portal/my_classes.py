@@ -159,32 +159,42 @@ def _get_students(co_name):
     """Return list of enrolled students for a course offering."""
     try:
         rows = frappe.db.sql(
-            """SELECT se.student AS student_id, se.student_name
+            """SELECT se.student AS student_id, se.student_name, sm.registration_id
                FROM `tabStudent Enrollment Course` sec
                JOIN `tabStudent Enrollment` se ON se.name = sec.parent
+               LEFT JOIN `tabStudent Master` sm ON sm.name = se.student
                WHERE sec.course_offering = %s AND sec.status = 'Enrolled'
                ORDER BY se.student_name""",
             co_name, as_dict=True,
         )
-        return [{"id": r.student_id, "name": (r.student_name or r.student_id or "—")} for r in rows]
+        return [{
+            "id": r.student_id,
+            "reg_id": r.registration_id or r.student_id or "—",
+            "name": (r.student_name or r.student_id or "—"),
+        } for r in rows]
+    except Exception:
+        return []
+
+
+def _active_academic_years():
+    """Academic Years with status Active (newest first)."""
+    try:
+        return frappe.get_all(
+            "Academic Year",
+            filters={"status": "Active"},
+            fields=["name", "year_start_date", "year_end_date"],
+            order_by="year_start_date desc",
+        )
     except Exception:
         return []
 
 
 def _set_year_options(context, course_years=()):
-    """All Academic Years (newest first) plus any year found on the courses,
-    with the year covering today pre-selected in the filter."""
-    try:
-        rows = frappe.get_all(
-            "Academic Year",
-            fields=["name", "year_start_date", "year_end_date"],
-            order_by="year_start_date desc",
-        )
-    except Exception:
-        rows = []
+    """Only the Active Academic Year(s), with the one covering today
+    pre-selected in the filter."""
+    rows = _active_academic_years()
     years = [r.name for r in rows]
-    extra = sorted({y for y in course_years if y and y != "—" and y not in years}, reverse=True)
-    context.filter_years = years + extra
+    context.filter_years = years
 
     today = frappe.utils.getdate()
     current = next(
@@ -197,12 +207,17 @@ def _set_year_options(context, course_years=()):
 
 
 def _set_term_options(context, course_terms=()):
-    """All Academic Terms (newest first) plus any term found on the courses.
-    filter_terms is a list of {name, year} so the page can show only the
-    terms of the selected academic year(s)."""
+    """Only the terms of the Active Academic Year(s) (newest first), plus any
+    such term found on the courses. filter_terms is a list of {name, year}
+    so the page can show only the terms of the selected academic year(s)."""
+    active_years = {r.name for r in _active_academic_years()}
+    if not active_years:
+        context.filter_terms = []
+        return
     try:
         rows = frappe.get_all(
             "Academic Term",
+            filters={"academic_year": ["in", list(active_years)]},
             fields=["name", "academic_year"],
             order_by="term_start_date desc, name asc",
         )
@@ -211,9 +226,9 @@ def _set_term_options(context, course_terms=()):
     seen = {r.name for r in rows}
     terms = [{"name": r.name, "year": r.academic_year or ""} for r in rows]
     for name, year in course_terms:
-        if name and name != "—" and name not in seen:
+        if name and name != "—" and name not in seen and year in active_years:
             seen.add(name)
-            terms.append({"name": name, "year": year if year and year != "—" else ""})
+            terms.append({"name": name, "year": year})
     context.filter_terms = terms
 
 
