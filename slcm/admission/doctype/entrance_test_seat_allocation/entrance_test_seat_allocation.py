@@ -2164,11 +2164,11 @@ def download_attendance_sheet_pdf(
 
     total_centres = len(centre_records_map)
     is_zip = False
-    if download_mode == "Single Combined PDF File":
+    if total_centres <= 1:
         is_zip = False
-    elif total_centres > 1:
-        is_zip = True
-    elif download_mode and "ZIP" in download_mode:
+    elif download_mode == "Single Combined PDF File":
+        is_zip = False
+    else:
         is_zip = True
 
     inst_name = frappe.db.get_single_value("Institution Settings", "institution_name") or "National Law School of India University"
