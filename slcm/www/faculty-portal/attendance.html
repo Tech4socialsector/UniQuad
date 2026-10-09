@@ -2409,7 +2409,7 @@ function _fpCpContextHtml(ctx) {
     parts += '<span>OH session ' + ctx.slot + ' of ' + ctx.classes_in_week + ' · recorded as <b>' + escHtml(ctx.slot_label) + '</b></span>';
   } else {
     parts += '<span>' + escHtml(ctx.start_date_fmt) + ' – ' + escHtml(ctx.end_date_fmt) + '</span>'
-      + '<span>Class ' + ctx.slot + ' of ' + ctx.classes_in_week + ' this week · recorded as <b>' + escHtml(ctx.slot_label) + '</b></span>';
+      + '<span>Session ' + ctx.slot + ' of ' + ctx.classes_in_week + ' this week · recorded as <b>' + escHtml(ctx.slot_label) + '</b></span>';
   }
   return '<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">' + parts + '</div>';
 }

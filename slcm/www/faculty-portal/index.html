@@ -321,7 +321,7 @@ window._fpDashData = {
       <span><i class="fp-cal-dot" style="background:#d97706;"></i>Pending</span>
       <span><i class="fp-cal-dot" style="background:var(--fp-primary);"></i>Marked</span>
       <span><i class="fp-cal-dot" style="background:#f5c6ce;"></i>Upcoming</span>
-      <span><b class="fp-cal-oh-tag">OH</b>Office Hours</span>
+      <span><b class="fp-cal-oh-tag">OH</b>OH Session</span>
       <span><i class="fp-cal-dot" style="background:var(--fp-cal-holiday-bg);border:1px solid #f5c6ce;"></i>Holiday</span>
     </div>
     </div>
@@ -590,7 +590,7 @@ function fpGcalProgress(done, total, status) {
   var pct = total ? Math.round(done / total * 100) : 100;
   fill.classList.remove('is-indeterminate');
   fill.style.width = pct + '%';
-  count.textContent = done + ' of ' + total + ' classes · ' + pct + '%';
+  count.textContent = done + ' of ' + total + ' sessions · ' + pct + '%';
 }
 
 function fpSyncToCalendar() {
@@ -625,7 +625,7 @@ function fpSyncToCalendar() {
           + (error ? ' Reason: ' + error : '');
       kind = synced ? 'warning' : 'danger';
     } else {
-      msg = 'No upcoming classes to sync.';
+      msg = 'No upcoming sessions to sync.';
       kind = 'info';
     }
     fpGcalFreeze(false);
@@ -654,7 +654,7 @@ function fpSyncToCalendar() {
         failed += out.failed || 0;
         firstError = firstError || out.error || null;
         done += batch.length;
-        fpGcalProgress(done, total, 'Synced ' + done + ' of ' + total + ' classes');
+        fpGcalProgress(done, total, 'Synced ' + done + ' of ' + total + ' sessions');
         next();
       }, function (err) {
         finish(synced, failed, firstError, err);
