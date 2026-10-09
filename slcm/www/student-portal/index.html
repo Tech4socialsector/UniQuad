@@ -754,11 +754,9 @@
     </div>
     <div class="spd-kpi-label">Assessment Eligible</div>
     <div class="spd-kpi-progress">
-      <div class="spd-kpi-progress-fill"
-        style="width: {% if course_count > 0 %}{{ ((eligible_count / course_count) * 100)|round|int }}{% else %}0{% endif %}%; background: var(--sp-primary);">
-      </div>
+      <div class="spd-kpi-progress-fill" style="width: 100%; background: var(--sp-primary);"></div>
     </div>
-    <div class="spd-kpi-footer">Courses cleared for assessments</div>
+    <div class="spd-kpi-footer"></div>
   </a>
 
   {# Card 3: Fee Outstanding #}
@@ -777,8 +775,8 @@
       ₹{{ "{:,.0f}".format(total_outstanding) if has_dues else "0" }}
     </div>
     <div class="spd-kpi-label">Fee Outstanding</div>
-    <div class="spd-kpi-progress" style="background:transparent;">
-      <!-- No progress bar for fees, just empty space for alignment -->
+    <div class="spd-kpi-progress">
+      <div class="spd-kpi-progress-fill" style="width: 100%; background: var(--sp-primary);"></div>
     </div>
     <div class="spd-kpi-footer">{% if has_dues %}Payment due — act now{% else %}All fees cleared{% endif %}</div>
   </a>
