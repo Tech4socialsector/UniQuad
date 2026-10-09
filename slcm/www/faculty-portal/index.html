@@ -1605,7 +1605,8 @@ body.fp-dark .fp-dash-icon .fp-ms { color: #fff !important; }
       var ds = toDS(d), items = itemsForDay(ds);
       var cls = 'fp-cal-cell' + (d.getMonth() !== month ? ' is-other' : '') + (ds === todayDS ? ' is-today' : '')
               + (isHoliday(items) ? ' is-holiday' : '');
-      html += '<div class="' + cls + '" data-day="' + ds + '" title="Open day view">'
+      /* no native title here — it would pop up over the item tooltip */
+      html += '<div class="' + cls + '" data-day="' + ds + '">'
             + '<span class="fp-cal-daynum">' + d.getDate() + '</span>';
       items.slice(0, MONTH_CHIP_LIMIT).forEach(function (it) { html += chip(it, ds); });
       if (items.length > MONTH_CHIP_LIMIT) html += '<div class="fp-cal-more">+' + (items.length - MONTH_CHIP_LIMIT) + ' more</div>';
@@ -1775,6 +1776,9 @@ body.fp-dark .fp-dash-icon .fp-ms { color: #fff !important; }
 
   /* ── Hover tooltip ── */
   var tip = document.getElementById('fp-cal-tip');
+  /* position:fixed is only viewport-relative when no ancestor has a CSS
+     transform (e.g. a .fade-in animation) — keep the tooltip on <body>. */
+  if (tip && tip.parentNode !== document.body) document.body.appendChild(tip);
   function tipHtml(it) {
     var L = LAYERS[it.layer];
     var s = parseDS(it.start_date), e = parseDS(it.end_date);

@@ -2702,6 +2702,7 @@ def _student_calendar_timetable(student_name, start, end):
             "subtitle": "OH" if is_oh else "Class Session",
             "venue": r.venue or "",
             "faculty": faculty_names.get(str(r.instructor)) or "",
+            "course_offering": r.course_offering or "",
         })
     return items
 
@@ -2751,10 +2752,12 @@ def _student_calendar_events(student_name, start, end):
 
 
 @frappe.whitelist()
-def get_student_calendar(start, end):
-    """Dashboard calendar items between `start` and `end` (inclusive), in
-    three layers: "class" (class sessions), "events" (Institutional Calendar
-    entries + Events) and "oh" (OH sessions of the student's OH groups)."""
+def get_student_calendar(start, end, course_offering=None):
+    """Calendar items between `start` and `end` (inclusive), in three layers:
+    "class" (class sessions), "events" (Institutional Calendar entries +
+    Events) and "oh" (OH sessions of the student's OH groups).
+    `course_offering` (Timetable page's Course filter) limits the class / OH
+    sessions to that offering; University Events are always shown."""
     from slcm.api.faculty_portal import _CAL_MAX_DAYS, _cal_institutional
 
     if frappe.session.user == "Guest":
@@ -2771,7 +2774,10 @@ def get_student_calendar(start, end):
 
     items, errors = [], []
     try:
-        items += _student_calendar_timetable(student_name, start, end)
+        sessions = _student_calendar_timetable(student_name, start, end)
+        if course_offering and course_offering != "all":
+            sessions = [s for s in sessions if s["course_offering"] == course_offering]
+        items += sessions
     except Exception:
         errors.append("class")
         frappe.log_error(frappe.get_traceback(), "Student Calendar – Time Table")
