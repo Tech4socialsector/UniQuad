@@ -1935,19 +1935,35 @@ def _get_compressed_photo_b64(file_url):
     if not file_url:
         return ""
     
+    try:
+        cached = frappe.cache().get_value(f"photo_b64_{file_url}")
+        if cached:
+            return cached
+    except Exception:
+        pass
+
     raw_b64 = get_file_b64(file_url)
     if not raw_b64:
         return ""
     
     try:
         raw_bytes = base64.b64decode(raw_b64)
-        img = Image.open(io.BytesIO(raw_bytes))
-        if img.mode in ("RGBA", "P"):
-            img = img.convert("RGB")
-        img.thumbnail((160, 200), Image.Resampling.LANCZOS)
-        buf = io.BytesIO()
-        img.save(buf, format="JPEG", quality=70, optimize=True)
-        return base64.b64encode(buf.getvalue()).decode("utf-8")
+        if len(raw_bytes) <= 40000:
+            result = raw_b64
+        else:
+            img = Image.open(io.BytesIO(raw_bytes))
+            if img.mode in ("RGBA", "P"):
+                img = img.convert("RGB")
+            img.thumbnail((120, 150), Image.Resampling.BILINEAR)
+            buf = io.BytesIO()
+            img.save(buf, format="JPEG", quality=65)
+            result = base64.b64encode(buf.getvalue()).decode("utf-8")
+        
+        try:
+            frappe.cache().set_value(f"photo_b64_{file_url}", result, expires_in_sec=86400)
+        except Exception:
+            pass
+        return result
     except Exception:
         return raw_b64
 
@@ -2190,7 +2206,9 @@ def download_attendance_sheet_pdf(
         "margin-right": "10mm",
         "encoding": "UTF-8",
         "no-outline": None,
-        "disable-smart-shrinking": None
+        "disable-smart-shrinking": None,
+        "disable-javascript": None,
+        "quiet": None
     }
 
     def _build_sheets_for_groups(groups_dict, processed_counter_ref):
@@ -2301,32 +2319,6 @@ def download_attendance_sheet_pdf(
         return sheets
 
     processed_counter = [0]
-
-    if not is_zip:
-        all_groups = OrderedDict()
-        for cn, progs in centre_records_map.items():
-            for p_key, recs in progs.items():
-                all_groups[(cn, p_key)] = recs
-
-        sheets = _build_sheets_for_groups(all_groups, processed_counter)
-
-        frappe.publish_realtime("attendance_sheet_progress", {
-            "progress": 75,
-            "description": _("Rendering HTML layout..."),
-            "current": total_candidates,
-            "total": total_candidates
-        })
-
-        rendered_html = frappe.render_template(template_str, {"sheets": sheets})
-
-        frappe.publish_realtime("attendance_sheet_progress", {
-            "progress": 85,
-            "description": _("Generating PDF document structure..."),
-            "current": total_candidates,
-            "total": total_candidates
-        })
-
-        pdf_content = get_pdf(rendered_html, options=pdf_options)
 
     ts = frappe.utils.now_datetime().strftime("%Y%m%d_%H%M%S")
 
