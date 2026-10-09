@@ -384,6 +384,10 @@ def register_office_hours_attendance(session_name):
     office_hours_group = frappe.db.get_value(
         "Office Hours Group", {"office_hours_session": session.name}
     )
+    # Student Attendance.office_hours_group now links to Student Group; a
+    # legacy Office Hours Group name would fail link validation on insert.
+    if office_hours_group and not frappe.db.exists("Student Group", office_hours_group):
+        office_hours_group = None
 
     doc = frappe.new_doc("Student Attendance")
     doc.based_on = "Office Hours"
@@ -1293,9 +1297,9 @@ def get_portal_notifications():
 						"id": f"exam_schedule:{es.name}",
 						"date": _iso(es.exam_date),
 						"type": "exam_schedule",
-						"category": "Exam Schedule",
+						"category": "Assessment Schedule",
 						"priority": "Important",
-						"title": f"Exam: {_course_name(es.course)}",
+						"title": f"Assessment: {_course_name(es.course)}",
 						"subtitle": _join(date_str, es.venue),
 						"icon": "event_note",
 						"link": "/student-portal/exam-schedule",
@@ -1483,9 +1487,9 @@ def get_portal_notifications():
 						"id": f"office_hours:{sess.name}",
 						"date": _iso(sess.session_date),
 						"type": "office_hours",
-						"category": "Office Hours",
+						"category": "OH",
 						"priority": "Normal",
-						"title": "Office Hours Available",
+						"title": "OH Available",
 						"subtitle": _join(_offering_name(sess.course_offering), date_str),
 						"icon": "school",
 						"link": "/student-portal/attendance",
@@ -2607,3 +2611,184 @@ def upload_bank_passbook(kind, file_url):
         "Info", _("{0} passbook uploaded by the student from the Student Portal.").format(kind.title())
     )
     return {"status": "success"}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Dashboard calendar (layers: class sessions, university events, OH)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _student_course_offerings(student_name):
+    """Course Offerings the student is enrolled in (Student Enrollment Course
+    rows, plus any with an Attendance Summary — the dashboard's own fallback)."""
+    cos = set(frappe.db.sql_list(
+        """SELECT DISTINCT sec.course_offering
+           FROM `tabStudent Enrollment Course` sec
+           JOIN `tabStudent Enrollment` se ON se.name = sec.parent
+           WHERE se.student = %s AND se.docstatus < 2 AND IFNULL(sec.course_offering, '') != ''""",
+        student_name,
+    ))
+    cos.update(frappe.get_all(
+        "Attendance Summary",
+        filters={"student": student_name, "course_offering": ["is", "set"]},
+        pluck="course_offering",
+        ignore_permissions=True,
+    ))
+    return cos
+
+
+def _student_calendar_timetable(student_name, start, end):
+    """Class sessions (Time Table of the student's course offerings) and OH
+    sessions (Time Table OH entries whose OH Student Group lists the student)."""
+    from slcm.api.faculty_portal import _hhmm
+
+    cos = _student_course_offerings(student_name)
+    oh_groups = set(frappe.db.sql_list(
+        """SELECT DISTINCT sgs.parent FROM `tabStudent Group Student` sgs
+           JOIN `tabStudent Group` sg ON sg.name = sgs.parent
+           WHERE sgs.student = %s AND sgs.parenttype = 'Student Group' AND sg.group_based_on = 'Office Hours'""",
+        student_name,
+    ))
+
+    rows = frappe.get_all(
+        "Time Table",
+        filters=[["schedule_date", "between", [start, end]], ["docstatus", "<", 2]],
+        or_filters=[
+            ["course_offering", "in", list(cos) or [""]],
+            ["based_on", "=", "Office Hours"],
+        ],
+        fields=["name", "title", "course", "course_offering", "based_on", "office_hours_group",
+                "parent_schedule", "schedule_date", "from_time", "to_time", "venue", "instructor"],
+        limit_page_length=0,
+        ignore_permissions=True,
+    )
+    # Older generated OH occurrences lack the group — their series root has it
+    roots = {r.parent_schedule for r in rows if r.parent_schedule and not r.office_hours_group}
+    root_group = dict(frappe.get_all(
+        "Time Table", filters={"name": ["in", list(roots)]}, fields=["name", "office_hours_group"],
+        as_list=True, ignore_permissions=True,
+    )) if roots else {}
+
+    co_names = dict(frappe.get_all(
+        "Course Offering", filters={"name": ["in", list({r.course_offering for r in rows if r.course_offering}) or [""]]},
+        fields=["name", "course_name"], as_list=True, ignore_permissions=True,
+    ))
+    faculty_ids = {r.instructor for r in rows if r.instructor}
+    faculty_names = {
+        str(f.name): " ".join(filter(None, [f.first_name, f.last_name]))
+        for f in frappe.get_all("Faculty", filters={"name": ["in", list(faculty_ids) or [""]]},
+                                fields=["name", "first_name", "last_name"], ignore_permissions=True)
+    }
+
+    items = []
+    for r in rows:
+        is_oh = r.based_on == "Office Hours"
+        if is_oh:
+            group = r.office_hours_group or root_group.get(r.parent_schedule)
+            # The student's own OH group; ungrouped OH falls back to their course offerings
+            if not (group in oh_groups if group else r.course_offering in cos):
+                continue
+        elif r.course_offering not in cos:
+            continue
+        date = getdate(r.schedule_date)
+        items.append({
+            "id": f"tt::{r.name}",
+            "layer": "oh" if is_oh else "class",
+            "title": co_names.get(r.course_offering) or r.title or r.course or ("OH" if is_oh else "Class"),
+            "start_date": str(date),
+            "end_date": str(date),
+            "start_time": _hhmm(r.from_time),
+            "end_time": _hhmm(r.to_time),
+            "all_day": not r.from_time,
+            "subtitle": "OH" if is_oh else "Class Session",
+            "venue": r.venue or "",
+            "faculty": faculty_names.get(str(r.instructor)) or "",
+            "course_offering": r.course_offering or "",
+        })
+    return items
+
+
+def _student_calendar_events(student_name, start, end):
+    """Public Events plus Events listing the student as a participant (by
+    one of their email addresses), with repeats expanded. Time Table sync
+    copies are skipped — those sessions show in the Class / OH layers."""
+    from slcm.api.faculty_portal import _WEEKDAY_FIELDS, _event_occurrences
+
+    st = frappe.db.get_value(
+        "Student Master", student_name, ["user", "email", "official_email_id", "personal_email"], as_dict=True
+    ) or frappe._dict()
+    emails = list({e.strip().lower() for e in (st.user, st.email, st.official_email_id, st.personal_email) if e and e.strip()})
+    participant_events = frappe.db.sql_list(
+        """SELECT DISTINCT parent FROM `tabEvent Participants`
+           WHERE parenttype = 'Event' AND LOWER(email) IN %(emails)s""",
+        {"emails": tuple(emails)},
+    ) if emails else []
+
+    events = frappe.get_all(
+        "Event",
+        filters={"status": "Open"},
+        or_filters={"event_type": "Public", "name": ["in", participant_events or [""]]},
+        fields=["name", "subject", "description", "starts_on", "ends_on", "all_day", "event_type",
+                "repeat_this_event", "repeat_on", "repeat_till", *_WEEKDAY_FIELDS],
+        ignore_permissions=True,
+    )
+    items = []
+    for ev in events:
+        if (ev.description or "").startswith("Synced from Time Table:"):
+            continue
+        for s, e in _event_occurrences(ev, start, end):
+            items.append({
+                "id": f"event::{ev.name}::{s.date()}",
+                "layer": "events",
+                "title": ev.subject or "Event",
+                "start_date": str(s.date()),
+                "end_date": str(e.date()),
+                "start_time": "" if ev.all_day else s.strftime("%H:%M"),
+                "end_time": "" if ev.all_day else e.strftime("%H:%M"),
+                "all_day": bool(ev.all_day),
+                "subtitle": "Event",
+                "description": frappe.utils.strip_html(ev.description or "")[:300],
+            })
+    return items
+
+
+@frappe.whitelist()
+def get_student_calendar(start, end, course_offering=None):
+    """Calendar items between `start` and `end` (inclusive), in three layers:
+    "class" (class sessions), "events" (Institutional Calendar entries +
+    Events) and "oh" (OH sessions of the student's OH groups).
+    `course_offering` (Timetable page's Course filter) limits the class / OH
+    sessions to that offering; University Events are always shown."""
+    from slcm.api.faculty_portal import _CAL_MAX_DAYS, _cal_institutional
+
+    if frappe.session.user == "Guest":
+        frappe.throw(_("Not permitted"), frappe.PermissionError)
+    student_name = _get_student()
+    if not student_name:
+        frappe.throw(_("No student record found for your account."), frappe.DoesNotExistError)
+
+    start, end = getdate(start), getdate(end)
+    if end < start:
+        start, end = end, start
+    if frappe.utils.date_diff(end, start) > _CAL_MAX_DAYS:
+        end = getdate(add_days(start, _CAL_MAX_DAYS))
+
+    items, errors = [], []
+    try:
+        sessions = _student_calendar_timetable(student_name, start, end)
+        if course_offering and course_offering != "all":
+            sessions = [s for s in sessions if s["course_offering"] == course_offering]
+        items += sessions
+    except Exception:
+        errors.append("class")
+        frappe.log_error(frappe.get_traceback(), "Student Calendar – Time Table")
+    try:
+        for it in _cal_institutional(start, end):
+            it["layer"] = "events"
+            items.append(it)
+        items += _student_calendar_events(student_name, start, end)
+    except Exception:
+        errors.append("events")
+        frappe.log_error(frappe.get_traceback(), "Student Calendar – Events")
+
+    items.sort(key=lambda i: (i["start_date"], not i["all_day"], i["start_time"]))
+    return {"start": str(start), "end": str(end), "today": str(getdate()), "items": items, "errors": errors}

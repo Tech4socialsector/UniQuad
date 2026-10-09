@@ -8,7 +8,7 @@
 <div class="fp-page-header fade-in">
   <div class="fp-page-header-left">
     <h1 class="fp-page-title">My Course Offerings</h1>
-    <p class="fp-page-sub">All courses assigned to you — attendance, marks, and session data at a glance</p>
+    <p class="fp-page-sub">All courses assigned to you — attendance, grades, and session data at a glance</p>
   </div>
   {% if course_offerings %}
   <div class="fp-page-actions">
@@ -38,7 +38,7 @@
     </div>
     <div>
       <div class="fco-summary-val">{{ total_courses }}</div>
-      <div class="fco-summary-lbl">Total Courses</div>
+      <div class="fco-summary-lbl">Courses</div>
     </div>
   </div>
   <div class="fco-summary-cell">
@@ -47,7 +47,7 @@
     </div>
     <div>
       <div class="fco-summary-val">{{ total_students }}</div>
-      <div class="fco-summary-lbl">Total Students</div>
+      <div class="fco-summary-lbl">Students</div>
     </div>
   </div>
   <div class="fco-summary-cell">
@@ -56,7 +56,7 @@
     </div>
     <div>
       <div class="fco-summary-val">{{ active_courses }}</div>
-      <div class="fco-summary-lbl">Active Courses</div>
+      <div class="fco-summary-lbl">Current Courses</div>
     </div>
   </div>
   <div class="fco-summary-cell">
@@ -272,7 +272,7 @@
          style="background:var(--fp-primary);color:#fff;border-left:1px solid var(--fp-border-light);"
          onmouseover="this.style.background='var(--fp-primary-dark)';this.style.color='#fff';"
          onmouseout="this.style.background='var(--fp-primary)';this.style.color='#fff';">
-        <span class="fp-ms">grade</span>Marks
+        <span class="fp-ms">grade</span>Grades
       </a>
       <button class="fco-action-btn"
               style="background:var(--fp-primary);color:#fff;border:none;
@@ -345,7 +345,7 @@
                 <a href="/faculty-portal/marks?course_offering={{ co.name | urlencode }}"
                    class="fp-btn fp-btn-sm"
                    style="background:var(--fp-primary);color:#fff;text-decoration:none;">
-                  <span class="fp-ms">grade</span>Marks
+                  <span class="fp-ms">grade</span>Grades
                 </a>
               </div>
             </td>
@@ -412,7 +412,7 @@
       <div style="flex:1;min-width:160px;max-width:200px;padding:16px;background:var(--fp-bg);
                   border-radius:var(--fp-radius);border:1px solid var(--fp-border);text-align:center;">
         <span class="fp-ms" style="font-size:26px;color:var(--fp-success);display:block;margin-bottom:8px;">grade</span>
-        <div style="font-size:12px;font-weight:600;color:var(--fp-text-2);margin-bottom:4px;">Enter Marks</div>
+        <div style="font-size:12px;font-weight:600;color:var(--fp-text-2);margin-bottom:4px;">Enter Grades</div>
         <div style="font-size:11px;color:var(--fp-text-4);line-height:1.5;">Record student grades per course</div>
       </div>
       <div style="flex:1;min-width:160px;max-width:200px;padding:16px;background:var(--fp-bg);
@@ -579,7 +579,7 @@ function fcoShowDetails(id) {
       '</a>',
       '<a href="/faculty-portal/marks?course_offering=' + encodeURIComponent(co.id) + '"',
          'class="fp-btn fp-btn-success" style="flex:1;justify-content:center;text-decoration:none;">',
-        '<span class="fp-ms">grade</span>Enter Marks',
+        '<span class="fp-ms">grade</span>Enter Grades',
       '</a>',
     '</div>',
   ].join('');

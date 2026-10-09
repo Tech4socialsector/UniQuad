@@ -1,0 +1,46 @@
+{
+ "chart_name": "Allocated Students by City",
+ "chart_type": "Report",
+ "creation": "2026-10-05 12:45:00.000000",
+ "currency": "",
+ "custom_options": "{}",
+ "docstatus": 0,
+ "doctype": "Dashboard Chart",
+ "dynamic_filters_json": "{}",
+ "filters_json": "{}",
+ "group_by_type": "Count",
+ "idx": 0,
+ "is_public": 1,
+ "is_standard": 1,
+ "modified": "2026-10-05 12:45:00.000000",
+ "modified_by": "Administrator",
+ "module": "Admission",
+ "name": "Allocated Students by City",
+ "number_of_groups": 0,
+ "owner": "Administrator",
+ "report_name": "Allocated Students by City",
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Entrance Test Admin"
+  },
+  {
+   "role": "Entrance Test Provider"
+  }
+ ],
+ "show_values_over_chart": 0,
+ "time_interval": "Yearly",
+ "timeseries": 0,
+ "timespan": "Last Year",
+ "type": "Bar",
+ "use_report_chart": 1,
+ "x_field": "city",
+ "y_axis": [
+  {
+   "color": "#2490EF",
+   "y_field": "allocated_count"
+  }
+ ]
+}

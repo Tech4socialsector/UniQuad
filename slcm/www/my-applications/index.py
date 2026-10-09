@@ -243,18 +243,15 @@ def get_context(context):
                 {"label": "12th Certificate", "field": "class_xii_marksheet", "required": True, "accept": ".pdf,.jpg,.jpeg,.png", "max_size_mb": 5},
                 {"label": "ID Proof", "field": "id_proof", "required": True, "accept": ".pdf,.jpg,.jpeg,.png", "max_size_mb": 5},
                 {"label": "Photo", "field": "candidate_photo", "required": True, "accept": ".jpg,.jpeg,.png", "max_size_mb": 1},
-                {"label": "CV", "field": "cv", "required": True, "accept": ".doc,.docx,.pdf", "max_size_mb": 5},
+
             ]
 
             # Optional / Conditional fields
-            if target_applicant.whether_scstobc_ncl and target_applicant.whether_scstobc_ncl != "NA":
+            if target_applicant.whether_scstobc_ncl and target_applicant.whether_scstobc_ncl not in ["NA", "General"]:
                 standard_checklist.append({"label": "Category Certificate", "field": "caste_certificate", "required": True, "accept": ".jpg,.jpeg,.png", "max_size_mb": 5})
                 
             if target_applicant.pwd == "Yes":
                 standard_checklist.append({"label": "PwD Certificate", "field": "pwd_certificate", "required": True, "accept": ".jpg,.jpeg,.png", "max_size_mb": 5})
-
-            if getattr(target_applicant, "ews", None) == "Yes":
-                standard_checklist.append({"label": "EWS Certificate", "field": "ews_certificate", "required": True, "accept": ".pdf,.jpg,.jpeg,.png", "max_size_mb": 5})
                 
             if target_applicant.program_level == "Research Course":
                 standard_checklist.append({"label": "Research Proposal", "field": "phd_proposal", "required": True, "accept": ".pdf,.jpg,.jpeg,.png", "max_size_mb": 5})

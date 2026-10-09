@@ -43,6 +43,13 @@ def get_context(context):
         context.view = view_param
         context.selected_course = course_param
 
+        # Shared student calendar (_calendar.html), same as the Dashboard's
+        context.calendar_today = str(today)
+        context.cal_variant = "page"
+        context.cal_default_view = view_param if view_param in ("day", "week", "month") else "week"
+        context.cal_course = "" if course_param in ("", "all") else course_param
+        context.cal_title = "Schedule"
+
         # Determine Date Bounds
         if view_param == "month":
             if from_date_param:
@@ -78,25 +85,24 @@ def get_context(context):
             context.next_date = str(target_date + timedelta(days=1))
             
         else:
-            # Week View
+            # Week View — Sunday to Saturday, like the portal's other calendars
             if from_date_param and to_date_param:
                 try:
                     week_start = frappe.utils.getdate(from_date_param)
                     week_end = frappe.utils.getdate(to_date_param)
                 except:
-                    week_start = today - timedelta(days=today.weekday())
-                    week_end = week_start + timedelta(days=5)
+                    week_start = _sunday_of(today)
+                    week_end = week_start + timedelta(days=6)
             elif from_date_param:
                 try:
-                    raw = frappe.utils.getdate(from_date_param)
-                    week_start = raw - timedelta(days=raw.weekday())
-                    week_end = week_start + timedelta(days=5)
+                    week_start = _sunday_of(frappe.utils.getdate(from_date_param))
+                    week_end = week_start + timedelta(days=6)
                 except:
-                    week_start = today - timedelta(days=today.weekday())
-                    week_end = week_start + timedelta(days=5)
+                    week_start = _sunday_of(today)
+                    week_end = week_start + timedelta(days=6)
             else:
-                week_start = today - timedelta(days=today.weekday())
-                week_end = week_start + timedelta(days=5) # Mon-Sat
+                week_start = _sunday_of(today)
+                week_end = week_start + timedelta(days=6)  # Sun-Sat
 
             context.prev_date = str(week_start - timedelta(days=7))
             context.next_date = str(week_start + timedelta(days=7))
@@ -353,8 +359,13 @@ def _build_days(week_start):
         })
     return days
 
+def _sunday_of(d):
+    """The Sunday starting the (Sun–Sat) week that contains `d`."""
+    return d - timedelta(days=(d.weekday() + 1) % 7)
+
+
 def _build_month_days(month_start):
-    cal = calendar.Calendar(firstweekday=0) # Monday start
+    cal = calendar.Calendar(firstweekday=6)  # Sunday start (Sun–Sat rows)
     days = []
     for d in cal.itermonthdates(month_start.year, month_start.month):
         days.append({

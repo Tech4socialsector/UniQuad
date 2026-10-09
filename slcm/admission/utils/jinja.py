@@ -7,7 +7,7 @@ def get_file_b64(file_url):
     Returns base64 encoded string of a file.
     Used in Jinja templates for PDF generation to avoid external HTTP requests.
     """
-    if not file_url:
+    if not file_url or not isinstance(file_url, str):
         return ""
     
     try:
@@ -15,21 +15,39 @@ def get_file_b64(file_url):
         if file_url.startswith("data:") and ";base64," in file_url:
             return file_url.split(";base64,")[1]
 
-        # Resolve local path if it starts with /files or /private/files
+        # Resolve local path if it starts with /files/ or /private/files/
         if file_url.startswith("/files/") or file_url.startswith("/private/files/"):
-            path = frappe.get_site_path("public" if file_url.startswith("/files/") else "", file_url.lstrip("/"))
-            if os.path.exists(path):
-                with open(path, "rb") as f:
-                    return base64.b64encode(f.read()).decode()
+            is_pub = file_url.startswith("/files/")
+            path = frappe.get_site_path("public" if is_pub else "", file_url.lstrip("/"))
+            candidates = [path]
+            if "." in path:
+                ext_dot = path.rfind(".")
+                candidates.append(path[:ext_dot] + " (Copy)" + path[ext_dot:])
 
-        # Fallback: Try to get via File DocType
-        file_doc = frappe.get_doc("File", {"file_url": file_url})
-        if file_doc:
-            return base64.b64encode(file_doc.get_content()).decode()
+            # Alternate path (if stored in private instead of public or vice versa)
+            rel_sub = file_url[len("/files/"):] if is_pub else file_url[len("/private/files/"):]
+            alt_path = frappe.get_site_path("" if is_pub else "public", ("private/files/" if is_pub else "files/") + rel_sub)
+            candidates.append(alt_path)
+            if "." in alt_path:
+                ext_dot = alt_path.rfind(".")
+                candidates.append(alt_path[:ext_dot] + " (Copy)" + alt_path[ext_dot:])
+
+            for p in candidates:
+                if os.path.exists(p) and os.path.isfile(p):
+                    with open(p, "rb") as f:
+                        return base64.b64encode(f.read()).decode()
+
+        # Fallback: Try to get via File DocType by exact file_url
+        file_docs = frappe.get_all("File", filters={"file_url": file_url}, fields=["name"], limit=1)
+        if file_docs:
+            fdoc = frappe.get_doc("File", file_docs[0].name)
+            content = fdoc.get_content()
+            if content:
+                if isinstance(content, str):
+                    content = content.encode("utf-8")
+                return base64.b64encode(content).decode()
             
     except Exception:
-        # Log error only if it's not a simple missing file
-        # frappe.log_error(f"get_file_b64 failed for {file_url}", "Jinja Utils")
         pass
         
     return ""

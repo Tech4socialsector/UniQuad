@@ -107,58 +107,36 @@
       <span>All bookings are reviewed by the administration. Select the venue type first to load available rooms.</span>
     </div>
 
-    {# Row 1: Event name (full width) #}
+    {# Row 1: Venue Type (full width) #}
     <div class="vb-field-block">
-      <label class="vb-label">Event / Purpose <span class="vb-req">*</span></label>
-      <input type="text" id="vb-event-name" class="vb-input"
-        placeholder="e.g. Study Group, Moot Practice, Club Meeting">
-    </div>
-
-    {# Row 2: Venue Type + Room #}
-    <div class="vb-form-2col">
-      <div class="vb-field-block">
-        <label class="vb-label">Venue Type <span class="vb-req">*</span></label>
-        <div class="vb-select-wrap">
-          <select id="vb-venue-type" class="vb-input vb-select" onchange="loadRooms()">
-            <option value=""> Select Type </option>
-            <option value="Classroom">Classroom</option>
-            <option value="Moot Court">Moot Court</option>
-            <option value="Open Spaces">Open Spaces</option>
-            <option value="Meeting Room">Meeting Room</option>
-            <option value="Mess">Mess</option>
-            <option value="Quad">Quad</option>
-            <option value="Conference Hall">Conference Hall</option>
-            <option value="Project">Project</option>
-            <option value="Guest House">Guest House</option>
-            <option value="Staff Quarters">Staff Quarters</option>
-          </select>
-          <span class="sp-ms vb-select-arrow">expand_more</span>
-        </div>
-      </div>
-      <div class="vb-field-block">
-        <label class="vb-label">Venue / Room <span class="vb-req">*</span></label>
-        <div class="vb-select-wrap">
-          <select id="vb-room" class="vb-input vb-select" disabled>
-            <option value=""> Select Venue Type first </option>
-          </select>
-          <span class="sp-ms vb-select-arrow">expand_more</span>
-        </div>
-        <div id="vb-room-capacity" style="display:none;" class="vb-cap-hint">
-          <span class="sp-ms" style="font-size:13px;">people</span>
-          Capacity: <strong id="vb-cap-val"></strong>
-        </div>
+      <label class="vb-label">Venue Type <span class="vb-req">*</span></label>
+      <div class="vb-select-wrap">
+        <select id="vb-venue-type" class="vb-input vb-select" onchange="loadRooms()">
+          <option value=""> Select Type </option>
+          <option value="Classroom">Classroom</option>
+          <option value="Moot Court">Moot Court</option>
+          <option value="Open Spaces">Open Spaces</option>
+          <option value="Meeting Room">Meeting Room</option>
+          <option value="Mess">Mess</option>
+          <option value="Quad">Quad</option>
+          <option value="Conference Hall">Conference Hall</option>
+          <option value="Project">Project</option>
+          <option value="Guest House">Guest House</option>
+          <option value="Staff Quarters">Staff Quarters</option>
+        </select>
+        <span class="sp-ms vb-select-arrow">expand_more</span>
       </div>
     </div>
 
-    {# Row 3: Start + End datetime #}
+    {# Row 2: Start + End datetime #}
     <div class="vb-form-2col">
       <div class="vb-field-block">
         <label class="vb-label">Start Date &amp; Time <span class="vb-req">*</span></label>
-        <input type="datetime-local" id="vb-start" class="vb-input" onchange="checkDuration()">
+        <input type="datetime-local" id="vb-start" class="vb-input" onchange="checkDuration(); loadRooms();">
       </div>
       <div class="vb-field-block">
         <label class="vb-label">End Date &amp; Time <span class="vb-req">*</span></label>
-        <input type="datetime-local" id="vb-end" class="vb-input" onchange="checkDuration()">
+        <input type="datetime-local" id="vb-end" class="vb-input" onchange="checkDuration(); loadRooms();">
       </div>
     </div>
 
@@ -169,16 +147,38 @@
       </span>
     </div>
 
-    {# Row 4: Attendees + Description #}
-    <div class="vb-form-2col">
-      <div class="vb-field-block">
-        <label class="vb-label">Expected Attendees</label>
-        <input type="number" id="vb-attendees" class="vb-input" min="1" placeholder="How many people?">
+    {# Row 3: Expected Attendees #}
+    <div class="vb-field-block">
+      <label class="vb-label">Expected Attendees <span class="vb-req">*</span></label>
+      <input type="number" id="vb-attendees" class="vb-input" min="1" placeholder="How many people?" oninput="loadRooms()">
+    </div>
+
+    {# Row 4: Venue #}
+    <div class="vb-field-block" style="margin-bottom:16px;">
+      <label class="vb-label">Venue / Room <span class="vb-req">*</span></label>
+      <div class="vb-select-wrap">
+        <select id="vb-room" class="vb-input vb-select">
+          <option value=""> Select venue type and attendees first </option>
+        </select>
+        <span class="sp-ms vb-select-arrow">expand_more</span>
       </div>
-      <div class="vb-field-block">
-        <label class="vb-label">Description</label>
-        <textarea id="vb-reason" class="vb-input" rows="3" placeholder="Any special requirements (optional)" style="resize:vertical;"></textarea>
+      <div id="vb-room-capacity" style="display:none;" class="vb-cap-hint">
+        <span class="sp-ms" style="font-size:13px;">people</span>
+        Capacity: <strong id="vb-cap-val"></strong>
       </div>
+    </div>
+
+    {# Row 5: Event / Purpose #}
+    <div class="vb-field-block">
+      <label class="vb-label">Event / Purpose <span class="vb-req">*</span></label>
+      <input type="text" id="vb-event-name" class="vb-input"
+        placeholder="e.g. Study Group, Moot Practice, Club Meeting">
+    </div>
+
+    {# Row 4: Description #}
+    <div class="vb-field-block" style="margin-bottom:16px;">
+      <label class="vb-label">Description</label>
+      <textarea id="vb-reason" class="vb-input" rows="3" placeholder="Any special requirements (optional)" style="resize:vertical;"></textarea>
     </div>
 
     {# Row 5: File upload #}
@@ -451,29 +451,52 @@
 {% endblock %}
 
 {% block extra_js %}
+<style>
+.flatpickr-calendar {
+    z-index: 99999999 !important;
+}
+.flatpickr-wrapper {
+    z-index: 99999999 !important;
+}
+</style>
+
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
 document.addEventListener("DOMContentLoaded", function() {
-  var startPicker = flatpickr("#vb-start", { 
+  var now = new Date();
+  window.fpStartPicker = flatpickr("#vb-start", { 
     enableTime: true, 
     dateFormat: "Y-m-d\TH:i", 
     altInput: true, 
     altFormat: "d/m/Y h:i K",
-    minDate: new Date(),
+    minDate: "today",
+    defaultDate: now,
     onChange: function(selectedDates, dateStr, instance) {
       if (selectedDates.length > 0) {
-        endPicker.set('minDate', selectedDates[0]);
+        var startDate = selectedDates[0];
+        var minEnd = new Date(startDate.getTime());
+        window.fpEndPicker.set('minDate', minEnd);
+        
+        var defaultEnd = new Date(startDate.getTime() + 30 * 60000);
+        window.fpEndPicker.setDate(defaultEnd);
       }
-      checkDuration(); 
+      checkDuration();
+      if(typeof loadRooms === "function") loadRooms();
     }
   });
-  var endPicker = flatpickr("#vb-end", { 
+
+  var defaultEnd = new Date(now.getTime() + 30 * 60000);
+  window.fpEndPicker = flatpickr("#vb-end", { 
     enableTime: true, 
     dateFormat: "Y-m-d\TH:i", 
     altInput: true, 
     altFormat: "d/m/Y h:i K",
-    minDate: new Date(),
-    onChange: function() { checkDuration(); }
+    minDate: "today",
+    defaultDate: defaultEnd,
+    onChange: function() { 
+      checkDuration(); 
+      if(typeof loadRooms === "function") loadRooms();
+    }
   });
 });
 var _roomData = [];
@@ -482,8 +505,33 @@ var _vbSkipConflict = false;
 var _vbCapacityResolve = null;
 var _vbConflictResolve = null;
 
+function fpCheckAvailabilityMsg() {
+  var sel = document.getElementById('vb-room');
+  var msg = document.getElementById('vb-room-availability');
+  if (!sel || !msg) return;
+  var opt = sel.options[sel.selectedIndex];
+  if (!opt || !opt.value) {
+    msg.style.display = 'none';
+    return;
+  }
+  msg.style.display = 'block';
+  if (opt.disabled || opt.text.indexOf('(Pending') > -1 || opt.text.indexOf('(Allotted') > -1 || opt.text.indexOf('(Booked') > -1) {
+    msg.style.color = 'var(--fp-primary, #b91c1c)';
+    msg.innerHTML = '<span class="fp-ms" style="font-size:14px;vertical-align:middle;margin-right:4px;">cancel</span>Not available, check other venue.';
+  } else {
+    msg.style.color = '#166534';
+    msg.innerHTML = '<span class="fp-ms" style="font-size:14px;vertical-align:middle;margin-right:4px;">check_circle</span>Venue is available for booking!';
+  }
+}
+
 function loadRooms() {
   var vtype = document.getElementById('vb-venue-type').value;
+  var attendees = document.getElementById('vb-attendees') ? document.getElementById('vb-attendees').value : '';
+  var start = document.getElementById('vb-start') ? document.getElementById('vb-start').value : '';
+  var end = document.getElementById('vb-end') ? document.getElementById('vb-end').value : '';
+  var showBooked = document.getElementById('vb-show-booked') ? document.getElementById('vb-show-booked').checked : false;
+  var sortDesc = document.getElementById('vb-sort-desc') ? document.getElementById('vb-sort-desc').checked : false;
+
   var rsel  = document.getElementById('vb-room');
   var capEl = document.getElementById('vb-room-capacity');
 
@@ -491,14 +539,33 @@ function loadRooms() {
   rsel.disabled  = true;
   capEl.style.display = 'none';
 
-  if (!vtype) {
-    rsel.innerHTML = '<option value=""> Select Venue Type first </option>';
+  if (!vtype || !attendees) {
+    rsel.innerHTML = '<option value=""> Select Venue Type and Expected Attendees first </option>';
     return;
   }
 
+  var filters = {
+    venue_type: vtype,
+    expected_attendees: attendees,
+    include_booked: showBooked ? 1 : 0,
+    sort_order: sortDesc ? 'desc' : 'asc'
+  };
+
+  if (start && end && start < end) {
+    filters.start_datetime = start;
+    filters.end_datetime = end;
+  }
+
   spCall(
-    'slcm.api.student_portal.get_rooms_for_type',
-    { venue_type: vtype },
+    'slcm.slcm.doctype.venue_booking.venue_booking.get_venue_query',
+    {
+      doctype: 'Venue Booking',
+      txt: '',
+      searchfield: 'name',
+      start: 0,
+      page_len: 100,
+      filters: JSON.stringify(filters)
+    },
     function(rooms) {
       _roomData = rooms || [];
       rsel.innerHTML = '<option value=""> Select Room </option>';
@@ -507,12 +574,15 @@ function loadRooms() {
         return;
       }
       _roomData.forEach(function(r) {
-        var label = r.room_name || r.name;
-        if (r.seating_capacity) label += ' (cap: ' + r.seating_capacity + ')';
+        var label = r.description || r.value;
+        if (r.capacity) label += ' (cap: ' + r.capacity + ')';
+        var is_booked = r.is_booked;
+        if (is_booked) label += ' (Booked)';
         var opt = document.createElement('option');
-        opt.value = r.name;
+        opt.value = r.value;
         opt.textContent = label;
-        opt.dataset.cap = r.seating_capacity || '';
+        opt.dataset.cap = r.capacity || '';
+        if (is_booked) opt.disabled = true;
         rsel.appendChild(opt);
       });
       rsel.disabled = false;

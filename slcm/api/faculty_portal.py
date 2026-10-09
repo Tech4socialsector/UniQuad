@@ -1,3 +1,4 @@
+import datetime
 import json
 
 import frappe
@@ -162,6 +163,10 @@ def get_session_students(session_name):
 
     session = frappe.get_doc("Attendance Session", session_name, ignore_permissions=True)
     _assert_session_owned_by_faculty(session, faculty_name)
+    # OH rosters come from the OH Student Group; refresh in memory so sessions
+    # saved before that rule (or before the group changed) list the right students.
+    if session.session_type == "Office Hour":
+        session.update_attendance_summary()
 
     # Attendance Session Student (roster) has no source/who/when — that detail
     # only lives on the actual Student Attendance record, when one exists.
@@ -315,8 +320,15 @@ def get_attendance_history(attendance_record):
 
 
 @frappe.whitelist()
-def save_attendance(session_name, attendance):
-    """Save attendance for an attendance session."""
+def get_class_participation(session_name):
+    """Class Participants tab: the week's Class-Participation group for this
+    session, which hour slot this class records into, and each student's
+    already-saved participation/mark for that slot."""
+    from slcm.slcm.utils.class_participation import (
+        get_participation_context,
+        get_participation_roster,
+    )
+
     if frappe.session.user == "Guest":
         frappe.throw("Not permitted", frappe.PermissionError)
 
@@ -326,6 +338,31 @@ def save_attendance(session_name, attendance):
 
     session = frappe.get_doc("Attendance Session", session_name, ignore_permissions=True)
     _assert_session_owned_by_faculty(session, faculty_name)
+
+    ctx = get_participation_context(session)
+    if not ctx.available:
+        return {"context": ctx, "students": [], "slot_recorded": False}
+
+    return {"context": ctx, **get_participation_roster(ctx)}
+
+
+@frappe.whitelist()
+def save_attendance(session_name, attendance, participation=None):
+    """Save attendance for an attendance session, plus (optionally) class
+    participation marks for the session's week/slot - see
+    slcm.slcm.utils.class_participation."""
+    if frappe.session.user == "Guest":
+        frappe.throw("Not permitted", frappe.PermissionError)
+
+    faculty_name = get_faculty_name()
+    if not faculty_name:
+        frappe.throw("No faculty record found", frappe.DoesNotExistError)
+
+    session = frappe.get_doc("Attendance Session", session_name, ignore_permissions=True)
+    _assert_session_owned_by_faculty(session, faculty_name)
+    # Same roster the faculty was shown (see get_session_students)
+    if session.session_type == "Office Hour":
+        session.update_attendance_summary()
 
     if isinstance(attendance, str):
         attendance = json.loads(attendance)
@@ -399,6 +436,24 @@ def save_attendance(session_name, attendance):
             attendance_percentage=%s, attendance_marked=1
         WHERE name=%s
     """, (present_count, absent_count, total, pct, session_name))
+
+    # Class participation goes in the same transaction, so a validation error
+    # (e.g. a mark out of range) rolls back the attendance save too instead of
+    # leaving the two half-saved.
+    from slcm.slcm.utils.class_participation import (
+        get_participation_context,
+        save_class_participation,
+    )
+
+    if isinstance(participation, str):
+        participation = json.loads(participation) if participation else None
+
+    ctx = get_participation_context(session)
+    if ctx.available:
+        final_att_map = {row.student: row.status for row in session.get("students", [])}
+        save_class_participation(session, ctx, participation, final_att_map)
+    elif participation:
+        frappe.throw(ctx.reason or "Class participation cannot be recorded for this session.")
 
     frappe.db.commit()
 
@@ -683,9 +738,10 @@ def get_dashboard_stats():
 
 def _get_faculty_co_names(faculty_name):
     """Return list of active course offering names for the faculty."""
+    active_ays = frappe.get_all("Academic Year", filters={"status": "Active"}, pluck="name")
     return frappe.get_all(
         "Course Offering",
-        filters={"faculty": faculty_name, "status": ["in", ["Open", "Active"]]},
+        filters={"faculty": faculty_name, "status": "Active", "academic_year": ["in", active_ays]},
         pluck="name",
         ignore_permissions=True,
     )
@@ -853,9 +909,11 @@ def drilldown_subjects():
     if not faculty_name:
         frappe.throw("No faculty record found", frappe.DoesNotExistError)
 
+    active_ays = frappe.get_all("Academic Year", filters={"status": "Active"}, pluck="name")
+
     offerings = frappe.get_all(
         "Course Offering",
-        filters={"faculty": faculty_name, "status": ["in", ["Open", "Active"]]},
+        filters={"faculty": faculty_name, "status": "Active", "academic_year": ["in", active_ays]},
         fields=["name", "course_name", "term_name", "academic_year",
                 "credit_value", "status"],
         order_by="academic_year desc, term_name asc, course_name asc",
@@ -889,9 +947,11 @@ def drilldown_subjects():
             avg_pct = 0.0
             sessions = 0
 
+        import urllib.parse
         rows.append({
             "course_offering": co.name,
             "course_name": co.course_name or co.name,
+            "course_link": f"/faculty-portal/my-classes?course_offering={urllib.parse.quote(co.name)}",
             "term": co.term_name or "—",
             "academic_year": co.academic_year or "—",
             "credits": co.credit_value or 0,
@@ -899,12 +959,15 @@ def drilldown_subjects():
             "sessions": sessions,
             "avg_attendance": avg_pct,
             "status": co.status or "Active",
+            "action_btn": "Mark Attendance",
+            "action_link": f"/faculty-portal/attendance?course_offering={urllib.parse.quote(co.name)}#attendance-sessions-card",
         })
 
     return {
-        "title": "My Subjects",
+        "title": "Courses",
+        "hide_count": True,
         "columns": [
-            {"key": "course_name",    "label": "Course Name",      "type": "text"},
+            {"key": "course_name",    "label": "Course Name",      "type": "link", "link_key": "course_link"},
             {"key": "term",           "label": "Term",             "type": "text"},
             {"key": "academic_year",  "label": "Academic Year",    "type": "text"},
             {"key": "credits",        "label": "Credits",          "type": "number"},
@@ -912,6 +975,7 @@ def drilldown_subjects():
             {"key": "sessions",       "label": "Sessions Held",    "type": "number"},
             {"key": "avg_attendance", "label": "Avg Attendance %", "type": "percent"},
             {"key": "status",         "label": "Status",           "type": "badge"},
+            {"key": "action_btn",     "label": "Action",           "type": "button", "link_key": "action_link"},
         ],
         "rows": rows,
         "count": len(rows),
@@ -929,7 +993,7 @@ def drilldown_students():
 
     co_names = _get_faculty_co_names(faculty_name)
     if not co_names:
-        return {"title": "Total Students", "columns": [], "rows": [], "count": 0}
+        return {"title": "Students", "columns": [], "rows": [], "count": 0}
 
     try:
         raw = frappe.db.sql(
@@ -940,7 +1004,8 @@ def drilldown_students():
                 sm.registration_id,
                 sm.gender,
                 sm.passport_size_photo,
-                se.program,
+                sm.section as student_section,
+                pm.program_name,
                 sec.course_offering,
                 co.course_name,
                 co.term_name,
@@ -949,6 +1014,7 @@ def drilldown_students():
             JOIN `tabStudent Enrollment` se ON se.name = sec.parent
             JOIN `tabCourse Offering` co ON co.name = sec.course_offering
             LEFT JOIN `tabStudent Master` sm ON sm.name = se.student
+            LEFT JOIN `tabProgramme` pm ON pm.name = se.program
             WHERE sec.course_offering IN %s
               AND sec.status = 'Enrolled'
             ORDER BY co.course_name, sm.last_name, sm.first_name
@@ -965,15 +1031,16 @@ def drilldown_students():
         rows.append({
             "student_id": r.get("registration_id") or r.get("student", ""),
             "student_name": full_name,
-            # Not a column: used only to draw the avatar beside the name
-            # (so it stays out of the CSV export).
             "student_image": r.get("passport_size_photo") or "",
             "gender": r.get("gender") or "—",
-            "program": r.get("program") or "—",
+            "program": r.get("program_name") or r.get("program") or "—",
             "course_name": r.get("course_name") or r.get("course_offering", ""),
             "term": r.get("term_name") or "—",
             "academic_year": r.get("academic_year") or "—",
+            "section": r.get("student_section") or "—",
         })
+        
+    active_ay = frappe.get_cached_value("Academic Year", {"status": "Active"}, "name")
 
     return {
         "title": "Enrolled Students",
@@ -983,11 +1050,18 @@ def drilldown_students():
             {"key": "gender",       "label": "Gender",        "type": "text"},
             {"key": "program",      "label": "Programme",       "type": "text"},
             {"key": "course_name",  "label": "Course",        "type": "text"},
-            {"key": "term",         "label": "Term",          "type": "text"},
-            {"key": "academic_year","label": "Academic Year", "type": "text"},
+            {"key": "section",      "label": "Section",       "type": "text"},
         ],
         "rows": rows,
         "count": len(rows),
+        "filters": [
+            {"key": "academic_year", "label": "Academic Year"},
+            {"key": "term", "label": "Term"},
+            {"key": "program", "label": "Programme"},
+            {"key": "course_name", "label": "Course"},
+            {"key": "section", "label": "Section"},
+        ],
+        "default_ay": active_ay
     }
 
 
@@ -1004,7 +1078,7 @@ def drilldown_todays_classes():
     today = frappe.utils.today()
 
     if not co_names:
-        return {"title": "Today's Classes", "columns": [], "rows": [], "count": 0}
+        return {"title": "Today's Sessions", "columns": [], "rows": [], "count": 0}
 
     raw = frappe.get_all(
         "Attendance Session",
@@ -1042,7 +1116,7 @@ def drilldown_todays_classes():
         })
 
     return {
-        "title": "Today's Classes",
+        "title": "Today's Sessions",
         "columns": [
             {"key": "course_name",    "label": "Course",        "type": "text"},
             {"key": "date",           "label": "Date",          "type": "text"},
@@ -1073,7 +1147,7 @@ def drilldown_pending_attendance():
     today = frappe.utils.today()
 
     if not co_names:
-        return {"title": "Pending Attendance", "columns": [], "rows": [], "count": 0}
+        return {"title": "Attendance Tasks", "columns": [], "rows": [], "count": 0}
 
     raw = frappe.get_all(
         "Attendance Session",
@@ -1112,7 +1186,7 @@ def drilldown_pending_attendance():
         })
 
     return {
-        "title": "Pending Attendance Sessions",
+        "title": "Attendance Tasks",
         "columns": [
             {"key": "course_name",    "label": "Course",          "type": "text"},
             {"key": "date",           "label": "Session Date",    "type": "text"},
@@ -1321,6 +1395,293 @@ def drilldown_student_groups():
         "rows": rows,
         "count": len(rows),
     }
+
+
+# ── Dashboard calendar ────────────────────────────────────────────────
+
+_CAL_MAX_DAYS = 100
+_HOLIDAY_ENTRY_TYPES = ("Holiday", "Weekly Off")
+
+
+def _hhmm(t):
+    """Time/timedelta/str → 'HH:MM' (24h), or '' when empty."""
+    if not t:
+        return ""
+    if hasattr(t, "seconds"):
+        h, rem = divmod(int(t.total_seconds()) % 86400, 3600)
+        return f"{h:02d}:{rem // 60:02d}"
+    parts = str(t).split(":")
+    return f"{int(parts[0]):02d}:{int(parts[1]) if len(parts) > 1 else 0:02d}"
+
+
+_WEEKDAY_FIELDS = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
+
+
+def _faculty_participant_event_names(faculty_name):
+    """Events listing this faculty in their Participants table — as a Faculty
+    reference, or by one of the faculty's email addresses (e.g. the Contact
+    added by "Sync to Google Calendar")."""
+    fac = frappe.db.get_value(
+        "Faculty", faculty_name, ["user_id", "email", "official_email_id"], as_dict=True
+    ) or frappe._dict()
+    emails = list({e.strip().lower() for e in (fac.user_id, fac.email, fac.official_email_id) if e and e.strip()})
+
+    conditions = ["(ep.reference_doctype = 'Faculty' AND ep.reference_docname = %(faculty)s)"]
+    if emails:
+        conditions.append("LOWER(ep.email) IN %(emails)s")
+    return frappe.db.sql_list(
+        f"""SELECT DISTINCT ep.parent FROM `tabEvent Participants` ep
+            WHERE ep.parenttype = 'Event' AND ({' OR '.join(conditions)})""",
+        {"faculty": str(faculty_name), "emails": tuple(emails)},
+    )
+
+
+def _event_occurrences(ev, start, end):
+    """(start_datetime, end_datetime) of each occurrence of `ev` overlapping
+    start..end, expanding Daily / Weekly (on its ticked weekdays) / Monthly /
+    Yearly repeats up to repeat_till."""
+    from dateutil.relativedelta import relativedelta
+
+    starts_on = frappe.utils.get_datetime(ev.starts_on)
+    ends_on = frappe.utils.get_datetime(ev.ends_on) if ev.ends_on else starts_on
+    ends_on = max(ends_on, starts_on)
+    duration = ends_on - starts_on
+
+    def overlaps(s, e):
+        return s.date() <= end and e.date() >= start
+
+    if not ev.repeat_this_event:
+        return [(starts_on, ends_on)] if overlaps(starts_on, ends_on) else []
+
+    last = min(end, frappe.utils.getdate(ev.repeat_till)) if ev.repeat_till else end
+    out = []
+    if ev.repeat_on in ("Daily", "Weekly"):
+        weekdays = {i for i, f in enumerate(_WEEKDAY_FIELDS) if ev.get(f)}
+        if ev.repeat_on == "Weekly" and not weekdays:
+            weekdays = {starts_on.weekday()}
+        day = max(starts_on.date(), start - duration - datetime.timedelta(days=1))
+        while day <= last:
+            if ev.repeat_on == "Daily" or day.weekday() in weekdays:
+                s = datetime.datetime.combine(day, starts_on.time())
+                if s >= starts_on and overlaps(s, s + duration):
+                    out.append((s, s + duration))
+            day += datetime.timedelta(days=1)
+    elif ev.repeat_on in ("Monthly", "Quarterly", "Half Yearly", "Yearly"):
+        months = {"Monthly": 1, "Quarterly": 3, "Half Yearly": 6, "Yearly": 12}[ev.repeat_on]
+        n = 0
+        while True:
+            s = starts_on + relativedelta(months=months * n)
+            if s.date() > last:
+                break
+            if overlaps(s, s + duration):
+                out.append((s, s + duration))
+            n += 1
+    return out
+
+
+def _cal_events(start, end, timetable_event_names, faculty_name):
+    """Events that list this faculty as a participant (see
+    _faculty_participant_event_names), with repeating events expanded.
+    Events that only mirror a Time Table entry for Google sync are skipped —
+    the class shows in the Time Table layer."""
+    names = _faculty_participant_event_names(faculty_name)
+    if not names:
+        return []
+
+    events = frappe.get_all(
+        "Event",
+        filters={"name": ["in", names], "status": "Open"},
+        fields=["name", "subject", "description", "starts_on", "ends_on", "all_day", "event_type",
+                "repeat_this_event", "repeat_on", "repeat_till", *_WEEKDAY_FIELDS],
+        ignore_permissions=True,
+    )
+
+    items = []
+    for ev in events:
+        # The description marker also catches mirrors whose Time Table lost its link
+        if ev.name in timetable_event_names or (ev.description or "").startswith("Synced from Time Table:"):
+            continue
+        all_day = bool(ev.all_day)
+        for s, e in _event_occurrences(ev, start, end):
+            items.append({
+                "id": f"event::{ev.name}::{s.date()}",
+                "layer": "event",
+                "title": ev.subject or "Event",
+                "start_date": str(s.date()),
+                "end_date": str(e.date()),
+                "start_time": "" if all_day else s.strftime("%H:%M"),
+                "end_time": "" if all_day else e.strftime("%H:%M"),
+                "all_day": all_day,
+                "subtitle": ev.event_type or "",
+                "description": frappe.utils.strip_html(ev.description or "")[:300],
+            })
+    return items
+
+
+def _cal_institutional(start, end):
+    rows = frappe.get_all(
+        "Institutional Calendar",
+        filters=[["start_date", "<=", end]],
+        fields=["name", "name1", "entry_type", "status", "start_date", "end_date",
+                "academic_year", "description"],
+        order_by="start_date asc",
+        ignore_permissions=True,
+    )
+    rows = [r for r in rows
+            if r.status != "Inactive" and frappe.utils.getdate(r.end_date or r.start_date) >= start]
+    off_days = {}
+    weekly_off = [r.name for r in rows if r.entry_type == "Weekly Off"]
+    if weekly_off:
+        for d in frappe.get_all(
+            "Institutional Calendar Weekly Off Day",
+            filters={"parent": ["in", weekly_off], "parenttype": "Institutional Calendar"},
+            fields=["parent", "day"],
+            ignore_permissions=True,
+        ):
+            off_days.setdefault(d.parent, set()).add(d.day)
+
+    items = []
+    for r in rows:
+        r_start = frappe.utils.getdate(r.start_date)
+        r_end = frappe.utils.getdate(r.end_date or r.start_date)
+        base = {
+            "layer": "institutional",
+            "title": r.name1 or r.name,
+            "start_time": "",
+            "end_time": "",
+            "all_day": True,
+            "subtitle": " · ".join(filter(None, [r.entry_type, r.academic_year])),
+            "entry_type": r.entry_type or "",
+            "is_holiday": r.entry_type in _HOLIDAY_ENTRY_TYPES,
+            "description": frappe.utils.strip_html(r.description or "")[:300],
+        }
+        if r.entry_type == "Weekly Off" and off_days.get(r.name):
+            # One entry per matching weekday inside the visible window
+            day = max(r_start, start)
+            while day <= min(r_end, end):
+                if day.strftime("%A") in off_days[r.name]:
+                    items.append({**base, "id": f"inst::{r.name}::{day}",
+                                  "start_date": str(day), "end_date": str(day)})
+                day = frappe.utils.add_days(day, 1)
+        else:
+            items.append({**base, "id": f"inst::{r.name}",
+                          "start_date": str(r_start), "end_date": str(max(r_end, r_start))})
+    return items
+
+
+def _cal_timetable(faculty_name, start, end, today):
+    base_filters = [["schedule_date", "between", [start, end]], ["docstatus", "<", 2]]
+    fields = ["name", "title", "course", "course_offering", "section", "based_on",
+              "schedule_date", "from_time", "to_time", "venue", "linked_google_event"]
+
+    rows = {r.name: r for r in frappe.get_all(
+        "Time Table", filters=base_filters + [["instructor", "=", faculty_name]],
+        fields=fields, limit_page_length=0, ignore_permissions=True,
+    )}
+    co_names = frappe.get_all(
+        "Course Offering", filters={"faculty": faculty_name}, pluck="name", ignore_permissions=True
+    )
+    if co_names:
+        for r in frappe.get_all(
+            "Time Table", filters=base_filters + [["course_offering", "in", co_names]],
+            fields=fields, limit_page_length=0, ignore_permissions=True,
+        ):
+            rows.setdefault(r.name, r)
+    if not rows:
+        return [], set()
+
+    co_titles = {}
+    offering_names = list({r.course_offering for r in rows.values() if r.course_offering})
+    if offering_names:
+        co_titles = dict(frappe.get_all(
+            "Course Offering", filters={"name": ["in", offering_names]},
+            fields=["name", "course_name"], as_list=True, ignore_permissions=True,
+        ))
+
+    sessions = {}
+    for s in frappe.get_all(
+        "Attendance Session",
+        filters={"class_schedule": ["in", list(rows)]},
+        fields=["name", "class_schedule", "attendance_marked", "session_status", "session_type"],
+        ignore_permissions=True,
+    ):
+        sessions[s.class_schedule] = s
+
+    items = []
+    for r in rows.values():
+        sess = sessions.get(r.name)
+        date = frappe.utils.getdate(r.schedule_date)
+        # Same status rules as the attendance page's sessions list
+        if sess and sess.session_status == "Cancelled":
+            status = "Cancelled"
+        elif sess and sess.attendance_marked:
+            status = "Marked"
+        elif date > today:
+            status = "Upcoming"
+        elif date == today:
+            status = "Active"
+        else:
+            status = "Pending"
+        is_oh = (sess.session_type == "Office Hour") if sess else r.based_on == "Office Hours"
+        items.append({
+            "id": f"tt::{r.name}",
+            "layer": "timetable",
+            "title": co_titles.get(r.course_offering) or r.title or r.course or "Class",
+            "start_date": str(date),
+            "end_date": str(date),
+            "start_time": _hhmm(r.from_time),
+            "end_time": _hhmm(r.to_time),
+            "all_day": not r.from_time,
+            "subtitle": " · ".join(filter(None, ["OH" if is_oh else "Class", r.section])),
+            "venue": r.venue or "",
+            "status": status,
+            # Opens this session in the attendance page's Student Attendance Tool
+            "session": sess.name if sess else "",
+            "kind": "oh" if is_oh else "class",
+        })
+    linked_events = {r.linked_google_event for r in rows.values() if r.linked_google_event}
+    return items, linked_events
+
+
+@frappe.whitelist()
+def get_faculty_calendar(start, end):
+    """Calendar items for the dashboard between `start` and `end` (inclusive):
+    Events, Institutional Calendar entries and the faculty's Time Table classes."""
+    if frappe.session.user == "Guest":
+        frappe.throw("Not permitted", frappe.PermissionError)
+    faculty_name = get_faculty_name()
+    if not faculty_name:
+        frappe.throw("No faculty record found", frappe.DoesNotExistError)
+
+    start, end = frappe.utils.getdate(start), frappe.utils.getdate(end)
+    if end < start:
+        start, end = end, start
+    if frappe.utils.date_diff(end, start) > _CAL_MAX_DAYS:
+        end = frappe.utils.getdate(frappe.utils.add_days(start, _CAL_MAX_DAYS))
+
+    today = frappe.utils.getdate()
+    items, errors = [], []
+
+    linked_events = set()
+    try:
+        tt_items, linked_events = _cal_timetable(faculty_name, start, end, today)
+        items += tt_items
+    except Exception:
+        errors.append("timetable")
+        frappe.log_error(frappe.get_traceback(), "Faculty Calendar – Time Table")
+    try:
+        items += _cal_institutional(start, end)
+    except Exception:
+        errors.append("institutional")
+        frappe.log_error(frappe.get_traceback(), "Faculty Calendar – Institutional Calendar")
+    try:
+        items += _cal_events(start, end, linked_events, faculty_name)
+    except Exception:
+        errors.append("event")
+        frappe.log_error(frappe.get_traceback(), "Faculty Calendar – Event")
+
+    items.sort(key=lambda i: (i["start_date"], not i["all_day"], i["start_time"]))
+    return {"start": str(start), "end": str(end), "today": str(today), "items": items, "errors": errors}
 
 
 @frappe.whitelist()

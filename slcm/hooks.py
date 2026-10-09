@@ -357,6 +357,7 @@ fixtures = [
         "filters": [
             ["dt", "not in", ["HD Ticket Type", "HD Ticket"]],
             ["name", "!=", "Web Form-amount_field"],
+            ["name", "!=", "Email Template-reference_doctype"],
         ]
     },
     {

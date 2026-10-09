@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   {# Fully-resolved settings: defaults applied, derived shades and body classes pre-computed #}
@@ -576,6 +576,14 @@
         </div>
       </a>
 
+      {# Announcements #}
+      <a href="/student-portal/announcements" class="sp-nav-group-header {% if active_page == 'announcements' %}active{% endif %}" data-label="Announcements" style="text-decoration: none; margin-bottom: 4px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span class="sp-ms">campaign</span>
+          <span class="sp-nav-label">Announcements</span>
+        </div>
+      </a>
+
       {# Academics #}
       <div class="sp-nav-group" id="sp-group-academics">
         <div class="sp-nav-group-header" onclick="spToggleNavGroup('academics')" data-label="Academics">
@@ -586,15 +594,15 @@
           <span class="sp-ms sp-nav-group-caret">keyboard_arrow_down</span>
         </div>
         <div class="sp-nav-group-items">
+          <a href="/student-portal/courses" class="sp-nav-item {% if active_page == 'courses' %}active{% endif %}" data-label="Courses">
+            <span class="sp-ms">library_books</span><span class="sp-nav-label">Courses</span>
+          </a>
           <a href="/student-portal/attendance" class="sp-nav-item {% if active_page == 'attendance' %}active{% endif %}" data-label="Attendance">
             <span class="sp-ms">event_available</span><span class="sp-nav-label">Attendance</span>
           </a>
           <!-- <a href="/student-portal/enrollment" class="sp-nav-item {% if active_page == 'enrollment' %}active{% endif %}" data-label="Enrollment">
             <span class="sp-ms">how_to_reg</span><span class="sp-nav-label">Enrollment</span>
           </a> -->
-          <a href="/student-portal/courses" class="sp-nav-item {% if active_page == 'courses' %}active{% endif %}" data-label="My Courses">
-            <span class="sp-ms">library_books</span><span class="sp-nav-label">Courses</span>
-          </a>
           <a href="/student-portal/timetable" class="sp-nav-item {% if active_page == 'timetable' %}active{% endif %}" data-label="Timetable">
             <span class="sp-ms">calendar_month</span><span class="sp-nav-label">Timetable</span>
           </a>
@@ -631,29 +639,29 @@
         </div>
       </div> -->
 
-      {# Examinations & Results #}
+      {# Assessments #}
       <div class="sp-nav-group" id="sp-group-exams">
-        <div class="sp-nav-group-header" onclick="spToggleNavGroup('exams')" data-label="Examinations">
+        <div class="sp-nav-group-header" onclick="spToggleNavGroup('exams')" data-label="Assessments">
           <div style="display:flex;align-items:center;gap:12px;">
             <span class="sp-ms">bar_chart</span>
-            <span class="sp-nav-label">Examinations &amp; Results</span>
+            <span class="sp-nav-label">Assessments</span>
           </div>
           <span class="sp-ms sp-nav-group-caret">keyboard_arrow_down</span>
         </div>
         <div class="sp-nav-group-items">
-          <a href="/student-portal/exam-schedule" class="sp-nav-item {% if active_page == 'exam_schedule' %}active{% endif %}" data-label="Exam Schedule">
-            <span class="sp-ms">event_note</span><span class="sp-nav-label">Exam Schedule</span>
+          <a href="/student-portal/exam-schedule" class="sp-nav-item {% if active_page == 'exam_schedule' %}active{% endif %}" data-label="Assessment Schedule">
+            <span class="sp-ms">event_note</span><span class="sp-nav-label">Assessment Schedule</span>
           </a>
           {# Grade Appeal — hidden per request; markup kept for easy restore
           <a href="/student-portal/grade-appeal" class="sp-nav-item {% if active_page == 'grade_appeal' %}active{% endif %}" data-label="Grade Appeal">
             <span class="sp-ms">balance</span><span class="sp-nav-label">Grade Appeal</span>
           </a>
           #}
-          <a href="/student-portal/re-exam" class="sp-nav-item {% if active_page == 're_exam' %}active{% endif %}" data-label="Re-exam Application">
-            <span class="sp-ms">assignment_late</span><span class="sp-nav-label">Re-exam Application</span>
+          <a href="/student-portal/re-exam" class="sp-nav-item {% if active_page == 're_exam' %}active{% endif %}" data-label="Re-Exam Application">
+            <span class="sp-ms">assignment_late</span><span class="sp-nav-label">Re-Exam Application</span>
           </a>
-          <a href="/student-portal/results" class="sp-nav-item {% if active_page == 'results' %}active{% endif %}" data-label="Results / Grades">
-            <span class="sp-ms">assignment_turned_in</span><span class="sp-nav-label">Results / Grades</span>
+          <a href="/student-portal/results" class="sp-nav-item {% if active_page == 'results' %}active{% endif %}" data-label="Grades">
+            <span class="sp-ms">assignment_turned_in</span><span class="sp-nav-label">Grades</span>
           </a>
         </div>
       </div>
@@ -698,14 +706,6 @@
           </a>
         </div>
       </div>
-      {# Announcements #}
-      <a href="/student-portal/announcements" class="sp-nav-group-header {% if active_page == 'announcements' %}active{% endif %}" data-label="Announcements" style="text-decoration: none; margin-bottom: 4px;">
-        <div style="display:flex;align-items:center;gap:12px;">
-          <span class="sp-ms">campaign</span>
-          <span class="sp-nav-label">Announcements</span>
-        </div>
-      </a>
-
 
     </div>
 
@@ -908,6 +908,16 @@
       var saved = null;
       try { saved = localStorage.getItem('sp-navgroup-' + id); } catch(e) {}
       if (saved === '1') el.classList.add('open');
+    });
+  })();
+
+  /* Hover tooltip with each menu item's full name — long labels are cut
+     off with "…" in the sidebar (and hidden entirely when it's collapsed). */
+  (function spNavTooltips() {
+    document.querySelectorAll('.sp-nav-item, .sp-nav-group-header').forEach(function(el) {
+      var label = el.querySelector('.sp-nav-label');
+      var text = ((label && label.textContent) || el.getAttribute('data-label') || '').trim();
+      if (text && !el.hasAttribute('title')) el.setAttribute('title', text);
     });
   })();
 

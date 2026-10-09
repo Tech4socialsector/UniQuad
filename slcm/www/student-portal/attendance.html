@@ -21,7 +21,7 @@
 </script>
 <style>
   /* ── KPI tiles (same look as the Dashboard / Fees pages) ── */
-  .att-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 18px; }
+  .att-kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 18px; }
   .att-kpi {
     background: var(--sp-card); border: 1px solid var(--sp-border); border-radius: 14px;
     box-shadow: 0 1px 4px rgba(0,0,0,0.05); padding: 18px 20px; min-width: 0;
@@ -138,6 +138,34 @@
     gap: 16px;
     flex-wrap: wrap;
   }
+  /* ── OH / Class Participation (attendance + participation, no marks) ── */
+  .att-part-card { background: var(--sp-card, #fff); border: 1px solid var(--sp-border); border-radius: 14px; box-shadow: 0 1px 2px rgba(16,24,40,.04); margin-bottom: 16px; overflow: hidden; }
+  .att-part-head { display: flex; align-items: center; justify-content: space-between; gap: 12px 20px; flex-wrap: wrap; padding: 14px 18px; border-bottom: 1px solid var(--sp-border-light, #f1f5f9); }
+  .att-part-title { display: flex; align-items: center; gap: 8px; font-size: 14.5px; font-weight: 700; color: var(--sp-text-1); }
+  .att-part-title .sp-ms { font-size: 19px; color: var(--sp-primary); }
+  .att-part-sub { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--sp-text-3); margin-top: 3px; }
+  .att-part-stats { display: flex; gap: 18px; }
+  .att-part-stats div { display: flex; align-items: baseline; gap: 4px; font-size: 12px; color: var(--sp-text-3); }
+  .att-part-stats b { font-size: 18px; color: var(--sp-primary); }
+  .att-part-table-wrap { overflow-x: auto; }
+  .att-part-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .att-part-table th { text-align: left; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--sp-text-4); padding: 9px 14px; background: #fcfcfd; border-bottom: 1px solid var(--sp-border-light, #f1f5f9); white-space: nowrap; }
+  .att-part-table td { padding: 10px 14px; border-bottom: 1px solid var(--sp-border-light, #f1f5f9); color: var(--sp-text-2); white-space: nowrap; }
+  .att-part-table tr:last-child td { border-bottom: none; }
+  .att-part-muted { color: var(--sp-text-4); font-size: 11.5px; }
+  .att-part-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+  .att-part-pill .sp-ms { font-size: 13px; }
+  .att-part-pill.is-good { background: #e8f6ec; color: #1e7b3a; }
+  .att-part-pill.is-bad { background: #fff0f2; color: var(--sp-primary); }
+  .att-part-pill.is-muted { background: #f1f2f4; color: var(--sp-text-3); }
+  .att-part-pill.is-neutral { background: #fff7e6; color: #9a6700; }
+  @media (max-width: 640px) {
+    .att-part-table thead { display: none; }
+    .att-part-table, .att-part-table tbody, .att-part-table tr, .att-part-table td { display: block; width: 100%; }
+    .att-part-table tr { padding: 8px 14px; border-bottom: 1px solid var(--sp-border-light, #f1f5f9); }
+    .att-part-table td { border: none; padding: 3px 0; white-space: normal; }
+    .att-part-table td::before { content: attr(data-label); display: inline-block; min-width: 96px; font-size: 10.5px; font-weight: 700; text-transform: uppercase; color: var(--sp-text-4); }
+  }
 </style>
 
 {% endblock %}
@@ -164,7 +192,7 @@
 {# ── Summary KPIs ──────────────────────────────────────────────── #}
 <section class="att-kpis fade-in" aria-label="Attendance summary">
   <div class="att-kpi">
-    <div class="att-kpi-head"><span class="att-kpi-label">Total Courses</span><span class="att-kpi-icon"><span class="sp-ms" aria-hidden="true">menu_book</span></span></div>
+    <div class="att-kpi-head"><span class="att-kpi-label">Ongoing Courses</span><span class="att-kpi-icon"><span class="sp-ms" aria-hidden="true">menu_book</span></span></div>
     <div class="att-kpi-value">{{ total_courses }}</div>
     <div class="att-kpi-sub">{{ term_groups|length }} term{% if term_groups|length != 1 %}s{% endif %}</div>
   </div>
@@ -172,11 +200,6 @@
     <div class="att-kpi-head"><span class="att-kpi-label">Below {{ _g|int }}%</span><span class="att-kpi-icon"><span class="sp-ms" aria-hidden="true">warning</span></span></div>
     <div class="att-kpi-value{{ ' is-alert' if courses_below_75 > 0 }}">{{ courses_below_75 }}</div>
     <div class="att-kpi-sub">{{ 'Need attention' if courses_below_75 > 0 else 'All courses on track' }}</div>
-  </div>
-  <div class="att-kpi">
-    <div class="att-kpi-head"><span class="att-kpi-label">Exam Eligible</span><span class="att-kpi-icon"><span class="sp-ms" aria-hidden="true">task_alt</span></span></div>
-    <div class="att-kpi-value">{{ courses_eligible }}<small> / {{ total_courses }}</small></div>
-    <div class="att-kpi-sub">Cleared for examinations</div>
   </div>
 </section>
 
@@ -194,10 +217,10 @@
     <span class="sp-ms">event_available</span> Overview
   </button>
   <button class="sp-tab" onclick="spSwitchTab('officehours', this)" id="tab-btn-officehours" style="display:flex;align-items:center;gap:8px;border-radius:8px;">
-    <span class="sp-ms">schedule</span> Office Hours
-    {% if office_hours_sessions %}
-    <span class="sp-tab-badge sp-tab-badge-info">{{ office_hours_sessions|length }}</span>
-    {% endif %}
+    <span class="sp-ms">schedule</span> OH
+  </button>
+  <button class="sp-tab" onclick="spSwitchTab('classparticipation', this)" id="tab-btn-classparticipation" style="display:flex;align-items:center;gap:8px;border-radius:8px;">
+    <span class="sp-ms">groups</span> Class Participation
   </button>
 </div>
 
@@ -246,7 +269,7 @@
           <div class="att-facts">
             <div><div class="att-fact-lbl">Minimum</div><div class="att-fact-val">{{ _min|int }}%</div></div>
             <div><div class="att-fact-lbl">Shortfall</div><div class="att-fact-val{{ ' is-short' if s.shortfall > 0 }}">{{ (s.shortfall ~ '%') if s.shortfall > 0 else 'None' }}</div></div>
-            {% if s.total_office_hours and s.total_office_hours > 0 %}<div><div class="att-fact-lbl">Office hours</div><div class="att-fact-val">{{ s.total_office_hours }}h</div></div>{% endif %}
+            {% if s.total_office_hours and s.total_office_hours > 0 %}<div><div class="att-fact-lbl">OH</div><div class="att-fact-val">{{ s.total_office_hours }}h</div></div>{% endif %}
             {% if s.total_condonation_hours and s.total_condonation_hours > 0 %}<div><div class="att-fact-lbl">Condoned</div><div class="att-fact-val">{{ s.total_condonation_hours }}h</div></div>{% endif %}
           </div>
         </div>
@@ -294,104 +317,93 @@
 
 
 {# ══════════════════════════════════════════════════════════════════
-   TAB 4 — OFFICE HOURS
+   TABS — OH and CLASS PARTICIPATION
+   One card per Student Group the student is in (a week's CP group / an OH
+   group), one row per session: attendance + participation. Marks are never
+   shown to students.
 ══════════════════════════════════════════════════════════════════ #}
-<div id="sp-tab-officehours" class="sp-tab-panel">
+{% macro _part_pill(value) -%}
+  {%- set _cls = {'Present': 'is-good', 'Participated': 'is-good', 'Absent': 'is-bad', 'Did not participate': 'is-bad', 'Upcoming': 'is-muted'}.get(value, 'is-neutral') -%}
+  {%- set _icon = {'Present': 'check_circle', 'Participated': 'record_voice_over', 'Absent': 'cancel', 'Did not participate': 'voice_over_off', 'Upcoming': 'schedule'}.get(value, 'hourglass_empty') -%}
+  <span class="att-part-pill {{ _cls }}"><span class="sp-ms" aria-hidden="true">{{ _icon }}</span>{{ value }}</span>
+{%- endmacro %}
 
+{% macro _part_groups(groups, kind) %}
+  {% for g in groups %}
+  <article class="att-part-card fade-in">
+    <header class="att-part-head">
+      <div class="att-part-title-wrap">
+        <div class="att-part-title"><span class="sp-ms" aria-hidden="true">{{ 'schedule' if kind == 'oh' else 'date_range' }}</span>{{ g.title }}</div>
+        <div class="att-part-sub">
+          {% if g.course_name %}<span>{{ g.course_name }}</span>{% endif %}
+          {% if kind == 'cp' and g.start_date_fmt %}<span>{{ g.start_date_fmt }} – {{ g.end_date_fmt }}</span>{% endif %}
+        </div>
+      </div>
+      <div class="att-part-stats" aria-label="Summary">
+        <div><b>{{ g.attended }}</b><span>/ {{ g.held }} attended</span></div>
+        <div><b>{{ g.participated }}</b><span>/ {{ g.held }} participated</span></div>
+      </div>
+    </header>
+    <div class="att-part-table-wrap">
+      <table class="att-part-table">
+        <thead><tr>
+          <th scope="col">Date</th><th scope="col">Time</th><th scope="col">Venue</th><th scope="col">Faculty</th>
+          <th scope="col">Session</th><th scope="col">Attendance</th><th scope="col">Participation</th>
+        </tr></thead>
+        <tbody>
+          {% for s in g.sessions %}
+          <tr>
+            <td data-label="Date"><b>{{ s.date_fmt }}</b> <span class="att-part-muted">{{ s.weekday }}</span></td>
+            <td data-label="Time">{{ s.time or '—' }}</td>
+            <td data-label="Venue">{{ s.venue or '—' }}</td>
+            <td data-label="Faculty">{{ s.faculty or '—' }}</td>
+            <td data-label="Session">{{ s.slot_label }}</td>
+            <td data-label="Attendance">{{ _part_pill(s.attendance) }}</td>
+            <td data-label="Participation">{{ _part_pill(s.participation) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+  {% endfor %}
+{% endmacro %}
+
+<div id="sp-tab-officehours" class="sp-tab-panel">
   <div class="sp-tab-section-header">
     <div>
-      <h2 class="sp-section-title">Office Hours Sessions</h2>
-      <p class="sp-section-sub">Upcoming office hours for your enrolled courses</p>
+      <h2 class="sp-section-title">OH</h2>
+      <p class="sp-section-sub">Your OH sessions — attendance and participation recorded by your faculty</p>
     </div>
   </div>
-
-  {% if not office_hours_sessions %}
+  {% if not oh_groups %}
   <div class="sp-empty fade-in">
     <span class="sp-ms" style="color: var(--sp-primary) !important;">schedule</span>
-    <p class="sp-empty-title" style="color: black !important;">No Upcoming Office Hours</p>
-    <p class="sp-empty-sub">No office hours sessions are currently scheduled for your courses.</p>
+    <p class="sp-empty-title" style="color: black !important;">No OH yet</p>
+    <p class="sp-empty-sub">OH sessions scheduled for your OH group will appear here.</p>
   </div>
   {% else %}
-  <div class="sp-oh-grid fade-in">
-    {% for oh in office_hours_sessions %}
-    <div class="sp-oh-card {% if oh.session_status == 'Conducted' %}sp-oh-conducted{% endif %}">
-
-      {# Status ribbon #}
-      <div class="sp-oh-status-bar" style="background:{% if oh.session_status == 'Scheduled' %}var(--sp-primary){% else %}var(--sp-text-4){% endif %};">
-        <span class="sp-ms" style="font-size:14px;">{% if oh.session_status == 'Scheduled' %}schedule{% else %}done_all{% endif %}</span>
-        {{ oh.session_status }}
-      </div>
-
-      {# Course name #}
-      <div style="font-size:14px;font-weight:700;color:var(--sp-text-1);line-height:1.3;margin-bottom:12px;">
-        {{ oh.course_display }}
-      </div>
-
-      {# Details grid #}
-      <div class="sp-oh-details">
-        <div class="sp-oh-detail-item">
-          <span class="sp-ms">calendar_today</span>
-          <span>{{ frappe.utils.formatdate(oh.session_date, "EEE, dd MMM yyyy") }}</span>
-        </div>
-        <div class="sp-oh-detail-item">
-          <span class="sp-ms">access_time</span>
-          <span>{{ oh.start_fmt }} – {{ oh.end_fmt }}
-            {% if oh.duration_hours %}<em style="color:var(--sp-text-4);">({{ oh.duration_hours }}h)</em>{% endif %}
-          </span>
-        </div>
-        {% if oh.faculty %}
-        <div class="sp-oh-detail-item">
-          <span class="sp-ms">person</span>
-          <span>{{ oh.faculty }}</span>
-        </div>
-        {% endif %}
-        {% if oh.location %}
-        <div class="sp-oh-detail-item">
-          <span class="sp-ms">location_on</span>
-          <span>{{ oh.location }}</span>
-        </div>
-        {% endif %}
-      </div>
-
-      {# Register button #}
-      {% if oh.already_registered %}
-      <div style="margin-top:14px;">
-        <span class="sp-btn sp-btn-sm sp-btn-full" style="background:var(--sp-success);color:#fff;cursor:default;">
-          <span class="sp-ms">check_circle</span> Registered
-        </span>
-      </div>
-      {% elif oh.is_scheduled %}
-      <div style="margin-top:14px;">
-        <button class="sp-btn sp-btn-primary sp-btn-sm sp-btn-full"
-          onclick="spRegisterOfficeHours('{{ oh.name }}', '{{ oh.course_display|replace("'", "\\'") }}')"
-          id="oh-btn-{{ oh.name }}">
-          <span class="sp-ms">how_to_reg</span> Register Attendance
-        </button>
-      </div>
-      {% else %}
-      <div style="margin-top:14px;">
-        <span class="sp-btn sp-btn-sm sp-btn-full" style="background:var(--sp-bg);color:var(--sp-text-4);cursor:default;border:1px solid var(--sp-border);">
-          <span class="sp-ms">done_all</span> Session Conducted
-        </span>
-      </div>
-      {% endif %}
-
-    </div>
-    {% endfor %}
-  </div>
+  {{ _part_groups(oh_groups, 'oh') }}
   {% endif %}
+</div>{# end tab-officehours #}
 
-  {# Info box #}
-  <div class="sp-info-box fade-in" style="margin-top:48px; background-color:#fff0f2; border:1px solid #f5c6ce; border-radius:12px; padding:20px; display:flex; gap:16px; color:var(--sp-text-1);">
-    <span class="sp-ms" style="font-size:24px; color:var(--sp-primary); flex-shrink:0;">info</span>
-    <div style="font-size:13px;line-height:1.8;">
-      <strong>About Office Hours:</strong> Attending office hours sessions counts towards your attendance percentage.
-      Click <strong>Register Attendance</strong> to log your participation for a scheduled session.
-      Office hours hours are added to your total attendance automatically.
+<div id="sp-tab-classparticipation" class="sp-tab-panel">
+  <div class="sp-tab-section-header">
+    <div>
+      <h2 class="sp-section-title">Class Participation</h2>
+      <p class="sp-section-sub">Week-wise class sessions — attendance and participation recorded by your faculty</p>
     </div>
   </div>
-
-</div>{# end tab-officehours #}
+  {% if not cp_groups %}
+  <div class="sp-empty fade-in">
+    <span class="sp-ms" style="color: var(--sp-primary) !important;">groups</span>
+    <p class="sp-empty-title" style="color: black !important;">No Class Participation yet</p>
+    <p class="sp-empty-sub">Class Participation weeks for your courses will appear here.</p>
+  </div>
+  {% else %}
+  {{ _part_groups(cp_groups, 'cp') }}
+  {% endif %}
+</div>{# end tab-classparticipation #}
 
 
 {# ══════════════════════════════════════════════════════════════════
@@ -583,40 +595,6 @@
   spBindFileInput('cond-proof', 'cond-proof-name');
 
   /* ── Office Hours Registration ──────────────────────────────── */
-  window.spRegisterOfficeHours = function (sessionName, courseDisplay) {
-    if (!confirm('Register your attendance for the office hours session: ' + courseDisplay + '?')) return;
-
-    var btn = document.getElementById('oh-btn-' + sessionName);
-    if (btn) {
-      btn.disabled = true;
-      btn.innerHTML = '<span class="sp-ms">hourglass_top</span> Registering…';
-    }
-
-    spCall('slcm.api.student_portal.register_office_hours_attendance', {
-      session_name: sessionName,
-    })
-      .then(function (result) {
-        spToast(result.message || 'Registered for office hours session!', 'success');
-        if (btn) {
-          btn.innerHTML = '<span class="sp-ms">check_circle</span> Registered';
-          btn.style.background = 'var(--sp-success)';
-          btn.style.borderColor = 'var(--sp-success)';
-        }
-      })
-      .catch(function (err) {
-        var alreadyRegistered = (err.message || '').indexOf('already registered') !== -1;
-        spToast(err.message || 'Registration failed. Please try again.', alreadyRegistered ? 'info' : 'danger');
-        if (btn) {
-          if (alreadyRegistered) {
-            btn.outerHTML = '<span class="sp-btn sp-btn-sm sp-btn-full" style="background:var(--sp-success);color:#fff;cursor:default;">'
-              + '<span class="sp-ms">check_circle</span> Registered</span>';
-          } else {
-            btn.disabled = false;
-            btn.innerHTML = '<span class="sp-ms">how_to_reg</span> Register Attendance';
-          }
-        }
-      });
-  };
 
 })();
 </script>

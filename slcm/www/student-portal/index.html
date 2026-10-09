@@ -6,17 +6,27 @@
 <style>
   /* Base typography */
   /* White panels behind the title/alerts and Quick Actions */
-  .spd-hero, .spd-qa-section {
+  .spd-hero,
+  .spd-qa-section {
     background: var(--sp-card, #fff);
     border: 1px solid var(--sp-border, #e5e7eb);
     border-radius: 14px;
-    box-shadow: 0 1px 2px rgba(16,24,40,0.04);
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
     padding: 20px 24px;
     margin-bottom: 18px;
   }
-  .spd-hero .spd-page-title { margin: 0; }
-  .spd-hero-alerts .spd-alert-custom:first-child { margin-top: 12px; }
-  .spd-hero-alerts .spd-alert-custom:last-child { margin-bottom: 0; }
+
+  .spd-hero .spd-page-title {
+    margin: 0;
+  }
+
+  .spd-hero-alerts .spd-alert-custom:first-child {
+    margin-top: 12px;
+  }
+
+  .spd-hero-alerts .spd-alert-custom:last-child {
+    margin-bottom: 0;
+  }
 
   .spd-page-title {
     font-size: 18px !important;
@@ -38,8 +48,19 @@
     font-size: 13.5px;
     line-height: 1.4;
   }
-  .spd-alert-custom > .sp-ms { font-size: 18px; flex-shrink: 0; color: var(--sp-primary, #920c24); }
-  .spd-alert-text { min-width: 0; font-weight: 700; color: var(--sp-primary, #920c24); }
+
+  .spd-alert-custom>.sp-ms {
+    font-size: 18px;
+    flex-shrink: 0;
+    color: var(--sp-primary, #920c24);
+  }
+
+  .spd-alert-text {
+    min-width: 0;
+    font-weight: 700;
+    color: var(--sp-primary, #920c24);
+  }
+
   .spd-alert-link {
     flex-shrink: 0;
     font-size: 13.5px;
@@ -49,7 +70,10 @@
     text-underline-offset: 3px;
     white-space: nowrap;
   }
-  .spd-alert-link:hover { color: var(--sp-primary-dark, #6b091a); }
+
+  .spd-alert-link:hover {
+    color: var(--sp-primary-dark, #6b091a);
+  }
 
   /* KPI Cards Grid */
   .spd-kpi-row {
@@ -58,6 +82,7 @@
     gap: 20px;
     margin-bottom: 32px;
   }
+
   .spd-kpi {
     background: #ffffff;
     border: 1px solid var(--sp-border);
@@ -67,28 +92,35 @@
     flex-direction: column;
     text-decoration: none;
     color: inherit;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
+
   .spd-qa-item:hover {
     transform: translateY(-4px);
-    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
     border-color: var(--sp-primary-light, #fecdd3);
   }
+
   .spd-kpi-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
     margin-bottom: 16px;
   }
+
   .spd-kpi-icon-box {
     background: var(--sp-card);
     border: 1px solid var(--sp-border);
     color: var(--sp-primary);
-    width: 44px; height: 44px;
+    width: 44px;
+    height: 44px;
     border-radius: 13px;
-    display: flex; align-items: center; justify-content: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
+
   .spd-kpi-badge {
     padding: 4px 10px;
     border-radius: 20px;
@@ -98,11 +130,13 @@
     align-items: center;
     gap: 4px;
   }
+
   .spd-kpi-badge.success {
     background: transparent;
     color: var(--sp-success);
-    border: 1px solid rgba(146,12,36,0.35);
+    border: 1px solid rgba(146, 12, 36, 0.35);
   }
+
   .spd-kpi-badge.warning {
     background: #fff0f2;
     color: #920c24;
@@ -116,6 +150,7 @@
     margin-bottom: 8px;
     line-height: 1;
   }
+
   .spd-kpi-label {
     font-size: 11.5px;
     font-weight: 600;
@@ -125,9 +160,11 @@
     margin-bottom: 12px;
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
+
   .spd-qa-item:hover .spd-qa-item-icon {
     transform: scale(1.1) rotate(3deg);
   }
+
   .spd-kpi-progress {
     height: 4px;
     background: var(--sp-border);
@@ -135,10 +172,12 @@
     margin-bottom: 12px;
     overflow: hidden;
   }
+
   .spd-kpi-progress-fill {
     height: 100%;
     border-radius: 2px;
   }
+
   .spd-kpi-footer {
     font-size: 12px;
     color: var(--sp-text-4);
@@ -148,22 +187,26 @@
   .spd-qa-section {
     margin-top: 16px;
   }
+
   .spd-qa-header-title {
     font-size: 16px;
     font-weight: 700;
     color: var(--sp-text-1);
     margin: 0 0 4px 0;
   }
+
   .spd-qa-header-sub {
     font-size: 13.5px;
     color: var(--sp-text-3);
     margin: 0 0 20px 0;
   }
+
   .spd-qa-container {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
     gap: 16px;
   }
+
   .spd-qa-item {
     background: #ffffff;
     border: 1px solid var(--sp-border);
@@ -175,14 +218,16 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
+
   .spd-qa-item:hover {
     transform: translateY(-4px);
-    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
     border-color: var(--sp-primary-light, #fecdd3);
   }
+
   .spd-qa-item-icon {
     background: #fff0f2;
     color: var(--sp-primary);
@@ -192,98 +237,460 @@
     margin-bottom: 12px;
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
+
   .spd-qa-item:hover .spd-qa-item-icon {
     transform: scale(1.1) rotate(3deg);
   }
+
   .spd-qa-item-title {
     font-size: 14px;
     font-weight: 700;
     color: var(--sp-text-1);
     margin-bottom: 4px;
   }
+
   .spd-qa-item-sub {
     font-size: 12px;
     color: var(--sp-text-4);
   }
 
   /* Quick Actions (2×2) + Timetable side by side */
-  .spd-qa-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: stretch; }
-  .spd-qa-row > .spd-qa-section { margin: 0; }
-  .spd-qa-row .spd-qa-container { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .spd-tt { display: flex; flex-direction: column; }
-  .spd-tt-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-  .spd-tt-link { display: inline-flex; align-items: center; gap: 2px; font-size: 13px; font-weight: 700; color: var(--sp-primary); text-decoration: none; white-space: nowrap; }
-  .spd-tt-link .sp-ms { font-size: 18px; }
-  .spd-tt-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
-  .spd-tt-item { display: flex; gap: 14px; align-items: center; border: 1px solid var(--sp-border); border-radius: 10px; padding: 10px 14px; }
-  .spd-tt-when { display: flex; flex-direction: column; min-width: 118px; padding-right: 14px; border-right: 1px solid var(--sp-border); }
-  .spd-tt-date { font-size: 12px; font-weight: 700; color: var(--sp-text-3); text-transform: uppercase; letter-spacing: 0.04em; }
-  .spd-tt-when.is-today .spd-tt-date { color: var(--sp-primary); }
-  .spd-tt-time { font-size: 13.5px; font-weight: 700; color: var(--sp-text-1); margin-top: 2px; white-space: nowrap; }
-  .spd-tt-what { min-width: 0; }
-  .spd-tt-course { font-size: 14px; font-weight: 700; color: var(--sp-text-1); overflow-wrap: anywhere; }
-  .spd-tt-venue { display: flex; align-items: center; gap: 4px; font-size: 12.5px; color: var(--sp-text-3); margin-top: 2px; }
-  .spd-tt-venue .sp-ms { font-size: 15px; }
-  .spd-tt-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; color: var(--sp-text-3); padding: 24px 0; }
-  .spd-tt-empty > .sp-ms { font-size: 30px; color: var(--sp-text-4); }
-  .spd-tt-empty strong { display: block; color: var(--sp-text-1); font-size: 14px; }
-  .spd-tt-empty span { font-size: 12.5px; }
-  @media (max-width: 1000px) { .spd-qa-row { grid-template-columns: minmax(0, 1fr); } }
-  .spd-links-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-  .spd-link-item { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 1px solid var(--sp-border); border-radius: 10px; text-decoration: none; color: var(--sp-text-1); background: #fff; transition: border-color .15s, box-shadow .15s; }
-  .spd-link-item:hover { border-color: var(--sp-primary); box-shadow: 0 4px 12px rgba(146,12,36,.08); }
-  .spd-link-icon { font-size: 20px; color: var(--sp-primary); flex-shrink: 0; }
-  .spd-link-name { flex: 1; min-width: 0; font-size: 14px; font-weight: 700; }
-  .spd-link-ext { font-size: 18px; color: var(--sp-text-4); flex-shrink: 0; }
-  @media (max-width: 900px) { .spd-links-grid { grid-template-columns: minmax(0, 1fr); } }
+  .spd-qa-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 18px;
+    align-items: stretch;
+  }
+
+  .spd-qa-row>.spd-qa-section {
+    margin: 0;
+  }
+
+  .spd-qa-row .spd-qa-container {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .spd-tt {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .spd-tt-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .spd-tt-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--sp-primary);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .spd-tt-link .sp-ms {
+    font-size: 18px;
+  }
+
+  .spd-tt-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .spd-tt-item {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    border: 1px solid var(--sp-border);
+    border-radius: 10px;
+    padding: 10px 14px;
+  }
+
+  .spd-tt-when {
+    display: flex;
+    flex-direction: column;
+    min-width: 118px;
+    padding-right: 14px;
+    border-right: 1px solid var(--sp-border);
+  }
+
+  .spd-tt-date {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--sp-text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .spd-tt-when.is-today .spd-tt-date {
+    color: var(--sp-primary);
+  }
+
+  .spd-tt-time {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--sp-text-1);
+    margin-top: 2px;
+    white-space: nowrap;
+  }
+
+  .spd-tt-what {
+    min-width: 0;
+  }
+
+  .spd-tt-course {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--sp-text-1);
+    overflow-wrap: anywhere;
+  }
+
+  .spd-tt-venue {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12.5px;
+    color: var(--sp-text-3);
+    margin-top: 2px;
+  }
+
+  .spd-tt-venue .sp-ms {
+    font-size: 15px;
+  }
+
+  .spd-tt-empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-align: center;
+    color: var(--sp-text-3);
+    padding: 24px 0;
+  }
+
+  .spd-tt-empty>.sp-ms {
+    font-size: 30px;
+    color: var(--sp-text-4);
+  }
+
+  .spd-tt-empty strong {
+    display: block;
+    color: var(--sp-text-1);
+    font-size: 14px;
+  }
+
+  .spd-tt-empty span {
+    font-size: 12.5px;
+  }
+
+  @media (max-width: 1000px) {
+    .spd-qa-row {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  .spd-links-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .spd-link-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border: 1px solid var(--sp-border);
+    border-radius: 10px;
+    text-decoration: none;
+    color: var(--sp-text-1);
+    background: #fff;
+    transition: border-color .15s, box-shadow .15s;
+  }
+
+  .spd-link-item:hover {
+    border-color: var(--sp-primary);
+    box-shadow: 0 4px 12px rgba(146, 12, 36, .08);
+  }
+
+  .spd-link-icon {
+    font-size: 20px;
+    color: var(--sp-primary);
+    flex-shrink: 0;
+  }
+
+  .spd-link-name {
+    flex: 1;
+    min-width: 0;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .spd-link-ext {
+    font-size: 18px;
+    color: var(--sp-text-4);
+    flex-shrink: 0;
+  }
+
+  @media (max-width: 900px) {
+    .spd-links-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
 
   /* Responsive — KPI and Quick Action grids reflow instead of overflowing */
   @media (max-width: 1100px) {
-    .spd-qa-section:not(.spd-tt) .spd-qa-container { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .spd-qa-section:not(.spd-tt) .spd-qa-container {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
   }
+
   @media (max-width: 768px) {
-    .spd-kpi-row { grid-template-columns: 1fr; gap: 12px; margin-bottom: 24px; }
-    .spd-alert-custom { flex-wrap: wrap; gap: 10px; }
+    .spd-kpi-row {
+      grid-template-columns: 1fr;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .spd-alert-custom {
+      flex-wrap: wrap;
+      gap: 10px;
+    }
   }
+
   @media (max-width: 520px) {
-    .spd-qa-container { grid-template-columns: repeat(2, 1fr); gap: 12px; }
-    .spd-page-title { overflow-wrap: anywhere; }
+    .spd-qa-container {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .spd-page-title {
+      overflow-wrap: anywhere;
+    }
   }
 
   /* Student card */
-  .spd-student { display: flex; flex-direction: row; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 0; }
-  .spd-avatar {
-    width: 52px; height: 52px; border-radius: 50%; flex-shrink: 0; overflow: hidden; background: #fff0f2;
-    color: var(--sp-primary); border: 1px solid rgba(146,12,36,0.15); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700;
+  .spd-student {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 0;
   }
-  .spd-avatar img { width: 100%; height: 100%; object-fit: cover; }
-  .spd-student-main { flex: 1 1 240px; min-width: 0; }
-  .spd-student-name-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-  .spd-student-name { font-size: 18px; font-weight: 700; color: var(--sp-text-1); margin: 0; overflow-wrap: anywhere; }
-  .spd-dot-status { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; }
-  .spd-dot-status::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
-  .spd-student-meta { font-size: 13px; color: var(--sp-text-3, #6b7280); margin-top: 3px; overflow-wrap: anywhere; }
-  .spd-student-meta .spd-sep { margin: 0 6px; color: #cbd5e1; }
-  .spd-facts { display: grid; grid-template-columns: repeat(3, auto); gap: 4px 28px; margin: 0; }
-  .spd-facts > div { min-width: 0; }
-  .spd-facts dt { font-size: 11px; font-weight: 700; color: var(--sp-text-3, #6b7280); text-transform: uppercase; letter-spacing: 0.05em; }
-  .spd-facts dd { margin: 2px 0 0; font-size: 13.5px; font-weight: 600; color: var(--sp-text-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .spd-hero-alerts { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
-  .spd-hero-alerts:empty { display: none; margin-top: 0; }
-  .spd-tone-success { color: var(--sp-success, #059669) !important; }
-  .spd-tone-warning { color: var(--sp-warning, #d97706) !important; }
-  .spd-tone-muted   { color: var(--sp-text-3, #6b7280) !important; }
+
+  .spd-avatar {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    overflow: hidden;
+    background: #fff0f2;
+    color: var(--sp-primary);
+    border: 1px solid rgba(146, 12, 36, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 700;
+  }
+
+  .spd-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .spd-student-main {
+    flex: 1 1 240px;
+    min-width: 0;
+  }
+
+  .spd-student-name-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .spd-student-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--sp-text-1);
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .spd-dot-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .spd-dot-status::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .spd-student-meta {
+    font-size: 13px;
+    color: var(--sp-text-3, #6b7280);
+    margin-top: 3px;
+    overflow-wrap: anywhere;
+  }
+
+  .spd-student-meta .spd-sep {
+    margin: 0 6px;
+    color: #cbd5e1;
+  }
+
+  .spd-facts {
+    display: grid;
+    grid-template-columns: repeat(3, auto);
+    gap: 4px 28px;
+    margin: 0;
+  }
+
+  .spd-facts>div {
+    min-width: 0;
+  }
+
+  .spd-facts dt {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--sp-text-3, #6b7280);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .spd-facts dd {
+    margin: 2px 0 0;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--sp-text-1);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .spd-hero-alerts {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .spd-hero-alerts:empty {
+    display: none;
+    margin-top: 0;
+  }
+
+  .spd-tone-success {
+    color: var(--sp-success, #059669) !important;
+  }
+
+  .spd-tone-warning {
+    color: var(--sp-warning, #d97706) !important;
+  }
+
+  .spd-tone-muted {
+    color: var(--sp-text-3, #6b7280) !important;
+  }
 
   @media (min-width: 1200px) {
-    .spd-student { flex-wrap: nowrap; }
-    .spd-student-main { flex: 1 1 200px; }
-    .spd-facts { flex: 0 1 auto; min-width: 0; gap: 4px 22px; }
+    .spd-student {
+      flex-wrap: nowrap;
+    }
+
+    .spd-student-main {
+      flex: 1 1 200px;
+    }
+
+    .spd-facts {
+      flex: 0 1 auto;
+      min-width: 0;
+      gap: 4px 22px;
+    }
   }
+
   @media (max-width: 1199px) {
-    .spd-student-main { order: 1; }
-    .spd-facts { order: 3; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; padding-top: 12px; border-top: 1px solid var(--sp-border); }
+    .spd-student-main {
+      order: 1;
+    }
+
+    .spd-facts {
+      order: 3;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      width: 100%;
+      padding-top: 12px;
+      border-top: 1px solid var(--sp-border);
+    }
   }
-  @media (max-width: 480px) { .spd-facts { grid-template-columns: 1fr 1fr; } }
+
+  @media (max-width: 480px) {
+    .spd-facts {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  /* ══ Main area: KPIs + Quick Actions | My Calendar ══ */
+  /* Both columns end on the same line: the row is as tall as the left column
+     (KPIs + Quick Actions) and the calendar fills that height, scrolling inside. */
+  .spd-main { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 18px; align-items: stretch; margin-bottom: 18px; }
+  .spd-main-left { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+  .spd-main-left .spd-qa2 { flex: 1; }
+  .spd-kpi2-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .spd-kpi2, .spd-qa2, .spd-cal {
+    background: var(--sp-card, #fff); border: 1px solid var(--sp-border, #e5e7eb);
+    border-radius: 14px; box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  }
+  .spd-kpi2 { display: flex; gap: 14px; padding: 18px; text-decoration: none; color: inherit; transition: border-color .15s, box-shadow .15s; }
+  .spd-kpi2:hover { border-color: var(--sp-primary); box-shadow: 0 4px 14px rgba(146, 12, 36, 0.08); }
+  .spd-kpi2-icon { width: 42px; height: 42px; flex-shrink: 0; border-radius: 10px; background: var(--sp-primary-light); color: var(--sp-primary); display: flex; align-items: center; justify-content: center; }
+  .spd-kpi2-icon .sp-ms { font-size: 22px; }
+  .spd-kpi2-body { flex: 1; min-width: 0; }
+  .spd-kpi2-value { font-size: 20px; font-weight: 800; color: var(--sp-primary); line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* 6+ digit amounts (₹1,00,000 and up) step down so they stay on one line */
+  .spd-kpi2-value.is-long { font-size: 17px; }
+  .spd-kpi2-label { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--sp-text-2); margin-top: 5px; }
+  .spd-kpi2-bar { height: 3px; border-radius: 3px; background: var(--sp-primary); margin: 8px 0 7px; }
+  .spd-kpi2-foot { font-size: 11.5px; color: var(--sp-text-3); }
+
+  .spd-qa2 { padding: 18px; }
+  .spd-qa2-title { font-size: 15px; font-weight: 700; color: var(--sp-text-1); margin: 0 0 14px; }
+  .spd-qa2-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .spd-qa2-item { display: flex; align-items: center; gap: 12px; padding: 14px 14px; border: 1px solid var(--sp-border); border-radius: 10px; text-decoration: none; color: inherit; transition: border-color .15s, background .15s; min-width: 0; }
+  .spd-qa2-item:hover { border-color: var(--sp-primary); background: var(--sp-primary-light); }
+  .spd-qa2-icon { width: 40px; height: 40px; flex-shrink: 0; border-radius: 10px; background: var(--sp-primary-light); color: var(--sp-primary); display: flex; align-items: center; justify-content: center; }
+  .spd-qa2-icon .sp-ms { font-size: 21px; }
+  .spd-qa2-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .spd-qa2-text b { font-size: 13px; font-weight: 700; color: var(--sp-text-1); }
+  .spd-qa2-text small { font-size: 11px; color: var(--sp-text-3); line-height: 1.3; }
+  .spd-qa2-go { color: var(--sp-primary); font-size: 18px; flex-shrink: 0; }
+
+
+  @media (max-width: 1199px) {
+    .spd-main { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 560px) {
+    .spd-kpi2-row, .spd-qa2-grid { grid-template-columns: 1fr; }
+  }
 </style>
 {% endblock %}
 
@@ -317,180 +724,86 @@
       <div class="spd-student-name-row">
         <h2 class="spd-student-name">{{ student_name or '—' }}</h2>
         {% if student_status %}
-        <span class="spd-dot-status {{ 'spd-tone-success' if student_status == 'Active' else ('spd-tone-muted' if student_status in ('Graduated', 'Alumni') else 'spd-tone-warning') }}">{{ student_status }}</span>
+        <span
+          class="spd-dot-status {{ 'spd-tone-success' if student_status == 'Active' else ('spd-tone-muted' if student_status in ('Graduated', 'Alumni') else 'spd-tone-warning') }}">{{
+          student_status }}</span>
         {% endif %}
       </div>
       {% set _term = current_term %}
       {% set _meta = [programme_name, _term, ('Batch ' ~ batch_year) if batch_year else ''] | select | list %}
-      {% if _meta %}<div class="spd-student-meta">{% for m in _meta %}{% if not loop.first %}<span class="spd-sep" aria-hidden="true">|</span>{% endif %}{{ m }}{% endfor %}</div>{% endif %}
+      {% if _meta %}<div class="spd-student-meta">{% for m in _meta %}{% if not loop.first %}<span class="spd-sep"
+          aria-hidden="true">|</span>{% endif %}{{ m }}{% endfor %}</div>{% endif %}
     </div>
     <dl class="spd-facts">
-      <div><dt>Student ID</dt><dd>{{ student_id or '—' }}</dd></div>
-      <div><dt>Academic Year</dt><dd>{{ academic_year or '—' }}</dd></div>
+      <div>
+        <dt>Student ID</dt>
+        <dd>{{ student_id or '—' }}</dd>
+      </div>
+      <div>
+        <dt>Academic Year</dt>
+        <dd>{{ academic_year or '—' }}</dd>
+      </div>
   </div>
-
-<div class="spd-hero-alerts">
-
-  {% if has_dues %}
-  <div class="spd-alert-custom" role="alert">
-    <span class="sp-ms" aria-hidden="true">account_balance_wallet</span>
-    <span class="spd-alert-text">₹{{ "{:,.0f}".format(total_outstanding) }} fees pending</span>
-    <a href="/student-portal/fees" class="spd-alert-link" aria-label="Pay pending fees">Pay now</a>
-  </div>
-  {% endif %}
-</div>
-</div>
-
-{# ── KPI Cards ─────────────────────────────────────────────────── #}
-<div class="spd-kpi-row fade-in delay-2">
-
-  {# Card 1: Active Courses #}
-  <a href="/student-portal/courses" class="spd-kpi">
-    <div class="spd-kpi-header">
-      <div class="spd-kpi-icon-box">
-        <span class="sp-ms" style="font-size:24px;">menu_book</span>
-      </div>
-      <div class="spd-kpi-badge success">
-        <span class="sp-ms" style="font-size:14px;">check_circle</span> Enrolled
-      </div>
-    </div>
-    <div class="spd-kpi-value" id="spd-course-val">{{ course_count|int }}</div>
-    <div class="spd-kpi-label">Active Courses</div>
-    <div class="spd-kpi-progress">
-      <div class="spd-kpi-progress-fill" style="width: 100%; background: var(--sp-primary);"></div>
-    </div>
-    <div class="spd-kpi-footer">This semester</div>
-  </a>
-
-  {# Card 2: Examination Eligible #}
-  <a href="/student-portal/exam-schedule" class="spd-kpi">
-    {% set eligible_count = courses_eligible if courses_eligible is defined else 0 %}
-    <div class="spd-kpi-header">
-      <div class="spd-kpi-icon-box">
-        <span class="sp-ms" style="font-size:24px;">quiz</span>
-      </div>
-      <div class="spd-kpi-badge {% if eligible_count == course_count and course_count > 0 %}success{% else %}warning{% endif %}">
-        <span class="sp-ms" style="font-size:14px;">{% if eligible_count == course_count and course_count > 0 %}check_circle{% else %}shield{% endif %}</span>
-        {% if eligible_count == course_count and course_count > 0 %}Clear{% else %}Partial{% endif %}
-      </div>
-    </div>
-    <div class="spd-kpi-value">
-      {{ eligible_count }}<span style="font-size:18px;color:var(--sp-text-3);">/{{ course_count }}</span>
-    </div>
-    <div class="spd-kpi-label">Examination Eligible</div>
-    <div class="spd-kpi-progress">
-      <div class="spd-kpi-progress-fill" style="width: {% if course_count > 0 %}{{ ((eligible_count / course_count) * 100)|round|int }}{% else %}0{% endif %}%; background: var(--sp-primary);"></div>
-    </div>
-    <div class="spd-kpi-footer">Courses cleared for examinations</div>
-  </a>
-
-  {# Card 3: Fee Outstanding #}
-  <a href="/student-portal/fees" class="spd-kpi">
-    <div class="spd-kpi-header">
-      <div class="spd-kpi-icon-box">
-        <span class="sp-ms" style="font-size:24px;">payments</span>
-      </div>
-      <div class="spd-kpi-badge {% if has_dues %}warning{% else %}success{% endif %}">
-        <span class="sp-ms" style="font-size:14px;">{% if has_dues %}error_outline{% else %}check_circle{% endif %}</span>
-        {% if has_dues %}Pending{% else %}Clear{% endif %}
-      </div>
-    </div>
-    <div class="spd-kpi-value" style="color:{% if has_dues %}var(--sp-danger){% else %}var(--sp-success){% endif %};">
-      ₹{{ "{:,.0f}".format(total_outstanding) if has_dues else "0" }}
-    </div>
-    <div class="spd-kpi-label">Fee Outstanding</div>
-    <div class="spd-kpi-progress" style="background:transparent;">
-      <!-- No progress bar for fees, just empty space for alignment -->
-    </div>
-    <div class="spd-kpi-footer">{% if has_dues %}Payment due — act now{% else %}All fees cleared{% endif %}</div>
-  </a>
 
 </div>
 
-{# ── Quick Actions ─────────────────────────────────────────────── #}
-{% if not sp_settings or sp_settings.show_quick_actions %}
-<div class="spd-qa-row fade-in delay-2">
-<div class="spd-qa-section">
-  <h2 class="spd-qa-header-title">Quick Actions</h2>
-  <br>
+{# ── Main: KPIs + Quick Actions (left) | My Calendar (right) ─────── #}
+<div class="spd-main fade-in delay-2">
 
-  <div class="spd-qa-container">
-
-    <a href="/student-portal/attendance" class="spd-qa-item">
-      <div class="spd-qa-item-icon">
-        <span class="sp-ms" style="font-size:28px;">calendar_today</span>
-      </div>
-      <div class="spd-qa-item-title">Attendance</div>
-      <div class="spd-qa-item-sub">View your attendance</div>
-    </a>
-
-    <!-- <a href="/student-portal/documents" class="spd-qa-item">
-      <div class="spd-qa-item-icon">
-        <span class="sp-ms" style="font-size:28px;">folder</span>
-      </div>
-      <div class="spd-qa-item-title">Documents</div>
-      <div class="spd-qa-item-sub">Downloads &amp; uploads</div>
-    </a> -->
-
-    <a href="/student-portal/results" class="spd-qa-item">
-      <div class="spd-qa-item-icon">
-        <span class="sp-ms" style="font-size:28px;">workspace_premium</span>
-      </div>
-      <div class="spd-qa-item-title">Results</div>
-      <div class="spd-qa-item-sub">Grades &amp; marks</div>
-    </a>
-
-    <a href="/student-portal/announcements" class="spd-qa-item">
-      <div class="spd-qa-item-icon">
-        <span class="sp-ms" style="font-size:28px;">campaign</span>
-      </div>
-      <div class="spd-qa-item-title">Announcements</div>
-      <div class="spd-qa-item-sub">Notices &amp; updates</div>
-    </a>
-
-    <a href="/student-portal/venue-booking" class="spd-qa-item">
-      <div class="spd-qa-item-icon">
-        <span class="sp-ms" style="font-size:28px;">meeting_room</span>
-      </div>
-      <div class="spd-qa-item-title">Venue Booking</div>
-      <div class="spd-qa-item-sub">Book rooms &amp; venues</div>
-    </a>
-
-  </div>
-</div>
-
-<section class="spd-qa-section spd-tt" aria-labelledby="spd-tt-title">
-  <div class="spd-tt-head">
-    <div>
-      <h2 class="spd-qa-header-title" id="spd-tt-title">Timetable</h2>
-      <br>
+  <div class="spd-main-left">
+    <div class="spd-kpi2-row">
+      <a href="/student-portal/courses" class="spd-kpi2">
+        <div class="spd-kpi2-icon"><span class="sp-ms">menu_book</span></div>
+        <div class="spd-kpi2-body">
+          <div class="spd-kpi2-value" id="spd-course-val">{{ course_count|int }}</div>
+          <div class="spd-kpi2-label">Current Courses</div>
+          <div class="spd-kpi2-bar"></div>
+        </div>
+      </a>
+      <a href="/student-portal/fees" class="spd-kpi2">
+        <div class="spd-kpi2-icon"><span class="sp-ms">payments</span></div>
+        <div class="spd-kpi2-body">
+          {% set _fee_txt = "{:,.0f}".format(total_outstanding) if has_dues else "0" %}
+          <div class="spd-kpi2-value{{ ' is-long' if total_outstanding >= 100000 }}" title="₹{{ _fee_txt }}">₹{{ _fee_txt }}</div>
+          <div class="spd-kpi2-label">Fee Outstanding</div>
+          <div class="spd-kpi2-bar"></div>
+          <!-- <div class="spd-kpi2-foot">{% if has_dues %}Payment due — act now{% else %}All fees cleared{% endif %}</div> -->
+        </div>
+      </a>
     </div>
-    <a href="/student-portal/timetable" class="spd-tt-link">View all <span class="sp-ms" aria-hidden="true">chevron_right</span></a>
-  </div>
-  {% if week_classes %}
-  <ul class="spd-tt-list">
-    {% for c in week_classes %}
-    <li class="spd-tt-item">
-      <div class="spd-tt-when{{ ' is-today' if c.is_today }}">
-        <span class="spd-tt-date">{{ 'Today' if c.is_today else c.date }}</span>
-        <span class="spd-tt-time">{{ c.from_time }}{% if c.to_time %} – {{ c.to_time }}{% endif %}</span>
+
+    {% if not sp_settings or sp_settings.show_quick_actions %}
+    <section class="spd-qa2" aria-labelledby="spd-qa2-title">
+      <h2 class="spd-qa2-title" id="spd-qa2-title">Quick Actions</h2>
+      <div class="spd-qa2-grid">
+        <a href="/student-portal/attendance" class="spd-qa2-item">
+          <span class="spd-qa2-icon"><span class="sp-ms">calendar_today</span></span>
+          <span class="spd-qa2-text"><b>Attendance</b><small>View your attendance</small></span>
+          <span class="sp-ms spd-qa2-go" aria-hidden="true">chevron_right</span>
+        </a>
+        <a href="/student-portal/results" class="spd-qa2-item">
+          <span class="spd-qa2-icon"><span class="sp-ms">workspace_premium</span></span>
+          <span class="spd-qa2-text"><b>Grades</b><small>View marks and grades</small></span>
+          <span class="sp-ms spd-qa2-go" aria-hidden="true">chevron_right</span>
+        </a>
+        <a href="/student-portal/courses" class="spd-qa2-item">
+          <span class="spd-qa2-icon"><span class="sp-ms">description</span></span>
+          <span class="spd-qa2-text"><b>Course Materials</b><small>Access learning resources</small></span>
+          <span class="sp-ms spd-qa2-go" aria-hidden="true">chevron_right</span>
+        </a>
+        <a href="/student-portal/fees" class="spd-qa2-item">
+          <span class="spd-qa2-icon"><span class="sp-ms">credit_card</span></span>
+          <span class="spd-qa2-text"><b>Fees &amp; Payments</b><small>View and pay fees</small></span>
+          <span class="sp-ms spd-qa2-go" aria-hidden="true">chevron_right</span>
+        </a>
       </div>
-      <div class="spd-tt-what">
-        <div class="spd-tt-course">{{ c.course_name }}</div>
-        {% if c.venue %}<div class="spd-tt-venue"><span class="sp-ms" aria-hidden="true">location_on</span>{{ c.venue }}</div>{% endif %}
-      </div>
-    </li>
-    {% endfor %}
-  </ul>
-  {% else %}
-  <div class="spd-tt-empty">
-    <span class="sp-ms" aria-hidden="true">event_busy</span>
-    <div><strong>No classes scheduled</strong><span>No classes found for the next 7 days.</span></div>
+    </section>
+    {% endif %}
   </div>
-  {% endif %}
-</section>
+
+  {# My Calendar — shared with the Timetable page (_calendar.html) #}
+  {% include "slcm/www/student-portal/_calendar.html" %}
 </div>
-{% endif %}
 
 {# ── Important Links ───────────────────────────────────────────── #}
 {% set _il = important_links or {} %}
@@ -499,13 +812,16 @@
   <br>
   <div class="spd-links-grid">
     <a href="{{ _il.academic_calendar or '#' }}" target="_blank" rel="noopener" class="spd-link-item">
-      <span class="sp-ms spd-link-icon" aria-hidden="true">calendar_month</span><span class="spd-link-name">Academic Calendar</span><span class="sp-ms spd-link-ext" aria-hidden="true">open_in_new</span>
+      <span class="sp-ms spd-link-icon" aria-hidden="true">calendar_month</span><span class="spd-link-name">Academic
+        Calendar</span><span class="sp-ms spd-link-ext" aria-hidden="true">open_in_new</span>
     </a>
     <a href="{{ _il.student_handbook or '#' }}" target="_blank" rel="noopener" class="spd-link-item">
-      <span class="sp-ms spd-link-icon" aria-hidden="true">menu_book</span><span class="spd-link-name">Student Handbook</span><span class="sp-ms spd-link-ext" aria-hidden="true">open_in_new</span>
+      <span class="sp-ms spd-link-icon" aria-hidden="true">menu_book</span><span class="spd-link-name">Student
+        Handbook</span><span class="sp-ms spd-link-ext" aria-hidden="true">open_in_new</span>
     </a>
     <a href="{{ _il.examination_guidelines or '#' }}" target="_blank" rel="noopener" class="spd-link-item">
-      <span class="sp-ms spd-link-icon" aria-hidden="true">description</span><span class="spd-link-name">Examination Guidelines</span><span class="sp-ms spd-link-ext" aria-hidden="true">open_in_new</span>
+      <span class="sp-ms spd-link-icon" aria-hidden="true">description</span><span class="spd-link-name">Assessment
+        Guidelines</span><span class="sp-ms spd-link-ext" aria-hidden="true">open_in_new</span>
     </a>
   </div>
 </section>

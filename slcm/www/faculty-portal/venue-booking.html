@@ -196,42 +196,23 @@
     <div class="fp-vb-modal-body">
 
       <div class="fp-vb-section">
-        <div class="fp-vb-section-title"><span class="fp-ms">event_note</span>Event Details</div>
+        <div class="fp-vb-section-title"><span class="fp-ms">category</span>Venue Type</div>
         <div class="fp-form-group" style="margin-bottom:0;">
-          <label class="fp-label" for="fp-vb-event">Event / Purpose <span style="color:var(--fp-primary);">*</span></label>
-          <input type="text" class="fp-input" id="fp-vb-event" placeholder="e.g. Guest Lecture, Seminar, Meeting">
-          <div class="fp-vb-field-error" id="fp-vb-event-err"><span class="fp-ms">error</span>Event / Purpose is required.</div>
-        </div>
-      </div>
-
-      <div class="fp-vb-section">
-        <div class="fp-vb-section-title"><span class="fp-ms">meeting_room</span>Venue</div>
-        <div class="fp-vb-row-2">
-          <div class="fp-form-group" style="margin-bottom:0;">
-            <label class="fp-label" for="fp-vb-venue-type">Venue Type <span style="color:var(--fp-primary);">*</span></label>
-            <select class="fp-select" id="fp-vb-venue-type" onchange="fpFilterRoomsByType()">
-              <option value="">Select type…</option>
-              <option value="Classroom">Classroom</option>
-              <option value="Moot Court">Moot Court</option>
-              <option value="Open Spaces">Open Spaces</option>
-              <option value="Meeting Room">Meeting Room</option>
-              <option value="Mess">Mess</option>
-              <option value="Quad">Quad</option>
-              <option value="Conference Hall">Conference Hall</option>
-              <option value="Project">Project</option>
-              <option value="Guest House">Guest House</option>
-              <option value="Staff Quarters">Staff Quarters</option>
-            </select>
-            <div class="fp-vb-field-error" id="fp-vb-venue-type-err"><span class="fp-ms">error</span>Please select a venue type.</div>
-          </div>
-          <div class="fp-form-group" style="margin-bottom:0;">
-            <label class="fp-label" for="fp-vb-room">Room / Venue <span style="color:var(--fp-primary);">*</span></label>
-            <select class="fp-select" id="fp-vb-room">
-              <option value="">Select venue type first…</option>
-            </select>
-            <div class="fp-vb-field-error" id="fp-vb-room-err"><span class="fp-ms">error</span>Please select a room / venue.</div>
-            <script>window._fp_vb_rooms = {{ (available_rooms or []) | tojson }};</script>
-          </div>
+          <label class="fp-label" for="fp-vb-venue-type">Venue Type <span style="color:var(--fp-primary);">*</span></label>
+          <select class="fp-select" id="fp-vb-venue-type" onchange="fpFilterRoomsByType()">
+            <option value="">Select type…</option>
+            <option value="Classroom">Classroom</option>
+            <option value="Moot Court">Moot Court</option>
+            <option value="Open Spaces">Open Spaces</option>
+            <option value="Meeting Room">Meeting Room</option>
+            <option value="Mess">Mess</option>
+            <option value="Quad">Quad</option>
+            <option value="Conference Hall">Conference Hall</option>
+            <option value="Project">Project</option>
+            <option value="Guest House">Guest House</option>
+            <option value="Staff Quarters">Staff Quarters</option>
+          </select>
+          <div class="fp-vb-field-error" id="fp-vb-venue-type-err"><span class="fp-ms">error</span>Please select a venue type.</div>
         </div>
       </div>
 
@@ -240,23 +221,40 @@
         <div class="fp-vb-row-2">
           <div class="fp-form-group" style="margin-bottom:0;">
             <label class="fp-label" for="fp-vb-start">Start Date &amp; Time <span style="color:var(--fp-primary);">*</span></label>
-            <input type="datetime-local" class="fp-input" id="fp-vb-start">
+            <input type="datetime-local" class="fp-input" id="fp-vb-start" onchange="fpFilterRoomsByType()">
             <div class="fp-vb-field-error" id="fp-vb-start-err"><span class="fp-ms">error</span>Start date &amp; time is required.</div>
           </div>
           <div class="fp-form-group" style="margin-bottom:0;">
             <label class="fp-label" for="fp-vb-end">End Date &amp; Time <span style="color:var(--fp-primary);">*</span></label>
-            <input type="datetime-local" class="fp-input" id="fp-vb-end">
+            <input type="datetime-local" class="fp-input" id="fp-vb-end" onchange="fpFilterRoomsByType()">
             <div class="fp-vb-field-error" id="fp-vb-end-err"><span class="fp-ms">error</span>End time must be after start time.</div>
           </div>
         </div>
       </div>
 
       <div class="fp-vb-section">
-        <div class="fp-vb-section-title"><span class="fp-ms">groups</span>Attendee Information</div>
-        <div class="fp-form-group" style="margin-bottom:0;">
+        <div class="fp-vb-section-title"><span class="fp-ms">meeting_room</span>Venue</div>
+        <div class="fp-form-group">
           <label class="fp-label" for="fp-vb-attendees">Expected Attendees <span style="color:var(--fp-primary);">*</span></label>
-          <input type="number" class="fp-input" id="fp-vb-attendees" placeholder="0" min="1" step="1">
-          <div class="fp-vb-field-error" id="fp-vb-attendees-err"><span class="fp-ms">error</span>Enter a valid number of attendees (1 or more).</div>
+          <input type="number" class="fp-input" id="fp-vb-attendees" placeholder="0" min="1" step="1" oninput="fpFilterRoomsByType()">
+          <div class="fp-vb-field-error" id="fp-vb-attendees-err"><span class="fp-ms">error</span>Enter a valid number of attendees.</div>
+        </div>
+        <div class="fp-form-group" style="margin-bottom:0;">
+          <label class="fp-label" for="fp-vb-room">Room / Venue <span style="color:var(--fp-primary);">*</span></label>
+          <select class="fp-select" id="fp-vb-room" onchange="fpCheckAvailabilityMsg()">
+            <option value="">Select venue type and attendees first…</option>
+          </select>
+          <div class="fp-vb-field-error" id="fp-vb-room-err"><span class="fp-ms">error</span>Please select a room / venue.</div>
+          <div id="fp-vb-room-availability" style="font-size:12px; margin-top:5px; display:none; font-weight:500;"></div>
+        </div>
+      </div>
+
+      <div class="fp-vb-section">
+        <div class="fp-vb-section-title"><span class="fp-ms">event_note</span>Event Details</div>
+        <div class="fp-form-group" style="margin-bottom:0;">
+          <label class="fp-label" for="fp-vb-event">Purpose<span style="color:var(--fp-primary);">*</span></label>
+          <input type="text" class="fp-input" id="fp-vb-event" placeholder="e.g. Guest Lecture, Seminar, Meeting">
+          <div class="fp-vb-field-error" id="fp-vb-event-err"><span class="fp-ms">error</span>Event / Purpose is required.</div>
         </div>
       </div>
 
@@ -301,6 +299,52 @@
 {% endblock %}
 
 {% block extra_js %}
+<style>
+.flatpickr-calendar {
+    z-index: 99999999 !important;
+}
+.flatpickr-wrapper {
+    z-index: 99999999 !important;
+}
+</style>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  var now = new Date();
+  window.fpStartPicker = flatpickr("#fp-vb-start", {
+    enableTime: true,
+    dateFormat: "Y-m-d\TH:i",
+    altInput: true,
+    altFormat: "d/m/Y h:i K",
+    minDate: "today",
+    defaultDate: now,
+    onChange: function(selectedDates, dateStr, instance) {
+      if (selectedDates.length > 0) {
+        var startDate = selectedDates[0];
+        var minEnd = new Date(startDate.getTime());
+        window.fpEndPicker.set('minDate', minEnd);
+        
+        var defaultEnd = new Date(startDate.getTime() + 30 * 60000);
+        window.fpEndPicker.setDate(defaultEnd);
+      }
+      fpFilterRoomsByType();
+    }
+  });
+
+  var defaultEnd = new Date(now.getTime() + 30 * 60000);
+  window.fpEndPicker = flatpickr("#fp-vb-end", {
+    enableTime: true,
+    dateFormat: "Y-m-d\TH:i",
+    altInput: true,
+    altFormat: "d/m/Y h:i K",
+    minDate: "today",
+    defaultDate: defaultEnd,
+    onChange: function() { fpFilterRoomsByType(); }
+  });
+});
+</script>
 <script>
 /* ── Status multi-select filter ─────────────────────────────── */
 function fpToggleStatusPanel() {
@@ -393,43 +437,91 @@ function fpUpdateCharCount() {
   if (el && countEl) countEl.textContent = el.value.length;
 }
 
+function fpCheckAvailabilityMsg() {
+  var sel = document.getElementById('fp-vb-room');
+  var msg = document.getElementById('fp-vb-room-availability');
+  if (!sel || !msg) return;
+  var opt = sel.options[sel.selectedIndex];
+  if (!opt || !opt.value) {
+    msg.style.display = 'none';
+    return;
+  }
+  msg.style.display = 'block';
+  if (opt.disabled || opt.text.indexOf('(Pending') > -1 || opt.text.indexOf('(Allotted') > -1 || opt.text.indexOf('(Booked') > -1) {
+    msg.style.color = 'var(--fp-primary, #b91c1c)';
+    msg.innerHTML = '<span class="fp-ms" style="font-size:14px;vertical-align:middle;margin-right:4px;">cancel</span>Not available, check other venue.';
+  } else {
+    msg.style.color = '#166534';
+    msg.innerHTML = '<span class="fp-ms" style="font-size:14px;vertical-align:middle;margin-right:4px;">check_circle</span>Venue is available for booking!';
+  }
+}
+
 function fpFilterRoomsByType() {
   var venueType = (document.getElementById('fp-vb-venue-type').value || '').trim();
+  var attendees = document.getElementById('fp-vb-attendees') ? (document.getElementById('fp-vb-attendees').value || '').trim() : '';
+  var start = window.fpStartPicker && window.fpStartPicker.selectedDates.length ? window.fpStartPicker.formatDate(window.fpStartPicker.selectedDates[0], "Y-m-d H:i:S") : '';
+  var end = window.fpEndPicker && window.fpEndPicker.selectedDates.length ? window.fpEndPicker.formatDate(window.fpEndPicker.selectedDates[0], "Y-m-d H:i:S") : '';
+  var showBooked = document.getElementById('fp-vb-show-booked') ? document.getElementById('fp-vb-show-booked').checked : false;
+  var sortDesc = document.getElementById('fp-vb-sort-desc') ? document.getElementById('fp-vb-sort-desc').checked : false;
   var roomSel   = document.getElementById('fp-vb-room');
   if (!roomSel) return;
 
-  var allRooms = window._fp_vb_rooms || [];
-
   roomSel.innerHTML = '';
-  if (!venueType) {
-    roomSel.innerHTML = '<option value="">Select venue type first…</option>';
+  if (!venueType || !attendees) {
+    roomSel.innerHTML = '<option value="">Select venue type and expected attendees first…</option>';
     return;
   }
 
-  var filtered = allRooms.filter(function(r) {
-    return r.room_type === venueType;
-  });
+  var filters = {
+    venue_type: venueType,
+    expected_attendees: attendees,
+    include_booked: showBooked ? 1 : 0,
+    sort_order: sortDesc ? 'desc' : 'asc'
+  };
 
-  if (!filtered.length) {
-    roomSel.innerHTML = '<option value="">No rooms available for this type</option>';
-    return;
+  if (start && end && start < end) {
+    filters.start_datetime = start;
+    filters.end_datetime = end;
   }
 
-  var opts = '<option value="">Select a room…</option>';
-  filtered.forEach(function(r) {
-    var label = r.room_name || r.name;
-    if (r.room_number) label += ' (' + r.room_number + ')';
-    if (r.seating_capacity) label += ' — Cap: ' + r.seating_capacity;
-    opts += '<option value="' + r.name + '">' + label + '</option>';
+  fpCall('slcm.slcm.doctype.venue_booking.venue_booking.get_venue_query', {
+    doctype: 'Venue Booking',
+    txt: '',
+    searchfield: 'name',
+    start: 0,
+    page_len: 100,
+    filters: JSON.stringify(filters)
+  }, function(res) {
+    var filtered = res || [];
+    if (!filtered.length) {
+      roomSel.innerHTML = '<option value="">No rooms available</option>';
+      return;
+    }
+
+    var opts = '<option value="">Select a room…</option>';
+    filtered.forEach(function(r) {
+      var label = r.description || r.value;
+      if (r.capacity) label += ' — Cap: ' + r.capacity;
+      
+      var is_booked = r.is_booked;
+      if (is_booked) {
+        var statusStr = r.booked_booking_status ? r.booked_booking_status : 'Booked';
+        label += ' (' + statusStr + ')';
+      }
+      opts += '<option value="' + r.value + '"' + (is_booked ? ' disabled' : '') + '>' + label + '</option>';
+    });
+    roomSel.innerHTML = opts;
+    fpCheckAvailabilityMsg();
+  }, function(err) {
+    roomSel.innerHTML = '<option value="">Error fetching rooms</option>';
   });
-  roomSel.innerHTML = opts;
 }
 
 function fpOpenBookingForm() {
   fpReset('fp-vb-event');
   fpReset('fp-vb-venue-type');
-  fpReset('fp-vb-start');
-  fpReset('fp-vb-end');
+  // fpReset('fp-vb-start');
+  // fpReset('fp-vb-end');
   fpReset('fp-vb-attendees');
   fpReset('fp-vb-reason');
   fpHide('fp-vb-error');
@@ -461,8 +553,8 @@ function fpSubmitBooking() {
   var event     = eventEl     ? eventEl.value.trim()     : '';
   var venueType = venueTypeEl ? venueTypeEl.value.trim() : '';
   var room      = roomEl      ? roomEl.value.trim()      : '';
-  var start     = startEl     ? startEl.value            : '';
-  var end       = endEl       ? endEl.value              : '';
+  var start = window.fpStartPicker && window.fpStartPicker.selectedDates.length ? window.fpStartPicker.formatDate(window.fpStartPicker.selectedDates[0], "Y-m-d H:i:S") : '';
+  var end = window.fpEndPicker && window.fpEndPicker.selectedDates.length ? window.fpEndPicker.formatDate(window.fpEndPicker.selectedDates[0], "Y-m-d H:i:S") : '';
   var attendees = attendeesEl ? attendeesEl.value        : '';
   var reason    = reasonEl    ? reasonEl.value.trim()    : '';
 
@@ -495,8 +587,8 @@ function fpSubmitBooking() {
     event_name: event,
     venue_type: venueType,
     room: room,
-    start_datetime: start.replace('T', ' '),
-    end_datetime: end.replace('T', ' '),
+    start_datetime: start,
+    end_datetime: end,
     expected_attendees: attendees || 0,
     reason: reason,
   }, function() {

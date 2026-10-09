@@ -125,8 +125,39 @@ class AttendanceSession(Document):
 				
 		self.update_attendance_summary()
 
+	def get_oh_group(self):
+		"""OH Student Group for an Office Hour session - its own field, else the
+		Time Table series root's (older generated occurrences lack the copy)."""
+		if self.office_hours_group:
+			return self.office_hours_group
+		if not self.class_schedule:
+			return None
+		tt = frappe.db.get_value(
+			"Time Table", self.class_schedule, ["office_hours_group", "parent_schedule"], as_dict=True
+		)
+		if not tt:
+			return None
+		if tt.office_hours_group:
+			return tt.office_hours_group
+		if tt.parent_schedule:
+			return frappe.db.get_value("Time Table", tt.parent_schedule, "office_hours_group")
+		return None
+
 	def get_enrolled_students(self):
-		"""Find students enrolled in this Course Offering"""
+		"""Expected roster: the OH Student Group's students for an Office Hour
+		session (OH attendance is kept separate from the class roster), else
+		the students enrolled in this Course Offering."""
+		if self.session_type == "Office Hour":
+			group = self.get_oh_group()
+			if group and frappe.db.exists("Student Group", group):
+				return frappe.get_all(
+					"Student Group Student",
+					filters={"parent": group, "parenttype": "Student Group"},
+					pluck="student",
+					order_by="idx",
+				)
+			return []
+
 		if not self.course_offering:
 			return []
 
