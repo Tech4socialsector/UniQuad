@@ -11,6 +11,7 @@ _DEFAULTS = {
     "portal_subtitle":       "",
     "show_logo":             1,
     "nav_brand_text":        "",
+    "portal_logo":           "",
     "portal_favicon":        "",
     # Typography
     "font_family":           "Merriweather",
@@ -104,6 +105,8 @@ _DEFAULTS = {
     "allow_language_preference":    0,
     # Advanced
     "custom_css": "",
+    "enable_lms_navigation": 0,
+    "lms_url": "",
 }
 
 # ── Font mappings ─────────────────────────────────────────────────────
@@ -143,6 +146,7 @@ _CHECK_FIELDS = frozenset({
     "enable_leave_request", "show_workload_indicator",
     "allow_theme_override", "allow_density_override", "allow_notification_settings",
     "allow_dashboard_customization", "allow_font_size_override", "allow_language_preference",
+    "enable_lms_navigation",
 })
 
 
