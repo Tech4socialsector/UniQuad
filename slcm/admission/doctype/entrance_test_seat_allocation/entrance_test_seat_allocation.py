@@ -1935,8 +1935,9 @@ def _get_compressed_photo_b64(file_url):
     if not file_url:
         return ""
     
+    cache_key = f"photo_b64_v4_{file_url}"
     try:
-        cached = frappe.cache().get_value(f"photo_b64_{file_url}")
+        cached = frappe.cache().get_value(cache_key)
         if cached:
             return cached
     except Exception:
@@ -1948,19 +1949,17 @@ def _get_compressed_photo_b64(file_url):
     
     try:
         raw_bytes = base64.b64decode(raw_b64)
-        if len(raw_bytes) <= 40000:
-            result = raw_b64
-        else:
-            img = Image.open(io.BytesIO(raw_bytes))
-            if img.mode in ("RGBA", "P"):
-                img = img.convert("RGB")
-            img.thumbnail((120, 150), Image.Resampling.BILINEAR)
-            buf = io.BytesIO()
-            img.save(buf, format="JPEG", quality=65)
-            result = base64.b64encode(buf.getvalue()).decode("utf-8")
+        buf_in = io.BytesIO(raw_bytes)
+        img = Image.open(buf_in)
+        if img.mode in ("RGBA", "P"):
+            img = img.convert("RGB")
+        img.thumbnail((180, 225), Image.Resampling.LANCZOS)
+        buf_out = io.BytesIO()
+        img.save(buf_out, format="JPEG", quality=85, optimize=True)
+        result = base64.b64encode(buf_out.getvalue()).decode("utf-8")
         
         try:
-            frappe.cache().set_value(f"photo_b64_{file_url}", result, expires_in_sec=86400)
+            frappe.cache().set_value(cache_key, result, expires_in_sec=86400)
         except Exception:
             pass
         return result
@@ -1968,25 +1967,24 @@ def _get_compressed_photo_b64(file_url):
         return raw_b64
 
 
-
 def _save_generated_file(filename, content, dt, dn, is_private=0):
-    from frappe.utils.file_manager import save_file, save_file_on_filesystem
+    from frappe.utils.file_manager import save_file_on_filesystem
     try:
-        return save_file(filename, content, dt, dn, is_private=is_private)
+        res = save_file_on_filesystem(filename, content, is_private=is_private)
+        file_doc = frappe.get_doc({
+            "doctype": "File",
+            "file_name": res.get("file_name") or filename,
+            "file_url": res.get("file_url"),
+            "attached_to_doctype": dt,
+            "attached_to_name": dn,
+            "is_private": is_private
+        })
+        file_doc.flags.ignore_permissions = True
+        file_doc.flags.ignore_file_validate = True
+        file_doc.insert()
+        return file_doc
     except Exception as e:
-        if "MaxFileSizeReachedError" in type(e).__name__ or "exceeded" in str(e).lower():
-            res = save_file_on_filesystem(filename, content, is_private=is_private)
-            file_doc = frappe.get_doc({
-                "doctype": "File",
-                "file_name": res.get("file_name") or filename,
-                "file_url": res.get("file_url"),
-                "attached_to_doctype": dt,
-                "attached_to_name": dn,
-                "is_private": is_private
-            })
-            file_doc.flags.ignore_permissions = True
-            file_doc.insert()
-            return file_doc
+        frappe.log_error(f"Error saving generated file {filename}: {e}", "Save Generated File")
         raise e
 
 
@@ -2146,14 +2144,14 @@ def download_attendance_sheet_pdf(
         "total": total_candidates
     })
 
-    # Bulk fetch applicant photos and father names in ONE query
+    # Bulk fetch applicant photos and parent/guardian names in ONE query
     applicant_ids = list({rec.applicant for rec in records if rec.applicant})
     applicant_data = {}
     if applicant_ids:
         app_list = frappe.get_all(
             "Applicant",
             filters={"name": ["in", applicant_ids]},
-            fields=["name", "candidate_photo", "father_name"],
+            fields=["name", "candidate_photo", "father_name", "mother_name", "guardian_name"],
             limit_page_length=0
         )
         applicant_data = {a.name: a for a in app_list}
@@ -2167,6 +2165,28 @@ def download_attendance_sheet_pdf(
     centre_to_city = {p.center_name: (p.city or "Centres").strip() for p in all_providers if p.center_name}
 
     b64_cache = {}
+    unique_photos = set()
+    for rec in records:
+        app_info = applicant_data.get(rec.applicant) if rec.applicant else None
+        p_path = app_info.candidate_photo if app_info else None
+        if not p_path:
+            p_path = rec.profile
+        if p_path:
+            unique_photos.add(p_path)
+        if rec.profile:
+            unique_photos.add(rec.profile)
+
+    if unique_photos:
+        from concurrent.futures import ThreadPoolExecutor
+        def _worker(p):
+            try:
+                return p, _get_compressed_photo_b64(p)
+            except Exception:
+                return p, ""
+        with ThreadPoolExecutor(max_workers=16) as executor:
+            for p_url, b64_val in executor.map(_worker, unique_photos):
+                if b64_val:
+                    b64_cache[p_url] = b64_val
 
     centre_records_map = OrderedDict()
     for rec in records:
@@ -2287,9 +2307,9 @@ def download_attendance_sheet_pdf(
                 if pb64:
                     p_src = f"data:image/jpeg;base64,{pb64}"
 
-                p_name = c.father_name or c.mother_name
+                p_name = getattr(c, "father_name", None) or getattr(c, "mother_name", None) or getattr(c, "guardian_name", None)
                 if not p_name and app_info:
-                    p_name = app_info.father_name
+                    p_name = getattr(app_info, "father_name", None) or getattr(app_info, "mother_name", None) or getattr(app_info, "guardian_name", None)
 
                 processed_candidates.append({
                     "sl_no": idx + 1,
