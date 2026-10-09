@@ -311,8 +311,10 @@ window._fpDashData = {
     </div>
     <div class="fp-cal-legend">
       <span><i class="fp-cal-dot" style="background:var(--fp-success);"></i>Active</span>
+      <span><i class="fp-cal-dot" style="background:#d97706;"></i>Pending</span>
       <span><i class="fp-cal-dot" style="background:var(--fp-primary);"></i>Marked</span>
       <span><i class="fp-cal-dot" style="background:#f5c6ce;"></i>Upcoming</span>
+      <span><b class="fp-cal-oh-tag">OH</b>Office Hours</span>
       <span><i class="fp-cal-dot" style="background:var(--fp-cal-holiday-bg);border:1px solid #f5c6ce;"></i>Holiday</span>
     </div>
   </div>
@@ -345,8 +347,10 @@ window._fpDashData = {
   body.fp-dark { --fp-cal-event: #f87171; --fp-cal-inst: #60a5fa; --fp-cal-tt: #4ade80; --fp-cal-holiday-bg: rgba(225,29,72,0.12); --fp-cal-line: #3a4660; }
 
   .fp-cal-head { flex-wrap: wrap; gap: 12px 20px; justify-content: space-between; }
-  .fp-cal-layers { display: flex; flex-wrap: wrap; gap: 6px 18px; flex: 1; }
-  .fp-cal-layer { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--fp-text-2); cursor: pointer; user-select: none; }
+  /* Layers keep their natural width (no squeezing one onto a second line);
+     when space runs out the legend wraps below as a whole instead. */
+  .fp-cal-layers { display: flex; flex-wrap: wrap; gap: 6px 18px; flex: 0 0 auto; max-width: 100%; }
+  .fp-cal-layer { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--fp-text-2); cursor: pointer; user-select: none; white-space: nowrap; }
   .fp-cal-layer input { position: absolute; opacity: 0; width: 1px; height: 1px; }
   .fp-cal-check { width: 18px; height: 18px; border-radius: 4px; border: 2px solid var(--layer); display: inline-flex; align-items: center; justify-content: center; background: transparent; transition: background .15s; }
   .fp-cal-check .fp-ms { font-size: 14px; color: #fff; opacity: 0; }
@@ -354,8 +358,18 @@ window._fpDashData = {
   .fp-cal-layer input:checked + .fp-cal-check .fp-ms { opacity: 1; }
   .fp-cal-layer input:focus-visible + .fp-cal-check { outline: 2px solid var(--layer); outline-offset: 2px; }
 
-  .fp-cal-legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--fp-text-3); }
-  .fp-cal-legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .fp-cal-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--fp-text-3); margin-left: auto; justify-content: flex-end; }
+  .fp-cal-legend span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+  /* OH marker on calendar chips/blocks (classes have none) */
+  .fp-cal-oh-tag {
+    display: inline-block; flex-shrink: 0; padding: 0 4px; border-radius: 4px;
+    background: var(--fp-primary); color: #fff; font-size: 9.5px; font-weight: 700; line-height: 15px;
+  }
+  /* Class / OH items open the attendance tool on click */
+  .fp-cal-chip.is-session, .fp-cal-block.is-session { cursor: pointer; }
+  .fp-cal-chip.is-session:hover, .fp-cal-block.is-session:hover { filter: brightness(0.95); }
+  .fp-cal-tip-hint { margin-top: 6px; font-size: 11.5px; font-weight: 700; color: var(--fp-primary); display: flex; align-items: center; gap: 4px; }
+  .fp-cal-tip-hint .fp-ms { font-size: 14px; }
   .fp-cal-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
 
   .fp-cal-toolbar { padding: 14px 20px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--fp-border-light); }
@@ -1463,6 +1477,26 @@ body.fp-dark .fp-dash-icon .fp-ms { color: #fff !important; }
     try { localStorage.setItem('fp-cal-prefs', JSON.stringify({ view: state.view, layers: state.layers })); } catch (e) {}
   }
 
+  /* Coming back from a session opened on the calendar (see openSession):
+     restore its view/date now, and the scroll position once data is drawn. */
+  var RETURN_KEY = 'fp-cal-return';
+  var returnScrollY = null;
+  try {
+    var ret = JSON.parse(sessionStorage.getItem(RETURN_KEY) || 'null');
+    sessionStorage.removeItem(RETURN_KEY);
+    if (ret) {
+      if (['month', 'week', 'day'].indexOf(ret.view) > -1) state.view = ret.view;
+      if (ret.cursor) state.cursor = parseDS(ret.cursor);
+      if (typeof ret.scrollY === 'number') returnScrollY = ret.scrollY;
+    }
+  } catch (e) {}
+  function restoreReturnScroll() {
+    if (returnScrollY === null) return;
+    var y = returnScrollY;
+    returnScrollY = null;
+    window.scrollTo(0, y);
+  }
+
   var store = {};        // item id → item
   var loadedDays = {};   // 'YYYY-MM-DD' → true once fetched
   var errorLayers = [];
@@ -1536,8 +1570,22 @@ body.fp-dark .fp-dash-icon .fp-ms { color: #fff !important; }
   function chip(it, ds) {
     var time = !isAllDay(it, ds) ? '<span class="fp-cal-chip-time">' + esc(fmtTime(it.start_time).replace(':00', '')) + '</span>' : '';
     var dot = it.status ? '<i class="fp-cal-dot" style="width:6px;height:6px;background:' + STATUS_COLORS[it.status] + ';"></i>' : '';
-    return '<div class="fp-cal-chip' + (it.status === 'Cancelled' ? ' is-cancelled' : '') + '"' + layerStyle(it) + '"' + ref(it)
-         + ' data-day="' + ds + '">' + dot + time + '<span class="fp-cal-chip-txt">' + esc(it.title) + '</span></div>';
+    var oh = it.kind === 'oh' ? '<b class="fp-cal-oh-tag">OH</b>' : '';
+    return '<div class="fp-cal-chip' + (it.status === 'Cancelled' ? ' is-cancelled' : '') + (it.session ? ' is-session' : '') + '"' + layerStyle(it) + '"' + ref(it)
+         + ' data-day="' + ds + '">' + dot + oh + time + '<span class="fp-cal-chip-txt">' + esc(it.title) + '</span></div>';
+  }
+
+  /* Class / OH session -> the attendance page's Student Attendance Tool for
+     it (?mark=), returning to the dashboard after save/close (from=dashboard). */
+  function openSession(it) {
+    if (!it || !it.session || it.status === 'Cancelled') return false;
+    /* Remember where we were so the return lands back on the same calendar
+       view/date and scroll position, not the top of the dashboard. */
+    try {
+      sessionStorage.setItem(RETURN_KEY, JSON.stringify({ view: state.view, cursor: toDS(state.cursor), scrollY: window.scrollY }));
+    } catch (e) {}
+    window.location.href = '/faculty-portal/attendance?mark=' + encodeURIComponent(it.session) + '&from=dashboard';
+    return true;
   }
 
   /* ── Month view ── */
@@ -1611,9 +1659,9 @@ body.fp-dark .fp-dash-icon .fp-ms { color: #fff !important; }
         var top = b.s / 60 * HOUR_H, h = Math.max((b.e - b.s) / 60 * HOUR_H - 2, 18);
         var w = 100 / b.cols;
         var meta = fmtTime(b.it.start_time) + (b.it.end_time ? ' – ' + fmtTime(b.it.end_time) : '') + (b.it.venue ? ' · ' + b.it.venue : '');
-        cols += '<div class="fp-cal-block' + (b.it.status === 'Cancelled' ? ' is-cancelled' : '') + '"' + layerStyle(b.it)
+        cols += '<div class="fp-cal-block' + (b.it.status === 'Cancelled' ? ' is-cancelled' : '') + (b.it.session ? ' is-session' : '') + '"' + layerStyle(b.it)
               + 'top:' + top + 'px;height:' + h + 'px;left:calc(' + (b.col * w) + '% + 2px);width:calc(' + w + '% - 4px);"'
-              + ref(b.it) + ' data-day="' + ds + '"><b>' + esc(b.it.title) + '</b>'
+              + ref(b.it) + ' data-day="' + ds + '"><b>' + (b.it.kind === 'oh' ? '<span class="fp-cal-oh-tag">OH</span> ' : '') + esc(b.it.title) + '</b>'
               + (h >= 34 ? '<small>' + esc(meta) + '</small>' : '') + '</div>';
       });
       if (ds === todayDS) {
@@ -1679,9 +1727,9 @@ body.fp-dark .fp-dash-icon .fp-ms { color: #fff !important; }
   function render() {
     updateChrome();
     var r = visibleRange();
-    if (rangeLoaded(r)) { draw(); return; }
+    if (rangeLoaded(r)) { draw(); restoreReturnScroll(); return; }
     draw();            // show the frame immediately with whatever is cached
-    load(r, draw);
+    load(r, function () { draw(); restoreReturnScroll(); });
   }
 
   /* ── Public controls ── */
@@ -1704,6 +1752,9 @@ body.fp-dark .fp-dash-icon .fp-ms { color: #fff !important; }
 
   /* Day drill-down: clicking a month cell, an item or a week column header opens the Day view */
   container.addEventListener('click', function (e) {
+    /* A class / OH session item opens its attendance in any view */
+    var sessEl = e.target.closest('[data-i]');
+    if (sessEl && openSession(rendered[+sessEl.getAttribute('data-i')])) return;
     if (state.view === 'day') {
       // No hover on touch screens — tapping an item shows its details instead
       var item = e.target.closest('[data-i]');
@@ -1729,7 +1780,12 @@ body.fp-dark .fp-dash-icon .fp-ms { color: #fff !important; }
          + '<div class="fp-cal-tip-row"><span class="fp-ms">calendar_today</span>' + esc(when) + '</div>'
          + '<div class="fp-cal-tip-row"><span class="fp-ms">schedule</span>' + esc(time) + '</div>'
          + (it.venue ? '<div class="fp-cal-tip-row"><span class="fp-ms">location_on</span>' + esc(it.venue) + '</div>' : '')
-         + (it.description ? '<div class="fp-cal-tip-desc">' + esc(it.description) + '</div>' : '');
+         + (it.description ? '<div class="fp-cal-tip-desc">' + esc(it.description) + '</div>' : '')
+         + (it.session && it.status !== 'Cancelled'
+             ? '<div class="fp-cal-tip-hint"><span class="fp-ms">touch_app</span>'
+               + ({ Pending: 'Click to mark attendance', Active: 'Click to mark attendance', Marked: 'Click to view / edit attendance', Upcoming: 'Click to view' }[it.status] || 'Click to open')
+               + (it.kind === 'oh' ? ' (OH)' : '') + '</div>'
+             : '');
   }
   function placeTip(x, y) {
     var pad = 12, w = tip.offsetWidth, h = tip.offsetHeight;

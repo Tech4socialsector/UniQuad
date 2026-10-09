@@ -1135,6 +1135,12 @@ function _closeModal(id, opts) {
   if (!_attModalStack.length) document.body.style.overflow = '';
   var fromPopState = opts && opts.fromPopState;
   var swappingToAnother = opts && opts.swapping;
+  /* Opened from the dashboard calendar (?mark=…&from=dashboard): any close —
+     Cancel, ✕, Esc, backdrop or after Save — returns there. */
+  if (id === 'att-mark-modal' && _fpReturnTo && !swappingToAnother) {
+    window.location.replace(_fpReturnTo);
+    return;
+  }
   if (swappingToAnother) {
     /* Leave the history entry alone — the next _openModal() call in this
        same handler will replaceState() over it. */
@@ -1646,13 +1652,19 @@ document.addEventListener('DOMContentLoaded', function() {
   var p = new URLSearchParams(window.location.search);
   var markSession = p.get('mark');
   if (!markSession) return;
-  /* Drop the param so a reload / Back doesn't reopen the modal */
+  if (p.get('from') === 'dashboard') _fpReturnTo = '/faculty-portal';
+  /* Drop the params so a reload / Back doesn't reopen the modal */
   p.delete('mark');
+  p.delete('from');
   var qs = p.toString();
   history.replaceState(history.state, '', window.location.pathname + (qs ? '?' + qs : '') + window.location.hash);
-  var row = document.querySelector('.fp-session-row[data-session="' + CSS.escape(markSession) + '"]');
-  fpOpenMarkModal(markSession, row ? row.getAttribute('data-course-name') : '');
+  /* Same as a row click: OH sessions open on the OH list, Upcoming read-only */
+  fpViewSession(markSession);
 });
+
+/* Where to go when the mark modal closes, if it was opened from elsewhere
+   (dashboard calendar). Empty = stay on this page as usual. */
+var _fpReturnTo = '';
 
 /* ══════════════════════════════════════════════════════════
    ROW CLICK — open mark or view based on session state

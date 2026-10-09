@@ -1526,7 +1526,7 @@ def _cal_timetable(faculty_name, start, end, today):
     for s in frappe.get_all(
         "Attendance Session",
         filters={"class_schedule": ["in", list(rows)]},
-        fields=["class_schedule", "attendance_marked", "session_status"],
+        fields=["name", "class_schedule", "attendance_marked", "session_status", "session_type"],
         ignore_permissions=True,
     ):
         sessions[s.class_schedule] = s
@@ -1535,6 +1535,7 @@ def _cal_timetable(faculty_name, start, end, today):
     for r in rows.values():
         sess = sessions.get(r.name)
         date = frappe.utils.getdate(r.schedule_date)
+        # Same status rules as the attendance page's sessions list
         if sess and sess.session_status == "Cancelled":
             status = "Cancelled"
         elif sess and sess.attendance_marked:
@@ -1545,6 +1546,7 @@ def _cal_timetable(faculty_name, start, end, today):
             status = "Active"
         else:
             status = "Pending"
+        is_oh = (sess.session_type == "Office Hour") if sess else r.based_on == "Office Hours"
         items.append({
             "id": f"tt::{r.name}",
             "layer": "timetable",
@@ -1554,9 +1556,12 @@ def _cal_timetable(faculty_name, start, end, today):
             "start_time": _hhmm(r.from_time),
             "end_time": _hhmm(r.to_time),
             "all_day": not r.from_time,
-            "subtitle": " · ".join(filter(None, [r.based_on, r.section])),
+            "subtitle": " · ".join(filter(None, ["OH" if is_oh else "Class", r.section])),
             "venue": r.venue or "",
             "status": status,
+            # Opens this session in the attendance page's Student Attendance Tool
+            "session": sess.name if sess else "",
+            "kind": "oh" if is_oh else "class",
         })
     linked_events = {r.linked_google_event for r in rows.values() if r.linked_google_event}
     return items, linked_events

@@ -16,11 +16,16 @@ OH_FIELDS = ["office_hour_1st_hour", "office_hour_2nd_hour", "1st_oh_grade", "2n
 
 class StudentGroup(Document):
 	def autoname(self):
-		# CP-{Academic Term}-{Week Name} / OH-{Academic Term}-{Week Name}.
-		# Several groups can share a term + week (different courses), so a
-		# numeric suffix is added when the base name is already taken.
+		# {CP|OH}-{Programme Code}-{Academic Term}-{Week Name}, with the code
+		# taken from the linked Programme's program_code. Several groups can
+		# share these (different courses), so a numeric suffix is added when
+		# the base name is already taken.
 		prefix = "CP" if self.group_based_on == CP else "OH"
-		base = f"{prefix}-{self.academic_term}-{self.week_name}".strip()
+		programme_code = (
+			frappe.db.get_value("Programme", self.programme, "program_code") if self.programme else None
+		)
+		parts = [prefix, programme_code, self.academic_term, self.week_name]
+		base = "-".join(str(p).strip() for p in parts if p and str(p).strip())
 		name, n = base, 1
 		while frappe.db.exists("Student Group", name):
 			name = f"{base}-{n}"
