@@ -315,9 +315,9 @@ def get_student_participation(student):
 	Returns {"cp": [group, ...], "oh": [group, ...]}; each group:
 	  group, title (week name), course_name, start_date_fmt / end_date_fmt (CP),
 	  sessions: [{date_fmt, weekday, time, venue, faculty, slot_label,
-	              attendance: Present | Absent | Not marked | Upcoming,
+	              attendance: Present | Absent | Pending | Upcoming,
 	              participation: Participated | Did not participate |
-	                             Not recorded yet | Upcoming}],
+	                             Pending | Upcoming}],
 	  attended, participated, held (counts over sessions already held).
 	Uses the same group / slot rules as the faculty portal."""
 	member_rows = frappe.db.sql(
@@ -419,15 +419,19 @@ def get_student_participation(student):
 		kind, group, slot = resolved
 		member = mine[group][1]
 		tt = tts.get(s.class_schedule) or frappe._dict()
-		started = _session_has_started(s, now)
+		slot_recorded = (kind, group, slot) in recorded
+		# Anything the faculty already recorded is shown, even before the
+		# session's start time; "Upcoming" only when nothing is recorded yet.
+		started = _session_has_started(s, now) or s.name in att_status or slot_recorded
 		if not started:
 			attendance = participation = "Upcoming"
 		else:
-			attendance = att_status.get(s.name) or "Not marked"
-			if (kind, group, slot) in recorded:
+			# "Pending" = held, but the faculty hasn't recorded it yet
+			attendance = att_status.get(s.name) or "Pending"
+			if slot_recorded:
 				participation = "Participated" if cint(member.get(hour_fields(slot, kind)[0])) else "Did not participate"
 			else:
-				participation = "Not recorded yet"
+				participation = "Pending"
 
 		g = groups.get(group)
 		if not g:
@@ -457,6 +461,10 @@ def get_student_participation(student):
 			g.participated += participation == "Participated"
 
 	for g in sorted(groups.values(), key=lambda x: x.sort_key):
+		# OH groups have no configured week dates — span their sessions instead
+		if not g.start_date_fmt and g.sessions:
+			g.start_date_fmt = formatdate(g.sessions[0].date, "dd MMM yyyy")
+			g.end_date_fmt = formatdate(g.sessions[-1].date, "dd MMM yyyy")
 		result[g.kind].append(g)
 	return result
 
