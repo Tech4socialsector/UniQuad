@@ -7567,7 +7567,7 @@
   "meta_description": null,
   "meta_image": null,
   "meta_title": "Application Form",
-  "modified": "2026-10-07 11:52:57.643546",
+  "modified": "2026-10-09 14:08:26.311429",
   "module": "Admission",
   "name": "applicant-form",
   "payment_button_help": null,
@@ -7907,13 +7907,13 @@
    {
     "allow_read_on_all_link_options": 0,
     "default": null,
-    "depends_on": null,
+    "depends_on": "eval:doc.foriegn_national == \"No\"",
     "description": "Max 5 MB — supported formats: png, jpeg, jpg, pdf . Upload a valid government ID (PAN, Voter ID, Aadhar or Driving License etc).",
     "fieldname": "id_proof",
     "fieldtype": "Attach",
     "hidden": 0,
     "label": "ID Proof (Govt. issued photo ID)",
-    "mandatory_depends_on": null,
+    "mandatory_depends_on": "eval:doc.foriegn_national == \"No\"",
     "max_length": 0,
     "max_value": 0,
     "options": "png,jpeg,jpg,pdf",
@@ -7921,7 +7921,7 @@
     "precision": "",
     "read_only": 0,
     "read_only_depends_on": null,
-    "reqd": 1,
+    "reqd": 0,
     "show_in_filter": 0
    },
    {
