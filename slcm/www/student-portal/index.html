@@ -648,6 +648,136 @@
       grid-template-columns: 1fr 1fr;
     }
   }
+
+  /* ══ Main area: KPIs + Quick Actions | My Calendar ══ */
+  :root { --spc-class: #920c24; --spc-events: #2563eb; --spc-oh: #16a34a; --spc-line: #e3e5ea; --spc-hour-h: 46px; --spc-holiday-bg: #fff0f0; }
+  /* Both columns end on the same line: the row is as tall as the left column
+     (KPIs + Quick Actions) and the calendar fills that height, scrolling inside. */
+  .spd-main { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 18px; align-items: stretch; margin-bottom: 18px; }
+  .spd-main-left { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+  .spd-main-left .spd-qa2 { flex: 1; }
+  .spd-kpi2-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .spd-kpi2, .spd-qa2, .spd-cal {
+    background: var(--sp-card, #fff); border: 1px solid var(--sp-border, #e5e7eb);
+    border-radius: 14px; box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  }
+  .spd-kpi2 { display: flex; gap: 14px; padding: 18px; text-decoration: none; color: inherit; transition: border-color .15s, box-shadow .15s; }
+  .spd-kpi2:hover { border-color: var(--sp-primary); box-shadow: 0 4px 14px rgba(146, 12, 36, 0.08); }
+  .spd-kpi2-icon { width: 42px; height: 42px; flex-shrink: 0; border-radius: 10px; background: var(--sp-primary-light); color: var(--sp-primary); display: flex; align-items: center; justify-content: center; }
+  .spd-kpi2-icon .sp-ms { font-size: 22px; }
+  .spd-kpi2-body { flex: 1; min-width: 0; }
+  .spd-kpi2-value { font-size: 24px; font-weight: 800; color: var(--sp-primary); line-height: 1.1; }
+  .spd-kpi2-label { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--sp-text-2); margin-top: 5px; }
+  .spd-kpi2-bar { height: 3px; border-radius: 3px; background: var(--sp-primary); margin: 8px 0 7px; }
+  .spd-kpi2-foot { font-size: 11.5px; color: var(--sp-text-3); }
+
+  .spd-qa2 { padding: 18px; }
+  .spd-qa2-title { font-size: 15px; font-weight: 700; color: var(--sp-text-1); margin: 0 0 14px; }
+  .spd-qa2-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .spd-qa2-item { display: flex; align-items: center; gap: 12px; padding: 14px 14px; border: 1px solid var(--sp-border); border-radius: 10px; text-decoration: none; color: inherit; transition: border-color .15s, background .15s; min-width: 0; }
+  .spd-qa2-item:hover { border-color: var(--sp-primary); background: var(--sp-primary-light); }
+  .spd-qa2-icon { width: 40px; height: 40px; flex-shrink: 0; border-radius: 10px; background: var(--sp-primary-light); color: var(--sp-primary); display: flex; align-items: center; justify-content: center; }
+  .spd-qa2-icon .sp-ms { font-size: 21px; }
+  .spd-qa2-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .spd-qa2-text b { font-size: 13px; font-weight: 700; color: var(--sp-text-1); }
+  .spd-qa2-text small { font-size: 11px; color: var(--sp-text-3); line-height: 1.3; }
+  .spd-qa2-go { color: var(--sp-primary); font-size: 18px; flex-shrink: 0; }
+
+  /* My Calendar */
+  .spd-cal { padding: 16px 18px 12px; min-width: 0; display: flex; flex-direction: column; }
+  .spd-cal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+  .spd-cal-title { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 700; color: var(--sp-text-1); margin: 0; }
+  .spd-cal-title .sp-ms { color: var(--sp-primary); font-size: 21px; }
+  .spd-cal-views { display: inline-flex; border: 1px solid var(--sp-border); border-radius: 8px; overflow: hidden; }
+  .spd-cal-views button { padding: 6px 13px; border: none; background: var(--sp-card, #fff); color: var(--sp-text-1); font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+  .spd-cal-views button + button { border-left: 1px solid var(--sp-border); }
+  .spd-cal-views button.is-active { background: var(--sp-primary); color: #fff; }
+  .spd-cal-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px 16px; flex-wrap: wrap; margin-bottom: 12px; }
+  .spd-cal-nav { display: flex; align-items: center; gap: 8px; }
+  .spd-cal-btn { border: 1px solid var(--sp-border); background: var(--sp-card, #fff); border-radius: 8px; padding: 5px 11px; font-family: inherit; font-size: 12px; font-weight: 600; color: var(--sp-text-1); cursor: pointer; display: inline-flex; align-items: center; }
+  .spd-cal-btn:hover { border-color: var(--sp-primary); color: var(--sp-primary); }
+  .spd-cal-icon { padding: 4px 6px; }
+  .spd-cal-icon .sp-ms { font-size: 16px; }
+  .spd-cal-label { font-size: 13px; font-weight: 700; color: var(--sp-text-1); min-width: 100px; text-align: center; }
+  .spd-cal-layers { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+  .spd-cal-layer { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--sp-text-2); cursor: pointer; user-select: none; white-space: nowrap; }
+  .spd-cal-layer input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .spd-cal-check { width: 15px; height: 15px; border-radius: 4px; border: 2px solid var(--layer); display: inline-flex; align-items: center; justify-content: center; }
+  .spd-cal-check .sp-ms { font-size: 12px; color: #fff; opacity: 0; }
+  .spd-cal-layer input:checked + .spd-cal-check { background: var(--layer); }
+  .spd-cal-layer input:checked + .spd-cal-check .sp-ms { opacity: 1; }
+  .spd-cal-layer input:focus-visible + .spd-cal-check { outline: 2px solid var(--layer); outline-offset: 2px; }
+
+  /* flex-basis 0: the calendar never makes the row taller than the left column
+     (beyond a 280px floor); its content scrolls inside instead. */
+  .spd-cal-body { position: relative; flex: 1 1 0; min-height: 280px; overflow-y: auto; }
+  .spd-cal-body.is-loading::after { content: ''; position: absolute; top: 0; left: 0; height: 2px; width: 40%; background: var(--sp-primary); animation: spdCalLoad 1s ease-in-out infinite; }
+  @keyframes spdCalLoad { from { left: -40%; } to { left: 100%; } }
+  .spd-cal-msg { padding: 8px 4px; font-size: 12px; color: var(--sp-danger); }
+  .spd-cal-empty { text-align: center; padding: 14px; color: var(--sp-text-4); font-size: 13px; }
+
+  /* Month grid */
+  .spd-cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-left: 1px solid var(--spc-line); border-top: 1px solid var(--spc-line); }
+  .spd-cal-grid > div { border-right: 1px solid var(--spc-line); border-bottom: 1px solid var(--spc-line); }
+  .spd-cal-dow { text-align: center; font-size: 11px; font-weight: 600; color: var(--sp-text-4); padding: 6px 2px; text-transform: uppercase; }
+  .spd-cal-cell { padding: 4px; min-height: 76px; display: flex; flex-direction: column; gap: 2px; cursor: pointer; min-width: 0; }
+  .spd-cal-cell:hover { background: var(--sp-primary-light); }
+  .spd-cal-cell.is-other { opacity: .4; }
+  .spd-cal-cell.is-holiday { background: var(--spc-holiday-bg); }
+  .spd-cal-daynum { font-size: 12px; font-weight: 600; color: var(--sp-text-2); min-width: 20px; height: 20px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; align-self: flex-start; }
+  .spd-cal-cell.is-today .spd-cal-daynum { background: var(--sp-primary); color: #fff; }
+  .spd-cal-more { font-size: 10.5px; color: var(--sp-text-3); font-weight: 600; padding: 0 3px; }
+
+  /* Chips (month + all-day) */
+  .spd-cal-chip { display: flex; align-items: center; gap: 4px; font-size: 10.5px; line-height: 1.3; padding: 1px 5px; border-radius: 4px; background: color-mix(in srgb, var(--layer) 12%, transparent); border-left: 3px solid var(--layer); color: var(--sp-text-1); white-space: nowrap; overflow: hidden; min-width: 0; }
+  .spd-cal-chip-txt { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .spd-cal-chip-time { color: var(--sp-text-3); font-weight: 600; flex-shrink: 0; }
+
+  /* Week / Day time grid */
+  .spd-cal-tg-scroll { height: 100%; overflow-y: auto; border-top: 1px solid var(--spc-line); }
+  .spd-cal-tg { display: grid; grid-template-columns: 52px repeat(var(--cols), minmax(0, 1fr)); }
+  .spd-cal-tg-head { position: sticky; top: 0; z-index: 5; background: var(--sp-card, #fff); border-bottom: 1px solid var(--spc-line); }
+  .spd-cal-tg-colhead { text-align: center; padding: 6px 2px; border-left: 1px solid var(--spc-line); cursor: pointer; }
+  .spd-cal-tg-colhead .dow { font-size: 10.5px; font-weight: 600; color: var(--sp-text-4); text-transform: uppercase; }
+  .spd-cal-tg-colhead .num { font-size: 13px; font-weight: 700; color: var(--sp-text-1); width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; }
+  .spd-cal-tg-colhead.is-today .num { background: var(--sp-primary); color: #fff; }
+  .spd-cal-tg-colhead.is-holiday, .spd-cal-tg-col.is-holiday { background-color: var(--spc-holiday-bg); }
+  .spd-cal-tg-allday { border-left: 1px solid var(--spc-line); padding: 3px; display: flex; flex-direction: column; gap: 2px; min-height: 22px; min-width: 0; }
+  .spd-cal-tg-gutter { font-size: 10px; color: var(--sp-text-4); text-align: right; padding-right: 6px; }
+  .spd-cal-tg-hours { position: relative; height: calc(var(--spc-hour-h) * 24); }
+  .spd-cal-tg-hours span { position: absolute; right: 6px; font-size: 10px; color: var(--sp-text-3); transform: translateY(-50%); }
+  .spd-cal-tg-col { position: relative; border-left: 1px solid var(--spc-line); height: calc(var(--spc-hour-h) * 24); background-image: repeating-linear-gradient(to bottom, var(--spc-line) 0, var(--spc-line) 1px, transparent 1px, transparent var(--spc-hour-h)); }
+  .spd-cal-block { position: absolute; border-radius: 6px; padding: 4px 8px; font-size: 11px; line-height: 1.3; overflow: hidden; background: color-mix(in srgb, var(--layer) 11%, var(--sp-card, #fff)); border-left: 3px solid var(--layer); color: var(--sp-text-1); cursor: default; }
+  .spd-cal-block:hover { z-index: 3; background: color-mix(in srgb, var(--layer) 18%, var(--sp-card, #fff)); }
+  .spd-cal-block b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 11.5px; }
+  .spd-cal-block small { display: flex; align-items: center; gap: 3px; color: var(--sp-text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 10.5px; }
+  .spd-cal-block small .sp-ms { font-size: 12px; }
+  .spd-cal-block .t { color: var(--layer); font-weight: 600; font-size: 10.5px; }
+  /* Short sessions (< ~40 min): one line — time + course; venue is in the tooltip */
+  .spd-cal-block.is-short { display: flex; align-items: center; gap: 8px; padding-top: 1px; padding-bottom: 1px; }
+  .spd-cal-block.is-short .t, .spd-cal-block.is-short b { white-space: nowrap; }
+  /* Day view: time on the left, course + venue beside it (one session per row) */
+  .spd-cal-block.is-wide { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 14px; align-content: start; }
+  .spd-cal-block.is-wide .t { grid-row: 1 / span 2; padding-top: 1px; }
+  .spd-cal-now { position: absolute; left: 0; right: 0; height: 2px; background: var(--sp-danger); z-index: 4; pointer-events: none; }
+
+  /* Tooltip */
+  .spd-cal-tip { position: fixed; z-index: 2000; max-width: 280px; background: var(--sp-card, #fff); color: var(--sp-text-1); border: 1px solid var(--sp-border); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); padding: 10px 12px; font-size: 12px; pointer-events: none; opacity: 0; transition: opacity .12s; }
+  .spd-cal-tip.show { opacity: 1; }
+  .spd-cal-tip-title { font-weight: 700; font-size: 13px; margin-bottom: 4px; display: flex; gap: 6px; align-items: center; }
+  .spd-cal-tip-row { display: flex; gap: 6px; align-items: center; color: var(--sp-text-3); margin-top: 3px; }
+  .spd-cal-tip-row .sp-ms { font-size: 14px; }
+  .spd-cal-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+
+  @media (max-width: 1199px) {
+    .spd-main { grid-template-columns: 1fr; }
+    /* Stacked: no left column to match, so give the calendar its own height */
+    .spd-cal-body { flex: none; height: 460px; }
+  }
+  @media (max-width: 560px) {
+    .spd-kpi2-row, .spd-qa2-grid { grid-template-columns: 1fr; }
+    .spd-cal-tg { grid-template-columns: 40px repeat(var(--cols), minmax(0, 1fr)); }
+  }
 </style>
 {% endblock %}
 
@@ -714,161 +844,97 @@
   </div>
 </div>
 
-{# ── KPI Cards ─────────────────────────────────────────────────── #}
-<div class="spd-kpi-row fade-in delay-2">
+{# ── Main: KPIs + Quick Actions (left) | My Calendar (right) ─────── #}
+<div class="spd-main fade-in delay-2">
 
-  {# Card 1: Current Courses #}
-  <a href="/student-portal/courses" class="spd-kpi">
-    <div class="spd-kpi-header">
-      <div class="spd-kpi-icon-box">
-        <span class="sp-ms" style="font-size:24px;">menu_book</span>
-      </div>
-      <div class="spd-kpi-badge success">
-        <span class="sp-ms" style="font-size:14px;">check_circle</span> Enrolled
-      </div>
-    </div>
-    <div class="spd-kpi-value" id="spd-course-val">{{ course_count|int }}</div>
-    <div class="spd-kpi-label">Current Courses</div>
-    <div class="spd-kpi-progress">
-      <div class="spd-kpi-progress-fill" style="width: 100%; background: var(--sp-primary);"></div>
-    </div>
-    <div class="spd-kpi-footer">This semester</div>
-  </a>
-
-  {# Card 2: Assessment Eligible #}
-  <a href="/student-portal/exam-schedule" class="spd-kpi">
-    {% set eligible_count = courses_eligible if courses_eligible is defined else 0 %}
-    <div class="spd-kpi-header">
-      <div class="spd-kpi-icon-box">
-        <span class="sp-ms" style="font-size:24px;">quiz</span>
-      </div>
-      <div
-        class="spd-kpi-badge {% if eligible_count == course_count and course_count > 0 %}success{% else %}warning{% endif %}">
-        <span class="sp-ms" style="font-size:14px;">{% if eligible_count == course_count and course_count > 0
-          %}check_circle{% else %}shield{% endif %}</span>
-        {% if eligible_count == course_count and course_count > 0 %}Clear{% else %}Partial{% endif %}
-      </div>
-    </div>
-    <div class="spd-kpi-value">
-      {{ eligible_count }}<span style="font-size:18px;color:var(--sp-text-3);">/{{ course_count }}</span>
-    </div>
-    <div class="spd-kpi-label">Assessment Eligible</div>
-    <div class="spd-kpi-progress">
-      <div class="spd-kpi-progress-fill" style="width: 100%; background: var(--sp-primary);"></div>
-    </div>
-    <div class="spd-kpi-footer"></div>
-  </a>
-
-  {# Card 3: Fee Outstanding #}
-  <a href="/student-portal/fees" class="spd-kpi">
-    <div class="spd-kpi-header">
-      <div class="spd-kpi-icon-box">
-        <span class="sp-ms" style="font-size:24px;">payments</span>
-      </div>
-      <div class="spd-kpi-badge {% if has_dues %}warning{% else %}success{% endif %}">
-        <span class="sp-ms" style="font-size:14px;">{% if has_dues %}error_outline{% else %}check_circle{% endif
-          %}</span>
-        {% if has_dues %}Pending{% else %}Clear{% endif %}
-      </div>
-    </div>
-    <div class="spd-kpi-value" style="color:{% if has_dues %}var(--sp-danger){% else %}var(--sp-success){% endif %};">
-      ₹{{ "{:,.0f}".format(total_outstanding) if has_dues else "0" }}
-    </div>
-    <div class="spd-kpi-label">Fee Outstanding</div>
-    <div class="spd-kpi-progress">
-      <div class="spd-kpi-progress-fill" style="width: 100%; background: var(--sp-primary);"></div>
-    </div>
-    <div class="spd-kpi-footer">{% if has_dues %}Payment due — act now{% else %}All fees cleared{% endif %}</div>
-  </a>
-
-</div>
-
-{# ── Quick Actions ─────────────────────────────────────────────── #}
-{% if not sp_settings or sp_settings.show_quick_actions %}
-<div class="spd-qa-row fade-in delay-2">
-  <div class="spd-qa-section">
-    <h2 class="spd-qa-header-title">Quick Actions</h2>
-    <br>
-
-    <div class="spd-qa-container">
-
-      <a href="/student-portal/attendance" class="spd-qa-item">
-        <div class="spd-qa-item-icon">
-          <span class="sp-ms" style="font-size:28px;">calendar_today</span>
+  <div class="spd-main-left">
+    <div class="spd-kpi2-row">
+      <a href="/student-portal/courses" class="spd-kpi2">
+        <div class="spd-kpi2-icon"><span class="sp-ms">menu_book</span></div>
+        <div class="spd-kpi2-body">
+          <div class="spd-kpi2-value" id="spd-course-val">{{ course_count|int }}</div>
+          <div class="spd-kpi2-label">Current Courses</div>
+          <div class="spd-kpi2-bar"></div>
         </div>
-        <div class="spd-qa-item-title">Attendance</div>
-        <div class="spd-qa-item-sub">View your attendance</div>
       </a>
-
-      <!-- <a href="/student-portal/documents" class="spd-qa-item">
-      <div class="spd-qa-item-icon">
-        <span class="sp-ms" style="font-size:28px;">folder</span>
-      </div>
-      <div class="spd-qa-item-title">Documents</div>
-      <div class="spd-qa-item-sub">Downloads &amp; uploads</div>
-    </a> -->
-
-      <a href="/student-portal/results" class="spd-qa-item">
-        <div class="spd-qa-item-icon">
-          <span class="sp-ms" style="font-size:28px;">workspace_premium</span>
+      <a href="/student-portal/fees" class="spd-kpi2">
+        <div class="spd-kpi2-icon"><span class="sp-ms">payments</span></div>
+        <div class="spd-kpi2-body">
+          <div class="spd-kpi2-value">₹{{ "{:,.0f}".format(total_outstanding) if has_dues else "0" }}</div>
+          <div class="spd-kpi2-label">Fee Outstanding</div>
+          <div class="spd-kpi2-bar"></div>
+          <!-- <div class="spd-kpi2-foot">{% if has_dues %}Payment due — act now{% else %}All fees cleared{% endif %}</div> -->
         </div>
-        <div class="spd-qa-item-title">Grades</div>
-        <div class="spd-qa-item-sub">Grades &amp; marks</div>
       </a>
-
-      <a href="/student-portal/announcements" class="spd-qa-item">
-        <div class="spd-qa-item-icon">
-          <span class="sp-ms" style="font-size:28px;">campaign</span>
-        </div>
-        <div class="spd-qa-item-title">Announcements</div>
-        <div class="spd-qa-item-sub">Notices &amp; updates</div>
-      </a>
-
-      <a href="/student-portal/venue-booking" class="spd-qa-item">
-        <div class="spd-qa-item-icon">
-          <span class="sp-ms" style="font-size:28px;">meeting_room</span>
-        </div>
-        <div class="spd-qa-item-title">Venue Booking</div>
-        <div class="spd-qa-item-sub">Book rooms &amp; venues</div>
-      </a>
-
     </div>
+
+    {% if not sp_settings or sp_settings.show_quick_actions %}
+    <section class="spd-qa2" aria-labelledby="spd-qa2-title">
+      <h2 class="spd-qa2-title" id="spd-qa2-title">Quick Actions</h2>
+      <div class="spd-qa2-grid">
+        <a href="/student-portal/attendance" class="spd-qa2-item">
+          <span class="spd-qa2-icon"><span class="sp-ms">calendar_today</span></span>
+          <span class="spd-qa2-text"><b>Attendance</b><small>View your attendance</small></span>
+          <span class="sp-ms spd-qa2-go" aria-hidden="true">chevron_right</span>
+        </a>
+        <a href="/student-portal/results" class="spd-qa2-item">
+          <span class="spd-qa2-icon"><span class="sp-ms">workspace_premium</span></span>
+          <span class="spd-qa2-text"><b>Grades</b><small>View marks and grades</small></span>
+          <span class="sp-ms spd-qa2-go" aria-hidden="true">chevron_right</span>
+        </a>
+        <a href="/student-portal/courses" class="spd-qa2-item">
+          <span class="spd-qa2-icon"><span class="sp-ms">description</span></span>
+          <span class="spd-qa2-text"><b>Course Materials</b><small>Access learning resources</small></span>
+          <span class="sp-ms spd-qa2-go" aria-hidden="true">chevron_right</span>
+        </a>
+        <a href="/student-portal/fees" class="spd-qa2-item">
+          <span class="spd-qa2-icon"><span class="sp-ms">credit_card</span></span>
+          <span class="spd-qa2-text"><b>Fees &amp; Payments</b><small>View and pay fees</small></span>
+          <span class="sp-ms spd-qa2-go" aria-hidden="true">chevron_right</span>
+        </a>
+      </div>
+    </section>
+    {% endif %}
   </div>
 
-  <section class="spd-qa-section spd-tt" aria-labelledby="spd-tt-title">
-    <div class="spd-tt-head">
-      <div>
-        <h2 class="spd-qa-header-title" id="spd-tt-title">Timetable</h2>
-        <br>
+  {# My Calendar — layers: Class Sessions (Time Table), University Events
+     (Institutional Calendar + Events), Office Hours (the student's OH groups) #}
+  <section class="spd-cal" aria-labelledby="spd-cal-title">
+    <div class="spd-cal-head">
+      <h2 class="spd-cal-title" id="spd-cal-title"><span class="sp-ms">calendar_month</span>My Calendar</h2>
+      <div class="spd-cal-views" role="tablist" aria-label="Calendar view">
+        <button type="button" data-view="day" onclick="spCalSetView('day')">Day</button>
+        <button type="button" data-view="week" onclick="spCalSetView('week')">Week</button>
+        <button type="button" data-view="month" onclick="spCalSetView('month')">Month</button>
       </div>
-      <a href="/student-portal/timetable" class="spd-tt-link">View all <span class="sp-ms"
-          aria-hidden="true">chevron_right</span></a>
     </div>
-    {% if week_classes %}
-    <ul class="spd-tt-list">
-      {% for c in week_classes %}
-      <li class="spd-tt-item">
-        <div class="spd-tt-when{{ ' is-today' if c.is_today }}">
-          <span class="spd-tt-date">{{ 'Today' if c.is_today else c.date }}</span>
-          <span class="spd-tt-time">{{ c.from_time }}{% if c.to_time %} – {{ c.to_time }}{% endif %}</span>
-        </div>
-        <div class="spd-tt-what">
-          <div class="spd-tt-course">{{ c.course_name }}</div>
-          {% if c.venue %}<div class="spd-tt-venue"><span class="sp-ms" aria-hidden="true">location_on</span>{{ c.venue
-            }}</div>{% endif %}
-        </div>
-      </li>
-      {% endfor %}
-    </ul>
-    {% else %}
-    <div class="spd-tt-empty">
-      <span class="sp-ms" aria-hidden="true">event_busy</span>
-      <div><strong>No sessions scheduled</strong><span>No sessions found for the next 7 days.</span></div>
+    <div class="spd-cal-toolbar">
+      <div class="spd-cal-nav">
+        <button type="button" class="spd-cal-btn spd-cal-icon" onclick="spCalPrev()" aria-label="Previous"><span class="sp-ms">chevron_left</span></button>
+        <span id="spd-cal-label" class="spd-cal-label" aria-live="polite"></span>
+        <button type="button" class="spd-cal-btn spd-cal-icon" onclick="spCalNext()" aria-label="Next"><span class="sp-ms">chevron_right</span></button>
+        <button type="button" class="spd-cal-btn" onclick="spCalToday()">Today</button>
+      </div>
+      <div class="spd-cal-layers" role="group" aria-label="Calendar layers">
+        <label class="spd-cal-layer" style="--layer:var(--spc-class);">
+          <input type="checkbox" data-layer="class" checked onchange="spCalToggleLayer(this)">
+          <span class="spd-cal-check"><span class="sp-ms">check</span></span>Class Sessions
+        </label>
+        <label class="spd-cal-layer" style="--layer:var(--spc-events);">
+          <input type="checkbox" data-layer="events" checked onchange="spCalToggleLayer(this)">
+          <span class="spd-cal-check"><span class="sp-ms">check</span></span>University Events
+        </label>
+        <label class="spd-cal-layer" style="--layer:var(--spc-oh);">
+          <input type="checkbox" data-layer="oh" checked onchange="spCalToggleLayer(this)">
+          <span class="spd-cal-check"><span class="sp-ms">check</span></span>Office Hours
+        </label>
+      </div>
     </div>
-    {% endif %}
+    <div id="spd-calendar" class="spd-cal-body"></div>
   </section>
 </div>
-{% endif %}
+<div id="spd-cal-tip" class="spd-cal-tip" role="tooltip"></div>
+<script type="application/json" id="spd-cal-today">"{{ calendar_today or '' }}"</script>
 
 {# ── Important Links ───────────────────────────────────────────── #}
 {% set _il = important_links or {} %}
@@ -892,4 +958,311 @@
 </section>
 
 {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* ══ Student dashboard calendar ══════════════════════════════════════
+   Same behaviour as the faculty dashboard calendar, fed by
+   slcm.api.student_portal.get_student_calendar. Layers:
+     class  — class sessions (Time Table of enrolled course offerings)
+     events — University Events (Institutional Calendar + Events)
+     oh     — Office Hours of the student's OH groups                    */
+(function () {
+  var container = document.getElementById('spd-calendar');
+  if (!container) return;
+
+  var API = '/api/method/slcm.api.student_portal.get_student_calendar';
+  var MONTHS_LONG  = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var DAYS_SHORT   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var LAYERS = {
+    'class':  { label: 'Class Session',    color: 'var(--spc-class)',  icon: 'school' },
+    'events': { label: 'University Event', color: 'var(--spc-events)', icon: 'account_balance' },
+    'oh':     { label: 'Office Hours',     color: 'var(--spc-oh)',     icon: 'schedule' }
+  };
+  var MONTH_CHIP_LIMIT = 3;
+  var HOUR_H = 46;
+
+  function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+  function toDS(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+  function parseDS(s) { var p = s.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
+  function addDays(d, n) { var r = new Date(d.getFullYear(), d.getMonth(), d.getDate()); r.setDate(r.getDate() + n); return r; }
+  function startOfWeek(d) { return addDays(d, -d.getDay()); }
+  function toMin(hhmm) { if (!hhmm) return null; var p = hhmm.split(':'); return (+p[0]) * 60 + (+p[1] || 0); }
+  function fmtTime(hhmm) {
+    if (!hhmm) return '';
+    var p = hhmm.split(':'), h = +p[0];
+    return (h % 12 || 12) + ':' + p[1] + ' ' + (h < 12 ? 'AM' : 'PM');
+  }
+  function fmtDate(d) { return pad2(d.getDate()) + ' ' + MONTHS_SHORT[d.getMonth()] + ' ' + d.getFullYear(); }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  var todayDS = '';
+  try { todayDS = JSON.parse(document.getElementById('spd-cal-today').textContent || '""'); } catch (e) {}
+  if (!todayDS) todayDS = toDS(new Date());
+
+  /* Day view by default (as designed); the last view + layer choices are remembered */
+  var state = { view: 'day', cursor: parseDS(todayDS), layers: { 'class': true, 'events': true, 'oh': true } };
+  try {
+    var saved = JSON.parse(localStorage.getItem('spd-cal-prefs') || 'null');
+    if (saved) {
+      if (['month', 'week', 'day'].indexOf(saved.view) > -1) state.view = saved.view;
+      if (saved.layers) Object.keys(state.layers).forEach(function (k) { if (k in saved.layers) state.layers[k] = !!saved.layers[k]; });
+    }
+  } catch (e) {}
+  function savePrefs() {
+    try { localStorage.setItem('spd-cal-prefs', JSON.stringify({ view: state.view, layers: state.layers })); } catch (e) {}
+  }
+
+  var store = {}, loadedDays = {}, errorLayers = [], reqSeq = 0, rendered = [];
+
+  function visibleRange() {
+    var c = state.cursor;
+    if (state.view === 'day') return { start: c, end: c };
+    if (state.view === 'week') { var ws = startOfWeek(c); return { start: ws, end: addDays(ws, 6) }; }
+    var first = new Date(c.getFullYear(), c.getMonth(), 1), last = new Date(c.getFullYear(), c.getMonth() + 1, 0);
+    return { start: startOfWeek(first), end: addDays(startOfWeek(last), 6) };
+  }
+  function rangeLoaded(r) {
+    for (var d = r.start; d <= r.end; d = addDays(d, 1)) if (!loadedDays[toDS(d)]) return false;
+    return true;
+  }
+  function load(r, done) {
+    var seq = ++reqSeq;
+    container.classList.add('is-loading');
+    fetch(API + '?start=' + toDS(r.start) + '&end=' + toDS(r.end), { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
+      .then(function (res) { return res.json().then(function (j) { return { ok: res.ok, body: j }; }); })
+      .then(function (res) {
+        if (seq !== reqSeq) return;
+        container.classList.remove('is-loading');
+        if (!res.ok || !res.body.message) throw new Error('bad response');
+        var msg = res.body.message;
+        Object.keys(store).forEach(function (id) {
+          var it = store[id];
+          if (it.start_date >= msg.start && it.end_date <= msg.end) delete store[id];
+        });
+        (msg.items || []).forEach(function (it) { store[it.id] = it; });
+        for (var d = parseDS(msg.start); toDS(d) <= msg.end; d = addDays(d, 1)) loadedDays[toDS(d)] = true;
+        errorLayers = msg.errors || [];
+        done();
+      })
+      .catch(function () {
+        if (seq !== reqSeq) return;
+        container.classList.remove('is-loading');
+        errorLayers = ['load'];
+        done();
+      });
+  }
+
+  function isAllDay(it) { return it.all_day || !it.start_time || it.start_date !== it.end_date; }
+  function itemsForDay(ds) {
+    var out = [];
+    Object.keys(store).forEach(function (id) {
+      var it = store[id];
+      if (state.layers[it.layer] && it.start_date <= ds && it.end_date >= ds) out.push(it);
+    });
+    return out.sort(function (a, b) {
+      var aa = isAllDay(a) ? 0 : 1, bb = isAllDay(b) ? 0 : 1;
+      if (aa !== bb) return aa - bb;
+      return (a.start_time || '').localeCompare(b.start_time || '') || a.title.localeCompare(b.title);
+    });
+  }
+  function isHoliday(items) { return items.some(function (it) { return it.is_holiday; }); }
+  function ref(it) { rendered.push(it); return ' data-i="' + (rendered.length - 1) + '"'; }
+  function layerVar(it) { return '--layer:' + LAYERS[it.layer].color + ';'; }
+
+  function chip(it, ds) {
+    var time = !isAllDay(it) ? '<span class="spd-cal-chip-time">' + esc(fmtTime(it.start_time).replace(':00', '')) + '</span>' : '';
+    return '<div class="spd-cal-chip" style="' + layerVar(it) + '"' + ref(it) + ' data-day="' + ds + '">'
+         + time + '<span class="spd-cal-chip-txt">' + esc(it.title) + '</span></div>';
+  }
+
+  function renderMonth() {
+    var r = visibleRange(), month = state.cursor.getMonth();
+    var html = '<div class="spd-cal-grid">';
+    DAYS_SHORT.forEach(function (d) { html += '<div class="spd-cal-dow">' + d + '</div>'; });
+    for (var d = r.start; d <= r.end; d = addDays(d, 1)) {
+      var ds = toDS(d), items = itemsForDay(ds);
+      var cls = 'spd-cal-cell' + (d.getMonth() !== month ? ' is-other' : '') + (ds === todayDS ? ' is-today' : '') + (isHoliday(items) ? ' is-holiday' : '');
+      html += '<div class="' + cls + '" data-day="' + ds + '" title="Open day view"><span class="spd-cal-daynum">' + d.getDate() + '</span>';
+      items.slice(0, MONTH_CHIP_LIMIT).forEach(function (it) { html += chip(it, ds); });
+      if (items.length > MONTH_CHIP_LIMIT) html += '<div class="spd-cal-more">+' + (items.length - MONTH_CHIP_LIMIT) + ' more</div>';
+      html += '</div>';
+    }
+    return html + '</div>';
+  }
+
+  /* Greedy column packing for overlapping blocks */
+  function layoutColumns(timed) {
+    var res = [], cluster = [], clusterEnd = -1;
+    function flush() {
+      var colsEnd = [];
+      cluster.forEach(function (b) {
+        var c = 0;
+        while (colsEnd[c] !== undefined && colsEnd[c] > b.s) c++;
+        colsEnd[c] = b.e; b.col = c;
+      });
+      cluster.forEach(function (b) { b.cols = colsEnd.length; res.push(b); });
+      cluster = []; clusterEnd = -1;
+    }
+    timed.map(function (it) {
+      var s = toMin(it.start_time), e = toMin(it.end_time);
+      if (e === null || e <= s) e = s + 30;
+      return { it: it, s: s, e: e };
+    }).sort(function (a, b) { return a.s - b.s || b.e - a.e; }).forEach(function (b) {
+      if (cluster.length && b.s >= clusterEnd) flush();
+      cluster.push(b); clusterEnd = Math.max(clusterEnd, b.e);
+    });
+    if (cluster.length) flush();
+    return res;
+  }
+
+  function renderTimeGrid(days) {
+    var single = days.length === 1;
+    var head = '<div class="spd-cal-tg spd-cal-tg-head" style="--cols:' + days.length + ';"><div class="spd-cal-tg-gutter"></div>';
+    var allday = '<div class="spd-cal-tg-gutter" style="align-self:center;">all-day</div>';
+    var cols = '', earliest = 24 * 60, anything = false;
+
+    days.forEach(function (d) {
+      var ds = toDS(d), items = itemsForDay(ds), hol = isHoliday(items);
+      var stateCls = (ds === todayDS ? ' is-today' : '') + (hol ? ' is-holiday' : '');
+      head += '<div class="spd-cal-tg-colhead' + stateCls + '" data-day="' + ds + '"' + (single ? '' : ' title="Open day view"') + '>'
+            + '<div class="dow">' + DAYS_SHORT[d.getDay()] + '</div><div class="num">' + d.getDate() + '</div></div>';
+      var adItems = items.filter(isAllDay), timed = items.filter(function (it) { return !isAllDay(it); });
+      if (items.length) anything = true;
+      allday += '<div class="spd-cal-tg-allday">';
+      adItems.forEach(function (it) { allday += chip(it, ds); });
+      allday += '</div>';
+
+      cols += '<div class="spd-cal-tg-col' + stateCls + '" data-day="' + ds + '">';
+      layoutColumns(timed).forEach(function (b) {
+        earliest = Math.min(earliest, b.s);
+        var top = b.s / 60 * HOUR_H, h = Math.max((b.e - b.s) / 60 * HOUR_H - 2, 20), w = 100 / b.cols;
+        var time = fmtTime(b.it.start_time) + (b.it.end_time ? ' – ' + fmtTime(b.it.end_time) : '');
+        var venue = b.it.venue ? '<small><span class="sp-ms" aria-hidden="true">location_on</span>' + esc(b.it.venue) + '</small>' : '';
+        var isShort = h < 34;
+        var wide = single && b.cols === 1 && !isShort;
+        cols += '<div class="spd-cal-block' + (wide ? ' is-wide' : '') + (isShort ? ' is-short' : '') + '" style="' + layerVar(b.it)
+              + 'top:' + top + 'px;height:' + h + 'px;left:calc(' + (b.col * w) + '% + 3px);width:calc(' + w + '% - 6px);"'
+              + ref(b.it) + ' data-day="' + ds + '">'
+              + '<span class="t">' + esc(time) + '</span><b>' + esc(b.it.title) + '</b>' + (isShort ? '' : venue) + '</div>';
+      });
+      if (ds === todayDS) {
+        var now = new Date();
+        cols += '<div class="spd-cal-now" style="top:' + ((now.getHours() * 60 + now.getMinutes()) / 60 * HOUR_H) + 'px;"></div>';
+      }
+      cols += '</div>';
+    });
+    head += allday + '</div>';
+
+    var hours = '<div class="spd-cal-tg-hours">';
+    for (var h = 1; h < 24; h++) hours += '<span style="top:' + (h * HOUR_H) + 'px;">' + (h % 12 || 12) + (h < 12 ? ' AM' : ' PM') + '</span>';
+    hours += '</div>';
+    var empty = !anything && single ? '<div class="spd-cal-empty">Nothing scheduled for this day.</div>' : '';
+    var body = '<div class="spd-cal-tg" style="--cols:' + days.length + ';">' + hours + cols + '</div>';
+    return { html: '<div class="spd-cal-tg-scroll">' + head + empty + body + '</div>', scrollTo: Math.max(0, Math.min(earliest, 8 * 60) / 60 * HOUR_H - 8) };
+  }
+
+  function updateChrome() {
+    var label = document.getElementById('spd-cal-label'), c = state.cursor;
+    if (label) {
+      if (state.view === 'month') label.textContent = MONTHS_LONG[c.getMonth()] + ' ' + c.getFullYear();
+      else if (state.view === 'day') label.textContent = fmtDate(c);
+      else {
+        var r = visibleRange();
+        label.textContent = pad2(r.start.getDate()) + ' ' + MONTHS_SHORT[r.start.getMonth()] + ' – ' + fmtDate(r.end);
+      }
+    }
+    document.querySelectorAll('.spd-cal-views button').forEach(function (b) {
+      var on = b.getAttribute('data-view') === state.view;
+      b.classList.toggle('is-active', on);
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    document.querySelectorAll('.spd-cal-layer input').forEach(function (inp) {
+      inp.checked = !!state.layers[inp.getAttribute('data-layer')];
+    });
+  }
+
+  function draw() {
+    hideTip();
+    rendered = [];
+    var err = errorLayers.length
+      ? '<div class="spd-cal-msg">' + (errorLayers.indexOf('load') > -1 ? 'Could not load calendar data. Please refresh the page.' : 'Some calendar data could not be loaded.') + '</div>'
+      : '';
+    if (state.view === 'month') { container.innerHTML = err + renderMonth(); return; }
+    var r = visibleRange(), days = [];
+    for (var d = r.start; d <= r.end; d = addDays(d, 1)) days.push(d);
+    var tg = renderTimeGrid(days);
+    container.innerHTML = err + tg.html;
+    var sc = container.querySelector('.spd-cal-tg-scroll');
+    if (sc) sc.scrollTop = tg.scrollTo;
+  }
+
+  function render() {
+    updateChrome();
+    var r = visibleRange();
+    if (rangeLoaded(r)) { draw(); return; }
+    draw();
+    load(r, draw);
+  }
+
+  function step(dir) {
+    var c = state.cursor;
+    if (state.view === 'month') state.cursor = new Date(c.getFullYear(), c.getMonth() + dir, 1);
+    else state.cursor = addDays(c, state.view === 'week' ? 7 * dir : dir);
+    render();
+  }
+  window.spCalPrev = function () { step(-1); };
+  window.spCalNext = function () { step(1); };
+  window.spCalToday = function () { state.cursor = parseDS(todayDS); render(); };
+  window.spCalSetView = function (view) { state.view = view; savePrefs(); render(); };
+  window.spCalToggleLayer = function (inp) { state.layers[inp.getAttribute('data-layer')] = inp.checked; savePrefs(); draw(); };
+
+  /* Clicking a day (month cell / week column header) opens its Day view */
+  container.addEventListener('click', function (e) {
+    if (state.view === 'day') {
+      var item = e.target.closest('[data-i]');
+      if (item) { tip.innerHTML = tipHtml(rendered[+item.getAttribute('data-i')]); tip.classList.add('show'); placeTip(e.clientX, e.clientY); }
+      return;
+    }
+    var el = e.target.closest('[data-day]');
+    if (el && container.contains(el)) { state.cursor = parseDS(el.getAttribute('data-day')); state.view = 'day'; savePrefs(); render(); }
+  });
+
+  /* Hover tooltip */
+  var tip = document.getElementById('spd-cal-tip');
+  function tipHtml(it) {
+    var L = LAYERS[it.layer], s = parseDS(it.start_date), e = parseDS(it.end_date);
+    var when = it.start_date === it.end_date ? DAYS_SHORT[s.getDay()] + ', ' + fmtDate(s) : fmtDate(s) + ' – ' + fmtDate(e);
+    var time = it.all_day || !it.start_time ? 'All day' : fmtTime(it.start_time) + (it.end_time ? ' – ' + fmtTime(it.end_time) : '');
+    return '<div class="spd-cal-tip-title"><i class="spd-cal-dot" style="background:' + L.color + ';"></i><span>' + esc(it.title) + '</span></div>'
+         + '<div class="spd-cal-tip-row"><span class="sp-ms">' + L.icon + '</span>' + esc(it.subtitle || L.label) + '</div>'
+         + '<div class="spd-cal-tip-row"><span class="sp-ms">calendar_today</span>' + esc(when) + '</div>'
+         + '<div class="spd-cal-tip-row"><span class="sp-ms">schedule</span>' + esc(time) + '</div>'
+         + (it.venue ? '<div class="spd-cal-tip-row"><span class="sp-ms">location_on</span>' + esc(it.venue) + '</div>' : '')
+         + (it.faculty ? '<div class="spd-cal-tip-row"><span class="sp-ms">person</span>' + esc(it.faculty) + '</div>' : '')
+         + (it.description ? '<div class="spd-cal-tip-row" style="white-space:pre-line;">' + esc(it.description) + '</div>' : '');
+  }
+  function placeTip(x, y) {
+    var pad = 12, w = tip.offsetWidth, h = tip.offsetHeight, left = x + pad, top = y + pad;
+    if (left + w > window.innerWidth - 8) left = x - w - pad;
+    if (top + h > window.innerHeight - 8) top = y - h - pad;
+    tip.style.left = Math.max(8, left) + 'px';
+    tip.style.top = Math.max(8, top) + 'px';
+  }
+  function hideTip() { if (tip) tip.classList.remove('show'); }
+  var tipFor = null;
+  container.addEventListener('mousemove', function (e) {
+    var el = e.target.closest('[data-i]');
+    if (!el) { tipFor = null; hideTip(); return; }
+    if (el !== tipFor) { tipFor = el; tip.innerHTML = tipHtml(rendered[+el.getAttribute('data-i')]); tip.classList.add('show'); }
+    placeTip(e.clientX, e.clientY);
+  });
+  container.addEventListener('mouseleave', function () { tipFor = null; hideTip(); });
+  window.addEventListener('scroll', hideTip, true);
+
+  render();
+})();
+</script>
 {% endblock %}

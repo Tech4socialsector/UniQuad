@@ -169,6 +169,7 @@ def get_context(context):
 
         # ── Upcoming / Today's Sessions ─────────────────────────
         today = frappe.utils.today()
+        context.calendar_today = today  # My Calendar's "Today"
         enrolled_co_set = {s.course_offering for s in att_summaries if s.course_offering}
         context.todays_classes = []
         if enrolled_co_set:
