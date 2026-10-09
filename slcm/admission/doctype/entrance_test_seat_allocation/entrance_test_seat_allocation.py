@@ -2176,11 +2176,9 @@ def download_attendance_sheet_pdf(
         if rec.profile:
             unique_photos.add(rec.profile)
 
-    cur_site = frappe.local.site
     if unique_photos:
         from concurrent.futures import ThreadPoolExecutor
         def _worker(p):
-            frappe.local.site = cur_site
             try:
                 return p, _get_compressed_photo_b64(p)
             except Exception:
@@ -2417,42 +2415,36 @@ def download_attendance_sheet_pdf(
         zip_buffer = io.BytesIO()
         total_sheets_count = 0
         total_pages_count = 0
+        centre_idx = 0
 
-        centre_sheets_map = OrderedDict()
-        for c_name, progs in centre_records_map.items():
-            c_groups = OrderedDict()
-            for p_key, recs in progs.items():
-                c_groups[(c_name, p_key)] = recs
-            c_sheets = _build_sheets_for_groups(c_groups, processed_counter)
-            total_sheets_count += len(c_sheets)
-            total_pages_count += sum(len(s["pages"]) for s in c_sheets)
-            centre_sheets_map[c_name] = c_sheets
+        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as zip_file:
+            for c_name, progs in centre_records_map.items():
+                centre_idx += 1
+                c_groups = OrderedDict()
+                for p_key, recs in progs.items():
+                    c_groups[(c_name, p_key)] = recs
 
-        frappe.publish_realtime("attendance_sheet_progress", {
-            "progress": 70,
-            "description": _("Compiling PDFs for {0} test centres in parallel...").format(len(centre_sheets_map)),
-            "current": total_candidates,
-            "total": total_candidates
-        })
+                c_sheets = _build_sheets_for_groups(c_groups, processed_counter)
+                total_sheets_count += len(c_sheets)
+                total_pages_count += sum(len(s["pages"]) for s in c_sheets)
 
-        cur_site = frappe.local.site
-        from concurrent.futures import ThreadPoolExecutor
-        def _render_centre_pdf(item):
-            cn, c_sheets = item
-            frappe.local.site = cur_site
-            rendered_html = frappe.render_template(template_str, {"sheets": c_sheets})
-            pdf_bytes = get_pdf(rendered_html, options=pdf_options)
-            city_name = centre_to_city.get(cn, "Centres")
-            safe_city = _safe_path_component(city_name)
-            safe_centre = _safe_path_component(cn)
-            zip_entry = f"{safe_city}/{safe_centre}.pdf"
-            return zip_entry, pdf_bytes
+                pct = int(70 + (centre_idx / total_centres) * 25)
+                frappe.publish_realtime("attendance_sheet_progress", {
+                    "progress": pct,
+                    "description": _("Generating PDF for Centre {0}/{1}: {2}...").format(centre_idx, total_centres, c_name),
+                    "current": processed_counter[0],
+                    "total": total_candidates
+                })
 
-        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as zip_file:
-            with ThreadPoolExecutor(max_workers=8) as executor:
-                pdf_results = executor.map(_render_centre_pdf, centre_sheets_map.items())
-                for zip_entry, pdf_bytes in pdf_results:
-                    zip_file.writestr(zip_entry, pdf_bytes)
+                rendered_html = frappe.render_template(template_str, {"sheets": c_sheets})
+                pdf_bytes = get_pdf(rendered_html, options=pdf_options)
+
+                city_name = centre_to_city.get(c_name, "Centres")
+                safe_city = _safe_path_component(city_name)
+                safe_centre = _safe_path_component(c_name)
+                zip_entry = f"{safe_city}/{safe_centre}.pdf"
+
+                zip_file.writestr(zip_entry, pdf_bytes)
 
         zip_filename = f"Attendance_Sheets_{c_slug}_{ts}.zip"
 
