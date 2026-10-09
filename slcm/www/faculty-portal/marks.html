@@ -44,7 +44,7 @@
 <div class="fp-card fade-in">
   <div class="fp-empty">
     <span class="fp-ms" style="font-size:48px;color:var(--fp-primary);">lock</span>
-    <p class="fp-empty-title">Results Not Available</p>
+    <p class="fp-empty-title">Grades Not Available</p>
     {% if view_deadline_expired %}
     <p class="fp-empty-sub">The view access deadline for this course has passed. Please contact your Programme Chair.</p>
     {% else %}
@@ -63,7 +63,7 @@
     {% if edit_deadline_expired %}
     <strong>Edit deadline has passed</strong> for this course. You can view grades but the edit window is now closed.
     {% else %}
-    <strong>Result entry is locked</strong> for this course. You can view grades but cannot make any changes. Contact your Programme Chair to unlock.
+    <strong>Grade entry is locked</strong> for this course. You can view grades but cannot make any changes. Contact your Programme Chair to unlock.
     {% endif %}
   </div>
 </div>
@@ -85,7 +85,7 @@
     <div class="fp-stat-icon fp-c-navy"><span class="fp-ms">groups</span></div>
     <div class="fp-stat-body">
       <div class="fp-stat-val">{{ marks_stats.total }}</div>
-      <div class="fp-stat-lbl">Total Students</div>
+      <div class="fp-stat-lbl">Students</div>
     </div>
   </div>
   <div class="fp-stat-card fp-vb-stat-card fp-vb-accent-maroon fade-in" style="animation-delay:0.08s;">

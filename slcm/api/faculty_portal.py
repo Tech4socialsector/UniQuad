@@ -993,7 +993,7 @@ def drilldown_students():
 
     co_names = _get_faculty_co_names(faculty_name)
     if not co_names:
-        return {"title": "Total Students", "columns": [], "rows": [], "count": 0}
+        return {"title": "Students", "columns": [], "rows": [], "count": 0}
 
     try:
         raw = frappe.db.sql(
@@ -1078,7 +1078,7 @@ def drilldown_todays_classes():
     today = frappe.utils.today()
 
     if not co_names:
-        return {"title": "Today's Classes", "columns": [], "rows": [], "count": 0}
+        return {"title": "Today's Sessions", "columns": [], "rows": [], "count": 0}
 
     raw = frappe.get_all(
         "Attendance Session",
@@ -1116,7 +1116,7 @@ def drilldown_todays_classes():
         })
 
     return {
-        "title": "Today's Classes",
+        "title": "Today's Sessions",
         "columns": [
             {"key": "course_name",    "label": "Course",        "type": "text"},
             {"key": "date",           "label": "Date",          "type": "text"},
@@ -1147,7 +1147,7 @@ def drilldown_pending_attendance():
     today = frappe.utils.today()
 
     if not co_names:
-        return {"title": "Pending Attendance", "columns": [], "rows": [], "count": 0}
+        return {"title": "Attendance Tasks", "columns": [], "rows": [], "count": 0}
 
     raw = frappe.get_all(
         "Attendance Session",
@@ -1186,7 +1186,7 @@ def drilldown_pending_attendance():
         })
 
     return {
-        "title": "Pending Attendance Sessions",
+        "title": "Attendance Tasks",
         "columns": [
             {"key": "course_name",    "label": "Course",          "type": "text"},
             {"key": "date",           "label": "Session Date",    "type": "text"},

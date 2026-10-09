@@ -305,6 +305,183 @@ def save_class_participation(session, ctx, participation, att_map):
 		group.save(ignore_permissions=True)
 
 
+# ── Student view (student portal Attendance page) ────────────────────────
+
+def get_student_participation(student):
+	"""The student's Class Participation and OH, per group, for the student
+	portal - attendance and participation only. Marks (*_cp_grade /
+	*_oh_grade) are deliberately never read here.
+
+	Returns {"cp": [group, ...], "oh": [group, ...]}; each group:
+	  group, title (week name), course_name, start_date_fmt / end_date_fmt (CP),
+	  sessions: [{date_fmt, weekday, time, venue, faculty, slot_label,
+	              attendance: Present | Absent | Pending | Upcoming,
+	              participation: Participated | Did not participate |
+	                             Pending | Upcoming}],
+	  attended, participated, held (counts over sessions already held).
+	Uses the same group / slot rules as the faculty portal."""
+	member_rows = frappe.db.sql(
+		"""SELECT sgs.parent AS grp, sg.group_based_on, sg.week_name, sg.course_offering,
+		          {checks}
+		   FROM `tabStudent Group Student` sgs
+		   JOIN `tabStudent Group` sg ON sg.name = sgs.parent
+		   WHERE sgs.student = %(student)s AND sgs.parenttype = 'Student Group'""".format(
+			checks=", ".join(
+				f"sgs.`{hour_fields(n, k)[0]}`"
+				for k, count in (("cp", len(HOURS)), ("oh", OH_SLOTS))
+				for n in range(1, count + 1)
+			)
+		),
+		{"student": student},
+		as_dict=True,
+	)
+	result = {"cp": [], "oh": []}
+	if not member_rows:
+		return result
+
+	mine = {}  # group -> (kind, member row)
+	for r in member_rows:
+		kind = "oh" if r.group_based_on == OH_GROUP_TYPE else "cp" if r.group_based_on == CP_GROUP_TYPE else None
+		if kind:
+			mine[r.grp] = (kind, r)
+	if not mine:
+		return result
+
+	# Time Table series that reference the student's groups, and all their entries
+	cp_groups = [g for g, (k, _) in mine.items() if k == "cp"]
+	oh_groups = [g for g, (k, _) in mine.items() if k == "oh"]
+	series = set(frappe.get_all(
+		"Class Participation Week",
+		filters={"parenttype": "Time Table", "week": ["in", cp_groups or [""]]},
+		pluck="parent",
+	))
+	series |= {
+		t.parent_schedule or t.name
+		for t in frappe.get_all(
+			"Time Table", filters={"office_hours_group": ["in", oh_groups or [""]]},
+			fields=["name", "parent_schedule"],
+		)
+	}
+	if not series:
+		return result
+	tts = {
+		t.name: t
+		for t in frappe.get_all(
+			"Time Table",
+			filters={"docstatus": ["<", 2]},
+			or_filters={"name": ["in", list(series)], "parent_schedule": ["in", list(series)]},
+			fields=["name", "venue", "instructor", "from_time", "to_time"],
+		)
+	}
+	sessions = frappe.get_all(
+		"Attendance Session",
+		filters={"class_schedule": ["in", list(tts) or [""]], "docstatus": ["<", 2]},
+		fields=["name", "class_schedule", "session_date", "session_start_time", "session_type", "course_offering"],
+		order_by="session_date asc, session_start_time asc",
+	)
+	slots = _bulk_session_slots(sessions)
+	recorded, _ungraded = _bulk_slot_state(set(mine))
+
+	att_status = dict(frappe.get_all(
+		"Student Attendance",
+		filters={"student": student, "attendance_session": ["in", [s.name for s in sessions] or [""]], "docstatus": ["<", 2]},
+		fields=["attendance_session", "status"],
+		as_list=True,
+	))
+	co_names = dict(frappe.get_all(
+		"Course Offering",
+		filters={"name": ["in", list({s.course_offering for s in sessions if s.course_offering} | {r.course_offering for _, r in mine.values() if r.course_offering}) or [""]]},
+		fields=["name", "course_name"],
+		as_list=True,
+	))
+	faculty_ids = {t.instructor for t in tts.values() if t.instructor}
+	faculty_names = {
+		str(f.name): " ".join(filter(None, [f.first_name, f.last_name]))
+		for f in frappe.get_all("Faculty", filters={"name": ["in", list(faculty_ids) or [""]]},
+		                        fields=["name", "first_name", "last_name"])
+	}
+	# CP week date ranges, per group
+	week_range = {}
+	for w in frappe.get_all(
+		"Class Participation Week",
+		filters={"parenttype": "Time Table", "week": ["in", cp_groups or [""]]},
+		fields=["week", "start_date", "end_date"],
+	):
+		lo, hi = week_range.get(w.week, (None, None))
+		week_range[w.week] = (min(filter(None, [lo, getdate(w.start_date)])), max(filter(None, [hi, getdate(w.end_date)])))
+
+	now = now_datetime()
+	groups = {}
+	for s in sessions:
+		resolved = slots.get(s.name)
+		if not resolved or resolved[1] not in mine:
+			continue
+		kind, group, slot = resolved
+		member = mine[group][1]
+		tt = tts.get(s.class_schedule) or frappe._dict()
+		slot_recorded = (kind, group, slot) in recorded
+		# Anything the faculty already recorded is shown, even before the
+		# session's start time; "Upcoming" only when nothing is recorded yet.
+		started = _session_has_started(s, now) or s.name in att_status or slot_recorded
+		if not started:
+			attendance = participation = "Upcoming"
+		else:
+			# "Pending" = held, but the faculty hasn't recorded it yet
+			attendance = att_status.get(s.name) or "Pending"
+			if slot_recorded:
+				participation = "Participated" if cint(member.get(hour_fields(slot, kind)[0])) else "Did not participate"
+			else:
+				participation = "Pending"
+
+		g = groups.get(group)
+		if not g:
+			lo_hi = week_range.get(group)
+			g = groups[group] = frappe._dict(
+				group=group, kind=kind, title=member.week_name or group,
+				# The sessions' own course (what the student actually attends);
+				# the group's Course Offering field only as a fallback
+				course_name=co_names.get(s.course_offering) or co_names.get(member.course_offering) or "",
+				start_date_fmt=formatdate(lo_hi[0], "dd MMM yyyy") if lo_hi else "",
+				end_date_fmt=formatdate(lo_hi[1], "dd MMM yyyy") if lo_hi else "",
+				sessions=[], attended=0, participated=0, held=0, sort_key=str(s.session_date),
+			)
+		d = getdate(s.session_date)
+		from_fmt, to_fmt = _fmt_12h(s.session_start_time or tt.from_time), _fmt_12h(tt.to_time)
+		g.sessions.append(frappe._dict(
+			date=str(d), date_fmt=formatdate(d, "dd MMM yyyy"), weekday=d.strftime("%a"),
+			from_fmt=from_fmt, to_fmt=to_fmt, course_offering=s.course_offering or "",
+			time=" – ".join(filter(None, [from_fmt, to_fmt])),
+			venue=tt.venue or "", faculty=faculty_names.get(str(tt.instructor)) or "",
+			slot_label=_("{0} Hour").format(HOURS[slot - 1]),
+			attendance=attendance, participation=participation,
+		))
+		if started:
+			g.held += 1
+			g.attended += attendance == "Present"
+			g.participated += participation == "Participated"
+
+	for g in sorted(groups.values(), key=lambda x: x.sort_key):
+		# OH groups have no configured week dates — span their sessions instead
+		if not g.start_date_fmt and g.sessions:
+			g.start_date_fmt = formatdate(g.sessions[0].date, "dd MMM yyyy")
+			g.end_date_fmt = formatdate(g.sessions[-1].date, "dd MMM yyyy")
+		result[g.kind].append(g)
+	return result
+
+
+def _fmt_12h(t):
+	"""Time / timedelta / "HH:MM:SS" → "9:57 AM" ("" when empty)."""
+	if not t:
+		return ""
+	if hasattr(t, "seconds"):
+		h, rem = divmod(int(t.total_seconds()) % 86400, 3600)
+		m = rem // 60
+	else:
+		parts = str(t).split(":")
+		h, m = int(parts[0]), int(parts[1]) if len(parts) > 1 else 0
+	return f"{h % 12 or 12}:{m:02d} {'AM' if h < 12 else 'PM'}"
+
+
 # ── Pending tasks (dashboard card + attendance page filter) ──────────────
 TASKS = ("course_att", "cp_att", "cp_grade", "oh_att", "oh_grade")
 
