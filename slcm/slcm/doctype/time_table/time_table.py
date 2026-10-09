@@ -31,12 +31,49 @@ from dateutil.relativedelta import relativedelta
 
 
 from frappe.utils import to_timedelta
+from contextlib import contextmanager
+
+
+@contextmanager
+def quiet_bulk_operation():
+    """Mute the per-record messages (Attendance Session updates, Google
+    Calendar's own 'Event Synced with Google Calendar.' msgprint) while many
+    Time Table rows are written in one request, and count what happened so
+    the caller can show a single summary instead of a toast per record."""
+    prev_mute, prev_stats = frappe.flags.mute_messages, frappe.flags.tt_bulk_stats
+    stats = prev_stats or frappe._dict(sessions_created=0, sessions_updated=0, gcal_synced=0, gcal_failed=0)
+    frappe.flags.mute_messages = True
+    frappe.flags.tt_bulk_stats = stats
+    try:
+        yield stats
+    finally:
+        frappe.flags.mute_messages = prev_mute
+        frappe.flags.tt_bulk_stats = prev_stats
+
+
+def bump_bulk_stat(key):
+    stats = frappe.flags.tt_bulk_stats
+    if stats is not None:
+        stats[key] += 1
+
+
+def publish_bulk_progress(label, done, total):
+    """Pushed while the save request is still running - time_table.js renders
+    it into the freeze overlay as '<label>... NN%'."""
+    frappe.publish_realtime(
+        "time_table_bulk_progress",
+        {"label": label, "done": done, "total": total, "percent": int(done * 100 / total) if total else 100},
+        user=frappe.session.user,
+    )
+
 
 class TimeTable(Document):
     def validate(self):
         """Validate the Time Table entry"""
         self.validate_time()
         self.validate_repeat_settings()
+        self.validate_office_hours_group()
+        self.validate_class_participation_weeks()
         self.check_holiday_conflict()
         self.check_conflicts()
         self.check_venue_conflict()
@@ -62,6 +99,10 @@ class TimeTable(Document):
 
     def on_update(self):
         """Update the corresponding Attendance Session when the Time Table entry is updated"""
+        # On insert, after_insert has just created the session from these same
+        # values - re-saving it would only add a redundant "updated" toast.
+        if self.flags.in_insert:
+            return
         self.update_attendance_session()
 
     def validate_time(self):
@@ -84,6 +125,113 @@ class TimeTable(Document):
                 frappe.throw("Please specify 'Repeats Till' date for recurring schedules")
             if self.repeats_till < self.schedule_date:
                 frappe.throw("Repeats Till date cannot be before Schedule Date")
+
+    def validate_office_hours_group(self):
+        """Office Hours Group links to Student Group - only Office Hours groups
+        are allowed (the client-side link filter isn't enforced on the server)."""
+        if self.based_on != "Office Hours" or not self.office_hours_group:
+            return
+
+        group_based_on = frappe.db.get_value("Student Group", self.office_hours_group, "group_based_on")
+        if group_based_on != "Office Hours":
+            frappe.throw(
+                _("Office Hours Group {0} is not an Office Hours group.").format(frappe.bold(self.office_hours_group)),
+                title=_("Invalid Office Hours Group"),
+            )
+
+    def get_schedule_range(self):
+        """Date range covered by this schedule's series. Generated occurrences
+        (parent_schedule set) are copied with repeat 'Never' and their own single
+        date, so they are checked against the series root's range instead."""
+        from frappe.utils import getdate
+
+        schedule_date, repeat_frequency, repeats_till = self.schedule_date, self.repeat_frequency, self.repeats_till
+        if self.parent_schedule:
+            root = frappe.db.get_value(
+                "Time Table",
+                self.parent_schedule,
+                ["schedule_date", "repeat_frequency", "repeats_till"],
+                as_dict=True,
+            )
+            if root:
+                schedule_date, repeat_frequency, repeats_till = root.schedule_date, root.repeat_frequency, root.repeats_till
+
+        start = getdate(schedule_date)
+        end = getdate(repeats_till) if repeat_frequency and repeat_frequency != "Never" and repeats_till else start
+        return start, end
+
+    def validate_class_participation_weeks(self):
+        """Class Participation Week Group: only Class-Participation groups, no
+        duplicate weeks or overlapping date ranges, and every week must fall
+        within Schedule Date .. Repeats Till (or on Schedule Date when Repeat
+        is 'Never')."""
+        from frappe.utils import formatdate, getdate
+
+        rows = self.get("class_participation_week_group") or []
+        if not rows or not self.schedule_date:
+            return
+
+        range_start, range_end = self.get_schedule_range()
+
+        week_names = list({row.week for row in rows if row.week})
+        group_type_by_week = dict(
+            frappe.get_all(
+                "Student Group",
+                filters={"name": ["in", week_names]},
+                fields=["name", "group_based_on"],
+                as_list=True,
+            )
+        ) if week_names else {}
+
+        seen_weeks = {}
+        checked_rows = []
+        for row in rows:
+            if not (row.week and row.start_date and row.end_date):
+                continue
+
+            if group_type_by_week.get(row.week) != "Class-Participation":
+                frappe.throw(
+                    _("Row #{0}: Week {1} is not a Class-Participation group.").format(row.idx, frappe.bold(row.week)),
+                    title=_("Invalid Week"),
+                )
+
+            if row.week in seen_weeks:
+                frappe.throw(
+                    _("Row #{0}: Week {1} is already added in row #{2}.").format(
+                        row.idx, frappe.bold(row.week), seen_weeks[row.week]
+                    ),
+                    title=_("Duplicate Week"),
+                )
+            seen_weeks[row.week] = row.idx
+
+            start, end = getdate(row.start_date), getdate(row.end_date)
+            if start > end:
+                frappe.throw(
+                    _("Row #{0}: Start Date cannot be after End Date.").format(row.idx),
+                    title=_("Invalid Week Dates"),
+                )
+
+            if start < range_start or end > range_end:
+                if range_start == range_end:
+                    msg = _("Row #{0}: Week dates must be on the Schedule Date {1} since Repeat is 'Never'.").format(
+                        row.idx, formatdate(range_start)
+                    )
+                else:
+                    msg = _("Row #{0}: Week dates ({1} - {2}) must be within Schedule Date {3} and Repeats Till {4}.").format(
+                        row.idx, formatdate(start), formatdate(end), formatdate(range_start), formatdate(range_end)
+                    )
+                frappe.throw(msg, title=_("Week Out of Range"))
+
+            for other_idx, other_start, other_end in checked_rows:
+                if start <= other_end and end >= other_start:
+                    frappe.throw(
+                        _("Row #{0}: Week dates ({1} - {2}) overlap with row #{3} ({4} - {5}).").format(
+                            row.idx, formatdate(start), formatdate(end),
+                            other_idx, formatdate(other_start), formatdate(other_end),
+                        ),
+                        title=_("Duplicate Week Dates"),
+                    )
+            checked_rows.append((row.idx, start, end))
 
     def check_conflicts(self):
         """Check for scheduling conflicts"""
@@ -182,6 +330,12 @@ class TimeTable(Document):
         # Create attendance session for this schedule
         self.create_attendance_session()
 
+    def get_session_office_hours_group(self):
+        """Office Hours Group (a Student Group) to carry onto the Attendance Session."""
+        if self.based_on != "Office Hours":
+            return None
+        return self.office_hours_group
+
     def create_attendance_session(self):
         """Create an attendance session for this schedule"""
         from frappe.utils import getdate
@@ -206,7 +360,7 @@ class TimeTable(Document):
             "based_on": based_on,
             "class_schedule": self.name,
             "course_schedule": self.course_schedule if based_on == "Course Schedule" else None,
-            "office_hours_group": self.office_hours_group if based_on == "Office Hours" else None,
+            "office_hours_group": self.get_session_office_hours_group(),
             "course_offering": self.course_offering,
             "course": self.course,
             "instructor": self.instructor,
@@ -222,6 +376,7 @@ class TimeTable(Document):
         # only get created when attendance is actually taken (manual mark,
         # bulk mark, or RFID swipe).
         doc.insert(ignore_permissions=True)
+        bump_bulk_stat("sessions_created")
 
     def update_attendance_session(self):
         """Update the corresponding Attendance Session when the Time Table entry is updated"""
@@ -284,10 +439,11 @@ class TimeTable(Document):
         session.course_offering = self.course_offering
         session.based_on = based_on
         session.course_schedule = self.course_schedule if based_on == "Course Schedule" else None
-        session.office_hours_group = self.office_hours_group if based_on == "Office Hours" else None
+        session.office_hours_group = self.get_session_office_hours_group()
 
         # Save the session
         session.save(ignore_permissions=True)
+        bump_bulk_stat("sessions_updated")
 
         frappe.msgprint(
             f"Attendance Session {session_name} has been updated successfully.",
@@ -413,41 +569,64 @@ class TimeTable(Document):
                 # Increment based on frequency
                 current_date += increment
 
-            # Now create all schedules in a transaction
-            for schedule_date in schedules_to_create:
-                new_schedule = frappe.copy_doc(self)
-                new_schedule.schedule_date = schedule_date
-                new_schedule.parent_schedule = self.name
-                new_schedule.repeat_frequency = "Never"  # Don't repeat the child schedules
-                new_schedule.repeats_till = None
-                new_schedule.insert(ignore_permissions=True)
-                created_count += 1
+            # Now create all schedules in a transaction. Each insert creates an
+            # Attendance Session and pushes a Google Calendar event, which would
+            # otherwise each raise their own toast - collect them into one summary.
+            total = len(schedules_to_create)
+            with quiet_bulk_operation() as stats:
+                publish_bulk_progress("Scheduling", 0, total)
+                for schedule_date in schedules_to_create:
+                    new_schedule = frappe.copy_doc(self)
+                    new_schedule.schedule_date = schedule_date
+                    new_schedule.parent_schedule = self.name
+                    new_schedule.repeat_frequency = "Never"  # Don't repeat the child schedules
+                    new_schedule.repeats_till = None
+                    new_schedule.insert(ignore_permissions=True)
+                    created_count += 1
+                    publish_bulk_progress("Scheduling", created_count, total)
 
-            # Provide feedback to user
-            if created_count > 0:
-                message = f"Created {created_count} recurring class schedule(s)"
-                skip_notes = []
-                if conflict_count > 0:
-                    skip_notes.append(f"{conflict_count} due to conflicts")
-                if holiday_skip_count > 0:
-                    skip_notes.append(f"{holiday_skip_count} due to holidays")
-                if skip_notes:
-                    message += f" (Skipped {', '.join(skip_notes)})"
-                frappe.msgprint(
-                    message,
-                    indicator="green" if conflict_count == 0 else "orange",
-                    alert=True,
-                )
-            elif conflict_count > 0 or holiday_skip_count > 0:
-                frappe.msgprint(
-                    f"Could not create recurring schedules. All dates were skipped "
-                    f"({conflict_count} conflicts, {holiday_skip_count} holidays).",
-                    indicator="red",
-                    alert=True,
-                )
+            self.show_scheduling_summary(created_count, conflict_count, holiday_skip_count, stats)
         except Exception as e:
             frappe.log_error(message=f"Error creating recurring schedules: {str(e)}", title="Recurring Schedule Creation Error")
             frappe.throw(f"Error creating recurring schedules: {str(e)}")
+
+    def show_scheduling_summary(self, created_count, conflict_count, holiday_skip_count, stats):
+        """One summary dialog for the whole recurring series, replacing the
+        per-occurrence 'Attendance Session updated' / 'Event Synced' toasts."""
+        from slcm.slcm.doctype.time_table.google_calendar_sync import get_active_google_calendar_account
+
+        # The rest of this request (this schedule's own Google Calendar push)
+        # shouldn't add its own toast on top of the summary.
+        frappe.flags.tt_summary_shown = True
+
+        if not created_count:
+            frappe.msgprint(
+                _("Could not create recurring schedules. All dates were skipped ({0} conflicts, {1} holidays).").format(
+                    conflict_count, holiday_skip_count
+                ),
+                title=_("Scheduling Summary"),
+                indicator="red",
+            )
+            return
+
+        lines = [_("Recurring occurrences created: <b>{0}</b> (plus this schedule)").format(created_count)]
+        if holiday_skip_count:
+            lines.append(_("Skipped due to holidays: <b>{0}</b>").format(holiday_skip_count))
+        if conflict_count:
+            lines.append(_("Skipped due to faculty/venue conflicts: <b>{0}</b>").format(conflict_count))
+        lines.append(_("Attendance sessions created: <b>{0}</b>").format(stats.sessions_created))
+        if get_active_google_calendar_account():
+            lines.append(_("Synced with Google Calendar: <b>{0}</b>").format(stats.gcal_synced))
+            if stats.gcal_failed:
+                lines.append(
+                    _("Google Calendar sync failed: <b>{0}</b> (see Error Log)").format(stats.gcal_failed)
+                )
+
+        frappe.msgprint(
+            "<ul style='margin-bottom:0'>" + "".join(f"<li>{line}</li>" for line in lines) + "</ul>",
+            title=_("Scheduling Summary"),
+            indicator="orange" if (conflict_count or stats.gcal_failed) else "green",
+        )
 
 
 @frappe.whitelist()
@@ -904,8 +1083,14 @@ def _apply_updates_to_rows(names, updates):
         docs_to_save.append(row_doc)
 
     try:
-        for row_doc in docs_to_save:
-            row_doc.save(ignore_permissions=True)
+        # The callers show one "Updated N occurrence(s)" alert - mute the
+        # per-row Attendance Session / Google Calendar toasts underneath it.
+        total = len(docs_to_save)
+        with quiet_bulk_operation():
+            publish_bulk_progress("Updating", 0, total)
+            for done, row_doc in enumerate(docs_to_save, start=1):
+                row_doc.save(ignore_permissions=True)
+                publish_bulk_progress("Updating", done, total)
     except Exception:
         frappe.db.rollback()
         raise

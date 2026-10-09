@@ -34,13 +34,25 @@ def get_context(context):
         course_offerings = frappe.get_all(
             "Course Offering",
             filters={"faculty": faculty_name, "status": ["in", ["Open", "Active"]]},
-            fields=["name", "course_name", "term_name", "academic_year"],
+            fields=["name", "course_name", "term_name", "academic_year", "program"],
             order_by="course_name asc",
             ignore_permissions=True,
         )
         context.course_offerings = course_offerings
         co_names = [c.name for c in course_offerings]
         co_map = {c.name: c for c in course_offerings}
+
+        # Readable programme name shown under the course in the sessions table
+        programme_ids = list({c.program for c in course_offerings if c.program})
+        programme_names = {
+            p.name: p.program_name or p.name
+            for p in frappe.get_all(
+                "Programme",
+                filters={"name": ["in", programme_ids]},
+                fields=["name", "program_name"],
+                ignore_permissions=True,
+            )
+        } if programme_ids else {}
 
         # ── Filter from URL params ──────────────────────────────────
         selected_co = frappe.request.args.get("course_offering", "") if frappe.request else ""
@@ -79,8 +91,23 @@ def get_context(context):
                 tt_data = frappe.get_all("Time Table", filters={"name": ("in", list(set(tt_names)))}, fields=["name", "venue"])
                 tt_venue_map = {d.name: d.venue for d in tt_data}
 
+            cp_dates_by_tt = _get_class_participation_ranges(
+                [s.class_schedule for s in raw_sessions if s.class_schedule]
+            )
+            # Pending-task keys per session (same rules as the dashboard's
+            # Pending Tasks card, which links here with ?pending=<key>)
+            from slcm.slcm.utils.class_participation import get_session_task_flags
+            task_flags = get_session_task_flags(raw_sessions, today)
+
             for s in raw_sessions:
                 co = co_map.get(s.course_offering, frappe._dict())
+                session_type = s.session_type or "Lecture"
+                session_day = frappe.utils.getdate(s.session_date) if s.session_date else None
+                has_cp = bool(
+                    session_day
+                    and session_type != "Office Hour"
+                    and any(start <= session_day <= end for start, end in cp_dates_by_tt.get(s.class_schedule, ()))
+                )
                 pct = round(float(s.attendance_percentage or 0), 1)
                 rfid_active = bool(
                     s.rfid_activation_time and s.rfid_active_until and now <= s.rfid_active_until
@@ -91,9 +118,17 @@ def get_context(context):
                     "name": s.name,
                     "course_name": co.get("course_name") or s.course_offering,
                     "course_offering": s.course_offering,
+                    "programme_name": programme_names.get(co.get("program")) or co.get("program") or "",
                     "session_date": str(s.session_date) if s.session_date else "",
                     "session_date_fmt": frappe.utils.formatdate(s.session_date, "dd MMM yyyy"),
-                    "session_type": s.session_type or "Lecture",
+                    "session_type": session_type,
+                    # What faculty see — "Office Hour" is shown as "OH" across the portal
+                    "session_type_label": "OH" if session_type == "Office Hour" else session_type,
+                    # Which page tab lists it: Office Hours vs class sessions;
+                    # has_cp = also listed under Class Participants.
+                    "category": "oh" if session_type == "Office Hour" else "class",
+                    "has_cp": has_cp,
+                    "tasks": " ".join(sorted(task_flags.get(s.name, ()))),
                     "from_time": fmt_time(s.session_start_time),
                     "to_time": fmt_time(s.session_end_time),
                     "from_time_sort": str(s.session_start_time) if s.session_start_time else "",
@@ -144,10 +179,15 @@ def get_context(context):
         )
         context.terms = [{"key": k, "label": term_labels[k]} for k in terms]
 
-        # ── Selected term (defaults to the most recent) ──────────────
+        # ── Selected term (only when asked for via ?term=) ──────────
+        # Defaulting to the single most recent term hid every session of a
+        # faculty's other active course offerings (e.g. Office Hours in a
+        # Term 2 offering while a Trimester I course had later classes), with
+        # no visible way to switch. Course offerings are already limited to
+        # Open/Active, so show all of them unless a term is requested.
         selected_term = frappe.request.args.get("term", "") if frappe.request else ""
-        if not selected_term or selected_term not in terms:
-            selected_term = terms[0] if terms else ""
+        if selected_term not in terms:
+            selected_term = ""
         context.selected_term = selected_term
         if selected_term:
             parts = selected_term.split("|")
@@ -193,16 +233,7 @@ def get_context(context):
         upcoming_sessions = 0
         
         for s in sessions:
-            is_completed = False
-            # Check if date is in the past
             if s["session_date"] < today_date_str:
-                is_completed = True
-            elif s["session_date"] == today_date_str:
-                # If today, check if time has passed or if it's already marked
-                if s["marked"] or s["from_time_sort"] < current_time_str:
-                    is_completed = True
-
-            if is_completed:
                 completed_sessions += 1
                 if s["marked"]:
                     marked_sessions += 1
@@ -210,6 +241,14 @@ def get_context(context):
                 else:
                     pending_sessions += 1
                     s["computed_status"] = "Pending"
+            elif s["session_date"] == today_date_str:
+                if s["marked"]:
+                    completed_sessions += 1
+                    marked_sessions += 1
+                    s["computed_status"] = "Marked"
+                else:
+                    pending_sessions += 1
+                    s["computed_status"] = "Active"
             else:
                 upcoming_sessions += 1
                 s["computed_status"] = "Upcoming"
@@ -281,6 +320,42 @@ def get_context(context):
         _set_defaults(context)
 
     return context
+
+
+def _get_class_participation_ranges(time_table_names):
+    """{Time Table name: [(start_date, end_date), ...]} of the Class
+    Participation weeks configured for each entry's series, in two bulk
+    queries. Generated occurrences carry a copy of the series root's week
+    table, so the root's rows are used with the occurrence's own as fallback
+    (same rule as slcm.slcm.utils.class_participation)."""
+    time_table_names = list(set(time_table_names))
+    if not time_table_names:
+        return {}
+
+    tts = frappe.get_all(
+        "Time Table",
+        filters={"name": ["in", time_table_names]},
+        fields=["name", "parent_schedule"],
+        ignore_permissions=True,
+    )
+    parents = {t.name for t in tts} | {t.parent_schedule for t in tts if t.parent_schedule}
+
+    ranges_by_parent = {}
+    for row in frappe.get_all(
+        "Class Participation Week",
+        filters={"parenttype": "Time Table", "parent": ["in", list(parents)]},
+        fields=["parent", "start_date", "end_date"],
+        ignore_permissions=True,
+    ):
+        if row.start_date and row.end_date:
+            ranges_by_parent.setdefault(row.parent, []).append(
+                (frappe.utils.getdate(row.start_date), frappe.utils.getdate(row.end_date))
+            )
+
+    return {
+        t.name: ranges_by_parent.get(t.parent_schedule) or ranges_by_parent.get(t.name) or []
+        for t in tts
+    }
 
 
 def _set_defaults(context):

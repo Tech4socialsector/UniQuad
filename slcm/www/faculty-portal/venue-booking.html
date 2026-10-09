@@ -196,55 +196,23 @@
     <div class="fp-vb-modal-body">
 
       <div class="fp-vb-section">
-        <div class="fp-vb-section-title"><span class="fp-ms">event_note</span>Event Details</div>
+        <div class="fp-vb-section-title"><span class="fp-ms">category</span>Venue Type</div>
         <div class="fp-form-group" style="margin-bottom:0;">
-          <label class="fp-label" for="fp-vb-event">Event / Purpose <span style="color:var(--fp-primary);">*</span></label>
-          <input type="text" class="fp-input" id="fp-vb-event" placeholder="e.g. Guest Lecture, Seminar, Meeting">
-          <div class="fp-vb-field-error" id="fp-vb-event-err"><span class="fp-ms">error</span>Event / Purpose is required.</div>
-        </div>
-      </div>
-
-      <div class="fp-vb-section">
-        <div class="fp-vb-section-title"><span class="fp-ms">meeting_room</span>Venue</div>
-        <div class="fp-vb-row-2">
-          <div class="fp-form-group" style="margin-bottom:0;">
-            <label class="fp-label" for="fp-vb-venue-type">Venue Type <span style="color:var(--fp-primary);">*</span></label>
-            <select class="fp-select" id="fp-vb-venue-type" onchange="fpFilterRoomsByType()">
-              <option value="">Select type…</option>
-              <option value="Classroom">Classroom</option>
-              <option value="Moot Court">Moot Court</option>
-              <option value="Open Spaces">Open Spaces</option>
-              <option value="Meeting Room">Meeting Room</option>
-              <option value="Mess">Mess</option>
-              <option value="Quad">Quad</option>
-              <option value="Conference Hall">Conference Hall</option>
-              <option value="Project">Project</option>
-              <option value="Guest House">Guest House</option>
-              <option value="Staff Quarters">Staff Quarters</option>
-            </select>
-            <div class="fp-vb-field-error" id="fp-vb-venue-type-err"><span class="fp-ms">error</span>Please select a venue type.</div>
-          </div>
-          <div class="fp-form-group" style="margin-bottom:0;">
-            <label class="fp-label" for="fp-vb-attendees">Expected Attendees <span style="color:var(--fp-primary);">*</span></label>
-            <input type="number" class="fp-input" id="fp-vb-attendees" placeholder="0" min="1" step="1" oninput="fpFilterRoomsByType()">
-            <div class="fp-vb-field-error" id="fp-vb-attendees-err"><span class="fp-ms">error</span>Enter a valid number of attendees.</div>
-          </div>
-        </div>
-        <div class="fp-vb-row-2" style="margin-top:16px;">
-          <div class="fp-form-group" style="margin-bottom:0; grid-column: 1 / -1;">
-            <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-              <label class="fp-label" for="fp-vb-room" style="margin-bottom:0;">Room / Venue <span style="color:var(--fp-primary);">*</span></label>
-              <div style="font-size:12px; display:flex; gap:10px;">
-                <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" id="fp-vb-show-booked" onchange="fpFilterRoomsByType()"> Show booked</label>
-                <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" id="fp-vb-sort-desc" onchange="fpFilterRoomsByType()"> Sort desc</label>
-              </div>
-            </div>
-            <select class="fp-select" id="fp-vb-room" onchange="fpCheckAvailabilityMsg()">
-              <option value="">Select venue type and attendees first…</option>
-            </select>
-            <div class="fp-vb-field-error" id="fp-vb-room-err"><span class="fp-ms">error</span>Please select a room / venue.</div>
-            <div id="fp-vb-room-availability" style="font-size:12px; margin-top:5px; display:none; font-weight:500;"></div>
-          </div>
+          <label class="fp-label" for="fp-vb-venue-type">Venue Type <span style="color:var(--fp-primary);">*</span></label>
+          <select class="fp-select" id="fp-vb-venue-type" onchange="fpFilterRoomsByType()">
+            <option value="">Select type…</option>
+            <option value="Classroom">Classroom</option>
+            <option value="Moot Court">Moot Court</option>
+            <option value="Open Spaces">Open Spaces</option>
+            <option value="Meeting Room">Meeting Room</option>
+            <option value="Mess">Mess</option>
+            <option value="Quad">Quad</option>
+            <option value="Conference Hall">Conference Hall</option>
+            <option value="Project">Project</option>
+            <option value="Guest House">Guest House</option>
+            <option value="Staff Quarters">Staff Quarters</option>
+          </select>
+          <div class="fp-vb-field-error" id="fp-vb-venue-type-err"><span class="fp-ms">error</span>Please select a venue type.</div>
         </div>
       </div>
 
@@ -261,6 +229,32 @@
             <input type="datetime-local" class="fp-input" id="fp-vb-end" onchange="fpFilterRoomsByType()">
             <div class="fp-vb-field-error" id="fp-vb-end-err"><span class="fp-ms">error</span>End time must be after start time.</div>
           </div>
+        </div>
+      </div>
+
+      <div class="fp-vb-section">
+        <div class="fp-vb-section-title"><span class="fp-ms">meeting_room</span>Venue</div>
+        <div class="fp-form-group">
+          <label class="fp-label" for="fp-vb-attendees">Expected Attendees <span style="color:var(--fp-primary);">*</span></label>
+          <input type="number" class="fp-input" id="fp-vb-attendees" placeholder="0" min="1" step="1" oninput="fpFilterRoomsByType()">
+          <div class="fp-vb-field-error" id="fp-vb-attendees-err"><span class="fp-ms">error</span>Enter a valid number of attendees.</div>
+        </div>
+        <div class="fp-form-group" style="margin-bottom:0;">
+          <label class="fp-label" for="fp-vb-room">Room / Venue <span style="color:var(--fp-primary);">*</span></label>
+          <select class="fp-select" id="fp-vb-room" onchange="fpCheckAvailabilityMsg()">
+            <option value="">Select venue type and attendees first…</option>
+          </select>
+          <div class="fp-vb-field-error" id="fp-vb-room-err"><span class="fp-ms">error</span>Please select a room / venue.</div>
+          <div id="fp-vb-room-availability" style="font-size:12px; margin-top:5px; display:none; font-weight:500;"></div>
+        </div>
+      </div>
+
+      <div class="fp-vb-section">
+        <div class="fp-vb-section-title"><span class="fp-ms">event_note</span>Event Details</div>
+        <div class="fp-form-group" style="margin-bottom:0;">
+          <label class="fp-label" for="fp-vb-event">Purpose<span style="color:var(--fp-primary);">*</span></label>
+          <input type="text" class="fp-input" id="fp-vb-event" placeholder="e.g. Guest Lecture, Seminar, Meeting">
+          <div class="fp-vb-field-error" id="fp-vb-event-err"><span class="fp-ms">error</span>Event / Purpose is required.</div>
         </div>
       </div>
 

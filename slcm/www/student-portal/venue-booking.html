@@ -107,62 +107,28 @@
       <span>All bookings are reviewed by the administration. Select the venue type first to load available rooms.</span>
     </div>
 
-    {# Row 1: Event name (full width) #}
+    {# Row 1: Venue Type (full width) #}
     <div class="vb-field-block">
-      <label class="vb-label">Event / Purpose <span class="vb-req">*</span></label>
-      <input type="text" id="vb-event-name" class="vb-input"
-        placeholder="e.g. Study Group, Moot Practice, Club Meeting">
-    </div>
-
-    {# Row 2: Venue Type + Attendees #}
-    <div class="vb-form-2col">
-      <div class="vb-field-block">
-        <label class="vb-label">Venue Type <span class="vb-req">*</span></label>
-        <div class="vb-select-wrap">
-          <select id="vb-venue-type" class="vb-input vb-select" onchange="loadRooms()">
-            <option value=""> Select Type </option>
-            <option value="Classroom">Classroom</option>
-            <option value="Moot Court">Moot Court</option>
-            <option value="Open Spaces">Open Spaces</option>
-            <option value="Meeting Room">Meeting Room</option>
-            <option value="Mess">Mess</option>
-            <option value="Quad">Quad</option>
-            <option value="Conference Hall">Conference Hall</option>
-            <option value="Project">Project</option>
-            <option value="Guest House">Guest House</option>
-            <option value="Staff Quarters">Staff Quarters</option>
-          </select>
-          <span class="sp-ms vb-select-arrow">expand_more</span>
-        </div>
-      </div>
-      <div class="vb-field-block">
-        <label class="vb-label">Expected Attendees <span class="vb-req">*</span></label>
-        <input type="number" id="vb-attendees" class="vb-input" min="1" placeholder="How many people?" oninput="loadRooms()">
-      </div>
-    </div>
-    
-    {# Row 2b: Venue #}
-    <div class="vb-field-block" style="margin-bottom:16px;">
-      <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-        <label class="vb-label" style="margin-bottom:0;">Venue / Room <span class="vb-req">*</span></label>
-        <div style="font-size:12px; display:flex; gap:10px;">
-          <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" id="vb-show-booked" onchange="loadRooms()"> Show booked</label>
-          <label style="cursor:pointer;display:flex;align-items:center;gap:4px;"><input type="checkbox" id="vb-sort-desc" onchange="loadRooms()"> Sort desc</label>
-        </div>
-      </div>
+      <label class="vb-label">Venue Type <span class="vb-req">*</span></label>
       <div class="vb-select-wrap">
-        <select id="vb-room" class="vb-input vb-select">
-          <option value=""> Select venue type and attendees first </option>
+        <select id="vb-venue-type" class="vb-input vb-select" onchange="loadRooms()">
+          <option value=""> Select Type </option>
+          <option value="Classroom">Classroom</option>
+          <option value="Moot Court">Moot Court</option>
+          <option value="Open Spaces">Open Spaces</option>
+          <option value="Meeting Room">Meeting Room</option>
+          <option value="Mess">Mess</option>
+          <option value="Quad">Quad</option>
+          <option value="Conference Hall">Conference Hall</option>
+          <option value="Project">Project</option>
+          <option value="Guest House">Guest House</option>
+          <option value="Staff Quarters">Staff Quarters</option>
         </select>
         <span class="sp-ms vb-select-arrow">expand_more</span>
       </div>
-      <div id="vb-room-capacity" style="display:none;" class="vb-cap-hint">
-        <span class="sp-ms" style="font-size:13px;">people</span>
-        Capacity: <strong id="vb-cap-val"></strong>
-      </div>
     </div>
 
-    {# Row 3: Start + End datetime #}
+    {# Row 2: Start + End datetime #}
     <div class="vb-form-2col">
       <div class="vb-field-block">
         <label class="vb-label">Start Date &amp; Time <span class="vb-req">*</span></label>
@@ -179,6 +145,34 @@
         <span class="sp-ms" style="font-size:14px;">schedule</span>
         <span id="vb-duration-text"></span>
       </span>
+    </div>
+
+    {# Row 3: Expected Attendees #}
+    <div class="vb-field-block">
+      <label class="vb-label">Expected Attendees <span class="vb-req">*</span></label>
+      <input type="number" id="vb-attendees" class="vb-input" min="1" placeholder="How many people?" oninput="loadRooms()">
+    </div>
+
+    {# Row 4: Venue #}
+    <div class="vb-field-block" style="margin-bottom:16px;">
+      <label class="vb-label">Venue / Room <span class="vb-req">*</span></label>
+      <div class="vb-select-wrap">
+        <select id="vb-room" class="vb-input vb-select">
+          <option value=""> Select venue type and attendees first </option>
+        </select>
+        <span class="sp-ms vb-select-arrow">expand_more</span>
+      </div>
+      <div id="vb-room-capacity" style="display:none;" class="vb-cap-hint">
+        <span class="sp-ms" style="font-size:13px;">people</span>
+        Capacity: <strong id="vb-cap-val"></strong>
+      </div>
+    </div>
+
+    {# Row 5: Event / Purpose #}
+    <div class="vb-field-block">
+      <label class="vb-label">Event / Purpose <span class="vb-req">*</span></label>
+      <input type="text" id="vb-event-name" class="vb-input"
+        placeholder="e.g. Study Group, Moot Practice, Club Meeting">
     </div>
 
     {# Row 4: Description #}

@@ -114,7 +114,7 @@ function hdInitFrame(basePath) {
     "@font-face { font-family: 'Merriweather'; font-weight: 400; src: url('/assets/slcm/fonts/Merriweather-Regular.ttf') format('truetype'); }",
     "@font-face { font-family: 'Merriweather'; font-weight: 700; src: url('/assets/slcm/fonts/Merriweather-Bold.ttf') format('truetype'); }",
     "@font-face { font-family: 'Merriweather'; font-weight: 400; font-style: italic; src: url('/assets/slcm/fonts/Merriweather-Italic.ttf') format('truetype'); }",
-    "html, body, body *:not(svg):not(path) { font-family: 'Merriweather', Georgia, serif !important; }",
+    "html, body, body *:not(svg):not(path) { font-family: " + (getComputedStyle(document.documentElement).getPropertyValue('--fp-font-family').trim() || "'Merriweather', Georgia, serif") + " !important; }",
     'body, .text-base, .text-sm, .text-p-sm, .text-p-base, input, select, textarea, button, .ProseMirror { font-size: 14px !important; }',
     '.text-xs, .text-p-xs, .text-2xs { font-size: 12.5px !important; }',
     '.text-lg { font-size: 17px !important; }'
