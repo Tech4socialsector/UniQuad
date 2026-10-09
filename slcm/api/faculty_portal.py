@@ -1,3 +1,4 @@
+import datetime
 import json
 
 import frappe
@@ -1413,32 +1414,107 @@ def _hhmm(t):
     return f"{int(parts[0]):02d}:{int(parts[1]) if len(parts) > 1 else 0:02d}"
 
 
-def _cal_events(start, end, timetable_event_names):
-    """Frappe Events visible to the session user (public, owned or shared),
-    with repeating events expanded. Events that only mirror a Time Table
-    entry for Google sync are skipped — the class shows in the Time Table layer."""
-    from frappe.desk.doctype.event.event import get_events
+_WEEKDAY_FIELDS = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
+
+
+def _faculty_participant_event_names(faculty_name):
+    """Events listing this faculty in their Participants table — as a Faculty
+    reference, or by one of the faculty's email addresses (e.g. the Contact
+    added by "Sync to Google Calendar")."""
+    fac = frappe.db.get_value(
+        "Faculty", faculty_name, ["user_id", "email", "official_email_id"], as_dict=True
+    ) or frappe._dict()
+    emails = list({e.strip().lower() for e in (fac.user_id, fac.email, fac.official_email_id) if e and e.strip()})
+
+    conditions = ["(ep.reference_doctype = 'Faculty' AND ep.reference_docname = %(faculty)s)"]
+    if emails:
+        conditions.append("LOWER(ep.email) IN %(emails)s")
+    return frappe.db.sql_list(
+        f"""SELECT DISTINCT ep.parent FROM `tabEvent Participants` ep
+            WHERE ep.parenttype = 'Event' AND ({' OR '.join(conditions)})""",
+        {"faculty": str(faculty_name), "emails": tuple(emails)},
+    )
+
+
+def _event_occurrences(ev, start, end):
+    """(start_datetime, end_datetime) of each occurrence of `ev` overlapping
+    start..end, expanding Daily / Weekly (on its ticked weekdays) / Monthly /
+    Yearly repeats up to repeat_till."""
+    from dateutil.relativedelta import relativedelta
+
+    starts_on = frappe.utils.get_datetime(ev.starts_on)
+    ends_on = frappe.utils.get_datetime(ev.ends_on) if ev.ends_on else starts_on
+    ends_on = max(ends_on, starts_on)
+    duration = ends_on - starts_on
+
+    def overlaps(s, e):
+        return s.date() <= end and e.date() >= start
+
+    if not ev.repeat_this_event:
+        return [(starts_on, ends_on)] if overlaps(starts_on, ends_on) else []
+
+    last = min(end, frappe.utils.getdate(ev.repeat_till)) if ev.repeat_till else end
+    out = []
+    if ev.repeat_on in ("Daily", "Weekly"):
+        weekdays = {i for i, f in enumerate(_WEEKDAY_FIELDS) if ev.get(f)}
+        if ev.repeat_on == "Weekly" and not weekdays:
+            weekdays = {starts_on.weekday()}
+        day = max(starts_on.date(), start - duration - datetime.timedelta(days=1))
+        while day <= last:
+            if ev.repeat_on == "Daily" or day.weekday() in weekdays:
+                s = datetime.datetime.combine(day, starts_on.time())
+                if s >= starts_on and overlaps(s, s + duration):
+                    out.append((s, s + duration))
+            day += datetime.timedelta(days=1)
+    elif ev.repeat_on in ("Monthly", "Quarterly", "Half Yearly", "Yearly"):
+        months = {"Monthly": 1, "Quarterly": 3, "Half Yearly": 6, "Yearly": 12}[ev.repeat_on]
+        n = 0
+        while True:
+            s = starts_on + relativedelta(months=months * n)
+            if s.date() > last:
+                break
+            if overlaps(s, s + duration):
+                out.append((s, s + duration))
+            n += 1
+    return out
+
+
+def _cal_events(start, end, timetable_event_names, faculty_name):
+    """Events that list this faculty as a participant (see
+    _faculty_participant_event_names), with repeating events expanded.
+    Events that only mirror a Time Table entry for Google sync are skipped —
+    the class shows in the Time Table layer."""
+    names = _faculty_participant_event_names(faculty_name)
+    if not names:
+        return []
+
+    events = frappe.get_all(
+        "Event",
+        filters={"name": ["in", names], "status": "Open"},
+        fields=["name", "subject", "description", "starts_on", "ends_on", "all_day", "event_type",
+                "repeat_this_event", "repeat_on", "repeat_till", *_WEEKDAY_FIELDS],
+        ignore_permissions=True,
+    )
 
     items = []
-    for ev in get_events(start, end) or []:
+    for ev in events:
         # The description marker also catches mirrors whose Time Table lost its link
         if ev.name in timetable_event_names or (ev.description or "").startswith("Synced from Time Table:"):
             continue
-        starts_on = frappe.utils.get_datetime(ev.starts_on)
-        ends_on = frappe.utils.get_datetime(ev.ends_on) if ev.ends_on else starts_on
         all_day = bool(ev.all_day)
-        items.append({
-            "id": f"event::{ev.name}::{starts_on.date()}",
-            "layer": "event",
-            "title": ev.subject or "Event",
-            "start_date": str(starts_on.date()),
-            "end_date": str(max(ends_on, starts_on).date()),
-            "start_time": "" if all_day else starts_on.strftime("%H:%M"),
-            "end_time": "" if all_day else ends_on.strftime("%H:%M"),
-            "all_day": all_day,
-            "subtitle": ev.event_type or "",
-            "description": frappe.utils.strip_html(ev.description or "")[:300],
-        })
+        for s, e in _event_occurrences(ev, start, end):
+            items.append({
+                "id": f"event::{ev.name}::{s.date()}",
+                "layer": "event",
+                "title": ev.subject or "Event",
+                "start_date": str(s.date()),
+                "end_date": str(e.date()),
+                "start_time": "" if all_day else s.strftime("%H:%M"),
+                "end_time": "" if all_day else e.strftime("%H:%M"),
+                "all_day": all_day,
+                "subtitle": ev.event_type or "",
+                "description": frappe.utils.strip_html(ev.description or "")[:300],
+            })
     return items
 
 
@@ -1599,7 +1675,7 @@ def get_faculty_calendar(start, end):
         errors.append("institutional")
         frappe.log_error(frappe.get_traceback(), "Faculty Calendar – Institutional Calendar")
     try:
-        items += _cal_events(start, end, linked_events)
+        items += _cal_events(start, end, linked_events, faculty_name)
     except Exception:
         errors.append("event")
         frappe.log_error(frappe.get_traceback(), "Faculty Calendar – Event")

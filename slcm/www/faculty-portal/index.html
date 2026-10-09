@@ -291,10 +291,17 @@ window._fpDashData = {
 {# ── My Calendar ───────────────────────────────────────── #}
 <div class="fp-card fade-in fp-cal-card" style="margin-bottom:20px;">
   <div class="fp-card-header fp-cal-head">
-    <div class="fp-card-title">
-      <span class="fp-ms">event</span>
-      My Calendar
+    {# Left: title + Google sync. Right: layer toggles over the legend. #}
+    <div class="fp-cal-head-left">
+      <div class="fp-card-title">
+        <span class="fp-ms">event</span>
+        My Calendar
+      </div>
+      <button class="fp-btn fp-cal-sync-btn" onclick="fpOpenGcalModal()" style="font-size: 12px; padding: 4px 10px;">
+        <span class="fp-ms" style="font-size: 14px;">sync</span> Sync to Google Calendar
+      </button>
     </div>
+    <div class="fp-cal-head-right">
     <div class="fp-cal-layers" role="group" aria-label="Calendar layers">
       <label class="fp-cal-layer" style="--layer:var(--fp-cal-event);">
         <input type="checkbox" data-layer="event" checked onchange="fpCalToggleLayer(this)">
@@ -317,6 +324,7 @@ window._fpDashData = {
       <span><b class="fp-cal-oh-tag">OH</b>Office Hours</span>
       <span><i class="fp-cal-dot" style="background:var(--fp-cal-holiday-bg);border:1px solid #f5c6ce;"></i>Holiday</span>
     </div>
+    </div>
   </div>
   <div class="fp-card-body" style="padding:0;">
     <div class="fp-cal-toolbar">
@@ -327,9 +335,6 @@ window._fpDashData = {
       </div>
       <div id="cal-month-label" class="fp-cal-label" aria-live="polite"></div>
       <div class="fp-cal-actions">
-        <button class="fp-btn fp-cal-sync-btn" onclick="fpOpenGcalModal()">
-          <span class="fp-ms">sync</span> Sync to Google Calendar
-        </button>
         <div class="fp-cal-views" role="tablist" aria-label="Calendar view">
           <button type="button" data-view="month" onclick="fpCalSetView('month')">Month</button>
           <button type="button" data-view="week" onclick="fpCalSetView('week')">Week</button>
@@ -346,10 +351,10 @@ window._fpDashData = {
   :root { --fp-cal-event: #920c24; --fp-cal-inst: #2563eb; --fp-cal-tt: #16a34a; --fp-cal-holiday-bg: #fff0f0; --fp-cal-hour-h: 48px; --fp-cal-line: #d0d0d0; }
   body.fp-dark { --fp-cal-event: #f87171; --fp-cal-inst: #60a5fa; --fp-cal-tt: #4ade80; --fp-cal-holiday-bg: rgba(225,29,72,0.12); --fp-cal-line: #3a4660; }
 
-  .fp-cal-head { flex-wrap: wrap; gap: 12px 20px; justify-content: space-between; }
-  /* Layers keep their natural width (no squeezing one onto a second line);
-     when space runs out the legend wraps below as a whole instead. */
-  .fp-cal-layers { display: flex; flex-wrap: wrap; gap: 6px 18px; flex: 0 0 auto; max-width: 100%; }
+  .fp-cal-head { flex-wrap: wrap; gap: 12px 20px; justify-content: space-between; align-items: center; }
+  .fp-cal-head-left { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+  .fp-cal-head-right { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; margin-left: auto; max-width: 100%; }
+  .fp-cal-layers { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px 18px; max-width: 100%; }
   .fp-cal-layer { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--fp-text-2); cursor: pointer; user-select: none; white-space: nowrap; }
   .fp-cal-layer input { position: absolute; opacity: 0; width: 1px; height: 1px; }
   .fp-cal-check { width: 18px; height: 18px; border-radius: 4px; border: 2px solid var(--layer); display: inline-flex; align-items: center; justify-content: center; background: transparent; transition: background .15s; }
@@ -358,7 +363,7 @@ window._fpDashData = {
   .fp-cal-layer input:checked + .fp-cal-check .fp-ms { opacity: 1; }
   .fp-cal-layer input:focus-visible + .fp-cal-check { outline: 2px solid var(--layer); outline-offset: 2px; }
 
-  .fp-cal-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--fp-text-3); margin-left: auto; justify-content: flex-end; }
+  .fp-cal-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--fp-text-3); justify-content: flex-end; }
   .fp-cal-legend span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
   /* OH marker on calendar chips/blocks (classes have none) */
   .fp-cal-oh-tag {
@@ -448,6 +453,9 @@ window._fpDashData = {
 
   @media (max-width: 768px) {
     .fp-cal-toolbar { justify-content: center; }
+    /* Stacked on phones: everything left-aligned under the title */
+    .fp-cal-head-right { align-items: flex-start; margin-left: 0; }
+    .fp-cal-layers, .fp-cal-legend { justify-content: flex-start; }
     .fp-cal-cell { min-height: 64px; padding: 4px; }
     .fp-cal-chip-time { display: none; }
     .fp-cal-chip { font-size: 10px; padding: 1px 4px; }
