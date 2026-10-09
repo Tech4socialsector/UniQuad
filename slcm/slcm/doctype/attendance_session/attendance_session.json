@@ -68,7 +68,7 @@
    "fieldname": "office_hours_group",
    "fieldtype": "Link",
    "label": "Office Hours Group",
-   "options": "Office Hours Group"
+   "options": "Student Group"
   },
   {
    "fieldname": "course_schedule",
@@ -254,7 +254,7 @@
   }
  ],
  "links": [],
- "modified": "2026-07-14 16:00:00.000000",
+ "modified": "2026-10-09 10:30:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Attendance Session",

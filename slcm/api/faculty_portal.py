@@ -162,6 +162,10 @@ def get_session_students(session_name):
 
     session = frappe.get_doc("Attendance Session", session_name, ignore_permissions=True)
     _assert_session_owned_by_faculty(session, faculty_name)
+    # OH rosters come from the OH Student Group; refresh in memory so sessions
+    # saved before that rule (or before the group changed) list the right students.
+    if session.session_type == "Office Hour":
+        session.update_attendance_summary()
 
     # Attendance Session Student (roster) has no source/who/when — that detail
     # only lives on the actual Student Attendance record, when one exists.
@@ -315,8 +319,15 @@ def get_attendance_history(attendance_record):
 
 
 @frappe.whitelist()
-def save_attendance(session_name, attendance):
-    """Save attendance for an attendance session."""
+def get_class_participation(session_name):
+    """Class Participants tab: the week's Class-Participation group for this
+    session, which hour slot this class records into, and each student's
+    already-saved participation/mark for that slot."""
+    from slcm.slcm.utils.class_participation import (
+        get_participation_context,
+        get_participation_roster,
+    )
+
     if frappe.session.user == "Guest":
         frappe.throw("Not permitted", frappe.PermissionError)
 
@@ -326,6 +337,31 @@ def save_attendance(session_name, attendance):
 
     session = frappe.get_doc("Attendance Session", session_name, ignore_permissions=True)
     _assert_session_owned_by_faculty(session, faculty_name)
+
+    ctx = get_participation_context(session)
+    if not ctx.available:
+        return {"context": ctx, "students": [], "slot_recorded": False}
+
+    return {"context": ctx, **get_participation_roster(ctx)}
+
+
+@frappe.whitelist()
+def save_attendance(session_name, attendance, participation=None):
+    """Save attendance for an attendance session, plus (optionally) class
+    participation marks for the session's week/slot - see
+    slcm.slcm.utils.class_participation."""
+    if frappe.session.user == "Guest":
+        frappe.throw("Not permitted", frappe.PermissionError)
+
+    faculty_name = get_faculty_name()
+    if not faculty_name:
+        frappe.throw("No faculty record found", frappe.DoesNotExistError)
+
+    session = frappe.get_doc("Attendance Session", session_name, ignore_permissions=True)
+    _assert_session_owned_by_faculty(session, faculty_name)
+    # Same roster the faculty was shown (see get_session_students)
+    if session.session_type == "Office Hour":
+        session.update_attendance_summary()
 
     if isinstance(attendance, str):
         attendance = json.loads(attendance)
@@ -399,6 +435,24 @@ def save_attendance(session_name, attendance):
             attendance_percentage=%s, attendance_marked=1
         WHERE name=%s
     """, (present_count, absent_count, total, pct, session_name))
+
+    # Class participation goes in the same transaction, so a validation error
+    # (e.g. a mark out of range) rolls back the attendance save too instead of
+    # leaving the two half-saved.
+    from slcm.slcm.utils.class_participation import (
+        get_participation_context,
+        save_class_participation,
+    )
+
+    if isinstance(participation, str):
+        participation = json.loads(participation) if participation else None
+
+    ctx = get_participation_context(session)
+    if ctx.available:
+        final_att_map = {row.student: row.status for row in session.get("students", [])}
+        save_class_participation(session, ctx, participation, final_att_map)
+    elif participation:
+        frappe.throw(ctx.reason or "Class participation cannot be recorded for this session.")
 
     frappe.db.commit()
 

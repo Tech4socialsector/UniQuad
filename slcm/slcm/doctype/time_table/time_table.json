@@ -8,17 +8,17 @@
  "engine": "InnoDB",
  "field_order": [
   "naming_series",
-  "based_on",
   "column_break_1",
-  "instructor",
+  "based_on",
   "class_configuration",
+  "office_hours_group",
   "section_break_details",
   "term",
   "programme",
   "course_offering",
   "course",
   "column_break_2",
-  "office_hours_group",
+  "instructor",
   "course_schedule",
   "section",
   "section_break_schedule",
@@ -91,7 +91,8 @@
    "fieldname": "office_hours_group",
    "fieldtype": "Link",
    "label": "Office Hours Group",
-   "options": "Office Hours Group"
+   "mandatory_depends_on": "eval:doc.based_on=='Office Hours'",
+   "options": "Student Group"
   },
   {
    "fieldname": "section_break_details",
@@ -121,8 +122,7 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Course",
-   "options": "Course"
+   "label": "Course"
   },
   {
    "fetch_from": "class_configuration.course_offering",
@@ -274,7 +274,7 @@
   }
  ],
  "links": [],
- "modified": "2026-10-08 17:53:43.246380",
+ "modified": "2026-10-09 09:48:35.926981",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Time Table",

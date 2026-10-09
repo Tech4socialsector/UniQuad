@@ -155,7 +155,8 @@
    "depends_on": "eval: doc.class_participation_1st_hour",
    "fieldname": "1st_cp_grade",
    "fieldtype": "Float",
-   "label": "1st CP Grade"
+   "label": "1st CP Grade",
+   "precision": "2"
   },
   {
    "depends_on": "eval: doc.class_participation_2nd_hour",
@@ -192,7 +193,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-10-08 17:07:23.113850",
+ "modified": "2026-10-09 10:53:11.416240",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Student Group Student",

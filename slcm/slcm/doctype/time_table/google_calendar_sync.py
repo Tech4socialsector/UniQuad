@@ -64,9 +64,21 @@ def sync_time_table_to_google_calendar(doc, method=None, raise_error=False):
 	if not (doc.schedule_date and doc.from_time and doc.to_time):
 		return
 
+	# Document.insert() runs after_insert and then on_update. The after_insert
+	# hook has just pushed this event, so the on_update one would only push it
+	# to Google a second time (and doubles the time a recurring series takes).
+	if method == "on_update" and doc.flags.in_insert:
+		return
+
 	account = get_active_google_calendar_account()
 	if not account:
 		return
+
+	stats = frappe.flags.tt_bulk_stats
+	prev_mute = frappe.flags.mute_messages
+	# Frappe's Event -> Google push msgprints "Event Synced with Google
+	# Calendar." on every push; report it once below instead.
+	frappe.flags.mute_messages = True
 
 	# If the Google push in Event.after_insert fails, the Event row is already
 	# written — roll back to here so we don't leave orphan Events behind.
@@ -93,13 +105,24 @@ def sync_time_table_to_google_calendar(doc, method=None, raise_error=False):
 			frappe.db.set_value(
 				"Time Table", doc.name, "linked_google_event", event.name, update_modified=False
 			)
+			doc.linked_google_event = event.name
 	except Exception:
 		frappe.db.rollback(save_point="tt_gcal_sync")
 		frappe.log_error(
 			message=frappe.get_traceback(), title="Time Table Google Calendar Sync Failed"
 		)
+		if stats is not None:
+			stats.gcal_failed += 1
 		if raise_error:
 			raise
+		return
+	finally:
+		frappe.flags.mute_messages = prev_mute
+
+	if stats is not None:
+		stats.gcal_synced += 1
+	elif not prev_mute and not frappe.flags.tt_summary_shown:
+		frappe.msgprint("Synced with Google Calendar.", indicator="green", alert=True)
 
 
 def _get_student_for_session_user():

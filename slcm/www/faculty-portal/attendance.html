@@ -16,6 +16,164 @@
 /* ── Right-align numeric columns (Students / Present / Att %) ── */
 .fp-num-col { text-align: right !important; }
 
+/* ══ Attendance Sessions card ══ */
+.fp-as-head { padding: 18px 22px 16px; border-bottom: 1px solid var(--fp-border-light); }
+.fp-as-title {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 16px; font-weight: 800; color: var(--fp-text-1); margin-bottom: 16px;
+}
+.fp-as-title .fp-ms { font-size: 21px; color: var(--fp-primary); }
+
+/* Segmented page tabs */
+.fp-as-tabs {
+  display: inline-flex; border: 1px solid var(--fp-border); border-radius: 8px;
+  overflow: hidden; margin-bottom: 16px; background: var(--fp-card); max-width: 100%;
+}
+.fp-as-tab {
+  display: flex; align-items: center; gap: 7px; padding: 8px 16px;
+  border: none; background: transparent; color: var(--fp-text-1);
+  font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+.fp-as-tab + .fp-as-tab { border-left: 1px solid var(--fp-border); }
+.fp-as-tab .fp-ms { font-size: 17px; }
+.fp-as-tab:hover:not(.fp-as-tab-active) { background: var(--fp-bg); }
+.fp-as-tab-active { background: var(--fp-primary); color: #fff; }
+.fp-as-tab-count {
+  font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 10px;
+  background: var(--fp-bg); color: var(--fp-text-3);
+}
+.fp-as-tab-active .fp-as-tab-count { background: rgba(255,255,255,0.22); color: #fff; }
+
+/* Filter bar — labelled field boxes */
+.fp-as-filters { display: flex; align-items: stretch; gap: 12px; flex-wrap: wrap; }
+.fp-as-field {
+  flex: 1 1 150px; min-width: 130px; max-width: 230px;
+  border: 1px solid var(--fp-border); border-radius: 8px; background: var(--fp-card);
+}
+.fp-as-field-lbl { display: block; font-size: 11px; color: var(--fp-text-4); font-weight: 500; line-height: 1.2; }
+.fp-as-field.fp-msf .fp-msf-btn {
+  width: 100%; height: 100%; display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto;
+  align-items: center; column-gap: 8px; text-align: left;
+  padding: 7px 12px; border: none !important; background: transparent !important; box-shadow: none !important;
+}
+.fp-as-field.fp-msf .fp-as-field-lbl { grid-column: 1; grid-row: 1; }
+.fp-as-field.fp-msf .fp-msf-btn-label {
+  grid-column: 1; grid-row: 2; font-size: 13px; font-weight: 500; color: var(--fp-text-1);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px;
+}
+.fp-as-field.fp-msf .fp-msf-chevron { grid-column: 2; grid-row: 1 / span 2; color: var(--fp-text-2); }
+/* faculty_portal.css paints an active filter button white-on-primary; the
+   field box keeps its own background, so keep the text readable instead. */
+.fp-as-field.fp-msf.fp-msf-active { border-color: var(--fp-primary); background: var(--fp-primary-light); }
+.fp-as-field.fp-msf.fp-msf-active .fp-msf-btn { color: var(--fp-primary); }
+.fp-as-field.fp-msf.fp-msf-active .fp-msf-btn .fp-msf-btn-label { color: var(--fp-primary); font-weight: 600; }
+.fp-as-field.fp-msf.fp-msf-active .fp-msf-btn .fp-ms { color: var(--fp-primary); }
+.fp-as-date { padding: 7px 10px 5px 12px; }
+.fp-as-date-row { display: flex; align-items: center; gap: 7px; margin-top: 2px; }
+.fp-as-date-row > .fp-ms { font-size: 16px; color: var(--fp-primary); }
+.fp-as-date-row input {
+  flex: 1; min-width: 0; border: none; outline: none; background: transparent; padding: 0;
+  font-size: 13px; font-weight: 500; font-family: inherit; color: var(--fp-text-1);
+}
+.fp-as-date-clear {
+  border: none; background: transparent; padding: 0; cursor: pointer; display: flex;
+  color: var(--fp-text-4);
+}
+.fp-as-date-clear .fp-ms { font-size: 17px; }
+.fp-as-date-clear:hover { color: var(--fp-primary); }
+.fp-as-clear {
+  align-self: center; margin-left: auto; display: flex; align-items: center; gap: 5px;
+  padding: 8px 14px; border: 1.5px solid var(--fp-primary); border-radius: 8px;
+  background: var(--fp-card); color: var(--fp-primary); font-size: 12px; font-weight: 700;
+  font-family: inherit; cursor: pointer; white-space: nowrap; transition: background 0.15s, color 0.15s;
+}
+.fp-as-clear .fp-ms { font-size: 15px; }
+.fp-as-pending-chip {
+  align-self: center; display: flex; align-items: center; gap: 6px; padding: 6px 6px 6px 12px;
+  border-radius: 20px; background: var(--fp-primary-light); color: var(--fp-primary);
+  font-size: 12px; font-weight: 700; white-space: nowrap;
+}
+.fp-as-pending-chip > .fp-ms { font-size: 16px; }
+.fp-as-pending-chip button {
+  display: flex; border: none; background: transparent; color: var(--fp-primary); cursor: pointer; padding: 0 2px;
+}
+.fp-as-pending-chip button .fp-ms { font-size: 16px; }
+.fp-as-clear:hover { background: var(--fp-primary); color: #fff; }
+
+/* Table cells */
+#fp-sessions-table th {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--fp-text-3); padding: 12px 22px;
+}
+#fp-sessions-table td { padding: 10px 22px; vertical-align: middle; }
+#fp-sessions-table .fp-sort-arrow .fp-ms { font-size: 14px; vertical-align: -3px; margin-left: 4px; }
+.fp-as-course { max-width: 260px; }
+.fp-as-primary {
+  font-size: 13.5px; font-weight: 700; color: var(--fp-text-1);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.fp-as-primary-plain { font-size: 13.5px; color: var(--fp-text-1); }
+.fp-as-secondary {
+  font-size: 12px; color: var(--fp-text-3); margin-top: 2px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.fp-as-counts { font-size: 12px; margin-top: 2px; white-space: nowrap; }
+.fp-as-present { color: var(--fp-success); font-weight: 500; }
+.fp-as-absent { color: var(--fp-primary); font-weight: 500; }
+.fp-as-sep { color: var(--fp-text-4); margin: 0 4px; }
+.fp-as-pill {
+  display: inline-block; padding: 5px 14px; border-radius: 20px; white-space: nowrap;
+  background: var(--fp-bg); border: 1px solid var(--fp-border-light);
+  font-size: 12px; font-weight: 500; color: var(--fp-text-1);
+}
+.fp-as-status {
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 14px; border-radius: 20px;
+  font-size: 12.5px; font-weight: 500; white-space: nowrap;
+}
+.fp-as-status .fp-ms { font-size: 16px; }
+.fp-as-status-upcoming { background: var(--fp-bg); color: var(--fp-text-1); border: 1px solid var(--fp-border-light); }
+.fp-as-status-upcoming .fp-ms { color: var(--fp-text-2); }
+.fp-as-status-pending,
+.fp-as-status-marked { background: #fde8eb; color: var(--fp-primary); }
+.fp-as-status-active { background: #e3f6e8; color: #1e7b3a; }
+.fp-as-status-active .fp-ms { color: #21a04a; }
+.fp-as-action {
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 8px;
+  border: none; background: var(--fp-bg); color: var(--fp-text-1);
+  font-size: 12.5px; font-weight: 500; font-family: inherit; cursor: pointer; white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+.fp-as-action .fp-ms { font-size: 17px; }
+.fp-as-action:hover { background: var(--fp-primary); color: #fff; }
+
+/* Footer: "Showing X of N sessions" + numbered pagination */
+.fp-as-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  padding: 12px 22px; border-top: 1px solid var(--fp-border-light);
+}
+.fp-as-foot-info { font-size: 12.5px; color: var(--fp-text-3); }
+.fp-as-pages { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.fp-as-page {
+  min-width: 30px; height: 30px; padding: 0 7px; display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--fp-border); border-radius: 7px; background: var(--fp-card);
+  font-size: 12.5px; font-family: inherit; color: var(--fp-text-2); cursor: pointer;
+}
+.fp-as-page .fp-ms { font-size: 16px; }
+.fp-as-page:hover:not(:disabled):not(.fp-as-page-active) { border-color: var(--fp-primary); color: var(--fp-primary); }
+.fp-as-page:disabled { opacity: 0.45; cursor: not-allowed; }
+.fp-as-page-active { background: var(--fp-primary); border-color: var(--fp-primary); color: #fff; font-weight: 700; }
+.fp-as-ellipsis { padding: 0 4px; color: var(--fp-text-4); }
+
+@media (max-width: 768px) {
+  .fp-as-head { padding: 16px; }
+  .fp-as-tabs { display: flex; overflow-x: auto; }
+  .fp-as-tab { padding: 9px 14px; }
+  .fp-as-field { max-width: none; flex-basis: calc(50% - 7px); }
+  .fp-as-clear { margin-left: 0; }
+  .fp-as-foot { padding: 12px 16px; }
+}
+
 /* ── Responsive: sessions table reflows into cards on narrow screens ──
    CSS-only reflow of the existing <tr>/<td> nodes — no DOM restructuring,
    so onclick handlers and data-* attributes used by fpFilterSessions()/
@@ -215,6 +373,30 @@
   transition: border-color 0.15s, box-shadow 0.15s; outline: none;
 }
 .sat-search:focus { border-color: var(--fp-primary); box-shadow: 0 0 0 3px var(--fp-primary-light); }
+
+/* Attendance / Class Participants toggle */
+.sat-tabs {
+  display: inline-flex; border: 1.5px solid #920c24; border-radius: 7px; overflow: hidden;
+}
+.sat-tab {
+  display: flex; align-items: center; gap: 6px; padding: 6px 14px;
+  border: none; background: var(--fp-card); color: var(--fp-text-1);
+  font-size: 12px; font-weight: 700; font-family: inherit; cursor: pointer; white-space: nowrap;
+}
+.sat-tab + .sat-tab { border-left: 1.5px solid #920c24; }
+.sat-tab-active { background: #920c24; color: #fff; }
+
+/* Class Participants rows */
+.sat-cp-grade {
+  width: 92px; padding: 7px 10px; border: 1.5px solid var(--fp-border);
+  border-radius: var(--fp-radius-sm); font-size: 14px; font-family: inherit;
+  color: var(--fp-text-1); background: var(--fp-card); outline: none; text-align: right;
+}
+.sat-cp-grade:focus { border-color: var(--fp-primary); box-shadow: 0 0 0 3px var(--fp-primary-light); }
+.sat-cp-grade:disabled { background: var(--fp-bg); color: var(--fp-text-4); cursor: not-allowed; }
+.sat-cp-grade.sat-cp-invalid { border-color: #d92d20; box-shadow: 0 0 0 3px rgba(217,45,32,0.12); }
+.sat-cp-row.sat-cp-disabled { opacity: 0.6; }
+.sat-row-hidden { display: none !important; }
 
 /* Student list */
 .sat-student-list {
@@ -572,26 +754,31 @@
    descendants and silently mispositions them; see the fp-msf
    helper functions in extra_js for the full explanation. #}
 <div class="fp-card" id="attendance-sessions-card" style="margin-bottom:24px;">
-  <div class="fp-card-header" style="align-items:flex-start;flex-wrap:wrap;">
-    <div>
-      <div class="fp-card-title">
-        <span class="fp-ms">event_available</span>
-        Attendance Sessions
-        {% if selected_term %}
-        <span class="fp-badge fp-badge-neutral" style="margin-left:6px;font-weight:600;">Term : {{ active_term_name }}</span>
-        <span class="fp-badge fp-badge-neutral" style="margin-left:6px;font-weight:600;">Academic Year : {{ active_academic_year }}</span>
-        {% endif %}
-      </div>
-      <br>
+  <div class="fp-as-head">
+    <div class="fp-as-title">
+      <span class="fp-ms">calendar_month</span>
+      Attendance Sessions
     </div>
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-      <div class="sat-search-wrap">
-        <span class="fp-ms">search</span>
-        <input type="text" class="sat-search" id="fp-sessions-search" placeholder="Search by course, date or venue…"
-               oninput="fpFilterSessions()" aria-label="Search sessions" style="width:240px;">
-      </div>
-      <div class="fp-msf" id="fp-co-filter" data-label-all="All Courses" data-label-one="Course" data-label-many="Courses">
+
+    {# Page tabs — Attendance = class sessions, Class Participants = class
+       sessions with a participation week configured, Office Hours = OH sessions #}
+    <div class="fp-as-tabs" role="tablist">
+      <button type="button" class="fp-as-tab fp-as-tab-active" data-tab="att" onclick="fpSetSessionsTab('att')" role="tab">
+        <span class="fp-ms">person</span>Attendance
+      </button>
+      <button type="button" class="fp-as-tab" data-tab="cp" onclick="fpSetSessionsTab('cp')" role="tab">
+        <span class="fp-ms">group</span>Class Participants
+      </button>
+      <button type="button" class="fp-as-tab" data-tab="oh" onclick="fpSetSessionsTab('oh')" role="tab">
+        <span class="fp-ms">schedule</span>OH
+      </button>
+    </div>
+
+    {# Filter bar — labelled field boxes #}
+    <div class="fp-as-filters">
+      <div class="fp-msf fp-as-field" id="fp-co-filter" data-label-all="All Courses" data-label-one="Course" data-label-many="Courses">
         <button type="button" class="fp-msf-btn" onclick="fpToggleMsf('fp-co-filter')" aria-haspopup="true" aria-expanded="false" aria-label="Filter by course">
+          <span class="fp-as-field-lbl">Course</span>
           <span class="fp-msf-btn-label">All Courses</span>
           <span class="fp-ms fp-msf-chevron">expand_more</span>
         </button>
@@ -610,14 +797,47 @@
           {% endif %}
         </div>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <input type="text" class="fp-input" id="fp-date-filter-from" placeholder="DD/MM/YYYY" onchange="fpFilterSessions()" aria-label="From date" style="width:140px;padding:7px 10px;font-size:13px;">
-        <span style="font-size:13px;color:var(--fp-text-4);font-weight:600;">to</span>
-        <input type="text" class="fp-input" id="fp-date-filter-to" placeholder="DD/MM/YYYY" onchange="fpFilterSessions()" aria-label="To date" style="width:140px;padding:7px 10px;font-size:13px;">
-      </div>      
-      <div class="fp-msf" id="fp-status-filter" data-label-all="All Status" data-label-one="Status" data-label-many="Statuses">
+
+      <div class="fp-msf fp-as-field" id="fp-type-filter" data-label-all="All Types" data-label-one="Type" data-label-many="Types">
+        <button type="button" class="fp-msf-btn" onclick="fpToggleMsf('fp-type-filter')" aria-haspopup="true" aria-expanded="false" aria-label="Filter by type">
+          <span class="fp-as-field-lbl">Type</span>
+          <span class="fp-msf-btn-label">All Types</span>
+          <span class="fp-ms fp-msf-chevron">expand_more</span>
+        </button>
+        <div class="fp-msf-panel">
+          {# OH has its own tab, so it isn't offered as a Type here #}
+          {% for t in sessions | map(attribute='session_type') | unique | sort if t != 'Office Hour' %}
+          <label class="fp-msf-option"><input type="checkbox" value="{{ t }}" onchange="fpFilterSessions()"><span>{{ t }}</span></label>
+          {% endfor %}
+          <div class="fp-msf-footer">
+            <button type="button" class="fp-msf-footer-btn" onclick="fpMsfSelectAll('fp-type-filter')">Select all</button>
+            <button type="button" class="fp-msf-footer-btn fp-msf-clear" onclick="fpMsfClearAll('fp-type-filter')">Clear all</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="fp-as-field fp-as-date">
+        <span class="fp-as-field-lbl">From Date</span>
+        <div class="fp-as-date-row">
+          <span class="fp-ms">calendar_today</span>
+          <input type="text" id="fp-date-filter-from" placeholder="DD/MM/YYYY" onchange="fpFilterSessions()" aria-label="From date">
+          <button type="button" class="fp-as-date-clear" onclick="fpClearDate('fp-date-filter-from')" aria-label="Clear from date"><span class="fp-ms">cancel</span></button>
+        </div>
+      </div>
+
+      <div class="fp-as-field fp-as-date">
+        <span class="fp-as-field-lbl">To Date</span>
+        <div class="fp-as-date-row">
+          <span class="fp-ms">calendar_today</span>
+          <input type="text" id="fp-date-filter-to" placeholder="DD/MM/YYYY" onchange="fpFilterSessions()" aria-label="To date">
+          <button type="button" class="fp-as-date-clear" onclick="fpClearDate('fp-date-filter-to')" aria-label="Clear to date"><span class="fp-ms">cancel</span></button>
+        </div>
+      </div>
+
+      <div class="fp-msf fp-as-field" id="fp-status-filter" data-label-all="All Statuses" data-label-one="Status" data-label-many="Statuses">
         <button type="button" class="fp-msf-btn" onclick="fpToggleMsf('fp-status-filter')" aria-haspopup="true" aria-expanded="false" aria-label="Filter by status">
-          <span class="fp-msf-btn-label">All Status</span>
+          <span class="fp-as-field-lbl">Status</span>
+          <span class="fp-msf-btn-label">All Statuses</span>
           <span class="fp-ms fp-msf-chevron">expand_more</span>
         </button>
         <div class="fp-msf-panel">
@@ -631,6 +851,15 @@
           </div>
         </div>
       </div>
+
+      {# Pending-task filter from the dashboard's Pending Tasks card (?pending=…) #}
+      <div id="fp-pending-chip" class="fp-as-pending-chip" style="display:none;">
+        <span class="fp-ms">assignment_late</span><span id="fp-pending-chip-lbl"></span>
+        <button type="button" onclick="fpSetPendingFilter('')" aria-label="Remove pending filter"><span class="fp-ms">close</span></button>
+      </div>
+      <button type="button" class="fp-as-clear" onclick="fpClearSessionFilters()">
+        <span class="fp-ms">refresh</span>Clear Filters
+      </button>
       <button class="fp-btn fp-btn-primary fp-btn-sm" onclick="fpOpenSessionPicker()" id="fp-mark-btn" title="Mark attendance for a pending session" style="display:none;">
         <span class="fp-ms">add</span>Mark Attendance
       </button>
@@ -649,15 +878,11 @@
         <thead>
           <tr>
             <th class="fp-sortable-th" data-sort-key="course" onclick="fpSortSessions('course')">Course<span class="fp-sort-arrow"></span></th>
-            <th class="fp-sortable-th" data-sort-key="date" onclick="fpSortSessions('date')">Date<span class="fp-sort-arrow"></span></th>
-            <th>Time</th>
+            <th class="fp-sortable-th" data-sort-key="date" onclick="fpSortSessions('date')">Date &amp; Time<span class="fp-sort-arrow"><span class="fp-ms">unfold_more</span></span></th>
             <th>Type</th>
-            <th>Venue</th>
-            <th class="fp-sortable-th fp-num-col" data-sort-key="students" onclick="fpSortSessions('students')">Students<span class="fp-sort-arrow"></span></th>
-            <th class="fp-sortable-th fp-num-col" data-sort-key="present" onclick="fpSortSessions('present')">Present<span class="fp-sort-arrow"></span></th>
-            <th class="fp-sortable-th fp-num-col" data-sort-key="pct" onclick="fpSortSessions('pct')">Att %<span class="fp-sort-arrow"></span></th>
+            <th class="fp-sortable-th" data-sort-key="students" onclick="fpSortSessions('students')">Students<span class="fp-sort-arrow"></span></th>
             <th>Status</th>
-            <th style="text-align:center;">Actions</th>
+            <th>Action</th>
           </tr>
         </thead>
         <tbody>
@@ -665,61 +890,57 @@
           <tr class="fp-session-row"
               data-co="{{ s.course_offering }}"
               data-marked="{{ s.computed_status | lower }}"
+              data-type="{{ s.session_type }}"
+              data-category="{{ s.category }}"
+              data-cp="{{ '1' if s.has_cp else '0' }}"
+              data-tasks="{{ s.tasks }}"
               data-session="{{ s.name }}"
               data-session-date="{{ s.session_date }}"
+              data-time-sort="{{ s.from_time_sort }}"
               data-total="{{ s.total }}"
               data-present="{{ s.present if s.marked else '' }}"
               data-pct="{{ s.pct if s.marked else '' }}"
               data-rfid-active-until="{{ s.rfid_active_until }}"
               data-rfid-activated="{{ '1' if s.rfid_activated else '0' }}"
+              data-course-name="{{ s.course_name }}"
+              data-status="{{ s.computed_status }}"
               style="cursor:pointer;"
-              onclick='attRowClick(this, {{ s.name | tojson }}, {{ s.course_name | tojson }}, {{ s.computed_status | tojson }})'>
-            <td data-label="Course" style="font-weight:600;color:var(--fp-text-1);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ s.course_name }}">{{ s.course_name }}</td>
-            <td data-label="Date" style="white-space:nowrap;color:var(--fp-text-2);">{{ s.session_date_fmt }}</td>
-            <td data-label="Time" style="white-space:nowrap;font-size:12px;color:var(--fp-text-3);">{{ s.from_time }}{% if s.to_time %} – {{ s.to_time }}{% endif %}</td>
-            <td data-label="Type" class="fp-col-type"><span class="fp-badge fp-badge-neutral">{{ s.session_type }}</span></td>
-            <td data-label="Venue" class="fp-col-venue" style="color:var(--fp-text-3);font-size:12px;">{{ s.venue }}</td>
-            <td data-label="Students" class="fp-num-col" style="font-weight:500;">{{ s.total }}</td>
-            <td data-label="Present" class="fp-num-col" style="font-weight:700;color:var(--fp-success);">{{ s.present if s.marked else '—' }}</td>
-            <td data-label="Att %" class="fp-num-col">
-              {% if s.marked %}
-                {% if s.pct >= 100 %}<span class="fp-badge fp-badge-success">{{ s.pct }}%</span>
-                {% elif s.pct >= 75 %}<span class="fp-badge fp-badge-success">{{ s.pct }}%</span>
-                {% elif s.pct > 0 %}<span class="fp-badge fp-badge-warning">{{ s.pct }}%</span>
-                {% else %}<span class="fp-badge fp-badge-outline">{{ s.pct }}%</span>{% endif %}
-              {% else %}<span class="fp-badge fp-badge-neutral">—</span>{% endif %}
+              onclick="attRowClick(this, this.getAttribute('data-session'), this.getAttribute('data-course-name'), this.getAttribute('data-status'))">
+            <td data-label="Course" class="fp-as-course">
+              <div class="fp-as-primary" title="{{ s.course_name }}">{{ s.course_name }}</div>
+              {% if s.programme_name %}<div class="fp-as-secondary">{{ s.programme_name }}</div>{% endif %}
+            </td>
+            <td data-label="Date &amp; Time" style="white-space:nowrap;">
+              <div class="fp-as-primary-plain">{{ s.session_date_fmt }}</div>
+              <div class="fp-as-secondary">{{ s.from_time }}{% if s.to_time %} – {{ s.to_time }}{% endif %}</div>
+            </td>
+            <td data-label="Type" class="fp-col-type"><span class="fp-as-pill">{{ s.session_type_label }}</span></td>
+            <td data-label="Students">
+              <div class="fp-as-primary-plain">{{ s.total }} student{{ 's' if s.total != 1 else '' }}</div>
+              <div class="fp-as-counts">
+                <span class="fp-as-present">Present: {{ s.present if s.marked else 0 }}</span>
+                <span class="fp-as-sep">|</span>
+                <span class="fp-as-absent">Absent: {{ s.absent if s.marked else 0 }}</span>
+              </div>
             </td>
             <td data-label="Status">
               {% if s.computed_status == 'Marked' %}
-                <span class="fp-badge fp-badge-success"><span class="fp-ms" style="font-size:12px;">check_circle</span>Marked</span>
+                <span class="fp-as-status fp-as-status-marked"><span class="fp-ms">task_alt</span>Marked</span>
               {% elif s.computed_status == 'Pending' %}
-                <span class="fp-badge fp-badge-warning"><span class="fp-ms" style="font-size:12px;">schedule</span>Pending</span>
+                <span class="fp-as-status fp-as-status-pending"><span class="fp-ms">error</span>Pending</span>
               {% elif s.computed_status == 'Active' %}
-                <span class="fp-badge fp-badge-success"><span class="fp-ms" style="font-size:12px;">play_circle</span>Active</span>
+                <span class="fp-as-status fp-as-status-active"><span class="fp-ms">check_circle</span>Active</span>
               {% else %}
-                <span class="fp-badge fp-badge-neutral"><span class="fp-ms" style="font-size:12px;">schedule</span>Upcoming</span>
+                <span class="fp-as-status fp-as-status-upcoming"><span class="fp-ms">schedule</span>Upcoming</span>
               {% endif %}
             </td>
-            <td data-label="Actions" class="fp-col-actions" style="text-align:center;" onclick="event.stopPropagation()">
-              {% if s.computed_status == 'Pending' %}
-              <button class="fp-btn fp-btn-primary fp-btn-sm"
-                      onclick='fpOpenMarkModal({{ s.name | tojson }}, {{ s.course_name | tojson }})'
-                      title="Mark attendance" aria-label="Mark attendance for {{ s.course_name }}">
-                <span class="fp-ms">how_to_reg</span><span class="fp-btn-label">Mark</span>
+            <td data-label="Action" class="fp-col-actions" onclick="event.stopPropagation()">
+              {# Label is set per page tab by _fpRefreshActionLabels() #}
+              <button type="button" class="fp-as-action"
+                      onclick="attRowClick(this.closest('tr'), this.closest('tr').getAttribute('data-session'), this.closest('tr').getAttribute('data-course-name'), this.closest('tr').getAttribute('data-status'))"
+                      aria-label="Open session {{ s.course_name }}">
+                <span class="fp-ms">visibility</span><span class="fp-as-action-lbl">View</span>
               </button>
-              {% elif s.computed_status == 'Active' %}
-              <button class="fp-btn fp-btn-success fp-btn-sm"
-                      onclick='fpOpenMarkModal({{ s.name | tojson }}, {{ s.course_name | tojson }})'
-                      title="Mark attendance" aria-label="Mark attendance for {{ s.course_name }}">
-                <span class="fp-ms">how_to_reg</span><span class="fp-btn-label">Mark</span>
-              </button>
-              {% else %}
-              <button class="fp-btn fp-btn-secondary fp-btn-sm" style="color:var(--fp-primary); border-color:var(--fp-primary);"
-                      onclick="fpViewSession('{{ s.name }}')"
-                      title="View session details" aria-label="View session details for {{ s.course_name }}">
-                <span class="fp-ms">visibility</span><span class="fp-btn-label">View</span>
-              </button>
-              {% endif %}
             </td>
           </tr>
           {% endfor %}
@@ -787,9 +1008,27 @@
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     /* Default the session date range to today */
-    flatpickr("#fp-date-filter-from", { altInput: true, altFormat: "d/m/Y", dateFormat: "Y-m-d", defaultDate: "today" });
-    flatpickr("#fp-date-filter-to", { altInput: true, altFormat: "d/m/Y", dateFormat: "Y-m-d", defaultDate: "today" });
-    if (document.getElementById('fp-date-filter-from')) fpFilterSessions();
+    /* ?tab=att|cp|oh and ?pending=<task> (from the dashboard's Pending Tasks
+       card). Pending sessions are mostly in the past, so a pending filter
+       starts without the default today-only date range. */
+    var _qp = new URLSearchParams(window.location.search);
+    var _qPending = _qp.get('pending') || '';
+    var _qTab = _qp.get('tab') || '';
+    var _dateDefault = _qPending ? null : "today";
+    flatpickr("#fp-date-filter-from", { altInput: true, altFormat: "d/m/Y", dateFormat: "Y-m-d", defaultDate: _dateDefault });
+    flatpickr("#fp-date-filter-to", { altInput: true, altFormat: "d/m/Y", dateFormat: "Y-m-d", defaultDate: _dateDefault });
+    if (['att', 'cp', 'oh'].indexOf(_qTab) !== -1 && typeof fpSetSessionsTab === 'function') {
+      _fpSessionsTab = _qTab;
+      document.querySelectorAll('.fp-as-tab').forEach(function(btn) {
+        btn.classList.toggle('fp-as-tab-active', btn.getAttribute('data-tab') === _qTab);
+      });
+      _fpRefreshActionLabels();
+    }
+    if (_qPending && typeof fpSetPendingFilter === 'function') {
+      fpSetPendingFilter(_qPending);
+      _fpSyncFieldsToPending();
+    }
+    else if (document.getElementById('fp-date-filter-from')) fpFilterSessions();
     if(document.getElementById('sat-date')) {
       flatpickr("#sat-date", { altInput: true, altFormat: "d/m/Y", dateFormat: "Y-m-d" });
     }
@@ -1100,34 +1339,181 @@ var FP_SESSIONS_PAGE_SIZE = 10;
 var _fpSessionsPage = 1;
 var _fpSortKey = null;
 var _fpSortDir = 1;
+var _fpSessionsTab = 'att';   /* 'att' | 'cp' | 'oh' — see fpSetSessionsTab */
+var _fpPendingTask = '';      /* '' | 'all' | a task key — see fpSetPendingFilter */
+
+var FP_PENDING_LABELS = {
+  all:        'All pending tasks',
+  course_att: 'Pending: Course Attendance',
+  cp_att:     'Pending: Class Participation Attendance',
+  cp_grade:   'Pending: Class Participation Grade',
+  oh_att:     'Pending: OH Attendance',
+  oh_grade:   'Pending: OH Grading',
+};
+
+/* Filter rows to sessions with a pending task (dashboard Pending Tasks card
+   links here with ?tab=…&pending=<key>). Persists across page tabs. */
+function fpSetPendingFilter(task) {
+  _fpPendingTask = FP_PENDING_LABELS[task] ? task : '';
+  var chip = document.getElementById('fp-pending-chip');
+  if (chip) chip.style.display = _fpPendingTask ? 'flex' : 'none';
+  var lbl = document.getElementById('fp-pending-chip-lbl');
+  if (lbl) lbl.textContent = FP_PENDING_LABELS[_fpPendingTask] || '';
+  /* Keep the URL in sync so reload/back keeps (or drops) the filter */
+  var p = new URLSearchParams(window.location.search);
+  if (_fpPendingTask) p.set('pending', _fpPendingTask); else p.delete('pending');
+  var qs = p.toString();
+  history.replaceState(history.state, '', window.location.pathname + (qs ? '?' + qs : '') + window.location.hash);
+  fpFilterSessions();
+}
+
+/* Reflect an incoming pending filter (?pending=…) in the visible filter
+   fields: Status = the statuses of the matching sessions, From/To Date =
+   their date range — so the fields say what is actually being shown. */
+function _fpSyncFieldsToPending() {
+  if (!_fpPendingTask) return;
+  var rows = Array.prototype.slice.call(document.querySelectorAll('.fp-session-row')).filter(function(row) {
+    return _fpRowInTab(row, _fpSessionsTab) && _fpRowMatchesPending(row);
+  });
+  if (!rows.length) return;
+
+  var statuses = [], dates = [];
+  rows.forEach(function(row) {
+    var st = (row.getAttribute('data-marked') || '').toLowerCase();
+    if (st && statuses.indexOf(st) === -1) statuses.push(st);
+    var d = row.getAttribute('data-session-date');
+    if (d) dates.push(d);
+  });
+  _msfSetValues('fp-status-filter', statuses);
+
+  dates.sort();
+  [['fp-date-filter-from', dates[0]], ['fp-date-filter-to', dates[dates.length - 1]]].forEach(function(pair) {
+    var el = document.getElementById(pair[0]);
+    if (!el || !pair[1]) return;
+    if (el._flatpickr) el._flatpickr.setDate(pair[1], false); else el.value = pair[1];
+  });
+  fpFilterSessions();
+}
+
+function _fpRowMatchesPending(row) {
+  if (!_fpPendingTask) return true;
+  var tasks = (row.getAttribute('data-tasks') || '').split(' ').filter(Boolean);
+  return _fpPendingTask === 'all' ? tasks.length > 0 : tasks.indexOf(_fpPendingTask) !== -1;
+}
 
 function fpFilterSessions() {
   _fpSessionsPage = 1;
   _fpApplySessionsView();
 }
 
-function _fpApplySessionsView() {
-  ['fp-co-filter', 'fp-status-filter'].forEach(_msfRefreshLabel);
+/* Page tabs:
+     att = class sessions (everything except Office Hours)
+     cp  = class sessions with a Class Participation week configured
+     oh  = Office Hours sessions */
+function _fpRowInTab(row, tab) {
+  var category = row.getAttribute('data-category');
+  if (tab === 'oh') return category === 'oh';
+  if (tab === 'cp') return row.getAttribute('data-cp') === '1';
+  return category !== 'oh';
+}
 
-  var cos     = _msfValues('fp-co-filter');
+/* Back to the page's default view: Course/Type/Status = All, no pending
+   filter, From/To Date = today. */
+function _fpResetFiltersToDefault() {
+  ['fp-co-filter', 'fp-type-filter', 'fp-status-filter'].forEach(function(id) {
+    var box = document.getElementById(id);
+    if (box) box.querySelectorAll('.fp-msf-panel input[type="checkbox"]').forEach(function(cb) { cb.checked = false; });
+  });
+  ['fp-date-filter-from', 'fp-date-filter-to'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    if (el._flatpickr) el._flatpickr.setDate(new Date(), false); else el.value = _todayIso();
+  });
+  _fpPendingTask = '';
+  var chip = document.getElementById('fp-pending-chip');
+  if (chip) chip.style.display = 'none';
+}
+
+/* Switching tabs starts that tab fresh — filters (incl. a pending filter
+   that came from the dashboard) belong to the tab they were set on. */
+function fpSetSessionsTab(tab) {
+  if (tab !== _fpSessionsTab) {
+    _fpResetFiltersToDefault();
+    var p = new URLSearchParams(window.location.search);
+    p.delete('pending');
+    p.set('tab', tab);
+    history.replaceState(history.state, '', window.location.pathname + '?' + p.toString() + window.location.hash);
+  }
+  _fpSessionsTab = tab;
+  document.querySelectorAll('.fp-as-tab').forEach(function(btn) {
+    var active = btn.getAttribute('data-tab') === tab;
+    btn.classList.toggle('fp-as-tab-active', active);
+    btn.setAttribute('aria-selected', active ? 'true' : 'false');
+  });
+  _fpRefreshActionLabels();
+  fpFilterSessions();
+}
+
+/* Action button reads "View" for anything already held/marked, "Mark" for a
+   session still awaiting attendance, and "Grade" on the Class Participants
+   tab (which opens the modal straight on its Class Participants list). */
+function _fpRefreshActionLabels() {
+  document.querySelectorAll('.fp-session-row').forEach(function(row) {
+    var status = row.getAttribute('data-status');
+    var marked = !!row.getAttribute('data-present');
+    var label = 'View', icon = 'visibility';
+    if ((_fpSessionsTab === 'cp' || _fpSessionsTab === 'oh') && status !== 'Upcoming') {
+      label = 'Grade'; icon = 'grading';
+    } else if (status === 'Pending' || (status === 'Active' && !marked)) {
+      label = 'Mark'; icon = 'how_to_reg';
+    }
+    var btn = row.querySelector('.fp-as-action');
+    if (!btn) return;
+    btn.querySelector('.fp-ms').textContent = icon;
+    btn.querySelector('.fp-as-action-lbl').textContent = label;
+  });
+}
+
+function fpClearDate(id) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  if (el._flatpickr) el._flatpickr.clear(); else el.value = '';
+  fpFilterSessions();
+}
+
+function fpClearSessionFilters() {
+  ['fp-co-filter', 'fp-type-filter', 'fp-status-filter'].forEach(function(id) {
+    var box = document.getElementById(id);
+    if (box) box.querySelectorAll('.fp-msf-panel input[type="checkbox"]').forEach(function(cb) { cb.checked = false; });
+  });
+  ['fp-date-filter-from', 'fp-date-filter-to'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    if (el._flatpickr) el._flatpickr.clear(); else el.value = '';
+  });
+  fpSetPendingFilter('');  /* also re-filters */
+}
+
+function _fpApplySessionsView() {
+  ['fp-co-filter', 'fp-type-filter', 'fp-status-filter'].forEach(_msfRefreshLabel);
+
+  var cos      = _msfValues('fp-co-filter');
+  var types    = _msfValues('fp-type-filter');
   var statuses = _msfValues('fp-status-filter').map(function(v) { return v.toLowerCase(); });
-  var searchEl = document.getElementById('fp-sessions-search');
-  var q = searchEl ? searchEl.value.toLowerCase().trim() : '';
   var fromDate = (document.getElementById('fp-date-filter-from') || {}).value || '';
-  var toDate = (document.getElementById('fp-date-filter-to') || {}).value || '';
-  var allRows = Array.prototype.slice.call(document.querySelectorAll('.fp-session-row'));
+  var toDate   = (document.getElementById('fp-date-filter-to') || {}).value || '';
+  var allRows  = Array.prototype.slice.call(document.querySelectorAll('.fp-session-row'));
 
   var matched = allRows.filter(function(row) {
-    var matchesFilters = (!cos.length || cos.indexOf(row.getAttribute('data-co')) !== -1)
-      && (!statuses.length || statuses.indexOf((row.getAttribute('data-marked') || '').toLowerCase()) !== -1);
-    var matchesSearch = !q || row.textContent.toLowerCase().includes(q);
-    
+    if (!_fpRowInTab(row, _fpSessionsTab)) return false;
+    if (!_fpRowMatchesPending(row)) return false;
+    if (cos.length && cos.indexOf(row.getAttribute('data-co')) === -1) return false;
+    if (types.length && types.indexOf(row.getAttribute('data-type')) === -1) return false;
+    if (statuses.length && statuses.indexOf((row.getAttribute('data-marked') || '').toLowerCase()) === -1) return false;
     var rowDate = row.getAttribute('data-session-date') || '';
-    var matchesDate = true;
-    if (fromDate && rowDate < fromDate) matchesDate = false;
-    if (toDate && rowDate > toDate) matchesDate = false;
-
-    return matchesFilters && matchesSearch && matchesDate;
+    if (fromDate && rowDate < fromDate) return false;
+    if (toDate && rowDate > toDate) return false;
+    return true;
   });
 
   /* Hide everything that doesn't match, first */
@@ -1143,27 +1529,50 @@ function _fpApplySessionsView() {
   var empty = document.getElementById('fp-sessions-empty');
   if (empty) empty.style.display = (matched.length === 0 && allRows.length > 0) ? 'block' : 'none';
 
-  _fpRenderPagination(matched.length, totalPages);
+  _fpRenderPagination(pageRows.length, matched.length, totalPages);
 }
 
-function _fpRenderPagination(totalMatched, totalPages) {
+/* Page numbers to show: always first + last, a window around the current
+   page, and '…' for the gaps — e.g. 1 2 3 4 5 … 7 or 1 … 4 5 6 … 12. */
+function _fpPageList(current, total) {
+  if (total <= 7) {
+    var all = [];
+    for (var i = 1; i <= total; i++) all.push(i);
+    return all;
+  }
+  var pages = [1];
+  var lo = Math.max(2, current - 1), hi = Math.min(total - 1, current + 1);
+  if (current <= 3) { lo = 2; hi = 5; }
+  if (current >= total - 2) { lo = total - 4; hi = total - 1; }
+  if (lo > 2) pages.push('…');
+  for (var p = lo; p <= hi; p++) pages.push(p);
+  if (hi < total - 1) pages.push('…');
+  pages.push(total);
+  return pages;
+}
+
+function _fpRenderPagination(shown, totalMatched, totalPages) {
   var el = document.getElementById('fp-sessions-pagination');
   if (!el) return;
-  if (totalMatched <= FP_SESSIONS_PAGE_SIZE) { el.innerHTML = ''; return; }
+  if (!totalMatched) { el.innerHTML = ''; return; }
 
-  var start = (_fpSessionsPage - 1) * FP_SESSIONS_PAGE_SIZE + 1;
-  var end   = Math.min(_fpSessionsPage * FP_SESSIONS_PAGE_SIZE, totalMatched);
+  var html = '<div class="fp-as-foot">'
+    + '<span class="fp-as-foot-info">Showing ' + shown + ' of ' + totalMatched + ' session' + (totalMatched === 1 ? '' : 's') + '</span>';
 
-  var html = '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-top:1px solid var(--fp-border);">'
-    + '<span style="font-size:12px;color:var(--fp-text-4);">Showing ' + start + '–' + end + ' of ' + totalMatched + '</span>'
-    + '<div style="display:flex;gap:6px;">'
-    + '<button class="fp-btn fp-btn-secondary fp-btn-sm" onclick="fpGotoPage(' + (_fpSessionsPage - 1) + ')" ' + (_fpSessionsPage <= 1 ? 'disabled' : '') + '>'
-    + '<span class="fp-ms">chevron_left</span></button>'
-    + '<span style="font-size:12px;color:var(--fp-text-3);padding:6px 4px;">Page ' + _fpSessionsPage + ' of ' + totalPages + '</span>'
-    + '<button class="fp-btn fp-btn-secondary fp-btn-sm" onclick="fpGotoPage(' + (_fpSessionsPage + 1) + ')" ' + (_fpSessionsPage >= totalPages ? 'disabled' : '') + '>'
-    + '<span class="fp-ms">chevron_right</span></button>'
-    + '</div></div>';
-  el.innerHTML = html;
+  if (totalPages > 1) {
+    html += '<div class="fp-as-pages">'
+      + '<button type="button" class="fp-as-page" onclick="fpGotoPage(' + (_fpSessionsPage - 1) + ')" aria-label="Previous page" '
+      + (_fpSessionsPage <= 1 ? 'disabled' : '') + '><span class="fp-ms">chevron_left</span></button>';
+    _fpPageList(_fpSessionsPage, totalPages).forEach(function(p) {
+      if (p === '…') { html += '<span class="fp-as-ellipsis">…</span>'; return; }
+      html += '<button type="button" class="fp-as-page' + (p === _fpSessionsPage ? ' fp-as-page-active' : '') + '" '
+        + 'onclick="fpGotoPage(' + p + ')"' + (p === _fpSessionsPage ? ' aria-current="page"' : '') + '>' + p + '</button>';
+    });
+    html += '<button type="button" class="fp-as-page" onclick="fpGotoPage(' + (_fpSessionsPage + 1) + ')" aria-label="Next page" '
+      + (_fpSessionsPage >= totalPages ? 'disabled' : '') + '><span class="fp-ms">chevron_right</span></button>'
+      + '</div>';
+  }
+  el.innerHTML = html + '</div>';
 }
 
 function fpGotoPage(page) {
@@ -1173,8 +1582,8 @@ function fpGotoPage(page) {
 
 /* ── Column sort — reorders the actual <tr> nodes in the DOM ── */
 var FP_SORT_ACCESSORS = {
-  course:   function(row) { return row.querySelector('td').textContent.trim().toLowerCase(); },
-  date:     function(row) { return row.getAttribute('data-session-date') || ''; },
+  course:   function(row) { return (row.getAttribute('data-course-name') || '').toLowerCase(); },
+  date:     function(row) { return (row.getAttribute('data-session-date') || '') + ' ' + (row.getAttribute('data-time-sort') || '').padStart(8, '0'); },
   students: function(row) { return parseFloat(row.getAttribute('data-total')) || 0; },
   present:  function(row) { return parseFloat(row.getAttribute('data-present')) || -1; },
   pct:      function(row) { return parseFloat(row.getAttribute('data-pct')) || -1; },
@@ -1205,6 +1614,7 @@ function fpSortSessions(key) {
 }
 /* Initial paginate/render pass, then auto-apply course_offering/session from URL */
 (function() {
+  _fpRefreshActionLabels();
   _fpApplySessionsView();
 
   var p = new URLSearchParams(window.location.search);
@@ -1241,42 +1651,47 @@ document.addEventListener('DOMContentLoaded', function() {
   var qs = p.toString();
   history.replaceState(history.state, '', window.location.pathname + (qs ? '?' + qs : '') + window.location.hash);
   var row = document.querySelector('.fp-session-row[data-session="' + CSS.escape(markSession) + '"]');
-  var courseCell = row && row.querySelector('[data-label="Course"]');
-  fpOpenMarkModal(markSession, courseCell ? courseCell.textContent.trim() : '');
+  fpOpenMarkModal(markSession, row ? row.getAttribute('data-course-name') : '');
 });
 
 /* ══════════════════════════════════════════════════════════
    ROW CLICK — open mark or view based on session state
 ══════════════════════════════════════════════════════════ */
 function attRowClick(row, sessionName, courseName, status) {
-  /* data-present is only filled in once attendance has been marked */
-  var isMarked = !!(row && row.getAttribute('data-present'));
-  if (status === 'Pending' || (status === 'Active' && !isMarked)) {
-    fpOpenMarkModal(sessionName, courseName);
-  } else {
-    fpViewSession(sessionName);
-  }
+  /* Class Participants tab: open the mark modal straight on its Class
+     Participants list (also for already-marked sessions, to edit marks).
+     Upcoming classes haven't happened yet, so they just open the view. */
+  /* Same for the OH tab, whose participants list is the OH group's. */
+  fpViewSession(sessionName, (_fpSessionsTab === 'cp' || _fpSessionsTab === 'oh') ? 'cp' : 'att');
 }
 
 /* ══════════════════════════════════════════════════════════
    SESSION PICKER MODAL
 ══════════════════════════════════════════════════════════ */
+/* Display details for a session from the server-embedded _attSessions
+   (the table no longer has one plain-text column per field to read). */
+function _fpSessionMeta(sessionName) {
+  var s = (_attSessions || []).filter(function(x) { return x.name === sessionName; })[0] || {};
+  return {
+    course: s.course_name || '—',
+    date:   s.session_date_fmt || '—',
+    time:   s.from_time ? s.from_time + (s.to_time ? ' – ' + s.to_time : '') : '—',
+    type:   s.session_type_label || s.session_type || '—',
+    venue:  s.venue || '—',
+    total:  (s.total !== undefined && s.total !== null) ? String(s.total) : '—',
+  };
+}
+
 function fpOpenSessionPicker() {
   /* Collect all pending sessions from the table rows */
   var sessions = [];
   var today = new Date().toDateString();
 
   document.querySelectorAll('.fp-session-row[data-marked="pending"]').forEach(function(row) {
-    var tds = row.querySelectorAll('td');
     var name  = row.getAttribute('data-session') || '';
     if (!name) return;
-    var course = tds[0] ? tds[0].textContent.trim() : '—';
-    var date   = tds[1] ? tds[1].textContent.trim() : '—';
-    var time   = tds[2] ? tds[2].textContent.trim() : '—';
-    var type   = tds[3] ? tds[3].textContent.trim() : '—';
-    var venue  = tds[4] ? tds[4].textContent.trim() : '—';
-    var total  = tds[5] ? tds[5].textContent.trim() : '—';
-    sessions.push({ name: name, course: course, date: date, time: time, type: type, venue: venue, total: total });
+    var m = _fpSessionMeta(name);
+    sessions.push({ name: name, course: m.course, date: m.date, time: m.time, type: m.type, venue: m.venue, total: m.total });
   });
 
   if (!sessions.length) {
@@ -1349,11 +1764,31 @@ var _sat = {
    When a specific session is known (row "Mark" click), skip the Based-On
    form entirely and load that session's roster directly — the faculty
    already picked the course + date + time slot by clicking the row. */
+/* Upcoming sessions open read-only: switches, mark inputs, bulk buttons,
+   RFID and Save are all disabled until the session has started. */
+function _satApplyReadOnly(sessionName) {
+  var s = (typeof _attSessions !== 'undefined' ? _attSessions : []).filter(function(x) { return x.name === sessionName; })[0];
+  _sat.readOnly = !!(s && s.computed_status === 'Upcoming');
+  var note = document.getElementById('sat-readonly-note');
+  if (note) note.style.display = _sat.readOnly ? 'flex' : 'none';
+  var save = document.getElementById('att-save-btn');
+  if (save) {
+    save.disabled = _sat.readOnly;
+    save.style.opacity = _sat.readOnly ? '0.5' : '';
+    save.style.cursor = _sat.readOnly ? 'not-allowed' : 'pointer';
+  }
+  var rfid = document.getElementById('sat-rfid');
+  if (rfid) rfid.style.display = _sat.readOnly ? 'none' : 'flex';
+  document.querySelectorAll('#sat-list .sat-chk').forEach(function(c) { c.disabled = _sat.readOnly; });
+}
+
 function fpOpenMarkModal(sessionName, courseName, slots) {
   _satResetForm();
   _renderRfidControl('sat-rfid', sessionName);
   _sat.sessionName = sessionName || '';
   _sat.modalSlots  = slots || null;
+  _satApplyReadOnly(_sat.sessionName);
+  _satShowTabs(!!sessionName);
 
   _satRenderModalSlotPicker(slots || null, sessionName);
 
@@ -1445,6 +1880,9 @@ function fpChooseModalSlot(sessionName) {
   var chosen = slots.filter(function(s) { return s.session === sessionName; })[0];
 
   _sat.sessionName = sessionName;
+  _cpReset();
+  _satApplyReadOnly(sessionName);
+  _satShowTabs(true);  /* label + toggle visibility + OH-only list */
   _renderRfidControl('sat-rfid', sessionName);
   _satRenderModalSlotPicker(slots, sessionName);
   _satLoadSessionRoster(sessionName, chosen ? chosen.courseName : null);
@@ -1478,6 +1916,21 @@ function _satSessionMeta(sessionName) {
    Cached per session name so switching between slot tabs after the first
    load is instant instead of re-fetching from the server every click. */
 var _satRosterCache = {};
+var _satAuditCache = {};
+
+function _satRenderAudit(audit) {
+  var el = document.getElementById('sat-audit');
+  if (!el) return;
+  if (!audit) { el.innerHTML = ''; return; }
+  var rfid = audit.rfid_activated_on
+    ? '<span class="fp-ms" style="font-size:14px;">wifi_tethering</span>Biometric activated on ' + escHtml(audit.rfid_activated_on)
+      + (audit.rfid_activated_by ? ' by ' + escHtml(audit.rfid_activated_by) : '')
+    : '<span class="fp-ms" style="font-size:14px;">wifi_off</span>Biometric attendance not activated';
+  el.innerHTML = '<span style="display:flex;align-items:center;gap:5px;">'
+    + '<span class="fp-ms" style="font-size:14px;">history_edu</span>Last updated by ' + escHtml(audit.last_updated_by)
+    + ' · ' + escHtml(audit.last_updated_on) + '</span>'
+    + '<span style="display:flex;align-items:center;gap:5px;">' + rfid + '</span>';
+}
 
 function _satLoadSessionRoster(sessionName, courseName) {
   var step1 = document.getElementById('sat-step-form');
@@ -1496,8 +1949,10 @@ function _satLoadSessionRoster(sessionName, courseName) {
     _sat.students = _satRosterCache[sessionName];
     _satRenderList(_sat.students);
     _satRefreshCounters();
+    _satRenderAudit(_satAuditCache[sessionName]);
     return;
   }
+  _satRenderAudit(null);
 
   document.getElementById('sat-list').innerHTML =
     '<div style="padding:40px;text-align:center;color:var(--fp-text-4);">'
@@ -1512,12 +1967,14 @@ function _satLoadSessionRoster(sessionName, courseName) {
                  status: s.status === 'Absent' ? 'Absent' : 'Present' };
       }) : [];
       _satRosterCache[sessionName] = students;
+      _satAuditCache[sessionName] = data && data.session_audit;
       /* Guard against a slower earlier request resolving after a later
          tab switch — only apply if this is still the active session. */
       if (sessionName !== _sat.sessionName) return;
       _sat.students = students;
       _satRenderList(_sat.students);
       _satRefreshCounters();
+      _satRenderAudit(_satAuditCache[sessionName]);
     },
     function(msg) {
       _showError('sat-error', msg || 'Could not load students for this session.');
@@ -1591,6 +2048,9 @@ function _satResetForm() {
   el = document.getElementById('sat-form-error'); if (el) el.style.display = 'none';
   el = document.getElementById('sat-error');      if (el) el.style.display = 'none';
   _satUpdateCounters(0, 0, 0);
+  _satRenderAudit(null);
+  _cpReset();
+  _satShowTabs(false);
 
   /* Rebuild right column for the current Based On mode */
   satBasedOnChange();
@@ -1776,7 +2236,8 @@ function _satRenderList(students) {
       + '<label class="sat-switch" style="position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;cursor:pointer;">'
       + '<input type="checkbox" id="' + uid + '" class="sat-chk" data-student="' + escHtml(s.student) + '" '
       + 'data-idx="' + i + '" onchange="satToggleSwitch(this)" '
-      + (present ? 'checked ' : '') + 'style="opacity:0;width:0;height:0;position:absolute;">'
+      + (present ? 'checked ' : '') + (_sat.readOnly ? 'disabled ' : '')
+      + 'style="opacity:0;width:0;height:0;position:absolute;">'
       + '<span class="sat-switch-track" data-idx="' + i + '" style="position:absolute;inset:0;border-radius:24px;transition:background 0.15s;'
       + 'background:' + (present ? 'var(--fp-success)' : 'var(--fp-border)') + ';">'
       + '<span class="sat-switch-thumb" style="position:absolute;top:2px;left:' + (present ? '22px' : '2px') + ';width:20px;height:20px;'
@@ -1793,9 +2254,11 @@ function _satRenderList(students) {
 
 function satFilterStudents() {
   var q = (document.getElementById('sat-search').value || '').toLowerCase().trim();
-  document.querySelectorAll('#sat-list .sat-student-row-toggle').forEach(function(row) {
+  /* Toggle a class rather than row.style.display — these rows lay out via an
+     inline display:grid, which resetting style.display to '' would wipe. */
+  document.querySelectorAll('#sat-list .sat-student-row-toggle, #sat-cp-list .sat-cp-row').forEach(function(row) {
     var text = row.getAttribute('data-search') || '';
-    row.style.display = (!q || text.indexOf(q) !== -1) ? '' : 'none';
+    row.classList.toggle('sat-row-hidden', !!q && text.indexOf(q) === -1);
   });
 }
 
@@ -1827,8 +2290,8 @@ function satToggleSwitch(chk) {
 
 /* ── Bulk helpers ── */
 function satChkChange(chk) { _satRefreshCounters(); }
-function satCheckAll()   { _satSetAllPills(true); }
-function satUncheckAll() { _satSetAllPills(false); }
+function satCheckAll()   { if (_sat.readOnly) return; if (_sat.tab === 'cp') _cpSetAll(true);  else _satSetAllPills(true); }
+function satUncheckAll() { if (_sat.readOnly) return; if (_sat.tab === 'cp') _cpSetAll(false); else _satSetAllPills(false); }
 function attMarkAll(status) { _satSetAllPills(status === 'Present'); }
 
 function _satSetAllPills(present) {
@@ -1852,9 +2315,13 @@ function _satSetAllPills(present) {
 
 /* ── Live counters ── */
 function _satRefreshCounters() {
+  /* OH: counters come from the participants list (see _cpUpdateSummary) */
+  if (typeof _cp !== 'undefined' && _cpIsOh()) { if (_cp.loaded) _cpRender(); return; }
   var total = 0, present = 0;
   document.querySelectorAll('#sat-list .sat-chk').forEach(function(c) { total++; if (c.checked) present++; });
   _satUpdateCounters(total, present, total - present);
+  /* Attendance changed -> participation eligibility changed (Absent clears + locks it). */
+  if (typeof _cp !== 'undefined' && _cp.loaded) _cpRender();
 }
 function _satUpdateCounters(total, present, absent) {
   var s = function(id, v) { var e = document.getElementById(id); if (e) e.textContent = v; };
@@ -1873,11 +2340,304 @@ function attCollectData() {
   return map;
 }
 
+/* ══════════════════════════════════════════════════════════
+   CLASS PARTICIPANTS TAB
+   The session's Time Table maps each week (start..end date) to a
+   Class-Participation Student Group; this class is the Nth class of that
+   week and records into the group's Nth "hour" + mark. Participation is
+   only allowed for students marked Present on the Attendance tab — it is
+   read live from the attendance switches, so flipping a student to Absent
+   there immediately clears and locks their participation here.
+══════════════════════════════════════════════════════════ */
+var _cp = { session: '', loaded: false, ctx: null, students: [], state: {}, slotRecorded: false, dirty: false };
+
+function _cpReset() {
+  _cp = { session: '', loaded: false, ctx: null, students: [], state: {}, slotRecorded: false, dirty: false };
+  var el;
+  el = document.getElementById('sat-cp-info'); if (el) el.innerHTML = '';
+  el = document.getElementById('sat-cp-list'); if (el) el.innerHTML = '';
+}
+
+/* The toggle only applies to a known session (row / today-card click), not
+   the manual Based-On form flow, which has no Time Table week context. */
+function _satShowTabs(show) {
+  /* OH sessions have no separate Attendance list — the OH Participants list
+     IS their attendance (Participated = Present), so no toggle either. */
+  var isOh = show && _fpIsOhSession(_sat.sessionName);
+  var tabs = document.getElementById('sat-tabs');
+  if (tabs) tabs.style.display = (show && !isOh) ? 'inline-flex' : 'none';
+  var lbl = document.getElementById('sat-tab-cp-lbl');
+  if (lbl) lbl.textContent = _fpParticipantsLabel(_sat.sessionName);
+  satShowTab(isOh ? 'cp' : 'att');
+}
+
+function _cpIsOh() { return !!_sat.sessionName && _fpIsOhSession(_sat.sessionName); }
+
+function _fpSessionMarked(sessionName) {
+  var s = (typeof _attSessions !== 'undefined' ? _attSessions : []).filter(function(x) { return x.name === sessionName; })[0];
+  return !!(s && s.marked);
+}
+
+/* OH sessions record into the OH Student Group (1st/2nd OH hour);
+   class sessions into the week's Class-Participation group. */
+function _fpIsOhSession(sessionName) {
+  var s = (typeof _attSessions !== 'undefined' ? _attSessions : []).filter(function(x) { return x.name === sessionName; })[0];
+  return !!(s && s.session_type === 'Office Hour');
+}
+function _fpParticipantsLabel(sessionName) {
+  return _fpIsOhSession(sessionName) ? 'OH Participants' : 'Class Participants';
+}
+
+/* Info bar context line: CP shows the week's date range + "Class N of M this
+   week"; OH has no date range, just "OH session N of M" for its group. */
+function _fpCpContextHtml(ctx) {
+  var parts = '<span style="font-weight:700;color:var(--fp-text-1);"><span class="fp-ms" style="font-size:16px;vertical-align:-3px;color:var(--fp-primary);">'
+    + (ctx.kind === 'oh' ? 'schedule' : 'date_range') + '</span> ' + escHtml(ctx.week_name) + '</span>';
+  if (ctx.kind === 'oh') {
+    parts += '<span>OH session ' + ctx.slot + ' of ' + ctx.classes_in_week + ' · recorded as <b>' + escHtml(ctx.slot_label) + '</b></span>';
+  } else {
+    parts += '<span>' + escHtml(ctx.start_date_fmt) + ' – ' + escHtml(ctx.end_date_fmt) + '</span>'
+      + '<span>Class ' + ctx.slot + ' of ' + ctx.classes_in_week + ' this week · recorded as <b>' + escHtml(ctx.slot_label) + '</b></span>';
+  }
+  return '<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">' + parts + '</div>';
+}
+
+function satShowTab(tab) {
+  if (tab === 'cp' && !_sat.sessionName) return;
+  _sat.tab = tab;
+  var isCp = tab === 'cp';
+  var a = document.getElementById('sat-tab-att'), c = document.getElementById('sat-tab-cp');
+  if (a) a.classList.toggle('sat-tab-active', !isCp);
+  if (c) c.classList.toggle('sat-tab-active', isCp);
+  var list = document.getElementById('sat-list'), panel = document.getElementById('sat-cp-panel');
+  if (list) list.style.display = isCp ? 'none' : '';
+  if (panel) panel.style.display = isCp ? '' : 'none';
+
+  if (!isCp) return;
+  /* Already loaded / loading for this session -> just (re)render */
+  if (_cp.session === _sat.sessionName) { if (_cp.loaded) _cpRender(); return; }
+  _cpLoad(_sat.sessionName);
+}
+
+function _cpLoad(sessionName) {
+  _cpReset();
+  _cp.session = sessionName;
+  document.getElementById('sat-cp-list').innerHTML =
+    '<div style="padding:40px;text-align:center;color:var(--fp-text-4);">'
+    + '<span class="fp-ms" style="font-size:32px;display:block;margin-bottom:10px;animation:fp-spin 0.8s linear infinite;">sync</span>'
+    + 'Loading participants…</div>';
+
+  fpCall('slcm.api.faculty_portal.get_class_participation', { session_name: sessionName },
+    function(data) {
+      if (sessionName !== _sat.sessionName) return;  /* tab/slot switched meanwhile */
+      _cp.loaded = true;
+      _cp.ctx = (data && data.context) || {};
+      _cp.students = (data && data.students) || [];
+      _cp.slotRecorded = !!(data && data.slot_recorded);
+      _cp.students.forEach(function(s) {
+        /* participated: null = not decided yet -> follows attendance (Present => participated) */
+        _cp.state[s.student] = {
+          participated: _cp.slotRecorded ? !!s.participated : null,
+          grade: (s.grade === null || s.grade === undefined) ? '' : String(s.grade),
+        };
+      });
+      _cpRender();
+    },
+    function(msg) {
+      document.getElementById('sat-cp-list').innerHTML = '';
+      _showError('sat-error', msg || 'Could not load class participants.');
+    }
+  );
+}
+
+/* Effective participation for a student, given the live attendance switches. */
+function _cpEffective(sid, attMap) {
+  var st = _cp.state[sid] || { participated: null, grade: '' };
+  if (_cpIsOh()) {
+    /* OH: participation is the attendance. Undecided -> the saved attendance
+       for an already-marked session, otherwise not attended. */
+    var p = st.participated === null
+      ? (_fpSessionMarked(_sat.sessionName) && attMap[sid] === 'Present')
+      : st.participated;
+    return { present: true, participated: p, grade: p ? st.grade : '' };
+  }
+  var present = attMap[sid] === 'Present';
+  if (!present) return { present: false, participated: false, grade: '' };
+  var p = st.participated === null ? true : st.participated;
+  return { present: true, participated: p, grade: p ? st.grade : '' };
+}
+
+function _cpRender() {
+  var info = document.getElementById('sat-cp-info');
+  var list = document.getElementById('sat-cp-list');
+  if (!info || !list) return;
+  var ctx = _cp.ctx || {};
+
+  if (!ctx.available) {
+    info.innerHTML = '';
+    list.innerHTML = '<div style="padding:40px;text-align:center;color:var(--fp-text-4);">'
+      + '<span class="fp-ms" style="font-size:36px;display:block;margin-bottom:10px;opacity:0.4;">event_busy</span>'
+      + escHtml(ctx.reason || 'Participation is not available for this session.') + '</div>';
+    return;
+  }
+
+  info.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;'
+    + 'padding:12px 16px;margin-bottom:14px;border:1px solid var(--fp-border);border-radius:var(--fp-radius-sm);background:var(--fp-bg);font-size:13.5px;color:var(--fp-text-2);">'
+    + _fpCpContextHtml(ctx)
+    + '<div id="sat-cp-summary" style="font-weight:700;color:#920c24;"></div>'
+    + '</div>';
+
+  if (!_cp.students.length) {
+    list.innerHTML = '<div style="padding:40px;text-align:center;color:var(--fp-text-4);">'
+      + 'No students in group ' + escHtml(ctx.group) + '.</div>';
+    return;
+  }
+
+  var attMap = attCollectData();
+  /* Fixed widths: the header and each row are separate grids, so 'auto'
+     columns would size independently and drift out of alignment. */
+  /* OH: no Attendance column — Participated is the attendance itself */
+  var isOh = _cpIsOh();
+  var COLS = isOh ? '64px minmax(0,1fr) 120px 120px' : '64px minmax(0,1fr) 120px 120px 120px';
+  var html = '<div style="border:1px solid var(--fp-border);border-radius:var(--fp-radius-sm);overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,0.03);">'
+    + '<div style="display:grid;grid-template-columns:' + COLS + ';gap:14px;padding:12px 24px;'
+    + 'background:var(--fp-bg);border-bottom:2px solid var(--fp-border);'
+    + 'font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--fp-text-4);">'
+    + '<span></span><span>Student</span>'
+    + (isOh ? '' : '<span style="text-align:center;">Attendance</span>')
+    + '<span style="text-align:center;">Participated</span>'
+    + '<span style="text-align:right;">Mark (0–' + escHtml(ctx.max_grade) + ')</span></div>';
+
+  _cp.students.forEach(function(s, i) {
+    var eff = _cpEffective(s.student, attMap);
+    var name = s.student_name || s.student;
+    var roll = s.reg_id || '';
+    var initial = escHtml((name || '?').trim().charAt(0).toUpperCase());
+    var avatar = s.student_image
+      ? '<img src="' + escHtml(s.student_image) + '" alt="" style="width:58px;height:58px;border-radius:50%;object-fit:cover;border:2px solid var(--fp-primary);">'
+      : '<span style="width:58px;height:58px;border-radius:50%;background:var(--fp-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;">' + initial + '</span>';
+    var attLabel = attMap[s.student] === 'Present' ? 'PRESENT' : (attMap[s.student] === 'Absent' ? 'ABSENT' : 'NOT ON ROSTER');
+    var searchKey = escHtml(((name || '') + ' ' + roll + ' ' + s.student).toLowerCase());
+    var sid = escHtml(s.student);
+
+    html += '<div class="sat-cp-row' + (eff.present ? '' : ' sat-cp-disabled') + '" data-search="' + searchKey + '" '
+      + 'style="display:grid;grid-template-columns:' + COLS + ';gap:14px;align-items:center;padding:14px 24px;border-bottom:1px solid var(--fp-border-light);"'
+      + (eff.present ? '' : ' title="Only students marked Present can be given class participation."') + '>'
+      + avatar
+      + '<div style="min-width:0;"><div style="font-size:16px;font-weight:700;color:var(--fp-text-1);">' + escHtml(name) + '</div>'
+      + (roll ? '<div style="font-size:13px;color:var(--fp-text-3);font-family:var(--fp-mono);margin-top:2px;">' + escHtml(roll) + '</div>' : '')
+      + '</div>'
+      + (isOh ? '' : '<span style="font-size:12.5px;font-weight:700;text-align:center;color:' + (eff.present ? 'var(--fp-success)' : 'var(--fp-text-4)') + ';">' + attLabel + '</span>')
+      + '<label class="sat-switch" style="position:relative;display:inline-block;width:44px;height:24px;cursor:' + (eff.present ? 'pointer' : 'not-allowed') + ';justify-self:center;">'
+      + '<input type="checkbox" class="sat-cp-chk" data-student="' + sid + '" onchange="cpToggle(this)" '
+      + (eff.participated ? 'checked ' : '') + (eff.present && !_sat.readOnly ? '' : 'disabled ')
+      + 'style="opacity:0;width:0;height:0;position:absolute;">'
+      + '<span style="position:absolute;inset:0;border-radius:24px;background:' + (eff.participated ? 'var(--fp-success)' : 'var(--fp-border)') + ';">'
+      + '<span style="position:absolute;top:2px;left:' + (eff.participated ? '22px' : '2px') + ';width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.3);"></span>'
+      + '</span></label>'
+      + '<input type="number" class="sat-cp-grade" data-student="' + sid + '" min="0" max="' + escHtml(ctx.max_grade) + '" step="0.01" '
+      + 'inputmode="decimal" placeholder="' + (eff.participated ? 'Mark' : '—') + '" value="' + escHtml(eff.grade) + '" '
+      + (eff.participated && !_sat.readOnly ? '' : 'disabled ') + 'oninput="cpGradeInput(this)" style="justify-self:end;">'
+      + '</div>';
+  });
+  html += '</div>';
+  list.innerHTML = html;
+
+  satFilterStudents();
+  _cpUpdateSummary();
+}
+
+function cpToggle(chk) {
+  var sid = chk.getAttribute('data-student');
+  var st = _cp.state[sid] || (_cp.state[sid] = { participated: null, grade: '' });
+  st.participated = chk.checked;
+  if (!chk.checked) st.grade = '';
+  _cp.dirty = true;
+  _cpRender();
+}
+
+function cpGradeInput(inp) {
+  var sid = inp.getAttribute('data-student');
+  var st = _cp.state[sid] || (_cp.state[sid] = { participated: true, grade: '' });
+  if (st.participated === null) st.participated = true;  /* typing a mark confirms the default tick */
+  st.grade = inp.value;
+  _cp.dirty = true;
+  inp.classList.toggle('sat-cp-invalid', ['invalid', 'range'].indexOf(_cpGradeError(inp.value)) !== -1);
+  _cpUpdateSummary();
+}
+
+/* Check all / Uncheck all on the Class Participants tab: only Present students can be ticked. */
+function _cpSetAll(participated) {
+  var attMap = attCollectData();
+  var isOh = _cpIsOh();
+  _cp.students.forEach(function(s) {
+    if (!isOh && attMap[s.student] !== 'Present') return;
+    var st = _cp.state[s.student] || (_cp.state[s.student] = { participated: null, grade: '' });
+    st.participated = participated;
+    if (!participated) st.grade = '';
+  });
+  _cp.dirty = true;
+  _cpRender();
+}
+
+function _cpGradeError(value) {
+  var max = parseFloat((_cp.ctx || {}).max_grade);
+  if (value === '' || value === null || value === undefined) return 'missing';
+  var n = Number(value);
+  if (!isFinite(n)) return 'invalid';
+  if (n < 0 || (!isNaN(max) && n > max)) return 'range';
+  return '';
+}
+
+function _cpUpdateSummary() {
+  var el = document.getElementById('sat-cp-summary');
+  if (!el) return;
+  var attMap = attCollectData();
+  var present = 0, participating = 0, graded = 0;
+  _cp.students.forEach(function(s) {
+    var eff = _cpEffective(s.student, attMap);
+    if (eff.present) present++;
+    if (eff.participated) { participating++; if (!_cpGradeError(eff.grade)) graded++; }
+  });
+  if (_cpIsOh()) {
+    var total = _cp.students.length;
+    el.textContent = 'Attended: ' + participating + ' / ' + total + '  ·  Marked: ' + graded + ' / ' + participating;
+    _satUpdateCounters(total, participating, total - participating);
+    return;
+  }
+  el.textContent = 'Participating: ' + participating + ' / ' + present + ' present  ·  Marked: ' + graded + ' / ' + participating;
+}
+
+/* Validate + build the payload. Returns null when nothing was edited (so
+   just opening the tab never forces faculty to grade before saving
+   attendance), or { error } / { rows }. */
+function _cpCollect() {
+  /* OH always sends its list (it is the attendance); CP only when edited */
+  if (!_cp.loaded || !(_cp.ctx || {}).available || _cp.session !== _sat.sessionName) return null;
+  if (!_cp.dirty && !_cpIsOh()) return null;
+  var attMap = attCollectData();
+  var rows = [], bad = [];
+  _cp.students.forEach(function(s) {
+    var eff = _cpEffective(s.student, attMap);
+    /* A blank mark is allowed — it shows up as a pending "Grade" task */
+    if (eff.participated && _cpGradeError(eff.grade) && _cpGradeError(eff.grade) !== 'missing') {
+      bad.push(s.student_name || s.student);
+    }
+    rows.push({ student: s.student, participated: eff.participated ? 1 : 0,
+                grade: eff.participated && !_cpGradeError(eff.grade) ? Number(eff.grade) : null });
+  });
+  if (bad.length) {
+    return { error: 'Marks must be between 0 and ' + (_cp.ctx || {}).max_grade + ' for: ' + bad.join(', ') + '.' };
+  }
+  return { rows: rows };
+}
+
 /* ── Save / Mark Attendance ──
    If a specific session was pre-selected (row click), save straight against
    that session via the faculty-portal API. Otherwise fall back to the
    Based-On form flow (bulk_attendance API). */
 function fpSaveAttendance() {
+  if (_sat.readOnly) return;
   var map = attCollectData();
   if (!Object.keys(map).length) { alert('No students to save.'); return; }
 
@@ -1905,9 +2665,27 @@ function fpSaveAttendance() {
 
   if (_sat.sessionName) {
     var attendance = Object.keys(map).map(function(sid) { return { student: sid, status: map[sid] }; });
-    fpCall('slcm.api.faculty_portal.save_attendance',
-      { session_name: _sat.sessionName, attendance: JSON.stringify(attendance) },
-      onSaved, onFailed);
+    var args = { session_name: _sat.sessionName, attendance: JSON.stringify(attendance) };
+
+    /* Attendance + class participation are saved together in one call. */
+    var cp = _cpCollect();
+    if (cp && cp.error) {
+      satShowTab('cp');
+      document.querySelectorAll('#sat-cp-list .sat-cp-grade:not(:disabled)').forEach(function(inp) {
+        inp.classList.toggle('sat-cp-invalid', ['invalid', 'range'].indexOf(_cpGradeError(inp.value)) !== -1);
+      });
+      onFailed(cp.error);
+      return;
+    }
+    if (cp) args.participation = JSON.stringify(cp.rows);
+    /* OH: attendance is the participants list itself */
+    if (cp && _cpIsOh()) {
+      args.attendance = JSON.stringify(cp.rows.map(function(r) {
+        return { student: r.student, status: r.participated ? 'Present' : 'Absent' };
+      }));
+    }
+
+    fpCall('slcm.api.faculty_portal.save_attendance', args, onSaved, onFailed);
     return;
   }
 
@@ -1958,8 +2736,11 @@ var _viewSessionName = null;
 function _fpFindSiblingSlots(sessionName) {
   var current = _attSessions.filter(function(s) { return s.name === sessionName; })[0];
   if (current) {
+    /* OH is kept separate from class attendance — only group same-kind slots */
+    var currentIsOh = current.session_type === 'Office Hour';
     var siblings = _attSessions.filter(function(s) {
-      return s.course_offering === current.course_offering && s.session_date === current.session_date;
+      return s.course_offering === current.course_offering && s.session_date === current.session_date
+        && (s.session_type === 'Office Hour') === currentIsOh;
     }).sort(function(a, b) { return (a.from_time_sort || '').localeCompare(b.from_time_sort || ''); });
     if (siblings.length > 1) {
       return siblings.map(function(s) {
@@ -1979,23 +2760,28 @@ function _fpFindSiblingSlots(sessionName) {
   return null;
 }
 
-function fpViewSession(sessionName) {
+/* Every session — any status, class or OH — opens the one Student
+   Attendance Tool modal (Upcoming ones read-only), so the layout is the same
+   everywhere. `tab` = 'cp' opens it on the Class/OH Participants list. */
+function fpViewSession(sessionName, tab) {
+  var meta = _fpSessionMeta(sessionName);
+  fpOpenMarkModal(sessionName, meta.course !== '—' ? meta.course : '', _fpFindSiblingSlots(sessionName));
+  if (tab === 'cp') satShowTab('cp');
+}
+
+/* Former separate read-only "Session Attendance" modal — no longer opened
+   (kept for its per-student history popup helpers below). */
+function _fpLegacyViewSession(sessionName, tab) {
   _viewSessionName = sessionName;
+  _viewTab = '';  /* force fpViewShowTab below to (re)apply */
+  var cpLbl = document.getElementById('att-view-tab-cp-lbl');
+  if (cpLbl) cpLbl.textContent = _fpParticipantsLabel(sessionName);
   var sessionObj = (_attSessions || []).filter(function(s) { return s.name === sessionName; })[0];
   var isUpcoming = sessionObj && sessionObj.computed_status === 'Upcoming';
   var editBtn = document.getElementById('att-view-edit-btn');
   if (editBtn) editBtn.style.display = isUpcoming ? 'none' : 'flex';
 
-  /* Find meta from row */
-  var row  = document.querySelector('.fp-session-row[data-session="' + sessionName + '"]');
-  var meta = { course:'—', date:'—', time:'—', venue:'—' };
-  if (row) {
-    var tds = row.querySelectorAll('td');
-    meta.course = tds[0] ? tds[0].textContent.trim() : '—';
-    meta.date   = tds[1] ? tds[1].textContent.trim() : '—';
-    meta.time   = tds[2] ? tds[2].textContent.trim() : '—';
-    meta.venue  = tds[4] ? tds[4].textContent.trim() : '—';
-  }
+  var meta = _fpSessionMeta(sessionName);
 
   /* Set header */
   document.getElementById('att-view-course').textContent = meta.course;
@@ -2011,6 +2797,7 @@ function fpViewSession(sessionName) {
 
   _openModal('att-view-modal');
   _fpLoadViewSessionBody(sessionName);
+  fpViewShowTab(tab === 'cp' ? 'cp' : 'att');
 }
 
 var _viewModalSlots = null;
@@ -2049,6 +2836,8 @@ function fpChooseViewSlot(sessionName) {
   var chosen = slots.filter(function(s) { return s.session === sessionName; })[0];
 
   _viewSessionName = sessionName;
+  var cpLbl = document.getElementById('att-view-tab-cp-lbl');
+  if (cpLbl) cpLbl.textContent = _fpParticipantsLabel(sessionName);
   document.getElementById('att-view-course').textContent = chosen ? chosen.courseName : '—';
   var timeLabel = chosen ? (chosen.fromTime + (chosen.toTime ? ' – ' + chosen.toTime : '')) : '';
   document.getElementById('att-view-meta').textContent = timeLabel;
@@ -2056,6 +2845,7 @@ function fpChooseViewSlot(sessionName) {
   _renderRfidControl('att-view-rfid', sessionName);
   _renderViewSlotPicker(slots, sessionName);
   _fpLoadViewSessionBody(sessionName);
+  if (_viewTab === 'cp') _fpLoadViewCp(sessionName);  /* stay on the same tab */
 }
 
 function _fpRenderViewSessionBody(students, audit) {
@@ -2135,14 +2925,146 @@ function _fpRenderViewSessionBody(students, audit) {
   if (searchBox) searchBox.value = '';
 
   _renderSessionAuditFooter(audit);
+
+  /* The Class Participants tab shows each student's attendance from this roster */
+  if (_viewTab === 'cp' && _viewCpCache[_viewSessionName]) _fpRenderViewCp(_viewSessionName);
 }
 
 function fpFilterViewStudents() {
   var q = (document.getElementById('att-view-search').value || '').toLowerCase().trim();
-  document.querySelectorAll('#att-view-body .att-view-row').forEach(function(row) {
+  /* Class toggle, not style.display — these rows lay out via inline display:grid. */
+  document.querySelectorAll('#att-view-body .att-view-row, #att-view-cp .att-view-row').forEach(function(row) {
     var text = row.getAttribute('data-search') || '';
-    row.style.display = (!q || text.indexOf(q) !== -1) ? '' : 'none';
+    row.classList.toggle('sat-row-hidden', !!q && text.indexOf(q) === -1);
   });
+}
+
+/* ══════════════════════════════════════════════════════════
+   VIEW MODAL — CLASS PARTICIPANTS TAB (read-only)
+   Same data as the mark modal's tab (get_class_participation); editing
+   goes through "Edit Participation", which opens the mark modal on it.
+══════════════════════════════════════════════════════════ */
+var _viewTab = 'att';
+var _viewCpCache = {};
+
+function fpViewShowTab(tab) {
+  if (tab === _viewTab) return;
+  _viewTab = tab;
+  var isCp = tab === 'cp';
+  var a = document.getElementById('att-view-tab-att'), c = document.getElementById('att-view-tab-cp');
+  if (a) a.classList.toggle('sat-tab-active', !isCp);
+  if (c) c.classList.toggle('sat-tab-active', isCp);
+  document.getElementById('att-view-body').style.display = isCp ? 'none' : '';
+  document.getElementById('att-view-cp').style.display = isCp ? '' : 'none';
+  var lbl = document.getElementById('att-view-edit-lbl');
+  if (lbl) lbl.textContent = isCp ? 'Edit Participation' : 'Edit Attendance';
+  if (isCp) _fpLoadViewCp(_viewSessionName);
+}
+
+function _fpLoadViewCp(sessionName) {
+  if (!sessionName) return;
+  if (_viewCpCache[sessionName]) { _fpRenderViewCp(sessionName); return; }
+
+  document.getElementById('att-view-cp').innerHTML =
+    '<div style="text-align:center;padding:48px;">'
+    + '<span class="fp-ms" style="font-size:36px;display:block;margin-bottom:10px;animation:fp-spin 0.8s linear infinite;color:var(--fp-text-4);">sync</span>'
+    + '<span style="color:var(--fp-text-4);font-size:13px;">Loading participants…</span></div>';
+
+  fpCall('slcm.api.faculty_portal.get_class_participation', { session_name: sessionName },
+    function(data) {
+      _viewCpCache[sessionName] = data || {};
+      if (sessionName === _viewSessionName && _viewTab === 'cp') _fpRenderViewCp(sessionName);
+    },
+    function(msg) {
+      document.getElementById('att-view-cp').innerHTML = '';
+      _showError('att-view-error', msg || 'Could not load class participants.');
+    }
+  );
+}
+
+function _fpRenderViewCp(sessionName) {
+  var el = document.getElementById('att-view-cp');
+  var data = _viewCpCache[sessionName] || {};
+  var ctx = data.context || {};
+
+  if (!ctx.available) {
+    el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--fp-text-4);">'
+      + '<span class="fp-ms" style="font-size:36px;display:block;margin-bottom:10px;opacity:0.4;">event_busy</span>'
+      + escHtml(ctx.reason || 'Participation is not available for this session.') + '</div>';
+    return;
+  }
+
+  var sessionObj = (_attSessions || []).filter(function(s) { return s.name === sessionName; })[0] || {};
+  var isUpcoming = sessionObj.computed_status === 'Upcoming';
+
+  /* Attendance status per student, from the Attendance tab's roster (if loaded) */
+  var attMap = {};
+  var roster = _viewRosterCache[sessionName];
+  ((roster && roster.students) || []).forEach(function(s) { attMap[s.student] = s.status; });
+
+  var students = data.students || [];
+  var recorded = !!data.slot_recorded;
+  var participated = 0, markSum = 0;
+  students.forEach(function(s) { if (s.participated) { participated++; markSum += Number(s.grade) || 0; } });
+
+  var html = '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;'
+    + 'padding:12px 16px;margin-bottom:16px;border:1px solid var(--fp-border);border-radius:var(--fp-radius-sm);background:var(--fp-bg);font-size:13px;color:var(--fp-text-2);">'
+    + _fpCpContextHtml(ctx)
+    + '<span style="font-weight:700;color:#920c24;">'
+    + (isUpcoming ? 'Class not held yet'
+       : recorded ? 'Participated: ' + participated + ' / ' + students.length
+                    + (participated ? '  ·  Avg mark: ' + (Math.round(markSum / participated * 100) / 100) + ' / ' + escHtml(ctx.max_grade) : '')
+       : 'Not recorded yet')
+    + '</span></div>';
+
+  if (!students.length) {
+    el.innerHTML = html + '<div style="padding:32px;text-align:center;color:var(--fp-text-4);">'
+      + 'No students in group ' + escHtml(ctx.group) + '.</div>';
+    return;
+  }
+
+  var COLS = '40px 1fr 110px 130px 90px';
+  html += '<div style="border:1px solid var(--fp-border);border-radius:var(--fp-radius-sm);overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,0.03);">'
+    + '<div style="display:grid;grid-template-columns:' + COLS + ';gap:12px;padding:11px 16px;'
+    + 'background:var(--fp-bg);border-bottom:2px solid var(--fp-border);'
+    + 'font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--fp-text-4);">'
+    + '<span></span><span>Student</span><span>Attendance</span><span>Participated</span>'
+    + '<span style="text-align:right;">Mark (0–' + escHtml(ctx.max_grade) + ')</span></div>'
+    + '<div style="max-height:400px;overflow-y:auto;">';
+
+  students.forEach(function(s) {
+    var name = s.student_name || s.student;
+    var initial = escHtml((name || '?').trim().charAt(0).toUpperCase());
+    var avatar = s.student_image
+      ? '<img src="' + escHtml(s.student_image) + '" alt="" style="width:34px;height:34px;border-radius:50%;object-fit:cover;border:2px solid var(--fp-primary);">'
+      : '<span style="width:34px;height:34px;border-radius:50%;background:var(--fp-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;">' + initial + '</span>';
+
+    var att = attMap[s.student];
+    var attBadge = att === 'Present' ? '<span class="fp-badge fp-badge-success">Present</span>'
+      : att === 'Late' ? '<span class="fp-badge fp-badge-warning">Late</span>'
+      : att === 'Absent' ? '<span class="fp-badge att-badge-absent">Absent</span>'
+      : '<span style="font-size:11px;color:var(--fp-text-4);">' + (isUpcoming ? 'Upcoming' : 'Not on roster') + '</span>';
+
+    var partBadge = (isUpcoming || !recorded)
+      ? '<span style="font-size:11px;color:var(--fp-text-4);">Not recorded</span>'
+      : s.participated
+        ? '<span class="fp-badge fp-badge-success"><span class="fp-ms" style="font-size:13px;">check</span>Yes</span>'
+        : '<span class="fp-badge fp-badge-neutral">No</span>';
+
+    html += '<div class="att-view-row" data-search="' + escHtml(((name || '') + ' ' + (s.reg_id || s.student || '')).toLowerCase()) + '" '
+      + 'style="display:grid;grid-template-columns:' + COLS + ';gap:12px;align-items:center;padding:9px 16px;border-bottom:1px solid var(--fp-border-light);">'
+      + avatar
+      + '<div style="min-width:0;"><div style="font-size:13px;font-weight:600;color:var(--fp-text-1);">' + escHtml(name) + '</div>'
+      + '<div style="font-size:11px;color:var(--fp-text-4);font-family:var(--fp-mono);">' + escHtml(s.reg_id || s.student) + '</div></div>'
+      + '<span style="justify-self:start;">' + attBadge + '</span>'
+      + '<span style="justify-self:start;">' + partBadge + '</span>'
+      + '<span style="text-align:right;font-size:14px;font-weight:700;color:var(--fp-text-1);">'
+      + (s.participated && s.grade !== null && s.grade !== undefined ? escHtml(s.grade) : '<span style="color:var(--fp-text-4);font-weight:400;">—</span>')
+      + '</span></div>';
+  });
+  html += '</div></div>';
+  el.innerHTML = html;
+  fpFilterViewStudents();
 }
 
 /* ── Session-level audit footer — activated-by/on, last-updated-by/on ── */
@@ -2277,7 +3199,9 @@ function _fpLoadViewSessionBody(sessionName) {
 function fpEditFromView() {
   _closeModal('att-view-modal', { swapping: true });
   var courseName = document.getElementById('att-view-course').textContent;
+  var openOnCp = _viewTab === 'cp';
   fpOpenMarkModal(_viewSessionName, courseName, _viewModalSlots);
+  if (openOnCp) satShowTab('cp');
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -2373,7 +3297,7 @@ function attDrill(type) {
         course_name:      s.course_name,
         session_date_fmt: s.session_date_fmt,
         from_time:        s.from_time || '—',
-        session_type:     s.session_type || '—',
+        session_type:     s.session_type_label || s.session_type || '—',
         venue:            s.venue || '—',
         total:            s.total,
         present:          s.marked ? s.present : '—',
@@ -2810,6 +3734,10 @@ document.addEventListener('DOMContentLoaded', function() {
           <div style="margin-bottom:12px;">
             <div style="font-size:18px;font-weight:700;color:var(--fp-text-1);" id="sat-course-name">Attendance</div>
             <div id="sat-course-meta" style="display:none;align-items:center;gap:14px;flex-wrap:wrap;margin-top:4px;font-size:13.5px;color:var(--fp-text-3);"></div>
+            {# Shown for Upcoming sessions, which open read-only #}
+            <div id="sat-readonly-note" style="display:none;align-items:center;gap:6px;margin-top:6px;font-size:12.5px;font-weight:600;color:#920c24;">
+              <span class="fp-ms" style="font-size:16px;">lock_clock</span>Upcoming session — attendance and marks can be recorded once it has started.
+            </div>
           </div>
           {# Counts on the left; search + bulk actions grouped on the right #}
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
@@ -2819,6 +3747,15 @@ document.addEventListener('DOMContentLoaded', function() {
               <span style="color:#920c24;">Absent: <span id="sat-cnt-absent">0</span></span>
             </div>
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;margin-left:auto;">
+              {# Attendance / Class Participants toggle — only for a known session (see _satShowTabs) #}
+              <div id="sat-tabs" class="sat-tabs" style="display:none;">
+                <button type="button" id="sat-tab-att" class="sat-tab sat-tab-active" onclick="satShowTab('att')">
+                  <span class="fp-ms" style="font-size:16px;">how_to_reg</span>Attendance
+                </button>
+                <button type="button" id="sat-tab-cp" class="sat-tab" onclick="satShowTab('cp')">
+                  <span class="fp-ms" style="font-size:16px;">groups</span><span id="sat-tab-cp-lbl">Class Participants</span>
+                </button>
+              </div>
               <div class="fp-search-wrap" style="width:260px;max-width:100%;">
                 <span class="fp-ms">search</span>
                 <input type="text" class="fp-input fp-search-input" id="sat-search"
@@ -2849,6 +3786,11 @@ document.addEventListener('DOMContentLoaded', function() {
          full-screen modal. #}
       <div style="flex:1;overflow-y:auto;padding:18px 22px;" id="sat-list-wrap">
         <div style="max-width:1280px;margin:0 auto;" id="sat-list"></div>
+        {# Class Participants tab — week info bar + per-student participation & mark #}
+        <div style="max-width:1280px;margin:0 auto;display:none;" id="sat-cp-panel">
+          <div id="sat-cp-info"></div>
+          <div id="sat-cp-list"></div>
+        </div>
       </div>
 
       {# Error #}
@@ -2860,6 +3802,8 @@ document.addEventListener('DOMContentLoaded', function() {
     {# ── Footer ── #}
     <div style="padding:14px 22px;border-top:1px solid var(--fp-border);display:flex;gap:10px;align-items:center;justify-content:flex-end;flex-shrink:0;background:var(--fp-card);">
       <div style="flex:1;font-size:12px;color:var(--fp-text-4);display:none;" id="sat-pbar-lbl"></div>
+      {# Session audit — last updated by/on, RFID activation — filled by _satRenderAudit() #}
+      <div id="sat-audit" style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;font-size:11.5px;font-weight:600;color:var(--fp-text-3);"></div>
       <button class="fp-btn fp-btn-secondary" onclick="fpCloseMarkModal()" style="padding:9px 18px;">Cancel</button>
       <button id="att-save-btn" onclick="fpSaveAttendance()"
               style="padding:9px 22px;border:none;border-radius:var(--fp-radius-sm);background:var(--fp-primary);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:7px;transition:all 0.15s;box-shadow:0 2px 8px var(--fp-primary-glow);"
@@ -2944,13 +3888,22 @@ document.addEventListener('DOMContentLoaded', function() {
       </div>
     </div>
 
-    {# Global search — filters the student list below by name/reg no #}
-    <div style="padding:12px 22px;border-bottom:1px solid var(--fp-border);flex-shrink:0;">
-      <div class="fp-search-wrap" style="max-width:320px;">
+    {# Global search — filters the student list below by name/reg no — and
+       the Attendance / Class Participants toggle (same as the mark modal) #}
+    <div style="padding:12px 22px;border-bottom:1px solid var(--fp-border);flex-shrink:0;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <div class="fp-search-wrap" style="width:320px;max-width:100%;">
         <span class="fp-ms">search</span>
         <input type="text" class="fp-input fp-search-input" id="att-view-search"
                placeholder="Search students…" oninput="fpFilterViewStudents()"
                style="padding-top:7px;padding-bottom:7px;" autocomplete="off">
+      </div>
+      <div class="sat-tabs" style="margin-left:auto;">
+        <button type="button" id="att-view-tab-att" class="sat-tab sat-tab-active" onclick="fpViewShowTab('att')">
+          <span class="fp-ms" style="font-size:16px;">how_to_reg</span>Attendance
+        </button>
+        <button type="button" id="att-view-tab-cp" class="sat-tab" onclick="fpViewShowTab('cp')">
+          <span class="fp-ms" style="font-size:16px;">groups</span><span id="att-view-tab-cp-lbl">Class Participants</span>
+        </button>
       </div>
     </div>
 
@@ -2961,6 +3914,8 @@ document.addEventListener('DOMContentLoaded', function() {
         <span style="color:var(--fp-text-4);font-size:13px;">Loading…</span>
       </div>
     </div>
+    {# Class Participants tab (read-only) — filled by _fpRenderViewCp() #}
+    <div style="flex:1;overflow-y:auto;padding:20px 22px;display:none;" id="att-view-cp"></div>
 
     {# Error #}
     <div id="att-view-error" class="fp-alert fp-alert-warning" style="display:none;margin:0 22px;border-radius:var(--fp-radius-sm);">
@@ -2973,7 +3928,7 @@ document.addEventListener('DOMContentLoaded', function() {
     {# Footer #}
     <div style="padding:14px 22px;border-top:1px solid var(--fp-border);display:flex;gap:10px;flex-shrink:0;">
       <button id="att-view-edit-btn" onclick="fpEditFromView()" class="fp-btn fp-btn-primary" style="flex:1;justify-content:center;font-size:14px;padding:10px 18px;">
-        <span class="fp-ms">edit</span>Edit Attendance
+        <span class="fp-ms">edit</span><span id="att-view-edit-lbl">Edit Attendance</span>
       </button>
       <button class="fp-btn fp-btn-secondary" onclick="_closeModal('att-view-modal')" style="padding:10px 18px;">
         Close

@@ -167,20 +167,28 @@ def get_context(context):
         context.todays_sessions = todays_sessions
         context.todays_class_count = len(todays_sessions)
 
-        # ── Attendance pending (sessions not yet marked today/recent) ─
-        try:
-            pending_att = frappe.db.count(
-                "Attendance Session",
-                filters={
-                    "course_offering": ["in", co_names] if co_names else ["in", ["__none__"]],
-                    "attendance_marked": 0,
-                    "session_date": ["<=", today],
-                    "session_status": "Scheduled",
-                },
-            ) if co_names else 0
-        except Exception:
-            pending_att = 0
-        context.attendance_pending = pending_att
+        # ── Pending Tasks card ──────────────────────────────────────
+        # Counts per task key; each card links to the attendance page
+        # filtered with ?tab=…&pending=<key> (same flags computed there).
+        from slcm.slcm.utils.class_participation import TASKS, get_session_task_flags
+
+        task_counts = dict.fromkeys(TASKS, 0)
+        if co_names:
+            try:
+                due_sessions = frappe.get_all(
+                    "Attendance Session",
+                    filters=[["course_offering", "in", co_names], ["session_date", "<=", today], ["docstatus", "<", 2]],
+                    fields=["name", "class_schedule", "session_date", "session_start_time",
+                            "session_type", "attendance_marked"],
+                    ignore_permissions=True,
+                )
+                for keys in get_session_task_flags(due_sessions, today).values():
+                    for key in keys:
+                        task_counts[key] += 1
+            except Exception:
+                frappe.log_error(frappe.get_traceback(), "Faculty Portal Pending Tasks")
+        context.task_counts = task_counts
+        context.attendance_pending = task_counts["course_att"]
 
         # ── Upcoming class schedule (next 7 days) ──────────────────
         next_week = frappe.utils.add_days(today, 7)
@@ -403,6 +411,7 @@ def _set_defaults(context):
     context.todays_class_count = 0
     context.todays_sessions = []
     context.attendance_pending = 0
+    context.task_counts = {}
     context.upcoming_classes = []
     context.pending_venues = 0
     context.pending_condonation = 0

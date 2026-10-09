@@ -384,6 +384,10 @@ def register_office_hours_attendance(session_name):
     office_hours_group = frappe.db.get_value(
         "Office Hours Group", {"office_hours_session": session.name}
     )
+    # Student Attendance.office_hours_group now links to Student Group; a
+    # legacy Office Hours Group name would fail link validation on insert.
+    if office_hours_group and not frappe.db.exists("Student Group", office_hours_group):
+        office_hours_group = None
 
     doc = frappe.new_doc("Student Attendance")
     doc.based_on = "Office Hours"

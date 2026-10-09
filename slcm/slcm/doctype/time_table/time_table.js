@@ -1,7 +1,69 @@
 // Copyright (c) 2026, TFSS and contributors
 // For license information, please see license.txt
 
+// Renders "Scheduling... NN%" with a spinner into Frappe's freeze overlay
+// (the #freeze backdrop shown while the save request runs). The server pushes
+// `time_table_bulk_progress` after every occurrence it creates/updates.
+function render_bulk_progress(data) {
+    const $msg = $('#freeze .freeze-message');
+    if (!$msg.length) return;
+
+    const percent = Math.min(100, Math.max(0, cint(data.percent)));
+    const counts = data.total
+        ? `<div class="text-muted small mt-1">${__('{0} of {1} occurrence(s)', [cint(data.done), cint(data.total)])}</div>`
+        : '';
+
+    $msg.html(`
+        <div class="d-flex align-items-center justify-content-center">
+            <span class="spinner-border spinner-border-sm text-primary mr-2" role="status"></span>
+            <span class="lead mb-0">${__(data.label || 'Scheduling')}... ${percent}%</span>
+        </div>
+        <div class="progress mt-2" style="height: 6px; min-width: 240px;">
+            <div class="progress-bar" style="width: ${percent}%"></div>
+        </div>
+        ${counts}
+    `);
+}
+
+if (!frappe.flags.time_table_progress_bound) {
+    frappe.flags.time_table_progress_bound = true;
+    frappe.realtime.on('time_table_bulk_progress', render_bulk_progress);
+}
+
+// The freeze overlay is created by the save request that starts right after
+// before_save, so wait briefly for it before showing the initial 0%.
+function show_initial_progress(label) {
+    let tries = 0;
+    const timer = setInterval(() => {
+        if ($('#freeze .freeze-message').length) {
+            clearInterval(timer);
+            // A server update may already have rendered a real percentage.
+            if (!$('#freeze .progress').length) {
+                render_bulk_progress({ label: label, percent: 0 });
+            }
+        } else if (++tries > 40) {
+            clearInterval(timer);
+        }
+    }, 50);
+}
+
 frappe.ui.form.on('Time Table', {
+    before_save: function (frm) {
+        if (frm.is_new() && frm.doc.repeat_frequency && frm.doc.repeat_frequency !== 'Never') {
+            show_initial_progress('Scheduling');
+        }
+    },
+
+    setup: function (frm) {
+        // Both fields link to Student Group - restrict each to its own group type.
+        frm.set_query('office_hours_group', function () {
+            return { filters: { group_based_on: 'Office Hours' } };
+        });
+        frm.set_query('week', 'class_participation_week_group', function () {
+            return { filters: { group_based_on: 'Class-Participation' } };
+        });
+    },
+
     refresh: function (frm) {
         // Auto-generate title if not set
         if (!frm.doc.title && frm.doc.course) {
@@ -221,14 +283,14 @@ frappe.ui.form.on('Time Table', {
     },
 
     office_hours_group: function (frm) {
+        // Office Hours Group now links to Student Group, which carries no date,
+        // time or faculty - only the course context. Setting course_offering
+        // triggers its own handler to fill course, programme, faculty and term.
         if (frm.doc.office_hours_group) {
-            frappe.db.get_value("Office Hours Group", frm.doc.office_hours_group, ["date", "from_time", "to_time", "course_offering", "instructor"], (r) => {
+            frappe.db.get_value("Student Group", frm.doc.office_hours_group, ["course_offering", "programme"], (r) => {
                 if (r) {
-                    frm.set_value("schedule_date", r.date);
-                    frm.set_value("from_time", r.from_time);
-                    frm.set_value("to_time", r.to_time);
                     if (r.course_offering) frm.set_value("course_offering", r.course_offering);
-                    if (r.instructor) frm.set_value("instructor", r.instructor);
+                    if (r.programme && !frm.doc.programme) frm.set_value("programme", r.programme);
                 }
             });
         }

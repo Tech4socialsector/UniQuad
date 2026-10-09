@@ -235,100 +235,43 @@ window._fpDashData = {
       <span class="fp-ms">event_note</span>
       Pending Tasks
     </div>
-    <a href="#" style="font-size:12px; font-weight:700; color:var(--fp-primary); text-decoration:none;">View All &rarr;</a>
+    <a href="/faculty-portal/attendance?pending=all" style="font-size:12px; font-weight:700; color:var(--fp-primary); text-decoration:none;">View All &rarr;</a>
   </div>
   <div class="fp-card-body">
-    <div class="fp-pending-tasks-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
-       
-       <!-- Left Column -->
-       <div style="display:flex; flex-direction:column; gap:12px;">
-         
-         <a href="/faculty-portal/attendance" class="fp-task-link" style="display:flex; align-items:center; justify-content:space-between; padding:12px; border:1px solid var(--fp-border-light); border-radius:8px; text-decoration:none; transition: border 0.2s;">
-            <div style="display:flex; align-items:center; gap:12px;">
-              <div style="width:36px; height:36px; border-radius:8px; background:var(--fp-primary-light); color:var(--fp-primary); display:flex; align-items:center; justify-content:center;">
-                 <span class="fp-ms" style="font-size:20px;">event_available</span>
-              </div>
-              <div>
-                 <div style="font-size:13.5px; font-weight:700; color:var(--fp-text-1);">Course Attendance</div>
-                 <div style="font-size:11.5px; color:var(--fp-text-4); margin-top:2px;">Mark attendance for completed sessions</div>
-              </div>
-            </div>
-            <div style="display:flex; align-items:center; gap:8px;">
-               <span style="font-size:13px; font-weight:700; color:var(--fp-primary); background:var(--fp-primary-light); padding:2px 8px; border-radius:12px;">{{ attendance_pending if not portal_error else '12' }}</span>
-               <span class="fp-ms" style="font-size:18px; color:var(--fp-text-4);">chevron_right</span>
-            </div>
-         </a>
-         
-         <a href="#" class="fp-task-link" style="display:flex; align-items:center; justify-content:space-between; padding:12px; border:1px solid var(--fp-border-light); border-radius:8px; text-decoration:none; transition: border 0.2s;">
-            <div style="display:flex; align-items:center; gap:12px;">
-              <div style="width:36px; height:36px; border-radius:8px; background:var(--fp-primary-light); color:var(--fp-primary); display:flex; align-items:center; justify-content:center;">
-                 <span class="fp-ms" style="font-size:20px;">how_to_reg</span>
-              </div>
-              <div>
-                 <div style="font-size:13.5px; font-weight:700; color:var(--fp-text-1);">Office Hour Attendance</div>
-                 <div style="font-size:11.5px; color:var(--fp-text-4); margin-top:2px;">Mark attendance for office hour sessions</div>
-              </div>
-            </div>
-            <div style="display:flex; align-items:center; gap:8px;">
-               <span style="font-size:13px; font-weight:700; color:var(--fp-primary); background:var(--fp-primary-light); padding:2px 8px; border-radius:12px;">4</span>
-               <span class="fp-ms" style="font-size:18px; color:var(--fp-text-4);">chevron_right</span>
-            </div>
-         </a>
-         
-         <a href="#" class="fp-task-link" style="display:flex; align-items:center; justify-content:space-between; padding:12px; border:1px solid var(--fp-border-light); border-radius:8px; text-decoration:none; transition: border 0.2s;">
-            <div style="display:flex; align-items:center; gap:12px;">
-              <div style="width:36px; height:36px; border-radius:8px; background:var(--fp-primary-light); color:var(--fp-primary); display:flex; align-items:center; justify-content:center;">
-                 <span class="fp-ms" style="font-size:20px;">description</span>
-              </div>
-              <div>
-                 <div style="font-size:13.5px; font-weight:700; color:var(--fp-text-1);">Office Hour Grading</div>
-                 <div style="font-size:11.5px; color:var(--fp-text-4); margin-top:2px;">Enter or update grades for OH</div>
-              </div>
-            </div>
-            <div style="display:flex; align-items:center; gap:8px;">
-               <span style="font-size:13px; font-weight:700; color:var(--fp-primary); background:var(--fp-primary-light); padding:2px 8px; border-radius:12px;">3</span>
-               <span class="fp-ms" style="font-size:18px; color:var(--fp-text-4);">chevron_right</span>
-            </div>
-         </a>
-         
-       </div>
-       
-       <!-- Right Column -->
-       <div style="display:flex; flex-direction:column; gap:12px;">
-         
-         <a href="#" class="fp-task-link" style="display:flex; align-items:center; justify-content:space-between; padding:12px; border:1px solid var(--fp-border-light); border-radius:8px; text-decoration:none; transition: border 0.2s;">
-            <div style="display:flex; align-items:center; gap:12px;">
-              <div style="width:36px; height:36px; border-radius:8px; background:var(--fp-primary-light); color:var(--fp-primary); display:flex; align-items:center; justify-content:center;">
-                 <span class="fp-ms" style="font-size:20px;">groups</span>
-              </div>
-              <div>
-                 <div style="font-size:13.5px; font-weight:700; color:var(--fp-text-1);">Class Participation Attendance</div>
-                 <div style="font-size:11.5px; color:var(--fp-text-4); margin-top:2px;">Mark participation attendance</div>
-              </div>
-            </div>
-            <div style="display:flex; align-items:center; gap:8px;">
-               <span style="font-size:13px; font-weight:700; color:var(--fp-primary); background:var(--fp-primary-light); padding:2px 8px; border-radius:12px;">3</span>
-               <span class="fp-ms" style="font-size:18px; color:var(--fp-text-4);">chevron_right</span>
-            </div>
-         </a>
-         
-         <a href="#" class="fp-task-link" style="display:flex; align-items:center; justify-content:space-between; padding:12px; border:1px solid var(--fp-border-light); border-radius:8px; text-decoration:none; transition: border 0.2s;">
-            <div style="display:flex; align-items:center; gap:12px;">
-              <div style="width:36px; height:36px; border-radius:8px; background:var(--fp-primary-light); color:var(--fp-primary); display:flex; align-items:center; justify-content:center;">
-                 <span class="fp-ms" style="font-size:20px;">star_border</span>
-              </div>
-              <div>
-                 <div style="font-size:13.5px; font-weight:700; color:var(--fp-text-1);">Class Participation Grade</div>
-                 <div style="font-size:11.5px; color:var(--fp-text-4); margin-top:2px;">Enter or update participation grades</div>
-              </div>
-            </div>
-            <div style="display:flex; align-items:center; gap:8px;">
-               <span style="font-size:13px; font-weight:700; color:var(--fp-primary); background:var(--fp-primary-light); padding:2px 8px; border-radius:12px;">2</span>
-               <span class="fp-ms" style="font-size:18px; color:var(--fp-text-4);">chevron_right</span>
-            </div>
-         </a>
-         
-       </div>
+    {# Each task opens the attendance page on its tab, filtered to just the
+       sessions with that pending task (keys from class_participation.TASKS). #}
+    {% set _tc = task_counts or {} %}
+    {% set _tasks = [
+      {"key": "course_att", "tab": "att", "icon": "event_available", "title": "Course Attendance",              "sub": "Mark attendance for completed sessions"},
+      {"key": "cp_att",     "tab": "cp",  "icon": "groups",          "title": "Class Participation Attendance", "sub": "Record who participated in class"},
+      {"key": "oh_att",     "tab": "oh",  "icon": "how_to_reg",      "title": "OH Attendance",                  "sub": "Mark attendance for OH sessions"},
+      {"key": "cp_grade",   "tab": "cp",  "icon": "star_border",     "title": "Class Participation Grade",      "sub": "Enter or update participation grades"},
+      {"key": "oh_grade",   "tab": "oh",  "icon": "description",     "title": "OH Grading",                     "sub": "Enter or update grades for OH"},
+    ] %}
+    <div class="fp-pending-tasks-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:12px 16px;">
+      {% for t in _tasks %}
+      {% set _n = _tc.get(t.key, 0) %}
+      <a href="/faculty-portal/attendance?tab={{ t.tab }}&pending={{ t.key }}" class="fp-task-link{% if not _n %} fp-task-done{% endif %}"
+         style="display:flex; align-items:center; justify-content:space-between; padding:12px; border:1px solid var(--fp-border-light); border-radius:8px; text-decoration:none; transition: border 0.2s;">
+        <div style="display:flex; align-items:center; gap:12px; min-width:0;">
+          <div style="width:36px; height:36px; border-radius:8px; background:var(--fp-primary-light); color:var(--fp-primary); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+            <span class="fp-ms" style="font-size:20px;">{{ t.icon }}</span>
+          </div>
+          <div style="min-width:0;">
+            <div style="font-size:13.5px; font-weight:700; color:var(--fp-text-1);">{{ t.title }}</div>
+            <div style="font-size:11.5px; color:var(--fp-text-4); margin-top:2px;">{{ t.sub if _n else 'All caught up' }}</div>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+          {% if _n %}
+          <span style="font-size:13px; font-weight:700; color:var(--fp-primary); background:var(--fp-primary-light); padding:2px 8px; border-radius:12px;">{{ _n }}</span>
+          {% else %}
+          <span class="fp-ms" style="font-size:18px; color:var(--fp-success);">check_circle</span>
+          {% endif %}
+          <span class="fp-ms" style="font-size:18px; color:var(--fp-text-4);">chevron_right</span>
+        </div>
+      </a>
+      {% endfor %}
     </div>
   </div>
 </div>
@@ -337,6 +280,7 @@ window._fpDashData = {
 .fp-task-link:hover {
   border-color: var(--fp-primary) !important;
 }
+.fp-task-link.fp-task-done { opacity: 0.7; }
 @media (max-width: 768px) {
   .fp-pending-tasks-grid {
     grid-template-columns: 1fr !important;
