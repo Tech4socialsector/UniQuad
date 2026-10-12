@@ -432,7 +432,7 @@
 {% macro grade_sup(c) -%}
 {%- if c.mfa == "Yes" -%}<sup class="spr-sup" title="MFA">MFA</sup>
 {%- elif c.arrear_marker -%}<sup class="spr-sup spr-sup-arrear" title="Arrear">{{ c.arrear_marker }}</sup>{%- endif -%}
-{%- if c.improvement_applied -%}<sup class="spr-sup spr-sup-imp" title="Improvement applied">I</sup>{%- endif -%}
+{%- if c.improved -%}<sup class="spr-sup spr-sup-imp" title="Result improved by a re-exam or improvement exam">I</sup>{%- endif -%}
 {%- endmacro %}
 
 {% macro improve_state(c) -%}

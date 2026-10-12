@@ -1364,7 +1364,7 @@ body.fp-dark .fp-dash-icon .fp-ms { color: #fff !important; }
   /* ── CSV Export ── */
   window.fpDrillExport = function() {
     if (!_drillData || !_drillData.rows || !_drillData.rows.length) {
-      alert('No data to export.');
+      fpAlert('There is no data in this list to export.', { title: 'Nothing to export', icon: 'download' });
       return;
     }
     var cols  = _drillData.columns;

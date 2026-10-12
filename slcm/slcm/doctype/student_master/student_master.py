@@ -671,7 +671,7 @@ def bulk_student_enrollment(students):
                     student.first_name, student.middle_name, student.last_name
                 ])),
                 "batch":         student.batch,
-                "batch_year_ref": frappe.db.get_value("Batch", student.batch, "section") or "",
+                "section":       frappe.db.get_value("Batch", student.batch, "section") or "",
                 "academic_year": student.academic_year,
                 "status":        "Enrolled",
                 "enrollment_date": frappe.utils.today(),
@@ -914,8 +914,7 @@ def get_academic_progress(student_name, enrollment_name=None):
     sm = frappe.db.get_value(
         "Student Master",
         student_name,
-        ["batch", "current_year", "academic_term", "current_cgpa", "attendance_status",
-         "first_name", "last_name"],
+        ["batch", "current_year", "academic_term", "current_cgpa"],
         as_dict=True,
     )
     batch_year = frappe.db.get_value("Batch", sm.batch, "section") if sm.batch else ""
@@ -927,7 +926,7 @@ def get_academic_progress(student_name, enrollment_name=None):
             {"student": student_name, "docstatus": ["<", 2], "name": enrollment_name},
             [
                 "name", "academic_year", "term_name", "status",
-                "program", "batch", "batch_year_ref", "enrollment_date", "faculty_advisor",
+                "program", "batch", "section", "enrollment_date", "faculty_advisor",
             ],
             as_dict=True,
         )
@@ -940,7 +939,7 @@ def get_academic_progress(student_name, enrollment_name=None):
                 recent[0].name,
                 [
                     "name", "academic_year", "term_name", "status",
-                    "program", "batch", "batch_year_ref", "enrollment_date", "faculty_advisor",
+                    "program", "batch", "section", "enrollment_date", "faculty_advisor",
                 ],
                 as_dict=True,
             )
@@ -950,7 +949,6 @@ def get_academic_progress(student_name, enrollment_name=None):
         "current_year": sm.current_year or "",
         "current_term": sm.academic_term or "",
         "current_cgpa": flt(sm.current_cgpa or 0),
-        "attendance_status": sm.attendance_status or "",
         "batch_year": batch_year or "",
         "enrollment": None,
         "courses": [],
@@ -1025,7 +1023,7 @@ def get_academic_progress(student_name, enrollment_name=None):
         "cohort_term_year":     cohort_doc.term_year if cohort_doc else "",
         "cohort_status":        cohort_doc.status if cohort_doc else "",
         "cohort_section":       cohort_doc.section if cohort_doc else "",
-        "batch_year":           enrollment.batch_year_ref or "",
+        "batch_year":           enrollment.section or "",
         "faculty_advisor":      enrollment.faculty_advisor or "",
         "faculty_advisor_name": faculty_advisor_name,
         "enrollment_date":      str(enrollment.enrollment_date) if enrollment.enrollment_date else "",

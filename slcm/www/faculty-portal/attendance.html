@@ -2824,7 +2824,7 @@ function _cpCollect() {
 function fpSaveAttendance() {
   if (_sat.readOnly) return;
   var map = attCollectData();
-  if (!Object.keys(map).length) { alert('No students to save.'); return; }
+  if (!Object.keys(map).length) { fpAlert('There are no students in this session to save.', { title: 'Nothing to save', icon: 'group_off' }); return; }
 
   var btn = document.getElementById('att-save-btn');
   btn.disabled = true;
@@ -3424,7 +3424,7 @@ function fpCloseRecModal() { _closeModal('att-rec-modal'); }
 function fpSaveRecommendation() {
   var doc = document.getElementById('att-rec-doc').value;
   var rec = document.getElementById('att-rec-value').value;
-  if (!rec) { alert('Please select a recommendation before submitting.'); return; }
+  if (!rec) { fpAlert('Please select a recommendation before submitting.', { title: 'Recommendation needed', icon: 'rule' }); return; }
 
   var btn = document.getElementById('att-rec-save-btn');
   btn.disabled = true;
@@ -3644,7 +3644,7 @@ function attDrillSearch() {
 
 /* Export drill table to CSV */
 function attDrillExport() {
-  if (!_drillRows.length) { alert('Nothing to export.'); return; }
+  if (!_drillRows.length) { fpAlert('There are no records in this list to export.', { title: 'Nothing to export', icon: 'download' }); return; }
   var rows   = _drillRows;
   var title  = (document.getElementById('att-drill-title').textContent || 'export')
                  .replace(/[^a-z0-9]/gi, '_').toLowerCase();
@@ -3723,7 +3723,7 @@ function fpActivateRfid(sessionName, btn) {
     function(msg) {
       btn.disabled = false;
       btn.innerHTML = originalHtml;
-      alert(msg || 'Could not activate RFID for this session.');
+      fpAlert(msg || 'Could not activate RFID for this session.', { title: 'RFID not activated', icon: 'wifi_off' });
     }
   );
 }

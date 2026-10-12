@@ -4,6 +4,18 @@
 import frappe
 from frappe import _
 
+from slcm.slcm.utils.result_access import (
+	MARKS_STATUSES,
+	arrear_badge,
+	assert_course_editable,
+	assert_student_editable,
+	get_max_marks,
+	get_reexam_attempts,
+	is_improved,
+	parse_marks,
+	validate_grade,
+)
+
 EXAMINATION_RESULT_ROLES = {"System Manager", "Academics User"}
 
 
@@ -854,7 +866,8 @@ def get_course_students_paged(course, exam_plan="", search="", page=1, page_leng
 			sm.programme_of_study,
 			sm.passport_size_photo,
 			NULL AS section,
-			scm.manually_added
+			scm.manually_added,
+			scm.status AS marks_status
 		FROM `tabStudent Course Marks` scm
 		LEFT JOIN `tabStudent Master` sm ON sm.name = scm.student
 		WHERE scm.course = %(course)s
@@ -1199,54 +1212,9 @@ def get_marks_for_students(course, exam_plan, student_ids):
 	)
 	approved_fa_mfa_students = {row["student"] for row in fa_mfa_apps}
 
-	# Bulk-fetch Re Exam Registration counts for all students in this batch
-	if student_ids:
-		reg_rows = frappe.db.sql(
-			"""
-			SELECT student, COUNT(*) AS cnt
-			FROM `tabRe Exam Registration`
-			WHERE course = %(course)s
-			  AND student IN %(students)s
-			  AND status != 'Cancelled'
-			GROUP BY student
-			""",
-			{"course": course, "students": tuple(student_ids)},
-			as_dict=True,
-		)
-		reg_count_map = {r["student"]: r["cnt"] for r in reg_rows}
-	else:
-		reg_count_map = {}
-
-	# Get the failed grades for this course's grade schema
-	assignment = frappe.db.get_value(
-		"Course Schema Assignment",
-		{"exam_plan": exam_plan, "course": course},
-		"grade_schema",
-	)
-	_failed_grade_set = set()
-	if assignment:
-		fg = frappe.db.sql(
-			"SELECT grade FROM `tabGrading Schema Component` WHERE parent = %s AND failed = 1",
-			assignment, as_list=True,
-		)
-		_failed_grade_set = {r[0] for r in fg if r[0]}
-
-	def _arrear_marker(student, grade, row=None):
-		reg_cnt = reg_count_map.get(student, 0)
-		is_fail = bool(grade and grade in _failed_grade_set) if _failed_grade_set else False
-		total = reg_cnt + (1 if is_fail else 0)
-		
-		if row:
-			updated = row.get("updated_final_marks") or 0.0
-			original = row.get("total_marks") or 0.0
-			if updated > original:
-				return "I"
-
-		if total >= 3:
-			return "RR"
-		elif total >= 1:
-			return "R"
-		return ""
+	# Arrear badge: one R per paid re-exam written (R, RR, RRR…); "improved"
+	# (I badge) is separate — see slcm.slcm.utils.result_access
+	attempts = get_reexam_attempts(course, student_ids)
 
 	result = {}
 	for row in header_rows:
@@ -1268,7 +1236,8 @@ def get_marks_for_students(course, exam_plan, student_ids):
 			"improvement_grade":    row["improvement_grade"] or "",
 			"improvement_applied":  int(row["improvement_applied"] or 0),
 			"re_exam_grade":        row["re_exam_grade"] or "",
-			"arrear_marker":        _arrear_marker(s, row["grade"] or "", row),
+			"arrear_marker":        arrear_badge(attempts.get(s, 0)),
+			"improved":             is_improved(row),
 			"entries":              {},
 		}
 
@@ -1310,6 +1279,7 @@ def get_marks_for_students(course, exam_plan, student_ids):
 def save_improvement_marks(course, exam_plan, student, improvement_marks):
 	"""Save improvement marks for a student and auto-compute improvement grade."""
 	_check_access()
+	assert_course_editable(exam_plan, course)
 	scm_name = frappe.db.get_value(
 		"Student Course Marks",
 		{"course": course, "exam_plan": exam_plan, "student": student},
@@ -1317,9 +1287,15 @@ def save_improvement_marks(course, exam_plan, student, improvement_marks):
 	)
 	if not scm_name:
 		frappe.throw("No marks record found for this student.")
+	assert_student_editable(scm_name)
+	return write_improvement_marks(scm_name, course, exam_plan, improvement_marks)
 
+
+def write_improvement_marks(scm_name, course, exam_plan, improvement_marks):
+	"""Store improvement-exam marks and apply them to the final result when
+	higher. Access checks are the caller's job."""
 	doc = frappe.get_doc("Student Course Marks", scm_name)
-	imp_marks = float(improvement_marks) if improvement_marks not in (None, "", "null") else None
+	imp_marks = parse_marks(improvement_marks, label="Improvement marks")
 
 	# Determine current best marks: use total_marks as the baseline
 	# (ignore updated_final_marks since it may have been set by a previous improvement)
@@ -1758,10 +1734,16 @@ def bulk_upload_grades(course, exam_plan, file_url):
 	if grade_col == -1:
 		frappe.throw("Column 'Grade' not found in the uploaded file.")
 
-	updated = 0
+	assert_course_editable(exam_plan, course)
+	grade_schema = frappe.db.get_value(
+		"Course Schema Assignment", {"course": course, "exam_plan": exam_plan}, "grade_schema"
+	)
+
+	# Validate every row first; nothing is written unless the whole file is valid
+	pending = []
 	errors  = []
 
-	for row in ws.iter_rows(min_row=2, values_only=True):
+	for row_no, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
 		reg_id = str(row[reg_col]).strip() if reg_col >= 0 and row[reg_col] else ""
 		email  = str(row[email_col]).strip() if email_col >= 0 and row[email_col] else ""
 		grade  = str(row[grade_col]).strip() if row[grade_col] else ""
@@ -1782,24 +1764,38 @@ def bulk_upload_grades(course, exam_plan, file_url):
 			) or frappe.db.get_value("Student Master", {"official_email_id": email}, "name") \
 			  or frappe.db.get_value("Student Master", {"email": email}, "name")
 
+		who = reg_id or email
 		if not student:
-			errors.append(f"Student not found: {reg_id or email}")
+			errors.append(f"Row {row_no}: student not found: {who}")
 			continue
 
-		scm_name = frappe.db.get_value(
+		scm = frappe.db.get_value(
 			"Student Course Marks",
 			{"course": course, "exam_plan": exam_plan, "student": student},
-			"name",
+			["name", "status"],
+			as_dict=True,
 		)
-		if not scm_name:
-			errors.append(f"No result record for: {reg_id or email}")
+		if not scm:
+			errors.append(f"Row {row_no}: no result record for {who}")
 			continue
+		if scm.status == "Locked":
+			errors.append(f"Row {row_no}: {who} is locked")
+			continue
+		try:
+			grade = validate_grade(grade, grade_schema)
+		except frappe.ValidationError as e:
+			errors.append(f"Row {row_no}: {who}: {frappe.utils.strip_html(str(e))}")
+			frappe.clear_messages()
+			continue
+		pending.append((scm.name, grade))
 
+	if errors:
+		return {"updated": 0, "errors": errors, "aborted": 1}
+
+	for scm_name, grade in pending:
 		frappe.db.set_value("Student Course Marks", scm_name, "grade", grade)
-		updated += 1
-
 	frappe.db.commit()
-	return {"updated": updated, "errors": errors}
+	return {"updated": len(pending), "errors": []}
 
 
 def _get_or_create_scm(course, exam_plan, student):
@@ -1846,7 +1842,9 @@ def _get_or_create_scm(course, exam_plan, student):
 def save_student_remark(course, exam_plan, student, remark):
 	"""Save a remark on a Student Course Marks record."""
 	_check_access()
+	assert_course_editable(exam_plan, course)
 	scm_name = _get_or_create_scm(course, exam_plan, student)
+	assert_student_editable(scm_name)
 	frappe.db.set_value("Student Course Marks", scm_name, "remark", remark)
 	frappe.db.commit()
 	return {"success": True}
@@ -1862,7 +1860,14 @@ def save_status(course, exam_plan, student, field, value):
 	if field not in VALID_FIELDS:
 		frappe.throw(f"Invalid field: {field}")
 
+	assert_course_editable(exam_plan, course)
 	scm_name = _get_or_create_scm(course, exam_plan, student)
+	assert_student_editable(scm_name)
+	if field in ("grade", "updated_grade"):
+		grade_schema = frappe.db.get_value(
+			"Course Schema Assignment", {"course": course, "exam_plan": exam_plan}, "grade_schema"
+		)
+		value = validate_grade(value, grade_schema)
 	frappe.db.set_value("Student Course Marks", scm_name, field, value)
 	# When marking absent, force grade = "Ab" and clear total
 	if field == "attendance_status" and (value or "").lower() == "absent":
@@ -1874,58 +1879,69 @@ def save_status(course, exam_plan, student, field, value):
 def save_marks(course, exam_plan, student, component, assessment_type, marks_field, value):
 	"""Save/update a single marks entry for a student assessment. Returns updated total and grade."""
 	_check_access()
+	assert_course_editable(exam_plan, course)
+	scm_name = _get_or_create_scm(course, exam_plan, student)
+	assert_student_editable(scm_name)
+	return write_marks_entry(scm_name, course, exam_plan, component, assessment_type, marks_field, value)
+
+
+def write_marks_entry(scm_name, course, exam_plan, component, assessment_type, marks_field, value):
+	"""Validate and store one component mark, then recalculate total + grade.
+	Access checks are the caller's job (desk save_marks / faculty portal)."""
 	VALID_FIELDS = {"marks", "revaluation_marks"}
 	if marks_field not in VALID_FIELDS:
 		frappe.throw(f"Invalid marks_field: {marks_field}")
 
-	fvalue = frappe.utils.flt(value) if value not in (None, "", "null", "--") else None
+	evaluation_schema = frappe.db.get_value("Student Course Marks", scm_name, "evaluation_schema") or \
+		frappe.db.get_value("Course Schema Assignment", {"course": course, "exam_plan": exam_plan}, "evaluation_schema")
+	max_marks = get_max_marks(evaluation_schema).get((component or "", assessment_type or ""))
+	# Blank stays blank (None), not 0 — an unentered mark is not a zero
+	fvalue = parse_marks(value, max_marks)
 
-	scm_name = _get_or_create_scm(course, exam_plan, student)
+	store_marks_entry(scm_name, component, assessment_type, marks_field, fvalue)
+	frappe.db.commit()
+	return _recalculate_student_marks(scm_name, course, exam_plan)
 
-	# Check lock status
-	access = frappe.db.get_value(
-		"Access Result Settings",
-		{"exam_plan": exam_plan, "course": course},
-		["edit_access", "status"],
-		as_dict=True,
-	) or {}
-	if access.get("status") == "LOCKED":
-		frappe.throw("Result entry is locked for this course.")
-	if not int(access.get("edit_access") or 1):
-		frappe.throw("Edit access is disabled for this course.")
 
-	# Update or create the marks entry row
+def store_marks_entry(scm_name, component, assessment_type, marks_field, fvalue):
+	"""Upsert one Student Marks Entry value (already validated; None clears
+	it). No recalculation — callers recalculate once per student.
+
+	Float columns are NOT NULL, so a cleared mark removes the entry row
+	(no row = not entered, shown blank) instead of storing 0; a cleared
+	revaluation / deduction is 0, which means "none"."""
+	if marks_field not in ("marks", "revaluation_marks"):
+		frappe.throw(f"Invalid marks_field: {marks_field}")
 	sme_name = frappe.db.get_value(
 		"Student Marks Entry",
 		{"parent": scm_name, "component": component, "assessment_type": assessment_type},
 		"name",
 	)
 	if sme_name:
-		frappe.db.set_value("Student Marks Entry", sme_name, marks_field, fvalue if fvalue is not None else 0.0)
-	else:
-		if fvalue is not None:
-			# marks_field is already validated against VALID_FIELDS — safe to use in f-string
-			frappe.db.sql(
-				f"""
-				INSERT INTO `tabStudent Marks Entry`
-				(name, creation, modified, modified_by, owner,
-				 parent, parenttype, parentfield, component, assessment_type, {marks_field})
-				VALUES (%(name_val)s, NOW(), NOW(), %(user)s, %(user)s,
-				        %(parent)s, 'Student Course Marks', 'marks_entries',
-				        %(comp)s, %(atype)s, %(val)s)
-				""",
-				{
-					"name_val": frappe.generate_hash("", 10),
-					"user":     frappe.session.user,
-					"parent":   scm_name,
-					"comp":     component,
-					"atype":    assessment_type,
-					"val":      fvalue,
-				},
-			)
-
-	frappe.db.commit()
-	return _recalculate_student_marks(scm_name, course, exam_plan)
+		if fvalue is None and marks_field == "marks":
+			frappe.db.delete("Student Marks Entry", {"name": sme_name})
+		else:
+			frappe.db.set_value("Student Marks Entry", sme_name, marks_field, fvalue or 0)
+	elif fvalue is not None:
+		# marks_field is validated above — safe to use in the f-string
+		frappe.db.sql(
+			f"""
+			INSERT INTO `tabStudent Marks Entry`
+			(name, creation, modified, modified_by, owner,
+			 parent, parenttype, parentfield, component, assessment_type, {marks_field})
+			VALUES (%(name_val)s, NOW(), NOW(), %(user)s, %(user)s,
+			        %(parent)s, 'Student Course Marks', 'marks_entries',
+			        %(comp)s, %(atype)s, %(val)s)
+			""",
+			{
+				"name_val": frappe.generate_hash("", 10),
+				"user":     frappe.session.user,
+				"parent":   scm_name,
+				"comp":     component,
+				"atype":    assessment_type,
+				"val":      fvalue,
+			},
+		)
 
 
 def _recalculate_student_marks(scm_name, course, exam_plan):
@@ -2080,6 +2096,16 @@ def _recalculate_student_marks(scm_name, course, exam_plan):
 	# Updated grade uses Re Exam Composition when the schema is configured for it
 	updated_grade = _lookup_grade(grade_schema, updated_final_marks, use_reexam=True) if grade_schema else ""
 
+	# Improvement-exam marks (write_improvement_marks) still count after any
+	# later recalculation — previously an edit here silently dropped them.
+	improvement_marks = frappe.utils.flt(
+		frappe.db.get_value("Student Course Marks", scm_name, "improvement_marks") or 0
+	)
+	improvement_applied = 1 if (improvement_marks > 0 and improvement_marks > total) else 0
+	if improvement_applied and improvement_marks > updated_final_marks:
+		updated_final_marks = improvement_marks
+		updated_grade = _lookup_grade(grade_schema, improvement_marks) if grade_schema else ""
+
 	# Re-exam grade — the grade the re-exam attempt itself maps to (mirrors how
 	# improvement_grade is looked up from the raw improvement_marks alone),
 	# distinct from updated_grade which reflects the better-of-the-two total.
@@ -2093,6 +2119,7 @@ def _recalculate_student_marks(scm_name, course, exam_plan):
 		"updated_final_marks": round(updated_final_marks, 2),
 		"updated_grade":      updated_grade,
 		"re_exam_grade":      reexam_grade,
+		"improvement_applied": improvement_applied,
 	})
 	frappe.db.commit()
 	return {
@@ -2101,6 +2128,8 @@ def _recalculate_student_marks(scm_name, course, exam_plan):
 		"updated_final_marks": round(updated_final_marks, 2),
 		"updated_grade":      updated_grade,
 		"re_exam_grade":      reexam_grade,
+		"improvement_applied": improvement_applied,
+		"improved":           bool(improvement_applied or updated_final_marks > total),
 	}
 
 
@@ -2206,6 +2235,33 @@ def toggle_lock(course, exam_plan):
 	frappe.db.set_value("Access Result Settings", doc.name, "status", new_status)
 	frappe.db.commit()
 	return {"status": new_status}
+
+
+@frappe.whitelist()
+def set_marks_status(course, exam_plan, status, students=None, select_all=0):
+	"""Manage Status: set Student Course Marks.status (Draft / Submitted /
+	Locked) for the selected students, or every student of the course when
+	select_all is set. Locked rows can't be edited by anyone until set back
+	to Draft; Submitted rows can't be edited by faculty."""
+	_check_access()
+	import json as _json
+
+	if status not in MARKS_STATUSES:
+		frappe.throw(_("Invalid status: {0}").format(status))
+
+	filters = {"course": course, "exam_plan": exam_plan}
+	if not frappe.utils.cint(select_all):
+		if isinstance(students, str):
+			students = _json.loads(students or "[]")
+		if not students:
+			frappe.throw(_("Select at least one student."))
+		filters["student"] = ["in", students]
+
+	names = frappe.get_all("Student Course Marks", filters=filters, pluck="name")
+	for name in names:
+		frappe.db.set_value("Student Course Marks", name, "status", status)
+	frappe.db.commit()
+	return {"updated": len(names), "status": status}
 
 
 # ── Excel Import / Export ─────────────────────────────────────────────────────
@@ -2699,7 +2755,7 @@ def import_marks_excel(course, exam_plan, file_url):
 	# ── Build student lookup maps ─────────────────────────────────────────────
 	students = frappe.db.sql(
 		"""
-		SELECT scm.name AS scm_name, scm.student, sm.registration_id, sm.personal_email AS email_id
+		SELECT scm.name AS scm_name, scm.student, scm.status, sm.registration_id, sm.personal_email AS email_id
 		FROM `tabStudent Course Marks` scm
 		LEFT JOIN `tabStudent Master` sm ON sm.name = scm.student
 		WHERE scm.course = %(course)s AND scm.exam_plan = %(exam_plan)s
@@ -2707,29 +2763,33 @@ def import_marks_excel(course, exam_plan, file_url):
 		{"course": course, "exam_plan": exam_plan},
 		as_dict=True,
 	)
-	reg_map   = {s["registration_id"]: (s["scm_name"], s["student"]) for s in students if s["registration_id"]}
-	email_map = {s["email_id"]:        (s["scm_name"], s["student"]) for s in students if s["email_id"]}
+	reg_map   = {s["registration_id"]: s for s in students if s["registration_id"]}
+	email_map = {s["email_id"]:        s for s in students if s["email_id"]}
 
-	updated = 0
+	assert_course_editable(exam_plan, course)
+	max_map = get_max_marks(csa_row)
+
+	# Validate every row first; nothing is written unless the whole file is valid
+	pending = {}   # scm_name -> [(comp, atype, field, value)]
 	errors  = []
 
 	# Data starts from row 4 (rows 1-3 are the 3-level headers)
-	for row in ws.iter_rows(min_row=4, values_only=True):
+	for row_no, row in enumerate(ws.iter_rows(min_row=4, values_only=True), start=4):
 		reg_id   = str(row[reg_col]).strip()   if reg_col   is not None and row[reg_col]   else ""
 		email_id = str(row[email_col]).strip() if email_col is not None and row[email_col] else ""
+		who = reg_id or email_id
 
-		scm_name = _student = None
-		if reg_id and reg_id in reg_map:
-			scm_name, _student = reg_map[reg_id]
-		elif email_id and email_id in email_map:
-			scm_name, _student = email_map[email_id]
+		srow = reg_map.get(reg_id) if reg_id else None
+		if not srow and email_id:
+			srow = email_map.get(email_id)
 
-		if not scm_name:
-			if reg_id or email_id:
-				errors.append(f"Student '{reg_id or email_id}' not found.")
+		if not srow:
+			if who:
+				errors.append(f"Row {row_no}: student '{who}' not found in this course.")
 			continue
-
-		row_changed = False
+		if srow["status"] == "Locked":
+			errors.append(f"Row {row_no}: {who} is locked.")
+			continue
 
 		for ci, (comp, atype, db_field) in col_field_map.items():
 			if ci >= len(row):
@@ -2737,46 +2797,25 @@ def import_marks_excel(course, exam_plan, file_url):
 			cell_val = row[ci]
 			if cell_val is None or str(cell_val).strip() == "":
 				continue
+			# Project deduction (revaluation_marks) is capped by the same maximum
 			try:
-				fval = float(cell_val)
-			except (ValueError, TypeError):
-				errors.append(f"Invalid value '{cell_val}' for {reg_id} / col {ci + 1}.")
+				fval = parse_marks(cell_val, max_map.get((comp or "", atype or "")), label=f"Column {ci + 1}")
+			except frappe.ValidationError as e:
+				errors.append(f"Row {row_no}: {who}: {frappe.utils.strip_html(str(e))}")
+				frappe.clear_messages()
 				continue
+			pending.setdefault(srow["scm_name"], []).append((comp, atype, db_field, fval))
 
-			sme_name = frappe.db.get_value(
-				"Student Marks Entry",
-				{"parent": scm_name, "component": comp, "assessment_type": atype},
-				"name",
-			)
-			if sme_name:
-				frappe.db.set_value("Student Marks Entry", sme_name, db_field, fval)
-			else:
-				frappe.db.sql(
-					f"""
-					INSERT INTO `tabStudent Marks Entry`
-					(name, creation, modified, modified_by, owner,
-					 parent, parenttype, parentfield, component, assessment_type, {db_field})
-					VALUES (%(nm)s, NOW(), NOW(), %(usr)s, %(usr)s,
-					        %(par)s, 'Student Course Marks', 'marks_entries',
-					        %(comp)s, %(atype)s, %(val)s)
-					""",
-					{
-						"nm":   frappe.generate_hash("", 10),
-						"usr":  frappe.session.user,
-						"par":  scm_name,
-						"comp": comp,
-						"atype": atype,
-						"val":  fval,
-					},
-				)
-			row_changed = True
+	if errors:
+		return {"updated": 0, "errors": errors, "aborted": 1}
 
-		if row_changed:
-			_recalculate_student_marks(scm_name, course, exam_plan)
-			updated += 1
+	for scm_name, values in pending.items():
+		for comp, atype, db_field, fval in values:
+			store_marks_entry(scm_name, comp, atype, db_field, fval)
+		_recalculate_student_marks(scm_name, course, exam_plan)
 
 	frappe.db.commit()
-	return {"updated": updated, "errors": errors}
+	return {"updated": len(pending), "errors": []}
 
 
 @frappe.whitelist()
@@ -2883,6 +2922,7 @@ def import_reexam_marks_excel(course, exam_plan, file_url):
 		frappe.throw("openpyxl is required. Run: bench pip install openpyxl")
 
 	file_doc = frappe.get_doc("File", {"file_url": file_url})
+	file_doc.check_permission("read")
 	file_path = file_doc.get_full_path()
 
 	wb = openpyxl.load_workbook(file_path, data_only=True)
@@ -2905,7 +2945,7 @@ def import_reexam_marks_excel(course, exam_plan, file_url):
 	# Build student map
 	students = frappe.db.sql(
 		"""
-		SELECT scm.name AS scm_name, scm.student, sm.registration_id, sm.personal_email AS email_id
+		SELECT scm.name AS scm_name, scm.student, scm.status, sm.registration_id, sm.personal_email AS email_id
 		FROM `tabStudent Course Marks` scm
 		LEFT JOIN `tabStudent Master` sm ON sm.name = scm.student
 		WHERE scm.course = %(course)s AND scm.exam_plan = %(exam_plan)s
@@ -2914,99 +2954,74 @@ def import_reexam_marks_excel(course, exam_plan, file_url):
 		as_dict=True,
 	)
 
-	reg_map = {s["registration_id"]: s["scm_name"] for s in students if s["registration_id"]}
-	email_map = {s["email_id"]: s["scm_name"] for s in students if s["email_id"]}
+	reg_map = {s["registration_id"]: s for s in students if s["registration_id"]}
+	email_map = {s["email_id"]: s for s in students if s["email_id"]}
 
-	updated = 0
+	assert_course_editable(exam_plan, course)
+
+	# The re-exam component the marks go into (first Schema Reexam Config row)
+	csa_row = frappe.db.get_value(
+		"Course Schema Assignment",
+		{"course": course, "exam_plan": exam_plan},
+		"evaluation_schema",
+	)
+	reexam_config = frappe.db.get_value(
+		"Schema Reexam Config",
+		{"parent": csa_row},
+		["component", "assessment_type", "maximum_marks"],
+		as_dict=True,
+		order_by="idx asc",
+	) if csa_row else None
+	if not reexam_config:
+		frappe.throw("No re-exam component is configured in this course's evaluation schema.")
+
+	# Validate every row first; nothing is written unless the whole file is valid
+	pending = []
 	errors = []
 
-	for row in ws.iter_rows(min_row=2, values_only=True):
+	for row_no, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
 		if not row or all(cell is None or str(cell).strip() == "" for cell in row):
 			continue
 
 		reg_id = str(row[reg_col]).strip() if reg_col is not None and row[reg_col] else ""
 		email_id = str(row[email_col]).strip() if email_col is not None and row[email_col] else ""
 		reexam_marks = row[reexam_col] if reexam_col is not None and reexam_col < len(row) else None
+		who = reg_id or email_id
 
 		# Skip if no re-exam marks provided
 		if reexam_marks is None or str(reexam_marks).strip() == "":
 			continue
 
-		# Find student
-		scm_name = None
-		if reg_id and reg_id in reg_map:
-			scm_name = reg_map[reg_id]
-		elif email_id and email_id in email_map:
-			scm_name = email_map[email_id]
-
-		if not scm_name:
-			if reg_id or email_id:
-				errors.append(f"Student '{reg_id or email_id}' not found.")
+		srow = reg_map.get(reg_id) if reg_id else None
+		if not srow and email_id:
+			srow = email_map.get(email_id)
+		if not srow:
+			if who:
+				errors.append(f"Row {row_no}: student '{who}' not found in this course.")
+			continue
+		if srow["status"] == "Locked":
+			errors.append(f"Row {row_no}: {who} is locked.")
 			continue
 
-		# Validate marks
 		try:
-			marks_val = float(reexam_marks)
-		except (ValueError, TypeError):
-			errors.append(f"Invalid re-exam marks '{reexam_marks}' for student '{reg_id or email_id}'.")
+			marks_val = parse_marks(reexam_marks, reexam_config.maximum_marks, label="Re-exam marks")
+		except frappe.ValidationError as e:
+			errors.append(f"Row {row_no}: {who}: {frappe.utils.strip_html(str(e))}")
+			frappe.clear_messages()
 			continue
+		pending.append((srow["scm_name"], marks_val))
 
-		# Update updated_final_marks field
-		# frappe.db.set_value("Student Course Marks", scm_name, "updated_final_marks", marks_val)
+	if errors:
+		return {"updated": 0, "errors": errors, "aborted": 1}
 
-		# Dynamically fetch re-exam config for component and assessment_type
-		csa_row = frappe.db.get_value(
-			"Course Schema Assignment",
-			{"course": course, "exam_plan": exam_plan},
-			"evaluation_schema",
+	for scm_name, marks_val in pending:
+		store_marks_entry(
+			scm_name, reexam_config.component, reexam_config.assessment_type, "marks", marks_val
 		)
-		reexam_config = frappe.db.get_value(
-			"Schema Reexam Config",
-			{"parent": csa_row},
-			["component", "assessment_type"],
-			as_dict=True
-		) if csa_row else None
-		
-		if reexam_config:
-			r_comp = reexam_config.get("component")
-			r_atype = reexam_config.get("assessment_type")
-			reexam_entry = frappe.db.get_value(
-				"Student Marks Entry",
-				{
-					"parent": scm_name,
-					"component": r_comp,
-					"assessment_type": r_atype
-				},
-				"name"
-			)
-			if reexam_entry:
-				frappe.db.set_value("Student Marks Entry", reexam_entry, "marks", marks_val)
-			else:
-				frappe.db.sql(
-					"""
-					INSERT INTO `tabStudent Marks Entry`
-					(name, creation, modified, modified_by, owner,
-					 parent, parenttype, parentfield, component, assessment_type, marks)
-					VALUES (%(nm)s, NOW(), NOW(), %(usr)s, %(usr)s,
-					        %(par)s, 'Student Course Marks', 'marks_entries',
-					        %(comp)s, %(atype)s, %(val)s)
-					""",
-					{
-						"nm":   frappe.generate_hash("", 10),
-						"usr":  frappe.session.user,
-						"par":  scm_name,
-						"comp": r_comp,
-						"atype": r_atype,
-						"val":  marks_val,
-					},
-				)
-
-		# Recalculate grade based on new marks
 		_recalculate_student_marks(scm_name, course, exam_plan)
-		updated += 1
 
 	frappe.db.commit()
-	return {"updated": updated, "errors": errors}
+	return {"updated": len(pending), "errors": []}
 
 
 def _recalculate_grade_for_reexam(scm_name, final_marks, course, exam_plan):
@@ -3254,15 +3269,16 @@ def get_arrear_students_for_course(exam_plan, course):
 		as_dict=True,
 	)
 
+	attempts = get_reexam_attempts(course, [s["student"] for s in students])
 	result = []
 	for s in students:
 		effective_grade = s.get("updated_grade") or s.get("grade") or ""
 		is_fail = (effective_grade in failed_set) if failed_set else False
-		reg_count = int(s.get("reg_count") or 0)
-		total_arrears = reg_count + (1 if is_fail else 0)
-		if total_arrears >= 1:
-			s["arrear_marker"] = "RR" if total_arrears >= 3 else "R"
-			s["total_arrears"] = total_arrears
+		written = attempts.get(s["student"], 0)
+		# Still failing, or has written re-exams before → needs / had another attempt
+		if is_fail or written:
+			s["arrear_marker"] = arrear_badge(written)
+			s["total_arrears"] = written
 			s["effective_grade"] = effective_grade
 			result.append(s)
 
