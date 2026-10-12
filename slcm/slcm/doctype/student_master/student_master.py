@@ -975,7 +975,7 @@ def get_academic_progress(student_name, enrollment_name=None):
         at_doc = frappe.db.get_value(
             "Academic Term",
             enrollment.term_name,
-            ["term_name", "sequence", "term_start_date", "term_end_date", "status"],
+            ["term_name", "term_start_date", "term_end_date", "status"],
             as_dict=True,
         )
 
@@ -997,8 +997,11 @@ def get_academic_progress(student_name, enrollment_name=None):
     # Faculty advisor name
     faculty_advisor_name = ""
     if enrollment.faculty_advisor:
-        faculty_advisor_name = frappe.db.get_value(
-            "Faculty", enrollment.faculty_advisor, "faculty_name"
+        fa = frappe.db.get_value(
+            "Faculty", enrollment.faculty_advisor, ["first_name", "last_name"], as_dict=True
+        )
+        faculty_advisor_name = (
+            " ".join(filter(None, [fa.first_name, fa.last_name])) if fa else ""
         ) or enrollment.faculty_advisor
 
     result["enrollment"] = {
@@ -1010,7 +1013,6 @@ def get_academic_progress(student_name, enrollment_name=None):
         "ay_end":               str(ay_doc.year_end_date) if ay_doc and ay_doc.year_end_date else "",
         "ay_status":            ay_doc.status if ay_doc else "",
         "term_name":            enrollment.term_name or "",
-        "term_sequence":        at_doc.sequence if at_doc else "",
         "term_start":           str(at_doc.term_start_date) if at_doc and at_doc.term_start_date else "",
         "term_end":             str(at_doc.term_end_date) if at_doc and at_doc.term_end_date else "",
         "term_status":          at_doc.status if at_doc else "",

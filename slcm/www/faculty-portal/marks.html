@@ -33,6 +33,21 @@
 .fg-toolbar .fp-btn { white-space: nowrap; }
 .fg-sel-info { font-size: 12px; color: var(--fp-text-3); margin-left: auto; }
 
+/* Save bar: Save Changes (count) + Discard + progress / result text */
+.fg-savebar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 18px;
+  border-bottom: 1px solid var(--fp-border-light); background: var(--fp-bg); }
+.fg-save-btn:disabled { opacity: .5; cursor: not-allowed; }
+.fg-save-btn .fg-count { display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 4px; border-radius: 9px;
+  background: rgba(255,255,255,.25); font-size: 11px; line-height: 18px; text-align: center; }
+.fg-save-status { font-size: 12.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; }
+.fg-save-status .fp-ms { font-size: 16px; }
+.fg-save-status.ok   { color: var(--fp-success); }
+.fg-save-status.err  { color: var(--fp-primary); }
+.fg-save-status.busy { color: #b25e09; }
+.fg-save-status.busy .fp-ms { animation: fp-spin .8s linear infinite; }
+.fg-progress { flex: 1; min-width: 120px; max-width: 260px; height: 6px; border-radius: 3px; background: var(--fp-border-light); overflow: hidden; display: none; }
+.fg-progress > div { height: 100%; width: 0; background: var(--fp-primary); transition: width .15s; }
+
 .fg-wrap { overflow: auto; max-height: calc(100vh - 260px); }
 .fg-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; }
 .fg-table th { position: sticky; top: 0; z-index: 2; background: var(--fp-bg); color: var(--fp-text-3);
@@ -53,6 +68,8 @@
 .fg-in { width: 74px; height: 30px; border: 1.5px solid var(--fp-border); border-radius: 6px; text-align: center;
   font-size: 13px; font-weight: 600; font-family: inherit; color: var(--fp-text-1); background: var(--fp-card); }
 .fg-in:focus { border-color: var(--fp-primary); outline: none; }
+/* Changed but not saved yet (Save Changes button) */
+.fg-in.fg-dirty, .fg-remark.fg-dirty { border-color: #d4a017; background: #fff8e6; }
 .fg-in.fg-saving { border-color: #d4a017; }
 .fg-in.fg-saved  { border-color: var(--fp-success); }
 .fg-in.fg-error  { border-color: var(--fp-primary); background: #fde8eb; }
@@ -189,6 +206,17 @@
         <button type="button" class="fp-btn fp-btn-secondary fp-btn-sm fg-edit-only" onclick="fgSetStatus('Draft')"><span class="fp-ms">undo</span>Mark as Draft</button>
         <span class="fg-sel-info" id="fg-sel-info"></span>
       </div>
+      {# Edits are saved only when Save Changes is clicked #}
+      <div class="fg-savebar fg-edit-only" data-savebar="sheet">
+        <button type="button" class="fp-btn fp-btn-primary fp-btn-sm fg-save-btn" onclick="fgSaveAll('sheet')" disabled>
+          <span class="fp-ms">save</span>Save Changes<span class="fg-count">0</span>
+        </button>
+        <button type="button" class="fp-btn fp-btn-secondary fp-btn-sm fg-discard-btn" onclick="fgDiscard('sheet')" disabled>
+          <span class="fp-ms">undo</span>Discard
+        </button>
+        <div class="fg-progress"><div></div></div>
+        <span class="fg-save-status"></span>
+      </div>
       <div class="fg-wrap"><table class="fg-table" id="fg-sheet"></table></div>
     </div>
 
@@ -198,6 +226,16 @@
         Only students with a <b>paid</b> re-exam or improvement exam registration are listed. Their previous result is shown next to the new marks.
         <span class="fg-badge fg-badge-r">R</span> one per re-exam written ·
         <span class="fg-badge fg-badge-i">I</span> the final result was improved.
+      </div>
+      <div class="fg-savebar" data-savebar="reexam">
+        <button type="button" class="fp-btn fp-btn-primary fp-btn-sm fg-save-btn" onclick="fgSaveAll('reexam')" disabled>
+          <span class="fp-ms">save</span>Save Changes<span class="fg-count">0</span>
+        </button>
+        <button type="button" class="fp-btn fp-btn-secondary fp-btn-sm fg-discard-btn" onclick="fgDiscard('reexam')" disabled>
+          <span class="fp-ms">undo</span>Discard
+        </button>
+        <div class="fg-progress"><div></div></div>
+        <span class="fg-save-status"></span>
       </div>
       <div class="fg-wrap"><table class="fg-table" id="fg-reexam"></table></div>
     </div>
@@ -319,15 +357,27 @@ function fgSetUrl() {
   history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : ''));
 }
 function fgChangeCourse() {
-  FG.co = document.getElementById('fg-co').value;
-  FG.plan = '';
-  fgSetUrl();
-  fgLoad();
+  var sel = document.getElementById('fg-co');
+  var wanted = sel.value;
+  fgGuardUnsaved(function () {
+    FG.co = wanted;
+    sel.value = wanted;
+    FG.plan = '';
+    fgSetUrl();
+    fgLoad();
+  });
+  sel.value = FG.co || '';   /* stays put until the faculty confirms */
 }
 function fgChangePlan() {
-  FG.plan = document.getElementById('fg-plan').value;
-  fgSetUrl();
-  fgLoad();
+  var sel = document.getElementById('fg-plan');
+  var wanted = sel.value;
+  fgGuardUnsaved(function () {
+    FG.plan = wanted;
+    sel.value = wanted;
+    fgSetUrl();
+    fgLoad();
+  });
+  sel.value = FG.plan || '';
 }
 
 function fgLoad() {
@@ -465,11 +515,11 @@ function fgRenderSheet() {
     var absent = s.attendance_status === 'Absent';
     var grade = absent ? 'Ab' : (s.grade || '');
     var gradeCell = (rowEdit && FG.info.can_override_grade && !absent)
-      ? '<input class="fg-in fg-grade-in" list="fg-grade-list" data-student="' + fgEsc(s.student) + '" value="' + fgEsc(grade) + '" onchange="fgSaveGrade(this)" title="Override grade">'
+      ? '<input class="fg-in fg-grade-in fg-track" data-kind="grade" list="fg-grade-list" data-student="' + fgEsc(s.student) + '" value="' + fgEsc(grade) + '" data-orig="' + fgEsc(grade) + '" oninput="fgTrack(this)" title="Override grade">'
       : '<span class="fg-grade ' + fgGradeClass(grade) + '">' + fgEsc(grade || '—') + '</span>';
     cells += '<td class="fg-total" data-total="' + fgEsc(s.student) + '">' + (absent ? '—' : fgFmt(s.total)) + '</td>' +
       '<td data-grade="' + fgEsc(s.student) + '">' + gradeCell + '<span data-badges="' + fgEsc(s.student) + '">' + fgBadges(s.arrear_marker, s.improved) + '</span></td>' +
-      '<td class="fg-left"><input class="fg-remark" data-student="' + fgEsc(s.student) + '" value="' + fgEsc(s.remark) + '" placeholder="' + (rowEdit ? 'Add remark' : '') + '" ' + (rowEdit ? 'onchange="fgSaveRemark(this)"' : 'disabled') + '></td>' +
+      '<td class="fg-left"><input class="fg-remark' + (rowEdit ? ' fg-track' : '') + '" data-kind="remark" data-student="' + fgEsc(s.student) + '" value="' + fgEsc(s.remark) + '" data-orig="' + fgEsc(s.remark) + '" placeholder="' + (rowEdit ? 'Add remark' : '') + '" ' + (rowEdit ? 'oninput="fgTrack(this)"' : 'disabled') + '></td>' +
       '<td><span class="fg-status fg-status-' + fgEsc(s.status) + '">' + fgEsc(s.status) + '</span></td>';
     return '<tr class="fg-row' + (rowEdit ? '' : ' fg-row-readonly') + '" data-student="' + fgEsc(s.student) + '" data-q="' + fgEsc((s.student_name + ' ' + s.reg_id).toLowerCase()) + '">' + cells + '</tr>';
   }).join('');
@@ -478,14 +528,16 @@ function fgRenderSheet() {
     '<datalist id="fg-grade-list">' + (FG.info.grades || []).map(function (g) { return '<option value="' + fgEsc(g) + '">'; }).join('') + '</datalist>';
   fgFilter();
   fgSelInfo();
+  fgSetSaveStatus('sheet', '', '');
+  fgRefreshSaveBar('sheet');
 }
 
 function fgMarkInput(s, c, field, value, editable) {
   var v = (value === null || value === undefined) ? '' : fgFmt(value);
-  return '<input type="number" class="fg-in" step="0.01" min="0" max="' + c.max_marks + '" value="' + fgEsc(v) + '"' +
-    ' data-student="' + fgEsc(s.student) + '" data-comp="' + fgEsc(c.component) + '" data-atype="' + fgEsc(c.assessment_type) + '"' +
+  return '<input type="number" class="fg-in' + (editable ? ' fg-track' : '') + '" data-kind="mark" step="0.01" min="0" max="' + c.max_marks + '" value="' + fgEsc(v) + '"' +
+    ' data-orig="' + fgEsc(v) + '" data-student="' + fgEsc(s.student) + '" data-comp="' + fgEsc(c.component) + '" data-atype="' + fgEsc(c.assessment_type) + '"' +
     ' data-field="' + field + '" data-max="' + c.max_marks + '" data-label="' + fgEsc(c.label) + '"' +
-    (editable ? ' onchange="fgSaveMark(this)" onkeydown="fgKeyNav(event,this)"' : ' disabled') + '>';
+    (editable ? ' oninput="fgTrack(this)" onkeydown="fgKeyNav(event,this)"' : ' disabled') + '>';
 }
 
 /* Enter / arrow-down moves to the same column on the next row */
@@ -506,21 +558,96 @@ function fgCellState(inp, state, title) {
   if (state === 'saved') setTimeout(function () { inp.classList.remove('fg-saved'); }, 1500);
 }
 
-function fgSaveMark(inp) {
-  var val = inp.value.trim(), max = parseFloat(inp.dataset.max);
-  if (val !== '' && (isNaN(parseFloat(val)) || parseFloat(val) < 0 || (max && parseFloat(val) > max))) {
-    fgCellState(inp, 'error', 'Enter a number between 0 and ' + max);
-    fgToast(inp.dataset.label + ': enter a number between 0 and ' + max, true);
-    return;
+/* ══════════════════════════════════════════════════════════
+   SAVE CHANGES — edits are tracked, then saved together with the
+   Save Changes button (progress shown, each cell marked saved / failed).
+   Each tracked input (.fg-track) carries data-orig = the saved value.
+══════════════════════════════════════════════════════════ */
+var FG_SAVE_ORDER = { mark: 0, reexam: 1, improvement: 2, grade: 3, remark: 4 };  /* grades after marks: marks recalculate the grade */
+
+function fgTabEl(tab) { return document.getElementById(tab === 'reexam' ? 'fg-tab-reexam' : 'fg-tab-sheet'); }
+function fgDirty(tab) { return Array.prototype.slice.call(fgTabEl(tab).querySelectorAll('.fg-track.fg-dirty')); }
+function fgAnyDirty() { return fgDirty('sheet').length + fgDirty('reexam').length > 0; }
+
+/* Client-side check, same rules as the server; returns an error or '' */
+function fgValidate(inp) {
+  var kind = inp.dataset.kind, val = inp.value.trim();
+  if (kind === 'remark' || kind === 'grade') return '';
+  if (val === '') return '';
+  var n = parseFloat(val), max = parseFloat(inp.dataset.max);
+  if (isNaN(n)) return (inp.dataset.label || 'Marks') + ': enter a number';
+  if (n < 0) return (inp.dataset.label || 'Marks') + ' cannot be negative';
+  if (max && n > max) return (inp.dataset.label || 'Marks') + ' cannot be more than ' + fgFmt(max);
+  return '';
+}
+
+function fgTrack(inp) {
+  if (inp.dataset.kind === 'grade') inp.value = inp.value.toUpperCase();
+  var changed = inp.value.trim() !== (inp.dataset.orig || '');
+  inp.classList.toggle('fg-dirty', changed);
+  inp.classList.remove('fg-saved');
+  var err = changed ? fgValidate(inp) : '';
+  inp.classList.toggle('fg-error', !!err);
+  inp.title = err;
+  fgRefreshSaveBar(inp.closest('#fg-tab-reexam') ? 'reexam' : 'sheet');
+}
+
+function fgSaveBar(tab) { return document.querySelector('[data-savebar="' + tab + '"]'); }
+
+function fgSetSaveStatus(tab, kind, html) {
+  var el = fgSaveBar(tab).querySelector('.fg-save-status');
+  el.className = 'fg-save-status' + (kind ? ' ' + kind : '');
+  el.innerHTML = html || '';
+}
+
+function fgRefreshSaveBar(tab) {
+  var bar = fgSaveBar(tab);
+  if (!bar || bar.dataset.busy === '1') return;
+  var n = fgDirty(tab).length;
+  bar.querySelector('.fg-save-btn').disabled = !n;
+  bar.querySelector('.fg-discard-btn').disabled = !n;
+  bar.querySelector('.fg-count').textContent = n;
+  if (n) fgSetSaveStatus(tab, 'busy', '<span class="fp-ms" style="animation:none;">edit_note</span>' + n + ' unsaved change' + (n === 1 ? '' : 's'));
+  else if (!bar.querySelector('.fg-save-status').classList.contains('ok') && !bar.querySelector('.fg-save-status').classList.contains('err')) fgSetSaveStatus(tab, '', '');
+}
+
+/* Save one tracked input → Promise resolving to {ok, msg} */
+function fgSaveOne(inp) {
+  var sid = inp.dataset.student, val = inp.value.trim(), kind = inp.dataset.kind;
+  var base = { course_offering: FG.co, exam_plan: FG.plan, student: sid };
+  var method, args;
+  if (kind === 'mark') {
+    method = 'save_mark';
+    args = Object.assign(base, { component: inp.dataset.comp, assessment_type: inp.dataset.atype, field: inp.dataset.field, value: val });
+  } else if (kind === 'grade') {
+    method = 'save_grade'; args = Object.assign(base, { grade: val });
+  } else if (kind === 'remark') {
+    method = 'save_remark'; args = Object.assign(base, { remark: inp.value });
+  } else if (kind === 'reexam') {
+    method = 'save_reexam_mark';
+    args = Object.assign(base, { component: inp.dataset.comp, assessment_type: inp.dataset.atype, value: val });
+  } else {
+    method = 'save_improvement_mark'; args = Object.assign(base, { value: val });
   }
-  var sid = inp.dataset.student;
-  fgCellState(inp, 'saving');
-  fgCall('save_mark', {
-    course_offering: FG.co, exam_plan: FG.plan, student: sid,
-    component: inp.dataset.comp, assessment_type: inp.dataset.atype, field: inp.dataset.field, value: val,
-  }, function (r) {
-    fgCellState(inp, 'saved');
-    var s = FG.students.filter(function (x) { return x.student === sid; })[0];
+  return new Promise(function (resolve) {
+    fgCellState(inp, 'saving');
+    fgCall(method, args, function (r) {
+      inp.dataset.orig = kind === 'remark' ? inp.value : val;
+      inp.classList.remove('fg-dirty');
+      fgCellState(inp, 'saved');
+      fgApplyResult(inp, kind, sid, val, r || {});
+      resolve({ ok: true });
+    }, function (msg) {
+      fgCellState(inp, 'error', msg);   /* stays dirty so it can be retried */
+      resolve({ ok: false, msg: msg });
+    });
+  });
+}
+
+/* Reflect a successful save in the row (totals, grades, badges, state) */
+function fgApplyResult(inp, kind, sid, val, r) {
+  var s = FG.students.filter(function (x) { return x.student === sid; })[0];
+  if (kind === 'mark') {
     if (s) {
       s.entries = s.entries || {};
       var key = inp.dataset.comp + '|' + inp.dataset.atype;
@@ -529,11 +656,116 @@ function fgSaveMark(inp) {
       s.total = r.total; s.grade = r.grade || ''; s.arrear_marker = r.arrear_marker || ''; s.improved = !!r.improved;
     }
     fgUpdateRowResult(sid, r.total, r.grade, r.arrear_marker, r.improved);
-  }, function (msg) {
-    fgCellState(inp, 'error', msg);
-    fgToast(msg, true);
+  } else if (kind === 'grade') {
+    if (s) s.grade = r.grade;
+  } else if (kind === 'remark') {
+    if (s) s.remark = inp.value;
+  } else if (kind === 'reexam') {
+    var rx = document.querySelector('[data-rxg="' + CSS.escape(sid) + '"]');
+    if (rx) rx.innerHTML = '<span class="fg-grade">' + fgEsc(r.re_exam_grade || '—') + '</span>';
+    fgReexamFinal(sid, r.updated_final_marks, r.updated_grade, r.arrear_marker, r.improved);
+  } else if (kind === 'improvement') {
+    var ig = document.querySelector('[data-impg="' + CSS.escape(sid) + '"]');
+    if (ig) ig.innerHTML = '<span class="fg-grade">' + fgEsc(r.improvement_grade || '—') + '</span>';
+    fgReexamFinal(sid, r.updated_final_marks, r.updated_grade, r.arrear_marker, r.improved);
+  }
+}
+
+function fgSaveAll(tab) {
+  var bar = fgSaveBar(tab);
+  if (!bar || bar.dataset.busy === '1') return;
+  var items = fgDirty(tab);
+  if (!items.length) return;
+
+  /* Fix client-side errors before anything is sent */
+  var bad = items.filter(function (inp) { return !!fgValidate(inp); });
+  if (bad.length) {
+    bad.forEach(function (inp) { fgCellState(inp, 'error', fgValidate(inp)); });
+    bad[0].focus();
+    fgSetSaveStatus(tab, 'err', '<span class="fp-ms">error</span>' + bad.length + ' value' + (bad.length === 1 ? ' is' : 's are') + ' not valid — fix the red cells first');
+    return;
+  }
+
+  items.sort(function (a, b) { return FG_SAVE_ORDER[a.dataset.kind] - FG_SAVE_ORDER[b.dataset.kind]; });
+  var total = items.length, done = 0, failed = [];
+  var btn = bar.querySelector('.fg-save-btn'), discard = bar.querySelector('.fg-discard-btn');
+  var progress = bar.querySelector('.fg-progress'), fill = progress.firstElementChild;
+  bar.dataset.busy = '1';
+  btn.disabled = true; discard.disabled = true;
+  btn.innerHTML = '<span class="fp-ms" style="animation:fp-spin .8s linear infinite;">sync</span>Saving…';
+  progress.style.display = 'block'; fill.style.width = '0%';
+
+  function step() {
+    fgSetSaveStatus(tab, 'busy', '<span class="fp-ms">sync</span>Saving ' + (done + 1) + ' of ' + total + '…');
+    fgSaveOne(items[done]).then(function (res) {
+      if (!res.ok) failed.push({ inp: items[done], msg: res.msg });
+      done++;
+      fill.style.width = Math.round(done / total * 100) + '%';
+      if (done < total) { step(); return; }
+      finish();
+    });
+  }
+
+  function finish() {
+    bar.dataset.busy = '';
+    btn.innerHTML = '<span class="fp-ms">save</span>Save Changes<span class="fg-count">0</span>';
+    setTimeout(function () { progress.style.display = 'none'; }, 600);
+    /* Buttons/count first, so the result message below isn't replaced by
+       the "N unsaved changes" hint when some saves failed */
+    fgRefreshSaveBar(tab);
+    var saved = total - failed.length;
+    if (!failed.length) {
+      fgSetSaveStatus(tab, 'ok', '<span class="fp-ms">task_alt</span>All ' + saved + ' change' + (saved === 1 ? '' : 's') + ' saved');
+      fgToast(saved + ' change' + (saved === 1 ? '' : 's') + ' saved');
+    } else {
+      fgSetSaveStatus(tab, 'err', '<span class="fp-ms">error</span>' + saved + ' saved · ' + failed.length + ' not saved — hover the red cells for the reason');
+      fgToast(failed[0].msg + (failed.length > 1 ? ' (+' + (failed.length - 1) + ' more)' : ''), true);
+      failed[0].inp.focus();
+    }
+  }
+
+  step();
+}
+
+function fgDiscard(tab) {
+  var items = fgDirty(tab);
+  if (!items.length) return;
+  fpConfirm({
+    title: 'Discard changes?',
+    message: items.length + ' unsaved change' + (items.length === 1 ? '' : 's') + ' will be undone.',
+    confirmLabel: 'Discard', icon: 'undo',
+  }, function () {
+    items.forEach(function (inp) {
+      inp.value = inp.dataset.orig || '';
+      inp.classList.remove('fg-dirty', 'fg-error');
+      inp.title = '';
+    });
+    fgSetSaveStatus(tab, '', '');
+    fgRefreshSaveBar(tab);
   });
 }
+
+/* Run `fn` now, or after the faculty agrees to drop unsaved edits */
+function fgGuardUnsaved(fn) {
+  if (!fgAnyDirty()) { fn(); return; }
+  fpConfirm({
+    title: 'Unsaved changes',
+    message: 'You have marks that are not saved yet. Continue without saving them?',
+    confirmLabel: 'Continue without saving', cancelLabel: 'Stay', icon: 'warning',
+  }, fn);
+}
+
+window.addEventListener('beforeunload', function (e) {
+  if (fgAnyDirty()) { e.preventDefault(); e.returnValue = ''; }
+});
+
+/* Ctrl/Cmd+S saves the visible tab */
+document.addEventListener('keydown', function (e) {
+  if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S') && FG.co) {
+    e.preventDefault();
+    fgSaveAll(FG.tab);
+  }
+});
 
 function fgUpdateRowResult(sid, total, grade, arrear, improved) {
   var tot = document.querySelector('[data-total="' + CSS.escape(sid) + '"]');
@@ -541,30 +773,13 @@ function fgUpdateRowResult(sid, total, grade, arrear, improved) {
   var gcell = document.querySelector('[data-grade="' + CSS.escape(sid) + '"]');
   if (gcell) {
     var gin = gcell.querySelector('.fg-grade-in');
-    if (gin) gin.value = grade || '';
+    /* Recalculated grade — unless an override is waiting to be saved */
+    if (gin && !gin.classList.contains('fg-dirty')) { gin.value = grade || ''; gin.dataset.orig = grade || ''; }
     var gs = gcell.querySelector('.fg-grade');
     if (gs) { gs.textContent = grade || '—'; gs.className = 'fg-grade ' + fgGradeClass(grade); }
     var b = gcell.querySelector('[data-badges]');
     if (b) b.innerHTML = fgBadges(arrear, improved);
   }
-}
-
-function fgSaveGrade(inp) {
-  var sid = inp.dataset.student, val = inp.value.trim().toUpperCase();
-  inp.value = val;
-  fgCellState(inp, 'saving');
-  fgCall('save_grade', { course_offering: FG.co, exam_plan: FG.plan, student: sid, grade: val }, function (r) {
-    fgCellState(inp, 'saved');
-    var s = FG.students.filter(function (x) { return x.student === sid; })[0];
-    if (s) s.grade = r.grade;
-  }, function (msg) { fgCellState(inp, 'error', msg); fgToast(msg, true); });
-}
-
-function fgSaveRemark(inp) {
-  var sid = inp.dataset.student;
-  fgCall('save_remark', { course_offering: FG.co, exam_plan: FG.plan, student: sid, remark: inp.value }, function () {
-    fgToast('Remark saved');
-  });
 }
 
 function fgFilter() {
@@ -589,8 +804,17 @@ function fgSelInfo() {
   if (el) el.textContent = n ? n + ' selected' : 'Tick students to submit them';
 }
 
+/* Actions that reload the sheet would drop unsaved edits — save first */
+function fgBlockedByUnsaved() {
+  var n = fgDirty('sheet').length;
+  if (!n) return false;
+  fpAlert('You have ' + n + ' unsaved change' + (n === 1 ? '' : 's') + '. Click Save Changes (or Discard) first.', { title: 'Save your changes first', icon: 'save' });
+  return true;
+}
+
 /* ── Mark as Submitted / Draft ── */
 function fgSetStatus(status) {
+  if (fgBlockedByUnsaved()) return;
   var ids = fgSelected();
   if (!ids.length) { fgToast('Tick the students first.', true); return; }
   var n = ids.length + ' student' + (ids.length === 1 ? '' : 's');
@@ -611,6 +835,7 @@ function fgSetStatus(status) {
 }
 
 function fgAutoGrades() {
+  if (fgBlockedByUnsaved()) return;
   fpConfirm({
     title: 'Calculate grades?',
     message: 'Total and grade will be recalculated from the entered marks for every student still in Draft.',
@@ -631,6 +856,7 @@ function fgDownloadTemplate() {
     new URLSearchParams({ course_offering: FG.co, exam_plan: FG.plan }).toString(), '_blank');
 }
 function fgOpenUpload() {
+  if (fgBlockedByUnsaved()) return;
   document.getElementById('fg-up-sub').textContent = (FG.info.course_name || '') + ' · ' +
     ((FG.info.exam_plans || []).filter(function (p) { return p.name === FG.plan; })[0] || {}).label;
   document.getElementById('fg-file').value = '';
@@ -725,6 +951,9 @@ function fgLoadReexam() {
 
 function fgRenderReexam() {
   var d = FG.reexam, t = document.getElementById('fg-reexam'), editable = !d.edit_block;
+  fgSaveBar('reexam').style.display = editable && d.students.length ? '' : 'none';
+  fgSetSaveStatus('reexam', '', '');
+  fgRefreshSaveBar('reexam');
   if (!d.students.length) {
     t.innerHTML = '<tr><td style="padding:40px;color:var(--fp-text-4);">No students have a paid re-exam or improvement exam registration for this assessment.</td></tr>';
     return;
@@ -744,16 +973,16 @@ function fgRenderReexam() {
       var e = (s.entries || {})[c.key] || {};
       var v = (e.marks === null || e.marks === undefined) ? '' : fgFmt(e.marks);
       cells += '<td>' + (s.reexam
-        ? '<input type="number" class="fg-in" step="0.01" min="0" max="' + c.max_marks + '" value="' + fgEsc(v) + '" data-student="' + fgEsc(s.student) + '"' +
+        ? '<input type="number" class="fg-in' + (editable ? ' fg-track' : '') + '" data-kind="reexam" step="0.01" min="0" max="' + c.max_marks + '" value="' + fgEsc(v) + '" data-orig="' + fgEsc(v) + '" data-student="' + fgEsc(s.student) + '"' +
           ' data-comp="' + fgEsc(c.component) + '" data-atype="' + fgEsc(c.assessment_type) + '" data-max="' + c.max_marks + '" data-label="' + fgEsc(c.label) + '"' +
-          (editable ? ' onchange="fgSaveReexam(this)"' : ' disabled') + '>'
+          (editable ? ' oninput="fgTrack(this)" onkeydown="fgKeyNav(event,this)"' : ' disabled') + '>'
         : '—') + '</td>';
     });
     if (d.columns.length) cells += '<td data-rxg="' + fgEsc(s.student) + '"><span class="fg-grade">' + fgEsc(s.re_exam_grade || '—') + '</span></td>';
     var iv = s.improvement_marks === null || s.improvement_marks === undefined ? '' : fgFmt(s.improvement_marks);
     cells += '<td>' + (s.improvement
-      ? '<input type="number" class="fg-in" step="0.01" min="0" value="' + fgEsc(iv) + '" data-student="' + fgEsc(s.student) + '" data-label="Improvement marks"' +
-        (editable ? ' onchange="fgSaveImprovement(this)"' : ' disabled') + '>'
+      ? '<input type="number" class="fg-in' + (editable ? ' fg-track' : '') + '" data-kind="improvement" step="0.01" min="0" value="' + fgEsc(iv) + '" data-orig="' + fgEsc(iv) + '" data-student="' + fgEsc(s.student) + '" data-label="Improvement marks"' +
+        (editable ? ' oninput="fgTrack(this)" onkeydown="fgKeyNav(event,this)"' : ' disabled') + '>'
       : '—') + '</td>' +
       '<td data-impg="' + fgEsc(s.student) + '"><span class="fg-grade">' + fgEsc(s.improvement_grade || '—') + '</span></td>' +
       '<td class="fg-total" data-final="' + fgEsc(s.student) + '">' + fgFmt(s.updated_final_marks) + '</td>' +
@@ -761,6 +990,7 @@ function fgRenderReexam() {
     return '<tr data-student="' + fgEsc(s.student) + '">' + cells + '</tr>';
   }).join('');
   t.innerHTML = '<thead>' + head + '</thead><tbody>' + body + '</tbody>';
+  fgRefreshSaveBar('reexam');
 }
 
 function fgReexamFinal(sid, final, grade, arrear, improved) {
@@ -768,34 +998,6 @@ function fgReexamFinal(sid, final, grade, arrear, improved) {
   if (f) f.textContent = fgFmt(final);
   var g = document.querySelector('[data-finalg="' + CSS.escape(sid) + '"]');
   if (g) g.innerHTML = '<span class="fg-grade ' + fgGradeClass(grade) + '">' + fgEsc(grade || '—') + '</span>' + fgBadges(arrear, improved);
-}
-
-function fgSaveReexam(inp) {
-  var val = inp.value.trim(), max = parseFloat(inp.dataset.max), sid = inp.dataset.student;
-  if (val !== '' && (isNaN(parseFloat(val)) || parseFloat(val) < 0 || (max && parseFloat(val) > max))) {
-    fgCellState(inp, 'error'); fgToast('Re-exam marks must be between 0 and ' + max, true); return;
-  }
-  fgCellState(inp, 'saving');
-  fgCall('save_reexam_mark', { course_offering: FG.co, exam_plan: FG.plan, student: sid,
-    component: inp.dataset.comp, assessment_type: inp.dataset.atype, value: val }, function (r) {
-    fgCellState(inp, 'saved');
-    var rx = document.querySelector('[data-rxg="' + CSS.escape(sid) + '"]');
-    if (rx) rx.innerHTML = '<span class="fg-grade">' + fgEsc(r.re_exam_grade || '—') + '</span>';
-    fgReexamFinal(sid, r.updated_final_marks, r.updated_grade, r.arrear_marker, r.improved);
-    FG.students.forEach(function (s) { if (s.student === sid) { s.arrear_marker = r.arrear_marker; s.improved = !!r.improved; } });
-  }, function (msg) { fgCellState(inp, 'error', msg); fgToast(msg, true); });
-}
-
-function fgSaveImprovement(inp) {
-  var val = inp.value.trim(), sid = inp.dataset.student;
-  if (val !== '' && (isNaN(parseFloat(val)) || parseFloat(val) < 0)) { fgCellState(inp, 'error'); fgToast('Enter a valid number', true); return; }
-  fgCellState(inp, 'saving');
-  fgCall('save_improvement_mark', { course_offering: FG.co, exam_plan: FG.plan, student: sid, value: val }, function (r) {
-    fgCellState(inp, 'saved');
-    var ig = document.querySelector('[data-impg="' + CSS.escape(sid) + '"]');
-    if (ig) ig.innerHTML = '<span class="fg-grade">' + fgEsc(r.improvement_grade || '—') + '</span>';
-    fgReexamFinal(sid, r.updated_final_marks, r.updated_grade, r.arrear_marker, r.improved);
-  }, function (msg) { fgCellState(inp, 'error', msg); fgToast(msg, true); });
 }
 
 document.addEventListener('DOMContentLoaded', function () {
