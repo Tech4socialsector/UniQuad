@@ -76,6 +76,35 @@
     border-color: var(--sp-primary);
   }
 
+  /* Course dropdown (in-page, anchored under the field) */
+  #tt-form { position: relative; z-index: 5; } /* keep the open menu above the calendar */
+  .tt-dd { position: relative; }
+  .tt-dd-btn {
+    display: flex; align-items: center;
+    padding: 8px 36px 8px 12px;
+    border: 1px solid var(--sp-border); border-radius: 8px;
+    background: #fff; color: var(--sp-text-1);
+    font-family: inherit; font-size: 14px; text-align: left;
+    min-width: 160px; max-width: 100%; cursor: pointer;
+  }
+  .tt-dd-btn:focus, .tt-dd.open .tt-dd-btn { outline: none; border-color: var(--sp-primary); }
+  .tt-dd-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tt-dd.open .sp-ms { transform: rotate(180deg); }
+  .tt-dd-menu {
+    display: none; position: absolute; top: calc(100% + 4px); left: 0; z-index: 50;
+    min-width: 100%; max-width: min(320px, calc(100vw - 48px)); max-height: 260px; overflow-y: auto;
+    margin: 0; padding: 4px; list-style: none;
+    background: #fff; border: 1px solid var(--sp-border); border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(16, 24, 40, 0.12);
+  }
+  .tt-dd.open .tt-dd-menu { display: block; }
+  .tt-dd-menu li {
+    padding: 8px 10px; border-radius: 6px; font-size: 14px; color: var(--sp-text-1);
+    cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .tt-dd-menu li:hover { background: var(--sp-primary-light); color: var(--sp-primary); }
+  .tt-dd-menu li.selected { background: var(--sp-primary); color: #fff; }
+
   .tt-view-toggles {
     display: flex;
     align-items: center;
@@ -140,15 +169,26 @@
   <div class="tt-filters-bar">
     <div class="tt-filter-inputs">
       <div class="tt-input-group">
-        <label for="tt-course">Course</label>
-        <div class="tt-input-wrap">
-          <select id="tt-course" name="course" onchange="document.getElementById('tt-form').submit()">
-            <option value="all" {% if selected_course=='all' %}selected{% endif %}>All Courses</option>
-            {% for c in all_courses %}
-            <option value="{{ c.id }}" {% if selected_course==c.id %}selected{% endif %}>{{ c.name }}</option>
-            {% endfor %}
-          </select>
+        <label for="tt-course-btn">Course</label>
+        {# Custom dropdown instead of a native <select>: the native popup is drawn
+           by the browser/OS and lands detached from the field in scaled views #}
+        {% set _sel_label = namespace(v="All Courses") %}
+        {% for c in all_courses %}{% if selected_course == c.id %}{% set _sel_label.v = c.name %}{% endif %}{% endfor %}
+        <div class="tt-input-wrap tt-dd" id="tt-course-dd">
+          <input type="hidden" id="tt-course" name="course" value="{{ selected_course or 'all' }}">
+          <button type="button" id="tt-course-btn" class="tt-dd-btn" aria-haspopup="listbox" aria-expanded="false"
+            onclick="ttDdToggle()">
+            <span class="tt-dd-label">{{ _sel_label.v }}</span>
+          </button>
           <span class="sp-ms">expand_more</span>
+          <ul class="tt-dd-menu" role="listbox">
+            <li role="option" data-value="all" class="{% if not selected_course or selected_course=='all' %}selected{% endif %}"
+              onclick="ttDdPick(this)">All Courses</li>
+            {% for c in all_courses %}
+            <li role="option" data-value="{{ c.id }}" class="{% if selected_course==c.id %}selected{% endif %}"
+              onclick="ttDdPick(this)">{{ c.name }}</li>
+            {% endfor %}
+          </ul>
         </div>
       </div>
     </div>
@@ -219,6 +259,28 @@
 <div id="sp-toast" class="sp-toast" role="alert" aria-live="polite"></div>
 
 <script>
+  function ttDdToggle(force) {
+    var dd = document.getElementById('tt-course-dd');
+    var open = typeof force === 'boolean' ? force : !dd.classList.contains('open');
+    dd.classList.toggle('open', open);
+    document.getElementById('tt-course-btn').setAttribute('aria-expanded', open);
+  }
+  function ttDdPick(li) {
+    var input = document.getElementById('tt-course');
+    ttDdToggle(false);
+    if (input.value === li.dataset.value) return;
+    input.value = li.dataset.value;
+    document.querySelector('#tt-course-dd .tt-dd-label').textContent = li.textContent;
+    document.getElementById('tt-form').submit();
+  }
+  document.addEventListener('click', function (e) {
+    var dd = document.getElementById('tt-course-dd');
+    if (dd && !dd.contains(e.target)) ttDdToggle(false);
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') ttDdToggle(false);
+  });
+
   function ttSyncToCalendar() {
     var selected = document.querySelector('input[name="gcal-email"]:checked');
     if (!selected) { return; }
