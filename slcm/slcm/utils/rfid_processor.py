@@ -108,6 +108,7 @@ def process_log_entry(log_doc):
 			# Keep hours_counted aligned with the session duration
 			if session.duration_hours:
 				doc.hours_counted = session.duration_hours
+			doc.flags.ignore_attendance_lock = True  # system reconciliation, not a faculty edit
 			doc.save(ignore_permissions=True)
 			log_doc.student_attendance = doc.name
 	else:
@@ -129,6 +130,7 @@ def process_log_entry(log_doc):
 				"attendance_log": log_doc.name,
 				"hours_counted": session.duration_hours or 1.0,
 			})
+			new_att.flags.ignore_attendance_lock = True
 			new_att.insert(ignore_permissions=True)
 			log_doc.student_attendance = new_att.name
 

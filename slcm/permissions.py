@@ -151,14 +151,14 @@ def attendance_session_query_conditions(user):
     """
     Faculty: sessions where they are the instructor OR the session's
     course_offering is one they teach.
-    Programme Chair / Admin: unrestricted.
+    Programme Chair / AAD / Admin: unrestricted.
     """
     if user == "Administrator":
         return ""
 
     roles = set(frappe.get_roles(user))
 
-    if roles & _FULL_ACCESS_ROLES or "slcm_Programme Chair" in roles:
+    if roles & _FULL_ACCESS_ROLES or roles & {"slcm_Programme Chair", "AAD"}:
         return ""
 
     if "slcm_Faculty" in roles:
@@ -388,14 +388,15 @@ def class_schedule_query_conditions(user):
     """
     Faculty: schedules for Course Offerings they teach OR where they are the
     direct instructor.
-    Programme Chair / Admin: unrestricted.
+    Programme Chair / AAD / Admin: unrestricted (AAD reopens locked
+    attendance from the Time Table entry).
     """
     if user == "Administrator":
         return ""
 
     roles = set(frappe.get_roles(user))
 
-    if roles & _FULL_ACCESS_ROLES or "slcm_Programme Chair" in roles:
+    if roles & _FULL_ACCESS_ROLES or roles & {"slcm_Programme Chair", "AAD"}:
         return ""
 
     if "slcm_Faculty" in roles:
