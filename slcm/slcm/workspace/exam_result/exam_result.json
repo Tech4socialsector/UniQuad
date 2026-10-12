@@ -1,0 +1,187 @@
+{
+ "app": "slcm",
+ "charts": [],
+ "content": "[{\"id\":\"er-hdr-overview\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Overview</b></span>\",\"col\":12}},{\"id\":\"er-nc-1\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Total Exam Plans\",\"col\":3}},{\"id\":\"er-nc-2\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Active Exam Plans\",\"col\":3}},{\"id\":\"er-nc-3\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Courses Mapped\",\"col\":3}},{\"id\":\"er-hdr-reexam\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Re Exam</b></span>\",\"col\":12}},{\"id\":\"er-nc-rx-1\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Re Exam Registrations\",\"col\":3}},{\"id\":\"er-nc-rx-2\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Re Exam Paid\",\"col\":3}},{\"id\":\"er-sc-rx-1\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Re Exam\",\"col\":3}},{\"id\":\"er-sc-rx-2\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Re Exam Registrations\",\"col\":3}},{\"id\":\"er-hdr-improv\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Improvement Exam</b></span>\",\"col\":12}},{\"id\":\"er-nc-ix-1\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Improvement Exam Registrations\",\"col\":3}},{\"id\":\"er-nc-ix-2\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Improvement Exam Paid\",\"col\":3}},{\"id\":\"er-sc-ix-1\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Improvement Exam\",\"col\":3}},{\"id\":\"er-sc-ix-2\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Improvement Exam Registrations\",\"col\":3}},{\"id\":\"er-hdr-access\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Access &amp; Settings</span>\",\"col\":12}},{\"id\":\"er-sc-3\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Result Access Settings\",\"col\":3}},{\"id\":\"K-YiSThWuA\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Term Result Settings\",\"col\":3}},{\"id\":\"er-hdr-results\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Results</b></span>\",\"col\":12}},{\"id\":\"er-sc-1\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Course Results\",\"col\":3}},{\"id\":\"WZHBU8OIJf\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Term Result\",\"col\":3}},{\"id\":\"lnDHp7XAtv\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Publish Result\",\"col\":3}}]",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "external_link": null,
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "clipboard-check",
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Exam Result",
+ "link_to": null,
+ "link_type": "DocType",
+ "links": [],
+ "modified": "2026-10-12 13:00:00.000000",
+ "module": "SLCM",
+ "name": "Exam Result",
+ "number_cards": [
+  {
+   "label": "Total Exam Plans",
+   "number_card_name": "Total Exam Plans"
+  },
+  {
+   "label": "Active Exam Plans",
+   "number_card_name": "Active Exam Plans"
+  },
+  {
+   "label": "Courses Mapped",
+   "number_card_name": "Courses Mapped"
+  },
+  {
+   "label": "Re Exam Registrations",
+   "number_card_name": "Re Exam Registrations"
+  },
+  {
+   "label": "Re Exam Paid",
+   "number_card_name": "Re Exam Paid"
+  },
+  {
+   "label": "Improvement Exam Registrations",
+   "number_card_name": "Improvement Exam Registrations"
+  },
+  {
+   "label": "Improvement Exam Paid",
+   "number_card_name": "Improvement Exam Paid"
+  }
+ ],
+ "parent_page": null,
+ "public": 1,
+ "quick_lists": [],
+ "restrict_to_domain": null,
+ "roles": [],
+ "sequence_id": 0.0,
+ "shortcuts": [
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "format": null,
+   "icon": null,
+   "kanban_board": null,
+   "label": "Term Result",
+   "link_to": null,
+   "report_ref_doctype": null,
+   "restrict_to_domain": null,
+   "stats_filter": null,
+   "type": "URL",
+   "url": "/desk/term-result"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "format": null,
+   "icon": null,
+   "kanban_board": null,
+   "label": "Term Result Settings",
+   "link_to": null,
+   "report_ref_doctype": null,
+   "restrict_to_domain": null,
+   "stats_filter": null,
+   "type": "URL",
+   "url": "/desk/result-settings"
+  },
+  {
+   "color": "Purple",
+   "doc_view": "",
+   "format": null,
+   "icon": null,
+   "kanban_board": null,
+   "label": "Course Results",
+   "link_to": "examination-result",
+   "report_ref_doctype": null,
+   "restrict_to_domain": null,
+   "stats_filter": null,
+   "type": "Page",
+   "url": null
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "format": null,
+   "icon": null,
+   "kanban_board": null,
+   "label": "Publish Result",
+   "link_to": null,
+   "report_ref_doctype": null,
+   "restrict_to_domain": null,
+   "stats_filter": null,
+   "type": "URL",
+   "url": "/desk/publish-result"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "format": null,
+   "icon": null,
+   "kanban_board": null,
+   "label": "Result Access Settings",
+   "link_to": "Access Result Settings",
+   "report_ref_doctype": null,
+   "restrict_to_domain": null,
+   "stats_filter": null,
+   "type": "DocType",
+   "url": null
+  },
+  {
+   "color": "Red",
+   "doc_view": "",
+   "format": null,
+   "icon": null,
+   "kanban_board": null,
+   "label": "Re Exam",
+   "link_to": "re-exam",
+   "report_ref_doctype": null,
+   "restrict_to_domain": null,
+   "stats_filter": null,
+   "type": "Page",
+   "url": null
+  },
+  {
+   "color": "Red",
+   "doc_view": "List",
+   "format": null,
+   "icon": null,
+   "kanban_board": null,
+   "label": "Re Exam Registrations",
+   "link_to": "Re Exam Registration",
+   "report_ref_doctype": null,
+   "restrict_to_domain": null,
+   "stats_filter": null,
+   "type": "DocType",
+   "url": null
+  },
+  {
+   "color": "Purple",
+   "doc_view": "",
+   "format": null,
+   "icon": null,
+   "kanban_board": null,
+   "label": "Improvement Exam",
+   "link_to": "improvement-exam",
+   "report_ref_doctype": null,
+   "restrict_to_domain": null,
+   "stats_filter": null,
+   "type": "Page",
+   "url": null
+  },
+  {
+   "color": "Purple",
+   "doc_view": "List",
+   "format": null,
+   "icon": null,
+   "kanban_board": null,
+   "label": "Improvement Exam Registrations",
+   "link_to": "Improvement Exam Registration",
+   "report_ref_doctype": null,
+   "restrict_to_domain": null,
+   "stats_filter": null,
+   "type": "DocType",
+   "url": null
+  }
+ ],
+ "title": "Exam Result",
+ "type": "Workspace"
+}
