@@ -87,7 +87,118 @@ frappe.ui.form.on('Time Table', {
                     frm.events.show_apply_future_dialog(frm);
                 }, __('Actions'));
             }
+
+            frm.events.render_attendance_lock(frm);
         }
+    },
+
+    // Attendance lock: a headline with the linked session's lock state, and
+    // (for AAD) Reopen / Lock buttons. See slcm.slcm.utils.attendance_lock.
+    render_attendance_lock: function (frm) {
+        const name = frm.doc.name;
+        frappe.call({
+            method: 'slcm.slcm.utils.attendance_lock.get_time_table_lock_status',
+            args: { time_table: name },
+            callback: function (r) {
+                const s = r.message;
+                // Ignore a late response after navigating to another entry
+                if (!s || !s.session || frm.doc.name !== name) return;
+
+                if (s.reopened) {
+                    frm.dashboard.set_headline_alert(
+                        __('Attendance reopened by {0} on {1}. Reason: {2}', [
+                            frappe.utils.escape_html(s.reopened_by || ''),
+                            s.reopened_on || '',
+                            frappe.utils.escape_html(s.reopen_reason || '')
+                        ]),
+                        'orange'
+                    );
+                } else if (s.locked) {
+                    frm.dashboard.set_headline_alert(
+                        __('Attendance locked since {0} ({1} hours after the session ended). Faculty can no longer change it.', [s.lock_at, s.lock_hours]),
+                        'red'
+                    );
+                } else if (s.lock_at) {
+                    frm.dashboard.set_headline_alert(
+                        __('Faculty can change attendance until {0}.', [s.lock_at]),
+                        'green'
+                    );
+                }
+
+                if (!s.can_manage) return;
+                const group = __('Attendance Lock');
+                if (s.locked) {
+                    frm.add_custom_button(__('Reopen Attendance'), function () {
+                        frm.events.attendance_lock_dialog(frm, s, 'reopen');
+                    }, group);
+                } else if (s.reopened) {
+                    frm.add_custom_button(__('Lock Attendance'), function () {
+                        frm.events.attendance_lock_dialog(frm, s, 'lock');
+                    }, group);
+                }
+                frm.add_custom_button(__('Reopen History'), function () {
+                    frappe.set_route('List', 'Attendance Reopen Log', { attendance_session: s.session });
+                }, group);
+            }
+        });
+    },
+
+    attendance_lock_dialog: function (frm, status, mode) {
+        const reopen = mode === 'reopen';
+        const d = new frappe.ui.Dialog({
+            title: reopen ? __('Reopen Attendance') : __('Lock Attendance'),
+            fields: [
+                {
+                    fieldtype: 'HTML',
+                    options: '<p class="text-muted">' + (reopen
+                        ? __('Faculty will be able to change attendance for session {0} again, until you lock it.', [status.session])
+                        : __('Faculty will no longer be able to change attendance for session {0}.', [status.session])) + '</p>'
+                },
+                {
+                    fieldname: 'reason',
+                    fieldtype: 'Small Text',
+                    label: __('Reason'),
+                    reqd: reopen ? 1 : 0
+                },
+                {
+                    fieldname: 'notice',
+                    fieldtype: 'Small Text',
+                    label: __('Notice to Faculty'),
+                    description: __('Optional message included in the faculty notification.')
+                },
+                {
+                    fieldname: 'notify_faculty',
+                    fieldtype: 'Check',
+                    label: __('Notify Faculty'),
+                    default: 1
+                }
+            ],
+            primary_action_label: reopen ? __('Reopen') : __('Lock'),
+            primary_action: function (values) {
+                frappe.call({
+                    method: reopen
+                        ? 'slcm.slcm.utils.attendance_lock.reopen_attendance'
+                        : 'slcm.slcm.utils.attendance_lock.lock_attendance',
+                    args: {
+                        session: status.session,
+                        reason: values.reason,
+                        notice: values.notice,
+                        notify_faculty: values.notify_faculty ? 1 : 0
+                    },
+                    freeze: true,
+                    callback: function (r) {
+                        if (r.exc) return;
+                        d.hide();
+                        frappe.show_alert({
+                            message: reopen ? __('Attendance reopened') : __('Attendance locked'),
+                            indicator: 'green'
+                        }, 5);
+                        frm.reload_doc();
+                    }
+                });
+            }
+        });
+        d.show();
     },
 
     show_apply_future_dialog: function (frm) {

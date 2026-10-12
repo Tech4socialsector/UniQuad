@@ -7,6 +7,8 @@ import frappe
 from frappe import _
 from frappe.utils import time_diff_in_hours, get_datetime
 
+from slcm.slcm.utils.attendance_lock import assert_session_editable
+
 
 @frappe.whitelist()
 def get_faculty_context():
@@ -199,6 +201,8 @@ def create_bulk_attendance_from_schedule(course_schedule, attendance_date, atten
 	attendance_session = _get_or_create_attendance_session(
 		attendance_date, course_offering, "Course Schedule"
 	)
+	if attendance_session:
+		assert_session_editable(attendance_session)
 
 	created, updated, errors = 0, 0, []
 
@@ -475,6 +479,11 @@ def mark_attendance(
 			sess_doc.flags.skip_auto_attendance = True
 			sess_doc.insert(ignore_permissions=True)
 			attendance_session = sess_doc.name
+
+	# Refuse up front: the per-student loop below only collects errors, so a
+	# locked session would otherwise come back as "success".
+	if attendance_session:
+		assert_session_editable(attendance_session)
 
 	# ---------------------------------------------------------
 
