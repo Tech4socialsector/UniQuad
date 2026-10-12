@@ -38,7 +38,7 @@
       </div>
       {% endif %}
     </div>
-    <a href="/faculty-portal/profile" class="fp-fd-link">View Profile<span class="fp-ms">arrow_forward</span></a>
+    <a href="/faculty-portal/profile" class="fp-fd-link" aria-label="View Profile" title="View Profile"><span class="fp-fd-link-text">View Profile</span><span class="fp-ms" aria-hidden="true">arrow_forward</span></a>
   </div>
 </div>
 {% endif %}
@@ -86,9 +86,8 @@
         <div class="fp-schedule-info">
           <div class="fp-schedule-course">{{ s.course_name }}</div>
           <div class="fp-schedule-meta">
-            <span class="fp-ms" style="font-size:14px;color:var(--fp-text-4);">location_on</span>{{ s.venue }}
-            &nbsp;·&nbsp;
-            <span class="fp-ms" style="font-size:14px;color:var(--fp-text-4);">groups</span>{{ s.total_students }} students
+            {% if s.venue %}<span class="fp-schedule-meta-item"><span class="fp-ms">location_on</span>{{ s.venue }}</span>{% endif %}
+            <span class="fp-schedule-meta-item"><span class="fp-ms">groups</span>{{ s.total_students }} students</span>
           </div>
         </div>
         <div class="fp-schedule-badge">
@@ -975,9 +974,20 @@ body.fp-dark .fp-dash-icon .fp-ms { color: #fff !important; }
               font-size: 13px; font-weight: 700; color: var(--fp-primary); text-decoration: none; }
 .fp-fd-link .fp-ms { font-size: 16px; transition: transform 0.15s; }
 .fp-fd-link:hover .fp-ms { transform: translateX(3px); }
+/* Phones: keep one row (photo | name + ID | arrow) instead of dropping
+   "View Profile" onto its own line and leaving the card lopsided */
 @media (max-width: 560px) {
-  .fp-fd-main { flex-wrap: wrap; padding: 16px; }
-  .fp-fd-link { width: 100%; justify-content: flex-end; }
+  .fp-fd-main { gap: 12px; padding: 14px 16px; }
+  .fp-fd-avatar { width: 52px; height: 52px; font-size: 20px; }
+  .fp-fd-name { font-size: 16px; }
+  .fp-fd-role { font-size: 12px; }
+  .fp-fd-chips { margin-top: 6px; }
+  .fp-fd-link-text { display: none; }
+  .fp-fd-link {
+    width: 36px; height: 36px; justify-content: center; border-radius: 50%;
+    background: var(--fp-primary-light, rgba(146,12,36,.08));
+  }
+  .fp-fd-link .fp-ms { font-size: 18px; }
 }
 
 /* Today's / Upcoming Sessions — equal halves (shared .fp-grid-2 is 3fr/2fr) */
