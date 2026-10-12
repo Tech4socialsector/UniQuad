@@ -498,7 +498,7 @@ background: var(--pp-primary-light); color: var(--pp-primary);
     {% if _err.timetable %}
     {{ error_state("the time table") }}
     {% elif class_schedules %}
-    <ul class="pp-list pp-list-scroll" tabindex="0" aria-label="Upcoming classes">
+    <ul class="pp-list pp-list-scroll" tabindex="0" aria-label="Upcoming sessions">
       {% for sc in class_schedules %}
       <li class="pp-list-row">
         <div class="pp-date-chip {% if sc.is_today %}is-today{% endif %}" aria-hidden="true">
@@ -529,7 +529,7 @@ background: var(--pp-primary-light); color: var(--pp-primary);
       {% endfor %}
     </ul>
     {% else %}
-    {{ empty_state("event_upcoming", "No classes scheduled", "No classes found for the next 7 days.") }}
+    {{ empty_state("event_upcoming", "No sessions scheduled", "No sessions found for the next 7 days.") }}
     {% endif %}
   </section>
 

@@ -648,6 +648,49 @@
       grid-template-columns: 1fr 1fr;
     }
   }
+
+  /* ══ Main area: KPIs + Quick Actions | My Calendar ══ */
+  /* Both columns end on the same line: the row is as tall as the left column
+     (KPIs + Quick Actions) and the calendar fills that height, scrolling inside. */
+  .spd-main { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 18px; align-items: stretch; margin-bottom: 18px; }
+  .spd-main-left { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+  .spd-main-left .spd-qa2 { flex: 1; }
+  .spd-kpi2-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .spd-kpi2, .spd-qa2, .spd-cal {
+    background: var(--sp-card, #fff); border: 1px solid var(--sp-border, #e5e7eb);
+    border-radius: 14px; box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  }
+  .spd-kpi2 { display: flex; gap: 14px; padding: 18px; text-decoration: none; color: inherit; transition: border-color .15s, box-shadow .15s; }
+  .spd-kpi2:hover { border-color: var(--sp-primary); box-shadow: 0 4px 14px rgba(146, 12, 36, 0.08); }
+  .spd-kpi2-icon { width: 42px; height: 42px; flex-shrink: 0; border-radius: 10px; background: var(--sp-primary-light); color: var(--sp-primary); display: flex; align-items: center; justify-content: center; }
+  .spd-kpi2-icon .sp-ms { font-size: 22px; }
+  .spd-kpi2-body { flex: 1; min-width: 0; }
+  .spd-kpi2-value { font-size: 20px; font-weight: 800; color: var(--sp-primary); line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* 6+ digit amounts (₹1,00,000 and up) step down so they stay on one line */
+  .spd-kpi2-value.is-long { font-size: 17px; }
+  .spd-kpi2-label { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--sp-text-2); margin-top: 5px; }
+  .spd-kpi2-bar { height: 3px; border-radius: 3px; background: var(--sp-primary); margin: 8px 0 7px; }
+  .spd-kpi2-foot { font-size: 11.5px; color: var(--sp-text-3); }
+
+  .spd-qa2 { padding: 18px; }
+  .spd-qa2-title { font-size: 15px; font-weight: 700; color: var(--sp-text-1); margin: 0 0 14px; }
+  .spd-qa2-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .spd-qa2-item { display: flex; align-items: center; gap: 12px; padding: 14px 14px; border: 1px solid var(--sp-border); border-radius: 10px; text-decoration: none; color: inherit; transition: border-color .15s, background .15s; min-width: 0; }
+  .spd-qa2-item:hover { border-color: var(--sp-primary); background: var(--sp-primary-light); }
+  .spd-qa2-icon { width: 40px; height: 40px; flex-shrink: 0; border-radius: 10px; background: var(--sp-primary-light); color: var(--sp-primary); display: flex; align-items: center; justify-content: center; }
+  .spd-qa2-icon .sp-ms { font-size: 21px; }
+  .spd-qa2-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .spd-qa2-text b { font-size: 13px; font-weight: 700; color: var(--sp-text-1); }
+  .spd-qa2-text small { font-size: 11px; color: var(--sp-text-3); line-height: 1.3; }
+  .spd-qa2-go { color: var(--sp-primary); font-size: 18px; flex-shrink: 0; }
+
+
+  @media (max-width: 1199px) {
+    .spd-main { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 560px) {
+    .spd-kpi2-row, .spd-qa2-grid { grid-template-columns: 1fr; }
+  }
 </style>
 {% endblock %}
 
@@ -702,173 +745,65 @@
       </div>
   </div>
 
-  <div class="spd-hero-alerts">
+</div>
 
-    {% if has_dues %}
-    <div class="spd-alert-custom" role="alert">
-      <span class="sp-ms" aria-hidden="true">account_balance_wallet</span>
-      <span class="spd-alert-text">₹{{ "{:,.0f}".format(total_outstanding) }} fees pending</span>
-      <a href="/student-portal/fees" class="spd-alert-link" aria-label="Pay pending fees">Pay now</a>
+{# ── Main: KPIs + Quick Actions (left) | My Calendar (right) ─────── #}
+<div class="spd-main fade-in delay-2">
+
+  <div class="spd-main-left">
+    <div class="spd-kpi2-row">
+      <a href="/student-portal/courses" class="spd-kpi2">
+        <div class="spd-kpi2-icon"><span class="sp-ms">menu_book</span></div>
+        <div class="spd-kpi2-body">
+          <div class="spd-kpi2-value" id="spd-course-val">{{ course_count|int }}</div>
+          <div class="spd-kpi2-label">Current Courses</div>
+          <div class="spd-kpi2-bar"></div>
+        </div>
+      </a>
+      <a href="/student-portal/fees" class="spd-kpi2">
+        <div class="spd-kpi2-icon"><span class="sp-ms">payments</span></div>
+        <div class="spd-kpi2-body">
+          {% set _fee_txt = "{:,.0f}".format(total_outstanding) if has_dues else "0" %}
+          <div class="spd-kpi2-value{{ ' is-long' if total_outstanding >= 100000 }}" title="₹{{ _fee_txt }}">₹{{ _fee_txt }}</div>
+          <div class="spd-kpi2-label">Fee Outstanding</div>
+          <div class="spd-kpi2-bar"></div>
+          <!-- <div class="spd-kpi2-foot">{% if has_dues %}Payment due — act now{% else %}All fees cleared{% endif %}</div> -->
+        </div>
+      </a>
     </div>
+
+    {% if not sp_settings or sp_settings.show_quick_actions %}
+    <section class="spd-qa2" aria-labelledby="spd-qa2-title">
+      <h2 class="spd-qa2-title" id="spd-qa2-title">Quick Actions</h2>
+      <div class="spd-qa2-grid">
+        <a href="/student-portal/attendance" class="spd-qa2-item">
+          <span class="spd-qa2-icon"><span class="sp-ms">calendar_today</span></span>
+          <span class="spd-qa2-text"><b>Attendance</b><small>View your attendance</small></span>
+          <span class="sp-ms spd-qa2-go" aria-hidden="true">chevron_right</span>
+        </a>
+        <a href="/student-portal/results" class="spd-qa2-item">
+          <span class="spd-qa2-icon"><span class="sp-ms">workspace_premium</span></span>
+          <span class="spd-qa2-text"><b>Grades</b><small>View marks and grades</small></span>
+          <span class="sp-ms spd-qa2-go" aria-hidden="true">chevron_right</span>
+        </a>
+        <a href="/student-portal/courses" class="spd-qa2-item">
+          <span class="spd-qa2-icon"><span class="sp-ms">description</span></span>
+          <span class="spd-qa2-text"><b>Course Materials</b><small>Access learning resources</small></span>
+          <span class="sp-ms spd-qa2-go" aria-hidden="true">chevron_right</span>
+        </a>
+        <a href="/student-portal/fees" class="spd-qa2-item">
+          <span class="spd-qa2-icon"><span class="sp-ms">credit_card</span></span>
+          <span class="spd-qa2-text"><b>Fees &amp; Payments</b><small>View and pay fees</small></span>
+          <span class="sp-ms spd-qa2-go" aria-hidden="true">chevron_right</span>
+        </a>
+      </div>
+    </section>
     {% endif %}
   </div>
+
+  {# My Calendar — shared with the Timetable page (_calendar.html) #}
+  {% include "slcm/www/student-portal/_calendar.html" %}
 </div>
-
-{# ── KPI Cards ─────────────────────────────────────────────────── #}
-<div class="spd-kpi-row fade-in delay-2">
-
-  {# Card 1: Current Courses #}
-  <a href="/student-portal/courses" class="spd-kpi">
-    <div class="spd-kpi-header">
-      <div class="spd-kpi-icon-box">
-        <span class="sp-ms" style="font-size:24px;">menu_book</span>
-      </div>
-      <div class="spd-kpi-badge success">
-        <span class="sp-ms" style="font-size:14px;">check_circle</span> Enrolled
-      </div>
-    </div>
-    <div class="spd-kpi-value" id="spd-course-val">{{ course_count|int }}</div>
-    <div class="spd-kpi-label">Current Courses</div>
-    <div class="spd-kpi-progress">
-      <div class="spd-kpi-progress-fill" style="width: 100%; background: var(--sp-primary);"></div>
-    </div>
-    <div class="spd-kpi-footer">This semester</div>
-  </a>
-
-  {# Card 2: Assessment Eligible #}
-  <a href="/student-portal/exam-schedule" class="spd-kpi">
-    {% set eligible_count = courses_eligible if courses_eligible is defined else 0 %}
-    <div class="spd-kpi-header">
-      <div class="spd-kpi-icon-box">
-        <span class="sp-ms" style="font-size:24px;">quiz</span>
-      </div>
-      <div
-        class="spd-kpi-badge {% if eligible_count == course_count and course_count > 0 %}success{% else %}warning{% endif %}">
-        <span class="sp-ms" style="font-size:14px;">{% if eligible_count == course_count and course_count > 0
-          %}check_circle{% else %}shield{% endif %}</span>
-        {% if eligible_count == course_count and course_count > 0 %}Clear{% else %}Partial{% endif %}
-      </div>
-    </div>
-    <div class="spd-kpi-value">
-      {{ eligible_count }}<span style="font-size:18px;color:var(--sp-text-3);">/{{ course_count }}</span>
-    </div>
-    <div class="spd-kpi-label">Assessment Eligible</div>
-    <div class="spd-kpi-progress">
-      <div class="spd-kpi-progress-fill" style="width: 100%; background: var(--sp-primary);"></div>
-    </div>
-    <div class="spd-kpi-footer"></div>
-  </a>
-
-  {# Card 3: Fee Outstanding #}
-  <a href="/student-portal/fees" class="spd-kpi">
-    <div class="spd-kpi-header">
-      <div class="spd-kpi-icon-box">
-        <span class="sp-ms" style="font-size:24px;">payments</span>
-      </div>
-      <div class="spd-kpi-badge {% if has_dues %}warning{% else %}success{% endif %}">
-        <span class="sp-ms" style="font-size:14px;">{% if has_dues %}error_outline{% else %}check_circle{% endif
-          %}</span>
-        {% if has_dues %}Pending{% else %}Clear{% endif %}
-      </div>
-    </div>
-    <div class="spd-kpi-value" style="color:{% if has_dues %}var(--sp-danger){% else %}var(--sp-success){% endif %};">
-      ₹{{ "{:,.0f}".format(total_outstanding) if has_dues else "0" }}
-    </div>
-    <div class="spd-kpi-label">Fee Outstanding</div>
-    <div class="spd-kpi-progress">
-      <div class="spd-kpi-progress-fill" style="width: 100%; background: var(--sp-primary);"></div>
-    </div>
-    <div class="spd-kpi-footer">{% if has_dues %}Payment due — act now{% else %}All fees cleared{% endif %}</div>
-  </a>
-
-</div>
-
-{# ── Quick Actions ─────────────────────────────────────────────── #}
-{% if not sp_settings or sp_settings.show_quick_actions %}
-<div class="spd-qa-row fade-in delay-2">
-  <div class="spd-qa-section">
-    <h2 class="spd-qa-header-title">Quick Actions</h2>
-    <br>
-
-    <div class="spd-qa-container">
-
-      <a href="/student-portal/attendance" class="spd-qa-item">
-        <div class="spd-qa-item-icon">
-          <span class="sp-ms" style="font-size:28px;">calendar_today</span>
-        </div>
-        <div class="spd-qa-item-title">Attendance</div>
-        <div class="spd-qa-item-sub">View your attendance</div>
-      </a>
-
-      <!-- <a href="/student-portal/documents" class="spd-qa-item">
-      <div class="spd-qa-item-icon">
-        <span class="sp-ms" style="font-size:28px;">folder</span>
-      </div>
-      <div class="spd-qa-item-title">Documents</div>
-      <div class="spd-qa-item-sub">Downloads &amp; uploads</div>
-    </a> -->
-
-      <a href="/student-portal/results" class="spd-qa-item">
-        <div class="spd-qa-item-icon">
-          <span class="sp-ms" style="font-size:28px;">workspace_premium</span>
-        </div>
-        <div class="spd-qa-item-title">Results</div>
-        <div class="spd-qa-item-sub">Grades &amp; marks</div>
-      </a>
-
-      <a href="/student-portal/announcements" class="spd-qa-item">
-        <div class="spd-qa-item-icon">
-          <span class="sp-ms" style="font-size:28px;">campaign</span>
-        </div>
-        <div class="spd-qa-item-title">Announcements</div>
-        <div class="spd-qa-item-sub">Notices &amp; updates</div>
-      </a>
-
-      <a href="/student-portal/venue-booking" class="spd-qa-item">
-        <div class="spd-qa-item-icon">
-          <span class="sp-ms" style="font-size:28px;">meeting_room</span>
-        </div>
-        <div class="spd-qa-item-title">Venue Booking</div>
-        <div class="spd-qa-item-sub">Book rooms &amp; venues</div>
-      </a>
-
-    </div>
-  </div>
-
-  <section class="spd-qa-section spd-tt" aria-labelledby="spd-tt-title">
-    <div class="spd-tt-head">
-      <div>
-        <h2 class="spd-qa-header-title" id="spd-tt-title">Timetable</h2>
-        <br>
-      </div>
-      <a href="/student-portal/timetable" class="spd-tt-link">View all <span class="sp-ms"
-          aria-hidden="true">chevron_right</span></a>
-    </div>
-    {% if week_classes %}
-    <ul class="spd-tt-list">
-      {% for c in week_classes %}
-      <li class="spd-tt-item">
-        <div class="spd-tt-when{{ ' is-today' if c.is_today }}">
-          <span class="spd-tt-date">{{ 'Today' if c.is_today else c.date }}</span>
-          <span class="spd-tt-time">{{ c.from_time }}{% if c.to_time %} – {{ c.to_time }}{% endif %}</span>
-        </div>
-        <div class="spd-tt-what">
-          <div class="spd-tt-course">{{ c.course_name }}</div>
-          {% if c.venue %}<div class="spd-tt-venue"><span class="sp-ms" aria-hidden="true">location_on</span>{{ c.venue
-            }}</div>{% endif %}
-        </div>
-      </li>
-      {% endfor %}
-    </ul>
-    {% else %}
-    <div class="spd-tt-empty">
-      <span class="sp-ms" aria-hidden="true">event_busy</span>
-      <div><strong>No classes scheduled</strong><span>No classes found for the next 7 days.</span></div>
-    </div>
-    {% endif %}
-  </section>
-</div>
-{% endif %}
 
 {# ── Important Links ───────────────────────────────────────────── #}
 {% set _il = important_links or {} %}

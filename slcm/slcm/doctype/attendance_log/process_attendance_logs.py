@@ -570,6 +570,7 @@ def _upsert_class_attendance(student, session, status, logs):
         doc.attendance_log = first_log.get("name")
         doc.hours_counted  = hours
         doc.session_type   = session.get("session_type") or "Lecture"
+        doc.flags.ignore_attendance_lock = True  # system reconciliation, not a faculty edit
         doc.save(ignore_permissions=True)
     else:
         # Create a fresh record — this is the critical fix:
@@ -591,6 +592,7 @@ def _upsert_class_attendance(student, session, status, logs):
             "session_type":       session.get("session_type") or "Lecture",
             "hours_counted":      hours,
         })
+        doc.flags.ignore_attendance_lock = True
         doc.insert(ignore_permissions=True)
 
 
@@ -616,6 +618,7 @@ def _upsert_office_hour_attendance(student, session, logs):
         doc.out_time      = last_log.get("swipe_time")
         doc.hours_counted  = duration
         doc.session_type   = "Office Hour"
+        doc.flags.ignore_attendance_lock = True
         doc.save(ignore_permissions=True)
     else:
         doc = frappe.get_doc({
@@ -632,6 +635,7 @@ def _upsert_office_hour_attendance(student, session, logs):
             "hours_counted":      duration,
             "session_type":       "Office Hour",
         })
+        doc.flags.ignore_attendance_lock = True
         doc.insert(ignore_permissions=True)
 
 
@@ -781,6 +785,7 @@ def sync_attendance_log(log_name, session_name, student=None, synced_via="Class 
         att.in_time = swipe_time
         att.attendance_log = log_doc.name
         att.hours_counted = hours
+        att.flags.ignore_attendance_lock = True  # staff reconciling RFID taps
         att.save(ignore_permissions=True)
     else:
         att = frappe.get_doc({
@@ -798,6 +803,7 @@ def sync_attendance_log(log_name, session_name, student=None, synced_via="Class 
             "session_type": session.session_type or "Lecture",
             "hours_counted": hours,
         })
+        att.flags.ignore_attendance_lock = True
         att.insert(ignore_permissions=True)
 
     log_doc.student_attendance = att.name

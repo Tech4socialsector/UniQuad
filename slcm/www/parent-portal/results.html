@@ -328,7 +328,7 @@
 {% macro grade_sup(c) -%}
 {%- if c.mfa == "Yes" -%}<sup class="ppr-sup" title="MFA">MFA</sup>
 {%- elif c.arrear_marker -%}<sup class="ppr-sup ppr-sup-arrear" title="Arrear">{{ c.arrear_marker }}</sup>{%- endif -%}
-{%- if c.improvement_applied -%}<sup class="ppr-sup ppr-sup-imp" title="Improvement applied">I</sup>{%- endif -%}
+{%- if c.improved -%}<sup class="ppr-sup ppr-sup-imp" title="Result improved by a re-exam or improvement exam">I</sup>{%- endif -%}
 {%- endmacro %}
 
 {% block content %}

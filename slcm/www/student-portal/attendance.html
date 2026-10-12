@@ -138,6 +138,92 @@
     gap: 16px;
     flex-wrap: wrap;
   }
+  /* ── OH / Class Participation (attendance + participation, no marks) ── */
+  .att-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  /* Title + filters in one white row card, like the tab bar above it */
+  .att-pt-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px 16px; flex-wrap: wrap;
+    margin-bottom: 14px; padding: 10px 14px 10px 18px;
+    background: var(--sp-card, #fff); border: 1px solid var(--sp-border-light, #eef0f3); border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  }
+  .att-pt-title { font-size: 18px; font-weight: 700; color: var(--sp-text-1); margin: 0; }
+  .att-pt-sub { font-size: 12.5px; color: var(--sp-text-3); margin: 3px 0 0; }
+  .att-pt-filters { display: flex; gap: 10px; flex-wrap: wrap; }
+  .att-pt-select { position: relative; display: inline-flex; align-items: center; }
+  .att-pt-select select {
+    appearance: none; -webkit-appearance: none; min-width: 150px; padding: 9px 34px 9px 14px;
+    border: 1px solid var(--sp-border); border-radius: 10px; background: var(--sp-card, #fff);
+    font-family: inherit; font-size: 13px; font-weight: 600; color: var(--sp-text-1); cursor: pointer;
+  }
+  .att-pt-select select:focus { outline: none; border-color: var(--sp-primary); }
+  .att-pt-select .sp-ms { position: absolute; right: 10px; font-size: 18px; color: var(--sp-text-2); pointer-events: none; }
+
+  /* Week card */
+  .att-pc { background: var(--sp-card, #fff); border: 1px solid var(--sp-border); border-radius: 14px; box-shadow: 0 1px 2px rgba(16,24,40,.04); margin-bottom: 14px; overflow: hidden; }
+  .att-pc-head {
+    width: 100%; display: flex; align-items: center; gap: 14px; padding: 14px 18px; border: none; background: transparent;
+    font-family: inherit; text-align: left; cursor: pointer;
+  }
+  /* Palette here: primary, success and grey only */
+  .att-pc-icon { width: 40px; height: 40px; flex-shrink: 0; border-radius: 10px; background: #f1f2f4; color: var(--sp-primary); display: flex; align-items: center; justify-content: center; }
+  .att-pc-icon .sp-ms { font-size: 22px; }
+  .att-pc-titles { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+  .att-pc-title { font-size: 15px; font-weight: 700; color: var(--sp-text-1); }
+  .att-pc-course { display: block; max-width: 100%; color: var(--sp-text-3); font-size: 12px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .att-pc-stats { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+  .att-pc-stat { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 8px; font-size: 12px; color: var(--sp-text-2); white-space: nowrap; }
+  .att-pc-stat .sp-ms { font-size: 16px; }
+  .att-pc-stat b { color: var(--sp-text-1); }
+  .att-pc-stat.is-att { background: #e8f6ec; }
+  .att-pc-stat.is-att .sp-ms { color: #1e8e47; }
+  .att-pc-stat.is-part { background: #f1f2f4; }
+  .att-pc-stat.is-part .sp-ms { color: var(--sp-primary); }
+  .att-pc-chev { font-size: 22px; color: var(--sp-text-2); transition: transform .15s; flex-shrink: 0; }
+  .att-pc.is-open .att-pc-chev { transform: rotate(180deg); }
+  .att-pc-body { display: none; padding: 0 18px 16px; overflow-x: auto; }
+  .att-pc.is-open .att-pc-body { display: block; }
+
+  /* Sessions table */
+  .att-pt { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12.5px; border: 1px solid var(--sp-border-light, #eef0f3); border-radius: 10px; overflow: hidden; }
+  .att-pt th { text-align: left; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--sp-text-4); padding: 10px 14px; background: #f8f9fb; white-space: nowrap; }
+  .att-pt td { padding: 11px 14px; border-top: 1px solid var(--sp-border-light, #eef0f3); color: var(--sp-text-2); white-space: nowrap; vertical-align: middle; }
+  .att-pt-date { font-weight: 700; color: var(--sp-text-1); }
+  .att-pt-muted { font-size: 11.5px; color: var(--sp-text-4); margin-top: 2px; }
+  .att-pt-venue { display: inline-flex; align-items: center; gap: 5px; }
+  .att-pt-venue .sp-ms { font-size: 15px; color: var(--sp-text-3); }
+  .att-pt-slot { display: inline-block; padding: 4px 10px; border-radius: 7px; background: #f1f2f4; color: var(--sp-text-1); font-weight: 600; font-size: 11.5px; }
+  .att-pp { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 7px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+  .att-pp .sp-ms { font-size: 14px; }
+  .att-pp.is-good  { background: #e8f6ec; color: #1e7b3a; }                                   /* success */
+  .att-pp.is-bad   { background: var(--sp-primary); color: #fff; }                              /* primary */
+  .att-pp.is-warn  { background: var(--sp-card, #fff); color: var(--sp-primary); box-shadow: inset 0 0 0 1px var(--sp-primary); } /* primary outline */
+  .att-pp.is-muted { background: #f1f2f4; color: var(--sp-text-3); }                            /* grey */
+  .att-pt-view {
+    display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border: 1px solid var(--sp-border); border-radius: 8px;
+    background: var(--sp-card, #fff); font-family: inherit; font-size: 12px; font-weight: 600; color: var(--sp-text-1); cursor: pointer;
+  }
+  .att-pt-view .sp-ms { font-size: 16px; }
+  .att-pt-view:hover { border-color: var(--sp-primary); color: var(--sp-primary); }
+
+  /* View popup */
+  .att-pv-head { display: flex; flex-direction: column; gap: 3px; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--sp-border-light, #eef0f3); }
+  .att-pv-head b { font-size: 15px; color: var(--sp-text-1); }
+  .att-pv-head span { font-size: 12px; color: var(--sp-text-3); }
+  .att-pv-row { display: grid; grid-template-columns: 22px 110px minmax(0, 1fr); align-items: center; gap: 6px; padding: 7px 0; font-size: 13px; }
+  .att-pv-row > .sp-ms { font-size: 17px; color: var(--sp-primary); }
+  .att-pv-lbl { color: var(--sp-text-3); }
+  .att-pv-val { color: var(--sp-text-1); font-weight: 600; }
+
+  @media (max-width: 760px) {
+    .att-pc-head { flex-wrap: wrap; }
+    .att-pc-stats { order: 3; width: 100%; justify-content: flex-start; }
+    .att-pt thead { display: none; }
+    .att-pt, .att-pt tbody, .att-pt tr, .att-pt td { display: block; width: 100%; }
+    .att-pt tr { padding: 8px 12px; border-top: 1px solid var(--sp-border-light, #eef0f3); }
+    .att-pt td { border: none; padding: 4px 0; white-space: normal; }
+    .att-pt td::before { content: attr(data-label); display: inline-block; min-width: 100px; font-size: 10.5px; font-weight: 700; text-transform: uppercase; color: var(--sp-text-4); }
+  }
 </style>
 
 {% endblock %}
@@ -166,12 +252,10 @@
   <div class="att-kpi">
     <div class="att-kpi-head"><span class="att-kpi-label">Ongoing Courses</span><span class="att-kpi-icon"><span class="sp-ms" aria-hidden="true">menu_book</span></span></div>
     <div class="att-kpi-value">{{ total_courses }}</div>
-    <div class="att-kpi-sub">{{ term_groups|length }} term{% if term_groups|length != 1 %}s{% endif %}</div>
   </div>
   <div class="att-kpi">
     <div class="att-kpi-head"><span class="att-kpi-label">Below {{ _g|int }}%</span><span class="att-kpi-icon"><span class="sp-ms" aria-hidden="true">warning</span></span></div>
     <div class="att-kpi-value{{ ' is-alert' if courses_below_75 > 0 }}">{{ courses_below_75 }}</div>
-    <div class="att-kpi-sub">{{ 'Need attention' if courses_below_75 > 0 else 'All courses on track' }}</div>
   </div>
 </section>
 
@@ -190,9 +274,9 @@
   </button>
   <button class="sp-tab" onclick="spSwitchTab('officehours', this)" id="tab-btn-officehours" style="display:flex;align-items:center;gap:8px;border-radius:8px;">
     <span class="sp-ms">schedule</span> OH
-    {% if office_hours_sessions %}
-    <span class="sp-tab-badge sp-tab-badge-info">{{ office_hours_sessions|length }}</span>
-    {% endif %}
+  </button>
+  <button class="sp-tab" onclick="spSwitchTab('classparticipation', this)" id="tab-btn-classparticipation" style="display:flex;align-items:center;gap:8px;border-radius:8px;">
+    <span class="sp-ms">groups</span> Class Participation
   </button>
 </div>
 
@@ -289,104 +373,189 @@
 
 
 {# ══════════════════════════════════════════════════════════════════
-   TAB 4 — OFFICE HOURS
+   TABS — OH and CLASS PARTICIPATION
+   One collapsible card per Student Group the student is in (a week's CP
+   group / an OH group), one row per session: attendance + participation.
+   Marks are never shown to students. Course / week filters are per tab.
 ══════════════════════════════════════════════════════════════════ #}
-<div id="sp-tab-officehours" class="sp-tab-panel">
+{% macro _part_pill(value) -%}
+  {%- set _cls = {'Present': 'is-good', 'Participated': 'is-good', 'Absent': 'is-bad', 'Did not participate': 'is-bad', 'Pending': 'is-warn', 'Upcoming': 'is-muted'}.get(value, 'is-muted') -%}
+  {%- set _icon = {'Present': 'check_circle', 'Participated': 'record_voice_over', 'Absent': 'cancel', 'Did not participate': 'voice_over_off', 'Pending': 'schedule', 'Upcoming': 'schedule'}.get(value, 'schedule') -%}
+  <span class="att-pp {{ _cls }}"><span class="sp-ms" aria-hidden="true">{{ _icon }}</span>{{ value }}</span>
+{%- endmacro %}
 
-  <div class="sp-tab-section-header">
-    <div>
-      <h2 class="sp-section-title">OH Sessions</h2>
-      <p class="sp-section-sub">Upcoming OH for your enrolled courses</p>
+{% macro _part_tab(groups, kind, title, sub, empty_icon, empty_title, empty_sub) %}
+  {% set _courses = groups | map(attribute='course_name') | select | unique | sort | list %}
+  {% set _weeks = groups | map(attribute='title') | unique | list %}
+  <div class="att-pt-head">
+    <h2 class="att-pt-title">{{ title }}</h2>
+    {% if groups %}
+    <div class="att-pt-filters" data-kind="{{ kind }}">
+      <label class="att-pt-select">
+        <span class="att-sr-only">Course</span>
+        <select data-filter="course" onchange="attPartFilter('{{ kind }}')">
+          <option value="">All Courses</option>
+          {% for c in _courses %}<option value="{{ c | e }}">{{ c }}</option>{% endfor %}
+        </select>
+        <span class="sp-ms" aria-hidden="true">expand_more</span>
+      </label>
+      <label class="att-pt-select">
+        <span class="att-sr-only">Week</span>
+        <select data-filter="week" onchange="attPartFilter('{{ kind }}')">
+          <option value="">All Weeks</option>
+          {% for w in _weeks %}<option value="{{ w | e }}">{{ w }}</option>{% endfor %}
+        </select>
+        <span class="sp-ms" aria-hidden="true">expand_more</span>
+      </label>
     </div>
+    {% endif %}
   </div>
 
-  {% if not office_hours_sessions %}
+  {% if not groups %}
   <div class="sp-empty fade-in">
-    <span class="sp-ms" style="color: var(--sp-primary) !important;">schedule</span>
-    <p class="sp-empty-title" style="color: black !important;">No Upcoming OH</p>
-    <p class="sp-empty-sub">No OH sessions are currently scheduled for your courses.</p>
+    <span class="sp-ms" style="color: var(--sp-primary) !important;">{{ empty_icon }}</span>
+    <p class="sp-empty-title" style="color: black !important;">{{ empty_title }}</p>
+    <p class="sp-empty-sub">{{ empty_sub }}</p>
   </div>
   {% else %}
-  <div class="sp-oh-grid fade-in">
-    {% for oh in office_hours_sessions %}
-    <div class="sp-oh-card {% if oh.session_status == 'Conducted' %}sp-oh-conducted{% endif %}">
-
-      {# Status ribbon #}
-      <div class="sp-oh-status-bar" style="background:{% if oh.session_status == 'Scheduled' %}var(--sp-primary){% else %}var(--sp-text-4){% endif %};">
-        <span class="sp-ms" style="font-size:14px;">{% if oh.session_status == 'Scheduled' %}schedule{% else %}done_all{% endif %}</span>
-        {{ oh.session_status }}
-      </div>
-
-      {# Course name #}
-      <div style="font-size:14px;font-weight:700;color:var(--sp-text-1);line-height:1.3;margin-bottom:12px;">
-        {{ oh.course_display }}
-      </div>
-
-      {# Details grid #}
-      <div class="sp-oh-details">
-        <div class="sp-oh-detail-item">
-          <span class="sp-ms">calendar_today</span>
-          <span>{{ frappe.utils.formatdate(oh.session_date, "EEE, dd MMM yyyy") }}</span>
-        </div>
-        <div class="sp-oh-detail-item">
-          <span class="sp-ms">access_time</span>
-          <span>{{ oh.start_fmt }} – {{ oh.end_fmt }}
-            {% if oh.duration_hours %}<em style="color:var(--sp-text-4);">({{ oh.duration_hours }}h)</em>{% endif %}
-          </span>
-        </div>
-        {% if oh.faculty %}
-        <div class="sp-oh-detail-item">
-          <span class="sp-ms">person</span>
-          <span>{{ oh.faculty }}</span>
-        </div>
-        {% endif %}
-        {% if oh.location %}
-        <div class="sp-oh-detail-item">
-          <span class="sp-ms">location_on</span>
-          <span>{{ oh.location }}</span>
-        </div>
-        {% endif %}
-      </div>
-
-      {# Register button #}
-      {% if oh.already_registered %}
-      <div style="margin-top:14px;">
-        <span class="sp-btn sp-btn-sm sp-btn-full" style="background:var(--sp-success);color:#fff;cursor:default;">
-          <span class="sp-ms">check_circle</span> Registered
+  <div class="att-pt-list" id="att-pt-list-{{ kind }}">
+    {% for g in groups %}
+    <article class="att-pc{{ ' is-open' if loop.first }}" data-course="{{ g.course_name | e }}" data-week="{{ g.title | e }}">
+      <button type="button" class="att-pc-head" onclick="attPartToggle(this)" aria-expanded="{{ 'true' if loop.first else 'false' }}">
+        <span class="att-pc-icon"><span class="sp-ms" aria-hidden="true">calendar_month</span></span>
+        <span class="att-pc-titles">
+          <span class="att-pc-title">{{ g.course_name or g.title }}</span>
+          <span class="att-pc-course">{{ g.title }}{% if g.start_date_fmt %} · {{ g.start_date_fmt }}{% if g.end_date_fmt and g.end_date_fmt != g.start_date_fmt %} to {{ g.end_date_fmt }}{% endif %}{% endif %}</span>
         </span>
-      </div>
-      {% elif oh.is_scheduled %}
-      <div style="margin-top:14px;">
-        <button class="sp-btn sp-btn-primary sp-btn-sm sp-btn-full"
-          onclick="spRegisterOfficeHours('{{ oh.name }}', '{{ oh.course_display|replace("'", "\\'") }}')"
-          id="oh-btn-{{ oh.name }}">
-          <span class="sp-ms">how_to_reg</span> Register Attendance
-        </button>
-      </div>
-      {% else %}
-      <div style="margin-top:14px;">
-        <span class="sp-btn sp-btn-sm sp-btn-full" style="background:var(--sp-bg);color:var(--sp-text-4);cursor:default;border:1px solid var(--sp-border);">
-          <span class="sp-ms">done_all</span> Session Conducted
+        <span class="att-pc-stats">
+          <span class="att-pc-stat is-att"><span class="sp-ms" aria-hidden="true">person</span><b>{{ g.attended }}</b> / {{ g.held }} attended</span>
+          <span class="att-pc-stat is-part"><span class="sp-ms" aria-hidden="true">groups</span><b>{{ g.participated }}</b> / {{ g.held }} participated</span>
         </span>
+        <span class="sp-ms att-pc-chev" aria-hidden="true">expand_more</span>
+      </button>
+      <div class="att-pc-body">
+        <table class="att-pt">
+          <thead><tr>
+            <th scope="col">Date</th><th scope="col">Time</th><th scope="col">Venue</th><th scope="col">Faculty</th>
+            <th scope="col">Session</th><th scope="col">Attendance</th><th scope="col">Participation</th><th scope="col">Actions</th>
+          </tr></thead>
+          <tbody>
+            {% for s in g.sessions %}
+            <tr>
+              <td data-label="Date"><div class="att-pt-date">{{ s.date_fmt }}</div><div class="att-pt-muted">{{ s.weekday }}</div></td>
+              <td data-label="Time">{{ s.time or '—' }}</td>
+              <td data-label="Venue">{% if s.venue %}<span class="att-pt-venue"><span class="sp-ms" aria-hidden="true">location_on</span>{{ s.venue }}</span>{% else %}—{% endif %}</td>
+              <td data-label="Faculty">{{ s.faculty or '—' }}</td>
+              <td data-label="Session"><span class="att-pt-slot">{{ s.slot_label }}</span></td>
+              <td data-label="Attendance">{{ _part_pill(s.attendance) }}</td>
+              <td data-label="Participation">{{ _part_pill(s.participation) }}</td>
+              <td data-label="Actions">
+                <button type="button" class="att-pt-view" onclick="attPartView(this)"
+                        data-kind="{{ 'OH' if kind == 'oh' else 'Class Participation' }}" data-week="{{ g.title | e }}" data-course="{{ g.course_name | e }}"
+                        data-date="{{ s.date_fmt }} ({{ s.weekday }})" data-time="{{ s.time | e }}" data-venue="{{ s.venue | e }}"
+                        data-faculty="{{ s.faculty | e }}" data-slot="{{ s.slot_label }}"
+                        data-attendance="{{ s.attendance }}" data-participation="{{ s.participation }}">
+                  <span class="sp-ms" aria-hidden="true">visibility</span>View
+                </button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
       </div>
-      {% endif %}
-
-    </div>
+    </article>
     {% endfor %}
+    <div class="sp-empty att-pt-nomatch" style="display:none;">
+      <span class="sp-ms">filter_alt_off</span>
+      <p class="sp-empty-title" style="color: black !important;">No matching weeks</p>
+      <p class="sp-empty-sub">Try a different course or week.</p>
+    </div>
   </div>
   {% endif %}
+{% endmacro %}
 
-  {# Info box #}
-  <div class="sp-info-box fade-in" style="margin-top:48px; background-color:#fff0f2; border:1px solid #f5c6ce; border-radius:12px; padding:20px; display:flex; gap:16px; color:var(--sp-text-1);">
-    <span class="sp-ms" style="font-size:24px; color:var(--sp-primary); flex-shrink:0;">info</span>
-    <div style="font-size:13px;line-height:1.8;">
-      <strong>About OH:</strong> Attending OH sessions counts towards your attendance percentage.
-      Click <strong>Register Attendance</strong> to log your participation for a scheduled session.
-      OH hours are added to your total attendance automatically.
-    </div>
-  </div>
-
+<div id="sp-tab-officehours" class="sp-tab-panel">
+  {{ _part_tab(oh_groups, 'oh', 'OH', 'Your OH sessions — attendance and participation recorded by your faculty',
+               'schedule', 'No OH yet', 'OH sessions scheduled for your OH group will appear here.') }}
 </div>{# end tab-officehours #}
+
+<div id="sp-tab-classparticipation" class="sp-tab-panel">
+  {{ _part_tab(cp_groups, 'cp', 'Class Participation', 'Week-wise class sessions — attendance and participation recorded by your faculty',
+               'groups', 'No Class Participation yet', 'Class Participation weeks for your courses will appear here.') }}
+</div>{# end tab-classparticipation #}
+
+{# Session details (View) — attendance + participation only, no marks #}
+<div class="sp-modal-overlay" id="modal-part-session" onclick="spCloseModalIf(event, 'modal-part-session')">
+  <div class="sp-modal" role="dialog" aria-modal="true" aria-labelledby="part-modal-title" style="max-width:440px;">
+    <div class="sp-modal-header">
+      <div class="sp-modal-title" id="part-modal-title"><span class="sp-ms">event_note</span> Session Details</div>
+      <button class="sp-modal-close" onclick="spCloseModal('modal-part-session')" aria-label="Close"><span class="sp-ms">close</span></button>
+    </div>
+    <div class="sp-modal-body" id="part-modal-body"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+  /* Collapse / expand a week card */
+  window.attPartToggle = function (btn) {
+    var card = btn.closest('.att-pc');
+    var open = card.classList.toggle('is-open');
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  };
+
+  /* Course / Week filters (per tab) */
+  window.attPartFilter = function (kind) {
+    var box = document.querySelector('.att-pt-filters[data-kind="' + kind + '"]');
+    var list = document.getElementById('att-pt-list-' + kind);
+    if (!box || !list) return;
+    var course = box.querySelector('[data-filter="course"]').value;
+    var week = box.querySelector('[data-filter="week"]').value;
+    var shown = 0;
+    list.querySelectorAll('.att-pc').forEach(function (card) {
+      var ok = (!course || card.getAttribute('data-course') === course) && (!week || card.getAttribute('data-week') === week);
+      card.style.display = ok ? '' : 'none';
+      if (ok) shown++;
+    });
+    /* A single matching card is opened so its sessions are visible */
+    if (shown === 1) list.querySelectorAll('.att-pc').forEach(function (card) {
+      if (card.style.display !== 'none') { card.classList.add('is-open'); card.querySelector('.att-pc-head').setAttribute('aria-expanded', 'true'); }
+    });
+    var none = list.querySelector('.att-pt-nomatch');
+    if (none) none.style.display = shown ? 'none' : '';
+  };
+
+  var PILL = {
+    'Present': ['is-good', 'check_circle'], 'Participated': ['is-good', 'record_voice_over'],
+    'Absent': ['is-bad', 'cancel'], 'Did not participate': ['is-bad', 'voice_over_off'],
+    'Pending': ['is-warn', 'schedule'], 'Upcoming': ['is-muted', 'schedule']
+  };
+  function pill(v) {
+    var p = PILL[v] || ['is-muted', 'schedule'];
+    return '<span class="att-pp ' + p[0] + '"><span class="sp-ms" aria-hidden="true">' + p[1] + '</span>' + esc(v) + '</span>';
+  }
+
+  /* View — session details popup */
+  window.attPartView = function (btn) {
+    var d = btn.dataset;
+    function row(icon, label, value) {
+      return '<div class="att-pv-row"><span class="sp-ms" aria-hidden="true">' + icon + '</span><span class="att-pv-lbl">' + label
+        + '</span><span class="att-pv-val">' + value + '</span></div>';
+    }
+    document.getElementById('part-modal-body').innerHTML =
+      '<div class="att-pv-head"><b>' + esc(d.course || d.kind) + '</b><span>' + esc(d.kind) + ' · ' + esc(d.week) + ' · ' + esc(d.slot) + '</span></div>'
+      + row('calendar_today', 'Date', esc(d.date))
+      + row('schedule', 'Time', esc(d.time || '—'))
+      + row('location_on', 'Venue', esc(d.venue || '—'))
+      + row('person', 'Faculty', esc(d.faculty || '—'))
+      + row('how_to_reg', 'Attendance', pill(d.attendance))
+      + row('record_voice_over', 'Participation', pill(d.participation));
+    spOpenModal('modal-part-session');
+  };
+})();
+</script>
 
 
 {# ══════════════════════════════════════════════════════════════════
@@ -578,40 +747,6 @@
   spBindFileInput('cond-proof', 'cond-proof-name');
 
   /* ── Office Hours Registration ──────────────────────────────── */
-  window.spRegisterOfficeHours = function (sessionName, courseDisplay) {
-    if (!confirm('Register your attendance for the OH session: ' + courseDisplay + '?')) return;
-
-    var btn = document.getElementById('oh-btn-' + sessionName);
-    if (btn) {
-      btn.disabled = true;
-      btn.innerHTML = '<span class="sp-ms">hourglass_top</span> Registering…';
-    }
-
-    spCall('slcm.api.student_portal.register_office_hours_attendance', {
-      session_name: sessionName,
-    })
-      .then(function (result) {
-        spToast(result.message || 'Registered for OH session!', 'success');
-        if (btn) {
-          btn.innerHTML = '<span class="sp-ms">check_circle</span> Registered';
-          btn.style.background = 'var(--sp-success)';
-          btn.style.borderColor = 'var(--sp-success)';
-        }
-      })
-      .catch(function (err) {
-        var alreadyRegistered = (err.message || '').indexOf('already registered') !== -1;
-        spToast(err.message || 'Registration failed. Please try again.', alreadyRegistered ? 'info' : 'danger');
-        if (btn) {
-          if (alreadyRegistered) {
-            btn.outerHTML = '<span class="sp-btn sp-btn-sm sp-btn-full" style="background:var(--sp-success);color:#fff;cursor:default;">'
-              + '<span class="sp-ms">check_circle</span> Registered</span>';
-          } else {
-            btn.disabled = false;
-            btn.innerHTML = '<span class="sp-ms">how_to_reg</span> Register Attendance';
-          }
-        }
-      });
-  };
 
 })();
 </script>

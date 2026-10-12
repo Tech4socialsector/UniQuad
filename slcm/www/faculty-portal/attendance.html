@@ -586,6 +586,63 @@
 .fp-vb-stat-grid-4 { grid-template-columns: repeat(4, 1fr); }
 @media (max-width: 1024px) { .fp-vb-stat-grid-4 { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 560px) { .fp-vb-stat-grid-4 { grid-template-columns: 1fr; } }
+
+/* Course filter option: course name + programme underneath */
+.fp-msf-option-2line { align-items: flex-start; }
+.fp-msf-opt-text { display: flex; flex-direction: column; min-width: 0; }
+.fp-msf-opt-text small { font-size: 11.5px; color: var(--fp-text-4); white-space: normal; }
+
+/* "Session N of M" under the course name */
+.fp-as-seq { font-size: 12px; font-weight: 700; color: var(--fp-primary); margin-top: 2px; white-space: nowrap; }
+.fp-as-seq span { font-weight: 500; color: var(--fp-text-4); }
+
+/* Attendance lock chip under the status */
+/* Locked = primary, reopened (unlocked) = success — same colours everywhere
+   (table chip, session switcher, modal banners). */
+.fp-as-lock {
+  display: inline-flex; align-items: center; gap: 4px; margin-top: 5px;
+  font-size: 11.5px; font-weight: 600; color: var(--fp-primary); white-space: nowrap;
+}
+.fp-as-lock .fp-ms { font-size: 14px; }
+.fp-as-lock-open { color: var(--fp-success); }
+.fp-lock-ic { color: var(--fp-primary) !important; }
+.fp-unlock-ic { color: var(--fp-success) !important; }
+
+/* Mark Attendance modal: Session 1, 2, 3… strip for the course */
+.sat-session-strip {
+  position: relative; /* offsetParent for scrolling the active tab into view */
+  display: flex; align-items: stretch; gap: 8px; overflow-x: auto; flex-shrink: 0;
+  padding: 10px 22px; border-bottom: 1px solid var(--fp-border-light); background: var(--fp-bg);
+  scrollbar-width: thin;
+}
+.sat-sess-tab {
+  flex: 0 0 auto; min-width: 108px; display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  padding: 7px 12px; border: 1.5px solid var(--fp-border); border-radius: var(--fp-radius-sm);
+  background: var(--fp-card); font-family: inherit; text-align: left; cursor: pointer;
+  transition: border-color 0.15s;
+}
+.sat-sess-tab:hover { border-color: var(--fp-primary); }
+.sat-sess-tab-active { border-color: var(--fp-primary); box-shadow: 0 0 0 2px var(--fp-primary-light); }
+.sat-sess-tab-name { display: flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 700; color: var(--fp-text-1); white-space: nowrap; }
+.sat-sess-tab-name .fp-ms { font-size: 15px; }
+.sat-sess-tab-st {
+  display: flex; align-items: center; gap: 3px; font-size: 10.5px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap;
+}
+.sat-sess-tab-st .fp-ms { font-size: 12px; }
+.sat-sess-st-marked { color: var(--fp-success); }
+.sat-sess-st-pending { color: var(--fp-primary); }
+.sat-sess-st-active { color: #1e7b3a; }
+.sat-sess-st-upcoming { color: var(--fp-text-4); }
+@media (max-width: 768px) { .sat-session-strip { padding: 8px 16px; } }
+
+/* Mark Attendance modal: lock / reopen banners */
+.sat-lock-note {
+  display: none; align-items: flex-start; gap: 6px; margin-top: 6px;
+  font-size: 12.5px; font-weight: 600; color: #920c24;
+}
+.sat-lock-note .fp-ms { font-size: 16px; flex-shrink: 0; }
+.sat-reopen-note { color: var(--fp-success); }
 </style>
 {% endblock %}
 
@@ -693,7 +750,10 @@
   </div>
 </div>
 
-{# ── Stat Cards (all drillable) ───────────────────────────────── #}
+{# ── Stat Cards (all drillable) — overall totals for every session of the
+   faculty's courses: they sit above the tabs and filters and don't change
+   with them. Completed = Marked + Pending (today's unmarked sessions count
+   as Pending); Cancelled / Postponed sessions count nowhere. #}
 <div class="fp-stat-grid fp-vb-stat-grid fp-vb-stat-grid-4">
 
   <div class="fp-stat-card fp-vb-stat-card fp-vb-accent-maroon att-stat-drillable fp-stat-drillable fade-in" style="animation-delay:0.04s;"
@@ -730,7 +790,7 @@
     </div>
     <span class="fp-drill-badge">Details</span>
   </div>
-  
+
   <div class="fp-stat-card fp-vb-stat-card fp-vb-accent-maroon att-stat-drillable fp-stat-drillable fade-in" style="animation-delay:0.16s;"
        onclick="attDrill('upcoming_sessions')" title="View upcoming sessions">
     <div class="fp-stat-icon fp-c-navy">
@@ -783,10 +843,12 @@
           <span class="fp-ms fp-msf-chevron">expand_more</span>
         </button>
         <div class="fp-msf-panel">
+          {# Course name with its programme underneath; the offering ID is in
+             the tooltip, since several offerings can share a course name #}
           {% for co in course_offerings %}
-          <label class="fp-msf-option">
-            <input type="checkbox" value="{{ co.name }}" onchange="fpFilterSessions()" {% if selected_co == co.name %}checked{% endif %}>
-            <span>{{ co.course_name }}</span>
+          <label class="fp-msf-option fp-msf-option-2line" title="{{ co.name }}">
+            <input type="checkbox" value="{{ co.name }}" data-label="{{ co.course_name }}" onchange="fpFilterSessions()" {% if selected_co == co.name %}checked{% endif %}>
+            <span class="fp-msf-opt-text">{{ co.course_name }}{% if co.programme_name %}<small>{{ co.programme_name }}</small>{% endif %}</span>
           </label>
           {% endfor %}
           {% if course_offerings %}
@@ -845,6 +907,8 @@
           <label class="fp-msf-option"><input type="checkbox" value="marked" onchange="fpFilterSessions()"><span>Marked</span></label>
           <label class="fp-msf-option"><input type="checkbox" value="pending" onchange="fpFilterSessions()"><span>Pending</span></label>
           <label class="fp-msf-option"><input type="checkbox" value="upcoming" onchange="fpFilterSessions()"><span>Upcoming</span></label>
+          <label class="fp-msf-option"><input type="checkbox" value="cancelled" onchange="fpFilterSessions()"><span>Cancelled</span></label>
+          <label class="fp-msf-option"><input type="checkbox" value="postponed" onchange="fpFilterSessions()"><span>Postponed</span></label>
           <div class="fp-msf-footer">
             <button type="button" class="fp-msf-footer-btn" onclick="fpMsfSelectAll('fp-status-filter')">Select all</button>
             <button type="button" class="fp-msf-footer-btn fp-msf-clear" onclick="fpMsfClearAll('fp-status-filter')">Clear all</button>
@@ -865,6 +929,7 @@
       </button>
     </div>
   </div>
+
   <div class="fp-card-body" style="padding:0;">
     {% if not sessions %}
     <div class="fp-empty">
@@ -904,10 +969,13 @@
               data-rfid-activated="{{ '1' if s.rfid_activated else '0' }}"
               data-course-name="{{ s.course_name }}"
               data-status="{{ s.computed_status }}"
+              data-locked="{{ '1' if s.locked else '0' }}"
+              data-seq="{{ s.seq }}"
               style="cursor:pointer;"
               onclick="attRowClick(this, this.getAttribute('data-session'), this.getAttribute('data-course-name'), this.getAttribute('data-status'))">
             <td data-label="Course" class="fp-as-course">
-              <div class="fp-as-primary" title="{{ s.course_name }}">{{ s.course_name }}</div>
+              <div class="fp-as-primary" title="{{ s.course_name }} ({{ s.course_offering }})">{{ s.course_name }}</div>
+              {% if s.seq %}<div class="fp-as-seq">{{ 'OH' if s.category == 'oh' else 'Session' }} {{ s.seq }} <span>of {{ s.seq_total }}</span></div>{% endif %}
               {% if s.programme_name %}<div class="fp-as-secondary">{{ s.programme_name }}</div>{% endif %}
             </td>
             <td data-label="Date &amp; Time" style="white-space:nowrap;">
@@ -930,8 +998,15 @@
                 <span class="fp-as-status fp-as-status-pending"><span class="fp-ms">error</span>Pending</span>
               {% elif s.computed_status == 'Active' %}
                 <span class="fp-as-status fp-as-status-active"><span class="fp-ms">check_circle</span>Active</span>
+              {% elif s.not_held %}
+                <span class="fp-as-status fp-as-status-upcoming"><span class="fp-ms">event_busy</span>{{ s.computed_status }}</span>
               {% else %}
                 <span class="fp-as-status fp-as-status-upcoming"><span class="fp-ms">schedule</span>Upcoming</span>
+              {% endif %}
+              {% if s.locked %}
+                <div class="fp-as-lock" title="Locked on {{ s.lock_at_fmt }} — contact AAD to reopen"><span class="fp-ms">lock</span>Locked</div>
+              {% elif s.reopened %}
+                <div class="fp-as-lock fp-as-lock-open" title="Reopened by {{ s.reopened_by_name }} on {{ s.reopened_on_fmt }}"><span class="fp-ms">lock_open</span>Reopened</div>
               {% endif %}
             </td>
             <td data-label="Action" class="fp-col-actions" onclick="event.stopPropagation()">
@@ -1007,10 +1082,10 @@
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
-    /* Default the session date range to today */
-    /* ?tab=att|cp|oh and ?pending=<task> (from the dashboard's Pending Tasks
-       card). Pending sessions are mostly in the past, so a pending filter
-       starts without the default today-only date range. */
+    /* From / To Date default to today. ?tab=att|cp|oh and ?pending=<task>
+       come from the dashboard's Pending Tasks card; pending sessions are
+       mostly in the past, so a pending filter starts without a date range.
+       The dates carry over between tabs; Clear Filters empties them. */
     var _qp = new URLSearchParams(window.location.search);
     var _qPending = _qp.get('pending') || '';
     var _qTab = _qp.get('tab') || '';
@@ -1180,7 +1255,7 @@ document.addEventListener('keydown', function(e) {
    segmented buttons injected via innerHTML, so they need a delegated click
    listener rather than inline onclick handlers. ── */
 document.addEventListener('click', function(e) {
-  var markTab = e.target.closest('#sat-slot-picker .fp-slot-tab');
+  var markTab = e.target.closest('#sat-slot-picker .fp-slot-tab, #sat-session-strip .sat-sess-tab');
   if (markTab) { fpChooseModalSlot(markTab.getAttribute('data-session')); return; }
 
   var viewTab = e.target.closest('#att-view-slot-picker .fp-slot-tab');
@@ -1250,7 +1325,7 @@ function _msfRefreshLabel(id) {
     labelEl.textContent = allLbl;
   } else if (values.length === 1) {
     var opt = box.querySelector('input[value="' + CSS.escape(values[0]) + '"]');
-    labelEl.textContent = opt ? opt.parentElement.querySelector('span').textContent : values[0];
+    labelEl.textContent = opt ? (opt.getAttribute('data-label') || opt.parentElement.querySelector('span').textContent) : values[0];
   } else {
     labelEl.textContent = values.length + ' ' + manyLbl;
   }
@@ -1423,28 +1498,22 @@ function _fpRowInTab(row, tab) {
   return category !== 'oh';
 }
 
-/* Back to the page's default view: Course/Type/Status = All, no pending
-   filter, From/To Date = today. */
-function _fpResetFiltersToDefault() {
-  ['fp-co-filter', 'fp-type-filter', 'fp-status-filter'].forEach(function(id) {
-    var box = document.getElementById(id);
-    if (box) box.querySelectorAll('.fp-msf-panel input[type="checkbox"]').forEach(function(cb) { cb.checked = false; });
-  });
-  ['fp-date-filter-from', 'fp-date-filter-to'].forEach(function(id) {
-    var el = document.getElementById(id);
-    if (!el) return;
-    if (el._flatpickr) el._flatpickr.setDate(new Date(), false); else el.value = _todayIso();
-  });
+/* On a tab switch, drop only the filters that belong to one tab: Type (OH
+   sessions have their own type) and the dashboard's pending-task filter.
+   Course, Status and the date range are the faculty's chosen scope and
+   carry over to the new tab. */
+function _fpResetTabFilters() {
+  var box = document.getElementById('fp-type-filter');
+  if (box) box.querySelectorAll('.fp-msf-panel input[type="checkbox"]').forEach(function(cb) { cb.checked = false; });
   _fpPendingTask = '';
   var chip = document.getElementById('fp-pending-chip');
   if (chip) chip.style.display = 'none';
 }
 
-/* Switching tabs starts that tab fresh — filters (incl. a pending filter
-   that came from the dashboard) belong to the tab they were set on. */
+/* Switching tabs keeps Course / Status / dates (see _fpResetTabFilters). */
 function fpSetSessionsTab(tab) {
   if (tab !== _fpSessionsTab) {
-    _fpResetFiltersToDefault();
+    _fpResetTabFilters();
     var p = new URLSearchParams(window.location.search);
     p.delete('pending');
     p.set('tab', tab);
@@ -1468,7 +1537,9 @@ function _fpRefreshActionLabels() {
     var status = row.getAttribute('data-status');
     var marked = !!row.getAttribute('data-present');
     var label = 'View', icon = 'visibility';
-    if ((_fpSessionsTab === 'cp' || _fpSessionsTab === 'oh') && status !== 'Upcoming') {
+    if (row.getAttribute('data-locked') === '1') {
+      /* locked: read-only until AAD reopens it */
+    } else if ((_fpSessionsTab === 'cp' || _fpSessionsTab === 'oh') && status !== 'Upcoming') {
       label = 'Grade'; icon = 'grading';
     } else if (status === 'Pending' || (status === 'Active' && !marked)) {
       label = 'Mark'; icon = 'how_to_reg';
@@ -1699,7 +1770,7 @@ function fpOpenSessionPicker() {
   var sessions = [];
   var today = new Date().toDateString();
 
-  document.querySelectorAll('.fp-session-row[data-marked="pending"]').forEach(function(row) {
+  document.querySelectorAll('.fp-session-row[data-marked="pending"]:not([data-locked="1"])').forEach(function(row) {
     var name  = row.getAttribute('data-session') || '';
     if (!name) return;
     var m = _fpSessionMeta(name);
@@ -1776,13 +1847,35 @@ var _sat = {
    When a specific session is known (row "Mark" click), skip the Based-On
    form entirely and load that session's roster directly — the faculty
    already picked the course + date + time slot by clicking the row. */
+function _fpSessionObj(sessionName) {
+  return (typeof _attSessions !== 'undefined' ? _attSessions : []).filter(function(x) { return x.name === sessionName; })[0];
+}
+
 /* Upcoming sessions open read-only: switches, mark inputs, bulk buttons,
-   RFID and Save are all disabled until the session has started. */
+   RFID and Save are all disabled until the session has started. Locked
+   sessions (lock hours after the session ended, unless AAD reopened them)
+   open read-only the same way. */
 function _satApplyReadOnly(sessionName) {
-  var s = (typeof _attSessions !== 'undefined' ? _attSessions : []).filter(function(x) { return x.name === sessionName; })[0];
-  _sat.readOnly = !!(s && s.computed_status === 'Upcoming');
+  var s = _fpSessionObj(sessionName);
+  var locked = !!(s && s.locked);
+  _sat.readOnly = locked || !!(s && s.computed_status === 'Upcoming');
   var note = document.getElementById('sat-readonly-note');
   if (note) note.style.display = _sat.readOnly ? 'flex' : 'none';
+  var icon = document.getElementById('sat-readonly-icon');
+  if (icon) icon.textContent = locked ? 'lock' : 'lock_clock';
+  var text = document.getElementById('sat-readonly-text');
+  if (text) {
+    text.textContent = locked
+      ? 'Attendance locked on ' + (s.lock_at_fmt || '—') + '.'
+      : 'Upcoming session — attendance and marks can be recorded once it has started.';
+  }
+  var reopen = document.getElementById('sat-reopen-note');
+  var showReopen = !!(s && s.reopened && !locked);
+  if (reopen) reopen.style.display = showReopen ? 'flex' : 'none';
+  if (showReopen) {
+    document.getElementById('sat-reopen-text').textContent =
+      'Reopened by ' + (s.reopened_by_name || '—') + ' on ' + (s.reopened_on_fmt || '—');
+  }
   var save = document.getElementById('att-save-btn');
   if (save) {
     save.disabled = _sat.readOnly;
@@ -1802,7 +1895,10 @@ function fpOpenMarkModal(sessionName, courseName, slots) {
   _satApplyReadOnly(_sat.sessionName);
   _satShowTabs(!!sessionName);
 
-  _satRenderModalSlotPicker(slots || null, sessionName);
+  /* The Session 1, 2, 3… strip replaces the same-day slot picker (it
+     already contains those slots); the picker stays as a fallback for a
+     session that isn't in the page data. */
+  if (!_satRenderSessionStrip(sessionName)) _satRenderModalSlotPicker(slots || null, sessionName);
 
   if (sessionName) {
     _satLoadSessionRoster(sessionName, courseName);
@@ -1890,14 +1986,86 @@ function fpChooseModalSlot(sessionName) {
 
   var slots = _sat.modalSlots || [];
   var chosen = slots.filter(function(s) { return s.session === sessionName; })[0];
+  var meta = _fpSessionObj(sessionName);
 
   _sat.sessionName = sessionName;
   _cpReset();
   _satApplyReadOnly(sessionName);
   _satShowTabs(true);  /* label + toggle visibility + OH-only list */
   _renderRfidControl('sat-rfid', sessionName);
-  _satRenderModalSlotPicker(slots, sessionName);
-  _satLoadSessionRoster(sessionName, chosen ? chosen.courseName : null);
+  if (!_satRenderSessionStrip(sessionName)) _satRenderModalSlotPicker(slots, sessionName);
+  _satLoadSessionRoster(sessionName, chosen ? chosen.courseName : (meta ? meta.course_name : null));
+}
+
+/* ── Session switcher: the other sessions of this course on the SAME date
+   (class sessions and OH kept apart), shown as "Session N" tabs with
+   Marked / Pending status — only when that date has 2+ sessions.
+   Returns false when the session isn't in the page data, so the caller can
+   fall back to the old same-day slot picker. */
+var SAT_SESSION_STATUS = {
+  Marked:   { cls: 'marked',   icon: 'check_circle', label: 'Marked' },
+  Pending:  { cls: 'pending',  icon: 'error',        label: 'Pending' },
+  Active:   { cls: 'active',   icon: 'pending',      label: 'Pending' },
+  Upcoming: { cls: 'upcoming', icon: 'schedule',     label: 'Upcoming' },
+};
+
+function _satRenderSessionStrip(activeSessionName) {
+  var strip = document.getElementById('sat-session-strip');
+  if (!strip) return false;
+  var current = _fpSessionObj(activeSessionName);
+  if (!current || !current.seq) { strip.style.display = 'none'; strip.innerHTML = ''; return false; }
+
+  var sessions = _attSessions.filter(function(s) {
+    return s.course_offering === current.course_offering && s.category === current.category
+      && s.session_date === current.session_date && s.seq;
+  }).sort(function(a, b) { return a.seq - b.seq; });
+
+  /* One session that day: nothing to switch to */
+  var picker = document.getElementById('sat-slot-picker');
+  if (picker) picker.innerHTML = '';
+  if (sessions.length < 2) { strip.style.display = 'none'; strip.innerHTML = ''; return true; }
+
+  /* Each tab: time range + lock icon, then status */
+  strip.innerHTML = sessions.map(function(s) {
+    var st = SAT_SESSION_STATUS[s.computed_status] || SAT_SESSION_STATUS.Upcoming;
+    var isActive = s.name === activeSessionName;
+    return '<button type="button" class="sat-sess-tab' + (isActive ? ' sat-sess-tab-active' : '') + '" '
+      + 'data-session="' + escHtml(s.name) + '" aria-pressed="' + (isActive ? 'true' : 'false') + '" '
+      + 'title="' + escHtml(s.locked ? 'Locked' : s.reopened ? 'Reopened by AAD' : '') + '">'
+      + '<span class="sat-sess-tab-name">' + escHtml(s.from_time + (s.to_time ? ' – ' + s.to_time : ''))
+      + (s.locked ? '<span class="fp-ms fp-lock-ic">lock</span>' : s.reopened ? '<span class="fp-ms fp-unlock-ic">lock_open</span>' : '') + '</span>'
+      + '<span class="sat-sess-tab-st sat-sess-st-' + st.cls + '"><span class="fp-ms">' + st.icon + '</span>' + st.label + '</span>'
+      + '</button>';
+  }).join('');
+  strip.style.display = 'flex';
+
+  /* Keep the active session in view (horizontal scroll only). Deferred:
+     on first open this runs before the modal is shown and has no width. */
+  setTimeout(function() {
+    var active = strip.querySelector('.sat-sess-tab-active');
+    if (active) strip.scrollLeft = Math.max(0, active.offsetLeft - (strip.clientWidth - active.offsetWidth) / 2);
+  }, 30);
+  return true;
+}
+
+/* Refresh a session's lock state from the server (get_session_students),
+   in case it changed since the page was rendered. */
+function _satSyncLock(sessionName, lock) {
+  var s = _fpSessionObj(sessionName);
+  if (!s || !lock) return;
+  var changed = s.locked !== !!lock.locked || s.reopened !== !!(lock.reopened && !lock.locked);
+  s.locked = !!lock.locked;
+  s.reopened = !!(lock.reopened && !lock.locked);
+  s.lock_at_fmt = lock.lock_at || s.lock_at_fmt;
+  if (lock.reopened) {
+    s.reopened_by_name = lock.reopened_by || '';
+    s.reopened_on_fmt = lock.reopened_on || '';
+    s.reopen_reason = lock.reopen_reason || '';
+    s.reopen_notice = lock.notice || '';
+  }
+  if (sessionName !== _sat.sessionName) return;
+  _satApplyReadOnly(sessionName);
+  if (changed) _satRenderSessionStrip(sessionName);
 }
 
 /* Course heading meta line (date · time) for the mark-attendance modal */
@@ -1980,6 +2148,8 @@ function _satLoadSessionRoster(sessionName, courseName) {
       }) : [];
       _satRosterCache[sessionName] = students;
       _satAuditCache[sessionName] = data && data.session_audit;
+      /* Before rendering, so a just-locked session renders read-only */
+      _satSyncLock(sessionName, data && data.lock);
       /* Guard against a slower earlier request resolving after a later
          tab switch — only apply if this is still the active session. */
       if (sessionName !== _sat.sessionName) return;
@@ -2048,6 +2218,9 @@ function _satResetForm() {
   var cn = document.getElementById('sat-course-name');
   if (cn) cn.textContent = 'Attendance';
   _satSetMeta('', '');
+
+  var strip = document.getElementById('sat-session-strip');
+  if (strip) { strip.style.display = 'none'; strip.innerHTML = ''; }
 
   /* Show step 1 only */
   var step1 = document.getElementById('sat-step-form');
@@ -2409,7 +2582,7 @@ function _fpCpContextHtml(ctx) {
     parts += '<span>OH session ' + ctx.slot + ' of ' + ctx.classes_in_week + ' · recorded as <b>' + escHtml(ctx.slot_label) + '</b></span>';
   } else {
     parts += '<span>' + escHtml(ctx.start_date_fmt) + ' – ' + escHtml(ctx.end_date_fmt) + '</span>'
-      + '<span>Class ' + ctx.slot + ' of ' + ctx.classes_in_week + ' this week · recorded as <b>' + escHtml(ctx.slot_label) + '</b></span>';
+      + '<span>Session ' + ctx.slot + ' of ' + ctx.classes_in_week + ' this week · recorded as <b>' + escHtml(ctx.slot_label) + '</b></span>';
   }
   return '<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">' + parts + '</div>';
 }
@@ -2651,7 +2824,7 @@ function _cpCollect() {
 function fpSaveAttendance() {
   if (_sat.readOnly) return;
   var map = attCollectData();
-  if (!Object.keys(map).length) { alert('No students to save.'); return; }
+  if (!Object.keys(map).length) { fpAlert('There are no students in this session to save.', { title: 'Nothing to save', icon: 'group_off' }); return; }
 
   var btn = document.getElementById('att-save-btn');
   btn.disabled = true;
@@ -3251,7 +3424,7 @@ function fpCloseRecModal() { _closeModal('att-rec-modal'); }
 function fpSaveRecommendation() {
   var doc = document.getElementById('att-rec-doc').value;
   var rec = document.getElementById('att-rec-value').value;
-  if (!rec) { alert('Please select a recommendation before submitting.'); return; }
+  if (!rec) { fpAlert('Please select a recommendation before submitting.', { title: 'Recommendation needed', icon: 'rule' }); return; }
 
   var btn = document.getElementById('att-rec-save-btn');
   btn.disabled = true;
@@ -3281,11 +3454,14 @@ function attDrill(type) {
   var title, rows, cols;
 
   if (type === 'all_sessions' || type === 'marked_sessions' || type === 'pending_sessions' || type === 'completed_sessions' || type === 'upcoming_sessions') {
-    var filtered = _attSessions;
-    if (type === 'marked_sessions')    filtered = _attSessions.filter(function(s) { return s.computed_status === 'Marked'; });
-    if (type === 'pending_sessions')   filtered = _attSessions.filter(function(s) { return s.computed_status === 'Pending'; });
-    if (type === 'completed_sessions') filtered = _attSessions.filter(function(s) { return s.computed_status === 'Marked' || s.computed_status === 'Pending'; });
-    if (type === 'upcoming_sessions')  filtered = _attSessions.filter(function(s) { return s.computed_status === 'Upcoming'; });
+    /* Same sessions the stat cards count: all of them, not the filters */
+    var base = _attSessions;
+    var isPending = function(s) { return s.computed_status === 'Pending' || s.computed_status === 'Active'; };
+    var filtered = base;
+    if (type === 'marked_sessions')    filtered = base.filter(function(s) { return s.computed_status === 'Marked'; });
+    if (type === 'pending_sessions')   filtered = base.filter(isPending);
+    if (type === 'completed_sessions') filtered = base.filter(function(s) { return s.computed_status === 'Marked' || isPending(s); });
+    if (type === 'upcoming_sessions')  filtered = base.filter(function(s) { return s.computed_status === 'Upcoming'; });
 
     title = type === 'all_sessions' ? 'All Sessions'
           : type === 'marked_sessions' ? 'Marked Sessions'
@@ -3468,7 +3644,7 @@ function attDrillSearch() {
 
 /* Export drill table to CSV */
 function attDrillExport() {
-  if (!_drillRows.length) { alert('Nothing to export.'); return; }
+  if (!_drillRows.length) { fpAlert('There are no records in this list to export.', { title: 'Nothing to export', icon: 'download' }); return; }
   var rows   = _drillRows;
   var title  = (document.getElementById('att-drill-title').textContent || 'export')
                  .replace(/[^a-z0-9]/gi, '_').toLowerCase();
@@ -3547,7 +3723,7 @@ function fpActivateRfid(sessionName, btn) {
     function(msg) {
       btn.disabled = false;
       btn.innerHTML = originalHtml;
-      alert(msg || 'Could not activate RFID for this session.');
+      fpAlert(msg || 'Could not activate RFID for this session.', { title: 'RFID not activated', icon: 'wifi_off' });
     }
   );
 }
@@ -3689,6 +3865,11 @@ document.addEventListener('DOMContentLoaded', function() {
       </div>
     </div>
 
+    {# ── Session-wise view: Session 1, 2, 3… of this course with Marked /
+       Pending status — click one to switch the modal to it. Filled by
+       _satRenderSessionStrip(); hidden for the Based-On form flow. #}
+    <div id="sat-session-strip" class="sat-session-strip" style="display:none;"></div>
+
     {# ── Step 1: Configuration form — matches desk Student Attendance Tool ── #}
     <div id="sat-step-form" style="overflow-y:auto;flex-shrink:0;">
       <div class="sat-form-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:0;">
@@ -3746,9 +3927,14 @@ document.addEventListener('DOMContentLoaded', function() {
           <div style="margin-bottom:12px;">
             <div style="font-size:18px;font-weight:700;color:var(--fp-text-1);" id="sat-course-name">Attendance</div>
             <div id="sat-course-meta" style="display:none;align-items:center;gap:14px;flex-wrap:wrap;margin-top:4px;font-size:13.5px;color:var(--fp-text-3);"></div>
-            {# Shown for Upcoming sessions, which open read-only #}
-            <div id="sat-readonly-note" style="display:none;align-items:center;gap:6px;margin-top:6px;font-size:12.5px;font-weight:600;color:#920c24;">
-              <span class="fp-ms" style="font-size:16px;">lock_clock</span>Upcoming session — attendance and marks can be recorded once it has started.
+            {# Read-only reason: Upcoming session, or attendance locked
+               (text set by _satApplyReadOnly) #}
+            <div id="sat-readonly-note" class="sat-lock-note">
+              <span class="fp-ms" id="sat-readonly-icon">lock_clock</span><span id="sat-readonly-text"></span>
+            </div>
+            {# AAD reopened a locked session — who, when, why #}
+            <div id="sat-reopen-note" class="sat-lock-note sat-reopen-note">
+              <span class="fp-ms fp-unlock-ic">lock_open</span><span id="sat-reopen-text"></span>
             </div>
           </div>
           {# Counts on the left; search + bulk actions grouped on the right #}

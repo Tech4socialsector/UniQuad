@@ -1,7 +1,7 @@
 [
  {
   "allow_condonation": 1,
-  "attendance_lock_days": 7,
+  "attendance_lock_hours": 24,
   "attendance_unit": "Session",
   "auto_calculate_summary": 1,
   "calculation_frequency": "Daily",

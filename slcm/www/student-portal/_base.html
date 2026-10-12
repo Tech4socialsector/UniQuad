@@ -657,8 +657,8 @@
             <span class="sp-ms">balance</span><span class="sp-nav-label">Grade Appeal</span>
           </a>
           #}
-          <a href="/student-portal/re-exam" class="sp-nav-item {% if active_page == 're_exam' %}active{% endif %}" data-label="Re-Assessment Application">
-            <span class="sp-ms">assignment_late</span><span class="sp-nav-label">Re-Assessment Application</span>
+          <a href="/student-portal/re-exam" class="sp-nav-item {% if active_page == 're_exam' %}active{% endif %}" data-label="Re-Exam Application">
+            <span class="sp-ms">assignment_late</span><span class="sp-nav-label">Re-Exam Application</span>
           </a>
           <a href="/student-portal/results" class="sp-nav-item {% if active_page == 'results' %}active{% endif %}" data-label="Grades">
             <span class="sp-ms">assignment_turned_in</span><span class="sp-nav-label">Grades</span>
@@ -908,6 +908,16 @@
       var saved = null;
       try { saved = localStorage.getItem('sp-navgroup-' + id); } catch(e) {}
       if (saved === '1') el.classList.add('open');
+    });
+  })();
+
+  /* Hover tooltip with each menu item's full name — long labels are cut
+     off with "…" in the sidebar (and hidden entirely when it's collapsed). */
+  (function spNavTooltips() {
+    document.querySelectorAll('.sp-nav-item, .sp-nav-group-header').forEach(function(el) {
+      var label = el.querySelector('.sp-nav-label');
+      var text = ((label && label.textContent) || el.getAttribute('data-label') || '').trim();
+      if (text && !el.hasAttribute('title')) el.setAttribute('title', text);
     });
   })();
 

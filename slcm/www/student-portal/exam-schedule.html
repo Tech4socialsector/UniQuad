@@ -585,7 +585,7 @@
         <span class="exam-meta-dot">{{ plan.course_count }} Course Paper{{ "s" if plan.course_count != 1 else ""
           }}</span>
         {% if plan.published_on %}
-        <span class="exam-meta-dot">Results Published {{ frappe.utils.format_datetime(plan.published_on, "d MMM yyyy")
+        <span class="exam-meta-dot">Grades Published {{ frappe.utils.format_datetime(plan.published_on, "d MMM yyyy")
           }}</span>
         {% endif %}
       </div>
@@ -596,7 +596,7 @@
       </span>
       {% if plan.is_published %}
       <a href="/student-portal/results" class="sp-btn sp-btn-sm sp-btn-outline">
-        <span class="sp-ms">assignment_turned_in</span>View Results
+        <span class="sp-ms">assignment_turned_in</span>View Grades
       </a>
       {% endif %}
     </div>

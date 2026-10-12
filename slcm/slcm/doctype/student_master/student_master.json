@@ -48,6 +48,7 @@
   "column_break_bgkj",
   "concentration",
   "current_year",
+  "current_cgpa",
   "cumulative_percentage",
   "master_programme",
   "tab_personal",
@@ -631,6 +632,13 @@
    "fieldtype": "Data",
    "label": "Current Term",
    "length": 10
+  },
+  {
+   "fieldname": "current_cgpa",
+   "fieldtype": "Float",
+   "label": "Current CGPA",
+   "precision": "2",
+   "read_only": 1
   },
   {
    "fieldname": "cumulative_percentage",
@@ -1759,7 +1767,7 @@
  ],
  "image_field": "passport_size_photo",
  "links": [],
- "modified": "2026-09-25 12:55:27.872665",
+ "modified": "2026-10-12 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Student Master",

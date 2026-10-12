@@ -1,0 +1,172 @@
+{
+ "actions": [],
+ "autoname": "ARL-.YYYY.-.#####",
+ "creation": "2026-10-12 12:00:00.000000",
+ "description": "Audit trail of AAD reopening and re-locking session attendance. Records are created by the system and cannot be edited.",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "action",
+  "attendance_session",
+  "time_table",
+  "course_offering",
+  "session_date",
+  "faculty",
+  "column_break_main",
+  "action_by",
+  "action_by_name",
+  "action_on",
+  "faculty_notified",
+  "details_section",
+  "reason",
+  "notice"
+ ],
+ "fields": [
+  {
+   "fieldname": "action",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Action",
+   "options": "Reopened\nLocked",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "attendance_session",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Attendance Session",
+   "options": "Attendance Session",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "time_table",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Time Table",
+   "options": "Time Table",
+   "read_only": 1
+  },
+  {
+   "fieldname": "course_offering",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Course Offering",
+   "options": "Course Offering",
+   "read_only": 1
+  },
+  {
+   "fieldname": "session_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Session Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "faculty",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Faculty",
+   "options": "Faculty",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "action_by",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Action By",
+   "options": "User",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fetch_from": "action_by.full_name",
+   "fieldname": "action_by_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Action By Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "action_on",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Action On",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "faculty_notified",
+   "fieldtype": "Check",
+   "label": "Faculty Notified",
+   "read_only": 1
+  },
+  {
+   "fieldname": "details_section",
+   "fieldtype": "Section Break",
+   "label": "Details"
+  },
+  {
+   "fieldname": "reason",
+   "fieldtype": "Small Text",
+   "label": "Reason",
+   "read_only": 1
+  },
+  {
+   "description": "Message sent to the faculty with this action.",
+   "fieldname": "notice",
+   "fieldtype": "Small Text",
+   "label": "Notice to Faculty",
+   "read_only": 1
+  }
+ ],
+ "in_create": 1,
+ "links": [],
+ "modified": "2026-10-12 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "SLCM",
+ "name": "Attendance Reopen Log",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "AAD"
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Academic Admin"
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "action_on",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "attendance_session",
+ "track_changes": 1
+}

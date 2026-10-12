@@ -794,9 +794,9 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 							<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg>
 						</button>
 						<div class="dd-menu">
-							<div class="dd-item">Mark as Submitted</div>
-							<div class="dd-item">Mark as Draft</div>
-							<div class="dd-item">Lock Selected</div>
+							<div class="dd-item er2-set-status" data-status="Submitted">Mark as Submitted</div>
+							<div class="dd-item er2-set-status" data-status="Draft">Mark as Draft</div>
+							<div class="dd-item er2-set-status" data-status="Locked">Lock Selected</div>
 						</div>
 					</div>
 				</div>
@@ -1359,11 +1359,7 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 						file_url:  values.upload_file,
 					},
 					callback: function (r) {
-						var res = r.message || {};
-						frappe.show_alert({
-							message: 'Grades updated: ' + (res.updated || 0) + ' rows processed.',
-							indicator: 'green'
-						});
+						show_import_result(r.message, 'grades updated');
 						load_students();
 					},
 				});
@@ -1480,12 +1476,7 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 					method: 'slcm.slcm.page.examination_result.examination_result.import_marks_excel',
 					args: { course: S.course, exam_plan: S.info.exam_plan || '', file_url: vals.upload_file },
 					callback: function (r) {
-						var res = r.message || {};
-						var msg = 'Imported: ' + (res.updated || 0) + ' students updated.';
-						if (res.errors && res.errors.length) {
-							msg += ' Errors: ' + res.errors.slice(0, 5).join(', ');
-						}
-						frappe.msgprint(msg);
+						show_import_result(r.message, 'students updated');
 						load_students();
 						load_stats();
 					},
@@ -1535,12 +1526,7 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 					method: 'slcm.slcm.page.examination_result.examination_result.import_reexam_marks_excel',
 					args: { course: S.course, exam_plan: S.info.exam_plan || '', file_url: vals.upload_file },
 					callback: function (r) {
-						var res = r.message || {};
-						var msg = 'Imported: ' + (res.updated || 0) + ' students updated.';
-						if (res.errors && res.errors.length) {
-							msg += '<br>Errors: ' + res.errors.slice(0, 5).join('<br>');
-						}
-						frappe.msgprint(msg);
+						show_import_result(r.message, 'students updated');
 						load_students();
 						load_stats();
 					},
@@ -1631,6 +1617,59 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 		});
 		d.show();
 	});
+
+	// ── Manage Status: Draft / Submitted / Locked for the ticked students ──
+	// (or every student of the course after "Select All Across All Pages").
+	// Locked rows can't be edited until set back to Draft; Submitted rows
+	// can't be edited by faculty.
+	$body.on('click', '.er2-set-status', function () {
+		if (!S.course || !S.info) { frappe.msgprint('Select a course first.'); return; }
+		var status = $(this).data('status');
+		var ids = [];
+		$body.find('.er2-srow').each(function () {
+			if ($(this).find('.er2-chk').prop('checked')) ids.push($(this).data('student'));
+		});
+		if (!S.selected_all && !ids.length) {
+			frappe.msgprint('Tick the students first (or use Select All Across All Pages).');
+			return;
+		}
+		var count = S.selected_all ? S.total : ids.length;
+		frappe.confirm('Set marks status to <b>' + frappe.utils.escape_html(status) + '</b> for ' + count + ' student(s)?', function () {
+			frappe.call({
+				method: 'slcm.slcm.page.examination_result.examination_result.set_marks_status',
+				args: {
+					course: S.course,
+					exam_plan: S.info.exam_plan || '',
+					status: status,
+					students: JSON.stringify(ids),
+					select_all: S.selected_all ? 1 : 0,
+				},
+				callback: function (r) {
+					var res = r.message || {};
+					frappe.show_alert({ message: (res.updated || 0) + ' student(s) set to ' + status + '.', indicator: 'green' });
+					load_students();
+				},
+			});
+		});
+	});
+
+	// Uploads are all-or-nothing: if any row is wrong nothing is saved and
+	// every problem is listed (row number, student, reason).
+	function show_import_result(res, what) {
+		res = res || {};
+		var errors = res.errors || [];
+		if (!errors.length) {
+			frappe.show_alert({ message: (res.updated || 0) + ' ' + what + '.', indicator: 'green' });
+			return;
+		}
+		frappe.msgprint({
+			title: res.aborted ? 'Nothing was saved — fix these rows and upload again' : 'Upload finished with errors',
+			indicator: 'red',
+			message: '<div style="max-height:360px;overflow:auto;"><ol style="padding-left:18px;margin:0;font-size:12.5px;">' +
+				errors.map(function (e) { return '<li>' + frappe.utils.escape_html(e) + '</li>'; }).join('') +
+				'</ol></div>',
+		});
+	}
 
 	// ── Data loaders ──────────────────────────────────────────────────────────
 	function load_course_info() {
@@ -1916,6 +1955,11 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 				  'Remove</button>'
 				: '';
 			var manualBadge = '';
+			// Marks status (Manage Status): Submitted by faculty / Locked by admin
+			if (s.marks_status === 'Submitted' || s.marks_status === 'Locked') {
+				manualBadge = '<span class="er2-badge" style="background:' + (s.marks_status === 'Locked' ? '#F5D9DE;color:#920C24' : '#e0f2fe;color:#0369a1') + ';">' +
+					frappe.utils.escape_html(s.marks_status) + '</span>';
+			}
 			html +=
 				'<div class="er2-srow" data-student="' + frappe.utils.escape_html(s.student) + '"' + rowStyle + '>' +
 				'  <input type="checkbox" class="er2-chk" style="flex-shrink:0;accent-color:#920C24;width:14px;height:14px;cursor:pointer;">' +
@@ -2148,7 +2192,8 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 			var total     = (!isAbsent && sm.total != null) ? parseFloat(sm.total).toFixed(2) : '—';
 			var cells     = '';
 
-			var canEdit = S.info && S.info.edit_access && S.info.status !== 'LOCKED';
+			// A student Locked via Manage Status is read-only until set back to Draft
+			var canEdit = S.info && S.info.edit_access && S.info.status !== 'LOCKED' && sm.status !== 'Locked';
 
 			// Regular assessment cells
 			groups.forEach(function (g) {
@@ -2208,7 +2253,8 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 			});
 
 			var mfaStr    = sm.mfa === 'Yes' ? ' <sup class="er2-ann-badge er2-mfa-badge">MFA</sup>' : '';
-			var improvedStr = (sm.arrear_marker === 'I') ? ' <sup class="er2-ann-badge er2-improved-badge">I</sup>' : '';
+			// I = the final result was raised by a re-exam / improvement exam (shown alongside R…)
+			var improvedStr = sm.improved ? ' <sup class="er2-ann-badge er2-improved-badge">I</sup>' : '';
 			var arrearStr = (sm.arrear_marker && sm.arrear_marker !== 'I' && sm.mfa !== 'Yes')
 				? ' <sup class="er2-ann-badge er2-arrear-badge">' + frappe.utils.escape_html(sm.arrear_marker) + '</sup>' : '';
 
@@ -2436,12 +2482,13 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 								var ufm = r.message.updated_final_marks;
 								var ug = r.message.updated_grade;
 								var sm_ref    = S.marks[student] || {};
+								sm_ref.improved = !!r.message.improved;  // recalculated with this save
 								var isMFA2    = sm_ref.mfa === 'Yes';
 								var isAS2     = !!sm_ref.attendance_shortage || sm_ref.attendance_status === 'Attendance Shortage';
 								var mStr      = isMFA2 ? ' <sup class="er2-ann-badge er2-mfa-badge">MFA</sup>' : '';
 								var arrStr    = (sm_ref.arrear_marker && sm_ref.arrear_marker !== 'I')
 									? ' <sup class="er2-ann-badge er2-arrear-badge">' + frappe.utils.escape_html(sm_ref.arrear_marker) + '</sup>' : '';
-								var impStrNew = (sm_ref.arrear_marker === 'I')
+								var impStrNew = sm_ref.improved
 									? ' <sup class="er2-ann-badge er2-improved-badge">I</sup>' : '';
 								// Attendance shortage replaces the grade text itself with "AS"
 								// (rather than annotating it) — see render_marks_table().
@@ -2471,7 +2518,7 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 									$ugCell.find('sup').remove();
 									if (isMFA2) $ugInput.after('<sup class="er2-ann-badge er2-mfa-badge">MFA</sup>');
 									if (sm_ref.arrear_marker && sm_ref.arrear_marker !== 'I') $ugInput.after('<sup class="er2-ann-badge er2-arrear-badge">' + frappe.utils.escape_html(sm_ref.arrear_marker) + '</sup>');
-								if (sm_ref.arrear_marker === 'I') $ugInput.after('<sup class="er2-ann-badge er2-improved-badge">I</sup>');
+								if (sm_ref.improved) $ugInput.after('<sup class="er2-ann-badge er2-improved-badge">I</sup>');
 								} else {
 									$ugCell.html(frappe.utils.escape_html(ugDisp || '—') + mStr + arrStr);
 								}
@@ -2479,7 +2526,7 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 								var $rxgCell = $mtable.find('.er2-rxg-cell[data-student="' + student + '"]');
 								$rxgCell.find('.er2-rxg-box').text(rxGrade || '—');
 								$rxgCell.find('.er2-improved-badge').remove();
-								if (sm_ref.arrear_marker === 'I') {
+								if (sm_ref.improved) {
 									$rxgCell.append(impStrNew);
 								}
 								// Update state
@@ -2549,7 +2596,7 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 							var arrMk  = S.marks[student].arrear_marker || '';
 							var mStr   = isMFA  ? ' <sup class="er2-ann-badge er2-mfa-badge">MFA</sup>' : '';
 							var arStr  = (arrMk && arrMk !== 'I') ? ' <sup class="er2-ann-badge er2-arrear-badge">' + frappe.utils.escape_html(arrMk) + '</sup>' : '';
-							var impStrN2 = (arrMk === 'I') ? ' <sup class="er2-ann-badge er2-improved-badge">I</sup>' : '';
+							var impStrN2 = S.marks[student].improved ? ' <sup class="er2-ann-badge er2-improved-badge">I</sup>' : '';
 							var tg    = isAS ? 'AS' : (S.marks[student].grade || '—');
 							var ug    = isAS ? 'AS' : (S.marks[student].updated_grade || '—');
 							var $gc2  = $tr.find('.er2-grade-cell');
@@ -2571,7 +2618,7 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 								$ugC.find('sup').remove();
 								if (isMFA) $ugI.after('<sup class="er2-ann-badge er2-mfa-badge">MFA</sup>');
 								if (arrMk && arrMk !== 'I') $ugI.after('<sup class="er2-ann-badge er2-arrear-badge">' + frappe.utils.escape_html(arrMk) + '</sup>');
-								if (arrMk === 'I') $ugI.after('<sup class="er2-ann-badge er2-improved-badge">I</sup>');
+								if (S.marks[student].improved) $ugI.after('<sup class="er2-ann-badge er2-improved-badge">I</sup>');
 							} else {
 								$ugC.html(frappe.utils.escape_html(ug) + mStr + arStr);
 							}
