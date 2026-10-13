@@ -2,6 +2,11 @@ import datetime
 import json
 
 import frappe
+from slcm.slcm.utils.attendance_lock import (
+    assert_session_editable,
+    compute_lock_state,
+    get_lock_info_for_portal,
+)
 from slcm.utils.faculty_portal import get_faculty_name
 
 
@@ -230,7 +235,12 @@ def get_session_students(session_name):
             if last_updated_on else "—",
     }
 
-    return {"students": students, "session_name": session_name, "session_audit": session_audit}
+    return {
+        "students": students,
+        "session_name": session_name,
+        "session_audit": session_audit,
+        "lock": get_lock_info_for_portal(session_name),
+    }
 
 
 @frappe.whitelist()
@@ -360,6 +370,14 @@ def save_attendance(session_name, attendance, participation=None):
 
     session = frappe.get_doc("Attendance Session", session_name, ignore_permissions=True)
     _assert_session_owned_by_faculty(session, faculty_name)
+    # Attendance and class participation both close at the lock time
+    assert_session_editable(session)
+    # Edits made while AAD has the session reopened carry the reopen reason
+    # into the Attendance Edit Log.
+    edit_reason = None
+    lock_state = compute_lock_state(session)
+    if lock_state.reopened and lock_state.past_lock:
+        edit_reason = "Edited after AAD reopened attendance: {0}".format(lock_state.reopen_reason or "")
     # Same roster the faculty was shown (see get_session_students)
     if session.session_type == "Office Hour":
         session.update_attendance_summary()
@@ -392,6 +410,8 @@ def save_attendance(session_name, attendance, participation=None):
             att_doc = frappe.get_doc("Student Attendance", existing)
             att_doc.status = status
             att_doc.source = "Manual"
+            if edit_reason:
+                att_doc.edit_reason = edit_reason  # read by StudentAttendance.create_edit_log
             att_doc.save(ignore_permissions=True)
         else:
             frappe.get_doc({

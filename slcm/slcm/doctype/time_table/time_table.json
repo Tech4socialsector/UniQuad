@@ -274,7 +274,7 @@
   }
  ],
  "links": [],
- "modified": "2026-10-09 09:48:35.926981",
+ "modified": "2026-10-12 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Time Table",
@@ -318,6 +318,13 @@
    "read": 1,
    "report": 1,
    "role": "slcm_Programme Chair"
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "AAD"
   }
  ],
  "row_format": "Dynamic",

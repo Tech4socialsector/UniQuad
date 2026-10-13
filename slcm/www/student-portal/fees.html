@@ -325,6 +325,17 @@
 .spf-support-sub { display: block; font-size: 12px; color: var(--spf-muted); margin-top: 1px; }
 .spf-support-item > .sp-ms:last-child { margin-left: auto; color: var(--spf-muted); font-size: 20px; }
 
+/* ── Tables on tablets / narrow desktops: the 9-column table leaves the
+   Receipt and Status columns too narrow for a labelled button or an icon
+   badge, so show the receipt as an icon button (matching Invoice) and drop
+   the badge icon. Each link keeps its aria-label. ─────────────────────── */
+@media (min-width: 641px) and (max-width: 1279px) {
+  .spf-t td.c-action .spf-btn-sm { font-size: 0; gap: 0; padding: 0; width: 30px; min-height: 30px; height: 30px; }
+  .spf-t td.c-action .spf-btn-sm .sp-ms { font-size: 18px; }
+  .spf-t td.c-status .spf-badge .sp-ms { display: none; }
+  .spf-t td.c-status .spf-badge { padding-left: 6px; padding-right: 6px; }
+}
+
 /* ── Tables → stacked rows on phones ────────────────────────────────── */
 @media (max-width: 640px) {
   .spf-t, .spf-t tbody, .spf-t tr, .spf-t td, .spf-t th { display: block; width: 100%; }
@@ -338,6 +349,13 @@
   .spf-t td[data-label]::before { content: attr(data-label); flex-shrink: 0; text-align: left; font-size: 11px; font-weight: 700; color: var(--spf-muted); text-transform: uppercase; letter-spacing: 0.04em; }
   .spf-t td[data-label] > * { min-width: 0; }
   .spf-t td.c-primary { text-align: left; padding-bottom: 4px !important; }
+  /* Payment / refund / scholarship sub-rows: same inset as the fee rows (a
+     little deeper to show nesting), tinted as one block, and the blank
+     placeholder cells dropped so they don't leave a gap mid-card */
+  .spf-t tr.spf-sub-row { padding: 10px 16px 10px 28px; background: rgba(146,12,36,.035); border-bottom: 1px solid var(--spf-row); }
+  .spf-t tr.spf-sub-row td { background: transparent; }
+  .spf-t tr.spf-sub-row td:empty { display: none; }
+  .spf-t tr.spf-sub-row td.c-text { text-align: left; padding-bottom: 4px !important; }
   .spf-t .spf-group-row th { padding: 9px 16px 8px 13px; }
   .spf-t td.c-empty { padding: 0 !important; text-align: left; }
   .spf-t .spf-cell-hint { white-space: normal; }

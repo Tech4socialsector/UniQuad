@@ -281,7 +281,14 @@
 @media (max-width: 640px) {
   .spr-mk-hint { display: flex; }
   .spr-modal-overlay { padding: 0; align-items: flex-end; }
-  .spr-modal { border-radius: 16px 16px 0 0; max-height: 92vh; }
+  /* Bottom sheet: span the full width (the desktop width leaves side gaps)
+     and size to the visible viewport so the bottom isn't hidden behind the
+     mobile browser toolbar */
+  .spr-modal { width: 100%; border-radius: 16px 16px 0 0; max-height: 92vh; max-height: 92dvh; }
+  .spr-modal-head { padding: 14px 16px 12px; }
+  .spr-mk-hint { padding: 8px 16px 6px; }
+  .spr-remark { padding: 10px 16px 4px; }
+  .spr-modal-body { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
 }
 @media (prefers-reduced-motion: reduce) { .spr-card, .spr-card:hover { transition: none; transform: none; } }
 
@@ -432,7 +439,7 @@
 {% macro grade_sup(c) -%}
 {%- if c.mfa == "Yes" -%}<sup class="spr-sup" title="MFA">MFA</sup>
 {%- elif c.arrear_marker -%}<sup class="spr-sup spr-sup-arrear" title="Arrear">{{ c.arrear_marker }}</sup>{%- endif -%}
-{%- if c.improvement_applied -%}<sup class="spr-sup spr-sup-imp" title="Improvement applied">I</sup>{%- endif -%}
+{%- if c.improved -%}<sup class="spr-sup spr-sup-imp" title="Result improved by a re-exam or improvement exam">I</sup>{%- endif -%}
 {%- endmacro %}
 
 {% macro improve_state(c) -%}

@@ -289,30 +289,6 @@
 
 </div>{# end fp-layout #}
 
-{# ── Bottom Tab Navigation (mobile) ─────────────────────────────────── #}
-<nav class="fp-bottom-nav" aria-label="Mobile navigation">
-  <div class="fp-bottom-nav-inner">
-    <a href="/faculty-portal"               class="fp-bn-item {% if active_page == 'dashboard'     %}active{% endif %}">
-      <span class="fp-ms">dashboard</span>Home
-    </a>
-    <a href="/faculty-portal/my-classes"    class="fp-bn-item {% if active_page == 'my_classes'    %}active{% endif %}">
-      <span class="fp-ms">menu_book</span>Courses
-    </a>
-    <a href="/faculty-portal/attendance"    class="fp-bn-item {% if active_page == 'attendance'    %}active{% endif %}">
-      <span class="fp-ms">how_to_reg</span>Attendance
-    </a>
-    <a href="/faculty-portal/marks"         class="fp-bn-item {% if active_page == 'marks'         %}active{% endif %}">
-      <span class="fp-ms">grade</span>Grades
-    </a>
-    <a href="/faculty-portal/communication" class="fp-bn-item {% if active_page == 'communication' %}active{% endif %}">
-      <span class="fp-ms">campaign</span>Notices
-    </a>
-    <a href="/faculty-portal/profile"       class="fp-bn-item {% if active_page == 'profile'       %}active{% endif %}">
-      <span class="fp-ms">manage_accounts</span>Profile
-    </a>
-  </div>
-</nav>
-
 {# ── Logout Confirmation Modal ───────────────────────────────────────── #}
 <div id="fp-logout-modal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);align-items:center;justify-content:center;" role="dialog" aria-modal="true">
   <div style="background:var(--fp-card);border-radius:var(--fp-radius-lg);width:92%;max-width:400px;box-shadow:var(--fp-shadow-xl);overflow:hidden;animation:fpModalIn 0.22s var(--fp-ease);">
@@ -621,7 +597,101 @@ body.fp-compact .fp-card-header{ padding: 12px 16px !important; }
   {% endif %}
 </script>
 
+<style>
+/* ── Portal dialog (fpConfirm / fpAlert) — replaces the browser's
+   confirm()/alert() so prompts match the portal styling ── */
+.fp-dlg-backdrop { position: fixed; inset: 0; z-index: 2000; background: rgba(15, 23, 42, .45);
+  display: none; align-items: center; justify-content: center; padding: 16px; }
+.fp-dlg-backdrop.open { display: flex; animation: fp-dlg-fade .15s ease-out; }
+.fp-dlg { width: 100%; max-width: 420px; background: var(--fp-card, #fff); border-radius: 14px;
+  box-shadow: 0 24px 60px rgba(0,0,0,.25); overflow: hidden; animation: fp-dlg-pop .18s ease-out; }
+.fp-dlg-body { display: flex; gap: 14px; padding: 22px 22px 18px; }
+.fp-dlg-icon { width: 40px; height: 40px; border-radius: 11px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  background: var(--fp-primary-light, #fde8eb); color: var(--fp-primary, #920c24); }
+.fp-dlg-icon .fp-ms { font-size: 22px; }
+.fp-dlg-title { font-size: 15.5px; font-weight: 700; color: var(--fp-text-1, #0f172a); margin: 0 0 6px; }
+.fp-dlg-msg { font-size: 13.5px; line-height: 1.55; color: var(--fp-text-2, #334155); white-space: pre-line; }
+.fp-dlg-ftr { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 22px 18px; }
+.fp-dlg-btn { padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer;
+  border: 1.5px solid var(--fp-border, #e2e8f0); background: var(--fp-card, #fff); color: var(--fp-text-2, #334155); }
+.fp-dlg-btn:hover { background: var(--fp-bg, #f8fafc); }
+.fp-dlg-btn-primary { background: var(--fp-primary, #920c24); border-color: var(--fp-primary, #920c24); color: #fff; }
+.fp-dlg-btn-primary:hover { background: var(--fp-primary-dark, #6f091b); }
+@keyframes fp-dlg-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fp-dlg-pop { from { transform: translateY(8px) scale(.98); opacity: 0; } to { transform: none; opacity: 1; } }
+</style>
+
 <script>
+/* ── fpConfirm / fpAlert: portal-styled dialogs ──
+   fpConfirm({ title, message, confirmLabel, cancelLabel, icon }, onConfirm, onCancel)
+   fpAlert(message, { title, icon })
+   Built on first use; Enter confirms, Escape / backdrop cancels. */
+(function () {
+  var _el = null, _onOk = null, _onCancel = null;
+
+  function build() {
+    _el = document.createElement('div');
+    _el.className = 'fp-dlg-backdrop';
+    _el.setAttribute('role', 'dialog');
+    _el.setAttribute('aria-modal', 'true');
+    _el.innerHTML =
+      '<div class="fp-dlg">' +
+        '<div class="fp-dlg-body">' +
+          '<div class="fp-dlg-icon"><span class="fp-ms"></span></div>' +
+          '<div style="min-width:0;flex:1;"><p class="fp-dlg-title"></p><div class="fp-dlg-msg"></div></div>' +
+        '</div>' +
+        '<div class="fp-dlg-ftr">' +
+          '<button type="button" class="fp-dlg-btn" data-act="cancel"></button>' +
+          '<button type="button" class="fp-dlg-btn fp-dlg-btn-primary" data-act="ok"></button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(_el);
+    _el.addEventListener('click', function (e) {
+      var act = e.target.closest('[data-act]');
+      if (act) close(act.getAttribute('data-act') === 'ok');
+      else if (e.target === _el) close(false);
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!_el.classList.contains('open')) return;
+      /* Capture phase + stopPropagation: Escape must not also close a page
+         modal sitting under the dialog */
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(false); }
+      else if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); close(true); }
+    }, true);
+  }
+
+  function close(ok) {
+    _el.classList.remove('open');
+    var cb = ok ? _onOk : _onCancel;
+    _onOk = _onCancel = null;
+    if (cb) cb();
+  }
+
+  function open(opts, onOk, onCancel, withCancel) {
+    if (!_el) build();
+    _el.querySelector('.fp-dlg-icon .fp-ms').textContent = opts.icon || (withCancel ? 'help' : 'info');
+    _el.querySelector('.fp-dlg-title').textContent = opts.title || (withCancel ? 'Please confirm' : 'Notice');
+    _el.querySelector('.fp-dlg-msg').textContent = opts.message || '';
+    var cancel = _el.querySelector('[data-act="cancel"]');
+    cancel.textContent = opts.cancelLabel || 'Cancel';
+    cancel.style.display = withCancel ? '' : 'none';
+    _el.querySelector('[data-act="ok"]').textContent = opts.confirmLabel || (withCancel ? 'Confirm' : 'OK');
+    _onOk = onOk || null; _onCancel = onCancel || null;
+    _el.classList.add('open');
+    _el.querySelector('[data-act="ok"]').focus();
+  }
+
+  window.fpConfirm = function (opts, onOk, onCancel) {
+    if (typeof opts === 'string') opts = { message: opts };
+    open(opts || {}, onOk, onCancel, true);
+  };
+  window.fpAlert = function (message, opts) {
+    opts = opts || {};
+    opts.message = message;
+    open(opts, opts.onClose, opts.onClose, false);
+  };
+})();
+
 /* ── fpCall: frappe.call with fetch fallback ── */
 function fpCall(method, args, onSuccess, onError) {
   if (window.frappe && typeof frappe.call === 'function') {
@@ -636,7 +706,7 @@ function fpCall(method, args, onSuccess, onError) {
           var parsed = msgs.map(function(m) { try { return JSON.parse(m).message || m; } catch(e) { return m; } });
           if (parsed.length) msg = parsed.join('\n');
         } catch(e) {}
-        if (onError) onError(msg); else alert(msg);
+        if (onError) onError(msg); else fpAlert(msg, { title: 'Something went wrong', icon: 'error' });
       }
     });
     return;
@@ -662,12 +732,12 @@ function fpCall(method, args, onSuccess, onError) {
         var parsed = msgs.map(function(m) { try { return JSON.parse(m).message || m; } catch(e) { return m; } });
         if (parsed.length) msg = parsed.join('\n');
       } catch(e) {}
-      if (onError) onError(msg); else alert(msg);
+      if (onError) onError(msg); else fpAlert(msg, { title: 'Something went wrong', icon: 'error' });
     } else { onSuccess(data.message); }
   })
   .catch(function() {
     var msg = 'Network error. Please check your connection.';
-    if (onError) onError(msg); else alert(msg);
+    if (onError) onError(msg); else fpAlert(msg, { title: 'Connection problem', icon: 'wifi_off' });
   });
 }
 

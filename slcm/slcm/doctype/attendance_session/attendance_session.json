@@ -29,6 +29,12 @@
   "rfid_activated_by",
   "rfid_activation_time",
   "rfid_active_until",
+  "attendance_lock_section",
+  "attendance_reopened",
+  "reopen_reason",
+  "column_break_lock",
+  "reopened_by",
+  "reopened_on",
   "attendance_section",
   "students",
   "attendance_marked",
@@ -187,6 +193,48 @@
    "read_only": 1
   },
   {
+   "collapsible": 1,
+   "collapsible_depends_on": "attendance_reopened",
+   "description": "Faculty can change attendance until the lock time set in Attendance Settings (hours after the session ends). AAD reopens or locks it again from the Time Table entry; every action is recorded in Attendance Reopen Log.",
+   "fieldname": "attendance_lock_section",
+   "fieldtype": "Section Break",
+   "label": "Attendance Lock"
+  },
+  {
+   "default": "0",
+   "description": "Set by AAD. While ticked, faculty can change attendance even after the lock time.",
+   "fieldname": "attendance_reopened",
+   "fieldtype": "Check",
+   "label": "Reopened by AAD",
+   "read_only": 1
+  },
+  {
+   "depends_on": "attendance_reopened",
+   "fieldname": "reopen_reason",
+   "fieldtype": "Small Text",
+   "label": "Reopen Reason",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_lock",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "attendance_reopened",
+   "fieldname": "reopened_by",
+   "fieldtype": "Link",
+   "label": "Reopened By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "depends_on": "attendance_reopened",
+   "fieldname": "reopened_on",
+   "fieldtype": "Datetime",
+   "label": "Reopened On",
+   "read_only": 1
+  },
+  {
    "fieldname": "attendance_section",
    "fieldtype": "Section Break",
    "label": "Attendance Summary"
@@ -254,7 +302,7 @@
   }
  ],
  "links": [],
- "modified": "2026-10-09 10:30:00.000000",
+ "modified": "2026-10-12 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Attendance Session",
@@ -294,6 +342,13 @@
    "role": "slcm_Programme Chair",
    "share": 1,
    "write": 1
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "AAD"
   }
  ],
  "row_format": "Dynamic",

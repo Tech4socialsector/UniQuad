@@ -84,7 +84,7 @@ class IDCardTemplate(Document):
 			"school_logo": self.institute_logo or "",
 			"logo_url": self.institute_logo or "",  # Alias
 			"student_name": student.first_name or "Student Name",
-			"batch": student.programme or "Batch",
+			"batch": student.batch or "Batch",
 			"program": student.programme_of_study or "Programme",
 			"programme": student.programme_of_study or "Programme",
 			"email": student.email or "email@example.com",

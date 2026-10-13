@@ -1,7 +1,20 @@
 import frappe
+from slcm.slcm.utils.attendance_lock import compute_lock_state, get_lock_hours
 from slcm.utils.faculty_portal import get_faculty_name, set_faculty_nav, set_nav_defaults, set_portal_settings, fmt_time
 
 no_cache = 1
+
+# Sessions that didn't take place: not counted in the stats or the
+# Session 1, 2, 3… numbering.
+NOT_HELD_STATUSES = ("Cancelled", "Postponed")
+
+
+def _time_sort_key(t):
+    """Zero-padded seconds, so times sort correctly as strings (a plain
+    str(timedelta) puts "10:00:00" before "9:00:00")."""
+    if not t:
+        return ""
+    return "%05d" % int(frappe.utils.to_timedelta(t).total_seconds())
 
 
 def get_context(context):
@@ -53,6 +66,9 @@ def get_context(context):
                 ignore_permissions=True,
             )
         } if programme_ids else {}
+        # Shown under each course in the Course filter
+        for c in course_offerings:
+            c.programme_name = programme_names.get(c.program) or c.program or ""
 
         # ── Filter from URL params ──────────────────────────────────
         selected_co = frappe.request.args.get("course_offering", "") if frappe.request else ""
@@ -72,11 +88,21 @@ def get_context(context):
                         "session_start_time", "session_end_time", "room", "course_schedule", "class_schedule",
                         "session_status", "total_students", "present_count",
                         "absent_count", "attendance_percentage", "attendance_marked",
-                        "rfid_activated_by", "rfid_activation_time", "rfid_active_until"],
+                        "rfid_activated_by", "rfid_activation_time", "rfid_active_until",
+                        "attendance_reopened", "reopened_by", "reopened_on", "reopen_reason"],
                 order_by="session_date desc",
                 ignore_permissions=True,
             )
             now = frappe.utils.now_datetime()
+            lock_hours = get_lock_hours()
+            reopener_ids = list({s.reopened_by for s in raw_sessions if s.reopened_by})
+            reopener_names = {
+                u.name: u.full_name or u.name
+                for u in frappe.get_all(
+                    "User", filters={"name": ["in", reopener_ids]}, fields=["name", "full_name"],
+                    ignore_permissions=True,
+                )
+            } if reopener_ids else {}
             
             # Pre-fetch rooms from course schedules or time tables if they are missing on the session
             cs_names = [s.course_schedule for s in raw_sessions if s.course_schedule and not s.room]
@@ -114,6 +140,7 @@ def get_context(context):
                 )
                 term_name = co.get("term_name") or "—"
                 academic_year = co.get("academic_year") or "—"
+                lock = compute_lock_state(s, now=now, lock_hours=lock_hours)
                 all_sessions.append({
                     "name": s.name,
                     "course_name": co.get("course_name") or s.course_offering,
@@ -131,9 +158,17 @@ def get_context(context):
                     "tasks": " ".join(sorted(task_flags.get(s.name, ()))),
                     "from_time": fmt_time(s.session_start_time),
                     "to_time": fmt_time(s.session_end_time),
-                    "from_time_sort": str(s.session_start_time) if s.session_start_time else "",
+                    "from_time_sort": _time_sort_key(s.session_start_time),
                     "venue": s.room or cs_room_map.get(s.course_schedule) or tt_venue_map.get(s.class_schedule) or "—",
                     "status": s.session_status or "Active",
+                    "not_held": s.session_status in NOT_HELD_STATUSES,
+                    # Attendance lock (see slcm.slcm.utils.attendance_lock)
+                    "locked": lock.locked,
+                    "reopened": lock.reopened and lock.past_lock,
+                    "lock_at_fmt": frappe.utils.format_datetime(lock.lock_at, "dd MMM yyyy, hh:mm a") if lock.lock_at else "",
+                    "reopened_by_name": reopener_names.get(s.reopened_by, s.reopened_by or ""),
+                    "reopened_on_fmt": frappe.utils.format_datetime(s.reopened_on, "dd MMM yyyy, hh:mm a") if s.reopened_on else "",
+                    "reopen_reason": s.reopen_reason or "",
                     "total": s.total_students or 0,
                     "present": s.present_count or 0,
                     "absent": s.absent_count or 0,
@@ -146,6 +181,22 @@ def get_context(context):
                     "academic_year": academic_year,
                     "term_key": f"{term_name}|{academic_year}",
                 })
+
+            # ── Session-wise numbering: Session 1, 2, 3… ────────────────
+            # Chronological per course offering, class sessions and OH
+            # numbered separately, sessions that weren't held skipped.
+            # Counted over every term so the number never shifts when a
+            # term filter is applied.
+            seq_counts = {}
+            for s in sorted(all_sessions, key=lambda x: (x["session_date"], x["from_time_sort"], x["name"])):
+                if s["not_held"]:
+                    s["seq"] = 0
+                    continue
+                key = (s["course_offering"], s["category"])
+                seq_counts[key] = seq_counts.get(key, 0) + 1
+                s["seq"] = seq_counts[key]
+            for s in all_sessions:
+                s["seq_total"] = seq_counts.get((s["course_offering"], s["category"]), 0)
 
         # ── Distinct terms present, most recent first ────────────────
         # "Most recent" = the term containing the latest session_date, since
@@ -223,41 +274,42 @@ def get_context(context):
         context.todays_courses = todays_courses
 
         # ── Stats ───────────────────────────────────────────────────
-        now = frappe.utils.now_datetime()
-        today_date_str = str(now.date())
-        current_time_str = str(now.time())
+        # Completed = Marked + Pending (today's unmarked "Active" sessions
+        # count as Pending). Cancelled/Postponed sessions count nowhere.
+        # The page recalculates these in the browser for the active tab and
+        # filters (_fpRefreshStats); these are the first-paint values.
+        today_date_str = str(frappe.utils.now_datetime().date())
 
-        completed_sessions = 0
         marked_sessions = 0
         pending_sessions = 0
         upcoming_sessions = 0
-        
+
         for s in sessions:
-            if s["session_date"] < today_date_str:
-                completed_sessions += 1
-                if s["marked"]:
-                    marked_sessions += 1
-                    s["computed_status"] = "Marked"
-                else:
-                    pending_sessions += 1
-                    s["computed_status"] = "Pending"
-            elif s["session_date"] == today_date_str:
-                if s["marked"]:
-                    completed_sessions += 1
-                    marked_sessions += 1
-                    s["computed_status"] = "Marked"
-                else:
-                    pending_sessions += 1
-                    s["computed_status"] = "Active"
-            else:
+            if s["not_held"]:
+                s["computed_status"] = s["status"]
+            elif s["session_date"] > today_date_str:
                 upcoming_sessions += 1
                 s["computed_status"] = "Upcoming"
+            elif s["marked"]:
+                marked_sessions += 1
+                s["computed_status"] = "Marked"
+            else:
+                pending_sessions += 1
+                s["computed_status"] = "Pending" if s["session_date"] < today_date_str else "Active"
 
-        context.completed_sessions = completed_sessions
+        # Default table order: today and past sessions newest first (what
+        # faculty act on), then upcoming ones soonest first.
+        held = [s for s in sessions if s["session_date"] <= today_date_str]
+        future = [s for s in sessions if s["session_date"] > today_date_str]
+        held.sort(key=lambda s: (s["session_date"], s["from_time_sort"]), reverse=True)
+        future.sort(key=lambda s: (s["session_date"], s["from_time_sort"]))
+        sessions[:] = held + future
+
+        context.completed_sessions = marked_sessions + pending_sessions
         context.marked_sessions = marked_sessions
         context.pending_sessions = pending_sessions
         context.upcoming_sessions = upcoming_sessions
-        context.total_sessions = len(sessions)
+        context.total_sessions = marked_sessions + pending_sessions + upcoming_sessions
 
         # ── Condonation requests pending faculty recommendation ─────
         condonation_requests = []
