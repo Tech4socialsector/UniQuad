@@ -224,6 +224,66 @@
     .att-pt td { border: none; padding: 4px 0; white-space: normal; }
     .att-pt td::before { content: attr(data-label); display: inline-block; min-width: 100px; font-size: 10.5px; font-weight: 700; text-transform: uppercase; color: var(--sp-text-4); }
   }
+
+  .att-empty-title { color: #000 !important; }
+
+  /* ── Dark mode ── */
+  /* Tabs */
+  body.sp-dark .sp-tab:not(.active) { background: var(--sp-card); border-color: var(--sp-border); color: var(--sp-text-2); }
+  body.sp-dark .sp-tab:hover:not(.active) { background: #1a2540; color: var(--sp-text-1); }
+  body.sp-dark .sp-tab.active { background: var(--sp-primary); border-color: var(--sp-primary); color: #fff; }
+
+  /* Course-wise boxes */
+  body.sp-dark .att-kpi, body.sp-dark .att-box { box-shadow: none; }
+  body.sp-dark .att-box-foot { background: #1a2540; border-top-color: var(--sp-border); }
+  body.sp-dark .att-bar { background: #263352; }
+  body.sp-dark .att-bar-fill.is-low { background: var(--sp-primary); }
+  body.sp-dark .att-bar-min, body.sp-dark .att-section-legend i { background: var(--sp-text-1); }
+  body.sp-dark .att-pill { background: transparent; border-color: var(--sp-primary); color: #f08da0; }
+  body.sp-dark .att-pill.is-solid { background: var(--sp-primary-light); border-color: var(--sp-primary-mid); color: #f08da0; }
+
+  /* Calendar */
+  body.sp-dark .att-cal-nav button { background: #1a2540; border-color: var(--sp-border); color: var(--sp-text-1); }
+  body.sp-dark .att-cal-nav button:hover { border-color: var(--sp-primary); color: #f08da0; }
+  body.sp-dark .att-dot-absent { background: var(--sp-card); }
+  body.sp-dark .att-dot-scheduled { background: rgba(240,141,160,0.55); }
+  body.sp-dark .att-dot-holiday { background: var(--sp-primary-light); box-shadow: inset 0 0 0 1px rgba(240,141,160,0.6); }
+  /* JS-built calendar cells / holiday banner (inline styles) */
+  body.sp-dark #sp-calendar [style*="background:#fff0f0"],
+  body.sp-dark #day-modal-body [style*="background:#fff0f0"] { background: var(--sp-primary-light) !important; border-color: var(--sp-primary-mid) !important; }
+  body.sp-dark #sp-calendar [style*="background:#fff0f2"] { background: var(--sp-primary-light) !important; }
+  body.sp-dark #sp-calendar [style*="background:var(--sp-bg)"] { background: #1a2540 !important; border-color: #263352 !important; }
+  body.sp-dark #day-modal-body [style*="color:#f5c6ce"] { color: var(--sp-text-4) !important; }
+
+  /* OH / Class Participation */
+  body.sp-dark .att-pt-head, body.sp-dark .att-pc { border-color: var(--sp-border); box-shadow: none; }
+  body.sp-dark .att-pc-head:hover { background: rgba(255,255,255,0.03); }
+  body.sp-dark .att-pc-icon { background: #1a2540; color: #f08da0; }
+  body.sp-dark .att-pc-stat.is-att { background: var(--sp-success-bg); }
+  body.sp-dark .att-pc-stat.is-att .sp-ms { color: var(--sp-success); }
+  body.sp-dark .att-pc-stat.is-part { background: #1a2540; }
+  body.sp-dark .att-pc-stat.is-part .sp-ms { color: #f08da0; }
+  body.sp-dark .att-pt { border-color: var(--sp-border); }
+  body.sp-dark .att-pt th { background: #1a2540; color: var(--sp-text-3); }
+  body.sp-dark .att-pt td, body.sp-dark .att-pt tr { border-color: var(--sp-border); }
+  body.sp-dark .att-pt tbody tr:nth-child(even) { background: rgba(255,255,255,0.025); }
+  body.sp-dark .att-pt tbody tr:hover { background: rgba(255,255,255,0.05); }
+  body.sp-dark .att-pt-slot { background: #1a2540; color: var(--sp-text-1); }
+  body.sp-dark .att-pp.is-good  { background: var(--sp-success-bg); color: var(--sp-success); }
+  body.sp-dark .att-pp.is-warn  { background: transparent; color: #f08da0; box-shadow: inset 0 0 0 1px var(--sp-primary); }
+  body.sp-dark .att-pp.is-muted { background: #1a2540; color: var(--sp-text-3); }
+  body.sp-dark .att-pt-view { background: #1a2540; border-color: var(--sp-border); color: var(--sp-text-1); }
+  body.sp-dark .att-pt-view:hover { border-color: var(--sp-primary); color: #f08da0; }
+  body.sp-dark .att-pt-select select { background: #1a2540; border-color: var(--sp-border); color: var(--sp-text-1); }
+  body.sp-dark .att-pv-head { border-bottom-color: var(--sp-border); }
+  body.sp-dark .att-pv-row > .sp-ms { color: #f08da0; }
+  body.sp-dark .att-empty-title { color: var(--sp-text-1) !important; }
+
+  /* Modals */
+  body.sp-dark .sp-modal-close { background: #1a2540; }
+  body.sp-dark .sp-modal-close:hover { background: #263352; }
+  body.sp-dark .sp-btn-secondary { background: #1a2540; color: var(--sp-text-1); border-color: var(--sp-border); }
+  body.sp-dark .sp-btn-secondary:hover:not(:disabled) { background: #263352; }
 </style>
 
 {% endblock %}
@@ -414,7 +474,7 @@
   {% if not groups %}
   <div class="sp-empty fade-in">
     <span class="sp-ms" style="color: var(--sp-primary) !important;">{{ empty_icon }}</span>
-    <p class="sp-empty-title" style="color: black !important;">{{ empty_title }}</p>
+    <p class="sp-empty-title att-empty-title">{{ empty_title }}</p>
     <p class="sp-empty-sub">{{ empty_sub }}</p>
   </div>
   {% else %}
@@ -467,7 +527,7 @@
     {% endfor %}
     <div class="sp-empty att-pt-nomatch" style="display:none;">
       <span class="sp-ms">filter_alt_off</span>
-      <p class="sp-empty-title" style="color: black !important;">No matching weeks</p>
+      <p class="sp-empty-title att-empty-title">No matching weeks</p>
       <p class="sp-empty-sub">Try a different course or week.</p>
     </div>
   </div>

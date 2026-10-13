@@ -501,6 +501,29 @@
       display: none;
     }
   }
+
+  /* ── Dark mode ── */
+  body.sp-dark .es-stat,
+  body.sp-dark .exam-plan,
+  body.sp-dark .es-table-footer,
+  body.sp-dark .es-table tbody tr:nth-child(odd) { background: var(--sp-card); }
+  body.sp-dark .es-table tbody tr:nth-child(even) { background: rgba(255,255,255,0.025); }
+  body.sp-dark .es-table tbody tr:hover { background: rgba(255,255,255,0.05); }
+  body.sp-dark .es-table thead tr { background: #1a2540; }
+  body.sp-dark .es-table th { color: var(--sp-text-2); }
+  body.sp-dark .es-search-input { background-color: #1a2540; color: var(--sp-text-1); }
+  body.sp-dark .es-header-icon,
+  body.sp-dark .es-stat .es-stat-icon { background: var(--sp-primary-light); color: var(--sp-primary); }
+  body.sp-dark .es-stat-nextdate::before,
+  body.sp-dark .es-stat-reexam::before,
+  body.sp-dark .es-stat-published::before { background: var(--sp-primary); }
+  body.sp-dark .es-badge-present,
+  body.sp-dark .es-badge-detained { background: var(--sp-primary-light); color: #f08da0; border-color: var(--sp-primary-mid); }
+  body.sp-dark .es-badge-pending { background: rgba(255,255,255,0.06); border-color: var(--sp-border); }
+  body.sp-dark .es-badge-scheduled { background: var(--sp-success-bg); color: var(--sp-success); border-color: rgba(74,222,128,0.3); }
+  body.sp-dark .es-badge[style*="#f5c6ce"] { border-color: var(--sp-primary-mid) !important; }
+  body.sp-dark .es-page-btn:hover { background: rgba(255,255,255,0.06); }
+  body.sp-dark .es-page-btn.active { background: var(--sp-primary-light); }
 </style>
 {% endblock %}
 

@@ -35,6 +35,27 @@
   .cs-up-empty .sp-ms { font-size: 18px; color: var(--sp-primary); flex-shrink: 0; }
   .cs-up-empty strong { font-size: 13px; font-weight: 700; color: var(--sp-text-1); }
   .cs-up-empty span.cs-up-hint { font-size: 12.5px; color: var(--sp-text-3); }
+
+  /* ── Dark mode ── */
+  body.sp-dark .sp-course-card-btn { background: #1a2540; color: var(--sp-text-1); border-color: var(--sp-border); }
+  body.sp-dark .sp-course-card-btn .sp-ms { color: #f08da0; }
+  body.sp-dark .sp-course-card-btn:hover { background: var(--sp-primary-light); border-color: var(--sp-primary-mid); color: #f08da0; }
+  body.sp-dark .cs-up { background: var(--sp-card); border-color: var(--sp-border); }
+  body.sp-dark .cs-up-lbl .sp-ms,
+  body.sp-dark .cs-up-empty .sp-ms { color: #f08da0; }
+  body.sp-dark .cs-up-chip { background: #1a2540; border-color: #263352; color: var(--sp-text-1); }
+  body.sp-dark .cs-up-chip .sp-ms { color: #f08da0; }
+  body.sp-dark .cs-up-chip small { color: var(--sp-text-3); }
+  body.sp-dark .cs-term-head { background: var(--sp-card) !important; border-color: var(--sp-border) !important; }
+  body.sp-dark .cs-term-head > .sp-ms { color: #f08da0 !important; }
+  body.sp-dark .cs-course-card { background: var(--sp-card) !important; border-color: var(--sp-border) !important; box-shadow: 0 1px 3px rgba(0,0,0,0.3) !important; }
+  body.sp-dark .cs-badge-code { background: var(--sp-primary-light) !important; color: #f08da0 !important; }
+  body.sp-dark .cs-badge-credits { background: var(--sp-success-bg) !important; color: var(--sp-success) !important; }
+  body.sp-dark .cs-badge-type { background: var(--sp-primary-light) !important; color: #f08da0 !important; }
+  body.sp-dark .cs-cta { background: var(--sp-card) !important; border-color: var(--sp-border) !important; }
+  body.sp-dark .cs-cta-icon { background: var(--sp-primary-light) !important; color: #f08da0 !important; }
+  body.sp-dark .cs-cta-btn { background: var(--sp-primary) !important; color: #fff !important; }
+  body.sp-dark .cs-cta-btn:hover { background: var(--sp-primary-dark) !important; }
 </style>
 
 {% if no_student %}
@@ -79,7 +100,7 @@
 <div class="sp-term-section fade-in" style="margin-bottom:32px;">
 
   {# Term Header #}
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;background:var(--sp-card,#fff);border:1px solid var(--sp-border);border-radius:12px;padding:14px 20px;">
+  <div class="cs-term-head" style="display:flex;align-items:center;gap:12px;margin-bottom:16px;background:var(--sp-card,#fff);border:1px solid var(--sp-border);border-radius:12px;padding:14px 20px;">
     <span class="sp-ms" style="font-size:24px;color:var(--sp-primary);">school</span>
     <div>
       <div style="font-size:18px;font-weight:400;color:var(--sp-text-1);">{{ ed.term_label }}</div>
@@ -92,20 +113,20 @@
   {# Course Cards Grid #}
   <div style="display:flex; flex-direction:column; gap:20px;">
     {% for c in ed.courses %}
-    <div style="background:#fff; border:1px solid var(--sp-border); border-radius:12px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.02);">
+    <div class="cs-course-card" style="background:#fff; border:1px solid var(--sp-border); border-radius:12px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.02);">
 
       {# Top Row #}
       <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; padding-bottom:16px; border-bottom:1px solid var(--sp-border);">
         <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
           <h3 style="margin:0; font-family:var(--sp-font-serif); font-size:18px; font-weight:700; color:var(--sp-text-1);">{{ c.course_name }}</h3>
           {% if c.course_code %}
-          <span style="background:var(--sp-primary-light); color:var(--sp-primary); font-size:12px; font-weight:600; padding:4px 10px; border-radius:20px;">{{ c.course_code }}</span>
+          <span class="cs-badge-code" style="background:var(--sp-primary-light); color:var(--sp-primary); font-size:12px; font-weight:600; padding:4px 10px; border-radius:20px;">{{ c.course_code }}</span>
           {% endif %}
           {% if c.credits %}
-          <span style="background:#fff0f2; color:var(--sp-success); font-size:12px; font-weight:600; padding:4px 10px; border-radius:20px;">{{ c.credits }} Credit{% if c.credits != 1 %}s{% endif %}</span>
+          <span class="cs-badge-credits" style="background:#fff0f2; color:var(--sp-success); font-size:12px; font-weight:600; padding:4px 10px; border-radius:20px;">{{ c.credits }} Credit{% if c.credits != 1 %}s{% endif %}</span>
           {% endif %}
           {% if c.course_type and c.course_type != '—' %}
-          <span style="background:#fff0f2; color:#920c24; font-size:12px; font-weight:600; padding:4px 10px; border-radius:20px;">{{ c.course_type }}</span>
+          <span class="cs-badge-type" style="background:#fff0f2; color:#920c24; font-size:12px; font-weight:600; padding:4px 10px; border-radius:20px;">{{ c.course_type }}</span>
           {% endif %}
         </div>
       </div>
@@ -175,9 +196,9 @@
 {% endfor %}
 
 {# Bottom CTA #}
-<div class="fade-in" style="margin-top:32px; margin-bottom:32px; background:var(--sp-bg); border:1px solid var(--sp-border); border-radius:12px; padding:24px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px;">
+<div class="fade-in cs-cta" style="margin-top:32px; margin-bottom:32px; background:var(--sp-bg); border:1px solid var(--sp-border); border-radius:12px; padding:24px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px;">
   <div style="display:flex; align-items:flex-start; gap:16px;">
-    <div style="background:#fff0f2; color:var(--sp-primary); width:48px; height:48px; border-radius:8px; display:flex; align-items:center; justify-content:center;">
+    <div class="cs-cta-icon" style="background:#fff0f2; color:var(--sp-primary); width:48px; height:48px; border-radius:8px; display:flex; align-items:center; justify-content:center;">
       <span class="sp-ms" style="font-size:24px;">calendar_today</span>
     </div>
     <div>
@@ -185,7 +206,7 @@
       <p style="margin:0; font-size:14px; color:var(--sp-text-3);">View your complete timetable with all courses and sessions.</p>
     </div>
   </div>
-  <a href="/student-portal/timetable" style="display:inline-flex; align-items:center; gap:8px; background:var(--sp-primary); color:#fff; font-size:14px; font-weight:600; padding:10px 20px; border-radius:8px; text-decoration:none;">
+  <a href="/student-portal/timetable" class="cs-cta-btn" style="display:inline-flex; align-items:center; gap:8px; background:var(--sp-primary); color:#fff; font-size:14px; font-weight:600; padding:10px 20px; border-radius:8px; text-decoration:none;">
     <span class="sp-ms" style="font-size:18px;">calendar_today</span> View Timetable
   </a>
 </div>

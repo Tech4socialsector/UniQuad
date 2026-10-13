@@ -167,5 +167,24 @@ function downloadFeeCertificate(btn) {
   align-self: flex-start;
   margin-top: 4px;
 }
+
+/* ── Dark mode ── */
+body.sp-dark .sp-section-card { background: var(--sp-card); border-color: var(--sp-border); }
+body.sp-dark .sp-section-card .sp-section-header { background: #1a2540 !important; border-bottom-color: var(--sp-border); color: var(--sp-text-1); }
+body.sp-dark .sp-section-card .sp-section-header .sp-ms { color: #f08da0; }
+body.sp-dark .sp-form-label { color: var(--sp-text-2); }
+body.sp-dark #fc-academic-year,
+body.sp-dark #fc-academic-year:focus { background-color: #1a2540; color: var(--sp-text-1); border-color: #263352; }
+body.sp-dark #fc-academic-year:focus { border-color: var(--sp-primary); box-shadow: 0 0 0 3px rgba(214,74,102,0.18); }
+body.sp-dark #fc-academic-year option { background: #1a2540; color: var(--sp-text-1); }
+body.sp-dark .fc-card { background: var(--sp-card); border-color: #263352; }
+body.sp-dark .fc-card-icon { background: rgba(214,74,102,0.14); color: #f08da0; }
+body.sp-dark .fc-card-title { color: var(--sp-text-1); }
+body.sp-dark .fc-card-desc { color: var(--sp-text-3); }
+body.sp-dark .fc-locked { background: rgba(242,179,106,0.12); color: #f2b36a; border: 1px solid rgba(242,179,106,0.28); }
+body.sp-dark .fc-locked strong { color: #f8c98f; }
+body.sp-dark .sp-info-box { background: rgba(124,196,242,0.10); color: #7cc4f2; border-color: rgba(124,196,242,0.25); }
+body.sp-dark .sp-info-box[style*="--sp-warning-bg"] { background: rgba(242,179,106,0.12) !important; color: #f2b36a; border-color: rgba(242,179,106,0.35) !important; }
+body.sp-dark .sp-info-box strong { color: inherit; }
 </style>
 {% endblock %}
