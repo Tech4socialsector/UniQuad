@@ -25,7 +25,8 @@ text-align: center; min-height: 160px;
 .pp-dash-two-col.is-stretch > .pp-card > .pp-state > .ms { font-size: 32px; }
 
 /* ── Profile header extras ────────────────────────────────── */
-.pp-profile-status { margin-left: auto; align-self: flex-start; flex-shrink: 0; }
+.pp-name-row { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; }
+.pp-name-row .pp-ward-banner-name { margin: 0; }
 .pp-profile-facts {
 display: flex; flex-wrap: wrap; gap: 6px 22px;
 margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--pp-border-light);
@@ -68,6 +69,8 @@ white-space: nowrap; }
 @media (max-width: 1100px) {
 .pp-dash-banner { flex-wrap: wrap; }
 .pp-hostel-strip { flex-basis: 100%; }
+/* Keep the details beside the photo (they used to wrap under it) */
+.pp-dash-banner .pp-ward-banner-info { flex: 1 1 280px; min-width: 0; }
 }
 @media (max-width: 700px) {
 .pp-hostel-strip-items { width: 100%; }
@@ -78,7 +81,28 @@ white-space: nowrap; }
 .pp-ward-banner { flex-wrap: wrap; padding: 16px; }
 .pp-ward-banner-avatar, .pp-dash-banner .pp-ward-banner-avatar { width: 72px; height: 72px; font-size: 26px; }
 .pp-ward-banner-name { font-size: 20px; }
-.pp-profile-status { order: -1; margin-left: 0; width: 100%; }
+
+/* Phones: photo beside greeting / name + status / programme, then the
+   facts full width in a 2×2 grid — instead of the photo sitting alone on
+   a row with everything else wrapped underneath it. The info wrapper is
+   flattened (display: contents) so its children join the grid. */
+.pp-dash-banner {
+display: grid; grid-template-columns: 64px minmax(0, 1fr);
+column-gap: 14px; row-gap: 2px; align-items: center;
+}
+.pp-dash-banner .pp-ward-banner-avatar { grid-column: 1; grid-row: 1 / span 3; align-self: start;
+width: 64px; height: 64px; font-size: 24px; }
+.pp-dash-banner .pp-ward-banner-info { display: contents; }
+.pp-dash-banner .pp-ward-banner-eyebrow,
+.pp-dash-banner .pp-name-row,
+.pp-dash-banner .pp-ward-banner-meta { grid-column: 2; margin: 0; min-width: 0; }
+.pp-dash-banner .pp-ward-banner-name { font-size: 19px; line-height: 1.25; overflow-wrap: anywhere; }
+.pp-dash-banner .pp-ward-banner-meta { font-size: 12.5px; }
+.pp-dash-banner .pp-profile-facts {
+grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+gap: 10px 16px; margin-top: 12px;
+}
+.pp-dash-banner .pp-hostel-strip { grid-column: 1 / -1; margin-top: 12px; }
 }
 
 /* ── Status pills ─────────────────────────────────────────── */
@@ -99,7 +123,13 @@ display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
 gap: 14px; margin-bottom: 20px;
 }
 @media (max-width: 1200px) { .pp-kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (max-width: 640px) { .pp-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } }
+@media (max-width: 640px) {
+.pp-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+/* The course-wise Attendance tile is the tall one: give it the full width
+   on top so the other four tiles pair up evenly as a 2×2 grid */
+.pp-kpi-grid > .pp-kpi-att { grid-column: 1 / -1; order: -1; }
+.pp-kpi-label { line-height: 1.3; }
+}
 .pp-kpi {
 background: var(--pp-kpi-bg); border: 1px solid var(--pp-kpi-border); border-radius: 14px;
 padding: 16px; text-decoration: none; color: inherit; min-width: 0;
@@ -160,6 +190,15 @@ font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
 .pp-metric-val { font-size: 18px; font-weight: 700; color: var(--pp-text-1); margin-top: 2px; white-space: nowrap;
 overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 400px) { .pp-metric-val { font-size: 15px; } }
+/* Phones: three boxes are too narrow for "₹50,000" / "OUTSTANDING", so
+   show Total / Paid / Outstanding as label-left, amount-right rows */
+@media (max-width: 480px) {
+.pp-metric-row { grid-template-columns: 1fr; gap: 6px; }
+.pp-metric { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 12px; }
+.pp-metric-val { margin-top: 0; font-size: 16px; overflow: visible; }
+.pp-card-header .pp-card-title { font-size: 15px; white-space: nowrap; min-width: 0; }
+.pp-card-header .pp-card-link { white-space: nowrap; flex-shrink: 0; }
+}
 
 .pp-att-headline { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
 .pp-att-big { font-size: 30px; font-weight: 700; line-height: 1; letter-spacing: -0.02em; }
@@ -259,7 +298,16 @@ background: var(--pp-primary-light); color: var(--pp-primary);
     <div class="pp-ward-banner-eyebrow">
       {{ "Good morning" if _h < 12 else ("Good afternoon" if _h < 17 else "Good evening" ) }}, {{
         parent_display_name.split()[0] if parent_display_name else 'Parent' }} </div>
-        <h1 class="pp-ward-banner-name">{{ ward_name }}</h1>
+        {# Status sits beside the name at every screen size (it used to be a
+           separate banner item that wrapped to the top / bottom / far right) #}
+        <div class="pp-name-row">
+          <h1 class="pp-ward-banner-name">{{ ward_name }}</h1>
+          {% if ward_status %}
+          <span
+            class="pp-pill {{ 'pp-pill-success' if ward_status == 'Active' else ('pp-pill-neutral' if ward_status in ('Graduated', 'Alumni') else 'pp-pill-warning') }}">{{
+            ward_status }}</span>
+          {% endif %}
+        </div>
         {% if ward_programme or ward_batch %}
         <div class="pp-ward-banner-meta">
           {% if ward_programme %}<span>{{ ward_programme }}</span>{% endif %}
@@ -314,13 +362,6 @@ background: var(--pp-primary-light); color: var(--pp-primary);
       </div>
     </div>
     {% endif %}
-    {% if ward_status %}
-    <div class="pp-profile-status">
-      <span
-        class="pp-pill {{ 'pp-pill-success' if ward_status == 'Active' else ('pp-pill-neutral' if ward_status in ('Graduated', 'Alumni') else 'pp-pill-warning') }}">{{
-        ward_status }}</span>
-    </div>
-    {% endif %}
 </section>
 
 {# ── Alerts ────────────────────────────────────────────────────── #}
@@ -348,7 +389,7 @@ background: var(--pp-primary-light); color: var(--pp-primary);
     {% endif %}
   </a>
 
-  <a class="pp-kpi" href="/parent-portal/attendance{{ _q }}">
+  <a class="pp-kpi pp-kpi-att" href="/parent-portal/attendance{{ _q }}">
     <div class="pp-kpi-head"><span class="pp-kpi-label">Attendance</span><span class="pp-kpi-icon"><span class="ms"
           aria-hidden="true">event_available</span></span></div>
     {% if _err.attendance %}

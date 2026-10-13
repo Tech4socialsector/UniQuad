@@ -65,6 +65,21 @@
   .pp-course-card-pct { font-size: 21px; font-weight: 800; line-height: 1; }
   .pp-course-card-classes { font-size: 11px; color: var(--pp-text-4); font-weight: 500; text-align: right; }
 
+  /* Calendar header on phones: title on its own line, then ‹ October 2026 ›
+     across the full width — they don't fit side by side (the month was cut
+     off). Legend in a tidy 2×2 instead of wrapping one item onto a line. */
+  @media (max-width: 560px) {
+    .pp-cal-head { flex-wrap: wrap; padding: 14px 14px 10px; row-gap: 10px; }
+    .pp-cal-head .pp-card-title { width: 100%; }
+    .pp-cal-nav { width: 100%; justify-content: space-between; }
+    .pp-cal-nav #pp-cal-month-label { flex: 1; min-width: 0 !important; }
+    .pp-cal-legend { display: grid !important; grid-template-columns: repeat(2, max-content); gap: 6px 18px !important;
+      padding: 10px 14px !important; }
+    #pp-calendar { padding: 0 8px 12px !important; }
+    .pp-cal-grid { gap: 3px; }
+    .pp-cal-cell { min-height: 52px; padding: 5px 2px 6px; }
+  }
+
   @media (max-width: 480px) {
     .pp-course-card { flex-wrap: wrap; gap: 10px; padding: 14px; }
     .pp-course-card-icon { display: none; }
@@ -244,11 +259,11 @@
 
 {# ── Attendance Calendar ────────────────────────────────────────── #}
 <div class="pp-card fade-in" style="margin-bottom:22px;animation-delay:0.07s;">
-  <div class="pp-card-header">
+  <div class="pp-card-header pp-cal-head">
     <div class="pp-card-title">
       <span class="ms">calendar_month</span> Attendance Calendar
     </div>
-    <div style="display:flex;align-items:center;gap:6px;">
+    <div class="pp-cal-nav" style="display:flex;align-items:center;gap:6px;">
       <button class="pp-btn pp-btn-outline pp-btn-sm" onclick="ppCalPrev()" aria-label="Previous month"
               style="display:flex;align-items:center;justify-content:center;width:34px;height:34px;padding:0;">
         <span class="ms" style="font-size:18px;">chevron_left</span>
@@ -263,7 +278,7 @@
   </div>
 
   {# Legend #}
-  <div style="display:flex;gap:14px;flex-wrap:wrap;padding:0 16px 10px;font-size:12px;color:var(--pp-text-3);">
+  <div class="pp-cal-legend" style="display:flex;gap:14px;flex-wrap:wrap;padding:0 16px 10px;font-size:12px;color:var(--pp-text-3);">
     <span style="display:flex;align-items:center;gap:5px;">
       <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--pp-success);"></span>Present
     </span>
