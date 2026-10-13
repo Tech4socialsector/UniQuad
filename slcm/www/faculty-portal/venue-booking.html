@@ -306,6 +306,121 @@
 .flatpickr-wrapper {
     z-index: 99999999 !important;
 }
+
+/* ── Dark mode ── */
+/* --fp-text-4 (#475569) is too faint on navy cards for dates, labels and
+   counters on this page — lift it inside the page's own containers only. */
+body.fp-dark .fp-vb-stat-grid,
+body.fp-dark #fp-bookings-table,
+body.fp-dark #fp-bookings-card-list,
+body.fp-dark #fp-booking-modal,
+body.fp-dark #fp-view-booking-modal,
+body.fp-dark #fp-vb-status-multiselect,
+body.fp-dark #fp-vb-status-panel { --fp-text-4: #7b8aa3; }
+
+/* Booking table: raised header, soft hover */
+body.fp-dark #fp-bookings-table th { background: #1a2540; color: var(--fp-text-3); border-bottom-color: var(--fp-border-mid); }
+body.fp-dark #fp-bookings-table td { border-bottom-color: var(--fp-border); }
+body.fp-dark #fp-bookings-table tbody tr:hover td { background: rgba(255,255,255,0.05); }
+
+/* Mobile booking cards */
+body.fp-dark .fp-vb-card { background: #1a2540; border-color: var(--fp-border-mid); }
+
+/* Secondary buttons (View, Cancel) would otherwise blend into the card */
+body.fp-dark #fp-bookings-table .fp-btn-secondary,
+body.fp-dark #fp-bookings-card-list .fp-btn-secondary,
+body.fp-dark #fp-booking-modal .fp-btn-secondary { background: #1a2540; color: var(--fp-text-1); border-color: var(--fp-border); box-shadow: none; }
+body.fp-dark #fp-bookings-table .fp-btn-secondary:hover,
+body.fp-dark #fp-bookings-card-list .fp-btn-secondary:hover,
+body.fp-dark #fp-booking-modal .fp-btn-secondary:hover { background: #222f4f; border-color: var(--fp-border-mid); }
+
+/* Status badges: neutral pill matches the card colour → give it a visible tint;
+   success tint is fine, outline keeps lifted rose */
+body.fp-dark #fp-bookings-table .fp-badge-neutral,
+body.fp-dark #fp-bookings-card-list .fp-badge-neutral,
+body.fp-dark #fp-view-booking-content .fp-badge-neutral { background: rgba(148,163,184,0.14); color: var(--fp-text-2); }
+body.fp-dark #fp-bookings-table .fp-badge-outline,
+body.fp-dark #fp-bookings-card-list .fp-badge-outline,
+body.fp-dark #fp-view-booking-content .fp-badge-outline { background: rgba(214,74,102,0.14); color: #f08da0; border-color: rgba(214,74,102,0.3); }
+
+/* Status multi-select */
+body.fp-dark #fp-vb-status-btn { background: #1a2540; border-color: var(--fp-border-mid); }
+body.fp-dark #fp-vb-status-panel { background: #1a2540; border-color: var(--fp-border-mid); box-shadow: 0 10px 28px rgba(0,0,0,0.5); }
+body.fp-dark #fp-vb-status-panel .fp-multiselect-option:hover,
+body.fp-dark #fp-vb-status-panel .fp-multiselect-clear:hover,
+body.fp-dark #fp-vb-status-panel .fp-multiselect-selectall:hover { background: rgba(255,255,255,0.05); }
+body.fp-dark #fp-vb-status-panel .fp-multiselect-footer { border-top-color: var(--fp-border-mid); }
+body.fp-dark #fp-vb-status-panel .fp-multiselect-selectall { color: #f08da0; }
+
+/* Empty state icon (border-mid is invisible on the card) */
+body.fp-dark .fp-card .fp-empty > .fp-ms { color: var(--fp-text-4); }
+
+/* Modals */
+body.fp-dark #fp-booking-modal,
+body.fp-dark #fp-view-booking-modal { background: rgba(0,0,0,0.65) !important; }
+body.fp-dark .fp-vb-modal-panel,
+body.fp-dark #fp-view-booking-modal > div { border: 1px solid var(--fp-border-mid); box-shadow: 0 24px 60px rgba(0,0,0,0.6) !important; }
+body.fp-dark #fp-booking-modal button[aria-label="Close"]:hover,
+body.fp-dark #fp-view-booking-modal button[aria-label="Close"]:hover { background: rgba(255,255,255,0.06) !important; color: var(--fp-text-1) !important; }
+body.fp-dark .fp-vb-section-title { border-bottom-color: var(--fp-border); }
+body.fp-dark #fp-view-booking-content > div { border-bottom-color: var(--fp-border) !important; }
+/* Disabled (already booked) rooms in the select */
+body.fp-dark #fp-vb-room option { background: #1a2540; color: var(--fp-text-1); }
+body.fp-dark #fp-vb-room option:disabled { color: #64748b; }
+/* JS sets the "available" message to #166534 (dark green) — unreadable on navy */
+body.fp-dark #fp-vb-room-availability[style*="rgb(22, 101, 52)"],
+body.fp-dark #fp-vb-room-availability[style*="#166534"] { color: var(--fp-success) !important; }
+
+/* flatpickr date/time picker (appended to <body>, white by default) */
+body.fp-dark .flatpickr-calendar { background: #1a2540; border: 1px solid var(--fp-border-mid); box-shadow: 0 12px 32px rgba(0,0,0,0.55); }
+body.fp-dark .flatpickr-calendar.arrowTop:before { border-bottom-color: var(--fp-border-mid); }
+body.fp-dark .flatpickr-calendar.arrowTop:after { border-bottom-color: #1a2540; }
+body.fp-dark .flatpickr-calendar.arrowBottom:before { border-top-color: var(--fp-border-mid); }
+body.fp-dark .flatpickr-calendar.arrowBottom:after { border-top-color: #1a2540; }
+body.fp-dark .flatpickr-months .flatpickr-month,
+body.fp-dark .flatpickr-current-month,
+body.fp-dark .flatpickr-current-month input.cur-year { background: transparent; color: var(--fp-text-1); fill: var(--fp-text-1); }
+body.fp-dark .flatpickr-current-month .flatpickr-monthDropdown-months { background: #1a2540; color: var(--fp-text-1); }
+body.fp-dark .flatpickr-current-month .flatpickr-monthDropdown-months:hover { background: rgba(255,255,255,0.06); }
+body.fp-dark .flatpickr-current-month .flatpickr-monthDropdown-months .flatpickr-monthDropdown-month { background: #1a2540; color: var(--fp-text-1); }
+body.fp-dark .flatpickr-months .flatpickr-prev-month,
+body.fp-dark .flatpickr-months .flatpickr-next-month { color: var(--fp-text-2); fill: var(--fp-text-2); }
+body.fp-dark .flatpickr-months .flatpickr-prev-month svg,
+body.fp-dark .flatpickr-months .flatpickr-next-month svg { fill: var(--fp-text-2); }
+body.fp-dark .flatpickr-months .flatpickr-prev-month:hover svg,
+body.fp-dark .flatpickr-months .flatpickr-next-month:hover svg { fill: #f08da0; }
+body.fp-dark .flatpickr-months .flatpickr-prev-month.flatpickr-disabled svg,
+body.fp-dark .flatpickr-months .flatpickr-next-month.flatpickr-disabled svg { fill: var(--fp-text-4); }
+body.fp-dark .numInputWrapper:hover,
+body.fp-dark .numInputWrapper span:hover { background: rgba(255,255,255,0.06); }
+body.fp-dark .numInputWrapper span { border-color: var(--fp-border-mid); }
+body.fp-dark .numInputWrapper span.arrowUp:after { border-bottom-color: var(--fp-text-2); }
+body.fp-dark .numInputWrapper span.arrowDown:after { border-top-color: var(--fp-text-2); }
+body.fp-dark span.flatpickr-weekday,
+body.fp-dark .flatpickr-weekdays { background: transparent; color: var(--fp-text-3); }
+body.fp-dark .flatpickr-day { color: var(--fp-text-1); }
+body.fp-dark .flatpickr-day:hover,
+body.fp-dark .flatpickr-day:focus,
+body.fp-dark .flatpickr-day.prevMonthDay:hover,
+body.fp-dark .flatpickr-day.nextMonthDay:hover { background: rgba(255,255,255,0.08); border-color: transparent; color: var(--fp-text-1); }
+body.fp-dark .flatpickr-day.today { border-color: var(--fp-primary); }
+body.fp-dark .flatpickr-day.today:hover,
+body.fp-dark .flatpickr-day.today:focus { background: rgba(214,74,102,0.2); border-color: var(--fp-primary); color: #fff; }
+body.fp-dark .flatpickr-day.selected,
+body.fp-dark .flatpickr-day.selected:hover,
+body.fp-dark .flatpickr-day.selected:focus { background: var(--fp-primary); border-color: var(--fp-primary); color: #fff; }
+body.fp-dark .flatpickr-day.prevMonthDay,
+body.fp-dark .flatpickr-day.nextMonthDay { color: #64748b; }
+body.fp-dark .flatpickr-day.flatpickr-disabled,
+body.fp-dark .flatpickr-day.flatpickr-disabled:hover { color: #3b4a66; background: transparent; border-color: transparent; }
+body.fp-dark .flatpickr-calendar.hasTime .flatpickr-time { border-top-color: var(--fp-border-mid); }
+body.fp-dark .flatpickr-time input,
+body.fp-dark .flatpickr-time .flatpickr-am-pm,
+body.fp-dark .flatpickr-time .flatpickr-time-separator { background: transparent; color: var(--fp-text-1); border: 0; }
+body.fp-dark .flatpickr-time input:hover,
+body.fp-dark .flatpickr-time input:focus,
+body.fp-dark .flatpickr-time .flatpickr-am-pm:hover,
+body.fp-dark .flatpickr-time .flatpickr-am-pm:focus { background: rgba(255,255,255,0.06); }
 </style>
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">

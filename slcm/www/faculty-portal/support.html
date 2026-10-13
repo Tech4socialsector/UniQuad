@@ -6,6 +6,13 @@
 <style>
   /* Make iframe fill available height properly */
   #hd-frame { border: none; }
+
+  /* ── Dark mode ── */
+  /* Iframe area behind the helpdesk while it loads / repaints */
+  body.fp-dark #hd-frame { background: var(--fp-card); }
+  /* "Loading Helpdesk…" uses --fp-text-4 (#475569), too faint on navy */
+  body.fp-dark #hd-loading p { color: var(--fp-text-3) !important; }
+  body.fp-dark .fp-page-title { color: var(--fp-text-1); }
 </style>
 <script>
 /* ── Helpdesk iframe routing ──────────────────────────────────────
@@ -117,8 +124,57 @@ function hdInitFrame(basePath) {
     "html, body, body *:not(svg):not(path) { font-family: " + (getComputedStyle(document.documentElement).getPropertyValue('--fp-font-family').trim() || "'Merriweather', Georgia, serif") + " !important; }",
     'body, .text-base, .text-sm, .text-p-sm, .text-p-base, input, select, textarea, button, .ProseMirror { font-size: 14px !important; }',
     '.text-xs, .text-p-xs, .text-2xs { font-size: 12.5px !important; }',
-    '.text-lg { font-size: 17px !important; }'
+    '.text-lg { font-size: 17px !important; }',
+
+    /*
+     * Dark mode: the portal drives the iframe's frappe-ui theme (data-theme on
+     * <html>, see syncHelpdeskTheme). frappe-ui's own dark palette is neutral
+     * grey, so retint its tokens to the portal's navy surfaces. Scoped to
+     * html[data-theme="dark"] (beats frappe-ui's [data-theme=dark]) so light
+     * mode is untouched.
+     */
+    'html[data-theme="dark"] {',
+    '  --surface-white: #131d35; --surface-menu-bar: #131d35;',
+    '  --surface-cards: #172340; --surface-modal: #172340;',
+    '  --surface-gray-1: #1a2540; --surface-gray-2: #1f2b48; --surface-gray-3: #263352; --surface-gray-4: #2e3d5f;',
+    '  --surface-selected: #2e3d5f;',
+    '  --outline-white: #172340; --outline-gray-1: #1e2d4a; --outline-gray-2: #263352; --outline-gray-3: #334366; --outline-gray-modals: #263352;',
+    '  --ink-gray-9: #f1f5f9; --ink-gray-8: #e2e8f0; --ink-gray-7: #cbd5e1; --ink-gray-6: #94a3b8;',
+    '  --ink-gray-5: #8291a8; --ink-gray-4: #64748b; --ink-gray-3: #64748b; --ink-gray-2: #334366; --ink-gray-1: #1e2d4a;',
+    '  --ink-white: #131d35;',
+    '}',
+    'html[data-theme="dark"], html[data-theme="dark"] body { background-color: #131d35 !important; color: #f1f5f9; }',
+    'html[data-theme="dark"] ::selection { background: #334a7a; color: #ffffff; }'
   ].join('\n');
+
+  /*
+   * Mirror the portal theme (body.fp-dark) into the helpdesk iframe. frappe-ui's
+   * useTheme() sets data-theme from localStorage on mount; we deliberately do
+   * NOT write localStorage (it is shared with the standalone helpdesk/desk on
+   * this origin) and instead re-assert the attribute whenever it changes.
+   */
+  function wantedTheme() {
+    return document.body.classList.contains('fp-dark') ? 'dark' : 'light';
+  }
+  function syncHelpdeskTheme(doc) {
+    if (!doc || !doc.documentElement) return;
+    var want = wantedTheme();
+    if (doc.documentElement.getAttribute('data-theme') !== want) {
+      doc.documentElement.setAttribute('data-theme', want);
+    }
+  }
+  function watchHelpdeskTheme(doc) {
+    if (!doc || !doc.documentElement || doc.__fpThemeWatched) return;
+    doc.__fpThemeWatched = true;
+    syncHelpdeskTheme(doc);
+    new MutationObserver(function () { syncHelpdeskTheme(doc); })
+      .observe(doc.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  }
+  /* Portal theme toggle (fpToggleTheme flips body.fp-dark) → re-sync the iframe */
+  new MutationObserver(function () {
+    var f = document.getElementById('hd-frame');
+    try { syncHelpdeskTheme(f && (f.contentDocument || f.contentWindow.document)); } catch (e) {}
+  }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
 
   var _observer = null;
 
@@ -137,6 +193,7 @@ function hdInitFrame(basePath) {
 
       /* Inject immediately in case Vue already mounted */
       injectStyleIntoFrame(doc);
+      watchHelpdeskTheme(doc);
 
       /* Watch for Vue mounting the app after the iframe loads */
       if (_observer) { _observer.disconnect(); _observer = null; }

@@ -1031,6 +1031,94 @@ body.fp-dark .fp-dash-icon .fp-ms { color: #fff !important; }
 .fp-drill-table tr:hover td { background: var(--fp-bg); }
 .fp-drill-empty { padding: 48px 24px; text-align: center; color: var(--fp-text-4); font-size: 13px; }
 .fp-drill-empty .fp-ms { font-size: 36px; display: block; margin-bottom: 12px; opacity: 0.4; }
+
+/* ── Dark mode ── */
+/* Secondary text: --fp-text-4/5 are too dim on navy — lift to text-3 */
+body.fp-dark .fp-schedule-item [style*="fp-text-4)"],
+body.fp-dark .fp-task-link [style*="fp-text-4)"],
+body.fp-dark .fp-dash-qa [style*="fp-text-4)"],
+body.fp-dark #modal-gcal-sync [style*="fp-text-4)"],
+body.fp-dark #fp-drill-modal [style*="fp-text-4)"],
+body.fp-dark #fp-drill-modal [style*="fp-text-5)"] { color: var(--fp-text-3) !important; }
+body.fp-dark .fp-cal-dow,
+body.fp-dark .fp-cal-tg-colhead .dow,
+body.fp-dark .fp-cal-tg-gutter,
+body.fp-dark .fp-cal-tg-hours span,
+body.fp-dark .fp-cal-empty,
+body.fp-dark .fp-sync-freeze-note,
+body.fp-dark .fp-drill-table th,
+body.fp-dark .fp-drill-empty { color: var(--fp-text-3); }
+
+/* Maroon text → light rose */
+body.fp-dark .fp-schedule-item [style*="color:var(--fp-primary)"],
+body.fp-dark .fp-dash-stat-grid [style*="color:var(--fp-primary)"],
+body.fp-dark .fp-card-header > a[style*="color:var(--fp-primary)"],
+body.fp-dark #fp-drill-body [style*="color:var(--fp-primary)"],
+body.fp-dark #fp-drill-body a[style*="var(--fp-accent)"] { color: #f08da0 !important; }
+body.fp-dark .fp-fd-link,
+body.fp-dark .fp-cal-tip-hint,
+body.fp-dark .fp-sync-freeze-count,
+body.fp-dark .fp-cal-cell.is-holiday .fp-cal-daynum,
+body.fp-dark .fp-drill-table th.sorted-asc .fp-sort-icon,
+body.fp-dark .fp-drill-table th.sorted-desc .fp-sort-icon { color: #f08da0; }
+body.fp-dark .fp-dash-qa { color: #f08da0; }
+body.fp-dark .fp-fd-link { background: transparent; }
+@media (max-width: 560px) { body.fp-dark .fp-fd-link { background: rgba(214,74,102,0.14); } }
+
+/* Neutral badges sit on the card colour (--fp-border-light) → give them a surface */
+body.fp-dark .fp-badge-neutral { background: var(--fp-card-2); color: var(--fp-text-2); border: 1px solid var(--fp-border); }
+
+/* Pending Tasks tiles: border was the card colour; icon box + count pill tints */
+body.fp-dark .fp-task-link:not(:hover) { border-color: var(--fp-border) !important; }
+body.fp-dark .fp-task-link:hover { background: rgba(255,255,255,0.03); }
+body.fp-dark .fp-task-link [style*="background:var(--fp-primary-light)"] { background: rgba(214,74,102,0.14) !important; color: #f08da0 !important; }
+body.fp-dark .fp-task-link span[style*="background:var(--fp-primary-light)"] { border: 1px solid rgba(214,74,102,0.3); }
+
+/* Calendar */
+body.fp-dark .fp-cal-sync-btn { color: #f08da0; border-color: rgba(214,74,102,0.55); }
+body.fp-dark .fp-cal-sync-btn:hover { background: rgba(214,74,102,0.14); }
+body.fp-dark .fp-cal-nav .fp-btn-secondary { background: #1a2540; color: var(--fp-text-1); border-color: var(--fp-border); }
+body.fp-dark .fp-cal-nav .fp-btn-secondary:hover { background: #22304f; border-color: var(--fp-border-mid); }
+body.fp-dark .fp-cal-views { border-color: var(--fp-border-mid); }
+body.fp-dark .fp-cal-views button + button { border-left-color: var(--fp-border-mid); }
+body.fp-dark .fp-cal-views button:not(.is-active):hover { background: rgba(255,255,255,0.05); color: var(--fp-text-1); }
+/* Layer checkboxes / today markers use light fills in dark → dark glyphs */
+body.fp-dark .fp-cal-check .fp-ms { color: #0a0f1e; }
+body.fp-dark .fp-cal-cell.is-today .fp-cal-daynum,
+body.fp-dark .fp-cal-cell.is-today.is-holiday .fp-cal-daynum,
+body.fp-dark .fp-cal-tg-colhead.is-today .num { color: #0a0f1e; }
+body.fp-dark .fp-cal-cell:hover,
+body.fp-dark .fp-cal-tg-colhead:hover { background: rgba(255,255,255,0.05); }
+body.fp-dark .fp-cal-cell.is-holiday:hover { background: rgba(214,74,102,0.18); }
+body.fp-dark .fp-cal-daynum:hover { background: rgba(214,74,102,0.22); }
+body.fp-dark .fp-cal-chip.is-session:hover,
+body.fp-dark .fp-cal-block.is-session:hover { filter: brightness(1.15); }
+body.fp-dark .fp-cal-legend i[style*="#f5c6ce"] { border-color: rgba(214,74,102,0.5) !important; }
+/* Tooltip status badges (built in JS) */
+body.fp-dark .fp-cal-tip { background: var(--fp-card-2); border-color: var(--fp-border-mid); }
+body.fp-dark .fp-cal-badge[style*="#f5c6ce"] { background: rgba(214,74,102,0.14) !important; color: #f08da0 !important; border: 1px solid rgba(214,74,102,0.3); }
+body.fp-dark .fp-cal-badge[style*="var(--fp-success)"] { color: #0a0f1e !important; }
+body.fp-dark .fp-cal-badge[style*="fp-cal-holiday-bg"] { color: #f08da0 !important; border: 1px solid rgba(214,74,102,0.3); }
+
+/* Google sync modal + progress overlay */
+body.fp-dark #modal-gcal-sync label[style*="border:1px solid var(--fp-border)"] { background: var(--fp-card-2); }
+body.fp-dark #modal-gcal-sync .fp-btn-secondary { background: #1a2540; color: var(--fp-text-1); border-color: var(--fp-border); }
+body.fp-dark .fp-sync-freeze { background: rgba(0,0,0,0.6); }
+body.fp-dark .fp-sync-freeze-card { border: 1px solid var(--fp-border); }
+body.fp-dark .fp-sync-freeze-spinner { background: rgba(214,74,102,0.14); color: #f08da0; }
+body.fp-dark .fp-sync-freeze-bar { background: var(--fp-card-2); }
+
+/* Drill-down modal */
+body.fp-dark #fp-drill-modal { background: rgba(0,0,0,0.65) !important; }
+body.fp-dark #fp-drill-box { border: 1px solid var(--fp-border); }
+body.fp-dark #fp-drill-header { background: var(--fp-bg-2) !important; }
+body.fp-dark #fp-drill-header button[aria-label="Close"] { border-color: var(--fp-border-mid) !important; }
+body.fp-dark #fp-drill-bar { border-bottom-color: var(--fp-border) !important; }
+body.fp-dark .fp-drill-table th { background: var(--fp-card-2); border-bottom-color: var(--fp-border-mid); }
+body.fp-dark .fp-drill-table th:hover { color: var(--fp-text-1); }
+body.fp-dark .fp-drill-table td { border-bottom-color: var(--fp-border); }
+body.fp-dark .fp-drill-table tr:hover td { background: rgba(255,255,255,0.05); }
+body.fp-dark #fp-drill-body [style*="background:var(--fp-border-light)"] { background: var(--fp-card-2) !important; }
 </style>
 
 {# ── Drill-down JavaScript ── #}
