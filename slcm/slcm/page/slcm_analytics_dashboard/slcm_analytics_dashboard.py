@@ -2719,14 +2719,14 @@ def get_drilldown_data(module, dimension, value, academic_year=None, term=None, 
 				filters["status"] = value
 			rows = frappe.db.get_all(
 				"Batch", filters=filters,
-				fields=["name", "cohort_name", "program", "section", "academic_year",
-						"status", "seat_limit", "start_date", "end_date"],
+				fields=["name", "batch_name", "program", "section", "academic_year",
+						"status", "total_enrolled_count", "start_date", "end_date"],
 				limit_start=offset, limit_page_length=page_size, order_by="start_date desc",
 			)
 			total = frappe.db.count("Batch", filters=filters)
 			return {"rows": rows, "total": total,
-					"columns": ["cohort_name", "program", "section", "academic_year",
-								"status", "seat_limit"]}
+					"columns": ["batch_name", "program", "section", "academic_year",
+								"status", "total_enrolled_count"]}
 
 		elif dimension == "enrollment_status":
 			filters = {}
