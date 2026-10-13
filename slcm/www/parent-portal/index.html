@@ -257,6 +257,37 @@ background: var(--pp-primary-light); color: var(--pp-primary);
 .pp-card-body { padding: 16px 14px; }
 }
 
+/* ── Dark mode ── */
+/* Borders: --pp-border equals the card colour on navy, so outlined boxes vanish */
+body.pp-dark .pp-hostel-strip { border-color: #263352; border-left-color: var(--pp-primary); }
+body.pp-dark .pp-hostel-item,
+body.pp-dark .pp-date-chip,
+body.pp-dark .pp-src-tag { border-color: #263352; }
+body.pp-dark .pp-date-chip.is-today { border-color: var(--pp-primary); }
+body.pp-dark .pp-profile-facts { border-top-color: #263352; }
+/* Rose accent text is too dim at small sizes; use the light rose */
+body.pp-dark .pp-hostel-strip-eyebrow,
+body.pp-dark .pp-kpi-course-pct,
+body.pp-dark .pp-date-chip-mon,
+body.pp-dark .pp-today-tag,
+body.pp-dark .pp-dash-banner .pp-ward-banner-avatar { color: #f08da0; }
+body.pp-dark .pp-kpi-course-pct.is-low { color: var(--pp-danger); }
+/* KPI icon chips sat on the same colour as the tile */
+body.pp-dark .pp-kpi-icon { background: #1a2540; border-color: #263352; color: #f08da0; }
+body.pp-dark a.pp-kpi:hover { border-color: rgba(214,74,102,0.45); box-shadow: 0 4px 14px rgba(0,0,0,0.35); }
+/* Grey pills / chips blended into the cards */
+body.pp-dark .pp-pill-neutral,
+body.pp-dark .pp-dash-banner .pp-ward-banner-pill { background: #1a2540; color: var(--pp-text-2); border: 1px solid #263352; }
+body.pp-dark .pp-rfid-dot { background: #1a2540; color: var(--pp-text-3); border: 1px solid #263352; }
+body.pp-dark .pp-grade { background: rgba(214,74,102,0.14); color: #f08da0; border: 1px solid rgba(214,74,102,0.3); }
+body.pp-dark .pp-grade.is-pending { background: #1a2540; color: var(--pp-text-3); border-color: #263352; }
+/* Retry button (white secondary button) */
+body.pp-dark .pp-retry { background: #1a2540; color: #f08da0; border-color: rgba(214,74,102,0.45); }
+body.pp-dark .pp-retry:hover { background: rgba(214,74,102,0.14); }
+/* Metric boxes: slightly raised instead of a near-black hole */
+body.pp-dark .pp-metric { background: #1a2540; }
+body.pp-dark .pp-progress { background: #1a2540; }
+
 {% endblock %}
 
 {# ── Reusable states ──────────────────────────────────────────── #}

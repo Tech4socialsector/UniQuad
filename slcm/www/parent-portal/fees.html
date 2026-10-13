@@ -386,6 +386,18 @@
   .ppf-card-hd, .ppf-card-bd { padding-left: 16px; padding-right: 16px; }
   .ppf-tabs { padding: 10px 16px 0; }
   .ppf-refund { padding: 12px 16px; }
+  /* Payment / refund / scholarship sub-rows: same side padding as the fee
+     rows, tint on the whole row, title left-aligned, no blank spacer cells */
+  .ppf-t tr.ppf-sub-row:not(.is-hidden) {
+    display: flex; flex-direction: column;
+    padding: 10px 16px; border-bottom: 1px solid var(--ppf-row);
+    background: rgba(146,12,36,.035);
+  }
+  .ppf-t tr.ppf-sub-row td { background: transparent; }
+  .ppf-t tr.ppf-sub-row td:first-child { padding-left: 0 !important; text-align: left; padding-bottom: 4px !important; }
+  .ppf-t tr.ppf-sub-row td:empty { display: none; }
+  body.pp-dark .ppf-t tr.ppf-sub-row:not(.is-hidden) { background: rgba(214,74,102,0.06); }
+  html body.pp-dark .ppf-t tr.ppf-sub-row td { background: transparent; }  /* beats the dark-mode cell tint below */
 }
 
 /* ── Fees skeleton (shown only while switching ward) ────────────────── */
@@ -430,6 +442,87 @@
 @keyframes ppfSpin { to { transform: rotate(360deg); } }
 .ppf-overlay-msg { font-size: 14px; font-weight: 600; color: var(--pp-text-2); }
 @media (prefers-reduced-motion: reduce) { .ppf-spinner { transition: none; animation-duration: 2s; } }
+
+/* ── Dark mode ── */
+/* Page tokens are resolved on :root (light values), so redefine them on body */
+body.pp-dark {
+  --ppf-maroon:  #f08da0;
+  --ppf-maroon-soft: rgba(214,74,102,0.14);
+  --ppf-green:   #4ade80;
+  --ppf-red:     #f87171;
+  --ppf-amber:   #f2b36a;
+  --ppf-border:  #263352;
+  --ppf-row:     #1e2d4a;
+  --ppf-head:    #1a2540;
+  --ppf-muted:   #94a3b8;
+  --ppf-card:    var(--pp-card);
+  --ppf-text:    var(--pp-text-1);
+}
+body.pp-dark .ppf-ay-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%2394a3b8' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+}
+body.pp-dark .ppf-ay-static { background: #1a2540; }
+
+/* Buttons */
+body.pp-dark .ppf-btn-primary { background: var(--pp-primary); border-color: var(--pp-primary); color: #fff; }
+body.pp-dark .ppf-btn-ghost { background: #1a2540; color: #f08da0; border-color: rgba(214,74,102,0.4); }
+body.pp-dark .ppf-btn-ghost:hover:not(:disabled) { background: rgba(214,74,102,0.14); }
+body.pp-dark .ppf-icon-btn { background: #1a2540; }
+body.pp-dark .ppf-dl-btn { border-color: rgba(214,74,102,0.3); }
+body.pp-dark .ppf-dl-btn:hover { background: var(--pp-primary); border-color: var(--pp-primary); color: #fff; }
+body.pp-dark .ppf-icon-dl { background: #1a2540; }
+body.pp-dark .ppf-icon-dl:hover { background: rgba(214,74,102,0.14); }
+
+/* Badges / status */
+body.pp-dark .ppf-badge-warning { background: rgba(242,179,106,0.14); }
+body.pp-dark .ppf-badge-danger  { background: rgba(248,113,113,0.14); }
+body.pp-dark .ppf-badge-academic { color: #f08da0; background: rgba(214,74,102,0.14); border: 1px solid rgba(214,74,102,0.3); }
+body.pp-dark .ppf-status-badge { background: #1a2540; }
+body.pp-dark .ppf-status-badge-paid { border-color: rgba(74,222,128,0.4); }
+body.pp-dark .ppf-status-badge-due  { border-color: rgba(248,113,113,0.45); }
+body.pp-dark .ppf-avatar { border-color: rgba(214,74,102,0.3); }
+body.pp-dark .ppf-student-meta .sep,
+body.pp-dark .ppf-card-meta [style*="color:#cbd5e1"] { color: #475569 !important; }
+
+/* Summary cards + drill-down popup */
+body.pp-dark .ppf-mini-drill { background: var(--pp-card); }
+body.pp-dark .ppf-mini-drill:hover { border-color: var(--pp-primary); box-shadow: 0 2px 12px rgba(0,0,0,0.35); }
+body.pp-dark .ppf-dd-overlay { background: rgba(0,0,0,0.6); }
+body.pp-dark .ppf-dd-box { background: var(--pp-card); color: var(--pp-text-1); border: 1px solid var(--ppf-border); box-shadow: 0 20px 60px rgba(0,0,0,0.55); }
+body.pp-dark .ppf-dd-close { background: #1a2540; }
+body.pp-dark .ppf-dd-group-hd { background: rgba(214,74,102,0.14); }
+body.pp-dark .ppf-dd-pay { background: rgba(214,74,102,0.14); }
+
+/* Filter chips */
+body.pp-dark .ppf-fchip { background: #1a2540; color: var(--pp-text-2); }
+body.pp-dark .ppf-fchip:hover { border-color: var(--pp-primary); }
+body.pp-dark .ppf-fchip.is-active { background: var(--pp-primary); border-color: var(--pp-primary); color: #fff; }
+body.pp-dark .ppf-schip.is-active { background: rgba(214,74,102,0.14); border-color: rgba(214,74,102,0.3); color: #f08da0; }
+
+/* Tables: group / sub / detail rows */
+body.pp-dark .ppf-t tr.ppf-row-data:hover td { background: rgba(255,255,255,0.05); }
+body.pp-dark .ppf-t tr.ppf-detail-tr > td { background: rgba(255,255,255,0.025); }
+body.pp-dark .ppf-t tr.ppf-sub-row td { background: rgba(214,74,102,0.06); }
+body.pp-dark .ppf-row-toggle { background: #1a2540; }
+body.pp-dark .ppf-sub-kind { background: #1a2540; }
+body.pp-dark .ppf-sub-kind-payment { color: #4ade80; border-color: rgba(74,222,128,0.35); }
+body.pp-dark .ppf-sub-kind-refund { color: #93c5fd; border-color: rgba(147,197,253,0.35); }
+body.pp-dark .ppf-sub-kind-scholarship { color: #f08da0; border-color: rgba(214,74,102,0.35); }
+body.pp-dark .ppf-sub-kind-credit { color: #f2b36a; border-color: rgba(242,179,106,0.35); }
+body.pp-dark .ppf-payall { border-color: rgba(214,74,102,0.3); }
+
+/* Payment Summary sheet + processing overlay */
+body.pp-dark .ppf-bulk-overlay { background: rgba(0,0,0,0.65); }
+body.pp-dark .ppf-bulk-sheet { background: var(--pp-card); border: 1px solid var(--ppf-border); border-bottom: none; box-shadow: 0 -12px 48px rgba(0,0,0,0.5); }
+body.pp-dark .ppf-overlay { background: rgba(0,0,0,0.65); }
+body.pp-dark .ppf-overlay-box { background: var(--pp-card); border: 1px solid var(--ppf-border); box-shadow: 0 12px 40px rgba(0,0,0,0.5); }
+
+/* JS toasts (inline styles → hook classes) */
+body.pp-dark .ppf-toast { background: var(--pp-card) !important; box-shadow: 0 6px 20px rgba(0,0,0,0.45) !important; }
+body.pp-dark .ppf-toast-success { color: #4ade80 !important; border-color: rgba(74,222,128,0.4) !important; }
+body.pp-dark .ppf-toast-error   { color: #f87171 !important; border-color: rgba(248,113,113,0.45) !important; }
+body.pp-dark .ppf-toast-warning { color: #f2b36a !important; border-color: rgba(242,179,106,0.45) !important; }
+body.pp-dark .ppf-toast-info    { color: #7cc4f2 !important; border-color: rgba(124,196,242,0.45) !important; }
 {% endblock %}
 
 {# ── Macros ──────────────────────────────────────────────────────────── #}
@@ -937,6 +1030,7 @@
     };
     var c = p[type] || p.info;
     var t = document.createElement('div');
+    t.className = 'ppf-toast ppf-toast-' + (p[type] ? type : 'info');
     t.setAttribute('role', type === 'error' ? 'alert' : 'status');
     t.style.cssText =
       'position:fixed;bottom:20px;right:20px;z-index:10000;max-width:320px;min-width:200px;' +
