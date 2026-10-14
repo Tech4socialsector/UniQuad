@@ -62,6 +62,27 @@
   opacity: 0.8;
 }
 
+.sp-hero-info { min-width: 0; }
+.sp-hero-ids { display: flex; gap: 48px; }
+.sp-hero-label { font-size: 11px; font-weight: 400; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+.sp-hero-value { font-family: var(--sp-font-family, 'Merriweather', serif); font-size: 20px; font-weight: 700; color: var(--sp-primary); text-transform: uppercase; overflow-wrap: anywhere; }
+.sp-hero-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+
+/* Phones: stack the hero (photo on top, then name/ID side by side, then
+   tags) instead of squeezing three columns into ~300px */
+@media (max-width: 600px) {
+  .sp-profile-hero { padding: 20px 16px; background-image: none !important; }
+  .sp-profile-hero .hero-content { flex-direction: column; align-items: center; gap: 16px; width: 100%; text-align: center; }
+  .sp-profile-hero .sp-profile-avatar { width: 96px !important; height: 96px !important; }
+  .sp-hero-info { width: 100%; }
+  .sp-hero-ids { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+  .sp-hero-value { font-size: 17px; }
+  .sp-hero-tags { justify-content: center; }
+  .sp-hero-tags .sp-status-tag { border-radius: 12px; text-align: center; }
+  .sp-section-header { padding: 14px 16px; flex-wrap: wrap; gap: 8px; }
+  .sp-section-body { padding: 16px; }
+}
+
 .sp-profile-layout {
   display: grid;
   grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
@@ -301,23 +322,19 @@
       {% endif %}
     </div>
     
-    <div>
-      <div style="display: flex; gap: 48px;">
+    <div class="sp-hero-info">
+      <div class="sp-hero-ids">
         <div>
-          <div style="font-size: 11px; font-weight: 400; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Student Name</div>
-          <div style="font-family: var(--sp-font-family, 'Merriweather', serif); font-size: 20px; font-weight: 700; color: var(--sp-primary); text-transform: uppercase;">
-            {{ student_name }}
-          </div>
+          <div class="sp-hero-label">Student Name</div>
+          <div class="sp-hero-value">{{ student_name }}</div>
         </div>
         <div>
-          <div style="font-size: 11px; font-weight: 400; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Student ID</div>
-          <div style="font-family: var(--sp-font-family, 'Merriweather', serif); font-size: 20px; font-weight: 700; color: var(--sp-primary); text-transform: uppercase;">
-            {{ student_id }}
-          </div>
+          <div class="sp-hero-label">Student ID</div>
+          <div class="sp-hero-value">{{ student_id }}</div>
         </div>
       </div>
-      
-      <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:16px;">
+
+      <div class="sp-hero-tags">
         {% if programme_name %}
         <span class="sp-status-tag gray" style="background: #e2e8f0; color: #334155; font-weight: 500;">Programme: {{ programme_name }}</span>
         {% endif %}

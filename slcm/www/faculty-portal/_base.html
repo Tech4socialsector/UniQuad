@@ -289,30 +289,6 @@
 
 </div>{# end fp-layout #}
 
-{# ── Bottom Tab Navigation (mobile) ─────────────────────────────────── #}
-<nav class="fp-bottom-nav" aria-label="Mobile navigation">
-  <div class="fp-bottom-nav-inner">
-    <a href="/faculty-portal"               class="fp-bn-item {% if active_page == 'dashboard'     %}active{% endif %}">
-      <span class="fp-ms">dashboard</span>Home
-    </a>
-    <a href="/faculty-portal/my-classes"    class="fp-bn-item {% if active_page == 'my_classes'    %}active{% endif %}">
-      <span class="fp-ms">menu_book</span>Courses
-    </a>
-    <a href="/faculty-portal/attendance"    class="fp-bn-item {% if active_page == 'attendance'    %}active{% endif %}">
-      <span class="fp-ms">how_to_reg</span>Attendance
-    </a>
-    <a href="/faculty-portal/marks"         class="fp-bn-item {% if active_page == 'marks'         %}active{% endif %}">
-      <span class="fp-ms">grade</span>Grades
-    </a>
-    <a href="/faculty-portal/communication" class="fp-bn-item {% if active_page == 'communication' %}active{% endif %}">
-      <span class="fp-ms">campaign</span>Notices
-    </a>
-    <a href="/faculty-portal/profile"       class="fp-bn-item {% if active_page == 'profile'       %}active{% endif %}">
-      <span class="fp-ms">manage_accounts</span>Profile
-    </a>
-  </div>
-</nav>
-
 {# ── Logout Confirmation Modal ───────────────────────────────────────── #}
 <div id="fp-logout-modal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);align-items:center;justify-content:center;" role="dialog" aria-modal="true">
   <div style="background:var(--fp-card);border-radius:var(--fp-radius-lg);width:92%;max-width:400px;box-shadow:var(--fp-shadow-xl);overflow:hidden;animation:fpModalIn 0.22s var(--fp-ease);">

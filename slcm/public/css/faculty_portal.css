@@ -1297,8 +1297,19 @@ header[class*="navbar"], .website-header,
 }
 .fp-schedule-info { flex: 1; min-width: 0; }
 .fp-schedule-course { font-size: 13px; font-weight: 600; color: var(--fp-text-1); }
-.fp-schedule-meta   { font-size: 12px; color: var(--fp-text-3); margin-top: 3px; display: flex; align-items: center; gap: 6px; }
+.fp-schedule-meta   { font-size: 12px; color: var(--fp-text-3); margin-top: 3px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px 14px; }
+/* Each meta fact (venue, student count) wraps as a unit, never mid-label */
+.fp-schedule-meta-item { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.fp-schedule-meta-item .fp-ms { font-size: 14px; color: var(--fp-text-4); }
 .fp-schedule-badge  { flex-shrink: 0; align-self: center; }
+
+/* Phones: time | details on one line, status badge drops under the details
+   so the course/venue text gets the full width */
+@media (max-width: 480px) {
+  .fp-schedule-item { flex-wrap: wrap; gap: 10px 12px; padding: 14px 16px; }
+  .fp-schedule-info { flex: 1 1 0; }
+  .fp-schedule-badge { flex-basis: 100%; align-self: auto; padding-left: 88px; }
+}
 
 /* ══════════════════════════════════════════════════════════
    STUDENT GROUPS GRID
@@ -1535,33 +1546,6 @@ header[class*="navbar"], .website-header,
 .fp-section-error-retry .fp-ms { font-size: 15px; color: inherit; }
 
 /* ══════════════════════════════════════════════════════════
-   BOTTOM NAVIGATION (mobile)
-══════════════════════════════════════════════════════════ */
-.fp-bottom-nav {
-  display: none;
-  position: fixed; bottom: 0; left: 0; right: 0;
-  background: var(--fp-card);
-  border-top: 1px solid var(--fp-border);
-  z-index: 400;
-  overflow-x: auto;
-  box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
-}
-.fp-bottom-nav-inner {
-  display: flex; align-items: stretch;
-  min-width: max-content; width: 100%;
-}
-.fp-bn-item {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 3px; padding: 8px 14px; min-width: 64px;
-  font-size: 10px; font-weight: 500;
-  color: var(--fp-text-4); text-decoration: none;
-  transition: color 0.15s, background 0.15s; white-space: nowrap;
-}
-.fp-bn-item .fp-ms { font-size: 22px; }
-.fp-bn-item.active { color: var(--fp-primary); }
-.fp-bn-item.active .fp-ms { font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24; }
-
-/* ══════════════════════════════════════════════════════════
    TOOLTIP (mini sidebar)
 ══════════════════════════════════════════════════════════ */
 .fp-tooltip {
@@ -1601,19 +1585,18 @@ header[class*="navbar"], .website-header,
   .fp-hamburger { display: flex; }
   .fp-sidebar { transform: translateX(-100%); }
   .fp-sidebar.open { transform: translateX(0); }
-  .fp-main { margin-left: 0; padding: 20px 16px 100px; }
-  .fp-bottom-nav { display: block; }
+  .fp-main { margin-left: 0; padding: 20px 16px 32px; }
   .fp-grid-2, .fp-grid-3 { grid-template-columns: 1fr; }
   .fp-stat-grid { grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)); gap: 12px; }
   .fp-sg-grid   { grid-template-columns: 1fr; }
   .fp-chart-wrap { height: 180px; }
   .fp-page-title { font-size: 20px; }
-  .fp-main { padding: 20px 16px 100px; }
+  .fp-main { padding: 20px 16px 32px; }
   .fp-mc-grid { grid-template-columns: 1fr; }
   .fp-metric-grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 480px) {
-  .fp-main { padding: 16px 12px 100px; }
+  .fp-main { padding: 16px 12px 32px; }
   .fp-stat-grid { grid-template-columns: 1fr 1fr; }
   .fp-stat-val  { font-size: 22px; }
   .fp-page-title { font-size: 18px; }
@@ -1621,9 +1604,6 @@ header[class*="navbar"], .website-header,
   .fp-class-info-cell { border-right: none; }
   .fp-metric-grid { grid-template-columns: 1fr 1fr; }
   .fp-form-grid-2 { grid-template-columns: 1fr; }
-}
-@media (min-width: 769px) {
-  .fp-bottom-nav { display: none !important; }
 }
 
 /* ══════════════════════════════════════════════════════════
