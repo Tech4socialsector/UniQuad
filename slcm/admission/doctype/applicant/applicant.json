@@ -1319,8 +1319,7 @@
    "fieldname": "class_xii_status",
    "fieldtype": "Autocomplete",
    "label": "Class XII Status",
-   "options": "Completed\nAppearing",
-   "reqd": 1
+   "options": "Completed\nAppearing"
   },
   {
    "depends_on": "eval:doc.class_xii_status == \"Appearing\"",
@@ -1363,7 +1362,7 @@
   }
  ],
  "make_attachments_public": 1,
- "modified": "2026-10-14 10:54:06.844956",
+ "modified": "2026-10-14 12:10:51.202518",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Applicant",
