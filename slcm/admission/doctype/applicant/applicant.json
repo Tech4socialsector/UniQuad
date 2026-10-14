@@ -338,7 +338,7 @@
    "default": "No",
    "fieldname": "guardian_required",
    "fieldtype": "Select",
-   "label": "If both parent details unavailable, enter details of a legal guardian?",
+   "label": "If both parent details are unavailable, enter details of a legal guardian?",
    "options": "No\nYes"
   },
   {
@@ -440,7 +440,7 @@
    "description": "Max 5MB - Supported formats png, jpeg, jpg, pdf",
    "fieldname": "class_x_marksheet",
    "fieldtype": "Attach",
-   "label": "Class X Marksheet To Be Upload",
+   "label": "Class X Marksheet To Be Uploaded",
    "reqd": 1
   },
   {
@@ -471,7 +471,7 @@
    "description": "Max 5MB - Supported formats png, jpeg, jpg, pdf",
    "fieldname": "class_xii_marksheet",
    "fieldtype": "Attach",
-   "label": "Class XII Marksheet / Bonafide Certificate To Be Upload",
+   "label": "Class XII Marksheet / Bonafide Certificate To Be Uploaded",
    "reqd": 1
   },
   {
@@ -1310,7 +1310,7 @@
    "description": "Max 5MB - Supported formats png, jpeg, jpg, pdf",
    "fieldname": "degree_certificate_bonafide",
    "fieldtype": "Attach",
-   "label": "Degree Certificate / Bonafide",
+   "label": "Degree Certificate",
    "mandatory_depends_on": "eval: doc.other_degree == \"Yes\"",
    "options": "png, jpeg, jpg, pdf"
   },
@@ -1362,7 +1362,7 @@
   }
  ],
  "make_attachments_public": 1,
- "modified": "2026-10-14 12:10:51.202518",
+ "modified": "2026-10-14 18:11:01.158685",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Applicant",

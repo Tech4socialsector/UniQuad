@@ -1561,9 +1561,11 @@
             Apply now
           </a>
           {% else %}
-          {% set _base_app_link = (p.application_form_link or build_applicant_form_new_url(_slug, p.admission_cycle or (active_cycle.name if active_cycle else ''), campus=(p.campus or ''), intake_type=(p.intake_type or ''), admission_year=(active_cycle.admission_year if active_cycle else ''), academic_year=(active_cycle.academic_year if active_cycle else ''), program_level=(p.program_level or ''))) %}
-          <a href="{{ _base_app_link if (_is_cycle_active and not _is_full) else 'javascript:void(0)' }}"
-             data-base-url="{{ _base_app_link }}"
+          {% set _dom_app_link = (p.get('application_form_link') or build_applicant_form_new_url(_slug, p.admission_cycle or (active_cycle.name if active_cycle else ''), campus=(p.campus or ''), intake_type=(p.intake_type or ''), admission_year=(active_cycle.admission_year if active_cycle else ''), academic_year=(active_cycle.academic_year if active_cycle else ''), program_level=(p.program_level or ''))) %}
+          {% set _intl_app_link = p.get('international_application_form_link') or '' %}
+          <a href="{{ _dom_app_link if (_is_cycle_active and not _is_full) else 'javascript:void(0)' }}"
+             data-domestic-url="{{ _dom_app_link }}"
+             data-international-url="{{ _intl_app_link }}"
              class="prog-apply-btn"
             style="display:inline-flex;align-items:center;justify-content:center;gap:2px;
                         padding:8px 18px;border-radius:8px;font-size:12px;font-weight:700;
@@ -1983,22 +1985,14 @@ document.addEventListener('DOMContentLoaded', function() {
           if (match) {
             let applyBtns = card.querySelectorAll('.prog-apply-btn');
             applyBtns.forEach(btn => {
-              let baseUrl = btn.getAttribute('data-base-url');
-              if (baseUrl && btn.getAttribute('href') !== 'javascript:void(0)') {
-                 let isLogin = btn.getAttribute('data-is-login');
-                 if (currentFilter === 'International') {
-                    if (isLogin) {
-                       btn.href = baseUrl + '%26foriegn_national%3DYes';
-                    } else {
-                       btn.href = baseUrl + '&foriegn_national=Yes';
-                    }
-                 } else if (currentFilter === 'Domestic') {
-                    if (isLogin) {
-                       btn.href = baseUrl + '%26foriegn_national%3DNo%26nationality%3DIndian';
-                    } else {
-                       btn.href = baseUrl + '&foriegn_national=No&nationality=Indian';
-                    }
-                 }
+              if (btn.getAttribute('href') !== 'javascript:void(0)') {
+                let domesticUrl = btn.getAttribute('data-domestic-url') || '';
+                let internationalUrl = btn.getAttribute('data-international-url') || '';
+                if (currentFilter === 'International' && internationalUrl) {
+                  btn.href = internationalUrl;
+                } else if (domesticUrl) {
+                  btn.href = domesticUrl;
+                }
               }
             });
 

@@ -853,7 +853,7 @@ def get_active_programs():
                     p["campus_label"] = p.get("campus")
             # Fetch slug, abbreviation, and other details from Program
             prog_info = frappe.db.get_value("Programme", p.program,
-                ["program_slug", "program_code", "program_duration", "program_image", "program_description", "brochure_file", "level_of_study", "application_form_link"],
+                ["program_slug", "program_code", "program_duration", "program_image", "program_description", "brochure_file", "level_of_study", "application_form_link", "international_application_form_link"],
                 as_dict=True
             )
             if prog_info:
@@ -866,6 +866,7 @@ def get_active_programs():
                 p["brochure_file"] = prog_info.brochure_file
                 p["program_level"] = prog_info.level_of_study or p.get("program_level")
                 p["application_form_link"] = prog_info.application_form_link
+                p["international_application_form_link"] = prog_info.international_application_form_link
             else:
                 p["program_slug"] = _re.sub(r'[^a-z0-9]+', '-', (p.program or "").lower()).strip('-')
                 p["program_abbreviation"] = ""
@@ -873,6 +874,7 @@ def get_active_programs():
                 p["program_description"] = ""
                 p["brochure_file"] = ""
                 p["application_form_link"] = ""
+                p["international_application_form_link"] = ""
 
             p["description"] = p.get("desciption") or ""
             
