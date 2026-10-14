@@ -98,6 +98,13 @@ class ExamAssessmentSchedule(Document):
 					_("Row {0}: Second Submission Deadline must be after the First Submission Deadline.").format(row.idx)
 				)
 
+			marks_by = get_datetime(row.marks_entry_deadline) if row.marks_entry_deadline else None
+			closes = second or first or start
+			if marks_by and closes and marks_by <= closes:
+				frappe.throw(
+					_("Row {0}: Marks Entry Deadline must be after the last submission deadline.").format(row.idx)
+				)
+
 
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs

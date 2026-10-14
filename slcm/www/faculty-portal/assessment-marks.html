@@ -1,0 +1,545 @@
+{% extends "slcm/www/faculty-portal/_base.html" %}
+
+{% block title %}Assessment Marks{% endblock %}
+
+{% block extra_head %}
+<style>
+/* ── Assessment Marks page: 1st / 2nd submission marks per assessment ── */
+.am-select-card { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; padding: 16px 20px; }
+.am-field { display: flex; flex-direction: column; gap: 5px; min-width: 220px; flex: 1; max-width: 520px; }
+.am-field label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--fp-text-4); }
+.am-field select { padding: 9px 12px; border: 1.5px solid var(--fp-border); border-radius: var(--fp-radius-sm);
+  font-size: 13.5px; font-family: inherit; color: var(--fp-text-1); background: var(--fp-card); }
+.am-field select:focus { border-color: var(--fp-primary); outline: none; }
+
+/* Assessment picker */
+.am-section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--fp-text-3); margin: 0 0 10px; }
+.am-asmts { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.am-asmt { text-align: left; font-family: inherit; cursor: pointer; background: var(--fp-card);
+  border: 1.5px solid var(--fp-border); border-radius: var(--fp-radius-sm); padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 10px; transition: border-color .12s, box-shadow .12s; }
+.am-asmt:hover { border-color: var(--fp-primary); }
+.am-asmt:focus-visible { outline: 2px solid var(--fp-primary); outline-offset: 2px; }
+.am-asmt.am-active { border-color: var(--fp-primary); box-shadow: 0 0 0 3px rgba(146,12,36,.12); }
+.am-asmt-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.am-asmt-name { font-size: 14px; font-weight: 700; color: var(--fp-text-1); line-height: 1.3; }
+.am-asmt-dates { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
+.am-dl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--fp-text-4); }
+.am-dv { font-size: 12.5px; color: var(--fp-text-1); margin-top: 1px; }
+.am-dv.am-none { color: var(--fp-text-4); }
+
+/* Window pill */
+.am-pill { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700;
+  padding: 3px 9px; border-radius: 12px; white-space: nowrap; flex-shrink: 0; }
+.am-pill .fp-ms { font-size: 14px; }
+.am-pill-open        { background: #e3f6e8; color: #1e7b3a; }
+.am-pill-not_open    { background: #fff4e0; color: #9a5b00; }
+.am-pill-closed      { background: var(--fp-bg); color: var(--fp-text-3); }
+.am-pill-unscheduled { background: var(--fp-bg); color: var(--fp-text-4); }
+
+/* Marks sheet */
+.am-sheet-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 16px 18px; border-bottom: 1px solid var(--fp-border-light); }
+.am-sheet-title { font-size: 15px; font-weight: 700; color: var(--fp-text-1); }
+.am-sheet-sub { font-size: 12.5px; color: var(--fp-text-3); margin-top: 2px; }
+.am-banner { display: flex; align-items: center; gap: 8px; margin: 14px 18px 0; padding: 10px 14px; border-radius: var(--fp-radius-sm);
+  background: #fff4e0; color: #8a5100; font-size: 13px; font-weight: 600; }
+.am-banner .fp-ms { font-size: 18px; }
+
+.am-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 12px 18px;
+  border-bottom: 1px solid var(--fp-border-light); background: var(--fp-bg); }
+.am-toolbar .am-search { flex: 1; min-width: 200px; max-width: 320px; }
+.am-save-btn:disabled, .am-discard-btn:disabled { opacity: .5; cursor: not-allowed; }
+.am-count { display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 4px; border-radius: 9px;
+  background: rgba(255,255,255,.25); font-size: 11px; line-height: 18px; text-align: center; }
+.am-save-status { font-size: 12.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; margin-left: auto; }
+.am-save-status .fp-ms { font-size: 16px; }
+.am-save-status.ok   { color: var(--fp-success); }
+.am-save-status.err  { color: var(--fp-primary); }
+.am-save-status.busy { color: #b25e09; }
+.am-save-status.busy .fp-ms { animation: fp-spin .8s linear infinite; }
+
+.am-wrap { overflow: auto; max-height: calc(100vh - 240px); }
+.am-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; }
+.am-table th { position: sticky; top: 0; z-index: 2; background: var(--fp-bg); color: var(--fp-text-3);
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+  padding: 9px 12px; border-bottom: 2px solid var(--fp-border); text-align: left; white-space: nowrap; }
+.am-table th small { display: block; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--fp-text-4); }
+.am-table td { padding: 8px 12px; border-bottom: 1px solid var(--fp-border-light); vertical-align: middle; }
+.am-table tr.am-ro td { background: var(--fp-bg); }
+.am-table .am-num { width: 40px; color: var(--fp-text-4); font-size: 12px; }
+.am-stu-name { font-weight: 600; color: var(--fp-text-1); }
+.am-stu-reg { font-size: 11.5px; color: var(--fp-text-4); font-family: var(--fp-mono); }
+.am-in { width: 90px; height: 32px; border: 1.5px solid var(--fp-border); border-radius: 6px; text-align: center;
+  font-size: 13px; font-weight: 600; font-family: inherit; color: var(--fp-text-1); background: var(--fp-card); }
+.am-remark { width: 100%; min-width: 160px; height: 32px; border: 1.5px solid var(--fp-border); border-radius: 6px;
+  padding: 0 8px; font-size: 12.5px; font-family: inherit; color: var(--fp-text-1); background: var(--fp-card); }
+.am-in:focus, .am-remark:focus { border-color: var(--fp-primary); outline: none; }
+.am-in.am-dirty, .am-remark.am-dirty { border-color: #d4a017; background: #fff8e6; }
+.am-in.am-error, .am-remark.am-error { border-color: var(--fp-primary); background: #fde8eb; }
+.am-in:disabled, .am-remark:disabled { background: transparent; border-color: transparent; color: var(--fp-text-2); }
+.am-row-err { font-size: 11.5px; color: var(--fp-primary); margin-top: 3px; }
+.am-entered { font-size: 11.5px; color: var(--fp-text-4); line-height: 1.35; }
+.am-status { display: inline-block; font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 10px; margin-left: 6px; }
+.am-status-Submitted { background: #e0f2fe; color: #0369a1; }
+.am-status-Locked    { background: #fde8eb; color: var(--fp-primary); }
+
+.am-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 700; display: none;
+  max-width: 90vw; padding: 10px 18px; border-radius: 10px; color: #fff; font-size: 13px; font-weight: 600;
+  box-shadow: 0 8px 24px rgba(0,0,0,.2); white-space: pre-line; }
+
+/* Phones / narrow tablets: one card per student */
+@media (max-width: 768px) {
+  .am-field { min-width: 100%; }
+  .am-asmts { grid-template-columns: 1fr; }
+  .am-toolbar .am-search { max-width: none; min-width: 100%; }
+  .am-save-status { margin-left: 0; width: 100%; }
+  .am-wrap { max-height: none; }
+  .am-table thead { display: none; }
+  .am-table, .am-table tbody { display: block; }
+  .am-table tr { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; padding: 14px 16px;
+    border-bottom: 1px solid var(--fp-border-light); }
+  .am-table tr.am-ro { background: var(--fp-bg); }
+  .am-table td { display: block; padding: 0; border: none; background: transparent !important; }
+  .am-table td.am-num { display: none; }
+  .am-table td.am-cell-stu, .am-table td.am-cell-remark, .am-table td.am-cell-entered { grid-column: 1 / -1; }
+  .am-table td[data-label]::before { content: attr(data-label); display: block; font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .05em; color: var(--fp-text-4); margin-bottom: 4px; }
+  .am-in { width: 100%; }
+  .am-table td.am-cell-entered:empty { display: none; }
+}
+
+/* ── Dark mode ── */
+body.fp-dark .am-field label, body.fp-dark .am-dl, body.fp-dark .am-stu-reg, body.fp-dark .am-entered,
+body.fp-dark .am-table th small, body.fp-dark .am-dv.am-none { color: var(--fp-text-3); }
+body.fp-dark .am-field select { background: var(--fp-card-2); border-color: var(--fp-border-mid); }
+body.fp-dark .am-asmt { background: var(--fp-card-2); border-color: var(--fp-border-mid); }
+body.fp-dark .am-asmt.am-active, body.fp-dark .am-asmt:hover { border-color: var(--fp-primary); }
+body.fp-dark .am-pill-open { background: rgba(74,222,128,0.12); color: var(--fp-success); }
+body.fp-dark .am-pill-not_open { background: rgba(242,179,106,0.14); color: var(--fp-warning); }
+body.fp-dark .am-pill-closed, body.fp-dark .am-pill-unscheduled { background: rgba(255,255,255,0.06); color: var(--fp-text-3); }
+body.fp-dark .am-banner { background: rgba(242,179,106,0.14); color: var(--fp-warning); }
+body.fp-dark .am-table th { color: var(--fp-text-2); border-bottom-color: var(--fp-border-mid); }
+body.fp-dark .am-in, body.fp-dark .am-remark { background: var(--fp-card-2); border-color: var(--fp-border-mid); }
+body.fp-dark .am-in.am-dirty, body.fp-dark .am-remark.am-dirty { background: rgba(242,179,106,0.14); border-color: var(--fp-warning); }
+body.fp-dark .am-in.am-error, body.fp-dark .am-remark.am-error { background: rgba(248,113,113,0.14); border-color: var(--fp-danger); }
+body.fp-dark .am-in:disabled, body.fp-dark .am-remark:disabled { background: transparent; border-color: transparent; }
+body.fp-dark .am-row-err, body.fp-dark .am-save-status.err { color: #f08da0; }
+body.fp-dark .am-save-status.busy { color: var(--fp-warning); }
+body.fp-dark .am-status-Submitted { background: rgba(124,196,242,0.14); color: var(--fp-info); }
+body.fp-dark .am-status-Locked { background: rgba(214,74,102,0.14); color: #f08da0; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="fp-page-header fade-in" style="background: var(--fp-card, #fff); border: 1px solid var(--fp-border, #e5e7eb); border-radius: 14px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 20px;">
+  <div>
+    <h1 class="fp-page-title" style="margin: 0; font-size: 18px !important; font-weight: 700 !important;">Assessment Marks</h1>
+    <div style="font-size:12.5px;color:var(--fp-text-4);margin-top:2px;">Enter 1st and 2nd submission marks once an assessment closes, before its marks entry deadline</div>
+  </div>
+</div>
+
+{% if portal_error %}
+<div class="fp-alert fp-alert-warning fade-in"><span class="fp-ms">warning</span><div>Some data could not be loaded. Please refresh.</div></div>
+{% endif %}
+
+{% if not course_offerings %}
+<div class="fp-card"><div class="fp-empty">
+  <span class="fp-ms">assignment</span>
+  <p class="fp-empty-title">No courses assigned</p>
+  <p class="fp-empty-sub">Courses you are assigned to as faculty will appear here.</p>
+</div></div>
+{% else %}
+
+<div class="fp-card" style="margin-bottom:18px;">
+  <div class="am-select-card">
+    <div class="am-field">
+      <label for="am-co">Course</label>
+      <select id="am-co" onchange="amChangeCourse()">
+        <option value="">— Select a course —</option>
+        {% for co in course_offerings %}
+        <option value="{{ co.name }}" {% if selected_co == co.name %}selected{% endif %}>
+          {{ co.course_name }}{% if co.programme_name %} — {{ co.programme_name }}{% endif %}{% if co.term_name %} · {{ co.term_name }}{% endif %}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+</div>
+
+<div id="am-empty" class="fp-card">
+  <div class="fp-empty">
+    <span class="fp-ms">assignment</span>
+    <p class="fp-empty-title">Select a course</p>
+    <p class="fp-empty-sub">Choose one of your course offerings above to see its assessments.</p>
+  </div>
+</div>
+
+<div id="am-loading" style="display:none;padding:48px;text-align:center;color:var(--fp-text-4);">
+  <span class="fp-ms" style="font-size:32px;animation:fp-spin .8s linear infinite;display:block;margin-bottom:8px;">sync</span>Loading…
+</div>
+
+<div id="am-main" style="display:none;">
+  <div class="am-section-title">Assessments</div>
+  <div id="am-asmts" class="am-asmts"></div>
+
+  <div id="am-sheet" class="fp-card" style="display:none;margin-bottom:24px;">
+    <div class="am-sheet-head">
+      <div>
+        <div class="am-sheet-title" id="am-sheet-title"></div>
+        <div class="am-sheet-sub" id="am-sheet-sub"></div>
+      </div>
+      <span id="am-sheet-pill"></span>
+    </div>
+    <div id="am-banner"></div>
+    <div class="am-toolbar" style="margin-top:14px;">
+      <div class="fp-search-wrap am-search">
+        <span class="fp-ms">search</span>
+        <input type="text" class="fp-input fp-search-input" id="am-search" placeholder="Search student…" oninput="amFilter()" autocomplete="off">
+      </div>
+      <button type="button" class="fp-btn fp-btn-primary fp-btn-sm am-save-btn" id="am-save" onclick="amSave()" disabled>
+        <span class="fp-ms">save</span>Save Changes<span class="am-count" id="am-count">0</span>
+      </button>
+      <button type="button" class="fp-btn fp-btn-secondary fp-btn-sm am-discard-btn" id="am-discard" onclick="amDiscard()" disabled>
+        <span class="fp-ms">undo</span>Discard
+      </button>
+      <span class="am-save-status" id="am-save-status"></span>
+    </div>
+    <div class="am-wrap"><table class="am-table" id="am-table"></table></div>
+  </div>
+</div>
+{% endif %}
+
+<div class="am-toast" id="am-toast"></div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+var AM = {
+  co: {{ selected_co | tojson }},
+  item: '',
+  assessments: [],
+  info: null,
+  students: [],
+  dirty: {},      /* student -> {first, second, remarks} edited but not saved */
+  errors: {},     /* student -> message from the last save */
+};
+var AM_API = 'slcm.api.faculty_assessment_marks.';
+var AM_PILL = {
+  open:        ['lock_open', 'Open'],
+  not_open:    ['schedule', 'Not open yet'],
+  closed:      ['lock', 'Closed'],
+  unscheduled: ['event_busy', 'Not scheduled'],
+};
+
+function amEsc(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function amVal(v) { return (v === null || v === undefined) ? '' : String(Math.round(parseFloat(v) * 100) / 100); }
+
+/* Server call — same CSRF / error handling as the Grades page */
+function amCall(method, args, ok, fail) {
+  var token = window._fp_csrf
+    || decodeURIComponent((document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/) || [])[1] || '');
+  var params = new URLSearchParams();
+  Object.keys(args || {}).forEach(function (k) {
+    var v = args[k];
+    if (v === null || v === undefined) return;
+    params.append(k, typeof v === 'object' ? JSON.stringify(v) : v);
+  });
+  var failWith = function (msg) { if (fail) fail(msg); else amToast(msg, true); };
+  fetch('/api/method/' + AM_API + method, {
+    method: 'POST', credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Frappe-CSRF-Token': token, 'Accept': 'application/json' },
+    body: params.toString(),
+  })
+  .then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
+  .then(function (r) {
+    var data = r.data || {};
+    if (!r.ok || data.exc || data.exc_type) {
+      var msg = 'Something went wrong. Please try again.';
+      try {
+        var msgs = JSON.parse(data._server_messages || '[]');
+        var parsed = msgs.map(function (m) { try { return JSON.parse(m).message || m; } catch (e) { return m; } });
+        if (parsed.length) msg = parsed.join('\n').replace(/<[^>]+>/g, '');
+      } catch (e) {}
+      failWith(msg);
+      return;
+    }
+    if (ok) ok(data.message);
+  })
+  .catch(function () { failWith('Network error. Please check your connection.'); });
+}
+
+function amToast(msg, isError) {
+  var el = document.getElementById('am-toast');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.background = isError ? 'var(--fp-primary)' : 'var(--fp-success)';
+  el.style.display = 'block';
+  clearTimeout(el._t);
+  el._t = setTimeout(function () { el.style.display = 'none'; }, isError ? 5000 : 3000);
+}
+
+function amShow(id, on) { var el = document.getElementById(id); if (el) el.style.display = on ? '' : 'none'; }
+
+function amHasDirty() { return Object.keys(AM.dirty).length > 0; }
+function amConfirmLeave() {
+  return !amHasDirty() || confirm('You have unsaved marks. Discard them?');
+}
+window.addEventListener('beforeunload', function (e) {
+  if (amHasDirty()) { e.preventDefault(); e.returnValue = ''; }
+});
+
+function amSetUrl() {
+  var p = new URLSearchParams(window.location.search);
+  if (AM.co) p.set('course_offering', AM.co); else p.delete('course_offering');
+  if (AM.item) p.set('assessment', AM.item); else p.delete('assessment');
+  var qs = p.toString();
+  history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : ''));
+}
+
+/* ── Course → assessments ── */
+function amChangeCourse() {
+  var sel = document.getElementById('am-co');
+  if (!amConfirmLeave()) { sel.value = AM.co; return; }
+  AM.co = sel.value;
+  AM.item = '';
+  AM.dirty = {}; AM.errors = {};
+  amSetUrl();
+  amLoadAssessments();
+}
+
+function amLoadAssessments(selectItem) {
+  amShow('am-main', false);
+  amShow('am-sheet', false);
+  if (!AM.co) { amShow('am-empty', true); return; }
+  amShow('am-empty', false);
+  amShow('am-loading', true);
+  amCall('get_assessments', { course_offering: AM.co }, function (r) {
+    amShow('am-loading', false);
+    AM.assessments = r.assessments || [];
+    amRenderAssessments();
+    amShow('am-main', true);
+    if (selectItem && AM.assessments.some(function (a) { return a.name === selectItem; })) amSelect(selectItem, true);
+  }, function (msg) {
+    amShow('am-loading', false);
+    amShow('am-empty', true);
+    amToast(msg, true);
+  });
+}
+
+function amPill(state) {
+  var p = AM_PILL[state] || AM_PILL.unscheduled;
+  return '<span class="am-pill am-pill-' + state + '"><span class="fp-ms">' + p[0] + '</span>' + p[1] + '</span>';
+}
+
+function amDate(label, value) {
+  return '<div><div class="am-dl">' + label + '</div><div class="am-dv' + (value ? '' : ' am-none') + '">'
+    + (value ? amEsc(value) : '—') + '</div></div>';
+}
+
+function amRenderAssessments() {
+  var box = document.getElementById('am-asmts');
+  if (!AM.assessments.length) {
+    box.innerHTML = '<div class="fp-card" style="grid-column:1/-1;"><div class="fp-empty">'
+      + '<span class="fp-ms">event_busy</span><p class="fp-empty-title">No assessments scheduled</p>'
+      + '<p class="fp-empty-sub">The examination office has not added assessments for this course to an Exam Assessment Schedule yet.</p></div></div>';
+    return;
+  }
+  box.innerHTML = AM.assessments.map(function (a) {
+    return '<button type="button" class="am-asmt' + (a.name === AM.item ? ' am-active' : '') + '" onclick="amSelect(\'' + amEsc(a.name) + '\')">'
+      + '<div class="am-asmt-top"><div class="am-asmt-name">' + amEsc(a.label) + '</div>' + amPill(a.window) + '</div>'
+      + '<div class="am-asmt-dates">'
+      + amDate('1st Deadline', a.first_deadline)
+      + amDate('2nd Deadline', a.second_deadline)
+      + amDate('Assessment Date', a.assessment_date)
+      + amDate('Marks Entry By', a.marks_deadline)
+      + '</div></button>';
+  }).join('');
+}
+
+/* ── Assessment → marks sheet ── */
+function amSelect(name, skipConfirm) {
+  if (name === AM.item) return;
+  if (!skipConfirm && !amConfirmLeave()) return;
+  AM.item = name;
+  AM.dirty = {}; AM.errors = {};
+  amSetUrl();
+  amRenderAssessments();
+  amShow('am-sheet', false);
+  amShow('am-loading', true);
+  amCall('get_marks_sheet', { course_offering: AM.co, schedule_item: name }, function (r) {
+    amShow('am-loading', false);
+    AM.info = r.info;
+    AM.students = r.students || [];
+    amRenderSheet();
+    amShow('am-sheet', true);
+    document.getElementById('am-sheet').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, function (msg) {
+    amShow('am-loading', false);
+    amToast(msg, true);
+  });
+}
+
+function amRenderSheet() {
+  var info = AM.info;
+  document.getElementById('am-sheet-title').textContent = info.label;
+  var sub = [];
+  if (info.max_marks) sub.push('Max marks ' + amVal(info.max_marks) + ' per submission');
+  if (info.marks_deadline) sub.push('Marks entry by ' + info.marks_deadline);
+  sub.push(AM.students.length + ' student' + (AM.students.length === 1 ? '' : 's'));
+  document.getElementById('am-sheet-sub').textContent = sub.join(' · ');
+  document.getElementById('am-sheet-pill').innerHTML = info.locked ? amPill('closed') : amPill(info.window);
+  document.getElementById('am-banner').innerHTML = info.window_message
+    ? '<div class="am-banner"><span class="fp-ms">info</span>' + amEsc(info.window_message) + '</div>' : '';
+
+  var maxAttr = info.max_marks ? ' max="' + info.max_marks + '"' : '';
+  var head = '<thead><tr><th class="am-num">#</th><th>Student</th>'
+    + '<th>1st Submission' + (info.max_marks ? '<small>out of ' + amVal(info.max_marks) + '</small>' : '') + '</th>'
+    + (info.has_second ? '<th>2nd Submission' + (info.max_marks ? '<small>out of ' + amVal(info.max_marks) + '</small>' : '') + '</th>' : '')
+    + '<th>Remarks</th><th>Last Entered</th></tr></thead>';
+
+  var body = AM.students.map(function (s, i) {
+    var d = AM.dirty[s.student] || {};
+    var ro = !s.row_editable;
+    var dis = ro ? ' disabled' : '';
+    var err = AM.errors[s.student];
+    var val = function (k) { return k in d ? d[k] : (k === 'remarks' ? s.remarks : amVal(s[k])); };
+    var cls = function (k) { return (k in d ? ' am-dirty' : '') + (err ? ' am-error' : ''); };
+    var status = (s.status === 'Submitted' || s.status === 'Locked')
+      ? '<span class="am-status am-status-' + s.status + '">' + s.status + '</span>' : '';
+    var input = function (k, label) {
+      return '<td data-label="' + label + '"><input type="number" inputmode="decimal" step="0.01" min="0"' + maxAttr
+        + ' class="am-in' + cls(k) + '" data-student="' + amEsc(s.student) + '" data-key="' + k + '"'
+        + ' value="' + amEsc(val(k)) + '" aria-label="' + label + ' for ' + amEsc(s.student_name) + '"'
+        + ' oninput="amEdit(this)"' + dis + '></td>';
+    };
+    return '<tr class="am-row' + (ro ? ' am-ro' : '') + '" data-search="' + amEsc((s.student_name + ' ' + s.reg_id).toLowerCase()) + '">'
+      + '<td class="am-num">' + (i + 1) + '</td>'
+      + '<td class="am-cell-stu"><div class="am-stu-name">' + amEsc(s.student_name) + status + '</div>'
+      + '<div class="am-stu-reg">' + amEsc(s.reg_id) + '</div>'
+      + (err ? '<div class="am-row-err">' + amEsc(err) + '</div>' : '') + '</td>'
+      + input('first', '1st Submission')
+      + (info.has_second ? input('second', '2nd Submission') : '')
+      + '<td class="am-cell-remark" data-label="Remarks"><input type="text" maxlength="250" class="am-remark' + cls('remarks') + '"'
+      + ' data-student="' + amEsc(s.student) + '" data-key="remarks" value="' + amEsc(val('remarks')) + '"'
+      + ' oninput="amEdit(this)"' + dis + '></td>'
+      + '<td class="am-cell-entered">' + (s.entered_on ? '<div class="am-entered">' + amEsc(s.entered_on) + '<br>' + amEsc(s.entered_by) + '</div>' : '') + '</td>'
+      + '</tr>';
+  }).join('');
+
+  if (!AM.students.length) {
+    body = '<tr><td colspan="6"><div class="fp-empty"><span class="fp-ms">group_off</span>'
+      + '<p class="fp-empty-title">No enrolled students</p></div></td></tr>';
+  }
+  document.getElementById('am-table').innerHTML = head + '<tbody>' + body + '</tbody>';
+  amFilter();
+  amUpdateSaveBar();
+}
+
+function amEdit(el) {
+  var sid = el.dataset.student, key = el.dataset.key;
+  var s = AM.students.find(function (x) { return x.student === sid; });
+  if (!s) return;
+  var original = key === 'remarks' ? (s.remarks || '') : amVal(s[key]);
+  var d = AM.dirty[sid] || {};
+  if (el.value === original) delete d[key]; else d[key] = el.value;
+  if (Object.keys(d).length) AM.dirty[sid] = d; else delete AM.dirty[sid];
+  el.classList.toggle('am-dirty', key in d);
+
+  /* Quick check here; the server validates again on save */
+  var bad = false;
+  if (key !== 'remarks' && el.value !== '') {
+    var n = parseFloat(el.value);
+    bad = isNaN(n) || n < 0 || (AM.info.max_marks && n > AM.info.max_marks);
+  }
+  el.classList.toggle('am-error', bad);
+  el.title = bad ? ('Enter a number from 0 to ' + (AM.info.max_marks || '…')) : '';
+  amUpdateSaveBar();
+}
+
+function amUpdateSaveBar() {
+  var n = Object.keys(AM.dirty).length;
+  var editable = AM.info && AM.info.editable;
+  document.getElementById('am-count').textContent = n;
+  document.getElementById('am-save').disabled = !n || !editable;
+  document.getElementById('am-discard').disabled = !n;
+  amShow('am-save', !!editable);
+  amShow('am-discard', !!editable);
+}
+
+function amStatus(cls, icon, text) {
+  var el = document.getElementById('am-save-status');
+  el.className = 'am-save-status ' + (cls || '');
+  el.innerHTML = text ? '<span class="fp-ms">' + icon + '</span>' + amEsc(text) : '';
+}
+
+function amDiscard() {
+  AM.dirty = {}; AM.errors = {};
+  amStatus('', '', '');
+  amRenderSheet();
+}
+
+function amSave() {
+  if (document.querySelector('#am-table .am-in.am-error')) {
+    amToast('Fix the highlighted marks before saving.', true);
+    return;
+  }
+  var rows = Object.keys(AM.dirty).map(function (sid) {
+    var s = AM.students.find(function (x) { return x.student === sid; });
+    var d = AM.dirty[sid];
+    return {
+      student: sid,
+      first: 'first' in d ? d.first : amVal(s.first),
+      second: 'second' in d ? d.second : amVal(s.second),
+      remarks: 'remarks' in d ? d.remarks : (s.remarks || ''),
+    };
+  });
+  if (!rows.length) return;
+  document.getElementById('am-save').disabled = true;
+  amStatus('busy', 'sync', 'Saving ' + rows.length + '…');
+  amCall('save_marks', { course_offering: AM.co, schedule_item: AM.item, rows: rows }, function (r) {
+    var errs = {};
+    (r.errors || []).forEach(function (e) { errs[e.student] = e.error; });
+    /* Keep only the failed rows as unsaved, then reload the saved values */
+    var keep = {};
+    Object.keys(errs).forEach(function (sid) { if (AM.dirty[sid]) keep[sid] = AM.dirty[sid]; });
+    var saved = (r.saved || []).length;
+    amCall('get_marks_sheet', { course_offering: AM.co, schedule_item: AM.item }, function (sheet) {
+      AM.info = sheet.info;
+      AM.students = sheet.students || [];
+      AM.dirty = keep;
+      AM.errors = errs;
+      amRenderSheet();
+      if (Object.keys(errs).length) {
+        amStatus('err', 'error', saved + ' saved, ' + Object.keys(errs).length + ' not saved — see the highlighted rows');
+      } else {
+        amStatus('ok', 'check_circle', saved + ' saved');
+        amToast('Marks saved.');
+      }
+    });
+  }, function (msg) {
+    amStatus('err', 'error', 'Not saved');
+    amUpdateSaveBar();
+    amToast(msg, true);
+  });
+}
+
+function amFilter() {
+  var q = (document.getElementById('am-search').value || '').toLowerCase().trim();
+  document.querySelectorAll('#am-table tr.am-row').forEach(function (tr) {
+    tr.style.display = !q || tr.dataset.search.indexOf(q) > -1 ? '' : 'none';
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  if (!document.getElementById('am-co')) return;
+  var initialItem = new URLSearchParams(window.location.search).get('assessment');
+  if (AM.co) amLoadAssessments(initialItem);
+});
+</script>
+{% endblock %}
