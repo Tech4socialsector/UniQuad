@@ -133,8 +133,12 @@ def get_chart_data(data: list[dict], program_fields: list[dict] | None = None) -
 			"stacked": True,
 			"spaceRatio": 0.3,
 		},
-		"height": 340,
+		"height": 360,
 		"colors": palette[: max(1, len(datasets))],
+		"axisOptions": {
+			"xAxisMode": "span",
+			"seriesLabelSpaceRatio": 5,
+		},
 	}
 
 

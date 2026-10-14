@@ -444,66 +444,141 @@
 
 		d.chart_group.widgets_list.forEach(w => {
 			if (w.chart_wrapper && w.chart_wrapper.length) {
-				align_chart_legend($(w.chart_wrapper));
+				align_chart_legend($(w.chart_wrapper), w);
 			}
 		});
 	}
 
-	function align_chart_legend($wrapper) {
+	function align_chart_legend($wrapper, widget) {
 		if (!$wrapper || !$wrapper.length) return;
 
 		const do_align = () => {
 			const $svg = $wrapper.find('svg');
 			if (!$svg.length) return;
-			const $legend = $svg.find('.chart-legend');
-			if (!$legend.length) return;
 
-			const $items = $legend.children('g');
-			if (!$items.length) return;
+			// 1. Check if this is "Allocated Students by City" or a bar chart with many X labels
+			let maxLabelDrop = 0;
+			const $xAxis = $svg.find('.x.axis');
+			const isDrilledDown = widget && widget._is_drilled_down;
+			const chartName = widget && ((widget.chart_doc && widget.chart_doc.name) || widget.chart_name || widget.name);
+			const shouldRotateLabels = $xAxis.length && !isDrilledDown && (chartName === 'Allocated Students by City' || $xAxis.children('g').length > 6);
 
-			let curX = 0;
-			let curY = 0;
-			const rowHeight = 26;
-			const svgWidth = $svg.width() || $wrapper.width() || 600;
-			const maxRowWidth = Math.max(280, svgWidth - 50);
+			if (shouldRotateLabels) {
+				const $groups = $xAxis.children('g');
+				let raw_labels = null;
+				if (widget && widget.dashboard_chart && widget.dashboard_chart.data && widget.dashboard_chart.data.labels) {
+					raw_labels = widget.dashboard_chart.data.labels;
+				} else if (widget && widget.report_result && widget.report_result.result) {
+					raw_labels = widget.report_result.result
+						.filter(r => r.city !== 'International Applicant')
+						.map(r => r.city);
+				}
 
-			$items.each(function() {
-				const $item = $(this);
-				let itemWidth = 140;
-				try {
-					const bbox = this.getBBox();
-					if (bbox && bbox.width > 0) {
-						itemWidth = Math.ceil(bbox.width) + 26;
+				$groups.each(function(i) {
+					const $g = $(this);
+					const $text = $g.find('text');
+					if (!$text.length) return;
+
+					if (raw_labels && raw_labels[i]) {
+						$text.text(raw_labels[i]);
 					}
-				} catch (e) {
-					const txt = $item.find('text').text();
-					itemWidth = Math.max(120, (txt ? txt.length * 8 : 100) + 26);
+
+					let origY = $text.data('orig-y');
+					if (origY === undefined) {
+						origY = parseFloat($text.attr('y')) || 0;
+						$text.data('orig-y', origY);
+					}
+
+					$text.attr({
+						'transform': `rotate(-45, 0, ${origY})`,
+						'text-anchor': 'end',
+						'dx': '-6px',
+						'dy': '4px'
+					});
+
+					const txt = $text.text() || '';
+					const textDrop = Math.ceil(txt.length * 4.8);
+					if (textDrop > maxLabelDrop) {
+						maxLabelDrop = textDrop;
+					}
+				});
+			}
+
+			const labelExtraHeight = maxLabelDrop > 0 ? Math.max(45, maxLabelDrop + 10) : 0;
+
+			// 2. Adjust Legend
+			let legendExtraHeight = 0;
+			const $legend = $svg.find('.chart-legend');
+			if ($legend.length) {
+				const $items = $legend.children('g');
+				if ($items.length) {
+					let origLegendTransform = $legend.data('orig-transform');
+					if (!origLegendTransform) {
+						origLegendTransform = $legend.attr('transform') || '';
+						$legend.data('orig-transform', origLegendTransform);
+					}
+
+					if (labelExtraHeight > 0 && origLegendTransform) {
+						const match = origLegendTransform.match(/translate\(([^,]+),\s*([^)]+)\)/);
+						if (match) {
+							const lx = parseFloat(match[1]) || 0;
+							const ly = parseFloat(match[2]) || 0;
+							$legend.attr('transform', `translate(${lx}, ${ly + labelExtraHeight})`);
+						}
+					}
+
+					let curX = 0;
+					let curY = 0;
+					const rowHeight = 26;
+					const svgWidth = $svg.width() || $wrapper.width() || 600;
+					const maxRowWidth = Math.max(280, svgWidth - 50);
+
+					$items.each(function() {
+						const $item = $(this);
+						let itemWidth = 140;
+						try {
+							const bbox = this.getBBox();
+							if (bbox && bbox.width > 0) {
+								itemWidth = Math.ceil(bbox.width) + 26;
+							}
+						} catch (e) {
+							const txt = $item.find('text').text();
+							itemWidth = Math.max(120, (txt ? txt.length * 8 : 100) + 26);
+						}
+
+						if (curX + itemWidth > maxRowWidth && curX > 0) {
+							curX = 0;
+							curY += rowHeight;
+						}
+
+						$item.attr('transform', `translate(${curX}, ${curY})`);
+						curX += itemWidth;
+					});
+
+					legendExtraHeight = curY;
 				}
+			}
 
-				if (curX + itemWidth > maxRowWidth && curX > 0) {
-					curX = 0;
-					curY += rowHeight;
-				}
-
-				$item.attr('transform', `translate(${curX}, ${curY})`);
-				curX += itemWidth;
-			});
-
-			if (curY > 0) {
+			if (labelExtraHeight > 0 || legendExtraHeight > 0) {
 				const baseHeight = parseFloat($svg.data('base-height') || $svg.attr('height') || 300);
 				if (!$svg.data('base-height')) {
 					$svg.data('base-height', baseHeight);
 				}
-				const targetHeight = baseHeight + curY;
+				const targetHeight = baseHeight + labelExtraHeight + legendExtraHeight;
 				$svg.attr('height', targetHeight);
 				$svg.css('height', targetHeight + 'px');
-				$svg.css('overflow', 'visible');
 			}
+
+			$svg.css('overflow', 'visible');
+			$wrapper.css('overflow', 'visible');
+			$wrapper.find('.chart-container').css('overflow', 'visible');
 		};
 
-		setTimeout(do_align, 60);
-		setTimeout(do_align, 200);
-		setTimeout(do_align, 500);
+		// Run immediately to eliminate glitch
+		do_align();
+		requestAnimationFrame(do_align);
+		setTimeout(do_align, 100);
+		setTimeout(do_align, 400);
 	}
 
 	$(window).off('resize.entrance_test_legend').on('resize.entrance_test_legend', () => {

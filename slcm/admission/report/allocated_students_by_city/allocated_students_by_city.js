@@ -16,6 +16,12 @@ frappe.query_reports["Allocated Students by City"] = {
 			options: "Admission Cycle"
 		},
 		{
+			fieldname: "campus",
+			label: __("Campus"),
+			fieldtype: "Link",
+			options: "Campus"
+		},
+		{
 			fieldname: "program_level",
 			label: __("Programme Level"),
 			fieldtype: "Select",
@@ -43,9 +49,64 @@ frappe.query_reports["Allocated Students by City"] = {
 			fieldname: "allocation_date",
 			label: __("Entrance Test Date"),
 			fieldtype: "Date"
+		},
+		{
+			fieldname: "is_international_applicant",
+			label: __("Show International Applicant"),
+			fieldtype: "Check",
+			on_change: function() {
+				const report = frappe.query_report;
+				if (!report) return;
+				const is_checked = !!report.get_filter_value("is_international_applicant");
+				const provider_field = report.get_filter("entrance_test_provider");
+				if (provider_field) {
+					if (is_checked) {
+						report.set_filter_value("entrance_test_provider", "");
+						provider_field.df.read_only = 1;
+					} else {
+						if (!frappe.user_roles.includes("Entrance Test Provider") ||
+							frappe.user_roles.includes("System Manager") ||
+							frappe.user_roles.includes("Entrance Test Admin")) {
+							provider_field.df.read_only = 0;
+						}
+					}
+					provider_field.refresh();
+				}
+				report.refresh();
+			}
 		}
 	],
 	onload: function(report) {
+		// Hook chart rendering to eliminate layout glitch / flash
+		if (!report._chart_layout_hooked) {
+			report._chart_layout_hooked = true;
+
+			const orig_get_chart_options = report.get_chart_options;
+			report.get_chart_options = function(data) {
+				let options = orig_get_chart_options.apply(this, arguments);
+				if (options) {
+					options.axisOptions = options.axisOptions || {};
+					options.axisOptions.seriesLabelSpaceRatio = 5;
+					options.axisOptions.xAxisMode = "span";
+					options.height = 360;
+				}
+				return options;
+			};
+
+			const orig_render_chart = report.render_chart;
+			report.render_chart = function(options) {
+				if (options) {
+					options.axisOptions = options.axisOptions || {};
+					options.axisOptions.seriesLabelSpaceRatio = 5;
+					options.axisOptions.xAxisMode = "span";
+					options.height = 360;
+				}
+				orig_render_chart.apply(this, arguments);
+				// Synchronously format labels and layout BEFORE first paint
+				fix_chart_layout_and_labels(report.$chart, report);
+			};
+		}
+
 		if (frappe.user_roles.includes("Entrance Test Provider") &&
 			!frappe.user_roles.includes("System Manager") &&
 			!frappe.user_roles.includes("Entrance Test Admin")) {
@@ -146,10 +207,11 @@ frappe.query_reports["Allocated Students by City"] = {
 				stacked: true,
 				spaceRatio: 0.3
 			},
-			height: 340,
+			height: 360,
 			colors: palette.slice(0, Math.max(1, datasets.length)),
 			axisOptions: {
-				xAxisMode: "span"
+				xAxisMode: "span",
+				seriesLabelSpaceRatio: 5
 			},
 			tooltipOptions: {
 				formatTooltipY: d => d.toLocaleString("en-IN")
@@ -159,66 +221,143 @@ frappe.query_reports["Allocated Students by City"] = {
 
 	after_refresh: function(report) {
 		setup_report_drilldown(report);
-		fix_chart_legend_alignment(report.$chart);
+		fix_chart_layout_and_labels(report.$chart, report);
 	}
 };
 
-function fix_chart_legend_alignment($wrapper) {
+function fix_chart_layout_and_labels($wrapper, report) {
 	if (!$wrapper || !$wrapper.length) return;
 
-	const do_align = () => {
+	const do_format = () => {
 		const $svg = $wrapper.find("svg");
 		if (!$svg.length) return;
-		const $legend = $svg.find(".chart-legend");
-		if (!$legend.length) return;
 
-		const $items = $legend.children("g");
-		if (!$items.length) return;
+		// 1. Format X-Axis Labels (rotate -45° and ensure full names)
+		let maxLabelDrop = 0;
+		const $xAxis = $svg.find(".x.axis");
+		if ($xAxis.length && !(report && report._is_drilled_down)) {
+			const $groups = $xAxis.children("g");
+			let raw_labels = null;
+			if (report && report.chart && report.chart.data && report.chart.data.labels) {
+				raw_labels = report.chart.data.labels;
+			} else if (report && report.data) {
+				raw_labels = report.data.filter(r => r.city !== "International Applicant").map(r => r.city);
+			}
 
-		let curX = 0;
-		let curY = 0;
-		const rowHeight = 26;
-		const svgWidth = $svg.width() || $wrapper.width() || 600;
-		const maxRowWidth = Math.max(280, svgWidth - 50);
+			$groups.each(function(i) {
+				const $g = $(this);
+				const $text = $g.find("text");
+				if (!$text.length) return;
 
-		$items.each(function() {
-			const $item = $(this);
-			let itemWidth = 140;
-			try {
-				const bbox = this.getBBox();
-				if (bbox && bbox.width > 0) {
-					itemWidth = Math.ceil(bbox.width) + 26;
+				if (raw_labels && raw_labels[i]) {
+					$text.text(raw_labels[i]);
 				}
-			} catch (e) {
-				const txt = $item.find("text").text();
-				itemWidth = Math.max(120, (txt ? txt.length * 8 : 100) + 26);
+
+				let origY = $text.data("orig-y");
+				if (origY === undefined) {
+					origY = parseFloat($text.attr("y")) || 0;
+					$text.data("orig-y", origY);
+				}
+
+				$text.attr({
+					"transform": `rotate(-45, 0, ${origY})`,
+					"text-anchor": "end",
+					"dx": "-6px",
+					"dy": "4px"
+				});
+
+				const txt = $text.text() || "";
+				const textDrop = Math.ceil(txt.length * 4.8);
+				if (textDrop > maxLabelDrop) {
+					maxLabelDrop = textDrop;
+				}
+			});
+		}
+
+		const labelExtraHeight = maxLabelDrop > 0 ? Math.max(45, maxLabelDrop + 10) : 0;
+
+		// 2. Adjust Legend position and alignment
+		let legendExtraHeight = 0;
+		const $legend = $svg.find(".chart-legend");
+		if ($legend.length) {
+			const $items = $legend.children("g");
+			if ($items.length) {
+				let origLegendTransform = $legend.data("orig-transform");
+				if (!origLegendTransform) {
+					origLegendTransform = $legend.attr("transform") || "";
+					$legend.data("orig-transform", origLegendTransform);
+				}
+
+				if (labelExtraHeight > 0 && origLegendTransform) {
+					const match = origLegendTransform.match(/translate\(([^,]+),\s*([^)]+)\)/);
+					if (match) {
+						const lx = parseFloat(match[1]) || 0;
+						const ly = parseFloat(match[2]) || 0;
+						$legend.attr("transform", `translate(${lx}, ${ly + labelExtraHeight})`);
+					}
+				}
+
+				let curX = 0;
+				let curY = 0;
+				const rowHeight = 26;
+				const svgWidth = $svg.width() || $wrapper.width() || 600;
+				const maxRowWidth = Math.max(280, svgWidth - 50);
+
+				$items.each(function() {
+					const $item = $(this);
+					let itemWidth = 140;
+					try {
+						const bbox = this.getBBox();
+						if (bbox && bbox.width > 0) {
+							itemWidth = Math.ceil(bbox.width) + 26;
+						}
+					} catch (e) {
+						const txt = $item.find("text").text();
+						itemWidth = Math.max(120, (txt ? txt.length * 8 : 100) + 26);
+					}
+
+					if (curX + itemWidth > maxRowWidth && curX > 0) {
+						curX = 0;
+						curY += rowHeight;
+					}
+
+					$item.attr("transform", `translate(${curX}, ${curY})`);
+					curX += itemWidth;
+				});
+
+				legendExtraHeight = curY;
 			}
+		}
 
-			if (curX + itemWidth > maxRowWidth && curX > 0) {
-				curX = 0;
-				curY += rowHeight;
-			}
-
-			$item.attr("transform", `translate(${curX}, ${curY})`);
-			curX += itemWidth;
-		});
-
-		if (curY > 0) {
-			const baseHeight = parseFloat($svg.data("base-height") || $svg.attr("height") || 340);
+		// 3. Update total SVG height and container styles
+		if (labelExtraHeight > 0 || legendExtraHeight > 0) {
+			const baseHeight = parseFloat($svg.data("base-height") || $svg.attr("height") || 360);
 			if (!$svg.data("base-height")) {
 				$svg.data("base-height", baseHeight);
 			}
-			const targetHeight = baseHeight + curY;
+			const targetHeight = baseHeight + labelExtraHeight + legendExtraHeight;
 			$svg.attr("height", targetHeight);
 			$svg.css("height", targetHeight + "px");
-			$svg.css("overflow", "visible");
 		}
+
+		$svg.css("overflow", "visible");
+		$wrapper.css("overflow", "visible");
+		$wrapper.find(".chart-container").css("overflow", "visible");
 	};
 
-	setTimeout(do_align, 60);
-	setTimeout(do_align, 200);
-	setTimeout(do_align, 500);
+	// Execute immediately in current turn so there is zero glitch
+	do_format();
+	requestAnimationFrame(do_format);
+	setTimeout(do_format, 100);
+	setTimeout(do_format, 400);
 }
+
+$(window).off("resize.allocated_city_chart").on("resize.allocated_city_chart", () => {
+	const report = frappe.query_report;
+	if (report && report.$chart && report.$chart.length) {
+		fix_chart_layout_and_labels(report.$chart, report);
+	}
+});
 
 function setup_report_drilldown(report) {
 	if (!report || !report.$chart || !report.$chart.length) return;
@@ -317,6 +456,7 @@ function drilldown_into_city(report, city) {
 		if (original_options) {
 			report.render_chart(original_options);
 			setup_report_drilldown(report);
+			fix_chart_layout_and_labels(report.$chart, report);
 		}
 	});
 
