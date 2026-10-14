@@ -1,16 +1,8 @@
-{% extends "slcm/www/faculty-portal/_base.html" %}
-
-{% block title %}Assessment Marks{% endblock %}
-
-{% block extra_head %}
+{#- Assessment Marks view of the Grades page (marks.html): 1st / 2nd submission
+    marks per assessment of the Exam Assessment Schedule. Shares the page course
+    selector (FG.co), unsaved-changes guard, toast and Ctrl+S. -#}
 <style>
-/* ── Assessment Marks page: 1st / 2nd submission marks per assessment ── */
-.am-select-card { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; padding: 16px 20px; }
-.am-field { display: flex; flex-direction: column; gap: 5px; min-width: 220px; flex: 1; max-width: 520px; }
-.am-field label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--fp-text-4); }
-.am-field select { padding: 9px 12px; border: 1.5px solid var(--fp-border); border-radius: var(--fp-radius-sm);
-  font-size: 13.5px; font-family: inherit; color: var(--fp-text-1); background: var(--fp-card); }
-.am-field select:focus { border-color: var(--fp-primary); outline: none; }
+/* ── Assessment Marks view: 1st / 2nd submission marks per assessment ── */
 
 /* Assessment picker */
 .am-section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
@@ -85,13 +77,13 @@
 .am-status-Submitted { background: #e0f2fe; color: #0369a1; }
 .am-status-Locked    { background: #fde8eb; color: var(--fp-primary); }
 
-.am-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 700; display: none;
-  max-width: 90vw; padding: 10px 18px; border-radius: 10px; color: #fff; font-size: 13px; font-weight: 600;
-  box-shadow: 0 8px 24px rgba(0,0,0,.2); white-space: pre-line; }
+.am-head-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+#am-up-result .fp-alert a { color: inherit; font-weight: 700; text-decoration: underline; }
+.am-head-actions .fp-btn { white-space: nowrap; }
 
 /* Phones / narrow tablets: one card per student */
 @media (max-width: 768px) {
-  .am-field { min-width: 100%; }
+  .am-head-actions { width: 100%; }
   .am-asmts { grid-template-columns: 1fr; }
   .am-toolbar .am-search { max-width: none; min-width: 100%; }
   .am-save-status { margin-left: 0; width: 100%; }
@@ -111,9 +103,8 @@
 }
 
 /* ── Dark mode ── */
-body.fp-dark .am-field label, body.fp-dark .am-dl, body.fp-dark .am-stu-reg, body.fp-dark .am-entered,
+body.fp-dark .am-section-title, body.fp-dark .am-dl, body.fp-dark .am-stu-reg, body.fp-dark .am-entered,
 body.fp-dark .am-table th small, body.fp-dark .am-dv.am-none { color: var(--fp-text-3); }
-body.fp-dark .am-field select { background: var(--fp-card-2); border-color: var(--fp-border-mid); }
 body.fp-dark .am-asmt { background: var(--fp-card-2); border-color: var(--fp-border-mid); }
 body.fp-dark .am-asmt.am-active, body.fp-dark .am-asmt:hover { border-color: var(--fp-primary); }
 body.fp-dark .am-pill-open { background: rgba(74,222,128,0.12); color: var(--fp-success); }
@@ -130,52 +121,6 @@ body.fp-dark .am-save-status.busy { color: var(--fp-warning); }
 body.fp-dark .am-status-Submitted { background: rgba(124,196,242,0.14); color: var(--fp-info); }
 body.fp-dark .am-status-Locked { background: rgba(214,74,102,0.14); color: #f08da0; }
 </style>
-{% endblock %}
-
-{% block content %}
-
-<div class="fp-page-header fade-in" style="background: var(--fp-card, #fff); border: 1px solid var(--fp-border, #e5e7eb); border-radius: 14px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 20px;">
-  <div>
-    <h1 class="fp-page-title" style="margin: 0; font-size: 18px !important; font-weight: 700 !important;">Assessment Marks</h1>
-    <div style="font-size:12.5px;color:var(--fp-text-4);margin-top:2px;">Enter 1st and 2nd submission marks once an assessment closes, before its marks entry deadline</div>
-  </div>
-</div>
-
-{% if portal_error %}
-<div class="fp-alert fp-alert-warning fade-in"><span class="fp-ms">warning</span><div>Some data could not be loaded. Please refresh.</div></div>
-{% endif %}
-
-{% if not course_offerings %}
-<div class="fp-card"><div class="fp-empty">
-  <span class="fp-ms">assignment</span>
-  <p class="fp-empty-title">No courses assigned</p>
-  <p class="fp-empty-sub">Courses you are assigned to as faculty will appear here.</p>
-</div></div>
-{% else %}
-
-<div class="fp-card" style="margin-bottom:18px;">
-  <div class="am-select-card">
-    <div class="am-field">
-      <label for="am-co">Course</label>
-      <select id="am-co" onchange="amChangeCourse()">
-        <option value="">— Select a course —</option>
-        {% for co in course_offerings %}
-        <option value="{{ co.name }}" {% if selected_co == co.name %}selected{% endif %}>
-          {{ co.course_name }}{% if co.programme_name %} — {{ co.programme_name }}{% endif %}{% if co.term_name %} · {{ co.term_name }}{% endif %}
-        </option>
-        {% endfor %}
-      </select>
-    </div>
-  </div>
-</div>
-
-<div id="am-empty" class="fp-card">
-  <div class="fp-empty">
-    <span class="fp-ms">assignment</span>
-    <p class="fp-empty-title">Select a course</p>
-    <p class="fp-empty-sub">Choose one of your course offerings above to see its assessments.</p>
-  </div>
-</div>
 
 <div id="am-loading" style="display:none;padding:48px;text-align:center;color:var(--fp-text-4);">
   <span class="fp-ms" style="font-size:32px;animation:fp-spin .8s linear infinite;display:block;margin-bottom:8px;">sync</span>Loading…
@@ -191,7 +136,15 @@ body.fp-dark .am-status-Locked { background: rgba(214,74,102,0.14); color: #f08d
         <div class="am-sheet-title" id="am-sheet-title"></div>
         <div class="am-sheet-sub" id="am-sheet-sub"></div>
       </div>
-      <span id="am-sheet-pill"></span>
+      <div class="am-head-actions">
+        <button type="button" class="fp-btn fp-btn-secondary fp-btn-sm" onclick="amDownloadSheet()" title="Excel sheet of the students listed below, with their saved marks">
+          <span class="fp-ms">download</span>Download Sheet
+        </button>
+        <button type="button" class="fp-btn fp-btn-secondary fp-btn-sm" id="am-upload-btn" onclick="amOpenUpload()" style="display:none;">
+          <span class="fp-ms">upload_file</span>Upload Marks
+        </button>
+        <span id="am-sheet-pill"></span>
+      </div>
     </div>
     <div id="am-banner"></div>
     <div class="am-toolbar" style="margin-top:14px;">
@@ -210,22 +163,45 @@ body.fp-dark .am-status-Locked { background: rgba(214,74,102,0.14); color: #f08d
     <div class="am-wrap"><table class="am-table" id="am-table"></table></div>
   </div>
 </div>
-{% endif %}
 
-<div class="am-toast" id="am-toast"></div>
+{# ── Upload sheet dialog (styles shared with the Grades upload dialog) ── #}
+<div class="fg-modal" id="am-upload" onclick="if(event.target===this)amCloseUpload()">
+  <div class="fg-modal-box">
+    <div class="fg-modal-hdr">
+      <div>
+        <div style="font-size:15px;font-weight:700;">Upload Assessment Marks</div>
+        <div style="font-size:12px;color:var(--fp-text-4);" id="am-up-sub"></div>
+      </div>
+      <button type="button" onclick="amCloseUpload()" style="background:none;border:none;cursor:pointer;" aria-label="Close"><span class="fp-ms">close</span></button>
+    </div>
+    <div class="fg-modal-body">
+      <ol class="fg-steps">
+        <li><a href="#" onclick="amDownloadSheet();return false;">Download the sheet</a> for this assessment — it lists the students shown on this page.</li>
+        <li>Fill in the 1st / 2nd submission marks and remarks. A blank cell keeps the value already saved. Don't change the column headings.</li>
+        <li>Upload it here and click <b>Check File</b>. Nothing is saved until every row is valid.</li>
+      </ol>
+      <input type="file" id="am-file" accept=".xlsx" class="fp-input" style="padding:8px;" onchange="amResetUpload()">
+      <div id="am-up-result" style="margin-top:12px;"></div>
+    </div>
+    <div class="fg-modal-ftr">
+      <button type="button" class="fp-btn fp-btn-secondary" onclick="amCloseUpload()">Cancel</button>
+      <button type="button" class="fp-btn fp-btn-secondary" id="am-up-check" onclick="amCheckUpload()"><span class="fp-ms">fact_check</span>Check File</button>
+      <button type="button" class="fp-btn fp-btn-primary" id="am-up-save" onclick="amSaveUpload()" style="display:none;"><span class="fp-ms">save</span>Save Marks</button>
+    </div>
+  </div>
+</div>
 
-{% endblock %}
-
-{% block extra_js %}
 <script>
 var AM = {
-  co: {{ selected_co | tojson }},
+  co: '',         /* set by the Grades page (FG.co) through amSetCourse */
   item: '',
   assessments: [],
   info: null,
   students: [],
   dirty: {},      /* student -> {first, second, remarks} edited but not saved */
   errors: {},     /* student -> message from the last save */
+  upload: null,   /* {name, data} of the sheet being uploaded */
+  lastErrors: [],
 };
 var AM_API = 'slcm.api.faculty_assessment_marks.';
 var AM_PILL = {
@@ -250,7 +226,7 @@ function amCall(method, args, ok, fail) {
     if (v === null || v === undefined) return;
     params.append(k, typeof v === 'object' ? JSON.stringify(v) : v);
   });
-  var failWith = function (msg) { if (fail) fail(msg); else amToast(msg, true); };
+  var failWith = function (msg) { if (fail) fail(msg); else fgToast(msg, true); };
   fetch('/api/method/' + AM_API + method, {
     method: 'POST', credentials: 'same-origin',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Frappe-CSRF-Token': token, 'Accept': 'application/json' },
@@ -274,61 +250,47 @@ function amCall(method, args, ok, fail) {
   .catch(function () { failWith('Network error. Please check your connection.'); });
 }
 
-function amToast(msg, isError) {
-  var el = document.getElementById('am-toast');
-  if (!el) return;
-  el.textContent = msg;
-  el.style.background = isError ? 'var(--fp-primary)' : 'var(--fp-success)';
-  el.style.display = 'block';
-  clearTimeout(el._t);
-  el._t = setTimeout(function () { el.style.display = 'none'; }, isError ? 5000 : 3000);
-}
-
 function amShow(id, on) { var el = document.getElementById(id); if (el) el.style.display = on ? '' : 'none'; }
 
+/* Unsaved marks count in the Grades page's guard (fgAnyDirty) */
 function amHasDirty() { return Object.keys(AM.dirty).length > 0; }
-function amConfirmLeave() {
-  return !amHasDirty() || confirm('You have unsaved marks. Discard them?');
-}
-window.addEventListener('beforeunload', function (e) {
-  if (amHasDirty()) { e.preventDefault(); e.returnValue = ''; }
-});
 
 function amSetUrl() {
   var p = new URLSearchParams(window.location.search);
-  if (AM.co) p.set('course_offering', AM.co); else p.delete('course_offering');
   if (AM.item) p.set('assessment', AM.item); else p.delete('assessment');
   var qs = p.toString();
   history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : ''));
 }
 
-/* ── Course → assessments ── */
-function amChangeCourse() {
-  var sel = document.getElementById('am-co');
-  if (!amConfirmLeave()) { sel.value = AM.co; return; }
-  AM.co = sel.value;
-  AM.item = '';
-  AM.dirty = {}; AM.errors = {};
+/* ── Course → assessments (called by the Grades page) ── */
+function amSetCourse(co, selectItem) {
+  if (co !== AM.co) { AM.item = ''; AM.dirty = {}; AM.errors = {}; }
+  AM.co = co;
   amSetUrl();
-  amLoadAssessments();
+  amLoadAssessments(selectItem || AM.item);
+}
+
+function amHide() {
+  ['am-main', 'am-sheet', 'am-loading'].forEach(function (id) { amShow(id, false); });
 }
 
 function amLoadAssessments(selectItem) {
   amShow('am-main', false);
   amShow('am-sheet', false);
-  if (!AM.co) { amShow('am-empty', true); return; }
-  amShow('am-empty', false);
+  if (!AM.co) return;
+  var reselect = selectItem;
+  AM.item = '';
   amShow('am-loading', true);
   amCall('get_assessments', { course_offering: AM.co }, function (r) {
     amShow('am-loading', false);
     AM.assessments = r.assessments || [];
     amRenderAssessments();
     amShow('am-main', true);
-    if (selectItem && AM.assessments.some(function (a) { return a.name === selectItem; })) amSelect(selectItem, true);
+    if (reselect && AM.assessments.some(function (a) { return a.name === reselect; })) amOpen(reselect);
+    else amSetUrl();
   }, function (msg) {
     amShow('am-loading', false);
-    amShow('am-empty', true);
-    amToast(msg, true);
+    fgToast(msg, true);
   });
 }
 
@@ -363,9 +325,12 @@ function amRenderAssessments() {
 }
 
 /* ── Assessment → marks sheet ── */
-function amSelect(name, skipConfirm) {
+function amSelect(name) {
   if (name === AM.item) return;
-  if (!skipConfirm && !amConfirmLeave()) return;
+  fgGuardUnsaved(function () { amOpen(name); });
+}
+
+function amOpen(name) {
   AM.item = name;
   AM.dirty = {}; AM.errors = {};
   amSetUrl();
@@ -381,7 +346,7 @@ function amSelect(name, skipConfirm) {
     document.getElementById('am-sheet').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, function (msg) {
     amShow('am-loading', false);
-    amToast(msg, true);
+    fgToast(msg, true);
   });
 }
 
@@ -394,6 +359,7 @@ function amRenderSheet() {
   sub.push(AM.students.length + ' student' + (AM.students.length === 1 ? '' : 's'));
   document.getElementById('am-sheet-sub').textContent = sub.join(' · ');
   document.getElementById('am-sheet-pill').innerHTML = info.locked ? amPill('closed') : amPill(info.window);
+  amShow('am-upload-btn', !!info.editable);
   document.getElementById('am-banner').innerHTML = info.window_message
     ? '<div class="am-banner"><span class="fp-ms">info</span>' + amEsc(info.window_message) + '</div>' : '';
 
@@ -486,7 +452,7 @@ function amDiscard() {
 
 function amSave() {
   if (document.querySelector('#am-table .am-in.am-error')) {
-    amToast('Fix the highlighted marks before saving.', true);
+    fgToast('Fix the highlighted marks before saving.', true);
     return;
   }
   var rows = Object.keys(AM.dirty).map(function (sid) {
@@ -519,13 +485,110 @@ function amSave() {
         amStatus('err', 'error', saved + ' saved, ' + Object.keys(errs).length + ' not saved — see the highlighted rows');
       } else {
         amStatus('ok', 'check_circle', saved + ' saved');
-        amToast('Marks saved.');
+        fgToast('Marks saved.');
       }
     });
   }, function (msg) {
     amStatus('err', 'error', 'Not saved');
     amUpdateSaveBar();
-    amToast(msg, true);
+    fgToast(msg, true);
+  });
+}
+
+/* ── Excel sheet: download / bulk upload ── */
+function amDownloadSheet() {
+  if (!AM.co || !AM.item) return;
+  window.open('/api/method/' + AM_API + 'download_sheet?' +
+    new URLSearchParams({ course_offering: AM.co, schedule_item: AM.item }).toString(), '_blank');
+}
+
+function amOpenUpload() {
+  if (amHasDirty()) {
+    fgToast('Save or discard your changes before uploading a sheet.', true);
+    return;
+  }
+  var co = document.getElementById('fg-co');
+  var course = co && co.selectedIndex > -1 ? co.options[co.selectedIndex].textContent.trim() : '';
+  document.getElementById('am-up-sub').textContent = course + ' · ' + (AM.info ? AM.info.label : '');
+  document.getElementById('am-file').value = '';
+  amResetUpload();
+  document.getElementById('am-upload').classList.add('open');
+}
+function amCloseUpload() { document.getElementById('am-upload').classList.remove('open'); }
+function amResetUpload() {
+  AM.upload = null;
+  document.getElementById('am-up-result').innerHTML = '';
+  amShow('am-up-save', false);
+}
+
+function amReadFile(cb) {
+  var f = document.getElementById('am-file').files[0];
+  if (!f) { fgToast('Choose the filled sheet first.', true); return; }
+  if (!/\.xlsx$/i.test(f.name)) { fgToast('Please choose the .xlsx sheet.', true); return; }
+  var reader = new FileReader();
+  reader.onload = function () { AM.upload = { name: f.name, data: reader.result }; cb(); };
+  reader.readAsDataURL(f);
+}
+
+/* Server call with the page's busy overlay */
+function amBusyCall(method, args, ok) {
+  var busy = document.getElementById('fg-busy');
+  if (busy) busy.classList.add('open');
+  var done = function () { if (busy) busy.classList.remove('open'); };
+  amCall(method, args, function (r) { done(); ok(r); }, function (msg) {
+    done();
+    document.getElementById('am-up-result').innerHTML = fgBanner('error', amEsc(msg));
+  });
+}
+
+function amUploadArgs(apply) {
+  return { course_offering: AM.co, schedule_item: AM.item, filedata: AM.upload.data, filename: AM.upload.name, apply: apply };
+}
+
+function amCheckUpload() {
+  amReadFile(function () { amBusyCall('import_sheet', amUploadArgs(0), amShowUploadResult); });
+}
+
+function amShowUploadResult(r) {
+  var box = document.getElementById('am-up-result');
+  AM.lastErrors = r.errors || [];
+  if (r.ok) {
+    var n = r.summary.students;
+    box.innerHTML = '<div class="fp-alert fg-up-ok" style="background:#e3f6e8;color:#1e7b3a;display:flex;gap:8px;align-items:center;">'
+      + '<span class="fp-ms">task_alt</span><div>' + (n
+        ? 'File is valid: marks for <b>' + n + '</b> student(s). Click <b>Save Marks</b> to apply.'
+        : 'File is valid, but it has no marks or remarks to save.') + '</div></div>';
+    amShow('am-up-save', n > 0);
+    return;
+  }
+  amShow('am-up-save', false);
+  box.innerHTML = fgBanner('error', '<b>' + AM.lastErrors.length + ' problem(s) found — nothing was saved.</b> Fix them in the file and check again. '
+      + '<a href="#" onclick="amDownloadErrors();return false;">Download error report</a>')
+    + '<div style="max-height:300px;overflow:auto;"><table class="fg-errs"><thead><tr><th>Row</th><th>Student</th><th>Column</th><th>Problem</th></tr></thead><tbody>'
+    + AM.lastErrors.map(function (e) {
+      return '<tr><td>' + e.row + '</td><td>' + amEsc(e.student) + '</td><td>' + amEsc(e.column || '—') + '</td><td>' + amEsc(e.message) + '</td></tr>';
+    }).join('') + '</tbody></table></div>';
+}
+
+function amDownloadErrors() {
+  var csv = [['Row', 'Student', 'Column', 'Problem']].concat((AM.lastErrors || []).map(function (e) {
+    return [e.row, e.student, e.column || '', e.message];
+  })).map(function (r) {
+    return r.map(function (v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; }).join(',');
+  }).join('\r\n');
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  a.download = 'assessment_marks_upload_errors.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+function amSaveUpload() {
+  if (!AM.upload) return;
+  amBusyCall('import_sheet', amUploadArgs(1), function (r) {
+    if (!r.applied) { amShowUploadResult(r); return; }
+    amCloseUpload();
+    fgToast('Marks saved for ' + r.summary.students + ' student(s).');
+    amOpen(AM.item);   /* reload the list with the saved marks */
   });
 }
 
@@ -535,11 +598,4 @@ function amFilter() {
     tr.style.display = !q || tr.dataset.search.indexOf(q) > -1 ? '' : 'none';
   });
 }
-
-document.addEventListener('DOMContentLoaded', function () {
-  if (!document.getElementById('am-co')) return;
-  var initialItem = new URLSearchParams(window.location.search).get('assessment');
-  if (AM.co) amLoadAssessments(initialItem);
-});
 </script>
-{% endblock %}

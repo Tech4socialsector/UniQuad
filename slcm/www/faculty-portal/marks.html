@@ -48,6 +48,23 @@
 .fg-dist { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .fg-dist span { background: var(--fp-bg); border-radius: 6px; padding: 2px 9px; font-size: 12px; }
 
+/* Grades ⇄ Assessment Marks switch in the page header */
+.fg-view { display: inline-flex; padding: 3px; gap: 2px; border-radius: 999px; background: var(--fp-bg); border: 1px solid var(--fp-border); }
+.fg-view-btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 16px; border: none; border-radius: 999px;
+  background: transparent; color: var(--fp-text-2); font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer;
+  white-space: nowrap; transition: background .15s, color .15s; }
+.fg-view-btn .fp-ms { font-size: 17px; }
+.fg-view-btn:hover { color: var(--fp-text-1); }
+.fg-view-btn:focus-visible { outline: 2px solid var(--fp-primary); outline-offset: 2px; }
+.fg-view-btn.fg-view-active { background: var(--fp-primary); color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.15); }
+@media (max-width: 768px) {
+  .fg-view { display: flex; width: 100%; }
+  .fg-view-btn { flex: 1; justify-content: center; padding: 8px 10px; }
+}
+body.fp-dark .fg-view { background: var(--fp-card-2); border-color: var(--fp-border-mid); }
+body.fp-dark .fg-view-btn { color: var(--fp-text-2); }
+body.fp-dark .fg-view-btn.fg-view-active { background: var(--fp-primary); color: #fff; }
+
 .fg-tabs { display: inline-flex; border: 1.5px solid var(--fp-border); border-radius: var(--fp-radius-sm); overflow: hidden; }
 .fg-tab { padding: 8px 16px; font-size: 13px; font-weight: 600; font-family: inherit; border: none; background: var(--fp-card);
   color: var(--fp-text-2); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
@@ -249,8 +266,19 @@ body.fp-dark .fg-busy { background: rgba(10,15,30,.65); color: var(--fp-text-1);
 <div class="fp-page-header fade-in" style="background: var(--fp-card, #fff); border: 1px solid var(--fp-border, #e5e7eb); border-radius: 14px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 20px;">
   <div>
     <h1 class="fp-page-title" style="margin: 0; font-size: 18px !important; font-weight: 700 !important;">Grades</h1>
-    <div style="font-size:12.5px;color:var(--fp-text-4);margin-top:2px;">Enter marks for the students of your course offering</div>
+    <div style="font-size:12.5px;color:var(--fp-text-4);margin-top:2px;" id="fg-subtitle">Enter marks for the students of your course offering</div>
   </div>
+  {% if course_offerings %}
+  {# Grades ⇄ Assessment Marks (1st / 2nd submission marks per scheduled assessment) #}
+  <div class="fg-view" role="tablist" aria-label="Marks view">
+    <button type="button" class="fg-view-btn fg-view-active" data-view="grades" role="tab" aria-selected="true" onclick="fgSetView('grades')">
+      <span class="fp-ms">table_view</span>Grades
+    </button>
+    <button type="button" class="fg-view-btn" data-view="assessments" role="tab" aria-selected="false" onclick="fgSetView('assessments')">
+      <span class="fp-ms">assignment</span>Assessment Marks
+    </button>
+  </div>
+  {% endif %}
 </div>
 
 {% if portal_error %}
@@ -290,7 +318,7 @@ body.fp-dark .fg-busy { background: rgba(10,15,30,.65); color: var(--fp-text-1);
   <div class="fp-empty">
     <span class="fp-ms">grade</span>
     <p class="fp-empty-title">Select a course</p>
-    <p class="fp-empty-sub">Choose one of your course offerings above to enter grades.</p>
+    <p class="fp-empty-sub" id="fg-empty-sub">Choose one of your course offerings above to enter grades.</p>
   </div>
 </div>
 
@@ -361,6 +389,8 @@ body.fp-dark .fg-busy { background: rgba(10,15,30,.65); color: var(--fp-text-1);
   </div>
 </div>
 
+{% if course_offerings %}{% include "slcm/www/faculty-portal/_assessment_marks.html" %}{% endif %}
+
 <div class="fg-toast" id="fg-toast"></div>
 <div class="fg-busy" id="fg-busy"><span class="fp-ms" style="animation:fp-spin .8s linear infinite;margin-right:8px;">sync</span>Please wait…</div>
 
@@ -403,6 +433,7 @@ var FG = {
   students: [],
   reexam: null,
   tab: 'sheet',
+  view: new URLSearchParams(window.location.search).get('view') === 'assessments' ? 'assessments' : 'grades',
   timers: {},
   upload: null,     /* {name, data} of the file being uploaded */
 };
@@ -483,10 +514,67 @@ function fgChangeCourse() {
     FG.co = wanted;
     sel.value = wanted;
     FG.plan = '';
+    FG.info = null;
     fgSetUrl();
-    fgLoad();
+    fgRefreshView();
   });
   sel.value = FG.co || '';   /* stays put until the faculty confirms */
+}
+
+/* ── Grades ⇄ Assessment Marks view (same course selector) ── */
+var FG_SUBTITLES = {
+  grades: 'Enter marks for the students of your course offering',
+  assessments: 'Enter 1st and 2nd submission marks once an assessment closes, before its marks entry deadline',
+};
+function fgSetView(view) {
+  if (view === FG.view) return;
+  fgGuardUnsaved(function () {
+    /* Edits on the view being left were confirmed as dropped */
+    if (FG.view === 'grades') fgDropGradeEdits(); else { AM.dirty = {}; AM.errors = {}; }
+    FG.view = view;
+    var p = new URLSearchParams(window.location.search);
+    if (view === 'assessments') p.set('view', 'assessments'); else { p.delete('view'); p.delete('assessment'); }
+    var qs = p.toString();
+    history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : ''));
+    fgRefreshView();
+  });
+}
+function fgRefreshView() {
+  var isAsmt = FG.view === 'assessments';
+  document.querySelectorAll('.fg-view-btn').forEach(function (b) {
+    var on = b.dataset.view === FG.view;
+    b.classList.toggle('fg-view-active', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  var subtitle = document.getElementById('fg-subtitle');
+  if (subtitle) subtitle.textContent = FG_SUBTITLES[FG.view];
+  var emptySub = document.getElementById('fg-empty-sub');
+  if (emptySub) emptySub.textContent = isAsmt
+    ? 'Choose one of your course offerings above to see its assessments.'
+    : 'Choose one of your course offerings above to enter grades.';
+
+  if (isAsmt) {
+    /* The exam plan picker and grade sheet belong to the Grades view */
+    ['fg-main', 'fg-loading', 'fg-plan-wrap'].forEach(function (id) { document.getElementById(id).style.display = 'none'; });
+    document.getElementById('fg-empty').style.display = FG.co ? 'none' : '';
+    if (FG.co) amSetCourse(FG.co, new URLSearchParams(window.location.search).get('assessment'));
+    else amHide();
+  } else {
+    if (typeof amHide === 'function') amHide();
+    fgLoad();
+  }
+}
+/* Put every grade-sheet input back to its saved value, without asking */
+function fgDropGradeEdits() {
+  ['sheet', 'reexam'].forEach(function (tab) {
+    fgDirty(tab).forEach(function (inp) {
+      inp.value = inp.dataset.orig || '';
+      inp.classList.remove('fg-dirty', 'fg-error');
+      inp.title = '';
+    });
+    fgSetSaveStatus(tab, '', '');
+    fgRefreshSaveBar(tab);
+  });
 }
 function fgChangePlan() {
   var sel = document.getElementById('fg-plan');
@@ -687,7 +775,10 @@ var FG_SAVE_ORDER = { mark: 0, reexam: 1, improvement: 2, grade: 3, remark: 4 };
 
 function fgTabEl(tab) { return document.getElementById(tab === 'reexam' ? 'fg-tab-reexam' : 'fg-tab-sheet'); }
 function fgDirty(tab) { return Array.prototype.slice.call(fgTabEl(tab).querySelectorAll('.fg-track.fg-dirty')); }
-function fgAnyDirty() { return fgDirty('sheet').length + fgDirty('reexam').length > 0; }
+function fgAnyDirty() {
+  return fgDirty('sheet').length + fgDirty('reexam').length > 0
+    || (typeof amHasDirty === 'function' && amHasDirty());
+}
 
 /* Client-side check, same rules as the server; returns an error or '' */
 function fgValidate(inp) {
@@ -883,7 +974,8 @@ window.addEventListener('beforeunload', function (e) {
 document.addEventListener('keydown', function (e) {
   if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S') && FG.co) {
     e.preventDefault();
-    fgSaveAll(FG.tab);
+    if (FG.view === 'assessments') { if (amHasDirty()) amSave(); }
+    else fgSaveAll(FG.tab);
   }
 });
 
@@ -1221,7 +1313,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var sel = document.getElementById(id);
     if (sel) fgEnhanceSelect(sel);
   });
-  if (FG.co) fgLoad();
+  if (FG.view === 'assessments' || FG.co) fgRefreshView();
 });
 </script>
 {% endblock %}
