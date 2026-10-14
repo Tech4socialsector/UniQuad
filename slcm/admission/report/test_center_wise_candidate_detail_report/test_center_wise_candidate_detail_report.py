@@ -144,8 +144,12 @@ def get_chart_data(data: list[dict]) -> dict | None:
 		},
 		"type": "bar",
 		"barOptions": {"stacked": True},
-		"height": 300,
+		"height": 360,
 		"colors": ["#f39c12", "#27ae60", "#2980b9"],
+		"axisOptions": {
+			"xAxisMode": "span",
+			"seriesLabelSpaceRatio": 5,
+		},
 	}
 
 
@@ -244,7 +248,7 @@ def get_data(filters: dict) -> list[dict]:
 	if filters.get("scribe_required_only"):
 		conditions.append("(app.pwd_required_test = 'Yes' OR (app.scribe_allotment IS NOT NULL AND app.scribe_allotment != ''))")
 
-	if filters.get("city"):
+	if filters.get("city"): 
 		conditions.append("(prov.city = %(city)s OR sa.center_name LIKE %(city_like)s OR sa.re_center_name LIKE %(city_like)s)")
 		values["city"] = filters.get("city")
 		values["city_like"] = f"%{filters.get('city')}%"

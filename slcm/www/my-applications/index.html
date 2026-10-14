@@ -3063,7 +3063,7 @@ DETAIL VIEW
 {% set _app = selected_app %}
 {% set _aname = (_app.get('candidate_name') or _app.get('applicant_name') if _app.get else (_app.candidate_name or
 _app.applicant_name)) or '' %}
-{% set _prog = (_app.get('program') or _app.get('program_name') or _app.get('programme') if _app.get else (_app.program or _app.program_name or _app.programme)) or 'Programme' %}
+{% set _prog = (_app.get('program_name') or _app.get('program') or _app.get('programme') if _app.get else (_app.program_name or _app.program or _app.programme)) or 'Programme' %}
 {% set _cycle = (_app.get('admission_cycle') if _app.get else _app.admission_cycle) or '' %}
 {% set _status = (_app.get('status') if _app.get else _app.status) or 'Draft' %}
 {% set _stage = (_app.get('current_stage_name') or _app.get('current_stage') if _app.get else (_app.current_stage_name

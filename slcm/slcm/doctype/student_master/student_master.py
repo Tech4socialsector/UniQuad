@@ -8,7 +8,7 @@ import re
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import get_fullname, getdate, now_datetime, today, flt
+from frappe.utils import flt, get_fullname, getdate, now_datetime, today
 
 # ---------------------------------------------------------------------------
 # Single source of truth for the registration state machine
@@ -853,8 +853,8 @@ def _enrollments_by_recency(student_name):
     enrollments.sort(
         key=lambda e: (
             1 if e.status == "Enrolled" else 0,
-            # getdate: creation is a datetime, year_start_date a date
             getdate(ay_start.get(e.academic_year) or e.creation),
+            str(e.creation),
         ),
         reverse=True,
     )

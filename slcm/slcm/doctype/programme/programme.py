@@ -28,8 +28,8 @@ class Programme(Document):
 		self.program_slug
 		from frappe.utils import get_url
 		web_form_route = frappe.db.get_value("Web Form", "Application Form", "route") or "admission/application-form"
-		self.application_form_link = f"{get_url()}/{web_form_route}/new?program={self.program_slug}"
-
+		self.application_form_link = f"{get_url()}/{web_form_route}/new?program={self.program_slug}&foriegn_national=No&nationality=Indian"
+		self.international_application_form_link = f"{get_url()}/{web_form_route}/new?program={self.program_slug}&foriegn_national=Yes"
 	def generate_program_slug(self):
 		if not self.program_name:
 			return

@@ -1,459 +1,466 @@
 {
-    "actions": [],
-    "allow_import": 1,
-    "allow_rename": 1,
-    "creation": "2026-03-11 13:55:37.916716",
-    "doctype": "DocType",
-    "engine": "InnoDB",
-    "field_order": [
-        "program_name",
-        "program_code",
-        "level_of_study",
-        "program_duration",
-        "graduation_credits",
-        "department",
-        "program_status",
-        "column_break_aosh",
-        "image",
-        "program_slug",
-        "academic_year",
-        "academic_term",
-        "term_start_date",
-        "term_end_date",
-        "application_form_link",
-        "section_break_fwyh",
-        "table_fela",
-        "portal_details_tab",
-        "intake_type",
-        "program_image",
-        "brochure_file",
-        "program_description",
-        "eligibility_summary",
-        "media",
-        "curriculum_items",
-        "career_items",
-        "faculty_items",
-        "stages_tab",
-        "domestic_applicant_stages_section",
-        "submitted",
-        "entrance_test",
-        "intereview",
-        "merit_list",
-        "column_break_iwco",
-        "seat_allocation",
-        "offer_letter",
-        "admission_fee",
-        "enrolled",
-        "international_applicant_stages_section",
-        "internationa_application_submitted",
-        "international_entrance_test",
-        "international_interview",
-        "column_break_vpmn",
-        "international_offer_letter",
-        "inrternation_admission_fee",
-        "international_enrolled",
-        "connections_tab_tab"
-    ],
-    "fields": [
-        {
-            "fetch_from": "program_name.programme_code",
-            "fieldname": "program_code",
-            "fieldtype": "Data",
-            "in_list_view": 1,
-            "label": "Programme Code",
-            "reqd": 1
-        },
-        {
-            "description": "Do not use special characters such as &.",
-            "fieldname": "program_name",
-            "fieldtype": "Link",
-            "in_list_view": 1,
-            "in_standard_filter": 1,
-            "label": "Programme Name",
-            "options": "Programme Master",
-            "reqd": 1
-        },
-        {
-            "fieldname": "department",
-            "fieldtype": "Link",
-            "hidden": 1,
-            "label": "Department",
-            "options": "Department"
-        },
-        {
-            "fieldname": "image",
-            "fieldtype": "Attach Image",
-            "hidden": 1,
-            "label": "Image"
-        },
-        {
-            "fieldname": "column_break_aosh",
-            "fieldtype": "Column Break"
-        },
-        {
-            "fetch_from": "program_name.level_of_study",
-            "fieldname": "level_of_study",
-            "fieldtype": "Select",
-            "in_list_view": 1,
-            "in_standard_filter": 1,
-            "label": "Level of Study",
-            "options": "\nUndergraduate\nPostgraduate\nResearch Course",
-            "reqd": 1
-        },
-        {
-            "fetch_from": "program_name.programme_duration_in_years",
-            "fieldname": "program_duration",
-            "fieldtype": "Int",
-            "label": "Programme duration (in years)"
-        },
-        {
-            "fieldname": "academic_year",
-            "fieldtype": "Link",
-            "in_list_view": 1,
-            "in_standard_filter": 1,
-            "label": "Academic Year",
-            "options": "Academic Year",
-            "reqd": 1
-        },
-        {
-            "fieldname": "academic_term",
-            "fieldtype": "Link",
-            "label": "Academic Term",
-            "options": "Academic Term",
-            "reqd": 1
-        },
-        {
-            "fetch_from": "program_name.graduation_credits",
-            "fieldname": "graduation_credits",
-            "fieldtype": "Int",
-            "label": "Graduation Credits"
-        },
-        {
-            "fieldname": "program_status",
-            "fieldtype": "Select",
-            "in_standard_filter": 1,
-            "label": "Status",
-            "options": "\nActive\nInactive"
-        },
-        {
-            "fieldname": "section_break_fwyh",
-            "fieldtype": "Section Break"
-        },
-        {
-            "fieldname": "table_fela",
-            "fieldtype": "Table",
-            "options": "Program Enrollment Course"
-        },
-        {
-            "fieldname": "portal_details_tab",
-            "fieldtype": "Tab Break",
-            "label": "Admissions"
-        },
-        {
-            "fieldname": "intake_type",
-            "fieldtype": "Select",
-            "hidden": 1,
-            "label": "Intake Type",
-            "options": "\nInternal Test\nExternal Test\nDirect Merit"
-        },
-        {
-            "fieldname": "program_image",
-            "fieldtype": "Attach Image",
-            "label": "Program Image",
-            "reqd": 1
-        },
-        {
-            "fieldname": "program_description",
-            "fieldtype": "Text Editor",
-            "label": "Program Description",
-            "reqd": 1
-        },
-        {
-            "fieldname": "eligibility_summary",
-            "fieldtype": "Text Editor",
-            "label": "Eligibility Summary"
-        },
-        {
-            "fieldname": "brochure_file",
-            "fieldtype": "Attach",
-            "label": "Brochure File",
-            "reqd": 1
-        },
-        {
-            "fieldname": "media",
-            "fieldtype": "Table",
-            "label": "Media Gallery",
-            "options": "Program Media"
-        },
-        {
-            "fieldname": "curriculum_items",
-            "fieldtype": "Table",
-            "label": "Curriculum",
-            "options": "Program Curriculum Item"
-        },
-        {
-            "fieldname": "career_items",
-            "fieldtype": "Table",
-            "label": "Career Prospects",
-            "options": "Program Career Item"
-        },
-        {
-            "fieldname": "faculty_items",
-            "fieldtype": "Table",
-            "label": "Faculty",
-            "options": "Program Faculty Item"
-        },
-        {
-            "fieldname": "connections_tab_tab",
-            "fieldtype": "Tab Break",
-            "label": "Connections",
-            "show_dashboard": 1
-        },
-        {
-            "fieldname": "program_slug",
-            "fieldtype": "Data",
-            "label": "URL Slug",
-            "read_only": 1
-        },
-        {
-            "fieldname": "stages_tab",
-            "fieldtype": "Tab Break",
-            "label": "Stages"
-        },
-        {
-            "default": "1",
-            "fieldname": "submitted",
-            "fieldtype": "Check",
-            "label": "Application Submitted"
-        },
-        {
-            "default": "0",
-            "fieldname": "entrance_test",
-            "fieldtype": "Check",
-            "label": "Entrance Test"
-        },
-        {
-            "default": "0",
-            "fieldname": "intereview",
-            "fieldtype": "Check",
-            "label": "Interview"
-        },
-        {
-            "default": "1",
-            "fieldname": "merit_list",
-            "fieldtype": "Check",
-            "label": "Merit List",
-            "read_only": 1
-        },
-        {
-            "fieldname": "column_break_iwco",
-            "fieldtype": "Column Break"
-        },
-        {
-            "default": "1",
-            "fieldname": "seat_allocation",
-            "fieldtype": "Check",
-            "label": "Seat Allocation",
-            "read_only": 1
-        },
-        {
-            "default": "1",
-            "fieldname": "offer_letter",
-            "fieldtype": "Check",
-            "label": "Offer Letter",
-            "read_only": 1
-        },
-        {
-            "default": "1",
-            "fieldname": "admission_fee",
-            "fieldtype": "Check",
-            "label": "Admission Fee",
-            "read_only": 1
-        },
-        {
-            "default": "1",
-            "fieldname": "enrolled",
-            "fieldtype": "Check",
-            "label": "Enrolled",
-            "read_only": 1
-        },
-        {
-            "fieldname": "international_applicant_stages_section",
-            "fieldtype": "Section Break",
-            "label": "International Applicant Stages"
-        },
-        {
-            "default": "0",
-            "fieldname": "international_entrance_test",
-            "fieldtype": "Check",
-            "label": "Entrance Test"
-        },
-        {
-            "default": "0",
-            "fieldname": "international_interview",
-            "fieldtype": "Check",
-            "label": "Interview"
-        },
-        {
-            "fieldname": "application_form_link",
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 1,
+ "creation": "2026-03-11 13:55:37.916716",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "program_name",
+  "program_code",
+  "level_of_study",
+  "program_duration",
+  "graduation_credits",
+  "department",
+  "program_status",
+  "column_break_aosh",
+  "image",
+  "program_slug",
+  "academic_year",
+  "academic_term",
+  "term_start_date",
+  "term_end_date",
+  "application_form_link",
+  "international_application_form_link",
+  "section_break_fwyh",
+  "table_fela",
+  "portal_details_tab",
+  "intake_type",
+  "program_image",
+  "brochure_file",
+  "program_description",
+  "eligibility_summary",
+  "media",
+  "curriculum_items",
+  "career_items",
+  "faculty_items",
+  "stages_tab",
+  "domestic_applicant_stages_section",
+  "submitted",
+  "entrance_test",
+  "intereview",
+  "merit_list",
+  "column_break_iwco",
+  "seat_allocation",
+  "offer_letter",
+  "admission_fee",
+  "enrolled",
+  "international_applicant_stages_section",
+  "internationa_application_submitted",
+  "international_entrance_test",
+  "international_interview",
+  "column_break_vpmn",
+  "international_offer_letter",
+  "inrternation_admission_fee",
+  "international_enrolled",
+  "connections_tab_tab"
+ ],
+ "fields": [
+  {
+   "fetch_from": "program_name.programme_code",
+   "fieldname": "program_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Programme Code",
+   "reqd": 1
+  },
+  {
+   "description": "Do not use special characters such as &.",
+   "fieldname": "program_name",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Programme Name",
+   "options": "Programme Master",
+   "reqd": 1
+  },
+  {
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Department",
+   "options": "Department"
+  },
+  {
+   "fieldname": "image",
+   "fieldtype": "Attach Image",
+   "hidden": 1,
+   "label": "Image"
+  },
+  {
+   "fieldname": "column_break_aosh",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "program_name.level_of_study",
+   "fieldname": "level_of_study",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Level of Study",
+   "options": "\nUndergraduate\nPostgraduate\nResearch Course",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "program_name.programme_duration_in_years",
+   "fieldname": "program_duration",
+   "fieldtype": "Int",
+   "label": "Programme duration (in years)"
+  },
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Academic Year",
+   "options": "Academic Year",
+   "reqd": 1
+  },
+  {
+   "fieldname": "academic_term",
+   "fieldtype": "Link",
+   "label": "Academic Term",
+   "options": "Academic Term",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "program_name.graduation_credits",
+   "fieldname": "graduation_credits",
+   "fieldtype": "Int",
+   "label": "Graduation Credits"
+  },
+  {
+   "fieldname": "program_status",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "\nActive\nInactive"
+  },
+  {
+   "fieldname": "section_break_fwyh",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "table_fela",
+   "fieldtype": "Table",
+   "options": "Program Enrollment Course"
+  },
+  {
+   "fieldname": "portal_details_tab",
+   "fieldtype": "Tab Break",
+   "label": "Admissions"
+  },
+  {
+   "fieldname": "intake_type",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "label": "Intake Type",
+   "options": "\nInternal Test\nExternal Test\nDirect Merit"
+  },
+  {
+   "fieldname": "program_image",
+   "fieldtype": "Attach Image",
+   "label": "Program Image",
+   "reqd": 1
+  },
+  {
+   "fieldname": "program_description",
+   "fieldtype": "Text Editor",
+   "label": "Program Description",
+   "reqd": 1
+  },
+  {
+   "fieldname": "eligibility_summary",
+   "fieldtype": "Text Editor",
+   "label": "Eligibility Summary"
+  },
+  {
+   "fieldname": "brochure_file",
+   "fieldtype": "Attach",
+   "label": "Brochure File",
+   "reqd": 1
+  },
+  {
+   "fieldname": "media",
+   "fieldtype": "Table",
+   "label": "Media Gallery",
+   "options": "Program Media"
+  },
+  {
+   "fieldname": "curriculum_items",
+   "fieldtype": "Table",
+   "label": "Curriculum",
+   "options": "Program Curriculum Item"
+  },
+  {
+   "fieldname": "career_items",
+   "fieldtype": "Table",
+   "label": "Career Prospects",
+   "options": "Program Career Item"
+  },
+  {
+   "fieldname": "faculty_items",
+   "fieldtype": "Table",
+   "label": "Faculty",
+   "options": "Program Faculty Item"
+  },
+  {
+   "fieldname": "connections_tab_tab",
+   "fieldtype": "Tab Break",
+   "label": "Connections",
+   "show_dashboard": 1
+  },
+  {
+   "fieldname": "program_slug",
+   "fieldtype": "Data",
+   "label": "URL Slug",
+   "read_only": 1
+  },
+  {
+   "fieldname": "stages_tab",
+   "fieldtype": "Tab Break",
+   "label": "Stages"
+  },
+  {
+   "default": "1",
+   "fieldname": "submitted",
+   "fieldtype": "Check",
+   "label": "Application Submitted"
+  },
+  {
+   "default": "0",
+   "fieldname": "entrance_test",
+   "fieldtype": "Check",
+   "label": "Entrance Test"
+  },
+  {
+   "default": "0",
+   "fieldname": "intereview",
+   "fieldtype": "Check",
+   "label": "Interview"
+  },
+  {
+   "default": "1",
+   "fieldname": "merit_list",
+   "fieldtype": "Check",
+   "label": "Merit List",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_iwco",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "fieldname": "seat_allocation",
+   "fieldtype": "Check",
+   "label": "Seat Allocation",
+   "read_only": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "offer_letter",
+   "fieldtype": "Check",
+   "label": "Offer Letter",
+   "read_only": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "admission_fee",
+   "fieldtype": "Check",
+   "label": "Admission Fee",
+   "read_only": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "enrolled",
+   "fieldtype": "Check",
+   "label": "Enrolled",
+   "read_only": 1
+  },
+  {
+   "fieldname": "international_applicant_stages_section",
+   "fieldtype": "Section Break",
+   "label": "International Applicant Stages"
+  },
+  {
+   "default": "0",
+   "fieldname": "international_entrance_test",
+   "fieldtype": "Check",
+   "label": "Entrance Test"
+  },
+  {
+   "default": "0",
+   "fieldname": "international_interview",
+   "fieldtype": "Check",
+   "label": "Interview"
+  },
+  {
+   "fieldname": "application_form_link",
    "fieldtype": "Code",
-   "label": "Application Form Link",
-            "read_only": 1
-        },
-        {
-            "fetch_from": "academic_term.term_start_date",
-            "fieldname": "term_start_date",
-            "fieldtype": "Date",
-            "label": "Term start date"
-        },
-        {
-            "fetch_from": "academic_term.term_end_date",
-            "fieldname": "term_end_date",
-            "fieldtype": "Date",
-            "label": "Term end date"
-        },
-        {
-            "fieldname": "domestic_applicant_stages_section",
-            "fieldtype": "Section Break",
-            "label": "Domestic Applicant Stages"
-        },
-        {
-            "default": "1",
-            "fieldname": "internationa_application_submitted",
-            "fieldtype": "Check",
-            "label": "Application Submitted"
-        },
-        {
-            "default": "1",
-            "fieldname": "inrternation_admission_fee",
-            "fieldtype": "Check",
-            "label": "Admission Fee ",
-            "read_only": 1
-        },
-        {
-            "default": "1",
-            "fieldname": "international_enrolled",
-            "fieldtype": "Check",
-            "label": "Enrolled",
-            "read_only": 1
-        },
-        {
-            "fieldname": "column_break_vpmn",
-            "fieldtype": "Column Break"
-        },
-        {
-            "default": "1",
-            "fieldname": "international_offer_letter",
-            "fieldtype": "Check",
-            "label": "Offer Letter",
-            "read_only": 1
-        }
-    ],
-    "grid_page_length": 50,
-    "image_field": "program_image",
-    "index_web_pages_for_search": 1,
-    "links": [
-        {
-            "group": "Academics",
-            "link_doctype": "Batch",
-            "link_fieldname": "program"
-        },
-        {
-            "group": "Academics",
-            "link_doctype": "Course Offering",
-            "link_fieldname": "program"
-        },
-        {
-            "group": "Students",
-            "link_doctype": "Student Enrollment",
-            "link_fieldname": "program"
-        },
-        {
-            "group": "Fees",
-            "link_doctype": "Fee Structure",
-            "link_fieldname": "program"
-        }
-    ],
-    "make_attachments_public": 1,
- "modified": "2026-08-03 15:53:25.880785",
+   "label": "Domestic Application Form Link",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "academic_term.term_start_date",
+   "fieldname": "term_start_date",
+   "fieldtype": "Date",
+   "label": "Term start date"
+  },
+  {
+   "fetch_from": "academic_term.term_end_date",
+   "fieldname": "term_end_date",
+   "fieldtype": "Date",
+   "label": "Term end date"
+  },
+  {
+   "fieldname": "domestic_applicant_stages_section",
+   "fieldtype": "Section Break",
+   "label": "Domestic Applicant Stages"
+  },
+  {
+   "default": "1",
+   "fieldname": "internationa_application_submitted",
+   "fieldtype": "Check",
+   "label": "Application Submitted"
+  },
+  {
+   "default": "1",
+   "fieldname": "inrternation_admission_fee",
+   "fieldtype": "Check",
+   "label": "Admission Fee ",
+   "read_only": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "international_enrolled",
+   "fieldtype": "Check",
+   "label": "Enrolled",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_vpmn",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "fieldname": "international_offer_letter",
+   "fieldtype": "Check",
+   "label": "Offer Letter",
+   "read_only": 1
+  },
+  {
+   "fieldname": "international_application_form_link",
+   "fieldtype": "Code",
+   "label": "International Application Form Link",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "image_field": "program_image",
+ "index_web_pages_for_search": 1,
+ "links": [
+  {
+   "group": "Academics",
+   "link_doctype": "Batch",
+   "link_fieldname": "program"
+  },
+  {
+   "group": "Academics",
+   "link_doctype": "Course Offering",
+   "link_fieldname": "program"
+  },
+  {
+   "group": "Students",
+   "link_doctype": "Student Enrollment",
+   "link_fieldname": "program"
+  },
+  {
+   "group": "Fees",
+   "link_doctype": "Fee Structure",
+   "link_fieldname": "program"
+  }
+ ],
+ "make_attachments_public": 1,
+ "modified": "2026-10-14 11:07:05.403691",
  "modified_by": "Administrator",
-    "module": "SLCM",
-    "name": "Programme",
-    "owner": "Administrator",
-    "permissions": [
-        {
-            "create": 1,
-            "delete": 1,
-            "email": 1,
-            "export": 1,
-            "print": 1,
-            "read": 1,
-            "report": 1,
-            "role": "System Manager",
-            "share": 1,
-            "write": 1
-        },
-        {
-            "email": 1,
-            "export": 1,
-            "print": 1,
-            "read": 1,
-            "report": 1,
-            "role": "Admission Admin",
-            "share": 1,
-            "write": 1
-        },
-        {
-            "email": 1,
-            "export": 1,
-            "print": 1,
-            "read": 1,
-            "report": 1,
-            "role": "Merit Admin",
-            "share": 1,
-            "write": 1
-        },
-        {
-            "email": 1,
-            "export": 1,
-            "print": 1,
-            "read": 1,
-            "report": 1,
-            "role": "Scholarship Admin",
-            "share": 1,
-            "write": 1
-        },
-        {
-            "email": 1,
-            "export": 1,
-            "print": 1,
-            "read": 1,
-            "report": 1,
-            "role": "Offer Letter Admin",
-            "share": 1,
-            "write": 1
-        },
-        {
-            "email": 1,
-            "read": 1,
-            "role": "Applicant",
-            "share": 1
-        },
-        {
-            "email": 1,
-            "export": 1,
-            "print": 1,
-            "read": 1,
-            "report": 1,
-            "role": "All",
-            "share": 1
-        }
-    ],
-    "row_format": "Dynamic",
-    "rows_threshold_for_grid_search": 20,
-    "search_fields": "program_name",
-    "sort_field": "creation",
-    "sort_order": "DESC",
-    "states": [],
-    "title_field": "program_name"
+ "module": "SLCM",
+ "name": "Programme",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Admission Admin",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Merit Admin",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Scholarship Admin",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Offer Letter Admin",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "read": 1,
+   "role": "Applicant",
+   "share": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "All",
+   "share": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "search_fields": "program_name",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "program_name"
 }
