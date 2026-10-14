@@ -2,6 +2,65 @@
 
 {% block title %}Announcements{% endblock %}
 
+{% block extra_head %}
+<style>
+/* ── Dark mode ── */
+/* --fp-text-4 (#475569) is too faint on navy for dates, chevrons and the
+   empty-content note — lift it inside this page's lists only. */
+body.fp-dark #fp-ann-list,
+body.fp-dark #fp-no-ann,
+body.fp-dark #fp-ann-chips { --fp-text-4: #7b8aa3; }
+
+/* Announcement cards */
+body.fp-dark .fp-ann-card { border-color: var(--fp-border); }
+body.fp-dark .fp-ann-header:hover { background: rgba(255,255,255,0.04); }
+body.fp-dark .fp-ann-body .fp-card-body { border-top-color: var(--fp-border) !important; }
+/* Type badge uses --fp-border-light, which equals the card colour on navy */
+body.fp-dark .fp-ann-card .fp-badge-neutral { background: rgba(148,163,184,0.14); color: var(--fp-text-2); }
+
+/* Search box */
+body.fp-dark #fp-ann-search { background: #1a2540; border-color: var(--fp-border-mid); color: var(--fp-text-1); }
+body.fp-dark #fp-ann-search::placeholder { color: var(--fp-text-3); }
+
+/* Empty-state icons (border-mid is invisible on the card) */
+body.fp-dark .fp-card .fp-empty > .fp-ms { color: #7b8aa3; }
+
+/* Rich-text bodies often carry inline editor colours (black text,
+   white/yellow highlights) that are unreadable on navy — neutralise them. */
+body.fp-dark .fp-ann-body .fp-card-body,
+body.fp-dark .fp-ann-body .fp-card-body p,
+body.fp-dark .fp-ann-body .fp-card-body li,
+body.fp-dark .fp-ann-body .fp-card-body span:not(.fp-ms),
+body.fp-dark .fp-ann-body .fp-card-body div,
+body.fp-dark .fp-ann-body .fp-card-body td,
+body.fp-dark .fp-ann-body .fp-card-body th { color: var(--fp-text-2) !important; }
+body.fp-dark .fp-ann-body .fp-card-body strong,
+body.fp-dark .fp-ann-body .fp-card-body b,
+body.fp-dark .fp-ann-body .fp-card-body h1, body.fp-dark .fp-ann-body .fp-card-body h2,
+body.fp-dark .fp-ann-body .fp-card-body h3, body.fp-dark .fp-ann-body .fp-card-body h4,
+body.fp-dark .fp-ann-body .fp-card-body h5, body.fp-dark .fp-ann-body .fp-card-body h6 { color: var(--fp-text-1) !important; }
+body.fp-dark .fp-ann-body .fp-card-body a,
+body.fp-dark .fp-ann-body .fp-card-body a * { color: #f08da0 !important; }
+body.fp-dark .fp-ann-body .fp-card-body [style*="background"],
+body.fp-dark .fp-ann-body .fp-card-body mark,
+body.fp-dark .fp-ann-body .fp-card-body [bgcolor] { background: transparent !important; }
+body.fp-dark .fp-ann-body .fp-card-body table,
+body.fp-dark .fp-ann-body .fp-card-body td,
+body.fp-dark .fp-ann-body .fp-card-body th { border-color: var(--fp-border) !important; }
+body.fp-dark .fp-ann-body .fp-card-body th { background: #1a2540 !important; }
+body.fp-dark .fp-ann-body .fp-card-body hr { border-color: var(--fp-border); }
+body.fp-dark .fp-ann-body .fp-card-body blockquote { border-left-color: var(--fp-border-mid); color: var(--fp-text-3) !important; }
+body.fp-dark .fp-ann-body .fp-card-body pre,
+body.fp-dark .fp-ann-body .fp-card-body code { background: #1a2540 !important; color: var(--fp-text-1) !important; }
+body.fp-dark .fp-ann-body .fp-card-body > span[style*="font-style:italic"] { color: #7b8aa3 !important; }
+
+/* Type / Priority multi-selects (currently commented out in the markup) */
+body.fp-dark #fp-type-btn, body.fp-dark #fp-pri-btn { background: #1a2540; border-color: var(--fp-border-mid); }
+body.fp-dark #fp-type-panel, body.fp-dark #fp-pri-panel { background: #1a2540; border-color: var(--fp-border-mid); box-shadow: 0 10px 28px rgba(0,0,0,0.5); }
+body.fp-dark #fp-type-panel .fp-multiselect-option:hover, body.fp-dark #fp-pri-panel .fp-multiselect-option:hover { background: rgba(255,255,255,0.05); }
+</style>
+{% endblock %}
+
 {% block content %}
 
 

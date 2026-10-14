@@ -139,6 +139,26 @@
   }
 
   /* Calendar styles come from the shared _calendar.html */
+
+  /* ── Dark mode ── */
+  body.sp-dark .tt-filters-bar { background: var(--sp-card); border-color: var(--sp-border); box-shadow: none; }
+  body.sp-dark .tt-input-wrap select,
+  body.sp-dark .tt-input-wrap input,
+  body.sp-dark .tt-dd-btn { background: #1a2540; color: var(--sp-text-1); border-color: #263352; }
+  body.sp-dark .tt-dd-btn:focus, body.sp-dark .tt-dd.open .tt-dd-btn { border-color: var(--sp-primary); }
+  body.sp-dark .tt-dd-menu { background: #1a2540; border-color: #263352; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); }
+  body.sp-dark .tt-dd-menu li { color: var(--sp-text-1); }
+  body.sp-dark .tt-dd-menu li:hover { background: var(--sp-primary-mid); color: #fff; }
+  body.sp-dark .tt-dd-menu li.selected { background: var(--sp-primary); color: #fff; }
+  body.sp-dark .tt-toggle-btn { background: #1a2540; color: var(--sp-text-1); border-color: var(--sp-border); }
+  body.sp-dark .tt-toggle-btn.active { background: var(--sp-primary); color: #fff; border-color: var(--sp-primary); }
+  body.sp-dark .tt-toggle-btn:not(.active):hover { background: var(--sp-primary-light); color: #f08da0; border-color: var(--sp-primary); }
+  /* Sync modal */
+  body.sp-dark #modal-gcal-sync .sp-btn-secondary { background: #1a2540; color: var(--sp-text-1); border-color: var(--sp-border); }
+  body.sp-dark #modal-gcal-sync .sp-btn-secondary:hover:not(:disabled) { background: #263352; }
+  body.sp-dark #modal-gcal-sync .sp-modal-footer { background: var(--sp-card); }
+  body.sp-dark #modal-gcal-sync label { border-color: #263352 !important; color: var(--sp-text-1); }
+  body.sp-dark #modal-gcal-sync input[type="radio"] { accent-color: var(--sp-primary); }
 </style>
 {% endblock %}
 

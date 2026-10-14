@@ -2239,8 +2239,17 @@ body.fp-dark {
   --fp-warning-bg:              rgba(242,179,106,0.14);
   --fp-danger-bg:               rgba(248,113,113,0.14);
   --fp-info-bg:                 rgba(124,196,242,0.14);
+  /* Accent stayed #920c24 (unreadable on navy); faint text and the light
+     border matched the card colour, so labels and dividers disappeared */
+  --fp-accent:                  #f08da0;
+  --fp-accent-light:            rgba(214,74,102,0.14);
+  --fp-text-4:                  #7b8aa3;
+  --fp-text-5:                  #5b6b85;
+  --fp-border-light:            #1e2d4a;
   color-scheme: dark;
 }
+body.fp-dark .fp-badge-neutral { background: var(--fp-card-2); color: var(--fp-text-2); border: 1px solid var(--fp-border); }
+body.fp-dark .fp-btn-secondary { background: var(--fp-card-2); color: var(--fp-text-1); border-color: var(--fp-border-mid); }
 body.fp-dark .fp-nav { border-bottom-color: var(--fp-border); }
 body.fp-dark .fp-sidebar { background: var(--fp-bg-2); border-right-color: var(--fp-border); }
 

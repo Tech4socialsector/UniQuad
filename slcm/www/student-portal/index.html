@@ -691,6 +691,76 @@
   @media (max-width: 560px) {
     .spd-kpi2-row, .spd-qa2-grid { grid-template-columns: 1fr; }
   }
+
+  /* ── Dark mode ── */
+  body.sp-dark .spd-hero,
+  body.sp-dark .spd-qa-section,
+  body.sp-dark .spd-kpi2,
+  body.sp-dark .spd-qa2,
+  body.sp-dark .spd-cal {
+    background: var(--sp-card);
+    border-color: var(--sp-border);
+    color: var(--sp-text-1);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Important Links tiles */
+  body.sp-dark .spd-link-item {
+    background: #1a2540;
+    border-color: var(--sp-border);
+    color: var(--sp-text-1);
+  }
+  body.sp-dark .spd-link-item:hover {
+    border-color: var(--sp-primary);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  }
+  body.sp-dark .spd-link-name { color: var(--sp-text-1); }
+  body.sp-dark .spd-link-ext { color: var(--sp-text-3); }
+
+  /* KPI / quick-action cards (legacy + current) */
+  body.sp-dark .spd-kpi,
+  body.sp-dark .spd-qa-item {
+    background: var(--sp-card);
+    border-color: var(--sp-border);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  }
+  body.sp-dark .spd-qa-item:hover,
+  body.sp-dark .spd-kpi2:hover {
+    border-color: var(--sp-primary);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  }
+  body.sp-dark .spd-qa-item-icon,
+  body.sp-dark .spd-avatar {
+    background: var(--sp-primary-light);
+    border-color: var(--sp-primary-mid);
+  }
+  body.sp-dark .spd-kpi-badge.warning {
+    background: var(--sp-primary-light);
+    border-color: var(--sp-primary-mid);
+    color: #f08da0;
+  }
+  body.sp-dark .spd-kpi-badge.success { border-color: rgba(74, 222, 128, 0.35); }
+  body.sp-dark .spd-kpi2-value { color: #f08da0; }
+  body.sp-dark .spd-kpi2-label { color: var(--sp-text-3); }
+  body.sp-dark .spd-qa2-item { background: transparent; }
+  body.sp-dark .spd-qa2-item:hover { background: var(--sp-primary-light); }
+
+  /* Hero / student card + alerts */
+  body.sp-dark .spd-student-meta .spd-sep { color: #263352; }
+  body.sp-dark .spd-alert-custom,
+  body.sp-dark .spd-alert-custom > .sp-ms,
+  body.sp-dark .spd-alert-text,
+  body.sp-dark .spd-alert-link,
+  body.sp-dark .spd-tt-link,
+  body.sp-dark .spd-tt-when.is-today .spd-tt-date { color: #f08da0; }
+  body.sp-dark .spd-alert-link:hover { color: var(--sp-text-1); }
+
+  /* Timetable list */
+  body.sp-dark .spd-tt-item { background: transparent; border-color: var(--sp-border); }
+  body.sp-dark .spd-tt-when { border-right-color: var(--sp-border); }
+
+  /* No-student empty state */
+  body.sp-dark .spd-no-student-icon { background: #1a2540; }
 </style>
 {% endblock %}
 

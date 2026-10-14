@@ -1,6 +1,6 @@
 {
  "app": "slcm",
- "creation": "2026-04-08 00:00:00.000000",
+ "creation": "2026-04-08 00:00:00",
  "docstatus": 0,
  "doctype": "Workspace Sidebar",
  "header_icon": "layout-panel-top",
@@ -61,6 +61,18 @@
    "keep_closed": 0,
    "label": "Exam Plan",
    "link_to": "Exam Plan",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "icon": "calendar",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Exam Assessment Schedule",
+   "link_to": "Exam Assessment Schedule",
    "link_type": "DocType",
    "show_arrow": 0,
    "type": "Link"
@@ -171,7 +183,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-04-08 00:00:00.000000",
+ "modified": "2026-10-14 10:40:04.906343",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Exam Planner",

@@ -45,7 +45,7 @@
     <div class="fp-card-body">
 
       {# Session info #}
-      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--fp-primary);border-radius:var(--fp-radius-sm);margin-bottom:24px;">
+      <div class="fp-set-session" style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--fp-primary);border-radius:var(--fp-radius-sm);margin-bottom:24px;">
         <span class="fp-ms" style="color:#fff;font-size:22px;">account_circle</span>
         <div>
           <div style="font-size:11px;color:rgba(255,255,255,0.8);text-transform:uppercase;letter-spacing:0.05em;">Logged in as</div>
@@ -146,6 +146,30 @@
 }
 .fp-pwd-eye:hover { color: var(--fp-text-2); }
 .fp-pwd-eye .fp-ms { font-size: 18px; }
+
+/* ── Dark mode ── */
+body.fp-dark .fp-pwd-eye { color: var(--fp-text-3); }
+body.fp-dark .fp-pwd-eye:hover { color: var(--fp-text-1); }
+body.fp-dark .fp-btn-secondary {
+  background: #1a2540; color: var(--fp-text-1); border-color: var(--fp-border);
+}
+body.fp-dark .fp-btn-secondary:hover { background: #22304f; border-color: var(--fp-border-mid); }
+/* "Logged in as" strip: lifted rose is too light behind white text */
+body.fp-dark .fp-set-session { background: var(--fp-primary-dark) !important; }
+/* Toast: success/danger tokens are light on navy, so use dark text */
+body.fp-dark #fp-toast { color: #0a0f1e !important; box-shadow: 0 4px 24px rgba(0,0,0,0.55) !important; }
+/* Password strength (JS sets maroon inline; lift it on navy) */
+body.fp-dark #fp-strength-fill[data-lvl="0"] { background: var(--fp-danger) !important; }
+body.fp-dark #fp-strength-lbl[data-lvl="0"]  { color: var(--fp-danger) !important; }
+body.fp-dark #fp-strength-fill[data-lvl="1"],
+body.fp-dark #fp-strength-fill[data-lvl="2"],
+body.fp-dark #fp-strength-fill[data-lvl="3"],
+body.fp-dark #fp-strength-fill[data-lvl="4"] { background: var(--fp-primary) !important; }
+body.fp-dark #fp-strength-lbl[data-lvl="1"],
+body.fp-dark #fp-strength-lbl[data-lvl="2"],
+body.fp-dark #fp-strength-lbl[data-lvl="3"],
+body.fp-dark #fp-strength-lbl[data-lvl="4"] { color: #f08da0 !important; }
+body.fp-dark #fp-strength-bar > div:first-child { background: var(--fp-border-mid) !important; }
 </style>
 
 {% endblock %}
@@ -199,7 +223,10 @@ function fpStrength() {
     { w:'80%', c:'#920c24', t:'Strong'     },
     { w:'100%',c:'#920c24', t:'Very strong'},
   ];
-  var lvl = lvls[Math.max(0, score - 1)];
+  var lvlIdx = Math.max(0, score - 1);
+  var lvl = lvls[lvlIdx];
+  if (fill) fill.setAttribute('data-lvl', lvlIdx);
+  if (lbl)  lbl.setAttribute('data-lvl', lvlIdx);
   if (fill) { fill.style.width = lvl.w; fill.style.background = lvl.c; }
   if (lbl)  { lbl.textContent = lvl.t; lbl.style.color = lvl.c; }
   fpMatchCheck();

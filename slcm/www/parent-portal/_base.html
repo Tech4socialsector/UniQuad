@@ -447,6 +447,21 @@
       .pp-main { margin-left: 0; padding: 18px 14px 56px; }
     }
 
+    /* App shell (desktop): only the content pane scrolls — one scrollbar,
+       below the fixed navbar, instead of a page scrollbar plus an inner one.
+       Same approach as the Student Portal. */
+    @media screen and (min-width: 769px) {
+      html:has(> body > .pp-layout),
+      body:has(> .pp-layout) { overflow: hidden; height: 100%; }
+      .pp-layout { height: 100vh; min-height: 0; }
+      .pp-main {
+        height: 100%;
+        overflow-y: auto;
+        scrollbar-gutter: stable;
+        overscroll-behavior: contain;
+      }
+    }
+
     /* ── Mobile ward banner: hide mini stats, stack content ─── */
     @media (max-width: 520px) {
       .pp-ward-banner { padding: 16px 18px; gap: 14px; }
@@ -681,11 +696,152 @@
     .pp-preview-back { background: #fff; color: #78350f; border: 1px solid #fcd34d; }
     .pp-preview-form input:focus-visible { outline: 2px solid #b45309; outline-offset: 1px; }
 
+    /* Dark mode toggle button */
+    .pp-theme-btn {
+      width: 38px; height: 38px; border-radius: 10px;
+      background: none; border: none; cursor: pointer; padding: 0;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s, transform 0.15s;
+    }
+    .pp-theme-btn:hover { background: var(--pp-primary-light); transform: translateY(-1px); }
+    .pp-theme-btn .ms { font-size: 22px; color: var(--pp-primary); }
+
+    /* ═══ Dark Mode ═════════════════════════════════════════════
+       Same palette as the Student and Faculty portals. Portal
+       settings set colours on :root; redefining them on body.pp-dark
+       wins because custom properties inherit from body. */
+    body.pp-dark {
+      --pp-bg:            #0a0f1e;
+      --pp-card:          #131d35;
+      --pp-kpi-bg:        #131d35;
+      --pp-kpi-border:    #1e2d4a;
+      --pp-sidebar-bg:    #0f172a;
+      --pp-sidebar-text:  #cbd5e1;
+      --pp-navy:          #e2e8f0;
+      --pp-text-1:        #f1f5f9;
+      --pp-text-2:        #e2e8f0;
+      --pp-text-3:        #94a3b8;
+      --pp-text-4:        #7b8aa3;
+      --pp-border:        #1e2d4a;
+      --pp-border-light:  #1e2d4a;
+      /* NLS maroon is too dark to read on navy — use a lifted rose for accents */
+      --pp-primary:       #d64a66;
+      --pp-primary-dark:  #b8354f;
+      --pp-primary-light: rgba(214,74,102,0.14);
+      --pp-primary-mid:   rgba(214,74,102,0.24);
+      --pp-secondary:     #e0c068;
+      --pp-success:       #4ade80;
+      --pp-warning:       #f2b36a;
+      --pp-warning-bg:    rgba(242,179,106,0.14);
+      --pp-danger:        #f87171;
+      --pp-danger-bg:     rgba(248,113,113,0.14);
+      --pp-info:          #7cc4f2;
+      --pp-info-bg:       rgba(124,196,242,0.14);
+      --pp-purple:        #c4b5fd;
+      --pp-purple-bg:     rgba(167,139,250,0.16);
+      color-scheme: dark;
+    }
+    body.pp-dark .pp-nav { background: #0f172a; border-bottom: 1px solid var(--pp-border); }
+    body.pp-dark .pp-notif-badge { border-color: #0f172a; }
+    body.pp-dark .pp-sidebar { background: var(--pp-sidebar-bg); border-right-color: var(--pp-border); }
+    body.pp-dark .pp-nav-item:hover:not(.active),
+    body.pp-dark .pp-ward-pill:hover { background: #1a2540; color: #ffffff; border-color: #263352; }
+    body.pp-dark .pp-nav-item.active .pp-nav-item-badge { background: #ffffff; color: #b8354f; }
+    body.pp-dark .pp-preview-back { background: #1a2540; color: #fcd34d; border-color: #78350f; }
+    body.pp-dark .pp-preview-form input { background: #1a2540; color: var(--pp-text-1); border-color: #78350f; }
+
+    /* Inline maroon text written as a literal colour */
+    body.pp-dark [style*="color:#920c24"], body.pp-dark [style*="color: #920c24"],
+    body.pp-dark [style*="color:#920C24"], body.pp-dark [style*="color: #920C24"],
+    body.pp-dark [style*="color:#770a1d"], body.pp-dark [style*="color:#6b091a"] { color: #f08da0 !important; }
+
+    /* Inline white / near-white surfaces become dark cards */
+    body.pp-dark [style*="background:#fff;"], body.pp-dark [style*="background: #fff;"],
+    body.pp-dark [style*="background:#fff\""], body.pp-dark [style*="background:#ffffff"],
+    body.pp-dark [style*="background: #ffffff"], body.pp-dark [style*="background:white"],
+    body.pp-dark [style*="background:#f8fafc"], body.pp-dark [style*="background: #f8fafc"],
+    body.pp-dark [style*="background:#f9fafb"], body.pp-dark [style*="background:#f1f5f9"],
+    body.pp-dark [style*="background:#fafafa"] { background: var(--pp-card) !important; }
+    body.pp-dark [style*="background:#fff0f2"], body.pp-dark [style*="background: #fff0f2"],
+    body.pp-dark [style*="background:#fdf2f4"], body.pp-dark [style*="background:#fdf0f2"],
+    body.pp-dark [style*="background:#fef2f2"] { background: var(--pp-primary-light) !important; }
+
+    /* Common light-only text colours */
+    body.pp-dark [style*="color:#1e293b"], body.pp-dark [style*="color:#0f172a"],
+    body.pp-dark [style*="color:#111"], body.pp-dark [style*="color:#000"] { color: var(--pp-text-1) !important; }
+
+    /* Form controls */
+    body.pp-dark input, body.pp-dark select, body.pp-dark textarea { background-color: #1a2540; color: var(--pp-text-1); border-color: #263352; }
+    body.pp-dark input::placeholder, body.pp-dark textarea::placeholder { color: var(--pp-text-3); }
+    body.pp-dark ::selection { background: #334a7a; color: #ffffff; }
+    body.pp-dark ::-moz-selection { background: #334a7a; color: #ffffff; }
+
+    /* ── Dark mode: shell components ── */
+    /* Page edge (overscroll / short pages) stays navy instead of white */
+    html:has(body.pp-dark) { background: #0a0f1e; }
+
+    /* Navbar */
+    body.pp-dark .pp-avatar-btn { color: #0f172a; border-color: rgba(255,255,255,0.25); }
+
+    /* Notification + account dropdowns */
+    body.pp-dark .pp-notif-dropdown,
+    body.pp-dark .pp-dropdown { box-shadow: 0 10px 40px rgba(0,0,0,0.5); border-color: #263352; }
+    body.pp-dark .pp-notif-dd-item:hover,
+    body.pp-dark .pp-dropdown-item:hover:not(.danger) { background: #1a2540; }
+
+    /* Sidebar */
+    body.pp-dark .pp-sidebar { scrollbar-color: #263352 transparent; }
+    body.pp-dark .pp-nav-item:hover:not(.active) .ms { color: #ffffff; }
+    body.pp-dark .pp-ward-pill-avatar { background: #1a2540; border-color: #263352; color: var(--pp-text-2); }
+    body.pp-dark .pp-ward-pill.active .pp-ward-pill-avatar { background: var(--pp-primary); border-color: var(--pp-primary); color: #fff; }
+    body.pp-dark .pp-sidebar-info-box { background: #1a2540; }
+    body.pp-dark .pp-sidebar-contact-label,
+    body.pp-dark .pp-sidebar-contact-card .ms { color: #f08da0; }
+
+    /* Mobile overlay a little heavier so the navy sidebar separates from the page */
+    body.pp-dark .pp-sidebar-overlay { background: rgba(0,0,0,0.6); }
+    @media (max-width: 768px) {
+      body.pp-dark .pp-sidebar.open { box-shadow: 4px 0 24px rgba(0,0,0,0.5); }
+    }
+
+    /* Shared page components defined in the shell */
+    body.pp-dark .pp-card,
+    body.pp-dark .pp-stat-card { box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+    body.pp-dark .pp-table th { background: #1a2540; color: var(--pp-text-3); }
+    body.pp-dark .pp-table tbody tr:hover,
+    body.pp-dark .pp-acc-hdr:hover { background: rgba(255,255,255,0.05); }
+    body.pp-dark .pp-progress { background: #1a2540; }
+    body.pp-dark .pp-ward-banner-pill { background: #1a2540; border-color: #263352; color: var(--pp-text-2); }
+    body.pp-dark .pp-ward-banner-avatar { color: #f08da0; }
+    body.pp-dark .pp-alert-info    { border-color: rgba(124,196,242,0.35); }
+    body.pp-dark .pp-alert-warning { border-color: rgba(242,179,106,0.40); }
+    body.pp-dark .pp-alert-danger  { border-color: rgba(248,113,113,0.40); }
+    body.pp-dark .pp-alert-success { border-color: rgba(74,222,128,0.35); }
+    body.pp-dark .pp-skel { background: linear-gradient(90deg, #1a2540 25%, #223053 37%, #1a2540 63%); background-size: 400% 100%; }
+
+    /* Admin preview bar (amber on navy) */
+    body.pp-dark .pp-preview-bar { background: rgba(242,179,106,0.10); border-color: rgba(242,179,106,0.40); color: #fcd34d; }
+    body.pp-dark .pp-preview-bar > .ms { color: #f2b36a; }
+    body.pp-dark .pp-preview-form button { background: #b45309; border-color: #d97706; color: #fff; }
+    body.pp-dark .pp-preview-form input:focus-visible { outline-color: #f2b36a; }
+    /* JS toast ("Downloads are disabled in preview mode") — inline cssText, so !important */
+    body.pp-dark .pp-preview-toast { background: #1a2540 !important; border-color: rgba(242,179,106,0.5) !important; color: #fcd34d !important; box-shadow: 0 4px 16px rgba(0,0,0,0.5) !important; }
+
+    /* "Not a Parent Account" screen (inline-styled, hooked by class) */
+    body.pp-dark .pp-np-screen { background: var(--pp-bg) !important; }
+    body.pp-dark .pp-np-card { background: var(--pp-card) !important; border-color: var(--pp-border) !important; box-shadow: 0 4px 24px rgba(0,0,0,0.4) !important; }
+    body.pp-dark .pp-np-icon { background: #1a2540 !important; }
+    body.pp-dark .pp-np-icon .ms-np { color: var(--pp-text-3) !important; }
+    body.pp-dark .pp-np-title { color: var(--pp-text-1) !important; }
+    body.pp-dark .pp-np-text { color: var(--pp-text-3) !important; }
+
     {% block extra_css %}{% endblock %}
   </style>
 </head>
 
 <body class="{{ pp_settings.body_classes if pp_settings else '' }}">
+{# Apply saved dark mode before first paint so pages don't flash light #}
+<script>try { if (localStorage.getItem('pp-dark') === '1') document.body.classList.add('pp-dark'); } catch(e) {}</script>
 {% if pp_settings and pp_settings.custom_css %}
 <style>{{ pp_settings.custom_css }}</style>
 {% endif %}
@@ -759,6 +915,12 @@
   }
   .pp-so-confirm:hover { opacity: .88; }
   .pp-so-confirm.pp-loading { opacity: .6; pointer-events: none; }
+
+  /* ── Dark mode ── */
+  body.pp-dark #pp-signout-overlay { background: rgba(0,0,0,0.6); }
+  body.pp-dark #pp-signout-modal { border: 1px solid var(--pp-border); box-shadow: 0 24px 64px rgba(0,0,0,0.55), 0 4px 16px rgba(0,0,0,0.3); }
+  body.pp-dark #pp-signout-modal .pp-so-icon .ms { color: #f08da0; }
+  body.pp-dark .pp-so-cancel { background: #1a2540; color: var(--pp-text-1); border: 1px solid #263352; }
 </style>
 
 <!-- Sign-out confirmation modal -->
@@ -814,13 +976,13 @@
 {% if is_guest %}
 <script>window.location.href = "/portal-login?redirect-to=/parent-portal";</script>
 {% elif not_a_parent %}
-<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f3f6f5;">
-  <div style="text-align:center;max-width:420px;padding:48px 28px;background:#fff;border-radius:20px;box-shadow:0 4px 24px rgba(0,0,0,0.08);border:1px solid #e5e7eb;">
-    <div style="width:72px;height:72px;border-radius:50%;background:#f3f4f6;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
-      <span style="font-family:'Material Symbols Outlined';font-size:36px;color:#9ca3af;">group_off</span>
+<div class="pp-np-screen" style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f3f6f5;">
+  <div class="pp-np-card" style="text-align:center;max-width:420px;padding:48px 28px;background:#fff;border-radius:20px;box-shadow:0 4px 24px rgba(0,0,0,0.08);border:1px solid #e5e7eb;">
+    <div class="pp-np-icon" style="width:72px;height:72px;border-radius:50%;background:#f3f4f6;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+      <span class="ms-np" style="font-family:'Material Symbols Outlined';font-size:36px;color:#9ca3af;">group_off</span>
     </div>
-    <h2 style="font-size:19px;font-weight:700;color:#111827;margin:0 0 10px;">Not a Parent Account</h2>
-    <p style="font-size:13.5px;color:#6b7280;margin:0 0 24px;line-height:1.6;">Your account is not linked to any student record as a parent or guardian. Please contact the Registrar's Office for assistance.</p>
+    <h2 class="pp-np-title" style="font-size:19px;font-weight:700;color:#111827;margin:0 0 10px;">Not a Parent Account</h2>
+    <p class="pp-np-text" style="font-size:13.5px;color:#6b7280;margin:0 0 24px;line-height:1.6;">Your account is not linked to any student record as a parent or guardian. Please contact the Registrar's Office for assistance.</p>
     <button onclick="ppDoLogout()" style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#2b2e4a,#920c24);color:#fff;padding:10px 26px;border-radius:10px;border:none;cursor:pointer;font-weight:600;font-size:13.5px;font-family:inherit;">
       <span style="font-family:'Material Symbols Outlined';font-size:18px;">logout</span>Sign Out &amp; Login Again
     </button>
@@ -859,6 +1021,11 @@
   </div>
 
   <div class="pp-nav-right">
+    {# Dark mode toggle #}
+    <button type="button" class="pp-theme-btn" id="pp-theme-btn" onclick="ppToggleTheme()" title="Toggle dark mode" aria-label="Toggle dark mode">
+      <span class="ms" id="pp-theme-icon" aria-hidden="true">dark_mode</span>
+    </button>
+
     {# Notification bell — dropdown, does not redirect #}
     {% set _below = courses_below_75 | default(0) %}
     <button type="button" class="pp-notif-btn" id="pp-notif-btn" onclick="toggleNotif(event)"
@@ -1075,6 +1242,18 @@
 {% endif %}
 
 <script>
+  /* ── Dark mode ── */
+  function ppToggleTheme() {
+    var isDark = document.body.classList.toggle('pp-dark');
+    var icon = document.getElementById('pp-theme-icon');
+    if (icon) icon.textContent = isDark ? 'light_mode' : 'dark_mode';
+    try { localStorage.setItem('pp-dark', isDark ? '1' : '0'); } catch(e) {}
+  }
+  (function ppSyncThemeIcon() {
+    var icon = document.getElementById('pp-theme-icon');
+    if (icon && document.body.classList.contains('pp-dark')) icon.textContent = 'light_mode';
+  })();
+
   function ppSetExpanded(id, open) {
     var el = document.getElementById(id);
     if (el) el.setAttribute('aria-expanded', open ? 'true' : 'false');
@@ -1126,6 +1305,7 @@
       document.getElementById('pp-main').setAttribute('aria-busy', 'true');
       closeSidebar();
       window.scrollTo(0, 0);
+      document.getElementById('pp-main').scrollTop = 0;  /* desktop: the content pane is the scroller */
     });
   });
   /* A ward photo that fails to load falls back to the ward's initial */
@@ -1181,6 +1361,7 @@
     e.preventDefault();
     var t = document.createElement('div');
     t.setAttribute('role', 'status');
+    t.className = 'pp-preview-toast';
     t.textContent = 'Downloads are disabled in preview mode.';
     t.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:10000;background:#fff;border:1.5px solid #fcd34d;color:#78350f;border-radius:10px;padding:10px 14px;font-size:13px;box-shadow:0 4px 16px rgba(0,0,0,.1);';
     document.body.appendChild(t);

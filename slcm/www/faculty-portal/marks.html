@@ -174,6 +174,73 @@
   .fg-toolbar, .fg-savebar { padding-left: 14px; padding-right: 14px; }
   .fg-toolbar .fg-search { max-width: none; min-width: 100%; }
 }
+
+/* ── Dark mode ── */
+/* Muted labels: --fp-text-4 (#475569) is too dim on navy cards */
+body.fp-dark .fg-field label, body.fp-dark .fg-info-lbl, body.fp-dark .fg-off,
+body.fp-dark .fg-table th small, body.fp-dark .fg-stu-reg,
+body.fp-dark .fg-dd-label.fg-dd-ph, body.fp-dark .fg-dd-menu li.fg-dd-placeholder,
+body.fp-dark .fg-dd-btn .fp-ms,
+body.fp-dark .fp-page-header [style*="color:var(--fp-text-4)"],
+body.fp-dark #fg-loading, body.fp-dark #fg-up-sub,
+body.fp-dark #fg-info [style*="color:var(--fp-text-4)"],
+body.fp-dark #fg-sheet td[style*="color:var(--fp-text-4)"],
+body.fp-dark #fg-reexam td[style*="color:var(--fp-text-4)"] { color: var(--fp-text-3) !important; }
+
+/* Course / assessment dropdown */
+body.fp-dark .fg-dd-btn { background: var(--fp-card-2); border-color: var(--fp-border-mid); }
+body.fp-dark .fg-dd-btn:focus-visible, body.fp-dark .fg-dd.open .fg-dd-btn { border-color: var(--fp-primary); }
+body.fp-dark .fg-dd-menu { background: var(--fp-card-2); border-color: var(--fp-border-mid); box-shadow: 0 12px 32px rgba(0,0,0,.55); }
+body.fp-dark .fg-dd-menu li.fg-dd-active { background: rgba(255,255,255,0.06); }
+body.fp-dark .fg-dd-menu li[aria-selected="true"] { background: var(--fp-primary); color: #fff; }
+
+/* Info cards, grade distribution, tabs */
+body.fp-dark .fg-dist span { background: var(--fp-card-2); color: var(--fp-text-2); }
+body.fp-dark .fg-tabs { border-color: var(--fp-border-mid); }
+body.fp-dark .fg-tab { background: var(--fp-card-2); color: var(--fp-text-2); }
+body.fp-dark .fg-tab + .fg-tab { border-left-color: var(--fp-border-mid); }
+body.fp-dark .fg-tab-active { background: var(--fp-primary); color: #fff; }
+
+/* Save bar */
+body.fp-dark .fg-save-status.busy { color: var(--fp-warning); }
+body.fp-dark .fg-save-status.err  { color: #f08da0; }
+body.fp-dark .fg-progress { background: var(--fp-border-mid); }
+
+/* Grade sheet cells */
+body.fp-dark .fg-table th { color: var(--fp-text-2); border-bottom-color: var(--fp-border-mid); }
+body.fp-dark .fg-in.fg-dirty, body.fp-dark .fg-remark.fg-dirty { background: rgba(242,179,106,0.14); border-color: var(--fp-warning); }
+body.fp-dark .fg-in.fg-saving { border-color: var(--fp-warning); }
+body.fp-dark .fg-in.fg-error { background: rgba(248,113,113,0.14); border-color: var(--fp-danger); }
+body.fp-dark .fg-in:disabled, body.fp-dark .fg-remark:disabled { background: transparent; border-color: transparent; color: var(--fp-text-2); }
+body.fp-dark .fg-grade-fail { color: #f08da0; }
+
+/* Badges / status pills / chips */
+body.fp-dark .fg-badge-r, body.fp-dark .fg-chip-re, body.fp-dark .fg-status-Locked {
+  background: rgba(214,74,102,0.14); color: #f08da0; box-shadow: inset 0 0 0 1px rgba(214,74,102,0.3); }
+body.fp-dark .fg-badge-i, body.fp-dark .fg-chip-imp {
+  background: rgba(74,222,128,0.12); color: var(--fp-success); box-shadow: inset 0 0 0 1px rgba(74,222,128,0.28); }
+body.fp-dark .fg-status-Draft { background: var(--fp-card-2); color: var(--fp-text-3); }
+body.fp-dark .fg-status-Submitted { background: rgba(124,196,242,0.14); color: var(--fp-info); }
+
+/* Upload dialog */
+body.fp-dark .fg-modal { background: rgba(0,0,0,.65); }
+body.fp-dark .fg-modal-box { color: var(--fp-text-1); border: 1px solid var(--fp-border); box-shadow: 0 20px 60px rgba(0,0,0,.6); }
+body.fp-dark .fg-modal-hdr button { color: var(--fp-text-2); }
+body.fp-dark .fg-steps a { color: #f08da0; }
+body.fp-dark .fg-modal .fp-alert a { color: #fff; text-decoration: underline; }
+body.fp-dark #fg-file::file-selector-button { background: var(--fp-border-mid); color: var(--fp-text-1);
+  border: 1px solid var(--fp-border-mid); border-radius: 6px; padding: 4px 10px; margin-right: 10px; cursor: pointer; }
+body.fp-dark .fg-up-ok { background: rgba(74,222,128,0.12) !important; color: var(--fp-success) !important;
+  border: 1px solid rgba(74,222,128,0.28); }
+body.fp-dark .fg-up-ok b { color: var(--fp-text-1); }
+body.fp-dark .fg-errs th { color: var(--fp-text-2); }
+body.fp-dark .fg-errs td { color: var(--fp-text-2); }
+body.fp-dark .fg-errs tbody tr:nth-child(even) td { background: rgba(255,255,255,0.025); }
+
+/* Toast + busy overlay */
+body.fp-dark .fg-toast { background: #15803d !important; color: #fff; box-shadow: 0 8px 24px rgba(0,0,0,.5); }
+body.fp-dark .fg-toast.fg-toast-err { background: var(--fp-primary-dark) !important; }
+body.fp-dark .fg-busy { background: rgba(10,15,30,.65); color: var(--fp-text-1); }
 </style>
 {% endblock %}
 
@@ -395,6 +462,7 @@ function fgToast(msg, isError) {
   if (!el) return;
   el.textContent = msg;
   el.style.background = isError ? 'var(--fp-primary)' : 'var(--fp-success)';
+  el.classList.toggle('fg-toast-err', !!isError);   /* dark-mode hook */
   el.style.display = 'block';
   clearTimeout(el._t);
   el._t = setTimeout(function () { el.style.display = 'none'; }, isError ? 5000 : 3000);
@@ -944,7 +1012,7 @@ function fgShowUploadResult(r) {
   var box = document.getElementById('fg-up-result');
   FG.lastErrors = r.errors || [];
   if (r.ok) {
-    box.innerHTML = '<div class="fp-alert" style="background:#e3f6e8;color:#1e7b3a;display:flex;gap:8px;align-items:center;">' +
+    box.innerHTML = '<div class="fp-alert fg-up-ok" style="background:#e3f6e8;color:#1e7b3a;display:flex;gap:8px;align-items:center;">' +
       '<span class="fp-ms">task_alt</span><div>File is valid: <b>' + r.summary.values + '</b> mark(s) for <b>' + r.summary.students + '</b> student(s). Click <b>Save Marks</b> to apply.</div></div>';
     document.getElementById('fg-up-save').style.display = r.summary.students ? '' : 'none';
     return;
