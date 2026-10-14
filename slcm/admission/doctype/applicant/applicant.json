@@ -77,17 +77,19 @@
   "class_x_board",
   "class_x_marksheet",
   "section_break_vpmz",
+  "class_xii_status",
   "class_xii_name_of_examination",
   "class_xii_board",
   "hsc_group",
-  "xii_country",
   "column_break_mlet",
   "class_xii_year_of_completion",
   "hsc_percentage",
   "class_xii_marksheet",
+  "sample_bonafide_certificate",
   "column_break_ycmo",
   "class_xii_school",
   "if_cgpa_maximum_cgpa_class_xii",
+  "xii_country",
   "section_break_cmag",
   "ug_degree_completion",
   "ug_degree_details",
@@ -898,12 +900,13 @@
    "reqd": 1
   },
   {
+   "depends_on": "eval:doc.class_xii_status == \"Completed\"",
    "fieldname": "hsc_percentage",
    "fieldtype": "Percent",
    "label": "Percentage/CGPA obtained (Class XII/Equivalent)",
+   "mandatory_depends_on": "eval:doc.class_xii_status == \"Completed\"",
    "non_negative": 1,
-   "precision": "2",
-   "reqd": 1
+   "precision": "2"
   },
   {
    "fieldname": "hsc_group",
@@ -1205,6 +1208,7 @@
    "show_dashboard": 1
   },
   {
+   "depends_on": "eval:doc.class_xii_status == \"Completed\"",
    "fieldname": "if_cgpa_maximum_cgpa_class_xii",
    "fieldtype": "Float",
    "label": "If CGPA, maximum CPGA (Class XII/Equivalent)",
@@ -1309,6 +1313,21 @@
    "label": "Degree Certificate / Bonafide",
    "mandatory_depends_on": "eval: doc.other_degree == \"Yes\"",
    "options": "png, jpeg, jpg, pdf"
+  },
+  {
+   "default": "Completed",
+   "fieldname": "class_xii_status",
+   "fieldtype": "Autocomplete",
+   "label": "Class XII Status",
+   "options": "Completed\nAppearing",
+   "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.class_xii_status == \"Appearing\"",
+   "fieldname": "sample_bonafide_certificate",
+   "fieldtype": "HTML",
+   "label": "Sample Bonafide Certificate Template",
+   "options": "<a href=\"https://docs.google.com/document/d/1hmPndT-uGT0m_IVd1ocYH5y_Ckd7-XuE/edit?pli=1\" target=\"_blank\" rel=\"noopener noreferrer\" style=\"\n    display: inline-block;\n    padding: 5px 8px;\n    background-color: #920C24;\n    color: white;\n    text-decoration: none;\n    border-radius: 5px;\n    font-family: Merriweather, sans-serif;\n    text-align: center;\n\">Sample Template</a><br>\n\n<p style=\"\n    color: #999999;\n    font-weight: 400;\n    font-size: 10.5px;\n    font-family: Merriweather, sans-serif;\n    margin-top: 5px;\n\">Sample bonafide certificate template</p>\n"
   }
  ],
  "grid_page_length": 50,
@@ -1344,7 +1363,7 @@
   }
  ],
  "make_attachments_public": 1,
- "modified": "2026-10-09 14:07:21.376515",
+ "modified": "2026-10-14 10:54:06.844956",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Applicant",
