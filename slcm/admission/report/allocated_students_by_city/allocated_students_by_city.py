@@ -1,6 +1,7 @@
 # Copyright (c) 2026, TFSS and contributors
 # For license information, please see license.txt
 
+import re
 import frappe
 from frappe import _
 
@@ -9,8 +10,8 @@ def execute(filters: dict | None = None):
 	if filters is None:
 		filters = {}
 
-	columns = get_columns()
-	data = get_data(filters)
+	data, program_fields = get_data(filters)
+	columns = get_columns(program_fields)
 
 	total_allocated = sum(d.get("allocated_count", 0) for d in data)
 
@@ -24,67 +25,124 @@ def execute(filters: dict | None = None):
 	]
 
 	message = (
-		_("Allocated student counts grouped by city.")
+		_("Allocated student counts grouped by city and programme.")
 		if data
 		else _("No allocated students found.")
 	)
 
-	chart = get_chart_data(data)
+	chart = get_chart_data(data, program_fields)
 
 	return columns, data, message, chart, summary
 
 
-def get_columns() -> list[dict]:
-	return [
+def get_columns(program_fields: list[dict] | None = None) -> list[dict]:
+	columns = [
 		{
 			"label": _("City"),
 			"fieldname": "city",
 			"fieldtype": "Data",
-			"width": 200,
+			"width": 180,
 		},
 		{
 			"label": _("Number of Centres"),
 			"fieldname": "centre_count",
 			"fieldtype": "Int",
-			"width": 160,
-		},
-		{
-			"label": _("Allocated Count"),
-			"fieldname": "allocated_count",
-			"fieldtype": "Int",
-			"width": 160,
+			"width": 140,
 		},
 	]
 
+	if program_fields:
+		for p in program_fields:
+			columns.append(
+				{
+					"label": _(p["label"]),
+					"fieldname": p["fieldname"],
+					"fieldtype": "Int",
+					"width": 160,
+				}
+			)
 
-def get_chart_data(data: list[dict]) -> dict | None:
+	columns.append(
+		{
+			"label": _("Total Allocated Count"),
+			"fieldname": "allocated_count",
+			"fieldtype": "Int",
+			"width": 160,
+		}
+	)
+
+	return columns
+
+
+def get_chart_data(data: list[dict], program_fields: list[dict] | None = None) -> dict | None:
 	if not data:
 		return None
 
 	# Exclude the "International Applicant" bucket from the chart (no real city)
 	chart_rows = [r for r in data if r.get("city") != "International Applicant"]
+	if not chart_rows:
+		return None
 
 	labels = [r["city"] for r in chart_rows]
-	values = [r["allocated_count"] for r in chart_rows]
+
+	# Filter programme fields to only those that have at least one allocated student in chart rows
+	active_programs = []
+	if program_fields:
+		for p in program_fields:
+			if any(r.get(p["fieldname"], 0) > 0 for r in chart_rows):
+				active_programs.append(p)
+
+	if active_programs:
+		datasets = [
+			{
+				"name": p["label"],
+				"values": [r.get(p["fieldname"], 0) for r in chart_rows],
+			}
+			for p in active_programs
+		]
+	else:
+		datasets = [
+			{
+				"name": _("Allocated Count"),
+				"values": [r.get("allocated_count", 0) for r in chart_rows],
+			}
+		]
+
+	palette = [
+		"#2490EF",
+		"#48C774",
+		"#FF9F43",
+		"#EA5455",
+		"#7367F0",
+		"#1E9FF2",
+		"#10AC84",
+		"#EE5253",
+		"#F368E0",
+		"#00D2D3",
+		"#6C5CE7",
+		"#FFA502",
+	]
 
 	return {
 		"data": {
 			"labels": labels,
-			"datasets": [
-				{
-					"name": _("Allocated Count"),
-					"values": values,
-				}
-			],
+			"datasets": datasets,
 		},
 		"type": "bar",
-		"barOptions": {"horizontal": True, "stacked": False},
-		"height": max(280, len(chart_rows) * 28 + 80),
-		"colors": ["#2490EF"],
+		"barOptions": {
+			"stacked": True,
+			"spaceRatio": 0.3,
+		},
+		"height": 360,
+		"colors": palette[: max(1, len(datasets))],
+		"axisOptions": {
+			"xAxisMode": "span",
+			"seriesLabelSpaceRatio": 5,
+		},
 	}
 
 
-def get_data(filters: dict) -> list[dict]:
+def get_data(filters: dict) -> tuple[list[dict], list[dict]]:
 	user = frappe.session.user
 	roles = frappe.get_roles(user)
 
@@ -97,7 +155,7 @@ def get_data(filters: dict) -> list[dict]:
 	):
 		provider_name = frappe.db.get_value("Entrance Test Provider", {"user": user}, "name")
 		if not provider_name:
-			return []
+			return [], []
 		provider_filter = provider_name
 	elif filters.get("entrance_test_provider"):
 		provider_filter = filters.get("entrance_test_provider")
@@ -145,9 +203,7 @@ def get_data(filters: dict) -> list[dict]:
 
 	where_clause = " AND ".join(conditions)
 
-	# effective_provider = re_entrance_test_provider when rescheduled, else entrance_test_provider.
-	# City is fetched by joining Entrance Test Provider on that effective provider name.
-	# Applicants with no provider (international) are grouped under 'International Applicant'.
+	# Fetch raw allocation counts grouped by city, program, and provider (centre)
 	records = frappe.db.sql(
 		f"""
 		SELECT
@@ -155,7 +211,11 @@ def get_data(filters: dict) -> list[dict]:
 				NULLIF(prov.city, ''),
 				'International Applicant'
 			) AS city,
-			COUNT(DISTINCT prov.name) AS centre_count,
+			IFNULL(
+				NULLIF(alloc.program, ''),
+				'Unassigned'
+			) AS program,
+			prov.name AS provider_name,
 			COUNT(alloc.name) AS allocated_count
 		FROM `tabEntrance Test Seat Allocation` alloc
 		LEFT JOIN `tabEntrance Test Provider` prov
@@ -173,11 +233,87 @@ def get_data(filters: dict) -> list[dict]:
 				NULL
 			)
 		WHERE {where_clause}
-		GROUP BY city
-		ORDER BY allocated_count DESC
+		GROUP BY city, alloc.program, prov.name
 		""",
 		values,
 		as_dict=True,
 	)
 
-	return records
+	if not records:
+		return [], []
+
+	# Map programmes to human-readable names and clean labels for chart legend
+	prog_names = sorted(list({r["program"] for r in records if r.get("program")}))
+	prog_details = frappe.db.sql(
+		"SELECT name, program_name, program_code FROM `tabProgramme`",
+		as_dict=True,
+	)
+	prog_info_map = {p["name"]: p for p in prog_details}
+
+	program_fields = []
+	used_fieldnames = set()
+	for p in prog_names:
+		info = prog_info_map.get(p, {})
+		p_name = info.get("program_name") or p
+		p_code = info.get("program_code") or ""
+
+		if "public policy" in p.lower() or "public policy" in p_name.lower():
+			label = "MPP"
+		elif p_name and 2 <= len(p_name) <= 14:
+			label = p_name
+		elif p_code and 2 <= len(p_code) <= 12:
+			label = p_code
+		elif p_name:
+			clean = re.sub(r"-\d{4}\s*-\s*\d{4}.*$", "", p_name).strip()
+			label = clean
+		else:
+			label = p
+
+		slug = re.sub(r"[^a-zA-Z0-9_]+", "_", p).strip("_").lower()
+		fieldname = f"prog_{slug[:35]}"
+		if fieldname in used_fieldnames:
+			idx = 2
+			while f"{fieldname}_{idx}" in used_fieldnames:
+				idx += 1
+			fieldname = f"{fieldname}_{idx}"
+		used_fieldnames.add(fieldname)
+		program_fields.append({
+			"program": p,
+			"label": label,
+			"full_name": p_name,
+			"fieldname": fieldname,
+		})
+
+	# Group records per city
+	city_map = {}
+	for r in records:
+		c = r["city"]
+		if c not in city_map:
+			city_map[c] = {
+				"city": c,
+				"centre_names": set(),
+				"total": 0,
+				"prog_counts": {},
+			}
+		if r.get("provider_name"):
+			city_map[c]["centre_names"].add(r["provider_name"])
+		cnt = r.get("allocated_count", 0)
+		city_map[c]["total"] += cnt
+		p = r["program"]
+		city_map[c]["prog_counts"][p] = city_map[c]["prog_counts"].get(p, 0) + cnt
+
+	# Build tabular rows
+	data = []
+	for c, info in city_map.items():
+		row = {
+			"city": c,
+			"centre_count": len(info["centre_names"]),
+			"allocated_count": info["total"],
+		}
+		for pf in program_fields:
+			row[pf["fieldname"]] = info["prog_counts"].get(pf["program"], 0)
+		data.append(row)
+
+	data.sort(key=lambda x: x["allocated_count"], reverse=True)
+
+	return data, program_fields
