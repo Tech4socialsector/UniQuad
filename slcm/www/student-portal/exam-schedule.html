@@ -393,6 +393,179 @@
     border: 1px solid #bbf7d0;
   }
 
+  /* Assessments under a course (Exam Assessment Schedule) */
+  .es-table tbody tr.es-has-asmt {
+    cursor: pointer;
+  }
+
+  .es-table tbody tr.es-has-asmt.es-open,
+  .es-table tbody tr.es-has-asmt.es-open:hover {
+    background: rgba(146,12,36, .05);
+  }
+
+  .es-table tbody tr.es-has-asmt.es-open td {
+    border-bottom-color: transparent;
+  }
+
+  .es-table tbody tr.es-asmt-row,
+  .es-table tbody tr.es-asmt-row:hover {
+    background: rgba(146,12,36, .05);
+  }
+
+  .es-asmt-row[hidden] {
+    display: none !important;
+  }
+
+  /* Indent so the list lines up with the course name */
+  .es-table tr.es-asmt-row td {
+    padding: 0 16px 16px 56px;
+  }
+
+  .es-asmt-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px 4px 12px;
+    border-radius: 20px;
+    border: 1px solid #f5c6ce;
+    background: #fff0f2;
+    color: var(--sp-primary);
+    font-size: 11.5px;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background .12s;
+  }
+
+  .es-asmt-toggle:hover {
+    background: #fde4e8;
+  }
+
+  .es-asmt-toggle:focus-visible {
+    outline: 2px solid var(--sp-primary);
+    outline-offset: 2px;
+  }
+
+  .es-asmt-chevron {
+    font-size: 18px;
+    transition: transform .2s ease;
+  }
+
+  .es-asmt-toggle[aria-expanded="true"] .es-asmt-chevron {
+    transform: rotate(180deg);
+  }
+
+  .es-asmt-list {
+    background: #fff;
+    border: 1px solid var(--sp-border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .es-asmt-item {
+    display: grid;
+    grid-template-columns: minmax(140px, 1.3fr) repeat(3, minmax(120px, 1fr)) minmax(110px, auto);
+    grid-template-areas: "label date first second status";
+    gap: 12px;
+    align-items: center;
+    padding: 10px 14px;
+    font-size: 12.5px;
+    color: var(--sp-text-2);
+    border-top: 1px solid var(--sp-border);
+  }
+
+  .es-a-label  { grid-area: label; min-width: 0; }
+  .es-a-date   { grid-area: date; }
+  .es-a-first  { grid-area: first; }
+  .es-a-second { grid-area: second; }
+  .es-a-status { grid-area: status; }
+
+  .es-asmt-item:first-child {
+    border-top: none;
+  }
+
+  .es-asmt-head {
+    background: #fdf5f5;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--sp-text-3);
+    padding-top: 7px;
+    padding-bottom: 7px;
+  }
+
+  .es-asmt-label {
+    font-weight: 700;
+    color: var(--sp-text-1);
+  }
+
+  .es-asmt-remarks {
+    font-size: 11px;
+    color: var(--sp-text-4);
+    margin-top: 2px;
+  }
+
+  .es-asmt-deadline {
+    font-weight: 600;
+    color: var(--sp-text-1);
+  }
+
+  .es-asmt-upcoming { background: #f0f1f6; color: #3b4a6b; border: 1px solid #d8dcea; }
+  .es-asmt-open     { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+  .es-asmt-due      { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+  .es-asmt-closed   { background: #f3f4f6; color: #6b7280; border: 1px solid #e5e7eb; }
+  .es-asmt-tba      { background: #f3f4f6; color: #9ca3af; border: 1px solid #e5e7eb; font-style: italic; }
+
+  /* The layout below follows the card's own width (not the viewport), since the
+     portal sidebar stays open on tablets and leaves the card much narrower. */
+  .exam-plan {
+    container: esplan / inline-size;
+  }
+
+  /* Medium card: assessment rows become small cards — name + status on top, dates below */
+  @container esplan (max-width: 900px) {
+    .es-asmt-head { display: none; }
+    .es-asmt-item {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-areas:
+        "label  label  status"
+        "date   first  second";
+      gap: 8px 14px;
+      align-items: start;
+    }
+    .es-a-status { justify-self: end; }
+    .es-asmt-item > div[data-label]:not(.es-a-label):not(.es-a-status)::before {
+      content: attr(data-label);
+      display: block;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: var(--sp-text-4);
+      margin-bottom: 2px;
+    }
+  }
+
+  @container esplan (max-width: 760px) {
+    .es-table { min-width: 0; }
+    .es-table th,
+    .es-table td { padding: 10px 12px; }
+    .es-table tr.es-asmt-row td { padding: 0 12px 14px; }
+  }
+
+  /* Narrow card: dates stack one per line */
+  @container esplan (max-width: 440px) {
+    .es-asmt-item {
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas:
+        "label  status"
+        "date   date"
+        "first  first"
+        "second second";
+    }
+  }
+
   /* Table footer — row count + summary */
   .es-table-footer {
     display: flex;
@@ -492,13 +665,68 @@
       align-items: flex-start;
     }
 
-    .es-table th,
-    .es-table td {
-      padding: 10px 12px;
-    }
-
     .es-col-sno {
       display: none;
+    }
+  }
+
+  /* Phone: section header stacks, search goes full width */
+  @media (max-width: 640px) {
+    .es-section-header { align-items: stretch; }
+    .es-search-input { width: 100%; }
+  }
+
+  /* Narrow card: course table turns into one card per course */
+  @container esplan (max-width: 600px) {
+    .es-table thead { display: none; }
+    .es-table,
+    .es-table tbody { display: block; }
+
+    .es-table tbody tr.es-table-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 12px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--sp-border);
+    }
+
+    .es-table tbody tr.es-has-asmt.es-open { border-bottom-color: transparent; }
+
+    .es-table tbody tr.es-table-row td {
+      display: block;
+      padding: 0;
+      border: none;
+      min-width: 0;
+    }
+
+    .es-table tbody tr.es-table-row td.es-col-sno { display: none; }
+    .es-table tbody tr.es-table-row td.es-cell-course { grid-column: 1 / -1; }
+    .es-table tbody tr.es-table-row td[data-label="Status"] { grid-column: 1 / -1; }
+
+    .es-table tbody tr.es-table-row td[data-label]::before {
+      content: attr(data-label);
+      display: block;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: var(--sp-text-4);
+      margin-bottom: 4px;
+    }
+
+    .es-table tbody tr.es-table-row td[data-label="Status"]:has(.es-asmt-toggle)::before { display: none; }
+
+    .es-asmt-toggle {
+      width: 100%;
+      justify-content: center;
+      padding: 7px 12px;
+    }
+
+    .es-table tbody tr.es-asmt-row { display: block; }
+    .es-table tbody tr.es-asmt-row td {
+      display: block;
+      padding: 0 12px 14px;
+      border-bottom: 1px solid var(--sp-border);
     }
   }
 
@@ -522,6 +750,19 @@
   body.sp-dark .es-badge-pending { background: rgba(255,255,255,0.06); border-color: var(--sp-border); }
   body.sp-dark .es-badge-scheduled { background: var(--sp-success-bg); color: var(--sp-success); border-color: rgba(74,222,128,0.3); }
   body.sp-dark .es-badge[style*="#f5c6ce"] { border-color: var(--sp-primary-mid) !important; }
+  body.sp-dark .es-table tbody tr.es-asmt-row,
+  body.sp-dark .es-table tbody tr.es-asmt-row:hover,
+  body.sp-dark .es-table tbody tr.es-has-asmt.es-open,
+  body.sp-dark .es-table tbody tr.es-has-asmt.es-open:hover { background: rgba(255,255,255,0.04); }
+  body.sp-dark .es-asmt-list { background: var(--sp-card); }
+  body.sp-dark .es-asmt-toggle { background: var(--sp-primary-light); color: #f08da0; border-color: var(--sp-primary-mid); }
+  body.sp-dark .es-asmt-toggle:hover { background: rgba(240,141,160,0.18); }
+  body.sp-dark .es-asmt-head { background: #1a2540; color: var(--sp-text-2); }
+  body.sp-dark .es-asmt-upcoming { background: rgba(255,255,255,0.06); color: var(--sp-text-2); border-color: var(--sp-border); }
+  body.sp-dark .es-asmt-open { background: var(--sp-success-bg); color: var(--sp-success); border-color: rgba(74,222,128,0.3); }
+  body.sp-dark .es-asmt-due { background: rgba(251,146,60,0.12); color: #fdba74; border-color: rgba(251,146,60,0.35); }
+  body.sp-dark .es-asmt-closed,
+  body.sp-dark .es-asmt-tba { background: rgba(255,255,255,0.04); color: var(--sp-text-4); border-color: var(--sp-border); }
   body.sp-dark .es-page-btn:hover { background: rgba(255,255,255,0.06); }
   body.sp-dark .es-page-btn.active { background: var(--sp-primary-light); }
 </style>
@@ -584,6 +825,7 @@
 {% else %}
 
 {% for plan in exam_plans %}
+{% set plan_idx = loop.index %}
 
 <div class="es-section-header fade-in">
   <div class="es-section-title">
@@ -639,22 +881,27 @@
       </thead>
       <tbody>
         {% for course in plan.courses %}
-        <tr class="es-table-row">
+        {% set asmt_id = "asmt-" ~ plan_idx ~ "-" ~ loop.index %}
+        <tr class="es-table-row{% if course.assessments %} es-has-asmt{% endif %}" {% if course.assessments
+          %}data-asmt="{{ asmt_id }}" {% endif %}>
           <td class="es-col-sno">{{ loop.index }}</td>
-          <td>
+          <td class="es-cell-course">
             <div class="es-course-name search-target">{{ course.course_name }}</div>
             <div class="es-course-code search-target">{{ (course.get('course_code') or course.course).split('-')[0] }}
             </div>
           </td>
-          <td>
+          <td data-label="Assessment Date">
             {% if course.exam_date %}
             <div class="es-date-main">{{ course.exam_date }}</div>
+            {% elif course.next_assessment %}
+            <div class="es-date-main">{{ course.next_assessment.date }}</div>
+            <div class="es-time-sub">Next: {{ course.next_assessment.label }}</div>
             {% else %}
             <span class="es-tba">To be announced</span>
             {% endif %}
           </td>
 
-          <td>
+          <td data-label="Attendance">
             {% if course.attendance_status in ['Present', 'Eligible'] %}
             <span class="es-badge es-badge-present"><span class="sp-ms" style="font-size:12px;">check_circle</span>{{
               course.attendance_status }}</span>
@@ -666,14 +913,46 @@
                 style="font-size:12px;">pending</span>Pending</span>
             {% endif %}
           </td>
-          <td>
-            {% if course.has_schedule %}
+          <td data-label="Status">
+            {% if course.assessments %}
+            <button type="button" class="es-asmt-toggle" aria-expanded="false" aria-controls="{{ asmt_id }}">
+              {{ course.assessments | length }} Assessment{{ "s" if course.assessments | length != 1 else "" }}
+              <span class="sp-ms es-asmt-chevron">expand_more</span>
+            </button>
+            {% elif course.has_schedule %}
             <span class="es-badge es-badge-scheduled">Scheduled</span>
             {% else %}
             <span class="es-tba">To be announced</span>
             {% endif %}
           </td>
         </tr>
+        {% if course.assessments %}
+        <tr class="es-asmt-row" id="{{ asmt_id }}" hidden>
+          <td colspan="5">
+            <div class="es-asmt-list">
+              <div class="es-asmt-item es-asmt-head">
+                <div>Assessment</div>
+                <div>Assessment Date</div>
+                <div>1st Submission Deadline</div>
+                <div>2nd Submission Deadline</div>
+                <div>Status</div>
+              </div>
+              {% for a in course.assessments %}
+              <div class="es-asmt-item">
+                <div class="es-a-label" data-label="Assessment">
+                  <div class="es-asmt-label">{{ a.label }}</div>
+                  {% if a.remarks %}<div class="es-asmt-remarks">{{ a.remarks }}</div>{% endif %}
+                </div>
+                <div class="es-a-date" data-label="Assessment Date">{% if a.assessment_date %}{{ a.assessment_date }}{% else %}<span class="es-tba">—</span>{% endif %}</div>
+                <div class="es-a-first" data-label="1st Submission Deadline">{% if a.first_deadline %}<span class="es-asmt-deadline">{{ a.first_deadline }}</span>{% else %}<span class="es-tba">—</span>{% endif %}</div>
+                <div class="es-a-second" data-label="2nd Submission Deadline">{% if a.second_deadline %}<span class="es-asmt-deadline">{{ a.second_deadline }}</span>{% else %}<span class="es-tba">—</span>{% endif %}</div>
+                <div class="es-a-status" data-label="Status"><span class="es-badge es-asmt-{{ a.tone }}">{{ a.status }}</span></div>
+              </div>
+              {% endfor %}
+            </div>
+          </td>
+        </tr>
+        {% endif %}
         {% endfor %}
       </tbody>
     </table>
@@ -715,11 +994,15 @@
         textValue += targets[j].textContent || targets[j].innerText;
       }
 
-      if (textValue.toLowerCase().indexOf(filter) > -1) {
-        rows[i].style.display = "";
-        visibleCount++;
-      } else {
-        rows[i].style.display = "none";
+      const show = textValue.toLowerCase().indexOf(filter) > -1;
+      rows[i].style.display = show ? "" : "none";
+      if (show) visibleCount++;
+
+      // Hide the course's assessments with it; when shown again the
+      // `hidden` attribute still decides whether it is expanded.
+      const next = rows[i].nextElementSibling;
+      if (next && next.classList.contains('es-asmt-row')) {
+        next.style.display = show ? "" : "none";
       }
     }
 
@@ -732,5 +1015,24 @@
       }
     }
   }
+
+  // Expand / collapse a course's assessments — the whole course row is clickable
+  document.querySelectorAll('.es-table-row.es-has-asmt').forEach(function (row) {
+    const panel = document.getElementById(row.dataset.asmt);
+    const btn = row.querySelector('.es-asmt-toggle');
+    if (!panel || !btn) return;
+
+    function toggle() {
+      const open = btn.getAttribute('aria-expanded') !== 'true';
+      btn.setAttribute('aria-expanded', open);
+      row.classList.toggle('es-open', open);
+      panel.hidden = !open;
+    }
+
+    row.addEventListener('click', function (e) {
+      if (e.target.closest('a')) return;
+      toggle();
+    });
+  });
 </script>
 {% endblock %}

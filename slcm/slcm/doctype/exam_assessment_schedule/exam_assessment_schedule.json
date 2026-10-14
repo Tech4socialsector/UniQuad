@@ -1,0 +1,111 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "autoname": "format:EAS-{#####}",
+ "creation": "2026-10-14 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "academic_year",
+  "term",
+  "programme",
+  "col_break_1",
+  "exam_plan",
+  "status",
+  "section_assessments",
+  "assessments"
+ ],
+ "fields": [
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Academic Year",
+   "options": "Academic Year",
+   "reqd": 1
+  },
+  {
+   "fieldname": "term",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Term",
+   "options": "Academic Term",
+   "reqd": 1
+  },
+  {
+   "fieldname": "programme",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Programme",
+   "options": "Programme",
+   "reqd": 1
+  },
+  {
+   "fieldname": "col_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Exam Plan of this term. Used to pick the mapped Evaluation Schema when fetching assessments.",
+   "fieldname": "exam_plan",
+   "fieldtype": "Link",
+   "label": "Exam Plan",
+   "options": "Exam Plan"
+  },
+  {
+   "default": "Active",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Active\nInactive"
+  },
+  {
+   "fieldname": "section_assessments",
+   "fieldtype": "Section Break",
+   "label": "Course-wise Assessment Schedule"
+  },
+  {
+   "fieldname": "assessments",
+   "fieldtype": "Table",
+   "label": "Assessments",
+   "options": "Exam Assessment Schedule Item"
+  }
+ ],
+ "grid_page_length": 50,
+ "links": [],
+ "modified": "2026-10-14 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "SLCM",
+ "name": "Exam Assessment Schedule",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Academics User",
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "search_fields": "programme,term",
+ "show_title_field_in_link": 0,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
