@@ -461,12 +461,14 @@
 			const $xAxis = $svg.find('.x.axis');
 			const isDrilledDown = widget && widget._is_drilled_down;
 			const chartName = widget && ((widget.chart_doc && widget.chart_doc.name) || widget.chart_name || widget.name);
-			const shouldRotateLabels = $xAxis.length && !isDrilledDown && (chartName === 'Allocated Students by City' || $xAxis.children('g').length > 6);
+			const shouldRotateLabels = $xAxis.length && !isDrilledDown && (chartName === 'Allocated Students by City' || chartName === 'Allocated Students by Programme' || $xAxis.children('g').length > 6);
 
 			if (shouldRotateLabels) {
 				const $groups = $xAxis.children('g');
 				let raw_labels = null;
-				if (widget && widget.dashboard_chart && widget.dashboard_chart.data && widget.dashboard_chart.data.labels) {
+				if (chartName === 'Allocated Students by Programme' && widget && widget.report_result && widget.report_result.result) {
+					raw_labels = widget.report_result.result.map(r => r.program_name || r.program);
+				} else if (widget && widget.dashboard_chart && widget.dashboard_chart.data && widget.dashboard_chart.data.labels) {
 					raw_labels = widget.dashboard_chart.data.labels;
 				} else if (widget && widget.report_result && widget.report_result.result) {
 					raw_labels = widget.report_result.result
