@@ -292,11 +292,11 @@ frappe.ui.form.on("Applicant", {
     },
 
     nationality: function (frm) {
-        if (frm.doc.foriegn_national === "No" && frm.doc.nationality && frm.doc.nationality !== "Indian") {
-            frappe.show_alert({ message: __("For Domestic applications, Nationality must be Indian."), indicator: "orange" });
-            frm.set_value("nationality", "Indian");
-        } else if (frm.doc.foriegn_national === "Yes" && frm.doc.nationality === "Indian") {
-            frappe.show_alert({ message: __("For International applications, Nationality cannot be Indian."), indicator: "orange" });
+        if (frm.doc.foriegn_national === "No" && frm.doc.nationality && frm.doc.nationality !== "India") {
+            frappe.show_alert({ message: __("For Domestic applications, Nationality must be India."), indicator: "orange" });
+            frm.set_value("nationality", "India");
+        } else if (frm.doc.foriegn_national === "Yes" && frm.doc.nationality === "India") {
+            frappe.show_alert({ message: __("For International applications, Nationality cannot be India."), indicator: "orange" });
             frm.set_value("nationality", "");
         }
     },
@@ -337,8 +337,11 @@ frappe.ui.form.on("Applicant", {
                         if (is_cgpa) {
                             errors.push(__("UG CGPA for degree \"{0}\" should be between 4 and {1}",
                                 [row.ug_program || __("(unnamed)"), max_val]));
+                        } else if (row.ug_cgpa < 35) {
+                            errors.push(__("UG score for degree \"{0}\" is less than 35. If entering CGPA, please provide the Maximum CGPA; otherwise, Percentage must be between 35 and 100",
+                                [row.ug_program || __("(unnamed)")]));
                         } else {
-                            errors.push(__("UG Percentage for degree \"{0}\" should be between 35 and 100, If CGPA then give the maximum CGPA else percentage",
+                            errors.push(__("UG Percentage for degree \"{0}\" cannot be more than 100",
                                 [row.ug_program || __("(unnamed)")]));
                         }
                     }
@@ -357,8 +360,11 @@ frappe.ui.form.on("Applicant", {
                         if (is_cgpa) {
                             errors.push(__("PG CGPA for degree \"{0}\" should be between 4 and {1}",
                                 [row.pg_program || __("(unnamed)"), max_val]));
+                        } else if (row.pg_cgpa < 35) {
+                            errors.push(__("PG score for degree \"{0}\" is less than 35. If entering CGPA, please provide the Maximum CGPA; otherwise, Percentage must be between 35 and 100",
+                                [row.pg_program || __("(unnamed)")]));
                         } else {
-                            errors.push(__("PG Percentage for degree \"{0}\" should be between 35 and 100 , If CGPA then give the maximum CGPA else percentage",
+                            errors.push(__("PG Percentage for degree \"{0}\" cannot be more than 100",
                                 [row.pg_program || __("(unnamed)")]));
                         }
                     }
@@ -389,11 +395,11 @@ frappe.ui.form.on("Applicant", {
         }
 
         if (frm.doc.nationality && frm.doc.foriegn_national) {
-            if (frm.doc.nationality !== "Indian" && frm.doc.foriegn_national !== "Yes") {
-                errors.push(__("If Nationality is not Indian, then 'Foreign National' must be Yes."));
+            if (frm.doc.nationality !== "India" && frm.doc.foriegn_national !== "Yes") {
+                errors.push(__("If Nationality is not India, then 'Foreign National' must be Yes."));
             }
-            if (frm.doc.foriegn_national === "Yes" && frm.doc.nationality === "Indian") {
-                errors.push(__("If 'Foreign National' is Yes, Nationality cannot be Indian."));
+            if (frm.doc.foriegn_national === "Yes" && frm.doc.nationality === "India") {
+                errors.push(__("If 'Foreign National' is Yes, Nationality cannot be India."));
             }
         }
 

@@ -96,6 +96,7 @@ class Applicant(Document):
                 self._validate_application_fee_before_submit()
 
         if self.status in ("Submitted", "Completed"):
+            self._validate_admission_open_for_scope()
             self._validate_national_test_percentage()
             self.validate_eligibility()
             self.validate_dynamic_conditions()
@@ -277,6 +278,43 @@ class Applicant(Document):
                     title=_("Limit Reached")
                 )
 
+    def _validate_admission_open_for_scope(self):
+        """
+        Validate whether the programme is open for Domestic, International, or both in the admission cycle.
+        """
+        if not self.admission_cycle or not self.program:
+            return
+
+        scope = frappe.db.get_value(
+            "Admission Cycle Program",
+            {"parent": self.admission_cycle, "program": self.program, "is_active": 1},
+            "admission_open_for",
+        )
+        if not scope:
+            return
+
+        scope = scope.strip()
+        is_foreign = (self.foriegn_national or "").strip().lower() in ("yes", "true", "1")
+        is_dom = (self.foriegn_national or "").strip().lower() in ("no", "false", "0")
+        if not is_foreign and not is_dom and self.nationality:
+            if self.nationality.strip().lower() == "india":
+                is_dom = True
+            else:
+                is_foreign = True
+
+        prog_title = frappe.db.get_value("Programme", self.program, "program_name") or self.program
+
+        if scope == "International" and is_dom:
+            frappe.throw(
+                _("Access Restricted: The {0} programme is exclusively open to international applicants. Domestic candidates are not eligible to apply for this course.").format(prog_title),
+                title=_("Access Restricted"),
+            )
+        elif scope == "Domestic" and is_foreign:
+            frappe.throw(
+                _("Access Restricted: The {0} programme is exclusively open to domestic applicants. International candidates are not eligible to apply for this course.").format(prog_title),
+                title=_("Access Restricted"),
+            )
+
     def _validate_application_fee_before_submit(self):
         """Block submission if application fee is required and not paid/waived.
         When category has no fee or fee is 0, allow submit and set application_fee_status to 'Paid'."""
@@ -284,7 +322,7 @@ class Applicant(Document):
         from slcm.api.service.application_fee_service import _get_applicant_category
 
         category = _get_applicant_category(self.name)
-        is_foreign = self.nationality != "Indian" if self.nationality else False
+        is_foreign = self.nationality != "India" if self.nationality else False
         fee_amount = get_application_fee_for_category(self.program, self.admission_cycle, category, is_foreign=is_foreign)
 
         if flt(fee_amount, 2) <= 0:
