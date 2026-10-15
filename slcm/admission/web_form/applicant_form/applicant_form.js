@@ -4493,11 +4493,11 @@ function setupPreferenceValidation() {
 				var nat = wf.get_value('nationality');
 				var fn = wf.get_value('foriegn_national');
 
-				if (fn === 'No' && nat && nat !== 'Indian') {
-					frappe.msgprint('For Domestic applications, Nationality must be Indian.');
-					wf.set_value('nationality', 'Indian');
-				} else if (fn === 'Yes' && nat === 'Indian') {
-					frappe.msgprint('For International applications, Nationality cannot be Indian.');
+				if (fn === 'No' && nat && nat !== 'India') {
+					frappe.msgprint('For Domestic applications, Nationality must be India.');
+					wf.set_value('nationality', 'India');
+				} else if (fn === 'Yes' && nat === 'India') {
+					frappe.msgprint('For International applications, Nationality cannot be India.');
 					wf.set_value('nationality', '');
 				}
 			}

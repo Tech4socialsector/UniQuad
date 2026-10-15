@@ -292,11 +292,11 @@ frappe.ui.form.on("Applicant", {
     },
 
     nationality: function (frm) {
-        if (frm.doc.foriegn_national === "No" && frm.doc.nationality && frm.doc.nationality !== "Indian") {
-            frappe.show_alert({ message: __("For Domestic applications, Nationality must be Indian."), indicator: "orange" });
-            frm.set_value("nationality", "Indian");
-        } else if (frm.doc.foriegn_national === "Yes" && frm.doc.nationality === "Indian") {
-            frappe.show_alert({ message: __("For International applications, Nationality cannot be Indian."), indicator: "orange" });
+        if (frm.doc.foriegn_national === "No" && frm.doc.nationality && frm.doc.nationality !== "India") {
+            frappe.show_alert({ message: __("For Domestic applications, Nationality must be India."), indicator: "orange" });
+            frm.set_value("nationality", "India");
+        } else if (frm.doc.foriegn_national === "Yes" && frm.doc.nationality === "India") {
+            frappe.show_alert({ message: __("For International applications, Nationality cannot be India."), indicator: "orange" });
             frm.set_value("nationality", "");
         }
     },
@@ -395,11 +395,11 @@ frappe.ui.form.on("Applicant", {
         }
 
         if (frm.doc.nationality && frm.doc.foriegn_national) {
-            if (frm.doc.nationality !== "Indian" && frm.doc.foriegn_national !== "Yes") {
-                errors.push(__("If Nationality is not Indian, then 'Foreign National' must be Yes."));
+            if (frm.doc.nationality !== "India" && frm.doc.foriegn_national !== "Yes") {
+                errors.push(__("If Nationality is not India, then 'Foreign National' must be Yes."));
             }
-            if (frm.doc.foriegn_national === "Yes" && frm.doc.nationality === "Indian") {
-                errors.push(__("If 'Foreign National' is Yes, Nationality cannot be Indian."));
+            if (frm.doc.foriegn_national === "Yes" && frm.doc.nationality === "India") {
+                errors.push(__("If 'Foreign National' is Yes, Nationality cannot be India."));
             }
         }
 

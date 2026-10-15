@@ -297,7 +297,7 @@ class Applicant(Document):
         is_foreign = (self.foriegn_national or "").strip().lower() in ("yes", "true", "1")
         is_dom = (self.foriegn_national or "").strip().lower() in ("no", "false", "0")
         if not is_foreign and not is_dom and self.nationality:
-            if self.nationality.strip().lower() == "indian":
+            if self.nationality.strip().lower() == "india":
                 is_dom = True
             else:
                 is_foreign = True
@@ -322,7 +322,7 @@ class Applicant(Document):
         from slcm.api.service.application_fee_service import _get_applicant_category
 
         category = _get_applicant_category(self.name)
-        is_foreign = self.nationality != "Indian" if self.nationality else False
+        is_foreign = self.nationality != "India" if self.nationality else False
         fee_amount = get_application_fee_for_category(self.program, self.admission_cycle, category, is_foreign=is_foreign)
 
         if flt(fee_amount, 2) <= 0:

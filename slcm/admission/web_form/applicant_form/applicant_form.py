@@ -286,7 +286,7 @@ def validate_new_application_access(program=None, foriegn_national=None, nationa
         is_international = (foriegn_national or "").strip().lower() in ("yes", "true", "1")
         is_domestic = (foriegn_national or "").strip().lower() in ("no", "false", "0")
         if not is_international and not is_domestic and nationality:
-            if nationality.strip().lower() == "indian":
+            if nationality.strip().lower() == "india":
                 is_domestic = True
             else:
                 is_international = True
@@ -550,7 +550,7 @@ def save_applicant_draft(data, ignore_mandatory=True):
             is_foreign = (getattr(doc, "foriegn_national", "") or "").strip().lower() in ("yes", "true", "1")
             is_dom = (getattr(doc, "foriegn_national", "") or "").strip().lower() in ("no", "false", "0")
             if not is_foreign and not is_dom and getattr(doc, "nationality", None):
-                is_dom = doc.nationality.strip().lower() == "indian"
+                is_dom = doc.nationality.strip().lower() == "india"
                 is_foreign = not is_dom
 
             if acp_scope == "International" and is_dom:

@@ -268,9 +268,9 @@
   },
   {
    "fieldname": "nationality",
-   "fieldtype": "Select",
+   "fieldtype": "Autocomplete",
    "label": "Nationality",
-   "options": "Indian\nAfghan\nAlbanian\nAlgerian\nAmerican\nAndorran\nAngolan\nAntiguan and Barbudan\nArgentine\nArmenian\nAustralian\nAustrian\nAzerbaijani\nBahamian\nBahraini\nBangladeshi\nBarbadian\nBelarusian\nBelgian\nBelizean\nBeninese\nBhutanese\nBolivian\nBosnian\nBotswanan\nBrazilian\nBritish\nBruneian\nBulgarian\nBurkinab\u00e9\nBurundian\nCambodian\nCameroonian\nCanadian\nCape Verdean\nCentral African\nChadian\nChilean\nChinese\nColombian\nComorian\nCongolese (Democratic Republic of the Congo)\nCongolese (Republic of the Congo)\nCosta Rican\nCroatian\nCuban\nCypriot\nCzech\nDanish\nDjiboutian\nDominican\nDominican (Dominican Republic)\nDutch\nEcuadorian\nEgyptian\nEmirati\nEquatorial Guinean\nEritrean\nEstonian\nEswatini\nEthiopian\nFijian\nFilipino\nFinnish\nFrench\nGabonese\nGambian\nGeorgian\nGerman\nGhanaian\nGreek\nGrenadian\nGuatemalan\nGuinean\nGuinea-Bissauan\nGuyanese\nHaitian\nHonduran\nHungarian\nIcelandic\nIndonesian\nIranian\nIraqi\nIrish\nIsraeli\nItalian\nIvorian\nJamaican\nJapanese\nJordanian\nKazakhstani\nKenyan\nKiribatian\nKosovar\nKuwaiti\nKyrgyzstani\nLao\nLatvian\nLebanese\nLesotho\nLiberian\nLibyan\nLiechtensteiner\nLithuanian\nLuxembourgish\nMalagasy\nMalawian\nMalaysian\nMaldivian\nMalian\nMaltese\nMarshallese\nMauritanian\nMauritian\nMexican\nMicronesian\nMoldovan\nMon\u00e9gasque\nMongolian\nMontenegrin\nMoroccan\nMozambican\nMyanmar (Burmese)\nNamibian\nNauruan\nNepali\nNew Zealander\nNicaraguan\nNigerian\nNigerien\nNorth Korean\nNorth Macedonian\nNorwegian\nOmani\nPakistani\nPalauan\nPalestinian\nPanamanian\nPapua New Guinean\nParaguayan\nPeruvian\nPolish\nPortuguese\nQatari\nRomanian\nRussian\nRwandan\nSaint Kitts and Nevis\nSaint Lucian\nSaint Vincentian\nSalvadoran\nSamoan\nSan Marinese\nS\u00e3o Tom\u00e9an\nSaudi Arabian\nSenegalese\nSerbian\nSeychellois\nSierra Leonean\nSingaporean\nSlovak\nSlovenian\nSolomon Islander\nSomali\nSouth African\nSouth Korean\nSouth Sudanese\nSpanish\nSri Lankan\nSudanese\nSurinamese\nSwedish\nSwiss\nSyrian\nTaiwanese\nTajikistani\nTanzanian\nThai\nTimorese\nTogolese\nTongan\nTrinidadian and Tobagonian\nTunisian\nTurkish\nTurkmen\nTuvaluan\nUgandan\nUkrainian\nUruguayan\nUzbekistani\nVanuatuan\nVatican\nVenezuelan\nVietnamese\nYemeni\nZambian\nZimbabwean",
+   "options": "India\nAfghanistan\nAlbania\nAlgeria\nUnited States of America\nAndorra\nAngola\nAntigua and Barbuda\nArgentina\nArmenia\nAustralia\nAustria\nAzerbaijan\nBahamas\nBahrain\nBangladesh\nBarbados\nBelarus\nBelgium\nBelize\nBenin\nBhutan\nBolivia\nBosnia and Herzegovina\nBotswana\nBrazil\nUnited Kingdom\nBrunei\nBulgaria\nBurkina Faso\nBurundi\nCambodia\nCameroon\nCanada\nCape Verde\nCentral African Republic\nChad\nChile\nChina\nColombia\nComoros\nDemocratic Republic of the Congo\nRepublic of the Congo\nCosta Rica\nCroatia\nCuba\nCyprus\nCzechia\nDenmark\nDjibouti\nDominica\nDominican Republic\nNetherlands\nEcuador\nEgypt\nUnited Arab Emirates\nEquatorial Guinea\nEritrea\nEstonia\nEswatini\nEthiopia\nFiji\nPhilippines\nFinland\nFrance\nGabon\nThe Gambia\nGeorgia\nGermany\nGhana\nGreece\nGrenada\nGuatemala\nGuinea\nGuinea-Bissau\nGuyana\nHaiti\nHonduras\nHungary\nIceland\nIndonesia\nIran\nIraq\nIreland\nIsrael\nItaly\nC\u00f4te d'Ivoire\nJamaica\nJapan\nJordan\nKazakhstan\nKenya\nKiribati\nKosovo\nKuwait\nKyrgyzstan\nLaos\nLatvia\nLebanon\nLesotho\nLiberia\nLibya\nLiechtenstein\nLithuania\nLuxembourg\nMadagascar\nMalawi\nMalaysia\nMaldives\nMali\nMalta\nMarshall Islands\nMauritania\nMauritius\nMexico\nFederated States of Micronesia\nMoldova\nMonaco\nMongolia\nMontenegro\nMorocco\nMozambique\nMyanmar\nNamibia\nNauru\nNepal\nNew Zealand\nNicaragua\nNigeria\nNiger\nNorth Korea\nNorth Macedonia\nNorway\nOman\nPakistan\nPalau\nPalestine\nPanama\nPapua New Guinea\nParaguay\nPeru\nPoland\nPortugal\nQatar\nRomania\nRussia\nRwanda\nSaint Kitts and Nevis\nSaint Lucia\nSaint Vincent and the Grenadines\nEl Salvador\nSamoa\nSan Marino\nS\u00e3o Tom\u00e9 and Pr\u00edncipe\nSaudi Arabia\nSenegal\nSerbia\nSeychelles\nSierra Leone\nSingapore\nSlovakia\nSlovenia\nSolomon Islands\nSomalia\nSouth Africa\nSouth Korea\nSouth Sudan\nSpain\nSri Lanka\nSudan\nSuriname\nSweden\nSwitzerland\nSyria\nTaiwan\nTajikistan\nTanzania\nThailand\nTimor-Leste\nTogo\nTonga\nTrinidad and Tobago\nTunisia\nT\u00fcrkiye\nTurkmenistan\nTuvalu\nUganda\nUkraine\nUruguay\nUzbekistan\nVanuatu\nVatican City\nVenezuela\nVietnam\nYemen\nZambia\nZimbabwe",
    "reqd": 1,
    "sort_options": 1
   },
@@ -338,7 +338,7 @@
    "default": "No",
    "fieldname": "guardian_required",
    "fieldtype": "Select",
-   "label": "If both parent details are unavailable, enter details of a legal guardian?",
+   "label": "If both parent's details are unavailable, enter details of a legal guardian?",
    "options": "No\nYes"
   },
   {
@@ -374,8 +374,7 @@
    "fieldname": "country",
    "fieldtype": "Link",
    "label": "Country",
-   "options": "Country",
-   "reqd": 1
+   "options": "Country"
   },
   {
    "fieldname": "state",
@@ -385,11 +384,11 @@
    "reqd": 1
   },
   {
-   "depends_on": "eval:doc.country == \"India\"",
+   "depends_on": "eval:doc.country == \"nationality\"",
    "fieldname": "city",
    "fieldtype": "Link",
    "label": "City",
-   "mandatory_depends_on": "eval:doc.country == \"India\"",
+   "mandatory_depends_on": "eval:doc.nationality == \"India\"",
    "options": "City"
   },
   {
@@ -1082,13 +1081,13 @@
    "depends_on": "eval:doc.program_level == \"Research Course\"",
    "fieldname": "section_break_vmys",
    "fieldtype": "Section Break",
-   "label": "PHD Details"
+   "label": "PhD Details"
   },
   {
    "depends_on": "eval:doc.program_level == \"Research Course\"",
    "fieldname": "proposed_phd_topic",
    "fieldtype": "Small Text",
-   "label": "Proposed PHD Topic ",
+   "label": "Proposed PhD Topic ",
    "mandatory_depends_on": "eval:doc.program_level == \"Research Course\""
   },
   {
@@ -1251,8 +1250,7 @@
    "fieldname": "foriegn_national",
    "fieldtype": "Select",
    "label": "Are you a foreign national with a valid passport of a country other that India?",
-   "options": "\nYes\nNo",
-   "reqd": 1
+   "options": "\nYes\nNo"
   },
   {
    "depends_on": "eval:doc.foriegn_national == \"Yes\"",
@@ -1283,11 +1281,11 @@
    "label": "Last Admission Fee Reminder Sent On"
   },
   {
-   "depends_on": "eval:doc.country != \"India\"",
+   "depends_on": "eval:doc.country != \"nationality\"",
    "fieldname": "foreigin_city",
    "fieldtype": "Data",
    "label": "City",
-   "mandatory_depends_on": "eval:doc.country != \"India\""
+   "mandatory_depends_on": "eval:doc.country != \"nationality\""
   },
   {
    "depends_on": "eval:doc.foriegn_national == \"Yes\"",
@@ -1362,7 +1360,7 @@
   }
  ],
  "make_attachments_public": 1,
- "modified": "2026-10-15 12:16:59.096622",
+ "modified": "2026-10-15 16:27:23.482936",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Applicant",
