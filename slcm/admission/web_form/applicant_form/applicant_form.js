@@ -153,22 +153,70 @@ function _injectCSS() {
 		'.slcm-status-submitted{background:#dcfce7;color:#14532d;border:1px solid #86efac;}',
 		'.slcm-status-other    {background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;}',
 		/* Fee-payment overlay modal */
-		'#slcm-fee-modal{position:fixed;inset:0;z-index:99998;display:none;align-items:center;justify-content:center;}',
+		'#slcm-fee-modal{position:fixed;inset:0;z-index:99998;display:none;align-items:center;justify-content:center;padding:16px;}',
 		'#slcm-fee-modal.open{display:flex;}',
-		'#slcm-fee-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.45);}',
-		'#slcm-fee-box{position:relative;background:#fff;border-radius:14px;' +
-			'padding:32px 28px;width:100%;max-width:420px;box-shadow:0 16px 48px rgba(0,0,0,.2);}',
-		'#slcm-fee-box h3{margin:0 0 6px;font-size:1.15rem;color:#1e293b;}',
-		'#slcm-fee-amount{font-size:2rem;font-weight:400;color:var(--slcm-primary,#1a73e8);margin:10px 0 6px;}',
-		'#slcm-fee-box p{font-size:.85rem;color:#64748b;margin:0 0 22px;}',
-		'.slcm-fee-actions{display:flex;gap:10px;flex-wrap:wrap;}',
-		'#slcm-fee-pay-btn{flex:1;padding:10px 0;border-radius:8px;' +
-			'background:var(--slcm-primary,#1a73e8);color:#fff;border:none;font-weight:300;cursor:pointer;font-size:14px;' +
-			'display:inline-flex;align-items:center;justify-content:center;gap:8px;}',
+		'#slcm-fee-backdrop{position:absolute;inset:0;background:rgba(15,23,42,.55);backdrop-filter:blur(4px);}',
+		'#slcm-fee-box{position:relative;background:#fff;border-radius:14px;width:100%;max-width:500px;' +
+			'max-height:calc(100vh - 32px);overflow-y:auto;padding:28px 26px 26px;text-align:center;font-family:inherit;' +
+			'box-shadow:0 24px 64px rgba(15,23,42,.28);animation:slcm-slide-up .3s ease-out;}',
+		'#slcm-fee-box .slcm-fee-ms{font-family:"Material Symbols Outlined";font-weight:normal;font-style:normal;' +
+			'line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;' +
+			'-webkit-font-smoothing:antialiased;}',
+		'#slcm-fee-close{position:absolute;top:14px;right:14px;width:36px;height:36px;border-radius:9px;border:none;' +
+			'background:#f1f5f9;color:#0f172a;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;}',
+		'#slcm-fee-close:hover{background:#e2e8f0;}',
+		'#slcm-fee-close .slcm-fee-ms{font-size:22px;}',
+		/* Rupee hero icon with decorative bubbles */
+		'.slcm-fee-hero{position:relative;width:120px;height:84px;margin:4px auto 12px;}',
+		'.slcm-fee-hero-circle{position:absolute;left:50%;top:0;transform:translateX(-50%);width:84px;height:84px;border-radius:50%;' +
+			'background:#fbe9ec;background:color-mix(in srgb,var(--slcm-primary,#920C24) 10%,#fff);' +
+			'color:var(--slcm-primary,#920C24);display:flex;align-items:center;justify-content:center;}',
+		'.slcm-fee-hero-circle .slcm-fee-ms{font-size:46px;font-weight:600;}',
+		'.slcm-fee-bubble{position:absolute;border-radius:50%;}',
+		'.slcm-fee-bubble.b1{width:22px;height:22px;left:0;bottom:4px;background:#fbe9ec;background:color-mix(in srgb,var(--slcm-primary,#920C24) 12%,#fff);}',
+		'.slcm-fee-bubble.b2{width:10px;height:10px;left:-4px;bottom:22px;border:2px solid #f5c9d1;border-color:color-mix(in srgb,var(--slcm-primary,#920C24) 22%,#fff);background:#fff;}',
+		'.slcm-fee-bubble.b3{width:14px;height:14px;right:-2px;top:22px;border:2.5px solid #f5c9d1;border-color:color-mix(in srgb,var(--slcm-primary,#920C24) 22%,#fff);background:#fff;}',
+		'.slcm-fee-title{margin:0 0 16px;font-size:22px;font-weight:700;color:#1e293b;line-height:1.25;}',
+		/* Amount panel */
+		'.slcm-fee-amount-box{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;' +
+			'padding:16px 14px;margin:0 12px 12px;border-radius:10px;' +
+			'background:#fdf2f4;background:color-mix(in srgb,var(--slcm-primary,#920C24) 6%,#fff);}',
+		'#slcm-fee-amount{font-size:30px;font-weight:700;color:var(--slcm-primary,#920C24);line-height:1.1;margin:0;}',
+		'.slcm-fee-secured{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:6px;' +
+			'background:#dcfce7;color:#166534;font-size:13px;font-weight:500;}',
+		'.slcm-fee-secured .slcm-fee-ms{font-size:17px;color:#15803d;font-variation-settings:"FILL" 1;}',
+		/* Info + note callouts */
+		'.slcm-fee-callout{display:flex;align-items:stretch;text-align:left;border-radius:10px;margin:0 0 12px;overflow:hidden;' +
+			'font-size:13.5px;line-height:1.55;}',
+		'.slcm-fee-callout-icon{flex:0 0 auto;display:flex;align-items:center;justify-content:center;padding:0 14px;}',
+		'.slcm-fee-callout-text{flex:1;padding:12px 14px 12px 4px;}',
+		'.slcm-fee-info{background:#fdf2f4;background:color-mix(in srgb,var(--slcm-primary,#920C24) 5%,#fff);color:#64748b;}',
+		'.slcm-fee-info .slcm-fee-callout-icon{background:#fbe9ec;background:color-mix(in srgb,var(--slcm-primary,#920C24) 8%,#fff);' +
+			'color:var(--slcm-primary,#920C24);padding:0 16px;}',
+		'.slcm-fee-info .slcm-fee-callout-text{padding-left:14px;}',
+		'.slcm-fee-info .slcm-fee-ms{font-size:24px;}',
+		'.slcm-fee-note{background:#fff8eb;color:#5b3a12;}',
+		'.slcm-fee-note .slcm-fee-callout-icon{color:#ea8a0c;align-items:flex-start;padding-top:12px;}',
+		'.slcm-fee-note .slcm-fee-ms{font-size:24px;}',
+		'.slcm-fee-note strong{color:#3f2a0e;font-weight:700;}',
+		/* Actions */
+		'.slcm-fee-actions{display:flex;flex-direction:column;gap:12px;margin-top:16px;}',
+		'#slcm-fee-pay-btn{position:relative;width:100%;padding:13px 44px;border-radius:8px;border:none;cursor:pointer;' +
+			'background:var(--slcm-primary,#920C24);color:#fff;font-family:inherit;font-size:16px;font-weight:600;' +
+			'display:flex;align-items:center;justify-content:center;gap:10px;transition:filter .15s;}',
+		'#slcm-fee-pay-btn .slcm-fee-ms{font-size:22px;}',
+		'#slcm-fee-pay-btn .slcm-fee-pay-arrow{position:absolute;right:16px;top:50%;transform:translateY(-50%);}',
 		'#slcm-fee-pay-btn:hover:not(:disabled){filter:brightness(1.08);}',
 		'#slcm-fee-pay-btn:disabled{opacity:.6;cursor:not-allowed;}',
-		'#slcm-fee-later-btn{flex:1;padding:10px 0;border-radius:8px;' +
-			'background:#f1f5f9;color:#334155;border:1.5px solid #cbd5e1;font-weight:300;cursor:pointer;font-size:14px;}',
+		'#slcm-fee-later-btn{width:100%;padding:12px 16px;border-radius:8px;cursor:pointer;' +
+			'background:#fff;color:#1e293b;border:1.5px solid #cbd5e1;font-family:inherit;font-size:16px;font-weight:600;' +
+			'display:flex;align-items:center;justify-content:center;gap:10px;transition:background .15s,border-color .15s;}',
+		'#slcm-fee-later-btn:hover{background:#f8fafc;border-color:#94a3b8;}',
+		'#slcm-fee-later-btn .slcm-fee-ms{font-size:22px;}',
+		// NOTE: keep the space after the opening brace below. This file is rendered through Jinja,
+		// and an opening brace directly followed by a hash starts a Jinja comment.
+		'@media (max-width:480px){ #slcm-fee-box{padding:24px 18px 20px;}.slcm-fee-amount-box{margin:0 0 12px;}' +
+			'#slcm-fee-amount{font-size:26px;}.slcm-fee-title{font-size:20px;}}',
 		/* Top-bar: Back (left) + Receipt icon-btn (right) */
 		'#slcm-form-topbar{display:flex;align-items:center;justify-content:space-between;' +
 			'padding:8px 4px 4px;margin-bottom:4px;}',
@@ -717,6 +765,8 @@ function _buildShell(ws, cfg, user, uinfo) {
 		'</h1>' +
 		'<div class="adm-nav-links">' +
 			(portalActive ? '<a href="/admission" style="color:rgba(255,255,255,.85);text-decoration:none;font-size:14px;font-weight:500;white-space:nowrap;" onmouseover="this.style.color=\'#fff\'" onmouseout="this.style.color=\'rgba(255,255,255,.85)\'">Admission</a>' : '') +
+			// Same route as the admission portal navbar (admission_base.html)
+			'<a href="/merit-and-scholarship/helpdesk" style="color:rgba(255,255,255,.85);text-decoration:none;font-size:14px;font-weight:500;white-space:nowrap;" onmouseover="this.style.color=\'#fff\'" onmouseout="this.style.color=\'rgba(255,255,255,.85)\'">Helpdesk</a>' +
 			(isGuest
 				? '<a href="/login" style="display:inline-flex;align-items:center;background:' + primary + ';color:#fff;padding:8px 20px;border-radius:8px;font-weight:400;font-size:14px;text-decoration:none;">Login / Apply</a>'
 				: '<div style="position:relative;display:flex;align-items:center;gap:10px;">' +
@@ -2403,6 +2453,11 @@ function _feePayBtnSetLoading(payBtn, loading, label) {
 			'style="animation:slcm-spin .8s linear infinite;flex-shrink:0" aria-hidden="true">' +
 			'<path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>' +
 			'<span>' + (label || 'Opening\u2026') + '</span>';
+	} else if (payBtn.id === 'slcm-fee-pay-btn') {
+		payBtn.innerHTML =
+			'<span class="slcm-fee-ms" aria-hidden="true">credit_card</span>' +
+			'<span>Pay Now</span>' +
+			'<span class="slcm-fee-ms slcm-fee-pay-arrow" aria-hidden="true">arrow_forward</span>';
 	} else {
 		payBtn.textContent = payBtn.id === 'slcm-pay-btn' ? 'Pay Application Fee' : 'Pay Now';
 	}
@@ -2415,47 +2470,57 @@ function _showFeeModal(feeDetails, onPaid) {
 		modal = document.createElement('div');
 		modal.id = 'slcm-fee-modal';
 		modal.innerHTML =
-			'<div id="slcm-fee-backdrop" style="position:absolute;inset:0;background:rgba(15,23,42,0.6);backdrop-filter:blur(3px);"></div>' +
-			'<div id="slcm-fee-box" style="position:relative;background:#fff;border-radius:12px;width:100%;max-width:380px;text-align:center;box-shadow:0 10px 15px -3px rgba(0,0,0,0.1);border:1px solid #e2e8f0;border-top:4px solid var(--slcm-primary,#1a3c6e);overflow:hidden;padding:0;animation:slcm-slide-up 0.3s ease-out;">' +
-				'<div style="padding:32px 24px 24px;">' +
-					'<div style="margin-bottom:16px;">' +
-						'<div style="display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:50%;background:#e0f2fe;color:var(--slcm-primary,#1a3c6e);">' +
-							'<span style="font-family:\'Material Symbols Outlined\';font-size:32px;">currency_rupee</span>' +
-						'</div>' +
-					'</div>' +
-					'<h3 style="margin:0 0 16px;font-size:18px;font-weight:600;color:#0f172a;">Confirm Your Payment</h3>' +
-					'<div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:16px;">' +
-						'<div id="slcm-fee-amount" style="font-size:28px;font-weight:700;color:#0f172a;"></div>' +
-						'<span style="background:#dcfce7;color:#166534;font-size:12px;font-weight:500;padding:4px 8px;border-radius:4px;">Secured</span>' +
-					'</div>' +
-					'<p style="margin:0 0 24px;font-size:14px;color:#64748b;">You are about to complete your application for <strong id="slcm-applying-for-prog"></strong>. Please pay the application fee</p>' +
-					'<div class="slcm-fee-actions" style="display:flex;flex-direction:column;gap:12px;">' +
-						'<button id="slcm-fee-pay-btn" style="background:var(--slcm-primary,#1a3c6e);color:#fff;border:none;padding:12px;border-radius:8px;font-size:15px;font-weight:500;cursor:pointer;width:100%;transition:all 0.2s;">Pay Now</button>' +
-						'<button id="slcm-fee-later-btn" style="background:transparent;color:#64748b;border:none;padding:8px;font-size:14px;cursor:pointer;width:100%;">Save &amp; Pay Later</button>' +
-					'</div>' +
+			'<div id="slcm-fee-backdrop"></div>' +
+			'<div id="slcm-fee-box" role="dialog" aria-modal="true" aria-labelledby="slcm-fee-title">' +
+				'<button type="button" id="slcm-fee-close" aria-label="Close"><span class="slcm-fee-ms">close</span></button>' +
+				'<div class="slcm-fee-hero" aria-hidden="true">' +
+					'<span class="slcm-fee-bubble b1"></span>' +
+					'<span class="slcm-fee-bubble b2"></span>' +
+					'<span class="slcm-fee-bubble b3"></span>' +
+					'<div class="slcm-fee-hero-circle"><span class="slcm-fee-ms">currency_rupee</span></div>' +
+				'</div>' +
+				'<div class="slcm-fee-title" id="slcm-fee-title">Confirm Your Payment</div>' +
+				'<div class="slcm-fee-amount-box">' +
+					'<div id="slcm-fee-amount"></div>' +
+					'<span class="slcm-fee-secured"><span class="slcm-fee-ms">verified_user</span>Secured</span>' +
+				'</div>' +
+				'<div class="slcm-fee-callout slcm-fee-info">' +
+					'<div class="slcm-fee-callout-icon"><span class="slcm-fee-ms">info</span></div>' +
+					'<div class="slcm-fee-callout-text">You are about to complete your application. Please pay the application fee.</div>' +
+				'</div>' +
+				'<div class="slcm-fee-callout slcm-fee-note">' +
+					'<div class="slcm-fee-callout-icon"><span class="slcm-fee-ms">warning</span></div>' +
+					'<div class="slcm-fee-callout-text"><strong>Note:</strong> Once the payment is completed, the application form cannot be edited in upcoming stages.</div>' +
+				'</div>' +
+				'<div class="slcm-fee-actions">' +
+					'<button type="button" id="slcm-fee-pay-btn"></button>' +
+					'<button type="button" id="slcm-fee-later-btn"><span class="slcm-fee-ms">schedule</span><span>Submit &amp; Pay Later</span></button>' +
 				'</div>' +
 			'</div>';
 		document.body.appendChild(modal);
 	}
 
-	var amountFormatted = '\u20B9 ' + (feeDetails.fee_amount || 0).toFixed(2);
+	var feeNum = Number(feeDetails.fee_amount || 0);
+	var amountFormatted = '\u20B9 ' + feeNum.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 	document.getElementById('slcm-fee-amount').textContent = amountFormatted;
-	var progLabel = '';
-	var progEl = document.querySelector('[data-fieldname="program"] input');
-	if (progEl) progLabel = progEl.value;
-	if (!progLabel && frappe.web_form) progLabel = frappe.web_form.get_value('program') || '';
-	var progStrEl = document.getElementById('slcm-applying-for-prog');
-	if (progStrEl) progStrEl.textContent = progLabel;
 	var payBtnEl = document.getElementById('slcm-fee-pay-btn');
 	if (payBtnEl) {
 		payBtnEl.disabled = false;
 		_feePayBtnSetLoading(payBtnEl, false);
 	}
+	// "Submit & Pay Later" only makes sense for a Draft — once the application is
+	// submitted (e.g. opened via "Pay Application Fee"), the only option is to pay.
+	var laterBtnEl = document.getElementById('slcm-fee-later-btn');
+	if (laterBtnEl) {
+		var curStatus = (resolveField('status') || '').trim();
+		laterBtnEl.style.display = (!curStatus || curStatus === 'Draft') ? '' : 'none';
+	}
 	modal.classList.add('open');
 
 	function closeModal() { modal.classList.remove('open'); }
 
-	
+	// X only dismisses the dialog — the application stays as it is (no submit)
+	document.getElementById('slcm-fee-close').onclick = closeModal;
 
 	document.getElementById('slcm-fee-later-btn').onclick = function () {
 		closeModal();
@@ -4493,8 +4558,11 @@ function setupPreferenceValidation() {
 				var nat = wf.get_value('nationality');
 				var fn = wf.get_value('foriegn_national');
 
-				if (fn === 'No' && nat && nat !== 'India') {
-					frappe.msgprint('For Domestic applications, Nationality must be India.');
+				if (fn === 'No' && nat !== 'India') {
+					// Domestic candidate: Nationality is always India
+					if (nat) {
+						frappe.msgprint('For Domestic applications, Nationality must be India.');
+					}
 					wf.set_value('nationality', 'India');
 				} else if (fn === 'Yes' && nat === 'India') {
 					frappe.msgprint('For International applications, Nationality cannot be India.');
@@ -4504,6 +4572,7 @@ function setupPreferenceValidation() {
 
 			function validateForeignNational() {
 				validateNationality();
+				_slcmToggleDegreeCountry(wf);
 				var prog = wf.get_value('program');
 				var fn = wf.get_value('foriegn_national');
 				var nat = wf.get_value('nationality');
@@ -4531,7 +4600,12 @@ function setupPreferenceValidation() {
 			}
 
 			wf.on('nationality', validateNationality);
+			// Note: wf.on() replaces any earlier handler for the field, so the country toggle
+			// lives inside validateForeignNational rather than a second wf.on() registration.
 			wf.on('foriegn_national', validateForeignNational);
+			_slcmToggleDegreeCountry(wf);
+			// Saved drafts load asynchronously — re-apply once their values are in
+			setTimeout(function () { _slcmToggleDegreeCountry(wf); }, 1500);
 			function validateHscPercentage() {
 				var hsc = parseFloat(wf.get_value('hsc_percentage'));
 				var cgpa_max = parseFloat(wf.get_value('if_cgpa_maximum_cgpa_class_xii'));
@@ -4557,6 +4631,21 @@ function setupPreferenceValidation() {
 	}, 200);
 }
 
+
+/** UG / PG degree "Country" column is shown only for foreign nationals (foriegn_national = Yes). */
+function _slcmToggleDegreeCountry(wf) {
+	if (!wf || !wf.fields_dict) return;
+	var show = wf.get_value('foriegn_national') === 'Yes';
+	['ug_degree_details', 'pg_degree_details'].forEach(function (ct) {
+		var f = wf.fields_dict[ct];
+		if (!f || !f.grid) return;
+		try {
+			f.grid.toggle_display('country', show);
+		} catch (e) {
+			console.warn('Could not toggle country column on', ct, e);
+		}
+	});
+}
 
 /** Get the current Applicant docname from wf.doc or URL */
 function _slcmGetApplicantDocName() {

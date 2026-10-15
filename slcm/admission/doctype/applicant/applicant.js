@@ -23,6 +23,8 @@ frappe.ui.form.on("Applicant", {
 
     // ── REFRESH ──────────────────────────────
     refresh: function (frm) {
+        toggle_degree_country_column(frm);
+
         // Auto-refresh when status is updated from Entrance Test Seat Allocation
         if (!window._applicant_status_realtime_subscribed) {
             window._applicant_status_realtime_subscribed = true;
@@ -292,8 +294,11 @@ frappe.ui.form.on("Applicant", {
     },
 
     nationality: function (frm) {
-        if (frm.doc.foriegn_national === "No" && frm.doc.nationality && frm.doc.nationality !== "India") {
-            frappe.show_alert({ message: __("For Domestic applications, Nationality must be India."), indicator: "orange" });
+        if (frm.doc.foriegn_national === "No" && frm.doc.nationality !== "India") {
+            // Domestic candidate: Nationality is always India
+            if (frm.doc.nationality) {
+                frappe.show_alert({ message: __("For Domestic applications, Nationality must be India."), indicator: "orange" });
+            }
             frm.set_value("nationality", "India");
         } else if (frm.doc.foriegn_national === "Yes" && frm.doc.nationality === "India") {
             frappe.show_alert({ message: __("For International applications, Nationality cannot be India."), indicator: "orange" });
@@ -303,6 +308,7 @@ frappe.ui.form.on("Applicant", {
 
     foriegn_national: function (frm) {
         frm.trigger("nationality");
+        toggle_degree_country_column(frm);
     },
 
     validate: function (frm) {
@@ -520,6 +526,20 @@ frappe.ui.form.on("Applicant", {
 // ─────────────────────────────────────────────
 //  UG Degree Detail — Child Table
 // ─────────────────────────────────────────────
+// UG / PG degree "Country" is only relevant for foreign nationals (foriegn_national = Yes)
+function toggle_degree_country_column(frm) {
+    const show = frm.doc.foriegn_national === "Yes";
+    ["ug_degree_details", "pg_degree_details"].forEach((table) => {
+        const grid = frm.fields_dict[table] && frm.fields_dict[table].grid;
+        if (!grid) return;
+        try {
+            grid.toggle_display("country", show);
+        } catch (e) {
+            console.warn("Could not toggle country column on", table, e);
+        }
+    });
+}
+
 frappe.ui.form.on("UG Degree Detail", {
     ug_cgpa: function (frm, cdt, cdn) {
         const row = locals[cdt][cdn];

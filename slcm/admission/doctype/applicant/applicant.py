@@ -96,6 +96,7 @@ class Applicant(Document):
 
         set_intake_type(self)
         set_admission_details(self)
+        self._validate_nationality_matches_foreign_national()
         self._validate_education_percentage_bounds()
 
         if self.status in ("Submitted", "Completed") and self.has_value_changed("status"):
@@ -219,6 +220,38 @@ class Applicant(Document):
             frappe.throw(
                 "PwD Certificate is mandatory for PwD category.",
                 title="Missing Document"
+            )
+
+    def _validate_nationality_matches_foreign_national(self):
+        """
+        foriegn_national = "No"  → Nationality must be India (filled in automatically when blank).
+        foriegn_national = "Yes" → Nationality must not be India.
+        Checked on new records and whenever either field (or the status) changes, so older
+        inconsistent records don't block unrelated desk edits.
+        """
+        if not (
+            self.is_new()
+            or self.has_value_changed("foriegn_national")
+            or self.has_value_changed("nationality")
+            or self.has_value_changed("status")
+        ):
+            return
+
+        fn = (self.foriegn_national or "").strip()
+        nationality = (self.nationality or "").strip()
+
+        if fn == "No":
+            if not nationality:
+                self.nationality = "India"
+            elif nationality.lower() != "india":
+                frappe.throw(
+                    _("For Domestic applicants (Foreign National = No), Nationality must be India."),
+                    title=_("Invalid Nationality"),
+                )
+        elif fn == "Yes" and nationality.lower() == "india":
+            frappe.throw(
+                _("For International applicants (Foreign National = Yes), Nationality cannot be India."),
+                title=_("Invalid Nationality"),
             )
 
     def _validate_national_test_percentage(self):
