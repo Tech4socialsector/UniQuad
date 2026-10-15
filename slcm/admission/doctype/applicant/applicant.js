@@ -337,8 +337,11 @@ frappe.ui.form.on("Applicant", {
                         if (is_cgpa) {
                             errors.push(__("UG CGPA for degree \"{0}\" should be between 4 and {1}",
                                 [row.ug_program || __("(unnamed)"), max_val]));
+                        } else if (row.ug_cgpa < 35) {
+                            errors.push(__("UG score for degree \"{0}\" is less than 35. If entering CGPA, please provide the Maximum CGPA; otherwise, Percentage must be between 35 and 100",
+                                [row.ug_program || __("(unnamed)")]));
                         } else {
-                            errors.push(__("UG Percentage for degree \"{0}\" should be between 35 and 100, If CGPA then give the maximum CGPA else percentage",
+                            errors.push(__("UG Percentage for degree \"{0}\" cannot be more than 100",
                                 [row.ug_program || __("(unnamed)")]));
                         }
                     }
@@ -357,8 +360,11 @@ frappe.ui.form.on("Applicant", {
                         if (is_cgpa) {
                             errors.push(__("PG CGPA for degree \"{0}\" should be between 4 and {1}",
                                 [row.pg_program || __("(unnamed)"), max_val]));
+                        } else if (row.pg_cgpa < 35) {
+                            errors.push(__("PG score for degree \"{0}\" is less than 35. If entering CGPA, please provide the Maximum CGPA; otherwise, Percentage must be between 35 and 100",
+                                [row.pg_program || __("(unnamed)")]));
                         } else {
-                            errors.push(__("PG Percentage for degree \"{0}\" should be between 35 and 100 , If CGPA then give the maximum CGPA else percentage",
+                            errors.push(__("PG Percentage for degree \"{0}\" cannot be more than 100",
                                 [row.pg_program || __("(unnamed)")]));
                         }
                     }
