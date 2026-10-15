@@ -455,7 +455,14 @@ def save_applicant_draft(data, ignore_mandatory=True):
         "name", "idx", "doctype", "parent", "parentfield", "parenttype",
         "owner", "creation", "modified", "modified_by", "docstatus",
     }
-    valid_scalar  = {f.fieldname for f in meta.fields if f.fieldtype not in SKIP_TYPES}
+    # Server-controlled fields: never accept these from the portal payload
+    # (e.g. a client could otherwise post application_fee_status="Paid" and skip payment).
+    PROTECTED_FIELDS = {
+        "status", "email", "workflow_state", "applicant_id", "rejected_reason",
+        "application_fee_status", "application_fee_amount",
+        "fee_waived_by", "fee_waived_on",
+    }
+    valid_scalar  = {f.fieldname for f in meta.fields if f.fieldtype not in SKIP_TYPES} - PROTECTED_FIELDS
     attach_fields = {f.fieldname for f in meta.fields if f.fieldtype in ["Attach", "Attach Image"]}
     child_tables  = {f.fieldname for f in meta.fields if f.fieldtype == "Table"}
 
@@ -466,15 +473,9 @@ def save_applicant_draft(data, ignore_mandatory=True):
             return True
         
         try:
-            file_name = frappe.db.get_value("File", {"file_url": file_url}, "name")
-            if file_name:
-                import os
-                file_path = frappe.get_site_path(file_url.lstrip("/"))
-                return os.path.exists(file_path)
-            else:
-                import os
-                file_path = frappe.get_site_path(file_url.lstrip("/"))
-                return os.path.exists(file_path)
+            import os
+            file_path = frappe.get_site_path(file_url.lstrip("/"))
+            return os.path.exists(file_path)
         except Exception:
             return False
 
@@ -484,15 +485,11 @@ def save_applicant_draft(data, ignore_mandatory=True):
             continue
         if key in valid_scalar:
             if key in attach_fields and value and not _is_valid_file(value):
-                try:
-                    setattr(doc, key, None)
-                except Exception:
-                    pass
-            else:
-                try:
-                    setattr(doc, key, value)
-                except Exception:
-                    pass
+                value = None
+            try:
+                setattr(doc, key, value)
+            except Exception:
+                frappe.log_error(frappe.get_traceback(), f"save_applicant_draft — could not set field {key}")
 
     # Apply child-table rows
     for ct_field in child_tables:
@@ -515,7 +512,7 @@ def save_applicant_draft(data, ignore_mandatory=True):
                 try:
                     doc.append(ct_field, clean)
                 except Exception:
-                    pass
+                    frappe.log_error(frappe.get_traceback(), f"save_applicant_draft — could not append row to {ct_field}")
 
     # Set Admission Year and Academic Year from current active admission cycle if missing
     if not doc.admission_year or not doc.academic_year:
@@ -621,10 +618,10 @@ def save_applicant_draft(data, ignore_mandatory=True):
     except frappe.ValidationError as e:
         frappe.db.rollback()
         return {"status": "error", "message": str(e)}
-    except Exception as e:
+    except Exception:
         frappe.db.rollback()
         frappe.log_error(frappe.get_traceback(), "save_applicant_draft — Error")
-        return {"status": "error", "message": str(e)}
+        return {"status": "error", "message": _("Could not save the application. Please try again or contact support.")}
 
 
 # ───────────────────────────────────────────────────────────────────
@@ -661,7 +658,11 @@ def submit_applicant(applicant_name, target_status=None):
         return {"status": "error", "message": _("No permission to submit this application.")}
 
     current_status = (doc.status or "").strip()
-    _ts = target_status if target_status else "Submitted"
+    _ts = (target_status or "Submitted").strip()
+    # The portal may only move an application to Submitted or Completed; any other
+    # status would bypass the fee check below and the admission workflow.
+    if _ts not in ("Submitted", "Completed"):
+        return {"status": "error", "message": _("Invalid target status.")}
 
     if current_status in APPLICATION_SUBMITTED_STATUSES:
         if current_status == "Submitted" and _ts == "Completed":
@@ -703,8 +704,10 @@ def submit_applicant(applicant_name, target_status=None):
         sync_application_fee_assignment_for_applicant(doc.name)
         doc.reload() # reload after sync
         fee_status = (doc.application_fee_status or "").strip()
+        # The sync may correct a stale/zero amount — re-read it so the fee guard uses the real value
+        fee_amount = flt(doc.application_fee_amount or 0)
     except Exception:
-        pass
+        frappe.log_error(frappe.get_traceback(), "submit_applicant — pre-submit fee sync")
 
     if _ts == "Completed" and fee_amount > 0 and fee_status not in ("Paid", "Waived"):
         return {"status": "error", "message": _("Application fee must be paid before completing application.")}
@@ -722,7 +725,7 @@ def submit_applicant(applicant_name, target_status=None):
                 if not doc.academic_year or doc.academic_year == "":
                     doc.academic_year = cycle_data.academic_year
 
-    doc.status = target_status if target_status else "Submitted"
+    doc.status = _ts
     if fee_amount == 0:
         doc.application_fee_status = "Waived"
 
@@ -770,10 +773,10 @@ def submit_applicant(applicant_name, target_status=None):
     except frappe.ValidationError as e:
         frappe.db.rollback()
         return {"status": "error", "message": str(e)}
-    except Exception as e:
+    except Exception:
         frappe.db.rollback()
         frappe.log_error(frappe.get_traceback(), "submit_applicant — Error")
-        return {"status": "error", "message": str(e)}
+        return {"status": "error", "message": _("Could not submit the application. Please try again or contact support.")}
 
 
 # ───────────────────────────────────────────────────────────────────
@@ -862,6 +865,13 @@ def _check_eligibility_ineligible_response(doc, raw_msg: str) -> dict:
     if len(err_text) > 2400:
         err_text = err_text[:2397] + "..."
 
+    # Called from an except-branch in check_eligibility — must not raise itself
+    try:
+        suggestions = (doc.get_eligibility_suggestion_payload() if doc else None) or {}
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "check_eligibility — suggestions")
+        suggestions = {}
+
     return {
         "status": "Ineligible",
         "message": err_text,
@@ -870,7 +880,7 @@ def _check_eligibility_ineligible_response(doc, raw_msg: str) -> dict:
         "is_eligibility_error": True,
         "programs": programs,
         "failure_sections": getattr(doc, "_slcm_failure_sections", None) or [],
-        "suggestions": (doc.get_eligibility_suggestion_payload() if doc else None) or {},
+        "suggestions": suggestions,
     }
 
 
@@ -1063,6 +1073,9 @@ def switch_applicant_program(applicant_name, program):
     if user == "Guest":
         return {"status": "error", "message": _("You must be logged in.")}
 
+    if not frappe.db.exists("Applicant", applicant_name):
+        return {"status": "error", "message": _("Application not found.")}
+
     email = frappe.db.get_value("User", user, "email") or user
     doc = frappe.get_doc("Applicant", applicant_name)
 
@@ -1145,10 +1158,13 @@ def switch_applicant_program(applicant_name, program):
     try:
         doc.save()
         frappe.db.commit()
-    except Exception as ex:
+    except frappe.ValidationError as ex:
+        frappe.db.rollback()
+        return {"status": "error", "message": str(ex)}
+    except Exception:
         frappe.db.rollback()
         frappe.log_error(frappe.get_traceback(), "switch_applicant_program")
-        return {"status": "error", "message": str(ex)}
+        return {"status": "error", "message": _("Could not switch the programme. Please try again or contact support.")}
 
     try:
         from slcm.api.service.application_fee_service import (
@@ -1200,10 +1216,13 @@ def _latest_application_fee_receipt_for_portal(applicant_name):
 def portal_application_fee_receipt_ready(applicant_name):
     """Whether the portal may show “Download fee receipt” for this application."""
     applicant_name = (applicant_name or "").strip()
-    if not applicant_name or not frappe.db.exists("Applicant", applicant_name):
+    # Same response for "missing" and "not yours" so application IDs can't be probed
+    if (
+        not applicant_name
+        or not frappe.db.exists("Applicant", applicant_name)
+        or not _portal_can_access_applicant(applicant_name)
+    ):
         return {"ready": False, "receipt_name": ""}
-    if not _portal_can_access_applicant(applicant_name):
-        frappe.throw(_("Not permitted."), frappe.PermissionError)
     st = (frappe.db.get_value("Applicant", applicant_name, "application_fee_status") or "").strip()
     if st != "Paid":
         return {"ready": False, "receipt_name": ""}
@@ -1270,7 +1289,6 @@ def state_query(doctype=None, txt=None, searchfield=None, start=0, page_len=20, 
     if not country:
         country = frappe.form_dict.get("filters[country]") or frappe.form_dict.get("country")
 
-    cond = ""
     params = {
         "txt": "%" + (txt or "") + "%",
         "start": cint(start),
@@ -1278,23 +1296,18 @@ def state_query(doctype=None, txt=None, searchfield=None, start=0, page_len=20, 
     }
 
     if country and country.strip():
-        country_clean = country.strip()
+        # Country selected: only that country's states (+ "Other"). Do not fall back to
+        # all states, otherwise e.g. "Cal" under India would return "California".
         matched_rows = frappe.db.sql("""
             select distinct name from `tabState`
             where (LOWER(country) = LOWER(%(country)s) or name = 'Other')
             and name like %(txt)s
             order by (case when name = 'Other' then 1 else 0 end), name
             limit %(start)s, %(page_len)s
-        """, {
-            "country": country_clean,
-            "txt": "%" + (txt or "") + "%",
-            "start": cint(start),
-            "page_len": cint(page_len)
-        })
-        if matched_rows:
-            return [{"value": r[0], "description": "", "label": r[0]} for r in matched_rows]
+        """, dict(params, country=country.strip()))
+        return [{"value": r[0], "description": "", "label": r[0]} for r in matched_rows]
 
-    rows = frappe.db.sql(f"""
+    rows = frappe.db.sql("""
         select distinct name from `tabState`
         where name like %(txt)s
         order by (case when name = 'Other' then 1 else 0 end), name
@@ -1318,7 +1331,6 @@ def city_query(doctype=None, txt=None, searchfield=None, start=0, page_len=20, f
     if not state:
         state = frappe.form_dict.get("filters[state]") or frappe.form_dict.get("state")
 
-    cond = ""
     params = {
         "txt": "%" + (txt or "") + "%",
         "start": cint(start),
@@ -1326,23 +1338,17 @@ def city_query(doctype=None, txt=None, searchfield=None, start=0, page_len=20, f
     }
 
     if state and state.strip():
-        state_clean = state.strip()
+        # State selected: only that state's cities (+ "Other"); no fallback to every city.
         matched_rows = frappe.db.sql("""
             select distinct IFNULL(NULLIF(city_name, ''), name) as display_name from `tabCity`
             where (LOWER(state) = LOWER(%(state)s) or name = 'Other' or city_name = 'Other')
             and (city_name like %(txt)s or name like %(txt)s)
             order by (case when city_name = 'Other' or name = 'Other' then 1 else 0 end), display_name
             limit %(start)s, %(page_len)s
-        """, {
-            "state": state_clean,
-            "txt": "%" + (txt or "") + "%",
-            "start": cint(start),
-            "page_len": cint(page_len)
-        })
-        if matched_rows:
-            return [{"value": r[0], "description": "", "label": r[0]} for r in matched_rows]
+        """, dict(params, state=state.strip()))
+        return [{"value": r[0], "description": "", "label": r[0]} for r in matched_rows]
 
-    rows = frappe.db.sql(f"""
+    rows = frappe.db.sql("""
         select distinct IFNULL(NULLIF(city_name, ''), name) as display_name from `tabCity`
         where (city_name like %(txt)s or name like %(txt)s)
         order by (case when city_name = 'Other' or name = 'Other' then 1 else 0 end), display_name

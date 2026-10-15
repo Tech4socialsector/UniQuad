@@ -1,8 +1,6 @@
 import json
 import traceback
 from contextlib import contextmanager
-import os
-import uuid
 
 import frappe
 from frappe import _
@@ -36,6 +34,16 @@ APPLICATION_SUBMITTED_STATUSES = frozenset(
         "Offer Issued",
         "Offer Accepted",
         "Enrolled",
+    }
+)
+
+# Statuses an application can land in at the moment of submission (see _get_submission_status)
+SUBMISSION_ENTRY_STATUSES = frozenset(
+    {
+        "Submitted",
+        "Entrance Test Exempted",
+        "Interview Excempted",
+        "Excempted Entrance Test And Interview",
     }
 )
 
@@ -95,7 +103,9 @@ class Applicant(Document):
             if self.status == "Completed":
                 self._validate_application_fee_before_submit()
 
-        if self.status in ("Submitted", "Completed"):
+        # Only on the submit/complete transition — not on every later desk edit or fee sync
+        # of an already Submitted/Completed record (rules may have changed since).
+        if self.status in ("Submitted", "Completed") and (self.is_new() or self.has_value_changed("status")):
             self._validate_admission_open_for_scope()
             self._validate_national_test_percentage()
             self.validate_eligibility()
@@ -215,7 +225,8 @@ class Applicant(Document):
         """When National test is selected, score/percentage is mandatory."""
         if self.get("national_test_name") and not self.flags.ignore_mandatory:
             pct = self.get("percentage")
-            if pct is None or pct == "" or (isinstance(pct, (int, float)) and flt(pct) < 0):
+            # Percent fields store "empty" as 0.0, so treat <= 0 as missing
+            if pct in (None, "") or flt(pct) <= 0:
                 frappe.throw(
                     _("Score or percentage is required when National test is selected."),
                     title=_("National Test Score Required"),
@@ -265,6 +276,7 @@ class Applicant(Document):
                 WHERE a.admission_cycle = %s
                   AND a.program = %s
                   AND a.name != %s
+                  AND a.status != 'Draft'
                   AND COALESCE(s.status_type, '') != 'Closed'
             """, (self.admission_cycle, self.program, self.name), as_dict=True)
             
@@ -322,7 +334,12 @@ class Applicant(Document):
         from slcm.api.service.application_fee_service import _get_applicant_category
 
         category = _get_applicant_category(self.name)
-        is_foreign = self.nationality != "India" if self.nationality else False
+        # Same rule as the portal fee calc: foriegn_national decides; nationality is only a fallback
+        fn = (self.foriegn_national or "").strip()
+        if fn:
+            is_foreign = fn == "Yes"
+        else:
+            is_foreign = bool(self.nationality) and self.nationality.strip() != "India"
         fee_amount = get_application_fee_for_category(self.program, self.admission_cycle, category, is_foreign=is_foreign)
 
         if flt(fee_amount, 2) <= 0:
@@ -397,9 +414,11 @@ class Applicant(Document):
             if doc_before_save and hasattr(doc_before_save, "status")
             else self.flags.get("old_status")
         )
+        # validate() turns "Submitted" into an exemption status when the national test exempts
+        # the applicant, so those must also count as a fresh submission (email, audit, log).
         just_submitted = (
             (not old_status or old_status == "Draft" or old_status not in APPLICATION_SUBMITTED_STATUSES)
-            and self.status == "Submitted"
+            and self.status in SUBMISSION_ENTRY_STATUSES
             and (self.is_new() or self.has_value_changed("status"))
         )
 
@@ -481,7 +500,10 @@ class Applicant(Document):
                             notify_stage_entry(self, s)
                             break
                 except Exception:
-                    pass
+                    frappe.log_error(
+                        frappe.get_traceback(),
+                        f"Stage entry notification failed for Applicant {self.name}",
+                    )
 
         # Withdrawn application: Student Master (Current Status) + enrollments
         if self.status == "Withdrawn" and self.has_value_changed("status"):
@@ -560,6 +582,9 @@ class Applicant(Document):
             self.update_admission_cycle_program_count(old_cycle, old_program, old_campus)
 
     def on_trash(self):
+        # on_trash runs before the row is deleted (and before Frappe sets flags.in_delete),
+        # so tell the counter to exclude this record explicitly.
+        self.flags.in_trash = True
         self.update_admission_cycle_program_count()
 
     def sync_user_profile(self):
@@ -655,7 +680,7 @@ class Applicant(Document):
             new_count = frappe.db.count("Applicant", count_filters)
             
             # If current doc is being deleted and matches filters, decrement
-            if frappe.flags.in_trash and self.status != "Draft":
+            if self.flags.get("in_trash") and self.status != "Draft":
                 if self.admission_cycle == target_cycle and self.program == target_program:
                     if not target_campus or self.campus == target_campus:
                         new_count = max(0, new_count - 1)
@@ -711,7 +736,8 @@ class Applicant(Document):
                         fdoc = frappe.get_doc("File", file_name)
                         full_path = fdoc.get_full_path()
                     except Exception:
-                        pass
+                        # Fall through to the path-based lookup below
+                        full_path = None
                 
                 if not full_path or not os.path.exists(full_path):
                     if file_url.startswith("/private/files/"):
@@ -791,16 +817,17 @@ class Applicant(Document):
         test_center_summary = " | ".join(test_centers) if test_centers else "Not specified"
 
         # ── Program-level academic summary ───────────────────────────────────
+        # program_level options: Undergraduate / Postgraduate / Research Course (legacy UG/PG/PhD kept)
         academic_line = ""
-        if self.program_level == "UG":
+        if self.program_level in ("Undergraduate", "UG"):
             academic_line = (
                 f"Class XII: {self.class_xii_school or '—'} "
                 f"({self.class_xii_year_of_completion or '—'}) "
                 f"— {self.hsc_percentage or '—'}%"
             )
-        elif self.program_level in ["PG", "LLM"]:
+        elif self.program_level in ("Postgraduate", "PG", "LLM"):
             academic_line = f"UG Degree completion: {self.ug_degree_completion or '—'}"
-        elif self.program_level == "PhD":
+        elif self.program_level in ("Research Course", "PhD"):
             academic_line = f"PhD Program Type: {self.phd_program_type or '—'}"
 
         # ── Institution name ─────────────────────────────────────────────────
@@ -825,6 +852,7 @@ class Applicant(Document):
             "first_name": (self.candidate_name or "").split()[0] if self.candidate_name else "",
             "program": frappe.db.get_value("Programme", self.program, "program_name") if self.program else "—",
             "program_level": self.program_level or "—",
+            "academic_line": academic_line,
             "application_type": self.application_type or "—",
             "admission_cycle": self.admission_cycle or "—",
             "campus": self.campus or "—",
@@ -1450,22 +1478,6 @@ class Applicant(Document):
         rows = getattr(self, "pg_degree_details", None) or []
         return [flt(row.pg_cgpa) for row in rows if row.pg_cgpa not in (None, "")]
 
-    @frappe.whitelist()
-    def waive_fee(self):
-        """Admin marks fee as waived — records who waived and when."""
-        self.application_fee_status = "Waived"
-        self.fee_waived_by = frappe.session.user
-        self.fee_waived_on = frappe.utils.now()
-        self.save(ignore_permissions=True)
-        frappe.get_doc({
-            "doctype": "Admission Audit Log",
-            "action": "Fee Waived",
-            "reference_doctype": "Applicant",
-            "reference_name": self.name,
-            "performed_by": frappe.session.user,
-            "reason": "Application fee waived by admin"
-        }).insert(ignore_permissions=True)
-
     def _get_ug_programs(self):
         """Return a list of all UG programs from the ug_degree_details child table."""
         rows = getattr(self, "ug_degree_details", None) or []
@@ -1695,7 +1707,6 @@ class Applicant(Document):
         required vs secured scores and specific eligibility mismatches.
         """
         # Split combined message if it contains '|' (multi-reason support)
-        reasons_list = []
         if "|" in failure_message:
             parts = failure_message.split("|")
             main_reason = parts[0].strip()
@@ -2256,8 +2267,6 @@ class Applicant(Document):
                 elif not blocks:
                     blocks.append(_("Program mismatch for {0} qualification.").format(display_level))
 
-        custom_rule_msg = ""
-
         if not blocks:
             return ""
 
@@ -2789,10 +2798,15 @@ class Applicant(Document):
 
         try:
             doc.save(ignore_permissions=True)
-            frappe.db.commit()
-        except Exception as e:
-            frappe.logger().warning(
-                f"Failed to save Eligibility Evaluation for {applicant_name}: {str(e)}"
+            # Commit only on the Ineligible path: validate_eligibility() throws right after,
+            # which would otherwise roll this record back. On the Eligible path, let it
+            # commit with the applicant save so a later validation failure rolls it back too.
+            if current_status == "Ineligible":
+                frappe.db.commit()
+        except Exception:
+            frappe.log_error(
+                frappe.get_traceback(),
+                f"Failed to save Eligibility Evaluation for {applicant_name}",
             )
 
 
@@ -3066,7 +3080,6 @@ def ensure_application_form_pdf_for_applicant(applicant_name):
     if (status or "").strip() not in APPLICATION_SUBMITTED_STATUSES:
         return
     doc = frappe.get_doc("Applicant", applicant_name, check_permission=False)
-    print_format_name = resolve_application_form_print_format_for_cycle(doc.admission_cycle)
     try:
         pdf_content = doc.get_application_pdf_content()
         if pdf_content:
@@ -3196,6 +3209,40 @@ def get_application_attachments(doc):
     return attachments
 
 
+def _ensure_desk_user():
+    """Block portal (Website User) accounts, e.g. applicants, from staff-only endpoints."""
+    user = frappe.session.user
+    if user == "Guest" or frappe.get_cached_value("User", user, "user_type") == "Website User":
+        frappe.throw(_("Not permitted."), frappe.PermissionError)
+
+
+@frappe.whitelist(methods=["POST"])
+def waive_fee(name):
+    """Admin marks fee as waived — records who waived and when (desk button in applicant.js)."""
+    _ensure_desk_user()
+    doc = frappe.get_doc("Applicant", name)
+    doc.check_permission("write")
+
+    doc.application_fee_status = "Waived"
+    doc.fee_waived_by = frappe.session.user
+    doc.fee_waived_on = now()
+    doc.save(ignore_permissions=True)
+
+    try:
+        frappe.get_doc({
+            "doctype": "Admission Audit Log",
+            "action": "Fee Waived",
+            "reference_doctype": "Applicant",
+            "reference_name": doc.name,
+            "performed_by": frappe.session.user,
+            "reason": "Application fee waived by admin"
+        }).insert(ignore_permissions=True)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), f"waive_fee — audit log failed for {doc.name}")
+
+    return {"status": "success", "application_fee_status": doc.application_fee_status}
+
+
 @frappe.whitelist()
 def get_bulk_applications_zip(campus=None, program=None, admission_cycle=None, academic_year=None, admission_year=None, status=None, print_format=None):
     """
@@ -3203,6 +3250,9 @@ def get_bulk_applications_zip(campus=None, program=None, admission_cycle=None, a
     Draft applications are never included. Prefer cached ``application_form`` PDF when set;
     otherwise generate with the selected print format.
     """
+    _ensure_desk_user()
+    frappe.has_permission("Applicant", "read", throw=True)
+
     if status and (status or "").strip() == "Draft":
         frappe.throw(_("Bulk download cannot include applications in Draft status."))
 
@@ -3220,7 +3270,8 @@ def get_bulk_applications_zip(campus=None, program=None, admission_cycle=None, a
     if status:
         filters["status"] = status
 
-    rows = frappe.get_all("Applicant", filters=filters, fields=["name", "status"])
+    # get_list (not get_all) so user permissions — e.g. campus restrictions — are respected
+    rows = frappe.get_list("Applicant", filters=filters, fields=["name", "status"], limit_page_length=0)
     applicants = [
         r.name
         for r in rows
@@ -3268,8 +3319,14 @@ def bulk_convert_applicants_to_student(applicants=None):
         bulk_convert_to_student as bulk_convert_assignments,
     )
 
+    _ensure_desk_user()
+    frappe.has_permission("Applicant", "write", throw=True)
+
     if isinstance(applicants, str):
-        applicants = json.loads(applicants)
+        try:
+            applicants = json.loads(applicants)
+        except ValueError:
+            frappe.throw(_("Invalid applicant list."))
     if not applicants:
         return {"message": _("No applicants selected.")}
 
@@ -3946,7 +4003,10 @@ def _auto_allocate_international_entrance_test(applicant_doc):
         for cat in categories:
             allocation.append("category", {"category": cat})
     except Exception:
-        pass
+        frappe.log_error(
+            frappe.get_traceback(),
+            f"International allocation — could not attach categories for {applicant_doc.name}",
+        )
 
     allocation.insert(ignore_permissions=True)
 
