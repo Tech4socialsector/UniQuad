@@ -82,7 +82,7 @@ def execute(filters: dict | None = None):
 	]
 
 	message = (
-		_("Test Center-wise Candidate Detail Report.")
+		_("Test Centre Wise PWD candidate Report.")
 		if data
 		else _("No candidates found matching the selected filters.")
 	)
@@ -537,11 +537,11 @@ def download_candidate_detail_excel(filters=None, download_type="overall"):
 		ws = wb.active
 		ws.title = "Candidate Attendance"
 
-		# If filtered by a specific center, use that center name as header
-		single_center = filters.get("entrance_test_provider")
+		# If filtered by a specific centre, use that centre name as header
+		single_centre = filters.get("entrance_test_provider")
 		distinct_centres = {d.get("test_centre") for d in data}
-		if single_center or len(distinct_centres) == 1:
-			title_text = single_center or list(distinct_centres)[0]
+		if single_centre or len(distinct_centres) == 1:
+			title_text = single_centre or list(distinct_centres)[0]
 			_format_candidate_sheet(ws, title_text, data, include_centre=False)
 		else:
 			title_text = "All Test Centres - Overall Candidate Attendance"
@@ -556,7 +556,7 @@ def download_candidate_detail_excel(filters=None, download_type="overall"):
 			filename,
 			buf.getvalue(),
 			"Report",
-			"Test Center-wise Candidate Detail Report",
+			"Test Centre Wise PWD candidate Report",
 			is_private=1,
 		)
 
@@ -566,7 +566,7 @@ def download_candidate_detail_excel(filters=None, download_type="overall"):
 			"total_records": len(data),
 		}
 
-	elif download_type == "center_wise":
+	elif download_type in ("centre_wise", "center_wise"):
 		# Group by test centre and package into a ZIP
 		from collections import OrderedDict
 		centre_groups = OrderedDict()
@@ -593,13 +593,13 @@ def download_candidate_detail_excel(filters=None, download_type="overall"):
 				zf.writestr(f"{safe_c}.xlsx", wb_buf.getvalue())
 
 		zip_buf.seek(0)
-		zip_filename = f"Test_Center_Wise_Candidate_Details{ay_part}_{ts}.zip"
+		zip_filename = f"Test_Centre_Wise_Candidate_Details{ay_part}_{ts}.zip"
 
 		saved = save_file(
 			zip_filename,
 			zip_buf.getvalue(),
 			"Report",
-			"Test Center-wise Candidate Detail Report",
+			"Test Centre Wise PWD candidate Report",
 			is_private=1,
 		)
 
