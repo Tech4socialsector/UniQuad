@@ -195,14 +195,19 @@ def get_portal_shell_data():
 # ───────────────────────────────────────────────────────────────────
 
 @frappe.whitelist(allow_guest=False)
-def validate_new_application_access(program=None):
+def validate_new_application_access(program=None, foriegn_national=None, nationality=None):
     """
     Validates if a new application can be created for the active Admission Cycle
-    and the selected program.
+    and the selected program, and whether it is open for Domestic / International applicants.
 
-    Returns: {"allowed": True} or {"allowed": False, "message": "..."}
+    Returns: {"allowed": True, ...} or {"allowed": False, "message": "..."}
     """
     from frappe.utils import getdate, today, formatdate
+
+    if not foriegn_national:
+        foriegn_national = frappe.form_dict.get("foriegn_national")
+    if not nationality:
+        nationality = frappe.form_dict.get("nationality")
 
     # 1. Must have an Active cycle
     active_cycle = frappe.db.get_value(
@@ -248,29 +253,55 @@ def validate_new_application_access(program=None):
     resolved_campus = ""
     resolved_intake_type = ""
     resolved_program_level = ""
-    
+    resolved_admission_open_for = ""
+    prog_title = program or ""
+
     if program:
         # Resolve from slug if needed
         slug_match = frappe.db.get_value("Programme", {"program_slug": program}, "name")
         if slug_match:
             resolved_program = slug_match
 
+        prog_data = frappe.db.get_value("Programme", resolved_program, ["program_name", "program_slug"], as_dict=True) or {}
+        prog_title = prog_data.get("program_name") or resolved_program
+
         prog_row = frappe.db.get_value(
             "Admission Cycle Program",
             {"parent": active_cycle, "program": resolved_program, "is_active": 1},
-            ["name", "max_applications", "application_count", "campus", "intake_type", "program_level"],
+            ["name", "max_applications", "application_count", "campus", "intake_type", "program_level", "admission_open_for"],
             as_dict=True,
         )
         if not prog_row:
             return {
                 "allowed": False,
-                "message": _("The selected programme '{0}' is not available in the current admission cycle.").format(resolved_program),
+                "message": _("The selected programme '{0}' is not available in the current admission cycle.").format(prog_title),
             }
-            
+
         resolved_campus = prog_row.get("campus") or ""
         resolved_intake_type = prog_row.get("intake_type") or ""
         resolved_program_level = prog_row.get("program_level") or ""
-        
+        resolved_admission_open_for = (prog_row.get("admission_open_for") or "").strip()
+
+        # Check Domestic vs International admission scope
+        is_international = (foriegn_national or "").strip().lower() in ("yes", "true", "1")
+        is_domestic = (foriegn_national or "").strip().lower() in ("no", "false", "0")
+        if not is_international and not is_domestic and nationality:
+            if nationality.strip().lower() == "indian":
+                is_domestic = True
+            else:
+                is_international = True
+
+        if resolved_admission_open_for == "International" and is_domestic:
+            return {
+                "allowed": False,
+                "message": _("The {0} programme is exclusively open to international applicants. Domestic candidates are not eligible to apply for this course.").format(prog_title),
+            }
+        elif resolved_admission_open_for == "Domestic" and is_international:
+            return {
+                "allowed": False,
+                "message": _(" The {0} programme is exclusively open to domestic applicants. International candidates are not eligible to apply for this course.").format(prog_title),
+            }
+
         # Check seats/application limit
         max_apps = prog_row.get("max_applications") or 0
         if max_apps > 0:
@@ -278,7 +309,7 @@ def validate_new_application_access(program=None):
             if app_count >= max_apps:
                 return {
                     "allowed": False,
-                    "message": _("Seats are filled for the selected programme '{0}'. New applications cannot be submitted.").format(resolved_program),
+                    "message": _("Seats are filled for the selected programme '{0}'. New applications cannot be submitted.").format(prog_title),
                 }
 
     # Extract year context
@@ -291,9 +322,11 @@ def validate_new_application_access(program=None):
         "admission_year": admission_year,
         "academic_year": academic_year,
         "program": resolved_program,
+        "program_label": prog_title,
         "campus": resolved_campus,
         "intake_type": resolved_intake_type,
         "program_level": resolved_program_level,
+        "admission_open_for": resolved_admission_open_for,
     }
 
 
@@ -506,6 +539,30 @@ def save_applicant_draft(data, ignore_mandatory=True):
             doc.intake_type = deriv["intake_type"]
         if deriv.get("campus"):
             doc.campus = deriv["campus"]
+
+        acp_scope = frappe.db.get_value(
+            "Admission Cycle Program",
+            {"parent": doc.admission_cycle, "program": doc.program, "is_active": 1},
+            "admission_open_for",
+        )
+        if acp_scope:
+            prog_name = frappe.db.get_value("Programme", doc.program, "program_name") or doc.program
+            is_foreign = (getattr(doc, "foriegn_national", "") or "").strip().lower() in ("yes", "true", "1")
+            is_dom = (getattr(doc, "foriegn_national", "") or "").strip().lower() in ("no", "false", "0")
+            if not is_foreign and not is_dom and getattr(doc, "nationality", None):
+                is_dom = doc.nationality.strip().lower() == "indian"
+                is_foreign = not is_dom
+
+            if acp_scope == "International" and is_dom:
+                return {
+                    "status": "error",
+                    "message": _("The {0} programme is exclusively open to international applicants. Domestic candidates are not eligible to apply for this course.").format(prog_name),
+                }
+            elif acp_scope == "Domestic" and is_foreign:
+                return {
+                    "status": "error",
+                    "message": _("The {0} programme is exclusively open to domestic applicants. International candidates are not eligible to apply for this course.").format(prog_name),
+                }
 
     # Enforce safe values
     doc.status = "Draft"

@@ -3927,9 +3927,14 @@ function _slcmRenderSelectProgrammeButton(wf, onConfirm) {
  * Runs the full prefill + cycle validation flow after the picker confirms a program.
  */
 function _slcmRunPrefillWithProgram(wf, program) {
+	var params = new URLSearchParams(window.location.search);
 	frappe.call({
 		method: 'slcm.admission.web_form.applicant_form.applicant_form.validate_new_application_access',
-		args: { program: program },
+		args: {
+			program: program,
+			foriegn_national: wf.get_value('foriegn_national') || params.get('foriegn_national') || '',
+			nationality: wf.get_value('nationality') || params.get('nationality') || ''
+		},
 		callback: function (r) {
 			var res = r && r.message;
 			if (res && !res.allowed) {
@@ -4013,10 +4018,14 @@ function applyQueryStringPrefill() {
 		clearInterval(t);
 		if (!isNewApplicantWebForm()) return;
 
-		// ── Validate admission cycle is open before allowing new application ──
+		// ── Validate admission cycle and domestic/international scope before allowing new application ──
 		frappe.call({
 			method: 'slcm.admission.web_form.applicant_form.applicant_form.validate_new_application_access',
-			args: { program: params.get('program') || '' },
+			args: {
+				program: params.get('program') || '',
+				foriegn_national: params.get('foriegn_national') || '',
+				nationality: params.get('nationality') || ''
+			},
 			callback: function (r) {
 				var res = r && r.message;
 				if (res && !res.allowed) {
@@ -4495,6 +4504,30 @@ function setupPreferenceValidation() {
 
 			function validateForeignNational() {
 				validateNationality();
+				var prog = wf.get_value('program');
+				var fn = wf.get_value('foriegn_national');
+				var nat = wf.get_value('nationality');
+				if (prog && fn) {
+					frappe.call({
+						method: 'slcm.admission.web_form.applicant_form.applicant_form.validate_new_application_access',
+						args: {
+							program: prog,
+							foriegn_national: fn,
+							nationality: nat || ''
+						},
+						callback: function (r) {
+							var res = r && r.message;
+							if (res && !res.allowed) {
+								frappe.msgprint({
+									title: __('Access Restricted'),
+									indicator: 'red',
+									message: res.message
+								});
+								wf.set_value('foriegn_national', fn === 'Yes' ? 'No' : 'Yes');
+							}
+						}
+					});
+				}
 			}
 
 			wf.on('nationality', validateNationality);
