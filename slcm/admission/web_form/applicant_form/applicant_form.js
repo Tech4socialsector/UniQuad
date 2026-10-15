@@ -5369,27 +5369,38 @@ function setupCityStateFilter() {
 
 		wf.on(countryFld, function () {
 			if (wf._is_syncing_address) return;
-			var currentCountry = wf.get_value(countryFld);
-			if (!lastCountry && currentCountry) {
+			var currentCountry = (wf.get_value(countryFld) || '').trim();
+			var prevCountry = (lastCountry || '').trim();
+
+			if (!prevCountry && currentCountry) {
 				lastCountry = currentCountry;
 				return;
 			}
-			if (lastCountry === currentCountry) return;
+			if (prevCountry && currentCountry && prevCountry.toLowerCase() === currentCountry.toLowerCase()) return;
 			lastCountry = currentCountry;
 
-			wf.set_value(stateFld, '');
-			wf.set_value(cityDataFld, '');
+			// Country genuinely changed: clear state and the opposite city field
+			if (prevCountry && currentCountry && prevCountry.toLowerCase() !== currentCountry.toLowerCase()) {
+				wf.set_value(stateFld, '');
+				if (currentCountry.toLowerCase() === 'india') {
+					wf.set_value('foreigin_city', '');
+				} else {
+					wf.set_value(cityDataFld, '');
+				}
+			}
 		});
 
 		wf.on(stateFld, function () {
 			if (wf._is_syncing_address) return;
-			var currentCountry = wf.get_value(countryFld);
-			var currentState = wf.get_value(stateFld);
-			if (!lastState && currentState) {
+			var currentCountry = (wf.get_value(countryFld) || '').trim();
+			var currentState = (wf.get_value(stateFld) || '').trim();
+			var prevState = (lastState || '').trim();
+
+			if (!prevState && currentState) {
 				lastState = currentState;
 				return;
 			}
-			if (lastState === currentState) return;
+			if (prevState && currentState && prevState.toLowerCase() === currentState.toLowerCase()) return;
 			lastState = currentState;
 
 			if (!currentState) {
@@ -5397,7 +5408,8 @@ function setupCityStateFilter() {
 				return;
 			}
 
-			if (currentCountry && String(currentState).toUpperCase() !== 'OTHER' && String(currentCountry).toUpperCase() !== 'OTHER') {
+			// Validate state belongs to country if country is India
+			if (currentCountry && currentCountry.toLowerCase() === 'india' && currentState.toLowerCase() !== 'other') {
 				frappe.call({
 					method: "frappe.client.get_value",
 					args: {
@@ -5406,8 +5418,8 @@ function setupCityStateFilter() {
 						fieldname: ["country"]
 					},
 					callback: function(r) {
-						if (r.message && r.message.country && r.message.country !== currentCountry) {
-							frappe.msgprint("The selected State '" + currentState + "' does not belong to '" + currentCountry + "'.");
+						if (r.message && r.message.country && r.message.country.trim().toLowerCase() !== 'india') {
+							frappe.msgprint("The selected State '" + currentState + "' does not belong to 'India'.");
 							wf._is_syncing_address = true;
 							wf.set_value(stateFld, '');
 							wf.set_value(cityDataFld, '');
@@ -5417,7 +5429,28 @@ function setupCityStateFilter() {
 				});
 			}
 
-			wf.set_value(cityDataFld, '');
+			// Only check/clear city if user genuinely changed from one state to a different state
+			if (prevState && currentState && prevState.toLowerCase() !== currentState.toLowerCase()) {
+				var currentCity = (wf.get_value(cityDataFld) || '').trim();
+				if (currentCity && currentCity.toLowerCase() !== 'other') {
+					frappe.call({
+						method: 'frappe.client.get_value',
+						args: {
+							doctype: 'City',
+							filters: { name: currentCity },
+							fieldname: ['state']
+						},
+						callback: function(r) {
+							if (r.message && r.message.state) {
+								var cityState = (r.message.state || '').trim();
+								if (cityState && cityState.toLowerCase() !== 'other' && cityState.toLowerCase() !== currentState.toLowerCase()) {
+									wf.set_value(cityDataFld, '');
+								}
+							}
+						}
+					});
+				}
+			}
 		});
 
 		// Focus show all trick for city
@@ -5455,11 +5488,12 @@ function setupCityStateFilter() {
 		// ── Validate city belongs to selected state on awesomplete selection ──
 		$(document).off('awesomplete-selectcomplete.slcmCityValidate')
 			.on('awesomplete-selectcomplete.slcmCityValidate', '[data-fieldname="' + cityDataFld + '"] input', function () {
-				var selectedCity = $(this).val();
-				var currentState = wf.get_value(stateFld);
-				var currentCountry = wf.get_value(countryFld);
+				var selectedCity = ($(this).val() || '').trim();
+				var currentState = (wf.get_value(stateFld) || '').trim();
+				var currentCountry = (wf.get_value(countryFld) || '').trim();
 				if (!selectedCity || !currentState) return;
-				if (currentCountry && currentCountry !== 'India') return; // non-India: no validation
+				if (currentCountry && currentCountry.toLowerCase() !== 'india') return; // non-India: uses foreigin_city
+				if (selectedCity.toLowerCase() === 'other') return; // 'Other' is always valid
 
 				frappe.call({
 					method: 'frappe.client.get_value',
@@ -5470,8 +5504,9 @@ function setupCityStateFilter() {
 					},
 					callback: function (r) {
 						if (!r.message) return;
-						var cityState = r.message.state;
-						if (cityState && cityState !== currentState) {
+						var cityState = (r.message.state || '').trim();
+						if (cityState && cityState.toLowerCase() === 'other') return;
+						if (cityState && cityState.toLowerCase() !== currentState.toLowerCase()) {
 							showToast(
 								'\u26a0 "' + selectedCity + '" belongs to ' + cityState +
 								', not ' + currentState + '. Please select a city from ' + currentState + '.',
