@@ -119,6 +119,43 @@
     .spd-cal-tg { grid-template-columns: 40px repeat(var(--cols), minmax(0, 1fr)); }
     .spd-cal--page .spd-cal-body { height: 520px; }
   }
+
+  /* ── Dark mode ── */
+  /* Lifted layer colours (maroon/blue/green read poorly on navy), dark grid
+     lines and a translucent holiday tint. Set on body so the tooltip (moved
+     to <body>) picks them up too. */
+  body.sp-dark { --spc-class: #e5677f; --spc-events: #60a5fa; --spc-oh: #4ade80; --spc-line: #1e2d4a; --spc-holiday-bg: rgba(248, 113, 113, 0.12); }
+  body.sp-dark .spd-cal { background: var(--sp-card); border-color: var(--sp-border); box-shadow: none; }
+  body.sp-dark .spd-cal-views { border-color: #263352; }
+  body.sp-dark .spd-cal-views button { background: #1a2540; color: var(--sp-text-1); }
+  body.sp-dark .spd-cal-views button + button { border-left-color: #263352; }
+  body.sp-dark .spd-cal-views button:not(.is-active):hover { background: #263352; }
+  body.sp-dark .spd-cal-views button.is-active { background: var(--sp-primary); color: #fff; }
+  body.sp-dark .spd-cal-btn { background: #1a2540; color: var(--sp-text-1); border-color: #263352; }
+  body.sp-dark .spd-cal-btn:hover { border-color: var(--sp-primary); color: #f08da0; }
+  body.sp-dark .spd-cal-label { color: var(--sp-text-1); }
+  body.sp-dark .spd-cal-title .sp-ms { color: #f08da0; }
+  body.sp-dark .spd-cal-layer { color: var(--sp-text-2); }
+  body.sp-dark .spd-cal-layer input:checked + .spd-cal-check .sp-ms { color: #0a0f1e; }
+  body.sp-dark .spd-cal-dow,
+  body.sp-dark .spd-cal-tg-colhead .dow,
+  body.sp-dark .spd-cal-tg-gutter { color: var(--sp-text-3); }
+  body.sp-dark .spd-cal-tg-hours span { color: var(--sp-text-3); }
+  body.sp-dark .spd-cal-daynum,
+  body.sp-dark .spd-cal-tg-colhead .num { color: var(--sp-text-1); }
+  body.sp-dark .spd-cal-cell:hover { background: rgba(255, 255, 255, 0.05); }
+  body.sp-dark .spd-cal-cell.is-holiday:hover { background: rgba(248, 113, 113, 0.18); }
+  body.sp-dark .spd-cal-cell.is-other { opacity: .55; }
+  body.sp-dark .spd-cal-more { color: var(--sp-text-2); }
+  body.sp-dark .spd-cal-chip { background: color-mix(in srgb, var(--layer) 22%, transparent); color: var(--sp-text-1); }
+  body.sp-dark .spd-cal-chip-time { color: var(--sp-text-2); }
+  body.sp-dark .spd-cal-tg-head { background: var(--sp-card); }
+  body.sp-dark .spd-cal-block { background: color-mix(in srgb, var(--layer) 20%, var(--sp-card)); color: var(--sp-text-1); }
+  body.sp-dark .spd-cal-block:hover { background: color-mix(in srgb, var(--layer) 30%, var(--sp-card)); }
+  body.sp-dark .spd-cal-block small { color: var(--sp-text-2); }
+  body.sp-dark .spd-cal-empty { color: var(--sp-text-3); }
+  body.sp-dark .spd-cal-tip { background: #1a2540; color: var(--sp-text-1); border-color: #263352; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); }
+  body.sp-dark .spd-cal-tip-row { color: var(--sp-text-2); }
 </style>
   {# My Calendar — layers: Class Sessions (Time Table), University Events
      (Institutional Calendar + Events), Office Hours (the student's OH groups) #}

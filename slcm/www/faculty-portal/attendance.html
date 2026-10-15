@@ -671,6 +671,143 @@
 }
 .sat-lock-note .fp-ms { font-size: 16px; flex-shrink: 0; }
 .sat-reopen-note { color: var(--fp-success); }
+
+/* ── Dark mode ── */
+/* Muted text tokens are too dim on navy cards (labels, reg nos, ABSENT,
+   grid headers, empty / loading states) — lift them on this page only. */
+body.fp-dark .fp-att-page,
+body.fp-dark .att-modal-backdrop { --fp-text-4: #7b8aa3; --fp-text-5: #5b6b85; }
+
+/* Sessions card: tabs, filter fields, chips */
+body.fp-dark .fp-as-field.fp-msf.fp-msf-active { border-color: rgba(214,74,102,0.5); background: rgba(214,74,102,0.12); }
+body.fp-dark .fp-as-field.fp-msf.fp-msf-active .fp-msf-btn,
+body.fp-dark .fp-as-field.fp-msf.fp-msf-active .fp-msf-btn .fp-msf-btn-label,
+body.fp-dark .fp-as-field.fp-msf.fp-msf-active .fp-msf-btn .fp-ms { color: #f08da0; }
+/* the global dark input rule would paint the flatpickr inputs as boxes inside the field */
+body.fp-dark .fp-as-date-row input { background: transparent; border: none; color: var(--fp-text-1); }
+body.fp-dark .fp-as-clear { background: #1a2540; color: #f08da0; border-color: rgba(214,74,102,0.55); }
+body.fp-dark .fp-as-clear:hover { background: var(--fp-primary); color: #fff; border-color: var(--fp-primary); }
+body.fp-dark .fp-as-pending-chip { background: rgba(214,74,102,0.14); color: #f08da0; border: 1px solid rgba(214,74,102,0.3); }
+body.fp-dark .fp-as-pending-chip button { color: #f08da0; }
+
+/* Sessions table */
+body.fp-dark #fp-sessions-table thead th { background: var(--fp-card-2); }
+body.fp-dark #fp-sessions-table tbody tr.fp-session-row:hover td { background: rgba(255,255,255,0.05); }
+body.fp-dark .fp-as-seq { color: #f08da0; }
+body.fp-dark .fp-as-absent { color: #f08da0; }
+body.fp-dark .fp-as-pill,
+body.fp-dark .fp-as-status-upcoming { background: var(--fp-card-2); border-color: var(--fp-border-mid); color: var(--fp-text-2); }
+body.fp-dark .fp-as-status-upcoming .fp-ms { color: var(--fp-text-3); }
+body.fp-dark .fp-as-status-pending,
+body.fp-dark .fp-as-status-marked { background: rgba(214,74,102,0.14); color: #f08da0; border: 1px solid rgba(214,74,102,0.3); }
+body.fp-dark .fp-as-status-active { background: var(--fp-success-bg); color: var(--fp-success); border: 1px solid rgba(74,222,128,0.3); }
+body.fp-dark .fp-as-status-active .fp-ms { color: var(--fp-success); }
+body.fp-dark .fp-as-lock { color: #f08da0; }
+body.fp-dark .fp-as-lock-open { color: var(--fp-success); }
+body.fp-dark .fp-lock-ic { color: #f08da0 !important; }
+body.fp-dark .fp-as-action { background: #1a2540; color: var(--fp-text-1); border: 1px solid var(--fp-border); }
+body.fp-dark .fp-as-action:hover { background: var(--fp-primary); color: #fff; border-color: var(--fp-primary); }
+@media (max-width: 768px) {
+  body.fp-dark #fp-sessions-table thead th:first-child { background: var(--fp-card-2); }
+  body.fp-dark #fp-sessions-table td:first-child { box-shadow: 1px 0 0 var(--fp-border); }
+}
+
+/* Modals: separate the card from the dimmed page */
+body.fp-dark .att-modal-backdrop { background: rgba(0,0,0,0.65); }
+body.fp-dark .att-modal-box,
+body.fp-dark .sat-modal-box,
+body.fp-dark .sp-modal-box { border: 1px solid var(--fp-border); box-shadow: 0 12px 40px rgba(0,0,0,0.55); }
+body.fp-dark .att-modal-close:hover,
+body.fp-dark .sat-hdr-close-light:hover { background: #1a2540; }
+body.fp-dark .sp-session-card { border-color: var(--fp-border-mid); }
+body.fp-dark .sp-session-card:hover { border-color: var(--fp-primary); }
+
+/* Mark Attendance modal — session strip, tabs, lock notes, counts */
+body.fp-dark .sat-sess-tab { background: #1a2540; border-color: var(--fp-border-mid); }
+body.fp-dark .sat-sess-tab-active { border-color: var(--fp-primary); box-shadow: 0 0 0 2px rgba(214,74,102,0.25); }
+body.fp-dark .sat-sess-st-pending { color: #f08da0; }
+body.fp-dark .sat-sess-st-active { color: var(--fp-success); }
+body.fp-dark .sat-tabs { border-color: var(--fp-primary); }
+body.fp-dark .sat-tab { background: #1a2540; color: var(--fp-text-1); }
+body.fp-dark .sat-tab + .sat-tab { border-left-color: var(--fp-primary); }
+body.fp-dark .sat-tab-active { background: var(--fp-primary); color: #fff; }
+body.fp-dark .sat-lock-note { color: #f08da0; }
+body.fp-dark .sat-reopen-note { color: var(--fp-success); }
+/* Check all / Uncheck all (inline var(--fp-card) background) */
+body.fp-dark .sat-bulk { background: #1a2540 !important; color: var(--fp-text-1) !important; border-color: var(--fp-border-mid) !important; }
+body.fp-dark .sat-bulk:hover { background: var(--fp-primary) !important; color: #fff !important; border-color: var(--fp-primary) !important; }
+/* Activate RFID button is hard-coded NLS maroon */
+body.fp-dark .fp-rfid-btn[style*="#920c24"] { background: var(--fp-primary) !important; border-color: var(--fp-primary) !important; color: #fff !important; }
+body.fp-dark .fp-rfid-btn[style*="#920c24"]:hover { background: var(--fp-primary-dark) !important; border-color: var(--fp-primary-dark) !important; }
+/* Based-On form fields (inline var(--fp-card) background) */
+body.fp-dark #sat-step-form select,
+body.fp-dark #sat-step-form input { background: #1a2540 !important; border-color: var(--fp-border-mid) !important; color: var(--fp-text-1) !important; }
+body.fp-dark #sat-step-form select:focus,
+body.fp-dark #sat-step-form input:focus { border-color: var(--fp-primary) !important; }
+body.fp-dark #sat-step-form option { background: #1a2540; color: var(--fp-text-1); }
+
+/* Student roster grids (Attendance / Class Participants / OH) */
+body.fp-dark .sat-grid-hd { background: var(--fp-card-2) !important; border-bottom-color: var(--fp-border-mid) !important; }
+body.fp-dark .sat-student-row-toggle,
+body.fp-dark .sat-cp-row { border-bottom-color: var(--fp-border) !important; }
+body.fp-dark .sat-student-row-toggle:nth-child(odd),
+body.fp-dark .sat-cp-row:nth-child(odd) { background: rgba(255,255,255,0.025) !important; }
+body.fp-dark .sat-student-row-toggle:hover,
+body.fp-dark .sat-cp-row:hover { background: rgba(255,255,255,0.05) !important; filter: none !important; }
+/* Off switches: --fp-border is nearly the card colour on navy */
+body.fp-dark .sat-chk:not(:checked) + .sat-switch-track,
+body.fp-dark .sat-cp-chk:not(:checked) + span { background: #334155 !important; }
+body.fp-dark .sat-cp-grade { background: #1a2540; border-color: var(--fp-border-mid); color: var(--fp-text-1); }
+body.fp-dark .sat-cp-grade:focus { border-color: var(--fp-primary); box-shadow: 0 0 0 3px rgba(214,74,102,0.2); }
+body.fp-dark .sat-cp-grade:disabled { background: var(--fp-bg); border-color: var(--fp-border); color: var(--fp-text-4); }
+body.fp-dark .sat-cp-grade.sat-cp-invalid { border-color: var(--fp-danger); box-shadow: 0 0 0 3px rgba(248,113,113,0.18); }
+
+/* View-session list / history / drill-down */
+body.fp-dark .att-badge-absent { color: #f08da0 !important; border-color: rgba(214,74,102,0.4); }
+body.fp-dark .att-view-row:hover { background: rgba(255,255,255,0.05) !important; filter: none !important; }
+body.fp-dark .fp-link-btn { color: #f08da0 !important; }
+body.fp-dark .att-drill-table th { background: var(--fp-card-2); border-bottom-color: var(--fp-border-mid); }
+body.fp-dark .att-drill-table td { border-bottom-color: var(--fp-border); }
+body.fp-dark .att-drill-table tbody tr:nth-child(even) td { background: rgba(255,255,255,0.025); }
+body.fp-dark .att-drill-table tr:hover td,
+body.fp-dark .att-drill-table tr.clickable-row:hover td { background: rgba(255,255,255,0.05); }
+
+/* Flatpickr calendar (From / To Date filters) — appended to <body> */
+body.fp-dark .flatpickr-calendar {
+  background: var(--fp-card);
+  border: 1px solid var(--fp-border);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+body.fp-dark .flatpickr-calendar.arrowTop:before,
+body.fp-dark .flatpickr-calendar.arrowTop:after { border-bottom-color: var(--fp-card); }
+body.fp-dark .flatpickr-calendar.arrowBottom:before,
+body.fp-dark .flatpickr-calendar.arrowBottom:after { border-top-color: var(--fp-card); }
+body.fp-dark .flatpickr-months .flatpickr-month,
+body.fp-dark .flatpickr-current-month .flatpickr-monthDropdown-months,
+body.fp-dark .flatpickr-current-month input.cur-year,
+body.fp-dark span.flatpickr-weekday {
+  background: transparent;
+  color: var(--fp-text-1);
+  fill: var(--fp-text-1);
+}
+body.fp-dark .flatpickr-current-month .flatpickr-monthDropdown-months option { background: #1a2540; color: var(--fp-text-1); }
+body.fp-dark .flatpickr-months .flatpickr-prev-month,
+body.fp-dark .flatpickr-months .flatpickr-next-month { color: var(--fp-text-1); fill: var(--fp-text-1); }
+body.fp-dark .flatpickr-months .flatpickr-prev-month svg,
+body.fp-dark .flatpickr-months .flatpickr-next-month svg { fill: var(--fp-text-1); }
+body.fp-dark .flatpickr-months .flatpickr-prev-month:hover svg,
+body.fp-dark .flatpickr-months .flatpickr-next-month:hover svg { fill: #f08da0; }
+body.fp-dark .flatpickr-current-month .numInputWrapper span.arrowUp:after { border-bottom-color: var(--fp-text-2); }
+body.fp-dark .flatpickr-current-month .numInputWrapper span.arrowDown:after { border-top-color: var(--fp-text-2); }
+body.fp-dark .flatpickr-day { color: var(--fp-text-1); }
+body.fp-dark .flatpickr-day:hover,
+body.fp-dark .flatpickr-day:focus { background: #1a2540; border-color: #263352; }
+body.fp-dark .flatpickr-day.today { border-color: var(--fp-primary); }
+body.fp-dark .flatpickr-day.selected,
+body.fp-dark .flatpickr-day.selected:hover { background: var(--fp-primary); border-color: var(--fp-primary); color: #fff; }
+body.fp-dark .flatpickr-day.flatpickr-disabled,
+body.fp-dark .flatpickr-day.prevMonthDay,
+body.fp-dark .flatpickr-day.nextMonthDay { color: #5b6b85; }
 </style>
 {% endblock %}
 

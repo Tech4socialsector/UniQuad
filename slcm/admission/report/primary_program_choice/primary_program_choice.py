@@ -49,8 +49,7 @@ def get_columns() -> list[dict]:
 		{
 			"label": _("Programme"),
 			"fieldname": "program",
-			"fieldtype": "Link",
-			"options": "Programme",
+			"fieldtype": "Data",
 			"width": 180
 		},
 		{
@@ -106,6 +105,7 @@ def get_data(filters: dict | None) -> list[dict]:
 			"mobile_number",
 			"program_level",
 			"program",
+			"program.program_name as program_name",
 			"campus",
 			"status",
 			"admission_year",
@@ -113,6 +113,10 @@ def get_data(filters: dict | None) -> list[dict]:
 		],
 		order_by="program asc, applicant_id asc"
 	)
+
+	for row in data:
+		if row.get("program_name"):
+			row["program"] = row["program_name"]
 
 	return data
 

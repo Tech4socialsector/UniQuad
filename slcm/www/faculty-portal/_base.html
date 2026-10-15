@@ -67,6 +67,8 @@
 </head>
 
 <body{% if fp_settings and fp_settings.body_classes %} class="{{ fp_settings.body_classes }}"{% endif %}>
+{# Apply saved dark mode before first paint so pages don't flash light #}
+<script>try { if (localStorage.getItem('fp-dark') === '1') document.body.classList.add('fp-dark'); } catch(e) {}</script>
 
 {% if is_guest %}
 <script>window.location.href = "/portal-login?redirect-to=/faculty-portal";</script>
@@ -74,19 +76,19 @@
 {% elif not_a_faculty %}
 {% if is_admin_preview %}
 {# ── Admin: no Faculty records exist at all — show setup prompt ── #}
-<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:var(--fp-font-family, 'Merriweather', Georgia, serif);background:linear-gradient(135deg,#f0f4f8,#e8edf3);">
-  <div style="text-align:center;padding:48px 40px;background:#fff;border-radius:20px;box-shadow:0 16px 64px rgba(0,0,0,0.12);max-width:480px;width:90%;">
-    <div style="width:72px;height:72px;border-radius:20px;background:rgba(43,46,74,0.08);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
-      <span style="font-family:'Material Symbols Outlined';font-size:36px;color:#2b2e4a;">admin_panel_settings</span>
+<div class="fp-nf-screen" style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:var(--fp-font-family, 'Merriweather', Georgia, serif);background:linear-gradient(135deg,#f0f4f8,#e8edf3);">
+  <div class="fp-nf-card" style="text-align:center;padding:48px 40px;background:#fff;border-radius:20px;box-shadow:0 16px 64px rgba(0,0,0,0.12);max-width:480px;width:90%;">
+    <div class="fp-nf-icon-box" style="width:72px;height:72px;border-radius:20px;background:rgba(43,46,74,0.08);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+      <span class="fp-nf-icon" style="font-family:'Material Symbols Outlined';font-size:36px;color:#2b2e4a;">admin_panel_settings</span>
     </div>
-    <h2 style="margin:0 0 8px;color:#0f172a;font-size:22px;font-weight:800;letter-spacing:-0.02em;">No Faculty Records Found</h2>
-    <p style="color:#64748b;font-size:14px;margin:0 0 6px;line-height:1.6;">You are logged in as an administrator but there are no Faculty records in the system yet.</p>
-    <p style="color:#64748b;font-size:13px;margin:0 0 28px;line-height:1.6;">Create at least one Faculty record to preview the portal.</p>
+    <h2 class="fp-nf-title" style="margin:0 0 8px;color:#0f172a;font-size:22px;font-weight:800;letter-spacing:-0.02em;">No Faculty Records Found</h2>
+    <p class="fp-nf-sub" style="color:#64748b;font-size:14px;margin:0 0 6px;line-height:1.6;">You are logged in as an administrator but there are no Faculty records in the system yet.</p>
+    <p class="fp-nf-sub" style="color:#64748b;font-size:13px;margin:0 0 28px;line-height:1.6;">Create at least one Faculty record to preview the portal.</p>
     <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
       <a href="/slcm/faculty/new-faculty-1" style="display:inline-flex;align-items:center;gap:8px;padding:11px 24px;background:linear-gradient(135deg,#2b2e4a,#920c24);color:#fff;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px;font-family:inherit;box-shadow:0 4px 16px rgba(43,46,74,0.3);">
         <span style="font-family:'Material Symbols Outlined';font-size:18px;">person_add</span>Create Faculty Record
       </a>
-      <a href="/slcm/faculty" style="display:inline-flex;align-items:center;gap:8px;padding:11px 24px;background:#f1f5f9;color:#2b2e4a;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px;font-family:inherit;">
+      <a href="/slcm/faculty" class="fp-nf-btn-secondary" style="display:inline-flex;align-items:center;gap:8px;padding:11px 24px;background:#f1f5f9;color:#2b2e4a;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px;font-family:inherit;">
         <span style="font-family:'Material Symbols Outlined';font-size:18px;">group</span>View All Faculty
       </a>
     </div>
@@ -94,13 +96,13 @@
 </div>
 {% else %}
 {# ── Non-admin user with no linked Faculty record ── #}
-<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:var(--fp-font-family, 'Merriweather', Georgia, serif);background:linear-gradient(135deg,#f0f4f8,#e8edf3);">
-  <div style="text-align:center;padding:48px 40px;background:#fff;border-radius:20px;box-shadow:0 16px 64px rgba(0,0,0,0.12);max-width:420px;width:90%;">
-    <div style="width:72px;height:72px;border-radius:20px;background:rgba(148,163,184,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
-      <span style="font-family:'Material Symbols Outlined';font-size:36px;color:#94a3b8;">person_off</span>
+<div class="fp-nf-screen" style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:var(--fp-font-family, 'Merriweather', Georgia, serif);background:linear-gradient(135deg,#f0f4f8,#e8edf3);">
+  <div class="fp-nf-card" style="text-align:center;padding:48px 40px;background:#fff;border-radius:20px;box-shadow:0 16px 64px rgba(0,0,0,0.12);max-width:420px;width:90%;">
+    <div class="fp-nf-icon-box fp-nf-icon-muted" style="width:72px;height:72px;border-radius:20px;background:rgba(148,163,184,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+      <span class="fp-nf-icon" style="font-family:'Material Symbols Outlined';font-size:36px;color:#94a3b8;">person_off</span>
     </div>
-    <h2 style="margin:0 0 10px;color:#0f172a;font-size:22px;font-weight:800;letter-spacing:-0.02em;">Not a Faculty Account</h2>
-    <p style="color:#64748b;font-size:14px;margin:0 0 28px;line-height:1.6;">No faculty record is linked to your account. Please contact the administrator to get access.</p>
+    <h2 class="fp-nf-title" style="margin:0 0 10px;color:#0f172a;font-size:22px;font-weight:800;letter-spacing:-0.02em;">Not a Faculty Account</h2>
+    <p class="fp-nf-sub" style="color:#64748b;font-size:14px;margin:0 0 28px;line-height:1.6;">No faculty record is linked to your account. Please contact the administrator to get access.</p>
     <button onclick="fpNotFacultyLogout()" style="display:inline-flex;align-items:center;gap:8px;padding:11px 28px;background:linear-gradient(135deg,#2b2e4a,#920c24);color:#fff;border-radius:10px;border:none;cursor:pointer;font-weight:600;font-size:14px;font-family:inherit;box-shadow:0 4px 16px rgba(43,46,74,0.3);">
       <span style="font-family:'Material Symbols Outlined';font-size:18px;">logout</span>Sign Out &amp; Login Again
     </button>
@@ -262,8 +264,7 @@
       </a>
       <a href="/faculty-portal/marks"          class="fp-nav-item {% if active_page == 'marks'         %}active{% endif %}" data-label="Grades">
         <span class="fp-ms">grade</span><span class="fp-nav-label">Grades</span>
-      </a>
-      <a href="/faculty-portal/venue-booking"  class="fp-nav-item {% if active_page == 'venue_booking' %}active{% endif %}" data-label="Venue Booking">
+      </a>      <a href="/faculty-portal/venue-booking"  class="fp-nav-item {% if active_page == 'venue_booking' %}active{% endif %}" data-label="Venue Booking">
         <span class="fp-ms">meeting_room</span><span class="fp-nav-label">Venue Booking</span>
       </a>
       {% if fp_settings and fp_settings.enable_lms_navigation %}
@@ -619,6 +620,76 @@ body.fp-compact .fp-card-header{ padding: 12px 16px !important; }
 .fp-dlg-btn-primary:hover { background: var(--fp-primary-dark, #6f091b); }
 @keyframes fp-dlg-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes fp-dlg-pop { from { transform: translateY(8px) scale(.98); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* ── Dark mode ── */
+/* Navbar: hover washes used --fp-bg, which is darker than the navy nav and barely shows */
+body.fp-dark .fp-hamburger:hover,
+body.fp-dark .fp-theme-btn:hover { background: var(--fp-card-2); }
+body.fp-dark .fp-brand-sub { color: var(--fp-text-3); }
+body.fp-dark .fp-avatar-btn { border-color: rgba(255,255,255,0.25); }
+
+/* Avatar dropdown */
+body.fp-dark .fp-dropdown { border-color: var(--fp-border-mid); }
+body.fp-dark .fp-dropdown-email { color: var(--fp-text-3); }
+body.fp-dark .fp-dropdown-item { color: var(--fp-text-2); }
+body.fp-dark .fp-dropdown-item .fp-ms { color: var(--fp-text-3); }
+body.fp-dark .fp-dropdown-item:hover { background: rgba(255,255,255,0.05); color: var(--fp-text-1); }
+body.fp-dark .fp-dropdown-item:hover .fp-ms { color: var(--fp-text-1); }
+body.fp-dark .fp-dropdown-item.fp-danger,
+body.fp-dark .fp-dropdown-item.fp-danger .fp-ms { color: var(--fp-danger); }
+body.fp-dark .fp-dropdown-item.fp-danger:hover { background: var(--fp-danger-bg); }
+
+/* Notification panel */
+body.fp-dark .fp-notif-panel { border-color: var(--fp-border-mid); }
+body.fp-dark .fp-notif-header,
+body.fp-dark .fp-notif-footer { background: var(--fp-card-2); border-color: var(--fp-border); }
+body.fp-dark .fp-notif-header-count { background: rgba(214,74,102,0.14); color: #f08da0; border: 1px solid rgba(214,74,102,0.3); }
+/* --fp-border-light equals the card colour in dark, so the row dividers vanished */
+body.fp-dark .fp-notif-item { border-bottom-color: var(--fp-border); }
+body.fp-dark .fp-notif-item:hover { background: rgba(255,255,255,0.05); }
+body.fp-dark .fp-notif-cat,
+body.fp-dark .fp-notif-sub,
+body.fp-dark .fp-notif-empty { color: var(--fp-text-3); }
+/* Footer link uses --fp-accent, which stays NLS maroon (#920c24) in dark */
+body.fp-dark .fp-notif-footer a { color: #f08da0; }
+
+/* Sidebar */
+body.fp-dark .fp-sidebar-section,
+body.fp-dark .fp-collapse-btn { color: var(--fp-text-3); }
+body.fp-dark .fp-sidebar-section.fp-section-toggle:hover { color: var(--fp-text-1); }
+body.fp-dark .fp-collapse-btn:hover { background: var(--fp-card-2); color: var(--fp-text-1); }
+/* White text on the lifted --fp-danger (#f87171) is too faint */
+body.fp-dark .fp-nav-pill { background: #dc2626; color: #fff; }
+/* Mini-sidebar tooltip is #0f172a — the same colour as the dark sidebar */
+body.fp-dark .fp-tooltip { background: var(--fp-card-2); color: var(--fp-text-1); border-color: var(--fp-border-mid); box-shadow: 0 6px 20px rgba(0,0,0,0.5); }
+
+/* Portal dialog (fpConfirm / fpAlert) */
+body.fp-dark .fp-dlg-backdrop { background: rgba(0,0,0,0.6); }
+body.fp-dark .fp-dlg { border: 1px solid var(--fp-border-mid); box-shadow: 0 24px 60px rgba(0,0,0,0.6); }
+body.fp-dark .fp-dlg-icon { background: rgba(214,74,102,0.14); color: #f08da0; border: 1px solid rgba(214,74,102,0.3); }
+body.fp-dark .fp-dlg-title { color: var(--fp-text-1); }
+body.fp-dark .fp-dlg-msg { color: var(--fp-text-2); }
+body.fp-dark .fp-dlg-btn { background: #1a2540; color: var(--fp-text-1); border-color: var(--fp-border); }
+body.fp-dark .fp-dlg-btn:hover { background: #222f4f; }
+body.fp-dark .fp-dlg-btn-primary { background: var(--fp-primary); border-color: var(--fp-primary); color: #fff; }
+body.fp-dark .fp-dlg-btn-primary:hover { background: var(--fp-primary-dark); border-color: var(--fp-primary-dark); }
+
+/* Logout confirmation modal (inline-styled) */
+body.fp-dark #fp-logout-modal { background: rgba(0,0,0,0.65) !important; }
+body.fp-dark #fp-logout-modal > div { border: 1px solid var(--fp-border-mid); }
+body.fp-dark #fp-logout-modal button[onclick="fpCancelLogout()"] { background: #1a2540 !important; color: var(--fp-text-1) !important; border-color: var(--fp-border) !important; }
+body.fp-dark #fp-logout-modal button[onclick="fpCancelLogout()"]:hover { background: #222f4f !important; }
+
+/* "No Faculty Records" / "Not a Faculty Account" screens (inline-styled) */
+body.fp-dark .fp-nf-screen { background: var(--fp-bg) !important; }
+body.fp-dark .fp-nf-card { background: var(--fp-card) !important; border: 1px solid var(--fp-border); box-shadow: 0 16px 64px rgba(0,0,0,0.5) !important; }
+body.fp-dark .fp-nf-icon-box { background: rgba(214,74,102,0.14) !important; }
+body.fp-dark .fp-nf-icon { color: #f08da0 !important; }
+body.fp-dark .fp-nf-icon-muted { background: rgba(148,163,184,0.12) !important; }
+body.fp-dark .fp-nf-icon-muted .fp-nf-icon { color: var(--fp-text-3) !important; }
+body.fp-dark .fp-nf-title { color: var(--fp-text-1) !important; }
+body.fp-dark .fp-nf-sub { color: var(--fp-text-3) !important; }
+body.fp-dark .fp-nf-btn-secondary { background: #1a2540 !important; color: var(--fp-text-1) !important; border: 1px solid var(--fp-border); }
 </style>
 
 <script>

@@ -65,6 +65,21 @@
   .pp-course-card-pct { font-size: 21px; font-weight: 800; line-height: 1; }
   .pp-course-card-classes { font-size: 11px; color: var(--pp-text-4); font-weight: 500; text-align: right; }
 
+  /* Calendar header on phones: title on its own line, then ‹ October 2026 ›
+     across the full width — they don't fit side by side (the month was cut
+     off). Legend in a tidy 2×2 instead of wrapping one item onto a line. */
+  @media (max-width: 560px) {
+    .pp-cal-head { flex-wrap: wrap; padding: 14px 14px 10px; row-gap: 10px; }
+    .pp-cal-head .pp-card-title { width: 100%; }
+    .pp-cal-nav { width: 100%; justify-content: space-between; }
+    .pp-cal-nav #pp-cal-month-label { flex: 1; min-width: 0 !important; }
+    .pp-cal-legend { display: grid !important; grid-template-columns: repeat(2, max-content); gap: 6px 18px !important;
+      padding: 10px 14px !important; }
+    #pp-calendar { padding: 0 8px 12px !important; }
+    .pp-cal-grid { gap: 3px; }
+    .pp-cal-cell { min-height: 52px; padding: 5px 2px 6px; }
+  }
+
   @media (max-width: 480px) {
     .pp-course-card { flex-wrap: wrap; gap: 10px; padding: 14px; }
     .pp-course-card-icon { display: none; }
@@ -161,6 +176,45 @@
   .pp-day-session-card:last-child { margin-bottom: 0; }
   .pp-day-session-bar { width: 4px; flex-shrink: 0; }
   .pp-day-session-body { flex: 1; padding: 9px 12px; }
+
+  /* ── Dark mode ── */
+  /* Month nav buttons (.pp-btn has no portal styles, so they fall back to
+     the browser's grey button) */
+  body.pp-dark .pp-cal-nav .pp-btn {
+    background: #1a2540; color: var(--pp-text-1);
+    border: 1px solid var(--pp-border); border-radius: 8px; cursor: pointer;
+  }
+  body.pp-dark .pp-cal-nav .pp-btn:hover { background: #263352; }
+  /* Holiday: maroon text/tints are unreadable on navy */
+  body.pp-dark .pp-cal-holiday-label { color: #f08da0; }
+  body.pp-dark .pp-cal-cell.pp-cal-holiday {
+    background: rgba(214,74,102,0.10) !important;
+    border-color: rgba(214,74,102,0.35) !important;
+  }
+  body.pp-dark .pp-cal-legend-holiday {
+    background: rgba(214,74,102,0.25) !important; border-color: #f08da0 !important;
+  }
+  body.pp-dark .pp-day-holiday { border-color: rgba(214,74,102,0.35) !important; }
+  /* Calendar cells with data: border == bg in dark, so give them a lift */
+  body.pp-dark .pp-cal-cell.clickable:not(.pp-cal-holiday):not(.pp-cal-today) {
+    background: #1a2540 !important; border-color: #263352 !important;
+  }
+  body.pp-dark .pp-cal-cell.clickable:hover { box-shadow: 0 4px 14px rgba(0,0,0,0.45); }
+  /* Bar chart track */
+  body.pp-dark .pp-att-bar-track { background: #1a2540 !important; }
+  /* Course / stat card hover shadows */
+  body.pp-dark .pp-course-card:hover { box-shadow: 0 4px 18px rgba(0,0,0,0.4); }
+  body.pp-dark .pp-drill-clear-btn:hover { background: rgba(255,255,255,0.06); }
+  /* Day modal */
+  body.pp-dark .pp-modal { box-shadow: 0 24px 64px rgba(0,0,0,0.6); border: 1px solid var(--pp-border); }
+  body.pp-dark .pp-modal-overlay { background: rgba(0,0,0,0.6); }
+  body.pp-dark .pp-modal-close:hover { background: #1a2540; }
+  body.pp-dark .pp-modal-footer button {
+    background: #1a2540; color: var(--pp-text-1); border: 1px solid var(--pp-border);
+  }
+  body.pp-dark .pp-modal-footer button:hover { background: #263352; opacity: 1; }
+  body.pp-dark .pp-day-stat { background: #1a2540 !important; border-color: #263352 !important; }
+  body.pp-dark .pp-day-pill { background: #1a2540 !important; color: var(--pp-text-3) !important; border-color: #263352 !important; }
 {% endblock %}
 
 {% block content %}
@@ -224,7 +278,7 @@
       {% else %}{% set bar_color = "color-mix(in srgb, var(--pp-primary) 30%, transparent)" %}{% endif %}
       <div style="display:flex;flex-direction:column;align-items:center;gap:5px;flex:1;min-width:60px;max-width:100px;">
         <div style="font-size:11.5px;font-weight:800;color:var(--pp-primary);">{{ pct|round(0)|int }}%</div>
-        <div style="width:100%;background:var(--pp-border-light);border-radius:8px 8px 4px 4px;height:110px;display:flex;align-items:flex-end;overflow:hidden;">
+        <div class="pp-att-bar-track" style="width:100%;background:var(--pp-border-light);border-radius:8px 8px 4px 4px;height:110px;display:flex;align-items:flex-end;overflow:hidden;">
           <div data-height="{{ pct }}"
                style="width:100%;height:0%;background:{{ bar_color }};opacity:0.88;border-radius:6px 6px 3px 3px;transition:height 1s cubic-bezier(0.16,1,0.3,1);">
           </div>
@@ -244,11 +298,11 @@
 
 {# ── Attendance Calendar ────────────────────────────────────────── #}
 <div class="pp-card fade-in" style="margin-bottom:22px;animation-delay:0.07s;">
-  <div class="pp-card-header">
+  <div class="pp-card-header pp-cal-head">
     <div class="pp-card-title">
       <span class="ms">calendar_month</span> Attendance Calendar
     </div>
-    <div style="display:flex;align-items:center;gap:6px;">
+    <div class="pp-cal-nav" style="display:flex;align-items:center;gap:6px;">
       <button class="pp-btn pp-btn-outline pp-btn-sm" onclick="ppCalPrev()" aria-label="Previous month"
               style="display:flex;align-items:center;justify-content:center;width:34px;height:34px;padding:0;">
         <span class="ms" style="font-size:18px;">chevron_left</span>
@@ -263,7 +317,7 @@
   </div>
 
   {# Legend #}
-  <div style="display:flex;gap:14px;flex-wrap:wrap;padding:0 16px 10px;font-size:12px;color:var(--pp-text-3);">
+  <div class="pp-cal-legend" style="display:flex;gap:14px;flex-wrap:wrap;padding:0 16px 10px;font-size:12px;color:var(--pp-text-3);">
     <span style="display:flex;align-items:center;gap:5px;">
       <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--pp-success);"></span>Present
     </span>
@@ -274,7 +328,7 @@
       <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--pp-primary);"></span>Scheduled
     </span>
     <span style="display:flex;align-items:center;gap:5px;">
-      <span style="display:inline-block;width:8px;height:8px;border-radius:4px;background:rgba(146,12,36,0.25);border:1px solid #920c24;"></span>Holiday
+      <span class="pp-cal-legend-holiday" style="display:inline-block;width:8px;height:8px;border-radius:4px;background:rgba(146,12,36,0.25);border:1px solid #920c24;"></span>Holiday
     </span>
   </div>
 
@@ -406,7 +460,9 @@ document.addEventListener('keydown', e => {
       bg = 'border:1.5px solid transparent;';
     }
 
-    var html = '<div class="pp-cal-cell' + (clickable ? ' clickable' : '') + '" style="'
+    var html = '<div class="pp-cal-cell' + (clickable ? ' clickable' : '')
+             + (isHoliday && !otherMonth ? ' pp-cal-holiday' : '')
+             + (isToday ? ' pp-cal-today' : '') + '" style="'
              + (otherMonth ? 'opacity:.28;' : '') + bg + '"'
              + (clickable ? ' onclick="ppOpenDayModal(\'' + ds + '\')" title="View details"' : '')
              + '>';
@@ -500,7 +556,7 @@ document.addEventListener('keydown', e => {
 
     /* Holiday banner */
     if (data.is_holiday) {
-      html += '<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;'
+      html += '<div class="pp-day-holiday" style="display:flex;align-items:center;gap:12px;padding:12px 14px;'
             + 'border-radius:10px;background:transparent;border:1px solid rgba(146,12,36,0.30);margin-bottom:14px;">'
             + '<span class="ms" style="color:#920c24;font-size:26px;flex-shrink:0;">celebration</span>'
             + '<div><div style="font-size:14px;font-weight:700;color:#920c24;">'
@@ -522,14 +578,14 @@ document.addEventListener('keydown', e => {
 
       html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">';
 
-      html += '<div style="flex:1;min-width:58px;padding:7px 10px;border-radius:9px;'
+      html += '<div class="pp-day-stat" style="flex:1;min-width:58px;padding:7px 10px;border-radius:9px;'
             + 'background:var(--pp-border-light);border:1px solid var(--pp-border);text-align:center;">'
             + '<div style="font-size:18px;font-weight:800;color:var(--pp-primary);">' + sessions.length + '</div>'
             + '<div style="font-size:10px;color:var(--pp-text-4);">Session' + (sessions.length !== 1 ? 's' : '') + '</div>'
             + '</div>';
 
       if (totalHours > 0) {
-        html += '<div style="flex:1;min-width:58px;padding:7px 10px;border-radius:9px;'
+        html += '<div class="pp-day-stat" style="flex:1;min-width:58px;padding:7px 10px;border-radius:9px;'
               + 'background:var(--pp-border-light);border:1px solid var(--pp-border);text-align:center;">'
               + '<div style="font-size:18px;font-weight:800;color:var(--pp-primary);">' + totalHours.toFixed(1) + 'h</div>'
               + '<div style="font-size:10px;color:var(--pp-text-4);">Total Hrs</div>'
@@ -579,7 +635,7 @@ document.addEventListener('keydown', e => {
 
       /* Row 2: session type, time, hours, venue */
       html += '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">';
-      html += '<span style="font-size:11px;font-weight:500;padding:2px 7px;border-radius:20px;'
+      html += '<span class="pp-day-pill" style="font-size:11px;font-weight:500;padding:2px 7px;border-radius:20px;'
             + 'background:var(--pp-border-light);color:var(--pp-text-4);border:1px solid var(--pp-border);">'
             + esc(s.session_type || 'Lecture') + '</span>';
 
@@ -590,7 +646,7 @@ document.addEventListener('keydown', e => {
         html += '</span>';
       }
       if (s.hours > 0) {
-        html += '<span style="font-size:11px;font-weight:600;padding:2px 7px;border-radius:20px;'
+        html += '<span class="pp-day-pill" style="font-size:11px;font-weight:600;padding:2px 7px;border-radius:20px;'
               + 'background:var(--pp-border-light);color:var(--pp-text-3);">' + s.hours + 'h</span>';
       }
       if (s.venue) {

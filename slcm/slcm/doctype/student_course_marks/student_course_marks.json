@@ -33,7 +33,9 @@
   "improvement_applied",
   "re_exam_grade",
   "section_entries",
-  "marks_entries"
+  "marks_entries",
+  "section_assessment_marks",
+  "assessment_marks"
  ],
  "fields": [
   {
@@ -125,6 +127,18 @@
    "options": "Student Marks Entry"
   },
   {
+   "fieldname": "section_assessment_marks",
+   "fieldtype": "Section Break",
+   "label": "Assessment Marks",
+   "description": "Per-assessment marks entered by faculty from the portal (1st and 2nd submission)."
+  },
+  {
+   "fieldname": "assessment_marks",
+   "fieldtype": "Table",
+   "label": "Assessment Marks",
+   "options": "Student Assessment Marks"
+  },
+  {
    "fieldname": "moderated_grade",
    "fieldtype": "Data",
    "label": "Moderated Grade"
@@ -213,7 +227,7 @@
   }
  ],
  "links": [],
- "modified": "2026-09-03 15:06:33.600810",
+ "modified": "2026-10-14 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Student Course Marks",

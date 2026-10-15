@@ -215,7 +215,7 @@
       border-bottom: 1px solid rgba(0,0,0,0.1);
     }
     .glass-title { display: flex; align-items: center; gap: 9px; }
-    .glass-title h2 { font-size: 16px !important; font-weight: 400 !important; }
+    .glass-title h2 { font-size: 14px !important; font-weight: 400 !important; }
 
     /* announcement rows */
     .ann-row {
@@ -228,8 +228,10 @@
     .ann-row:hover { background: rgba(255, 255, 255, 0.5); }
     .ann-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 6px; }
     .ann-text { flex: 1; min-width: 0; color: #000000; font-weight:500; }
-    .ann-title { line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 14px; }
-    .ann-summary {opacity: .7; margin-top: 4px; font-size: 13px;
+    /* Fixed 11px list text: !important beats applicant_portal.css, which sizes
+       every div / span from the Portal Config body font size */
+    .ann-title { line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 11px !important; }
+    .ann-summary {opacity: .7; margin-top: 4px; font-size: 11px !important;
                    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .ann-row .material-symbols-outlined { font-size: 18px; color: #9ca3af;}
 
@@ -259,9 +261,12 @@
     }
     .date-item-icon .dim { font-size: 16px; font-weight: 500; }
     .date-item-body { flex: 1; min-width: 0; color: #374151; }
-    .date-item-label { line-height: 1.4; font-size: 14px;
+    .date-item-label { line-height: 1.4; font-size: 11px !important;
                        white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .date-item-sub { font-size: 12px; margin-top: 2px; }
+    .date-item-sub { font-size: 11px !important; margin-top: 2px; }
+    /* "No announcements / No Important Dates" messages */
+    .ann-row > span:not(.material-symbols-outlined),
+    .date-item > span:not(.material-symbols-outlined) { font-size: 11px !important; }
     .date-badge {
       font-size: 8px; font-weight: 400; letter-spacing: .08em;
       padding: 2px 6px; border-radius: 99px; flex-shrink: 0;
@@ -435,7 +440,6 @@
       .lp-left { padding: 44px 36px; }
       .lp-right-body { padding: 20px 20px; }
       .lp-tagline { font-size: 21px; max-width: 340px; }
-      .glass-title h2 { font-size: 16px; }
     }
 
     /* Tablet (≤860px): right hidden, left fills full screen */
@@ -448,6 +452,47 @@
         box-shadow: none; min-height: 100vh;
       }
       .lp-right { display: none; }
+    }
+
+    /* Tablet + mobile (≤860px): Announcements and Important Dates move under
+       the login / register form, with fixed font sizes (the portal typography
+       block would otherwise size the card titles from the Portal Config). */
+    @media (max-width: 860px) {
+      .lp-wrap { flex-direction: column; justify-content: flex-start; }
+      .lp-left { flex: 0 0 auto; min-height: 0; padding-bottom: 28px; }
+      /* grows to fill a tall screen, so the photo reaches the bottom */
+      .lp-right { display: block; flex: 1 0 auto; width: 100%; }
+      .lp-right-body {
+        min-height: 0; height: auto; overflow: visible;
+        justify-content: flex-start; padding: 24px 20px 32px;
+      }
+      .lp-tagline { display: none; }
+      .lp-cards-grid {
+        grid-template-columns: 1fr 1fr; gap: 16px;
+        max-width: 760px; margin: 0 auto;
+      }
+
+      .glass-head { padding: 10px 14px; }
+      .glass-title h2 { line-height: 1.3 !important; }
+
+      .ann-row, .date-item { padding: 8px 10px; gap: 10px; }
+      .date-item-icon { width: 34px; height: 34px; }
+      .ann-title, .date-item-label {
+        font-size: 11px !important; line-height: 1.45 !important;
+        white-space: normal; display: -webkit-box;
+        -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+      }
+      .ann-summary, .date-item-sub,
+      .ann-row span:not(.material-symbols-outlined),
+      .date-item span:not(.material-symbols-outlined) {
+        font-size: 11px !important;
+      }
+    }
+
+    /* Mobile (≤600px): one card per row */
+    @media (max-width: 600px) {
+      .lp-cards-grid { grid-template-columns: 1fr; }
+      .lp-right-body { padding: 20px 16px 28px; }
     }
 
     /* Mobile (≤600px) */

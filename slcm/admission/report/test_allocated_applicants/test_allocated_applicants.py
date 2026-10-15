@@ -37,8 +37,7 @@ def get_columns() -> list[dict]:
 		{
 			"label": _("Programme"),
 			"fieldname": "program",
-			"fieldtype": "Link",
-			"options": "Programme",
+			"fieldtype": "Data",
 			"width": 250,
 		},
 		{
@@ -82,45 +81,45 @@ def get_data(filters: dict) -> list[dict]:
 	elif filters.get("entrance_test_provider"):
 		provider_filter = filters.get("entrance_test_provider")
 
-	conditions = ["docstatus < 2"]
+	conditions = ["sa.docstatus < 2"]
 	values = {}
 
 	if filters.get("is_international_applicant") or filters.get("show_international_applicant"):
 		conditions.append(
-			"(is_international_applicant = 1 OR entrance_test_provider = 'International Applicant' OR entrance_test_provider IS NULL OR entrance_test_provider = '')"
+			"(sa.is_international_applicant = 1 OR sa.entrance_test_provider = 'International Applicant' OR sa.entrance_test_provider IS NULL OR sa.entrance_test_provider = '')"
 		)
 	elif provider_filter:
 		conditions.append(
-			"(entrance_test_provider = %(provider)s OR re_entrance_test_provider = %(provider)s)"
+			"(sa.entrance_test_provider = %(provider)s OR sa.re_entrance_test_provider = %(provider)s)"
 		)
 		values["provider"] = provider_filter
 
 	if filters.get("academic_year"):
-		conditions.append("academic_year = %(academic_year)s")
+		conditions.append("sa.academic_year = %(academic_year)s")
 		values["academic_year"] = filters.get("academic_year")
 
 	if filters.get("admission_cycle"):
-		conditions.append("admission_cycle = %(admission_cycle)s")
+		conditions.append("sa.admission_cycle = %(admission_cycle)s")
 		values["admission_cycle"] = filters.get("admission_cycle")
 
 	if filters.get("campus"):
-		conditions.append("campus = %(campus)s")
+		conditions.append("sa.campus = %(campus)s")
 		values["campus"] = filters.get("campus")
 
 	if filters.get("program_level"):
-		conditions.append("program_level = %(program_level)s")
+		conditions.append("sa.program_level = %(program_level)s")
 		values["program_level"] = filters.get("program_level")
 
 	if filters.get("program"):
-		conditions.append("program = %(program)s")
+		conditions.append("(sa.program = %(program)s OR p.program_name = %(program)s)")
 		values["program"] = filters.get("program")
 
 	if filters.get("entrance_test_list"):
-		conditions.append("entrance_test_list = %(entrance_test_list)s")
+		conditions.append("sa.entrance_test_list = %(entrance_test_list)s")
 		values["entrance_test_list"] = filters.get("entrance_test_list")
 
 	if filters.get("allocation_date"):
-		conditions.append("allocation_date = %(allocation_date)s")
+		conditions.append("sa.allocation_date = %(allocation_date)s")
 		values["allocation_date"] = filters.get("allocation_date")
 
 	where_clause = " AND ".join(conditions)
@@ -128,13 +127,15 @@ def get_data(filters: dict) -> list[dict]:
 	records = frappe.db.sql(
 		f"""
 		SELECT
-			program,
-			academic_year,
-			admission_cycle,
-			COUNT(name) as allocated_count
-		FROM `tabEntrance Test Seat Allocation`
+			COALESCE(NULLIF(p.program_name, ''), sa.program) AS program,
+			COALESCE(NULLIF(p.program_name, ''), sa.program) AS program_name,
+			sa.academic_year,
+			sa.admission_cycle,
+			COUNT(sa.name) AS allocated_count
+		FROM `tabEntrance Test Seat Allocation` sa
+		LEFT JOIN `tabProgramme` p ON sa.program = p.name
 		WHERE {where_clause}
-		GROUP BY program, academic_year, admission_cycle
+		GROUP BY COALESCE(NULLIF(p.program_name, ''), sa.program), sa.academic_year, sa.admission_cycle
 		ORDER BY allocated_count DESC
 		""",
 		values,

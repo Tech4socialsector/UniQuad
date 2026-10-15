@@ -311,6 +311,67 @@
 .ppr-sup-arrear { color: var(--ppr-maroon); }
 .ppr-sup-imp { background: #fff0f2; color: #6b091a; border: 1px solid #b5364a; border-radius: 3px; padding: 0 2px; }
 @media (prefers-reduced-motion: reduce) { .ppr-card, .ppr-card:hover { transition: none; transform: none; } }
+
+/* ── Dark mode ── */
+/* Page tokens were set on :root, where var(--pp-*) resolves to the light values — redefine them */
+body.pp-dark {
+  --ppr-maroon: var(--pp-primary);
+  --ppr-maroon-soft: var(--pp-primary-light);
+  --ppr-green:  var(--pp-success);
+  --ppr-red:    var(--pp-danger);
+  --ppr-info:   var(--pp-info);
+  --ppr-border: var(--pp-border);
+  --ppr-row:    var(--pp-border);
+  --ppr-head:   #1a2540;
+  --ppr-muted:  var(--pp-text-3);
+}
+body.pp-dark .ppr-student-meta .sep { color: #475569; }
+body.pp-dark .ppr-avatar { border-color: rgba(214,74,102,0.3); color: #f08da0; }
+body.pp-dark .ppr-mi-maroon { color: #f08da0; }
+body.pp-dark .ppr-mi-green { background: rgba(74,222,128,0.12); }
+body.pp-dark .ppr-mi-red { background: rgba(248,113,113,0.12); }
+body.pp-dark .ppr-section-title h2 .ms,
+body.pp-dark .ppr-grid-group .ms,
+body.pp-dark .ppr-card-strip .ms,
+body.pp-dark .ppr-count strong { color: #f08da0; }
+body.pp-dark .ppr-exams { scrollbar-color: rgba(214,74,102,0.5) transparent; }
+body.pp-dark .ppr-exams::-webkit-scrollbar-thumb { background: rgba(214,74,102,0.5); }
+body.pp-dark .ppr-exam:hover,
+body.pp-dark .ppr-tool-btn:hover { border-color: rgba(214,74,102,0.45); }
+body.pp-dark .ppr-exam:hover,
+body.pp-dark .ppr-card:hover { box-shadow: 0 6px 18px rgba(0,0,0,0.35); }
+body.pp-dark .ppr-rail-btn { background: #1a2540; border-color: #263352; color: #f08da0; box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
+body.pp-dark .ppr-tool-btn { background: #1a2540; border-color: var(--pp-border); }
+body.pp-dark .ppr-tool-btn:hover { color: #f08da0; }
+body.pp-dark .ppr-select.is-active { color: #f08da0; border-color: rgba(214,74,102,0.5); }
+body.pp-dark .ppr-chip { background: #1a2540; border-color: #263352; }
+/* Status pills */
+body.pp-dark .ppr-status-pass { background: rgba(74,222,128,0.10); border-color: rgba(74,222,128,0.32); }
+body.pp-dark .ppr-status-fail { background: rgba(248,113,113,0.12); }
+body.pp-dark .ppr-status-pend { background: #1a2540; color: var(--pp-text-2); }
+/* Buttons / actions */
+body.pp-dark .ppr-btn { background: #1a2540; color: #f08da0; border-color: rgba(214,74,102,0.5); }
+body.pp-dark .ppr-btn:hover { background: rgba(214,74,102,0.14); }
+body.pp-dark .ppr-action-primary { color: #f08da0; }
+/* List view */
+body.pp-dark .ppr-t tbody tr:nth-child(even) td { background: rgba(255,255,255,0.025); }
+body.pp-dark .ppr-t tbody tr:hover td { background: rgba(255,255,255,0.05); }
+/* Marks dialog */
+body.pp-dark .ppr-modal-overlay { background: rgba(2,6,23,0.7); }
+body.pp-dark .ppr-modal { --ppr-mk-pass: #f08da0; --ppr-mk-fail: var(--pp-danger); box-shadow: 0 24px 64px rgba(0,0,0,0.6); border: 1px solid var(--pp-border); }
+body.pp-dark .ppr-modal-close { background: #1a2540; border-color: var(--pp-border); }
+body.pp-dark .ppr-modal-close:hover { color: #f08da0; border-color: rgba(214,74,102,0.5); }
+body.pp-dark .ppr-mk td { color: var(--pp-text-2); }
+body.pp-dark .ppr-mk .grp,
+body.pp-dark .ppr-mk .grp-grade, body.pp-dark .ppr-mk .grp-status, body.pp-dark .ppr-mk .grp-reexam,
+body.pp-dark .ppr-mk .grp-improve, body.pp-dark .ppr-mk .grp-final { background: #212e4d; color: var(--pp-text-1); }
+body.pp-dark .ppr-mk-grade.pass { border-color: rgba(214,74,102,0.4); }
+body.pp-dark .ppr-mk-grade.fail { background: rgba(248,113,113,0.12); }
+body.pp-dark .ppr-mk-grade.pend { background: #1a2540; color: var(--pp-text-2); }
+body.pp-dark .ppr-mk-grade.reexam { background: rgba(214,74,102,0.14); color: #f08da0; }
+body.pp-dark .ppr-mk-grade.improve { color: #f08da0; border-color: rgba(214,74,102,0.5); }
+body.pp-dark .ppr-sup-imp { background: rgba(214,74,102,0.14); color: #f08da0; border-color: rgba(214,74,102,0.3); }
+body.pp-dark .ppr-sup-arrear { color: #f08da0; }
 {% endblock %}
 
 {# ── Macros ──────────────────────────────────────────────────────────── #}
@@ -798,14 +859,22 @@
   if (canvas && typeof Chart !== 'undefined') {
     var raw = {{ gpa_chart_data | tojson }};
     var pts = raw.filter(function (d) { return d.pct !== null && d.pct !== undefined; });
-    new Chart(canvas, {
+    /* Light: maroon on white; dark (body.pp-dark): lifted rose with navy grid */
+    function chartTheme() {
+      var dark = document.body.classList.contains('pp-dark');
+      return dark
+        ? { line: '#d64a66', fill: 'rgba(214,74,102,0.14)', grid: '#1e2d4a', tick: '#94a3b8' }
+        : { line: '#920c24', fill: 'rgba(146,12,36,0.08)', grid: '#f1f2f4', tick: '#666' };
+    }
+    var th = chartTheme();
+    var trendChart = new Chart(canvas, {
       type: 'line',
       data: {
         labels: pts.map(function (d) { return d.label; }),
         datasets: [{
           label: 'Term %', data: pts.map(function (d) { return d.pct; }),
-          borderColor: '#920c24', backgroundColor: 'rgba(146,12,36,0.08)', fill: true,
-          tension: 0.35, pointRadius: pts.length > 12 ? 2 : 4, pointHoverRadius: 6, pointBackgroundColor: '#920c24', borderWidth: 2,
+          borderColor: th.line, backgroundColor: th.fill, fill: true,
+          tension: 0.35, pointRadius: pts.length > 12 ? 2 : 4, pointHoverRadius: 6, pointBackgroundColor: th.line, borderWidth: 2,
         }],
       },
       options: {
@@ -822,11 +891,25 @@
         },
         scales: {
           /* Fixed scale so a long series stays comparable */
-          y: { min: 0, max: 100, ticks: { font: { size: 11 }, stepSize: 20 }, grid: { color: '#f1f2f4' } },
-          x: { ticks: { font: { size: 11 }, autoSkip: true, maxTicksLimit: 10, maxRotation: 0 }, grid: { display: false } },
+          y: { min: 0, max: 100, ticks: { font: { size: 11 }, stepSize: 20, color: th.tick }, grid: { color: th.grid } },
+          x: { ticks: { font: { size: 11 }, autoSkip: true, maxTicksLimit: 10, maxRotation: 0, color: th.tick }, grid: { display: false } },
         },
       },
     });
+    /* Re-colour when the dark-mode toggle flips the body class */
+    if (window.MutationObserver) {
+      new MutationObserver(function () {
+        var t = chartTheme();
+        if (t.line === th.line) return;
+        th = t;
+        var ds = trendChart.data.datasets[0];
+        ds.borderColor = t.line; ds.backgroundColor = t.fill; ds.pointBackgroundColor = t.line;
+        trendChart.options.scales.y.grid.color = t.grid;
+        trendChart.options.scales.y.ticks.color = t.tick;
+        trendChart.options.scales.x.ticks.color = t.tick;
+        trendChart.update('none');
+      }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    }
   }
 }());
 </script>
