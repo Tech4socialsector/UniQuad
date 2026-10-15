@@ -35,17 +35,10 @@ def execute(filters: dict | None = None):
 def get_columns() -> list[dict]:
 	return [
 		{
-			"label": _("Programme Name"),
+			"label": _("Programme"),
 			"fieldname": "program",
 			"fieldtype": "Data",
 			"width": 250,
-		},
-		{
-			"label": _("Programme ID"),
-			"fieldname": "program_id",
-			"fieldtype": "Link",
-			"options": "Programme",
-			"width": 220,
 		},
 		{
 			"label": _("Academic Year"),
@@ -136,14 +129,13 @@ def get_data(filters: dict) -> list[dict]:
 		SELECT
 			COALESCE(NULLIF(p.program_name, ''), sa.program) AS program,
 			COALESCE(NULLIF(p.program_name, ''), sa.program) AS program_name,
-			COALESCE(MAX(sa.program), '') AS program_id,
-			COALESCE(MAX(sa.academic_year), '') AS academic_year,
-			COALESCE(MAX(sa.admission_cycle), '') AS admission_cycle,
+			sa.academic_year,
+			sa.admission_cycle,
 			COUNT(sa.name) AS allocated_count
 		FROM `tabEntrance Test Seat Allocation` sa
 		LEFT JOIN `tabProgramme` p ON sa.program = p.name
 		WHERE {where_clause}
-		GROUP BY COALESCE(NULLIF(p.program_name, ''), sa.program)
+		GROUP BY COALESCE(NULLIF(p.program_name, ''), sa.program), sa.academic_year, sa.admission_cycle
 		ORDER BY allocated_count DESC
 		""",
 		values,

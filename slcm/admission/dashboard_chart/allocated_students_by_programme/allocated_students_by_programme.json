@@ -11,7 +11,7 @@
  "idx": 0,
  "is_public": 1,
  "is_standard": 1,
- "modified": "2026-08-03 14:49:32.184506",
+ "modified": "2026-10-15 10:14:26.284489",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Allocated Students by Programme",
@@ -28,7 +28,6 @@
  "x_field": "program",
  "y_axis": [
   {
-   "color": "#2490EF",
    "y_field": "allocated_count"
   }
  ]

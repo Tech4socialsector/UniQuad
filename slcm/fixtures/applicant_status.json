@@ -42,46 +42,6 @@
  {
   "docstatus": 0,
   "doctype": "Applicant Status",
-  "modified": "2026-03-11 14:41:22.044734",
-  "name": "Interview Sheduled",
-  "next_step_note": null,
-  "stage_type": null,
-  "status": "Interview Sheduled",
-  "status_type": null
- },
- {
-  "docstatus": 0,
-  "doctype": "Applicant Status",
-  "modified": "2026-03-11 14:43:34.365668",
-  "name": "Accepted",
-  "next_step_note": null,
-  "stage_type": null,
-  "status": "Accepted",
-  "status_type": null
- },
- {
-  "docstatus": 0,
-  "doctype": "Applicant Status",
-  "modified": "2026-03-11 09:37:16.017258",
-  "name": "Selected",
-  "next_step_note": null,
-  "stage_type": null,
-  "status": "Selected",
-  "status_type": null
- },
- {
-  "docstatus": 0,
-  "doctype": "Applicant Status",
-  "modified": "2026-03-11 09:37:56.172795",
-  "name": "Waitlisted",
-  "next_step_note": null,
-  "stage_type": null,
-  "status": "Waitlisted",
-  "status_type": null
- },
- {
-  "docstatus": 0,
-  "doctype": "Applicant Status",
   "modified": "2026-07-01 12:54:32.698997",
   "name": "Rejected",
   "next_step_note": "Your application was not successful at this stage. Please check the communication sent to you for further details.",
@@ -252,12 +212,12 @@
  {
   "docstatus": 0,
   "doctype": "Applicant Status",
-  "modified": "2026-03-24 10:49:30.429030",
+  "modified": "2026-10-15 09:44:38.232603",
   "name": "Exempted Entrance Test And Interview",
   "next_step_note": null,
-  "stage_type": "",
+  "stage_type": "Entrance Test",
   "status": "Exempted Entrance Test And Interview",
-  "status_type": null
+  "status_type": "Completed"
  },
  {
   "docstatus": 0,
