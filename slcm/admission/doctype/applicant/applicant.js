@@ -338,7 +338,7 @@ frappe.ui.form.on("Applicant", {
                             errors.push(__("UG CGPA for degree \"{0}\" should be between 4 and {1}",
                                 [row.ug_program || __("(unnamed)"), max_val]));
                         } else {
-                            errors.push(__("UG Percentage for degree \"{0}\" should be between 35 and 100",
+                            errors.push(__("UG Percentage for degree \"{0}\" should be between 35 and 100, If CGPA then give the maximum CGPA else percentage",
                                 [row.ug_program || __("(unnamed)")]));
                         }
                     }
@@ -358,7 +358,7 @@ frappe.ui.form.on("Applicant", {
                             errors.push(__("PG CGPA for degree \"{0}\" should be between 4 and {1}",
                                 [row.pg_program || __("(unnamed)"), max_val]));
                         } else {
-                            errors.push(__("PG Percentage for degree \"{0}\" should be between 35 and 100",
+                            errors.push(__("PG Percentage for degree \"{0}\" should be between 35 and 100 , If CGPA then give the maximum CGPA else percentage",
                                 [row.pg_program || __("(unnamed)")]));
                         }
                     }
