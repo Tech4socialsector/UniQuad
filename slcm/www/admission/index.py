@@ -390,6 +390,37 @@ def _set_empty_pd_context(context, slug):
     context.apply_web_form_login_url = "/admission/login?redirect-to=/admission"
     context.allow_multiple_applications = False
 
+PROGRAM_LEVEL_GROUPS = [
+    ("undergraduate", "Undergraduate Programmes"),
+    ("postgraduate", "Postgraduate Programmes"),
+    ("research", "PhD Programmes"),
+    ("other", "Other Programmes"),
+]
+
+
+def _program_level_key(level):
+    lv = (level or "").strip().lower()
+    if lv.startswith("under") or lv == "ug":
+        return "undergraduate"
+    if lv.startswith("post") or lv == "pg":
+        return "postgraduate"
+    if "research" in lv or "phd" in lv:
+        return "research"
+    return "other"
+
+
+def _group_programs_by_level(programs):
+    """Split programmes into Undergraduate / Postgraduate / Research sections (non-empty only)."""
+    buckets = {key: [] for key, _ in PROGRAM_LEVEL_GROUPS}
+    for p in programs or []:
+        buckets[_program_level_key(p.get("program_level"))].append(p)
+    return [
+        {"key": key, "title": title, "programs": buckets[key]}
+        for key, title in PROGRAM_LEVEL_GROUPS
+        if buckets[key]
+    ]
+
+
 def get_context(context):
     if frappe.session.user and frappe.session.user != "Guest":
         roles = frappe.get_roles(frappe.session.user)
@@ -478,7 +509,11 @@ def get_context(context):
     context.app_open = app_open
 
     # ── 3. user_app_map: program_name → {app_name, status} ──
+    #    user_app_map_by_type: "Domestic"/"International" → program_name → {app_name, status}
+    #    (split on Applicant.foriegn_national so an International application
+    #     isn't shown as "Applied" under the Indian Nationals toggle and vice versa)
     context.user_app_map = {}
+    context.user_app_map_by_type = {"Domestic": {}, "International": {}}
     context.has_any_application = False
     if frappe.session.user and frappe.session.user != "Guest":
         try:
@@ -489,21 +524,27 @@ def get_context(context):
             _uapps = frappe.get_all(
                 "Applicant",
                 filters=filters,
-                fields=["name", "program", "status"],
+                fields=["name", "program", "status", "foriegn_national"],
                 order_by="creation desc",
                 limit=50
             )
             for _ua in _uapps:
                 _key = (_ua.get("program") or "").strip()
-                if _key and _key not in context.user_app_map:
-                    context.user_app_map[_key] = {
-                        "app_name": _ua.get("name") or "",
-                        "status":   _ua.get("status") or ""
-                    }
+                if not _key:
+                    continue
+                _info = {
+                    "app_name": _ua.get("name") or "",
+                    "status":   _ua.get("status") or ""
+                }
+                if _key not in context.user_app_map:
+                    context.user_app_map[_key] = _info
+                _type = "International" if (_ua.get("foriegn_national") or "").strip() == "Yes" else "Domestic"
+                context.user_app_map_by_type[_type].setdefault(_key, _info)
             if context.user_app_map:
                 context.has_any_application = True
         except Exception:
             context.user_app_map = {}
+            context.user_app_map_by_type = {"Domestic": {}, "International": {}}
 
     if _slug:
         _load_program_detail(context, _slug)
@@ -589,6 +630,13 @@ def get_context(context):
         context.programs = []
         context.announcements = []
         context.events = []
+
+    # ── 5b. Group programmes by level & detect Domestic / International ──
+    context.program_groups = _group_programs_by_level(context.programs)
+    _open_for_values = [(p.get("admission_open_for") or "") for p in context.programs]
+    # Blank "admission_open_for" means the card is shown under both toggles
+    context.has_domestic_programs = any(not v or "Domestic" in v for v in _open_for_values)
+    context.has_international_programs = any(not v or "International" in v for v in _open_for_values)
 
     # ── 6. Stats ─────────────────────────────────────────────────────
     try:
