@@ -1343,6 +1343,7 @@ function bindFeeListener() {
 }
 
 var _feeReceiptBtnInFlight = false;
+var _feeReceiptLastAsk = { name: '', at: 0 };
 
 /** SVG icons for the top-bar buttons */
 var _SVG_BACK = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>';
@@ -1544,6 +1545,11 @@ function syncApplicationFeeReceiptButton() {
 	// Fee status unknown on client — fall back to server (receipt row exists)
 	if (document.getElementById('slcm-fee-receipt-btn')) return;
 	if (_feeReceiptBtnInFlight) return;
+	// This runs every 1.2 s; drafts never have a fee status, so without a throttle every open
+	// form would hit the server ~50×/min forever. Ask at most once per 30 s per application.
+	var _now = Date.now();
+	if (_feeReceiptLastAsk.name === applicant && _now - _feeReceiptLastAsk.at < 30000) return;
+	_feeReceiptLastAsk = { name: applicant, at: _now };
 
 	_feeReceiptBtnInFlight = true;
 	frappe.call({
@@ -4570,33 +4576,63 @@ function setupPreferenceValidation() {
 				}
 			}
 
+			/*
+			 * Freeze guard — previously this handler flipped foriegn_national on ANY refusal.
+			 * Refusals like "window closed", "seats full", "programme not in cycle" apply to
+			 * Yes and No alike, so the flip re-fired this handler, was refused again and flipped
+			 * back — forever (endless server calls + stacked dialogs = frozen page). It also ran
+			 * when a saved draft was opened, because loading values fires the change handler.
+			 * Now: skip the value loaded from the saved draft, revert ONLY scope refusals, and
+			 * never re-enter while reverting.
+			 */
+			var _slcmFnReverting = false;
+			var _slcmFnLastChecked = isNewApplicantWebForm() ? null : (wf.doc && wf.doc.foriegn_national) || null;
+			var _slcmFnLastMsg = '';
+
 			function validateForeignNational() {
 				validateNationality();
 				_slcmToggleDegreeCountry(wf);
+				if (_slcmFnReverting) return;
+
 				var prog = wf.get_value('program');
 				var fn = wf.get_value('foriegn_national');
 				var nat = wf.get_value('nationality');
-				if (prog && fn) {
-					frappe.call({
-						method: 'slcm.admission.web_form.applicant_form.applicant_form.validate_new_application_access',
-						args: {
-							program: prog,
-							foriegn_national: fn,
-							nationality: nat || ''
-						},
-						callback: function (r) {
-							var res = r && r.message;
-							if (res && !res.allowed) {
-								frappe.msgprint({
-									title: __('Access Restricted'),
-									indicator: 'red',
-									message: res.message
-								});
-								wf.set_value('foriegn_national', fn === 'Yes' ? 'No' : 'Yes');
-							}
+				if (!prog || !fn || fn === _slcmFnLastChecked) return;
+				_slcmFnLastChecked = fn;
+
+				frappe.call({
+					method: 'slcm.admission.web_form.applicant_form.applicant_form.validate_new_application_access',
+					args: {
+						program: prog,
+						foriegn_national: fn,
+						nationality: nat || ''
+					},
+					callback: function (r) {
+						var res = r && r.message;
+						if (!res || res.allowed) {
+							_slcmFnLastMsg = '';
+							return;
 						}
-					});
-				}
+						// Same refusal twice in a row → don't stack identical dialogs
+						if (res.message !== _slcmFnLastMsg) {
+							_slcmFnLastMsg = res.message;
+							frappe.msgprint({
+								title: __('Access Restricted'),
+								indicator: 'red',
+								message: res.message
+							});
+						}
+						// Only a Domestic/International mismatch is fixed by changing this field
+						if (res.reason !== 'scope' || wf.get_value('foriegn_national') !== fn) return;
+						var reverted = fn === 'Yes' ? 'No' : 'Yes';
+						_slcmFnReverting = true;
+						_slcmFnLastChecked = reverted;
+						Promise.resolve()
+							.then(function () { return wf.set_value('foriegn_national', reverted); })
+							.catch(function () {})
+							.then(function () { _slcmFnReverting = false; });
+					}
+				});
 			}
 
 			wf.on('nationality', validateNationality);
@@ -4606,21 +4642,40 @@ function setupPreferenceValidation() {
 			_slcmToggleDegreeCountry(wf);
 			// Saved drafts load asynchronously — re-apply once their values are in
 			setTimeout(function () { _slcmToggleDegreeCountry(wf); }, 1500);
+			/*
+			 * Freeze guard — hsc_percentage is numeric, so set_value('') stores 0 and fires this
+			 * handler again: 0 < 35 → msgprint + clear → 0 → … an endless synchronous loop that
+			 * froze the page behind a stuck dialog. It hit every saved draft with an empty HSC
+			 * (stored as 0) as soon as the draft was reopened.
+			 * 0 / empty now means "not entered", and our own clearing never re-validates.
+			 */
+			var _slcmHscClearing = false;
+
+			function clearHscPercentage() {
+				_slcmHscClearing = true;
+				Promise.resolve()
+					.then(function () { return wf.set_value('hsc_percentage', ''); })
+					.catch(function () {})
+					.then(function () { _slcmHscClearing = false; });
+			}
+
 			function validateHscPercentage() {
-				var hsc = parseFloat(wf.get_value('hsc_percentage'));
+				if (_slcmHscClearing) return;
+				var raw = wf.get_value('hsc_percentage');
+				var hsc = parseFloat(raw);
+				if (raw === '' || raw === null || raw === undefined || Number.isNaN(hsc) || hsc === 0) return;
+
 				var cgpa_max = parseFloat(wf.get_value('if_cgpa_maximum_cgpa_class_xii'));
-				if (!Number.isNaN(hsc)) {
-					var max_val = (!Number.isNaN(cgpa_max) && cgpa_max > 0) ? cgpa_max : 100;
-					var is_cgpa = (!Number.isNaN(cgpa_max) && cgpa_max > 0);
-					var min_val = is_cgpa ? 4 : 35;
-					
-					if (hsc < min_val) {
-						frappe.msgprint(is_cgpa ? 'HSC CGPA must be at least 4.' : 'HSC percentage must be at least 35%.');
-						wf.set_value('hsc_percentage', '');
-					} else if (hsc > max_val) {
-						frappe.msgprint(is_cgpa ? 'HSC CGPA cannot exceed ' + max_val + '.' : 'HSC percentage cannot exceed 100%.');
-						wf.set_value('hsc_percentage', '');
-					}
+				var is_cgpa = (!Number.isNaN(cgpa_max) && cgpa_max > 0);
+				var max_val = is_cgpa ? cgpa_max : 100;
+				var min_val = is_cgpa ? 4 : 35;
+
+				if (hsc < min_val) {
+					frappe.msgprint(is_cgpa ? 'HSC CGPA must be at least 4.' : 'HSC percentage must be at least 35%.');
+					clearHscPercentage();
+				} else if (hsc > max_val) {
+					frappe.msgprint(is_cgpa ? 'HSC CGPA cannot exceed ' + max_val + '.' : 'HSC percentage cannot exceed 100%.');
+					clearHscPercentage();
 				}
 			}
 
@@ -4728,14 +4783,21 @@ function _slcmRestoreApplicantCheckboxValues(wf) {
 			// MutationObserver: re-apply whenever the declaration section appears in DOM
 			// Critical for multi-page forms where checkboxes render only when page is shown
 			if (!window._slcm_chk_observer) {
+				// Other timers on this page toggle class/style several times a second, so batch
+				// the work into one pass per animation frame instead of running per mutation.
+				var _chkQueued = false;
 				window._slcm_chk_observer = new MutationObserver(function () {
-					CHECK_FIELDS.forEach(function (fn) {
-						var $chk = $('[data-fieldname="' + fn + '"] input[type="checkbox"]');
-						if ($chk.length && data[fn]) {
+					if (_chkQueued) return;
+					_chkQueued = true;
+					requestAnimationFrame(function () {
+						_chkQueued = false;
+						CHECK_FIELDS.forEach(function (fn) {
+							if (!data[fn]) return;
+							var $chk = $('[data-fieldname="' + fn + '"] input[type="checkbox"]');
 							$chk.each(function () {
 								if (!this.checked) this.checked = true;
 							});
-						}
+						});
 					});
 				});
 				window._slcm_chk_observer.observe(

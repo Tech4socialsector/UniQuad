@@ -291,15 +291,19 @@ def validate_new_application_access(program=None, foriegn_national=None, nationa
             else:
                 is_international = True
 
+        # reason="scope": the only refusal that depends on foriegn_national — the portal
+        # reverts that field ONLY for this reason (other refusals apply to Yes and No alike).
         if resolved_admission_open_for == "International" and is_domestic:
             return {
                 "allowed": False,
+                "reason": "scope",
                 "message": _("The {0} programme is exclusively open to international applicants. Domestic candidates are not eligible to apply for this course.").format(prog_title),
             }
         elif resolved_admission_open_for == "Domestic" and is_international:
             return {
                 "allowed": False,
-                "message": _(" The {0} programme is exclusively open to domestic applicants. International candidates are not eligible to apply for this course.").format(prog_title),
+                "reason": "scope",
+                "message": _("The {0} programme is exclusively open to domestic applicants. International candidates are not eligible to apply for this course.").format(prog_title),
             }
 
         # Check seats/application limit
