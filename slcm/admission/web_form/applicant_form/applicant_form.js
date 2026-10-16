@@ -152,6 +152,13 @@ function _injectCSS() {
 		'.slcm-status-draft    {background:#fef3c7;color:#92400e;border:1px solid #fcd34d;}',
 		'.slcm-status-submitted{background:#dcfce7;color:#14532d;border:1px solid #86efac;}',
 		'.slcm-status-other    {background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;}',
+		/* Link / Autocomplete dropdowns — look like a native select list (input width, rounded, shadow) */
+		'.web-form .awesomplete > [role="listbox"]{background:#fff;border:1px solid #cbd5e1;border-radius:8px;' +
+			'box-shadow:0 8px 24px rgba(15,23,42,.14);padding:4px;margin-top:0;}',
+		'.web-form .awesomplete > [role="listbox"] > li{padding:7px 10px;border-radius:6px;font-size:13.5px;' +
+			'line-height:1.35;color:#1e293b;cursor:pointer;white-space:normal;}',
+		'.web-form .awesomplete > [role="listbox"] > li:hover,' +
+			'.web-form .awesomplete > [role="listbox"] > li[aria-selected="true"]{background:#e5e7eb;color:#0f172a;}',
 		/* Fee-payment overlay modal */
 		'#slcm-fee-modal{position:fixed;inset:0;z-index:99998;display:none;align-items:center;justify-content:center;padding:16px;}',
 		'#slcm-fee-modal.open{display:flex;}',
@@ -1043,6 +1050,12 @@ function collectDraftData() {
 	['ug_degree_details', 'pg_degree_details', 'categories'].forEach(function (ct) {
 		if ((!data[ct] || !data[ct].length) && doc[ct] && doc[ct].length) {
 			data[ct] = doc[ct];
+		}
+	});
+	// Drop the untouched default row (and any other completely blank degree row)
+	['ug_degree_details', 'pg_degree_details'].forEach(function (ct) {
+		if (Array.isArray(data[ct])) {
+			data[ct] = data[ct].filter(function (row) { return !_slcmIsBlankDegreeRow(row); });
 		}
 	});
 	return data;
@@ -2496,7 +2509,7 @@ function _showFeeModal(feeDetails, onPaid) {
 				'</div>' +
 				'<div class="slcm-fee-callout slcm-fee-note">' +
 					'<div class="slcm-fee-callout-icon"><span class="slcm-fee-ms">warning</span></div>' +
-					'<div class="slcm-fee-callout-text"><strong>Note:</strong> Once the payment is completed, the application form cannot be edited in upcoming stages.</div>' +
+					'<div class="slcm-fee-callout-text"><strong>Note:</strong> Once the application form is submitted and the application fee is paid, no further modifications will be permitted during subsequent stages of the admission process.</div>' +
 				'</div>' +
 				'<div class="slcm-fee-actions">' +
 					'<button type="button" id="slcm-fee-pay-btn"></button>' +
@@ -4376,6 +4389,26 @@ function setupSlcmFieldErrorClear() {
  * jQuery .offset() (viewport vs document), so lists jump to the top after scroll. Core also uses
  * overflow on .form-grid. Re-anchor the list with position:fixed under the focused input.
  */
+/** Nearest ancestor that becomes the containing block for position:fixed descendants (or null = viewport). */
+function _slcmFixedContainingBlock(el) {
+	var node = el && el.parentElement;
+	while (node && node !== document.body && node !== document.documentElement) {
+		var cs = getComputedStyle(node);
+		if (
+			(cs.transform && cs.transform !== 'none') ||
+			(cs.perspective && cs.perspective !== 'none') ||
+			(cs.filter && cs.filter !== 'none') ||
+			(cs.backdropFilter && cs.backdropFilter !== 'none') ||
+			/transform|perspective|filter/.test(cs.willChange || '') ||
+			/paint|layout|strict|content/.test(cs.contain || '')
+		) {
+			return node;
+		}
+		node = node.parentElement;
+	}
+	return null;
+}
+
 function setupSlcmWebFormAwesompletePositionFix() {
 	var scrollHandler = null;
 
@@ -4406,11 +4439,18 @@ function setupSlcmWebFormAwesompletePositionFix() {
 		if (!rect.width && !rect.height) {
 			return;
 		}
+		// Inside the child-table "Editing Row" panel an ancestor is transformed, and position:fixed
+		// is then relative to that ancestor, not the viewport — subtract its offset.
+		var cb = _slcmFixedContainingBlock(ul);
+		var cbRect = cb ? cb.getBoundingClientRect() : { left: 0, top: 0 };
 		$(ul).css({
 			position: 'fixed',
-			left: Math.round(rect.left) + 'px',
-			top: Math.round(rect.bottom + 2) + 'px',
-			width: Math.max(250, Math.round(rect.width)) + 'px',
+			left: Math.round(rect.left - cbRect.left) + 'px',
+			top: Math.round(rect.bottom + 4 - cbRect.top) + 'px',
+			width: Math.max(180, Math.round(rect.width)) + 'px',
+			// Frappe sets min-width:100% inline; with position:fixed that is 100% of the
+			// viewport, which stretched every dropdown across the whole screen.
+			minWidth: '0',
 			zIndex: 10050,
 			maxHeight: 'min(60vh, 300px)',
 			overflowY: 'auto',
@@ -4431,6 +4471,7 @@ function setupSlcmWebFormAwesompletePositionFix() {
 			left: '',
 			top: '',
 			width: '',
+			minWidth: '100%',
 			zIndex: '',
 			maxHeight: '',
 			overflowY: '',
@@ -4687,18 +4728,232 @@ function setupPreferenceValidation() {
 }
 
 
-/** UG / PG degree "Country" column is shown only for foreign nationals (foriegn_national = Yes). */
+/** UG / PG degree "Country": shown AND mandatory only for foreign nationals (foriegn_national = Yes). */
 function _slcmToggleDegreeCountry(wf) {
 	if (!wf || !wf.fields_dict) return;
-	var show = wf.get_value('foriegn_national') === 'Yes';
+	var foreign = wf.get_value('foriegn_national') === 'Yes';
 	['ug_degree_details', 'pg_degree_details'].forEach(function (ct) {
 		var f = wf.fields_dict[ct];
 		if (!f || !f.grid) return;
 		try {
-			f.grid.toggle_display('country', show);
+			f.grid.toggle_display('country', foreign);
+			f.grid.toggle_reqd('country', foreign);
 		} catch (e) {
 			console.warn('Could not toggle country column on', ct, e);
 		}
+	});
+}
+
+// ───────────────────────────────────────────────────────────────────
+//  UG / PG DEGREE TABLES — one default row, row click opens the
+//  "Editing Row" form instead of column-by-column inline editing,
+//  and closing that form keeps the page where it was.
+// ───────────────────────────────────────────────────────────────────
+var SLCM_DEGREE_TABLES = ['ug_degree_details', 'pg_degree_details'];
+
+/**
+ * Frappe's GridRow.hide_form() calls scroll_to(row). In this web form layout jQuery
+ * offset() reports 0 at that moment, so the target goes negative and the page jumps to
+ * the very top. Patched once on the shared GridRow prototype: keep the scroll position.
+ */
+function _slcmPatchGridRowScroll(gridRow) {
+	var proto = gridRow && Object.getPrototypeOf(gridRow);
+	if (!proto || proto._slcmScrollPatched || typeof proto.hide_form !== 'function') return;
+	proto._slcmScrollPatched = true;
+	var origHide = proto.hide_form;
+	proto.hide_form = function () {
+		var y = window.scrollY;
+		var prev = frappe.flags.disable_auto_scroll;
+		frappe.flags.disable_auto_scroll = true;
+		try {
+			return origHide.apply(this, arguments);
+		} finally {
+			frappe.flags.disable_auto_scroll = prev;
+			var restore = function () {
+				if (Math.abs(window.scrollY - y) > 2) window.scrollTo(0, y);
+			};
+			restore();
+			requestAnimationFrame(restore);
+			setTimeout(restore, 60);
+		}
+	};
+}
+
+/**
+ * Degree-row "Country" is a Link → Country. Web forms turn child Link fields into Autocomplete
+ * with options filtered to records the applicant OWNS (allow_read_on_all_link_options can't be
+ * set on a child field), so the list came back empty. Load all countries once and feed them in.
+ */
+var _slcmCountryOptionsPromise = null;
+function _slcmLoadCountryOptions() {
+	if (!_slcmCountryOptionsPromise) {
+		_slcmCountryOptionsPromise = new Promise(function (resolve) {
+			frappe.call({
+				method: 'frappe.client.get_list',
+				args: { doctype: 'Country', fields: ['name'], order_by: 'name asc', limit_page_length: 0 },
+				callback: function (r) {
+					resolve(((r && r.message) || []).map(function (c) { return c.name; }));
+				},
+				error: function () {
+					_slcmCountryOptionsPromise = null;   // allow a retry on the next check
+					resolve([]);
+				},
+			});
+		});
+	}
+	return _slcmCountryOptionsPromise;
+}
+
+function _slcmApplyDegreeCountryOptions(grid) {
+	if (grid._slcmCountryOptionsDone || grid._slcmCountryOptionsLoading) return;
+	grid._slcmCountryOptionsLoading = true;
+	_slcmLoadCountryOptions().then(function (names) {
+		grid._slcmCountryOptionsLoading = false;
+		if (!names.length) return;
+		grid._slcmCountryOptionsDone = true;
+		var opts = names.join('\n');
+		try { grid.update_docfield_property('country', 'options', opts); } catch (e) { console.warn('country options', e); }
+		// A row panel that is already open keeps its own controls — update those too
+		(grid.grid_rows || []).forEach(function (row) {
+			var ctrl = row.grid_form && row.grid_form.fields_dict && row.grid_form.fields_dict.country;
+			if (ctrl) {
+				ctrl.df.options = opts;
+				if (typeof ctrl.set_data === 'function') {
+					try { ctrl.set_data(names); } catch (e) { /* refreshed on next open */ }
+				}
+			}
+		});
+	});
+}
+
+function _slcmSetupDegreeTable(wf, fieldname) {
+	var field = wf.fields_dict && wf.fields_dict[fieldname];
+	var grid = field && field.grid;
+	if (!grid) return false;
+	_slcmApplyDegreeCountryOptions(grid);
+
+	if (!grid._slcmRowFormMode) {
+		grid._slcmRowFormMode = true;
+		// Instance-level only (meta stays editable_grid=1): a row click now falls through to
+		// Frappe's own handler, which opens the row form; "Add row" also opens the new row.
+		grid.allow_on_grid_editing = function () { return false; };
+	}
+
+	// One empty row by default — only while the table is shown for this programme level,
+	// only once per page load (a row the applicant deletes is not re-added).
+	var shown = !field.df.hidden && !field.df.hidden_due_to_dependency;
+	wf._slcmDefaultDegreeRow = wf._slcmDefaultDegreeRow || {};
+	if (shown && !wf._slcmDefaultDegreeRow[fieldname] && grid.is_editable()) {
+		wf._slcmDefaultDegreeRow[fieldname] = true;
+		if (!(grid.get_data() || []).length) {
+			try { grid.add_new_row(null, null, false); } catch (e) { console.warn('default degree row', fieldname, e); }
+		}
+	}
+
+	if (grid.grid_rows && grid.grid_rows.length) _slcmPatchGridRowScroll(grid.grid_rows[0]);
+	return true;
+}
+
+/**
+ * Close the open "Editing Row" panel when the applicant clicks outside it (on the dark
+ * overlay or anywhere else on the page). Clicks inside popups that belong to the panel's
+ * fields — date picker, link dropdowns, the attach/file-upload dialog, message dialogs —
+ * live elsewhere in the DOM and must not count as "outside".
+ */
+function _slcmSetupRowFormOutsideClose() {
+	if (window._slcmRowFormOutsideClose) return;
+	window._slcmRowFormOutsideClose = true;
+
+	// .grid-add-row / .grid-buttons: "Add row" opens the new row in its own click handler —
+	// that same click must not immediately close it again.
+	var KEEP_OPEN = '.grid-row-open, .grid-add-row, .grid-buttons, .datepicker, .awesomplete, .dropdown-menu, ' +
+		'.modal, .modal-backdrop, .pcr-app, .select2-container, #slcm-toast';
+
+	function isOutside(el) {
+		return !!el && document.documentElement.contains(el) && !$(el).closest(KEEP_OPEN).length;
+	}
+
+	// Remember where the press started: selecting text inside the panel and releasing the
+	// mouse outside it is not an "outside click".
+	var pressStartedOutside = false;
+	document.addEventListener('pointerdown', function (e) {
+		pressStartedOutside = isOutside(e.target);
+	}, true);
+
+	document.addEventListener('click', function (e) {
+		var $open = $('.web-form .grid-row-open');
+		if (!$open.length) return;
+		// Target removed by the click itself (e.g. a picked dropdown item) → not an outside click
+		if (!pressStartedOutside || !isOutside(e.target)) return;
+
+		$open.each(function () {
+			var gridRow = $(this).data('grid_row');
+			if (gridRow && typeof gridRow.toggle_view === 'function') gridRow.toggle_view(false);
+		});
+	});
+}
+
+/**
+ * Frappe's Dialog closes any open grid row form when ANY dialog hides (dialog.js "hide.bs.modal"),
+ * unless dialog.keep_grid_form_open is set. So finishing an upload in the Attach dialog — or
+ * dismissing a validation message — inside the "Editing Row" panel closed the panel too.
+ * Dialogs opened while a row panel is open now keep it open.
+ */
+function _slcmKeepRowFormOpenAcrossDialogs() {
+	var Dialog = window.frappe && frappe.ui && frappe.ui.Dialog;
+	if (!Dialog || !Dialog.prototype || Dialog.prototype._slcmKeepGridPatched) return !!(Dialog && Dialog.prototype && Dialog.prototype._slcmKeepGridPatched);
+	Dialog.prototype._slcmKeepGridPatched = true;
+	var origShow = Dialog.prototype.show;
+	Dialog.prototype.show = function () {
+		if (this._slcmKeepGridDefault === undefined) this._slcmKeepGridDefault = !!this.keep_grid_form_open;
+		this.keep_grid_form_open = this._slcmKeepGridDefault || $('.web-form .grid-row-open').length > 0;
+		return origShow.apply(this, arguments);
+	};
+	return true;
+}
+
+/** Next / Previous / stepper switch pages without scrolling — bring the new page into view from its top. */
+function _slcmScrollTopOnPageChange(wf) {
+	if (!wf || typeof wf.toggle_section !== 'function' || wf._slcmScrollTopPatched) return;
+	wf._slcmScrollTopPatched = true;
+	var origToggle = wf.toggle_section;
+	var lastSection = wf.current_section;
+	wf.toggle_section = function () {
+		var out = origToggle.apply(this, arguments);
+		if (this.current_section !== lastSection) {
+			lastSection = this.current_section;
+			window.scrollTo({ top: 0, behavior: 'smooth' });
+		}
+		return out;
+	};
+}
+
+function setupDegreeTablesUX() {
+	_slcmSetupRowFormOutsideClose();
+	var _patchN = 0;
+	var _patchT = setInterval(function () {
+		var wf = window.frappe && frappe.web_form;
+		_slcmScrollTopOnPageChange(wf);
+		if ((_slcmKeepRowFormOpenAcrossDialogs() && wf && wf._slcmScrollTopPatched) || ++_patchN > 60) clearInterval(_patchT);
+	}, 200);
+	// Cheap visibility check: the tables appear/disappear with program_level (depends_on),
+	// which can change at any time, so keep checking at a relaxed pace.
+	setInterval(function () {
+		var wf = window.frappe && frappe.web_form;
+		if (!wf || !wf.fields_dict) return;
+		SLCM_DEGREE_TABLES.forEach(function (fn) { _slcmSetupDegreeTable(wf, fn); });
+	}, 700);
+}
+
+/** A degree row is "blank" when the applicant has not typed anything into it. */
+function _slcmIsBlankDegreeRow(row) {
+	if (!row) return true;
+	var META = { name: 1, idx: 1, doctype: 1, parent: 1, parentfield: 1, parenttype: 1, owner: 1,
+		creation: 1, modified: 1, modified_by: 1, docstatus: 1 };
+	return Object.keys(row).every(function (k) {
+		if (META[k] || k.indexOf('__') === 0) return true;
+		var v = row[k];
+		return v === null || v === undefined || v === '' || v === 0;
 	});
 }
 
@@ -4907,6 +5162,7 @@ frappe.ready(function () {
 	}
 	setupSubmittedFormUX();
 	setupCandidatePhotoPreview();
+	setupDegreeTablesUX();
 	setupAttachFieldValidation();
 	setupSlcmForcePublicUploads();
 	setupNumericFieldRestriction();
@@ -5419,6 +5675,22 @@ function _slcmWebFormLayoutFieldtype(ft) {
  * _validateStage — required (and conditionally required) fields on one page.
  * Returns an object with ok (boolean) and missing (string[]). This file is Jinja-rendered by Frappe Web Form — never use literal double-open-brace sequences in source.
  */
+/** Foreign nationals: every filled UG / PG degree row on this page needs a Country. */
+function _slcmValidateDegreeCountryOnPage(wf, $page, missing) {
+	if (wf.get_value('foriegn_national') !== 'Yes') return;
+	SLCM_DEGREE_TABLES.forEach(function (ct) {
+		var fw = wf.fields_dict[ct];
+		if (!fw || !fw.df || fw.df.hidden || fw.df.hidden_due_to_dependency) return;
+		if (!$page.find('[data-fieldname="' + ct + '"]').length) return;
+		(wf.get_value(ct) || []).forEach(function (row, i) {
+			if (_slcmIsBlankDegreeRow(row)) return;
+			if (!((row.country || '') + '').trim()) {
+				missing.push(__('{0} — Row {1}: Country', [(fw.df.label || ct).trim(), row.idx || i + 1]));
+			}
+		});
+	});
+}
+
 function _validateStage(wf, $page) {
 	const missing = [];
 	const seen = new Set();
@@ -5460,6 +5732,9 @@ function _validateStage(wf, $page) {
 		} else if (df.fieldtype === 'Phone') {
 			var sVal = String(val || '').trim();
 			empty = !sVal || (sVal.indexOf('-') > -1 && !sVal.split('-').slice(1).join('').trim());
+		} else if (df.fieldtype === 'Table' && SLCM_DEGREE_TABLES.indexOf(fieldname) !== -1) {
+			// The default (untouched) degree row must not satisfy "table is mandatory"
+			empty = !(Array.isArray(val) && val.some(function (r) { return !_slcmIsBlankDegreeRow(r); }));
 		} else {
 			empty =
 				val === undefined ||
@@ -5488,6 +5763,7 @@ function _validateStage(wf, $page) {
 	});
 
 	_slcmValidateApplicantFormatsOnPage(wf, $page, missing);
+	_slcmValidateDegreeCountryOnPage(wf, $page, missing);
 
 	return { ok: missing.length === 0, missing };
 }

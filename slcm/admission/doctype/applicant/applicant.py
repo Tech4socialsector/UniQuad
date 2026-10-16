@@ -109,6 +109,7 @@ class Applicant(Document):
         if self.status in ("Submitted", "Completed") and (self.is_new() or self.has_value_changed("status")):
             self._validate_admission_open_for_scope()
             self._validate_national_test_percentage()
+            self._validate_degree_country_for_foreign_national()
             self.validate_eligibility()
             self.validate_dynamic_conditions()
             if self.evaluation_status == "Ineligible":
@@ -252,6 +253,27 @@ class Applicant(Document):
             frappe.throw(
                 _("For International applicants (Foreign National = Yes), Nationality cannot be India."),
                 title=_("Invalid Nationality"),
+            )
+
+    def _validate_degree_country_for_foreign_national(self):
+        """
+        Country in UG / PG degree rows is shown — and therefore required — only for foreign
+        nationals (foriegn_national = "Yes"); mirrors the portal show/mandatory rule.
+        """
+        if (self.foriegn_national or "").strip() != "Yes":
+            return
+        missing = []
+        for table, label in (
+            ("ug_degree_details", _("Undergraduate Degree Details")),
+            ("pg_degree_details", _("PG Degree Details")),
+        ):
+            for row in self.get(table) or []:
+                if not (row.get("country") or "").strip():
+                    missing.append(_("{0} — Row {1}: Country").format(label, row.idx))
+        if missing:
+            frappe.throw(
+                _("Country is required for each degree for international applicants:") + "<br>" + "<br>".join(missing),
+                title=_("Missing Country"),
             )
 
     def _validate_national_test_percentage(self):

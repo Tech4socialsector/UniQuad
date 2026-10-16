@@ -297,13 +297,13 @@ def validate_new_application_access(program=None, foriegn_national=None, nationa
             return {
                 "allowed": False,
                 "reason": "scope",
-                "message": _("The {0} programme is exclusively open to international applicants. Domestic candidates are not eligible to apply for this course.").format(prog_title),
+                "message": _("The {0} programme is exclusively open to international applicants. Domestic candidates are not eligible to apply for this programme.").format(prog_title),
             }
         elif resolved_admission_open_for == "Domestic" and is_international:
             return {
                 "allowed": False,
                 "reason": "scope",
-                "message": _("The {0} programme is exclusively open to domestic applicants. International candidates are not eligible to apply for this course.").format(prog_title),
+                "message": _("The {0} programme is exclusively open to domestic applicants. International candidates are not eligible to apply for this programme.").format(prog_title),
             }
 
         # Check seats/application limit
@@ -557,12 +557,12 @@ def save_applicant_draft(data, ignore_mandatory=True):
             if acp_scope == "International" and is_dom:
                 return {
                     "status": "error",
-                    "message": _("The {0} programme is exclusively open to international applicants. Domestic candidates are not eligible to apply for this course.").format(prog_name),
+                    "message": _("The {0} programme is exclusively open to international applicants. Domestic candidates are not eligible to apply for this programme.").format(prog_name),
                 }
             elif acp_scope == "Domestic" and is_foreign:
                 return {
                     "status": "error",
-                    "message": _("The {0} programme is exclusively open to domestic applicants. International candidates are not eligible to apply for this course.").format(prog_name),
+                    "message": _("The {0} programme is exclusively open to domestic applicants. International candidates are not eligible to apply for this programme.").format(prog_name),
                 }
 
     # Enforce safe values
