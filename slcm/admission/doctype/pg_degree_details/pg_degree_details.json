@@ -11,11 +11,11 @@
   "year_of_completion",
   "collegeuniversity",
   "board_uni_pg",
-  "country",
   "pg_cgpa",
   "if_pg_cgpa",
   "pg_degree_certificatebonafide_certificate_to_be_uploaded",
-  "transcriptsmarksheets_to_be_uploaded"
+  "transcriptsmarksheets_to_be_uploaded",
+  "country"
  ],
  "fields": [
   {
@@ -81,9 +81,10 @@
   },
   {
    "fieldname": "country",
-   "fieldtype": "Data",
+   "fieldtype": "Link",
    "in_list_view": 1,
-   "label": "Country"
+   "label": "Country",
+   "options": "Country"
   },
   {
    "fieldname": "board_uni_pg",
@@ -96,7 +97,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-09-30 15:14:58.136909",
+ "modified": "2026-10-16 14:30:00.000000",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "PG Degree Details",

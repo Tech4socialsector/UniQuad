@@ -14,7 +14,7 @@
         @media only screen and (max-width: 600px) {
             .container { width: 100% !important; min-width: 100% !important; }
             .mobile-header-padding { padding: 30px 20px 15px 20px !important; }
-            .logo-img { height: 42px !important; width: auto !important; }
+            .logo-img { height: 50px !important; width: auto !important; }
             .univ-name, .campus-name { font-size: 16px !important; line-height: 1.2 !important; white-space: nowrap !important; }
             .body-content { padding: 20px 20px !important; }
         }
@@ -34,15 +34,18 @@
                     <tr>
                         <td style="padding: 40px 40px 15px 40px;" class="mobile-header-padding">
                             <table width="100%" cellpadding="0" cellspacing="0" border="0" style="width: 100%;">
-                                <tr>
+                                                                <tr>
                                     <!-- Logo Cell -->
                                     <td width="1" style="vertical-align: middle; padding-right: 20px;">
                                         {% set inst_logo = frappe.db.get_single_value('Institution Settings', 'logo') %}
-                                        {% if inst_logo %}
-                                            <img src="{{ frappe.utils.get_url(inst_logo) }}" alt="Logo" class="logo-img" style="height: 52px; width: auto; display: block; border: 0;">
+                                        {% if inst_logo and (inst_logo.startswith('http://') or inst_logo.startswith('https://')) %}
+                                            {% set logo_url = inst_logo %}
+                                        {% elif inst_logo and not inst_logo.startswith('/private') and not ('localhost' in frappe.utils.get_url() or 'slcm.com' in frappe.utils.get_url() or '127.0.0.1' in frappe.utils.get_url()) %}
+                                            {% set logo_url = frappe.utils.get_url(inst_logo) %}
                                         {% else %}
-                                            <div style="width: 40px; height: 40px; background-color: #f3f4f6; border-radius: 4px;"></div>
+                                            {% set logo_url = 'https://www.nls.ac.in/wp-content/uploads/2020/09/NLSIU-logo.png' %}
                                         {% endif %}
+                                        <img src="{{ logo_url }}" alt="National Law School of India University" class="logo-img" style="height: 64px; width: auto; display: block; border: 0;">
                                     </td>
                                     <!-- Title Cell -->
                                     <td style="vertical-align: middle; text-align: left;">
@@ -70,17 +73,18 @@
                     <!-- Body Content -->
                     <tr>
                         <td class="body-content" style="padding: 20px 40px 40px 40px; font-family: 'Merriweather', serif; font-size: 16px; line-height: 1.6; color: #333333;">
-<p>Dear Candidate,</p>
+<p class="greeting" style="font-size: 18px; font-weight: 600; color: #920c24;">Dear {{ candidate_name or full_name or applicant_name or doc.candidate_name or doc.applicant_name or doc.full_name or "Candidate" }},</p>
 
     <p>
         {% if doc.is_reallocation %}Your previously allocated examination centre ({{ doc.old_center_name or '—' }}) has been rejected. A new examination centre has now been allocated to you.Your admit card for the NLSAT Examination is now available. You may download your admit card by logging in to the Admissions portal with your username and password. Once you have logged in, please click on "Download Admit Card." Please print a copy of the admit card, read the instructions carefully and have it with you when reporting for the examination.{% else %}Your admit card for the NLSAT Examination is now available. You may download your admit card by logging in to the Admissions portal with your username and password. Once you have logged in, please click on "Download Admit Card." Please print a copy of the admit card, read the instructions carefully and have it with you when reporting for the examination.{% endif %}
     </p>
 
-    <p>Best Wishes,<br>
-    NLSAT Team</p>
+                                <p style="margin-top: 24px; margin-bottom: 0;">Regards,<br>
+                            <strong>Admissions Office</strong><br>
+                            National Law School of India University</p>
 
-    <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-    <p style="font-size: 12px; color: #777;">This is an automated message. Please do not reply to this email.</p>
+                            <hr style="border: none; border-top: 1px solid #eeeeee; margin: 30px 0 15px 0;">
+                            <p style="font-size: 12px; color: #999999; text-align: center; margin: 0;">This is a system-generated email. Please do not reply to this message.</p>
                         </td>
                     </tr>
                 </table>

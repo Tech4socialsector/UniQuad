@@ -1,4 +1,5 @@
 import frappe
+from slcm.slcm.utils.exam_schedule import get_visible_exam_plans
 
 no_cache = 1
 
@@ -35,56 +36,33 @@ def get_context(context):
         student = frappe.get_doc("Student Master", student_name)
         _set_student_nav(context, student)
 
+        # Only the exam plans / courses the student is enrolled in (same
+        # source as the Courses page) — see slcm.slcm.utils.exam_schedule
+        visible = get_visible_exam_plans(student_name)
+
         marks_rows = frappe.get_all(
             "Student Course Marks",
-            filters={"student": student_name},
+            filters={"student": student_name, "exam_plan": ["in", list(visible) or ["__none__"]]},
             fields=["name", "exam_plan", "course", "attendance_status", "enrollment_status", "status"],
             order_by="modified desc",
             ignore_permissions=True,
         )
-
-        publish_rows = frappe.get_all(
-            "Student Result Publish",
-            filters={"student": student_name},
-            fields=["exam_plan", "is_published", "published_on"],
-            ignore_permissions=True,
-        )
-        published_map = {row.exam_plan: row for row in publish_rows}
-
-        grouped = {}
+        marks_map = {}
         for row in marks_rows:
-            grouped.setdefault(row.exam_plan, []).append(row)
+            marks_map.setdefault((row.exam_plan, row.course), row)   # newest first
 
-        # Get the student's enrolled courses to match against exam plans
-        enrolled_courses = set(row.course for row in marks_rows)
-
-        # Also include any Active exam plan whose course_schedules contain
-        # at least one course this student is enrolled in — this covers plans
-        # that exist but where Student Course Marks haven't been created yet.
-        all_active_plans = frappe.get_all(
-            "Exam Plan",
-            filters={"status": "Active"},
-            fields=["name"],
-            order_by="modified desc",
-            limit=50,
-            ignore_permissions=True,
-        )
-        for plan in all_active_plans:
-            if plan.name in grouped:
-                continue  # already have marks for this plan
-            plan_courses = frappe.get_all(
-                "Exam Course Schedule",
-                filters={"parent": plan.name, "parenttype": "Exam Plan"},
-                fields=["course"],
+        published_map = {
+            row.exam_plan: row
+            for row in frappe.get_all(
+                "Student Result Publish",
+                filters={"student": student_name},
+                fields=["exam_plan", "is_published", "published_on"],
                 ignore_permissions=True,
             )
-            plan_course_set = {r.course for r in plan_courses}
-            # Show plan if: student has matching enrolled courses, OR no marks exist at all
-            if (not enrolled_courses and plan_course_set) or (enrolled_courses & plan_course_set):
-                grouped.setdefault(plan.name, [])
+        }
 
         exam_plans = []
-        for exam_plan, rows in grouped.items():
+        for exam_plan, plan_courses in visible.items():
             ep = frappe.db.get_value(
                 "Exam Plan",
                 exam_plan,
@@ -93,74 +71,38 @@ def get_context(context):
             ) or frappe._dict()
             pub = published_map.get(exam_plan)
 
-            # Build per-course schedule map from child table
-            schedule_rows = frappe.get_all(
-                "Exam Course Schedule",
-                filters={"parent": exam_plan, "parenttype": "Exam Plan"},
-                fields=["course", "exam_date", "start_time", "end_time", "venue", "hall"],
-                ignore_permissions=True,
-            )
-            schedule_map = {s.course: s for s in schedule_rows}
+            schedule_map = {
+                s.course: s
+                for s in frappe.get_all(
+                    "Exam Course Schedule",
+                    filters={"parent": exam_plan, "parenttype": "Exam Plan"},
+                    fields=["course", "exam_date", "start_time", "end_time", "venue", "hall"],
+                    ignore_permissions=True,
+                )
+            }
 
             courses = []
-            if rows:
-                # Build courses from Student Course Marks (normal path)
-                for row in rows:
-                    actual_course = frappe.db.get_value("Course Offering", row.course, "course_title") or row.course
-                    c_doc = frappe.db.get_value("Course", actual_course, ["course_name", "course_code"], as_dict=True) or {}
-                    course_name = c_doc.get("course_name") or actual_course
-                    course_code = c_doc.get("course_code") or actual_course
-                    
-                    att = _get_attendance(row, student_name, exam_plan)
-                    sched = schedule_map.get(row.course) or frappe._dict()
-                    exam_date_str = frappe.utils.formatdate(sched.exam_date, "d MMM yyyy") if sched.exam_date else ""
-                    start = _fmt_time(sched.start_time) if sched.start_time else ""
-                    end = _fmt_time(sched.end_time) if sched.end_time else ""
-                    exam_time = f"{start} – {end}" if start and end else (start or "To be announced")
-                    venue_str = " | ".join(filter(None, [sched.venue, sched.hall])) or "To be announced"
-                    courses.append({
-                        "course": row.course,
-                        "course_code": course_code,
-                        "course_name": course_name,
-                        "attendance_status": att,
-                        "enrollment_status": row.enrollment_status or "Enrolled",
-                        "marks_status": row.status or "Draft",
-                        "hall_ticket_status": _hall_ticket_status(att, row.enrollment_status),
-                        "exam_date": exam_date_str,
-                        "_raw_exam_date": sched.exam_date,
-                        "venue": venue_str,
-                        "exam_time": exam_time,
-                        "has_schedule": bool(sched.exam_date or sched.venue),
-                    })
-            else:
-                # No Student Course Marks yet — build course list directly from
-                # the Exam Plan's course_schedules child table so the timetable
-                # is still visible to students before marks are created.
-                for sched in schedule_rows:
-                    actual_course = frappe.db.get_value("Course Offering", sched.course, "course_title") or sched.course
-                    c_doc = frappe.db.get_value("Course", actual_course, ["course_name", "course_code"], as_dict=True) or {}
-                    course_name = c_doc.get("course_name") or actual_course
-                    course_code = c_doc.get("course_code") or actual_course
-                    
-                    exam_date_str = frappe.utils.formatdate(sched.exam_date, "d MMM yyyy") if sched.exam_date else ""
-                    start = _fmt_time(sched.start_time) if sched.start_time else ""
-                    end = _fmt_time(sched.end_time) if sched.end_time else ""
-                    exam_time = f"{start} – {end}" if start and end else (start or "To be announced")
-                    venue_str = " | ".join(filter(None, [sched.venue, sched.hall])) or "To be announced"
-                    courses.append({
-                        "course": sched.course,
-                        "course_code": course_code,
-                        "course_name": course_name,
-                        "attendance_status": "",
-                        "enrollment_status": "Enrolled",
-                        "marks_status": "Draft",
-                        "hall_ticket_status": "Eligible",
-                        "exam_date": exam_date_str,
-                        "_raw_exam_date": sched.exam_date,
-                        "venue": venue_str,
-                        "exam_time": exam_time,
-                        "has_schedule": bool(sched.exam_date or sched.venue),
-                    })
+            for course in plan_courses:
+                c_doc = frappe.db.get_value("Course", course, ["course_name", "course_code"], as_dict=True) or {}
+                row = marks_map.get((exam_plan, course))
+                att = _get_attendance(row, student_name, exam_plan) if row else ""
+                sched = schedule_map.get(course) or frappe._dict()
+                start = _fmt_time(sched.start_time) if sched.start_time else ""
+                end = _fmt_time(sched.end_time) if sched.end_time else ""
+                courses.append({
+                    "course": course,
+                    "course_code": c_doc.get("course_code") or course,
+                    "course_name": c_doc.get("course_name") or course,
+                    "attendance_status": att,
+                    "enrollment_status": (row.enrollment_status if row else "") or "Enrolled",
+                    "marks_status": (row.status if row else "") or "Draft",
+                    "hall_ticket_status": _hall_ticket_status(att, row.enrollment_status if row else None),
+                    "exam_date": frappe.utils.formatdate(sched.exam_date, "d MMM yyyy") if sched.exam_date else "",
+                    "_raw_exam_date": sched.exam_date,
+                    "venue": " | ".join(filter(None, [sched.venue, sched.hall])) or "To be announced",
+                    "exam_time": f"{start} – {end}" if start and end else (start or "To be announced"),
+                    "has_schedule": bool(sched.exam_date or sched.venue),
+                })
 
             courses.sort(key=lambda c: c["course_name"])
             exam_plans.append({

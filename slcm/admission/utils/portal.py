@@ -109,6 +109,24 @@ def build_custom_application_form_url(
 	return f"/application_form?{q}" if q else "/application_form"
 
 
+def site_relative_url(url):
+	"""
+	Drop scheme + host from a stored absolute URL ("http://127.0.0.1:8000/admission/...")
+	so it resolves against whatever host the user is browsing on. Programme application
+	links were saved with get_url() at save time; a different host (127.0.0.1 vs localhost
+	vs the real domain) has no session cookie and bounces logged-in users to the login page.
+	"""
+	from urllib.parse import urlsplit, urlunsplit
+
+	url = (url or "").strip()
+	if not url:
+		return ""
+	parts = urlsplit(url)
+	if not parts.netloc:
+		return url
+	return urlunsplit(("", "", parts.path or "/", parts.query, parts.fragment))
+
+
 def build_applicant_form_new_url(
 	program,
 	admission_cycle="",
@@ -865,8 +883,8 @@ def get_active_programs():
                 p["program_description"] = prog_info.program_description
                 p["brochure_file"] = prog_info.brochure_file
                 p["program_level"] = prog_info.level_of_study or p.get("program_level")
-                p["application_form_link"] = prog_info.application_form_link
-                p["international_application_form_link"] = prog_info.international_application_form_link
+                p["application_form_link"] = site_relative_url(prog_info.application_form_link)
+                p["international_application_form_link"] = site_relative_url(prog_info.international_application_form_link)
             else:
                 p["program_slug"] = _re.sub(r'[^a-z0-9]+', '-', (p.program or "").lower()).strip('-')
                 p["program_abbreviation"] = ""
