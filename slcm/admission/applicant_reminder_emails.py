@@ -249,7 +249,9 @@ def send_not_started_reminders(current_item=0, total_items=0, is_rejection_only=
                 email,
                 {
                     "candidate_name": user_doc.first_name or user_doc.full_name or email,
-                    "cycle_end_date": formatdate(application_end_date),
+                    "cycle_end_date": formatdate(application_end_date, "dd MMMM yyyy"),
+                    "application_end_date": formatdate(application_end_date, "dd MMMM yyyy"),
+                    "app_end_date_formatted": formatdate(application_end_date, "dd MMMM yyyy"),
                     "institution_name": institution_name,
                     "admission_portal_url": get_url("/admission-dashboard"),
                 },
