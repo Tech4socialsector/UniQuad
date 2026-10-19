@@ -4,7 +4,7 @@
 import re
 import frappe
 from frappe.model.document import Document
-
+from frappe.utils import get_url
 
 class Programme(Document):
 
@@ -28,11 +28,12 @@ class Programme(Document):
 		# Site-relative on purpose: an absolute get_url() link bakes in the host it was saved
 		# from (127.0.0.1 / localhost / domain); opened from another host the session cookie
 		# is missing and logged-in applicants get sent to the login page.
+		base_url = get_url()
 		web_form_route = (
 			frappe.db.get_value("Web Form", "applicant-form", "route") or "admission/application-form"
 		).strip("/")
-		self.application_form_link = f"/{web_form_route}/new?program={self.program_slug}&foriegn_national=No&nationality=India"
-		self.international_application_form_link = f"/{web_form_route}/new?program={self.program_slug}&foriegn_national=Yes"
+		self.application_form_link = f"{base_url}/{web_form_route}/new?program={self.program_slug}&foriegn_national=No&nationality=India"
+		self.international_application_form_link = f"{base_url}/{web_form_route}/new?program={self.program_slug}&foriegn_national=Yes"
 	def generate_program_slug(self):
 		if not self.program_name:
 			return
