@@ -195,14 +195,19 @@ def get_portal_shell_data():
 # ───────────────────────────────────────────────────────────────────
 
 @frappe.whitelist(allow_guest=False)
-def validate_new_application_access(program=None):
+def validate_new_application_access(program=None, foriegn_national=None, nationality=None):
     """
     Validates if a new application can be created for the active Admission Cycle
-    and the selected program.
+    and the selected program, and whether it is open for Domestic / International applicants.
 
-    Returns: {"allowed": True} or {"allowed": False, "message": "..."}
+    Returns: {"allowed": True, ...} or {"allowed": False, "message": "..."}
     """
     from frappe.utils import getdate, today, formatdate
+
+    if not foriegn_national:
+        foriegn_national = frappe.form_dict.get("foriegn_national")
+    if not nationality:
+        nationality = frappe.form_dict.get("nationality")
 
     # 1. Must have an Active cycle
     active_cycle = frappe.db.get_value(
@@ -248,29 +253,59 @@ def validate_new_application_access(program=None):
     resolved_campus = ""
     resolved_intake_type = ""
     resolved_program_level = ""
-    
+    resolved_admission_open_for = ""
+    prog_title = program or ""
+
     if program:
         # Resolve from slug if needed
         slug_match = frappe.db.get_value("Programme", {"program_slug": program}, "name")
         if slug_match:
             resolved_program = slug_match
 
+        prog_data = frappe.db.get_value("Programme", resolved_program, ["program_name", "program_slug"], as_dict=True) or {}
+        prog_title = prog_data.get("program_name") or resolved_program
+
         prog_row = frappe.db.get_value(
             "Admission Cycle Program",
             {"parent": active_cycle, "program": resolved_program, "is_active": 1},
-            ["name", "max_applications", "application_count", "campus", "intake_type", "program_level"],
+            ["name", "max_applications", "application_count", "campus", "intake_type", "program_level", "admission_open_for"],
             as_dict=True,
         )
         if not prog_row:
             return {
                 "allowed": False,
-                "message": _("The selected programme '{0}' is not available in the current admission cycle.").format(resolved_program),
+                "message": _("The selected programme '{0}' is not available in the current admission cycle.").format(prog_title),
             }
-            
+
         resolved_campus = prog_row.get("campus") or ""
         resolved_intake_type = prog_row.get("intake_type") or ""
         resolved_program_level = prog_row.get("program_level") or ""
-        
+        resolved_admission_open_for = (prog_row.get("admission_open_for") or "").strip()
+
+        # Check Domestic vs International admission scope
+        is_international = (foriegn_national or "").strip().lower() in ("yes", "true", "1")
+        is_domestic = (foriegn_national or "").strip().lower() in ("no", "false", "0")
+        if not is_international and not is_domestic and nationality:
+            if nationality.strip().lower() == "india":
+                is_domestic = True
+            else:
+                is_international = True
+
+        # reason="scope": the only refusal that depends on foriegn_national — the portal
+        # reverts that field ONLY for this reason (other refusals apply to Yes and No alike).
+        if resolved_admission_open_for == "International" and is_domestic:
+            return {
+                "allowed": False,
+                "reason": "scope",
+                "message": _("The {0} programme is exclusively open to international applicants. Domestic candidates are not eligible to apply for this programme.").format(prog_title),
+            }
+        elif resolved_admission_open_for == "Domestic" and is_international:
+            return {
+                "allowed": False,
+                "reason": "scope",
+                "message": _("The {0} programme is exclusively open to domestic applicants. International candidates are not eligible to apply for this programme.").format(prog_title),
+            }
+
         # Check seats/application limit
         max_apps = prog_row.get("max_applications") or 0
         if max_apps > 0:
@@ -278,7 +313,7 @@ def validate_new_application_access(program=None):
             if app_count >= max_apps:
                 return {
                     "allowed": False,
-                    "message": _("Seats are filled for the selected programme '{0}'. New applications cannot be submitted.").format(resolved_program),
+                    "message": _("Seats are filled for the selected programme '{0}'. New applications cannot be submitted.").format(prog_title),
                 }
 
     # Extract year context
@@ -291,9 +326,11 @@ def validate_new_application_access(program=None):
         "admission_year": admission_year,
         "academic_year": academic_year,
         "program": resolved_program,
+        "program_label": prog_title,
         "campus": resolved_campus,
         "intake_type": resolved_intake_type,
         "program_level": resolved_program_level,
+        "admission_open_for": resolved_admission_open_for,
     }
 
 
@@ -422,7 +459,14 @@ def save_applicant_draft(data, ignore_mandatory=True):
         "name", "idx", "doctype", "parent", "parentfield", "parenttype",
         "owner", "creation", "modified", "modified_by", "docstatus",
     }
-    valid_scalar  = {f.fieldname for f in meta.fields if f.fieldtype not in SKIP_TYPES}
+    # Server-controlled fields: never accept these from the portal payload
+    # (e.g. a client could otherwise post application_fee_status="Paid" and skip payment).
+    PROTECTED_FIELDS = {
+        "status", "email", "workflow_state", "applicant_id", "rejected_reason",
+        "application_fee_status", "application_fee_amount",
+        "fee_waived_by", "fee_waived_on",
+    }
+    valid_scalar  = {f.fieldname for f in meta.fields if f.fieldtype not in SKIP_TYPES} - PROTECTED_FIELDS
     attach_fields = {f.fieldname for f in meta.fields if f.fieldtype in ["Attach", "Attach Image"]}
     child_tables  = {f.fieldname for f in meta.fields if f.fieldtype == "Table"}
 
@@ -433,15 +477,9 @@ def save_applicant_draft(data, ignore_mandatory=True):
             return True
         
         try:
-            file_name = frappe.db.get_value("File", {"file_url": file_url}, "name")
-            if file_name:
-                import os
-                file_path = frappe.get_site_path(file_url.lstrip("/"))
-                return os.path.exists(file_path)
-            else:
-                import os
-                file_path = frappe.get_site_path(file_url.lstrip("/"))
-                return os.path.exists(file_path)
+            import os
+            file_path = frappe.get_site_path(file_url.lstrip("/"))
+            return os.path.exists(file_path)
         except Exception:
             return False
 
@@ -451,15 +489,11 @@ def save_applicant_draft(data, ignore_mandatory=True):
             continue
         if key in valid_scalar:
             if key in attach_fields and value and not _is_valid_file(value):
-                try:
-                    setattr(doc, key, None)
-                except Exception:
-                    pass
-            else:
-                try:
-                    setattr(doc, key, value)
-                except Exception:
-                    pass
+                value = None
+            try:
+                setattr(doc, key, value)
+            except Exception:
+                frappe.log_error(frappe.get_traceback(), f"save_applicant_draft — could not set field {key}")
 
     # Apply child-table rows
     for ct_field in child_tables:
@@ -482,7 +516,7 @@ def save_applicant_draft(data, ignore_mandatory=True):
                 try:
                     doc.append(ct_field, clean)
                 except Exception:
-                    pass
+                    frappe.log_error(frappe.get_traceback(), f"save_applicant_draft — could not append row to {ct_field}")
 
     # Set Admission Year and Academic Year from current active admission cycle if missing
     if not doc.admission_year or not doc.academic_year:
@@ -506,6 +540,30 @@ def save_applicant_draft(data, ignore_mandatory=True):
             doc.intake_type = deriv["intake_type"]
         if deriv.get("campus"):
             doc.campus = deriv["campus"]
+
+        acp_scope = frappe.db.get_value(
+            "Admission Cycle Program",
+            {"parent": doc.admission_cycle, "program": doc.program, "is_active": 1},
+            "admission_open_for",
+        )
+        if acp_scope:
+            prog_name = frappe.db.get_value("Programme", doc.program, "program_name") or doc.program
+            is_foreign = (getattr(doc, "foriegn_national", "") or "").strip().lower() in ("yes", "true", "1")
+            is_dom = (getattr(doc, "foriegn_national", "") or "").strip().lower() in ("no", "false", "0")
+            if not is_foreign and not is_dom and getattr(doc, "nationality", None):
+                is_dom = doc.nationality.strip().lower() == "india"
+                is_foreign = not is_dom
+
+            if acp_scope == "International" and is_dom:
+                return {
+                    "status": "error",
+                    "message": _("The {0} programme is exclusively open to international applicants. Domestic candidates are not eligible to apply for this programme.").format(prog_name),
+                }
+            elif acp_scope == "Domestic" and is_foreign:
+                return {
+                    "status": "error",
+                    "message": _("The {0} programme is exclusively open to domestic applicants. International candidates are not eligible to apply for this programme.").format(prog_name),
+                }
 
     # Enforce safe values
     doc.status = "Draft"
@@ -564,10 +622,10 @@ def save_applicant_draft(data, ignore_mandatory=True):
     except frappe.ValidationError as e:
         frappe.db.rollback()
         return {"status": "error", "message": str(e)}
-    except Exception as e:
+    except Exception:
         frappe.db.rollback()
         frappe.log_error(frappe.get_traceback(), "save_applicant_draft — Error")
-        return {"status": "error", "message": str(e)}
+        return {"status": "error", "message": _("Could not save the application. Please try again or contact support.")}
 
 
 # ───────────────────────────────────────────────────────────────────
@@ -604,7 +662,11 @@ def submit_applicant(applicant_name, target_status=None):
         return {"status": "error", "message": _("No permission to submit this application.")}
 
     current_status = (doc.status or "").strip()
-    _ts = target_status if target_status else "Submitted"
+    _ts = (target_status or "Submitted").strip()
+    # The portal may only move an application to Submitted or Completed; any other
+    # status would bypass the fee check below and the admission workflow.
+    if _ts not in ("Submitted", "Completed"):
+        return {"status": "error", "message": _("Invalid target status.")}
 
     if current_status in APPLICATION_SUBMITTED_STATUSES:
         if current_status == "Submitted" and _ts == "Completed":
@@ -646,8 +708,10 @@ def submit_applicant(applicant_name, target_status=None):
         sync_application_fee_assignment_for_applicant(doc.name)
         doc.reload() # reload after sync
         fee_status = (doc.application_fee_status or "").strip()
+        # The sync may correct a stale/zero amount — re-read it so the fee guard uses the real value
+        fee_amount = flt(doc.application_fee_amount or 0)
     except Exception:
-        pass
+        frappe.log_error(frappe.get_traceback(), "submit_applicant — pre-submit fee sync")
 
     if _ts == "Completed" and fee_amount > 0 and fee_status not in ("Paid", "Waived"):
         return {"status": "error", "message": _("Application fee must be paid before completing application.")}
@@ -665,7 +729,7 @@ def submit_applicant(applicant_name, target_status=None):
                 if not doc.academic_year or doc.academic_year == "":
                     doc.academic_year = cycle_data.academic_year
 
-    doc.status = target_status if target_status else "Submitted"
+    doc.status = _ts
     if fee_amount == 0:
         doc.application_fee_status = "Waived"
 
@@ -713,10 +777,10 @@ def submit_applicant(applicant_name, target_status=None):
     except frappe.ValidationError as e:
         frappe.db.rollback()
         return {"status": "error", "message": str(e)}
-    except Exception as e:
+    except Exception:
         frappe.db.rollback()
         frappe.log_error(frappe.get_traceback(), "submit_applicant — Error")
-        return {"status": "error", "message": str(e)}
+        return {"status": "error", "message": _("Could not submit the application. Please try again or contact support.")}
 
 
 # ───────────────────────────────────────────────────────────────────
@@ -805,6 +869,13 @@ def _check_eligibility_ineligible_response(doc, raw_msg: str) -> dict:
     if len(err_text) > 2400:
         err_text = err_text[:2397] + "..."
 
+    # Called from an except-branch in check_eligibility — must not raise itself
+    try:
+        suggestions = (doc.get_eligibility_suggestion_payload() if doc else None) or {}
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "check_eligibility — suggestions")
+        suggestions = {}
+
     return {
         "status": "Ineligible",
         "message": err_text,
@@ -813,7 +884,7 @@ def _check_eligibility_ineligible_response(doc, raw_msg: str) -> dict:
         "is_eligibility_error": True,
         "programs": programs,
         "failure_sections": getattr(doc, "_slcm_failure_sections", None) or [],
-        "suggestions": (doc.get_eligibility_suggestion_payload() if doc else None) or {},
+        "suggestions": suggestions,
     }
 
 
@@ -1006,6 +1077,9 @@ def switch_applicant_program(applicant_name, program):
     if user == "Guest":
         return {"status": "error", "message": _("You must be logged in.")}
 
+    if not frappe.db.exists("Applicant", applicant_name):
+        return {"status": "error", "message": _("Application not found.")}
+
     email = frappe.db.get_value("User", user, "email") or user
     doc = frappe.get_doc("Applicant", applicant_name)
 
@@ -1088,10 +1162,13 @@ def switch_applicant_program(applicant_name, program):
     try:
         doc.save()
         frappe.db.commit()
-    except Exception as ex:
+    except frappe.ValidationError as ex:
+        frappe.db.rollback()
+        return {"status": "error", "message": str(ex)}
+    except Exception:
         frappe.db.rollback()
         frappe.log_error(frappe.get_traceback(), "switch_applicant_program")
-        return {"status": "error", "message": str(ex)}
+        return {"status": "error", "message": _("Could not switch the programme. Please try again or contact support.")}
 
     try:
         from slcm.api.service.application_fee_service import (
@@ -1143,10 +1220,13 @@ def _latest_application_fee_receipt_for_portal(applicant_name):
 def portal_application_fee_receipt_ready(applicant_name):
     """Whether the portal may show “Download fee receipt” for this application."""
     applicant_name = (applicant_name or "").strip()
-    if not applicant_name or not frappe.db.exists("Applicant", applicant_name):
+    # Same response for "missing" and "not yours" so application IDs can't be probed
+    if (
+        not applicant_name
+        or not frappe.db.exists("Applicant", applicant_name)
+        or not _portal_can_access_applicant(applicant_name)
+    ):
         return {"ready": False, "receipt_name": ""}
-    if not _portal_can_access_applicant(applicant_name):
-        frappe.throw(_("Not permitted."), frappe.PermissionError)
     st = (frappe.db.get_value("Applicant", applicant_name, "application_fee_status") or "").strip()
     if st != "Paid":
         return {"ready": False, "receipt_name": ""}
@@ -1198,6 +1278,43 @@ def download_portal_application_fee_receipt(applicant_name):
     frappe.local.response.filecontent = pdf
     frappe.local.response.type = "pdf"
 
+# Nationality options spelled differently from the Country used on State records
+NATIONALITY_STATE_COUNTRY_ALIASES = {
+    "united states of america": "United States",
+    "cape verde": "Cabo Verde",
+    "republic of the congo": "Congo",
+    "czechia": "Czech Republic",
+    "the gambia": "Gambia",
+    "federated states of micronesia": "Micronesia",
+    "são tomé and príncipe": "Sao Tome and Principe",
+    "türkiye": "Turkey",
+}
+
+
+def _state_country_names(country):
+    """Lower-cased country names to match against State.country (the given name plus its alias)."""
+    country = (country or "").strip().lower()
+    names = {country}
+    alias = NATIONALITY_STATE_COUNTRY_ALIASES.get(country)
+    if alias:
+        names.add(alias.lower())
+    return tuple(names)
+
+
+@frappe.whitelist(allow_guest=True)
+def state_belongs_to_country(state=None, country=None):
+    """True when the State belongs to the given country / nationality. 'Other' is always valid."""
+    state = (state or "").strip()
+    if not state or state.lower() == "other" or not (country or "").strip():
+        return True
+
+    state_country = frappe.db.get_value("State", state, "country")
+    if not state_country:
+        return True
+
+    return state_country.strip().lower() in _state_country_names(country)
+
+
 @frappe.whitelist(allow_guest=True)
 def state_query(doctype=None, txt=None, searchfield=None, start=0, page_len=20, filters=None, **kwargs):
     if isinstance(filters, str):
@@ -1211,9 +1328,15 @@ def state_query(doctype=None, txt=None, searchfield=None, start=0, page_len=20, 
 
     country = filters.get("country") if isinstance(filters, dict) else None
     if not country:
-        country = frappe.form_dict.get("filters[country]") or frappe.form_dict.get("country")
+        country = kwargs.get("country") or frappe.form_dict.get("filters[country]") or frappe.form_dict.get("country")
 
-    cond = ""
+    # frappe.desk.search.search_link (passes doctype) reads item[0] from each row, while the
+    # web form's Autocomplete control (no doctype) needs {"value", "label"} dicts
+    def to_results(rows):
+        if doctype:
+            return [(r[0],) for r in rows]
+        return [{"value": r[0], "description": "", "label": r[0]} for r in rows]
+
     params = {
         "txt": "%" + (txt or "") + "%",
         "start": cint(start),
@@ -1221,30 +1344,25 @@ def state_query(doctype=None, txt=None, searchfield=None, start=0, page_len=20, 
     }
 
     if country and country.strip():
-        country_clean = country.strip()
+        # Country selected: only that country's states (+ "Other"). Do not fall back to
+        # all states, otherwise e.g. "Cal" under India would return "California".
         matched_rows = frappe.db.sql("""
             select distinct name from `tabState`
-            where (LOWER(country) = LOWER(%(country)s) or name = 'Other')
+            where (LOWER(country) in %(countries)s or name = 'Other')
             and name like %(txt)s
             order by (case when name = 'Other' then 1 else 0 end), name
             limit %(start)s, %(page_len)s
-        """, {
-            "country": country_clean,
-            "txt": "%" + (txt or "") + "%",
-            "start": cint(start),
-            "page_len": cint(page_len)
-        })
-        if matched_rows:
-            return [{"value": r[0], "description": "", "label": r[0]} for r in matched_rows]
+        """, dict(params, countries=_state_country_names(country)))
+        return to_results(matched_rows)
 
-    rows = frappe.db.sql(f"""
+    rows = frappe.db.sql("""
         select distinct name from `tabState`
         where name like %(txt)s
         order by (case when name = 'Other' then 1 else 0 end), name
         limit %(start)s, %(page_len)s
     """, params)
 
-    return [{"value": r[0], "description": "", "label": r[0]} for r in rows]
+    return to_results(rows)
 
 @frappe.whitelist(allow_guest=True)
 def city_query(doctype=None, txt=None, searchfield=None, start=0, page_len=20, filters=None, **kwargs):
@@ -1261,7 +1379,6 @@ def city_query(doctype=None, txt=None, searchfield=None, start=0, page_len=20, f
     if not state:
         state = frappe.form_dict.get("filters[state]") or frappe.form_dict.get("state")
 
-    cond = ""
     params = {
         "txt": "%" + (txt or "") + "%",
         "start": cint(start),
@@ -1269,23 +1386,17 @@ def city_query(doctype=None, txt=None, searchfield=None, start=0, page_len=20, f
     }
 
     if state and state.strip():
-        state_clean = state.strip()
+        # State selected: only that state's cities (+ "Other"); no fallback to every city.
         matched_rows = frappe.db.sql("""
             select distinct IFNULL(NULLIF(city_name, ''), name) as display_name from `tabCity`
             where (LOWER(state) = LOWER(%(state)s) or name = 'Other' or city_name = 'Other')
             and (city_name like %(txt)s or name like %(txt)s)
             order by (case when city_name = 'Other' or name = 'Other' then 1 else 0 end), display_name
             limit %(start)s, %(page_len)s
-        """, {
-            "state": state_clean,
-            "txt": "%" + (txt or "") + "%",
-            "start": cint(start),
-            "page_len": cint(page_len)
-        })
-        if matched_rows:
-            return [{"value": r[0], "description": "", "label": r[0]} for r in matched_rows]
+        """, dict(params, state=state.strip()))
+        return [{"value": r[0], "description": "", "label": r[0]} for r in matched_rows]
 
-    rows = frappe.db.sql(f"""
+    rows = frappe.db.sql("""
         select distinct IFNULL(NULLIF(city_name, ''), name) as display_name from `tabCity`
         where (city_name like %(txt)s or name like %(txt)s)
         order by (case when city_name = 'Other' or name = 'Other' then 1 else 0 end), display_name

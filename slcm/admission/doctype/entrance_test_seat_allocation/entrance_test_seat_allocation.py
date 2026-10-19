@@ -1092,7 +1092,7 @@ def _send_custom_result_email(doc, email, custom_email_content):
             if template.get("email_account"):
                 sender = frappe.db.get_value("Email Account", template.get("email_account"), "email_id") or template.get("email_account")
         else:
-            subject = f"Entrance Test Result - {doc.entrance_test_list or doc.entrance_test_name}"
+            subject = "Entrance Test Result"
         
         # Render the custom content wrapped in the HTML header/footer template to allow variables
         full_html_template = get_custom_email_html(custom_email_content)

@@ -120,7 +120,7 @@
    "fieldname": "receipt",
    "fieldtype": "Attach",
    "label": "Receipt",
-   "read_only": 1
+   "read_only": 0
   },
   {
    "fieldname": "receipt_template",

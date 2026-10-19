@@ -91,22 +91,32 @@ def get_faculty_offerings(faculty):
 	return offerings
 
 
-def _exam_plans_for(course, offering):
-	"""Exam plans with a Course Schema Assignment for this course — the ones
-	mapped to this offering first, then Active before Inactive, newest first."""
-	return frappe.db.sql(
+def _exam_plans_for(course, offering, term=None):
+	"""Exam plans with a Course Schema Assignment for this course, limited to
+	the ones this faculty handles: mapped to this offering, or in the
+	offering's term (a duplicate offering of the same course + term). Plans of
+	other terms belong to other offerings. Mapped-to-this-offering first,
+	then Active before Inactive, newest first; one row per plan."""
+	rows = frappe.db.sql(
 		"""
 		SELECT csa.exam_plan, csa.evaluation_schema, csa.grade_schema, csa.course_offering,
 		       ep.exam_name, ep.status AS plan_status, ep.term
 		FROM `tabCourse Schema Assignment` csa
 		JOIN `tabExam Plan` ep ON ep.name = csa.exam_plan
 		WHERE csa.course = %(course)s
+		  AND (csa.course_offering = %(offering)s OR (%(term)s != '' AND ep.term = %(term)s))
 		ORDER BY (csa.course_offering = %(offering)s) DESC,
 		         FIELD(ep.status, 'Active', 'Inactive') ASC, ep.creation DESC
 		""",
-		{"course": course, "offering": offering},
+		{"course": course, "offering": offering, "term": term or ""},
 		as_dict=True,
 	)
+	seen, out = set(), []
+	for r in rows:
+		if r.exam_plan not in seen:
+			seen.add(r.exam_plan)
+			out.append(r)
+	return out
 
 
 def _context(course_offering, exam_plan=None):
@@ -123,7 +133,7 @@ def _context(course_offering, exam_plan=None):
 	if not co or str(co.faculty or "") != str(faculty):
 		frappe.throw(_("You are not assigned to this course offering."), frappe.PermissionError)
 
-	plans = _exam_plans_for(co.course_title, co.name)
+	plans = _exam_plans_for(co.course_title, co.name, co.term_name)
 	plan = None
 	if exam_plan:
 		plan = next((p for p in plans if p.exam_plan == exam_plan), None)

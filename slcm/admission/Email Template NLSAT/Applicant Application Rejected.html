@@ -5,29 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&display=swap" rel="stylesheet">
     <style>
-        /* Base reset for email clients */
         body { margin: 0; padding: 0; background-color: #ffffff; font-family: 'Merriweather', serif; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
         table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; border-collapse: collapse !important; }
         img { border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic; }
-        
-        /* Responsive overrides */
         @media only screen and (max-width: 600px) {
             .container { width: 100% !important; min-width: 100% !important; }
             .mobile-header-padding { padding: 30px 20px 15px 20px !important; }
-            .logo-img { height: 42px !important; width: auto !important; }
+            .logo-img { height: 50px !important; width: auto !important; }
             .univ-name, .campus-name { font-size: 16px !important; line-height: 1.2 !important; white-space: nowrap !important; }
             .body-content { padding: 20px 20px !important; }
         }
     </style>
 </head>
 <body style="margin: 0; padding: 0; background-color: #ffffff; font-family: 'Merriweather', serif;">
-    <!-- Gmail mobile auto-shrink fix -->
     <div style="display:none; white-space:nowrap; font:15px courier; line-height:0;">
         &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
     </div>
-
     <table width="100%" cellpadding="0" cellspacing="0" border="0" style="width: 100%; background-color: #ffffff; table-layout: fixed;">
-        <!-- Header Section -->
         <tr>
             <td align="center">
                 <table width="600" cellpadding="0" cellspacing="0" border="0" class="container" style="max-width: 600px; width: 100%;">
@@ -38,11 +32,14 @@
                                     <!-- Logo Cell -->
                                     <td width="1" style="vertical-align: middle; padding-right: 20px;">
                                         {% set inst_logo = frappe.db.get_single_value('Institution Settings', 'logo') %}
-                                        {% if inst_logo %}
-                                            <img src="{{ frappe.utils.get_url(inst_logo) }}" alt="Logo" class="logo-img" style="height: 52px; width: auto; display: block; border: 0;">
+                                        {% if inst_logo and (inst_logo.startswith('http://') or inst_logo.startswith('https://')) %}
+                                            {% set logo_url = inst_logo %}
+                                        {% elif inst_logo and not inst_logo.startswith('/private') and not ('localhost' in frappe.utils.get_url() or 'slcm.com' in frappe.utils.get_url() or '127.0.0.1' in frappe.utils.get_url()) %}
+                                            {% set logo_url = frappe.utils.get_url(inst_logo) %}
                                         {% else %}
-                                            <div style="width: 40px; height: 40px; background-color: #f3f4f6; border-radius: 4px;"></div>
+                                            {% set logo_url = 'https://www.nls.ac.in/wp-content/uploads/2020/09/NLSIU-logo.png' %}
                                         {% endif %}
+                                        <img src="{{ logo_url }}" alt="National Law School of India University" class="logo-img" style="height: 64px; width: auto; display: block; border: 0;">
                                     </td>
                                     <!-- Title Cell -->
                                     <td style="vertical-align: middle; text-align: left;">
@@ -61,69 +58,33 @@
                 </table>
             </td>
         </tr>
-
-        <!-- Body Section -->
         <tr>
             <td align="center">
-                <!-- Content Wrapper -->
                 <table width="600" cellpadding="0" cellspacing="0" border="0" class="container" style="max-width: 600px; width: 100%;">
-                    <!-- Body Content -->
                     <tr>
                         <td class="body-content" style="padding: 20px 40px 40px 40px; font-family: 'Merriweather', serif; font-size: 16px; line-height: 1.6; color: #333333;">
-<p>Dear {{ doc.candidate_name or doc.applicant }},</p>
+                            <p class="greeting" style="font-size: 18px; font-weight: 600; color: #920c24;">Dear {{ candidate_name or full_name or applicant_name or doc.candidate_name or doc.applicant_name or doc.full_name or "Candidate" }},</p>
+                            <p>Greetings from the Admissions Office.</p>
+                            <p>We regret to inform you that your application could not be processed further for the admission cycle that closed on <strong>{{ cycle_end_date }}</strong>.</p>
+                            {% if applicant_id or (doc and doc.name) or program or (doc and doc.program) %}
+                            <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; border-left: 5px solid #920c24; margin: 20px 0;">
+                                <h3 style="margin-top: 0; color: #920c24;">Application Details</h3>
+                                {% if applicant_id or (doc and doc.name) %}<p style="margin: 0;"><strong>Application ID:</strong> {{ applicant_id or (doc and doc.name) }}</p>{% endif %}
+                                {% if program_name or program or (doc and doc.program) %}<p style="margin: 0;"><strong>Programme:</strong> {{ program_name or program or (doc and doc.program) }}</p>{% endif %}
+                                <p style="margin: 0;"><strong>Closing Date:</strong> {{ cycle_end_date }}</p>
+                            </div>
+                            {% endif %}
+                            <div style="margin: 20px 0; padding: 15px; background-color: #fff8f8; border-radius: 4px; border: 1px solid #f5c6cb;">
+                                <p style="margin: 0 0 4px 0; font-size: 14px; font-weight: 600; color: #920c24;">Reason for Rejection</p>
+                                <p style="margin: 0; font-size: 15px; line-height: 1.6;">{{ rejection_reason or (doc and doc.rejected_reason) or 'Application requirement not completed within the stipulated admission cycle deadline.' }}</p>
+                            </div>
+                            <p>We appreciate your interest in {{ institution_name or 'National Law School of India University' }} and wish you the very best in your future endeavours.</p>
+                            <p style="margin-top: 24px; margin-bottom: 0;">Regards,<br>
+                            <strong>Admissions Office</strong><br>
+                            National Law School of India University</p>
 
-    <p>Greetings from the Admissions Office.</p>
-
-    <p>We are pleased to inform you that your application has been successfully processed for the upcoming Entrance Test. You are now eligible to select your preferred test centre.</p>
-
-    <div style="padding: 20px; margin: 20px 0; border-bottom: 1px solid #eee;">
-        <h3 style="margin-top: 0; color: #920c24;">Application Details</h3>
-        <p style="margin: 0;"><strong>Application Number:</strong> {{ doc.applicant }}</p>
-        <p style="margin: 0;"><strong>Entrance Test:</strong> {{ doc.entrance_test_name or doc.entrance_test_list }}</p>
-        <p style="margin: 0;"><strong>Campus:</strong> {{ doc.campus }}</p>
-        <p style="margin: 0;"><strong>Entrance Test Date:</strong> 
-            {% if doc.allocation_date %}
-                {{ frappe.utils.format_datetime(doc.allocation_date, "dd-MM-yyyy") }}
-            {% else %}
-                To be communicated
-            {% endif %}
-        </p>
-        <p style="margin: 0;"><strong>Start Time:</strong> 
-            {{ frappe.utils.get_time(doc.start_time).strftime('%I:%M %p') if doc.start_time else 'To be communicated' }}
-        </p>
-        <p style="margin: 0;"><strong>End Time:</strong> 
-            {{ frappe.utils.get_time(doc.end_time).strftime('%I:%M %p') if doc.end_time else 'To be communicated' }}
-        </p>
-        <p style="margin: 0;"><strong>Program:</strong> {{ doc.program }}</p>
-    </div>
-
-    {% if doc.assigned_preferences %}
-    <h3 style="color: #920c24;">Available Test Centres:</h3>
-    <ul style="padding-left: 20px;">
-        {% for p in doc.assigned_preferences %}
-        <li style="margin-bottom: 8px;">{{ p.center_name or p.provider }}</li>
-        {% endfor %}
-    </ul>
-    {% endif %}
-
-    <p style="font-size: 13px; color: #555;">Kindly note that test centre allocation is based on availability and will be offered on a first-come, first-served basis. Once selected, changes are not permitted.</p>
-
-    <p>Please log in to the admission portal and complete your test centre selection at the earliest.</p>
-
-    <p style="text-align: center; margin: 30px 0;">
-        <a href="{{ portal_url }}" style="background-color: #920c24; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">Select Test Centre</a>
-    </p>
-
-    <p>If you require assistance, please contact the Admissions Office.</p>
-
-    <p>We wish you success in your preparation.</p>
-
-    <p>Regards,<br>
-    <strong>Admissions Team</strong><br>
-    National Law School of India University</p>
-
-    <hr style="border-top: 1px solid #e5e7eb; margin: 20px 0; border-bottom: 1px solid #eee;">
-    <p style="font-size: 12px; color: #777;">This is an automated message. Please do not reply to this email.</p>
+                            <hr style="border: none; border-top: 1px solid #eeeeee; margin: 30px 0 15px 0;">
+                            <p style="font-size: 12px; color: #999999; text-align: center; margin: 0;">This is a system-generated email. Please do not reply to this message.</p>
                         </td>
                     </tr>
                 </table>

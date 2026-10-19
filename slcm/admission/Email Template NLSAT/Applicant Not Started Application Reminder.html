@@ -14,7 +14,7 @@
         @media only screen and (max-width: 600px) {
             .container { width: 100% !important; min-width: 100% !important; }
             .mobile-header-padding { padding: 30px 20px 15px 20px !important; }
-            .logo-img { height: 42px !important; width: auto !important; }
+            .logo-img { height: 50px !important; width: auto !important; }
             .univ-name, .campus-name { font-size: 16px !important; line-height: 1.2 !important; white-space: nowrap !important; }
             .body-content { padding: 20px 20px !important; }
         }
@@ -34,15 +34,18 @@
                     <tr>
                         <td style="padding: 40px 40px 15px 40px;" class="mobile-header-padding">
                             <table width="100%" cellpadding="0" cellspacing="0" border="0" style="width: 100%;">
-                                <tr>
+                                                                <tr>
                                     <!-- Logo Cell -->
                                     <td width="1" style="vertical-align: middle; padding-right: 20px;">
                                         {% set inst_logo = frappe.db.get_single_value('Institution Settings', 'logo') %}
-                                        {% if inst_logo %}
-                                            <img src="{{ frappe.utils.get_url(inst_logo) }}" alt="Logo" class="logo-img" style="height: 52px; width: auto; display: block; border: 0;">
+                                        {% if inst_logo and (inst_logo.startswith('http://') or inst_logo.startswith('https://')) %}
+                                            {% set logo_url = inst_logo %}
+                                        {% elif inst_logo and not inst_logo.startswith('/private') and not ('localhost' in frappe.utils.get_url() or 'slcm.com' in frappe.utils.get_url() or '127.0.0.1' in frappe.utils.get_url()) %}
+                                            {% set logo_url = frappe.utils.get_url(inst_logo) %}
                                         {% else %}
-                                            <div style="width: 40px; height: 40px; background-color: #f3f4f6; border-radius: 4px;"></div>
+                                            {% set logo_url = 'https://www.nls.ac.in/wp-content/uploads/2020/09/NLSIU-logo.png' %}
                                         {% endif %}
+                                        <img src="{{ logo_url }}" alt="National Law School of India University" class="logo-img" style="height: 64px; width: auto; display: block; border: 0;">
                                     </td>
                                     <!-- Title Cell -->
                                     <td style="vertical-align: middle; text-align: left;">
@@ -74,40 +77,57 @@
 {% if active_cycle_name %}
     {% set active_cycle = frappe.get_doc("Admission Cycle", active_cycle_name) %}
     {% set app_end_date = active_cycle.application_end_date %}
-    {% set app_end_date_formatted = frappe.utils.getdate(app_end_date).strftime('%B %d, %Y') if app_end_date else "March 23, 2026" %}
+    {% set app_end_date_formatted = frappe.utils.formatdate(app_end_date, "dd MMMM yyyy") if app_end_date else (application_end_date or "31 March 2026") %}
     {% set admission_year = active_cycle.admission_year or "2026" %}
-    {% set today_date = frappe.utils.nowdate() %}
-    {% set days_left = frappe.utils.date_diff(app_end_date, today_date) if app_end_date else "5" %}
-    {% set program_names = active_cycle.programs | map(attribute='program') | join(', ') %}
 {% else %}
-    {% set app_end_date_formatted = "March 23, 2026" %}
+    {% set app_end_date_formatted = application_end_date or "31 March 2026" %}
     {% set admission_year = "2026" %}
-    {% set days_left = "5" %}
-    {% set program_names = "NLS BA (Hons), 3-Year LLB (Hons), Master's Programme in Public Policy, and the PhD" %}
 {% endif %}
 
-<!-- 
-DYNAMIC SUBJECT TO BE USED: 
-{{ days_left }} days to go! NLSAT {{ admission_year }} Application Deadline Closes {{ app_end_date_formatted }}
--->
+<p class="greeting" style="font-size: 18px; font-weight: 600; color: #920c24;">Dear {{ candidate_name or full_name or applicant_name or doc.candidate_name or doc.applicant_name or doc.full_name or "Candidate" }},</p>
 
-<p>Dear <strong>{{ candidate_name or 'Applicant' }}</strong>,</p>
-<p>Greetings from the National Law School of India University (NLSIU), Bengaluru.</p>
+<p>Thank you for expressing your interest in National Law School of India University (NLSIU), Bengaluru. This is a reminder that applications for our academic programmes will close soon.</p>
 
-<p>Thank you for expressing your interest in NLSIU's programmes. This is to remind you that the application deadline for the <strong>{{ program_names }}</strong> programmes will close soon! Please note, the application deadline is <strong>{{ app_end_date_formatted }}</strong>.</p>
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9f9f9; border-left: 4px solid #920c24; border-radius: 4px; margin: 24px 0; font-size: 14px;">
+    <tr>
+        <td style="padding: 16px 20px;">
+            <div style="font-size: 15px; font-weight: 700; color: #920c24; margin-bottom: 10px;">Important Dates</div>
+            <table width="100%" cellpadding="0" cellspacing="0" style="font-size: 14px; line-height: 1.8;">
+                <tr>
+                    <td style="color: #555555; width: 170px; padding: 3px 0;">Application Deadline:</td>
+                    <td style="color: #111111; font-weight: 600; padding: 3px 0;">{{ app_end_date_formatted }} (11:59 PM)</td>
+                </tr>
+                <tr>
+                    <td style="color: #555555; padding: 3px 0;">NLSAT Examination:</td>
+                    <td style="color: #111111; font-weight: 600; padding: 3px 0;">April 26, 2026 | 10:00 AM – 12:30 PM</td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
 
-<p>Admission to these programmes is through the National Law School Admissions Test (NLSAT), scheduled to be held on April 26, 2026 from 10.00 am to 12.30 pm in specified centres across the country.</p>
+<p>Please complete your registration and fee payment on the admissions portal before the deadline to ensure your application is considered.</p>
 
-<p>If you are planning to appear for the NLSAT {{ admission_year }}, don't forget to complete your registration (and payment) before 11:59 pm on <strong>{{ app_end_date_formatted }}</strong>, via the admissions portal (<a href="https://nlsatadmissions.nls.ac.in/" style="color: #920c24; text-decoration: none; font-weight: bold;">https://nlsatadmissions.nls.ac.in/</a>).</p>
+<table width="100%" cellpadding="0" cellspacing="0" style="margin: 28px 0;">
+    <tr>
+        <td align="center">
+            <a href="https://nlsatadmissions.nls.ac.in/" style="display: inline-block; background-color: #920c24; color: #ffffff; padding: 12px 28px; text-decoration: none; border-radius: 4px; font-weight: bold; font-family: 'Merriweather', serif; font-size: 15px;">
+                Complete Your Application
+            </a>
+        </td>
+    </tr>
+</table>
 
-<p>To know more about all NLSIU programmes, visit <a href="https://www.nls.ac.in/admissions/" style="color: #920c24; text-decoration: none; font-weight: bold;">https://www.nls.ac.in/admissions/</a></p>
+<p style="font-size: 14px; color: #555555; line-height: 1.6; margin-top: 20px;">
+    To learn more about our programmes, visit <a href="https://www.nls.ac.in/admissions/" style="color: #920c24; font-weight: 600; text-decoration: none;">nls.ac.in/admissions</a>.
+</p>
 
-<ul style="margin-top: 10px; margin-bottom: 20px; padding-left: 20px;">
-    <li style="margin-bottom: 8px;">For any queries regarding our postgraduate programmes, please write to <a href="mailto:nlsat.query@nls.ac.in" style="color: #920c24; text-decoration: none; font-weight: bold;">nlsat.query@nls.ac.in</a></li>
-    <li>For queries related to the undergraduate NLS BA (Hons) programme, please write to <a href="mailto:admissions.ba@nls.ac.in" style="color: #920c24; text-decoration: none; font-weight: bold;">admissions.ba@nls.ac.in</a></li>
-</ul>
+<p style="margin-top: 24px; margin-bottom: 0;">Regards,<br>
+<strong>Admissions Office</strong><br>
+National Law School of India University</p>
 
-<p>Warm Regards,<br><strong>The NLSAT Team</strong></p>
+<hr style="border: none; border-top: 1px solid #eeeeee; margin: 30px 0 15px 0;">
+<p style="font-size: 12px; color: #999999; text-align: center; margin: 0;">This is a system-generated email. Please do not reply to this message.</p>
                         </td>
                     </tr>
                 </table>

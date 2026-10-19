@@ -23,6 +23,8 @@ frappe.ui.form.on("Applicant", {
 
     // ── REFRESH ──────────────────────────────
     refresh: function (frm) {
+        toggle_degree_country_column(frm);
+
         // Auto-refresh when status is updated from Entrance Test Seat Allocation
         if (!window._applicant_status_realtime_subscribed) {
             window._applicant_status_realtime_subscribed = true;
@@ -292,17 +294,21 @@ frappe.ui.form.on("Applicant", {
     },
 
     nationality: function (frm) {
-        if (frm.doc.foriegn_national === "No" && frm.doc.nationality && frm.doc.nationality !== "Indian") {
-            frappe.show_alert({ message: __("For Domestic applications, Nationality must be Indian."), indicator: "orange" });
-            frm.set_value("nationality", "Indian");
-        } else if (frm.doc.foriegn_national === "Yes" && frm.doc.nationality === "Indian") {
-            frappe.show_alert({ message: __("For International applications, Nationality cannot be Indian."), indicator: "orange" });
+        if (frm.doc.foriegn_national === "No" && frm.doc.nationality !== "India") {
+            // Domestic candidate: Nationality is always India
+            if (frm.doc.nationality) {
+                frappe.show_alert({ message: __("For Domestic applications, Nationality must be India."), indicator: "orange" });
+            }
+            frm.set_value("nationality", "India");
+        } else if (frm.doc.foriegn_national === "Yes" && frm.doc.nationality === "India") {
+            frappe.show_alert({ message: __("For International applications, Nationality cannot be India."), indicator: "orange" });
             frm.set_value("nationality", "");
         }
     },
 
     foriegn_national: function (frm) {
         frm.trigger("nationality");
+        toggle_degree_country_column(frm);
     },
 
     validate: function (frm) {
@@ -337,8 +343,11 @@ frappe.ui.form.on("Applicant", {
                         if (is_cgpa) {
                             errors.push(__("UG CGPA for degree \"{0}\" should be between 4 and {1}",
                                 [row.ug_program || __("(unnamed)"), max_val]));
+                        } else if (row.ug_cgpa < 35) {
+                            errors.push(__("UG score for degree \"{0}\" is less than 35. If entering CGPA, please provide the Maximum CGPA; otherwise, Percentage must be between 35 and 100",
+                                [row.ug_program || __("(unnamed)")]));
                         } else {
-                            errors.push(__("UG Percentage for degree \"{0}\" should be between 35 and 100, If CGPA then give the maximum CGPA else percentage",
+                            errors.push(__("UG Percentage for degree \"{0}\" cannot be more than 100",
                                 [row.ug_program || __("(unnamed)")]));
                         }
                     }
@@ -357,8 +366,11 @@ frappe.ui.form.on("Applicant", {
                         if (is_cgpa) {
                             errors.push(__("PG CGPA for degree \"{0}\" should be between 4 and {1}",
                                 [row.pg_program || __("(unnamed)"), max_val]));
+                        } else if (row.pg_cgpa < 35) {
+                            errors.push(__("PG score for degree \"{0}\" is less than 35. If entering CGPA, please provide the Maximum CGPA; otherwise, Percentage must be between 35 and 100",
+                                [row.pg_program || __("(unnamed)")]));
                         } else {
-                            errors.push(__("PG Percentage for degree \"{0}\" should be between 35 and 100 , If CGPA then give the maximum CGPA else percentage",
+                            errors.push(__("PG Percentage for degree \"{0}\" cannot be more than 100",
                                 [row.pg_program || __("(unnamed)")]));
                         }
                     }
@@ -389,11 +401,11 @@ frappe.ui.form.on("Applicant", {
         }
 
         if (frm.doc.nationality && frm.doc.foriegn_national) {
-            if (frm.doc.nationality !== "Indian" && frm.doc.foriegn_national !== "Yes") {
-                errors.push(__("If Nationality is not Indian, then 'Foreign National' must be Yes."));
+            if (frm.doc.nationality !== "India" && frm.doc.foriegn_national !== "Yes") {
+                errors.push(__("If Nationality is not India, then 'Foreign National' must be Yes."));
             }
-            if (frm.doc.foriegn_national === "Yes" && frm.doc.nationality === "Indian") {
-                errors.push(__("If 'Foreign National' is Yes, Nationality cannot be Indian."));
+            if (frm.doc.foriegn_national === "Yes" && frm.doc.nationality === "India") {
+                errors.push(__("If 'Foreign National' is Yes, Nationality cannot be India."));
             }
         }
 
@@ -514,6 +526,20 @@ frappe.ui.form.on("Applicant", {
 // ─────────────────────────────────────────────
 //  UG Degree Detail — Child Table
 // ─────────────────────────────────────────────
+// UG / PG degree "Country" is only relevant for foreign nationals (foriegn_national = Yes)
+function toggle_degree_country_column(frm) {
+    const show = frm.doc.foriegn_national === "Yes";
+    ["ug_degree_details", "pg_degree_details"].forEach((table) => {
+        const grid = frm.fields_dict[table] && frm.fields_dict[table].grid;
+        if (!grid) return;
+        try {
+            grid.toggle_display("country", show);
+        } catch (e) {
+            console.warn("Could not toggle country column on", table, e);
+        }
+    });
+}
+
 frappe.ui.form.on("UG Degree Detail", {
     ug_cgpa: function (frm, cdt, cdn) {
         const row = locals[cdt][cdn];
