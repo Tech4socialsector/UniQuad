@@ -12,10 +12,11 @@
  "link_to": "PACE",
  "link_type": "Workspace Sidebar",
  "logo_url": "",
- "modified": "2026-09-08 14:33:49.152608",
+ "modified": "2026-09-29 16:08:42.831505",
  "modified_by": "Administrator",
  "name": "PACE",
  "owner": "Administrator",
+ "parent_icon": "Admission",
  "restrict_removal": 0,
  "roles": [
   {

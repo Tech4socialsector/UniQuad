@@ -255,7 +255,7 @@ def run_generation_main(docname):
             msg=(
                 f"Phase 1 Shortlisting Merit List generated. Results pushed to <b><a href='/app/shortlisting-merit-list/{sp_doc.name}'>{sp_doc.name}</a></b>.<br><br>"
                 f"<b>Summary:</b><br>"
-                f"• Total Candidates: {total_candidates}<br>"
+                f"• Total Entrance Test Passed Candidates: {total_candidates}<br>"
                 f"• Shortlisted: {total_shortlisted}<br>"
                 f"• Rejected: {total_rejected}"
             ),

@@ -33,7 +33,7 @@ def get_context(context):
         my_bookings = frappe.get_all(
             "Venue Booking",
             filters={"owner": frappe.session.user, "requester_type": "Faculty"},
-            fields=["name", "event_name", "venue_type", "room",
+            fields=["name", "event_name", "venue_type", "venue as room",
                     "start_datetime", "end_datetime", "status",
                     "expected_attendees", "reason", "admin_remarks"],
             order_by="start_datetime desc",
@@ -46,9 +46,9 @@ def get_context(context):
             b["end_fmt"]   = frappe.utils.format_datetime(b.end_datetime, "hh:mm a") if b.end_datetime else "—"
             status = b.status or "Pending Allotment"
             b["status_class"] = {
-                "Pending Allotment": "fp-badge-warning",
+                "Pending Allotment": "fp-badge-outline",
                 "Allotted": "fp-badge-success",
-                "Rejected": "fp-badge-danger",
+                "Rejected": "fp-badge-dark",
                 "Cancelled": "fp-badge-neutral",
             }.get(status, "fp-badge-neutral")
 
@@ -63,19 +63,19 @@ def get_context(context):
         # ── Available rooms ──────────────────────────────────────────
         try:
             rooms = frappe.get_all(
-                "Room",
-                filters={"is_booking_allowed": 1},
-                fields=["name", "room_name", "room_number", "seating_capacity", "room_type"],
-                order_by="room_name asc",
+                "Venue Master",
+                filters={"is_active": 1},
+                fields=["name", "venue_name_or_number", "venue_code", "capacity", "venue_type"],
+                order_by="venue_name_or_number asc",
                 ignore_permissions=True,
             )
             rooms = [
                 {
                     "name": r.name or "",
-                    "room_name": r.room_name or r.name or "",
-                    "room_number": r.room_number or "",
-                    "seating_capacity": r.seating_capacity or 0,
-                    "room_type": r.room_type or "",
+                    "room_name": r.venue_name_or_number or r.name or "",
+                    "room_number": r.venue_code or "",
+                    "seating_capacity": r.capacity or 0,
+                    "room_type": r.venue_type or "",
                 }
                 for r in rooms
             ]

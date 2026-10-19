@@ -1,458 +1,224 @@
 {% extends "slcm/www/student-portal/_base.html" %}
-{% block title %}My Timetable{% endblock %}
+{% block title %}Timetable{% endblock %}
 
 {% block extra_head %}
 <style>
-/* ── Timetable page ─────────────────────────────────── */
+  /* ── Timetable page ─────────────────────────────────── */
 
-/* Week navigation bar */
-.tt-week-nav {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: var(--sp-surface);
-  border: 1px solid var(--sp-border);
-  border-radius: 12px;
-  padding: 12px 18px;
-  margin-bottom: 18px;
-  flex-wrap: wrap;
-}
-.tt-week-label {
-  flex: 1;
-  text-align: center;
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--sp-text-1);
-  min-width: 180px;
-}
-.tt-week-sub {
-  text-align: center;
-  font-size: 11px;
-  color: var(--sp-text-4);
-  font-weight: 400;
-  display: block;
-  margin-top: 1px;
-}
-.tt-nav-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 7px 14px;
-  border-radius: 8px;
-  border: 1px solid var(--sp-border);
-  background: var(--sp-bg);
-  color: var(--sp-text-2);
-  font-size: 13px;
-  font-weight: 600;
-  text-decoration: none;
-  transition: all .15s;
-  white-space: nowrap;
-}
-.tt-nav-btn:hover {
-  border-color: var(--sp-primary);
-  color: var(--sp-primary);
-  background: var(--sp-primary-light);
-}
-.tt-nav-btn-today {
-  background: var(--sp-primary);
-  color: #fff;
-  border-color: var(--sp-primary);
-}
-.tt-nav-btn-today:hover {
-  background: var(--sp-accent);
-  border-color: var(--sp-accent);
-  color: #fff;
-}
+  /* Filters */
+  /* Same card look as the rest of the portal (--sp-surface isn't defined in
+     the student portal, which left this bar transparent on the grey page) */
+  .tt-filters-bar {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    background: var(--sp-card, #fff);
+    border: 1px solid var(--sp-border);
+    border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
 
-/* Stats strip */
-.tt-stats {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 18px;
-  flex-wrap: wrap;
-}
-.tt-stat {
-  flex: 1;
-  min-width: 120px;
-  background: var(--sp-surface);
-  border: 1px solid var(--sp-border);
-  border-radius: 10px;
-  padding: 12px 16px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.tt-stat-icon {
-  width: 36px; height: 36px;
-  border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 18px;
-  flex-shrink: 0;
-}
-.tt-stat-val  { font-size: 20px; font-weight: 800; color: var(--sp-text-1); line-height: 1; }
-.tt-stat-lbl  { font-size: 11px; color: var(--sp-text-4); margin-top: 2px; font-weight: 500; }
+  .tt-filter-inputs {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
 
-/* Legend */
-.tt-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 18px;
-}
-.tt-legend-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: 20px;
-  font-size: 11px;
-  font-weight: 600;
-  background: var(--sp-surface);
-  border: 1px solid var(--sp-border);
-  color: var(--sp-text-2);
-  white-space: nowrap;
-}
-.tt-legend-dot {
-  width: 10px; height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
+  .tt-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
 
-/* Weekly grid */
-.tt-grid {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 10px;
-  align-items: start;
-}
-@media (max-width: 900px) {
-  .tt-grid { grid-template-columns: repeat(3, 1fr); }
-}
-@media (max-width: 580px) {
-  .tt-grid { grid-template-columns: repeat(2, 1fr); }
-}
-@media (max-width: 380px) {
-  .tt-grid { grid-template-columns: 1fr; }
-}
+  .tt-input-group label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--sp-text-2);
+  }
 
-/* Day column */
-.tt-day-col {
-  background: var(--sp-surface);
-  border: 1px solid var(--sp-border);
-  border-radius: 12px;
-  overflow: hidden;
-  transition: box-shadow .15s;
-}
-.tt-day-col:hover { box-shadow: 0 4px 16px rgba(0,0,0,.08); }
-.tt-day-col.tt-today {
-  border-color: var(--sp-primary);
-  box-shadow: 0 0 0 2px rgba(200,70,48,.15);
-}
+  .tt-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
 
-/* Day header */
-.tt-day-header {
-  padding: 10px 12px 8px;
-  background: var(--sp-bg);
-  border-bottom: 1px solid var(--sp-border);
-  text-align: center;
-}
-.tt-day-col.tt-today .tt-day-header {
-  background: var(--sp-primary);
-}
-.tt-day-short {
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  color: var(--sp-text-3);
-}
-.tt-day-col.tt-today .tt-day-short { color: rgba(255,255,255,.8); }
+  .tt-input-wrap .sp-ms {
+    position: absolute;
+    right: 12px;
+    font-size: 18px;
+    color: var(--sp-text-3);
+    pointer-events: none;
+  }
 
-.tt-day-num {
-  font-size: 20px;
-  font-weight: 800;
-  color: var(--sp-text-1);
-  line-height: 1.1;
-  margin: 2px 0;
-}
-.tt-day-col.tt-today .tt-day-num { color: #fff; }
+  .tt-input-wrap select,
+  .tt-input-wrap input {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    padding: 8px 36px 8px 12px;
+    border: 1px solid var(--sp-border);
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--sp-text-1);
+    background: #fff;
+    min-width: 160px;
+  }
 
-.tt-day-month {
-  font-size: 10px;
-  color: var(--sp-text-4);
-  font-weight: 500;
-}
-.tt-day-col.tt-today .tt-day-month { color: rgba(255,255,255,.7); }
+  .tt-input-wrap select:focus,
+  .tt-input-wrap input:focus {
+    outline: none;
+    border-color: var(--sp-primary);
+  }
 
-.tt-today-badge {
-  display: inline-block;
-  margin-top: 4px;
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: .08em;
-  background: rgba(255,255,255,.25);
-  color: #fff;
-  padding: 2px 7px;
-  border-radius: 10px;
-}
+  /* Course dropdown (in-page, anchored under the field) */
+  #tt-form { position: relative; z-index: 5; } /* keep the open menu above the calendar */
+  .tt-dd { position: relative; }
+  .tt-dd-btn {
+    display: flex; align-items: center;
+    padding: 8px 36px 8px 12px;
+    border: 1px solid var(--sp-border); border-radius: 8px;
+    background: #fff; color: var(--sp-text-1);
+    font-family: inherit; font-size: 14px; text-align: left;
+    min-width: 160px; max-width: 100%; cursor: pointer;
+  }
+  .tt-dd-btn:focus, .tt-dd.open .tt-dd-btn { outline: none; border-color: var(--sp-primary); }
+  .tt-dd-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tt-dd.open .sp-ms { transform: rotate(180deg); }
+  .tt-dd-menu {
+    display: none; position: absolute; top: calc(100% + 4px); left: 0; z-index: 50;
+    min-width: 100%; max-width: min(320px, calc(100vw - 48px)); max-height: 260px; overflow-y: auto;
+    margin: 0; padding: 4px; list-style: none;
+    background: #fff; border: 1px solid var(--sp-border); border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(16, 24, 40, 0.12);
+  }
+  .tt-dd.open .tt-dd-menu { display: block; }
+  .tt-dd-menu li {
+    padding: 8px 10px; border-radius: 6px; font-size: 14px; color: var(--sp-text-1);
+    cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .tt-dd-menu li:hover { background: var(--sp-primary-light); color: var(--sp-primary); }
+  .tt-dd-menu li.selected { background: var(--sp-primary); color: #fff; }
 
-/* Day body */
-.tt-day-body {
-  padding: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-  min-height: 80px;
-}
+  .tt-view-toggles {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
 
-/* Class card */
-.tt-class-card {
-  border-radius: 9px;
-  padding: 9px 10px;
-  border-left: 4px solid;
-  cursor: default;
-  transition: transform .12s;
-}
-.tt-class-card:hover { transform: translateY(-1px); }
+  .tt-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--sp-border);
+    background: #fff;
+    color: var(--sp-text-2);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all .15s;
+  }
 
-.tt-class-name {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--sp-text-1);
-  line-height: 1.3;
-  margin-bottom: 5px;
-}
-.tt-class-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-.tt-class-meta-row {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  color: var(--sp-text-3);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.tt-class-meta-row .sp-ms {
-  font-size: 13px;
-  flex-shrink: 0;
-  opacity: .7;
-}
+  .tt-toggle-btn.active {
+    background: var(--sp-primary);
+    color: #fff;
+    border-color: var(--sp-primary);
+  }
 
-/* Free day */
-.tt-free-day {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 20px 8px;
-  color: var(--sp-text-4);
-  gap: 4px;
-}
-.tt-free-day .sp-ms { font-size: 22px; opacity: .4; }
-.tt-free-day span   { font-size: 11px; font-weight: 500; }
+  .tt-toggle-btn:not(.active):hover {
+    background: var(--sp-primary-light);
+    color: var(--sp-primary);
+    border-color: var(--sp-primary);
+  }
 
-/* Show-more overflow */
-.tt-class-hidden { display: none; }
-.tt-show-more-btn {
-  width: 100%;
-  padding: 5px 8px;
-  border: 1px dashed var(--sp-border);
-  border-radius: 8px;
-  background: transparent;
-  color: var(--sp-primary);
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  text-align: center;
-  transition: background .12s;
-}
-.tt-show-more-btn:hover { background: var(--sp-primary-light); }
+  /* Calendar styles come from the shared _calendar.html */
 
-/* No-schedule empty state */
-.tt-no-schedule {
-  text-align: center;
-  padding: 48px 24px;
-  color: var(--sp-text-4);
-}
-.tt-no-schedule .sp-ms { font-size: 48px; opacity: .3; display: block; margin-bottom: 12px; }
+  /* ── Dark mode ── */
+  body.sp-dark .tt-filters-bar { background: var(--sp-card); border-color: var(--sp-border); box-shadow: none; }
+  body.sp-dark .tt-input-wrap select,
+  body.sp-dark .tt-input-wrap input,
+  body.sp-dark .tt-dd-btn { background: #1a2540; color: var(--sp-text-1); border-color: #263352; }
+  body.sp-dark .tt-dd-btn:focus, body.sp-dark .tt-dd.open .tt-dd-btn { border-color: var(--sp-primary); }
+  body.sp-dark .tt-dd-menu { background: #1a2540; border-color: #263352; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); }
+  body.sp-dark .tt-dd-menu li { color: var(--sp-text-1); }
+  body.sp-dark .tt-dd-menu li:hover { background: var(--sp-primary-mid); color: #fff; }
+  body.sp-dark .tt-dd-menu li.selected { background: var(--sp-primary); color: #fff; }
+  body.sp-dark .tt-toggle-btn { background: #1a2540; color: var(--sp-text-1); border-color: var(--sp-border); }
+  body.sp-dark .tt-toggle-btn.active { background: var(--sp-primary); color: #fff; border-color: var(--sp-primary); }
+  body.sp-dark .tt-toggle-btn:not(.active):hover { background: var(--sp-primary-light); color: #f08da0; border-color: var(--sp-primary); }
+  /* Sync modal */
+  body.sp-dark #modal-gcal-sync .sp-btn-secondary { background: #1a2540; color: var(--sp-text-1); border-color: var(--sp-border); }
+  body.sp-dark #modal-gcal-sync .sp-btn-secondary:hover:not(:disabled) { background: #263352; }
+  body.sp-dark #modal-gcal-sync .sp-modal-footer { background: var(--sp-card); }
+  body.sp-dark #modal-gcal-sync label { border-color: #263352 !important; color: var(--sp-text-1); }
+  body.sp-dark #modal-gcal-sync input[type="radio"] { accent-color: var(--sp-primary); }
 </style>
 {% endblock %}
 
 {% block content %}
 
 {# ── Page header ───────────────────────────────────────────────── #}
-<div class="sp-page-header fade-in" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
-  <div>
-    <h1 class="sp-page-title"><span class="sp-ms" style="font-size:24px;vertical-align:middle;margin-right:6px;">calendar_month</span>My Timetable</h1>
-    <p class="sp-page-sub">Your weekly class schedule</p>
+<div class="sp-page-header fade-in"
+  style="margin-bottom: 24px; margin-top: 10px; display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:16px;">
+  <div style="display:flex; align-items:flex-start; gap:16px;">
+    <div style="padding-top: 8px;">
+      <h1 class="sp-page-title"
+        style="font-family: 'Merriweather', serif; font-size: 18px!important; color: var(--sp-text-1); margin: 0 0 6px 0; font-weight: 700 !important;">
+        Timetable</h1>
+    </div>
   </div>
   {% if not no_student %}
-  <button class="sp-btn sp-btn-primary" onclick="spOpenModal('modal-gcal-sync')">
+  <button class="sp-btn"
+    style="border: 1px solid var(--sp-primary); color: var(--sp-primary); background: transparent; font-weight: 600; padding: 8px 16px; border-radius: 8px; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s; margin-top: 4px;"
+    onclick="spOpenModal('modal-gcal-sync')" onmouseover="this.style.background='rgba(146,12,36,0.05)'"
+    onmouseout="this.style.background='transparent'">
     <span class="sp-ms">sync</span> Sync to My Calendar
   </button>
   {% endif %}
 </div>
 
-{% if no_student %}
-<div class="sp-alert sp-alert-warning fade-in">
-  <span class="sp-ms">warning</span>
-  <div><strong>No student record found.</strong> Please contact the Registrar's Office.</div>
-</div>
-{% else %}
-
-{# ── Week navigation ───────────────────────────────────────────── #}
-<div class="tt-week-nav fade-in">
-  <a href="/student-portal/timetable?week={{ prev_week }}" class="tt-nav-btn">
-    <span class="sp-ms">chevron_left</span> Prev
-  </a>
-
-  <div class="tt-week-label">
-    {{ week_label }}
-    <span class="tt-week-sub">
-      {% if is_current_week %}Current Week{% else %}{{ week_start.strftime('%A, %d %B %Y') }}{% endif %}
-    </span>
-  </div>
-
-  <a href="/student-portal/timetable?week={{ next_week }}" class="tt-nav-btn">
-    Next <span class="sp-ms">chevron_right</span>
-  </a>
-  {% if not is_current_week %}
-  <a href="/student-portal/timetable" class="tt-nav-btn tt-nav-btn-today">
-    <span class="sp-ms">today</span> Today
-  </a>
-  {% endif %}
-</div>
-
-{# ── Stats strip ───────────────────────────────────────────────── #}
-<div class="tt-stats fade-in">
-  <div class="tt-stat">
-    <div class="tt-stat-icon" style="background:var(--sp-primary-light);color:var(--sp-primary);">
-      <span class="sp-ms">calendar_month</span>
-    </div>
-    <div>
-      <div class="tt-stat-val">{{ total_this_week }}</div>
-      <div class="tt-stat-lbl">Classes This Week</div>
-    </div>
-  </div>
-
-  {% if is_current_week %}
-  <div class="tt-stat">
-    <div class="tt-stat-icon" style="background:{% if today_count > 0 %}var(--sp-success-bg);color:var(--sp-success){% else %}var(--sp-warning-bg);color:var(--sp-warning){% endif %};">
-      <span class="sp-ms">today</span>
-    </div>
-    <div>
-      <div class="tt-stat-val">{{ today_count }}</div>
-      <div class="tt-stat-lbl">Today's Classes</div>
-    </div>
-  </div>
-  {% endif %}
-
-  <div class="tt-stat">
-    <div class="tt-stat-icon" style="background:#ede9fe;color:#7c3aed;">
-      <span class="sp-ms">auto_stories</span>
-    </div>
-    <div>
-      <div class="tt-stat-val">{{ legend|length }}</div>
-      <div class="tt-stat-lbl">Courses</div>
-    </div>
-  </div>
-</div>
-
-{# ── Course legend ─────────────────────────────────────────────── #}
-{% if legend %}
-<div class="tt-legend fade-in">
-  {% for item in legend %}
-  <div class="tt-legend-item">
-    <div class="tt-legend-dot" style="background:{{ item.color }};"></div>
-    {{ item.course_name }}
-  </div>
-  {% endfor %}
-</div>
-{% endif %}
-
-{# ── Weekly grid ───────────────────────────────────────────────── #}
-{% if total_this_week == 0 %}
-<div class="sp-card fade-in">
-  <div class="tt-no-schedule">
-    <span class="sp-ms">event_busy</span>
-    <div style="font-size:16px;font-weight:700;color:var(--sp-text-2);margin-bottom:6px;">No classes scheduled</div>
-    <div style="font-size:13px;">No class schedules found for this week.</div>
-    {% if not is_current_week %}
-    <a href="/student-portal/timetable" class="sp-btn sp-btn-primary" style="margin-top:16px;display:inline-flex;">
-      <span class="sp-ms">today</span> Go to Current Week
-    </a>
-    {% endif %}
-  </div>
-</div>
-{% else %}
-<div class="tt-grid fade-in">
-  {% for day in days %}
-  {% set day_classes = schedules_by_day.get(day.date, []) %}
-  <div class="tt-day-col {% if day.date == today|string %}tt-today{% endif %}">
-
-    {# Day header #}
-    <div class="tt-day-header">
-      <div class="tt-day-short">{{ day.short }}</div>
-      <div class="tt-day-num">{{ day.num }}</div>
-      <div class="tt-day-month">{{ day.month }}</div>
-      {% if day.date == today|string %}
-      <div class="tt-today-badge">TODAY</div>
-      {% endif %}
-    </div>
-
-    {# Day body #}
-    <div class="tt-day-body">
-      {% if day_classes %}
-        {% set overflow = day_classes|length > 3 %}
-        {% for cls in day_classes %}
-        <div class="tt-class-card {% if loop.index > 3 %}tt-class-hidden{% endif %}"
-             style="border-left-color:{{ cls.color }};background:{{ cls.color }}18;">
-          <div class="tt-class-name">{{ cls.course_name }}</div>
-          <div class="tt-class-meta">
-            <div class="tt-class-meta-row">
-              <span class="sp-ms">schedule</span>
-              {{ cls.from_time }}{% if cls.to_time %} – {{ cls.to_time }}{% endif %}
-            </div>
-            {% if cls.venue and cls.venue != '—' %}
-            <div class="tt-class-meta-row">
-              <span class="sp-ms">location_on</span>
-              {{ cls.venue }}
-            </div>
-            {% endif %}
-            {% if cls.instructor and cls.instructor != '—' %}
-            <div class="tt-class-meta-row">
-              <span class="sp-ms">person</span>
-              {{ cls.instructor }}
-            </div>
-            {% endif %}
-          </div>
+{# ── Filter: Course (the calendar has its own Day / Week / Month + dates) ── #}
+<form id="tt-form" method="GET" action="/student-portal/timetable" class="fade-in">
+  <div class="tt-filters-bar">
+    <div class="tt-filter-inputs">
+      <div class="tt-input-group">
+        <label for="tt-course-btn">Course</label>
+        {# Custom dropdown instead of a native <select>: the native popup is drawn
+           by the browser/OS and lands detached from the field in scaled views #}
+        {% set _sel_label = namespace(v="All Courses") %}
+        {% for c in all_courses %}{% if selected_course == c.id %}{% set _sel_label.v = c.name %}{% endif %}{% endfor %}
+        <div class="tt-input-wrap tt-dd" id="tt-course-dd">
+          <input type="hidden" id="tt-course" name="course" value="{{ selected_course or 'all' }}">
+          <button type="button" id="tt-course-btn" class="tt-dd-btn" aria-haspopup="listbox" aria-expanded="false"
+            onclick="ttDdToggle()">
+            <span class="tt-dd-label">{{ _sel_label.v }}</span>
+          </button>
+          <span class="sp-ms">expand_more</span>
+          <ul class="tt-dd-menu" role="listbox">
+            <li role="option" data-value="all" class="{% if not selected_course or selected_course=='all' %}selected{% endif %}"
+              onclick="ttDdPick(this)">All Courses</li>
+            {% for c in all_courses %}
+            <li role="option" data-value="{{ c.id }}" class="{% if selected_course==c.id %}selected{% endif %}"
+              onclick="ttDdPick(this)">{{ c.name }}</li>
+            {% endfor %}
+          </ul>
         </div>
-        {% endfor %}
-        {% if overflow %}
-        <button class="tt-show-more-btn"
-                onclick="ttToggleMore(this, {{ day_classes|length - 3 }})">
-          +{{ day_classes|length - 3 }} more
-        </button>
-        {% endif %}
-      {% else %}
-        <div class="tt-free-day">
-          <span class="sp-ms">weekend</span>
-          <span>Free</span>
-        </div>
-      {% endif %}
+      </div>
     </div>
-
   </div>
-  {% endfor %}
-</div>
-{% endif %}
+</form>
 
-{% endif %}{# end no_student #}
+{# ── Calendar — the same component as the Dashboard's My Calendar ── #}
+<div class="fade-in">
+  {% include "slcm/www/student-portal/_calendar.html" %}
+</div>
 
 {# ── Sync to Google Calendar modal ─────────────────────────────── #}
 <div class="sp-modal-overlay" id="modal-gcal-sync" onclick="spCloseModalIf(event, 'modal-gcal-sync')">
@@ -467,11 +233,13 @@
     </div>
     <div class="sp-modal-body">
       <p style="font-size:13px;color:var(--sp-text-3);margin-bottom:14px;">
-        Choose which email to send your class schedule invites to. You'll receive a Google Calendar invite for each upcoming class — accept it once and it stays synced.
+        Choose which email to send your class schedule invites to. You'll receive a Google Calendar invite for each
+        upcoming session — accept it once and it stays synced.
       </p>
       <div style="display:flex;flex-direction:column;gap:10px;">
         {% if official_email_id %}
-        <label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--sp-border);border-radius:8px;cursor:pointer;">
+        <label
+          style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--sp-border);border-radius:8px;cursor:pointer;">
           <input type="radio" name="gcal-email" value="{{ official_email_id }}" checked>
           <span>
             <strong>Official Email</strong><br>
@@ -480,8 +248,10 @@
         </label>
         {% endif %}
         {% if personal_email %}
-        <label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--sp-border);border-radius:8px;cursor:pointer;">
-          <input type="radio" name="gcal-email" value="{{ personal_email }}" {% if not official_email_id %}checked{% endif %}>
+        <label
+          style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--sp-border);border-radius:8px;cursor:pointer;">
+          <input type="radio" name="gcal-email" value="{{ personal_email }}" {% if not official_email_id %}checked{%
+            endif %}>
           <span>
             <strong>Personal Email</strong><br>
             <span style="font-size:12px;color:var(--sp-text-4);">{{ personal_email }}</span>
@@ -498,8 +268,8 @@
     </div>
     <div class="sp-modal-footer">
       <button class="sp-btn sp-btn-secondary" onclick="spCloseModal('modal-gcal-sync')">Cancel</button>
-      <button class="sp-btn sp-btn-primary" id="gcal-sync-btn" onclick="ttSyncToCalendar()"
-        {% if not official_email_id and not personal_email %}disabled{% endif %}>
+      <button class="sp-btn sp-btn-primary" id="gcal-sync-btn" onclick="ttSyncToCalendar()" {% if not official_email_id
+        and not personal_email %}disabled{% endif %}>
         <span class="sp-ms">sync</span> Sync Now
       </button>
     </div>
@@ -509,73 +279,72 @@
 <div id="sp-toast" class="sp-toast" role="alert" aria-live="polite"></div>
 
 <script>
-function ttSyncToCalendar() {
-  var selected = document.querySelector('input[name="gcal-email"]:checked');
-  if (!selected) { return; }
-  var email = selected.value;
-  var btn = document.getElementById('gcal-sync-btn');
-  btn.disabled = true;
-
-  spCall('slcm.slcm.doctype.time_table.google_calendar_sync.sync_student_calendar',
-    { email: email },
-    function (result) {
-      btn.disabled = false;
-      spCloseModal('modal-gcal-sync');
-      var msg = result.synced
-        ? 'Calendar invites sent for ' + result.synced + ' class(es) to ' + email + '.'
-        : (result.message || 'No upcoming classes to sync.');
-      spToast(msg, result.synced ? 'success' : 'info');
-    },
-    function (err) {
-      btn.disabled = false;
-      spToast(err || 'Sync failed. Please try again.', 'danger');
-    }
-  );
-}
-
-window.spOpenModal = window.spOpenModal || function (id) {
-  var el = document.getElementById(id);
-  if (el) { el.classList.add('open'); document.body.style.overflow = 'hidden'; }
-};
-window.spCloseModal = window.spCloseModal || function (id) {
-  var el = document.getElementById(id);
-  if (el) { el.classList.remove('open'); document.body.style.overflow = ''; }
-};
-window.spCloseModalIf = window.spCloseModalIf || function (evt, id) {
-  if (evt.target === document.getElementById(id)) { spCloseModal(id); }
-};
-window.spToast = window.spToast || function (msg, type) {
-  var el = document.getElementById('sp-toast');
-  if (!el) return;
-  el.className = 'sp-toast sp-toast-' + (type || 'info') + ' open';
-  el.innerHTML = '<span class="sp-ms">' +
-    (type === 'success' ? 'check_circle' : type === 'danger' ? 'error' : 'info') +
-    '</span><span>' + msg + '</span>';
-  clearTimeout(el._t);
-  el._t = setTimeout(function () { el.classList.remove('open'); }, 5000);
-};
-</script>
-
-<script>
-function ttToggleMore(btn, extraCount) {
-  var body = btn.parentElement;
-  var expanded = btn.dataset.expanded === '1';
-  if (expanded) {
-    // collapse: re-hide cards after index 3
-    var cards = body.querySelectorAll('.tt-class-card');
-    cards.forEach(function(el, i) {
-      if (i >= 3) el.classList.add('tt-class-hidden');
-    });
-    btn.textContent = '+' + extraCount + ' more';
-    btn.dataset.expanded = '0';
-  } else {
-    // expand: show all
-    body.querySelectorAll('.tt-class-hidden').forEach(function(el) {
-      el.classList.remove('tt-class-hidden');
-    });
-    btn.textContent = 'Show less';
-    btn.dataset.expanded = '1';
+  function ttDdToggle(force) {
+    var dd = document.getElementById('tt-course-dd');
+    var open = typeof force === 'boolean' ? force : !dd.classList.contains('open');
+    dd.classList.toggle('open', open);
+    document.getElementById('tt-course-btn').setAttribute('aria-expanded', open);
   }
-}
+  function ttDdPick(li) {
+    var input = document.getElementById('tt-course');
+    ttDdToggle(false);
+    if (input.value === li.dataset.value) return;
+    input.value = li.dataset.value;
+    document.querySelector('#tt-course-dd .tt-dd-label').textContent = li.textContent;
+    document.getElementById('tt-form').submit();
+  }
+  document.addEventListener('click', function (e) {
+    var dd = document.getElementById('tt-course-dd');
+    if (dd && !dd.contains(e.target)) ttDdToggle(false);
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') ttDdToggle(false);
+  });
+
+  function ttSyncToCalendar() {
+    var selected = document.querySelector('input[name="gcal-email"]:checked');
+    if (!selected) { return; }
+    var email = selected.value;
+    var btn = document.getElementById('gcal-sync-btn');
+    btn.disabled = true;
+
+    spCall('slcm.slcm.doctype.time_table.google_calendar_sync.sync_student_calendar',
+      { email: email },
+      function (result) {
+        btn.disabled = false;
+        spCloseModal('modal-gcal-sync');
+        var msg = result.synced
+          ? 'Calendar invites sent for ' + result.synced + ' session(s) to ' + email + '.'
+          : (result.message || 'No upcoming sessions to sync.');
+        spToast(msg, result.synced ? 'success' : 'info');
+      },
+      function (err) {
+        btn.disabled = false;
+        spToast(err || 'Sync failed. Please try again.', 'danger');
+      }
+    );
+  }
+
+  window.spOpenModal = window.spOpenModal || function (id) {
+    var el = document.getElementById(id);
+    if (el) { el.classList.add('open'); document.body.style.overflow = 'hidden'; }
+  };
+  window.spCloseModal = window.spCloseModal || function (id) {
+    var el = document.getElementById(id);
+    if (el) { el.classList.remove('open'); document.body.style.overflow = ''; }
+  };
+  window.spCloseModalIf = window.spCloseModalIf || function (evt, id) {
+    if (evt.target === document.getElementById(id)) { spCloseModal(id); }
+  };
+  window.spToast = window.spToast || function (msg, type) {
+    var el = document.getElementById('sp-toast');
+    if (!el) return;
+    el.className = 'sp-toast sp-toast-' + (type || 'info') + ' open';
+    el.innerHTML = '<span class="sp-ms">' +
+      (type === 'success' ? 'check_circle' : type === 'danger' ? 'error' : 'info') +
+      '</span><span>' + msg + '</span>';
+    clearTimeout(el._t);
+    el._t = setTimeout(function () { el.classList.remove('open'); }, 5000);
+  };
 </script>
 {% endblock %}

@@ -841,12 +841,13 @@
             {% set _has_applicant = True if frappe.db.get_value("Has Role", {"parent": frappe.session.user, "role": "Applicant"}, "role") else False %}
             {% set _has_pace_applicant = True if frappe.db.get_value("Has Role", {"parent": frappe.session.user, "role": "PACE Applicant"}, "role") else False %}
 
-            {% set _show_admission = _show_adm_page and not (_has_pace_applicant and not _has_applicant) %}
+            {% set _show_admission = _active and not (_has_pace_applicant and not _has_applicant) %}
             {% set _show_pace = not (_has_applicant and not _has_pace_applicant) %}
 
             {% if _show_admission %}
             <a href="/admission" class="nav-hide-mobile">Admission</a>
             {% endif %}
+            <a href="/merit-and-scholarship/helpdesk" class="nav-hide-mobile">Helpdesk</a>
 
 
             <!-- <a href="/merit-and-scholarship/admission_dashboard" class="nav-hide-mobile">Dashboard</a> -->
@@ -1055,7 +1056,7 @@
         {% set _has_applicant = True if frappe.db.get_value("Has Role", {"parent": frappe.session.user, "role": "Applicant"}, "role") else False %}
         {% set _has_pace_applicant = True if frappe.db.get_value("Has Role", {"parent": frappe.session.user, "role": "PACE Applicant"}, "role") else False %}
 
-        {% set _show_admission = _show_adm_page and not (_has_pace_applicant and not _has_applicant) %}
+        {% set _show_admission = _active and not (_has_pace_applicant and not _has_applicant) %}
         {% set _show_pace = not (_has_applicant and not _has_pace_applicant) %}
 
         {% if _show_admission %}
@@ -1067,6 +1068,13 @@
             Admission
         </a>
         {% endif %}
+        <a href="/merit-and-scholarship/helpdesk" class="drawer-link" onclick="closeDrawer()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 18v-6a9 9 0 0 1 18 0v6" />
+                <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
+            </svg>
+            Helpdesk
+        </a>
 
 
         <!-- <a href="/merit-and-scholarship/admission_dashboard" class="drawer-link" onclick="closeDrawer()">
@@ -1120,10 +1128,7 @@
     {% if _active == 0 %}
     <main class="adm-main" style="display:flex;align-items:center;justify-content:center;">
         <div style="text-align:center;max-width:500px;padding:40px;">
-            <div style="font-size:48px;margin-bottom:16px;">🔧</div>
-            <h2 style="color:var(--primary);">Portal Under Maintenance</h2>
-            <div style="color:var(--muted);margin-top:12px;">{{ _mmsg | safe if _mmsg else "Temporarily unavailable." }}
-            </div>
+            <h2 style="color:var(--primary); ">{{ _mmsg | safe if _mmsg else "Temporarily unavailable." }}</h2>
         </div>
     </main>
     {% else %}

@@ -1,4 +1,4 @@
-frappe.listview_settings['Venue Booking'] = {
+﻿frappe.listview_settings['Venue Booking'] = {
     add_fields: ['status', 'docstatus'],
 
     refresh: function (listview) {
@@ -179,7 +179,7 @@ frappe.ui.form.on('Venue Booking', {
 
             // ── Swap Request banner + actions ──────────────────────────
             if (frm.doc.swap_requested && frm.doc.swap_status === 'Pending') {
-                const reqRoom = frm.doc.swap_requested_room || '—';
+                const reqRoom = frm.doc.swap_requested_venue || '—';
                 const reqReason = frm.doc.swap_request_reason
                     ? `<br><span style="color:#555;font-size:12px;">Reason: ${frm.doc.swap_request_reason}</span>`
                     : '';
@@ -391,7 +391,7 @@ frappe.ui.form.on('Venue Booking', {
                                         return;
                                     }
                                     frappe.call({
-                                        method: 'slcm.slcm.doctype.venue_booking.venue_booking.swap_venue',
+                                        method: 'slcm.slcm.doctype.venue_booking.venue_booking.swap_venues',
                                         args: { booking_a: frm.doc.name, booking_b: vals.other_booking },
                                         freeze: true,
                                         freeze_message: __('Swapping venues…'),
@@ -574,3 +574,4 @@ function vb_bulk_action(listview, cfg) {
     });
     d.show();
 }
+

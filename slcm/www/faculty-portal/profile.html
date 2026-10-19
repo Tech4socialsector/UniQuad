@@ -2,6 +2,48 @@
 
 {% block title %}My Profile{% endblock %}
 
+{% block extra_head %}
+<style>
+/* ── Dark mode ── */
+body.fp-dark .fp-badge-neutral {
+  background: #1a2540; color: var(--fp-text-2); border: 1px solid var(--fp-border);
+}
+body.fp-dark .fp-btn-secondary {
+  background: #1a2540; color: var(--fp-text-1); border-color: var(--fp-border);
+}
+body.fp-dark .fp-btn-secondary:hover { background: #22304f; border-color: var(--fp-border-mid); }
+body.fp-dark .fp-profile-banner-crest > div:last-child,
+body.fp-dark .fp-pf-muted,
+body.fp-dark .fp-pf-eye,
+body.fp-dark .fp-pf-modal-close,
+body.fp-dark #fp-cp-strength-lbl:not([data-lvl]) { color: var(--fp-text-3) !important; }
+/* Course list dividers (border-light equals card colour in dark) */
+body.fp-dark .fp-pf-course-row { border-bottom-color: var(--fp-border) !important; }
+body.fp-dark .fp-pf-course-row:last-child { border-bottom: none !important; }
+body.fp-dark .fp-pf-course-row:hover { background: rgba(255,255,255,0.025); }
+/* Edit modal */
+body.fp-dark #fp-edit-modal { background: rgba(2,6,23,0.72) !important; }
+body.fp-dark .fp-pf-modal-box {
+  border: 1px solid var(--fp-border);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6) !important;
+}
+body.fp-dark .fp-pf-modal-close:hover { background: rgba(255,255,255,0.05) !important; color: var(--fp-text-2) !important; }
+body.fp-dark .fp-pf-eye:hover { color: var(--fp-text-2) !important; }
+/* Password strength (JS sets maroon inline; lift it on navy) */
+body.fp-dark #fp-cp-strength-fill[data-lvl="0"] { background: var(--fp-danger) !important; }
+body.fp-dark #fp-cp-strength-lbl[data-lvl="0"]  { color: var(--fp-danger) !important; }
+body.fp-dark #fp-cp-strength-fill[data-lvl="1"],
+body.fp-dark #fp-cp-strength-fill[data-lvl="2"],
+body.fp-dark #fp-cp-strength-fill[data-lvl="3"],
+body.fp-dark #fp-cp-strength-fill[data-lvl="4"] { background: var(--fp-primary) !important; }
+body.fp-dark #fp-cp-strength-lbl[data-lvl="1"],
+body.fp-dark #fp-cp-strength-lbl[data-lvl="2"],
+body.fp-dark #fp-cp-strength-lbl[data-lvl="3"],
+body.fp-dark #fp-cp-strength-lbl[data-lvl="4"] { color: #f08da0 !important; }
+body.fp-dark #fp-cp-strength-bar > div:first-child { background: var(--fp-border-mid) !important; }
+</style>
+{% endblock %}
+
 {% block content %}
 
 <div class="fp-page-header fade-in">
@@ -18,64 +60,115 @@
 
 {% set f = faculty_full or {} %}
 
+{# ── Header Banner Strip ──────────────────────────────────────── #}
+<div class="fp-card fade-in fp-profile-banner" style="animation-delay:0.02s;margin-bottom:20px;">
+  <div class="fp-profile-banner-inner">
+    <div class="fp-profile-avatar">
+      {% if f.get('photo') %}
+      <img src="{{ f.photo }}" alt="{{ faculty_name }}">
+      {% else %}
+      {{ faculty_initial }}
+      {% endif %}
+    </div>
+    <div class="fp-profile-banner-info">
+      <div class="fp-profile-banner-name">{{ faculty_name }}</div>
+      <div class="fp-profile-banner-meta">
+        <span class="fp-badge fp-badge-neutral">{{ f.get('faculty_id') }}</span>
+        <span>{{ f.get('designation') or '—' }}</span>
+      </div>
+      <span class="fp-badge fp-badge-success" style="margin-top:8px;">{{ f.get('status') or 'Active' }}</span>
+    </div>
+    <div class="fp-profile-banner-crest">
+      <div style="font-weight:700;color:var(--fp-primary);font-size:14px;">National Law School</div>
+      <div style="font-size:11px;color:var(--fp-text-4);">of India University</div>
+    </div>
+  </div>
+</div>
+
 <div class="fp-grid-2">
 
-  {# ── Profile Card ─────────────────────────────────────────── #}
-  <div class="fp-card fade-in" style="animation-delay:0.04s;">
-    <div style="background:linear-gradient(135deg,var(--fp-primary),#2b2e4a);padding:28px 24px;display:flex;flex-direction:column;align-items:center;gap:14px;border-radius:var(--fp-radius) var(--fp-radius) 0 0;">
-      <div style="width:88px;height:88px;border-radius:50%;background:rgba(255,255,255,0.2);border:3px solid rgba(255,255,255,0.4);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:700;color:#fff;">
-        {% if f.get('photo') %}
-        <img src="{{ f.photo }}" alt="{{ faculty_name }}" style="width:100%;height:100%;object-fit:cover;">
-        {% else %}
-        {{ faculty_initial }}
+  {# ── Left Column: Sectioned Info Cards ────────────────────── #}
+  <div style="display:flex;flex-direction:column;gap:16px;">
+
+    {% macro fp_info_row(icon, label, value) %}
+    <div style="display:flex;align-items:flex-start;gap:12px;">
+      <div style="width:34px;height:34px;border-radius:8px;background:var(--fp-primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <span class="fp-ms" style="font-size:16px;color:#fff;">{{ icon }}</span>
+      </div>
+      <div>
+        <div class="fp-pf-muted" style="font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:var(--fp-text-4);margin-bottom:2px;">{{ label }}</div>
+        <div style="font-size:14px;font-weight:500;color:var(--fp-text-1);">{{ value or '—' }}</div>
+      </div>
+    </div>
+    {% endmacro %}
+
+    {# Personal Information #}
+    <div class="fp-card fade-in" style="animation-delay:0.04s;">
+      <div class="fp-card-header">
+        <div class="fp-card-title">
+          <span class="fp-ms">person</span>
+          Personal Information
+        </div>
+        <button class="fp-btn fp-btn-secondary fp-btn-sm" onclick="fpOpenEditModal()">
+          <span class="fp-ms">edit</span>Edit
+        </button>
+      </div>
+      <div class="fp-card-body">
+        <div class="fp-vb-row-2" style="row-gap:16px;">
+          {{ fp_info_row('badge', 'Faculty ID', f.get('faculty_id')) }}
+          {{ fp_info_row('work', 'Designation', f.get('designation')) }}
+          {{ fp_info_row('apartment', 'Department', f.get('department')) }}
+          {{ fp_info_row('calendar_today', 'Joining Date', f.get('joining_date')) }}
+        </div>
+      </div>
+    </div>
+
+    {# Contact Information #}
+    <div class="fp-card fade-in" style="animation-delay:0.08s;">
+      <div class="fp-card-header">
+        <div class="fp-card-title">
+          <span class="fp-ms">contact_mail</span>
+          Contact Information
+        </div>
+        <button class="fp-btn fp-btn-secondary fp-btn-sm" onclick="fpOpenEditModal()">
+          <span class="fp-ms">edit</span>Edit
+        </button>
+      </div>
+      <div class="fp-card-body">
+        <div class="fp-vb-row-2" style="row-gap:16px;">
+          {{ fp_info_row('email', 'Email', f.get('email')) }}
+          {{ fp_info_row('phone', 'Phone', f.get('phone')) }}
+        </div>
+      </div>
+    </div>
+
+    {# Academic Information #}
+    <div class="fp-card fade-in" style="animation-delay:0.12s;">
+      <div class="fp-card-header">
+        <div class="fp-card-title">
+          <span class="fp-ms">school</span>
+          Academic Information
+        </div>
+        <button class="fp-btn fp-btn-secondary fp-btn-sm" onclick="fpOpenEditModal()">
+          <span class="fp-ms">edit</span>Edit
+        </button>
+      </div>
+      <div class="fp-card-body">
+        <div class="fp-vb-row-2" style="row-gap:16px;">
+          {{ fp_info_row('school', 'Qualification', f.get('qualification')) }}
+          {{ fp_info_row('science', 'Specialization', f.get('specialization')) }}
+          {{ fp_info_row('work_history', 'Experience', ((f.get('experience_years') or 0) | string) + ' years') }}
+          {{ fp_info_row('account_balance', 'Institution', f.get('institution')) }}
+        </div>
+        {% if f.get('highlights') %}
+        <div style="margin-top:18px;padding:14px;background:var(--fp-info-bg);border-radius:var(--fp-radius-sm);border-left:3px solid var(--fp-info);">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--fp-info);font-weight:700;margin-bottom:6px;">Highlights</div>
+          <div style="font-size:13px;color:var(--fp-text-2);line-height:1.6;">{{ f.get('highlights') }}</div>
+        </div>
         {% endif %}
       </div>
-      <div style="text-align:center;color:#fff;">
-        <div style="font-size:20px;font-weight:700;margin-bottom:4px;">{{ faculty_name }}</div>
-        <div style="font-size:13px;opacity:0.85;">{{ f.get('designation') or '—' }}</div>
-        <div style="font-size:12px;opacity:0.7;margin-top:2px;">{{ f.get('department') or '—' }}</div>
-        <div style="margin-top:10px;">
-          <span style="background:rgba(255,255,255,0.2);color:#fff;font-size:11px;font-weight:600;padding:4px 12px;border-radius:20px;">
-            {{ f.get('status') or 'Active' }}
-          </span>
-        </div>
-      </div>
     </div>
 
-    <div class="fp-card-body">
-      <div style="display:flex;flex-direction:column;gap:14px;">
-
-        {% macro fp_info_row(icon, label, value) %}
-        <div style="display:flex;align-items:flex-start;gap:12px;">
-          <div style="width:34px;height:34px;border-radius:8px;background:var(--fp-primary-light);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-            <span class="fp-ms" style="font-size:16px;color:var(--fp-primary);">{{ icon }}</span>
-          </div>
-          <div>
-            <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:var(--fp-text-4);margin-bottom:2px;">{{ label }}</div>
-            <div style="font-size:14px;font-weight:500;color:var(--fp-text-1);">{{ value or '—' }}</div>
-          </div>
-        </div>
-        {% endmacro %}
-
-        {{ fp_info_row('badge', 'Faculty ID', f.get('faculty_id')) }}
-        {{ fp_info_row('email', 'Email', f.get('email')) }}
-        {{ fp_info_row('phone', 'Phone', f.get('phone')) }}
-        {{ fp_info_row('school', 'Qualification', f.get('qualification')) }}
-        {{ fp_info_row('science', 'Specialization', f.get('specialization')) }}
-        {{ fp_info_row('work_history', 'Experience', ((f.get('experience_years') or 0) | string) + ' years') }}
-        {{ fp_info_row('calendar_today', 'Joining Date', f.get('joining_date')) }}
-        {{ fp_info_row('account_balance', 'Institution', f.get('institution')) }}
-
-      </div>
-
-      {% if f.get('highlights') %}
-      <div style="margin-top:18px;padding:14px;background:var(--fp-info-bg);border-radius:var(--fp-radius-sm);border-left:3px solid var(--fp-info);">
-        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--fp-info);font-weight:700;margin-bottom:6px;">Highlights</div>
-        <div style="font-size:13px;color:var(--fp-text-2);line-height:1.6;">{{ f.get('highlights') }}</div>
-      </div>
-      {% endif %}
-
-    </div>
   </div>
 
   {# ── Right Column ─────────────────────────────────────────── #}
@@ -99,10 +192,10 @@
         </div>
         {% else %}
         {% for co in assigned_courses %}
-        <div style="padding:12px 20px;border-bottom:1px solid var(--fp-border-light);display:flex;align-items:center;justify-content:space-between;gap:12px;{% if loop.last %}border-bottom:none;{% endif %}">
+        <div class="fp-pf-course-row" style="padding:12px 20px;border-bottom:1px solid var(--fp-border-light);display:flex;align-items:center;justify-content:space-between;gap:12px;{% if loop.last %}border-bottom:none;{% endif %}">
           <div>
             <div style="font-size:13px;font-weight:600;color:var(--fp-text-1);">{{ co.course_name }}</div>
-            <div style="font-size:11px;color:var(--fp-text-4);margin-top:2px;">{{ co.term_name }} &nbsp;|&nbsp; {{ co.academic_year }}</div>
+            <div class="fp-pf-muted" style="font-size:11px;color:var(--fp-text-4);margin-top:2px;">{{ co.term_name }} &nbsp;|&nbsp; {{ co.academic_year }}</div>
           </div>
           <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
             {% if co.credit_value %}
@@ -118,48 +211,18 @@
       </div>
     </div>
 
-    {# Theme & Preferences #}
-    <div class="fp-card fade-in" style="animation-delay:0.12s;">
-      <div class="fp-card-header">
-        <div class="fp-card-title">
-          <span class="fp-ms" style="font-size:18px;vertical-align:-4px;color:var(--fp-primary);margin-right:6px;">tune</span>
-          Preferences
-        </div>
-      </div>
-      <div class="fp-card-body">
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--fp-border-light);">
-          <div>
-            <div style="font-size:13px;font-weight:500;color:var(--fp-text-1);">Dark Mode</div>
-            <div style="font-size:12px;color:var(--fp-text-4);">Switch to dark theme</div>
-          </div>
-          <button onclick="fpToggleTheme()" class="fp-btn fp-btn-secondary fp-btn-sm" id="fp-theme-toggle-btn">
-            <span class="fp-ms">dark_mode</span><span id="fp-theme-toggle-label">Enable</span>
-          </button>
-        </div>
-        <div style="padding:12px 0;">
-          <div style="font-size:13px;font-weight:500;color:var(--fp-text-1);margin-bottom:4px;">Session</div>
-          <div style="font-size:12px;color:var(--fp-text-4);margin-bottom:12px;">Logged in as {{ frappe.session.user }}</div>
-          <a href="javascript:void(0)" onclick="fpLogout()" class="fp-btn fp-btn-danger" style="width:100%;justify-content:center;">
-            <span class="fp-ms">logout</span>Sign Out
-          </a>
-        </div>
-      </div>
-    </div>
-
   </div>
 
 </div>
 
-{% endblock %}
-
 {# ── Edit Profile Modal ────────────────────────────────────── #}
 <div id="fp-edit-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;">
-  <div style="background:var(--fp-card);border-radius:var(--fp-radius);width:92%;max-width:540px;max-height:94vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.25);">
+  <div class="fp-pf-modal-box" style="background:var(--fp-card);border-radius:var(--fp-radius);width:92%;max-width:540px;max-height:94vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.25);">
 
     {# Header #}
     <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px 0;border-bottom:1px solid var(--fp-border);position:sticky;top:0;background:var(--fp-card);z-index:1;">
       <div style="font-size:16px;font-weight:700;color:var(--fp-text-1);">Edit Profile</div>
-      <button onclick="fpCloseEditModal()" style="background:none;border:none;cursor:pointer;padding:6px;border-radius:8px;color:var(--fp-text-4);">
+      <button class="fp-pf-modal-close" onclick="fpCloseEditModal()" style="background:none;border:none;cursor:pointer;padding:6px;border-radius:8px;color:var(--fp-text-4);">
         <span class="fp-ms" style="font-size:22px;">close</span>
       </button>
     </div>
@@ -235,7 +298,7 @@
           <label class="fp-label">Current Password</label>
           <div style="position:relative;">
             <input type="password" class="fp-input" id="fp-cp-current" placeholder="Enter your current password" autocomplete="current-password">
-            <button type="button" onclick="fpTogglePwdField('fp-cp-current','fp-cp-eye1')"
+            <button type="button" class="fp-pf-eye" onclick="fpTogglePwdField('fp-cp-current','fp-cp-eye1')"
               style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:2px;color:var(--fp-text-4);">
               <span class="fp-ms" id="fp-cp-eye1" style="font-size:18px;">visibility</span>
             </button>
@@ -245,7 +308,7 @@
           <label class="fp-label">New Password</label>
           <div style="position:relative;">
             <input type="password" class="fp-input" id="fp-cp-new" placeholder="Minimum 8 characters" autocomplete="new-password" oninput="fpCpStrength()">
-            <button type="button" onclick="fpTogglePwdField('fp-cp-new','fp-cp-eye2')"
+            <button type="button" class="fp-pf-eye" onclick="fpTogglePwdField('fp-cp-new','fp-cp-eye2')"
               style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:2px;color:var(--fp-text-4);">
               <span class="fp-ms" id="fp-cp-eye2" style="font-size:18px;">visibility</span>
             </button>
@@ -261,7 +324,7 @@
           <label class="fp-label">Confirm New Password</label>
           <div style="position:relative;">
             <input type="password" class="fp-input" id="fp-cp-confirm" placeholder="Re-enter new password" autocomplete="new-password" oninput="fpCpMatchCheck()">
-            <button type="button" onclick="fpTogglePwdField('fp-cp-confirm','fp-cp-eye3')"
+            <button type="button" class="fp-pf-eye" onclick="fpTogglePwdField('fp-cp-confirm','fp-cp-eye3')"
               style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:2px;color:var(--fp-text-4);">
               <span class="fp-ms" id="fp-cp-eye3" style="font-size:18px;">visibility</span>
             </button>
@@ -288,25 +351,10 @@
   </div>
 </div>
 
+{% endblock %}
+
 {% block extra_js %}
 <script>
-(function fpInitProfileThemeBtn() {
-  var btn   = document.getElementById('fp-theme-toggle-btn');
-  var label = document.getElementById('fp-theme-toggle-label');
-  var icon  = btn ? btn.querySelector('.fp-ms') : null;
-  var isDark = document.body.classList.contains('fp-dark');
-  if (label) label.textContent = isDark ? 'Disable' : 'Enable';
-  if (icon)  icon.textContent  = isDark ? 'light_mode' : 'dark_mode';
-
-  var origToggle = window.fpToggleTheme;
-  window.fpToggleTheme = function() {
-    if (origToggle) origToggle();
-    var darkNow = document.body.classList.contains('fp-dark');
-    if (label) label.textContent = darkNow ? 'Disable' : 'Enable';
-    if (icon)  icon.textContent  = darkNow ? 'light_mode' : 'dark_mode';
-  };
-})();
-
 /* ── Modal open/close ── */
 function fpOpenEditModal() {
   fpSwitchTab('profile');
@@ -424,12 +472,15 @@ function fpCpStrength() {
   if (/[^A-Za-z0-9]/.test(val))    score++;
   var levels = [
     { pct:'20%', color:'#dc2626', text:'Very weak' },
-    { pct:'40%', color:'#f97316', text:'Weak' },
-    { pct:'60%', color:'#eab308', text:'Fair' },
-    { pct:'80%', color:'#22c55e', text:'Strong' },
-    { pct:'100%',color:'#16a34a', text:'Very strong' },
+    { pct:'40%', color:'#920c24', text:'Weak' },
+    { pct:'60%', color:'#920c24', text:'Fair' },
+    { pct:'80%', color:'#920c24', text:'Strong' },
+    { pct:'100%',color:'#920c24', text:'Very strong' },
   ];
-  var lvl = levels[Math.max(0, score - 1)];
+  var lvlIdx = Math.max(0, score - 1);
+  var lvl = levels[lvlIdx];
+  fill.setAttribute('data-lvl', lvlIdx);
+  lbl.setAttribute('data-lvl', lvlIdx);
   fill.style.width      = lvl.pct;
   fill.style.background = lvl.color;
   lbl.textContent = lvl.text;

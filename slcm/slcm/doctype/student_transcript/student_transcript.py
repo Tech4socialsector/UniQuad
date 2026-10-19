@@ -4,6 +4,8 @@
 import frappe
 from frappe.model.document import Document
 from collections import defaultdict
+from functools import lru_cache
+import subprocess
 
 
 class StudentTranscript(Document):
@@ -323,6 +325,26 @@ def get_transcript_context(student_id):
 
 # ── Compact Transcript ───────────────────────────────────────────────────────
 
+@lru_cache(maxsize=1)
+def _compact_page_height_mm():
+    """
+    CSS min-height (mm) that makes the compact transcript wrapper fill exactly one
+    printable A4 page, so the CGPA / Date / Registrar footer sits at the page bottom.
+
+    wkhtmltopdf built with patched Qt honours --disable-smart-shrinking and renders
+    1:1, but the unpatched build ignores it and shrinks everything by ~0.775, so the
+    same CSS height lands much higher on the page. Detect the build once per worker.
+    """
+    try:
+        out = subprocess.run(
+            ["wkhtmltopdf", "--version"], capture_output=True, text=True, timeout=10
+        ).stdout.lower()
+        patched = "patched qt" in out
+    except Exception:
+        patched = True
+    return 260 if patched else 340
+
+
 @frappe.whitelist()
 def get_compact_transcript_context(student_id):
     """
@@ -391,6 +413,7 @@ def get_compact_transcript_context(student_id):
         period = ctx["student"].get("batch_year") or ""
 
     ctx["period"] = period
+    ctx["page_height_mm"] = _compact_page_height_mm()
     return ctx
 
 

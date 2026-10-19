@@ -1,0 +1,42 @@
+{
+ "app": "slcm",
+ "bg_color": "blue",
+ "creation": "2026-09-29 16:08:42.909377",
+ "docstatus": 0,
+ "doctype": "Desktop Icon",
+ "hidden": 0,
+ "icon_type": "App",
+ "idx": 0,
+ "label": "Student Services",
+ "link": "",
+ "link_type": "External",
+ "modified": "2026-09-29 16:08:42.909377",
+ "modified_by": "Administrator",
+ "name": "Student Services",
+ "owner": "Administrator",
+ "restrict_removal": 0,
+ "roles": [
+  {
+   "role": "slcm_Registrar"
+  },
+  {
+   "role": "slcm_Registration Officer"
+  },
+  {
+   "role": "Campus Admin"
+  },
+  {
+   "role": "Admission Admin"
+  },
+  {
+   "role": "slcm_Hostel Admin"
+  },
+  {
+   "role": "slcm_Hostel Warden"
+  },
+  {
+   "role": "slcm_Placement Officer"
+  }
+ ],
+ "standard": 1
+}

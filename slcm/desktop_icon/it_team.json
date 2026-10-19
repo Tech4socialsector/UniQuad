@@ -1,0 +1,31 @@
+{
+ "app": "slcm",
+ "bg_color": "gray",
+ "creation": "2026-03-02 14:50:43.473332",
+ "docstatus": 0,
+ "doctype": "Desktop Icon",
+ "hidden": 0,
+ "icon": "quantity-1",
+ "icon_image": "",
+ "icon_type": "Link",
+ "idx": 0,
+ "label": "IT Team",
+ "link_to": "IT Team",
+ "link_type": "Workspace Sidebar",
+ "modified": "2026-09-29 16:08:42.947092",
+ "modified_by": "Administrator",
+ "name": "IT Team",
+ "owner": "Administrator",
+ "parent_icon": "Campus & Support",
+ "restrict_removal": 0,
+ "roles": [
+  {
+   "role": "slcm_IT Admin"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
+ "sidebar": "IT Team",
+ "standard": 1
+}

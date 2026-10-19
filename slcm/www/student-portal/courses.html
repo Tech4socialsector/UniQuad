@@ -3,6 +3,60 @@
 {% block title %}My Courses{% endblock %}
 
 {% block content %}
+<style>
+  .sp-course-card-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--sp-primary);
+    text-decoration: none;
+    padding: 6px 12px;
+    border-radius: 20px;
+    background: #fff;
+    border: 1px solid var(--sp-primary-light);
+    transition: all 0.2s ease;
+  }
+  .sp-course-card-btn:hover {
+    background: var(--sp-primary-light);
+    transform: translateX(4px);
+  }
+
+  /* ── Upcoming classes strip ── */
+  .cs-up { background: var(--sp-card, #fff); border: 1px solid var(--sp-border); border-radius: 10px; padding: 10px 12px 10px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .cs-up-main { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
+  .cs-up-lbl { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; color: var(--sp-text-3); text-transform: uppercase; letter-spacing: .06em; }
+  .cs-up-lbl .sp-ms { font-size: 16px; color: var(--sp-primary); }
+  .cs-up-chip { display: inline-flex; align-items: center; gap: 6px; background: #fff; border: 1px solid var(--sp-border); color: var(--sp-text-1); font-size: 12.5px; font-weight: 600; padding: 4px 10px; border-radius: 99px; white-space: nowrap; }
+  .cs-up-chip .sp-ms { font-size: 14px; color: var(--sp-primary); }
+  .cs-up-chip small { font-size: 12px; font-weight: 400; color: var(--sp-text-3); }
+  .cs-up-empty { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+  .cs-up-empty .sp-ms { font-size: 18px; color: var(--sp-primary); flex-shrink: 0; }
+  .cs-up-empty strong { font-size: 13px; font-weight: 700; color: var(--sp-text-1); }
+  .cs-up-empty span.cs-up-hint { font-size: 12.5px; color: var(--sp-text-3); }
+
+  /* ── Dark mode ── */
+  body.sp-dark .sp-course-card-btn { background: #1a2540; color: var(--sp-text-1); border-color: var(--sp-border); }
+  body.sp-dark .sp-course-card-btn .sp-ms { color: #f08da0; }
+  body.sp-dark .sp-course-card-btn:hover { background: var(--sp-primary-light); border-color: var(--sp-primary-mid); color: #f08da0; }
+  body.sp-dark .cs-up { background: var(--sp-card); border-color: var(--sp-border); }
+  body.sp-dark .cs-up-lbl .sp-ms,
+  body.sp-dark .cs-up-empty .sp-ms { color: #f08da0; }
+  body.sp-dark .cs-up-chip { background: #1a2540; border-color: #263352; color: var(--sp-text-1); }
+  body.sp-dark .cs-up-chip .sp-ms { color: #f08da0; }
+  body.sp-dark .cs-up-chip small { color: var(--sp-text-3); }
+  body.sp-dark .cs-term-head { background: var(--sp-card) !important; border-color: var(--sp-border) !important; }
+  body.sp-dark .cs-term-head > .sp-ms { color: #f08da0 !important; }
+  body.sp-dark .cs-course-card { background: var(--sp-card) !important; border-color: var(--sp-border) !important; box-shadow: 0 1px 3px rgba(0,0,0,0.3) !important; }
+  body.sp-dark .cs-badge-code { background: var(--sp-primary-light) !important; color: #f08da0 !important; }
+  body.sp-dark .cs-badge-credits { background: var(--sp-success-bg) !important; color: var(--sp-success) !important; }
+  body.sp-dark .cs-badge-type { background: var(--sp-primary-light) !important; color: #f08da0 !important; }
+  body.sp-dark .cs-cta { background: var(--sp-card) !important; border-color: var(--sp-border) !important; }
+  body.sp-dark .cs-cta-icon { background: var(--sp-primary-light) !important; color: #f08da0 !important; }
+  body.sp-dark .cs-cta-btn { background: var(--sp-primary) !important; color: #fff !important; }
+  body.sp-dark .cs-cta-btn:hover { background: var(--sp-primary-dark) !important; }
+</style>
 
 {% if no_student %}
 <div class="sp-alert sp-alert-warning fade-in">
@@ -12,11 +66,10 @@
 
 {% else %}
 
-<div class="sp-page-header fade-in">
-  <h1 class="sp-page-title">My Courses</h1>
-  <p class="sp-page-sub">
-    {{ programme_name }}{% if batch_year %} &nbsp;·&nbsp; Batch {{ batch_year }}{% endif %}
-  </p>
+<div class="sp-page-header fade-in" style="display:flex; justify-content:space-between; align-items:flex-end;">
+  <div>
+    <h1 class="sp-page-title" style="font-size: 18px !important; font-weight: 700 !important;">Courses</h1>
+  </div>
 </div>
 
 {% if portal_error %}
@@ -40,116 +93,99 @@
 
 {% else %}
 
-{# ── Term Tabs ─────────────────────────────────────────────── #}
-{% if all_terms %}
-<div class="sp-term-tabs-wrap fade-in">
-  <div class="sp-term-tabs">
-    {% for term in all_terms %}
-    <button class="sp-term-tab{% if term == active_term_label %} active{% endif %}"
-            data-term="{{ term }}"
-            onclick="spSwitchTerm(this)">
-      {{ term }}
-    </button>
-    {% endfor %}
-  </div>
-</div>
-{% endif %}
-
-{# ── Enrolment Sections (one per term) ───────────────────── #}
+{# ── Enrolment Sections (stacked terms) ───────────────────── #}
 {% for ed in enrollment_data %}
 {% if ed.course_count > 0 %}
 
-<div class="sp-term-section fade-in{% if ed.term_label != active_term_label %} sp-term-hidden{% endif %}"
-     data-term="{{ ed.term_label }}"
-     style="margin-bottom:32px;">
+<div class="sp-term-section fade-in" style="margin-bottom:32px;">
 
-  {# Section Header #}
-  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:16px;">
-    <div style="font-size:16px;font-weight:700;color:var(--sp-text-1);display:flex;align-items:center;gap:8px;">
-      <span class="sp-ms" style="font-size:20px;color:var(--sp-primary);">school</span>
-      {{ ed.cohort_display }}
-      {% if ed.enrollment.academic_year %}
-      <span style="font-size:13px;font-weight:400;color:var(--sp-text-4);">{{ ed.enrollment.academic_year }}</span>
-      {% endif %}
-    </div>
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-      <span class="sp-badge" style="background:{% if ed.enrollment.status == 'Enrolled' %}var(--sp-success-bg);color:var(--sp-success){% elif ed.enrollment.status == 'Completed' %}var(--sp-info-bg);color:var(--sp-info){% else %}var(--sp-bg);color:var(--sp-text-3){% endif %};">
-        {{ ed.enrollment.status or "Enrolled" }}
-      </span>
-      <span style="font-size:13px;color:var(--sp-text-4);">
-        {{ ed.course_count }} course{% if ed.course_count != 1 %}s{% endif %}
-        {% if ed.total_credits %} · {{ ed.total_credits }} credits{% endif %}
-      </span>
+  {# Term Header #}
+  <div class="cs-term-head" style="display:flex;align-items:center;gap:12px;margin-bottom:16px;background:var(--sp-card,#fff);border:1px solid var(--sp-border);border-radius:12px;padding:14px 20px;">
+    <span class="sp-ms" style="font-size:24px;color:var(--sp-primary);">school</span>
+    <div>
+      <div style="font-size:18px;font-weight:400;color:var(--sp-text-1);">{{ ed.term_label }}</div>
+      <div style="font-size:14px;color:var(--sp-text-4);margin-top:2px;">
+        {{ ed.enrollment.academic_year }}
+      </div>
     </div>
   </div>
 
   {# Course Cards Grid #}
-  <div class="sp-courses-grid">
+  <div style="display:flex; flex-direction:column; gap:20px;">
     {% for c in ed.courses %}
-    <div class="sp-course-card">
+    <div class="cs-course-card" style="background:#fff; border:1px solid var(--sp-border); border-radius:12px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.02);">
 
-      {# Course Name & Status #}
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
-        <div style="overflow:hidden;flex:1;">
-          <div style="font-size:15px;font-weight:700;color:var(--sp-text-1);line-height:1.3;margin-bottom:3px;">
-            {{ c.course_name }}
-          </div>
-          {% if c.course_offering %}
-          <div style="font-size:11px;color:var(--sp-text-4);font-family:monospace;letter-spacing:0.03em;">
-            {{ c.course_offering }}
-          </div>
+      {# Top Row #}
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; padding-bottom:16px; border-bottom:1px solid var(--sp-border);">
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+          <h3 style="margin:0; font-family:var(--sp-font-serif); font-size:18px; font-weight:700; color:var(--sp-text-1);">{{ c.course_name }}</h3>
+          {% if c.course_code %}
+          <span class="cs-badge-code" style="background:var(--sp-primary-light); color:var(--sp-primary); font-size:12px; font-weight:600; padding:4px 10px; border-radius:20px;">{{ c.course_code }}</span>
           {% endif %}
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">
-          <span class="sp-badge" style="background:{% if c.status == 'Enrolled' %}var(--sp-success-bg);color:var(--sp-success){% elif c.status == 'Completed' %}var(--sp-info-bg);color:var(--sp-info){% else %}var(--sp-bg);color:var(--sp-text-3){% endif %};">
-            {{ c.status }}
-          </span>
+          {% if c.credits %}
+          <span class="cs-badge-credits" style="background:#fff0f2; color:var(--sp-success); font-size:12px; font-weight:600; padding:4px 10px; border-radius:20px;">{{ c.credits }} Credit{% if c.credits != 1 %}s{% endif %}</span>
+          {% endif %}
           {% if c.course_type and c.course_type != '—' %}
-          <span class="sp-badge" style="font-size:10px;background:var(--sp-primary-light);color:var(--sp-primary);">
-            {{ c.course_type }}
-          </span>
+          <span class="cs-badge-type" style="background:#fff0f2; color:#920c24; font-size:12px; font-weight:600; padding:4px 10px; border-radius:20px;">{{ c.course_type }}</span>
           {% endif %}
         </div>
       </div>
 
-      {# Faculty & Credits row #}
-      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-        <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--sp-text-3);">
-          <span class="sp-ms" style="font-size:15px;color:var(--sp-text-4);">person</span>
-          {{ c.faculty }}
-        </span>
-        {% if c.credits %}
-        <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--sp-text-3);">
-          <span class="sp-ms" style="font-size:15px;color:var(--sp-text-4);">stars</span>
-          {{ c.credits }} Credit{% if c.credits != 1 %}s{% endif %}
-        </span>
-        {% endif %}
-      </div>
+      {# Middle Row (Next Class Info) #}
+      {% set _has_sched = c.upcoming_classes or c.next_class %}
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:20px;{% if c.upcoming_classes %} margin-bottom:16px; padding-bottom:16px; border-bottom:1px solid var(--sp-border);{% endif %}">
 
-      {# Attendance Bar #}
-      <div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-          <span style="font-size:12px;color:var(--sp-text-4);">Attendance</span>
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span style="font-size:13px;font-weight:700;color:{{ c.att_color }};">
-              {% if c.attendance_pct > 0 %}{{ c.attendance_pct }}%{% else %}—{% endif %}
-            </span>
-            {% if c.eligible_for_exam is not none %}
-            <span class="sp-badge" style="font-size:10px;background:{% if c.eligible_for_exam %}var(--sp-success-bg);color:var(--sp-success){% else %}var(--sp-danger-bg);color:var(--sp-danger){% endif %};">
-              {% if c.eligible_for_exam %}Eligible{% else %}Not Eligible{% endif %}
-            </span>
+        {# Next Class #}
+        <div style="display:flex; gap:12px;">
+          <span class="sp-ms" style="color:var(--sp-text-3); font-size:20px; margin-top:2px;">calendar_today</span>
+          <div>
+            <div style="font-size:12px; color:var(--sp-text-3); margin-bottom:4px;">Next Session</div>
+            {% if c.next_class %}
+            <div style="font-size:14px; font-weight:600; color:var(--sp-text-1);">{{ c.next_class.date }}</div>
+            <div style="font-size:13px; color:var(--sp-text-3);">{{ c.next_class.time }}</div>
+            {% else %}
+            <div style="font-size:14px; font-weight:600; color:var(--sp-text-1);">No upcoming sessions</div>
             {% endif %}
           </div>
         </div>
-        <div class="sp-progress">
-          <div class="sp-progress-bar" style="width:{{ [c.attendance_pct, 100]|min }}%;background:{{ c.att_color }};"></div>
+
+        {# Venue #}
+        <div style="display:flex; gap:12px; border-left:1px solid var(--sp-border); padding-left:20px;">
+          <span class="sp-ms" style="color:var(--sp-text-3); font-size:20px; margin-top:2px;">location_on</span>
+          <div>
+            <div style="font-size:12px; color:var(--sp-text-3); margin-bottom:4px;">Venue</div>
+            <div style="font-size:14px; font-weight:600; color:var(--sp-text-1);">{{ c.next_class.room if c.next_class else "—" }}</div>
+          </div>
         </div>
-        {% if c.total_classes > 0 %}
-        <div style="font-size:11px;color:var(--sp-text-4);margin-top:4px;">
-          {{ c.attended_classes|int }} / {{ c.total_classes|int }} sessions attended
+
+        {# Faculty #}
+        <div style="display:flex; gap:12px; border-left:1px solid var(--sp-border); padding-left:20px;">
+          <span class="sp-ms" style="color:var(--sp-text-3); font-size:20px; margin-top:2px;">person</span>
+          <div>
+            <div style="font-size:12px; color:var(--sp-text-3); margin-bottom:4px;">Faculty</div>
+            <div style="font-size:14px; font-weight:600; color:var(--sp-text-1);">{{ c.next_class.instructor if c.next_class else c.faculty }}</div>
+          </div>
         </div>
-        {% endif %}
+
       </div>
+
+      {# Bottom Row (Upcoming Sessions & Timetable button); left out when nothing follows the next class #}
+      {% if c.upcoming_classes %}
+      <div class="cs-up">
+        <div class="cs-up-main">
+          {% if c.upcoming_classes %}
+            <span class="cs-up-lbl"><span class="sp-ms" aria-hidden="true">event_upcoming</span>Upcoming sessions</span>
+            {% for uc in c.upcoming_classes %}
+            <span class="cs-up-chip"><span class="sp-ms" aria-hidden="true">schedule</span>{{ uc.date }} <small>{{ uc.time }}</small></span>
+            {% endfor %}
+          {% endif %}
+        </div>
+
+        <a href="/student-portal/timetable?course={{ c.course_offering }}" class="sp-course-card-btn">
+          View Timetable <span class="sp-ms" style="font-size:16px;">chevron_right</span>
+        </a>
+      </div>
+      {% endif %}
 
     </div>
     {% endfor %}
@@ -159,60 +195,27 @@
 {% endif %}
 {% endfor %}
 
+{# Bottom CTA #}
+<div class="fade-in cs-cta" style="margin-top:32px; margin-bottom:32px; background:var(--sp-bg); border:1px solid var(--sp-border); border-radius:12px; padding:24px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px;">
+  <div style="display:flex; align-items:flex-start; gap:16px;">
+    <div class="cs-cta-icon" style="background:#fff0f2; color:var(--sp-primary); width:48px; height:48px; border-radius:8px; display:flex; align-items:center; justify-content:center;">
+      <span class="sp-ms" style="font-size:24px;">calendar_today</span>
+    </div>
+    <div>
+      <h3 style="margin:0 0 4px; font-size:18px; color:var(--sp-text-1);">Want to see your full schedule?</h3>
+      <p style="margin:0; font-size:14px; color:var(--sp-text-3);">View your complete timetable with all courses and sessions.</p>
+    </div>
+  </div>
+  <a href="/student-portal/timetable" class="cs-cta-btn" style="display:inline-flex; align-items:center; gap:8px; background:var(--sp-primary); color:#fff; font-size:14px; font-weight:600; padding:10px 20px; border-radius:8px; text-decoration:none;">
+    <span class="sp-ms" style="font-size:18px;">calendar_today</span> View Timetable
+  </a>
+</div>
+
 {% endif %}{# end has_any_courses #}
 
-<style>
-.sp-term-tabs-wrap {
-  margin-bottom: 24px;
-}
-.sp-term-tabs {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  background: var(--sp-card-bg, #fff);
-  border: 1px solid var(--sp-border, #e5e7eb);
-  border-radius: 10px;
-  padding: 8px 10px;
-}
-.sp-term-tab {
-  padding: 6px 18px;
-  border-radius: 6px;
-  border: none;
-  background: transparent;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--sp-text-3, #6b7280);
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-.sp-term-tab:hover {
-  background: var(--sp-primary-light, #e0f2fe);
-  color: var(--sp-primary, #0284c7);
-}
-.sp-term-tab.active {
-  background: var(--sp-primary, #0284c7);
-  color: #fff;
-}
-.sp-term-hidden {
-  display: none !important;
-}
-</style>
-
-<script>
-function spSwitchTerm(btn) {
-  document.querySelectorAll('.sp-term-tab').forEach(function(t) {
-    t.classList.remove('active');
-  });
-  btn.classList.add('active');
-  var term = btn.dataset.term;
-  document.querySelectorAll('.sp-term-section').forEach(function(s) {
-    if (s.dataset.term === term) {
-      s.classList.remove('sp-term-hidden');
-    } else {
-      s.classList.add('sp-term-hidden');
-    }
-  });
-}
-</script>
 {% endif %}{# end no_student #}
 {% endblock %}
+
+
+
+

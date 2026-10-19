@@ -1,0 +1,261 @@
+{
+ "actions": [],
+ "autoname": "PR-.YYYY.-.#####",
+ "creation": "2026-09-10 00:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_criteria",
+  "program",
+  "source_academic_year",
+  "source_term",
+  "col_break_criteria",
+  "batch",
+  "section",
+  "section_target",
+  "target_academic_year",
+  "target_term",
+  "col_break_target",
+  "promotion_policy",
+  "section_status",
+  "status",
+  "total_students",
+  "col_break_status",
+  "promoted_count",
+  "skipped_count",
+  "section_meta",
+  "run_by",
+  "run_on",
+  "col_break_meta",
+  "last_heartbeat",
+  "stop_requested",
+  "error_log",
+  "selected_enrollments",
+  "section_log",
+  "log"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_criteria",
+   "fieldtype": "Section Break",
+   "label": "Source Criteria"
+  },
+  {
+   "fieldname": "program",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Programme",
+   "options": "Programme",
+   "reqd": 1
+  },
+  {
+   "fieldname": "source_academic_year",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Source Academic Year",
+   "options": "Academic Year",
+   "reqd": 1
+  },
+  {
+   "fieldname": "source_term",
+   "fieldtype": "Link",
+   "label": "Source Term",
+   "options": "Academic Term"
+  },
+  {
+   "fieldname": "col_break_criteria",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "batch",
+   "fieldtype": "Link",
+   "label": "Batch",
+   "options": "Batch"
+  },
+  {
+   "fieldname": "section",
+   "fieldtype": "Link",
+   "label": "Section",
+   "options": "Section"
+  },
+  {
+   "fieldname": "section_target",
+   "fieldtype": "Section Break",
+   "label": "Target"
+  },
+  {
+   "fieldname": "target_academic_year",
+   "fieldtype": "Link",
+   "label": "Target Academic Year",
+   "options": "Academic Year",
+   "reqd": 1
+  },
+  {
+   "fieldname": "target_term",
+   "fieldtype": "Link",
+   "label": "Target Term",
+   "options": "Academic Term"
+  },
+  {
+   "fieldname": "col_break_target",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "promotion_policy",
+   "fieldtype": "Link",
+   "label": "Promotion Policy",
+   "options": "Promotion Policy"
+  },
+  {
+   "fieldname": "section_status",
+   "fieldtype": "Section Break",
+   "label": "Run Status"
+  },
+  {
+   "default": "Queued",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Queued\nIn Progress\nCompleted\nCompleted with Errors\nError",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "total_students",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Total Students",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_break_status",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "promoted_count",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Promoted",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "skipped_count",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Skipped",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_meta",
+   "fieldtype": "Section Break",
+   "label": "Run Metadata"
+  },
+  {
+   "fieldname": "run_by",
+   "fieldtype": "Link",
+   "label": "Run By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "run_on",
+   "fieldtype": "Datetime",
+   "label": "Run On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_break_meta",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "last_heartbeat",
+   "fieldtype": "Datetime",
+   "hidden": 1,
+   "label": "Last Heartbeat",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "stop_requested",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Stop Requested"
+  },
+  {
+   "fieldname": "error_log",
+   "fieldtype": "Small Text",
+   "label": "Error Log",
+   "read_only": 1
+  },
+  {
+   "description": "JSON list of Student Enrollment names to restrict this run to. Empty means all Enrolled students matching the criteria.",
+   "fieldname": "selected_enrollments",
+   "fieldtype": "Long Text",
+   "hidden": 1,
+   "label": "Selected Enrollments",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_log",
+   "fieldtype": "Section Break",
+   "label": "Per-Student Log"
+  },
+  {
+   "fieldname": "log",
+   "fieldtype": "Table",
+   "label": "Promotion Run Log",
+   "options": "Promotion Run Log"
+  }
+ ],
+ "links": [],
+ "modified": "2026-09-10 00:00:00",
+ "modified_by": "Administrator",
+ "module": "SLCM",
+ "name": "Promotion Run",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "slcm_Academic Incharge",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "slcm_Programme Chair"
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

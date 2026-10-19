@@ -395,6 +395,7 @@ def initiate_payment(request_name):
         frappe.db.set_value("Transcript Request", request_name, {
             "razorpay_order_id": razorpay_order_id,
             "gateway_response":  _json.dumps(order, indent=2),
+            "payment_failure_reason": "",
         })
         frappe.db.commit()
 
@@ -479,6 +480,7 @@ def confirm_payment(request_name, razorpay_payment_id,
             "payment_date":      now_datetime(),
             "payment_reference": razorpay_payment_id,
             "status":            "Submitted",
+            "payment_failure_reason": "",
         },
     )
     frappe.db.commit()
@@ -519,11 +521,14 @@ def confirm_payment(request_name, razorpay_payment_id,
 
 
 @frappe.whitelist()
-def record_payment_failure(request_name, error_description=""):
+def record_payment_failure(request_name, error_description="", error_code="",
+                            error_reason="", error_source="", error_step=""):
     """
     Called when Razorpay fires an explicit failure event on the client side
     (razorpay.on('payment.failed', ...)).
-    Sets razorpay_payment_status = "failed", payment_status = "Payment Failed".
+    Sets razorpay_payment_status = "failed", payment_status = "Payment Failed",
+    and stores a human-readable reason in payment_failure_reason so admins can
+    see why the payment failed without digging into the raw gateway JSON.
     Request status stays "Payment Pending" so the student can retry.
     """
     student_name = _require_student()
@@ -532,11 +537,22 @@ def record_payment_failure(request_name, error_description=""):
     if req.payment_status == "Paid":
         return {"success": True}  # already paid, ignore
 
+    reason = error_description or "Payment failed at gateway"
+
     # Keep request status as "Payment Pending" – student can retry
     _set_payment_fields(
         request_name, "failed",
-        gateway_response={"error_description": error_description or "Payment failed at gateway"},
-        extra={"status": "Payment Pending"},
+        gateway_response={
+            "error_description": reason,
+            "error_code":        error_code or "",
+            "error_reason":      error_reason or "",
+            "error_source":      error_source or "",
+            "error_step":        error_step or "",
+        },
+        extra={
+            "status": "Payment Pending",
+            "payment_failure_reason": reason,
+        },
     )
     frappe.db.commit()
     return {"success": True, "payment_status": "Payment Failed"}

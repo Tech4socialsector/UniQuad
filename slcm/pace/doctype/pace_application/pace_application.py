@@ -976,19 +976,77 @@ def get_application_attachments(doc):
     if doc.application_form:
         file_name = frappe.db.get_value("File", {"file_url": doc.application_form}, "name")
         if file_name:
-            file_doc = frappe.get_doc("File", file_name)
-            attachments.append({
-                "fname": file_doc.file_name,
-                "fcontent": file_doc.get_content()
-            })
+            try:
+                file_doc = frappe.get_doc("File", file_name)
+                content = file_doc.get_content()
+                if content:
+                    attachments.append({
+                        "fname": file_doc.file_name,
+                        "fcontent": content
+                    })
+            except Exception as e:
+                frappe.log_error(
+                    message=f"Could not read application form PDF for {doc.name}: {str(e)}",
+                    title="PACE Application Attachment Error"
+                )
     return attachments
+
+def chunked(iterable, size=500):
+    """Yield successive chunks from iterable."""
+    for i in range(0, len(iterable), size):
+        yield iterable[i:i + size]
+
+def get_file_bytes_and_ext(file_url, file_meta_map):
+    """
+    Fast file reader directly accessing disk file path.
+    Avoids loading full File Document ORM objects.
+    """
+    if not file_url:
+        return None, None
+    from urllib.parse import unquote
+    clean_url = unquote(file_url)
+
+    ext = ""
+    file_meta = file_meta_map.get(clean_url) or file_meta_map.get(file_url)
+    if file_meta and file_meta.get("file_name"):
+        ext = os.path.splitext(file_meta["file_name"])[1]
+    if not ext:
+        ext = os.path.splitext(clean_url)[1]
+    if not ext:
+        ext = ".bin"
+
+    if clean_url.startswith("/private/files/"):
+        rel_path = clean_url.split("/private/files/", 1)[1]
+        file_path = frappe.get_site_path("private", "files", rel_path)
+    elif clean_url.startswith("/files/"):
+        rel_path = clean_url.split("/files/", 1)[1]
+        file_path = frappe.get_site_path("public", "files", rel_path)
+    else:
+        file_path = frappe.get_site_path(clean_url.lstrip("/"))
+
+    if os.path.exists(file_path):
+        try:
+            with open(file_path, "rb") as f:
+                return f.read(), ext
+        except Exception:
+            pass
+
+    if file_meta and file_meta.get("name"):
+        try:
+            file_doc = frappe.get_doc("File", file_meta["name"])
+            content = file_doc.get_content()
+            if content:
+                return content, ext
+        except Exception:
+            pass
+
+    return None, ext
 
 @frappe.whitelist()
 def bulk_download_all_records(names):
     """
     Creates a ZIP archive containing ALL uploaded documents for the selected PACE Applications.
-    Organized by applicant ID folders.
-    Documents included: Photo, Signature, UG Certificate, Govt ID, Application Form, and Admission Letter.
+    Organized by applicant ID folders. High-performance streaming implementation optimized for up to 10,000+ applicants.
     """
     if isinstance(names, str):
         names = frappe.parse_json(names)
@@ -996,128 +1054,272 @@ def bulk_download_all_records(names):
     if not names:
         frappe.throw(_("Please select at least one application to download."))
 
-    zip_buffer = io.BytesIO()
+    import tempfile
+
+    # Disk-backed temporary file to avoid RAM exhaustion on 10,000+ applicants
+    temp_zip_file = tempfile.NamedTemporaryFile(suffix=".zip", delete=False)
+    zip_path = temp_zip_file.name
+    temp_zip_file.close()
+
     found_files = 0
-    
-    # Mapping of fieldnames to professional filenames inside the zip
+    report_rows = []
+
     document_map = {
-        "upload_student_photo": "Student_Photo",
-        "student_signature": "Student_Signature",
-        "ug_degree_certificate": "UG_Degree_Certificate",
-        "govt_id": "Govt_ID",
-        "application_form": "Application_Form",
-        "admission_letter": "Admission_Letter"
+        "upload_student_photo": ("Student Photo", "Student_Photo"),
+        "student_signature": ("Student Signature", "Student_Signature"),
+        "ug_degree_certificate": ("UG Degree Certificate", "UG_Degree_Certificate"),
+        "govt_id": ("Govt ID", "Govt_ID"),
+        "application_form": ("Application Form", "Application_Form"),
+        "admission_letter": ("Admission Letter", "Admission_Letter")
     }
 
-    total_names = len(names)
-    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
-        for idx, name in enumerate(names):
-            doc = frappe.get_doc("PACE Application", name)
-            applicant_id = doc.name # e.g. PACE-2024-00001
-            applicant_name = doc.applicant_name or "Unknown_Applicant"
-            folder_name = f"{applicant_name}-{applicant_id}"
-            
-            frappe.publish_realtime("progress", {
-                "progress": [idx + 1, total_names],
-                "title": _("Exporting Attachments"),
-                "description": f"Processing {applicant_name} ({applicant_id})"
-            }, user=frappe.session.user)
-            
-            for fieldname, label in document_map.items():
-                file_url = getattr(doc, fieldname)
-                if not file_url:
-                    continue
-                
-                # Get the File record to retrieve content
-                file_record_name = frappe.db.get_value("File", {
-                    "file_url": file_url,
-                    "attached_to_doctype": "PACE Application",
-                    "attached_to_name": name
-                }, "name")
-                
-                if not file_record_name:
-                    file_record_name = frappe.db.get_value("File", {"file_url": file_url}, "name")
-                
-                if file_record_name:
-                    file_doc = frappe.get_doc("File", file_record_name)
-                    content = file_doc.get_content()
-                    if content:
-                        # Get original extension
-                        ext = os.path.splitext(file_doc.file_name)[1]
-                        # Path inside the ZIP: [Applicant Name-Applicant ID] / [Applicant ID]_[Label].[ext]
-                        arcname = f"{folder_name}/{applicant_id}_{label}{ext}"
-                        zip_file.writestr(arcname, content)
-                        found_files += 1
+    # 1. Batch fetch all PACE Application records in chunks of 500
+    apps_dict = {}
+    for chunk in chunked(names, 500):
+        records = frappe.get_all(
+            "PACE Application",
+            filters={"name": ["in", chunk]},
+            fields=[
+                "name", "applicant_name", "first_name", "last_name", "programme", 
+                "email_address", "mobile_number", "status",
+                "upload_student_photo", "student_signature", "ug_degree_certificate",
+                "govt_id", "application_form", "admission_letter"
+            ],
+            limit=0
+        )
+        for r in records:
+            apps_dict[r.name] = r
 
-            # Fetch receipts for the applicant
-            receipts = frappe.get_all(
-                "PACE Receipt", 
-                filters={"pace_application": name}, 
-                fields=["name", "fee_type", "receipt"]
+    ordered_apps = [apps_dict[n] for n in names if n in apps_dict]
+
+    # 2. Batch fetch all PACE Receipts in chunks of 500
+    receipts_by_app = {}
+    for chunk in chunked(names, 500):
+        receipt_list = frappe.get_all(
+            "PACE Receipt",
+            filters={"pace_application": ["in", chunk]},
+            fields=["name", "pace_application", "fee_type", "receipt"],
+            limit=0
+        )
+        for r in receipt_list:
+            receipts_by_app.setdefault(r.pace_application, []).append(r)
+
+    # 3. Collect all File URLs and batch fetch File Doc metadata in chunks of 500
+    all_file_urls = set()
+    for app_data in ordered_apps:
+        for fieldname in document_map:
+            url = app_data.get(fieldname)
+            if url:
+                all_file_urls.add(url)
+        for receipt in receipts_by_app.get(app_data.name, []):
+            if receipt.get("receipt"):
+                all_file_urls.add(receipt.receipt)
+
+    file_meta_map = {}
+    if all_file_urls:
+        for chunk in chunked(list(all_file_urls), 500):
+            file_records = frappe.get_all(
+                "File",
+                filters={"file_url": ["in", chunk]},
+                fields=["name", "file_name", "file_url"],
+                limit=0
             )
-            for receipt in receipts:
-                if receipt.receipt:
-                    # Determine filename label based on fee type
-                    if receipt.fee_type == "Application Fee":
-                        label = "Application_Fee_Receipt"
-                    elif receipt.fee_type == "Course Fee":
-                        label = "Course_Fee_Receipt"
-                    else:
-                        label = f"{str(receipt.fee_type).replace(' ', '_')}_Receipt"
-                    
-                    file_url = receipt.receipt
-                    
-                    # Get the File record to retrieve content
-                    file_record_name = frappe.db.get_value("File", {
-                        "file_url": file_url,
-                        "attached_to_doctype": "PACE Receipt",
-                        "attached_to_name": receipt.name
-                    }, "name")
-                    
-                    if not file_record_name:
-                        file_record_name = frappe.db.get_value("File", {"file_url": file_url}, "name")
-                    
-                    if file_record_name:
-                        file_doc = frappe.get_doc("File", file_record_name)
-                        content = file_doc.get_content()
-                        if content:
-                            ext = os.path.splitext(file_doc.file_name)[1]
-                            arcname = f"{folder_name}/{applicant_id}_{label}{ext}"
-                            zip_file.writestr(arcname, content)
-                            found_files += 1
+            for fr in file_records:
+                if fr.file_url not in file_meta_map:
+                    file_meta_map[fr.file_url] = fr
 
-    if found_files == 0:
-        frappe.throw(_("No uploaded documents found for the selected records."))
-
-    zip_buffer.seek(0)
-    zip_filename = f"PACE_Bulk_Records_{frappe.utils.now_datetime().strftime('%Y%m%d_%H%M%S')}.zip"
-    
-    # Temporarily override max file size limit checks to allow saving the generated zip file
-    from frappe.utils import file_manager as utils_fm
-    from frappe.core.api import file as core_file
-
-    orig_utils_get_max = utils_fm.get_max_file_size
-    orig_core_get_max = core_file.get_max_file_size
-
-    # Set temporary large limit (2 GB) to bypass the default 10MB restriction
-    large_limit = 2 * 1024 * 1024 * 1024
-    utils_fm.get_max_file_size = lambda: large_limit
-    core_file.get_max_file_size = lambda: large_limit
+    total_names = len(ordered_apps)
 
     try:
-        _file = save_file(
-            zip_filename,
-            zip_buffer.getvalue(),
-            "PACE Application",
-            names[0],
-            is_private=1
-        )
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zip_file:
+            for idx, doc in enumerate(ordered_apps, start=1):
+                applicant_id = doc.name
+                applicant_name = doc.applicant_name or f"{doc.first_name or ''} {doc.last_name or ''}".strip() or "Unknown_Applicant"
+                folder_name = f"{applicant_name}-{applicant_id}"
+
+                # Explicitly create folder entry in ZIP so extracted folder exists even if 0 files are retrieved
+                zip_file.writestr(f"{folder_name}/", "")
+
+                # Dynamic progress update step (every record for small sets, up to 50 updates for large sets)
+                progress_step = max(1, total_names // 50)
+                if idx % progress_step == 0 or idx == total_names:
+                    percent = int((idx / total_names) * 100)
+                    frappe.publish_realtime("progress", {
+                        "progress": [idx, total_names],
+                        "percent": percent,
+                        "title": _("Exporting Attachments"),
+                        "description": f"Processing {idx}/{total_names}: {applicant_name}"
+                    }, user=frappe.session.user)
+
+                missing_docs = []
+                retrieved_docs = []
+
+                for fieldname, (label, zip_label) in document_map.items():
+                    file_url = doc.get(fieldname)
+                    if not file_url:
+                        if fieldname == "admission_letter":
+                            continue
+                        missing_docs.append(label)
+                        continue
+
+                    content, ext = get_file_bytes_and_ext(file_url, file_meta_map)
+                    if content:
+                        arcname = f"{folder_name}/{applicant_id}_{zip_label}{ext}"
+                        zip_file.writestr(arcname, content)
+                        found_files += 1
+                        retrieved_docs.append(label)
+                    else:
+                        missing_docs.append(label)
+
+                app_receipts = receipts_by_app.get(doc.name, [])
+                for receipt in app_receipts:
+                    if receipt.get("receipt"):
+                        if receipt.fee_type == "Application Fee":
+                            label = "Application Fee Receipt"
+                            zip_label = "Application_Fee_Receipt"
+                        elif receipt.fee_type == "Course Fee":
+                            label = "Course Fee Receipt"
+                            zip_label = "Course_Fee_Receipt"
+                        else:
+                            label = f"{receipt.fee_type} Receipt"
+                            zip_label = f"{str(receipt.fee_type).replace(' ', '_')}_Receipt"
+
+                        file_url = receipt.receipt
+                        content, ext = get_file_bytes_and_ext(file_url, file_meta_map)
+                        if content:
+                            arcname = f"{folder_name}/{applicant_id}_{zip_label}{ext}"
+                            zip_file.writestr(arcname, content)
+                            found_files += 1
+                            retrieved_docs.append(label)
+                        else:
+                            missing_docs.append(label)
+
+                # If no document files could be downloaded, add an explanatory text file in their folder
+                if len(retrieved_docs) == 0:
+                    txt_content = (
+                        f"Applicant ID: {applicant_id}\n"
+                        f"Applicant Name: {applicant_name}\n"
+                        f"Status: {doc.status or ''}\n\n"
+                        f"No downloadable document files were found for this applicant on the server.\n\n"
+                        f"Missing Documents Detail:\n"
+                        + "\n".join([f"- {d}" for d in missing_docs])
+                    )
+                    zip_file.writestr(f"{folder_name}/{applicant_id}_MISSING_DOCUMENTS.txt", txt_content)
+
+                if missing_docs:
+                    report_rows.append({
+                        "applicant_id": applicant_id,
+                        "applicant_name": applicant_name,
+                        "programme": doc.programme or "",
+                        "email": doc.email_address or "",
+                        "mobile": doc.mobile_number or "",
+                        "status": doc.status or "",
+                        "retrieved_count": len(retrieved_docs),
+                        "missing_count": len(missing_docs),
+                        "missing_documents": ", ".join(missing_docs)
+                    })
+
+            # Generate Excel report inside ZIP using constant memory mode
+            if report_rows:
+                try:
+                    import xlsxwriter
+                    excel_temp = tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False)
+                    excel_path = excel_temp.name
+                    excel_temp.close()
+
+                    workbook = xlsxwriter.Workbook(excel_path, {"constant_memory": True})
+                    worksheet = workbook.add_worksheet("Missing Documents Report")
+
+                    header_format = workbook.add_format({
+                        "bold": True,
+                        "bg_color": "#920C24",
+                        "font_color": "#FFFFFF",
+                        "border": 1,
+                        "align": "center",
+                        "valign": "vcenter"
+                    })
+                    cell_format = workbook.add_format({"border": 1, "valign": "vcenter"})
+
+                    headers = [
+                        "Applicant ID",
+                        "Applicant Name",
+                        "Programme",
+                        "Email",
+                        "Mobile",
+                        "Application Status",
+                        "Downloaded Files Count",
+                        "Missing Files Count",
+                        "Missing Documents List"
+                    ]
+
+                    for col_idx, header in enumerate(headers):
+                        worksheet.write(0, col_idx, header, header_format)
+
+                    for row_idx, r in enumerate(report_rows, start=1):
+                        worksheet.write(row_idx, 0, r["applicant_id"], cell_format)
+                        worksheet.write(row_idx, 1, r["applicant_name"], cell_format)
+                        worksheet.write(row_idx, 2, r["programme"], cell_format)
+                        worksheet.write(row_idx, 3, r["email"], cell_format)
+                        worksheet.write(row_idx, 4, r["mobile"], cell_format)
+                        worksheet.write(row_idx, 5, r["status"], cell_format)
+                        worksheet.write(row_idx, 6, r["retrieved_count"], cell_format)
+                        worksheet.write(row_idx, 7, r["missing_count"], cell_format)
+                        worksheet.write(row_idx, 8, r["missing_documents"], cell_format)
+
+                    worksheet.set_column(0, 0, 25)
+                    worksheet.set_column(1, 1, 28)
+                    worksheet.set_column(2, 2, 25)
+                    worksheet.set_column(3, 3, 28)
+                    worksheet.set_column(4, 4, 15)
+                    worksheet.set_column(5, 5, 20)
+                    worksheet.set_column(6, 6, 22)
+                    worksheet.set_column(7, 7, 18)
+                    worksheet.set_column(8, 8, 60)
+
+                    workbook.close()
+
+                    with open(excel_path, "rb") as ef:
+                        zip_file.writestr("Missing_Documents_Report.xlsx", ef.read())
+                    os.remove(excel_path)
+                except Exception as e:
+                    frappe.log_error(
+                        message=f"Failed to generate Excel missing documents report: {str(e)}",
+                        title="PACE Bulk Export Excel Report Error"
+                    )
+
+        if found_files == 0 and not any(r["missing_count"] > 0 for r in report_rows):
+            frappe.throw(_("No uploaded documents found for the selected records."))
+
+        zip_filename = f"PACE_Bulk_Records_{frappe.utils.now_datetime().strftime('%Y%m%d_%H%M%S')}.zip"
+        
+        from frappe.utils import file_manager as utils_fm
+        from frappe.core.api import file as core_file
+
+        orig_utils_get_max = utils_fm.get_max_file_size
+        orig_core_get_max = core_file.get_max_file_size
+
+        large_limit = 5 * 1024 * 1024 * 1024
+        utils_fm.get_max_file_size = lambda: large_limit
+        core_file.get_max_file_size = lambda: large_limit
+
+        try:
+            with open(zip_path, "rb") as zf:
+                _file = save_file(
+                    zip_filename,
+                    zf.read(),
+                    "PACE Application",
+                    names[0],
+                    is_private=1
+                )
+        finally:
+            utils_fm.get_max_file_size = orig_utils_get_max
+            core_file.get_max_file_size = orig_core_get_max
+
+        return _file.file_url
+
     finally:
-        # Restore the original functions
-        utils_fm.get_max_file_size = orig_utils_get_max
-        core_file.get_max_file_size = orig_core_get_max
-    
-    return _file.file_url
+        if os.path.exists(zip_path):
+            os.remove(zip_path)
 
 
 def send_document_reminders(current_item=0, total_items=0):
@@ -2140,10 +2342,8 @@ def withdraw_application(application_name, reason):
 	# Update Student Master status if exists
 	student_name = frappe.db.get_value("Student Master", {"application_number": application_name}, "name")
 	if student_name:
-		frappe.db.set_value("Student Master", student_name, {
-			"student_status": "Withdrawn",
-			"status_remark": reason
-		}, update_modified=True)
+		from slcm.admission.utils.withdrawal_sync import sync_student_records_for_withdrawn_application
+		sync_student_records_for_withdrawn_application(application_name, status_remark=reason)
 
 	return {
 		"status": "success",

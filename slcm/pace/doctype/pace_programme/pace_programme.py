@@ -25,9 +25,12 @@ class PACEProgramme(Document):
 
 	def generate_application_form_link(self):
 		if self.route:
-			from frappe.utils import get_url
-			web_form_route = frappe.db.get_value("Web Form", "PACE Application Form", "route") or "paceadmissions/application-form"
-			self.application_form_link = f"{get_url()}/{web_form_route}/new?programme={self.route}"
+			# Site-relative (see Programme.generate_application_form_link): an absolute
+			# get_url() link breaks login when the portal is opened from another host.
+			web_form_route = (
+				frappe.db.get_value("Web Form", "PACE Application Form", "route") or "paceadmissions/application-form"
+			).strip("/")
+			self.application_form_link = f"/{web_form_route}/new?programme={self.route}"
 
 	def generate_program_slug(self):
 		if not self.programme_name:

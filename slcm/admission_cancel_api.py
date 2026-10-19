@@ -488,7 +488,7 @@ def submit_admission_cancellation(**kwargs):
 	receipts = frappe.get_all(
 		"Applicant Payment Receipt",
 		filters={"applicant": applicant, "docstatus": ["<", 2]},
-		fields=["name", "fee_type", "total_amount", "net_amount", "transaction_id"],
+		fields=["name", "fee_type", "total_amount", "net_amount", "transaction_id", "assignment"],
 		order_by="creation asc"
 	)
 	
@@ -503,6 +503,13 @@ def submit_admission_cancellation(**kwargs):
 		amt = flt(r.net_amount) if flt(r.get("net_amount")) > 0 else flt(r.total_amount)
 		if amt > 0:
 			ft = r.fee_type or ""
+			if not ft and r.get("assignment"):
+				ft = frappe.db.get_value("Applicant Fee Assignment", r.assignment, "fee_type") or ""
+
+			# Application/Form Fees are non-refundable during admission cancellation
+			if "Application" in ft or "Form" in ft:
+				continue
+
 			if "Confirmation" in ft and not is_conf_ref:
 				continue
 			valid_receipts.append(r)

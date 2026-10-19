@@ -9,7 +9,6 @@ from frappe.model.document import Document
 class StudentEnrollment(Document):
     def validate(self):
         self.validate_duplicate_enrollment()
-        self._validate_cohort_seat_limit()
 
     def before_save(self):
         self.fetch_program_and_courses()
@@ -115,27 +114,6 @@ class StudentEnrollment(Document):
                     "status":          "Enrolled",
                 })
 
-    def _validate_cohort_seat_limit(self):
-        """Block enrollment if batch has reached its seat limit."""
-        if not self.batch:
-            return
-        seat_limit = frappe.db.get_value("Batch", self.batch, "seat_limit")
-        if not seat_limit:
-            return
-        existing_count = frappe.db.count(
-            "Student Enrollment",
-            {
-                "batch": self.batch,
-                "status": ["not in", ["Dropped"]],
-                "name": ["!=", self.name or "__new__"],
-                "docstatus": ["<", 2],
-            },
-        )
-        if existing_count >= seat_limit:
-            frappe.throw(
-                _("Batch {0} has reached its seat limit of {1}").format(self.batch, seat_limit)
-            )
-
     def validate_duplicate_enrollment(self):
         """Prevent duplicate enrollment for same student + batch + academic_year."""
         filters = {
@@ -189,9 +167,10 @@ class StudentEnrollment(Document):
 
 @frappe.whitelist()
 def get_other_terms(student, exclude=None):
-    """List a student's other Student Enrollment records (other terms),
-    most recent academic year first, for the 'Other Terms' selector on
-    the Student Enrollment form."""
+    """List a student's Student Enrollment records across terms, most recent
+    academic year first, for the Academic Timeline on the Student Enrollment
+    form. Pass exclude=None to include every term (the form marks the one
+    currently being viewed); pass a docname to omit just that record."""
     if not student:
         return []
 
@@ -211,7 +190,9 @@ def get_other_terms(student, exclude=None):
         ):
             ay_start[ay.name] = ay.year_start_date
 
-    enrollments.sort(key=lambda e: ay_start.get(e.academic_year) or "", reverse=True)
+    # str() so enrollments without a start date ("") compare with real dates;
+    # ISO date strings sort chronologically.
+    enrollments.sort(key=lambda e: str(ay_start.get(e.academic_year) or ""), reverse=True)
 
     return [e for e in enrollments if e.name != exclude]
 
@@ -219,7 +200,7 @@ def get_other_terms(student, exclude=None):
 @frappe.whitelist()
 def bulk_update_enrollment_status(names, status):
     """Update status on multiple Student Enrollment records via save(),
-    so validate() (duplicate/seat-limit/transition checks) still applies.
+    so validate() (duplicate/transition checks) still applies.
     """
     if isinstance(names, str):
         names = frappe.parse_json(names)

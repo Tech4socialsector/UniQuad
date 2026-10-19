@@ -1,0 +1,151 @@
+{
+ "actions": [],
+ "creation": "2026-09-25 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "purpose",
+  "certificate_type",
+  "column_break_1",
+  "enabled",
+  "include_bank_details",
+  "require_full_payment",
+  "section_content",
+  "heading",
+  "body_text",
+  "applicant_body_text",
+  "paid_line_text",
+  "total_label",
+  "show_paid_rows",
+  "paid_row_label",
+  "outstanding_row_label",
+  "bank_details_text",
+  "closing_text"
+ ],
+ "fields": [
+  {
+   "description": "The option students/staff pick in the Purpose field of a Fee Certificate Request.",
+   "fieldname": "purpose",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Purpose",
+   "reqd": 1
+  },
+  {
+   "description": "Controls which fee figures go into the table.<br><b>Multi Year Fee Structure</b> \u2013 one column for every year of the programme from the student's first year (future years repeat the per-annum fees; Admission Fee only in year 1).<br><b>Single Year Fee Demand</b> \u2013 one academic year, fee to be paid (Admission Fee only in the student's first year).<br><b>Single Year Fee Receipt</b> \u2013 one academic year, fee already paid.",
+   "fieldname": "certificate_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Certificate Type",
+   "options": "Multi Year Fee Structure\nSingle Year Fee Demand\nSingle Year Fee Receipt",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Enabled"
+  },
+  {
+   "default": "0",
+   "fieldname": "include_bank_details",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Include Bank Details"
+  },
+  {
+   "default": "0",
+   "fieldname": "require_full_payment",
+   "fieldtype": "Check",
+   "label": "Download Only When Fully Paid",
+   "description": "Students can download this certificate from the student portal only when they have no outstanding fee (all their Fee Demands are fully paid)."
+  },
+  {
+   "description": "Placeholders you can use in the texts below: {{ student_name }}, {{ student_id }}, {{ admit_card_number }}, {{ application_number }}, {{ registration_id }}, {{ programme }}, {{ programme_duration }} (e.g. \"five years\"), {{ academic_year }} (e.g. \"2026-27\"), {{ current_year }} (year of study, e.g. \"II\"), {{ year_fee }} (that year's Total fee payable), {{ due_year }} / {{ due_academic_year }} (the first year from the certificate year that still has fee outstanding, e.g. \"II\" / \"2027-28\"), {{ paid_summary }} (year-wise paid amount lines), {{ institute_name }}, {{ bank_account_name }}, {{ bank_account_no }}, {{ bank_ifsc_code }}, {{ bank_branch }}.",
+   "fieldname": "section_content",
+   "fieldtype": "Section Break",
+   "label": "Certificate Content"
+  },
+  {
+   "fieldname": "heading",
+   "fieldtype": "Data",
+   "label": "Heading",
+   "reqd": 1
+  },
+  {
+   "description": "Printed above the fee table.",
+   "fieldname": "body_text",
+   "fieldtype": "Text Editor",
+   "label": "Body Text (Campus Student)"
+  },
+  {
+   "fieldname": "applicant_body_text",
+   "fieldtype": "Text Editor",
+   "label": "Body Text (Admission Stage)",
+   "description": "Used instead of Body Text when the certificate is for an applicant (Certificate For = Admission Stage). Extra placeholders: {{ admit_card_number }}, {{ application_number }}."
+  },
+  {
+   "default": "Academic Year {{ academic_year }} paid amount is Rs. {{ fee_amount }}/-",
+   "description": "One line per academic year the student has studied so far (up to the certificate's academic year), printed wherever {{ paid_summary }} appears in the Body Text. Placeholders: {{ academic_year }} (e.g. \"2025-2026\"), {{ fee_amount }} (the year's overall Total from the table, after any University Scholarship), {{ paid_amount }} (amount actually paid so far).",
+   "fieldname": "paid_line_text",
+   "fieldtype": "Data",
+   "label": "Year-wise Paid Amount Line"
+  },
+  {
+   "default": "Total",
+   "fieldname": "total_label",
+   "fieldtype": "Data",
+   "label": "Total Row Label"
+  },
+  {
+   "default": "0",
+   "fieldname": "show_paid_rows",
+   "fieldtype": "Check",
+   "label": "Show Paid / Outstanding Rows",
+   "description": "Multi-year certificates for campus students: adds a paid row (amounts in brackets) and an outstanding row under the total. Not shown for applicants."
+  },
+  {
+   "default": "Total Fee paid",
+   "depends_on": "show_paid_rows",
+   "fieldname": "paid_row_label",
+   "fieldtype": "Data",
+   "label": "Paid Row Label"
+  },
+  {
+   "default": "Outstanding fee",
+   "depends_on": "show_paid_rows",
+   "fieldname": "outstanding_row_label",
+   "fieldtype": "Data",
+   "label": "Outstanding Row Label"
+  },
+  {
+   "depends_on": "include_bank_details",
+   "description": "Printed below the fee table.",
+   "fieldname": "bank_details_text",
+   "fieldtype": "Text Editor",
+   "label": "Bank Details Text"
+  },
+  {
+   "description": "Optional closing paragraph / note printed after the table (and bank details).",
+   "fieldname": "closing_text",
+   "fieldtype": "Text Editor",
+   "label": "Closing Text"
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-09-28 13:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "SLCM",
+ "name": "Fee Certificate Purpose Template",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

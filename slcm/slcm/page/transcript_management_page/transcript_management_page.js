@@ -1,6 +1,13 @@
 // Copyright (c) 2026, TFSS and contributors
 // For license information, please see license.txt
 
+const TRANSCRIPT_TYPE_DISPLAY_LABELS = {
+	"Final Transcript": __("Provisional Transcript"),
+};
+function transcript_type_label(value) {
+	return TRANSCRIPT_TYPE_DISPLAY_LABELS[value] || value;
+}
+
 frappe.pages["transcript-management-page"].on_page_load = function (wrapper) {
 	const page = frappe.ui.make_app_page({
 		parent: wrapper,
@@ -31,6 +38,21 @@ frappe.pages["transcript-management-page"].on_page_load = function (wrapper) {
 		_dept_labels:   {},
 	};
 
+	// ── Requests tab state ────────────────────────────────────────────────────
+	const active_tab = { value: "students" };
+	const req_state = {
+		search:           "",
+		status:           "",
+		transcript_type:  "",
+		payment_status:   "",
+		page:             1,
+		page_length:      50,
+		total:            0,
+		loading:          false,
+		selected:         new Set(),
+		rows:             [],
+	};
+
 	// ── Inject CSS ─────────────────────────────────────────────────────────────
 	if (!document.getElementById("tm-styles")) {
 		const style = document.createElement("style");
@@ -40,6 +62,48 @@ frappe.pages["transcript-management-page"].on_page_load = function (wrapper) {
 
 			/* Layout */
 			.tm-wrap { padding: 20px 24px 80px; background: #f7f8fa; min-height: 100%; }
+
+			/* ── Tabs ── */
+			.tm-tabs {
+				display: flex; gap: 4px; margin-bottom: 18px;
+				border-bottom: 1px solid #e4e7ea;
+			}
+			.tm-tab-btn {
+				background: none; border: none; cursor: pointer;
+				padding: 10px 4px; margin-right: 22px;
+				font-size: 14px; font-weight: 600; color: #888;
+				border-bottom: 2.5px solid transparent;
+				transition: color 0.15s, border-color 0.15s;
+			}
+			.tm-tab-btn:hover { color: #c84630; }
+			.tm-tab-btn.active { color: #c84630; border-color: #c84630; }
+
+			/* ── Requests status chart ── */
+			.tm-req-chart { display: flex; flex-direction: column; gap: 10px; }
+			.tm-req-chart-row { display: flex; align-items: center; gap: 10px; }
+			.tm-req-chart-label { width: 130px; flex-shrink: 0; font-size: 12px; color: #555; font-weight: 500; }
+			.tm-req-chart-track { flex: 1; height: 16px; background: #f0f1f3; border-radius: 8px; overflow: hidden; }
+			.tm-req-chart-fill { height: 100%; border-radius: 8px; transition: width 0.3s; }
+			.tm-req-chart-count { width: 34px; text-align: right; font-size: 12px; font-weight: 700; color: #333; }
+
+			/* ── Payment info button ── */
+			.tm-pay-btn {
+				width: 28px; height: 28px; border-radius: 6px; border: 1.5px solid #d1d8dd;
+				background: #fff; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+				color: #666; transition: border-color 0.15s, color 0.15s;
+			}
+			.tm-pay-btn:hover { border-color: #c84630; color: #c84630; }
+
+			/* ── Payment details dialog table ── */
+			.tm-pay-detail-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #f0f1f3; font-size: 13px; }
+			.tm-pay-detail-row:last-child { border-bottom: none; }
+			.tm-pay-detail-label { color: #888; }
+			.tm-pay-detail-value { color: #222; font-weight: 600; text-align: right; }
+			.tm-pay-gateway-json {
+				background: #f7f8fa; border: 1px solid #e4e7ea; border-radius: 6px;
+				padding: 10px; font-family: monospace; font-size: 11.5px; white-space: pre-wrap;
+				max-height: 240px; overflow: auto; margin-top: 10px; color: #444;
+			}
 
 			/* ── Stats bar ── */
 			.tm-stats-bar {
@@ -447,6 +511,19 @@ frappe.pages["transcript-management-page"].on_page_load = function (wrapper) {
 	$(wrapper).find(".page-content").html(`
 		<div class="tm-wrap">
 
+			<!-- Tab Switcher -->
+			<div class="tm-tabs">
+				<button class="tm-tab-btn active" id="tm-tab-students" data-tab="students">
+					${__("Students")}
+				</button>
+				<button class="tm-tab-btn" id="tm-tab-requests" data-tab="requests">
+					${__("Requests")}
+				</button>
+			</div>
+
+			<!-- ══════════════ STUDENTS TAB ══════════════ -->
+			<div id="tm-panel-students" class="tm-panel">
+
 			<!-- Toolbar -->
 			<div class="tm-toolbar">
 				<div class="tm-search-box">
@@ -657,12 +734,12 @@ frappe.pages["transcript-management-page"].on_page_load = function (wrapper) {
 								<span class="tm-sort-icon" data-col="cgpa">↕</span>
 							</th>
 							<th class="tm-col-accent" style="text-align:center; width:120px;">${__("Interim")}</th>
-							<th style="text-align:center; width:120px;">${__("Final")}</th>
+							<!-- FINAL column hidden: <th style="text-align:center; width:120px;">\${__("Final")}</th> -->
 						</tr>
 					</thead>
 					<tbody id="tm-tbody">
 						<tr>
-							<td colspan="8" style="text-align:center; padding:48px; color:#aaa;">
+							<td colspan="7" style="text-align:center; padding:48px; color:#aaa;">
 								<div class="tm-spinner"></div>
 								${__("Loading students...")}
 							</td>
@@ -678,18 +755,224 @@ frappe.pages["transcript-management-page"].on_page_load = function (wrapper) {
 
 			</div>
 
+			</div> <!-- /tm-panel-students -->
+
+			<!-- ══════════════ REQUESTS TAB ══════════════ -->
+			<div id="tm-panel-requests" class="tm-panel" style="display:none;">
+
+				<!-- Analytics -->
+				<div class="tm-stats-bar" id="tm-req-stats">
+					<div class="tm-stat-card">
+						<div class="tm-stat-icon tm-stat-icon-total">
+							<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+								fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+							</svg>
+						</div>
+						<div class="tm-stat-body">
+							<div class="tm-stat-value" id="tm-rstat-total">—</div>
+							<div class="tm-stat-label">${__("Total Requests")}</div>
+						</div>
+					</div>
+					<div class="tm-stat-card">
+						<div class="tm-stat-icon tm-stat-icon-pending">
+							<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+								fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+							</svg>
+						</div>
+						<div class="tm-stat-body">
+							<div class="tm-stat-value" id="tm-rstat-review">—</div>
+							<div class="tm-stat-label">${__("Under Review")}</div>
+						</div>
+					</div>
+					<div class="tm-stat-card">
+						<div class="tm-stat-icon tm-stat-icon-final">
+							<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+								fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<polyline points="20 6 9 17 4 12"/>
+							</svg>
+						</div>
+						<div class="tm-stat-body">
+							<div class="tm-stat-value" id="tm-rstat-generated">—</div>
+							<div class="tm-stat-label">${__("Generated / Delivered")}</div>
+						</div>
+					</div>
+					<div class="tm-stat-card">
+						<div class="tm-stat-icon tm-stat-icon-interim" style="font-size:18px; font-weight:700;">₹</div>
+						<div class="tm-stat-body">
+							<div class="tm-stat-value" id="tm-rstat-revenue">—</div>
+							<div class="tm-stat-label">${__("Revenue Collected")}</div>
+						</div>
+					</div>
+					<div class="tm-stat-card">
+						<div class="tm-stat-icon tm-stat-icon-pending">
+							<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+								fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+							</svg>
+						</div>
+						<div class="tm-stat-body">
+							<div class="tm-stat-value" id="tm-rstat-rejected">—</div>
+							<div class="tm-stat-label">${__("Rejected")}</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Status distribution bar chart -->
+				<div class="tm-table-card" style="padding:16px 20px; margin-bottom:16px;">
+					<div class="tm-filter-panel-title" style="margin-bottom:10px;">${__("Requests by Status")}</div>
+					<div id="tm-req-chart" class="tm-req-chart"></div>
+				</div>
+
+				<!-- Toolbar -->
+				<div class="tm-toolbar">
+					<div class="tm-search-box">
+						<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24"
+							fill="none" stroke="#999" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+							<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+						</svg>
+						<input id="tm-req-search" type="text" class="tm-search-input"
+							placeholder="${__("Search by Student Name, Reg ID, Request ID")}" />
+					</div>
+					<div class="tm-actions">
+						<select id="tm-req-f-status" class="tm-dt-select" style="height:34px;">
+							<option value="">${__("All Statuses")}</option>
+							<option value="Payment Pending">${__("Payment Pending")}</option>
+							<option value="Submitted">${__("Submitted")}</option>
+							<option value="Under Review">${__("Under Review")}</option>
+							<option value="Approved">${__("Approved")}</option>
+							<option value="Generated">${__("Generated")}</option>
+							<option value="Delivered">${__("Delivered")}</option>
+							<option value="Rejected">${__("Rejected")}</option>
+							<option value="Cancelled">${__("Cancelled")}</option>
+						</select>
+						<select id="tm-req-f-type" class="tm-dt-select" style="height:34px;">
+							<option value="">${__("All Types")}</option>
+							<option value="Interim Transcript">${__("Interim Transcript")}</option>
+							<option value="Final Transcript">${transcript_type_label("Final Transcript")}</option>
+							<option value="Consolidated Marksheet">${__("Consolidated Marksheet")}</option>
+							<option value="Duplicate Transcript">${__("Duplicate Transcript")}</option>
+							<option value="Digital Transcript">${__("Digital Transcript")}</option>
+						</select>
+						<select id="tm-req-f-payment" class="tm-dt-select" style="height:34px;">
+							<option value="">${__("All Payment Status")}</option>
+							<option value="Not Required">${__("Not Required")}</option>
+							<option value="Pending">${__("Pending")}</option>
+							<option value="Paid">${__("Paid")}</option>
+							<option value="Payment Failed">${__("Payment Failed")}</option>
+							<option value="Refunded">${__("Refunded")}</option>
+						</select>
+						<button id="tm-req-refresh" class="tm-btn tm-btn-default" title="${__("Refresh")}">
+							<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24"
+								fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+								<path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+							</svg>
+							${__("Refresh")}
+						</button>
+					</div>
+				</div>
+
+				<!-- Requests Table -->
+				<div class="tm-table-card">
+					<div class="tm-dt-topbar">
+						<div class="tm-dt-entries">
+							${__("Show")}
+							<select id="tm-req-page-length" class="tm-dt-select">
+								<option value="10">10</option>
+								<option value="25">25</option>
+								<option value="50" selected>50</option>
+								<option value="100">100</option>
+							</select>
+							${__("entries")}
+						</div>
+						<div class="tm-dt-topbar-right" id="tm-req-count-badge"></div>
+					</div>
+
+					<table class="tm-table">
+						<thead>
+							<tr>
+								<th style="width:38px; padding:9px 12px;">
+									<input type="checkbox" id="tm-req-select-all" class="tm-checkbox"
+										title="${__("Select / deselect all on this page")}" />
+								</th>
+								<th style="min-width:80px;">${__("ID")}</th>
+								<th style="min-width:160px;">${__("Student")}</th>
+								<th style="min-width:130px;">${__("Type")}</th>
+								<th style="min-width:100px;">${__("Status")}</th>
+								<th style="min-width:110px;">${__("Payment")}</th>
+								<th style="text-align:right; width:90px;">${__("Fee")}</th>
+								<th style="min-width:100px;">${__("Requested")}</th>
+								<th style="width:70px; text-align:center;">${__("Payment Info")}</th>
+							</tr>
+						</thead>
+						<tbody id="tm-req-tbody">
+							<tr>
+								<td colspan="9" style="text-align:center; padding:48px; color:#aaa;">
+									<div class="tm-spinner"></div>
+									${__("Loading requests...")}
+								</td>
+							</tr>
+						</tbody>
+					</table>
+
+					<div class="tm-dt-bottombar">
+						<span id="tm-req-page-info" class="tm-page-info"></span>
+						<div class="tm-page-controls" id="tm-req-page-controls"></div>
+					</div>
+				</div>
+
+			</div> <!-- /tm-panel-requests -->
+
 		</div>
 
-		<!-- Selection Action Bar (fixed bottom) -->
+		<!-- Selection Action Bar (fixed bottom, Students tab) -->
 		<div id="tm-sel-bar" class="tm-sel-bar">
 			<span id="tm-sel-count" class="tm-sel-count">0</span>
 			<span class="tm-sel-label">${__("selected")}</span>
 			<div class="tm-sel-divider"></div>
 			<button id="tm-sel-clear" class="tm-sel-clear">✕ ${__("Clear selection")}</button>
 		</div>
+
+		<!-- Selection Action Bar (fixed bottom, Requests tab) -->
+		<div id="tm-req-sel-bar" class="tm-sel-bar">
+			<span id="tm-req-sel-count" class="tm-sel-count">0</span>
+			<span class="tm-sel-label">${__("selected")}</span>
+			<div class="tm-sel-divider"></div>
+			<button id="tm-req-bulk-approve" class="tm-btn tm-btn-primary" style="height:30px;">
+				${__("Approve & Generate")}
+			</button>
+			<button id="tm-req-bulk-reject" class="tm-btn tm-btn-outline" style="height:30px; border-color:#fff; color:#fff;">
+				${__("Reject")}
+			</button>
+			<button id="tm-req-sel-clear" class="tm-sel-clear">✕ ${__("Clear selection")}</button>
+		</div>
 	`);
 
 	// ── Event Bindings ─────────────────────────────────────────────────────────
+
+	// Tab switching
+	$(wrapper).on("click", ".tm-tab-btn", function () {
+		const tab = $(this).data("tab");
+		if (tab === active_tab.value) return;
+		active_tab.value = tab;
+		$(wrapper).find(".tm-tab-btn").removeClass("active");
+		$(this).addClass("active");
+
+		if (tab === "students") {
+			$(wrapper).find("#tm-panel-requests").hide();
+			$(wrapper).find("#tm-panel-students").show();
+			$(wrapper).find("#tm-req-sel-bar").removeClass("tm-sel-bar--visible");
+			update_selection_bar();
+		} else {
+			$(wrapper).find("#tm-panel-students").hide();
+			$(wrapper).find("#tm-panel-requests").show();
+			$(wrapper).find("#tm-sel-bar").removeClass("tm-sel-bar--visible");
+			load_request_stats();
+			load_requests();
+		}
+	});
 
 	// Search debounce
 	let searchTimer;
@@ -814,6 +1097,100 @@ frappe.pages["transcript-management-page"].on_page_load = function (wrapper) {
 		update_selection_bar();
 	});
 
+	// ── Requests tab: event bindings ────────────────────────────────────────────
+
+	let reqSearchTimer;
+	$(wrapper).on("input", "#tm-req-search", function () {
+		clearTimeout(reqSearchTimer);
+		reqSearchTimer = setTimeout(() => {
+			req_state.search = $(this).val().trim();
+			req_state.page = 1;
+			load_requests();
+		}, 350);
+	});
+
+	$(wrapper).on("change", "#tm-req-f-status", function () {
+		req_state.status = $(this).val();
+		req_state.page = 1;
+		load_requests();
+	});
+	$(wrapper).on("change", "#tm-req-f-type", function () {
+		req_state.transcript_type = $(this).val();
+		req_state.page = 1;
+		load_requests();
+	});
+	$(wrapper).on("change", "#tm-req-f-payment", function () {
+		req_state.payment_status = $(this).val();
+		req_state.page = 1;
+		load_requests();
+	});
+	$(wrapper).on("change", "#tm-req-page-length", function () {
+		req_state.page_length = parseInt($(this).val());
+		req_state.page = 1;
+		load_requests();
+	});
+	$(wrapper).on("click", "#tm-req-refresh", function () {
+		load_request_stats();
+		load_requests();
+	});
+
+	$(wrapper).on("change", "#tm-req-select-all", function () {
+		const checked = $(this).is(":checked");
+		$(wrapper).find(".tm-req-row-check").prop("checked", checked).each(function () {
+			const name = $(this).data("name");
+			if (checked) req_state.selected.add(name);
+			else         req_state.selected.delete(name);
+		});
+		update_req_selection_bar();
+	});
+
+	$(wrapper).on("change", ".tm-req-row-check", function () {
+		const name = $(this).data("name");
+		if ($(this).is(":checked")) req_state.selected.add(name);
+		else                        req_state.selected.delete(name);
+		const total = $(wrapper).find(".tm-req-row-check").length;
+		const sel   = $(wrapper).find(".tm-req-row-check:checked").length;
+		$(wrapper).find("#tm-req-select-all")
+			.prop("indeterminate", sel > 0 && sel < total)
+			.prop("checked", sel === total && total > 0);
+		update_req_selection_bar();
+	});
+
+	$(wrapper).on("click", "#tm-req-sel-clear", function () {
+		req_state.selected.clear();
+		$(wrapper).find(".tm-req-row-check").prop("checked", false);
+		$(wrapper).find("#tm-req-select-all").prop("checked", false).prop("indeterminate", false);
+		update_req_selection_bar();
+	});
+
+	$(wrapper).on("click", ".tm-pay-btn", function () {
+		show_payment_details($(this).data("name"));
+	});
+
+	$(wrapper).on("click", "#tm-req-bulk-approve", function () {
+		const names = [...req_state.selected];
+		if (!names.length) return;
+		frappe.confirm(
+			__("Approve & generate transcripts for {0} selected request(s)?", [names.length]),
+			function () { bulk_approve(names); }
+		);
+	});
+
+	$(wrapper).on("click", "#tm-req-bulk-reject", function () {
+		const names = [...req_state.selected];
+		if (!names.length) return;
+		frappe.prompt(
+			{
+				fieldname: "rejection_reason",
+				label: __("Rejection Reason"),
+				fieldtype: "Small Text",
+				reqd: 1,
+			},
+			(values) => bulk_reject(names, values.rejection_reason),
+			__("Reject {0} Request(s)", [names.length])
+		);
+	});
+
 	// ── Functions ──────────────────────────────────────────────────────────────
 
 	function update_selection_bar() {
@@ -906,7 +1283,7 @@ frappe.pages["transcript-management-page"].on_page_load = function (wrapper) {
 
 		$(wrapper).find("#tm-tbody").html(`
 			<tr>
-				<td colspan="8" style="text-align:center; padding:48px; color:#aaa;">
+				<td colspan="7" style="text-align:center; padding:48px; color:#aaa;">
 					<div class="tm-spinner"></div>
 					${__("Loading students...")}
 				</td>
@@ -939,7 +1316,7 @@ frappe.pages["transcript-management-page"].on_page_load = function (wrapper) {
 			error: function () {
 				state.loading = false;
 				$(wrapper).find("#tm-tbody").html(`
-					<tr><td colspan="8" style="text-align:center; padding:32px; color:#c84630;">
+					<tr><td colspan="7" style="text-align:center; padding:32px; color:#c84630;">
 						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
 							fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
 							style="display:block;margin:0 auto 8px;opacity:.6;">
@@ -957,7 +1334,7 @@ frappe.pages["transcript-management-page"].on_page_load = function (wrapper) {
 
 		if (!students || students.length === 0) {
 			tbody.html(`
-				<tr><td colspan="8" style="text-align:center; padding:56px; color:#bbb;">
+				<tr><td colspan="7" style="text-align:center; padding:56px; color:#bbb;">
 					<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24"
 						fill="none" stroke="#ddd" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
 						style="display:block;margin:0 auto 12px;">
@@ -1046,7 +1423,7 @@ frappe.pages["transcript-management-page"].on_page_load = function (wrapper) {
 					<td style="text-align:center;">${credHtml}</td>
 					<td style="text-align:center;">${cgpaHtml}</td>
 					<td style="text-align:center;">${interactive_badge(s.interim_transcript, s.student, "Interim")}</td>
-					<td style="text-align:center;">${interactive_badge(s.final_transcript, s.student, "Final")}</td>
+					<!-- FINAL column hidden: <td style="text-align:center;">\${interactive_badge(s.final_transcript, s.student, "Final")}</td> -->
 				</tr>`;
 		});
 
@@ -1344,9 +1721,374 @@ frappe.pages["transcript-management-page"].on_page_load = function (wrapper) {
 		});
 	}
 
+	// ── Requests tab: functions ─────────────────────────────────────────────────
+
+	const REQ_STATUS_COLORS = {
+		"Payment Pending": "#c8632f",
+		"Submitted":       "#3b5bdb",
+		"Under Review":    "#b45309",
+		"Approved":        "#0f8a5f",
+		"Generated":       "#1a7a36",
+		"Delivered":       "#1a7a36",
+		"Rejected":        "#c84630",
+		"Cancelled":       "#888",
+	};
+
+	const REQ_STATUS_PILL_CLASS = {
+		"Payment Pending": "tm-status-dropped",
+		"Submitted":       "tm-status-active",
+		"Under Review":    "tm-status-dormant",
+		"Approved":        "tm-status-graduated",
+		"Generated":       "tm-status-graduated",
+		"Delivered":       "tm-status-graduated",
+		"Rejected":        "tm-status-dropped",
+		"Cancelled":       "tm-status-inactive",
+	};
+
+	function req_status_pill(status) {
+		const cls = REQ_STATUS_PILL_CLASS[status] || "tm-status-inactive";
+		return `<span class="tm-status-pill ${cls}">${frappe.utils.escape_html(status || "")}</span>`;
+	}
+
+	function req_payment_pill(status) {
+		const map = {
+			"Paid":             "tm-status-graduated",
+			"Pending":          "tm-status-dropped",
+			"Payment Initiated":"tm-status-dormant",
+			"Authorized":       "tm-status-dormant",
+			"Payment Failed":   "tm-status-dropped",
+			"Payment Cancelled":"tm-status-inactive",
+			"Refunded":         "tm-status-alumni",
+			"Not Required":     "tm-status-inactive",
+		};
+		const cls = map[status] || "tm-status-inactive";
+		return `<span class="tm-status-pill ${cls}">${frappe.utils.escape_html(status || "")}</span>`;
+	}
+
+	function load_request_stats() {
+		frappe.call({
+			method: "slcm.slcm.page.transcript_management_page.transcript_management_page.get_request_stats",
+			callback: function (r) {
+				const s = r.message || {};
+				$(wrapper).find("#tm-rstat-total").text(s.total || 0);
+				$(wrapper).find("#tm-rstat-review").text(s.under_review || 0);
+				$(wrapper).find("#tm-rstat-generated").text(s.generated || 0);
+				$(wrapper).find("#tm-rstat-rejected").text(s.rejected || 0);
+				$(wrapper).find("#tm-rstat-revenue").text(
+					s.revenue ? format_currency(s.revenue) : format_currency(0)
+				);
+				render_req_chart(s);
+			},
+		});
+	}
+
+	function format_currency(amount) {
+		try {
+			return frappe.utils.fmt_money(amount || 0, {}, "INR");
+		} catch (e) {
+			return "₹" + (Math.round((amount || 0) * 100) / 100).toLocaleString();
+		}
+	}
+
+	function render_req_chart(s) {
+		const rows = [
+			{ label: __("Payment Pending"), value: s.payment_pending || 0, color: REQ_STATUS_COLORS["Payment Pending"] },
+			{ label: __("Under Review"),    value: s.under_review || 0,    color: REQ_STATUS_COLORS["Under Review"] },
+			{ label: __("Approved"),        value: s.approved || 0,        color: REQ_STATUS_COLORS["Approved"] },
+			{ label: __("Generated"),       value: s.generated || 0,       color: REQ_STATUS_COLORS["Generated"] },
+			{ label: __("Rejected"),        value: s.rejected || 0,        color: REQ_STATUS_COLORS["Rejected"] },
+		];
+		const max = Math.max(1, ...rows.map(r => r.value));
+		const container = $(wrapper).find("#tm-req-chart");
+		container.html(rows.map(r => `
+			<div class="tm-req-chart-row">
+				<span class="tm-req-chart-label">${frappe.utils.escape_html(r.label)}</span>
+				<div class="tm-req-chart-track">
+					<div class="tm-req-chart-fill" style="width:${(r.value / max) * 100}%; background:${r.color};"></div>
+				</div>
+				<span class="tm-req-chart-count">${r.value}</span>
+			</div>
+		`).join(""));
+	}
+
+	function load_requests() {
+		if (req_state.loading) return;
+		req_state.loading = true;
+		frappe.call({
+			method: "slcm.slcm.page.transcript_management_page.transcript_management_page.get_requests",
+			args: {
+				search:          req_state.search,
+				status:          req_state.status,
+				transcript_type: req_state.transcript_type,
+				payment_status:  req_state.payment_status,
+				page:            req_state.page,
+				page_length:     req_state.page_length,
+			},
+			callback: function (r) {
+				req_state.loading = false;
+				const data = r.message || { requests: [], total: 0 };
+				req_state.rows  = data.requests || [];
+				req_state.total = data.total || 0;
+				render_requests_table(req_state.rows);
+				render_requests_pagination();
+				$(wrapper).find("#tm-req-count-badge").text(
+					req_state.total ? __("{0} requests", [req_state.total]) : ""
+				);
+			},
+			error: function () {
+				req_state.loading = false;
+			},
+		});
+	}
+
+	function render_requests_table(rows) {
+		const tbody = $(wrapper).find("#tm-req-tbody");
+		if (!rows.length) {
+			tbody.html(`
+				<tr><td colspan="9" style="text-align:center; padding:48px; color:#aaa;">
+					${__("No transcript requests found.")}
+				</td></tr>
+			`);
+			return;
+		}
+
+		const html = rows.map(row => {
+			const checked = req_state.selected.has(row.name) ? "checked" : "";
+			const name = frappe.utils.escape_html(row.name);
+			const sname = frappe.utils.escape_html(row.student_name || row.student || "");
+			const fee = row.payment_required ? format_currency(row.fee_amount || 0) : "—";
+			const requested = row.requested_on
+				? frappe.datetime.str_to_user(row.requested_on)
+				: "—";
+			return `
+				<tr>
+					<td style="padding:9px 12px;">
+						<input type="checkbox" class="tm-checkbox tm-req-row-check" data-name="${name}" ${checked} />
+					</td>
+					<td>
+						<a href="/app/transcript-request/${encodeURIComponent(row.name)}" target="_blank"
+							style="color:#c84630; font-weight:600; text-decoration:none;">${name}</a>
+					</td>
+					<td>${sname}<br><span style="color:#999; font-size:11px;">${frappe.utils.escape_html(row.registration_id || "")}</span></td>
+					<td>${frappe.utils.escape_html(transcript_type_label(row.transcript_type) || "")}</td>
+					<td>${req_status_pill(row.status)}</td>
+					<td>${req_payment_pill(row.payment_status)}</td>
+					<td style="text-align:right;">${fee}</td>
+					<td>${requested}</td>
+					<td style="text-align:center;">
+						<button class="tm-pay-btn" data-name="${name}" title="${__("View payment details")}">
+							<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24"
+								fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/>
+							</svg>
+						</button>
+					</td>
+				</tr>
+			`;
+		}).join("");
+		tbody.html(html);
+
+		const total = $(wrapper).find(".tm-req-row-check").length;
+		const sel   = $(wrapper).find(".tm-req-row-check:checked").length;
+		$(wrapper).find("#tm-req-select-all")
+			.prop("indeterminate", sel > 0 && sel < total)
+			.prop("checked", sel === total && total > 0);
+	}
+
+	function render_requests_pagination() {
+		const total_pages = Math.ceil(req_state.total / req_state.page_length) || 1;
+		const from = req_state.total ? (req_state.page - 1) * req_state.page_length + 1 : 0;
+		const to   = Math.min(req_state.page * req_state.page_length, req_state.total);
+
+		$(wrapper).find("#tm-req-page-info").text(
+			req_state.total
+				? `${__("Showing")} ${from} ${__("to")} ${to} ${__("of")} ${req_state.total} ${__("entries")}`
+				: __("No entries found")
+		);
+
+		const controls = $(wrapper).find("#tm-req-page-controls");
+		controls.empty();
+
+		const prev = $(`<button class="tm-page-btn"${req_state.page <= 1 ? " disabled" : ""}>‹ ${__("Previous")}</button>`);
+		prev.on("click", function () { if (req_state.page > 1) { req_state.page--; load_requests(); } });
+		controls.append(prev);
+
+		const win = 5;
+		let start = Math.max(1, req_state.page - Math.floor(win / 2));
+		let end   = Math.min(total_pages, start + win - 1);
+		if (end - start < win - 1) start = Math.max(1, end - win + 1);
+
+		if (start > 1) {
+			const b1 = $(`<button class="tm-page-num">1</button>`);
+			b1.on("click", function () { req_state.page = 1; load_requests(); });
+			controls.append(b1);
+			if (start > 2) controls.append(`<span class="tm-page-ellipsis">…</span>`);
+		}
+		for (let i = start; i <= end; i++) {
+			const pg  = i;
+			const btn = $(`<button class="tm-page-num${i === req_state.page ? " active" : ""}">${i}</button>`);
+			btn.on("click", function () { req_state.page = pg; load_requests(); });
+			controls.append(btn);
+		}
+		if (end < total_pages) {
+			if (end < total_pages - 1) controls.append(`<span class="tm-page-ellipsis">…</span>`);
+			const blast = $(`<button class="tm-page-num">${total_pages}</button>`);
+			blast.on("click", function () { req_state.page = total_pages; load_requests(); });
+			controls.append(blast);
+		}
+		const next = $(`<button class="tm-page-btn"${req_state.page >= total_pages ? " disabled" : ""}>${__("Next")} ›</button>`);
+		next.on("click", function () { if (req_state.page < total_pages) { req_state.page++; load_requests(); } });
+		controls.append(next);
+	}
+
+	function update_req_selection_bar() {
+		const count = req_state.selected.size;
+		const bar   = $(wrapper).find("#tm-req-sel-bar");
+		$(wrapper).find("#tm-req-sel-count").text(count);
+		if (count > 0) {
+			bar.addClass("tm-sel-bar--visible");
+		} else {
+			bar.removeClass("tm-sel-bar--visible");
+		}
+	}
+
+	function show_payment_details(name) {
+		frappe.call({
+			method: "slcm.slcm.page.transcript_management_page.transcript_management_page.get_payment_details",
+			args: { request_name: name },
+			freeze: true,
+			callback: function (r) {
+				if (!r.message) return;
+				const d = r.message;
+				const gw = d.gateway_response
+					? (typeof d.gateway_response === "string" ? d.gateway_response : JSON.stringify(d.gateway_response, null, 2))
+					: null;
+
+				const dialog = new frappe.ui.Dialog({
+					title: __("Payment Details — {0}", [d.request_name]),
+					fields: [{ fieldname: "html", fieldtype: "HTML" }],
+				});
+
+				dialog.fields_dict.html.$wrapper.html(`
+					<div class="tm-pay-detail-row">
+						<span class="tm-pay-detail-label">${__("Student")}</span>
+						<span class="tm-pay-detail-value">${frappe.utils.escape_html(d.student_name || d.student || "")}</span>
+					</div>
+					<div class="tm-pay-detail-row">
+						<span class="tm-pay-detail-label">${__("Payment Required")}</span>
+						<span class="tm-pay-detail-value">${d.payment_required ? __("Yes") : __("No")}</span>
+					</div>
+					<div class="tm-pay-detail-row">
+						<span class="tm-pay-detail-label">${__("Fee Amount")}</span>
+						<span class="tm-pay-detail-value">${format_currency(d.fee_amount || 0)}</span>
+					</div>
+					<div class="tm-pay-detail-row">
+						<span class="tm-pay-detail-label">${__("Payment Status")}</span>
+						<span class="tm-pay-detail-value">${req_payment_pill(d.payment_status)}</span>
+					</div>
+					<div class="tm-pay-detail-row">
+						<span class="tm-pay-detail-label">${__("Razorpay Status")}</span>
+						<span class="tm-pay-detail-value">${frappe.utils.escape_html(d.razorpay_payment_status || "—")}</span>
+					</div>
+					<div class="tm-pay-detail-row">
+						<span class="tm-pay-detail-label">${__("Razorpay Order ID")}</span>
+						<span class="tm-pay-detail-value">${frappe.utils.escape_html(d.razorpay_order_id || "—")}</span>
+					</div>
+					<div class="tm-pay-detail-row">
+						<span class="tm-pay-detail-label">${__("Payment Reference")}</span>
+						<span class="tm-pay-detail-value">${frappe.utils.escape_html(d.payment_reference || "—")}</span>
+					</div>
+					<div class="tm-pay-detail-row">
+						<span class="tm-pay-detail-label">${__("Payment Date")}</span>
+						<span class="tm-pay-detail-value">${d.payment_date ? frappe.datetime.str_to_user(d.payment_date) : "—"}</span>
+					</div>
+					${d.payment_failure_reason ? `
+					<div class="tm-pay-detail-row">
+						<span class="tm-pay-detail-label">${__("Failure Reason")}</span>
+						<span class="tm-pay-detail-value" style="color:#c0392b;">${frappe.utils.escape_html(d.payment_failure_reason)}</span>
+					</div>` : ""}
+					${gw ? `<div class="tm-pay-detail-label" style="margin-top:12px;">${__("Gateway Response")}</div>
+						<div class="tm-pay-gateway-json">${frappe.utils.escape_html(gw)}</div>` : ""}
+				`);
+				dialog.show();
+			},
+		});
+	}
+
+	function bulk_approve(names) {
+		frappe.call({
+			method: "slcm.slcm.page.transcript_management_page.transcript_management_page.bulk_approve_requests",
+			args: { request_names: JSON.stringify(names) },
+			freeze: true,
+			freeze_message: __("Approving & generating transcripts..."),
+			callback: function (r) {
+				if (!r.message) return;
+				const { succeeded, failed, results } = r.message;
+				frappe.show_alert({
+					message: `${succeeded} ${__("approved.")}` + (failed ? `  ${failed} ${__("failed.")}` : ""),
+					indicator: failed ? "orange" : "green",
+				}, 6);
+				if (failed) {
+					const errs = results.filter(x => !x.success)
+						.map(x => `${x.name}: ${frappe.utils.escape_html(x.error || "")}`).join("<br>");
+					frappe.msgprint({ title: __("Some requests failed"), message: errs, indicator: "orange" });
+				}
+				req_state.selected.clear();
+				update_req_selection_bar();
+				load_request_stats();
+				load_requests();
+			},
+			error: function () {
+				frappe.show_alert({
+					message: __("Approval request failed. Please try again."),
+					indicator: "red",
+				}, 6);
+			},
+		});
+	}
+
+	function bulk_reject(names, reason) {
+		frappe.call({
+			method: "slcm.slcm.page.transcript_management_page.transcript_management_page.bulk_reject_requests",
+			args: { request_names: JSON.stringify(names), rejection_reason: reason },
+			freeze: true,
+			freeze_message: __("Rejecting requests..."),
+			callback: function (r) {
+				if (!r.message) return;
+				const { succeeded, failed, results } = r.message;
+				frappe.show_alert({
+					message: `${succeeded} ${__("rejected.")}` + (failed ? `  ${failed} ${__("failed.")}` : ""),
+					indicator: failed ? "orange" : "green",
+				}, 6);
+				if (failed) {
+					const errs = results.filter(x => !x.success)
+						.map(x => `${x.name}: ${frappe.utils.escape_html(x.error || "")}`).join("<br>");
+					frappe.msgprint({ title: __("Some requests failed"), message: errs, indicator: "orange" });
+				}
+				req_state.selected.clear();
+				update_req_selection_bar();
+				load_request_stats();
+				load_requests();
+			},
+			error: function () {
+				frappe.show_alert({
+					message: __("Rejection request failed. Please try again."),
+					indicator: "red",
+				}, 6);
+			},
+		});
+	}
+
 	// ── Initial Load ───────────────────────────────────────────────────────────
 	update_sort_indicators();
 	load_filter_options();
 	load_students();
+
+	// Deep-link support: /app/transcript-management-page/requests opens directly
+	// on the Requests tab (used by the "Transcript Requests Queue" workspace shortcut).
+	const route = frappe.get_route();
+	if (route && route[1] === "requests") {
+		$(wrapper).find(`.tm-tab-btn[data-tab="requests"]`).trigger("click");
+	}
 
 };

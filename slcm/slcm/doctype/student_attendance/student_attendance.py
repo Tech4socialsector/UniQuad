@@ -14,20 +14,18 @@ class StudentAttendance(Document):
 		self.track_changes()
 	
 	def validate_attendance_lock(self):
-		"""Prevent modification of attendance records older than lock period"""
-		if frappe.session.user == "Administrator" or "System Manager" in frappe.get_roles():
-			return
-			
-		lock_days = frappe.db.get_single_value("Attendance Settings", "attendance_lock_days")
-		if not lock_days:
+		"""Refuse changes once the session's attendance is locked (Attendance
+		Settings lock hours after it ended) unless AAD has reopened it. The
+		RFID pipeline sets flags.ignore_attendance_lock."""
+		if self.flags.ignore_attendance_lock:
 			return
 
-		if self.attendance_date:
-			from frappe.utils import date_diff, nowdate
-			days_diff = date_diff(nowdate(), self.attendance_date)
-			
-			if days_diff > lock_days:
-				frappe.throw(_("Attendance for this date is locked and cannot be modified."))
+		from slcm.slcm.utils.attendance_lock import assert_date_editable, assert_session_editable
+
+		if self.attendance_session:
+			assert_session_editable(self.attendance_session)
+		else:
+			assert_date_editable(self.attendance_date)
 
 	
 	def validate_duplicate_attendance(self):

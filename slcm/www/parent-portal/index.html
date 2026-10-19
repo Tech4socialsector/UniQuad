@@ -3,781 +3,694 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block extra_css %}
-  /* ── Stat card drill-down ─────────────────────────────────── */
-  .pp-stat-card-drillable { cursor: pointer; transition: box-shadow 0.2s, transform 0.2s; }
-  .pp-stat-card-drillable:hover { box-shadow: 0 10px 28px rgba(0,0,0,0.13); transform: translateY(-4px); }
-  .pp-stat-drill-hint {
-    display: flex; align-items: center; gap: 3px;
-    font-size: 10.5px; font-weight: 600; color: var(--pp-primary);
-    margin-top: 8px; opacity: 0; transition: opacity 0.2s;
-  }
-  .pp-stat-card-drillable:hover .pp-stat-drill-hint { opacity: 1; }
+/* ── Section rhythm ───────────────────────────────────────── */
+.pp-dash-section { margin-bottom: 20px; }
+.pp-section-title {
+font-size: 17px; font-weight: 700; color: var(--pp-text-1);
+margin: 0 0 12px; letter-spacing: -0.01em;
+}
+.pp-dash-two-col {
+display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+align-items: start; margin-bottom: 20px;
+}
+@media (max-width: 1000px) { .pp-dash-two-col { grid-template-columns: 1fr; } }
+/* Side-by-side cards share the row height; bodies fill the extra space */
+.pp-dash-two-col.is-stretch { align-items: stretch; }
+.pp-dash-two-col.is-stretch > .pp-card { display: flex; flex-direction: column; }
+.pp-dash-two-col.is-stretch > .pp-card > :not(.pp-card-header) { flex: 1 1 auto; }
+.pp-dash-two-col.is-stretch > .pp-card > .pp-state {
+flex-direction: column; align-items: center; justify-content: center;
+text-align: center; min-height: 160px;
+}
+.pp-dash-two-col.is-stretch > .pp-card > .pp-state > .ms { font-size: 32px; }
 
-  /* ── Drill-down modal ─────────────────────────────────────── */
-  .pp-drill-overlay {
-    display: none; position: fixed; inset: 0;
-    background: rgba(0,0,0,0.45); z-index: 9000;
-    align-items: center; justify-content: center; padding: 20px;
-  }
-  .pp-drill-overlay.open { display: flex; }
-  .pp-drill-modal {
-    background: var(--pp-card); border-radius: 20px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
-    width: 100%; max-width: 560px; max-height: 80vh;
-    display: flex; flex-direction: column;
-    animation: ppModalIn 0.22s ease;
-  }
-  @keyframes ppModalIn {
-    from { opacity:0; transform: scale(0.94) translateY(16px); }
-    to   { opacity:1; transform: scale(1)    translateY(0); }
-  }
-  .pp-drill-modal-header {
-    display: flex; align-items: center; gap: 12px;
-    padding: 18px 20px 14px; border-bottom: 1px solid var(--pp-border); flex-shrink: 0;
-  }
-  .pp-drill-modal-icon {
-    width: 40px; height: 40px; border-radius: 12px;
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'Material Symbols Outlined'; font-size: 20px; flex-shrink: 0;
-  }
-  .pp-drill-modal-title { font-size: 15px; font-weight: 700; color: var(--pp-text-1); flex: 1; }
-  .pp-drill-modal-sub   { font-size: 12px; color: var(--pp-text-4); margin-top: 2px; }
-  .pp-drill-modal-close {
-    background: var(--pp-bg); border: none; cursor: pointer;
-    width: 32px; height: 32px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'Material Symbols Outlined'; font-size: 18px;
-    color: var(--pp-text-3); transition: background 0.15s; flex-shrink: 0;
-  }
-  .pp-drill-modal-close:hover { background: var(--pp-border); }
-  .pp-drill-modal-body { overflow-y: auto; padding: 16px 20px 20px; flex: 1; }
-  .pp-drill-row {
-    display: flex; align-items: center; gap: 12px;
-    padding: 12px 0; border-bottom: 1px solid var(--pp-border-light);
-  }
-  .pp-drill-row:last-child { border-bottom: none; padding-bottom: 0; }
-  .pp-drill-row:first-child { padding-top: 0; }
-  .pp-drill-row-icon {
-    width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'Material Symbols Outlined'; font-size: 18px;
-  }
-  .pp-drill-row-name  { font-size: 13.5px; font-weight: 600; color: var(--pp-text-1); }
-  .pp-drill-row-meta  { font-size: 11.5px; color: var(--pp-text-4); margin-top: 2px; }
-  .pp-drill-row-right { margin-left: auto; text-align: right; flex-shrink: 0; }
-  .pp-drill-row-pct   { font-size: 20px; font-weight: 800; line-height: 1; }
-  .pp-drill-row-bar   { margin-top: 6px; width: 100px; }
-  .pp-drill-empty     { text-align: center; padding: 32px 0; color: var(--pp-text-4); font-size: 13px; }
-  .pp-drill-empty .ms { font-size: 36px; display: block; margin-bottom: 8px; }
+/* ── Profile header extras ────────────────────────────────── */
+.pp-name-row { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; }
+.pp-name-row .pp-ward-banner-name { margin: 0; }
+.pp-profile-facts {
+display: flex; flex-wrap: wrap; gap: 6px 22px;
+margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--pp-border-light);
+}
+.pp-profile-fact { font-size: 13px; color: var(--pp-text-2); min-width: 0; }
+.pp-profile-fact-key { font-size: 11px; font-weight: 600; color: var(--pp-text-4); text-transform: uppercase;
+letter-spacing: 0.05em; display: block; }
+.pp-profile-fact-val { font-weight: 600; color: var(--pp-text-1); overflow-wrap: anywhere; }
+/* ── Hostel strip (inside profile banner) ─────────────────── */
+.pp-dash-banner { align-items: center; gap: 22px; }
+.pp-dash-banner .pp-ward-banner-avatar { width: 104px; height: 104px; font-size: 36px; }
+.pp-dash-banner .pp-ward-banner-info { flex: 0 1 auto; }
+.pp-hostel-strip {
+flex: 1 1 360px; min-width: 0; align-self: stretch;
+display: flex; flex-direction: column; justify-content: center; gap: 12px;
+padding: 14px 18px; border-radius: 12px;
+border: 1px solid var(--pp-border);
+border-left: 4px solid var(--pp-primary);
+}
+.pp-hostel-strip-head { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.pp-hostel-strip-icon {
+width: 50px; height: 50px; border-radius: 12px; flex-shrink: 0;
+background: var(--pp-primary); color: #fff;
+display: flex; align-items: center; justify-content: center;
+}
+.pp-hostel-strip-icon .ms { font-size: 26px; }
+.pp-hostel-strip-eyebrow { font-size: 12.5px; font-weight: 700; color: var(--pp-primary); text-transform: uppercase;
+letter-spacing: 0.06em; }
+.pp-hostel-strip-name { font-size: 20px; font-weight: 700; color: var(--pp-text-1); margin-top: 2px; }
+.pp-hostel-strip-items { display: flex; flex-wrap: wrap; gap: 10px; }
+.pp-hostel-item {
+border: 1px solid var(--pp-border); border-radius: 10px;
+padding: 8px 14px; flex: 1 1 110px; min-width: 0; text-align: center;
+}
+.pp-hostel-item-key { display: flex; align-items: center; justify-content: center; gap: 5px; font-size: 12.5px;
+font-weight: 600; color: var(--pp-text-3); text-transform: uppercase; letter-spacing: 0.05em; }
+.pp-hostel-item-key .ms { font-size: 17px; color: var(--pp-primary); text-transform: none; letter-spacing: 0; }
+.pp-hostel-item-val { display: block; font-size: 19px; font-weight: 700; color: var(--pp-text-1); margin-top: 4px;
+white-space: nowrap; }
+@media (max-width: 1100px) {
+.pp-dash-banner { flex-wrap: wrap; }
+.pp-hostel-strip { flex-basis: 100%; }
+/* Keep the details beside the photo (they used to wrap under it) */
+.pp-dash-banner .pp-ward-banner-info { flex: 1 1 280px; min-width: 0; }
+}
+@media (max-width: 700px) {
+.pp-hostel-strip-items { width: 100%; }
+.pp-hostel-item { flex: 1 1 calc(50% - 12px); min-width: 0; }
+.pp-hostel-item-val { font-size: 17px; }
+}
+@media (max-width: 560px) {
+.pp-ward-banner { flex-wrap: wrap; padding: 16px; }
+.pp-ward-banner-avatar, .pp-dash-banner .pp-ward-banner-avatar { width: 72px; height: 72px; font-size: 26px; }
+.pp-ward-banner-name { font-size: 20px; }
 
-  /* ── Quick action cards ────────────────────────────────────── */
-  .pp-action-grid {
-    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
-  }
-  @media (max-width: 700px) { .pp-action-grid { grid-template-columns: repeat(2, 1fr); } }
-  @media (max-width: 400px) { .pp-action-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; } }
-  .pp-action-card {
-    background: var(--pp-card); border: 1px solid var(--pp-border);
-    border-radius: 14px; padding: 16px 12px;
-    text-decoration: none; display: flex; flex-direction: column;
-    align-items: center; gap: 8px; text-align: center;
-    transition: box-shadow 0.2s, transform 0.2s, border-color 0.2s;
-  }
-  .pp-action-card:hover {
-    box-shadow: 0 6px 20px rgba(0,0,0,0.1); transform: translateY(-2px);
-    border-color: var(--pp-primary);
-  }
-  .pp-action-icon {
-    width: 44px; height: 44px; border-radius: 12px;
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'Material Symbols Outlined'; font-size: 22px;
-  }
-  .pp-action-label { font-size: 12px; font-weight: 600; color: var(--pp-text-2); line-height: 1.3; }
+/* Phones: photo beside greeting / name + status / programme, then the
+   facts full width in a 2×2 grid — instead of the photo sitting alone on
+   a row with everything else wrapped underneath it. The info wrapper is
+   flattened (display: contents) so its children join the grid. */
+.pp-dash-banner {
+display: grid; grid-template-columns: 64px minmax(0, 1fr);
+column-gap: 14px; row-gap: 2px; align-items: center;
+}
+.pp-dash-banner .pp-ward-banner-avatar { grid-column: 1; grid-row: 1 / span 3; align-self: start;
+width: 64px; height: 64px; font-size: 24px; }
+.pp-dash-banner .pp-ward-banner-info { display: contents; }
+.pp-dash-banner .pp-ward-banner-eyebrow,
+.pp-dash-banner .pp-name-row,
+.pp-dash-banner .pp-ward-banner-meta { grid-column: 2; margin: 0; min-width: 0; }
+.pp-dash-banner .pp-ward-banner-name { font-size: 19px; line-height: 1.25; overflow-wrap: anywhere; }
+.pp-dash-banner .pp-ward-banner-meta { font-size: 12.5px; }
+.pp-dash-banner .pp-profile-facts {
+grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+gap: 10px 16px; margin-top: 12px;
+}
+.pp-dash-banner .pp-hostel-strip { grid-column: 1 / -1; margin-top: 12px; }
+}
 
-  /* ── Responsive two-col grids ─────────────────────────────── */
-  @media (max-width: 900px) {
-    .pp-dash-two-col { grid-template-columns: 1fr !important; }
-  }
+/* ── Status pills ─────────────────────────────────────────── */
+.pp-pill {
+display: inline-flex; align-items: center; gap: 5px;
+padding: 3px 10px; border-radius: 20px;
+font-size: 11.5px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase;
+}
+.pp-pill::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.pp-pill-success { background: none; color: var(--pp-success); padding-left: 0; padding-right: 0; }
+.pp-pill-warning { background: var(--pp-warning-bg); color: var(--pp-warning); }
+.pp-pill-danger { background: var(--pp-danger-bg); color: var(--pp-danger); }
+.pp-pill-neutral { background: var(--pp-border-light); color: var(--pp-text-3); }
 
-  /* ── Bar chart ────────────────────────────────────────────── */
-  .pp-att-chart-wrap {
-    padding: 16px 20px 20px; overflow-x: auto;
-  }
-  .pp-att-chart-inner {
-    display: flex; align-items: flex-end; gap: 10px;
-    min-height: 160px; min-width: max-content;
-  }
-  .pp-att-bar-col {
-    display: flex; flex-direction: column; align-items: center; gap: 5px;
-    flex: 1; min-width: 56px; max-width: 90px;
-  }
-  .pp-att-bar-pct {
-    font-size: 11.5px; font-weight: 800; line-height: 1;
-  }
-  .pp-att-bar-track {
-    width: 100%; background: var(--pp-border-light);
-    border-radius: 8px 8px 4px 4px; height: 120px;
-    display: flex; align-items: flex-end; overflow: hidden;
-  }
-  .pp-att-bar-fill {
-    width: 100%; border-radius: 6px 6px 3px 3px;
-    transition: height 1s cubic-bezier(0.16,1,0.3,1);
-  }
-  .pp-att-bar-name {
-    font-size: 10.5px; font-weight: 600; color: var(--pp-text-3);
-    text-align: center; line-height: 1.3;
-    overflow: hidden; text-overflow: ellipsis;
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-    max-width: 80px;
-  }
-  .pp-att-bar-thresh {
-    width: 100%; height: 1px; background: var(--pp-danger); opacity: 0.4;
-    position: relative; margin-bottom: -1px;
-  }
+/* ── KPI cards ────────────────────────────────────────────── */
+.pp-kpi-grid {
+display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+gap: 14px; margin-bottom: 20px;
+}
+@media (max-width: 1200px) { .pp-kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 640px) {
+.pp-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+/* The course-wise Attendance tile is the tall one: give it the full width
+   on top so the other four tiles pair up evenly as a 2×2 grid */
+.pp-kpi-grid > .pp-kpi-att { grid-column: 1 / -1; order: -1; }
+.pp-kpi-label { line-height: 1.3; }
+}
+.pp-kpi {
+background: var(--pp-kpi-bg); border: 1px solid var(--pp-kpi-border); border-radius: 14px;
+padding: 16px; text-decoration: none; color: inherit; min-width: 0;
+display: flex; flex-direction: column; gap: 4px;
+box-shadow: 0 1px 2px rgba(16,24,40,0.04);
+transition: border-color 0.15s, box-shadow 0.15s;
+}
+a.pp-kpi:hover { border-color: var(--pp-primary-mid); box-shadow: 0 4px 12px rgba(16,24,40,0.07); }
+.pp-kpi-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.pp-kpi-label { font-size: 11.5px; font-weight: 700; color: var(--pp-text-3); text-transform: uppercase; letter-spacing:
+0.06em; }
+.pp-kpi-icon {
+width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
+background: var(--pp-card); color: var(--pp-primary);
+border: 1px solid var(--pp-kpi-border);
+display: flex; align-items: center; justify-content: center;
+}
+.pp-kpi-icon .ms { font-size: 18px; }
+.pp-kpi-value {
+font-size: 28px; font-weight: 700; color: var(--pp-text-1); line-height: 1.1;
+letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pp-kpi-value.is-money { font-size: 24px; }
+.pp-kpi-value.is-empty { color: var(--pp-text-4); }
+.pp-kpi-courses { display: flex; flex-direction: column; gap: 4px; margin: 6px 0 4px; }
+.pp-kpi-course { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 13px; }
+.pp-kpi-course-name { color: var(--pp-text-1); font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.pp-kpi-course-pct { color: var(--pp-primary); font-weight: 700; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.pp-kpi-course-pct.is-low { color: var(--pp-danger, #b91c1c); }
+.pp-kpi-sub { font-size: 12.5px; color: var(--pp-text-3); white-space: nowrap; overflow: hidden; text-overflow:
+ellipsis; }
+@media (max-width: 480px) {
+.pp-kpi { padding: 14px 12px; }
+.pp-kpi-value { font-size: 24px; }
+.pp-kpi-value.is-money { font-size: 19px; }
+}
 
-  /* ── RFID swipe rows ──────────────────────────────────────── */
-  .pp-rfid-row {
-    display: flex; align-items: center; gap: 12px;
-    padding: 11px 20px; border-bottom: 1px solid var(--pp-border);
-    transition: background 0.12s;
-  }
-  .pp-rfid-row:last-child { border-bottom: none; }
-  .pp-rfid-row:hover { background: #fafafa; }
-  .pp-rfid-icon {
-    width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'Material Symbols Outlined'; font-size: 17px;
-  }
-  .pp-rfid-time { font-size: 15px; font-weight: 700; color: var(--pp-text-1); }
-  .pp-rfid-meta { font-size: 11.5px; color: var(--pp-text-4); margin-top: 1px; }
+/* ── Compact empty / error states ─────────────────────────── */
+.pp-state { display: flex; align-items: flex-start; gap: 12px; padding: 20px; }
+.pp-state > .ms { font-size: 24px; color: var(--pp-text-4); flex-shrink: 0; }
+.pp-state-title { font-size: 14px; font-weight: 600; color: var(--pp-text-2); margin: 0; }
+.pp-state-sub { font-size: 12.5px; color: var(--pp-text-3); margin: 3px 0 0; }
+.pp-state-error > .ms { color: var(--pp-danger); }
+.pp-retry {
+margin-top: 10px; display: inline-flex; align-items: center; gap: 5px;
+padding: 7px 14px; min-height: 36px; border-radius: 8px;
+border: 1px solid var(--pp-primary); background: var(--pp-card); color: var(--pp-primary);
+font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.pp-retry:hover { background: var(--pp-primary-light); }
+.pp-retry .ms { font-size: 16px; }
 
-  /* ── Schedule rows ────────────────────────────────────────── */
-  .pp-sched-date-group { margin-bottom: 18px; }
-  .pp-sched-date-label {
-    font-size: 11px; font-weight: 700; letter-spacing: 0.07em;
-    text-transform: uppercase; color: var(--pp-text-4);
-    padding: 0 20px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;
-  }
-  .pp-sched-date-label span.today-pill {
-    background: var(--pp-primary); color: #fff;
-    font-size: 10px; padding: 2px 8px; border-radius: 20px;
-    font-weight: 700; letter-spacing: 0.04em;
-  }
-  .pp-sched-row {
-    display: flex; align-items: center; gap: 12px;
-    padding: 11px 20px; border-bottom: 1px solid var(--pp-border);
-    transition: background 0.12s;
-  }
-  .pp-sched-row:last-child { border-bottom: none; }
-  .pp-sched-row:hover { background: #fafafa; }
-  .pp-sched-time-col { flex-shrink: 0; text-align: center; min-width: 54px; }
-  .pp-sched-from { font-size: 13px; font-weight: 700; color: var(--pp-primary); }
-  .pp-sched-to   { font-size: 11px; color: var(--pp-text-4); }
-  .pp-sched-divider { width: 1px; height: 36px; background: var(--pp-border); flex-shrink: 0; }
-  .pp-sched-course { font-size: 13.5px; font-weight: 600; color: var(--pp-text-1); }
-  .pp-sched-meta   { font-size: 11.5px; color: var(--pp-text-4); margin-top: 2px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+/* ── Metric rows inside cards ─────────────────────────────── */
+.pp-metric-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.pp-metric { background: var(--pp-bg); border-radius: 10px; padding: 10px 12px; min-width: 0; }
+.pp-metric-key { font-size: 11px; font-weight: 600; color: var(--pp-text-3); text-transform: uppercase; letter-spacing:
+0.05em; }
+.pp-metric-val { font-size: 18px; font-weight: 700; color: var(--pp-text-1); margin-top: 2px; white-space: nowrap;
+overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 400px) { .pp-metric-val { font-size: 15px; } }
+/* Phones: three boxes are too narrow for "₹50,000" / "OUTSTANDING", so
+   show Total / Paid / Outstanding as label-left, amount-right rows */
+@media (max-width: 480px) {
+.pp-metric-row { grid-template-columns: 1fr; gap: 6px; }
+.pp-metric { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 12px; }
+.pp-metric-val { margin-top: 0; font-size: 16px; overflow: visible; }
+.pp-card-header .pp-card-title { font-size: 15px; white-space: nowrap; min-width: 0; }
+.pp-card-header .pp-card-link { white-space: nowrap; flex-shrink: 0; }
+}
 
-  /* ── Attendance course list (dashboard) ──────────────────── */
-  .pp-att-course-row {
-    display: flex; align-items: center; gap: 14px;
-    padding: 11px 20px; border-bottom: 1px solid var(--pp-border);
-    transition: background 0.12s;
-  }
-  .pp-att-course-row:last-child { border-bottom: none; }
-  .pp-att-course-row:hover { background: #fafafa; }
-  .pp-att-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-  .pp-att-course-name { font-size: 13.5px; font-weight: 600; color: var(--pp-text-1); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .pp-att-bar-wrap    { flex: 1; min-width: 60px; max-width: 130px; }
-  .pp-att-pct         { font-size: 13px; font-weight: 800; min-width: 42px; text-align: right; }
+.pp-att-headline { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+.pp-att-big { font-size: 30px; font-weight: 700; line-height: 1; letter-spacing: -0.02em; }
+.pp-att-caption { font-size: 13px; color: var(--pp-text-3); }
+.pp-card-foot { font-size: 12.5px; color: var(--pp-text-3); margin-top: 14px; display: flex; align-items: center; gap:
+6px; flex-wrap: wrap; }
+.pp-card-foot .ms { font-size: 16px; }
 
-  /* ── Hostel card ─────────────────────────────────────────────── */
-  .pp-hostel-hero {
-    background: linear-gradient(135deg, var(--pp-primary-dark) 0%, var(--pp-primary) 100%);
-    padding: 20px 20px 18px;
-    display: flex; align-items: center; gap: 14px;
-    border-radius: 16px 16px 0 0;
-    position: relative; overflow: hidden;
-  }
-  .pp-hostel-hero::before {
-    content: ''; position: absolute; top: -24px; right: -24px;
-    width: 96px; height: 96px; border-radius: 50%;
-    background: rgba(255,255,255,0.07);
-  }
-  .pp-hostel-hero-icon {
-    width: 48px; height: 48px; border-radius: 14px; flex-shrink: 0;
-    background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.25);
-    display: flex; align-items: center; justify-content: center;
-  }
-  .pp-hostel-hero-icon .ms { font-size: 26px; color: #fff; }
-  .pp-hostel-hero-info { flex: 1; min-width: 0; }
-  .pp-hostel-hero-name { font-size: 15px; font-weight: 700; color: #fff; line-height: 1.2; }
-  .pp-hostel-hero-sub  { font-size: 12px; color: rgba(255,255,255,0.7); margin-top: 3px; }
-  .pp-hostel-status-badge { flex-shrink: 0; font-size: 11.5px; font-weight: 600; }
-  .pp-hostel-grid {
-    display: grid; grid-template-columns: repeat(4, 1fr);
-    gap: 1px; background: var(--pp-border);
-    border-bottom: 1px solid var(--pp-border);
-  }
-  .pp-hostel-stat {
-    display: flex; flex-direction: column; align-items: center;
-    padding: 16px 8px 14px; background: var(--pp-card); text-align: center;
-    transition: background 0.15s;
-  }
-  .pp-hostel-stat:hover { background: var(--pp-bg); }
-  .pp-hostel-stat-icon {
-    font-family: 'Material Symbols Outlined'; font-size: 20px;
-    color: var(--pp-primary); margin-bottom: 6px;
-  }
-  .pp-hostel-stat-val { font-size: 15px; font-weight: 800; color: var(--pp-text-1); line-height: 1; }
-  .pp-hostel-stat-key { font-size: 10.5px; font-weight: 600; color: var(--pp-text-4); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 4px; }
-  .pp-hostel-footer { padding: 10px 18px; font-size: 12px; color: var(--pp-text-4); display: flex; align-items: center; gap: 6px; }
-  .pp-hostel-footer strong { color: var(--pp-text-2); }
-  @media (max-width: 560px) { .pp-hostel-grid { grid-template-columns: repeat(2, 1fr); } }
+/* ── List rows (timetable / RFID / grades) ────────────────── */
+.pp-list { list-style: none; margin: 0; padding: 0; }
+/* Keeps the Time Table and RFID cards a similar height side by side */
+.pp-list-scroll { max-height: 424px; overflow-y: auto; overscroll-behavior: contain; }
+.pp-list-row {
+display: flex; align-items: center; gap: 14px;
+padding: 12px 20px; border-bottom: 1px solid var(--pp-border-light);
+}
+.pp-list-row:last-child { border-bottom: none; }
+.pp-date-chip {
+width: 48px; flex-shrink: 0; text-align: center;
+border: 1px solid var(--pp-border); border-radius: 10px; padding: 5px 0;
+}
+.pp-date-chip.is-today { border-color: var(--pp-primary); background: var(--pp-primary-light); }
+.pp-date-chip-day { font-size: 17px; font-weight: 700; color: var(--pp-text-1); line-height: 1.1; }
+.pp-date-chip-mon { font-size: 10.5px; font-weight: 700; color: var(--pp-primary); letter-spacing: 0.05em; }
+.pp-list-main { flex: 1; min-width: 0; }
+.pp-list-title { font-size: 14px; font-weight: 600; color: var(--pp-text-1); overflow: hidden; text-overflow: ellipsis;
+white-space: nowrap; }
+.pp-list-meta { font-size: 12.5px; color: var(--pp-text-3); margin-top: 2px; display: flex; flex-wrap: wrap; gap: 4px
+10px; align-items: center; }
+.pp-list-meta .ms { font-size: 14px; vertical-align: -2px; margin-right: 2px; }
+.pp-list-side { flex-shrink: 0; text-align: right; }
+.pp-time { font-size: 13px; font-weight: 700; color: var(--pp-text-1); white-space: nowrap; }
+.pp-time-sub { font-size: 11.5px; color: var(--pp-text-4); white-space: nowrap; }
+.pp-today-tag { font-size: 10.5px; font-weight: 700; color: var(--pp-primary); text-transform: uppercase;
+letter-spacing: 0.05em; }
+.pp-rfid-dot {
+width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+background: var(--pp-border-light); color: var(--pp-text-3);
+display: flex; align-items: center; justify-content: center;
+}
+.pp-rfid-dot .ms { font-size: 18px; }
+.pp-src-tag {
+font-size: 11px; font-weight: 600; color: var(--pp-text-3);
+border: 1px solid var(--pp-border); border-radius: 20px; padding: 2px 8px;
+}
+.pp-grade {
+min-width: 40px; padding: 4px 8px; border-radius: 8px; text-align: center;
+font-size: 13px; font-weight: 700;
+background: var(--pp-primary-light); color: var(--pp-primary);
+}
+.pp-grade.is-pending { background: var(--pp-border-light); color: var(--pp-text-4); font-weight: 600; }
+.pp-header-note { font-size: 12px; color: var(--pp-text-4); font-weight: 500; white-space: nowrap; }
+@media (max-width: 480px) {
+.pp-list-row { padding: 12px 14px; gap: 10px; }
+.pp-card-header { padding: 14px; }
+.pp-card-body { padding: 16px 14px; }
+}
 
-  /* ── Result preview ────────────────────────────────────────── */
-  .pp-result-item { display: flex; align-items: center; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--pp-border-light); }
-  .pp-result-item:last-child { border-bottom: none; padding-bottom: 0; }
-  .pp-result-item:first-child { padding-top: 0; }
-  .pp-result-icon { width: 42px; height: 42px; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-family: 'Material Symbols Outlined'; font-size: 20px; flex-shrink: 0; }
-  .pp-result-name { font-weight: 600; font-size: 13.5px; color: var(--pp-text-1); }
-  .pp-result-meta { font-size: 11.5px; color: var(--pp-text-4); margin-top: 2px; }
+/* ── Dark mode ── */
+/* Borders: --pp-border equals the card colour on navy, so outlined boxes vanish */
+body.pp-dark .pp-hostel-strip { border-color: #263352; border-left-color: var(--pp-primary); }
+body.pp-dark .pp-hostel-item,
+body.pp-dark .pp-date-chip,
+body.pp-dark .pp-src-tag { border-color: #263352; }
+body.pp-dark .pp-date-chip.is-today { border-color: var(--pp-primary); }
+body.pp-dark .pp-profile-facts { border-top-color: #263352; }
+/* Rose accent text is too dim at small sizes; use the light rose */
+body.pp-dark .pp-hostel-strip-eyebrow,
+body.pp-dark .pp-kpi-course-pct,
+body.pp-dark .pp-date-chip-mon,
+body.pp-dark .pp-today-tag,
+body.pp-dark .pp-dash-banner .pp-ward-banner-avatar { color: #f08da0; }
+body.pp-dark .pp-kpi-course-pct.is-low { color: var(--pp-danger); }
+/* KPI icon chips sat on the same colour as the tile */
+body.pp-dark .pp-kpi-icon { background: #1a2540; border-color: #263352; color: #f08da0; }
+body.pp-dark a.pp-kpi:hover { border-color: rgba(214,74,102,0.45); box-shadow: 0 4px 14px rgba(0,0,0,0.35); }
+/* Grey pills / chips blended into the cards */
+body.pp-dark .pp-pill-neutral,
+body.pp-dark .pp-dash-banner .pp-ward-banner-pill { background: #1a2540; color: var(--pp-text-2); border: 1px solid #263352; }
+body.pp-dark .pp-rfid-dot { background: #1a2540; color: var(--pp-text-3); border: 1px solid #263352; }
+body.pp-dark .pp-grade { background: rgba(214,74,102,0.14); color: #f08da0; border: 1px solid rgba(214,74,102,0.3); }
+body.pp-dark .pp-grade.is-pending { background: #1a2540; color: var(--pp-text-3); border-color: #263352; }
+/* Retry button (white secondary button) */
+body.pp-dark .pp-retry { background: #1a2540; color: #f08da0; border-color: rgba(214,74,102,0.45); }
+body.pp-dark .pp-retry:hover { background: rgba(214,74,102,0.14); }
+/* Metric boxes: slightly raised instead of a near-black hole */
+body.pp-dark .pp-metric { background: #1a2540; }
+body.pp-dark .pp-progress { background: #1a2540; }
 
 {% endblock %}
 
-{% block content %}
+{# ── Reusable states ──────────────────────────────────────────── #}
+{% macro error_state(what) %}
+<div class="pp-state pp-state-error" role="alert">
+  <span class="ms" aria-hidden="true">error</span>
+  <div>
+    <p class="pp-state-title">Unable to load {{ what }}.</p>
+    <p class="pp-state-sub">The rest of the dashboard is unaffected.</p>
+    <button type="button" class="pp-retry" onclick="window.location.reload()">
+      <span class="ms" aria-hidden="true">refresh</span> Retry
+    </button>
+  </div>
+</div>
+{% endmacro %}
 
-{# ── Ward Banner ───────────────────────────────────────────────── #}
-<div class="pp-ward-banner fade-in">
+{% macro empty_state(icon, title, sub) %}
+<div class="pp-state">
+  <span class="ms" aria-hidden="true">{{ icon }}</span>
+  <div>
+    <p class="pp-state-title">{{ title }}</p>
+    {% if sub %}<p class="pp-state-sub">{{ sub }}</p>{% endif %}
+  </div>
+</div>
+{% endmacro %}
+
+{% block content %}
+{% set _err = load_errors or {} %}
+{% set _q = ward_qs | default('') %}
+
+{# ── Student profile header ────────────────────────────────────── #}
+<section class="pp-ward-banner pp-dash-banner fade-in" aria-label="Selected student">
   <div class="pp-ward-banner-avatar">
-    {% if ward_photo %}<img src="{{ ward_photo }}" alt="{{ ward_name }}">
-    {% else %}{{ ward_initial }}{% endif %}
+    {% if ward_photo %}<img src="{{ ward_photo }}" alt="" data-fallback="{{ ward_initial }}">
+    {% else %}<span aria-hidden="true">{{ ward_initial }}</span>{% endif %}
   </div>
   <div class="pp-ward-banner-info">
     {% set _h = frappe.utils.now_datetime().hour %}
     <div class="pp-ward-banner-eyebrow">
-      {{ "Good Morning" if _h < 12 else ("Good Afternoon" if _h < 17 else "Good Evening") }}, {{ parent_display_name.split()[0] if parent_display_name else 'Parent' }}
+      {{ "Good morning" if _h < 12 else ("Good afternoon" if _h < 17 else "Good evening" ) }}, {{
+        parent_display_name.split()[0] if parent_display_name else 'Parent' }} </div>
+        {# Status sits beside the name at every screen size (it used to be a
+           separate banner item that wrapped to the top / bottom / far right) #}
+        <div class="pp-name-row">
+          <h1 class="pp-ward-banner-name">{{ ward_name }}</h1>
+          {% if ward_status %}
+          <span
+            class="pp-pill {{ 'pp-pill-success' if ward_status == 'Active' else ('pp-pill-neutral' if ward_status in ('Graduated', 'Alumni') else 'pp-pill-warning') }}">{{
+            ward_status }}</span>
+          {% endif %}
+        </div>
+        {% if ward_programme or ward_batch %}
+        <div class="pp-ward-banner-meta">
+          {% if ward_programme %}<span>{{ ward_programme }}</span>{% endif %}
+          {% if ward_batch %}<span class="pp-ward-banner-pill">Batch {{ ward_batch }}</span>{% endif %}
+        </div>
+        {% endif %}
+        <div class="pp-profile-facts">
+          {% if ward_enrolment_no %}
+          <div class="pp-profile-fact"><span class="pp-profile-fact-key">Enrolment No.</span><span
+              class="pp-profile-fact-val">{{ ward_enrolment_no }}</span></div>
+          {% endif %}
+          <div class="pp-profile-fact"><span class="pp-profile-fact-key">Courses</span><span
+              class="pp-profile-fact-val">{{ "%02d"|format(course_count) if course_count is not none else "—" }}</span>
+          </div>
+          {% if ward_academic_year %}
+          <div class="pp-profile-fact"><span class="pp-profile-fact-key">Academic Year</span><span
+              class="pp-profile-fact-val">{{ ward_academic_year }}</span></div>
+          {% endif %}
+          {% if ward_term %}
+          <div class="pp-profile-fact"><span class="pp-profile-fact-key">Current Term</span><span
+              class="pp-profile-fact-val">{{ ward_term }}</span></div>
+          {% endif %}
+        </div>
     </div>
-    <div class="pp-ward-banner-name">{{ ward_name }}</div>
-    <div class="pp-ward-banner-meta">
-      {% if ward_programme %}<span>{{ ward_programme }}</span>{% endif %}
-      {% if ward_batch %}<span class="pp-ward-banner-pill">Batch {{ ward_batch }}</span>{% endif %}
-      {% if ward_status %}
-        <span class="pp-ward-banner-pill" style="{% if ward_status != 'Active' %}background:rgba(220,38,38,0.25);{% endif %}">
-          {{ ward_status }}
-        </span>
-      {% endif %}
-    </div>
-  </div>
-  <div style="display:flex;gap:10px;flex-shrink:0;margin-left:auto;" id="pp-banner-stats">
-    {% if ward_enrolment_no %}
-    <div class="pp-banner-stat">
-      <div class="pp-banner-stat-val" style="font-size:13px;letter-spacing:0.02em;">{{ ward_enrolment_no }}</div>
-      <div class="pp-banner-stat-key">Enrolment No.</div>
+    {% if is_hosteller and hostel_details %}
+    {% set _hd = hostel_details %}
+    <div class="pp-hostel-strip" aria-label="Hostel details">
+      <div class="pp-hostel-strip-head">
+        <span class="pp-hostel-strip-icon" aria-hidden="true"><span class="ms">apartment</span></span>
+        <div style="min-width:0;">
+          <div class="pp-hostel-strip-eyebrow">Hostel</div>
+          <div class="pp-hostel-strip-name">{{ _hd.hostel_name or "Hostel" }}{% if _hd.hostel_block %} · {{
+            _hd.hostel_block }}{% endif %}</div>
+        </div>
+      </div>
+      <div class="pp-hostel-strip-items">
+        {% if _hd.room_number %}<div class="pp-hostel-item"><span class="pp-hostel-item-key"><span class="ms"
+              aria-hidden="true">meeting_room</span> Room</span><span class="pp-hostel-item-val">{{ _hd.room_number
+            }}</span></div>{% endif %}
+        {% if _hd.bed_no %}<div class="pp-hostel-item"><span class="pp-hostel-item-key"><span class="ms"
+              aria-hidden="true">bed</span> Bed</span><span class="pp-hostel-item-val">{{ _hd.bed_no }}</span></div>{%
+        endif %}
+        {% if _hd.key_number %}<div class="pp-hostel-item"><span class="pp-hostel-item-key"><span class="ms"
+              aria-hidden="true">key</span> Key</span><span class="pp-hostel-item-val">{{ _hd.key_number }}</span></div>
+        {% endif %}
+        {% if _hd.meal_plan %}<div class="pp-hostel-item"><span class="pp-hostel-item-key"><span class="ms"
+              aria-hidden="true">restaurant</span> Meal Plan</span><span class="pp-hostel-item-val">{{ _hd.meal_plan
+            }}</span></div>{% endif %}
+        {% if _hd.allocation_date %}<div class="pp-hostel-item"><span class="pp-hostel-item-key"><span class="ms"
+              aria-hidden="true">calendar_today</span> Allotted On</span><span class="pp-hostel-item-val">{{
+            _hd.allocation_date }}</span></div>{% endif %}
+      </div>
     </div>
     {% endif %}
-    <div class="pp-banner-stat">
-      <div class="pp-banner-stat-val">{{ "%02d"|format(course_count) }}</div>
-      <div class="pp-banner-stat-key">Courses</div>
-    </div>
-  </div>
-</div>
+</section>
 
 {# ── Alerts ────────────────────────────────────────────────────── #}
-{% if ward_status and ward_status != 'Active' %}
-<div class="pp-alert pp-alert-warning fade-in" style="margin-bottom:14px;">
-  <span class="ms">info</span>
-  <div>Your ward's enrolment status is currently <strong>{{ ward_status }}</strong>. Contact the Registrar's Office for details.</div>
+{% if ward_status and ward_status not in ('Active', 'Graduated', 'Alumni') %}
+<div class="pp-alert pp-alert-warning fade-in" style="margin-bottom:14px;" role="status">
+  <span class="ms" aria-hidden="true">info</span>
+  <div>Enrolment status: <strong>{{ ward_status }}</strong>&nbsp;—&nbsp;contact the Registrar's Office.</div>
 </div>
 {% endif %}
 
-{% if courses_below_75 > 0 %}
-<div class="pp-alert pp-alert-danger fade-in" style="margin-bottom:14px;">
-  <span class="ms">warning</span>
-  <div>
-    <strong>{{ courses_below_75 }} course{% if courses_below_75 != 1 %}s{% endif %} below {{ att_good|int }}% attendance</strong>
-    &nbsp;—&nbsp; Your ward may be ineligible for exams in these courses.
-    <a href="/parent-portal/attendance{% if active_ward %}?ward={{ active_ward }}{% endif %}"
-       style="color:inherit;font-weight:700;text-decoration:underline;">View Details →</a>
-  </div>
-</div>
-{% endif %}
 
-{# ── Stat Cards ────────────────────────────────────────────────── #}
-<div class="pp-stat-grid fade-in" style="animation-delay:0.05s;">
 
-  <div class="pp-stat-card pp-stat-card-drillable" style="--pp-stat-accent:var(--pp-primary);"
-       onclick="ppOpenDrillModal('all')">
-    <div class="pp-stat-icon" style="background:var(--pp-primary-light);color:var(--pp-primary);">menu_book</div>
-    <div class="pp-stat-label">Enrolled Courses</div>
-    <div class="pp-stat-value" style="color:var(--pp-primary);">{{ "%02d"|format(course_count) }}</div>
-    <div class="pp-stat-sub">Active this term</div>
-    <div class="pp-stat-drill-hint"><span class="ms" style="font-size:13px;">expand_circle_down</span> View courses</div>
-  </div>
+{# ── Key metrics ───────────────────────────────────────────────── #}
+<section class="pp-kpi-grid fade-in" aria-label="Key metrics" style="animation-delay:0.04s;">
 
-  <div class="pp-stat-card pp-stat-card-drillable"
-       style="--pp-stat-accent:{% if courses_below_75 == 0 %}var(--pp-success){% else %}var(--pp-danger){% endif %};"
-       onclick="ppOpenDrillModal('below75')">
-    <div class="pp-stat-icon"
-         style="background:{% if courses_below_75 == 0 %}var(--pp-success-bg);color:var(--pp-success){% else %}var(--pp-danger-bg);color:var(--pp-danger){% endif %};">
-      {% if courses_below_75 == 0 %}verified{% else %}warning{% endif %}
-    </div>
-    <div class="pp-stat-label">Below {{ att_good|int }}%</div>
-    <div class="pp-stat-value"
-         style="color:{% if courses_below_75 == 0 %}var(--pp-success){% else %}var(--pp-danger){% endif %};">
-      {{ courses_below_75 }}
-    </div>
-    <div class="pp-stat-sub">{% if courses_below_75 == 0 %}All courses on track{% else %}Needs attention{% endif %}</div>
-    <div class="pp-stat-drill-hint"><span class="ms" style="font-size:13px;">expand_circle_down</span>
-      {% if courses_below_75 == 0 %}View courses{% else %}View at-risk{% endif %}
-    </div>
-  </div>
-
-  <div class="pp-stat-card pp-stat-card-drillable"
-       style="--pp-stat-accent:{% if courses_eligible == course_count and course_count > 0 %}var(--pp-success){% else %}var(--pp-warning){% endif %};"
-       onclick="ppOpenDrillModal('eligible')">
-    <div class="pp-stat-icon"
-         style="background:{% if courses_eligible == course_count and course_count > 0 %}var(--pp-success-bg);color:var(--pp-success){% else %}var(--pp-warning-bg);color:var(--pp-warning){% endif %};">
-      shield
-    </div>
-    <div class="pp-stat-label">Exam Eligible</div>
-    <div class="pp-stat-value"
-         style="color:{% if courses_eligible == course_count and course_count > 0 %}var(--pp-success){% else %}var(--pp-warning){% endif %};">
-      {{ courses_eligible }}/{{ course_count }}
-    </div>
-    <div class="pp-stat-sub">Courses cleared</div>
-    <div class="pp-stat-drill-hint"><span class="ms" style="font-size:13px;">expand_circle_down</span> View eligibility</div>
-  </div>
-
-</div>
-
-{# ── Quick Actions ──────────────────────────────────────────────── #}
-<div class="pp-action-grid fade-in" style="margin-bottom:22px;animation-delay:0.08s;">
-  <a href="/parent-portal/attendance{% if active_ward %}?ward={{ active_ward }}{% endif %}" class="pp-action-card">
-    <div class="pp-action-icon" style="background:var(--pp-primary-light);color:var(--pp-primary);">event_available</div>
-    <span class="pp-action-label">Attendance</span>
+  <a class="pp-kpi" href="/parent-portal/attendance{{ _q }}">
+    <div class="pp-kpi-head"><span class="pp-kpi-label">Enrolled Courses</span><span class="pp-kpi-icon"><span
+          class="ms" aria-hidden="true">menu_book</span></span></div>
+    {% if course_count is not none %}
+    <div class="pp-kpi-value">{{ "%02d"|format(course_count) }}</div>
+    <div class="pp-kpi-sub">{{ "Current enrolment" if course_count else "No courses enrolled yet" }}</div>
+    {% else %}
+    <div class="pp-kpi-value is-empty">—</div>
+    <div class="pp-kpi-sub">Not available</div>
+    {% endif %}
   </a>
-  <a href="/parent-portal/results{% if active_ward %}?ward={{ active_ward }}{% endif %}" class="pp-action-card">
-    <div class="pp-action-icon" style="background:var(--pp-purple-bg);color:var(--pp-purple);">school</div>
-    <span class="pp-action-label">Results &amp; Grades</span>
-  </a>
-  <a href="/parent-portal/fees{% if active_ward %}?ward={{ active_ward }}{% endif %}" class="pp-action-card">
-    <div class="pp-action-icon" style="background:var(--pp-success-bg);color:var(--pp-success);">payments</div>
-    <span class="pp-action-label">Fees &amp; Payments</span>
-  </a>
-  <a href="#pp-rfid-section" class="pp-action-card">
-    <div class="pp-action-icon" style="background:var(--pp-info-bg);color:var(--pp-info);">contactless</div>
-    <span class="pp-action-label">RFID In/Out</span>
-  </a>
-</div>
 
-{# ── Main Content Grid ──────────────────────────────────────────── #}
-<div style="display:flex;flex-direction:column;gap:20px;" class="fade-in" style="animation-delay:0.1s;">
-
-  {# ── Row 1: Attendance Chart (full width) ──────────────────── #}
-  <div>
-
-    {# Attendance Bar Chart #}
-    {% if attendance_summaries %}
-    <div class="pp-card">
-      <div class="pp-card-header">
-        <div class="pp-card-title"><span class="ms">bar_chart</span> Attendance by Course</div>
-        <a href="/parent-portal/attendance{% if active_ward %}?ward={{ active_ward }}{% endif %}"
-           class="pp-card-link">View Full <span style="font-family:'Material Symbols Outlined';font-size:14px;vertical-align:-2px;">arrow_forward</span></a>
+  <a class="pp-kpi pp-kpi-att" href="/parent-portal/attendance{{ _q }}">
+    <div class="pp-kpi-head"><span class="pp-kpi-label">Attendance</span><span class="pp-kpi-icon"><span class="ms"
+          aria-hidden="true">event_available</span></span></div>
+    {% if _err.attendance %}
+    <div class="pp-kpi-value is-empty">—</div>
+    <div class="pp-kpi-sub">Unable to load</div>
+    {% elif attendance_summaries %}
+    <div class="pp-kpi-courses">
+      {% for s in attendance_summaries[:3] %}
+      {% set _pct = s.attendance_percentage %}
+      <div class="pp-kpi-course">
+        <span class="pp-kpi-course-name" title="{{ s.course_name | e }}">{{ s.course_name }}</span>
+        <span class="pp-kpi-course-pct{{ ' is-low' if _pct is not none and _pct < att_good }}">{{ '—' if _pct is none
+          else ((_pct | round(1)) ~ '%') }}</span>
       </div>
-      <div class="pp-att-chart-wrap">
-        <div class="pp-att-chart-inner" id="pp-att-chart">
-          {% for s in attendance_summaries %}
-          {% set pct = [s.attendance_percentage or 0, 100]|min %}
-          {% if pct >= att_good %}
-            {% set bar_color = "var(--pp-success)" %}
-          {% elif pct >= att_warn %}
-            {% set bar_color = "var(--pp-warning)" %}
-          {% else %}
-            {% set bar_color = "var(--pp-danger)" %}
-          {% endif %}
-          <div class="pp-att-bar-col">
-            <div class="pp-att-bar-pct" style="color:{{ bar_color }};">{{ pct|round(0)|int }}%</div>
-            <div class="pp-att-bar-track">
-              <div class="pp-att-bar-fill" data-height="{{ pct }}"
-                   style="height:0%;background:{{ bar_color }};opacity:0.85;">
-              </div>
-            </div>
-            <div class="pp-att-bar-name" title="{{ s.course_name or s.course }}">{{ s.course_name or s.course }}</div>
-          </div>
-          {% endfor %}
+      {% endfor %}
+    </div>
+    <div class="pp-kpi-sub">{% if attendance_summaries | length > 3 %}+{{ attendance_summaries | length - 3 }} more · {%
+      endif %}Course-wise attendance</div>
+    {% else %}
+    <div class="pp-kpi-value is-empty">—</div>
+    <div class="pp-kpi-sub">No attendance data yet</div>
+    {% endif %}
+  </a>
+
+  <a class="pp-kpi" href="/parent-portal/results{{ _q }}">
+    <div class="pp-kpi-head"><span class="pp-kpi-label">Grades</span><span class="pp-kpi-icon"><span class="ms"
+          aria-hidden="true">school</span></span></div>
+    {% if _err.results %}
+    <div class="pp-kpi-value is-empty">—</div>
+    <div class="pp-kpi-sub">Unable to load</div>
+    {% elif latest_result %}
+    <div class="pp-kpi-value">{{ "%02d"|format(latest_grades|length) }}</div>
+    <div class="pp-kpi-sub" title="{{ latest_result.exam_name }}">Subjects · {{ latest_result.exam_name }}</div>
+    {% else %}
+    <div class="pp-kpi-value is-empty">—</div>
+    <div class="pp-kpi-sub">No grades published yet</div>
+    {% endif %}
+  </a>
+
+  <a class="pp-kpi" href="/parent-portal/fees{{ _q }}">
+    <div class="pp-kpi-head"><span class="pp-kpi-label">Fees</span><span class="pp-kpi-icon"><span class="ms"
+          aria-hidden="true">payments</span></span></div>
+    {% if _err.fees %}
+    <div class="pp-kpi-value is-empty">—</div>
+    <div class="pp-kpi-sub">Unable to load</div>
+    {% elif fee_summary %}
+    {% if fee_summary.outstanding > 0 %}
+    <div class="pp-kpi-value is-money" style="color:var(--pp-danger);">{{ fee_summary.fmt_outstanding }}</div>
+    <div class="pp-kpi-sub">Outstanding</div>
+    {% else %}
+    <div class="pp-kpi-value is-money">{{ fee_summary.fmt_paid }}</div>
+    <div class="pp-kpi-sub">Paid · no dues</div>
+    {% endif %}
+    {% else %}
+    <div class="pp-kpi-value is-empty">—</div>
+    <div class="pp-kpi-sub">No payment information</div>
+    {% endif %}
+  </a>
+
+  <a class="pp-kpi" href="#pp-rfid-section">
+    <div class="pp-kpi-head"><span class="pp-kpi-label">Entry/Exit</span><span class="pp-kpi-icon"><span class="ms"
+          aria-hidden="true">contactless</span></span></div>
+    {% if _err.rfid %}
+    <div class="pp-kpi-value is-empty">—</div>
+    <div class="pp-kpi-sub">Unable to load</div>
+    {% elif rfid_logs %}
+    <div class="pp-kpi-value" style="font-size:24px;">{{ rfid_logs[0].swipe_clock }}</div>
+    <div class="pp-kpi-sub">Last swipe · {{ rfid_logs[0].swipe_date }}</div>
+    {% else %}
+    <div class="pp-kpi-value is-empty">—</div>
+    <div class="pp-kpi-sub">No swipe records</div>
+    {% endif %}
+  </a>
+
+</section>
+
+{# ── Row: Fees summary ─────────────────────────────────────────── #}
+{% set _show_fees = not pp_settings or pp_settings.show_fee_summary %}
+{% if _show_fees %}
+<div class="pp-dash-two-col fade-in" style="animation-delay:0.1s;grid-template-columns:1fr;">
+
+  {% if _show_fees %}
+  <section class="pp-card" aria-labelledby="pp-fees-title">
+    <div class="pp-card-header">
+      <h2 class="pp-card-title" id="pp-fees-title"><span class="ms" aria-hidden="true">payments</span> Fees &amp;
+        Payments</h2>
+      <a href="/parent-portal/fees{{ _q }}" class="pp-card-link">View payments <span class="ms" style="font-size:15px;"
+          aria-hidden="true">arrow_forward</span></a>
+    </div>
+    {% if _err.fees %}
+    {{ error_state("fee information") }}
+    {% elif fee_summary %}
+    {% set _fs = fee_summary.status or '' %}
+    <div class="pp-card-body">
+      <div
+        style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+        <span class="pp-att-caption">Payment status</span>
+        {% if _fs %}
+        <span
+          class="pp-pill {{ 'pp-pill-success' if _fs == 'Paid' else ('pp-pill-warning' if _fs in ('Partially Paid', 'Payment Initiated', 'Authorized') else 'pp-pill-danger') }}">{{
+          _fs }}</span>
+        {% endif %}
+      </div>
+      {% set _pct = ((fee_summary.paid / fee_summary.total * 100) if fee_summary.total > 0 else 0) %}
+      <div class="pp-progress" role="progressbar" aria-label="Fees paid" aria-valuemin="0" aria-valuemax="100"
+        aria-valuenow="{{ [_pct, 100]|min|round|int }}" style="margin-bottom:16px;">
+        <div class="pp-progress-bar" style="width:{{ [_pct, 100]|min }}%;background:var(--pp-success);"></div>
+      </div>
+      <div class="pp-metric-row">
+        <div class="pp-metric">
+          <div class="pp-metric-key">Total</div>
+          <div class="pp-metric-val" title="{{ fee_summary.fmt_total }}">{{ fee_summary.fmt_total }}</div>
         </div>
-        {# Threshold reference line legend #}
-        <div style="display:flex;gap:14px;margin-top:10px;flex-wrap:wrap;font-size:11.5px;color:var(--pp-text-4);">
-          <span style="display:flex;align-items:center;gap:5px;">
-            <span style="display:inline-block;width:18px;height:3px;background:var(--pp-success);border-radius:2px;"></span>≥{{ att_good|int }}% Good
-          </span>
-          <span style="display:flex;align-items:center;gap:5px;">
-            <span style="display:inline-block;width:18px;height:3px;background:var(--pp-warning);border-radius:2px;"></span>{{ att_warn|int }}–{{ att_good|int }}% Low
-          </span>
-          <span style="display:flex;align-items:center;gap:5px;">
-            <span style="display:inline-block;width:18px;height:3px;background:var(--pp-danger);border-radius:2px;"></span>&lt;{{ att_warn|int }}% Critical
-          </span>
+        <div class="pp-metric">
+          <div class="pp-metric-key">Paid</div>
+          <div class="pp-metric-val" style="color:var(--pp-success);" title="{{ fee_summary.fmt_paid }}">{{
+            fee_summary.fmt_paid }}</div>
+        </div>
+        <div class="pp-metric">
+          <div class="pp-metric-key">Outstanding</div>
+          <div class="pp-metric-val"
+            style="color:{% if fee_summary.outstanding > 0 %}var(--pp-danger){% else %}var(--pp-text-1){% endif %};"
+            title="{{ fee_summary.fmt_outstanding }}">{{ fee_summary.fmt_outstanding }}</div>
         </div>
       </div>
     </div>
     {% else %}
-    <div class="pp-card">
-      <div class="pp-card-header">
-        <div class="pp-card-title"><span class="ms">bar_chart</span> Attendance by Course</div>
-      </div>
-      <div class="pp-empty">
-        <span class="ms">event_busy</span>
-        <p class="pp-empty-title">No Attendance Data Yet</p>
-        <p class="pp-empty-sub">Attendance records will appear once sessions are recorded.</p>
-      </div>
-    </div>
+    {{ empty_state("receipt_long", "No payment information available", "Fee details will appear once invoices are
+    raised.") }}
     {% endif %}
+  </section>
+  {% endif %}
 
-  </div>{# end row 1 #}
 
-  {# ── Row 2: Time Table + RFID In/Out ────────────────────── #}
-  <div class="pp-dash-two-col" style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;">
+</div>
+{% endif %}
 
-    {# Time Table #}
-    <div class="pp-card" id="pp-schedule-section">
-      <div class="pp-card-header">
-        <div class="pp-card-title"><span class="ms">schedule</span> Time Table</div>
-        <span style="font-size:11px;color:var(--pp-text-4);font-weight:500;">Next 7 days</span>
-      </div>
-      {% if class_schedules %}
-        {% set ns = namespace(cur_date=None) %}
-        <div style="padding-bottom:4px;">
-        {% for sc in class_schedules %}
-          {% if sc.schedule_date != ns.cur_date %}
-            {% if ns.cur_date is not none %}
-            </div>{# close prev date group #}
-            {% endif %}
-            {% set ns.cur_date = sc.schedule_date %}
-            <div class="pp-sched-date-group" style="margin-bottom:0;">
-            <div class="pp-sched-date-label">
-              {{ sc.date_label }}
-              {% if sc.is_today %}<span class="today-pill">Today</span>{% endif %}
-            </div>
-          {% endif %}
-          <div class="pp-sched-row">
-            <div class="pp-sched-time-col">
-              <div class="pp-sched-from">{{ sc.from_time_fmt }}</div>
-              {% if sc.to_time_fmt %}<div class="pp-sched-to">{{ sc.to_time_fmt }}</div>{% endif %}
-            </div>
-            <div class="pp-sched-divider"></div>
-            <div style="flex:1;min-width:0;">
-              <div class="pp-sched-course">{{ sc.course_name }}</div>
-              <div class="pp-sched-meta">
-                {% if sc.instructor %}
-                <span style="font-family:'Material Symbols Outlined';font-size:12px;vertical-align:-2px;">person</span>
-                {{ sc.instructor }}
-                {% endif %}
-                {% if sc.venue %}
-                <span style="font-family:'Material Symbols Outlined';font-size:12px;vertical-align:-2px;">location_on</span>
-                {{ sc.venue }}
-                {% endif %}
-                {% if sc.duration_hours %}
-                <span style="font-family:'Material Symbols Outlined';font-size:12px;vertical-align:-2px;">timer</span>
-                {{ sc.duration_hours }}h
-                {% endif %}
-              </div>
-            </div>
-            {% if sc.status and sc.status != 'Scheduled' %}
-            <span class="pp-badge"
-                  style="font-size:10px;background:{% if sc.status == 'Completed' %}var(--pp-success-bg);color:var(--pp-success){% else %}var(--pp-warning-bg);color:var(--pp-warning){% endif %};">
-              {{ sc.status }}
-            </span>
-            {% endif %}
-          </div>
-        {% endfor %}
-        {% if ns.cur_date is not none %}
-        </div>{# close last date group #}
-        {% endif %}
-        </div>
-      {% else %}
-      <div class="pp-empty" style="padding:32px 24px;">
-        <span class="ms">calendar_today</span>
-        <p class="pp-empty-title">No Classes Scheduled</p>
-        <p class="pp-empty-sub">No classes found for the next 7 days.</p>
-      </div>
-      {% endif %}
+{# ── Row: Time Table + RFID ────────────────────────────────────── #}
+<div class="pp-dash-two-col is-stretch fade-in" style="animation-delay:0.12s;">
+
+  <section class="pp-card" id="pp-schedule-section" aria-labelledby="pp-tt-title">
+    <div class="pp-card-header">
+      <h2 class="pp-card-title" id="pp-tt-title"><span class="ms" aria-hidden="true">calendar_month</span> Time Table
+      </h2>
+      <span class="pp-header-note">Next 7 days</span>
     </div>
-
-    {# RFID In/Out #}
-    <div class="pp-card" id="pp-rfid-section">
-      <div class="pp-card-header">
-        <div class="pp-card-title"><span class="ms">contactless</span> RFID In/Out</div>
-        <span style="font-size:11px;color:var(--pp-text-4);font-weight:500;">Last 10 swipes</span>
-      </div>
-      {% if rfid_logs %}
-        {% for lg in rfid_logs %}
-        <div class="pp-rfid-row">
-          <div class="pp-rfid-icon" style="background:var(--pp-info-bg);color:var(--pp-info);">
-            contactless
-          </div>
-          <div style="flex:1;min-width:0;">
-            <div class="pp-rfid-time">{{ lg.swipe_clock }}</div>
-            <div class="pp-rfid-meta">
-              {{ lg.swipe_date }}
-              {% if lg.location or lg.terminal_alias %}
-              &nbsp;·&nbsp;
-              <span style="font-family:'Material Symbols Outlined';font-size:12px;vertical-align:-2px;">location_on</span>
-              {{ lg.terminal_alias or lg.location }}
-              {% endif %}
-            </div>
-          </div>
-          <span class="pp-badge" style="background:var(--pp-info-bg);color:var(--pp-info);font-size:10.5px;">
-            {{ lg.source or "Swipe" }}
-          </span>
+    {% if _err.timetable %}
+    {{ error_state("the time table") }}
+    {% elif class_schedules %}
+    <ul class="pp-list pp-list-scroll" tabindex="0" aria-label="Upcoming sessions">
+      {% for sc in class_schedules %}
+      <li class="pp-list-row">
+        <div class="pp-date-chip {% if sc.is_today %}is-today{% endif %}" aria-hidden="true">
+          <div class="pp-date-chip-day">{{ sc.day_num }}</div>
+          <div class="pp-date-chip-mon">{{ sc.month }}</div>
         </div>
-        {% endfor %}
-      {% else %}
-      <div class="pp-empty" style="padding:32px 24px;">
-        <span class="ms">contactless</span>
-        <p class="pp-empty-title">No Swipe Records</p>
-        <p class="pp-empty-sub">RFID gate entries will appear here once recorded.</p>
-      </div>
-      {% endif %}
-    </div>
-
-  </div>{# end row 2 #}
-
-  {# ── Row 3: Latest Results + Hostel ─────────────────────────── #}
-  <div style="display:grid;grid-template-columns:1fr{% if is_hosteller and hostel_details %} 1fr{% endif %};gap:20px;align-items:start;">
-
-    {# Latest Results #}
-    <div class="pp-card">
-      <div class="pp-card-header">
-        <div class="pp-card-title"><span class="ms">school</span> Results &amp; Grades</div>
-        <a href="/parent-portal/results{% if active_ward %}?ward={{ active_ward }}{% endif %}"
-           class="pp-card-link">View All <span style="font-family:'Material Symbols Outlined';font-size:14px;vertical-align:-2px;">arrow_forward</span></a>
-      </div>
-      <div class="pp-card-body">
-        {% if latest_result %}
-        <div class="pp-result-item">
-          <div class="pp-result-icon" style="background:var(--pp-primary-light);color:var(--pp-primary);">
-            assignment_turned_in
+        <div class="pp-list-main">
+          <div class="pp-list-title" title="{{ sc.course_name }}">{{ sc.course_name }}</div>
+          <div class="pp-list-meta">
+            <span class="pp-sr-only">{{ sc.weekday }} {{ sc.day_num }} {{ sc.month }},</span>
+            {% if sc.venue %}<span><span class="ms" aria-hidden="true">location_on</span>{{ sc.venue }}</span>{% endif
+            %}
+            {% if sc.instructor %}<span><span class="ms" aria-hidden="true">person</span>{{ sc.instructor }}</span>{%
+            endif %}
           </div>
-          <div style="flex:1;min-width:0;">
-            <div class="pp-result-name">{{ latest_result.exam_name }}</div>
-            <div class="pp-result-meta">
-              <span style="font-family:'Material Symbols Outlined';font-size:12px;vertical-align:-2px;">verified</span>
-              Published {{ frappe.utils.formatdate(latest_result.published_on, "dd MMM yyyy") if latest_result.published_on else "—" }}
-            </div>
-          </div>
-          <a href="/parent-portal/results{% if active_ward %}?ward={{ active_ward }}{% endif %}"
-             style="font-size:12px;font-weight:600;color:var(--pp-primary);text-decoration:none;white-space:nowrap;">
-            Details →
-          </a>
         </div>
-        {% else %}
-        <div class="pp-empty" style="padding:28px 24px;">
-          <span class="ms">assignment</span>
-          <p class="pp-empty-title">No Results Published Yet</p>
-          <p class="pp-empty-sub">Results will appear here once published by faculty.</p>
-        </div>
-        {% endif %}
-      </div>
-    </div>
-
-    {# Hostel Details #}
-    {% if is_hosteller and hostel_details %}
-    <div class="pp-card pp-hostel-card">
-
-      {# Hero banner #}
-      <div class="pp-hostel-hero">
-        <div class="pp-hostel-hero-icon">
-          <span class="ms">apartment</span>
-        </div>
-        <div class="pp-hostel-hero-info">
-          <div class="pp-hostel-hero-name">{{ hostel_details.hostel_name or "Hostel" }}</div>
-          {% if hostel_details.hostel_block %}
-          <div class="pp-hostel-hero-sub">{{ hostel_details.hostel_block }}</div>
+        <div class="pp-list-side">
+          {% if sc.is_today %}<div class="pp-today-tag">Today</div>{% endif %}
+          <div class="pp-time">{{ sc.from_time_fmt or "—" }}</div>
+          {% if sc.to_time_fmt %}<div class="pp-time-sub">to {{ sc.to_time_fmt }}</div>{% endif %}
+          {% if sc.status and sc.status not in ('Scheduled',) %}
+          <div class="pp-time-sub"
+            style="color:{% if sc.status == 'Completed' %}var(--pp-success){% else %}var(--pp-warning){% endif %};font-weight:600;">
+            {{ sc.status }}</div>
           {% endif %}
         </div>
-        <span class="pp-badge pp-hostel-status-badge"
-              style="background:{% if hostel_details.hostel_status|lower == 'active' %}rgba(255,255,255,0.18){% else %}rgba(255,200,0,0.22){% endif %};
-                     color:#fff;border:1px solid rgba(255,255,255,0.3);">
-          <span class="ms" style="font-size:13px;margin-right:3px;vertical-align:-1px;">
-            {% if hostel_details.hostel_status|lower == 'active' %}check_circle{% else %}info{% endif %}
-          </span>
-          {{ hostel_details.hostel_status or "Active" }}
-        </span>
-      </div>
-
-      {# Key stats grid #}
-      <div class="pp-hostel-grid">
-        {% if hostel_details.room_number %}
-        <div class="pp-hostel-stat">
-          <span class="ms pp-hostel-stat-icon">meeting_room</span>
-          <div class="pp-hostel-stat-val">{{ hostel_details.room_number }}</div>
-          <div class="pp-hostel-stat-key">Room</div>
-        </div>
-        {% endif %}
-        {% if hostel_details.bed_no %}
-        <div class="pp-hostel-stat">
-          <span class="ms pp-hostel-stat-icon">bed</span>
-          <div class="pp-hostel-stat-val">{{ hostel_details.bed_no }}</div>
-          <div class="pp-hostel-stat-key">Bed</div>
-        </div>
-        {% endif %}
-        {% if hostel_details.key_number %}
-        <div class="pp-hostel-stat">
-          <span class="ms pp-hostel-stat-icon">key</span>
-          <div class="pp-hostel-stat-val">{{ hostel_details.key_number }}</div>
-          <div class="pp-hostel-stat-key">Key</div>
-        </div>
-        {% endif %}
-        {% if hostel_details.meal_plan %}
-        <div class="pp-hostel-stat">
-          <span class="ms pp-hostel-stat-icon">restaurant</span>
-          <div class="pp-hostel-stat-val" style="font-size:13px;">{{ hostel_details.meal_plan }}</div>
-          <div class="pp-hostel-stat-key">Meal Plan</div>
-        </div>
-        {% endif %}
-      </div>
-
-      {% if hostel_details.allocation_date %}
-      <div class="pp-hostel-footer">
-        <span class="ms" style="font-size:14px;vertical-align:-2px;color:var(--pp-text-4);">calendar_today</span>
-        Allotted on <strong>{{ hostel_details.allocation_date }}</strong>
-      </div>
-      {% endif %}
-
-    </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    {{ empty_state("event_upcoming", "No sessions scheduled", "No sessions found for the next 7 days.") }}
     {% endif %}
+  </section>
 
-  </div>{# end row 3 #}
-
-</div>{# end main content #}
-
-{# ── Drill-down modal ────────────────────────────────────────────── #}
-<div id="pp-drill-overlay" class="pp-drill-overlay" onclick="ppCloseDrillModal(event)">
-  <div class="pp-drill-modal" id="pp-drill-modal">
-    <div class="pp-drill-modal-header">
-      <div class="pp-drill-modal-icon" id="pp-drill-modal-icon"></div>
-      <div>
-        <div class="pp-drill-modal-title" id="pp-drill-modal-title"></div>
-        <div class="pp-drill-modal-sub"   id="pp-drill-modal-sub"></div>
-      </div>
-      <button class="pp-drill-modal-close" onclick="ppCloseDrillModal()">close</button>
+  <section class="pp-card" id="pp-rfid-section" aria-labelledby="pp-rfid-title"
+    style="scroll-margin-top:calc(var(--nav-h) + 16px);">
+    <div class="pp-card-header">
+      <h2 class="pp-card-title" id="pp-rfid-title"><span class="ms" aria-hidden="true">contactless</span> Entry/Exit
+      </h2>
+      <span class="pp-header-note">Last 10 swipes</span>
     </div>
-    <div class="pp-drill-modal-body" id="pp-drill-modal-body"></div>
-  </div>
+    {% if _err.rfid %}
+    {{ error_state("Entry/Exit records") }}
+    {% elif rfid_logs %}
+    <ul class="pp-list pp-list-scroll" tabindex="0" aria-label="Recent Entry/Exit swipes">
+      {% for lg in rfid_logs %}
+      <li class="pp-list-row">
+        <span class="pp-rfid-dot" aria-hidden="true"><span class="ms">contactless</span></span>
+        <div class="pp-list-main">
+          <div class="pp-list-title">{{ lg.swipe_clock }}</div>
+          <div class="pp-list-meta">
+            <span>{{ lg.swipe_date }}</span>
+            {% if lg.terminal_alias or lg.location %}<span><span class="ms" aria-hidden="true">location_on</span>{{
+              lg.terminal_alias or lg.location }}</span>{% endif %}
+          </div>
+        </div>
+        {% if lg.source %}<span class="pp-src-tag">{{ lg.source }}</span>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    {{ empty_state("contactless", "No swipe records", "Entry/Exit gate entries will appear here once recorded.") }}
+    {% endif %}
+  </section>
+
 </div>
 
-{% endblock %}
+{# ── Row: Results & Grades ─────────────────────────────────────── #}
+{% set _show_res = not pp_settings or pp_settings.show_latest_result %}
+{% if _show_res %}
+<div class="pp-dash-two-col fade-in" style="animation-delay:0.14s;grid-template-columns:1fr;">
 
-{% block extra_js %}
-<script>
-const PP_COURSES   = {{ attendance_summaries | tojson }};
-const PP_ATT_GOOD  = {{ att_good }};
-const PP_ATT_WARN  = {{ att_warn }};
+  {% if _show_res %}
+  <section class="pp-card" aria-labelledby="pp-res-title">
+    <div class="pp-card-header">
+      <h2 class="pp-card-title" id="pp-res-title"><span class="ms" aria-hidden="true">school</span> Grades</h2>
+      <a href="/parent-portal/results{{ _q }}" class="pp-card-link">View all grades <span class="ms"
+          style="font-size:15px;" aria-hidden="true">arrow_forward</span></a>
+    </div>
+    {% if _err.results %}
+    {{ error_state("results") }}
+    {% elif latest_result %}
+    <div style="padding:14px 20px 4px;">
+      <div style="font-size:14px;font-weight:600;color:var(--pp-text-1);">{{ latest_result.exam_name }}</div>
+      <div class="pp-att-caption" style="margin-top:2px;">
+        Published {{ frappe.utils.formatdate(latest_result.published_on, "dd MMM yyyy") if latest_result.published_on
+        else "—" }}
+        {% if results_published_count > 1 %} · {{ results_published_count }} grades published{% endif %}
+      </div>
+    </div>
+    {% if latest_grades %}
+    <ul class="pp-list">
+      {% for g in latest_grades[:6] %}
+      <li class="pp-list-row">
+        <div class="pp-list-main">
+          <div class="pp-list-title" title="{{ g.course_name }}">{{ g.course_name }}</div>
+        </div>
+        {% if g.grade %}
+        <span class="pp-grade"><span class="pp-sr-only">Grade </span>{{ g.grade }}</span>
+        {% else %}
+        <span class="pp-grade is-pending">Pending</span>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% if latest_grades|length > 6 %}
+    <div style="padding:0 20px 14px;" class="pp-att-caption">+ {{ latest_grades|length - 6 }} more on the Grades page
+    </div>
+    {% endif %}
+    {% else %}
+    {{ empty_state("grading", "Grades not available", "Course grades are not available yet.") }}
+    {% endif %}
+    {% else %}
+    {{ empty_state("assignment", "No grades published yet", "Grades will appear once published.") }}
+    {% endif %}
+  </section>
+  {% endif %}
 
-/* ── Animate bar chart on load ─────────────────────────────────── */
-document.addEventListener('DOMContentLoaded', function () {
-  document.querySelectorAll('.pp-att-bar-fill').forEach(function (el) {
-    var h = parseFloat(el.dataset.height) || 0;
-    setTimeout(function () { el.style.height = Math.min(h, 100) + '%'; }, 120);
-  });
-});
 
-/* ── Colour helpers ────────────────────────────────────────────── */
-function ppStatusColor(pct) {
-  return pct >= PP_ATT_GOOD ? 'var(--pp-success)'
-       : pct >= PP_ATT_WARN ? 'var(--pp-warning)'
-       :                      'var(--pp-danger)';
-}
-function ppStatusBg(pct) {
-  return pct >= PP_ATT_GOOD ? 'var(--pp-success-bg)'
-       : pct >= PP_ATT_WARN ? 'var(--pp-warning-bg)'
-       :                      'var(--pp-danger-bg)';
-}
+</div>
+{% endif %}
 
-/* ── Drill-down modal ──────────────────────────────────────────── */
-function ppOpenDrillModal(type) {
-  var overlay = document.getElementById('pp-drill-overlay');
-  var iconEl  = document.getElementById('pp-drill-modal-icon');
-  var titleEl = document.getElementById('pp-drill-modal-title');
-  var subEl   = document.getElementById('pp-drill-modal-sub');
-  var bodyEl  = document.getElementById('pp-drill-modal-body');
-
-  var courses = PP_COURSES.slice();
-  var title, sub, iconName, iconStyle;
-
-  if (type === 'all') {
-    title     = 'All Enrolled Courses';
-    sub       = courses.length + ' course' + (courses.length !== 1 ? 's' : '') + ' this semester';
-    iconName  = 'menu_book';
-    iconStyle = 'background:var(--pp-primary-light);color:var(--pp-primary)';
-  } else if (type === 'below75') {
-    courses   = courses.filter(function(c){ return parseFloat(c.attendance_percentage||0) < PP_ATT_GOOD; });
-    title     = courses.length ? 'Courses Below Attendance Threshold' : 'All Courses On Track';
-    sub       = courses.length ? courses.length + ' course' + (courses.length!==1?'s':'') + ' need attention'
-                               : 'No courses are below the required attendance';
-    iconName  = courses.length ? 'warning' : 'verified';
-    iconStyle = courses.length ? 'background:var(--pp-danger-bg);color:var(--pp-danger)'
-                               : 'background:var(--pp-success-bg);color:var(--pp-success)';
-  } else if (type === 'eligible') {
-    title     = 'Exam Eligibility';
-    sub       = PP_COURSES.filter(function(c){return c.eligible_for_exam;}).length + ' eligible · '
-              + PP_COURSES.filter(function(c){return !c.eligible_for_exam;}).length + ' not eligible';
-    iconName  = 'shield';
-    iconStyle = 'background:var(--pp-success-bg);color:var(--pp-success)';
-  }
-
-  iconEl.style.cssText = iconStyle;
-  iconEl.textContent   = iconName;
-  titleEl.textContent  = title;
-  subEl.textContent    = sub;
-
-  if (!courses.length && type !== 'eligible') {
-    bodyEl.innerHTML = '<div class="pp-drill-empty"><span class="ms">check_circle</span>All courses are above the required attendance threshold.</div>';
-  } else {
-    var list = type === 'eligible' ? PP_COURSES : courses;
-    bodyEl.innerHTML = list.map(function(c) {
-      var pct      = parseFloat(c.attendance_percentage||0);
-      var pctR     = Math.round(pct*10)/10;
-      var color    = ppStatusColor(pct);
-      var bg       = ppStatusBg(pct);
-      var eligible = c.eligible_for_exam;
-      var eligBg   = eligible ? 'var(--pp-success-bg)' : 'var(--pp-danger-bg)';
-      var eligClr  = eligible ? 'var(--pp-success)'    : 'var(--pp-danger)';
-      var eligIcon = eligible ? 'shield' : 'block';
-      var eligTxt  = eligible ? 'Eligible' : 'Not Eligible';
-      var name     = c.course_name || c.course || '—';
-      var attended = c.attended_classes || 0;
-      var total    = c.total_classes    || 0;
-      var rowOp    = (type==='eligible' && !eligible) ? 'opacity:0.55;' : '';
-      return '<div class="pp-drill-row" style="' + rowOp + '">'
-           + '<div class="pp-drill-row-icon" style="background:' + bg + ';color:' + color + ';">menu_book</div>'
-           + '<div style="flex:1;min-width:0;">'
-           + '<div class="pp-drill-row-name">' + name + '</div>'
-           + '<div class="pp-drill-row-meta">' + attended + ' / ' + total + ' classes</div>'
-           + '<div class="pp-progress pp-drill-row-bar" style="height:5px;margin-top:6px;">'
-           + '<div class="pp-progress-bar" style="width:' + Math.min(pctR,100) + '%;background:' + color + ';"></div>'
-           + '</div></div>'
-           + '<div class="pp-drill-row-right">'
-           + '<div class="pp-drill-row-pct" style="color:' + color + ';">' + pctR + '%</div>'
-           + '<div style="margin-top:5px;"><span class="pp-badge" style="background:' + eligBg + ';color:' + eligClr + ';font-size:11px;">'
-           + '<span style="font-family:\'Material Symbols Outlined\';font-size:12px;margin-right:2px;vertical-align:-1px;">' + eligIcon + '</span>'
-           + eligTxt + '</span></div>'
-           + '</div></div>';
-    }).join('');
-  }
-
-  overlay.classList.add('open');
-  document.body.style.overflow = 'hidden';
-}
-
-function ppCloseDrillModal(evt) {
-  if (evt && evt.target !== document.getElementById('pp-drill-overlay')) return;
-  document.getElementById('pp-drill-overlay').classList.remove('open');
-  document.body.style.overflow = '';
-}
-
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') ppCloseDrillModal();
-});
-</script>
 {% endblock %}

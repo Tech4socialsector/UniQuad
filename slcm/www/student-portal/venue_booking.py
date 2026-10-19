@@ -48,11 +48,11 @@ def get_context(context):
         #  5. Linked Student Master has official_email_id = this portal user's email
         venue_bookings = frappe.db.sql("""
             SELECT DISTINCT
-                vb.name, vb.event_name, vb.venue_type, vb.room, vb.capacity,
+                vb.name, vb.event_name, vb.venue_type, vb.venue AS room, vb.capacity,
                 vb.start_datetime, vb.end_datetime, vb.status,
                 vb.reason, vb.attachment, vb.admin_remarks,
                 vb.expected_attendees, vb.creation,
-                vb.swap_requested, vb.swap_requested_room,
+                vb.swap_requested, vb.swap_requested_venue AS swap_requested_room,
                 vb.swap_request_reason, vb.swap_status, vb.swap_admin_remarks
             FROM `tabVenue Booking` vb
             LEFT JOIN `tabStudent Master` sm ON sm.name = vb.student

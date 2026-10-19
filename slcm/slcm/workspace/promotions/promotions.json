@@ -1,8 +1,25 @@
 {
  "app": "slcm",
- "charts": [],
- "content": "[{\"id\":\"prm_banner\",\"type\":\"paragraph\",\"data\":{\"text\":\"<p style=\\\"color:#64748b;font-size:13px;margin:0;\\\">Configure promotion criteria, evaluate students, confirm decisions, and download results. Use the flow below to get started.</p>\",\"col\":12}},{\"id\":\"prm_sp0\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"prm_h2\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h3\\\">&#9654; Quick Actions</span>\",\"col\":12}},{\"id\":\"prm_sc_page\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Promotion Management Page\",\"col\":4}},{\"id\":\"prm_sc_new\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Promotion Policy\",\"col\":4}},{\"id\":\"prm_sc_dl\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Download Promotion Report\",\"col\":4}},{\"id\":\"prm_sp1\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"prm_h3\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h3\\\">&#9881; Configuration</span>\",\"col\":12}},{\"id\":\"prm_sc_pol\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Promotion Policy List\",\"col\":4}},{\"id\":\"prm_sp2\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"prm_h4\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h3\\\">&#128203; Records</span>\",\"col\":12}},{\"id\":\"prm_sc_sp\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Student Promotion List\",\"col\":4}}]",
- "creation": "2026-08-05 12:10:23.328991",
+ "charts": [
+  {
+   "chart_name": "Promotion Outcome Distribution",
+   "label": "Promotion Outcome Distribution"
+  },
+  {
+   "chart_name": "Promotions Over Time",
+   "label": "Promotions Over Time"
+  },
+  {
+   "chart_name": "Promotion Runs by Status",
+   "label": "Promotion Runs by Status"
+  },
+  {
+   "chart_name": "Promotion Exceptions by Reason",
+   "label": "Promotion Exceptions by Reason"
+  }
+ ],
+ "content": "[{\"type\": \"paragraph\", \"data\": {\"text\": \"<p style=\\\"color:#64748b;font-size:13px;margin:0;\\\">Set up a promotion policy, run promotion for a batch from the Promotion Management page, then review outcomes and resolve exceptions here.</p>\", \"col\": 12}, \"id\": \"prm_00\"}, {\"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Overview</b></span>\", \"col\": 12}, \"id\": \"prm_01\"}, {\"type\": \"number_card\", \"data\": {\"number_card_name\": \"Active Promotion Policies\", \"col\": 4}, \"id\": \"prm_02\"}, {\"type\": \"number_card\", \"data\": {\"number_card_name\": \"Students Promoted\", \"col\": 4}, \"id\": \"prm_03\"}, {\"type\": \"number_card\", \"data\": {\"number_card_name\": \"Students Not Promoted\", \"col\": 4}, \"id\": \"prm_04\"}, {\"type\": \"number_card\", \"data\": {\"number_card_name\": \"Promotions Pending Review\", \"col\": 4}, \"id\": \"prm_05\"}, {\"type\": \"number_card\", \"data\": {\"number_card_name\": \"Promotion Enrollment Failures\", \"col\": 4}, \"id\": \"prm_06\"}, {\"type\": \"number_card\", \"data\": {\"number_card_name\": \"Promotion Runs with Errors\", \"col\": 4}, \"id\": \"prm_07\"}, {\"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Quick Actions</b></span>\", \"col\": 12}, \"id\": \"prm_08\"}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Run Promotion\", \"col\": 4}, \"id\": \"prm_09\"}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"New Promotion Policy\", \"col\": 4}, \"id\": \"prm_10\"}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Download Promotion Report\", \"col\": 4}, \"id\": \"prm_11\"}, {\"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Records</b></span>\", \"col\": 12}, \"id\": \"prm_12\"}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Promotion Policies\", \"col\": 4}, \"id\": \"prm_13\"}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Student Promotions\", \"col\": 4}, \"id\": \"prm_14\"}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Promotion Runs\", \"col\": 4}, \"id\": \"prm_15\"}, {\"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Analytics</b></span>\", \"col\": 12}, \"id\": \"prm_16\"}, {\"type\": \"chart\", \"data\": {\"chart_name\": \"Promotion Outcome Distribution\", \"col\": 6}, \"id\": \"prm_17\"}, {\"type\": \"chart\", \"data\": {\"chart_name\": \"Promotions Over Time\", \"col\": 6}, \"id\": \"prm_18\"}, {\"type\": \"chart\", \"data\": {\"chart_name\": \"Promotion Runs by Status\", \"col\": 6}, \"id\": \"prm_19\"}, {\"type\": \"chart\", \"data\": {\"chart_name\": \"Promotion Exceptions by Reason\", \"col\": 6}, \"id\": \"prm_20\"}]",
+ "creation": "2026-09-29 16:24:05.459192",
  "custom_blocks": [],
  "docstatus": 0,
  "doctype": "Workspace",
@@ -13,12 +30,21 @@
  "indicator_color": "green",
  "is_hidden": 0,
  "label": "Promotions",
+ "link_type": "DocType",
  "links": [
   {
-   "dependencies": "",
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Promotion Management Page",
+   "label": "Promotions",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Promotion Management",
    "link_count": 0,
    "link_to": "promotion-management",
    "link_type": "Page",
@@ -26,7 +52,6 @@
    "type": "Link"
   },
   {
-   "dependencies": "",
    "hidden": 0,
    "is_query_report": 0,
    "label": "Promotion Policy",
@@ -37,7 +62,6 @@
    "type": "Link"
   },
   {
-   "dependencies": "",
    "hidden": 0,
    "is_query_report": 0,
    "label": "Student Promotion",
@@ -46,13 +70,48 @@
    "link_type": "DocType",
    "onboard": 1,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Promotion Run",
+   "link_count": 0,
+   "link_to": "Promotion Run",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2026-05-12 12:30:00",
+ "modified": "2026-09-29 16:24:05.459192",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Promotions",
- "number_cards": [],
+ "number_cards": [
+  {
+   "label": "Active Promotion Policies",
+   "number_card_name": "Active Promotion Policies"
+  },
+  {
+   "label": "Students Promoted",
+   "number_card_name": "Students Promoted"
+  },
+  {
+   "label": "Students Not Promoted",
+   "number_card_name": "Students Not Promoted"
+  },
+  {
+   "label": "Promotions Pending Review",
+   "number_card_name": "Promotions Pending Review"
+  },
+  {
+   "label": "Promotion Enrollment Failures",
+   "number_card_name": "Promotion Enrollment Failures"
+  },
+  {
+   "label": "Promotion Runs with Errors",
+   "number_card_name": "Promotion Runs with Errors"
+  }
+ ],
  "owner": "Administrator",
  "parent_page": "",
  "public": 1,
@@ -63,9 +122,9 @@
   {
    "color": "Green",
    "doc_view": "",
-   "label": "Promotion Management Page",
-   "type": "URL",
-   "url": "/app/promotion-management"
+   "label": "Run Promotion",
+   "link_to": "promotion-management",
+   "type": "Page"
   },
   {
    "color": "Blue",
@@ -79,20 +138,27 @@
    "doc_view": "",
    "label": "Download Promotion Report",
    "type": "URL",
-   "url": "/app/promotion-management?action=download_report"
+   "url": "/desk/promotion-management?action=download_report"
   },
   {
    "color": "Blue",
    "doc_view": "List",
-   "label": "Promotion Policy List",
+   "label": "Promotion Policies",
    "link_to": "Promotion Policy",
    "type": "DocType"
   },
   {
-   "color": "Grey",
+   "color": "Cyan",
    "doc_view": "List",
-   "label": "Student Promotion List",
+   "label": "Student Promotions",
    "link_to": "Student Promotion",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "label": "Promotion Runs",
+   "link_to": "Promotion Run",
    "type": "DocType"
   }
  ],

@@ -161,11 +161,12 @@
    "link_fieldname": "course_title"
   },
   {
+   "group": "Students",
    "link_doctype": "Student Master",
    "link_fieldname": "batch"
   }
  ],
- "modified": "2026-08-03 17:23:59.711255",
+ "modified": "2026-09-16 17:02:38.346702",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Batch",

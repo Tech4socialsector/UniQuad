@@ -22,6 +22,71 @@ def get_parent_wards(email):
     )
 
 
+_WARD_FIELDS = """
+    sm.name, sm.first_name, sm.last_name, sm.programme,
+    sm.programme_of_study, sm.batch_year, sm.student_status,
+    sm.passport_size_photo, sm.academic_year, sm.academic_term
+"""
+
+PREVIEW_ROLES = ("System Manager",)
+
+
+def can_preview_portal(user=None):
+    """Administrator / System Manager may preview the parent portal."""
+    user = user or frappe.session.user
+    if user == "Guest":
+        return False
+    return user == "Administrator" or bool(set(PREVIEW_ROLES) & set(frappe.get_roles(user)))
+
+
+def _get_preview_rows(context):
+    """Pick the student an admin previews the portal for.
+
+    ?ward=<Student Master> chooses the student; otherwise the first student
+    with a linked parent (falling back to any student). Returns [] when the
+    site has no students yet.
+    """
+    requested = frappe.request.args.get("ward") if frappe.request else None
+    row = None
+    if requested:
+        row = _fetch_ward_row("WHERE sm.name = %s", (requested,))
+        if not row:
+            context.preview_notice = f"Student {requested} was not found — showing another student instead."
+    if not row:
+        row = _fetch_ward_row(
+            """WHERE EXISTS (SELECT 1 FROM `tabStudent Parent` sp
+                             WHERE sp.parent = sm.name AND sp.parenttype = 'Student Master'
+                               AND IFNULL(sp.email, '') != '')""",
+            (),
+        ) or _fetch_ward_row("", ())
+    if not row:
+        return []
+
+    context.is_preview = True
+    context.preview_students = frappe.db.sql(
+        """
+        SELECT sm.name, TRIM(CONCAT(IFNULL(sm.first_name, ''), ' ', IFNULL(sm.last_name, ''))) AS full_name
+        FROM   `tabStudent Master` sm
+        ORDER  BY (EXISTS (SELECT 1 FROM `tabStudent Parent` sp
+                           WHERE sp.parent = sm.name AND sp.parenttype = 'Student Master'
+                             AND IFNULL(sp.email, '') != '')) DESC,
+                  sm.modified DESC
+        LIMIT  500
+        """,
+        as_dict=True,
+    )
+    return [row]
+
+
+def _fetch_ward_row(where, values):
+    rows = frappe.db.sql(
+        f"SELECT {_WARD_FIELDS} FROM `tabStudent Master` sm {where} ORDER BY sm.first_name LIMIT 1",
+        values,
+        as_dict=True,
+    )
+    return rows[0] if rows else None
+
+
 def get_parent_context(context):
     """
     Shared setup for all parent portal pages.
@@ -46,9 +111,8 @@ def get_parent_context(context):
 
     # Find all students where this user's email is in the parents child table
     rows = frappe.db.sql(
-        """
-        SELECT sm.name, sm.first_name, sm.last_name, sm.programme,
-               sm.batch_year, sm.student_status, sm.passport_size_photo
+        f"""
+        SELECT {_WARD_FIELDS}
         FROM   `tabStudent Master` sm
         INNER JOIN `tabStudent Parent` sp
                ON sp.parent = sm.name AND sp.parenttype = 'Student Master'
@@ -58,6 +122,11 @@ def get_parent_context(context):
         user,
         as_dict=True,
     )
+
+    # Admins who aren't parents get a read-only preview as one student's parent
+    context.is_preview = False
+    if not rows and can_preview_portal(user):
+        rows = _get_preview_rows(context)
 
     if not rows:
         context.not_a_parent = True
@@ -105,8 +174,17 @@ def get_parent_context(context):
     if student.programme:
         prog_name = frappe.db.get_value("Batch", student.programme, "cohort_name")
         context.ward_programme = prog_name or student.programme
+    elif student.programme_of_study:
+        prog_name = frappe.db.get_value("Programme", student.programme_of_study, "program_name")
+        context.ward_programme = prog_name or student.programme_of_study
 
     context.ward_batch = student.batch_year or ""
+    context.ward_academic_year = student.academic_year or ""
+    context.ward_term = student.academic_term or ""
+
+    # Every portal link must carry the active ward, otherwise navigating
+    # (e.g. back to the dashboard) silently falls back to the first ward.
+    context.ward_qs = f"?ward={active_ward}"
 
     # Inject portal settings so all pages can access pp_settings in templates
     try:

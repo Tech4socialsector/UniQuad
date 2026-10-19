@@ -1,403 +1,112 @@
-<style>
-    * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-    }
+{% set logo = "/files/nlsiu-logo.jpg" %}
+{% set applicant_name = frappe.db.get_value("Applicant", doc.applicant, "candidate_name") if doc.applicant else "" %}
+{% set program = frappe.db.get_value("Admission Cancellation", doc.admission_cancellation, "program") if doc.admission_cancellation else "" %}
+{% set amount_paid = frappe.utils.flt(doc.amount_paid or 0) %}
+{% set refund_amount = frappe.utils.flt(doc.refund_amount or 0) %}
 
-    .receipt-wrapper {
-        padding: 40px;
-        font-family: 'DejaVu Sans', Arial, sans-serif;
-        color: #333333;
-        line-height: 1.6;
-        -webkit-print-color-adjust: exact;
-        width: 100%;
-    }
+{% include "slcm/templates/print/nls_receipt_style.html" %}
+<div class="nls-doc">
+<div class="nls-copy is-page">
 
-    /* ── HEADER ── */
-    .receipt-header {
-        width: 100%;
-        border-bottom: 3px solid #dc2626;
-        padding-bottom: 16px;
-        margin-bottom: 32px;
-        overflow: hidden; /* clearfix */
-    }
+  <div class="nls-head">
+    <img src="{{ logo }}" alt="NLS Logo">
+    <div class="nls-inst">National Law School of India University</div>
+  </div>
 
-    .company-logo {
-        float: left;
-        font-size: 16px;
-        font-weight: 900;
-        color: #dc2626;
-        max-width: 55%;
-        word-wrap: break-word;
-        line-height: 1.3;
-    }
+  <div class="nls-title">Refund Receipt</div>
 
-    .receipt-title {
-        float: right;
-        text-align: right;
-        max-width: 40%;
-    }
+  <table class="nls-meta">
+    <tr>
+      <td class="lbl">Application No:</td>
+      <td class="val">{{ doc.applicant or "—" }}</td>
+      <td class="lbl">Applicant Name:</td>
+      <td class="val">{{ applicant_name or doc.applicant or "—" }}</td>
+    </tr>
+    <tr>
+      <td class="lbl">Request ID:</td>
+      <td class="val"><span class="nls-boxed">{{ doc.name }}</span></td>
+      <td class="lbl">Status:</td>
+      <td class="val">{{ "Refunded" if doc.status == "Processed" else (doc.status or "—") }}</td>
+    </tr>
+  </table>
 
-    .receipt-title h1 {
-        margin: 0;
-        font-size: 26px;
-        font-weight: 900;
-        color: #111111;
-        letter-spacing: 1px;
-    }
+  <hr class="nls-divider">
 
-    .receipt-title p {
-        margin: 6px 0 0;
-        color: #666666;
-        font-size: 13px;
-        font-weight: 600;
-    }
+  <table class="nls-meta">
+    <tr>
+      <td class="lbl">Programme:</td>
+      <td class="val">{{ program or "—" }}</td>
+      <td class="lbl">Request Date:</td>
+      <td class="val">{{ frappe.utils.formatdate(doc.request_date, "dd-MM-yyyy") if doc.request_date else "—" }}</td>
+    </tr>
+    <tr>
+      <td class="lbl">Withdrawal Reason:</td>
+      <td class="val">{{ doc.refund_reason or "—" }}</td>
+      <td class="lbl">Refund Date:</td>
+      <td class="val">{{ frappe.utils.formatdate(doc.refund_date, "dd-MM-yyyy") if doc.refund_date else "Pending" }}</td>
+    </tr>
+  </table>
 
-    .header-clear {
-        clear: both;
-        display: block;
-    }
+  <table class="nls-table">
+    <thead>
+      <tr>
+        <th style="width:10%">Sl No.</th>
+        <th>Particulars</th>
+        <th style="width:26%">Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1</td>
+        <td>Total Admission Fee Paid (Original)</td>
+        <td>INR {{ "{:,.2f}".format(amount_paid) }}</td>
+      </tr>
+      {% if refund_amount != amount_paid %}
+      <tr>
+        <td>2</td>
+        <td>Deduction{% if doc.refund_policy %} ({{ doc.refund_policy }}){% endif %}</td>
+        <td>− INR {{ "{:,.2f}".format(amount_paid - refund_amount) }}</td>
+      </tr>
+      {% elif doc.refund_policy %}
+      <tr>
+        <td>2</td>
+        <td>Refund Policy Applied: {{ doc.refund_policy }}</td>
+        <td>—</td>
+      </tr>
+      {% endif %}
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="2">Refund Amount</td>
+        <td>INR {{ "{:,.2f}".format(refund_amount) }}</td>
+      </tr>
+    </tfoot>
+  </table>
 
-    /* ── INFO GRID (table-based) ── */
-    .info-grid {
-        width: 100%;
-        margin-bottom: 36px;
-        border-collapse: collapse;
-    }
+  <div class="nls-words">
+    {{ frappe.utils.money_in_words(refund_amount, doc.currency or "INR") | replace("INR ", "Rupees ") }}
+  </div>
 
-    .info-grid td {
-        vertical-align: top;
-        padding: 0;
-        width: 50%;
-    }
+  <hr class="nls-divider">
 
-    .info-grid td.right-col {
-        text-align: right;
-        padding-left: 20px;
-    }
+  <table class="nls-meta">
+    <tr>
+      <td class="lbl">Refund Reference:</td>
+      <td class="val">{{ doc.razorpay_refund_id or "N/A" }}</td>
+      <td class="lbl">Original Payment Id:</td>
+      <td class="val">{{ doc.razorpay_payment_id or "N/A" }}</td>
+    </tr>
+    <tr>
+      <td class="lbl">Payment Receipt:</td>
+      <td class="val">{{ doc.applicant_payment_receipt or "N/A" }}</td>
+      <td class="lbl">Currency:</td>
+      <td class="val">{{ doc.currency or "INR" }}</td>
+    </tr>
+  </table>
 
-    .info-label {
-        font-size: 11px;
-        color: #94a3b8;
-        font-weight: 700;
-        margin-bottom: 6px;
-        display: block;
-        letter-spacing: 1px;
-        text-transform: none;
-    }
+  <div class="nls-note">
+    This is a computer generated receipt, hence it does not require signature/seal.
+  </div>
 
-    .info-value {
-        font-size: 14px;
-        font-weight: 500;
-        color: #1e293b;
-        margin-bottom: 14px;
-    }
-
-    .info-value strong {
-        font-weight: 800;
-        color: #0f172a;
-    }
-
-    .date-value {
-        white-space: nowrap;
-        display: inline-block;
-    }
-
-    /* ── DETAILS TABLE ── */
-    .details-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 30px;
-        border: 1px solid #fee2e2;
-        page-break-inside: auto;
-    }
-
-    .details-table th {
-        background-color: #fef2f2;
-        color: #991b1b;
-        font-size: 12px;
-        font-weight: 800;
-        padding: 14px 18px;
-        text-align: left;
-        letter-spacing: 1px;
-        text-transform: none;
-        border-bottom: 1px solid #fee2e2;
-    }
-
-    .details-table th.amount-col {
-        text-align: right;
-    }
-
-    .details-table td {
-        padding: 14px 18px;
-        border-bottom: 1px solid #fee2e2;
-        font-size: 14px;
-        color: #334155;
-    }
-
-    .details-table .amount-col {
-        text-align: right;
-        font-weight: 700;
-    }
-
-    /* ── TOTALS BOX (table-based, right aligned) ── */
-    .totals-outer {
-        width: 100%;
-        margin-top: 10px;
-        margin-bottom: 30px;
-        overflow: hidden;
-    }
-
-    .totals-box {
-        float: right;
-        width: 360px;
-        background-color: #fffafa;
-        padding: 20px 24px;
-        border-radius: 12px;
-        border: 2px solid #fee2e2;
-        page-break-inside: avoid;
-    }
-
-    .totals-inner {
-        width: 100%;
-        border-collapse: collapse;
-    }
-
-    .totals-inner td {
-        padding: 6px 0;
-        font-size: 14px;
-        color: #64748b;
-        vertical-align: middle;
-    }
-
-    .totals-inner td.t-label {
-        text-align: left;
-    }
-
-    .totals-inner td.t-val {
-        text-align: right;
-        font-weight: 600;
-    }
-
-    .totals-inner tr.deduction td {
-        color: #ef4444;
-    }
-
-    .totals-inner tr.grand td {
-        padding-top: 12px;
-        border-top: 2px solid #fecaca;
-        font-size: 20px;
-        font-weight: 900;
-        color: #dc2626;
-    }
-
-    .totals-inner tr.grand td.t-label {
-        font-size: 15px;
-        color: #1e293b;
-        font-weight: 700;
-    }
-
-    .currency-note {
-        text-align: right;
-        font-size: 11px;
-        color: #94a3b8;
-        font-weight: 600;
-        letter-spacing: 1px;
-        margin-top: 8px;
-    }
-
-    .totals-clear {
-        clear: both;
-        display: block;
-    }
-
-    /* ── STATUS STAMP ── */
-    .status-stamp {
-        border: 4px solid #dc2626;
-        color: #dc2626;
-        display: block;
-        padding: 12px 40px;
-        border-radius: 12px;
-        font-weight: 900;
-        opacity: 0.3;
-        font-size: 36px;
-        text-align: center;
-        margin: 30px auto;
-        width: 300px;
-        letter-spacing: 3px;
-        background-color: transparent;
-        page-break-inside: avoid;
-        /* wkhtmltopdf supports -webkit-transform */
-        -webkit-transform: rotate(-3deg);
-    }
-
-    /* ── AUDIT BOX ── */
-    .audit-box {
-        margin-top: 30px;
-        font-size: 13px;
-        color: #475569;
-        background-color: #f8fafc;
-        padding: 20px 24px;
-        border-radius: 10px;
-        border: 1px solid #e2e8f0;
-        page-break-inside: avoid;
-        width: 100%;
-        overflow: hidden;
-    }
-
-    .audit-col-left {
-        float: left;
-        width: 48%;
-    }
-
-    .audit-col-right {
-        float: right;
-        width: 48%;
-        text-align: left;
-    }
-
-    .audit-clear {
-        clear: both;
-        display: block;
-    }
-
-    /* ── FOOTER ── */
-    .footer-note {
-        margin-top: 50px;
-        font-size: 12px;
-        color: #94a3b8;
-        border-top: 1px solid #f1f5f9;
-        padding-top: 20px;
-        text-align: center;
-        width: 100%;
-        clear: both;
-    }
-
-    .footer-note p {
-        margin-bottom: 4px;
-    }
-</style>
-
-<div class="receipt-wrapper">
-
-    <!-- ── HEADER ── -->
-    <div class="receipt-header">
-        <div class="company-logo">
-            {% set campus = frappe.db.get_value("Admission Cancellation", doc.admission_cancellation, "campus") if doc.admission_cancellation else "" %}
-            Campus: {{ _(campus or "") }}
-        </div>
-        <div class="receipt-title">
-            <h1>Refund Receipt</h1>
-            <p><strong>Request ID:</strong> {{ doc.name }}</p>
-        </div>
-        <div class="header-clear"></div>
-    </div>
-
-    <!-- ── INFO GRID ── -->
-    <table class="info-grid">
-        <tr>
-            <td>
-                <span class="info-label">Applicant Information</span>
-                <div class="info-value">
-                    {% set applicant_name = frappe.db.get_value("Applicant", doc.applicant, "candidate_name") %}
-                    {% set program = frappe.db.get_value("Admission Cancellation", doc.admission_cancellation, "program") if doc.admission_cancellation else "" %}
-                    Applicant Name: <strong>{{ applicant_name or doc.applicant }}</strong><br>
-                    Applicant No: {{ doc.applicant }}<br>
-                    Program: {{ program or "" }}
-                </div>
-                <span class="info-label">Withdrawal Reason</span>
-                <div class="info-value" style="font-style: italic; color: #64748b;">"{{ doc.refund_reason }}"</div>
-            </td>
-            <td class="right-col">
-                <span class="info-label">Refund Journey</span>
-                <div class="info-value">
-                    Withdrawal Request Date:
-                    <span class="date-value">{{ frappe.format(doc.request_date, "Datetime") }}</span><br>
-                    Refund Processed Date:
-                    <span class="date-value">{{ frappe.format(doc.refund_date, "Datetime") if doc.refund_date else "Pending" }}</span><br>
-                    Transaction Reference:
-                    <span style="font-family: monospace; font-size: 12px;">{{ doc.razorpay_refund_id or "N/A" }}</span>
-                </div>
-                {% if doc.status != 'Processed' %}
-                <div style="font-size: 12px; font-weight: 800; color: #64748b; border: 1px solid #cbd5e1; display: inline-block; padding: 4px 12px; border-radius: 6px;">
-                    Status: {{ doc.status }}
-                </div>
-                {% endif %}
-            </td>
-        </tr>
-    </table>
-
-    <!-- ── ITEMIZED TABLE ── -->
-    <table class="details-table">
-        <thead>
-            <tr>
-                <th>Itemized Description</th>
-                <th class="amount-col">Amount</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td>Total Admission Fee Paid (Original)</td>
-                <td class="amount-col">{{ doc.get_formatted("amount_paid") }}</td>
-            </tr>
-            {% if doc.refund_policy %}
-            <tr>
-                <td>Refund Policy Applied</td>
-                <td class="amount-col">{{ doc.refund_policy }}</td>
-            </tr>
-            {% endif %}
-        </tbody>
-    </table>
-
-    <!-- ── TOTALS BOX ── -->
-    <div class="totals-outer">
-        <div class="totals-box">
-            <table class="totals-inner">
-                <tr>
-                    <td class="t-label">Total Amount Paid</td>
-                    <td class="t-val">{{ doc.get_formatted("amount_paid") }}</td>
-                </tr>
-                {% if doc.refund_amount != doc.amount_paid %}
-                <tr class="deduction">
-                    <td class="t-label">Total Deduction (if any)</td>
-                    <td class="t-val">- {{ frappe.format(doc.amount_paid - doc.refund_amount, "Currency", doc.currency or "INR") }}</td>
-                </tr>
-                {% endif %}
-                <tr class="grand">
-                    <td class="t-label">Refund Amount</td>
-                    <td class="t-val">{{ doc.get_formatted("refund_amount") }}</td>
-                </tr>
-            </table>
-            <p class="currency-note">Currency: {{ doc.currency or "INR" }}</p>
-        </div>
-        <div class="totals-clear"></div>
-    </div>
-
-    <!-- ── AUDIT BOX ── -->
-    <div class="audit-box">
-        <div class="audit-col-left">
-            <span class="info-label" style="margin-bottom: 10px;">Original Payment Audit</span>
-            <strong>Razorpay Payment ID</strong><br>
-            <span style="font-family: monospace; font-size: 12px;">{{ doc.razorpay_payment_id or "N/A" }}</span>
-        </div>
-        <div class="audit-col-right">
-            <br>
-            <strong>Internal Receipt Reference</strong><br>
-            {{ doc.applicant_payment_receipt or "N/A" }}
-        </div>
-        <div class="audit-clear"></div>
-    </div>
-
-    <!-- ── STAMP ── -->
-    {% if doc.status == 'Processed' %}
-    <div class="status-stamp">Refunded</div>
-    {% endif %}
-
-    <!-- ── FOOTER ── -->
-    <div class="footer-note">
-        <p style="font-weight: 700; color: #64748b;">This is a system-generated receipt. No signature is required.</p>
-        <p>&copy; {{ frappe.utils.now_datetime().year }} {{ campus or "NLSIU" }}. All rights reserved.</p>
-    </div>
-
+</div>
 </div>

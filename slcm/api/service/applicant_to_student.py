@@ -133,7 +133,7 @@ def _map_applicant_to_student(student, applicant, program, admission_cycle, offe
             as_dict=True
         )
         if batch_data:
-            student.programme = batch_data.name
+            student.batch = batch_data.name
             if batch_data.academic_term:
                 student.academic_term = batch_data.academic_term
 
@@ -197,8 +197,6 @@ def _map_applicant_to_student(student, applicant, program, admission_cycle, offe
     
     if is_international:
         student.quota = "NA"
-    elif str(applicant.get("ews")).strip() == "Yes":
-        student.quota = "EWS"
     else:
         sc_st_obc = (applicant.get("whether_scstobc_ncl") or "").strip()
         if sc_st_obc == "OBC-NCL":
@@ -243,8 +241,9 @@ def _map_applicant_to_student(student, applicant, program, admission_cycle, offe
     student.needs_accommodation = applicant.get("needs_accommodation")
     student.id_proof_govt_issued_photo_id = applicant.get("id_proof")
     student.caste_certificate = applicant.get("caste_certificate")
-    student.whether_ews = applicant.get("ews")
-    student.ews_certificate = applicant.get("ews_certificate")
+    student.whether_ews = "Yes" if applicant.get("whether_scstobc_ncl") == "EWS" else "No"
+    if applicant.get("whether_scstobc_ncl") == "EWS":
+        student.ews_certificate = applicant.get("caste_certificate")
     student.pwd_required_test = applicant.get("pwd_required_test")
     student.scribe_allotment = applicant.get("scribe_allotment")
     student.karnataka_category = applicant.get("karnataka_category")
@@ -747,19 +746,19 @@ def create_student_enrollment(student_name):
     try:
         student = frappe.get_doc("Student Master", student_name)
         
-        # Enrollment requires a batch (stored in 'programme' field on Student Master)
-        if not student.programme:
+        # Enrollment requires a batch
+        if not student.batch:
             frappe.logger().warning(f"Skipping Student Enrollment for {student_name}: No batch assigned.")
             return None
             
         # Check if enrollment already exists for this batch
-        if frappe.db.exists("Student Enrollment", {"student": student_name, "batch": student.programme}):
+        if frappe.db.exists("Student Enrollment", {"student": student_name, "batch": student.batch}):
             return None
             
         enrollment = frappe.new_doc("Student Enrollment")
         enrollment.student = student_name
         enrollment.enrollment_date = frappe.utils.today()
-        enrollment.batch = student.programme
+        enrollment.batch = student.batch
         
         # Fields like program, academic_year, and term_name are fetch_from batch
         enrollment.insert(ignore_permissions=True)

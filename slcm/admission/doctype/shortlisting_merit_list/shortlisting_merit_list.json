@@ -87,7 +87,7 @@
   {
    "fieldname": "total_candidates",
    "fieldtype": "Int",
-   "label": "Total Candidates",
+   "label": "Total Entrance Test Passed Candidates",
    "read_only": 1
   },
   {

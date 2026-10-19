@@ -1,8 +1,8 @@
 {
  "app": "slcm",
  "charts": [],
- "content": "[{\"id\":\"tm-header-1\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Transcript Requests Overview</span>\",\"col\":12}},{\"id\":\"tm-nc-total\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Total Transcript Requests\",\"col\":2}},{\"id\":\"tm-nc-pending\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Transcript Requests Pending Review\",\"col\":2}},{\"id\":\"tm-nc-approved\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Transcript Requests Approved\",\"col\":2}},{\"id\":\"tm-nc-payment\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Transcript Requests Payment Pending\",\"col\":2}},{\"id\":\"tm-nc-generated\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Transcript Requests Generated\",\"col\":2}},{\"id\":\"tm-nc-rejected\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Transcript Requests Rejected\",\"col\":2}},{\"id\":\"tm-header-2\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Quick Access</span>\",\"col\":12}},{\"id\":\"7Vb4QaabHh\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Transcript management page\",\"col\":4}},{\"id\":\"jHCMgCQAee\",\"type\":\"spacer\",\"data\":{\"col\":8}},{\"id\":\"tm-sc-requests\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Transcript Request\",\"col\":3}},{\"id\":\"tm-sc-transcripts\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Student Transcript\",\"col\":3}},{\"id\":\"tm-sc-template\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Transcript Template\",\"col\":3}},{\"id\":\"aEs3LgbD06\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Configuration</b></span>\",\"col\":12}},{\"id\":\"tm-sc-settings\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Transcript Settings\",\"col\":4}},{\"id\":\"rlwPtCZTR0\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Transcript Fee Settings\",\"col\":4}}]",
- "creation": "2026-08-05 12:10:23.229179",
+ "content": "[{\"id\":\"tm-header-1\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h3\\\"><b>Transcript Requests Overview</b></span>\",\"col\":12}},{\"id\":\"tm-nc-total\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Total Transcript Requests\",\"col\":4}},{\"id\":\"tm-nc-pending\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Transcript Requests Pending Review\",\"col\":4}},{\"id\":\"tm-nc-approved\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Transcript Requests Approved\",\"col\":4}},{\"id\":\"tm-nc-payment\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Transcript Requests Payment Pending\",\"col\":4}},{\"id\":\"tm-nc-generated\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Transcript Requests Generated\",\"col\":4}},{\"id\":\"tm-nc-rejected\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Transcript Requests Rejected\",\"col\":4}},{\"id\":\"tm-header-2\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h3\\\"><b>Quick Access</b></span>\",\"col\":12}},{\"id\":\"7Vb4QaabHh\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Transcript management page\",\"col\":5}},{\"id\":\"Wj2I5GpYED\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Transcript Request Management\",\"col\":5}},{\"id\":\"tm-sc-requests\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Transcript Request\",\"col\":5}},{\"id\":\"tm-sc-transcripts\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Student Transcript\",\"col\":5}},{\"id\":\"tm-sc-template\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Transcript Template\",\"col\":5}},{\"id\":\"aEs3LgbD06\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h3\\\"><b>Configuration</b></span>\",\"col\":12}},{\"id\":\"tm-sc-settings\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Transcript Settings\",\"col\":4}},{\"id\":\"rlwPtCZTR0\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Transcript Fee Settings\",\"col\":4}}]",
+ "creation": "2026-09-08 12:43:14.769065",
  "custom_blocks": [],
  "docstatus": 0,
  "doctype": "Workspace",
@@ -100,7 +100,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-06-16 17:06:15.304835",
+ "modified": "2026-09-08 14:50:50.385821",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Transcript Management",
@@ -144,6 +144,13 @@
    "label": "Transcript Request",
    "link_to": "Transcript Request",
    "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Transcript Request Management",
+   "type": "URL",
+   "url": "/app/transcript-management-page/requests"
   },
   {
    "color": "Grey",

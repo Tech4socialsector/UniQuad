@@ -68,6 +68,10 @@ def get_data(filters):
             CASE
                 WHEN EXISTS (
                     SELECT 1 FROM `tabPACE Application` pa
+                    WHERE (pa.email_address = u.email OR pa.user_id = u.name) AND pa.status = 'Enrolled'
+                ) THEN 'Enrolled'
+                WHEN EXISTS (
+                    SELECT 1 FROM `tabPACE Application` pa
                     WHERE pa.email_address = u.email OR pa.user_id = u.name
                 ) THEN 'Applied'
                 ELSE 'Not Applied'
@@ -86,6 +90,8 @@ def get_data(filters):
         rows = [r for r in rows if r.application_status == "Applied"]
     elif case == "Without Application":
         rows = [r for r in rows if r.application_status == "Not Applied"]
+    elif case == "Enrolled":
+        rows = [r for r in rows if r.application_status == "Enrolled"]
 
     return rows
 
@@ -96,6 +102,10 @@ def get_report_summary(filters):
     query = f"""
         SELECT
             CASE
+                WHEN EXISTS (
+                    SELECT 1 FROM `tabPACE Application` pa
+                    WHERE (pa.email_address = u.email OR pa.user_id = u.name) AND pa.status = 'Enrolled'
+                ) THEN 'Enrolled'
                 WHEN EXISTS (
                     SELECT 1 FROM `tabPACE Application` pa
                     WHERE pa.email_address = u.email OR pa.user_id = u.name
@@ -111,11 +121,13 @@ def get_report_summary(filters):
     rows = frappe.db.sql(query, values, as_dict=True)
 
     total = len(rows)
+    enrolled = len([r for r in rows if r.application_status == "Enrolled"])
     applied = len([r for r in rows if r.application_status == "Applied"])
-    not_applied = total - applied
+    not_applied = len([r for r in rows if r.application_status == "Not Applied"])
 
     return [
         {"value": total, "label": "Total Registered (PACE Applicant)", "datatype": "Int", "indicator": "blue"},
         {"value": applied, "label": "Registered & Applied", "datatype": "Int", "indicator": "green"},
+        {"value": enrolled, "label": "Enrolled", "datatype": "Int", "indicator": "green"},
         {"value": not_applied, "label": "Registered & Not Applied", "datatype": "Int", "indicator": "red"},
     ]

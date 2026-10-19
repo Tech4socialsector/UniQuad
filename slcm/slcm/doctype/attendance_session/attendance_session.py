@@ -6,6 +6,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import time_diff_in_hours, now_datetime, add_to_date, get_datetime
 from slcm.slcm.utils.attendance_calculator import calculate_student_attendance
+from slcm.slcm.utils.attendance_lock import SESSION_GUARDED_FIELDS, assert_session_editable
 
 DEFAULT_RFID_ACTIVE_WINDOW_MINUTES = 10
 
@@ -31,9 +32,23 @@ class AttendanceSession(Document):
 	
 	def validate(self):
 		"""Validate session details"""
+		self.validate_attendance_lock()
 		self.calculate_duration()
 		self.validate_times()
-	
+
+	def validate_attendance_lock(self):
+		"""A locked session's date/times/status can't be changed either - they
+		decide the hours credited to each student. Checked against the saved
+		values, so moving the date can't be used to unlock it."""
+		if self.is_new() or self.flags.ignore_attendance_lock:
+			return
+		before = self.get_doc_before_save()
+		if not before:
+			return
+		if all(str(before.get(f) or "") == str(self.get(f) or "") for f in SESSION_GUARDED_FIELDS):
+			return
+		assert_session_editable(before)
+
 	def after_insert(self):
 		"""Session created — students are NOT auto-populated.
 		Use the 'Fetch Students' button or the Student Attendance Tool to mark attendance."""
@@ -125,8 +140,39 @@ class AttendanceSession(Document):
 				
 		self.update_attendance_summary()
 
+	def get_oh_group(self):
+		"""OH Student Group for an Office Hour session - its own field, else the
+		Time Table series root's (older generated occurrences lack the copy)."""
+		if self.office_hours_group:
+			return self.office_hours_group
+		if not self.class_schedule:
+			return None
+		tt = frappe.db.get_value(
+			"Time Table", self.class_schedule, ["office_hours_group", "parent_schedule"], as_dict=True
+		)
+		if not tt:
+			return None
+		if tt.office_hours_group:
+			return tt.office_hours_group
+		if tt.parent_schedule:
+			return frappe.db.get_value("Time Table", tt.parent_schedule, "office_hours_group")
+		return None
+
 	def get_enrolled_students(self):
-		"""Find students enrolled in this Course Offering"""
+		"""Expected roster: the OH Student Group's students for an Office Hour
+		session (OH attendance is kept separate from the class roster), else
+		the students enrolled in this Course Offering."""
+		if self.session_type == "Office Hour":
+			group = self.get_oh_group()
+			if group and frappe.db.exists("Student Group", group):
+				return frappe.get_all(
+					"Student Group Student",
+					filters={"parent": group, "parenttype": "Student Group"},
+					pluck="student",
+					order_by="idx",
+				)
+			return []
+
 		if not self.course_offering:
 			return []
 
@@ -262,6 +308,7 @@ def activate_rfid(session_name):
 	attendance capture; it only affects what faculty sees in the portal."""
 	session = frappe.get_doc("Attendance Session", session_name)
 	_check_instructor_or_admin(session)
+	assert_session_editable(session)
 	user = frappe.session.user
 
 	if session.rfid_activation_time:

@@ -2,6 +2,768 @@
 
 {% block title %}Dashboard{% endblock %}
 
+{% block extra_head %}
+<style>
+  /* Base typography */
+  /* White panels behind the title/alerts and Quick Actions */
+  .spd-hero,
+  .spd-qa-section {
+    background: var(--sp-card, #fff);
+    border: 1px solid var(--sp-border, #e5e7eb);
+    border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+    padding: 20px 24px;
+    margin-bottom: 18px;
+  }
+
+  .spd-hero .spd-page-title {
+    margin: 0;
+  }
+
+  .spd-hero-alerts .spd-alert-custom:first-child {
+    margin-top: 12px;
+  }
+
+  .spd-hero-alerts .spd-alert-custom:last-child {
+    margin-bottom: 0;
+  }
+
+  .spd-page-title {
+    font-size: 18px !important;
+    color: var(--sp-text-1);
+    font-weight: 700 !important;
+    letter-spacing: -0.02em;
+    margin: 0 0 22px;
+  }
+
+  /* Alert — one short line of NLS maroon text, no background */
+  .spd-alert-custom {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 16px;
+    padding: 0;
+    background: none;
+    color: var(--sp-primary, #920c24);
+    font-size: 13.5px;
+    line-height: 1.4;
+  }
+
+  .spd-alert-custom>.sp-ms {
+    font-size: 18px;
+    flex-shrink: 0;
+    color: var(--sp-primary, #920c24);
+  }
+
+  .spd-alert-text {
+    min-width: 0;
+    font-weight: 700;
+    color: var(--sp-primary, #920c24);
+  }
+
+  .spd-alert-link {
+    flex-shrink: 0;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--sp-primary, #920c24);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    white-space: nowrap;
+  }
+
+  .spd-alert-link:hover {
+    color: var(--sp-primary-dark, #6b091a);
+  }
+
+  /* KPI Cards Grid */
+  .spd-kpi-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-bottom: 32px;
+  }
+
+  .spd-kpi {
+    background: #ffffff;
+    border: 1px solid var(--sp-border);
+    border-radius: 14px;
+    padding: 22px 20px 18px;
+    display: flex;
+    flex-direction: column;
+    text-decoration: none;
+    color: inherit;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .spd-qa-item:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    border-color: var(--sp-primary-light, #fecdd3);
+  }
+
+  .spd-kpi-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+  }
+
+  .spd-kpi-icon-box {
+    background: var(--sp-card);
+    border: 1px solid var(--sp-border);
+    color: var(--sp-primary);
+    width: 44px;
+    height: 44px;
+    border-radius: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .spd-kpi-badge {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .spd-kpi-badge.success {
+    background: transparent;
+    color: var(--sp-success);
+    border: 1px solid rgba(146, 12, 36, 0.35);
+  }
+
+  .spd-kpi-badge.warning {
+    background: #fff0f2;
+    color: #920c24;
+    border: 1px solid #fff0f2;
+  }
+
+  .spd-kpi-value {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--sp-text-1);
+    margin-bottom: 8px;
+    line-height: 1;
+  }
+
+  .spd-kpi-label {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--sp-text-4);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin-bottom: 12px;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .spd-qa-item:hover .spd-qa-item-icon {
+    transform: scale(1.1) rotate(3deg);
+  }
+
+  .spd-kpi-progress {
+    height: 4px;
+    background: var(--sp-border);
+    border-radius: 2px;
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+
+  .spd-kpi-progress-fill {
+    height: 100%;
+    border-radius: 2px;
+  }
+
+  .spd-kpi-footer {
+    font-size: 12px;
+    color: var(--sp-text-4);
+  }
+
+  /* Quick Actions Grid */
+  .spd-qa-section {
+    margin-top: 16px;
+  }
+
+  .spd-qa-header-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--sp-text-1);
+    margin: 0 0 4px 0;
+  }
+
+  .spd-qa-header-sub {
+    font-size: 13.5px;
+    color: var(--sp-text-3);
+    margin: 0 0 20px 0;
+  }
+
+  .spd-qa-container {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+  }
+
+  .spd-qa-item {
+    background: #ffffff;
+    border: 1px solid var(--sp-border);
+    border-radius: 12px;
+    padding: 20px 12px;
+    text-align: center;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .spd-qa-item:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    border-color: var(--sp-primary-light, #fecdd3);
+  }
+
+  .spd-qa-item-icon {
+    background: #fff0f2;
+    color: var(--sp-primary);
+    padding: 12px;
+    border-radius: 10px;
+    display: flex;
+    margin-bottom: 12px;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .spd-qa-item:hover .spd-qa-item-icon {
+    transform: scale(1.1) rotate(3deg);
+  }
+
+  .spd-qa-item-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--sp-text-1);
+    margin-bottom: 4px;
+  }
+
+  .spd-qa-item-sub {
+    font-size: 12px;
+    color: var(--sp-text-4);
+  }
+
+  /* Quick Actions (2×2) + Timetable side by side */
+  .spd-qa-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 18px;
+    align-items: stretch;
+  }
+
+  .spd-qa-row>.spd-qa-section {
+    margin: 0;
+  }
+
+  .spd-qa-row .spd-qa-container {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .spd-tt {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .spd-tt-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .spd-tt-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--sp-primary);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .spd-tt-link .sp-ms {
+    font-size: 18px;
+  }
+
+  .spd-tt-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .spd-tt-item {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    border: 1px solid var(--sp-border);
+    border-radius: 10px;
+    padding: 10px 14px;
+  }
+
+  .spd-tt-when {
+    display: flex;
+    flex-direction: column;
+    min-width: 118px;
+    padding-right: 14px;
+    border-right: 1px solid var(--sp-border);
+  }
+
+  .spd-tt-date {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--sp-text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .spd-tt-when.is-today .spd-tt-date {
+    color: var(--sp-primary);
+  }
+
+  .spd-tt-time {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--sp-text-1);
+    margin-top: 2px;
+    white-space: nowrap;
+  }
+
+  .spd-tt-what {
+    min-width: 0;
+  }
+
+  .spd-tt-course {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--sp-text-1);
+    overflow-wrap: anywhere;
+  }
+
+  .spd-tt-venue {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12.5px;
+    color: var(--sp-text-3);
+    margin-top: 2px;
+  }
+
+  .spd-tt-venue .sp-ms {
+    font-size: 15px;
+  }
+
+  .spd-tt-empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-align: center;
+    color: var(--sp-text-3);
+    padding: 24px 0;
+  }
+
+  .spd-tt-empty>.sp-ms {
+    font-size: 30px;
+    color: var(--sp-text-4);
+  }
+
+  .spd-tt-empty strong {
+    display: block;
+    color: var(--sp-text-1);
+    font-size: 14px;
+  }
+
+  .spd-tt-empty span {
+    font-size: 12.5px;
+  }
+
+  @media (max-width: 1000px) {
+    .spd-qa-row {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  .spd-links-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .spd-link-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border: 1px solid var(--sp-border);
+    border-radius: 10px;
+    text-decoration: none;
+    color: var(--sp-text-1);
+    background: #fff;
+    transition: border-color .15s, box-shadow .15s;
+  }
+
+  .spd-link-item:hover {
+    border-color: var(--sp-primary);
+    box-shadow: 0 4px 12px rgba(146, 12, 36, .08);
+  }
+
+  .spd-link-icon {
+    font-size: 20px;
+    color: var(--sp-primary);
+    flex-shrink: 0;
+  }
+
+  .spd-link-name {
+    flex: 1;
+    min-width: 0;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .spd-link-ext {
+    font-size: 18px;
+    color: var(--sp-text-4);
+    flex-shrink: 0;
+  }
+
+  @media (max-width: 900px) {
+    .spd-links-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  /* Responsive — KPI and Quick Action grids reflow instead of overflowing */
+  @media (max-width: 1100px) {
+    .spd-qa-section:not(.spd-tt) .spd-qa-container {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 768px) {
+    .spd-kpi-row {
+      grid-template-columns: 1fr;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .spd-alert-custom {
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+  }
+
+  @media (max-width: 520px) {
+    .spd-qa-container {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .spd-page-title {
+      overflow-wrap: anywhere;
+    }
+  }
+
+  /* Student card */
+  .spd-student {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 0;
+  }
+
+  .spd-avatar {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    overflow: hidden;
+    background: #fff0f2;
+    color: var(--sp-primary);
+    border: 1px solid rgba(146, 12, 36, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 700;
+  }
+
+  .spd-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .spd-student-main {
+    flex: 1 1 240px;
+    min-width: 0;
+  }
+
+  .spd-student-name-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .spd-student-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--sp-text-1);
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .spd-dot-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .spd-dot-status::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .spd-student-meta {
+    font-size: 13px;
+    color: var(--sp-text-3, #6b7280);
+    margin-top: 3px;
+    overflow-wrap: anywhere;
+  }
+
+  .spd-student-meta .spd-sep {
+    margin: 0 6px;
+    color: #cbd5e1;
+  }
+
+  .spd-facts {
+    display: grid;
+    grid-template-columns: repeat(3, auto);
+    gap: 4px 28px;
+    margin: 0;
+  }
+
+  .spd-facts>div {
+    min-width: 0;
+  }
+
+  .spd-facts dt {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--sp-text-3, #6b7280);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .spd-facts dd {
+    margin: 2px 0 0;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--sp-text-1);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .spd-hero-alerts {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .spd-hero-alerts:empty {
+    display: none;
+    margin-top: 0;
+  }
+
+  .spd-tone-success {
+    color: var(--sp-success, #059669) !important;
+  }
+
+  .spd-tone-warning {
+    color: var(--sp-warning, #d97706) !important;
+  }
+
+  .spd-tone-muted {
+    color: var(--sp-text-3, #6b7280) !important;
+  }
+
+  @media (min-width: 1200px) {
+    .spd-student {
+      flex-wrap: nowrap;
+    }
+
+    .spd-student-main {
+      flex: 1 1 200px;
+    }
+
+    .spd-facts {
+      flex: 0 1 auto;
+      min-width: 0;
+      gap: 4px 22px;
+    }
+  }
+
+  @media (max-width: 1199px) {
+    .spd-student-main {
+      order: 1;
+    }
+
+    .spd-facts {
+      order: 3;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      width: 100%;
+      padding-top: 12px;
+      border-top: 1px solid var(--sp-border);
+    }
+  }
+
+  @media (max-width: 480px) {
+    .spd-facts {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  /* ══ Main area: KPIs + Quick Actions | My Calendar ══ */
+  /* Both columns end on the same line: the row is as tall as the left column
+     (KPIs + Quick Actions) and the calendar fills that height, scrolling inside. */
+  .spd-main { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 18px; align-items: stretch; margin-bottom: 18px; }
+  .spd-main-left { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+  .spd-main-left .spd-qa2 { flex: 1; }
+  .spd-kpi2-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .spd-kpi2, .spd-qa2, .spd-cal {
+    background: var(--sp-card, #fff); border: 1px solid var(--sp-border, #e5e7eb);
+    border-radius: 14px; box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  }
+  .spd-kpi2 { display: flex; gap: 14px; padding: 18px; text-decoration: none; color: inherit; transition: border-color .15s, box-shadow .15s; }
+  .spd-kpi2:hover { border-color: var(--sp-primary); box-shadow: 0 4px 14px rgba(146, 12, 36, 0.08); }
+  .spd-kpi2-icon { width: 42px; height: 42px; flex-shrink: 0; border-radius: 10px; background: var(--sp-primary-light); color: var(--sp-primary); display: flex; align-items: center; justify-content: center; }
+  .spd-kpi2-icon .sp-ms { font-size: 22px; }
+  .spd-kpi2-body { flex: 1; min-width: 0; }
+  .spd-kpi2-value { font-size: 20px; font-weight: 800; color: var(--sp-primary); line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* 6+ digit amounts (₹1,00,000 and up) step down so they stay on one line */
+  .spd-kpi2-value.is-long { font-size: 17px; }
+  .spd-kpi2-label { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--sp-text-2); margin-top: 5px; }
+  .spd-kpi2-bar { height: 3px; border-radius: 3px; background: var(--sp-primary); margin: 8px 0 7px; }
+  .spd-kpi2-foot { font-size: 11.5px; color: var(--sp-text-3); }
+
+  .spd-qa2 { padding: 18px; }
+  .spd-qa2-title { font-size: 15px; font-weight: 700; color: var(--sp-text-1); margin: 0 0 14px; }
+  .spd-qa2-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .spd-qa2-item { display: flex; align-items: center; gap: 12px; padding: 14px 14px; border: 1px solid var(--sp-border); border-radius: 10px; text-decoration: none; color: inherit; transition: border-color .15s, background .15s; min-width: 0; }
+  .spd-qa2-item:hover { border-color: var(--sp-primary); background: var(--sp-primary-light); }
+  .spd-qa2-icon { width: 40px; height: 40px; flex-shrink: 0; border-radius: 10px; background: var(--sp-primary-light); color: var(--sp-primary); display: flex; align-items: center; justify-content: center; }
+  .spd-qa2-icon .sp-ms { font-size: 21px; }
+  .spd-qa2-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .spd-qa2-text b { font-size: 13px; font-weight: 700; color: var(--sp-text-1); }
+  .spd-qa2-text small { font-size: 11px; color: var(--sp-text-3); line-height: 1.3; }
+  .spd-qa2-go { color: var(--sp-primary); font-size: 18px; flex-shrink: 0; }
+
+
+  @media (max-width: 1199px) {
+    .spd-main { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 560px) {
+    .spd-kpi2-row, .spd-qa2-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ── Dark mode ── */
+  body.sp-dark .spd-hero,
+  body.sp-dark .spd-qa-section,
+  body.sp-dark .spd-kpi2,
+  body.sp-dark .spd-qa2,
+  body.sp-dark .spd-cal {
+    background: var(--sp-card);
+    border-color: var(--sp-border);
+    color: var(--sp-text-1);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Important Links tiles */
+  body.sp-dark .spd-link-item {
+    background: #1a2540;
+    border-color: var(--sp-border);
+    color: var(--sp-text-1);
+  }
+  body.sp-dark .spd-link-item:hover {
+    border-color: var(--sp-primary);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  }
+  body.sp-dark .spd-link-name { color: var(--sp-text-1); }
+  body.sp-dark .spd-link-ext { color: var(--sp-text-3); }
+
+  /* KPI / quick-action cards (legacy + current) */
+  body.sp-dark .spd-kpi,
+  body.sp-dark .spd-qa-item {
+    background: var(--sp-card);
+    border-color: var(--sp-border);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  }
+  body.sp-dark .spd-qa-item:hover,
+  body.sp-dark .spd-kpi2:hover {
+    border-color: var(--sp-primary);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  }
+  body.sp-dark .spd-qa-item-icon,
+  body.sp-dark .spd-avatar {
+    background: var(--sp-primary-light);
+    border-color: var(--sp-primary-mid);
+  }
+  body.sp-dark .spd-kpi-badge.warning {
+    background: var(--sp-primary-light);
+    border-color: var(--sp-primary-mid);
+    color: #f08da0;
+  }
+  body.sp-dark .spd-kpi-badge.success { border-color: rgba(74, 222, 128, 0.35); }
+  body.sp-dark .spd-kpi2-value { color: #f08da0; }
+  body.sp-dark .spd-kpi2-label { color: var(--sp-text-3); }
+  body.sp-dark .spd-qa2-item { background: transparent; }
+  body.sp-dark .spd-qa2-item:hover { background: var(--sp-primary-light); }
+
+  /* Hero / student card + alerts */
+  body.sp-dark .spd-student-meta .spd-sep { color: #263352; }
+  body.sp-dark .spd-alert-custom,
+  body.sp-dark .spd-alert-custom > .sp-ms,
+  body.sp-dark .spd-alert-text,
+  body.sp-dark .spd-alert-link,
+  body.sp-dark .spd-tt-link,
+  body.sp-dark .spd-tt-when.is-today .spd-tt-date { color: #f08da0; }
+  body.sp-dark .spd-alert-link:hover { color: var(--sp-text-1); }
+
+  /* Timetable list */
+  body.sp-dark .spd-tt-item { background: transparent; border-color: var(--sp-border); }
+  body.sp-dark .spd-tt-when { border-right-color: var(--sp-border); }
+
+  /* No-student empty state */
+  body.sp-dark .spd-no-student-icon { background: #1a2540; }
+</style>
+{% endblock %}
+
 {% block content %}
 
 {% if no_student %}
@@ -21,604 +783,118 @@
 
 {% else %}
 
-{# ══════════════════════════════════════════════════════════════════
-   HERO SECTION — Premium Welcome Banner
-   ══════════════════════════════════════════════════════════════════ #}
+{# ── Title ─────────────────────────────────────────────────────── #}
 <div class="spd-hero fade-in">
-  {# Animated background shapes #}
-  <div class="spd-hero-shape spd-hero-shape-1"></div>
-  <div class="spd-hero-shape spd-hero-shape-2"></div>
-  <div class="spd-hero-shape spd-hero-shape-3"></div>
-  <div class="spd-hero-particles">
-    <span class="spd-particle"></span><span class="spd-particle"></span>
-    <span class="spd-particle"></span><span class="spd-particle"></span>
-    <span class="spd-particle"></span><span class="spd-particle"></span>
-  </div>
-
-  <div class="spd-hero-content">
-    {# Left: greeting + info #}
-    <div class="spd-hero-left">
-      <div class="spd-hero-greeting">
-        {% set _h = frappe.utils.now_datetime().hour %}
-        <span class="spd-greeting-emoji">
-          {% if _h < 12 %}🌅{% elif _h < 17 %}☀️{% else %}🌙{% endif %}
-        </span>
-        Good {{ "Morning" if _h < 12 else ("Afternoon" if _h < 17 else "Evening") }}
-      </div>
-      <h1 class="spd-hero-name">
-        {{ student_name.split()[0] if student_name else 'Student' }}
-      </h1>
-      <div class="spd-hero-meta">
-        {% if programme_name %}
-        <span class="spd-hero-tag">
-          <span class="sp-ms">school</span>{{ programme_name }}
-        </span>
-        {% endif %}
-        {% if batch_year %}
-        <span class="spd-hero-tag">
-          <span class="sp-ms">calendar_today</span>Batch {{ batch_year }}
-        </span>
-        {% endif %}
-        {% if current_term %}
-        <span class="spd-hero-tag">
-          <span class="sp-ms">timeline</span>{{ current_term }}
-        </span>
-        {% endif %}
-        {% if year_of_study %}
-        <span class="spd-hero-tag">
-          <span class="sp-ms">grade</span>{{ year_of_study }}
-        </span>
+  <div class="spd-student" aria-label="Student">
+    <div class="spd-avatar">
+      {% if student_photo %}<img src="{{ student_photo }}" alt="" data-fallback="{{ student_initial }}">
+      {% else %}<span aria-hidden="true">{{ student_initial }}</span>{% endif %}
+    </div>
+    <div class="spd-student-main">
+      <div class="spd-student-name-row">
+        <h2 class="spd-student-name">{{ student_name or '—' }}</h2>
+        {% if student_status %}
+        <span
+          class="spd-dot-status {{ 'spd-tone-success' if student_status == 'Active' else ('spd-tone-muted' if student_status in ('Graduated', 'Alumni') else 'spd-tone-warning') }}">{{
+          student_status }}</span>
         {% endif %}
       </div>
-      <div class="spd-hero-date" id="spd-live-date"></div>
+      {% set _term = current_term %}
+      {% set _meta = [programme_name, _term, ('Batch ' ~ batch_year) if batch_year else ''] | select | list %}
+      {% if _meta %}<div class="spd-student-meta">{% for m in _meta %}{% if not loop.first %}<span class="spd-sep"
+          aria-hidden="true">|</span>{% endif %}{{ m }}{% endfor %}</div>{% endif %}
     </div>
-
-    {# Right: avatar + status badge #}
-    <div class="spd-hero-right">
-      <div class="spd-hero-avatar-wrap">
-        <div class="spd-hero-avatar">
-          {% if student_photo %}
-            <img src="{{ student_photo }}" alt="{{ student_name }}">
-          {% else %}
-            <span>{{ student_initial or 'S' }}</span>
-          {% endif %}
-        </div>
-        <div class="spd-hero-status-dot {% if student_status == 'Active' %}active{% else %}inactive{% endif %}"></div>
-      </div>
-      <div class="spd-hero-status-label">
-        <span class="sp-ms">{{ 'verified' if student_status == 'Active' else 'pending' }}</span>
-        {{ student_status or 'Active' }}
-      </div>
-      {% if student_id %}
-      <div class="spd-hero-id">{{ student_id }}</div>
-      {% endif %}
-    </div>
-  </div>
-
-  {# Quick stat strip inside hero #}
-  <div class="spd-hero-strip">
-    <div class="spd-hero-strip-item">
-      <div class="spd-hero-strip-val">{{ "%02d"|format(course_count) }}</div>
-      <div class="spd-hero-strip-lbl">Courses</div>
-    </div>
-    <div class="spd-hero-strip-sep"></div>
-    <div class="spd-hero-strip-item">
-      {% set eligible_count = courses_eligible if courses_eligible is defined else 0 %}
-      <div class="spd-hero-strip-val" style="color:{% if eligible_count == course_count and course_count > 0 %}#34d399{% else %}#fbbf24{% endif %};">
-        {% if eligible_count == course_count and course_count > 0 %}All{% else %}{{ eligible_count }}/{{ course_count }}{% endif %}
-      </div>
-      <div class="spd-hero-strip-lbl">Examination Eligible</div>
-    </div>
-    {% if has_dues %}
-    <div class="spd-hero-strip-sep"></div>
-    <div class="spd-hero-strip-item">
-      <div class="spd-hero-strip-val" style="color:#f87171;">₹{{ "{:,.0f}".format(total_outstanding) }}</div>
-      <div class="spd-hero-strip-lbl">Outstanding</div>
-    </div>
-    {% endif %}
-  </div>
-</div>
-
-{# ══════════════════════════════════════════════════════════════════
-   SMART ALERT BANNERS
-   ══════════════════════════════════════════════════════════════════ #}
-{% set ns = namespace(low=0) %}
-{% for s in attendance_summaries %}
-  {% if s.attendance_percentage is not none and s.attendance_percentage < 75 %}
-    {% set ns.low = ns.low + 1 %}
-  {% endif %}
-{% endfor %}
-
-<div class="spd-alerts fade-in delay-1">
-  {% if ns.low > 0 %}
-  <div class="spd-alert-banner spd-alert-warning">
-    <div class="spd-alert-icon"><span class="sp-ms">warning_amber</span></div>
-    <div class="spd-alert-body">
-      <div class="spd-alert-title">Attendance Warning</div>
-      <div class="spd-alert-text">{{ ns.low }} course{% if ns.low != 1 %}s{% endif %} below 75% — you may be ineligible for examinations.</div>
-    </div>
-    <a href="/student-portal/attendance" class="spd-alert-action">View Details →</a>
-  </div>
-  {% endif %}
-  {% if has_dues %}
-  <div class="spd-alert-banner spd-alert-danger">
-    <div class="spd-alert-icon"><span class="sp-ms">account_balance_wallet</span></div>
-    <div class="spd-alert-body">
-      <div class="spd-alert-title">Fee Outstanding</div>
-      <div class="spd-alert-text">₹{{ "{:,.0f}".format(total_outstanding) }} pending — clear dues to avoid restrictions.</div>
-    </div>
-    <a href="/student-portal/fees" class="spd-alert-action">Pay Now →</a>
-  </div>
-  {% endif %}
-</div>
-
-{# ══════════════════════════════════════════════════════════════════
-   KPI CARDS ROW
-   ══════════════════════════════════════════════════════════════════ #}
-<div class="spd-kpi-grid fade-in delay-2">
-
-  {# Courses KPI #}
-  <a href="/student-portal/courses" class="spd-kpi-card spd-kpi-courses">
-    <div class="spd-kpi-top">
-      <div class="spd-kpi-icon"><span class="sp-ms">menu_book</span></div>
-      <div class="spd-kpi-trend up"><span class="sp-ms">check_circle</span>Enrolled</div>
-    </div>
-    <div class="spd-kpi-value" id="spd-course-val">{{ "%02d"|format(course_count) }}</div>
-    <div class="spd-kpi-label">Active Courses</div>
-    <div class="spd-kpi-bar">
-      <div class="spd-kpi-bar-fill" style="width:100%;background:var(--sp-primary);"></div>
-    </div>
-    <div class="spd-kpi-sub">This semester</div>
-  </a>
-
-  {# Exam Eligibility KPI #}
-  <a href="/student-portal/exam-schedule" class="spd-kpi-card spd-kpi-exam">
-    {% set eligible_count = courses_eligible if courses_eligible is defined else 0 %}
-    <div class="spd-kpi-top">
-      <div class="spd-kpi-icon"><span class="sp-ms">quiz</span></div>
-      <div class="spd-kpi-trend {% if eligible_count == course_count and course_count > 0 %}up{% else %}warn{% endif %}">
-        <span class="sp-ms">{% if eligible_count == course_count and course_count > 0 %}verified{% else %}shield{% endif %}</span>
-        {% if eligible_count == course_count and course_count > 0 %}All Clear{% else %}Partial{% endif %}
-      </div>
-    </div>
-    <div class="spd-kpi-value">{{ eligible_count }}<span style="font-size:0.45em;font-weight:500;opacity:0.6;">/{{ course_count }}</span></div>
-    <div class="spd-kpi-label">Examination Eligible</div>
-    <div class="spd-kpi-bar">
-      <div class="spd-kpi-bar-fill" style="width:{% if course_count > 0 %}{{ ((eligible_count / course_count) * 100)|round|int }}{% else %}0{% endif %}%;background:{% if eligible_count == course_count and course_count > 0 %}var(--sp-success){% else %}#f59e0b{% endif %};"></div>
-    </div>
-    <div class="spd-kpi-sub">Courses cleared for examinations</div>
-  </a>
-
-  {# Fee Status KPI #}
-  <a href="/student-portal/fees" class="spd-kpi-card spd-kpi-fees">
-    <div class="spd-kpi-top">
-      <div class="spd-kpi-icon"><span class="sp-ms">payments</span></div>
-      <div class="spd-kpi-trend {% if not has_dues %}up{% else %}down{% endif %}">
-        <span class="sp-ms">{% if not has_dues %}check_circle{% else %}error_outline{% endif %}</span>
-        {% if not has_dues %}Clear{% else %}Pending{% endif %}
-      </div>
-    </div>
-    {% if has_dues %}
-    <div class="spd-kpi-value" style="font-size:1.4rem;">₹{{ "{:,.0f}".format(total_outstanding) }}</div>
-    {% else %}
-    <div class="spd-kpi-value" style="color:var(--sp-success);">₹0</div>
-    {% endif %}
-    <div class="spd-kpi-label">Fee Outstanding</div>
-    <div class="spd-kpi-bar">
-      <div class="spd-kpi-bar-fill" style="width:{% if has_dues %}100{% else %}0{% endif %}%;background:{% if has_dues %}var(--sp-danger){% else %}var(--sp-success){% endif %};"></div>
-    </div>
-    <div class="spd-kpi-sub">{% if has_dues %}Payment due — act now{% else %}All fees cleared{% endif %}</div>
-  </a>
-
-  {# Quick Actions Shortcut KPI #}
-  {% if not sp_settings or sp_settings.show_quick_actions %}
-  <a href="#spd-quick-actions" class="spd-kpi-card spd-kpi-quickactions" onclick="document.getElementById('spd-quick-actions').scrollIntoView({behavior:'smooth'});return false;">
-    <div class="spd-kpi-top">
-      <div class="spd-kpi-icon"><span class="sp-ms">bolt</span></div>
-      <div class="spd-kpi-trend spd-kpi-trend-nls"><span class="sp-ms">apps</span>8 Actions</div>
-    </div>
-    <div class="spd-kqa-dots">
-      <span><span class="sp-ms">event_available</span></span>
-      <span><span class="sp-ms">workspace_premium</span></span>
-      <span><span class="sp-ms">folder_open</span></span>
-      <span><span class="sp-ms">campaign</span></span>
-    </div>
-    <div class="spd-kpi-label">Quick Actions</div>
-    <div class="spd-kpi-bar">
-      <div class="spd-kpi-bar-fill" style="width:100%;background:rgba(255,255,255,0.3);"></div>
-    </div>
-    <div class="spd-kpi-sub">Jump to any feature →</div>
-  </a>
-  {% endif %}
-
-</div>
-
-{# ══════════════════════════════════════════════════════════════════
-   TODAY'S CLASSES — Timeline View
-   ══════════════════════════════════════════════════════════════════ #}
-{% if not sp_settings or sp_settings.show_today_classes %}
-<div class="spd-section-card fade-in delay-2">
-  <div class="spd-section-hdr">
-    <div class="spd-section-title">
-      <div class="spd-section-icon spd-icon-blue"><span class="sp-ms">today</span></div>
+    <dl class="spd-facts">
       <div>
-        <div class="spd-section-name">Today's Classes</div>
-        <div class="spd-section-sub" id="spd-today-label"></div>
+        <dt>Student ID</dt>
+        <dd>{{ student_id or '—' }}</dd>
       </div>
-    </div>
-    <a href="/student-portal/timetable" class="spd-section-link">Weekly View <span class="sp-ms">arrow_forward</span></a>
+      <div>
+        <dt>Academic Year</dt>
+        <dd>{{ academic_year or '—' }}</dd>
+      </div>
   </div>
-  <div class="spd-section-body">
-    {% if todays_classes %}
-    <div class="spd-timeline">
-      {% for cls in todays_classes %}
-      <div class="spd-timeline-item {% if loop.first %}spd-timeline-current{% endif %}">
-        <div class="spd-timeline-time">
-          <div class="spd-timeline-hr">{{ cls.from_time or "TBA" }}</div>
-          {% if cls.to_time %}<div class="spd-timeline-end">{{ cls.to_time }}</div>{% endif %}
-        </div>
-        <div class="spd-timeline-dot {% if loop.first %}active{% endif %}">
-          <span class="sp-ms">school</span>
-        </div>
-        <div class="spd-timeline-card">
-          <div class="spd-tc-name">{{ cls.course_name }}</div>
-          <div class="spd-tc-meta">
-            {% if cls.venue %}<span class="spd-tc-chip"><span class="sp-ms">location_on</span>{{ cls.venue }}</span>{% endif %}
-            {% if cls.faculty %}<span class="spd-tc-chip"><span class="sp-ms">person</span>{{ cls.faculty }}</span>{% endif %}
-          </div>
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-    {% else %}
-    <div class="spd-empty-state">
-      <div class="spd-empty-illustration">
-        <span class="sp-ms">event_available</span>
-      </div>
-      <div class="spd-empty-title">No Classes Today</div>
-      <div class="spd-empty-sub">Enjoy your free day! Use this time to review your notes or work on assignments.</div>
-      <a href="/student-portal/timetable" class="spd-btn spd-btn-ghost">View Full Timetable</a>
-    </div>
-    {% endif %}
-  </div>
+
 </div>
-{% endif %}
 
-{# ══════════════════════════════════════════════════════════════════
-   MAIN DASHBOARD GRID
-   ══════════════════════════════════════════════════════════════════ #}
-<div class="spd-main-grid">
+{# ── Main: KPIs + Quick Actions (left) | My Calendar (right) ─────── #}
+<div class="spd-main fade-in delay-2">
 
-  {# ── LEFT COLUMN ─────────────────────────────────────── #}
-  <div class="spd-col">
-
-    {# Course Insights with Progress Rings #}
-    {% if attendance_summaries and (not sp_settings or sp_settings.show_course_insights) %}
-    <div class="spd-section-card fade-in delay-3">
-      <div class="spd-section-hdr">
-        <div class="spd-section-title">
-          <div class="spd-section-icon spd-icon-purple"><span class="sp-ms">insights</span></div>
-          <div>
-            <div class="spd-section-name">Course Insights</div>
-            <div class="spd-section-sub">Attendance health per course</div>
-          </div>
+  <div class="spd-main-left">
+    <div class="spd-kpi2-row">
+      <a href="/student-portal/courses" class="spd-kpi2">
+        <div class="spd-kpi2-icon"><span class="sp-ms">menu_book</span></div>
+        <div class="spd-kpi2-body">
+          <div class="spd-kpi2-value" id="spd-course-val">{{ course_count|int }}</div>
+          <div class="spd-kpi2-label">Current Courses</div>
+          <div class="spd-kpi2-bar"></div>
         </div>
-        <a href="/student-portal/attendance" class="spd-section-link">Full Report <span class="sp-ms">arrow_forward</span></a>
-      </div>
-      <div class="spd-section-body spd-section-body-flush">
-        {% for s in attendance_summaries %}
-        {% set pct = s.attendance_percentage|round(0)|int if s.attendance_percentage else 0 %}
-        {% set status = 'good' if pct >= 75 else 'warn' if pct >= 60 else 'danger' %}
-        <div class="spd-insight-row">
-          {# Circular Progress Ring #}
-          <div class="spd-ring-wrap">
-            <svg class="spd-ring" viewBox="0 0 44 44" aria-label="{{ pct }}%">
-              <circle class="spd-ring-track" cx="22" cy="22" r="18"/>
-              <circle class="spd-ring-fill spd-ring-{{ status }}" cx="22" cy="22" r="18"
-                stroke-dasharray="{{ ((pct / 100) * 113.1)|round(1) }} 113.1"/>
-            </svg>
-            <div class="spd-ring-label spd-ring-lbl-{{ status }}">{{ pct }}%</div>
-          </div>
-          {# Course info #}
-          <div class="spd-insight-info">
-            <div class="spd-insight-name">{{ s.get('course_display') or s.course or '—' }}</div>
-            <div class="spd-insight-detail">
-              {{ s.attended_classes|int }}h attended · {{ s.total_class_hours|int }}h total
-              {% if s.get('faculty') and s.faculty != '—' %} · <span>{{ s.faculty }}</span>{% endif %}
-            </div>
-          </div>
-          {# Health badge #}
-          <div class="spd-health-badge spd-health-{{ status }}">
-            <span class="sp-ms">{% if status == 'good' %}check_circle{% elif status == 'warn' %}warning{% else %}error{% endif %}</span>
-            {% if status == 'good' %}Safe{% elif status == 'warn' %}At Risk{% else %}Critical{% endif %}
-          </div>
+      </a>
+      <a href="/student-portal/fees" class="spd-kpi2">
+        <div class="spd-kpi2-icon"><span class="sp-ms">payments</span></div>
+        <div class="spd-kpi2-body">
+          {% set _fee_txt = "{:,.0f}".format(total_outstanding) if has_dues else "0" %}
+          <div class="spd-kpi2-value{{ ' is-long' if total_outstanding >= 100000 }}" title="₹{{ _fee_txt }}">₹{{ _fee_txt }}</div>
+          <div class="spd-kpi2-label">Fee Outstanding</div>
+          <div class="spd-kpi2-bar"></div>
+          <!-- <div class="spd-kpi2-foot">{% if has_dues %}Payment due — act now{% else %}All fees cleared{% endif %}</div> -->
         </div>
-        {% endfor %}
-      </div>
-    </div>
-    {% endif %}
-
-    {# My Courses #}
-    <div class="spd-section-card fade-in delay-3">
-      <div class="spd-section-hdr">
-        <div class="spd-section-title">
-          <div class="spd-section-icon spd-icon-teal"><span class="sp-ms">menu_book</span></div>
-          <div>
-            <div class="spd-section-name">My Courses</div>
-            <div class="spd-section-sub">{{ course_count }} enrolled this semester</div>
-          </div>
-        </div>
-        <a href="/student-portal/courses" class="spd-section-link">View All <span class="sp-ms">arrow_forward</span></a>
-      </div>
-      <div class="spd-section-body spd-section-body-flush">
-        {% if courses_display %}
-          {% for c in courses_display %}
-          {% set att_status = 'good' if c.attendance_pct >= 75 else 'warn' if c.attendance_pct >= 60 else 'danger' if c.attendance_pct > 0 else 'none' %}
-          <div class="spd-course-row">
-            <div class="spd-course-avatar" style="background:{{ ['#e8f4fd','#f0fdf4','#fef9c3','#fdf2f8','#eff6ff','#f0fdfa'][loop.index0 % 6] }};color:{{ ['#1d4ed8','#15803d','#a16207','#9333ea','#1d4ed8','#0f766e'][loop.index0 % 6] }};">
-              <span class="sp-ms">school</span>
-            </div>
-            <div class="spd-course-info">
-              <div class="spd-course-name">{{ c.course_name }}</div>
-              <div class="spd-course-meta">
-                {% if c.credits and c.credits > 0 %}<span>{{ c.credits }} Credits</span>{% endif %}
-                {% if c.faculty and c.faculty != '—' %}<span>{{ c.faculty }}</span>{% endif %}
-              </div>
-            </div>
-            <div class="spd-course-att">
-              {% if c.attendance_pct > 0 %}
-              <div class="spd-course-pct spd-att-{{ att_status }}">{{ c.attendance_pct }}%</div>
-              <div class="spd-course-pct-lbl">Attendance</div>
-              {% else %}
-              <div class="spd-course-pct" style="color:var(--sp-text-4);">—</div>
-              {% endif %}
-            </div>
-          </div>
-          {% endfor %}
-        {% else %}
-          <div class="spd-empty-state spd-empty-compact">
-            <span class="sp-ms">menu_book</span>
-            <div class="spd-empty-title">No Courses Yet</div>
-            <div class="spd-empty-sub">Your enrolled courses will appear here.</div>
-          </div>
-        {% endif %}
-      </div>
+      </a>
     </div>
 
-  </div>{# end left col #}
-
-  {# ── RIGHT COLUMN ─────────────────────────────────────── #}
-  <div class="spd-col">
-
-    {# ── Quick Actions ─────────────────────────────────────────── #}
     {% if not sp_settings or sp_settings.show_quick_actions %}
-    <div id="spd-quick-actions" class="spd-section-card spd-qa-accent-card fade-in delay-2">
-      <div class="spd-qa-accent-hdr">
-        <div class="spd-qa-accent-title">
-          <div class="spd-qa-accent-icon"><span class="sp-ms">bolt</span></div>
-          <div>
-            <div class="spd-qa-accent-name">Quick Actions</div>
-            <div class="spd-qa-accent-sub">Everything you need, one tap away</div>
-          </div>
-        </div>
+    <section class="spd-qa2" aria-labelledby="spd-qa2-title">
+      <h2 class="spd-qa2-title" id="spd-qa2-title">Quick Actions</h2>
+      <div class="spd-qa2-grid">
+        <a href="/student-portal/attendance" class="spd-qa2-item">
+          <span class="spd-qa2-icon"><span class="sp-ms">calendar_today</span></span>
+          <span class="spd-qa2-text"><b>Attendance</b><small>View your attendance</small></span>
+          <span class="sp-ms spd-qa2-go" aria-hidden="true">chevron_right</span>
+        </a>
+        <a href="/student-portal/results" class="spd-qa2-item">
+          <span class="spd-qa2-icon"><span class="sp-ms">workspace_premium</span></span>
+          <span class="spd-qa2-text"><b>Grades</b><small>View marks and grades</small></span>
+          <span class="sp-ms spd-qa2-go" aria-hidden="true">chevron_right</span>
+        </a>
+        <a href="/student-portal/courses" class="spd-qa2-item">
+          <span class="spd-qa2-icon"><span class="sp-ms">description</span></span>
+          <span class="spd-qa2-text"><b>Course Materials</b><small>Access learning resources</small></span>
+          <span class="sp-ms spd-qa2-go" aria-hidden="true">chevron_right</span>
+        </a>
+        <a href="/student-portal/fees" class="spd-qa2-item">
+          <span class="spd-qa2-icon"><span class="sp-ms">credit_card</span></span>
+          <span class="spd-qa2-text"><b>Fees &amp; Payments</b><small>View and pay fees</small></span>
+          <span class="sp-ms spd-qa2-go" aria-hidden="true">chevron_right</span>
+        </a>
       </div>
-      <div class="spd-section-body">
-        {# Quick Actions — only pages NOT already in the sidebar
-             Sidebar has: Dashboard, My Courses, Timetable, Fees & Payments, Venue Booking, Helpdesk, My Profile, Hostel
-             Quick Actions covers everything else students need fast access to #}
-        <div class="spd-qa-grid">
-
-          <a href="/student-portal/attendance" class="spd-qa-card" style="--qa-clr:#0369a1;--qa-bg:#e0f2fe;">
-            <div class="spd-qa-icon">
-              <span class="sp-ms">event_available</span>
-            </div>
-            <div class="spd-qa-label">Attendance</div>
-            <div class="spd-qa-desc">View your attendance</div>
-          </a>
-
-          <a href="/student-portal/results" class="spd-qa-card" style="--qa-clr:#9333ea;--qa-bg:#fdf2f8;">
-            <div class="spd-qa-icon">
-              <span class="sp-ms">workspace_premium</span>
-            </div>
-            <div class="spd-qa-label">My Results</div>
-            <div class="spd-qa-desc">Grades &amp; marks</div>
-          </a>
-
-          <a href="/student-portal/documents" class="spd-qa-card" style="--qa-clr:#1d4ed8;--qa-bg:#eff6ff;">
-            <div class="spd-qa-icon">
-              <span class="sp-ms">folder_open</span>
-            </div>
-            <div class="spd-qa-label">Documents</div>
-            <div class="spd-qa-desc">Downloads &amp; uploads</div>
-          </a>
-
-          <a href="/student-portal/announcements" class="spd-qa-card" style="--qa-clr:#0f766e;--qa-bg:#f0fdfa;">
-            <div class="spd-qa-icon">
-              <span class="sp-ms">campaign</span>
-            </div>
-            <div class="spd-qa-label">Notices</div>
-            <div class="spd-qa-desc">Announcements</div>
-          </a>
-
-          <a href="/student-portal/transcript-request" class="spd-qa-card" style="--qa-clr:#059669;--qa-bg:#ecfdf5;">
-            <div class="spd-qa-icon">
-              <span class="sp-ms">description</span>
-            </div>
-            <div class="spd-qa-label">Transcript</div>
-            <div class="spd-qa-desc">Request transcript</div>
-          </a>
-
-          <a href="/student-portal/exam-schedule" class="spd-qa-card" style="--qa-clr:#0e7490;--qa-bg:#ecfeff;">
-            <div class="spd-qa-icon">
-              <span class="sp-ms">event_note</span>
-            </div>
-            <div class="spd-qa-label">Exam Schedule</div>
-            <div class="spd-qa-desc">Timetable &amp; results</div>
-          </a>
-
-          <a href="/student-portal/re-exam" class="spd-qa-card" style="--qa-clr:#7c3aed;--qa-bg:#f5f3ff;">
-            <div class="spd-qa-icon">
-              <span class="sp-ms">assignment_late</span>
-            </div>
-            <div class="spd-qa-label">Re-Examination</div>
-            <div class="spd-qa-desc">Apply for re-exam</div>
-          </a>
-
-          <a href="/student-portal/grade-appeal" class="spd-qa-card" style="--qa-clr:#c2410c;--qa-bg:#fff7ed;">
-            <div class="spd-qa-icon">
-              <span class="sp-ms">rate_review</span>
-            </div>
-            <div class="spd-qa-label">Grade Appeal</div>
-            <div class="spd-qa-desc">Contest a grade</div>
-          </a>
-
-        </div>
-      </div>
-    </div>
+    </section>
     {% endif %}
-
-
-    {# Fee Summary — Compact #}
-    {% if not sp_settings or sp_settings.show_fee_summary %}
-    <div class="spd-section-card fade-in delay-4">
-      <div class="spd-section-hdr">
-        <div class="spd-section-title">
-          <div class="spd-section-icon {% if has_dues %}spd-icon-red{% else %}spd-icon-green{% endif %}">
-            <span class="sp-ms">receipt_long</span>
-          </div>
-          <div>
-            <div class="spd-section-name">Fee Summary</div>
-            <div class="spd-section-sub">
-              {% if has_dues %}Payment required{% else %}All cleared{% endif %}
-            </div>
-          </div>
-        </div>
-        <a href="/student-portal/fees" class="spd-section-link">Details <span class="sp-ms">arrow_forward</span></a>
-      </div>
-      <div class="spd-section-body">
-        {% if fee_invoices %}
-          <div class="spd-fee-list">
-            {% for inv in fee_invoices %}
-            <div class="spd-fee-row">
-              <div class="spd-fee-row-left">
-                <div class="spd-fee-term">{{ inv.academic_term or inv.name }}</div>
-                {% if inv.due_date %}
-                <div class="spd-fee-due">Due {{ frappe.utils.formatdate(inv.due_date, "dd MMM yyyy") }}</div>
-                {% endif %}
-              </div>
-              <div class="spd-fee-row-right">
-                <span class="spd-status-badge spd-status-{{ inv.status | lower | replace(' ', '-') }}">{{ inv.status }}</span>
-                {% if inv.outstanding_amount > 0 %}
-                <div class="spd-fee-amt">₹{{ "{:,.0f}".format(inv.outstanding_amount) }}</div>
-                {% endif %}
-              </div>
-            </div>
-            {% endfor %}
-          </div>
-          {% if has_dues %}
-          <a href="/student-portal/fees" class="spd-btn spd-btn-primary spd-btn-full spd-btn-mt">
-            <span class="sp-ms">payments</span>Pay Now
-          </a>
-          {% endif %}
-        {% else %}
-          <div class="spd-empty-state spd-empty-compact">
-            <span class="sp-ms" style="color:var(--sp-success);">check_circle</span>
-            <div class="spd-empty-title">All Clear!</div>
-            <div class="spd-empty-sub">No pending fee invoices.</div>
-          </div>
-        {% endif %}
-      </div>
-    </div>
-    {% endif %}
-
-  </div>{# end right col #}
-</div>{# end main grid #}
-
-{# ══════════════════════════════════════════════════════════════════
-   UPCOMING CLASSES — Bottom Section
-   ══════════════════════════════════════════════════════════════════ #}
-{% if upcoming_sessions %}
-<div class="spd-section-card fade-in delay-5">
-  <div class="spd-section-hdr">
-    <div class="spd-section-title">
-      <div class="spd-section-icon spd-icon-teal"><span class="sp-ms">upcoming</span></div>
-      <div>
-        <div class="spd-section-name">Upcoming Classes</div>
-        <div class="spd-section-sub">Next scheduled sessions</div>
-      </div>
-    </div>
-    <a href="/student-portal/timetable" class="spd-section-link">Full Timetable <span class="sp-ms">arrow_forward</span></a>
   </div>
-  <div class="spd-section-body">
-    <div class="spd-upcoming-grid">
-      {% for sess in upcoming_sessions %}
-      <div class="spd-upcoming-card">
-        <div class="spd-upcoming-date-col">
-          <div class="spd-upcoming-day">{{ frappe.utils.formatdate(sess.session_date, "dd") }}</div>
-          <div class="spd-upcoming-month">{{ frappe.utils.formatdate(sess.session_date, "MMM") }}</div>
-        </div>
-        <div class="spd-upcoming-info">
-          <div class="spd-upcoming-name">{{ sess.course_offering or "—" }}</div>
-          <div class="spd-upcoming-meta">
-            {% if sess.start_time %}<span><span class="sp-ms">schedule</span>{{ sess.start_time }}</span>{% endif %}
-            {% if sess.venue %}<span><span class="sp-ms">location_on</span>{{ sess.venue }}</span>{% endif %}
-            {% if sess.session_type %}<span><span class="sp-ms">category</span>{{ sess.session_type }}</span>{% endif %}
-          </div>
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-  </div>
+
+  {# My Calendar — shared with the Timetable page (_calendar.html) #}
+  {% include "slcm/www/student-portal/_calendar.html" %}
 </div>
+
+{# ── Important Links ───────────────────────────────────────────── #}
+{% set _il = important_links or {} %}
+<section class="spd-qa-section spd-links fade-in delay-2" aria-labelledby="spd-links-title" style="margin-top:18px;">
+  <h2 class="spd-qa-header-title" id="spd-links-title">Important Links</h2>
+  <br>
+  <div class="spd-links-grid">
+    <a href="{{ _il.academic_calendar or '#' }}" target="_blank" rel="noopener" class="spd-link-item">
+      <span class="sp-ms spd-link-icon" aria-hidden="true">calendar_month</span><span class="spd-link-name">Academic
+        Calendar</span><span class="sp-ms spd-link-ext" aria-hidden="true">open_in_new</span>
+    </a>
+    <a href="{{ _il.student_handbook or '#' }}" target="_blank" rel="noopener" class="spd-link-item">
+      <span class="sp-ms spd-link-icon" aria-hidden="true">menu_book</span><span class="spd-link-name">Student
+        Handbook</span><span class="sp-ms spd-link-ext" aria-hidden="true">open_in_new</span>
+    </a>
+    <a href="{{ _il.examination_guidelines or '#' }}" target="_blank" rel="noopener" class="spd-link-item">
+      <span class="sp-ms spd-link-icon" aria-hidden="true">description</span><span class="spd-link-name">Assessment
+        Guidelines</span><span class="sp-ms spd-link-ext" aria-hidden="true">open_in_new</span>
+    </a>
+  </div>
+</section>
+
 {% endif %}
-
-{% endif %}{# end no_student #}
-
-<script>
-(function() {
-  /* Live date in hero */
-  const dateEl = document.getElementById('spd-live-date');
-  if (dateEl) {
-    const d = new Date();
-    const opts = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    dateEl.textContent = d.toLocaleDateString('en-IN', opts);
-  }
-
-  /* Today label in classes section */
-  const todayLbl = document.getElementById('spd-today-label');
-  if (todayLbl) {
-    const d = new Date();
-    const opts = { weekday: 'long', month: 'short', day: 'numeric' };
-    todayLbl.textContent = d.toLocaleDateString('en-IN', opts);
-  }
-
-  /* Animated counters */
-  function animateCounter(el, target, suffix, duration) {
-    if (!el) return;
-    const start = 0;
-    const startTime = performance.now();
-    function step(now) {
-      const elapsed = now - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      const current = Math.round(start + (target - start) * eased);
-      el.textContent = current + suffix;
-      if (progress < 1) requestAnimationFrame(step);
-    }
-    requestAnimationFrame(step);
-  }
-
-  const attEl = document.getElementById('spd-att-val');
-  const courseEl = document.getElementById('spd-course-val');
-  if (attEl) {
-    const val = parseFloat(attEl.textContent) || 0;
-    animateCounter(attEl, val, '%', 1200);
-  }
-  if (courseEl) {
-    const val = parseInt(courseEl.textContent) || 0;
-    animateCounter(courseEl, val, '', 800);
-  }
-})();
-</script>
-
 {% endblock %}

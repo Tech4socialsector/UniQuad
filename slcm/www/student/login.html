@@ -1,7 +1,7 @@
-{% set _primary   = primary_color   or "#2b2e4a" %}
-{% set _secondary = secondary_color or "#920c24" %}
-{% set _title     = portal_title    or "Student Portal" %}
-{% set _tagline   = portal_tagline  or "Access your courses, results, and attendance" %}
+{% set _primary   = primary_color   or "#920c24" %}
+{% set _secondary = secondary_color or "#2b2e4a" %}
+{% set _title     = portal_title    or "National Law School of India University" %}
+{% set _tagline   = portal_tagline  or "" %}
 {% set _logo      = portal_logo     or "" %}
 {% set _redir     = redirect_to     or "/student-portal" %}
 
@@ -11,18 +11,31 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ title or (_title + " — Login") }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20,400,0,0&display=block">
   <style>
     :root { --primary: {{ _primary }}; --secondary: {{ _secondary }}; }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; font-family: system-ui, -apple-system, sans-serif;
-                 background: #f1f3f5; overflow-x: hidden; }
+    html, body { height: 100%; font-family: 'Merriweather', serif; font-weight: 300;
+                 background-color: {{ bg_color or "#FAFAFA" }}; 
+                 {% if bg_image %}
+                 background-image: url('{{ bg_image }}');
+                 background-size: cover;
+                 background-position: center;
+                 background-repeat: no-repeat;
+                 {% endif %}
+                 overflow-x: hidden; }
+
+    /* For bold elements */
+    b, strong, h1, h2, h3, h4, h5, h6, .bold { font-weight: 400; }
 
     /* ─── NOTIFICATIONS ─── */
     .lp-notify {
       display: none; align-items: center; gap: 10px;
       padding: 10px 14px; border-radius: 8px; margin-bottom: 20px;
-      font-size: 1rem; font-weight: 600; animation: fadeIn .2s ease;
+      font-size: 1rem; font-weight: 400; animation: fadeIn .2s ease;
     }
     .lp-notify.success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
     .lp-notify.danger,
@@ -32,132 +45,63 @@
     @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: none; } }
 
     /* ─── FIELD ERRORS ─── */
-    .lp-field-error { color: #dc2626; font-size: 11px; font-weight: 600;
+    .lp-field-error { color: #dc2626; font-size: 11px; font-weight: 400;
                       margin-top: 5px; display: none; animation: fadeIn .2s ease; }
 
     /* ─── LAYOUT ─── */
-    .lp-wrap { display: flex; min-height: 100vh; }
+    .lp-wrap { display: flex; min-height: 100vh; padding: 40px 20px 80px 20px; box-sizing: border-box; }
 
-    /* ─── LEFT ─── */
-    .lp-left {
-      width: 460px; flex: 0 0 460px;
-      background: #fff; display: flex; flex-direction: column;
-      justify-content: center; padding: 52px 48px;
-      box-shadow: 4px 0 24px rgba(0,0,0,.07); position: relative; z-index: 2;
-      overflow-y: auto;
+    /* ─── CENTER CARD ─── */
+    .lp-card { margin: auto;
+      width: 100%; max-width: 480px;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 52px 48px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.15); 
+      border-radius: 8px;
     }
 
     /* brand */
-    .lp-brand { display: flex; align-items: center; gap: 16px; margin-bottom: 44px; }
+    .lp-brand { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 16px; margin-bottom: 30px; }
     .lp-brand-icon {
-      width: 68px; height: 68px; border-radius: 50%;
-      background: #fff; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,.06);
+      height: 80px;
       display: flex; align-items: center;
-      justify-content: center; color: #fff; flex-shrink: 0; overflow: hidden;
+      justify-content: center; color: #fff; flex-shrink: 0;
     }
-    .lp-brand-icon:has(.material-symbols-outlined) { background: var(--primary); border: none; }
-    .lp-brand-icon img { width: 70%; height: 70%; object-fit: contain; }
-    .lp-brand-icon .material-symbols-outlined { font-size: 34px; }
-    .lp-brand-name { font-size: 22px; font-weight: 800; color: var(--primary); line-height: 1.2; }
+    .lp-brand-icon img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .lp-brand-name { font-size: 24px; font-weight: 400; color: var(--primary); line-height: 1.3; }
 
-    .lp-heading { font-size: 20px; font-weight: 900; color: #111827; margin-bottom: 6px; }
-    .lp-sub     { font-size: 12.5px; color: #6b7280; margin-bottom: 30px; line-height: 1.5; }
-
-    /* role badge */
-    .lp-role-badge {
-      display: inline-flex; align-items: center; gap: 5px;
-      background: color-mix(in srgb, var(--primary) 10%, #fff);
-      color: var(--primary); border: 1px solid color-mix(in srgb, var(--primary) 20%, #fff);
-      border-radius: 99px; padding: 3px 10px; font-size: 11px; font-weight: 700;
-      letter-spacing: .04em; margin-bottom: 24px;
-    }
-    .lp-role-badge .material-symbols-outlined { font-size: 13px; }
+    .lp-heading { font-size: 20px; font-weight: 400; color: #111827; margin-bottom: 6px; text-align: left; }
+    .lp-sub     { font-size: 12px; color: #6b7280; margin-bottom: 30px; line-height: 1.5; text-align: left; }
 
     /* google button */
     .lp-btn-google {
-      width: 100%; padding: 12px; background: #fff; color: #374151;
-      border: 1.5px solid #d1d5db; border-radius: 8px; font-size: 13px;
-      font-weight: 600; cursor: pointer; font-family: inherit;
+      width: 100%; padding: 12px; background: #f3f4f6; color: #374151;
+      border: none; border-radius: 4px; font-size: 14px;
+      font-weight: 400; cursor: pointer; font-family: inherit;
       display: flex; align-items: center; justify-content: center; gap: 10px;
       text-decoration: none; transition: background .2s, box-shadow .2s;
-      margin-top: 10px;
+      margin-top: 16px;
     }
-    .lp-btn-google:hover { background: #f9fafb; }
-
-    /* ─── RIGHT ─── */
-    .lp-right { flex: 1; position: relative; overflow: hidden; background: #0d1b2a; }
-    .lp-right-overlay {
-      position: absolute; inset: 0;
-      background: linear-gradient(140deg,
-        color-mix(in srgb, var(--primary) 82%, #000) 0%, #0a1628 65%);
-      opacity: .92;
-    }
-    .lp-right-body {
-      position: relative; z-index: 2;
-      display: flex; flex-direction: column;
-      justify-content: center; align-items: center;
-      height: 100%; min-height: 100vh;
-      padding: 48px 44px; color: #fff; text-align: center;
-    }
-    .lp-right-icon {
-      width: 80px; height: 80px; border-radius: 50%;
-      background: rgba(255,255,255,.12); border: 2px solid rgba(255,255,255,.2);
-      display: flex; align-items: center; justify-content: center;
-      margin: 0 auto 24px;
-    }
-    .lp-right-icon .material-symbols-outlined { font-size: 38px; color: #fff; }
-    .lp-tagline { font-size: 26px; font-weight: 900; line-height: 1.3;
-                  margin-bottom: 14px; max-width: 440px; }
-    .lp-tagline-sub { font-size: 14px; opacity: .65; max-width: 360px; line-height: 1.6; }
-
-    /* feature list on right side */
-    .lp-features { margin-top: 36px; text-align: left; max-width: 360px; width: 100%; }
-    .lp-feature-item {
-      display: flex; align-items: flex-start; gap: 12px;
-      padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,.08);
-    }
-    .lp-feature-item:last-child { border-bottom: none; }
-    .lp-feature-icon {
-      width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
-      background: rgba(255,255,255,.12);
-      display: flex; align-items: center; justify-content: center;
-    }
-    .lp-feature-icon .material-symbols-outlined { font-size: 16px; }
-    .lp-feature-text { flex: 1; }
-    .lp-feature-title { font-size: 13px; font-weight: 700; line-height: 1.4; }
-    .lp-feature-desc  { font-size: 11px; opacity: .55; margin-top: 1px; }
+    .lp-btn-google:hover { background: #e5e7eb; }
+    
+    .lp-footer { margin-top: 30px; text-align: center; font-size: 12px; color: #6b7280; }
 
     /* ─── RESPONSIVE ─── */
-    @media (max-width: 860px) {
-      .lp-wrap { justify-content: center; background: #fff; }
-      .lp-left { width: 100%; flex: 1; max-width: 540px; margin: 0 auto;
-                 padding: 48px 36px; box-shadow: none; min-height: 100vh; }
-      .lp-right { display: none; }
-    }
     @media (max-width: 600px) {
-      .lp-left { padding: 36px 24px; max-width: 100%; }
-    }
-    @media (max-width: 480px) {
-      .lp-left { padding: 28px 16px; }
-    }
-    @media (min-width: 1400px) {
-      .lp-left { width: 520px; flex: 0 0 520px; padding: 60px 56px; }
+      .lp-card { margin: auto; padding: 36px 24px; margin: 16px; border-radius: 12px; }
     }
   </style>
 </head>
 <body>
 
 <div class="lp-wrap">
-
-  <!-- ══════════ LEFT ══════════ -->
-  <div class="lp-left">
-    <!-- Brand -->
+  <div class="lp-card">
     <div class="lp-brand">
       <div class="lp-brand-icon">
         {% if _logo %}
           <img src="{{ _logo }}" alt="{{ _title }}">
         {% else %}
-          <span class="material-symbols-outlined">school</span>
+          <span class="material-symbols-outlined" style="font-size: 48px; color: var(--primary);">school</span>
         {% endif %}
       </div>
       <div>
@@ -165,15 +109,29 @@
       </div>
     </div>
 
-    <div class="lp-role-badge">
-      <span class="material-symbols-outlined">badge</span>
-      Student Login
-    </div>
-
-    <h2 class="lp-heading">Welcome Back</h2>
-    <p class="lp-sub">Sign in to access your courses, results, and more.</p>
+    <h2 class="lp-heading">Login</h2>
+    <p class="lp-sub">Enter your login details to access your account</p>
 
     <div id="lp-notify-login" class="lp-notify"></div>
+
+    <form id="lp-form" onsubmit="return handleLogin(event)">
+      <div style="margin-bottom: 16px;">
+        <input type="text" id="login_id" name="login_id" placeholder="Username or email" required
+               style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 4px; font-family: inherit; font-size: 14px;">
+      </div>
+      <div style="margin-bottom: 24px;">
+        <input type="password" id="password" name="password" placeholder="Password" required
+               style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 4px; font-family: inherit; font-size: 14px;">
+      </div>
+      <button type="submit" style="width: 100%; padding: 12px; background: var(--primary); color: #fff; border: none; border-radius: 4px; font-family: inherit; font-size: 15px; font-weight: 400; cursor: pointer;">
+        Login
+      </button>
+    </form>
+    
+    <div style="text-align: center; margin-top: 16px; font-size: 12px; color: var(--primary);">
+        Forgotten username or password?<br>
+        Cookies must be enabled in your browser <span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">info</span>
+    </div>
 
     {% if google_login_url %}
     <a class="lp-btn-google" id="lp-google-btn"
@@ -184,71 +142,18 @@
         <path fill="#FBBC05" d="M3.95 10.69A5.4 5.4 0 0 1 3.68 9c0-.59.1-1.16.27-1.69V4.97H.95A9 9 0 0 0 0 9c0 1.45.35 2.83.95 4.03l3-2.34z"/>
         <path fill="#EA4335" d="M9 3.58c1.32 0 2.51.46 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0 5.48 0 2.44 2.02.95 4.97l3 2.34C4.66 5.17 6.65 3.58 9 3.58z"/>
       </svg>
-      <span>Sign in with NLS Google account</span>
+      <span>Sign in with Google</span>
     </a>
-    {% else %}
-    <div class="lp-notify danger" style="display:flex;">
-      <span class="material-symbols-outlined">error</span>
-      Google sign-in is not configured. Please contact administration.
-    </div>
     {% endif %}
 
-  </div><!-- end left -->
+  </div>
+</div>
 
-  <!-- ══════════ RIGHT ══════════ -->
-  <div class="lp-right">
-    <div class="lp-right-overlay"></div>
-    <div class="lp-right-body">
-      <div class="lp-right-icon">
-        <span class="material-symbols-outlined">school</span>
-      </div>
-      <h2 class="lp-tagline">{{ _tagline }}</h2>
-      <p class="lp-tagline-sub">Your academic journey, all in one place.</p>
-
-      <div class="lp-features">
-        <div class="lp-feature-item">
-          <div class="lp-feature-icon">
-            <span class="material-symbols-outlined">menu_book</span>
-          </div>
-          <div class="lp-feature-text">
-            <div class="lp-feature-title">Courses &amp; Timetable</div>
-            <div class="lp-feature-desc">View your enrolled courses and class schedule</div>
-          </div>
-        </div>
-        <div class="lp-feature-item">
-          <div class="lp-feature-icon">
-            <span class="material-symbols-outlined">grade</span>
-          </div>
-          <div class="lp-feature-text">
-            <div class="lp-feature-title">Results &amp; Grades</div>
-            <div class="lp-feature-desc">Track your academic performance</div>
-          </div>
-        </div>
-        <div class="lp-feature-item">
-          <div class="lp-feature-icon">
-            <span class="material-symbols-outlined">event_available</span>
-          </div>
-          <div class="lp-feature-text">
-            <div class="lp-feature-title">Attendance</div>
-            <div class="lp-feature-desc">Monitor your attendance across all courses</div>
-          </div>
-        </div>
-        <div class="lp-feature-item">
-          <div class="lp-feature-icon">
-            <span class="material-symbols-outlined">payments</span>
-          </div>
-          <div class="lp-feature-text">
-            <div class="lp-feature-title">Fee Payments</div>
-            <div class="lp-feature-desc">View dues and payment history</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div><!-- end right -->
-</div><!-- end lp-wrap -->
+<div style="position: fixed; bottom: 0; width: 100%; background: var(--primary); color: #fff; padding: 6px; text-align: center; font-size: 11px;">
+  2023 Copyright: {{ _title }}
+</div>
 
 <script>
-/* ── UTILS ── */
 function lpEsc(s) {
   if (!s) return '';
   var d = document.createElement('div');
@@ -256,7 +161,6 @@ function lpEsc(s) {
   return d.innerHTML;
 }
 
-/* ── NOTIFICATIONS ── */
 function lpNotify(msg, type) {
   var el = document.getElementById('lp-notify-login');
   if (!el) return;
@@ -267,10 +171,45 @@ function lpNotify(msg, type) {
   el.style.display = 'flex';
 }
 
-/* ── INIT ── */
+function handleLogin(e) {
+  e.preventDefault();
+  var usr = document.getElementById('login_id').value;
+  var pwd = document.getElementById('password').value;
+  var btn = e.target.querySelector('button[type="submit"]');
+  btn.disabled = true;
+  btn.innerText = 'Logging in...';
+
+  fetch('/api/method/login', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Frappe-CSRF-Token': (window.frappe && window.frappe.csrf_token) ? window.frappe.csrf_token : ''
+    },
+    body: JSON.stringify({ usr: usr, pwd: pwd })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.message === "Logged In") {
+      window.location.href = "{{ _redir }}";
+    } else {
+      lpNotify(data.message || "Invalid Login", 'danger');
+      btn.disabled = false;
+      btn.innerText = 'Login';
+    }
+  })
+  .catch(err => {
+    lpNotify("Login failed. Please try again.", 'danger');
+    btn.disabled = false;
+    btn.innerText = 'Login';
+  });
+  return false;
+}
+
 document.addEventListener('DOMContentLoaded', function() {
-  var serverError = {{ google_login_error | tojson }};
-  if (serverError) lpNotify(serverError, 'danger');
+  var urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.has('error')) {
+      lpNotify(urlParams.get('error'), 'danger');
+  }
 });
 </script>
 

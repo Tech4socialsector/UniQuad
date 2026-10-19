@@ -6,14 +6,39 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt, getdate, now_datetime
 
-from slcm.slcm.fee.fee_demand_utils import create_event_demand
-from slcm.slcm.fee.event_hooks import _cancel_demand_for_trigger
-
 
 class FineImposition(Document):
 	def validate(self):
 		if getdate(self.to_date) < getdate(self.from_date):
 			frappe.throw(_("To Date cannot be before From Date."))
+
+	@frappe.whitelist()
+	def get_outstanding_preview(self):
+		demands = self._get_outstanding_demands()
+
+		rows = []
+		total_outstanding = 0
+		total_estimated_fine = 0
+
+		for demand in demands:
+			estimated_fine = self._compute_fine_amount(demand.outstanding_amount)
+			rows.append({
+				"student": demand.student,
+				"fee_component": demand.fee_component,
+				"demand_type": demand.demand_type,
+				"due_date": demand.due_date,
+				"outstanding_amount": demand.outstanding_amount,
+				"estimated_fine_amount": estimated_fine,
+			})
+			total_outstanding += flt(demand.outstanding_amount)
+			total_estimated_fine += estimated_fine
+
+		return {
+			"rows": rows,
+			"total_demands": len(rows),
+			"total_outstanding": total_outstanding,
+			"total_estimated_fine": total_estimated_fine,
+		}
 
 	@frappe.whitelist()
 	def apply_fine(self):
@@ -33,24 +58,15 @@ class FineImposition(Document):
 			if fine_amount <= 0:
 				continue
 
-			fine_demand_name = create_event_demand(
-				student=demand.student,
-				fee_component_name=self.fee_component,
-				amount=fine_amount,
-				demand_type="Fine",
-				due_days=self.due_days,
-				trigger_doctype="Fine Imposition",
-				trigger_name=self.name,
-				description=_("Fine for outstanding demand {0}").format(demand.name),
-				academic_year=demand.academic_year,
-			)
+			demand_doc = frappe.get_doc("Fee Demand", demand.name)
+			demand_doc.penalty_amount = flt(demand_doc.penalty_amount) + fine_amount
+			demand_doc.save(ignore_permissions=True)
 
 			self.append("fine_log", {
 				"student": demand.student,
 				"source_fee_demand": demand.name,
 				"outstanding_amount": demand.outstanding_amount,
 				"fine_amount": fine_amount,
-				"fine_demand": fine_demand_name,
 			})
 			total_fine_amount += fine_amount
 
@@ -71,7 +87,33 @@ class FineImposition(Document):
 		if self.status != "Applied":
 			frappe.throw(_("Only an Applied Fine Imposition can be reversed."))
 
-		_cancel_demand_for_trigger("Fine Imposition", self.name)
+		for row in self.fine_log:
+			if not row.source_fee_demand or not row.fine_amount:
+				continue
+
+			try:
+				demand_doc = frappe.get_doc("Fee Demand", row.source_fee_demand)
+			except frappe.DoesNotExistError:
+				continue
+
+			new_penalty = flt(demand_doc.penalty_amount) - flt(row.fine_amount)
+			if new_penalty < 0:
+				new_penalty = 0
+
+			new_net_payable = flt(demand_doc.original_amount) - flt(demand_doc.waiver_amount) + new_penalty
+			if flt(demand_doc.paid_amount) > new_net_payable:
+				frappe.log_error(
+					title="Fine Imposition Reversal Skipped",
+					message=(
+						f"Cannot reverse penalty on Fee Demand {demand_doc.name}: the amount already "
+						f"paid ({demand_doc.paid_amount}) exceeds what would be owed after removing "
+						f"the penalty ({new_net_payable})."
+					),
+				)
+				continue
+
+			demand_doc.penalty_amount = new_penalty
+			demand_doc.save(ignore_permissions=True)
 
 		self.status = "Reversed"
 		self.reversed_on = now_datetime()
@@ -95,9 +137,12 @@ class FineImposition(Document):
 		filters = {
 			"outstanding_amount": [">", 0],
 			"status": ["not in", ["Paid", "Cancelled", "Waived"]],
-			"demand_type": ["!=", "Fine"],
 			"due_date": ["between", [self.from_date, self.to_date]],
 		}
+		# never fine a fine: exclude dues whose Fee Component is a fine type ("Fine - …")
+		fine_components = frappe.get_all("Fee Component", filters={"component_type": ["like", "Fine%"]}, pluck="name")
+		if fine_components:
+			filters["fee_component"] = ["not in", fine_components]
 		if self.demand_type_filter:
 			filters["demand_type"] = self.demand_type_filter
 		if self.programme:
@@ -110,5 +155,13 @@ class FineImposition(Document):
 		return frappe.get_all(
 			"Fee Demand",
 			filters=filters,
-			fields=["name", "student", "academic_year", "outstanding_amount"],
+			fields=[
+				"name",
+				"student",
+				"academic_year",
+				"outstanding_amount",
+				"fee_component",
+				"demand_type",
+				"due_date",
+			],
 		)

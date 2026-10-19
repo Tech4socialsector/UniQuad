@@ -1,6 +1,19 @@
 frappe.ui.form.on("Fee Refund", {
+	refresh(frm) {
+		_show_available_excess(frm);
+	},
+
+	refund_source(frm) {
+		if (frm.doc.refund_source === "Excess Amount") {
+			frm.set_value("fee_demand", "");
+			if (!frm.doc.refund_type) frm.set_value("refund_type", "Excess Refund");
+		}
+		_show_available_excess(frm);
+	},
+
 	student(frm) {
 		frm.set_value("fee_demand", "");
+		_show_available_excess(frm);
 		if (frm.doc.student) {
 			frm.set_query("fee_demand", () => ({
 				filters: {
@@ -65,4 +78,20 @@ function _show_refund_preview(frm) {
 
 function format_currency(val) {
 	return frappe.format(val, { fieldtype: "Currency" });
+}
+
+// Excess refunds: show what the student can be refunded (unused active credit notes).
+function _show_available_excess(frm) {
+	if (frm.doc.docstatus !== 0 || frm.doc.refund_source !== "Excess Amount" || !frm.doc.student) return;
+	frappe.db
+		.get_list("Student Credit Note", {
+			filters: { student: frm.doc.student, docstatus: 1, status: "Active" },
+			fields: ["available_credit"],
+			limit: 0,
+		})
+		.then((rows) => {
+			const available = rows.reduce((sum, r) => sum + flt(r.available_credit), 0);
+			frm.set_value("available_excess", available);
+			if (!frm.doc.refund_amount && available) frm.set_value("refund_amount", available);
+		});
 }

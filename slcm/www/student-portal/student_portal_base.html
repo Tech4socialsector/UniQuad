@@ -35,10 +35,10 @@
     *, *::before, *::after { box-sizing: border-box; }
 
     :root {
-      --primary: #1a3c6e;
-      --primary-dark: #122d54;
+      --primary: #920c24;
+      --primary-dark: #6b091a;
       --primary-light: rgba(26,60,110,0.1);
-      --secondary: #c8a14b;
+      --secondary: #b5364a;
       --text-1: #1f2937;
       --text-2: #374151;
       --text-3: #6b7280;
@@ -46,14 +46,14 @@
       --border: #e5e7eb;
       --bg: #f0f2f5;
       --card: #ffffff;
-      --success: #16a34a;
-      --success-bg: #dcfce7;
-      --warning: #d97706;
-      --warning-bg: #fef3c7;
-      --danger: #dc2626;
-      --danger-bg: #fee2e2;
-      --info: #0369a1;
-      --info-bg: #e0f2fe;
+      --success: #920c24;
+      --success-bg: #fff0f2;
+      --warning: #920c24;
+      --warning-bg: #fff0f2;
+      --danger: #920c24;
+      --danger-bg: #fff0f2;
+      --info: #920c24;
+      --info-bg: #fff0f2;
       --sidebar-w: 240px;
       --nav-h: 60px;
     }
@@ -278,7 +278,7 @@
 
     /* Student card in sidebar */
     .sp-student-card {
-      background: linear-gradient(135deg, var(--primary), #2a5298);
+      background: linear-gradient(135deg, var(--primary), #920c24);
       border-radius: 14px;
       padding: 14px;
       margin-bottom: 20px;
@@ -793,7 +793,7 @@
       <button onclick="spCancelLogout()" style="flex:1;padding:11px;border:1.5px solid var(--sp-border);background:transparent;border-radius:8px;font-size:14px;font-weight:600;color:var(--sp-text-2);cursor:pointer;font-family:inherit;transition:background 0.15s;" onmouseover="this.style.background='var(--sp-bg)'" onmouseout="this.style.background='transparent'">
         Cancel
       </button>
-      <button id="sp-logout-confirm-btn" onclick="spConfirmLogout()" style="flex:1;padding:11px;border:none;background:linear-gradient(135deg,var(--sp-danger),#c01010);border-radius:8px;font-size:14px;font-weight:600;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;font-family:inherit;box-shadow:0 4px 12px rgba(224,82,82,0.35);">
+      <button id="sp-logout-confirm-btn" onclick="spConfirmLogout()" style="flex:1;padding:11px;border:none;background:linear-gradient(135deg,var(--sp-danger),#920c24);border-radius:8px;font-size:14px;font-weight:600;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;font-family:inherit;box-shadow:0 4px 12px rgba(146,12,36,0.35);">
         <span class="sp-ms" style="font-size:17px;">logout</span>Sign Out
       </button>
     </div>

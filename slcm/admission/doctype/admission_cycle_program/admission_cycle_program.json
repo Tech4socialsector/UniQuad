@@ -6,14 +6,20 @@
  "field_order": [
   "program",
   "seats",
+  "reservation_applicable",
+  "application_fee_indian",
+  "application_fee_foreign",
   "reservation_policy",
   "intake_type",
   "program_name",
   "col_break_1",
   "is_active",
   "campus",
+  "admission_open_for",
   "program_level",
   "add_reservation_policy",
+  "payment_gateway",
+  "payment_receipt_template",
   "brochure_url",
   "section_break_eligibility",
   "eligibility_hint",
@@ -67,6 +73,7 @@
    "reqd": 1
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "seats",
    "fieldtype": "Int",
    "in_list_view": 1,
@@ -134,6 +141,7 @@
   },
   {
    "allow_on_submit": 1,
+   "depends_on": "eval:doc.reservation_applicable == 1",
    "description": "Auto-linked when Programme Reservation Policy is saved for this program",
    "fieldname": "reservation_policy",
    "fieldtype": "Link",
@@ -159,7 +167,7 @@
   },
   {
    "allow_on_submit": 1,
-   "depends_on": "eval: !doc.reservation_policy",
+   "depends_on": "eval:doc.reservation_applicable == 1 && !doc.reservation_policy",
    "fieldname": "add_reservation_policy",
    "fieldtype": "Button",
    "label": "Add Reservation Policy"
@@ -182,11 +190,58 @@
    "fieldtype": "Data",
    "label": "Program level",
    "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "admission_open_for",
+   "fieldtype": "Autocomplete",
+   "label": "Admission Open For",
+   "options": "Domestic\nInternational\nDomestic & International",
+   "placeholder": "Select admission scope",
+   "reqd": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "1",
+   "fieldname": "reservation_applicable",
+   "fieldtype": "Check",
+   "label": "Reservation Applicable"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.reservation_applicable == 0",
+   "fieldname": "application_fee_indian",
+   "fieldtype": "Currency",
+   "label": "Application Fee for Indian",
+   "non_negative": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.reservation_applicable == 0",
+   "fieldname": "application_fee_foreign",
+   "fieldtype": "Currency",
+   "label": "Application Fee for Foreign"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.reservation_applicable == 0",
+   "fieldname": "payment_gateway",
+   "fieldtype": "Link",
+   "label": "Payment Gateway",
+   "options": "Payment Gateway"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.reservation_applicable == 0",
+   "fieldname": "payment_receipt_template",
+   "fieldtype": "Link",
+   "label": "Payment Receipt Template",
+   "options": "Print Format"
   }
  ],
  "istable": 1,
  "links": [],
- "modified": "2026-07-10 11:09:29.348248",
+ "modified": "2026-09-30 12:19:03.654138",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Admission Cycle Program",

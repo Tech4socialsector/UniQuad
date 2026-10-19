@@ -10,7 +10,7 @@
    "label": "ID Cards Generated Over Time"
   }
  ],
- "content": "[{\"id\":\"ws-hdr-overview\",\"type\":\"header\",\"data\":{\"text\":\"<b>Overview</b>\",\"col\":12}},{\"id\":\"ws-nc-students\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Active Students\",\"col\":3}},{\"id\":\"ws-nc-total\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Total ID Cards\",\"col\":3}},{\"id\":\"ws-nc-active\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Active ID Cards\",\"col\":3}},{\"id\":\"ws-nc-draft\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Pending (Draft) Cards\",\"col\":3}},{\"id\":\"ws-hdr-charts\",\"type\":\"header\",\"data\":{\"text\":\"<b>Analytics</b>\",\"col\":12}},{\"id\":\"ws-chart-status\",\"type\":\"chart\",\"data\":{\"chart_name\":\"ID Card Status Distribution\",\"col\":6}},{\"id\":\"ws-chart-trend\",\"type\":\"chart\",\"data\":{\"chart_name\":\"ID Cards Generated Over Time\",\"col\":6}},{\"id\":\"ws-hdr-actions\",\"type\":\"header\",\"data\":{\"text\":\"<b>Quick Actions</b>\",\"col\":12}},{\"id\":\"ws-sc-tool\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"ID Card Generation Tool\",\"col\":3}},{\"id\":\"ws-sc-gen\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"ID Card Generation\",\"col\":3}},{\"id\":\"ws-sc-template\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"ID Card Template\",\"col\":3}},{\"id\":\"ws-sc-student\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Student Master\",\"col\":3}},{\"id\":\"ws-hdr-logs\",\"type\":\"header\",\"data\":{\"text\":\"<b>Logs &amp; Audit</b>\",\"col\":12}},{\"id\":\"ws-sc-tool-log\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"ID Card Generation Tool Log\",\"col\":3}},{\"id\":\"ws-sc-print-log\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"ID Card Print Log\",\"col\":3}},{\"id\":\"ws-nc-print-log\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Print Log Entries\",\"col\":3}},{\"id\":\"ws-nc-cancelled\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Cancelled Cards\",\"col\":3}}]",
+ "content": "[{\"id\":\"ws-hdr-overview\",\"type\":\"header\",\"data\":{\"text\":\"<b>Overview</b>\",\"col\":12}},{\"id\":\"ws-nc-students\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Active Students\",\"col\":3}},{\"id\":\"ws-nc-total\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Total ID Cards\",\"col\":3}},{\"id\":\"ws-nc-active\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Active ID Cards\",\"col\":3}},{\"id\":\"ws-nc-draft\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Pending (Draft) Cards\",\"col\":3}},{\"id\":\"ws-hdr-rfid\",\"type\":\"header\",\"data\":{\"text\":\"<b>RFID Management</b>\",\"col\":12}},{\"id\":\"ws-sc-rfid-device\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"RFID Device\",\"col\":6}},{\"id\":\"ws-sc-device-mapping\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Device Mapping\",\"col\":6}},{\"id\":\"ws-sc-rfid-card-management\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"RFID Card Management\",\"col\":6}},{\"id\":\"ws-sc-rfid-attendance-report\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"RFID Attendance Report\",\"col\":6}},{\"id\":\"ws-sc-rfid-agent-dashboard\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"RFID Agent Dashboard\",\"col\":6}},{\"id\":\"ws-sc-rfid-configuration\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"RFID Configuration\",\"col\":6}},{\"id\":\"ws-hdr-idcard\",\"type\":\"header\",\"data\":{\"text\":\"<b>ID Card Management</b>\",\"col\":12}},{\"id\":\"ws-sc-generate-id-cards\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Generate ID Cards\",\"col\":6}},{\"id\":\"ws-sc-id-card-generation\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"ID Card Generation\",\"col\":6}},{\"id\":\"ws-sc-id-card-template\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"ID Card Template\",\"col\":6}},{\"id\":\"ws-hdr-student\",\"type\":\"header\",\"data\":{\"text\":\"<b>Student Management</b>\",\"col\":12}},{\"id\":\"ws-sc-student-master\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Student Master\",\"col\":6}},{\"id\":\"ws-sc-student-rfid-card\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Student RFID Card\",\"col\":6}},{\"id\":\"ws-hdr-charts\",\"type\":\"header\",\"data\":{\"text\":\"<b>Analytics</b>\",\"col\":12}},{\"id\":\"ws-chart-status\",\"type\":\"chart\",\"data\":{\"chart_name\":\"ID Card Status Distribution\",\"col\":6}},{\"id\":\"ws-chart-trend\",\"type\":\"chart\",\"data\":{\"chart_name\":\"ID Cards Generated Over Time\",\"col\":6}},{\"id\":\"ws-hdr-logs\",\"type\":\"header\",\"data\":{\"text\":\"<b>Logs &amp; Audit</b>\",\"col\":12}},{\"id\":\"ws-sc-id-card-generation-log\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"ID Card Generation Log\",\"col\":6}},{\"id\":\"ws-sc-id-card-print-log\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"ID Card Print Log\",\"col\":6}},{\"id\":\"ws-sc-rfid-punch-log\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"RFID Punch Log\",\"col\":6}},{\"id\":\"ws-nc-print-log\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Print Log Entries\",\"col\":6}},{\"id\":\"ws-nc-cancelled\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Cancelled Cards\",\"col\":6}}]",
  "creation": "2026-08-05 12:10:23.222280",
  "custom_blocks": [],
  "docstatus": 0,
@@ -23,7 +23,7 @@
  "is_hidden": 0,
  "label": "IT Team",
  "links": [],
- "modified": "2026-03-25 19:48:36.209055",
+ "modified": "2026-09-24 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "IT Team",
@@ -61,11 +61,58 @@
  "sequence_id": 6.0,
  "shortcuts": [
   {
-   "color": "Purple",
+   "color": "Cyan",
    "doc_view": "List",
-   "label": "ID Card Generation Tool",
-   "type": "URL",
-   "url": "/app/id-card-generation-tool"
+   "label": "RFID Device",
+   "link_to": "RFID Device",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Cyan",
+   "doc_view": "List",
+   "label": "Device Mapping",
+   "link_to": "RFID Device Room Mapping",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Cyan",
+   "doc_view": "",
+   "label": "RFID Card Management",
+   "link_to": "rfid-mapping",
+   "type": "Page"
+  },
+  {
+   "color": "Cyan",
+   "doc_view": "",
+   "label": "RFID Attendance Report",
+   "link_to": "RFID Attendance Report",
+   "report_ref_doctype": "Attendance Log",
+   "type": "Report"
+  },
+  {
+   "color": "Cyan",
+   "doc_view": "",
+   "label": "RFID Agent Dashboard",
+   "link_to": "rfid-sql-agent-dashboard",
+   "type": "Page"
+  },
+  {
+   "color": "Cyan",
+   "doc_view": "List",
+   "label": "RFID Configuration",
+   "link_to": "RFID SQL Agent Settings",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "Generate ID Cards",
+   "link_to": "ID Card Generation Tool",
+   "stats_filter": "[]",
+   "type": "DocType"
   },
   {
    "color": "Blue",
@@ -76,7 +123,7 @@
    "type": "DocType"
   },
   {
-   "color": "Green",
+   "color": "Blue",
    "doc_view": "List",
    "label": "ID Card Template",
    "link_to": "ID Card Template",
@@ -84,7 +131,7 @@
    "type": "DocType"
   },
   {
-   "color": "Cyan",
+   "color": "Green",
    "doc_view": "List",
    "label": "Student Master",
    "link_to": "Student Master",
@@ -92,9 +139,17 @@
    "type": "DocType"
   },
   {
+   "color": "Green",
+   "doc_view": "List",
+   "label": "Student RFID Card",
+   "link_to": "Student RFID Card",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
    "color": "Grey",
    "doc_view": "List",
-   "label": "ID Card Generation Tool Log",
+   "label": "ID Card Generation Log",
    "link_to": "ID Card Generation Tool Log",
    "stats_filter": "[]",
    "type": "DocType"
@@ -104,6 +159,14 @@
    "doc_view": "List",
    "label": "ID Card Print Log",
    "link_to": "ID Card Print Log",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "RFID Punch Log",
+   "link_to": "RFID SQL Punch Log",
    "stats_filter": "[]",
    "type": "DocType"
   }

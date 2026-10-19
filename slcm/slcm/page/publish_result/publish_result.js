@@ -5,6 +5,22 @@ frappe.pages['publish-result'].on_page_load = function (wrapper) {
 		single_column: true,
 	});
 
+	// Shared brand theme (#920C24 + Merriweather) for all Examination Result tabs
+	$(wrapper).addClass('er-theme');
+	if (!document.getElementById('er-theme-font')) {
+		$('head').append(
+			'<link rel="preconnect" href="https://fonts.googleapis.com">' +
+			'<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
+			'<link id="er-theme-font" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Merriweather:opsz,wght@18..144,300..900&display=swap">'
+		);
+	}
+	frappe.require('/assets/slcm/css/exam_results_theme.css');
+	// On narrow screens the tab strip scrolls sideways — bring the active tab into view
+	setTimeout(function () {
+		var $nav = $(wrapper).find('.er2-page-nav'), $act = $nav.find('.er2-pnav-btn.active');
+		if ($nav.length && $act.length) $nav.scrollLeft($act.position().left + $nav.scrollLeft() - 12);
+	}, 0);
+
 	// ── CSS ───────────────────────────────────────────────────────────────────
 	if (!document.getElementById('pr-style')) {
 		var style = document.createElement('style');
@@ -23,19 +39,19 @@ frappe.pages['publish-result'].on_page_load = function (wrapper) {
 		                   color:#64748b; border-radius:7px; transition:all .2s; user-select:none;
 		                   letter-spacing:.1px; border:none; background:transparent;
 		                   display:inline-flex; align-items:center; gap:5px; }
-		.er2-pnav-btn:hover  { color:#4f46e5; background:rgba(79,70,229,.08); }
-		.er2-pnav-btn.active { background:#fff; color:#4f46e5; box-shadow:0 1px 4px rgba(0,0,0,.12); }
+		.er2-pnav-btn:hover  { color:#920C24; background:rgba(146,12,36,.08); }
+		.er2-pnav-btn.active { background:#fff; color:#920C24; box-shadow:0 1px 4px rgba(0,0,0,.12); }
 
 		/* Stat cards */
 		.pr-stat-cards   { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
 		.pr-stat-card    { background:#fff; border-radius:12px; padding:14px 18px; flex:1;
 		                   min-width:150px; box-shadow:0 1px 3px rgba(0,0,0,.06);
-		                   border-top:3px solid var(--sc-color,#8b5cf6);
+		                   border-top:3px solid var(--sc-color,#920C24);
 		                   display:flex; align-items:center; gap:12px; }
 		.pr-sc-icon      { width:38px; height:38px; border-radius:9px; flex-shrink:0;
 		                   display:flex; align-items:center; justify-content:center;
-		                   background:var(--sc-bg,#f5f3ff); color:var(--sc-color,#8b5cf6); }
-		.pr-sc-val       { font-size:22px; font-weight:800; color:var(--sc-color,#8b5cf6); line-height:1.1; }
+		                   background:var(--sc-bg,#FBEEF0); color:var(--sc-color,#920C24); }
+		.pr-sc-val       { font-size:22px; font-weight:800; color:var(--sc-color,#920C24); line-height:1.1; }
 		.pr-sc-lbl       { font-size:10px; color:#94a3b8; font-weight:700; text-transform:uppercase;
 		                   letter-spacing:.6px; margin-top:2px; }
 
@@ -48,14 +64,14 @@ frappe.pages['publish-result'].on_page_load = function (wrapper) {
 		.pr-filter-arrow { display:flex; align-items:flex-end; padding-bottom:9px; color:#cbd5e1; font-size:16px; flex-shrink:0; }
 		.pr-active-badge { display:inline-block; border-radius:6px; font-size:10px; font-weight:700;
 		                   padding:2px 7px; margin-left:6px; letter-spacing:.3px; vertical-align:middle; }
-		.pr-active-badge.prog  { background:#eff6ff; color:#3b82f6; }
-		.pr-active-badge.course { background:#f5f3ff; color:#8b5cf6; }
+		.pr-active-badge.prog  { background:#FBEEF0; color:#920C24; }
+		.pr-active-badge.course { background:#FBEEF0; color:#920C24; }
 		.pr-flabel       { font-size:11px; color:#94a3b8; font-weight:700; margin-bottom:5px;
 		                   text-transform:uppercase; letter-spacing:.6px; }
 		.pr-select       { height:36px; border:1.5px solid #e2e8f0; border-radius:8px;
 		                   padding:0 12px; font-size:13px; background:#fff; color:#1e293b;
 		                   outline:none; cursor:pointer; transition:border-color .2s; }
-		.pr-select:focus { border-color:#8b5cf6; box-shadow:0 0 0 3px rgba(139,92,246,.1); }
+		.pr-select:focus { border-color:#920C24; box-shadow:0 0 0 3px rgba(146,12,36,.1); }
 
 		/* Action bar */
 		.pr-actbar       { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
@@ -63,14 +79,14 @@ frappe.pages['publish-result'].on_page_load = function (wrapper) {
 		.pr-srch input   { width:100%; height:36px; border:1.5px solid #e2e8f0; border-radius:8px;
 		                   padding:0 12px 0 36px; font-size:13px; outline:none; color:#1e293b;
 		                   background:#fff; transition:border-color .2s; box-sizing:border-box; }
-		.pr-srch input:focus { border-color:#8b5cf6; box-shadow:0 0 0 3px rgba(139,92,246,.1); }
+		.pr-srch input:focus { border-color:#920C24; box-shadow:0 0 0 3px rgba(146,12,36,.1); }
 		.pr-srch-ico     { position:absolute; left:10px; top:10px; color:#94a3b8; }
 		.pr-btn          { height:36px; padding:0 14px; border-radius:7px; border:1.5px solid #e2e8f0;
 		                   background:#fff; cursor:pointer; font-size:12.5px; font-weight:600;
 		                   color:#475569; display:inline-flex; align-items:center; gap:5px;
 		                   white-space:nowrap; transition:all .15s; }
 		.pr-btn:hover    { background:#f8fafc; border-color:#cbd5e1; color:#1e293b; }
-		.pr-btn.primary  { background:linear-gradient(135deg,#8b5cf6,#a78bfa);
+		.pr-btn.primary  { background:#920C24;
 		                   border-color:transparent; color:#fff; }
 		.pr-btn.primary:hover { opacity:.9; }
 
@@ -98,7 +114,7 @@ frappe.pages['publish-result'].on_page_load = function (wrapper) {
 		.pr-table th.center { text-align:center; }
 		.pr-table td     { padding:0 14px; border-bottom:1.5px solid #f1f5f9; vertical-align:middle; white-space:nowrap; }
 		.pr-table tbody tr { height:72px; }
-		.pr-table tbody tr:hover td { background:#fafbff; }
+		.pr-table tbody tr:hover td { background:#FDF8F9; }
 		.pr-table tbody tr:last-child td { border-bottom:none; }
 
 		/* Student cell */
@@ -107,19 +123,19 @@ frappe.pages['publish-result'].on_page_load = function (wrapper) {
 		                   font-size:14px; font-weight:700; color:#fff; overflow:hidden; }
 		.pr-savatar img  { width:100%; height:100%; object-fit:cover; }
 		.pr-sname        { font-size:13px; font-weight:700; color:#0f172a; }
-		.pr-sreg         { font-size:11px; color:#8b5cf6; font-weight:600; margin-top:2px;
-		                   background:#f5f3ff; border-radius:4px; padding:1px 6px; display:inline-block; }
+		.pr-sreg         { font-size:11px; color:#920C24; font-weight:600; margin-top:2px;
+		                   background:#FBEEF0; border-radius:4px; padding:1px 6px; display:inline-block; }
 		.pr-semail       { font-size:11px; color:#94a3b8; margin-top:2px; }
 
 		/* Publish status header filter */
 		.pr-status-hdr   { display:inline-flex; align-items:center; gap:4px; cursor:pointer; user-select:none; position:relative; }
-		.pr-status-hdr:hover { color:#8b5cf6; }
+		.pr-status-hdr:hover { color:#920C24; }
 		.pr-status-dd    { display:none; position:absolute; top:calc(100% + 8px); left:50%;
 		                   transform:translateX(-50%); z-index:999; background:#fff;
 		                   border:1.5px solid #e2e8f0; border-radius:9px;
 		                   box-shadow:0 8px 24px rgba(0,0,0,.12); min-width:140px; padding:5px; }
 		.pr-status-hdr.open .pr-status-dd { display:block; }
-		.pr-status-dd .dd-item.active { color:#8b5cf6; font-weight:700; background:#f5f3ff; }
+		.pr-status-dd .dd-item.active { color:#920C24; font-weight:700; background:#FBEEF0; }
 
 		/* Toggle */
 		.pr-toggle       { position:relative; display:inline-block; width:44px; height:24px; cursor:pointer; }
@@ -128,7 +144,7 @@ frappe.pages['publish-result'].on_page_load = function (wrapper) {
 		.pr-toggle-slider:before { content:''; position:absolute; width:18px; height:18px;
 		                           left:3px; bottom:3px; background:#fff; border-radius:50%;
 		                           transition:transform .2s; box-shadow:0 1px 3px rgba(0,0,0,.2); }
-		.pr-toggle input:checked + .pr-toggle-slider { background:#10b981; }
+		.pr-toggle input:checked + .pr-toggle-slider { background:#920C24; }
 		.pr-toggle input:checked + .pr-toggle-slider:before { transform:translateX(20px); }
 		.pr-toggle.saving .pr-toggle-slider { opacity:.6; }
 
@@ -138,8 +154,8 @@ frappe.pages['publish-result'].on_page_load = function (wrapper) {
 		.pr-pub-name     { font-size:12px; color:#475569; font-weight:500; }
 		.pr-pub-date     { font-size:11px; color:#94a3b8; }
 		.pr-pub-none     { font-size:12px; color:#cbd5e1; }
-		.pr-unpub-name   { font-size:12px; color:#ef4444; font-weight:500; }
-		.pr-unpub-date   { font-size:11px; color:#fca5a5; }
+		.pr-unpub-name   { font-size:12px; color:#920C24; font-weight:500; }
+		.pr-unpub-date   { font-size:11px; color:#E8B4BE; }
 
 		/* Pagination */
 		.pr-pag-bar      { display:flex; align-items:center; justify-content:space-between;
@@ -149,7 +165,7 @@ frappe.pages['publish-result'].on_page_load = function (wrapper) {
 		.pr-pag-btn      { width:30px; height:30px; border:1.5px solid #e2e8f0; border-radius:7px;
 		                   background:#fff; cursor:pointer; font-size:14px; display:inline-flex;
 		                   align-items:center; justify-content:center; color:#64748b; transition:all .15s; }
-		.pr-pag-btn:hover:not(:disabled) { background:#f5f3ff; border-color:#ddd6fe; color:#8b5cf6; }
+		.pr-pag-btn:hover:not(:disabled) { background:#FBEEF0; border-color:#E8B4BE; color:#920C24; }
 		.pr-pag-btn:disabled { opacity:.35; cursor:default; }
 
 		/* Empty / Loading */
@@ -160,14 +176,14 @@ frappe.pages['publish-result'].on_page_load = function (wrapper) {
 		.pr-loading      { padding:60px; text-align:center; color:#94a3b8; font-size:13px; }
 
 		/* Avatar colours */
-		.av-0{background:linear-gradient(135deg,#4f46e5,#818cf8);}
-		.av-1{background:linear-gradient(135deg,#0ea5e9,#38bdf8);}
-		.av-2{background:linear-gradient(135deg,#10b981,#34d399);}
-		.av-3{background:linear-gradient(135deg,#f59e0b,#fbbf24);}
-		.av-4{background:linear-gradient(135deg,#ef4444,#f87171);}
-		.av-5{background:linear-gradient(135deg,#8b5cf6,#a78bfa);}
-		.av-6{background:linear-gradient(135deg,#ec4899,#f472b6);}
-		.av-7{background:linear-gradient(135deg,#14b8a6,#2dd4bf);}
+		.av-0{background:#920C24;}
+		.av-1{background:#920C24;}
+		.av-2{background:#920C24;}
+		.av-3{background:#920C24;}
+		.av-4{background:#920C24;}
+		.av-5{background:#920C24;}
+		.av-6{background:#920C24;}
+		.av-7{background:#920C24;}
 
 		/* ── Institutional Filter Modal ── */
 		.xif-overlay { position:fixed; inset:0; background:rgba(15,23,42,.35);
@@ -182,14 +198,14 @@ frappe.pages['publish-result'].on_page_load = function (wrapper) {
 		.xif-close   { width:30px; height:30px; border-radius:8px; border:none; background:#f1f5f9;
 		               cursor:pointer; display:flex; align-items:center; justify-content:center;
 		               color:#64748b; font-size:16px; transition:all .15s; }
-		.xif-close:hover { background:#fee2e2; color:#ef4444; }
+		.xif-close:hover { background:#F5D9DE; color:#920C24; }
 		.xif-body    { display:flex; flex:1; overflow:hidden; }
-		.xif-types   { width:190px; flex-shrink:0; border-right:1.5px solid #f1f5f9; padding:8px; background:#fafbff; }
+		.xif-types   { width:190px; flex-shrink:0; border-right:1.5px solid #f1f5f9; padding:8px; background:#FDF8F9; }
 		.xif-type    { padding:10px 14px; border-radius:8px; font-size:13px; font-weight:600; color:#475569;
 		               cursor:pointer; margin-bottom:2px; transition:all .15s; display:flex; align-items:center; gap:8px; }
 		.xif-type:hover { background:#f1f5f9; color:#1e293b; }
-		.xif-type.active { background:#f5f3ff; color:#8b5cf6; }
-		.xif-type-badge { min-width:18px; height:18px; border-radius:20px; background:#8b5cf6; color:#fff;
+		.xif-type.active { background:#FBEEF0; color:#920C24; }
+		.xif-type-badge { min-width:18px; height:18px; border-radius:20px; background:#920C24; color:#fff;
 		                  font-size:10px; font-weight:700; display:inline-flex; align-items:center;
 		                  justify-content:center; padding:0 5px; margin-left:auto; }
 		.xif-panel   { flex:1; display:flex; flex-direction:column; overflow:hidden; }
@@ -199,28 +215,28 @@ frappe.pages['publish-result'].on_page_load = function (wrapper) {
 		               padding:0 10px 0 30px; font-size:12.5px; outline:none; color:#1e293b;
 		               background:#f8fafc url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E") no-repeat 9px center;
 		               box-sizing:border-box; transition:border-color .2s; }
-		.xif-search:focus { border-color:#8b5cf6; background-color:#fff; }
+		.xif-search:focus { border-color:#920C24; background-color:#fff; }
 		.xif-opts    { flex:1; overflow-y:auto; padding:8px; }
 		.xif-opt     { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:8px;
 		               cursor:pointer; font-size:13px; font-weight:500; color:#334155; transition:background .12s; }
 		.xif-opt:hover { background:#f8fafc; }
-		.xif-opt.checked { background:#f5f3ff; color:#6d28d9; }
-		.xif-opt input[type="checkbox"] { width:15px; height:15px; accent-color:#8b5cf6; cursor:pointer; flex-shrink:0; }
+		.xif-opt.checked { background:#FBEEF0; color:#920C24; }
+		.xif-opt input[type="checkbox"] { width:15px; height:15px; accent-color:#920C24; cursor:pointer; flex-shrink:0; }
 		.xif-empty-opts { padding:32px; text-align:center; color:#cbd5e1; font-size:13px; }
 		.xif-footer  { display:flex; align-items:center; justify-content:space-between;
-		               padding:12px 16px; border-top:1.5px solid #f1f5f9; background:#fafbff; }
+		               padding:12px 16px; border-top:1.5px solid #f1f5f9; background:#FDF8F9; }
 		.xif-status  { font-size:12.5px; color:#64748b; font-weight:500; }
-		.xif-status strong { color:#8b5cf6; }
+		.xif-status strong { color:#920C24; }
 		.xif-actions { display:flex; gap:8px; }
 		.xif-clear   { padding:0 14px; height:32px; border-radius:7px; border:1.5px solid #e2e8f0;
 		               background:#fff; color:#64748b; font-size:12.5px; font-weight:600; cursor:pointer; transition:all .15s; }
-		.xif-clear:hover { border-color:#ef4444; color:#ef4444; background:#fff5f5; }
+		.xif-clear:hover { border-color:#920C24; color:#920C24; background:#FBEEF0; }
 		.xif-apply   { padding:0 18px; height:32px; border-radius:7px; border:none;
-		               background:linear-gradient(135deg,#8b5cf6,#a78bfa); color:#fff;
+		               background:#920C24; color:#fff;
 		               font-size:12.5px; font-weight:700; cursor:pointer; transition:opacity .15s; }
 		.xif-apply:hover { opacity:.88; }
-		.xif-btn-active { background:linear-gradient(135deg,#f5f3ff,#ede9fe) !important;
-		                  border-color:#ddd6fe !important; color:#7c3aed !important; }
+		.xif-btn-active { background:linear-gradient(135deg,#FBEEF0,#F5D9DE) !important;
+		                  border-color:#E8B4BE !important; color:#920C24 !important; }
 		`;
 		document.head.appendChild(style);
 	}
@@ -250,7 +266,7 @@ frappe.pages['publish-result'].on_page_load = function (wrapper) {
 		<div class="er2-wrap" style="padding:20px 24px;">
 
 			<div class="er2-page-header">
-				<div class="er2-page-icon" style="background:linear-gradient(135deg,#8b5cf6,#a78bfa);">
+				<div class="er2-page-icon" style="background:#920C24;">
 					<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
 				</div>
 				<div>
@@ -679,11 +695,11 @@ frappe.pages['publish-result'].on_page_load = function (wrapper) {
 				if (!r.message) return;
 				var d = r.message;
 				var cards = [
-					{ label:'Total Students', value: d.total         || 0, color:'#8b5cf6', bg:'#f5f3ff',
+					{ label:'Total Students', value: d.total         || 0, color:'#920C24', bg:'#FBEEF0',
 					  icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' },
-					{ label:'Published',      value: d.published     || 0, color:'#10b981', bg:'#d1fae5',
+					{ label:'Published',      value: d.published     || 0, color:'#920C24', bg:'#F5D9DE',
 					  icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>' },
-					{ label:'Not Published',  value: d.not_published || 0, color:'#f59e0b', bg:'#fef3c7',
+					{ label:'Not Published',  value: d.not_published || 0, color:'#920C24', bg:'#F5D9DE',
 					  icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' },
 				];
 				var html = cards.map(function (c) {
@@ -741,11 +757,11 @@ frappe.pages['publish-result'].on_page_load = function (wrapper) {
 		var countLabel = 'Students (' + S.total + ')';
 		if (S.programme) {
 			var progLbl = $progSelect.find('option:selected').text() || S.programme;
-			countLabel += ' &nbsp;<span style="font-size:11px;color:#3b82f6;font-weight:600;background:#eff6ff;border-radius:5px;padding:2px 8px;">' + frappe.utils.escape_html(progLbl) + '</span>';
+			countLabel += ' &nbsp;<span style="font-size:11px;color:#920C24;font-weight:600;background:#FBEEF0;border-radius:5px;padding:2px 8px;">' + frappe.utils.escape_html(progLbl) + '</span>';
 		}
 		if (S.course) {
 			var courseLbl = $courseSelect.find('option:selected').text() || S.course;
-			countLabel += ' &nbsp;<span style="font-size:11px;color:#8b5cf6;font-weight:600;background:#f5f3ff;border-radius:5px;padding:2px 8px;">' + frappe.utils.escape_html(courseLbl) + '</span>';
+			countLabel += ' &nbsp;<span style="font-size:11px;color:#920C24;font-weight:600;background:#FBEEF0;border-radius:5px;padding:2px 8px;">' + frappe.utils.escape_html(courseLbl) + '</span>';
 		}
 		$countLbl.html(countLabel);
 		if (!S.students.length) {
@@ -772,7 +788,7 @@ frappe.pages['publish-result'].on_page_load = function (wrapper) {
 			var stuEsc   = frappe.utils.escape_html(s.student);
 
 			return '<tr>' +
-				'<td style="width:40px;"><input type="checkbox" class="pr-row-chk" data-student="' + stuEsc + '" style="accent-color:#8b5cf6;cursor:pointer;"></td>' +
+				'<td style="width:40px;"><input type="checkbox" class="pr-row-chk" data-student="' + stuEsc + '" style="accent-color:#920C24;cursor:pointer;"></td>' +
 				'<td style="min-width:220px;">' +
 					'<div style="display:flex;align-items:center;gap:10px;">' +
 					'<div class="pr-savatar ' + avClass + '">' + avatar + '</div>' +
@@ -794,11 +810,11 @@ frappe.pages['publish-result'].on_page_load = function (wrapper) {
 		});
 
 		var thead = '<table class="pr-table"><thead><tr>' +
-			'<th style="width:40px;"><input type="checkbox" id="pr-chk-all" style="accent-color:#8b5cf6;cursor:pointer;"></th>' +
+			'<th style="width:40px;"><input type="checkbox" id="pr-chk-all" style="accent-color:#920C24;cursor:pointer;"></th>' +
 			'<th>Student</th>' +
 			'<th>Programme</th>' +
 			'<th class="center"><span class="pr-status-hdr" id="pr-status-hdr">Publish Status' +
-				(S.status_filter !== 'all' ? ' <span style="color:#8b5cf6;">(' + sfLabel + ')</span>' : '') +
+				(S.status_filter !== 'all' ? ' <span style="color:#920C24;">(' + sfLabel + ')</span>' : '') +
 				' <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg>' +
 				'<div class="pr-status-dd">' +
 				'<div class="dd-item' + (S.status_filter==='all'?' active':'') + '" data-filter="all">All</div>' +
@@ -967,7 +983,7 @@ frappe.pages['publish-result'].on_page_load = function (wrapper) {
 		}
 
 		var $overlay = $('<div class="xif-overlay"></div>');
-		var $modal = $('<div class="xif-modal"><div class="xif-header"><span class="xif-title"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2.5" style="vertical-align:-3px;margin-right:6px;"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>Institutional Filter</span><button class="xif-close">&#10005;</button></div><div class="xif-body"><div class="xif-types"></div><div class="xif-panel"><div class="xif-ph"><div class="xif-ph-title"></div><input class="xif-search" type="text" placeholder="Search\u2026"></div><div class="xif-opts"></div></div></div><div class="xif-footer"><span class="xif-status">No Filters Applied</span><div class="xif-actions"><button class="xif-clear">Clear All</button><button class="xif-apply">Apply</button></div></div></div>');
+		var $modal = $('<div class="xif-modal"><div class="xif-header"><span class="xif-title"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#920C24" stroke-width="2.5" style="vertical-align:-3px;margin-right:6px;"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>Institutional Filter</span><button class="xif-close">&#10005;</button></div><div class="xif-body"><div class="xif-types"></div><div class="xif-panel"><div class="xif-ph"><div class="xif-ph-title"></div><input class="xif-search" type="text" placeholder="Search\u2026"></div><div class="xif-opts"></div></div></div><div class="xif-footer"><span class="xif-status">No Filters Applied</span><div class="xif-actions"><button class="xif-clear">Clear All</button><button class="xif-apply">Apply</button></div></div></div>');
 		$overlay.append($modal);
 		$('body').append($overlay);
 		render_types(); render_panel(); update_footer();
@@ -984,7 +1000,7 @@ frappe.pages['publish-result'].on_page_load = function (wrapper) {
 			var $btn = $body.find('#pr-inst-filter-btn');
 			if (total) {
 				$btn.addClass('xif-btn-active').find('.xif-count').remove();
-				$btn.append('<span class="xif-count" style="background:#8b5cf6;color:#fff;border-radius:20px;font-size:10px;font-weight:700;padding:1px 6px;margin-left:4px;">' + total + '</span>');
+				$btn.append('<span class="xif-count" style="background:#920C24;color:#fff;border-radius:20px;font-size:10px;font-weight:700;padding:1px 6px;margin-left:4px;">' + total + '</span>');
 			} else {
 				$btn.removeClass('xif-btn-active').find('.xif-count').remove();
 			}

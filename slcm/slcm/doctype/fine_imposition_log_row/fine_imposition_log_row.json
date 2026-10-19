@@ -8,8 +8,7 @@
   "student",
   "source_fee_demand",
   "outstanding_amount",
-  "fine_amount",
-  "fine_demand"
+  "fine_amount"
  ],
  "fields": [
   {
@@ -24,7 +23,7 @@
    "fieldname": "source_fee_demand",
    "fieldtype": "Link",
    "in_list_view": 1,
-   "label": "Outstanding Fee Demand",
+   "label": "Fee Demand",
    "options": "Fee Demand",
    "read_only": 1
   },
@@ -39,15 +38,7 @@
    "fieldname": "fine_amount",
    "fieldtype": "Currency",
    "in_list_view": 1,
-   "label": "Fine Amount",
-   "read_only": 1
-  },
-  {
-   "fieldname": "fine_demand",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Fine Demand Created",
-   "options": "Fee Demand",
+   "label": "Penalty Amount Applied",
    "read_only": 1
   }
  ],

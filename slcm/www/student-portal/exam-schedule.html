@@ -1,268 +1,778 @@
 {% extends "slcm/www/student-portal/_base.html" %}
-{% block title %}Exam Schedule{% endblock %}
+{% block title %}Assessment Schedule{% endblock %}
 
 {% block extra_head %}
 <style>
-/* ── Overview stats grid ── */
-.es-overview {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
-  margin-bottom: 24px;
-}
-.es-stat {
-  background: var(--sp-card);
-  border: 1px solid var(--sp-border);
-  border-radius: 14px;
-  padding: 18px 20px;
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  position: relative;
-  overflow: hidden;
-  transition: box-shadow 0.18s, transform 0.18s;
-}
-.es-stat:hover { box-shadow: var(--sp-shadow-md, 0 4px 18px rgba(0,0,0,.08)); transform: translateY(-2px); }
-.es-stat::before {
-  content: "";
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 3px;
-  border-radius: 14px 14px 0 0;
-}
-.es-stat-upcoming::before  { background: linear-gradient(90deg, var(--sp-primary), #1e4080); }
-.es-stat-nextdate::before  { background: linear-gradient(90deg, var(--sp-secondary, #920c24), #c0192f); }
-.es-stat-reexam::before    { background: linear-gradient(90deg, #b45309, #d97706); }
-.es-stat-published::before { background: linear-gradient(90deg, #15803d, #16a34a); }
+  /* ── Header ── */
+  .es-header-wrap {
+    /* Same white header card as the other portal pages */
+    background: var(--sp-card, #fff);
+    border: 1px solid var(--sp-border, #e5e7eb);
+    border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(16,24,40,0.04);
+    padding: 24px 28px;
+    margin-bottom: 22px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border: 1px solid var(--sp-border);
+  }
 
-.es-stat-icon {
-  width: 44px; height: 44px;
-  border-radius: 12px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 22px;
-  flex-shrink: 0;
-}
-.es-stat-upcoming .es-stat-icon  { background: rgba(43,46,74,.07);  color: var(--sp-primary); }
-.es-stat-nextdate .es-stat-icon  { background: rgba(146,12,36,.08); color: var(--sp-secondary, #920c24); }
-.es-stat-reexam .es-stat-icon    { background: rgba(180,83,9,.08);  color: #b45309; }
-.es-stat-published .es-stat-icon { background: rgba(21,128,61,.08); color: #15803d; }
+  .es-header-icon {
+    width: 64px;
+    height: 64px;
+    background: #fce8e8;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    color: var(--sp-primary);
+    flex-shrink: 0;
+    background: var(--sp-primary-light, #fff0f2);
+    color: var(--sp-primary);
+  }
 
-.es-stat-body { min-width: 0; flex: 1; }
-.es-stat-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .05em;
-  text-transform: uppercase;
-  color: var(--sp-text-4);
-  margin-bottom: 4px;
-}
-.es-stat-value {
-  font-size: 28px;
-  font-weight: 800;
-  color: var(--sp-text-1);
-  line-height: 1.1;
-}
-.es-stat-sub {
-  font-size: 11px;
-  color: var(--sp-text-4);
-  margin-top: 3px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+  .es-header-title {
+    /* same as the other portal page titles */
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.25;
+    margin-bottom: 4px;
+    color: var(--sp-text-1);
+  }
 
-/* ── Exam plan cards ── */
-.exam-plan {
-  background: var(--sp-card);
-  border: 1px solid var(--sp-border);
-  border-radius: 14px;
-  overflow: hidden;
-  margin-bottom: 20px;
-  box-shadow: var(--sp-shadow-sm);
-}
-.exam-plan-strip { height: 4px; }
+  .es-header-sub {
+    font-size: 14px;
+    color: var(--sp-text-3);
+  }
 
-.exam-plan-head {
-  padding: 16px 20px;
-  display: flex;
-  justify-content: space-between;
-  gap: 14px;
-  align-items: center;
-  border-bottom: 1px solid var(--sp-border);
-  background: linear-gradient(135deg, rgba(43,46,74,.03) 0%, transparent 60%);
-}
-.exam-title { font-size: 15px; font-weight: 800; color: var(--sp-text-1); margin-bottom: 4px; }
-.exam-meta  { font-size: 12px; color: var(--sp-text-4); display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
-.exam-meta-dot::before { content: "·"; margin-right: 6px; }
+  /* ── Overview Stats ── */
+  .es-overview {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+  }
 
-/* ── Data table ── */
-.es-table-wrap {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-.es-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-  min-width: 600px;
-}
+  .es-stat {
+    background: #fff;
+    border: 1px solid var(--sp-border);
+    border-radius: 14px;
+    padding: 18px 20px;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  }
 
-/* Column header bar — NLSIU navy */
-.es-table thead tr {
-  background: var(--sp-primary);
-}
-.es-table th {
-  padding: 10px 16px;
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: .07em;
-  text-transform: uppercase;
-  color: rgba(255,255,255,.82);
-  text-align: left;
-  white-space: nowrap;
-  border: none;
-}
-.es-table th:first-child { border-radius: 0; }
+  .es-stat::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    border-radius: 14px 14px 0 0;
+  }
 
-/* Zebra rows */
-.es-table tbody tr:nth-child(odd)  { background: #ffffff; }
-.es-table tbody tr:nth-child(even) { background: rgba(43,46,74,.025); }
-.es-table tbody tr:hover           { background: rgba(43,46,74,.055); transition: background .12s; }
+  .es-stat::before {
+    background: var(--sp-primary);
+  }
 
-.es-table td {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--sp-border);
-  vertical-align: middle;
-}
-.es-table tbody tr:last-child td { border-bottom: none; }
+  .es-stat-nextdate::before {
+    background: #920c24;
+  }
 
-/* Sno column */
-.es-col-sno {
-  width: 40px;
-  text-align: center;
-  color: var(--sp-text-4);
-  font-size: 12px;
-  font-weight: 600;
-}
-.es-table th.es-col-sno { text-align: center; }
+  .es-stat-reexam::before {
+    background: #920c24;
+  }
 
-/* Course name + code */
-.es-course-name { font-weight: 700; color: var(--sp-text-1); margin-bottom: 2px; line-height: 1.3; }
-.es-course-code { font-size: 10.5px; color: var(--sp-text-4); font-family: monospace; letter-spacing: .02em; }
+  .es-stat-published::before {
+    background: #920c24;
+  }
 
-/* Date + time */
-.es-date-main { font-weight: 700; color: var(--sp-text-1); }
-.es-time-sub  { font-size: 11.5px; color: var(--sp-text-3); margin-top: 2px; }
-.es-tba       { color: var(--sp-text-4); font-size: 12px; font-style: italic; }
+  .es-stat-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
 
-/* Venue */
-.es-venue     { color: var(--sp-text-2); font-weight: 500; }
+  .es-stat-upcoming .es-stat-icon {
+    background: #fff0f2;
+    color: var(--sp-primary);
+  }
 
-/* Status badges */
-.es-badge {
-  display: inline-flex; align-items: center; gap: 4px;
-  font-size: 11px; font-weight: 700;
-  border-radius: 20px;
-  padding: 3px 10px;
-  white-space: nowrap;
-}
-.es-badge-present  { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
-.es-badge-detained { background: #fdf0f2; color: #920c24; border: 1px solid #fecdd3; }
-.es-badge-pending  { background: #f0f1f6; color: var(--sp-primary); border: 1px solid rgba(43,46,74,.15); }
-.es-badge-upcoming {
-  display: inline-flex; align-items: center; gap: 3px;
-  font-size: 10px; font-weight: 700;
-  background: rgba(43,46,74,.07); color: var(--sp-primary);
-  border-radius: 20px; padding: 2px 7px;
-  margin-left: 5px; vertical-align: middle;
-}
+  .es-stat-nextdate .es-stat-icon {
+    background: #fff0f2;
+    color: #920c24;
+  }
 
-/* Table footer — row count + summary */
-.es-table-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 16px;
-  background: rgba(43,46,74,.03);
-  border-top: 1px solid var(--sp-border);
-  font-size: 11.5px;
-  color: var(--sp-text-4);
-  gap: 10px;
-  flex-wrap: wrap;
-}
-.es-table-footer strong { color: var(--sp-text-2); }
-.es-footer-pills { display: flex; gap: 6px; flex-wrap: wrap; }
-.es-footer-pill {
-  display: inline-flex; align-items: center; gap: 4px;
-  font-size: 10.5px; font-weight: 600;
-  border-radius: 20px; padding: 2px 9px;
-}
-.es-footer-pill-upcoming  { background: rgba(43,46,74,.07);  color: var(--sp-primary); }
-.es-footer-pill-present   { background: #f0fdf4; color: #15803d; }
-.es-footer-pill-detained  { background: #fdf0f2; color: #920c24; }
+  .es-stat-reexam .es-stat-icon {
+    background: #fff0f2;
+    color: #920c24;
+  }
 
-/* ── Empty states ── */
-.exam-empty {
-  text-align: center;
-  padding: 52px 24px;
-  color: var(--sp-text-4);
-}
-.exam-empty .sp-ms {
-  font-size: 52px;
-  opacity: .25;
-  display: block;
-  margin-bottom: 14px;
-}
-.exam-empty-title { font-size: 16px; font-weight: 700; color: var(--sp-text-2); margin-bottom: 6px; }
-.exam-empty-sub   { font-size: 13px; }
+  .es-stat-published .es-stat-icon {
+    background: #fff0f2;
+    color: #920c24;
+  }
 
-/* ── Page header accent ── */
-.es-header-wrap {
-  background: #2b2e4a;
-  border-radius: 16px;
-  padding: 24px 28px;
-  margin-bottom: 22px;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-.es-header-icon {
-  width: 52px; height: 52px;
-  background: rgba(255,255,255,.12);
-  border-radius: 14px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 26px;
-  flex-shrink: 0;
-}
-.es-header-title { font-size: 22px; font-weight: 800; margin-bottom: 4px; }
-.es-header-sub   { font-size: 13px; opacity: .8; }
+  .es-stat-body {
+    min-width: 0;
+    flex: 1;
+  }
 
-/* ── Responsive ── */
-@media (max-width: 900px) {
-  .es-overview { grid-template-columns: repeat(2, 1fr); }
-}
-@media (max-width: 540px) {
-  .es-overview { grid-template-columns: 1fr; gap: 10px; }
-  .es-header-wrap { padding: 18px 16px; }
-  .es-header-title { font-size: 18px; }
-  .exam-plan-head { flex-direction: column; align-items: flex-start; }
-  .es-table th, .es-table td { padding: 10px 12px; }
-  .es-col-sno { display: none; }
-}
+  .es-stat-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--sp-text-4);
+    margin-bottom: 4px;
+  }
+
+  .es-stat-value {
+    font-size: 24px;
+    font-weight: 400;
+    color: var(--sp-text-1);
+    line-height: 1.1;
+  }
+
+  .es-stat-sub {
+    font-size: 11px;
+    color: var(--sp-text-4);
+    margin-top: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ── Section Header (Term Header) ── */
+  .es-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .es-section-title {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .es-section-title-icon {
+    font-size: 24px;
+    color: var(--sp-primary);
+    margin-top: 2px;
+  }
+
+  .es-section-title-text {
+    font-size: 18px;
+    font-weight: 400;
+    color: var(--sp-text-1);
+  }
+
+  .es-section-title-sub {
+    font-size: 14px;
+    color: var(--sp-text-4);
+    margin-top: 2px;
+  }
+
+  .es-search-input {
+    padding: 8px 12px 8px 36px;
+    border: 1px solid var(--sp-border);
+    border-radius: 20px;
+    font-size: 13px;
+    width: 250px;
+    background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%236b7280' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z'/%3E%3C/svg%3E") no-repeat 12px center;
+  }
+
+  .es-search-input:focus {
+    outline: none;
+    border-color: var(--sp-primary);
+  }
+
+
+  /* ── Exam Plan Card & Table ── */
+  .exam-plan {
+    background: #fff;
+    border: 1px solid var(--sp-border);
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  }
+
+  .exam-plan-strip {
+    height: 4px;
+  }
+
+  .exam-plan-head {
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    align-items: center;
+    border-bottom: 1px solid var(--sp-border);
+  }
+
+  .exam-title {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--sp-text-1);
+    margin-bottom: 4px;
+  }
+
+  .exam-meta {
+    font-size: 12px;
+    color: var(--sp-text-4);
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .exam-meta-dot::before {
+    content: "·";
+    margin-right: 6px;
+  }
+
+  /* ── Data table ── */
+  .es-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .es-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    min-width: 600px;
+  }
+
+  /* Column header bar — NLSIU navy? No, soft pink in screenshot! */
+  .es-table thead tr {
+    background: #fdf5f5;
+  }
+
+  .es-table th {
+    padding: 10px 16px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: #000;
+    text-align: left;
+    white-space: nowrap;
+    border: none;
+  }
+
+  .es-table th:first-child {
+    border-radius: 0;
+  }
+
+  /* Zebra rows */
+  .es-table tbody tr:nth-child(odd) {
+    background: #ffffff;
+  }
+
+  .es-table tbody tr:nth-child(even) {
+    background: rgba(146,12,36, .025);
+  }
+
+  .es-table tbody tr:hover {
+    background: rgba(146,12,36, .055);
+    transition: background .12s;
+  }
+
+  .es-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--sp-border);
+    vertical-align: middle;
+  }
+
+  .es-table tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  /* Sno column */
+  .es-col-sno {
+    width: 40px;
+    text-align: center;
+    color: var(--sp-text-4);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .es-table th.es-col-sno {
+    text-align: center;
+  }
+
+  /* Course name + code */
+  .es-course-name {
+    font-weight: 700;
+    color: var(--sp-text-1);
+    margin-bottom: 2px;
+    line-height: 1.3;
+  }
+
+  .es-course-code {
+    font-size: 10.5px;
+    color: var(--sp-text-4);
+    letter-spacing: .02em;
+  }
+
+  /* Date + time */
+  .es-date-main {
+    color: var(--sp-text-1);
+  }
+
+  .es-time-sub {
+    font-size: 11.5px;
+    color: var(--sp-text-3);
+    margin-top: 2px;
+  }
+
+  .es-tba {
+    color: var(--sp-text-4);
+    font-size: 12px;
+    font-style: italic;
+  }
+
+  /* Venue */
+  .es-venue {
+    color: var(--sp-text-2);
+    font-weight: 500;
+  }
+
+  /* Status badges */
+  .es-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 20px;
+    padding: 3px 10px;
+    white-space: nowrap;
+  }
+
+  .es-badge-present {
+    background: #fff0f2;
+    color: #920c24;
+    border: 1px solid #f5c6ce;
+  }
+
+  .es-badge-detained {
+    background: #fdf0f2;
+    color: #920c24;
+    border: 1px solid #fecdd3;
+  }
+
+  .es-badge-pending {
+    background: #f0f1f6;
+    color: var(--sp-primary);
+    border: 1px solid rgba(146,12,36, .15);
+  }
+
+  .es-badge-scheduled {
+    background: #f0fdf4;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+  }
+
+  /* Assessments under a course (Exam Assessment Schedule) */
+  .es-table tbody tr.es-has-asmt {
+    cursor: pointer;
+  }
+
+  .es-table tbody tr.es-has-asmt.es-open,
+  .es-table tbody tr.es-has-asmt.es-open:hover {
+    background: rgba(146,12,36, .05);
+  }
+
+  .es-table tbody tr.es-has-asmt.es-open td {
+    border-bottom-color: transparent;
+  }
+
+  .es-table tbody tr.es-asmt-row,
+  .es-table tbody tr.es-asmt-row:hover {
+    background: rgba(146,12,36, .05);
+  }
+
+  .es-asmt-row[hidden] {
+    display: none !important;
+  }
+
+  /* Indent so the list lines up with the course name */
+  .es-table tr.es-asmt-row td {
+    padding: 0 16px 16px 56px;
+  }
+
+  .es-asmt-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px 4px 12px;
+    border-radius: 20px;
+    border: 1px solid #f5c6ce;
+    background: #fff0f2;
+    color: var(--sp-primary);
+    font-size: 11.5px;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background .12s;
+  }
+
+  .es-asmt-toggle:hover {
+    background: #fde4e8;
+  }
+
+  .es-asmt-toggle:focus-visible {
+    outline: 2px solid var(--sp-primary);
+    outline-offset: 2px;
+  }
+
+  .es-asmt-chevron {
+    font-size: 18px;
+    transition: transform .2s ease;
+  }
+
+  .es-asmt-toggle[aria-expanded="true"] .es-asmt-chevron {
+    transform: rotate(180deg);
+  }
+
+  .es-asmt-list {
+    background: #fff;
+    border: 1px solid var(--sp-border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .es-asmt-item {
+    display: grid;
+    grid-template-columns: minmax(140px, 1.3fr) repeat(3, minmax(120px, 1fr)) minmax(110px, auto);
+    grid-template-areas: "label date first second status";
+    gap: 12px;
+    align-items: center;
+    padding: 10px 14px;
+    font-size: 12.5px;
+    color: var(--sp-text-2);
+    border-top: 1px solid var(--sp-border);
+  }
+
+  .es-a-label  { grid-area: label; min-width: 0; }
+  .es-a-date   { grid-area: date; }
+  .es-a-first  { grid-area: first; }
+  .es-a-second { grid-area: second; }
+  .es-a-status { grid-area: status; }
+
+  .es-asmt-item:first-child {
+    border-top: none;
+  }
+
+  .es-asmt-head {
+    background: #fdf5f5;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--sp-text-3);
+    padding-top: 7px;
+    padding-bottom: 7px;
+  }
+
+  .es-asmt-label {
+    font-weight: 700;
+    color: var(--sp-text-1);
+  }
+
+  .es-asmt-remarks {
+    font-size: 11px;
+    color: var(--sp-text-4);
+    margin-top: 2px;
+  }
+
+  .es-asmt-deadline {
+    font-weight: 600;
+    color: var(--sp-text-1);
+  }
+
+  .es-asmt-upcoming { background: #f0f1f6; color: #3b4a6b; border: 1px solid #d8dcea; }
+  .es-asmt-open     { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+  .es-asmt-due      { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+  .es-asmt-closed   { background: #f3f4f6; color: #6b7280; border: 1px solid #e5e7eb; }
+  .es-asmt-tba      { background: #f3f4f6; color: #9ca3af; border: 1px solid #e5e7eb; font-style: italic; }
+
+  /* The layout below follows the card's own width (not the viewport), since the
+     portal sidebar stays open on tablets and leaves the card much narrower. */
+  .exam-plan {
+    container: esplan / inline-size;
+  }
+
+  /* Medium card: assessment rows become small cards — name + status on top, dates below */
+  @container esplan (max-width: 900px) {
+    .es-asmt-head { display: none; }
+    .es-asmt-item {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-areas:
+        "label  label  status"
+        "date   first  second";
+      gap: 8px 14px;
+      align-items: start;
+    }
+    .es-a-status { justify-self: end; }
+    .es-asmt-item > div[data-label]:not(.es-a-label):not(.es-a-status)::before {
+      content: attr(data-label);
+      display: block;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: var(--sp-text-4);
+      margin-bottom: 2px;
+    }
+  }
+
+  @container esplan (max-width: 760px) {
+    .es-table { min-width: 0; }
+    .es-table th,
+    .es-table td { padding: 10px 12px; }
+    .es-table tr.es-asmt-row td { padding: 0 12px 14px; }
+  }
+
+  /* Narrow card: dates stack one per line */
+  @container esplan (max-width: 440px) {
+    .es-asmt-item {
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas:
+        "label  status"
+        "date   date"
+        "first  first"
+        "second second";
+    }
+  }
+
+  /* Table footer — row count + summary */
+  .es-table-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: #fff;
+    border-top: 1px solid var(--sp-border);
+    font-size: 12px;
+    color: var(--sp-text-4);
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .es-table-footer strong {
+    color: var(--sp-text-1);
+  }
+
+  /* Pagination */
+  .es-pagination {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .es-page-btn {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--sp-text-3);
+    cursor: pointer;
+  }
+
+  .es-page-btn:hover {
+    background: rgba(0, 0, 0, 0.05);
+  }
+
+  .es-page-btn.active {
+    background: #fdf0f2;
+    color: var(--sp-primary);
+  }
+
+
+  /* ── Empty states ── */
+  .exam-empty {
+    text-align: center;
+    padding: 52px 24px;
+    color: var(--sp-text-4);
+  }
+
+  .exam-empty .sp-ms {
+    font-size: 52px;
+    opacity: .25;
+    display: block;
+    margin-bottom: 14px;
+  }
+
+  .exam-empty-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--sp-text-2);
+    margin-bottom: 6px;
+  }
+
+  .exam-empty-sub {
+    font-size: 13px;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 900px) {
+    .es-overview {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 540px) {
+    .es-overview {
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    .es-header-wrap {
+      padding: 18px 16px;
+    }
+
+    .es-header-title {
+      font-size: 18px;
+    }
+
+    .exam-plan-head {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .es-col-sno {
+      display: none;
+    }
+  }
+
+  /* Phone: section header stacks, search goes full width */
+  @media (max-width: 640px) {
+    .es-section-header { align-items: stretch; }
+    .es-search-input { width: 100%; }
+  }
+
+  /* Narrow card: course table turns into one card per course */
+  @container esplan (max-width: 600px) {
+    .es-table thead { display: none; }
+    .es-table,
+    .es-table tbody { display: block; }
+
+    .es-table tbody tr.es-table-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 12px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--sp-border);
+    }
+
+    .es-table tbody tr.es-has-asmt.es-open { border-bottom-color: transparent; }
+
+    .es-table tbody tr.es-table-row td {
+      display: block;
+      padding: 0;
+      border: none;
+      min-width: 0;
+    }
+
+    .es-table tbody tr.es-table-row td.es-col-sno { display: none; }
+    .es-table tbody tr.es-table-row td.es-cell-course { grid-column: 1 / -1; }
+    .es-table tbody tr.es-table-row td[data-label="Status"] { grid-column: 1 / -1; }
+
+    .es-table tbody tr.es-table-row td[data-label]::before {
+      content: attr(data-label);
+      display: block;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: var(--sp-text-4);
+      margin-bottom: 4px;
+    }
+
+    .es-table tbody tr.es-table-row td[data-label="Status"]:has(.es-asmt-toggle)::before { display: none; }
+
+    .es-asmt-toggle {
+      width: 100%;
+      justify-content: center;
+      padding: 7px 12px;
+    }
+
+    .es-table tbody tr.es-asmt-row { display: block; }
+    .es-table tbody tr.es-asmt-row td {
+      display: block;
+      padding: 0 12px 14px;
+      border-bottom: 1px solid var(--sp-border);
+    }
+  }
+
+  /* ── Dark mode ── */
+  body.sp-dark .es-stat,
+  body.sp-dark .exam-plan,
+  body.sp-dark .es-table-footer,
+  body.sp-dark .es-table tbody tr:nth-child(odd) { background: var(--sp-card); }
+  body.sp-dark .es-table tbody tr:nth-child(even) { background: rgba(255,255,255,0.025); }
+  body.sp-dark .es-table tbody tr:hover { background: rgba(255,255,255,0.05); }
+  body.sp-dark .es-table thead tr { background: #1a2540; }
+  body.sp-dark .es-table th { color: var(--sp-text-2); }
+  body.sp-dark .es-search-input { background-color: #1a2540; color: var(--sp-text-1); }
+  body.sp-dark .es-header-icon,
+  body.sp-dark .es-stat .es-stat-icon { background: var(--sp-primary-light); color: var(--sp-primary); }
+  body.sp-dark .es-stat-nextdate::before,
+  body.sp-dark .es-stat-reexam::before,
+  body.sp-dark .es-stat-published::before { background: var(--sp-primary); }
+  body.sp-dark .es-badge-present,
+  body.sp-dark .es-badge-detained { background: var(--sp-primary-light); color: #f08da0; border-color: var(--sp-primary-mid); }
+  body.sp-dark .es-badge-pending { background: rgba(255,255,255,0.06); border-color: var(--sp-border); }
+  body.sp-dark .es-badge-scheduled { background: var(--sp-success-bg); color: var(--sp-success); border-color: rgba(74,222,128,0.3); }
+  body.sp-dark .es-badge[style*="#f5c6ce"] { border-color: var(--sp-primary-mid) !important; }
+  body.sp-dark .es-table tbody tr.es-asmt-row,
+  body.sp-dark .es-table tbody tr.es-asmt-row:hover,
+  body.sp-dark .es-table tbody tr.es-has-asmt.es-open,
+  body.sp-dark .es-table tbody tr.es-has-asmt.es-open:hover { background: rgba(255,255,255,0.04); }
+  body.sp-dark .es-asmt-list { background: var(--sp-card); }
+  body.sp-dark .es-asmt-toggle { background: var(--sp-primary-light); color: #f08da0; border-color: var(--sp-primary-mid); }
+  body.sp-dark .es-asmt-toggle:hover { background: rgba(240,141,160,0.18); }
+  body.sp-dark .es-asmt-head { background: #1a2540; color: var(--sp-text-2); }
+  body.sp-dark .es-asmt-upcoming { background: rgba(255,255,255,0.06); color: var(--sp-text-2); border-color: var(--sp-border); }
+  body.sp-dark .es-asmt-open { background: var(--sp-success-bg); color: var(--sp-success); border-color: rgba(74,222,128,0.3); }
+  body.sp-dark .es-asmt-due { background: rgba(251,146,60,0.12); color: #fdba74; border-color: rgba(251,146,60,0.35); }
+  body.sp-dark .es-asmt-closed,
+  body.sp-dark .es-asmt-tba { background: rgba(255,255,255,0.04); color: var(--sp-text-4); border-color: var(--sp-border); }
+  body.sp-dark .es-page-btn:hover { background: rgba(255,255,255,0.06); }
+  body.sp-dark .es-page-btn.active { background: var(--sp-primary-light); }
 </style>
 {% endblock %}
 
 {% block content %}
-
 <!-- Page Header -->
 <div class="es-header-wrap fade-in">
-  <div class="es-header-icon">
-    <span class="sp-ms">event_note</span>
-  </div>
   <div>
-    <div class="es-header-title">Exam Schedule</div>
-    <div class="es-header-sub">Your examination timetable, seat assignments and result updates</div>
+    <div class="es-header-title" style="font-size: 18px !important; font-weight: 700 !important;">Assessment Schedule</div>
   </div>
 </div>
 
@@ -279,7 +789,7 @@
   <div class="es-stat es-stat-upcoming">
     <div class="es-stat-icon"><span class="sp-ms">upcoming</span></div>
     <div class="es-stat-body">
-      <div class="es-stat-label">Upcoming Exams</div>
+      <div class="es-stat-label">Upcoming Assessments</div>
       <div class="es-stat-value">{{ upcoming_exams or 0 }}</div>
       <div class="es-stat-sub">scheduled ahead</div>
     </div>
@@ -288,34 +798,16 @@
   <div class="es-stat es-stat-nextdate">
     <div class="es-stat-icon"><span class="sp-ms">today</span></div>
     <div class="es-stat-body">
-      <div class="es-stat-label">Next Exam Date</div>
+      <div class="es-stat-label">Next Assessment Date</div>
       {% if next_exam_date and next_exam_date != "–" %}
-        <div class="es-stat-value" style="font-size:18px;margin-top:2px;">{{ next_exam_date }}</div>
-        {% if next_exam_course %}
-        <div class="es-stat-sub" title="{{ next_exam_course }}">{{ next_exam_course }}</div>
-        {% endif %}
-      {% else %}
-        <div class="es-stat-value" style="font-size:22px;color:var(--sp-text-4);">–</div>
-        <div class="es-stat-sub">none scheduled</div>
+      <div class="es-stat-value" style="font-size:18px;margin-top:2px;">{{ next_exam_date }}</div>
+      {% if next_exam_course %}
+      <div class="es-stat-sub" title="{{ next_exam_course }}">{{ next_exam_course }}</div>
       {% endif %}
-    </div>
-  </div>
-
-  <div class="es-stat es-stat-reexam">
-    <div class="es-stat-icon"><span class="sp-ms">replay_circle_filled</span></div>
-    <div class="es-stat-body">
-      <div class="es-stat-label">Re-Exam Requests</div>
-      <div class="es-stat-value">{{ reexam_requests or 0 }}</div>
-      <div class="es-stat-sub">active requests</div>
-    </div>
-  </div>
-
-  <div class="es-stat es-stat-published">
-    <div class="es-stat-icon"><span class="sp-ms">task_alt</span></div>
-    <div class="es-stat-body">
-      <div class="es-stat-label">Results Published</div>
-      <div class="es-stat-value">{{ results_published or 0 }}</div>
-      <div class="es-stat-sub">of {{ total_exams or 0 }} exam plan{{ "s" if (total_exams or 0) != 1 else "" }}</div>
+      {% else %}
+      <div class="es-stat-value" style="font-size:22px;color:var(--sp-text-4);">–</div>
+      <div class="es-stat-sub">none scheduled</div>
+      {% endif %}
     </div>
   </div>
 
@@ -325,139 +817,222 @@
 <div class="sp-card fade-in">
   <div class="exam-empty">
     <span class="sp-ms">event_busy</span>
-    <div class="exam-empty-title">No Exam Schedule Yet</div>
-    <div class="exam-empty-sub">Exam plans mapped to your courses will appear here once published by the Examinations Office.</div>
+    <div class="exam-empty-title">No Assessment Schedule Yet</div>
+    <div class="exam-empty-sub">Assessment plans mapped to your courses will appear here once published by the Examinations
+      Office.</div>
   </div>
 </div>
 {% else %}
 
-  {% for plan in exam_plans %}
-  {# compute summary counts for footer #}
-  {% set ns = namespace(upcoming=0, present=0, detained=0) %}
-  {% for c in plan.courses %}
-    {% if c.is_upcoming %}{% set ns.upcoming = ns.upcoming + 1 %}{% endif %}
-    {% if c.attendance_status in ['Present', 'Eligible'] %}{% set ns.present = ns.present + 1 %}{% endif %}
-    {% if c.attendance_status in ['Detained', 'Absent', 'Low Attendance'] %}{% set ns.detained = ns.detained + 1 %}{% endif %}
-  {% endfor %}
+{% for plan in exam_plans %}
+{% set plan_idx = loop.index %}
 
-  <div class="exam-plan fade-in">
-
-    <!-- Colour strip -->
-    <div class="exam-plan-strip" style="background:{% if plan.is_published %}#15803d{% elif plan.status == 'Active' %}var(--sp-primary){% else %}var(--sp-text-4){% endif %};"></div>
-
-    <!-- Plan header -->
-    <div class="exam-plan-head">
-      <div style="min-width:0;">
-        <div class="exam-title">{{ plan.exam_name }}</div>
-        <div class="exam-meta">
-          {% if plan.term %}<span>{{ plan.term }}</span>{% endif %}
-          <span class="exam-meta-dot">{{ plan.course_count }} Course Paper{{ "s" if plan.course_count != 1 else "" }}</span>
-          {% if plan.published_on %}
-          <span class="exam-meta-dot">Results Published {{ frappe.utils.format_datetime(plan.published_on, "d MMM yyyy") }}</span>
-          {% endif %}
-        </div>
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;flex-shrink:0;">
-        <span class="sp-badge {% if plan.is_published %}sp-badge-paid{% elif plan.status == 'Active' %}sp-badge-pend{% else %}sp-badge-over{% endif %}">
-          {% if plan.is_published %}Result Published{% else %}{{ plan.status }}{% endif %}
-        </span>
-        {% if plan.is_published %}
-        <a href="/student-portal/results" class="sp-btn sp-btn-sm sp-btn-outline">
-          <span class="sp-ms">assignment_turned_in</span>View Results
-        </a>
-        {% endif %}
-      </div>
+<div class="es-section-header fade-in">
+  <div class="es-section-title">
+    <span class="sp-ms es-section-title-icon">calendar_month</span>
+    <div>
+      <div class="es-section-title-text">{{ plan.term or "Term" }} {% if plan.academic_year %}({{ plan.academic_year
+        }}){% endif %}</div>
+      <div class="es-section-title-sub">Assessment timetable for this trimester</div>
     </div>
-
-    <!-- Data table -->
-    {% if plan.courses %}
-    <div class="es-table-wrap">
-      <table class="es-table">
-        <thead>
-          <tr>
-            <th class="es-col-sno">#</th>
-            <th>Course / Paper</th>
-            <th>Exam Date</th>
-            <th>Time</th>
-            <th>Venue / Hall</th>
-            <th>Attendance</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for course in plan.courses %}
-          <tr>
-            <td class="es-col-sno">{{ loop.index }}</td>
-            <td>
-              <div class="es-course-name">
-                {{ course.course_name }}
-                {% if course.is_upcoming %}
-                <span class="es-badge-upcoming"><span class="sp-ms" style="font-size:10px;">schedule</span>Upcoming</span>
-                {% endif %}
-              </div>
-              <div class="es-course-code">{{ course.course }}</div>
-            </td>
-            <td>
-              {% if course.exam_date %}
-              <div class="es-date-main">{{ course.exam_date }}</div>
-              {% else %}
-              <span class="es-tba">To be announced</span>
-              {% endif %}
-            </td>
-            <td>
-              {% if course.exam_time and course.exam_time != "To be announced" %}
-              <div class="es-time-sub" style="color:var(--sp-text-2);font-weight:600;">{{ course.exam_time }}</div>
-              {% else %}
-              <span class="es-tba">–</span>
-              {% endif %}
-            </td>
-            <td>
-              {% if course.venue and course.venue != "To be announced" %}
-              <span class="es-venue">{{ course.venue }}</span>
-              {% else %}
-              <span class="es-tba">To be announced</span>
-              {% endif %}
-            </td>
-            <td>
-              {% if course.attendance_status in ['Present', 'Eligible'] %}
-              <span class="es-badge es-badge-present"><span class="sp-ms" style="font-size:12px;">check_circle</span>{{ course.attendance_status }}</span>
-              {% elif course.attendance_status in ['Detained', 'Absent', 'Low Attendance'] %}
-              <span class="es-badge es-badge-detained"><span class="sp-ms" style="font-size:12px;">cancel</span>{{ course.attendance_status }}</span>
-              {% else %}
-              <span class="es-badge es-badge-pending"><span class="sp-ms" style="font-size:12px;">pending</span>Pending</span>
-              {% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Table footer summary -->
-    <div class="es-table-footer">
-      <span>Showing <strong>{{ plan.course_count }}</strong> course paper{{ "s" if plan.course_count != 1 else "" }}</span>
-      <div class="es-footer-pills">
-        {% if ns.upcoming > 0 %}
-        <span class="es-footer-pill es-footer-pill-upcoming"><span class="sp-ms" style="font-size:11px;">schedule</span>{{ ns.upcoming }} Upcoming</span>
-        {% endif %}
-        {% if ns.present > 0 %}
-        <span class="es-footer-pill es-footer-pill-present"><span class="sp-ms" style="font-size:11px;">check_circle</span>{{ ns.present }} Present</span>
-        {% endif %}
-        {% if ns.detained > 0 %}
-        <span class="es-footer-pill es-footer-pill-detained"><span class="sp-ms" style="font-size:11px;">cancel</span>{{ ns.detained }} Detained</span>
-        {% endif %}
-      </div>
-    </div>
-
-    {% else %}
-    <div class="exam-empty" style="padding:32px 20px;">
-      <span class="sp-ms" style="font-size:36px;opacity:.25;display:block;margin-bottom:10px;">pending_actions</span>
-      <div style="font-size:13px;">Course papers for this exam plan have not been mapped yet.</div>
-    </div>
-    {% endif %}
-
   </div>
-  {% endfor %}
+  <input type="text" class="es-search-input" placeholder="Search by course code or title..."
+    onkeyup="filterExamTable(this, 'exam-table-{{ loop.index }}')">
+</div>
+
+<div class="exam-plan fade-in">
+  <div class="exam-plan-strip" style="background:var(--sp-primary);"></div>
+  <div class="exam-plan-head">
+    <div style="min-width:0;">
+      <div class="exam-title">{{ plan.exam_name }}</div>
+      <div class="exam-meta">
+        {% if plan.term %}<span>{{ plan.term }}</span>{% endif %}
+        <span class="exam-meta-dot">{{ plan.course_count }} Course Paper{{ "s" if plan.course_count != 1 else ""
+          }}</span>
+        {% if plan.published_on %}
+        <span class="exam-meta-dot">Grades Published {{ frappe.utils.format_datetime(plan.published_on, "d MMM yyyy")
+          }}</span>
+        {% endif %}
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;flex-shrink:0;">
+      <span class="es-badge" style="background:#fff0f2; color:#920c24; border: 1px solid #f5c6ce;">
+        {{ plan.status }}
+      </span>
+      {% if plan.is_published %}
+      <a href="/student-portal/results" class="sp-btn sp-btn-sm sp-btn-outline">
+        <span class="sp-ms">assignment_turned_in</span>View Grades
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if plan.courses %}
+  <div class="es-table-wrap">
+    <table class="es-table" id="exam-table-{{ loop.index }}">
+      <thead>
+        <tr>
+          <th class="es-col-sno">#</th>
+          <th>Course / Paper</th>
+          <th>Assessment Date</th>
+          <th>Attendance</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for course in plan.courses %}
+        {% set asmt_id = "asmt-" ~ plan_idx ~ "-" ~ loop.index %}
+        <tr class="es-table-row{% if course.assessments %} es-has-asmt{% endif %}" {% if course.assessments
+          %}data-asmt="{{ asmt_id }}" {% endif %}>
+          <td class="es-col-sno">{{ loop.index }}</td>
+          <td class="es-cell-course">
+            <div class="es-course-name search-target">{{ course.course_name }}</div>
+            <div class="es-course-code search-target">{{ (course.get('course_code') or course.course).split('-')[0] }}
+            </div>
+          </td>
+          <td data-label="Assessment Date">
+            {% if course.exam_date %}
+            <div class="es-date-main">{{ course.exam_date }}</div>
+            {% elif course.next_assessment %}
+            <div class="es-date-main">{{ course.next_assessment.date }}</div>
+            <div class="es-time-sub">Next: {{ course.next_assessment.label }}</div>
+            {% else %}
+            <span class="es-tba">To be announced</span>
+            {% endif %}
+          </td>
+
+          <td data-label="Attendance">
+            {% if course.attendance_status in ['Present', 'Eligible'] %}
+            <span class="es-badge es-badge-present"><span class="sp-ms" style="font-size:12px;">check_circle</span>{{
+              course.attendance_status }}</span>
+            {% elif course.attendance_status in ['Detained', 'Absent', 'Low Attendance'] %}
+            <span class="es-badge es-badge-detained"><span class="sp-ms" style="font-size:12px;">cancel</span>{{
+              course.attendance_status }}</span>
+            {% else %}
+            <span class="es-badge es-badge-pending"><span class="sp-ms"
+                style="font-size:12px;">pending</span>Pending</span>
+            {% endif %}
+          </td>
+          <td data-label="Status">
+            {% if course.assessments %}
+            <button type="button" class="es-asmt-toggle" aria-expanded="false" aria-controls="{{ asmt_id }}">
+              {{ course.assessments | length }} Assessment{{ "s" if course.assessments | length != 1 else "" }}
+              <span class="sp-ms es-asmt-chevron">expand_more</span>
+            </button>
+            {% elif course.has_schedule %}
+            <span class="es-badge es-badge-scheduled">Scheduled</span>
+            {% else %}
+            <span class="es-tba">To be announced</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% if course.assessments %}
+        <tr class="es-asmt-row" id="{{ asmt_id }}" hidden>
+          <td colspan="5">
+            <div class="es-asmt-list">
+              <div class="es-asmt-item es-asmt-head">
+                <div>Assessment</div>
+                <div>Assessment Date</div>
+                <div>1st Submission Deadline</div>
+                <div>2nd Submission Deadline</div>
+                <div>Status</div>
+              </div>
+              {% for a in course.assessments %}
+              <div class="es-asmt-item">
+                <div class="es-a-label" data-label="Assessment">
+                  <div class="es-asmt-label">{{ a.label }}</div>
+                  {% if a.remarks %}<div class="es-asmt-remarks">{{ a.remarks }}</div>{% endif %}
+                </div>
+                <div class="es-a-date" data-label="Assessment Date">{% if a.assessment_date %}{{ a.assessment_date }}{% else %}<span class="es-tba">—</span>{% endif %}</div>
+                <div class="es-a-first" data-label="1st Submission Deadline">{% if a.first_deadline %}<span class="es-asmt-deadline">{{ a.first_deadline }}</span>{% else %}<span class="es-tba">—</span>{% endif %}</div>
+                <div class="es-a-second" data-label="2nd Submission Deadline">{% if a.second_deadline %}<span class="es-asmt-deadline">{{ a.second_deadline }}</span>{% else %}<span class="es-tba">—</span>{% endif %}</div>
+                <div class="es-a-status" data-label="Status"><span class="es-badge es-asmt-{{ a.tone }}">{{ a.status }}</span></div>
+              </div>
+              {% endfor %}
+            </div>
+          </td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Table footer summary -->
+  <div class="es-table-footer">
+    <div class="es-pagination" style="margin-left:auto;">
+      <span class="sp-ms" style="font-size:16px;">chevron_left</span>
+      <div class="es-page-btn active">1</div>
+      <span class="sp-ms" style="font-size:16px;">chevron_right</span>
+    </div>
+  </div>
+
+  {% else %}
+  <div class="exam-empty" style="padding:32px 20px;">
+    <span class="sp-ms" style="font-size:36px;opacity:.25;display:block;margin-bottom:10px;">pending_actions</span>
+    <div style="font-size:13px;">Course papers for this assessment plan have not been mapped yet.</div>
+  </div>
+  {% endif %}
+
+</div>
+{% endfor %}
 
 {% endif %}
 {% endif %}
+
+<script>
+  function filterExamTable(input, tableId) {
+    const filter = input.value.toLowerCase();
+    const table = document.getElementById(tableId);
+    const rows = table.getElementsByClassName('es-table-row');
+    let visibleCount = 0;
+
+    for (let i = 0; i < rows.length; i++) {
+      const targets = rows[i].getElementsByClassName('search-target');
+      let textValue = "";
+      for (let j = 0; j < targets.length; j++) {
+        textValue += targets[j].textContent || targets[j].innerText;
+      }
+
+      const show = textValue.toLowerCase().indexOf(filter) > -1;
+      rows[i].style.display = show ? "" : "none";
+      if (show) visibleCount++;
+
+      // Hide the course's assessments with it; when shown again the
+      // `hidden` attribute still decides whether it is expanded.
+      const next = rows[i].nextElementSibling;
+      if (next && next.classList.contains('es-asmt-row')) {
+        next.style.display = show ? "" : "none";
+      }
+    }
+
+    // Update showing count
+    const footerStr = table.nextElementSibling;
+    if (footerStr && footerStr.classList.contains('es-table-footer')) {
+      const countDisplay = footerStr.querySelector('.row-count-display strong');
+      if (countDisplay) {
+        countDisplay.innerText = visibleCount;
+      }
+    }
+  }
+
+  // Expand / collapse a course's assessments — the whole course row is clickable
+  document.querySelectorAll('.es-table-row.es-has-asmt').forEach(function (row) {
+    const panel = document.getElementById(row.dataset.asmt);
+    const btn = row.querySelector('.es-asmt-toggle');
+    if (!panel || !btn) return;
+
+    function toggle() {
+      const open = btn.getAttribute('aria-expanded') !== 'true';
+      btn.setAttribute('aria-expanded', open);
+      row.classList.toggle('es-open', open);
+      panel.hidden = !open;
+    }
+
+    row.addEventListener('click', function (e) {
+      if (e.target.closest('a')) return;
+      toggle();
+    });
+  });
+</script>
 {% endblock %}

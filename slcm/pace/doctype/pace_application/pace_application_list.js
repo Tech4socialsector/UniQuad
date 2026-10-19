@@ -24,12 +24,7 @@ frappe.listview_settings['PACE Application'] = {
 					frappe.hide_progress();
 					if (r.message) {
 						const file_url = r.message;
-						const link = document.createElement('a');
-						link.href = file_url;
-						link.download = file_url.split('/').pop();
-						document.body.appendChild(link);
-						link.click();
-						document.body.removeChild(link);
+						window.location.href = file_url;
 
 						frappe.show_alert({
 							message: __('Download started successfully.'),

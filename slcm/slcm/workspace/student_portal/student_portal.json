@@ -1,14 +1,31 @@
 {
  "app": "slcm",
- "charts": [],
- "content": "[{\"id\":\"sp_p1\",\"type\":\"paragraph\",\"data\":{\"text\":\"Manage the student-facing web portal \u2014 configure portal settings, publish announcements, and oversee leave applications from a single place.\",\"col\":12}},{\"id\":\"sp_sp0\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"sp_sc_settings\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Student Portal Settings\",\"col\":4}},{\"id\":\"sp_sc_portal\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Student Portal\",\"col\":3}},{\"id\":\"sp_sc_ann\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Student Announcement\",\"col\":4}},{\"id\":\"sp_sc_leave\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Student Leave Applications\",\"col\":4}},{\"id\":\"sp_sp1\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"sp_h1\",\"type\":\"paragraph\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Portal Management</span>\",\"col\":12}},{\"id\":\"sp_card1\",\"type\":\"card\",\"data\":{\"card_name\":\"Student Portal\",\"col\":4}}]",
- "creation": "2026-08-05 12:10:23.141503",
+ "charts": [
+  {
+   "chart_name": "Announcements by Type",
+   "label": "Announcements by Type"
+  },
+  {
+   "chart_name": "Announcements Over Time",
+   "label": "Announcements Over Time"
+  },
+  {
+   "chart_name": "Leave Applications by Status",
+   "label": "Leave Applications by Status"
+  },
+  {
+   "chart_name": "Leave Applications Over Time",
+   "label": "Leave Applications Over Time"
+  }
+ ],
+ "content": "[{\"type\": \"paragraph\", \"data\": {\"text\": \"<p style=\\\"color:#64748b;font-size:13px;margin:0;\\\">Run the student-facing web portal: publish announcements, review leave requests, and tune how the portal looks and what students see.</p>\", \"col\": 12}, \"id\": \"sp_00\"}, {\"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Overview</b></span>\", \"col\": 12}, \"id\": \"sp_01\"}, {\"type\": \"number_card\", \"data\": {\"number_card_name\": \"Live Announcements\", \"col\": 3}, \"id\": \"sp_02\"}, {\"type\": \"number_card\", \"data\": {\"number_card_name\": \"Urgent Announcements\", \"col\": 3}, \"id\": \"sp_03\"}, {\"type\": \"number_card\", \"data\": {\"number_card_name\": \"Pending Leave Requests\", \"col\": 3}, \"id\": \"sp_04\"}, {\"type\": \"number_card\", \"data\": {\"number_card_name\": \"Students on Leave Today\", \"col\": 3}, \"id\": \"sp_05\"}, {\"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Quick Actions</b></span>\", \"col\": 12}, \"id\": \"sp_06\"}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Open Student Portal\", \"col\": 4}, \"id\": \"sp_07\"}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"New Announcement\", \"col\": 4}, \"id\": \"sp_08\"}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Portal Settings\", \"col\": 4}, \"id\": \"sp_09\"}, {\"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Records</b></span>\", \"col\": 12}, \"id\": \"sp_10\"}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Student Announcements\", \"col\": 4}, \"id\": \"sp_11\"}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Leave Applications\", \"col\": 4}, \"id\": \"sp_12\"}, {\"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Analytics</b></span>\", \"col\": 12}, \"id\": \"sp_13\"}, {\"type\": \"chart\", \"data\": {\"chart_name\": \"Announcements by Type\", \"col\": 6}, \"id\": \"sp_14\"}, {\"type\": \"chart\", \"data\": {\"chart_name\": \"Announcements Over Time\", \"col\": 6}, \"id\": \"sp_15\"}, {\"type\": \"chart\", \"data\": {\"chart_name\": \"Leave Applications by Status\", \"col\": 6}, \"id\": \"sp_16\"}, {\"type\": \"chart\", \"data\": {\"chart_name\": \"Leave Applications Over Time\", \"col\": 6}, \"id\": \"sp_17\"}]",
+ "creation": "2026-09-29 16:25:56.315458",
  "custom_blocks": [],
  "docstatus": 0,
  "doctype": "Workspace",
  "for_user": "",
  "hide_custom": 0,
- "icon": "grid",
+ "icon": "monitor",
  "idx": 0,
  "indicator_color": "green",
  "is_hidden": 0,
@@ -19,7 +36,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Student Portal",
-   "link_count": 3,
+   "link_count": 0,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -31,17 +48,7 @@
    "link_count": 0,
    "link_to": "Student Portal Settings",
    "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Student Leave Applications",
-   "link_count": 0,
-   "link_to": "Student Leave Applications",
-   "link_type": "DocType",
-   "onboard": 0,
+   "onboard": 1,
    "type": "Link"
   },
   {
@@ -51,15 +58,42 @@
    "link_count": 0,
    "link_to": "Student Announcement",
    "link_type": "DocType",
-   "onboard": 0,
+   "onboard": 1,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Student Leave Applications",
+   "link_count": 0,
+   "link_to": "Student Leave Applications",
+   "link_type": "DocType",
+   "onboard": 1,
    "type": "Link"
   }
  ],
- "modified": "2026-05-07 01:30:31.873158",
+ "modified": "2026-09-29 16:42:03.033295",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Student Portal",
- "number_cards": [],
+ "number_cards": [
+  {
+   "label": "Live Announcements",
+   "number_card_name": "Live Announcements"
+  },
+  {
+   "label": "Urgent Announcements",
+   "number_card_name": "Urgent Announcements"
+  },
+  {
+   "label": "Pending Leave Requests",
+   "number_card_name": "Pending Leave Requests"
+  },
+  {
+   "label": "Students on Leave Today",
+   "number_card_name": "Students on Leave Today"
+  }
+ ],
  "owner": "Administrator",
  "parent_page": "",
  "public": 1,
@@ -68,31 +102,39 @@
  "sequence_id": 25.0,
  "shortcuts": [
   {
-   "color": "Blue",
-   "doc_view": "List",
-   "label": "Student Portal",
+   "color": "Green",
+   "doc_view": "",
+   "label": "Open Student Portal",
    "type": "URL",
    "url": "/student-portal"
   },
   {
-   "color": "Orange",
-   "doc_view": "List",
-   "label": "Student Announcement",
+   "color": "Blue",
+   "doc_view": "New",
+   "label": "New Announcement",
    "link_to": "Student Announcement",
    "type": "DocType"
   },
   {
-   "color": "Green",
-   "doc_view": "List",
-   "label": "Student Leave Applications",
-   "link_to": "Student Leave Applications",
+   "color": "Grey",
+   "doc_view": "",
+   "label": "Portal Settings",
+   "link_to": "Student Portal Settings",
    "type": "DocType"
   },
   {
-   "color": "Purple",
+   "color": "Blue",
    "doc_view": "List",
-   "label": "Student Portal Settings",
-   "link_to": "Student Portal Settings",
+   "label": "Student Announcements",
+   "link_to": "Student Announcement",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "label": "Leave Applications",
+   "link_to": "Student Leave Applications",
+   "stats_filter": "[[\"Student Leave Applications\", \"status\", \"=\", \"Pending\", false]]",
    "type": "DocType"
   }
  ],

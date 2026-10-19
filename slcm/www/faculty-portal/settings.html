@@ -16,7 +16,7 @@
   {% set g = gates or {} %}
 
   SECTION: Appearance (Dark Mode, Font Size, Layout Density)
-  SECTION: Notifications (Assignment, Attendance, Query, Leave, Marks toggles + Email Digest)
+  SECTION: Notifications (Assignment, Attendance, Query, Leave, Grades toggles + Email Digest)
   SECTION: Dashboard Customization (hide_today_schedule, hide_pending_evaluations, etc.)
   SECTION: Sticky Save Bar for preferences
 
@@ -45,11 +45,11 @@
     <div class="fp-card-body">
 
       {# Session info #}
-      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--fp-primary-light);border-radius:var(--fp-radius-sm);margin-bottom:24px;">
-        <span class="fp-ms" style="color:var(--fp-primary);font-size:22px;">account_circle</span>
+      <div class="fp-set-session" style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--fp-primary);border-radius:var(--fp-radius-sm);margin-bottom:24px;">
+        <span class="fp-ms" style="color:#fff;font-size:22px;">account_circle</span>
         <div>
-          <div style="font-size:11px;color:var(--fp-text-4);text-transform:uppercase;letter-spacing:0.05em;">Logged in as</div>
-          <div style="font-size:13px;font-weight:600;color:var(--fp-text-1);">{{ faculty_email or frappe.session.user }}</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.8);text-transform:uppercase;letter-spacing:0.05em;">Logged in as</div>
+          <div style="font-size:13px;font-weight:600;color:#fff;">{{ faculty_email or frappe.session.user }}</div>
         </div>
       </div>
 
@@ -78,7 +78,7 @@
           </div>
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="fp-form-grid-2">
           <div class="fp-form-group">
             <label class="fp-label">New Password</label>
             <div class="fp-pwd-wrap">
@@ -146,6 +146,30 @@
 }
 .fp-pwd-eye:hover { color: var(--fp-text-2); }
 .fp-pwd-eye .fp-ms { font-size: 18px; }
+
+/* ── Dark mode ── */
+body.fp-dark .fp-pwd-eye { color: var(--fp-text-3); }
+body.fp-dark .fp-pwd-eye:hover { color: var(--fp-text-1); }
+body.fp-dark .fp-btn-secondary {
+  background: #1a2540; color: var(--fp-text-1); border-color: var(--fp-border);
+}
+body.fp-dark .fp-btn-secondary:hover { background: #22304f; border-color: var(--fp-border-mid); }
+/* "Logged in as" strip: lifted rose is too light behind white text */
+body.fp-dark .fp-set-session { background: var(--fp-primary-dark) !important; }
+/* Toast: success/danger tokens are light on navy, so use dark text */
+body.fp-dark #fp-toast { color: #0a0f1e !important; box-shadow: 0 4px 24px rgba(0,0,0,0.55) !important; }
+/* Password strength (JS sets maroon inline; lift it on navy) */
+body.fp-dark #fp-strength-fill[data-lvl="0"] { background: var(--fp-danger) !important; }
+body.fp-dark #fp-strength-lbl[data-lvl="0"]  { color: var(--fp-danger) !important; }
+body.fp-dark #fp-strength-fill[data-lvl="1"],
+body.fp-dark #fp-strength-fill[data-lvl="2"],
+body.fp-dark #fp-strength-fill[data-lvl="3"],
+body.fp-dark #fp-strength-fill[data-lvl="4"] { background: var(--fp-primary) !important; }
+body.fp-dark #fp-strength-lbl[data-lvl="1"],
+body.fp-dark #fp-strength-lbl[data-lvl="2"],
+body.fp-dark #fp-strength-lbl[data-lvl="3"],
+body.fp-dark #fp-strength-lbl[data-lvl="4"] { color: #f08da0 !important; }
+body.fp-dark #fp-strength-bar > div:first-child { background: var(--fp-border-mid) !important; }
 </style>
 
 {% endblock %}
@@ -194,12 +218,15 @@ function fpStrength() {
   if (/[^A-Za-z0-9]/.test(v)) score++;
   var lvls = [
     { w:'20%', c:'#dc2626', t:'Very weak'  },
-    { w:'40%', c:'#f97316', t:'Weak'       },
-    { w:'60%', c:'#eab308', t:'Fair'       },
-    { w:'80%', c:'#22c55e', t:'Strong'     },
-    { w:'100%',c:'#16a34a', t:'Very strong'},
+    { w:'40%', c:'#920c24', t:'Weak'       },
+    { w:'60%', c:'#920c24', t:'Fair'       },
+    { w:'80%', c:'#920c24', t:'Strong'     },
+    { w:'100%',c:'#920c24', t:'Very strong'},
   ];
-  var lvl = lvls[Math.max(0, score - 1)];
+  var lvlIdx = Math.max(0, score - 1);
+  var lvl = lvls[lvlIdx];
+  if (fill) fill.setAttribute('data-lvl', lvlIdx);
+  if (lbl)  lbl.setAttribute('data-lvl', lvlIdx);
   if (fill) { fill.style.width = lvl.w; fill.style.background = lvl.c; }
   if (lbl)  { lbl.textContent = lvl.t; lbl.style.color = lvl.c; }
   fpMatchCheck();

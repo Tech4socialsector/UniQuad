@@ -85,7 +85,6 @@ def get_data(filters):
             app.candidate_name,
             app.gender,
             app.whether_scstobc_ncl,
-            app.ews,
             app.pwd,
             app.karnataka_category
         FROM
@@ -102,8 +101,6 @@ def get_data(filters):
         sc_st_obc = (r.whether_scstobc_ncl or "").strip()
         if sc_st_obc and sc_st_obc in vertical_list:
             return sc_st_obc
-        if (r.ews or "").strip() == "Yes" and "EWS" in vertical_list:
-            return "EWS"
         return "General"
 
     # Initialize counter mappings

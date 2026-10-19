@@ -52,7 +52,7 @@ frappe.pages["fee-reminder-tool"].on_page_load = function (wrapper) {
 	const $year    = _select("Academic Year", "academic_year",
 		Promise.resolve([]).then(() => window._frt_opts ? window._frt_opts.academic_years : []));
 	const $dtype   = _select("Demand Type", "demand_type",
-		Promise.resolve(["Academic","Examination","Service","Fine","Hostel","Deposit","Other"]));
+		Promise.resolve(["Academic","Non Academic"]));
 
 	// Reload options after fetch
 	frappe.call({ method: "slcm.slcm.page.fee_reminder_tool.fee_reminder_tool.get_filter_options" })

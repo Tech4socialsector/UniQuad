@@ -1,0 +1,62 @@
+{
+ "actions": [],
+ "creation": "2026-09-08 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "academic_year",
+  "year_label",
+  "programme_year",
+  "column_break_1",
+  "status_override"
+ ],
+ "fields": [
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Academic Year",
+   "options": "Academic Year",
+   "description": "Empty for a future year of the programme that has no Academic Year record yet; its per-annum fees are repeated from the latest year with fee data."
+  },
+  {
+   "description": "Column heading on the certificate, e.g. \"2026-27\".",
+   "fieldname": "year_label",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Year Label",
+   "reqd": 1
+  },
+  {
+   "fieldname": "programme_year",
+   "fieldtype": "Int",
+   "label": "Programme Year",
+   "in_list_view": 1,
+   "read_only": 1,
+   "description": "1 = the student's first year of the programme. The Admission Fee is shown only in year 1."
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "status_override",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "\nAuto\nPaid\nPayable",
+   "hidden": 1
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-09-25 17:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "SLCM",
+ "name": "Fee Certificate Request Year",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

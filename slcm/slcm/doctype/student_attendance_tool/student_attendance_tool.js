@@ -4,6 +4,11 @@
 frappe.ui.form.on("Student Attendance Tool", {
 	setup(frm) {
 		frm.students_area = $("<div>").appendTo(frm.fields_dict.students_html.wrapper);
+
+		// Office Hours Group links to Student Group - only offer Office Hours groups.
+		frm.set_query("office_hours_group", () => ({
+			filters: { group_based_on: "Office Hours" },
+		}));
 	},
 
 	refresh(frm) {
@@ -113,7 +118,7 @@ frappe.ui.form.on("Student Attendance Tool", {
 					frm.trigger("fetch_students");
 				});
 		} else if (frm.doc.office_hours_group) {
-			frappe.db.get_value("Office Hours Group", frm.doc.office_hours_group,
+			frappe.db.get_value("Student Group", frm.doc.office_hours_group,
 				"course_offering", (r) => {
 					if (r && r.course_offering) frm.set_value("course_offering", r.course_offering);
 					frm.trigger("fetch_students");

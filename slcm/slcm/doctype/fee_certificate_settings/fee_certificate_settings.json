@@ -1,0 +1,221 @@
+{
+ "actions": [],
+ "creation": "2026-09-08 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_institute",
+  "institute_name",
+  "institute_logo",
+  "column_break_inst",
+  "institute_address",
+  "institute_phone",
+  "institute_email",
+  "institute_website",
+  "footer_note",
+  "section_letterhead",
+  "letterhead_header_image",
+  "column_break_letterhead",
+  "letterhead_footer_image",
+  "section_cfo",
+  "cfo_name",
+  "cfo_designation",
+  "column_break_cfo",
+  "cfo_signature",
+  "seal_image",
+  "signature_includes_designation",
+  "section_bank",
+  "bank_account_name",
+  "bank_account_no",
+  "bank_name",
+  "column_break_bank",
+  "bank_ifsc_code",
+  "bank_branch",
+  "bank_account_type",
+  "section_purposes",
+  "purposes"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_institute",
+   "fieldtype": "Section Break",
+   "label": "Institute Details"
+  },
+  {
+   "fieldname": "institute_name",
+   "fieldtype": "Data",
+   "label": "Institute Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "institute_logo",
+   "fieldtype": "Attach Image",
+   "label": "Institute Logo"
+  },
+  {
+   "fieldname": "column_break_inst",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "institute_address",
+   "fieldtype": "Small Text",
+   "label": "Institute Address"
+  },
+  {
+   "fieldname": "institute_phone",
+   "fieldtype": "Data",
+   "label": "Telephone"
+  },
+  {
+   "fieldname": "institute_email",
+   "fieldtype": "Data",
+   "label": "Email",
+   "options": "Email"
+  },
+  {
+   "fieldname": "institute_website",
+   "fieldtype": "Data",
+   "label": "Website"
+  },
+  {
+   "fieldname": "footer_note",
+   "fieldtype": "Small Text",
+   "label": "Footer Note",
+   "description": "Used only when no Letter Head Footer Image is set."
+  },
+  {
+   "fieldname": "section_letterhead",
+   "fieldtype": "Section Break",
+   "label": "Letter Head",
+   "description": "When a header image is set it replaces the text header built from the Institute Details above; likewise the footer image replaces the Footer Note."
+  },
+  {
+   "fieldname": "letterhead_header_image",
+   "fieldtype": "Attach Image",
+   "label": "Letter Head Header Image",
+   "description": "Full-width banner printed at the top of every certificate (logo, name, address, contact)."
+  },
+  {
+   "fieldname": "column_break_letterhead",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "letterhead_footer_image",
+   "fieldtype": "Attach Image",
+   "label": "Letter Head Footer Image",
+   "description": "Full-width strip printed at the bottom of every certificate."
+  },
+  {
+   "fieldname": "section_cfo",
+   "fieldtype": "Section Break",
+   "label": "Signatory"
+  },
+  {
+   "fieldname": "cfo_name",
+   "fieldtype": "Data",
+   "label": "Signatory Name"
+  },
+  {
+   "default": "Chief Finance Officer",
+   "fieldname": "cfo_designation",
+   "fieldtype": "Data",
+   "label": "Signatory Designation"
+  },
+  {
+   "fieldname": "column_break_cfo",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "cfo_signature",
+   "fieldtype": "Attach Image",
+   "label": "Signature Image"
+  },
+  {
+   "description": "University seal/stamp, shown alongside the signature on the certificate.",
+   "fieldname": "seal_image",
+   "fieldtype": "Attach Image",
+   "label": "Seal / Stamp Image"
+  },
+  {
+   "default": "1",
+   "fieldname": "signature_includes_designation",
+   "fieldtype": "Check",
+   "label": "Signature Image Includes Designation",
+   "description": "Tick when the signature image already carries the designation/address text, so it is not printed a second time below the image."
+  },
+  {
+   "fieldname": "section_bank",
+   "fieldtype": "Section Break",
+   "label": "Bank Account Details"
+  },
+  {
+   "fieldname": "bank_account_name",
+   "fieldtype": "Data",
+   "label": "Account Holder Name"
+  },
+  {
+   "fieldname": "bank_account_no",
+   "fieldtype": "Data",
+   "label": "Account Number"
+  },
+  {
+   "fieldname": "bank_name",
+   "fieldtype": "Data",
+   "label": "Bank Name"
+  },
+  {
+   "fieldname": "column_break_bank",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "bank_ifsc_code",
+   "fieldtype": "Data",
+   "label": "IFSC Code"
+  },
+  {
+   "fieldname": "bank_branch",
+   "fieldtype": "Data",
+   "label": "Branch"
+  },
+  {
+   "default": "Savings",
+   "fieldname": "bank_account_type",
+   "fieldtype": "Data",
+   "label": "Account Type"
+  },
+  {
+   "fieldname": "section_purposes",
+   "fieldtype": "Section Break",
+   "label": "Certificate Purposes"
+  },
+  {
+   "fieldname": "purposes",
+   "fieldtype": "Table",
+   "label": "Purposes & Templates",
+   "options": "Fee Certificate Purpose Template",
+   "description": "Each row is one Purpose option on the Fee Certificate Request, with the heading and text printed for it. Rename or edit the text freely; open a row to edit its content."
+  }
+ ],
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-09-28 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "SLCM",
+ "name": "Fee Certificate Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

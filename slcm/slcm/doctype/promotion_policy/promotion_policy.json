@@ -37,6 +37,8 @@
   "enable_cf_check",
   "col_break_cf",
   "max_cf_fa_shortage",
+  "section_fee",
+  "block_on_fee_due",
   "section_conditional",
   "conditional_promotion_action",
   "col_break_3",
@@ -234,6 +236,18 @@
    "fieldname": "max_cf_fa_shortage",
    "fieldtype": "Int",
    "label": "Max Allowed CF Courses"
+  },
+  {
+   "fieldname": "section_fee",
+   "fieldtype": "Section Break",
+   "label": "Fee Criteria"
+  },
+  {
+   "default": "0",
+   "description": "If checked, a student with any outstanding Fee Demand (Pending/Partially Paid/Overdue) will not be promoted, regardless of academic criteria",
+   "fieldname": "block_on_fee_due",
+   "fieldtype": "Check",
+   "label": "Block Promotion on Fee Due"
   },
   {
    "fieldname": "section_conditional",

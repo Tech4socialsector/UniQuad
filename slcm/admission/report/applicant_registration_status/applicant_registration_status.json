@@ -1,0 +1,52 @@
+{
+ "add_total_row": 0,
+ "add_translate_data": 0,
+ "columns": [],
+ "creation": "2026-09-08 14:03:23.644853",
+ "disable_prepared_report_automation": 1,
+ "disabled": 0,
+ "docstatus": 0,
+ "doctype": "Report",
+ "doctype_to_sync": [],
+ "filters": [],
+ "idx": 0,
+ "is_standard": "Yes",
+ "letter_head": null,
+ "modified": "2026-09-17 16:51:41.772470",
+ "modified_by": "Administrator",
+ "module": "Admission",
+ "name": "Applicant Registration Status",
+ "owner": "Administrator",
+ "prepared_report": 0,
+ "ref_doctype": "Applicant",
+ "report_name": "Applicant Registration Status",
+ "report_type": "Script Report",
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Eligibility Admin"
+  },
+  {
+   "role": "Entrance Test Admin"
+  },
+  {
+   "role": "Offer Letter Admin"
+  },
+  {
+   "role": "Campus Admin"
+  },
+  {
+   "role": "Interview Staff Member"
+  },
+  {
+   "role": "Administrator"
+  },
+  {
+   "role": "Admission Admin"
+  }
+ ],
+ "snapshot_report": 0,
+ "timeout": 0
+}

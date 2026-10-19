@@ -4,7 +4,16 @@
 // ── Built-in theme presets ────────────────────────────────────────────
 const PP_PRESETS = [
     {
-        name: "Rose Red (Default)",
+        name: "NLSIU Maroon (Default)",
+        primary_color: "#920c24", secondary_color: "#c9a84c",
+        background_color: "#f0f2f5", card_background: "#ffffff",
+        nav_text_color: "#ffffff",
+        sidebar_bg_color: "#ffffff", sidebar_text_color: "#475569",
+        success_color: "#008000", warning_color: "#d97706",
+        danger_color: "#920c24", info_color: "#0369a1",
+    },
+    {
+        name: "Rose Red",
         primary_color: "#e11d48", secondary_color: "#c8a14b",
         background_color: "#f3f6f5", card_background: "#ffffff",
         nav_text_color: "#ffffff",
@@ -58,7 +67,7 @@ const PP_PRESETS = [
         danger_color: "#dc2626", info_color: "#0284c7",
     },
     {
-        name: "NLSIU",
+        name: "NLSIU Navy",
         font_family: "Merriweather",
         primary_color: "#2b2e4a", secondary_color: "#920c24",
         background_color: "#f3f6f5", card_background: "#ffffff",
@@ -69,25 +78,8 @@ const PP_PRESETS = [
     },
 ];
 
-const PP_DEFAULTS = {
-    portal_title: "Parent Portal", portal_subtitle: "",
-    show_logo: 1, nav_brand_text: "", portal_favicon: "",
-    font_family: "Inter", font_size: "Normal",
-    ...(() => {
-        const { name, ...colors } = PP_PRESETS[0];
-        return colors;
-    })(),
-    grade_excellent_color: "#16a34a", grade_excellent_label: "A+ / A / S",
-    grade_good_color: "#0369a1", grade_good_label: "B+ / B",
-    grade_average_color: "#d97706", grade_average_label: "C+ / C",
-    grade_fail_color: "#dc2626", grade_fail_label: "D / F",
-    att_good_threshold: 75, att_warn_threshold: 60,
-    att_label_good: "Good", att_label_warn: "Low", att_label_danger: "Critical",
-    sidebar_width: "Normal", nav_height: "Normal",
-    corner_style: "Normal", layout_density: "Normal",
-    show_fee_summary: 1, show_attendance_overview: 1, show_latest_result: 1,
-    custom_css: "",
-};
+// Fallback colours used by the in-form previews when a field is blank
+const PP_FALLBACK_PRIMARY = "#920c24";
 
 
 // ── Form event handlers ───────────────────────────────────────────────
@@ -108,6 +100,8 @@ frappe.ui.form.on("Parent Portal Settings", {
     warning_color:    (frm) => _render_color_preview(frm),
     danger_color:     (frm) => _render_color_preview(frm),
     info_color:       (frm) => _render_color_preview(frm),
+    sidebar_bg_color:   (frm) => _render_color_preview(frm),
+    sidebar_text_color: (frm) => _render_color_preview(frm),
 
     // Grade color triggers
     grade_excellent_color: (frm) => _render_color_preview(frm),
@@ -133,15 +127,20 @@ frappe.ui.form.on("Parent Portal Settings", {
 
 // ── Action buttons ────────────────────────────────────────────────────
 function _add_action_buttons(frm) {
-    frm.add_custom_button(__("Preview Portal"), () => {
-        window.open("/parent-portal", "_blank");
-    }, __("Actions"));
+    frm.add_custom_button(__("Preview Portal"), () => _open_preview_dialog(frm));
 
     frm.add_custom_button(__("Reset to Defaults"), () => {
         frappe.confirm(
-            __("Reset all settings to factory defaults?"),
+            __("Reset all settings to factory defaults? Uploaded logo and favicon are kept."),
             () => {
-                frm.set_value(PP_DEFAULTS).then(() => {
+                frappe.call({
+                    method: "slcm.slcm.doctype.parent_portal_settings.parent_portal_settings.get_default_settings",
+                }).then((r) => {
+                    const values = Object.assign({}, r.message || {});
+                    delete values.portal_logo;
+                    delete values.portal_favicon;
+                    return frm.set_value(values);
+                }).then(() => {
                     frappe.show_alert({ message: __("Defaults restored — click Save to apply."), indicator: "blue" });
                     _render_all_previews(frm);
                 });
@@ -150,13 +149,42 @@ function _add_action_buttons(frm) {
     }, __("Actions"));
 }
 
+function _open_preview_dialog(frm) {
+    const d = new frappe.ui.Dialog({
+        title: __("Preview Parent Portal"),
+        fields: [
+            {
+                fieldname: "student", fieldtype: "Link", options: "Student Master",
+                label: __("Preview as the parent of"),
+                description: __("Leave blank to use the first student with a linked parent. You can switch students from the preview banner."),
+            },
+        ],
+        primary_action_label: __("Open Preview"),
+        primary_action(values) {
+            const url = "/parent-portal" + (values.student ? "?ward=" + encodeURIComponent(values.student) : "");
+            // Open synchronously (inside the click) so the browser doesn't block the pop-up
+            const win = window.open("about:blank", "_blank");
+            d.hide();
+            const go = () => { if (win) { win.location.href = url; } else { window.location.href = url; } };
+            if (frm.is_dirty()) {
+                frm.save().then(go).catch(() => { if (win) win.close(); });
+            } else {
+                go();
+            }
+        },
+    });
+    if (frm.is_dirty()) {
+        d.set_df_property("student", "description",
+            __("You have unsaved changes — they will be saved before the preview opens."));
+    }
+    d.show();
+}
+
 
 // ── Color Preset bar ─────────────────────────────────────────────────
 function _render_preset_bar(frm) {
-    const section = frm.get_field("theme_section");
-    if (!section || !section.$wrapper) return;
-
-    const wrapper = section.$wrapper;
+    const wrapper = _section_container(frm, "theme_section");
+    if (!wrapper) return;
     if (wrapper.find(".pp-preset-bar").length) return;
 
     const buttons = PP_PRESETS.map((preset, idx) => `
@@ -178,7 +206,8 @@ function _render_preset_bar(frm) {
           </div>
         </div>`;
 
-    const $bar = $(html).prependTo(wrapper);
+    const $bar = $(html).addClass("col-sm-12");
+    (_section_body(wrapper) || wrapper).prepend($bar);
 
     $bar.find(".pp-preset-btn").on("click", function () {
         const preset = PP_PRESETS[$(this).data("idx")];
@@ -201,9 +230,9 @@ function _render_all_previews(frm) {
 // ── Color / Theme preview ─────────────────────────────────────────────
 function _render_color_preview(frm) {
     const d = frm.doc;
-    const primary   = d.primary_color   || "#e11d48";
-    const secondary = d.secondary_color || "#c8a14b";
-    const bg        = d.background_color || "#f3f6f5";
+    const primary   = d.primary_color   || PP_FALLBACK_PRIMARY;
+    const secondary = d.secondary_color || "#c9a84c";
+    const bg        = d.background_color || "#f0f2f5";
     const card      = d.card_background  || "#ffffff";
     const navText   = d.nav_text_color   || "#ffffff";
     const success   = d.success_color   || "#16a34a";
@@ -255,7 +284,7 @@ function _render_color_preview(frm) {
       </div>
       <div class="pp-preview-group" style="margin-top:12px;">
         <div class="pp-preview-label">Mini Portal Card</div>
-        ${_mini_portal_card(primary, secondary, bg, card, navText)}
+        ${_mini_portal_card(primary, secondary, bg, card, navText, d.sidebar_bg_color || "#ffffff", d.sidebar_text_color || "#475569")}
       </div>
     </div>`;
 
@@ -281,7 +310,7 @@ function _render_layout_preview(frm) {
     const size    = d.font_size      || "Normal";
     const corners = d.corner_style   || "Normal";
     const density = d.layout_density || "Normal";
-    const primary = d.primary_color  || "#e11d48";
+    const primary = d.primary_color  || PP_FALLBACK_PRIMARY;
     const navH    = d.nav_height     || "Normal";
     const font    = d.font_family    || "Inter";
 
@@ -302,7 +331,6 @@ function _render_layout_preview(frm) {
              border-radius:${radius};font-size:${fsPx};color:${active ? primary : "#6b7280"};
              margin-bottom:2px;display:flex;align-items:center;gap:4px;
              border-left:2px solid ${active ? primary : "transparent"};">
-          <span style="font-family:'Material Symbols Outlined';font-size:12px;opacity:0.6;">${icon}</span>
           ${label}
         </div>`).join("");
 
@@ -365,7 +393,7 @@ function _render_layout_preview(frm) {
 
 
 // ── Mini portal card ──────────────────────────────────────────────────
-function _mini_portal_card(primary, secondary, bg, card, navText) {
+function _mini_portal_card(primary, secondary, bg, card, navText, sidebarBg, sidebarText) {
     return `
     <div style="width:280px;border-radius:10px;overflow:hidden;border:1px solid #e5e7eb;font-family:'Inter',sans-serif;">
       <div style="background:${primary};height:32px;display:flex;align-items:center;
@@ -378,11 +406,11 @@ function _mini_portal_card(primary, secondary, bg, card, navText) {
         <div style="width:16px;height:16px;background:${secondary};border-radius:50%;"></div>
       </div>
       <div style="display:flex;background:${bg};">
-        <div style="width:64px;background:${card};padding:6px 4px;border-right:1px solid rgba(0,0,0,0.06);">
+        <div style="width:64px;background:${sidebarBg};padding:6px 4px;border-right:1px solid rgba(0,0,0,0.06);">
           <div style="height:16px;background:linear-gradient(135deg,${primary},${primary}cc);border-radius:5px;margin-bottom:5px;"></div>
           ${["Dashboard","Attendance","Results","Fees"].map((l, i) => `
           <div style="padding:3px 5px;margin-bottom:2px;border-radius:4px;font-size:7px;
-               color:${i===0 ? primary : "#6b7280"};
+               color:${i===0 ? primary : sidebarText};
                background:${i===0 ? primary + "1a" : "transparent"};
                border-left:2px solid ${i===0 ? primary : "transparent"};">
             ${l}
@@ -421,6 +449,7 @@ function _swatch(color, label, bordered, textColor) {
 }
 
 function _grade_badge(color, label) {
+    label = frappe.utils.escape_html(label || "");
     return `
     <div style="padding:4px 10px;background:${color}22;border:1px solid ${color}55;
          border-radius:20px;font-size:10px;font-weight:600;color:${color};white-space:nowrap;">
@@ -428,13 +457,28 @@ function _grade_badge(color, label) {
     </div>`;
 }
 
-function _inject_into_section(frm, fieldname, selector, html) {
+// Section Break wrapper (Frappe 16: .wrapper; older: .$wrapper). Extra UI is
+// added to .section-body as a full-width col-sm-12 row, so it lines up with the
+// fields and wraps below/above the columns instead of becoming another column.
+function _section_container(frm, fieldname) {
     const field = frm.get_field(fieldname);
-    if (!field || !field.$wrapper) return;
-    const wrapper = field.$wrapper;
+    if (!field) return null;
+    const el = field.wrapper || field.$wrapper;
+    return el && el.length ? $(el) : null;
+}
+
+function _section_body(wrapper) {
+    const body = wrapper.children(".section-body");
+    return body.length ? body : null;
+}
+
+function _inject_into_section(frm, fieldname, selector, html) {
+    const wrapper = _section_container(frm, fieldname);
+    if (!wrapper) return;
     let el = wrapper.find(selector);
     if (!el.length) {
-        el = $(`<div class="${selector.replace(".", "")}"></div>`).appendTo(wrapper);
+        el = $(`<div class="${selector.replace(".", "")} col-sm-12" style="padding-bottom:12px;"></div>`);
+        (_section_body(wrapper) || wrapper).append(el);
     }
     el.html(html);
 }

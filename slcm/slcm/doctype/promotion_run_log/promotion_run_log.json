@@ -1,0 +1,134 @@
+{
+ "actions": [],
+ "creation": "2026-09-10 00:00:00",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "student",
+  "student_name",
+  "from_enrollment",
+  "to_enrollment",
+  "col_break_1",
+  "result",
+  "reason_code",
+  "reason_detail",
+  "section_resolution",
+  "resolved",
+  "resolution_action",
+  "col_break_2",
+  "resolved_by",
+  "resolved_on"
+ ],
+ "fields": [
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Student",
+   "options": "Student Master",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "student_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Student Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "from_enrollment",
+   "fieldtype": "Link",
+   "label": "From Enrollment",
+   "options": "Student Enrollment",
+   "read_only": 1
+  },
+  {
+   "fieldname": "to_enrollment",
+   "fieldtype": "Link",
+   "label": "To Enrollment",
+   "options": "Student Enrollment",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "result",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Result",
+   "options": "Promoted\nSkipped\nFailed",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "reason_code",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Reason Code",
+   "options": "\nAttendance Shortage\nFee Due\nBacklog\nCGPA Shortfall\nManual Hold\nAlready Promoted\nNo Target Batch\nOther",
+   "read_only": 1
+  },
+  {
+   "fieldname": "reason_detail",
+   "fieldtype": "Text",
+   "label": "Reason Detail",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_resolution",
+   "fieldtype": "Section Break",
+   "label": "Manual Resolution"
+  },
+  {
+   "default": "0",
+   "fieldname": "resolved",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Resolved"
+  },
+  {
+   "default": "None",
+   "fieldname": "resolution_action",
+   "fieldtype": "Select",
+   "label": "Resolution Action",
+   "options": "None\nManually Promoted\nMarked Exempt\nIgnored",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "resolved_by",
+   "fieldtype": "Link",
+   "label": "Resolved By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "resolved_on",
+   "fieldtype": "Datetime",
+   "label": "Resolved On",
+   "read_only": 1
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-09-10 00:00:00",
+ "modified_by": "Administrator",
+ "module": "SLCM",
+ "name": "Promotion Run Log",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

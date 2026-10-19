@@ -14,7 +14,7 @@ points at the new composite Link name ("Facilities-Plumbing") instead.
 import frappe
 
 ISSUE_OPTIONS = {
-	"Academics": ["Attendance", "Certificates - Letters", "Examination", "Learning Material", "Projects", "Viva", "Others"],
+	"Academics": ["Attendance Discrepancy", "Certificates - Letters", "Examination", "Learning Material", "Projects", "Viva", "FA", "MFA", "Others"],
 	"Facilities": ["Carpentry", "Electrical", "House Keeping", "Plumbing", "Security", "Others"],
 	"Finance": ["Fees", "Others"],
 	"IT": ["Admin Portal", "Gsuite", "Group Creation", "ID Card", "Internet Connectivity", "Learning Platform", "Microsoft Office", "Online Library Access", "Others"],

@@ -1,6 +1,6 @@
 [
  {
-  "app": null,
+  "app": "slcm",
   "bg_color": "blue",
   "docstatus": 0,
   "doctype": "Desktop Icon",
@@ -13,7 +13,7 @@
   "link_to": "Faculty Management",
   "link_type": "Workspace Sidebar",
   "logo_url": null,
-  "modified": "2026-07-08 23:49:06.253793",
+  "modified": "2026-09-24 09:33:32.862819",
   "name": "Faculty Management",
   "parent_icon": null,
   "restrict_removal": 0,

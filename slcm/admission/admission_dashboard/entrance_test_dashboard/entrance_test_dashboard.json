@@ -27,11 +27,15 @@
  ],
  "charts": [
   {
+   "chart": "Allocated Students by City",
+   "width": "Full"
+  },
+  {
    "chart": "Allocated Students by Centre",
    "width": "Full"
   },
   {
-   "chart": "Allocated Students by Programme",
+   "chart": "Test Centre Wise PWD candidate Report",
    "width": "Full"
   }
  ],
@@ -42,7 +46,7 @@
  "idx": 0,
  "is_default": 0,
  "is_standard": 1,
- "modified": "2026-08-05 15:12:23.437015",
+ "modified": "2026-10-15 09:49:28.632389",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Entrance Test Dashboard",

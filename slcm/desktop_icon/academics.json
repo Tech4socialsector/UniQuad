@@ -1,0 +1,48 @@
+{
+ "app": "slcm",
+ "bg_color": "blue",
+ "creation": "2026-09-29 16:08:42.852089",
+ "docstatus": 0,
+ "doctype": "Desktop Icon",
+ "hidden": 0,
+ "icon_type": "App",
+ "idx": 0,
+ "label": "Academics",
+ "link": "",
+ "link_type": "External",
+ "modified": "2026-09-29 16:08:42.852089",
+ "modified_by": "Administrator",
+ "name": "Academics",
+ "owner": "Administrator",
+ "restrict_removal": 0,
+ "roles": [
+  {
+   "role": "slcm_Registrar"
+  },
+  {
+   "role": "slcm_Programme Chair"
+  },
+  {
+   "role": "Campus Admin"
+  },
+  {
+   "role": "Admission Admin"
+  },
+  {
+   "role": "slcm_Registration Officer"
+  },
+  {
+   "role": "slcm_Registration User"
+  },
+  {
+   "role": "slcm_Documentation Officer"
+  },
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "slcm_Faculty"
+  }
+ ],
+ "standard": 1
+}

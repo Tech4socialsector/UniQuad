@@ -21,8 +21,6 @@
   "percentage",
   "column_break_rule",
   "max_fine_amount",
-  "fee_component",
-  "due_days",
   "section_status",
   "status",
   "applied_on",
@@ -61,7 +59,7 @@
    "fieldname": "demand_type_filter",
    "fieldtype": "Select",
    "label": "Demand Type",
-   "options": "\nAcademic\nExamination\nService\nHostel\nDeposit\nOther"
+   "options": "\nAcademic\nNon Academic"
   },
   {
    "fieldname": "column_break_crit",
@@ -122,20 +120,6 @@
    "fieldname": "max_fine_amount",
    "fieldtype": "Currency",
    "label": "Maximum Fine Amount (per demand)"
-  },
-  {
-   "fieldname": "fee_component",
-   "fieldtype": "Link",
-   "label": "Fine Fee Component",
-   "options": "Fee Component",
-   "reqd": 1
-  },
-  {
-   "default": "15",
-   "fieldname": "due_days",
-   "fieldtype": "Int",
-   "label": "Due Days (for the new Fine demand)",
-   "reqd": 1
   },
   {
    "fieldname": "section_status",
@@ -212,7 +196,7 @@
   }
  ],
  "links": [],
- "modified": "2026-08-27 00:00:00.000000",
+ "modified": "2026-09-25 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Fine Imposition",

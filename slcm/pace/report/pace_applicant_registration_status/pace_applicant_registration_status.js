@@ -20,7 +20,7 @@ frappe.query_reports["PACE Applicant Registration Status"] = {
             fieldname: "case",
             label: "Case",
             fieldtype: "Select",
-            options: ["All", "With Application", "Without Application"],
+            options: ["All", "With Application", "Without Application", "Enrolled"],
             default: "All",
         },
     ],

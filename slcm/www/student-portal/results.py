@@ -1,5 +1,7 @@
 import frappe
 
+from slcm.slcm.utils.result_access import arrear_badge, get_reexam_attempts, is_improved
+
 no_cache = 1
 
 
@@ -93,9 +95,11 @@ def get_context(context):
             has_any_fail = False
 
             for m in marks_records:
-                course_name = (
-                    frappe.db.get_value("Course", m.course, "course_name") or m.course
-                )
+                _course = frappe.db.get_value(
+                    "Course", m.course, ["course_name", "course_code"], as_dict=True
+                ) or frappe._dict()
+                course_name = _course.course_name or m.course
+                course_code = _course.course_code or m.course
 
                 # ── Component groups split by regular vs re-exam ──
                 regular_groups, reexam_groups = _get_component_groups(
@@ -133,7 +137,7 @@ def get_context(context):
                 if not enroll_status:
                     enroll_status = _get_enrollment_fallback(student_name, m.course)
 
-                arrear_marker = _get_arrear_marker(student_name, m.course, is_currently_failing=is_fail)
+                arrear_marker = _get_arrear_marker(student_name, m.course)
 
                 # ── Improvement Exam info ─────────────────────────
                 improv_setting = _get_improvement_setting(ep_name, m.course)
@@ -152,6 +156,7 @@ def get_context(context):
                 courses_out.append({
                     "course":                   m.course,
                     "course_name":              course_name,
+                    "course_code":              course_code,
                     "display_grade":            display_grade,
                     "display_total":            display_total,
                     "overall_status":           overall_status,
@@ -173,6 +178,8 @@ def get_context(context):
                     "has_comp_marks":           bool(regular_groups or reexam_groups),
                     "show_total":               show_total,
                     "arrear_marker":            arrear_marker,
+                    # I badge: result raised by a re-exam or an improvement exam
+                    "improved":                 is_improved(m),
                     "improvement_available":      bool(improv_setting) and improvement_cgpa_ok,
                     "improvement_setting_exists": bool(improv_setting),
                     "improvement_cgpa_ok":        improvement_cgpa_ok,
@@ -241,10 +248,12 @@ def get_context(context):
         # ── GPA Trend data for chart (chronological order) ────────
         chart_data = []
         for r in sorted(published_results, key=lambda x: str(x["published_on"] or "")):
-            if r["term_gpa"] is not None or r["term_percentage"] is not None:
+            # Respect the exam's "show SGPA" publish setting in the trend too
+            sgpa = r["term_gpa"] if r["show_sgpa"] else None
+            if sgpa is not None or r["term_percentage"] is not None:
                 chart_data.append({
                     "label": r["term"] or r["exam_name"],
-                    "sgpa":  r["term_gpa"],
+                    "sgpa":  sgpa,
                     "pct":   r["term_percentage"],
                     "cgpa":  r["cumulative_gpa"],
                 })
@@ -487,30 +496,10 @@ def _get_improvement_registration(student_name, exam_plan, course):
         return None
 
 
-def _get_arrear_marker(student_name, course, is_currently_failing=False):
-    """Return arrear marker based on total arrear count.
-
-    total = re-exam registrations (non-cancelled) + 1 if currently failing.
-    This means the very first failure already shows R.
-    >= 3 total → RR, >= 1 → R, 0 → ''.
-    """
-    try:
-        reg_count = frappe.db.count(
-            "Re Exam Registration",
-            filters={
-                "student": student_name,
-                "course": course,
-                "status": ["!=", "Cancelled"],
-            },
-        )
-        total = reg_count + (1 if is_currently_failing else 0)
-        if total >= 3:
-            return "RR"
-        elif total >= 1:
-            return "R"
-    except Exception:
-        pass
-    return ""
+def _get_arrear_marker(student_name, course):
+    """One R per paid re-exam written: R, RR, RRR… (same rule as the desk
+    Course Results page — slcm.slcm.utils.result_access)."""
+    return arrear_badge(get_reexam_attempts(course, [student_name]).get(student_name, 0))
 
 
 # ── Nav helpers ───────────────────────────────────────────────────────────────
@@ -541,6 +530,21 @@ def _set_student_nav(context, student):
     )
     context.department = student.department or ""
     context.batch_year = student.batch_year or ""
+    context.academic_year = student.get("academic_year") or ""
+    context.academic_term = student.get("academic_term") or _current_enrollment_term(student.name)
+
+
+def _current_enrollment_term(student_name):
+    """Current trimester from the latest Enrolled Student Enrollment (same as the Fees page)."""
+    try:
+        return frappe.db.get_value(
+            "Student Enrollment",
+            {"student": student_name, "status": "Enrolled"},
+            "term_name",
+            order_by="creation desc",
+        ) or ""
+    except Exception:
+        return ""
 
 
 def _set_nav_defaults(context):

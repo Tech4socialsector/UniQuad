@@ -1,0 +1,33 @@
+{
+ "app": "slcm",
+ "bg_color": "gray",
+ "creation": "2026-03-02 14:50:43.475488",
+ "docstatus": 0,
+ "doctype": "Desktop Icon",
+ "hidden": 0,
+ "icon": "agriculture",
+ "icon_type": "Link",
+ "idx": 0,
+ "label": "Placement",
+ "link_to": "Placement",
+ "link_type": "Workspace Sidebar",
+ "modified": "2026-09-29 16:08:42.928639",
+ "modified_by": "Administrator",
+ "name": "Placement",
+ "owner": "Administrator",
+ "parent_icon": "Student Services",
+ "restrict_removal": 0,
+ "roles": [
+  {
+   "role": "slcm_Placement Officer"
+  },
+  {
+   "role": "Campus Admin"
+  },
+  {
+   "role": "Admission Admin"
+  }
+ ],
+ "sidebar": "Placement",
+ "standard": 1
+}

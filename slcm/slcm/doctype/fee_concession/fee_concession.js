@@ -16,6 +16,13 @@ frappe.ui.form.on("Fee Concession", {
 		}
 	},
 
+	setup(frm) {
+		// Student ID: search by ID, name, Registration Id, Application Number or email
+		frm.set_query("student", () => ({
+			query: "slcm.slcm.doctype.fee_concession.fee_concession.student_query",
+		}));
+	},
+
 	set_fee_demand_filter(frm) {
 		frm.set_query("fee_demand", () => {
 			const filters = {
@@ -28,28 +35,35 @@ frappe.ui.form.on("Fee Concession", {
 		});
 	},
 
-	student(frm) {
-		frm.set_value("fee_demand", "");
+	// Student ID picked first → fill Registration Id / email, and limit the Voucher list to their dues
+	async student(frm) {
 		frm.trigger("set_fee_demand_filter");
+		if (!frm.doc.student) {
+			frm.set_value({ registration_id: "", student_email: "" });
+			return;
+		}
+		const sm = (await frappe.db.get_value("Student Master", frm.doc.student, ["registration_id", "application_number", "official_email_id", "email"])).message || {};
+		frm.set_value({
+			registration_id: sm.registration_id || sm.application_number || "",
+			student_email: sm.official_email_id || sm.email || "",
+		});
+		if (frm.doc.fee_demand) {
+			const v = (await frappe.db.get_value("Fee Demand", frm.doc.fee_demand, "student")).message || {};
+			if (v.student !== frm.doc.student) frm.set_value("fee_demand", "");
+		}
 	},
 
-	fee_demand(frm) {
+	// Voucher → its student; the dues columns come from the voucher via fetch_from
+	async fee_demand(frm) {
 		if (!frm.doc.fee_demand) return;
-		frappe.db.get_value(
-			"Fee Demand",
-			frm.doc.fee_demand,
-			["fee_component", "original_amount", "paid_amount", "status"],
-			(r) => {
-				if (r) {
-					frm.set_value("fee_component", r.fee_component);
-					frm.set_value("original_amount", r.original_amount);
-				}
-			}
-		);
-	},
-
-	waiver_mode(frm) {
-		frm.trigger("calculate_waiver");
+		const r = await frappe.db.get_value("Fee Demand", frm.doc.fee_demand, "student");
+		const student = r.message && r.message.student;
+		if (student && frm.doc.student !== student) {
+			await frm.set_value("student", student);
+			const sm = (await frappe.db.get_value("Student Master", student, ["registration_id", "application_number", "official_email_id", "email"])).message || {};
+			frm.set_value("registration_id", sm.registration_id || sm.application_number || "");
+			frm.set_value("student_email", sm.official_email_id || sm.email || "");
+		}
 	},
 
 	waiver_value(frm) {
@@ -66,16 +80,7 @@ frappe.ui.form.on("Fee Concession", {
 
 		if (!original || !value) return;
 
-		let waiver = 0;
-		if (frm.doc.waiver_mode === "Percentage") {
-			if (value > 100) {
-				frappe.show_alert({ message: __("Percentage cannot exceed 100."), indicator: "red" });
-				return;
-			}
-			waiver = Math.round(original * value / 100 * 100) / 100;
-		} else {
-			waiver = value;
-		}
+		const waiver = value;
 
 		if (waiver > original) {
 			frappe.show_alert({

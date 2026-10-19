@@ -136,7 +136,7 @@ def get_filter_options():
 		"SELECT DISTINCT academic_year FROM `tabFee Demand` WHERE academic_year IS NOT NULL AND academic_year != '' ORDER BY academic_year DESC",
 		as_dict=True,
 	)
-	demand_types = ["Academic", "Examination", "Service", "Fine", "Hostel", "Deposit", "Other"]
+	demand_types = ["Academic", "Non Academic"]
 
 	return {
 		"programs": [r.program for r in programs],

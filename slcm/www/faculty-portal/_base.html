@@ -3,17 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% block title %}Faculty Portal{% endblock %} — SLCM</title>
+  <title>{% block title %}Faculty Portal{% endblock %} — {{ fp_settings.portal_title if fp_settings and fp_settings.portal_title else "SLCM" }}</title>
+
+  {% if fp_settings and fp_settings.portal_favicon %}
+  <link rel="icon" href="{{ fp_settings.portal_favicon }}">
+  <link rel="shortcut icon" href="{{ fp_settings.portal_favicon }}">
+  {% endif %}
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&family=Merriweather:wght@300;400;700;900&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20,400,0,0&display=block" rel="stylesheet">
 
   <link rel="stylesheet" href="/assets/slcm/css/faculty_portal.css">
 
   {% if fp_settings %}
   {% set s = fp_settings %}
+  {% if s.font_google_url %}
+  <link href="{{ s.font_google_url }}" rel="stylesheet">
+  {% endif %}
   <style>
     :root {
       --fp-primary:       {{ s.primary_color or "#920c24" }};
@@ -21,27 +29,34 @@
       --fp-primary-light: {{ s.primary_light  or "rgba(146,12,36,0.08)" }};
       --fp-primary-mid:   {{ s.primary_mid    or "rgba(146,12,36,0.14)" }};
       --fp-secondary:     {{ s.secondary_color or "#c9a84c" }};
-      --fp-nav-text:      {{ s.nav_text_color  or "#ffffff" }};
-      --fp-bg:            {{ s.background_color or "#f0f4f8" }};
+      --fp-sidebar-active-text: {{ s.sidebar_active_text_color or "#ffffff" }};
+      --fp-sidebar-menu-text:        {{ s.sidebar_menu_text_color or "#475569" }};
+      --fp-sidebar-menu-hover-bg:    {{ s.sidebar_menu_hover_bg_color or "#f0f4f8" }};
+      --fp-sidebar-menu-hover-text:  {{ s.sidebar_menu_hover_text_color or "#0f172a" }};
+      {% if s.sidebar_theme == "Dark" %}
+      --fp-nav-bg:        {{ s.primary_color or "#920c24" }};
+      --fp-nav-text:      {{ s.nav_text_color or "#ffffff" }};
+      {% else %}
+      --fp-nav-bg:        #fafafa;
+      --fp-nav-text:      {{ s.primary_color or "#920c24" }};
+      {% endif %}
+      --fp-bg:            {{ s.background_color or "#f0f2f5" }};
       --fp-card:          {{ s.card_background  or "#ffffff" }};
-      --fp-success:       {{ s.success_color or "#16a34a" }};
-      --fp-success-bg:    {{ s.success_bg    or "rgba(22,163,74,0.10)" }};
-      --fp-warning:       {{ s.warning_color or "#d97706" }};
-      --fp-warning-bg:    {{ s.warning_bg    or "rgba(217,119,6,0.10)" }};
+      --fp-success:       {{ s.success_color or "#920c24" }};
+      --fp-success-bg:    {{ s.success_bg    or "rgba(146,12,36,0.08)" }};
+      --fp-warning:       {{ s.warning_color or "#920c24" }};
+      --fp-warning-bg:    {{ s.warning_bg    or "rgba(146,12,36,0.08)" }};
       --fp-danger:        {{ s.danger_color  or "#dc2626" }};
       --fp-danger-bg:     {{ s.danger_bg     or "rgba(220,38,38,0.10)" }};
       --fp-info:          {{ s.info_color    or "#0369a1" }};
       --fp-info-bg:       {{ s.info_bg       or "rgba(3,105,161,0.10)" }};
-      --fp-font-family:   {{ s.font_family_css or "'Poppins', system-ui, sans-serif" }};
+      --fp-font-family:   {{ s.font_family_css or "'Merriweather', Georgia, serif" }};
       --fp-nav-h:         {{ s.nav_height_css or "62px" }};
       --fp-base-font:     {% if s.font_size == "Small" %}13px{% elif s.font_size == "Large" %}15px{% else %}14px{% endif %};
       --fp-radius:        {% if s.corner_style == "Sharp" %}6px{% elif s.corner_style == "Pill" %}20px{% else %}14px{% endif %};
       --fp-radius-sm:     {% if s.corner_style == "Sharp" %}4px{% elif s.corner_style == "Pill" %}14px{% else %}9px{% endif %};
       --fp-sidebar-w:     {% if s.sidebar_width == "Narrow" %}210px{% elif s.sidebar_width == "Wide" %}290px{% else %}260px{% endif %};
     }
-    {% if s.font_google_url %}
-    @import url("{{ s.font_google_url }}");
-    {% endif %}
   </style>
   {% if s.custom_css %}
   <style>{{ s.custom_css }}</style>
@@ -52,26 +67,28 @@
 </head>
 
 <body{% if fp_settings and fp_settings.body_classes %} class="{{ fp_settings.body_classes }}"{% endif %}>
+{# Apply saved dark mode before first paint so pages don't flash light #}
+<script>try { if (localStorage.getItem('fp-dark') === '1') document.body.classList.add('fp-dark'); } catch(e) {}</script>
 
 {% if is_guest %}
-<script>window.location.href = "/faculty/login?redirect-to=/faculty-portal";</script>
+<script>window.location.href = "/portal-login?redirect-to=/faculty-portal";</script>
 
 {% elif not_a_faculty %}
 {% if is_admin_preview %}
 {# ── Admin: no Faculty records exist at all — show setup prompt ── #}
-<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:'Poppins',sans-serif;background:linear-gradient(135deg,#f0f4f8,#e8edf3);">
-  <div style="text-align:center;padding:48px 40px;background:#fff;border-radius:20px;box-shadow:0 16px 64px rgba(0,0,0,0.12);max-width:480px;width:90%;">
-    <div style="width:72px;height:72px;border-radius:20px;background:rgba(43,46,74,0.08);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
-      <span style="font-family:'Material Symbols Outlined';font-size:36px;color:#2b2e4a;">admin_panel_settings</span>
+<div class="fp-nf-screen" style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:var(--fp-font-family, 'Merriweather', Georgia, serif);background:linear-gradient(135deg,#f0f4f8,#e8edf3);">
+  <div class="fp-nf-card" style="text-align:center;padding:48px 40px;background:#fff;border-radius:20px;box-shadow:0 16px 64px rgba(0,0,0,0.12);max-width:480px;width:90%;">
+    <div class="fp-nf-icon-box" style="width:72px;height:72px;border-radius:20px;background:rgba(43,46,74,0.08);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+      <span class="fp-nf-icon" style="font-family:'Material Symbols Outlined';font-size:36px;color:#2b2e4a;">admin_panel_settings</span>
     </div>
-    <h2 style="margin:0 0 8px;color:#0f172a;font-size:22px;font-weight:800;letter-spacing:-0.02em;">No Faculty Records Found</h2>
-    <p style="color:#64748b;font-size:14px;margin:0 0 6px;line-height:1.6;">You are logged in as an administrator but there are no Faculty records in the system yet.</p>
-    <p style="color:#64748b;font-size:13px;margin:0 0 28px;line-height:1.6;">Create at least one Faculty record to preview the portal.</p>
+    <h2 class="fp-nf-title" style="margin:0 0 8px;color:#0f172a;font-size:22px;font-weight:800;letter-spacing:-0.02em;">No Faculty Records Found</h2>
+    <p class="fp-nf-sub" style="color:#64748b;font-size:14px;margin:0 0 6px;line-height:1.6;">You are logged in as an administrator but there are no Faculty records in the system yet.</p>
+    <p class="fp-nf-sub" style="color:#64748b;font-size:13px;margin:0 0 28px;line-height:1.6;">Create at least one Faculty record to preview the portal.</p>
     <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
       <a href="/slcm/faculty/new-faculty-1" style="display:inline-flex;align-items:center;gap:8px;padding:11px 24px;background:linear-gradient(135deg,#2b2e4a,#920c24);color:#fff;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px;font-family:inherit;box-shadow:0 4px 16px rgba(43,46,74,0.3);">
         <span style="font-family:'Material Symbols Outlined';font-size:18px;">person_add</span>Create Faculty Record
       </a>
-      <a href="/slcm/faculty" style="display:inline-flex;align-items:center;gap:8px;padding:11px 24px;background:#f1f5f9;color:#2b2e4a;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px;font-family:inherit;">
+      <a href="/slcm/faculty" class="fp-nf-btn-secondary" style="display:inline-flex;align-items:center;gap:8px;padding:11px 24px;background:#f1f5f9;color:#2b2e4a;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px;font-family:inherit;">
         <span style="font-family:'Material Symbols Outlined';font-size:18px;">group</span>View All Faculty
       </a>
     </div>
@@ -79,13 +96,13 @@
 </div>
 {% else %}
 {# ── Non-admin user with no linked Faculty record ── #}
-<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:'Poppins',sans-serif;background:linear-gradient(135deg,#f0f4f8,#e8edf3);">
-  <div style="text-align:center;padding:48px 40px;background:#fff;border-radius:20px;box-shadow:0 16px 64px rgba(0,0,0,0.12);max-width:420px;width:90%;">
-    <div style="width:72px;height:72px;border-radius:20px;background:rgba(148,163,184,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
-      <span style="font-family:'Material Symbols Outlined';font-size:36px;color:#94a3b8;">person_off</span>
+<div class="fp-nf-screen" style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:var(--fp-font-family, 'Merriweather', Georgia, serif);background:linear-gradient(135deg,#f0f4f8,#e8edf3);">
+  <div class="fp-nf-card" style="text-align:center;padding:48px 40px;background:#fff;border-radius:20px;box-shadow:0 16px 64px rgba(0,0,0,0.12);max-width:420px;width:90%;">
+    <div class="fp-nf-icon-box fp-nf-icon-muted" style="width:72px;height:72px;border-radius:20px;background:rgba(148,163,184,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+      <span class="fp-nf-icon" style="font-family:'Material Symbols Outlined';font-size:36px;color:#94a3b8;">person_off</span>
     </div>
-    <h2 style="margin:0 0 10px;color:#0f172a;font-size:22px;font-weight:800;letter-spacing:-0.02em;">Not a Faculty Account</h2>
-    <p style="color:#64748b;font-size:14px;margin:0 0 28px;line-height:1.6;">No faculty record is linked to your account. Please contact the administrator to get access.</p>
+    <h2 class="fp-nf-title" style="margin:0 0 10px;color:#0f172a;font-size:22px;font-weight:800;letter-spacing:-0.02em;">Not a Faculty Account</h2>
+    <p class="fp-nf-sub" style="color:#64748b;font-size:14px;margin:0 0 28px;line-height:1.6;">No faculty record is linked to your account. Please contact the administrator to get access.</p>
     <button onclick="fpNotFacultyLogout()" style="display:inline-flex;align-items:center;gap:8px;padding:11px 28px;background:linear-gradient(135deg,#2b2e4a,#920c24);color:#fff;border-radius:10px;border:none;cursor:pointer;font-weight:600;font-size:14px;font-family:inherit;box-shadow:0 4px 16px rgba(43,46,74,0.3);">
       <span style="font-family:'Material Symbols Outlined';font-size:18px;">logout</span>Sign Out &amp; Login Again
     </button>
@@ -98,7 +115,7 @@
         method: 'POST', credentials: 'same-origin',
         headers: { 'X-Frappe-CSRF-Token': window._fp_csrf || decodeURIComponent((document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/) || [])[1] || '') }
       }).finally(function() {
-        window.location.href = '/faculty/login';
+        window.location.href = '/portal-login';
       });
     }
     </script>
@@ -110,9 +127,9 @@
 
 {% if is_admin_preview %}
 {# ── Admin preview ribbon — visible only to System Manager / Administrator ── #}
-<div id="fp-admin-preview-bar" style="position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(90deg,#2b2e4a,#920c24);color:#fff;font-family:'Poppins',sans-serif;font-size:12.5px;font-weight:600;padding:7px 16px;display:flex;align-items:center;gap:10px;box-shadow:0 2px 8px rgba(0,0,0,0.25);">
+<div id="fp-admin-preview-bar" style="position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(90deg,#2b2e4a,#920c24);color:#fff;font-family:var(--fp-font-family, 'Merriweather', Georgia, serif);font-size:12.5px;font-weight:600;padding:7px 16px;display:flex;align-items:center;gap:10px;box-shadow:0 2px 8px rgba(0,0,0,0.25);">
   <span style="font-family:'Material Symbols Outlined';font-size:16px;flex-shrink:0;">preview</span>
-  <span style="flex:1;">Admin Preview Mode — you are viewing the portal as <strong>{{ faculty_name }}</strong>. Your account has no linked Faculty record. <a href="/slcm/faculty" style="color:#fcd34d;text-decoration:underline;">Link one here</a> to log in as yourself.</span>
+  <span style="flex:1;">Admin Preview Mode — you are viewing the portal as <strong>{{ faculty_name }}</strong>. Your account has no linked Faculty record. <a href="/slcm/faculty" style="color:#f5c6ce;text-decoration:underline;">Link one here</a> to log in as yourself.</span>
   <button onclick="document.getElementById('fp-admin-preview-bar').style.display='none'" style="background:rgba(255,255,255,0.15);border:none;color:#fff;border-radius:6px;padding:2px 10px;cursor:pointer;font-size:12px;flex-shrink:0;">✕ Dismiss</button>
 </div>
 <style>body { padding-top: 36px !important; }</style>
@@ -125,17 +142,29 @@
       <span></span><span></span><span></span>
     </div>
     <a href="/faculty-portal" class="fp-brand">
+      {% if not fp_settings or fp_settings.show_logo %}
       <div class="fp-brand-logo">
         {% set _ws = frappe.get_doc("Website Settings", "Website Settings") %}
-        {% if _ws and _ws.banner_image %}
+        {% if fp_settings and fp_settings.portal_logo %}
+          <img src="{{ fp_settings.portal_logo }}" alt="Logo">
+        {% elif _ws and _ws.banner_image %}
           <img src="{{ _ws.banner_image }}" alt="Logo">
         {% else %}
-          <span style="font-family:'Material Symbols Outlined';font-size:20px;color:#fff;font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24;">school</span>
+          <span style="font-family:'Material Symbols Outlined';font-size:20px;color:var(--fp-nav-text);font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24;">school</span>
         {% endif %}
       </div>
+      {% endif %}
       <div class="fp-brand-text">
-        <span class="fp-brand-name">Faculty Portal</span>
-        <span class="fp-brand-sub">Academic Management</span>
+        <span class="fp-brand-name">
+          {%- if fp_settings and fp_settings.nav_brand_text -%}
+          {{ fp_settings.nav_brand_text }}
+          {%- elif fp_settings and fp_settings.portal_title -%}
+          {{ fp_settings.portal_title }}
+          {%- else -%}
+          Faculty Portal
+          {%- endif -%}
+        </span>
+        <span class="fp-brand-sub">{{ (fp_settings.portal_subtitle if fp_settings and fp_settings.portal_subtitle else "Academic Management") }}</span>
       </div>
     </a>
   </div>
@@ -164,25 +193,19 @@
         <div class="fp-dropdown-header">
           <div class="fp-dropdown-name">{{ faculty_name or frappe.session.user }}</div>
           <div class="fp-dropdown-role">
-            <span style="font-family:'Material Symbols Outlined';font-size:11px;vertical-align:-1px;margin-right:3px;font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 20;">verified</span>
-            {{ faculty_designation or 'Faculty' }}
+            <span style="font-family:'Material Symbols Outlined';font-size:11px;vertical-align:-1px;margin-right:3px;font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 20;">badge</span>
+            {{ faculty_id or 'Faculty' }}
           </div>
           <div class="fp-dropdown-email">{{ frappe.session.user }}</div>
         </div>
         <a href="/faculty-portal/profile" class="fp-dropdown-item">
           <span class="fp-ms">manage_accounts</span> My Profile
         </a>
-        <a href="/faculty-portal" class="fp-dropdown-item">
-          <span class="fp-ms">dashboard</span> Dashboard
-        </a>
-        <a href="/faculty-portal/communication" class="fp-dropdown-item">
-          <span class="fp-ms">campaign</span> Announcements
-        </a>
         <a href="/faculty-portal/settings" class="fp-dropdown-item">
           <span class="fp-ms">tune</span> Settings
         </a>
         <a href="/faculty-portal/support" class="fp-dropdown-item">
-          <span class="fp-ms">support_agent</span> Help & Support
+          <span class="fp-ms">support_agent</span> Helpdesk
         </a>
         <hr class="fp-dropdown-divider">
         <a href="javascript:void(0)" onclick="fpLogout()" class="fp-dropdown-item fp-danger">
@@ -220,78 +243,44 @@
   {# ── Sidebar ─────────────────────────────────────────────────────────── #}
   <aside class="fp-sidebar" id="fp-sidebar" role="navigation" aria-label="Faculty portal navigation">
 
-    {# Profile Hero #}
-    <div class="fp-profile-hero">
-      <div class="fp-profile-avatar-wrap">
-        <div class="fp-sidebar-avatar">
-          {% if faculty_photo %}
-            <img src="{{ faculty_photo }}" alt="{{ faculty_name }}">
-          {% else %}
-            {{ faculty_initial or "F" }}
-          {% endif %}
-        </div>
-        <span class="fp-online-dot" title="Online"></span>
-      </div>
-      <div class="fp-faculty-name">{{ faculty_name or "Faculty" }}</div>
-      <div class="fp-faculty-dept">{{ faculty_department or "—" }}</div>
-      <div class="fp-faculty-id">
-        <span class="fp-ms">badge</span>
-        {{ faculty_id or "—" }}
-      </div>
-    </div>
-
 
     {# Main Menu #}
     <div class="fp-sidebar-section fp-section-toggle" data-section="main-menu" onclick="fpToggleSection('main-menu')">
-      Main Menu
       <span class="fp-ms fp-section-chevron">expand_more</span>
     </div>
     <div class="fp-section-items" id="fp-section-main-menu">
       <a href="/faculty-portal"                class="fp-nav-item {% if active_page == 'dashboard'     %}active{% endif %}" data-label="Dashboard">
         <span class="fp-ms">dashboard</span><span class="fp-nav-label">Dashboard</span>
       </a>
-      <a href="/faculty-portal/my-classes"     class="fp-nav-item {% if active_page == 'my_classes'    %}active{% endif %}" data-label="My Classes">
-        <span class="fp-ms">menu_book</span><span class="fp-nav-label">My Classes</span>
+      <a href="/faculty-portal/communication"  class="fp-nav-item {% if active_page == 'communication' %}active{% endif %}" data-label="Announcements">
+        <span class="fp-ms">campaign</span><span class="fp-nav-label">Announcements</span>
+      </a>
+      <a href="/faculty-portal/my-classes"     class="fp-nav-item {% if active_page == 'my_classes'    %}active{% endif %}" data-label="My Courses">
+        <span class="fp-ms">menu_book</span><span class="fp-nav-label">My Courses</span>
       </a>
 <a href="/faculty-portal/attendance"     class="fp-nav-item {% if active_page == 'attendance'    %}active{% endif %}" data-label="Attendance">
         <span class="fp-ms">how_to_reg</span><span class="fp-nav-label">Attendance</span>
         <span class="fp-nav-pill" id="fp-att-pill" style="display:none;"></span>
       </a>
-      <a href="/faculty-portal/marks"          class="fp-nav-item {% if active_page == 'marks'         %}active{% endif %}" data-label="Marks Entry">
-        <span class="fp-ms">grade</span><span class="fp-nav-label">Marks Entry</span>
-      </a>
-      <a href="/faculty-portal/venue-booking"  class="fp-nav-item {% if active_page == 'venue_booking' %}active{% endif %}" data-label="Venue Booking">
+      <a href="/faculty-portal/marks"          class="fp-nav-item {% if active_page == 'marks'         %}active{% endif %}" data-label="Grades">
+        <span class="fp-ms">grade</span><span class="fp-nav-label">Grades</span>
+      </a>      <a href="/faculty-portal/venue-booking"  class="fp-nav-item {% if active_page == 'venue_booking' %}active{% endif %}" data-label="Venue Booking">
         <span class="fp-ms">meeting_room</span><span class="fp-nav-label">Venue Booking</span>
       </a>
-      <a href="/faculty-portal/communication"  class="fp-nav-item {% if active_page == 'communication' %}active{% endif %}" data-label="Communication">
-        <span class="fp-ms">campaign</span><span class="fp-nav-label">Communication</span>
+      {% if fp_settings and fp_settings.enable_lms_navigation %}
+      <a href="{{ fp_settings.lms_url or '#' }}" target="_blank" class="fp-nav-item" data-label="LMS">
+        <span class="fp-ms">school</span><span class="fp-nav-label">LMS</span>
       </a>
-    </div>
-
-    <div class="fp-sidebar-section fp-section-toggle" data-section="my-info" onclick="fpToggleSection('my-info')">
-      My Account
-      <span class="fp-ms fp-section-chevron">expand_more</span>
-    </div>
-    <div class="fp-section-items" id="fp-section-my-info">
-      <a href="/faculty-portal/profile"        class="fp-nav-item {% if active_page == 'profile'       %}active{% endif %}" data-label="My Profile">
-        <span class="fp-ms">manage_accounts</span><span class="fp-nav-label">My Profile</span>
-      </a>
-      <a href="/faculty-portal/settings"       class="fp-nav-item {% if active_page == 'settings'      %}active{% endif %}" data-label="Settings">
-        <span class="fp-ms">tune</span><span class="fp-nav-label">Settings</span>
-      </a>
-      <a href="/faculty-portal/support"        class="fp-nav-item {% if active_page == 'support'        %}active{% endif %}" data-label="Helpdesk">
+      {% endif %}
+      <a href="/faculty-portal/support"        class="fp-nav-item {% if active_page == 'support'       %}active{% endif %}" data-label="Helpdesk">
         <span class="fp-ms">support_agent</span><span class="fp-nav-label">Helpdesk</span>
       </a>
     </div>
 
     <hr class="fp-sidebar-divider">
-    <button class="fp-collapse-btn" onclick="fpToggleMini()" data-label="Expand" style="margin:0 8px;">
+    <button class="fp-collapse-btn" onclick="fpToggleMini()" data-label="Expand" style="margin:0 8px;" title="Collapse sidebar" aria-label="Collapse sidebar">
       <span class="fp-ms">left_panel_close</span>
-      <span class="fp-collapse-label">Collapse Sidebar</span>
     </button>
-    <a href="javascript:void(0)" onclick="fpLogout()" class="fp-nav-item fp-danger" data-label="Sign Out" style="margin:4px 8px 0;">
-      <span class="fp-ms">logout</span><span class="fp-nav-label">Sign Out</span>
-    </a>
   </aside>
 
   {# ── Main Content ─────────────────────────────────────────────────────── #}
@@ -300,30 +289,6 @@
   </main>
 
 </div>{# end fp-layout #}
-
-{# ── Bottom Tab Navigation (mobile) ─────────────────────────────────── #}
-<nav class="fp-bottom-nav" aria-label="Mobile navigation">
-  <div class="fp-bottom-nav-inner">
-    <a href="/faculty-portal"               class="fp-bn-item {% if active_page == 'dashboard'     %}active{% endif %}">
-      <span class="fp-ms">dashboard</span>Home
-    </a>
-    <a href="/faculty-portal/my-classes"    class="fp-bn-item {% if active_page == 'my_classes'    %}active{% endif %}">
-      <span class="fp-ms">menu_book</span>Classes
-    </a>
-    <a href="/faculty-portal/attendance"    class="fp-bn-item {% if active_page == 'attendance'    %}active{% endif %}">
-      <span class="fp-ms">how_to_reg</span>Attendance
-    </a>
-    <a href="/faculty-portal/marks"         class="fp-bn-item {% if active_page == 'marks'         %}active{% endif %}">
-      <span class="fp-ms">grade</span>Marks
-    </a>
-    <a href="/faculty-portal/communication" class="fp-bn-item {% if active_page == 'communication' %}active{% endif %}">
-      <span class="fp-ms">campaign</span>Notices
-    </a>
-    <a href="/faculty-portal/profile"       class="fp-bn-item {% if active_page == 'profile'       %}active{% endif %}">
-      <span class="fp-ms">manage_accounts</span>Profile
-    </a>
-  </div>
-</nav>
 
 {# ── Logout Confirmation Modal ───────────────────────────────────────── #}
 <div id="fp-logout-modal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);align-items:center;justify-content:center;" role="dialog" aria-modal="true">
@@ -394,7 +359,7 @@ body.fp-compact .fp-card-header{ padding: 12px 16px !important; }
       method: 'POST',
       headers: { 'X-Frappe-CSRF-Token': window._fp_csrf || '' }
     }).finally(function() {
-      window.location.href = '/faculty/login?redirect-to=/faculty-portal';
+      window.location.href = '/portal-login?redirect-to=/faculty-portal';
     });
   }
   document.addEventListener('DOMContentLoaded', function() {
@@ -410,8 +375,11 @@ body.fp-compact .fp-card-header{ padding: 12px 16px !important; }
     document.body.classList.toggle('fp-sidebar-mini', isMini);
     var btn = sidebar.querySelector('.fp-collapse-btn .fp-ms');
     if (btn) btn.textContent = isMini ? 'right_panel_close' : 'left_panel_close';
-    var lbl = sidebar.querySelector('.fp-collapse-label');
-    if (lbl) lbl.textContent = isMini ? 'Expand' : 'Collapse Sidebar';
+    var cbtn = sidebar.querySelector('.fp-collapse-btn');
+    if (cbtn) {
+      var tip = isMini ? 'Expand sidebar' : 'Collapse sidebar';
+      cbtn.title = tip; cbtn.setAttribute('aria-label', tip);
+    }
     try { localStorage.setItem('fp-sidebar-mini', isMini ? '1' : '0'); } catch(e) {}
   }
   (function fpRestoreMini() {
@@ -465,7 +433,7 @@ body.fp-compact .fp-card-header{ padding: 12px 16px !important; }
     try { localStorage.setItem('fp-sect-' + sectionId, isCollapsed ? '0' : '1'); } catch(e) {}
   }
   (function fpInitSections() {
-    ['main-menu', 'my-info'].forEach(function(id) {
+    ['main-menu'].forEach(function(id) {
       var itemsEl  = document.getElementById('fp-section-' + id);
       var headerEl = document.querySelector('.fp-section-toggle[data-section="' + id + '"]');
       if (!itemsEl) return;
@@ -630,7 +598,171 @@ body.fp-compact .fp-card-header{ padding: 12px 16px !important; }
   {% endif %}
 </script>
 
+<style>
+/* ── Portal dialog (fpConfirm / fpAlert) — replaces the browser's
+   confirm()/alert() so prompts match the portal styling ── */
+.fp-dlg-backdrop { position: fixed; inset: 0; z-index: 2000; background: rgba(15, 23, 42, .45);
+  display: none; align-items: center; justify-content: center; padding: 16px; }
+.fp-dlg-backdrop.open { display: flex; animation: fp-dlg-fade .15s ease-out; }
+.fp-dlg { width: 100%; max-width: 420px; background: var(--fp-card, #fff); border-radius: 14px;
+  box-shadow: 0 24px 60px rgba(0,0,0,.25); overflow: hidden; animation: fp-dlg-pop .18s ease-out; }
+.fp-dlg-body { display: flex; gap: 14px; padding: 22px 22px 18px; }
+.fp-dlg-icon { width: 40px; height: 40px; border-radius: 11px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  background: var(--fp-primary-light, #fde8eb); color: var(--fp-primary, #920c24); }
+.fp-dlg-icon .fp-ms { font-size: 22px; }
+.fp-dlg-title { font-size: 15.5px; font-weight: 700; color: var(--fp-text-1, #0f172a); margin: 0 0 6px; }
+.fp-dlg-msg { font-size: 13.5px; line-height: 1.55; color: var(--fp-text-2, #334155); white-space: pre-line; }
+.fp-dlg-ftr { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 22px 18px; }
+.fp-dlg-btn { padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer;
+  border: 1.5px solid var(--fp-border, #e2e8f0); background: var(--fp-card, #fff); color: var(--fp-text-2, #334155); }
+.fp-dlg-btn:hover { background: var(--fp-bg, #f8fafc); }
+.fp-dlg-btn-primary { background: var(--fp-primary, #920c24); border-color: var(--fp-primary, #920c24); color: #fff; }
+.fp-dlg-btn-primary:hover { background: var(--fp-primary-dark, #6f091b); }
+@keyframes fp-dlg-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fp-dlg-pop { from { transform: translateY(8px) scale(.98); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* ── Dark mode ── */
+/* Navbar: hover washes used --fp-bg, which is darker than the navy nav and barely shows */
+body.fp-dark .fp-hamburger:hover,
+body.fp-dark .fp-theme-btn:hover { background: var(--fp-card-2); }
+body.fp-dark .fp-brand-sub { color: var(--fp-text-3); }
+body.fp-dark .fp-avatar-btn { border-color: rgba(255,255,255,0.25); }
+
+/* Avatar dropdown */
+body.fp-dark .fp-dropdown { border-color: var(--fp-border-mid); }
+body.fp-dark .fp-dropdown-email { color: var(--fp-text-3); }
+body.fp-dark .fp-dropdown-item { color: var(--fp-text-2); }
+body.fp-dark .fp-dropdown-item .fp-ms { color: var(--fp-text-3); }
+body.fp-dark .fp-dropdown-item:hover { background: rgba(255,255,255,0.05); color: var(--fp-text-1); }
+body.fp-dark .fp-dropdown-item:hover .fp-ms { color: var(--fp-text-1); }
+body.fp-dark .fp-dropdown-item.fp-danger,
+body.fp-dark .fp-dropdown-item.fp-danger .fp-ms { color: var(--fp-danger); }
+body.fp-dark .fp-dropdown-item.fp-danger:hover { background: var(--fp-danger-bg); }
+
+/* Notification panel */
+body.fp-dark .fp-notif-panel { border-color: var(--fp-border-mid); }
+body.fp-dark .fp-notif-header,
+body.fp-dark .fp-notif-footer { background: var(--fp-card-2); border-color: var(--fp-border); }
+body.fp-dark .fp-notif-header-count { background: rgba(214,74,102,0.14); color: #f08da0; border: 1px solid rgba(214,74,102,0.3); }
+/* --fp-border-light equals the card colour in dark, so the row dividers vanished */
+body.fp-dark .fp-notif-item { border-bottom-color: var(--fp-border); }
+body.fp-dark .fp-notif-item:hover { background: rgba(255,255,255,0.05); }
+body.fp-dark .fp-notif-cat,
+body.fp-dark .fp-notif-sub,
+body.fp-dark .fp-notif-empty { color: var(--fp-text-3); }
+/* Footer link uses --fp-accent, which stays NLS maroon (#920c24) in dark */
+body.fp-dark .fp-notif-footer a { color: #f08da0; }
+
+/* Sidebar */
+body.fp-dark .fp-sidebar-section,
+body.fp-dark .fp-collapse-btn { color: var(--fp-text-3); }
+body.fp-dark .fp-sidebar-section.fp-section-toggle:hover { color: var(--fp-text-1); }
+body.fp-dark .fp-collapse-btn:hover { background: var(--fp-card-2); color: var(--fp-text-1); }
+/* White text on the lifted --fp-danger (#f87171) is too faint */
+body.fp-dark .fp-nav-pill { background: #dc2626; color: #fff; }
+/* Mini-sidebar tooltip is #0f172a — the same colour as the dark sidebar */
+body.fp-dark .fp-tooltip { background: var(--fp-card-2); color: var(--fp-text-1); border-color: var(--fp-border-mid); box-shadow: 0 6px 20px rgba(0,0,0,0.5); }
+
+/* Portal dialog (fpConfirm / fpAlert) */
+body.fp-dark .fp-dlg-backdrop { background: rgba(0,0,0,0.6); }
+body.fp-dark .fp-dlg { border: 1px solid var(--fp-border-mid); box-shadow: 0 24px 60px rgba(0,0,0,0.6); }
+body.fp-dark .fp-dlg-icon { background: rgba(214,74,102,0.14); color: #f08da0; border: 1px solid rgba(214,74,102,0.3); }
+body.fp-dark .fp-dlg-title { color: var(--fp-text-1); }
+body.fp-dark .fp-dlg-msg { color: var(--fp-text-2); }
+body.fp-dark .fp-dlg-btn { background: #1a2540; color: var(--fp-text-1); border-color: var(--fp-border); }
+body.fp-dark .fp-dlg-btn:hover { background: #222f4f; }
+body.fp-dark .fp-dlg-btn-primary { background: var(--fp-primary); border-color: var(--fp-primary); color: #fff; }
+body.fp-dark .fp-dlg-btn-primary:hover { background: var(--fp-primary-dark); border-color: var(--fp-primary-dark); }
+
+/* Logout confirmation modal (inline-styled) */
+body.fp-dark #fp-logout-modal { background: rgba(0,0,0,0.65) !important; }
+body.fp-dark #fp-logout-modal > div { border: 1px solid var(--fp-border-mid); }
+body.fp-dark #fp-logout-modal button[onclick="fpCancelLogout()"] { background: #1a2540 !important; color: var(--fp-text-1) !important; border-color: var(--fp-border) !important; }
+body.fp-dark #fp-logout-modal button[onclick="fpCancelLogout()"]:hover { background: #222f4f !important; }
+
+/* "No Faculty Records" / "Not a Faculty Account" screens (inline-styled) */
+body.fp-dark .fp-nf-screen { background: var(--fp-bg) !important; }
+body.fp-dark .fp-nf-card { background: var(--fp-card) !important; border: 1px solid var(--fp-border); box-shadow: 0 16px 64px rgba(0,0,0,0.5) !important; }
+body.fp-dark .fp-nf-icon-box { background: rgba(214,74,102,0.14) !important; }
+body.fp-dark .fp-nf-icon { color: #f08da0 !important; }
+body.fp-dark .fp-nf-icon-muted { background: rgba(148,163,184,0.12) !important; }
+body.fp-dark .fp-nf-icon-muted .fp-nf-icon { color: var(--fp-text-3) !important; }
+body.fp-dark .fp-nf-title { color: var(--fp-text-1) !important; }
+body.fp-dark .fp-nf-sub { color: var(--fp-text-3) !important; }
+body.fp-dark .fp-nf-btn-secondary { background: #1a2540 !important; color: var(--fp-text-1) !important; border: 1px solid var(--fp-border); }
+</style>
+
 <script>
+/* ── fpConfirm / fpAlert: portal-styled dialogs ──
+   fpConfirm({ title, message, confirmLabel, cancelLabel, icon }, onConfirm, onCancel)
+   fpAlert(message, { title, icon })
+   Built on first use; Enter confirms, Escape / backdrop cancels. */
+(function () {
+  var _el = null, _onOk = null, _onCancel = null;
+
+  function build() {
+    _el = document.createElement('div');
+    _el.className = 'fp-dlg-backdrop';
+    _el.setAttribute('role', 'dialog');
+    _el.setAttribute('aria-modal', 'true');
+    _el.innerHTML =
+      '<div class="fp-dlg">' +
+        '<div class="fp-dlg-body">' +
+          '<div class="fp-dlg-icon"><span class="fp-ms"></span></div>' +
+          '<div style="min-width:0;flex:1;"><p class="fp-dlg-title"></p><div class="fp-dlg-msg"></div></div>' +
+        '</div>' +
+        '<div class="fp-dlg-ftr">' +
+          '<button type="button" class="fp-dlg-btn" data-act="cancel"></button>' +
+          '<button type="button" class="fp-dlg-btn fp-dlg-btn-primary" data-act="ok"></button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(_el);
+    _el.addEventListener('click', function (e) {
+      var act = e.target.closest('[data-act]');
+      if (act) close(act.getAttribute('data-act') === 'ok');
+      else if (e.target === _el) close(false);
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!_el.classList.contains('open')) return;
+      /* Capture phase + stopPropagation: Escape must not also close a page
+         modal sitting under the dialog */
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(false); }
+      else if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); close(true); }
+    }, true);
+  }
+
+  function close(ok) {
+    _el.classList.remove('open');
+    var cb = ok ? _onOk : _onCancel;
+    _onOk = _onCancel = null;
+    if (cb) cb();
+  }
+
+  function open(opts, onOk, onCancel, withCancel) {
+    if (!_el) build();
+    _el.querySelector('.fp-dlg-icon .fp-ms').textContent = opts.icon || (withCancel ? 'help' : 'info');
+    _el.querySelector('.fp-dlg-title').textContent = opts.title || (withCancel ? 'Please confirm' : 'Notice');
+    _el.querySelector('.fp-dlg-msg').textContent = opts.message || '';
+    var cancel = _el.querySelector('[data-act="cancel"]');
+    cancel.textContent = opts.cancelLabel || 'Cancel';
+    cancel.style.display = withCancel ? '' : 'none';
+    _el.querySelector('[data-act="ok"]').textContent = opts.confirmLabel || (withCancel ? 'Confirm' : 'OK');
+    _onOk = onOk || null; _onCancel = onCancel || null;
+    _el.classList.add('open');
+    _el.querySelector('[data-act="ok"]').focus();
+  }
+
+  window.fpConfirm = function (opts, onOk, onCancel) {
+    if (typeof opts === 'string') opts = { message: opts };
+    open(opts || {}, onOk, onCancel, true);
+  };
+  window.fpAlert = function (message, opts) {
+    opts = opts || {};
+    opts.message = message;
+    open(opts, opts.onClose, opts.onClose, false);
+  };
+})();
+
 /* ── fpCall: frappe.call with fetch fallback ── */
 function fpCall(method, args, onSuccess, onError) {
   if (window.frappe && typeof frappe.call === 'function') {
@@ -645,7 +777,7 @@ function fpCall(method, args, onSuccess, onError) {
           var parsed = msgs.map(function(m) { try { return JSON.parse(m).message || m; } catch(e) { return m; } });
           if (parsed.length) msg = parsed.join('\n');
         } catch(e) {}
-        if (onError) onError(msg); else alert(msg);
+        if (onError) onError(msg); else fpAlert(msg, { title: 'Something went wrong', icon: 'error' });
       }
     });
     return;
@@ -671,14 +803,73 @@ function fpCall(method, args, onSuccess, onError) {
         var parsed = msgs.map(function(m) { try { return JSON.parse(m).message || m; } catch(e) { return m; } });
         if (parsed.length) msg = parsed.join('\n');
       } catch(e) {}
-      if (onError) onError(msg); else alert(msg);
+      if (onError) onError(msg); else fpAlert(msg, { title: 'Something went wrong', icon: 'error' });
     } else { onSuccess(data.message); }
   })
   .catch(function() {
     var msg = 'Network error. Please check your connection.';
-    if (onError) onError(msg); else alert(msg);
+    if (onError) onError(msg); else fpAlert(msg, { title: 'Connection problem', icon: 'wifi_off' });
   });
 }
+
+/* ── fpPositionMultiselect: place a fixed-position dropdown panel
+   under its trigger button. The panel is moved to document.body while
+   open so it escapes any ancestor with `overflow:hidden` or a CSS
+   `transform` (e.g. our `.fade-in` entrance animation) — either of
+   those would otherwise break `position:fixed` by making that ancestor
+   the containing block instead of the viewport. ── */
+function fpPositionMultiselect(btn, panel) {
+  var rect = btn.getBoundingClientRect();
+  var panelWidth = Math.max(panel.offsetWidth || 200, rect.width);
+  var left = rect.left;
+  if (left + panelWidth > window.innerWidth - 8) {
+    left = Math.max(8, window.innerWidth - panelWidth - 8);
+  }
+  panel.style.left = left + 'px';
+  panel.style.top = (rect.bottom + 6) + 'px';
+  panel.style.minWidth = rect.width + 'px';
+}
+
+function fpOpenMultiselectPanel(btn, panel) {
+  document.querySelectorAll('.fp-multiselect-panel.fp-open').forEach(function(p) {
+    if (p !== panel) fpCloseMultiselectPanel(p);
+  });
+  var willOpen = !panel.classList.contains('fp-open');
+  if (willOpen) {
+    if (!panel._fpHomeParent) {
+      panel._fpHomeParent = panel.parentNode;
+      panel._fpHomeNext = panel.nextSibling;
+    }
+    document.body.appendChild(panel);
+    panel.classList.add('fp-open');
+    fpPositionMultiselect(btn, panel);
+  } else {
+    fpCloseMultiselectPanel(panel);
+  }
+}
+
+function fpCloseMultiselectPanel(panel) {
+  panel.classList.remove('fp-open');
+  if (panel._fpHomeParent) {
+    if (panel._fpHomeNext && panel._fpHomeNext.parentNode === panel._fpHomeParent) {
+      panel._fpHomeParent.insertBefore(panel, panel._fpHomeNext);
+    } else {
+      panel._fpHomeParent.appendChild(panel);
+    }
+  }
+}
+
+(function() {
+  function reposition() {
+    document.querySelectorAll('.fp-multiselect-panel.fp-open').forEach(function(panel) {
+      var wrap = panel._fpHomeParent ? panel._fpHomeParent.closest('.fp-multiselect') : panel.closest('.fp-multiselect');
+      var btn = wrap ? wrap.querySelector('.fp-multiselect-btn') : null;
+      if (btn) fpPositionMultiselect(btn, panel);
+    });
+  }
+  window.addEventListener('scroll', reposition, true);
+  window.addEventListener('resize', reposition);
+})();
 </script>
 
 {% block extra_js %}{% endblock %}

@@ -12,6 +12,7 @@
   "col_break_brand",
   "show_logo",
   "nav_brand_text",
+  "portal_logo",
   "portal_favicon",
   "typography_section",
   "font_family",
@@ -42,6 +43,7 @@
   "grade_average_color",
   "grade_average_label",
   "col_break_grade2",
+  "grade_color",
   "grade_fail_color",
   "grade_fail_label",
   "tab_layout",
@@ -90,7 +92,7 @@
    "fieldname": "html_appearance_note",
    "fieldtype": "HTML",
    "label": "Appearance Note",
-   "options": "<div class=\"alert alert-primary\" style=\"background:#e8f0fe;border-left:4px solid #4285f4;padding:10px 14px;border-radius:6px;margin-bottom:12px;\"><strong style=\"color:#1a56db;\">&#127912; Appearance</strong> &nbsp;Configure the portal's visual identity — branding, typography, theme colors, status indicators, and grade color bands. Changes apply globally to all parent portal pages.</div>"
+   "options": "<div class=\"alert alert-primary\" style=\"background:#e8f0fe;border-left:4px solid #4285f4;padding:10px 14px;border-radius:6px;margin-bottom:12px;\"><strong style=\"color:#1a56db;\">&#127912; Appearance</strong> &nbsp;Configure the portal's visual identity \u2014 branding, typography, theme colors, status indicators, and grade color bands. Changes apply globally to all parent portal pages.</div>"
   },
   {
    "fieldname": "branding_section",
@@ -116,7 +118,7 @@
   },
   {
    "default": "1",
-   "description": "Show institution logo in the top navbar (pulled from Website Settings › Banner Image)",
+   "description": "Show institution logo in the top navbar (pulled from Website Settings \u203a Banner Image)",
    "fieldname": "show_logo",
    "fieldtype": "Check",
    "label": "Show Logo in Navbar"
@@ -126,6 +128,12 @@
    "fieldname": "nav_brand_text",
    "fieldtype": "Data",
    "label": "Navbar Brand Text"
+  },
+  {
+   "fieldname": "portal_logo",
+   "fieldtype": "Attach Image",
+   "label": "Portal Logo",
+   "description": "Logo shown in the portal navbar. If left blank, it falls back to the site default."
   },
   {
    "description": "Custom favicon for the parent portal. Leave blank to use the site default.",
@@ -269,17 +277,19 @@
   },
   {
    "default": "#16a34a",
-   "description": "Top grade band — Distinction, A+, A, S",
+   "description": "Top grade band \u2014 Distinction, A+, A, S",
    "fieldname": "grade_excellent_color",
    "fieldtype": "Color",
-   "label": "Excellent Grade Color"
+   "label": "Excellent Grade Color",
+   "hidden": 1
   },
   {
-   "default": "A+ / A / S",
+   "default": "A+ / A",
    "description": "Label for this grade band shown in the Results legend",
    "fieldname": "grade_excellent_label",
    "fieldtype": "Data",
-   "label": "Excellent Grade Label"
+   "label": "Excellent Grade Label",
+   "hidden": 1
   },
   {
    "fieldname": "col_break_grade1",
@@ -287,45 +297,56 @@
   },
   {
    "default": "#0369a1",
-   "description": "Second grade band — B+, B",
+   "description": "Second grade band \u2014 B+, B",
    "fieldname": "grade_good_color",
    "fieldtype": "Color",
-   "label": "Good Grade Color"
+   "label": "Good Grade Color",
+   "hidden": 1
   },
   {
    "default": "B+ / B",
    "description": "Label for this grade band",
    "fieldname": "grade_good_label",
    "fieldtype": "Data",
-   "label": "Good Grade Label"
+   "label": "Good Grade Label",
+   "hidden": 1
   },
   {
    "default": "#d97706",
-   "description": "Third grade band — C+, C",
+   "description": "Third grade band \u2014 C+, C",
    "fieldname": "grade_average_color",
    "fieldtype": "Color",
-   "label": "Average Grade Color"
+   "label": "Average Grade Color",
+   "hidden": 1
   },
   {
    "default": "C+ / C",
    "description": "Label for this grade band",
    "fieldname": "grade_average_label",
    "fieldtype": "Data",
-   "label": "Average Grade Label"
+   "label": "Average Grade Label",
+   "hidden": 1
   },
   {
    "fieldname": "col_break_grade2",
    "fieldtype": "Column Break"
   },
   {
+   "fieldname": "grade_color",
+   "fieldtype": "Color",
+   "label": "Grade Color",
+   "default": "#000000",
+   "description": "Default color for passing grades"
+  },
+  {
    "default": "#dc2626",
-   "description": "Fail grade band — D, F, Absent",
+   "description": "Fail grade band \u2014 F, AB, AS",
    "fieldname": "grade_fail_color",
    "fieldtype": "Color",
    "label": "Fail Grade Color"
   },
   {
-   "default": "D / F",
+   "default": "F / AB / AS",
    "description": "Label for this grade band",
    "fieldname": "grade_fail_label",
    "fieldtype": "Data",
@@ -340,7 +361,7 @@
    "fieldname": "html_layout_note",
    "fieldtype": "HTML",
    "label": "Layout Note",
-   "options": "<div class=\"alert\" style=\"background:#fef3c7;border-left:4px solid #f59e0b;padding:10px 14px;border-radius:6px;margin-bottom:12px;\"><strong style=\"color:#b45309;\">&#128461;&#65039; Layout &amp; Navigation</strong> &nbsp;Control the portal's structural layout — sidebar width, navbar height, corner style, density, and attendance color thresholds. Changes take effect on the next page load for all parents.</div>"
+   "options": "<div class=\"alert\" style=\"background:#fef3c7;border-left:4px solid #f59e0b;padding:10px 14px;border-radius:6px;margin-bottom:12px;\"><strong style=\"color:#b45309;\">&#128461;&#65039; Layout &amp; Navigation</strong> &nbsp;Control the portal's structural layout \u2014 sidebar width, navbar height, corner style, density, and attendance color thresholds. Changes take effect on the next page load for all parents.</div>"
   },
   {
    "collapsible": 1,
@@ -523,7 +544,7 @@
    "fieldname": "html_advanced_note",
    "fieldtype": "HTML",
    "label": "Advanced Note",
-   "options": "<div class=\"alert\" style=\"background:#fefce8;border-left:4px solid #eab308;padding:10px 14px;border-radius:6px;margin-bottom:12px;\"><strong style=\"color:#854d0e;\">&#9888;&#65039; Advanced — Custom CSS</strong> &nbsp;Inject raw CSS that is appended after all portal stylesheets. Use CSS variables like <code>--pp-primary</code> for theme-consistent overrides. Incorrect CSS here can break the portal layout — test changes carefully before saving.</div>"
+   "options": "<div class=\"alert\" style=\"background:#fefce8;border-left:4px solid #eab308;padding:10px 14px;border-radius:6px;margin-bottom:12px;\"><strong style=\"color:#854d0e;\">&#9888;&#65039; Advanced \u2014 Custom CSS</strong> &nbsp;Inject raw CSS that is appended after all portal stylesheets. Use CSS variables like <code>--pp-primary</code> for theme-consistent overrides. Incorrect CSS here can break the portal layout \u2014 test changes carefully before saving.</div>"
   },
   {
    "description": "Controls the \"Sign in with NLS Google account\" option on the parent login page",
@@ -549,7 +570,7 @@
    "description": "Inject raw CSS that is appended after all portal styles. Use this for pixel-perfect adjustments not covered by the settings above.",
    "fieldname": "advanced_section",
    "fieldtype": "Section Break",
-   "label": "Advanced — Custom CSS"
+   "label": "Advanced \u2014 Custom CSS"
   },
   {
    "description": "Raw CSS injected at the end of every parent portal page. Use CSS variables like --pp-primary for consistency.",

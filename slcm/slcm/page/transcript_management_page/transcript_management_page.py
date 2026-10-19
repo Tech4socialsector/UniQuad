@@ -925,6 +925,10 @@ def get_request_stats():
         return {}
 
 
+#: payment_status values that clear a payment-required request for approval
+APPROVABLE_PAYMENT_STATUSES = ("Not Required", "Paid")
+
+
 @frappe.whitelist()
 def approve_request(request_name):
     """Approve a Transcript Request and generate the Student Transcript."""
@@ -934,6 +938,12 @@ def approve_request(request_name):
     doc = frappe.get_doc("Transcript Request", request_name)
     if doc.status in ("Generated", "Delivered", "Rejected", "Cancelled"):
         frappe.throw(f"Request is already in {doc.status} state.")
+
+    if doc.payment_required and doc.payment_status not in APPROVABLE_PAYMENT_STATUSES:
+        frappe.throw(
+            f"Cannot approve: payment is not complete for this request "
+            f"(payment status: {doc.payment_status})."
+        )
 
     from slcm.api.transcript_request import _do_generate_transcript
     tr_name = _do_generate_transcript(request_name, doc.student, doc.transcript_type)
@@ -963,21 +973,35 @@ def reject_request(request_name, rejection_reason=""):
     if not frappe.db.exists("Transcript Request", request_name):
         frappe.throw("Transcript Request not found.")
 
+    rejection_reason = (rejection_reason or "").strip()
+    if not rejection_reason:
+        frappe.throw("Rejection reason is required.")
+
+    doc = frappe.get_doc("Transcript Request", request_name)
+    if doc.status in ("Generated", "Delivered", "Rejected", "Cancelled"):
+        frappe.throw(f"Request is already in {doc.status} state.")
+
     # Build a temporary doc-like object so _notify_student has rejection_reason
     # without needing a DB round-trip before the data is committed.
-    doc = frappe.get_doc("Transcript Request", request_name)
-    doc.rejection_reason = rejection_reason or ""
+    doc.rejection_reason = rejection_reason
     email_flags = _notify_student(doc, "rejected")
 
-    # Single set_value + single commit
-    frappe.db.set_value("Transcript Request", request_name, {
+    update = {
         "status":               "Rejected",
-        "rejection_reason":     rejection_reason or "",
+        "rejection_reason":     rejection_reason,
         "reviewed_by":          frappe.session.user,
         "reviewed_on":          frappe.utils.now_datetime(),
         "rejection_email_sent": 0,
         **email_flags,
-    })
+    }
+
+    # A request that already collected payment needs a refund trail, not a
+    # silent "Paid" left dangling on a Rejected request.
+    if doc.payment_required and doc.payment_status == "Paid":
+        update["payment_status"] = "Refund Pending"
+
+    # Single set_value + single commit
+    frappe.db.set_value("Transcript Request", request_name, update)
     frappe.db.commit()
     return {"success": True}
 
@@ -1038,3 +1062,81 @@ def _notify_student(doc, event, transcript_doc=None):
     except Exception:
         frappe.log_error(frappe.get_traceback(), "Transcript notification error")
         return {}
+
+
+@frappe.whitelist()
+def bulk_approve_requests(request_names):
+    """Approve & generate transcripts for multiple requests. Returns per-row results."""
+    import json
+    if isinstance(request_names, str):
+        request_names = json.loads(request_names)
+
+    results = []
+    for name in request_names:
+        try:
+            res = approve_request(name)
+            results.append({"name": name, "success": True, **res})
+        except Exception as e:
+            frappe.db.rollback()
+            results.append({"name": name, "success": False, "error": str(e)})
+
+    return {
+        "results": results,
+        "succeeded": sum(1 for r in results if r["success"]),
+        "failed": sum(1 for r in results if not r["success"]),
+    }
+
+
+@frappe.whitelist()
+def bulk_reject_requests(request_names, rejection_reason=""):
+    """Reject multiple requests at once. Returns per-row results."""
+    import json
+    if isinstance(request_names, str):
+        request_names = json.loads(request_names)
+
+    results = []
+    for name in request_names:
+        try:
+            res = reject_request(name, rejection_reason)
+            results.append({"name": name, "success": True, **res})
+        except Exception as e:
+            frappe.db.rollback()
+            results.append({"name": name, "success": False, "error": str(e)})
+
+    return {
+        "results": results,
+        "succeeded": sum(1 for r in results if r["success"]),
+        "failed": sum(1 for r in results if not r["success"]),
+    }
+
+
+@frappe.whitelist()
+def get_payment_details(request_name):
+    """Return a parsed, human-readable payment summary for one Transcript Request."""
+    if not frappe.db.exists("Transcript Request", request_name):
+        frappe.throw("Transcript Request not found.")
+
+    doc = frappe.get_doc("Transcript Request", request_name)
+
+    parsed_gateway_response = None
+    if doc.gateway_response:
+        try:
+            import json
+            parsed_gateway_response = json.loads(doc.gateway_response)
+        except Exception:
+            parsed_gateway_response = doc.gateway_response
+
+    return {
+        "request_name":            doc.name,
+        "student":                 doc.student,
+        "student_name":            doc.student_name,
+        "payment_required":        doc.payment_required,
+        "fee_amount":              doc.fee_amount,
+        "payment_status":          doc.payment_status,
+        "razorpay_payment_status": doc.razorpay_payment_status,
+        "razorpay_order_id":       doc.razorpay_order_id,
+        "payment_reference":       doc.payment_reference,
+        "payment_date":            doc.payment_date,
+        "payment_failure_reason":  doc.payment_failure_reason,
+        "gateway_response":        parsed_gateway_response,
+    }

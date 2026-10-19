@@ -5,6 +5,22 @@ frappe.pages['improvement-exam'].on_page_load = function (wrapper) {
 		single_column: true,
 	});
 
+	// Shared brand theme (#920C24 + Merriweather) for all Examination Result tabs
+	$(wrapper).addClass('er-theme');
+	if (!document.getElementById('er-theme-font')) {
+		$('head').append(
+			'<link rel="preconnect" href="https://fonts.googleapis.com">' +
+			'<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
+			'<link id="er-theme-font" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Merriweather:opsz,wght@18..144,300..900&display=swap">'
+		);
+	}
+	frappe.require('/assets/slcm/css/exam_results_theme.css');
+	// On narrow screens the tab strip scrolls sideways — bring the active tab into view
+	setTimeout(function () {
+		var $nav = $(wrapper).find('.er2-page-nav'), $act = $nav.find('.er2-pnav-btn.active');
+		if ($nav.length && $act.length) $nav.scrollLeft($act.position().left + $nav.scrollLeft() - 12);
+	}, 0);
+
 	if (!document.getElementById('ix-style')) {
 		var style = document.createElement('style');
 		style.id  = 'ix-style';
@@ -22,8 +38,8 @@ frappe.pages['improvement-exam'].on_page_load = function (wrapper) {
 		                   color:#64748b; border-radius:7px; transition:all .2s; user-select:none;
 		                   letter-spacing:.1px; border:none; background:transparent;
 		                   display:inline-flex; align-items:center; gap:5px; }
-		.er2-pnav-btn:hover  { color:#4f46e5; background:rgba(79,70,229,.08); }
-		.er2-pnav-btn.active { background:#fff; color:#4f46e5; box-shadow:0 1px 4px rgba(0,0,0,.12); }
+		.er2-pnav-btn:hover  { color:#920C24; background:rgba(146,12,36,.08); }
+		.er2-pnav-btn.active { background:#fff; color:#920C24; box-shadow:0 1px 4px rgba(0,0,0,.12); }
 
 		.ix-filter-card  { background:#fff; border-radius:12px; padding:14px 20px; margin-bottom:14px;
 		                   box-shadow:0 1px 3px rgba(0,0,0,.06); display:flex; gap:14px;
@@ -36,22 +52,22 @@ frappe.pages['improvement-exam'].on_page_load = function (wrapper) {
 		.ix-select       { height:36px; border:1.5px solid #e2e8f0; border-radius:8px;
 		                   padding:0 12px; font-size:13px; background:#fff; color:#1e293b;
 		                   outline:none; cursor:pointer; transition:border-color .2s; }
-		.ix-select:focus { border-color:#4f46e5; box-shadow:0 0 0 3px rgba(79,70,229,.1); }
+		.ix-select:focus { border-color:#920C24; box-shadow:0 0 0 3px rgba(146,12,36,.1); }
 
 		.ix-stat-cards   { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
 		.ix-stat-card    { background:#fff; border-radius:12px; padding:14px 18px; flex:1;
 		                   min-width:150px; box-shadow:0 1px 3px rgba(0,0,0,.06);
-		                   border-top:3px solid var(--sc-color,#4f46e5);
+		                   border-top:3px solid var(--sc-color,#920C24);
 		                   display:flex; align-items:center; gap:12px; }
 		.ix-sc-icon      { width:38px; height:38px; border-radius:9px; flex-shrink:0;
 		                   display:flex; align-items:center; justify-content:center;
-		                   background:var(--sc-bg,#eef2ff); color:var(--sc-color,#4f46e5); }
-		.ix-sc-val       { font-size:22px; font-weight:800; color:var(--sc-color,#4f46e5); line-height:1.1; }
+		                   background:var(--sc-bg,#FBEEF0); color:var(--sc-color,#920C24); }
+		.ix-sc-val       { font-size:22px; font-weight:800; color:var(--sc-color,#920C24); line-height:1.1; }
 		.ix-sc-lbl       { font-size:10px; color:#94a3b8; font-weight:700; text-transform:uppercase;
 		                   letter-spacing:.6px; margin-top:2px; }
 
 		.ix-settings-card { background:#fff; border-radius:12px; padding:18px 22px; margin-bottom:14px;
-		                    box-shadow:0 1px 3px rgba(0,0,0,.06); border-left:4px solid #4f46e5; }
+		                    box-shadow:0 1px 3px rgba(0,0,0,.06); border-left:4px solid #920C24; }
 		.ix-settings-title { font-size:13px; font-weight:800; color:#0f172a; margin-bottom:14px;
 		                     display:flex; align-items:center; gap:8px; }
 		.ix-settings-grid  { display:flex; gap:14px; flex-wrap:wrap; align-items:flex-end; }
@@ -61,25 +77,25 @@ frappe.pages['improvement-exam'].on_page_load = function (wrapper) {
 		.ix-input          { height:36px; border:1.5px solid #e2e8f0; border-radius:8px;
 		                     padding:0 12px; font-size:13px; background:#fff; color:#1e293b;
 		                     outline:none; transition:border-color .2s; width:100%; box-sizing:border-box; }
-		.ix-input:focus    { border-color:#4f46e5; box-shadow:0 0 0 3px rgba(79,70,229,.1); }
+		.ix-input:focus    { border-color:#920C24; box-shadow:0 0 0 3px rgba(146,12,36,.1); }
 		.ix-save-btn       { height:36px; padding:0 20px; border-radius:8px; border:none;
-		                     background:linear-gradient(135deg,#4f46e5,#818cf8);
+		                     background:#920C24;
 		                     color:#fff; font-size:13px; font-weight:700; cursor:pointer;
 		                     display:inline-flex; align-items:center; gap:6px; transition:opacity .15s;
 		                     white-space:nowrap; }
 		.ix-save-btn:hover { opacity:.88; }
 		.ix-save-btn:disabled { opacity:.5; cursor:default; }
 		.ix-saved-badge    { display:inline-flex; align-items:center; gap:4px; font-size:11px;
-		                     font-weight:700; color:#10b981; margin-left:10px;
-		                     background:#d1fae5; border-radius:6px; padding:3px 9px; }
+		                     font-weight:700; color:#920C24; margin-left:10px;
+		                     background:#F5D9DE; border-radius:6px; padding:3px 9px; }
 		.ix-bulk-btn       { height:36px; padding:0 16px; border-radius:8px; border:1.5px solid #e2e8f0;
 		                     background:#fff; color:#475569; font-size:12px; font-weight:700; cursor:pointer;
 		                     display:inline-flex; align-items:center; gap:5px; transition:all .15s;
 		                     white-space:nowrap; }
-		.ix-bulk-btn:hover { border-color:#4f46e5; color:#4f46e5; background:#eef2ff; }
+		.ix-bulk-btn:hover { border-color:#920C24; color:#920C24; background:#FBEEF0; }
 
 		.ix-table-card    { background:#fff; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,.06);
-		                    overflow:hidden; border-top:3px solid #4f46e5; }
+		                    overflow:hidden; border-top:3px solid #920C24; }
 		.ix-table-topbar  { display:flex; align-items:center; justify-content:space-between;
 		                    padding:12px 16px 10px; border-bottom:1.5px solid #f1f5f9; }
 		.ix-count-lbl     { font-size:13px; font-weight:700; color:#0f172a; }
@@ -87,7 +103,7 @@ frappe.pages['improvement-exam'].on_page_load = function (wrapper) {
 		.ix-srch input    { width:260px; height:34px; border:1.5px solid #e2e8f0; border-radius:8px;
 		                    padding:0 12px 0 34px; font-size:13px; outline:none; color:#1e293b;
 		                    background:#fff; transition:border-color .2s; box-sizing:border-box; }
-		.ix-srch input:focus { border-color:#4f46e5; box-shadow:0 0 0 3px rgba(79,70,229,.1); }
+		.ix-srch input:focus { border-color:#920C24; box-shadow:0 0 0 3px rgba(146,12,36,.1); }
 		.ix-srch-ico      { position:absolute; left:10px; top:10px; color:#94a3b8; }
 
 		.ix-tbl-scroll    { overflow-x:auto; }
@@ -99,10 +115,10 @@ frappe.pages['improvement-exam'].on_page_load = function (wrapper) {
 		.ix-tbl th.ix-th-center { text-align:center; }
 		.ix-tbl td        { padding:0 14px; border-bottom:1.5px solid #f1f5f9; vertical-align:middle; }
 		.ix-tbl tbody tr  { height:64px; transition:background .12s; }
-		.ix-tbl tbody tr:hover td { background:#fafbff; }
+		.ix-tbl tbody tr:hover td { background:#FDF8F9; }
 		.ix-tbl tbody tr:last-child td { border-bottom:none; }
 		.ix-tbl .ix-td-num { width:42px; text-align:center; font-size:11px; font-weight:700; color:#cbd5e1;
-		                     background:#fafbff; border-right:1.5px solid #f1f5f9; }
+		                     background:#FDF8F9; border-right:1.5px solid #f1f5f9; }
 		.ix-tbl .ix-td-center { text-align:center; }
 
 		.ix-s-cell        { display:flex; align-items:center; gap:10px; }
@@ -114,21 +130,21 @@ frappe.pages['improvement-exam'].on_page_load = function (wrapper) {
 		.ix-semail        { font-size:11px; color:#94a3b8; margin-top:1px; }
 		.ix-grade-badge   { display:inline-flex; align-items:center; justify-content:center;
 		                    min-width:34px; height:26px; border-radius:7px; font-size:12px;
-		                    font-weight:800; background:#eef2ff; color:#4f46e5;
-		                    border:1.5px solid #c7d2fe; padding:0 8px; }
+		                    font-weight:800; background:#FBEEF0; color:#920C24;
+		                    border:1.5px solid #E8B4BE; padding:0 8px; }
 		.ix-improv-badge  { display:inline-flex; align-items:center; justify-content:center;
 		                    min-width:34px; height:26px; border-radius:7px; font-size:12px;
-		                    font-weight:800; background:#d1fae5; color:#059669;
-		                    border:1.5px solid #6ee7b7; padding:0 8px; }
+		                    font-weight:800; background:#F5D9DE; color:#920C24;
+		                    border:1.5px solid #E8B4BE; padding:0 8px; }
 
 		.ix-st-badge   { display:inline-flex; align-items:center; height:22px; border-radius:6px;
 		                 font-size:11px; font-weight:700; padding:0 9px; white-space:nowrap; }
-		.ix-st-reg     { background:#eff6ff; color:#2563eb; }
+		.ix-st-reg     { background:#FBEEF0; color:#920C24; }
 		.ix-st-paid    { background:#d1fae5; color:#059669; }
 		.ix-st-none    { background:#f1f5f9; color:#94a3b8; }
 
 		.ix-pay-btn    { height:28px; padding:0 12px; border-radius:6px; border:none;
-		                 background:linear-gradient(135deg,#10b981,#34d399);
+		                 background:#920C24;
 		                 color:#fff; font-size:11px; font-weight:700; cursor:pointer;
 		                 transition:opacity .15s; }
 		.ix-pay-btn:hover { opacity:.85; }
@@ -140,14 +156,14 @@ frappe.pages['improvement-exam'].on_page_load = function (wrapper) {
 		.ix-empty-txt     { font-size:14px; font-weight:700; color:#94a3b8; }
 		.ix-empty-sub     { font-size:12px; color:#cbd5e1; margin-top:4px; }
 
-		.av-0{background:linear-gradient(135deg,#4f46e5,#818cf8);}
-		.av-1{background:linear-gradient(135deg,#0ea5e9,#38bdf8);}
-		.av-2{background:linear-gradient(135deg,#10b981,#34d399);}
-		.av-3{background:linear-gradient(135deg,#f59e0b,#fbbf24);}
-		.av-4{background:linear-gradient(135deg,#ef4444,#f87171);}
-		.av-5{background:linear-gradient(135deg,#8b5cf6,#a78bfa);}
-		.av-6{background:linear-gradient(135deg,#ec4899,#f472b6);}
-		.av-7{background:linear-gradient(135deg,#14b8a6,#2dd4bf);}
+		.av-0{background:#920C24;}
+		.av-1{background:#920C24;}
+		.av-2{background:#920C24;}
+		.av-3{background:#920C24;}
+		.av-4{background:#920C24;}
+		.av-5{background:#920C24;}
+		.av-6{background:#920C24;}
+		.av-7{background:#920C24;}
 		`;
 		document.head.appendChild(style);
 	}
@@ -167,7 +183,7 @@ frappe.pages['improvement-exam'].on_page_load = function (wrapper) {
 		<div class="er2-wrap" style="padding:20px 24px;">
 
 			<div class="er2-page-header">
-				<div class="er2-page-icon" style="background:linear-gradient(135deg,#4f46e5,#818cf8);">
+				<div class="er2-page-icon" style="background:#920C24;">
 					<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
 				</div>
 				<div>
@@ -240,7 +256,7 @@ frappe.pages['improvement-exam'].on_page_load = function (wrapper) {
 				<!-- Settings card -->
 				<div class="ix-settings-card" id="ix-settings-card" style="display:none;">
 					<div class="ix-settings-title">
-						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#920C24" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
 						Improvement Exam Settings
 						<span id="ix-saved-badge" class="ix-saved-badge" style="display:none;">
 							<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
@@ -585,10 +601,10 @@ frappe.pages['improvement-exam'].on_page_load = function (wrapper) {
 				if (!r.message) return;
 				var d = r.message;
 				$statCards.html(
-					statCard('#6366f1','#eef2ff', '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>', d.total, 'Total Students') +
-					statCard('#10b981','#d1fae5', '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>', d.graded, 'Graded') +
-					statCard('#f59e0b','#fef3c7', '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg>', d.registered, 'Registered') +
-					statCard('#8b5cf6','#f5f3ff', '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/></svg>', d.applied, 'Improvement Applied')
+					statCard('#920C24','#FBEEF0', '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>', d.total, 'Total Students') +
+					statCard('#920C24','#F5D9DE', '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>', d.graded, 'Graded') +
+					statCard('#920C24','#F5D9DE', '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg>', d.registered, 'Registered') +
+					statCard('#920C24','#FBEEF0', '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/></svg>', d.applied, 'Improvement Applied')
 				).show();
 			},
 		});
@@ -662,7 +678,7 @@ frappe.pages['improvement-exam'].on_page_load = function (wrapper) {
 				'<td>' + frappe.utils.escape_html(s.programme || '—') + '</td>' +
 				'<td class="ix-td-center">' + gradeHtml + '</td>' +
 				'<td class="ix-td-center" style="font-weight:700;">' + frappe.utils.escape_html(String(s.total_marks || '—')) + '</td>' +
-				'<td class="ix-td-center" style="color:#059669;font-weight:700;">' + frappe.utils.escape_html(String(improvMarks)) + '</td>' +
+				'<td class="ix-td-center" style="color:#920C24;font-weight:700;">' + frappe.utils.escape_html(String(improvMarks)) + '</td>' +
 				'<td class="ix-td-center">' + improvGrade + '</td>' +
 				'<td class="ix-td-center">' + regBadge + '</td>' +
 				'<td class="ix-td-center">' + payBadge + '</td>' +
@@ -771,11 +787,11 @@ frappe.pages['improvement-exam'].on_page_load = function (wrapper) {
 			s.textContent = `
 			.ix-ps-badge  { display:inline-flex;align-items:center;height:22px;border-radius:6px;font-size:11px;font-weight:700;padding:0 9px;white-space:nowrap; }
 			.ix-ps-paid   { background:#d1fae5;color:#059669; }
-			.ix-ps-init   { background:#fef3c7;color:#b45309; }
-			.ix-ps-fail   { background:#fee2e2;color:#dc2626; }
-			.ix-ps-ref    { background:#fce7f3;color:#be185d; }
+			.ix-ps-init   { background:#F5D9DE;color:#920C24; }
+			.ix-ps-fail   { background:#F5D9DE;color:#920C24; }
+			.ix-ps-ref    { background:#F5D9DE;color:#920C24; }
 			.ix-ps-cancel { background:#f1f5f9;color:#64748b; }
-			.ix-ps-pend   { background:#eff6ff;color:#2563eb; }
+			.ix-ps-pend   { background:#FBEEF0;color:#920C24; }
 			.ix-ps-none   { background:#f8fafc;color:#94a3b8; }
 			`;
 			document.head.appendChild(s);
@@ -824,7 +840,7 @@ frappe.pages['improvement-exam'].on_page_load = function (wrapper) {
 				action = '<span style="display:flex;align-items:center;gap:6px;">' +
 					'<span style="font-size:11px;color:#10b981;font-weight:700;">✓ Paid</span>' +
 					'<a href="' + receiptUrl + '" target="_blank" title="Download Receipt" ' +
-					'style="font-size:11px;color:#0f766e;text-decoration:underline;font-weight:600;">Receipt</a>' +
+					'style="font-size:11px;color:#920C24;text-decoration:underline;font-weight:600;">Receipt</a>' +
 					'</span>';
 			} else {
 				action = '<button class="ix-pay-btn" onclick="ixMarkPaidDialog(\'' + frappe.utils.escape_html(reg.name) + '\',this)">Mark Paid</button>';
@@ -840,7 +856,7 @@ frappe.pages['improvement-exam'].on_page_load = function (wrapper) {
 				: '';
 
 			return '<tr>' +
-				'<td style="width:42px;text-align:center;font-size:11px;font-weight:700;color:#cbd5e1;background:#fafbff;border-right:1.5px solid #f1f5f9;border-bottom:1.5px solid #f1f5f9;height:58px;vertical-align:middle;">' + (i + 1) + '</td>' +
+				'<td style="width:42px;text-align:center;font-size:11px;font-weight:700;color:#cbd5e1;background:#FDF8F9;border-right:1.5px solid #f1f5f9;border-bottom:1.5px solid #f1f5f9;height:58px;vertical-align:middle;">' + (i + 1) + '</td>' +
 				'<td style="padding:0 14px;border-bottom:1.5px solid #f1f5f9;height:58px;vertical-align:middle;min-width:200px;">' +
 					'<div style="display:flex;align-items:center;gap:10px;">' + avatar +
 						'<div>' +
@@ -897,7 +913,7 @@ frappe.pages['improvement-exam'].on_page_load = function (wrapper) {
 									encodeURIComponent(registrationName) + '&format=Improvement%20Exam%20Receipt&trigger_print=0';
 								td.innerHTML = '<span style="display:flex;align-items:center;gap:6px;">' +
 									'<span style="font-size:11px;color:#10b981;font-weight:700;">✓ Paid</span>' +
-									'<a href="' + receiptUrl + '" target="_blank" style="font-size:11px;color:#0f766e;text-decoration:underline;font-weight:600;">Receipt</a>' +
+									'<a href="' + receiptUrl + '" target="_blank" style="font-size:11px;color:#920C24;text-decoration:underline;font-weight:600;">Receipt</a>' +
 									'</span>';
 								var statusTd = td.closest('tr').querySelector('.ix-ps-badge');
 								if (statusTd) {

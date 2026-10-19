@@ -1,5 +1,6 @@
 import frappe
 from slcm.slcm.utils.parent_portal import get_parent_context
+from slcm.slcm.utils.result_access import arrear_badge, get_reexam_attempts, is_improved
 
 no_cache = 1
 
@@ -55,6 +56,7 @@ def get_context(context):
                 fields=[
                     "name", "course", "total_marks", "grade", "moderated_grade",
                     "updated_final_marks", "updated_grade", "re_exam_grade",
+                    "improvement_marks", "improvement_grade", "improvement_applied",
                     "enrollment_status", "attendance_status",
                     "mfa", "remark", "consider_for_sgpa",
                 ],
@@ -65,7 +67,8 @@ def get_context(context):
             has_any_fail = False
 
             for m in marks_records:
-                course_name = frappe.db.get_value("Course", m.course, "course_name") or m.course
+                _course = frappe.db.get_value("Course", m.course, ["course_name", "course_code"], as_dict=True) or frappe._dict()
+                course_name = _course.course_name or m.course
                 regular_groups, reexam_groups = _get_component_groups(m.name, ep_name, m.course, allowed_components)
 
                 raw_total = m.updated_final_marks or m.total_marks or sum(
@@ -102,6 +105,19 @@ def get_context(context):
                     "has_comp_marks":    bool(regular_groups or reexam_groups),
                     "show_total":        show_total,
                     "re_exam_grade":     m.re_exam_grade or "",
+                    # Same fields as the student portal, so the marks dialog shows the same table
+                    "course_code":                _course.course_code or m.course,
+                    "updated_final_marks":        round(float(m.updated_final_marks), 2) if m.updated_final_marks else None,
+                    "updated_grade":              m.updated_grade or "",
+                    "improvement_marks":          round(float(m.improvement_marks), 2) if m.improvement_marks else None,
+                    "improvement_grade":          m.improvement_grade or "",
+                    "improvement_applied":        int(m.improvement_applied or 0),
+                    "improvement_setting_exists": bool(frappe.db.exists(
+                        "Improvement Exam Course Setting", {"exam_plan": ep_name, "course": m.course}
+                    )),
+                    "arrear_marker":              _get_arrear_marker(student_name, m.course),
+                    # I badge: result raised by a re-exam or an improvement exam
+                    "improved":                   is_improved(m),
                 })
 
             courses_out.sort(key=lambda c: c["course_name"])
@@ -143,12 +159,13 @@ def get_context(context):
 
         chart_data = []
         for r in sorted(published_results, key=lambda x: str(x["published_on"] or "")):
-            if r["term_gpa"] is not None or r["term_percentage"] is not None:
+            # Trend shows Term % only
+            if r["term_percentage"] is not None:
                 chart_data.append({
-                    "label": r["term"] or r["exam_name"],
-                    "sgpa":  r["term_gpa"],
+                    # Exam name is unique per point; several exams can share a term
+                    "label": r["exam_name"] or r["term"],
+                    "term":  r["term"],
                     "pct":   r["term_percentage"],
-                    "cgpa":  r["cumulative_gpa"],
                 })
         context.gpa_chart_data = chart_data
 
@@ -294,3 +311,9 @@ def _get_enrollment_fallback(student_name, course):
         return row or ""
     except Exception:
         return ""
+
+
+def _get_arrear_marker(student_name, course):
+    """One R per paid re-exam written: R, RR, RRR… (same rule as the student
+    portal and the desk — slcm.slcm.utils.result_access)."""
+    return arrear_badge(get_reexam_attempts(course, [student_name]).get(student_name, 0))

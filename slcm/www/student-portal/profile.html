@@ -1,6 +1,345 @@
-{% extends "slcm/www/student-portal/_base.html" %}
+﻿{% extends "slcm/www/student-portal/_base.html" %}
 
 {% block title %}My Profile{% endblock %}
+
+{% block extra_head %}
+<style>
+/* ── Profile Page ─────────────────────────────────────── */
+.sp-profile-hero {
+  display: flex;
+  align-items: center;
+  background: var(--sp-primary-light);
+  border-radius: var(--sp-corner-radius);
+  padding: 24px;
+  margin-bottom: 24px;
+  position: relative;
+  overflow: hidden;
+}
+.sp-profile-hero .hero-content {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  z-index: 2;
+}
+.sp-profile-avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--sp-primary);
+  border: 2px solid #fff;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.sp-profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.sp-profile-hero-right {
+  margin-left: auto;
+  text-align: right;
+  z-index: 2;
+  color: var(--sp-primary);
+}
+.sp-profile-hero-right h2 {
+  font-size: 16px;
+  font-weight: 400;
+  margin: 0 0 4px 0;
+  line-height: 1.2;
+}
+.sp-profile-hero-right p {
+  font-size: 14px;
+  font-style: italic;
+  font-weight: 400;
+  margin: 0;
+  opacity: 0.8;
+}
+
+.sp-hero-info { min-width: 0; }
+.sp-hero-ids { display: flex; gap: 48px; }
+.sp-hero-label { font-size: 11px; font-weight: 400; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+.sp-hero-value { font-family: var(--sp-font-family, 'Merriweather', serif); font-size: 20px; font-weight: 700; color: var(--sp-primary); text-transform: uppercase; overflow-wrap: anywhere; }
+.sp-hero-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+
+/* Phones: stack the hero (photo on top, then name/ID side by side, then
+   tags) instead of squeezing three columns into ~300px */
+@media (max-width: 600px) {
+  .sp-profile-hero { padding: 20px 16px; background-image: none !important; }
+  .sp-profile-hero .hero-content { flex-direction: column; align-items: center; gap: 16px; width: 100%; text-align: center; }
+  .sp-profile-hero .sp-profile-avatar { width: 96px !important; height: 96px !important; }
+  .sp-hero-info { width: 100%; }
+  .sp-hero-ids { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+  .sp-hero-value { font-size: 17px; }
+  .sp-hero-tags { justify-content: center; }
+  .sp-hero-tags .sp-status-tag { border-radius: 12px; text-align: center; }
+  .sp-section-header { padding: 14px 16px; flex-wrap: wrap; gap: 8px; }
+  .sp-section-body { padding: 16px; }
+}
+
+.sp-profile-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 24px;
+}
+@media (max-width: 900px) {
+  .sp-profile-layout { grid-template-columns: 1fr; }
+}
+
+.sp-section-card {
+  background: var(--sp-card-bg);
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-corner-radius);
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+.sp-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--sp-border);
+  background: #fff;
+}
+.sp-section-header-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--sp-font-family, "Merriweather", serif);
+  font-size: 16px;
+  font-weight: 400;
+  color: black;
+}
+.sp-section-header-title .sp-ms {
+  font-size: 20px;
+}
+.sp-section-body {
+  padding: 24px;
+}
+
+.sp-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 20px 24px;
+}
+.sp-info-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: gray;
+  margin-bottom: 4px;
+}
+.sp-info-value {
+  font-size: 14px;
+  font-weight: 400; /* As requested, standard text is 300, but data values look better at normal. The rule says "everything else 300" but the mockup shows these bolder. I will use 300 for normal text. */
+  font-weight: 400;
+  color: var(--sp-text-1);
+}
+/* Bank details */
+.sp-bank-subtitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sp-primary);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.sp-bank-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 14px;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  background: #fff0f2;
+  color: #920c24;
+  font-size: 13px;
+  font-weight: 400;
+}
+.sp-bank-note .sp-ms { font-size: 18px; }
+.sp-bank-note-locked { background: #fff0f2; color: #6b091a; }
+.sp-passbook-link, .sp-passbook-upload { display: inline-flex; align-items: center; gap: 4px; color: var(--sp-primary); font-weight: 600; cursor: pointer; text-decoration: none; }
+.sp-passbook-link:hover, .sp-passbook-upload:hover { text-decoration: underline; }
+.sp-passbook-link .sp-ms, .sp-passbook-upload .sp-ms { font-size: 18px; }
+.sp-bank-form input[type=file] { padding: 6px; background: #fff; }
+.sp-bank-form label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sp-text-3);
+  margin-bottom: 6px;
+}
+.sp-bank-form input,
+.sp-bank-form select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--sp-border);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  box-sizing: border-box;
+  background: #fff;
+}
+.sp-bank-form .sp-bank-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.sp-bank-form .sp-bank-hint {
+  font-size: 11px;
+  color: var(--sp-text-4);
+  margin-top: 4px;
+}
+
+.sp-info-value.bold {
+  font-weight: 400;
+}
+.sp-info-value.primary {
+  color: var(--sp-primary);
+  font-weight: 400;
+}
+
+/* Specific elements */
+.sp-status-tag {
+  display: inline-flex;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 400;
+}
+.sp-status-tag.gray { background: #e5e7eb; color: var(--sp-text-2); }
+.sp-status-tag.green { background: var(--sp-success); color: #fff; }
+.sp-status-tag.red { background: var(--sp-danger); color: #fff; }
+
+.sp-quick-action-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.sp-quick-action-card {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  padding-bottom: 32px;
+  padding-right: 32px;
+  border-radius: 12px;
+  text-decoration: none;
+  background: var(--sp-primary-light);
+  position: relative;
+  transition: transform 0.2s;
+  height: 100%;
+  box-sizing: border-box;
+}
+.sp-quick-action-card:hover {
+  transform: translateY(-2px);
+}
+.sp-quick-action-card .icon-wrap {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+.sp-quick-action-card h3 {
+  font-family: var(--sp-font-family, "Merriweather", serif);
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--sp-text-1);
+  margin: 0 0 4px 0;
+}
+.sp-quick-action-card p {
+  font-size: 10px;
+  color: var(--sp-nav-text);
+  margin: 0;
+  font-weight: 400;
+}
+.sp-quick-action-card .sp-ms-chevron {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  font-size: 20px;
+  color: var(--sp-primary);
+}
+
+.sp-link-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.sp-link-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #f9fafb;
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--sp-text-1);
+  font-weight: 400;
+}
+.sp-link-item:hover {
+  background: #f3f4f6;
+}
+.sp-link-item .sp-ms-icon {
+  color: var(--sp-primary);
+  font-size: 20px;
+  margin-right: 12px;
+}
+
+/* ── Dark mode ── */
+body.sp-dark .sp-profile-hero { background-color: var(--sp-card) !important; border: 1px solid var(--sp-border); }
+body.sp-dark .sp-profile-avatar { background: #1a2540; border-color: var(--sp-border) !important; color: #f08da0; box-shadow: 0 4px 10px rgba(0,0,0,0.35) !important; }
+body.sp-dark .sp-hero-label { color: var(--sp-text-3); }
+body.sp-dark .sp-hero-value { color: #f08da0; }
+body.sp-dark .sp-status-tag.gray,
+body.sp-dark .sp-status-tag[style*="background: #e2e8f0"] { background: #1a2540 !important; color: var(--sp-text-2) !important; border: 1px solid #263352; }
+body.sp-dark .sp-status-tag[style*="background: #920c24"] { background: var(--sp-primary) !important; color: #fff !important; }
+body.sp-dark .sp-section-card { background: var(--sp-card); border-color: var(--sp-border); }
+body.sp-dark .sp-section-header { background: var(--sp-card); border-bottom-color: var(--sp-border); }
+body.sp-dark .sp-section-header-title { color: var(--sp-text-1); }
+body.sp-dark .sp-section-header-title .sp-ms { color: #f08da0; }
+body.sp-dark .sp-section-header .sp-btn[style*="background: #fff"] { background: transparent !important; border-color: var(--sp-primary) !important; color: #f08da0 !important; }
+body.sp-dark .sp-section-header .sp-btn[style*="background: #fff"]:hover { background: var(--sp-primary-light) !important; }
+body.sp-dark .sp-info-label { color: var(--sp-text-3); }
+body.sp-dark .sp-info-value.primary,
+body.sp-dark .sp-bank-subtitle,
+body.sp-dark .sp-passbook-link,
+body.sp-dark .sp-passbook-upload { color: #f08da0; }
+body.sp-dark .sp-bank-note,
+body.sp-dark .sp-bank-note-locked { background: var(--sp-primary-light); color: #f08da0; border: 1px solid var(--sp-primary-mid); }
+body.sp-dark .sp-bank-form input,
+body.sp-dark .sp-bank-form select,
+body.sp-dark .sp-bank-form input[type=file] { background: #1a2540; color: var(--sp-text-1); border-color: #263352; }
+body.sp-dark .sp-section-body [style*="border:1px solid #f5c6ce"] { border-color: var(--sp-primary-mid) !important; }
+body.sp-dark .sp-quick-action-card { background: #1a2540; border: 1px solid var(--sp-border); }
+body.sp-dark .sp-quick-action-card p { color: var(--sp-text-3); }
+body.sp-dark .sp-quick-action-card .sp-ms-chevron { color: #f08da0; }
+body.sp-dark .sp-quick-action-card .icon-wrap { background: var(--sp-primary-light) !important; color: #f08da0 !important; }
+body.sp-dark .sp-link-item { background: #1a2540; }
+body.sp-dark .sp-link-item:hover { background: rgba(255,255,255,0.05); }
+body.sp-dark .sp-link-item .sp-ms-icon,
+body.sp-dark .sp-section-body .sp-ms[style*="color:var(--sp-primary)"] { color: #f08da0 !important; }
+body.sp-dark .sp-modal { background: var(--sp-card); border: 1px solid var(--sp-border); box-shadow: 0 12px 40px rgba(0,0,0,0.5); }
+body.sp-dark .sp-modal-header,
+body.sp-dark .sp-modal-footer { border-color: var(--sp-border); }
+body.sp-dark .sp-modal-title { color: var(--sp-text-1); }
+body.sp-dark .sp-modal-title .sp-ms { color: #f08da0; }
+body.sp-dark .sp-modal-close { background: #1a2540; }
+body.sp-dark .sp-modal-close:hover { background: #263352; }
+body.sp-dark .sp-modal-body input { background: #1a2540; color: var(--sp-text-1); border-color: #263352 !important; }
+body.sp-dark .sp-btn-secondary { background: #1a2540; color: var(--sp-text-1); border-color: var(--sp-border); }
+body.sp-dark .sp-btn-secondary:hover:not(:disabled) { background: #263352; }
+
+</style>
+{% endblock %}
 
 {% block content %}
 
@@ -9,38 +348,52 @@
   <span class="sp-ms">warning</span>
   <div><strong>No student record found.</strong> Please contact the Registrar's Office.</div>
 </div>
-
+{% elif portal_error %}
+<div class="sp-alert sp-alert-warning fade-in">
+  <span class="sp-ms">error</span>
+  <div><strong>We couldn't load your profile right now.</strong> Please try again later or contact the Registrar's Office if this continues.</div>
+</div>
 {% else %}
 
 {# ── Profile Hero ──────────────────────────────────────────── #}
-<div class="sp-profile-hero fade-in">
-  <div class="sp-profile-avatar">
-    {% if profile.photo %}
-      <img src="{{ profile.photo }}" alt="{{ student_name }}">
-    {% else %}
-      {{ student_initial or "S" }}
-    {% endif %}
-  </div>
-  <div>
-    <div style="font-size:22px;font-weight:800;line-height:1.2;">{{ student_name }}</div>
-    <div style="font-size:14px;opacity:0.8;margin-top:4px;font-family:monospace;">{{ student_id }}</div>
-    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;">
-      {% if programme_name %}
-      <span style="background:rgba(255,255,255,0.15);padding:4px 12px;border-radius:20px;font-size:12px;font-weight:500;">{{ programme_name }}</span>
-      {% endif %}
-      {% if department %}
-      <span style="background:rgba(255,255,255,0.15);padding:4px 12px;border-radius:20px;font-size:12px;font-weight:500;">{{ department }}</span>
-      {% endif %}
-      {% if batch_year %}
-      <span style="background:rgba(200,161,75,0.35);padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;">Batch {{ batch_year }}</span>
-      {% endif %}
-      {% if profile.student_status %}
-      <span style="background:{% if profile.student_status == 'Active' %}rgba(22,163,74,0.3){% else %}rgba(220,38,38,0.3){% endif %};padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;">{{ profile.student_status }}</span>
+<div class="sp-profile-hero fade-in" style="background: #ffffff url('/assets/slcm/images/building-illustration.png') no-repeat right 35% center / contain; justify-content: space-between;">
+  <div class="hero-content">
+    <div class="sp-profile-avatar" style="border: 4px solid #fff; width: 110px; height: 110px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+      {% if profile.photo %}
+        <img src="{{ profile.photo }}" alt="{{ student_name }}">
+      {% else %}
+        {{ student_initial or "S" }}
       {% endif %}
     </div>
-  </div>
-</div>
+    
+    <div class="sp-hero-info">
+      <div class="sp-hero-ids">
+        <div>
+          <div class="sp-hero-label">Student Name</div>
+          <div class="sp-hero-value">{{ student_name }}</div>
+        </div>
+        <div>
+          <div class="sp-hero-label">Student ID</div>
+          <div class="sp-hero-value">{{ student_id }}</div>
+        </div>
+      </div>
 
+      <div class="sp-hero-tags">
+        {% if programme_name %}
+        <span class="sp-status-tag gray" style="background: #e2e8f0; color: #334155; font-weight: 500;">Programme: {{ programme_name }}</span>
+        {% endif %}
+        {% if profile.student_status %}
+        <span class="sp-status-tag {% if profile.student_status == 'Active' %}green{% else %}red{% endif %}" style="{% if profile.student_status == 'Active' %}background: #920c24; color: #fff;{% else %}background: #920c24; color: #fff;{% endif %} font-weight: 500; padding: 4px 16px;">{{ profile.student_status }}</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  
+  <!-- <div class="sp-profile-hero-right" style="text-align: right; z-index: 2; margin-left: 24px;">
+    <h2 style="font-family: var(--sp-font-family, 'Merriweather', serif); font-size: 22px; font-weight: 600; color: #920c24; margin: 0 0 8px 0; line-height: 1.3;">National Law School<br>of India University</h2>
+    <p style="font-size: 14px; font-style: italic; color: #6b7280; margin: 0;">Knowledge for a Just Society</p>
+  </div> -->
+</div>
 {# ── Two-Column Layout ─────────────────────────────────────── #}
 <div class="sp-profile-layout">
 
@@ -50,7 +403,7 @@
     {# Personal Information #}
     <div class="sp-section-card fade-in delay-1">
       <div class="sp-section-header">
-        <span class="sp-ms">person</span> Personal Information
+        <div class="sp-section-header-title"><span class="sp-ms">person</span> Personal Information</div>
       </div>
       <div class="sp-section-body">
         <div class="sp-info-grid">
@@ -60,22 +413,20 @@
           </div>
           <div>
             <div class="sp-info-label">Date of Birth</div>
-            <div class="sp-info-value {% if not profile.dob %}empty{% endif %}">{{ profile.dob or "Not provided" }}</div>
+            <div class="sp-info-value">{{ profile.dob or "—" }}</div>
           </div>
           <div>
             <div class="sp-info-label">Gender</div>
-            <div class="sp-info-value {% if not profile.gender %}empty{% endif %}">{{ profile.gender or "Not provided" }}</div>
+            <div class="sp-info-value">{{ profile.gender or "—" }}</div>
           </div>
           <div>
             <div class="sp-info-label">Nationality</div>
-            <div class="sp-info-value {% if not profile.nationality %}empty{% endif %}">{{ profile.nationality or "Not provided" }}</div>
+            <div class="sp-info-value">{{ profile.nationality or "—" }}</div>
           </div>
-          {% if profile.quota %}
           <div>
             <div class="sp-info-label">Category / Quota</div>
-            <div class="sp-info-value">{{ profile.quota }}</div>
+            <div class="sp-info-value">{{ profile.quota or "—" }}</div>
           </div>
-          {% endif %}
         </div>
       </div>
     </div>
@@ -83,43 +434,40 @@
     {# Contact Information #}
     <div class="sp-section-card fade-in delay-2">
       <div class="sp-section-header">
-        <span class="sp-ms">contact_mail</span> Contact Information
+        <div class="sp-section-header-title"><span class="sp-ms">badge</span> Contact Information</div>
       </div>
       <div class="sp-section-body">
         <div class="sp-info-grid">
           <div>
             <div class="sp-info-label">Login Email</div>
-            <div class="sp-info-value" style="word-break:break-all;">{{ frappe.session.user }}</div>
+            <div class="sp-info-value">{{ frappe.session.user }}</div>
           </div>
-          {% if profile.official_email %}
           <div>
             <div class="sp-info-label">Official Email</div>
-            <div class="sp-info-value" style="word-break:break-all;">{{ profile.official_email }}</div>
+            <div class="sp-info-value">{{ profile.official_email or "—" }}</div>
           </div>
-          {% endif %}
-          {% if profile.personal_email %}
           <div>
             <div class="sp-info-label">Personal Email</div>
-            <div class="sp-info-value" style="word-break:break-all;">{{ profile.personal_email }}</div>
+            <div class="sp-info-value">{{ profile.personal_email or "—" }}</div>
           </div>
-          {% endif %}
-          {% if profile.phone %}
           <div>
             <div class="sp-info-label">Phone</div>
-            <div class="sp-info-value">{{ profile.phone }}</div>
+            <div class="sp-info-value">{{ profile.phone or "—" }}</div>
           </div>
-          {% endif %}
         </div>
-        {% if profile.present_address %}
-        <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--sp-border);">
-          <div class="sp-info-label">Present Address</div>
-          <div class="sp-info-value" style="margin-top:4px;line-height:1.6;">{{ profile.present_address }}</div>
+        
+        <div style="margin-top:24px;">
+          <div class="sp-info-label" style="display:flex;align-items:center;gap:4px;">
+            <span class="sp-ms" style="color:var(--sp-primary);font-size:18px;">location_on</span> Present Address
+          </div>
+          <div class="sp-info-value" style="margin-top:8px;">{{ profile.present_address or "—" }}</div>
         </div>
-        {% endif %}
         {% if profile.permanent_address and profile.permanent_address != profile.present_address %}
-        <div style="margin-top:14px;">
-          <div class="sp-info-label">Permanent Address</div>
-          <div class="sp-info-value" style="margin-top:4px;line-height:1.6;">{{ profile.permanent_address }}</div>
+        <div style="margin-top:24px;">
+          <div class="sp-info-label" style="display:flex;align-items:center;gap:4px;">
+            <span class="sp-ms" style="color:var(--sp-primary);font-size:18px;">location_on</span> Permanent Address
+          </div>
+          <div class="sp-info-value" style="margin-top:8px;">{{ profile.permanent_address }}</div>
         </div>
         {% endif %}
       </div>
@@ -128,13 +476,13 @@
     {# Academic Information #}
     <div class="sp-section-card fade-in delay-3">
       <div class="sp-section-header">
-        <span class="sp-ms">school</span> Academic Information
+        <div class="sp-section-header-title"><span class="sp-ms">school</span> Academic Information</div>
       </div>
       <div class="sp-section-body">
         <div class="sp-info-grid">
           <div>
             <div class="sp-info-label">Student ID</div>
-            <div style="font-size:18px;font-weight:800;color:var(--sp-primary);font-family:monospace;">{{ profile.registration_id or "—" }}</div>
+            <div class="sp-info-value primary bold">{{ profile.registration_id or "—" }}</div>
           </div>
           <div>
             <div class="sp-info-label">Programme</div>
@@ -156,218 +504,684 @@
             <div class="sp-info-label">Academic Year</div>
             <div class="sp-info-value">{{ profile.academic_year or "—" }}</div>
           </div>
-          {# CGPA removed from profile — shown on Dashboard instead #}
-          {% if profile.specialisation %}
-          <div>
-            <div class="sp-info-label">Specialisation</div>
-            <div class="sp-info-value">{{ profile.specialisation }}</div>
-          </div>
-          {% endif %}
-          {% if profile.admission_type %}
           <div>
             <div class="sp-info-label">Admission Type</div>
-            <div class="sp-info-value">{{ profile.admission_type }}</div>
+            <div class="sp-info-value">{{ profile.admission_type or "—" }}</div>
           </div>
-          {% endif %}
         </div>
       </div>
     </div>
 
     {# Bank Details #}
-    {% if profile.bank_name or profile.bank_account_number %}
     <div class="sp-section-card fade-in delay-4">
       <div class="sp-section-header">
-        <span class="sp-ms">account_balance</span> Bank Details
+        <div class="sp-section-header-title"><span class="sp-ms">account_balance</span> Bank Details</div>
+        {% if not profile.bank_details_submitted %}
+        <button id="sp-bank-edit-btn" class="sp-btn" style="border: 1px solid var(--sp-primary); color: var(--sp-primary); background: #fff; border-radius: 20px; padding: 6px 16px; font-weight: 400;" onclick="spOpenModal('modal-bank-details')">
+          <span class="sp-ms" style="font-size:16px;vertical-align:-3px;">edit</span> {{ "Update" if profile.savings_account_number else "Add" }} Bank Details
+        </button>
+        {% endif %}
       </div>
       <div class="sp-section-body">
+        {% if profile.bank_details_submitted %}
+        <div class="sp-bank-note sp-bank-note-locked">
+          <span class="sp-ms">lock</span>
+          <span>Submitted{% if profile.bank_details_submitted_on %} on {{ profile.bank_details_submitted_on }}{% endif %}. To make changes, please contact the administration office.</span>
+        </div>
+        {% else %}
+        <div class="sp-bank-note">
+          <span class="sp-ms">info</span>
+          <span>Savings bank account details are mandatory. You can submit them <strong>only once</strong>; please verify before saving.</span>
+        </div>
+        {% endif %}
+
+        <div class="sp-bank-subtitle">Savings Bank Account</div>
         <div class="sp-info-grid">
-          {% if profile.bank_name %}
-          <div><div class="sp-info-label">Bank</div><div class="sp-info-value">{{ profile.bank_name }}</div></div>
+          <div>
+            <div class="sp-info-label">Account Number</div>
+            <div class="sp-info-value">{{ profile.savings_account_number or "—" }}</div>
+          </div>
+          <div>
+            <div class="sp-info-label">Account Holder</div>
+            <div class="sp-info-value">{{ profile.savings_account_holder_name or "—" }}</div>
+          </div>
+          <div>
+            <div class="sp-info-label">Bank</div>
+            <div class="sp-info-value">{{ profile.savings_bank_name or "—" }}</div>
+          </div>
+          <div>
+            <div class="sp-info-label">Branch</div>
+            <div class="sp-info-value">{{ profile.savings_branch_name or "—" }}</div>
+          </div>
+          <div>
+            <div class="sp-info-label">IFSC Code</div>
+            <div class="sp-info-value">{{ profile.savings_ifsc_code or "—" }}</div>
+          </div>
+          <div>
+            <div class="sp-info-label">Passbook</div>
+            <div class="sp-info-value">
+              {% if profile.savings_passbook %}
+              <a class="sp-passbook-link" href="{{ profile.savings_passbook }}" target="_blank" rel="noopener"><span class="sp-ms">description</span> View passbook</a>
+              {% elif profile.bank_details_submitted %}
+              <label class="sp-passbook-upload"><span class="sp-ms">upload_file</span> Upload passbook
+                <input type="file" accept=".pdf,.jpg,.jpeg,.png" onchange="spUploadLaterPassbook('savings', this)" hidden>
+              </label>
+              {% else %}—{% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="sp-bank-subtitle" style="margin-top:24px;">Education Loan</div>
+        <div class="sp-info-grid">
+          <div>
+            <div class="sp-info-label">Availed Education Loan?</div>
+            <div class="sp-info-value">{{ profile.availed_education_loan or "—" }}</div>
+          </div>
+          {% if profile.availed_education_loan == "Yes" %}
+          <div>
+            <div class="sp-info-label">Loan Scheme</div>
+            <div class="sp-info-value">{{ profile.education_loan_scheme or "—" }}</div>
+          </div>
+          {% if profile.education_loan_scheme == "Others" %}
+          <div>
+            <div class="sp-info-label">Other Scheme</div>
+            <div class="sp-info-value">{{ profile.other_loan_scheme or "—" }}</div>
+          </div>
           {% endif %}
-          {% if profile.bank_account_number %}
-          <div><div class="sp-info-label">Account Number</div><div class="sp-info-value" style="font-family:monospace;">{{ profile.bank_account_number }}</div></div>
-          {% endif %}
-          {% if profile.ifsc_code %}
-          <div><div class="sp-info-label">IFSC Code</div><div class="sp-info-value" style="font-family:monospace;">{{ profile.ifsc_code }}</div></div>
-          {% endif %}
-          {% if profile.branch_name %}
-          <div><div class="sp-info-label">Branch</div><div class="sp-info-value">{{ profile.branch_name }}</div></div>
-          {% endif %}
-          {% if profile.account_holder %}
-          <div><div class="sp-info-label">Account Holder</div><div class="sp-info-value">{{ profile.account_holder }}</div></div>
+          <div>
+            <div class="sp-info-label">Loan Account Number</div>
+            <div class="sp-info-value">{{ profile.loan_account_number or "—" }}</div>
+          </div>
+          <div>
+            <div class="sp-info-label">Account Holder</div>
+            <div class="sp-info-value">{{ profile.loan_account_holder_name or "—" }}</div>
+          </div>
+          <div>
+            <div class="sp-info-label">Bank</div>
+            <div class="sp-info-value">{{ profile.loan_bank_name or "—" }}</div>
+          </div>
+          <div>
+            <div class="sp-info-label">Branch</div>
+            <div class="sp-info-value">{{ profile.loan_branch_name or "—" }}</div>
+          </div>
+          <div>
+            <div class="sp-info-label">IFSC Code</div>
+            <div class="sp-info-value">{{ profile.loan_ifsc_code or "—" }}</div>
+          </div>
+          <div>
+            <div class="sp-info-label">Loan Passbook / Statement</div>
+            <div class="sp-info-value">
+              {% if profile.loan_passbook %}
+              <a class="sp-passbook-link" href="{{ profile.loan_passbook }}" target="_blank" rel="noopener"><span class="sp-ms">description</span> View document</a>
+              {% elif profile.bank_details_submitted %}
+              <label class="sp-passbook-upload"><span class="sp-ms">upload_file</span> Upload document
+                <input type="file" accept=".pdf,.jpg,.jpeg,.png" onchange="spUploadLaterPassbook('loan', this)" hidden>
+              </label>
+              {% else %}—{% endif %}
+            </div>
+          </div>
           {% endif %}
         </div>
       </div>
     </div>
-    {% endif %}
 
     {# Parents #}
-    {% if parents %}
     <div class="sp-section-card fade-in delay-5">
       <div class="sp-section-header">
-        <span class="sp-ms">family_restroom</span> Parent / Guardian
+        <div class="sp-section-header-title"><span class="sp-ms">family_restroom</span> Parent / Guardian</div>
+        <button class="sp-btn" style="border: 1px solid var(--sp-primary); color: var(--sp-primary); background: #fff; border-radius: 20px; padding: 6px 16px; font-weight: 400;" onclick="spOpenModal('modal-add-guardian')">
+          + Add Guardian
+        </button>
       </div>
       <div class="sp-section-body">
-        {% for p in parents %}
-        <div {% if not loop.last %}style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--sp-border);"{% endif %}>
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-            <div style="width:36px;height:36px;border-radius:50%;background:var(--sp-primary-light);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--sp-primary);">
+        {% if parents %}
+          {% for p in parents %}
+          <div style="display:flex; gap:16px; margin-bottom:16px; padding-bottom:16px; border-bottom:1px solid var(--sp-border);">
+            <div style="width:40px; height:40px; border-radius:50%; background:var(--sp-primary-light); display:flex; align-items:center; justify-content:center; color:var(--sp-primary); font-family: var(--sp-font-family, 'Merriweather', serif); font-size: 18px;">
               {{ (p.parent_name or "P")[0].upper() }}
             </div>
-            <div>
-              <div style="font-size:14px;font-weight:700;color:var(--sp-text-1);">{{ p.parent_name }}</div>
-              <div style="font-size:12px;color:var(--sp-text-4);">{{ p.relation }}</div>
+            <div style="flex-grow:1;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <div style="font-weight:400; font-family: var(--sp-font-family, 'Merriweather', serif); color:var(--sp-text-1); font-size: 14px;">{{ p.parent_name }}</div>
+                {% if p.relation %}
+                <span style="background:#fff0f2; color:#920c24; padding:2px 8px; border-radius:12px; font-size:12px;">{{ p.relation }}</span>
+                {% endif %}
+              </div>
+              <div style="display:flex; flex-wrap:wrap; gap:16px; margin-top:8px; font-size:13px; color:var(--sp-text-3); font-weight:400;">
+                {% if p.contact_number %}
+                <div style="display:flex; align-items:center; gap:4px;"><span class="sp-ms" style="font-size:16px; color:var(--sp-primary);">call</span> {{ p.contact_number }}</div>
+                {% endif %}
+                {% if p.email_id %}
+                <div style="display:flex; align-items:center; gap:4px;"><span class="sp-ms" style="font-size:16px; color:var(--sp-primary);">mail</span> {{ p.email_id }}</div>
+                {% endif %}
+                {% if p.occupation %}
+                <div style="display:flex; align-items:center; gap:4px;"><span class="sp-ms" style="font-size:16px; color:var(--sp-primary);">work</span> {{ p.occupation }}</div>
+                {% endif %}
+              </div>
             </div>
           </div>
-          <div style="display:flex;flex-wrap:wrap;gap:12px;margin-left:46px;">
-            {% if p.contact_number %}<span style="font-size:13px;color:var(--sp-text-3);">&#128222; {{ p.contact_number }}</span>{% endif %}
-            {% if p.email_id %}<span style="font-size:13px;color:var(--sp-text-3);word-break:break-all;">&#9993; {{ p.email_id }}</span>{% endif %}
-            {% if p.occupation %}<span style="font-size:13px;color:var(--sp-text-3);">{{ p.occupation }}</span>{% endif %}
-          </div>
-        </div>
-        {% endfor %}
+          {% endfor %}
+        {% else %}
+          <div style="color:var(--sp-text-4); font-style:italic;">No guardians added yet.</div>
+        {% endif %}
       </div>
     </div>
-    {% endif %}
 
   </div>
 
   {# ── Right Column ─────────────────────────────────────────── #}
   <div>
 
-    {# ID Card #}
-    {% if id_card %}
-    <div class="sp-section-card fade-in delay-1" style="margin-bottom:20px;">
-      <div class="sp-section-header">
-        <span class="sp-ms">badge</span> Student ID Card
-      </div>
-      <div class="sp-section-body">
-        <div class="sp-id-card-preview">
-          {% if id_card.front_id_image %}
-          <img src="{{ id_card.front_id_image }}" style="width:100%;border-radius:8px;" alt="ID Card">
-          {% else %}
-          <div style="text-align:center;padding:10px;">
-            <div style="font-size:11px;opacity:0.7;margin-bottom:6px;letter-spacing:0.1em;">STUDENT ID</div>
-            <div style="font-size:16px;font-weight:700;">{{ student_name }}</div>
-            <div style="font-size:13px;font-family:monospace;opacity:0.8;margin-top:4px;">{{ student_id }}</div>
-            {% if programme_name %}<div style="font-size:12px;opacity:0.7;margin-top:6px;">{{ programme_name }}</div>{% endif %}
-            {% if id_card.expiry_date %}<div style="font-size:11px;opacity:0.6;margin-top:8px;">Valid till {{ frappe.utils.formatdate(id_card.expiry_date, "MMM yyyy") }}</div>{% endif %}
-          </div>
-          {% endif %}
-        </div>
-        <div style="margin-top:12px;display:flex;align-items:center;justify-content:space-between;">
-          <span class="sp-badge" style="background:var(--sp-success-bg);color:var(--sp-success);">{{ id_card.card_status }}</span>
-          {% if id_card.expiry_date %}
-          <span style="font-size:12px;color:var(--sp-text-4);">Expires {{ frappe.utils.formatdate(id_card.expiry_date, "dd MMM yyyy") }}</span>
-          {% endif %}
-        </div>
-      </div>
-    </div>
-    {% endif %}
-
     {# Hostel #}
-    {% if profile.is_hosteller %}
-    <div class="sp-section-card fade-in delay-2" style="margin-bottom:20px;">
+    <div class="sp-section-card fade-in delay-1">
       <div class="sp-section-header">
-        <span class="sp-ms">hotel</span> Hostel
+        <div class="sp-section-header-title"><span class="sp-ms">hotel</span> Hostel</div>
       </div>
       <div class="sp-section-body">
-        <span class="sp-badge" style="background:var(--sp-success-bg);color:var(--sp-success);margin-bottom:14px;">Resident</span>
-        {% if profile.hostel_room %}
-        <div style="margin-top:12px;"><div class="sp-info-label">Room</div><div class="sp-info-value">{{ profile.hostel_room }}</div></div>
-        {% endif %}
-        {% if profile.hostel_bed %}
-        <div style="margin-top:10px;"><div class="sp-info-label">Bed</div><div class="sp-info-value">{{ profile.hostel_bed }}</div></div>
-        {% endif %}
+        <div style="display:flex; align-items:center; gap:12px; background:#fff0f2; border:1px solid #f5c6ce; padding:16px; border-radius:8px; margin-bottom:16px;">
+          <span class="sp-ms" style="color:var(--sp-success); font-size:32px;">apartment</span>
+          <div>
+            <div style="color:var(--sp-success); font-weight:400; font-size:16px;">Resident</div>
+            <div style="color:var(--sp-text-3); font-size:13px; font-weight:400;">Hostel accommodation allotted</div>
+          </div>
+        </div>
+        
+        <div class="sp-info-grid" style="grid-template-columns: 1fr;">
+          <div>
+            <div class="sp-info-label">Hostel Name</div>
+            <div class="sp-info-value">{{ profile.hostel_name or "—" }}</div>
+          </div>
+          <div>
+            <div class="sp-info-label">Room Number</div>
+            <div class="sp-info-value">{{ profile.hostel_room or "—" }}</div>
+          </div>
+          <div>
+            <div class="sp-info-label">Mess Type</div>
+            <div class="sp-info-value">{{ profile.meal_plan or "—" }}</div>
+          </div>
+        </div>
       </div>
     </div>
-    {% endif %}
 
     {# Prior Qualifications #}
-    {% if ug_degrees %}
-    <div class="sp-section-card fade-in delay-3">
+    <div class="sp-section-card fade-in delay-2">
       <div class="sp-section-header">
-        <span class="sp-ms">workspace_premium</span> Prior Qualifications
+        <div class="sp-section-header-title"><span class="sp-ms">school</span> Prior Qualifications</div>
       </div>
       <div class="sp-section-body">
-        {% for ug in ug_degrees %}
-        <div {% if not loop.last %}style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--sp-border);"{% endif %}>
-          <div class="sp-info-label">Degree</div>
-          <div class="sp-info-value" style="margin-bottom:4px;">{{ ug.degree or "—" }}</div>
-          {% if ug.institution %}<div style="font-size:13px;color:var(--sp-text-3);">{{ ug.institution }}</div>{% endif %}
-          <div style="display:flex;gap:10px;margin-top:4px;">
-            {% if ug.year_of_passing %}<span style="font-size:12px;color:var(--sp-text-4);">{{ ug.year_of_passing }}</span>{% endif %}
-            {% if ug.percentage %}<span style="font-size:12px;color:var(--sp-text-4);">{{ ug.percentage }}</span>{% endif %}
+        {% if ug_degrees %}
+          {% for ug in ug_degrees %}
+          <div style="background:var(--sp-primary-light); padding:16px; border-radius:8px; margin-bottom:12px;">
+            <div style="font-family: var(--sp-font-family, 'Merriweather', serif); font-weight:400; font-size:16px; color:var(--sp-text-1);">{{ ug.degree or "—" }}</div>
+            <div style="font-size:13px; color:var(--sp-text-3); font-weight:400; margin-top:4px; text-transform:uppercase;">{{ ug.institution or "—" }}</div>
+            <div style="font-size:13px; color:var(--sp-text-4); font-weight:400; margin-top:8px;">
+              {{ ug.year_of_passing or "—" }} <span style="margin:0 8px;">|</span> {{ ug.percentage or "—" }}
+            </div>
           </div>
-        </div>
-        {% endfor %}
+          {% endfor %}
+        {% else %}
+          <div style="color:var(--sp-text-4); font-style:italic;">No prior qualifications listed.</div>
+        {% endif %}
       </div>
     </div>
-    {% endif %}
+
+    {# Quick Actions #}
+    <div class="sp-section-card fade-in delay-3">
+      <div class="sp-section-header">
+        <div class="sp-section-header-title"><span class="sp-ms">bolt</span> Quick Actions</div>
+      </div>
+      <div class="sp-section-body">
+        <div class="sp-quick-action-grid">
+          <a href="/student-portal/fees" class="sp-quick-action-card">
+            <div class="icon-wrap" style="background:#fff0f2; color:#920c24;"><span class="sp-ms">receipt_long</span></div>
+            <h3>Fees & Payments</h3>
+            <p>View fee details</p>
+            <span class="sp-ms sp-ms-chevron">chevron_right</span>
+          </a>
+          <a href="/student-portal/hostel" class="sp-quick-action-card">
+            <div class="icon-wrap" style="background:#fff0f2; color:#920c24;"><span class="sp-ms">hotel</span></div>
+            <h3>Hostel Details</h3>
+            <p>View hostel information</p>
+            <span class="sp-ms sp-ms-chevron">chevron_right</span>
+          </a>
+          <a href="/student-portal/helpdesk" class="sp-quick-action-card">
+            <div class="icon-wrap" style="background:#fff0f2; color:#920c24;"><span class="sp-ms">support_agent</span></div>
+            <h3>Raise a Ticket</h3>
+            <p>Get support from helpdesk</p>
+            <span class="sp-ms sp-ms-chevron">chevron_right</span>
+          </a>
+          <a href="/student-portal/timetable" class="sp-quick-action-card">
+            <div class="icon-wrap" style="background:#fff0f2; color:#920c24;"><span class="sp-ms">calendar_today</span></div>
+            <h3>View Timetable</h3>
+            <p>Check your class schedule</p>
+            <span class="sp-ms sp-ms-chevron">chevron_right</span>
+          </a>
+        </div>
+      </div>
+    </div>
+
 
   </div>
 </div>
 
-{# ════════════════════════════════════════════════════════════════════
-   Downloads Section
-════════════════════════════════════════════════════════════════════ #}
-{# My Documents section removed — uncomment to restore
-{% if can_download_application or can_download_registration %}
-<div style="margin-top:28px;" class="fade-in">
-
-  <div class="sp-section-hdr" style="margin-bottom:14px;">
-    <div class="sp-section-hdr-title">
-      <span class="sp-ms" style="font-family:'Material Symbols Outlined';font-size:18px;vertical-align:-3px;margin-right:6px;">download</span>
-      My Documents
+{# ── Add Guardian Modal ─────────────────────────────── #}
+<div class="sp-modal-overlay" id="modal-add-guardian" onclick="spCloseModalIf(event, 'modal-add-guardian')">
+  <div class="sp-modal" role="dialog" aria-modal="true" style="max-width:500px;">
+    <div class="sp-modal-header">
+      <div class="sp-modal-title">
+        <span class="sp-ms">person_add</span> Add Guardian
+      </div>
+      <button class="sp-modal-close" onclick="spCloseModal('modal-add-guardian')" aria-label="Close">
+        <span class="sp-ms">close</span>
+      </button>
+    </div>
+    <div class="sp-modal-body">
+      <form id="add-guardian-form" onsubmit="event.preventDefault(); submitGuardian();">
+        <div style="display:flex; gap:16px; margin-bottom:16px;">
+          <div style="flex:1;">
+            <label style="display:block; font-size:13px; font-weight:600; color:var(--sp-text-3); margin-bottom:6px;">First Name *</label>
+            <input type="text" id="g_first_name" required style="width:100%; padding:8px 12px; border:1px solid var(--sp-border); border-radius:8px; font-size:14px; font-family:inherit;">
+          </div>
+          <div style="flex:1;">
+            <label style="display:block; font-size:13px; font-weight:600; color:var(--sp-text-3); margin-bottom:6px;">Last Name</label>
+            <input type="text" id="g_last_name" style="width:100%; padding:8px 12px; border:1px solid var(--sp-border); border-radius:8px; font-size:14px; font-family:inherit;">
+          </div>
+        </div>
+        <div style="margin-bottom:16px;">
+          <label style="display:block; font-size:13px; font-weight:600; color:var(--sp-text-3); margin-bottom:6px;">Relation *</label>
+          <input type="text" id="g_relation" required style="width:100%; padding:8px 12px; border:1px solid var(--sp-border); border-radius:8px; font-size:14px; font-family:inherit;">
+        </div>
+        <div style="display:flex; gap:16px; margin-bottom:16px;">
+          <div style="flex:1;">
+            <label style="display:block; font-size:13px; font-weight:600; color:var(--sp-text-3); margin-bottom:6px;">Phone</label>
+            <input type="text" id="g_phone" style="width:100%; padding:8px 12px; border:1px solid var(--sp-border); border-radius:8px; font-size:14px; font-family:inherit;">
+          </div>
+          <div style="flex:1;">
+            <label style="display:block; font-size:13px; font-weight:600; color:var(--sp-text-3); margin-bottom:6px;">Email</label>
+            <input type="email" id="g_email" style="width:100%; padding:8px 12px; border:1px solid var(--sp-border); border-radius:8px; font-size:14px; font-family:inherit;">
+          </div>
+        </div>
+        <div style="margin-bottom:16px;">
+          <label style="display:block; font-size:13px; font-weight:600; color:var(--sp-text-3); margin-bottom:6px;">Occupation</label>
+          <input type="text" id="g_occupation" style="width:100%; padding:8px 12px; border:1px solid var(--sp-border); border-radius:8px; font-size:14px; font-family:inherit;">
+        </div>
+      </form>
+    </div>
+    <div class="sp-modal-footer">
+      <button class="sp-btn sp-btn-secondary" onclick="spCloseModal('modal-add-guardian')">Cancel</button>
+      <button class="sp-btn sp-btn-primary" onclick="submitGuardian()">
+        Save Guardian
+      </button>
     </div>
   </div>
+</div>
 
-  <div class="sp-doc-download-grid">
-
-    {% if can_download_registration %}
-    <div class="sp-doc-card">
-      <div class="sp-doc-icon" style="background:var(--sp-primary-light);color:var(--sp-primary);">
-        <span class="sp-ms">badge</span>
+{# ── Bank Details Modal (one-time submission) ───────── #}
+{% if not profile.bank_details_submitted %}
+<div class="sp-modal-overlay" id="modal-bank-details" onclick="spCloseModalIf(event, 'modal-bank-details')">
+  <div class="sp-modal" role="dialog" aria-modal="true" style="max-width:640px;">
+    <div class="sp-modal-header">
+      <div class="sp-modal-title">
+        <span class="sp-ms">account_balance</span> Bank Details
       </div>
-      <div class="sp-doc-info">
-        <div class="sp-doc-title">Registration Slip</div>
-        <div class="sp-doc-sub">Your official student registration document</div>
-      </div>
-      <a class="sp-doc-btn"
-         href="/api/method/slcm.api.student_portal.download_student_document?doc_type=registration_slip"
-         target="_blank"
-         rel="noopener noreferrer"
-         aria-label="Download Registration Slip PDF">
-        <span class="sp-ms" style="font-family:'Material Symbols Outlined';font-size:16px;">picture_as_pdf</span>
-        Download PDF
-      </a>
+      <button class="sp-modal-close" onclick="spCloseModal('modal-bank-details')" aria-label="Close">
+        <span class="sp-ms">close</span>
+      </button>
     </div>
-    {% endif %}
+    <div class="sp-modal-body" style="max-height:70vh; overflow-y:auto;">
+      <div class="sp-bank-note">
+        <span class="sp-ms">warning</span>
+        <span>These details can be submitted <strong>only once</strong> and cannot be edited afterwards.</span>
+      </div>
+      <form id="bank-details-form" class="sp-bank-form" onsubmit="event.preventDefault(); submitBankDetails();">
+        <div class="sp-bank-subtitle">Savings Bank Account (mandatory)</div>
+        <div class="sp-bank-row">
+          <div>
+            <label for="b_savings_account_number">Savings Bank Account Number *</label>
+            <input type="text" id="b_savings_account_number" maxlength="20" inputmode="numeric" autocomplete="off">
+          </div>
+          <div>
+            <label for="b_savings_account_holder_name">Name of the Account Holder *</label>
+            <input type="text" id="b_savings_account_holder_name" maxlength="100">
+          </div>
+        </div>
+        <div class="sp-bank-row">
+          <div>
+            <label for="b_savings_bank_name">Name of the Bank *</label>
+            <input type="text" id="b_savings_bank_name" maxlength="100">
+          </div>
+          <div>
+            <label for="b_savings_branch_name">Name of the Branch *</label>
+            <input type="text" id="b_savings_branch_name" maxlength="100">
+          </div>
+        </div>
+        <div class="sp-bank-row">
+          <div>
+            <label for="b_savings_ifsc_code">IFSC Code *</label>
+            <input type="text" id="b_savings_ifsc_code" maxlength="11" style="text-transform:uppercase;" autocomplete="off">
+            <div class="sp-bank-hint">11 alphanumeric characters</div>
+          </div>
+          <div>
+            <label for="b_savings_passbook">Passbook (optional)</label>
+            <input type="file" id="b_savings_passbook" accept=".pdf,.jpg,.jpeg,.png">
+            <div class="sp-bank-hint">Front page of the passbook or a cancelled cheque · PDF, JPG or PNG, up to 5 MB</div>
+          </div>
+        </div>
 
-    {% if can_download_application %}
-    <div class="sp-doc-card">
-      <div class="sp-doc-icon" style="background:var(--sp-info-bg,#e0f2fe);color:var(--sp-info,#0369a1);">
-        <span class="sp-ms">description</span>
-      </div>
-      <div class="sp-doc-info">
-        <div class="sp-doc-title">Application Form</div>
-        <div class="sp-doc-sub">Your original admission application (App: {{ profile.application_number }})</div>
-      </div>
-      <a class="sp-doc-btn"
-         href="/api/method/slcm.api.student_portal.download_student_document?doc_type=application_form"
-         target="_blank"
-         rel="noopener noreferrer"
-         aria-label="Download Application Form PDF">
-        <span class="sp-ms" style="font-family:'Material Symbols Outlined';font-size:16px;">picture_as_pdf</span>
-        Download PDF
-      </a>
+        <div class="sp-bank-subtitle" style="margin-top:8px;">Education Loan</div>
+        <div class="sp-bank-row">
+          <div>
+            <label for="b_availed_education_loan">Availed Education Loan? *</label>
+            <select id="b_availed_education_loan" onchange="spToggleLoanFields()">
+              <option value="">Select</option>
+              <option value="Yes">Yes</option>
+              <option value="No">No</option>
+            </select>
+          </div>
+          <div class="sp-loan-field">
+            <label for="b_education_loan_scheme">Loan Scheme *</label>
+            <select id="b_education_loan_scheme" onchange="spToggleLoanFields()">
+              <option value="">Select</option>
+              <option value="PM Vidyalaxmi">PM Vidyalaxmi</option>
+              <option value="Others">Others</option>
+            </select>
+          </div>
+        </div>
+        <div class="sp-loan-field">
+          <div class="sp-bank-row" id="sp-other-scheme-row">
+            <div>
+              <label for="b_other_loan_scheme">Specify Other Scheme *</label>
+              <input type="text" id="b_other_loan_scheme" maxlength="140" placeholder="Name of the loan scheme">
+            </div>
+          </div>
+          <div class="sp-bank-row">
+            <div>
+              <label for="b_loan_account_number">Loan Account Number *</label>
+              <input type="text" id="b_loan_account_number" maxlength="30" autocomplete="off">
+            </div>
+            <div>
+              <label for="b_loan_account_holder_name">Name of the Account Holder *</label>
+              <input type="text" id="b_loan_account_holder_name" maxlength="100">
+            </div>
+          </div>
+          <div class="sp-bank-row">
+            <div>
+              <label for="b_loan_bank_name">Name of the Bank *</label>
+              <input type="text" id="b_loan_bank_name" maxlength="100">
+            </div>
+            <div>
+              <label for="b_loan_branch_name">Name of the Branch *</label>
+              <input type="text" id="b_loan_branch_name" maxlength="100">
+            </div>
+          </div>
+          <div class="sp-bank-row">
+            <div>
+                <label for="b_loan_ifsc_code">IFSC Code *</label>
+                <input type="text" id="b_loan_ifsc_code" maxlength="11" style="text-transform:uppercase;" autocomplete="off">
+                <div class="sp-bank-hint">11 alphanumeric characters</div>
+              </div>
+              <div>
+                <label for="b_loan_passbook">Loan Passbook / Statement (optional)</label>
+                <input type="file" id="b_loan_passbook" accept=".pdf,.jpg,.jpeg,.png">
+                <div class="sp-bank-hint">Passbook, statement or sanction letter · PDF, JPG or PNG, up to 5 MB</div>
+              </div>
+          </div>
+        </div>
+      </form>
     </div>
-    {% endif %}
+    <div class="sp-modal-footer">
+      <button class="sp-btn sp-btn-secondary" onclick="spCloseModal('modal-bank-details')">Cancel</button>
+      <button class="sp-btn sp-btn-primary" onclick="submitBankDetails()">
+        Submit Bank Details
+      </button>
+    </div>
+  </div>
+</div>
 
+{# ── Bank Details Confirmation ─────────────────────── #}
+<div class="sp-modal-overlay" id="modal-bank-confirm" onclick="spCloseModalIf(event, 'modal-bank-confirm')">
+  <div class="sp-modal" role="dialog" aria-modal="true" style="max-width:440px;">
+    <div class="sp-modal-header">
+      <div class="sp-modal-title">
+        <span class="sp-ms">help</span> Confirm Bank Details
+      </div>
+      <button class="sp-modal-close" onclick="spCloseModal('modal-bank-confirm')" aria-label="Close">
+        <span class="sp-ms">close</span>
+      </button>
+    </div>
+    <div class="sp-modal-body">
+      <p style="margin:0 0 12px; font-size:14px; color:var(--sp-text-2);">
+        Please check your bank details carefully before saving.
+      </p>
+      <div class="sp-bank-note" style="margin-bottom:0;">
+        <span class="sp-ms">lock</span>
+        <span>Once saved, you <strong>cannot edit</strong> these details again. If you need to make changes later, please approach the <strong>Administrator</strong>.</span>
+      </div>
+    </div>
+    <div class="sp-modal-footer">
+      <button class="sp-btn sp-btn-secondary" onclick="spCloseModal('modal-bank-confirm')">Go Back</button>
+      <button class="sp-btn sp-btn-primary" onclick="spConfirmBankDetails()">Yes, Save</button>
+    </div>
   </div>
 </div>
 {% endif %}
-#}
+
+<div id="sp-toast" class="sp-toast" role="alert" aria-live="polite"></div>
+
+<script>
+window.spOpenModal = window.spOpenModal || function (id) {
+  var el = document.getElementById(id);
+  if (el) { el.classList.add('open'); document.body.style.overflow = 'hidden'; }
+};
+window.spCloseModal = window.spCloseModal || function (id) {
+  var el = document.getElementById(id);
+  if (el) { el.classList.remove('open'); document.body.style.overflow = ''; }
+};
+window.spCloseModalIf = window.spCloseModalIf || function (evt, id) {
+  if (evt.target === document.getElementById(id)) { spCloseModal(id); }
+};
+window.spToast = window.spToast || function (msg, type) {
+  var el = document.getElementById('sp-toast');
+  if (!el) return;
+  el.className = 'sp-toast sp-toast-' + (type || 'info') + ' open';
+  el.innerHTML = '<span class="sp-ms">' +
+    (type === 'success' ? 'check_circle' : type === 'danger' ? 'error' : 'info') +
+    '</span><span>' + msg + '</span>';
+  clearTimeout(el._t);
+  el._t = setTimeout(function () { el.classList.remove('open'); }, 5000);
+};
+
+function submitGuardian() {
+  var data = {
+    first_name: document.getElementById('g_first_name').value,
+    last_name: document.getElementById('g_last_name').value,
+    relation: document.getElementById('g_relation').value,
+    phone: document.getElementById('g_phone').value,
+    email: document.getElementById('g_email').value,
+    occupation: document.getElementById('g_occupation').value
+  };
+
+  if (!data.first_name || !data.relation) {
+    spToast('First Name and Relation are required', 'danger');
+    return;
+  }
+
+  spCall('slcm.api.student_portal.add_guardian', data, function(res) {
+    spCloseModal('modal-add-guardian');
+    spToast('Guardian added successfully', 'success');
+    setTimeout(function() {
+      window.location.reload();
+    }, 1000);
+  }, function(err) {
+    spToast(err || 'Failed to add guardian', 'danger');
+  });
+}
+var SP_BANK_FIELDS = [
+  'savings_account_number', 'savings_account_holder_name', 'savings_bank_name',
+  'savings_branch_name', 'savings_ifsc_code', 'availed_education_loan',
+  'education_loan_scheme', 'other_loan_scheme', 'loan_account_number',
+  'loan_account_holder_name', 'loan_bank_name', 'loan_branch_name', 'loan_ifsc_code'
+];
+var SP_BANK_PENDING = null;
+var SP_BANK_PREFILL = {{ bank_prefill | tojson }};
+var SP_IFSC_RE = /^[A-Z0-9]{11}$/;
+
+function spToggleLoanFields() {
+  var sel = document.getElementById('b_availed_education_loan');
+  if (!sel) return;
+  var show = sel.value === 'Yes';
+  document.querySelectorAll('.sp-loan-field').forEach(function (el) {
+    el.style.display = show ? '' : 'none';
+  });
+  var scheme = document.getElementById('b_education_loan_scheme');
+  var otherRow = document.getElementById('sp-other-scheme-row');
+  if (otherRow) otherRow.style.display = (show && scheme && scheme.value === 'Others') ? '' : 'none';
+}
+
+(function initBankForm() {
+  if (!document.getElementById('bank-details-form')) return;
+  SP_BANK_FIELDS.forEach(function (f) {
+    var el = document.getElementById('b_' + f);
+    if (el && SP_BANK_PREFILL[f]) el.value = SP_BANK_PREFILL[f];
+  });
+  spToggleLoanFields();
+})();
+
+function spServerMsg(err) {
+  /* spCall passes _server_messages entries joined by newlines; each is a JSON string */
+  try {
+    return String(err || '').split('\n').map(function (m) {
+      try { var o = JSON.parse(m); return (o && o.message) || m; } catch (e) { return m; }
+    }).join(' ');
+  } catch (e) { return err; }
+}
+
+function submitBankDetails() {
+  var data = {};
+  SP_BANK_FIELDS.forEach(function (f) {
+    var el = document.getElementById('b_' + f);
+    data[f] = el ? el.value.trim() : '';
+  });
+  data.savings_ifsc_code = data.savings_ifsc_code.toUpperCase();
+  data.loan_ifsc_code = data.loan_ifsc_code.toUpperCase();
+
+  var required = ['savings_account_number', 'savings_account_holder_name', 'savings_bank_name',
+                  'savings_branch_name', 'savings_ifsc_code', 'availed_education_loan'];
+  var loan = data.availed_education_loan === 'Yes';
+  if (loan) {
+    required = required.concat(['education_loan_scheme', 'loan_account_number', 'loan_account_holder_name',
+                                'loan_bank_name', 'loan_branch_name', 'loan_ifsc_code']);
+    if (data.education_loan_scheme === 'Others') required.push('other_loan_scheme');
+    else data.other_loan_scheme = '';
+  } else {
+    ['education_loan_scheme', 'other_loan_scheme', 'loan_account_number', 'loan_account_holder_name',
+     'loan_bank_name', 'loan_branch_name', 'loan_ifsc_code'].forEach(function (f) { data[f] = ''; });
+  }
+  for (var i = 0; i < required.length; i++) {
+    if (!data[required[i]]) {
+      spToast('Please fill all mandatory (*) fields', 'danger');
+      var el = document.getElementById('b_' + required[i]);
+      if (el) el.focus();
+      return;
+    }
+  }
+  if (!SP_IFSC_RE.test(data.savings_ifsc_code)) {
+    spToast('Savings IFSC Code must be exactly 11 alphanumeric characters', 'danger');
+    return;
+  }
+  if (loan && !SP_IFSC_RE.test(data.loan_ifsc_code)) {
+    spToast('Loan IFSC Code must be exactly 11 alphanumeric characters', 'danger');
+    return;
+  }
+  var fileErr = spPassbookError(document.getElementById('b_savings_passbook'))
+             || (loan ? spPassbookError(document.getElementById('b_loan_passbook')) : null);
+  if (fileErr) { spToast(fileErr, 'danger'); return; }
+  SP_BANK_PENDING = data;
+  spOpenModal('modal-bank-confirm');
+}
+
+/* ── Passbook uploads (private files, attached to the student's record by the server) ── */
+var SP_PASSBOOK_EXT = /\.(pdf|jpe?g|png)$/i;
+var SP_PASSBOOK_MAX = 5 * 1024 * 1024;
+
+function spPassbookError(input) {
+  var file = input && input.files && input.files[0];
+  if (!file) return null;
+  if (!SP_PASSBOOK_EXT.test(file.name)) return 'Passbook must be a PDF, JPG or PNG file';
+  if (file.size > SP_PASSBOOK_MAX) return 'Passbook file must be 5 MB or smaller';
+  return null;
+}
+
+function spUploadPrivate(input) {
+  return new Promise(function (resolve, reject) {
+    var file = input && input.files && input.files[0];
+    if (!file) { resolve(''); return; }
+    var fd = new FormData();
+    fd.append('file', file, file.name);
+    fd.append('is_private', '1');
+    fetch('/api/method/upload_file', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'X-Frappe-CSRF-Token': window._sp_csrf || (window.frappe && frappe.csrf_token) || '' },
+      body: fd,
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        if (res.message && res.message.file_url) resolve(res.message.file_url);
+        else reject(new Error('Passbook upload failed. Please try again.'));
+      })
+      .catch(function () { reject(new Error('Passbook upload failed. Please try again.')); });
+  });
+}
+
+function spUploadLaterPassbook(kind, input) {
+  var err = spPassbookError(input);
+  if (err) { spToast(err, 'danger'); input.value = ''; return; }
+  spToast('Uploading…', 'info');
+  spUploadPrivate(input).then(function (url) {
+    spCall('slcm.api.student_portal.upload_bank_passbook', { kind: kind, file_url: url }, function () {
+      spToast('Passbook uploaded successfully', 'success');
+      setTimeout(function () { window.location.reload(); }, 800);
+    }, function (e) {
+      spToast(spServerMsg(e) || 'Failed to upload passbook', 'danger');
+      input.value = '';
+    });
+  }).catch(function (e) { spToast(e.message, 'danger'); input.value = ''; });
+}
+
+function spConfirmBankDetails() {
+  if (!SP_BANK_PENDING) return;
+  var data = SP_BANK_PENDING;
+  spCloseModal('modal-bank-confirm');
+  var loan = data.availed_education_loan === 'Yes';
+  Promise.all([
+    spUploadPrivate(document.getElementById('b_savings_passbook')),
+    loan ? spUploadPrivate(document.getElementById('b_loan_passbook')) : Promise.resolve(''),
+  ]).then(function (urls) {
+    data.savings_passbook = urls[0];
+    data.loan_passbook = urls[1];
+    spSubmitBankDetails(data);
+  }).catch(function (e) { spToast(e.message, 'danger'); });
+}
+
+function spSubmitBankDetails(data) {
+  spCall('slcm.api.student_portal.submit_bank_details', data, function () {
+    SP_BANK_PENDING = null;
+    spCloseModal('modal-bank-details');
+    var btn = document.getElementById('sp-bank-edit-btn');
+    if (btn) btn.remove();
+    spToast('Bank details submitted successfully', 'success');
+    setTimeout(function () { window.location.reload(); }, 1000);
+  }, function (err) {
+    spToast(spServerMsg(err) || 'Failed to submit bank details', 'danger');
+  });
+}
+</script>
 
 {% endif %}{# end no_student #}
 {% endblock %}
+
+
+
+
+

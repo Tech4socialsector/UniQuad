@@ -1,7 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "OC-{admission_cycle}.#",
+ "autoname": "format:OC-{admission_cycle}-{####}",
  "creation": "2026-02-13 18:22:16.905855",
  "doctype": "DocType",
  "engine": "InnoDB",

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&display=swap" rel="stylesheet">
+    <style>
+        body { margin: 0; padding: 0; background-color: #ffffff; font-family: 'Merriweather', serif; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+        table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; border-collapse: collapse !important; }
+        img { border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic; }
+        @media only screen and (max-width: 600px) {
+            .container { width: 100% !important; min-width: 100% !important; }
+            .mobile-header-padding { padding: 30px 20px 15px 20px !important; }
+            .logo-img { height: 50px !important; width: auto !important; }
+            .univ-name, .campus-name { font-size: 16px !important; line-height: 1.2 !important; white-space: nowrap !important; }
+            .body-content { padding: 20px 20px !important; }
+        }
+    </style>
+</head>
+<body style="margin: 0; padding: 0; background-color: #ffffff; font-family: 'Merriweather', serif;">
+    <div style="display:none; white-space:nowrap; font:15px courier; line-height:0;">
+        &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
+    </div>
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="width: 100%; background-color: #ffffff; table-layout: fixed;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" border="0" class="container" style="max-width: 600px; width: 100%;">
+                    <tr>
+                        <td style="padding: 40px 40px 15px 40px;" class="mobile-header-padding">
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="width: 100%;">
+                                <tr>
+                                    <!-- Logo Cell -->
+                                    <td width="1" style="vertical-align: middle; padding-right: 20px;">
+                                        {% set inst_logo = frappe.db.get_single_value('Institution Settings', 'logo') %}
+                                        {% if inst_logo and (inst_logo.startswith('http://') or inst_logo.startswith('https://')) %}
+                                            {% set logo_url = inst_logo %}
+                                        {% elif inst_logo and not inst_logo.startswith('/private') and not ('localhost' in frappe.utils.get_url() or 'slcm.com' in frappe.utils.get_url() or '127.0.0.1' in frappe.utils.get_url()) %}
+                                            {% set logo_url = frappe.utils.get_url(inst_logo) %}
+                                        {% else %}
+                                            {% set logo_url = 'https://www.nls.ac.in/wp-content/uploads/2020/09/NLSIU-logo.png' %}
+                                        {% endif %}
+                                        <img src="{{ logo_url }}" alt="National Law School of India University" class="logo-img" style="height: 64px; width: auto; display: block; border: 0;">
+                                    </td>
+                                    <!-- Title Cell -->
+                                    <td style="vertical-align: middle; text-align: left;">
+                                        <div class="univ-name" style="font-family: 'Merriweather', serif; font-size: 20px; color: #920c24; line-height: 1.25; font-weight: 400; margin: 0; white-space: nowrap;">
+                                            National Law School of India University
+                                        </div>
+                                        <div style="border-top: 1.5px solid #920c24; margin: 5px 0; padding: 0; font-size: 0px; line-height: 0px;">&nbsp;</div>
+                                        <div class="campus-name" style="font-family: 'Merriweather', serif; font-size: 20px; color: #920c24; line-height: 1.25; font-weight: 700; margin: 0; white-space: nowrap;">
+                                            Bengaluru
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" border="0" class="container" style="max-width: 600px; width: 100%;">
+                    <tr>
+                        <td class="body-content" style="padding: 20px 40px 40px 40px; font-family: 'Merriweather', serif; font-size: 16px; line-height: 1.6; color: #333333;">
+                            <p class="greeting" style="font-size: 18px; font-weight: 600; color: #920c24;">Dear {{ candidate_name or full_name or applicant_name or doc.candidate_name or doc.applicant_name or doc.full_name or "Candidate" }},</p>
+                            <p>Greetings from the Admissions Office.</p>
+                            <p>We regret to inform you that your application could not be processed further for the admission cycle that closed on <strong>{{ cycle_end_date }}</strong>.</p>
+                            {% if applicant_id or (doc and doc.name) or program or (doc and doc.program) %}
+                            <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; border-left: 5px solid #920c24; margin: 20px 0;">
+                                <h3 style="margin-top: 0; color: #920c24;">Application Details</h3>
+                                {% if applicant_id or (doc and doc.name) %}<p style="margin: 0;"><strong>Application ID:</strong> {{ applicant_id or (doc and doc.name) }}</p>{% endif %}
+                                {% if program_name or program or (doc and doc.program) %}<p style="margin: 0;"><strong>Programme:</strong> {{ program_name or program or (doc and doc.program) }}</p>{% endif %}
+                                <p style="margin: 0;"><strong>Closing Date:</strong> {{ cycle_end_date }}</p>
+                            </div>
+                            {% endif %}
+                            <div style="margin: 20px 0; padding: 15px; background-color: #fff8f8; border-radius: 4px; border: 1px solid #f5c6cb;">
+                                <p style="margin: 0 0 4px 0; font-size: 14px; font-weight: 600; color: #920c24;">Reason for Rejection</p>
+                                <p style="margin: 0; font-size: 15px; line-height: 1.6;">{{ rejection_reason or (doc and doc.rejected_reason) or 'Application requirement not completed within the stipulated admission cycle deadline.' }}</p>
+                            </div>
+                            <p>We appreciate your interest in {{ institution_name or 'National Law School of India University' }} and wish you the very best in your future endeavours.</p>
+                            <p style="margin-top: 24px; margin-bottom: 0;">Regards,<br>
+                            <strong>Admissions Office</strong><br>
+                            National Law School of India University</p>
+
+                            <hr style="border: none; border-top: 1px solid #eeeeee; margin: 30px 0 15px 0;">
+                            <p style="font-size: 12px; color: #999999; text-align: center; margin: 0;">This is a system-generated email. Please do not reply to this message.</p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

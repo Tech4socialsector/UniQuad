@@ -133,12 +133,13 @@ class OfferService:
         validate_offer_config_fee_deadlines(config, program=program)
 
         # --- PRE-FLIGHT CHECKS (Before Transaction) ---
-        if not config.offer_issued_email:
-            throw(_("Email Template For Offer Issued is missing in Offer Configuration {0}").format(config.name))
-        
-        applicant_email = frappe.db.get_value("Applicant", applicant, "email")
-        if not applicant_email:
-            throw(_("Applicant {0} does not have a valid email address. Cannot send offer letter.").format(applicant))
+        if config.enable_notifications:
+            if not config.offer_issued_email:
+                throw(_("Email Template For Offer Issued is missing in Offer Configuration {0}").format(config.name))
+            
+            applicant_email = frappe.db.get_value("Applicant", applicant, "email")
+            if not applicant_email:
+                throw(_("Applicant {0} does not have a valid email address. Cannot send offer letter.").format(applicant))
         
         if not config.pdf_format:
             throw(_("PDF Print Format is missing in Offer Configuration {0}").format(config.name))
@@ -169,9 +170,9 @@ class OfferService:
                 "selection_status": "Selected",
                 "parenttype": "Seat Allocation"
             }
-            status_check = frappe.db.get_value("Seat Selection Applicant", sa_filters, ["parent"], as_dict=1)
+            sa_parents = frappe.db.get_all("Seat Selection Applicant", filters=sa_filters, pluck="parent")
 
-            if not status_check:
+            if not sa_parents:
                  # Check if an offer was ALREADY issued (in which case they would be 'Offer Issued')
                  already_issued = frappe.db.exists("Offer Letter", {
                     "applicant": applicant,
@@ -181,8 +182,25 @@ class OfferService:
                  if not already_issued:
                     throw(_("Applicant {0} is not in 'Selected' status for Program {1} in any Seat Allocation. Offer letter cannot be generated.").format(applicant, program))
             else:
-                # Check if parent Seat Allocation is Published
-                if frappe.db.get_value("Seat Allocation", status_check.parent, "status") != "Published":
+                # Check if parent Seat Allocation matching campus and cycle is Published
+                published_filters = {
+                    "name": ["in", sa_parents],
+                    "status": "Published"
+                }
+                if resolved_cycle or cycle:
+                    published_filters["admission_cycle"] = resolved_cycle or cycle
+                if campus:
+                    published_filters["campus"] = campus
+
+                published_sa = frappe.db.exists("Seat Allocation", published_filters)
+                if not published_sa:
+                    # Fallback check without strict cycle/campus if specific match failed
+                    published_sa = frappe.db.exists("Seat Allocation", {
+                        "name": ["in", sa_parents],
+                        "status": "Published"
+                    })
+
+                if not published_sa:
                      throw(_("Seat Allocation for Applicant {0} is not yet 'Published'. Please publish the allocation first.").format(applicant))
 
         # Idempotency: Prevent duplicate offers for same campus, cycle, program and admission_year
@@ -557,12 +575,19 @@ class OfferService:
                         "applicant_id": applicant_name
                     }
 
-                    sa_child_data = frappe.db.get_value(
+                    sa_child_records = frappe.db.get_all(
                         "Seat Selection Applicant",
-                        sa_child_filters,
-                        ["parent", "program"],
-                        as_dict=1
+                        filters=sa_child_filters,
+                        fields=["parent", "program"]
                     )
+                    sa_child_data = None
+                    for rec in sa_child_records:
+                        st = frappe.db.get_value("Seat Allocation", rec.parent, "status")
+                        if st == "Published":
+                            sa_child_data = rec
+                            break
+                    if not sa_child_data and sa_child_records:
+                        sa_child_data = sa_child_records[0]
 
                     if sa_child_data:
                         parent_sa = frappe.db.get_value("Seat Allocation", sa_child_data.parent, 
@@ -824,15 +849,21 @@ class OfferService:
             # Workaround for wkhtmltopdf HostNotFoundError/deadlock on single-threaded dev servers
             original_host_name = frappe.conf.get("host_name")
             try:
-                if getattr(frappe.local, "request", None):
-                    from urllib.parse import urlparse
-                    parsed = urlparse(frappe.request.host_url)
-                    port = parsed.port or (443 if parsed.scheme == 'https' else 80)
-                    frappe.conf.host_name = f"{parsed.scheme}://127.0.0.1:{port}"
-                else:
-                    frappe.conf.host_name = "http://127.0.0.1:8000"
+                if frappe.conf.get("developer_mode"):
+                    if getattr(frappe.local, "request", None):
+                        from urllib.parse import urlparse
+                        parsed = urlparse(frappe.request.host_url)
+                        port = parsed.port or (443 if parsed.scheme == 'https' else 80)
+                        frappe.conf.host_name = f"{parsed.scheme}://127.0.0.1:{port}"
+                    else:
+                        port = frappe.conf.get("webserver_port") or 8000
+                        frappe.conf.host_name = f"http://127.0.0.1:{port}"
                 
-                pdf_content = frappe.get_print("Offer Letter", offer_doc.name, print_format, as_pdf=True)
+                try:
+                    pdf_content = frappe.get_print("Offer Letter", offer_doc.name, print_format, as_pdf=True)
+                except Exception as pdf_err:
+                    frappe.log_error(f"wkhtmltopdf crashed during Offer Letter generation: {str(pdf_err)}", "PDF Generation Error")
+                    pdf_content = None
             finally:
                 if original_host_name is not None:
                     frappe.conf.host_name = original_host_name

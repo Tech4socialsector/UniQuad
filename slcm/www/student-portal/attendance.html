@@ -2,12 +2,292 @@
 
 {% block title %}Attendance{% endblock %}
 
+
 {% block extra_head %}
+<!-- Flatpickr for Date Inputs -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    if (typeof flatpickr !== 'undefined') {
+      flatpickr("#cond-from-date", { dateFormat: "d/m/Y", allowInput: true });
+      flatpickr("#cond-to-date", { dateFormat: "d/m/Y", allowInput: true });
+    }
+  });
+</script>
 <script>
   /* CSRF token for Frappe API calls */
   var SP_CSRF = "{{ frappe.session.csrf_token }}";
 </script>
+<style>
+  /* ── KPI tiles (same look as the Dashboard / Fees pages) ── */
+  .att-kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 18px; }
+  .att-kpi {
+    background: var(--sp-card); border: 1px solid var(--sp-border); border-radius: 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05); padding: 18px 20px; min-width: 0;
+  }
+  .att-kpi-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+  .att-kpi-label { font-size: 11.5px; font-weight: 700; color: var(--sp-text-4); text-transform: uppercase; letter-spacing: 0.07em; }
+  .att-kpi-icon {
+    width: 32px; height: 32px; border-radius: 10px; border: 1px solid var(--sp-border);
+    display: flex; align-items: center; justify-content: center; color: var(--sp-primary); flex-shrink: 0;
+  }
+  .att-kpi-icon .sp-ms { font-size: 18px; }
+  .att-kpi-value { font-size: 26px; font-weight: 700; color: var(--sp-text-1); line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .att-kpi-value small { font-size: 16px; font-weight: 400; color: var(--sp-text-4); }
+  .att-kpi-value.is-alert { color: var(--sp-primary); }
+  .att-kpi-sub { font-size: 12.5px; color: var(--sp-text-3); margin-top: 6px; }
+  @media (max-width: 640px) { .att-kpis { grid-template-columns: minmax(0, 1fr); } }
+
+  /* ── Short warning line ── */
+  .att-alert { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0 0 18px; color: var(--sp-primary); font-size: 13.5px; line-height: 1.4; }
+  .att-alert .sp-ms { font-size: 18px; }
+  .att-alert a { color: var(--sp-primary); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
+  .att-alert a:hover { color: var(--sp-primary-dark, #6b091a); }
+
+  /* ── Course-wise attendance: one box per course, grouped by term ── */
+  .att-section-head { display: flex; align-items: center; gap: 8px; margin: 4px 0 14px; }
+  .att-section-title { font-size: 17px; font-weight: 700; color: var(--sp-text-1); margin: 0; display: flex; align-items: center; gap: 8px; }
+  .att-section-title .sp-ms { font-size: 20px; color: var(--sp-primary); }
+  .att-section-legend { margin-left: auto; font-size: 12px; color: var(--sp-text-4); display: inline-flex; align-items: center; gap: 6px; }
+  .att-section-legend i { width: 2px; height: 12px; background: var(--sp-text-2); border-radius: 1px; display: inline-block; }
+  .att-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; margin-bottom: 22px; }
+  .att-course-term { font-size: 10.5px; font-weight: 700; color: var(--sp-text-4); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 4px; }
+  .att-box {
+    background: var(--sp-card); border: 1px solid var(--sp-border); border-radius: 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05); display: flex; flex-direction: column; min-width: 0; overflow: hidden;
+  }
+  .att-box.is-low { border-top: 3px solid var(--sp-primary); }
+  .att-box-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 16px 18px 0; }
+  .att-course { min-width: 0; }
+  .att-course-name { font-size: 15px; font-weight: 700; color: var(--sp-text-1); line-height: 1.3; overflow-wrap: anywhere; }
+  .att-course-meta { font-size: 12px; color: var(--sp-text-4); margin-top: 3px; overflow-wrap: anywhere; }
+  .att-box-body { padding: 14px 18px 16px; flex: 1; }
+  .att-pct-line { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+  .att-pct { font-size: 28px; font-weight: 700; color: var(--sp-text-1); line-height: 1; font-variant-numeric: tabular-nums; }
+  .att-pct.is-low { color: var(--sp-primary); }
+  .att-pct-hours { font-size: 12.5px; color: var(--sp-text-3); white-space: nowrap; }
+  .att-pct-hours strong { color: var(--sp-text-1); font-weight: 700; }
+  .att-bar { position: relative; height: 8px; border-radius: 99px; background: #f1f2f4; }
+  .att-bar-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 99px; background: var(--sp-primary); transition: width .4s ease; }
+  .att-bar-fill.is-low { background: #920C24; }
+  .att-bar-min { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: var(--sp-text-2); border-radius: 1px; }
+  .att-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+  .att-fact-lbl { font-size: 10.5px; font-weight: 700; color: var(--sp-text-4); text-transform: uppercase; letter-spacing: 0.06em; }
+  .att-fact-val { font-size: 13.5px; font-weight: 700; color: var(--sp-text-1); margin-top: 2px; }
+  .att-fact-val.is-short { color: var(--sp-primary); }
+  .att-box-foot {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+    padding: 12px 18px; border-top: 1px solid var(--sp-border-light, #f1f5f9); background: #fcfcfd;
+  }
+  .att-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; border: 1px solid #920C24; color: #920C24; background: #fff; flex-shrink: 0; }
+  .att-pill.is-solid { background: #fff0f2; border-color: #fff0f2; }
+  .att-pill .sp-ms { font-size: 13px; }
+  @media (max-width: 520px) { .att-grid { grid-template-columns: minmax(0, 1fr); } }
+
+  @media (max-width: 640px) {
+    .sp-tab-nav { flex-wrap: wrap; overflow: visible; }
+    .sp-tab-nav .sp-tab { flex: 1 1 auto; justify-content: center; }
+  }
+
+  /* ── Calendar markers: shape tells Present / Absent / Scheduled apart ── */
+  .att-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .att-dot-present   { background: var(--sp-primary); }
+  .att-dot-absent    { background: #fff; box-shadow: inset 0 0 0 2px var(--sp-primary); }
+  .att-dot-scheduled { border-radius: 2px; background: #f5c6ce; }
+  .att-dot-holiday   { border-radius: 2px; background: #fff0f0; box-shadow: inset 0 0 0 1px #f5c6ce; }
+  .att-cal-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 18px 22px 0; }
+  .att-cal-legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--sp-text-3); padding: 12px 22px 0; }
+  .att-cal-legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .att-cal-nav { display: flex; align-items: center; gap: 10px; }
+  .att-cal-nav button {
+    width: 32px; height: 32px; border-radius: 9px; border: 1px solid var(--sp-border); background: #fff;
+    color: var(--sp-text-2); display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .att-cal-nav button:hover { border-color: var(--sp-primary); color: var(--sp-primary); }
+  .att-cal-nav button .sp-ms { font-size: 18px; }
+
+  /* Custom overrides for the exact UI */
+  .sp-tab-nav {
+    border-bottom: none;
+    gap: 8px;
+    margin-bottom: 24px;
+  }
+  .sp-tab {
+    background: #ffffff;
+    border: 1px solid var(--sp-border);
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-weight: 500;
+    color: var(--sp-text-2);
+  }
+  .sp-tab.active {
+    background: var(--sp-primary);
+    color: white;
+    border-color: var(--sp-primary);
+  }
+  .sp-tab.active .sp-ms {
+    color: white;
+  }
+  .sp-cal-header-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px;
+    border-bottom: 1px solid var(--sp-border);
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  /* ── OH / Class Participation (attendance + participation, no marks) ── */
+  .att-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  /* Title + filters in one white row card, like the tab bar above it */
+  .att-pt-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px 16px; flex-wrap: wrap;
+    margin-bottom: 14px; padding: 10px 14px 10px 18px;
+    background: var(--sp-card, #fff); border: 1px solid var(--sp-border-light, #eef0f3); border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  }
+  .att-pt-title { font-size: 18px; font-weight: 700; color: var(--sp-text-1); margin: 0; }
+  .att-pt-sub { font-size: 12.5px; color: var(--sp-text-3); margin: 3px 0 0; }
+  .att-pt-filters { display: flex; gap: 10px; flex-wrap: wrap; }
+  .att-pt-select { position: relative; display: inline-flex; align-items: center; }
+  .att-pt-select select {
+    appearance: none; -webkit-appearance: none; min-width: 150px; padding: 9px 34px 9px 14px;
+    border: 1px solid var(--sp-border); border-radius: 10px; background: var(--sp-card, #fff);
+    font-family: inherit; font-size: 13px; font-weight: 600; color: var(--sp-text-1); cursor: pointer;
+  }
+  .att-pt-select select:focus { outline: none; border-color: var(--sp-primary); }
+  .att-pt-select .sp-ms { position: absolute; right: 10px; font-size: 18px; color: var(--sp-text-2); pointer-events: none; }
+
+  /* Week card */
+  .att-pc { background: var(--sp-card, #fff); border: 1px solid var(--sp-border); border-radius: 14px; box-shadow: 0 1px 2px rgba(16,24,40,.04); margin-bottom: 14px; overflow: hidden; }
+  .att-pc-head {
+    width: 100%; display: flex; align-items: center; gap: 14px; padding: 14px 18px; border: none; background: transparent;
+    font-family: inherit; text-align: left; cursor: pointer;
+  }
+  /* Palette here: primary, success and grey only */
+  .att-pc-icon { width: 40px; height: 40px; flex-shrink: 0; border-radius: 10px; background: #f1f2f4; color: var(--sp-primary); display: flex; align-items: center; justify-content: center; }
+  .att-pc-icon .sp-ms { font-size: 22px; }
+  .att-pc-titles { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+  .att-pc-title { font-size: 15px; font-weight: 700; color: var(--sp-text-1); }
+  .att-pc-course { display: block; max-width: 100%; color: var(--sp-text-3); font-size: 12px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .att-pc-stats { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+  .att-pc-stat { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 8px; font-size: 12px; color: var(--sp-text-2); white-space: nowrap; }
+  .att-pc-stat .sp-ms { font-size: 16px; }
+  .att-pc-stat b { color: var(--sp-text-1); }
+  .att-pc-stat.is-att { background: #e8f6ec; }
+  .att-pc-stat.is-att .sp-ms { color: #1e8e47; }
+  .att-pc-stat.is-part { background: #f1f2f4; }
+  .att-pc-stat.is-part .sp-ms { color: var(--sp-primary); }
+  .att-pc-chev { font-size: 22px; color: var(--sp-text-2); transition: transform .15s; flex-shrink: 0; }
+  .att-pc.is-open .att-pc-chev { transform: rotate(180deg); }
+  .att-pc-body { display: none; padding: 0 18px 16px; overflow-x: auto; }
+  .att-pc.is-open .att-pc-body { display: block; }
+
+  /* Sessions table */
+  .att-pt { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12.5px; border: 1px solid var(--sp-border-light, #eef0f3); border-radius: 10px; overflow: hidden; }
+  .att-pt th { text-align: left; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--sp-text-4); padding: 10px 14px; background: #f8f9fb; white-space: nowrap; }
+  .att-pt td { padding: 11px 14px; border-top: 1px solid var(--sp-border-light, #eef0f3); color: var(--sp-text-2); white-space: nowrap; vertical-align: middle; }
+  .att-pt-date { font-weight: 700; color: var(--sp-text-1); }
+  .att-pt-muted { font-size: 11.5px; color: var(--sp-text-4); margin-top: 2px; }
+  .att-pt-venue { display: inline-flex; align-items: center; gap: 5px; }
+  .att-pt-venue .sp-ms { font-size: 15px; color: var(--sp-text-3); }
+  .att-pt-slot { display: inline-block; padding: 4px 10px; border-radius: 7px; background: #f1f2f4; color: var(--sp-text-1); font-weight: 600; font-size: 11.5px; }
+  .att-pp { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 7px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+  .att-pp .sp-ms { font-size: 14px; }
+  .att-pp.is-good  { background: #e8f6ec; color: #1e7b3a; }                                   /* success */
+  .att-pp.is-bad   { background: var(--sp-primary); color: #fff; }                              /* primary */
+  .att-pp.is-warn  { background: var(--sp-card, #fff); color: var(--sp-primary); box-shadow: inset 0 0 0 1px var(--sp-primary); } /* primary outline */
+  .att-pp.is-muted { background: #f1f2f4; color: var(--sp-text-3); }                            /* grey */
+  .att-pt-view {
+    display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border: 1px solid var(--sp-border); border-radius: 8px;
+    background: var(--sp-card, #fff); font-family: inherit; font-size: 12px; font-weight: 600; color: var(--sp-text-1); cursor: pointer;
+  }
+  .att-pt-view .sp-ms { font-size: 16px; }
+  .att-pt-view:hover { border-color: var(--sp-primary); color: var(--sp-primary); }
+
+  /* View popup */
+  .att-pv-head { display: flex; flex-direction: column; gap: 3px; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--sp-border-light, #eef0f3); }
+  .att-pv-head b { font-size: 15px; color: var(--sp-text-1); }
+  .att-pv-head span { font-size: 12px; color: var(--sp-text-3); }
+  .att-pv-row { display: grid; grid-template-columns: 22px 110px minmax(0, 1fr); align-items: center; gap: 6px; padding: 7px 0; font-size: 13px; }
+  .att-pv-row > .sp-ms { font-size: 17px; color: var(--sp-primary); }
+  .att-pv-lbl { color: var(--sp-text-3); }
+  .att-pv-val { color: var(--sp-text-1); font-weight: 600; }
+
+  @media (max-width: 760px) {
+    .att-pc-head { flex-wrap: wrap; }
+    .att-pc-stats { order: 3; width: 100%; justify-content: flex-start; }
+    .att-pt thead { display: none; }
+    .att-pt, .att-pt tbody, .att-pt tr, .att-pt td { display: block; width: 100%; }
+    .att-pt tr { padding: 8px 12px; border-top: 1px solid var(--sp-border-light, #eef0f3); }
+    .att-pt td { border: none; padding: 4px 0; white-space: normal; }
+    .att-pt td::before { content: attr(data-label); display: inline-block; min-width: 100px; font-size: 10.5px; font-weight: 700; text-transform: uppercase; color: var(--sp-text-4); }
+  }
+
+  .att-empty-title { color: #000 !important; }
+
+  /* ── Dark mode ── */
+  /* Tabs */
+  body.sp-dark .sp-tab:not(.active) { background: var(--sp-card); border-color: var(--sp-border); color: var(--sp-text-2); }
+  body.sp-dark .sp-tab:hover:not(.active) { background: #1a2540; color: var(--sp-text-1); }
+  body.sp-dark .sp-tab.active { background: var(--sp-primary); border-color: var(--sp-primary); color: #fff; }
+
+  /* Course-wise boxes */
+  body.sp-dark .att-kpi, body.sp-dark .att-box { box-shadow: none; }
+  body.sp-dark .att-box-foot { background: #1a2540; border-top-color: var(--sp-border); }
+  body.sp-dark .att-bar { background: #263352; }
+  body.sp-dark .att-bar-fill.is-low { background: var(--sp-primary); }
+  body.sp-dark .att-bar-min, body.sp-dark .att-section-legend i { background: var(--sp-text-1); }
+  body.sp-dark .att-pill { background: transparent; border-color: var(--sp-primary); color: #f08da0; }
+  body.sp-dark .att-pill.is-solid { background: var(--sp-primary-light); border-color: var(--sp-primary-mid); color: #f08da0; }
+
+  /* Calendar */
+  body.sp-dark .att-cal-nav button { background: #1a2540; border-color: var(--sp-border); color: var(--sp-text-1); }
+  body.sp-dark .att-cal-nav button:hover { border-color: var(--sp-primary); color: #f08da0; }
+  body.sp-dark .att-dot-absent { background: var(--sp-card); }
+  body.sp-dark .att-dot-scheduled { background: rgba(240,141,160,0.55); }
+  body.sp-dark .att-dot-holiday { background: var(--sp-primary-light); box-shadow: inset 0 0 0 1px rgba(240,141,160,0.6); }
+  /* JS-built calendar cells / holiday banner (inline styles) */
+  body.sp-dark #sp-calendar [style*="background:#fff0f0"],
+  body.sp-dark #day-modal-body [style*="background:#fff0f0"] { background: var(--sp-primary-light) !important; border-color: var(--sp-primary-mid) !important; }
+  body.sp-dark #sp-calendar [style*="background:#fff0f2"] { background: var(--sp-primary-light) !important; }
+  body.sp-dark #sp-calendar [style*="background:var(--sp-bg)"] { background: #1a2540 !important; border-color: #263352 !important; }
+  body.sp-dark #day-modal-body [style*="color:#f5c6ce"] { color: var(--sp-text-4) !important; }
+
+  /* OH / Class Participation */
+  body.sp-dark .att-pt-head, body.sp-dark .att-pc { border-color: var(--sp-border); box-shadow: none; }
+  body.sp-dark .att-pc-head:hover { background: rgba(255,255,255,0.03); }
+  body.sp-dark .att-pc-icon { background: #1a2540; color: #f08da0; }
+  body.sp-dark .att-pc-stat.is-att { background: var(--sp-success-bg); }
+  body.sp-dark .att-pc-stat.is-att .sp-ms { color: var(--sp-success); }
+  body.sp-dark .att-pc-stat.is-part { background: #1a2540; }
+  body.sp-dark .att-pc-stat.is-part .sp-ms { color: #f08da0; }
+  body.sp-dark .att-pt { border-color: var(--sp-border); }
+  body.sp-dark .att-pt th { background: #1a2540; color: var(--sp-text-3); }
+  body.sp-dark .att-pt td, body.sp-dark .att-pt tr { border-color: var(--sp-border); }
+  body.sp-dark .att-pt tbody tr:nth-child(even) { background: rgba(255,255,255,0.025); }
+  body.sp-dark .att-pt tbody tr:hover { background: rgba(255,255,255,0.05); }
+  body.sp-dark .att-pt-slot { background: #1a2540; color: var(--sp-text-1); }
+  body.sp-dark .att-pp.is-good  { background: var(--sp-success-bg); color: var(--sp-success); }
+  body.sp-dark .att-pp.is-warn  { background: transparent; color: #f08da0; box-shadow: inset 0 0 0 1px var(--sp-primary); }
+  body.sp-dark .att-pp.is-muted { background: #1a2540; color: var(--sp-text-3); }
+  body.sp-dark .att-pt-view { background: #1a2540; border-color: var(--sp-border); color: var(--sp-text-1); }
+  body.sp-dark .att-pt-view:hover { border-color: var(--sp-primary); color: #f08da0; }
+  body.sp-dark .att-pt-select select { background: #1a2540; border-color: var(--sp-border); color: var(--sp-text-1); }
+  body.sp-dark .att-pv-head { border-bottom-color: var(--sp-border); }
+  body.sp-dark .att-pv-row > .sp-ms { color: #f08da0; }
+  body.sp-dark .att-empty-title { color: var(--sp-text-1) !important; }
+
+  /* Modals */
+  body.sp-dark .sp-modal-close { background: #1a2540; }
+  body.sp-dark .sp-modal-close:hover { background: #263352; }
+  body.sp-dark .sp-btn-secondary { background: #1a2540; color: var(--sp-text-1); border-color: var(--sp-border); }
+  body.sp-dark .sp-btn-secondary:hover:not(:disabled) { background: #263352; }
+</style>
+
 {% endblock %}
+
 
 {% block content %}
 
@@ -19,65 +299,44 @@
 
 {% else %}
 
+
+
 {# ── Page Header ───────────────────────────────────────────────── #}
+{% set _g = att_good_threshold|default(75) %}{% set _w = att_warn_threshold|default(60) %}
 <div class="sp-page-header fade-in">
-  <h1 class="sp-page-title">Attendance</h1>
-  <p class="sp-page-sub">Track your attendance, applications, and office hours</p>
+  <h1 class="sp-page-title" style="font-size: 18px !important; font-weight: 700 !important;">Attendance</h1>
 </div>
 
-{# ── Summary Stats ─────────────────────────────────────────────── #}
-<div class="sp-att-stat-grid fade-in">
-  <div class="sp-att-stat">
-    {% set _g = att_good_threshold|default(75) %}{% set _w = att_warn_threshold|default(60) %}
-    <div class="sp-att-stat-num" style="color:{% if avg_attendance >= _g %}var(--sp-success){% elif avg_attendance >= _w %}var(--sp-warning){% else %}var(--sp-danger){% endif %};">
-      {{ avg_attendance }}%
-    </div>
-    <div class="sp-att-stat-lbl">Overall Average</div>
+{# ── Summary KPIs ──────────────────────────────────────────────── #}
+<section class="att-kpis fade-in" aria-label="Attendance summary">
+  <div class="att-kpi">
+    <div class="att-kpi-head"><span class="att-kpi-label">Ongoing Courses</span><span class="att-kpi-icon"><span class="sp-ms" aria-hidden="true">menu_book</span></span></div>
+    <div class="att-kpi-value">{{ total_courses }}</div>
   </div>
-  <div class="sp-att-stat">
-    <div class="sp-att-stat-num" style="color:var(--sp-primary);">{{ total_courses }}</div>
-    <div class="sp-att-stat-lbl">Total Courses</div>
+  <div class="att-kpi">
+    <div class="att-kpi-head"><span class="att-kpi-label">Below {{ _g|int }}%</span><span class="att-kpi-icon"><span class="sp-ms" aria-hidden="true">warning</span></span></div>
+    <div class="att-kpi-value{{ ' is-alert' if courses_below_75 > 0 }}">{{ courses_below_75 }}</div>
   </div>
-  <div class="sp-att-stat">
-    <div class="sp-att-stat-num" style="color:var(--sp-danger);">{{ courses_below_75 }}</div>
-    <div class="sp-att-stat-lbl">Below {{ att_good_threshold|default(75)|int }}%</div>
-  </div>
-  <div class="sp-att-stat">
-    <div class="sp-att-stat-num" style="color:var(--sp-success);">{{ courses_eligible }}</div>
-    <div class="sp-att-stat-lbl">Exam Eligible</div>
-  </div>
-</div>
+</section>
 
-{# ── Alert ─────────────────────────────────────────────────────── #}
+{# ── Warning ───────────────────────────────────────────────────── #}
 {% if courses_below_75 > 0 %}
-<div class="sp-alert sp-alert-warning fade-in">
-  <span class="sp-ms">warning</span>
-  <div>
-    <strong>{{ courses_below_75 }} course{% if courses_below_75 != 1 %}s{% endif %} below 75%.</strong>
-    You may not be eligible for examinations in these courses. Use the <em>Condonation</em> tab if eligible, or contact your Faculty Adviser.
-  </div>
+<div class="att-alert fade-in" role="alert">
+  <span class="sp-ms" aria-hidden="true">warning</span>
+  <strong>{{ courses_below_75 }} course{% if courses_below_75 != 1 %}s{% endif %} below {{ _g|int }}% attendance</strong>
 </div>
 {% endif %}
 
 {# ── Tab Navigation ────────────────────────────────────────────── #}
-<div class="sp-tab-nav fade-in">
-  <button class="sp-tab active" onclick="spSwitchTab('overview', this)" id="tab-btn-overview">
-    <span class="sp-ms">event_available</span>
-    Overview
+<div class="sp-tab-nav fade-in" style="display:flex;gap:8px;margin-bottom:24px;border:none;">
+  <button class="sp-tab active" onclick="spSwitchTab('overview', this)" id="tab-btn-overview" style="display:flex;align-items:center;gap:8px;border-radius:8px;">
+    <span class="sp-ms">event_available</span> Overview
   </button>
-  <button class="sp-tab" onclick="spSwitchTab('condonation', this)" id="tab-btn-condonation">
-    <span class="sp-ms">how_to_reg</span>
-    Condonation
-    {% if condonation_applications %}
-    <span class="sp-tab-badge">{{ condonation_applications|length }}</span>
-    {% endif %}
+  <button class="sp-tab" onclick="spSwitchTab('officehours', this)" id="tab-btn-officehours" style="display:flex;align-items:center;gap:8px;border-radius:8px;">
+    <span class="sp-ms">schedule</span> OH
   </button>
-  <button class="sp-tab" onclick="spSwitchTab('officehours', this)" id="tab-btn-officehours">
-    <span class="sp-ms">schedule</span>
-    Office Hours
-    {% if office_hours_sessions %}
-    <span class="sp-tab-badge sp-tab-badge-info">{{ office_hours_sessions|length }}</span>
-    {% endif %}
+  <button class="sp-tab" onclick="spSwitchTab('classparticipation', this)" id="tab-btn-classparticipation" style="display:flex;align-items:center;gap:8px;border-radius:8px;">
+    <span class="sp-ms">groups</span> Class Participation
   </button>
 </div>
 
@@ -94,117 +353,72 @@
   </div>
   {% else %}
 
-  {# Course Cards grouped by term #}
-  {% for tg in term_groups %}
-  <div style="margin-bottom:28px;" class="fade-in">
-    <div style="font-size:13px;font-weight:700;color:var(--sp-text-2);margin-bottom:14px;display:flex;align-items:center;gap:8px;">
-      <span class="sp-ms" style="font-size:18px;color:var(--sp-primary);">calendar_month</span>
-      {{ tg.term }}
-      <span style="font-size:12px;font-weight:400;color:var(--sp-text-4);">
-        {{ tg.summaries|length }} course{% if tg.summaries|length != 1 %}s{% endif %}
-      </span>
-    </div>
-
-    <div class="sp-att-grid">
-      {% for s in tg.summaries %}
-      <div class="sp-att-card" style="border-left-color:{{ s.status_color }};">
-
-        {# Header #}
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:10px;">
-          <div style="overflow:hidden;flex:1;">
-            <div style="font-size:14px;font-weight:700;color:var(--sp-text-1);line-height:1.35;">{{ s.course_display }}</div>
-            <div style="font-size:12px;color:var(--sp-text-4);margin-top:2px;">
-              <span class="sp-ms" style="font-size:13px;vertical-align:-2px;">person</span>
-              {{ s.faculty }}
-            </div>
-          </div>
-          <div style="text-align:right;flex-shrink:0;">
-            <div style="font-size:26px;font-weight:800;color:{{ s.status_color }};line-height:1;">{{ s.pct }}%</div>
-            <span class="sp-badge" style="font-size:10px;background:{% if s.status_label == 'Good' %}var(--sp-success-bg);color:var(--sp-success){% elif s.status_label == 'Low' %}var(--sp-warning-bg);color:var(--sp-warning){% else %}var(--sp-danger-bg);color:var(--sp-danger){% endif %};">
-              {{ s.status_label }}
-            </span>
-          </div>
-        </div>
-
-        {# Progress Bar #}
-        <div class="sp-progress" style="margin-bottom:10px;">
-          <div class="sp-progress-bar" style="width:{{ s.pct if s.pct <= 100 else 100 }}%;background:{{ s.status_color }};"></div>
-        </div>
-
-        {# Stats Row #}
-        <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--sp-text-4);margin-bottom:10px;">
-          <span>
-            <strong style="color:var(--sp-text-2);">{{ s.attended_classes|int }}</strong>
-            / {{ s.total_class_hours|int }}h attended
-          </span>
-          {% if s.minimum_required_percentage %}
-          <span>Min: <strong style="color:var(--sp-text-2);">{{ s.minimum_required_percentage|int }}%</strong></span>
-          {% endif %}
-          {% if s.shortfall > 0 %}
-          <span style="color:var(--sp-danger);">Shortfall: <strong>{{ s.shortfall }}%</strong></span>
-          {% endif %}
-        </div>
-
-        {# Badges Row #}
-        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:12px;">
-          {% if s.eligible_for_exam is not none %}
-          <span class="sp-badge" style="background:{% if s.eligible_for_exam %}var(--sp-success-bg);color:var(--sp-success){% else %}var(--sp-danger-bg);color:var(--sp-danger){% endif %};">
-            <span class="sp-ms">{% if s.eligible_for_exam %}check_circle{% else %}cancel{% endif %}</span>
-            {% if s.eligible_for_exam %}Exam Eligible{% else %}Not Eligible{% endif %}
-          </span>
-          {% endif %}
-          {% if s.total_office_hours and s.total_office_hours > 0 %}
-          <span class="sp-badge" style="background:var(--sp-info-bg);color:var(--sp-info);">
-            <span class="sp-ms">schedule</span>Office: {{ s.total_office_hours }}h
-          </span>
-          {% endif %}
-          {% if s.total_condonation_hours and s.total_condonation_hours > 0 %}
-          <span class="sp-badge" style="background:#e8f5e9;color:#2e7d32;">
-            <span class="sp-ms">how_to_reg</span>Cond: {{ s.total_condonation_hours }}h
-          </span>
-          {% endif %}
-        </div>
-
-        {# Apply Buttons #}
-        <div style="display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid var(--sp-border);padding-top:10px;">
-          {% if s.can_apply_condonation %}
-          <button class="sp-btn sp-btn-outline-warning sp-btn-sm"
-            onclick="spOpenCondonation('{{ s.course_offering }}', '{{ s.course_display|replace("'", "\\'") }}')"
-            title="Apply for Attendance Condonation">
-            <span class="sp-ms">how_to_reg</span>Apply Condonation
-          </button>
-          {% endif %}
-        </div>
-
-      </div>
-      {% endfor %}
-    </div>
+  {# ── Course-wise attendance: a box per course, grouped by term ── #}
+  <div class="att-section-head fade-in">
+    <h2 class="att-section-title"><span class="sp-ms" aria-hidden="true">leaderboard</span>Course-wise Attendance</h2>
+    <span class="att-section-legend"><i aria-hidden="true"></i>Minimum required</span>
   </div>
-  {% endfor %}
+
+  <div class="att-grid fade-in">
+      {% for tg in term_groups %}{% for s in tg.summaries %}
+      {% set _min = (s.minimum_required_percentage or _g)|float %}
+      {% set _low = s.pct < _min %}
+      <article class="att-box{{ ' is-low' if _low }}">
+        <div class="att-box-head">
+          <div class="att-course">
+            {% if tg.term %}<div class="att-course-term">{{ tg.term }}</div>{% endif %}
+            <div class="att-course-name">{{ s.course_display }}</div>
+            <div class="att-course-meta">{{ s.course_code or '' }}{% if s.course_code and s.credits %} · {% endif %}{% if s.credits %}{{ s.credits }} credits{% endif %}</div>
+          </div>
+          <span class="att-pill{{ ' is-solid' if _low }}">{{ s.status_label }}</span>
+        </div>
+
+        <div class="att-box-body">
+          <div class="att-pct-line">
+            <span class="att-pct{{ ' is-low' if _low }}">{{ s.pct }}%</span>
+            <span class="att-pct-hours"><strong>{{ s.attended_classes|int }}</strong> / {{ s.total_class_hours|int }}h attended</span>
+          </div>
+          <div class="att-bar" role="img" aria-label="{{ s.course_display | e }}: {{ s.pct }}% attendance, minimum {{ _min|int }}%">
+            <div class="att-bar-fill{{ ' is-low' if _low }}" style="width:{{ [[s.pct, 0]|max, 100]|min }}%;"></div>
+            <div class="att-bar-min" style="left:{{ [_min, 100]|min }}%;"></div>
+          </div>
+          <div class="att-facts">
+            <div><div class="att-fact-lbl">Minimum</div><div class="att-fact-val">{{ _min|int }}%</div></div>
+            <div><div class="att-fact-lbl">Shortfall</div><div class="att-fact-val{{ ' is-short' if s.shortfall > 0 }}">{{ (s.shortfall ~ '%') if s.shortfall > 0 else 'None' }}</div></div>
+            {% if s.total_office_hours and s.total_office_hours > 0 %}<div><div class="att-fact-lbl">OH</div><div class="att-fact-val">{{ s.total_office_hours }}h</div></div>{% endif %}
+            {% if s.total_condonation_hours and s.total_condonation_hours > 0 %}<div><div class="att-fact-lbl">Condoned</div><div class="att-fact-val">{{ s.total_condonation_hours }}h</div></div>{% endif %}
+          </div>
+        </div>
+
+        {% if s.eligible_for_exam is not none %}
+        <div class="att-box-foot">
+          <span class="att-pill{{ ' is-solid' if not s.eligible_for_exam }}">
+            <span class="sp-ms" aria-hidden="true">{{ 'check_circle' if s.eligible_for_exam else 'cancel' }}</span>{{ 'Exam eligible' if s.eligible_for_exam else 'Not eligible for exam' }}
+          </span>
+        </div>
+        {% endif %}
+      </article>
+      {% endfor %}{% endfor %}
+  </div>
 
   {# ── Attendance Calendar ────────────────────────────────────── #}
   <div class="sp-card fade-in" style="margin-top:8px;">
-    <div class="sp-card-header" style="flex-wrap:wrap;gap:10px;">
-      <div class="sp-card-title">
-        <span class="sp-ms">calendar_month</span> Attendance Calendar
-      </div>
-      <div style="display:flex;align-items:center;gap:6px;">
-        <button class="sp-btn sp-btn-outline sp-btn-sm" onclick="spCalPrev()" aria-label="Previous month">
-          <span class="sp-ms">chevron_left</span>
-        </button>
-        <span id="cal-month-label" style="font-size:14px;font-weight:600;color:var(--sp-text-1);min-width:140px;text-align:center;"></span>
-        <button class="sp-btn sp-btn-outline sp-btn-sm" onclick="spCalNext()" aria-label="Next month">
-          <span class="sp-ms">chevron_right</span>
-        </button>
+    <div class="att-cal-head">
+      <h2 class="sp-card-title" style="margin:0;"><span class="sp-ms" aria-hidden="true">calendar_month</span>Attendance Calendar</h2>
+      <div class="att-cal-nav">
+        <button type="button" onclick="spCalPrev()" aria-label="Previous month"><span class="sp-ms" aria-hidden="true">chevron_left</span></button>
+        <span id="cal-month-label" style="font-size:14px;font-weight:700;color:var(--sp-text-1);min-width:130px;text-align:center;"></span>
+        <button type="button" onclick="spCalNext()" aria-label="Next month"><span class="sp-ms" aria-hidden="true">chevron_right</span></button>
       </div>
     </div>
-    <div style="display:flex;gap:14px;flex-wrap:wrap;padding:0 16px 10px;font-size:12px;color:var(--sp-text-3);">
-      <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--sp-success);"></span>Present</span>
-      <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--sp-danger);"></span>Absent</span>
-      <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--sp-primary);"></span>Scheduled</span>
-      <span style="display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:8px;height:8px;border-radius:4px;background:#fca5a5;border:1px solid #ef4444;"></span>Holiday</span>
+    <div class="att-cal-legend">
+      <span><span class="att-dot att-dot-present"></span>Present</span>
+      <span><span class="att-dot att-dot-absent"></span>Absent</span>
+      <span><span class="att-dot att-dot-scheduled"></span>Scheduled</span>
+      <span><span class="att-dot att-dot-holiday"></span>Holiday</span>
     </div>
-    <div id="sp-calendar" style="padding:0 12px 16px;"></div>
+
+    <div id="sp-calendar" style="padding:16px 24px 24px;"></div>
   </div>
 
   {# Embedded calendar data for JS — safe JSON in script tag #}
@@ -216,206 +430,192 @@
 
 
 
-{# ══════════════════════════════════════════════════════════════════
-   TAB 3 — CONDONATION
-══════════════════════════════════════════════════════════════════ #}
-<div id="sp-tab-condonation" class="sp-tab-panel">
-
-  <div class="sp-tab-section-header">
-    <div>
-      <h2 class="sp-section-title">Condonation Applications</h2>
-      <p class="sp-section-sub">Request attendance condonation for approved absences</p>
-    </div>
-    {% if allow_condonation %}
-    <button class="sp-btn sp-btn-primary" onclick="spOpenCondonation('', '')">
-      <span class="sp-ms">add</span> New Application
-    </button>
-    {% endif %}
-  </div>
-
-  {% if not allow_condonation %}
-  <div class="sp-alert sp-alert-info fade-in" style="margin-top:16px;">
-    <span class="sp-ms">info</span>
-    <div>Condonation Applications are currently <strong>disabled</strong> by the administration.</div>
-  </div>
-  {% elif not condonation_applications %}
-  <div class="sp-empty fade-in">
-    <span class="sp-ms">how_to_reg</span>
-    <p class="sp-empty-title">No Condonation Applications</p>
-    <p class="sp-empty-sub">You have not submitted any condonation applications yet.</p>
-    {% if allow_condonation %}
-    <button class="sp-btn sp-btn-primary" style="margin-top:16px;" onclick="spOpenCondonation('', '')">
-      <span class="sp-ms">add</span> New Application
-    </button>
-    {% endif %}
-  </div>
-  {% else %}
-  <div style="overflow-x:auto;margin-top:4px;">
-    <table class="sp-table sp-card fade-in" style="overflow:hidden;">
-      <thead>
-        <tr>
-          <th>App ID</th>
-          <th>Course</th>
-          <th>Sessions</th>
-          <th>Hours</th>
-          <th>Reason</th>
-          <th>Faculty Rec.</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for app in condonation_applications %}
-        <tr>
-          <td>
-            <span style="font-family:monospace;font-size:12px;color:var(--sp-text-4);">{{ app.name }}</span>
-          </td>
-          <td style="font-weight:500;">{{ app.course_display }}</td>
-          <td style="text-align:center;">{{ app.number_of_sessions or 0 }}</td>
-          <td style="text-align:center;">{{ app.number_of_hours or 0 }}h</td>
-          <td style="font-size:13px;color:var(--sp-text-3);">{{ app.condonation_reason or "—" }}</td>
-          <td>
-            {% set rec = app.faculty_recommendation or "Pending" %}
-            <span class="sp-badge" style="font-size:11px;background:{% if rec == 'Recommended' %}var(--sp-success-bg);color:var(--sp-success){% elif rec == 'Not Recommended' %}var(--sp-danger-bg);color:var(--sp-danger){% else %}var(--sp-warning-bg);color:var(--sp-warning){% endif %};">
-              {{ rec }}
-            </span>
-          </td>
-          <td>
-            <span class="sp-badge" style="background:{{ app.status_bg }};color:{{ app.status_color }};">
-              {% if app.final_status == "Pending" %}<span class="sp-ms">hourglass_empty</span>
-              {% elif app.final_status == "Approved" %}<span class="sp-ms">check_circle</span>
-              {% else %}<span class="sp-ms">cancel</span>{% endif %}
-              {{ app.final_status or "Pending" }}
-            </span>
-          </td>
-        </tr>
-        {% if app.remarks %}
-        <tr style="background:#f9fafb;">
-          <td colspan="7" style="font-size:12px;color:var(--sp-text-3);padding:6px 16px;">
-            <strong>Remarks:</strong> {{ app.remarks }}
-          </td>
-        </tr>
-        {% endif %}
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% endif %}
-
-  {# Info box about condonation #}
-  <div class="sp-info-box fade-in" style="margin-top:24px;">
-    <span class="sp-ms">info</span>
-    <div>
-      <strong>About Condonation:</strong>
-      <ul style="margin:6px 0 0 16px;padding:0;font-size:13px;line-height:1.8;">
-        <li>Apply anytime during the trimester — your attendance % is only checked at final (Programme Chair) approval, and must be <strong>{{ min_condonation_pct|int }}% or above</strong> at that point</li>
-        <li>Requires Faculty recommendation followed by Programme Chair approval</li>
-        <li>Submit with a valid proof document (medical certificate, event proof, etc.)</li>
-        <li>Approval will automatically update your attendance percentage</li>
-      </ul>
-    </div>
-  </div>
-</div>{# end tab-condonation #}
 
 
 {# ══════════════════════════════════════════════════════════════════
-   TAB 4 — OFFICE HOURS
+   TABS — OH and CLASS PARTICIPATION
+   One collapsible card per Student Group the student is in (a week's CP
+   group / an OH group), one row per session: attendance + participation.
+   Marks are never shown to students. Course / week filters are per tab.
 ══════════════════════════════════════════════════════════════════ #}
-<div id="sp-tab-officehours" class="sp-tab-panel">
+{% macro _part_pill(value) -%}
+  {%- set _cls = {'Present': 'is-good', 'Participated': 'is-good', 'Absent': 'is-bad', 'Did not participate': 'is-bad', 'Pending': 'is-warn', 'Upcoming': 'is-muted'}.get(value, 'is-muted') -%}
+  {%- set _icon = {'Present': 'check_circle', 'Participated': 'record_voice_over', 'Absent': 'cancel', 'Did not participate': 'voice_over_off', 'Pending': 'schedule', 'Upcoming': 'schedule'}.get(value, 'schedule') -%}
+  <span class="att-pp {{ _cls }}"><span class="sp-ms" aria-hidden="true">{{ _icon }}</span>{{ value }}</span>
+{%- endmacro %}
 
-  <div class="sp-tab-section-header">
-    <div>
-      <h2 class="sp-section-title">Office Hours Sessions</h2>
-      <p class="sp-section-sub">Upcoming office hours for your enrolled courses</p>
+{% macro _part_tab(groups, kind, title, sub, empty_icon, empty_title, empty_sub) %}
+  {% set _courses = groups | map(attribute='course_name') | select | unique | sort | list %}
+  {% set _weeks = groups | map(attribute='title') | unique | list %}
+  <div class="att-pt-head">
+    <h2 class="att-pt-title">{{ title }}</h2>
+    {% if groups %}
+    <div class="att-pt-filters" data-kind="{{ kind }}">
+      <label class="att-pt-select">
+        <span class="att-sr-only">Course</span>
+        <select data-filter="course" onchange="attPartFilter('{{ kind }}')">
+          <option value="">All Courses</option>
+          {% for c in _courses %}<option value="{{ c | e }}">{{ c }}</option>{% endfor %}
+        </select>
+        <span class="sp-ms" aria-hidden="true">expand_more</span>
+      </label>
+      <label class="att-pt-select">
+        <span class="att-sr-only">Week</span>
+        <select data-filter="week" onchange="attPartFilter('{{ kind }}')">
+          <option value="">All Weeks</option>
+          {% for w in _weeks %}<option value="{{ w | e }}">{{ w }}</option>{% endfor %}
+        </select>
+        <span class="sp-ms" aria-hidden="true">expand_more</span>
+      </label>
     </div>
+    {% endif %}
   </div>
 
-  {% if not office_hours_sessions %}
+  {% if not groups %}
   <div class="sp-empty fade-in">
-    <span class="sp-ms">schedule</span>
-    <p class="sp-empty-title">No Upcoming Office Hours</p>
-    <p class="sp-empty-sub">No office hours sessions are currently scheduled for your courses.</p>
+    <span class="sp-ms" style="color: var(--sp-primary) !important;">{{ empty_icon }}</span>
+    <p class="sp-empty-title att-empty-title">{{ empty_title }}</p>
+    <p class="sp-empty-sub">{{ empty_sub }}</p>
   </div>
   {% else %}
-  <div class="sp-oh-grid fade-in">
-    {% for oh in office_hours_sessions %}
-    <div class="sp-oh-card {% if oh.session_status == 'Conducted' %}sp-oh-conducted{% endif %}">
-
-      {# Status ribbon #}
-      <div class="sp-oh-status-bar" style="background:{% if oh.session_status == 'Scheduled' %}var(--sp-primary){% else %}var(--sp-text-4){% endif %};">
-        <span class="sp-ms" style="font-size:14px;">{% if oh.session_status == 'Scheduled' %}schedule{% else %}done_all{% endif %}</span>
-        {{ oh.session_status }}
-      </div>
-
-      {# Course name #}
-      <div style="font-size:14px;font-weight:700;color:var(--sp-text-1);line-height:1.3;margin-bottom:12px;">
-        {{ oh.course_display }}
-      </div>
-
-      {# Details grid #}
-      <div class="sp-oh-details">
-        <div class="sp-oh-detail-item">
-          <span class="sp-ms">calendar_today</span>
-          <span>{{ frappe.utils.formatdate(oh.session_date, "EEE, dd MMM yyyy") }}</span>
-        </div>
-        <div class="sp-oh-detail-item">
-          <span class="sp-ms">access_time</span>
-          <span>{{ oh.start_fmt }} – {{ oh.end_fmt }}
-            {% if oh.duration_hours %}<em style="color:var(--sp-text-4);">({{ oh.duration_hours }}h)</em>{% endif %}
-          </span>
-        </div>
-        {% if oh.faculty %}
-        <div class="sp-oh-detail-item">
-          <span class="sp-ms">person</span>
-          <span>{{ oh.faculty }}</span>
-        </div>
-        {% endif %}
-        {% if oh.location %}
-        <div class="sp-oh-detail-item">
-          <span class="sp-ms">location_on</span>
-          <span>{{ oh.location }}</span>
-        </div>
-        {% endif %}
-      </div>
-
-      {# Register button #}
-      {% if oh.already_registered %}
-      <div style="margin-top:14px;">
-        <span class="sp-btn sp-btn-sm sp-btn-full" style="background:var(--sp-success);color:#fff;cursor:default;">
-          <span class="sp-ms">check_circle</span> Registered
+  <div class="att-pt-list" id="att-pt-list-{{ kind }}">
+    {% for g in groups %}
+    <article class="att-pc{{ ' is-open' if loop.first }}" data-course="{{ g.course_name | e }}" data-week="{{ g.title | e }}">
+      <button type="button" class="att-pc-head" onclick="attPartToggle(this)" aria-expanded="{{ 'true' if loop.first else 'false' }}">
+        <span class="att-pc-icon"><span class="sp-ms" aria-hidden="true">calendar_month</span></span>
+        <span class="att-pc-titles">
+          <span class="att-pc-title">{{ g.course_name or g.title }}</span>
+          <span class="att-pc-course">{{ g.title }}{% if g.start_date_fmt %} · {{ g.start_date_fmt }}{% if g.end_date_fmt and g.end_date_fmt != g.start_date_fmt %} to {{ g.end_date_fmt }}{% endif %}{% endif %}</span>
         </span>
-      </div>
-      {% elif oh.is_scheduled %}
-      <div style="margin-top:14px;">
-        <button class="sp-btn sp-btn-primary sp-btn-sm sp-btn-full"
-          onclick="spRegisterOfficeHours('{{ oh.name }}', '{{ oh.course_display|replace("'", "\\'") }}')"
-          id="oh-btn-{{ oh.name }}">
-          <span class="sp-ms">how_to_reg</span> Register Attendance
-        </button>
-      </div>
-      {% else %}
-      <div style="margin-top:14px;">
-        <span class="sp-btn sp-btn-sm sp-btn-full" style="background:var(--sp-bg);color:var(--sp-text-4);cursor:default;border:1px solid var(--sp-border);">
-          <span class="sp-ms">done_all</span> Session Conducted
+        <span class="att-pc-stats">
+          <span class="att-pc-stat is-att"><span class="sp-ms" aria-hidden="true">person</span><b>{{ g.attended }}</b> / {{ g.held }} attended</span>
+          <span class="att-pc-stat is-part"><span class="sp-ms" aria-hidden="true">groups</span><b>{{ g.participated }}</b> / {{ g.held }} participated</span>
         </span>
+        <span class="sp-ms att-pc-chev" aria-hidden="true">expand_more</span>
+      </button>
+      <div class="att-pc-body">
+        <table class="att-pt">
+          <thead><tr>
+            <th scope="col">Date</th><th scope="col">Time</th><th scope="col">Venue</th><th scope="col">Faculty</th>
+            <th scope="col">Session</th><th scope="col">Attendance</th><th scope="col">Participation</th><th scope="col">Actions</th>
+          </tr></thead>
+          <tbody>
+            {% for s in g.sessions %}
+            <tr>
+              <td data-label="Date"><div class="att-pt-date">{{ s.date_fmt }}</div><div class="att-pt-muted">{{ s.weekday }}</div></td>
+              <td data-label="Time">{{ s.time or '—' }}</td>
+              <td data-label="Venue">{% if s.venue %}<span class="att-pt-venue"><span class="sp-ms" aria-hidden="true">location_on</span>{{ s.venue }}</span>{% else %}—{% endif %}</td>
+              <td data-label="Faculty">{{ s.faculty or '—' }}</td>
+              <td data-label="Session"><span class="att-pt-slot">{{ s.slot_label }}</span></td>
+              <td data-label="Attendance">{{ _part_pill(s.attendance) }}</td>
+              <td data-label="Participation">{{ _part_pill(s.participation) }}</td>
+              <td data-label="Actions">
+                <button type="button" class="att-pt-view" onclick="attPartView(this)"
+                        data-kind="{{ 'OH' if kind == 'oh' else 'Class Participation' }}" data-week="{{ g.title | e }}" data-course="{{ g.course_name | e }}"
+                        data-date="{{ s.date_fmt }} ({{ s.weekday }})" data-time="{{ s.time | e }}" data-venue="{{ s.venue | e }}"
+                        data-faculty="{{ s.faculty | e }}" data-slot="{{ s.slot_label }}"
+                        data-attendance="{{ s.attendance }}" data-participation="{{ s.participation }}">
+                  <span class="sp-ms" aria-hidden="true">visibility</span>View
+                </button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
       </div>
-      {% endif %}
-
-    </div>
+    </article>
     {% endfor %}
-  </div>
-  {% endif %}
-
-  {# Info box #}
-  <div class="sp-info-box fade-in" style="margin-top:24px;">
-    <span class="sp-ms">info</span>
-    <div style="font-size:13px;line-height:1.8;">
-      <strong>About Office Hours:</strong> Attending office hours sessions counts towards your attendance percentage.
-      Click <strong>Register Attendance</strong> to log your participation for a scheduled session.
-      Office hours hours are added to your total attendance automatically.
+    <div class="sp-empty att-pt-nomatch" style="display:none;">
+      <span class="sp-ms">filter_alt_off</span>
+      <p class="sp-empty-title att-empty-title">No matching weeks</p>
+      <p class="sp-empty-sub">Try a different course or week.</p>
     </div>
   </div>
+  {% endif %}
+{% endmacro %}
 
+<div id="sp-tab-officehours" class="sp-tab-panel">
+  {{ _part_tab(oh_groups, 'oh', 'OH', 'Your OH sessions — attendance and participation recorded by your faculty',
+               'schedule', 'No OH yet', 'OH sessions scheduled for your OH group will appear here.') }}
 </div>{# end tab-officehours #}
+
+<div id="sp-tab-classparticipation" class="sp-tab-panel">
+  {{ _part_tab(cp_groups, 'cp', 'Class Participation', 'Week-wise class sessions — attendance and participation recorded by your faculty',
+               'groups', 'No Class Participation yet', 'Class Participation weeks for your courses will appear here.') }}
+</div>{# end tab-classparticipation #}
+
+{# Session details (View) — attendance + participation only, no marks #}
+<div class="sp-modal-overlay" id="modal-part-session" onclick="spCloseModalIf(event, 'modal-part-session')">
+  <div class="sp-modal" role="dialog" aria-modal="true" aria-labelledby="part-modal-title" style="max-width:440px;">
+    <div class="sp-modal-header">
+      <div class="sp-modal-title" id="part-modal-title"><span class="sp-ms">event_note</span> Session Details</div>
+      <button class="sp-modal-close" onclick="spCloseModal('modal-part-session')" aria-label="Close"><span class="sp-ms">close</span></button>
+    </div>
+    <div class="sp-modal-body" id="part-modal-body"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+  /* Collapse / expand a week card */
+  window.attPartToggle = function (btn) {
+    var card = btn.closest('.att-pc');
+    var open = card.classList.toggle('is-open');
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  };
+
+  /* Course / Week filters (per tab) */
+  window.attPartFilter = function (kind) {
+    var box = document.querySelector('.att-pt-filters[data-kind="' + kind + '"]');
+    var list = document.getElementById('att-pt-list-' + kind);
+    if (!box || !list) return;
+    var course = box.querySelector('[data-filter="course"]').value;
+    var week = box.querySelector('[data-filter="week"]').value;
+    var shown = 0;
+    list.querySelectorAll('.att-pc').forEach(function (card) {
+      var ok = (!course || card.getAttribute('data-course') === course) && (!week || card.getAttribute('data-week') === week);
+      card.style.display = ok ? '' : 'none';
+      if (ok) shown++;
+    });
+    /* A single matching card is opened so its sessions are visible */
+    if (shown === 1) list.querySelectorAll('.att-pc').forEach(function (card) {
+      if (card.style.display !== 'none') { card.classList.add('is-open'); card.querySelector('.att-pc-head').setAttribute('aria-expanded', 'true'); }
+    });
+    var none = list.querySelector('.att-pt-nomatch');
+    if (none) none.style.display = shown ? 'none' : '';
+  };
+
+  var PILL = {
+    'Present': ['is-good', 'check_circle'], 'Participated': ['is-good', 'record_voice_over'],
+    'Absent': ['is-bad', 'cancel'], 'Did not participate': ['is-bad', 'voice_over_off'],
+    'Pending': ['is-warn', 'schedule'], 'Upcoming': ['is-muted', 'schedule']
+  };
+  function pill(v) {
+    var p = PILL[v] || ['is-muted', 'schedule'];
+    return '<span class="att-pp ' + p[0] + '"><span class="sp-ms" aria-hidden="true">' + p[1] + '</span>' + esc(v) + '</span>';
+  }
+
+  /* View — session details popup */
+  window.attPartView = function (btn) {
+    var d = btn.dataset;
+    function row(icon, label, value) {
+      return '<div class="att-pv-row"><span class="sp-ms" aria-hidden="true">' + icon + '</span><span class="att-pv-lbl">' + label
+        + '</span><span class="att-pv-val">' + value + '</span></div>';
+    }
+    document.getElementById('part-modal-body').innerHTML =
+      '<div class="att-pv-head"><b>' + esc(d.course || d.kind) + '</b><span>' + esc(d.kind) + ' · ' + esc(d.week) + ' · ' + esc(d.slot) + '</span></div>'
+      + row('calendar_today', 'Date', esc(d.date))
+      + row('schedule', 'Time', esc(d.time || '—'))
+      + row('location_on', 'Venue', esc(d.venue || '—'))
+      + row('person', 'Faculty', esc(d.faculty || '—'))
+      + row('how_to_reg', 'Attendance', pill(d.attendance))
+      + row('record_voice_over', 'Participation', pill(d.participation));
+    spOpenModal('modal-part-session');
+  };
+})();
+</script>
 
 
 {# ══════════════════════════════════════════════════════════════════
@@ -440,136 +640,13 @@
 </div>
 
 
-{# ══════════════════════════════════════════════════════════════════
-   MODAL — CONDONATION APPLICATION
-══════════════════════════════════════════════════════════════════ #}
-<div class="sp-modal-overlay" id="modal-condonation" onclick="spCloseModalIf(event, 'modal-condonation')">
-  <div class="sp-modal" role="dialog" aria-modal="true" aria-labelledby="cond-modal-title">
-    <div class="sp-modal-header">
-      <div class="sp-modal-title" id="cond-modal-title">
-        <span class="sp-ms">how_to_reg</span> New Condonation Application
-      </div>
-      <button class="sp-modal-close" onclick="spCloseModal('modal-condonation')" aria-label="Close">
-        <span class="sp-ms">close</span>
-      </button>
-    </div>
-
-    <div class="sp-modal-body">
-      <div id="cond-alert" class="sp-form-alert" style="display:none;"></div>
-
-      <form id="form-condonation" onsubmit="return false;">
-
-        {# Course Offering #}
-        <div class="sp-form-group">
-          <label class="sp-form-label" for="cond-course">
-            Course <span class="sp-required">*</span>
-          </label>
-          {% if student_cos %}
-          <select class="sp-form-control" id="cond-course" name="course_offering" required>
-            <option value="">— Select Course —</option>
-            {% for c in student_cos %}
-            <option value="{{ c.course_offering }}">{{ c.name }}</option>
-            {% endfor %}
-          </select>
-          {% else %}
-          <input type="text" class="sp-form-control" id="cond-course" name="course_offering"
-            placeholder="Enter Course Offering ID" required>
-          {% endif %}
-        </div>
-
-        <div class="sp-form-row">
-          {# From Date #}
-          <div class="sp-form-group">
-            <label class="sp-form-label" for="cond-from-date">
-              From Date <span class="sp-required">*</span>
-            </label>
-            <input type="date" class="sp-form-control" id="cond-from-date"
-              name="absence_from_date" required>
-          </div>
-
-          {# To Date #}
-          <div class="sp-form-group">
-            <label class="sp-form-label" for="cond-to-date">
-              To Date <span class="sp-required">*</span>
-            </label>
-            <input type="date" class="sp-form-control" id="cond-to-date"
-              name="absence_to_date" required>
-          </div>
-        </div>
-
-        <div class="sp-form-row">
-          {# Number of Sessions #}
-          <div class="sp-form-group">
-            <label class="sp-form-label" for="cond-sessions">
-              Sessions to Condone <span class="sp-required">*</span>
-            </label>
-            <input type="number" class="sp-form-control" id="cond-sessions"
-              name="number_of_sessions" min="1" max="30" placeholder="e.g. 3" required>
-          </div>
-
-          {# Number of Hours #}
-          <div class="sp-form-group">
-            <label class="sp-form-label" for="cond-hours">
-              Hours to Condone <span class="sp-required">*</span>
-            </label>
-            <input type="number" class="sp-form-control" id="cond-hours"
-              name="number_of_hours" min="0.5" step="0.5" placeholder="e.g. 3.0" required>
-          </div>
-        </div>
-
-        {# Reason #}
-        <div class="sp-form-group">
-          <label class="sp-form-label" for="cond-reason">
-            Reason <span class="sp-required">*</span>
-          </label>
-          <select class="sp-form-control" id="cond-reason" name="condonation_reason" required>
-            <option value="">— Select Reason —</option>
-            {% for r in condonation_reasons %}
-            <option value="{{ r }}">{{ r }}</option>
-            {% endfor %}
-            {% if not condonation_reasons %}
-            <option value="Medical">Medical</option>
-            <option value="Family Emergency">Family Emergency</option>
-            <option value="University Event">University Event</option>
-            {% endif %}
-          </select>
-        </div>
-
-        {# Proof Document #}
-        <div class="sp-form-group">
-          <label class="sp-form-label" for="cond-proof">Proof Document</label>
-          <div class="sp-file-upload-wrapper">
-            <input type="file" class="sp-file-input" id="cond-proof" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
-            <label class="sp-file-label" for="cond-proof">
-              <span class="sp-ms">upload_file</span>
-              <span id="cond-proof-name">Click to upload (PDF, JPG, PNG, DOC)</span>
-            </label>
-          </div>
-          <div id="cond-upload-progress" class="sp-upload-progress" style="display:none;">
-            <div class="sp-upload-bar"></div>
-          </div>
-        </div>
-
-      </form>
-    </div>
-
-    <div class="sp-modal-footer">
-      <button class="sp-btn sp-btn-secondary" onclick="spCloseModal('modal-condonation')">
-        Cancel
-      </button>
-      <button class="sp-btn sp-btn-primary" onclick="spSubmitCondonation()" id="btn-submit-cond">
-        <span class="sp-ms">send</span> Submit Application
-      </button>
-    </div>
-  </div>
-</div>
-
-
 {# ── Toast Notification ────────────────────────────────────────── #}
 <div id="sp-toast" class="sp-toast" role="alert" aria-live="polite"></div>
 
 {% endif %}{# end no_student #}
+
 {% endblock %}
+
 
 
 {% block extra_js %}
@@ -729,96 +806,7 @@
   }
   spBindFileInput('cond-proof', 'cond-proof-name');
 
-  /* ── Condonation ────────────────────────────────────────────── */
-  window.spOpenCondonation = function (courseOffering, courseName) {
-    spHideAlert('cond-alert');
-    document.getElementById('form-condonation').reset();
-    document.getElementById('cond-proof-name').textContent = 'Click to upload (PDF, JPG, PNG, DOC)';
-
-    /* Pre-select course if provided */
-    var sel = document.getElementById('cond-course');
-    if (sel && courseOffering) {
-      for (var i = 0; i < sel.options.length; i++) {
-        if (sel.options[i].value === courseOffering) {
-          sel.selectedIndex = i;
-          break;
-        }
-      }
-    }
-    spOpenModal('modal-condonation');
-  };
-
-  window.spSubmitCondonation = function () {
-    spHideAlert('cond-alert');
-    var btn = document.getElementById('btn-submit-cond');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="sp-ms">hourglass_top</span> Uploading…';
-
-    var proofInput = document.getElementById('cond-proof');
-
-    spUploadFile(proofInput, 'cond-upload-progress')
-      .then(function (fileUrl) {
-        btn.innerHTML = '<span class="sp-ms">hourglass_top</span> Submitting…';
-
-        var args = {
-          course_offering: document.getElementById('cond-course').value,
-          absence_from_date: document.getElementById('cond-from-date').value || null,
-          absence_to_date: document.getElementById('cond-to-date').value || null,
-          number_of_sessions: document.getElementById('cond-sessions').value,
-          number_of_hours: document.getElementById('cond-hours').value,
-          condonation_reason: document.getElementById('cond-reason').value,
-          proof_document: fileUrl || null,
-        };
-
-        return spCall('slcm.api.student_portal.submit_condonation_application', args);
-      })
-      .then(function (result) {
-        spCloseModal('modal-condonation');
-        spToast(result.message || 'Condonation application submitted successfully!', 'success');
-        setTimeout(function () { location.reload(); }, 2000);
-      })
-      .catch(function (err) {
-        spShowAlert('cond-alert', err.message || 'Submission failed. Please try again.');
-        btn.disabled = false;
-        btn.innerHTML = '<span class="sp-ms">send</span> Submit Application';
-      });
-  };
-
   /* ── Office Hours Registration ──────────────────────────────── */
-  window.spRegisterOfficeHours = function (sessionName, courseDisplay) {
-    if (!confirm('Register your attendance for the office hours session: ' + courseDisplay + '?')) return;
-
-    var btn = document.getElementById('oh-btn-' + sessionName);
-    if (btn) {
-      btn.disabled = true;
-      btn.innerHTML = '<span class="sp-ms">hourglass_top</span> Registering…';
-    }
-
-    spCall('slcm.api.student_portal.register_office_hours_attendance', {
-      session_name: sessionName,
-    })
-      .then(function (result) {
-        spToast(result.message || 'Registered for office hours session!', 'success');
-        if (btn) {
-          btn.innerHTML = '<span class="sp-ms">check_circle</span> Registered';
-          btn.style.background = 'var(--sp-success)';
-          btn.style.borderColor = 'var(--sp-success)';
-        }
-      })
-      .catch(function (err) {
-        var alreadyRegistered = (err.message || '').indexOf('already registered') !== -1;
-        spToast(err.message || 'Registration failed. Please try again.', alreadyRegistered ? 'info' : 'danger');
-        if (btn) {
-          if (alreadyRegistered) {
-            btn.outerHTML = '<span class="sp-btn sp-btn-sm sp-btn-full" style="background:var(--sp-success);color:#fff;cursor:default;">'
-              + '<span class="sp-ms">check_circle</span> Registered</span>';
-          } else {
-            btn.disabled = false;
-            btn.innerHTML = '<span class="sp-ms">how_to_reg</span> Register Attendance';
-          }
-        }
-      });
-  };
 
 })();
 </script>
@@ -884,9 +872,9 @@
 
     var bg;
     if (isHoliday && !otherMonth) {
-      bg = 'background:#fff0f0;border:1.5px solid #fca5a5;';
+      bg = 'background:#fff0f0;border:1.5px solid #f5c6ce;';
     } else if (isToday) {
-      bg = 'background:#e8f0fe;border:1.5px solid var(--sp-primary);';
+      bg = 'background:#fff0f2;border:1.5px solid var(--sp-primary);';
     } else if (hasData && !otherMonth) {
       bg = 'background:var(--sp-bg);border:1.5px solid var(--sp-border);';
     } else {
@@ -901,7 +889,7 @@
 
     /* day number */
     var numColor = isToday ? 'color:var(--sp-primary);'
-                 : isHoliday && !otherMonth ? 'color:#dc2626;'
+                 : isHoliday && !otherMonth ? 'color:#920c24;'
                  : otherMonth ? 'color:var(--sp-text-4);'
                  : 'color:var(--sp-text-2);';
     html += '<div style="font-size:13px;font-weight:600;margin-bottom:4px;line-height:1;' + numColor + '">' + dayNum + '</div>';
@@ -909,7 +897,7 @@
     if (data && !otherMonth) {
       /* holiday label */
       if (data.is_holiday) {
-        html += '<div style="font-size:9px;font-weight:700;color:#dc2626;text-transform:uppercase;'
+        html += '<div style="font-size:9px;font-weight:700;color:#920c24;text-transform:uppercase;'
               + 'letter-spacing:.3px;line-height:1.2;text-align:center;margin-bottom:3px;max-width:52px;'
               + 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escHtml(data.holiday_name) + '">'
               + escHtml(data.holiday_name || 'Holiday') + '</div>';
@@ -918,15 +906,15 @@
       /* attendance / schedule dots */
       html += '<div style="display:flex;gap:3px;flex-wrap:wrap;justify-content:center;">';
       if (data.has_present && !data.has_absent) {
-        html += '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--sp-success);" title="Present"></span>';
+        html += '<span class="att-dot att-dot-present" title="Present"></span>';
       } else if (data.has_absent && !data.has_present) {
-        html += '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--sp-danger);" title="Absent"></span>';
+        html += '<span class="att-dot att-dot-absent" title="Absent"></span>';
       } else if (data.has_present && data.has_absent) {
-        html += '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--sp-success);" title="Present"></span>';
-        html += '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--sp-danger);" title="Absent"></span>';
+        html += '<span class="att-dot att-dot-present" title="Present"></span>';
+        html += '<span class="att-dot att-dot-absent" title="Absent"></span>';
       }
       if (data.has_scheduled) {
-        html += '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--sp-primary);" title="Scheduled"></span>';
+        html += '<span class="att-dot att-dot-scheduled" title="Scheduled"></span>';
       }
       html += '</div>';
     }
@@ -1000,12 +988,12 @@
     /* ── Holiday banner ──────────────────────────────────────── */
     if (data.is_holiday) {
       html += '<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;'
-            + 'border-radius:10px;background:#fff0f0;border:1.5px solid #fca5a5;margin-bottom:14px;">'
-            + '<span class="sp-ms" style="color:#dc2626;font-size:26px;flex-shrink:0;">celebration</span>'
-            + '<div><div style="font-size:14px;font-weight:700;color:#dc2626;">'
+            + 'border-radius:10px;background:#fff0f0;border:1.5px solid #f5c6ce;margin-bottom:14px;">'
+            + '<span class="sp-ms" style="color:#920c24;font-size:26px;flex-shrink:0;">celebration</span>'
+            + '<div><div style="font-size:14px;font-weight:700;color:#920c24;">'
             + escHtml(data.holiday_name || 'Holiday') + '</div>'
             + (data.holiday_type
-                ? '<div style="font-size:12px;color:#ef4444;margin-top:2px;">' + escHtml(data.holiday_type) + '</div>'
+                ? '<div style="font-size:12px;color:#920c24;margin-top:2px;">' + escHtml(data.holiday_type) + '</div>'
                 : '')
             + '</div></div>';
     }
@@ -1089,9 +1077,9 @@
             + escHtml(s.session_type || 'Lecture') + '</span>';
 
       if (s.from_time || s.to_time) {
-        html += '<span style="font-size:12px;font-weight:600;color:#4f46e5;">'
+        html += '<span style="font-size:12px;font-weight:600;color:#920c24;">'
               + escHtml(s.from_time || '');
-        if (s.to_time) html += '<span style="font-weight:400;color:#a5b4fc;margin:0 4px;">–</span>' + escHtml(s.to_time);
+        if (s.to_time) html += '<span style="font-weight:400;color:#f5c6ce;margin:0 4px;">–</span>' + escHtml(s.to_time);
         html += '</span>';
       }
 
@@ -1142,4 +1130,6 @@
   renderCalendar(calYear, calMonth);
 })();
 </script>
+
 {% endblock %}
+

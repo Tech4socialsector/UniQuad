@@ -11,9 +11,10 @@ _DEFAULTS = {
     "portal_subtitle":       "",
     "show_logo":             1,
     "nav_brand_text":        "",
+    "portal_logo":           "",
     "portal_favicon":        "",
     # Typography
-    "font_family":           "Poppins",
+    "font_family":           "Merriweather",
     "font_size":             "Normal",
     # Theme
     "primary_color":         "#920c24",
@@ -22,9 +23,13 @@ _DEFAULTS = {
     "card_background":       "#ffffff",
     "sidebar_theme":         "Light",
     "nav_text_color":        "#ffffff",
+    "sidebar_active_text_color": "#ffffff",
+    "sidebar_menu_text_color":         "#475569",
+    "sidebar_menu_hover_bg_color":     "#f0f4f8",
+    "sidebar_menu_hover_text_color":   "#0f172a",
     # Status colors
-    "success_color":         "#16a34a",
-    "warning_color":         "#d97706",
+    "success_color":         "#920c24",
+    "warning_color":         "#920c24",
     "danger_color":          "#dc2626",
     "info_color":            "#0369a1",
     # Grading
@@ -34,7 +39,8 @@ _DEFAULTS = {
     "grade_good_label":      "B+ / B",
     "grade_average_color":   "#d97706",
     "grade_average_label":   "C+ / C",
-    "grade_fail_color":      "#dc2626",
+    "grade_color": "#000000",
+            "grade_fail_color":      "#dc2626",
     "grade_fail_label":      "D / F",
     # Attendance thresholds
     "att_good_threshold":    75,
@@ -99,6 +105,8 @@ _DEFAULTS = {
     "allow_language_preference":    0,
     # Advanced
     "custom_css": "",
+    "enable_lms_navigation": 0,
+    "lms_url": "",
 }
 
 # ── Font mappings ─────────────────────────────────────────────────────
@@ -106,12 +114,14 @@ _FONT_CSS = {
     "Poppins":        "'Poppins', system-ui, -apple-system, sans-serif",
     "Inter":          "'Inter', system-ui, -apple-system, sans-serif",
     "Roboto":         "'Roboto', system-ui, -apple-system, sans-serif",
+    "Merriweather":   "'Merriweather', Georgia, serif",
     "System Default": "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
 }
 
 _FONT_GOOGLE_URL = {
-    "Inter":  "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap",
-    "Roboto": "https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap",
+    "Inter":        "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap",
+    "Roboto":       "https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap",
+    "Merriweather": "https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700;900&display=swap",
 }
 
 _NAV_HEIGHT = {
@@ -136,6 +146,7 @@ _CHECK_FIELDS = frozenset({
     "enable_leave_request", "show_workload_indicator",
     "allow_theme_override", "allow_density_override", "allow_notification_settings",
     "allow_dashboard_customization", "allow_font_size_override", "allow_language_preference",
+    "enable_lms_navigation",
 })
 
 
@@ -144,13 +155,34 @@ class FacultyPortalSettings(Document):
         self._validate_colors()
         self._validate_thresholds()
         self._validate_integers()
+        self._ensure_public_attachments()
+
+    def _ensure_public_attachments(self):
+        # portal_logo / portal_favicon are rendered on every faculty-portal page
+        # (including for guests before login), so they must not be private —
+        # the Attach Image widget defaults to private unless the uploader
+        # remembers to tick "Public", so force it here instead of relying on that.
+        for fieldname in ("portal_logo", "portal_favicon"):
+            file_url = self.get(fieldname)
+            if not file_url or not file_url.startswith("/private/files/"):
+                continue
+            file_doc = frappe.db.get_value(
+                "File", {"file_url": file_url}, ["name", "is_private"], as_dict=True
+            )
+            if not file_doc or not file_doc.is_private:
+                continue
+            file = frappe.get_doc("File", file_doc.name)
+            file.is_private = 0
+            file.save(ignore_permissions=True)
+            self.set(fieldname, file.file_url)
 
     def _validate_colors(self):
         color_fields = [
             "primary_color", "secondary_color", "background_color", "card_background",
-            "nav_text_color",
+            "nav_text_color", "sidebar_active_text_color",
+            "sidebar_menu_text_color", "sidebar_menu_hover_bg_color", "sidebar_menu_hover_text_color",
             "success_color", "warning_color", "danger_color", "info_color",
-            "grade_excellent_color", "grade_good_color", "grade_average_color", "grade_fail_color",
+            "grade_color", "grade_fail_color",
         ]
         for field in color_fields:
             val = (self.get(field) or "").strip()
@@ -256,7 +288,7 @@ def get_faculty_portal_settings():
     raw["nav_text_rgba_80"] = _hex_to_rgba(raw["nav_text_color"], 0.8)
 
     # ── Font family CSS value + optional Google Fonts URL ──────────
-    raw["font_family_css"] = _FONT_CSS.get(raw["font_family"], _FONT_CSS["Poppins"])
+    raw["font_family_css"] = _FONT_CSS.get(raw["font_family"], _FONT_CSS["Merriweather"])
     raw["font_google_url"] = _FONT_GOOGLE_URL.get(raw["font_family"], "")
 
     # ── Nav height CSS value ───────────────────────────────────────

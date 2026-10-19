@@ -31,10 +31,10 @@
 	style="grid-template-columns: repeat(3, 1fr); margin-bottom: 24px"
 >
 	<div class="sp-stat-card">
-		<div class="sp-stat-icon" style="background: #ede9fe; color: #7c3aed">work</div>
+		<div class="sp-stat-icon" style="background: #fff0f2; color: #920c24">work</div>
 		<div>
 			<div class="sp-stat-label">Open Opportunities</div>
-			<div class="sp-stat-value" style="color: #7c3aed">{{ open_count or 0 }}</div>
+			<div class="sp-stat-value" style="color: #920c24">{{ open_count or 0 }}</div>
 		</div>
 	</div>
 	<div class="sp-stat-card">
@@ -69,7 +69,7 @@
 <div
 	class="sp-section-card fade-in"
 	style="
-		background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+		background: linear-gradient(135deg, #fff0f2, #f5c6ce);
 		border: none;
 		margin-bottom: 24px;
 		animation-delay: 0.05s;
@@ -83,15 +83,15 @@
 			style="
 				font-family: &quot;Material Symbols Outlined&quot;;
 				font-size: 40px;
-				color: #059669;
+				color: #920c24;
 			"
 			>celebration</span
 		>
 		<div>
-			<div style="font-weight: 700; font-size: 16px; color: #065f46">
+			<div style="font-weight: 700; font-size: 16px; color: #6b091a">
 				Placement Offer Received!
 			</div>
-			<div style="color: #047857; font-size: 13px; margin-top: 2px">
+			<div style="color: #6b091a; font-size: 13px; margin-top: 2px">
 				{{ placement_offer.offered_role or "Role" }} {% if placement_offer.compensation %}
 				· {{ frappe.utils.fmt_money(placement_offer.compensation) }} {% endif %}
 			</div>

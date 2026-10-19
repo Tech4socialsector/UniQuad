@@ -1,0 +1,35 @@
+{
+ "app": "slcm",
+ "bg_color": "blue",
+ "creation": "2026-04-14 19:19:48.094029",
+ "docstatus": 0,
+ "doctype": "Desktop Icon",
+ "hidden": 0,
+ "icon_type": "Link",
+ "idx": 0,
+ "label": "Student Portal",
+ "link_to": "Student Portal",
+ "link_type": "Workspace Sidebar",
+ "modified": "2026-09-29 16:08:42.916219",
+ "modified_by": "Administrator",
+ "name": "Student Portal",
+ "owner": "Administrator",
+ "parent_icon": "Student Services",
+ "restrict_removal": 0,
+ "roles": [
+  {
+   "role": "slcm_Registrar"
+  },
+  {
+   "role": "slcm_Registration Officer"
+  },
+  {
+   "role": "Campus Admin"
+  },
+  {
+   "role": "Admission Admin"
+  }
+ ],
+ "sidebar": "Student Portal",
+ "standard": 1
+}

@@ -41,7 +41,15 @@ app_include_js = [
 app_include_css = []
 
 doctype_js = {
-    "Notification": "public/js/notification_override.js"
+    "Notification": "public/js/notification_override.js",
+    "Data Import": "public/js/bulk_upload_template.js",
+}
+
+# Bulk-upload templates (Download / Upload buttons) on these lists
+doctype_list_js = {
+    "Fee Concession": "public/js/bulk_upload_template.js",
+    "Fee Payment": "public/js/bulk_upload_template.js",
+    "Fee Demand": "public/js/bulk_upload_template.js",
 }
 
 doctype_calendar_js = {
@@ -73,6 +81,7 @@ jinja = {
 		"slcm.admission.utils.portal.get_portal_website_branding",
 		"slcm.admission.utils.portal.get_typography_style_block",
 		"slcm.admission.doctype.seat_allocation.seat_allocation.get_results_notification_context",
+		"slcm.slcm.doctype.fee_certificate_request.fee_certificate_request.get_fee_certificate_context",
 	],
 }
 
@@ -107,7 +116,7 @@ fixtures = [
                 # SLCM student-lifecycle roles
                 "slcm_Student", "slcm_Faculty", "slcm_Registrar",
                 "slcm_Programme Chair", "slcm_Hostel Warden", "slcm_Hostel Admin",
-                "slcm_Placement Officer",
+                "slcm_Placement Officer", "slcm_Academic Incharge",
                 # Student Registration workflow roles
                 "slcm_REGO Officer", "slcm_FINO Officer", "slcm_Registration Officer",
                 "slcm_Documentation Officer", "slcm_IT Admin", "slcm_Registration User",
@@ -203,6 +212,7 @@ fixtures = [
                 "Programme Chair Approval Email Template",
                 "Programme Chair Rejected Email Template",
                 # Admission Module — Applicant Reminder Emails
+                "Applicant Application Rejected",
                 "Applicant Not Started Application Reminder",
                 "Applicant Draft Application Reminder",
                 "Applicant Fee Payment Pending Reminder",
@@ -213,7 +223,9 @@ fixtures = [
                 "NLSAT Confirmation Fee Paid",
                 "Admission Full Fee Invoice",
                 "NLSAT Full Fee Paid",
-                "NLSAT Offer Expired / Withdrawn"
+                "NLSAT Offer Expired / Withdrawn",
+                "NLSAT Application Completed Email",
+                "Application Submitted Email"
             ]]
         ]
     },
@@ -266,6 +278,10 @@ fixtures = [
             # Venue Bookings
             "Total Venue Bookings", "Pending Venue Bookings", "Approved Venue Bookings",
             "Rejected Venue Bookings", "Cancelled Venue Bookings", "Total Rooms",
+            # Promotions
+            "Active Promotion Policies", "Students Promoted", "Students Not Promoted",
+            "Promotions Pending Review", "Promotion Enrollment Failures",
+            "Promotion Runs with Errors",
         ]]]
     },
     # --- Dashboard: Charts ---
@@ -288,6 +304,9 @@ fixtures = [
             # Venue Bookings
             "Venue Bookings Trend Over Time", "Venue Booking Status Distribution",
             "Venue Bookings by Venue Type",
+            # Promotions
+            "Promotion Outcome Distribution", "Promotions Over Time",
+            "Promotion Runs by Status", "Promotion Exceptions by Reason",
         ]]]
     },
     {
@@ -306,7 +325,12 @@ fixtures = [
     # --- Workspaces ---
     {
         "doctype": "Workspace",
-        "filters": [["module", "in", ["SLCM", "Admission", "PACE"]]]
+        # Workspaces listed here ship only as module JSON (slcm/slcm/workspace/<name>/).
+        # A fixture copy would be force-imported after it on every migrate and win.
+        "filters": [
+            ["module", "in", ["SLCM", "Admission", "PACE"]],
+            ["name", "not in", ["Student Portal", "Master"]],
+        ]
     },
     # --- Workspace Sidebars ---
     {
@@ -334,6 +358,7 @@ fixtures = [
         "filters": [
             ["dt", "not in", ["HD Ticket Type", "HD Ticket"]],
             ["name", "!=", "Web Form-amount_field"],
+            ["name", "!=", "Email Template-reference_doctype"],
         ]
     },
     {
@@ -443,7 +468,9 @@ doc_events = {
 # ------------------------------
 #
 override_whitelisted_methods = {
-	"frappe.core.doctype.user.user.update_password": "slcm.api.user.custom_update_password"
+	"frappe.core.doctype.user.user.update_password": "slcm.api.user.custom_update_password",
+	# Fee Concession / Fee Payment / Fee Demand: Data Import's blank template = the bulk-upload sheet
+	"frappe.core.doctype.data_import.data_import.download_template": "slcm.slcm.fee.bulk_upload.data_import_download_template",
 }
 
 # each overriding function accepts a `data` argument;
@@ -618,11 +645,11 @@ website_route_rules = [
     {"from_route": "/portal-login", "to_route": "portal-login/login"},
     {"from_route": "/admission/login", "to_route": "admission/login"},
     {"from_route": "/applicant-dashboard", "to_route": "applicant_dashboard"},
+    {"from_route": "/admission/application-form", "to_route": "admission/application-form"},
     {"from_route": "/admission/<name>", "to_route": "admission/program_detail"},
     {"from_route": "/announcement/<name>", "to_route": "announcement/announcement_detail"},
     {"from_route": "/admission-dashboard", "to_route": "merit-and-scholarship/admission_dashboard"},
     {"from_route": "/apply", "to_route": "merit-and-scholarship/apply"},
-    # {"from_route": "/application-form", "to_route": "application_form"},
     # Student Portal
     {"from_route": "/student-portal", "to_route": "student-portal/index"},
     {"from_route": "/student-portal/courses", "to_route": "student-portal/courses"},

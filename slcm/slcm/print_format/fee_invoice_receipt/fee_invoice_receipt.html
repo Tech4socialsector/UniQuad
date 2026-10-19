@@ -1,392 +1,124 @@
-{% set org_name = "National Law School of India University" %}
 {% set logo = "/files/nlsiu-logo.jpg" %}
+{% set sm = frappe.get_doc("Student Master", doc.student, ignore_permissions=True) if doc.student else None %}
+{% set student_full = ([sm.first_name, sm.middle_name, sm.last_name] | select | join(" ")) if sm else (doc.student_name or "—") %}
+{% set net_payable = frappe.utils.flt(doc.final_payable_amount or doc.total_amount or 0) %}
+{% set outstanding = [frappe.utils.flt(doc.outstanding_amount), 0] | max %}
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+{% include "slcm/templates/print/nls_receipt_style.html" %}
+<div class="nls-doc">
+<div class="nls-copy is-page">
 
-  body {
-    font-family: "Helvetica Neue", Arial, sans-serif;
-    font-size: 12px;
-    color: #1a1a2e;
-    background: #fff;
-    padding: 0;
-  }
-
-  .fi-page {
-    max-width: 720px;
-    margin: 0 auto;
-    padding: 32px 40px;
-    border: 1px solid #e2e8f0;
-    min-height: 100vh;
-  }
-
-  /* ── Header ── */
-  .fi-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    padding-bottom: 20px;
-    border-bottom: 2px solid #1a1a2e;
-    margin-bottom: 24px;
-  }
-  .fi-header-left { display: flex; align-items: center; gap: 14px; }
-  .fi-logo { height: 52px; width: auto; }
-  .fi-org { font-size: 18px; font-weight: 700; color: #1a1a2e; line-height: 1.2; }
-  .fi-org-sub { font-size: 11px; color: #64748b; margin-top: 2px; }
-  .fi-header-right { text-align: right; }
-  .fi-title { font-size: 22px; font-weight: 800; color: #1a1a2e; letter-spacing: -0.5px; }
-  .fi-number { font-size: 13px; color: #475569; margin-top: 4px; }
-  .fi-number strong { color: #1a1a2e; }
-
-  /* ── Status badge ── */
-  .fi-status-wrap { display: flex; justify-content: flex-end; margin-bottom: 20px; }
-  .fi-badge {
-    display: inline-block;
-    padding: 4px 14px;
-    border-radius: 999px;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.3px;
-    text-transform: uppercase;
-  }
-  .fi-badge-paid     { background: #dcfce7; color: #15803d; }
-  .fi-badge-partial  { background: #fef9c3; color: #a16207; }
-  .fi-badge-unpaid   { background: #fee2e2; color: #dc2626; }
-  .fi-badge-overdue  { background: #fde8d8; color: #c2410c; }
-  .fi-badge-default  { background: #f1f5f9; color: #475569; }
-
-  /* ── Info grid ── */
-  .fi-info-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0;
-    margin-bottom: 24px;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    overflow: hidden;
-  }
-  .fi-info-box {
-    padding: 14px 18px;
-    border-right: 1px solid #e2e8f0;
-    border-bottom: 1px solid #e2e8f0;
-  }
-  .fi-info-box:nth-child(2n) { border-right: none; }
-  .fi-info-box:nth-last-child(-n+2) { border-bottom: none; }
-  .fi-info-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #94a3b8; margin-bottom: 4px; }
-  .fi-info-value { font-size: 13px; font-weight: 600; color: #1e293b; }
-  .fi-info-value.muted { font-weight: 400; color: #475569; }
-
-  /* ── Section heading ── */
-  .fi-section-title {
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    color: #64748b;
-    margin-bottom: 10px;
-    padding-bottom: 6px;
-    border-bottom: 1px solid #e2e8f0;
-  }
-
-  /* ── Fee components table ── */
-  .fi-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 24px;
-    font-size: 12px;
-  }
-  .fi-table thead tr {
-    background: #1a1a2e;
-    color: #fff;
-  }
-  .fi-table thead th {
-    padding: 9px 14px;
-    text-align: left;
-    font-weight: 600;
-    font-size: 11px;
-    letter-spacing: 0.3px;
-  }
-  .fi-table thead th.right { text-align: right; }
-  .fi-table tbody tr:nth-child(even) { background: #f8fafc; }
-  .fi-table tbody td {
-    padding: 9px 14px;
-    border-bottom: 1px solid #f1f5f9;
-    color: #334155;
-  }
-  .fi-table tbody td.right { text-align: right; }
-  .fi-table tfoot td {
-    padding: 8px 14px;
-    font-weight: 600;
-  }
-  .fi-table tfoot .subtotal { background: #f8fafc; color: #475569; }
-  .fi-table tfoot .discount { background: #f0fdf4; color: #16a34a; }
-  .fi-table tfoot .net-payable { background: #1a1a2e; color: #fff; font-size: 13px; }
-
-  /* ── Summary box ── */
-  .fi-summary {
-    display: flex;
-    justify-content: flex-end;
-    margin-bottom: 24px;
-  }
-  .fi-summary-box {
-    width: 280px;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    overflow: hidden;
-  }
-  .fi-sum-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 8px 16px;
-    border-bottom: 1px solid #f1f5f9;
-    font-size: 12px;
-  }
-  .fi-sum-row:last-child { border-bottom: none; }
-  .fi-sum-row .label { color: #64748b; }
-  .fi-sum-row .value { font-weight: 600; color: #1e293b; }
-  .fi-sum-row.discount .value { color: #16a34a; }
-  .fi-sum-row.outstanding .value { color: #dc2626; }
-  .fi-sum-row.total-row {
-    background: #1a1a2e;
-    padding: 10px 16px;
-  }
-  .fi-sum-row.total-row .label,
-  .fi-sum-row.total-row .value { color: #fff; font-weight: 700; font-size: 13px; }
-
-  /* ── Payment history ── */
-  .fi-payments-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 24px;
-    font-size: 12px;
-  }
-  .fi-payments-table thead tr { background: #f1f5f9; }
-  .fi-payments-table thead th {
-    padding: 8px 12px;
-    text-align: left;
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-    color: #64748b;
-    border-bottom: 2px solid #e2e8f0;
-  }
-  .fi-payments-table thead th.right { text-align: right; }
-  .fi-payments-table tbody td {
-    padding: 8px 12px;
-    border-bottom: 1px solid #f1f5f9;
-    color: #334155;
-  }
-  .fi-payments-table tbody td.right { text-align: right; }
-
-  /* ── No payments message ── */
-  .fi-no-data {
-    text-align: center;
-    padding: 20px;
-    color: #94a3b8;
-    font-size: 12px;
-    border: 1px dashed #e2e8f0;
-    border-radius: 6px;
-    margin-bottom: 24px;
-  }
-
-  /* ── Footer ── */
-  .fi-footer {
-    margin-top: 32px;
-    padding-top: 16px;
-    border-top: 1px solid #e2e8f0;
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-  }
-  .fi-footer-note { font-size: 10px; color: #94a3b8; max-width: 340px; line-height: 1.5; }
-  .fi-footer-generated { font-size: 10px; color: #cbd5e1; text-align: right; }
-  .fi-watermark-paid {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) rotate(-35deg);
-    font-size: 100px;
-    font-weight: 900;
-    color: rgba(21,128,61,0.06);
-    letter-spacing: 8px;
-    pointer-events: none;
-    z-index: 0;
-  }
-</style>
-</head>
-<body>
-
-{% if doc.status == "Paid" %}
-<div class="fi-watermark-paid">PAID</div>
-{% endif %}
-
-<div class="fi-page">
-
-  {# ── Header ── #}
-  <div class="fi-header">
-    <div class="fi-header-left">
-      <img src="{{ logo }}" class="fi-logo" alt="NLS Logo">
-      <div>
-        <div class="fi-org">{{ org_name }}</div>
-        <div class="fi-org-sub">Fee Invoice Receipt</div>
-      </div>
-    </div>
-    <div class="fi-header-right">
-      <div class="fi-title">INVOICE</div>
-      <div class="fi-number"><strong>{{ doc.name }}</strong></div>
-      <div class="fi-number">Date: {{ frappe.format(doc.invoice_date, {"fieldtype": "Date"}) }}</div>
-      {% if doc.due_date %}
-      <div class="fi-number">Due: {{ frappe.format(doc.due_date, {"fieldtype": "Date"}) }}</div>
-      {% endif %}
-    </div>
+  <div class="nls-head">
+    <img src="{{ logo }}" alt="NLS Logo">
+    <div class="nls-inst">National Law School of India University</div>
   </div>
 
-  {# ── Status Badge ── #}
-  <div class="fi-status-wrap">
-    {% if doc.status == "Paid" %}
-      <span class="fi-badge fi-badge-paid">Paid</span>
-    {% elif doc.status == "Partially Paid" %}
-      <span class="fi-badge fi-badge-partial">Partially Paid</span>
-    {% elif doc.status == "Overdue" %}
-      <span class="fi-badge fi-badge-overdue">Overdue</span>
-    {% elif doc.status == "Unpaid" %}
-      <span class="fi-badge fi-badge-unpaid">Unpaid</span>
-    {% else %}
-      <span class="fi-badge fi-badge-default">{{ doc.status or "—" }}</span>
-    {% endif %}
-  </div>
+  <div class="nls-title">Fee Invoice</div>
 
-  {# ── Student & Program Info ── #}
-  {% set sm = frappe.get_doc("Student Master", doc.student, ignore_permissions=True) if doc.student else None %}
-  <div class="fi-info-grid">
-    <div class="fi-info-box">
-      <div class="fi-info-label">Student Name</div>
-      <div class="fi-info-value">
-        {% if sm %}
-          {{ [sm.first_name, sm.middle_name, sm.last_name] | select | join(" ") }}
-        {% else %}
-          {{ doc.student_name or "—" }}
-        {% endif %}
-      </div>
-    </div>
-    <div class="fi-info-box">
-      <div class="fi-info-label">Student ID</div>
-      <div class="fi-info-value">{{ sm.registration_id if sm and sm.registration_id else doc.student }}</div>
-    </div>
-    <div class="fi-info-box">
-      <div class="fi-info-label">Programme</div>
-      <div class="fi-info-value muted">{{ doc.program or "—" }}</div>
-    </div>
-    <div class="fi-info-box">
-      <div class="fi-info-label">Academic Year</div>
-      <div class="fi-info-value muted">{{ doc.academic_year or "—" }}</div>
-    </div>
-    <div class="fi-info-box">
-      <div class="fi-info-label">Academic Term</div>
-      <div class="fi-info-value muted">{{ doc.academic_term or "—" }}</div>
-    </div>
-    <div class="fi-info-box">
-      <div class="fi-info-label">Email</div>
-      <div class="fi-info-value muted">{{ sm.official_email_id or sm.email if sm else "—" }}</div>
-    </div>
-  </div>
+  <table class="nls-meta">
+    <tr>
+      <td class="lbl">Registration Id:</td>
+      <td class="val">{{ sm.registration_id if sm and sm.registration_id else doc.student }}</td>
+      <td class="lbl">Student Name:</td>
+      <td class="val">{{ student_full }}</td>
+    </tr>
+    <tr>
+      <td class="lbl">Invoice Number:</td>
+      <td class="val"><span class="nls-boxed">{{ doc.name }}</span></td>
+      <td class="lbl">Invoice Date:</td>
+      <td class="val">{{ frappe.utils.formatdate(doc.invoice_date, "dd-MM-yyyy") if doc.invoice_date else "—" }}</td>
+    </tr>
+  </table>
 
-  {# ── Fee Components ── #}
-  <div class="fi-section-title">Fee Breakdown</div>
-  <table class="fi-table">
+  <hr class="nls-divider">
+
+  <table class="nls-meta">
+    <tr>
+      <td class="lbl">Academic Year:</td>
+      <td class="val">{{ doc.academic_year or "—" }}</td>
+      <td class="lbl">Academic Term:</td>
+      <td class="val">{{ doc.academic_term or "—" }}</td>
+    </tr>
+    <tr>
+      <td class="lbl">Programme:</td>
+      <td class="val">{{ doc.program or "—" }}</td>
+      <td class="lbl">Due Date:</td>
+      <td class="val">{{ frappe.utils.formatdate(doc.due_date, "dd-MM-yyyy") if doc.due_date else "—" }}</td>
+    </tr>
+  </table>
+
+  <table class="nls-table">
     <thead>
       <tr>
-        <th>#</th>
-        <th>Component</th>
-        <th>Type</th>
-        <th class="right">Amount (₹)</th>
-        <th class="right">Tax (%)</th>
-        <th class="right">Total (₹)</th>
+        <th style="width:9%">Sl No.</th>
+        <th>Particulars</th>
+        <th class="r" style="width:17%">Amount</th>
+        <th class="r" style="width:10%">Tax</th>
+        <th style="width:19%">Total</th>
       </tr>
     </thead>
     <tbody>
       {% for comp in doc.fee_components %}
       <tr>
         <td>{{ loop.index }}</td>
-        <td>{{ comp.component_name or comp.component or "—" }}</td>
-        <td>{{ comp.component_type or "—" }}</td>
-        <td class="right">{{ frappe.utils.fmt_money(comp.amount or 0, currency="INR") }}</td>
-        <td class="right">{{ comp.tax_rate or 0 }}%</td>
-        <td class="right">{{ frappe.utils.fmt_money(comp.total_amount or comp.amount or 0, currency="INR") }}</td>
+        <td>{{ comp.component_name or comp.fee_component or "—" }}</td>
+        <td class="r">INR {{ "{:,.2f}".format(frappe.utils.flt(comp.amount or 0)) }}</td>
+        <td class="r">{{ (comp.tax_rate or 0) | int }}%</td>
+        <td>INR {{ "{:,.2f}".format(frappe.utils.flt(comp.total_amount or comp.amount or 0)) }}</td>
       </tr>
       {% else %}
-      <tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:16px;">No fee components.</td></tr>
+      <tr><td colspan="5" style="text-align:center;">No fee components.</td></tr>
       {% endfor %}
     </tbody>
     <tfoot>
-      <tr class="subtotal">
-        <td colspan="5" class="right">Gross Total</td>
-        <td class="right">{{ frappe.utils.fmt_money(doc.total_amount or 0, currency="INR") }}</td>
-      </tr>
       {% if doc.scholarship_amount and doc.scholarship_amount > 0 %}
-      <tr class="discount">
-        <td colspan="5" class="right">Scholarship Discount</td>
-        <td class="right">− {{ frappe.utils.fmt_money(doc.scholarship_amount, currency="INR") }}</td>
+      <tr>
+        <td colspan="4">Gross Total</td>
+        <td>INR {{ "{:,.2f}".format(frappe.utils.flt(doc.total_amount or 0)) }}</td>
+      </tr>
+      <tr class="muted-row">
+        <td colspan="4">Scholarship / Discount</td>
+        <td>− INR {{ "{:,.2f}".format(frappe.utils.flt(doc.scholarship_amount)) }}</td>
       </tr>
       {% endif %}
-      <tr class="net-payable">
-        <td colspan="5" class="right">Net Payable</td>
-        <td class="right">{{ frappe.utils.fmt_money(doc.final_payable_amount or doc.total_amount or 0, currency="INR") }}</td>
+      <tr>
+        <td colspan="4">Net Payable</td>
+        <td>INR {{ "{:,.2f}".format(net_payable) }}</td>
       </tr>
     </tfoot>
   </table>
 
-  {# ── Summary ── #}
-  <div class="fi-summary">
-    <div class="fi-summary-box">
-      <div class="fi-sum-row">
-        <span class="label">Gross Total</span>
-        <span class="value">{{ frappe.utils.fmt_money(doc.total_amount or 0, currency="INR") }}</span>
-      </div>
-      {% if doc.scholarship_amount and doc.scholarship_amount > 0 %}
-      <div class="fi-sum-row discount">
-        <span class="label">Scholarship Discount</span>
-        <span class="value">− {{ frappe.utils.fmt_money(doc.scholarship_amount, currency="INR") }}</span>
-      </div>
-      {% endif %}
-      <div class="fi-sum-row">
-        <span class="label">Net Payable</span>
-        <span class="value">{{ frappe.utils.fmt_money(doc.final_payable_amount or doc.total_amount or 0, currency="INR") }}</span>
-      </div>
-      <div class="fi-sum-row">
-        <span class="label">Amount Paid</span>
-        <span class="value">{{ frappe.utils.fmt_money(doc.paid_amount or 0, currency="INR") }}</span>
-      </div>
-      {% set outstanding = [frappe.utils.flt(doc.outstanding_amount), 0] | max %}
-      {% if outstanding > 0 %}
-      <div class="fi-sum-row outstanding">
-        <span class="label">Outstanding</span>
-        <span class="value">{{ frappe.utils.fmt_money(outstanding, currency="INR") }}</span>
-      </div>
-      {% endif %}
-      <div class="fi-sum-row total-row">
-        <span class="label">Status</span>
-        <span class="value">{{ doc.status or "—" }}</span>
-      </div>
-    </div>
+  <div class="nls-words">
+    {{ frappe.utils.money_in_words(net_payable, "INR") | replace("INR ", "Rupees ") }}
   </div>
 
-  {# ── Payment History ── #}
-  <div class="fi-section-title">Payment History</div>
+  <hr class="nls-divider">
+
+  <table class="nls-meta">
+    <tr>
+      <td class="lbl">Amount Paid:</td>
+      <td class="val">INR {{ "{:,.2f}".format(frappe.utils.flt(doc.paid_amount or 0)) }}</td>
+      <td class="lbl">Outstanding:</td>
+      <td class="val">INR {{ "{:,.2f}".format(outstanding) }}</td>
+    </tr>
+    <tr>
+      <td class="lbl">Status:</td>
+      <td class="val">{{ doc.status or "—" }}</td>
+      <td class="lbl"></td>
+      <td class="val"></td>
+    </tr>
+  </table>
+
   {% if doc.payments %}
-  <table class="fi-payments-table">
+  <div class="nls-section">Payment History</div>
+  <table class="nls-table" style="margin-top:4px;">
     <thead>
       <tr>
-        <th>#</th>
+        <th style="width:9%">Sl No.</th>
         <th>Payment Reference</th>
-        <th>Date</th>
-        <th>Mode</th>
-        <th class="right">Amount (₹)</th>
+        <th style="width:18%">Date</th>
+        <th style="width:18%">Mode</th>
+        <th style="width:19%">Amount</th>
       </tr>
     </thead>
     <tbody>
@@ -394,29 +126,18 @@
       <tr>
         <td>{{ loop.index }}</td>
         <td>{{ p.payment or "—" }}</td>
-        <td>{{ frappe.format(p.payment_date, {"fieldtype": "Date"}) if p.payment_date else "—" }}</td>
+        <td>{{ frappe.utils.formatdate(p.payment_date, "dd-MM-yyyy") if p.payment_date else "—" }}</td>
         <td>{{ p.payment_mode or "—" }}</td>
-        <td class="right">{{ frappe.utils.fmt_money(p.amount or 0, currency="INR") }}</td>
+        <td>INR {{ "{:,.2f}".format(frappe.utils.flt(p.amount or 0)) }}</td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
-  {% else %}
-  <div class="fi-no-data">No payments recorded yet.</div>
   {% endif %}
 
-  {# ── Footer ── #}
-  <div class="fi-footer">
-    <div class="fi-footer-note">
-      This is a computer-generated invoice and does not require a physical signature.<br>
-      For queries, contact the Finance Office.
-    </div>
-    <div class="fi-footer-generated">
-      Generated on {{ frappe.utils.now_datetime().strftime("%d %b %Y, %I:%M %p") }}<br>
-      {{ org_name }}
-    </div>
+  <div class="nls-note">
+    This is a computer generated invoice, hence it does not require signature/seal.
   </div>
 
 </div>
-</body>
-</html>
+</div>

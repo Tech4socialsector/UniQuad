@@ -28,7 +28,7 @@
  "x_field": "center_name",
  "y_axis": [
   {
-   "color": "#29CD42",
+   "color": "#2490EF",
    "y_field": "allocated_count"
   }
  ]

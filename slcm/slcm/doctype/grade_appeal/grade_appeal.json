@@ -75,7 +75,8 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Submitted\nUnder Review\nResolved\nRejected"
+   "options": "Submitted\nUnder Review\nResolved\nRejected",
+   "in_standard_filter": 1
   },
   {
    "fieldname": "submitted_on",
@@ -91,12 +92,14 @@
   {
    "fieldname": "current_grade",
    "fieldtype": "Data",
-   "label": "Current Grade"
+   "label": "Current Grade",
+   "description": "Filled automatically from the student's marks if left blank."
   },
   {
    "fieldname": "current_marks",
    "fieldtype": "Float",
-   "label": "Current Marks"
+   "label": "Current Marks",
+   "description": "Filled automatically from the student's marks if left blank."
   },
   {
    "fieldname": "reason",
@@ -112,13 +115,15 @@
   {
    "fieldname": "section_resolution",
    "fieldtype": "Section Break",
-   "label": "Resolution"
+   "label": "Resolution",
+   "depends_on": "eval:!doc.__islocal"
   },
   {
    "fieldname": "resolution",
    "fieldtype": "Small Text",
    "label": "Resolution Details",
-   "read_only": 1
+   "mandatory_depends_on": "eval:['Resolved','Rejected'].includes(doc.status)",
+   "description": "Shown to the student in the portal. Required when the appeal is Resolved or Rejected."
   },
   {
    "fieldname": "resolved_by",
@@ -135,7 +140,7 @@
   }
  ],
  "links": [],
- "modified": "2026-04-20 00:00:00.000000",
+ "modified": "2026-09-28 11:44:17.860455",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Grade Appeal",
@@ -187,5 +192,6 @@
  "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
- "track_changes": 1
+ "track_changes": 1,
+ "search_fields": "student,course,exam_plan"
 }

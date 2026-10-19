@@ -57,12 +57,16 @@ def get_student_attendance_records(
 	# -------------------- FETCH STUDENTS --------------------
 
 	if based_on == "Office Hours":
-		student_list = frappe.get_all(
-			"Office Hours Group Student",
-			fields=["student", "student_name", "group_roll_number"],
-			filters={"parent": office_hours_group, "active": 1},
-			order_by="group_roll_number",
-		)
+		# Office Hours Group is a Student Group (group_based_on = Office Hours);
+		# its Student Group Student rows carry only the student link and
+		# registration ID, so the display name comes from Student Master.
+		student_list = frappe.db.sql("""
+			SELECT sgs.student, sm.first_name AS student_name, sgs.student_id AS group_roll_number
+			FROM `tabStudent Group Student` sgs
+			LEFT JOIN `tabStudent Master` sm ON sm.name = sgs.student
+			WHERE sgs.parent = %s AND sgs.parenttype = 'Student Group'
+			ORDER BY sgs.idx
+		""", (office_hours_group,), as_dict=True)
 	else:
 		course_offering = None
 		if based_on == "Course Schedule" and course_schedule:

@@ -3063,7 +3063,7 @@ DETAIL VIEW
 {% set _app = selected_app %}
 {% set _aname = (_app.get('candidate_name') or _app.get('applicant_name') if _app.get else (_app.candidate_name or
 _app.applicant_name)) or '' %}
-{% set _prog = (_app.get('program') or _app.get('program_name') or _app.get('programme') if _app.get else (_app.program or _app.program_name or _app.programme)) or 'Programme' %}
+{% set _prog = (_app.get('program_name') or _app.get('program') or _app.get('programme') if _app.get else (_app.program_name or _app.program or _app.programme)) or 'Programme' %}
 {% set _cycle = (_app.get('admission_cycle') if _app.get else _app.admission_cycle) or '' %}
 {% set _status = (_app.get('status') if _app.get else _app.status) or 'Draft' %}
 {% set _stage = (_app.get('current_stage_name') or _app.get('current_stage') if _app.get else (_app.current_stage_name
@@ -3128,8 +3128,8 @@ or _app.current_stage)) or _status %}
             <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end;">
               {% if cancellation_details %}
                 {% set _cstat = cancellation_details.status %}
-                {% set _bg = '#fee2e2' if _cstat == 'Initiated' else ('#ffedd5' if _cstat == 'Approved' else '#dcfce7') %}
-                {% set _clr = '#991b1b' if _cstat == 'Initiated' else ('#9a3412' if _cstat == 'Approved' else '#166534') %}
+                {% set _bg = '#fef3c7' if _cstat in ['Initiated', 'Under Review'] else ('#ffedd5' if _cstat in ['Approved', 'Processing'] else '#dcfce7') %}
+                {% set _clr = '#b45309' if _cstat in ['Initiated', 'Under Review'] else ('#9a3412' if _cstat in ['Approved', 'Processing'] else '#166534') %}
                 <div class="cancellation-status-badge" style="display:flex; align-items:center; gap:8px; background:{{ _bg }}; color:{{ _clr }}; padding:6px 14px; border-radius:30px; font-size:12px; font-weight:700; border:1px solid {{ _clr }}40;">
                   <span class="material-symbols-outlined" style="font-size:16px;">cancel_presentation</span>
                   Withdrawal: {{ _cstat }}
@@ -3417,12 +3417,12 @@ or _app.current_stage)) or _status %}
         {% set status_color = '#16a34a' %}
         {% set status_icon = 'check_circle' %}
         {% set display_status = 'Refund Processed' %}
-    {% elif r_status in ['Processing', 'Approved', 'Initiated'] %}
+    {% elif r_status in ['Processing', 'Approved', 'Initiated', 'Under Review'] %}
         {% set card_border = '#fef08a' %}
         {% set card_bg = 'linear-gradient(to bottom, #ffffff, #fefce8)' %}
         {% set status_color = '#ca8a04' %}
         {% set status_icon = 'hourglass_empty' %}
-        {% set display_status = 'Refund Processing' if r_status != 'Initiated' else 'Withdrawal Initiated' %}
+        {% set display_status = 'Refund Under Review' if r_status == 'Under Review' else ('Refund Processing' if r_status != 'Initiated' else 'Withdrawal Initiated') %}
     {% elif r_status in ['Error', 'Failed', 'Rejected'] %}
         {% set card_border = '#fecaca' %}
         {% set card_bg = 'linear-gradient(to bottom, #ffffff, #fff1f2)' %}
@@ -3549,7 +3549,6 @@ or _app.current_stage)) or _status %}
           </div>
         </div>
       </div>
-    </div>
     {% endif %}
 
     <!-- ╔══════════════════════════════════════════════╗

@@ -5,6 +5,22 @@ frappe.pages['re-exam'].on_page_load = function (wrapper) {
 		single_column: true,
 	});
 
+	// Shared brand theme (#920C24 + Merriweather) for all Examination Result tabs
+	$(wrapper).addClass('er-theme');
+	if (!document.getElementById('er-theme-font')) {
+		$('head').append(
+			'<link rel="preconnect" href="https://fonts.googleapis.com">' +
+			'<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
+			'<link id="er-theme-font" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Merriweather:opsz,wght@18..144,300..900&display=swap">'
+		);
+	}
+	frappe.require('/assets/slcm/css/exam_results_theme.css');
+	// On narrow screens the tab strip scrolls sideways — bring the active tab into view
+	setTimeout(function () {
+		var $nav = $(wrapper).find('.er2-page-nav'), $act = $nav.find('.er2-pnav-btn.active');
+		if ($nav.length && $act.length) $nav.scrollLeft($act.position().left + $nav.scrollLeft() - 12);
+	}, 0);
+
 	// ── CSS ───────────────────────────────────────────────────────────────────
 	if (!document.getElementById('rx-style')) {
 		var style = document.createElement('style');
@@ -23,8 +39,8 @@ frappe.pages['re-exam'].on_page_load = function (wrapper) {
 		                   color:#64748b; border-radius:7px; transition:all .2s; user-select:none;
 		                   letter-spacing:.1px; border:none; background:transparent;
 		                   display:inline-flex; align-items:center; gap:5px; }
-		.er2-pnav-btn:hover  { color:#4f46e5; background:rgba(79,70,229,.08); }
-		.er2-pnav-btn.active { background:#fff; color:#ef4444; box-shadow:0 1px 4px rgba(0,0,0,.12); }
+		.er2-pnav-btn:hover  { color:#920C24; background:rgba(146,12,36,.08); }
+		.er2-pnav-btn.active { background:#fff; color:#920C24; box-shadow:0 1px 4px rgba(0,0,0,.12); }
 
 		/* Filter card */
 		.rx-filter-card  { background:#fff; border-radius:12px; padding:14px 20px; margin-bottom:14px;
@@ -35,31 +51,31 @@ frappe.pages['re-exam'].on_page_load = function (wrapper) {
 		.rx-filter-arrow { display:flex; align-items:flex-end; padding-bottom:9px; color:#cbd5e1; font-size:16px; flex-shrink:0; }
 		.rx-active-badge { display:inline-block; border-radius:6px; font-size:10px; font-weight:700;
 		                   padding:2px 7px; margin-left:6px; letter-spacing:.3px; vertical-align:middle; }
-		.rx-active-badge.prog   { background:#fff0f0; color:#ef4444; }
-		.rx-active-badge.course { background:#fff0f0; color:#ef4444; }
+		.rx-active-badge.prog   { background:#FBEEF0; color:#920C24; }
+		.rx-active-badge.course { background:#FBEEF0; color:#920C24; }
 		.rx-flabel       { font-size:11px; color:#94a3b8; font-weight:700; margin-bottom:5px;
 		                   text-transform:uppercase; letter-spacing:.6px; }
 		.rx-select       { height:36px; border:1.5px solid #e2e8f0; border-radius:8px;
 		                   padding:0 12px; font-size:13px; background:#fff; color:#1e293b;
 		                   outline:none; cursor:pointer; transition:border-color .2s; }
-		.rx-select:focus { border-color:#ef4444; box-shadow:0 0 0 3px rgba(239,68,68,.1); }
+		.rx-select:focus { border-color:#920C24; box-shadow:0 0 0 3px rgba(146,12,36,.1); }
 
 		/* Stat cards */
 		.rx-stat-cards   { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
 		.rx-stat-card    { background:#fff; border-radius:12px; padding:14px 18px; flex:1;
 		                   min-width:150px; box-shadow:0 1px 3px rgba(0,0,0,.06);
-		                   border-top:3px solid var(--sc-color,#ef4444);
+		                   border-top:3px solid var(--sc-color,#920C24);
 		                   display:flex; align-items:center; gap:12px; }
 		.rx-sc-icon      { width:38px; height:38px; border-radius:9px; flex-shrink:0;
 		                   display:flex; align-items:center; justify-content:center;
-		                   background:var(--sc-bg,#fff0f0); color:var(--sc-color,#ef4444); }
-		.rx-sc-val       { font-size:22px; font-weight:800; color:var(--sc-color,#ef4444); line-height:1.1; }
+		                   background:var(--sc-bg,#FBEEF0); color:var(--sc-color,#920C24); }
+		.rx-sc-val       { font-size:22px; font-weight:800; color:var(--sc-color,#920C24); line-height:1.1; }
 		.rx-sc-lbl       { font-size:10px; color:#94a3b8; font-weight:700; text-transform:uppercase;
 		                   letter-spacing:.6px; margin-top:2px; }
 
 		/* Settings card */
 		.rx-settings-card { background:#fff; border-radius:12px; padding:18px 22px; margin-bottom:14px;
-		                    box-shadow:0 1px 3px rgba(0,0,0,.06); border-left:4px solid #ef4444; }
+		                    box-shadow:0 1px 3px rgba(0,0,0,.06); border-left:4px solid #920C24; }
 		.rx-settings-title { font-size:13px; font-weight:800; color:#0f172a; margin-bottom:14px;
 		                     display:flex; align-items:center; gap:8px; }
 		.rx-settings-grid  { display:flex; gap:14px; flex-wrap:wrap; align-items:flex-end; }
@@ -69,21 +85,21 @@ frappe.pages['re-exam'].on_page_load = function (wrapper) {
 		.rx-input          { height:36px; border:1.5px solid #e2e8f0; border-radius:8px;
 		                     padding:0 12px; font-size:13px; background:#fff; color:#1e293b;
 		                     outline:none; transition:border-color .2s; width:100%; box-sizing:border-box; }
-		.rx-input:focus    { border-color:#ef4444; box-shadow:0 0 0 3px rgba(239,68,68,.1); }
+		.rx-input:focus    { border-color:#920C24; box-shadow:0 0 0 3px rgba(146,12,36,.1); }
 		.rx-save-btn       { height:36px; padding:0 20px; border-radius:8px; border:none;
-		                     background:linear-gradient(135deg,#ef4444,#f87171);
+		                     background:#920C24;
 		                     color:#fff; font-size:13px; font-weight:700; cursor:pointer;
 		                     display:inline-flex; align-items:center; gap:6px; transition:opacity .15s;
 		                     white-space:nowrap; }
 		.rx-save-btn:hover { opacity:.88; }
 		.rx-save-btn:disabled { opacity:.5; cursor:default; }
 		.rx-saved-badge    { display:inline-flex; align-items:center; gap:4px; font-size:11px;
-		                     font-weight:700; color:#10b981; margin-left:10px;
-		                     background:#d1fae5; border-radius:6px; padding:3px 9px; }
+		                     font-weight:700; color:#920C24; margin-left:10px;
+		                     background:#F5D9DE; border-radius:6px; padding:3px 9px; }
 
 		/* Students table card */
 		.rx-table-card    { background:#fff; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,.06);
-		                    overflow:hidden; border-top:3px solid #ef4444; }
+		                    overflow:hidden; border-top:3px solid #920C24; }
 		.rx-table-topbar  { display:flex; align-items:center; justify-content:space-between;
 		                    padding:12px 16px 10px; border-bottom:1.5px solid #f1f5f9; }
 		.rx-count-lbl     { font-size:13px; font-weight:700; color:#0f172a; }
@@ -91,7 +107,7 @@ frappe.pages['re-exam'].on_page_load = function (wrapper) {
 		.rx-srch input    { width:260px; height:34px; border:1.5px solid #e2e8f0; border-radius:8px;
 		                    padding:0 12px 0 34px; font-size:13px; outline:none; color:#1e293b;
 		                    background:#fff; transition:border-color .2s; box-sizing:border-box; }
-		.rx-srch input:focus { border-color:#ef4444; box-shadow:0 0 0 3px rgba(239,68,68,.1); }
+		.rx-srch input:focus { border-color:#920C24; box-shadow:0 0 0 3px rgba(146,12,36,.1); }
 		.rx-srch-ico      { position:absolute; left:10px; top:10px; color:#94a3b8; }
 
 		/* Custom table */
@@ -104,10 +120,10 @@ frappe.pages['re-exam'].on_page_load = function (wrapper) {
 		.rx-tbl th.rx-th-center { text-align:center; }
 		.rx-tbl td        { padding:0 14px; border-bottom:1.5px solid #f1f5f9; vertical-align:middle; }
 		.rx-tbl tbody tr  { height:64px; transition:background .12s; }
-		.rx-tbl tbody tr:hover td { background:#fafbff; }
+		.rx-tbl tbody tr:hover td { background:#FDF8F9; }
 		.rx-tbl tbody tr:last-child td { border-bottom:none; }
 		.rx-tbl .rx-td-num { width:42px; text-align:center; font-size:11px; font-weight:700; color:#cbd5e1;
-		                     background:#fafbff; border-right:1.5px solid #f1f5f9; }
+		                     background:#FDF8F9; border-right:1.5px solid #f1f5f9; }
 		.rx-tbl .rx-td-center { text-align:center; }
 
 		/* Student cell */
@@ -120,8 +136,8 @@ frappe.pages['re-exam'].on_page_load = function (wrapper) {
 		.rx-semail        { font-size:11px; color:#94a3b8; margin-top:1px; }
 		.rx-grade-badge   { display:inline-flex; align-items:center; justify-content:center;
 		                    min-width:34px; height:26px; border-radius:7px; font-size:12px;
-		                    font-weight:800; background:#fff0f0; color:#ef4444;
-		                    border:1.5px solid #fecaca; padding:0 8px; }
+		                    font-weight:800; background:#FBEEF0; color:#920C24;
+		                    border:1.5px solid #E8B4BE; padding:0 8px; }
 
 		/* Toggle switch */
 		.rx-toggle        { position:relative; display:inline-flex; align-items:center; gap:8px;
@@ -133,14 +149,14 @@ frappe.pages['re-exam'].on_page_load = function (wrapper) {
 		.rx-toggle-track:before { content:''; position:absolute; width:16px; height:16px;
 		                          left:2px; top:2px; background:#fff; border-radius:50%;
 		                          transition:transform .22s; box-shadow:0 1px 4px rgba(0,0,0,.2); }
-		.rx-toggle input:checked + .rx-toggle-track           { background:#10b981; border-color:#10b981; }
+		.rx-toggle input:checked + .rx-toggle-track           { background:#920C24; border-color:#920C24; }
 		.rx-toggle input:checked + .rx-toggle-track:before    { transform:translateX(20px); }
 		.rx-toggle input:disabled + .rx-toggle-track          { opacity:.5; cursor:not-allowed; }
 		.rx-toggle-lbl    { font-size:12px; font-weight:700; min-width:52px; color:#94a3b8;
 		                    transition:color .2s; }
-		.rx-toggle input:checked ~ .rx-toggle-lbl             { color:#10b981; }
+		.rx-toggle input:checked ~ .rx-toggle-lbl             { color:#920C24; }
 		.rx-toggle:hover .rx-toggle-track                     { border-color:#94a3b8; }
-		.rx-toggle input:checked:hover ~ .rx-toggle-lbl       { color:#059669; }
+		.rx-toggle input:checked:hover ~ .rx-toggle-lbl       { color:#920C24; }
 
 		/* Empty / Loading */
 		.rx-empty         { padding:80px 20px; display:flex; flex-direction:column;
@@ -151,36 +167,36 @@ frappe.pages['re-exam'].on_page_load = function (wrapper) {
 		.rx-empty-sub     { font-size:12px; color:#cbd5e1; margin-top:4px; }
 
 		/* Avatar gradients */
-		.av-0{background:linear-gradient(135deg,#4f46e5,#818cf8);}
-		.av-1{background:linear-gradient(135deg,#0ea5e9,#38bdf8);}
-		.av-2{background:linear-gradient(135deg,#10b981,#34d399);}
-		.av-3{background:linear-gradient(135deg,#f59e0b,#fbbf24);}
-		.av-4{background:linear-gradient(135deg,#ef4444,#f87171);}
-		.av-5{background:linear-gradient(135deg,#8b5cf6,#a78bfa);}
-		.av-6{background:linear-gradient(135deg,#ec4899,#f472b6);}
-		.av-7{background:linear-gradient(135deg,#14b8a6,#2dd4bf);}
+		.av-0{background:#920C24;}
+		.av-1{background:#920C24;}
+		.av-2{background:#920C24;}
+		.av-3{background:#920C24;}
+		.av-4{background:#920C24;}
+		.av-5{background:#920C24;}
+		.av-6{background:#920C24;}
+		.av-7{background:#920C24;}
 
 		/* ── Registered stat card CTA highlight ── */
-		.rx-stat-card-cta { box-shadow:0 0 0 2px #f59e0b, 0 4px 16px rgba(245,158,11,.20) !important;
+		.rx-stat-card-cta { box-shadow:0 0 0 2px #920C24, 0 4px 16px rgba(146,12,36,.20) !important;
 		                    transition:transform .15s, box-shadow .15s; }
 		.rx-stat-card-cta:hover { transform:translateY(-2px);
-		                          box-shadow:0 0 0 2px #f59e0b, 0 8px 24px rgba(245,158,11,.28) !important; }
-		.rx-cta-hint   { font-size:10px; font-weight:700; color:#f59e0b; margin-top:4px;
+		                          box-shadow:0 0 0 2px #920C24, 0 8px 24px rgba(146,12,36,.28) !important; }
+		.rx-cta-hint   { font-size:10px; font-weight:700; color:#920C24; margin-top:4px;
 		                 letter-spacing:.4px; display:flex; align-items:center; gap:3px; }
-		@keyframes rx-ring { 0%,100%{box-shadow:0 0 0 2px #f59e0b,0 0 0 5px rgba(245,158,11,.0);}
-		                     50%{box-shadow:0 0 0 2px #f59e0b,0 0 0 7px rgba(245,158,11,.25);} }
+		@keyframes rx-ring { 0%,100%{box-shadow:0 0 0 2px #920C24,0 0 0 5px rgba(146,12,36,.0);}
+		                     50%{box-shadow:0 0 0 2px #920C24,0 0 0 7px rgba(146,12,36,.25);} }
 		.rx-stat-card-cta { animation:rx-ring 2s ease-in-out infinite; }
 
 		/* Status badges */
 		.rx-st-badge   { display:inline-flex; align-items:center; height:22px; border-radius:6px;
 		                 font-size:11px; font-weight:700; padding:0 9px; white-space:nowrap; }
-		.rx-st-reg     { background:#eff6ff; color:#2563eb; }
+		.rx-st-reg     { background:#FBEEF0; color:#920C24; }
 		.rx-st-paid    { background:#d1fae5; color:#059669; }
 		.rx-st-cancel  { background:#f1f5f9; color:#94a3b8; }
 
 		/* Mark paid button */
 		.rx-pay-btn    { height:28px; padding:0 12px; border-radius:6px; border:none;
-		                 background:linear-gradient(135deg,#10b981,#34d399);
+		                 background:#920C24;
 		                 color:#fff; font-size:11px; font-weight:700; cursor:pointer;
 		                 transition:opacity .15s; }
 		.rx-pay-btn:hover { opacity:.85; }
@@ -189,47 +205,47 @@ frappe.pages['re-exam'].on_page_load = function (wrapper) {
 		.rx-export-btn { height:34px; padding:0 14px; border-radius:8px; border:1.5px solid #e2e8f0;
 		                 background:#fff; color:#475569; font-size:12px; font-weight:700; cursor:pointer;
 		                 display:inline-flex; align-items:center; gap:5px; transition:all .15s; }
-		.rx-export-btn:hover { border-color:#8b5cf6; color:#8b5cf6; background:#f5f3ff; }
+		.rx-export-btn:hover { border-color:#920C24; color:#920C24; background:#FBEEF0; }
 
 		/* Apply to all courses button */
 		.rx-bulk-btn   { height:36px; padding:0 16px; border-radius:8px; border:1.5px solid #e2e8f0;
 		                 background:#fff; color:#475569; font-size:12px; font-weight:700; cursor:pointer;
 		                 display:inline-flex; align-items:center; gap:5px; transition:all .15s;
 		                 white-space:nowrap; }
-		.rx-bulk-btn:hover   { border-color:#ef4444; color:#ef4444; background:#fff0f0; }
+		.rx-bulk-btn:hover   { border-color:#920C24; color:#920C24; background:#FBEEF0; }
 		.rx-bulk-btn:disabled { opacity:.5; cursor:default; }
 
 		/* Override reason pill */
 		.rx-reason-pill { display:inline-block; border-radius:5px; font-size:10px; font-weight:700;
-		                  padding:2px 6px; background:#fef3c7; color:#92400e; margin-top:3px;
+		                  padding:2px 6px; background:#F5D9DE; color:#6E091B; margin-top:3px;
 		                  cursor:help; max-width:130px; overflow:hidden; text-overflow:ellipsis;
 		                  white-space:nowrap; vertical-align:middle; }
 
 		/* Source selection card */
 		.rx-source-card      { background:#fff; border-radius:12px; padding:18px 22px; margin-bottom:14px;
-		                       box-shadow:0 1px 3px rgba(0,0,0,.06); border-left:4px solid #3b82f6; }
+		                       box-shadow:0 1px 3px rgba(0,0,0,.06); border-left:4px solid #920C24; }
 		.rx-source-title     { font-size:13px; font-weight:800; color:#0f172a; margin-bottom:14px;
 		                       display:flex; align-items:center; gap:8px; }
 		.rx-source-opts      { display:flex; gap:12px; flex-wrap:wrap; }
 		.rx-source-opt       { flex:1; min-width:200px; cursor:pointer; border:2px solid #e2e8f0;
 		                       border-radius:10px; padding:14px; transition:all .18s; background:#fff;
 		                       user-select:none; }
-		.rx-source-opt-active { border-color:#3b82f6; background:#eff6ff; }
+		.rx-source-opt-active { border-color:#920C24; background:#FBEEF0; }
 		.rx-source-opt-inner  { display:flex; align-items:center; gap:12px; pointer-events:none; }
 		.rx-source-opt-icon   { width:38px; height:38px; border-radius:9px; flex-shrink:0;
 		                        display:flex; align-items:center; justify-content:center; }
 		.rx-source-opt-title  { font-size:13px; font-weight:700; color:#0f172a; }
 		.rx-source-opt-sub    { font-size:11px; color:#94a3b8; margin-top:2px; }
-		.rx-dl-tpl-btn        { height:34px; padding:0 14px; border-radius:8px; border:1.5px solid #10b981;
-		                        background:#fff; color:#10b981; font-size:12px; font-weight:700; cursor:pointer;
+		.rx-dl-tpl-btn        { height:34px; padding:0 14px; border-radius:8px; border:1.5px solid #920C24;
+		                        background:#fff; color:#920C24; font-size:12px; font-weight:700; cursor:pointer;
 		                        display:inline-flex; align-items:center; gap:6px; transition:all .15s; }
-		.rx-dl-tpl-btn:hover  { background:#d1fae5; border-color:#059669; color:#059669; }
+		.rx-dl-tpl-btn:hover  { background:#F5D9DE; border-color:#920C24; color:#920C24; }
 		.rx-drop-zone         { border:2px dashed #e2e8f0; border-radius:10px; padding:28px 20px;
-		                        text-align:center; cursor:pointer; transition:all .18s; background:#fafbff;
+		                        text-align:center; cursor:pointer; transition:all .18s; background:#FDF8F9;
 		                        display:flex; flex-direction:column; align-items:center; gap:6px; }
-		.rx-drop-zone:hover, .rx-drop-zone.rx-drag-over { border-color:#3b82f6; background:#eff6ff; }
+		.rx-drop-zone:hover, .rx-drop-zone.rx-drag-over { border-color:#920C24; background:#FBEEF0; }
 		.rx-dz-title          { font-size:13px; font-weight:600; color:#475569; }
-		.rx-dz-link           { color:#3b82f6; cursor:pointer; text-decoration:underline; }
+		.rx-dz-link           { color:#920C24; cursor:pointer; text-decoration:underline; }
 		.rx-dz-sub            { font-size:11px; color:#94a3b8; }
 		`;
 		document.head.appendChild(style);
@@ -254,7 +270,7 @@ frappe.pages['re-exam'].on_page_load = function (wrapper) {
 		<div class="er2-wrap" style="padding:20px 24px;">
 
 			<div class="er2-page-header">
-				<div class="er2-page-icon" style="background:linear-gradient(135deg,#ef4444,#f87171);">
+				<div class="er2-page-icon" style="background:#920C24;">
 					<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></svg>
 				</div>
 				<div>
@@ -331,7 +347,7 @@ frappe.pages['re-exam'].on_page_load = function (wrapper) {
 				<!-- Settings card -->
 				<div class="rx-settings-card" id="rx-settings-card" style="display:none;">
 					<div class="rx-settings-title">
-						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#920C24" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
 						Re-Exam Settings
 						<span id="rx-saved-badge" class="rx-saved-badge" style="display:none;">
 							<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
@@ -367,14 +383,14 @@ frappe.pages['re-exam'].on_page_load = function (wrapper) {
 				<!-- Source selection card -->
 				<div class="rx-source-card" id="rx-source-card" style="display:none;">
 					<div class="rx-source-title">
-						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#920C24" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
 						Failed Student List Source
 					</div>
 					<div class="rx-source-opts">
 						<label class="rx-source-opt rx-source-opt-active" id="rx-src-tool-lbl" onclick="rxSetSource('tool')">
 							<input type="radio" name="rx-src" value="tool" id="rx-src-tool" checked style="display:none;">
 							<div class="rx-source-opt-inner">
-								<div class="rx-source-opt-icon" style="background:#eff6ff;color:#2563eb;">
+								<div class="rx-source-opt-icon" style="background:#FBEEF0;color:#920C24;">
 									<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></svg>
 								</div>
 								<div>
@@ -386,7 +402,7 @@ frappe.pages['re-exam'].on_page_load = function (wrapper) {
 						<label class="rx-source-opt" id="rx-src-manual-lbl" onclick="rxSetSource('manual')">
 							<input type="radio" name="rx-src" value="manual" id="rx-src-manual" style="display:none;">
 							<div class="rx-source-opt-inner">
-								<div class="rx-source-opt-icon" style="background:#f0fdf4;color:#16a34a;">
+								<div class="rx-source-opt-icon" style="background:#FBEEF0;color:#920C24;">
 									<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
 								</div>
 								<div>
@@ -412,7 +428,7 @@ frappe.pages['re-exam'].on_page_load = function (wrapper) {
 							<div class="rx-dz-sub">Accepted: .csv &mdash; use the sample template above</div>
 						</div>
 						<div id="rx-upload-status" style="display:none;margin-top:10px;align-items:center;gap:10px;">
-							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" style="flex-shrink:0;"><polyline points="20 6 9 17 4 12"/></svg>
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#920C24" stroke-width="2.5" style="flex-shrink:0;"><polyline points="20 6 9 17 4 12"/></svg>
 							<span id="rx-upload-filename" style="font-size:13px;font-weight:600;color:#1e293b;"></span>
 							<button id="rx-upload-clear" style="height:24px;width:24px;border-radius:6px;border:1.5px solid #e2e8f0;background:#fff;color:#94a3b8;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-weight:700;" title="Clear uploaded file">&times;</button>
 						</div>
@@ -420,8 +436,8 @@ frappe.pages['re-exam'].on_page_load = function (wrapper) {
 				</div>
 
 				<!-- Warning banner -->
-				<div id="rx-warning-banner" style="display:none;background:#fef3c7;border:1.5px solid #fde68a;border-radius:10px;padding:10px 16px;margin-bottom:12px;align-items:center;gap:10px;font-size:12.5px;color:#92400e;">
-					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2.5" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+				<div id="rx-warning-banner" style="display:none;background:#F5D9DE;border:1.5px solid #E8B4BE;border-radius:10px;padding:10px 16px;margin-bottom:12px;align-items:center;gap:10px;font-size:12.5px;color:#6E091B;">
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#920C24" stroke-width="2.5" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
 					<span><b>No failed grades defined in grading schema.</b> Showing all graded students. Open the <b>Grading Schema</b> and check the <b>Failed</b> checkbox on failing grades (e.g. F) to filter correctly.</span>
 				</div>
 
@@ -734,13 +750,13 @@ frappe.pages['re-exam'].on_page_load = function (wrapper) {
 				if (!r.message) return;
 				var d = r.message;
 				var cards = [
-					{ label: 'Total Students', value: d.total      || 0, color: '#8b5cf6', bg: '#f5f3ff',
+					{ label: 'Total Students', value: d.total      || 0, color: '#920C24', bg: '#FBEEF0',
 					  icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' },
-					{ label: 'Failed',         value: d.failed     || 0, color: '#ef4444', bg: '#fff0f0',
+					{ label: 'Failed',         value: d.failed     || 0, color: '#920C24', bg: '#FBEEF0',
 					  icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>' },
-					{ label: 'Passed',         value: d.passed     || 0, color: '#10b981', bg: '#d1fae5',
+					{ label: 'Passed',         value: d.passed     || 0, color: '#920C24', bg: '#F5D9DE',
 					  icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg>' },
-					{ label: 'Registered',     value: d.registered || 0, color: '#f59e0b', bg: '#fffbeb',
+					{ label: 'Registered',     value: d.registered || 0, color: '#920C24', bg: '#FBEEF0',
 					  clickable: true,
 					  icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>' },
 				];
@@ -1055,11 +1071,11 @@ frappe.pages['re-exam'].on_page_load = function (wrapper) {
 						: frappe.utils.escape_html(c.course);
 					var isCurrentCourse = (c.course === S.course);
 					return '<label style="display:flex;align-items:center;gap:10px;padding:7px 4px;cursor:pointer;border-bottom:1px solid #f1f5f9;' +
-						(isCurrentCourse ? 'background:#fffbeb;border-radius:6px;' : '') + '">' +
+						(isCurrentCourse ? 'background:#FBEEF0;border-radius:6px;' : '') + '">' +
 						'<input type="checkbox" class="rx-bc-cb" value="' + frappe.utils.escape_html(c.course) + '" checked ' +
-						'style="width:15px;height:15px;cursor:pointer;accent-color:#ef4444;">' +
+						'style="width:15px;height:15px;cursor:pointer;accent-color:#920C24;">' +
 						'<span style="font-size:13px;color:#1e293b;line-height:1.4;">' + lbl +
-						(isCurrentCourse ? ' <span style="font-size:10px;background:#fef3c7;color:#92400e;border-radius:4px;padding:1px 5px;font-weight:700;margin-left:4px;">Current</span>' : '') +
+						(isCurrentCourse ? ' <span style="font-size:10px;background:#F5D9DE;color:#6E091B;border-radius:4px;padding:1px 5px;font-weight:700;margin-left:4px;">Current</span>' : '') +
 						'</span></label>';
 				}).join('');
 
@@ -1085,7 +1101,7 @@ frappe.pages['re-exam'].on_page_load = function (wrapper) {
 								'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">' +
 									'<span style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;">Select Courses (' + courses.length + ' total)</span>' +
 									'<div style="display:flex;gap:12px;">' +
-										'<button type="button" onclick="rxBulkSelectAll(true)" style="font-size:11px;color:#8b5cf6;background:none;border:none;cursor:pointer;font-weight:700;padding:0;">Select All</button>' +
+										'<button type="button" onclick="rxBulkSelectAll(true)" style="font-size:11px;color:#920C24;background:none;border:none;cursor:pointer;font-weight:700;padding:0;">Select All</button>' +
 										'<button type="button" onclick="rxBulkSelectAll(false)" style="font-size:11px;color:#94a3b8;background:none;border:none;cursor:pointer;font-weight:700;padding:0;">Deselect All</button>' +
 									'</div>' +
 								'</div>' +
@@ -1210,7 +1226,7 @@ frappe.pages['re-exam'].on_page_load = function (wrapper) {
 				: '<span style="display:flex;align-items:center;gap:6px;">' +
 				  '<span style="font-size:11px;color:#10b981;font-weight:700;">✓ Paid</span>' +
 				  '<a href="' + receiptUrl + '" target="_blank" title="Download Receipt" ' +
-				  'style="font-size:11px;color:#0f766e;text-decoration:underline;font-weight:600;">Receipt</a>' +
+				  'style="font-size:11px;color:#920C24;text-decoration:underline;font-weight:600;">Receipt</a>' +
 				  '</span>';
 			var feeHtml  = reg.re_exam_fee
 				? '₹' + parseFloat(reg.re_exam_fee).toLocaleString('en-IN')
@@ -1221,7 +1237,7 @@ frappe.pages['re-exam'].on_page_load = function (wrapper) {
 				: '';
 
 			return '<tr>' +
-				'<td style="width:42px;text-align:center;font-size:11px;font-weight:700;color:#cbd5e1;background:#fafbff;border-right:1.5px solid #f1f5f9;border-bottom:1.5px solid #f1f5f9;height:58px;vertical-align:middle;">' + (i + 1) + '</td>' +
+				'<td style="width:42px;text-align:center;font-size:11px;font-weight:700;color:#cbd5e1;background:#FDF8F9;border-right:1.5px solid #f1f5f9;border-bottom:1.5px solid #f1f5f9;height:58px;vertical-align:middle;">' + (i + 1) + '</td>' +
 				'<td style="padding:0 14px;border-bottom:1.5px solid #f1f5f9;height:58px;vertical-align:middle;min-width:200px;">' +
 					'<div style="display:flex;align-items:center;gap:10px;">' + avatar +
 						'<div>' +

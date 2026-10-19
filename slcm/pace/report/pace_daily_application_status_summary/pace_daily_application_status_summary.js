@@ -64,35 +64,6 @@ frappe.query_reports["PACE Daily Application Status Summary"] = {
 		return value;
 	},
 	"onload": function(report) {
-		frappe.dom.set_style(`
-			/* PACE Daily Application Status Summary Bar Chart Colors (5 active stages) */
-			[data-widget-name*="PACE Daily Application Status Summary"] [data-point-index="0"].bar,
-			[data-widget-name*="PACE Daily Application Status Summary"] [data-point-index="0"] .bar,
-			.chart-container [data-point-index="0"].bar {
-				fill: #1a73e8 !important;
-			}
-			[data-widget-name*="PACE Daily Application Status Summary"] [data-point-index="1"].bar,
-			[data-widget-name*="PACE Daily Application Status Summary"] [data-point-index="1"] .bar,
-			.chart-container [data-point-index="1"].bar {
-				fill: #f39c12 !important;
-			}
-			[data-widget-name*="PACE Daily Application Status Summary"] [data-point-index="2"].bar,
-			[data-widget-name*="PACE Daily Application Status Summary"] [data-point-index="2"] .bar,
-			.chart-container [data-point-index="2"].bar {
-				fill: #3498db !important;
-			}
-			[data-widget-name*="PACE Daily Application Status Summary"] [data-point-index="3"].bar,
-			[data-widget-name*="PACE Daily Application Status Summary"] [data-point-index="3"] .bar,
-			.chart-container [data-point-index="3"].bar {
-				fill: #9b59b6 !important;
-			}
-			[data-widget-name*="PACE Daily Application Status Summary"] [data-point-index="4"].bar,
-			[data-widget-name*="PACE Daily Application Status Summary"] [data-point-index="4"] .bar,
-			.chart-container [data-point-index="4"].bar {
-				fill: #27ae60 !important;
-			}
-		`, 'pace_daily_status_chart_colors');
-
 		// Add prominent Export to Excel button
 		report.page.add_inner_button(__("Export to Excel"), function() {
 			let visible_idx = report.get_validated_visible_indexes() || [];

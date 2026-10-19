@@ -7,10 +7,12 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "academic_timeline_html",
   "section_student",
   "student",
   "student_name",
   "enrollment_date",
+  "term_start_date",
   "column_break_1",
   "batch",
   "program",
@@ -27,6 +29,11 @@
   "user"
  ],
  "fields": [
+  {
+   "fieldname": "academic_timeline_html",
+   "fieldtype": "HTML",
+   "label": "Academic Timeline"
+  },
   {
    "fieldname": "section_student",
    "fieldtype": "Section Break",
@@ -49,11 +56,20 @@
   },
   {
    "default": "Today",
+   "description": "The date this record was created/updated in the system.",
    "fieldname": "enrollment_date",
    "fieldtype": "Date",
    "in_list_view": 1,
    "label": "Enrollment Date",
    "reqd": 1
+  },
+  {
+   "description": "When the Batch's academic term actually begins — distinct from Enrollment Date, which is just when this record was created.",
+   "fetch_from": "batch.start_date",
+   "fieldname": "term_start_date",
+   "fieldtype": "Date",
+   "label": "Term Start Date",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_1",

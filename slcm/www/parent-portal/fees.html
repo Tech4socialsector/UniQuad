@@ -2,663 +2,571 @@
 {% block title %}Fees &amp; Payments{% endblock %}
 
 {% block extra_css %}
-/* ── NLSIU Brand Overrides ─────────────────────────────────────────── */
+/* ── Tokens (fees page) ─────────────────────────────────────────────── */
 :root {
-  --ppf-navy:      var(--pp-primary, #2b2e4a);
-  --ppf-gold:      var(--pp-secondary, #c8a14b);
-  --ppf-gold-bg:   rgba(200,161,75,0.12);
-  --ppf-gold-dark: #a07830;
-  --ppf-radius:    var(--pp-radius, 16px);
+  --ppf-maroon:  var(--pp-primary, #920c24);
+  --ppf-maroon-soft: rgba(146,12,36,0.06);
+  --ppf-green:   var(--pp-success, #008000);
+  --ppf-red:     var(--pp-danger, #920c24);
+  --ppf-amber:   #b45309;            /* darker than --pp-warning for AA text contrast */
+  --ppf-border:  #e5e7eb;
+  --ppf-row:     #f1f2f4;
+  --ppf-head:    #f9fafb;
+  --ppf-muted:   #64748b;
+  --ppf-radius:  12px;
 }
 
-/* ── Overview Card ─────────────────────────────────────────────────── */
-.ppf-overview {
-  background: linear-gradient(135deg, var(--ppf-navy) 0%, #3d4170 60%, #4a4f85 100%);
-  border-radius: var(--ppf-radius);
-  padding: 24px 24px 20px;
-  color: #fff;
-  margin-bottom: 20px;
-  box-shadow: 0 6px 28px rgba(43,46,74,0.30);
-  position: relative;
-  overflow: hidden;
-}
-.ppf-overview::before {
-  content: '';
-  position: absolute;
-  top: -40px; right: -40px;
-  width: 180px; height: 180px;
-  border-radius: 50%;
-  background: rgba(200,161,75,0.10);
-  pointer-events: none;
-}
-.ppf-overview::after {
-  content: '';
-  position: absolute;
-  bottom: -60px; left: 40%;
-  width: 240px; height: 240px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.04);
-  pointer-events: none;
-}
-.ppf-overview-eyebrow {
-  font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
-  text-transform: uppercase; color: rgba(255,255,255,0.6);
-  display: flex; align-items: center; gap: 6px; margin-bottom: 10px;
-  position: relative; z-index: 1;
-}
-.ppf-overview-topbar {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 10px; position: relative; z-index: 1;
-}
-.ppf-status-pill {
-  font-size: 11px; font-weight: 700; padding: 4px 12px;
-  border-radius: 20px; text-transform: uppercase; letter-spacing: 0.04em;
-  background: rgba(255,255,255,0.16); color: #fff;
-  border: 1px solid rgba(255,255,255,0.25);
-}
-.ppf-status-paid         { background: rgba(22,163,74,0.30);  border-color: rgba(22,163,74,0.45); }
-.ppf-status-partially-paid { background: rgba(217,119,6,0.30); border-color: rgba(217,119,6,0.45); }
-.ppf-status-overdue      { background: rgba(220,38,38,0.35);   border-color: rgba(220,38,38,0.45); }
-.ppf-status-unpaid       { background: rgba(220,38,38,0.25);   border-color: rgba(220,38,38,0.35); }
-.ppf-hero-lbl {
-  font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
-  text-transform: uppercase; color: rgba(255,255,255,0.55);
-  margin-bottom: 4px; margin-top: 12px; position: relative; z-index: 1;
-}
-.ppf-amount {
-  font-size: 36px; font-weight: 800; letter-spacing: -0.02em; line-height: 1;
-  margin-bottom: 4px; color: #fff; position: relative; z-index: 1;
-}
-.ppf-amount-label {
-  font-size: 12px; color: rgba(255,255,255,0.60); margin-bottom: 18px;
-  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-  position: relative; z-index: 1;
-}
-.ppf-validity-pill {
-  font-size: 10.5px; font-weight: 600; padding: 2px 9px; border-radius: 20px;
-  background: rgba(200,161,75,0.25); border: 1px solid rgba(200,161,75,0.40);
-  color: #fde68a; letter-spacing: 0.02em;
-}
+/* The fees page brings its own skeleton that mirrors the layout below */
+.pp-switch-skel:not(.ppf-skel) { display: none !important; }
 
-/* Stat row */
-.ppf-stat-row {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
-  position: relative; z-index: 1;
+/* ── Page header ────────────────────────────────────────────────────── */
+.ppf-head {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap; margin-bottom: 16px;
 }
-.ppf-stat-box {
-  background: rgba(255,255,255,0.10);
-  border: 1px solid rgba(255,255,255,0.16);
-  border-radius: 12px; padding: 12px 14px;
-  display: flex; align-items: center; gap: 10px;
+.ppf-head .pp-page-title { margin: 0 0 2px; font-size: 26px; }
+.ppf-ay { display: flex; flex-direction: column; gap: 4px; min-width: 160px; }
+.ppf-ay-label { font-size: 11px; font-weight: 700; color: var(--ppf-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.ppf-ay-select, .ppf-ay-static {
+  height: 38px; padding: 0 12px; border-radius: 8px;
+  border: 1px solid var(--ppf-border); background: var(--pp-card, #fff);
+  font: inherit; font-size: 13.5px; font-weight: 600; color: var(--pp-text-1);
+  display: flex; align-items: center;
 }
-.ppf-stat-icon {
-  width: 34px; height: 34px; border-radius: 9px;
-  background: rgba(200,161,75,0.20);
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-}
-.ppf-stat-label { font-size: 10.5px; color: rgba(255,255,255,0.60); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
-.ppf-stat-value { font-size: 17px; font-weight: 800; color: #fff; line-height: 1.2; }
-.ppf-stat-value-warn { color: #fde68a; }
+.ppf-ay-select { cursor: pointer; padding-right: 32px; appearance: none; -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%2364748b' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center; background-size: 16px; }
+.ppf-ay-select:focus-visible { outline: 2px solid var(--ppf-maroon); outline-offset: 2px; }
+.ppf-ay-hint { font-size: 12px; color: var(--ppf-muted); margin: -8px 0 14px; display: none; }
+.ppf-ay-hint.show { display: block; }
+@media (max-width: 560px) { .ppf-ay { width: 100%; } }
 
-/* Progress bar */
-.ppf-progress-wrap { margin-top: 18px; position: relative; z-index: 1; }
-.ppf-progress-labels { display: flex; justify-content: space-between; font-size: 11px; color: rgba(255,255,255,0.65); margin-bottom: 6px; }
-.ppf-progress-track { height: 8px; background: rgba(255,255,255,0.18); border-radius: 6px; overflow: hidden; }
-.ppf-progress-fill { height: 100%; border-radius: 6px; background: var(--ppf-gold); transition: width 0.7s ease; }
-.ppf-progress-fill-done { background: #86efac; }
-@media (max-width: 520px) {
-  .ppf-stat-row { grid-template-columns: 1fr 1fr; }
-  .ppf-amount { font-size: 28px; }
+/* ── Cards ──────────────────────────────────────────────────────────── */
+.ppf-card {
+  background: var(--pp-card, #fff); border: 1px solid var(--ppf-border);
+  border-radius: var(--ppf-radius); min-width: 0; display: flex; flex-direction: column;
 }
+.ppf-card-hd {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 14px 20px; min-height: 56px; border-bottom: 1px solid var(--ppf-border); flex-wrap: wrap;
+}
+.ppf-card-title {
+  display: flex; align-items: center; gap: 8px; margin: 0;
+  font-size: 15px; font-weight: 700; color: var(--pp-text-1); letter-spacing: -0.005em;
+}
+.ppf-card-title .ms { font-size: 19px; color: var(--ppf-maroon); }
+.ppf-card-sub { font-size: 12px; color: var(--ppf-muted); margin-top: 2px; font-weight: 500; }
+.ppf-card-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 12.5px; color: var(--ppf-muted); font-weight: 600; }
+.ppf-card-bd { padding: 16px 20px; }
+.ppf-card-ft { padding: 12px 20px; border-top: 1px solid var(--ppf-border); margin-top: auto; }
 
-/* ── Notice Bars ───────────────────────────────────────────────────── */
-.ppf-notice {
-  display: flex; align-items: flex-start; gap: 10px;
-  padding: 12px 16px; border-radius: 12px;
-  font-size: 13px; margin-bottom: 16px; border: 1px solid transparent;
-}
-.ppf-notice-info    { background: var(--pp-info-bg, #ebf8ff); color: var(--pp-info, #0369a1); border-color: rgba(3,105,161,0.2); }
-.ppf-notice-warning { background: var(--pp-warning-bg); color: var(--pp-warning); border-color: rgba(217,119,6,0.25); }
-.ppf-notice-success { background: #f0fdf4; color: #14532d; border-color: #86efac; }
+.ppf-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; margin-bottom: 16px; }
+@media (min-width: 1280px) { .ppf-row-detail { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1600px) { .ppf-row-tables { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
-/* ── Overdue Banner ────────────────────────────────────────────────── */
-.ppf-overdue-banner {
-  background: #fff1f2; border: 1px solid #fecdd3; border-radius: 12px;
-  display: flex; align-items: center; gap: 14px;
-  padding: 14px 16px; margin-bottom: 16px;
+/* ── Buttons / links ────────────────────────────────────────────────── */
+.ppf-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 34px; padding: 6px 14px; border-radius: 8px; cursor: pointer;
+  font: inherit; font-size: 13px; font-weight: 600; white-space: nowrap; text-decoration: none;
+  border: 1px solid var(--ppf-maroon); transition: background .15s, opacity .15s;
 }
-.ppf-overdue-banner-icon {
-  width: 40px; height: 40px; border-radius: 10px;
-  background: #fee2e2; color: #be123c;
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+.ppf-btn .ms { font-size: 16px; }
+.ppf-btn-primary { background: var(--ppf-maroon); color: #fff; }
+.ppf-btn-primary:hover:not(:disabled) { opacity: .9; }
+.ppf-btn-ghost { background: var(--pp-card, #fff); color: var(--ppf-maroon); }
+.ppf-btn-ghost:hover:not(:disabled) { background: var(--ppf-maroon-soft); }
+.ppf-btn-sm { min-height: 30px; padding: 4px 10px; font-size: 12.5px; }
+.ppf-btn:disabled { opacity: .55; cursor: not-allowed; }
+.ppf-link {
+  display: inline-flex; align-items: center; gap: 3px; background: none; border: none; padding: 2px 0;
+  font: inherit; font-size: 12.5px; font-weight: 700; color: var(--ppf-maroon); cursor: pointer; text-decoration: none;
 }
-.ppf-overdue-banner-body { flex: 1; }
-.ppf-overdue-banner-title { font-size: 13px; font-weight: 700; color: #be123c; }
-.ppf-overdue-banner-sub   { font-size: 12px; color: #9f1239; margin-top: 2px; }
-.ppf-overdue-banner-btn {
-  font-size: 12px; font-weight: 700; color: #be123c;
-  background: #fff; border: 1px solid #fca5a5;
-  border-radius: 8px; padding: 6px 14px;
-  text-decoration: none; white-space: nowrap; flex-shrink: 0;
+.ppf-link:hover { text-decoration: underline; }
+.ppf-link .ms { font-size: 16px; }
+.ppf-icon-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--ppf-border);
+  color: var(--ppf-muted); background: var(--pp-card, #fff); text-decoration: none;
 }
-
-/* ── Section Header ────────────────────────────────────────────────── */
-.ppf-section-hdr {
-  display: flex; align-items: center; justify-content: space-between;
-  margin: 20px 0 10px; padding: 0 2px;
-}
-.ppf-section-title {
-  display: flex; align-items: center; gap: 8px;
-  font-size: 15px; font-weight: 700; color: var(--pp-text-1);
-}
-.ppf-section-count {
-  font-size: 11px; font-weight: 700; padding: 3px 10px;
-  background: var(--pp-border-light); color: var(--pp-text-3);
-  border-radius: 20px; border: 1px solid var(--pp-border);
-}
-.ppf-section-count-red { background: #fff1f2; color: #be123c; border-color: #fecdd3; }
-
-/* ── Fee Structure Card ─────────────────────────────────────────────── */
-.ppf-fs-card {
-  background: var(--pp-card); border: 1px solid var(--pp-border);
-  border-radius: var(--ppf-radius); margin-bottom: 20px; overflow: hidden;
-}
-.ppf-fs-hdr {
-  display: flex; align-items: center; gap: 10px; padding: 14px 18px;
-  background: var(--ppf-gold-bg); border-bottom: 1px solid rgba(200,161,75,0.20);
-}
-.ppf-fs-title { font-size: 14px; font-weight: 700; color: var(--ppf-gold-dark); }
-.ppf-fs-sub   { font-size: 11.5px; color: var(--pp-text-4); margin-top: 1px; }
-.ppf-fs-body  { padding: 0 18px 14px; }
-.ppf-fs-table-hdr {
-  display: flex; justify-content: space-between;
-  font-size: 10.5px; font-weight: 700; color: var(--pp-text-4);
-  text-transform: uppercase; letter-spacing: 0.05em;
-  padding: 12px 0 8px; border-bottom: 1px solid var(--pp-border);
-}
-.ppf-fs-row {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 9px 0; border-bottom: 1px dashed var(--pp-border-light); font-size: 13px;
-}
-.ppf-fs-row:last-of-type { border-bottom: none; }
-.ppf-fs-comp-name { color: var(--pp-text-2); display: flex; align-items: center; gap: 6px; }
-.ppf-fs-comp-amt  { font-weight: 600; color: var(--pp-text-1); }
-.ppf-fs-tax-pill  {
-  font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 8px;
-  background: var(--pp-info-bg); color: var(--pp-info);
-}
-.ppf-fs-total-row {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 10px 0 6px; border-top: 2px solid var(--pp-border);
-  font-size: 13px; font-weight: 700; color: var(--pp-text-1); margin-top: 4px;
-}
-.ppf-fs-disc-row {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 6px 0; font-size: 13px; color: var(--pp-purple, #7c3aed); font-weight: 600;
-}
-.ppf-fs-net-row {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 8px 12px; margin-top: 4px;
-  background: var(--ppf-gold-bg); border-radius: 8px;
-  font-size: 13.5px; font-weight: 800; color: var(--ppf-gold-dark);
-}
-
-/* ── Term Groups ────────────────────────────────────────────────────── */
-.ppf-term-group { margin-bottom: 20px; }
-.ppf-term-hdr {
-  display: flex; align-items: center; gap: 8px; padding: 10px 16px;
-  background: var(--ppf-gold-bg);
-  border-left: 4px solid var(--ppf-gold);
-  border-radius: 10px 10px 0 0;
-  font-size: 13px; font-weight: 700; color: var(--ppf-gold-dark);
-}
-.ppf-term-year {
-  font-size: 11px; font-weight: 600; color: var(--pp-text-4);
-  background: var(--pp-border-light); border-radius: 6px;
-  padding: 2px 8px; margin-left: auto;
-}
-.ppf-term-summary {
-  display: flex; gap: 8px; flex-wrap: wrap; padding: 10px 16px 12px;
-  background: var(--pp-card); border-left: 4px solid var(--ppf-gold);
-  border-right: 1px solid var(--pp-border); font-size: 12px;
-}
-.ppf-term-pill {
-  display: flex; align-items: center; gap: 5px; padding: 4px 10px;
-  border-radius: 20px; font-size: 11.5px; font-weight: 600;
-}
-.ppf-term-pill-neutral { background: var(--pp-border-light); color: var(--pp-text-2); }
-.ppf-term-pill-green   { background: var(--pp-success-bg); color: var(--pp-success); }
-.ppf-term-pill-red     { background: var(--pp-danger-bg); color: var(--pp-danger); }
-
-/* ── Invoice Card ───────────────────────────────────────────────────── */
-.ppf-invoice-card {
-  background: var(--pp-card); border: 1px solid var(--pp-border);
-  border-top: none; overflow: hidden;
-}
-.ppf-invoice-card:last-child { border-radius: 0 0 12px 12px; }
-
-/* Due-date alert strip */
-.ppf-due-strip {
-  display: flex; align-items: center; gap: 6px;
-  padding: 7px 16px; font-size: 12px; font-weight: 600;
-}
-.ppf-due-overdue  { background: #fff1f2; color: #be123c; }
-.ppf-due-urgent   { background: #fffbeb; color: #92400e; }
-.ppf-due-upcoming { background: #f0f9ff; color: #0369a1; }
-
-.ppf-inv-row {
-  display: flex; align-items: center; gap: 12px; padding: 14px 16px;
-  cursor: pointer; border-bottom: 1px solid var(--pp-border-light);
-  transition: background 0.15s;
-}
-.ppf-inv-row:hover { background: var(--pp-border-light); }
-
-.ppf-inv-icon {
-  width: 40px; height: 40px; border-radius: 11px;
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-  font-family: 'Material Symbols Outlined'; font-size: 19px;
-}
-.ppf-icon-paid      { background: var(--pp-success-bg); color: var(--pp-success); }
-.ppf-icon-partial   { background: var(--pp-warning-bg); color: var(--pp-warning); }
-.ppf-icon-pending   { background: var(--ppf-gold-bg); color: var(--ppf-gold-dark); }
-.ppf-icon-overdue   { background: var(--pp-danger-bg); color: var(--pp-danger); }
-.ppf-icon-cancelled { background: var(--pp-border-light); color: var(--pp-text-4); }
-
-.ppf-inv-info { flex: 1; min-width: 0; }
-.ppf-inv-label  { font-size: 13.5px; font-weight: 700; color: var(--pp-text-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ppf-inv-dates  { font-size: 11.5px; color: var(--pp-text-4); margin-top: 2px; }
-.ppf-inv-overdue-tag { font-size: 10.5px; font-weight: 700; color: var(--pp-danger); background: var(--pp-danger-bg); border-radius: 6px; padding: 1px 7px; margin-left: 6px; }
-.ppf-comp-pills { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
-.ppf-comp-pill  { font-size: 10.5px; font-weight: 600; padding: 2px 8px; border-radius: 10px; background: var(--pp-border-light); color: var(--pp-text-3); }
-
-.ppf-inv-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
-.ppf-inv-amount { font-size: 16px; font-weight: 800; color: var(--pp-text-1); }
-.ppf-inv-amount-due   { color: var(--pp-danger); }
-.ppf-inv-amount-clear { color: var(--pp-success); }
-.ppf-inv-badge {
-  font-size: 10.5px; font-weight: 700; padding: 3px 9px; border-radius: 20px; white-space: nowrap;
-  display: inline-flex; align-items: center; gap: 3px;
-}
-.ppf-badge-paid      { background: var(--pp-success-bg); color: var(--pp-success); }
-.ppf-badge-partial   { background: var(--pp-warning-bg); color: var(--pp-warning); }
-.ppf-badge-unpaid    { background: var(--pp-danger-bg);  color: var(--pp-danger); }
-.ppf-badge-overdue   { background: var(--pp-danger-bg);  color: var(--pp-danger); }
-.ppf-badge-cancelled { background: var(--pp-border-light); color: var(--pp-text-4); }
-
-.ppf-pay-btn {
-  display: inline-flex; align-items: center; gap: 5px;
-  background: var(--ppf-navy); color: #fff;
-  border: none; border-radius: 8px; padding: 7px 14px;
-  font-size: 12px; font-weight: 700; cursor: pointer;
-  transition: background 0.15s, transform 0.1s; font-family: inherit; white-space: nowrap; margin-top: 2px;
-}
-.ppf-pay-btn:hover:not(:disabled) { filter: brightness(1.12); transform: translateY(-1px); }
-.ppf-pay-btn:disabled { opacity: 0.55; cursor: not-allowed; }
-
-.ppf-inv-chevron { font-size: 18px; color: var(--pp-text-4); transition: transform 0.22s; flex-shrink: 0; }
-.ppf-inv-chevron-open { transform: rotate(180deg); }
-
-/* Expandable detail */
-.ppf-inv-detail { display: none; padding: 0 16px 16px; border-top: 1px solid var(--pp-border-light); }
-.ppf-inv-detail.open { display: block; }
-.ppf-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 12px; }
-@media (max-width: 560px) { .ppf-detail-grid { grid-template-columns: 1fr; } }
-.ppf-detail-col-hdr {
-  font-size: 11px; font-weight: 700; color: var(--pp-text-4);
-  text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;
-  display: flex; align-items: center; gap: 5px;
-}
-.ppf-detail-row {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 8px 0; border-bottom: 1px dashed var(--pp-border); font-size: 13px;
-}
-.ppf-detail-row:last-child { border-bottom: none; }
-.ppf-detail-label { color: var(--pp-text-3); }
-.ppf-detail-value { font-weight: 600; color: var(--pp-text-1); }
-
-/* Payment history */
-.ppf-payment-entry { display: flex; align-items: flex-start; gap: 10px; padding: 9px 0; border-bottom: 1px dashed var(--pp-border); }
-.ppf-payment-entry:last-child { border-bottom: none; }
-.ppf-payment-tick {
-  width: 24px; height: 24px; border-radius: 50%;
-  background: var(--pp-success-bg); color: var(--pp-success);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 13px; font-weight: 700; flex-shrink: 0; margin-top: 1px;
-}
-.ppf-payment-tick-fail { background: var(--pp-danger-bg); color: var(--pp-danger); }
-.ppf-payment-amount { font-size: 14px; font-weight: 700; color: var(--pp-success); }
-.ppf-payment-meta   { font-size: 11px; color: var(--pp-text-4); margin-top: 2px; }
-.ppf-payment-txn    { font-size: 11px; color: var(--pp-text-4); margin-top: 2px; }
-.ppf-no-payments { text-align: center; padding: 16px 0; font-size: 12px; color: var(--pp-text-4); }
-
-/* Download actions */
-.ppf-inv-actions-row { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+.ppf-icon-btn:hover { color: var(--ppf-maroon); border-color: var(--ppf-maroon); }
+.ppf-icon-btn .ms { font-size: 17px; }
+/* Receipt download — clearly visible maroon action */
 .ppf-dl-btn {
-  display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600;
-  padding: 6px 12px; border-radius: 8px; text-decoration: none;
-  border: 1px solid var(--pp-border); color: var(--pp-text-2); background: var(--pp-card);
-  transition: background 0.14s;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: 34px; padding: 0 12px; border-radius: 8px; text-decoration: none; white-space: nowrap;
+  font-size: 12.5px; font-weight: 600;
+  color: var(--ppf-maroon); background: var(--ppf-maroon-soft);
+  border: 1px solid rgba(146,12,36,0.35);
+  transition: background .15s, color .15s, border-color .15s;
 }
-.ppf-dl-btn:hover { background: var(--pp-border-light); }
+.ppf-dl-btn .ms { font-size: 17px; font-variation-settings: 'wght' 600; }
+.ppf-dl-btn:hover { background: var(--ppf-maroon); border-color: var(--ppf-maroon); color: #fff; }
+.ppf-dl-btn:focus-visible { outline: 2px solid var(--ppf-maroon); outline-offset: 2px; }
 
-/* ── Fee Demands ────────────────────────────────────────────────────── */
-.ppf-demand-type-group { margin-bottom: 14px; }
-.ppf-demand-type-hdr {
-  display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700;
-  color: var(--pp-text-3); text-transform: uppercase; letter-spacing: 0.04em;
-  padding: 8px 4px 6px;
+/* ── Status badges & tones ──────────────────────────────────────────── */
+.ppf-badge {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px;
+  font-size: 11.5px; font-weight: 700; white-space: nowrap; line-height: 1.5;
 }
-.ppf-demand-type-count {
-  font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 20px;
-  background: var(--pp-border-light); color: var(--pp-text-3); margin-left: 4px;
-}
-.ppf-demand-table-wrap { border-radius: 10px; overflow: hidden; border: 1px solid var(--pp-border); }
-.ppf-demand-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.ppf-demand-table thead tr { background: var(--pp-border-light); }
-.ppf-demand-table th {
-  padding: 9px 12px; font-size: 11px; font-weight: 700; color: var(--pp-text-3);
-  text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--pp-border);
-}
-.ppf-demand-table td { padding: 10px 12px; border-bottom: 1px solid var(--pp-border-light); vertical-align: top; }
-.ppf-demand-table tbody tr:last-child td { border-bottom: none; }
-.ppf-demand-table tbody tr:hover { background: var(--pp-border-light); }
-.ppf-demand-row-overdue  { background: #fff8f8; }
-.ppf-demand-row-settled  td { opacity: 0.65; }
-.ppf-demand-comp-name { font-weight: 600; color: var(--pp-text-1); }
-.ppf-demand-source-chip {
-  display: inline-block; font-size: 10px; font-weight: 600; padding: 1px 6px;
-  border-radius: 6px; background: var(--pp-border-light); color: var(--pp-text-4); margin-top: 3px;
-}
-.ppf-demand-due-overdue { display: flex; align-items: center; gap: 4px; color: var(--pp-danger); font-weight: 600; }
-.ppf-demand-days-overdue { font-size: 10px; color: var(--pp-danger); font-weight: 600; }
-.ppf-demand-amt-due   { color: var(--pp-danger); font-weight: 700; }
-.ppf-demand-amt-clear { color: var(--pp-success); font-weight: 700; }
-.ppf-demand-badge {
-  font-size: 10.5px; font-weight: 700; padding: 3px 9px; border-radius: 20px; white-space: nowrap;
-  display: inline-flex; align-items: center; gap: 3px;
-}
-.ppf-demand-badge-paid    { background: var(--pp-success-bg); color: var(--pp-success); }
-.ppf-demand-badge-waived  { background: var(--pp-border-light); color: var(--pp-text-3); }
-.ppf-demand-badge-pending { background: var(--ppf-gold-bg); color: var(--ppf-gold-dark); }
-.ppf-demand-badge-overdue { background: var(--pp-danger-bg); color: var(--pp-danger); }
-@media (max-width: 560px) { .ppf-col-hide-sm { display: none !important; } }
+.ppf-badge .ms { font-size: 14px; }
+.ppf-badge-success { color: var(--ppf-green); padding-left: 0; padding-right: 0; }
+.ppf-badge-warning { color: var(--ppf-amber); background: rgba(217,119,6,0.10); }
+.ppf-badge-danger  { color: var(--ppf-red);   background: rgba(146,12,36,0.07); }
+.ppf-badge-academic { color: #920C24; background: #fff0f2; }
+.ppf-badge-neutral { color: var(--ppf-muted); background: var(--ppf-row); }
+.ppf-tone-success { color: var(--ppf-green) !important; }
+.ppf-tone-danger  { color: var(--ppf-red) !important; }
+.ppf-tone-warning { color: var(--ppf-amber) !important; }
+.ppf-tone-maroon  { color: var(--ppf-maroon) !important; }
+.ppf-tone-muted   { color: var(--ppf-muted) !important; }
 
-/* ── Demand Payment Analytics ────────────────────────────────────────── */
-.ppfda-wrap {
-  margin: 14px 14px 10px;
-  padding: 16px;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 14px;
-  box-shadow: 0 1px 4px rgba(0,0,0,.06);
+/* ── Student card ───────────────────────────────────────────────────── */
+.ppf-student { flex-direction: row; align-items: center; gap: 16px; padding: 16px 20px; margin-bottom: 16px; flex-wrap: wrap; }
+.ppf-avatar {
+  width: 52px; height: 52px; border-radius: 50%; flex-shrink: 0; overflow: hidden;
+  background: var(--ppf-maroon-soft); color: var(--ppf-maroon); border: 1px solid rgba(146,12,36,0.15);
+  display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700;
 }
-.ppfda-progress-row {
-  display: flex; align-items: center; gap: 10px; margin-bottom: 14px;
+.ppf-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.ppf-student-main { flex: 1 1 240px; min-width: 0; }
+.ppf-student-name-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ppf-student-name { font-size: 18px; font-weight: 700; color: var(--pp-text-1); margin: 0; overflow-wrap: anywhere; }
+.ppf-dot-status { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; }
+.ppf-dot-status::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.ppf-student-meta { font-size: 13px; color: var(--pp-text-3); margin-top: 3px; overflow-wrap: anywhere; }
+.ppf-student-meta .sep { color: #cbd5e1; margin: 0 6px; }
+.ppf-facts { display: grid; grid-template-columns: repeat(3, auto); gap: 4px 28px; margin: 0; }
+.ppf-facts > div { min-width: 0; }
+.ppf-facts dt { font-size: 11px; font-weight: 700; color: var(--ppf-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.ppf-facts dd { margin: 2px 0 0; font-size: 13.5px; font-weight: 600; color: var(--pp-text-1); overflow-wrap: anywhere; }
+@media (max-width: 1199px) {
+  .ppf-facts { grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; padding-top: 12px; border-top: 1px solid var(--ppf-row); }
 }
-.ppfda-progress-bar {
-  flex: 1; height: 8px; background: #f3f4f6;
-  border-radius: 99px; overflow: hidden; display: flex;
+@media (max-width: 480px) { .ppf-facts { grid-template-columns: 1fr 1fr; } }
+
+/* Programme fee status — compact horizontal badge, far right of the student row */
+@media (min-width: 1200px) {
+  .ppf-student { flex-wrap: nowrap; }
+  .ppf-student-main { flex: 1 1 200px; }
+  .ppf-facts { flex: 0 1 auto; min-width: 0; gap: 4px 22px; }
 }
-.ppfda-progress-fill { height: 100%; transition: width .5s ease; }
-.ppfda-fill-paid   { background: #22c55e; }
-.ppfda-fill-waived { background: #a78bfa; }
-.ppfda-pct-label { font-size: 11px; font-weight: 700; color: #6b7280; white-space: nowrap; }
-.ppfda-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
-  gap: 10px; margin-bottom: 12px;
+.ppf-student-status { flex-shrink: 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+.ppf-status-badge {
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  padding: 5px 12px; border-radius: 8px; background: var(--pp-card, #fff);
+  font-size: 13px; font-weight: 700; line-height: 1.3; border: 1px solid;
 }
-.ppfda-stat {
-  padding: 10px 12px; border-radius: 10px; border: 1px solid #e5e7eb;
-}
-.ppfda-stat-total  { background: #f9fafb; }
-.ppfda-stat-paid   { background: #f0fdf4; border-color: #bbf7d0; }
-.ppfda-stat-waived { background: #faf5ff; border-color: #e9d5ff; }
-.ppfda-stat-due    { background: #eff6ff; border-color: #bfdbfe; }
-.ppfda-stat-overdue{ background: #fff1f2; border-color: #fecdd3; }
-.ppfda-stat-val { font-size: 15px; font-weight: 800; color: #111827; letter-spacing: -.3px; }
-.ppfda-stat-paid   .ppfda-stat-val { color: #16a34a; }
-.ppfda-stat-waived .ppfda-stat-val { color: #7c3aed; }
-.ppfda-stat-overdue .ppfda-stat-val{ color: #be123c; }
-.ppfda-stat-due    .ppfda-stat-val { color: #1d4ed8; }
-.ppfda-stat-lbl { font-size: 11px; font-weight: 600; color: #374151; margin-top: 2px; }
-.ppfda-stat-sub { font-size: 10px; color: #9ca3af; margin-top: 1px; }
-.ppfda-legend { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.ppfda-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.ppfda-dot-paid    { background: #22c55e; }
-.ppfda-dot-waived  { background: #a78bfa; }
-.ppfda-dot-overdue { background: #f43f5e; }
-.ppfda-dot-pending { background: #60a5fa; }
-.ppfda-legend-lbl { font-size: 11px; color: #6b7280; font-weight: 500; margin-right: 8px; }
-@media (max-width: 480px) {
-  .ppfda-stats { grid-template-columns: 1fr 1fr; }
-  .ppfda-wrap { margin: 10px 8px; padding: 12px; }
-}
-/* ── Demand Pay All bar ──────────────────────────────────────────────── */
-.ppf-pay-all-bar {
-  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;
-  margin: 10px 14px 6px; padding: 14px 18px;
-  background: linear-gradient(135deg, #f0f5ff 0%, #e8f0fe 100%);
-  border: 1px solid rgba(43,46,74,0.15);
-  border-radius: 14px;
-}
-.ppf-pay-all-info  { display: flex; align-items: center; gap: 10px; }
-.ppf-pay-all-label { font-size: 13.5px; font-weight: 700; color: var(--pp-text-1); line-height: 1.3; }
-.ppf-pay-all-sub   { font-size: 11.5px; color: var(--pp-text-3); font-weight: 500; margin-top: 1px; }
-.ppf-pay-all-right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
-.ppf-pay-all-total { font-size: 20px; font-weight: 800; color: var(--pp-primary,#2b2e4a); font-variant-numeric: tabular-nums; letter-spacing: -0.3px; }
-.ppf-pay-all-btn {
-  display: inline-flex; align-items: center; gap: 7px;
-  background: var(--pp-primary, #2b2e4a); color: #fff;
-  border: none; border-radius: 10px; padding: 10px 22px;
-  font-size: 13.5px; font-weight: 700; cursor: pointer; font-family: inherit;
-  transition: background .15s, box-shadow .15s; white-space: nowrap;
-  box-shadow: 0 2px 8px rgba(43,46,74,0.25);
-}
-.ppf-pay-all-btn:hover:not(:disabled) { opacity: .88; box-shadow: 0 4px 14px rgba(43,46,74,0.35); }
-.ppf-pay-all-btn:disabled { opacity: .55; cursor: not-allowed; box-shadow: none; }
-@media (max-width: 560px) {
-  .ppf-pay-all-bar { flex-direction: column; align-items: flex-start; }
-  .ppf-pay-all-right { width: 100%; justify-content: space-between; }
+.ppf-status-badge .ms { font-size: 17px; }
+.ppf-status-badge-paid { color: var(--ppf-green); border-color: rgba(0,128,0,0.35); }
+.ppf-status-badge-due  { color: var(--ppf-red);   border-color: rgba(146,12,36,0.35); }
+@media (max-width: 1199px) {
+  .ppf-student-main { order: 1; }
+  .ppf-student-status { order: 2; align-self: flex-start; margin-left: auto; }
+  .ppf-facts { order: 3; }
 }
 
-/* ── Payment Summary bottom sheet ───────────────────────────────────── */
-.ppf-bulk-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
-  backdrop-filter: blur(3px); z-index: 8000;
-  animation: ppf-fade-in 0.2s ease;
+/* ── Notices ────────────────────────────────────────────────────────── */
+.ppf-notice {
+  display: flex; align-items: flex-start; gap: 10px; padding: 11px 16px; margin-bottom: 12px;
+  border-radius: 10px; background: var(--pp-card, #fff); border: 1px solid var(--ppf-border);
+  font-size: 13px; color: var(--pp-text-2);
 }
+.ppf-notice > .ms { font-size: 19px; flex-shrink: 0; }
+.ppf-notice-warning > .ms { color: var(--ppf-amber); }
+.ppf-notice-success > .ms { color: var(--ppf-green); }
+.ppf-notice-danger  > .ms { color: var(--ppf-red); }
+
+/* ── KPI cards ──────────────────────────────────────────────────────── */
+.ppf-kpis { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; margin-bottom: 16px; }
+@media (min-width: 641px)  { .ppf-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1100px) { .ppf-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.ppf-kpi {
+  background: var(--pp-card, #fff); border: 1px solid var(--ppf-border); border-radius: var(--ppf-radius);
+  padding: 16px 18px; min-width: 0; display: flex; flex-direction: column; gap: 6px;
+}
+.ppf-kpi-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ppf-kpi-label { font-size: 11.5px; font-weight: 700; color: var(--ppf-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.ppf-kpi-icon {
+  width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--ppf-border);
+  display: flex; align-items: center; justify-content: center; color: var(--ppf-maroon); flex-shrink: 0;
+}
+.ppf-kpi-icon .ms { font-size: 18px; }
+.ppf-kpi-value {
+  font-size: 26px; font-weight: 700; color: var(--pp-text-1); line-height: 1.15; letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ppf-kpi-value.is-empty { color: var(--ppf-muted); }
+.ppf-kpi-sub { font-size: 12.5px; color: var(--pp-text-3); line-height: 1.4; }
+.ppf-kpi-note { font-size: 12px; font-weight: 600; line-height: 1.4; }
+.ppf-kpi-note a { color: inherit; }
+
+/* ── Payment status ─────────────────────────────────────────────────── */
+/* ── Tables ─────────────────────────────────────────────────────────── */
+.ppf-t { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 13px; }
+.ppf-t th {
+  padding: 9px 12px; background: var(--ppf-head); border-bottom: 1px solid var(--ppf-border);
+  font-size: 11px; font-weight: 700; color: var(--ppf-muted); text-transform: uppercase; letter-spacing: 0.05em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ppf-t td { padding: 11px 12px; border-bottom: 1px solid var(--ppf-row); vertical-align: middle; color: var(--pp-text-2); overflow-wrap: anywhere; }
+.ppf-t th:first-child, .ppf-t td:first-child { padding-left: 20px; }
+.ppf-t th:last-child,  .ppf-t td:last-child  { padding-right: 20px; }
+.ppf-t tbody tr:last-child td { border-bottom: none; }
+.ppf-t tr.ppf-row-data:hover td { background: #fafbfc; }
+.ppf-t .c-text   { text-align: left; }
+#ppf-inv-table th, #ppf-inv-table td, #ppf-ph-table th, #ppf-ph-table td { padding-left: 8px; padding-right: 8px; }
+#ppf-inv-table th:first-child, #ppf-inv-table td:first-child, #ppf-ph-table th:first-child, #ppf-ph-table td:first-child { padding-left: 20px; }
+#ppf-inv-table th:last-child, #ppf-inv-table td:last-child, #ppf-ph-table th:last-child, #ppf-ph-table td:last-child { padding-right: 20px; }
+.ppf-t .c-date   { text-align: left; white-space: nowrap; }
+.ppf-t .c-num    { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ppf-t .c-status { text-align: center; }
+.ppf-t .c-action { text-align: right; white-space: nowrap; }
+.ppf-summary-cards { padding-bottom: 0; }
+.ppf-mini-drill { font: inherit; color: inherit; text-align: left; background: var(--ppf-card, #fff); display: flex; flex-direction: column; cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+.ppf-mini-drill:hover { border-color: var(--ppf-maroon, #920c24); box-shadow: 0 2px 10px rgba(146,12,36,.08); }
+.ppf-mini-drill:focus-visible { outline: 2px solid var(--ppf-maroon, #920c24); outline-offset: 2px; }
+.ppf-mini-drill .ppf-mini-lbl { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.ppf-drill-caret { font-size: 15px; opacity: .6; }
+.ppf-dd-overlay { position: fixed; inset: 0; z-index: 2000; background: rgba(15,23,42,.45); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.ppf-dd-overlay[hidden] { display: none; }
+.ppf-dd-box { background: #fff; border-radius: 12px; width: min(560px, 100%); max-height: min(80vh, 720px); display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,.25); font-family: var(--pp-font, inherit); color: var(--ppf-text, #1f2937); font-size: 13px; }
+.ppf-dd-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--ppf-border, #e5e7eb); }
+.ppf-dd-title { margin: 0; font-size: 16px; font-weight: 700; color: var(--ppf-maroon, #920c24); font-family: inherit; }
+.ppf-dd-close { font: inherit; background: none; border: 1px solid var(--ppf-border, #e5e7eb); border-radius: 8px; width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; color: inherit; }
+.ppf-dd-close:hover { border-color: var(--ppf-maroon, #920c24); }
+.ppf-dd-body { padding: 8px 20px 20px; overflow-y: auto; }
+.ppf-dd-group { padding-top: 12px; }
+.ppf-dd-group + .ppf-dd-group { margin-top: 12px; }
+.ppf-dd-group-hd { display: flex; justify-content: space-between; gap: 12px; font-size: 13.5px; font-weight: 700; color: var(--ppf-maroon, #920c24); background: rgba(146,12,36,.07); border-left: 3px solid var(--ppf-maroon, #920c24); border-radius: 6px; padding: 8px 12px; }
+.ppf-dd-group-val { font-variant-numeric: tabular-nums; }
+.ppf-dd-group-sub { font-size: 11.5px; color: var(--ppf-maroon, #920c24); opacity: .8; margin: 4px 0 6px 15px; }
+.ppf-dd-list { list-style: none; margin: 0; padding: 0; }
+.ppf-dd-list li { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 8px 0; border-top: 1px dashed var(--ppf-border, #e5e7eb); font-size: 13px; }
+.ppf-dd-item { display: flex; flex-direction: column; min-width: 0; }
+.ppf-dd-name { font-weight: 600; }
+.ppf-dd-meta { font-size: 11.5px; color: var(--ppf-muted, #6b7280); }
+.ppf-dd-amt { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; display: inline-flex; gap: 6px; align-items: center; }
+.ppf-dd-empty { color: var(--ppf-muted, #6b7280); font-size: 12.5px; }
+.ppf-filters { display: flex; flex-wrap: wrap; gap: 10px 28px; align-items: center; padding: 14px 20px 10px; }
+.ppf-fchips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.ppf-flabel { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ppf-muted, #6b7280); margin-right: 4px; }
+.ppf-fchip { font: inherit; font-size: 12.5px; line-height: 1.4; border: 1px solid var(--ppf-border, #e5e7eb); background: #fff; color: inherit; border-radius: 999px; padding: 4px 12px; cursor: pointer; }
+.ppf-fchip:hover { border-color: var(--ppf-maroon, #920c24); }
+.ppf-fchip.is-active { background: var(--ppf-maroon, #920c24); border-color: var(--ppf-maroon, #920c24); color: #fff; font-weight: 600; }
+.ppf-fchip:focus-visible { outline: 2px solid var(--ppf-maroon, #920c24); outline-offset: 2px; }
+.ppf-cards-group.is-hidden { display: none; }
+.ppf-sum-sec { margin-top: 4px; }
+.ppf-card-pay { align-self: flex-start; margin: 6px 0 4px; }
+.ppf-dd-pay { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 12px 0 4px; padding: 10px 12px; border-radius: 8px; background: rgba(146,12,36,.06); font-size: 13px; }
+.ppf-c-center { text-align: center !important; }
+.ppf-icon-dl { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--ppf-border, #e5e7eb); color: var(--ppf-maroon, #920c24); text-decoration: none; }
+.ppf-icon-dl:hover { border-color: var(--ppf-maroon, #920c24); background: rgba(146,12,36,.06); }
+.ppf-icon-dl .ms { font-size: 18px; }
+.ppf-row-toggle { font: inherit; font-size: 11.5px; font-weight: 600; margin-left: 6px; display: inline-flex; align-items: center; gap: 2px; padding: 0 6px 0 2px; height: 20px; border-radius: 999px; border: 1px solid var(--ppf-border, #e5e7eb); background: #fff; color: var(--ppf-maroon, #920c24); cursor: pointer; vertical-align: middle; }
+.ppf-row-toggle .ms { font-size: 16px; transition: transform .15s; }
+.ppf-row-toggle[aria-expanded="true"] .ms { transform: rotate(180deg); }
+.ppf-row-toggle:focus-visible { outline: 2px solid var(--ppf-maroon, #920c24); outline-offset: 1px; }
+.ppf-t tr.ppf-sub-row td { background: rgba(146,12,36,.035); font-size: 12.5px; padding-top: 7px; padding-bottom: 7px; }
+.ppf-t tr.ppf-sub-row td:first-child { padding-left: 32px; }
+.ppf-t tr.ppf-sub-row.is-hidden { display: none; }
+.ppf-sub-main { font-weight: 600; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ppf-sub-kind { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 1px 7px; border-radius: 999px; background: #fff; border: 1px solid var(--ppf-border, #e5e7eb); color: var(--ppf-muted, #6b7280); }
+.ppf-sub-kind-payment { color: #166534; border-color: #bbf7d0; }
+.ppf-sub-kind-refund { color: #1e40af; border-color: #bfdbfe; }
+.ppf-sub-kind-scholarship { color: var(--ppf-maroon, #920c24); border-color: rgba(146,12,36,.25); }
+.ppf-sub-kind-credit { color: #92400e; border-color: #fde68a; }
+.ppf-schip.is-active { background: rgba(146,12,36,.08); border-color: var(--ppf-maroon, #920c24); color: var(--ppf-maroon, #920c24); font-weight: 600; }
+.ppf-subhead { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 12px 20px 8px; font-size: 12px; font-weight: 700; color: var(--ppf-muted, #6b7280); text-transform: uppercase; letter-spacing: 0.05em; border-top: 1px solid var(--ppf-border, #e5e7eb); }
+.ppf-cards-group + .ppf-cards-group { margin-top: 14px; }
+.ppf-cards-group-hd { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ppf-maroon, #920c24); margin: 0 0 8px; }
+.ppf-t td.c-num  { font-weight: 600; color: var(--pp-text-1); }
+.ppf-cell-main { font-weight: 600; color: var(--pp-text-1); }
+.ppf-cell-sub  { font-size: 11.5px; color: var(--ppf-muted); margin-top: 1px; }
+.ppf-cell-hint { font-size: 11.5px; font-weight: 600; margin-top: 1px; white-space: nowrap; }
+.ppf-ellip { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ppf-t .ppf-group-row th {
+  background: var(--pp-card, #fff); color: var(--ppf-maroon); text-transform: none; letter-spacing: 0;
+  font-size: 12.5px; padding-top: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--ppf-border);
+  border-left: 3px solid var(--ppf-maroon);
+}
+.ppf-t .ppf-group-row th:first-child { padding-left: 17px; }
+.ppf-group-inner { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+.ppf-group-meta { font-weight: 600; color: var(--ppf-muted); font-size: 12px; }
+.ppf-t .ppf-total-row td { border-top: 1px solid var(--ppf-border); font-weight: 700; color: var(--pp-text-1); }
+.ppf-t .ppf-net-row td { font-weight: 800; color: var(--ppf-maroon); border-top: 2px solid var(--ppf-maroon); font-size: 14px; }
+.ppf-t .ppf-net-row td.c-num { color: var(--pp-text-1); }
+.ppf-tax-pill { font-size: 10.5px; font-weight: 600; padding: 1px 6px; border-radius: 6px; background: var(--ppf-row); color: var(--pp-text-3); margin-left: 6px; }
+.is-hidden { display: none !important; }
+[data-tab-meta] { display: inline-flex; align-items: center; gap: 10px; }
+
+/* Invoice detail (expanded row) */
+.ppf-t tr.ppf-detail-tr > td { background: #fbfbfc; padding: 14px 20px 16px; }
+.ppf-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+@media (max-width: 700px) { .ppf-detail-grid { grid-template-columns: 1fr; } }
+.ppf-detail-hd { font-size: 11px; font-weight: 700; color: var(--ppf-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+.ppf-kv { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px dashed var(--ppf-border); font-size: 13px; }
+.ppf-kv:last-child { border-bottom: none; }
+.ppf-kv > span:last-child { font-weight: 600; color: var(--pp-text-1); text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ppf-detail-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+
+/* ── Compact empty / error states ───────────────────────────────────── */
+.ppf-state { display: flex; align-items: flex-start; gap: 12px; padding: 18px 20px; }
+.ppf-state > .ms { font-size: 22px; color: var(--ppf-muted); flex-shrink: 0; }
+.ppf-state-ok > .ms { color: var(--ppf-green); }
+.ppf-state-error > .ms { color: var(--ppf-red); }
+.ppf-state-title { font-size: 13.5px; font-weight: 600; color: var(--pp-text-2); margin: 0; }
+.ppf-state-sub { font-size: 12.5px; color: var(--pp-text-3); margin: 2px 0 0; }
+.ppf-state .ppf-btn { margin-top: 10px; }
+
+/* ── Additional charges ─────────────────────────────────────────────── */
+.ppf-mini-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 560px) { .ppf-mini-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.ppf-mini { border: 1px solid var(--ppf-border); border-radius: 10px; padding: 10px 12px; min-width: 0; }
+.ppf-mini-lbl { font-size: 11px; font-weight: 700; color: var(--ppf-muted); text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ppf-mini-val { font-size: 17px; font-weight: 700; color: var(--pp-text-1); font-variant-numeric: tabular-nums; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ppf-mini-sub { font-size: 11.5px; color: var(--ppf-muted); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ppf-payall {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  margin-top: 12px; padding: 10px 14px; border: 1px solid rgba(146,12,36,0.2); border-radius: 10px;
+}
+.ppf-payall-text { font-size: 13px; color: var(--pp-text-2); }
+.ppf-payall-text strong { color: var(--ppf-maroon); font-variant-numeric: tabular-nums; }
+.ppf-details-toggle .ms { transition: transform .2s; }
+.ppf-details-toggle[aria-expanded="true"] .ms { transform: rotate(180deg); }
+.ppf-details { border-top: 1px solid var(--ppf-border); }
+.ppf-tabs { display: flex; gap: 4px; padding: 10px 20px 0; border-bottom: 1px solid var(--ppf-border); }
+.ppf-tab {
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 10px 9px; margin-bottom: -1px;
+  background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer;
+  font: inherit; font-size: 13px; font-weight: 600; color: var(--ppf-muted);
+}
+.ppf-tab[aria-selected="true"] { color: var(--ppf-maroon); border-bottom-color: var(--ppf-maroon); }
+.ppf-tab-count { font-size: 11px; font-weight: 700; padding: 0 6px; border-radius: 99px; background: var(--ppf-row); color: var(--pp-text-3); }
+.ppf-demand-row-settled td { color: var(--ppf-muted); }
+.ppf-refund { display: flex; gap: 12px; padding: 12px 20px; border-bottom: 1px solid var(--ppf-row); }
+.ppf-refund:last-child { border-bottom: none; }
+.ppf-refund-body { flex: 1; min-width: 0; font-size: 12.5px; color: var(--pp-text-3); }
+.ppf-refund-title { font-size: 13.5px; font-weight: 700; color: var(--pp-text-1); }
+.ppf-refund-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.ppf-chip { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 6px; background: var(--ppf-row); color: var(--pp-text-3); }
+.ppf-chip .ms { font-size: 12px; }
+.ppf-refund-right { text-align: right; flex-shrink: 0; }
+.ppf-refund-amt { font-size: 14px; font-weight: 700; color: var(--pp-text-1); font-variant-numeric: tabular-nums; }
+
+/* ── Tables → stacked rows on phones ────────────────────────────────── */
+@media (max-width: 640px) {
+  .ppf-t, .ppf-t tbody, .ppf-t tr, .ppf-t td, .ppf-t th { display: block; width: 100%; }
+  .ppf-t colgroup, .ppf-t thead { display: none; }
+  .ppf-t tr.ppf-row-data, .ppf-t tr.ppf-total-row, .ppf-t tr.ppf-net-row, .ppf-t tr.ppf-disc-row {
+    padding: 10px 16px; border-bottom: 1px solid var(--ppf-row);
+  }
+  .ppf-t tbody tr:last-child { border-bottom: none; }
+  .ppf-t td, .ppf-t th:first-child, .ppf-t td:first-child, .ppf-t th:last-child, .ppf-t td:last-child {
+    padding: 3px 0; border: none !important; text-align: right;
+  }
+  .ppf-t tr.ppf-row-data { display: flex; flex-direction: column; }
+  .ppf-t td.c-primary { order: -1; }
+  .ppf-t tr td { padding: 3px 0 !important; }
+  .ppf-t tr.ppf-detail-tr > td { padding: 12px 16px !important; }
+  .ppf-t-kv tr { display: flex !important; flex-direction: row !important; justify-content: space-between; align-items: center; gap: 12px; }
+  .ppf-t-kv td[data-label]::before { content: none !important; }
+  .ppf-t-kv td { width: auto !important; }
+  .ppf-t td[data-label] { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .ppf-t td[data-label]::before {
+    content: attr(data-label); flex-shrink: 0; text-align: left;
+    font-size: 11px; font-weight: 700; color: var(--ppf-muted); text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .ppf-t td[data-label] > * { min-width: 0; }
+  .ppf-t td.c-primary { text-align: left; padding-bottom: 4px; }
+  .ppf-t .ppf-group-row th { padding: 9px 16px 8px 13px; }
+  .ppf-t tr.ppf-detail-tr > td { padding: 12px 16px; text-align: left; }
+  .ppf-t td.c-empty { padding: 0 !important; text-align: left; }
+  .ppf-t .ppf-cell-hint { white-space: normal; }
+  .ppf-card-hd, .ppf-card-bd { padding-left: 16px; padding-right: 16px; }
+  .ppf-tabs { padding: 10px 16px 0; }
+  .ppf-refund { padding: 12px 16px; }
+  /* Payment / refund / scholarship sub-rows: same side padding as the fee
+     rows, tint on the whole row, title left-aligned, no blank spacer cells */
+  .ppf-t tr.ppf-sub-row:not(.is-hidden) {
+    display: flex; flex-direction: column;
+    padding: 10px 16px; border-bottom: 1px solid var(--ppf-row);
+    background: rgba(146,12,36,.035);
+  }
+  .ppf-t tr.ppf-sub-row td { background: transparent; }
+  .ppf-t tr.ppf-sub-row td:first-child { padding-left: 0 !important; text-align: left; padding-bottom: 4px !important; }
+  .ppf-t tr.ppf-sub-row td:empty { display: none; }
+  body.pp-dark .ppf-t tr.ppf-sub-row:not(.is-hidden) { background: rgba(214,74,102,0.06); }
+  html body.pp-dark .ppf-t tr.ppf-sub-row td { background: transparent; }  /* beats the dark-mode cell tint below */
+}
+
+/* ── Fees skeleton (shown only while switching ward) ────────────────── */
+.ppf-skel .pp-skel { border-radius: 12px; }
+.ppf-skel-row { display: grid; gap: 16px; margin-bottom: 16px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 641px)  { .ppf-skel-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1100px) { .ppf-skel-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (min-width: 900px)  { .ppf-skel-pair { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ── Payment Summary bottom sheet (unchanged behaviour) ─────────────── */
+.ppf-bulk-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(3px); z-index: 8000; animation: ppf-fade-in 0.2s ease; }
 .ppf-bulk-sheet {
-  position: fixed; bottom: 0; left: 0; right: 0; z-index: 8001;
-  background: #fff; border-radius: 24px 24px 0 0;
-  display: none; flex-direction: column; max-height: 85vh;
-  transform: translateY(100%);
-  transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
-  will-change: transform; box-shadow: 0 -12px 48px rgba(0,0,0,0.18);
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 8001; background: #fff; border-radius: 20px 20px 0 0;
+  display: none; flex-direction: column; max-height: 85vh; transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1); will-change: transform; box-shadow: 0 -12px 48px rgba(0,0,0,0.18);
+  max-width: 640px; margin: 0 auto;
 }
 .ppf-bulk-sheet-open { transform: translateY(0) !important; }
-.ppf-bulk-sheet-handle {
-  width: 36px; height: 4px; background: var(--pp-border);
-  border-radius: 4px; margin: 10px auto 0; flex-shrink: 0;
-}
-.ppf-bulk-sheet-head {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 16px 20px 14px; border-bottom: 1px solid var(--pp-border); flex-shrink: 0;
-}
-.ppf-bulk-sheet-title {
-  display: flex; align-items: center; gap: 10px;
-  font-size: 16px; font-weight: 700; color: var(--pp-text-1);
-}
-.ppf-bulk-sheet-title-icon {
-  width: 34px; height: 34px; border-radius: 10px;
-  background: #eef2ff; color: var(--pp-primary, #2b2e4a);
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-}
-.ppf-bulk-sheet-close {
-  width: 32px; height: 32px; background: var(--pp-border-light);
-  border: 1px solid var(--pp-border); border-radius: 8px; cursor: pointer;
-  color: var(--pp-text-3); display: flex; align-items: center; justify-content: center;
-  transition: all .15s; flex-shrink: 0;
-}
-.ppf-bulk-sheet-close:hover { background: var(--pp-border); color: var(--pp-text-1); }
-.ppf-bulk-sheet-body {
-  flex: 1; overflow-y: auto; padding: 18px 20px 10px; overscroll-behavior: contain;
-}
-.ppf-bulk-sheet-note {
-  display: flex; align-items: center; gap: 6px; font-size: 12.5px;
-  color: var(--pp-text-3); background: var(--pp-border-light);
-  border: 1px solid var(--pp-border); border-radius: 10px;
-  padding: 9px 12px; margin-bottom: 16px; font-weight: 500;
-}
-.ppf-bulk-items { display: flex; flex-direction: column; gap: 8px; }
-.ppf-bulk-item {
-  display: flex; align-items: center; gap: 12px; padding: 13px 16px;
-  background: var(--pp-border-light); border: 1px solid var(--pp-border);
-  border-radius: 12px; transition: border-color .15s;
-}
-.ppf-bulk-item:hover { border-color: var(--pp-primary, #2b2e4a); }
-.ppf-bulk-item-num {
-  width: 28px; height: 28px; border-radius: 8px;
-  background: #eef2ff; color: var(--pp-primary, #2b2e4a);
-  font-size: 12px; font-weight: 700;
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-}
-.ppf-bulk-item-label { flex: 1; font-size: 13.5px; font-weight: 600; color: var(--pp-text-1); }
-.ppf-bulk-item-amt {
-  font-size: 14px; font-weight: 700; color: var(--pp-primary, #2b2e4a);
-  font-variant-numeric: tabular-nums; white-space: nowrap;
-}
-.ppf-bulk-total-row {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 14px 16px; background: #eef2ff;
-  border: 1px solid rgba(43,46,74,0.15); border-radius: 12px; margin-top: 12px;
-}
-.ppf-bulk-total-label {
-  display: flex; align-items: center; gap: 8px;
-  font-size: 14px; font-weight: 700; color: var(--pp-text-1);
-}
-.ppf-bulk-total-val {
-  font-size: 20px; font-weight: 800; color: var(--pp-primary, #2b2e4a);
-  font-variant-numeric: tabular-nums;
-}
-.ppf-bulk-sheet-foot {
-  display: flex; gap: 10px; padding: 14px 20px 24px;
-  flex-shrink: 0; border-top: 1px solid var(--pp-border);
-}
-.ppf-bulk-sheet-cancel {
-  flex: 1; background: transparent; color: var(--pp-text-2);
-  border: 1.5px solid var(--pp-border); border-radius: 12px;
-  padding: 13px; font-size: 14px; font-weight: 600;
-  cursor: pointer; font-family: inherit; transition: all .15s;
-}
-.ppf-bulk-sheet-cancel:hover { background: var(--pp-border-light); border-color: var(--pp-text-3); }
-.ppf-bulk-sheet-confirm {
-  flex: 2; background: var(--pp-primary, #2b2e4a); color: #fff;
-  border: none; border-radius: 12px; padding: 13px 20px;
-  font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit;
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  box-shadow: 0 4px 14px rgba(43,46,74,0.3); transition: all .15s;
-}
-.ppf-bulk-sheet-confirm:not(:disabled):hover { opacity: .88; box-shadow: 0 6px 20px rgba(43,46,74,0.4); transform: translateY(-1px); }
-.ppf-bulk-sheet-confirm:disabled { background: var(--pp-border); color: var(--pp-text-4); cursor: not-allowed; box-shadow: none; }
+.ppf-bulk-sheet-handle { width: 36px; height: 4px; background: var(--ppf-border); border-radius: 4px; margin: 10px auto 0; flex-shrink: 0; }
+.ppf-bulk-sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px 12px; border-bottom: 1px solid var(--ppf-border); flex-shrink: 0; }
+.ppf-bulk-sheet-title { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 700; color: var(--pp-text-1); }
+.ppf-bulk-sheet-title .ms { color: var(--ppf-maroon); font-size: 20px; }
+.ppf-bulk-sheet-body { flex: 1; overflow-y: auto; padding: 16px 20px 10px; overscroll-behavior: contain; }
+.ppf-bulk-sheet-note { font-size: 12.5px; color: var(--pp-text-3); margin: 0 0 12px; }
+.ppf-bulk-items { display: flex; flex-direction: column; }
+.ppf-bulk-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--ppf-row); }
+.ppf-bulk-item-num { width: 24px; height: 24px; border-radius: 6px; background: var(--ppf-maroon-soft); color: var(--ppf-maroon); font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.ppf-bulk-item-label { flex: 1; font-size: 13.5px; font-weight: 600; color: var(--pp-text-1); min-width: 0; }
+.ppf-bulk-item-amt { font-size: 13.5px; font-weight: 700; color: var(--pp-text-1); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ppf-bulk-total-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0 4px; font-size: 14px; font-weight: 700; color: var(--pp-text-1); }
+.ppf-bulk-total-val { font-size: 20px; font-weight: 800; color: var(--ppf-maroon); font-variant-numeric: tabular-nums; }
+.ppf-bulk-sheet-foot { display: flex; gap: 10px; padding: 12px 20px 22px; flex-shrink: 0; border-top: 1px solid var(--ppf-border); }
+.ppf-bulk-sheet-foot .ppf-btn { flex: 1; min-height: 44px; font-size: 14px; }
 @keyframes ppf-fade-in { from { opacity: 0; } to { opacity: 1; } }
-@media (max-width: 600px) {
-  .ppf-bulk-sheet { max-height: 92vh; border-radius: 20px 20px 0 0; }
-  .ppf-bulk-sheet-foot { padding-bottom: max(24px, env(safe-area-inset-bottom)); }
-}
-
-/* ── Receipts Table ─────────────────────────────────────────────────── */
-.ppf-receipt-table-wrap { border-radius: 12px; overflow: hidden; border: 1px solid var(--pp-border); margin-bottom: 20px; }
-.ppf-receipt-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.ppf-receipt-table thead tr { background: var(--pp-border-light); }
-.ppf-receipt-table th { padding: 9px 12px; font-size: 11px; font-weight: 700; color: var(--pp-text-3); text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--pp-border); }
-.ppf-receipt-table td { padding: 10px 12px; border-bottom: 1px solid var(--pp-border-light); }
-.ppf-receipt-table tbody tr:last-child td { border-bottom: none; }
-.ppf-receipt-table tbody tr:hover { background: var(--pp-border-light); }
-.ppf-receipt-dl-btn { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--pp-border); color: var(--pp-text-3); text-decoration: none; transition: background 0.14s; }
-.ppf-receipt-dl-btn:hover { background: var(--pp-border-light); color: var(--ppf-navy); }
-
-/* ── Concessions ────────────────────────────────────────────────────── */
-.ppf-con-card {
-  display: flex; align-items: flex-start; gap: 12px;
-  padding: 14px; border-bottom: 1px solid var(--pp-border-light);
-}
-.ppf-con-card:last-child { border-bottom: none; }
-.ppf-con-icon {
-  width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0;
-  background: var(--ppf-gold-bg); color: var(--ppf-gold-dark);
-  display: flex; align-items: center; justify-content: center;
-}
-.ppf-con-body { flex: 1; min-width: 0; }
-.ppf-con-type   { font-size: 13.5px; font-weight: 700; color: var(--pp-text-1); }
-.ppf-con-meta   { font-size: 11.5px; color: var(--pp-text-4); margin-top: 3px; }
-.ppf-con-right  { text-align: right; flex-shrink: 0; }
-.ppf-con-amount { font-size: 15px; font-weight: 800; color: var(--pp-purple, #7c3aed); }
-.ppf-con-status-badge { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
-.ppf-con-status-approved { background: var(--pp-success-bg); color: var(--pp-success); }
-.ppf-con-status-pending  { background: var(--pp-warning-bg); color: var(--pp-warning); }
-
-/* ── Refunds ────────────────────────────────────────────────────────── */
-.ppf-refund-card {
-  display: flex; align-items: flex-start; gap: 12px;
-  padding: 14px; border-bottom: 1px solid var(--pp-border-light);
-}
-.ppf-refund-card:last-child { border-bottom: none; }
-.ppf-refund-icon { width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0; background: #f0fdf4; color: #16a34a; display: flex; align-items: center; justify-content: center; }
-.ppf-refund-body { flex: 1; min-width: 0; }
-.ppf-refund-type   { font-size: 13.5px; font-weight: 700; color: var(--pp-text-1); }
-.ppf-refund-meta   { font-size: 11.5px; color: var(--pp-text-4); margin-top: 3px; display: flex; flex-wrap: wrap; gap: 6px; }
-.ppf-refund-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 8px; background: var(--pp-border-light); color: var(--pp-text-3); }
-.ppf-refund-right { text-align: right; flex-shrink: 0; }
-.ppf-refund-amount { font-size: 15px; font-weight: 800; color: var(--pp-success); }
-.ppf-refund-status-approved { background: var(--pp-success-bg); color: var(--pp-success); font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
-.ppf-refund-status-pending  { background: var(--pp-warning-bg); color: var(--pp-warning); font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
-
-/* ── Tabs ───────────────────────────────────────────────────────────── */
-.ppf-tab-bar {
-  display: flex; gap: 4px; padding: 4px;
-  background: var(--pp-border-light); border-radius: 12px 12px 0 0;
-  border: 1px solid var(--pp-border); border-bottom: none;
-}
-.ppf-tab {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 8px 14px; font-size: 12.5px; font-weight: 600;
-  border: none; border-radius: 9px; cursor: pointer; background: transparent;
-  color: var(--pp-text-3); font-family: inherit; transition: background 0.15s, color 0.15s;
-}
-.ppf-tab:hover { background: var(--pp-border); }
-.ppf-tab-active { background: var(--pp-card) !important; color: var(--ppf-navy) !important; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
-.ppf-tab-badge {
-  font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 10px;
-  background: var(--pp-border); color: var(--pp-text-4);
-}
-.ppf-tab-badge-red   { background: #fee2e2; color: #be123c; }
-.ppf-tab-badge-green { background: var(--pp-success-bg); color: var(--pp-success); }
-.ppf-tab-panel {
-  background: var(--pp-card); border: 1px solid var(--pp-border);
-  border-top: none; border-radius: 0 0 12px 12px;
-}
-.ppf-history-wrap { margin-bottom: 20px; }
-
-/* ── Empty State ────────────────────────────────────────────────────── */
-.ppf-empty {
-  text-align: center; padding: 48px 24px;
-  background: var(--pp-card); border-radius: 16px; border: 1px solid var(--pp-border);
-}
-.ppf-empty-icon  { font-size: 52px; color: #d1d5db; display: block; margin-bottom: 14px; }
-.ppf-empty-title { font-size: 15px; font-weight: 700; color: var(--pp-text-2); margin-bottom: 6px; }
-.ppf-empty-sub   { font-size: 13px; color: var(--pp-text-4); }
+@media (max-width: 600px) { .ppf-bulk-sheet-foot { padding-bottom: max(22px, env(safe-area-inset-bottom)); } }
 
 /* ── Payment Processing Overlay ─────────────────────────────────────── */
 .ppf-overlay { display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(15,23,42,0.55); backdrop-filter: blur(3px); align-items: center; justify-content: center; }
 .ppf-overlay.active { display: flex; }
-.ppf-overlay-box { background: #fff; border-radius: 16px; padding: 28px 32px; text-align: center; box-shadow: 0 12px 40px rgba(0,0,0,0.2); max-width: 300px; }
-.ppf-spinner { width: 36px; height: 36px; border-radius: 50%; border: 3px solid var(--pp-border); border-top-color: var(--ppf-navy); animation: ppfSpin 0.8s linear infinite; margin: 0 auto 14px; }
+.ppf-overlay-box { background: #fff; border-radius: 14px; padding: 26px 30px; text-align: center; box-shadow: 0 12px 40px rgba(0,0,0,0.2); max-width: 300px; }
+.ppf-spinner { width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--ppf-border); border-top-color: var(--ppf-maroon); animation: ppfSpin 0.8s linear infinite; margin: 0 auto 12px; }
 @keyframes ppfSpin { to { transform: rotate(360deg); } }
 .ppf-overlay-msg { font-size: 14px; font-weight: 600; color: var(--pp-text-2); }
+@media (prefers-reduced-motion: reduce) { .ppf-spinner { transition: none; animation-duration: 2s; } }
+
+/* ── Dark mode ── */
+/* Page tokens are resolved on :root (light values), so redefine them on body */
+body.pp-dark {
+  --ppf-maroon:  #f08da0;
+  --ppf-maroon-soft: rgba(214,74,102,0.14);
+  --ppf-green:   #4ade80;
+  --ppf-red:     #f87171;
+  --ppf-amber:   #f2b36a;
+  --ppf-border:  #263352;
+  --ppf-row:     #1e2d4a;
+  --ppf-head:    #1a2540;
+  --ppf-muted:   #94a3b8;
+  --ppf-card:    var(--pp-card);
+  --ppf-text:    var(--pp-text-1);
+}
+body.pp-dark .ppf-ay-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%2394a3b8' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+}
+body.pp-dark .ppf-ay-static { background: #1a2540; }
+
+/* Buttons */
+body.pp-dark .ppf-btn-primary { background: var(--pp-primary); border-color: var(--pp-primary); color: #fff; }
+body.pp-dark .ppf-btn-ghost { background: #1a2540; color: #f08da0; border-color: rgba(214,74,102,0.4); }
+body.pp-dark .ppf-btn-ghost:hover:not(:disabled) { background: rgba(214,74,102,0.14); }
+body.pp-dark .ppf-icon-btn { background: #1a2540; }
+body.pp-dark .ppf-dl-btn { border-color: rgba(214,74,102,0.3); }
+body.pp-dark .ppf-dl-btn:hover { background: var(--pp-primary); border-color: var(--pp-primary); color: #fff; }
+body.pp-dark .ppf-icon-dl { background: #1a2540; }
+body.pp-dark .ppf-icon-dl:hover { background: rgba(214,74,102,0.14); }
+
+/* Badges / status */
+body.pp-dark .ppf-badge-warning { background: rgba(242,179,106,0.14); }
+body.pp-dark .ppf-badge-danger  { background: rgba(248,113,113,0.14); }
+body.pp-dark .ppf-badge-academic { color: #f08da0; background: rgba(214,74,102,0.14); border: 1px solid rgba(214,74,102,0.3); }
+body.pp-dark .ppf-status-badge { background: #1a2540; }
+body.pp-dark .ppf-status-badge-paid { border-color: rgba(74,222,128,0.4); }
+body.pp-dark .ppf-status-badge-due  { border-color: rgba(248,113,113,0.45); }
+body.pp-dark .ppf-avatar { border-color: rgba(214,74,102,0.3); }
+body.pp-dark .ppf-student-meta .sep,
+body.pp-dark .ppf-card-meta [style*="color:#cbd5e1"] { color: #475569 !important; }
+
+/* Summary cards + drill-down popup */
+body.pp-dark .ppf-mini-drill { background: var(--pp-card); }
+body.pp-dark .ppf-mini-drill:hover { border-color: var(--pp-primary); box-shadow: 0 2px 12px rgba(0,0,0,0.35); }
+body.pp-dark .ppf-dd-overlay { background: rgba(0,0,0,0.6); }
+body.pp-dark .ppf-dd-box { background: var(--pp-card); color: var(--pp-text-1); border: 1px solid var(--ppf-border); box-shadow: 0 20px 60px rgba(0,0,0,0.55); }
+body.pp-dark .ppf-dd-close { background: #1a2540; }
+body.pp-dark .ppf-dd-group-hd { background: rgba(214,74,102,0.14); }
+body.pp-dark .ppf-dd-pay { background: rgba(214,74,102,0.14); }
+
+/* Filter chips */
+body.pp-dark .ppf-fchip { background: #1a2540; color: var(--pp-text-2); }
+body.pp-dark .ppf-fchip:hover { border-color: var(--pp-primary); }
+body.pp-dark .ppf-fchip.is-active { background: var(--pp-primary); border-color: var(--pp-primary); color: #fff; }
+body.pp-dark .ppf-schip.is-active { background: rgba(214,74,102,0.14); border-color: rgba(214,74,102,0.3); color: #f08da0; }
+
+/* Tables: group / sub / detail rows */
+body.pp-dark .ppf-t tr.ppf-row-data:hover td { background: rgba(255,255,255,0.05); }
+body.pp-dark .ppf-t tr.ppf-detail-tr > td { background: rgba(255,255,255,0.025); }
+body.pp-dark .ppf-t tr.ppf-sub-row td { background: rgba(214,74,102,0.06); }
+body.pp-dark .ppf-row-toggle { background: #1a2540; }
+body.pp-dark .ppf-sub-kind { background: #1a2540; }
+body.pp-dark .ppf-sub-kind-payment { color: #4ade80; border-color: rgba(74,222,128,0.35); }
+body.pp-dark .ppf-sub-kind-refund { color: #93c5fd; border-color: rgba(147,197,253,0.35); }
+body.pp-dark .ppf-sub-kind-scholarship { color: #f08da0; border-color: rgba(214,74,102,0.35); }
+body.pp-dark .ppf-sub-kind-credit { color: #f2b36a; border-color: rgba(242,179,106,0.35); }
+body.pp-dark .ppf-payall { border-color: rgba(214,74,102,0.3); }
+
+/* Payment Summary sheet + processing overlay */
+body.pp-dark .ppf-bulk-overlay { background: rgba(0,0,0,0.65); }
+body.pp-dark .ppf-bulk-sheet { background: var(--pp-card); border: 1px solid var(--ppf-border); border-bottom: none; box-shadow: 0 -12px 48px rgba(0,0,0,0.5); }
+body.pp-dark .ppf-overlay { background: rgba(0,0,0,0.65); }
+body.pp-dark .ppf-overlay-box { background: var(--pp-card); border: 1px solid var(--ppf-border); box-shadow: 0 12px 40px rgba(0,0,0,0.5); }
+
+/* JS toasts (inline styles → hook classes) */
+body.pp-dark .ppf-toast { background: var(--pp-card) !important; box-shadow: 0 6px 20px rgba(0,0,0,0.45) !important; }
+body.pp-dark .ppf-toast-success { color: #4ade80 !important; border-color: rgba(74,222,128,0.4) !important; }
+body.pp-dark .ppf-toast-error   { color: #f87171 !important; border-color: rgba(248,113,113,0.45) !important; }
+body.pp-dark .ppf-toast-warning { color: #f2b36a !important; border-color: rgba(242,179,106,0.45) !important; }
+body.pp-dark .ppf-toast-info    { color: #7cc4f2 !important; border-color: rgba(124,196,242,0.45) !important; }
 {% endblock %}
 
+{# ── Macros ──────────────────────────────────────────────────────────── #}
+{% macro ay(v) -%}{{ (v or '') | replace('-', ' – ') }}{%- endmacro %}
+
+{% macro badge(status, id='') -%}
+{%- set s = status or '—' -%}
+{%- if s in ('Paid', 'Approved', 'Settled', 'Completed', 'Captured') -%}{%- set tone, icon = 'success', 'check_circle' -%}
+{%- elif s in ('Overdue', 'Unpaid', 'Failed', 'Payment Failed', 'Rejected') -%}{%- set tone, icon = 'danger', 'error' -%}
+{%- elif s in ('Partially Paid', 'Pending', 'Payment Initiated', 'Authorized', 'Queued') -%}{%- set tone, icon = 'warning', 'schedule' -%}
+{%- else -%}{%- set tone, icon = 'neutral', '' -%}{%- endif -%}
+<span class="ppf-badge ppf-badge-{{ tone }}"{% if id %} id="{{ id }}"{% endif %}>{% if icon %}<span class="ms" aria-hidden="true">{{ icon }}</span>{% endif %}{{ s }}</span>
+{%- endmacro %}
+
+{% macro section_error(what) %}
+<div class="ppf-state ppf-state-error" role="alert">
+  <span class="ms" aria-hidden="true">error</span>
+  <div>
+    <p class="ppf-state-title">Unable to load {{ what }}.</p>
+    <p class="ppf-state-sub">The rest of the page is unaffected.</p>
+    <button type="button" class="ppf-btn ppf-btn-ghost ppf-btn-sm" onclick="window.location.reload()">
+      <span class="ms" aria-hidden="true">refresh</span> Retry
+    </button>
+  </div>
+</div>
+{% endmacro %}
+
+{% macro empty(icon, title, sub='', ok=False) %}
+<div class="ppf-state{% if ok %} ppf-state-ok{% endif %}">
+  <span class="ms" aria-hidden="true">{{ icon }}</span>
+  <div>
+    <p class="ppf-state-title">{{ title }}</p>
+    {% if sub %}<p class="ppf-state-sub">{{ sub }}</p>{% endif %}
+  </div>
+</div>
+{% endmacro %}
+
 {% block content %}
+{% set _err = load_errors or {} %}
+{% set _inr = "₹{:,.0f}" %}
+{% set _first = ward_name.split()[0] if ward_name else 'Your ward' %}
+{% set _summary_ok = has_fee_data and not _err.summary %}
+{% set _ns = namespace(inv_count=0) %}
+{% for tg in term_groups %}{% set _ns.inv_count = _ns.inv_count + (tg.invoices | length) %}{% endfor %}
 
 {# Pass student name, payer details, and CSRF to JS #}
 <div id="ppf-meta"
@@ -671,881 +579,402 @@
   var PPF_CSRF    = "{{ frappe.session.csrf_token }}";
 </script>
 
-{# ── Ward Banner ─────────────────────────────────────────────────── #}
-<div class="pp-ward-banner fade-in">
-  <div class="pp-ward-banner-avatar">
-    {% if ward_photo %}<img src="{{ ward_photo }}" alt="{{ ward_name }}">
-    {% else %}{{ ward_initial }}{% endif %}
+{# ── Skeleton: shown instead of this ward's data while another ward loads ── #}
+<div class="pp-switch-skel ppf-skel" role="status" aria-live="polite">
+  <p class="pp-sr-only" id="ppf-switch-msg">Loading student information…</p>
+  <div style="display:flex;justify-content:space-between;gap:16px;margin-bottom:16px;">
+    <div style="flex:1;max-width:420px;"><span class="pp-skel" style="height:30px;width:60%;"></span><span class="pp-skel" style="height:14px;width:90%;margin-top:8px;"></span></div>
+    <span class="pp-skel" style="height:38px;width:160px;align-self:flex-end;"></span>
   </div>
-  <div class="pp-ward-banner-info">
-    <div class="pp-ward-banner-eyebrow">Fees &amp; Payments</div>
-    <div class="pp-ward-banner-name">{{ ward_name }}</div>
-    <div class="pp-ward-banner-meta">
-      {% if ward_programme %}<span>{{ ward_programme }}</span>{% endif %}
-      {% if ward_batch %}<span class="pp-ward-banner-pill">Batch {{ ward_batch }}</span>{% endif %}
-    </div>
+  <span class="pp-skel" style="height:84px;margin-bottom:16px;"></span>
+  <div class="ppf-skel-row ppf-skel-kpis">
+    <span class="pp-skel" style="height:112px;"></span><span class="pp-skel" style="height:112px;"></span>
+    <span class="pp-skel" style="height:112px;"></span><span class="pp-skel" style="height:112px;"></span>
   </div>
-  {% if has_dues %}
-  <div style="flex-shrink:0;margin-left:auto;text-align:right;">
-    <div style="font-size:11px;color:rgba(255,255,255,0.7);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Outstanding</div>
-    <div style="font-size:22px;font-weight:800;color:#fde68a;">&#8377;{{ "{:,.0f}".format(total_outstanding) }}</div>
-  </div>
-  {% endif %}
+  <div class="ppf-skel-row"><span class="pp-skel" style="height:140px;"></span></div>
+  <div class="ppf-skel-row ppf-skel-pair"><span class="pp-skel" style="height:220px;"></span><span class="pp-skel" style="height:220px;"></span></div>
+  <div class="ppf-skel-row ppf-skel-pair"><span class="pp-skel" style="height:240px;"></span><span class="pp-skel" style="height:240px;"></span></div>
+  <div class="ppf-skel-row"><span class="pp-skel" style="height:180px;"></span></div>
+  <div class="ppf-skel-row"><span class="pp-skel" style="height:140px;"></span></div>
 </div>
 
-{# ── Page Header ─────────────────────────────────────────────────── #}
-<div class="pp-page-header fade-in">
-  <h1 class="pp-page-title">Fees &amp; Payments</h1>
-  <p class="pp-page-sub">View your ward's fee schedule and pay outstanding dues by term</p>
-</div>
+<div class="ppf-page" data-ward="{{ ward_student_name | e }}">
 
-{% if portal_error %}
-<div class="ppf-notice ppf-notice-warning fade-in">
-  <span class="ms">error_outline</span>
-  <div><strong>Could not load fee data.</strong> Please refresh or contact the Finance Office.</div>
-</div>
+{# ═══════════════ Page header ═══════════════ #}
+<header class="ppf-head fade-in" style="background: var(--pp-card, #fff); border: 1px solid var(--pp-border, #e5e7eb); border-radius: 14px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin: 0 0 16px;">
+  <div>
+    <h1 class="pp-page-title" style="margin: 0; font-size: 18px !important; font-weight: 700 !important;">Fees &amp; Payments</h1>
+  </div>
+  <div class="ppf-ay">
+    {% if fee_academic_years | length > 1 %}
+    <label class="ppf-ay-label" for="ppf-ay-select">Academic Year</label>
+    <select id="ppf-ay-select" class="ppf-ay-select" aria-describedby="ppf-ay-hint">
+      <option value="all">All academic years</option>
+      {% for y in fee_academic_years %}<option value="{{ y | e }}">{{ ay(y) }}</option>{% endfor %}
+    </select>
+    {% else %}
+    <span class="ppf-ay-label">Academic Year</span>
+    <span class="ppf-ay-static">{{ ay(fee_academic_years[0]) if fee_academic_years else '—' }}</span>
+    {% endif %}
+  </div>
+</header>
+{% if fee_academic_years | length > 1 %}
+<p class="ppf-ay-hint" id="ppf-ay-hint" aria-live="polite">Summary figures and outstanding dues cover all academic years; invoice, payment and charge lists are filtered.</p>
 {% endif %}
 
-{% if not has_fee_data %}
-<div class="ppf-empty fade-in">
-  <span class="ms ppf-empty-icon">receipt_long</span>
-  <p class="ppf-empty-title">No Fee Details Yet</p>
-  <p class="ppf-empty-sub">Your ward's programme fee will appear here once the Finance Office has set up their record.</p>
-</div>
-
-{% else %}
-
-{# ═══════════════════════════════════════════════════════════════
-   SECTION 1 — Financial Overview
-═══════════════════════════════════════════════════════════════ #}
-<div class="ppf-overview fade-in">
-  <div class="ppf-overview-topbar">
-    <div class="ppf-overview-eyebrow">
-      <span class="ms" style="font-size:13px;">account_balance</span>
-      Financial Overview · Fees &amp; Payments
-    </div>
-    {% if sm_fee_status %}
-    <span class="ppf-status-pill ppf-status-{{ sm_fee_status | lower | replace(' ','-') }}">
-      {% if sm_fee_status == 'Paid' %}<span class="ms" style="font-size:11px;">check_circle</span>
-      {% elif sm_fee_status == 'Partially Paid' %}<span class="ms" style="font-size:11px;">timelapse</span>
-      {% elif sm_fee_status in ('Unpaid','Overdue') %}<span class="ms" style="font-size:11px;">warning</span>
-      {% elif sm_fee_status == 'Payment Initiated' %}<span class="ms" style="font-size:11px;">pending</span>
+{# ═══════════════ Student context ═══════════════ #}
+<section class="ppf-card ppf-student fade-in" aria-label="Selected student">
+  <div class="ppf-avatar">
+    {% if ward_photo %}<img src="{{ ward_photo }}" alt="" data-fallback="{{ ward_initial }}">
+    {% else %}<span aria-hidden="true">{{ ward_initial }}</span>{% endif %}
+  </div>
+  <div class="ppf-student-main">
+    <div class="ppf-student-name-row">
+      <h2 class="ppf-student-name">{{ ward_name or '—' }}</h2>
+      {% if ward_status %}
+      <span class="ppf-dot-status {{ 'ppf-tone-success' if ward_status == 'Active' else ('ppf-tone-muted' if ward_status in ('Graduated', 'Alumni') else 'ppf-tone-warning') }}">{{ ward_status }}</span>
       {% endif %}
-      {{ sm_fee_status }}
-    </span>
+    </div>
+    {% set _meta = [ward_programme, ward_term, ('Batch ' ~ ward_batch) if ward_batch else ''] | select | list %}
+    {% if _meta %}
+    <div class="ppf-student-meta">{% for m in _meta %}{% if not loop.first %}<span class="sep" aria-hidden="true">|</span>{% endif %}{{ m }}{% endfor %}</div>
     {% endif %}
   </div>
-
-  <div class="ppf-hero-lbl">{% if has_dues %}Amount Due{% else %}Net Programme Fee{% endif %}</div>
-  <div class="ppf-amount">&#8377;{{ "{:,.2f}".format(total_outstanding if has_dues else total_payable) }}</div>
-  {% if has_dues and has_sm_inv_mismatch %}
-  <div style="font-size:12px;color:#fde68a;font-weight:600;margin-top:4px;position:relative;z-index:1;">
-    <span class="ms" style="font-size:12px;vertical-align:middle;">workspace_premium</span>
-    Scholarship &#8377;{{ "{:,.0f}".format(total_scholarship) }} applied &nbsp;·&nbsp; &#8377;{{ "{:,.0f}".format(inv_outstanding_raw) }} invoice balance
+  <dl class="ppf-facts">
+    <div><dt>Enrollment No.</dt><dd>{{ ward_enrolment_no or '—' }}</dd></div>
+    <div><dt>Academic Year</dt><dd>{{ ay(ward_academic_year) or '—' }}</dd></div>
+    <div><dt>Programme</dt><dd>{{ ward_programme or '—' }}</dd></div>
+  </dl>
+  {% if _summary_ok %}
+  <div class="ppf-student-status">
+    {% if has_dues %}
+    <span class="ppf-status-badge ppf-status-badge-due"><span class="ms" aria-hidden="true">error</span>Pending</span>
+    {% if payment_enabled and payable_invoices %}
+      {% if payable_invoices | length == 1 %}
+      {% set _pi = payable_invoices[0] %}
+      <button type="button" class="ppf-btn ppf-btn-primary ppf-btn-sm" data-pay-invoice="{{ _pi.name | e }}"
+              onclick="ppfInitiatePayment('{{ _pi.name | e }}')">
+        <span class="ms" aria-hidden="true">lock</span> Pay Now · {{ _pi.formatted_outstanding }}
+      </button>
+      {% else %}
+      <a class="ppf-btn ppf-btn-primary ppf-btn-sm" href="#ppf-dm-details" onclick="ppfShowTab('invoices'); return false;"><span class="ms" aria-hidden="true">receipt_long</span> View invoices to pay</a>
+      {% endif %}
+    {% endif %}
+    {% else %}
+    <span class="ppf-status-badge ppf-status-badge-paid"><span class="ms" aria-hidden="true">check_circle</span>No Dues</span>
+    {% endif %}
   </div>
   {% endif %}
+</section>
 
-  <div class="ppf-amount-label">
-    Net Programme Fee
-    {% if fee_structure_name %} &nbsp;·&nbsp; {{ fee_structure_name }}{% endif %}
-    {% if fee_structure_valid_from %}
-    <span class="ppf-validity-pill">
-      Valid {{ frappe.utils.formatdate(fee_structure_valid_from, "dd MMM yyyy") }}
-      {% if fee_structure_valid_until %} – {{ frappe.utils.formatdate(fee_structure_valid_until, "dd MMM yyyy") }}{% endif %}
-    </span>
-    {% endif %}
-  </div>
-
-  <div class="ppf-stat-row">
-    <div class="ppf-stat-box">
-      <div class="ppf-stat-icon"><span class="ms" style="font-size:17px;">payments</span></div>
-      <div>
-        <div class="ppf-stat-label">Total Fee</div>
-        <div class="ppf-stat-value">&#8377;{{ "{:,.0f}".format(total_fee) }}</div>
-      </div>
-    </div>
-    <div class="ppf-stat-box">
-      <div class="ppf-stat-icon"><span class="ms" style="font-size:17px;">check_circle</span></div>
-      <div>
-        <div class="ppf-stat-label">Amount Paid</div>
-        <div class="ppf-stat-value">&#8377;{{ "{:,.0f}".format(total_paid) }}</div>
-      </div>
-    </div>
-    {% if total_scholarship > 0 %}
-    <div class="ppf-stat-box">
-      <div class="ppf-stat-icon"><span class="ms" style="font-size:17px;">workspace_premium</span></div>
-      <div>
-        <div class="ppf-stat-label">Scholarship</div>
-        <div class="ppf-stat-value">&#8377;{{ "{:,.0f}".format(total_scholarship) }}</div>
-      </div>
-    </div>
-    {% endif %}
-    <div class="ppf-stat-box">
-      <div class="ppf-stat-icon"><span class="ms" style="font-size:17px;">{% if has_dues %}warning{% else %}verified{% endif %}</span></div>
-      <div>
-        <div class="ppf-stat-label">Outstanding</div>
-        <div class="ppf-stat-value {% if has_dues %}ppf-stat-value-warn{% endif %}">&#8377;{{ "{:,.0f}".format(total_outstanding) }}</div>
-      </div>
-    </div>
-  </div>
-
-  {% if total_payable > 0 %}
-  {% set paid_pct = [((total_paid / total_payable * 100) if total_payable > 0 else 0) | round | int, 100] | min %}
-  <div class="ppf-progress-wrap">
-    <div class="ppf-progress-labels">
-      <span>{{ paid_pct }}% paid</span>
-      <span>&#8377;{{ "{:,.0f}".format(total_paid) }} of &#8377;{{ "{:,.0f}".format(total_payable) }}</span>
-    </div>
-    <div class="ppf-progress-track">
-      <div class="ppf-progress-fill {% if paid_pct == 100 %}ppf-progress-fill-done{% endif %}" style="width:{{ paid_pct }}%;"></div>
-    </div>
-  </div>
-  {% endif %}
-</div>
-
-{# ── Notices ─────────────────────────────────────────────────────── #}
-{% if has_dues and not payment_enabled %}
-<div class="ppf-notice ppf-notice-info fade-in">
-  <span class="ms">info</span>
-  <div>
-    <strong>Payment due · &#8377;{{ "{:,.0f}".format(total_outstanding) }}</strong>
-    <span style="margin-left:6px;opacity:0.85;">Please contact the Bursar's Office to clear the outstanding balance.</span>
-  </div>
+{# ═══════════════ Notices ═══════════════ #}
+{% if portal_error %}
+<div class="ppf-notice ppf-notice-danger fade-in" role="alert">
+  <span class="ms" aria-hidden="true">error</span>
+  <div><strong>Could not load fee data.</strong> Please <button type="button" class="ppf-link" onclick="window.location.reload()">retry</button> or contact the Finance Office.</div>
 </div>
 {% endif %}
-
-{% if has_sm_inv_mismatch %}
+{% if has_sm_inv_mismatch and not _err.summary %}
 <div class="ppf-notice ppf-notice-success fade-in">
-  <span class="ms">workspace_premium</span>
+  <span class="ms" aria-hidden="true">workspace_premium</span>
   <div>
-    <strong>Scholarship of &#8377;{{ "{:,.0f}".format(mismatch_diff) }} approved but not yet applied to the invoice.</strong>
-    Your effective outstanding is <strong>&#8377;{{ "{:,.0f}".format(total_outstanding) }}</strong>.
-    The Finance Office will update the invoice shortly.
+    <strong>Scholarship of {{ _inr.format(mismatch_diff) }} approved but not yet applied to the invoice.</strong>
+    The effective outstanding is <strong>{{ _inr.format(total_outstanding) }}</strong>
+    ({{ _inr.format(inv_outstanding_raw) }} invoice balance). The Finance Office will update the invoice shortly.
   </div>
 </div>
 {% endif %}
-
-{% if has_overpayment_flag %}
+{% if has_overpayment_flag and not _err.summary %}
 <div class="ppf-notice ppf-notice-warning fade-in">
-  <span class="ms">info</span>
+  <span class="ms" aria-hidden="true">info</span>
   <div>The recorded paid amount exceeds the net payable. Please contact the Finance Office to verify and reconcile the payment records.</div>
 </div>
 {% endif %}
 
-{# ── Overdue Demands Banner ───────────────────────────────────────── #}
-{% if has_overdue_demands %}
-<div class="ppf-overdue-banner fade-in">
-  <div class="ppf-overdue-banner-icon"><span class="ms" style="font-size:20px;">warning</span></div>
-  <div class="ppf-overdue-banner-body">
-    <div class="ppf-overdue-banner-title">{{ overdue_demand_count }} overdue fee demand{{ 's' if overdue_demand_count != 1 else '' }}</div>
-    <div class="ppf-overdue-banner-sub">Total outstanding: <strong>{{ formatted_overdue_total }}</strong>. Late fees may apply.</div>
-  </div>
-  <a class="ppf-overdue-banner-btn" href="#ppf-demands-section">View Demands</a>
-</div>
-{% endif %}
-
-{# ═══════════════════════════════════════════════════════════════
-   SECTION 2 — Fee Structure
-═══════════════════════════════════════════════════════════════ #}
-{% if fs_components %}
-<div class="ppf-fs-card fade-in">
-  <div class="ppf-fs-hdr">
-    <span class="ms" style="font-size:16px;color:var(--ppf-gold-dark);">description</span>
-    <div style="flex:1;">
-      <div class="ppf-fs-title">Fee Structure
-        {% if fee_structure_status %}
-        <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:6px;
-          background:{% if fee_structure_status == 'Active' %}var(--pp-success-bg){% else %}var(--pp-warning-bg){% endif %};
-          color:{% if fee_structure_status == 'Active' %}var(--pp-success){% else %}var(--pp-warning){% endif %};">
-          {{ fee_structure_status }}
-        </span>
-        {% endif %}
-      </div>
-      {% if fee_structure_name %}<div class="ppf-fs-sub">{{ fee_structure_name }}</div>{% endif %}
-    </div>
-    {% if fee_structure_valid_from %}
-    <div style="text-align:right;flex-shrink:0;">
-      <div style="font-size:10.5px;font-weight:600;color:var(--pp-text-4);text-transform:uppercase;letter-spacing:0.04em;">Validity</div>
-      <div style="font-size:11.5px;font-weight:600;color:var(--ppf-gold-dark);">
-        {{ frappe.utils.formatdate(fee_structure_valid_from, "dd MMM yyyy") }}
-        {% if fee_structure_valid_until %} – {{ frappe.utils.formatdate(fee_structure_valid_until, "dd MMM yyyy") }}{% endif %}
-      </div>
-    </div>
-    {% endif %}
-  </div>
-  <div class="ppf-fs-body">
-    <div class="ppf-fs-table-hdr"><span>Fee Component</span><span>Amount</span></div>
-    {% set fs_total = namespace(val=0) %}
-    {% for comp in fs_components %}
-    {% set comp_amt = comp.total_amount or comp.amount or 0 %}
-    {% set fs_total.val = fs_total.val + comp_amt %}
-    <div class="ppf-fs-row">
-      <span class="ppf-fs-comp-name">
-        {{ comp.component_name }}
-        {% if comp.is_taxable and comp.tax_rate %}
-        <span class="ppf-fs-tax-pill">{{ comp.tax_rate | int }}% tax</span>
-        {% endif %}
-      </span>
-      <span class="ppf-fs-comp-amt">&#8377;{{ "{:,.0f}".format(comp_amt) }}</span>
-    </div>
-    {% endfor %}
-    <div class="ppf-fs-total-row"><span>Total Programme Fee</span><span>&#8377;{{ "{:,.0f}".format(fs_total.val) }}</span></div>
-    {% if total_scholarship > 0 %}
-    <div class="ppf-fs-disc-row"><span>Scholarship / Discount</span><span>− &#8377;{{ "{:,.0f}".format(total_scholarship) }}</span></div>
-    <div class="ppf-fs-net-row"><span>Net Payable</span><span>&#8377;{{ "{:,.2f}".format(total_payable) }}</span></div>
-    {% endif %}
-  </div>
-</div>
-{% endif %}
-
-{# ═══════════════════════════════════════════════════════════════
-   SECTION 3 — Term-wise Fee Schedule (Invoices)
-═══════════════════════════════════════════════════════════════ #}
-<div class="ppf-section-hdr fade-in" id="ppf-invoices-section">
-  <div class="ppf-section-title">
-    <span class="ms" style="color:var(--ppf-navy);">receipt_long</span>
-    Fee Invoices
-  </div>
-  {% if has_invoices %}
-  {%- set ns_inv = namespace(total=0) %}{% for tg in term_groups %}{% set ns_inv.total = ns_inv.total + (tg.invoices | length) %}{% endfor -%}
-  <span class="ppf-section-count">{{ ns_inv.total }} invoice{{ 's' if ns_inv.total != 1 else '' }}</span>
-  {% endif %}
-</div>
-
-{% if has_invoices %}
-
-{% for tg in term_groups %}
-<div class="ppf-term-group fade-in" style="animation-delay:{{ loop.index0 * 0.06 }}s;">
-
-  <div class="ppf-term-hdr">
-    <span class="ms" style="font-size:15px;">calendar_today</span>
-    {{ tg.term }}
-    {% if tg.academic_year %}<span class="ppf-term-year">{{ tg.academic_year }}</span>{% endif %}
-  </div>
-
-  <div class="ppf-term-summary">
-    <span class="ppf-term-pill ppf-term-pill-neutral"><span class="ms" style="font-size:13px;">payments</span>Due: {{ tg.formatted_term_total }}</span>
-    <span class="ppf-term-pill ppf-term-pill-green"><span class="ms" style="font-size:13px;">check_circle</span>Paid: {{ tg.formatted_term_paid }}</span>
-    {% if tg.term_has_dues %}
-    <span class="ppf-term-pill ppf-term-pill-red"><span class="ms" style="font-size:13px;">warning</span>Outstanding: {{ tg.formatted_term_outstanding }}</span>
-    {% else %}
-    <span class="ppf-term-pill ppf-term-pill-green"><span class="ms" style="font-size:13px;">verified</span>Cleared</span>
-    {% endif %}
-  </div>
-
-  {% for inv in tg.invoices %}
-  {# Resolve effective status using namespace so re-assignment in if-block takes effect #}
-  {% set _ns = namespace(eff_status=inv.eff_status or inv.status or 'Unpaid') %}
-  {% if inv.is_overdue and _ns.eff_status not in ('Paid', 'Cancelled', 'Partially Paid') %}
-    {% set _ns.eff_status = 'Overdue' %}
-  {% endif %}
-  {% set eff_status = _ns.eff_status %}
-
-  <div class="ppf-invoice-card" id="ppf-card-{{ inv.name | e }}">
-
-    {# Due-date alert strip #}
-    {% if eff_status not in ('Paid', 'Cancelled') and inv.due_date %}
-      {% set days_left = (frappe.utils.getdate(inv.due_date) - frappe.utils.getdate(frappe.utils.today())).days %}
-      {% if days_left < 0 %}
-    <div class="ppf-due-strip ppf-due-overdue">
-      <span class="ms" style="font-size:13px;">warning</span>
-      Overdue by {{ days_left | abs }} day{{ 's' if days_left | abs != 1 else '' }} — was due {{ frappe.utils.formatdate(inv.due_date, "dd MMM yyyy") }}
-    </div>
-      {% elif days_left <= 7 %}
-    <div class="ppf-due-strip ppf-due-urgent">
-      <span class="ms" style="font-size:13px;">schedule</span>
-      Due in {{ days_left }} day{{ 's' if days_left != 1 else '' }} — {{ frappe.utils.formatdate(inv.due_date, "dd MMM yyyy") }}
-    </div>
-      {% elif days_left <= 30 %}
-    <div class="ppf-due-strip ppf-due-upcoming">
-      <span class="ms" style="font-size:13px;">event_available</span>
-      Due on {{ frappe.utils.formatdate(inv.due_date, "dd MMM yyyy") }}
-    </div>
-      {% endif %}
-    {% endif %}
-
-    {# Clickable row #}
-    <div class="ppf-inv-row" onclick="ppfToggle('{{ inv.name | e }}')"
-         role="button" tabindex="0" aria-expanded="false">
-
-      <div class="ppf-inv-icon
-        {% if eff_status == 'Paid' %}ppf-icon-paid
-        {% elif eff_status == 'Partially Paid' %}ppf-icon-partial
-        {% elif eff_status == 'Cancelled' %}ppf-icon-cancelled
-        {% elif eff_status in ('Overdue', 'Payment Failed') %}ppf-icon-overdue
-        {% else %}ppf-icon-pending{% endif %}">
-        <span class="ms">{% if eff_status == 'Paid' %}check_circle{% elif eff_status == 'Partially Paid' %}timelapse{% elif eff_status == 'Cancelled' %}cancel{% elif eff_status in ('Overdue', 'Payment Failed') %}error{% else %}receipt_long{% endif %}</span>
-      </div>
-
-      <div class="ppf-inv-info">
-        <div class="ppf-inv-label">
-          {% if inv.fee_components and inv.fee_components | length == 1 %}{{ inv.fee_components[0].component_name }}
-          {% else %}Programme Fee{% endif %}
-        </div>
-        <div class="ppf-inv-dates">
-          {% if inv.invoice_date %}{{ frappe.utils.formatdate(inv.invoice_date, "dd MMM yyyy") }}{% endif %}
-          {% if inv.due_date %} &nbsp;·&nbsp; Due {{ frappe.utils.formatdate(inv.due_date, "dd MMM yyyy") }}{% endif %}
-        </div>
-        {% if inv.fee_components %}
-        <div class="ppf-comp-pills">
-          {% for c in inv.fee_components %}
-          <span class="ppf-comp-pill">{{ c.component_type or c.component_name }}</span>
-          {% endfor %}
-        </div>
-        {% endif %}
-      </div>
-
-      <div class="ppf-inv-right" onclick="event.stopPropagation()">
-        <div class="ppf-inv-amount {% if inv.outstanding_amount > 0 %}ppf-inv-amount-due{% else %}ppf-inv-amount-clear{% endif %}">
-          {{ inv.formatted_outstanding }}
-        </div>
-        <div style="font-size:11px;color:var(--pp-text-4);font-weight:500;">outstanding</div>
-        <span class="ppf-inv-badge ppf-badge-{{ eff_status | lower | replace(' ','-') }}"
-              id="ppf-badge-{{ inv.name | e }}">
-          {% if eff_status == 'Paid' %}<span class="ms" style="font-size:9px;">check_circle</span>{% endif %}
-          {{ eff_status }}
-        </span>
-        {% if inv.can_pay and payment_enabled %}
-        <button class="ppf-pay-btn" type="button"
-                id="ppf-pay-btn-{{ inv.name | e }}"
-                onclick="ppfInitiatePayment('{{ inv.name | e }}')">
-          <span class="ms" style="font-size:14px;">payments</span> Pay Now
-        </button>
-        {% endif %}
-      </div>
-
-      <span class="ms ppf-inv-chevron" id="ppf-chv-{{ inv.name | e }}">expand_more</span>
-    </div>
-
-    {# Expandable detail panel #}
-    <div class="ppf-inv-detail" id="ppf-det-{{ inv.name | e }}">
-      {% if eff_status == 'Cancelled' %}
-      <div style="padding:14px;text-align:center;font-size:13px;color:var(--pp-text-4);">
-        <span class="ms" style="font-size:20px;display:block;margin-bottom:6px;">cancel</span>
-        This invoice has been cancelled. No payment is required.
-      </div>
-      {% else %}
-      <div class="ppf-detail-grid">
-
-        {# Left: Fee breakdown #}
-        <div>
-          <div class="ppf-detail-col-hdr"><span class="ms" style="font-size:12px;">receipt_long</span>Fee Breakdown</div>
-
-          {% if inv.fee_components %}
-          {% for comp in inv.fee_components %}
-          <div class="ppf-detail-row">
-            <span class="ppf-detail-label">{{ comp.component_name }}</span>
-            <span class="ppf-detail-value">&#8377;{{ "{:,.0f}".format(comp.total_amount or comp.amount or 0) }}</span>
-          </div>
-          {% endfor %}
-          <div style="border-top:1px solid var(--pp-border);margin:4px 0 6px;"></div>
-          {% endif %}
-
-          {% if inv.scholarship_amount %}
-          <div class="ppf-detail-row">
-            <span class="ppf-detail-label" style="color:var(--pp-purple, #7c3aed);">
-              <span class="ms" style="font-size:12px;vertical-align:middle;">workspace_premium</span>
-              Scholarship / Discount
-            </span>
-            <span class="ppf-detail-value" style="color:var(--pp-purple, #7c3aed);">− &#8377;{{ "{:,.0f}".format(inv.scholarship_amount) }}</span>
-          </div>
-          {% endif %}
-          <div class="ppf-detail-row">
-            <span class="ppf-detail-label">Net Payable</span>
-            <span class="ppf-detail-value">{{ inv.formatted_payable }}</span>
-          </div>
-          <div class="ppf-detail-row">
-            <span class="ppf-detail-label" style="color:var(--pp-success);">Amount Paid</span>
-            <span class="ppf-detail-value" style="color:var(--pp-success);"
-                  id="ppf-paid-{{ inv.name | e }}">{{ inv.formatted_paid }}</span>
-          </div>
-          <div class="ppf-detail-row">
-            <span class="ppf-detail-label">Outstanding Balance</span>
-            <span class="ppf-detail-value"
-                  style="color:{% if inv.outstanding_amount > 0 %}var(--pp-danger){% else %}var(--pp-success){% endif %};"
-                  id="ppf-outstanding-{{ inv.name | e }}">{{ inv.formatted_outstanding }}</span>
-          </div>
-
-          {# Download buttons #}
-          <div class="ppf-inv-actions-row" style="margin-top:14px;">
-            <a class="ppf-dl-btn"
-               href="/api/method/slcm.api.student_portal.parent_download_fee_invoice?invoice_name={{ inv.name | urlencode }}&student_name={{ ward_student_name | urlencode }}"
-               target="_blank" rel="noopener noreferrer">
-              <span class="ms" style="font-size:15px;">picture_as_pdf</span>
-              Download Invoice
-            </a>
-            {% if inv.has_receipt %}
-            {% for rc in inv.receipts %}
-            <a class="ppf-dl-btn"
-               href="/api/method/slcm.api.student_portal.parent_download_fee_receipt?receipt_name={{ rc.receipt_name | urlencode }}&student_name={{ ward_student_name | urlencode }}"
-               target="_blank" rel="noopener noreferrer"
-               title="Ref: {{ rc.reference_number or rc.receipt_name }}">
-              <span class="ms" style="font-size:15px;">receipt</span>
-              Download Receipt{% if inv.receipts | length > 1 %} {{ loop.index }}{% endif %}
-            </a>
-            {% endfor %}
-            {% endif %}
-          </div>
-        </div>
-
-        {# Right: Payment history #}
-        <div>
-          <div class="ppf-detail-col-hdr"><span class="ms" style="font-size:12px;">history</span>Payment History</div>
-          {% if inv.payments %}
-          {% for p in inv.payments %}
-          <div class="ppf-payment-entry">
-            {% if p.is_rzp_only %}
-            <div class="ppf-payment-tick ppf-payment-tick-fail">✗</div>
-            <div>
-              <div class="ppf-payment-amount" style="color:var(--pp-danger);font-size:13px;">{{ p.rzp_status or "Failed" }}</div>
-              <div class="ppf-payment-meta">{{ frappe.utils.formatdate(p.payment_date, "dd MMM yyyy") if p.payment_date else "" }}</div>
-            </div>
-            {% else %}
-            <div class="ppf-payment-tick">✓</div>
-            <div>
-              <div class="ppf-payment-amount">&#8377;{{ "{:,.0f}".format(p.amount or 0) }}</div>
-              <div class="ppf-payment-meta">
-                {{ frappe.utils.formatdate(p.payment_date, "dd MMM yyyy") if p.payment_date else "" }}
-                {% if p.payment_mode %} &nbsp;·&nbsp; {{ p.payment_mode }}{% endif %}
-              </div>
-              {% if p.reference_number %}
-              <div class="ppf-payment-txn">
-                <span class="ms" style="font-size:10px;vertical-align:middle;">tag</span>
-                Ref: {{ p.reference_number }}
-              </div>
-              {% endif %}
-            </div>
-            {% endif %}
-          </div>
-          {% endfor %}
-          {% else %}
-          <div class="ppf-no-payments">
-            <span class="ms" style="font-size:26px;display:block;margin-bottom:6px;">account_balance_wallet</span>
-            No payments recorded yet
-          </div>
-          {% endif %}
-        </div>
-
-      </div>
-      {% endif %}
-    </div>
-
-  </div>
-  {% endfor %}
-</div>
-{% endfor %}
-
+{% if not has_any_fee_records %}
+<section class="ppf-card fade-in">
+  {{ empty('receipt_long', 'No fee details yet', 'Your ward\'s fees will appear here once the Finance Office has set up their record.') }}
+</section>
 {% else %}
-<div class="ppf-notice ppf-notice-warning fade-in">
-  <span class="ms">schedule</span>
-  <div>Invoices are being prepared by the Finance Office. The summary above is from your ward's student fee record.</div>
-</div>
-{% endif %}{# end has_invoices #}
 
-{# ═══════════════════════════════════════════════════════════════
-   SECTION 4 — Fee Demands, Receipts, Refunds (tabbed)
-═══════════════════════════════════════════════════════════════ #}
-{% if has_fee_demands or has_transactions or has_fee_refunds %}
-<div class="ppf-section-hdr fade-in" id="ppf-demands-section" style="margin-top:28px;">
-  <div class="ppf-section-title">
-    <span class="ms" style="color:#7c3aed;">list_alt</span>
-    Additional Charges &amp; History
-  </div>
-  {% if has_overdue_demands %}
-  <span class="ppf-section-count ppf-section-count-red">{{ overdue_demand_count }} overdue</span>
-  {% elif has_fee_demands %}
-  <span class="ppf-section-count">{{ fee_demands | length }} demand{{ 's' if fee_demands | length != 1 else '' }}</span>
-  {% endif %}
-</div>
-
-<div class="ppf-history-wrap fade-in">
-  <div class="ppf-tab-bar">
-    {% if has_fee_demands %}
-    <button class="ppf-tab ppf-tab-active" id="ppf-tabbtn-demands" onclick="ppfTab('demands')">
-      <span class="ms" style="font-size:15px;">list_alt</span>
-      Fee Demands
-      {% if has_overdue_demands %}<span class="ppf-tab-badge ppf-tab-badge-red">{{ overdue_demand_count }}</span>
-      {% else %}<span class="ppf-tab-badge">{{ fee_demands | length }}</span>{% endif %}
-    </button>
-    {% endif %}
-    {% if has_transactions %}
-    <button class="ppf-tab {% if not has_fee_demands %}ppf-tab-active{% endif %}" id="ppf-tabbtn-receipts" onclick="ppfTab('receipts')">
-      <span class="ms" style="font-size:15px;">receipt</span>
-      Receipts
-      <span class="ppf-tab-badge">{{ all_transactions | length }}</span>
-    </button>
-    {% endif %}
-    {% if has_fee_refunds %}
-    <button class="ppf-tab" id="ppf-tabbtn-refunds" onclick="ppfTab('refunds')">
-      <span class="ms" style="font-size:15px;">undo</span>
-      Refunds
-      <span class="ppf-tab-badge ppf-tab-badge-green">{{ fee_refunds | length }}</span>
-    </button>
-    {% endif %}
-  </div>
-
-  {# ── Tab: Fee Demands ────────────────────────────────────── #}
-  {% if has_fee_demands %}
-  <div id="ppf-tab-demands" class="ppf-tab-panel">
-    <div style="font-size:12px;color:var(--pp-text-4);padding:10px 14px 0;font-weight:500;">
-      Additional charges (development fee, hostel, examinations, etc.) separate from the programme tuition fee above.
-    </div>
-
-    {# ── Payment Analytics Panel ─────────────────────────── #}
-    {% if da_total > 0 %}
-    <div class="ppfda-wrap">
-      <div class="ppfda-progress-row">
-        <div class="ppfda-progress-bar">
-          <div class="ppfda-progress-fill ppfda-fill-paid"   style="width:{{ ((da_paid_amt / da_total_amt * 100) if da_total_amt > 0 else 0)|round|int }}%;"></div>
-          <div class="ppfda-progress-fill ppfda-fill-waived" style="width:{{ ((da_waived_amt / da_total_amt * 100) if da_total_amt > 0 else 0)|round|int }}%;"></div>
-        </div>
-        <span class="ppfda-pct-label">{{ da_pct }}% settled</span>
-      </div>
-      <div class="ppfda-stats">
-        <div class="ppfda-stat ppfda-stat-total">
-          <div class="ppfda-stat-val">{{ da_fmt_total }}</div>
-          <div class="ppfda-stat-lbl">Total Levied</div>
-          <div class="ppfda-stat-sub">{{ da_total }} demand{{ 's' if da_total != 1 else '' }}</div>
-        </div>
-        <div class="ppfda-stat ppfda-stat-paid">
-          <div class="ppfda-stat-val">{{ da_fmt_paid }}</div>
-          <div class="ppfda-stat-lbl">Settled</div>
-          <div class="ppfda-stat-sub">{{ da_paid }} paid{% if da_waived %} · {{ da_waived }} waived{% endif %}</div>
-        </div>
-        {% if da_waived_amt > 0 %}
-        <div class="ppfda-stat ppfda-stat-waived">
-          <div class="ppfda-stat-val">{{ da_fmt_waived }}</div>
-          <div class="ppfda-stat-lbl">Waived Off</div>
-          <div class="ppfda-stat-sub">concessions applied</div>
-        </div>
-        {% endif %}
-        <div class="ppfda-stat {% if da_overdue > 0 %}ppfda-stat-overdue{% else %}ppfda-stat-due{% endif %}">
-          <div class="ppfda-stat-val">{{ da_fmt_outstanding }}</div>
-          <div class="ppfda-stat-lbl">Outstanding</div>
-          <div class="ppfda-stat-sub">
-            {% if da_overdue > 0 %}{{ da_overdue }} overdue{% elif da_pending > 0 %}{{ da_pending }} pending{% else %}all clear{% endif %}
-          </div>
-        </div>
-      </div>
-      <div class="ppfda-legend">
-        <span class="ppfda-dot ppfda-dot-paid"></span><span class="ppfda-legend-lbl">Settled</span>
-        {% if da_waived_amt > 0 %}<span class="ppfda-dot ppfda-dot-waived"></span><span class="ppfda-legend-lbl">Waived</span>{% endif %}
-        {% if da_outstanding > 0 %}<span class="ppfda-dot {% if da_overdue > 0 %}ppfda-dot-overdue{% else %}ppfda-dot-pending{% endif %}"></span>
-        <span class="ppfda-legend-lbl">{% if da_overdue > 0 %}Overdue{% else %}Outstanding{% endif %}</span>{% endif %}
-      </div>
+{# ═══════════════ Row 2 — Summary (additional charges & history) ═══════════════ #}
+{% set _has_sc = has_concessions or _err.concessions %}
+{% set _has_ph = payment_history or _err.payments or _err.receipts %}
+{% set _has_inv = has_invoices or _err.invoices %}
+{# Detail tabs: Fee Demands / Payment History / Fee Invoices / Refunds / Scholarships & Concessions; the first one present is open #}
+{% set _ntabs = (1 if has_fee_demands else 0) + (1 if _has_ph else 0) + (1 if _has_inv else 0) + (1 if has_fee_refunds else 0) + (1 if _has_sc else 0) %}
+{% set _first = 'demands' if has_fee_demands else ('payments' if _has_ph else ('invoices' if _has_inv else ('refunds' if has_fee_refunds else 'scholarships'))) %}
+<section class="ppf-card fade-in" id="ppf-demands-section" style="margin-bottom:16px;" aria-labelledby="ppf-dm-title">
+  <div class="ppf-card-hd">
+    <h2 class="ppf-card-title" id="ppf-dm-title"><span class="ms" aria-hidden="true">list_alt</span>Summary</h2>
+    {% if outstanding_rows or has_fee_demands %}
+    <div class="ppf-card-meta">
+      <span class="{{ 'ppf-tone-danger' if outstanding_pending_count }}">{{ outstanding_pending_count }} pending</span>
+      <span aria-hidden="true" style="color:#cbd5e1;">|</span>
+      <span class="{{ 'ppf-tone-danger' if outstanding_overdue_count }}">{{ outstanding_overdue_count }} overdue</span>
+      {% if has_fee_demands %}<span aria-hidden="true" style="color:#cbd5e1;">|</span><span>{{ da_pct }}% settled</span>{% endif %}
     </div>
     {% endif %}
-
-    {# Pay All bar — shown only when payment is enabled and there are payable demands #}
-    {% if payment_enabled %}
-    {% set ns_pay = namespace(total=0, count=0, names=[]) %}
-    {% for d in fee_demands %}
-      {% if d.outstanding_amount > 0 and d.status not in ('Paid','Waived','Cancelled') %}
-        {% set ns_pay.total = ns_pay.total + d.outstanding_amount %}
-        {% set ns_pay.count = ns_pay.count + 1 %}
-        {% set ns_pay.names = ns_pay.names + [d.name] %}
-      {% endif %}
-    {% endfor %}
-    {% if ns_pay.count > 0 %}
-    <div class="ppf-pay-all-bar">
-      <div class="ppf-pay-all-info">
-        <span class="ms" style="font-size:18px;color:var(--pp-primary,#2b2e4a);">pending_actions</span>
-        <div>
-          <div class="ppf-pay-all-label">{{ ns_pay.count }} outstanding demand{{ 's' if ns_pay.count != 1 else '' }}</div>
-          <div class="ppf-pay-all-sub">Total due across all unpaid charges</div>
-        </div>
-      </div>
-      <div class="ppf-pay-all-right">
-        <span class="ppf-pay-all-total">₹{{ "{:,.0f}".format(ns_pay.total) }}</span>
-        <button class="ppf-pay-all-btn" id="ppf-pay-all-demands-btn"
-          onclick="ppfPayAll()"
-          data-demands="{{ ns_pay.names | join(',') | e }}"
-          data-total="{{ ns_pay.total }}">
-          <span class="ms" style="font-size:16px;">shopping_cart_checkout</span>
-          Pay All
-        </button>
-      </div>
-    </div>
+  </div>
+  {# Overall cards; click one for a popup with its Academic / Non Academic split (Scholarship: Academic only) #}
+  {% if charge_cards %}
+  {% set _ov = charge_cards[0] %}
+  {% set _grp = charge_cards[1:] %}
+  {# Pay All: every unpaid Fee Demand, paid together in one order #}
+  {% set ns_pay = namespace(total=0, count=0, names=[], items=[]) %}
+  {% for d in fee_demands %}
+    {% if d.outstanding_amount > 0 and d.status not in ('Paid','Waived','Cancelled') %}
+      {% set ns_pay.total = ns_pay.total + d.outstanding_amount %}
+      {% set ns_pay.count = ns_pay.count + 1 %}
+      {% set ns_pay.names = ns_pay.names + [d.name] %}
+      {% set ns_pay.items = ns_pay.items + [{'label': d.fee_component or d.description or 'Charge', 'amount': d.formatted_outstanding}] %}
     {% endif %}
-    {% endif %}
-
-    {% for demand_type, type_demands in fee_demands | groupby('demand_type', default='Other') %}
-    <div class="ppf-demand-type-group" style="padding:10px 14px 4px;">
-      <div class="ppf-demand-type-hdr">
-        <span class="ms" style="font-size:13px;
-          color:{% if demand_type == 'Academic' %}var(--ppf-navy)
-                {% elif demand_type == 'Hostel' %}#c2410c
-                {% elif demand_type == 'Fine' %}#b91c1c
-                {% elif demand_type == 'Examination' %}#7c3aed
-                {% else %}var(--pp-text-3){% endif %};">
-          {% if demand_type == 'Academic' %}school
-          {% elif demand_type == 'Hostel' %}home
-          {% elif demand_type == 'Fine' %}report
-          {% elif demand_type == 'Examination' %}edit_note
-          {% else %}receipt_long{% endif %}
-        </span>
-        {{ demand_type }} Demands
-        <span class="ppf-demand-type-count">{{ type_demands | list | length }}</span>
-      </div>
-      <div class="ppf-demand-table-wrap">
-        <table class="ppf-demand-table">
-          <colgroup>
-            <col style="width:auto;min-width:140px;">
-            <col style="width:120px;">
-            <col class="ppf-col-hide-sm" style="width:110px;">
-            <col class="ppf-col-hide-sm" style="width:100px;">
-            <col style="width:110px;">
-            <col style="width:110px;">
-          </colgroup>
-          <thead>
-            <tr>
-              <th style="text-align:left;">Component</th>
-              <th style="text-align:center;">Due Date</th>
-              <th class="ppf-col-hide-sm" style="text-align:right;">Net Payable</th>
-              <th class="ppf-col-hide-sm" style="text-align:right;">Settled</th>
-              <th style="text-align:right;">Outstanding</th>
-              <th style="text-align:center;">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for d in type_demands %}
-            <tr class="ppf-demand-row {% if d.status == 'Overdue' or d.is_demand_overdue %}ppf-demand-row-overdue{% elif d.status in ('Paid','Waived') %}ppf-demand-row-settled{% endif %}">
-              <td>
-                <div class="ppf-demand-comp-name">{{ d.fee_component or d.description or "—" }}</div>
-                {% if d.trigger_ref_doctype %}
-                <span class="ppf-demand-source-chip">{{ d.trigger_ref_doctype | replace('_',' ') }}</span>
-                {% endif %}
-              </td>
-              <td style="text-align:center;white-space:nowrap;">
-                {% if d.due_date_fmt %}
-                  {% if d.status == 'Overdue' or d.is_demand_overdue %}
-                  <div class="ppf-demand-due-overdue" style="justify-content:center;">
-                    <span class="ms" style="font-size:13px;">warning</span>{{ d.due_date_fmt }}
-                  </div>
-                  <div class="ppf-demand-days-overdue" style="text-align:center;margin-top:2px;">{{ d.days_overdue }}d overdue</div>
-                  {% else %}
-                  <span style="font-size:12px;color:var(--pp-text-2);">{{ d.due_date_fmt }}</span>
-                  {% endif %}
-                {% else %}<span style="color:var(--pp-text-4);">—</span>{% endif %}
-              </td>
-              <td class="ppf-col-hide-sm" style="text-align:right;color:var(--pp-text-2);font-size:13px;font-variant-numeric:tabular-nums;">
-                {{ d.formatted_net }}
-                {% if d.waiver_amount and d.waiver_amount > 0 %}
-                <div style="font-size:10px;color:#059669;font-weight:600;">−{{ d.formatted_waiver }} waiver</div>
-                {% endif %}
-              </td>
-              <td class="ppf-col-hide-sm" style="text-align:right;font-variant-numeric:tabular-nums;">
-                {% if d.settled_amount and d.settled_amount > 0 %}
-                <span style="color:#059669;font-weight:600;">{{ d.formatted_settled }}</span>
-                {% if d.has_credit_adj %}<div style="font-size:10px;color:#0891b2;font-weight:600;">incl. credit</div>{% endif %}
-                {% else %}<span style="color:var(--pp-text-4);">—</span>{% endif %}
-              </td>
-              <td class="ppf-demand-outstanding" style="text-align:right;font-variant-numeric:tabular-nums;">
-                <span class="{% if d.outstanding_amount > 0 and d.status not in ('Paid','Waived') %}ppf-demand-amt-due{% else %}ppf-demand-amt-clear{% endif %}">
-                  {{ d.formatted_outstanding }}
-                </span>
-              </td>
-              <td style="text-align:center;">
-                <span class="ppf-demand-badge ppf-demand-badge-{{ (d.status if not (d.is_demand_overdue and d.status == 'Pending') else 'overdue') | lower | replace(' ','-') }}">
-                  {% if d.status == 'Paid' %}<span class="ms" style="font-size:9px;">check_circle</span>&nbsp;
-                  {% elif d.status == 'Overdue' or d.is_demand_overdue %}<span class="ms" style="font-size:9px;">error</span>&nbsp;
-                  {% elif d.status == 'Waived' %}<span class="ms" style="font-size:9px;">do_not_disturb_on</span>&nbsp;
-                  {% endif %}
-                  {% if d.is_demand_overdue and d.status == 'Pending' %}Overdue{% else %}{{ d.status }}{% endif %}
-                </span>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-    {% endfor %}
-
-  </div>{# end ppf-tab-demands #}
-
-  {# ── Payment Summary bottom sheet (mirrors student portal) ── #}
-  {% if payment_enabled and has_fee_demands %}
-  <div id="ppf-bulk-overlay" class="ppf-bulk-overlay" style="display:none;" onclick="ppfBulkSheetClose()"></div>
-  <div id="ppf-bulk-sheet" class="ppf-bulk-sheet" role="dialog" aria-modal="true" aria-label="Confirm Payment">
-    <div class="ppf-bulk-sheet-handle"></div>
-    <div class="ppf-bulk-sheet-head">
-      <div class="ppf-bulk-sheet-title">
-        <div class="ppf-bulk-sheet-title-icon">
-          <span class="ms" style="font-size:18px;">receipt_long</span>
-        </div>
-        Payment Summary
-      </div>
-      <button class="ppf-bulk-sheet-close" onclick="ppfBulkSheetClose()" aria-label="Close">
-        <span class="ms" style="font-size:18px;">close</span>
-      </button>
-    </div>
-    <div class="ppf-bulk-sheet-body">
-      <div class="ppf-bulk-sheet-note">
-        <span class="ms" style="font-size:14px;vertical-align:-2px;">info</span>
-        Review the charges below before proceeding to payment.
-      </div>
-      <div id="ppf-bulk-items" class="ppf-bulk-items"></div>
-      <div class="ppf-bulk-total-row">
-        <div class="ppf-bulk-total-label">
-          <span class="ms" style="font-size:16px;color:var(--pp-text-3);">payments</span>
-          Total Payable
-        </div>
-        <span id="ppf-bulk-total-amt" class="ppf-bulk-total-val"></span>
-      </div>
-    </div>
-    <div class="ppf-bulk-sheet-foot">
-      <button class="ppf-bulk-sheet-cancel" onclick="ppfBulkSheetClose()">Cancel</button>
-      <button class="ppf-bulk-sheet-confirm" id="ppf-bulk-confirm-btn" onclick="ppfBulkConfirmPay()">
-        <span class="ms" style="font-size:18px;">lock</span>
-        Proceed to Pay
-      </button>
-    </div>
-  </div>
-  {% endif %}
-
-  {% endif %}{# end has_fee_demands #}
-
-  {# ── Tab: Receipts ───────────────────────────────────────── #}
-  {% if has_transactions %}
-  <div id="ppf-tab-receipts" class="ppf-tab-panel" {% if has_fee_demands %}style="display:none;"{% endif %}>
-    <div class="ppf-receipt-table-wrap" style="border-radius:0;border:none;">
-      <table class="ppf-receipt-table">
-        <thead>
-          <tr>
-            <th style="text-align:left;">Receipt No.</th>
-            <th>Date</th>
-            <th class="ppf-col-hide-sm">Academic Year</th>
-            <th>Mode</th>
-            <th class="ppf-col-hide-sm" style="text-align:left;">Reference No.</th>
-            <th style="text-align:right;">Amount</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for txn in all_transactions %}
-          <tr>
-            <td style="font-weight:600;color:var(--pp-text-1);">{{ txn.name }}</td>
-            <td style="white-space:nowrap;">{{ txn.display_date or "—" }}</td>
-            <td class="ppf-col-hide-sm">{{ txn.academic_year or "—" }}</td>
-            <td>{{ txn.payment_mode or "—" }}</td>
-            <td class="ppf-col-hide-sm">{{ txn.reference_number or "—" }}</td>
-            <td style="text-align:right;font-weight:700;color:var(--pp-success);">{{ txn.formatted_amount }}</td>
-            <td style="text-align:centre;">
-              <a class="ppf-receipt-dl-btn"
-                 href="/api/method/slcm.api.student_portal.parent_download_fee_receipt?receipt_name={{ txn.name | urlencode }}&student_name={{ ward_student_name | urlencode }}"
-                 target="_blank" rel="noopener noreferrer" title="Download Receipt">
-                <span class="ms" style="font-size:17px;">download</span>
-              </a>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-  {% endif %}
-
-  {# ── Tab: Refunds ────────────────────────────────────────── #}
-  {% if has_fee_refunds %}
-  <div id="ppf-tab-refunds" class="ppf-tab-panel" style="display:none;">
-    {% for r in fee_refunds %}
-    {% if r.demand_paid_amount and r.demand_paid_amount > 0 %}
-    <div class="ppf-refund-card">
-      <div class="ppf-refund-icon"><span class="ms" style="font-size:20px;">{% if r.status == 'Approved' %}check_circle{% else %}pending{% endif %}</span></div>
-      <div class="ppf-refund-body">
-        <div class="ppf-refund-type">{{ r.refund_type or "Refund" }}</div>
-        <div style="font-size:11.5px;color:var(--pp-text-4);margin-top:2px;">{{ r.fee_component or "" }}</div>
-        {% if r.reason %}<div style="font-size:12px;color:var(--pp-text-3);margin-top:4px;">{{ r.reason }}</div>{% endif %}
-        <div class="ppf-refund-meta">
-          {% if r.refund_date_fmt %}<span class="ppf-refund-chip"><span class="ms" style="font-size:11px;">event</span>{{ r.refund_date_fmt }}</span>{% endif %}
-          {% if r.refund_mode %}<span class="ppf-refund-chip"><span class="ms" style="font-size:11px;">payments</span>{{ r.refund_mode }}</span>{% endif %}
-          {% if r.approved_by_name %}<span class="ppf-refund-chip"><span class="ms" style="font-size:11px;">person</span>{{ r.approved_by_name }}</span>{% endif %}
-        </div>
-        {% if r.status == 'Approved' and (r.bank_name or r.masked_account or r.utr_number) %}
-        <div class="ppf-refund-meta" style="margin-top:4px;">
-          {% if r.bank_name %}<span class="ppf-refund-chip"><span class="ms" style="font-size:11px;">account_balance</span>{{ r.bank_name }}</span>{% endif %}
-          {% if r.masked_account %}<span class="ppf-refund-chip">{{ r.masked_account }}</span>{% endif %}
-          {% if r.utr_number %}<span class="ppf-refund-chip"><span class="ms" style="font-size:11px;">tag</span>UTR: {{ r.utr_number }}</span>{% endif %}
-        </div>
-        {% endif %}
-      </div>
-      <div class="ppf-refund-right">
-        <div class="ppf-refund-amount">+ {{ r.formatted_amount }}</div>
-        <div style="font-size:10.5px;color:var(--pp-text-4);margin-top:2px;">refunded</div>
-        <span class="ppf-refund-status-{{ r.status | lower }}" style="display:inline-block;margin-top:4px;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:10px;">
-          {% if r.status == 'Approved' %}<span class="ms" style="font-size:10px;">check_circle</span>&nbsp;{% endif %}{{ r.status }}
-        </span>
-      </div>
-    </div>
-    {% else %}
-    <div class="ppf-notice ppf-notice-warning" style="margin:10px 14px;">
-      <span class="ms">info</span>
-      <div>Refund <strong>{{ r.name }}</strong> ({{ r.formatted_amount }}) cannot be processed — no payment has been recorded for the linked demand. Please contact the Finance Office.</div>
-    </div>
-    {% endif %}
-    {% endfor %}
-  </div>
-  {% endif %}
-
-</div>
-{% endif %}{# end demands/receipts/refunds #}
-
-{# ═══════════════════════════════════════════════════════════════
-   SECTION 5 — Scholarships & Concessions
-═══════════════════════════════════════════════════════════════ #}
-{% if has_concessions %}
-<div class="ppf-section-hdr fade-in" style="margin-top:24px;">
-  <div class="ppf-section-title">
-    <span class="ms" style="color:var(--pp-purple, #7c3aed);">workspace_premium</span>
-    Scholarships &amp; Concessions
-  </div>
-  <span class="ppf-section-count">{{ concessions | length }}</span>
-</div>
-<div class="ppf-fs-card fade-in" style="overflow:visible;">
-  {% for c in concessions %}
-  <div class="ppf-con-card">
-    <div class="ppf-con-icon">
-      <span class="ms" style="font-size:20px;">
-        {% if c.concession_type == 'Merit' %}emoji_events
-        {% elif c.concession_type == 'Scholarship' %}workspace_premium
-        {% elif c.concession_type == 'SC/ST' %}shield
-        {% elif c.concession_type == 'EWS' %}people
-        {% elif c.concession_type == 'Staff Ward' %}badge
-        {% else %}card_membership{% endif %}
-      </span>
-    </div>
-    <div class="ppf-con-body">
-      <div class="ppf-con-type">{{ c.concession_type or "Concession" }}</div>
-      {% if c.fee_component %}<div style="font-size:11.5px;color:var(--pp-text-4);margin-top:2px;">{{ c.fee_component }}</div>{% endif %}
-      {% if c.reason %}<div style="font-size:12px;color:var(--pp-text-3);margin-top:4px;">{{ c.reason }}</div>{% endif %}
-      {% if c.approved_by_name or c.approved_on_fmt %}
-      <div class="ppf-con-meta">
-        {% if c.approved_by_name %}Approved by {{ c.approved_by_name }}{% endif %}
-        {% if c.approved_on_fmt %} · {{ c.approved_on_fmt }}{% endif %}
-      </div>
-      {% endif %}
-    </div>
-    <div class="ppf-con-right">
-      <div class="ppf-con-amount">− {{ c.formatted_waiver }}</div>
-      <div style="font-size:10px;color:var(--pp-text-4);margin-top:2px;">waived</div>
-      <span class="ppf-con-status-badge ppf-con-status-{{ (c.status or 'pending') | lower }}" style="display:inline-block;margin-top:4px;">
-        {% if c.status == 'Approved' %}<span class="ms" style="font-size:10px;">check_circle</span>&nbsp;{% endif %}
-        {{ c.status or "Pending" }}
-      </span>
-    </div>
-  </div>
   {% endfor %}
+  {# Without an online gateway the button explains how to pay instead of opening Razorpay #}
+  {% set _pay_click = 'ppfPayAll()' if payment_enabled else 'ppfPayUnavailable()' %}
+  <div class="ppf-card-bd ppf-summary-cards">
+  <div class="ppf-mini-grid">
+    <button type="button" class="ppf-mini ppf-mini-drill" aria-haspopup="dialog" data-drill="ppf-drill-total" data-title="Total Levied" onclick="ppfDrill(this)">
+      <span class="ppf-mini-lbl">Total Levied<span class="ms ppf-drill-caret" aria-hidden="true">open_in_new</span></span>
+      <span class="ppf-mini-val">{{ _ov.total_fmt }}</span>
+      <span class="ppf-mini-sub">{{ _ov.count }} charge{{ 's' if _ov.count != 1 }}</span>
+    </button>
+    <template id="ppf-drill-total">
+      {% for g in _grp %}
+      <section class="ppf-dd-group">
+        <div class="ppf-dd-group-hd"><span>{{ g.label }}</span><span class="ppf-dd-group-val">{{ g.total_fmt }}</span></div>
+        <div class="ppf-dd-group-sub">{{ g.count }} charge{{ 's' if g.count != 1 }}</div>
+        {% set _items = charge_rows | selectattr('group', 'equalto', g.label) | list %}
+        {% set _ns = namespace(n=0) %}
+        <ul class="ppf-dd-list">
+          {% for r in _items %}{% if true %}{% set _ns.n = _ns.n + 1 %}
+          <li><span class="ppf-dd-item"><span class="ppf-dd-name">{{ r.component }}</span><span class="ppf-dd-meta">{{ r.sub }}{% if r.due_date_fmt %} · Due {{ r.due_date_fmt }}{% endif %}</span></span><span class="ppf-dd-amt">{{ r.gross_fmt }}</span></li>
+          {% endif %}{% endfor %}
+          {% if _ns.n == 0 %}<li class="ppf-dd-empty">Nothing here</li>{% endif %}
+        </ul>
+      </section>
+      {% endfor %}
+    </template>
+    <button type="button" class="ppf-mini ppf-mini-drill" aria-haspopup="dialog" data-drill="ppf-drill-settled" data-title="Settled" onclick="ppfDrill(this)">
+      <span class="ppf-mini-lbl">Settled<span class="ms ppf-drill-caret" aria-hidden="true">open_in_new</span></span>
+      <span class="ppf-mini-val">{{ _ov.paid_fmt }}</span>
+      <span class="ppf-mini-sub">{{ _ov.paid_count }} paid</span>
+    </button>
+    <template id="ppf-drill-settled">
+      {% for g in _grp %}
+      <section class="ppf-dd-group">
+        <div class="ppf-dd-group-hd"><span>{{ g.label }}</span><span class="ppf-dd-group-val">{{ g.paid_fmt }}</span></div>
+        <div class="ppf-dd-group-sub">{{ g.paid_count }} fully paid</div>
+        {% set _items = charge_rows | selectattr('group', 'equalto', g.label) | list %}
+        {% set _ns = namespace(n=0) %}
+        <ul class="ppf-dd-list">
+          {% for r in _items %}{% if r.paid > 0 %}{% set _ns.n = _ns.n + 1 %}
+          <li><span class="ppf-dd-item"><span class="ppf-dd-name">{{ r.component }}</span><span class="ppf-dd-meta">{{ r.sub }}{% if r.due_date_fmt %} · Due {{ r.due_date_fmt }}{% endif %}</span></span><span class="ppf-dd-amt">{{ r.paid_fmt }}</span></li>
+          {% endif %}{% endfor %}
+          {% if _ns.n == 0 %}<li class="ppf-dd-empty">No payments yet</li>{% endif %}
+        </ul>
+      </section>
+      {% endfor %}
+    </template>
+    <button type="button" class="ppf-mini ppf-mini-drill" aria-haspopup="dialog" data-drill="ppf-drill-scholarship" data-title="Scholarship" onclick="ppfDrill(this)">
+      <span class="ppf-mini-lbl">Scholarship<span class="ms ppf-drill-caret" aria-hidden="true">open_in_new</span></span>
+      <span class="ppf-mini-val">{{ _ov.waived_fmt }}</span>
+      <span class="ppf-mini-sub">Applied to academic fees</span>
+    </button>
+    <template id="ppf-drill-scholarship">
+      {% for g in _grp %}{% if g.label == 'Academic' %}
+      <section class="ppf-dd-group">
+        <div class="ppf-dd-group-hd"><span>{{ g.label }}</span><span class="ppf-dd-group-val">{{ g.waived_fmt }}</span></div>
+        <div class="ppf-dd-group-sub">Applied to academic fees</div>
+        {% set _items = charge_rows | selectattr('group', 'equalto', g.label) | list %}
+        {% set _ns = namespace(n=0) %}
+        <ul class="ppf-dd-list">
+          {% for r in _items %}{% if r.waiver > 0 %}{% set _ns.n = _ns.n + 1 %}
+          <li><span class="ppf-dd-item"><span class="ppf-dd-name">{{ r.component }}</span><span class="ppf-dd-meta">{{ r.sub }}{% if r.due_date_fmt %} · Due {{ r.due_date_fmt }}{% endif %}</span></span><span class="ppf-dd-amt">−{{ r.waiver_fmt }}</span></li>
+          {% endif %}{% endfor %}
+          {% if _ns.n == 0 %}<li class="ppf-dd-empty">No scholarship applied</li>{% endif %}
+        </ul>
+      </section>
+      {% endif %}{% endfor %}
+    </template>
+    <div class="ppf-mini ppf-mini-drill" role="button" tabindex="0" aria-haspopup="dialog" data-drill="ppf-drill-outstanding" data-title="Outstanding"
+         onclick="ppfDrill(this)" onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); ppfDrill(this); }">
+      <span class="ppf-mini-lbl">Outstanding<span class="ms ppf-drill-caret" aria-hidden="true">open_in_new</span></span>
+      {% if ns_pay.count > 0 %}
+      <button type="button" class="ppf-btn ppf-btn-primary ppf-btn-sm ppf-card-pay" id="ppf-pay-all-demands-btn" data-pay onclick="event.stopPropagation(); {{ _pay_click }}"
+              data-demands="{{ ns_pay.names | join(',') | e }}" data-total="{{ ns_pay.total }}"
+              aria-label="Pay all {{ _inr.format(ns_pay.total) }} due across {{ ns_pay.count }} charges"><span class="ms" aria-hidden="true">payments</span> Pay All · {{ _inr.format(ns_pay.total) }}</button>
+      <script type="application/json" id="ppf-pay-all-items">{{ ns_pay.items | tojson }}</script>
+      {% endif %}
+      <span class="ppf-mini-val {{ 'ppf-tone-danger' if _ov.outstanding > 0 }}">{{ _ov.outstanding_fmt }}</span>
+      <span class="ppf-mini-sub">{% if _ov.overdue > 0 %}{{ _ov.overdue }} overdue{% elif _ov.pending > 0 %}{{ _ov.pending }} pending{% else %}all clear{% endif %}</span>
+    </div>
+    <template id="ppf-drill-outstanding">
+      {% if ns_pay.count > 0 %}
+      <div class="ppf-dd-pay">
+        <span><strong>{{ _inr.format(ns_pay.total) }}</strong> due across {{ ns_pay.count }} charge{{ 's' if ns_pay.count != 1 }}</span>
+        <button type="button" class="ppf-btn ppf-btn-primary ppf-btn-sm" onclick="ppfDrillClose(); {{ _pay_click }}"><span class="ms" aria-hidden="true">payments</span> Pay All</button>
+      </div>
+      {% endif %}
+      {% for g in _grp %}
+      <section class="ppf-dd-group">
+        <div class="ppf-dd-group-hd"><span>{{ g.label }}</span><span class="ppf-dd-group-val">{{ g.outstanding_fmt }}</span></div>
+        <div class="ppf-dd-group-sub">{% if g.overdue > 0 %}{{ g.overdue }} overdue{% elif g.pending > 0 %}{{ g.pending }} pending{% else %}all clear{% endif %}</div>
+        {% set _items = charge_rows | selectattr('group', 'equalto', g.label) | list %}
+        {% set _ns = namespace(n=0) %}
+        <ul class="ppf-dd-list">
+          {% for r in _items %}{% if r.outstanding > 0 %}{% set _ns.n = _ns.n + 1 %}
+          <li><span class="ppf-dd-item"><span class="ppf-dd-name">{{ r.component }}</span><span class="ppf-dd-meta">{{ r.sub }}{% if r.due_date_fmt %} · Due {{ r.due_date_fmt }}{% endif %}</span></span><span class="ppf-dd-amt">{{ r.outstanding_fmt }} {{ badge(r.status) }}</span></li>
+          {% endif %}{% endfor %}
+          {% if _ns.n == 0 %}<li class="ppf-dd-empty">Nothing outstanding</li>{% endif %}
+        </ul>
+      </section>
+      {% endfor %}
+    </template>
+  </div>
+  </div>
+  {% endif %}
+  <div class="ppf-dd-overlay" id="ppf-dd" hidden onclick="if (event.target === this) ppfDrillClose()">
+    <div class="ppf-dd-box" role="dialog" aria-modal="true" aria-labelledby="ppf-dd-title">
+      <div class="ppf-dd-head">
+        <h3 class="ppf-dd-title" id="ppf-dd-title"></h3>
+        <button type="button" class="ppf-dd-close" onclick="ppfDrillClose()" aria-label="Close"><span class="ms" aria-hidden="true">close</span></button>
+      </div>
+      <div class="ppf-dd-body" id="ppf-dd-body"></div>
+    </div>
+  </div>
+  {% if (_err.invoices or _err.re_exams) and summary_rows %}<div class="ppf-notice ppf-notice-danger" style="margin:12px 20px 0;"><span class="ms" aria-hidden="true">error</span><div>Some fee records could not be loaded, so this list may be incomplete. <button type="button" class="ppf-link" onclick="window.location.reload()">Retry</button></div></div>{% endif %}
+  {# Every charge (paid ones too), Academic then Non Academic, with type / status filters #}
+  {% if charge_rows %}
+  <div class="ppf-filters" role="group" aria-label="Filter fees">
+    <div class="ppf-fchips" role="group" aria-label="Fee type">
+      <span class="ppf-flabel">Type</span>
+      <button type="button" class="ppf-fchip is-active" data-filter="type" data-value="all" aria-pressed="true">All</button><button type="button" class="ppf-fchip" data-filter="type" data-value="Academic" aria-pressed="false">Academic</button><button type="button" class="ppf-fchip" data-filter="type" data-value="Non Academic" aria-pressed="false">Non Academic</button>
+    </div>
+    <div class="ppf-fchips" role="group" aria-label="Payment status">
+      <span class="ppf-flabel">Status</span>
+      <button type="button" class="ppf-fchip is-active" data-filter="status" data-value="all" aria-pressed="true">All</button><button type="button" class="ppf-fchip" data-filter="status" data-value="pending" aria-pressed="false">Pending</button><button type="button" class="ppf-fchip" data-filter="status" data-value="overdue" aria-pressed="false">Overdue</button><button type="button" class="ppf-fchip" data-filter="status" data-value="paid" aria-pressed="false">Paid</button>
+    </div>
+  </div>
+  <table class="ppf-t ppf-summary-t" id="ppf-charges-table">
+    <caption class="pp-sr-only">All fees: Academic and Non Academic, paid and unpaid</caption>
+    <colgroup><col style="width:21%;"><col style="width:11%;"><col style="width:9%;"><col style="width:9%;"><col style="width:10%;"><col style="width:9%;"><col style="width:9%;"><col style="width:10%;"><col style="width:12%;"></colgroup>
+    <thead><tr><th scope="col" class="c-text">Component</th><th scope="col" class="c-date">Due Date</th><th scope="col" class="c-num">Amount</th><th scope="col" class="c-num">Scholarship</th><th scope="col" class="c-num">Outstanding</th><th scope="col" class="c-action ppf-c-center">Invoice</th><th scope="col" class="c-num">Paid</th><th scope="col" class="c-status">Status</th><th scope="col" class="c-action">Receipt</th></tr></thead>
+    <tbody>
+      {% for grp, grp_rows in charge_rows | groupby('group') %}
+      {% set gid = 'cg' ~ loop.index %}
+      <tr class="ppf-group-row" data-group="{{ gid }}"><th scope="colgroup" colspan="9"><div class="ppf-group-inner"><span>{{ grp }}</span><span class="ppf-group-meta">{{ grp_rows | list | length }}</span></div></th></tr>
+      {% set gix = loop.index %}
+      {% for r in grp_rows %}
+      {% set rid = 'ppf-cr-' ~ gix ~ '-' ~ loop.index %}
+      <tr class="ppf-row-data" id="{{ rid }}" data-group="{{ gid }}" data-type="{{ r.group }}" data-status="{{ r.status_key }}" data-ay="{{ (r.academic_year or '') | e }}">
+        <td class="c-text c-primary">
+          <div class="ppf-cell-main">{{ r.component }}{% if r.details %}
+            <button type="button" class="ppf-row-toggle" aria-expanded="false" aria-controls="{{ rid }}-d" data-row="{{ rid }}" onclick="ppfRowToggle(this)"
+                    title="Payments, refunds and scholarships for this fee"><span class="ms" aria-hidden="true">expand_more</span>{{ r.details | length }}</button>{% endif %}</div>
+          <div class="ppf-cell-sub">{{ r.sub }}</div>
+        </td>
+        <td class="c-date" data-label="Due Date"><div><div>{{ r.due_date_fmt or '—' }}</div>{% if r.status_key == 'overdue' and r.days_overdue %}<div class="ppf-cell-hint ppf-tone-danger">{{ r.days_overdue }}d overdue</div>{% endif %}</div></td>
+        <td class="c-num" data-label="Amount">{{ r.gross_fmt }}</td>
+        <td class="c-num" data-label="Scholarship">{% if r.waiver > 0 %}−{{ r.waiver_fmt }}{% else %}<span class="ppf-tone-muted">—</span>{% endif %}</td>
+        <td class="c-num {{ 'ppf-tone-danger' if r.outstanding > 0 }}" data-label="Outstanding">{{ r.outstanding_fmt }}</td>
+        <td class="c-action ppf-c-center" data-label="Invoice">
+          {% if r.kind == 'demand' and r.demand_name %}<a class="ppf-icon-dl" target="_blank" rel="noopener noreferrer" href="/api/method/slcm.api.student_portal.parent_download_fee_demand_invoice?fee_demand={{ r.demand_name | urlencode }}&student_name={{ ward_student_name | urlencode }}"
+             title="Download invoice" aria-label="Download invoice for {{ r.component }}"><span class="ms" aria-hidden="true">picture_as_pdf</span></a>
+          {% elif r.invoice %}<a class="ppf-icon-dl" target="_blank" rel="noopener noreferrer" href="/api/method/slcm.api.student_portal.parent_download_fee_invoice?invoice_name={{ r.invoice | urlencode }}&student_name={{ ward_student_name | urlencode }}"
+             title="Download invoice" aria-label="Download invoice {{ r.invoice }}"><span class="ms" aria-hidden="true">picture_as_pdf</span></a>
+          {% else %}<span class="ppf-tone-muted">—</span>{% endif %}
+        </td>
+        <td class="c-num" data-label="Paid">{% if r.paid > 0 %}{{ r.paid_fmt }}{% else %}<span class="ppf-tone-muted">—</span>{% endif %}</td>
+        <td class="c-status" data-label="Status">{{ badge(r.status) if r.status else '' }}</td>
+        <td class="c-action" data-label="Receipt">
+          {% if r.receipt %}
+          <a class="ppf-btn ppf-btn-ghost ppf-btn-sm" target="_blank" rel="noopener noreferrer" href="/api/method/slcm.api.student_portal.parent_download_fee_receipt?receipt_name={{ r.receipt | urlencode }}&student_name={{ ward_student_name | urlencode }}"
+             aria-label="Download receipt for {{ r.component }}"><span class="ms" aria-hidden="true">download</span> Receipt</a>
+          {% elif r.re_exam_receipt %}
+          <a class="ppf-btn ppf-btn-ghost ppf-btn-sm" target="_blank" rel="noopener noreferrer" href="/api/method/slcm.api.student_portal.parent_download_re_exam_receipt?registration_name={{ r.re_exam_receipt | urlencode }}&student_name={{ ward_student_name | urlencode }}"
+             aria-label="Download receipt for {{ r.component }}"><span class="ms" aria-hidden="true">download</span> Receipt</a>
+          {% elif r.receipt_kind == 'transcript' and r.receipt_doc %}<a class="ppf-btn ppf-btn-ghost ppf-btn-sm" target="_blank" rel="noopener noreferrer" href="/api/method/slcm.api.student_portal.parent_download_transcript_receipt?request_name={{ r.receipt_doc | urlencode }}&student_name={{ ward_student_name | urlencode }}"
+             aria-label="Download receipt for {{ r.component }}"><span class="ms" aria-hidden="true">download</span> Receipt</a>
+          {% elif r.receipt_kind == 'improvement' and r.receipt_doc %}<a class="ppf-btn ppf-btn-ghost ppf-btn-sm" target="_blank" rel="noopener noreferrer" href="/api/method/slcm.api.student_portal.parent_download_improvement_exam_receipt?registration_name={{ r.receipt_doc | urlencode }}&student_name={{ ward_student_name | urlencode }}"
+             aria-label="Download receipt for {{ r.component }}"><span class="ms" aria-hidden="true">download</span> Receipt</a>
+          {% elif r.kind == 'fine' and not r.is_paid %}
+          <span class="ppf-cell-sub" title="Hostel fines are paid at the Hostel Office or Bursar's Office.">Pay at office</span>
+          {% else %}<span class="ppf-tone-muted">—</span>{% endif %}
+        </td>
+      </tr>
+      {% for d in r.details %}
+      <tr class="ppf-sub-row is-hidden" data-parent="{{ rid }}" data-dkind="{{ d.kind }}"{% if loop.first %} id="{{ rid }}-d"{% endif %}>
+        <td class="c-text"><div class="ppf-sub-main"><span class="ppf-sub-kind ppf-sub-kind-{{ d.kind }}">{{ {'payment': 'Payment', 'refund': 'Refund', 'scholarship': 'Scholarship', 'credit': 'Credit'}[d.kind] }}</span>{{ d.title }}</div><div class="ppf-cell-sub">{{ d.sub }}</div></td>
+        <td class="c-date" data-label="Date">{{ d.date_fmt or '—' }}</td>
+        <td class="c-num" data-label="Amount">{{ d.amount_fmt }}</td>
+        <td></td><td></td><td></td><td></td>
+        <td class="c-status" data-label="Status">{{ badge(d.status) if d.status else '' }}</td>
+        <td class="c-action" data-label="Receipt">
+          {% if d.receipt %}<a class="ppf-btn ppf-btn-ghost ppf-btn-sm" target="_blank" rel="noopener noreferrer" href="/api/method/slcm.api.student_portal.parent_download_fee_receipt?receipt_name={{ d.receipt | urlencode }}&student_name={{ ward_student_name | urlencode }}"
+             aria-label="Download receipt {{ d.receipt }}"><span class="ms" aria-hidden="true">download</span> Receipt</a>
+          {% elif d.re_exam_receipt %}<a class="ppf-btn ppf-btn-ghost ppf-btn-sm" target="_blank" rel="noopener noreferrer" href="/api/method/slcm.api.student_portal.parent_download_re_exam_receipt?registration_name={{ d.re_exam_receipt | urlencode }}&student_name={{ ward_student_name | urlencode }}"
+             aria-label="Download receipt"><span class="ms" aria-hidden="true">download</span> Receipt</a>
+          {% elif d.receipt_kind == 'transcript' and d.receipt_doc %}<a class="ppf-btn ppf-btn-ghost ppf-btn-sm" target="_blank" rel="noopener noreferrer" href="/api/method/slcm.api.student_portal.parent_download_transcript_receipt?request_name={{ d.receipt_doc | urlencode }}&student_name={{ ward_student_name | urlencode }}"
+             aria-label="Download receipt"><span class="ms" aria-hidden="true">download</span> Receipt</a>
+          {% elif d.receipt_kind == 'improvement' and d.receipt_doc %}<a class="ppf-btn ppf-btn-ghost ppf-btn-sm" target="_blank" rel="noopener noreferrer" href="/api/method/slcm.api.student_portal.parent_download_improvement_exam_receipt?registration_name={{ d.receipt_doc | urlencode }}&student_name={{ ward_student_name | urlencode }}"
+             aria-label="Download receipt"><span class="ms" aria-hidden="true">download</span> Receipt</a>
+          {% else %}<span class="ppf-tone-muted">—</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+      {% endfor %}
+      {% endfor %}
+      <tr class="ppf-filter-empty is-hidden"><td colspan="9" class="c-empty">{{ empty('filter_alt', 'No fees match these filters') }}</td></tr>
+    </tbody>
+  </table>
+  {% endif %}
+  {% if _err.demands %}
+    {{ section_error('additional charges') }}
+  {% elif not has_fee_demands and not has_fee_refunds and not _has_sc and not _has_ph and not _has_inv %}
+    {% if not summary_rows %}{{ empty('task_alt', 'No outstanding fees', 'Your ward has no pending or overdue payments.', ok=True) }}{% endif %}
+  {% else %}
+
+
+  <div class="ppf-sum-sections">
+
+    
+
+  </div>
+  {% endif %}
+</section>
+
+{% endif %}{# end has_any_fee_records #}
+</div>{# end .ppf-page #}
+
+{# ── Payment Summary bottom sheet (demand Pay All) ───────────────────── #}
+{% if payment_enabled and has_fee_demands %}
+<div id="ppf-bulk-overlay" class="ppf-bulk-overlay" style="display:none;" onclick="ppfBulkSheetClose()"></div>
+<div id="ppf-bulk-sheet" class="ppf-bulk-sheet" role="dialog" aria-modal="true" aria-labelledby="ppf-bulk-title">
+  <div class="ppf-bulk-sheet-handle"></div>
+  <div class="ppf-bulk-sheet-head">
+    <div class="ppf-bulk-sheet-title" id="ppf-bulk-title"><span class="ms" aria-hidden="true">receipt_long</span>Payment Summary</div>
+    <button type="button" class="ppf-icon-btn" onclick="ppfBulkSheetClose()" aria-label="Close" title="Close"><span class="ms" aria-hidden="true">close</span></button>
+  </div>
+  <div class="ppf-bulk-sheet-body">
+    <p class="ppf-bulk-sheet-note">Review the charges below before proceeding to payment.</p>
+    <div id="ppf-bulk-items" class="ppf-bulk-items"></div>
+    <div class="ppf-bulk-total-row"><span>Total Payable</span><span id="ppf-bulk-total-amt" class="ppf-bulk-total-val"></span></div>
+  </div>
+  <div class="ppf-bulk-sheet-foot">
+    <button type="button" class="ppf-btn ppf-btn-ghost" onclick="ppfBulkSheetClose()">Cancel</button>
+    <button type="button" class="ppf-btn ppf-btn-primary" id="ppf-bulk-confirm-btn" onclick="ppfBulkConfirmPay()">
+      <span class="ms" aria-hidden="true">lock</span> Proceed to Pay
+    </button>
+  </div>
 </div>
 {% endif %}
-
-{% endif %}{# end has_fee_data #}
 
 {# ── Payment Processing Overlay ──────────────────────────────────── #}
-<div class="ppf-overlay" id="ppf-overlay" aria-hidden="true" role="dialog" aria-modal="true">
+<div class="ppf-overlay" id="ppf-overlay" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Payment in progress">
   <div class="ppf-overlay-box">
     <div class="ppf-spinner"></div>
-    <div class="ppf-overlay-msg" id="ppf-overlay-msg">Preparing payment&hellip;</div>
+    <div class="ppf-overlay-msg" id="ppf-overlay-msg" role="status">Preparing payment&hellip;</div>
   </div>
 </div>
 
@@ -1589,20 +1018,23 @@
     .catch(function (e) { (err || noop)(e && e.message || 'Network error'); });
   }
   function noop() {}
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
   /* ── Toast ───────────────────────────────────────────────────── */
   function toast(title, msg, type) {
     var p = {
-      success: { bg: '#f0fff4', bd: '#86efac', tx: '#166534' },
-      error:   { bg: '#fff5f5', bd: '#fca5a5', tx: '#991b1b' },
-      warning: { bg: '#fffbeb', bd: '#fde68a', tx: '#92400e' },
-      info:    { bg: '#ebf8ff', bd: '#bae6fd', tx: '#0c4a6e' },
+      success: { bd: 'rgba(0,128,0,0.35)', tx: '#006400' },
+      error:   { bd: 'rgba(146,12,36,0.35)', tx: '#920c24' },
+      warning: { bd: '#fcd34d', tx: '#92400e' },
+      info:    { bd: '#bae6fd', tx: '#0c4a6e' },
     };
     var c = p[type] || p.info;
     var t = document.createElement('div');
+    t.className = 'ppf-toast ppf-toast-' + (p[type] ? type : 'info');
+    t.setAttribute('role', type === 'error' ? 'alert' : 'status');
     t.style.cssText =
-      'position:fixed;bottom:20px;right:20px;z-index:10000;max-width:300px;min-width:200px;' +
-      'background:' + c.bg + ';border:1.5px solid ' + c.bd + ';color:' + c.tx + ';' +
+      'position:fixed;bottom:20px;right:20px;z-index:10000;max-width:320px;min-width:200px;' +
+      'background:#fff;border:1.5px solid ' + c.bd + ';color:' + c.tx + ';' +
       'border-radius:10px;padding:11px 14px;box-shadow:0 4px 16px rgba(0,0,0,0.1);' +
       'font-family:inherit;font-size:13px;line-height:1.4;animation:_ti .2s ease;';
     if (!document.getElementById('_tikf')) {
@@ -1611,7 +1043,6 @@
       s.textContent = '@keyframes _ti{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}';
       document.head.appendChild(s);
     }
-    function esc(str) { return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
     t.innerHTML = (title ? '<div style="font-weight:700;margin-bottom:2px;">' + esc(title) + '</div>' : '') + '<div>' + esc(msg) + '</div>';
     document.body.appendChild(t);
     setTimeout(function () {
@@ -1631,37 +1062,211 @@
     if (o) { o.classList.remove('active'); o.setAttribute('aria-hidden','true'); }
   }
 
-  /* ── Accordion toggle ────────────────────────────────────────── */
-  window.ppfToggle = function (invName) {
-    var det = document.getElementById('ppf-det-' + invName);
-    var chv = document.getElementById('ppf-chv-' + invName);
-    var hdr = det && det.previousElementSibling;
-    if (!det) return;
-    var open = det.classList.toggle('open');
-    if (chv) chv.classList.toggle('ppf-inv-chevron-open', open);
-    if (hdr) hdr.setAttribute('aria-expanded', open ? 'true' : 'false');
-  };
-
-  /* ── Tab switching ───────────────────────────────────────────── */
-  window.ppfTab = function (tab) {
-    ['demands','receipts','refunds'].forEach(function (t) {
-      var panel = document.getElementById('ppf-tab-' + t);
-      var btn   = document.getElementById('ppf-tabbtn-' + t);
-      if (panel) panel.style.display = (t === tab) ? '' : 'none';
-      if (btn)   btn.classList.toggle('ppf-tab-active', t === tab);
-    });
-  };
-
-  /* ── Pay button busy state ───────────────────────────────────── */
-  function setBusy(invName, busy) {
-    var btn = document.getElementById('ppf-pay-btn-' + invName);
-    if (!btn) return;
-    btn.disabled = busy;
-    if (busy) { btn.dataset.orig = btn.innerHTML; btn.innerHTML = '<span style="font-size:12px;">Processing…</span>'; }
-    else if (btn.dataset.orig) { btn.innerHTML = btn.dataset.orig; }
+  /* ── Status badge (mirrors the Jinja badge macro) ────────────── */
+  function badgeTone(s) {
+    if (['Paid','Approved','Settled','Completed','Captured'].indexOf(s) > -1) return ['success', 'check_circle'];
+    if (['Overdue','Unpaid','Failed','Payment Failed','Rejected'].indexOf(s) > -1) return ['danger', 'error'];
+    if (['Partially Paid','Pending','Payment Initiated','Authorized','Queued'].indexOf(s) > -1) return ['warning', 'schedule'];
+    return ['neutral', ''];
   }
 
-  /* ── Refresh invoice card after payment ──────────────────────── */
+  /* ── Invoice detail toggle ───────────────────────────────────── */
+  window.ppfToggle = function (invName) {
+    var det = document.getElementById('ppf-det-' + invName);
+    var btn = document.getElementById('ppf-view-' + invName);
+    if (!det) return;
+    var open = det.classList.contains('is-hidden');
+    det.classList.toggle('is-hidden', !open);
+    if (btn) { btn.setAttribute('aria-expanded', open ? 'true' : 'false'); btn.textContent = open ? 'Hide' : 'View'; }
+  };
+
+  /* ── Additional charges: details + tabs ──────────────────────── */
+  // Open the Summary's details on one tab (payments, invoices…) and bring it into view.
+  // Pay All when no online gateway is configured on this site
+  window.ppfPayUnavailable = function () {
+    toast('Online payment unavailable', 'Online payment is not set up yet. Please contact the Finance Office.', 'info');
+  };
+  // Summary card drill-down: popup with the Academic / Non Academic split
+  var _ddFrom = null;
+  window.ppfDrill = function (btn) {
+    var tpl = document.getElementById(btn.getAttribute('data-drill')), dd = document.getElementById('ppf-dd');
+    if (!tpl || !dd) return;
+    // The Summary card animates in with a transform, which would pin a fixed overlay to the card;
+    // living directly under <body> keeps the popup centred on the screen.
+    if (dd.parentNode !== document.body) document.body.appendChild(dd);
+    document.getElementById('ppf-dd-title').textContent = btn.getAttribute('data-title') || '';
+    var body = document.getElementById('ppf-dd-body'); body.innerHTML = '';
+    body.appendChild(tpl.content.cloneNode(true));
+    _ddFrom = btn; dd.hidden = false; document.body.style.overflow = 'hidden';
+    dd.querySelector('.ppf-dd-close').focus();
+  };
+  window.ppfDrillClose = function () {
+    var dd = document.getElementById('ppf-dd'); if (!dd || dd.hidden) return;
+    dd.hidden = true; document.body.style.overflow = '';
+    if (_ddFrom) _ddFrom.focus();
+  };
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') ppfDrillClose(); });
+  window.ppfShowTab = function (tab) {
+    var target = document.getElementById('ppf-sec-' + tab);
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+  window.ppfToggleDetails = function (btn) {
+    var panel = document.getElementById(btn.getAttribute('aria-controls'));
+    if (!panel) return;
+    var open = panel.classList.contains('is-hidden');
+    panel.classList.toggle('is-hidden', !open);
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    btn.firstChild.textContent = open ? 'Hide Details ' : 'View Details ';
+  };
+  window.ppfTab = function (tab) {
+    var cur = document.getElementById('ppf-tabbtn-' + tab);
+    var list = cur && cur.closest('.ppf-tabs');
+    if (!list) return;
+    list.querySelectorAll('[role="tab"]').forEach(function (btn) {
+      var t = btn.id.replace('ppf-tabbtn-', ''), on = t === tab;
+      var panel = document.getElementById('ppf-tab-' + t);
+      if (panel) panel.classList.toggle('is-hidden', !on);
+      btn.setAttribute('aria-selected', on ? 'true' : 'false'); btn.tabIndex = on ? 0 : -1;
+      document.querySelectorAll('[data-tab-meta="' + t + '"]').forEach(function (m) { m.classList.toggle('is-hidden', !on); });
+    });
+  };
+  document.querySelectorAll('.ppf-tabs').forEach(function (list) {
+    list.addEventListener('keydown', function (e) {
+      if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+      var tabs = Array.prototype.slice.call(list.querySelectorAll('[role="tab"]'));
+      var i = tabs.indexOf(document.activeElement);
+      if (i < 0) return;
+      var next = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+      next.focus(); next.click();
+    });
+  });
+
+  /* ── Academic-year filter + "View All" on long tables ────────── */
+  var AY = 'all';
+  var expanded = {};
+  /* Type / status chips over the Summary list; card groups follow the type */
+  var FF = { type: 'all', status: 'all' };
+  function feeFilterMatch(tr) {
+    var t = tr.getAttribute('data-type'), st = tr.getAttribute('data-status');
+    return (FF.type === 'all' || !t || t === FF.type) && (FF.status === 'all' || !st || st === FF.status);
+  }
+  document.querySelectorAll('.ppf-fchip:not(.ppf-schip)').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var f = b.getAttribute('data-filter');
+      FF[f] = b.getAttribute('data-value');
+      document.querySelectorAll('.ppf-fchip[data-filter="' + f + '"]').forEach(function (o) {
+        var on = o === b; o.classList.toggle('is-active', on); o.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
+      document.querySelectorAll('[data-card-group]').forEach(function (g) {
+        var lbl = g.getAttribute('data-card-group');
+        g.classList.toggle('is-hidden', FF.type !== 'all' && lbl !== 'Overall' && lbl !== FF.type);
+      });
+      applyAll();
+    });
+  });
+  function applyTable(table) {
+    var limit = parseInt(table.getAttribute('data-limit'), 10) || 0;
+    var rows = table.querySelectorAll('tr.ppf-row-data');
+    var shown = 0, matched = 0, groupsShown = {};
+    rows.forEach(function (tr) {
+      var ay = tr.getAttribute('data-ay') || '';
+      var match = (AY === 'all' || !ay || ay === AY) && feeFilterMatch(tr);
+      if (match) matched++;
+      var visible = match && (!limit || expanded[table.id] || shown < limit);
+      if (visible) { shown++; groupsShown[tr.getAttribute('data-group')] = true; }
+      tr.classList.toggle('is-hidden', !visible);
+      var detId = tr.getAttribute('data-detail');
+      if (!visible && detId) {
+        var det = document.getElementById(detId);
+        if (det && !det.classList.contains('is-hidden')) window.ppfToggle(detId.replace('ppf-det-', ''));
+      }
+    });
+    table.querySelectorAll('tr.ppf-group-row').forEach(function (g) {
+      g.classList.toggle('is-hidden', !groupsShown[g.getAttribute('data-group')]);
+    });
+    var emptyRow = table.querySelector('tr.ppf-filter-empty');
+    if (emptyRow) emptyRow.classList.toggle('is-hidden', matched > 0);
+
+    var btn = document.querySelector('[data-viewall-for="' + table.id + '"]');
+    if (btn) {
+      btn.classList.toggle('is-hidden', !limit || matched <= limit);
+      btn.setAttribute('aria-expanded', expanded[table.id] ? 'true' : 'false');
+      btn.firstChild.textContent = expanded[table.id] ? 'Show Less ' : 'View All ';
+    }
+    var cnt = document.querySelector('[data-count-for="' + table.id + '"]');
+    if (cnt) cnt.textContent = matched + ' ' + cnt.getAttribute('data-noun') + (matched === 1 ? '' : 's');
+  }
+  /* Payments / refunds / scholarships under each fee: its toggle, or the "Show" chips */
+  var SHOW = {}, EXP = {};
+  function applyDetails() {
+    document.querySelectorAll('#ppf-charges-table tr.ppf-sub-row').forEach(function (tr) {
+      var pid = tr.getAttribute('data-parent'), parentRow = document.getElementById(pid);
+      var on = !!parentRow && !parentRow.classList.contains('is-hidden') && (EXP[pid] || SHOW[tr.getAttribute('data-dkind')]);
+      tr.classList.toggle('is-hidden', !on);
+    });
+  }
+  window.ppfRowToggle = function (btn) {
+    var id = btn.getAttribute('data-row'); EXP[id] = !EXP[id];
+    btn.setAttribute('aria-expanded', EXP[id] ? 'true' : 'false');
+    applyDetails();
+  };
+  document.querySelectorAll('.ppf-schip').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var k = b.getAttribute('data-show'); SHOW[k] = !SHOW[k];
+      b.classList.toggle('is-active', SHOW[k]); b.setAttribute('aria-pressed', SHOW[k] ? 'true' : 'false');
+      applyDetails();
+    });
+  });
+  function applyAll() {
+    ['ppf-charges-table', 'ppf-inv-table', 'ppf-ph-table', 'ppf-dm-table'].forEach(function (id) {
+      var t = document.getElementById(id);
+      if (t) applyTable(t);
+    });
+    applyDetails();
+  }
+  document.querySelectorAll('[data-viewall-for]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var id = btn.getAttribute('data-viewall-for');
+      expanded[id] = !expanded[id];
+      applyTable(document.getElementById(id));
+    });
+  });
+  var aySel = document.getElementById('ppf-ay-select');
+  if (aySel) {
+    aySel.addEventListener('change', function () {
+      AY = aySel.value || 'all';
+      var hint = document.getElementById('ppf-ay-hint');
+      if (hint) hint.classList.toggle('show', AY !== 'all');
+      applyAll();
+    });
+  }
+  applyAll();
+
+  /* ── Ward switch: announce the loading ward; broken photo → initial ── */
+  document.querySelectorAll('.pp-ward-pill').forEach(function (pill) {
+    pill.addEventListener('click', function () {
+      var msg = document.getElementById('ppf-switch-msg');
+      if (msg) msg.textContent = 'Loading ' + (pill.dataset.wardName || 'student') + '’s fee information…';
+    });
+  });
+  document.querySelectorAll('.ppf-avatar img').forEach(function (img) {
+    function fallback() { if (img.parentNode) img.parentNode.textContent = img.getAttribute('data-fallback') || ''; }
+    if (img.complete && img.naturalWidth === 0) fallback(); else img.addEventListener('error', fallback);
+  });
+
+  /* ── Pay button busy state (every button for the same invoice) ─ */
+  var _payingInvoice = null;
+  function setBusy(invName, busy) {
+    _payingInvoice = busy ? invName : null;
+    document.querySelectorAll('[data-pay-invoice]').forEach(function (btn) {
+      var mine = btn.getAttribute('data-pay-invoice') === invName;
+      btn.disabled = busy;                       /* one payment at a time */
+      if (busy && mine) { btn.dataset.orig = btn.innerHTML; btn.innerHTML = 'Processing…'; btn.setAttribute('aria-busy', 'true'); }
+      else if (!busy && btn.dataset.orig) { btn.innerHTML = btn.dataset.orig; delete btn.dataset.orig; btn.removeAttribute('aria-busy'); }
+    });
+  }
+
+  /* ── Refresh invoice row after payment ───────────────────────── */
   function refreshCard(invName) {
     ppfCall(
       'slcm.api.student_payment.parent_get_invoice_summary',
@@ -1670,22 +1275,20 @@
         var d = r && r.message;
         if (!d) return;
         var badge = document.getElementById('ppf-badge-' + invName);
-        if (badge) {
-          badge.textContent = d.status;
-          badge.className = 'ppf-inv-badge ' +
-            (d.status === 'Paid' ? 'ppf-badge-paid' :
-             d.status === 'Partially Paid' ? 'ppf-badge-partial' : 'ppf-badge-unpaid');
+        if (badge && d.status) {
+          var tone = badgeTone(d.status);
+          badge.className = 'ppf-badge ppf-badge-' + tone[0];
+          badge.innerHTML = (tone[1] ? '<span class="ms" aria-hidden="true">' + tone[1] + '</span>' : '') + esc(d.status);
         }
         var paidEl = document.getElementById('ppf-paid-' + invName);
-        if (paidEl) paidEl.textContent = d.formatted_paid;
+        if (paidEl && d.formatted_paid) paidEl.textContent = d.formatted_paid;
         var outEl = document.getElementById('ppf-outstanding-' + invName);
-        if (outEl) {
+        if (outEl && d.formatted_outstanding) {
           outEl.textContent = d.formatted_outstanding;
-          outEl.style.color = d.outstanding_amount > 0 ? 'var(--pp-danger)' : 'var(--pp-success)';
+          outEl.className = d.outstanding_amount > 0 ? 'ppf-tone-danger' : '';
         }
         if (d.outstanding_amount <= 0 || d.status === 'Paid') {
-          var btn = document.getElementById('ppf-pay-btn-' + invName);
-          if (btn) btn.remove();
+          document.querySelectorAll('[data-pay-invoice="' + invName + '"]').forEach(function (b) { b.remove(); });
         }
       }
     );
@@ -1733,7 +1336,7 @@
         email:   order.payer_email || (meta.dataset && meta.dataset.payerEmail) || '',
         contact: order.payer_phone || (meta.dataset && meta.dataset.payerPhone) || '',
       },
-      theme: { color: '#2b2e4a' },
+      theme: { color: '#920c24' },
       modal: {
         confirm_close: true,
         ondismiss: function () {
@@ -1766,6 +1369,7 @@
           },
           function (e) {
             hideOverlay();
+            /* Pay stays disabled: the payment may already be captured */
             toast('Pending', e || 'Payment captured but confirmation is pending. Refresh in a few minutes.', 'warning');
           }
         );
@@ -1797,12 +1401,20 @@
      Mirrors student portal spPayAll / spBulkConfirmPay / _launchBulk
      ══════════════════════════════════════════════════════════════ */
   function _ppfFmtINR(n) { return '₹' + Number(n).toLocaleString('en-IN', {maximumFractionDigits: 0}); }
-  function _ppfEsc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  var _bulkBusy = false;
+  function setBulkBusy(busy) {
+    _bulkBusy = busy;
+    var btn = document.getElementById('ppf-pay-all-demands-btn');
+    if (!btn) return;
+    btn.disabled = busy;
+    if (busy) { btn.dataset.orig = btn.innerHTML; btn.innerHTML = 'Processing…'; btn.setAttribute('aria-busy', 'true'); }
+    else if (btn.dataset.orig) { btn.innerHTML = btn.dataset.orig; delete btn.dataset.orig; btn.removeAttribute('aria-busy'); }
+  }
 
   /* "Pay All" button — build line items from DOM, open bottom sheet */
   window.ppfPayAll = function () {
     var btn = document.getElementById('ppf-pay-all-demands-btn');
-    if (!btn) return;
+    if (!btn || _bulkBusy) return;
     var names = (btn.getAttribute('data-demands') || '').split(',').filter(Boolean);
     var total = parseFloat(btn.getAttribute('data-total')) || 0;
     if (!names.length || total <= 0) return;
@@ -1810,30 +1422,28 @@
     var items = document.getElementById('ppf-bulk-items');
     var totEl = document.getElementById('ppf-bulk-total-amt');
     if (items) {
-      var rows = document.querySelectorAll('.ppf-demand-row:not(.ppf-demand-row-settled)');
-      var html = '';
-      var idx  = 1;
-      rows.forEach(function (row) {
-        var comp = row.querySelector('.ppf-demand-comp-name');
-        var out  = row.querySelector('.ppf-demand-outstanding .ppf-demand-amt-due');
-        if (comp && out) {
-          html += '<div class="ppf-bulk-item">'
-            + '<span class="ppf-bulk-item-num">' + idx++ + '</span>'
-            + '<span class="ppf-bulk-item-label">' + _ppfEsc(comp.textContent.trim()) + '</span>'
-            + '<span class="ppf-bulk-item-amt">'  + _ppfEsc(out.textContent.trim())  + '</span>'
-            + '</div>';
-        }
+      var html = '', list = [];
+      try { list = JSON.parse((document.getElementById('ppf-pay-all-items') || {}).textContent || '[]'); } catch (e) { list = []; }
+      list.forEach(function (it, i) {
+        html += '<div class="ppf-bulk-item">'
+          + '<span class="ppf-bulk-item-num">' + (i + 1) + '</span>'
+          + '<span class="ppf-bulk-item-label">' + esc(it.label) + '</span>'
+          + '<span class="ppf-bulk-item-amt">'  + esc(it.amount)  + '</span>'
+          + '</div>';
       });
-      items.innerHTML = html || '<div style="padding:12px;color:var(--pp-text-3);font-size:13px;">No payable demands found.</div>';
+      items.innerHTML = html || '<div style="padding:12px 0;color:var(--pp-text-3);font-size:13px;">No payable demands found.</div>';
     }
     if (totEl) totEl.textContent = _ppfFmtINR(total);
 
+    var confirmBtn = document.getElementById('ppf-bulk-confirm-btn');
+    if (confirmBtn) confirmBtn.disabled = false;
     var sheet   = document.getElementById('ppf-bulk-sheet');
     var overlay = document.getElementById('ppf-bulk-overlay');
     if (overlay) overlay.style.display = 'block';
     if (sheet) {
       sheet.style.display = 'flex';
       requestAnimationFrame(function () { sheet.classList.add('ppf-bulk-sheet-open'); });
+      if (confirmBtn) setTimeout(function () { confirmBtn.focus(); }, 60);
     }
     document.body.style.overflow = 'hidden';
   };
@@ -1848,17 +1458,22 @@
       document.body.style.overflow = '';
     }, 280);
   };
+  document.addEventListener('keydown', function (e) {
+    var sheet = document.getElementById('ppf-bulk-sheet');
+    if (e.key === 'Escape' && sheet && sheet.classList.contains('ppf-bulk-sheet-open')) window.ppfBulkSheetClose();
+  });
 
   /* "Proceed to Pay" in bottom sheet */
   window.ppfBulkConfirmPay = function () {
     var btn = document.getElementById('ppf-pay-all-demands-btn');
-    if (!btn || !STUDENT) return;
+    if (!btn || !STUDENT || _bulkBusy) return;
     var names = (btn.getAttribute('data-demands') || '').split(',').filter(Boolean);
     var confirmBtn = document.getElementById('ppf-bulk-confirm-btn');
 
-    ppfBulkSheetClose();
-    showOverlay('Creating payment order…');
     if (confirmBtn) confirmBtn.disabled = true;
+    ppfBulkSheetClose();
+    setBulkBusy(true);
+    showOverlay('Creating payment order…');
 
     ppfCall(
       'slcm.api.student_payment.parent_create_bulk_demand_payment_order',
@@ -1866,25 +1481,23 @@
       function (r) {
         var order = r && r.message;
         if (!order || !order.order_id) {
-          hideOverlay();
+          hideOverlay(); setBulkBusy(false);
           toast('Error', 'Could not create payment order. Please try again.', 'error');
-          if (confirmBtn) confirmBtn.disabled = false;
           return;
         }
         ensureRzp(function (le) {
           hideOverlay();
           if (le) {
+            setBulkBusy(false);
             toast('Unavailable', le || 'Payment gateway could not load.', 'error');
-            if (confirmBtn) confirmBtn.disabled = false;
             return;
           }
           _ppfLaunchBulk(order, names);
         });
       },
       function (e) {
-        hideOverlay();
+        hideOverlay(); setBulkBusy(false);
         toast('Error', e || 'Could not create payment order.', 'error');
-        if (confirmBtn) confirmBtn.disabled = false;
       }
     );
   };
@@ -1908,12 +1521,13 @@
         email:   order.payer_email || '',
         contact: order.payer_phone || '',
       },
-      theme: { color: '#2b2e4a' },
+      theme: { color: '#920c24' },
       modal: {
         confirm_close: true,
         ondismiss: function () {
           /* If payment.failed already fired, skip — failure is already logged */
           if (_failedAlready) { return; }
+          setBulkBusy(false);
           toast('Cancelled', 'Payment was cancelled. No charges applied.', 'info');
           ppfCall(
             'slcm.api.student_payment.parent_cancel_bulk_demand_payment',
@@ -1983,15 +1597,16 @@
 
   /* ── Public: initiate invoice payment ───────────────────────── */
   window.ppfInitiatePayment = function (invName) {
-    if (!invName || !STUDENT) return;
+    if (!invName || !STUDENT || _payingInvoice) return;   /* ignore double clicks */
     showOverlay('Preparing payment…');
     setBusy(invName, true);
     ppfCall(
       'slcm.api.student_payment.parent_create_payment_order',
       { invoice_name: invName, student_name: STUDENT },
       function (r) {
-        hideOverlay(); setBusy(invName, false);
-        if (!r || !r.message) { toast('Error', 'Could not initiate payment. Please try again.', 'error'); return; }
+        hideOverlay();
+        if (!r || !r.message) { setBusy(invName, false); toast('Error', 'Could not initiate payment. Please try again.', 'error'); return; }
+        /* stays busy until Razorpay is dismissed, fails or succeeds */
         openRzp(r.message, invName);
       },
       function (e) { hideOverlay(); setBusy(invName, false); toast('Error', e || 'Something went wrong.', 'error'); }

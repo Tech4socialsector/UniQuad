@@ -330,13 +330,13 @@ def create_refund_request(cancellation):
 		receipts = frappe.get_all(
 			"Applicant Payment Receipt",
 			filters={"name": receipt_name},
-			fields=["name", "fee_type", "net_amount", "total_amount", "transaction_id", "offer_letter"]
+			fields=["name", "fee_type", "net_amount", "total_amount", "transaction_id", "offer_letter", "assignment"]
 		)
 	else:
 		receipts = frappe.get_all(
 			"Applicant Payment Receipt",
 			filters={"applicant": cancellation.applicant, "docstatus": ["<", 2]},
-			fields=["name", "fee_type", "net_amount", "total_amount", "transaction_id", "offer_letter"],
+			fields=["name", "fee_type", "net_amount", "total_amount", "transaction_id", "offer_letter", "assignment"],
 			order_by="creation asc"
 		)
 
@@ -379,6 +379,13 @@ def create_refund_request(cancellation):
 			continue
 
 		ft = r.fee_type or ""
+		if not ft and r.get("assignment"):
+			ft = frappe.db.get_value("Applicant Fee Assignment", r.assignment, "fee_type") or ""
+
+		# Application / Form Fee is non-refundable on admission cancellation
+		if "Application" in ft or "Form" in ft:
+			continue
+
 		is_conf = "Confirmation" in ft
 		
 		ref_pct = conf_fee_pct if is_conf else course_policy_pct
@@ -387,13 +394,15 @@ def create_refund_request(cancellation):
 			continue
 
 		# Resolve AFA for this receipt
-		afa_type = "Confirmation Fee" if is_conf else "Admission Fee"
-		afa_name = frappe.db.get_value("Applicant Fee Assignment", {
-			"applicant": cancellation.applicant,
-			"fee_type": afa_type,
-			"status": "Paid",
-			"docstatus": ["!=", 2]
-		}, "name", order_by="creation desc")
+		afa_name = r.get("assignment")
+		if not afa_name:
+			afa_type = "Confirmation Fee" if is_conf else "Admission Fee"
+			afa_name = frappe.db.get_value("Applicant Fee Assignment", {
+				"applicant": cancellation.applicant,
+				"fee_type": afa_type,
+				"status": "Paid",
+				"docstatus": ["!=", 2]
+			}, "name", order_by="creation desc")
 
 		# Create individual Refund Request for this specific transaction ID
 		refund = frappe.new_doc("Refund Request")

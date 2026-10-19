@@ -1,6 +1,6 @@
 {
  "actions": [],
- "creation": "2026-06-16 00:00:00.000000",
+ "creation": "2026-06-16 00:00:00",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
@@ -91,13 +91,15 @@
    "default": "1",
    "fieldname": "allow_interim",
    "fieldtype": "Check",
+   "hidden": 1,
    "label": "Allow Interim Transcript Requests"
   },
   {
    "default": "300",
    "fieldname": "interim_fee",
    "fieldtype": "Currency",
-   "label": "Interim Transcript Fee (₹)",
+   "hidden": 1,
+   "label": "Interim Transcript Fee (\u20b9)",
    "precision": "2"
   },
   {
@@ -110,15 +112,15 @@
    "default": "1000",
    "fieldname": "final_fee",
    "fieldtype": "Currency",
-   "label": "Final Transcript Fee (₹)",
+   "label": "Final Transcript Fee (\u20b9)",
    "precision": "2"
   },
   {
    "default": "0",
+   "description": "If checked, only students with academic status Graduated / Programme Completed / Completed can request a Final Transcript.",
    "fieldname": "restrict_final_to_graduates",
    "fieldtype": "Check",
-   "label": "Restrict Final Transcript to Graduated Students Only",
-   "description": "If checked, only students with academic status Graduated / Programme Completed / Completed can request a Final Transcript."
+   "label": "Restrict Final Transcript to Graduated Students Only"
   },
   {
    "fieldname": "column_break_fees",
@@ -128,39 +130,45 @@
    "default": "1",
    "fieldname": "allow_marksheet",
    "fieldtype": "Check",
+   "hidden": 1,
    "label": "Allow Consolidated Marksheet Requests"
   },
   {
    "default": "500",
    "fieldname": "marksheet_fee",
    "fieldtype": "Currency",
-   "label": "Consolidated Marksheet Fee (₹)",
+   "hidden": 1,
+   "label": "Consolidated Marksheet Fee (\u20b9)",
    "precision": "2"
   },
   {
    "default": "1",
    "fieldname": "allow_duplicate",
    "fieldtype": "Check",
+   "hidden": 1,
    "label": "Allow Duplicate Transcript Requests"
   },
   {
    "default": "500",
    "fieldname": "duplicate_fee",
    "fieldtype": "Currency",
-   "label": "Duplicate Transcript Fee (₹)",
+   "hidden": 1,
+   "label": "Duplicate Transcript Fee (\u20b9)",
    "precision": "2"
   },
   {
    "default": "1",
    "fieldname": "allow_digital",
    "fieldtype": "Check",
+   "hidden": 1,
    "label": "Allow Digital Transcript Requests"
   },
   {
    "default": "150",
    "fieldname": "digital_fee",
    "fieldtype": "Currency",
-   "label": "Digital Transcript Fee (₹)",
+   "hidden": 1,
+   "label": "Digital Transcript Fee (\u20b9)",
    "precision": "2"
   },
   {
@@ -255,7 +263,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-06-16 00:00:00.000000",
+ "modified": "2026-09-16 15:58:16.185907",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Transcript Fee Settings",
@@ -272,6 +280,7 @@
    "write": 1
   }
  ],
+ "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],

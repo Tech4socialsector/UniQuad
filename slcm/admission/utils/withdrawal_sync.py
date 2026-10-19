@@ -6,7 +6,7 @@
 import frappe
 from frappe import _
 
-WITHDRAWN_WORKFLOW_STATE = "Withdrawn"
+WITHDRAWN_WORKFLOW_STATE = "Closed"
 ENROLLMENT_STATUS_DROPPED = "Dropped"
 STUDENT_STATUS_WITHDRAWN = "Withdrawn"
 
@@ -26,7 +26,7 @@ def ensure_workflow_state_withdrawn():
 def sync_student_records_for_withdrawn_application(applicant_name, status_remark=None):
     """
     For a withdrawn application (Applicant name):
-    - Student Master: Current Status (registration_status) -> Withdrawn (Workflow State)
+    - Student Master: Current Status (registration_status) -> Closed (Workflow State)
     - Student Master: Student Status -> Withdrawn
     - Student Master: academic inactive + remark
     - Student Enrollment: status -> Dropped (for non-terminal enrollments)

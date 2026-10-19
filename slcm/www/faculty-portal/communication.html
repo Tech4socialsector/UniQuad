@@ -2,11 +2,72 @@
 
 {% block title %}Announcements{% endblock %}
 
+{% block extra_head %}
+<style>
+/* ── Dark mode ── */
+/* --fp-text-4 (#475569) is too faint on navy for dates, chevrons and the
+   empty-content note — lift it inside this page's lists only. */
+body.fp-dark #fp-ann-list,
+body.fp-dark #fp-no-ann,
+body.fp-dark #fp-ann-chips { --fp-text-4: #7b8aa3; }
+
+/* Announcement cards */
+body.fp-dark .fp-ann-card { border-color: var(--fp-border); }
+body.fp-dark .fp-ann-header:hover { background: rgba(255,255,255,0.04); }
+body.fp-dark .fp-ann-body .fp-card-body { border-top-color: var(--fp-border) !important; }
+/* Type badge uses --fp-border-light, which equals the card colour on navy */
+body.fp-dark .fp-ann-card .fp-badge-neutral { background: rgba(148,163,184,0.14); color: var(--fp-text-2); }
+
+/* Search box */
+body.fp-dark #fp-ann-search { background: #1a2540; border-color: var(--fp-border-mid); color: var(--fp-text-1); }
+body.fp-dark #fp-ann-search::placeholder { color: var(--fp-text-3); }
+
+/* Empty-state icons (border-mid is invisible on the card) */
+body.fp-dark .fp-card .fp-empty > .fp-ms { color: #7b8aa3; }
+
+/* Rich-text bodies often carry inline editor colours (black text,
+   white/yellow highlights) that are unreadable on navy — neutralise them. */
+body.fp-dark .fp-ann-body .fp-card-body,
+body.fp-dark .fp-ann-body .fp-card-body p,
+body.fp-dark .fp-ann-body .fp-card-body li,
+body.fp-dark .fp-ann-body .fp-card-body span:not(.fp-ms),
+body.fp-dark .fp-ann-body .fp-card-body div,
+body.fp-dark .fp-ann-body .fp-card-body td,
+body.fp-dark .fp-ann-body .fp-card-body th { color: var(--fp-text-2) !important; }
+body.fp-dark .fp-ann-body .fp-card-body strong,
+body.fp-dark .fp-ann-body .fp-card-body b,
+body.fp-dark .fp-ann-body .fp-card-body h1, body.fp-dark .fp-ann-body .fp-card-body h2,
+body.fp-dark .fp-ann-body .fp-card-body h3, body.fp-dark .fp-ann-body .fp-card-body h4,
+body.fp-dark .fp-ann-body .fp-card-body h5, body.fp-dark .fp-ann-body .fp-card-body h6 { color: var(--fp-text-1) !important; }
+body.fp-dark .fp-ann-body .fp-card-body a,
+body.fp-dark .fp-ann-body .fp-card-body a * { color: #f08da0 !important; }
+body.fp-dark .fp-ann-body .fp-card-body [style*="background"],
+body.fp-dark .fp-ann-body .fp-card-body mark,
+body.fp-dark .fp-ann-body .fp-card-body [bgcolor] { background: transparent !important; }
+body.fp-dark .fp-ann-body .fp-card-body table,
+body.fp-dark .fp-ann-body .fp-card-body td,
+body.fp-dark .fp-ann-body .fp-card-body th { border-color: var(--fp-border) !important; }
+body.fp-dark .fp-ann-body .fp-card-body th { background: #1a2540 !important; }
+body.fp-dark .fp-ann-body .fp-card-body hr { border-color: var(--fp-border); }
+body.fp-dark .fp-ann-body .fp-card-body blockquote { border-left-color: var(--fp-border-mid); color: var(--fp-text-3) !important; }
+body.fp-dark .fp-ann-body .fp-card-body pre,
+body.fp-dark .fp-ann-body .fp-card-body code { background: #1a2540 !important; color: var(--fp-text-1) !important; }
+body.fp-dark .fp-ann-body .fp-card-body > span[style*="font-style:italic"] { color: #7b8aa3 !important; }
+
+/* Type / Priority multi-selects (currently commented out in the markup) */
+body.fp-dark #fp-type-btn, body.fp-dark #fp-pri-btn { background: #1a2540; border-color: var(--fp-border-mid); }
+body.fp-dark #fp-type-panel, body.fp-dark #fp-pri-panel { background: #1a2540; border-color: var(--fp-border-mid); box-shadow: 0 10px 28px rgba(0,0,0,0.5); }
+body.fp-dark #fp-type-panel .fp-multiselect-option:hover, body.fp-dark #fp-pri-panel .fp-multiselect-option:hover { background: rgba(255,255,255,0.05); }
+</style>
+{% endblock %}
+
 {% block content %}
 
-<div class="fp-page-header fade-in">
-  <h1 class="fp-page-title">Announcements</h1>
-  <p class="fp-page-sub">Faculty circulars, academic notices, and institutional updates</p>
+
+<div class="fp-page-header fade-in" style="background: var(--fp-card, #fff); border: 1px solid var(--fp-border, #e5e7eb); border-radius: 14px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
+  <div>
+    <h1 class="fp-page-title" style="margin: 0; font-size: 18px !important; font-weight: 700 !important;">Announcements</h1>
+  </div>
 </div>
 
 {% if portal_error %}
@@ -16,69 +77,67 @@
 </div>
 {% endif %}
 
-{# ── Stats row ──────────────────────────────────────────────── #}
-<div class="fp-stat-grid" style="margin-bottom:20px;">
-
-  <div class="fp-stat-card fade-in" style="animation-delay:0.04s;cursor:default;">
-    <div class="fp-stat-icon fp-c-blue">
-      <span class="fp-ms">campaign</span>
-    </div>
-    <div class="fp-stat-body">
-      <div class="fp-stat-val">{{ total_count }}</div>
-      <div class="fp-stat-lbl">Total</div>
-    </div>
-  </div>
-
-  <div class="fp-stat-card fade-in" style="animation-delay:0.08s;cursor:default;">
-    <div class="fp-stat-icon {% if urgent_count > 0 %}fp-c-red{% else %}fp-c-green{% endif %}">
-      <span class="fp-ms">priority_high</span>
-    </div>
-    <div class="fp-stat-body">
-      <div class="fp-stat-val">{{ urgent_count }}</div>
-      <div class="fp-stat-lbl">Urgent</div>
-    </div>
-  </div>
-
-  <div class="fp-stat-card fade-in" style="animation-delay:0.12s;cursor:default;">
-    <div class="fp-stat-icon {% if important_count > 0 %}fp-c-orange{% else %}fp-c-green{% endif %}">
-      <span class="fp-ms">info</span>
-    </div>
-    <div class="fp-stat-body">
-      <div class="fp-stat-val">{{ important_count }}</div>
-      <div class="fp-stat-lbl">Important</div>
-    </div>
-  </div>
-
-</div>
-
 {# ── Filter bar ─────────────────────────────────────────────── #}
-<div class="fp-card fade-in" style="margin-bottom:20px;animation-delay:0.10s;">
-  <div class="fp-card-body" style="padding:12px 20px;">
+<div class="fp-card fade-in" style="margin-bottom:20px;animation-delay:0.16s;">
+  <div class="fp-card-body" style="padding:14px 20px;">
     <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;">
+      {# Type / Priority filters — commented out; global search below stays active.
       <span class="fp-ms" style="font-size:18px;color:var(--fp-text-4);">filter_list</span>
-      <select class="fp-select" id="fp-type-filter" onchange="fpFilterAnn()"
-              style="width:auto;min-width:170px;padding:6px 10px;font-size:13px;">
-        <option value="">All Types</option>
-        {% for t in announcement_types %}
-        <option value="{{ t }}">{{ t }}</option>
-        {% endfor %}
-      </select>
-      <select class="fp-select" id="fp-pri-filter" onchange="fpFilterAnn()"
-              style="width:auto;min-width:140px;padding:6px 10px;font-size:13px;">
-        <option value="">All Priorities</option>
-        <option value="Urgent">Urgent</option>
-        <option value="Important">Important</option>
-        <option value="Normal">Normal</option>
-      </select>
+
+      <div class="fp-multiselect" id="fp-type-multiselect">
+        <button type="button" class="fp-multiselect-btn" id="fp-type-btn" onclick="fpToggleFilterPanel('fp-type-btn', 'fp-type-panel')">
+          <span id="fp-type-btn-label">All Types</span>
+          <span class="fp-ms">expand_more</span>
+        </button>
+        <div class="fp-multiselect-panel" id="fp-type-panel">
+          {% for t in announcement_types %}
+          <label class="fp-multiselect-option">
+            <input type="checkbox" class="fp-ann-type-opt" value="{{ t }}" onchange="fpFilterAnn()"> {{ t }}
+          </label>
+          {% endfor %}
+          <div class="fp-multiselect-footer">
+            <button type="button" class="fp-multiselect-selectall" onclick="fpSelectAllFilterGroup('fp-ann-type-opt', fpFilterAnn)">Select all</button>
+            <button type="button" class="fp-multiselect-clear" onclick="fpClearFilterGroup('fp-ann-type-opt', fpFilterAnn)">Clear all</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="fp-multiselect" id="fp-pri-multiselect">
+        <button type="button" class="fp-multiselect-btn" id="fp-pri-btn" onclick="fpToggleFilterPanel('fp-pri-btn', 'fp-pri-panel')">
+          <span id="fp-pri-btn-label">All Priorities</span>
+          <span class="fp-ms">expand_more</span>
+        </button>
+        <div class="fp-multiselect-panel" id="fp-pri-panel">
+          <label class="fp-multiselect-option">
+            <input type="checkbox" class="fp-ann-pri-opt" value="Urgent" onchange="fpFilterAnn()"> Urgent
+          </label>
+          <label class="fp-multiselect-option">
+            <input type="checkbox" class="fp-ann-pri-opt" value="Important" onchange="fpFilterAnn()"> Important
+          </label>
+          <label class="fp-multiselect-option">
+            <input type="checkbox" class="fp-ann-pri-opt" value="Normal" onchange="fpFilterAnn()"> Normal
+          </label>
+          <div class="fp-multiselect-footer">
+            <button type="button" class="fp-multiselect-selectall" onclick="fpSelectAllFilterGroup('fp-ann-pri-opt', fpFilterAnn)">Select all</button>
+            <button type="button" class="fp-multiselect-clear" onclick="fpClearFilterGroup('fp-ann-pri-opt', fpFilterAnn)">Clear all</button>
+          </div>
+        </div>
+      </div>
+      #}
+
       <input type="text" class="fp-input" id="fp-ann-search" placeholder="Search announcements…"
              oninput="fpFilterAnn()"
              style="flex:1;min-width:180px;max-width:300px;padding:6px 12px;font-size:13px;">
+      {# Reset — commented out along with the Type / Priority filters.
       <button class="fp-btn fp-btn-secondary fp-btn-sm" onclick="fpResetAnnFilters()">
         <span class="fp-ms">restart_alt</span>Reset
       </button>
+      #}
     </div>
   </div>
 </div>
+
+<div id="fp-ann-chips" class="fp-filter-chips" style="display:none;margin:-10px 0 20px;"></div>
 
 {# ── Announcement list ──────────────────────────────────────── #}
 {% if not announcements %}
@@ -182,29 +241,99 @@ function fpToggleAnn(id) {
   if (chev) chev.style.transform = open ? '' : 'rotate(180deg)';
 }
 
+/* ── Multi-select filter panels (Type / Priority) ───────────── */
+function fpToggleFilterPanel(btnId, panelId) {
+  fpOpenMultiselectPanel(document.getElementById(btnId), document.getElementById(panelId));
+}
+
+document.addEventListener('click', function(e) {
+  document.querySelectorAll('.fp-multiselect-panel.fp-open').forEach(function(panel) {
+    var wrap = panel._fpHomeParent ? panel._fpHomeParent.closest('.fp-multiselect') : panel.closest('.fp-multiselect');
+    var clickedInWrap  = wrap && wrap.contains(e.target);
+    var clickedInPanel = panel.contains(e.target);
+    if (!clickedInWrap && !clickedInPanel) {
+      fpCloseMultiselectPanel(panel);
+    }
+  });
+});
+
+function fpSelectAllFilterGroup(optClass, callback) {
+  document.querySelectorAll('.' + optClass).forEach(function(el) { el.checked = true; });
+  if (callback) callback();
+}
+
+function fpClearFilterGroup(optClass, callback) {
+  document.querySelectorAll('.' + optClass).forEach(function(el) { el.checked = false; });
+  if (callback) callback();
+}
+
+function fpGetChecked(optClass) {
+  return Array.from(document.querySelectorAll('.' + optClass + ':checked')).map(function(el) { return el.value; });
+}
+
 function fpFilterAnn() {
-  var type   = (document.getElementById('fp-type-filter').value || '').toLowerCase();
-  var pri    = (document.getElementById('fp-pri-filter').value || '').toLowerCase();
+  var types = fpGetChecked('fp-ann-type-opt');
+  var pris  = fpGetChecked('fp-ann-pri-opt');
   var search = (document.getElementById('fp-ann-search').value || '').toLowerCase();
   var cards  = document.querySelectorAll('.fp-ann-card');
   var visible = 0;
   cards.forEach(function(card) {
-    var cardType  = (card.getAttribute('data-type')     || '').toLowerCase();
-    var cardPri   = (card.getAttribute('data-priority') || '').toLowerCase();
-    var cardTitle = (card.getAttribute('data-title')    || '').toLowerCase();
-    var show = (!type   || cardType  === type)
-            && (!pri    || cardPri   === pri)
+    var cardType  = card.getAttribute('data-type')     || '';
+    var cardPri   = card.getAttribute('data-priority') || '';
+    var cardTitle = (card.getAttribute('data-title')   || '').toLowerCase();
+    var show = (!types.length || types.indexOf(cardType) !== -1)
+            && (!pris.length  || pris.indexOf(cardPri) !== -1)
             && (!search || cardTitle.indexOf(search) !== -1);
     card.style.display = show ? '' : 'none';
     if (show) visible++;
   });
   var noAnn = document.getElementById('fp-no-ann');
   if (noAnn) noAnn.style.display = visible === 0 ? 'block' : 'none';
+
+  var typeBtnLabel = document.getElementById('fp-type-btn-label');
+  if (typeBtnLabel) {
+    typeBtnLabel.textContent = !types.length ? 'All Types' : (types.length === 1 ? types[0] : types.length + ' selected');
+  }
+  var priBtnLabel = document.getElementById('fp-pri-btn-label');
+  if (priBtnLabel) {
+    priBtnLabel.textContent = !pris.length ? 'All Priorities' : (pris.length === 1 ? pris[0] : pris.length + ' selected');
+  }
+
+  var chipsWrap = document.getElementById('fp-ann-chips');
+  if (chipsWrap) {
+    chipsWrap.innerHTML = '';
+    var chips = [];
+    types.forEach(function(t) {
+      chips.push({ label: 'Type: ' + t, clear: function() {
+        var cb = document.querySelector('.fp-ann-type-opt[value="' + t.replace(/"/g, '\\"') + '"]');
+        if (cb) cb.checked = false;
+        fpFilterAnn();
+      }});
+    });
+    pris.forEach(function(p) {
+      chips.push({ label: 'Priority: ' + p, clear: function() {
+        var cb = document.querySelector('.fp-ann-pri-opt[value="' + p.replace(/"/g, '\\"') + '"]');
+        if (cb) cb.checked = false;
+        fpFilterAnn();
+      }});
+    });
+    if (chips.length) {
+      chipsWrap.style.display = 'flex';
+      chips.forEach(function(c) {
+        var chip = document.createElement('span');
+        chip.className = 'fp-filter-chip';
+        chip.innerHTML = c.label + ' <button type="button" aria-label="Remove filter"><span class="fp-ms">close</span></button>';
+        chip.querySelector('button').onclick = c.clear;
+        chipsWrap.appendChild(chip);
+      });
+    } else {
+      chipsWrap.style.display = 'none';
+    }
+  }
 }
 
 function fpResetAnnFilters() {
-  document.getElementById('fp-type-filter').value = '';
-  document.getElementById('fp-pri-filter').value  = '';
+  document.querySelectorAll('.fp-ann-type-opt, .fp-ann-pri-opt').forEach(function(el) { el.checked = false; });
   document.getElementById('fp-ann-search').value  = '';
   fpFilterAnn();
 }

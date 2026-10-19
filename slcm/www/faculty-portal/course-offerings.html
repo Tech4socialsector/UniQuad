@@ -3,24 +3,64 @@
 {% block title %}My Course Offerings{% endblock %}
 
 {% block content %}
+<style>
+  /* ── Dark mode ── */
+  /* Global dark tokens: --fp-border-light equals the card colour (dividers and
+     the attendance progress track vanish) and --fp-text-4/5 are too dim on navy.
+     Lift them for this page only. */
+  body.fp-dark .fco-page {
+    --fp-border-light: #1e2d4a;
+    --fp-text-4: #8391a7;
+    --fp-text-5: #64748b;
+  }
+  /* var(--fp-bg) is darker than the card on navy: use the secondary surface for
+     inline tiles, the inactive view toggle, empty-state icon/feature boxes, the
+     modal close button and the modal stat tiles */
+  body.fp-dark .fco-page [style*="background:var(--fp-bg)"],
+  body.fp-dark .fco-page [style*="background: var(--fp-bg)"] { background: var(--fp-card-2) !important; }
+
+  /* Summary strip: "no attendance data" icon uses an undefined token */
+  body.fp-dark .fco-page .fco-summary-icon[style*="--fp-surface-2"] { background: var(--fp-card-2) !important; }
+  body.fp-dark .fco-page .fco-summary-strip,
+  body.fp-dark .fco-page .fco-summary-cell { border-color: var(--fp-border); }
+
+  /* Course cards */
+  body.fp-dark .fco-page .fco-card { box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+  body.fp-dark .fco-page .fco-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.45); }
+  /* Attendance action: hover turns the fill light blue, white text would be unreadable */
+  body.fp-dark .fco-page .fco-action-btn[href*="/attendance"]:hover { color: #0a0f1e !important; }
+  body.fp-dark .fco-page .fco-action-btn[href*="/attendance"]:hover .fp-ms { color: #0a0f1e; }
+
+  /* List view table */
+  body.fp-dark .fco-page .fp-table th { background: var(--fp-card-2); border-bottom-color: var(--fp-border-mid); }
+  body.fp-dark .fco-page .fp-table tbody tr:nth-child(even) td { background: rgba(255,255,255,0.025); }
+  body.fp-dark .fco-page .fp-table tbody tr:hover td { background: rgba(255,255,255,0.05); }
+
+  /* Secondary buttons (no results, empty state) */
+  body.fp-dark .fco-page .fp-btn-secondary { background: var(--fp-card-2); color: var(--fp-text-1); border-color: var(--fp-border); }
+  body.fp-dark .fco-page .fp-btn-secondary:hover { background: #22304f; border-color: var(--fp-border-mid); }
+
+  /* Empty state: the floating icon box sits on the card itself */
+  body.fp-dark .fco-page [style*="background:var(--fp-card);"][style*="dashed"] { background: var(--fp-card-2) !important; }
+
+  /* Details modal */
+  body.fp-dark #fco-modal { background: rgba(0,0,0,0.65) !important; }
+  body.fp-dark #fco-modal > div { border: 1px solid var(--fp-border); box-shadow: 0 24px 64px rgba(0,0,0,0.6) !important; }
+</style>
+<div class="fco-page">
 
 {# ── Page Header ────────────────────────────────────────────── #}
 <div class="fp-page-header fade-in">
   <div class="fp-page-header-left">
-    <div class="fp-breadcrumb">
-      <a href="/faculty-portal"><span class="fp-ms">home</span></a>
-      <span class="fp-ms">chevron_right</span>
-      <span>Course Offerings</span>
-    </div>
     <h1 class="fp-page-title">My Course Offerings</h1>
-    <p class="fp-page-sub">All courses assigned to you — attendance, marks, and session data at a glance</p>
+    <p class="fp-page-sub">All courses assigned to you — attendance, grades, and session data at a glance</p>
   </div>
   {% if course_offerings %}
   <div class="fp-page-actions">
-    <div style="background:var(--fp-primary-light);border:1px solid var(--fp-primary-mid);border-radius:var(--fp-radius-sm);padding:8px 18px;display:flex;align-items:center;gap:10px;">
-      <span class="fp-ms" style="font-size:20px;color:var(--fp-primary);">library_books</span>
-      <span style="font-size:24px;font-weight:800;color:var(--fp-primary);letter-spacing:-0.03em;">{{ course_offerings | length }}</span>
-      <span style="font-size:12px;color:var(--fp-text-3);font-weight:500;">Course{{ 's' if course_offerings | length != 1 }}</span>
+    <div style="background:var(--fp-primary);border:1px solid var(--fp-primary);border-radius:var(--fp-radius-sm);padding:8px 18px;display:flex;align-items:center;gap:10px;">
+      <span class="fp-ms" style="font-size:20px;color:#fff;">library_books</span>
+      <span style="font-size:24px;font-weight:800;color:#fff;letter-spacing:-0.03em;">{{ course_offerings | length }}</span>
+      <span style="font-size:12px;color:rgba(255,255,255,0.85);font-weight:500;">Course{{ 's' if course_offerings | length != 1 }}</span>
     </div>
   </div>
   {% endif %}
@@ -38,34 +78,34 @@
 {# ── Summary Stats Strip ────────────────────────────────────── #}
 <div class="fco-summary-strip fade-in" style="animation-delay:0.06s;">
   <div class="fco-summary-cell">
-    <div class="fco-summary-icon" style="background:var(--fp-primary-light);color:var(--fp-primary);">
+    <div class="fco-summary-icon" style="background:var(--fp-primary);color:#fff;">
       <span class="fp-ms">library_books</span>
     </div>
     <div>
       <div class="fco-summary-val">{{ total_courses }}</div>
-      <div class="fco-summary-lbl">Total Courses</div>
+      <div class="fco-summary-lbl">Courses</div>
     </div>
   </div>
   <div class="fco-summary-cell">
-    <div class="fco-summary-icon" style="background:var(--fp-info-bg);color:var(--fp-info);">
+    <div class="fco-summary-icon" style="background:var(--fp-primary);color:#fff;">
       <span class="fp-ms">groups</span>
     </div>
     <div>
       <div class="fco-summary-val">{{ total_students }}</div>
-      <div class="fco-summary-lbl">Total Students</div>
+      <div class="fco-summary-lbl">Students</div>
     </div>
   </div>
   <div class="fco-summary-cell">
-    <div class="fco-summary-icon" style="background:var(--fp-success-bg);color:var(--fp-success);">
+    <div class="fco-summary-icon" style="background:var(--fp-primary);color:#fff;">
       <span class="fp-ms">radio_button_checked</span>
     </div>
     <div>
       <div class="fco-summary-val">{{ active_courses }}</div>
-      <div class="fco-summary-lbl">Active Courses</div>
+      <div class="fco-summary-lbl">Current Courses</div>
     </div>
   </div>
   <div class="fco-summary-cell">
-    <div class="fco-summary-icon" style="background:var(--fp-warning-bg);color:var(--fp-warning);">
+    <div class="fco-summary-icon" style="background:var(--fp-primary);color:#fff;">
       <span class="fp-ms">event_available</span>
     </div>
     <div>
@@ -75,11 +115,11 @@
   </div>
   <div class="fco-summary-cell">
     {% if overall_avg_att >= 75 %}
-      {% set _summ_bg = "var(--fp-success-bg)" %}{% set _summ_c = "var(--fp-success)" %}
+      {% set _summ_bg = "var(--fp-primary)" %}{% set _summ_c = "#fff" %}
     {% elif overall_avg_att >= 60 %}
-      {% set _summ_bg = "var(--fp-warning-bg)" %}{% set _summ_c = "var(--fp-warning)" %}
+      {% set _summ_bg = "var(--fp-primary)" %}{% set _summ_c = "#fff" %}
     {% elif overall_avg_att > 0 %}
-      {% set _summ_bg = "var(--fp-danger-bg)" %}{% set _summ_c = "var(--fp-danger)" %}
+      {% set _summ_bg = "var(--fp-primary)" %}{% set _summ_c = "#fff" %}
     {% else %}
       {% set _summ_bg = "var(--fp-surface-2)" %}{% set _summ_c = "var(--fp-text-4)" %}
     {% endif %}
@@ -274,17 +314,17 @@
       </a>
       <a href="/faculty-portal/marks?course_offering={{ co.name | urlencode }}"
          class="fco-action-btn"
-         style="background:var(--fp-success-bg);color:var(--fp-success);border-left:1px solid var(--fp-border-light);"
-         onmouseover="this.style.background='var(--fp-success)';this.style.color='#fff';"
-         onmouseout="this.style.background='var(--fp-success-bg)';this.style.color='var(--fp-success)';">
-        <span class="fp-ms">grade</span>Marks
+         style="background:var(--fp-primary);color:#fff;border-left:1px solid var(--fp-border-light);"
+         onmouseover="this.style.background='var(--fp-primary-dark)';this.style.color='#fff';"
+         onmouseout="this.style.background='var(--fp-primary)';this.style.color='#fff';">
+        <span class="fp-ms">grade</span>Grades
       </a>
       <button class="fco-action-btn"
-              style="background:var(--fp-primary-light);color:var(--fp-primary);border:none;
+              style="background:var(--fp-primary);color:#fff;border:none;
                      cursor:pointer;border-left:1px solid var(--fp-border-light);"
               onclick="fcoShowDetails('{{ co.name | replace("'", "\\'") }}')"
-              onmouseover="this.style.background='var(--fp-primary)';this.style.color='#fff';"
-              onmouseout="this.style.background='var(--fp-primary-light)';this.style.color='var(--fp-primary)';">
+              onmouseover="this.style.background='var(--fp-primary-dark)';this.style.color='#fff';"
+              onmouseout="this.style.background='var(--fp-primary)';this.style.color='#fff';">
         <span class="fp-ms">info</span>Details
       </button>
     </div>
@@ -349,8 +389,8 @@
                 </a>
                 <a href="/faculty-portal/marks?course_offering={{ co.name | urlencode }}"
                    class="fp-btn fp-btn-sm"
-                   style="background:var(--fp-success-bg);color:var(--fp-success);text-decoration:none;">
-                  <span class="fp-ms">grade</span>Marks
+                   style="background:var(--fp-primary);color:#fff;text-decoration:none;">
+                  <span class="fp-ms">grade</span>Grades
                 </a>
               </div>
             </td>
@@ -388,7 +428,7 @@
 <div class="fp-card fade-in" style="animation-delay:0.10s;">
   <div style="padding:72px 32px;text-align:center;">
     <div style="width:100px;height:100px;border-radius:28px;
-                background:linear-gradient(135deg,var(--fp-primary-light),var(--fp-accent-light));
+                background:var(--fp-card);
                 border:2px dashed var(--fp-border-mid);display:flex;align-items:center;
                 justify-content:center;margin:0 auto 24px;animation:fpFloat 3s ease-in-out infinite;">
       <span class="fp-ms" style="font-size:48px;color:var(--fp-text-5);">library_books</span>
@@ -417,7 +457,7 @@
       <div style="flex:1;min-width:160px;max-width:200px;padding:16px;background:var(--fp-bg);
                   border-radius:var(--fp-radius);border:1px solid var(--fp-border);text-align:center;">
         <span class="fp-ms" style="font-size:26px;color:var(--fp-success);display:block;margin-bottom:8px;">grade</span>
-        <div style="font-size:12px;font-weight:600;color:var(--fp-text-2);margin-bottom:4px;">Enter Marks</div>
+        <div style="font-size:12px;font-weight:600;color:var(--fp-text-2);margin-bottom:4px;">Enter Grades</div>
         <div style="font-size:11px;color:var(--fp-text-4);line-height:1.5;">Record student grades per course</div>
       </div>
       <div style="flex:1;min-width:160px;max-width:200px;padding:16px;background:var(--fp-bg);
@@ -457,6 +497,7 @@
   </div>
 </div>
 
+</div>{# /.fco-page #}
 {% endblock %}
 
 {% block extra_js %}
@@ -584,7 +625,7 @@ function fcoShowDetails(id) {
       '</a>',
       '<a href="/faculty-portal/marks?course_offering=' + encodeURIComponent(co.id) + '"',
          'class="fp-btn fp-btn-success" style="flex:1;justify-content:center;text-decoration:none;">',
-        '<span class="fp-ms">grade</span>Enter Marks',
+        '<span class="fp-ms">grade</span>Enter Grades',
       '</a>',
     '</div>',
   ].join('');

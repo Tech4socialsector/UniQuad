@@ -1,6 +1,5 @@
-from urllib.parse import quote
-
 import frappe
+from urllib.parse import quote
 from frappe.utils.oauth import get_oauth2_authorize_url
 
 from slcm.slcm.utils.parent_portal import get_parent_wards
@@ -48,9 +47,6 @@ def get_context(context):
             frappe.local.flags.redirect_location = "/desk"
             raise frappe.Redirect
 
-        # Logged-in Google account has no linked Student/Faculty/Parent record —
-        # sign them back out and show the error inline instead of forwarding
-        # them to a bare, disconnected portal page.
         frappe.local.login_manager.logout()
         frappe.db.commit()
         context.no_role_found = True
@@ -69,11 +65,14 @@ def get_context(context):
 
 
 def _get_google_login_url(tab, redirect_to):
-    # Returns the URL that starts the Google OAuth flow (redirects to Google's
-    # consent screen), or None if Google login isn't configured/enabled for
-    # this tab — in which case the "Continue with Google" button is hidden.
-    settings_doctype = "Parent Portal Settings" if tab == TAB_PARENT else "Student Portal Settings"
-    if not frappe.db.get_single_value(settings_doctype, "enable_google_login"):
+    if tab == TAB_PARENT:
+        enabled = frappe.db.get_single_value("Parent Portal Settings", "enable_google_login")
+    else:
+        enabled = (
+            frappe.db.get_single_value("Student Portal Settings", "enable_google_login")
+            or frappe.db.get_single_value("Faculty Portal Settings", "enable_google_login")
+        )
+    if not enabled:
         return None
     if not frappe.db.exists(
         "Social Login Key",
@@ -81,13 +80,7 @@ def _get_google_login_url(tab, redirect_to):
     ):
         return None
     try:
-        # Send the OAuth callback back to this login page (not straight to a
-        # portal) so the already-logged-in role-detection above always runs
-        # first, and the browser lands back on the tab it started from if
-        # the login is rejected. The real destination is carried through as
-        # a query param and honored once the role check passes.
         callback_target = f"/portal-login?tab={tab}&redirect-to=" + quote(redirect_to, safe="")
-        # "google" here is the Social Login Key docname, not the display label.
         return get_oauth2_authorize_url("google", callback_target)
     except Exception:
         frappe.log_error(frappe.get_traceback(), "portal-login/login: google oauth url failed")
@@ -96,15 +89,27 @@ def _get_google_login_url(tab, redirect_to):
 
 def _load_settings(context):
     try:
-        context.primary_color = "#2b2e4a"
-        context.secondary_color = "#920c24"
-        context.portal_title = "Institution Portal"
-        context.portal_tagline = "Access your courses, classes, or your child's progress — all in one place"
-        context.portal_logo = frappe.db.get_single_value("Institution Settings", "logo") or ""
+        settings = frappe.get_single("Student Portal Settings")
+        
+        context.primary_color = "#920C24"
+        context.secondary_color = "#2b2e4a"
+        context.portal_title = settings.portal_title or "National Law School of India University"
+        context.portal_tagline = settings.portal_subtitle or ""
+        
+        logo = settings.get("portal_favicon")
+        if not logo:
+            logo = frappe.db.get_single_value("Website Settings", "app_logo")
+        context.portal_logo = logo or ""
+
+        bg_image = settings.get("login_page_background_image")
+        context.bg_image = bg_image if bg_image else ""
+        context.bg_color = "#FAFAFA" if not bg_image else ""
     except Exception:
         frappe.log_error(frappe.get_traceback(), "portal-login/login: settings load failed")
-        context.primary_color = "#2b2e4a"
-        context.secondary_color = "#920c24"
-        context.portal_title = "Institution Portal"
-        context.portal_tagline = "Access your courses, classes, or your child's progress — all in one place"
+        context.primary_color = "#920C24"
+        context.secondary_color = "#2b2e4a"
+        context.portal_title = "National Law School of India University"
+        context.portal_tagline = ""
         context.portal_logo = ""
+        context.bg_image = ""
+        context.bg_color = "#FAFAFA"

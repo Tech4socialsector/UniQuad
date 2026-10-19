@@ -1,29 +1,13 @@
 {% extends "slcm/www/faculty-portal/_base.html" %}
 
-{% block title %}My Classes{% endblock %}
+{% block title %}My Courses{% endblock %}
 
 {% block content %}
+<div class="fp-mc-page">
 
 {# ── Page Header ─────────────────────────────────────────────── #}
-<div class="fp-page-header fade-in">
-  <div class="fp-page-header-left">
-    <div class="fp-breadcrumb">
-      <a href="/faculty-portal"><span class="fp-ms">home</span></a>
-      <span class="fp-ms">chevron_right</span>
-      <span>My Classes</span>
-    </div>
-    <h1 class="fp-page-title">My Classes</h1>
-    <p class="fp-page-sub">All course offerings assigned to you</p>
-  </div>
-  {% if course_offerings %}
-  <div class="fp-page-actions">
-    <div style="background:var(--fp-primary-light);border:1px solid var(--fp-primary-mid);border-radius:var(--fp-radius-sm);padding:8px 18px;display:flex;align-items:center;gap:8px;">
-      <span class="fp-ms" style="font-size:18px;color:var(--fp-primary);">menu_book</span>
-      <span style="font-size:22px;font-weight:800;color:var(--fp-primary);letter-spacing:-0.03em;">{{ course_offerings|length }}</span>
-      <span style="font-size:12px;color:var(--fp-text-3);font-weight:500;">Course{{ 's' if course_offerings|length != 1 else '' }}</span>
-    </div>
-  </div>
-  {% endif %}
+<div class="fp-page-header fade-in" style="background: var(--fp-card, #fff); border: 1px solid var(--fp-border, #e5e7eb); border-radius: 14px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
+  <h1 class="fp-page-title" style="margin: 0; font-size: 18px !important; font-weight: 700 !important;">Courses</h1>
 </div>
 
 {% if portal_error %}
@@ -33,101 +17,138 @@
 </div>
 {% endif %}
 
-{# ── Summary Stats Strip ──────────────────────────────────────── #}
+{# ── Summary Metric Cards ─────────────────────────────────────── #}
 {% if course_offerings %}
-<div class="fp-card fade-in" style="margin-bottom:20px;">
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));">
+<div class="fp-metric-grid fade-in">
 
-    <div style="padding:18px 20px;display:flex;align-items:center;gap:12px;border-right:1px solid var(--fp-border-light);">
-      <div style="width:36px;height:36px;border-radius:9px;background:var(--fp-primary-light);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-        <span class="fp-ms" style="font-size:18px;color:var(--fp-primary);">library_books</span>
-      </div>
-      <div>
-        <div style="font-size:20px;font-weight:800;color:var(--fp-text-1);letter-spacing:-0.03em;line-height:1;">{{ total_courses }}</div>
-        <div style="font-size:11px;color:var(--fp-text-4);font-weight:500;margin-top:2px;">Total Courses</div>
-      </div>
+  <div class="fp-metric-card">
+    <div class="fp-metric-icon" style="background:var(--fp-primary);">
+      <span class="fp-ms" style="color:var(--fp-primary);">library_books</span>
     </div>
-
-    <div style="padding:18px 20px;display:flex;align-items:center;gap:12px;border-right:1px solid var(--fp-border-light);">
-      <div style="width:36px;height:36px;border-radius:9px;background:var(--fp-info-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-        <span class="fp-ms" style="font-size:18px;color:var(--fp-info);">groups</span>
-      </div>
-      <div>
-        <div style="font-size:20px;font-weight:800;color:var(--fp-text-1);letter-spacing:-0.03em;line-height:1;">{{ total_students }}</div>
-        <div style="font-size:11px;color:var(--fp-text-4);font-weight:500;margin-top:2px;">Total Students</div>
-      </div>
+    <div>
+      <div class="fp-metric-val">{{ total_courses }}</div>
+      <div class="fp-metric-lbl">Courses</div>
     </div>
-
-    <div style="padding:18px 20px;display:flex;align-items:center;gap:12px;border-right:1px solid var(--fp-border-light);">
-      <div style="width:36px;height:36px;border-radius:9px;background:var(--fp-success-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-        <span class="fp-ms" style="font-size:18px;color:var(--fp-success);">check_circle</span>
-      </div>
-      <div>
-        <div style="font-size:20px;font-weight:800;color:var(--fp-text-1);letter-spacing:-0.03em;line-height:1;">{{ active_courses }}</div>
-        <div style="font-size:11px;color:var(--fp-text-4);font-weight:500;margin-top:2px;">Active</div>
-      </div>
-    </div>
-
-    <div style="padding:18px 20px;display:flex;align-items:center;gap:12px;border-right:1px solid var(--fp-border-light);">
-      <div style="width:36px;height:36px;border-radius:9px;background:var(--fp-warning-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-        <span class="fp-ms" style="font-size:18px;color:var(--fp-warning);">event_available</span>
-      </div>
-      <div>
-        <div style="font-size:20px;font-weight:800;color:var(--fp-text-1);letter-spacing:-0.03em;line-height:1;">{{ total_sessions }}</div>
-        <div style="font-size:11px;color:var(--fp-text-4);font-weight:500;margin-top:2px;">Sessions Held</div>
-      </div>
-    </div>
-
   </div>
+
+  <div class="fp-metric-card">
+    <div class="fp-metric-icon" style="background:var(--fp-primary);">
+      <span class="fp-ms" style="color:var(--fp-primary);">groups</span>
+    </div>
+    <div>
+      <div class="fp-metric-val">{{ total_students }}</div>
+      <div class="fp-metric-lbl">Students</div>
+    </div>
+  </div>
+
+  <div class="fp-metric-card">
+    <div class="fp-metric-icon" style="background:var(--fp-primary);">
+      <span class="fp-ms" style="color:var(--fp-primary);">check_circle</span>
+    </div>
+    <div>
+      <div class="fp-metric-val">{{ active_courses }}</div>
+      <div class="fp-metric-lbl">Current Courses</div>
+    </div>
+  </div>
+
+  <div class="fp-metric-card">
+    <div class="fp-metric-icon" style="background:var(--fp-primary);">
+      <span class="fp-ms" style="color:var(--fp-warning);">event_available</span>
+    </div>
+    <div>
+      <div class="fp-metric-val">{{ total_sessions }}</div>
+      <div class="fp-metric-lbl">Sessions Held</div>
+    </div>
+  </div>
+
 </div>
 {% endif %}
 
-{# ── Filter + Search Bar ──────────────────────────────────────── #}
-<div class="fp-card fade-in" style="margin-bottom:20px;padding:14px 18px;">
-  <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+{# ── Filter + Search Toolbar ──────────────────────────────────── #}
+<div class="fp-mc-toolbar">
+  <div class="fp-mc-toolbar-row">
 
-    <div class="fp-search-wrap" style="flex:1;min-width:200px;">
+    <div class="fp-search-wrap" style="flex:1;min-width:220px;">
       <span class="fp-ms">search</span>
       <input type="text" class="fp-input fp-search-input" id="fp-search"
-             placeholder="Search courses…" oninput="fpFilterClasses()" autocomplete="off">
+             placeholder="Search by course name, code or programme…" oninput="fpFilterClasses()" autocomplete="off"
+             aria-label="Search courses">
     </div>
 
-    <select class="fp-select" id="fp-filter-year" onchange="fpFilterClasses()"
-            style="width:auto;min-width:148px;padding:8px 12px;font-size:13px;">
-      <option value="">All Years</option>
-      {% for y in filter_years %}<option value="{{ y }}">{{ y }}</option>{% endfor %}
-    </select>
+    <div class="fp-msf" id="fp-filter-year" data-label-all="All Years" data-label-one="Year">
+      <button type="button" class="fp-msf-btn" onclick="fpToggleMsf('fp-filter-year')" aria-haspopup="true" aria-expanded="false" aria-label="Filter by academic year">
+        <span class="fp-msf-btn-label">All Years</span>
+        <span class="fp-ms fp-msf-chevron">expand_more</span>
+      </button>
+      <div class="fp-msf-panel">
+        {% for y in filter_years %}
+        <label class="fp-msf-option">
+          <input type="checkbox" value="{{ y }}" onchange="fpFilterClasses()"{% if y == current_academic_year %} checked{% endif %}>
+          <span>{{ y }}</span>
+        </label>
+        {% endfor %}
+        {% if filter_years %}
+        <div class="fp-msf-footer">
+          <button type="button" class="fp-msf-footer-btn" onclick="fpMsfSelectAll('fp-filter-year')">Select all</button>
+          <button type="button" class="fp-msf-footer-btn fp-msf-clear" onclick="fpMsfClearAll('fp-filter-year')">Clear all</button>
+        </div>
+        {% endif %}
+      </div>
+    </div>
 
-    <select class="fp-select" id="fp-filter-term" onchange="fpFilterClasses()"
-            style="width:auto;min-width:120px;padding:8px 12px;font-size:13px;">
-      <option value="">All Terms</option>
-      {% for t in filter_terms %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
-    </select>
+    <div class="fp-msf" id="fp-filter-term" data-label-all="All Terms" data-label-one="Term">
+      <button type="button" class="fp-msf-btn" onclick="fpToggleMsf('fp-filter-term')" aria-haspopup="true" aria-expanded="false" aria-label="Filter by term">
+        <span class="fp-msf-btn-label">All Terms</span>
+        <span class="fp-ms fp-msf-chevron">expand_more</span>
+      </button>
+      <div class="fp-msf-panel">
+        {% for t in filter_terms %}
+        <label class="fp-msf-option" data-year="{{ t.year }}">
+          <input type="checkbox" value="{{ t.name }}" onchange="fpFilterClasses()">
+          <span>{{ t.name }}</span>
+        </label>
+        {% endfor %}
+        {% if filter_terms %}
+        <div class="fp-msf-footer">
+          <button type="button" class="fp-msf-footer-btn" onclick="fpMsfSelectAll('fp-filter-term')">Select all</button>
+          <button type="button" class="fp-msf-footer-btn fp-msf-clear" onclick="fpMsfClearAll('fp-filter-term')">Clear all</button>
+        </div>
+        {% endif %}
+      </div>
+    </div>
 
-    <select class="fp-select" id="fp-filter-status" onchange="fpFilterClasses()"
-            style="width:auto;min-width:120px;padding:8px 12px;font-size:13px;">
-      <option value="">All Status</option>
-      <option value="Open">Open</option>
-      <option value="Active">Active</option>
-      <option value="Closed">Closed</option>
-    </select>
+    <div class="fp-msf" id="fp-filter-status" data-label-all="All Status" data-label-one="Status" data-label-many="Statuses">
+      <button type="button" class="fp-msf-btn" onclick="fpToggleMsf('fp-filter-status')" aria-haspopup="true" aria-expanded="false" aria-label="Filter by course status">
+        <span class="fp-msf-btn-label">All Status</span>
+        <span class="fp-ms fp-msf-chevron">expand_more</span>
+      </button>
+      <div class="fp-msf-panel">
+        <label class="fp-msf-option"><input type="checkbox" value="Open" onchange="fpFilterClasses()"><span>Open</span></label>
+        <label class="fp-msf-option"><input type="checkbox" value="Active" onchange="fpFilterClasses()"><span>Active</span></label>
+        <label class="fp-msf-option"><input type="checkbox" value="Closed" onchange="fpFilterClasses()"><span>Closed</span></label>
+        <div class="fp-msf-footer">
+          <button type="button" class="fp-msf-footer-btn" onclick="fpMsfSelectAll('fp-filter-status')">Select all</button>
+          <button type="button" class="fp-msf-footer-btn fp-msf-clear" onclick="fpMsfClearAll('fp-filter-status')">Clear all</button>
+        </div>
+      </div>
+    </div>
 
     <div style="display:flex;align-items:center;gap:8px;margin-left:auto;">
       <span style="font-size:12px;color:var(--fp-text-4);">
         <strong id="fp-visible-count">{{ course_offerings|length }}</strong>
         <span style="font-weight:400;"> / {{ course_offerings|length }} courses</span>
       </span>
-      <button class="fp-btn fp-btn-ghost fp-btn-sm" onclick="fpResetFilters()" title="Reset filters">
+      <button class="fp-btn fp-btn-ghost fp-btn-sm" onclick="fpResetFilters()" title="Reset filters" aria-label="Reset filters">
         <span class="fp-ms">restart_alt</span>
       </button>
       <div style="display:flex;gap:4px;">
-        <button id="view-grid" onclick="fpSetView('grid')" title="Grid view"
-                style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:var(--fp-primary);color:#fff;border:none;border-radius:8px;cursor:pointer;transition:all 0.15s;">
-          <span class="fp-ms" style="font-size:16px;">grid_view</span>
+        <button id="view-grid" class="fp-mc-view-toggle" onclick="fpSetView('grid')" title="Grid view" aria-label="Grid view"
+                style="background:var(--fp-primary);color:#fff;border:none;">
+          <span class="fp-ms">grid_view</span>
         </button>
-        <button id="view-list" onclick="fpSetView('list')" title="List view"
-                style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:var(--fp-bg);color:var(--fp-text-3);border:1px solid var(--fp-border);border-radius:8px;cursor:pointer;transition:all 0.15s;">
-          <span class="fp-ms" style="font-size:16px;">view_list</span>
+        <button id="view-list" class="fp-mc-view-toggle" onclick="fpSetView('list')" title="List view" aria-label="List view"
+                style="background:var(--fp-bg);color:var(--fp-text-3);border:1px solid var(--fp-border);">
+          <span class="fp-ms">view_list</span>
         </button>
       </div>
     </div>
@@ -147,9 +168,9 @@
     <div style="width:80px;height:80px;border-radius:24px;background:var(--fp-bg);border:2px dashed var(--fp-border-mid);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
       <span class="fp-ms" style="font-size:38px;color:var(--fp-text-5);">menu_book</span>
     </div>
-    <h2 style="font-size:20px;font-weight:700;color:var(--fp-text-2);margin:0 0 10px;">No Classes Assigned Yet</h2>
+    <h2 style="font-size:20px;font-weight:700;color:var(--fp-text-2);margin:0 0 10px;">No courses assigned</h2>
     <p style="font-size:13px;color:var(--fp-text-4);max-width:340px;margin:0 auto 24px;line-height:1.7;">
-      You have no course offerings assigned for this term.<br>Contact your academic administrator for assistance.
+      You currently don't have any assigned courses.<br>Contact your academic administrator for assistance.
     </p>
     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
       <a href="/faculty-portal/support" class="fp-btn fp-btn-primary">
@@ -165,75 +186,65 @@
 {% else %}
 
 {# ── Grid View ──────────────────────────────────────────────────── #}
-<div id="fp-classes-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px;margin-bottom:24px;">
+<div id="fp-classes-grid" class="fp-mc-grid">
   {% for co in course_offerings %}
 
-  {% set palette = [
-    'linear-gradient(135deg,#2b2e4a 0%,#3d4166 100%)',
-    'linear-gradient(135deg,#920c24 0%,#b01030 100%)',
-    'linear-gradient(135deg,#1e2038 0%,#2b2e4a 100%)',
-    'linear-gradient(135deg,#6e0919 0%,#920c24 100%)',
-    'linear-gradient(135deg,#232645 0%,#2b2e4a 100%)',
-    'linear-gradient(135deg,#7a0b20 0%,#920c24 100%)',
-    'linear-gradient(135deg,#2b2e4a 0%,#920c24 100%)',
-    'linear-gradient(135deg,#920c24 0%,#2b2e4a 100%)',
-  ] %}
-  {% set col = palette[loop.index0 % palette|length] %}
+  {% set status_class = 'fp-status-active' if co.status == 'Active' else ('fp-status-active' if co.status == 'Open' else ('fp-status-closed' if co.status == 'Closed' else 'fp-status-upcoming')) %}
 
-  <div class="fp-card fp-class-card fade-in"
-       style="animation-delay:{{ loop.index0 * 0.05 }}s;overflow:hidden;"
+  <div class="fp-card fp-course-card fp-class-card fade-in"
+       style="animation-delay:{{ loop.index0 * 0.05 }}s;"
        data-year="{{ co.academic_year }}"
        data-term="{{ co.term_name }}"
        data-status="{{ co.status }}"
        data-name="{{ co.course_name | lower }}">
 
-    {# Gradient Header #}
-    <div style="background:{{ col }};padding:18px 20px 16px;position:relative;overflow:hidden;">
-      <div style="position:absolute;top:-30px;right:-30px;width:110px;height:110px;border-radius:50%;background:rgba(255,255,255,0.07);"></div>
-      <div style="position:relative;z-index:1;">
-        <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.6);letter-spacing:0.09em;text-transform:uppercase;font-family:var(--fp-mono);margin-bottom:5px;">{{ co.name }}</div>
-        <div style="font-size:15px;font-weight:700;color:#fff;line-height:1.35;margin-bottom:10px;">{{ co.course_name }}</div>
-        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-          <span style="display:inline-flex;align-items:center;gap:3px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.9);font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;">
-            <span class="fp-ms" style="font-size:11px;{% if co.status in ('Active','Open') %}font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 20;{% endif %}">{% if co.status in ('Active','Open') %}radio_button_checked{% else %}pause_circle{% endif %}</span>
-            {{ co.status or 'Active' }}
-          </span>
-          {% if co.term_name and co.term_name != '—' %}
-          <span style="display:inline-flex;align-items:center;gap:3px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.9);font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;">
-            <span class="fp-ms" style="font-size:11px;">event_note</span>
-            {{ co.term_name }}
-          </span>
-          {% endif %}
-          {% if co.academic_year and co.academic_year != '—' %}
-          <span style="display:inline-flex;align-items:center;gap:3px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.75);font-size:10px;font-weight:500;padding:2px 8px;border-radius:20px;">
-            {{ co.academic_year }}
-          </span>
-          {% endif %}
-        </div>
+    <div class="fp-course-card-head">
+      <div class="fp-course-code">
+        {% if co.programme %}
+        <span style="display:inline-block;padding:2px 8px;background:var(--fp-primary-light);color:var(--fp-primary);border-radius:12px;font-size:11px;font-weight:400;margin-bottom:4px;">{{ co.programme }}</span>
+        {% endif %}
+      </div>
+      <div class="fp-course-name">
+        {% set course_link = co.lms_url if co.lms_url else (fp_settings.lms_url if fp_settings and fp_settings.lms_url else '#') %}
+        <a href="{{ course_link }}" target="_blank" style="color:var(--fp-text-1);text-decoration:none;display:inline-flex;align-items:center;vertical-align:middle;" title="Open in LMS">
+          {{ co.course_name }}
+          <span class="fp-ms" style="font-size:16px;color:var(--fp-primary);margin-left:6px;vertical-align:middle;">open_in_new</span>
+        </a>
+      </div>
+      <div class="fp-course-meta-row">
+        <span class="fp-status-badge {{ status_class }}">
+          <span class="fp-ms">{% if co.status in ('Active','Open') %}radio_button_checked{% else %}pause_circle{% endif %}</span>
+          {{ co.status or 'Active' }}
+        </span>
+        {% if co.academic_year and co.academic_year != '—' %}
+        <span class="fp-term-chip">{{ co.academic_year }}</span>
+        {% endif %}
       </div>
     </div>
 
-    {# Stats Row #}
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;border-bottom:1px solid var(--fp-border-light);">
-      <div style="padding:12px 16px;text-align:center;border-right:1px solid var(--fp-border-light);">
-        <div style="font-size:16px;font-weight:800;color:var(--fp-primary);line-height:1;">{{ co.student_count }}</div>
-        <div style="font-size:10px;color:var(--fp-text-4);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-top:3px;">Students</div>
+    <div class="fp-course-divider"></div>
+
+    {# Metrics Row #}
+    <div class="fp-course-metrics">
+      <div class="fp-course-metric">
+        <div class="fp-course-metric-val" style="color:var(--fp-primary);">{{ co.student_count }}</div>
+        <div class="fp-course-metric-lbl">Students</div>
       </div>
-      <div style="padding:12px 16px;text-align:center;border-right:1px solid var(--fp-border-light);">
-        <div style="font-size:16px;font-weight:800;color:var(--fp-text-1);line-height:1;">{{ co.total_sessions or 0 }}</div>
-        <div style="font-size:10px;color:var(--fp-text-4);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-top:3px;">Sessions</div>
+      <div class="fp-course-metric">
+        <div class="fp-course-metric-val">{{ co.credits or '—' }}</div>
+        <div class="fp-course-metric-lbl">Credits</div>
       </div>
-      <div style="padding:12px 16px;text-align:center;">
-        <div style="font-size:16px;font-weight:800;color:var(--fp-text-1);line-height:1;">{{ co.credits or '—' }}</div>
-        <div style="font-size:10px;color:var(--fp-text-4);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-top:3px;">Credits</div>
+      <div class="fp-course-metric">
+        <div class="fp-course-metric-val">{{ co.total_sessions or 0 }}</div>
+        <div class="fp-course-metric-lbl">Sessions</div>
       </div>
     </div>
 
     {# Next Session Row #}
-    <div style="padding:10px 16px;border-bottom:1px solid var(--fp-border-light);background:var(--fp-bg);display:flex;align-items:center;gap:8px;min-height:38px;">
-      <span class="fp-ms" style="font-size:15px;color:var(--fp-primary);flex-shrink:0;">event</span>
+    <div class="fp-course-next">
+      <span class="fp-ms">event</span>
       {% if co.next_session %}
-      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:4px;font-size:11px;color:var(--fp-text-3);">
+      <div class="fp-course-next-text">
         <span style="font-weight:700;color:var(--fp-text-1);">{{ co.next_session.date }}</span>
         <span style="color:var(--fp-text-5);">·</span>
         <span>{{ co.next_session.from_time }}{% if co.next_session.to_time %} – {{ co.next_session.to_time }}{% endif %}</span>
@@ -243,26 +254,20 @@
         {% endif %}
       </div>
       {% else %}
-      <span style="font-size:11px;color:var(--fp-text-5);font-style:italic;">No upcoming sessions</span>
+      <span class="fp-course-next-none">No upcoming sessions</span>
       {% endif %}
     </div>
 
     {# Actions #}
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;border-top:1px solid var(--fp-border-light);">
-      <a href="/faculty-portal/attendance?course_offering={{ co.name }}"
-         style="display:flex;align-items:center;justify-content:center;gap:5px;padding:10px 8px;font-size:12px;font-weight:600;color:var(--fp-info);text-decoration:none;border-right:1px solid var(--fp-border-light);transition:background 0.15s;"
-         onmouseover="this.style.background='var(--fp-info-bg)';" onmouseout="this.style.background='';">
-        <span class="fp-ms" style="font-size:15px;">how_to_reg</span>Attendance
+    <div class="fp-course-actions">
+      <a href="/faculty-portal/attendance?course_offering={{ co.name }}" class="fp-course-action fp-course-action-primary">
+        <span class="fp-ms">how_to_reg</span>Attendance
       </a>
-      <a href="/faculty-portal/marks?course_offering={{ co.name }}"
-         style="display:flex;align-items:center;justify-content:center;gap:5px;padding:10px 8px;font-size:12px;font-weight:600;color:var(--fp-success);text-decoration:none;border-right:1px solid var(--fp-border-light);transition:background 0.15s;"
-         onmouseover="this.style.background='var(--fp-success-bg)';" onmouseout="this.style.background='';">
-        <span class="fp-ms" style="font-size:15px;">grade</span>Marks
+      <a href="/faculty-portal/marks?course_offering={{ co.name }}" class="fp-course-action fp-course-action-primary">
+        <span class="fp-ms">grade</span>Grades
       </a>
-      <button onclick="fpShowCourseDetails('{{ co.name }}')"
-         style="display:flex;align-items:center;justify-content:center;gap:5px;padding:10px 8px;font-size:12px;font-weight:600;color:var(--fp-primary);background:none;border:none;cursor:pointer;font-family:inherit;transition:background 0.15s;width:100%;"
-         onmouseover="this.style.background='var(--fp-primary-light)';" onmouseout="this.style.background='';">
-        <span class="fp-ms" style="font-size:15px;">open_in_new</span>Details
+      <button onclick="fpShowCourseDetails('{{ co.name }}')" class="fp-course-action fp-course-action-primary">
+        <span class="fp-ms">open_in_new</span>Details
       </button>
     </div>
 
@@ -277,11 +282,13 @@
       <table class="fp-table">
         <thead>
           <tr>
-            <th>Course</th>
-            <th>Year · Term</th>
+            <th>Course Code</th>
+            <th>Course Name</th>
+            <th>Term</th>
+            <th>Academic Year</th>
             <th>Students</th>
-            <th>Sessions</th>
             <th>Credits</th>
+            <th>Sessions</th>
             <th>Status</th>
             <th style="text-align:right;">Actions</th>
           </tr>
@@ -293,35 +300,35 @@
               data-term="{{ co.term_name }}"
               data-status="{{ co.status }}"
               data-name="{{ co.course_name | lower }}">
-            <td>
-              <div style="font-weight:600;color:var(--fp-text-1);">{{ co.course_name }}</div>
-              <div style="font-size:11px;color:var(--fp-text-4);font-family:var(--fp-mono);margin-top:1px;">{{ co.name }}</div>
+            <td style="font-family:var(--fp-mono);font-size:11px;color:var(--fp-text-4);white-space:nowrap;">{{ co.name }}</td>
+            <td style="font-weight:600;color:var(--fp-text-1);">
+              {% set course_link = co.lms_url if co.lms_url else (fp_settings.lms_url if fp_settings and fp_settings.lms_url else '#') %}
+              <a href="{{ course_link }}" target="_blank" style="color:var(--fp-text-1);text-decoration:none;display:inline-flex;align-items:center;vertical-align:middle;" title="Open in LMS">
+                {{ co.course_name }}
+                <span class="fp-ms" style="font-size:16px;color:var(--fp-primary);margin-left:6px;vertical-align:middle;">open_in_new</span>
+              </a>
             </td>
-            <td style="color:var(--fp-text-3);white-space:nowrap;">
-              {{ co.academic_year or '—' }}
-              {% if co.term_name and co.term_name != '—' %}
-              <span style="color:var(--fp-text-5);margin:0 3px;">·</span>{{ co.term_name }}
-              {% endif %}
-            </td>
-            <td style="font-weight:600;color:var(--fp-info);">{{ co.student_count }}</td>
-            <td style="color:var(--fp-text-3);">{{ co.total_sessions or 0 }}</td>
+            <td style="color:var(--fp-text-3);white-space:nowrap;">{{ co.term_name or '—' }}</td>
+            <td style="color:var(--fp-text-3);white-space:nowrap;">{{ co.academic_year or '—' }}</td>
+            <td style="font-weight:600;color:var(--fp-primary);">{{ co.student_count }}</td>
             <td style="color:var(--fp-text-3);">{{ co.credits or '—' }}</td>
+            <td style="color:var(--fp-text-3);">{{ co.total_sessions or 0 }}</td>
             <td>
-              {% if co.status in ('Active', 'Open') %}<span class="fp-badge fp-badge-success">{{ co.status }}</span>
+              {% if co.status in ('Active', 'Open') %}<span class="fp-badge fp-badge-dark">{{ co.status }}</span>
               {% else %}<span class="fp-badge fp-badge-neutral">{{ co.status }}</span>{% endif %}
             </td>
             <td style="text-align:right;">
               <div style="display:flex;gap:6px;justify-content:flex-end;">
                 <a href="/faculty-portal/attendance?course_offering={{ co.name }}"
-                   class="fp-btn fp-btn-sm" style="background:var(--fp-info-bg);color:var(--fp-info);text-decoration:none;">
+                   class="fp-btn fp-btn-sm" style="background:var(--fp-primary);color:#fff;text-decoration:none;">
                   <span class="fp-ms">how_to_reg</span>Attendance
                 </a>
                 <a href="/faculty-portal/marks?course_offering={{ co.name }}"
-                   class="fp-btn fp-btn-sm" style="background:var(--fp-success-bg);color:var(--fp-success);text-decoration:none;">
-                  <span class="fp-ms">grade</span>Marks
+                   class="fp-btn fp-btn-sm" style="background:var(--fp-primary);color:#fff;text-decoration:none;">
+                  <span class="fp-ms">grade</span>Grades
                 </a>
                 <button onclick="fpShowCourseDetails('{{ co.name }}')"
-                        class="fp-btn fp-btn-sm" style="background:var(--fp-primary-light);color:var(--fp-primary);">
+                        class="fp-btn fp-btn-sm" style="background:var(--fp-primary);color:#fff;">
                   <span class="fp-ms">open_in_new</span>Details
                 </button>
               </div>
@@ -340,8 +347,8 @@
     <div style="width:64px;height:64px;border-radius:18px;background:var(--fp-bg);border:2px dashed var(--fp-border-mid);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
       <span class="fp-ms" style="font-size:28px;color:var(--fp-text-5);">search_off</span>
     </div>
-    <h3 style="font-size:16px;font-weight:700;color:var(--fp-text-2);margin:0 0 6px;">No courses match your filters</h3>
-    <p style="font-size:13px;color:var(--fp-text-4);margin:0 0 18px;">Try adjusting your search or clearing filters.</p>
+    <h3 style="font-size:16px;font-weight:700;color:var(--fp-text-2);margin:0 0 6px;">No courses found</h3>
+    <p style="font-size:13px;color:var(--fp-text-4);margin:0 0 18px;">Try changing your search or filters.</p>
     <button class="fp-btn fp-btn-secondary" onclick="fpResetFilters()">
       <span class="fp-ms">restart_alt</span>Clear Filters
     </button>
@@ -351,26 +358,111 @@
 {% endif %}
 
 {# ── Course Details Modal ─────────────────────────────────────── #}
+<style>
+  #fp-course-modal { padding: 16px; }
+  .fp-cd-panel {
+    background: var(--fp-card); border-radius: var(--fp-radius-lg);
+    width: 100%; max-width: 860px; max-height: 90vh; overflow-y: auto;
+    box-shadow: var(--fp-shadow-xl); animation: fpModalIn 0.22s var(--fp-ease);
+  }
+  #fp-modal-body { padding: 20px 24px; }
+  .fp-cd-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; margin-bottom: 14px; }
+  .fp-cd-students { overflow: auto; border: 1px solid var(--fp-border-light); border-radius: var(--fp-radius-sm); }
+  .fp-cd-students table { width: 100%; border-collapse: collapse; }
+  .fp-cd-students thead th { position: sticky; top: 0; z-index: 1; background: var(--fp-bg); }
+  .fp-cd-students td.fp-cd-name { word-break: break-word; }
+  .fp-cd-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .fp-cd-actions > a { flex: 1 1 180px; }
+  @media (max-width: 600px) {
+    #fp-course-modal { padding: 0; align-items: flex-end !important; }
+    .fp-cd-panel { max-height: 94vh; border-radius: var(--fp-radius-lg) var(--fp-radius-lg) 0 0; }
+    #fp-modal-body { padding: 16px; }
+    .fp-cd-stats { grid-template-columns: 1fr 1fr; }
+  }
+
+  /* ── Dark mode ── */
+  /* Global dark tokens: --fp-border-light equals the card colour (dividers and
+     progress tracks vanish) and --fp-text-4/5 are too dim on navy. Lift them for
+     this page only (the filter dropdown panel is position:fixed but still a
+     descendant, so it inherits these too). */
+  body.fp-dark .fp-mc-page {
+    --fp-border-light: #1e2d4a;
+    --fp-text-4: #8391a7;
+    --fp-text-5: #64748b;
+  }
+  /* var(--fp-bg) is darker than the card on navy: use the secondary surface
+     for inline tiles, the modal header, the close button, view toggle, empty-state icons */
+  body.fp-dark .fp-mc-page [style*="background:var(--fp-bg)"],
+  body.fp-dark .fp-mc-page [style*="background: var(--fp-bg)"] { background: var(--fp-card-2) !important; }
+  body.fp-dark .fp-mc-page .fp-mc-view-toggle[style*="var(--fp-bg)"] { border-color: var(--fp-border) !important; }
+
+  /* Programme pill (inline primary-light / primary) → rose pill */
+  body.fp-dark .fp-mc-page [style*="background:var(--fp-primary-light);color:var(--fp-primary)"] {
+    background: rgba(214,74,102,0.14) !important; color: #f08da0 !important;
+    box-shadow: inset 0 0 0 1px rgba(214,74,102,0.3);
+  }
+  body.fp-dark .fp-mc-page .fp-status-active {
+    background: rgba(214,74,102,0.14); color: #f08da0; box-shadow: inset 0 0 0 1px rgba(214,74,102,0.3);
+  }
+  body.fp-dark .fp-mc-page .fp-status-closed,
+  body.fp-dark .fp-mc-page .fp-term-chip { background: var(--fp-card-2); border-color: var(--fp-border-mid); color: var(--fp-text-3); }
+
+  /* Grid cards */
+  body.fp-dark .fp-mc-page .fp-course-next { background: rgba(255,255,255,0.025); }
+  body.fp-dark .fp-mc-page .fp-course-action-primary:hover { background: rgba(255,255,255,0.05); color: #f08da0; }
+
+  /* Multiselect filter dropdowns */
+  body.fp-dark .fp-mc-page .fp-msf-btn { background: var(--fp-card-2); border-color: var(--fp-border-mid); color: var(--fp-text-1); }
+  body.fp-dark .fp-mc-page .fp-msf.fp-msf-active .fp-msf-btn { background: var(--fp-primary); border-color: var(--fp-primary); color: #fff; }
+  body.fp-dark .fp-mc-page .fp-msf-panel { background: var(--fp-card-2); border-color: var(--fp-border-mid); box-shadow: 0 12px 32px rgba(0,0,0,0.55); }
+  body.fp-dark .fp-mc-page .fp-msf-option:hover,
+  body.fp-dark .fp-mc-page .fp-msf-footer-btn:hover { background: rgba(255,255,255,0.05); }
+  body.fp-dark .fp-mc-page .fp-msf-footer-btn:not(.fp-msf-clear) { color: #f08da0; }
+  body.fp-dark .fp-mc-page .fp-msf-footer { border-top-color: var(--fp-border-mid); }
+
+  /* Active-filter chips: inactive ones on a dark surface */
+  body.fp-dark .fp-mc-page .fp-filter-chip:not(.active) { background: var(--fp-card-2); }
+  body.fp-dark .fp-mc-page .fp-filter-chip:not(.active)[style*="var(--fp-primary)"] { color: #f08da0 !important; }
+
+  /* List view table */
+  body.fp-dark .fp-mc-page .fp-table th { background: var(--fp-card-2); border-bottom-color: var(--fp-border-mid); }
+  body.fp-dark .fp-mc-page .fp-table tbody tr:nth-child(even) td { background: rgba(255,255,255,0.025); }
+  body.fp-dark .fp-mc-page .fp-table tbody tr:hover td { background: rgba(255,255,255,0.05); }
+
+  /* Secondary buttons (empty state, no results, modal "Enter Grades") */
+  body.fp-dark .fp-mc-page .fp-btn-secondary { background: var(--fp-card-2); color: var(--fp-text-1); border-color: var(--fp-border); }
+  body.fp-dark .fp-mc-page .fp-btn-secondary:hover { background: #22304f; border-color: var(--fp-border-mid); }
+
+  /* Course details modal */
+  body.fp-dark #fp-course-modal { background: rgba(0,0,0,0.65) !important; }
+  body.fp-dark .fp-cd-panel { border: 1px solid var(--fp-border); box-shadow: 0 24px 64px rgba(0,0,0,0.6); }
+  body.fp-dark .fp-cd-panel > div:first-child { border-bottom-color: var(--fp-border) !important; }
+  body.fp-dark .fp-cd-students { border-color: var(--fp-border); }
+  body.fp-dark .fp-cd-students thead th { background: var(--fp-card-2); }
+  body.fp-dark .fp-cd-students tbody tr:nth-child(even) td { background: rgba(255,255,255,0.025); }
+  body.fp-dark .fp-cd-students tbody tr:hover td { background: rgba(255,255,255,0.05); }
+</style>
 <div id="fp-course-modal" style="display:none;position:fixed;inset:0;z-index:800;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
-  <div style="background:var(--fp-card);border-radius:var(--fp-radius-lg);width:94%;max-width:520px;max-height:88vh;overflow-y:auto;box-shadow:var(--fp-shadow-xl);animation:fpModalIn 0.22s var(--fp-ease);">
+  <div class="fp-cd-panel">
 
     {# Modal header #}
     <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--fp-border-light);background:var(--fp-bg);position:sticky;top:0;z-index:1;">
       <div style="display:flex;align-items:center;gap:10px;">
-        <div style="width:34px;height:34px;border-radius:9px;background:var(--fp-primary-light);display:flex;align-items:center;justify-content:center;">
-          <span class="fp-ms" style="font-size:17px;color:var(--fp-primary);">menu_book</span>
+        <div style="width:34px;height:34px;border-radius:9px;background:var(--fp-primary);display:flex;align-items:center;justify-content:center;">
+          <span class="fp-ms" style="font-size:17px;color:#fff;">menu_book</span>
         </div>
         <span style="font-size:15px;font-weight:700;color:var(--fp-text-1);">Course Details</span>
       </div>
-      <button onclick="fpCloseModal()" style="background:var(--fp-bg);border:1px solid var(--fp-border);border-radius:8px;width:30px;height:30px;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+      <button onclick="fpCloseModal()" aria-label="Close" style="background:var(--fp-bg);border:1px solid var(--fp-border);border-radius:8px;width:30px;height:30px;cursor:pointer;display:flex;align-items:center;justify-content:center;">
         <span class="fp-ms" style="font-size:16px;color:var(--fp-text-3);">close</span>
       </button>
     </div>
 
-    <div id="fp-modal-body" style="padding:20px;">Loading…</div>
+    <div id="fp-modal-body">Loading…</div>
   </div>
 </div>
 
+</div>{# /.fp-mc-page #}
 {% endblock %}
 
 {% block extra_js %}
@@ -381,6 +473,7 @@ var _fpCourses = {};
 _fpCourses[{{ co.name | tojson }}] = {
   name:     {{ co.course_name | tojson }},
   id:       {{ co.name | tojson }},
+  programme: {{ (co.programme or '') | tojson }},
   year:     {{ (co.academic_year or '—') | tojson }},
   term:     {{ (co.term_name or '—') | tojson }},
   credits:  {{ (co.credits or 0) | tojson }},
@@ -416,12 +509,171 @@ function fpSetView(v) {
   fpFilterClasses();
 }
 
+/* ── Multiselect filter dropdowns ── */
+function _msfValues(id) {
+  var box = document.getElementById(id);
+  if (!box) return [];
+  var checked = box.querySelectorAll('input[type="checkbox"]:checked');
+  return Array.prototype.map.call(checked, function(cb) { return cb.value; });
+}
+
+function _msfSetValues(id, values) {
+  var box = document.getElementById(id);
+  if (!box) return;
+  var lowerSet = values.map(function(v) { return v.toLowerCase(); });
+  box.querySelectorAll('input[type="checkbox"]').forEach(function(cb) {
+    cb.checked = lowerSet.indexOf(cb.value.toLowerCase()) !== -1;
+  });
+  _msfRefreshLabel(id);
+}
+
+function _msfRefreshLabel(id) {
+  var box = document.getElementById(id);
+  if (!box) return;
+  var labelEl = box.querySelector('.fp-msf-btn-label');
+  var values  = _msfValues(id);
+  var allLbl  = box.getAttribute('data-label-all');
+  var oneLbl  = box.getAttribute('data-label-one');
+  var manyLbl = box.getAttribute('data-label-many') || (oneLbl + 's');
+  if (!values.length) {
+    labelEl.textContent = allLbl;
+  } else if (values.length === 1) {
+    labelEl.textContent = values[0];
+  } else {
+    labelEl.textContent = values.length + ' ' + manyLbl;
+  }
+  box.classList.toggle('fp-msf-active', values.length > 0);
+}
+
+function fpMsfSelectAll(id) {
+  var box = document.getElementById(id);
+  if (!box) return;
+  box.querySelectorAll('.fp-msf-panel input[type="checkbox"]').forEach(function(cb) {
+    var opt = cb.closest('.fp-msf-option');
+    if (!opt || opt.style.display !== 'none') cb.checked = true;
+  });
+  _msfRefreshLabel(id);
+  if (box.classList.contains('fp-msf-open')) _msfPositionPanel(box, true);
+  fpFilterClasses();
+}
+
+function fpMsfClearAll(id) {
+  var box = document.getElementById(id);
+  if (!box) return;
+  box.querySelectorAll('.fp-msf-panel input[type="checkbox"]').forEach(function(cb) { cb.checked = false; });
+  _msfRefreshLabel(id);
+  if (box.classList.contains('fp-msf-open')) _msfPositionPanel(box, true);
+  fpFilterClasses();
+}
+
+var _msfOpenBox = null;
+var _msfRaf = null;
+
+function fpToggleMsf(id) {
+  var target = document.getElementById(id);
+  document.querySelectorAll('.fp-msf.fp-msf-open').forEach(function(box) {
+    if (box !== target) fpCloseMsf(box);
+  });
+  if (!target) return;
+  var isOpen = target.classList.toggle('fp-msf-open');
+  var btn = target.querySelector('.fp-msf-btn');
+  if (btn) btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+  if (isOpen) {
+    _msfOpenBox = target;
+    _msfPositionPanel(target, true);
+    _msfTrack();
+  } else if (_msfOpenBox === target) {
+    _msfOpenBox = null;
+  }
+}
+
+function _msfTrack() {
+  if (!_msfOpenBox || !_msfOpenBox.classList.contains('fp-msf-open')) {
+    _msfOpenBox = null;
+    return;
+  }
+  _msfPositionPanel(_msfOpenBox, false);
+  _msfRaf = window.requestAnimationFrame(_msfTrack);
+}
+
+function _msfPositionPanel(box, remeasure) {
+  var btn   = box.querySelector('.fp-msf-btn');
+  var panel = box.querySelector('.fp-msf-panel');
+  if (!btn || !panel) return;
+
+  var r = btn.getBoundingClientRect();
+  if (!r.width && !r.height) return; /* button not laid out yet — skip this frame */
+
+  if (remeasure) {
+    /* Measure the panel's natural width once, without any previous inline
+       width influencing the reading (avoids a feedback loop, and avoids
+       forcing a synchronous layout every animation frame). */
+    panel.style.width = 'auto';
+    box._msfWidth = Math.max(panel.offsetWidth, r.width, 180);
+  }
+  var panelWidth = box._msfWidth || Math.max(panel.offsetWidth, r.width, 180);
+
+  var left = r.left;
+  var maxLeft = window.innerWidth - panelWidth - 8;
+  if (left > maxLeft) left = Math.max(8, maxLeft);
+
+  var top = r.bottom + 6;
+  var maxTop = window.innerHeight - 8;
+  if (top + panel.offsetHeight > maxTop) {
+    var flipped = r.top - panel.offsetHeight - 6;
+    top = flipped >= 8 ? flipped : Math.max(8, maxTop - panel.offsetHeight);
+  }
+
+  panel.style.top   = top + 'px';
+  panel.style.left  = left + 'px';
+  panel.style.width = panelWidth + 'px';
+}
+
+function fpCloseMsf(box) {
+  box.classList.remove('fp-msf-open');
+  var btn = box.querySelector('.fp-msf-btn');
+  if (btn) btn.setAttribute('aria-expanded', 'false');
+  if (_msfOpenBox === box) {
+    _msfOpenBox = null;
+    if (_msfRaf) { window.cancelAnimationFrame(_msfRaf); _msfRaf = null; }
+  }
+}
+
+document.addEventListener('click', function(e) {
+  document.querySelectorAll('.fp-msf.fp-msf-open').forEach(function(box) {
+    if (!box.contains(e.target)) fpCloseMsf(box);
+  });
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.fp-msf.fp-msf-open').forEach(fpCloseMsf);
+  }
+});
+
+/* Apply the default (current academic year) selection on load */
+document.addEventListener('DOMContentLoaded', function() { fpFilterClasses(); });
+
 /* ── Filter logic ── */
+/* Show only the terms that belong to the selected academic year(s);
+   untick any term hidden by a year change. Terms with no year always show. */
+function _syncTermOptions() {
+  var selYears = _msfValues('fp-filter-year');
+  document.querySelectorAll('#fp-filter-term .fp-msf-option').forEach(function(opt) {
+    var y = opt.getAttribute('data-year') || '';
+    var show = !selYears.length || !y || selYears.indexOf(y) !== -1;
+    opt.style.display = show ? '' : 'none';
+    if (!show) { var cb = opt.querySelector('input'); if (cb) cb.checked = false; }
+  });
+}
+
 function fpFilterClasses() {
+  _syncTermOptions();
+  ['fp-filter-year', 'fp-filter-term', 'fp-filter-status'].forEach(_msfRefreshLabel);
+
   var search = (document.getElementById('fp-search').value || '').toLowerCase().trim();
-  var year   = (document.getElementById('fp-filter-year').value   || '').toLowerCase();
-  var term   = (document.getElementById('fp-filter-term').value   || '').toLowerCase();
-  var status = (document.getElementById('fp-filter-status').value || '').toLowerCase();
+  var years   = _msfValues('fp-filter-year').map(function(v) { return v.toLowerCase(); });
+  var terms   = _msfValues('fp-filter-term').map(function(v) { return v.toLowerCase(); });
+  var statuses = _msfValues('fp-filter-status').map(function(v) { return v.toLowerCase(); });
 
   var gridCards = document.querySelectorAll('.fp-class-card');
   var listRows  = document.querySelectorAll('.fp-class-row');
@@ -433,9 +685,9 @@ function fpFilterClasses() {
     var t = (el.getAttribute('data-term')   || '').toLowerCase();
     var s = (el.getAttribute('data-status') || '').toLowerCase();
     return (!search || n.includes(search))
-        && (!year   || y === year)
-        && (!term   || t === term)
-        && (!status || s === status);
+        && (!years.length    || years.indexOf(y) !== -1)
+        && (!terms.length    || terms.indexOf(t) !== -1)
+        && (!statuses.length || statuses.indexOf(s) !== -1);
   }
 
   gridCards.forEach(function(c) {
@@ -451,25 +703,46 @@ function fpFilterClasses() {
   var cnt = document.getElementById('fp-visible-count');
   if (cnt) cnt.textContent = visible;
 
-  _updateFilterChips(search, year, term, status);
+  /* Chips show the values exactly as selected (matching above is case-insensitive) */
+  _updateFilterChips(
+    (document.getElementById('fp-search').value || '').trim(),
+    _msfValues('fp-filter-year'),
+    _msfValues('fp-filter-term'),
+    _msfValues('fp-filter-status')
+  );
 }
 
 function fpResetFilters() {
-  document.getElementById('fp-search').value        = '';
-  document.getElementById('fp-filter-year').value   = '';
-  document.getElementById('fp-filter-term').value   = '';
-  document.getElementById('fp-filter-status').value = '';
+  document.getElementById('fp-search').value = '';
+  _msfSetValues('fp-filter-year', []);
+  _msfSetValues('fp-filter-term', []);
+  _msfSetValues('fp-filter-status', []);
   fpFilterClasses();
 }
 
-function _updateFilterChips(search, year, term, status) {
+function _updateFilterChips(search, years, terms, statuses) {
   var bar = document.getElementById('fp-filter-chips');
   if (!bar) return;
   var chips = [];
   if (search) chips.push({ label: 'Search: "' + search + '"', clear: function() { document.getElementById('fp-search').value = ''; fpFilterClasses(); } });
-  if (year)   chips.push({ label: 'Year: ' + year,   clear: function() { document.getElementById('fp-filter-year').value = ''; fpFilterClasses(); } });
-  if (term)   chips.push({ label: 'Term: ' + term,   clear: function() { document.getElementById('fp-filter-term').value = ''; fpFilterClasses(); } });
-  if (status) chips.push({ label: 'Status: ' + status, clear: function() { document.getElementById('fp-filter-status').value = ''; fpFilterClasses(); } });
+  years.forEach(function(y) {
+    chips.push({ label: 'Year: ' + y, clear: function() {
+      var vals = _msfValues('fp-filter-year').filter(function(v) { return v !== y; });
+      _msfSetValues('fp-filter-year', vals); fpFilterClasses();
+    }});
+  });
+  terms.forEach(function(t) {
+    chips.push({ label: 'Term: ' + t, clear: function() {
+      var vals = _msfValues('fp-filter-term').filter(function(v) { return v !== t; });
+      _msfSetValues('fp-filter-term', vals); fpFilterClasses();
+    }});
+  });
+  statuses.forEach(function(s) {
+    chips.push({ label: 'Status: ' + s, clear: function() {
+      var vals = _msfValues('fp-filter-status').filter(function(v) { return v !== s; });
+      _msfSetValues('fp-filter-status', vals); fpFilterClasses();
+    }});
+  });
 
   if (!chips.length) { bar.style.display = 'none'; return; }
   bar.style.display = 'flex';
@@ -477,13 +750,14 @@ function _updateFilterChips(search, year, term, status) {
   chips.forEach(function(ch) {
     var btn = document.createElement('button');
     btn.className = 'fp-filter-chip active';
-    btn.innerHTML = ch.label + ' <span class="fp-ms" style="font-size:12px;margin-left:2px;">close</span>';
+    btn.textContent = ch.label + ' ';
+    btn.insertAdjacentHTML('beforeend', '<span class="fp-ms" style="font-size:12px;margin-left:2px;">close</span>');
     btn.addEventListener('click', ch.clear);
     bar.appendChild(btn);
   });
   var clearAll = document.createElement('button');
   clearAll.className = 'fp-filter-chip';
-  clearAll.style.cssText = 'border-color:var(--fp-danger);color:var(--fp-danger);';
+  clearAll.style.cssText = 'border-color:var(--fp-primary);color:var(--fp-primary);';
   clearAll.innerHTML = '<span class="fp-ms" style="font-size:12px;">clear_all</span> Clear all';
   clearAll.addEventListener('click', fpResetFilters);
   bar.appendChild(clearAll);
@@ -493,17 +767,16 @@ function _updateFilterChips(search, year, term, status) {
 function fpShowCourseDetails(id) {
   var co = _fpCourses[id];
   if (!co) return;
-  var statusColor = (co.status === 'Active' || co.status === 'Open') ? 'fp-badge-success' : 'fp-badge-neutral';
 
-  // Next session block
+  // Next session block (Quick Statistics: upcoming session)
   var nextBlock = '';
   if (co.next) {
-    nextBlock = '<div style="background:var(--fp-primary-light);border:1px solid var(--fp-primary-mid);border-radius:var(--fp-radius-sm);padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;">'
-      + '<span class="fp-ms" style="font-size:18px;color:var(--fp-primary);">event</span>'
+    nextBlock = '<div style="background:var(--fp-primary);border:1px solid var(--fp-primary);border-radius:var(--fp-radius-sm);padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;">'
+      + '<span class="fp-ms" style="font-size:18px;color:#fff;">event</span>'
       + '<div>'
-      + '<div style="font-size:10px;color:var(--fp-primary);font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px;">Next Session</div>'
-      + '<div style="font-size:13px;font-weight:600;color:var(--fp-text-1);">' + co.next.date + ' &nbsp;·&nbsp; ' + co.next.from_time + (co.next.to_time ? ' – ' + co.next.to_time : '') + '</div>'
-      + (co.next.room && co.next.room !== '—' ? '<div style="font-size:11px;color:var(--fp-text-3);margin-top:2px;">' + co.next.room + '</div>' : '')
+      + '<div style="font-size:10px;color:#fff;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px;">Next Session</div>'
+      + '<div style="font-size:13px;font-weight:600;color:#fff;">' + co.next.date + ' &nbsp;·&nbsp; ' + co.next.from_time + (co.next.to_time ? ' – ' + co.next.to_time : '') + '</div>'
+      + (co.next.room && co.next.room !== '—' ? '<div style="font-size:11px;color:rgba(255,255,255,0.85);margin-top:2px;">' + co.next.room + '</div>' : '')
       + '</div></div>';
   }
 
@@ -513,19 +786,19 @@ function fpShowCourseDetails(id) {
     var rows = co.studentList.map(function(s, i) {
       return '<tr style="border-top:1px solid var(--fp-border-light);">'
         + '<td style="padding:7px 10px;font-size:11px;color:var(--fp-text-4);font-family:var(--fp-mono);">' + (i + 1) + '</td>'
-        + '<td style="padding:7px 10px;font-size:12px;font-weight:600;color:var(--fp-text-1);">' + s.name + '</td>'
-        + '<td style="padding:7px 10px;font-size:11px;color:var(--fp-text-4);font-family:var(--fp-mono);">' + s.id + '</td>'
+        + '<td class="fp-cd-name" style="padding:7px 10px;font-size:12px;font-weight:600;color:var(--fp-text-1);">' + _mcEsc(s.name) + '</td>'
+        + '<td style="padding:7px 10px;font-size:11px;color:var(--fp-text-4);font-family:var(--fp-mono);white-space:nowrap;">' + _mcEsc(s.reg_id || s.id) + '</td>'
         + '</tr>';
     }).join('');
     studentBlock = '<div style="margin-top:14px;">'
       + '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--fp-text-3);margin-bottom:8px;display:flex;align-items:center;gap:6px;">'
       + '<span class="fp-ms" style="font-size:14px;">groups</span>Enrolled Students (' + co.studentList.length + ')</div>'
-      + '<div style="max-height:200px;overflow-y:auto;border:1px solid var(--fp-border-light);border-radius:var(--fp-radius-sm);">'
-      + '<table style="width:100%;border-collapse:collapse;">'
-      + '<thead><tr style="background:var(--fp-bg);">'
-      + '<th style="padding:6px 10px;font-size:10px;color:var(--fp-text-4);font-weight:700;text-align:left;">#</th>'
+      + '<div class="fp-cd-students" id="fp-cd-students">'
+      + '<table>'
+      + '<thead><tr>'
+      + '<th style="padding:6px 10px;font-size:10px;color:var(--fp-text-4);font-weight:700;text-align:left;width:40px;">#</th>'
       + '<th style="padding:6px 10px;font-size:10px;color:var(--fp-text-4);font-weight:700;text-align:left;">Name</th>'
-      + '<th style="padding:6px 10px;font-size:10px;color:var(--fp-text-4);font-weight:700;text-align:left;">ID</th>'
+      + '<th style="padding:6px 10px;font-size:10px;color:var(--fp-text-4);font-weight:700;text-align:left;">Student ID</th>'
       + '</tr></thead>'
       + '<tbody>' + rows + '</tbody>'
       + '</table></div></div>';
@@ -536,24 +809,26 @@ function fpShowCourseDetails(id) {
       + '</div>';
   }
 
-  // Pending badge
+  // Pending badge (used as an at-a-glance warning, part of Quick Statistics)
   var pendingNote = '';
   if (co.pending > 0) {
-    pendingNote = '<div style="background:var(--fp-danger-bg);border:1px solid rgba(220,38,38,0.2);border-radius:var(--fp-radius-sm);padding:8px 12px;margin-bottom:14px;display:flex;align-items:center;gap:8px;">'
-      + '<span class="fp-ms" style="font-size:16px;color:var(--fp-danger);">warning_amber</span>'
-      + '<span style="font-size:12px;color:var(--fp-danger);font-weight:600;">' + co.pending + ' session' + (co.pending > 1 ? 's' : '') + ' pending attendance</span>'
+    pendingNote = '<div style="background:var(--fp-primary);border:1px solid var(--fp-primary);border-radius:var(--fp-radius-sm);padding:8px 12px;margin-bottom:14px;display:flex;align-items:center;gap:8px;">'
+      + '<span class="fp-ms" style="font-size:16px;color:#fff;">warning_amber</span>'
+      + '<span style="font-size:12px;color:#fff;font-weight:600;">' + co.pending + ' session' + (co.pending > 1 ? 's' : '') + ' pending attendance</span>'
       + '</div>';
   }
 
   document.getElementById('fp-modal-body').innerHTML = [
+    // Course Information
     '<div style="margin-bottom:14px;">',
-      '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--fp-text-4);font-family:var(--fp-mono);margin-bottom:4px;">' + co.id + '</div>',
-      '<div style="font-size:18px;font-weight:800;color:var(--fp-text-1);letter-spacing:-0.02em;line-height:1.3;">' + co.name + '</div>',
-      '<div style="margin-top:6px;"><span class="fp-badge ' + statusColor + '">' + co.status + '</span></div>',
+      (co.programme ? '<div style="margin-bottom:6px;"><span style="display:inline-block;padding:2px 8px;background:var(--fp-primary-light);color:var(--fp-primary);border-radius:12px;font-size:11px;font-weight:600;">' + _mcEsc(co.programme) + '</span></div>' : ''),
+      '<div style="font-size:18px;font-weight:800;color:var(--fp-text-1);letter-spacing:-0.02em;line-height:1.3;word-break:break-word;">' + _mcEsc(co.name) + '</div>',
     '</div>',
     pendingNote,
     nextBlock,
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">',
+    // Quick Statistics
+    '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--fp-text-3);margin-bottom:8px;">Quick Statistics</div>',
+    '<div class="fp-cd-stats">',
       _mRow('calendar_today',   'Academic Year',  co.year),
       _mRow('event_note',       'Term',           co.term),
       _mRow('groups',           'Students',       co.students),
@@ -561,17 +836,40 @@ function fpShowCourseDetails(id) {
       _mRow('event_available',  'Sessions Held',  co.sessions),
     '</div>',
     studentBlock,
-    '<div style="display:flex;gap:10px;margin-top:14px;">',
-      '<a href="/faculty-portal/attendance?course_offering=' + encodeURIComponent(co.id) + '" class="fp-btn fp-btn-primary" style="flex:1;justify-content:center;text-decoration:none;">',
+    // Quick Actions
+    '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--fp-text-3);margin:16px 0 8px;">Quick Actions</div>',
+    '<div class="fp-cd-actions">',
+      '<a href="/faculty-portal/attendance?course_offering=' + encodeURIComponent(co.id) + '" class="fp-btn fp-btn-primary" style="justify-content:center;text-decoration:none;">',
         '<span class="fp-ms">how_to_reg</span>Take Attendance',
       '</a>',
-      '<a href="/faculty-portal/marks?course_offering=' + encodeURIComponent(co.id) + '" class="fp-btn fp-btn-success" style="flex:1;justify-content:center;text-decoration:none;">',
-        '<span class="fp-ms">grade</span>Enter Marks',
+      '<a href="/faculty-portal/marks?course_offering=' + encodeURIComponent(co.id) + '" class="fp-btn fp-btn-secondary" style="justify-content:center;text-decoration:none;">',
+        '<span class="fp-ms">grade</span>Enter Grades',
       '</a>',
     '</div>',
   ].join('');
   document.getElementById('fp-course-modal').style.display = 'flex';
   document.body.style.overflow = 'hidden';
+  _mcFitStudentList();
+}
+
+/* Show the first 10 students, then scroll within the table */
+var FP_CD_VISIBLE_STUDENTS = 10;
+function _mcFitStudentList() {
+  var box = document.getElementById('fp-cd-students');
+  if (!box) return;
+  box.style.maxHeight = '';
+  var rows = box.querySelectorAll('tbody tr');
+  if (rows.length <= FP_CD_VISIBLE_STUDENTS) return;
+  var head = box.querySelector('thead');
+  var h = head ? head.offsetHeight : 0;
+  for (var i = 0; i < FP_CD_VISIBLE_STUDENTS; i++) h += rows[i].offsetHeight;
+  box.style.maxHeight = (h + 2) + 'px';   /* +2 for the border */
+}
+
+function _mcEsc(v) {
+  return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
 }
 
 function _mRow(icon, label, value) {

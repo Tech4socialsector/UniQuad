@@ -1,5 +1,4 @@
-{% set org_name = "National Law School of India University" %}
-{% set logo     = "/files/nlsiu-logo.jpg" %}
+{% set logo = "/files/nlsiu-logo.jpg" %}
 
 {% set sm = frappe.get_doc("Student Master", doc.student, ignore_permissions=True) if doc.student else None %}
 {% set student_full = ([sm.first_name, sm.middle_name, sm.last_name] | select | join(" ")) if sm else (doc.student or "—") %}
@@ -11,237 +10,113 @@
 {% set term_label = ep.term if ep else "" %}
 
 {% set course_name = frappe.db.get_value("Course", doc.course, "course_name") or doc.course %}
+{% set fee = frappe.utils.flt(doc.re_exam_fee or 0) %}
 
 {% set log = frappe.db.get_value(
     "Re Exam Payment Log",
     {"re_exam_registration": doc.name, "payment_status": ["in", ["Paid", "Captured"]]},
     ["razorpay_payment_id", "payment_method", "transaction_id", "transaction_date", "account_number_or_upi_id"],
     as_dict=True, order_by="creation desc"
-) or frappe._dict() %}
+) or {} %}
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 12px; color: #1a1a2e; background: #fff; }
+{% include "slcm/templates/print/nls_receipt_style.html" %}
+<div class="nls-doc">
+<div class="nls-copy is-page">
 
-  .rx-page { max-width: 720px; margin: 0 auto; padding: 32px 40px; border: 1px solid #e2e8f0; min-height: 100vh; }
-
-  /* header */
-  .rx-header { display: flex; align-items: flex-start; justify-content: space-between; padding-bottom: 20px; border-bottom: 2px solid #1a1a2e; margin-bottom: 24px; }
-  .rx-header-left { display: flex; align-items: center; gap: 14px; }
-  .rx-logo { height: 52px; width: auto; }
-  .rx-org { font-size: 18px; font-weight: 700; color: #1a1a2e; line-height: 1.2; }
-  .rx-org-sub { font-size: 11px; color: #64748b; margin-top: 2px; }
-  .rx-header-right { text-align: right; }
-  .rx-title { font-size: 22px; font-weight: 800; color: #1a1a2e; letter-spacing: -0.5px; }
-  .rx-number { font-size: 13px; color: #475569; margin-top: 4px; }
-  .rx-number strong { color: #1a1a2e; }
-
-  /* status badge */
-  .rx-status-wrap { display: flex; justify-content: flex-end; margin-bottom: 20px; }
-  .rx-badge { display: inline-block; padding: 4px 14px; border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; }
-  .rx-badge-paid     { background: #dcfce7; color: #15803d; }
-  .rx-badge-failed   { background: #fee2e2; color: #dc2626; }
-  .rx-badge-refunded { background: #fef3c7; color: #92400e; }
-  .rx-badge-default  { background: #f1f5f9; color: #475569; }
-
-  /* watermark */
-  .rx-watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-35deg); font-size: 100px; font-weight: 900; color: rgba(21,128,61,0.06); letter-spacing: 8px; pointer-events: none; z-index: 0; }
-
-  /* info grid */
-  .rx-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin-bottom: 24px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
-  .rx-info-box { padding: 14px 18px; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; }
-  .rx-info-box:nth-child(2n) { border-right: none; }
-  .rx-info-box:nth-last-child(-n+2) { border-bottom: none; }
-  .rx-info-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #94a3b8; margin-bottom: 4px; }
-  .rx-info-value { font-size: 13px; font-weight: 600; color: #1e293b; }
-  .rx-info-value.muted { font-weight: 400; color: #475569; }
-
-  /* section title */
-  .rx-section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: #64748b; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid #e2e8f0; }
-
-  /* fee table */
-  .rx-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 12px; }
-  .rx-table thead tr { background: #1a1a2e; color: #fff; }
-  .rx-table thead th { padding: 9px 14px; text-align: left; font-weight: 600; font-size: 11px; letter-spacing: 0.3px; }
-  .rx-table thead th.right { text-align: right; }
-  .rx-table tbody td { padding: 10px 14px; border-bottom: 1px solid #f1f5f9; color: #334155; }
-  .rx-table tbody td.right { text-align: right; }
-  .rx-table tfoot td { padding: 10px 14px; font-weight: 700; background: #1a1a2e; color: #fff; font-size: 13px; }
-
-  /* summary */
-  .rx-summary { display: flex; justify-content: flex-end; margin-bottom: 24px; }
-  .rx-summary-box { width: 280px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
-  .rx-sum-row { display: flex; justify-content: space-between; padding: 8px 16px; border-bottom: 1px solid #f1f5f9; font-size: 12px; }
-  .rx-sum-row:last-child { border-bottom: none; }
-  .rx-sum-row .label { color: #64748b; }
-  .rx-sum-row .value { font-weight: 600; color: #1e293b; }
-  .rx-sum-row.total-row { background: #1a1a2e; padding: 10px 16px; }
-  .rx-sum-row.total-row .label,
-  .rx-sum-row.total-row .value { color: #fff; font-weight: 700; font-size: 13px; }
-
-  /* payment detail table */
-  .rx-pay-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 12px; }
-  .rx-pay-table thead tr { background: #f1f5f9; }
-  .rx-pay-table thead th { padding: 8px 12px; text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; color: #64748b; border-bottom: 2px solid #e2e8f0; }
-  .rx-pay-table tbody td { padding: 9px 12px; border-bottom: 1px solid #f1f5f9; color: #334155; }
-
-  /* footer */
-  .rx-footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: flex-end; }
-  .rx-footer-note { font-size: 10px; color: #94a3b8; max-width: 340px; line-height: 1.5; }
-  .rx-footer-generated { font-size: 10px; color: #cbd5e1; text-align: right; }
-</style>
-</head>
-<body>
-
-{% if doc.payment_status == "Paid" %}
-<div class="rx-watermark">PAID</div>
-{% endif %}
-
-<div class="rx-page">
-
-  {# ── Header ── #}
-  <div class="rx-header">
-    <div class="rx-header-left">
-      <img src="{{ logo }}" class="rx-logo" alt="NLS Logo">
-      <div>
-        <div class="rx-org">{{ org_name }}</div>
-        <div class="rx-org-sub">Re-Examination Fee Receipt</div>
-      </div>
-    </div>
-    <div class="rx-header-right">
-      <div class="rx-title">RECEIPT</div>
-      <div class="rx-number"><strong>{{ doc.name }}</strong></div>
-      <div class="rx-number">Date: {{ frappe.utils.formatdate(frappe.utils.today(), "d MMM yyyy") }}</div>
-    </div>
+  <div class="nls-head">
+    <img src="{{ logo }}" alt="NLS Logo">
+    <div class="nls-inst">National Law School of India University</div>
   </div>
 
-  {# ── Status Badge ── #}
-  <div class="rx-status-wrap">
-    {% if doc.payment_status == "Paid" %}
-      <span class="rx-badge rx-badge-paid">Paid</span>
-    {% elif doc.payment_status == "Refunded" %}
-      <span class="rx-badge rx-badge-refunded">Refunded</span>
-    {% elif doc.payment_status == "Payment Failed" %}
-      <span class="rx-badge rx-badge-failed">Payment Failed</span>
-    {% else %}
-      <span class="rx-badge rx-badge-default">{{ doc.payment_status or "—" }}</span>
-    {% endif %}
-  </div>
+  <div class="nls-title">Re-Examination Fee Receipt</div>
 
-  {# ── Student & Exam Info ── #}
-  <div class="rx-info-grid">
-    <div class="rx-info-box">
-      <div class="rx-info-label">Student Name</div>
-      <div class="rx-info-value">{{ student_full }}</div>
-    </div>
-    <div class="rx-info-box">
-      <div class="rx-info-label">Student ID</div>
-      <div class="rx-info-value">{{ student_id }}</div>
-    </div>
-    <div class="rx-info-box">
-      <div class="rx-info-label">Email</div>
-      <div class="rx-info-value muted">{{ student_email }}</div>
-    </div>
-    <div class="rx-info-box">
-      <div class="rx-info-label">Exam Plan</div>
-      <div class="rx-info-value muted">{{ exam_label }}{% if term_label %} &mdash; {{ term_label }}{% endif %}</div>
-    </div>
-    <div class="rx-info-box">
-      <div class="rx-info-label">Course</div>
-      <div class="rx-info-value">{{ course_name }}</div>
-    </div>
-    <div class="rx-info-box">
-      <div class="rx-info-label">Registration No.</div>
-      <div class="rx-info-value">{{ doc.name }}</div>
-    </div>
-  </div>
+  <table class="nls-meta">
+    <tr>
+      <td class="lbl">Registration Id:</td>
+      <td class="val">{{ student_id or "—" }}</td>
+      <td class="lbl">Student Name:</td>
+      <td class="val">{{ student_full }}</td>
+    </tr>
+    <tr>
+      <td class="lbl">Receipt Number:</td>
+      <td class="val"><span class="nls-boxed">{{ doc.name }}</span></td>
+      <td class="lbl">Date:</td>
+      <td class="val">{{ frappe.utils.formatdate(log.transaction_date or frappe.utils.today(), "dd-MM-yyyy") }}</td>
+    </tr>
+  </table>
 
-  {# ── Fee Details ── #}
-  <div class="rx-section-title">Fee Details</div>
-  <table class="rx-table">
+  <hr class="nls-divider">
+
+  <table class="nls-meta">
+    <tr>
+      <td class="lbl">Examination:</td>
+      <td class="val">{{ exam_label }}{% if term_label %} – {{ term_label }}{% endif %}</td>
+      <td class="lbl">Course:</td>
+      <td class="val">{{ course_name or "—" }}</td>
+    </tr>
+    <tr>
+      <td class="lbl">Email:</td>
+      <td class="val">{{ student_email or "—" }}</td>
+      <td class="lbl">Status:</td>
+      <td class="val">{{ doc.payment_status or "—" }}</td>
+    </tr>
+  </table>
+
+  <table class="nls-table">
     <thead>
       <tr>
-        <th>#</th>
-        <th>Description</th>
-        <th>Course</th>
-        <th class="right">Amount (₹)</th>
+        <th style="width:10%">Sl No.</th>
+        <th>Particulars</th>
+        <th style="width:26%">Amount</th>
       </tr>
     </thead>
     <tbody>
       <tr>
         <td>1</td>
-        <td>Re-Examination Fee</td>
-        <td>{{ course_name }}</td>
-        <td class="right">₹ {{ "{:,.2f}".format(doc.re_exam_fee or 0) }}</td>
+        <td>Re-Examination Fee – {{ course_name }}</td>
+        <td>INR {{ "{:,.2f}".format(fee) }}</td>
       </tr>
     </tbody>
     <tfoot>
       <tr>
-        <td colspan="3" class="right">Total Amount Paid</td>
-        <td class="right">₹ {{ "{:,.2f}".format(doc.re_exam_fee or 0) }}</td>
+        <td colspan="2">Total Paid</td>
+        <td>INR {{ "{:,.2f}".format(fee) }}</td>
       </tr>
     </tfoot>
   </table>
 
-  {# ── Payment Summary ── #}
-  <div class="rx-summary">
-    <div class="rx-summary-box">
-      <div class="rx-sum-row">
-        <span class="label">Re-Exam Fee</span>
-        <span class="value">₹ {{ "{:,.2f}".format(doc.re_exam_fee or 0) }}</span>
-      </div>
-      <div class="rx-sum-row">
-        <span class="label">Payment Reference</span>
-        <span class="value">{{ doc.payment_reference or "—" }}</span>
-      </div>
-      <div class="rx-sum-row total-row">
-        <span class="label">Status</span>
-        <span class="value">{{ doc.payment_status or "—" }}</span>
-      </div>
-    </div>
+  <div class="nls-words">
+    {{ frappe.utils.money_in_words(fee, "INR") | replace("INR ", "Rupees ") }}
   </div>
 
-  {# ── Gateway Payment Details ── #}
-  {% if log and log.razorpay_payment_id %}
-  <div class="rx-section-title">Payment Transaction Details</div>
-  <table class="rx-pay-table">
-    <thead>
-      <tr>
-        <th>Payment ID</th>
-        <th>Method</th>
-        <th>Transaction Ref</th>
-        <th>Account / UPI</th>
-        <th>Date</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>{{ log.razorpay_payment_id or "—" }}</td>
-        <td>{{ (log.payment_method or "—") | title }}</td>
-        <td>{{ log.transaction_id or "—" }}</td>
-        <td>{{ log.account_number_or_upi_id or "—" }}</td>
-        <td>{{ frappe.utils.formatdate(log.transaction_date, "d MMM yyyy") if log.transaction_date else "—" }}</td>
-      </tr>
-    </tbody>
-  </table>
-  {% endif %}
+  <hr class="nls-divider">
 
-  {# ── Footer ── #}
-  <div class="rx-footer">
-    <div class="rx-footer-note">
-      This is a computer-generated receipt and does not require a physical signature.<br>
-      For queries, contact the Registrar's Office or Finance Office.
-    </div>
-    <div class="rx-footer-generated">
-      Generated on {{ frappe.utils.now_datetime().strftime("%d %b %Y, %I:%M %p") }}<br>
-      {{ org_name }}
-    </div>
+  <table class="nls-meta">
+    <tr>
+      <td class="lbl">Payment Mode:</td>
+      <td class="val">{{ (log.payment_method or "—") | title }}</td>
+      <td class="lbl">Transaction Id:</td>
+      <td class="val">{{ log.razorpay_payment_id or log.transaction_id or doc.payment_reference or "N/A" }}</td>
+    </tr>
+    <tr>
+      <td class="lbl">Transaction Date:</td>
+      <td class="val">{{ frappe.utils.formatdate(log.transaction_date, "yyyy-MM-dd") if log.transaction_date else "—" }}</td>
+      <td class="lbl">Amount Paid:</td>
+      <td class="val">INR {{ "{:,.0f}".format(fee) }}</td>
+    </tr>
+    {% if log.account_number_or_upi_id %}
+    <tr>
+      <td class="lbl">Account / UPI:</td>
+      <td class="val">{{ log.account_number_or_upi_id }}</td>
+      <td class="lbl"></td>
+      <td class="val"></td>
+    </tr>
+    {% endif %}
+  </table>
+
+  <div class="nls-note">
+    This is a computer generated receipt, hence it does not require signature/seal.
   </div>
 
 </div>
-</body>
-</html>
+</div>

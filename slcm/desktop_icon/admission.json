@@ -1,7 +1,7 @@
 {
  "app": "slcm",
  "bg_color": "blue",
- "creation": "2026-05-05 21:40:40.473431",
+ "creation": "2026-07-27 14:53:59.405131",
  "docstatus": 0,
  "doctype": "Desktop Icon",
  "hidden": 0,
@@ -11,7 +11,7 @@
  "label": "Admission",
  "link": "",
  "link_type": "External",
- "modified": "2026-05-22 12:25:17.878411",
+ "modified": "2026-09-29 16:08:42.645597",
  "modified_by": "Administrator",
  "name": "Admission",
  "owner": "Administrator",
@@ -55,6 +55,18 @@
   },
   {
    "role": "System Manager"
+  },
+  {
+   "role": "Academic Admin"
+  },
+  {
+   "role": "slcm_Registrar"
+  },
+  {
+   "role": "slcm_FINO Officer"
+  },
+  {
+   "role": "slcm_Registration Officer"
   }
  ],
  "standard": 1

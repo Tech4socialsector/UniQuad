@@ -23,6 +23,8 @@ frappe.ui.form.on("Applicant", {
 
     // ── REFRESH ──────────────────────────────
     refresh: function (frm) {
+        toggle_degree_country_column(frm);
+
         // Auto-refresh when status is updated from Entrance Test Seat Allocation
         if (!window._applicant_status_realtime_subscribed) {
             window._applicant_status_realtime_subscribed = true;
@@ -291,6 +293,24 @@ frappe.ui.form.on("Applicant", {
         frm.set_value("city", "");
     },
 
+    nationality: function (frm) {
+        if (frm.doc.foriegn_national === "No" && frm.doc.nationality !== "India") {
+            // Domestic candidate: Nationality is always India
+            if (frm.doc.nationality) {
+                frappe.show_alert({ message: __("For Domestic applications, Nationality must be India."), indicator: "orange" });
+            }
+            frm.set_value("nationality", "India");
+        } else if (frm.doc.foriegn_national === "Yes" && frm.doc.nationality === "India") {
+            frappe.show_alert({ message: __("For International applications, Nationality cannot be India."), indicator: "orange" });
+            frm.set_value("nationality", "");
+        }
+    },
+
+    foriegn_national: function (frm) {
+        frm.trigger("nationality");
+        toggle_degree_country_column(frm);
+    },
+
     validate: function (frm) {
         if (frm.doc.status === "Draft") {
             frm.ignore_mandatory = true;
@@ -303,10 +323,12 @@ frappe.ui.form.on("Applicant", {
 
         // HSC Percentage
         if (frm.doc.hsc_percentage !== undefined && frm.doc.hsc_percentage !== null && frm.doc.hsc_percentage !== "") {
-            if (frm.doc.hsc_percentage < 35) {
-                errors.push(__("HSC percentage should be above 35%"));
-            } else if (frm.doc.hsc_percentage > 100) {
-                errors.push(__("HSC percentage cannot be more than 100%"));
+            let max_val = frm.doc.if_cgpa_maximum_cgpa_class_xii ? frm.doc.if_cgpa_maximum_cgpa_class_xii : 100;
+            let is_cgpa = !!frm.doc.if_cgpa_maximum_cgpa_class_xii;
+            if (frm.doc.hsc_percentage < (is_cgpa ? 4 : 35)) {
+                errors.push(is_cgpa ? __("HSC CGPA should be at least 4") : __("HSC percentage should be above 35%"));
+            } else if (frm.doc.hsc_percentage > max_val) {
+                errors.push(is_cgpa ? __(`HSC CGPA cannot be more than ${max_val}`) : __("HSC percentage cannot be more than 100%"));
             }
         }
 
@@ -314,9 +336,20 @@ frappe.ui.form.on("Applicant", {
         if (frm.doc.ug_degree_details && frm.doc.ug_degree_details.length) {
             frm.doc.ug_degree_details.forEach(row => {
                 if (row.ug_cgpa !== undefined && row.ug_cgpa !== null && row.ug_cgpa !== "") {
-                    if (row.ug_cgpa < 4 || row.ug_cgpa > 10) {
-                        errors.push(__("UG CGPA for degree \"{0}\" should be between 4 and 10",
-                            [row.degree || __("(unnamed)")]));
+                    let is_cgpa = !!row.if_ug_cgpa;
+                    let max_val = is_cgpa ? row.if_ug_cgpa : 100;
+                    
+                    if (row.ug_cgpa < (is_cgpa ? 4 : 35) || row.ug_cgpa > max_val) {
+                        if (is_cgpa) {
+                            errors.push(__("UG CGPA for degree \"{0}\" should be between 4 and {1}",
+                                [row.ug_program || __("(unnamed)"), max_val]));
+                        } else if (row.ug_cgpa < 35) {
+                            errors.push(__("UG score for degree \"{0}\" is less than 35. If entering CGPA, please provide the Maximum CGPA; otherwise, Percentage must be between 35 and 100",
+                                [row.ug_program || __("(unnamed)")]));
+                        } else {
+                            errors.push(__("UG Percentage for degree \"{0}\" cannot be more than 100",
+                                [row.ug_program || __("(unnamed)")]));
+                        }
                     }
                 }
             });
@@ -326,9 +359,20 @@ frappe.ui.form.on("Applicant", {
         if (frm.doc.pg_degree_details && frm.doc.pg_degree_details.length) {
             frm.doc.pg_degree_details.forEach(row => {
                 if (row.pg_cgpa !== undefined && row.pg_cgpa !== null && row.pg_cgpa !== "") {
-                    if (row.pg_cgpa < 4 || row.pg_cgpa > 10) {
-                        errors.push(__("PG CGPA for degree \"{0}\" should be between 4 and 10",
-                            [row.degree || __("(unnamed)")]));
+                    let is_cgpa = !!row.if_pg_cgpa;
+                    let max_val = is_cgpa ? row.if_pg_cgpa : 100;
+                    
+                    if (row.pg_cgpa < (is_cgpa ? 4 : 35) || row.pg_cgpa > max_val) {
+                        if (is_cgpa) {
+                            errors.push(__("PG CGPA for degree \"{0}\" should be between 4 and {1}",
+                                [row.pg_program || __("(unnamed)"), max_val]));
+                        } else if (row.pg_cgpa < 35) {
+                            errors.push(__("PG score for degree \"{0}\" is less than 35. If entering CGPA, please provide the Maximum CGPA; otherwise, Percentage must be between 35 and 100",
+                                [row.pg_program || __("(unnamed)")]));
+                        } else {
+                            errors.push(__("PG Percentage for degree \"{0}\" cannot be more than 100",
+                                [row.pg_program || __("(unnamed)")]));
+                        }
                     }
                 }
             });
@@ -354,6 +398,15 @@ frappe.ui.form.on("Applicant", {
             .filter(Boolean);
         if (new Set(prefs).size !== prefs.length) {
             errors.push(__("Campus preferences must all be unique. Please remove duplicate selections."));
+        }
+
+        if (frm.doc.nationality && frm.doc.foriegn_national) {
+            if (frm.doc.nationality !== "India" && frm.doc.foriegn_national !== "Yes") {
+                errors.push(__("If Nationality is not India, then 'Foreign National' must be Yes."));
+            }
+            if (frm.doc.foriegn_national === "Yes" && frm.doc.nationality === "India") {
+                errors.push(__("If 'Foreign National' is Yes, Nationality cannot be India."));
+            }
         }
 
         if (errors.length) {
@@ -408,11 +461,14 @@ frappe.ui.form.on("Applicant", {
         const val = frm.doc.hsc_percentage;
         if (val === null || val === undefined || val === "") return;
 
-        if (val < 35) {
-            frappe.show_alert({ message: __("HSC percentage must be at least 35%."), indicator: "orange" });
+        let max_val = frm.doc.if_cgpa_maximum_cgpa_class_xii ? frm.doc.if_cgpa_maximum_cgpa_class_xii : 100;
+        let is_cgpa = !!frm.doc.if_cgpa_maximum_cgpa_class_xii;
+
+        if (val < (is_cgpa ? 4 : 35)) {
+            frappe.show_alert({ message: is_cgpa ? __("HSC CGPA must be at least 4.") : __("HSC percentage must be at least 35%."), indicator: "orange" });
             frm.set_value("hsc_percentage", null);
-        } else if (val > 100) {
-            frappe.show_alert({ message: __("HSC percentage cannot exceed 100%."), indicator: "orange" });
+        } else if (val > max_val) {
+            frappe.show_alert({ message: is_cgpa ? __(`HSC CGPA cannot exceed ${max_val}.`) : __("HSC percentage cannot exceed 100%."), indicator: "orange" });
             frm.set_value("hsc_percentage", null);
         }
     },
@@ -470,6 +526,20 @@ frappe.ui.form.on("Applicant", {
 // ─────────────────────────────────────────────
 //  UG Degree Detail — Child Table
 // ─────────────────────────────────────────────
+// UG / PG degree "Country" is only relevant for foreign nationals (foriegn_national = Yes)
+function toggle_degree_country_column(frm) {
+    const show = frm.doc.foriegn_national === "Yes";
+    ["ug_degree_details", "pg_degree_details"].forEach((table) => {
+        const grid = frm.fields_dict[table] && frm.fields_dict[table].grid;
+        if (!grid) return;
+        try {
+            grid.toggle_display("country", show);
+        } catch (e) {
+            console.warn("Could not toggle country column on", table, e);
+        }
+    });
+}
+
 frappe.ui.form.on("UG Degree Detail", {
     ug_cgpa: function (frm, cdt, cdn) {
         const row = locals[cdt][cdn];

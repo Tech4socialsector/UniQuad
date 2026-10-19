@@ -9,26 +9,43 @@
  "field_order": [
   "section_student",
   "student",
-  "student_name",
-  "column_break_1",
-  "program",
+  "registration_id",
+  "student_email",
+  "fee_component",
+  "fee_demand",
+  "demand_date",
   "academic_year",
-  "academic_term",
+  "due_date",
+  "demand_remark",
+  "column_break_1",
+  "original_amount",
+  "penalty_amount",
+  "waiver_amount",
+  "total_payable",
+  "paid_amount",
+  "pending_amount",
   "section_payment",
-  "fee_invoice",
-  "payment_date",
-  "payment_mode",
-  "bank_account",
-  "bank_name",
-  "column_break_2",
   "amount",
+  "payment_date",
+  "settlement_date",
+  "payment_mode",
+  "column_break_2",
   "reference_number",
-  "account_number",
-  "ifsc_code",
-  "transaction_date",
+  "university_bank_account",
   "remarks",
   "section_demands",
   "payment_demands",
+  "section_additional",
+  "student_name",
+  "program",
+  "academic_term",
+  "fee_invoice",
+  "column_break_additional",
+  "bank_account",
+  "transaction_date",
+  "bank_name",
+  "account_number",
+  "ifsc_code",
   "section_status",
   "status",
   "receipt",
@@ -38,35 +55,52 @@
   {
    "fieldname": "section_student",
    "fieldtype": "Section Break",
-   "label": "Student Details"
+   "label": "Dues Details"
   },
   {
    "fieldname": "student",
    "fieldtype": "Link",
    "in_list_view": 1,
-   "label": "Student",
+   "label": "Student ID",
    "options": "Student Master",
    "reqd": 1
   },
   {
-   "fetch_from": "student.first_name",
-   "fieldname": "student_name",
+   "fieldname": "registration_id",
    "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Student Name",
-   "read_only": 1
+   "label": "Student Registration Id / Application Number",
+   "read_only": 1,
+   "in_standard_filter": 1
   },
   {
-   "fieldname": "column_break_1",
-   "fieldtype": "Column Break"
+   "fieldname": "student_email",
+   "fieldtype": "Data",
+   "label": "Student Email Id",
+   "read_only": 1,
+   "options": "Email"
   },
   {
-   "fetch_from": "fee_invoice.program",
-   "fieldname": "program",
+   "fieldname": "fee_component",
+   "fieldtype": "Data",
+   "label": "Fee Component",
+   "read_only": 1,
+   "fetch_from": "fee_demand.fee_component"
+  },
+  {
+   "fieldname": "fee_demand",
    "fieldtype": "Link",
-   "label": "Programme",
-   "options": "Programme",
-   "read_only": 1
+   "label": "Voucher Number",
+   "options": "Fee Demand",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "description": "For a payment against one due. To pay several dues at once, leave this empty and use Fee Demands Covered below."
+  },
+  {
+   "fieldname": "demand_date",
+   "fieldtype": "Date",
+   "label": "Date of creation",
+   "read_only": 1,
+   "fetch_from": "fee_demand.demand_date"
   },
   {
    "fetch_from": "fee_invoice.academic_year",
@@ -77,11 +111,66 @@
    "read_only": 1
   },
   {
-   "fetch_from": "fee_invoice.academic_term",
-   "fieldname": "academic_term",
-   "fieldtype": "Data",
-   "label": "Academic Term",
-   "read_only": 1
+   "fieldname": "due_date",
+   "fieldtype": "Date",
+   "label": "Due Date",
+   "read_only": 1,
+   "fetch_from": "fee_demand.due_date"
+  },
+  {
+   "fieldname": "demand_remark",
+   "fieldtype": "Small Text",
+   "label": "Remark",
+   "read_only": 1,
+   "fetch_from": "fee_demand.remarks"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "original_amount",
+   "fieldtype": "Currency",
+   "label": "Original Amount",
+   "read_only": 1,
+   "fetch_from": "fee_demand.original_amount"
+  },
+  {
+   "fieldname": "penalty_amount",
+   "fieldtype": "Currency",
+   "label": "Penalty Amount",
+   "read_only": 1,
+   "fetch_from": "fee_demand.penalty_amount"
+  },
+  {
+   "fieldname": "waiver_amount",
+   "fieldtype": "Currency",
+   "label": "Scholarship / Waiver Amount",
+   "read_only": 1,
+   "fetch_from": "fee_demand.waiver_amount"
+  },
+  {
+   "fieldname": "total_payable",
+   "fieldtype": "Currency",
+   "label": "Total Payable",
+   "read_only": 1,
+   "fetch_from": "fee_demand.net_payable"
+  },
+  {
+   "fieldname": "paid_amount",
+   "fieldtype": "Currency",
+   "label": "Paid Amount",
+   "read_only": 1,
+   "fetch_from": "fee_demand.paid_amount",
+   "description": "Paid on the voucher before this payment."
+  },
+  {
+   "fieldname": "pending_amount",
+   "fieldtype": "Currency",
+   "label": "Pending Amount",
+   "read_only": 1,
+   "fetch_from": "fee_demand.outstanding_amount",
+   "description": "Pending on the voucher before this payment."
   },
   {
    "fieldname": "section_payment",
@@ -89,10 +178,11 @@
    "label": "Payment Details"
   },
   {
-   "fieldname": "fee_invoice",
-   "fieldtype": "Link",
-   "label": "Fee Invoice",
-   "options": "Fee Invoice"
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Payment Amount",
+   "reqd": 1
   },
   {
    "default": "Today",
@@ -101,6 +191,12 @@
    "in_list_view": 1,
    "label": "Payment Date",
    "reqd": 1
+  },
+  {
+   "fieldname": "settlement_date",
+   "fieldtype": "Date",
+   "label": "Settlement Date",
+   "description": "Date the amount was settled / credited to the university bank account."
   },
   {
    "fieldname": "payment_mode",
@@ -115,21 +211,77 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "amount",
-   "fieldtype": "Currency",
+   "fieldname": "reference_number",
+   "fieldtype": "Data",
+   "label": "Reference Number"
+  },
+  {
+   "fieldname": "university_bank_account",
+   "fieldtype": "Select",
+   "label": "University bank account",
+   "options": "\nHDFC Bank General 50100508244465\nICICI Bank General 231701001061\nUBI Bank General 520101045114133\nUBI Bank Scholarship 520101045115105"
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  },
+  {
+   "fieldname": "section_demands",
+   "fieldtype": "Section Break",
+   "label": "Fee Demands Covered",
+   "collapsible": 1,
+   "collapsible_depends_on": "eval:(doc.payment_demands||[]).length > 1 || !doc.fee_demand"
+  },
+  {
+   "fieldname": "payment_demands",
+   "fieldtype": "Table",
+   "label": "Fee Demands",
+   "options": "Fee Payment Demand Row"
+  },
+  {
+   "fieldname": "section_additional",
+   "fieldtype": "Section Break",
+   "label": "Additional Details",
+   "collapsible": 1
+  },
+  {
+   "fetch_from": "student.first_name",
+   "fieldname": "student_name",
+   "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Amount",
-   "reqd": 1
+   "label": "Student Name",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "fee_invoice.program",
+   "fieldname": "program",
+   "fieldtype": "Link",
+   "label": "Programme",
+   "options": "Programme",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "fee_invoice.academic_term",
+   "fieldname": "academic_term",
+   "fieldtype": "Data",
+   "label": "Academic Term",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fee_invoice",
+   "fieldtype": "Link",
+   "label": "Fee Invoice",
+   "options": "Fee Invoice"
+  },
+  {
+   "fieldname": "column_break_additional",
+   "fieldtype": "Column Break"
   },
   {
    "fieldname": "bank_account",
    "fieldtype": "Data",
    "label": "Bank Account"
-  },
-  {
-   "fieldname": "reference_number",
-   "fieldtype": "Data",
-   "label": "Reference / Transaction Number"
   },
   {
    "description": "Date on which the bank processed the payment",
@@ -153,25 +305,11 @@
    "label": "IFSC Code"
   },
   {
-   "fieldname": "remarks",
-   "fieldtype": "Small Text",
-   "label": "Remarks"
-  },
-  {
-   "fieldname": "section_demands",
-   "fieldtype": "Section Break",
-   "label": "Fee Demands Covered"
-  },
-  {
-   "fieldname": "payment_demands",
-   "fieldtype": "Table",
-   "label": "Fee Demands",
-   "options": "Fee Payment Demand Row"
-  },
-  {
    "fieldname": "section_status",
    "fieldtype": "Section Break",
-   "label": "Status"
+   "label": "Status & Receipt",
+   "collapsible": 1,
+   "collapsible_depends_on": "eval:doc.docstatus==1"
   },
   {
    "default": "Draft",
@@ -202,7 +340,7 @@
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2026-06-02 16:48:54.102251",
+ "modified": "2026-09-25 11:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Fee Payment",

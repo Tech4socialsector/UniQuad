@@ -1,8 +1,6 @@
 import json
 import traceback
 from contextlib import contextmanager
-import os
-import uuid
 
 import frappe
 from frappe import _
@@ -36,6 +34,16 @@ APPLICATION_SUBMITTED_STATUSES = frozenset(
         "Offer Issued",
         "Offer Accepted",
         "Enrolled",
+    }
+)
+
+# Statuses an application can land in at the moment of submission (see _get_submission_status)
+SUBMISSION_ENTRY_STATUSES = frozenset(
+    {
+        "Submitted",
+        "Entrance Test Exempted",
+        "Interview Excempted",
+        "Excempted Entrance Test And Interview",
     }
 )
 
@@ -88,6 +96,7 @@ class Applicant(Document):
 
         set_intake_type(self)
         set_admission_details(self)
+        self._validate_nationality_matches_foreign_national()
         self._validate_education_percentage_bounds()
 
         if self.status in ("Submitted", "Completed") and self.has_value_changed("status"):
@@ -95,8 +104,12 @@ class Applicant(Document):
             if self.status == "Completed":
                 self._validate_application_fee_before_submit()
 
-        if self.status in ("Submitted", "Completed"):
+        # Only on the submit/complete transition — not on every later desk edit or fee sync
+        # of an already Submitted/Completed record (rules may have changed since).
+        if self.status in ("Submitted", "Completed") and (self.is_new() or self.has_value_changed("status")):
+            self._validate_admission_open_for_scope()
             self._validate_national_test_percentage()
+            self._validate_degree_country_for_foreign_national()
             self.validate_eligibility()
             self.validate_dynamic_conditions()
             if self.evaluation_status == "Ineligible":
@@ -193,20 +206,14 @@ class Applicant(Document):
                 )
 
     def validate_reservation_documents(self):
-        if self.ews == "Yes" and not self.ews_certificate:
-            frappe.throw(
-                "EWS Certificate is mandatory for EWS category.",
-                title="Missing Document"
-            )
-
         # Derive caste categories from the whether_scstobc_ncl field
-        caste_categories = {"SC", "ST", "OBC-NCL"}
+        caste_categories = {"SC", "ST", "OBC-NCL", "EWS"}
         applicant_cats = self._get_applicant_categories()
         matched_caste = applicant_cats & caste_categories
 
-        if matched_caste and not self.caste_certificate:
+        if matched_caste and not getattr(self, "caste_certificate", None):
             frappe.throw(
-                f"Caste Certificate is mandatory for {', '.join(sorted(matched_caste))} category.",
+                f"Category Certificate is mandatory for {', '.join(sorted(matched_caste))} category.",
                 title="Missing Document"
             )
 
@@ -216,11 +223,65 @@ class Applicant(Document):
                 title="Missing Document"
             )
 
+    def _validate_nationality_matches_foreign_national(self):
+        """
+        foriegn_national = "No"  → Nationality must be India (filled in automatically when blank).
+        foriegn_national = "Yes" → Nationality must not be India.
+        Checked on new records and whenever either field (or the status) changes, so older
+        inconsistent records don't block unrelated desk edits.
+        """
+        if not (
+            self.is_new()
+            or self.has_value_changed("foriegn_national")
+            or self.has_value_changed("nationality")
+            or self.has_value_changed("status")
+        ):
+            return
+
+        fn = (self.foriegn_national or "").strip()
+        nationality = (self.nationality or "").strip()
+
+        if fn == "No":
+            if not nationality:
+                self.nationality = "India"
+            elif nationality.lower() != "india":
+                frappe.throw(
+                    _("For Domestic applicants (Foreign National = No), Nationality must be India."),
+                    title=_("Invalid Nationality"),
+                )
+        elif fn == "Yes" and nationality.lower() == "india":
+            frappe.throw(
+                _("For International applicants (Foreign National = Yes), Nationality cannot be India."),
+                title=_("Invalid Nationality"),
+            )
+
+    def _validate_degree_country_for_foreign_national(self):
+        """
+        Country in UG / PG degree rows is shown — and therefore required — only for foreign
+        nationals (foriegn_national = "Yes"); mirrors the portal show/mandatory rule.
+        """
+        if (self.foriegn_national or "").strip() != "Yes":
+            return
+        missing = []
+        for table, label in (
+            ("ug_degree_details", _("Undergraduate Degree Details")),
+            ("pg_degree_details", _("PG Degree Details")),
+        ):
+            for row in self.get(table) or []:
+                if not (row.get("country") or "").strip():
+                    missing.append(_("{0} — Row {1}: Country").format(label, row.idx))
+        if missing:
+            frappe.throw(
+                _("Country is required for each degree for international applicants:") + "<br>" + "<br>".join(missing),
+                title=_("Missing Country"),
+            )
+
     def _validate_national_test_percentage(self):
         """When National test is selected, score/percentage is mandatory."""
         if self.get("national_test_name") and not self.flags.ignore_mandatory:
             pct = self.get("percentage")
-            if pct is None or pct == "" or (isinstance(pct, (int, float)) and flt(pct) < 0):
+            # Percent fields store "empty" as 0.0, so treat <= 0 as missing
+            if pct in (None, "") or flt(pct) <= 0:
                 frappe.throw(
                     _("Score or percentage is required when National test is selected."),
                     title=_("National Test Score Required"),
@@ -270,6 +331,7 @@ class Applicant(Document):
                 WHERE a.admission_cycle = %s
                   AND a.program = %s
                   AND a.name != %s
+                  AND a.status != 'Draft'
                   AND COALESCE(s.status_type, '') != 'Closed'
             """, (self.admission_cycle, self.program, self.name), as_dict=True)
             
@@ -283,6 +345,43 @@ class Applicant(Document):
                     title=_("Limit Reached")
                 )
 
+    def _validate_admission_open_for_scope(self):
+        """
+        Validate whether the programme is open for Domestic, International, or both in the admission cycle.
+        """
+        if not self.admission_cycle or not self.program:
+            return
+
+        scope = frappe.db.get_value(
+            "Admission Cycle Program",
+            {"parent": self.admission_cycle, "program": self.program, "is_active": 1},
+            "admission_open_for",
+        )
+        if not scope:
+            return
+
+        scope = scope.strip()
+        is_foreign = (self.foriegn_national or "").strip().lower() in ("yes", "true", "1")
+        is_dom = (self.foriegn_national or "").strip().lower() in ("no", "false", "0")
+        if not is_foreign and not is_dom and self.nationality:
+            if self.nationality.strip().lower() == "india":
+                is_dom = True
+            else:
+                is_foreign = True
+
+        prog_title = frappe.db.get_value("Programme", self.program, "program_name") or self.program
+
+        if scope == "International" and is_dom:
+            frappe.throw(
+                _("Access Restricted: The {0} programme is exclusively open to international applicants. Domestic candidates are not eligible to apply for this course.").format(prog_title),
+                title=_("Access Restricted"),
+            )
+        elif scope == "Domestic" and is_foreign:
+            frappe.throw(
+                _("Access Restricted: The {0} programme is exclusively open to domestic applicants. International candidates are not eligible to apply for this course.").format(prog_title),
+                title=_("Access Restricted"),
+            )
+
     def _validate_application_fee_before_submit(self):
         """Block submission if application fee is required and not paid/waived.
         When category has no fee or fee is 0, allow submit and set application_fee_status to 'Paid'."""
@@ -290,7 +389,12 @@ class Applicant(Document):
         from slcm.api.service.application_fee_service import _get_applicant_category
 
         category = _get_applicant_category(self.name)
-        is_foreign = self.nationality != "Indian" if self.nationality else False
+        # Same rule as the portal fee calc: foriegn_national decides; nationality is only a fallback
+        fn = (self.foriegn_national or "").strip()
+        if fn:
+            is_foreign = fn == "Yes"
+        else:
+            is_foreign = bool(self.nationality) and self.nationality.strip() != "India"
         fee_amount = get_application_fee_for_category(self.program, self.admission_cycle, category, is_foreign=is_foreign)
 
         if flt(fee_amount, 2) <= 0:
@@ -345,74 +449,6 @@ class Applicant(Document):
             self.flags.old_program = None
             self.flags.old_campus = None
 
-        self.handle_file_name()
-
-    def handle_file_name(self):
-        doc_before = self.get_doc_before_save()
-        for df in self.meta.fields:
-            if df.fieldtype in ["Attach", "Attach Image"]:
-                file_url = self.get(df.fieldname)
-                if not file_url:
-                    continue
-                    
-                # Skip if the file was not changed in this transaction
-                if doc_before:
-                    prev_url = doc_before.get(df.fieldname)
-                    if prev_url == file_url:
-                        continue
-                    
-                file_name_from_url = file_url.split("/")[-1]
-                is_uuid = False
-                if len(file_name_from_url) > 13 and file_name_from_url[12] == "_" and file_name_from_url[:12].isalnum():
-                    is_uuid = True
-                
-                if is_uuid:
-                    try:
-                        file_doc = frappe.get_doc("File", {"file_url": file_url})
-                        if not file_doc.is_private:
-                            file_doc.is_private = 1
-                            file_doc.save(ignore_permissions=True)
-                            self.set(df.fieldname, file_doc.file_url)
-                    except Exception:
-                        pass
-                    continue
-                
-                # Check for stale frontend state sending the old URL
-                if doc_before:
-                    prev_url = doc_before.get(df.fieldname)
-                    if prev_url and prev_url != file_url:
-                        prev_name = prev_url.split("/")[-1]
-                        if len(prev_name) > 13 and prev_name[12] == "_" and prev_name[13:] == file_name_from_url:
-                            self.set(df.fieldname, prev_url)
-                            continue
-                
-                # It's a genuine new upload, generate a UUID
-                try:
-                    import uuid, os, shutil
-                    file_doc = frappe.get_doc("File", {"file_url": file_url})
-                    
-                    new_file_name = f"{uuid.uuid4().hex[:12]}_{file_doc.file_name}"
-                    new_file_url = f"/private/files/{new_file_name}"
-                    
-                    old_path = file_doc.get_full_path()
-                    new_path = frappe.get_site_path("private", "files", new_file_name)
-
-                    if os.path.exists(old_path):
-                        os.makedirs(os.path.dirname(new_path), exist_ok=True)
-                        shutil.move(old_path, new_path)
-
-                    file_doc.file_name = new_file_name
-                    file_doc.file_url = new_file_url
-                    file_doc.is_private = 1
-                    file_doc.attached_to_doctype = self.doctype
-                    file_doc.attached_to_name = self.name
-                    file_doc.attached_to_field = df.fieldname
-                    file_doc.save(ignore_permissions=True)
-
-                    self.set(df.fieldname, new_file_url)
-                except Exception:
-                    frappe.log_error(title="handle_file_name error", message=frappe.get_traceback())
-
     def on_update(self):
         if not self.user_id:
             frappe.db.set_value(self.doctype, self.name, "user_id", self.email, update_modified=False)
@@ -433,9 +469,11 @@ class Applicant(Document):
             if doc_before_save and hasattr(doc_before_save, "status")
             else self.flags.get("old_status")
         )
+        # validate() turns "Submitted" into an exemption status when the national test exempts
+        # the applicant, so those must also count as a fresh submission (email, audit, log).
         just_submitted = (
             (not old_status or old_status == "Draft" or old_status not in APPLICATION_SUBMITTED_STATUSES)
-            and self.status == "Submitted"
+            and self.status in SUBMISSION_ENTRY_STATUSES
             and (self.is_new() or self.has_value_changed("status"))
         )
 
@@ -494,6 +532,15 @@ class Applicant(Document):
                     f"Auto entrance test allocation failed for Applicant {self.name}",
                 )
 
+            # Send completion confirmation with receipt
+            try:
+                self.send_completion_confirmation()
+            except Exception:
+                frappe.log_error(
+                    frappe.get_traceback(),
+                    f"Completion confirmation email failed — {self.name}"
+                )
+
         # If current_stage changed, notify applicant
         if self.is_new() or self.has_value_changed("current_stage"):
             if self.current_stage and self.admission_cycle:
@@ -508,7 +555,10 @@ class Applicant(Document):
                             notify_stage_entry(self, s)
                             break
                 except Exception:
-                    pass
+                    frappe.log_error(
+                        frappe.get_traceback(),
+                        f"Stage entry notification failed for Applicant {self.name}",
+                    )
 
         # Withdrawn application: Student Master (Current Status) + enrollments
         if self.status == "Withdrawn" and self.has_value_changed("status"):
@@ -587,6 +637,9 @@ class Applicant(Document):
             self.update_admission_cycle_program_count(old_cycle, old_program, old_campus)
 
     def on_trash(self):
+        # on_trash runs before the row is deleted (and before Frappe sets flags.in_delete),
+        # so tell the counter to exclude this record explicitly.
+        self.flags.in_trash = True
         self.update_admission_cycle_program_count()
 
     def sync_user_profile(self):
@@ -682,7 +735,7 @@ class Applicant(Document):
             new_count = frappe.db.count("Applicant", count_filters)
             
             # If current doc is being deleted and matches filters, decrement
-            if frappe.flags.in_trash and self.status != "Draft":
+            if self.flags.get("in_trash") and self.status != "Draft":
                 if self.admission_cycle == target_cycle and self.program == target_program:
                     if not target_campus or self.campus == target_campus:
                         new_count = max(0, new_count - 1)
@@ -738,7 +791,8 @@ class Applicant(Document):
                         fdoc = frappe.get_doc("File", file_name)
                         full_path = fdoc.get_full_path()
                     except Exception:
-                        pass
+                        # Fall through to the path-based lookup below
+                        full_path = None
                 
                 if not full_path or not os.path.exists(full_path):
                     if file_url.startswith("/private/files/"):
@@ -799,8 +853,6 @@ class Applicant(Document):
         reservation_parts = []
         if self.whether_scstobc_ncl:
             reservation_parts.append(self.whether_scstobc_ncl)
-        if self.ews == "Yes":
-            reservation_parts.append("EWS")
         if self.pwd == "Yes":
             reservation_parts.append("PwD")
         if self.karnataka_category:
@@ -820,16 +872,17 @@ class Applicant(Document):
         test_center_summary = " | ".join(test_centers) if test_centers else "Not specified"
 
         # ── Program-level academic summary ───────────────────────────────────
+        # program_level options: Undergraduate / Postgraduate / Research Course (legacy UG/PG/PhD kept)
         academic_line = ""
-        if self.program_level == "UG":
+        if self.program_level in ("Undergraduate", "UG"):
             academic_line = (
                 f"Class XII: {self.class_xii_school or '—'} "
                 f"({self.class_xii_year_of_completion or '—'}) "
                 f"— {self.hsc_percentage or '—'}%"
             )
-        elif self.program_level in ["PG", "LLM"]:
+        elif self.program_level in ("Postgraduate", "PG", "LLM"):
             academic_line = f"UG Degree completion: {self.ug_degree_completion or '—'}"
-        elif self.program_level == "PhD":
+        elif self.program_level in ("Research Course", "PhD"):
             academic_line = f"PhD Program Type: {self.phd_program_type or '—'}"
 
         # ── Institution name ─────────────────────────────────────────────────
@@ -838,7 +891,7 @@ class Applicant(Document):
             or "Admissions Office"
         )
 
-        admission_portal_url = frappe.utils.get_url("/admission")
+        admission_portal_url = frappe.utils.get_url("/admission/login#login")
 
         # ── Institution logo ──────────────────────────────────────────────────
         institution_logo = frappe.db.get_single_value("Institution Settings", "logo") or ""
@@ -849,11 +902,12 @@ class Applicant(Document):
         doc_dict = self.as_dict() if hasattr(self, "as_dict") else self
         template_context = {
             "doc": doc_dict,
-            "applicant_id": self.applicant_id or self.name,
+            "applicant_id": self.name,
             "candidate_name": self.candidate_name or "",
             "first_name": (self.candidate_name or "").split()[0] if self.candidate_name else "",
-            "program": self.program or "—",
+            "program": frappe.db.get_value("Programme", self.program, "program_name") if self.program else "—",
             "program_level": self.program_level or "—",
+            "academic_line": academic_line,
             "application_type": self.application_type or "—",
             "admission_cycle": self.admission_cycle or "—",
             "campus": self.campus or "—",
@@ -1286,6 +1340,150 @@ class Applicant(Document):
 </html>
 """
         return frappe.render_template(html_template, ctx)
+
+    def send_completion_confirmation(self):
+        """
+        Sends a formatted confirmation email when the application is completely processed (fee paid).
+        - Uses the template from the Admission Cycle's `application_completed_email` field.
+        - Falls back to 'Application Completed Email' template.
+        - Generates and attaches PDF application form.
+        - Fetches and attaches Applicant Payment Receipt PDF if it exists.
+        """
+        recipient = self.email
+        if not recipient:
+            return False
+
+        # ── Resolve email template name ────────────────────────────────────────
+        email_template_name = "Application Completed Email"
+        if self.admission_cycle:
+            cycle_template = frappe.db.get_value("Admission Cycle", self.admission_cycle, "application_completed_email")
+            if cycle_template:
+                email_template_name = cycle_template
+
+        # ── Context dict for template rendering ──────────────────────────────
+        doc_dict = self.as_dict() if hasattr(self, "as_dict") else self
+        institution_name = frappe.db.get_single_value("Institution Settings", "institution_name") or "Admissions Office"
+        institution_logo = frappe.db.get_single_value("Institution Settings", "logo") or ""
+        if institution_logo and not institution_logo.startswith("http"):
+            institution_logo = frappe.utils.get_url(institution_logo)
+        admission_portal_url = frappe.utils.get_url("/admission/login#login")
+
+        template_context = {
+            "doc": doc_dict,
+            "applicant_id": self.applicant_id or self.name,
+            "applicant_document_id": self.name,
+            "candidate_name": self.candidate_name or "",
+            "program": self.program or "—",
+            "program_name": frappe.db.get_value("Programme", self.program, "program_name") if self.program else "—",
+            "admission_cycle": self.admission_cycle or "—",
+            "campus": self.campus or "—",
+            "application_fee_amount": frappe.utils.fmt_money(self.application_fee_amount, currency="INR") if self.application_fee_amount else "—",
+            "institution_name": institution_name,
+            "institution_logo": institution_logo,
+            "admission_portal_url": admission_portal_url,
+            "generated_on": frappe.utils.now_datetime().strftime("%d %b %Y, %I:%M %p"),
+        }
+
+        email_subject = f"Application Completed — {self.applicant_id or self.name} | {self.program or 'Admissions'}"
+        html_body = None
+        email_template = None
+
+        if frappe.db.exists("Email Template", email_template_name):
+            try:
+                email_template = frappe.get_doc("Email Template", email_template_name)
+                if email_template.get("subject"):
+                    email_subject = frappe.render_template(email_template.subject, template_context)
+                
+                if email_template.get("use_html") and email_template.get("response_html"):
+                    html_body = frappe.render_template(email_template.response_html, template_context)
+                elif email_template.get("response"):
+                    html_body = frappe.render_template(email_template.response, template_context)
+
+                if not html_body:
+                    html_body = frappe.render_template(email_template.get("message") or "", template_context)
+            except Exception:
+                frappe.log_error(frappe.get_traceback(), f"Email template render failed for {self.name}, falling back")
+                html_body = None
+
+        if not html_body:
+            return False
+
+        # ── Attachments (Application Form + Receipt) ─────────────────────────
+        attachments = []
+        
+        # 1. Application Form PDF
+        try:
+            pdf_content = read_stored_application_form_pdf(self.name)
+            if not pdf_content and not self.flags.get("in_pdf_generation"):
+                pdf_content = self.generate_application_pdf()
+            if pdf_content:
+                attachments.append({
+                    "fname": f"Application_Form_{self.applicant_id or self.name}.pdf",
+                    "fcontent": pdf_content
+                })
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), "Application PDF generation failed in completion email")
+
+        # 2. Payment Receipt PDF
+        try:
+            receipt_name = frappe.db.get_value(
+                "Applicant Payment Receipt",
+                {"applicant": self.name, "fee_type": "Application Fee", "docstatus": ["<", 2]},
+                "name",
+                order_by="creation desc"
+            )
+            if receipt_name:
+                receipt = frappe.get_doc("Applicant Payment Receipt", receipt_name)
+                receipt_pdf_content = None
+                if receipt.receipt_pdf:
+                    from frappe.utils.file_manager import get_file_path
+                    import os
+                    file_path = get_file_path(receipt.receipt_pdf)
+                    if file_path and os.path.exists(file_path):
+                        with open(file_path, "rb") as f:
+                            receipt_pdf_content = f.read()
+                
+                if not receipt_pdf_content:
+                    print_format = receipt.get("payment_receipt_template") or "Applicant Payment Receipt"
+                    receipt_pdf_content = frappe.get_print(
+                        "Applicant Payment Receipt",
+                        receipt.name,
+                        print_format,
+                        as_pdf=True,
+                    )
+                
+                if receipt_pdf_content:
+                    attachments.append({
+                        "fname": f"Payment_Receipt_{self.applicant_id or self.name}.pdf",
+                        "fcontent": receipt_pdf_content
+                    })
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), "Receipt PDF generation failed in completion email")
+
+        # ── Send email ────────────────────────────────────────────────────────
+        sender = None
+        if email_template and email_template.get("email_account"):
+            sender = frappe.db.get_value("Email Account", email_template.get("email_account"), "email_id") or email_template.get("email_account")
+
+        cc_list = []
+        if email_template and email_template.get("cc"):
+            cc_val = email_template.get("cc")
+            cc_list = [c.strip() for c in cc_val.replace(";", ",").split(",") if c.strip()]
+
+        frappe.sendmail(
+            recipients=[recipient],
+            sender=sender,
+            cc=cc_list if cc_list else None,
+            subject=email_subject,
+            message=html_body,
+            attachments=attachments,
+            reference_doctype=self.doctype,
+            reference_name=self.name,
+            now=True
+        )
+        return True
+
+
     # ──────────────────────────────────────────────
     # APPLICANT CATEGORY HELPER
     # ──────────────────────────────────────────────
@@ -1296,7 +1494,7 @@ class Applicant(Document):
         reservation fields in the eligibility_for_reservation_tab.
 
         Field → Admission Category mapping (static, matches DB records):
-          whether_scstobc_ncl  (not "NA")  →  OBC-NCL / ST / SC
+          whether_scstobc_ncl  (not "General")  →  OBC-NCL / ST / SC
           pwd == "Yes"                     →  PWD
           karnataka_category == "Yes"      →  Karnataka
 
@@ -1304,11 +1502,8 @@ class Applicant(Document):
         """
         cats = set()
 
-        if (getattr(self, "ews", None) or "").strip() == "Yes":
-            cats.add("EWS")
-
         sc_st_obc = (getattr(self, "whether_scstobc_ncl", None) or "").strip()
-        if sc_st_obc and sc_st_obc.lower() != "na":
+        if sc_st_obc and sc_st_obc.lower() != "general":
             cats.add(sc_st_obc)  # Only include real categories like "OBC-NCL", "ST", or "SC"
         else:
             cats.add("General")
@@ -1337,22 +1532,6 @@ class Applicant(Document):
         """Return a list of all PG CGPA values from the pg_degree_details child table."""
         rows = getattr(self, "pg_degree_details", None) or []
         return [flt(row.pg_cgpa) for row in rows if row.pg_cgpa not in (None, "")]
-
-    @frappe.whitelist()
-    def waive_fee(self):
-        """Admin marks fee as waived — records who waived and when."""
-        self.application_fee_status = "Waived"
-        self.fee_waived_by = frappe.session.user
-        self.fee_waived_on = frappe.utils.now()
-        self.save(ignore_permissions=True)
-        frappe.get_doc({
-            "doctype": "Admission Audit Log",
-            "action": "Fee Waived",
-            "reference_doctype": "Applicant",
-            "reference_name": self.name,
-            "performed_by": frappe.session.user,
-            "reason": "Application fee waived by admin"
-        }).insert(ignore_permissions=True)
 
     def _get_ug_programs(self):
         """Return a list of all UG programs from the ug_degree_details child table."""
@@ -1583,7 +1762,6 @@ class Applicant(Document):
         required vs secured scores and specific eligibility mismatches.
         """
         # Split combined message if it contains '|' (multi-reason support)
-        reasons_list = []
         if "|" in failure_message:
             parts = failure_message.split("|")
             main_reason = parts[0].strip()
@@ -2144,8 +2322,6 @@ class Applicant(Document):
                 elif not blocks:
                     blocks.append(_("Program mismatch for {0} qualification.").format(display_level))
 
-        custom_rule_msg = ""
-
         if not blocks:
             return ""
 
@@ -2677,10 +2853,15 @@ class Applicant(Document):
 
         try:
             doc.save(ignore_permissions=True)
-            frappe.db.commit()
-        except Exception as e:
-            frappe.logger().warning(
-                f"Failed to save Eligibility Evaluation for {applicant_name}: {str(e)}"
+            # Commit only on the Ineligible path: validate_eligibility() throws right after,
+            # which would otherwise roll this record back. On the Eligible path, let it
+            # commit with the applicant save so a later validation failure rolls it back too.
+            if current_status == "Ineligible":
+                frappe.db.commit()
+        except Exception:
+            frappe.log_error(
+                frappe.get_traceback(),
+                f"Failed to save Eligibility Evaluation for {applicant_name}",
             )
 
 
@@ -2954,7 +3135,6 @@ def ensure_application_form_pdf_for_applicant(applicant_name):
     if (status or "").strip() not in APPLICATION_SUBMITTED_STATUSES:
         return
     doc = frappe.get_doc("Applicant", applicant_name, check_permission=False)
-    print_format_name = resolve_application_form_print_format_for_cycle(doc.admission_cycle)
     try:
         pdf_content = doc.get_application_pdf_content()
         if pdf_content:
@@ -3084,6 +3264,40 @@ def get_application_attachments(doc):
     return attachments
 
 
+def _ensure_desk_user():
+    """Block portal (Website User) accounts, e.g. applicants, from staff-only endpoints."""
+    user = frappe.session.user
+    if user == "Guest" or frappe.get_cached_value("User", user, "user_type") == "Website User":
+        frappe.throw(_("Not permitted."), frappe.PermissionError)
+
+
+@frappe.whitelist(methods=["POST"])
+def waive_fee(name):
+    """Admin marks fee as waived — records who waived and when (desk button in applicant.js)."""
+    _ensure_desk_user()
+    doc = frappe.get_doc("Applicant", name)
+    doc.check_permission("write")
+
+    doc.application_fee_status = "Waived"
+    doc.fee_waived_by = frappe.session.user
+    doc.fee_waived_on = now()
+    doc.save(ignore_permissions=True)
+
+    try:
+        frappe.get_doc({
+            "doctype": "Admission Audit Log",
+            "action": "Fee Waived",
+            "reference_doctype": "Applicant",
+            "reference_name": doc.name,
+            "performed_by": frappe.session.user,
+            "reason": "Application fee waived by admin"
+        }).insert(ignore_permissions=True)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), f"waive_fee — audit log failed for {doc.name}")
+
+    return {"status": "success", "application_fee_status": doc.application_fee_status}
+
+
 @frappe.whitelist()
 def get_bulk_applications_zip(campus=None, program=None, admission_cycle=None, academic_year=None, admission_year=None, status=None, print_format=None):
     """
@@ -3091,6 +3305,9 @@ def get_bulk_applications_zip(campus=None, program=None, admission_cycle=None, a
     Draft applications are never included. Prefer cached ``application_form`` PDF when set;
     otherwise generate with the selected print format.
     """
+    _ensure_desk_user()
+    frappe.has_permission("Applicant", "read", throw=True)
+
     if status and (status or "").strip() == "Draft":
         frappe.throw(_("Bulk download cannot include applications in Draft status."))
 
@@ -3108,7 +3325,8 @@ def get_bulk_applications_zip(campus=None, program=None, admission_cycle=None, a
     if status:
         filters["status"] = status
 
-    rows = frappe.get_all("Applicant", filters=filters, fields=["name", "status"])
+    # get_list (not get_all) so user permissions — e.g. campus restrictions — are respected
+    rows = frappe.get_list("Applicant", filters=filters, fields=["name", "status"], limit_page_length=0)
     applicants = [
         r.name
         for r in rows
@@ -3156,8 +3374,14 @@ def bulk_convert_applicants_to_student(applicants=None):
         bulk_convert_to_student as bulk_convert_assignments,
     )
 
+    _ensure_desk_user()
+    frappe.has_permission("Applicant", "write", throw=True)
+
     if isinstance(applicants, str):
-        applicants = json.loads(applicants)
+        try:
+            applicants = json.loads(applicants)
+        except ValueError:
+            frappe.throw(_("Invalid applicant list."))
     if not applicants:
         return {"message": _("No applicants selected.")}
 
@@ -3834,7 +4058,10 @@ def _auto_allocate_international_entrance_test(applicant_doc):
         for cat in categories:
             allocation.append("category", {"category": cat})
     except Exception:
-        pass
+        frappe.log_error(
+            frappe.get_traceback(),
+            f"International allocation — could not attach categories for {applicant_doc.name}",
+        )
 
     allocation.insert(ignore_permissions=True)
 

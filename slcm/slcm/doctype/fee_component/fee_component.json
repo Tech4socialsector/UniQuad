@@ -9,6 +9,7 @@
  "field_order": [
   "component_name",
   "component_type",
+  "demand_type",
   "ledger",
   "column_break_1",
   "is_accommodation_fee",
@@ -32,6 +33,16 @@
    "label": "Component Type",
    "options": "Tuition Fee\nLibrary Fee\nLab Fee\nExamination Fee\nHostel Fee\nTransport Fee\nAdmission Fee\nApplication Fee\nRe-admission Fee\nTuition and Facilities Fee\nHousing and Mess Fee\nOff-campus Housing and Mess Fee\nRe-registration Tuition Fee\nStudent Refundable Deposit\nAnnual Fee (PhD)\nContinuation Fee (PhD)\nCourse Work Fee (PhD)\nRegistration Fee (PhD)\nRevaluation Fee\nConvocation Fee\nCertificate Fee\nIssue of Certificates\nProvisional Degree Certificate\nObjection Fee\nID Card Fee\nFine - Disciplinary\nFine - Hostel\nFine - Late Payment\nGap Year Fee\nMess Charges\nElectrical Appliance Charges\nLaundry Charges\nOther",
    "reqd": 1
+  },
+  {
+   "fieldname": "demand_type",
+   "fieldtype": "Select",
+   "label": "Demand Type",
+   "options": "\nAcademic\nNon Academic",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "description": "Fee Demands for this component take this Demand Type."
   },
   {
    "fieldname": "column_break_1",
@@ -67,7 +78,7 @@
   }
  ],
  "links": [],
- "modified": "2026-08-31 14:02:21.217327",
+ "modified": "2026-09-25 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Fee Component",
