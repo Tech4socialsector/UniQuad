@@ -1136,7 +1136,7 @@ class TestEligibilitySystem(FrappeTestCase):
 			"name": "TEST-APP-029",
 			"first_name": "Multi",
 			"last_name": "Reservation",
-			"ews": "Yes",
+			"whether_scstobc_ncl": "EWS",
 			"pwd": "Yes",
 			"karnataka_category": "Yes"
 		})

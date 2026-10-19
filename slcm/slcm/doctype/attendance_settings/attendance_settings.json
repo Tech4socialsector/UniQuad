@@ -6,7 +6,7 @@
  "field_order": [
   "tab_general",
   "minimum_attendance_percentage",
-  "attendance_lock_days",
+  "attendance_lock_hours",
   "late_entry_buffer_minutes",
   "attendance_unit",
   "column_break_general",
@@ -73,11 +73,11 @@
    "reqd": 1
   },
   {
-   "default": "7",
-   "description": "Days after which attendance cannot be modified",
-   "fieldname": "attendance_lock_days",
+   "default": "24",
+   "description": "Hours after a session ends before faculty can no longer change its attendance. Only AAD can reopen a locked session. Defaults to 24 when blank.",
+   "fieldname": "attendance_lock_hours",
    "fieldtype": "Int",
-   "label": "Attendance Lock Days"
+   "label": "Attendance Lock (Hours)"
   },
   {
    "default": "15",
@@ -419,7 +419,7 @@
  ],
  "issingle": 1,
  "links": [],
- "modified": "2026-07-13 00:00:00.000000",
+ "modified": "2026-10-12 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Attendance Settings",

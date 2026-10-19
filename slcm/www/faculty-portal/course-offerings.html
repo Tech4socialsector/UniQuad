@@ -3,12 +3,57 @@
 {% block title %}My Course Offerings{% endblock %}
 
 {% block content %}
+<style>
+  /* ── Dark mode ── */
+  /* Global dark tokens: --fp-border-light equals the card colour (dividers and
+     the attendance progress track vanish) and --fp-text-4/5 are too dim on navy.
+     Lift them for this page only. */
+  body.fp-dark .fco-page {
+    --fp-border-light: #1e2d4a;
+    --fp-text-4: #8391a7;
+    --fp-text-5: #64748b;
+  }
+  /* var(--fp-bg) is darker than the card on navy: use the secondary surface for
+     inline tiles, the inactive view toggle, empty-state icon/feature boxes, the
+     modal close button and the modal stat tiles */
+  body.fp-dark .fco-page [style*="background:var(--fp-bg)"],
+  body.fp-dark .fco-page [style*="background: var(--fp-bg)"] { background: var(--fp-card-2) !important; }
+
+  /* Summary strip: "no attendance data" icon uses an undefined token */
+  body.fp-dark .fco-page .fco-summary-icon[style*="--fp-surface-2"] { background: var(--fp-card-2) !important; }
+  body.fp-dark .fco-page .fco-summary-strip,
+  body.fp-dark .fco-page .fco-summary-cell { border-color: var(--fp-border); }
+
+  /* Course cards */
+  body.fp-dark .fco-page .fco-card { box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+  body.fp-dark .fco-page .fco-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.45); }
+  /* Attendance action: hover turns the fill light blue, white text would be unreadable */
+  body.fp-dark .fco-page .fco-action-btn[href*="/attendance"]:hover { color: #0a0f1e !important; }
+  body.fp-dark .fco-page .fco-action-btn[href*="/attendance"]:hover .fp-ms { color: #0a0f1e; }
+
+  /* List view table */
+  body.fp-dark .fco-page .fp-table th { background: var(--fp-card-2); border-bottom-color: var(--fp-border-mid); }
+  body.fp-dark .fco-page .fp-table tbody tr:nth-child(even) td { background: rgba(255,255,255,0.025); }
+  body.fp-dark .fco-page .fp-table tbody tr:hover td { background: rgba(255,255,255,0.05); }
+
+  /* Secondary buttons (no results, empty state) */
+  body.fp-dark .fco-page .fp-btn-secondary { background: var(--fp-card-2); color: var(--fp-text-1); border-color: var(--fp-border); }
+  body.fp-dark .fco-page .fp-btn-secondary:hover { background: #22304f; border-color: var(--fp-border-mid); }
+
+  /* Empty state: the floating icon box sits on the card itself */
+  body.fp-dark .fco-page [style*="background:var(--fp-card);"][style*="dashed"] { background: var(--fp-card-2) !important; }
+
+  /* Details modal */
+  body.fp-dark #fco-modal { background: rgba(0,0,0,0.65) !important; }
+  body.fp-dark #fco-modal > div { border: 1px solid var(--fp-border); box-shadow: 0 24px 64px rgba(0,0,0,0.6) !important; }
+</style>
+<div class="fco-page">
 
 {# ── Page Header ────────────────────────────────────────────── #}
 <div class="fp-page-header fade-in">
   <div class="fp-page-header-left">
     <h1 class="fp-page-title">My Course Offerings</h1>
-    <p class="fp-page-sub">All courses assigned to you — attendance, marks, and session data at a glance</p>
+    <p class="fp-page-sub">All courses assigned to you — attendance, grades, and session data at a glance</p>
   </div>
   {% if course_offerings %}
   <div class="fp-page-actions">
@@ -38,7 +83,7 @@
     </div>
     <div>
       <div class="fco-summary-val">{{ total_courses }}</div>
-      <div class="fco-summary-lbl">Total Courses</div>
+      <div class="fco-summary-lbl">Courses</div>
     </div>
   </div>
   <div class="fco-summary-cell">
@@ -47,7 +92,7 @@
     </div>
     <div>
       <div class="fco-summary-val">{{ total_students }}</div>
-      <div class="fco-summary-lbl">Total Students</div>
+      <div class="fco-summary-lbl">Students</div>
     </div>
   </div>
   <div class="fco-summary-cell">
@@ -56,7 +101,7 @@
     </div>
     <div>
       <div class="fco-summary-val">{{ active_courses }}</div>
-      <div class="fco-summary-lbl">Active Courses</div>
+      <div class="fco-summary-lbl">Current Courses</div>
     </div>
   </div>
   <div class="fco-summary-cell">
@@ -272,7 +317,7 @@
          style="background:var(--fp-primary);color:#fff;border-left:1px solid var(--fp-border-light);"
          onmouseover="this.style.background='var(--fp-primary-dark)';this.style.color='#fff';"
          onmouseout="this.style.background='var(--fp-primary)';this.style.color='#fff';">
-        <span class="fp-ms">grade</span>Marks
+        <span class="fp-ms">grade</span>Grades
       </a>
       <button class="fco-action-btn"
               style="background:var(--fp-primary);color:#fff;border:none;
@@ -345,7 +390,7 @@
                 <a href="/faculty-portal/marks?course_offering={{ co.name | urlencode }}"
                    class="fp-btn fp-btn-sm"
                    style="background:var(--fp-primary);color:#fff;text-decoration:none;">
-                  <span class="fp-ms">grade</span>Marks
+                  <span class="fp-ms">grade</span>Grades
                 </a>
               </div>
             </td>
@@ -412,7 +457,7 @@
       <div style="flex:1;min-width:160px;max-width:200px;padding:16px;background:var(--fp-bg);
                   border-radius:var(--fp-radius);border:1px solid var(--fp-border);text-align:center;">
         <span class="fp-ms" style="font-size:26px;color:var(--fp-success);display:block;margin-bottom:8px;">grade</span>
-        <div style="font-size:12px;font-weight:600;color:var(--fp-text-2);margin-bottom:4px;">Enter Marks</div>
+        <div style="font-size:12px;font-weight:600;color:var(--fp-text-2);margin-bottom:4px;">Enter Grades</div>
         <div style="font-size:11px;color:var(--fp-text-4);line-height:1.5;">Record student grades per course</div>
       </div>
       <div style="flex:1;min-width:160px;max-width:200px;padding:16px;background:var(--fp-bg);
@@ -452,6 +497,7 @@
   </div>
 </div>
 
+</div>{# /.fco-page #}
 {% endblock %}
 
 {% block extra_js %}
@@ -579,7 +625,7 @@ function fcoShowDetails(id) {
       '</a>',
       '<a href="/faculty-portal/marks?course_offering=' + encodeURIComponent(co.id) + '"',
          'class="fp-btn fp-btn-success" style="flex:1;justify-content:center;text-decoration:none;">',
-        '<span class="fp-ms">grade</span>Enter Marks',
+        '<span class="fp-ms">grade</span>Enter Grades',
       '</a>',
     '</div>',
   ].join('');

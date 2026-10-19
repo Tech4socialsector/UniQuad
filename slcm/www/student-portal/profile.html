@@ -62,6 +62,27 @@
   opacity: 0.8;
 }
 
+.sp-hero-info { min-width: 0; }
+.sp-hero-ids { display: flex; gap: 48px; }
+.sp-hero-label { font-size: 11px; font-weight: 400; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+.sp-hero-value { font-family: var(--sp-font-family, 'Merriweather', serif); font-size: 20px; font-weight: 700; color: var(--sp-primary); text-transform: uppercase; overflow-wrap: anywhere; }
+.sp-hero-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+
+/* Phones: stack the hero (photo on top, then name/ID side by side, then
+   tags) instead of squeezing three columns into ~300px */
+@media (max-width: 600px) {
+  .sp-profile-hero { padding: 20px 16px; background-image: none !important; }
+  .sp-profile-hero .hero-content { flex-direction: column; align-items: center; gap: 16px; width: 100%; text-align: center; }
+  .sp-profile-hero .sp-profile-avatar { width: 96px !important; height: 96px !important; }
+  .sp-hero-info { width: 100%; }
+  .sp-hero-ids { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+  .sp-hero-value { font-size: 17px; }
+  .sp-hero-tags { justify-content: center; }
+  .sp-hero-tags .sp-status-tag { border-radius: 12px; text-align: center; }
+  .sp-section-header { padding: 14px 16px; flex-wrap: wrap; gap: 8px; }
+  .sp-section-body { padding: 16px; }
+}
+
 .sp-profile-layout {
   display: grid;
   grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
@@ -273,6 +294,50 @@
   margin-right: 12px;
 }
 
+/* ── Dark mode ── */
+body.sp-dark .sp-profile-hero { background-color: var(--sp-card) !important; border: 1px solid var(--sp-border); }
+body.sp-dark .sp-profile-avatar { background: #1a2540; border-color: var(--sp-border) !important; color: #f08da0; box-shadow: 0 4px 10px rgba(0,0,0,0.35) !important; }
+body.sp-dark .sp-hero-label { color: var(--sp-text-3); }
+body.sp-dark .sp-hero-value { color: #f08da0; }
+body.sp-dark .sp-status-tag.gray,
+body.sp-dark .sp-status-tag[style*="background: #e2e8f0"] { background: #1a2540 !important; color: var(--sp-text-2) !important; border: 1px solid #263352; }
+body.sp-dark .sp-status-tag[style*="background: #920c24"] { background: var(--sp-primary) !important; color: #fff !important; }
+body.sp-dark .sp-section-card { background: var(--sp-card); border-color: var(--sp-border); }
+body.sp-dark .sp-section-header { background: var(--sp-card); border-bottom-color: var(--sp-border); }
+body.sp-dark .sp-section-header-title { color: var(--sp-text-1); }
+body.sp-dark .sp-section-header-title .sp-ms { color: #f08da0; }
+body.sp-dark .sp-section-header .sp-btn[style*="background: #fff"] { background: transparent !important; border-color: var(--sp-primary) !important; color: #f08da0 !important; }
+body.sp-dark .sp-section-header .sp-btn[style*="background: #fff"]:hover { background: var(--sp-primary-light) !important; }
+body.sp-dark .sp-info-label { color: var(--sp-text-3); }
+body.sp-dark .sp-info-value.primary,
+body.sp-dark .sp-bank-subtitle,
+body.sp-dark .sp-passbook-link,
+body.sp-dark .sp-passbook-upload { color: #f08da0; }
+body.sp-dark .sp-bank-note,
+body.sp-dark .sp-bank-note-locked { background: var(--sp-primary-light); color: #f08da0; border: 1px solid var(--sp-primary-mid); }
+body.sp-dark .sp-bank-form input,
+body.sp-dark .sp-bank-form select,
+body.sp-dark .sp-bank-form input[type=file] { background: #1a2540; color: var(--sp-text-1); border-color: #263352; }
+body.sp-dark .sp-section-body [style*="border:1px solid #f5c6ce"] { border-color: var(--sp-primary-mid) !important; }
+body.sp-dark .sp-quick-action-card { background: #1a2540; border: 1px solid var(--sp-border); }
+body.sp-dark .sp-quick-action-card p { color: var(--sp-text-3); }
+body.sp-dark .sp-quick-action-card .sp-ms-chevron { color: #f08da0; }
+body.sp-dark .sp-quick-action-card .icon-wrap { background: var(--sp-primary-light) !important; color: #f08da0 !important; }
+body.sp-dark .sp-link-item { background: #1a2540; }
+body.sp-dark .sp-link-item:hover { background: rgba(255,255,255,0.05); }
+body.sp-dark .sp-link-item .sp-ms-icon,
+body.sp-dark .sp-section-body .sp-ms[style*="color:var(--sp-primary)"] { color: #f08da0 !important; }
+body.sp-dark .sp-modal { background: var(--sp-card); border: 1px solid var(--sp-border); box-shadow: 0 12px 40px rgba(0,0,0,0.5); }
+body.sp-dark .sp-modal-header,
+body.sp-dark .sp-modal-footer { border-color: var(--sp-border); }
+body.sp-dark .sp-modal-title { color: var(--sp-text-1); }
+body.sp-dark .sp-modal-title .sp-ms { color: #f08da0; }
+body.sp-dark .sp-modal-close { background: #1a2540; }
+body.sp-dark .sp-modal-close:hover { background: #263352; }
+body.sp-dark .sp-modal-body input { background: #1a2540; color: var(--sp-text-1); border-color: #263352 !important; }
+body.sp-dark .sp-btn-secondary { background: #1a2540; color: var(--sp-text-1); border-color: var(--sp-border); }
+body.sp-dark .sp-btn-secondary:hover:not(:disabled) { background: #263352; }
+
 </style>
 {% endblock %}
 
@@ -301,23 +366,19 @@
       {% endif %}
     </div>
     
-    <div>
-      <div style="display: flex; gap: 48px;">
+    <div class="sp-hero-info">
+      <div class="sp-hero-ids">
         <div>
-          <div style="font-size: 11px; font-weight: 400; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Student Name</div>
-          <div style="font-family: var(--sp-font-family, 'Merriweather', serif); font-size: 20px; font-weight: 700; color: var(--sp-primary); text-transform: uppercase;">
-            {{ student_name }}
-          </div>
+          <div class="sp-hero-label">Student Name</div>
+          <div class="sp-hero-value">{{ student_name }}</div>
         </div>
         <div>
-          <div style="font-size: 11px; font-weight: 400; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Student ID</div>
-          <div style="font-family: var(--sp-font-family, 'Merriweather', serif); font-size: 20px; font-weight: 700; color: var(--sp-primary); text-transform: uppercase;">
-            {{ student_id }}
-          </div>
+          <div class="sp-hero-label">Student ID</div>
+          <div class="sp-hero-value">{{ student_id }}</div>
         </div>
       </div>
-      
-      <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:16px;">
+
+      <div class="sp-hero-tags">
         {% if programme_name %}
         <span class="sp-status-tag gray" style="background: #e2e8f0; color: #334155; font-weight: 500;">Programme: {{ programme_name }}</span>
         {% endif %}

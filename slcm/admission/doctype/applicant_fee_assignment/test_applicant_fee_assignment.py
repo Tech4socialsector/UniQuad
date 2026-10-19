@@ -84,7 +84,7 @@ class TestApplicantFeeAssignment(unittest.TestCase):
 		applicant.id_proof = "/files/test_id.pdf"
 		applicant.class_x_marksheet = "/files/test_x.pdf"
 		applicant.class_xii_marksheet = "/files/test_xii.pdf"
-		applicant.ews = "Yes"
+		applicant.whether_scstobc_ncl = "EWS"
 		
 		applicant.insert(ignore_permissions=True, ignore_mandatory=True)
 		

@@ -1,0 +1,146 @@
+{
+ "actions": [],
+ "creation": "2026-10-14 12:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "assessment_label",
+  "component",
+  "assessment_type",
+  "maximum_marks",
+  "col_break_1",
+  "first_submission_marks",
+  "first_marks_entered",
+  "second_submission_marks",
+  "second_marks_entered",
+  "remarks",
+  "section_audit",
+  "assessment_schedule",
+  "schedule_item",
+  "col_break_2",
+  "entered_by",
+  "entered_on"
+ ],
+ "fields": [
+  {
+   "columns": 2,
+   "fieldname": "assessment_label",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Assessment",
+   "reqd": 1
+  },
+  {
+   "columns": 2,
+   "fieldname": "component",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Component",
+   "options": "Exam Component"
+  },
+  {
+   "fieldname": "assessment_type",
+   "fieldtype": "Link",
+   "label": "Assessment Type",
+   "options": "Exam Assessment Type"
+  },
+  {
+   "columns": 1,
+   "description": "From the Evaluation Schema; applies to each submission's marks.",
+   "fieldname": "maximum_marks",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Max Marks",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "columns": 2,
+   "fieldname": "first_submission_marks",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "1st Submission Marks"
+  },
+  {
+   "default": "0",
+   "fieldname": "first_marks_entered",
+   "fieldtype": "Check",
+   "label": "1st Submission Marks Entered",
+   "read_only": 1,
+   "description": "Off = no marks entered yet (the marks field then reads 0)."
+  },
+  {
+   "columns": 2,
+   "fieldname": "second_submission_marks",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "2nd Submission Marks"
+  },
+  {
+   "default": "0",
+   "fieldname": "second_marks_entered",
+   "fieldtype": "Check",
+   "label": "2nd Submission Marks Entered",
+   "read_only": 1
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_audit",
+   "fieldtype": "Section Break",
+   "label": "Source & Audit"
+  },
+  {
+   "fieldname": "assessment_schedule",
+   "fieldtype": "Link",
+   "label": "Assessment Schedule",
+   "options": "Exam Assessment Schedule",
+   "read_only": 1
+  },
+  {
+   "description": "Row of the Exam Assessment Schedule these marks belong to.",
+   "fieldname": "schedule_item",
+   "fieldtype": "Data",
+   "label": "Schedule Row ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "columns": 1,
+   "fieldname": "entered_by",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Entered By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "entered_on",
+   "fieldtype": "Datetime",
+   "label": "Entered On",
+   "read_only": 1
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-10-14 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "SLCM",
+ "name": "Student Assessment Marks",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "ASC",
+ "states": []
+}

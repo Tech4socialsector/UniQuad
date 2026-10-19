@@ -78,6 +78,30 @@
     .nt-when { display: none; }
     .nt-item { padding: 12px 14px 12px 20px; gap: 12px; }
   }
+
+  /* ── Dark mode ── */
+  body.sp-dark .nt-summary strong { color: #f08da0; }
+  body.sp-dark .nt-search input { background: #1a2540; border-color: #263352; color: var(--sp-text-1); }
+  body.sp-dark .nt-search input::placeholder { color: var(--sp-text-3); }
+  body.sp-dark .nt-mark-all { background: #1a2540; border-color: var(--sp-primary); color: #f08da0; }
+  body.sp-dark .nt-mark-all:hover:not(:disabled) { background: var(--sp-primary); border-color: var(--sp-primary); color: #fff; }
+  body.sp-dark .nt-tab { background: #1a2540; border-color: var(--sp-border); color: var(--sp-text-2); }
+  body.sp-dark .nt-tab:hover { border-color: var(--sp-primary); color: #f08da0; }
+  body.sp-dark .nt-tab.is-active { background: var(--sp-primary); border-color: var(--sp-primary); color: #fff; }
+  body.sp-dark .nt-tab-count { background: #263352; color: var(--sp-text-2); }
+  body.sp-dark .nt-tab.is-active .nt-tab-count { background: rgba(255,255,255,.22); color: #fff; }
+  body.sp-dark .nt-list { background: var(--sp-card); border-color: var(--sp-border); box-shadow: 0 1px 4px rgba(0,0,0,.3); }
+  body.sp-dark .nt-item { border-top-color: var(--sp-border); }
+  body.sp-dark .nt-item:hover { background: rgba(255,255,255,0.05); }
+  body.sp-dark .nt-item.is-unread { background: rgba(214,74,102,0.08); }
+  body.sp-dark .nt-item.is-unread:hover { background: rgba(214,74,102,0.13); }
+  body.sp-dark .nt-icon { background: var(--sp-primary-light); color: #f08da0; }
+  body.sp-dark .nt-icon.is-urgent { background: var(--sp-primary); color: #fff; }
+  body.sp-dark .nt-cat { color: #f08da0; }
+  body.sp-dark .nt-flag { background: var(--sp-primary); color: #fff; }
+  body.sp-dark .nt-empty { background: var(--sp-card); border-color: var(--sp-border); }
+  body.sp-dark .nt-empty .sp-ms { color: #f08da0; }
+  body.sp-dark .sp-info-box[style*="--sp-warning-bg"] { color: var(--sp-warning); border-color: rgba(242,179,106,0.35) !important; }
 </style>
 {% endblock %}
 
@@ -93,7 +117,7 @@
 
 <div class="sp-page-header fade-in">
   <h1 class="sp-page-title">Notifications</h1>
-  <p class="sp-page-sub">Announcements, exam schedules, results and updates on your requests</p>
+  <p class="sp-page-sub">Announcements, assessment schedules, grades and updates on your requests</p>
 </div>
 
 {% if portal_error %}

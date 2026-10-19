@@ -301,7 +301,7 @@ def get_applicant_data():
             "program": app.program,
             "admission_cycle": app.admission_cycle,
             "program_level": app.get("program_level"),
-            "reservation_category": app.get("whether_scstobc_ncl") if app.get("whether_scstobc_ncl") and app.get("whether_scstobc_ncl") != "NA" else ("Karnataka" if app.get("karnataka_category") == "Yes" else "General"),
+            "reservation_category": app.get("whether_scstobc_ncl") if app.get("whether_scstobc_ncl") and app.get("whether_scstobc_ncl") != "General" else ("Karnataka" if app.get("karnataka_category") == "Yes" else "General"),
             "hsc_percentage": getattr(app, "hsc_percentage", 0),
             "interview_score": getattr(app, "interview_score", None),
             "source_type": getattr(app, "source_type", None),

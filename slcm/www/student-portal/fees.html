@@ -325,6 +325,17 @@
 .spf-support-sub { display: block; font-size: 12px; color: var(--spf-muted); margin-top: 1px; }
 .spf-support-item > .sp-ms:last-child { margin-left: auto; color: var(--spf-muted); font-size: 20px; }
 
+/* ── Tables on tablets / narrow desktops: the 9-column table leaves the
+   Receipt and Status columns too narrow for a labelled button or an icon
+   badge, so show the receipt as an icon button (matching Invoice) and drop
+   the badge icon. Each link keeps its aria-label. ─────────────────────── */
+@media (min-width: 641px) and (max-width: 1279px) {
+  .spf-t td.c-action .spf-btn-sm { font-size: 0; gap: 0; padding: 0; width: 30px; min-height: 30px; height: 30px; }
+  .spf-t td.c-action .spf-btn-sm .sp-ms { font-size: 18px; }
+  .spf-t td.c-status .spf-badge .sp-ms { display: none; }
+  .spf-t td.c-status .spf-badge { padding-left: 6px; padding-right: 6px; }
+}
+
 /* ── Tables → stacked rows on phones ────────────────────────────────── */
 @media (max-width: 640px) {
   .spf-t, .spf-t tbody, .spf-t tr, .spf-t td, .spf-t th { display: block; width: 100%; }
@@ -338,6 +349,13 @@
   .spf-t td[data-label]::before { content: attr(data-label); flex-shrink: 0; text-align: left; font-size: 11px; font-weight: 700; color: var(--spf-muted); text-transform: uppercase; letter-spacing: 0.04em; }
   .spf-t td[data-label] > * { min-width: 0; }
   .spf-t td.c-primary { text-align: left; padding-bottom: 4px !important; }
+  /* Payment / refund / scholarship sub-rows: same inset as the fee rows (a
+     little deeper to show nesting), tinted as one block, and the blank
+     placeholder cells dropped so they don't leave a gap mid-card */
+  .spf-t tr.spf-sub-row { padding: 10px 16px 10px 28px; background: rgba(146,12,36,.035); border-bottom: 1px solid var(--spf-row); }
+  .spf-t tr.spf-sub-row td { background: transparent; }
+  .spf-t tr.spf-sub-row td:empty { display: none; }
+  .spf-t tr.spf-sub-row td.c-text { text-align: left; padding-bottom: 4px !important; }
   .spf-t .spf-group-row th { padding: 9px 16px 8px 13px; }
   .spf-t td.c-empty { padding: 0 !important; text-align: left; }
   .spf-t .spf-cell-hint { white-space: normal; }
@@ -394,6 +412,84 @@
   .spf-bar-fill { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   @page { margin: 14mm; }
 }
+
+/* ── Dark mode ──────────────────────────────────────────────────────── */
+/* The --spf-* tokens above are resolved on :root (light values), so they
+   must be redefined on body.sp-dark for every card/table to pick up navy. */
+body.sp-dark {
+  --spf-maroon:  #f08da0;
+  --spf-maroon-soft: var(--sp-primary-light);
+  --spf-green:   var(--sp-text-1);
+  --spf-paid:    var(--sp-success);
+  --spf-red:     var(--sp-danger);
+  --spf-amber:   #f08da0;
+  --spf-border:  var(--sp-border);
+  --spf-row:     #1a2540;
+  --spf-head:    #1a2540;
+  --spf-muted:   var(--sp-text-3);
+  --spf-text:    var(--sp-text-1);
+  --spf-text-2:  var(--sp-text-2);
+  --spf-card:    var(--sp-card);
+}
+body.sp-dark .spf-head, body.sp-dark .spf-card, body.sp-dark .spf-kpi, body.sp-dark .spf-mini,
+body.sp-dark .spf-mini-drill, body.sp-dark .spf-notice, body.sp-dark .spf-support-item,
+body.sp-dark .spf-status-badge, body.sp-dark .spf-btn-ghost, body.sp-dark .spf-icon-btn { background-color: var(--sp-card); }
+body.sp-dark .spf-sep { color: #475569; }
+body.sp-dark .spf-ay-select, body.sp-dark .spf-ay-static { background-color: #1a2540; border-color: #263352; color: var(--sp-text-1); }
+/* Filled maroon surfaces keep the solid rose (the text token is lighter) */
+body.sp-dark .spf-btn-primary { background: var(--sp-primary); border-color: var(--sp-primary); color: #fff; }
+body.sp-dark .spf-dl-btn { border-color: var(--sp-primary-mid); }
+body.sp-dark .spf-dl-btn:hover { background: var(--sp-primary); border-color: var(--sp-primary); color: #fff; }
+body.sp-dark .spf-bar-fill, body.sp-dark .spf-credit-bar > div { background: var(--sp-primary); }
+/* Badges */
+body.sp-dark .spf-badge-academic { color: #f08da0; background: var(--sp-primary-light); }
+body.sp-dark .spf-badge-warning, body.sp-dark .spf-badge-danger { background: var(--sp-primary-light); }
+body.sp-dark .spf-status-badge-paid { border-color: rgba(74,222,128,0.35); }
+body.sp-dark .spf-status-badge-due  { border-color: rgba(248,113,113,0.4); }
+body.sp-dark .spf-avatar { border-color: var(--sp-primary-mid); }
+/* Filter chips */
+body.sp-dark .spf-fchip { background: #1a2540; border-color: var(--sp-border); color: var(--sp-text-1); }
+body.sp-dark .spf-fchip:hover { border-color: #f08da0; }
+body.sp-dark .spf-fchip.is-active { background: var(--sp-primary); border-color: var(--sp-primary); color: #fff; }
+body.sp-dark .spf-schip.is-active { background: var(--sp-primary-light); border-color: #f08da0; color: #f08da0; }
+/* Tables */
+body.sp-dark .spf-t tr.spf-row-data:hover td { background: rgba(255,255,255,0.05); }
+body.sp-dark .spf-t tr.spf-sub-row td { background: rgba(214,74,102,0.07); }
+body.sp-dark .spf-t tr.spf-detail-tr > td { background: rgba(255,255,255,0.025); }
+body.sp-dark .spf-row-toggle { background: #1a2540; border-color: var(--sp-border); }
+body.sp-dark .spf-sub-kind { background: #1a2540; border-color: var(--sp-border); }
+body.sp-dark .spf-sub-kind-payment { color: var(--sp-success); border-color: rgba(74,222,128,0.35); }
+body.sp-dark .spf-sub-kind-refund { color: var(--sp-info); border-color: rgba(124,196,242,0.35); }
+body.sp-dark .spf-sub-kind-scholarship { color: #f08da0; border-color: var(--sp-primary-mid); }
+body.sp-dark .spf-sub-kind-credit { color: var(--sp-warning); border-color: rgba(242,179,106,0.35); }
+body.sp-dark .spf-icon-dl:hover { background: var(--sp-primary-light); }
+@media (max-width: 640px) {
+  body.sp-dark .spf-t tr.spf-sub-row { background: rgba(214,74,102,0.07); }
+  body.sp-dark .spf-t tr.spf-sub-row td { background: transparent; }
+}
+/* Summary drill-down dialog, Pay All banner, support links */
+body.sp-dark .spf-mini-drill:hover { box-shadow: 0 2px 10px rgba(0,0,0,.35); }
+body.sp-dark .spf-dd-overlay { background: rgba(0,0,0,.6); }
+body.sp-dark .spf-dd-box { background: var(--sp-card); color: var(--sp-text-1); box-shadow: 0 20px 60px rgba(0,0,0,.6); }
+body.sp-dark .spf-dd-group-hd, body.sp-dark .spf-dd-pay { background: var(--sp-primary-light); }
+body.sp-dark .spf-payall, body.sp-dark .spf-support-item:hover { border-color: var(--sp-primary-mid); }
+body.sp-dark .spf-bulk-sheet { box-shadow: 0 -12px 48px rgba(0,0,0,0.5); }
+/* Secure Payment trust modal (styles from student_portal.css) */
+body.sp-dark .fee-trust-modal-box { background: var(--sp-card) !important; box-shadow: 0 24px 64px rgba(0,0,0,0.6) !important; }
+body.sp-dark .fee-trust-modal-header, body.sp-dark .fee-trust-badges { border-color: var(--sp-border) !important; }
+body.sp-dark .fee-trust-badge-item { border-right-color: var(--sp-border) !important; }
+body.sp-dark .fee-trust-modal-amount-row { background: #1a2540 !important; }
+body.sp-dark .fee-trust-badge-title { color: var(--sp-text-1) !important; }
+body.sp-dark .fee-trust-badge-sub, body.sp-dark .fee-trust-modal-note,
+body.sp-dark #sp-trust-modal [style*="color:#64748b"] { color: var(--sp-text-3) !important; }
+body.sp-dark .fee-trust-modal-close-x:hover { color: var(--sp-text-1) !important; background: #1a2540 !important; }
+body.sp-dark .fee-trust-modal-cancel-btn { background: #1a2540 !important; border-color: var(--sp-border) !important; color: var(--sp-text-1) !important; }
+body.sp-dark .fee-trust-modal-cancel-btn:hover { background: #263352 !important; }
+body.sp-dark .fee-trust-badge-icon[style*="color:#b5364a"] { color: #f08da0 !important; }
+/* Pay at Counter modal */
+body.sp-dark .fee-modal-amount-box { background: #1a2540; border-color: var(--sp-border); }
+body.sp-dark .fee-modal-note { background: var(--sp-primary-light); border-color: var(--sp-primary-mid); color: #f08da0; }
+body.sp-dark .fee-modal-body [style*="color:#475569"] { color: var(--sp-text-2) !important; }
 </style>
 {% endblock %}
 

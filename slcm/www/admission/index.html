@@ -1450,22 +1450,24 @@
   </div>
   {% endif %} -->
   <div class="mb-12 flex flex-col items-center justify-center text-center gap-4">
-    <div>
-      <h2 class="text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">Programmes</h2>
-    </div>
-
-    <!-- Type Toggle Buttons -->
+    <!-- Type Toggle Buttons (only when both Domestic & International programmes exist) -->
+    {% if has_domestic_programs and has_international_programs %}
     <div class="flex items-center gap-1 p-1 rounded-lg" style="background:#f1f5f9; display:inline-flex;">
        <button class="px-5 py-2 rounded-md font-bold text-sm shadow-sm transition-all text-slate-900 bg-white" id="btn-domestic" onclick="setProgramFilter('Domestic')">Indian Nationals</button>
        <button class="px-5 py-2 rounded-md font-bold text-sm transition-all text-slate-500 bg-transparent hover:text-slate-900 hover:bg-slate-200/50" id="btn-international" onclick="setProgramFilter('International')">International</button>
     </div>
+    {% endif %}
   </div>
 
   {% set _cyc = active_cycle.name if active_cycle else '' %}
   {% set _ay = active_cycle.admission_year if active_cycle else '' %}
   {% set _aac = active_cycle.academic_year if active_cycle else '' %}
+  <div id="program-level-sections" data-initial-filter="{{ 'International' if (has_international_programs and not has_domestic_programs) else 'Domestic' }}">
+  {% for grp in (program_groups or []) %}
+  <div class="program-level-section mb-14" data-level="{{ grp.key }}">
+  <h3 class="tracking-tight mb-8" style="color:var(--primary);font-size:clamp(26px, 3.2vw, 36px) !important;">{{ grp.title }}</h3>
   <div class="programs-grid gap-4">
-    {% for p in programs %}
+    {% for p in grp.programs %}
     {% set _slug = p.get('program_slug') if p.get else (p.program_slug or '') %}
     {% set _img = p.get('program_image') if p.get else (p.program_image or '') %}
     {% set _name = p.get('program_name') if p.get else (p.program_name or '') %}
@@ -1510,10 +1512,6 @@
           {{ (_abbr or _name[0]) | upper }}
         </div>
         {% endif %}
-        {% if _level %}
-        <div class="absolute right-4 top-4 rounded-full bg-white/90 px-3 py-1 text-xs font-bold"
-          style="color:var(--primary)">{{ _level }}</div>
-        {% endif %}
       </div>
 
       <!-- Body -->
@@ -1539,10 +1537,17 @@
         </div>
 
         <!-- Buttons -->
-        <div class="mt-6 flex gap-3">
-          {% set _ua = user_app_map.get(_pid) or user_app_map.get(_name) or {} %}
+        <div class="mt-6 flex gap-3" style="justify-content: space-between;">
           {% if frappe.session.user != "Guest" %}
           {% set _is_full = p.get('seats_full') if p.get else p.seats_full %}
+          {% set _dom_app_link = (p.get('application_form_link') or build_applicant_form_new_url(_slug, p.admission_cycle or (active_cycle.name if active_cycle else ''), campus=(p.campus or ''), intake_type=(p.intake_type or ''), admission_year=(active_cycle.admission_year if active_cycle else ''), academic_year=(active_cycle.academic_year if active_cycle else ''), program_level=(p.program_level or ''))) %}
+          {% set _intl_app_link = p.get('international_application_form_link') or _dom_app_link %}
+          {# One button per toggle type; JS shows the one matching the active Indian Nationals / International filter #}
+          {% for _atype in ['Domestic', 'International'] %}
+          {% set _tmap = (user_app_map_by_type or {}).get(_atype) or {} %}
+          {% set _ua = _tmap.get(_pid) or _tmap.get(_name) or {} %}
+          {% set _type_link = _intl_app_link if _atype == 'International' else _dom_app_link %}
+          <span class="prog-type-btn" data-type="{{ _atype }}" style="display:{{ 'contents' if _atype == 'Domestic' else 'none' }};">
           {% if _ua.get('app_name') %}
           <a href="/my-applications?app={{ _ua.app_name }}" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;
                         padding:8px 18px;border-radius:8px;font-size:12px;font-weight:700;
@@ -1561,7 +1566,7 @@
             Apply now
           </a>
           {% else %}
-          <a href="{{ (p.application_form_link or build_applicant_form_new_url(_slug, p.admission_cycle or (active_cycle.name if active_cycle else ''), campus=(p.campus or ''), intake_type=(p.intake_type or ''), admission_year=(active_cycle.admission_year if active_cycle else ''), academic_year=(active_cycle.academic_year if active_cycle else ''), program_level=(p.program_level or ''))) if (_is_cycle_active and not _is_full) else 'javascript:void(0)' }}"
+          <a href="{{ _type_link if (_is_cycle_active and not _is_full) else 'javascript:void(0)' }}"
             style="display:inline-flex;align-items:center;justify-content:center;gap:2px;
                         padding:8px 18px;border-radius:8px;font-size:12px;font-weight:700;
                         text-decoration:none;color:#fff;
@@ -1573,9 +1578,16 @@
             {{ 'Closed' if _is_full else ('Apply now' if _is_cycle_active else 'Closed') }}
           </a>
           {% endif %}
+          </span>
+          {% endfor %}
           {% else %}
           {% set _is_full = p.get('seats_full') if p.get else p.seats_full %}
-          <a href="{{ (p.application_form_link or build_login_redirect_to_applicant_form_new(_slug, p.admission_cycle or (active_cycle.name if active_cycle else ''), campus=(p.campus or ''), intake_type=(p.intake_type or ''), admission_year=(active_cycle.admission_year if active_cycle else ''), academic_year=(active_cycle.academic_year if active_cycle else ''), program_level=(p.program_level or ''))) if (_is_cycle_active and not _is_full) else 'javascript:void(0)' }}" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;
+          {% set _base_login_link = (p.application_form_link or build_login_redirect_to_applicant_form_new(_slug, p.admission_cycle or (active_cycle.name if active_cycle else ''), campus=(p.campus or ''), intake_type=(p.intake_type or ''), admission_year=(active_cycle.admission_year if active_cycle else ''), academic_year=(active_cycle.academic_year if active_cycle else ''), program_level=(p.program_level or ''))) %}
+          <a href="{{ _base_login_link if (_is_cycle_active and not _is_full) else 'javascript:void(0)' }}"
+             data-base-url="{{ _base_login_link }}"
+             data-is-login="1"
+             class="prog-apply-btn"
+             style="display:inline-flex;align-items:center;justify-content:center;gap:6px;
                       padding:8px 18px;border-radius:2px;font-size:12px;font-weight:700;
                       text-decoration:none;color:#fff;
                       background:var(--primary,#CB2929);transition:opacity .2s;
@@ -1597,24 +1609,26 @@
         </div>
       </div>
     </article>
-
-    {% else %}
-    <div class="col-span-full py-20 flex flex-col items-center justify-center bg-white rounded-3xl border border-slate-100 shadow-sm text-center px-6">
-      <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-6">
-        <span class="material-symbols-outlined text-slate-300" style="font-size:48px;">menu_book</span>
-      </div>
-      <h3 class="text-xl font-bold text-slate-900 mb-2">No active cycle found</h3>
-      <p class="text-slate-500 max-w-sm">We are not accepting applications at the moment. Please check back later or contact admissions for more information.</p>
-    </div>
     {% endfor %}
   </div>
 
-  <!-- Pagination Button -->
-  <div class="mt-12 flex justify-center">
-    <button id="load-more-programs" class="rounded-full px-10 py-3 font-bold text-white transition-all hover:scale-105"
+  <!-- Pagination Button (per level section) -->
+  <div class="mt-10 flex justify-center">
+    <button class="load-more-programs rounded-full px-10 py-3 font-bold text-white transition-all hover:scale-105"
       style="background:var(--primary); display:none;">
       View more
     </button>
+  </div>
+  </div>
+  {% else %}
+  <div class="py-20 flex flex-col items-center justify-center bg-white rounded-3xl border border-slate-100 shadow-sm text-center px-6">
+    <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-6">
+      <span class="material-symbols-outlined text-slate-300" style="font-size:48px;">menu_book</span>
+    </div>
+    <h3 class="text-xl font-bold text-slate-900 mb-2">No active cycle found</h3>
+    <p class="text-slate-500 max-w-sm">We are not accepting applications at the moment. Please check back later or contact admissions for more information.</p>
+  </div>
+  {% endfor %}
   </div>
 </section>
 <!-- END PROGRAMS -->
@@ -1930,11 +1944,16 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // ── Pagination logic ────────────────────────────────────────────────
-    const programsGrid = document.querySelector('.programs-grid');
-    if (programsGrid) {
-      const cards = Array.from(programsGrid.children);
-      const loadMoreBtn = document.getElementById('load-more-programs');
-
+    const levelWrap = document.getElementById('program-level-sections');
+    const levelSections = Array.from(document.querySelectorAll('.program-level-section')).map(function (sec) {
+      return {
+        el: sec,
+        cards: Array.from(sec.querySelectorAll('.programs-grid > .prog-card')),
+        loadMoreBtn: sec.querySelector('.load-more-programs'),
+        visibleCount: 0
+      };
+    });
+    if (levelSections.length) {
       function getBatchSize() {
         const w = window.innerWidth;
         if (w >= 1536) return 10; // 5 per row * 2 rows
@@ -1944,9 +1963,9 @@ document.addEventListener('DOMContentLoaded', function() {
       }
 
       let batchSize = getBatchSize();
-      let visibleCount = batchSize;
+      levelSections.forEach(function (s) { s.visibleCount = batchSize; });
 
-      let currentFilter = 'Domestic';
+      let currentFilter = (levelWrap && levelWrap.getAttribute('data-initial-filter')) || 'Domestic';
 
       // Define globally and safely (works with PJAX/DOMContentLoaded)
       window.setProgramFilter = function(filterVal) {
@@ -1959,22 +1978,44 @@ document.addEventListener('DOMContentLoaded', function() {
         if (btnInt) {
           btnInt.className = (filterVal === 'International') ? 'px-5 py-2 rounded-md font-bold text-sm shadow-sm transition-all text-slate-900 bg-white' : 'px-5 py-2 rounded-md font-bold text-sm transition-all text-slate-500 bg-transparent hover:text-slate-900 hover:bg-slate-200/50';
         }
-        visibleCount = batchSize;
+        levelSections.forEach(function (s) { s.visibleCount = batchSize; });
         if (typeof updateCardVisibility === 'function') {
           updateCardVisibility();
         }
       };
 
       function updateCardVisibility() {
+        levelSections.forEach(updateSectionVisibility);
+      }
+
+      function updateSectionVisibility(section) {
         let visibleMatching = 0;
         let totalMatching = 0;
-        cards.forEach((card) => {
+        section.cards.forEach((card) => {
           let openFor = card.getAttribute('data-open-for') || '';
           let match = !openFor || openFor.includes(currentFilter);
           
           if (match) {
+            // Show the Applied / Apply button for the active toggle type only
+            card.querySelectorAll('.prog-type-btn').forEach(function (w) {
+              w.style.display = (w.getAttribute('data-type') === currentFilter) ? 'contents' : 'none';
+            });
+
+            let applyBtns = card.querySelectorAll('.prog-apply-btn');
+            applyBtns.forEach(btn => {
+              if (btn.getAttribute('href') !== 'javascript:void(0)') {
+                let domesticUrl = btn.getAttribute('data-domestic-url') || '';
+                let internationalUrl = btn.getAttribute('data-international-url') || '';
+                if (currentFilter === 'International' && internationalUrl) {
+                  btn.href = internationalUrl;
+                } else if (domesticUrl) {
+                  btn.href = domesticUrl;
+                }
+              }
+            });
+
             totalMatching++;
-            if (visibleMatching < visibleCount) {
+            if (visibleMatching < section.visibleCount) {
               card.style.display = 'flex';
               if (typeof obs !== 'undefined') obs.observe(card);
               visibleMatching++;
@@ -1986,21 +2027,26 @@ document.addEventListener('DOMContentLoaded', function() {
           }
         });
 
-        if (loadMoreBtn) {
-          if (visibleCount >= totalMatching) {
-            loadMoreBtn.style.display = 'none';
+        // Hide the whole level section when no card matches the current filter
+        section.el.style.display = totalMatching ? '' : 'none';
+
+        if (section.loadMoreBtn) {
+          if (section.visibleCount >= totalMatching) {
+            section.loadMoreBtn.style.display = 'none';
           } else {
-            loadMoreBtn.style.display = 'inline-block';
+            section.loadMoreBtn.style.display = 'inline-block';
           }
         }
-      } // <-- Close updateCardVisibility
+      } // <-- Close updateSectionVisibility
 
-      if (loadMoreBtn) {
-        loadMoreBtn.onclick = function () {
-          visibleCount += batchSize;
-          updateCardVisibility();
-        };
-      }
+      levelSections.forEach(function (section) {
+        if (section.loadMoreBtn) {
+          section.loadMoreBtn.onclick = function () {
+            section.visibleCount += batchSize;
+            updateSectionVisibility(section);
+          };
+        }
+      });
 
       // Initial run
       updateCardVisibility();
@@ -2014,7 +2060,9 @@ document.addEventListener('DOMContentLoaded', function() {
           if (newBatch !== batchSize) {
             batchSize = newBatch;
             // If we haven't loaded more manually, keep the initial view consistent
-            if (visibleCount <= batchSize) visibleCount = batchSize;
+            levelSections.forEach(function (s) {
+              if (s.visibleCount <= batchSize) s.visibleCount = batchSize;
+            });
             updateCardVisibility();
           }
         }, 250);

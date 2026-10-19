@@ -581,10 +581,10 @@
   },
   {
    "default": "1",
-   "description": "Show the Today's Classes panel on the dashboard",
+   "description": "Show the Today's Sessions panel on the dashboard",
    "fieldname": "show_today_classes",
    "fieldtype": "Check",
-   "label": "Today's Classes Panel"
+   "label": "Today's Sessions Panel"
   },
   {
    "fieldname": "col_break_features",

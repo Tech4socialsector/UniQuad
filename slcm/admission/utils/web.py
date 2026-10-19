@@ -439,6 +439,10 @@ def get_stage_tracker_data(applicant_name: str) -> dict:
     if not applicant.admission_cycle:
         return {"stages": [], "progress_pct": 0, "current_status": applicant.status}
 
+    # Admission Cycle Stage was removed; querying it would raise DoesNotExistError
+    if not frappe.db.exists("DocType", "Admission Cycle Stage"):
+        return {"stages": [], "progress_pct": 0, "current_status": applicant.status}
+
     # Load all enabled stages for this cycle
     all_stages = frappe.get_all(
         "Admission Cycle Stage",

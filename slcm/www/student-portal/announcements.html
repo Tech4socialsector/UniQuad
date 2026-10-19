@@ -141,6 +141,63 @@
   .ann-past-title { white-space: normal; }
   .ann-past-body { padding-left: 18px; }
 }
+
+/* ── Dark mode ── */
+/* Page tokens live on :root (light values, and --ann-border resolves there),
+   so redefine them on body.sp-dark where descendants inherit from. */
+body.sp-dark {
+  --ann-maroon:       #f08da0;
+  --ann-maroon-soft:  rgba(214,74,102,0.14);
+  --ann-maroon-mid:   rgba(214,74,102,0.34);
+  --ann-urgent:       #f08da0;
+  --ann-urgent-bg:    rgba(214,74,102,0.18);
+  --ann-important:    #f08da0;
+  --ann-important-bg: rgba(214,74,102,0.18);
+  --ann-border:       var(--sp-border);
+  --ann-row:          var(--sp-border);
+}
+body.sp-dark .ann-toolbar,
+body.sp-dark .ann-card,
+body.sp-dark .ann-past,
+body.sp-dark .ann-empty { background: var(--sp-card); border-color: var(--sp-border); }
+body.sp-dark .ann-card { border-left-color: var(--sp-primary); }
+body.sp-dark .ann-card.p-urgent,
+body.sp-dark .ann-card.p-important { border-left-color: var(--sp-primary); }
+body.sp-dark .ann-card:hover { box-shadow: 0 6px 18px rgba(0,0,0,0.35); }
+body.sp-dark .ann-input { background: #1a2540; border-color: #263352; color: var(--sp-text-1); }
+body.sp-dark .ann-input::placeholder { color: var(--sp-text-3); }
+body.sp-dark .ann-cat { background: #1a2540; border-color: var(--sp-border); color: var(--sp-text-2); }
+body.sp-dark .ann-cat:hover { border-color: var(--ann-maroon-mid); color: #f08da0; }
+body.sp-dark .ann-cat[aria-pressed="true"] { background: var(--sp-primary); border-color: var(--sp-primary); color: #fff; }
+body.sp-dark .ann-tag-new { background: var(--sp-primary); color: #fff; }
+body.sp-dark .ann-more { background: #1a2540; border-color: var(--sp-border); color: #f08da0; }
+body.sp-dark .ann-more:hover { background: var(--ann-maroon-soft); border-color: var(--ann-maroon-mid); }
+body.sp-dark .ann-past-sum:hover { background: rgba(255,255,255,0.05); }
+body.sp-dark .ann-past-month { background: rgba(255,255,255,0.025); color: var(--sp-text-3); }
+/* Rich-text announcement bodies often carry inline editor colours (black text,
+   white/yellow highlights) that are unreadable on navy — neutralise them. */
+body.sp-dark .ann-full,
+body.sp-dark .ann-full p,
+body.sp-dark .ann-full li,
+body.sp-dark .ann-full span,
+body.sp-dark .ann-full div,
+body.sp-dark .ann-full td,
+body.sp-dark .ann-full th { color: var(--sp-text-2) !important; }
+body.sp-dark .ann-full strong,
+body.sp-dark .ann-full b,
+body.sp-dark .ann-full h1, body.sp-dark .ann-full h2, body.sp-dark .ann-full h3,
+body.sp-dark .ann-full h4, body.sp-dark .ann-full h5, body.sp-dark .ann-full h6 { color: var(--sp-text-1) !important; }
+body.sp-dark .ann-full a,
+body.sp-dark .ann-full a * { color: #f08da0 !important; }
+body.sp-dark .ann-full [style*="background"] { background: transparent !important; }
+body.sp-dark .ann-full table,
+body.sp-dark .ann-full td,
+body.sp-dark .ann-full th { border-color: var(--sp-border) !important; }
+body.sp-dark .ann-full th { background: #1a2540 !important; }
+body.sp-dark .ann-full hr { border-color: var(--sp-border); }
+body.sp-dark .ann-full blockquote { border-left-color: var(--sp-border); color: var(--sp-text-3) !important; }
+body.sp-dark .ann-full pre,
+body.sp-dark .ann-full code { background: #1a2540 !important; color: var(--sp-text-1) !important; }
 </style>
 {% endblock %}
 

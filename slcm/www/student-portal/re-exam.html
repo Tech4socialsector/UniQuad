@@ -1,5 +1,5 @@
 {% extends "slcm/www/student-portal/_base.html" %}
-{% block title %}Re Exam{% endblock %}
+{% block title %}Re-Exam{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -204,6 +204,116 @@
   color: #920c24;
   flex-shrink: 0;
 }
+
+/* ── Dark mode ─────────────────────────────────────────────────── */
+body.sp-dark .rx-congrats-icon .sp-ms { color: #f08da0; }
+body.sp-dark .rx-congrats-title { color: #f08da0; }
+body.sp-dark .rx-congrats-sub { color: var(--sp-text-3); }
+
+body.sp-dark .rx-summary { background: var(--sp-card); border-color: var(--sp-border); }
+body.sp-dark .rx-summary .sp-ms { color: var(--sp-warning); }
+body.sp-dark .rx-summary-text { color: var(--sp-text-1); }
+
+body.sp-dark .rx-card { background: var(--sp-card); border: 1px solid var(--sp-border); box-shadow: 0 2px 12px rgba(0,0,0,.35); }
+body.sp-dark .rx-card:hover { box-shadow: 0 6px 24px rgba(0,0,0,.5); }
+body.sp-dark .rx-card-top { background: var(--sp-card); border-bottom-color: var(--sp-border); }
+body.sp-dark .rx-card-eyebrow { color: var(--sp-text-3); }
+body.sp-dark .rx-card-course-name { color: var(--sp-text-1); }
+body.sp-dark .rx-card-exam { color: var(--sp-text-3); }
+body.sp-dark .rx-card-top [style*="background: #f1f5f9"] { background: var(--sp-danger-bg) !important; }
+body.sp-dark .rx-card-top [style*="background: #f1f5f9"] .sp-ms { color: var(--sp-danger) !important; }
+
+body.sp-dark .rx-meta-row { color: var(--sp-text-1); }
+body.sp-dark .rx-meta-row .sp-ms { color: #f08da0; }
+body.sp-dark .rx-meta-label { color: var(--sp-text-3); }
+body.sp-dark .rx-grade-badge { background: var(--sp-danger-bg); color: var(--sp-danger); }
+body.sp-dark .rx-fee-value { color: var(--sp-text-1); }
+body.sp-dark .rx-no-setting { color: var(--sp-text-3); }
+body.sp-dark .rx-card [style*="color:#6b7280"] { color: var(--sp-text-3) !important; }
+body.sp-dark .rx-card [style*="color:#374151"] { color: var(--sp-text-2) !important; }
+body.sp-dark .rx-card [style*="color:#64748b"] { color: var(--sp-text-3) !important; }
+
+/* Days-left pills (inline-styled) */
+body.sp-dark .rx-card [style*="background:#fff0f2"] {
+  background: var(--sp-primary-light) !important;
+  border-color: var(--sp-primary-mid) !important;
+  color: #f08da0 !important;
+}
+
+/* Deadline / status pills */
+body.sp-dark .rx-deadline-pill.active,
+body.sp-dark .rx-deadline-pill.passed,
+body.sp-dark .rx-deadline-pill.none {
+  background: var(--sp-primary-light);
+  border-color: var(--sp-primary-mid);
+  color: #f08da0 !important;
+}
+body.sp-dark .rx-deadline-pill.active { border-color: rgba(240,141,160,0.5); }
+
+body.sp-dark .rx-card-foot { border-top-color: var(--sp-border); }
+
+/* Buttons */
+body.sp-dark .rx-btn-pay { color: #fff; }
+body.sp-dark .rx-btn-pay[style*="background:#1e293b"] {
+  background: #1a2540 !important;
+  color: var(--sp-text-1);
+  border: 1px solid #263352;
+}
+body.sp-dark .rx-btn-pay[style*="background:#1e293b"]:hover { background: #263352 !important; }
+body.sp-dark .rx-btn-pay[style*="background:#920c24"] { background: var(--sp-primary-dark) !important; }
+body.sp-dark .rx-btn-pay:disabled,
+body.sp-dark .rx-btn-pay.disabled,
+body.sp-dark .rx-btn-pay:disabled:hover,
+body.sp-dark .rx-btn-pay.disabled:hover {
+  background: var(--sp-primary-light);
+  color: #f08da0;
+  border-color: var(--sp-primary-mid);
+}
+
+body.sp-dark .rx-not-allowed {
+  background: var(--sp-primary-light);
+  border-color: var(--sp-primary-mid);
+  color: #f08da0;
+}
+body.sp-dark .rx-not-allowed .sp-ms { color: #f08da0; }
+
+/* Pay-at-counter modal */
+body.sp-dark #rx-counter-modal { background: rgba(0,0,0,0.65) !important; }
+body.sp-dark .rx-cm-box { background: var(--sp-card) !important; border: 1px solid var(--sp-border); box-shadow: 0 24px 64px rgba(0,0,0,0.6) !important; }
+body.sp-dark .rx-cm-head { background: #1a2540 !important; border-bottom: 1px solid var(--sp-border); }
+body.sp-dark .rx-cm-head [style*="color:#f8fafc"] { color: var(--sp-text-1) !important; }
+body.sp-dark .rx-cm-tint {
+  background: var(--sp-primary-light) !important;
+  border-color: var(--sp-primary-mid) !important;
+  color: #f08da0 !important;
+}
+body.sp-dark .rx-cm-tint [style*="color:#920c24"],
+body.sp-dark .rx-cm-tint [style*="color:#b5364a"] { color: #f08da0 !important; }
+body.sp-dark .rx-cm-tint [style*="color:#6b091a"] { color: var(--sp-text-1) !important; }
+body.sp-dark .rx-cm-text { color: var(--sp-text-3) !important; }
+body.sp-dark .rx-cm-text strong { color: var(--sp-text-1) !important; }
+body.sp-dark #rx-counter-cancel-btn {
+  background: #1a2540 !important;
+  color: var(--sp-text-1) !important;
+  border-color: var(--sp-border) !important;
+}
+body.sp-dark #rx-counter-cancel-btn:hover { background: #263352 !important; }
+body.sp-dark #rx-counter-confirm-btn { background: var(--sp-primary) !important; color: #fff !important; }
+body.sp-dark #rx-counter-confirm-btn:hover { background: var(--sp-primary-dark) !important; }
+
+/* Payment processing overlay */
+body.sp-dark #rx-pay-overlay { background: rgba(0,0,0,0.6) !important; }
+body.sp-dark .rx-ov-box { background: var(--sp-card) !important; border: 1px solid var(--sp-border); box-shadow: 0 16px 48px rgba(0,0,0,0.6) !important; }
+body.sp-dark .rx-ov-spin { border-color: #263352 !important; border-top-color: var(--sp-primary) !important; }
+body.sp-dark #rx-pay-overlay-msg { color: var(--sp-text-1) !important; }
+
+/* Toasts (JS-built) */
+body.sp-dark .rx-toast {
+  background: #1a2540 !important;
+  border-color: var(--sp-primary-mid) !important;
+  color: #f08da0 !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5) !important;
+}
 </style>
 {% endblock %}
 
@@ -219,7 +329,7 @@
 
 <div class="es-header-wrap fade-in" style="background: var(--sp-card, #fff); border-radius: 16px; padding: 24px 28px; margin-bottom: 22px; display: flex; align-items: center; gap: 16px; border: 1px solid var(--sp-border);">
   <div>
-    <h1 class="sp-page-title" style="margin:0; font-size: 18px !important; font-weight: 700 !important; text-transform: none !important; color: var(--sp-text-1);">Re-examination</h1>
+    <h1 class="sp-page-title" style="margin:0; font-size: 18px !important; font-weight: 700 !important; text-transform: none !important; color: var(--sp-text-1);">Re-Exam</h1>
   </div>
 </div>
 
@@ -238,7 +348,7 @@
     </div>
     <div class="rx-congrats-title">Congratulations!</div>
     <div class="rx-congrats-sub">
-      You have passed all your exams so far. Keep up the excellent work!
+      You have passed all your assessments so far. Keep up the excellent work!
     </div>
   </div>
 </div>
@@ -248,7 +358,7 @@
 <div class="rx-summary fade-in">
   <span class="sp-ms">warning</span>
   <span class="rx-summary-text">
-    Courses eligible for Re-examination - {{ failed_count }}
+    Courses eligible for Re-Exam - {{ failed_count }}
   </span>
 </div>
 
@@ -468,12 +578,12 @@
   display:none;position:fixed;inset:0;z-index:9998;
   background:rgba(15,23,42,0.55);backdrop-filter:blur(3px);
   align-items:center;justify-content:center;padding:16px;">
-  <div style="
+  <div class="rx-cm-box" style="
     background:#fff;border-radius:18px;padding:0;
     box-shadow:0 24px 64px rgba(0,0,0,0.22);
     max-width:440px;width:100%;overflow:hidden;">
     {# Header #}
-    <div style="background:#1e293b;padding:22px 28px 18px;">
+    <div class="rx-cm-head" style="background:#1e293b;padding:22px 28px 18px;">
       <div style="display:flex;align-items:center;gap:12px;">
         <span class="sp-ms" style="font-size:28px;color:#94a3b8;">store</span>
         <div>
@@ -484,7 +594,7 @@
     </div>
     {# Body #}
     <div style="padding:24px 28px;">
-      <div style="
+      <div class="rx-cm-tint" style="
         background:#fff0f2;border:1px solid #f5c6ce;border-radius:10px;
         padding:14px 18px;margin-bottom:20px;
         display:flex;align-items:flex-start;gap:12px;">
@@ -495,12 +605,12 @@
           <div style="font-size:.75rem;color:#b5364a;margin-top:2px;">Cash payment only</div>
         </div>
       </div>
-      <p style="font-size:.88rem;color:#475569;line-height:1.6;margin:0 0 20px;">
+      <p class="rx-cm-text" style="font-size:.88rem;color:#475569;line-height:1.6;margin:0 0 20px;">
         Your registration will be recorded immediately upon confirmation.
         Please visit the <strong style="color:#1e293b;">Admin / Accounts Office</strong>
         with the exact cash amount to complete your payment.
       </p>
-      <div style="
+      <div class="rx-cm-tint" style="
         background:#fff0f2;border:1px solid #f5c6ce;border-radius:8px;
         padding:10px 14px;font-size:.8rem;color:#920c24;
         display:flex;align-items:flex-start;gap:8px;margin-bottom:4px;">
@@ -535,11 +645,11 @@
   display:none;position:fixed;inset:0;z-index:9999;
   background:rgba(0,0,0,0.45);backdrop-filter:blur(2px);
   align-items:center;justify-content:center;">
-  <div style="
+  <div class="rx-ov-box" style="
     background:#fff;border-radius:16px;padding:36px 40px;
     text-align:center;box-shadow:0 16px 48px rgba(0,0,0,0.22);
     min-width:260px;">
-    <div style="
+    <div class="rx-ov-spin" style="
       width:44px;height:44px;border:4px solid #e5e7eb;
       border-top-color:var(--sp-primary,#b5364a);
       border-radius:50%;animation:rx-spin 0.7s linear infinite;
@@ -652,6 +762,7 @@
     };
     var c = colors[type] || colors.info;
     var t = document.createElement('div');
+    t.className = 'rx-toast';
     t.style.cssText = [
       'position:fixed;bottom:24px;right:24px;z-index:10000',
       'max-width:340px;min-width:240px',

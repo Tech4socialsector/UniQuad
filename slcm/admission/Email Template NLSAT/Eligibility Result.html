@@ -14,7 +14,7 @@
         @media only screen and (max-width: 600px) {
             .container { width: 100% !important; min-width: 100% !important; }
             .mobile-header-padding { padding: 30px 20px 15px 20px !important; }
-            .logo-img { height: 42px !important; width: auto !important; }
+            .logo-img { height: 50px !important; width: auto !important; }
             .univ-name, .campus-name { font-size: 16px !important; line-height: 1.2 !important; white-space: nowrap !important; }
             .body-content { padding: 20px 20px !important; }
         }
@@ -38,11 +38,14 @@
                                     <!-- Logo Cell -->
                                     <td width="1" style="vertical-align: middle; padding-right: 20px;">
                                         {% set inst_logo = frappe.db.get_single_value('Institution Settings', 'logo') %}
-                                        {% if inst_logo %}
-                                            <img src="{{ frappe.utils.get_url(inst_logo) }}" alt="Logo" class="logo-img" style="height: 52px; width: auto; display: block; border: 0;">
+                                        {% if inst_logo and (inst_logo.startswith('http://') or inst_logo.startswith('https://')) %}
+                                            {% set logo_url = inst_logo %}
+                                        {% elif inst_logo and not inst_logo.startswith('/private') and not ('localhost' in frappe.utils.get_url() or 'slcm.com' in frappe.utils.get_url() or '127.0.0.1' in frappe.utils.get_url()) %}
+                                            {% set logo_url = frappe.utils.get_url(inst_logo) %}
                                         {% else %}
-                                            <div style="width: 40px; height: 40px; background-color: #f3f4f6; border-radius: 4px;"></div>
+                                            {% set logo_url = 'https://www.nls.ac.in/wp-content/uploads/2020/09/NLSIU-logo.png' %}
                                         {% endif %}
+                                        <img src="{{ logo_url }}" alt="National Law School of India University" class="logo-img" style="height: 64px; width: auto; display: block; border: 0;">
                                     </td>
                                     <!-- Title Cell -->
                                     <td style="vertical-align: middle; text-align: left;">
@@ -70,42 +73,70 @@
                     <!-- Body Content -->
                     <tr>
                         <td class="body-content" style="padding: 20px 40px 40px 40px; font-family: 'Merriweather', serif; font-size: 16px; line-height: 1.6; color: #333333;">
-<p>Dear {{ doc.candidate_name or doc.applicant_id }},</p>
-    <p>Greetings from the Admissions Office.</p>
-    <p>We are pleased to inform you that your eligibility assessment for the academic session has been completed. Your result is now available for review.</p>
-    
-    <div style="padding: 20px; margin: 20px 0; border-bottom: 1px solid #eee;">
-        <h3 style="margin-top: 0; color: #920c24;">Programme Details:</h3>
-        <p style="margin: 0;"><strong>Applicant ID:</strong> {{ doc.applicant_id }}</p>
-        <p style="margin: 0;"><strong>Programme:</strong> {{ doc.program or '—' }}</p>
-        <p style="margin: 0;"><strong>Campus:</strong> {{ doc.campus or '—' }}</p>
-    </div>
+<p class="greeting" style="font-size: 18px; font-weight: 600; color: #920c24;">Dear {{ candidate_name or full_name or applicant_name or doc.candidate_name or doc.applicant_name or doc.full_name or "Candidate" }},</p>
 
-    <div style="padding: 20px; margin: 20px 0; border-bottom: 1px solid #eee;">
-        <h3 style="margin-top: 0; color: #920c24;">Assessment Summary:</h3>
-        {% if (doc.et_source or doc.source_type) != "Entrance Test" %}
-        <p style="margin: 0;"><strong>Source:</strong> {{ doc.et_source or doc.source_type or '—' }}</p>
-        {% endif %}
-        <p style="margin: 0;"><strong>Interview Score:</strong> {{ doc.interview_score or 0 }} / 100</p>
-        <p style="margin: 0;"><strong>Result Status:</strong> <span style="color: #28a745; font-weight: bold; font-size: 1.1em;">{{ doc.result_status or 'Qualified' }}</span></p>
-    </div>
-    
-    <p>You may access your detailed result, including section-wise performance and Mark Sheet, by logging into the admission portal using the link provided below.</p>
-    
-    <p style="text-align: center; margin: 30px 0;">
-        <a href="{{ portal_url }}" style="background-color: #920c24; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">View Full Result</a>
-    </p>
-    
-    <p>Please note that further stages of the admission process, such as merit selection and counseling, will be communicated to you separately.</p>
-    <p>Should you require any clarification or assistance, please feel free to contact the Admissions Office.</p>
-    <p>We appreciate your participation and wish you the very best for the upcoming stages.</p>
+<p>We are pleased to inform you that your eligibility assessment for the academic session has been completed. Your result details are summarized below.</p>
 
-    <p>Regards,<br>
-    <strong>Admissions Team</strong><br>
-    National Law School of India University</p>
+<table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #eeeeee; border-radius: 4px; margin: 24px 0; font-size: 14px; border-collapse: separate; overflow: hidden; background-color: #ffffff;">
+    <tr style="background-color: #fafafa;">
+        <td colspan="2" style="padding: 12px 18px; font-weight: 700; color: #920c24; border-bottom: 1px solid #eeeeee; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">
+            Assessment &amp; Programme Details
+        </td>
+    </tr>
+    <tr>
+        <td style="padding: 10px 18px; color: #555555; width: 170px; border-bottom: 1px solid #f0f0f0;">Applicant ID</td>
+        <td style="padding: 10px 18px; color: #111111; font-weight: 600; border-bottom: 1px solid #f0f0f0;">{{ applicant_id or doc.applicant_id or doc.name }}</td>
+    </tr>
+    <tr>
+        <td style="padding: 10px 18px; color: #555555; border-bottom: 1px solid #f0f0f0;">Programme</td>
+        <td style="padding: 10px 18px; color: #111111; font-weight: 600; border-bottom: 1px solid #f0f0f0;">{{ program_name or (program.program_name if program is mapping else program) or doc.program or "5-Year B.A., LL.B. (Hons.)" }}</td>
+    </tr>
+    <tr>
+        <td style="padding: 10px 18px; color: #555555; border-bottom: 1px solid #f0f0f0;">Campus</td>
+        <td style="padding: 10px 18px; color: #111111; font-weight: 600; border-bottom: 1px solid #f0f0f0;">{{ campus_name or doc.campus or "Bengaluru" }}</td>
+    </tr>
+    {% if doc.et_source or doc.source_type %}
+    <tr>
+        <td style="padding: 10px 18px; color: #555555; border-bottom: 1px solid #f0f0f0;">Assessment Source</td>
+        <td style="padding: 10px 18px; color: #111111; font-weight: 600; border-bottom: 1px solid #f0f0f0;">{{ doc.et_source or doc.source_type }}</td>
+    </tr>
+    {% endif %}
+    {% if doc.interview_score %}
+    <tr>
+        <td style="padding: 10px 18px; color: #555555; border-bottom: 1px solid #f0f0f0;">Interview Score</td>
+        <td style="padding: 10px 18px; color: #111111; font-weight: 600; border-bottom: 1px solid #f0f0f0;">{{ doc.interview_score }}{% if '/' not in (doc.interview_score|string) %} / 100{% endif %}</td>
+    </tr>
+    {% endif %}
+    <tr>
+        <td style="padding: 12px 18px; color: #555555;">Result Status</td>
+        <td style="padding: 12px 18px;">
+            <span style="display: inline-block; background-color: #f0fdf4; color: #15803d; font-weight: 700; padding: 4px 12px; border-radius: 4px; border: 1px solid #bbf7d0; font-size: 13px;">
+                {{ doc.result_status or "Eligible / Selected" }}
+            </span>
+        </td>
+    </tr>
+</table>
 
-    <hr style="border-top: 1px solid #e5e7eb; margin: 20px 0; border-bottom: 1px solid #eee;">
-    <p style="font-size: 12px; color: #777;">This is an automated message. Please do not reply to this email.</p>
+<p>You can access your detailed scorecard, section-wise performance, and admission updates by logging into the admission portal.</p>
+
+<table width="100%" cellpadding="0" cellspacing="0" style="margin: 28px 0;">
+    <tr>
+        <td align="center">
+            <a href="{{ portal_url or portal_link or admission_portal_url }}" style="background-color: #920c24; color: #ffffff; padding: 12px 28px; text-decoration: none; border-radius: 4px; font-weight: bold; font-family: 'Merriweather', serif; font-size: 15px; display: inline-block;">
+                View Full Result
+            </a>
+        </td>
+    </tr>
+</table>
+
+<p style="font-size: 14px; color: #555555; line-height: 1.6;">Please note that further stages of the admission process, including seat allocation and merit counseling, will be communicated separately via the portal.</p>
+
+<p style="margin-top: 24px; margin-bottom: 0;">Regards,<br>
+<strong>Admissions Office</strong><br>
+National Law School of India University</p>
+
+<hr style="border: none; border-top: 1px solid #eeeeee; margin: 30px 0 15px 0;">
+<p style="font-size: 12px; color: #999999; text-align: center; margin: 0;">This is a system-generated email. Please do not reply to this message.</p>
                         </td>
                     </tr>
                 </table>

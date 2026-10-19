@@ -7,6 +7,8 @@ import frappe
 from frappe import _
 from frappe.utils import time_diff_in_hours, get_datetime
 
+from slcm.slcm.utils.attendance_lock import assert_session_editable
+
 
 @frappe.whitelist()
 def get_faculty_context():
@@ -199,6 +201,8 @@ def create_bulk_attendance_from_schedule(course_schedule, attendance_date, atten
 	attendance_session = _get_or_create_attendance_session(
 		attendance_date, course_offering, "Course Schedule"
 	)
+	if attendance_session:
+		assert_session_editable(attendance_session)
 
 	created, updated, errors = 0, 0, []
 
@@ -303,7 +307,10 @@ def mark_attendance(
 
 	schedule = frappe.get_doc("Course Schedule", course_schedule) if course_schedule else None
 	class_sched = frappe.get_doc("Time Table", class_schedule) if class_schedule else None
-	office_group = frappe.get_doc("Office Hours Group", office_hours_group) if office_hours_group else None
+	# Office Hours Group is a Student Group (group_based_on = Office Hours). It
+	# has programme / course_offering / academic year & term but no course or
+	# instructor - those are resolved from the Course Offering below.
+	office_group = frappe.get_doc("Student Group", office_hours_group) if office_hours_group else None
 
 	program = None
 	if schedule:
@@ -311,7 +318,7 @@ def mark_attendance(
 	elif class_sched:
 		program = class_sched.programme
 	elif office_group:
-		program = office_group.program
+		program = office_group.programme
 
 	# Determine Course
 	course = None
@@ -319,8 +326,6 @@ def mark_attendance(
 		course = schedule.course
 	elif class_sched:
 		course = class_sched.course
-	elif office_group:
-		course = office_group.course
 
 	# Determine Course Offering — prefer the direct link already stored on
 	# whichever source doc this came from (Course Schedule / Time Table /
@@ -394,6 +399,10 @@ def mark_attendance(
 				message=f"Could not find Course Offering.\nCourse: {course}\nProgram: {program}\nOffice Group: {office_hours_group}\nFilters tried: {filters}"
 			)
 
+	office_instructor = None
+	if office_group and course_offering:
+		office_instructor = frappe.db.get_value("Course Offering", course_offering, "faculty")
+
 	# ---------------------------------------------------------
 	# Ensure Attendance Session Exists and Update It
 	# ---------------------------------------------------------
@@ -444,10 +453,8 @@ def mark_attendance(
 			start_time = "09:00:00"
 			end_time = "10:00:00"
 			duration = 1.0
-			# instructor from OH group?
-			og_doc = frappe.get_doc("Office Hours Group", office_hours_group)
-			instructor = og_doc.instructor
-			
+			instructor = office_instructor
+
 			# Ensure we store the course offering if we found one!
 			# (Code logic handles it via locals or logic below?)
 			# Yes, `course_offering` variable is available.
@@ -472,6 +479,11 @@ def mark_attendance(
 			sess_doc.flags.skip_auto_attendance = True
 			sess_doc.insert(ignore_permissions=True)
 			attendance_session = sess_doc.name
+
+	# Refuse up front: the per-student loop below only collects errors, so a
+	# locked session would otherwise come back as "success".
+	if attendance_session:
+		assert_session_editable(attendance_session)
 
 	# ---------------------------------------------------------
 
@@ -521,7 +533,7 @@ def mark_attendance(
 				"academic_term": office_group.academic_term if office_group else None,
 				"attendance_session": attendance_session,
 				"instructor": _faculty_display_name(
-					schedule.instructor if schedule else class_sched.instructor if class_sched else office_group.instructor if office_group else None
+					schedule.instructor if schedule else class_sched.instructor if class_sched else office_instructor
 				),
 				"room": schedule.room if schedule else None,
 				"source": "Manual",

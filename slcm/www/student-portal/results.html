@@ -1,5 +1,5 @@
 {% extends "slcm/www/student-portal/_base.html" %}
-{% block title %}My Results{% endblock %}
+{% block title %}My Grades{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -151,7 +151,7 @@
   font-size: 15px; font-weight: 600; color: var(--sp-text-1); line-height: 1.35; margin: 0 0 10px;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
-.spr-card-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--spr-row); border-bottom: 1px solid var(--spr-row); }
+.spr-card-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--spr-row); border-bottom: 1px solid var(--spr-row); }
 .spr-cm { padding: 11px 8px; text-align: center; border-right: 1px solid var(--spr-row); min-width: 0; }
 .spr-cm:last-child { border-right: none; }
 .spr-cm-val { font-size: 16px; font-weight: 700; color: var(--sp-text-1); line-height: 1.1; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -281,7 +281,14 @@
 @media (max-width: 640px) {
   .spr-mk-hint { display: flex; }
   .spr-modal-overlay { padding: 0; align-items: flex-end; }
-  .spr-modal { border-radius: 16px 16px 0 0; max-height: 92vh; }
+  /* Bottom sheet: span the full width (the desktop width leaves side gaps)
+     and size to the visible viewport so the bottom isn't hidden behind the
+     mobile browser toolbar */
+  .spr-modal { width: 100%; border-radius: 16px 16px 0 0; max-height: 92vh; max-height: 92dvh; }
+  .spr-modal-head { padding: 14px 16px 12px; }
+  .spr-mk-hint { padding: 8px 16px 6px; }
+  .spr-remark { padding: 10px 16px 4px; }
+  .spr-modal-body { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
 }
 @media (prefers-reduced-motion: reduce) { .spr-card, .spr-card:hover { transition: none; transform: none; } }
 
@@ -414,6 +421,109 @@
 }
 .sp-improv-receipt-link:hover { opacity: .88; transform: translateY(-1px); }
 .sp-improv-receipt-link .sp-ms { font-family:'Material Symbols Outlined'; font-size:14px; }
+
+/* ── Dark mode ──────────────────────────────────────────────────────── */
+/* The --spr-* tokens above resolve var(--sp-*) on :root (light values), so
+   they must be redefined on body for the dark palette to reach them. */
+body.sp-dark {
+  --spr-primary: #f08da0;
+  --spr-soft:    rgba(214,74,102,0.14);
+  --spr-green:   #f08da0;
+  --spr-red:     #f87171;
+  --spr-amber:   #f2b36a;
+  --spr-border:  var(--sp-border);
+  --spr-row:     #1a2540;
+  --spr-head:    #1a2540;
+  --spr-muted:   #94a3b8;
+}
+body.sp-dark .spr-student-meta .sep { color: var(--sp-text-4); }
+body.sp-dark .spr-exam:hover,
+body.sp-dark .spr-card:hover { box-shadow: 0 6px 18px rgba(0,0,0,0.35); }
+body.sp-dark .spr-card { border-top-color: var(--sp-primary); }
+body.sp-dark .spr-card.is-fail { border-top-color: var(--spr-red); }
+body.sp-dark .spr-tool-btn[aria-pressed="true"] { background: var(--sp-primary); border-color: var(--sp-primary); color: #fff; }
+body.sp-dark .spr-tool-btn:hover:not([aria-pressed="true"]) { background: #1a2540; }
+
+/* Chips & status pills */
+body.sp-dark .spr-chip { background: #1a2540; border-color: #263352; color: var(--sp-text-3); }
+body.sp-dark .spr-status-pass { background: var(--sp-primary-light); border-color: var(--sp-primary-mid); color: #f08da0; }
+body.sp-dark .spr-status-fail { background: var(--sp-danger-bg); color: var(--sp-danger); }
+body.sp-dark .spr-status-pend { background: var(--sp-warning-bg); color: var(--sp-warning); }
+body.sp-dark .spr-chip-mfa { background: var(--sp-primary-light); border-color: var(--sp-primary-mid); color: #f08da0; }
+
+/* Card actions / buttons */
+body.sp-dark .spr-btn { background: #1a2540; border-color: var(--sp-primary-mid); color: #f08da0; }
+body.sp-dark .spr-btn:hover { background: var(--sp-primary-light); border-color: #f08da0; }
+body.sp-dark .spr-improve-open,
+body.sp-dark .spr-improve-paid,
+body.sp-dark .spr-improve-registered { color: #f08da0; }
+body.sp-dark .spr-improve-open:hover,
+body.sp-dark .spr-improve-paid:hover,
+body.sp-dark .spr-improve-registered:hover,
+body.sp-dark .spr-improve-retry:hover { background: var(--sp-primary-light); }
+body.sp-dark .spr-btn.spr-improve-open,
+body.sp-dark .spr-btn.spr-improve-paid,
+body.sp-dark .spr-btn.spr-improve-registered { border-color: var(--sp-primary-mid); }
+body.sp-dark .spr-btn.spr-improve-retry { border-color: rgba(242,179,106,0.35); }
+body.sp-dark .spr-btn.spr-improve-full,
+body.sp-dark .spr-btn.spr-improve-full:hover { background: #1a2540; border-color: var(--sp-border); color: var(--sp-text-4); }
+body.sp-dark .spr-sup-imp { background: var(--sp-primary-light); color: #f08da0; border-color: var(--sp-primary-dark); }
+
+/* List view */
+body.sp-dark .spr-t tbody tr:hover td { background: rgba(255,255,255,0.03); }
+
+/* Marks dialog */
+body.sp-dark .spr-modal-overlay { background: rgba(0,0,0,0.6); }
+body.sp-dark .spr-modal { box-shadow: 0 24px 64px rgba(0,0,0,0.55); border: 1px solid var(--sp-border); }
+body.sp-dark .spr-modal-head { border-top-color: var(--sp-primary); }
+body.sp-dark .spr-modal-close { background: #1a2540; border-color: var(--sp-border); color: var(--sp-text-2); }
+body.sp-dark .spr-mk td { color: var(--sp-text-1); }
+body.sp-dark .spr-mk .grp,
+body.sp-dark .spr-mk .grp-grade, body.sp-dark .spr-mk .grp-status, body.sp-dark .spr-mk .grp-reexam,
+body.sp-dark .spr-mk .grp-improve, body.sp-dark .spr-mk .grp-final { background: #212e4f; color: var(--sp-text-1); }
+body.sp-dark .spr-mk-grade.pass { border-color: var(--sp-primary-mid); color: #f08da0; }
+body.sp-dark .spr-mk-grade.fail { background: var(--sp-danger-bg); color: var(--sp-danger); }
+body.sp-dark .spr-mk-grade.pend { background: #1a2540; color: var(--sp-text-3); }
+body.sp-dark .spr-mk-grade.reexam { background: var(--sp-primary-light); color: #f08da0; }
+body.sp-dark .spr-mk-grade.improve { color: #f08da0; border-color: var(--sp-primary-dark); }
+
+/* Improvement exam dialog */
+body.sp-dark #sp-improv-overlay { background: rgba(0,0,0,0.65); }
+body.sp-dark .sp-improv-dialog { background: var(--sp-card); border: 1px solid var(--sp-border); border-top: 4px solid var(--sp-primary); box-shadow: 0 36px 90px rgba(0,0,0,0.6); }
+body.sp-dark .sp-improv-hdr { background: var(--sp-card); border-bottom-color: var(--sp-border); }
+body.sp-dark .sp-improv-hdr-icon { background: var(--sp-primary-light); border-color: var(--sp-primary-mid); }
+body.sp-dark .sp-improv-hdr-icon span { color: #f08da0 !important; }
+body.sp-dark .sp-improv-close { background: #1a2540; border-color: var(--sp-border); color: var(--sp-text-2); }
+body.sp-dark .sp-improv-close:hover { border-color: #f08da0; color: #f08da0; }
+body.sp-dark .sp-improv-info-card,
+body.sp-dark .sp-improv-note,
+body.sp-dark .sp-improv-msg-ok,
+body.sp-dark .sp-improv-msg-err,
+body.sp-dark .sp-improv-msg-info,
+body.sp-dark .sp-improv-status-paid,
+body.sp-dark .sp-improv-status-reg,
+body.sp-dark .sp-improv-status-retry { background: #1a2540; border-color: #263352; color: var(--sp-text-1); }
+body.sp-dark .sp-improv-msg-err { color: var(--sp-danger); }
+body.sp-dark .sp-improv-info-label { color: var(--sp-text-3); }
+body.sp-dark .sp-improv-fee-val,
+body.sp-dark .sp-improv-fee-free,
+body.sp-dark .sp-improv-deadline-val,
+body.sp-dark .sp-improv-status-paid .ix-title,
+body.sp-dark .sp-improv-status-reg .ix-title,
+body.sp-dark .sp-improv-status-retry .ix-title { color: var(--sp-text-1); }
+body.sp-dark .sp-improv-status-paid .ix-sub,
+body.sp-dark .sp-improv-status-reg .ix-sub,
+body.sp-dark .sp-improv-status-retry .ix-sub { color: var(--sp-text-2); }
+body.sp-dark .ix-icon-paid,
+body.sp-dark .ix-icon-reg,
+body.sp-dark .ix-icon-retry { background: var(--sp-card); border: 1px solid #263352; }
+body.sp-dark .ix-icon-paid .sp-ms,
+body.sp-dark .ix-icon-reg .sp-ms,
+body.sp-dark .ix-icon-retry .sp-ms { color: #f08da0; }
+body.sp-dark .sp-improv-cancel-btn { background: #1a2540; border-color: var(--sp-border); color: var(--sp-text-1); }
+body.sp-dark .sp-improv-cancel-btn:hover { background: #263352; border-color: #263352; color: var(--sp-text-1); }
+body.sp-dark .sp-improv-reg-btn,
+body.sp-dark .sp-improv-receipt-link { background: var(--sp-primary); box-shadow: 0 4px 16px rgba(0,0,0,0.35); }
 </style>
 {% endblock %}
 
@@ -432,7 +542,7 @@
 {% macro grade_sup(c) -%}
 {%- if c.mfa == "Yes" -%}<sup class="spr-sup" title="MFA">MFA</sup>
 {%- elif c.arrear_marker -%}<sup class="spr-sup spr-sup-arrear" title="Arrear">{{ c.arrear_marker }}</sup>{%- endif -%}
-{%- if c.improvement_applied -%}<sup class="spr-sup spr-sup-imp" title="Improvement applied">I</sup>{%- endif -%}
+{%- if c.improved -%}<sup class="spr-sup spr-sup-imp" title="Result improved by a re-exam or improvement exam">I</sup>{%- endif -%}
 {%- endmacro %}
 
 {% macro improve_state(c) -%}
@@ -473,14 +583,14 @@
 {# ═══════════════ Header ═══════════════ #}
 <div class="spr-head fade-in">
   <div class="sp-page-header">
-    <h1 class="sp-page-title" style="font-size: 18px !important; font-weight: 700 !important;">Results</h1>
+    <h1 class="sp-page-title" style="font-size: 18px !important; font-weight: 700 !important;">Grades</h1>
   </div>
 </div>
 
 {% if portal_error %}
 <div class="sp-alert sp-alert-warning fade-in">
   <span class="sp-ms">warning</span>
-  <div>Could not load your results. Please refresh the page.</div>
+  <div>Could not load your grades. Please refresh the page.</div>
 </div>
 {% endif %}
 
@@ -505,19 +615,19 @@
 <div class="sp-card fade-in" style="padding:0;">
   <div class="sp-empty">
     <span class="sp-ms">assignment</span>
-    <p class="sp-empty-title">No Results Published Yet</p>
-    <p class="sp-empty-sub">Results will appear here once your faculty publishes them.</p>
+    <p class="sp-empty-title">No Grades Published Yet</p>
+    <p class="sp-empty-sub">Grades will appear here once your faculty publishes them.</p>
   </div>
 </div>
 
 {% else %}
 
 {# ═══════════════ Summary tiles ═══════════════ #}
-<section class="sp-stat-grid spr-metrics fade-in" aria-label="Results summary">
+<section class="sp-stat-grid spr-metrics fade-in" aria-label="Grades summary">
   <div class="sp-stat-card">
     <div class="sp-stat-icon" style="background:#fff0f2;color:var(--sp-primary);">school</div>
     <div>
-      <div class="sp-stat-label">Results Published</div>
+      <div class="sp-stat-label">Grades Published</div>
       <div class="sp-stat-value">{{ published_results | length }}</div>
     </div>
   </div>
@@ -544,14 +654,14 @@
 
 {# ═══════════════ Exam summaries ═══════════════ #}
 <div class="spr-section-title fade-in">
-  <h2><span class="sp-ms" aria-hidden="true">fact_check</span>Examinations</h2>
+  <h2><span class="sp-ms" aria-hidden="true">fact_check</span>Assessments</h2>
   <span class="spr-section-sub">Select an exam to show only its courses</span>
 </div>
-<div class="spr-exams fade-in" role="group" aria-label="Filter by examination">
+<div class="spr-exams fade-in" role="group" aria-label="Filter by assessment">
   {% for res in published_results %}
   <button type="button" class="spr-exam" data-exam="{{ res.exam_plan | e }}" aria-pressed="false">
     <div class="spr-exam-head">
-      <div class="spr-eyebrow">{{ res.term or 'Examination' }}</div>
+      <div class="spr-eyebrow">{{ res.term or 'Assessment' }}</div>
       <div class="spr-exam-name">{{ res.exam_name }}</div>
       <div class="spr-chips">
         <span class="spr-chip"><span class="sp-ms" aria-hidden="true">event</span>Published {{ frappe.utils.formatdate(res.published_on, "dd MMM yyyy") if res.published_on else '—' }}</span>
@@ -598,7 +708,7 @@
 
 {# ═══════════════ Toolbar ═══════════════ #}
 <div class="spr-section-title fade-in" style="margin-top:6px;">
-  <h2><span class="sp-ms" aria-hidden="true">menu_book</span>Course Results</h2>
+  <h2><span class="sp-ms" aria-hidden="true">menu_book</span>Course Grades</h2>
 </div>
 <div class="spr-toolbar fade-in" role="search">
   <div class="spr-search">
@@ -606,12 +716,12 @@
     <label for="spr-q" class="spr-sr-only">Search courses</label>
     <input id="spr-q" class="spr-input" type="search" placeholder="Search by course name or code…" autocomplete="off">
   </div>
-  <label for="spr-exam" class="spr-sr-only">Examination</label>
+  <label for="spr-exam" class="spr-sr-only">Assessment</label>
   <select id="spr-exam" class="spr-select">
-    <option value="">All Exams</option>
+    <option value="">All Assessments</option>
     {% for res in published_results %}<option value="{{ res.exam_plan | e }}">{{ res.exam_name }}{% if res.term %} · {{ res.term }}{% endif %}</option>{% endfor %}
   </select>
-  <label for="spr-status" class="spr-sr-only">Result status</label>
+  <label for="spr-status" class="spr-sr-only">Grade status</label>
   <select id="spr-status" class="spr-select">
     <option value="">All Status</option>
     <option value="Pass">Passed</option>
@@ -646,7 +756,6 @@
     <div class="spr-card-metrics">
       <div class="spr-cm"><div class="spr-cm-val {{ grade_cls(c) }}">{{ grade_txt(c) }}{% if grade_txt(c) != '—' %}{{ grade_sup(c) }}{% endif %}</div><div class="spr-cm-lbl">Grade</div></div>
       <div class="spr-cm"><div class="spr-cm-val">{{ total_txt(c) }}</div><div class="spr-cm-lbl">Total Marks</div></div>
-      <div class="spr-cm"><div class="spr-cm-val {{ 'spr-g-fail' if c.attendance_status in ('Absent', 'Detained') else '' }}" style="font-size:13px;" title="{{ (c.attendance_status or '—') | e }}">{{ c.attendance_status or '—' }}</div><div class="spr-cm-lbl">Attendance</div></div>
     </div>
     <div class="spr-card-strip">
       <span><span class="sp-ms" aria-hidden="true">how_to_reg</span>{{ c.enrollment_status or 'Enrollment —' }}</span>
@@ -671,12 +780,11 @@
 {# ═══════════════ List view ═══════════════ #}
 <div class="spr-list is-hidden" id="spr-list">
   <table class="spr-t">
-    <caption class="spr-sr-only">Course results</caption>
-    <colgroup><col><col style="width:170px;"><col style="width:84px;"><col style="width:84px;"><col style="width:120px;"><col style="width:104px;"><col style="width:170px;"></colgroup>
+    <caption class="spr-sr-only">Course grades</caption>
+    <colgroup><col><col style="width:170px;"><col style="width:84px;"><col style="width:84px;"><col style="width:104px;"><col style="width:170px;"></colgroup>
     <thead><tr>
       <th scope="col" class="c-text">Course</th><th scope="col" class="c-text">Exam</th>
       <th scope="col" class="c-center">Grade</th><th scope="col" class="c-num">Total</th>
-      <th scope="col" class="c-text">Attendance</th>
       <th scope="col" class="c-center">Status</th><th scope="col" class="c-action">Action</th>
     </tr></thead>
     <tbody>
@@ -689,7 +797,6 @@
         <td class="c-text" data-label="Exam"><div><div>{{ res.exam_name }}</div>{% if res.term and res.term != res.exam_name %}<div class="spr-cell-sub">{{ res.term }}</div>{% endif %}</div></td>
         <td class="c-center" data-label="Grade"><span class="spr-grade-big {{ grade_cls(c) }}">{{ grade_txt(c) }}{% if grade_txt(c) != '—' %}{{ grade_sup(c) }}{% endif %}</span></td>
         <td class="c-num" data-label="Total">{{ total_txt(c) }}</td>
-        <td class="c-text" data-label="Attendance"><span class="{{ 'spr-g-fail' if c.attendance_status in ('Absent', 'Detained') else '' }}">{{ c.attendance_status or '—' }}</span></td>
         <td class="c-center" data-label="Status">{{ status_pill(st) }}</td>
         <td class="c-action" data-label="Action">
           <div class="spr-row-actions">
@@ -732,17 +839,17 @@
         <tr>
           {% for grp in c.regular_groups %}<th scope="colgroup" colspan="{{ grp.components | length }}" class="grp">{{ grp.type_name }}</th>{% endfor %}
           <th scope="colgroup" colspan="{{ 2 if c.show_total else 1 }}" class="grp grp-grade">Grade</th>
-          <th scope="colgroup" colspan="3" class="grp grp-status">Status</th>
+          <th scope="colgroup" colspan="2" class="grp grp-status">Status</th>
           {% for grp in c.reexam_groups %}<th scope="colgroup" colspan="{{ (grp.components | length) + (1 if loop.last else 0) }}" class="grp grp-reexam">{{ grp.type_name }}</th>{% endfor %}
           {% if show_improve %}<th scope="colgroup" colspan="2" class="grp grp-improve">Improvement Exam</th>{% endif %}
-          {% if show_updated %}<th scope="colgroup" colspan="2" class="grp grp-final">Updated Final Result</th>{% endif %}
+          {% if show_updated %}<th scope="colgroup" colspan="2" class="grp grp-final">Updated Final Grade</th>{% endif %}
         </tr>
         <tr>
           {% for grp in c.regular_groups %}{% for comp in grp.components %}
           <th scope="col">{{ comp.label }}{% if comp.max_marks %}<span class="max">Max {{ comp.max_marks }}</span>{% endif %}</th>
           {% endfor %}{% endfor %}
           {% if c.show_total %}<th scope="col">Total Marks</th>{% endif %}
-          <th scope="col">Grade</th><th scope="col">Enrollment</th><th scope="col">Attendance</th><th scope="col">MFA</th>
+          <th scope="col">Grade</th><th scope="col">Enrollment</th><th scope="col">MFA</th>
           {% for grp in c.reexam_groups %}{% for comp in grp.components %}
           <th scope="col">{{ comp.label }}{% if comp.max_marks %}<span class="max">Max {{ comp.max_marks }}</span>{% endif %}</th>
           {% endfor %}{% endfor %}
@@ -759,7 +866,6 @@
           {% if c.show_total %}<td style="font-weight:700;">{{ total_txt(c) }}</td>{% endif %}
           <td><span class="spr-mk-grade {{ 'pend' if (absent or not c.display_grade) else ('fail' if c.is_fail else 'pass') }}">{{ grade_txt(c) }}{% if grade_txt(c) != '—' %}{{ grade_sup(c) }}{% endif %}</span></td>
           <td class="{{ 'spr-g-pass' if c.enrollment_status == 'Enrolled' else ('spr-g-fail' if c.enrollment_status in ('Detained', 'Dropped') else '') }}" style="font-weight:600;">{{ c.enrollment_status or '—' }}</td>
-          <td class="{{ 'spr-g-fail' if c.attendance_status in ('Absent', 'Detained') else ('spr-g-pass' if c.attendance_status == 'Present' else '') }}" style="font-weight:600;{{ 'color:var(--spr-amber);' if c.attendance_status == 'Low Attendance' }}">{{ c.attendance_status or '—' }}</td>
           <td>{{ c.mfa or '—' }}</td>
           {% for grp in c.reexam_groups %}{% for comp in grp.components %}
           <td>{{ 'Absent' if absent else comp.marks }}</td>
@@ -944,7 +1050,8 @@
   /* ── Trend chart ─────────────────────────────────────────────── */
   var canvas = document.getElementById('gpaChart');
   if (canvas && typeof Chart !== 'undefined') {
-    var primary = (getComputedStyle(document.documentElement).getPropertyValue('--sp-primary') || '').trim() || '#920c24';
+    var isDark = document.body.classList.contains('sp-dark');
+    var primary = (getComputedStyle(document.body).getPropertyValue('--sp-primary') || '').trim() || '#920c24';
     var fill = /^#[0-9a-f]{6}$/i.test(primary)
       ? 'rgba(' + parseInt(primary.slice(1, 3), 16) + ',' + parseInt(primary.slice(3, 5), 16) + ',' + parseInt(primary.slice(5, 7), 16) + ',0.08)'
       : 'rgba(146,12,36,0.08)';
@@ -966,8 +1073,8 @@
         responsive: true, maintainAspectRatio: false,
         plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
         scales: {
-          y: { beginAtZero: false, grace: '10%', ticks: { font: { size: 11 } }, grid: { color: '#f1f2f4' } },
-          x: { ticks: { font: { size: 11 } }, grid: { display: false } },
+          y: { beginAtZero: false, grace: '10%', ticks: isDark ? { font: { size: 11 }, color: '#94a3b8' } : { font: { size: 11 } }, grid: { color: isDark ? 'rgba(255,255,255,0.06)' : '#f1f2f4' } },
+          x: { ticks: isDark ? { font: { size: 11 }, color: '#94a3b8' } : { font: { size: 11 } }, grid: { display: false } },
         },
       },
     });

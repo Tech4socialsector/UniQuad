@@ -39,7 +39,7 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Office Hours Group",
-   "options": "Office Hours Group",
+   "options": "Student Group",
    "reqd": 1
   },
   {
@@ -124,7 +124,7 @@
  "hide_toolbar": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-07-14 15:55:00.000000",
+ "modified": "2026-10-09 10:30:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Student Attendance Tool",

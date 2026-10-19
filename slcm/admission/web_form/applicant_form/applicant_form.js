@@ -152,23 +152,78 @@ function _injectCSS() {
 		'.slcm-status-draft    {background:#fef3c7;color:#92400e;border:1px solid #fcd34d;}',
 		'.slcm-status-submitted{background:#dcfce7;color:#14532d;border:1px solid #86efac;}',
 		'.slcm-status-other    {background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;}',
+		/* Link / Autocomplete dropdowns — look like a native select list (input width, rounded, shadow) */
+		'.web-form .awesomplete > [role="listbox"]{background:#fff;border:1px solid #cbd5e1;border-radius:8px;' +
+			'box-shadow:0 8px 24px rgba(15,23,42,.14);padding:4px;margin-top:0;}',
+		'.web-form .awesomplete > [role="listbox"] > li{padding:7px 10px;border-radius:6px;font-size:13.5px;' +
+			'line-height:1.35;color:#1e293b;cursor:pointer;white-space:normal;}',
+		'.web-form .awesomplete > [role="listbox"] > li:hover,' +
+			'.web-form .awesomplete > [role="listbox"] > li[aria-selected="true"]{background:#e5e7eb;color:#0f172a;}',
 		/* Fee-payment overlay modal */
-		'#slcm-fee-modal{position:fixed;inset:0;z-index:99998;display:none;align-items:center;justify-content:center;}',
+		'#slcm-fee-modal{position:fixed;inset:0;z-index:99998;display:none;align-items:center;justify-content:center;padding:16px;}',
 		'#slcm-fee-modal.open{display:flex;}',
-		'#slcm-fee-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.45);}',
-		'#slcm-fee-box{position:relative;background:#fff;border-radius:14px;' +
-			'padding:32px 28px;width:100%;max-width:420px;box-shadow:0 16px 48px rgba(0,0,0,.2);}',
-		'#slcm-fee-box h3{margin:0 0 6px;font-size:1.15rem;color:#1e293b;}',
-		'#slcm-fee-amount{font-size:2rem;font-weight:400;color:var(--slcm-primary,#1a73e8);margin:10px 0 6px;}',
-		'#slcm-fee-box p{font-size:.85rem;color:#64748b;margin:0 0 22px;}',
-		'.slcm-fee-actions{display:flex;gap:10px;flex-wrap:wrap;}',
-		'#slcm-fee-pay-btn{flex:1;padding:10px 0;border-radius:8px;' +
-			'background:var(--slcm-primary,#1a73e8);color:#fff;border:none;font-weight:300;cursor:pointer;font-size:14px;' +
-			'display:inline-flex;align-items:center;justify-content:center;gap:8px;}',
+		'#slcm-fee-backdrop{position:absolute;inset:0;background:rgba(15,23,42,.55);backdrop-filter:blur(4px);}',
+		'#slcm-fee-box{position:relative;background:#fff;border-radius:14px;width:100%;max-width:500px;' +
+			'max-height:calc(100vh - 32px);overflow-y:auto;padding:28px 26px 26px;text-align:center;font-family:inherit;' +
+			'box-shadow:0 24px 64px rgba(15,23,42,.28);animation:slcm-slide-up .3s ease-out;}',
+		'#slcm-fee-box .slcm-fee-ms{font-family:"Material Symbols Outlined";font-weight:normal;font-style:normal;' +
+			'line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;' +
+			'-webkit-font-smoothing:antialiased;}',
+		'#slcm-fee-close{position:absolute;top:14px;right:14px;width:36px;height:36px;border-radius:9px;border:none;' +
+			'background:#f1f5f9;color:#0f172a;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;}',
+		'#slcm-fee-close:hover{background:#e2e8f0;}',
+		'#slcm-fee-close .slcm-fee-ms{font-size:22px;}',
+		/* Rupee hero icon with decorative bubbles */
+		'.slcm-fee-hero{position:relative;width:120px;height:84px;margin:4px auto 12px;}',
+		'.slcm-fee-hero-circle{position:absolute;left:50%;top:0;transform:translateX(-50%);width:84px;height:84px;border-radius:50%;' +
+			'background:#fbe9ec;background:color-mix(in srgb,var(--slcm-primary,#920C24) 10%,#fff);' +
+			'color:var(--slcm-primary,#920C24);display:flex;align-items:center;justify-content:center;}',
+		'.slcm-fee-hero-circle .slcm-fee-ms{font-size:46px;font-weight:600;}',
+		'.slcm-fee-bubble{position:absolute;border-radius:50%;}',
+		'.slcm-fee-bubble.b1{width:22px;height:22px;left:0;bottom:4px;background:#fbe9ec;background:color-mix(in srgb,var(--slcm-primary,#920C24) 12%,#fff);}',
+		'.slcm-fee-bubble.b2{width:10px;height:10px;left:-4px;bottom:22px;border:2px solid #f5c9d1;border-color:color-mix(in srgb,var(--slcm-primary,#920C24) 22%,#fff);background:#fff;}',
+		'.slcm-fee-bubble.b3{width:14px;height:14px;right:-2px;top:22px;border:2.5px solid #f5c9d1;border-color:color-mix(in srgb,var(--slcm-primary,#920C24) 22%,#fff);background:#fff;}',
+		'.slcm-fee-title{margin:0 0 16px;font-size:22px;font-weight:700;color:#1e293b;line-height:1.25;}',
+		/* Amount panel */
+		'.slcm-fee-amount-box{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;' +
+			'padding:16px 14px;margin:0 12px 12px;border-radius:10px;' +
+			'background:#fdf2f4;background:color-mix(in srgb,var(--slcm-primary,#920C24) 6%,#fff);}',
+		'#slcm-fee-amount{font-size:30px;font-weight:700;color:var(--slcm-primary,#920C24);line-height:1.1;margin:0;}',
+		'.slcm-fee-secured{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:6px;' +
+			'background:#dcfce7;color:#166534;font-size:13px;font-weight:500;}',
+		'.slcm-fee-secured .slcm-fee-ms{font-size:17px;color:#15803d;font-variation-settings:"FILL" 1;}',
+		/* Info + note callouts */
+		'.slcm-fee-callout{display:flex;align-items:stretch;text-align:left;border-radius:10px;margin:0 0 12px;overflow:hidden;' +
+			'font-size:13.5px;line-height:1.55;}',
+		'.slcm-fee-callout-icon{flex:0 0 auto;display:flex;align-items:center;justify-content:center;padding:0 14px;}',
+		'.slcm-fee-callout-text{flex:1;padding:12px 14px 12px 4px;}',
+		'.slcm-fee-info{background:#fdf2f4;background:color-mix(in srgb,var(--slcm-primary,#920C24) 5%,#fff);color:#64748b;}',
+		'.slcm-fee-info .slcm-fee-callout-icon{background:#fbe9ec;background:color-mix(in srgb,var(--slcm-primary,#920C24) 8%,#fff);' +
+			'color:var(--slcm-primary,#920C24);padding:0 16px;}',
+		'.slcm-fee-info .slcm-fee-callout-text{padding-left:14px;}',
+		'.slcm-fee-info .slcm-fee-ms{font-size:24px;}',
+		'.slcm-fee-note{background:#fff8eb;color:#5b3a12;}',
+		'.slcm-fee-note .slcm-fee-callout-icon{color:#ea8a0c;align-items:flex-start;padding-top:12px;}',
+		'.slcm-fee-note .slcm-fee-ms{font-size:24px;}',
+		'.slcm-fee-note strong{color:#3f2a0e;font-weight:700;}',
+		/* Actions */
+		'.slcm-fee-actions{display:flex;flex-direction:column;gap:12px;margin-top:16px;}',
+		'#slcm-fee-pay-btn{position:relative;width:100%;padding:13px 44px;border-radius:8px;border:none;cursor:pointer;' +
+			'background:var(--slcm-primary,#920C24);color:#fff;font-family:inherit;font-size:16px;font-weight:600;' +
+			'display:flex;align-items:center;justify-content:center;gap:10px;transition:filter .15s;}',
+		'#slcm-fee-pay-btn .slcm-fee-ms{font-size:22px;}',
+		'#slcm-fee-pay-btn .slcm-fee-pay-arrow{position:absolute;right:16px;top:50%;transform:translateY(-50%);}',
 		'#slcm-fee-pay-btn:hover:not(:disabled){filter:brightness(1.08);}',
 		'#slcm-fee-pay-btn:disabled{opacity:.6;cursor:not-allowed;}',
-		'#slcm-fee-later-btn{flex:1;padding:10px 0;border-radius:8px;' +
-			'background:#f1f5f9;color:#334155;border:1.5px solid #cbd5e1;font-weight:300;cursor:pointer;font-size:14px;}',
+		'#slcm-fee-later-btn{width:100%;padding:12px 16px;border-radius:8px;cursor:pointer;' +
+			'background:#fff;color:#1e293b;border:1.5px solid #cbd5e1;font-family:inherit;font-size:16px;font-weight:600;' +
+			'display:flex;align-items:center;justify-content:center;gap:10px;transition:background .15s,border-color .15s;}',
+		'#slcm-fee-later-btn:hover{background:#f8fafc;border-color:#94a3b8;}',
+		'#slcm-fee-later-btn .slcm-fee-ms{font-size:22px;}',
+		// NOTE: keep the space after the opening brace below. This file is rendered through Jinja,
+		// and an opening brace directly followed by a hash starts a Jinja comment.
+		'@media (max-width:480px){ #slcm-fee-box{padding:24px 18px 20px;}.slcm-fee-amount-box{margin:0 0 12px;}' +
+			'#slcm-fee-amount{font-size:26px;}.slcm-fee-title{font-size:20px;}}',
 		/* Top-bar: Back (left) + Receipt icon-btn (right) */
 		'#slcm-form-topbar{display:flex;align-items:center;justify-content:space-between;' +
 			'padding:8px 4px 4px;margin-bottom:4px;}',
@@ -717,6 +772,8 @@ function _buildShell(ws, cfg, user, uinfo) {
 		'</h1>' +
 		'<div class="adm-nav-links">' +
 			(portalActive ? '<a href="/admission" style="color:rgba(255,255,255,.85);text-decoration:none;font-size:14px;font-weight:500;white-space:nowrap;" onmouseover="this.style.color=\'#fff\'" onmouseout="this.style.color=\'rgba(255,255,255,.85)\'">Admission</a>' : '') +
+			// Same route as the admission portal navbar (admission_base.html)
+			'<a href="/merit-and-scholarship/helpdesk" style="color:rgba(255,255,255,.85);text-decoration:none;font-size:14px;font-weight:500;white-space:nowrap;" onmouseover="this.style.color=\'#fff\'" onmouseout="this.style.color=\'rgba(255,255,255,.85)\'">Helpdesk</a>' +
 			(isGuest
 				? '<a href="/login" style="display:inline-flex;align-items:center;background:' + primary + ';color:#fff;padding:8px 20px;border-radius:8px;font-weight:400;font-size:14px;text-decoration:none;">Login / Apply</a>'
 				: '<div style="position:relative;display:flex;align-items:center;gap:10px;">' +
@@ -993,6 +1050,12 @@ function collectDraftData() {
 	['ug_degree_details', 'pg_degree_details', 'categories'].forEach(function (ct) {
 		if ((!data[ct] || !data[ct].length) && doc[ct] && doc[ct].length) {
 			data[ct] = doc[ct];
+		}
+	});
+	// Drop the untouched default row (and any other completely blank degree row)
+	['ug_degree_details', 'pg_degree_details'].forEach(function (ct) {
+		if (Array.isArray(data[ct])) {
+			data[ct] = data[ct].filter(function (row) { return !_slcmIsBlankDegreeRow(row); });
 		}
 	});
 	return data;
@@ -1293,6 +1356,7 @@ function bindFeeListener() {
 }
 
 var _feeReceiptBtnInFlight = false;
+var _feeReceiptLastAsk = { name: '', at: 0 };
 
 /** SVG icons for the top-bar buttons */
 var _SVG_BACK = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>';
@@ -1494,6 +1558,11 @@ function syncApplicationFeeReceiptButton() {
 	// Fee status unknown on client — fall back to server (receipt row exists)
 	if (document.getElementById('slcm-fee-receipt-btn')) return;
 	if (_feeReceiptBtnInFlight) return;
+	// This runs every 1.2 s; drafts never have a fee status, so without a throttle every open
+	// form would hit the server ~50×/min forever. Ask at most once per 30 s per application.
+	var _now = Date.now();
+	if (_feeReceiptLastAsk.name === applicant && _now - _feeReceiptLastAsk.at < 30000) return;
+	_feeReceiptLastAsk = { name: applicant, at: _now };
 
 	_feeReceiptBtnInFlight = true;
 	frappe.call({
@@ -2403,6 +2472,11 @@ function _feePayBtnSetLoading(payBtn, loading, label) {
 			'style="animation:slcm-spin .8s linear infinite;flex-shrink:0" aria-hidden="true">' +
 			'<path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>' +
 			'<span>' + (label || 'Opening\u2026') + '</span>';
+	} else if (payBtn.id === 'slcm-fee-pay-btn') {
+		payBtn.innerHTML =
+			'<span class="slcm-fee-ms" aria-hidden="true">credit_card</span>' +
+			'<span>Pay Now</span>' +
+			'<span class="slcm-fee-ms slcm-fee-pay-arrow" aria-hidden="true">arrow_forward</span>';
 	} else {
 		payBtn.textContent = payBtn.id === 'slcm-pay-btn' ? 'Pay Application Fee' : 'Pay Now';
 	}
@@ -2415,47 +2489,57 @@ function _showFeeModal(feeDetails, onPaid) {
 		modal = document.createElement('div');
 		modal.id = 'slcm-fee-modal';
 		modal.innerHTML =
-			'<div id="slcm-fee-backdrop" style="position:absolute;inset:0;background:rgba(15,23,42,0.6);backdrop-filter:blur(3px);"></div>' +
-			'<div id="slcm-fee-box" style="position:relative;background:#fff;border-radius:12px;width:100%;max-width:380px;text-align:center;box-shadow:0 10px 15px -3px rgba(0,0,0,0.1);border:1px solid #e2e8f0;border-top:4px solid var(--slcm-primary,#1a3c6e);overflow:hidden;padding:0;animation:slcm-slide-up 0.3s ease-out;">' +
-				'<div style="padding:32px 24px 24px;">' +
-					'<div style="margin-bottom:16px;">' +
-						'<div style="display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:50%;background:#e0f2fe;color:var(--slcm-primary,#1a3c6e);">' +
-							'<span style="font-family:\'Material Symbols Outlined\';font-size:32px;">currency_rupee</span>' +
-						'</div>' +
-					'</div>' +
-					'<h3 style="margin:0 0 16px;font-size:18px;font-weight:600;color:#0f172a;">Confirm Your Payment</h3>' +
-					'<div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:16px;">' +
-						'<div id="slcm-fee-amount" style="font-size:28px;font-weight:700;color:#0f172a;"></div>' +
-						'<span style="background:#dcfce7;color:#166534;font-size:12px;font-weight:500;padding:4px 8px;border-radius:4px;">Secured</span>' +
-					'</div>' +
-					'<p style="margin:0 0 24px;font-size:14px;color:#64748b;">You are about to complete your application for <strong id="slcm-applying-for-prog"></strong>. Please pay the application fee</p>' +
-					'<div class="slcm-fee-actions" style="display:flex;flex-direction:column;gap:12px;">' +
-						'<button id="slcm-fee-pay-btn" style="background:var(--slcm-primary,#1a3c6e);color:#fff;border:none;padding:12px;border-radius:8px;font-size:15px;font-weight:500;cursor:pointer;width:100%;transition:all 0.2s;">Pay Now</button>' +
-						'<button id="slcm-fee-later-btn" style="background:transparent;color:#64748b;border:none;padding:8px;font-size:14px;cursor:pointer;width:100%;">Save &amp; Pay Later</button>' +
-					'</div>' +
+			'<div id="slcm-fee-backdrop"></div>' +
+			'<div id="slcm-fee-box" role="dialog" aria-modal="true" aria-labelledby="slcm-fee-title">' +
+				'<button type="button" id="slcm-fee-close" aria-label="Close"><span class="slcm-fee-ms">close</span></button>' +
+				'<div class="slcm-fee-hero" aria-hidden="true">' +
+					'<span class="slcm-fee-bubble b1"></span>' +
+					'<span class="slcm-fee-bubble b2"></span>' +
+					'<span class="slcm-fee-bubble b3"></span>' +
+					'<div class="slcm-fee-hero-circle"><span class="slcm-fee-ms">currency_rupee</span></div>' +
+				'</div>' +
+				'<div class="slcm-fee-title" id="slcm-fee-title">Confirm Your Payment</div>' +
+				'<div class="slcm-fee-amount-box">' +
+					'<div id="slcm-fee-amount"></div>' +
+					'<span class="slcm-fee-secured"><span class="slcm-fee-ms">verified_user</span>Secured</span>' +
+				'</div>' +
+				'<div class="slcm-fee-callout slcm-fee-info">' +
+					'<div class="slcm-fee-callout-icon"><span class="slcm-fee-ms">info</span></div>' +
+					'<div class="slcm-fee-callout-text">You are about to complete your application. Please pay the application fee.</div>' +
+				'</div>' +
+				'<div class="slcm-fee-callout slcm-fee-note">' +
+					'<div class="slcm-fee-callout-icon"><span class="slcm-fee-ms">warning</span></div>' +
+					'<div class="slcm-fee-callout-text"><strong>Note:</strong> Once the application form is submitted and the application fee is paid, no further modifications will be permitted during subsequent stages of the admission process.</div>' +
+				'</div>' +
+				'<div class="slcm-fee-actions">' +
+					'<button type="button" id="slcm-fee-pay-btn"></button>' +
+					'<button type="button" id="slcm-fee-later-btn"><span class="slcm-fee-ms">schedule</span><span>Submit &amp; Pay Later</span></button>' +
 				'</div>' +
 			'</div>';
 		document.body.appendChild(modal);
 	}
 
-	var amountFormatted = '\u20B9 ' + (feeDetails.fee_amount || 0).toFixed(2);
+	var feeNum = Number(feeDetails.fee_amount || 0);
+	var amountFormatted = '\u20B9 ' + feeNum.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 	document.getElementById('slcm-fee-amount').textContent = amountFormatted;
-	var progLabel = '';
-	var progEl = document.querySelector('[data-fieldname="program"] input');
-	if (progEl) progLabel = progEl.value;
-	if (!progLabel && frappe.web_form) progLabel = frappe.web_form.get_value('program') || '';
-	var progStrEl = document.getElementById('slcm-applying-for-prog');
-	if (progStrEl) progStrEl.textContent = progLabel;
 	var payBtnEl = document.getElementById('slcm-fee-pay-btn');
 	if (payBtnEl) {
 		payBtnEl.disabled = false;
 		_feePayBtnSetLoading(payBtnEl, false);
 	}
+	// "Submit & Pay Later" only makes sense for a Draft — once the application is
+	// submitted (e.g. opened via "Pay Application Fee"), the only option is to pay.
+	var laterBtnEl = document.getElementById('slcm-fee-later-btn');
+	if (laterBtnEl) {
+		var curStatus = (resolveField('status') || '').trim();
+		laterBtnEl.style.display = (!curStatus || curStatus === 'Draft') ? '' : 'none';
+	}
 	modal.classList.add('open');
 
 	function closeModal() { modal.classList.remove('open'); }
 
-	
+	// X only dismisses the dialog — the application stays as it is (no submit)
+	document.getElementById('slcm-fee-close').onclick = closeModal;
 
 	document.getElementById('slcm-fee-later-btn').onclick = function () {
 		closeModal();
@@ -2634,7 +2718,7 @@ function _doFinalSubmit(applicantName, targetStatus) {
 					// ── Use "After Submission" settings ──────────────────────
 					var wf = frappe.web_form || {};
 					var title = wf.success_title || 'Application Submitted Successfully';
-					var message = wf.success_message || 'Your application has been submitted successfully.';
+					var message = wf.success_message || '';
 					var nextUrl = wf.success_url || '';
 					_showSuccessModal(title, message, nextUrl);
 				} else {
@@ -3450,8 +3534,15 @@ function _slcmApplicantFormatError(fieldname, rawVal, label) {
 		if (n100 < 0) {
 			return lbl + ': ' + __('Cannot be negative');
 		}
-		if (n100 > 100) {
-			return lbl + ': ' + __('Cannot be greater than 100');
+		var max_val = 100;
+		if (fieldname === 'hsc_percentage' && window.frappe && frappe.web_form) {
+			var cgpa_max = parseFloat(frappe.web_form.get_value('if_cgpa_maximum_cgpa_class_xii'));
+			if (!Number.isNaN(cgpa_max) && cgpa_max > 0) {
+				max_val = cgpa_max;
+			}
+		}
+		if (n100 > max_val) {
+			return lbl + ': ' + __('Cannot be greater than ' + max_val);
 		}
 		var rounded100 = Math.round(n100 * 100) / 100;
 		if (Math.abs(n100 - rounded100) > 1e-6) {
@@ -3920,9 +4011,14 @@ function _slcmRenderSelectProgrammeButton(wf, onConfirm) {
  * Runs the full prefill + cycle validation flow after the picker confirms a program.
  */
 function _slcmRunPrefillWithProgram(wf, program) {
+	var params = new URLSearchParams(window.location.search);
 	frappe.call({
 		method: 'slcm.admission.web_form.applicant_form.applicant_form.validate_new_application_access',
-		args: { program: program },
+		args: {
+			program: program,
+			foriegn_national: wf.get_value('foriegn_national') || params.get('foriegn_national') || '',
+			nationality: wf.get_value('nationality') || params.get('nationality') || ''
+		},
 		callback: function (r) {
 			var res = r && r.message;
 			if (res && !res.allowed) {
@@ -4006,10 +4102,14 @@ function applyQueryStringPrefill() {
 		clearInterval(t);
 		if (!isNewApplicantWebForm()) return;
 
-		// ── Validate admission cycle is open before allowing new application ──
+		// ── Validate admission cycle and domestic/international scope before allowing new application ──
 		frappe.call({
 			method: 'slcm.admission.web_form.applicant_form.applicant_form.validate_new_application_access',
-			args: { program: params.get('program') || '' },
+			args: {
+				program: params.get('program') || '',
+				foriegn_national: params.get('foriegn_national') || '',
+				nationality: params.get('nationality') || ''
+			},
 			callback: function (r) {
 				var res = r && r.message;
 				if (res && !res.allowed) {
@@ -4289,6 +4389,26 @@ function setupSlcmFieldErrorClear() {
  * jQuery .offset() (viewport vs document), so lists jump to the top after scroll. Core also uses
  * overflow on .form-grid. Re-anchor the list with position:fixed under the focused input.
  */
+/** Nearest ancestor that becomes the containing block for position:fixed descendants (or null = viewport). */
+function _slcmFixedContainingBlock(el) {
+	var node = el && el.parentElement;
+	while (node && node !== document.body && node !== document.documentElement) {
+		var cs = getComputedStyle(node);
+		if (
+			(cs.transform && cs.transform !== 'none') ||
+			(cs.perspective && cs.perspective !== 'none') ||
+			(cs.filter && cs.filter !== 'none') ||
+			(cs.backdropFilter && cs.backdropFilter !== 'none') ||
+			/transform|perspective|filter/.test(cs.willChange || '') ||
+			/paint|layout|strict|content/.test(cs.contain || '')
+		) {
+			return node;
+		}
+		node = node.parentElement;
+	}
+	return null;
+}
+
 function setupSlcmWebFormAwesompletePositionFix() {
 	var scrollHandler = null;
 
@@ -4319,11 +4439,18 @@ function setupSlcmWebFormAwesompletePositionFix() {
 		if (!rect.width && !rect.height) {
 			return;
 		}
+		// Inside the child-table "Editing Row" panel an ancestor is transformed, and position:fixed
+		// is then relative to that ancestor, not the viewport — subtract its offset.
+		var cb = _slcmFixedContainingBlock(ul);
+		var cbRect = cb ? cb.getBoundingClientRect() : { left: 0, top: 0 };
 		$(ul).css({
 			position: 'fixed',
-			left: Math.round(rect.left) + 'px',
-			top: Math.round(rect.bottom + 2) + 'px',
-			width: Math.max(250, Math.round(rect.width)) + 'px',
+			left: Math.round(rect.left - cbRect.left) + 'px',
+			top: Math.round(rect.bottom + 4 - cbRect.top) + 'px',
+			width: Math.max(180, Math.round(rect.width)) + 'px',
+			// Frappe sets min-width:100% inline; with position:fixed that is 100% of the
+			// viewport, which stretched every dropdown across the whole screen.
+			minWidth: '0',
 			zIndex: 10050,
 			maxHeight: 'min(60vh, 300px)',
 			overflowY: 'auto',
@@ -4344,6 +4471,7 @@ function setupSlcmWebFormAwesompletePositionFix() {
 			left: '',
 			top: '',
 			width: '',
+			minWidth: '100%',
 			zIndex: '',
 			maxHeight: '',
 			overflowY: '',
@@ -4477,36 +4605,360 @@ function setupPreferenceValidation() {
 				var nat = wf.get_value('nationality');
 				var fn = wf.get_value('foriegn_national');
 
-				if (nat && nat !== 'Indian') {
-					if (fn !== 'Yes') {
-						wf.set_value('foriegn_national', 'Yes');
+				if (fn === 'No' && nat !== 'India') {
+					// Domestic candidate: Nationality is always India
+					if (nat) {
+						frappe.msgprint('For Domestic applications, Nationality must be India.');
 					}
-				} else if (nat === 'Indian') {
-					if (fn === 'Yes') {
-						wf.set_value('foriegn_national', 'No');
-					}
+					wf.set_value('nationality', 'India');
+				} else if (fn === 'Yes' && nat === 'India') {
+					frappe.msgprint('For International applications, Nationality cannot be India.');
+					wf.set_value('nationality', '');
+				} else if (wf._slcmOnNationalityChangeForState) {
+					// State list follows Nationality: drop a State that no longer belongs to it
+					wf._slcmOnNationalityChangeForState();
 				}
 			}
 
-			function validateForeignNational() {
-				var nat = wf.get_value('nationality');
-				var fn = wf.get_value('foriegn_national');
+			/*
+			 * Freeze guard — previously this handler flipped foriegn_national on ANY refusal.
+			 * Refusals like "window closed", "seats full", "programme not in cycle" apply to
+			 * Yes and No alike, so the flip re-fired this handler, was refused again and flipped
+			 * back — forever (endless server calls + stacked dialogs = frozen page). It also ran
+			 * when a saved draft was opened, because loading values fires the change handler.
+			 * Now: skip the value loaded from the saved draft, revert ONLY scope refusals, and
+			 * never re-enter while reverting.
+			 */
+			var _slcmFnReverting = false;
+			var _slcmFnLastChecked = isNewApplicantWebForm() ? null : (wf.doc && wf.doc.foriegn_national) || null;
+			var _slcmFnLastMsg = '';
 
-				if (fn === 'Yes' && nat === 'Indian') {
-					wf.set_value('nationality', '');
-					frappe.msgprint('If Foreign National is Yes, Nationality cannot be Indian.');
-				} else if (fn === 'No' && nat && nat !== 'Indian') {
-					wf.set_value('nationality', 'Indian');
-				}
+			function validateForeignNational() {
+				validateNationality();
+				_slcmToggleDegreeCountry(wf);
+				if (_slcmFnReverting) return;
+
+				var prog = wf.get_value('program');
+				var fn = wf.get_value('foriegn_national');
+				var nat = wf.get_value('nationality');
+				if (!prog || !fn || fn === _slcmFnLastChecked) return;
+				_slcmFnLastChecked = fn;
+
+				frappe.call({
+					method: 'slcm.admission.web_form.applicant_form.applicant_form.validate_new_application_access',
+					args: {
+						program: prog,
+						foriegn_national: fn,
+						nationality: nat || ''
+					},
+					callback: function (r) {
+						var res = r && r.message;
+						if (!res || res.allowed) {
+							_slcmFnLastMsg = '';
+							return;
+						}
+						// Same refusal twice in a row → don't stack identical dialogs
+						if (res.message !== _slcmFnLastMsg) {
+							_slcmFnLastMsg = res.message;
+							frappe.msgprint({
+								title: __('Access Restricted'),
+								indicator: 'red',
+								message: res.message
+							});
+						}
+						// Only a Domestic/International mismatch is fixed by changing this field
+						if (res.reason !== 'scope' || wf.get_value('foriegn_national') !== fn) return;
+						var reverted = fn === 'Yes' ? 'No' : 'Yes';
+						_slcmFnReverting = true;
+						_slcmFnLastChecked = reverted;
+						Promise.resolve()
+							.then(function () { return wf.set_value('foriegn_national', reverted); })
+							.catch(function () {})
+							.then(function () { _slcmFnReverting = false; });
+					}
+				});
 			}
 
 			wf.on('nationality', validateNationality);
+			// Note: wf.on() replaces any earlier handler for the field, so the country toggle
+			// lives inside validateForeignNational rather than a second wf.on() registration.
 			wf.on('foriegn_national', validateForeignNational);
+			_slcmToggleDegreeCountry(wf);
+			// Saved drafts load asynchronously — re-apply once their values are in
+			setTimeout(function () { _slcmToggleDegreeCountry(wf); }, 1500);
+			/*
+			 * Freeze guard — hsc_percentage is numeric, so set_value('') stores 0 and fires this
+			 * handler again: 0 < 35 → msgprint + clear → 0 → … an endless synchronous loop that
+			 * froze the page behind a stuck dialog. It hit every saved draft with an empty HSC
+			 * (stored as 0) as soon as the draft was reopened.
+			 * 0 / empty now means "not entered", and our own clearing never re-validates.
+			 */
+			var _slcmHscClearing = false;
+
+			function clearHscPercentage() {
+				_slcmHscClearing = true;
+				Promise.resolve()
+					.then(function () { return wf.set_value('hsc_percentage', ''); })
+					.catch(function () {})
+					.then(function () { _slcmHscClearing = false; });
+			}
+
+			function validateHscPercentage() {
+				if (_slcmHscClearing) return;
+				var raw = wf.get_value('hsc_percentage');
+				var hsc = parseFloat(raw);
+				if (raw === '' || raw === null || raw === undefined || Number.isNaN(hsc) || hsc === 0) return;
+
+				var cgpa_max = parseFloat(wf.get_value('if_cgpa_maximum_cgpa_class_xii'));
+				var is_cgpa = (!Number.isNaN(cgpa_max) && cgpa_max > 0);
+				var max_val = is_cgpa ? cgpa_max : 100;
+				var min_val = is_cgpa ? 4 : 35;
+
+				if (hsc < min_val) {
+					frappe.msgprint(is_cgpa ? 'HSC CGPA must be at least 4.' : 'HSC percentage must be at least 35%.');
+					clearHscPercentage();
+				} else if (hsc > max_val) {
+					frappe.msgprint(is_cgpa ? 'HSC CGPA cannot exceed ' + max_val + '.' : 'HSC percentage cannot exceed 100%.');
+					clearHscPercentage();
+				}
+			}
+
+			wf.on('hsc_percentage', validateHscPercentage);
+			wf.on('if_cgpa_maximum_cgpa_class_xii', validateHscPercentage);
 		}
 		if (++n > 100) clearInterval(t);
 	}, 200);
 }
 
+
+/** UG / PG degree "Country": shown AND mandatory only for foreign nationals (foriegn_national = Yes). */
+function _slcmToggleDegreeCountry(wf) {
+	if (!wf || !wf.fields_dict) return;
+	var foreign = wf.get_value('foriegn_national') === 'Yes';
+	['ug_degree_details', 'pg_degree_details'].forEach(function (ct) {
+		var f = wf.fields_dict[ct];
+		if (!f || !f.grid) return;
+		try {
+			f.grid.toggle_display('country', foreign);
+			f.grid.toggle_reqd('country', foreign);
+		} catch (e) {
+			console.warn('Could not toggle country column on', ct, e);
+		}
+	});
+}
+
+// ───────────────────────────────────────────────────────────────────
+//  UG / PG DEGREE TABLES — one default row, row click opens the
+//  "Editing Row" form instead of column-by-column inline editing,
+//  and closing that form keeps the page where it was.
+// ───────────────────────────────────────────────────────────────────
+var SLCM_DEGREE_TABLES = ['ug_degree_details', 'pg_degree_details'];
+
+/**
+ * Frappe's GridRow.hide_form() calls scroll_to(row). In this web form layout jQuery
+ * offset() reports 0 at that moment, so the target goes negative and the page jumps to
+ * the very top. Patched once on the shared GridRow prototype: keep the scroll position.
+ */
+function _slcmPatchGridRowScroll(gridRow) {
+	var proto = gridRow && Object.getPrototypeOf(gridRow);
+	if (!proto || proto._slcmScrollPatched || typeof proto.hide_form !== 'function') return;
+	proto._slcmScrollPatched = true;
+	var origHide = proto.hide_form;
+	proto.hide_form = function () {
+		var y = window.scrollY;
+		var prev = frappe.flags.disable_auto_scroll;
+		frappe.flags.disable_auto_scroll = true;
+		try {
+			return origHide.apply(this, arguments);
+		} finally {
+			frappe.flags.disable_auto_scroll = prev;
+			var restore = function () {
+				if (Math.abs(window.scrollY - y) > 2) window.scrollTo(0, y);
+			};
+			restore();
+			requestAnimationFrame(restore);
+			setTimeout(restore, 60);
+		}
+	};
+}
+
+/**
+ * Degree-row "Country" is a Link → Country. Web forms turn child Link fields into Autocomplete
+ * with options filtered to records the applicant OWNS (allow_read_on_all_link_options can't be
+ * set on a child field), so the list came back empty. Load all countries once and feed them in.
+ */
+var _slcmCountryOptionsPromise = null;
+function _slcmLoadCountryOptions() {
+	if (!_slcmCountryOptionsPromise) {
+		_slcmCountryOptionsPromise = new Promise(function (resolve) {
+			frappe.call({
+				method: 'frappe.client.get_list',
+				args: { doctype: 'Country', fields: ['name'], order_by: 'name asc', limit_page_length: 0 },
+				callback: function (r) {
+					resolve(((r && r.message) || []).map(function (c) { return c.name; }));
+				},
+				error: function () {
+					_slcmCountryOptionsPromise = null;   // allow a retry on the next check
+					resolve([]);
+				},
+			});
+		});
+	}
+	return _slcmCountryOptionsPromise;
+}
+
+function _slcmApplyDegreeCountryOptions(grid) {
+	if (grid._slcmCountryOptionsDone || grid._slcmCountryOptionsLoading) return;
+	grid._slcmCountryOptionsLoading = true;
+	_slcmLoadCountryOptions().then(function (names) {
+		grid._slcmCountryOptionsLoading = false;
+		if (!names.length) return;
+		grid._slcmCountryOptionsDone = true;
+		var opts = names.join('\n');
+		try { grid.update_docfield_property('country', 'options', opts); } catch (e) { console.warn('country options', e); }
+		// A row panel that is already open keeps its own controls — update those too
+		(grid.grid_rows || []).forEach(function (row) {
+			var ctrl = row.grid_form && row.grid_form.fields_dict && row.grid_form.fields_dict.country;
+			if (ctrl) {
+				ctrl.df.options = opts;
+				if (typeof ctrl.set_data === 'function') {
+					try { ctrl.set_data(names); } catch (e) { /* refreshed on next open */ }
+				}
+			}
+		});
+	});
+}
+
+function _slcmSetupDegreeTable(wf, fieldname) {
+	var field = wf.fields_dict && wf.fields_dict[fieldname];
+	var grid = field && field.grid;
+	if (!grid) return false;
+	_slcmApplyDegreeCountryOptions(grid);
+
+	if (!grid._slcmRowFormMode) {
+		grid._slcmRowFormMode = true;
+		// Instance-level only (meta stays editable_grid=1): a row click now falls through to
+		// Frappe's own handler, which opens the row form; "Add row" also opens the new row.
+		grid.allow_on_grid_editing = function () { return false; };
+	}
+
+	// One empty row by default — only while the table is shown for this programme level,
+	// only once per page load (a row the applicant deletes is not re-added).
+	var shown = !field.df.hidden && !field.df.hidden_due_to_dependency;
+	wf._slcmDefaultDegreeRow = wf._slcmDefaultDegreeRow || {};
+	if (shown && !wf._slcmDefaultDegreeRow[fieldname] && grid.is_editable()) {
+		wf._slcmDefaultDegreeRow[fieldname] = true;
+		if (!(grid.get_data() || []).length) {
+			try { grid.add_new_row(null, null, false); } catch (e) { console.warn('default degree row', fieldname, e); }
+		}
+	}
+
+	if (grid.grid_rows && grid.grid_rows.length) _slcmPatchGridRowScroll(grid.grid_rows[0]);
+	return true;
+}
+
+/**
+ * Close the open "Editing Row" panel when the applicant clicks outside it (on the dark
+ * overlay or anywhere else on the page). Clicks inside popups that belong to the panel's
+ * fields — date picker, link dropdowns, the attach/file-upload dialog, message dialogs —
+ * live elsewhere in the DOM and must not count as "outside".
+ */
+function _slcmSetupRowFormOutsideClose() {
+	if (window._slcmRowFormOutsideClose) return;
+	window._slcmRowFormOutsideClose = true;
+
+	// .grid-add-row / .grid-buttons: "Add row" opens the new row in its own click handler —
+	// that same click must not immediately close it again.
+	var KEEP_OPEN = '.grid-row-open, .grid-add-row, .grid-buttons, .datepicker, .awesomplete, .dropdown-menu, ' +
+		'.modal, .modal-backdrop, .pcr-app, .select2-container, #slcm-toast';
+
+	function isOutside(el) {
+		return !!el && document.documentElement.contains(el) && !$(el).closest(KEEP_OPEN).length;
+	}
+
+	// Remember where the press started: selecting text inside the panel and releasing the
+	// mouse outside it is not an "outside click".
+	var pressStartedOutside = false;
+	document.addEventListener('pointerdown', function (e) {
+		pressStartedOutside = isOutside(e.target);
+	}, true);
+
+	document.addEventListener('click', function (e) {
+		var $open = $('.web-form .grid-row-open');
+		if (!$open.length) return;
+		// Target removed by the click itself (e.g. a picked dropdown item) → not an outside click
+		if (!pressStartedOutside || !isOutside(e.target)) return;
+
+		$open.each(function () {
+			var gridRow = $(this).data('grid_row');
+			if (gridRow && typeof gridRow.toggle_view === 'function') gridRow.toggle_view(false);
+		});
+	});
+}
+
+/**
+ * Frappe's Dialog closes any open grid row form when ANY dialog hides (dialog.js "hide.bs.modal"),
+ * unless dialog.keep_grid_form_open is set. So finishing an upload in the Attach dialog — or
+ * dismissing a validation message — inside the "Editing Row" panel closed the panel too.
+ * Dialogs opened while a row panel is open now keep it open.
+ */
+function _slcmKeepRowFormOpenAcrossDialogs() {
+	var Dialog = window.frappe && frappe.ui && frappe.ui.Dialog;
+	if (!Dialog || !Dialog.prototype || Dialog.prototype._slcmKeepGridPatched) return !!(Dialog && Dialog.prototype && Dialog.prototype._slcmKeepGridPatched);
+	Dialog.prototype._slcmKeepGridPatched = true;
+	var origShow = Dialog.prototype.show;
+	Dialog.prototype.show = function () {
+		if (this._slcmKeepGridDefault === undefined) this._slcmKeepGridDefault = !!this.keep_grid_form_open;
+		this.keep_grid_form_open = this._slcmKeepGridDefault || $('.web-form .grid-row-open').length > 0;
+		return origShow.apply(this, arguments);
+	};
+	return true;
+}
+
+/** Next / Previous / stepper switch pages without scrolling — bring the new page into view from its top. */
+function _slcmScrollTopOnPageChange(wf) {
+	if (!wf || typeof wf.toggle_section !== 'function' || wf._slcmScrollTopPatched) return;
+	wf._slcmScrollTopPatched = true;
+	var origToggle = wf.toggle_section;
+	var lastSection = wf.current_section;
+	wf.toggle_section = function () {
+		var out = origToggle.apply(this, arguments);
+		if (this.current_section !== lastSection) {
+			lastSection = this.current_section;
+			window.scrollTo({ top: 0, behavior: 'smooth' });
+		}
+		return out;
+	};
+}
+
+function setupDegreeTablesUX() {
+	_slcmSetupRowFormOutsideClose();
+	var _patchN = 0;
+	var _patchT = setInterval(function () {
+		var wf = window.frappe && frappe.web_form;
+		_slcmScrollTopOnPageChange(wf);
+		if ((_slcmKeepRowFormOpenAcrossDialogs() && wf && wf._slcmScrollTopPatched) || ++_patchN > 60) clearInterval(_patchT);
+	}, 200);
+	// Cheap visibility check: the tables appear/disappear with program_level (depends_on),
+	// which can change at any time, so keep checking at a relaxed pace.
+	setInterval(function () {
+		var wf = window.frappe && frappe.web_form;
+		if (!wf || !wf.fields_dict) return;
+		SLCM_DEGREE_TABLES.forEach(function (fn) { _slcmSetupDegreeTable(wf, fn); });
+	}, 700);
+}
+
+/** A degree row is "blank" when the applicant has not typed anything into it. */
+function _slcmIsBlankDegreeRow(row) {
+	if (!row) return true;
+	var META = { name: 1, idx: 1, doctype: 1, parent: 1, parentfield: 1, parenttype: 1, owner: 1,
+		creation: 1, modified: 1, modified_by: 1, docstatus: 1 };
+	return Object.keys(row).every(function (k) {
+		if (META[k] || k.indexOf('__') === 0) return true;
+		var v = row[k];
+		return v === null || v === undefined || v === '' || v === 0;
+	});
+}
 
 /** Get the current Applicant docname from wf.doc or URL */
 function _slcmGetApplicantDocName() {
@@ -4589,14 +5041,21 @@ function _slcmRestoreApplicantCheckboxValues(wf) {
 			// MutationObserver: re-apply whenever the declaration section appears in DOM
 			// Critical for multi-page forms where checkboxes render only when page is shown
 			if (!window._slcm_chk_observer) {
+				// Other timers on this page toggle class/style several times a second, so batch
+				// the work into one pass per animation frame instead of running per mutation.
+				var _chkQueued = false;
 				window._slcm_chk_observer = new MutationObserver(function () {
-					CHECK_FIELDS.forEach(function (fn) {
-						var $chk = $('[data-fieldname="' + fn + '"] input[type="checkbox"]');
-						if ($chk.length && data[fn]) {
+					if (_chkQueued) return;
+					_chkQueued = true;
+					requestAnimationFrame(function () {
+						_chkQueued = false;
+						CHECK_FIELDS.forEach(function (fn) {
+							if (!data[fn]) return;
+							var $chk = $('[data-fieldname="' + fn + '"] input[type="checkbox"]');
 							$chk.each(function () {
 								if (!this.checked) this.checked = true;
 							});
-						}
+						});
 					});
 				});
 				window._slcm_chk_observer.observe(
@@ -4706,6 +5165,7 @@ frappe.ready(function () {
 	}
 	setupSubmittedFormUX();
 	setupCandidatePhotoPreview();
+	setupDegreeTablesUX();
 	setupAttachFieldValidation();
 	setupSlcmForcePublicUploads();
 	setupNumericFieldRestriction();
@@ -5218,6 +5678,22 @@ function _slcmWebFormLayoutFieldtype(ft) {
  * _validateStage — required (and conditionally required) fields on one page.
  * Returns an object with ok (boolean) and missing (string[]). This file is Jinja-rendered by Frappe Web Form — never use literal double-open-brace sequences in source.
  */
+/** Foreign nationals: every filled UG / PG degree row on this page needs a Country. */
+function _slcmValidateDegreeCountryOnPage(wf, $page, missing) {
+	if (wf.get_value('foriegn_national') !== 'Yes') return;
+	SLCM_DEGREE_TABLES.forEach(function (ct) {
+		var fw = wf.fields_dict[ct];
+		if (!fw || !fw.df || fw.df.hidden || fw.df.hidden_due_to_dependency) return;
+		if (!$page.find('[data-fieldname="' + ct + '"]').length) return;
+		(wf.get_value(ct) || []).forEach(function (row, i) {
+			if (_slcmIsBlankDegreeRow(row)) return;
+			if (!((row.country || '') + '').trim()) {
+				missing.push(__('{0} — Row {1}: Country', [(fw.df.label || ct).trim(), row.idx || i + 1]));
+			}
+		});
+	});
+}
+
 function _validateStage(wf, $page) {
 	const missing = [];
 	const seen = new Set();
@@ -5259,6 +5735,9 @@ function _validateStage(wf, $page) {
 		} else if (df.fieldtype === 'Phone') {
 			var sVal = String(val || '').trim();
 			empty = !sVal || (sVal.indexOf('-') > -1 && !sVal.split('-').slice(1).join('').trim());
+		} else if (df.fieldtype === 'Table' && SLCM_DEGREE_TABLES.indexOf(fieldname) !== -1) {
+			// The default (untouched) degree row must not satisfy "table is mandatory"
+			empty = !(Array.isArray(val) && val.some(function (r) { return !_slcmIsBlankDegreeRow(r); }));
 		} else {
 			empty =
 				val === undefined ||
@@ -5287,6 +5766,7 @@ function _validateStage(wf, $page) {
 	});
 
 	_slcmValidateApplicantFormatsOnPage(wf, $page, missing);
+	_slcmValidateDegreeCountryOnPage(wf, $page, missing);
 
 	return { ok: missing.length === 0, missing };
 }
@@ -5299,8 +5779,9 @@ function setupCityStateFilter() {
 	if (wf._slcmApplicantAddrWired) return true;
 	wf._slcmApplicantAddrWired = true;
 
+	// State list follows the applicant's Nationality (falls back to the hidden address country, then India)
 	function effCountry() {
-		var raw = wf.get_value('country');
+		var raw = wf.get_value('nationality') || wf.get_value('country');
 		return ((raw || '') + '').trim() || 'India';
 	}
 
@@ -5309,7 +5790,9 @@ function setupCityStateFilter() {
 		var cf = wf.get_field && wf.get_field(cityDataFld);
 		if (!sf) return false;
 
-		[countryFld, stateFld].forEach(function (fn) {
+		// Not for State: Applicant.state does not allow ignoring user permissions, so search_link
+		// rejects every State search (empty dropdown) when this flag is sent
+		[countryFld].forEach(function (fn) {
 			var fld = wf.get_field(fn);
 			if (fld && fld.df) fld.df.ignore_user_permissions = 1;
 		});
@@ -5318,7 +5801,9 @@ function setupCityStateFilter() {
 			var eff = effCountry();
 			return {
 				query: 'slcm.admission.web_form.applicant_form.applicant_form.state_query',
-				filters: { country: eff }
+				filters: { country: eff },
+				// Web forms render Link fields as Autocomplete, which only sends `params` to the query
+				params: { country: eff }
 			};
 		}
 
@@ -5329,6 +5814,36 @@ function setupCityStateFilter() {
 				filters: { state: st || '' }
 			};
 		}
+
+		// Clears the State (and City) when it does not belong to the Nationality country
+		function checkStateMatchesCountry(stateVal) {
+			var eff = effCountry();
+			frappe.call({
+				method: 'slcm.admission.web_form.applicant_form.applicant_form.state_belongs_to_country',
+				args: { state: stateVal, country: eff },
+				callback: function (r) {
+					if (!r || r.message !== false) return;
+					if ((wf.get_value(stateFld) || '').trim() !== stateVal) return; // changed meanwhile
+					frappe.msgprint("The selected State '" + stateVal + "' does not belong to '" + eff + "'.");
+					wf._is_syncing_address = true;
+					wf.set_value(stateFld, '');
+					wf.set_value(cityDataFld, '');
+					setTimeout(function() { wf._is_syncing_address = false; }, 200);
+				}
+			});
+		}
+
+		// Called from validateNationality (wf.on would replace that handler). Only reacts when the
+		// user changes Nationality, so values loading into a saved draft are never cleared.
+		wf._slcmOnNationalityChangeForState = function () {
+			var natFld = wf.fields_dict.nationality;
+			var natInput = natFld && natFld.$input && natFld.$input[0];
+			if (!natInput || document.activeElement !== natInput) return;
+			// The link control shows cached results first; drop the previous country's list
+			if (sf.$input) sf.$input.cache = {};
+			var st = (wf.get_value(stateFld) || '').trim();
+			if (st && st.toLowerCase() !== 'other') checkStateMatchesCountry(st);
+		};
 
 		if (wf.set_query) {
 			wf.set_query(stateFld, stateQueryFn);
@@ -5341,6 +5856,8 @@ function setupCityStateFilter() {
 		if (sf) {
 			if (sf.df) sf.df.get_query = stateQueryFn;
 			sf.get_query = stateQueryFn;
+			// Drop any unfiltered results cached before the query was attached
+			if (sf.$input) sf.$input.cache = {};
 		}
 		if (cf) {
 			if (cf.df) cf.df.get_query = cityQueryFn;
@@ -5352,27 +5869,38 @@ function setupCityStateFilter() {
 
 		wf.on(countryFld, function () {
 			if (wf._is_syncing_address) return;
-			var currentCountry = wf.get_value(countryFld);
-			if (!lastCountry && currentCountry) {
+			var currentCountry = (wf.get_value(countryFld) || '').trim();
+			var prevCountry = (lastCountry || '').trim();
+
+			if (!prevCountry && currentCountry) {
 				lastCountry = currentCountry;
 				return;
 			}
-			if (lastCountry === currentCountry) return;
+			if (prevCountry && currentCountry && prevCountry.toLowerCase() === currentCountry.toLowerCase()) return;
 			lastCountry = currentCountry;
 
-			wf.set_value(stateFld, '');
-			wf.set_value(cityDataFld, '');
+			// Country genuinely changed: clear state and the opposite city field
+			if (prevCountry && currentCountry && prevCountry.toLowerCase() !== currentCountry.toLowerCase()) {
+				wf.set_value(stateFld, '');
+				if (currentCountry.toLowerCase() === 'india') {
+					wf.set_value('foreigin_city', '');
+				} else {
+					wf.set_value(cityDataFld, '');
+				}
+			}
 		});
 
 		wf.on(stateFld, function () {
 			if (wf._is_syncing_address) return;
-			var currentCountry = wf.get_value(countryFld);
-			var currentState = wf.get_value(stateFld);
-			if (!lastState && currentState) {
+			var currentCountry = (wf.get_value(countryFld) || '').trim();
+			var currentState = (wf.get_value(stateFld) || '').trim();
+			var prevState = (lastState || '').trim();
+
+			if (!prevState && currentState) {
 				lastState = currentState;
 				return;
 			}
-			if (lastState === currentState) return;
+			if (prevState && currentState && prevState.toLowerCase() === currentState.toLowerCase()) return;
 			lastState = currentState;
 
 			if (!currentState) {
@@ -5380,27 +5908,33 @@ function setupCityStateFilter() {
 				return;
 			}
 
-			if (currentCountry && String(currentState).toUpperCase() !== 'OTHER' && String(currentCountry).toUpperCase() !== 'OTHER') {
-				frappe.call({
-					method: "frappe.client.get_value",
-					args: {
-						doctype: "State",
-						filters: { name: currentState },
-						fieldname: ["country"]
-					},
-					callback: function(r) {
-						if (r.message && r.message.country && r.message.country !== currentCountry) {
-							frappe.msgprint("The selected State '" + currentState + "' does not belong to '" + currentCountry + "'.");
-							wf._is_syncing_address = true;
-							wf.set_value(stateFld, '');
-							wf.set_value(cityDataFld, '');
-							setTimeout(function() { wf._is_syncing_address = false; }, 200);
-						}
-					}
-				});
+			// Validate state belongs to the Nationality country ('Other' is always allowed)
+			if (currentState.toLowerCase() !== 'other') {
+				checkStateMatchesCountry(currentState);
 			}
 
-			wf.set_value(cityDataFld, '');
+			// Only check/clear city if user genuinely changed from one state to a different state
+			if (prevState && currentState && prevState.toLowerCase() !== currentState.toLowerCase()) {
+				var currentCity = (wf.get_value(cityDataFld) || '').trim();
+				if (currentCity && currentCity.toLowerCase() !== 'other') {
+					frappe.call({
+						method: 'frappe.client.get_value',
+						args: {
+							doctype: 'City',
+							filters: { name: currentCity },
+							fieldname: ['state']
+						},
+						callback: function(r) {
+							if (r.message && r.message.state) {
+								var cityState = (r.message.state || '').trim();
+								if (cityState && cityState.toLowerCase() !== 'other' && cityState.toLowerCase() !== currentState.toLowerCase()) {
+									wf.set_value(cityDataFld, '');
+								}
+							}
+						}
+					});
+				}
+			}
 		});
 
 		// Focus show all trick for city
@@ -5438,11 +5972,12 @@ function setupCityStateFilter() {
 		// ── Validate city belongs to selected state on awesomplete selection ──
 		$(document).off('awesomplete-selectcomplete.slcmCityValidate')
 			.on('awesomplete-selectcomplete.slcmCityValidate', '[data-fieldname="' + cityDataFld + '"] input', function () {
-				var selectedCity = $(this).val();
-				var currentState = wf.get_value(stateFld);
-				var currentCountry = wf.get_value(countryFld);
+				var selectedCity = ($(this).val() || '').trim();
+				var currentState = (wf.get_value(stateFld) || '').trim();
+				var currentCountry = (wf.get_value(countryFld) || '').trim();
 				if (!selectedCity || !currentState) return;
-				if (currentCountry && currentCountry !== 'India') return; // non-India: no validation
+				if (currentCountry && currentCountry.toLowerCase() !== 'india') return; // non-India: uses foreigin_city
+				if (selectedCity.toLowerCase() === 'other') return; // 'Other' is always valid
 
 				frappe.call({
 					method: 'frappe.client.get_value',
@@ -5453,8 +5988,9 @@ function setupCityStateFilter() {
 					},
 					callback: function (r) {
 						if (!r.message) return;
-						var cityState = r.message.state;
-						if (cityState && cityState !== currentState) {
+						var cityState = (r.message.state || '').trim();
+						if (cityState && cityState.toLowerCase() === 'other') return;
+						if (cityState && cityState.toLowerCase() !== currentState.toLowerCase()) {
 							showToast(
 								'\u26a0 "' + selectedCity + '" belongs to ' + cityState +
 								', not ' + currentState + '. Please select a city from ' + currentState + '.',

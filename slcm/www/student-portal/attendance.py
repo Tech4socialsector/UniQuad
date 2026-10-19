@@ -206,63 +206,20 @@ def get_context(context):
         except Exception:
             context.condonation_applications = []
 
-        # ── Office Hours Sessions ──────────────────────────────────
+        # ── OH & Class Participation (attendance + participation, no marks) ──
+        # From the OH / Class-Participation Student Groups the student is in and
+        # the Time Table sessions scheduled for them — same rules as the faculty
+        # portal. (Replaces the older "Office Hours Session" records.)
         try:
-            enrolled_cos = frappe.get_all(
-                "Student Enrollment Course",
-                filters={
-                    "parenttype": "Student Enrollment",
-                    "parent": ["in", frappe.get_all(
-                        "Student Enrollment",
-                        filters={"student": student_name, "status": "Enrolled", "docstatus": ["<", 2]},
-                        pluck="name",
-                    )],
-                    "status": "Enrolled",
-                },
-                pluck="course_offering",
-            )
-            enrolled_cos = list(set(co for co in enrolled_cos if co))
-            if enrolled_cos:
-                today_date = frappe.utils.today()
-                office_hours = frappe.get_all(
-                    "Office Hours Session",
-                    filters=[
-                        ["course_offering", "in", enrolled_cos],
-                        ["session_date", ">=", today_date],
-                        ["session_status", "in", ["Scheduled", "Conducted"]],
-                    ],
-                    fields=[
-                        "name", "course_offering", "course", "faculty",
-                        "session_date", "start_time", "end_time",
-                        "duration_hours", "location", "session_status",
-                    ],
-                    order_by="session_date asc, start_time asc",
-                    limit=30,
-                    ignore_permissions=True,
-                )
-                for oh in office_hours:
-                    oh["course_display"] = oh.course_offering or "—"
-                    for s in summaries:
-                        if s.course_offering == oh.course_offering:
-                            oh["course_display"] = s.get("course_display") or oh["course_display"]
-                            break
-                    oh["start_fmt"] = _fmt_time(oh.start_time)
-                    oh["end_fmt"] = _fmt_time(oh.end_time)
-                    oh["is_scheduled"] = oh.session_status == "Scheduled"
-                    oh["already_registered"] = frappe.db.exists(
-                        "Student Attendance",
-                        {
-                            "student": student_name,
-                            "based_on": "Office Hours",
-                            "attendance_date": oh.session_date,
-                            "course_offer": oh.course_offering,
-                        },
-                    ) is not None
-                context.office_hours_sessions = office_hours
-            else:
-                context.office_hours_sessions = []
+            from slcm.slcm.utils.class_participation import get_student_participation
+
+            participation = get_student_participation(student_name)
+            context.oh_groups = participation["oh"]
+            context.cp_groups = participation["cp"]
         except Exception:
-            context.office_hours_sessions = []
+            frappe.log_error(frappe.get_traceback(), "Student Portal – OH / Class Participation")
+            context.oh_groups = []
+            context.cp_groups = []
 
         # ── Recent Daily Attendance (last 30 days) ─────────────────
         today_date = frappe.utils.today()
@@ -395,22 +352,24 @@ def get_context(context):
             for _d in _sessions_by_date:
                 _sessions_by_date[_d].sort(key=lambda x: x["from_time"] or "")
 
-            # ── Add future office hours as Scheduled sessions ──────
-            for _oh in (context.office_hours_sessions or []):
-                _d = str(_oh.session_date)
-                _sessions_by_date.setdefault(_d, []).append({
-                    "course_name":    str(_oh.get("course_display") or _oh.get("course_offering") or "—"),
-                    "course_offering": str(_oh.get("course_offering") or ""),
-                    "session_type":   "Office Hour",
-                    "from_time":      str(_oh.get("start_fmt") or ""),
-                    "to_time":        str(_oh.get("end_fmt") or ""),
-                    "instructor":     str(_oh.get("faculty") or ""),
-                    "venue":          str(_oh.get("location") or ""),
-                    "status":         "Scheduled",
-                    "in_time":        "",
-                    "out_time":       "",
-                    "hours":          float(_oh.get("duration_hours") or 0),
-                })
+            # ── Add the student's upcoming OH sessions as Scheduled ─
+            for _grp in (context.oh_groups or []):
+                for _oh in _grp.sessions:
+                    if _oh.attendance != "Upcoming":
+                        continue
+                    _sessions_by_date.setdefault(_oh.date, []).append({
+                        "course_name":    str(_grp.course_name or _grp.title or "OH"),
+                        "course_offering": str(_oh.course_offering or ""),
+                        "session_type":   "Office Hour",
+                        "from_time":      str(_oh.from_fmt or ""),
+                        "to_time":        str(_oh.to_fmt or ""),
+                        "instructor":     str(_oh.faculty or ""),
+                        "venue":          str(_oh.venue or ""),
+                        "status":         "Scheduled",
+                        "in_time":        "",
+                        "out_time":       "",
+                        "hours":          0,
+                    })
 
             # ── Fetch holidays ─────────────────────────────────────
             _holidays = {}
@@ -531,7 +490,8 @@ def _set_defaults(context):
     context.attendance_summaries = []
     context.term_groups = []
     context.condonation_applications = []
-    context.office_hours_sessions = []
+    context.oh_groups = []
+    context.cp_groups = []
     context.recent_attendance = []
     context.attendance_calendar_json = "{}"
     context.calendar_today = ""

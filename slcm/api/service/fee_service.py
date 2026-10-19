@@ -1678,6 +1678,7 @@ class FeeService:
             receipt.transaction_id = transaction_id
             receipt.payment_mode = payment_mode
             receipt.total_amount = flt(fee_amount)
+            receipt.net_amount = flt(fee_amount)
             receipt.currency = frappe.defaults.get_global_default("currency") or "INR"
             receipt.bank_name = bank_name
             receipt.cheque_number = cheque_number

@@ -6,21 +6,22 @@
  "engine": "InnoDB",
  "field_order": [
   "faculty_id",
-  "user_id",
+  "photo",
   "first_name",
   "last_name",
-  "email",
-  "official_email_id",
-  "auto_create_user",
   "phone",
   "department",
   "designation",
+  "status",
+  "column_break_kved",
+  "email",
+  "user_id",
+  "official_email_id",
+  "auto_create_user",
   "reporting_to",
   "is_hod",
-  "status",
   "qualification",
   "joining_date",
-  "photo",
   "specialization",
   "experience_years",
   "highlights",
@@ -77,7 +78,7 @@
   },
   {
    "default": "0",
-   "description": "When checked (and saved by a System Manager), a Frappe User account is automatically created for the Official Email ID above, with the slcm_Faculty role and Website User access — so this faculty member can sign in to the Faculty Portal via Google immediately, without a separate manual User setup step.",
+   "description": "When checked (and saved by a System Manager), a Frappe User account is automatically created for the Official Email ID above, with the slcm_Faculty role and Website User access \u2014 so this faculty member can sign in to the Faculty Portal via Google immediately, without a separate manual User setup step.",
    "fieldname": "auto_create_user",
    "fieldtype": "Check",
    "label": "Auto Create User"
@@ -148,8 +149,8 @@
   {
    "fieldname": "photo",
    "fieldtype": "Attach Image",
-   "hidden": 1,
-   "label": "Photo"
+   "label": "Photo",
+   "reqd": 1
   },
   {
    "fieldname": "specialization",
@@ -175,12 +176,16 @@
    "fieldtype": "Data",
    "hidden": 1,
    "label": "Studied Institution"
+  },
+  {
+   "fieldname": "column_break_kved",
+   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-24 15:55:34.972501",
+ "modified": "2026-10-06 16:56:41.141817",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Faculty",

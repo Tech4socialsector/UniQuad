@@ -1,0 +1,46 @@
+{
+ "chart_name": "Allocated Students by City",
+ "chart_type": "Report",
+ "creation": "2026-10-05 12:45:00",
+ "currency": "",
+ "custom_options": "{\"barOptions\": {\"stacked\": 1}, \"axisOptions\": {\"seriesLabelSpaceRatio\": 5, \"xAxisMode\": \"span\"}, \"colors\": [\"#2490EF\", \"#48C774\", \"#FF9F43\", \"#EA5455\", \"#7367F0\", \"#1E9FF2\", \"#10AC84\", \"#EE5253\", \"#F368E0\", \"#00D2D3\"]}",
+ "docstatus": 0,
+ "doctype": "Dashboard Chart",
+ "dynamic_filters_json": "{}",
+ "filters_json": "{}",
+ "group_by_type": "Count",
+ "idx": 0,
+ "is_public": 1,
+ "is_standard": 1,
+ "modified": "2026-10-13 18:11:19.827394",
+ "modified_by": "Administrator",
+ "module": "Admission",
+ "name": "Allocated Students by City",
+ "number_of_groups": 0,
+ "owner": "Administrator",
+ "report_name": "Allocated Students by City",
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Entrance Test Admin"
+  },
+  {
+   "role": "Entrance Test Provider"
+  }
+ ],
+ "show_values_over_chart": 0,
+ "time_interval": "Yearly",
+ "timeseries": 0,
+ "timespan": "Last Year",
+ "type": "Bar",
+ "use_report_chart": 1,
+ "x_field": "city",
+ "y_axis": [
+  {
+   "color": "#2490EF",
+   "y_field": "allocated_count"
+  }
+ ]
+}

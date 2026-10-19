@@ -96,8 +96,7 @@ def get_students(program, course, academic_year=None, academic_term=None, batch=
 		params["academic_term"] = academic_term
 
 	if batch:
-		# 'batch_year_ref' is the fieldname for Batch in 'Student Enrollment'
-		conditions.append("se.batch_year_ref = %(batch)s")
+		conditions.append("se.batch = %(batch)s")
 		params["batch"] = batch
 
 	if section:

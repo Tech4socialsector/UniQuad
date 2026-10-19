@@ -8731,7 +8731,7 @@ details.fee-benefits-panel[open] .fee-benefits-chevron { transform: rotate(180de
  padding: 16px 18px; }
 .spd-section-body-flush { padding: 0; }
 
-/* ── Today's Classes — Timeline ──────────────────────────────────── */
+/* ── Today's Sessions — Timeline ──────────────────────────────────── */
 .spd-timeline { padding: 8px 18px 14px; display: flex; flex-direction: column; gap: 0; }
 .spd-timeline-item {
   display: flex;

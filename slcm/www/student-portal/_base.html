@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   {# Fully-resolved settings: defaults applied, derived shades and body classes pre-computed #}
@@ -389,12 +389,120 @@
     .sp-sidebar.sp-mini .sp-nav-group-caret { display: none; }
     .sp-sidebar.sp-mini .sp-nav-group-items { display: none !important; }
 
+    /* Dark mode toggle button */
+    .sp-theme-btn {
+      width: 38px; height: 38px; border-radius: 10px;
+      background: none; border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--sp-nav-text);
+      transition: background 0.15s, transform 0.15s;
+    }
+    .sp-theme-btn:hover { background: var(--sp-primary-light); transform: translateY(-1px); }
+    .sp-theme-btn .sp-ms { font-size: 22px; color: var(--sp-nav-text); }
+
+    /* ═══ Dark Mode ═════════════════════════════════════════════
+       Same palette as the Faculty Portal (body.fp-dark). Portal
+       settings set colours on :root; redefining them on body.sp-dark
+       wins because custom properties inherit from body. */
+    body.sp-dark {
+      --sp-bg:              #0a0f1e;
+      --sp-card:            #131d35;
+      --sp-card-bg:         #131d35;
+      --sp-nav-bg:          #0f172a;
+      --sp-nav-text:        #f1f5f9;
+      --sp-sidebar-bg:      #0f172a;
+      --sp-sidebar-text:    #cbd5e1;
+      --sp-sidebar-text-2:  #cbd5e1;
+      --sp-text-1:          #f1f5f9;
+      --sp-text-2:          #e2e8f0;
+      --sp-text-3:          #94a3b8;
+      --sp-text-4:          #64748b;
+      --sp-border:          #1e2d4a;
+      --sp-border-light:    #1a2540;
+      /* NLS maroon is too dark to read on navy — use a lifted rose for accents */
+      --sp-primary:         #d64a66;
+      --sp-primary-dark:    #b8354f;
+      --sp-primary-light:   rgba(214,74,102,0.14);
+      --sp-primary-mid:     rgba(214,74,102,0.24);
+      --sp-secondary:       #d64a66;
+      --sp-accent:          #d64a66;
+      --sp-accent-dark:     #b8354f;
+      --sp-accent-bg:       rgba(214,74,102,0.14);
+      --sp-success:         #4ade80;
+      --sp-warning:         #f2b36a;
+      --sp-danger:          #f87171;
+      --sp-info:            #7cc4f2;
+      --sp-success-bg:      rgba(74,222,128,0.16);
+      --sp-warning-bg:      rgba(242,179,106,0.14);
+      --sp-danger-bg:       rgba(248,113,113,0.14);
+      --sp-info-bg:         rgba(124,196,242,0.14);
+      --sp-purple:          #d64a66;
+      --sp-purple-bg:       rgba(214,74,102,0.14);
+      --sp-gold:            #f2b36a;
+      --sp-grade-color:     #f1f5f9;
+      --sp-grade-excellent: #f08da0;
+      --sp-grade-good:      #f08da0;
+      --sp-grade-average:   #f08da0;
+      --sp-grade-fail:      #f87171;
+      --sp-grade-excellent-bg: rgba(214,74,102,0.14);
+      --sp-grade-good-bg:      rgba(214,74,102,0.14);
+      --sp-grade-average-bg:   rgba(214,74,102,0.14);
+      --sp-grade-fail-bg:      rgba(248,113,113,0.14);
+      --sp-att-good:        #f08da0;
+      --sp-att-warn:        #f2b36a;
+      --sp-att-danger:      #f87171;
+      --sp-shadow-xs:       0 1px 2px rgba(0,0,0,0.3);
+      --sp-shadow-sm:       0 2px 6px rgba(0,0,0,0.35);
+      --sp-shadow-md:       0 4px 16px rgba(0,0,0,0.45);
+      --sp-shadow-lg:       0 8px 30px rgba(0,0,0,0.55);
+      color-scheme: dark;
+    }
+    body.sp-dark .sp-nav { border-bottom: 1px solid var(--sp-border); }
+    body.sp-dark .sp-sidebar { background: var(--sp-sidebar-bg); border-right-color: var(--sp-border); scrollbar-color: #334155 transparent; }
+    body.sp-dark .sp-card { border-color: var(--sp-border); }
+    body.sp-dark .sp-avatar-btn { border-color: rgba(255,255,255,0.2); }
+    body.sp-dark .sp-notif-item.is-unread { background: var(--sp-primary-light); }
+    body.sp-dark .sp-sidebar .sp-nav-item:hover:not(.active),
+    body.sp-dark .sp-sidebar .sp-nav-group-header:hover,
+    body.sp-dark .sp-sidebar .sp-collapse-btn:hover { background: #1a2540; color: #ffffff; }
+    body.sp-dark .sp-sidebar .sp-nav-item:hover:not(.active) .sp-ms,
+    body.sp-dark .sp-nav-group-header:hover .sp-ms,
+    body.sp-dark .sp-sidebar .sp-collapse-btn:hover .sp-ms { color: #ffffff !important; }
+    body.sp-dark ::selection      { background: #334a7a; color: #ffffff; }
+    body.sp-dark ::-moz-selection { background: #334a7a; color: #ffffff; }
+
+    /* Inline maroon text written as a literal colour */
+    body.sp-dark [style*="color:#920c24"], body.sp-dark [style*="color: #920c24"],
+    body.sp-dark [style*="color:#920C24"], body.sp-dark [style*="color: #920C24"],
+    body.sp-dark [style*="color:#6b091a"], body.sp-dark [style*="color:#85142b"] { color: #f08da0 !important; }
+
+    /* Inline white / near-white surfaces become dark cards */
+    body.sp-dark [style*="background:#fff;"], body.sp-dark [style*="background: #fff;"],
+    body.sp-dark [style*="background:#fff\""], body.sp-dark [style*="background:#ffffff"],
+    body.sp-dark [style*="background: #ffffff"], body.sp-dark [style*="background:white"],
+    body.sp-dark [style*="background:#f8fafc"], body.sp-dark [style*="background: #f8fafc"],
+    body.sp-dark [style*="background:#f9fafb"], body.sp-dark [style*="background:#f1f5f9"],
+    body.sp-dark [style*="background:#fafafa"] { background: var(--sp-card) !important; }
+    body.sp-dark [style*="background:#fff0f2"], body.sp-dark [style*="background: #fff0f2"],
+    body.sp-dark [style*="background:#fdf2f4"], body.sp-dark [style*="background:#fdf0f2"],
+    body.sp-dark [style*="background:#fef2f2"] { background: var(--sp-primary-light) !important; }
+
+    /* Common light-only text colours */
+    body.sp-dark [style*="color:#1e293b"], body.sp-dark [style*="color:#0f172a"],
+    body.sp-dark [style*="color:#111"], body.sp-dark [style*="color:#000"] { color: var(--sp-text-1) !important; }
+
+    /* Form controls */
+    body.sp-dark input, body.sp-dark select, body.sp-dark textarea { background-color: #1a2540; color: var(--sp-text-1); border-color: #263352; }
+    body.sp-dark input::placeholder, body.sp-dark textarea::placeholder { color: var(--sp-text-3); }
+
   </style>
 
   {% block extra_head %}{% endblock %}
 </head>
 
 <body class="{{ sp_settings.body_classes | default('') }}">
+{# Apply saved dark mode before first paint so pages don't flash light #}
+<script>try { if (localStorage.getItem('sp-dark') === '1') document.body.classList.add('sp-dark'); } catch(e) {}</script>
 
 {% if not is_guest %}
   {%- set _sp_role1 = frappe.db.get_value("Has Role", {"parent": frappe.session.user, "role": "slcm_student"}, "name") -%}
@@ -462,6 +570,11 @@
   </div>
 
   <div class="sp-nav-right">
+
+    {# ── Dark mode toggle ──────────────────────────── #}
+    <button type="button" class="sp-theme-btn" id="sp-theme-btn" onclick="spToggleTheme()" title="Toggle dark mode" aria-label="Toggle dark mode">
+      <span class="sp-ms" id="sp-theme-icon">dark_mode</span>
+    </button>
 
     {# ── Notification Bell ─────────────────────────── #}
     <button class="sp-notif-btn" id="sp-notif-btn" onclick="spToggleNotifPanel()" title="Notifications" aria-label="Notifications">
@@ -576,6 +689,14 @@
         </div>
       </a>
 
+      {# Announcements #}
+      <a href="/student-portal/announcements" class="sp-nav-group-header {% if active_page == 'announcements' %}active{% endif %}" data-label="Announcements" style="text-decoration: none; margin-bottom: 4px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span class="sp-ms">campaign</span>
+          <span class="sp-nav-label">Announcements</span>
+        </div>
+      </a>
+
       {# Academics #}
       <div class="sp-nav-group" id="sp-group-academics">
         <div class="sp-nav-group-header" onclick="spToggleNavGroup('academics')" data-label="Academics">
@@ -586,15 +707,15 @@
           <span class="sp-ms sp-nav-group-caret">keyboard_arrow_down</span>
         </div>
         <div class="sp-nav-group-items">
+          <a href="/student-portal/courses" class="sp-nav-item {% if active_page == 'courses' %}active{% endif %}" data-label="Courses">
+            <span class="sp-ms">library_books</span><span class="sp-nav-label">Courses</span>
+          </a>
           <a href="/student-portal/attendance" class="sp-nav-item {% if active_page == 'attendance' %}active{% endif %}" data-label="Attendance">
             <span class="sp-ms">event_available</span><span class="sp-nav-label">Attendance</span>
           </a>
           <!-- <a href="/student-portal/enrollment" class="sp-nav-item {% if active_page == 'enrollment' %}active{% endif %}" data-label="Enrollment">
             <span class="sp-ms">how_to_reg</span><span class="sp-nav-label">Enrollment</span>
           </a> -->
-          <a href="/student-portal/courses" class="sp-nav-item {% if active_page == 'courses' %}active{% endif %}" data-label="My Courses">
-            <span class="sp-ms">library_books</span><span class="sp-nav-label">Courses</span>
-          </a>
           <a href="/student-portal/timetable" class="sp-nav-item {% if active_page == 'timetable' %}active{% endif %}" data-label="Timetable">
             <span class="sp-ms">calendar_month</span><span class="sp-nav-label">Timetable</span>
           </a>
@@ -631,29 +752,29 @@
         </div>
       </div> -->
 
-      {# Examinations & Results #}
+      {# Assessments #}
       <div class="sp-nav-group" id="sp-group-exams">
-        <div class="sp-nav-group-header" onclick="spToggleNavGroup('exams')" data-label="Examinations">
+        <div class="sp-nav-group-header" onclick="spToggleNavGroup('exams')" data-label="Assessments">
           <div style="display:flex;align-items:center;gap:12px;">
             <span class="sp-ms">bar_chart</span>
-            <span class="sp-nav-label">Examinations &amp; Results</span>
+            <span class="sp-nav-label">Assessments</span>
           </div>
           <span class="sp-ms sp-nav-group-caret">keyboard_arrow_down</span>
         </div>
         <div class="sp-nav-group-items">
-          <a href="/student-portal/exam-schedule" class="sp-nav-item {% if active_page == 'exam_schedule' %}active{% endif %}" data-label="Exam Schedule">
-            <span class="sp-ms">event_note</span><span class="sp-nav-label">Exam Schedule</span>
+          <a href="/student-portal/exam-schedule" class="sp-nav-item {% if active_page == 'exam_schedule' %}active{% endif %}" data-label="Assessment Schedule">
+            <span class="sp-ms">event_note</span><span class="sp-nav-label">Assessment Schedule</span>
           </a>
           {# Grade Appeal — hidden per request; markup kept for easy restore
           <a href="/student-portal/grade-appeal" class="sp-nav-item {% if active_page == 'grade_appeal' %}active{% endif %}" data-label="Grade Appeal">
             <span class="sp-ms">balance</span><span class="sp-nav-label">Grade Appeal</span>
           </a>
           #}
-          <a href="/student-portal/re-exam" class="sp-nav-item {% if active_page == 're_exam' %}active{% endif %}" data-label="Re-exam Application">
-            <span class="sp-ms">assignment_late</span><span class="sp-nav-label">Re-exam Application</span>
+          <a href="/student-portal/re-exam" class="sp-nav-item {% if active_page == 're_exam' %}active{% endif %}" data-label="Re-Exam Application">
+            <span class="sp-ms">assignment_late</span><span class="sp-nav-label">Re-Exam Application</span>
           </a>
-          <a href="/student-portal/results" class="sp-nav-item {% if active_page == 'results' %}active{% endif %}" data-label="Results / Grades">
-            <span class="sp-ms">assignment_turned_in</span><span class="sp-nav-label">Results / Grades</span>
+          <a href="/student-portal/results" class="sp-nav-item {% if active_page == 'results' %}active{% endif %}" data-label="Grades">
+            <span class="sp-ms">assignment_turned_in</span><span class="sp-nav-label">Grades</span>
           </a>
         </div>
       </div>
@@ -698,14 +819,6 @@
           </a>
         </div>
       </div>
-      {# Announcements #}
-      <a href="/student-portal/announcements" class="sp-nav-group-header {% if active_page == 'announcements' %}active{% endif %}" data-label="Announcements" style="text-decoration: none; margin-bottom: 4px;">
-        <div style="display:flex;align-items:center;gap:12px;">
-          <span class="sp-ms">campaign</span>
-          <span class="sp-nav-label">Announcements</span>
-        </div>
-      </a>
-
 
     </div>
 
@@ -817,6 +930,18 @@
     if (modal) modal.addEventListener('click', function(e) { if (e.target === modal) spCancelLogout(); });
   });
 
+  /* ── Dark mode ── */
+  function spToggleTheme() {
+    var isDark = document.body.classList.toggle('sp-dark');
+    var icon = document.getElementById('sp-theme-icon');
+    if (icon) icon.textContent = isDark ? 'light_mode' : 'dark_mode';
+    try { localStorage.setItem('sp-dark', isDark ? '1' : '0'); } catch(e) {}
+  }
+  (function spSyncThemeIcon() {
+    var icon = document.getElementById('sp-theme-icon');
+    if (icon && document.body.classList.contains('sp-dark')) icon.textContent = 'light_mode';
+  })();
+
   /* ── Mini (icon-only) sidebar ── */
   function spToggleMini() {
     var sidebar = document.getElementById('sp-sidebar');
@@ -908,6 +1033,16 @@
       var saved = null;
       try { saved = localStorage.getItem('sp-navgroup-' + id); } catch(e) {}
       if (saved === '1') el.classList.add('open');
+    });
+  })();
+
+  /* Hover tooltip with each menu item's full name — long labels are cut
+     off with "…" in the sidebar (and hidden entirely when it's collapsed). */
+  (function spNavTooltips() {
+    document.querySelectorAll('.sp-nav-item, .sp-nav-group-header').forEach(function(el) {
+      var label = el.querySelector('.sp-nav-label');
+      var text = ((label && label.textContent) || el.getAttribute('data-label') || '').trim();
+      if (text && !el.hasAttribute('title')) el.setAttribute('title', text);
     });
   })();
 

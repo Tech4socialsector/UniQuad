@@ -258,14 +258,13 @@ class EligibilityResultConfiguration(Document):
             
             # Fetch categories from individual fields as done in other doctypes
             cats = []
-            if getattr(app, "whether_scstobc_ncl", None) and app.whether_scstobc_ncl != "NA":
+            if getattr(app, "whether_scstobc_ncl", None) and app.whether_scstobc_ncl != "General":
                 cats.append(app.whether_scstobc_ncl)
             if getattr(app, "pwd", None) == "Yes":
                 cats.append("PWD")
             if getattr(app, "karnataka_category", None) == "Yes":
                 cats.append("Karnataka")
-            if getattr(app, "ews", None) == "Yes":
-                cats.append("EWS")
+
             edu["categories"] = cats
 
             if (program_level or "").strip() in ("Postgraduate", "Research Course", "PG"):

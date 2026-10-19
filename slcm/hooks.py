@@ -212,6 +212,7 @@ fixtures = [
                 "Programme Chair Approval Email Template",
                 "Programme Chair Rejected Email Template",
                 # Admission Module — Applicant Reminder Emails
+                "Applicant Application Rejected",
                 "Applicant Not Started Application Reminder",
                 "Applicant Draft Application Reminder",
                 "Applicant Fee Payment Pending Reminder",
@@ -357,6 +358,7 @@ fixtures = [
         "filters": [
             ["dt", "not in", ["HD Ticket Type", "HD Ticket"]],
             ["name", "!=", "Web Form-amount_field"],
+            ["name", "!=", "Email Template-reference_doctype"],
         ]
     },
     {

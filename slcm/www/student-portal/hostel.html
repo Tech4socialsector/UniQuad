@@ -133,6 +133,42 @@ a.hs-contact:focus-visible { outline: 2px solid var(--hs-maroon); outline-offset
   .hs-side { align-items: flex-start; text-align: left; }
   .hs-card-head { flex-wrap: wrap; }
 }
+
+/* ── Dark mode ── */
+/* Page tokens live on :root (light values, and --hs-border resolves there),
+   so redefine them on body.sp-dark where descendants inherit from. */
+body.sp-dark {
+  --hs-maroon:      #f08da0;
+  --hs-maroon-soft: rgba(214,74,102,0.14);
+  --hs-maroon-mid:  rgba(214,74,102,0.34);
+  --hs-border:      var(--sp-border);
+  --hs-row:         var(--sp-border);
+  --hs-ok:          #f08da0;
+  --hs-ok-bg:       rgba(214,74,102,0.16);
+  --hs-warn:        #f08da0;
+  --hs-warn-bg:     rgba(214,74,102,0.16);
+}
+body.sp-dark .hs-hero,
+body.sp-dark .hs-card,
+body.sp-dark .hs-empty { background: var(--sp-card); border-color: var(--sp-border); }
+body.sp-dark .hs-hero { border-left-color: var(--sp-primary); }
+body.sp-dark .hs-chip { background: #1a2540; border-color: #263352; color: var(--sp-text-2); }
+body.sp-dark .hs-status { border-color: rgba(214,74,102,0.4); }
+body.sp-dark .hs-progress-bar { background: #1a2540; }
+body.sp-dark .hs-progress-fill { background: var(--sp-primary); }
+body.sp-dark .hs-step-mark { border-color: #334366; }
+body.sp-dark .hs-step.is-done .hs-step-mark { background: var(--sp-primary); color: #fff; }
+body.sp-dark .hs-bed { border-color: #334366; }
+body.sp-dark .hs-bed.is-taken { border-color: var(--hs-maroon-mid); background: var(--hs-maroon-soft); color: #f08da0; }
+body.sp-dark .hs-bed.is-you { border-color: var(--sp-primary); background: var(--sp-primary); color: #fff; }
+body.sp-dark .hs-contact { border-color: var(--sp-border); background: #1a2540; color: var(--sp-text-2); }
+body.sp-dark a.hs-contact:hover { border-color: var(--hs-maroon-mid); background: var(--hs-maroon-soft); }
+body.sp-dark .hs-pill { background: #1a2540; color: var(--sp-text-2); }
+body.sp-dark .hs-pill-ok,
+body.sp-dark .hs-pill-warn,
+body.sp-dark .hs-pill-bad,
+body.sp-dark .hs-pill-info { background: rgba(214,74,102,0.16); color: #f08da0; }
+body.sp-dark .sp-info-box { border-color: rgba(124,196,242,0.3); }
 </style>
 {% endblock %}
 

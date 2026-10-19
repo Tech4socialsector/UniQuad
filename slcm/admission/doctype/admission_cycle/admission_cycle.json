@@ -28,8 +28,6 @@
   "column_break_njek",
   "section_break_programs",
   "programs",
-  "section_break_stages",
-  "stages",
   "section_break_rounds",
   "enable_multiple_rounds",
   "section_break_remarks",
@@ -37,7 +35,9 @@
   "tab_2_tab",
   "section_break_fzif",
   "entrance_test_details",
-  "amended_from"
+  "amended_from",
+  "application_naming_tab",
+  "application_id_configuration"
  ],
  "fields": [
   {
@@ -116,19 +116,6 @@
    "label": "Programmes",
    "options": "Admission Cycle Program",
    "reqd": 1
-  },
-  {
-   "fieldname": "section_break_stages",
-   "fieldtype": "Section Break",
-   "hidden": 1
-  },
-  {
-   "description": "Stages active in this cycle and their sequence",
-   "fieldname": "stages",
-   "fieldtype": "Table",
-   "hidden": 1,
-   "label": "Stages",
-   "options": "Admission Cycle Stage"
   },
   {
    "fieldname": "section_break_rounds",
@@ -268,11 +255,25 @@
    "label": "Application Completed Email",
    "options": "Email Template",
    "reqd": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "application_naming_tab",
+   "fieldtype": "Tab Break",
+   "label": "Application Naming"
+  },
+  {
+   "allow_bulk_edit": 1,
+   "allow_on_submit": 1,
+   "fieldname": "application_id_configuration",
+   "fieldtype": "Table",
+   "label": "Application ID Configuration",
+   "options": "Application ID Configuration"
   }
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2026-09-28 10:31:52.370304",
+ "modified": "2026-10-16 16:33:17.183286",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Admission Cycle",
