@@ -212,6 +212,7 @@ fixtures = [
                 "Programme Chair Approval Email Template",
                 "Programme Chair Rejected Email Template",
                 # Admission Module — Applicant Reminder Emails
+                "Applicant Application Rejected",
                 "Applicant Not Started Application Reminder",
                 "Applicant Draft Application Reminder",
                 "Applicant Fee Payment Pending Reminder",
