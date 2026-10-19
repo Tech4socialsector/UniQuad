@@ -7,8 +7,7 @@ from typing import Any, Optional, cast
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import format_datetime, now_datetime
-from frappe.utils.file_manager import save_file
+from frappe.utils import escape_html, format_datetime, now_datetime
 
 
 def get_receipt_template(fee_type, program, academic_year, fee_assignment=None) -> str:
@@ -181,26 +180,44 @@ def _pace_update_bulk_progress(i, total, success, failure, user, event_name):
 		)
 
 
+# Time limit for the background job (regenerating receipt PDFs can be slow)
+BULK_JOB_TIMEOUT = 4 * 60 * 60
+
+# Merging keeps every page in memory, so very large merged PDFs are refused in favour of ZIP
+MERGED_PDF_LIMIT = 2000
+
+OUTPUT_FORMATS = ("ZIP Archive", "Single Merged PDF")
+
+
 def process_bulk_pace_receipts_zip(receipts, user=None, output_format="ZIP Archive"):
-	import tempfile
+	from slcm.pace.doctype.pace_application.pace_application import (
+		ensure_free_disk_space,
+		safe_zip_name,
+		unique_arcname,
+	)
 
 	total = len(receipts)
 	success_count = 0
 	failure_count = 0
 	errors = []
 
-	with tempfile.NamedTemporaryFile(
-		delete=False, suffix=".zip" if output_format == "ZIP Archive" else ".pdf"
-	) as temp_out:
-		temp_path = temp_out.name
+	ensure_free_disk_space()
 
+	final_name = f"Bulk_PACE_Receipts_{now_datetime().strftime('%Y%m%d_%H%M%S')}_{frappe.generate_hash(length=6)}"
+	final_name += ".zip" if output_format == "ZIP Archive" else ".pdf"
+	# Written straight into private files, so the finished file is never copied or loaded into memory
+	out_path = frappe.get_site_path("private", "files", final_name)
+
+	try:
 		if output_format == "ZIP Archive":
-			with zipfile.ZipFile(temp_path, "w", zipfile.ZIP_DEFLATED) as zip_file:
+			used_names = set()
+			# Receipts are PDFs (already compressed), so they are stored without re-compressing
+			with zipfile.ZipFile(out_path, "w", zipfile.ZIP_STORED, allowZip64=True) as zip_file:
 				for i, rec in enumerate(receipts):
 					applicant = (rec.get("applicant_name") or rec.get("pace_application") or rec.get("name") or "").strip()
 					pd = rec.get("payment_date")
-					formatted = format_datetime(pd, "dd-MM-yyyy HH:mm") if pd else "nodate"
-					filename = f"{applicant} - PACE receipt ({formatted}).pdf".replace("/", "-")
+					formatted = format_datetime(pd, "dd-MM-yyyy HH.mm") if pd else "nodate"
+					filename = unique_arcname(safe_zip_name(f"{applicant} - PACE receipt ({formatted})") + ".pdf", used_names)
 
 					try:
 						content = _get_pace_receipt_pdf_content(rec)
@@ -241,46 +258,34 @@ def process_bulk_pace_receipts_zip(receipts, user=None, output_format="ZIP Archi
 					i, total, success_count, failure_count, user, "bulk_pace_receipt_download_progress"
 				)
 
-			with open(temp_path, "wb") as f:
-				merger.write(f)
+			if success_count:
+				with open(out_path, "wb") as f:
+					merger.write(f)
 			merger.close()
 
-	if success_count == 0:
-		if os.path.exists(temp_path):
-			os.remove(temp_path)
-		frappe.throw(_("Failed to generate any PACE receipts. Please check the error logs."))
+		if success_count == 0:
+			frappe.throw(_("Failed to generate any PACE receipts. Please check the error logs."))
 
-	final_name = f"Bulk_PACE_Receipts_{now_datetime().strftime('%Y%m%d_%H%M%S')}"
-	final_name += ".zip" if output_format == "ZIP Archive" else ".pdf"
-
-	# Temporarily override max file size limit checks to allow saving the generated zip file
-	from frappe.utils import file_manager as utils_fm
-	from frappe.core.api import file as core_file
-
-	orig_utils_get_max = utils_fm.get_max_file_size
-	orig_core_get_max = core_file.get_max_file_size
-
-	# Set temporary large limit (2 GB) to bypass the default 10MB restriction
-	large_limit = 2 * 1024 * 1024 * 1024
-	utils_fm.get_max_file_size = lambda: large_limit
-	core_file.get_max_file_size = lambda: large_limit
-
-	try:
-		with open(temp_path, "rb") as f:
-			saved_file = save_file(
-				final_name,
-				f.read(),
-				"PACE Receipt",
-				"Bulk Download",
-				is_private=1,
-			)
-	finally:
-		# Restore the original functions
-		utils_fm.get_max_file_size = orig_utils_get_max
-		core_file.get_max_file_size = orig_core_get_max
-
-	if os.path.exists(temp_path):
-		os.remove(temp_path)
+		# The file is already in private files, so register it as a File record directly.
+		# copy_from_existing_file stops Frappe re-reading (and re-writing) the whole file.
+		saved_file = frappe.get_doc(
+			{
+				"doctype": "File",
+				"file_name": final_name,
+				"file_url": f"/private/files/{final_name}",
+				"is_private": 1,
+				"file_size": os.path.getsize(out_path),
+				"attached_to_doctype": "PACE Receipt",
+				"attached_to_name": "Bulk Download",
+			}
+		)
+		saved_file.flags.copy_from_existing_file = True
+		saved_file.insert(ignore_permissions=True)
+	except Exception:
+		# Remove the partially written file if the download did not complete
+		if os.path.exists(out_path):
+			os.remove(out_path)
+		raise
 
 	summary = _("Bulk download complete: {0} PACE receipt(s)").format(success_count)
 	if failure_count > 0:
@@ -295,8 +300,13 @@ def process_bulk_pace_receipts_zip(receipts, user=None, output_format="ZIP Archi
 
 @frappe.whitelist()
 def get_bulk_pace_receipts_zip(filters):
+	from slcm.pace.doctype.pace_application.pace_application import check_bulk_export_access
+
+	check_bulk_export_access("PACE Receipt")
+
 	if isinstance(filters, str):
 		filters = json.loads(filters)
+	filters = filters or {}
 
 	query_filters = {}
 	if filters.get("program"):
@@ -311,25 +321,49 @@ def get_bulk_pace_receipts_zip(filters):
 	elif filters.get("to_date"):
 		query_filters["payment_date"] = ["<=", filters["to_date"]]
 
-	output_format = filters.get("output_format", "ZIP Archive")
+	output_format = filters.get("output_format") or "ZIP Archive"
+	if output_format not in OUTPUT_FORMATS:
+		frappe.throw(_("Invalid output format: {0}").format(output_format))
 
-	receipts = frappe.get_all(
+	# get_list enforces the user's record permissions
+	receipts = frappe.get_list(
 		"PACE Receipt",
 		filters=query_filters,
-		fields=["name", "pace_application", "applicant_name", "payment_date", "receipt", "fee_assignment", "receipt_template"],
+		fields=[
+			"name", "pace_application", "applicant_name", "payment_date", "receipt", "fee_assignment",
+			"receipt_template", "fee_type", "program", "academic_year",
+		],
+		limit=0,
 	)
 
 	if not receipts:
 		frappe.throw(_("No PACE receipts found for the selected filters."))
 
+	if output_format == "Single Merged PDF" and len(receipts) > MERGED_PDF_LIMIT:
+		frappe.throw(
+			_("A single merged PDF supports up to {0} receipts, but {1} match these filters. Please narrow the filters or choose ZIP Archive.").format(
+				MERGED_PDF_LIMIT, len(receipts)
+			)
+		)
+
+	user = frappe.session.user
+
 	if len(receipts) > 10:
-		frappe.enqueue(
+		job = frappe.enqueue(
 			method="slcm.pace.doctype.pace_receipt.pace_receipt.bulk_pace_receipts_zip_worker",
 			queue="long",
+			timeout=BULK_JOB_TIMEOUT,
+			job_id=f"pace_receipt_bulk_download::{user}",
+			deduplicate=True,
 			receipts=receipts,
-			user=frappe.session.user,
+			user=user,
 			output_format=output_format,
 		)
+		if not job:
+			return {
+				"status": "already_running",
+				"message": _("Your previous PACE receipt bulk download is still running. You will be notified when it is ready."),
+			}
 		return {
 			"status": "enqueued",
 			"message": _("Preparing {0} for {1} PACE receipt(s) in the background. You will be notified when it is ready.").format(
@@ -337,44 +371,67 @@ def get_bulk_pace_receipts_zip(filters):
 			),
 		}
 
-	file_url, _summary, _errors = process_bulk_pace_receipts_zip(
-		receipts, user=frappe.session.user, output_format=output_format
-	)
+	try:
+		file_url, _summary, _errors = process_bulk_pace_receipts_zip(
+			receipts, user=user, output_format=output_format
+		)
+	except (frappe.ValidationError, frappe.PermissionError):
+		raise
+	except Exception:
+		frappe.log_error(frappe.get_traceback(), "Bulk PACE Receipt Download Failed")
+		frappe.throw(_("Bulk download failed. Please check the Error Log for details."))
+
 	return file_url
 
 
-@frappe.whitelist()
-def bulk_pace_receipts_zip_worker(receipts, user, output_format="ZIP Archive"):
-	frappe.set_user(user)
+def _notify_bulk_download(user, subject, content):
+	"""Bell notification, so the user gets the result even after leaving the page. Never fails the job."""
 	try:
-		file_url, summary, errors = process_bulk_pace_receipts_zip(
-			receipts, user=user, output_format=output_format
-		)
-
-		error_details = ""
-		if errors:
-			error_details = "<br><br><b>Errors:</b><ul>" + "".join(f"<li>{e}</li>" for e in errors[:10]) + "</ul>"
-			if len(errors) > 10:
-				error_details += _("<p>...and {0} more errors.</p>").format(len(errors) - 10)
-
 		from frappe.desk.doctype.notification_log.notification_log import enqueue_create_notification
 
 		enqueue_create_notification(
 			[user],
 			{
-				"subject": _("PACE receipt bulk download ready"),
-				"email_content": _("{0}. <a href='{1}' target='_blank'><b>Click here to download</b></a>. {2}").format(
-					summary, file_url, error_details
-				),
+				"subject": subject,
+				"email_content": content,
 				"type": "Alert",
 				"document_type": "PACE Receipt",
 			},
 		)
+	except Exception:
+		frappe.log_error(frappe.get_traceback(), "Bulk PACE Receipt Notification Failed")
 
-		frappe.publish_realtime(
-			"bulk_download_complete",
-			{"file_url": file_url, "doctype": "PACE Receipt"},
-			user=user,
+
+def bulk_pace_receipts_zip_worker(receipts, user, output_format="ZIP Archive"):
+	# Not whitelisted: it switches to the given user, so it must only run as a background job
+	frappe.set_user(user)
+	try:
+		file_url, summary, errors = process_bulk_pace_receipts_zip(
+			receipts, user=user, output_format=output_format
 		)
+		# Commit before notifying so the File record is visible when the user downloads it
+		frappe.db.commit()
 	except Exception as e:
-		frappe.log_error(f"Bulk PACE receipt download failed: {e!s}", "Bulk PACE Receipt Download")
+		frappe.db.rollback()
+		frappe.log_error(frappe.get_traceback(), "Bulk PACE Receipt Download Failed")
+		message = str(e) if isinstance(e, frappe.ValidationError) else _(
+			"Bulk download failed. Please check the Error Log for details."
+		)
+		_notify_bulk_download(user, _("PACE receipt bulk download failed"), escape_html(message))
+		frappe.publish_realtime("pace_receipt_bulk_download_failed", {"message": message}, user=user)
+		return
+
+	error_details = ""
+	if errors:
+		error_details = "<br><br><b>Errors:</b><ul>" + "".join(f"<li>{escape_html(e)}</li>" for e in errors[:10]) + "</ul>"
+		if len(errors) > 10:
+			error_details += _("<p>...and {0} more errors.</p>").format(len(errors) - 10)
+
+	_notify_bulk_download(
+		user,
+		_("PACE receipt bulk download ready"),
+		_("{0}. <a href='{1}' target='_blank'><b>Click here to download</b></a>. {2}").format(
+			summary, file_url, error_details
+		),
+	)
+	frappe.publish_realtime("pace_receipt_bulk_download_complete", {"file_url": file_url}, user=user)

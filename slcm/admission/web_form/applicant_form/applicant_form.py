@@ -1278,6 +1278,43 @@ def download_portal_application_fee_receipt(applicant_name):
     frappe.local.response.filecontent = pdf
     frappe.local.response.type = "pdf"
 
+# Nationality options spelled differently from the Country used on State records
+NATIONALITY_STATE_COUNTRY_ALIASES = {
+    "united states of america": "United States",
+    "cape verde": "Cabo Verde",
+    "republic of the congo": "Congo",
+    "czechia": "Czech Republic",
+    "the gambia": "Gambia",
+    "federated states of micronesia": "Micronesia",
+    "são tomé and príncipe": "Sao Tome and Principe",
+    "türkiye": "Turkey",
+}
+
+
+def _state_country_names(country):
+    """Lower-cased country names to match against State.country (the given name plus its alias)."""
+    country = (country or "").strip().lower()
+    names = {country}
+    alias = NATIONALITY_STATE_COUNTRY_ALIASES.get(country)
+    if alias:
+        names.add(alias.lower())
+    return tuple(names)
+
+
+@frappe.whitelist(allow_guest=True)
+def state_belongs_to_country(state=None, country=None):
+    """True when the State belongs to the given country / nationality. 'Other' is always valid."""
+    state = (state or "").strip()
+    if not state or state.lower() == "other" or not (country or "").strip():
+        return True
+
+    state_country = frappe.db.get_value("State", state, "country")
+    if not state_country:
+        return True
+
+    return state_country.strip().lower() in _state_country_names(country)
+
+
 @frappe.whitelist(allow_guest=True)
 def state_query(doctype=None, txt=None, searchfield=None, start=0, page_len=20, filters=None, **kwargs):
     if isinstance(filters, str):
@@ -1291,7 +1328,14 @@ def state_query(doctype=None, txt=None, searchfield=None, start=0, page_len=20, 
 
     country = filters.get("country") if isinstance(filters, dict) else None
     if not country:
-        country = frappe.form_dict.get("filters[country]") or frappe.form_dict.get("country")
+        country = kwargs.get("country") or frappe.form_dict.get("filters[country]") or frappe.form_dict.get("country")
+
+    # frappe.desk.search.search_link (passes doctype) reads item[0] from each row, while the
+    # web form's Autocomplete control (no doctype) needs {"value", "label"} dicts
+    def to_results(rows):
+        if doctype:
+            return [(r[0],) for r in rows]
+        return [{"value": r[0], "description": "", "label": r[0]} for r in rows]
 
     params = {
         "txt": "%" + (txt or "") + "%",
@@ -1304,12 +1348,12 @@ def state_query(doctype=None, txt=None, searchfield=None, start=0, page_len=20, 
         # all states, otherwise e.g. "Cal" under India would return "California".
         matched_rows = frappe.db.sql("""
             select distinct name from `tabState`
-            where (LOWER(country) = LOWER(%(country)s) or name = 'Other')
+            where (LOWER(country) in %(countries)s or name = 'Other')
             and name like %(txt)s
             order by (case when name = 'Other' then 1 else 0 end), name
             limit %(start)s, %(page_len)s
-        """, dict(params, country=country.strip()))
-        return [{"value": r[0], "description": "", "label": r[0]} for r in matched_rows]
+        """, dict(params, countries=_state_country_names(country)))
+        return to_results(matched_rows)
 
     rows = frappe.db.sql("""
         select distinct name from `tabState`
@@ -1318,7 +1362,7 @@ def state_query(doctype=None, txt=None, searchfield=None, start=0, page_len=20, 
         limit %(start)s, %(page_len)s
     """, params)
 
-    return [{"value": r[0], "description": "", "label": r[0]} for r in rows]
+    return to_results(rows)
 
 @frappe.whitelist(allow_guest=True)
 def city_query(doctype=None, txt=None, searchfield=None, start=0, page_len=20, filters=None, **kwargs):

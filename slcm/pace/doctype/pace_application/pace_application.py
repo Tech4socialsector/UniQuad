@@ -11,9 +11,9 @@ import time
 import random
 import io
 import os
+import re
 import uuid
 import zipfile
-from frappe.utils.file_manager import save_file
 
 class PACEApplication(Document):
     def before_validate(self):
@@ -996,9 +996,60 @@ def chunked(iterable, size=500):
     for i in range(0, len(iterable), size):
         yield iterable[i:i + size]
 
-def get_file_bytes_and_ext(file_url, file_meta_map):
+# Formats that are already compressed; deflating them again only burns CPU
+STORED_EXTENSIONS = {
+    ".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic",
+    ".pdf", ".zip", ".docx", ".xlsx", ".pptx", ".mp4"
+}
+
+# Selections up to this size are exported within the request; larger ones run as a background job
+SYNC_EXPORT_LIMIT = 100
+
+# Free space always left on the disk so the database and site keep running during large exports
+MIN_FREE_DISK_SPACE = 2 * 1024 * 1024 * 1024
+
+# Characters invalid in file/folder names on Windows, plus path separators
+UNSAFE_NAME_CHARS = re.compile(r'[\\/:*?"<>|\x00-\x1f]')
+
+
+def check_bulk_export_access(doctype):
+    """Bulk exports are only for desk (staff) users with read access, never website users such as applicants."""
+    user = frappe.session.user
+    if user == "Guest" or frappe.get_cached_value("User", user, "user_type") != "System User":
+        frappe.throw(_("You are not permitted to export these records."), frappe.PermissionError)
+    frappe.has_permission(doctype, "read", throw=True)
+
+
+def ensure_free_disk_space(required_bytes=0):
+    """Refuses to start an export that could fill up the disk the site and database run on."""
+    import shutil
+    free = shutil.disk_usage(frappe.get_site_path("private", "files")).free
+    if free < required_bytes + MIN_FREE_DISK_SPACE:
+        frappe.throw(_(
+            "Not enough free disk space on the server for this export "
+            "(needs about {0} GB, {1} GB available). Please select fewer records or contact the administrator."
+        ).format(round(required_bytes / 1024**3, 1), round(free / 1024**3, 1)))
+
+
+def safe_zip_name(name):
+    """Makes a name safe to use as a ZIP folder/file name on every OS."""
+    return UNSAFE_NAME_CHARS.sub("_", str(name)).strip(" .") or "Unknown"
+
+
+def unique_arcname(arcname, used_names):
+    """Appends _2, _3... when the same name was already written to the ZIP."""
+    base, ext = os.path.splitext(arcname)
+    candidate, n = arcname, 1
+    while candidate in used_names:
+        n += 1
+        candidate = f"{base}_{n}{ext}"
+    used_names.add(candidate)
+    return candidate
+
+
+def resolve_file_path_and_ext(file_url, file_meta_map):
     """
-    Fast file reader directly accessing disk file path.
+    Resolves a file URL to its absolute path on disk and its extension.
     Avoids loading full File Document ORM objects.
     """
     if not file_url:
@@ -1024,42 +1075,170 @@ def get_file_bytes_and_ext(file_url, file_meta_map):
     else:
         file_path = frappe.get_site_path(clean_url.lstrip("/"))
 
-    if os.path.exists(file_path):
+    # Only allow files inside the site's files folders (blocks values like /private/files/../../site_config.json)
+    real_path = os.path.realpath(file_path)
+    allowed_roots = (
+        os.path.realpath(frappe.get_site_path("public", "files")),
+        os.path.realpath(frappe.get_site_path("private", "files"))
+    )
+    if not any(real_path.startswith(root + os.sep) for root in allowed_roots):
+        return None, ext
+
+    return real_path, ext
+
+
+def add_file_to_zip(zip_file, file_url, file_meta_map, arcname_base, used_names):
+    """
+    Streams a file from disk into the ZIP without loading it fully into memory.
+    Already-compressed formats are stored as-is. Returns True if the file was added.
+    """
+    if not file_url:
+        return False
+
+    file_path, ext = resolve_file_path_and_ext(file_url, file_meta_map)
+    arcname = unique_arcname(f"{arcname_base}{ext}", used_names)
+    compress_type = zipfile.ZIP_STORED if ext.lower() in STORED_EXTENSIONS else zipfile.ZIP_DEFLATED
+
+    if file_path and os.path.isfile(file_path):
         try:
-            with open(file_path, "rb") as f:
-                return f.read(), ext
+            zip_file.write(file_path, arcname, compress_type=compress_type)
+            return True
         except Exception:
             pass
 
+    # Fall back to the File doc for files not found at the expected disk path
+    from urllib.parse import unquote
+    file_meta = file_meta_map.get(unquote(file_url)) or file_meta_map.get(file_url)
     if file_meta and file_meta.get("name"):
         try:
-            file_doc = frappe.get_doc("File", file_meta["name"])
-            content = file_doc.get_content()
+            content = frappe.get_doc("File", file_meta["name"]).get_content()
             if content:
-                return content, ext
+                zip_file.writestr(arcname, content, compress_type=compress_type)
+                return True
         except Exception:
             pass
 
-    return None, ext
+    return False
+
 
 @frappe.whitelist()
 def bulk_download_all_records(names):
     """
-    Creates a ZIP archive containing ALL uploaded documents for the selected PACE Applications.
-    Organized by applicant ID folders. High-performance streaming implementation optimized for up to 10,000+ applicants.
+    Exports ALL uploaded documents for the selected PACE Applications as a ZIP.
+    Small selections are built within the request. Larger ones run as a background job,
+    so the export is not cut off by the web request timeout; the user is notified when ready.
     """
     if isinstance(names, str):
         names = frappe.parse_json(names)
 
+    check_bulk_export_access("PACE Application")
+
     if not names:
         frappe.throw(_("Please select at least one application to download."))
 
+    user = frappe.session.user
+
+    if len(names) <= SYNC_EXPORT_LIMIT:
+        try:
+            file_url = build_application_attachments_zip(names, user)
+        except (frappe.ValidationError, frappe.PermissionError):
+            raise
+        except Exception:
+            frappe.log_error(
+                message=frappe.get_traceback(),
+                title="PACE Application Attachments Export Failed"
+            )
+            frappe.throw(_("Attachment export failed. Please check the Error Log for details."))
+
+        return {"status": "completed", "file_url": file_url}
+
+    job = frappe.enqueue(
+        "slcm.pace.doctype.pace_application.pace_application.export_application_attachments_worker",
+        queue="long",
+        timeout=4 * 60 * 60,
+        job_id=f"pace_application_attachments_export::{user}",
+        deduplicate=True,
+        names=names,
+        user=user
+    )
+
+    if not job:
+        return {
+            "status": "already_running",
+            "message": _("Your previous attachment export is still running. You will be notified when it is ready.")
+        }
+
+    return {
+        "status": "enqueued",
+        "message": _("Preparing attachments for {0} applications in the background. "
+                     "The download will start automatically, and you will also get a notification with the link.").format(len(names))
+    }
+
+
+def export_application_attachments_worker(names, user):
+    """Background job: builds the attachments ZIP and notifies the user."""
+    frappe.set_user(user)
+    try:
+        file_url = build_application_attachments_zip(names, user)
+        # Commit before notifying so the File record is visible when the user downloads it
+        frappe.db.commit()
+    except Exception as e:
+        frappe.db.rollback()
+        frappe.log_error(
+            message=frappe.get_traceback(),
+            title="PACE Application Attachments Export Failed"
+        )
+        message = str(e) if isinstance(e, frappe.ValidationError) else _(
+            "Attachment export failed. Please check the Error Log for details."
+        )
+        notify_export_result(user, _("PACE application attachments export failed"), frappe.utils.escape_html(message))
+        frappe.publish_realtime(
+            "pace_attachments_export_failed", {"message": message}, user=user
+        )
+        return
+
+    notify_export_result(
+        user,
+        _("PACE application attachments export is ready ({0} applications)").format(len(names)),
+        _("<a href='{0}' target='_blank'><b>Click here to download</b></a>").format(file_url)
+    )
+    frappe.publish_realtime(
+        "pace_attachments_export_complete", {"file_url": file_url}, user=user
+    )
+
+
+def notify_export_result(user, subject, content):
+    """Bell notification, so the user gets the result even after leaving the page. Never fails the job."""
+    try:
+        from frappe.desk.doctype.notification_log.notification_log import enqueue_create_notification
+
+        enqueue_create_notification(
+            [user],
+            {
+                "subject": subject,
+                "email_content": content,
+                "type": "Alert",
+                "document_type": "PACE Application"
+            }
+        )
+    except Exception:
+        frappe.log_error(message=frappe.get_traceback(), title="PACE Export Notification Failed")
+
+
+def build_application_attachments_zip(names, user):
+    """
+    Creates a ZIP archive containing ALL uploaded documents for the given PACE Applications,
+    organized by applicant folders. The ZIP is written straight into the site's private files
+    folder and files are streamed from disk, so memory use stays flat for 10,000+ applicants.
+    Returns the file URL of the saved ZIP.
+    """
     import tempfile
 
-    # Disk-backed temporary file to avoid RAM exhaustion on 10,000+ applicants
-    temp_zip_file = tempfile.NamedTemporaryFile(suffix=".zip", delete=False)
-    zip_path = temp_zip_file.name
-    temp_zip_file.close()
+    zip_filename = (
+        f"PACE_Bulk_Records_{frappe.utils.now_datetime().strftime('%Y%m%d_%H%M%S')}"
+        f"_{frappe.generate_hash(length=6)}.zip"
+    )
+    zip_path = frappe.get_site_path("private", "files", zip_filename)
 
     found_files = 0
     report_rows = []
@@ -1073,14 +1252,14 @@ def bulk_download_all_records(names):
         "admission_letter": ("Admission Letter", "Admission_Letter")
     }
 
-    # 1. Batch fetch all PACE Application records in chunks of 500
+    # 1. Batch fetch all PACE Application records in chunks of 500 (get_list enforces the user's record permissions)
     apps_dict = {}
     for chunk in chunked(names, 500):
-        records = frappe.get_all(
+        records = frappe.get_list(
             "PACE Application",
             filters={"name": ["in", chunk]},
             fields=[
-                "name", "applicant_name", "first_name", "last_name", "programme", 
+                "name", "applicant_name", "first_name", "last_name", "programme",
                 "email_address", "mobile_number", "status",
                 "upload_student_photo", "student_signature", "ug_degree_certificate",
                 "govt_id", "application_form", "admission_letter"
@@ -1128,20 +1307,33 @@ def bulk_download_all_records(names):
                 if fr.file_url not in file_meta_map:
                     file_meta_map[fr.file_url] = fr
 
+    if not ordered_apps:
+        frappe.throw(_("None of the selected applications were found, or you do not have access to them."))
+
+    # Make sure the export cannot fill up the disk (the ZIP is about the size of the source files)
+    estimated_size = 0
+    for url in all_file_urls:
+        path, _ext = resolve_file_path_and_ext(url, file_meta_map)
+        if path and os.path.isfile(path):
+            estimated_size += os.path.getsize(path)
+    ensure_free_disk_space(estimated_size)
+
     total_names = len(ordered_apps)
+    progress_step = max(1, total_names // 50)
+    used_names = set()
 
     try:
-        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zip_file:
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED, allowZip64=True) as zip_file:
             for idx, doc in enumerate(ordered_apps, start=1):
                 applicant_id = doc.name
                 applicant_name = doc.applicant_name or f"{doc.first_name or ''} {doc.last_name or ''}".strip() or "Unknown_Applicant"
-                folder_name = f"{applicant_name}-{applicant_id}"
+                folder_name = unique_arcname(safe_zip_name(f"{applicant_name}-{applicant_id}"), used_names)
+                file_prefix = f"{folder_name}/{safe_zip_name(applicant_id)}"
 
                 # Explicitly create folder entry in ZIP so extracted folder exists even if 0 files are retrieved
                 zip_file.writestr(f"{folder_name}/", "")
 
                 # Dynamic progress update step (every record for small sets, up to 50 updates for large sets)
-                progress_step = max(1, total_names // 50)
                 if idx % progress_step == 0 or idx == total_names:
                     percent = int((idx / total_names) * 100)
                     frappe.publish_realtime("progress", {
@@ -1149,7 +1341,7 @@ def bulk_download_all_records(names):
                         "percent": percent,
                         "title": _("Exporting Attachments"),
                         "description": f"Processing {idx}/{total_names}: {applicant_name}"
-                    }, user=frappe.session.user)
+                    }, user=user)
 
                 missing_docs = []
                 retrieved_docs = []
@@ -1162,10 +1354,7 @@ def bulk_download_all_records(names):
                         missing_docs.append(label)
                         continue
 
-                    content, ext = get_file_bytes_and_ext(file_url, file_meta_map)
-                    if content:
-                        arcname = f"{folder_name}/{applicant_id}_{zip_label}{ext}"
-                        zip_file.writestr(arcname, content)
+                    if add_file_to_zip(zip_file, file_url, file_meta_map, f"{file_prefix}_{zip_label}", used_names):
                         found_files += 1
                         retrieved_docs.append(label)
                     else:
@@ -1184,11 +1373,7 @@ def bulk_download_all_records(names):
                             label = f"{receipt.fee_type} Receipt"
                             zip_label = f"{str(receipt.fee_type).replace(' ', '_')}_Receipt"
 
-                        file_url = receipt.receipt
-                        content, ext = get_file_bytes_and_ext(file_url, file_meta_map)
-                        if content:
-                            arcname = f"{folder_name}/{applicant_id}_{zip_label}{ext}"
-                            zip_file.writestr(arcname, content)
+                        if add_file_to_zip(zip_file, receipt.receipt, file_meta_map, f"{file_prefix}_{safe_zip_name(zip_label)}", used_names):
                             found_files += 1
                             retrieved_docs.append(label)
                         else:
@@ -1204,7 +1389,7 @@ def bulk_download_all_records(names):
                         f"Missing Documents Detail:\n"
                         + "\n".join([f"- {d}" for d in missing_docs])
                     )
-                    zip_file.writestr(f"{folder_name}/{applicant_id}_MISSING_DOCUMENTS.txt", txt_content)
+                    zip_file.writestr(f"{file_prefix}_MISSING_DOCUMENTS.txt", txt_content)
 
                 if missing_docs:
                     report_rows.append({
@@ -1221,6 +1406,7 @@ def bulk_download_all_records(names):
 
             # Generate Excel report inside ZIP using constant memory mode
             if report_rows:
+                excel_path = None
                 try:
                     import xlsxwriter
                     excel_temp = tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False)
@@ -1278,48 +1464,40 @@ def bulk_download_all_records(names):
 
                     workbook.close()
 
-                    with open(excel_path, "rb") as ef:
-                        zip_file.writestr("Missing_Documents_Report.xlsx", ef.read())
-                    os.remove(excel_path)
+                    zip_file.write(excel_path, "Missing_Documents_Report.xlsx")
                 except Exception as e:
                     frappe.log_error(
                         message=f"Failed to generate Excel missing documents report: {str(e)}",
                         title="PACE Bulk Export Excel Report Error"
                     )
+                finally:
+                    if excel_path and os.path.exists(excel_path):
+                        os.remove(excel_path)
 
         if found_files == 0 and not any(r["missing_count"] > 0 for r in report_rows):
             frappe.throw(_("No uploaded documents found for the selected records."))
 
-        zip_filename = f"PACE_Bulk_Records_{frappe.utils.now_datetime().strftime('%Y%m%d_%H%M%S')}.zip"
-        
-        from frappe.utils import file_manager as utils_fm
-        from frappe.core.api import file as core_file
-
-        orig_utils_get_max = utils_fm.get_max_file_size
-        orig_core_get_max = core_file.get_max_file_size
-
-        large_limit = 5 * 1024 * 1024 * 1024
-        utils_fm.get_max_file_size = lambda: large_limit
-        core_file.get_max_file_size = lambda: large_limit
-
-        try:
-            with open(zip_path, "rb") as zf:
-                _file = save_file(
-                    zip_filename,
-                    zf.read(),
-                    "PACE Application",
-                    names[0],
-                    is_private=1
-                )
-        finally:
-            utils_fm.get_max_file_size = orig_utils_get_max
-            core_file.get_max_file_size = orig_core_get_max
+        # The ZIP is already in private/files, so register it as a File record directly.
+        # copy_from_existing_file stops Frappe re-reading (and re-writing) a possibly multi-GB file.
+        _file = frappe.get_doc({
+            "doctype": "File",
+            "file_name": zip_filename,
+            "file_url": f"/private/files/{zip_filename}",
+            "is_private": 1,
+            "file_size": os.path.getsize(zip_path),
+            "attached_to_doctype": "PACE Application",
+            "attached_to_name": names[0]
+        })
+        _file.flags.copy_from_existing_file = True
+        _file.insert(ignore_permissions=True)
 
         return _file.file_url
 
-    finally:
+    except Exception:
+        # Remove the partially written ZIP if the export did not complete
         if os.path.exists(zip_path):
             os.remove(zip_path)
+        raise
 
 
 def send_document_reminders(current_item=0, total_items=0):

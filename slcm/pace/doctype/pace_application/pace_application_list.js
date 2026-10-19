@@ -1,5 +1,28 @@
 frappe.listview_settings['PACE Application'] = {
 	onload: function (listview) {
+		// Large exports run as a background job; the server signals completion over realtime
+		frappe.realtime.off('pace_attachments_export_complete');
+		frappe.realtime.on('pace_attachments_export_complete', function (data) {
+			frappe.hide_progress();
+			if (data && data.file_url) {
+				window.location.href = data.file_url;
+				frappe.show_alert({
+					message: __('Attachments export is ready. Download started.'),
+					indicator: 'green'
+				});
+			}
+		});
+
+		frappe.realtime.off('pace_attachments_export_failed');
+		frappe.realtime.on('pace_attachments_export_failed', function (data) {
+			frappe.hide_progress();
+			frappe.msgprint({
+				title: __('Export Failed'),
+				indicator: 'red',
+				message: (data && data.message) || __('Attachment export failed.')
+			});
+		});
+
 		// Add to the 'Actions' menu that appears when records are selected
 		listview.page.add_actions_menu_item(__('Export Application Attachments'), function () {
 			const selected_items = listview.get_checked_items();
@@ -21,15 +44,24 @@ frappe.listview_settings['PACE Application'] = {
 				},
 				freeze: false,
 				callback: function (r) {
-					frappe.hide_progress();
-					if (r.message) {
-						const file_url = r.message;
-						window.location.href = file_url;
+					const res = r.message || {};
+
+					if (res.status === 'completed' && res.file_url) {
+						frappe.hide_progress();
+						window.location.href = res.file_url;
 
 						frappe.show_alert({
 							message: __('Download started successfully.'),
 							indicator: 'green'
 						});
+					} else if (res.status === 'enqueued' || res.status === 'already_running') {
+						// Progress bar stays open and is updated by the background job
+						frappe.show_alert({
+							message: res.message,
+							indicator: 'blue'
+						}, 10);
+					} else {
+						frappe.hide_progress();
 					}
 				},
 				error: function () {
