@@ -4614,6 +4614,9 @@ function setupPreferenceValidation() {
 				} else if (fn === 'Yes' && nat === 'India') {
 					frappe.msgprint('For International applications, Nationality cannot be India.');
 					wf.set_value('nationality', '');
+				} else if (wf._slcmOnNationalityChangeForState) {
+					// State list follows Nationality: drop a State that no longer belongs to it
+					wf._slcmOnNationalityChangeForState();
 				}
 			}
 
@@ -5776,8 +5779,9 @@ function setupCityStateFilter() {
 	if (wf._slcmApplicantAddrWired) return true;
 	wf._slcmApplicantAddrWired = true;
 
+	// State list follows the applicant's Nationality (falls back to the hidden address country, then India)
 	function effCountry() {
-		var raw = wf.get_value('country');
+		var raw = wf.get_value('nationality') || wf.get_value('country');
 		return ((raw || '') + '').trim() || 'India';
 	}
 
@@ -5786,7 +5790,9 @@ function setupCityStateFilter() {
 		var cf = wf.get_field && wf.get_field(cityDataFld);
 		if (!sf) return false;
 
-		[countryFld, stateFld].forEach(function (fn) {
+		// Not for State: Applicant.state does not allow ignoring user permissions, so search_link
+		// rejects every State search (empty dropdown) when this flag is sent
+		[countryFld].forEach(function (fn) {
 			var fld = wf.get_field(fn);
 			if (fld && fld.df) fld.df.ignore_user_permissions = 1;
 		});
@@ -5795,7 +5801,9 @@ function setupCityStateFilter() {
 			var eff = effCountry();
 			return {
 				query: 'slcm.admission.web_form.applicant_form.applicant_form.state_query',
-				filters: { country: eff }
+				filters: { country: eff },
+				// Web forms render Link fields as Autocomplete, which only sends `params` to the query
+				params: { country: eff }
 			};
 		}
 
@@ -5806,6 +5814,36 @@ function setupCityStateFilter() {
 				filters: { state: st || '' }
 			};
 		}
+
+		// Clears the State (and City) when it does not belong to the Nationality country
+		function checkStateMatchesCountry(stateVal) {
+			var eff = effCountry();
+			frappe.call({
+				method: 'slcm.admission.web_form.applicant_form.applicant_form.state_belongs_to_country',
+				args: { state: stateVal, country: eff },
+				callback: function (r) {
+					if (!r || r.message !== false) return;
+					if ((wf.get_value(stateFld) || '').trim() !== stateVal) return; // changed meanwhile
+					frappe.msgprint("The selected State '" + stateVal + "' does not belong to '" + eff + "'.");
+					wf._is_syncing_address = true;
+					wf.set_value(stateFld, '');
+					wf.set_value(cityDataFld, '');
+					setTimeout(function() { wf._is_syncing_address = false; }, 200);
+				}
+			});
+		}
+
+		// Called from validateNationality (wf.on would replace that handler). Only reacts when the
+		// user changes Nationality, so values loading into a saved draft are never cleared.
+		wf._slcmOnNationalityChangeForState = function () {
+			var natFld = wf.fields_dict.nationality;
+			var natInput = natFld && natFld.$input && natFld.$input[0];
+			if (!natInput || document.activeElement !== natInput) return;
+			// The link control shows cached results first; drop the previous country's list
+			if (sf.$input) sf.$input.cache = {};
+			var st = (wf.get_value(stateFld) || '').trim();
+			if (st && st.toLowerCase() !== 'other') checkStateMatchesCountry(st);
+		};
 
 		if (wf.set_query) {
 			wf.set_query(stateFld, stateQueryFn);
@@ -5818,6 +5856,8 @@ function setupCityStateFilter() {
 		if (sf) {
 			if (sf.df) sf.df.get_query = stateQueryFn;
 			sf.get_query = stateQueryFn;
+			// Drop any unfiltered results cached before the query was attached
+			if (sf.$input) sf.$input.cache = {};
 		}
 		if (cf) {
 			if (cf.df) cf.df.get_query = cityQueryFn;
@@ -5868,25 +5908,9 @@ function setupCityStateFilter() {
 				return;
 			}
 
-			// Validate state belongs to country if country is India
-			if (currentCountry && currentCountry.toLowerCase() === 'india' && currentState.toLowerCase() !== 'other') {
-				frappe.call({
-					method: "frappe.client.get_value",
-					args: {
-						doctype: "State",
-						filters: { name: currentState },
-						fieldname: ["country"]
-					},
-					callback: function(r) {
-						if (r.message && r.message.country && r.message.country.trim().toLowerCase() !== 'india') {
-							frappe.msgprint("The selected State '" + currentState + "' does not belong to 'India'.");
-							wf._is_syncing_address = true;
-							wf.set_value(stateFld, '');
-							wf.set_value(cityDataFld, '');
-							setTimeout(function() { wf._is_syncing_address = false; }, 200);
-						}
-					}
-				});
+			// Validate state belongs to the Nationality country ('Other' is always allowed)
+			if (currentState.toLowerCase() !== 'other') {
+				checkStateMatchesCountry(currentState);
 			}
 
 			// Only check/clear city if user genuinely changed from one state to a different state
