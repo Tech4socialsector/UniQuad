@@ -21,9 +21,9 @@ required_apps = ["payments"]
 add_to_apps_screen = [
 	{
 		"name": "slcm",
-		"logo": "/assets/slcm/logo.png",
+		"logo": "/assets/slcm/icons/desktop_icons/subtle/slcm.svg",
 		"title": "SLCM",
-		"route": "/slcm"
+		"route": "/desk/dashboard-view/Admission"
 	}
 ]
 

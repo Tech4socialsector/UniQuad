@@ -1240,7 +1240,13 @@ def is_application_editable(applicant):
     # Draft is always editable by default, overriding stage settings
     if current_status == "Draft":
         return True
-    
+
+    # Admission Cycle Stage was removed (stages no longer configured per cycle). Querying it
+    # raises DoesNotExistError, which showed applicants "Not Permitted" for any non-Draft
+    # application. With no stage marking it editable, the result was already False.
+    if not frappe.db.exists("DocType", "Admission Cycle Stage"):
+        return False
+
     # Fetch stages for this cycle
     stages = frappe.get_all(
         "Admission Cycle Stage",
