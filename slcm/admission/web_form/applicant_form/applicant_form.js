@@ -6191,3 +6191,23 @@ frappe.ready(function() {
 		}
 	}, 600);
 });
+
+frappe.ready(() => {
+    // Prevent registering the event more than once.
+    if (window.slcm_beforeunload_registered) {
+        return;
+    }
+
+    window.slcm_beforeunload_registered = true;
+
+    window.addEventListener("beforeunload", (event) => {
+        // Frappe's dirty flag indicates unsaved form changes.
+        if (frappe.form_dirty) {
+            event.preventDefault();
+
+            // Required for modern browsers to display
+            // their native unsaved-changes confirmation.
+            event.returnValue = "";
+        }
+    });
+});

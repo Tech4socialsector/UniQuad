@@ -43,6 +43,7 @@
   "guardian_required",
   "guardian_details_section",
   "guardian_name",
+  "guardian_occupation",
   "column_break_rbqz",
   "guardian_mobile",
   "column_break_kdxw",
@@ -56,7 +57,6 @@
   "state",
   "column_break_iltt",
   "city",
-  "foreigin_city",
   "column_break_coqt",
   "pincode",
   "section_break_azsq",
@@ -124,9 +124,8 @@
   "karnataka_category",
   "column_break_nwjz",
   "caste_certificate",
-  "scribe_allotment",
-  "column_break_udvt",
   "pwd_certificate",
+  "scribe_allotment",
   "which_of_the_following_applies_to_you_section",
   "ka_study_7yrs",
   "ka_study_7yrs_certificate",
@@ -231,7 +230,7 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Candidate's Name",
+   "label": "Candidate's Full Name",
    "reqd": 1
   },
   {
@@ -243,8 +242,9 @@
   {
    "fieldname": "gender",
    "fieldtype": "Select",
+   "in_standard_filter": 1,
    "label": "Gender",
-   "options": "\nMale\nFemale\nOthers",
+   "options": "\nMale\nFemale\nTransgender\nPrefer not to say\nOther",
    "reqd": 1
   },
   {
@@ -261,10 +261,9 @@
   },
   {
    "fieldname": "religion",
-   "fieldtype": "Select",
+   "fieldtype": "Autocomplete",
    "label": "Religion",
-   "options": "\nHindu\nMuslim\nChristian\nSikh\nBuddhist\nJain\nOther",
-   "reqd": 1
+   "options": "\nHindu\nMuslim\nChristian\nSikh\nBuddhist\nJain\nAtheist / Agnostic / Non-religious\nOther\nPrefer not to say"
   },
   {
    "fieldname": "nationality",
@@ -335,33 +334,33 @@
    "mandatory_depends_on": "eval:doc.guardian_required == \"No\""
   },
   {
-   "default": "No",
+   "default": "Not Applicable",
    "fieldname": "guardian_required",
    "fieldtype": "Select",
-   "label": "If both parent's details are unavailable, enter details of a legal guardian?",
-   "options": "No\nYes"
+   "label": "If details of both the parents are unavailable, enter details of a legal guardian",
+   "options": "Not Applicable\nProvide legal guardian details"
   },
   {
-   "depends_on": "eval:doc.guardian_required == 1 || doc.guardian_required === 'Yes'",
+   "depends_on": "eval:doc.guardian_required == 1 || doc.guardian_required === 'Provide legal guardian details'",
    "fieldname": "guardian_name",
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Guardian Name",
-   "mandatory_depends_on": "eval:doc.guardian_required == 1 || doc.guardian_required === 'Yes'"
+   "mandatory_depends_on": "eval:doc.guardian_required == 1 || doc.guardian_required === 'Provide legal guardian details'"
   },
   {
-   "depends_on": "eval:doc.guardian_required == 1 || doc.guardian_required === 'Yes'",
+   "depends_on": "eval:doc.guardian_required == 1 || doc.guardian_required === 'Provide legal guardian details'",
    "fieldname": "guardian_mobile",
    "fieldtype": "Phone",
    "label": "Guardian Mobile",
-   "mandatory_depends_on": "eval:doc.guardian_required == 1 || doc.guardian_required === 'Yes'"
+   "mandatory_depends_on": "eval:doc.guardian_required == 1 || doc.guardian_required === 'Provide legal guardian details'"
   },
   {
-   "depends_on": "eval:doc.guardian_required == 1 || doc.guardian_required === 'Yes'",
+   "depends_on": "eval:doc.guardian_required == 1 || doc.guardian_required === 'Provide legal guardian details'",
    "fieldname": "guardian_email",
    "fieldtype": "Data",
    "label": "Guardian Email",
-   "mandatory_depends_on": "eval:doc.guardian_required == 1 || doc.guardian_required === 'Yes'",
+   "mandatory_depends_on": "eval:doc.guardian_required == 1 || doc.guardian_required === 'Provide legal guardian details'",
    "options": "Email"
   },
   {
@@ -382,14 +381,6 @@
    "label": "State",
    "options": "State",
    "reqd": 1
-  },
-  {
-   "depends_on": "eval:doc.country == \"nationality\"",
-   "fieldname": "city",
-   "fieldtype": "Link",
-   "label": "City",
-   "mandatory_depends_on": "eval:doc.nationality == \"India\"",
-   "options": "City"
   },
   {
    "fieldname": "pincode",
@@ -707,18 +698,18 @@
    "fieldtype": "Section Break"
   },
   {
-   "depends_on": "eval:doc.guardian_required == 1 || doc.guardian_required === 'Yes'",
+   "depends_on": "eval:doc.guardian_required == 1 || doc.guardian_required === 'Provide legal guardian details'",
    "fieldname": "guardian_details_section",
    "fieldtype": "Section Break",
    "label": "Guardian Details"
   },
   {
-   "depends_on": "eval:doc.guardian_required == 1 || doc.guardian_required === 'Yes'",
+   "depends_on": "eval:doc.guardian_required == 1 || doc.guardian_required === 'Provide legal guardian details'",
    "fieldname": "column_break_rbqz",
    "fieldtype": "Column Break"
   },
   {
-   "depends_on": "eval:doc.guardian_required == 1 || doc.guardian_required === 'Yes'",
+   "depends_on": "eval:doc.guardian_required == 1 || doc.guardian_required === 'Provide legal guardian details'",
    "fieldname": "column_break_kdxw",
    "fieldtype": "Column Break"
   },
@@ -846,12 +837,12 @@
    "fieldtype": "Section Break"
   },
   {
-   "depends_on": "eval: doc.program_level == \"Postgraduate\" || doc.program_level == \"Research Course\"",
+   "depends_on": "eval: doc.program_level == \"Postgraduate\"",
    "fieldname": "ug_degree_completion",
    "fieldtype": "Select",
    "label": "Have you completed your Undergraduate degree",
-   "mandatory_depends_on": "eval: doc.program_level == \"Postgraduate\" || doc.program_level == \"Research Course\"",
-   "options": "\nFinal Year of UG Degree\nUG Degree completed"
+   "mandatory_depends_on": "eval: doc.program_level == \"Postgraduate\"",
+   "options": "\nFinal Year of UG Degree\nUG Degree Completed"
   },
   {
    "depends_on": "eval: doc.program_level == \"Postgraduate\" || doc.program_level == \"Research Course\"",
@@ -991,6 +982,7 @@
   },
   {
    "allow_on_submit": 1,
+   "fetch_from": "program.level_of_study",
    "fieldname": "program_level",
    "fieldtype": "Select",
    "in_standard_filter": 1,
@@ -1178,10 +1170,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "column_break_udvt",
-   "fieldtype": "Column Break"
-  },
-  {
    "fieldname": "column_break_icua",
    "fieldtype": "Column Break"
   },
@@ -1281,13 +1269,6 @@
    "label": "Last Admission Fee Reminder Sent On"
   },
   {
-   "depends_on": "eval:doc.country != \"nationality\"",
-   "fieldname": "foreigin_city",
-   "fieldtype": "Data",
-   "label": "City",
-   "mandatory_depends_on": "eval:doc.country != \"nationality\""
-  },
-  {
    "depends_on": "eval:doc.foriegn_national == \"Yes\"",
    "fieldname": "x_country",
    "fieldtype": "Link",
@@ -1314,9 +1295,11 @@
   },
   {
    "default": "Completed",
+   "depends_on": "eval: doc.program_level ==\"Undergraduate\"",
    "fieldname": "class_xii_status",
    "fieldtype": "Autocomplete",
    "label": "Class XII Status",
+   "mandatory_depends_on": "eval: doc.program_level ==\"Undergraduate\"",
    "options": "Completed\nAppearing"
   },
   {
@@ -1325,6 +1308,19 @@
    "fieldtype": "HTML",
    "label": "Sample Bonafide Certificate Template",
    "options": "<a title=\"Download the sample bonafide certificate template\" href=\"https://app.nls.ac.in/files/NLSAT-Bona_Fide_Certificate_Format.docx\" style=\"display:inline-block;padding:5px 8px;background-color:#920C24;color:white;text-decoration:none;border-radius:5px;font-family:Merriweather , sans-serif;text-align:center\" rel=\"noopener noreferrer\">Bonafide Certificate</a><br>"
+  },
+  {
+   "fieldname": "city",
+   "fieldtype": "Data",
+   "label": "City",
+   "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.guardian_required == 1 || doc.guardian_required === 'Provide legal guardian details'",
+   "fieldname": "guardian_occupation",
+   "fieldtype": "Data",
+   "label": "Guardian Occupation",
+   "mandatory_depends_on": "eval:doc.guardian_required == 1 || doc.guardian_required === 'Provide legal guardian details'"
   }
  ],
  "grid_page_length": 50,
@@ -1360,7 +1356,7 @@
   }
  ],
  "make_attachments_public": 1,
- "modified": "2026-10-15 16:27:23.482936",
+ "modified": "2026-10-20 15:05:34.477986",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Applicant",

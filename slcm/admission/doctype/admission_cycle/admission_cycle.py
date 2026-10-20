@@ -1,9 +1,21 @@
+import re
+
 import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.utils import escape_html, getdate
 from frappe.utils.data import format_date, get_link_to_form
 from slcm.admission.utils.institution import is_multi_campus_enabled
+
+
+APPLICATION_ID_SERIES_PATTERN = re.compile(r"\{(#+)\}")
+
+
+def _is_valid_application_id_format(application_id_format):
+    if not (application_id_format or "").startswith("format:"):
+        return False
+    series_tokens = APPLICATION_ID_SERIES_PATTERN.findall(application_id_format)
+    return len(series_tokens) == 1 and 5 <= len(series_tokens[0]) <= 6
 
 
 def _overlap_rows_with_labels(overlaps):
@@ -72,6 +84,7 @@ class AdmissionCycle(Document):
         self._validate_cycle_dates_no_overlap()
         self._validate_single_active_cycle()
         self._validate_programs()
+        self._validate_application_id_configurations()
 
     def on_submit(self):
         """Automatically set status to Active on submission."""
@@ -197,6 +210,41 @@ class AdmissionCycle(Document):
                     )
                 )
             seen.add(key)
+
+    def _validate_application_id_configurations(self):
+        configured_programmes = set()
+        for row in self.application_id_configuration or []:
+            if not row.programme:
+                frappe.throw(_("Programme is required for each Application ID Configuration row."))
+
+            if row.programme in configured_programmes:
+                frappe.throw(
+                    _("Application ID Configuration has duplicate Programme {0}.").format(
+                        frappe.bold(row.programme)
+                    )
+                )
+            configured_programmes.add(row.programme)
+
+            formats = {
+                _("Domestic"): row.domestic_application_id_format,
+                _("International"): row.international_application_id_format,
+            }
+            for label, application_id_format in formats.items():
+                if not _is_valid_application_id_format(application_id_format):
+                    frappe.throw(
+                        _(
+                            "{0} Application ID Format for Programme {1} must use Frappe format syntax "
+                            "and contain exactly one five- or six-digit series, for example "
+                            "format:B6{{######}}."
+                        ).format(label, frappe.bold(row.programme))
+                    )
+
+            if row.domestic_application_id_format == row.international_application_id_format:
+                frappe.throw(
+                    _("Domestic and International Application ID Formats must differ for Programme {0}.").format(
+                        frappe.bold(row.programme)
+                    )
+                )
 
     def get_active_programs(self):
         """Returns list of active program rows in this cycle."""

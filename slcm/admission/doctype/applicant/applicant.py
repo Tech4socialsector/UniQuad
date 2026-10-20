@@ -1,10 +1,12 @@
 import json
+import re
 import traceback
 from contextlib import contextmanager
 
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.model.naming import getseries, parse_naming_series
 from frappe.utils import validate_email_address, getdate, date_diff, today, now, flt, nowdate, cint
 from slcm.admission.portal_application_web_form import (
 	applicant_portal_application_locked,
@@ -48,7 +50,66 @@ SUBMISSION_ENTRY_STATUSES = frozenset(
 )
 
 
+APPLICATION_ID_SERIES = "Applicant Application Number"
+APPLICATION_ID_SERIES_PATTERN = re.compile(r"\{(#+)\}")
+
+
+def _render_application_id(application_id_format, applicant):
+    """Render a Frappe format string with an Applicant-wide running number."""
+    format_value = application_id_format.removeprefix("format:")
+    series_found = False
+
+    def replace_parameter(match):
+        nonlocal series_found
+        parameter = match.group(1)
+        if set(parameter) == {"#"}:
+            if series_found:
+                return ""
+            series_found = True
+            return getseries(APPLICATION_ID_SERIES, len(parameter))
+        return parse_naming_series([parameter], doc=applicant)
+
+    return APPLICATION_ID_SERIES_PATTERN.sub(replace_parameter, format_value)
+
+
 class Applicant(Document):
+
+    def autoname(self):
+        application_number = self._get_configured_application_number()
+        if application_number:
+            self.name = application_number
+            self.applicant_id = application_number
+
+    def _get_configured_application_number(self):
+        application_id_format = self._get_application_id_format()
+        if not application_id_format:
+            return None
+
+        return _render_application_id(application_id_format, self)
+
+    def _get_application_id_format(self):
+        if not self.admission_cycle or not self.program:
+            return None
+
+        configuration = frappe.db.get_value(
+            "Application ID Configuration",
+            {
+                "parent": self.admission_cycle,
+                "parenttype": "Admission Cycle",
+                "programme": self.program,
+            },
+            ["domestic_application_id_format", "international_application_id_format"],
+            as_dict=True,
+        )
+        if not configuration:
+            return None
+
+        fieldname = (
+            "international_application_id_format"
+            if (self.foriegn_national or "").strip() == "Yes"
+            else "domestic_application_id_format"
+        )
+        return (configuration.get(fieldname) or "").strip() or None
 
     # ──────────────────────────────────────────────
     # VALIDATE
