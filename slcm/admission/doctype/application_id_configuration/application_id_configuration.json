@@ -8,7 +8,8 @@
  "engine": "InnoDB",
  "field_order": [
   "programme",
-  "id_naming"
+  "domestic_application_id_format",
+  "international_application_id_format"
  ],
  "fields": [
   {
@@ -16,20 +17,31 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Programme",
-   "options": "Programme"
+   "options": "Programme",
+   "reqd": 1
   },
   {
-   "fieldname": "id_naming",
+   "allow_on_submit": 1,
+   "description": "Use Frappe format syntax, e.g. format:B6{######}. The number is shared across all Applicant records.",
+   "fieldname": "domestic_application_id_format",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "ID Naming"
+   "label": "Domestic Application ID Format"
+  },
+  {
+   "allow_on_submit": 1,
+   "description": "Use a different format from Domestic, e.g. format:F6{######}. The number is shared across all Applicant records.",
+   "fieldname": "international_application_id_format",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "International Application ID Format"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-10-16 16:30:08.907181",
+ "modified": "2026-10-20 10:36:58.504408",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Application ID Configuration",
