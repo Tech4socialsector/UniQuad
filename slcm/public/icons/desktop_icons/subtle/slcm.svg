@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="v3e_bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3730A3"/>
+      <stop offset="50%" stop-color="#211E64"/>
+      <stop offset="100%" stop-color="#1E1B4B"/>
+    </linearGradient>
+
+    <!-- Shield Inner Fill -->
+    <linearGradient id="v3e_shield" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#4F46E5"/>
+      <stop offset="100%" stop-color="#312E81"/>
+    </linearGradient>
+
+    <!-- Gold Gradients -->
+    <linearGradient id="v3e_gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FEF08A"/>
+      <stop offset="40%" stop-color="#FACC15"/>
+      <stop offset="80%" stop-color="#EAB308"/>
+      <stop offset="100%" stop-color="#CA8A04"/>
+    </linearGradient>
+
+    <!-- Filters -->
+    <filter id="v3e_shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- Background Tile -->
+  <rect width="512" height="512" rx="108" fill="url(#v3e_bg)"/>
+
+  <!-- Outer Metallic Gold Shield Rim -->
+  <path d="M 256 45 C 365 45 425 68 425 68 V 250 C 425 372 315 448 256 475 C 197 448 87 372 87 250 V 68 C 87 68 147 45 256 45 Z" fill="url(#v3e_gold)" filter="url(#v3e_shadow)"/>
+
+  <!-- Inner Shield Fill -->
+  <path d="M 256 58 C 352 58 410 79 410 79 V 246 C 410 357 310 430 256 456 C 202 430 102 357 102 246 V 79 C 102 79 160 58 256 58 Z" fill="url(#v3e_shield)"/>
+
+  <!-- Open Academic Book Base -->
+  <g filter="url(#v3e_shadow)">
+    <path d="M 256 270 C 220 250 160 254 135 270 L 135 342 C 160 326 220 322 256 340 Z" fill="#FFFFFF"/>
+    <path d="M 256 270 C 292 250 352 254 377 270 L 377 342 C 352 326 292 322 256 340 Z" fill="#F8FAFC"/>
+    <path d="M 252 270 L 252 362 L 256 355 L 260 362 L 260 270 Z" fill="url(#v3e_gold)"/>
+  </g>
+
+  <!-- Student Head -->
+  <circle cx="256" cy="220" r="42" fill="#FFFFFF" filter="url(#v3e_shadow)"/>
+
+  <!-- Mortarboard Graduation Cap -->
+  <g filter="url(#v3e_shadow)">
+    <polygon points="256,105 150,152 256,198 362,152" fill="#FFFFFF"/>
+    <path d="M 190 168 C 190 190 322 190 322 168" fill="none" stroke="#FFFFFF" stroke-width="9" stroke-linecap="round"/>
+    <path d="M 345 160 L 350 202" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="350" cy="208" r="7" fill="#FFFFFF"/>
+  </g>
+
+  <!-- Gold Star of Excellence Badge at Shield Bottom -->
+  <g filter="url(#v3e_shadow)">
+    <circle cx="256" cy="398" r="28" fill="url(#v3e_gold)"/>
+    <polygon points="256,380 262,393 277,393 265,402 269,416 256,407 243,416 247,402 235,393 250,393" fill="#312E81"/>
+  </g>
+</svg>
