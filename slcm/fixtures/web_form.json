@@ -7987,7 +7987,7 @@
   "published": 1,
   "route": "admission/application-form",
   "show_attachments": 0,
-  "show_list": 1,
+  "show_list": 0,
   "show_sidebar": 0,
   "success_message": "",
   "success_title": "Application Submitted Successfully",
