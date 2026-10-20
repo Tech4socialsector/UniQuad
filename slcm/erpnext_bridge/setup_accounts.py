@@ -29,6 +29,10 @@ def setup_fee_accounting(company):
 			_account(company, name, "Liability", liabilities)
 		else:
 			_account(company, name, "Income", fee_income)
+	# PACE and FLE income, matched by these names (see builders).
+	for fee_type in _options("PACE Receipt", "fee_type"):
+		_account(company, f"PACE {fee_type}", "Income", fee_income)
+	_account(company, "FLE Course Fee", "Income", fee_income)
 
 	banks_group = _group(company, "Bank Accounts", "Asset")
 	bank_ledgers = [_bank_account(company, label, banks_group) for label in _university_bank_accounts()]
@@ -53,7 +57,8 @@ def setup_fee_accounting(company):
 		"slcm_submit_journal_entries": 1,
 		"slcm_posting_from_date": _fiscal_year_start(company),
 		"slcm_default_fee_income_account": _account(company, "Other Fee Income", "Income", fee_income),
-		"slcm_unallocated_fee_account": _account(company, "Unallocated Fee Receipts", "Income", fee_income),
+		# Money held for students (advances, excess) until applied to a due or refunded: a liability, not income.
+		"slcm_unallocated_fee_account": _account(company, "Unallocated Fee Receipts", "Liability", liabilities),
 		"slcm_output_gst_account": _account(
 			company, "Output GST on Fees", "Liability", _group(company, "Duties and Taxes", "Liability"), account_type="Tax"
 		),
@@ -62,6 +67,7 @@ def setup_fee_accounting(company):
 		"slcm_gateway_gst_account": _account(
 			company, "Input GST on Gateway Charges", "Asset", _group(company, "Tax Assets", "Asset"), account_type="Tax"
 		),
+		"slcm_stipend_account": _account(company, "Student Stipends", "Expense", expenses),
 		"default_bank_account": default_bank,
 		"default_cash_account": default_cash,
 	}
@@ -79,12 +85,22 @@ def setup_fee_accounting(company):
 
 def _slcm_modes():
 	modes = []
-	for doctype, fieldname in (("Fee Payment", "payment_mode"), ("Fee Refund", "refund_mode")):
-		field = frappe.get_meta(doctype).get_field(fieldname)
-		for option in ((field.options or "") if field else "").split("\n"):
-			if option.strip() and option.strip() not in modes:
-				modes.append(option.strip())
+	for doctype, fieldname in (
+		("Fee Payment", "payment_mode"),
+		("Fee Refund", "refund_mode"),
+		("Applicant Payment Receipt", "payment_mode"),
+		("Stipend Payment", "payment_mode"),
+		("Student Credit Note", "received_via"),
+	):
+		for option in _options(doctype, fieldname):
+			if option not in modes:
+				modes.append(option)
 	return modes
+
+
+def _options(doctype, fieldname):
+	field = frappe.get_meta(doctype).get_field(fieldname)
+	return [o.strip() for o in ((field.options or "") if field else "").split("\n") if o.strip()]
 
 
 def _university_bank_accounts():

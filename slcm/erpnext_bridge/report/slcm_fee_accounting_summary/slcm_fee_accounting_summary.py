@@ -15,16 +15,25 @@ SOURCE_LABELS = {
 	"Fee Payment": _("Fee Receipts"),
 	"Fee Refund": _("Fee Refunds"),
 	"SLCM Payment Request": _("Gateway Settlements"),
+	"Student Credit Note": _("Moved to Excess"),
+	"Credit Adjustment Row": _("Excess Adjusted"),
+	"Applicant Payment Receipt": _("Admission Receipts"),
+	"PACE Receipt": _("PACE Receipts"),
+	"FLE Payment Log": _("FLE Receipts"),
+	"FLE Settlement": _("Gateway Settlements"),
+	"Stipend Payment": _("Stipends"),
+	"Refund Transaction": _("Admission Refunds"),
 }
 
 MEASURES = (
 	("fee_income", _("Fee Income"), "Currency"),
-	("deposits", _("Deposits Held"), "Currency"),
+	("deposits", _("Deposits & Advances Held"), "Currency"),
 	("output_tax", _("Output GST"), "Currency"),
 	("refunds", _("Refunds"), "Currency"),
 	("gateway_charges", _("Gateway Charges"), "Currency"),
 	("input_tax", _("GST on Gateway Charges"), "Currency"),
 	("net_income", _("Net Fee Income"), "Currency"),
+	("stipends", _("Stipends Paid"), "Currency"),
 	("cash_movement", _("Net Cash, Bank & Gateway Clearing"), "Currency"),
 )
 
@@ -104,7 +113,13 @@ def get_classifier(company):
 	c = frappe.db.get_value(
 		"Company",
 		company,
-		["slcm_output_gst_account", "slcm_fee_refund_account", "slcm_gateway_charges_account", "slcm_gateway_gst_account"],
+		[
+			"slcm_output_gst_account",
+			"slcm_fee_refund_account",
+			"slcm_gateway_charges_account",
+			"slcm_gateway_gst_account",
+			"slcm_stipend_account",
+		],
 		as_dict=True,
 	)
 	special = {
@@ -112,6 +127,7 @@ def get_classifier(company):
 		c.slcm_fee_refund_account: ("refunds", 1),
 		c.slcm_gateway_charges_account: ("gateway_charges", 1),
 		c.slcm_gateway_gst_account: ("input_tax", 1),
+		c.slcm_stipend_account: ("stipends", 1),
 	}
 	special.pop(None, None)
 

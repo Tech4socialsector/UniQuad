@@ -83,10 +83,11 @@ CUSTOM_FIELDS = {
 			"label": "SLCM Fee Accounting",
 			"insert_after": "slcm_fee_tab",
 			"collapsible": 1,
-			"description": "Posts SLCM fee receipts, refunds and Razorpay settlements to this company as Journal "
-			"Entries (cash basis). Cash, bank and cost center come from this company's defaults, payment-mode "
-			"accounts from Mode of Payment, university banks from Bank Account, and each Fee Component's income "
-			"ledger from the Account named like its Ledger.",
+			"description": "Posts SLCM money to this company as Journal Entries (cash basis): student, admission, "
+			"PACE and FLE receipts, refunds, stipends, student excess and Razorpay settlements. Cash, bank and cost "
+			"center come from this company's defaults, payment-mode accounts from Mode of Payment, university banks "
+			"from Bank Account, each Fee Component's income ledger from the Account named like its Ledger, and PACE / "
+			"FLE income from the Accounts named 'PACE <fee type>' and 'FLE Course Fee'.",
 		},
 		{
 			"fieldname": "slcm_enable_fee_posting",
@@ -120,7 +121,8 @@ CUSTOM_FIELDS = {
 			"slcm_unallocated_fee_account",
 			"Unallocated Fee Receipts Account",
 			"slcm_fee_column_break",
-			"Part of a payment not allocated to any Fee Demand",
+			"Liability: money held for students - payments not allocated to any Fee Demand, and paid fees "
+			"moved to a student's excess - until it is applied to a due or refunded",
 		),
 		_account(
 			"slcm_output_gst_account", "Output GST on Fees Account", "slcm_unallocated_fee_account", "GST in taxable Fee Components"
@@ -132,6 +134,18 @@ CUSTOM_FIELDS = {
 		_account(
 			"slcm_gateway_gst_account", "GST on Gateway Charges Account", "slcm_gateway_charges_account", "GST on Razorpay fees"
 		),
+		_account(
+			"slcm_stipend_account", "Stipend Expense Account", "slcm_gateway_gst_account", "Stipends paid to students"
+		),
+		{
+			"fieldname": "slcm_fees_include_gst",
+			"fieldtype": "Check",
+			"label": "Students Pay GST on Taxable Fees",
+			"default": "1",
+			"insert_after": "slcm_stipend_account",
+			"description": "Ticked: what a student pays for a taxable Fee Component includes GST, and the GST part is "
+			"posted to Output GST on Fees. Unticked: fees are collected without GST and the whole amount is fee income.",
+		},
 	],
 }
 

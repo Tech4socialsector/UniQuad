@@ -24,9 +24,12 @@ COMPANY_FIELDS = (
 	"slcm_fee_refund_account",
 	"slcm_gateway_charges_account",
 	"slcm_gateway_gst_account",
+	"slcm_fees_include_gst",
+	"slcm_stipend_account",
 )
 ACCOUNT_FIELDS = tuple(f for f in COMPANY_FIELDS if f.endswith("_account"))
 ONLINE_MODES = ("Online Payment",)
+MOVED_FROM_DUE = re.compile(r"^Moved from due (\S+)")
 
 
 def get_posting_company():
@@ -47,7 +50,7 @@ def get_config(company=None):
 	values = frappe.db.get_value(
 		"Company",
 		company,
-		[*COMPANY_FIELDS, "cost_center", "default_cash_account", "default_bank_account", "abbr"],
+		[*COMPANY_FIELDS, "cost_center", "default_cash_account", "default_bank_account", "abbr", "default_currency"],
 		as_dict=True,
 	)
 	values.company = company
@@ -135,3 +138,49 @@ def receipt_cash_account(cfg, payment_mode, slcm_bank_label=None):
 
 def gateway_clearing_account(cfg):
 	return receipt_cash_account(cfg, ONLINE_MODES[0])
+
+
+def account_named(cfg, account_name):
+	"""This company's ledger with that name (e.g. 'PACE Course Fee'), or None."""
+	return frappe.db.get_value(
+		"Account", {"company": cfg.company, "account_name": account_name, "is_group": 0, "disabled": 0}, "name"
+	)
+
+
+def payment_out_account(cfg, mode):
+	"""Ledger money is paid out from. 'Online' for an outgoing payment means a bank transfer, never the gateway."""
+	if mode == "Cash":
+		return mode_of_payment_account(cfg, mode) or require(cfg, "default_cash_account")
+	if mode in ONLINE_MODES or mode == "Online":
+		return require(cfg, "default_bank_account")
+	return mode_of_payment_account(cfg, mode) or require(cfg, "default_bank_account")
+
+
+def fees_include_gst(cfg):
+	"""Company setting: students pay GST on taxable Fee Components, so payments are GST-inclusive."""
+	value = cfg.get("slcm_fees_include_gst")
+	return True if value is None else bool(value)
+
+
+def credit_note_source_demand(note):
+	"""The paid Fee Demand a Student Credit Note's money was moved from, or None.
+
+	Only such notes hold real money (paid fees moved to the student's excess); other credit notes
+	(scholarship credit, manual) carry no cash and post nothing on cash basis. Notes created before
+	source_fee_demand existed are matched through the remark move_to_excess writes."""
+	demand = note.get("source_fee_demand")
+	if not demand:
+		match = MOVED_FROM_DUE.match(note.get("remarks") or "")
+		demand = match.group(1) if match else None
+	return demand if demand and frappe.db.exists("Fee Demand", demand) else None
+
+
+def credit_note_holds_money(note):
+	"""Money moved from a paid due, or money received directly and recorded on the note (Received Via)."""
+	return bool(credit_note_source_demand(note) or note.get("received_via"))
+
+
+def credit_note_date(note):
+	if not credit_note_source_demand(note) and note.get("received_date"):
+		return note.get("received_date")
+	return note.get("creation")

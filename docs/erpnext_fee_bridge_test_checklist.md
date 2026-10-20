@@ -74,8 +74,22 @@ SLCM's own files change only in `hooks.py` (hook registrations) and `modules.txt
 | Fee Payment submitted | **Debit:** the payment-mode ledger (Cash / Bank / Gateway Clearing), or the matched University Bank. **Credit:** each Fee Component's ledger, split by the demand allocation. The GST portion of taxable components goes to Output GST, and any amount not allocated to a demand goes to Unallocated Fee Receipts |
 | Fee Payment cancelled | The Journal Entry is cancelled |
 | Fee Refund submitted / cancelled | **Debit:** Fee Refunds, or the deposit's liability ledger for deposit components. **Credit:** the refund-mode ledger. Cancelled with the refund |
-| SLCM Payment Request marked *Settled* (Razorpay) | **Debit:** Bank (net) + Gateway Charges + GST on charges. **Credit:** Gateway Clearing (gross) |
-| Fee Demand, Fee Concession | Nothing is posted, because no cash moves |
+| Fee Refund from *Excess Amount* | **Debit:** Unallocated Fee Receipts, for the part drawn from credit notes whose money was posted there; anything else goes to Fee Refunds. **Credit:** the refund-mode ledger |
+| SLCM Payment Request marked *Settled* (Razorpay) | **Debit:** Bank (net) + Gateway Charges + GST on charges. **Credit:** Gateway Clearing (gross). Posted once its receipt is posted: a Fee Payment, Applicant Payment Receipt or PACE Receipt |
+| Applicant Payment Receipt created (admission) | **Debit:** the payment-mode ledger (*Online* → Gateway Clearing). **Credit:** each fee component on the receipt, sharing the net amount when a scholarship reduced it. Deposits go to their liability ledger. Reversed if the receipt is deleted |
+| PACE Receipt created | **Debit:** Gateway Clearing. **Credit:** the Account named *PACE &lt;fee type&gt;*. Receipts in a currency other than the company's are not posted and show as "Posting failed" |
+| FLE Payment Log (Authorized / Captured) | **Debit:** Gateway Clearing. **Credit:** *FLE Course Fee*. One payment can log several callbacks; only the first paid log posts |
+| FLE Payment Log settlement (*processed*) | Same as a Payment Request settlement, posted under the reference type *FLE Settlement* |
+| Stipend Payment submitted / cancelled | **Debit:** Stipend Expense. **Credit:** the payment-mode ledger (an *Online* payment out is a bank transfer) |
+| Refund Transaction *Processed* (admission refund via Razorpay) | **Debit:** Fee Refunds. **Credit:** Gateway Clearing |
+| Student Credit Note: paid fees moved to excess | **Debit:** the income ledger of the due the money came from. **Credit:** Unallocated Fee Receipts |
+| Student Credit Note entered by hand with *Received Via* (e.g. a duplicate NEFT) | **Debit:** the bank / cash ledger. **Credit:** Unallocated Fee Receipts. *Received Via* is required for Overpayment and Advance Deposit, and can be filled in after submit |
+| Excess adjusted to a due (Credit Adjustment Row) | **Debit:** Unallocated Fee Receipts. **Credit:** the due's income ledger. Only for credit notes whose money was posted |
+| Fee Demand, Fee Concession, Scholarship Credit | Nothing is posted, because no cash moves |
+
+**Unallocated Fee Receipts is a liability:** money held for students until it is applied to a due or refunded. The Company form rejects any other account type.
+
+**GST:** *Students Pay GST on Taxable Fees* (Company → SLCM Fees). When ticked, payments for taxable components include GST and the GST part goes to Output GST. When unticked, the whole amount is fee income.
 
 ## 4. Safety: why live and Fees Management are not affected
 
@@ -161,6 +175,10 @@ Automated: `bench --site slcm.local run-tests --module slcm.erpnext_bridge.tests
 - **One company.** Only one company can post SLCM fees.
 - **Fiscal year.** Each posting date needs an ERPNext Fiscal Year. If one is missing, Reconciliation shows "Posting failed" with ERPNext's message.
 - **Renaming accounts.** If a Fee Component ledger's Account is renamed, that component falls back to the default fee income ledger until the names match again. Reconciliation flags this.
+- **Razorpay refunds and settlements.** Settlements are posted per payment from Razorpay's per-payment figures. Razorpay takes refunds out of later settlement batches, and the settlement sync skips refund lines. So after an online refund, Gateway Clearing keeps a balance equal to the refund until an accountant clears it against the bank statement.
+- **Admission refunds** are booked as Fee Refunds expense, including any deposit portion. They are not split between income and the deposit liability.
+- **Not created by any SLCM code:** Mess Payment, Hostel Refund Request, Re Exam Payment Log and Improvement Exam Payment Log. They are not posted (re-exam fees go through Fee Demand → Fee Payment).
+- **Tests post real data.** Some tests run the hourly sweeper, which posts every pending document on the site. Run them only on a development or test site.
 
 ## 7. Environment notes
 

@@ -25,6 +25,14 @@ def validate_company(doc, method=None):
 	for fieldname in ACCOUNT_FIELDS:
 		if doc.get(fieldname):
 			_validate_account(doc, doc.get(fieldname), doc.meta.get_label(fieldname))
+	unallocated = doc.get("slcm_unallocated_fee_account")
+	if unallocated and frappe.db.get_value("Account", unallocated, "root_type") != "Liability":
+		frappe.throw(
+			_(
+				"{0}: Account {1} must be a Liability account - it holds money owed to students (advances and "
+				"excess) until it is applied to a due or refunded."
+			).format(doc.meta.get_label("slcm_unallocated_fee_account"), unallocated)
+		)
 
 
 def _validate_account(company, account, label):

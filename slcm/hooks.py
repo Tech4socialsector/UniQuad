@@ -394,6 +394,37 @@ doc_events = {
         "on_submit": "slcm.erpnext_bridge.sync.enqueue_sync",
         "on_cancel": "slcm.erpnext_bridge.sync.enqueue_sync",
     },
+    "Student Credit Note": {
+        "on_submit": "slcm.erpnext_bridge.sync.enqueue_sync",
+        "on_cancel": "slcm.erpnext_bridge.sync.enqueue_sync",
+        # "Money Received" can be completed after submit
+        "on_update_after_submit": "slcm.erpnext_bridge.sync.enqueue_sync",
+    },
+    # Excess applied to a due is recorded as an inserted row on the credit note.
+    "Credit Adjustment Row": {
+        "after_insert": "slcm.erpnext_bridge.sync.enqueue_sync",
+        "on_trash": "slcm.erpnext_bridge.sync.enqueue_sync",
+    },
+    "Stipend Payment": {
+        "on_submit": "slcm.erpnext_bridge.sync.enqueue_sync",
+        "on_cancel": "slcm.erpnext_bridge.sync.enqueue_sync",
+    },
+    # Admission, PACE and FLE money (not submittable: posted when created, reversed when deleted).
+    "Applicant Payment Receipt": {
+        "after_insert": "slcm.erpnext_bridge.sync.enqueue_sync",
+        "on_trash": "slcm.erpnext_bridge.sync.enqueue_sync",
+    },
+    "PACE Receipt": {
+        "after_insert": "slcm.erpnext_bridge.sync.enqueue_sync",
+        "on_trash": "slcm.erpnext_bridge.sync.enqueue_sync",
+    },
+    "FLE Payment Log": {
+        "after_insert": "slcm.erpnext_bridge.sync.enqueue_sync",
+    },
+    "Refund Transaction": {
+        "after_insert": "slcm.erpnext_bridge.sync.enqueue_sync",
+        "on_update": "slcm.erpnext_bridge.sync.enqueue_sync",
+    },
     # ERPNext Company (exists only with ERPNext): validates its "SLCM Fee Accounting" section.
     "Company": {
         "validate": "slcm.erpnext_bridge.company.validate_company",
