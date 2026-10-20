@@ -3,7 +3,7 @@ import csv
 from frappe.model.document import Document
 from frappe.utils import now
 
-class ClatRankImport(Document):
+class CLATRankImport(Document):
     def validate(self):
         # Check if the cycle has at least one CLAT program.
         is_clat_cycle = frappe.db.exists(

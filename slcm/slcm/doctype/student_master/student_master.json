@@ -1751,7 +1751,7 @@
    "fieldname": "batch",
    "fieldtype": "Link",
    "label": "Batch",
-   "options": "Batch"
+   "options": "SLCM Batch"
   },
   {
    "fieldname": "floor",
@@ -1767,7 +1767,7 @@
  ],
  "image_field": "passport_size_photo",
  "links": [],
- "modified": "2026-10-12 12:00:00.000000",
+ "modified": "2026-10-19 16:30:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Student Master",

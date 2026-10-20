@@ -332,7 +332,7 @@ class AcademicManagement {
                     fieldname: 'batch',
                     fieldtype: 'Link',
                     label: __('Batch'),
-                    options: 'Batch'
+                    options: 'SLCM Batch'
                 },
                 {
                     fieldname: 'col_break_2',

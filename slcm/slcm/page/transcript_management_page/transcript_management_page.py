@@ -270,7 +270,7 @@ def get_students(
         dept_ids = list({s["department"] for s in students if s.get("department")})
         if dept_ids:
             rows = frappe.db.sql(
-                "SELECT name, department_name FROM `tabDepartment` WHERE name IN %(ids)s",
+                "SELECT name, department_name FROM `tabSLCM Department` WHERE name IN %(ids)s",
                 {"ids": dept_ids},
                 as_dict=True,
             )
@@ -412,7 +412,7 @@ def get_filter_options():
         as_dict=True,
     )
     departments = frappe.db.sql(
-        "SELECT name, department_name FROM `tabDepartment` ORDER BY department_name ASC LIMIT 200",
+        "SELECT name, department_name FROM `tabSLCM Department` ORDER BY department_name ASC LIMIT 200",
         as_dict=True,
     )
     academic_years = frappe.db.sql(
@@ -425,7 +425,7 @@ def get_filter_options():
     # Student Master.batch_year column — students link to their Batch via the
     # (confusingly named) Student Master.programme field.
     batches = frappe.db.sql(
-        "SELECT name, batch_name FROM `tabBatch` ORDER BY batch_name ASC LIMIT 500",
+        "SELECT name, batch_name FROM `tabSLCM Batch` ORDER BY batch_name ASC LIMIT 500",
         as_dict=True,
     )
     courses = frappe.db.sql(

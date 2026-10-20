@@ -1,5 +1,5 @@
 import frappe
-from frappe.utils import nowdatetime
+from frappe.utils import now
 
 no_cache = 1
 
@@ -37,7 +37,7 @@ def get_context(context):
 		context.placement_profile = profile
 
 		# ── Open Opportunities ────────────────────────────────────
-		now_str = nowdatetime()
+		now_str = now()
 		opportunities = frappe.get_all(
 			"Placement Opportunity",
 			filters={"status": "Open"},
@@ -62,7 +62,7 @@ def get_context(context):
 
 		for opp in opportunities:
 			opp["company_name"] = (
-				frappe.db.get_value("Company", opp.company, "company_name") or opp.company
+				frappe.db.get_value("SLCM Company", opp.company, "company_name") or opp.company
 			)
 			opp["already_applied"] = opp.name in applied_set
 			opp["is_closed"] = bool(
@@ -89,7 +89,7 @@ def get_context(context):
 				["company", "opportunity_type"], as_dict=True,
 			) or frappe._dict()
 			app["company_name"] = (
-				frappe.db.get_value("Company", opp_data.company, "company_name") or opp_data.company or app.opportunity
+				frappe.db.get_value("SLCM Company", opp_data.company, "company_name") or opp_data.company or app.opportunity
 			)
 			app["opportunity_type"] = opp_data.opportunity_type or ""
 
@@ -140,7 +140,7 @@ def apply_for_opportunity(opportunity, resume_url=""):
 		"doctype": "Placement Application",
 		"student": student_name,
 		"opportunity": opportunity,
-		"applied_on": nowdatetime(),
+		"applied_on": now(),
 		"resume_used": resume_url or "",
 		"status": "Applied",
 	})
@@ -165,7 +165,7 @@ def _set_student_nav(context, student):
 	context.student_id = student.registration_id or student.name
 	context.student_photo = student.passport_size_photo or ""
 	context.student_initial = (context.student_name[0]).upper() if context.student_name else "S"
-	context.programme_name = frappe.db.get_value("Batch", student.programme, "cohort_name") or student.programme or ""
+	context.programme_name = frappe.db.get_value("SLCM Batch", student.programme, "cohort_name") or student.programme or ""
 	context.department = student.department or ""
 	context.batch_year = student.batch_year or ""
 

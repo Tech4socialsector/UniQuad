@@ -5,5 +5,5 @@
 from frappe.tests.utils import FrappeTestCase
 
 
-class TestClatRankImport(FrappeTestCase):
+class TestCLATRankImport(FrappeTestCase):
 	pass

@@ -4,7 +4,7 @@
  "currency": "INR",
  "docstatus": 0,
  "doctype": "Dashboard Chart",
- "document_type": "Batch",
+ "document_type": "SLCM Batch",
  "filters_json": "[]",
  "group_by_based_on": "status",
  "group_by_type": "Count",

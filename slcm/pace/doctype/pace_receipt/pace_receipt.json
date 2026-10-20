@@ -47,7 +47,7 @@
    "fieldname": "payment_request",
    "fieldtype": "Link",
    "label": "Payment Request",
-   "options": "Payment Request",
+   "options": "SLCM Payment Request",
    "read_only": 1
   },
   {
@@ -132,7 +132,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-13 20:31:29.950437",
+ "modified": "2026-10-19 16:30:00.000000",
  "modified_by": "Administrator",
  "module": "PACE",
  "name": "PACE Receipt",

@@ -172,7 +172,7 @@ def get_parent_context(context):
     # Programme display name
     context.ward_programme = ""
     if student.programme:
-        prog_name = frappe.db.get_value("Batch", student.programme, "cohort_name")
+        prog_name = frappe.db.get_value("SLCM Batch", student.programme, "cohort_name")
         context.ward_programme = prog_name or student.programme
     elif student.programme_of_study:
         prog_name = frappe.db.get_value("Programme", student.programme_of_study, "program_name")

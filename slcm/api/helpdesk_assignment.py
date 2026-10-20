@@ -96,7 +96,7 @@ def _get_student(email):
     # We need the Program linked from that Cohort.
     cohort_programme = None
     if sm.get("programme"):
-        cohort_programme = frappe.db.get_value("Batch", sm["programme"], "program")
+        cohort_programme = frappe.db.get_value("SLCM Batch", sm["programme"], "program")
 
     return {
         "programme": cohort_programme,

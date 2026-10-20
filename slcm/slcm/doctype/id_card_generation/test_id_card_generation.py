@@ -50,7 +50,7 @@ def test_naming_series_logic():
 			print("FAILED: Designation not fetched from Faculty")
 
 		# Get any existing Department
-		dept = frappe.db.get_value("Department", {}, "name")
+		dept = frappe.db.get_value("SLCM Department", {}, "name")
 		if not dept:
 			dept = "IT"
 

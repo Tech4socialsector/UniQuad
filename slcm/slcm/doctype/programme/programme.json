@@ -79,7 +79,7 @@
    "fieldtype": "Link",
    "hidden": 1,
    "label": "Department",
-   "options": "Department"
+   "options": "SLCM Department"
   },
   {
    "fieldname": "image",
@@ -362,7 +362,7 @@
  "links": [
   {
    "group": "Academics",
-   "link_doctype": "Batch",
+   "link_doctype": "SLCM Batch",
    "link_fieldname": "program"
   },
   {
@@ -382,7 +382,7 @@
   }
  ],
  "make_attachments_public": 1,
- "modified": "2026-10-14 11:07:05.403691",
+ "modified": "2026-10-19 16:30:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Programme",

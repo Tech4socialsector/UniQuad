@@ -37,7 +37,7 @@ def get_context(context):
             "email": faculty.email or frappe.session.user,
             "phone": faculty.phone or "—",
             "designation": faculty.designation or "—",
-            "department": frappe.db.get_value("Department", faculty.department, "department_name")
+            "department": frappe.db.get_value("SLCM Department", faculty.department, "department_name")
                           if faculty.department else faculty.department or "—",
             "qualification": faculty.qualification or "—",
             "specialization": faculty.specialization or "—",

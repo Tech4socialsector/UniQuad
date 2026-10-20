@@ -1025,7 +1025,7 @@ def _set_student_nav(context, student):
     context.student_photo  = student.passport_size_photo or ""
     context.student_initial = (context.student_name[0]).upper() if context.student_name else "S"
     context.programme_name = (
-        frappe.db.get_value("Batch", student.programme, "cohort_name")
+        frappe.db.get_value("SLCM Batch", student.programme, "cohort_name")
         or student.programme or ""
     )
     context.department = student.department or ""
@@ -1045,7 +1045,7 @@ def _ensure_student_fee_populated(student):
         return
 
     try:
-        program = frappe.db.get_value("Batch", student.programme, "program")
+        program = frappe.db.get_value("SLCM Batch", student.programme, "program")
         if not program and frappe.db.exists("Programme", student.programme):
             program = student.programme
         if not program:

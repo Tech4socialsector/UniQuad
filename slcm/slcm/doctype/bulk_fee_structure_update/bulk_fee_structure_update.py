@@ -26,7 +26,7 @@ class BulkFeeStructureUpdate(Document):
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _resolve_program_from_cohort(cohort):
-    program = frappe.db.get_value("Batch", cohort, "program")
+    program = frappe.db.get_value("SLCM Batch", cohort, "program")
     if not program and frappe.db.exists("Programme", cohort):
         program = cohort
     return program
@@ -36,17 +36,22 @@ def _get_students_for_scope(target_scope, programme, program, batch_year=None, a
     """Return list of active Student Master dicts matching the scope + optional filters."""
     filters = {"student_status": "Active"}
 
+    # Student Master's cohort field is "batch" (formerly "programme").
     if target_scope == "Programme":
-        filters["programme"] = programme
+        filters["batch"] = programme
     else:
         # Resolve all cohorts that map to this program
-        cohorts = frappe.get_all("Batch", filters={"program": program}, pluck="name")
+        cohorts = frappe.get_all("SLCM Batch", filters={"program": program}, pluck="name")
         if not cohorts:
             return []
-        filters["programme"] = ["in", cohorts]
+        filters["batch"] = ["in", cohorts]
 
     if batch_year:
-        filters["batch_year"] = batch_year
+        # Student Master has no batch year of its own; it comes from the student's fee structure.
+        fee_structures = frappe.get_all("Fee Structure", filters={"batch_year": batch_year}, pluck="name")
+        if not fee_structures:
+            return []
+        filters["fee_structure"] = ["in", fee_structures]
     if academic_year:
         filters["academic_year"] = academic_year
 
@@ -54,7 +59,7 @@ def _get_students_for_scope(target_scope, programme, program, batch_year=None, a
         "Student Master",
         filters=filters,
         fields=[
-            "name", "first_name", "last_name", "programme",
+            "name", "first_name", "last_name", "batch as programme",
             "fee_structure", "total_program_fee", "total_paid_amount",
             "discount_amount", "net_program_fee",
             "applying_scholarship", "scholarship_percentage", "scholarship_amount",

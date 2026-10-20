@@ -59,7 +59,7 @@
    "is_query_report": 0,
    "label": "Department",
    "link_count": 0,
-   "link_to": "Department",
+   "link_to": "SLCM Department",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -385,7 +385,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-09-29 17:06:36.390194",
+ "modified": "2026-10-19 16:30:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Master",
@@ -438,7 +438,7 @@
    "color": "Blue",
    "doc_view": "List",
    "label": "Department",
-   "link_to": "Department",
+   "link_to": "SLCM Department",
    "type": "DocType"
   },
   {

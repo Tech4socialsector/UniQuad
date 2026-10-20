@@ -120,7 +120,7 @@ def set_faculty_nav(context, faculty):
     context.faculty_email = faculty.email or frappe.session.user
     context.faculty_designation = faculty.designation or ""
     context.faculty_department = (
-        frappe.db.get_value("Department", faculty.department, "department_name")
+        frappe.db.get_value("SLCM Department", faculty.department, "department_name")
         if faculty.department
         else faculty.department or ""
     )

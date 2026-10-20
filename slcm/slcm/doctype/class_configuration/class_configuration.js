@@ -38,7 +38,7 @@ frappe.ui.form.on('Class Configuration', {
     batch: function (frm) {
         set_link_filters(frm);
         if (frm.doc.batch) {
-            frappe.db.get_value('Batch', frm.doc.batch, ['program', 'academic_term'], (r) => {
+            frappe.db.get_value('SLCM Batch', frm.doc.batch, ['program', 'academic_term'], (r) => {
                 if (r) {
                     frm.set_value('programme', r.program || '');
                     frm.set_value('term', r.academic_term || '');
@@ -209,7 +209,7 @@ function add_students_by_filter(frm) {
             {
                 fieldname: 'batch',
                 fieldtype: 'Link',
-                options: 'Batch',
+                options: 'SLCM Batch',
                 label: __('Batch'),
                 default: frm.doc.batch
             },

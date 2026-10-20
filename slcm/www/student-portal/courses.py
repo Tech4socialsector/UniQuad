@@ -67,7 +67,7 @@ def get_context(context):
         # If no formal enrollment record, synthesise one from the student's cohort
         if not enrollments and student.programme:
             cohort_doc = frappe.db.get_value(
-                "Batch",
+                "SLCM Batch",
                 student.programme,
                 ["name", "cohort_name", "academic_year", "term_name", "status"],
                 as_dict=True,
@@ -179,7 +179,7 @@ def get_context(context):
             # Cohort display name
             cohort_display = enr.term_name or cohort or "—"
             if cohort:
-                cn = frappe.db.get_value("Batch", cohort, "cohort_name")
+                cn = frappe.db.get_value("SLCM Batch", cohort, "cohort_name")
                 if cn:
                     cohort_display = cn
 
@@ -433,7 +433,7 @@ def _set_student_nav(context, student):
     context.student_photo = student.passport_size_photo or ""
     context.student_initial = (context.student_name[0]).upper() if context.student_name else "S"
     context.programme_name = (
-        frappe.db.get_value("Batch", student.programme, "cohort_name")
+        frappe.db.get_value("SLCM Batch", student.programme, "cohort_name")
         or student.programme
         or ""
     )

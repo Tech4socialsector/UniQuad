@@ -33,7 +33,7 @@ def get_columns():
 			"fieldname": "program",
 			"label": _("Batch"),
 			"fieldtype": "Link",
-			"options": "Batch",
+			"options": "SLCM Batch",
 			"width": 130
 		},
 		{

@@ -167,7 +167,7 @@
    "indent": 0,
    "keep_closed": 0,
    "label": "Company",
-   "link_to": "Company",
+   "link_to": "SLCM Company",
    "link_type": "DocType",
    "navigate_to_tab": null,
    "route_options": null,
@@ -176,7 +176,7 @@
    "url": null
   }
  ],
- "modified": "2026-02-18 15:11:01.696188",
+ "modified": "2026-10-19 16:30:00.000000",
  "module": "SLCM",
  "name": "Placement",
  "standard": 0,

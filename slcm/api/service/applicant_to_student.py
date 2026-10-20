@@ -123,7 +123,7 @@ def _map_applicant_to_student(student, applicant, program, admission_cycle, offe
     # ── Batch Assignment ───────────────────────────────────────────────────────
     if program and student.academic_year:
         batch_data = frappe.db.get_value(
-            "Batch",
+            "SLCM Batch",
             {
                 "program": program,
                 "academic_year": student.academic_year,

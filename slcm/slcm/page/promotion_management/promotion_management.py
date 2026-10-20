@@ -275,7 +275,7 @@ def _sync_student_master_batch(student, batch):
 	"""Point Student Master at the student's new Batch. db.set_value skips
 	fetch_from, so the Batch-derived fields are copied explicitly."""
 	b = frappe.db.get_value(
-		"Batch", batch, ["academic_year", "academic_term", "program", "level_of_study"], as_dict=True
+		"SLCM Batch", batch, ["academic_year", "academic_term", "program", "level_of_study"], as_dict=True
 	)
 	if not b:
 		return
@@ -315,7 +315,7 @@ def _get_students_raw(program, academic_year, from_year):
 			WHERE sm.current_year IN %(from_year)s
 			  AND sm.student_status = 'Active'
 		) s
-		INNER JOIN `tabBatch` c ON c.name = s.cur_batch
+		INNER JOIN `tabSLCM Batch` c ON c.name = s.cur_batch
 		WHERE c.program = %(program)s
 		  AND c.academic_year = %(academic_year)s
 		ORDER BY s.first_name
@@ -422,7 +422,7 @@ def _resolve_next_batch(current_cohort):
 	Enrollment → Promote Students) instead.
 	"""
 	batch = frappe.db.get_value(
-		"Batch", current_cohort,
+		"SLCM Batch", current_cohort,
 		["program", "section", "term_year", "academic_year"], as_dict=True,
 	)
 	if not batch or not batch.section or batch.term_year is None:
@@ -433,7 +433,7 @@ def _resolve_next_batch(current_cohort):
 		return None
 
 	return frappe.db.get_value(
-		"Batch",
+		"SLCM Batch",
 		{
 			"program": batch.program,
 			"section": batch.section,
@@ -487,7 +487,7 @@ def _promote_enrollment(student, to_year):
 	new_doc.student = student
 	new_doc.batch = next_batch
 	new_doc.status = "Enrolled"
-	new_doc.enrollment_date = frappe.db.get_value("Batch", next_batch, "start_date") or frappe.utils.today()
+	new_doc.enrollment_date = frappe.db.get_value("SLCM Batch", next_batch, "start_date") or frappe.utils.today()
 	new_doc.insert(ignore_permissions=True)
 	_sync_student_master_batch(student, next_batch)
 	return new_doc.name
@@ -610,7 +610,7 @@ def get_student_progression(student):
 	batch = frappe.db.sql(f"SELECT {CURRENT_BATCH_SQL} FROM `tabStudent Master` sm WHERE sm.name = %s", student)
 	batch = batch[0][0] if batch else None
 	b = frappe.db.get_value(
-		"Batch", batch, ["name", "program", "academic_year", "section", "term_year", "batch_name"], as_dict=True,
+		"SLCM Batch", batch, ["name", "program", "academic_year", "section", "term_year", "batch_name"], as_dict=True,
 	) if batch else None
 
 	import re as _re
@@ -632,7 +632,7 @@ def get_student_progression(student):
 		filters = {"program": b.program, "academic_year": b.academic_year}
 		if b.section:
 			filters["section"] = b.section
-		term_years = [cint(t) for t in frappe.get_all("Batch", filters=filters, pluck="term_year") if cint(t)]
+		term_years = [cint(t) for t in frappe.get_all("SLCM Batch", filters=filters, pluck="term_year") if cint(t)]
 		out["terms_in_year"] = max(term_years) if term_years else None
 		if out["term_no"] and out["terms_in_year"]:
 			out["is_last_term"] = out["term_no"] >= out["terms_in_year"]
@@ -1478,7 +1478,7 @@ def download_formatted_promotion_list(program, academic_year, university_name=No
 				       sm.current_cgpa AS current_cgpa, {CURRENT_BATCH_SQL} AS cur_batch
 				FROM `tabStudent Master` sm WHERE sm.student_status = 'Active'
 			) s
-			INNER JOIN `tabBatch` c ON c.name = s.cur_batch
+			INNER JOIN `tabSLCM Batch` c ON c.name = s.cur_batch
 			WHERE c.program = %(program)s
 			""",
 			{"program": program}, as_dict=True,

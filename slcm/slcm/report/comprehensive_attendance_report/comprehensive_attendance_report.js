@@ -14,7 +14,7 @@ frappe.query_reports["Comprehensive Attendance Report"] = {
             "fieldname": "program",
             "label": __("Batch"),
             "fieldtype": "Link",
-            "options": "Batch",
+            "options": "SLCM Batch",
             "reqd": 0
         },
         {

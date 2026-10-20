@@ -128,7 +128,7 @@ def _mark_alerted_today(student):
 
 def _send_alerts(student, parents, last_swipe, settings):
     student_name = f"{student.first_name} {student.last_name or ''}".strip()
-    programme = frappe.db.get_value("Batch", student.programme, "cohort_name") or student.programme or ""
+    programme = frappe.db.get_value("SLCM Batch", student.programme, "cohort_name") or student.programme or ""
     check_time = format_datetime(now_datetime(), "dd MMM yyyy, hh:mm a")
     last_swipe_time = (
         format_datetime(last_swipe, "dd MMM yyyy, hh:mm a") if last_swipe else "No swipe on record"

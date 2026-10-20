@@ -5,5 +5,5 @@
 from frappe.tests.utils import FrappeTestCase
 
 
-class Testnewdoctypebnqkjnnluh(FrappeTestCase):
+class TestCourseSchedulingTool(FrappeTestCase):
 	pass

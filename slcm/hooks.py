@@ -385,7 +385,7 @@ doc_events = {
     "Fee Structure": {
         "on_update": "slcm.slcm.doctype.student_master.student_master.on_fee_structure_update"
     },
-    "Payment Request": {
+    "SLCM Payment Request": {
         "before_save": [
             "slcm.admission.notification.utils.set_payment_request_receiver",
             "slcm.api.service.fee_service.update_payment_request_paid_on"

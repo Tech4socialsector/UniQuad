@@ -24,7 +24,7 @@ def _pace_application_fee_already_paid(application_name):
     if not assignments:
         return False
 
-    return bool(frappe.db.exists("Payment Request", {
+    return bool(frappe.db.exists("SLCM Payment Request", {
         "reference_doctype": "PACE Applicant Fee Assignment",
         "reference_name": ["in", assignments],
         "status": "Paid",
@@ -831,7 +831,7 @@ def log_pace_payment_gateway_closed(
         parsed_error = {"message": failure_message}
 
     gateway = frappe.db.get_value(
-        "Payment Request",
+        "SLCM Payment Request",
         {
             "reference_doctype": "PACE Applicant Fee Assignment",
             "reference_name": assignment.name,
@@ -986,7 +986,7 @@ def _initiate_pace_razorpay_order_impl(application_name):
         return {"status": "already_paid", "message": _("Fee already paid.")}
 
     # 3. Get or create Payment Request
-    pr_name = frappe.db.get_value("Payment Request", {
+    pr_name = frappe.db.get_value("SLCM Payment Request", {
         "reference_doctype": "PACE Applicant Fee Assignment",
         "reference_name": assignment.name,
         "docstatus": ["!=", 2]
@@ -994,7 +994,7 @@ def _initiate_pace_razorpay_order_impl(application_name):
 
     pr = None
     if pr_name:
-        pr = frappe.get_doc("Payment Request", pr_name)
+        pr = frappe.get_doc("SLCM Payment Request", pr_name)
         pr_status = (pr.status or "").strip()
         if pr_status == "Paid":
             # Already paid via a concurrent path — treat as done
@@ -1016,7 +1016,7 @@ def _initiate_pace_razorpay_order_impl(application_name):
     controller = _pace_get_payment_gateway_controller(gateway)
 
     if not pr:
-        pr = frappe.new_doc("Payment Request")
+        pr = frappe.new_doc("SLCM Payment Request")
         pr.payment_gateway = gateway
         pr.currency = "INR"
         pr.amount = amount
@@ -1087,9 +1087,9 @@ def complete_pace_payment(assignment, gateway, razorpay_order_id, razorpay_payme
             fee = float(response_data.get("fee") or 0)
             pr_amt = (raw_amount - fee) / 100.0
 
-        pr_name = frappe.db.get_value("Payment Request", {"reference_name": assignment.name, "docstatus": 1, "status": "Paid"})
+        pr_name = frappe.db.get_value("SLCM Payment Request", {"reference_name": assignment.name, "docstatus": 1, "status": "Paid"})
         if not pr_amt and pr_name:
-            pr_amt = frappe.db.get_value("Payment Request", pr_name, "amount")
+            pr_amt = frappe.db.get_value("SLCM Payment Request", pr_name, "amount")
             
         if pr_amt and float(pr_amt) > 0:
             assignment.razorpay_paid_amount = pr_amt
@@ -1160,7 +1160,7 @@ def verify_pace_payment_signature(
         # ── Step 4: Resolve Payment Request ───────────────────────────────────
         pr_name = (
             frappe.db.get_value(
-                "Payment Request",
+                "SLCM Payment Request",
                 {
                     "reference_doctype": "PACE Applicant Fee Assignment",
                     "reference_name": assignment.name,
@@ -1170,7 +1170,7 @@ def verify_pace_payment_signature(
                 "name",
             )
             or frappe.db.get_value(
-                "Payment Request",
+                "SLCM Payment Request",
                 {
                     "reference_doctype": "PACE Applicant Fee Assignment",
                     "reference_name": assignment.name,
@@ -1180,7 +1180,7 @@ def verify_pace_payment_signature(
                 "name",
             )
             or frappe.db.get_value(
-                "Payment Request",
+                "SLCM Payment Request",
                 {
                     "reference_doctype": "PACE Applicant Fee Assignment",
                     "reference_name": assignment.name,
@@ -1198,16 +1198,16 @@ def verify_pace_payment_signature(
 
         # ── Step 5: Row-level lock on PR + idempotency check ──────────────────
         frappe.db.sql(
-            "SELECT name FROM `tabPayment Request` WHERE name = %s FOR UPDATE",
+            "SELECT name FROM `tabSLCM Payment Request` WHERE name = %s FOR UPDATE",
             pr_name,
         )
-        pr = frappe.get_doc("Payment Request", pr_name, check_permission=False)
+        pr = frappe.get_doc("SLCM Payment Request", pr_name, check_permission=False)
         if pr.status == "Paid":
             return {"status": "success"}
 
         # ── Step 6: Anti-replay — same payment_id used on another PR ──────────
         if frappe.db.exists(
-            "Payment Request",
+            "SLCM Payment Request",
             {
                 "status": "Paid",
                 "transaction_id": razorpay_payment_id,
@@ -1417,7 +1417,7 @@ def generate_pace_receipt(application_name, assignment_name=None):
     # Fallback: look up transaction_id from linked Payment Request if not on assignment.
     if not transaction_id:
         pr = frappe.db.get_value(
-            "Payment Request",
+            "SLCM Payment Request",
             {
                 "reference_doctype": "PACE Applicant Fee Assignment",
                 "reference_name": assignment_name,

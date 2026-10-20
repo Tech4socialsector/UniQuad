@@ -61,7 +61,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Batch",
-   "options": "Batch"
+   "options": "SLCM Batch"
   },
   {
    "fieldname": "section_actions",
@@ -105,7 +105,7 @@
   }
  ],
  "links": [],
- "modified": "2026-07-08 22:13:41.582982",
+ "modified": "2026-10-19 16:30:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Parent Login Invite Tool",
