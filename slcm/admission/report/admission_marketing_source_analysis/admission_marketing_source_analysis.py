@@ -63,6 +63,9 @@ def get_chart(data):
 		labels.append(row.source_of_information)
 		values.append(row.total_applications)
 		
+	colors = ["#4f46e5", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316", "#06b6d4", "#64748b"]
+	chart_colors = [colors[i % len(colors)] for i in range(len(labels))]
+
 	return {
 		"data": {
 			"labels": labels,
@@ -73,6 +76,6 @@ def get_chart(data):
 				}
 			]
 		},
-		"type": "donut",
-		"colors": ["#4f46e5", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316", "#06b6d4", "#64748b"]
+		"type": "bar",
+		"colors": chart_colors
 	}
