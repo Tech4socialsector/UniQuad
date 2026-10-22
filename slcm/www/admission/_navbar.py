@@ -1,5 +1,6 @@
 """
-Navbar partial for the NLSAT portal layout (www/nlsat/admission_base.html).
+Navbar partial for the admission portal layout (www/admission/admission_base.html),
+shared by NLSAT (Domestic + International) and PACE pages.
 
 _navbar.html is included by the layout, not served as a page. Its data comes from
 get_nlsat_navbar_context(), exposed to Jinja through the `jinja.methods` hook.
@@ -9,7 +10,7 @@ import frappe
 
 
 def get_context(context):
-	# Partial only — /nlsat/_navbar must not render as a page
+	# Partial only — must not render as a page
 	raise frappe.PageDoesNotExistError
 
 
@@ -46,8 +47,14 @@ def get_nlsat_navbar_context(portal_config=None, current_path="", nlsat_login_ur
 		frappe.db.get_single_value("Institution Settings", "logo") or ""
 	)
 
+	# Shared pages are served under the candidate's prefix: /nlsat/... or /pace/...
+	from slcm.admission.utils.nlsat_portal import get_candidate_prefix
+
+	prefix = get_candidate_prefix(user, current_path)
+
 	return frappe._dict(
 		user=user,
+		prefix=prefix,
 		is_guest=is_guest,
 		first_letter=(user[0].upper() if user and not is_guest else "U"),
 		full_name=full_name,
@@ -59,6 +66,6 @@ def get_nlsat_navbar_context(portal_config=None, current_path="", nlsat_login_ur
 		login_url=login_url,
 		is_pace_login="pace" in login_url,
 		inst_logo=inst_logo,
-		profile_url="/nlsat/profile",
-		helpdesk_url="/nlsat/merit-and-scholarship/helpdesk",
+		profile_url=prefix + "/my-profile",
+		helpdesk_url=prefix + "/helpdesk",
 	)

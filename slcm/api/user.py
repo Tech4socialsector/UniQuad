@@ -991,9 +991,9 @@ def get_login_redirect():
         
     roles = frappe.get_roles(user)
     if "PACE Applicant" in roles and "Applicant" not in roles:
-        return "/nlsat/profile"
+        return "/pace/my-profile"
     else:
-        return "/nlsat/profile"
+        return "/nlsat/my-profile"
 
 from frappe.rate_limiter import rate_limit
 from frappe.core.doctype.user.user import get_password_reset_limit
@@ -1155,9 +1155,9 @@ def custom_update_password(new_password, logout_all_sessions=0, key=None, old_pa
                 return target
 
         if "PACE Applicant" in roles and "Applicant" not in roles:
-            return "/nlsat/profile"
+            return "/pace/my-profile"
         else:
-            return "/nlsat/profile"
+            return "/nlsat/my-profile"
     
     return result
 
@@ -1228,7 +1228,7 @@ def register_pace_user(email, full_name=None, mobile_number=None, redirect_to=No
         if redirect_to:
             frappe.cache().hset("redirect_after_login", user.name, redirect_to)
         else:
-            frappe.cache().hset("redirect_after_login", user.name, "/nlsat/profile")
+            frappe.cache().hset("redirect_after_login", user.name, "/pace/my-profile")
             
         frappe.db.commit()
         return {"status": "success", "message": "Check your email to set your password and activate your account!"}
@@ -1270,7 +1270,7 @@ def login_pace_user(usr, pwd):
     if user_type == "System User":
         frappe.local.response["home_page"] = "/desk"
     else:
-        frappe.local.response["home_page"] = "/nlsat/profile"
+        frappe.local.response["home_page"] = "/pace/my-profile"
 
 
 @frappe.whitelist(allow_guest=True, methods=["POST"])
@@ -1331,5 +1331,5 @@ def update_password_pace(new_password, key):
         return "/paceadmissions/login"
 
     # Default redirect for PACE
-    return "/nlsat/profile"
+    return "/pace/my-profile"
 

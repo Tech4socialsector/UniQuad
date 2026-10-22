@@ -31,7 +31,7 @@
      - [ ] Terminology consistent (programme, enrol, sign in, etc.)
 -->
 
-{% extends "slcm/www/nlsat/admission_base.html" %} {% block title %}Application Form — {{
+{% extends "slcm/www/admission/admission_base.html" %} {% block title %}Application Form — {{
 (portal_config.get('portal_title') if portal_config and portal_config.get else
 (portal_config.portal_title if portal_config else 'Admissions')) }}{% endblock %} {% block page_css
 %} {{ get_typography_style_block( portal_config.font_family,
@@ -5089,7 +5089,7 @@ src="https://www.facebook.com/tr?id=1279045953496223&ev=PageView&noscript=1"
 				</div>
 
 				<div style="margin-top: 2.5rem">
-					<a href="/nlsat/merit-and-scholarship/admission_dashboard" class="btn-dashboard">
+					<a href="/nlsat/dashboard" class="btn-dashboard">
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
 							width="18"

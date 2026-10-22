@@ -31,7 +31,7 @@
      - [ ] Terminology consistent (programme, enrol, sign in, etc.)
 -->
 
-{% extends "slcm/www/nlsat/admission_base.html" %} {% from "slcm/www/nlsat/_sidebar.html" import
+{% extends "slcm/www/admission/admission_base.html" %} {% from "slcm/www/admission/_sidebar.html" import
 portal_sidebar_css, portal_sidebar_html, portal_sidebar_js %} {% block title %}Offer Letter
 Detail{% endblock %} {% block adm_container_extra_class %}portal-layout-container{% endblock %} {%
 block theme_vars %}
@@ -1604,7 +1604,7 @@ wrapper.html(html);
 	                message: "{{ _('You have declined this admission offer. Redirecting to My Applications.') }}"
 	            });
 	            document.getElementById('success-modal').querySelector('button').onclick = function () {
-	                window.location.href = '/nlsat/merit-and-scholarship/admission_dashboard?panel=applications';
+	                window.location.href = '/nlsat/dashboard?panel=applications';
 	            };
 	        } catch (e) {
 	            hide_processing();
@@ -1874,7 +1874,7 @@ wrapper.html(html);
 	    }
 
 	    function render_error(message) {
-	        $('#offer-detail-wrapper').html(`<div class="text-center p-5 mt-5"><h4>{{ _("Error") }}</h4><p>${message}</p><a href="/nlsat/merit-and-scholarship/admission_dashboard?panel=applications" class="btn btn-primary-adm" style="margin-right:8px;">{{ _("My Applications") }}</a><a href="/nlsat/offer_letter/offer-letter-list" class="btn btn-outline-adm">{{ _("Offer Letter List") }}</a></div>`);
+	        $('#offer-detail-wrapper').html(`<div class="text-center p-5 mt-5"><h4>{{ _("Error") }}</h4><p>${message}</p><a href="/nlsat/dashboard?panel=applications" class="btn btn-primary-adm" style="margin-right:8px;">{{ _("My Applications") }}</a><a href="/nlsat/offer_letter/offer-letter-list" class="btn btn-outline-adm">{{ _("Offer Letter List") }}</a></div>`);
 	    }
 	    {{ portal_sidebar_js() }}
 </script>

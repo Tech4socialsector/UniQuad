@@ -407,7 +407,7 @@ def notify_scholarship_status(application_name):
 
     scheme_name = frappe.db.get_value("Scholarship Scheme", app.scholarship_scheme, "scheme_name")
     benefit_amount = fmt_money(app.calculated_benefit) if app.calculated_benefit else "0.00"
-    portal_url = get_url("/nlsat/merit-and-scholarship/scholarships")
+    portal_url = get_url("/nlsat/scholarships")
     
     template_name = "Scholarship Updates"
     
@@ -465,11 +465,11 @@ def notify_scholarship_status(application_name):
                 "subject": f"Scholarship Status: {app.status}",
                 "for_user": email,
                 "type": "Alert",
-                "email_content": f"Your scholarship application for <strong>{scheme_name}</strong> has been <strong>{app.status}</strong>. <br><br> <a href='/nlsat/merit-and-scholarship/scholarships'>Click here to view details.</a>",
+                "email_content": f"Your scholarship application for <strong>{scheme_name}</strong> has been <strong>{app.status}</strong>. <br><br> <a href='/nlsat/scholarships'>Click here to view details.</a>",
                 "document_type": "Scholarship Application",
                 "document_name": app.name,
                 "from_user": from_user,
-                "link": "/nlsat/merit-and-scholarship/scholarships"
+                "link": "/nlsat/scholarships"
             }).insert(ignore_permissions=True)
     except Exception as e:
         frappe.logger().error(f"Scholarship Notification Log error for {app.name}: {e}")

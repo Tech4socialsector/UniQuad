@@ -1,5 +1,6 @@
 """
-Footer partial for the NLSAT portal layout (www/nlsat/admission_base.html).
+Footer partial for the admission portal layout (www/admission/admission_base.html),
+shared by NLSAT (Domestic + International) and PACE pages.
 
 _footer.html is included by the layout, not served as a page. Its data comes from
 get_nlsat_footer_context(), exposed to Jinja through the `jinja.methods` hook.
@@ -23,7 +24,7 @@ SOCIAL_ICONS = {
 
 
 def get_context(context):
-	# Partial only — /nlsat/_footer must not render as a page
+	# Partial only — must not render as a page
 	raise frappe.PageDoesNotExistError
 
 

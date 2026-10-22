@@ -748,7 +748,7 @@ def _send_allocation_email(allocation, email, allocation_type=None):
         
         args = {
             "doc": doc_dict,
-            "portal_url": get_url("/nlsat/merit-and-scholarship/admission_dashboard?panel=applications")
+            "portal_url": get_url("/nlsat/dashboard?panel=applications")
         }
 
         subject = frappe.render_template(template.subject, args)
@@ -1097,13 +1097,13 @@ def _send_allocation_notification(allocation, email):
                 message_body = f"""
                     <p>Your online entrance test has been scheduled.</p>
                     <p>Please check your admission dashboard to view the details.</p>
-                    <p><a href="/nlsat/merit-and-scholarship/admission_dashboard?panel=applications" style="color: #16a34a; font-weight: bold;">Click here to view details.</a></p>
+                    <p><a href="/nlsat/dashboard?panel=applications" style="color: #16a34a; font-weight: bold;">Click here to view details.</a></p>
                 """
             else:
                 message_body = f"""
                     <p>An entrance test seat has been allocated for you in <strong>"{allocation.entrance_test_list}"</strong>.</p>
                     <p>Please check your admission dashboard to view the details and select your preferred center.</p>
-                    <p><a href="/nlsat/merit-and-scholarship/admission_dashboard?panel=applications" style="color: #16a34a; font-weight: bold;">Click here to view details.</a></p>
+                    <p><a href="/nlsat/dashboard?panel=applications" style="color: #16a34a; font-weight: bold;">Click here to view details.</a></p>
                 """
             
             frappe.get_doc({
@@ -1115,7 +1115,7 @@ def _send_allocation_notification(allocation, email):
                 "document_type": "Entrance Test Seat Allocation",
                 "document_name": allocation.name,
                 "from_user": frappe.session.user,
-                "link": "/nlsat/merit-and-scholarship/admission_dashboard?panel=applications"
+                "link": "/nlsat/dashboard?panel=applications"
             }).insert(ignore_permissions=True)
         except Exception:
             # Silently fail for individual notification logs if one user has issues, but log it

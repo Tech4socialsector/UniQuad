@@ -1,5 +1,5 @@
 
-{% extends "slcm/www/nlsat/admission_base.html" %}
+{% extends "slcm/www/admission/admission_base.html" %}
 
 {% block title %}{{ prog_name or 'Programme' }} — Admissions{% endblock %}
 
@@ -1256,7 +1256,7 @@
         <div style="display:flex;gap:20px;">
           <a href="{{ portal_base or '/nlsatadmissions' }}" style="font-size:12px;color:#64748b;text-decoration:none;font-weight:500;"
             onmouseover="this.style.color='var(--primary)'" onmouseout="this.style.color='#64748b'">All programmes</a>
-          <a href="/nlsat/merit-and-scholarship/admission_dashboard"
+          <a href="/nlsat/dashboard"
             style="font-size:12px;color:#64748b;text-decoration:none;font-weight:500;"
             onmouseover="this.style.color='var(--primary)'" onmouseout="this.style.color='#64748b'">Dashboard</a>
         </div>

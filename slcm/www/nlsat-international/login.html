@@ -5,7 +5,7 @@
 {% set _logo      = portal_logo or (_pc.logo if _pc else None) or "" %}
 {% set _tagline   = (_pc.portal_tagline  if _pc else None) or portal_tagline   or "Shaping Tomorrow's Legal Minds" %}
 {% set _support   = (_pc.support_email   if _pc else None) or support_email    or "" %}
-{% set _redir     = redirect_to or "/nlsat/profile" %}
+{% set _redir     = redirect_to or "/nlsat/my-profile" %}
 
 <!DOCTYPE html>
 <html lang="en">
@@ -1093,8 +1093,8 @@ function lpShowCredentials() {
 function lpLoginSuccess(redir) {
   lpNotify('Login successful. Please wait...', 'success', 'login');
   setTimeout(function() {
-    var defaultDash = '/nlsat/profile';
-    if (redir && redir !== '{{ portal_base }}' && redir !== '/nlsat/profile' && redir.indexOf('{{ portal_login_url }}') === -1) {
+    var defaultDash = '/nlsat/my-profile';
+    if (redir && redir !== '{{ portal_base }}' && redir !== '/nlsat/my-profile' && redir.indexOf('{{ portal_login_url }}') === -1) {
       window.location.href = redir;
     } else {
       window.location.href = defaultDash;
@@ -1111,7 +1111,7 @@ async function doLogin() {
   var btn   = document.getElementById('lp-login-btn');
   var spin  = document.getElementById('lp-login-spin');
   var label = document.getElementById('lp-login-label');
-  var redir = document.getElementById('lp-redir').value || '/nlsat/profile';
+  var redir = document.getElementById('lp-redir').value || '/nlsat/my-profile';
 
   btn.disabled = true; spin.style.display = 'block'; label.textContent = 'Login';
 
@@ -1164,7 +1164,7 @@ async function doVerifyOtp() {
   var btn   = document.getElementById('lp-otp-btn');
   var spin  = document.getElementById('lp-otp-spin');
   var label = document.getElementById('lp-otp-label');
-  var redir = document.getElementById('lp-redir').value || '/nlsat/profile';
+  var redir = document.getElementById('lp-redir').value || '/nlsat/my-profile';
 
   btn.disabled = true; spin.style.display = 'block'; label.textContent = 'Verifying';
   lpFieldError('lp-otp', null);

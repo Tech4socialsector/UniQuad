@@ -1,7 +1,7 @@
 """
 admission_base.html is the shared layout every NLSAT/PACE portal page extends.
-Pages that extend it do not run this module; it only stops /nlsat/admission_base
-from rendering the bare layout as a page.
+Pages that extend it do not run this module; it only stops the bare layout from
+rendering as a page if its folder path is ever reached.
 """
 
 import frappe

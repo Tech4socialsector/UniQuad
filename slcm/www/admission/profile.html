@@ -1,10 +1,11 @@
 {#
-  profile.html — My Profile page (/nlsat/profile) for NLSAT applicants (Indian Nationals and International).
+  profile.html — My Profile page, shared by NLSAT (Indian Nationals + International) and PACE candidates.
+  Served at /nlsat/my-profile and /pace/my-profile (website_route_rules).
   Moved out of the admission dashboard "profile" panel; context from profile.py.
 #}
 
-{% extends "slcm/www/nlsat/admission_base.html" %}
-{% from "slcm/www/nlsat/_sidebar.html" import portal_sidebar_css, portal_sidebar_html, portal_sidebar_js %}
+{% extends "slcm/www/admission/admission_base.html" %}
+{% from "slcm/www/admission/_sidebar.html" import portal_sidebar_css, portal_sidebar_html, portal_sidebar_js %}
 
 {# ── Safe config extraction ────────────────────────────────── #}
 {% if portal_config and portal_config.get %}

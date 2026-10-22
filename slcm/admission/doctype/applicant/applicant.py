@@ -3983,7 +3983,7 @@ def _send_automated_entrance_test_allocation_email(allocation, email):
         doc_dict["assigned_preferences"] = [p.as_dict() for p in (allocation.assigned_preferences or [])]
         args = {
             "doc": doc_dict,
-            "portal_url": frappe.utils.get_url("/nlsat/merit-and-scholarship/admission_dashboard?panel=applications"),
+            "portal_url": frappe.utils.get_url("/nlsat/dashboard?panel=applications"),
         }
 
         subject = frappe.render_template(template.subject or "", args)
@@ -4169,7 +4169,7 @@ def _send_international_entrance_test_email(allocation, email):
             or "Admissions Office"
         )
         portal_url = frappe.utils.get_url(
-            "/nlsat/merit-and-scholarship/admission_dashboard?panel=applications"
+            "/nlsat/dashboard?panel=applications"
         )
 
         # Format test date for display

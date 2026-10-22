@@ -1080,7 +1080,7 @@ def _send_custom_result_email(doc, email, custom_email_content):
         doc_dict = doc.as_dict()
         args = {
             "doc": doc_dict,
-            "portal_url": get_url("/nlsat/merit-and-scholarship/admission_dashboard?panel=applications")
+            "portal_url": get_url("/nlsat/dashboard?panel=applications")
         }
 
         # Use the header (subject) and sender from the default email template
@@ -1126,7 +1126,7 @@ def _send_result_notification_email(doc, email):
         doc_dict = doc.as_dict()
         args = {
             "doc": doc_dict,
-            "portal_url": get_url("/nlsat/merit-and-scholarship/admission_dashboard?panel=applications")
+            "portal_url": get_url("/nlsat/dashboard?panel=applications")
         }
 
         subject = frappe.render_template(template.subject, args)
@@ -1289,7 +1289,7 @@ def _send_reschedule_email(doc, email):
         
         args = {
             "doc": doc_dict,
-            "portal_url": get_url("/nlsat/merit-and-scholarship/admission_dashboard?panel=applications")
+            "portal_url": get_url("/nlsat/dashboard?panel=applications")
         }
 
         subject = frappe.render_template(template.subject, args)
@@ -1372,7 +1372,7 @@ def _send_result_notification(doc, email):
                 <p>Your entrance test result for <strong>"{doc.entrance_test_list}"</strong> has been published.</p>
                 <p>Your score: <strong>{doc.total_marks_secured_in_part_a_b}</strong></p>
                 <p>Your rank: <strong>{doc.entrance_test_rank or "\u2014"}</strong></p>
-                <p><a href="/nlsat/merit-and-scholarship/admission_dashboard?panel=applications" style="color: #16a34a; font-weight: bold;">Click here to view details.</a></p>
+                <p><a href="/nlsat/dashboard?panel=applications" style="color: #16a34a; font-weight: bold;">Click here to view details.</a></p>
             """
             
             frappe.get_doc({
@@ -1384,7 +1384,7 @@ def _send_result_notification(doc, email):
                 "document_type": "Entrance Test Seat Allocation",
                 "document_name": doc.name,
                 "from_user": frappe.session.user,
-                "link": "/nlsat/merit-and-scholarship/admission_dashboard?panel=applications"
+                "link": "/nlsat/dashboard?panel=applications"
             }).insert(ignore_permissions=True)
         except Exception:
             frappe.log_error(message=frappe.get_traceback(), title=f"Result Notification Failed: {doc.name}")
@@ -1400,7 +1400,7 @@ def _send_reschedule_notification(doc, email):
             message_body = f"""
                 <p>Your entrance test for <strong>"{doc.entrance_test_list}"</strong> has been rescheduled.</p>
                 <p>Please check your admission dashboard to view the new details and select your preferred center.</p>
-                <p><a href="/nlsat/merit-and-scholarship/admission_dashboard?panel=applications" style="color: #16a34a; font-weight: bold;">Click here to view details.</a></p>
+                <p><a href="/nlsat/dashboard?panel=applications" style="color: #16a34a; font-weight: bold;">Click here to view details.</a></p>
             """
             
             frappe.get_doc({
@@ -1412,7 +1412,7 @@ def _send_reschedule_notification(doc, email):
                 "document_type": "Entrance Test Seat Allocation",
                 "document_name": doc.name,
                 "from_user": frappe.session.user,
-                "link": "/nlsat/merit-and-scholarship/admission_dashboard?panel=applications"
+                "link": "/nlsat/dashboard?panel=applications"
             }).insert(ignore_permissions=True)
         except Exception:
             frappe.log_error(message=frappe.get_traceback(), title=f"Reschedule Notification Failed: {doc.name}")

@@ -82,10 +82,10 @@ jinja = {
 		"slcm.admission.utils.portal.get_typography_style_block",
 		"slcm.admission.doctype.seat_allocation.seat_allocation.get_results_notification_context",
 		"slcm.slcm.doctype.fee_certificate_request.fee_certificate_request.get_fee_certificate_context",
-		# NLSAT portal layout partials (www/nlsat/_navbar, _footer, _sidebar)
-		"slcm.www.nlsat._navbar.get_nlsat_navbar_context",
-		"slcm.www.nlsat._footer.get_nlsat_footer_context",
-		"slcm.www.nlsat._sidebar.get_nlsat_sidebar_context",
+		# Admission portal layout partials (www/admission/_navbar, _footer, _sidebar)
+		"slcm.www.admission._navbar.get_nlsat_navbar_context",
+		"slcm.www.admission._footer.get_nlsat_footer_context",
+		"slcm.www.admission._sidebar.get_nlsat_sidebar_context",
 	],
 }
 
@@ -644,20 +644,27 @@ role_home_page = {
     "slcm_parent": "/parent-portal",
 }
 
-# Website
+# Websitex
 website_route_rules = [
     {"from_route": "/portal-login", "to_route": "portal-login/login"},
-    # NLSAT admissions — www/nlsatadmissions (Indian Nationals), www/nlsat-international
-    # (International) and the shared pages under www/nlsat.
+    # Admission portals (see docs/admission_portal_restructure.md):
+    #   www/nlsatadmissions     — NLSAT Indian Nationals
+    #   www/nlsat-international — NLSAT International
+    #   www/nlsat               — shared by both NLSAT portals (folder routes /nlsat/...)
+    #   www/paceadmissions      — PACE
+    #   www/admission           — shared by NLSAT and PACE; served under the candidate's prefix below
     {"from_route": "/nlsatadmissions/login", "to_route": "nlsatadmissions/login"},
     {"from_route": "/nlsat-international/login", "to_route": "nlsat-international/login"},
-    {"from_route": "/applicant-dashboard", "to_route": "applicant_dashboard"},
     {"from_route": "/nlsatadmissions/application-form", "to_route": "nlsatadmissions/application-form"},
     {"from_route": "/nlsatadmissions/<name>", "to_route": "nlsatadmissions/program_detail"},
     {"from_route": "/nlsat-international/<name>", "to_route": "nlsat-international/program_detail"},
-    {"from_route": "/nlsat/announcement/<name>", "to_route": "nlsat/announcement/announcement_detail"},
-    {"from_route": "/admission-dashboard", "to_route": "nlsat/merit-and-scholarship/admission_dashboard"},
-    {"from_route": "/apply", "to_route": "nlsat/merit-and-scholarship/apply"},
+    # Shared NLSAT + PACE pages (www/admission) — /nlsat/... for NLSAT, /pace/... for PACE
+    {"from_route": "/nlsat/my-profile", "to_route": "admission/profile"},
+    {"from_route": "/pace/my-profile", "to_route": "admission/profile"},
+    {"from_route": "/nlsat/helpdesk", "to_route": "admission/helpdesk"},
+    {"from_route": "/pace/helpdesk", "to_route": "admission/helpdesk"},
+    {"from_route": "/nlsat/announcement/<name>", "to_route": "admission/announcement/announcement_detail"},
+    {"from_route": "/pace/announcement/<name>", "to_route": "admission/announcement/announcement_detail"},
     # Student Portal
     {"from_route": "/student-portal", "to_route": "student-portal/index"},
     {"from_route": "/student-portal/courses", "to_route": "student-portal/courses"},
@@ -672,10 +679,9 @@ website_route_rules = [
     {"from_route": "/parent-portal/attendance", "to_route": "parent-portal/attendance"},
     {"from_route": "/parent-portal/fees", "to_route": "parent-portal/fees"},
     {"from_route": "/parent-portal/results", "to_route": "parent-portal/results"},
+    # PACE (www/paceadmissions; application-card/ and progress-tracker/ are folder routes)
     {"from_route": "/paceadmissions/admission", "to_route": "paceadmissions/index"},
     {"from_route": "/paceadmissions/admission/<name>", "to_route": "paceadmissions/pace_programme_details"},
-    {"from_route": "/paceadmissions/progress-tracker", "to_route": "pace_progress_tracker"},
-    {"from_route": "/paceadmissions/application-card", "to_route": "pace_application_card"},
     # {"from_route": "/paceadmissions/application-form", "to_route": "pace-application-form"},
     {"from_route": "/paceadmissions/login", "to_route": "paceadmissions/login"},
     {"from_route": "/paceadmissions/forgot_password", "to_route": "paceadmissions/forgot_password"},
@@ -687,25 +693,39 @@ website_route_rules = [
     {"from_route": "/faculty-portal/communication", "to_route": "faculty-portal/communication"},
     {"from_route": "/faculty-portal/profile", "to_route": "faculty-portal/profile"},
     {"from_route": "/faculty-portal/venue-booking", "to_route": "faculty-portal/venue-booking"},
-    {"from_route": "/pace/admission", "to_route": "pace/index"},
-    {"from_route": "/pace/admission/<name>", "to_route": "pace/pace_programme_details"},
-    {"from_route": "/pace/progress-tracker", "to_route": "pace_progress_tracker"},
-    {"from_route": "/pace/login", "to_route": "pace/login"},
-    {"from_route": "/pace/forgot_password", "to_route": "pace/forgot_password"},
-    {"from_route": "/paceadmissions/forgot_password", "to_route": "paceadmissions/forgot_password"},
 ]
 
-# Old admission URLs (already sent in emails) → new NLSAT routes
+# Old admission URLs (already sent in emails / bookmarked) → current routes.
+# The /admission/(.*) rule also keeps www/admission (shared pages) from being opened by folder path;
+# those pages are only served under /nlsat/... and /pace/... (route rules above).
 website_redirects = [
     {"source": "/admission", "target": "/nlsatadmissions", "forward_query_parameters": True},
     {"source": r"/admission/(.*)", "target": r"/nlsatadmissions/\1", "forward_query_parameters": True},
-    # Common pages moved under www/nlsat
-    {"source": r"/merit-and-scholarship/(.*)", "target": r"/nlsat/merit-and-scholarship/\1", "forward_query_parameters": True},
+    # Shared NLSAT + PACE pages (www/admission)
+    {"source": "/my-profile", "target": "/nlsat/my-profile", "forward_query_parameters": True},
+    {"source": "/nlsat/profile", "target": "/nlsat/my-profile", "forward_query_parameters": True},
+    {"source": r"/(?:nlsat/)?merit-and-scholarship/helpdesk", "target": "/nlsat/helpdesk", "forward_query_parameters": True},
+    {"source": r"/announcement/(.*)", "target": r"/nlsat/announcement/\1", "forward_query_parameters": True},
+    # NLSAT shared pages (www/nlsat)
+    {"source": r"/(?:nlsat/)?merit-and-scholarship/admission_dashboard", "target": "/nlsat/dashboard", "forward_query_parameters": True},
+    {"source": "/admission-dashboard", "target": "/nlsat/dashboard", "forward_query_parameters": True},
+    {"source": "/applicant-dashboard", "target": "/nlsat/dashboard", "forward_query_parameters": True},
+    {"source": r"/(?:nlsat/)?merit-and-scholarship/scholarships", "target": "/nlsat/scholarships", "forward_query_parameters": True},
+    {"source": r"/(?:nlsat/)?merit-and-scholarship/apply", "target": "/nlsat/scholarships/apply", "forward_query_parameters": True},
+    {"source": "/apply", "target": "/nlsat/scholarships/apply", "forward_query_parameters": True},
+    {"source": "/admission-status", "target": "/nlsat/application-status", "forward_query_parameters": True},
     {"source": "/my-applications", "target": "/nlsat/my-applications", "forward_query_parameters": True},
     {"source": r"/offer_letter/(.*)", "target": r"/nlsat/offer_letter/\1", "forward_query_parameters": True},
     {"source": "/view_application", "target": "/nlsat/view_application", "forward_query_parameters": True},
-    {"source": r"/announcement/(.*)", "target": r"/nlsat/announcement/\1", "forward_query_parameters": True},
     {"source": r"/eligibility/(.*)", "target": r"/nlsat/eligibility/\1", "forward_query_parameters": True},
+    # PACE pages (www/paceadmissions); www/pace does not exist
+    {"source": "/pace_application_card", "target": "/paceadmissions/application-card", "forward_query_parameters": True},
+    {"source": "/pace_progress_tracker", "target": "/paceadmissions/progress-tracker", "forward_query_parameters": True},
+    {"source": "/pace/progress-tracker", "target": "/paceadmissions/progress-tracker", "forward_query_parameters": True},
+    {"source": "/pace/admission", "target": "/paceadmissions/admission", "forward_query_parameters": True},
+    {"source": r"/pace/admission/(.*)", "target": r"/paceadmissions/admission/\1", "forward_query_parameters": True},
+    {"source": "/pace/login", "target": "/paceadmissions/login", "forward_query_parameters": True},
+    {"source": "/pace/forgot_password", "target": "/paceadmissions/forgot_password", "forward_query_parameters": True},
 ]
 
 update_website_context = "slcm.admission.utils.portal.update_website_context"

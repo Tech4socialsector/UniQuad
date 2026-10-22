@@ -40,7 +40,7 @@ def get_context(context):
     
     # Redirect back to dashboard if no scheme is provided
     if not scheme_id:
-        frappe.local.flags.redirect_location = "/nlsat/merit-and-scholarship/admission_dashboard"
+        frappe.local.flags.redirect_location = "/nlsat/dashboard"
         raise frappe.Redirect
 
     _check_access(

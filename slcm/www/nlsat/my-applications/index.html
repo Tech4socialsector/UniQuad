@@ -31,8 +31,8 @@
      - [ ] Terminology consistent (programme, enrol, sign in, etc.)
 -->
 
-{% extends "slcm/www/nlsat/admission_base.html" %}
-{% from "slcm/www/nlsat/_sidebar.html" import portal_sidebar_css, portal_sidebar_html, portal_sidebar_js %}
+{% extends "slcm/www/admission/admission_base.html" %}
+{% from "slcm/www/admission/_sidebar.html" import portal_sidebar_css, portal_sidebar_html, portal_sidebar_js %}
 
 {% block adm_container_extra_class %}portal-layout-container{% endblock %}
 
@@ -3044,7 +3044,7 @@
   <div class="ico-wrap"><span class="material-symbols-outlined">search_off</span></div>
   <h3>Application Not Found</h3>
   <p>This application does not exist or may have been removed.</p>
-  <a href="/nlsat/merit-and-scholarship/admission_dashboard" class="btn-download">Back</a>
+  <a href="/nlsat/dashboard" class="btn-download">Back</a>
 </div>
 
 {# ── ACCESS DENIED ──────────────────────────────────────────────── #}
@@ -3053,7 +3053,7 @@
   <div class="ico-wrap"><span class="material-symbols-outlined">lock</span></div>
   <h3>Access Denied</h3>
   <p>You do not have permission to view this application.</p>
-  <a href="/nlsat/merit-and-scholarship/admission_dashboard" class="btn-download">Back</a>
+  <a href="/nlsat/dashboard" class="btn-download">Back</a>
 </div>
 
 {# ══════════════════════════════════════════════════════════════════
@@ -3093,7 +3093,7 @@ or _app.current_stage)) or _status %}
     <!-- Back breadcrumb + Edit Application -->
     <div class="ma-detail-actions fade-up"
       style="animation-delay:.0s;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;">
-      <a href="/nlsat/merit-and-scholarship/admission_dashboard" class="back-link">
+      <a href="/nlsat/dashboard" class="back-link">
         <span class="material-symbols-outlined">arrow_back</span>
         Back
       </a>

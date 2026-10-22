@@ -61,7 +61,7 @@ def get_context(context):
 
     # Profile moved to its own page; PACE-only users have no applications/scholarship panels
     if frappe.form_dict.get("panel") == "profile" or context.is_pace_only:
-        frappe.local.flags.redirect_location = "/nlsat/profile"
+        frappe.local.flags.redirect_location = "/pace/my-profile" if context.is_pace_only else "/nlsat/my-profile"
         raise frappe.Redirect
 
     # ── Application cards (new) ──────────────────────────────────

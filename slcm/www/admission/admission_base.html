@@ -827,9 +827,9 @@
     {% set _active = 1 %} {% set _mmsg = '' %} {% set _show_adm_page = 1 %}
     {% endif %}
 
-    {# Navbar + mobile drawer — slcm/www/nlsat/_navbar.html (data: _navbar.py) #}
+    {# Navbar + mobile drawer — slcm/www/admission/_navbar.html (data: _navbar.py) #}
     {% set nav = get_nlsat_navbar_context(portal_config, current_path, nlsat_login_url) %}
-    {% include "slcm/www/nlsat/_navbar.html" %}
+    {% include "slcm/www/admission/_navbar.html" %}
 
     {% if _active == 0 %}
     <main class="adm-main" style="display:flex;align-items:center;justify-content:center;">
@@ -845,8 +845,8 @@
     </main>
     {% endif %}
 
-    {# Footer — slcm/www/nlsat/_footer.html (data: _footer.py) #}
-    {% include "slcm/www/nlsat/_footer.html" %}
+    {# Footer — slcm/www/admission/_footer.html (data: _footer.py) #}
+    {% include "slcm/www/admission/_footer.html" %}
 
     <!-- Announcement slide panel -->
     <div id="ann-overlay" style="display:none;position:fixed;inset:0;top:60px;background:rgba(0,0,0,0.35);z-index:500;"
@@ -975,6 +975,9 @@
     <script>
         window.csrf_token = {{ frappe.session.csrf_token | tojson }};
         window.session_user = {{ frappe.session.user | tojson }} || 'Guest';
+        // Candidate prefix for shared pages (/nlsat or /pace) and the default landing page
+        window.ADM_PREFIX = {{ nav.prefix | tojson }};
+        window.ADM_HOME_URL = {{ ('/nlsat/dashboard' if nav.prefix == '/nlsat' else nav.profile_url) | tojson }};
 
         async function apiFetch(method, args, httpMethod = 'POST') {
             const token = window.csrf_token || (typeof frappe !== 'undefined' ? frappe.csrf_token : '');
@@ -1268,7 +1271,7 @@
 
         function panelRowClickNotif(ev, name, href) {
             if (ev) ev.preventDefault();
-            var dest = href || '/nlsat/merit-and-scholarship/admission_dashboard';
+            var dest = href || window.ADM_HOME_URL;
             if (!name || window.session_user === 'Guest') {
                 window.location.href = dest;
                 return;
@@ -1285,7 +1288,7 @@
 
         function panelRowClickAnn(ev, name) {
             if (ev) ev.preventDefault();
-            window.location.href = '/nlsat/announcement/' + encodeURIComponent(name);
+            window.location.href = window.ADM_PREFIX + '/announcement/' + encodeURIComponent(name);
         }
 
         function renderPanelContent() {
@@ -1415,7 +1418,7 @@
 
                 var rowDataAttrs = '';
                 if (_panelTab === 'notif') {
-                    var ph = item.portal_href || '/nlsat/merit-and-scholarship/admission_dashboard';
+                    var ph = item.portal_href || window.ADM_HOME_URL;
                     rowDataAttrs = ' class="slcm-notif-panel-row" data-slcm-nn="' + escAttr(item.name) + '" data-slcm-nh="' + escAttr(ph) + '"';
                 } else {
                     rowDataAttrs = ' class="slcm-ann-panel-row" data-slcm-an="' + escAttr(item.name) + '"';

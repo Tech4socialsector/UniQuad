@@ -32,10 +32,10 @@ def get_context(context):
         if user_type == "System User":
             frappe.local.flags.redirect_location = "/desk"
         else:
-            frappe.local.flags.redirect_location = redirect_to or "/nlsat/profile"
+            frappe.local.flags.redirect_location = redirect_to or "/pace/my-profile"
         raise frappe.Redirect
 
-    context.redirect_to = redirect_to or "/nlsat/profile"
+    context.redirect_to = redirect_to or "/pace/my-profile"
 
     from slcm.admission.utils.portal import get_portal_config
     portal_config = get_portal_config()

@@ -73,7 +73,7 @@ def get_context(context):
     context.error = None
 
     if _user == "Guest":
-        frappe.local.flags.redirect_location = get_portal_login_url() + "?redirect=/nlsat/merit-and-scholarship/scholarships"
+        frappe.local.flags.redirect_location = get_portal_login_url() + "?redirect=/nlsat/scholarships"
         raise frappe.Redirect
 
     try:

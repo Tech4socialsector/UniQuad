@@ -1,6 +1,6 @@
 {#
   _navbar.html — top navbar + mobile drawer for the NLSAT portal.
-  Included by slcm/www/nlsat/admission_base.html, which sets:
+  Included by slcm/www/admission/admission_base.html, which sets:
     nav = get_nlsat_navbar_context(portal_config, current_path, nlsat_login_url)   (see _navbar.py)
   Also uses the layout's _pc_title and ws_title.
 #}
@@ -28,7 +28,7 @@
             <a href="{{ nav.helpdesk_url }}" class="nav-hide-mobile">Helpdesk</a>
 
 
-            <!-- <a href="/nlsat/merit-and-scholarship/admission_dashboard" class="nav-hide-mobile">Dashboard</a> -->
+            <!-- <a href="/nlsat/dashboard" class="nav-hide-mobile">Dashboard</a> -->
             <!-- <a href="/nlsat/my-applications" class="nav-hide-mobile">My Applications</a> -->
             <!-- <a href="/nlsat/offer_letter/offer-letter-list" class="nav-hide-mobile">Offer Letter</a> -->
 
@@ -109,7 +109,7 @@
                         </div>
                     </div>
                     <!-- Dashboard -->
-                    <!-- <a href="/nlsat/merit-and-scholarship/admission_dashboard"
+                    <!-- <a href="/nlsat/dashboard"
                        style="display:flex;align-items:center;gap:10px;
                               padding:12px 16px;text-decoration:none;color:#334155;
                               font-size:14px;font-weight:600;transition:background 0.15s;"
@@ -247,7 +247,7 @@
         </a>
 
 
-        <!-- <a href="/nlsat/merit-and-scholarship/admission_dashboard" class="drawer-link" onclick="closeDrawer()">
+        <!-- <a href="/nlsat/dashboard" class="drawer-link" onclick="closeDrawer()">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
                     <polyline points="22 4 12 14.01 9 11.01" />

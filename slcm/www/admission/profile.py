@@ -1,5 +1,5 @@
 import frappe
-from slcm.admission.utils.nlsat_portal import get_portal_login_url
+from slcm.admission.utils.nlsat_portal import get_candidate_login_url, get_candidate_prefix
 from slcm.admission.api.profile import _user_address_value, _user_dob_value
 from slcm.admission.utils.portal import get_portal_config
 
@@ -39,10 +39,11 @@ def _check_access(allowed_roles, login_redirect):
 
 
 def get_context(context):
-    """/nlsat/profile — the applicant's profile (moved out of the admission dashboard)."""
+    """/nlsat/my-profile and /pace/my-profile — the candidate's profile, shared by NLSAT and PACE."""
+    prefix = get_candidate_prefix()
     _check_access(
         allowed_roles=["Applicant", "PACE Applicant", "System Manager", "Administrator"],
-        login_redirect=get_portal_login_url() + "?redirect-to=/nlsat/profile",
+        login_redirect=get_candidate_login_url(prefix) + "?redirect-to=" + prefix + "/my-profile",
     )
     context.portal_config = get_portal_config()
     context.no_cache = 1

@@ -178,13 +178,13 @@ def _portal_href_for_notification_log(
             elif dt == "Applicant" and dn:
                 base = f"/nlsat/my-applications?app={quote(dn, safe='')}"
             elif dt in ("Scholarship Application", "Scholarship Scheme", "Scholarship Utilization"):
-                base = "/nlsat/merit-and-scholarship/scholarships"
+                base = "/nlsat/scholarships"
             elif "Scholarship" in dt:
-                base = "/nlsat/merit-and-scholarship/scholarships"
+                base = "/nlsat/scholarships"
             elif dt == "User" and dn:
-                base = "/nlsat/profile"
+                base = "/nlsat/my-profile"
             else:
-                base = "/nlsat/merit-and-scholarship/admission_dashboard"
+                base = "/nlsat/dashboard"
 
     if notif_log_name:
         base = _append_query_param(base, "notif", notif_log_name)

@@ -104,3 +104,34 @@ def get_user_portal_redirect_url(user, path):
 
 	portal_type = get_applicant_portal_type(user) or DOMESTIC
 	return get_portal_login_url(portal_type) + "?redirect-to=" + quote(path, safe="/")
+
+
+# ── Candidate prefix for pages shared by NLSAT and PACE (www/admission) ──
+# The same page is served at /nlsat/<page> and /pace/<page> (website_route_rules),
+# so the URL shows whose page it is: /nlsat/my-profile, /pace/my-profile, …
+
+NLSAT_PREFIX = "/nlsat"
+PACE_PREFIX = "/pace"
+PACE_LOGIN_URL = "/paceadmissions/login"
+
+
+def _is_pace_only(user):
+	if not user or user == "Guest":
+		return False
+	roles = set(frappe.get_all("Has Role", filters={"parent": user}, pluck="role"))
+	return "PACE Applicant" in roles and "Applicant" not in roles
+
+
+def get_candidate_prefix(user=None, path=None):
+	"""/pace on PACE pages (or for PACE-only users), otherwise /nlsat."""
+	first = ((path if path is not None else _request_path()) or "").strip("/").split("/")[0]
+	if first in ("pace", "paceadmissions"):
+		return PACE_PREFIX
+	if first in ("nlsat", "nlsatadmissions", "nlsat-international", "application_form"):
+		return NLSAT_PREFIX
+	return PACE_PREFIX if _is_pace_only(user or frappe.session.user) else NLSAT_PREFIX
+
+
+def get_candidate_login_url(prefix=None):
+	"""Login page for the candidate: PACE login under /pace, NLSAT login (cookie/category) otherwise."""
+	return PACE_LOGIN_URL if (prefix or get_candidate_prefix()) == PACE_PREFIX else get_portal_login_url()

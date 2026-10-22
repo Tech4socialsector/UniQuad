@@ -1,4 +1,4 @@
-{% extends "slcm/www/nlsat/admission_base.html" %} {% block title %}Track Application Status{% endblock
+{% extends "slcm/www/admission/admission_base.html" %} {% block title %}Track Application Status{% endblock
 %} {% block theme_vars %}
 <style>
 	:root {
@@ -89,7 +89,7 @@
 		<p>{{ error }}</p>
 		<hr />
 		<form
-			action="/admission-status"
+			action="/nlsat/application-status"
 			method="GET"
 			class="form-inline"
 			style="display: flex; gap: 10px"

@@ -1,5 +1,5 @@
 import frappe
-from slcm.admission.utils.nlsat_portal import get_portal_login_url
+from slcm.admission.utils.nlsat_portal import get_candidate_login_url, get_candidate_prefix
 from frappe import _
 
 no_cache = 1
@@ -36,9 +36,11 @@ def _check_access(allowed_roles, login_redirect):
         raise CleanNotPermittedException()
 
 def get_context(context):
+    """/nlsat/helpdesk and /pace/helpdesk — shared by NLSAT and PACE candidates."""
+    prefix = get_candidate_prefix()
     _check_access(
         allowed_roles=["Applicant", "PACE Applicant", "System Manager", "Administrator"],
-        login_redirect=get_portal_login_url()
+        login_redirect=get_candidate_login_url(prefix) + "?redirect-to=" + prefix + "/helpdesk"
     )
     context.no_cache = 1
 

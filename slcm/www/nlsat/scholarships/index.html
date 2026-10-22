@@ -1,5 +1,5 @@
-{% extends "slcm/www/nlsat/admission_base.html" %}
-{% from "slcm/www/nlsat/_sidebar.html" import portal_sidebar_css, portal_sidebar_html, portal_sidebar_js %}
+{% extends "slcm/www/admission/admission_base.html" %}
+{% from "slcm/www/admission/_sidebar.html" import portal_sidebar_css, portal_sidebar_html, portal_sidebar_js %}
 
 {% block title %}Scholarship Dashboard — Admissions{% endblock %}
 
@@ -426,7 +426,7 @@
             <div class="bg-red-50 p-4 rounded-xl text-left mb-8">
               <p class="text-xs font-mono text-red-700 break-words">{{ error }}</p>
             </div>
-            <a href="/nlsat/merit-and-scholarship/admission_dashboard"
+            <a href="/nlsat/dashboard"
               class="inline-flex items-center gap-2 bg-slate-900 text-white px-8 py-3 rounded-xl font-bold transition-transform hover:scale-105">
               Back to Dashboard
             </a>
@@ -438,7 +438,7 @@
             <span class="material-symbols-outlined text-6xl text-slate-300 mb-6">person_search</span>
             <h2 class="text-2xl font-bold text-slate-900 mb-4">No Applicant Profile Found</h2>
             <p class="text-slate-500 mb-8">You need to have an active admission application to view scholarship opportunities.</p>
-            <a href="/nlsat/merit-and-scholarship/admission_dashboard"
+            <a href="/nlsat/dashboard"
               class="inline-flex items-center gap-2 bg-slate-900 text-white px-8 py-3 rounded-xl font-bold transition-transform hover:scale-105">
               Go to Dashboard
             </a>
@@ -455,7 +455,7 @@
           {% if all_applicants and all_applicants|length > 1 %}
           <div class="flex items-center gap-3 bg-white p-2 rounded-2xl border border-slate-200 shadow-sm">
             <span class="material-symbols-outlined text-slate-400 pl-2">person</span>
-            <select onchange="window.location.href='/nlsat/merit-and-scholarship/scholarships?app=' + this.value"
+            <select onchange="window.location.href='/nlsat/scholarships?app=' + this.value"
               class="bg-transparent border-none text-sm font-bold text-slate-700 focus:ring-0 cursor-pointer pr-8">
               {% for a in all_applicants %}
               <option value="{{ a.name }}" {% if a.name == applicant.name %}selected{% endif %}>
@@ -600,7 +600,7 @@
                     <button onclick="viewDetails('{{ sch.name }}')" class="btn-details">
                       Details <span class="material-symbols-outlined text-sm">chevron_right</span>
                     </button>
-                    <a href="{{ '/nlsat/merit-and-scholarship/apply?scheme=' ~ sch.name if (_is_cycle_active and not is_fee_paid) else 'javascript:void(0)' }}"
+                    <a href="{{ '/nlsat/scholarships/apply?scheme=' ~ sch.name if (_is_cycle_active and not is_fee_paid) else 'javascript:void(0)' }}"
                       class="{{ 'btn-apply-now' if (_is_cycle_active and not is_fee_paid) else 'btn-apply-disabled' }}"
                       style="{{ 'pointer-events: none;' if (not _is_cycle_active or is_fee_paid) else '' }}">
                       {% if is_fee_paid %}
