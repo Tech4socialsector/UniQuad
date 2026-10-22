@@ -2,7 +2,7 @@ describe('Offer Letter Flow', () => {
     const email = 'b6005316@gmail.com';
 
     const password = 'admin@123';
-    const loginUrl = 'http://192.168.1.213:8001/admission/login#login';
+    const loginUrl = 'http://192.168.1.213:8001/nlsatadmissions/login#login';
 
     before(() => {
         // Clear cookies and local storage before starting
@@ -85,7 +85,7 @@ describe('Offer Letter Flow', () => {
     });
 
     it('a', function() {
-        cy.visit('http://192.168.1.213:8001/admission/login#login')
+        cy.visit('http://192.168.1.213:8001/nlsatadmissions/login#login')
         
     });
 });

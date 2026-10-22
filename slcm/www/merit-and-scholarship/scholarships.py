@@ -1,4 +1,5 @@
 import frappe
+from slcm.admission.utils.nlsat_portal import get_portal_login_url
 from frappe import _
 from slcm.admission.utils.portal import get_portal_config
 
@@ -38,7 +39,7 @@ def _check_access(allowed_roles, login_redirect):
 def get_context(context):
     _check_access(
         allowed_roles=["Applicant", "System Manager", "Administrator"],
-        login_redirect="/admission/login"
+        login_redirect=get_portal_login_url()
     )
     context.portal_config = get_portal_config()
     _user = frappe.session.user
@@ -72,7 +73,7 @@ def get_context(context):
     context.error = None
 
     if _user == "Guest":
-        frappe.local.flags.redirect_location = "/admission/login?redirect=/merit-and-scholarship/scholarships"
+        frappe.local.flags.redirect_location = get_portal_login_url() + "?redirect=/merit-and-scholarship/scholarships"
         raise frappe.Redirect
 
     try:

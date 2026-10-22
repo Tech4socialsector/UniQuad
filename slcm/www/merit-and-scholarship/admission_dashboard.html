@@ -894,10 +894,10 @@ else 'Admissions Open') %}
                   </p>
                 </div>
                 <div style="display:flex;gap:10px;flex-shrink:0;">
-                  <a href="/admission#programs" class="btn btn-primary" style="font-size:13px;">
+                  <a href="{{ nlsat_portal_base or '/nlsatadmissions' }}#programs" class="btn btn-primary" style="font-size:13px;">
                     Explore Programmes
                   </a>
-                  <a href="/admission" style="padding:9px 18px;border-radius:8px;font-size:13px;font-weight:500;
+                  <a href="{{ nlsat_portal_base or '/nlsatadmissions' }}" style="padding:9px 18px;border-radius:8px;font-size:13px;font-weight:500;
                           color:white;text-decoration:none;
                           background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);
                           backdrop-filter:blur(8px);transition:background 0.2s;"
@@ -1111,7 +1111,7 @@ else 'Admissions Open') %}
               {% endif %}
 
               {# ── New Application / Closed CTA ── #}
-              <a href="{{ '/admission#programs' if _is_cycle_active else 'javascript:void(0)' }}"
+              <a href="{{ (nlsat_portal_base or '/nlsatadmissions') ~ '#programs' if _is_cycle_active else 'javascript:void(0)' }}"
                 class="{{ 'opacity-60 cursor-not-allowed' if not _is_cycle_active else '' }}" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;margin-top:16px;
                        border-radius:12px;text-decoration:none;border:2px dashed var(--border);
                        color:#94a3b8;font-size:13px;font-weight:500;

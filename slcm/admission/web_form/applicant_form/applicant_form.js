@@ -771,7 +771,7 @@ function _buildShell(ws, cfg, user, uinfo) {
 			_esc(title) +
 		'</h1>' +
 		'<div class="adm-nav-links">' +
-			(portalActive ? '<a href="/admission" style="color:rgba(255,255,255,.85);text-decoration:none;font-size:14px;font-weight:500;white-space:nowrap;" onmouseover="this.style.color=\'#fff\'" onmouseout="this.style.color=\'rgba(255,255,255,.85)\'">Admission</a>' : '') +
+			(portalActive ? '<a href="' + _nlsatPortalBase() + '" style="color:rgba(255,255,255,.85);text-decoration:none;font-size:14px;font-weight:500;white-space:nowrap;" onmouseover="this.style.color=\'#fff\'" onmouseout="this.style.color=\'rgba(255,255,255,.85)\'">Admission</a>' : '') +
 			// Same route as the admission portal navbar (admission_base.html)
 			'<a href="/merit-and-scholarship/helpdesk" style="color:rgba(255,255,255,.85);text-decoration:none;font-size:14px;font-weight:500;white-space:nowrap;" onmouseover="this.style.color=\'#fff\'" onmouseout="this.style.color=\'rgba(255,255,255,.85)\'">Helpdesk</a>' +
 			(isGuest
@@ -819,7 +819,7 @@ function _buildShell(ws, cfg, user, uinfo) {
 	if (logoutLink) {
 		logoutLink.addEventListener('click', function () {
 			slcmConfirmLeave(function () {
-				frappe.call({ method: 'logout', callback: function () { window.location.href = '/admission/login#login'; } });
+				frappe.call({ method: 'logout', callback: function () { window.location.href = _nlsatPortalBase() + '/login#login'; } });
 			});
 		});
 	}
@@ -921,6 +921,11 @@ function _esc(s) {
 	var d = document.createElement('div');
 	d.textContent = s == null ? '' : String(s);
 	return d.innerHTML;
+}
+
+// NLSAT portal the candidate came from (cookie set by the login page, see nlsat_portal.py)
+function _nlsatPortalBase() {
+	return /(?:^|;\s*)nlsat_portal=International/.test(document.cookie) ? '/nlsat-international' : '/nlsatadmissions';
 }
 
 // ───────────────────────────────────────────────────────────────────

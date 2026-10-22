@@ -643,10 +643,15 @@ role_home_page = {
 # Website
 website_route_rules = [
     {"from_route": "/portal-login", "to_route": "portal-login/login"},
-    {"from_route": "/admission/login", "to_route": "admission/login"},
+    # NLSAT admissions: /nlsatadmissions (Indian Nationals) and /nlsat-international
+    # share the pages in www/nlsatadmissions; the portal is detected from the path.
+    {"from_route": "/nlsatadmissions/login", "to_route": "nlsatadmissions/login"},
+    {"from_route": "/nlsat-international", "to_route": "nlsatadmissions/index"},
+    {"from_route": "/nlsat-international/login", "to_route": "nlsatadmissions/login"},
     {"from_route": "/applicant-dashboard", "to_route": "applicant_dashboard"},
-    {"from_route": "/admission/application-form", "to_route": "admission/application-form"},
-    {"from_route": "/admission/<name>", "to_route": "admission/program_detail"},
+    {"from_route": "/nlsatadmissions/application-form", "to_route": "nlsatadmissions/application-form"},
+    {"from_route": "/nlsatadmissions/<name>", "to_route": "nlsatadmissions/program_detail"},
+    {"from_route": "/nlsat-international/<name>", "to_route": "nlsatadmissions/program_detail"},
     {"from_route": "/announcement/<name>", "to_route": "announcement/announcement_detail"},
     {"from_route": "/admission-dashboard", "to_route": "merit-and-scholarship/admission_dashboard"},
     {"from_route": "/apply", "to_route": "merit-and-scholarship/apply"},
@@ -685,6 +690,12 @@ website_route_rules = [
     {"from_route": "/pace/login", "to_route": "pace/login"},
     {"from_route": "/pace/forgot_password", "to_route": "pace/forgot_password"},
     {"from_route": "/paceadmissions/forgot_password", "to_route": "paceadmissions/forgot_password"},
+]
+
+# Old /admission links (already sent in emails) → /nlsatadmissions
+website_redirects = [
+    {"source": "/admission", "target": "/nlsatadmissions", "forward_query_parameters": True},
+    {"source": r"/admission/(.*)", "target": r"/nlsatadmissions/\1", "forward_query_parameters": True},
 ]
 
 update_website_context = "slcm.admission.utils.portal.update_website_context"

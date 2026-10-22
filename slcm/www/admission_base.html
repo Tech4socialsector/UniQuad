@@ -845,7 +845,7 @@
             {% set _show_pace = not (_has_applicant and not _has_pace_applicant) %}
 
             {% if _show_admission %}
-            <a href="/admission" class="nav-hide-mobile">Admission</a>
+            <a href="{{ nlsat_portal_base or '/nlsatadmissions' }}" class="nav-hide-mobile">Admission</a>
             {% endif %}
             <a href="/merit-and-scholarship/helpdesk" class="nav-hide-mobile">Helpdesk</a>
 
@@ -879,7 +879,7 @@
 
             {% if _is_guest %}
             <!-- Guest: show Login/Apply button -->
-            {% set _login_url = "/paceadmissions/login" if ("pace" in (current_path or "")) or (_has_pace_applicant and not _has_applicant) else "/admission/login" %}
+            {% set _login_url = "/paceadmissions/login" if ("pace" in (current_path or "")) or (_has_pace_applicant and not _has_applicant) else (nlsat_login_url or "/nlsatadmissions/login") %}
             {% set _is_pace_login = ("pace" in _login_url) %}
             <a href="javascript:void(0)" onclick="window.location.href = '{{ _login_url }}' + '?redirect-to=' + encodeURIComponent(window.location.pathname + window.location.search) + '{{ "#register" if _is_pace_login else "" }}';" class="adm-nav-login-btn" style="display:inline-flex;align-items:center;gap:6px;
                           background:var(--primary,#1a3c6e);color:white;
@@ -1060,7 +1060,7 @@
         {% set _show_pace = not (_has_applicant and not _has_pace_applicant) %}
 
         {% if _show_admission %}
-        <a href="/admission" class="drawer-link" onclick="closeDrawer()">
+        <a href="{{ nlsat_portal_base or '/nlsatadmissions' }}" class="drawer-link" onclick="closeDrawer()">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
                 <polyline points="9 22 9 12 15 12 15 22" />
@@ -1110,7 +1110,7 @@
             Logout
         </a>
         {% else %}
-        {% set _drawer_login_url = "/paceadmissions/login" if ("pace" in (current_path or "")) or (_has_pace_applicant and not _has_applicant) else "/admission/login" %}
+        {% set _drawer_login_url = "/paceadmissions/login" if ("pace" in (current_path or "")) or (_has_pace_applicant and not _has_applicant) else (nlsat_login_url or "/nlsatadmissions/login") %}
         {% set _is_pace_drawer_login = ("pace" in _drawer_login_url) %}
         <a href="javascript:void(0)" class="drawer-link" onclick="closeDrawer(); window.location.href = '{{ _drawer_login_url }}' + '?redirect-to=' + encodeURIComponent(window.location.pathname + window.location.search) + '{{ "#register" if _is_pace_drawer_login else "" }}';">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1557,7 +1557,7 @@
 
         <!-- Panel footer -->
         <!-- <div style="padding:12px 20px;border-top:1px solid var(--border);flex-shrink:0;text-align:center;">
-            <a href="/admission" style="font-size:13px;color:var(--primary);
+            <a href="{{ nlsat_portal_base or '/nlsatadmissions' }}" style="font-size:13px;color:var(--primary);
                                         font-weight:600;text-decoration:none;">
                 View all announcements →
             </a>
@@ -2096,9 +2096,9 @@
                 var isApplicant = {{ 'true' if _has_applicant else 'false' }};
                 var isPaceApplicant = {{ 'true' if _has_pace_applicant else 'false' }};
                 
-                var baseLogin = '/admission/login';
+                var baseLogin = '{{ nlsat_login_url or "/nlsatadmissions/login" }}';
                 if (isApplicant) {
-                    baseLogin = '/admission/login';
+                    baseLogin = '{{ nlsat_login_url or "/nlsatadmissions/login" }}';
                 } else if (isPaceApplicant) {
                     baseLogin = '/paceadmissions/login';
                 } else if (window.location.pathname.indexOf('pace') !== -1) {

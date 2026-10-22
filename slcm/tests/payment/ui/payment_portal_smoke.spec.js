@@ -3,7 +3,7 @@ const { test, expect } = require('@playwright/test');
 
 test.describe('Payment portal pages load', () => {
 	test('admission login page', async ({ page }) => {
-		const response = await page.goto('/admission/login', { waitUntil: 'domcontentloaded' });
+		const response = await page.goto('/nlsatadmissions/login', { waitUntil: 'domcontentloaded' });
 		expect(response?.status()).toBeLessThan(400);
 		await expect(page.locator('input[type="email"], input[name="email"], #login_email').first()).toBeVisible({
 			timeout: 15_000,
@@ -26,7 +26,7 @@ test.describe('Payment portal pages load', () => {
 
 	test('/login redirects to admission portal login', async ({ page }) => {
 		await page.goto('/login', { waitUntil: 'domcontentloaded' });
-		await page.waitForURL(/\/admission\/login/, { timeout: 20_000 });
+		await page.waitForURL(/\/nlsatadmissions\/login/, { timeout: 20_000 });
 		await expect(page.locator('input[type="email"], input[name="email"], #login_email').first()).toBeVisible({
 			timeout: 15_000,
 		});

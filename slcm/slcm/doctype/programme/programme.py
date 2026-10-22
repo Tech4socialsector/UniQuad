@@ -30,7 +30,7 @@ class Programme(Document):
 		# is missing and logged-in applicants get sent to the login page.
 		base_url = get_url()
 		web_form_route = (
-			frappe.db.get_value("Web Form", "applicant-form", "route") or "admission/application-form"
+			frappe.db.get_value("Web Form", "applicant-form", "route") or "nlsatadmissions/application-form"
 		).strip("/")
 		self.application_form_link = f"{base_url}/{web_form_route}/new?program={self.program_slug}&foriegn_national=No&nationality=India"
 		self.international_application_form_link = f"{base_url}/{web_form_route}/new?program={self.program_slug}&foriegn_national=Yes"

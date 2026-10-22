@@ -14,23 +14,30 @@ def get_context(context):
     except Exception:
         context.portal_config = None
 
+    # ── Portal: /nlsatadmissions (Indian Nationals) or /nlsat-international ──
+    from slcm.admission.utils.nlsat_portal import (
+        DOMESTIC, PORTAL_BASES, get_portal_type_from_path, get_portal_login_url,
+    )
+    _req_path = (frappe.request.path if hasattr(frappe, "request") and frappe.request else "") or ""
+    context.portal_type      = get_portal_type_from_path(_req_path) or DOMESTIC
+    context.portal_base      = PORTAL_BASES[context.portal_type]
+    context.portal_login_url = get_portal_login_url(context.portal_type)
+
     # ── Get slug from URL ─────────────────────────────────────────
     # Supports both:
-    #   /admission/computer-application  (path-based, set by index.py)
-    #   /admission/program_detail?slug=computer-application
+    #   /nlsatadmissions/computer-application  (path-based, set by index.py)
+    #   /nlsatadmissions/program_detail?slug=computer-application
     slug = frappe.form_dict.get("slug") or ""
 
     if not slug:
-        # Try reading from path: /admission/program_detail/[slug]
+        # Try reading from path: /nlsatadmissions/program_detail/[slug]
         try:
-            _path = (getattr(frappe.local, 'path_info', '') or
-                     (frappe.request.path if hasattr(frappe, 'request')
-                      and frappe.request else ''))
+            _path = (getattr(frappe.local, 'path_info', '') or _req_path)
             _parts = [p for p in _path.strip('/').split('/') if p]
-            # /admission/program_detail/ba-llb-hons → parts[2]
+            # /nlsatadmissions/program_detail/ba-llb-hons → parts[2]
             if len(_parts) >= 3:
                 slug = _parts[2]
-            # /admission/ba-llb-hons → parts[1] (if routed via index)
+            # /nlsat-international/ba-llb-hons → parts[1] (if routed via index)
             elif len(_parts) == 2:
                 slug = _parts[1]
             if slug == "login":
@@ -40,7 +47,7 @@ def get_context(context):
 
     if not slug:
         frappe.local.response["type"] = "redirect"
-        frappe.local.response["location"] = "/admission"
+        frappe.local.response["location"] = context.portal_base
         return
 
     # ── Fetch Program by slug ─────────────────────────────────────
@@ -284,6 +291,10 @@ def get_context(context):
         academic_year=_aac,
         program_level=ac_prog_level,
     )
+    # International portal: pre-set Foreign National on the application form
+    if context.portal_type != DOMESTIC:
+        context.apply_web_form_url += ("&" if "?" in context.apply_web_form_url else "?") + "foriegn_national=Yes"
+        context.apply_web_form_login_url += "%26foriegn_national%3DYes"
 
     # ── Eligibility Rules ─────────────────────────────────────────
     try:
@@ -391,8 +402,8 @@ def _set_empty_context(context, slug):
     context.academic_year   = ""
     context.support_email   = "admissions@nlsiu.ac.in"
     context.title           = "Program Not Found"
-    context.apply_web_form_url = "/admission"
-    context.apply_web_form_login_url = "/admission/login?redirect-to=/admission"
+    context.apply_web_form_url = context.portal_base
+    context.apply_web_form_login_url = context.portal_login_url + "?redirect-to=" + context.portal_base
     context.user_app_name = ""
     context.user_app_status = ""
     context.allow_multiple_applications = False

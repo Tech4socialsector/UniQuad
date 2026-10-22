@@ -3,6 +3,7 @@ import base64
 import mimetypes
 
 import frappe
+from slcm.admission.utils.nlsat_portal import get_portal_base, get_portal_login_url
 from frappe import _
 from frappe.utils import random_string
 from frappe.core.doctype.user.user import sign_up
@@ -74,7 +75,7 @@ def send_welcome_or_custom_signup_email(user_doc, correct_link, template="new_us
             "logo": getattr(institution, "logo", ""),
             "full_name": full_name,
             "set_password_link": correct_link,
-            "login_url": getattr(institution, "login_url", "") or frappe.utils.get_url("/admission/login"),
+            "login_url": getattr(institution, "login_url", "") or frappe.utils.get_url(get_portal_login_url()),
             "support_email": getattr(institution, "support_email", ""),
             "link_expiry_hours": getattr(institution, "link_expiry_hours", 24) or 24
         }
@@ -916,7 +917,7 @@ def custom_sign_up(email, full_name, mobile_no=None, redirect_to=None):
         user_doc.db_set("last_reset_password_key_generated_on", add_days(now_datetime(), 30))
 
         parsed = urllib.parse.urlparse(frappe_link)
-        base_redir = redirect_to or "/admission"
+        base_redir = redirect_to or get_portal_base()
         correct_link = get_url(f"/update-password?{parsed.query}&redirect_to={urllib.parse.quote(base_redir)}")
 
         # Cache redirect for post-password-set
@@ -982,7 +983,7 @@ def get_user_details():
 def get_login_redirect():
     user = frappe.session.user
     if user == "Guest":
-        return "/admission/login"
+        return get_portal_login_url()
     
     user_type = frappe.db.get_value("User", user, "user_type") or "Website User"
     if user_type == "System User":

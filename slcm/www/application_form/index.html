@@ -2102,7 +2102,7 @@ src="https://www.facebook.com/tr?id=1279045953496223&ev=PageView&noscript=1"
 	<!-- ═══ Back to admission listing ─── -->
 	<div class="application-form-back-row">
 		<a
-			href="{% if applicant_data and applicant_data.name %}/my-applications?app={{ applicant_data.name }}{% else %}/admission{% endif %}"
+			href="{% if applicant_data and applicant_data.name %}/my-applications?app={{ applicant_data.name }}{% else %}{{ nlsat_portal_base or '/nlsatadmissions' }}{% endif %}"
 			class="btn-back-to-admission"
 			title="Back to programme listing"
 		>
@@ -5250,7 +5250,7 @@ src="https://www.facebook.com/tr?id=1279045953496223&ev=PageView&noscript=1"
 	national_tests: {{ national_tests | tojson }}
 	};
 
-	// Program from URL (e.g. /admission Apply Now) — pre-fill and lock
+	// Program from URL (e.g. /nlsatadmissions Apply Now) — pre-fill and lock
 	let PREFILL_PROGRAM = {{ (prefill_program or '') | tojson }};
 	let PREFILL_CAMPUS = {{ (prefill_campus or '') | tojson }};
 	const PROGRAM_READONLY = {{ 'true' if program_readonly else 'false' }};

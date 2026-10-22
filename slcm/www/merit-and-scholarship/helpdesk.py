@@ -1,4 +1,5 @@
 import frappe
+from slcm.admission.utils.nlsat_portal import get_portal_login_url
 from frappe import _
 
 no_cache = 1
@@ -37,7 +38,7 @@ def _check_access(allowed_roles, login_redirect):
 def get_context(context):
     _check_access(
         allowed_roles=["Applicant", "PACE Applicant", "System Manager", "Administrator"],
-        login_redirect="/admission/login"
+        login_redirect=get_portal_login_url()
     )
     context.no_cache = 1
 

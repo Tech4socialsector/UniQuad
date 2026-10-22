@@ -6,6 +6,7 @@ from contextlib import contextmanager
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from slcm.admission.utils.nlsat_portal import get_applicant_login_url
 from frappe.model.naming import getseries, parse_naming_series
 from frappe.utils import validate_email_address, getdate, date_diff, today, now, flt, nowdate, cint
 from slcm.admission.portal_application_web_form import (
@@ -952,7 +953,7 @@ class Applicant(Document):
             or "Admissions Office"
         )
 
-        admission_portal_url = frappe.utils.get_url("/admission/login#login")
+        admission_portal_url = frappe.utils.get_url(get_applicant_login_url(self.foriegn_national) + "#login")
 
         # ── Institution logo ──────────────────────────────────────────────────
         institution_logo = frappe.db.get_single_value("Institution Settings", "logo") or ""
@@ -1427,7 +1428,7 @@ class Applicant(Document):
         institution_logo = frappe.db.get_single_value("Institution Settings", "logo") or ""
         if institution_logo and not institution_logo.startswith("http"):
             institution_logo = frappe.utils.get_url(institution_logo)
-        admission_portal_url = frappe.utils.get_url("/admission/login#login")
+        admission_portal_url = frappe.utils.get_url(get_applicant_login_url(self.foriegn_national) + "#login")
 
         template_context = {
             "doc": doc_dict,

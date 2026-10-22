@@ -839,7 +839,7 @@
   <p style="font-size:14px;color:#64748b;margin-bottom:24px;line-height:1.6;">
     This programme page does not exist or may have been removed.
   </p>
-  <a href="/admission" style="display:inline-block;padding:10px 28px;border-radius:10px;
+  <a href="{{ portal_base or '/nlsatadmissions' }}" style="display:inline-block;padding:10px 28px;border-radius:10px;
             background:var(--primary);color:white;font-weight:700;
             font-size:13px;text-decoration:none;">
     ← Back to Programme
@@ -850,7 +850,7 @@
   <div style="max-width:1200px;margin:0 auto;padding:0 20px;">
     <!-- BREADCRUMB -->
     <div style="padding:4px 0 0;">
-      <a href="/admission" style="display:inline-flex;align-items:center;gap:6px;
+      <a href="{{ portal_base or '/nlsatadmissions' }}" style="display:inline-flex;align-items:center;gap:6px;
               font-size:13px;font-weight:600;color:#64748b;text-decoration:none;"
         onmouseover="this.style.color='var(--primary)'" onmouseout="this.style.color='#64748b'">
         <span class="material-symbols-outlined" style="font-size:18px;">arrow_back</span>
@@ -1244,7 +1244,7 @@
       <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;">
         <p style="font-size:12px;color:#94a3b8;margin:0;">National Law School of India University — Admissions Portal
         </p>
-        <div style="display:flex;gap:20px;"><a href="/admission"
+        <div style="display:flex;gap:20px;"><a href="{{ portal_base or '/nlsatadmissions' }}"
             style="font-size:12px;color:#64748b;text-decoration:none;font-weight:500;"
             onmouseover="this.style.color='var(--primary)'" onmouseout="this.style.color='#64748b'">All Programmes</a><a
             href="/merit-and-scholarship/admission_dashboard"
@@ -1449,20 +1449,11 @@
     </p>
   </div>
   {% endif %} -->
-  <div class="mb-12 flex flex-col items-center justify-center text-center gap-4">
-    <!-- Type Toggle Buttons (only when both Domestic & International programmes exist) -->
-    {% if has_domestic_programs and has_international_programs %}
-    <div class="flex items-center gap-1 p-1 rounded-lg" style="background:#f1f5f9; display:inline-flex;">
-       <button class="px-5 py-2 rounded-md font-bold text-sm shadow-sm transition-all text-slate-900 bg-white" id="btn-domestic" onclick="setProgramFilter('Domestic')">Indian Nationals</button>
-       <button class="px-5 py-2 rounded-md font-bold text-sm transition-all text-slate-500 bg-transparent hover:text-slate-900 hover:bg-slate-200/50" id="btn-international" onclick="setProgramFilter('International')">International</button>
-    </div>
-    {% endif %}
-  </div>
-
   {% set _cyc = active_cycle.name if active_cycle else '' %}
   {% set _ay = active_cycle.admission_year if active_cycle else '' %}
   {% set _aac = active_cycle.academic_year if active_cycle else '' %}
-  <div id="program-level-sections" data-initial-filter="{{ 'International' if (has_international_programs and not has_domestic_programs) else 'Domestic' }}">
+  {# Programmes are already filtered to this portal in index.py: /nlsatadmissions → Domestic, /nlsat-international → International #}
+  <div id="program-level-sections" data-initial-filter="{{ portal_type or 'Domestic' }}">
   {% for grp in (program_groups or []) %}
   <div class="program-level-section mb-14" data-level="{{ grp.key }}">
   <h3 class="tracking-tight mb-8" style="color:var(--primary);font-size:clamp(26px, 3.2vw, 36px) !important;">{{ grp.title }}</h3>
@@ -1538,10 +1529,10 @@
 
         <!-- Buttons -->
         <div class="mt-6 flex gap-3" style="justify-content: space-between;">
+          {% set _dom_app_link = (p.get('application_form_link') or build_applicant_form_new_url(_slug, p.admission_cycle or (active_cycle.name if active_cycle else ''), campus=(p.campus or ''), intake_type=(p.intake_type or ''), admission_year=(active_cycle.admission_year if active_cycle else ''), academic_year=(active_cycle.academic_year if active_cycle else ''), program_level=(p.program_level or ''))) %}
+          {% set _intl_app_link = p.get('international_application_form_link') or (_dom_app_link ~ ('&' if '?' in _dom_app_link else '?') ~ 'foriegn_national=Yes') %}
           {% if frappe.session.user != "Guest" %}
           {% set _is_full = p.get('seats_full') if p.get else p.seats_full %}
-          {% set _dom_app_link = (p.get('application_form_link') or build_applicant_form_new_url(_slug, p.admission_cycle or (active_cycle.name if active_cycle else ''), campus=(p.campus or ''), intake_type=(p.intake_type or ''), admission_year=(active_cycle.admission_year if active_cycle else ''), academic_year=(active_cycle.academic_year if active_cycle else ''), program_level=(p.program_level or ''))) %}
-          {% set _intl_app_link = p.get('international_application_form_link') or _dom_app_link %}
           {# One button per toggle type; JS shows the one matching the active Indian Nationals / International filter #}
           {% for _atype in ['Domestic', 'International'] %}
           {% set _tmap = (user_app_map_by_type or {}).get(_atype) or {} %}
@@ -1582,7 +1573,7 @@
           {% endfor %}
           {% else %}
           {% set _is_full = p.get('seats_full') if p.get else p.seats_full %}
-          {% set _base_login_link = (p.application_form_link or build_login_redirect_to_applicant_form_new(_slug, p.admission_cycle or (active_cycle.name if active_cycle else ''), campus=(p.campus or ''), intake_type=(p.intake_type or ''), admission_year=(active_cycle.admission_year if active_cycle else ''), academic_year=(active_cycle.academic_year if active_cycle else ''), program_level=(p.program_level or ''))) %}
+          {% set _base_login_link = portal_login_url ~ '?redirect-to=' ~ ((_intl_app_link if portal_type == 'International' else _dom_app_link) | urlencode) %}
           <a href="{{ _base_login_link if (_is_cycle_active and not _is_full) else 'javascript:void(0)' }}"
              data-base-url="{{ _base_login_link }}"
              data-is-login="1"

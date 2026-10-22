@@ -594,7 +594,7 @@ src="https://www.facebook.com/tr?id=1279045953496223&ev=PageView&noscript=1"
     </div>
 
     <h2 class="lp-heading">Welcome Back</h2>
-    <p class="lp-sub">Login to access your application and track your status.</p>
+    <p class="lp-sub">{{ 'International Candidates' if portal_type == 'International' else 'Indian Nationals' }} — Login to access your application and track your status.</p>
 
     <!-- Tabs -->
     <div class="lp-tabs">
@@ -1094,7 +1094,7 @@ function lpLoginSuccess(redir) {
   lpNotify('Login successful. Please wait...', 'success', 'login');
   setTimeout(function() {
     var defaultDash = '/merit-and-scholarship/admission_dashboard?panel=profile';
-    if (redir && redir !== '/admission' && redir !== '/merit-and-scholarship/admission_dashboard?panel=profile' && redir.indexOf('/admission/login') === -1) {
+    if (redir && redir !== '{{ portal_base }}' && redir !== '/merit-and-scholarship/admission_dashboard?panel=profile' && redir.indexOf('{{ portal_login_url }}') === -1) {
       window.location.href = redir;
     } else {
       window.location.href = defaultDash;
@@ -1399,7 +1399,7 @@ async function doRegister() {
   var email  = document.getElementById('reg-email').value.trim();
 
   var urlParams = new URLSearchParams(window.location.search);
-  var redirectUrl = urlParams.get('redirect-to') || urlParams.get('redirect_to') || urlParams.get('redirect') || urlParams.get('next') || '/admission';
+  var redirectUrl = urlParams.get('redirect-to') || urlParams.get('redirect_to') || urlParams.get('redirect') || urlParams.get('next') || '{{ portal_base }}';
 
   try {
     var resp = await fetch('/api/method/slcm.api.user.custom_sign_up', {
@@ -1490,7 +1490,7 @@ function lpEvOpen(idx) {
         '<span class="material-symbols-outlined" style="vertical-align:middle;font-size:16px;margin-right:6px;">event_available</span>' +
         'Register for Event</a>';
     } else {
-      footer.innerHTML = '<a href="/admission/login?redirect=' + encodeURIComponent(ev.reg_url) + '" class="ev-reg-btn" style="background:#4b5563;">' +
+      footer.innerHTML = '<a href="{{ portal_login_url }}?redirect=' +encodeURIComponent(ev.reg_url) + '" class="ev-reg-btn" style="background:#4b5563;">' +
         '<span class="material-symbols-outlined" style="vertical-align:middle;font-size:16px;margin-right:6px;">login</span>' +
         'Login to Register</a>';
     }

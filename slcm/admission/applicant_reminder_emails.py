@@ -12,6 +12,7 @@ Scheduler entry (hooks.py  "0 10 * * *"):
 import traceback
 import frappe
 from frappe.utils import get_url, getdate, today, now_datetime, formatdate
+from slcm.admission.utils.nlsat_portal import get_user_portal_redirect_url
 
 
 # ---------------------------------------------------------------------------
@@ -221,7 +222,7 @@ def send_not_started_reminders(current_item=0, total_items=0, is_rejection_only=
                         "rejection_reason": rejection_reason,
                         "cycle_end_date": formatdate(application_end_date),
                         "institution_name": institution_name,
-                        "admission_portal_url": get_url("/admission-dashboard"),
+                        "admission_portal_url": get_url(get_user_portal_redirect_url(email, "/admission-dashboard")),
                     },
                     reference_doctype="User",
                     reference_name=email,
@@ -253,7 +254,7 @@ def send_not_started_reminders(current_item=0, total_items=0, is_rejection_only=
                     "application_end_date": formatdate(application_end_date, "dd MMMM yyyy"),
                     "app_end_date_formatted": formatdate(application_end_date, "dd MMMM yyyy"),
                     "institution_name": institution_name,
-                    "admission_portal_url": get_url("/admission-dashboard"),
+                    "admission_portal_url": get_url(get_user_portal_redirect_url(email, "/admission-dashboard")),
                 },
                 reference_doctype="User",
                 reference_name=email,
@@ -343,7 +344,7 @@ def send_draft_applicant_reminders(current_item=0, total_items=0, is_rejection_o
                         "rejection_reason": rejection_reason,
                         "cycle_end_date": formatdate(application_end_date),
                         "institution_name": institution_name,
-                        "admission_portal_url": get_url("/admission-dashboard"),
+                        "admission_portal_url": get_url(get_user_portal_redirect_url(recipient, "/admission-dashboard")),
                     },
                     reference_doctype="Applicant",
                     reference_name=app.name,
@@ -379,7 +380,7 @@ def send_draft_applicant_reminders(current_item=0, total_items=0, is_rejection_o
                     "program": app.program or "",
                     "cycle_end_date": formatdate(application_end_date),
                     "institution_name": institution_name,
-                    "admission_portal_url": get_url("/admission-dashboard"),
+                    "admission_portal_url": get_url(get_user_portal_redirect_url(recipient, "/admission-dashboard")),
                 },
                 reference_doctype="Applicant",
                 reference_name=app.name,
@@ -473,7 +474,7 @@ def send_unpaid_fee_reminders(current_item=0, total_items=0, is_rejection_only=F
                         "rejection_reason": rejection_reason,
                         "cycle_end_date": formatdate(application_end_date),
                         "institution_name": institution_name,
-                        "admission_portal_url": get_url("/admission-dashboard"),
+                        "admission_portal_url": get_url(get_user_portal_redirect_url(recipient, "/admission-dashboard")),
                     },
                     reference_doctype="Applicant",
                     reference_name=app.name,
@@ -509,7 +510,7 @@ def send_unpaid_fee_reminders(current_item=0, total_items=0, is_rejection_only=F
                     "application_fee_amount": app.application_fee_amount or 0,
                     "cycle_end_date": formatdate(application_end_date),
                     "institution_name": institution_name,
-                    "admission_portal_url": get_url("/admission-dashboard"),
+                    "admission_portal_url": get_url(get_user_portal_redirect_url(recipient, "/admission-dashboard")),
                 },
                 reference_doctype="Applicant",
                 reference_name=app.name,
@@ -612,7 +613,7 @@ def send_admission_fee_reminders(current_item=0, total_items=0, is_rejection_onl
                         "rejection_reason": rejection_reason,
                         "cycle_end_date": formatdate(cycle_end_date),
                         "institution_name": institution_name,
-                        "admission_portal_url": get_url("/admission-dashboard"),
+                        "admission_portal_url": get_url(get_user_portal_redirect_url(recipient, "/admission-dashboard")),
                     },
                     reference_doctype="Applicant",
                     reference_name=assignment.applicant,
@@ -651,7 +652,7 @@ def send_admission_fee_reminders(current_item=0, total_items=0, is_rejection_onl
                     "program": assignment.program or "",
                     "cycle_end_date": formatdate(cycle_end_date),
                     "institution_name": institution_name,
-                    "admission_portal_url": get_url("/admission-dashboard"),
+                    "admission_portal_url": get_url(get_user_portal_redirect_url(recipient, "/admission-dashboard")),
                 },
                 reference_doctype="Applicant",
                 reference_name=assignment.applicant,

@@ -1,4 +1,5 @@
 import frappe
+from slcm.admission.utils.nlsat_portal import get_portal_login_url
 
 def user_before_insert(doc, method):
     """
@@ -93,7 +94,7 @@ def send_signup_email(doc, method):
             "logo": getattr(institution, "logo", ""),
             "full_name": full_name,
             "set_password_link": set_password_link,
-            "login_url": getattr(institution, "login_url", "") or frappe.utils.get_url("/admission/login"),
+            "login_url": getattr(institution, "login_url", "") or frappe.utils.get_url(get_portal_login_url()),
             "support_email": getattr(institution, "support_email", ""),
             "link_expiry_hours": getattr(institution, "link_expiry_hours", 24) or 24
         }

@@ -1,4 +1,5 @@
 import frappe
+from slcm.admission.utils.nlsat_portal import get_portal_login_url
 from frappe.utils import flt
 from slcm.admission.utils.portal import get_portal_config, is_application_editable
 
@@ -130,7 +131,7 @@ def _set_offer_letter_entries(context):
 
 def get_context(context):
     if frappe.session.user == "Guest":
-        frappe.local.flags.redirect_location = "/admission/login?redirect=/my-applications"
+        frappe.local.flags.redirect_location = get_portal_login_url() + "?redirect=/my-applications"
         raise frappe.Redirect
 
     context.no_cache     = 1

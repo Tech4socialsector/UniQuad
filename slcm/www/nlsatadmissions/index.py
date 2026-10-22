@@ -8,7 +8,7 @@ from slcm.admission.utils.stage_control import can_apply, get_current_stage
 login_required = False
 
 def _load_program_detail(context, slug):
-    """Populate context for /admission/[slug] detail view."""
+    """Populate context for /nlsatadmissions/[slug] detail view."""
     import frappe
     try:
         from slcm.admission.utils.portal import get_portal_config
@@ -387,8 +387,8 @@ def _set_empty_pd_context(context, slug):
     context.admission_cycle  = None
     context.admission_year   = None
     context.support_email    = "admissions@nlsiu.ac.in"
-    context.apply_web_form_url = "/admission"
-    context.apply_web_form_login_url = "/admission/login?redirect-to=/admission"
+    context.apply_web_form_url = context.portal_base
+    context.apply_web_form_login_url = context.portal_login_url + "?redirect-to=" + context.portal_base
     context.allow_multiple_applications = False
 
 PROGRAM_LEVEL_GROUPS = [
@@ -428,18 +428,25 @@ def get_context(context):
         if "PACE Applicant" in roles and "Applicant" not in roles and "System Manager" not in roles:
             frappe.local.flags.redirect_location = "/pace"
             raise frappe.Redirect
-            
-    # ── Route detection: /admission vs /admission/[slug] ─────────────
+
+    # ── Portal: /nlsatadmissions (Indian Nationals) or /nlsat-international ──
+    from slcm.admission.utils.nlsat_portal import (
+        DOMESTIC, PORTAL_BASES, get_portal_type_from_path, get_portal_login_url,
+    )
+    _req_path = (frappe.request.path if hasattr(frappe, "request") and frappe.request else "") or ""
+    context.portal_type      = get_portal_type_from_path(_req_path) or DOMESTIC
+    context.portal_base      = PORTAL_BASES[context.portal_type]
+    context.portal_login_url = get_portal_login_url(context.portal_type)
+
+    # ── Route detection: /nlsatadmissions vs /nlsatadmissions/[slug] ──
     _slug = ""
     try:
         _path = (
-            getattr(frappe.local, "path_info", "") or
-            (frappe.request.path
-             if hasattr(frappe, "request") and frappe.request else "")
+            getattr(frappe.local, "path_info", "") or _req_path
         )
         _parts = [p for p in _path.strip("/").split("/") if p]
-        # /admission/ba-llb-hons → ['admission', 'ba-llb-hons']
-        if len(_parts) == 2 and _parts[0] == "admission":
+        # /nlsatadmissions/ba-llb-hons → ['nlsatadmissions', 'ba-llb-hons']
+        if len(_parts) == 2 and get_portal_type_from_path(_parts[0]):
             _slug = _parts[1]
             if _slug == "login":
                 _slug = ""
@@ -447,7 +454,7 @@ def get_context(context):
         _slug = ""
 
     # ── 1. Active Admission Cycle ────────────────────────────────────
-    # Use db.get_value, not get_doc: public /admission is often loaded as Guest;
+    # Use db.get_value, not get_doc: public /nlsatadmissions is often loaded as Guest;
     # get_doc enforces DocType read permission and returns 500 on live.
     active_cycle = None
     try:
@@ -632,12 +639,13 @@ def get_context(context):
         context.announcements = []
         context.events = []
 
-    # ── 5b. Group programmes by level & detect Domestic / International ──
+    # ── 5b. Keep only this portal's programmes, then group by level ──
+    # Blank "admission_open_for" means the programme is listed on both portals
+    context.programs = [
+        p for p in context.programs
+        if not (p.get("admission_open_for") or "") or context.portal_type in (p.get("admission_open_for") or "")
+    ]
     context.program_groups = _group_programs_by_level(context.programs)
-    _open_for_values = [(p.get("admission_open_for") or "") for p in context.programs]
-    # Blank "admission_open_for" means the card is shown under both toggles
-    context.has_domestic_programs = any(not v or "Domestic" in v for v in _open_for_values)
-    context.has_international_programs = any(not v or "International" in v for v in _open_for_values)
 
     # ── 6. Stats ─────────────────────────────────────────────────────
     try:

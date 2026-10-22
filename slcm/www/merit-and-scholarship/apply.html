@@ -262,7 +262,7 @@
             <span class="material-symbols-outlined text-6xl text-slate-300 mb-6">lock</span>
             <h2 class="text-2xl font-bold text-slate-900 mb-2">Authentication Required</h2>
             <p class="text-slate-500 mb-8">Please sign in to your account to apply for scholarships.</p>
-            <a href="/admission/login" class="btn-submit inline-block">Sign In to Account</a>
+            <a href="{{ nlsat_login_url or '/nlsatadmissions/login' }}" class="btn-submit inline-block">Sign In to Account</a>
         </div>
         {% elif error %}
         <div class="form-container text-center p-12 fade-in-up">
