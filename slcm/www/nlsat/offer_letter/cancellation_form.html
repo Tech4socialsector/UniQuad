@@ -1,0 +1,579 @@
+<!--
+  TESTING CHECKLIST — complete before sending for approval
+  
+  1. Technical check
+     - [ ] Font loads correctly in Chrome, Firefox, Safari
+     - [ ] Font applies to ALL sections including cards, tables, modals
+     - [ ] Font size changes (Small/Normal/Large) reflect across heading, subheading, body
+     - [ ] Icons render on all pages
+     - [ ] No console errors (missing CDN, broken paths, 404s)
+     - [ ] Page loads without FOUC (flash of unstyled content)
+
+  2. Security check
+     - [ ] No API keys or credentials in HTML source
+     - [ ] CDN links include integrity and crossorigin attributes
+     - [ ] No inline event handlers (onclick= etc.) added during this change
+
+  3. UI / Usability check
+     - [ ] Mobile breakpoints still work correctly
+     - [ ] Button sizes and spacing unchanged
+     - [ ] Nav link sizes unchanged
+     - [ ] No layout shifts caused by font change
+
+  4. Language & spell check
+     - [ ] English (UK/India) spellings used throughout
+     - [ ] Sentence case on labels and descriptions
+     - [ ] Title Case on headings, buttons, nav
+     - [ ] No ALL CAPS in visible text
+     - [ ] Active voice used
+     - [ ] Instructions are short and direct
+     - [ ] No repeated phrases across heading levels
+     - [ ] Terminology consistent (programme, enrol, sign in, etc.)
+-->
+
+{% extends "slcm/www/nlsat/admission_base.html" %}
+
+{% block title %}Request Admission Cancellation{% endblock %}
+
+{% block theme_vars %}
+<style>
+    :root {
+        --primary: {{ portal_config.get('primary_color', '#1a3c6e') if portal_config and portal_config.get else (portal_config.primary_color if portal_config else '#1a3c6e') }};
+        --secondary: {{ portal_config.get('secondary_color', '#c8a14b') if portal_config and portal_config.get else (portal_config.secondary_color if portal_config else '#c8a14b') }};
+        --bg-light: #f8fafc;
+        --border-color: #e2e8f0;
+    }
+</style>
+{% endblock %}
+
+{% block page_css %}
+{{ get_typography_style_block(
+    portal_config.font_family,
+    font_size_heading=portal_config.font_size_heading,
+    font_size_subheading=portal_config.font_size_subheading,
+    font_size_body=portal_config.font_size_body,
+    font_size_form_title=portal_config.font_size_form_title,
+    font_size_toast=portal_config.font_size_toast,
+    primary_color=portal_config.primary_color,
+    secondary_color=portal_config.secondary_color,
+    navbar_color=portal_config.navbar_color,
+    footer_color=portal_config.footer_color,
+    button_border_radius=portal_config.button_border_radius
+) }}
+
+<style>
+
+    .cancellation-wrapper {
+        padding: 40px 40px 80px;
+        background: #f1f5f9;
+        min-height: 100vh;
+    }
+
+    .form-card-container {
+        max-width: 1100px;
+        margin: 0 auto;
+        width: 100%;
+    }
+
+    .page-nav-header {
+        margin-bottom: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .btn-return {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: #64748b;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 14px;
+        transition: all 0.2s;
+        padding: 8px 16px;
+        border-radius: 8px;
+        background: #fff;
+        border: 1px solid var(--border-color);
+    }
+
+    .btn-return:hover {
+        color: var(--primary);
+        border-color: var(--primary);
+        background: #fff;
+        transform: translateX(-4px);
+    }
+
+    .main-card {
+        background: #ffffff;
+        border-radius: 20px;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
+        overflow: hidden;
+        border: 1px solid var(--border-color);
+    }
+
+    .card-banner {
+        background: linear-gradient(135deg, var(--primary) 0%, #1e40af 100%);
+        padding: 32px 48px;
+        color: #ffffff;
+        position: relative;
+    }
+
+    .card-banner h1 {
+        font-weight: 800;
+        font-size: 24px;
+        margin: 0 0 4px;
+        letter-spacing: -0.02em;
+    }
+
+    .card-banner p {
+        margin: 0;
+        opacity: 0.85;
+        font-size: 14px;
+        font-weight: 400;
+    }
+
+    .card-body-content {
+        padding: 40px 48px;
+    }
+
+    .section-title {
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        color: #94a3b8;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .section-title::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: #f1f5f9;
+    }
+
+    .applicant-summary {
+        background: var(--bg-light);
+        border-radius: 16px;
+        padding: 24px 32px;
+        margin-bottom: 32px;
+        border: 1px solid var(--border-color);
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 24px 40px;
+    }
+
+    .summary-item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .summary-item label {
+        font-size: 11px;
+        font-weight: 700;
+        color: #64748b;
+        letter-spacing: 0.02em;
+    }
+
+    .summary-item .value {
+        font-weight: 600;
+        color: #1e293b;
+        font-size: 15px;
+    }
+
+    .payment-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #dcfce7;
+        color: #166534;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+    }
+
+    .form-full-width {
+        grid-column: span 2;
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: #334155;
+        margin-bottom: 8px;
+        font-size: 14px;
+        display: block;
+    }
+
+    .form-select, .form-control {
+        border: 1px solid #cbd5e1;
+        padding: 12px 16px;
+        border-radius: 10px;
+        font-size: 15px;
+        color: #1e293b;
+        transition: all 0.2s;
+        background-color: #fff;
+        width: 100%;
+    }
+
+    .mb-3-custom {
+        margin-bottom: 20px;
+    }
+
+    .form-select:focus, .form-control:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.08);
+        outline: none;
+    }
+
+    .warning-box {
+        background: #fff7ed;
+        border: 1px solid #ffedd5;
+        border-radius: 12px;
+        padding: 20px 24px;
+        display: flex;
+        gap: 16px;
+        margin-bottom: 32px;
+    }
+
+    .warning-box i {
+        color: #ea580c;
+        font-size: 20px;
+        margin-top: 2px;
+    }
+
+    .warning-text {
+        font-size: 14px;
+        color: #9a3412;
+        line-height: 1.6;
+    }
+
+    .btn-submit-premium {
+        background: var(--primary);
+        color: #ffffff;
+        font-weight: 700;
+        padding: 16px 32px;
+        border-radius: 12px;
+        border: none;
+        width: 100%;
+        transition: all 0.2s;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        cursor: pointer;
+    }
+
+    .btn-submit-premium:hover {
+        background: #1e40af;
+        transform: translateY(-1px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-submit-premium:active {
+        transform: translateY(0);
+    }
+
+    .custom-checkbox {
+        display: flex;
+        gap: 12px;
+        cursor: pointer;
+        padding: 12px;
+        border-radius: 8px;
+        transition: background 0.2s;
+        margin-bottom: 32px;
+    }
+
+    .custom-checkbox:hover {
+        background: #f8fafc;
+    }
+
+    .custom-checkbox input {
+        width: 20px;
+        height: 20px;
+        margin-top: 2px;
+        cursor: pointer;
+    }
+
+    .checkbox-label {
+        font-size: 14px;
+        color: #475569;
+        font-weight: 500;
+        user-select: none;
+        line-height: 1.5;
+    }
+
+    textarea.form-control {
+        height: 120px !important;
+        min-height: 120px !important;
+        resize: vertical;
+    }
+
+    /* Premium SweetAlert Styling */
+    .premium-swal-popup {
+        border-radius: 24px !important;
+        padding: 2.5rem !important;
+    }
+
+    .premium-swal-title {
+        font-weight: 800 !important;
+        color: #1e293b !important;
+        font-size: 24px !important;
+        margin-bottom: 0.5rem !important;
+    }
+
+    .premium-swal-content {
+        color: #64748b !important;
+        font-size: 15px !important;
+        line-height: 1.6 !important;
+    }
+
+    .premium-swal-button {
+        padding: 12px 32px !important;
+        border-radius: 12px !important;
+        font-weight: 700 !important;
+        font-size: 15px !important;
+        text-transform: none !important;
+    }
+
+    @media (max-width: 1024px) {
+        .applicant-summary {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+        .form-full-width {
+            grid-column: span 1;
+        }
+        .applicant-summary {
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+        .cancellation-wrapper {
+            padding: 20px;
+        }
+        .card-body-content {
+            padding: 24px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cancellation-wrapper">
+    <div class="form-card-container">
+        <div class="page-nav-header">
+            <a href="/nlsat/offer_letter/offer-letter-list" class="btn-return">
+                <i class="fa fa-chevron-left"></i>
+                {{ _('Back to offers') }}
+            </a>
+        </div>
+
+        <div class="main-card">
+            <div class="card-banner">
+                <h1>{{ _('Admission cancellation') }}</h1>
+                <p>{{ _('Securely initiate your admission rollback and refund request.') }}</p>
+            </div>
+
+            <div class="card-body-content">
+                {% if existing_cancellation %}
+                <div class="text-center py-5">
+                    <div class="mb-4">
+                        <i class="fa fa-info-circle fa-4x text-primary opacity-25"></i>
+                    </div>
+                    <h3 class="fw-bold text-dark mb-3">{{ _('Request Already Submitted') }}</h3>
+                    <p class="text-muted mb-5 mx-auto" style="max-width: 500px;">
+                        {{ _('You have already submitted a cancellation request for this offer. You can track the status of your request below.') }}
+                    </p>
+                    
+                    <div class="d-flex flex-column align-items-center gap-3">
+                        <div class="p-4 bg-light rounded-4 border border-1 w-100" style="max-width: 500px;">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="text-muted small fw-bold text-uppercase">{{ _('Reference') }}</span>
+                                <span class="badge bg-primary px-3 py-2 rounded-pill">{{ existing_cancellation.name }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted small fw-bold text-uppercase">{{ _('Status') }}</span>
+                                <span class="fw-bold text-dark">{{ existing_cancellation.status }}</span>
+                            </div>
+                        </div>
+                        
+                        <a href="/nlsat/offer_letter/cancellation_success?offer={{ offer.name }}" class="btn-submit-premium text-decoration-none" style="max-width: 500px;">
+                            <span>{{ _('View request status') }}</span>
+                            <i class="fa fa-external-link"></i>
+                        </a>
+                        
+                        <a href="/nlsat/offer_letter/offer-letter-list" class="text-primary fw-bold text-decoration-none small mt-3">
+                            <i class="fa fa-chevron-left me-2"></i>{{ _('Back to offers') }}
+                        </a>
+                    </div>
+                </div>
+                {% else %}
+                <div class="section-title">{{ _('Enrollment information') }}</div>
+                
+                <div class="applicant-summary">
+                    <div class="summary-item">
+                        <label>{{ _('Applicant') }}</label>
+                        <div class="value">{{ applicant_name }}</div>
+                    </div>
+                    <div class="summary-item">
+                        <label>{{ _('Academic program') }}</label>
+                        <div class="value">{{ offer.program }}</div>
+                    </div>
+                    <div class="summary-item">
+                        <label>{{ _('Admission campus') }}</label>
+                        <div class="value">{{ offer.campus }}</div>
+                    </div>
+                    <div class="summary-item">
+                        <label>{{ _('Offer reference') }}</label>
+                        <div class="value">{{ offer.name }}</div>
+                    </div>
+                    {% if payment %}
+                    <div class="summary-item">
+                        <label>{{ _('Fee status') }}</label>
+                        <div>
+                            <span class="payment-badge">
+                                <i class="fa fa-check-circle"></i>
+                                {{ _('Paid') }} ({{ "{:,.2f}".format(payment.amount) }})
+                            </span>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="section-title">{{ _('Cancellation request') }}</div>
+
+                <div class="warning-box">
+                    <i class="fa fa-info-circle"></i>
+                    <div class="warning-text">
+                        <strong>{{ _('Policy note') }}</strong><br>
+                        {{ _('Upon submission, your admission seat will be released. Refunds are processed according to the university refund policy based on the number of days from the payment date.') }}
+                    </div>
+                </div>
+
+                <form id="cancellation-form">
+                    <input type="hidden" name="offer" value="{{ offer.name }}">
+                    <input type="hidden" name="applicant" value="{{ offer.applicant }}">
+                    <input type="hidden" name="payment_request" value="{{ payment.name if payment else '' }}">
+                    <input type="hidden" name="campus" value="{{ offer.campus }}">
+                    <input type="hidden" name="program" value="{{ offer.program }}">
+
+                    <div class="form-grid">
+                        <div class="form-full-width mb-3-custom">
+                            <label class="form-label" for="cancellation_reason_type">{{ _('Primary reason for cancellation') }}</label>
+                            <select class="form-select" name="cancellation_reason_type" id="cancellation_reason_type" required>
+                                <option value="">{{ _('Choose a category...') }}</option>
+                                {% for reason in cancellation_reasons %}
+                                <option value="{{ reason }}">{{ reason }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3-custom">
+                            <label class="form-label" for="cancellation_reason">{{ _('Detailed Explanation') }}</label>
+                            <textarea class="form-control" name="cancellation_reason" id="cancellation_reason" required placeholder="{{ _('Please provide specific details regarding your decision...') }}"></textarea>
+                        </div>
+
+                        <div class="mb-3-custom">
+                            <label class="form-label" for="additional_comments">{{ _('Additional Comments (Optional)') }}</label>
+                            <textarea class="form-control" name="additional_comments" id="additional_comments" placeholder="{{ _('Any other information you would like to share...') }}"></textarea>
+                        </div>
+                    </div>
+
+                    <label class="custom-checkbox" for="declaration">
+                        <input type="checkbox" id="declaration" required>
+                        <div class="checkbox-label">
+                            {{ _('I hereby declare that I wish to withdraw my admission. I understand that this request, once processed, is final and irreversible.') }}
+                        </div>
+                    </label>
+
+                    <button type="submit" class="btn-submit-premium" id="submit-btn">
+                        <span>{{ _('Submit cancellation request') }}</span>
+                        <i class="fa fa-paper-plane"></i>
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modern Submission Overlay -->
+<div id="processing-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15, 23, 42, 0.8); z-index:9999; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);">
+    <div class="d-flex flex-column align-items-center justify-content-center h-100 text-white">
+        <div class="spinner-border" role="status" style="width: 3.5rem; height: 3.5rem; border-width: 0.25em; color: var(--secondary);"></div>
+        <div class="mt-4 text-center">
+            <h4 class="mb-1 fw-bold">{{ _('Processing Request') }}</h4>
+            <p class="opacity-75 small">{{ _('Please wait while we secure your records...') }}</p>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    $('#cancellation-form').on('submit', async function(e) {
+        e.preventDefault();
+        
+        const $btn = $('#submit-btn');
+        const formData = new FormData(this);
+        const data = Object.fromEntries(formData.entries());
+        
+        $('#processing-overlay').fadeIn(300);
+        $btn.prop('disabled', true);
+        
+        try {
+            const response = await apiFetch('slcm.admission_cancel_api.submit_admission_cancellation', data);
+            
+            if (response && response.status === 'Success') {
+                $('#processing-overlay').fadeOut(200);
+                window.location.href = `/nlsat/offer_letter/cancellation_success?offer=${data.offer}`;
+            }
+        } catch (error) {
+            $('#processing-overlay').fadeOut(200);
+            $btn.prop('disabled', false);
+            
+            Swal.fire({
+                title: "{{ _('Submission Error') }}",
+                text: error.message || "{{ _('We encountered a problem submitting your request. Please check your connection and try again.') }}",
+                icon: 'error',
+                confirmButtonColor: '#ef4444'
+            });
+        }
+    });
+
+    // Helper for apiFetch if not globally available
+    if (typeof apiFetch === 'undefined') {
+        window.apiFetch = function(method, args) {
+            return new Promise((resolve, reject) => {
+                frappe.call({
+                    method: method,
+                    args: args,
+                    callback: (r) => {
+                        if (r.exc) reject(r.exc);
+                        else resolve(r.message);
+                    }
+                });
+            });
+        };
+    }
+</script>
+{% endblock %}

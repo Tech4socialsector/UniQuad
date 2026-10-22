@@ -174,17 +174,17 @@ def _portal_href_for_notification_log(
             dt = (document_type or "").strip()
             ol = _resolve_offer_letter_for_portal(dt, dn, subject, email_content)
             if ol:
-                base = f"/offer_letter/offer-letter-detail?offer={quote(ol, safe='')}"
+                base = f"/nlsat/offer_letter/offer-letter-detail?offer={quote(ol, safe='')}"
             elif dt == "Applicant" and dn:
-                base = f"/my-applications?app={quote(dn, safe='')}"
+                base = f"/nlsat/my-applications?app={quote(dn, safe='')}"
             elif dt in ("Scholarship Application", "Scholarship Scheme", "Scholarship Utilization"):
-                base = "/merit-and-scholarship/scholarships"
+                base = "/nlsat/merit-and-scholarship/scholarships"
             elif "Scholarship" in dt:
-                base = "/merit-and-scholarship/scholarships"
+                base = "/nlsat/merit-and-scholarship/scholarships"
             elif dt == "User" and dn:
-                base = "/merit-and-scholarship/admission_dashboard?panel=profile"
+                base = "/nlsat/profile"
             else:
-                base = "/merit-and-scholarship/admission_dashboard"
+                base = "/nlsat/merit-and-scholarship/admission_dashboard"
 
     if notif_log_name:
         base = _append_query_param(base, "notif", notif_log_name)

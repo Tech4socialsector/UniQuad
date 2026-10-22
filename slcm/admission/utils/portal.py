@@ -192,7 +192,7 @@ def build_existing_applicant_portal_url(
 ) -> str:
 	"""Open an existing Applicant from my-applications or view_application."""
 	if not (applicant_name or "").strip():
-		return "/my-applications"
+		return "/nlsat/my-applications"
 	name = applicant_name.strip()
 	cycle = (admission_cycle or "").strip()
 	if cycle and not admission_cycle_uses_applicant_web_form(cycle):

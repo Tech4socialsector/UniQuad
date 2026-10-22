@@ -189,11 +189,11 @@ def notify_status_change(applicant, program, old_status, new_status, allocation_
                 "subject": f"Seat Allocation Status: {status_label}",
                 "for_user": email,
                 "type": "Alert",
-                "email_content": f"Your status for Seat Allocation {allocation_name} has been updated to <strong>{status_label}</strong>. <br><br> <a href='/my-applications?app={applicant_doc.applicant_id}'>Click here to view details.</a>",
+                "email_content": f"Your status for Seat Allocation {allocation_name} has been updated to <strong>{status_label}</strong>. <br><br> <a href='/nlsat/my-applications?app={applicant_doc.applicant_id}'>Click here to view details.</a>",
                 "document_type": "Seat Allocation",
                 "document_name": allocation_name,
                 "from_user": from_user,
-                "link": f"/my-applications?app={applicant_doc.applicant_id}"
+                "link": f"/nlsat/my-applications?app={applicant_doc.applicant_id}"
             }).insert(ignore_permissions=True)
     except Exception as e:
         frappe.logger().error(f"Notification Log error for {applicant}: {e}")
@@ -355,7 +355,7 @@ def notify_published_allocation(allocation_name):
                 "Seat Allocation", # document_type
                 allocation_name, # document_name
                 from_user, # from_user
-                f"/my-applications?app={row.applicant_id}" # link
+                f"/nlsat/my-applications?app={row.applicant_id}" # link
             ])
 
         # C. Prepare Audit Log
@@ -407,7 +407,7 @@ def notify_scholarship_status(application_name):
 
     scheme_name = frappe.db.get_value("Scholarship Scheme", app.scholarship_scheme, "scheme_name")
     benefit_amount = fmt_money(app.calculated_benefit) if app.calculated_benefit else "0.00"
-    portal_url = get_url("/merit-and-scholarship/scholarships")
+    portal_url = get_url("/nlsat/merit-and-scholarship/scholarships")
     
     template_name = "Scholarship Updates"
     
@@ -465,11 +465,11 @@ def notify_scholarship_status(application_name):
                 "subject": f"Scholarship Status: {app.status}",
                 "for_user": email,
                 "type": "Alert",
-                "email_content": f"Your scholarship application for <strong>{scheme_name}</strong> has been <strong>{app.status}</strong>. <br><br> <a href='/merit-and-scholarship/scholarships'>Click here to view details.</a>",
+                "email_content": f"Your scholarship application for <strong>{scheme_name}</strong> has been <strong>{app.status}</strong>. <br><br> <a href='/nlsat/merit-and-scholarship/scholarships'>Click here to view details.</a>",
                 "document_type": "Scholarship Application",
                 "document_name": app.name,
                 "from_user": from_user,
-                "link": "/merit-and-scholarship/scholarships"
+                "link": "/nlsat/merit-and-scholarship/scholarships"
             }).insert(ignore_permissions=True)
     except Exception as e:
         frappe.logger().error(f"Scholarship Notification Log error for {app.name}: {e}")
@@ -594,7 +594,7 @@ def notify_refund_processed(refund_request_name):
         "refund_amount": refund_amount_str,
         "razorpay_refund_id": refund.razorpay_refund_id or "N/A",
         "razorpay_payment_id": refund.razorpay_payment_id or "N/A",
-        "portal_url": get_url("/my-applications?app=" + str(refund.applicant))
+        "portal_url": get_url("/nlsat/my-applications?app=" + str(refund.applicant))
     }
 
     # Render body
@@ -627,11 +627,11 @@ def notify_refund_processed(refund_request_name):
                     "subject": "Refund Processed Successfully",
                     "for_user": email,
                     "type": "Alert",
-                    "email_content": f"Your refund request <strong>{refund.name}</strong> has been successfully processed for the amount of <strong>{refund_amount_str}</strong>. <br><br> <a href='/my-applications?app={refund.applicant}'>Click here to view details.</a>",
+                    "email_content": f"Your refund request <strong>{refund.name}</strong> has been successfully processed for the amount of <strong>{refund_amount_str}</strong>. <br><br> <a href='/nlsat/my-applications?app={refund.applicant}'>Click here to view details.</a>",
                     "document_type": "Refund Request",
                     "document_name": refund.name,
                     "from_user": from_user,
-                    "link": f"/my-applications?app={refund.applicant}"
+                    "link": f"/nlsat/my-applications?app={refund.applicant}"
                 }).insert(ignore_permissions=True)
         except Exception as e:
             frappe.logger().error(f"Refund Notification Log error for {refund.name}: {e}")

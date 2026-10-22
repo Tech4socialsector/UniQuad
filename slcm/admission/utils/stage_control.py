@@ -78,7 +78,7 @@ def can_apply(admission_cycle, intake_type=None):
 
 
 def can_edit_application(admission_cycle, intake_type=None):
-    """Returns True if Edit button should appear on /my-applications."""
+    """Returns True if Edit button should appear on /nlsat/my-applications."""
     stage = get_current_stage(admission_cycle, intake_type)
     if not stage:
         return False

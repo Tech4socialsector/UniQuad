@@ -73,3 +73,4 @@ slcm.patches.v2_0.migrate_ews_and_category
 slcm.patches.v2_0.backfill_student_master_batch
 slcm.patches.v2_0.autoincrement_name_columns_to_varchar
 slcm.patches.v2_0.nlsatadmissions_application_form_links
+slcm.patches.v2_0.nlsat_eligibility_download_links

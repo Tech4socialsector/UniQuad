@@ -3161,7 +3161,7 @@ def notify_stage_entry(applicant_doc, stage):
             "title":             f"Stage Update: {stage.stage_name}",
             "message":           f"Your application has moved to the {stage.stage_name} stage.",
             "notification_type": "Stage Update",
-            "link":              "/my-applications",
+            "link":              "/nlsat/my-applications",
             "is_read":           0
         }).insert(ignore_permissions=True)
         frappe.db.commit()
@@ -3983,7 +3983,7 @@ def _send_automated_entrance_test_allocation_email(allocation, email):
         doc_dict["assigned_preferences"] = [p.as_dict() for p in (allocation.assigned_preferences or [])]
         args = {
             "doc": doc_dict,
-            "portal_url": frappe.utils.get_url("/merit-and-scholarship/admission_dashboard?panel=applications"),
+            "portal_url": frappe.utils.get_url("/nlsat/merit-and-scholarship/admission_dashboard?panel=applications"),
         }
 
         subject = frappe.render_template(template.subject or "", args)
@@ -4169,7 +4169,7 @@ def _send_international_entrance_test_email(allocation, email):
             or "Admissions Office"
         )
         portal_url = frappe.utils.get_url(
-            "/merit-and-scholarship/admission_dashboard?panel=applications"
+            "/nlsat/merit-and-scholarship/admission_dashboard?panel=applications"
         )
 
         # Format test date for display

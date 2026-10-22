@@ -158,13 +158,13 @@ def get_context(context):
     if applicant_name:
         try:
             if not frappe.db.exists("Applicant", applicant_name):
-                frappe.local.flags.redirect_location = "/my-applications"
+                frappe.local.flags.redirect_location = "/nlsat/my-applications"
                 raise frappe.Redirect
             doc = frappe.get_doc("Applicant", applicant_name)
             user = frappe.session.user
             email = frappe.db.get_value("User", user, "email") or user
             if doc.owner != user and (doc.email or "").lower() != (email or "").lower():
-                frappe.local.flags.redirect_location = "/my-applications"
+                frappe.local.flags.redirect_location = "/nlsat/my-applications"
                 raise frappe.Redirect
             if admission_cycle_uses_applicant_web_form(doc.admission_cycle):
                 frappe.local.flags.redirect_location = f"/applicant-form/{applicant_name}"
@@ -178,7 +178,7 @@ def get_context(context):
             raise
         except Exception:
             frappe.log_error(frappe.get_traceback(), "Application Form — redirect by applicant")
-            frappe.local.flags.redirect_location = "/my-applications"
+            frappe.local.flags.redirect_location = "/nlsat/my-applications"
             raise frappe.Redirect
 
     user = frappe.session.user

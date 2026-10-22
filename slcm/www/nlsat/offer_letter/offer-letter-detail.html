@@ -1,0 +1,1881 @@
+<!--
+  TESTING CHECKLIST — complete before sending for approval
+  
+  1. Technical check
+     - [ ] Font loads correctly in Chrome, Firefox, Safari
+     - [ ] Font applies to ALL sections including cards, tables, modals
+     - [ ] Font size changes (Small/Normal/Large) reflect across heading, subheading, body
+     - [ ] Icons render on all pages
+     - [ ] No console errors (missing CDN, broken paths, 404s)
+     - [ ] Page loads without FOUC (flash of unstyled content)
+
+  2. Security check
+     - [ ] No API keys or credentials in HTML source
+     - [ ] CDN links include integrity and crossorigin attributes
+     - [ ] No inline event handlers (onclick= etc.) added during this change
+
+  3. UI / Usability check
+     - [ ] Mobile breakpoints still work correctly
+     - [ ] Button sizes and spacing unchanged
+     - [ ] Nav link sizes unchanged
+     - [ ] No layout shifts caused by font change
+
+  4. Language & spell check
+     - [ ] English (UK/India) spellings used throughout
+     - [ ] Sentence case on labels and descriptions
+     - [ ] Title Case on headings, buttons, nav
+     - [ ] No ALL CAPS in visible text
+     - [ ] Active voice used
+     - [ ] Instructions are short and direct
+     - [ ] No repeated phrases across heading levels
+     - [ ] Terminology consistent (programme, enrol, sign in, etc.)
+-->
+
+{% extends "slcm/www/nlsat/admission_base.html" %} {% from "slcm/www/nlsat/_sidebar.html" import
+portal_sidebar_css, portal_sidebar_html, portal_sidebar_js %} {% block title %}Offer Letter
+Detail{% endblock %} {% block adm_container_extra_class %}portal-layout-container{% endblock %} {%
+block theme_vars %}
+<style>
+	:root {
+	    --primary: {{ portal_config.get('primary_color', '#1a3c6e') if portal_config and portal_config.get else (portal_config.primary_color if portal_config else '#1a3c6e') }};
+	    --secondary: {{ portal_config.get('secondary_color', '#c8a14b') if portal_config and portal_config.get else (portal_config.secondary_color if portal_config else '#c8a14b') }};
+	    --accent: {{ portal_config.get('secondary_color', '#c8a14b') if portal_config and portal_config.get else (portal_config.secondary_color if portal_config else '#c8a14b') }};
+	    --primary-light: color-mix(in srgb, var(--primary) 12%, transparent);
+	    --primary-mid: color-mix(in srgb, var(--primary) 25%, transparent);
+	    --text-1: #1f2937;
+	    --text-2: #374151;
+	    --text-3: #6b7280;
+	    --text-4: #9ca3af;
+	    --text: #1a1a2e;
+	    --muted: #6c757d;
+	    --border: #e5e7eb;
+	    --bg: var(--secondary);
+	    --card-bg: #ffffff;
+	    --success: #16a34a;
+	    --warning: #f59e0b;
+	    --danger: #dc2626;
+	    --radius: 14px;
+	        }
+</style>
+{% endblock %} {% block page_css %} {{ get_typography_style_block( portal_config.font_family,
+font_size_heading=portal_config.font_size_heading,
+font_size_subheading=portal_config.font_size_subheading,
+font_size_body=portal_config.font_size_body,
+font_size_form_title=portal_config.font_size_form_title,
+font_size_toast=portal_config.font_size_toast, primary_color=portal_config.primary_color,
+secondary_color=portal_config.secondary_color, navbar_color=portal_config.navbar_color,
+footer_color=portal_config.footer_color, button_border_radius=portal_config.button_border_radius )
+}}
+
+<style>
+	body,
+	.adm-main,
+	.adm-container {
+	    background: var(--bg) !important;
+	    color: var(--text);
+	}
+
+	#offer-detail-wrapper {
+	    padding: 0;
+	}
+
+	/* Cards */
+	.ui-card {
+	    background: #ffffff;
+	    border-radius: 16px;
+	    border: 1px solid rgba(226, 232, 240, 0.8);
+	    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0,0,0,0.02);
+	    margin-bottom: 24px;
+	    padding: 14px;
+	    transition: transform 0.2s ease, box-shadow 0.2s ease;
+	}
+
+	.ui-card:hover {
+	    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+	    transform: translateY(-2px);
+	}
+
+	.ui-card-label {
+	    font-size: 0.75rem;
+	    font-weight: 700;
+	    color: var(--text-1);
+	    letter-spacing: 0.08em;
+	    margin-bottom: 16px;
+	    display: block;
+	}
+
+	.status-badge-row {
+	    display: inline-flex;
+	    align-items: center;
+	    gap: 8px;
+	    font-size: 0.95rem;
+	    font-weight: 700;
+	    padding: 8px 16px;
+	    border-radius: 99px;
+	    letter-spacing: 0.02em;
+	}
+
+	.status-badge-row.draft { background: #f1f5f9; color: #475569; }
+	.status-badge-row.issued { background: #fef3c7; color: #b45309; }
+	.status-badge-row.accepted { background: #dcfce7; color: #15803d; }
+	.status-badge-row.payment-completed { background: #dbeafe; color: #1d4ed8; }
+	.status-badge-row.confirmation-fee-paid { background: #e0e7ff; color: #4338ca; }
+	.status-badge-row.full-fee-paid { background: #cffafe; color: #0e7490; }
+	.status-badge-row.rejected { background: #fee2e2; color: #b91c1c; }
+	.status-badge-row.expired { background: #ffedd5; color: #c2410c; }
+	.status-badge-row.withdrawn { background: #fce7f3; color: #be185d; }
+
+	.summary-item {
+	    display: flex;
+	    align-items: center;
+	    gap: 12px;
+	    margin-bottom: 16px;
+	    padding: 12px;
+	    background: #f8fafc;
+	    border-radius: 12px;
+	}
+
+	.summary-item:last-child {
+	    margin-bottom: 0;
+	}
+
+	.summary-icon {
+	    display: flex;
+	    align-items: center;
+	    justify-content: center;
+	    width: 48px;
+	    height: 48px;
+	    background: #ffffff;
+	    border-radius: 12px;
+	    color: var(--primary);
+	    font-size: 24px;
+	    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+	}
+	
+	.summary-icon .material-symbols-outlined {
+	    font-size: 24px;
+	}
+
+	.summary-item .label {
+	    font-size: 0.75rem;
+	    color: #64748b;
+	    display: block;
+	    font-weight: 600;
+	    margin-bottom: 2px;
+	}
+
+	.summary-item .value {
+	    font-size: 0.9rem;
+	    font-weight: 700;
+	    color: var(--text);
+	}
+
+	.summary-item .value.amount {
+	    font-size: 1.1rem;
+	    color: var(--primary);
+	}
+
+	.fee-row {
+	    display: flex;
+	    justify-content: space-between;
+	    font-size: 0.9rem;
+	    margin-bottom: 14px;
+	    color: #475569;
+	    font-weight: 500;
+	}
+
+	.fee-row.total {
+	    margin-top: 20px;
+	    padding-top: 20px;
+	    border-top: 1px dashed #cbd5e1;
+	    font-size: 1.1rem;
+	    font-weight: 800;
+	    color: var(--primary);
+	}
+
+	.fee-row.discount {
+	    color: #15803d;
+	    font-weight: 600;
+	    background-color: #f0fdf4;
+	    border-radius: 8px;
+	    padding: 8px 12px;
+	    margin-left: -12px;
+	    margin-right: -12px;
+	}
+
+	.btn-pay {
+	    background-color: var(--primary);
+	    color: #ffffff;
+	    border-radius: 12px;
+	    width: 100%;
+	    padding: 14px;
+	    font-size: 1rem;
+	    font-weight: 700;
+	    border: none;
+	    margin-top: 12px;
+	    transition: all 0.2s ease;
+	    box-shadow: 0 4px 12px color-mix(in srgb, var(--primary) 30%, transparent);
+	}
+
+	/* Use a more specific selector to override Bootstrap's .btn:hover */
+	.btn.btn-pay:hover,
+	.btn.btn-pay:focus {
+	    background-color: var(--primary) !important;
+	    color: #ffffff !important;
+	    opacity: 0.9;
+	    transform: translateY(-1px);
+	    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.18);
+	}
+
+	.btn-download-outline {
+	    background-color: transparent;
+	    color: var(--primary);
+	    border: 1px solid var(--border);
+	    border-radius: 10px;
+	    width: 100%;
+	    padding: 12px;
+	    font-weight: 600;
+	    margin-top: 12px;
+	    display: flex;
+	    align-items: center;
+	    justify-content: center;
+	    gap: 8px;
+	    text-decoration: none;
+	}
+
+	.btn-download-outline:hover {
+	    background-color: #f7fafc;
+	    color: var(--primary);
+	}
+
+	/* Preview Card */
+	.preview-header {
+	    display: flex;
+	    justify-content: space-between;
+	    align-items: center;
+	    margin-bottom: 20px;
+	}
+
+	.preview-header h5 {
+	    margin: 0;
+	    font-weight: 700;
+	    color: var(--primary);
+	}
+
+	.preview-actions {
+	    display: flex;
+	    gap: 16px;
+	    color: #718096;
+	}
+
+	.preview-actions i {
+	    cursor: pointer;
+	}
+
+	.letter-container {
+	    background-color: #fcfcfc;
+	    border-radius: 8px;
+	    padding: 40px;
+	    min-height: 800px;
+	    border: 1px solid #f0f0f0;
+	    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.01);
+	}
+
+	.letter-content {
+	    font-family: var(--font-family, serif);
+	    color: #2d3748;
+	    line-height: 1.6;
+	}
+
+	/* ── Responsive ─────────────────────────────────────── */
+
+	/* Status stepper: allow horizontal scroll on small screens */
+	.stepper-scroll-wrap {
+	    overflow-x: auto;
+	    -webkit-overflow-scrolling: touch;
+	}
+
+	@media (max-width: 1400px) {
+	    /* TV / large desktop — no overrides needed */
+	}
+
+	@media (max-width: 1199px) {
+	    /* Small laptop */
+	    .portal-content-col { padding: 0 8px; }
+	    .fee-right-col { flex: 0 0 300px !important; }
+	}
+
+	@media (max-width: 991px) {
+	    /* Tablet */
+	    .fee-layout-wrap { flex-direction: column !important; }
+	    .fee-right-col { flex: 1 1 100% !important; }
+	    .fee-left-col  { flex: 1 1 100% !important; }
+	    .offer-doc-row { flex-direction: column !important; }
+	    .offer-doc-row > * { width: 100% !important; }
+	    #offer-letter-iframe { height: 500px !important; }
+	}
+
+	@media (max-width: 768px) {
+	    .row {
+	        flex-direction: column-reverse;
+	    }
+	    /* Fee Details card inner layout stacks vertically */
+	    .fee-layout-wrap { flex-direction: column !important; }
+	    .fee-right-col { flex: 1 1 100% !important; min-width: 0 !important; }
+	    .fee-left-col  { flex: 1 1 100% !important; min-width: 0 !important; }
+	    /* Status stepper card padding */
+	    .status-stepper-card { padding: 16px !important; }
+	    /* How-it-works + action buttons col */
+	    .how-it-works-col { flex: 1 1 100% !important; min-width: 0 !important; }
+	    /* Offer-letter iframe */
+	    #offer-letter-iframe { height: 400px !important; }
+	    /* Payment modal */
+	    .custom-modal-content { margin: 40px auto 0 !important; }
+	    /* Action buttons in issued state */
+	    .issued-action-row { flex-direction: column !important; }
+	    .issued-action-row > button { flex: none !important; width: 100% !important; }
+	}
+
+	@media (max-width: 480px) {
+	    /* Mobile */
+	    .ui-card { padding: 16px !important; border-radius: 12px !important; }
+	    .custom-modal-content { width: 96% !important; border-radius: 12px !important; }
+	    .custom-modal-body { padding: 20px !important; }
+	    .custom-modal-header { padding: 16px 20px !important; }
+	    #offer-letter-iframe { height: 340px !important; }
+	    .letter-container { padding: 20px !important; }
+	    .stepper-min-width { min-width: 480px !important; }
+	}
+
+	/* Modal Styles */
+	.custom-modal {
+	    display: none;
+	    position: fixed;
+	    z-index: 2000;
+	    left: 0;
+	    top: 0;
+	    width: 100%;
+	    height: 100%;
+	    overflow: auto;
+	    background-color: rgba(0, 0, 0, 0.5);
+	    backdrop-filter: blur(4px);
+	}
+
+	.custom-modal-content {
+	    background-color: #fefefe;
+	    margin: 20px auto 10%;
+	    padding: 0;
+	    border: none;
+	    width: 90%;
+	    max-width: 500px;
+	    border-radius: 20px;
+	    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+	    overflow: hidden;
+	    animation: modalSlide 0.3s ease-out;
+	}
+
+	@keyframes modalSlide {
+	    from {
+	        transform: translateY(-30px);
+	        opacity: 0;
+	    }
+
+	    to {
+	        transform: translateY(0);
+	        opacity: 1;
+	    }
+	}
+
+	.custom-modal-header {
+	    padding: 20px 24px;
+	    background: #fff;
+	    border-bottom: 1px solid #eef2f7;
+	    display: flex;
+	    justify-content: space-between;
+	    align-items: center;
+	}
+
+	.custom-modal-header h4 {
+	    margin: 0;
+	    font-weight: 700;
+	    color: var(--primary);
+	    font-size: 1.25rem;
+	}
+
+	.btn-back {
+	    display: inline-flex;
+	    align-items: center;
+	    gap: 8px;
+	    color: #64748b;
+	    text-decoration: none;
+	    font-size: 0.9rem;
+	    font-weight: 600;
+	    margin-bottom: 20px;
+	    transition: color 0.2s;
+	}
+
+	.btn-back:hover {
+	    color: var(--primary);
+	}
+
+	.close-modal {
+	    color: #a0aec0;
+	    font-size: 24px;
+	    font-weight: bold;
+	    cursor: pointer;
+	    line-height: 1;
+	    transition: color 0.2s;
+	}
+
+	.close-modal:hover {
+	    color: #4a5568;
+	}
+
+	.custom-modal-body {
+	    padding: 32px;
+	}
+
+	.border-bottom-dashed {
+	    border-bottom: 1px dashed #e2e8f0;
+	}
+
+	.color-dark {
+	    color: var(--primary);
+	}
+
+	.bg-light-primary {
+	    background-color: #ebf8ff;
+	}
+
+	.gap-3 {
+	    gap: 1rem;
+	}
+
+	.flex-grow-1 {
+	    flex-grow: 1;
+	}
+
+	{{ portal_sidebar_css() }}
+
+	/* ── Animations ─────────────────────────────────────── */
+	/* Scholarship Nudge Styling */
+	.scholarship-nudge-card {
+	    background: var(--card-bg);
+	    border: 1px solid var(--border);
+	    border-radius: 14px;
+	    padding: 16px;
+	    margin-bottom: 20px;
+	    display: flex;
+	    flex-direction: column;
+	    gap: 12px;
+	    box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+	}
+
+	.sn-header {
+	    display: flex;
+	    align-items: center;
+	    gap: 12px;
+	}
+
+	.sn-icon-wrap {
+	    width: 40px;
+	    height: 40px;
+	    background: var(--primary-light);
+	    color: var(--primary);
+	    border-radius: 10px;
+	    display: flex;
+	    align-items: center;
+	    justify-content: center;
+	    font-size: 20px;
+	    flex-shrink: 0;
+	    border: 1px solid var(--border);
+	}
+
+	.sn-icon-wrap .material-symbols-outlined {
+	    font-size: 22px;
+	}
+
+	.sn-title {
+	    font-size: 13px;
+	    font-weight: 700;
+	    color: var(--text-1);
+	    margin-bottom: 2px;
+	}
+
+	.sn-subtitle {
+	    font-size: 12px;
+	    color: var(--text-2);
+	    font-weight: 500;
+	    line-height: 1.4;
+	}
+
+	/* Scholarship State Variations */
+	.scholarship-nudge-card.applied {
+	    background: #f8fafc;
+	    border-color: var(--border);
+	}
+	.scholarship-nudge-card.applied .sn-icon-wrap { background: #e2e8f0; border-color: #cbd5e1; color: #475569; }
+	.scholarship-nudge-card.applied .sn-title { color: var(--text-1); }
+	.scholarship-nudge-card.applied .sn-subtitle { color: var(--text-2); }
+
+	.scholarship-nudge-card.approved {
+	    background: #f0fdf4;
+	    border-color: #bbf7d0;
+	}
+	.scholarship-nudge-card.approved .sn-icon-wrap { background: #dcfce7; border-color: #86efac; color: #16a34a; }
+	.scholarship-nudge-card.approved .sn-title { color: #166534; }
+	.scholarship-nudge-card.approved .sn-subtitle { color: #15803d; }
+
+	.scholarship-nudge-card.rejected {
+	    background: #fef2f2;
+	    border-color: #fecaca;
+	}
+	.scholarship-nudge-card.rejected .sn-icon-wrap { background: #fee2e2; border-color: #fca5a5; color: #dc2626; }
+	.scholarship-nudge-card.rejected .sn-title { color: #991b1b; }
+	.scholarship-nudge-card.rejected .sn-subtitle { color: #b91c1c; }
+
+	/* Warning Box for Applied State */
+	.payment-warning-box {
+	    background: #fffbeb;
+	    border: 1px solid #fde68a;
+	    border-radius: 10px;
+	    padding: 12px;
+	    margin-bottom: 12px;
+	    display: flex;
+	    gap: 10px;
+	    align-items: flex-start;
+	}
+	.pwb-icon { color: #d97706; font-size: 18px; margin-top: 2px; }
+	.pwb-text { font-size: 11px; color: #92400e; font-weight: 500; line-height: 1.4; }
+
+	.btn-sn-apply {
+	    display: flex;
+	    align-items: center;
+	    justify-content: center;
+	    gap: 6px;
+	    background: var(--primary);
+	    color: white;
+	    padding: 10px 14px;
+	    border-radius: 10px;
+	    font-size: 13px;
+	    font-weight: 700;
+	    text-decoration: none !important;
+	    transition: all 0.2s;
+	    border: none;
+	    width: 100%;
+	}
+
+	.btn-sn-apply:hover {
+	    background: var(--primary);
+	    opacity: 0.9;
+	    color: white;
+	    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+	}
+
+	@keyframes fadeInUp {
+	    from {
+	        opacity: 0;
+	        transform: translateY(18px);
+	    }
+
+	    to {
+	        opacity: 1;
+	        transform: translateY(0);
+	    }
+	}
+
+	.fade-in-up {
+	    animation: fadeInUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+	    opacity: 0;
+	}
+</style>
+{% endblock %} {% block content %} {% set _pc = portal_config if (portal_config and
+portal_config.get) else frappe.get_doc("Applicant Portal Config", "Applicant Portal Config",
+ignore_permissions=True) %} {% set _mission_txt = (_pc.get('mission_text') if _pc.get else
+_pc.mission_text) or '' %}
+
+<div class="portal-page-wrapper">
+	<div class="portal-page-inner">
+		<!-- ══ SHARED SIDEBAR ══════════════════════════════════════ -->
+		{{ portal_sidebar_html(active='offer_letter', portal_config=_pc, mission_txt=_mission_txt)
+		}}
+
+		<!-- ══ MAIN CONTENT ═══════════════════════════════════════════ -->
+		<div class="portal-content-col">
+			<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 py-8">
+				<div class="lg:col-span-12">
+					<a href="/nlsat/offer_letter/offer-letter-list" class="btn-back">
+						<i class="fa fa-arrow-left"></i>
+						Back to Offer Letter
+					</a>
+					<div id="offer-detail-wrapper">
+						<div class="text-center p-5 mt-5" id="loader" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 400px;">
+                            <style>
+                                @keyframes custom-spin {
+                                    from { transform: rotate(0deg); }
+                                    to { transform: rotate(360deg); }
+                                }
+                                .custom-loader-ring {
+                                    width: 60px;
+                                    height: 60px;
+                                    border-radius: 50%;
+                                    border: 4px solid color-mix(in srgb, var(--primary) 20%, transparent);
+                                    border-top-color: var(--primary);
+                                    animation: custom-spin 1s linear infinite;
+                                }
+                            </style>
+                            <div style="position: relative; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;">
+                                <div class="custom-loader-ring" style="position: absolute; top: 0; left: 0;"></div>
+                                <span class="material-symbols-outlined" style="color: var(--primary); font-size: 28px; position: relative; z-index: 1;">description</span>
+                            </div>
+                            <h4 style="margin-top: 24px; color: var(--primary); font-weight: 700;">{{ _("Loading Details...") }}</h4>
+                            <p style="color: #64748b;">{{ _("Please wait while we fetch your admission information.") }}</p>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Global Processing Overlay -->
+			<div
+				id="processing-overlay"
+				class="custom-modal"
+				style="display: none; background-color: rgba(0, 0, 0, 0.8); z-index: 9999;"
+			>
+				<div
+					class="d-flex flex-column align-items-center justify-content-center h-100 text-white w-100"
+                    style="height: 100vh;"
+				>
+					<div
+						class="spinner-border"
+						style="width: 3rem; height: 3rem; color: var(--primary);"
+                        role="status"
+                    ></div>
+					<h4 class="mt-4 font-weight-bold text-white" id="processing-msg" style="color: white !important;">
+						{{ _("Processing...") }}
+					</h4>
+					<p class="text-white-50 small" style="color: rgba(255, 255, 255, 0.7) !important;">{{ _("Please do not refresh the page.") }}</p>
+				</div>
+			</div>
+			<!-- Fee Breakdown Modal -->
+			<div id="payment-modal" class="custom-modal">
+				<div class="custom-modal-content" style="border-radius: 12px; border: none; overflow: hidden; padding: 0; max-width: 500px;">
+					<div class="custom-modal-header" style="background: #f8fafc; padding: 24px 32px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+						<h4 style="margin: 0; display: flex; align-items: center; gap: 12px; color: #1e293b; font-weight: 700;">
+                            <div style=" border-radius: 8px; padding: 6px; display: flex; align-items: center; justify-content: center;">
+                                <span class="material-symbols-outlined" style="color: #422006; font-size: 20px;">account_balance_wallet</span>
+                            </div>
+                            {{ _("Fee Payment") }}
+                        </h4>
+						<span class="close-modal" onclick="close_payment_modal()" style="font-size: 28px; cursor: pointer; color: #94a3b8; line-height: 1;">&times;</span>
+					</div>
+					<div class="custom-modal-body" id="payment-modal-body" style="padding: 32px;">
+						<!-- Breakdown injected here -->
+					</div>
+				</div>
+			</div>
+
+			<!-- Generic Confirmation Modal -->
+			<div id="confirmation-modal" class="custom-modal">
+				<div class="custom-modal-content">
+					<div class="custom-modal-header">
+						<h4 id="conf-modal-title">{{ _("Confirm Action") }}</h4>
+						<span class="close-modal" onclick="close_confirmation_modal()"
+							>&times;</span
+						>
+					</div>
+					<div class="custom-modal-body p-4">
+						<div class="text-center mb-4">
+							<div
+								class="icon-circle mx-auto mb-3"
+								style="
+									width: 64px;
+									height: 64px;
+									border-radius: 50%;
+									display: flex;
+									align-items: center;
+									justify-content: center;
+									background-"
+							>
+								<i class="fa fa-question-circle-o fa-2x"></i>
+							</div>
+							<p id="conf-modal-msg" class="text-muted"></p>
+						</div>
+						<div class="d-flex gap-3" style="gap: 12px">
+							<button
+								class="btn btn-secondary flex-grow-1 py-2"
+								style="border-radius: 10px"
+								onclick="close_confirmation_modal()"
+							>
+								{{ _("Cancel") }}
+							</button>
+							<button
+								id="conf-modal-btn"
+								class="btn btn-primary flex-grow-1 py-2"
+								style="border-radius: 10px; background-color: var(--primary)"
+							>
+								{{ _("Confirm") }}
+							</button>
+						</div>
+					</div>
+				</div>
+			</div>
+			
+			<!-- Accept Offer Modal -->
+			<div id="accept-offer-modal" class="custom-modal">
+				<div class="custom-modal-content">
+					<div class="custom-modal-header">
+						<h4>{{ _("Accept Offer") }}</h4>
+						<span class="close-modal" onclick="$('#accept-offer-modal').fadeOut(200);">&times;</span>
+					</div>
+					<div class="custom-modal-body p-4">
+						<div class="mb-4">
+							<p class="text-muted" style="margin-bottom: 20px;">{{ _("Are you sure you want to accept this admission offer? By accepting, you agree to the university's terms and conditions. Please note: all other active offers will be automatically rejected.") }}</p>
+                            
+                            <div style="margin-top: 20px; text-align: left;">
+                                <label for="accommodation_pref" style="">{{ _("Do you require accommodation ?") }}</label>
+                                <select id="accommodation_pref" class="mt-2" style="border-radius: 8px; border: 1px solid var(--border); padding: 8px; width: 100%;">
+                                    <option value="No">{{ _("No") }}</option>
+                                    <option value="Yes">{{ _("Yes") }}</option>
+                                </select>
+                            </div>
+						</div>
+						<div class="d-flex gap-3" style="gap: 12px">
+							<button class="btn btn-secondary flex-grow-1 py-2" style="border-radius: 10px" onclick="$('#accept-offer-modal').fadeOut(200);">
+								{{ _("Cancel") }}
+							</button>
+							<button class="btn btn-primary flex-grow-1 py-2" style="border-radius: 10px; background-color: var(--primary)" onclick="execute_acceptance()">
+								{{ _("Confirm") }}
+							</button>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Success Modal -->
+			<div id="success-modal" class="custom-modal">
+				<div class="custom-modal-content">
+					<div class="custom-modal-body p-5 text-center">
+						<div class="mb-4">
+							<div
+								class="bg-success text-white mx-auto mb-3"
+								style="
+									width: 64px;
+									height: 64px;
+									border-radius: 50%;
+									display: flex;
+									align-items: center;
+									justify-content: center;
+								"
+							>
+								<i class="fa fa-check fa-2x"></i>
+							</div>
+							<h3 class="font-weight-bold color-dark" id="success-title">
+								{{ _("Success!") }}
+							</h3>
+							<p id="success-msg" class="text-muted mb-0"></p>
+						</div>
+						<button
+							class="btn btn-primary w-100 py-3"
+							style="border-radius: 12px; background-color: var(--primary)"
+							onclick="location.reload()"
+						>
+							{{ _("Close") }}
+						</button>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+{% endblock %} {% block extra_js %}
+<script>
+	    let cur_offer_data = null;
+	    let payment_processed = false;
+
+	    function format_currency(v, c) {
+	        var code = (c || 'INR').toString().toUpperCase();
+	        var num = parseFloat(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+	        if (code === 'INR' || !c) {
+	            return '\u20B9 ' + num;
+	        }
+	        return code + ' ' + num;
+	    }
+
+	    function format_date_dd_mm_yyyy(date_str) {
+	        if (!date_str) return '';
+	        const clean_date = date_str.split(' ')[0];
+	        const parts = clean_date.split('-');
+	        if (parts.length === 3) {
+	            return `${parts[2]}-${parts[1]}-${parts[0]}`;
+	        }
+	        return clean_date;
+	    }
+
+	    // Fallback for translation helper
+	    window._ = window._ || function (s) { return s; };
+
+	    document.addEventListener('DOMContentLoaded', function () {
+	        const urlParams = new URLSearchParams(window.location.search);
+	        const offer_name = urlParams.get('offer');
+	        fetch_offer_details(offer_name);
+	    });
+
+	    async function fetch_offer_details(offer_name) {
+	        try {
+	            const data = await apiFetch('slcm.api.service.offer_service.get_offer_details', { offer_name: offer_name });
+	            if (data && !data.error) {
+	                cur_offer_data = data;
+	                render_offer_detail(data);
+	            } else {
+	                render_error(data ? data.error : "{{ _('Offer not found') }}");
+	            }
+	        } catch (e) {
+	            render_error(e.message || "{{ _('Offer not found') }}");
+	        }
+	    }
+
+	    function start_expiry_timer(deadline_str, original_label) {
+	        if (!deadline_str) return;
+
+	        const timer_el = $('#expiry-timer-display');
+	        const label_el = timer_el.siblings('.ui-card-label');
+	        if (!timer_el.length) return;
+
+	        let deadline_val = deadline_str;
+	        if (deadline_str.length === 10) {
+	            deadline_val = deadline_str + " 23:59:59";
+	        }
+
+	        const deadline = new Date(deadline_val).getTime();
+
+	        const x = setInterval(function () {
+	            const now = new Date().getTime();
+	            const distance = deadline - now;
+
+	            if (distance < 0) {
+	                clearInterval(x);
+	                timer_el.text("{{ _('EXPIRED') }}");
+	                timer_el.css('color', '#feb2b2');
+	                $('button[onclick="handle_primary_action()"], button[onclick="handle_reject()"]')
+	                    .prop('disabled', true)
+	                    .css({'opacity': '0.5', 'cursor': 'not-allowed'})
+	                    .attr('title', '{{ _("Deadline passed") }}');
+	                return;
+	            }
+
+	            if (distance > 24 * 60 * 60 * 1000) {
+	                // More than 24 hours - show date only
+	                if (original_label) {
+	                    label_el.html(original_label + ' <span class="material-symbols-outlined" style="color: var(--secondary); font-size: 18px;">event</span>');
+	                } else {
+	                    label_el.html('{{ _("Expiry Date") }} <span class="material-symbols-outlined" style="color: var(--secondary); font-size: 18px;">event</span>');
+	                }
+	                timer_el.text(format_date_dd_mm_yyyy(deadline_str));
+	                timer_el.next().hide(); // Hide the redundant deadline line
+	            } else {
+	                // 24 hours or less - show timer
+	                if (original_label) {
+	                    label_el.html(original_label + ' (Ends Soon) <span class="material-symbols-outlined" style="color: var(--secondary); font-size: 18px;">event</span>');
+	                } else {
+	                    label_el.html('{{ _("Ends Soon") }} <span class="material-symbols-outlined" style="color: var(--secondary); font-size: 18px;">event</span>');
+	                }
+	                timer_el.next().show();
+
+	                const hours = Math.floor(distance / (1000 * 60 * 60));
+	                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+	                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+	                const display =
+	                    (hours < 10 ? "0" + hours : hours) + " : " +
+	                    (minutes < 10 ? "0" + minutes : minutes) + " : " +
+	                    (seconds < 10 ? "0" + seconds : seconds) + " more";
+
+	                timer_el.html(display);
+	            }
+	        }, 1000);
+	    }
+
+
+	    function get_status_icon(status) {
+	        const s = (status || 'Issued').toLowerCase();
+	        switch(s) {
+	            case 'draft': return '<span class="material-symbols-outlined" style="font-size: 18px;">edit_document</span>';
+	            case 'issued': return '<span class="material-symbols-outlined" style="font-size: 18px;">mark_email_unread</span>';
+	            case 'accepted': return '<span class="material-symbols-outlined" style="font-size: 18px;">thumb_up</span>';
+	            case 'payment completed': return '<span class="material-symbols-outlined" style="font-size: 18px;">task_alt</span>';
+	            case 'confirmation fee paid': return '<span class="material-symbols-outlined" style="font-size: 18px;">check_circle</span>';
+	            case 'full fee paid': return '<span class="material-symbols-outlined" style="font-size: 18px;">verified</span>';
+	            case 'rejected': return '<span class="material-symbols-outlined" style="font-size: 18px;">thumb_down</span>';
+	            case 'expired': return '<span class="material-symbols-outlined" style="font-size: 18px;">timer_off</span>';
+	            case 'withdrawn': return '<span class="material-symbols-outlined" style="font-size: 18px;">cancel</span>';
+	            default: return '<span class="material-symbols-outlined" style="font-size: 18px;">info</span>';
+	        }
+	    }
+
+	    function render_offer_detail(data) {
+	        const { offer, applicant, fee_breakdown, rendered_content, currency, is_fee_paid, online_payment_enabled } = data;
+	        if (offer) {
+	            offer.status = offer.status || 'Issued';
+	        }
+	        const wrapper = $('#offer-detail-wrapper');
+	        const status_class = offer.status.toLowerCase().replace(/ /g, '-');
+	        const display_status = offer.status.charAt(0).toUpperCase() + offer.status.slice(1).toLowerCase();
+
+	        // Calculate has_conf_fee_deduction for use in the template
+	        let active_fee_breakdown = fee_breakdown;
+	        if (offer.status === 'Accepted' && offer.needs_accommodation === 'No') {
+	            active_fee_breakdown = fee_breakdown.filter(f => !f.is_accommodation_fee);
+	        }
+	        const deductions = active_fee_breakdown.filter(f => f.is_discount);
+	        const has_conf_fee_deduction = offer.deduct_confirmation_fee === 1 || deductions.some(d => d.component.includes('Confirmation'));
+
+	        
+        
+        let is_conf_paid = offer.status === 'Confirmation Fee Paid';
+        let is_full_paid = offer.status === 'Full Fee Paid' || offer.status === 'Enrolled';
+        
+        let html = `
+        <div style="max-width: none; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; padding-bottom: 40px;">
+        `;
+
+        if (is_conf_paid || is_full_paid) {
+            let banner_bg = '#f0fdf4';
+            let banner_border = '#bbf7d0';
+            let icon_bg = '#dcfce7';
+            let icon_color = '#16a34a';
+            let title = is_full_paid ? '{{ _("Full Fee Paid Successfully!") }}' : '{{ _("Confirmation Fee Paid Successfully!") }}';
+            let subtitle = is_full_paid ? '<div style="font-size: 0.95rem; font-weight: 600; color: #166534; margin-bottom: 4px;">{{ _("Congratulations! Your admission is now confirmed.") }}</div>' : '';
+            
+            // Try to find the payment date and amount from offer properties
+            let payment_date = is_full_paid ? offer.full_fee_paid_on : offer.confirmation_fee_paid_on;
+            let formatted_date = payment_date ? format_date_dd_mm_yyyy(payment_date) : '';
+            
+            // If we don't have the amount explicitly, we can calculate it from the fee structure
+            let paid_amount_val = 0;
+            if (is_full_paid) {
+                // Approximate it as the total full fee
+                let active_breakdown = fee_breakdown.filter(f => !f.is_discount && (offer.needs_accommodation === 'Yes' || !f.is_accommodation_fee));
+                paid_amount_val = active_breakdown.reduce((sum, f) => sum + f.amount, 0);
+            } else {
+                paid_amount_val = offer.confirmation_fee_amount || 0; // Or from fee_breakdown
+            }
+            
+            let amount_str = format_currency(paid_amount_val, currency);
+            let payment_text = payment_date ? `{{ _("Payment of ") }}${amount_str}{{ _(" received on ") }}${formatted_date}.` : `{{ _("Payment of ") }}${amount_str}{{ _(" received.") }}`;
+
+            html += `
+            <!-- Success Banner -->
+            <div style="background: ${banner_bg}; border: 1px solid ${banner_border}; border-radius: 12px; padding: 20px 24px; display: flex; align-items: flex-start; gap: 16px;">
+                <div style="width: 40px; height: 40px; border-radius: 50%; background: ${icon_bg}; color: ${icon_color}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <span class="material-symbols-outlined" style="font-size: 24px;">check_circle</span>
+                </div>
+                <div>
+                    <h3 style="margin: 0 0 4px 0; color: #166534; font-size: 1.25rem; font-weight: 800;">${title}</h3>
+                    ${subtitle}
+                    <div style="color: #15803d; font-size: 0.95rem;">${payment_text}</div>
+                </div>
+            </div>
+            `;
+        }
+
+        // ── Status Stepper ──────────────────────────
+        let s_issued = true;
+        let s_accepted = ['Accepted', 'Confirmation Fee Paid', 'Full Fee Paid', 'Payment Completed', 'Enrolled'].includes(offer.status);
+        let s_conf_paid = ['Confirmation Fee Paid', 'Full Fee Paid', 'Payment Completed', 'Enrolled'].includes(offer.status);
+        let s_full_paid = ['Full Fee Paid', 'Payment Completed', 'Enrolled'].includes(offer.status);
+
+        const is_expired_or_rejected = (offer.status === 'Expired' || offer.status === 'Rejected');
+
+        // ── Status Stepper: outer wrapper + card header ──────────────────────────
+        html += `
+            <div style="display: flex; flex-wrap: wrap; gap: 32px; margin-bottom: 0;">
+                <div class="ui-card" style="flex: 1 1 500px; background: #eff6ff; border: 1px solid #bfdbfe; padding: 32px; border-radius: 12px;">
+                    <h4 style="margin: 0; margin-bottom: 24px; display: flex; align-items: center; gap: 12px; color: #1e293b; font-weight: 700;">
+                        {{ _("Offer Status") }}
+                    </h4>
+        `;
+
+        if (is_expired_or_rejected) {
+            const exp_bg    = offer.status === 'Expired' ? '#fff7ed' : '#fef2f2';
+            const exp_bdr   = offer.status === 'Expired' ? '#fdba74' : '#fca5a5';
+            const exp_icon  = offer.status === 'Expired' ? '#f97316' : '#ef4444';
+            const exp_icon_name = offer.status === 'Expired' ? 'timer_off' : 'cancel';
+            const exp_title_color = offer.status === 'Expired' ? '#9a3412' : '#991b1b';
+            const exp_desc_color  = offer.status === 'Expired' ? '#c2410c' : '#dc2626';
+            const exp_title = offer.status === 'Expired' ? '{{ _("Offer Expired") }}' : '{{ _("Offer Rejected") }}';
+            const exp_desc  = offer.status === 'Expired'
+                ? '{{ _("This offer has expired. Please contact the admissions office for assistance.") }}'
+                : '{{ _("You have rejected this admission offer. This action cannot be undone.") }}';
+            html += `
+                    <div style="background: ${exp_bg}; border: 1px solid ${exp_bdr}; border-radius: 10px; padding: 20px 24px; display: flex; align-items: center; gap: 16px;">
+                        <span class="material-symbols-outlined" style="font-size: 32px; color: ${exp_icon};">${exp_icon_name}</span>
+                        <div>
+                            <div style="font-weight: 700; font-size: 1rem; color: ${exp_title_color}; margin-bottom: 4px;">${exp_title}</div>
+                            <div style="font-size: 0.9rem; color: ${exp_desc_color};">${exp_desc}</div>
+                        </div>
+                    </div>
+            `;
+        } else {
+            const progress_w = s_full_paid ? '80%' : (s_conf_paid ? '53%' : (s_accepted ? '26%' : '0%'));
+            const step2_bg   = s_accepted ? '#16a34a' : 'white';
+            const step2_col  = s_accepted ? 'white' : '#94a3b8';
+            const step2_bdr  = s_accepted ? 'none' : '2px solid #e2e8f0';
+            const step2_icon = s_accepted ? 'check' : 'inventory_2';
+            const step2_date = s_accepted ? format_date_dd_mm_yyyy(offer.accepted_on) : (offer.offer_acceptance_deadline ? 'Due: ' + format_date_dd_mm_yyyy(offer.offer_acceptance_deadline) : '\u2014');
+            const step3_bg   = s_conf_paid ? '#16a34a' : 'white';
+            const step3_col  = s_conf_paid ? 'white' : '#94a3b8';
+            const step3_bdr  = s_conf_paid ? 'none' : '2px solid #e2e8f0';
+            const step3_icon = s_conf_paid ? 'check' : 'account_balance_wallet';
+            const step3_date = s_conf_paid ? format_date_dd_mm_yyyy(offer.confirmation_fee_paid_on) : (offer.confirmation_fee_deadline ? 'Due: ' + format_date_dd_mm_yyyy(offer.confirmation_fee_deadline) : '\u2014');
+            const step4_bg   = s_full_paid ? '#16a34a' : 'white';
+            const step4_col  = s_full_paid ? 'white' : '#94a3b8';
+            const step4_bdr  = s_full_paid ? 'none' : '2px solid #e2e8f0';
+            const step4_icon = s_full_paid ? 'check' : 'account_balance_wallet';
+            const step4_date = s_full_paid ? format_date_dd_mm_yyyy(offer.full_fee_paid_on) : (offer.payment_deadline ? 'Due: ' + format_date_dd_mm_yyyy(offer.payment_deadline) : '\u2014');
+            const step2_label_color = s_accepted ? '#1e293b' : '#64748b';
+            const step3_label_color = s_conf_paid ? '#1e293b' : '#64748b';
+            const step4_label_color = s_full_paid ? '#1e293b' : '#64748b';
+            const conf_badge = s_conf_paid ? `<div style="display: inline-block; background: #dcfce7; color: #16a34a; padding: 2px 10px; border-radius: 99px; font-weight: 600; font-size: 0.75rem; border: 1px solid #bbf7d0; margin-top: 6px;">${format_currency(offer.confirmation_fee_amount || 0, currency)}</div>` : '';
+            
+            const full_badge = s_full_paid ? `<div style="display: inline-block; background: #dcfce7; color: #16a34a; padding: 2px 10px; border-radius: 99px; font-weight: 600; font-size: 0.75rem; border: 1px solid #bbf7d0; margin-top: 6px;">${format_currency(offer.payable_amount || 0, currency)}</div>` : '';
+
+            const issue_date_val = offer.issue_date ? format_date_dd_mm_yyyy(offer.issue_date) : (offer.issued_on ? format_date_dd_mm_yyyy(offer.issued_on) : '-');
+            html += `
+                    <div class="status-stepper-card stepper-scroll-wrap" style="background: white; border-radius: 12px; border: 1px solid #dbeafe; padding: 32px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); overflow-x: auto;">
+                        <div class="stepper-min-width" style="display: flex; justify-content: space-between; align-items: flex-start; min-width: 600px; position: relative;">
+                            <div style="position: absolute; top: 16px; left: 10%; right: 10%; height: 2px; background: #e2e8f0; z-index: 0;"></div>
+                            <div style="position: absolute; top: 16px; left: 10%; height: 2px; background: #16a34a; z-index: 0; transition: width 0.5s ease; width: ${progress_w};"></div>
+
+                            <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; z-index: 1; width: 25%; text-align: center;">
+                                <div style="width: 34px; height: 34px; border-radius: 50%; background: #16a34a; color: white; display: flex; align-items: center; justify-content: center; font-size: 18px;">
+                                    <span class="material-symbols-outlined" style="font-size: 20px;">check</span>
+                                </div>
+                                <div>
+                                    <div style="color: #1e293b; font-size: 0.95rem; font-weight: 600;">{{ _("Offer Issued") }}</div>
+                                    <div style="color: #64748b; font-size: 0.85rem; margin-top: 4px;">${issue_date_val}</div>
+                                </div>
+                            </div>
+
+                            <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; z-index: 1; width: 25%; text-align: center;">
+                                <div style="width: 34px; height: 34px; border-radius: 50%; background: ${step2_bg}; color: ${step2_col}; border: ${step2_bdr}; display: flex; align-items: center; justify-content: center;">
+                                    <span class="material-symbols-outlined" style="font-size: 20px;">${step2_icon}</span>
+                                </div>
+                                <div>
+                                    <div style="color: ${step2_label_color}; font-size: 0.95rem; font-weight: 600;">{{ _("Offer Accepted") }}</div>
+                                    <div style="color: #64748b; font-size: 0.85rem; margin-top: 4px;">${step2_date}</div>
+                                </div>
+                            </div>
+
+                            <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; z-index: 1; width: 25%; text-align: center;">
+                                <div style="width: 34px; height: 34px; border-radius: 50%; background: ${step3_bg}; color: ${step3_col}; border: ${step3_bdr}; display: flex; align-items: center; justify-content: center;">
+                                    <span class="material-symbols-outlined" style="font-size: 20px;">${step3_icon}</span>
+                                </div>
+                                <div>
+                                    <div style="color: ${step3_label_color}; font-size: 0.95rem; font-weight: 600;">{{ _("Confirmation Fee Paid") }}</div>
+                                    <div style="color: #64748b; font-size: 0.85rem; margin-top: 4px;">${step3_date}</div>
+                                    ${conf_badge}
+                                </div>
+                            </div>
+
+                            <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; z-index: 1; width: 25%; text-align: center;">
+                                <div style="width: 34px; height: 34px; border-radius: 50%; background: ${step4_bg}; color: ${step4_col}; border: ${step4_bdr}; display: flex; align-items: center; justify-content: center;">
+                                    <span class="material-symbols-outlined" style="font-size: 20px;">${step4_icon}</span>
+                                </div>
+                                <div>
+                                    <div style="color: ${step4_label_color}; font-size: 0.95rem; font-weight: 600;">{{ _("Full Fee Paid") }}</div>
+                                    <div style="color: #64748b; font-size: 0.85rem; margin-top: 4px;">${step4_date}</div>
+                                    ${full_badge}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+            `;
+        }
+
+        // Close status card div
+        html += `
+                </div>
+        `;
+
+        // ── Payment Receipts card (only when fees are paid) ──────────────────
+        if (is_conf_paid || is_full_paid) {
+            html += `
+                <div style="flex: 0 0 320px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 32px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                    <h4 style="margin: 0 0 24px 0; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 12px;">
+                        <div style="background: #f1f5f9; border-radius: 8px; padding: 8px; display: flex; align-items: center; justify-content: center;">
+                            <span class="material-symbols-outlined" style="color: #475569;">receipt_long</span>
+                        </div>
+                        {{ _("Payment Receipts") }}
+                    </h4>
+                    <div style="display: flex; flex-direction: column; gap: 16px;">
+                        <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; display: flex; flex-direction: column; gap: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div style="color: #334155; font-size: 0.95rem; font-weight: 700;">1. Confirmation Fee Receipt</div>
+                                <span class="material-symbols-outlined" style="color: #16a34a; font-size: 18px;">check_circle</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+                                <div style="color: #64748b; font-size: 0.85rem;">${offer.confirmation_fee_paid_on ? format_date_dd_mm_yyyy(offer.confirmation_fee_paid_on) : ''}</div>
+                                <a href="#" onclick="handle_download_receipt('Confirmation Fee'); return false;" style="display: flex; align-items: center; gap: 4px; color: var(--primary); text-decoration: none; font-size: 0.85rem; font-weight: 600; padding: 4px 8px; background: #eff6ff; border-radius: 4px;">
+                                    <span class="material-symbols-outlined" style="font-size: 16px;">download</span> {{ _("Download") }}
+                                </a>
+                            </div>
+                        </div>
+            `;
+            if (is_full_paid) {
+                html += `
+                        <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; display: flex; flex-direction: column; gap: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div style="color: #334155; font-size: 0.95rem; font-weight: 700;">2. Full Fee Receipt</div>
+                                <span class="material-symbols-outlined" style="color: #16a34a; font-size: 18px;">check_circle</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+                                <div style="color: #64748b; font-size: 0.85rem;">${offer.full_fee_paid_on ? format_date_dd_mm_yyyy(offer.full_fee_paid_on) : ''}</div>
+                                <a href="#" onclick="handle_download_receipt('Admission Fee'); return false;" style="display: flex; align-items: center; gap: 4px; color: var(--primary); text-decoration: none; font-size: 0.85rem; font-weight: 600; padding: 4px 8px; background: #eff6ff; border-radius: 4px;">
+                                    <span class="material-symbols-outlined" style="font-size: 16px;">download</span> {{ _("Download") }}
+                                </a>
+                            </div>
+                        </div>
+                `;
+            }
+            html += `
+                    </div>
+                </div>
+            `;
+        }
+
+        // Close outer flex wrapper
+        html += `
+            </div>
+        `;
+
+
+
+
+        html += `
+            <!-- Fee Details Block -->
+            <div class="ui-card" style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 32px; border-radius: 12px; display: flex; flex-direction: column; gap: 24px;">
+                <!-- Title -->
+                <h4 style="margin: 0; display: flex; align-items: center; gap: 12px; color: #1e293b; font-weight: 700;">
+                    {{ _("Fee Details") }}
+                </h4>
+
+                <div class="fee-layout-wrap" style="display: flex; flex-wrap: wrap; gap: 32px; align-items: stretch;">
+                    <!-- Left Column: Summary Table -->
+                    <div class="fee-left-col" style="flex: 1 1 600px; background: white; border-radius: 12px; border: 1px solid #eff6ff; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                        
+                        <!-- Standalone Confirmation Fee Card -->
+                        ${(() => {
+                            if (!offer.confirmation_fee_amount || offer.confirmation_fee_amount <= 0) return '';
+                            const conf_status_label = s_conf_paid
+                                ? `<span style="background:#dcfce7;color:#16a34a;padding:3px 12px;border-radius:99px;font-size:0.75rem;font-weight:700;border:1px solid #bbf7d0;">{{ _("Paid") }}</span>`
+                                : `<span style="background:#eff6ff;color:#b45309;padding:3px 12px;border-radius:99px;font-size:0.75rem;font-weight:700;border:1px solid var(--primary);">{{ _("Due") }}</span>`;
+                            return `
+                            <div style="background: ${s_conf_paid ? '#f0fdf4' : '#eff6ff'}; border: 1px solid ${s_conf_paid ? '#bbf7d0' : '#bfdbfe'}; border-radius: 10px; padding: 16px 20px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <div style="background: ${s_conf_paid ? '#eff6ff' : '#eff6ff'}; border-radius: 8px; padding: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                        <span class="material-symbols-outlined" style="font-size: 20px; color: ${s_conf_paid ? '#16a34a' : '#b45309'};">lock</span>
+                                    </div>
+                                    <div>
+                                        <div style="font-weight: 700; color: #1e293b; font-size: 0.95rem;">{{ _("Confirmation Fee") }}</div>
+                                        <div style="font-size: 0.8rem; color: #64748b; margin-top: 2px;">{{ _("Pay the Confirmation Fee to secure your admission.") }}</div>
+                                    </div>
+                                </div>
+                                <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+                                    <div style="font-size: 1.1rem; font-weight: 800; color: #1e293b;">${format_currency(offer.confirmation_fee_amount, currency)}</div>
+                                    <div>${conf_status_label}</div>
+                                </div>
+                            </div>`;
+                        })()}
+
+                        <div style="font-weight: 600; margin-bottom: 16px; color: #334155; font-size: 0.95rem;">{{ _("Fee Summary") }}</div>
+                        <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: 0.85rem;">
+                                    <th style="padding: 12px 12px 12px 0; font-weight: 600;">No</th>
+                                    <th style="padding: 12px; font-weight: 600;">{{ _("Fee Component") }}</th>
+                                    <th style="padding: 12px; font-weight: 600; text-align: right;">{{ _("Amount (₹)") }}</th>
+                                    ${(is_conf_paid || is_full_paid) ? `<th style="padding: 12px 0 12px 12px; font-weight: 600; text-align: center;">{{ _("Status") }}</th>` : ''}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${(() => {
+                                    let active_fee_breakdown = fee_breakdown;
+                                    if (offer.status === 'Accepted' && offer.needs_accommodation === 'No') {
+                                        active_fee_breakdown = fee_breakdown.filter(f => !f.is_accommodation_fee);
+                                    }
+
+                                    const base_components = active_fee_breakdown.filter(f => !f.is_discount);
+                                    const deductions = active_fee_breakdown.filter(f => f.is_discount);
+                                    const total_full_fee = base_components.reduce((sum, f) => sum + f.amount, 0);
+                                    const total_deductions = deductions.reduce((sum, f) => sum + Math.abs(f.amount), 0);
+                                    
+                                    let conf_amount = offer.confirmation_fee_amount || 0;
+                                    let index = 1;
+                                    
+                                    let rows_html = '';
+                                    
+                                    rows_html += base_components.map(f => {
+                                        let note = '';
+                                        if (f.is_accommodation_fee) {
+                                            note = (offer.status === 'Issued') ? ' (Optional)' : (offer.status === 'Accepted' ? ' (Opted)' : '');
+                                        }
+                                        
+                                        let status_pill = '';
+                                        if (is_full_paid) {
+                                            status_pill = `<span style="background: #dcfce7; color: #16a34a; padding: 4px 12px; border-radius: 99px; font-size: 0.75rem; font-weight: 700; border: 1px solid #bbf7d0;">Paid</span>`;
+                                        } else if (is_conf_paid) {
+                                            status_pill = `<span style="background: #ffedd5; color: #c2410c; padding: 4px 12px; border-radius: 99px; font-size: 0.75rem; font-weight: 700; border: 1px solid #fed7aa;">Pending</span>`;
+                                        }
+
+                                        return `
+                                        <tr style="border-bottom: 1px solid #f1f5f9; font-size: 0.95rem; color: #475569;">
+                                            <td style="padding: 16px 16px 16px 0;">${index++}</td>
+                                            <td style="padding: 16px;">${f.component}${note}</td>
+                                            <td style="padding: 16px; text-align: right; color: #1e293b;">${format_currency(f.amount, currency)}</td>
+                                            ${(is_conf_paid || is_full_paid) ? `<td style="padding: 16px 0 16px 16px; text-align: center;">${status_pill}</td>` : ''}
+                                        </tr>`;
+                                    }).join('');
+                                    
+                                    rows_html += `
+                                    </tbody>
+                                </table>
+                                
+                                <div style="margin-top: 24px; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0;">
+                                    <div style="background: #f8fafc; padding: 16px 24px; display: flex; justify-content: space-between; border-bottom: 1px solid #e2e8f0; font-weight: 600; color: #334155;">
+                                        <span>{{ _("Total Admission Fee") }}</span>
+                                        <span style="color: #0f172a;">${format_currency(total_full_fee, currency)}</span>
+                                    </div>`;
+                                    
+                                    if (has_conf_fee_deduction) {
+                                        rows_html += `
+                                    <div style="background: white; padding: 16px 24px; display: flex; justify-content: space-between; border-bottom: 1px solid #e2e8f0; font-weight: 600; color: #dc2626;">
+                                        <span>{{ _("Less: Confirmation Fee (Deducted)") }}</span>
+                                        <span>- ${format_currency(conf_amount, currency)}</span>
+                                    </div>
+                                    <div style="background: #f0fdf4; padding: 16px 24px; display: flex; justify-content: space-between; font-weight: 700; color: #1e293b; ${(is_conf_paid || is_full_paid) ? 'border-bottom: 1px solid #e2e8f0;' : ''}">
+                                        <span>{{ _("Total Payable (After Deduction)") }}</span>
+                                        <span style="color: #16a34a; font-size: 1.1rem;">${format_currency(Math.max(0, total_full_fee - conf_amount), currency)}</span>
+                                    </div>`;
+                                    } else {
+                                        rows_html += `
+                                    <div style="background: #f0fdf4; padding: 16px 24px; display: flex; justify-content: space-between; font-weight: 700; color: #1e293b; ${(is_conf_paid || is_full_paid) ? 'border-bottom: 1px solid #e2e8f0;' : ''}">
+                                        <span>{{ _("Total Payable") }}</span>
+                                        <span style="color: #16a34a; font-size: 1.1rem;">${format_currency(total_full_fee, currency)}</span>
+                                    </div>`;
+                                    }
+                                     
+                                     if (is_conf_paid && has_conf_fee_deduction) {
+                                         rows_html += `
+                                        <div style="background: white; padding: 16px 24px; display: flex; justify-content: space-between; border-bottom: 1px solid #e2e8f0; font-weight: 700; color: #1e293b;">
+                                            <span>{{ _("Confirmation Fee Paid") }}</span>
+                                            <span style="color: #16a34a;">${format_currency(conf_amount, currency)}</span>
+                                        </div>
+                                        <div style="background: #dcfce7; padding: 16px 24px; display: flex; justify-content: space-between; font-weight: 700; color: #1e293b;">
+                                            <span>{{ _("Remaining Balance (To be Paid)") }}</span>
+                                            <span style="color: #16a34a; font-size: 1.1rem;">${format_currency(Math.max(0, total_full_fee - conf_amount), currency)}</span>
+                                        </div>
+                                        `;
+                                     } else if (is_full_paid) {
+                                         rows_html += `
+                                        <div style="background: white; padding: 16px 24px; display: flex; justify-content: space-between; border-bottom: 1px solid #e2e8f0; font-weight: 700; color: #1e293b;">
+                                            <span>{{ _("Total Paid") }}</span>
+                                            <span style="color: #16a34a;">${format_currency(total_full_fee, currency)}</span>
+                                        </div>
+                                        <div style="background: #dcfce7; padding: 16px 24px; display: flex; justify-content: space-between; font-weight: 700; color: #1e293b;">
+                                            <span>{{ _("Balance") }}</span>
+                                            <span style="color: #16a34a; font-size: 1.1rem;">${format_currency(0, currency)}</span>
+                                        </div>
+                                        `;
+                                     }
+                                     
+                                     rows_html += `</div>`;
+                                     
+                                     return rows_html;
+                                 })()}
+                    </div>
+                    `;
+
+
+        // Right Column
+        html += `
+                    <div class="fee-right-col how-it-works-col" style="flex: 0 0 350px; display: flex; flex-direction: column; gap: 24px;">
+        `;
+        
+        if (offer.status === 'Issued' || offer.status === 'Accepted') {
+            // ── "How it works" card ──────────────────────────────────────────
+            html += `
+                        <div class="how-it-works-col" style="background: #eff6ff; border-radius: 12px; padding: 24px; border: 1px solid #bfdbfe; display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
+                            <div>
+                                <div style="font-weight: 700; margin-bottom: 24px; color: #334155; display: flex; align-items: center; gap: 8px;">
+                                    <span class="material-symbols-outlined" style="color: var(--primary)">info</span> {{ _("How it works") }}
+                                </div>
+                                <div style="display: flex; flex-direction: column; gap: 20px; position: relative;">
+                                    <div style="position: absolute; left: 11px; top: 24px; bottom: 24px; width: 1px; background: var(--primary); z-index: 0;"></div>
+
+                                    <!-- Step 1 (always shown): Accept the Offer -->
+                                    <div style="display: flex; gap: 16px; align-items: flex-start; position: relative; z-index: 1;">
+                                        <div style="width: 24px; height: 24px; border-radius: 50%; background: ${s_accepted ? '#dcfce7' : '#fefce8'}; border: 1px solid ${s_accepted ? '#16a34a' : 'var(--primary)'}; color: ${s_accepted ? '#16a34a' : 'var(--primary)'}; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700; flex-shrink: 0;">${s_accepted ? '<span class="material-symbols-outlined" style="font-size:14px;">check</span>' : '1'}</div>
+                                        <div style="font-size: 0.9rem; color: #475569; line-height: 1.5;">{{ _("Review and accept the offer to secure your seat.") }}</div>
+                                    </div>
+
+                                    <!-- Step 2: Pay Confirmation Fee -->
+                                    <div style="display: flex; gap: 16px; align-items: flex-start; position: relative; z-index: 1;">
+                                        <div style="width: 24px; height: 24px; border-radius: 50%; background: ${s_conf_paid ? '#dcfce7' : '#fefce8'}; border: 1px solid ${s_conf_paid ? '#16a34a' : 'var(--primary)'}; color: ${s_conf_paid ? '#16a34a' : 'var(--primary)'}; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700; flex-shrink: 0;">${s_conf_paid ? '<span class="material-symbols-outlined" style="font-size:14px;">check</span>' : '2'}</div>
+                                        <div style="font-size: 0.9rem; color: #475569; line-height: 1.5;">{{ _("Pay the Confirmation Fee to secure your admission.") }}</div>
+                                    </div>
+            `;
+            if (has_conf_fee_deduction) {
+                html += `
+                                    <!-- Step 3: Deduction note -->
+                                    <div style="display: flex; gap: 16px; align-items: flex-start; position: relative; z-index: 1;">
+                                        <div style="width: 24px; height: 24px; border-radius: 50%; background: #fefce8; border: 1px solid var(--primary); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700; flex-shrink: 0;">3</div>
+                                        <div style="font-size: 0.9rem; color: #475569; line-height: 1.5;">{{ _("The Confirmation Fee will be deducted from the Total Full Fee.") }}</div>
+                                    </div>
+                                    <!-- Step 4: Pay Remaining -->
+                                    <div style="display: flex; gap: 16px; align-items: flex-start; position: relative; z-index: 1;">
+                                        <div style="width: 24px; height: 24px; border-radius: 50%; background: ${s_full_paid ? '#dcfce7' : '#fefce8'}; border: 1px solid ${s_full_paid ? '#16a34a' : 'var(--primary)'}; color: ${s_full_paid ? '#16a34a' : 'var(--primary)'}; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700; flex-shrink: 0;">${s_full_paid ? '<span class="material-symbols-outlined" style="font-size:14px;">check</span>' : '4'}</div>
+                                        <div style="font-size: 0.9rem; color: #475569; line-height: 1.5;">{{ _("Pay the remaining balance (Total Payable) to complete your admission.") }}</div>
+                                    </div>
+                `;
+            } else {
+                html += `
+                                    <!-- Step 3: Pay Full Fee -->
+                                    <div style="display: flex; gap: 16px; align-items: flex-start; position: relative; z-index: 1;">
+                                        <div style="width: 24px; height: 24px; border-radius: 50%; background: ${s_full_paid ? '#dcfce7' : '#fefce8'}; border: 1px solid ${s_full_paid ? '#16a34a' : '#ca8a04'}; color: ${s_full_paid ? '#16a34a' : '#ca8a04'}; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700; flex-shrink: 0;">${s_full_paid ? '<span class="material-symbols-outlined" style="font-size:14px;">check</span>' : '3'}</div>
+                                        <div style="font-size: 0.9rem; color: #475569; line-height: 1.5;">{{ _("Pay the Full Fee to complete your admission.") }}</div>
+                                    </div>
+                `;
+            }
+            html += `
+                                </div>
+                            </div>
+                            <!-- Payment Actions -->
+                            <div style="margin-top: 32px;">
+            `;
+            if (offer.status === 'Issued') {
+                html += `
+                                <div class="issued-action-row" style="display: flex; gap: 12px; margin-bottom: 12px;">
+                                    <button class="btn" style="flex: 1; border: 1px solid #ef4444; color: #ef4444; background: white; font-weight: 600; padding: 12px; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 8px;" onclick="handle_reject()">
+                                        <span class="material-symbols-outlined" style="font-size: 18px;">close</span> {{ _("Reject") }}
+                                    </button>
+                                    <button class="btn" style="flex: 2; background: var(--primary); color: #fff; font-weight: 700; border: none; padding: 12px; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px color-mix(in srgb, var(--primary) 30%, transparent);" onclick="handle_primary_action()">
+                                        <span class="material-symbols-outlined" style="font-size: 18px;">check_circle</span>
+                                        {{ _("Accept Offer") }}
+                                    </button>
+                                </div>
+                `;
+            } else {
+                // Accepted state — show pay button
+                if (is_fee_paid) {
+                    html += `
+                                <button class="btn btn-default" style="width: 100%; font-weight: 600; padding: 12px; border-radius: 8px; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 8px;" onclick="handle_download_receipt()">
+                                    <span class="material-symbols-outlined" style="font-size: 18px;">download</span>
+                                    {{ _("Download Receipt") }}
+                                </button>
+                    `;
+                }
+                if (online_payment_enabled) {
+                    html += `
+                                <button class="btn btn-pay" style="width: 100%; background: var(--primary); color: #fff; font-weight: 700; border: none; padding: 12px; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px color-mix(in srgb, var(--primary) 30%, transparent);" onclick="handle_primary_action()">
+                                    <span class="material-symbols-outlined" style="font-size: 18px;">account_balance_wallet</span>
+                                    {{ _("Pay Confirmation Fee") }}
+                                </button>
+                    `;
+                }
+            }
+            html += `
+                            </div>
+                        </div>
+            `;
+        } else if (is_conf_paid || is_full_paid) {
+
+            
+            let paid_amount_val = 0;
+            if (is_full_paid) {
+                let active_breakdown = fee_breakdown.filter(f => !f.is_discount && (offer.needs_accommodation === 'Yes' || !f.is_accommodation_fee));
+                paid_amount_val = active_breakdown.reduce((sum, f) => sum + f.amount, 0);
+            } else {
+                paid_amount_val = offer.confirmation_fee_amount || 0;
+            }
+            let active_receipt = null;
+            if (cur_offer_data.receipts && cur_offer_data.receipts.length > 0) {
+                if (is_full_paid) {
+                    active_receipt = cur_offer_data.receipts.find(r => r.fee_type === 'Admission Fee') || cur_offer_data.receipts.find(r => r.fee_type === 'Confirmation Fee') || cur_offer_data.receipts[0];
+                } else {
+                    active_receipt = cur_offer_data.receipts.find(r => r.fee_type === 'Confirmation Fee') || cur_offer_data.receipts[0];
+                }
+            }
+            
+            let payment_date = active_receipt && active_receipt.payment_date ? active_receipt.payment_date : (is_full_paid ? offer.full_fee_paid_on : offer.confirmation_fee_paid_on);
+            let formatted_date = payment_date ? format_date_dd_mm_yyyy(payment_date) : '-';
+            let transaction_id = active_receipt && active_receipt.transaction_id ? active_receipt.transaction_id : '-';
+            let payment_mode = active_receipt && active_receipt.payment_mode ? active_receipt.payment_mode : 'Online';
+            
+            html += `
+                        <!-- Payment Information Card -->
+                        <div style="background: white; border-radius: 12px; padding: 24px; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                            <h5 style="margin: 0 0 16px 0; font-weight: 700; color: #1e293b;">{{ _("Payment Information") }}</h5>
+                            <div style="display: flex; align-items: center; gap: 8px; color: #16a34a; font-size: 0.9rem; font-weight: 600; margin-bottom: 20px;">
+                                <span class="material-symbols-outlined" style="font-size: 18px;">check_circle</span>
+                                ${is_full_paid ? '{{ _("Full Fee Paid") }}' : '{{ _("Confirmation Fee Paid") }}'}
+                            </div>
+                            
+                            <div style="display: flex; flex-direction: column; gap: 12px; font-size: 0.9rem;">
+                                <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #e2e8f0; padding-bottom: 8px;">
+                                    <span style="color: #64748b;">{{ _("Total Paid Amount") }}</span>
+                                    <span style="font-weight: 700; color: #1e293b;">${format_currency(paid_amount_val, currency)}</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #e2e8f0; padding-bottom: 8px;">
+                                    <span style="color: #64748b;">{{ _("Payment Date") }}</span>
+                                    <span style="font-weight: 600; color: #1e293b;">${formatted_date}</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #e2e8f0; padding-bottom: 8px;">
+                                    <span style="color: #64748b;">{{ _("Payment Mode") }}</span>
+                                    <span style="font-weight: 600; color: #1e293b;">${payment_mode}</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #e2e8f0; padding-bottom: 8px;">
+                                    <span style="color: #64748b;">{{ _("Transaction ID") }}</span>
+                                    <span style="font-weight: 600; color: #1e293b;">${transaction_id}</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; padding-top: 4px;">
+                                    <span style="color: #64748b;">{{ _("Receipt") }}</span>
+                                    <a href="#" onclick="handle_download_receipt('${is_full_paid ? 'Admission Fee' : 'Confirmation Fee'}'); return false;" style="font-weight: 600; color: var(--primary); text-decoration: none; display: flex; align-items: center; gap: 4px; hover:underline">
+                                        {{ _("Download") }} <span class="material-symbols-outlined" style="font-size: 16px;">download</span>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+            `;
+            
+            if (is_full_paid) {
+                html += `
+                        <!-- Admission Status Card -->
+                        <div style="background: white; border-radius: 12px; padding: 24px; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                            <h5 style="margin: 0 0 16px 0; font-weight: 700; color: #1e293b;">{{ _("Admission Status") }}</h5>
+                            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; display: flex; align-items: center; gap: 12px;">
+                                <div style="width: 32px; height: 32px; border-radius: 50%; background: #16a34a; color: white; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                    <span class="material-symbols-outlined" style="font-size: 20px;">verified_user</span>
+                                </div>
+                                <div>
+                                    <div style="font-weight: 800; color: #166534; font-size: 1.05rem;">{{ _("Admission Confirmed") }}</div>
+                                </div>
+                            </div>
+                            <p style="margin: 16px 0 0 0; font-size: 0.9rem; color: #475569; text-align: center;">{{ _("Welcome to the University!") }}</p>
+                        </div>
+                        
+                        <!-- What's Next Card -->
+                        <div style="background: white; border-radius: 12px; padding: 24px; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                            <h5 style="margin: 0 0 16px 0; font-weight: 700; color: #1e293b;">{{ _("What's Next?") }}</h5>
+                            <div style="display: flex; gap: 12px; align-items: flex-start;">
+                                <span class="material-symbols-outlined" style="color: #16a34a; font-size: 20px;">check_circle</span>
+                                <div style="font-size: 0.9rem; color: #475569; line-height: 1.5;">
+                                    {{ _("You will receive further communication regarding orientation, academic calendar and class schedule on your registered email.") }}
+                                </div>
+                            </div>
+                        </div>
+                `;
+            } else if (is_conf_paid) {
+            html += `
+                        <!-- What's Next Card -->
+                        <div style="background: white; border-radius: 12px; padding: 24px; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                            <h5 style="margin: 0 0 16px 0; font-weight: 700; color: #1e293b;">{{ _("What's Next?") }}</h5>
+                            <ol style="margin: 0; padding-left: 16px; font-size: 0.9rem; color: #475569; line-height: 1.6; display: flex; flex-direction: column; gap: 8px;">
+                                <li>{{ _("Your confirmation fee has been received.") }}</li>
+            `;
+            if (has_conf_fee_deduction) {
+                html += `<li>{{ _("The amount has been deducted from your total fee.") }}</li>`;
+            }
+            html += `
+                                <li>
+                                    {{ _("Please pay the remaining balance on or before") }} 
+                                    <strong style="color: #1e293b;">${offer.payment_deadline ? format_date_dd_mm_yyyy(offer.payment_deadline) : '-'}</strong> 
+                                    {{ _("to complete your admission.") }}
+                                </li>
+                            </ol>
+            `;
+            if (online_payment_enabled) {
+                html += `
+                            <button class="btn btn-pay" style="width: 100%; background: var(--primary); color: #fff; font-weight: 700; border: none; padding: 12px; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 24px; box-shadow: 0 4px 12px color-mix(in srgb, var(--primary) 30%, transparent);" onclick="handle_primary_action()">
+                                {{ _("Pay Remaining Balance") }}
+                            </button>
+                `;
+            }
+            html += `
+                        </div>
+            `;
+
+            }
+        }
+        
+        html += `
+                    </div>
+                </div>
+            </div>
+        `;
+
+            html += `
+            </div>
+
+            <!-- Offer Letter & Documents Block -->
+            <div class="ui-card" style="padding: 32px; border-radius: 12px; border: 1px solid #e2e8f0; background: white;">
+                <h4 style="margin: 0 0 24px 0; display: flex; align-items: center; gap: 12px; color: #1e293b; font-weight: 700;">
+                    {{ _("Offer Letter") }}
+                </h4>
+                
+                <div style="display: flex; flex-direction: column; gap: 24px;">
+                    <div style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; background: #f8fafc;">
+                        <div style="display: flex; align-items: center; gap: 16px;">
+                            <div>
+                                <div style="font-weight: 700; color: #1e293b; font-size: 1.05rem;">{{ _("Provisional Offer Letter") }}</div>
+                                <div style="color: #475569; font-size: 0.9rem; margin-top: 2px;">${offer.program_name || offer.program || '-'}</div>
+                                <div style="color: #64748b; font-size: 0.85rem; margin-top: 4px;">{{ _("Issued on") }} ${offer.issue_date ? format_date_dd_mm_yyyy(offer.issue_date) : (offer.issued_on ? format_date_dd_mm_yyyy(offer.issued_on) : '-')}</div>
+                            </div>
+                        </div>
+                        
+                        ${offer.status !== 'Draft' ? '<button class="btn btn-default" style="border: 1px solid #e2e8f0; background: white; color: #475569; display: flex; align-items: center; gap: 8px; font-weight: 600; padding: 10px 16px; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);" onclick="window.open(\'/api/method/frappe.utils.print_format.download_pdf?doctype=Offer+Letter&name=' + offer.name + '&format=Offer+Letter&no_letterhead=0&letterhead=No+Letterhead&settings=%7B%7D&_lang=en\', \'_blank\')"><span class="material-symbols-outlined" style="font-size: 18px;">download</span> {{ _("Download PDF") }}</button>' : ''}
+                    </div>
+
+                    <div style="margin-top: 8px; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; height: 800px; background: #f8fafc; position: relative;">
+                        <iframe id="offer-letter-iframe" style="width: 100%; height: 100%; border: none;"></iframe>
+                    </div>
+                </div>
+            </div>
+            
+        </div>`;
+wrapper.html(html);
+	        
+	        if (rendered_content) {
+	            const iframe = document.getElementById('offer-letter-iframe');
+	            if (iframe) {
+	                // Strip any Frappe print.bundle CSS links that cause 404s
+	                // (they reference dist assets served only from the Frappe desk, not the portal)
+	                const cleaned_content = rendered_content
+	                    .replace(/<link[^>]+print\.bundle[^>]*>/gi, '')
+	                    .replace(/<link[^>]+frappe\/dist\/css\/print[^>]*>/gi, '');
+	                iframe.contentWindow.document.open();
+	                iframe.contentWindow.document.write(cleaned_content);
+	                iframe.contentWindow.document.close();
+	            }
+	        }
+	        
+	        const timer_element = document.getElementById('expiry-timer-display');
+	        if (timer_element) {
+	            start_expiry_timer(timer_element.dataset.deadline, timer_element.dataset.label);
+	        }
+	    }
+
+	    function handle_primary_action() {
+	        if (cur_offer_data.offer.status === 'Issued') {
+	            handle_accept();
+	        } else {
+	            handle_pay_fee();
+	        }
+	    }
+
+	    function show_processing(msg) {
+	        $('#processing-msg').text(msg || "{{ _('Processing...') }}");
+	        $('#processing-overlay').fadeIn(200);
+	    }
+
+	    function hide_processing() {
+	        $('#processing-overlay').fadeOut(200);
+	    }
+
+	    function handle_accept() {
+	        $('#accept-offer-modal').fadeIn(200);
+	    }
+
+	    function handle_reject() {
+	        showConfirm("{{ _('Are you sure you want to reject this admission offer? This action cannot be undone.') }}", function () {
+	            execute_reject();
+	        });
+	    }
+
+	    async function execute_reject() {
+	        show_processing("{{ _('Processing...') }}");
+	        try {
+	            await apiFetch('slcm.api.service.offer_service.reject_offer', {
+	                offer_name: cur_offer_data.offer.name,
+	                reason: 'Rejected by applicant from portal'
+	            });
+	            hide_processing();
+	            show_success({
+	                title: "{{ _('Offer Declined') }}",
+	                message: "{{ _('You have declined this admission offer. Redirecting to My Applications.') }}"
+	            });
+	            document.getElementById('success-modal').querySelector('button').onclick = function () {
+	                window.location.href = '/nlsat/merit-and-scholarship/admission_dashboard?panel=applications';
+	            };
+	        } catch (e) {
+	            hide_processing();
+	            showToast(e.message || "{{ _('Could not reject offer. Please try again.') }}", "error");
+	        }
+	    }
+
+	    async function execute_acceptance() {
+            $('#accept-offer-modal').fadeOut(200);
+	        show_processing("{{ _('Processing Acceptance...') }}");
+            const needs_accommodation = $('#accommodation_pref').val();
+            
+	        try {
+	            const r = await apiFetch('slcm.api.service.offer_service.accept_offer', { 
+                    offer_name: cur_offer_data.offer.name,
+                    needs_accommodation: needs_accommodation 
+                });
+	            if (r) {
+	                await apiFetch('slcm.api.service.offer_service.reject_applicant_other_offer', {
+	                    applicant: cur_offer_data.offer.applicant,
+	                    reason: 'Applicant accepted another offer ' + cur_offer_data.offer.name
+	                });
+
+	                // Re-fetch offer details so UI updates immediately: Accepted status (hides Reject button)
+	                // and fee breakdown with scholarship applied, without requiring a manual refresh.
+	                const offer_name = cur_offer_data.offer.name;
+	                const fresh = await apiFetch('slcm.api.service.offer_service.get_offer_details', { offer_name: offer_name });
+	                if (fresh && !fresh.error) {
+	                    cur_offer_data = fresh;
+	                    render_offer_detail(fresh);
+	                }
+
+	                hide_processing();
+
+	                if (cur_offer_data.online_payment_enabled) {
+	                    showToast("{{ _('Offer accepted successfully. Proceeding to fee payment.') }}", "success");
+	                    setTimeout(() => handle_pay_fee(), 1000);
+	                } else {
+	                    show_success({
+	                        title: "{{ _('Offer Accepted!') }}",
+	                        message: "{{ _('Congratulations! You have successfully accepted the admission offer. Our team will contact you for further steps.') }}"
+	                    });
+	                }
+	            } else {
+	                hide_processing();
+	            }
+	        } catch (e) {
+	            hide_processing();
+	            showToast(e.message, "error");
+	        }
+	    }
+
+	    function show_success(options) {
+	        $('#success-title').text(options.title || "{{ _('Success!') }}");
+	        $('#success-msg').text(options.message || "");
+	        $('#success-modal').fadeIn(200);
+	    }
+
+	    function handle_pay_fee() {
+	        const { offer, fee_breakdown, currency } = cur_offer_data;
+
+            let fee_html = '';
+            
+            if (offer.status === 'Accepted') {
+                // Paying Confirmation Fee - Show only Confirmation Fee amount
+                fee_html = `
+                    <div class="text-center mb-4">
+                        <div style="font-size: 2rem; font-weight: 800; color: #1e293b;">${format_currency(offer.payable_amount, currency)}</div>
+                        <div class="text-muted small font-weight-bold mt-1" style="letter-spacing: 0.05em;">{{ _("Confirmation Fee") }}</div>
+                    </div>
+                `;
+            } else {
+                // Paying Full Fee - Show Breakdown and Deduction
+                let active_fee_breakdown = fee_breakdown;
+                if (offer.needs_accommodation === 'No') {
+                    active_fee_breakdown = fee_breakdown.filter(f => !f.is_accommodation_fee);
+                }
+
+                const base_components = active_fee_breakdown.filter(f => !f.is_discount);
+                const deductions = active_fee_breakdown.filter(f => f.is_discount);
+                const total_full_fee = base_components.reduce((sum, f) => sum + f.amount, 0);
+
+                let breakdown_html = base_components.map(f => `
+                    <div class="d-flex justify-content-between py-2 border-bottom-dashed">
+                        <span class="text-muted">${f.component}</span>
+                        <span class="font-weight-bold color-dark">${format_currency(f.amount, currency)}</span>
+                    </div>
+                `).join('');
+
+                fee_html = `
+                    <div class="text-center mb-4">
+                        <div style="font-size: 2.25rem; font-weight: 800; color: var(--primary);">${format_currency(offer.payable_amount, currency)}</div>
+                        <div class="text-muted small font-weight-bold mt-1" style="letter-spacing: 0.05em;">{{ _("Final Payable Amount") }}</div>
+                    </div>
+
+                    <div class="mt-4 pt-2">
+                        <h6 class="text-muted small font-weight-bold mb-3" style="letter-spacing: 0.05em;">{{ _("Fee components") }}</h6>
+                        <div class="fee-breakdown-list">
+                            ${breakdown_html}
+                            <div class="d-flex justify-content-between py-2 border-bottom-dashed mt-2">
+                                <span class="font-weight-bold" style="color: #334155;">{{ _("Total Fee") }}</span>
+                                <span class="font-weight-bold" style="color: #334155;">${format_currency(total_full_fee, currency)}</span>
+                            </div>
+                            ${deductions.map(f => `
+                                <div class="d-flex justify-content-between py-2 border-bottom-dashed" style="color: #16a34a;">
+                                    <span>${f.component}</span>
+                                    <span class="font-weight-bold">-${format_currency(Math.abs(f.amount), currency)}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+	        fee_html += `
+	            <div class="mt-4 p-3 rounded" style="background: #fefce8; border: 1px solid #fef08a; display: flex; align-items: flex-start; gap: 12px;">
+                    <span class="material-symbols-outlined" style="color: #ca8a04; font-size: 20px;">info</span>
+	                <div style="font-size: 0.9rem; color: #475569; line-height: 1.5;">
+	                    {{ _("You will be redirected to a secure payment gateway to complete your transaction.") }}
+	                </div>
+	            </div>
+
+	            <button class="btn btn-pay mt-4" style="width: 100%; background: var(--primary); color: #fff; font-weight: 700; border: none; padding: 14px; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 1.05rem; box-shadow: 0 4px 12px color-mix(in srgb, var(--primary) 30%, transparent);" onclick="proceed_to_payment()">
+                    <span class="material-symbols-outlined" style="font-size: 20px;">lock</span>
+	                {{ _("Proceed to Payment") }}
+	            </button>
+	        `;
+
+	        $('#payment-modal-body').html(fee_html);
+	        $('#payment-modal').fadeIn(200);
+	    }
+
+	    function close_payment_modal() { $('#payment-modal').fadeOut(200); }
+
+	    function proceed_to_payment() {
+	        close_payment_modal();
+	        initiate_payment();
+	    }
+
+	    async function initiate_payment() {
+	        show_processing("{{ _('Launching Secure Gateway...') }}");
+	        try {
+	            const data = await apiFetch('slcm.api.service.offer_service.create_offer_razorpay_order', { offer_name: cur_offer_data.offer.name });
+	            hide_processing();
+	            if (data) {
+	                if (data.zero_amount) {
+	                    show_success({
+	                        title: "{{ _('Payment Completed!') }}",
+	                        message: data.message || "{{ _('Your fee payment has been recorded successfully.') }}"
+	                    });
+	                    setTimeout(() => window.location.reload(), 1500);
+	                } else {
+	                    open_razorpay_modal(data);
+	                }
+	            }
+	        } catch (e) {
+	            hide_processing();
+	            showToast(e.message, "error");
+	        }
+	    }
+
+
+	    function open_razorpay_modal(data) {
+	        const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim() || "#1a202c";
+	        const options = {
+	            key: data.key_id,
+	            amount: data.amount,
+	            currency: data.currency,
+	            name: "{{ _('Admission Fee') }}",
+	            description: "{{ _('Offer Acceptance Fee Payment') }}",
+	            order_id: data.order_id,
+	            handler: function (response) { verify_payment(response); },
+	            prefill: {
+	                name: cur_offer_data.applicant.candidate_name,
+	                email: cur_offer_data.applicant.email || ""
+	            },
+	            theme: { color: primaryColor },
+	            modal: {
+	                ondismiss: function () {
+	                    if (!payment_processed) {
+	                        log_payment_failure(cur_offer_data.offer.name, data.order_id, { "message": "User closed the payment modal" });
+	                    }
+	                }
+	            }
+	        };
+
+	        if (typeof Razorpay === 'undefined') {
+	            show_processing("{{ _('Loading Payment Securely...') }}");
+	            $.getScript('https://checkout.razorpay.com/v1/checkout.js', function () {
+	                hide_processing();
+	                const rzp = new Razorpay(options);
+	                rzp.on('payment.failed', function (response) {
+	                    log_payment_failure(cur_offer_data.offer.name, data.order_id, response.error);
+	                });
+	                rzp.open();
+	            });
+	        } else {
+	            const rzp = new Razorpay(options);
+	            rzp.on('payment.failed', function (response) {
+	                log_payment_failure(cur_offer_data.offer.name, data.order_id, response.error);
+	            });
+	            rzp.open();
+	        }
+	    }
+
+	    function log_payment_failure(offer_name, order_id, error_data) {
+	        apiFetch("slcm.api.service.fee_service.log_payment_failure", {
+	            offer_name: offer_name,
+	            order_id: order_id,
+	            error_data: error_data
+	        });
+	    }
+
+	    async function verify_payment(response) {
+	        show_processing("{{ _('Verifying Payment Status...') }}");
+	        try {
+	            const r = await apiFetch('slcm.api.service.offer_service.verify_offer_payment', {
+	                razorpay_payment_id: response.razorpay_payment_id,
+	                razorpay_order_id: response.razorpay_order_id,
+	                razorpay_signature: response.razorpay_signature,
+	                offer_name: cur_offer_data.offer.name
+	            });
+	            if (r && r.status === 'success') {
+	                payment_processed = true;
+	                show_processing("{{ _('Payment Successful! Finalizing...') }}");
+	                setTimeout(() => window.location.reload(), 1500);
+	            } else {
+	                hide_processing();
+	                alert("{{ _('Payment verification failed. Please contact support.') }}");
+	            }
+	        } catch (e) {
+	            hide_processing();
+	            showToast(e.message, "error");
+	        }
+	    }
+
+	    function handle_download() {
+	        const offer = cur_offer_data.offer;
+	        const url = `/api/method/slcm.admission.utils.web.download_offer_letter?offer_letter=${encodeURIComponent(offer.name)}`;
+	        window.open(url, '_blank');
+	    }
+
+	    async function handle_download_receipt(fee_type) {
+	        const offer = cur_offer_data.offer;
+	        try {
+	            let filters = { offer_letter: offer.name, docstatus: ['<', 2] };
+	            if (fee_type) {
+	                filters.fee_type = fee_type;
+	            }
+	            
+	            const r = await apiFetch('frappe.client.get_value', {
+	                doctype: 'Applicant Payment Receipt',
+	                filters: filters,
+	                fieldname: 'name'
+	            });
+	            if (r && r.name) {
+	                const url = `/api/method/slcm.admission.utils.web.download_receipt?receipt_name=${encodeURIComponent(r.name)}`;
+	                window.open(url, '_blank');
+	            } else if (fee_type) {
+	                // Fallback to direct url with fee_type if get_value fails
+	                const url = `/api/method/slcm.admission.utils.web.download_receipt?fee_type=${encodeURIComponent(fee_type)}&offer_letter=${encodeURIComponent(offer.name)}`;
+	                window.open(url, '_blank');
+	            } else {
+	                showToast("{{ _('Payment Receipt not found. It might still be generating, please refresh in a moment.') }}", "info");
+	            }
+	        } catch (e) { showToast(e.message, "error"); }
+	    }
+
+	    function render_error(message) {
+	        $('#offer-detail-wrapper').html(`<div class="text-center p-5 mt-5"><h4>{{ _("Error") }}</h4><p>${message}</p><a href="/nlsat/merit-and-scholarship/admission_dashboard?panel=applications" class="btn btn-primary-adm" style="margin-right:8px;">{{ _("My Applications") }}</a><a href="/nlsat/offer_letter/offer-letter-list" class="btn btn-outline-adm">{{ _("Offer Letter List") }}</a></div>`);
+	    }
+	    {{ portal_sidebar_js() }}
+</script>
+{% endblock %}

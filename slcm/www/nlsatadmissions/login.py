@@ -20,13 +20,11 @@ def _fmt_date(date_obj):
 
 
 def get_context(context):
-    from slcm.admission.utils.nlsat_portal import (
-        DOMESTIC, INTERNATIONAL, get_portal_type_from_path, get_portal_base, set_portal_cookie,
-    )
+    from slcm.admission.utils.nlsat_portal import DOMESTIC, get_portal_base, set_portal_cookie
 
-    # /nlsatadmissions/login (Indian Nationals) or /nlsat-international/login.
-    # Remember the portal so shared pages send the candidate back to this login.
-    portal_type = get_portal_type_from_path(frappe.local.request.path) or DOMESTIC
+    # /nlsatadmissions/login — Indian Nationals (International login: www/nlsat-international/login.py).
+    # Remember the portal so shared /nlsat pages send the candidate back to this login.
+    portal_type = DOMESTIC
     set_portal_cookie(portal_type)
     context.portal_type      = portal_type
     context.portal_base      = get_portal_base(portal_type)
@@ -44,10 +42,10 @@ def get_context(context):
         if user_type == "System User":
             frappe.local.flags.redirect_location = "/desk"
         else:
-            frappe.local.flags.redirect_location = redirect_to or "/merit-and-scholarship/admission_dashboard?panel=profile"
+            frappe.local.flags.redirect_location = redirect_to or "/nlsat/profile"
         raise frappe.Redirect
 
-    context.redirect_to = redirect_to or "/merit-and-scholarship/admission_dashboard?panel=profile"
+    context.redirect_to = redirect_to or "/nlsat/profile"
 
     from slcm.admission.utils.portal import get_portal_config
     portal_config = get_portal_config()
@@ -97,7 +95,7 @@ def get_context(context):
                 active_cycle_name,
                 ["cycle_start_date", "cycle_end_date",
                  "application_start_date", "application_end_date", "admission_year",
-                 "enable_applicant_register_tab", "enable_international_register_tab", "academic_year"],
+                 "enable_applicant_register_tab", "academic_year"],
                 as_dict=True,
             ) or {}
             active_cycle = frappe._dict({
@@ -110,13 +108,9 @@ def get_context(context):
             context.is_closed = False
             active_year = row.get("academic_year") or row.get("admission_year") or ""
 
-            register_tab_field = (
-                "enable_international_register_tab" if portal_type == INTERNATIONAL
-                else "enable_applicant_register_tab"
-            )
             context.show_register_tab = (
                 not context.is_closed
-                and cint(row.get(register_tab_field))
+                and cint(row.get("enable_applicant_register_tab"))
                 and not cint(frappe.db.get_single_value("Website Settings", "disable_signup"))
             )
         else:

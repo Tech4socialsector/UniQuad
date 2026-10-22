@@ -313,7 +313,7 @@ def _send_interview_slot_email(allocation, email):
         doc_dict = allocation.as_dict()
         args = {
             "doc": doc_dict,
-            "portal_url": get_url("/merit-and-scholarship/admission_dashboard?panel=applications")
+            "portal_url": get_url("/nlsat/merit-and-scholarship/admission_dashboard?panel=applications")
         }
 
         subject = frappe.render_template(template.subject, args)
@@ -372,7 +372,7 @@ def _send_interview_slot_notification(allocation, email):
                 <p>Date: <strong>{format_date(allocation.interview_date) or "—"}</strong></p>
                 <p>Time: <strong>{format_time(allocation.interview_time) or "—"}</strong></p>
                 <p>Staff: <strong>{allocation.staff_name or "—"}</strong></p>
-                <p><a href="/merit-and-scholarship/admission_dashboard?panel=applications" style="color: #16a34a; font-weight: bold;">Click here to view details.</a></p>
+                <p><a href="/nlsat/merit-and-scholarship/admission_dashboard?panel=applications" style="color: #16a34a; font-weight: bold;">Click here to view details.</a></p>
             """
             
             frappe.get_doc({
@@ -384,7 +384,7 @@ def _send_interview_slot_notification(allocation, email):
                 "document_type": "Interview Seat Allocation",
                 "document_name": allocation.name,
                 "from_user": frappe.session.user,
-                "link": "/merit-and-scholarship/admission_dashboard?panel=applications"
+                "link": "/nlsat/merit-and-scholarship/admission_dashboard?panel=applications"
             }).insert(ignore_permissions=True)
         except Exception:
             frappe.log_error(message=frappe.get_traceback(), title=f"Interview Slot Notification Failed: {allocation.name}")

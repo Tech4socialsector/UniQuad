@@ -341,7 +341,7 @@ class EntranceTestList(Document):
 
                     # Assign a dynamic URL for lazy PDF generation to maintain fast bulk processing speeds
                     # We use allocation.name here since the document is now safely saved and has an ID
-                    dummy_url = f"/api/method/slcm.www.eligibility.entrance_test_seat_allocation.download_admit_card?allocation_name={allocation.name}"
+                    dummy_url = f"/api/method/slcm.www.nlsat.eligibility.entrance_test_seat_allocation.download_admit_card?allocation_name={allocation.name}"
                     frappe.db.set_value(allocation.doctype, allocation.name, "admit_card_download", dummy_url)
 
                 else:
@@ -748,7 +748,7 @@ def _send_allocation_email(allocation, email, allocation_type=None):
         
         args = {
             "doc": doc_dict,
-            "portal_url": get_url("/merit-and-scholarship/admission_dashboard?panel=applications")
+            "portal_url": get_url("/nlsat/merit-and-scholarship/admission_dashboard?panel=applications")
         }
 
         subject = frappe.render_template(template.subject, args)
@@ -1029,7 +1029,7 @@ def generate_and_store_admit_card(allocation, is_rescheduled=False, html_content
             html_content = re.sub(r'<script\b[^>]*>([\s\S]*?)<\/script>', '', html_content)
             html = html_content
         else:
-            from slcm.www.eligibility.entrance_test_seat_allocation import get_admit_card_html
+            from slcm.www.nlsat.eligibility.entrance_test_seat_allocation import get_admit_card_html
             html = get_admit_card_html(allocation, is_rescheduled)
             
         pdf_content = get_pdf(html, options={"load-error-handling": "ignore"})
@@ -1097,13 +1097,13 @@ def _send_allocation_notification(allocation, email):
                 message_body = f"""
                     <p>Your online entrance test has been scheduled.</p>
                     <p>Please check your admission dashboard to view the details.</p>
-                    <p><a href="/merit-and-scholarship/admission_dashboard?panel=applications" style="color: #16a34a; font-weight: bold;">Click here to view details.</a></p>
+                    <p><a href="/nlsat/merit-and-scholarship/admission_dashboard?panel=applications" style="color: #16a34a; font-weight: bold;">Click here to view details.</a></p>
                 """
             else:
                 message_body = f"""
                     <p>An entrance test seat has been allocated for you in <strong>"{allocation.entrance_test_list}"</strong>.</p>
                     <p>Please check your admission dashboard to view the details and select your preferred center.</p>
-                    <p><a href="/merit-and-scholarship/admission_dashboard?panel=applications" style="color: #16a34a; font-weight: bold;">Click here to view details.</a></p>
+                    <p><a href="/nlsat/merit-and-scholarship/admission_dashboard?panel=applications" style="color: #16a34a; font-weight: bold;">Click here to view details.</a></p>
                 """
             
             frappe.get_doc({
@@ -1115,7 +1115,7 @@ def _send_allocation_notification(allocation, email):
                 "document_type": "Entrance Test Seat Allocation",
                 "document_name": allocation.name,
                 "from_user": frappe.session.user,
-                "link": "/merit-and-scholarship/admission_dashboard?panel=applications"
+                "link": "/nlsat/merit-and-scholarship/admission_dashboard?panel=applications"
             }).insert(ignore_permissions=True)
         except Exception:
             # Silently fail for individual notification logs if one user has issues, but log it

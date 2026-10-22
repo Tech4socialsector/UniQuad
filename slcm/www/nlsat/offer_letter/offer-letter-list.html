@@ -1,0 +1,699 @@
+<!--
+  TESTING CHECKLIST — complete before sending for approval
+  
+  1. Technical check
+     - [ ] Font loads correctly in Chrome, Firefox, Safari
+     - [ ] Font applies to ALL sections including cards, tables, modals
+     - [ ] Font size changes (Small/Normal/Large) reflect across heading, subheading, body
+     - [ ] Icons render on all pages
+     - [ ] No console errors (missing CDN, broken paths, 404s)
+     - [ ] Page loads without FOUC (flash of unstyled content)
+
+  2. Security check
+     - [ ] No API keys or credentials in HTML source
+     - [ ] CDN links include integrity and crossorigin attributes
+     - [ ] No inline event handlers (onclick= etc.) added during this change
+
+  3. UI / Usability check
+     - [ ] Mobile breakpoints still work correctly
+     - [ ] Button sizes and spacing unchanged
+     - [ ] Nav link sizes unchanged
+     - [ ] No layout shifts caused by font change
+
+  4. Language & spell check
+     - [ ] English (UK/India) spellings used throughout
+     - [ ] Sentence case on labels and descriptions
+     - [ ] Title Case on headings, buttons, nav
+     - [ ] No ALL CAPS in visible text
+     - [ ] Active voice used
+     - [ ] Instructions are short and direct
+     - [ ] No repeated phrases across heading levels
+     - [ ] Terminology consistent (programme, enrol, sign in, etc.)
+-->
+
+{% extends "slcm/www/nlsat/admission_base.html" %}
+{% from "slcm/www/nlsat/_sidebar.html" import portal_sidebar_css, portal_sidebar_html, portal_sidebar_js %}
+
+{% block title %}My Admission Offers{% endblock %}
+
+{% block adm_container_extra_class %}portal-layout-container{% endblock %}
+
+{% block theme_vars %}
+<style>
+    :root {
+        --primary: {{ portal_config.get('primary_color', '#1a3c6e') if portal_config and portal_config.get else (portal_config.primary_color if portal_config else '#1a3c6e') }};
+        --secondary: {{ portal_config.get('secondary_color', '#c8a14b') if portal_config and portal_config.get else (portal_config.secondary_color if portal_config else '#c8a14b') }};
+        --accent: {{ portal_config.get('secondary_color', '#c8a14b') if portal_config and portal_config.get else (portal_config.secondary_color if portal_config else '#c8a14b') }};
+        --primary-light: color-mix(in srgb, var(--primary) 12%, transparent);
+        --primary-mid: color-mix(in srgb, var(--primary) 25%, transparent);
+        --text-1: #1f2937;
+        --text-2: #374151;
+        --text-3: #6b7280;
+        --text-4: #9ca3af;
+        --border: #e5e7eb;
+        --bg: var(--secondary);
+        --card-bg: #ffffff;
+        --navbar-color: {{ portal_config.get('navbar_color','#2B2E4A') if portal_config and portal_config.get else (portal_config.navbar_color if portal_config else '#2B2E4A') }};
+        --radius: 14px;
+    }
+</style>
+{% endblock %}
+
+{% block page_css %}
+{{ get_typography_style_block(
+    portal_config.font_family,
+    font_size_heading=portal_config.font_size_heading,
+    font_size_subheading=portal_config.font_size_subheading,
+    font_size_body=portal_config.font_size_body,
+    font_size_form_title=portal_config.font_size_form_title,
+    font_size_toast=portal_config.font_size_toast,
+    primary_color=portal_config.primary_color,
+    secondary_color=portal_config.secondary_color,
+    navbar_color=portal_config.navbar_color,
+    footer_color=portal_config.footer_color,
+    button_border_radius=portal_config.button_border_radius
+) }}
+
+<style>
+    body,
+    .adm-main,
+    .adm-container {
+        background: var(--secondary) !important;
+    }
+
+    .offer-card {
+        position: relative;
+        background: var(--card-bg);
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+        transition: all 0.3s ease;
+        cursor: pointer;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .offer-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        border-color: var(--primary);
+    }
+
+    .card-top-accent {
+        height: 8px;
+        background: var(--primary);
+        width: 100%;
+    }
+
+    .card-body {
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        flex: 1;
+    }
+
+    .status-header {
+        margin-bottom: 4px;
+    }
+
+    .status-text {
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: var(--primary);
+    }
+
+    .status-text.withdrawn, .status-text.expired, .status-text.rejected { color: var(--text-2); }
+    .status-text.accepted, .status-text.payment-completed { color: #16a34a; }
+
+    .academic-year {
+        font-size: 15px;
+        font-weight: 800;
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .program-name {
+        font-size: 16px;
+        font-weight: 800;
+        color: var(--text-1);
+        line-height: 1.4;
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: 1.5fr 1fr;
+        gap: 16px;
+        margin-top: auto;
+    }
+
+    .info-item {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .info-label {
+        font-size: 12px;
+        font-weight: 700;
+        color: #94a3b8;
+        letter-spacing: 0.03em;
+    }
+
+    .info-value {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-2);
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        line-height: 1.3;
+    }
+
+    .info-value i {
+        color: var(--primary);
+        margin-top: 2px;
+    }
+
+    .valid-until {
+        margin-top: 8px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        background: #fff7ed;
+        border: 1px solid #ffedd5;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .valid-label {
+        font-size: 11px;
+        font-weight: 700;
+        color: #c2410c;
+    }
+
+    .valid-value {
+        font-size: 12px;
+        font-weight: 800;
+        color: #9a3412;
+    }
+
+    .card-footer {
+        padding: 20px 24px;
+        background: #f8fafc;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-top: 1px solid var(--border);
+    }
+
+    .price-container {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .price-label {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-3);
+    }
+
+    .price-value {
+        font-size: 16px;
+        font-weight: 800;
+        color: var(--primary);
+    }
+
+    .rupee-sym {
+        font-size: 14px;
+        margin-right: 2px;
+    }
+
+    .scholarship-info {
+        font-size: 11px;
+        font-weight: 700;
+        color: #16a34a;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .action-button {
+        background: var(--primary);
+        color: white;
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+    }
+
+    .offer-card:hover .action-button {
+        background: var(--secondary);
+    }
+    .portal-header {
+        margin-bottom: 28px;
+        text-align: start;
+    }
+
+    .portal-header h2 {
+        font-size: 30px;
+        font-weight: 800;
+        color: var(--primary);
+        margin-bottom: 2px;
+        letter-spacing: -0.02em;
+    }
+
+    .portal-header p {
+        font-size: 0.8rem;
+        color: #64748b;
+    }
+
+    /* ── Modern Pagination ──────────────────────────── */
+    .modern-pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 32px;
+        margin-bottom: 16px;
+    }
+    .modern-pagination a,
+    .modern-pagination button,
+    .modern-pagination span {
+        background: white;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        width: 38px;
+        height: 38px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        color: var(--text-2);
+        font-weight: 600;
+        font-size: 14px;
+        transition: all 0.2s ease;
+    }
+    .modern-pagination a:hover,
+    .modern-pagination button:hover {
+        border-color: var(--primary);
+        color: var(--primary);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    .modern-pagination a.active,
+    .modern-pagination button.active {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+    }
+    .modern-pagination span.disabled,
+    .modern-pagination button[disabled] {
+        opacity: 0.5;
+        cursor: not-allowed;
+        background: #f8fafc;
+        color: var(--text-4);
+        transform: none;
+        box-shadow: none;
+        border-color: var(--border);
+    }
+
+    {{ portal_sidebar_css() }}
+
+    /* ── Animations ───────────────────────────────────── */
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(18px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in-up {
+        animation: fadeInUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        opacity: 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% set _pc = portal_config if (portal_config and portal_config.get) else frappe.get_doc("Applicant Portal Config", "Applicant Portal Config", ignore_permissions=True) %}
+{% set _mission_txt = (_pc.get('mission_text') if _pc.get else _pc.mission_text) or '' %}
+
+    <div class="portal-page-wrapper">
+        <div class="portal-page-inner">
+
+            <!-- ══ SHARED SIDEBAR ══════════════════════════════════════ -->
+            {{ portal_sidebar_html(active='offer_letter', portal_config=_pc, mission_txt=_mission_txt) }}
+
+            <!-- ══ MAIN CONTENT ═══════════════════════════════════════════ -->
+            <div class="portal-content-col">
+                <div id="offer-list-wrapper">
+                    <div class="text-center p-5 mt-5" id="loader">
+                        <div class="spinner-border" style="color: var(--primary);" role="status">
+                            <span class="sr-only">{{ _("Loading...") }}</span>
+                        </div>
+                        <p class="mt-3 text-muted">{{ _("Fetching your admission offers...") }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function format_currency(v, c) {
+        var code = (c || 'INR').toString().toUpperCase();
+        var num = parseFloat(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        if (code === 'INR' || !c) {
+            return '<span class="rupee-sym" aria-hidden="true">₹</span>' + num;
+        }
+        return code + ' ' + num;
+    }
+
+    function format_date_dd_mm_yyyy(date_str) {
+        if (!date_str) return '';
+        const clean_date = date_str.split(' ')[0];
+        const parts = clean_date.split('-');
+        if (parts.length === 3) {
+            return `${parts[2]}-${parts[1]}-${parts[0]}`;
+        }
+        return clean_date;
+    }
+
+    // Fallback for translation helper
+    window._ = window._ || function (s) { return s; };
+
+    let current_page = 0;
+    const page_size = 20;
+
+    document.addEventListener('DOMContentLoaded', function () {
+        fetch_offers();
+    });
+
+    async function fetch_offers() {
+        console.log("Fetching offers...");
+        try {
+            const data = await apiFetch('slcm.admission.utils.web.get_offer_list', {
+                limit_start: current_page * page_size,
+                limit_page_length: page_size
+            }, 'GET');
+            console.log("Offers data received:", data);
+            if (!data) {
+                render_error("{{ _('No response from server') }}");
+                return;
+            }
+            render_offer_list(data);
+        } catch (e) {
+            console.error("Fetch offers failed:", e);
+            render_error(e.message || "{{ _('Unknown Error') }}");
+        }
+    }
+
+    function render_offer_list(data) {
+        if (!data || typeof data !== 'object') {
+            render_error("{{ _('Invalid data received from server') }}");
+            return;
+        }
+        const { offers, total_count, applicant_name, is_admin, currency } = data;
+        const wrapper = $('#offer-list-wrapper');
+
+        if (!offers || offers.length === 0) {
+            render_error("{{ _('No admission offers found.') }}");
+            return;
+        }
+
+        let html = `
+        <div class="portal-header">
+            <h2>${is_admin ? "{{ _('Admission Offers Registry') }}" : "{{ _('My Admission Offers') }}"}</h2>
+            <p>${is_admin ? "{{ _('Administrative overview of all issued offers.') }}" : "{{ _('Welcome back, ') }}" + applicant_name + ". {{ _('Review your offers below.') }}"}</p>
+        </div>
+        <div class="row g-4">
+    `;
+        offers.forEach(offer => {
+            const status = offer.status || 'Issued';
+            const status_class = status.toLowerCase().replace(/ /g, '-');
+            const display_status = status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+            const _encOffer = encodeURIComponent(offer.name || '');
+            const _issuedDate = offer.issued_on ? new Date(offer.issued_on).toLocaleString('en-GB', {day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true}) : '—';
+            const _campusIcon = offer.campus_image ? `<img src="${offer.campus_image}" style="width: 16px; height: 16px; object-fit: cover; border-radius: 4px;">` : `<i class="fa fa-map-marker"></i>`;
+            const _avatar = offer.candidate_photo ? `<img src="${offer.candidate_photo}" style="width: 100%; height: 100%; object-fit: cover;">` : `<div style="width: 100%; height: 100%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: bold;"><i class="fa fa-user"></i></div>`;
+            
+            html += `
+<div class="col-12 col-lg-6 col-xl-4 mb-4">
+    <div class="offer-card" data-offer="${_encOffer}" style="border-top: 4px solid var(--primary);">
+        <div class="card-body">
+            <div class="status-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <span class="status-text ${status_class}" style="font-size: 14px; font-weight: 700; color: #16a34a;">
+                    ${display_status.toUpperCase()}
+                </span>
+                <div class="candidate-avatar" style="width: 80px; height: 80px; border-radius: 12px; overflow: hidden; flex-shrink: 0; background: #f5f5f5; box-shadow: 0 4px 12px rgba(0,0,0,.1);">
+                    ${_avatar}
+                </div>
+            </div>
+
+            <div class="academic-year" style="color: #9f1239; font-weight: 700; margin-top: -12px;">
+                <span class="material-symbols-outlined" style="font-size: 16px; margin-right: 4px; vertical-align: middle;">calendar_today</span>
+                ${offer.academic_year || '2026-27'}
+            </div>
+            
+            <div class="program-name" style="font-size: 18px; font-weight: 800; color: var(--text-1); margin-top: 16px;">${offer.program}</div>
+
+            <div class="info-grid" style="margin-top: 24px; display: grid; grid-template-columns: 1.5fr 1fr; gap: 16px;">
+                <div class="info-item">
+                    <span class="info-label" style="font-size: 13px; font-weight: 600; color: #94a3b8;">Campus</span>
+                    <div class="info-value" style="font-size: 14px; font-weight: 600; color: var(--text-2); display: flex; align-items: center; gap: 8px;">
+                        ${_campusIcon}
+                        <span>${offer.campus_name || offer.campus}</span>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <span class="info-label" style="font-size: 13px; font-weight: 600; color: #94a3b8;">Issued On</span>
+                    <div class="info-value" style="font-size: 14px; font-weight: 600; color: var(--text-2);">
+                        <span>${_issuedDate}</span>
+                    </div>
+                </div>
+            </div>
+
+            ${(() => {
+                let deadline_date = null;
+                let deadline_label = '';
+                if (offer.status === 'Issued' && offer.offer_acceptance_deadline) {
+                    deadline_date = offer.offer_acceptance_deadline;
+                    deadline_label = 'Offer Expiry';
+                } else if (offer.status === 'Accepted' && offer.confirmation_fee_deadline) {
+                    deadline_date = offer.confirmation_fee_deadline;
+                    deadline_label = 'Confirmation Fee Expiry';
+                } else if (offer.status === 'Confirmation Fee Paid' && offer.payment_deadline) {
+                    deadline_date = offer.payment_deadline;
+                    deadline_label = 'Admission Fee Expiry';
+                } else if ((offer.status === 'Issued' || offer.status === 'Accepted') && offer.payment_deadline) {
+                    deadline_date = offer.payment_deadline;
+                    deadline_label = 'Valid Until';
+                }
+                
+                if (deadline_date) {
+                    return `
+                        <div class="valid-until" style="margin-top: 24px; padding: 16px; border-radius: 8px; background: #fff7ed; border: 1px solid #ffedd5; display: flex; align-items: center; justify-content: space-between;">
+                            <span class="valid-label" style="font-size: 13px; font-weight: 700; color: #c2410c;">${deadline_label}</span>
+                            <span class="valid-value offer-timer" data-deadline="${deadline_date}" style="font-size: 14px; font-weight: 800; color: #9a3412;">
+                                ${format_date_dd_mm_yyyy(deadline_date)}
+                            </span>
+                        </div>
+                    `;
+                }
+                return '';
+            })()}
+
+        </div>
+
+        <div class="card-footer" style="padding: 24px; background: #f8fafc; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">
+            <div class="price-container" style="display: flex; flex-direction: column; gap: 4px;">
+                <span class="price-label" style="font-size: 14px; font-weight: 600; color: #64748b;">Admission Fee</span>
+                <div class="price-value" style="font-size: 18px; font-weight: 800; color: #9f1239;">
+                    ${format_currency(offer.final_payable_amount || offer.payable_amount, currency)}
+                </div>
+                ${offer.scholarship_amount > 0 ? `
+                    <div class="scholarship-info" style="font-size: 12px; font-weight: 700; color: #16a34a; display: flex; align-items: center; gap: 4px;">
+                        <i class="fa fa-check-circle"></i> Scholarship Applied
+                    </div>
+                ` : ''}
+            </div>
+
+            <div class="action-button" style="background: #9f1239; color: white; width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; box-shadow: 0 4px 12px rgba(159, 18, 57, 0.3);">
+                <span class="material-symbols-outlined">arrow_forward</span>
+            </div>
+        </div>
+    </div>
+</div>
+`;
+        });
+
+        html += `</div>`;
+
+        // Pagination UI
+        if (total_count > page_size) {
+            const total_pages = Math.ceil(total_count / page_size);
+            html += `
+                <div class="modern-pagination">
+            `;
+
+            // Previous button
+            if (current_page > 0) {
+                html += `
+                    <button type="button" onclick="change_page(${current_page - 1})" title="Previous Page">
+                        <span class="material-symbols-outlined" style="font-size:20px;">chevron_left</span>
+                    </button>
+                `;
+            } else {
+                html += `
+                    <span class="disabled">
+                        <span class="material-symbols-outlined" style="font-size:20px;">chevron_left</span>
+                    </span>
+                `;
+            }
+
+            // Page numbers
+            const delta = 2; // range around current_page
+            const range = [];
+            const rangeWithDots = [];
+            let l;
+
+            for (let i = 1; i <= total_pages; i++) {
+                if (i === 1 || i === total_pages || (i >= current_page + 1 - delta && i <= current_page + 1 + delta)) {
+                    range.push(i);
+                }
+            }
+
+            for (let i of range) {
+                if (l) {
+                    if (i - l === 2) {
+                        rangeWithDots.push(l + 1);
+                    } else if (i - l > 2) {
+                        rangeWithDots.push('...');
+                    }
+                }
+                rangeWithDots.push(i);
+                l = i;
+            }
+
+            rangeWithDots.forEach(p => {
+                if (p === '...') {
+                    html += `<span class="disabled" style="border:none;background:transparent;box-shadow:none;">...</span>`;
+                } else {
+                    const pageIndex = p - 1;
+                    html += `<button type="button" class="${pageIndex === current_page ? 'active' : ''}" onclick="change_page(${pageIndex})">${p}</button>`;
+                }
+            });
+
+            // Next button
+            if (current_page < total_pages - 1) {
+                html += `
+                    <button type="button" onclick="change_page(${current_page + 1})" title="Next Page">
+                        <span class="material-symbols-outlined" style="font-size:20px;">chevron_right</span>
+                    </button>
+                `;
+            } else {
+                html += `
+                    <span class="disabled">
+                        <span class="material-symbols-outlined" style="font-size:20px;">chevron_right</span>
+                    </span>
+                `;
+            }
+
+            html += `
+                </div>
+            `;
+        }
+
+        wrapper.html(html);
+        wrapper.off('click', '.offer-card').on('click', '.offer-card', function () {
+            var enc = this.getAttribute('data-offer');
+            if (enc) {
+                window.location.href = '/nlsat/offer_letter/offer-letter-detail?offer=' + enc;
+            }
+        });
+        start_offer_timers();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function change_page(page) {
+        current_page = page;
+        fetch_offers();
+    }
+
+    function start_offer_timers() {
+        const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+
+        const update_timers = () => {
+            $('.offer-timer').each(function () {
+                const $this = $(this);
+                const $wrapper = $this.closest('.offer-timer-wrapper');
+                const deadline_str = $this.data('deadline');
+                const $label = $this.prev('small'); // To update Expiry label
+                if (!deadline_str) return;
+
+                let deadline_val = deadline_str;
+                if (deadline_str.length === 10) deadline_val += " 23:59:59";
+
+                const deadline = new Date(deadline_val).getTime();
+                const now = new Date().getTime();
+                const distance = deadline - now;
+
+                if (distance < 0) {
+                    clearInterval(x);
+                    $this.text("{{ _('EXPIRED') }}");
+                    $this.closest('div').css({
+                        'background': '#fef2f2',
+                        'border-color': '#fecaca'
+                    });
+                    $this.css('color', '#dc2626');
+                    $this.prev().css('color', '#991b1b');
+                    return;
+                }
+
+                if (distance > 24 * 60 * 60 * 1000) {
+                    // More than 24 hours
+                    $label.text("{{ _('Expiry Date') }}");
+                    $this.text(format_date_dd_mm_yyyy(deadline_str));
+                } else {
+                    // 24 hours or less
+                    $label.text("{{ _('Expiry Timer') }}");
+                    const hours = Math.floor(distance / (1000 * 60 * 60));
+                    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+                    const display =
+                        (hours < 10 ? "0" + hours : hours) + ":" +
+                        (minutes < 10 ? "0" + minutes : minutes) + ":" +
+                        (seconds < 10 ? "0" + seconds : seconds);
+
+                    $this.text(display);
+                }
+            });
+        };
+
+        setInterval(update_timers, 1000);
+        update_timers();
+    }
+
+    function render_error(message) {
+        $('#offer-list-wrapper').html(`
+        <div class="text-center p-5 mt-5">
+            <i class="fa fa-folder-open text-muted mb-4 opacity-25" style="font-size: 64px !important; color: var(--primary) !important;"></i>
+            <p class="text-muted" style="font-size: 22px !important;">${message}</p>
+        </div>
+    `);
+    }
+
+    {{ portal_sidebar_js() }}
+    </script>
+    {% endblock %}

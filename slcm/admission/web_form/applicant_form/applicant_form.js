@@ -773,7 +773,7 @@ function _buildShell(ws, cfg, user, uinfo) {
 		'<div class="adm-nav-links">' +
 			(portalActive ? '<a href="' + _nlsatPortalBase() + '" style="color:rgba(255,255,255,.85);text-decoration:none;font-size:14px;font-weight:500;white-space:nowrap;" onmouseover="this.style.color=\'#fff\'" onmouseout="this.style.color=\'rgba(255,255,255,.85)\'">Admission</a>' : '') +
 			// Same route as the admission portal navbar (admission_base.html)
-			'<a href="/merit-and-scholarship/helpdesk" style="color:rgba(255,255,255,.85);text-decoration:none;font-size:14px;font-weight:500;white-space:nowrap;" onmouseover="this.style.color=\'#fff\'" onmouseout="this.style.color=\'rgba(255,255,255,.85)\'">Helpdesk</a>' +
+			'<a href="/nlsat/merit-and-scholarship/helpdesk" style="color:rgba(255,255,255,.85);text-decoration:none;font-size:14px;font-weight:500;white-space:nowrap;" onmouseover="this.style.color=\'#fff\'" onmouseout="this.style.color=\'rgba(255,255,255,.85)\'">Helpdesk</a>' +
 			(isGuest
 				? '<a href="/login" style="display:inline-flex;align-items:center;background:' + primary + ';color:#fff;padding:8px 20px;border-radius:8px;font-weight:400;font-size:14px;text-decoration:none;">Login / Apply</a>'
 				: '<div style="position:relative;display:flex;align-items:center;gap:10px;">' +
@@ -791,7 +791,7 @@ function _buildShell(ws, cfg, user, uinfo) {
 							'<div style="font-size:11px;color:#94a3b8;font-weight:300;letter-spacing:.05em;">Signed in as</div>' +
 							'<div style="font-size:13px;color:#1e293b;font-weight:400;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px;">' + _esc(user) + '</div>' +
 						'</div>' +
-						'<a href="/merit-and-scholarship/admission_dashboard?panel=profile" style="display:flex;align-items:center;gap:10px;padding:12px 16px;text-decoration:none;color:#334155;font-size:14px;font-weight:300;">' +
+						'<a href="/nlsat/profile" style="display:flex;align-items:center;gap:10px;padding:12px 16px;text-decoration:none;color:#334155;font-size:14px;font-weight:300;">' +
 							'<span style="font-family:\'Material Symbols Outlined\' !important;font-size:18px;color:' + primary + '">account_circle</span>Profile</a>' +
 						'<div style="height:1px;background:#f1f5f9;margin:4px 0;"></div>' +
 						'<a href="javascript:void(0)" id="slcm-nav-logout" style="display:flex;align-items:center;gap:10px;padding:12px 16px;text-decoration:none;color:#ef4444;font-size:14px;font-weight:300;">' +
@@ -828,7 +828,7 @@ function _buildShell(ws, cfg, user, uinfo) {
 	if (bellBtn) {
 		bellBtn.addEventListener('click', function () {
 			slcmConfirmLeave(function () {
-				window.location.href = '/merit-and-scholarship/admission_dashboard';
+				window.location.href = '/nlsat/merit-and-scholarship/admission_dashboard';
 			});
 		});
 	}
@@ -3875,7 +3875,7 @@ function _slcmShowErrorModal(message, customUrl, customLabel) {
 		'background:rgba(0,0,0,0.6)', 'backdrop-filter:blur(5px)'
 	].join(';');
 
-	var url = customUrl || '/merit-and-scholarship/admission_dashboard?panel=profile';
+	var url = customUrl || '/nlsat/profile';
 	var label = customLabel || __('My Profile');
 
 	overlay.innerHTML =

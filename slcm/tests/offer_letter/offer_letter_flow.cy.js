@@ -23,7 +23,7 @@ describe('Offer Letter Flow', () => {
         cy.url({ timeout: 15000 }).should('not.include', '/login');
         
         // 2. Navigate to Offer Letters list
-        cy.visit('http://192.168.1.213:8001/offer_letter/offer-letter-list');
+        cy.visit('http://192.168.1.213:8001/nlsat/offer_letter/offer-letter-list');
         
         // Wait for offer letters to load and click on the first one
         cy.get('.offer-card', { timeout: 15000 }).should('have.length.greaterThan', 0);

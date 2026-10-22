@@ -1,0 +1,296 @@
+{#
+  _navbar.html — top navbar + mobile drawer for the NLSAT portal.
+  Included by slcm/www/nlsat/admission_base.html, which sets:
+    nav = get_nlsat_navbar_context(portal_config, current_path, nlsat_login_url)   (see _navbar.py)
+  Also uses the layout's _pc_title and ws_title.
+#}
+
+    {# PACE Admission (Always enabled per requirement) #}
+    {% set _pace_enabled = 1 %}
+
+    {% set _inst_logo = nav.inst_logo %}
+
+    <nav class="adm-nav">
+        <h4 class="adm-nav-brand">
+            {% if _inst_logo %}<img src="{{ _inst_logo }}" alt="Logo">{% endif %}
+            {{ _pc_title or ws_title or "Admissions" }}
+        </h4>
+        <div class="adm-nav-links">
+            {% set _has_applicant = nav.has_applicant %}
+            {% set _has_pace_applicant = nav.has_pace_applicant %}
+
+            {% set _show_admission = nav.show_admission %}
+            {% set _show_pace = nav.show_pace %}
+
+            {% if _show_admission %}
+            <a href="{{ nlsat_portal_base or '/nlsatadmissions' }}" class="nav-hide-mobile">Admission</a>
+            {% endif %}
+            <a href="{{ nav.helpdesk_url }}" class="nav-hide-mobile">Helpdesk</a>
+
+
+            <!-- <a href="/nlsat/merit-and-scholarship/admission_dashboard" class="nav-hide-mobile">Dashboard</a> -->
+            <!-- <a href="/nlsat/my-applications" class="nav-hide-mobile">My Applications</a> -->
+            <!-- <a href="/nlsat/offer_letter/offer-letter-list" class="nav-hide-mobile">Offer Letter</a> -->
+
+            <div style="position:relative;display:flex;align-items:center;" class="nav-hide-mobile">
+                <button id="bellBtn" style="background:none;border:none;color:#fff;cursor:pointer;
+                        padding:4px 8px;position:relative;display:flex;align-items:center;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                    </svg>
+                    <span id="bellBadge" style="display:none;position:absolute;top:-4px;right:-4px;
+                            background:#fff;color:var(--primary);
+                            border:1.5px solid var(--primary);
+                            border-radius:50%;min-width:18px;height:18px;
+                            font-size:10px;font-weight:700;
+                            display:flex;align-items:center;justify-content:center;
+                            padding:0 3px;line-height:1;box-sizing:border-box;">0</span>
+                </button>
+            </div>
+
+            <!-- Right side: avatar (logged in) OR login button (guest) -->
+            {% set _nav_user = nav.user %}
+            {% set _is_guest = nav.is_guest %}
+            {% set _first_letter = nav.first_letter %}
+
+            {% if _is_guest %}
+            <!-- Guest: show Login/Apply button -->
+            {% set _login_url = nav.login_url %}
+            {% set _is_pace_login = nav.is_pace_login %}
+            <a href="javascript:void(0)" onclick="window.location.href = '{{ _login_url }}' + '?redirect-to=' + encodeURIComponent(window.location.pathname + window.location.search) + '{{ "#register" if _is_pace_login else "" }}';" class="adm-nav-login-btn" style="display:inline-flex;align-items:center;gap:6px;
+                          background:var(--primary,#1a3c6e);color:white;
+                          padding:4px 10px;border-radius:2px;font-weight:700;
+                          font-size:14px;text-decoration:none;
+                          box-shadow:0 2px 8px rgba(0,0,0,0.15);
+                          transition:opacity 0.2s;" onmouseover="this.style.opacity='0.85'"
+                onmouseout="this.style.opacity='1'">
+                Login / Register
+            </a>
+
+            {% else %}
+            <!-- Logged in: avatar circle + full name + dropdown -->
+            {% set _full_name = nav.full_name %}
+            {% set _user_img = nav.user_image %}
+            <div class="adm-avatar-wrap nav-hide-mobile"
+                style="position:relative; display:flex; align-items:center; gap:10px;">
+                <button id="adm-avatar-btn" onclick="toggleAvatarMenu(event)" style="width:38px;height:38px;border-radius:50%;
+                                 background:rgba(255,255,255,0.15);color:white;
+                                 border:2px solid rgba(255,255,255,0.3);
+                                 font-weight:800;font-size:15px;cursor:pointer;
+                                 display:flex;align-items:center;justify-content:center;
+                                 transition:all 0.2s; overflow:hidden; padding:0;" title="{{ _nav_user }}"
+                    aria-haspopup="true" aria-expanded="false">
+                    {% if _user_img %}
+                    <img src="{{ _user_img }}" id="adm-avatar-img" style="width:100%; height:100%; object-fit:cover;">
+                    {% else %}
+                    <span id="adm-avatar-init">{{ _first_letter }}</span>
+                    {% endif %}
+                </button>
+                <span style="color:white; font-size:13px; font-weight:600; opacity:0.95; cursor:pointer;"
+                    class="nav-hide-mobile" onclick="toggleAvatarMenu(event)">
+                    {{ _full_name }}
+                </span>
+
+                <!-- Dropdown menu -->
+                <div id="adm-avatar-menu" style="display:none;position:absolute;right:0;top:calc(100% + 8px);
+                              min-width:180px;background:white;border-radius:12px;
+                              box-shadow:0 8px 32px rgba(0,0,0,0.14);
+                              border:1px solid rgba(0,0,0,0.07);
+                              overflow:hidden;z-index:9999;">
+                    <!-- User email header -->
+                    <div style="padding:12px 16px;border-bottom:1px solid #f1f5f9;">
+                        <div style="font-size:11px;color:#94a3b8;font-weight:600;letter-spacing:0.05em;">
+                            Signed in as</div>
+                        <div style="font-size:13px;color:#1e293b;font-weight:700;margin-top:2px;
+                                  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px;">
+                            {{ _nav_user }}
+                        </div>
+                    </div>
+                    <!-- Dashboard -->
+                    <!-- <a href="/nlsat/merit-and-scholarship/admission_dashboard"
+                       style="display:flex;align-items:center;gap:10px;
+                              padding:12px 16px;text-decoration:none;color:#334155;
+                              font-size:14px;font-weight:600;transition:background 0.15s;"
+                       onmouseover="this.style.background='#f8fafc'"
+                       onmouseout="this.style.background='transparent'">
+                      <span class="material-symbols-outlined" style="font-size:18px;color:var(--primary,#1a3c6e)">dashboard</span>
+                      Dashboard
+                    </a> -->
+                    <!-- My Applications -->
+                    <!-- <a href="/nlsat/my-applications"
+                       style="display:flex;align-items:center;gap:10px;
+                              padding:12px 16px;text-decoration:none;color:#334155;
+                              font-size:14px;font-weight:600;transition:background 0.15s;"
+                       onmouseover="this.style.background='#f8fafc'"
+                       onmouseout="this.style.background='transparent'">
+                      <span class="material-symbols-outlined" style="font-size:18px;color:var(--primary,#1a3c6e)">description</span>
+                      My Applications
+                    </a> -->
+                    <!-- Profile -->
+                    <a href="{{ nav.profile_url }}" style="display:flex;align-items:center;gap:10px;
+                              padding:12px 16px;text-decoration:none;color:#334155;
+                              font-size:14px;font-weight:600;transition:background 0.15s;"
+                        onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+                        <span class="material-symbols-outlined" style="font-size:18px;color:var(--primary,#1a3c6e)">account_circle</span>
+                        Profile
+                    </a>
+                    <!-- Divider -->
+                    <div style="height:1px;background:#f1f5f9;margin:4px 0;"></div>
+                    <!-- Logout -->
+                    <a href="javascript:void(0);" id="logout-btn" style="display:flex;align-items:center;gap:10px;
+                              padding:12px 16px;text-decoration:none;color:#ef4444;
+                              font-size:14px;font-weight:600;transition:background 0.15s;"
+                        onmouseover="this.style.background='#fff5f5'" onmouseout="this.style.background='transparent'">
+                        <span class="material-symbols-outlined" style="font-size:18px;color:#ef4444">logout</span>
+                        Logout
+                    </a>
+                </div>
+            </div>
+
+            <script>
+                function toggleAvatarMenu(e) {
+                    e.stopPropagation();
+                    var menu = document.getElementById('adm-avatar-menu');
+                    var btn = document.getElementById('adm-avatar-btn');
+                    var open = menu.style.display === 'block';
+                    menu.style.display = open ? 'none' : 'block';
+                    btn.setAttribute('aria-expanded', !open);
+                    if (!open) {
+                        btn.style.borderColor = 'rgba(255,255,255,0.6)';
+                        btn.style.boxShadow = '0 0 0 3px rgba(26,60,110,0.15)';
+                    } else {
+                        btn.style.borderColor = 'rgba(255,255,255,0.3)';
+                        btn.style.boxShadow = 'none';
+                    }
+                }
+                // Close menu when clicking outside
+                document.addEventListener('click', function (e) {
+                    var menu = document.getElementById('adm-avatar-menu');
+                    var btn = document.getElementById('adm-avatar-btn');
+                    if (menu && !menu.contains(e.target) && e.target !== btn) {
+                        menu.style.display = 'none';
+                        if (btn) {
+                            btn.setAttribute('aria-expanded', 'false');
+                            btn.style.borderColor = 'rgba(255,255,255,0.3)';
+                            btn.style.boxShadow = 'none';
+                        }
+                    }
+                });
+            </script>
+            {% endif %}
+        </div>
+
+        <!-- Hamburger button — visible only on mobile -->
+        <button class="nav-hamburger" id="nav-hamburger" aria-label="Open menu" aria-expanded="false">
+            <span class="ham-line"></span>
+            <span class="ham-line"></span>
+            <span class="ham-line"></span>
+        </button>
+    </nav>
+
+    <!-- Mobile drawer — slides down below navbar -->
+    <div class="mobile-drawer" id="mobile-drawer" aria-hidden="true">
+        {% if not nav.is_guest %}
+        <div class="drawer-user-header"
+            style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid #f0f0f0;margin-bottom:8px;">
+            <a href="{{ nav.profile_url }}" onclick="closeDrawer()"
+                style="display:flex;align-items:center;gap:12px;text-decoration:none;cursor:pointer;">
+                <div
+                    style="width:38px;height:38px;border-radius:50%;background:rgba(26,60,110,0.1);color:var(--primary);font-weight:800;font-size:15px;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+                    {% if nav.user_image %}
+                    <img src="{{ nav.user_image }}"
+                        style="width:100%; height:100%; object-fit:cover;">
+                    {% else %}
+                    <span>{{ nav.first_letter }}</span>
+                    {% endif %}
+                </div>
+                <div style="display:flex;flex-direction:column;max-width:180px;">
+                    <span
+                        style="font-size:14px;font-weight:700;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                        {{ nav.full_name }}
+                    </span>
+                    <span
+                        style="font-size:11px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{
+                        nav.user }}</span>
+                </div>
+            </a>
+            <div>
+                <button onclick="document.getElementById('bellBtn').click(); closeDrawer();"
+                    style="background:none;border:none;color:#64748b;cursor:pointer;padding:4px;" title="Notifications">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if nav.show_admission %}
+        <a href="{{ nlsat_portal_base or '/nlsatadmissions' }}" class="drawer-link" onclick="closeDrawer()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                <polyline points="9 22 9 12 15 12 15 22" />
+            </svg>
+            Admission
+        </a>
+        {% endif %}
+        <a href="{{ nav.helpdesk_url }}" class="drawer-link" onclick="closeDrawer()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 18v-6a9 9 0 0 1 18 0v6" />
+                <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
+            </svg>
+            Helpdesk
+        </a>
+
+
+        <!-- <a href="/nlsat/merit-and-scholarship/admission_dashboard" class="drawer-link" onclick="closeDrawer()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                    <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
+                Dashboard
+            </a>
+            <a href="/nlsat/my-applications" class="drawer-link" onclick="closeDrawer()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                </svg>
+                My Applications
+            </a>
+            <a href="/nlsat/offer_letter/offer-letter-list" class="drawer-link" onclick="closeDrawer()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                </svg>
+                Offer Letter
+            </a> -->
+
+        <div class="drawer-divider"></div>
+        {% if not nav.is_guest %}
+        <a href="#" class="drawer-link drawer-link-danger" id="drawer-logout-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            Logout
+        </a>
+        {% else %}
+        {% set _drawer_login_url = nav.login_url %}
+        {% set _is_pace_drawer_login = nav.is_pace_login %}
+        <a href="javascript:void(0)" class="drawer-link" onclick="closeDrawer(); window.location.href = '{{ _drawer_login_url }}' + '?redirect-to=' + encodeURIComponent(window.location.pathname + window.location.search) + '{{ "#register" if _is_pace_drawer_login else "" }}';">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                <polyline points="10 17 15 12 10 7" />
+                <line x1="15" y1="12" x2="3" y2="12" />
+            </svg>
+            Login / Register
+        </a>
+        {% endif %}
+    </div>
+    <!-- Drawer overlay -->
+    <div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>

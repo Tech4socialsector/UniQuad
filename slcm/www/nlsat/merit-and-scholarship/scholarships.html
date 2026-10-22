@@ -1,0 +1,1179 @@
+{% extends "slcm/www/nlsat/admission_base.html" %}
+{% from "slcm/www/nlsat/_sidebar.html" import portal_sidebar_css, portal_sidebar_html, portal_sidebar_js %}
+
+{% block title %}Scholarship Dashboard — Admissions{% endblock %}
+
+{% block adm_container_extra_class %}portal-layout-container{% endblock %}
+
+{% block theme_vars %}
+<style>
+  :root {
+    {% if portal_config %}
+      --primary:   {{ portal_config.get('primary_color') if portal_config.get else portal_config.primary_color or '#1a3c6e' }};
+      --secondary: {{ portal_config.get('secondary_color') if portal_config.get else portal_config.secondary_color or '#c8a14b' }};
+      --navbar-color: {{ portal_config.get('navbar_color') if portal_config.get else portal_config.navbar_color or '#2b2e4a' }};
+    {% else %}
+      --primary: #1a3c6e;
+      --secondary: #c8a14b;
+      --navbar-color: #2b2e4a;
+    {% endif %}
+    --radius-xl: 24px;
+  }
+</style>
+{% endblock %}
+
+{% block page_css %}
+{{ get_typography_style_block(
+    portal_config.font_family,
+    font_size_heading=portal_config.font_size_heading,
+    font_size_subheading=portal_config.font_size_subheading,
+    font_size_body=portal_config.font_size_body,
+    font_size_form_title=portal_config.font_size_form_title,
+    font_size_toast=portal_config.font_size_toast,
+    primary_color=portal_config.primary_color,
+    secondary_color=portal_config.secondary_color,
+    navbar_color=portal_config.navbar_color,
+    footer_color=portal_config.footer_color,
+    button_border_radius=portal_config.button_border_radius
+) }}
+
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          primary: 'var(--primary)',
+          secondary: 'var(--secondary)',
+        }
+      }
+    }
+  }
+</script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+
+  body,
+  .adm-main,
+  .adm-container {
+    background: #f8fafc !important;
+    font-family: 'Outfit', sans-serif !important;
+  }
+
+  .coming-soon {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .coming-soon:hover::after {
+    content: "Coming Soon";
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #1e293b;
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .fade-in-up {
+    animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    opacity: 0;
+  }
+
+  /* ── KPI Cards Redesign ─────────────────────────── */
+  .kpi-card {
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 22px 24px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.01), 0 2px 4px -1px rgba(0, 0, 0, 0.01), 0 10px 15px -3px rgba(0, 0, 0, 0.03);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi-card:hover {
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
+    border-color: #cbd5e1;
+  }
+  .kpi-label {
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    color: #64748b;
+    margin: 0 0 6px 0 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .kpi-value {
+    font-size: 26px !important;
+    font-weight: 800 !important;
+    margin: 0 !important;
+    line-height: 1.2;
+  }
+  .kpi-icon-wrapper {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .kpi-icon-wrapper .material-symbols-outlined {
+    font-size: 24px !important;
+  }
+
+  /* ── Tab Styling Redesign ───────────────────────── */
+  .tabs-wrapper {
+    background: #f1f5f9;
+    padding: 6px;
+    border-radius: 16px;
+    display: flex;
+    gap: 6px;
+    margin-bottom: 28px;
+    box-shadow: inset 0 2px 4px 0 rgba(0,0,0,0.03);
+  }
+  .tab-btn {
+    flex: 1;
+    text-align: center;
+    padding: 10px 16px;
+    border-radius: 12px;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: #64748b;
+    transition: all 0.25s ease;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    outline: none;
+  }
+  .tab-btn:hover {
+    color: var(--primary);
+    background: rgba(255, 255, 255, 0.4);
+  }
+  .tab-btn.active {
+    background: #ffffff !important;
+    color: var(--primary) !important;
+    box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+    font-weight: 700 !important;
+  }
+
+  /* ── Scholarship Card Redesign ──────────────────── */
+  .scholarship-card {
+    background: #ffffff;
+    border-radius: 20px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 10px 15px -3px rgba(0, 0, 0, 0.03);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+  .scholarship-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    opacity: 0.8;
+  }
+  .scholarship-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.06), 0 10px 10px -5px rgba(0, 0, 0, 0.03);
+    border-color: #cbd5e1;
+  }
+  .sch-title {
+    font-size: 16px !important;
+    font-weight: 800 !important;
+    color: #0f172a;
+    line-height: 1.4;
+    margin: 0 !important;
+  }
+  .sch-badge {
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    padding: 4px 10px;
+    border-radius: 9999px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+  }
+  .sch-badge-eligible {
+    background: #f0fdf4;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+  }
+  .sch-badge-applied {
+    background: #eff6ff;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+  }
+  .sch-badge-approved {
+    background: #f0fdf4;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+  }
+  .sch-badge-rejected {
+    background: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+  }
+  .sch-badge-review {
+    background: #fffbeb;
+    color: #92400e;
+    border: 1px solid #fde68a;
+  }
+  .sch-type {
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 4px 0 0 0 !important;
+  }
+  .sch-description {
+    font-size: 13px !important;
+    color: #475569;
+    line-height: 1.6;
+    margin-top: 12px !important;
+    margin-bottom: 16px !important;
+  }
+  .sch-meta-box {
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 12px 14px;
+    border: 1px solid #f1f5f9;
+  }
+  .sch-meta-label {
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    color: var(--primary);
+    letter-spacing: 0.05em;
+    margin: 0 0 2px 0 !important;
+  }
+  .sch-meta-value {
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    color: #334155;
+    margin: 0 !important;
+  }
+  .sch-deadline-box {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 12px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 16px;
+    margin-bottom: 20px;
+  }
+  .sch-deadline-text {
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    color: #b45309;
+    margin: 0 !important;
+  }
+  .btn-details {
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    color: #64748b;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .btn-details:hover {
+    color: var(--primary);
+  }
+  .btn-apply-now {
+    background: var(--primary);
+    color: #ffffff !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    padding: 8px 20px;
+    border-radius: 10px;
+    text-align: center;
+    text-decoration: none;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    border: none;
+    display: inline-block;
+  }
+  .btn-apply-now:hover {
+    opacity: 0.95;
+    transform: translateY(-1px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+  .btn-apply-disabled {
+    background: #e2e8f0;
+    color: #94a3b8 !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    padding: 8px 20px;
+    border-radius: 10px;
+    text-align: center;
+    cursor: not-allowed;
+    pointer-events: none;
+    display: inline-block;
+  }
+
+  /* ── Modern Pagination ──────────────────────────── */
+  .modern-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 32px;
+    margin-bottom: 16px;
+  }
+  .modern-pagination a,
+  .modern-pagination button,
+  .modern-pagination span {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    color: #475569;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.2s ease;
+  }
+  .modern-pagination a:hover,
+  .modern-pagination button:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  }
+  .modern-pagination a.active,
+  .modern-pagination button.active {
+    background: var(--primary);
+    color: white !important;
+    border-color: var(--primary);
+  }
+  .modern-pagination span.disabled,
+  .modern-pagination button[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #f8fafc;
+    color: #94a3b8;
+    transform: none;
+    box-shadow: none;
+    border-color: #e2e8f0;
+  }
+
+  {{ portal_sidebar_css() }}
+</style>
+{% endblock %}
+
+{% block content %}
+{% set _pc = portal_config if (portal_config and portal_config.get) else frappe.get_doc("Applicant Portal Config", "Applicant Portal Config", ignore_permissions=True) %}
+{% set _mission_txt = (_pc.get('mission_text') if _pc.get else _pc.mission_text) or '' %}
+
+{# Cycle Active Check #}
+{% set _is_cycle_active = False %}
+{% if active_cycle %}
+    {% set _start = active_cycle.cycle_start_date %}
+    {% set _end = active_cycle.cycle_end_date %}
+    {% if (not _start or today >= _start) and (not _end or today <= _end) %}
+        {% set _is_cycle_active = True %}
+    {% endif %}
+{% endif %}
+
+  <div class="portal-page-wrapper">
+    <div class="portal-page-inner">
+
+      <!-- ══ SHARED SIDEBAR ════════════════════════════════════════════ -->
+      {{ portal_sidebar_html(active='scholarships', portal_config=_pc, mission_txt=_mission_txt) }}
+
+      <!-- ══ MAIN CONTENT ══════════════════════════════════════════════ -->
+      <main class="portal-content-col flex flex-col gap-6">
+
+        {% if error %}
+        <div class="text-center py-20 fade-in-up">
+          <div class="bg-white p-12 rounded-3xl border border-red-200 shadow-sm max-w-lg mx-auto">
+            <span class="material-symbols-outlined text-6xl text-red-300 mb-6">error</span>
+            <h2 class="text-2xl font-bold text-slate-900 mb-4">Something went wrong</h2>
+            <div class="bg-red-50 p-4 rounded-xl text-left mb-8">
+              <p class="text-xs font-mono text-red-700 break-words">{{ error }}</p>
+            </div>
+            <a href="/nlsat/merit-and-scholarship/admission_dashboard"
+              class="inline-flex items-center gap-2 bg-slate-900 text-white px-8 py-3 rounded-xl font-bold transition-transform hover:scale-105">
+              Back to Dashboard
+            </a>
+          </div>
+        </div>
+        {% elif no_applicant or not applicant %}
+        <div class="text-center py-20 fade-in-up">
+          <div class="bg-white p-12 rounded-3xl border border-slate-200 shadow-sm max-w-lg mx-auto">
+            <span class="material-symbols-outlined text-6xl text-slate-300 mb-6">person_search</span>
+            <h2 class="text-2xl font-bold text-slate-900 mb-4">No Applicant Profile Found</h2>
+            <p class="text-slate-500 mb-8">You need to have an active admission application to view scholarship opportunities.</p>
+            <a href="/nlsat/merit-and-scholarship/admission_dashboard"
+              class="inline-flex items-center gap-2 bg-slate-900 text-white px-8 py-3 rounded-xl font-bold transition-transform hover:scale-105">
+              Go to Dashboard
+            </a>
+          </div>
+        </div>
+        {% else %}
+
+        <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 fade-in-up"
+          style="animation-delay:0.1s">
+          <div>
+            <h1 class="text-3xl font-extrabold tracking-tight" style="color: var(--primary); margin: 0;">My Scholarships</h1>
+            <p class="text-sm text-slate-500 mt-1.5">Personalized scholarships recommended based on your academic profile.</p>
+          </div>
+          {% if all_applicants and all_applicants|length > 1 %}
+          <div class="flex items-center gap-3 bg-white p-2 rounded-2xl border border-slate-200 shadow-sm">
+            <span class="material-symbols-outlined text-slate-400 pl-2">person</span>
+            <select onchange="window.location.href='/nlsat/merit-and-scholarship/scholarships?app=' + this.value"
+              class="bg-transparent border-none text-sm font-bold text-slate-700 focus:ring-0 cursor-pointer pr-8">
+              {% for a in all_applicants %}
+              <option value="{{ a.name }}" {% if a.name == applicant.name %}selected{% endif %}>
+                {{ a.candidate_name }} ({{ a.name }})
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          {% endif %}
+        </header>
+
+        {% if is_fee_paid %}
+        <div class="bg-amber-50 border-l-4 border-amber-500 p-4 mb-2 rounded-r-2xl shadow-sm fade-in-up" style="animation-delay:0.1s">
+          <div class="flex items-center">
+            <div class="flex-shrink-0">
+              <span class="material-symbols-outlined text-amber-600">info</span>
+            </div>
+            <div class="ml-3">
+              <p class="text-xs font-bold text-amber-800 leading-relaxed m-0">
+                Notice: You are not eligible to apply for new scholarships as your admission fee has already been paid. 
+                Scholarships must be approved before the final payment is processed.
+              </p>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 fade-in-up" style="animation-delay:0.15s">
+          <!-- KPI 1: Eligible -->
+          <div class="kpi-card group">
+            <div class="flex justify-between items-center">
+              <div>
+                <p class="kpi-label">Eligible Schemes</p>
+                <h3 class="kpi-value text-slate-800">{{ kpis.eligible or 0 }}</h3>
+              </div>
+              <div class="kpi-icon-wrapper bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors duration-300">
+                <span class="material-symbols-outlined">auto_awesome</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- KPI 2: Applied -->
+          <div class="kpi-card group">
+            <div class="flex justify-between items-center">
+              <div>
+                <p class="kpi-label">Submitted</p>
+                <h3 class="kpi-value text-slate-800">{{ kpis.applied or 0 }}</h3>
+              </div>
+              <div class="kpi-icon-wrapper bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300">
+                <span class="material-symbols-outlined">history_edu</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- KPI 3: Approved -->
+          <div class="kpi-card group">
+            <div class="flex justify-between items-center">
+              <div>
+                <p class="kpi-label">Approved</p>
+                <h3 class="kpi-value text-slate-800">{{ kpis.approved or 0 }}</h3>
+              </div>
+              <div class="kpi-icon-wrapper bg-teal-50 text-teal-600 group-hover:bg-teal-600 group-hover:text-white transition-colors duration-300">
+                <span class="material-symbols-outlined">verified</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- KPI 4: Awarded -->
+          <div class="kpi-card group">
+            <div class="flex justify-between items-center">
+              <div>
+                <p class="kpi-label">Awarded Benefit</p>
+                <h3 class="kpi-value text-slate-800">₹{{ "{:,.0f}".format(kpis.amount_awarded or 0) }}</h3>
+              </div>
+              <div class="kpi-icon-wrapper bg-amber-50 text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors duration-300">
+                <span class="material-symbols-outlined">payments</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="fade-in-up" style="animation-delay:0.2s">
+          <div class="tabs-wrapper mobile-scroll-tabs">
+            <button onclick="showTab('eligible')"
+              class="tab-btn active">Eligible</button>
+            <button onclick="showTab('applied')"
+              class="tab-btn">Applied</button>
+            <button onclick="showTab('approved')"
+              class="tab-btn">Approved</button>
+            <button onclick="showTab('rejected')"
+              class="tab-btn">Rejected</button>
+          </div>
+
+          <!-- ELIGIBLE TAB -->
+          <div id="tab-eligible" class="tab-content">
+            {% if eligible_scholarships %}
+            <div id="eligible-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {% for sch in eligible_scholarships %}
+              <div class="eligible-card scholarship-card">
+                <div class="p-6 flex flex-col flex-1">
+                  <div class="flex justify-between items-start gap-4 mb-1">
+                    <h4 class="sch-title">{{ sch.scheme_name }}</h4>
+                    <span class="sch-badge sch-badge-eligible">Eligible</span>
+                  </div>
+                  <p class="sch-type">{{ sch.scheme_type }}</p>
+
+                  {% if sch.description %}
+                  <p class="sch-description line-clamp-2">
+                    {{ sch.description | striptags }}
+                  </p>
+                  {% endif %}
+
+                  <div class="grid grid-cols-2 gap-4 mt-auto">
+                    <div class="sch-meta-box flex flex-col justify-center">
+                      <p class="sch-meta-label">Coverage</p>
+                      <p class="sch-meta-value">
+                        {% if sch.coverage_type == 'Percentage' %}Up to {{ sch.coverage_value }}%
+                        {% else %}₹{{ "{:,.0f}".format(sch.coverage_value) }}{% endif %}
+                      </p>
+                    </div>
+                    <div class="sch-meta-box flex flex-col justify-center">
+                      {% if sch.max_amount and sch.max_amount > 0 %}
+                        <p class="sch-meta-label">Maximum Amount</p>
+                        <p class="sch-meta-value">₹{{ "{:,.0f}".format(sch.max_amount) }}</p>
+                      {% else %}
+                        <p class="sch-meta-label">Applies to</p>
+                        <p class="sch-meta-value">{{ sch.apply_on or "Total Fee" }}</p>
+                      {% endif %}
+                    </div>
+                  </div>
+
+                  {% if sch.application_end %}
+                  <div class="sch-deadline-box">
+                    <span class="material-symbols-outlined text-amber-600 text-lg">event_busy</span>
+                    <p class="sch-deadline-text">Deadline: {{ frappe.utils.format_date(sch.application_end, "dd MMM yyyy") }}</p>
+                  </div>
+                  {% else %}
+                  <div class="mb-4"></div>
+                  {% endif %}
+
+                  <div class="pt-4 border-t border-slate-100 flex items-center justify-between">
+                    <button onclick="viewDetails('{{ sch.name }}')" class="btn-details">
+                      Details <span class="material-symbols-outlined text-sm">chevron_right</span>
+                    </button>
+                    <a href="{{ '/nlsat/merit-and-scholarship/apply?scheme=' ~ sch.name if (_is_cycle_active and not is_fee_paid) else 'javascript:void(0)' }}"
+                      class="{{ 'btn-apply-now' if (_is_cycle_active and not is_fee_paid) else 'btn-apply-disabled' }}"
+                      style="{{ 'pointer-events: none;' if (not _is_cycle_active or is_fee_paid) else '' }}">
+                      {% if is_fee_paid %}
+                        Apply Now
+                      {% elif _is_cycle_active %}
+                        Apply Now
+                      {% else %}
+                        Closed
+                      {% endif %}
+                    </a>
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+
+            <!-- Pagination Controls -->
+            <div id="eligible-pagination" class="modern-pagination"></div>
+            {% else %}
+            <div class="text-center py-16 bg-white rounded-2xl border border-dashed border-slate-300">
+              <span class="material-symbols-outlined text-4xl text-slate-300 mb-3">sentiment_neutral</span>
+              <p class="text-slate-500 font-bold text-sm m-0">No schemes match your criteria yet.</p>
+            </div>
+            {% endif %}
+          </div>
+
+          <!-- APPLIED TAB -->
+          <div id="tab-applied" class="tab-content hidden">
+            {% if applied_scholarships %}
+            <div id="applied-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {% for app in applied_scholarships %}
+              <div class="applied-card scholarship-card">
+                <div class="p-6 flex flex-col flex-1">
+                  {% set _ast = app.status %}
+                  {% if _ast == 'Approved' %}
+                    {% set _badge='sch-badge-approved' %}{% set _lbl='Approved' %}{% set _st_color='#166534' %}
+                  {% elif _ast == 'Rejected' %}
+                    {% set _badge='sch-badge-rejected' %}{% set _lbl='Rejected' %}{% set _st_color='#991b1b' %}
+                  {% elif _ast in ['Submitted', 'Applied'] %}
+                    {% set _badge='sch-badge-applied' %}{% set _lbl='Applied' %}{% set _st_color='#1d40af' %}
+                  {% elif _ast == 'Under Review' %}
+                    {% set _badge='sch-badge-review' %}{% set _lbl='Under Review' %}{% set _st_color='#92400e' %}
+                  {% else %}
+                    {% set _badge='bg-slate-100 text-slate-600 border border-slate-200' %}{% set _lbl=_ast %}{% set _st_color='#475569' %}
+                  {% endif %}
+
+                  <div class="flex justify-between items-start gap-4 mb-1">
+                    <h4 class="sch-title">{{ app.scheme_name }}</h4>
+                    <span class="sch-badge {{ _badge }}">{{ _lbl }}</span>
+                  </div>
+                  <p class="sch-type">{{ app.scheme_type }}</p>
+
+                  {% if app.description %}
+                  <p class="sch-description line-clamp-2">
+                    {{ app.description | striptags }}
+                  </p>
+                  {% endif %}
+
+                  <div class="grid grid-cols-2 gap-4 mt-auto">
+                    <div class="sch-meta-box flex flex-col justify-center">
+                      <p class="sch-meta-label">Coverage</p>
+                      <p class="sch-meta-value">
+                        {% if app.coverage_type == 'Percentage' %}Up to {{ app.coverage_value }}%
+                        {% else %}₹{{ "{:,.0f}".format(app.coverage_value) }}{% endif %}
+                      </p>
+                    </div>
+                    <div class="sch-meta-box flex flex-col justify-center">
+                      {% if app.max_amount and app.max_amount > 0 %}
+                        <p class="sch-meta-label">Maximum Amount</p>
+                        <p class="sch-meta-value">₹{{ "{:,.0f}".format(app.max_amount) }}</p>
+                      {% else %}
+                        <p class="sch-meta-label">Applies to</p>
+                        <p class="sch-meta-value">{{ app.apply_on or "Total Fee (Fixed)" }}</p>
+                      {% endif %}
+                    </div>
+                  </div>
+
+                  <div class="mt-4 p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between">
+                    <span class="text-xs font-bold text-slate-500">Status Tracker</span>
+                    <div class="flex gap-1.5">
+                      <div class="w-6 h-1.5 rounded-full {{ 'bg-blue-600' if _ast in ['Submitted','Applied','Under Review','Approved','Rejected'] else 'bg-slate-200' }}"></div>
+                      <div class="w-6 h-1.5 rounded-full {{ 'bg-amber-500' if _ast in ['Under Review','Approved','Rejected'] else 'bg-slate-200' }}"></div>
+                      <div class="w-6 h-1.5 rounded-full {{ 'bg-emerald-500' if _ast == 'Approved' else 'bg-red-500' if _ast == 'Rejected' else 'bg-slate-200' }}"></div>
+                    </div>
+                  </div>
+
+                  <div class="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between">
+                    <div class="space-y-0.5">
+                      <p class="text-[11px] font-bold text-slate-400 m-0">Applied: {{ frappe.utils.formatdate(app.creation, "dd MMM yyyy") }}</p>
+                      <p class="text-[11px] font-black m-0" style="color: {{ _st_color }}">{{ _lbl }}</p>
+                    </div>
+                    <button onclick="viewDetails('{{ app.scholarship_scheme }}')" class="btn-details">
+                      View Info <span class="material-symbols-outlined text-sm">chevron_right</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+            
+            <!-- Pagination Controls -->
+            <div id="applied-pagination" class="modern-pagination"></div>
+            {% else %}
+            <div class="text-center py-16 bg-white rounded-2xl border border-dashed border-slate-300">
+              <span class="material-symbols-outlined text-4xl text-slate-300 mb-3">sentiment_neutral</span>
+              <p class="text-slate-500 font-bold text-sm m-0">No applications submitted yet.</p>
+            </div>
+            {% endif %}
+          </div>
+
+          <!-- APPROVED TAB -->
+          <div id="tab-approved" class="tab-content hidden">
+            {% if approved_scholarships %}
+            <div id="approved-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {% for app in approved_scholarships %}
+              <div class="approved-card scholarship-card">
+                <div class="p-6 flex flex-col flex-1">
+                  <div class="flex justify-between items-start gap-4 mb-1">
+                    <h4 class="sch-title">{{ app.scheme_name }}</h4>
+                    <span class="sch-badge sch-badge-approved">Approved</span>
+                  </div>
+                  <p class="sch-type">{{ app.scheme_type }}</p>
+
+                  <div class="grid grid-cols-2 gap-4 mt-4 mb-4">
+                    <div class="sch-meta-box flex flex-col justify-center !bg-emerald-50/50 !border-emerald-100">
+                      <p class="sch-meta-label !text-emerald-700">Benefit Awarded</p>
+                      <p class="sch-meta-value !text-emerald-800 text-lg">₹{{ "{:,.0f}".format(app.calculated_benefit or 0) }}</p>
+                    </div>
+                    <div class="sch-meta-box flex flex-col justify-center !bg-slate-100/50 !border-slate-200">
+                      <p class="sch-meta-label !text-slate-600">Final Fee</p>
+                      <p class="sch-meta-value !text-slate-800 text-lg">₹{{ "{:,.0f}".format(app.final_fee_amount or 0) }}</p>
+                    </div>
+                  </div>
+
+                  <div class="space-y-2 mt-auto pt-4 border-t border-slate-100">
+                    <div class="flex items-center gap-2">
+                      <span class="material-symbols-outlined text-slate-400 text-base">loyalty</span>
+                      <p class="text-xs font-bold text-slate-600 m-0">
+                        {% if app.coverage_type == 'Percentage' %}Up to {{ app.coverage_value }}%
+                        {% else %}₹{{ "{:,.0f}".format(app.coverage_value) }}{% endif %} Coverage
+                      </p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <span class="material-symbols-outlined text-slate-400 text-base">monetization_on</span>
+                      <p class="text-xs font-bold text-slate-600 m-0">
+                        {% if app.max_amount and app.max_amount > 0 %}
+                          Maximum Amount: ₹{{ "{:,.0f}".format(app.max_amount) }}
+                        {% else %}
+                          Applies to: {{ app.apply_on or "Total Fee" }}
+                        {% endif %}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between">
+                    <p class="text-[11px] font-bold text-emerald-600 m-0">Approved On: {{ frappe.utils.formatdate(app.approval_date or app.modified, "dd MMM yyyy") }}</p>
+                    <button onclick="viewDetails('{{ app.scholarship_scheme }}')" class="btn-details">
+                      Details <span class="material-symbols-outlined text-sm">chevron_right</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+
+            <!-- Pagination Controls -->
+            <div id="approved-pagination" class="modern-pagination"></div>
+            {% else %}
+            <div class="text-center py-16 bg-white rounded-2xl border border-dashed border-slate-300">
+              <span class="material-symbols-outlined text-4xl text-slate-300 mb-3">sentiment_neutral</span>
+              <p class="text-slate-500 font-bold text-sm m-0">No approved scholarships yet.</p>
+            </div>
+            {% endif %}
+          </div>
+
+          <!-- REJECTED TAB -->
+          <div id="tab-rejected" class="tab-content hidden">
+            {% if rejected_scholarships %}
+            <div id="rejected-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {% for app in rejected_scholarships %}
+              <div class="rejected-card scholarship-card opacity-90">
+                <div class="p-6 flex flex-col flex-1">
+                  <div class="flex justify-between items-start gap-4 mb-1">
+                    <h4 class="sch-title">{{ app.scheme_name }}</h4>
+                    <span class="sch-badge sch-badge-rejected">Rejected</span>
+                  </div>
+                  <p class="sch-type">{{ app.scheme_type }}</p>
+
+                  {% if app.description %}
+                  <p class="sch-description line-clamp-2">
+                    {{ app.description | striptags }}
+                  </p>
+                  {% endif %}
+
+                  <div class="grid grid-cols-2 gap-4 mt-auto">
+                    <div class="sch-meta-box flex flex-col justify-center">
+                      <p class="sch-meta-label">Coverage</p>
+                      <p class="sch-meta-value">
+                        {% if app.coverage_type == 'Percentage' %}{{ app.coverage_value }}%
+                        {% else %}₹{{ "{:,.0f}".format(app.coverage_value) }}{% endif %}
+                      </p>
+                    </div>
+                    <div class="sch-meta-box flex flex-col justify-center">
+                      <p class="sch-meta-label">Applies to</p>
+                      <p class="sch-meta-value">{{ app.apply_on or "Total Fee" }}</p>
+                    </div>
+                  </div>
+
+                  {% if app.rejection_reason %}
+                  <div class="mt-4 p-3 bg-red-50 border border-red-100 rounded-xl">
+                    <p class="text-[11px] font-bold text-red-700 mb-1">Reason for Rejection</p>
+                    <p class="text-xs text-red-600 leading-relaxed m-0">{{ app.rejection_reason }}</p>
+                  </div>
+                  {% endif %}
+
+                  <div class="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between">
+                    <p class="text-[11px] font-bold text-red-600 m-0">Rejected On: {{ frappe.utils.formatdate(app.modified, "dd MMM yyyy") }}</p>
+                    <button onclick="viewDetails('{{ app.scholarship_scheme }}')" class="btn-details">
+                      View Criteria <span class="material-symbols-outlined text-sm">chevron_right</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+
+            <!-- Pagination Controls -->
+            <div id="rejected-pagination" class="modern-pagination"></div>
+            {% else %}
+            <div class="text-center py-16 bg-white rounded-2xl border border-dashed border-slate-300">
+              <span class="material-symbols-outlined text-4xl text-slate-300 mb-3">sentiment_neutral</span>
+              <p class="text-slate-500 font-bold text-sm m-0">No rejected applications found.</p>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+
+        {% endif %}
+      </main>
+    </div>
+  </div>
+
+<div id="detail-modal" class="z-50 flex justify-center p-6 bg-slate-900/60 backdrop-blur-sm hidden"
+  style="position:fixed; top:60px; bottom:0; left:0; right:0; align-items:flex-start; padding-top:24px;">
+  <div class="bg-white rounded-[24px] w-full max-w-xl overflow-hidden flex flex-col shadow-2xl mt-8">
+    <div class="p-6 border-b border-slate-100 flex justify-between items-center">
+      <h3 id="m-title" class="text-xl font-extrabold text-slate-900 leading-tight m-0">Details</h3>
+      <button onclick="closeModal()" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center hover:bg-slate-200 transition-colors border-none cursor-pointer">
+        <span class="material-symbols-outlined text-slate-600 text-base">close</span>
+      </button>
+    </div>
+    <div class="p-6 overflow-y-auto custom-scrollbar" style="max-height: calc(100vh - 60px - 140px);">
+      <div id="m-content" class="space-y-6"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function showTab(tabId) {
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.classList.remove('active');
+      if (btn.getAttribute('onclick').includes(tabId)) btn.classList.add('active');
+    });
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
+    document.getElementById('tab-' + tabId).classList.remove('hidden');
+    
+    // Trigger render for the active tab to ensure correct pagination view
+    if (tabId === 'eligible') renderEligPage();
+    if (tabId === 'applied') renderAppliedPage();
+    if (tabId === 'approved') renderApprovedPage();
+    if (tabId === 'rejected') renderRejectedPage();
+  }
+
+  // ── Pagination Logic ────────────────────────────────────────────
+  const PER_PAGE = 10;
+
+  function renderPaginationControls(containerId, currentPage, totalPages, onPageChangeName) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    if (totalPages <= 1) {
+      container.style.display = 'none';
+      return;
+    }
+    container.style.display = 'flex';
+    
+    let html = '';
+    
+    // Left/Prev chevron
+    if (currentPage > 1) {
+      html += `
+        <button onclick="${onPageChangeName}(${currentPage - 1})" title="Previous Page">
+          <span class="material-symbols-outlined" style="font-size:20px;">chevron_left</span>
+        </button>
+      `;
+    } else {
+      html += `
+        <span class="disabled">
+          <span class="material-symbols-outlined" style="font-size:20px;">chevron_left</span>
+        </span>
+      `;
+    }
+    
+    // Page numbers with dots
+    const delta = 2; // range around currentPage
+    const range = [];
+    const rangeWithDots = [];
+    let l;
+
+    for (let i = 1; i <= totalPages; i++) {
+        if (i === 1 || i === totalPages || (i >= currentPage - delta && i <= currentPage + delta)) {
+            range.push(i);
+        }
+    }
+
+    for (let i of range) {
+        if (l) {
+            if (i - l === 2) {
+                rangeWithDots.push(l + 1);
+            } else if (i - l > 2) {
+                rangeWithDots.push('...');
+            }
+        }
+        rangeWithDots.push(i);
+        l = i;
+    }
+
+    rangeWithDots.forEach(p => {
+        if (p === '...') {
+            html += `<span class="disabled" style="border:none;background:transparent;box-shadow:none;">...</span>`;
+        } else {
+            html += `
+              <button class="${p === currentPage ? 'active' : ''}" onclick="${onPageChangeName}(${p})">
+                ${p}
+              </button>
+            `;
+        }
+    });
+    
+    // Right/Next chevron
+    if (currentPage < totalPages) {
+      html += `
+        <button onclick="${onPageChangeName}(${currentPage + 1})" title="Next Page">
+          <span class="material-symbols-outlined" style="font-size:20px;">chevron_right</span>
+        </button>
+      `;
+    } else {
+      html += `
+        <span class="disabled">
+          <span class="material-symbols-outlined" style="font-size:20px;">chevron_right</span>
+        </span>
+      `;
+    }
+    
+    container.innerHTML = html;
+  }
+  
+  // Eligible
+  let eligCurrentPage = 1;
+  function renderEligPage() {
+    const cards = document.querySelectorAll('.eligible-card');
+    const total = cards.length;
+    if (total === 0) return;
+    const totalPages = Math.ceil(total / PER_PAGE);
+    const start = (eligCurrentPage - 1) * PER_PAGE;
+    const end = start + PER_PAGE;
+    cards.forEach((card, i) => { card.style.display = (i >= start && i < end) ? '' : 'none'; });
+    renderPaginationControls('eligible-pagination', eligCurrentPage, totalPages, 'eligGoToPage');
+  }
+  function eligGoToPage(p) {
+    eligCurrentPage = p;
+    renderEligPage();
+  }
+
+  // Applied
+  let appliedCurrentPage = 1;
+  function renderAppliedPage() {
+    const cards = document.querySelectorAll('.applied-card');
+    const total = cards.length;
+    if (total === 0) return;
+    const totalPages = Math.ceil(total / PER_PAGE);
+    const start = (appliedCurrentPage - 1) * PER_PAGE;
+    const end = start + PER_PAGE;
+    cards.forEach((card, i) => { card.style.display = (i >= start && i < end) ? '' : 'none'; });
+    renderPaginationControls('applied-pagination', appliedCurrentPage, totalPages, 'appliedGoToPage');
+  }
+  function appliedGoToPage(p) {
+    appliedCurrentPage = p;
+    renderAppliedPage();
+  }
+
+  // Approved
+  let approvedCurrentPage = 1;
+  function renderApprovedPage() {
+    const cards = document.querySelectorAll('.approved-card');
+    const total = cards.length;
+    if (total === 0) return;
+    const totalPages = Math.ceil(total / PER_PAGE);
+    const start = (approvedCurrentPage - 1) * PER_PAGE;
+    const end = start + PER_PAGE;
+    cards.forEach((card, i) => { card.style.display = (i >= start && i < end) ? '' : 'none'; });
+    renderPaginationControls('approved-pagination', approvedCurrentPage, totalPages, 'approvedGoToPage');
+  }
+  function approvedGoToPage(p) {
+    approvedCurrentPage = p;
+    renderApprovedPage();
+  }
+
+  // Rejected
+  let rejectedCurrentPage = 1;
+  function renderRejectedPage() {
+    const cards = document.querySelectorAll('.rejected-card');
+    const total = cards.length;
+    if (total === 0) return;
+    const totalPages = Math.ceil(total / PER_PAGE);
+    const start = (rejectedCurrentPage - 1) * PER_PAGE;
+    const end = start + PER_PAGE;
+    cards.forEach((card, i) => { card.style.display = (i >= start && i < end) ? '' : 'none'; });
+    renderPaginationControls('rejected-pagination', rejectedCurrentPage, totalPages, 'rejectedGoToPage');
+  }
+  function rejectedGoToPage(p) {
+    rejectedCurrentPage = p;
+    renderRejectedPage();
+  }
+
+  // Run initial renders
+  renderEligPage();
+  renderAppliedPage();
+  renderApprovedPage();
+  renderRejectedPage();
+
+
+  const schemeData = {
+    {% for sch in eligible_scholarships + rejected_scholarships + applied_scholarships + approved_scholarships %}
+  "{{ sch.scholarship_scheme if sch.scholarship_scheme else sch.name }}": {
+    name: "{{ sch.scheme_name }}",
+      type: "{{ sch.scheme_type }}",
+        deadline: "{{ frappe.utils.format_date(sch.application_end, 'dd MMM yyyy') if sch.application_end else '' }}",
+          description: "{{ (sch.description or '') | replace('\n', '<br>') | replace('\r', '') | replace('\"', '\\\"') }}",
+            coverage: "{{ sch.coverage_type }}",
+              val: "{{ sch.coverage_value }}",
+                max: "{{ sch.max_amount }}",
+                apply_on: "{{ sch.apply_on or 'Total Fee' }}",
+                rejection_reason: "{{ (sch.rejection_reason or '') | replace('\n', '<br>') | replace('\r', '') | replace('\"', '\\\"') }}",
+                    eligibility: "{{ (sch.eligibility_criteria or 'Not provided.') | replace('\n', '<br>') | replace('\r', '') | replace('\"', '\\\"') }}",
+                    rules: [{% for r in sch.coverage_rules or [] %} { component: "{{ r.fee_component }}", type: "{{ r.coverage_type }}", val: "{{ r.coverage_value }}" }, {% endfor %}],
+                    income_certificate: "{{ sch.income_certificate or '' }}",
+                    supporting_documents: "{{ sch.supporting_documents or '' }}"
+    },
+  {% endfor %}
+  };
+
+  function viewDetails(name) {
+    const s = schemeData[name];
+    if (!s) return;
+
+    document.getElementById('m-title').innerText = s.name;
+
+    let rulesHtml = '';
+    if (s.rules && s.rules.length > 0) {
+      rulesHtml = s.rules.map(r => `
+        <div class="flex justify-between items-center p-3 bg-white border border-slate-100 rounded-lg shadow-sm">
+          <span class="text-xs font-bold text-slate-700">${r.component}</span>
+          <span class="text-xs font-black text-primary">${r.type === 'Percentage' ? r.val + '%' : '₹' + Number(r.val).toLocaleString()}</span>
+        </div>
+      `).join('');
+    } else {
+      rulesHtml = `
+        <div class="flex justify-between items-center p-3 bg-white border border-slate-100 rounded-lg shadow-sm">
+          <span class="text-xs font-bold text-slate-700">${s.apply_on}</span>
+          <span class="text-xs font-black text-primary">${s.coverage === 'Percentage' ? s.val + '%' : '₹' + Number(s.val).toLocaleString()}</span>
+        </div>
+      `;
+    }
+
+    let html = `
+      <div class="flex flex-col gap-6">
+        ${s.rejection_reason ? `
+        <div class="p-4 bg-red-50 rounded-xl border border-red-100">
+          <p class="text-[12px] font-black text-red-600 mb-1">Reason for Rejection</p>
+          <p class="text-sm font-bold text-red-700 leading-relaxed">${s.rejection_reason}</p>
+        </div>` : ''}
+
+        <div class="grid grid-cols-2 gap-3">
+          <div class="p-4 bg-slate-50 rounded-xl border border-slate-100">
+             <p class="text-[12px] font-black text-slate-400 mb-1">Category</p>
+             <p class="text-sm font-bold text-slate-900">${s.type}</p>
+          </div>
+          <div class="p-4 bg-slate-50 rounded-xl border border-slate-100">
+             <p class="text-[12px] font-bold text-slate-400 mb-1">Maximum Amount</p>
+             <p class="text-sm font-bold text-slate-900">₹${Number(s.max).toLocaleString()}</p>
+          </div>
+        </div>
+
+        ${s.deadline ? `
+        <div class="p-4 bg-amber-50 rounded-xl border border-amber-100 flex items-center gap-3">
+          <span class="material-symbols-outlined text-amber-600">event_busy</span>
+          <div>
+            <p class="text-[12px] font-bold text-amber-600 mb-0.5">Application Deadline</p>
+            <p class="text-sm font-black text-amber-700">${s.deadline}</p>
+          </div>
+        </div>` : ''}
+        
+        ${s.description ? `
+        <div>
+          <h5 class="text-sm font-black text-slate-900 mb-3 flex items-center gap-2">
+            <span class="material-symbols-outlined text-base text-primary">info</span>
+            About Scheme
+          </h5>
+          <div class="text-sm text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100">${s.description}</div>
+        </div>` : ''}
+
+        <div>
+          <h5 class="text-sm font-black text-slate-900 mb-3 flex items-center gap-2">
+            <span class="material-symbols-outlined text-base text-primary">analytics</span>
+            Coverage Details
+          </h5>
+          <div class="space-y-1.5">${rulesHtml}</div>
+        </div>
+
+        ${(s.income_certificate || s.supporting_documents) ? `
+        <div>
+          <h5 class="text-sm font-black text-slate-900 mb-3 flex items-center gap-2">
+            <span class="material-symbols-outlined text-base text-primary">description</span>
+            Submitted Documents
+          </h5>
+          <div class="space-y-2">
+            ${s.income_certificate ? `
+            <div class="flex justify-between items-center p-3 bg-slate-50 border border-slate-100 rounded-lg">
+              <span class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-base text-slate-400">upload_file</span>
+                Income Certificate
+              </span>
+              <a href="${s.income_certificate}" target="_blank" class="text-xs font-bold text-primary hover:underline flex items-center gap-1">
+                <span class="material-symbols-outlined text-base">download</span> View
+              </a>
+            </div>` : ''}
+            ${s.supporting_documents ? `
+            <div class="flex justify-between items-center p-3 bg-slate-50 border border-slate-100 rounded-lg">
+              <span class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-base text-slate-400">folder_open</span>
+                Supporting Documents
+              </span>
+              <a href="${s.supporting_documents}" target="_blank" class="text-xs font-bold text-primary hover:underline flex items-center gap-1">
+                <span class="material-symbols-outlined text-base">download</span> View
+              </a>
+            </div>` : ''}
+          </div>
+        </div>` : ''}
+
+        <div>
+          <h5 class="text-sm font-black text-slate-900 mb-3 flex items-center gap-2">
+            <span class="material-symbols-outlined text-base text-primary">verified_user</span>
+            Eligibility Criteria
+          </h5>
+          <div class="text-sm text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100">${s.eligibility}</div>
+        </div>
+      </div>`;
+
+    document.getElementById('m-content').innerHTML = html;
+    document.getElementById('detail-modal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeModal() {
+    document.getElementById('detail-modal').classList.add('hidden');
+    document.body.style.overflow = 'auto';
+  }
+
+  document.getElementById('detail-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'detail-modal') closeModal();
+  });
+
+  {{ portal_sidebar_js() }}
+</script>
+{% endblock %}

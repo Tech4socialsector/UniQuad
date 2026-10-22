@@ -14,14 +14,12 @@ def get_context(context):
     except Exception:
         context.portal_config = None
 
-    # ── Portal: /nlsatadmissions (Indian Nationals) or /nlsat-international ──
-    from slcm.admission.utils.nlsat_portal import (
-        DOMESTIC, PORTAL_BASES, get_portal_type_from_path, get_portal_login_url,
-    )
+    # ── Portal: /nlsatadmissions — Indian Nationals only ──
+    from slcm.admission.utils.nlsat_portal import DOMESTIC, PORTAL_BASES, get_portal_login_url
     _req_path = (frappe.request.path if hasattr(frappe, "request") and frappe.request else "") or ""
-    context.portal_type      = get_portal_type_from_path(_req_path) or DOMESTIC
-    context.portal_base      = PORTAL_BASES[context.portal_type]
-    context.portal_login_url = get_portal_login_url(context.portal_type)
+    context.portal_type      = DOMESTIC
+    context.portal_base      = PORTAL_BASES[DOMESTIC]
+    context.portal_login_url = get_portal_login_url(DOMESTIC)
 
     # ── Get slug from URL ─────────────────────────────────────────
     # Supports both:
@@ -37,7 +35,7 @@ def get_context(context):
             # /nlsatadmissions/program_detail/ba-llb-hons → parts[2]
             if len(_parts) >= 3:
                 slug = _parts[2]
-            # /nlsat-international/ba-llb-hons → parts[1] (if routed via index)
+            # /nlsatadmissions/ba-llb-hons → parts[1] (via route rule)
             elif len(_parts) == 2:
                 slug = _parts[1]
             if slug == "login":
@@ -291,10 +289,6 @@ def get_context(context):
         academic_year=_aac,
         program_level=ac_prog_level,
     )
-    # International portal: pre-set Foreign National on the application form
-    if context.portal_type != DOMESTIC:
-        context.apply_web_form_url += ("&" if "?" in context.apply_web_form_url else "?") + "foriegn_national=Yes"
-        context.apply_web_form_login_url += "%26foriegn_national%3DYes"
 
     # ── Eligibility Rules ─────────────────────────────────────────
     try:

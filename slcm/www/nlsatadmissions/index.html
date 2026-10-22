@@ -1,4 +1,4 @@
-{% extends "slcm/www/admission_base.html" %}
+{% extends "slcm/www/nlsat/admission_base.html" %}
 
 {% block title %}{{ portal_config.get('portal_title') if portal_config and portal_config.get else
 (portal_config.portal_title if portal_config else 'Admissions') }}{% endblock %}
@@ -1198,7 +1198,7 @@
             <div style="padding-top:12px;border-top:1px solid #f1f5f9;">
               {% if frappe.session.user and frappe.session.user != "Guest" %}
               {% if user_app_name %}
-              <a href="/my-applications?app={{ user_app_name }}"
+              <a href="/nlsat/my-applications?app={{ user_app_name }}"
                 style="display:block;width:100%;padding:13px;text-align:center;border-radius:10px;background:#10b981;color:white;font-weight:700;font-size:14px;text-decoration:none;box-shadow:0 4px 14px -4px rgba(16,185,129,0.4);"
                 onmouseover="this.style.opacity='0.88'" onmouseout="this.style.opacity='1'">
                 Applied
@@ -1247,7 +1247,7 @@
         <div style="display:flex;gap:20px;"><a href="{{ portal_base or '/nlsatadmissions' }}"
             style="font-size:12px;color:#64748b;text-decoration:none;font-weight:500;"
             onmouseover="this.style.color='var(--primary)'" onmouseout="this.style.color='#64748b'">All Programmes</a><a
-            href="/merit-and-scholarship/admission_dashboard"
+            href="/nlsat/merit-and-scholarship/admission_dashboard"
             style="font-size:12px;color:#64748b;text-decoration:none;font-weight:500;"
             onmouseover="this.style.color='var(--primary)'" onmouseout="this.style.color='#64748b'">Dashboard</a></div>
       </div>
@@ -1540,7 +1540,7 @@
           {% set _type_link = _intl_app_link if _atype == 'International' else _dom_app_link %}
           <span class="prog-type-btn" data-type="{{ _atype }}" style="display:{{ 'contents' if _atype == 'Domestic' else 'none' }};">
           {% if _ua.get('app_name') %}
-          <a href="/my-applications?app={{ _ua.app_name }}" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;
+          <a href="/nlsat/my-applications?app={{ _ua.app_name }}" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;
                         padding:8px 18px;border-radius:8px;font-size:12px;font-weight:700;
                         text-decoration:none;color:#fff;
                         background:#10b981;transition:opacity .2s;" onmouseover="this.style.opacity='.85'"

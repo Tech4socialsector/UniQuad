@@ -82,6 +82,10 @@ jinja = {
 		"slcm.admission.utils.portal.get_typography_style_block",
 		"slcm.admission.doctype.seat_allocation.seat_allocation.get_results_notification_context",
 		"slcm.slcm.doctype.fee_certificate_request.fee_certificate_request.get_fee_certificate_context",
+		# NLSAT portal layout partials (www/nlsat/_navbar, _footer, _sidebar)
+		"slcm.www.nlsat._navbar.get_nlsat_navbar_context",
+		"slcm.www.nlsat._footer.get_nlsat_footer_context",
+		"slcm.www.nlsat._sidebar.get_nlsat_sidebar_context",
 	],
 }
 
@@ -643,18 +647,17 @@ role_home_page = {
 # Website
 website_route_rules = [
     {"from_route": "/portal-login", "to_route": "portal-login/login"},
-    # NLSAT admissions: /nlsatadmissions (Indian Nationals) and /nlsat-international
-    # share the pages in www/nlsatadmissions; the portal is detected from the path.
+    # NLSAT admissions — www/nlsatadmissions (Indian Nationals), www/nlsat-international
+    # (International) and the shared pages under www/nlsat.
     {"from_route": "/nlsatadmissions/login", "to_route": "nlsatadmissions/login"},
-    {"from_route": "/nlsat-international", "to_route": "nlsatadmissions/index"},
-    {"from_route": "/nlsat-international/login", "to_route": "nlsatadmissions/login"},
+    {"from_route": "/nlsat-international/login", "to_route": "nlsat-international/login"},
     {"from_route": "/applicant-dashboard", "to_route": "applicant_dashboard"},
     {"from_route": "/nlsatadmissions/application-form", "to_route": "nlsatadmissions/application-form"},
     {"from_route": "/nlsatadmissions/<name>", "to_route": "nlsatadmissions/program_detail"},
-    {"from_route": "/nlsat-international/<name>", "to_route": "nlsatadmissions/program_detail"},
-    {"from_route": "/announcement/<name>", "to_route": "announcement/announcement_detail"},
-    {"from_route": "/admission-dashboard", "to_route": "merit-and-scholarship/admission_dashboard"},
-    {"from_route": "/apply", "to_route": "merit-and-scholarship/apply"},
+    {"from_route": "/nlsat-international/<name>", "to_route": "nlsat-international/program_detail"},
+    {"from_route": "/nlsat/announcement/<name>", "to_route": "nlsat/announcement/announcement_detail"},
+    {"from_route": "/admission-dashboard", "to_route": "nlsat/merit-and-scholarship/admission_dashboard"},
+    {"from_route": "/apply", "to_route": "nlsat/merit-and-scholarship/apply"},
     # Student Portal
     {"from_route": "/student-portal", "to_route": "student-portal/index"},
     {"from_route": "/student-portal/courses", "to_route": "student-portal/courses"},
@@ -692,10 +695,17 @@ website_route_rules = [
     {"from_route": "/paceadmissions/forgot_password", "to_route": "paceadmissions/forgot_password"},
 ]
 
-# Old /admission links (already sent in emails) → /nlsatadmissions
+# Old admission URLs (already sent in emails) → new NLSAT routes
 website_redirects = [
     {"source": "/admission", "target": "/nlsatadmissions", "forward_query_parameters": True},
     {"source": r"/admission/(.*)", "target": r"/nlsatadmissions/\1", "forward_query_parameters": True},
+    # Common pages moved under www/nlsat
+    {"source": r"/merit-and-scholarship/(.*)", "target": r"/nlsat/merit-and-scholarship/\1", "forward_query_parameters": True},
+    {"source": "/my-applications", "target": "/nlsat/my-applications", "forward_query_parameters": True},
+    {"source": r"/offer_letter/(.*)", "target": r"/nlsat/offer_letter/\1", "forward_query_parameters": True},
+    {"source": "/view_application", "target": "/nlsat/view_application", "forward_query_parameters": True},
+    {"source": r"/announcement/(.*)", "target": r"/nlsat/announcement/\1", "forward_query_parameters": True},
+    {"source": r"/eligibility/(.*)", "target": r"/nlsat/eligibility/\1", "forward_query_parameters": True},
 ]
 
 update_website_context = "slcm.admission.utils.portal.update_website_context"

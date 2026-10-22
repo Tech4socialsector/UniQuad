@@ -1,0 +1,675 @@
+<!--
+  TESTING CHECKLIST — complete before sending for approval
+  
+  1. Technical check
+     - [ ] Font loads correctly in Chrome, Firefox, Safari
+     - [ ] Font applies to ALL sections including cards, tables, modals
+     - [ ] Font size changes (Small/Normal/Large) reflect across heading, subheading, body
+     - [ ] Icons render on all pages
+     - [ ] No console errors (missing CDN, broken paths, 404s)
+     - [ ] Page loads without FOUC (flash of unstyled content)
+
+  2. Security check
+     - [ ] No API keys or credentials in HTML source
+     - [ ] CDN links include integrity and crossorigin attributes
+     - [ ] No inline event handlers (onclick= etc.) added during this change
+
+  3. UI / Usability check
+     - [ ] Mobile breakpoints still work correctly
+     - [ ] Button sizes and spacing unchanged
+     - [ ] Nav link sizes unchanged
+     - [ ] No layout shifts caused by font change
+
+  4. Language & spell check
+     - [ ] English (UK/India) spellings used throughout
+     - [ ] Sentence case on labels and descriptions
+     - [ ] Title Case on headings, buttons, nav
+     - [ ] No ALL CAPS in visible text
+     - [ ] Active voice used
+     - [ ] Instructions are short and direct
+     - [ ] No repeated phrases across heading levels
+     - [ ] Terminology consistent (programme, enrol, sign in, etc.)
+-->
+
+{% extends "slcm/www/nlsat/admission_base.html" %}
+
+{% block theme_vars %}
+{{ get_typography_style_block(
+    portal_config.font_family,
+    font_size_heading=portal_config.font_size_heading,
+    font_size_subheading=portal_config.font_size_subheading,
+    font_size_body=portal_config.font_size_body,
+    font_size_form_title=portal_config.font_size_form_title,
+    font_size_toast=portal_config.font_size_toast,
+    primary_color=portal_config.primary_color,
+    secondary_color=portal_config.secondary_color,
+    navbar_color=portal_config.navbar_color,
+    footer_color=portal_config.footer_color,
+    button_border_radius=portal_config.button_border_radius
+) }}
+<style>
+    :root {
+        --primary-adm: #1E3A8A;
+        --secondary-adm: #334155;
+        --accent-adm: #10B981;
+        --bg-adm: var(--secondary);
+        --card-bg: #FFFFFF;
+        --text-main: #0F172A;
+        --text-secondary: #475569;
+        --text-muted: #94A3B8;
+        --border-color: #E2E8F0;
+        --shadow-subtle: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<style>
+    .dashboard-container,
+    .adm-container {
+        width: 100% !important;
+        max-width: 1400px !important;
+        margin: 0 auto;
+        padding: 0;
+    }
+
+    .dashboard-container {
+        padding: 2.5rem 1rem;
+    }
+
+    body {
+        background: var(--bg-adm);
+        min-height: 100vh;
+        color: var(--text-main);
+        
+    }
+
+    .glass-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        box-shadow: var(--shadow-subtle);
+        height: 100%;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .card-header-premium {
+        padding: 1rem 1.75rem;
+        background: #F1F5F9;
+        border-bottom: 1px solid var(--border-color);
+        color: var(--text-main);
+    }
+
+    .card-body-padding {
+        padding: 2rem;
+    }
+
+    /* Typography & Badges */
+    .dash-title {
+        font-weight: 700;
+        font-size: 2rem;
+        color: var(--text-main);
+        letter-spacing: -0.01em;
+    }
+
+    .data-label {
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+        margin-bottom: 0.4rem;
+    }
+
+    .data-value {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-main);
+    }
+
+    .badge-premium {
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        border: 1px solid var(--border-color);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+    }
+
+    .status-confirmed {
+        background: #fff;
+        color: #166534;
+    }
+
+    .status-pending {
+        background: #fff;
+        color: #854d0e;
+    }
+
+    /* Avatar */
+    .profile-avatar-xl {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        border: 3px solid #F1F5F9;
+        padding: 0;
+        background: #fff;
+        object-fit: cover;
+        margin: 0 auto 1.25rem;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    }
+
+    /* Slot Box */
+    .slot-display {
+        background: #F8FAFC;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 1.25rem;
+    }
+
+    /* Action Button */
+    .btn-action-premium {
+        background: var(--primary-adm);
+        color: white;
+        border: none;
+        height: 44px;
+        padding: 0 2rem;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.95rem;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.6rem;
+    }
+
+    .btn-action-premium:hover:not(:disabled) {
+        background: #1D4ED8;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(30, 58, 138, 0.2);
+        color: white;
+    }
+
+    .btn-action-premium:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    /* Result UI */
+    .rank-ring-xl {
+        width: 110px;
+        height: 110px;
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto;
+        background: #F8FAFC;
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(15px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .animate-step {
+        animation: fadeInUp 0.4s ease-out both;
+    }
+
+    /* Polished Rating/Tags */
+    .rating-btn {
+        font-size: 1.5rem;
+        transition: all 0.2s;
+        border-radius: 12px;
+        height: 54px;
+        width: 54px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .rating-btn:hover {
+        transform: scale(1.1);
+        background: #f1f5f9;
+    }
+
+    .rating-btn.active {
+        background: var(--primary) !important;
+        color: white !important;
+        border-color: var(--primary) !important;
+        box-shadow: 0 4px 12px rgba(30, 58, 138, 0.2);
+    }
+
+    .tag-pill {
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .tag-pill:hover {
+        border-color: var(--primary) !important;
+        color: var(--primary) !important;
+    }
+
+    .tag-pill.active {
+        background: var(--primary) !important;
+        color: white !important;
+        border-color: var(--primary) !important;
+    }
+
+    .x-small {
+        font-size: 0.7rem;
+    }
+</style>
+
+<div class="dashboard-container">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-5 animate-step">
+        <div>
+            <h1 class="dash-title mb-1">Interview Portal</h1>
+            <p class="text-muted fw-medium mb-0">Direct Admission Assessment Centre</p>
+        </div>
+        <div class="mt-3 mt-md-0">
+            {% if not no_record %}
+            <span
+                class="badge-premium {% if doc.interview_slot_status == 'Confirmed' %}status-confirmed{% else %}status-pending{% endif %}">
+                Slot Status: {{ doc.interview_slot_status or 'Pending' }}
+            </span>
+            {% else %}
+            <span class="badge-premium status-pending">
+                Status: No Record
+            </span>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if no_record %}
+    <div class="glass-card p-5 text-center animate-step">
+        <div class="mb-4 opacity-25">
+            <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            </svg>
+        </div>
+        <h3 class="fw-black">No Interview Scheduled</h3>
+        <p class="text-muted">Your interview record is not available yet. Please contact the admission cell for
+            assistance.</p>
+    </div>
+    {% else %}
+
+    <div class="row g-4 mb-4 align-items-stretch">
+        <div class="col-lg-4 animate-step">
+            <div class="glass-card">
+                <div class="card-header-premium">
+                    <h6 class="mb-0 fw-bold">Applicant Profile</h6>
+                </div>
+                <div class="card-body-padding text-center">
+                    {% if doc.profile %}
+                    <img src="{{ doc.profile }}" class="profile-avatar-xl">
+                    {% else %}
+                    <div
+                        class="profile-avatar-xl d-flex align-items-center justify-content-center mx-auto text-muted bg-light">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                            <circle cx="12" cy="7" r="4" />
+                        </svg>
+                    </div>
+                    {% endif %}
+                    <h5 class="fw-bold mb-1 text-dark">{{ doc.candidate_name }}</h5>
+                    <p class="text-primary fw-semibold small mb-0">{{ doc.applicant }}</p>
+
+                    <div class="text-start mt-4 pt-3 border-top">
+                        <div class="mb-3">
+                            <div class="data-label x-small">Programme Applied</div>
+                            <div class="data-value small text-dark fw-bold">{{ doc.program }}</div>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <div class="data-label x-small">Campus</div>
+                                <div class="data-value small text-dark">{{ doc.campus }}</div>
+                            </div>
+                            <div class="col-6">
+                                <div class="data-label x-small">Academic Year</div>
+                                <div class="data-value small text-dark">{{ doc.academic_year }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8 animate-step">
+            {% if show_result %}
+            <div class="glass-card mb-4" style="border-top: 6px solid #10B981;">
+                <div class="card-header-premium"
+                    style="background: #F8FAFC; border-bottom: 1px solid var(--border-color);">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="text-success"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2.5">
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                                <polyline points="22 4 12 14.01 9 11.01" />
+                            </svg></div>
+                        <h6 class="mb-0 fw-bold">Interview Assessment Result</h6>
+                    </div>
+                </div>
+                <div class="card-body-padding">
+                    <div class="row align-items-center g-4">
+                        <div class="col-md-5 text-center border-md-end">
+                            <div class="rank-ring-xl"
+                                style="width: 140px; height: 140px; border-width: 4px; border-color: #F1F5F9; background: white; border-style: solid;">
+                                <div class="data-label" style="font-size: 0.65rem; margin-top: 5px;">RANK</div>
+                                <div class="h2 fw-bold text-primary mb-0">{{ doc.rank or '—' }}</div>
+                                <div class="small text-muted fw-medium">Consolidated</div>
+                            </div>
+                        </div>
+                        <div class="col-md-7 ps-md-5">
+                            <div class="mb-4">
+                                <div class="data-label">Total Assessment Score</div>
+                                <div class="d-flex align-items-baseline gap-2">
+                                    <span class="h1 fw-bold text-dark mb-0">{{ doc.interview_score or '—' }}</span>
+                                    <span class="text-muted fw-medium">Points</span>
+                                </div>
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-6">
+                                    <div class="data-label">Status</div>
+                                    <div class="data-value"><span
+                                            class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-20 px-3 py-2"
+                                            style="border-radius: 6px;">{{ doc.interview_result_status or 'Declared'
+                                            }}</span></div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="data-label">Test Held</div>
+                                    <div class="data-value">{{ current_slot.interview_date }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-4 border-top">
+                        <div class="p-3 rounded-3 border bg-light d-flex align-items-center gap-3">
+                            <div class="bg-white p-2 rounded-circle border shadow-sm"><svg width="16" height="16"
+                                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    class="text-primary">
+                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                                </svg></div>
+                            <div>
+                                <p class="mb-0 small fw-bold text-dark">Verified Panel Assessment</p>
+                                <p class="mb-0 x-small text-muted">This result has been officially verified by the
+                                    Admission Assessment Panel.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {# ── Integrated Feedback Section ── #}
+                    {% if show_feedback %}
+                    <div class="mt-4 pt-4 border-top animate-step">
+                        <h6 class="fw-bold mb-3">Interview Experience Feedback</h6>
+
+                        {% if feedback_submitted %}
+                        <div class="p-3 bg-light rounded-3 border">
+                            <div class="data-label x-small">Your Experience Narrative</div>
+                            <p class="mb-0 small fw-medium text-secondary" style="white-space: pre-wrap;">{{
+                                doc.feedback }}</p>
+                        </div>
+                        {% else %}
+                        <div class="feedback-power-container">
+                            <div class="mb-4">
+                                <label class="data-label mb-2">How would you rate the process?</label>
+                                <div class="d-flex gap-3 rating-emojis">
+                                    <button type="button" class="btn btn-outline-light border rating-btn"
+                                        data-val="Excellent">🤩</button>
+                                    <button type="button" class="btn btn-outline-light border rating-btn"
+                                        data-val="Good">🙂</button>
+                                    <button type="button" class="btn btn-outline-light border rating-btn"
+                                        data-val="Average">😐</button>
+                                    <button type="button" class="btn btn-outline-light border rating-btn"
+                                        data-val="Poor">😞</button>
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="data-label mb-2">Quick Highlights</label>
+                                <div class="d-flex flex-wrap gap-2 feedback-tags">
+                                    <span class="badge border bg-white text-muted px-3 py-2 cursor-pointer tag-pill"
+                                        style="border-radius:20px; font-weight:500;">Punctual Panel</span>
+                                    <span class="badge border bg-white text-muted px-3 py-2 cursor-pointer tag-pill"
+                                        style="border-radius:20px; font-weight:500;">Clear Communication</span>
+                                    <span class="badge border bg-white text-muted px-3 py-2 cursor-pointer tag-pill"
+                                        style="border-radius:20px; font-weight:500;">Constructive Feedback</span>
+                                    <span class="badge border bg-white text-muted px-3 py-2 cursor-pointer tag-pill"
+                                        style="border-radius:20px; font-weight:500;">Smooth Process</span>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="data-label">Detailed Comments (Optional)</label>
+                                <textarea id="feedbackText"
+                                    class="form-control border bg-light rounded-3 p-3 mt-1 fw-medium" rows="3"
+                                    placeholder="Tell us more about your assessment experience..."></textarea>
+                            </div>
+                            <button id="btnSubmitFeedback" class="btn-action-premium mt-2">Submit Powerful
+                                Feedback</button>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if not show_result %}
+            <div class="glass-card">
+                <div class="card-header-premium">
+                    <h6 class="mb-0 fw-bold">{% if is_rescheduled %}Rescheduled{% endif %} Interview Assignment</h6>
+                </div>
+                <div class="card-body-padding">
+                    {% if is_rescheduled and previous_schedule %}
+                    <div class="p-4 rounded-3 border bg-light mb-4">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <div class="text-warning"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                    stroke="currentColor" stroke-width="2.5">
+                                    <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                                    <path d="M22 4L12 14l-3-3" />
+                                </svg></div>
+                            <h6 class="fw-bold mb-0">Previous Schedule Note</h6>
+                        </div>
+                        <p class="text-secondary small mb-0">Your previous slot on {{
+                            frappe.format_date(previous_schedule.interview_date) }} was updated due to: <b>{{
+                                previous_schedule.reason }}</b></p>
+                    </div>
+                    {% endif %}
+
+                    <div class="row g-4 mb-4">
+                        <div class="col-md-6">
+                            <div class="slot-display">
+                                <div class="data-label">Assigned Panelist</div>
+                                <div class="data-value text-primary mb-1">{{ current_slot.staff_name or 'Panel TBA' }}
+                                </div>
+                                <p class="text-muted small mb-0">{{ current_slot.staff_contact or 'Direct contact via
+                                    portal' }}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="slot-display h-100">
+                                <div class="data-label">Interview Date</div>
+                                <div class="data-value mb-1">{{ current_slot.interview_date }}</div>
+                                <div class="row mt-2">
+                                    <div class="col-6">
+                                        <div class="data-label" style="font-size: 0.7rem;">Time</div>
+                                        <div class="data-value small">{{ current_slot.interview_time }}</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="data-label" style="font-size: 0.7rem; color: #dc2626;">Reporting
+                                        </div>
+                                        <div class="data-value small text-danger">{{ current_slot.reporting_time }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="slot-display">
+                                <div class="data-label">Interview Venue</div>
+                                <div class="data-value small mb-0">{{ current_slot.interview_address or 'Venue details
+                                    will be updated here' }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if not show_result %}
+                    <div class="mt-4 border-top pt-4">
+                        {% if current_slot.attendance_confirmation %}
+                        <div class="p-4 bg-light rounded-3 border text-center">
+                            <h6 class="text-success fw-bold mb-0">
+                                {% set conf = current_slot.attendance_confirmation %}
+                                {% if conf == "Confirm Attendance" %}
+                                    Interview Attendance Accepted
+                                {% elif conf == "Decline Interview Invitation" %}
+                                    Interview Invitation Declined
+                                {% elif conf == "Request Rescheduling" %}
+                                    Reschedule Request Submitted
+                                {% else %}
+                                    {{ conf }}
+                                {% endif %}
+                            </h6>
+                        </div>
+                        {% else %}
+                        <div id="attendance-action-section">
+                            <h6 class="fw-bold mb-3">Attendance Confirmation</h6>
+                            <p class="text-secondary small mb-4">Please confirm your availability for this slot. Once
+                                submitted, your selection is final.</p>
+                            <div class="row g-3 align-items-center">
+                                <div class="col-md-7">
+                                    <select id="attendanceSelect"
+                                        class="form-select fw-medium border bg-light py-2 px-3"
+                                        style="border-radius: 8px;">
+                                        <option value="" disabled selected>Select your response...</option>
+                                        {% for opt in attendance_options %}
+                                        <option value="{{ opt }}">{{ opt }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-5">
+                                    <button id="btnSaveAttendance" class="btn-action-premium w-100" disabled>Submit
+                                        Confirmation</button>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% if not no_record %}
+<script type="application/json" id="__interview-page-data__">
+    {
+        "allocationName": "{{ doc.name }}",
+        "isRescheduled": {{ 'true' if is_rescheduled else 'false' }}
+    }
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var dataEl = document.getElementById('__interview-page-data__');
+        if (!dataEl) return;
+        var pageData = JSON.parse(dataEl.textContent);
+
+        var sel = document.getElementById('attendanceSelect');
+        var btnSave = document.getElementById('btnSaveAttendance');
+
+        if (sel && btnSave) {
+            sel.addEventListener('change', function () { btnSave.disabled = !this.value; });
+            btnSave.addEventListener('click', function () {
+                var chosen = sel.value;
+                showConfirm('Confirm your response as <b>' + chosen + '</b>?', function () {
+                    btnSave.disabled = true;
+                    btnSave.innerHTML = 'Processing...';
+                    apiFetch('slcm.www.nlsat.eligibility.interview_management.save_attendance_confirmation', {
+                        allocation_name: pageData.allocationName,
+                        confirmation: chosen,
+                        is_rescheduled: pageData.isRescheduled
+                    }).then(() => {
+                        showToast('Confirmation recorded!', 'success');
+                        setTimeout(() => window.location.reload(), 1200);
+                    }).catch(err => {
+                        showToast(err.message, 'error');
+                        btnSave.disabled = false;
+                        btnSave.innerHTML = 'Submit Confirmation';
+                    });
+                });
+            });
+        }
+
+        var btnFeedback = document.getElementById('btnSubmitFeedback');
+        if (btnFeedback) {
+            var selectedRating = "";
+            var selectedTags = [];
+
+            document.querySelectorAll('.rating-btn').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    document.querySelectorAll('.rating-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    selectedRating = this.getAttribute('data-val');
+                });
+            });
+
+            document.querySelectorAll('.tag-pill').forEach(tag => {
+                tag.addEventListener('click', function () {
+                    this.classList.toggle('active');
+                    var tagVal = this.textContent.trim();
+                    if (this.classList.contains('active')) {
+                        selectedTags.push(tagVal);
+                    } else {
+                        selectedTags = selectedTags.filter(t => t !== tagVal);
+                    }
+                });
+            });
+
+            btnFeedback.addEventListener('click', function () {
+                var comment = (document.getElementById('feedbackText').value || '').trim();
+
+                // Construct "Powerful" Feedback String
+                var finalFeedback = "";
+                if (selectedRating) finalFeedback += "Rating: " + selectedRating + "\n";
+                if (selectedTags.length > 0) finalFeedback += "Highlights: " + selectedTags.join(", ") + "\n";
+                if (comment) finalFeedback += "Comments: " + comment;
+
+                if (!finalFeedback.trim()) { showToast('Please provide some feedback.', 'error'); return; }
+
+                showConfirm('Submit your experience feedback?', function () {
+                    btnFeedback.disabled = true;
+                    btnFeedback.innerHTML = 'Submitting...';
+                    apiFetch('slcm.www.nlsat.eligibility.interview_management.save_feedback', {
+                        allocation_name: pageData.allocationName,
+                        feedback_text: finalFeedback
+                    }).then(() => {
+                        showToast('Thank you for your valuable feedback!', 'success');
+                        setTimeout(() => window.location.reload(), 1200);
+                    }).catch(err => {
+                        showToast(err.message, 'error');
+                        btnFeedback.disabled = false;
+                        btnFeedback.innerHTML = 'Submit Feedback';
+                    });
+                });
+            });
+        }
+    });
+</script>
+{% endif %}
+{% endblock %}
