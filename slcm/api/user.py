@@ -65,48 +65,72 @@ def get_reset_password_link(user_doc, send_email=False):
 def send_welcome_or_custom_signup_email(user_doc, correct_link, template="new_user"):
     institution = frappe.get_single("Institution Settings")
     enable_custom = getattr(institution, "enable_signup_email", 0)
+    has_custom_template = frappe.db.exists("Email Template", "Applicant Registration Email")
     
-    if enable_custom:
+    if enable_custom or has_custom_template:
         full_name = user_doc.full_name or user_doc.first_name or user_doc.email
         
         # Context for rendering
         context = {
-            "institution_name": getattr(institution, "institution_name", ""),
+            "institution_name": getattr(institution, "institution_name", "") or "National Law School of India University",
             "logo": getattr(institution, "logo", ""),
             "full_name": full_name,
+            "candidate_name": full_name,
+            "applicant_name": full_name,
+            "first_name": user_doc.first_name or full_name,
             "set_password_link": correct_link,
-            "login_url": getattr(institution, "login_url", "") or frappe.utils.get_url(get_portal_login_url()),
+            "link": correct_link,
+            "reset_password_link": correct_link,
+           "login_url": getattr(institution, "login_url", "") or frappe.utils.get_url(get_portal_login_url()),
             "support_email": getattr(institution, "support_email", ""),
-            "link_expiry_hours": getattr(institution, "link_expiry_hours", 24) or 24
+            "link_expiry_hours": getattr(institution, "link_expiry_hours", 24) or 24,
+            "doc": user_doc,
         }
 
-        # Render Subject
-        subject_template = getattr(institution, "signup_email_subject", "")
-        if not subject_template:
-            subject_template = "Welcome to {{ institution_name }}"
-            
-        try:
-            subject = frappe.render_template(subject_template, context)
-        except Exception:
-            subject = "Welcome to " + getattr(institution, "institution_name", "")
+        # Check if standard Email Template 'Applicant Registration Email' exists
+        subject = None
+        message = None
+        sender = None
 
-        # Render Email Body
-        message_template = getattr(institution, "signup_email_template", "")
-        if message_template:
+        if frappe.db.exists("Email Template", "Applicant Registration Email"):
             try:
-                message = frappe.render_template(message_template, context)
-                
-                # Send Email
-                frappe.sendmail(
-                    recipients=[user_doc.email],
-                    subject=subject,
-                    message=message,
-                    now=True
-                )
-                user_doc.flags.email_sent = 1
-                return True
+                tmpl = frappe.get_doc("Email Template", "Applicant Registration Email")
+                tmpl.flags.ignore_permissions = True
+                subject = tmpl.get_formatted_subject(context)
+                message = tmpl.get_formatted_response(context)
+                if tmpl.email_account:
+                    sender = frappe.db.get_value("Email Account", tmpl.email_account, "email_id") or tmpl.email_account
             except Exception as e:
-                frappe.log_error(title="SLCM Custom Signup Email Render Error", message=frappe.get_traceback())
+                frappe.log_error(title="SLCM Email Template Render Error", message=frappe.get_traceback())
+
+        if not message:
+            # Fallback to Institution Settings fields
+            subject_template = getattr(institution, "signup_email_subject", "")
+            if not subject_template:
+                subject_template = "Welcome to {{ institution_name }}"
+                
+            try:
+                subject = frappe.render_template(subject_template, context)
+            except Exception:
+                subject = "Welcome to " + (getattr(institution, "institution_name", "") or "National Law School of India University")
+
+            message_template = getattr(institution, "signup_email_template", "")
+            if message_template:
+                try:
+                    message = frappe.render_template(message_template, context)
+                except Exception as e:
+                    frappe.log_error(title="SLCM Custom Signup Email Render Error", message=frappe.get_traceback())
+
+        if message:
+            frappe.sendmail(
+                recipients=[user_doc.email],
+                sender=sender,
+                subject=subject,
+                message=message,
+                now=True
+            )
+            user_doc.flags.email_sent = 1
+            return True
                 
     # Fallback to standard welcome email
     site_name = (
@@ -119,7 +143,16 @@ def send_welcome_or_custom_signup_email(user_doc, correct_link, template="new_us
     user_doc.send_login_mail(
         subject,
         template,
-        dict(link=correct_link, site_url=frappe.utils.get_url()),
+        dict(
+            link=correct_link,
+            site_url=frappe.utils.get_url(),
+            doc=user_doc,
+            candidate_name=user_doc.full_name or user_doc.first_name,
+            full_name=user_doc.full_name or user_doc.first_name,
+            first_name=user_doc.first_name,
+            set_password_link=correct_link,
+            reset_password_link=correct_link,
+        ),
         custom_template=welcome_email_template,
     )
     return False
@@ -999,8 +1032,8 @@ from frappe.rate_limiter import rate_limit
 from frappe.core.doctype.user.user import get_password_reset_limit
 
 @frappe.whitelist(allow_guest=True, methods=["POST"])
-@rate_limit(limit=get_password_reset_limit, seconds=60 * 60)
-def reset_password(user: str):
+@rate_limit(key="user", limit=get_password_reset_limit, seconds=60 * 60)
+def reset_password(user: str, redirect_to: str = None):
     """
     Send password reset email. Returns a dict {status, message} for portal JSON clients.
     """
@@ -1019,46 +1052,71 @@ def reset_password(user: str):
         # Generate the link without sending the email via Frappe core (which has a header list bug)
         link = get_reset_password_link(user_doc, send_email=False)
         
-        # Send email manually
+        # Determine redirect for portal users
         from frappe.utils import get_url
         from frappe.utils.user import get_user_fullname
-        
+
+        roles = frappe.get_roles(user_doc.name)
+        if "Applicant" in roles and not redirect_to:
+            redirect_to = "/admission"
+
+        if redirect_to:
+            import urllib.parse
+            parsed = urllib.parse.urlparse(link)
+            if "redirect_to" not in parsed.query:
+                link = get_url(f"/update-password?{parsed.query}&redirect_to={urllib.parse.quote(redirect_to)}")
+            frappe.cache().hset("redirect_after_login", user_doc.name, redirect_to)
+
         subject = _("Password Reset")
         created_by = get_user_fullname(frappe.session["user"]) if frappe.session.get("user") else "Administrator"
         if created_by == "Guest":
             created_by = "Administrator"
 
+        institution = frappe.get_single("Institution Settings")
+        institution_name = getattr(institution, "institution_name", "") or "National Law School of India University"
+        full_name = user_doc.full_name or user_doc.first_name or user_doc.last_name or "Candidate"
+
         args = {
-            "first_name": user_doc.first_name or user_doc.last_name or "user",
+            "first_name": user_doc.first_name or user_doc.last_name or "Candidate",
+            "full_name": full_name,
+            "candidate_name": full_name,
+            "applicant_name": full_name,
             "user": user_doc.name,
+            "email": user_doc.email or user_doc.name,
             "title": subject,
-            "login_url": get_url(),
+            "login_url": getattr(institution, "login_url", "") or get_url("/admission/login"),
             "created_by": created_by,
-            "link": link
+            "link": link,
+            "reset_password_link": link,
+            "set_password_link": link,
+            "institution_name": institution_name,
+            "support_email": getattr(institution, "support_email", ""),
+            "link_expiry_hours": getattr(institution, "link_expiry_hours", 24) or 24,
+            "logo": getattr(institution, "logo", ""),
+            "doc": user_doc,
         }
         
-        reset_password_template = frappe.db.get_system_setting("reset_password_template")
+        reset_password_template = frappe.db.get_system_setting("reset_password_template") or "Reset Password Template"
         content = None
         template = "slcm_password_reset"
         sender = None
         
-        if reset_password_template:
-            from frappe.email.doctype.email_template.email_template import get_email_template
-            email_template = get_email_template(reset_password_template, args)
-            subject = email_template.get("subject")
-            content = email_template.get("message")
+        if reset_password_template and frappe.db.exists("Email Template", reset_password_template):
+            tmpl = frappe.get_doc("Email Template", reset_password_template)
+            tmpl.flags.ignore_permissions = True
+            subject = tmpl.get_formatted_subject(args) or subject
+            content = tmpl.get_formatted_response(args)
             
             # Resolve sender from the template
-            email_account = frappe.db.get_value("Email Template", reset_password_template, "email_account")
-            if email_account:
-                sender = frappe.db.get_value("Email Account", email_account, "email_id") or email_account
+            if tmpl.email_account:
+                sender = frappe.db.get_value("Email Account", tmpl.email_account, "email_id") or tmpl.email_account
 
         frappe.sendmail(
             recipients=user_doc.email,
             sender=sender,
             subject=subject,
-            template=template if not reset_password_template else None,
-            content=content if reset_password_template else None,
+            template=template if not (reset_password_template and content) else None,
+            content=content if (reset_password_template and content) else None,
             args=args,
             now=True
         )
