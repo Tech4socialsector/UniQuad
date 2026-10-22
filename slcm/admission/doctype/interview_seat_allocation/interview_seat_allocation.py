@@ -290,7 +290,7 @@ def _send_custom_result_email(doc, email, custom_email_content):
         doc_dict = doc.as_dict()
         args = {
             "doc": doc_dict,
-            "portal_url": get_url("/merit-and-scholarship/admission_dashboard?panel=applications")
+            "portal_url": get_url("/nlsat/dashboard?panel=applications")
         }
 
         # Use the header (subject) and sender from the default email template
@@ -336,7 +336,7 @@ def _send_result_notification_email(doc, email):
         doc_dict = doc.as_dict()
         args = {
             "doc": doc_dict,
-            "portal_url": get_url("/merit-and-scholarship/admission_dashboard?panel=applications")
+            "portal_url": get_url("/nlsat/dashboard?panel=applications")
         }
 
         subject = frappe.render_template(template.subject, args)
@@ -598,7 +598,7 @@ def _send_reschedule_email(doc, email):
         doc_dict = doc.as_dict()
         args = {
             "doc": doc_dict,
-            "portal_url": get_url("/merit-and-scholarship/admission_dashboard?panel=applications")
+            "portal_url": get_url("/nlsat/dashboard?panel=applications")
         }
 
         subject = frappe.render_template(template.subject, args)
@@ -654,7 +654,7 @@ def _send_result_notification(doc, email):
             # Custom message for Interview Result
             message_body = f"""
                 <p>Your interview result for <strong>"{doc.interview_list}"</strong> has been published.</p>
-                <p><a href="/merit-and-scholarship/admission_dashboard?panel=applications" style="color: #16a34a; font-weight: bold;">Click here to view details.</a></p>
+                <p><a href="/nlsat/dashboard?panel=applications" style="color: #16a34a; font-weight: bold;">Click here to view details.</a></p>
             """
             
             frappe.get_doc({
@@ -666,7 +666,7 @@ def _send_result_notification(doc, email):
                 "document_type": "Interview Seat Allocation",
                 "document_name": doc.name,
                 "from_user": frappe.session.user,
-                "link": "/merit-and-scholarship/admission_dashboard?panel=applications"
+                "link": "/nlsat/dashboard?panel=applications"
             }).insert(ignore_permissions=True)
         except Exception:
             frappe.log_error(message=frappe.get_traceback(), title=f"Interview Result Notification Failed: {doc.name}")
@@ -684,7 +684,7 @@ def _send_reschedule_notification(doc, email):
                 <p>Your interview for <strong>"{doc.interview_list}"</strong> has been rescheduled.</p>
                 <p>New Date: <strong>{format_date(doc.re_interview_date) or "—"}</strong></p>
                 <p>New Time: <strong>{format_time(doc.re_interview_time) or "—"}</strong></p>
-                <p><a href="/merit-and-scholarship/admission_dashboard?panel=applications" style="color: #16a34a; font-weight: bold;">Click here to view details.</a></p>
+                <p><a href="/nlsat/dashboard?panel=applications" style="color: #16a34a; font-weight: bold;">Click here to view details.</a></p>
             """
             
             frappe.get_doc({
@@ -696,7 +696,7 @@ def _send_reschedule_notification(doc, email):
                 "document_type": "Interview Seat Allocation",
                 "document_name": doc.name,
                 "from_user": frappe.session.user,
-                "link": "/merit-and-scholarship/admission_dashboard?panel=applications"
+                "link": "/nlsat/dashboard?panel=applications"
             }).insert(ignore_permissions=True)
         except Exception:
             frappe.log_error(message=frappe.get_traceback(), title=f"Interview Reschedule Notification Failed: {doc.name}")

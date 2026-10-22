@@ -179,7 +179,9 @@ def build_login_redirect_to_applicant_form_new(
 		academic_year=academic_year,
 		program_level=program_level,
 	)
-	return "/admission/login?redirect-to=" + quote(path, safe="/")
+	from slcm.admission.utils.nlsat_portal import get_portal_login_url
+
+	return get_portal_login_url() + "?redirect-to=" + quote(path, safe="/")
 
 
 def build_existing_applicant_portal_url(
@@ -190,7 +192,7 @@ def build_existing_applicant_portal_url(
 ) -> str:
 	"""Open an existing Applicant from my-applications or view_application."""
 	if not (applicant_name or "").strip():
-		return "/my-applications"
+		return "/nlsat/my-applications"
 	name = applicant_name.strip()
 	cycle = (admission_cycle or "").strip()
 	if cycle and not admission_cycle_uses_applicant_web_form(cycle):
@@ -723,6 +725,19 @@ def update_website_context(context):
         except Exception:
             context.pace_enabled = 0
             context.current_path = context.get("path") or ""
+
+        # NLSAT portal (Indian Nationals / International) for shared pages' links
+        try:
+            from slcm.admission.utils.nlsat_portal import get_current_portal_type, get_portal_base
+
+            _nlsat_type = get_current_portal_type()
+            context.nlsat_portal_type = _nlsat_type
+            context.nlsat_portal_base = get_portal_base(_nlsat_type)
+            context.nlsat_login_url = context.nlsat_portal_base + "/login"
+        except Exception:
+            context.nlsat_portal_type = "Domestic"
+            context.nlsat_portal_base = "/nlsatadmissions"
+            context.nlsat_login_url = "/nlsatadmissions/login"
         
         # Issue 2: Fetch active programs for the footer -> Replaced by Dynamic Footer Context
         try:

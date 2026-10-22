@@ -122,11 +122,16 @@ def get_complete_mock_context(recipient="edwinstephano@dbcyelagiri.edu.in"):
         "application_fee_amount": "₹2,500",
         "payable_amount": "₹50,000",
         "institution_name": "National Law School of India University",
-        "portal_url": get_url("/merit-and-scholarship/admission_dashboard"),
-        "portal_link": get_url("/merit-and-scholarship/admission_dashboard"),
-        "admission_portal_url": get_url("/admission/login#login"),
+        "portal_url": get_url("/nlsat/dashboard"),
+        "portal_link": get_url("/nlsat/dashboard"),
+        "admission_portal_url": get_url("/nlsatadmissions/login#login"),
         "set_password_link": get_url("/update-password?key=sample_demo_key_12345"),
-        "login_url": get_url("/admission/login#login"),
+        "link": get_url("/update-password?key=sample_demo_key_12345"),
+        "reset_password_link": get_url("/update-password?key=sample_demo_key_12345"),
+        "first_name": "EDWIN",
+        "user": recipient,
+        "email": recipient,
+        "login_url": get_url("/nlsatadmissions/login#login"),
         "link_expiry_hours": 24,
         "overall_rank": "042",
         "total_score": "88.5",
@@ -155,17 +160,16 @@ def send_single_test_email(template_name, recipient="edwinstephano@dbcyelagiri.e
     """
     context = get_complete_mock_context(recipient)
 
-    # Special handling for Signup / Registration Email stored in Institution Settings
-    if template_name in ["Applicant Registration Email", "Signup / Registration Email"]:
+    if frappe.db.exists("Email Template", template_name):
+        tmpl = frappe.get_doc("Email Template", template_name)
+        html = tmpl.response_html or tmpl.response or tmpl.message or ""
+        subject = tmpl.subject or template_name
+    elif template_name in ["Applicant Registration Email", "Signup / Registration Email"]:
         html = frappe.db.get_single_value("Institution Settings", "signup_email_template")
         subject = frappe.db.get_single_value("Institution Settings", "signup_email_subject") or "Welcome to NLSIU - Set Your Password"
         if not html:
             with open("/home/bsoft/frappe-bench/apps/slcm/slcm/admission/Email Template NLSAT/Applicant Registration Email.html") as f:
                 html = f.read()
-    elif frappe.db.exists("Email Template", template_name):
-        tmpl = frappe.get_doc("Email Template", template_name)
-        html = tmpl.response_html or tmpl.response or tmpl.message or ""
-        subject = tmpl.subject or template_name
     else:
         # Check files in Email Template NLSAT
         file_path = f"/home/bsoft/frappe-bench/apps/slcm/slcm/admission/Email Template NLSAT/{template_name}.html"

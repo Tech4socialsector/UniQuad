@@ -219,7 +219,9 @@ class CleanNotPermittedException(HTTPException):
 		is_pace_applicant = "PACE Applicant" in roles
 
 		if is_applicant:
-			redirect_url = "/admission/login"
+			from slcm.admission.utils.nlsat_portal import get_portal_login_url
+
+			redirect_url = get_portal_login_url()
 		elif is_pace_applicant:
 			redirect_url = "/paceadmissions/login"
 		else:

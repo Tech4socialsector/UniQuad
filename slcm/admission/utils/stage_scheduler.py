@@ -87,7 +87,7 @@ def _notify_if_needed(applicant_name, stage, old_stage):
                 f"to '{stage.stage_name}'."
             ),
             "notification_type": "Stage Update",
-            "link":              "/my-applications",
+            "link":              "/nlsat/my-applications",
             "is_read":           0
         }).insert(ignore_permissions=True)
     except Exception as e:

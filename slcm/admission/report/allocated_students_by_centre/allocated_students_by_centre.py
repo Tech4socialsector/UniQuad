@@ -38,7 +38,7 @@ def get_chart_data(data: list[dict]) -> dict | None:
 	if not data:
 		return None
 
-	chart_rows = data[:15]
+	chart_rows = data[:25]
 	labels = [r.get("center_name") or r.get("entrance_test_provider") for r in chart_rows]
 	values = [r.get("allocated_count", 0) for r in chart_rows]
 
@@ -53,8 +53,8 @@ def get_chart_data(data: list[dict]) -> dict | None:
 			],
 		},
 		"type": "bar",
-		"barOptions": {"horizontal": True, "stacked": False},
-		"height": max(280, len(chart_rows) * 28 + 80),
+		"barOptions": {"stacked": False},
+		"height": 320,
 		"colors": ["#2490EF"],
 	}
 

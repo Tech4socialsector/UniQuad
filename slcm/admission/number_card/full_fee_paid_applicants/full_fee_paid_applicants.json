@@ -13,7 +13,7 @@
  "is_public": 1,
  "is_standard": 1,
  "label": "Full Fee Paid Applicants",
- "modified": "2026-08-31 16:13:32.010790",
+ "modified": "2026-10-22 09:57:27.734569",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Full Fee Paid Applicants",
@@ -21,7 +21,7 @@
  "parent_document_type": "",
  "report_function": "Sum",
  "show_full_number": 1,
- "show_percentage_stats": 1,
+ "show_percentage_stats": 0,
  "stats_time_interval": "Weekly",
  "type": "Document Type"
 }
