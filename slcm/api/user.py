@@ -3,6 +3,7 @@ import base64
 import mimetypes
 
 import frappe
+from slcm.admission.utils.nlsat_portal import get_portal_base, get_portal_login_url
 from frappe import _
 from frappe.utils import random_string
 from frappe.core.doctype.user.user import sign_up
@@ -78,9 +79,7 @@ def send_welcome_or_custom_signup_email(user_doc, correct_link, template="new_us
             "applicant_name": full_name,
             "first_name": user_doc.first_name or full_name,
             "set_password_link": correct_link,
-            "link": correct_link,
-            "reset_password_link": correct_link,
-            "login_url": getattr(institution, "login_url", "") or frappe.utils.get_url("/admission/login"),
+            "login_url": getattr(institution, "login_url", "") or frappe.utils.get_url(get_portal_login_url()),
             "support_email": getattr(institution, "support_email", ""),
             "link_expiry_hours": getattr(institution, "link_expiry_hours", 24) or 24,
             "doc": user_doc,
@@ -949,7 +948,7 @@ def custom_sign_up(email, full_name, mobile_no=None, redirect_to=None):
         user_doc.db_set("last_reset_password_key_generated_on", add_days(now_datetime(), 30))
 
         parsed = urllib.parse.urlparse(frappe_link)
-        base_redir = redirect_to or "/admission"
+        base_redir = redirect_to or get_portal_base()
         correct_link = get_url(f"/update-password?{parsed.query}&redirect_to={urllib.parse.quote(base_redir)}")
 
         # Cache redirect for post-password-set
@@ -1015,7 +1014,7 @@ def get_user_details():
 def get_login_redirect():
     user = frappe.session.user
     if user == "Guest":
-        return "/admission/login"
+        return get_portal_login_url()
     
     user_type = frappe.db.get_value("User", user, "user_type") or "Website User"
     if user_type == "System User":
@@ -1023,9 +1022,9 @@ def get_login_redirect():
         
     roles = frappe.get_roles(user)
     if "PACE Applicant" in roles and "Applicant" not in roles:
-        return "/merit-and-scholarship/admission_dashboard?panel=profile"
+        return "/pace/my-profile"
     else:
-        return "/merit-and-scholarship/admission_dashboard?panel=profile"
+        return "/nlsat/my-profile"
 
 from frappe.rate_limiter import rate_limit
 from frappe.core.doctype.user.user import get_password_reset_limit
@@ -1212,9 +1211,9 @@ def custom_update_password(new_password, logout_all_sessions=0, key=None, old_pa
                 return target
 
         if "PACE Applicant" in roles and "Applicant" not in roles:
-            return "/merit-and-scholarship/admission_dashboard?panel=profile"
+            return "/pace/my-profile"
         else:
-            return "/merit-and-scholarship/admission_dashboard?panel=profile"
+            return "/nlsat/my-profile"
     
     return result
 
@@ -1285,7 +1284,7 @@ def register_pace_user(email, full_name=None, mobile_number=None, redirect_to=No
         if redirect_to:
             frappe.cache().hset("redirect_after_login", user.name, redirect_to)
         else:
-            frappe.cache().hset("redirect_after_login", user.name, "/merit-and-scholarship/admission_dashboard?panel=profile")
+            frappe.cache().hset("redirect_after_login", user.name, "/pace/my-profile")
             
         frappe.db.commit()
         return {"status": "success", "message": "Check your email to set your password and activate your account!"}
@@ -1327,7 +1326,7 @@ def login_pace_user(usr, pwd):
     if user_type == "System User":
         frappe.local.response["home_page"] = "/desk"
     else:
-        frappe.local.response["home_page"] = "/merit-and-scholarship/admission_dashboard?panel=profile"
+        frappe.local.response["home_page"] = "/pace/my-profile"
 
 
 @frappe.whitelist(allow_guest=True, methods=["POST"])
@@ -1388,5 +1387,5 @@ def update_password_pace(new_password, key):
         return "/paceadmissions/login"
 
     # Default redirect for PACE
-    return "/merit-and-scholarship/admission_dashboard?panel=profile"
+    return "/pace/my-profile"
 

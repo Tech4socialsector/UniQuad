@@ -1,0 +1,2065 @@
+{% extends "slcm/www/admission/admission_base.html" %}
+
+{% block title %}{{ portal_config.get('portal_title') if portal_config and portal_config.get else
+(portal_config.portal_title if portal_config else 'Admissions') }}{% endblock %}
+
+{% block theme_vars %}
+<style>
+  :root {
+    {% if portal_config %}
+    --primary:   {{ portal_config.get('primary_color','#1a3c6e') if portal_config.get else portal_config.primary_color or '#1a3c6e' }};
+    --secondary: {{ portal_config.get('secondary_color','#c8a14b') if portal_config.get else portal_config.secondary_color or '#c8a14b' }};
+    {% else %}
+    --primary: #920C24;
+    --secondary: #2B2E4A;
+    {% endif %}
+  }
+
+  /* Tab underline */
+  .prog-tab {
+    cursor: pointer;
+    padding: 12px 20px;
+    font-size: 13px;
+    font-weight: 700;
+    border-bottom: 3px solid transparent;
+    color: #64748b;
+    transition: color 0.2s, border-color 0.2s;
+    white-space: nowrap;
+  }
+
+  .prog-tab:hover {
+    color: #1e293b;
+  }
+
+  .prog-tab.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+  }
+
+  /* Media gallery legacy — kept for backward compat if any */
+  .media-thumb {
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    aspect-ratio: 16/9;
+    background: #e2e8f0;
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+  }
+
+  .media-thumb:hover {
+    transform: scale(1.02);
+    box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.15);
+  }
+
+  .media-thumb img,
+  .media-thumb iframe {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border: none;
+  }
+
+  /* Curriculum accordion */
+  .curric-card {
+    border-radius: 12px;
+    border: 1.5px solid #e2e8f0;
+    background: white;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+
+  .curric-card.active-card {
+    border-color: var(--primary);
+  }
+
+  .curric-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 20px;
+    cursor: pointer;
+  }
+
+  .curric-body {
+    padding: 0 20px 18px;
+    border-top: 1px solid #f1f5f9;
+  }
+
+  /* Career cards */
+  .career-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px;
+    border-radius: 12px;
+    background: rgba(26, 60, 110, 0.04);
+    border: 1px solid rgba(26, 60, 110, 0.08);
+    transition: background 0.2s, transform 0.2s;
+  }
+
+  .career-card:hover {
+    background: rgba(26, 60, 110, 0.08);
+    transform: translateY(-2px);
+  }
+
+  /* Faculty cards */
+  .faculty-card {
+    background: white;
+    border-radius: 14px;
+    border: 1.5px solid #e2e8f0;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 10px;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .faculty-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 24px -6px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Lightbox overlay legacy */
+  #lb-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(0, 0, 0, 0.92);
+    align-items: center;
+    justify-content: center;
+  }
+
+  #lb-overlay.open {
+    display: flex;
+  }
+
+  #lb-img {
+    max-width: 90vw;
+    max-height: 85vh;
+    border-radius: 8px;
+    object-fit: contain;
+  }
+
+  /* ── Program detail specific styles ── */
+  #pd-tab-nav button {
+    cursor: pointer;
+    padding: 14px 22px;
+    font-size: 13px;
+    font-weight: 700;
+    border: none;
+    background: none;
+    white-space: nowrap;
+    flex-shrink: 0;
+    border-bottom: 3px solid transparent;
+    color: #64748b;
+    transition: color 0.2s, border-color 0.2s;
+  }
+
+  #pd-tab-nav button:hover {
+    color: #1e293b;
+  }
+
+  #pd-tab-nav button.pd-active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+  }
+
+  #pd-tab-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .pd-curric-card {
+    border-radius: 12px;
+    border: 1.5px solid #e2e8f0;
+    background: white;
+    overflow: hidden;
+  }
+
+  .pd-curric-card.pd-open {
+    border-color: var(--primary);
+  }
+
+  .pd-career-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 16px;
+    border-radius: 12px;
+    background: rgba(26, 60, 110, 0.04);
+    border: 1px solid rgba(26, 60, 110, 0.08);
+    transition: background 0.2s, transform 0.15s;
+  }
+
+  .pd-career-card:hover {
+    background: rgba(26, 60, 110, 0.09);
+    transform: translateY(-2px);
+  }
+
+  .pd-faculty-card {
+    background: white;
+    border-radius: 14px;
+    border: 1.5px solid #e2e8f0;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 10px;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .pd-faculty-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 24px -6px rgba(0, 0, 0, 0.1);
+  }
+
+  /* ── New Gallery Styles ────────────────────────────────────────── */
+  .pd-gallery-section {
+    width: 100%;
+  }
+
+  .pd-gallery-strip {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .pd-gallery-strip::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  .pd-gallery-strip::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 4px;
+  }
+
+  .pd-gthumb {
+    flex: 0 0 180px;
+    height: 120px;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    scroll-snap-align: start;
+    background: #111;
+    border: 2px solid transparent;
+    transition: border-color 0.2s, transform 0.2s;
+    position: relative;
+  }
+
+  .pd-gthumb:hover {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+  }
+
+  .pd-gthumb-video {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+  }
+
+  .pd-gmodal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(0, 0, 0, 0.92);
+    align-items: center;
+    justify-content: center;
+  }
+
+  .pd-gmodal-overlay.pd-gopen {
+    display: flex;
+  }
+
+  .pd-gmodal-box {
+    display: flex;
+    width: 94vw;
+    height: 88vh;
+    max-width: 1200px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #111;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.8);
+  }
+
+  .pd-gmodal-sidebar {
+    width: 160px;
+    flex: 0 0 160px;
+    background: #0d0d0d;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px;
+  }
+
+  .pd-gmodal-sidebar::-webkit-scrollbar {
+    width: 3px;
+  }
+
+  .pd-gmodal-sidebar::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 3px;
+  }
+
+  .pd-gside-thumb {
+    flex: 0 0 90px;
+    height: 90px;
+    border-radius: 6px;
+    overflow: hidden;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: border-color 0.15s;
+    background: #1a1a1a;
+    position: relative;
+  }
+
+  .pd-gside-thumb:hover,
+  .pd-gside-thumb.pd-gside-active {
+    border-color: var(--primary);
+  }
+
+  .pd-gside-video-ph {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+  }
+
+  .pd-gside-cap {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.6);
+    color: #eee;
+    font-size: 9px;
+    margin: 0;
+    padding: 2px 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .pd-gmodal-main {
+    flex: 1;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+    overflow: hidden;
+  }
+
+  .pd-gviewer {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .pd-gviewer img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 4px;
+  }
+
+  .pd-gviewer iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+
+  .pd-gnav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.5);
+    border: none;
+    cursor: pointer;
+    color: #fff;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    transition: background 0.2s;
+  }
+
+  .pd-gnav:hover {
+    background: var(--primary);
+  }
+
+  .pd-gnav-prev {
+    left: 12px;
+  }
+
+  .pd-gnav-next {
+    right: 12px;
+  }
+
+  .pd-gclose {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.6);
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 11;
+    transition: background 0.2s;
+  }
+
+  .pd-gclose:hover {
+    background: var(--primary);
+  }
+
+  .pd-gcaption {
+    position: absolute;
+    bottom: 36px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.6);
+    color: #eee;
+    font-size: 13px;
+    padding: 4px 14px;
+    border-radius: 20px;
+    max-width: 70%;
+    text-align: center;
+    pointer-events: none;
+  }
+
+  .pd-gcounter {
+    position: absolute;
+    bottom: 10px;
+    right: 14px;
+    color: #888;
+    font-size: 12px;
+  }
+
+  /* ── GLOBAL OVERFLOW CONTAINMENT ──────────────────────────── */
+  .pd-main-container { overflow-x: hidden; }
+  .pd-tab-content {
+    overflow-x: hidden;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+  .pd-tab-content img { max-width: 100%; height: auto; }
+  .pd-tab-content table { max-width: 100%; overflow-x: auto; display: block; }
+  .pd-tabs-container, .pd-hero-banner, #pd-sidebar { overflow: hidden; }
+
+  /* ── PD Responsive grid ───────────────────────────────────── */
+  #pd-grid {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 1023px) {
+    #pd-grid { grid-template-columns: 1fr; }
+    #pd-sidebar { position: relative !important; top: auto !important; }
+  }
+
+  /* ── Programs grid ───────────────────────────────────────── */
+  .programs-grid {
+    display: grid;
+    gap: 1.5rem;
+  }
+  @media (min-width: 1200px) { .programs-grid { grid-template-columns: repeat(4, 1fr); } }
+  @media (min-width: 768px) and (max-width: 1199px) { .programs-grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (min-width: 480px) and (max-width: 767px) { .programs-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 479px) { .programs-grid { grid-template-columns: 1fr; gap: 1rem; } }
+
+  /* Program card — no fixed width, fill the column */
+  .prog-card { width: 100% !important; min-width: 0 !important; max-width: 100% !important; box-sizing: border-box; }
+
+  /* ── Listing hero (fluid height) ────────────────────────── */
+  .adm-hero-wrap {
+    height: clamp(320px, 55vw, 600px);
+    overflow: hidden;
+  }
+  @media (max-width: 768px) {
+    .adm-hero-wrap { height: clamp(280px, 70vw, 420px); }
+  }
+  @media (max-width: 480px) {
+    .adm-hero-wrap { height: clamp(220px, 80vw, 320px); }
+  }
+
+  /* ── Announcement banner card ────────────────────────────── */
+  .ann-banner-card {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 20px 28px;
+    border-radius: 12px;
+    background: white;
+    box-shadow: 0 8px 32px -8px rgba(0,0,0,0.12);
+    border: 1px solid rgba(26,60,110,0.15);
+  }
+  .ann-banner-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    padding: 12px 28px;
+    border-radius: 2px;
+    font-weight: 700;
+    font-size: 14px;
+    color: white;
+    text-decoration: none;
+    background: var(--primary);
+    white-space: nowrap;
+  }
+  @media (max-width: 640px) {
+    .ann-banner-card { padding: 16px 16px; }
+    .ann-banner-btn { width: 100%; justify-content: center; }
+  }
+
+  /* ── Detail view hero ────────────────────────────────────── */
+  .det-hero-wrap {
+    border-radius: 20px;
+    overflow: hidden;
+    min-height: clamp(220px, 35vw, 420px);
+    position: relative;
+  }
+  .det-hero-inner {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    min-height: clamp(220px, 35vw, 420px);
+    padding: clamp(20px, 4vw, 36px) clamp(16px, 4vw, 40px);
+  }
+  @media (max-width: 640px) {
+    .det-hero-wrap { border-radius: 12px !important; }
+  }
+  @media (max-width: 480px) {
+    .det-hero-wrap { border-radius: 10px !important; }
+  }
+
+  /* ── Detail view action bar ──────────────────────────────── */
+  .det-action-bar {
+    background: white;
+    border-radius: 14px;
+    padding: 18px 28px;
+    margin-top: 16px;
+    border: 1.5px solid #e2e8f0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+  }
+  .det-action-chips { display: flex; flex-wrap: wrap; gap: 24px; flex: 1; }
+  .det-action-btns  { display: flex; gap: 10px; flex-shrink: 0; flex-wrap: wrap; }
+  @media (max-width: 640px) {
+    .det-action-bar { padding: 16px; flex-direction: column; align-items: stretch; }
+    .det-action-chips { gap: 14px; }
+    .det-action-btns { width: 100%; flex-direction: column; }
+    .det-action-btns a { width: 100% !important; justify-content: center !important; box-sizing: border-box; }
+  }
+  @media (max-width: 480px) {
+    .det-action-bar { padding: 14px; margin-top: 12px; }
+  }
+
+  /* ── Announcements & Events section ─────────────────────── */
+  .ann-evt-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 48px;
+  }
+  @media (max-width: 1023px) {
+    .ann-evt-grid { grid-template-columns: 1fr; gap: 36px; }
+  }
+  @media (max-width: 640px) {
+    .ann-evt-grid { gap: 24px; }
+  }
+
+  /* ── MOBILE RESPONSIVE (detail view tabs/sidebar) ────────── */
+  @media (max-width: 640px) {
+    #pd-tab-nav { gap: 0; -webkit-overflow-scrolling: touch; scrollbar-width: none; overflow-x: auto; display: flex; }
+    #pd-tab-nav::-webkit-scrollbar { display: none; }
+    #pd-tab-nav button { padding: 12px 14px !important; font-size: 12px !important; flex-shrink: 0; }
+    .pd-tab-content { padding: 20px 16px !important; }
+    .pd-tab-content h3 { font-size: 18px !important; }
+    #pd-sidebar > div { border-radius: 12px !important; }
+    #pd-grid { gap: 16px !important; }
+    .pd-tabs-container { border-radius: 12px !important; }
+    .pd-tab-content div[style*="line-height"] { overflow-wrap: break-word; word-break: break-word; }
+    .pd-gmodal-sidebar { display: none; }
+    .pd-gmodal-box { width: 100vw; height: 100vh; border-radius: 0; }
+  }
+  @media (max-width: 480px) {
+    #pd-tab-nav button { padding: 10px 12px !important; font-size: 11px !important; }
+    .pd-tab-content { padding: 16px 12px !important; }
+  }
+
+  /* line-clamp utility */
+  .line-clamp-4 {
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  @keyframes pdFadeUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .pd-fade { animation: pdFadeUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) both; }
+</style>
+<!-- Fonts loaded in <head>
+{{ get_typography_style_block(
+    portal_config.font_family,
+    font_size_heading=portal_config.font_size_heading,
+    font_size_subheading=portal_config.font_size_subheading,
+    font_size_body=portal_config.font_size_body,
+    font_size_form_title=portal_config.font_size_form_title,
+    font_size_toast=portal_config.font_size_toast,
+    primary_color=portal_config.primary_color,
+    secondary_color=portal_config.secondary_color,
+    navbar_color=portal_config.navbar_color,
+    footer_color=portal_config.footer_color,
+    button_border_radius=portal_config.button_border_radius
+) }}
+ so icons render before JS -->
+{% endblock %}
+
+{% block page_css %}
+
+<!-- Tailwind CSS -->
+
+<!-- Tailwind CSS -->
+
+
+<style>
+  
+
+
+  /* Full-bleed breakout utility */
+  .full-bleed {
+    margin-left: calc(-50vw + 50%);
+    margin-right: calc(-50vw + 50%);
+    width: 100vw;
+    position: relative;
+  }
+
+  /* Hero slide */
+  .hero-slide {
+    opacity: 0;
+    transition: opacity 1.5s ease-in-out;
+    position: absolute;
+    inset: 0;
+  }
+
+  .hero-slide.active {
+    opacity: 1;
+    z-index: 10;
+  }
+
+  /* Ken Burns */
+  .ken-burns {
+    animation: kenburns 20s ease-in-out infinite alternate;
+  }
+
+  @keyframes kenburns {
+    0% {
+      transform: scale(1);
+    }
+
+    100% {
+      transform: scale(1.12) translateY(-2%);
+    }
+  }
+
+  /* Slide content stagger */
+  .slide-content>* {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .active .slide-content>* {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .active .slide-content>*:nth-child(1) {
+    transition-delay: 0.2s;
+  }
+
+  .active .slide-content>*:nth-child(2) {
+    transition-delay: 0.4s;
+  }
+
+  .active .slide-content>*:nth-child(3) {
+    transition-delay: 0.6s;
+  }
+
+  .active .slide-content>*:nth-child(4) {
+    transition-delay: 0.8s;
+  }
+
+  /* Scroll fade-up */
+  .fade-card {
+    opacity: 0;
+    transform: translateY(40px);
+    transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .fade-card.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Back to top */
+  #back-to-top {
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+  }
+
+  #back-to-top.visible {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  /* Program card hover lift */
+  .prog-card {
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+      box-shadow 0.25s ease;
+  }
+
+  .prog-card:hover {
+    transform: translateY(-8px) scale(1.01);
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.14);
+  }
+
+  /* Announcement card hover */
+  .ann-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .ann-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Event card hover */
+  .evt-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .evt-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  }
+
+  /* Responsive: hide overflow */
+  body {
+    overflow-x: hidden;
+    background: var(--secondary) !important;
+  }
+
+  /* Remove white strip between sticky nav and hero slideshow (adm-container default padding-top: 12px) */
+  .adm-main > .adm-container {
+    padding-top: 0 !important;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# Cycle Active Check #}
+{% set _is_cycle_active = app_open %}
+{% set _app_start = active_cycle.application_start_date if active_cycle and active_cycle.application_start_date else (active_cycle.cycle_start_date if active_cycle else None) %}
+{% set _app_end = active_cycle.application_end_date if active_cycle and active_cycle.application_end_date else (active_cycle.cycle_end_date if active_cycle else None) %}
+{% set _is_yet_to_open = active_cycle and _app_start and today < _app_start %}
+{% set _is_closed = active_cycle and _app_end and today > _app_end %}
+
+{% if show_detail %}
+{# ── Programme detail view ── #}
+{# ── safe vars ──────────────────────────────────────────────────── #}
+{% set _name = prog_name or 'Program' %}
+{% set _level = prog_level or '' %}
+{% set _pro_image = prog_image or '' %}
+{% set _dur = prog_duration or '' %}
+{% set _credits = prog_credits or '' %}
+{% set _dept = prog_dept or '' %}
+{% set _hero = prog_hero or '' %}
+{% set _pimage = prog_image or '' %}
+{% set _desc = prog_description or '' %}
+{% set _intake = prog_intake or '' %}
+{% set _slug = prog_slug or '' %}
+{% set _elig = prog_eligibility or '' %}
+{% set _fee = prog_app_fee or '' %}
+{% set _deadline = prog_deadline or '' %}
+{% set _brochure = prog_brochure or '' %}
+{% set _media = prog_media or [] %}
+{% set _curric = prog_curriculum or [] %}
+{% set _career = prog_career or [] %}
+{% set _faculty = prog_faculty or [] %}
+{% set _erules = eligibility_rules or [] %}
+
+{% if program_not_found %}
+<div style="padding:80px 20px;text-align:center;max-width:480px;margin:0 auto;">
+  <span class="material-symbols-outlined" style="font-size:64px;color:#e2e8f0;display:block;margin-bottom:16px;">
+    search_off
+  </span>
+  <h2 style="font-size:24px;font-weight:800;color:#0f172a;margin-bottom:8px;">
+    Programme Not Found
+  </h2>
+  <p style="font-size:14px;color:#64748b;margin-bottom:24px;line-height:1.6;">
+    This programme page does not exist or may have been removed.
+  </p>
+  <a href="{{ portal_base or '/nlsatadmissions' }}" style="display:inline-block;padding:10px 28px;border-radius:10px;
+            background:var(--primary);color:white;font-weight:700;
+            font-size:13px;text-decoration:none;">
+    ← Back to Programme
+  </a>
+</div>
+{% else %}
+<div style="background:#f5f7f8;margin:0;padding:12px 0 52px;border-radius:16px;">
+  <div style="max-width:1200px;margin:0 auto;padding:0 20px;">
+    <!-- BREADCRUMB -->
+    <div style="padding:4px 0 0;">
+      <a href="{{ portal_base or '/nlsatadmissions' }}" style="display:inline-flex;align-items:center;gap:6px;
+              font-size:13px;font-weight:600;color:#64748b;text-decoration:none;"
+        onmouseover="this.style.color='var(--primary)'" onmouseout="this.style.color='#64748b'">
+        <span class="material-symbols-outlined" style="font-size:18px;">arrow_back</span>
+        All Programme
+      </a>
+    </div>
+
+    <!-- HERO BANNER -->
+    {% set _hero_bg = _pimage or _hero or "" %}
+    <div class="pd-fade" style="margin-top:16px;animation-delay:0s;">
+      <div class="det-hero-wrap"
+            style="{% if _hero_bg %}background: linear-gradient(to bottom, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.75) 70%, rgba(0,0,0,0.95) 100%), url('{{ _hero_bg }}') center/cover no-repeat;{% else %}background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);{% endif %}">
+        <div class="det-hero-inner">
+          {% if _level %}
+          <span style="display:inline-block;padding:4px 12px;
+                     background:var(--primary);color:white;
+                     font-size:11px;font-weight:700;text-transform:uppercase;
+                     letter-spacing:0.08em;border-radius:6px;
+                     margin-bottom:14px;width:fit-content;">
+            {{ _level }}
+          </span>
+          {% endif %}
+          <h1 style="font-size:clamp(20px,3.5vw,36px);font-weight:800;
+                   color:white;line-height:1.15;margin:0 0 12px;max-width:720px;">
+            {{ _name }}
+          </h1>
+          {% if _dept %}
+          <p style="font-size:15px;color:rgba(255,255,255,0.78);margin:0;">
+            {{ _dept }}
+          </p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- ACTION BAR -->
+    <div class="pd-fade det-action-bar" style="animation-delay:0.06s;">
+      <div class="det-action-chips">
+        {% if _dur %}
+        <div>
+          <p style="font-size:10px;font-weight:700;text-transform:uppercase;
+                  letter-spacing:0.08em;color:#94a3b8;margin:0 0 3px;">Duration</p>
+          <p style="font-size:15px;font-weight:700;color:#0f172a;margin:0;">
+            {{ _dur }} Year{{ 's' if _dur|string != '1' }} (Full-time)
+          </p>
+        </div>
+        {% endif %}
+        {% if _credits %}
+        <div>
+          <p style="font-size:10px;font-weight:700;text-transform:uppercase;
+                  letter-spacing:0.08em;color:#94a3b8;margin:0 0 3px;">Credits</p>
+          <p style="font-size:15px;font-weight:700;color:#0f172a;margin:0;">
+            {{ _credits }} Units
+          </p>
+        </div>
+        {% endif %}
+        {% if _intake %}
+        <div>
+          <p style="font-size:10px;font-weight:700;text-transform:uppercase;
+                  letter-spacing:0.08em;color:#94a3b8;margin:0 0 3px;">Admission Via</p>
+          <p style="font-size:15px;font-weight:700;color:#0f172a;margin:0;">
+            {{ _intake }}
+          </p>
+        </div>
+        {% endif %}
+      </div>
+      <div class="det-action-btns">
+        {% if _brochure %}
+        <a href="{{ _brochure }}" target="_blank" style="display:inline-flex;align-items:center;gap:8px;
+                padding:10px 20px;border-radius:10px;
+                background:#f1f5f9;color:#475569;font-size:13px;
+                font-weight:700;text-decoration:none;
+                border:1.5px solid #e2e8f0;"
+         onmouseover="this.style.background='#e2e8f0'"
+         onmouseout="this.style.background='#f1f5f9'">
+        <span class="material-symbols-outlined" style="font-size:18px;">download</span>
+        Brochure
+      </a>
+      {% endif %}
+      {% if frappe.session.user != "Guest" %}
+      <a href="{{ (prog_app_link or apply_web_form_url) if (_is_cycle_active and not prog_seats_full) else 'javascript:void(0)' }}"
+         style="display:inline-flex;align-items:center;gap:8px;
+                padding:10px 24px;border-radius:10px;font-size:13px;
+                font-weight:700;color:white;text-decoration:none;
+                background:var(--primary);
+                box-shadow:0 4px 12px -2px rgba(26,60,110,0.3);
+                {{ 'opacity: 0.6; cursor: not-allowed; pointer-events: none;' if (not _is_cycle_active or prog_seats_full) else '' }}"
+         {% if _is_cycle_active and not prog_seats_full %}
+         onmouseover="this.style.opacity='0.88'"
+         onmouseout="this.style.opacity='1'"
+         {% endif %}>
+        {{ 'Seats Full' if prog_seats_full else ('Apply Now' if _is_cycle_active else ('Yet to Open' if _is_yet_to_open else 'Application Closed')) }}
+      </a>
+      {% else %}
+      <a href="{{ (prog_app_link or apply_web_form_login_url) if (_is_cycle_active and not prog_seats_full) else 'javascript:void(0)' }}"
+         style="display:inline-flex;align-items:center;gap:8px;
+                padding:10px 24px;border-radius:10px;font-size:13px;
+                font-weight:700;color:white;text-decoration:none;
+                background:var(--primary);
+                box-shadow:0 4px 12px -2px rgba(26,60,110,0.3);
+                {{ 'opacity: 0.6; cursor: not-allowed; pointer-events: none;' if (not _is_cycle_active or prog_seats_full) else '' }}"
+         {% if _is_cycle_active and not prog_seats_full %}
+         onmouseover="this.style.opacity='0.88'"
+         onmouseout="this.style.opacity='1'"
+         {% endif %}>
+        {{ 'Seats Full' if prog_seats_full else ('Apply Now' if _is_cycle_active else ('Yet to Open' if _is_yet_to_open else 'Application Closed')) }}
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+    {# ══ GALLERY STRIP ══ #}
+    {% if _media %}
+    <section class="pd-gallery-section pd-fade" style="padding:24px 0 0 0; animation-delay:0.08s;">
+      <div class="pd-gallery-strip" id="pdGalleryStrip">
+        {% for item in _media %}
+        {% set _loop_index = loop.index0 %}
+        <div class="pd-gthumb" onclick="pdGalleryOpen({{ _loop_index }})" title="{{ item.caption or item.type }}">
+          {% if item.type == "Image" %}
+          <img src="{{ item.url }}" alt="{{ item.caption or 'Image' }}" loading="lazy"
+            style="width:100%;height:100%;object-fit:cover;border-radius:8px;">
+          {% else %}
+          <div class="pd-gthumb-video">
+            <span class="material-symbols-outlined" style="font-size:2rem;color:#fff;">
+              play_circle
+            </span>
+            {% if item.caption %}
+            <p style="font-size:11px;color:#eee;margin:4px 0 0;text-align:center;
+                      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+                      max-width:140px;">{{ item.caption }}</p>
+            {% endif %}
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <!-- GALLERY MODAL -->
+    <div id="pdGalleryModal" class="pd-gmodal-overlay" onclick="pdGalleryClose(event)">
+      <div class="pd-gmodal-box" onclick="event.stopPropagation()">
+        <!-- LEFT sidebar -->
+        <div class="pd-gmodal-sidebar" id="pdGSidebar">
+          {% for item in _media %}
+          {% set _li = loop.index0 %}
+          <div class="pd-gside-thumb {% if loop.first %}pd-gside-active{% endif %}" id="pdST{{ _li }}"
+            onclick="pdGalleryGo({{ _li }})">
+            {% if item.type == "Image" %}
+            <img src="{{ item.url }}" alt="{{ item.caption or '' }}" style="width:100%;height:100%;object-fit:cover;">
+            {% else %}
+            <div class="pd-gside-video-ph">
+              <span class="material-symbols-outlined" style="font-size:1.4rem;color:#fff;">
+                play_circle
+              </span>
+            </div>
+            {% endif %}
+            {% if item.caption %}
+            <p class="pd-gside-cap">{{ item.caption }}</p>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        <!-- RIGHT main -->
+        <div class="pd-gmodal-main">
+          <button class="pd-gnav pd-gnav-prev" onclick="pdGalleryStep(-1)">
+            <span class="material-symbols-outlined">chevron_left</span>
+          </button>
+          <button class="pd-gnav pd-gnav-next" onclick="pdGalleryStep(1)">
+            <span class="material-symbols-outlined">chevron_right</span>
+          </button>
+          <button class="pd-gclose" onclick="pdGalleryClose()">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+          <div class="pd-gviewer" id="pdGViewer"></div>
+          <div class="pd-gcaption" id="pdGCaption"></div>
+          <div class="pd-gcounter" id="pdGCounter"></div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <div id="pd-grid" style="margin-top:24px;" class="pd-fade" style="animation-delay:0.1s;">
+      <div>
+        <div style="background:white;border-radius:16px;border:1.5px solid #e2e8f0;overflow:hidden;">
+          <div id="pd-tab-nav" style="display:flex;border-bottom:1px solid #f1f5f9;overflow-x:auto;">
+            <button class="pd-active" onclick="pdTab(this,'pd-curriculum')">Curriculum</button>
+            <button onclick="pdTab(this,'pd-eligibility')">Eligibility</button>
+            <button onclick="pdTab(this,'pd-career')">Career Prospects</button>
+            <button onclick="pdTab(this,'pd-faculty')">Faculty</button>
+          </div>
+          <div id="pd-curriculum" style="padding:28px;">
+            <h3 style="font-size:20px;font-weight:700;color:#0f172a;margin:0 0 20px;">What You'll Study</h3>
+            {% if _curric %}
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              {% for item in _curric %}
+              {% set _yl = item.year_label if item is mapping else item['year_label'] %}
+              {% set _cr = item.credits if item is mapping else item['credits'] %}
+              {% set _sj = item.subjects if item is mapping else item['subjects'] %}
+              {% set _ix = loop.index0 %}
+              <div id="pdc-{{ _ix }}" class="pd-curric-card {% if _ix == 0 %}pd-open{% endif %}">
+                <div onclick="pdCurric({{ _ix }})"
+                  style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px;cursor:pointer;">
+                  <h4 id="pdc-h-{{ _ix }}"
+                    style="font-size:15px;font-weight:700;margin:0;color:{% if _ix == 0 %}var(--primary){% else %}#0f172a{% endif %};">
+                    {{ _yl }}</h4>
+                  {% if _cr %}<span
+                    style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#94a3b8;">{{
+                    _cr }}</span>{% endif %}
+                </div>
+                <div id="pdc-b-{{ _ix }}"
+                  style="{% if _ix != 0 %}display:none;{% endif %}padding:0 20px 18px;border-top:1px solid #f1f5f9;">
+                  {% if _sj %}<ul
+                    style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:10px;">{% for subj
+                    in _sj %}<li style="display:flex;align-items:center;gap:10px;font-size:14px;color:#475569;"><span
+                        class="material-symbols-outlined"
+                        style="font-size:18px;color:var(--primary);flex-shrink:0;">check_circle</span>{{ subj }}</li>{%
+                    endfor %}</ul>
+                  {% else %}<p style="font-size:13px;color:#94a3b8;font-style:italic;margin:0;">Subjects will be updated
+                    soon.</p>{% endif %}
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+            {% else %}<div style="padding:32px;text-align:center;"><span class="material-symbols-outlined"
+                style="font-size:44px;color:#e2e8f0;display:block;margin-bottom:8px;">menu_book</span>
+              <p style="font-size:13px;color:#94a3b8;margin:0;">Curriculum details coming soon.</p>
+            </div>{% endif %}
+          </div>
+          <div id="pd-eligibility" style="padding:28px;display:none;">
+            <h3 style="font-size:20px;font-weight:700;color:#0f172a;margin:0 0 20px;">Eligibility Criteria</h3>
+            {% if _elig %}<div style="font-size:14px;color:#475569;line-height:1.75;margin-bottom:20px;">{{ _elig | safe
+              }}</div>{% endif %}
+            {% if _erules %}<div style="display:flex;flex-direction:column;gap:12px;">{% for rule in _erules %}{% set
+              _rn = (rule.get('rule_name') if rule.get else rule.rule_name) or '' %}{% set _rql =
+              (rule.get('qualification_level') if rule.get else rule.qualification_level) or '' %}{% set _rrt =
+              (rule.get('rule_type') if rule.get else rule.rule_type) or '' %}{% set _rcg = (rule.get('required_cgpa')
+              if rule.get else rule.required_cgpa) or '' %}{% set _rpc = (rule.get('required_percentage') if rule.get
+              else rule.required_percentage) or '' %}{% set _rds = (rule.get('description') if rule.get else
+              rule.description) or '' %}<div
+                style="padding:16px 20px;border-radius:12px;background:#f8fafc;border:1px solid #e2e8f0;">
+                <div style="display:flex;align-items:center;gap:10px;{% if _rds %}margin-bottom:8px;{% endif %}"><span
+                    class="material-symbols-outlined"
+                    style="font-size:20px;color:var(--primary);flex-shrink:0;">verified</span>
+                  <div>
+                    <p style="font-size:14px;font-weight:700;color:#0f172a;margin:0;">{{ _rn }}</p>{% if _rql or _rrt %}
+                    <p style="font-size:12px;color:#64748b;margin:2px 0 0;">{{ _rql }}{% if _rql and _rrt %} · {% endif
+                      %}{{ _rrt }}{% if _rcg %} · Min CGPA: {{ _rcg }}{% endif %}{% if _rpc %} · Min {{ _rpc }}%{% endif
+                      %}</p>{% endif %}
+                  </div>
+                </div>{% if _rds %}<p style="font-size:13px;color:#475569;line-height:1.6;margin:0 0 0 30px;">{{ _rds }}
+                </p>{% endif %}
+              </div>{% endfor %}</div>{% endif %}
+            {% if not _elig and not _erules %}<div style="padding:32px;text-align:center;"><span
+                class="material-symbols-outlined"
+                style="font-size:44px;color:#e2e8f0;display:block;margin-bottom:8px;">checklist</span>
+              <p style="font-size:13px;color:#94a3b8;margin:0;">Eligibility details will be updated soon.</p>
+            </div>{% endif %}
+          </div>
+          <div id="pd-career" style="padding:28px;display:none;">
+            <h3 style="font-size:20px;font-weight:700;color:#0f172a;margin:0 0 20px;">Career Opportunities</h3>
+            {% if _career %}<div
+              style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;">{% for c in
+              _career %}{% set _ct = c.title if c is mapping else c['title'] %}{% set _ci = c.icon if c is mapping else
+              c['icon'] %}{% set _cs = c.salary if c is mapping else c['salary'] %}{% set _cd = c.description if c is
+              mapping else c['description'] %}<div class="pd-career-card"><span class="material-symbols-outlined"
+                  style="font-size:32px;color:var(--primary);flex-shrink:0;margin-top:2px;">{{ _ci or 'work' }}</span>
+                <div>
+                  <p style="font-size:14px;font-weight:700;color:#0f172a;margin:0;">{{ _ct }}</p>{% if _cs %}<p
+                    style="font-size:12px;color:#64748b;margin:3px 0 0;">{{ _cs }}</p>{% endif %}{% if _cd %}<p
+                    style="font-size:12px;color:#94a3b8;margin:5px 0 0;line-height:1.5;">{{ _cd }}</p>{% endif %}
+                </div>
+              </div>{% endfor %}</div>
+            {% else %}<div style="padding:32px;text-align:center;"><span class="material-symbols-outlined"
+                style="font-size:44px;color:#e2e8f0;display:block;margin-bottom:8px;">business_center</span>
+              <p style="font-size:13px;color:#94a3b8;margin:0;">Career information coming soon.</p>
+            </div>{% endif %}
+          </div>
+          <div id="pd-faculty" style="padding:28px;display:none;">
+            <h3 style="font-size:20px;font-weight:700;color:#0f172a;margin:0 0 20px;">Faculty</h3>
+            {% if _faculty %}<div
+              style="display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:16px;">{% for f in
+              _faculty %}{% set _fn = f.name if f is mapping else f['name'] %}{% set _fd = f.designation if f is mapping
+              else f['designation'] %}{% set _fs = f.specialization if f is mapping else f['specialization'] %}{% set
+              _fp = f.photo if f is mapping else f['photo'] %}{% set _fu = f.profile_url if f is mapping else
+              f['profile_url'] %}<div class="pd-faculty-card">{% if _fp %}<img src="{{ _fp }}" alt="{{ _fn }}"
+                  style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:3px solid rgba(26,60,110,0.1);">{%
+                else %}<div
+                  style="width:64px;height:64px;border-radius:50%;background:rgba(26,60,110,0.08);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:var(--primary);">
+                  {{ _fn[0]|upper if _fn else 'F' }}</div>{% endif %}<p
+                  style="font-size:14px;font-weight:700;color:#0f172a;margin:0;">{{ _fn }}</p>{% if _fd %}<p
+                  style="font-size:12px;color:#64748b;margin:0;">{{ _fd }}</p>{% endif %}{% if _fs %}<p
+                  style="font-size:11px;color:#94a3b8;margin:0;">{{ _fs }}</p>{% endif %}{% if _fu %}<a href="{{ _fu }}"
+                  style="font-size:12px;color:var(--primary);font-weight:600;text-decoration:none;"
+                  onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">View
+                  Profile</a>{% endif %}</div>{% endfor %}</div>
+            {% else %}<div style="padding:32px;text-align:center;"><span class="material-symbols-outlined"
+                style="font-size:44px;color:#e2e8f0;display:block;margin-bottom:8px;">groups</span>
+              <p style="font-size:13px;color:#94a3b8;margin:0;">Faculty profiles coming soon.</p>
+            </div>{% endif %}
+          </div>
+        </div>
+        {% if _desc %}<div
+          style="background:white;border-radius:16px;padding:28px;border:1.5px solid #e2e8f0;margin-top:20px;">
+          <h3 style="font-size:18px;font-weight:700;color:#0f172a;margin:0 0 14px;">About This Programme</h3>
+          <div style="font-size:14px;color:#475569;line-height:1.78;">{{ _desc | safe }}</div>
+        </div>{% endif %}
+      </div>
+      <div id="pd-sidebar" style="position:sticky;top:80px;">
+        <div style="background:white;border-radius:4px;padding:28px;border:1.5px solid #e2e8f0;margin-bottom:16px;">
+          <h4 style="font-size:16px;font-weight:700;color:#0f172a;margin:0 0 20px;">Admission Details</h4>
+          <div style="display:flex;flex-direction:column;gap:16px;">
+            {% if _intake %}<div>
+              <p
+                style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#94a3b8;margin:0 0 4px;">
+                Admission Via</p>
+              <p style="font-size:14px;color:#475569;margin:0;">{{ _intake }}</p>
+            </div>{% endif %}
+            {% if _dur %}<div>
+              <p
+                style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#94a3b8;margin:0 0 4px;">
+                Duration</p>
+              <p style="font-size:14px;color:#475569;margin:0;">{{ _dur }} Year{{ 's' if _dur|string != '1' }}
+                (Full-time)</p>
+            </div>{% endif %}
+            {% if _elig %}<div>
+              <p
+                style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#94a3b8;margin:0 0 4px;">
+                Eligibility</p>
+              <div style="font-size:13px;color:#475569;line-height:1.6;">{{ _elig[:180] | striptags }}{% if _elig|length
+                > 180 %}…{% endif %}</div>
+            </div>{% elif _erules %}<div>
+              <p
+                style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#94a3b8;margin:0 0 4px;">
+                Eligibility</p>{% set _fr = _erules[0] %}<p
+                style="font-size:13px;color:#475569;margin:0;line-height:1.6;">{{ (_fr.get('description') if _fr.get
+                else _fr.description) or (_fr.get('rule_name') if _fr.get else _fr.rule_name) or 'See Eligibility tab
+                for details.' }}</p>
+            </div>{% endif %}
+            {% if _fee %}<div>
+              <p
+                style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#94a3b8;margin:0 0 4px;">
+                Application Fee</p>
+              <p style="font-size:14px;color:#475569;margin:0;">{{ _fee }}</p>
+            </div>{% endif %}
+            <div style="padding-top:12px;border-top:1px solid #f1f5f9;">
+              {% if frappe.session.user and frappe.session.user != "Guest" %}
+              {% if user_app_name %}
+              <a href="/nlsat/my-applications?app={{ user_app_name }}"
+                style="display:block;width:100%;padding:13px;text-align:center;border-radius:10px;background:#10b981;color:white;font-weight:700;font-size:14px;text-decoration:none;box-shadow:0 4px 14px -4px rgba(16,185,129,0.4);"
+                onmouseover="this.style.opacity='0.88'" onmouseout="this.style.opacity='1'">
+                Applied
+              </a>
+              {% else %}
+              <a href="{{ (prog_app_link or apply_web_form_url) if _is_cycle_active else 'javascript:void(0)' }}"
+                style="display:block;width:100%;padding:13px;text-align:center;border-radius:10px;background:var(--primary);color:white;font-weight:700;font-size:14px;text-decoration:none;box-shadow:0 4px 14px -4px rgba(26,60,110,0.4);{{ 'opacity: 0.6; cursor: not-allowed; pointer-events: none;' if not _is_cycle_active else '' }}"
+                {% if _is_cycle_active %} onmouseover="this.style.opacity='0.88'" onmouseout="this.style.opacity='1'" {%
+                endif %}>
+                {{ 'Apply Now' if _is_cycle_active else ('Yet to Open' if _is_yet_to_open else 'Application Closed') }}
+              </a>
+              {% endif %}
+              {% else %}
+              <a href="{{ (prog_app_link or apply_web_form_login_url) if _is_cycle_active else 'javascript:void(0)' }}"
+                style="display:block;width:100%;padding:13px;text-align:center;border-radius:10px;background:var(--primary);color:white;font-weight:700;font-size:14px;text-decoration:none;box-shadow:0 4px 14px -4px rgba(26,60,110,0.4);{{ 'opacity: 0.6; cursor: not-allowed; pointer-events: none;' if not _is_cycle_active else '' }}"
+                {% if _is_cycle_active %} onmouseover="this.style.opacity='0.88'" onmouseout="this.style.opacity='1'" {%
+                endif %}>
+                {{ 'Apply Now' if _is_cycle_active else ('Yet to Open' if _is_yet_to_open else 'Application Closed') }}
+              </a>
+              {% endif %}
+              {% if _deadline %}<p style="font-size:11px;text-align:center;color:#94a3b8;margin:8px 0 0;">Application
+                deadline: {{ _deadline }}</p>{% elif active_cycle %}<p
+                style="font-size:11px;text-align:center;color:#94a3b8;margin:8px 0 0;">Cycle: {{ active_cycle.name }}
+              </p>{% endif %}
+            </div>
+          </div>
+        </div>
+        <div style="background:#0f172a;border-radius:16px;padding:28px;position:relative;overflow:hidden;">
+          <div style="position:relative;z-index:2;">
+            <h4 style="font-size:16px;font-weight:700;color:white;margin:0 0 8px;">Questions?</h4>
+            <p style="font-size:13px;color:#94a3b8;line-height:1.6;margin:0 0 20px;">Connect with our admissions team to
+              learn more about this programme.</p><a href="mailto:{{ support_email or 'admissions@nlsiu.ac.in' }}"
+              style="display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--secondary);text-decoration:none;"
+              onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">Contact
+              Admissions<span class="material-symbols-outlined" style="font-size:18px;">arrow_forward</span></a>
+          </div>
+          <div style="position:absolute;right:-18px;bottom:-18px;opacity:0.1;"><span class="material-symbols-outlined"
+              style="font-size:120px;color:white;">contact_support</span></div>
+        </div>
+      </div>
+    </div>
+    <footer style="margin-top:40px;padding-top:20px;border-top:1px solid #e2e8f0;">
+      <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;">
+        <p style="font-size:12px;color:#94a3b8;margin:0;">National Law School of India University — Admissions Portal
+        </p>
+        <div style="display:flex;gap:20px;"><a href="{{ portal_base or '/nlsatadmissions' }}"
+            style="font-size:12px;color:#64748b;text-decoration:none;font-weight:500;"
+            onmouseover="this.style.color='var(--primary)'" onmouseout="this.style.color='#64748b'">All Programmes</a><a
+            href="/nlsat/dashboard"
+            style="font-size:12px;color:#64748b;text-decoration:none;font-weight:500;"
+            onmouseover="this.style.color='var(--primary)'" onmouseout="this.style.color='#64748b'">Dashboard</a></div>
+      </div>
+    </footer>
+  </div>
+</div>
+{% endif %}
+
+{% else %}
+{# ── EXISTING LISTING VIEW ─────────────────────────────────────── #}
+{# ── Config extraction ─────────────────────────────── #}
+{% if portal_config and portal_config.get %}
+{% set _title = portal_config.get('portal_title') or 'Admissions' %}
+{% set _tagline = portal_config.get('portal_subtitle') or '' %}
+{% set _since = portal_config.get('institution_since') or '' %}
+{% set _slides = portal_config.get('slideshow_images') or [] %}
+{% set _hero_img = portal_config.get('hero_image') or '' %}
+{% set _show_ann = portal_config.get('show_announcement') or 0 %}
+{% set _ann_text = portal_config.get('header_announcement') or '' %}
+{% set _login_req= portal_config.get('login_required_for_application') %}
+{% set _cta1 = portal_config.get('hero_cta_label') or 'Explore Programmes' %}
+{% set _cta2 = portal_config.get('hero_cta2_label') or 'Virtual Tour' %}
+{% set _f_addr = portal_config.get('footer_address') or '' %}
+{% set _f_phone = portal_config.get('footer_phone') or '' %}
+{% set _f_email = portal_config.get('footer_email') or portal_config.get('contact_email') or '' %}
+{% elif portal_config %}
+{% set _title = portal_config.portal_title or 'Admissions' %}
+{% set _tagline = portal_config.portal_subtitle or '' %}
+{% set _since = portal_config.institution_since or '' %}
+{% set _slides = portal_config.slideshow_images or [] %}
+{% set _hero_img = portal_config.hero_image or '' %}
+{% set _show_ann = portal_config.show_announcement or 0 %}
+{% set _ann_text = portal_config.header_announcement or '' %}
+{% set _login_req= portal_config.login_required_for_application %}
+{% set _cta1 = portal_config.hero_cta_label or 'Explore Programmes' %}
+{% set _cta2 = portal_config.hero_cta2_label or 'Virtual Tour' %}
+{% set _f_addr = portal_config.footer_address or '' %}
+{% set _f_phone = portal_config.footer_phone or '' %}
+{% set _f_email = portal_config.contact_email or '' %}
+{% else %}
+{% set _title='Admissions' %} {% set _tagline='' %} {% set _since='' %}
+{% set _slides=[] %} {% set _hero_img='' %}
+{% set _show_ann=0 %} {% set _ann_text='' %} {% set _login_req=1 %}
+{% set _cta1='Explore Programmes' %} {% set _cta2='Virtual Tour' %}
+{% set _f_addr='' %} {% set _f_phone='' %} {% set _f_email='' %}
+{% endif %}
+
+{% set _total_slides = (_slides|length) + (1 if _hero_img else 0) %}
+
+<!-- ══ HERO ══════════════════════════════════════════════════════════ -->
+<div class="full-bleed adm-hero-wrap" style="position:relative;">
+
+  <!-- Slide: hero_image (if set) -->
+  {% if _hero_img %}
+  <div class="hero-slide active">
+    <div class="ken-burns absolute inset-0 bg-cover bg-center"
+      style="background-image:linear-gradient(to bottom,rgba(16,24,34,0.4),rgba(16,24,34,0.85)),url('{{ _hero_img }}')">
+    </div>
+    <div class="slide-content relative z-10 flex h-full flex-col items-center justify-center px-6 text-center mx-auto"
+      style="max-width:1200px">
+      <!-- {% if _since %}<span
+        class="mb-4 inline-block rounded-sm border border-white/30 bg-white/10 px-4 py-1 text-xs font-bold uppercase tracking-widest text-white backdrop-blur-sm">Est.
+        {{ _since }} • Excellence in Education</span>{% endif %} -->
+      <h1 class="max-w-4xl font-black leading-tight text-white">{{ _title }}</h1>
+      {% if _tagline %}<h2 class="mt-6 max-w-2xl text-lg text-slate-200 md:text-xl">{{ _tagline }}</h2>{% endif %}
+      <div class="mt-10 flex flex-wrap justify-center gap-4">
+        <a href="#programs"
+          class="rounded-sm px-6 py-3 text-lg font-bold text-white hover:scale-105 transition-transform"
+          style="background:var(--primary)">{{ _cta1 }}</a>
+        <!-- <button class="rounded-xl border border-white/20 bg-white/10 px-8 py-4 text-lg font-bold text-white backdrop-blur-md hover:bg-white/20 transition-all">{{ _cta2 }}</button> -->
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Slides: slideshow_images -->
+  {% for slide in _slides %}
+  {% set _simg = slide.get('image') if slide.get else slide.image %}
+  {% set _scap = slide.get('caption') if slide.get else slide.caption %}
+  {% set _ssub = slide.get('subtitle') if slide.get else '' %}
+  {% set _stag = slide.get('tag') if slide.get else '' %}
+  <div class="hero-slide {% if not _hero_img and loop.first %}active{% endif %}">
+    <div class="ken-burns absolute inset-0 bg-cover bg-center"
+      style="background-image:linear-gradient(to bottom,rgba(16,24,34,0.4),rgba(16,24,34,0.85)),url('{{ _simg or '' }}')">
+    </div>
+    <div class="slide-content relative z-10 flex h-full flex-col items-center justify-center px-6 text-center mx-auto"
+      style="max-width:1200px">
+      {% if _stag %}<span
+        class="mb-4 inline-block rounded-full border border-white/30 bg-white/10 px-4 py-1 text-xs font-bold uppercase tracking-widest text-white backdrop-blur-sm">{{
+        _stag }}</span>{% endif %}
+      <h1 class="max-w-4xl font-black leading-tight text-white">{{ _scap or _title }}</h1>
+      {% if _ssub %}<h2 class="mt-6 max-w-2xl text-lg text-slate-200 md:text-xl">{{ _ssub }}</h2>{% endif %}
+      <div class="mt-10 flex flex-wrap justify-center gap-4">
+        <a href="#programs"
+          class="rounded-sm px-6 py-3 text-lg font-bold text-white hover:scale-105 transition-transform"
+          style="background:var(--primary)">{{ _cta1 }}</a>
+        <!-- <button class="rounded-xl border border-white/20 bg-white/10 px-8 py-4 text-lg font-bold text-white backdrop-blur-md hover:bg-white/20 transition-all">{{ _cta2 }}</button> -->
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+
+  <!-- Fallback: no images configured -->
+  {% if _total_slides == 0 %}
+  <div class="hero-slide active">
+    <div class="ken-burns absolute inset-0"
+      style="background:linear-gradient(135deg,var(--primary) 0%,#0d2040 60%,#1a1a2e 100%)"></div>
+    <!-- subtle radial overlay for depth -->
+    <div class="absolute inset-0"
+      style="background:radial-gradient(ellipse at 30% 60%,rgba(255,255,255,0.06) 0%,transparent 60%)"></div>
+    <div class="slide-content relative z-10 flex h-full flex-col items-center justify-center px-6 text-center mx-auto"
+      style="max-width:1200px">
+      {% if _since %}<span
+        class="mb-4 inline-block rounded-sm border border-white/30 bg-white/10 px-4 py-1 text-xs font-bold uppercase tracking-widest text-white">Est.
+        {{ _since }} • Excellence in Education</span>{% endif %}
+      <h1 class="font-headline font-black leading-tight text-white">{{ _title }}</h1>
+      {% if _tagline %}<h2 class="mt-6 max-w-2xl text-lg text-slate-200 md:text-xl">{{ _tagline }}</h2>{% endif %}
+      <div class="mt-8 flex flex-wrap justify-center gap-4">
+        <a href="#programs" class="rounded-sm bg-white px-4 py-2 hover:scale-105 transition-transform"
+          style="color:var(--primary); font-size: 14px !important; font-weight: 400 !important;">{{ _cta1 }}</a>
+        <!-- <button class="rounded-xl border border-white/20 bg-white/10 px-8 py-4 text-lg font-bold text-white backdrop-blur-md hover:bg-white/20 transition-all">{{ _cta2 }}</button> -->
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+<!-- END HERO -->
+
+<!-- ══ ANNOUNCEMENT BANNER ══════════════════════════════════════════ -->
+<div class="full-bleed" style="position:relative;z-index:20;margin-top:-48px;">
+  <div style="max-width:960px;margin:0 auto;padding:0 16px;">
+    <div class="ann-banner-card">
+      <div style="display:flex;align-items:center;gap:14px;flex:1;min-width:0;">
+        <div style="flex-shrink:0;display:flex;width:44px;height:44px;align-items:center;justify-content:center;border-radius:50%;background:rgba(26,60,110,0.08);color:var(--primary)">
+          <span class="material-symbols-outlined" style="font-size:28px;">campaign</span>
+        </div>
+        <h2 class="font-headline font-black text-slate-900" style="font-size:clamp(16px,3vw,28px);margin:0;word-break:break-word;">
+          {% if _show_ann and _ann_text %}{{ _ann_text | safe }}
+          {% elif active_cycle %}Admissions {{ active_cycle.name }} Now Open!
+          {% else %}Admissions are currently closed.{% endif %}
+        </h2>
+      </div>
+      {% if active_cycle %}
+      <a href="{{ '#programs' if _is_cycle_active else 'javascript:void(0)' }}"
+        class="ann-banner-btn {{ 'opacity-60 cursor-not-allowed' if not _is_cycle_active else '' }}"
+        style="{{ 'pointer-events:none;background:#94a3b8;' if not _is_cycle_active else '' }}">
+        {{ 'Apply Now' if _is_cycle_active else ('Yet to Open' if _is_yet_to_open else 'Application Closed') }}
+      </a>
+      {% else %}
+      <div class="ann-banner-btn" style="background:#94a3b8;cursor:default;">
+        Stay Tuned
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+<!-- END BANNER -->
+
+<!-- ══ STATS BAR ════════════════════════════════════════════════════ -->
+<!-- {% if stats %}
+<div class="mt-16 grid grid-cols-2 overflow-hidden rounded-2xl bg-white shadow-sm md:grid-cols-4"
+     style="border:1px solid rgba(26,60,110,0.08);">
+  <div class="border-b border-r border-slate-100 p-6 text-center md:border-b-0">
+    <div class="text-3xl font-black" style="color:var(--primary)">{{ stats.total_programs or (programs|length) }}</div>
+    <div class="mt-1 text-xs font-semibold uppercase tracking-widest text-slate-500">Programmes</div>
+  </div>
+  <div class="border-b border-slate-100 p-6 text-center md:border-b-0 md:border-r">
+    <div class="text-3xl font-black" style="color:var(--primary)">{{ stats.total_seats or "—" }}</div>
+    <div class="mt-1 text-xs font-semibold uppercase tracking-widest text-slate-500">Total Seats</div>
+  </div>
+  <div class="border-r border-slate-100 p-6 text-center">
+    <div class="text-3xl font-black" style="color:var(--primary)">{{ stats.days_remaining if stats.days_remaining is not none else "—" }}</div>
+    <div class="mt-1 text-xs font-semibold uppercase tracking-widest text-slate-500">Days Left</div>
+  </div>
+  <div class="p-6 text-center">
+    <div class="text-2xl font-black" style="color:var(--primary)">{{ frappe.utils.formatdate(stats.apply_by,"dd MMM") if stats.apply_by else "—" }}</div>
+    <div class="mt-1 text-xs font-semibold uppercase tracking-widest text-slate-500">Apply By</div>
+  </div>
+</div>
+{% endif %} -->
+<!-- END STATS -->
+
+<!-- ══ PROGRAMS ══════════════════════════════════════════════════════ -->
+<section id="programs" class="py-20">
+  <!-- {% if active_cycle and _app_start and _app_end %}
+  <div class="mb-8 p-4 rounded-xl border flex items-center gap-3 fade-card
+    {{ 'border-red-200 bg-red-50' if _is_closed else ('border-amber-200 bg-amber-50' if _is_yet_to_open else 'border-emerald-200 bg-emerald-50') }}">
+    <span class="material-symbols-outlined {{ 'text-red-600' if _is_closed else ('text-amber-600' if _is_yet_to_open else 'text-emerald-600') }}">
+      {{ 'error' if _is_closed else ('schedule' if _is_yet_to_open else 'info') }}
+    </span>
+    <p class="text-sm font-semibold {{ 'text-red-800' if _is_closed else ('text-amber-800' if _is_yet_to_open else 'text-emerald-800') }}">
+      {% if _is_closed %}
+      Note: applications are closed for the current cycle. Application opened on {{ frappe.utils.formatdate(_app_start, "dd MMM yyyy") }} and closed on {{ frappe.utils.formatdate(_app_end, "dd MMM yyyy") }}.
+      {% elif _is_yet_to_open %}
+      Note: applications are yet to open for the current cycle. Application opens on {{ frappe.utils.formatdate(_app_start, "dd MMM yyyy") }} and closes on {{ frappe.utils.formatdate(_app_end, "dd MMM yyyy") }}.
+      {% else %}
+      Note: applications are open for the current cycle. Application opened on {{ frappe.utils.formatdate(_app_start, "dd MMM yyyy") }} and closes on {{ frappe.utils.formatdate(_app_end, "dd MMM yyyy") }}.
+      {% endif %}
+    </p>
+  </div>
+  {% endif %} -->
+  {% set _cyc = active_cycle.name if active_cycle else '' %}
+  {% set _ay = active_cycle.admission_year if active_cycle else '' %}
+  {% set _aac = active_cycle.academic_year if active_cycle else '' %}
+  {# Programmes are already filtered to this portal in index.py: /nlsatadmissions → Domestic, /nlsat-international → International #}
+  <div id="program-level-sections" data-initial-filter="{{ portal_type or 'Domestic' }}">
+  {% for grp in (program_groups or []) %}
+  <div class="program-level-section mb-14" data-level="{{ grp.key }}">
+  <h3 class="tracking-tight mb-8" style="color:var(--primary);font-size:clamp(26px, 3.2vw, 36px) !important;">{{ grp.title }}</h3>
+  <div class="programs-grid gap-4">
+    {% for p in grp.programs %}
+    {% set _slug = p.get('program_slug') if p.get else (p.program_slug or '') %}
+    {% set _img = p.get('program_image') if p.get else (p.program_image or '') %}
+    {% set _name = p.get('program_name') if p.get else (p.program_name or '') %}
+    {% set _abbr = p.get('program_abbreviation') if p.get else (p.program_abbreviation or '') %}
+
+    {% set _desc_raw = p.get('program_description') if p.get else (p.program_description or '') %}
+    {% set _desc_plain = _desc_raw | striptags if _desc_raw and _desc_raw|string != 'None' else '' %}
+
+    {% set _seats = (p.get('seats') or p.get('total_seats') or 0) if p.get else (p.seats or p.total_seats or 0) %}
+    {% set _dur = p.get('duration') or '' if p.get else (p.duration or '') %}
+    {% set _campus_label = p.get('campus_label') or p.get('campus') if p.get else (p.campus_label or p.campus or '') %}
+    {% set _show_campus = (p.get('multi_campus_enabled') and _campus_label) if p.get else (p.multi_campus_enabled and _campus_label) %}
+    {% set _level = p.get('program_level') or '' if p.get else (p.program_level or '') %}
+    {% set _can = p.get('can_apply') if p.get else p.can_apply %}
+    {% set _cur = p.get('current_stage_name') or '' if p.get else (p.current_stage_name or '') %}
+    {% set _bro = p.get('brochure_file') or p.get('brochure_url') if p.get else (p.brochure_file or p.brochure_url or
+    '') %}
+    {% set _pid = p.get('program') or p.get('name') if p.get else (p.program or p.name or '') %}
+
+    <article class="prog-card fade-card flex flex-col overflow-hidden rounded-sm bg-white shadow-2xl"
+      data-open-for="{{ p.get('admission_open_for') or '' }}"
+      style="height:100%;min-height:420px;border:1.5px solid rgba(26,60,110,0.06);cursor:pointer;box-sizing:border-box;" onclick="window.open('{{ portal_config.get('admission_website_url') or 'https://www.nls.ac.in/admissions' if portal_config else 'https://www.nls.ac.in/admissions' }}', '_blank')"
+      tabindex="0" role="button" aria-label="View {{ _name }}">
+
+      <!-- Image -->
+      <div class="relative overflow-hidden flex-shrink-0" style="height:208px;width:100%;">
+        {% set _pimg = _img %}
+        {% if _pimg %}
+        <img src="{{ _pimg }}" alt="{{ _name }}" loading="lazy"
+          class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+          onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
+        <!-- fallback when image fails -->
+        <div style="display:none;width:100%;height:100%;
+                    background:linear-gradient(135deg,var(--primary),#0d2040);
+                    align-items:center;justify-content:center;">
+          <span class="material-symbols-outlined" style="font-size:4rem;
+                       color:rgba(255,255,255,0.35);">school</span>
+        </div>
+        {% else %}
+        <div class="flex h-full w-full items-center justify-center text-8xl font-black"
+          style="background:linear-gradient(135deg,var(--primary),#0d2040);color:white;opacity:0.2;">
+          {{ (_abbr or _name[0]) | upper }}
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Body -->
+      <div class="flex flex-1 flex-col p-6 overflow-hidden">
+        <h4 class="font-bold line-clamp-2" style="font-size:20px !important; color:var(--primary) !important; margin-bottom:10px;">{{ _name }}</h4>
+        {% if _desc_plain %}
+        <div class="flex-grow line-clamp-2" style="font-size:12px !important;">
+          {{ _desc_plain }}
+        </div>
+        {% if _desc_plain|length > 150 %}
+        <a href="{{ portal_config.get('admission_website_url') or 'https://www.nls.ac.in/admissions' if portal_config else 'https://www.nls.ac.in/admissions' }}" target="_blank" class="mt-1 inline-block hover:underline"
+          style="font-size:12px !important; color:var(--primary) !important;" onclick="event.stopPropagation()">View more</a>
+        {% endif %}
+        {% else %}
+        <div class="mt-2 flex-grow"></div>
+        {% endif %}
+
+        <!-- Meta -->
+        <div class="mt-auto pt-3 flex flex-wrap gap-3 text-md text-slate-400 border-t border-slate-50">
+          <!-- {% if _seats %}<span class="flex items-center gap-1"><span class="material-symbols-outlined" style="font-size:16px;color:var(--primary);">group</span> {{ _seats }} seats</span>{% endif %} -->
+          
+          {% if _show_campus %}<span class="flex items-center gap-1"><span class="material-symbols-outlined" style="font-size:16px;color:var(--primary);">account_balance</span> {{ _campus_label }}</span>{% endif %}
+        </div>
+
+        <!-- Buttons -->
+        <div class="mt-6 flex gap-3" style="justify-content: space-between;">
+          {% set _dom_app_link = (p.get('application_form_link') or build_applicant_form_new_url(_slug, p.admission_cycle or (active_cycle.name if active_cycle else ''), campus=(p.campus or ''), intake_type=(p.intake_type or ''), admission_year=(active_cycle.admission_year if active_cycle else ''), academic_year=(active_cycle.academic_year if active_cycle else ''), program_level=(p.program_level or ''))) %}
+          {% set _intl_app_link = p.get('international_application_form_link') or (_dom_app_link ~ ('&' if '?' in _dom_app_link else '?') ~ 'foriegn_national=Yes') %}
+          {% if frappe.session.user != "Guest" %}
+          {% set _is_full = p.get('seats_full') if p.get else p.seats_full %}
+          {# One button per toggle type; JS shows the one matching the active Indian Nationals / International filter #}
+          {% for _atype in ['Domestic', 'International'] %}
+          {% set _tmap = (user_app_map_by_type or {}).get(_atype) or {} %}
+          {% set _ua = _tmap.get(_pid) or _tmap.get(_name) or {} %}
+          {% set _type_link = _intl_app_link if _atype == 'International' else _dom_app_link %}
+          <span class="prog-type-btn" data-type="{{ _atype }}" style="display:{{ 'contents' if _atype == 'Domestic' else 'none' }};">
+          {% if _ua.get('app_name') %}
+          <a href="/nlsat/my-applications?app={{ _ua.app_name }}" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;
+                        padding:8px 18px;border-radius:8px;font-size:12px;font-weight:700;
+                        text-decoration:none;color:#fff;
+                        background:#10b981;transition:opacity .2s;" onmouseover="this.style.opacity='.85'"
+            onmouseout="this.style.opacity='1'" onclick="event.stopPropagation()">
+            <span class="material-symbols-outlined" style="font-size:16px;">check_circle</span>
+            Applied
+          </a>
+          {% elif has_any_application and not (allow_multiple_applications|default(false)) %}
+          <a href="javascript:void(0)" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;
+                        padding:8px 18px;border-radius:8px;font-size:12px;font-weight:700;
+                        text-decoration:none;color:#fff;
+                        background:#94a3b8;cursor:not-allowed;opacity:0.6;" onclick="event.stopPropagation()">
+            <span class="material-symbols-outlined" style="font-size:16px;">block</span>
+            Apply now
+          </a>
+          {% else %}
+          <a href="{{ _type_link if (_is_cycle_active and not _is_full) else 'javascript:void(0)' }}"
+            style="display:inline-flex;align-items:center;justify-content:center;gap:2px;
+                        padding:8px 18px;border-radius:8px;font-size:12px;font-weight:700;
+                        text-decoration:none;color:#fff;
+                        background:var(--primary,#CB2929);transition:opacity .2s;
+                        {{ 'opacity: 0.6; cursor: not-allowed; pointer-events: none;' if (not _is_cycle_active or _is_full) else '' }}"
+            {% if _is_cycle_active and not _is_full %} onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'" {%
+            endif %} onclick="event.stopPropagation()">
+
+            {{ 'Closed' if _is_full else ('Apply now' if _is_cycle_active else 'Closed') }}
+          </a>
+          {% endif %}
+          </span>
+          {% endfor %}
+          {% else %}
+          {% set _is_full = p.get('seats_full') if p.get else p.seats_full %}
+          {% set _base_login_link = portal_login_url ~ '?redirect-to=' ~ ((_intl_app_link if portal_type == 'International' else _dom_app_link) | urlencode) %}
+          <a href="{{ _base_login_link if (_is_cycle_active and not _is_full) else 'javascript:void(0)' }}"
+             data-base-url="{{ _base_login_link }}"
+             data-is-login="1"
+             class="prog-apply-btn"
+             style="display:inline-flex;align-items:center;justify-content:center;gap:6px;
+                      padding:8px 18px;border-radius:2px;font-size:12px;font-weight:700;
+                      text-decoration:none;color:#fff;
+                      background:var(--primary,#CB2929);transition:opacity .2s;
+                      {{ 'opacity: 0.6; cursor: not-allowed; pointer-events: none;' if (not _is_cycle_active or _is_full) else '' }}"
+            {% if _is_cycle_active and not _is_full %} onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'" {%
+            endif %} onclick="event.stopPropagation()">
+            <span class="material-symbols-outlined" style="font-size:16px;">{{ 'login' if not _is_full else 'block' }}</span>
+            {{ 'Closed' if _is_full else ('Apply now' if _is_cycle_active else 'Closed') }}
+          </a>
+          {% endif %}
+          
+          {% if _bro %}
+          <a href="{{ _bro }}" target="_blank"
+            class="flex items-center justify-center rounded-lg px-3 transition-colors hover:bg-slate-200"
+            style="background:rgba(26,60,110,0.08);color:var(--primary)" onclick="event.stopPropagation()" title="Download brochure">
+            <span class="material-symbols-outlined" style="font-size:20px">download</span>
+          </a>
+          {% endif %}
+        </div>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+
+  <!-- Pagination Button (per level section) -->
+  <div class="mt-10 flex justify-center">
+    <button class="load-more-programs rounded-full px-10 py-3 font-bold text-white transition-all hover:scale-105"
+      style="background:var(--primary); display:none;">
+      View more
+    </button>
+  </div>
+  </div>
+  {% else %}
+  <div class="py-20 flex flex-col items-center justify-center bg-white rounded-3xl border border-slate-100 shadow-sm text-center px-6">
+    <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-6">
+      <span class="material-symbols-outlined text-slate-300" style="font-size:48px;">menu_book</span>
+    </div>
+    <h3 class="text-xl font-bold text-slate-900 mb-2">No active cycle found</h3>
+    <p class="text-slate-500 max-w-sm">We are not accepting applications at the moment. Please check back later or contact admissions for more information.</p>
+  </div>
+  {% endfor %}
+  </div>
+</section>
+<!-- END PROGRAMS -->
+
+<script>
+/* ── ANNOUNCEMENT PAGINATION (2 per page) ── */
+var _annPg = 0, _ANN_PER = 2;
+function initAnnPg() {
+  var rows = document.querySelectorAll('#ann-list [data-ann-idx]');
+  if (!rows.length) return;
+  renderAnnPg(rows);
+}
+function renderAnnPg(rows) {
+  rows = rows || document.querySelectorAll('#ann-list [data-ann-idx]');
+  var total = rows.length, pages = Math.ceil(total / _ANN_PER);
+  var start = _annPg * _ANN_PER;
+  rows.forEach(function(el, i) {
+    var show = (i >= start && i < start + _ANN_PER);
+    el.style.display = show ? 'flex' : 'none';
+    if (show) el.classList.add('visible');
+  });
+  var info = document.getElementById('ann-pg-info');
+  if (info) info.textContent = pages > 1 ? 'Page ' + (_annPg + 1) + ' / ' + pages : total + ' item' + (total > 1 ? 's' : '');
+  var prev = document.getElementById('ann-pg-prev');
+  var next = document.getElementById('ann-pg-next');
+  if (prev) prev.disabled = (_annPg === 0);
+  if (next) next.disabled = (_annPg >= pages - 1);
+}
+function annPg(dir) {
+  var rows = document.querySelectorAll('#ann-list [data-ann-idx]');
+  var pages = Math.ceil(rows.length / _ANN_PER);
+  _annPg = Math.max(0, Math.min(_annPg + dir, pages - 1));
+  renderAnnPg(rows);
+}
+
+/* ── EVENT PAGINATION (3 per page, calendar card always shown) ── */
+var _evtPg = 0, _EVT_PER = 3;
+function initEvtPg() {
+  var cards = document.querySelectorAll('#evt-grid [data-evt-idx]');
+  if (!cards.length) return;
+  renderEvtPg(cards);
+}
+function renderEvtPg(cards) {
+  cards = cards || document.querySelectorAll('#evt-grid [data-evt-idx]');
+  var total = cards.length, pages = Math.ceil(total / _EVT_PER);
+  var start = _evtPg * _EVT_PER;
+  cards.forEach(function(el, i) {
+    var show = (i >= start && i < start + _EVT_PER);
+    el.style.display = show ? '' : 'none';
+    if (show) el.classList.add('visible');
+  });
+  // Calendar card is always visible — no change needed
+  var info = document.getElementById('evt-pg-info');
+  if (info) info.textContent = pages > 1 ? 'Page ' + (_evtPg + 1) + ' / ' + pages : total + ' event' + (total > 1 ? 's' : '');
+  var prev = document.getElementById('evt-pg-prev');
+  var next = document.getElementById('evt-pg-next');
+  if (prev) prev.disabled = (_evtPg === 0);
+  if (next) next.disabled = (_evtPg >= pages - 1);
+  // Hide pager nav if only 1 page
+  var prevEl = document.getElementById('evt-pg-prev');
+  var nextEl = document.getElementById('evt-pg-next');
+  if (prevEl) prevEl.style.display = pages <= 1 ? 'none' : '';
+  if (nextEl) nextEl.style.display = pages <= 1 ? 'none' : '';
+}
+function evtPg(dir) {
+  var cards = document.querySelectorAll('#evt-grid [data-evt-idx]');
+  var pages = Math.ceil(cards.length / _EVT_PER);
+  _evtPg = Math.max(0, Math.min(_evtPg + dir, pages - 1));
+  renderEvtPg(cards);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  initAnnPg();
+  initEvtPg();
+});
+</script>
+
+
+<!-- GALLERY MODAL JS -->
+<script>
+  const _pdMedia = {{ (prog_media or []) | tojson | safe }};
+
+  let _pdCurrent = 0;
+
+  function pdGalleryOpen(idx) {
+    _pdCurrent = idx;
+    const m = document.getElementById("pdGalleryModal");
+    if (m) m.classList.add("pd-gopen");
+    pdGalleryRender();
+    document.addEventListener("keydown", _pdKeyHandler);
+  }
+
+  function pdGalleryClose(evt) {
+    if (evt && evt.target !== document.getElementById("pdGalleryModal")) return;
+    const m = document.getElementById("pdGalleryModal");
+    if (m) m.classList.remove("pd-gopen");
+    // Clear iframe to stop video playback
+    const v = document.getElementById("pdGViewer");
+    if (v) v.innerHTML = "";
+    document.removeEventListener("keydown", _pdKeyHandler);
+  }
+
+  function _pdKeyHandler(e) {
+    if (e.key === "ArrowLeft") pdGalleryStep(-1);
+    if (e.key === "ArrowRight") pdGalleryStep(1);
+    if (e.key === "Escape") {
+      pdGalleryClose();
+    }
+  }
+
+  function pdGalleryGo(idx) {
+    _pdCurrent = idx;
+    pdGalleryRender();
+  }
+
+  function pdGalleryStep(dir) {
+    if (!_pdMedia.length) return;
+    _pdCurrent = (_pdCurrent + dir + _pdMedia.length) % _pdMedia.length;
+    pdGalleryRender();
+  }
+
+  function pdGalleryRender() {
+    const item = _pdMedia[_pdCurrent];
+    if (!item) return;
+
+    // Main viewer
+    const viewer = document.getElementById("pdGViewer");
+    if (viewer) {
+      if (item.type === "Video") {
+        let src = item.url;
+        src += (src.includes("?") ? "&" : "?") + "autoplay=1";
+        viewer.innerHTML = `<iframe src="${src}" style="width:100%;height:100%;"
+        allow="autoplay;encrypted-media;fullscreen"
+        allowfullscreen frameborder="0"></iframe>`;
+      } else {
+        viewer.innerHTML = `<img src="${item.url}" alt="${item.caption || ''}" style="max-width:100%; max-height:100%; object-fit:contain; border-radius:4px;">`;
+      }
+    }
+
+    // Caption
+    const cap = document.getElementById("pdGCaption");
+    if (cap) cap.textContent = item.caption || "";
+
+    // Counter
+    const count = document.getElementById("pdGCounter");
+    if (count) count.textContent = (_pdCurrent + 1) + " / " + _pdMedia.length;
+
+    // Sidebar active state
+    document.querySelectorAll(".pd-gside-thumb").forEach((el, i) => {
+      el.classList.toggle("pd-gside-active", i === _pdCurrent);
+    });
+
+    // Scroll sidebar so active thumb is visible
+    const activeThumb = document.getElementById("pdST" + _pdCurrent);
+    if (activeThumb) {
+      activeThumb.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+  }
+</script>
+
+<!-- Back to top -->
+
+<!-- Back to top -->
+<button id="back-to-top"
+  class="fixed bottom-8 right-8 z-50 flex h-12 w-12 items-center justify-center rounded-full text-white shadow-lg transition-all hover:scale-110"
+  style="background:var(--primary)">
+  <span class="material-symbols-outlined">arrow_upward</span>
+</button>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  var LOGIN_REQUIRED = "{{ 'true' if _login_req else 'false' }}" === "true";
+
+  {% if show_detail %}
+  function pdTab(btn, panelId) {
+    document.querySelectorAll('#pd-tab-nav button').forEach(function (b) { b.classList.remove('pd-active'); });
+    document.querySelectorAll('#pd-curriculum,#pd-eligibility,#pd-career,#pd-faculty').forEach(function (p) { p.style.display = 'none'; });
+    btn.classList.add('pd-active');
+    var p = document.getElementById(panelId);
+    if (p) p.style.display = 'block';
+  }
+  function pdCurric(idx) {
+    var body = document.getElementById('pdc-b-' + idx);
+    var card = document.getElementById('pdc-' + idx);
+    var hdr = document.getElementById('pdc-h-' + idx);
+    if (!body) return;
+    if (body.style.display === 'none') {
+      body.style.display = 'block';
+      card.classList.add('pd-open');
+      if (hdr) hdr.style.color = 'var(--primary)';
+    } else {
+      body.style.display = 'none';
+      card.classList.remove('pd-open');
+      if (hdr) hdr.style.color = '#0f172a';
+    }
+  }
+
+  // ── New Gallery JS ───────────────────────────────────────────────────
+  const _pdMedia = {{ (prog_media or []) | tojson | safe }};
+
+  let _pdCurrent = 0;
+
+  function pdGalleryOpen(idx) {
+    _pdCurrent = idx;
+    const m = document.getElementById("pdGalleryModal");
+    if (m) m.classList.add("pd-gopen");
+    pdGalleryRender();
+    document.addEventListener("keydown", _pdKeyHandler);
+  }
+
+  function pdGalleryClose(evt) {
+    if (evt && evt.target !== document.getElementById("pdGalleryModal")) return;
+    const m = document.getElementById("pdGalleryModal");
+    if (m) m.classList.remove("pd-gopen");
+    // Clear iframe to stop video playback
+    const v = document.getElementById("pdGViewer");
+    if (v) v.innerHTML = "";
+    document.removeEventListener("keydown", _pdKeyHandler);
+  }
+
+  function _pdKeyHandler(e) {
+    if (e.key === "ArrowLeft") pdGalleryStep(-1);
+    if (e.key === "ArrowRight") pdGalleryStep(1);
+    if (e.key === "Escape") {
+      pdGalleryClose();
+    }
+  }
+
+  function pdGalleryGo(idx) {
+    _pdCurrent = idx;
+    pdGalleryRender();
+  }
+
+  function pdGalleryStep(dir) {
+    if (!_pdMedia.length) return;
+    _pdCurrent = (_pdCurrent + dir + _pdMedia.length) % _pdMedia.length;
+    pdGalleryRender();
+  }
+
+  function pdGalleryRender() {
+    const item = _pdMedia[_pdCurrent];
+    if (!item) return;
+
+    // Main viewer
+    const viewer = document.getElementById("pdGViewer");
+    if (viewer) {
+      if (item.type === "Video") {
+        let src = item.url;
+        src += (src.includes("?") ? "&" : "?") + "autoplay=1";
+        viewer.innerHTML = `<iframe src="${src}" style="width:100%;height:100%;"
+        allow="autoplay;encrypted-media;fullscreen"
+        allowfullscreen frameborder="0"></iframe>`;
+      } else {
+        viewer.innerHTML = `<img src="${item.url}" alt="${item.caption || ''}" style="max-width:100%; max-height:100%; object-fit:contain; border-radius:4px;">`;
+      }
+    }
+
+    // Caption
+    const cap = document.getElementById("pdGCaption");
+    if (cap) cap.textContent = item.caption || "";
+
+    // Counter
+    const count = document.getElementById("pdGCounter");
+    if (count) count.textContent = (_pdCurrent + 1) + " / " + _pdMedia.length;
+
+    // Sidebar active state
+    document.querySelectorAll(".pd-gside-thumb").forEach((el, i) => {
+      el.classList.toggle("pd-gside-active", i === _pdCurrent);
+    });
+
+    // Scroll sidebar so active thumb is visible
+    const activeThumb = document.getElementById("pdST" + _pdCurrent);
+    if (activeThumb) {
+      activeThumb.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+  }
+  {% else %}
+  (function () {
+    // Hero slideshow
+    var slides = document.querySelectorAll('.hero-slide');
+    if (slides.length > 1) {
+      var cur = 0;
+      function goSlide(i) {
+        slides[cur].classList.remove('active');
+        cur = ((i % slides.length) + slides.length) % slides.length;
+        slides[cur].classList.add('active');
+      }
+      setInterval(function () { goSlide(cur + 1); }, 7000);
+    }
+
+    // Scroll fade-up
+    var obs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry, i) {
+        if (entry.isIntersecting) {
+          setTimeout(function () { entry.target.classList.add('visible'); }, i * 80);
+          obs.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+    document.querySelectorAll('.fade-card').forEach(function (el) { obs.observe(el); });
+
+    // Back to top
+    var btn = document.getElementById('back-to-top');
+    if (btn) {
+      window.addEventListener('scroll', function () {
+        btn.classList.toggle('visible', window.pageYOffset > 300);
+      });
+      btn.addEventListener('click', function () {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    }
+
+    // ── Pagination logic ────────────────────────────────────────────────
+    const levelWrap = document.getElementById('program-level-sections');
+    const levelSections = Array.from(document.querySelectorAll('.program-level-section')).map(function (sec) {
+      return {
+        el: sec,
+        cards: Array.from(sec.querySelectorAll('.programs-grid > .prog-card')),
+        loadMoreBtn: sec.querySelector('.load-more-programs'),
+        visibleCount: 0
+      };
+    });
+    if (levelSections.length) {
+      function getBatchSize() {
+        const w = window.innerWidth;
+        if (w >= 1536) return 10; // 5 per row * 2 rows
+        if (w >= 1024) return 12; // 4 per row * 3 rows
+        if (w >= 640) return 8;  // 2 per row * 4 rows
+        return 5;                 // 1 per row * 5 rows
+      }
+
+      let batchSize = getBatchSize();
+      levelSections.forEach(function (s) { s.visibleCount = batchSize; });
+
+      let currentFilter = (levelWrap && levelWrap.getAttribute('data-initial-filter')) || 'Domestic';
+
+      // Define globally and safely (works with PJAX/DOMContentLoaded)
+      window.setProgramFilter = function(filterVal) {
+        currentFilter = filterVal;
+        let btnDom = document.getElementById('btn-domestic');
+        let btnInt = document.getElementById('btn-international');
+        if (btnDom) {
+          btnDom.className = (filterVal === 'Domestic') ? 'px-5 py-2 rounded-md font-bold text-sm shadow-sm transition-all text-slate-900 bg-white' : 'px-5 py-2 rounded-md font-bold text-sm transition-all text-slate-500 bg-transparent hover:text-slate-900 hover:bg-slate-200/50';
+        }
+        if (btnInt) {
+          btnInt.className = (filterVal === 'International') ? 'px-5 py-2 rounded-md font-bold text-sm shadow-sm transition-all text-slate-900 bg-white' : 'px-5 py-2 rounded-md font-bold text-sm transition-all text-slate-500 bg-transparent hover:text-slate-900 hover:bg-slate-200/50';
+        }
+        levelSections.forEach(function (s) { s.visibleCount = batchSize; });
+        if (typeof updateCardVisibility === 'function') {
+          updateCardVisibility();
+        }
+      };
+
+      function updateCardVisibility() {
+        levelSections.forEach(updateSectionVisibility);
+      }
+
+      function updateSectionVisibility(section) {
+        let visibleMatching = 0;
+        let totalMatching = 0;
+        section.cards.forEach((card) => {
+          let openFor = card.getAttribute('data-open-for') || '';
+          let match = !openFor || openFor.includes(currentFilter);
+          
+          if (match) {
+            // Show the Applied / Apply button for the active toggle type only
+            card.querySelectorAll('.prog-type-btn').forEach(function (w) {
+              w.style.display = (w.getAttribute('data-type') === currentFilter) ? 'contents' : 'none';
+            });
+
+            let applyBtns = card.querySelectorAll('.prog-apply-btn');
+            applyBtns.forEach(btn => {
+              if (btn.getAttribute('href') !== 'javascript:void(0)') {
+                let domesticUrl = btn.getAttribute('data-domestic-url') || '';
+                let internationalUrl = btn.getAttribute('data-international-url') || '';
+                if (currentFilter === 'International' && internationalUrl) {
+                  btn.href = internationalUrl;
+                } else if (domesticUrl) {
+                  btn.href = domesticUrl;
+                }
+              }
+            });
+
+            totalMatching++;
+            if (visibleMatching < section.visibleCount) {
+              card.style.display = 'flex';
+              if (typeof obs !== 'undefined') obs.observe(card);
+              visibleMatching++;
+            } else {
+              card.style.display = 'none';
+            }
+          } else {
+            card.style.display = 'none';
+          }
+        });
+
+        // Hide the whole level section when no card matches the current filter
+        section.el.style.display = totalMatching ? '' : 'none';
+
+        if (section.loadMoreBtn) {
+          if (section.visibleCount >= totalMatching) {
+            section.loadMoreBtn.style.display = 'none';
+          } else {
+            section.loadMoreBtn.style.display = 'inline-block';
+          }
+        }
+      } // <-- Close updateSectionVisibility
+
+      levelSections.forEach(function (section) {
+        if (section.loadMoreBtn) {
+          section.loadMoreBtn.onclick = function () {
+            section.visibleCount += batchSize;
+            updateSectionVisibility(section);
+          };
+        }
+      });
+
+      // Initial run
+      updateCardVisibility();
+
+      // Re-check on resize (optional, but good for responsiveness)
+      let resizeTimer;
+      window.onresize = function () {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+          const newBatch = getBatchSize();
+          if (newBatch !== batchSize) {
+            batchSize = newBatch;
+            // If we haven't loaded more manually, keep the initial view consistent
+            levelSections.forEach(function (s) {
+              if (s.visibleCount <= batchSize) s.visibleCount = batchSize;
+            });
+            updateCardVisibility();
+          }
+        }, 250);
+      };
+    }
+  })();
+  {% endif %}
+</script>
+{% endblock %}

@@ -1,0 +1,725 @@
+{% extends "slcm/www/admission/admission_base.html" %} {% block title %}View Application{% endblock %} {%
+block content %} {% set d = applicant %} {% set f = fmt or {} %}
+<div class="va-page">
+	<div class="va-container">
+		<div class="va-toolbar">
+			<a href="/nlsat/my-applications" class="va-back">
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					width="18"
+					height="18"
+					fill="none"
+					viewBox="0 0 24 24"
+					stroke="currentColor"
+					stroke-width="2"
+				>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						d="M10 19l-7-7m0 0l7-7m-7 7h18"
+					/>
+				</svg>
+				Back to My Applications
+			</a>
+			<span class="va-status va-status-{{ (status or 'Draft')|lower|replace(' ', '-') }}"
+				>{{ status or 'Draft' }}</span
+			>
+		</div>
+
+		<header class="va-header">
+			<h1 class="va-title">Application — {{ applicant_id }}</h1>
+			<p class="va-meta">
+				{{ program_name }} · {{ d.admission_cycle or '—' }} · {{ campus_name }}
+			</p>
+		</header>
+
+		<div class="va-grid">
+			<!-- Student Information -->
+			<section class="va-card">
+				<h2 class="va-card-title">Student Information</h2>
+				<dl class="va-dl">
+					<div class="va-row">
+						<dt>Full Name (as per Secondary School Certificate)</dt>
+						<dd>{{ d.candidate_name or '—' }}</dd>
+					</div>
+					<div class="va-row">
+						<dt>Email</dt>
+						<dd>{{ d.email or '—' }}</dd>
+					</div>
+					<div class="va-row">
+						<dt>Gender</dt>
+						<dd>{{ d.gender or '—' }}</dd>
+					</div>
+					<div class="va-row">
+						<dt>Nationality</dt>
+						<dd>{{ d.nationality or '—' }}</dd>
+					</div>
+					<div class="va-row">
+						<dt>Date of Birth</dt>
+						<dd>{{ f.get('date_of_birth') or d.date_of_birth or '—' }}</dd>
+					</div>
+					<div class="va-row">
+						<dt>Religion</dt>
+						<dd>{{ d.religion or '—' }}</dd>
+					</div>
+					<div class="va-row">
+						<dt>Annual Household Income</dt>
+						<dd>{{ d.annual_house_hold_income or '—' }}</dd>
+					</div>
+					<div class="va-row">
+						<dt>Mobile Number</dt>
+						<dd>{{ f.get('mobile_number') or d.mobile_number or '—' }}</dd>
+					</div>
+					<div class="va-row">
+						<dt>Alternate Contact</dt>
+						<dd>{{ f.get('alternate_contact') or d.alternate_contact or '—' }}</dd>
+					</div>
+					<div class="va-row">
+						<dt>Identification Proof</dt>
+						<dd>{{ d.id_proof or '—' }}</dd>
+					</div>
+				</dl>
+			</section>
+
+			<!-- Application Information -->
+			<section class="va-card">
+				<h2 class="va-card-title">Application Information</h2>
+				<dl class="va-dl">
+					<div class="va-row">
+						<dt>Application ID</dt>
+						<dd>{{ applicant_id }}</dd>
+					</div>
+					<div class="va-row">
+						<dt>Programme</dt>
+						<dd>{{ program_name }}</dd>
+					</div>
+					<div class="va-row">
+						<dt>Admission Cycle</dt>
+						<dd>{{ d.admission_cycle or '—' }}</dd>
+					</div>
+					<div class="va-row">
+						<dt>Academic Year</dt>
+						<dd>{{ d.academic_year or '—' }}</dd>
+					</div>
+					<div class="va-row">
+						<dt>Campus</dt>
+						<dd>{{ campus_name }}</dd>
+					</div>
+					<div class="va-row">
+						<dt>Application Type</dt>
+						<dd>{{ d.application_type or '—' }}</dd>
+					</div>
+					<div class="va-row">
+						<dt>Application Status</dt>
+						<dd>{{ status or '—' }}</dd>
+					</div>
+				</dl>
+			</section>
+
+			<!-- Parent & Guardian -->
+			<section class="va-card">
+				<h2 class="va-card-title">Parent & Guardian Details</h2>
+				<dl class="va-dl">
+					<div class="va-row">
+						<dt>Father's Name</dt>
+						<dd>{{ d.father_name or '—' }}</dd>
+					</div>
+					<div class="va-row">
+						<dt>Father's Mobile</dt>
+						<dd>{{ f.get('father_mobile') or d.father_mobile or '—' }}</dd>
+					</div>
+					<div class="va-row">
+						<dt>Father's Occupation</dt>
+						<dd>{{ d.father_occupation or '—' }}</dd>
+					</div>
+					<div class="va-row">
+						<dt>Mother's Name</dt>
+						<dd>{{ d.mother_name or '—' }}</dd>
+					</div>
+					<div class="va-row">
+						<dt>Mother's Mobile</dt>
+						<dd>{{ f.get('mother_mobile') or d.mother_mobile or '—' }}</dd>
+					</div>
+					<div class="va-row">
+						<dt>Mother's Occupation</dt>
+						<dd>{{ d.mother_occupation or '—' }}</dd>
+					</div>
+					{% if d.guardian_required %}
+					<div class="va-row">
+						<dt>Guardian Name</dt>
+						<dd>{{ d.guardian_name or '—' }}</dd>
+					</div>
+					<div class="va-row">
+						<dt>Guardian Mobile</dt>
+						<dd>{{ f.get('guardian_mobile') or d.guardian_mobile or '—' }}</dd>
+					</div>
+					{% endif %}
+				</dl>
+			</section>
+
+			<!-- Address -->
+			<section class="va-card">
+				<h2 class="va-card-title">Address for Correspondence</h2>
+				<dl class="va-dl">
+					<div class="va-row">
+						<dt>Address</dt>
+						<dd>{{ d.correspondence_address or '—' }}</dd>
+					</div>
+					<div class="va-row">
+						<dt>City</dt>
+						<dd>{{ d.city or '—' }}</dd>
+					</div>
+					<div class="va-row">
+						<dt>State</dt>
+						<dd>{{ d.state or '—' }}</dd>
+					</div>
+					<div class="va-row">
+						<dt>Pincode</dt>
+						<dd>{{ d.pincode or '—' }}</dd>
+					</div>
+				</dl>
+			</section>
+
+			<!-- Academic — Class X -->
+			<section class="va-card">
+				<h2 class="va-card-title">Class X Details</h2>
+				<dl class="va-dl">
+					<div class="va-row">
+						<dt>School</dt>
+						<dd>{{ d.class_x_school or '—' }}</dd>
+					</div>
+					<div class="va-row">
+						<dt>Board</dt>
+						<dd>{{ d.class_x_board or '—' }}</dd>
+					</div>
+					<div class="va-row">
+						<dt>Year of Completion</dt>
+						<dd>{{ d.class_x_year_of_completion or '—' }}</dd>
+					</div>
+					<div class="va-row">
+						<dt>Percentage / CGPA</dt>
+						<dd>{{ d.class_x_percentage or d.class_x_cgpa or '—' }}</dd>
+					</div>
+				</dl>
+			</section>
+
+			<!-- Academic — Class XII / HSC -->
+			<section class="va-card">
+				<h2 class="va-card-title">Class XII / HSC Details</h2>
+				<dl class="va-dl">
+					<div class="va-row">
+						<dt>Name of Examination</dt>
+						<dd>{{ d.class_xii_name_of_examination or '—' }}</dd>
+					</div>
+					<div class="va-row">
+						<dt>School</dt>
+						<dd>{{ d.class_xii_school or '—' }}</dd>
+					</div>
+					<div class="va-row">
+						<dt>Group</dt>
+						<dd>{{ d.hsc_group or '—' }}</dd>
+					</div>
+					<div class="va-row">
+						<dt>Year of Completion</dt>
+						<dd>{{ d.class_xii_year_of_completion or '—' }}</dd>
+					</div>
+					<div class="va-row">
+						<dt>Percentage / CGPA</dt>
+						<dd>
+							{{ d.hsc_percentage or d.class_xii_percentage or d.class_xii_cgpa or
+							'—' }}
+						</dd>
+					</div>
+					<div class="va-row">
+						<dt>Board</dt>
+						<dd>{{ d.class_xii_board or '—' }}</dd>
+					</div>
+				</dl>
+			</section>
+
+			<!-- UG / National Test -->
+			<section class="va-card">
+				<h2 class="va-card-title">UG / Entrance Test</h2>
+				<dl class="va-dl">
+					<div class="va-row">
+						<dt>National Test Name</dt>
+						<dd>{{ d.national_test_name or '—' }}</dd>
+					</div>
+					<div class="va-row">
+						<dt>Score / Percentage</dt>
+						<dd>{{ d.percentage or '—' }}</dd>
+					</div>
+					<div class="va-row">
+						<dt>UG Degree Completion</dt>
+						<dd>{{ d.ug_degree_completion or '—' }}</dd>
+					</div>
+				</dl>
+				{% if d.ug_degree_details and d.ug_degree_details|length > 0 %}
+				<h3 class="va-card-sub">UG Degree Details</h3>
+				<table class="va-table">
+					<thead>
+						<tr>
+							<th>Programme</th>
+							<th>College</th>
+							<th>Year</th>
+							<th>% / CGPA</th>
+						</tr>
+					</thead>
+					<tbody>
+						{% for row in d.ug_degree_details %}
+						<tr>
+							<td>{{ row.ug_program or '—' }}</td>
+							<td>{{ row.college or '—' }}</td>
+							<td>{{ row.year_of_completion or '—' }}</td>
+							<td>{{ row.percentage_cgpa_obtained or row.ug_cgpa or '—' }}</td>
+						</tr>
+						{% endfor %}
+					</tbody>
+				</table>
+				{% endif %}
+			</section>
+
+			{% if d.pg_degree_details and d.pg_degree_details|length > 0 %}
+			<section class="va-card">
+				<h2 class="va-card-title">PG Degree Details</h2>
+				<table class="va-table">
+					<thead>
+						<tr>
+							<th>Programme</th>
+							<th>College / University</th>
+							<th>Year</th>
+							<th>% / CGPA</th>
+						</tr>
+					</thead>
+					<tbody>
+						{% for row in d.pg_degree_details %}
+						<tr>
+							<td>{{ row.pg_program or '—' }}</td>
+							<td>{{ row.collegeuniversity or '—' }}</td>
+							<td>{{ row.year_of_completion or '—' }}</td>
+							<td>{{ row.percentagecgpa_obtained or row.pg_cgpa or '—' }}</td>
+						</tr>
+						{% endfor %}
+					</tbody>
+				</table>
+			</section>
+			{% endif %}
+
+			<!-- Employment -->
+			<section class="va-card">
+				<h2 class="va-card-title">Employment History</h2>
+				<dl class="va-dl">
+					<div class="va-row">
+						<dt>Post Degree Work Experience</dt>
+						<dd>{{ d.post_degree_work_experience or '—' }}</dd>
+					</div>
+					<div class="va-row">
+						<dt>Years of Work Experience</dt>
+						<dd>{{ d.years_of_work_experience or '—' }}</dd>
+					</div>
+				</dl>
+			</section>
+
+			<!-- Reservations -->
+			<section class="va-card">
+				<h2 class="va-card-title">Eligibility for Reservations</h2>
+				<dl class="va-dl">
+					<div class="va-row">
+						<dt>Whether SC/ST/OBC-NCL</dt>
+						<dd>{{ d.whether_scstobc_ncl or '—' }}</dd>
+					</div>
+					<div class="va-row">
+						<dt>EWS</dt>
+						<dd>{{ d.ews or '—' }}</dd>
+					</div>
+					<div class="va-row">
+						<dt>PWD</dt>
+						<dd>{{ d.pwd or '—' }}</dd>
+					</div>
+					<div class="va-row">
+						<dt>Karnataka Category</dt>
+						<dd>{{ d.karnataka_category or '—' }}</dd>
+					</div>
+					{% if d.categories and d.categories|length > 0 %}
+					<div class="va-row">
+						<dt>Reservation Category</dt>
+						<dd>
+							{{ (d.categories[0].get('category') or d.categories[0].category) if
+							d.categories else '—' }}
+						</dd>
+					</div>
+					{% endif %}
+				</dl>
+			</section>
+
+			<!-- Test Centre Preferences -->
+			<section class="va-card">
+				<h2 class="va-card-title">Preference of Test Centre</h2>
+				<dl class="va-dl">
+					<div class="va-row">
+						<dt>First Preference</dt>
+						<dd>{{ d.first_preference or '—' }}</dd>
+					</div>
+					<div class="va-row">
+						<dt>Second Preference</dt>
+						<dd>{{ d.second_preference or '—' }}</dd>
+					</div>
+					<div class="va-row">
+						<dt>Third Preference</dt>
+						<dd>{{ d.third_preference or '—' }}</dd>
+					</div>
+				</dl>
+			</section>
+
+			<!-- Other -->
+			<section class="va-card">
+				<h2 class="va-card-title">Other Information</h2>
+				<dl class="va-dl">
+					<div class="va-row">
+						<dt>Source of Information</dt>
+						<dd>{{ d.source_of_information or '—' }}</dd>
+					</div>
+					<div class="va-row">
+						<dt>Please Mention</dt>
+						<dd>{{ d.please_mention or '—' }}</dd>
+					</div>
+					<div class="va-row">
+						<dt>CV / Resume</dt>
+						<dd>{{ d.cv or '—' }}</dd>
+					</div>
+				</dl>
+			</section>
+
+			{% if application_fee and application_fee.fee_amount and application_fee.fee_amount > 0
+			%}
+			<!-- Application Fee -->
+			<section class="va-card" id="application-fee-card">
+				<h2 class="va-card-title">Application Fee</h2>
+				<p class="va-fee-note">
+					Your application can be submitted only after the application fee is paid. The
+					amount depends on your category as per the Programme Reservation Policy.
+				</p>
+				<div class="va-fee-row">
+					<span class="va-fee-label">Amount</span>
+					<span class="va-fee-amount">&#8377; {{ application_fee.fee_amount }}</span>
+				</div>
+				{% if application_fee.reservation_category %}
+				<div class="va-fee-row">
+					<span class="va-fee-label">Category</span
+					><span>{{ application_fee.reservation_category }}</span>
+				</div>
+				{% endif %}
+				<div class="va-fee-row">
+					<span class="va-fee-label">Status</span
+					><span
+						class="va-fee-status va-fee-status-{{ (application_fee.application_fee_status or 'unpaid')|lower }}"
+						>{{ application_fee.application_fee_status or 'Unpaid' }}</span
+					>
+				</div>
+				{% if application_fee.application_fee_status != 'Paid' and
+				application_fee.application_fee_status != 'Waived' %}
+				<button
+					type="button"
+					class="va-btn va-btn-primary va-pay-btn"
+					id="pay-application-fee-btn"
+				>
+					Pay Application Fee
+				</button>
+				{% endif %}
+			</section>
+			{% endif %}
+		</div>
+
+		<div class="va-actions">
+			<a href="{{ applicant_portal_open_url or '#' }}" class="va-btn va-btn-outline"
+				>Edit Application</a
+			>
+			<a href="/nlsat/my-applications" class="va-btn va-btn-primary">Back to My Applications</a>
+		</div>
+	</div>
+</div>
+
+{{ get_typography_style_block( portal_config.font_family,
+font_size_heading=portal_config.font_size_heading,
+font_size_subheading=portal_config.font_size_subheading,
+font_size_body=portal_config.font_size_body,
+font_size_form_title=portal_config.font_size_form_title,
+font_size_toast=portal_config.font_size_toast, primary_color=portal_config.primary_color,
+secondary_color=portal_config.secondary_color, navbar_color=portal_config.navbar_color,
+footer_color=portal_config.footer_color, button_border_radius=portal_config.button_border_radius )
+}}
+<style>
+	.va-page {
+		min-height: calc(100vh - 60px);
+		background: var(--bg, #f4f6fb);
+		margin: 0 -20px 0;
+		padding: 24px 20px 48px;
+	}
+	.va-container {
+		max-width: 900px;
+		margin: 0 auto;
+	}
+	.va-toolbar {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 20px;
+		flex-wrap: wrap;
+		gap: 12px;
+	}
+	.va-back {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		padding: 8px 14px;
+		font-size: 0.9rem;
+		font-weight: 600;
+		color: var(--primary, #1a3c6e);
+		background: #fff;
+		border: 2px solid #e2e8f0;
+		border-radius: 8px;
+		text-decoration: none;
+		transition: all 0.2s;
+	}
+	.va-back:hover {
+		background: #f1f5f9;
+		border-color: var(--primary, #1a3c6e);
+	}
+	.va-status {
+		padding: 6px 12px;
+		border-radius: 8px;
+		font-size: 0.85rem;
+		font-weight: 600;
+	}
+	.va-status-submitted {
+		background: #dbeafe;
+		color: #1e40af;
+	}
+	.va-status-draft {
+		background: #fef3c7;
+		color: #92400e;
+	}
+	.va-status-selected,
+	.va-status-offer-issued {
+		background: #d1fae5;
+		color: #065f46;
+	}
+	.va-header {
+		margin-bottom: 28px;
+	}
+	.va-title {
+		font-size: 1.5rem;
+		font-weight: 700;
+		color: #0f172a;
+		margin: 0 0 6px 0;
+	}
+	.va-meta {
+		font-size: 0.95rem;
+		color: #64748b;
+		margin: 0;
+	}
+	.va-grid {
+		display: flex;
+		flex-direction: column;
+		gap: 20px;
+	}
+	.va-card {
+		background: #fff;
+		border-radius: 12px;
+		padding: 20px 24px;
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+		border: 1px solid #e2e8f0;
+	}
+	.va-card-title {
+		font-size: 1.1rem;
+		font-weight: 700;
+		color: var(--primary, #1a3c6e);
+		margin: 0 0 16px 0;
+		padding-bottom: 10px;
+		border-bottom: 2px solid #e2e8f0;
+	}
+	.va-card-sub {
+		font-size: 0.95rem;
+		font-weight: 600;
+		color: #475569;
+		margin: 14px 0 10px 0;
+	}
+	.va-dl {
+		margin: 0;
+		display: grid;
+		gap: 10px;
+	}
+	.va-row {
+		display: grid;
+		grid-template-columns: 1fr 1.2fr;
+		gap: 12px;
+		align-items: baseline;
+	}
+	.va-row dt {
+		margin: 0;
+		font-size: 0.85rem;
+		font-weight: 600;
+		color: #64748b;
+	}
+	.va-row dd {
+		margin: 0;
+		font-size: 0.95rem;
+		color: #0f172a;
+	}
+	.va-table {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: 0.9rem;
+		margin-top: 8px;
+	}
+	.va-table th,
+	.va-table td {
+		padding: 8px 10px;
+		text-align: left;
+		border-bottom: 1px solid #e2e8f0;
+	}
+	.va-table th {
+		background: #f8fafc;
+		font-weight: 600;
+		color: #475569;
+	}
+	.va-actions {
+		margin-top: 28px;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 12px;
+	}
+	.va-btn {
+		display: inline-flex;
+		align-items: center;
+		padding: 10px 20px;
+		font-size: 0.95rem;
+		font-weight: 600;
+		border-radius: 8px;
+		text-decoration: none;
+		transition: all 0.2s;
+	}
+	.va-btn-primary {
+		background: var(--primary, #1a3c6e);
+		color: #fff;
+		border: 2px solid var(--primary, #1a3c6e);
+	}
+	.va-btn-primary:hover {
+		filter: brightness(1.1);
+	}
+	.va-btn-outline {
+		background: #fff;
+		color: var(--primary, #1a3c6e);
+		border: 2px solid var(--primary, #1a3c6e);
+	}
+	.va-btn-outline:hover {
+		background: #f1f5f9;
+	}
+	.va-fee-note {
+		font-size: 0.9rem;
+		color: #64748b;
+		margin: 0 0 16px 0;
+	}
+	.va-fee-row {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 8px 0;
+		border-bottom: 1px solid #e2e8f0;
+	}
+	.va-fee-row:last-of-type {
+		border-bottom: none;
+	}
+	.va-fee-label {
+		font-weight: 600;
+		color: #64748b;
+	}
+	.va-fee-amount {
+		font-size: 1.2rem;
+		font-weight: 700;
+		color: var(--primary, #1a3c6e);
+	}
+	.va-fee-status {
+		font-weight: 600;
+		padding: 4px 10px;
+		border-radius: 6px;
+		font-size: 0.85rem;
+	}
+	.va-fee-status.paid,
+	.va-fee-status.waived {
+		background: #d1fae5;
+		color: #065f46;
+	}
+	.va-fee-status.unpaid,
+	.va-fee-status.requested {
+		background: #fef3c7;
+		color: #92400e;
+	}
+	.va-pay-btn {
+		margin-top: 16px;
+	}
+	@media (max-width: 640px) {
+		.va-row {
+			grid-template-columns: 1fr;
+		}
+	}
+</style>
+{% if application_fee and app_name and application_fee.application_fee_status != 'Paid' and
+application_fee.application_fee_status != 'Waived' %}
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+	(function() {
+	  const applicantName = {{ app_name|tojson }};
+	  document.getElementById('pay-application-fee-btn').addEventListener('click', function() {
+	    const btn = this;
+	    btn.disabled = true;
+	    btn.textContent = 'Loading...';
+	    frappe.call({
+	      method: 'slcm.api.service.fee_service.create_application_fee_razorpay_order',
+	      args: { applicant_name: applicantName },
+	      callback: function(r) {
+	        btn.disabled = false;
+	        btn.textContent = 'Pay Application Fee';
+	        if (r.exc) return;
+	        const d = r.message;
+	        const options = {
+	          key: d.key_id,
+	          amount: d.amount,
+	          currency: d.currency || 'INR',
+	          order_id: d.order_id,
+	          name: 'Application Fee',
+	          handler: function(res) {
+	            frappe.call({
+	              method: 'slcm.api.service.fee_service.verify_application_fee_payment',
+	              args: {
+	                razorpay_payment_id: res.razorpay_payment_id,
+	                razorpay_order_id: res.razorpay_order_id,
+	                razorpay_signature: res.razorpay_signature,
+	                applicant_name: applicantName
+	              },
+	              callback: function(vr) {
+	                if (vr.message && vr.message.status === 'success') {
+	                  frappe.show_alert({ message: 'Payment successful!', indicator: 'green' }, 5);
+	                  window.location.reload();
+	                } else {
+	                  frappe.msgprint({ message: vr.message && vr.message.message || 'Verification failed.', indicator: 'red' });
+	                }
+	              }
+	            });
+	          }
+	        };
+	        const rzp = new Razorpay(options);
+	        rzp.on('payment.failed', function(err) {
+	          frappe.call({
+	            method: 'slcm.api.service.fee_service.log_application_fee_payment_failure',
+	            args: { applicant_name: applicantName, order_id: d.order_id, error_data: JSON.stringify(err) }
+	          });
+	          frappe.msgprint({ message: err.error ? (err.error.description || err.error.reason) : 'Payment failed.', indicator: 'red' });
+	        });
+	        rzp.open();
+	      }
+	    });
+	  });
+	})();
+</script>
+{% endif %} {% endblock %}

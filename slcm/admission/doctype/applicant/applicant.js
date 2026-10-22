@@ -164,7 +164,7 @@ frappe.ui.form.on("Applicant", {
 
         if (!frm.doc.__islocal) {
             frm.add_custom_button(__("View as Candidate"), function() {
-                window.open(`/my-applications?app=${encodeURIComponent(frm.doc.name)}`, '_blank');
+                window.open(`/nlsat/my-applications?app=${encodeURIComponent(frm.doc.name)}`, '_blank');
             });
         }
 

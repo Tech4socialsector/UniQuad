@@ -1,6 +1,7 @@
 # Validates query params and redirects to the Applicant web form (/applicant-form/new?...).
 
 import frappe
+from slcm.admission.utils.nlsat_portal import get_portal_base, get_portal_login_url
 from urllib.parse import quote, urlencode
 
 from slcm.admission.utils.portal import build_applicant_form_new_url
@@ -15,13 +16,13 @@ def get_context(context):
         path = "/application_form/start"
         if q:
             path = path + "?" + urlencode(q)
-        context.redirect_url = "/admission/login?redirect-to=" + quote(path, safe="/")
+        context.redirect_url = get_portal_login_url() + "?redirect-to=" + quote(path, safe="/")
         return
 
     program = (frappe.form_dict.get("program") or "").strip()
     admission_cycle = (frappe.form_dict.get("admission_cycle") or "").strip()
     if not program or not admission_cycle:
-        context.redirect_url = "/admission"
+        context.redirect_url = get_portal_base()
         return
 
     exists = frappe.db.exists(
@@ -29,7 +30,7 @@ def get_context(context):
         {"parent": admission_cycle, "program": program, "is_active": 1},
     )
     if not exists:
-        context.redirect_url = "/admission"
+        context.redirect_url = get_portal_base()
         return
 
     ad_year, ac_year = frappe.db.get_value(

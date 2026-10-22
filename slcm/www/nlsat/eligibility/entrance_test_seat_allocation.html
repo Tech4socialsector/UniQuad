@@ -1,0 +1,905 @@
+<!--
+  TESTING CHECKLIST — complete before sending for approval
+  
+  1. Technical check
+     - [ ] Font loads correctly in Chrome, Firefox, Safari
+     - [ ] Font applies to ALL sections including cards, tables, modals
+     - [ ] Font size changes (Small/Normal/Large) reflect across heading, subheading, body
+     - [ ] Icons render on all pages
+     - [ ] No console errors (missing CDN, broken paths, 404s)
+     - [ ] Page loads without FOUC (flash of unstyled content)
+
+  2. Security check
+     - [ ] No API keys or credentials in HTML source
+     - [ ] CDN links include integrity and crossorigin attributes
+     - [ ] No inline event handlers (onclick= etc.) added during this change
+
+  3. UI / Usability check
+     - [ ] Mobile breakpoints still work correctly
+     - [ ] Button sizes and spacing unchanged
+     - [ ] Nav link sizes unchanged
+     - [ ] No layout shifts caused by font change
+
+  4. Language & spell check
+     - [ ] English (UK/India) spellings used throughout
+     - [ ] Sentence case on labels and descriptions
+     - [ ] Title Case on headings, buttons, nav
+     - [ ] No ALL CAPS in visible text
+     - [ ] Active voice used
+     - [ ] Instructions are short and direct
+     - [ ] No repeated phrases across heading levels
+     - [ ] Terminology consistent (programme, enrol, sign in, etc.)
+-->
+
+{% extends "slcm/www/admission/admission_base.html" %}
+
+{% block theme_vars %}
+<style>
+    :root {
+        --primary-adm: #1E3A8A;
+        --primary-hover: #1D4ED8;
+        --secondary-adm: #334155;
+        --accent-adm: #10B981;
+        --bg-adm: var(--secondary);
+        --section-bg: #F1F5F9;
+        --card-bg: #FFFFFF;
+        --text-main: #0F172A;
+        --text-secondary: #475569;
+        --text-muted: #94A3B8;
+        --border-color: #E2E8F0;
+        --shadow-subtle: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<style>
+    /* Full screen responsive grid container */
+    .dashboard-container {
+        width: 100% !important;
+        max-width: 1280px !important;
+        margin: 0 auto;
+        padding: 2.5rem 2rem;
+    }
+
+    body {
+        background: var(--bg-adm);
+        min-height: 100vh;
+        color: var(--text-main);
+        /* font-family: set via get_typography_style_block */
+        }
+
+    .glass-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        box-shadow: var(--shadow-subtle);
+        height: 100%;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .card-header-gradient {
+        padding: 1rem 1.75rem;
+        background: var(--section-bg);
+        border-bottom: 1px solid var(--border-color);
+        color: var(--text-main);
+    }
+
+    .card-body-padding {
+        padding: 2rem;
+    }
+
+    /* Typography */
+    .dash-title {
+        font-weight: 700;
+        font-size: 2rem;
+        color: var(--text-main);
+        letter-spacing: -0.01em;
+    }
+
+    .data-label {
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+        margin-bottom: 0.4rem;
+    }
+
+    .data-value {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-main);
+    }
+
+    .status-badge-premium {
+        background: #fff;
+        color: var(--text-secondary);
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        border: 1px solid var(--border-color);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+    }
+
+    .profile-avatar-lg {
+        width: 120px;
+        height: 120px;
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+        padding: 4px;
+        background: #fff;
+        object-fit: cover;
+        margin-bottom: 1.5rem;
+    }
+
+    .btn-action-master {
+        background: var(--primary-adm);
+        color: white;
+        border: none;
+        height: 44px;
+        padding: 0 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.95rem;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.6rem;
+    }
+
+    .btn-action-master:hover:not(:disabled) {
+        background: var(--primary-hover);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(30, 58, 138, 0.2);
+        color: white;
+    }
+
+    /* Result UI */
+    .rank-display-box {
+        background: var(--bg-adm);
+        border: 1px solid var(--border-color);
+        width: 110px;
+        height: 110px;
+        border-radius: 10px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto;
+    }
+
+    /* Result Notification Panel */
+    .result-notice-panel {
+        margin-top: auto;
+        padding: 1.25rem;
+        background: #f0fdf4;
+        border: 1px solid #bbfcce;
+        border-radius: 8px;
+        text-align: center;
+    }
+
+    .result-notice-text {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #166534;
+        line-height: 1.5;
+        margin: 0;
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .animate-entrance {
+        animation: fadeInUp 0.6s ease-out both;
+    }
+</style>
+
+<div class="dashboard-container">
+    <!-- Section 1: Dashboard Header -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-5 animate-entrance">
+        <div class="mt-3 mt-md-0">
+            <span class="status-badge-premium">
+                <span class="text-success me-2">●</span>
+                System Status: {{ doc.entrance_test_status if not no_record else 'No Record' }}
+            </span>
+        </div>
+    </div>
+
+    {% if no_record %}
+    <div class="glass-card p-5 text-center animate-entrance">
+        <div class="mb-4 opacity-25">
+            <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 8v4M12 16h.01" />
+            </svg>
+        </div>
+        <h3 class="fw-black">Account Not Initialized</h3>
+        <p class="text-muted">We couldn't find any entrance test seat allocation record for your account yet.</p>
+    </div>
+    {% else %}
+
+    <!-- Row 1: Candidate Profile (Left) + Entrance Test Result (Right) -->
+    <div class="row g-4 mb-4 align-items-stretch">
+        <div class="col-lg-4 animate-entrance" style="animation-delay: 0.1s;">
+            <div class="glass-card">
+                <div class="card-header-gradient">
+                    <h6 class="mb-0 fw-bold">Applicant Profile</h6>
+                </div>
+                <div class="card-body-padding text-center">
+                    {% if doc.profile %}
+                    <img src="{{ doc.profile }}" class="profile-avatar-lg shadow-sm">
+                    {% else %}
+                    <div
+                        class="profile-avatar-lg bg-light d-flex align-items-center justify-content-center mx-auto text-muted">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                            <circle cx="12" cy="7" r="4" />
+                        </svg>
+                    </div>
+                    {% endif %}
+                    <h4 class="fw-bold mb-1" style="color: var(--text-main);">{{ doc.candidate_name }}</h4>
+                    <p class="text-primary fw-medium small mb-4">{{ doc.applicant }}</p>
+                    <div class="text-start border-top pt-4">
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <div class="data-label">Programme</div>
+                                <div class="data-value small" style="line-height: 1.2;">{{ doc.program }}</div>
+                            </div>
+                            <div class="col-6">
+                                <div class="data-label">Campus</div>
+                                <div class="data-value small" style="line-height: 1.2;">{{ doc.campus }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8 animate-entrance" style="animation-delay: 0.2s;">
+            {% if show_result %}
+            <div class="glass-card" style="border-top: 6px solid #22c55e;">
+                <div class="card-header-gradient" style="background: linear-gradient(135deg, #166534, #22c55e);">
+                    <h5 class="mb-0 fw-bold">Entrance Test Result</h5>
+                </div>
+                <div class="card-body-padding h-100 d-flex flex-column">
+                    <div class="row align-items-center g-4">
+                        <div class="col-md-4 text-center border-md-end">
+                            <div class="rank-display-box">
+                                <div class="h1 fw-black text-success mb-0">{{ doc.entrance_test_rank or '—' }}</div>
+                                <div class="data-label" style="font-size: 0.6rem;">Rank</div>
+                            </div>
+                        </div>
+                        <div class="col-md-8 ps-md-5">
+                            <div class="row g-4">
+                                <div class="col-sm-6">
+                                    <div class="data-label">Part A Score</div>
+                                    <div class="h4 fw-black mb-0 text-dark">{{ doc.part_a_total_marks_scored or 0 }}</div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="data-label">Part B Score</div>
+                                    <div class="h4 fw-black mb-0 text-dark">{{ doc.part_b_total_marks_scored or 0 }}</div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="data-label">Cumulative Score</div>
+                                    <div class="h2 fw-black mb-0 text-dark">{{ doc.total_marks_secured_in_part_a_b or 0 }} <span class="text-muted h5">/ {{ doc.total_marks or 0 }}</span></div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="data-label">Percentage</div>
+                                    <div class="h2 fw-black mb-0 text-dark">{{ "%.2f" | format(doc.percentage or 0) }}%</div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="data-label">Percentile</div>
+                                    <div class="h2 fw-black mb-0 text-dark">{{ doc.percentile or 0 }}%</div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="data-label">Result Status</div>
+                                    <div class="h2 fw-black text-success mb-0">{{ doc.result_status or 'Declared' }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Improved Notification Panel -->
+                    <div class="result-notice-panel">
+                        <p class="result-notice-text">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.5" class="me-2 mb-1">
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                                <polyline points="22 4 12 14.01 9 11.01" />
+                            </svg>
+                            Your entrance test result has been verified.<br>
+                            {% if doc.entrance_test_result_card %}
+                            <a href="{{ doc.entrance_test_result_card }}" target="_blank" class="btn btn-sm btn-success mt-3 px-4 fw-bold" style="border-radius: 6px;">
+                                <i class="fa fa-download me-2"></i> Download Result Card
+                            </a><br>
+                            {% endif %}
+                            <span class="text-muted small fw-normal">Further admission instructions will be sent to your
+                                registered email.</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="glass-card" style="background-color: var(--primary-adm); border: none;">
+                <div
+                    class="card-body-padding h-100 d-flex flex-column align-items-center justify-content-center text-center">
+                    <div class="bg-white p-4 rounded-circle shadow-sm mb-4" style="opacity: 0.9;">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--primary-adm)"
+                            stroke-width="1.5">
+                            <circle cx="12" cy="12" r="10" />
+                            <polyline points="12 6 12 12 16 14" />
+                        </svg>
+                    </div>
+                    <h4 class="fw-black text-white">Entrance Test Performance</h4>
+                    <p class="text-white opacity-75" style="max-width: 400px; font-weight: 400;">Results are typically
+                        declared within 7-10 days of the examination. You will be able to view your score and rank here.
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Row 2: Active Test Schedule Card (Full Width) -->
+    <!-- Logic: Hide if Attended OR Result Published -->
+    {% set current_status = doc.re_allocation_status if is_rescheduled else doc.allocation_status %}
+    {% if current_status == "Allocated" and not show_result and doc.entrance_test_status not in ["Attended", "Absent"]
+    %}
+    <div class="row mb-4 animate-entrance" style="animation-delay: 0.3s;">
+        <div class="col-12">
+            <div class="glass-card">
+                <div class="card-header-gradient">
+                    <h5 class="mb-0 fw-bold">Active Test Schedule</h5>
+                </div>
+                <div class="card-body-padding">
+                        <div class="col-lg-9">
+                            {% if doc.is_international_applicant %}
+                            <div class="row g-4">
+                                <div class="col-md-4">
+                                    <div class="data-label">Test Name</div>
+                                    <div class="data-value text-primary">{{ (doc.re_entrance_test_name or doc.re_entrance_test_list) if is_rescheduled else (doc.entrance_test_name or doc.entrance_test_list) }}</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="data-label">Test Date</div>
+                                    <div class="data-value">{{ frappe.format_date(doc.re_allocation_date if is_rescheduled else doc.allocation_date) }}</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="data-label">Test Time</div>
+                                    <div class="data-value">{{ test_time or '—' }}</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="data-label">Test Mode</div>
+                                    <div class="data-value text-success">Online</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="data-label">Programme</div>
+                                    <div class="data-value">{{ doc.program or '—' }}</div>
+                                </div>
+                            </div>
+                            {% else %}
+                            <div class="row g-4">
+                                <div class="col-md-4">
+                                    <div class="data-label">Exam Centre</div>
+                                    <div class="data-value text-primary">{{ doc.re_center_name if is_rescheduled else
+                                        doc.center_name }}</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="data-label">Test Date</div>
+                                    <div class="data-value">{{ frappe.format_date(doc.re_allocation_date if
+                                        is_rescheduled else doc.allocation_date) }}</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="data-label">Exam Time</div>
+                                    <div class="data-value">{{ test_time or '—' }}</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="data-label">Reporting Time</div>
+                                    <div class="data-value text-danger">{{ reporting_time }}</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="data-label">Hall / Room</div>
+                                    <div class="data-value">{{ doc.re_room_name if is_rescheduled else doc.room_name }}
+                                     </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="data-label">Seat Number</div>
+                                    <div class="data-value text-primary">
+                                        {%- set raw_seat = doc.re_seat_number if is_rescheduled else doc.seat_number -%}
+                                        {{ raw_seat.split('-')[-1] if raw_seat else '—' }}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% if not doc.is_international_applicant %}
+                        <div class="col-lg-3 d-flex align-items-end">
+                            <button onclick="downloadAdmitCard()" class="btn-action-master w-100">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2.5">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                    <polyline points="7 10 12 15 17 10" />
+                                    <line x1="12" y1="15" x2="12" y2="3" />
+                                </svg>
+                                Admit Card
+                            </button>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Row 3: Reschedule Section (Full Width) -->
+    <!-- Logic: Only show if Status is NOT Allocated AND Result is NOT shown -->
+    {% if current_status != "Allocated" and not show_result and doc.entrance_test_status not in ["Attended", "Absent"] and not doc.is_international_applicant
+    %}
+    <div class="row mb-4 animate-entrance" style="animation-delay: 0.4s;">
+        <div class="col-12">
+            <div class="glass-card">
+                <div class="card-header-gradient">
+                    <h6 class="mb-0 fw-bold">Test Centre Selection</h6>
+                </div>
+                <div class="card-body-padding">
+                    <div id="allocation-view-section" class="row g-5">
+                        <div class="col-lg-4">
+                            {% if is_rescheduled and previous_schedule %}
+                            <div class="p-4 rounded-3 border bg-light h-100">
+                                <h6 class="fw-bold text-secondary mb-3">Previous Appointment</h6>
+                                <div class="mb-3">
+                                    <div class="data-label">Centre</div>
+                                    <div class="fw-bold small">{{ previous_schedule.center }}</div>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="data-label">Date & Time</div>
+                                    <div class="fw-bold small">{{ frappe.utils.format_datetime(previous_schedule.date,
+                                        "dd-MM-yyyy hh:mm a") if previous_schedule.date else '—' }}</div>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="data-label">Reason for update</div>
+                                    <div class="text-danger fw-bold small">{{ previous_schedule.reason }}</div>
+                                </div>
+                            </div>
+                            {% else %}
+                            <div class="p-4 rounded-3 bg-light h-100 d-flex flex-column justify-content-center">
+                                <h5 class="fw-bold mb-2">Step 1: Selection</h5>
+                                <p class="text-secondary small mb-0">Initial seat allocation is pending. Please proceed
+                                    to select your preferred centre.</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-lg-8">
+                            <h5 class="fw-bold mb-3">Select Examination Centre</h5>
+                            <p class="text-secondary mb-4 small">Available centres are listed below based on real-time
+                                seat availability. Once confirmed, this choice cannot be modified.</p>
+
+                            <div class="row g-4 align-items-end">
+                                <div class="col-md-7">
+                                    <label class="data-label">Available Centres</label>
+                                    <select id="providerDropdown" class="form-select form-select-lg mt-1 fw-medium"
+                                        style="font-size: 1rem; height: 44px; border-radius: 8px; border: 1px solid var(--border-color);">
+                                        <option value="" disabled selected>Choose a location...</option>
+                                        {% for p in preferences %}
+                                        <option value="{{ p.provider }}">{{ p.center_name or p.provider }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-5">
+                                    <button id="btnSaveProvider" class="btn-action-master w-100" disabled>
+                                        Confirm Allocation
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div id="centerDetails" style="display:none;" class="mt-4 p-4 rounded-3 bg-light border">
+                                <div class="d-flex gap-3 align-items-center">
+                                    <div class="bg-primary text-white p-2 rounded-2"
+                                        style="background-color: var(--primary-adm) !important;">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2">
+                                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                                            <circle cx="12" cy="10" r="3" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h6 class="fw-bold mb-1" id="selectedCenterName"
+                                            style="color: var(--text-main);"></h6>
+                                        <p class="text-secondary small mb-0" id="selectedCenterAddr"></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="successSection" style="display:none;" class="text-center py-5">
+                        <div class="spinner-border text-primary mb-3"
+                            style="width: 3rem; height: 3rem; color: var(--primary-adm) !important;"></div>
+                        <h4 class="fw-bold" style="color: var(--text-main);">Securing Your Selection...</h4>
+                        <p class="text-secondary">Please wait while we finalize your examination centre.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endif %}
+</div>
+
+{% if not no_record %}
+<script type="application/json" id="__page-data__">
+    {
+        "preferences": {{ preferences|tojson|safe if preferences else '[]' }},
+        "allocationName": "{{ doc.name }}",
+        "applicantId": "{{ doc.applicant }}",
+        "entranceTestList": "{{ doc.entrance_test_list }}",
+        "isRescheduled": {{ 'true' if is_rescheduled else 'false' }},
+        "admitCard": "{{ doc.admit_card }}",
+        "rescheduleAdmitCard": "{{ doc.reschedule_admit_card }}",
+        "doc": {{ doc_json|safe if doc_json else '{}' }},
+        "branding": {{ campus_branding|tojson|safe if campus_branding else '{}' }}
+    }
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var dropdown = document.getElementById('providerDropdown');
+        if (!dropdown) return;
+        var pageDataElement = document.getElementById('__page-data__');
+        if (pageDataElement) {
+            var pageData = JSON.parse(pageDataElement.textContent);
+            var btnSave = document.getElementById('btnSaveProvider');
+
+            dropdown.addEventListener('change', function () {
+                var selected = (pageData.preferences || []).find(p => p.provider === this.value);
+                if (!selected) return;
+
+                btnSave.disabled = true;
+                btnSave.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Verifying...';
+
+                apiFetch('slcm.admission.doctype.entrance_test_list.entrance_test_list.get_applicant_preferences', {
+                    applicant_id: pageData.applicantId,
+                    entrance_test_list: pageData.entranceTestList
+                }).then(function (r) {
+                    var pinfo = (r || []).find(function (p) { return p.entrance_test_provider === selected.provider; });
+                    if (pinfo && pinfo.is_full) {
+                        showToast('<b>' + (selected.center_name || selected.provider) + '</b> is currently full.', 'error');
+                        dropdown.value = '';
+                        document.getElementById('centerDetails').style.display = 'none';
+                        btnSave.innerHTML = 'Confirm Allocation';
+                    } else {
+                        document.getElementById('centerDetails').style.display = 'block';
+                        document.getElementById('selectedCenterName').textContent = selected.center_name || selected.provider;
+                        document.getElementById('selectedCenterAddr').textContent = selected.center_address || '';
+                        btnSave.disabled = false;
+                        btnSave.innerHTML = 'Confirm Allocation';
+                    }
+                }).catch(() => {
+                    btnSave.disabled = false;
+                    btnSave.innerHTML = 'Confirm Allocation';
+                });
+            });
+
+            btnSave.addEventListener('click', function () {
+                var selectedProvider = dropdown.value;
+                showConfirm('Are you sure you want to confirm allocation at <b>' + dropdown.options[dropdown.selectedIndex].text + '</b>? This action is permanent.', function () {
+                    btnSave.disabled = true;
+                    btnSave.innerHTML = 'Processing...';
+                    apiFetch('slcm.www.nlsat.eligibility.entrance_test_seat_allocation.save_provider', {
+                        allocation_name: pageData.allocationName,
+                        selected_provider: selectedProvider,
+                        is_rescheduled: pageData.isRescheduled
+                    }).then(() => {
+                        document.getElementById('allocation-view-section').style.display = 'none';
+                        document.getElementById('successSection').style.display = 'block';
+                        setTimeout(() => window.location.reload(), 1500);
+                    }).catch(err => {
+                        showToast(err.message, 'error');
+                        btnSave.disabled = false;
+                        btnSave.innerHTML = 'Confirm Allocation';
+                    });
+                });
+            });
+        }
+    });
+
+    function downloadAdmitCard() {
+        var pageDataElement = document.getElementById('__page-data__');
+        if (!pageDataElement) return;
+        var pageData = JSON.parse(pageDataElement.textContent);
+
+        const doc = pageData.doc;
+        const branding = pageData.branding;
+        const is_rescheduled = pageData.isRescheduled;
+
+        // ── Trigger server-side storage ─────────────────────────────────────
+        fetch("/api/method/slcm.admission.doctype.entrance_test_list.entrance_test_list.generate_and_store_admit_card", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-Frappe-CSRF-Token": (typeof frappe !== 'undefined' ? frappe.csrf_token : "")
+            },
+            body: JSON.stringify({
+                allocation: doc.name,
+                is_rescheduled: is_rescheduled
+            })
+        }).catch(err => console.error("Admit Card storage failed:", err));
+
+        const esc = (v) => { if (!v) return ""; return String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;"); };
+        const val = (v) => (v && String(v).trim() !== "") ? esc(v) : "—";
+        const fmtDate = (v) => { if (!v) return "—"; try { return new Date(v).toLocaleDateString("en-IN", { day: '2-digit', month: '2-digit', year: 'numeric' }); } catch (e) { return v; } };
+
+        const admit_no = doc.admit_card_number || ("AC-" + doc.name);
+
+        const f_date = is_rescheduled ? doc.re_allocation_date : doc.allocation_date;
+        const f_test = is_rescheduled ? (doc.re_entrance_test_name || doc.re_entrance_test_list) : (doc.entrance_test_name || doc.entrance_test_list);
+        const f_seat_raw = is_rescheduled ? doc.re_seat_number : doc.seat_number;
+        const f_seat = f_seat_raw && f_seat_raw.includes('-') ? f_seat_raw.split('-').pop() : f_seat_raw;
+        const f_room = is_rescheduled ? doc.re_room_name : doc.room_name;
+        const f_code = is_rescheduled ? doc.re_room_code : doc.room_code;
+        const f_building = is_rescheduled ? doc.re_building : doc.building;
+        const f_floor = is_rescheduled ? doc.re_floor : doc.floor;
+        const f_center = is_rescheduled ? doc.re_center_name : doc.center_name;
+        const f_address = is_rescheduled ? doc.re_center_address : doc.center_address;
+        const f_status = is_rescheduled ? doc.re_allocation_status : doc.allocation_status;
+
+        const alloc_date = fmtDate(f_date);
+        const dob = fmtDate(doc.date_of_birth);
+        const issue_date = new Date().toLocaleDateString("en-IN", { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+        const exam_date_time = alloc_date !== "—" ? alloc_date + " &nbsp;|&nbsp; As per schedule" : "As per schedule";
+
+        let profile_image_url = doc.profile;
+        if (profile_image_url && !profile_image_url.startsWith('http')) {
+            profile_image_url = '/files/' + encodeURIComponent(profile_image_url.replace(/^.*[\\\/]/, ""));
+        }
+
+        const campus_display_name = branding.campus_name || doc.campus || "Institution of Legal Education";
+        const campus_logo_url = branding.logo ? (branding.logo.startsWith("http") ? branding.logo : '/files/' + encodeURIComponent(branding.logo.replace(/^.*[\\\/]/, ""))) : null;
+
+        const centre_parts = [f_center, f_address].filter(v => v && v.trim());
+        const centre_full = centre_parts.length ? centre_parts.map(esc).join(", ") : "—";
+
+        function headerHTML() {
+            return `
+                <div class="header" style="background: #7b1c1c; display: flex; align-items: center; padding: 10px 18px; gap: 16px; border-bottom: 3px solid #5a0e0e;">
+                  <div class="logo-box" style="width: 74px; height: 74px; background: #fff; border: 2px solid rgba(255,255,255,0.6); border-radius: 3px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden;">
+                    ${campus_logo_url
+                    ? `<img src="${campus_logo_url}" alt="Campus Logo" style="max-width:100%;max-height:100%;object-fit:contain;">`
+                    : `<div class="logo-inner" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;">
+                          <span class="logo-icon" style="font-size: 28px; line-height: 1; color: #7b1c1c;">⚖</span>
+                          <span class="logo-text" style="font-size: 7.5px; font-weight: bold; font-family: Arial, sans-serif; color: #7b1c1c; text-align: center; letter-spacing: 0.5px; line-height: 1.2;">LAW<br>SCHOOL</span>
+                        </div>`
+                }
+                  </div>
+                  <div class="hdr-center" style="flex: 1; text-align: center;">
+                    <div class="univ-name" style="font-size: 21px; font-weight: bold; font-family: Arial, sans-serif; color: #fff; text-transform: uppercase; letter-spacing: 1.5px; line-height: 1.2;">${esc(campus_display_name)}</div>
+                    <div class="univ-sub" style="font-size: 11px; font-family: Arial, sans-serif; color: rgba(255,255,255,0.80); letter-spacing: 2.5px; text-transform: uppercase; margin-top: 3px;">OFFICE OF ADMISSIONS &nbsp;&middot;&nbsp; EXAMINATION CELL</div>
+                  </div>
+                </div>`;
+        }
+
+        const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+
+
+<meta charset="UTF-8"/>
+<title>Admit Card - ${esc(admit_no)}</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "Times New Roman", Times, serif; font-size: 13px; background: #c8c8c8; color: #000; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+.card-page { width: 710px; margin: 20px auto; background: #fff; border: 1.5px solid #555; }
+.header { background: #7b1c1c; display: flex; align-items: center; padding: 10px 18px; gap: 16px; border-bottom: 3px solid #5a0e0e; }
+.logo-box { width: 74px; height: 74px; background: #fff; border: 2px solid rgba(255,255,255,0.6); border-radius: 3px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; }
+.univ-name { font-size: 21px; font-weight: bold; font-family: Arial, sans-serif; color: #fff; text-transform: uppercase; letter-spacing: 1.5px; line-height: 1.2; }
+.univ-sub { font-size: 11px; font-family: Arial, sans-serif; color: rgba(255,255,255,0.80); letter-spacing: 2.5px; text-transform: uppercase; margin-top: 3px; }
+.title-row { text-align: center; padding: 9px 18px 7px; border-bottom: 1.5px solid #bbb; }
+.title-row .t1 { font-size: 14px; font-weight: bold; font-family: Arial, sans-serif; color: #000; }
+.title-row .t2 { font-size: 12.5px; font-family: Arial, sans-serif; color: #111; margin-top: 2px; }
+.info-wrap-tbl {
+  width: calc(100% - 28px);
+  margin: 12px 14px;
+  border: 1.5px solid #888;
+  border-collapse: collapse;
+}
+.info-tbl-cell {
+  vertical-align: top;
+}
+.photo-col-cell {
+  width: 140px;
+  vertical-align: top;
+  border-left: 1.5px solid #888;
+  padding: 10px 8px;
+  height: 250px;
+}
+.info-tbl {
+  width: 100%;
+  border-collapse: collapse;
+}
+.info-tbl tr { border-bottom: 1px solid #ccc; }
+.info-tbl tr:last-child { border-bottom: none; }
+.info-tbl td { padding: 5.5px 8px; font-size: 12.5px; vertical-align: middle; line-height: 1.5; }
+.info-tbl td.lb { font-weight: bold; font-family: Arial, sans-serif; width: 36%; white-space: nowrap; color: #000; }
+.info-tbl td.sp { width: 14px; font-weight: bold; font-family: Arial, sans-serif; color: #000; text-align: center; padding: 0; }
+.info-tbl td.vl { font-family: "Times New Roman", Times, serif; font-size: 13px; color: #000; }
+.seat-pill { display: inline-block; background: #1a237e; color: #fff; font-weight: bold; font-family: Arial, sans-serif; font-size: 13px; padding: 2px 14px; border-radius: 2px; letter-spacing: 1px; }
+.status-pill { display: inline-block; border: 1px solid #4caf50; color: #1b5e20; background: #f0fdf0; font-family: Arial, sans-serif; font-size: 11px; font-weight: bold; padding: 1px 10px; border-radius: 30px; }
+.photo-inner-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  height: 100%;
+}
+.photo-box-inner { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.photo-frame { width: 120px; height: 150px; border: 1.5px solid #555; overflow: hidden; background: #eee; display: flex; align-items: center; justify-content: center; }
+.photo-frame img { display: block; }
+.photo-cap { font-size: 9.5px; font-family: Arial, sans-serif; color: #555; text-align: center; font-style: italic; line-height: 1.3; }
+.sig-note { text-align: center; font-style: italic; font-size: 11.5px; font-family: "Times New Roman", Times, serif; padding: 6px 14px 3px; color: #000; }
+.sig-tbl { border-collapse: collapse; width: calc(100% - 28px); margin: 0 14px 16px; border: 1.5px solid #888; }
+.sig-tbl td { border: 1.5px solid #888; padding: 0; width: 50%; }
+.sig-hdr { font-weight: bold; font-family: Arial, sans-serif; font-size: 12px; color: #000; text-align: center; padding: 5px 8px 4px; border-bottom: 1.5px solid #888; display: block; }
+.sig-body { height: 54px; display: block; }
+.inst-outer { border: 1.5px solid #888; margin: 12px 14px 16px; padding: 14px 18px 18px; }
+.inst-main-title { font-size: 13.5px; font-weight: bold; font-family: Arial, sans-serif; text-align: center; color: #000; margin-bottom: 10px; }
+.sec-title { font-size: 12.5px; font-weight: bold; font-family: Arial, sans-serif; color: #000; margin: 10px 0 3px; }
+.il { list-style: none; margin: 0; padding: 0; }
+.il > li { display: flex; gap: 6px; font-size: 11.5px; font-family: Arial, sans-serif; color: #000; line-height: 1.65; padding-left: 18px; }
+.il > li .mk { flex-shrink: 0; min-width: 16px; }
+.sl { list-style: none; margin: 2px 0 2px 52px; padding: 0; }
+.sl li { display: flex; gap: 6px; font-size: 11.5px; font-family: Arial, sans-serif; color: #000; line-height: 1.65; }
+.sl li .mk { flex-shrink: 0; min-width: 22px; font-style: italic; }
+.pg-footer { padding: 6px 14px 10px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #ddd; }
+.pg-footer span { font-size: 8.5px; font-family: Arial, sans-serif; color: #888; }
+@media print { body { background: #fff; margin: 0; } .card-page { width: 100%; margin: 0; border: 1.5px solid #555; } .p1 { page-break-after: always; } .p2 { page-break-before: always; } }
+</style>
+
+{{ get_typography_style_block(
+    portal_config.font_family,
+    font_size_heading=portal_config.font_size_heading,
+    font_size_subheading=portal_config.font_size_subheading,
+    font_size_body=portal_config.font_size_body,
+    font_size_form_title=portal_config.font_size_form_title,
+    font_size_toast=portal_config.font_size_toast,
+    primary_color=portal_config.primary_color,
+    secondary_color=portal_config.secondary_color,
+    navbar_color=portal_config.navbar_color,
+    footer_color=portal_config.footer_color,
+    button_border_radius=portal_config.button_border_radius
+) }}
+</head>
+<body>
+<div class="card-page p1">
+  ${headerHTML()}
+  <div class="title-row">
+    <div class="t1">Admit Card (${val(f_test)})</div>
+    <div class="t2">Admission to ${doc.program_level ? esc(doc.program_level) : "the Programme"} &nbsp;|&nbsp; ${val(doc.academic_year)} &nbsp;|&nbsp; ${val(doc.admission_cycle)}</div>
+  </div>
+  <table class="info-wrap-tbl">
+    <tr>
+      <td class="info-tbl-cell">
+        <table class="info-tbl">
+          <tbody>
+            <tr><td class="lb">Admit Card Number</td><td class="sp">:</td><td class="vl"><strong>${val(admit_no)}</strong></td></tr>
+            <tr><td class="lb">Candidate's Name</td><td class="sp">:</td><td class="vl">${val(doc.candidate_name)}</td></tr>
+            <tr><td class="lb">Date of Birth</td><td class="sp">:</td><td class="vl">${val(dob)}</td></tr>
+            <tr><td class="lb">Father's Name</td><td class="sp">:</td><td class="vl">${val(doc.father_name)}</td></tr>
+            <tr><td class="lb">Mother's Name</td><td class="sp">:</td><td class="vl">${val(doc.mother_name)}</td></tr>
+            <tr><td class="lb">Gender</td><td class="sp">:</td><td class="vl">${val(doc.gender)}</td></tr>
+            <tr><td class="lb">Programme Applied</td><td class="sp">:</td><td class="vl">${val(doc.program)}</td></tr>
+            <tr><td class="lb">Application Number</td><td class="sp">:</td><td class="vl">${val(doc.applicant)}</td></tr>
+            <tr><td class="lb">Examination Date &amp; Time</td><td class="sp">:</td><td class="vl">${exam_date_time}</td></tr>
+            <tr><td class="lb">Reporting Time</td><td class="sp">:</td><td class="vl">30 minutes before scheduled time</td></tr>
+            <tr><td class="lb">Seat Number</td><td class="sp">:</td><td class="vl"><span class="seat-pill">${val(f_seat)}</span></td></tr>
+            <tr><td class="lb">Room / Hall</td><td class="sp">:</td><td class="vl">${val(f_room)}${f_code && f_code.trim() ? "&nbsp; (Code:&nbsp;" + esc(f_code) + ")" : ""}</td></tr>
+            <tr><td class="lb">Building / Floor</td><td class="sp">:</td><td class="vl">${val(f_building)}${f_floor && f_floor.trim() ? "&nbsp; &middot;&nbsp; Floor:&nbsp;" + esc(f_floor) : ""}</td></tr>
+            <tr><td class="lb">Allocation Status</td><td class="sp">:</td><td class="vl"><span class="status-pill">${val(f_status)}</span></td></tr>
+            <tr><td class="lb">Test Centre Name &amp;&nbsp;Address</td><td class="sp">:</td><td class="vl" style="font-size:11.5px;">${centre_full}</td></tr>
+          </tbody>
+        </table>
+      </td>
+      <td class="photo-col-cell">
+        <div class="photo-inner-wrap">
+          <div class="photo-box-inner" style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+            <div class="photo-frame">
+              ${profile_image_url ? `<img src="${profile_image_url}" alt="Candidate Photo" width="120" height="150" style="width: 120px; height: 150px; object-fit: cover; display: block;">` : `<div class="photo-ph">👤</div>`}
+            </div>
+            <div class="photo-cap">Candidate's Photograph</div>
+          </div>
+          <div class="photo-sig-box" style="width: 100%; text-align: center; padding-bottom: 5px;">
+            <div style="height: 40px; border-bottom: 1px solid #999; margin-bottom: 4px;"></div>
+            <div style="font-size: 8px; font-family: Arial, sans-serif; font-weight: bold; text-transform: uppercase; color: #333; letter-spacing: -0.2px;">Candidate's Signature</div>
+          </div>
+        </div>
+      </td>
+    </tr>
+  </table>
+  <div class="sig-note">To be signed in the presence of the Invigilator in the Examination Hall</div>
+  <table class="sig-tbl">
+    <tr>
+      <td><span class="sig-hdr">Candidate's Signature</span><span class="sig-body"></span></td>
+      <td><span class="sig-hdr">Invigilator's Signature</span><span class="sig-body"></span></td>
+    </tr>
+  </table>
+</div>
+<div class="card-page p2">
+  <div class="inst-outer">
+    <div class="inst-main-title">Instructions to Candidates</div>
+    <div class="sec-title">1.&nbsp;&nbsp; General Instructions</div>
+    <ul class="il">
+      <li><span class="mk">a.</span><span>Candidates should check and review their admit cards carefully and make sure that their Name, Date of Birth, and other personal details mentioned in the admit card are as per the details filled by them in the application form. In case of any discrepancy, please contact the Examination Cell immediately.</span></li>
+      <li><span class="mk">b.</span><span>Please carry a printed copy of this admit card to the test centre.</span></li>
+    </ul>
+    <div class="sec-title">2.&nbsp;&nbsp; Reporting to the Test Centre &amp; Test Timings</div>
+    <ul class="il">
+      <li><span class="mk">a.</span><span>Candidates will be allowed to enter the premises of the test centre 30 minutes before the examination start time and should be seated in the examination hall at least 15 minutes before commencement.</span></li>
+      <li><span class="mk">b.</span><span>Candidates should carry a Government-issued photo ID card, preferably the one uploaded with the application form. The ID card will be checked at the time of entry into the centre.</span></li>
+      <li><span class="mk">c.</span><span>Candidates who arrive at the test centre beyond the scheduled entry cut-off time will not be permitted entry.</span></li>
+      <li><span class="mk">d.</span><span>Once the test commences, Candidates will not be permitted to leave the examination hall until the test is completed, and all the Question Booklets and OMR response sheets have been collected by the invigilator/s.</span></li>
+    </ul>
+    <div class="sec-title">3.&nbsp;&nbsp; Pre-Test Instructions</div>
+    <ul class="il">
+      <li><span class="mk">a.</span><span>Candidates shall be required to follow all directions issued by the Centre Coordinators and the Institution representatives at their respective test centres.</span></li>
+      <li><span class="mk">b.</span><span>Candidates must maintain all protocols in place at their respective test centres.</span></li>
+    </ul>
+    <div class="sec-title">4.&nbsp;&nbsp; Permitted Items</div>
+    <ul class="il">
+      <li><span class="mk">a.</span><span>Candidates will only be permitted to carry the following inside the Test Centre:</span></li>
+    </ul>
+    <ul class="sl">
+      <li><span class="mk">i.</span><span>Admit Card (In case the photograph on the Admit Card is not clear, candidates should carry a self-attested passport size photograph).</span></li>
+      <li><span class="mk">ii.</span><span>Government Issued Photo ID (preferably the one uploaded with the application form).</span></li>
+      <li><span class="mk">iii.</span><span>Black or Blue Ballpoint pen.</span></li>
+      <li><span class="mk">iv.</span><span>A transparent water bottle.</span></li>
+      <li><span class="mk">v.</span><span>A face mask (the Candidate may be asked to remove the face mask for ascertainment of identity).</span></li>
+      <li><span class="mk">vi.</span><span>An analogue watch. <strong>Note:</strong> Smart Watches are not permitted.</span></li>
+    </ul>
+    <div class="sec-title">5.&nbsp;&nbsp; Admissions Test Related Instructions</div>
+    <ul class="il">
+      <li><span class="mk">a.</span><span>An attendance sheet will be circulated during the admissions test. The requisite details should be filled in the attendance sheet.</span></li>
+      <li><span class="mk">b.</span><span>Candidates will be provided with a Question Booklet and/or answer sheets. Candidates should use black/blue ball point pen <strong>only</strong> to enter the admit card number and other required details.</span></li>
+    </ul>
+    <div class="sec-title">6.&nbsp;&nbsp; Documents to be retained by the Candidate after the test</div>
+    <ul class="il">
+      <li><span class="mk">a.</span><span>The admit card, with the invigilator's signature, should be retained by the candidate and produced at the Institution at the time of admission.</span></li>
+    </ul>
+    <div class="sec-title">7.&nbsp;&nbsp; Malpractice</div>
+    <ul class="il">
+      <li><span class="mk">a.</span><span>The use of any unfair means by a Candidate shall result in their disqualification and cancellation of their test.</span></li>
+      <li><span class="mk">b.</span><span>Possession of electronic devices, including mobile phones, smart watches, etc., is strictly prohibited.</span></li>
+    </ul>
+  </div>
+  <div class="pg-footer">
+    <span>Doc: <strong>${val(doc.name)}</strong> &nbsp;·&nbsp; Generated: <strong>${val(issue_date)}</strong></span>
+    <span>${val(admit_no)}</span>
+  </div>
+</div>
+<script>window.print();<\/script>
+</body>
+</html>`;
+
+        const win = window.open("", "_blank", "width=800,height=900");
+        win.document.open();
+        win.document.write(html);
+        win.document.close();
+    }
+</script>
+{% endif %}
+{% endblock %}
