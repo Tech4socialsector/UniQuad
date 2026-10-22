@@ -818,14 +818,18 @@ function _buildShell(ws, cfg, user, uinfo) {
 	var logoutLink = document.getElementById('slcm-nav-logout');
 	if (logoutLink) {
 		logoutLink.addEventListener('click', function () {
-			frappe.call({ method: 'logout', callback: function () { window.location.href = '/admission/login#login'; } });
+			slcmConfirmLeave(function () {
+				frappe.call({ method: 'logout', callback: function () { window.location.href = '/admission/login#login'; } });
+			});
 		});
 	}
 
 	var bellBtn = document.getElementById('slcm-bell-btn');
 	if (bellBtn) {
 		bellBtn.addEventListener('click', function () {
-			window.location.href = '/merit-and-scholarship/admission_dashboard';
+			slcmConfirmLeave(function () {
+				window.location.href = '/merit-and-scholarship/admission_dashboard';
+			});
 		});
 	}
 
@@ -1232,6 +1236,7 @@ function handleSaveDraft(opts) {
 				// before its async make_input() has finished.
 				try { if (wf && wf.doc) wf.doc.status = 'Draft'; } catch (e) {}
 				frappe.form_dirty = false;
+				window._slcmUserTouched = false;   // saved — later programmatic refreshes are not "unsaved"
 					updateStatusBadge('Draft');
 					if (!(opts && opts.silent)) {
 						showToast('\u2713  ' + (msg.message || 'Draft saved successfully.'), 'success');
@@ -1478,7 +1483,9 @@ function _ensureTopBar() {
 	backBtn.innerHTML = _SVG_BACK + '<span>Back</span>';
 	backBtn.addEventListener('click', function (e) {
 		e.preventDefault();
-		history.back();
+		slcmConfirmLeave(function () {
+			history.back();
+		});
 	});
 
 	var applyWrap = document.createElement('div');
@@ -6192,22 +6199,108 @@ frappe.ready(function() {
 	}, 600);
 });
 
+// ───────────────────────────────────────────────────────────────────
+//  UNSAVED CHANGES — our own "Leave page?" dialog for in-page navigation
+//  (links, Back, Logout, notifications). Browsers do not allow replacing
+//  their native prompt on tab close / refresh, so beforeunload stays for those.
+// ───────────────────────────────────────────────────────────────────
+var _slcmLeaveApproved = false;
+
+/** Only an editable (Draft) application can lose work; submitted/completed ones are read-only. */
+function slcmHasUnsavedChanges() {
+	return !!(window.frappe && frappe.form_dirty) && !slcmApplicationPortalLocked();
+}
+
+function slcmConfirmLeave(proceed) {
+	if (!slcmHasUnsavedChanges()) {
+		proceed();
+		return;
+	}
+	var d = new frappe.ui.Dialog({
+		title: __('Leave this page?'),
+		primary_action_label: __('Stay on page'),
+		primary_action: function () {
+			d.hide();
+		},
+		secondary_action_label: __('Leave page'),
+		secondary_action: function () {
+			d.hide();
+			_slcmLeaveApproved = true;
+			// If the navigation turns out to stay on this document, re-arm the warning
+			setTimeout(function () { _slcmLeaveApproved = false; }, 4000);
+			proceed();
+		},
+	});
+	d.$body.html(
+		'<p style="margin:0;font-size:14px;line-height:1.6;color:#475569;">' +
+			__('You have unsaved changes in your application. If you leave now, anything entered since your last <b>Save Draft</b> will be lost.') +
+			'</p>'
+	);
+	d.show();
+}
+
 frappe.ready(() => {
-    // Prevent registering the event more than once.
-    if (window.slcm_beforeunload_registered) {
-        return;
-    }
+	// Prevent registering the events more than once.
+	if (window.slcm_beforeunload_registered) {
+		return;
+	}
+	window.slcm_beforeunload_registered = true;
 
-    window.slcm_beforeunload_registered = true;
+	// Loading the saved values — and this script's own prefills / server callbacks (fee amount,
+	// programme details …), which can land seconds later — fire change handlers that call
+	// make_form_dirty() before the applicant has touched anything. Only count changes once the
+	// applicant has actually interacted with a field (typing, picking, ticking, uploading).
+	var EDIT_TARGETS = 'input, textarea, select, li, .btn-attach, .datepicker, .modal';
+	['keydown', 'input', 'change', 'pointerdown'].forEach(function (ev) {
+		document.addEventListener(ev, function (e) {
+			if (e.isTrusted && e.target && e.target.closest && e.target.closest(EDIT_TARGETS)) {
+				window._slcmUserTouched = true;
+			}
+		}, true);
+	});
+	var _dirtyPatchN = 0;
+	var _dirtyPatchT = setInterval(function () {
+		var wf = frappe.web_form;
+		if (wf && typeof wf.make_form_dirty === 'function' && !wf._slcmDirtyPatched) {
+			wf._slcmDirtyPatched = true;
+			var origDirty = wf.make_form_dirty;
+			wf.make_form_dirty = function () {
+				if (!window._slcmUserTouched) return;   // programmatic change while loading
+				return origDirty.apply(this, arguments);
+			};
+			if (!window._slcmUserTouched) frappe.form_dirty = false;   // drop anything set before the patch
+		}
+		if ((wf && wf._slcmDirtyPatched) || ++_dirtyPatchN > 100) clearInterval(_dirtyPatchT);
+	}, 100);
 
-    window.addEventListener("beforeunload", (event) => {
-        // Frappe's dirty flag indicates unsaved form changes.
-        if (frappe.form_dirty) {
-            event.preventDefault();
+	// Tab close / refresh / typing a new URL: only the browser's own prompt is possible here.
+	window.addEventListener('beforeunload', (event) => {
+		if (_slcmLeaveApproved || !slcmHasUnsavedChanges()) return;
+		event.preventDefault();
+		event.returnValue = '';
+	});
 
-            // Required for modern browsers to display
-            // their native unsaved-changes confirmation.
-            event.returnValue = "";
-        }
-    });
+	// Any same-tab link that leaves this page → our dialog instead of the browser prompt
+	document.addEventListener(
+		'click',
+		function (e) {
+			if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+			var a = e.target && e.target.closest && e.target.closest('a[href]');
+			if (!a || a.hasAttribute('download')) return;
+			if (a.target && a.target !== '_self') return;
+			var href = (a.getAttribute('href') || '').trim();
+			if (!href || href.charAt(0) === '#' || /^(javascript|mailto|tel):/i.test(href)) return;
+			var url;
+			try { url = new URL(a.href, window.location.href); } catch (err) { return; }
+			if (url.pathname === window.location.pathname && url.search === window.location.search) return;
+			if (!slcmHasUnsavedChanges()) return;
+
+			e.preventDefault();
+			e.stopPropagation();
+			slcmConfirmLeave(function () {
+				window.location.href = url.href;
+			});
+		},
+		true
+	);
 });
