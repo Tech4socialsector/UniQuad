@@ -12,9 +12,17 @@
    "link_to": "Admission",
    "link_type": "Sidebar",
    "title": "Admission"
+  },
+  {
+   "added": 0,
+   "hidden": 0,
+   "icon": "monitor-up",
+   "link_to": "PACE",
+   "link_type": "Sidebar",
+   "title": "PACE Admission"
   }
  ],
- "modified": "2026-10-20 09:59:18.958889",
+ "modified": "2026-10-21 17:53:31.613050",
  "modified_by": "Administrator",
  "name": "slcm",
  "owner": "Administrator",
