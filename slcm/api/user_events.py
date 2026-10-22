@@ -89,34 +89,58 @@ def send_signup_email(doc, method):
 
         # Context for rendering
         context = {
-            "institution_name": getattr(institution, "institution_name", ""),
+            "institution_name": getattr(institution, "institution_name", "") or "National Law School of India University",
             "logo": getattr(institution, "logo", ""),
             "full_name": full_name,
+            "candidate_name": full_name,
+            "applicant_name": full_name,
+            "first_name": doc.first_name or full_name,
             "set_password_link": set_password_link,
+            "link": set_password_link,
+            "reset_password_link": set_password_link,
             "login_url": getattr(institution, "login_url", "") or frappe.utils.get_url("/admission/login"),
             "support_email": getattr(institution, "support_email", ""),
-            "link_expiry_hours": getattr(institution, "link_expiry_hours", 24) or 24
+            "link_expiry_hours": getattr(institution, "link_expiry_hours", 24) or 24,
+            "doc": doc,
         }
 
-        # Render Subject
-        subject_template = getattr(institution, "signup_email_subject", "")
-        if not subject_template:
-            subject_template = "Welcome to {{ institution_name }}"
-        subject = frappe.render_template(subject_template, context)
+        subject = None
+        message = None
+        sender = None
 
-        # Render Email Body
-        message_template = getattr(institution, "signup_email_template", "")
-        if not message_template:
-            # If no template is configured, we can't send a custom one.
-            # In this case, we might want to log it.
-            frappe.log_error("No Signup Email Template configured in Institution Settings", "Signup Email Error")
-            return
-            
-        message = frappe.render_template(message_template, context)
+        # Check if standard Email Template 'Applicant Registration Email' exists
+        if frappe.db.exists("Email Template", "Applicant Registration Email"):
+            try:
+                tmpl = frappe.get_doc("Email Template", "Applicant Registration Email")
+                tmpl.flags.ignore_permissions = True
+                subject = tmpl.get_formatted_subject(context)
+                message = tmpl.get_formatted_response(context)
+                if tmpl.email_account:
+                    sender = frappe.db.get_value("Email Account", tmpl.email_account, "email_id") or tmpl.email_account
+            except Exception as e:
+                frappe.log_error(title="SLCM Email Template Render Error", message=frappe.get_traceback())
+
+        if not message:
+            # Fallback to Institution Settings fields
+            subject_template = getattr(institution, "signup_email_subject", "")
+            if not subject_template:
+                subject_template = "Welcome to {{ institution_name }}"
+            try:
+                subject = frappe.render_template(subject_template, context)
+            except Exception:
+                subject = "Welcome to " + (getattr(institution, "institution_name", "") or "National Law School of India University")
+
+            message_template = getattr(institution, "signup_email_template", "")
+            if not message_template:
+                frappe.log_error("No Signup Email Template configured in Institution Settings", "Signup Email Error")
+                return
+                
+            message = frappe.render_template(message_template, context)
 
         # Send Email
         frappe.sendmail(
             recipients=[doc.email],
+            sender=sender,
             subject=subject,
             message=message,
             now=True
