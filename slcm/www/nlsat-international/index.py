@@ -430,7 +430,8 @@ def get_context(context):
             raise frappe.Redirect
 
     # ── Portal: /nlsat-international — International candidates only ──
-    from slcm.admission.utils.nlsat_portal import INTERNATIONAL, PORTAL_BASES, get_portal_login_url
+    from slcm.admission.utils.nlsat_portal import INTERNATIONAL, PORTAL_BASES, enforce_portal_access, get_portal_login_url
+    enforce_portal_access(INTERNATIONAL)
     _req_path = (frappe.request.path if hasattr(frappe, "request") and frappe.request else "") or ""
     context.portal_type      = INTERNATIONAL
     context.portal_base      = PORTAL_BASES[INTERNATIONAL]

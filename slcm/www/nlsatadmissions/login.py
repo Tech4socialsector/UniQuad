@@ -20,11 +20,15 @@ def _fmt_date(date_obj):
 
 
 def get_context(context):
-    from slcm.admission.utils.nlsat_portal import DOMESTIC, get_portal_base, set_portal_cookie
+    from slcm.admission.utils.nlsat_portal import (
+        DOMESTIC, enforce_portal_access, get_portal_base, set_portal_cookie,
+    )
 
     # /nlsatadmissions/login — Indian Nationals (International login: www/nlsat-international/login.py).
     # Remember the portal so shared /nlsat pages send the candidate back to this login.
+    # A logged-in International candidate is sent back to their own portal before the cookie is touched.
     portal_type = DOMESTIC
+    enforce_portal_access(portal_type)
     set_portal_cookie(portal_type)
     context.portal_type      = portal_type
     context.portal_base      = get_portal_base(portal_type)

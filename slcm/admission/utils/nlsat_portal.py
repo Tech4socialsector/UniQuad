@@ -74,6 +74,31 @@ def get_applicant_portal_type(user=None):
 	return INTERNATIONAL if (foreign or "").strip() == "Yes" else DOMESTIC
 
 
+def enforce_portal_access(portal_type):
+	"""
+	Keep a logged-in candidate on the portal they logged in through: a Domestic
+	candidate opening an /nlsat-international page (or vice versa) is redirected to
+	the same page on their own portal. Guests and System Users are not restricted.
+	"""
+	user = frappe.session.user
+	if not user or user == "Guest":
+		return
+	if frappe.db.get_value("User", user, "user_type") == "System User":
+		return
+
+	allowed = get_portal_cookie() or get_applicant_portal_type(user)
+	if not allowed or allowed == normalize_portal_type(portal_type):
+		return
+
+	req = getattr(frappe.local, "request", None)
+	path = _request_path()
+	current_base = PORTAL_BASES[normalize_portal_type(portal_type)]
+	target = PORTAL_BASES[allowed] + (path[len(current_base):] if path.startswith(current_base) else "")
+	query = req.query_string.decode() if req and req.query_string else ""
+	frappe.local.flags.redirect_location = target + ("?" + query if query else "")
+	raise frappe.Redirect
+
+
 def get_current_portal_type():
 	"""Portal for this request: URL path, then cookie, then the user's applicant record."""
 	return (
