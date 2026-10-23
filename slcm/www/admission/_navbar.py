@@ -48,11 +48,27 @@ def get_nlsat_navbar_context(portal_config=None, current_path="", nlsat_login_ur
 	)
 
 	# Shared pages are served under the candidate's prefix: /nlsat/... or /pace/...
-	from slcm.admission.utils.nlsat_portal import get_candidate_prefix
+	from slcm.admission.utils.nlsat_portal import (
+		DOMESTIC, INTERNATIONAL, get_applicant_portal_type, get_current_portal_type,
+		get_candidate_prefix, PACE_PREFIX,
+	)
 
 	prefix = get_candidate_prefix(user, current_path)
+	if prefix == PACE_PREFIX or ("pace" in (current_path or "")) or (has_pace_applicant and not has_applicant):
+		portal_type = "PACE"
+	else:
+		applicant_portal = get_applicant_portal_type(user) if user and not is_guest else None
+		if applicant_portal:
+			portal_type = applicant_portal
+		elif "nlsat-international" in (current_path or "") or (nlsat_login_url and "international" in nlsat_login_url):
+			portal_type = INTERNATIONAL
+		elif "nlsatadmissions" in (current_path or ""):
+			portal_type = DOMESTIC
+		else:
+			portal_type = get_current_portal_type()
 
 	return frappe._dict(
+		portal_type=portal_type,
 		user=user,
 		prefix=prefix,
 		is_guest=is_guest,

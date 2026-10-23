@@ -86,7 +86,7 @@ def enforce_portal_access(portal_type):
 	if frappe.db.get_value("User", user, "user_type") == "System User":
 		return
 
-	allowed = get_portal_cookie() or get_applicant_portal_type(user)
+	allowed = get_applicant_portal_type(user) or get_portal_cookie()
 	if not allowed or allowed == normalize_portal_type(portal_type):
 		return
 
@@ -100,11 +100,11 @@ def enforce_portal_access(portal_type):
 
 
 def get_current_portal_type():
-	"""Portal for this request: URL path, then cookie, then the user's applicant record."""
+	"""Portal for this request: URL path, then user's applicant record, then cookie."""
 	return (
 		get_portal_type_from_path(_request_path())
-		or get_portal_cookie()
 		or get_applicant_portal_type()
+		or get_portal_cookie()
 		or DOMESTIC
 	)
 

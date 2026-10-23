@@ -619,8 +619,8 @@ def get_context(context):
             get_active_programs, get_active_announcements, get_active_events
         )
         programs      = get_active_programs() or []
-        context.announcements = get_active_announcements(limit=20, target_audience=["Global", "Admission", "", None]) or []
-        context.events = get_active_events(limit=20, target_audience=["Global", "Admission", "", None]) or []
+        context.announcements = get_active_announcements(limit=20, target_audience=["Global", "NLSAT – Domestic", "NLSAT – Domestic & International"]) or []
+        context.events = get_active_events(limit=20, target_audience=["Global", "NLSAT – Domestic", "NLSAT – Domestic & International"]) or []
 
         # Split announcements into non-event ones only
         context.announcements = [

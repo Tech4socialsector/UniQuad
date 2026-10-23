@@ -69,7 +69,7 @@ def get_context(context):
     # ── Announcements (all, paginated client-side - initial 3) ────────
     try:
         from slcm.admission.utils.web import get_public_announcements
-        context.announcements = get_public_announcements(target_audience=["Global", "Admission", "", None])
+        context.announcements = get_public_announcements(target_audience=["Global", "NLSAT – Domestic", "NLSAT – Domestic & International"])
         for ann in context.announcements:
             if ann.get("publish_date"):
                 d = getdate(str(ann.publish_date)[:10])
@@ -188,7 +188,7 @@ def get_context(context):
     try:
         raw_events = frappe.get_all(
             "Portal Announcement",
-            filters={"is_active": 1, "announcement_type": "Event", "status": "Published", "target_audience": ["in", ["Global", "Admission", "", None]]},
+            filters={"is_active": 1, "announcement_type": "Event", "status": "Published", "target_audience": ["in", ["Global", "NLSAT – Domestic", "NLSAT – Domestic & International"]]},
             fields=[
                 "name", "title", "summary", "event_date", "event_venue",
                 "event_registration_url", "featured_image", "content",
@@ -220,7 +220,7 @@ def get_context(context):
     try:
         raw_imp_dates = frappe.get_all(
             "Important Dates",
-            filters={"is_active": 1, "portal_type": ["in", ["Admission", "Both"]]},
+            filters={"is_active": 1, "portal_type": ["in", ["Both", "NLSAT – Domestic", "NLSAT – Domestic & International"]]},
             fields=[
                 "name", "title", "date", "url", "description",
             ],
