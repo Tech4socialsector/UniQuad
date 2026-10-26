@@ -29,7 +29,7 @@ def get_rejection_reason(reason_fieldname):
         "not_started_rejection_reason": "Your registration has been closed as you did not start your application before the admission cycle closing date.",
         "draft_rejection_reason": "Your application has been rejected as it was not submitted before the admission cycle closing date.",
         "unpaid_fee_rejection_reason": "Your application has been rejected as the application fee was not paid before the admission cycle closing date.",
-        "unpaid_admission_fee_rejection_reason": "Your application has been rejected as the admission fee was not paid before the admission cycle closing date.",
+        "unpaid_admission_fee_rejection_reason": "Your application has been rejected as the course fee was not paid before the admission cycle closing date.",
     }
     return defaults.get(reason_fieldname, "")
 
@@ -50,6 +50,7 @@ def should_send_reminder(reminder_type, last_sent_date, cycle_end_date=None):
         "draft":       ("enable_draft_reminder",       "draft_reminder_interval"),
         "unpaid_fee":  ("enable_unpaid_fee_reminder",  "unpaid_fee_reminder_interval"),
         "admission_fee": ("enable_admission_fee_reminder", "admission_fee_reminder_interval"),
+        "course_fee":    ("enable_admission_fee_reminder", "admission_fee_reminder_interval"),
     }
 
     if reminder_type not in field_map:
@@ -87,7 +88,7 @@ def should_send_reminder(reminder_type, last_sent_date, cycle_end_date=None):
     interval_val = config.get(interval_field)
     interval = frappe.utils.cint(interval_val) if interval_val is not None else 1
     days_since = date_diff(today_date, getdate(last_sent_date))
-    return days_since > interval
+    return days_since >= interval
 
 
 @frappe.whitelist()
@@ -153,9 +154,9 @@ def run_manual_reminders_in_background(reminders, is_rejection_only, user):
         tasks_with_counts.append({"task": send_unpaid_fee_reminders, "count": count})
         total_items += count
 
-    if "enable_admission_fee_reminder" in reminders:
+    if "enable_admission_fee_reminder" in reminders or "enable_course_fee_reminder" in reminders:
         count = frappe.db.count("Applicant Fee Assignment", {
-            "fee_type": "Admission Fee",
+            "fee_type": ["in", ["Course Fee", "Admission Fee"]],
             "status": "Assigned"
         })
         tasks_with_counts.append({"task": send_admission_fee_reminders, "count": count})

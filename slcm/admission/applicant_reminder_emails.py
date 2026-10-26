@@ -158,7 +158,10 @@ def send_not_started_reminders(current_item=0, total_items=0, is_rejection_only=
 
     already_rejected = frappe.get_all(
         "Applicant Reminder Email Log",
-        filters={"reminder_type": "Not Started Application Rejected"},
+        filters={
+            "reminder_type": "Not Started Application Rejected",
+            "admission_cycle": cycle_name,
+        },
         pluck="recipient",
         limit=0
     )
@@ -206,7 +209,17 @@ def send_not_started_reminders(current_item=0, total_items=0, is_rejection_only=
             if belong_to_other_cycle:
                 continue
 
-            last_sent = user_doc.get("last_applicant_reminder_sent")
+            last_sent = frappe.db.get_value(
+                "Applicant Reminder Email Log",
+                {
+                    "reference_doctype": "User",
+                    "reference_name": email,
+                    "reminder_type": "Not Started Application Reminder",
+                    "admission_cycle": cycle_name,
+                },
+                "sent_at",
+                order_by="sent_at desc",
+            )
 
             if not should_send_reminder("not_started", last_sent, application_end_date):
                 continue
@@ -260,7 +273,6 @@ def send_not_started_reminders(current_item=0, total_items=0, is_rejection_only=
                 reference_name=email,
             )
             if ok:
-                user_doc.db_set("last_applicant_reminder_sent", now_datetime(), update_modified=False)
                 log_applicant_reminder_email(
                     recipient=email,
                     subject=subject,
@@ -563,14 +575,14 @@ def send_admission_fee_reminders(current_item=0, total_items=0, is_rejection_onl
     fee_assignments = frappe.get_all(
         "Applicant Fee Assignment",
         filters={
-            "fee_type": "Admission Fee",
+            "fee_type": ["in", ["Course Fee", "Admission Fee"]],
             "status": "Assigned"
         },
         fields=["name", "applicant", "applicant_name", "academic_year", "program"],
         limit=0
     )
 
-    template_name = "Admission Fee Pending Reminder"
+    template_name = "Course Fee Pending Reminder" if frappe.db.exists("Email Template", "Course Fee Pending Reminder") else "Admission Fee Pending Reminder"
     institution_name = _get_institution_name()
     sent_count = 0
 
@@ -579,7 +591,7 @@ def send_admission_fee_reminders(current_item=0, total_items=0, is_rejection_onl
             frappe.publish_realtime("progress", {
                 "progress": [current_item + i, total_items],
                 "title": "Applicant Reminders",
-                "description": f"Admission Fee Reminders: {assignment.applicant}",
+                "description": f"Course Fee Reminders: {assignment.applicant}",
             }, user=frappe.session.user)
 
         try:
@@ -630,7 +642,7 @@ def send_admission_fee_reminders(current_item=0, total_items=0, is_rejection_onl
                     log_applicant_reminder_email(
                         recipient=recipient,
                         subject=subject or "Application Rejected",
-                        reminder_type="Unpaid Admission Fee Rejected",
+                        reminder_type="Unpaid Course Fee Rejected",
                         sender=_get_template_sender("Applicant Application Rejected"),
                         reference_doctype="Applicant",
                         reference_name=assignment.applicant,
@@ -668,7 +680,7 @@ def send_admission_fee_reminders(current_item=0, total_items=0, is_rejection_onl
                 log_applicant_reminder_email(
                     recipient=recipient,
                     subject=subject,
-                    reminder_type="Admission Fee Pending Reminder",
+                    reminder_type="Course Fee Pending Reminder",
                     sender=_get_template_sender(template_name),
                     reference_doctype="Applicant",
                     reference_name=assignment.applicant,
@@ -677,6 +689,6 @@ def send_admission_fee_reminders(current_item=0, total_items=0, is_rejection_onl
                 sent_count += 1
 
         except Exception:
-            frappe.log_error(frappe.get_traceback(), f"Admission Fee Reminder Failed: {assignment.name}")
+            frappe.log_error(frappe.get_traceback(), f"Course Fee Reminder Failed: {assignment.name}")
 
     return sent_count

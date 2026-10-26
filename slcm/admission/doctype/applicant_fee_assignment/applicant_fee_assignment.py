@@ -19,8 +19,8 @@ class ApplicantFeeAssignment(Document):
 	def validate_reference(self):
 		"""Require either offer_letter (Admission/Confirmation Fee) or applicant for Application Fee."""
 		if self.offer_letter:
-			if not self.fee_type or self.fee_type not in ["Admission Fee", "Confirmation Fee"]:
-				self.fee_type = "Admission Fee"
+			if not self.fee_type or self.fee_type not in ["Admission Fee", "Confirmation Fee", "Course Fee"]:
+				self.fee_type = "Course Fee"
 				
 			existing = frappe.db.get_value("Applicant Fee Assignment", {
 				"offer_letter": self.offer_letter,
@@ -68,7 +68,7 @@ class ApplicantFeeAssignment(Document):
 		No Fee Component link row is added — scholarship is tracked as a separate field.
 		Admission Fee assignments DO apply scholarship; scholarship applies only to Admission Fee.
 		"""
-		if self.fee_type != "Admission Fee" or not self.applicant or not self.admission_cycle:
+		if self.fee_type not in ["Admission Fee", "Course Fee"] or not self.applicant or not self.admission_cycle:
 			return
 
 		scholarship_data = frappe.db.get_all("Scholarship Application",
@@ -131,7 +131,7 @@ class ApplicantFeeAssignment(Document):
 						row.component_name or row.fee_component
 					)
 				)
-			if self.fee_type in ["Admission Fee", "Confirmation Fee"] and flt(row.amount) <= 0:
+			if self.fee_type in ["Admission Fee", "Confirmation Fee", "Course Fee"] and flt(row.amount) <= 0:
 				frappe.throw(
 					frappe._("Amount for {0} must be positive.").format(
 						row.component_name or row.fee_component
@@ -153,7 +153,7 @@ class ApplicantFeeAssignment(Document):
 			if self.fee_type == "Confirmation Fee":
 				if not frappe.db.get_value("Offer Letter", self.offer_letter, "confirmation_fee_paid_on"):
 					frappe.db.set_value("Offer Letter", self.offer_letter, "confirmation_fee_paid_on", today)
-			elif self.fee_type == "Admission Fee":
+			elif self.fee_type in ["Admission Fee", "Course Fee"]:
 				if not frappe.db.get_value("Offer Letter", self.offer_letter, "full_fee_paid_on"):
 					frappe.db.set_value("Offer Letter", self.offer_letter, "full_fee_paid_on", today)
 			
@@ -224,8 +224,8 @@ def _map_applicant_to_student(student, applicant, program, admission_cycle, offe
 def create_invoice(docname):
 	doc = frappe.get_doc("Applicant Fee Assignment", docname)
 
-	if doc.fee_type != "Admission Fee":
-		frappe.throw(frappe._("Conversion to Student is only allowed for the Admission Fee."))
+	if doc.fee_type not in ["Admission Fee", "Course Fee"]:
+		frappe.throw(frappe._("Conversion to Student is only allowed for the Course / Admission Fee."))
 
 	if doc.status == "Converted":
 		frappe.throw(frappe._("This assignment has already been converted to a student."))
@@ -419,11 +419,11 @@ def bulk_convert_to_student(assignments):
 		if not afa:
 			skipped.append({"assignment": name, "reason": frappe._("Not found")})
 			continue
-		if afa.fee_type not in ["Admission Fee", "Confirmation Fee"] or afa.docstatus != 1:
+		if afa.fee_type not in ["Admission Fee", "Confirmation Fee", "Course Fee"] or afa.docstatus != 1:
 			skipped.append(
 				{
 					"assignment": name,
-					"reason": frappe._("Must be submitted Admission/Confirmation Fee assignment."),
+					"reason": frappe._("Must be submitted Course/Admission/Confirmation Fee assignment."),
 				}
 			)
 			continue

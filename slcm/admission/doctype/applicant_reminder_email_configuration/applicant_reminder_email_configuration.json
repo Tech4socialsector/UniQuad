@@ -122,10 +122,10 @@
    "label": "Rejection Reason \u2014 Unpaid Application Fee"
   },
   {
-   "default": "Your application has been rejected as the admission fee was not paid before the admission cycle closing date.",
+   "default": "Your application has been rejected as the course fee was not paid before the admission cycle closing date.",
    "fieldname": "unpaid_admission_fee_rejection_reason",
    "fieldtype": "Small Text",
-   "label": "Rejection Reason \u2014 Unpaid Admission Fee"
+   "label": "Rejection Reason \u2014 Unpaid Course Fee"
   },
   {
    "fieldname": "sb_4",
@@ -136,7 +136,7 @@
    "default": "Active",
    "fieldname": "enable_admission_fee_reminder",
    "fieldtype": "Select",
-   "label": "Admission Fee Reminder Status",
+   "label": "Course Fee Reminder Status",
    "options": "Active\nInactive",
    "insert_after": "sb_4"
   },
@@ -150,7 +150,7 @@
    "depends_on": "eval:doc.enable_admission_fee_reminder == 'Active'",
    "fieldname": "admission_fee_reminder_interval",
    "fieldtype": "Int",
-   "label": "Admission Fee Reminder Interval (Days)",
+   "label": "Course Fee Reminder Interval (Days)",
    "mandatory_depends_on": "eval:doc.enable_admission_fee_reminder == 'Active'",
    "insert_after": "cb_4"
   }
