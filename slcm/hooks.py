@@ -221,6 +221,7 @@ fixtures = [
                 "Applicant Draft Application Reminder",
                 "Applicant Fee Payment Pending Reminder",
                 "Admission Fee Pending Reminder",
+                "Confirmation Fee Pending Reminder",
                 "NLSAT Offer Letter",
                 "NLSAT Offer Accepted",
                 "NLSAT Offer Rejected",
@@ -598,7 +599,8 @@ scheduler_events = {
 		    "slcm.admission.applicant_reminder_emails.send_not_started_reminders",
 		    "slcm.admission.applicant_reminder_emails.send_draft_applicant_reminders",
 		    "slcm.admission.applicant_reminder_emails.send_unpaid_fee_reminders",
-		    "slcm.admission.applicant_reminder_emails.send_admission_fee_reminders"
+		    "slcm.admission.applicant_reminder_emails.send_admission_fee_reminders",
+		    "slcm.admission.applicant_reminder_emails.send_confirmation_fee_reminders"
 		],
 		"daily": [
 		]

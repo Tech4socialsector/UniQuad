@@ -168,6 +168,7 @@
   "last_draft_reminder_sent",
   "last_fee_reminder_sent",
   "last_admission_fee_reminder_sent_on",
+  "last_confirmation_fee_reminder_sent_on",
   "section_break_portal",
   "center_filled",
   "application_fee_status",
@@ -1267,6 +1268,11 @@
    "fieldname": "last_admission_fee_reminder_sent_on",
    "fieldtype": "Datetime",
    "label": "Last Admission Fee Reminder Sent On"
+  },
+  {
+   "fieldname": "last_confirmation_fee_reminder_sent_on",
+   "fieldtype": "Datetime",
+   "label": "Last Confirmation Fee Reminder Sent On"
   },
   {
    "depends_on": "eval:doc.foriegn_national == \"Yes\"",
