@@ -159,7 +159,7 @@ class IDCardCommonMixin:
 				self.photo = getattr(faculty, "photo", None)
 
 		elif self.card_type == "Driver" and self.driver:
-			driver = frappe.get_doc("Driver", self.driver)
+			driver = frappe.get_doc("SLCM Driver", self.driver)
 			self.student_name = driver.driver_name
 			self.phone = driver.phone
 			if not self.photo:
@@ -183,7 +183,7 @@ class IDCardCommonMixin:
 		if self.card_type == "Student" and self.student:
 			programme = frappe.db.get_value("Student Master", self.student, "programme")
 			if programme:
-				cohort_end = frappe.db.get_value("Batch", programme, "end_date")
+				cohort_end = frappe.db.get_value("SLCM Batch", programme, "end_date")
 				if cohort_end:
 					self.expiry_date = cohort_end
 
@@ -210,7 +210,7 @@ class IDCardCommonMixin:
 		elif self.card_type == "Faculty" and self.faculty:
 			return frappe.get_doc("Faculty", self.faculty)
 		elif self.card_type == "Driver" and self.driver:
-			return frappe.get_doc("Driver", self.driver)
+			return frappe.get_doc("SLCM Driver", self.driver)
 		elif self.card_type == "Visitor":
 			return frappe._dict(
 				{

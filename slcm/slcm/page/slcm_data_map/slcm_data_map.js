@@ -16,9 +16,9 @@ frappe.pages['slcm-data-map'].on_page_load = function (wrapper) {
 				{ name: 'Gender',             dt: 'Gender' },
 				{ name: 'Student Category',   dt: 'Student Category' },
 				{ name: 'Skill',              dt: 'Skill' },
-				{ name: 'Designation',        dt: 'Designation' },
+				{ name: 'Designation',        dt: 'SLCM Designation' },
 				{ name: 'Condonation Reason', dt: 'Condonation Reason' },
-				{ name: 'Department',         dt: 'Department' },
+				{ name: 'Department',         dt: 'SLCM Department' },
 				{ name: 'Faculty',            dt: 'Faculty' },
 				{ name: 'Room',               dt: 'Room' },
 			],
@@ -40,7 +40,7 @@ frappe.pages['slcm-data-map'].on_page_load = function (wrapper) {
 				{ name: 'Course',              dt: 'Course' },
 				{ name: 'Programme',             dt: 'Programme' },
 				{ name: 'Curriculum',          dt: 'Curriculum' },
-				{ name: 'Batch',              dt: 'Batch' },
+				{ name: 'Batch',              dt: 'SLCM Batch' },
 				{ name: 'Course Offering',     dt: 'Course Offering' },
 				{ name: 'Class Configuration', dt: 'Class Configuration' },
 				{ name: 'Time Table',      dt: 'Time Table' },
@@ -170,8 +170,8 @@ frappe.pages['slcm-data-map'].on_page_load = function (wrapper) {
 	];
 
 	const QUICKSTART = [
-		'Department', 'Academic Year', 'Academic Term',
-		'Programme', 'Course', 'Batch', 'Course Offering',
+		'SLCM Department', 'Academic Year', 'Academic Term',
+		'Programme', 'Course', 'SLCM Batch', 'Course Offering',
 		'Student Master', 'Student Enrollment', 'Student Enrollment Course',
 		'Exam Plan', 'Student Course Marks', 'Student Result Publish',
 	];
@@ -185,7 +185,13 @@ frappe.pages['slcm-data-map'].on_page_load = function (wrapper) {
 	function load_stages() {
 		try {
 			const saved = localStorage.getItem('sdm_custom_stages');
-			if (saved) return JSON.parse(saved);
+			if (saved) {
+				// Batch / Department / Designation were renamed to avoid clashing with ERPNext.
+				const renamed = { 'Batch': 'SLCM Batch', 'Department': 'SLCM Department', 'Designation': 'SLCM Designation' };
+				const stages = JSON.parse(saved);
+				stages.forEach((s) => (s.docs || []).forEach((d) => { d.dt = renamed[d.dt] || d.dt; }));
+				return stages;
+			}
 		} catch (e) { /* ignore */ }
 		return JSON.parse(JSON.stringify(DEFAULT_STAGES));
 	}

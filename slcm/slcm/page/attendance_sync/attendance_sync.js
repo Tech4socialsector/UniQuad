@@ -143,7 +143,7 @@ frappe.pages["attendance-sync"].on_page_load = function (wrapper) {
 		fieldtype: "Link",
 		fieldname: "batch_filter",
 		label: "Batch",
-		options: "Batch",
+		options: "SLCM Batch",
 		get_query() {
 			const filters = {};
 			const programme = page.fields_dict.programme_filter.get_value();

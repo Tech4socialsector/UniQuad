@@ -596,7 +596,7 @@ def sync_razorpay_amount(assignment_name):
 		frappe.throw("Can only sync amount for Paid assignments.")
 	
 	pr_list = frappe.get_all(
-		"Payment Request",
+		"SLCM Payment Request",
 		filters={
 			"reference_doctype": "PACE Applicant Fee Assignment",
 			"reference_name": assignment.name,

@@ -82,7 +82,7 @@
    "fieldname": "batch",
    "fieldtype": "Link",
    "label": "Batch",
-   "options": "Batch"
+   "options": "SLCM Batch"
   },
   {
    "fetch_from": "batch.section",
@@ -138,7 +138,7 @@
   }
  ],
  "links": [],
- "modified": "2026-07-14 09:54:21.102136",
+ "modified": "2026-10-19 16:30:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Office Hours Group",

@@ -363,7 +363,7 @@ frappe.pages['improvement-exam'].on_page_load = function (wrapper) {
 					},
 					onchange() { d.set_value('course', ''); } },
 				{ fieldtype: 'Section Break' },
-				{ label: 'Batch',         fieldname: 'batch',         fieldtype: 'Link', options: 'Batch' },
+				{ label: 'Batch',         fieldname: 'batch',         fieldtype: 'Link', options: 'SLCM Batch' },
 				{ fieldtype: 'Section Break' },
 				{ label: 'Report Type',   fieldname: 'report_type',   fieldtype: 'Select', options: 'Bulk\nCourse Based', default: 'Bulk' },
 				{ fieldtype: 'Column Break' },

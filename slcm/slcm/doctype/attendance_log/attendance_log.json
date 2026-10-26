@@ -76,7 +76,7 @@
    "fieldtype": "Link",
    "in_standard_filter": 1,
    "label": "Batch",
-   "options": "Batch",
+   "options": "SLCM Batch",
    "read_only": 1
   },
   {
@@ -186,7 +186,7 @@
   }
  ],
  "links": [],
- "modified": "2026-07-16 01:00:00.000000",
+ "modified": "2026-10-19 16:30:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Attendance Log",

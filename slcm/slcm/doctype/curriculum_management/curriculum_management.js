@@ -601,7 +601,7 @@ function add_course_dialog(frm, semester, enrollment_type) {
 				fieldtype: "Link",
 				fieldname: "department",
 				label: "Department",
-				options: "Department",
+				options: "SLCM Department",
 				default: frm.doc.department,
 				onchange() {
 					load_courses();

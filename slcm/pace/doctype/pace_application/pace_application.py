@@ -199,7 +199,7 @@ class PACEApplication(Document):
 
                 # Cancel associated Payment Requests
                 frappe.db.sql("""
-                    UPDATE `tabPayment Request`
+                    UPDATE `tabSLCM Payment Request`
                     SET status = 'Cancelled'
                     WHERE reference_doctype = 'PACE Applicant Fee Assignment'
                       AND reference_name = %s

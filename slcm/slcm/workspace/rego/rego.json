@@ -141,7 +141,7 @@
    "is_query_report": 0,
    "label": "Batch",
    "link_count": 0,
-   "link_to": "Batch",
+   "link_to": "SLCM Batch",
    "link_type": "DocType",
    "onboard": 1,
    "type": "Link"
@@ -163,7 +163,7 @@
    "is_query_report": 0,
    "label": "Department",
    "link_count": 0,
-   "link_to": "Department",
+   "link_to": "SLCM Department",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -213,7 +213,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-03-26 10:00:00",
+ "modified": "2026-10-19 16:30:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "REGO",
@@ -277,7 +277,7 @@
    "color": "Yellow",
    "doc_view": "List",
    "label": "Batch",
-   "link_to": "Batch",
+   "link_to": "SLCM Batch",
    "stats_filter": "[]",
    "type": "DocType"
   },
@@ -293,7 +293,7 @@
    "color": "Orange",
    "doc_view": "List",
    "label": "Department",
-   "link_to": "Department",
+   "link_to": "SLCM Department",
    "stats_filter": "[]",
    "type": "DocType"
   },

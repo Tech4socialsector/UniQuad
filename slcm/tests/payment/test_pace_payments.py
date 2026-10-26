@@ -67,7 +67,7 @@ class TestPACEPayments(PaymentTestBase):
 		}
 
 		with patch("frappe.request.get_data", return_value=json.dumps(payload).encode("utf-8")), \
-			 patch("frappe.get_request_header", return_value=None), \
+			 patch("frappe.get_request_header", side_effect=self.sign_webhook_request), \
 			 patch("slcm.pace.web_form.pace_application_form.pace_application_form._pace_portal_user_owns_application", return_value=True):
 			handle_razorpay_webhook()
 
@@ -84,7 +84,7 @@ class TestPACEPayments(PaymentTestBase):
 
 		from frappe.utils import add_to_date
 		old_time = add_to_date(frappe.utils.now_datetime(), minutes=-20)
-		frappe.db.sql("UPDATE `tabPayment Request` SET modified = %s WHERE name = %s", (old_time, pr.name))
+		frappe.db.sql("UPDATE `tabSLCM Payment Request` SET modified = %s WHERE name = %s", (old_time, pr.name))
 		frappe.db.commit()
 
 		self.mock_razorpay(payments_list=[{

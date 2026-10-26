@@ -312,7 +312,7 @@ def get_details_from_section(section):
 		return {}
 
 	program, academic_year = frappe.db.get_value(
-		"Batch", batch, ["program", "academic_year"]
+		"SLCM Batch", batch, ["program", "academic_year"]
 	)
 
 	return {
@@ -340,7 +340,7 @@ def get_courses_for_curriculum(department, txt=None, start=0, page_length=20):
 			c.credit_value,
 			COALESCE(d.department_name, d.name) AS department_name
 		FROM `tabCourse` c
-		LEFT JOIN `tabDepartment` d ON d.name = c.department
+		LEFT JOIN `tabSLCM Department` d ON d.name = c.department
 		WHERE
 			c.department = %s
 			AND c.status = 'Active'

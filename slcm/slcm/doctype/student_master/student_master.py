@@ -68,7 +68,7 @@ def _get_valid_fee_structure_for_program(program):
 
 def _resolve_program(programme):
     """Resolve a Cohort name (or bare Program name) to a Program name."""
-    program = frappe.db.get_value("Batch", programme, "program")
+    program = frappe.db.get_value("SLCM Batch", programme, "program")
     if not program and frappe.db.exists("Programme", programme):
         program = programme
     return program
@@ -671,7 +671,7 @@ def bulk_student_enrollment(students):
                     student.first_name, student.middle_name, student.last_name
                 ])),
                 "batch":         student.batch,
-                "section":       frappe.db.get_value("Batch", student.batch, "section") or "",
+                "section":       frappe.db.get_value("SLCM Batch", student.batch, "section") or "",
                 "academic_year": student.academic_year,
                 "status":        "Enrolled",
                 "enrollment_date": frappe.utils.today(),
@@ -918,7 +918,7 @@ def get_academic_progress(student_name, enrollment_name=None):
         ["batch", "current_year", "academic_term", "current_cgpa"],
         as_dict=True,
     )
-    batch_year = frappe.db.get_value("Batch", sm.batch, "section") if sm.batch else ""
+    batch_year = frappe.db.get_value("SLCM Batch", sm.batch, "section") if sm.batch else ""
 
     # ── Enrollment: a specific one if requested, else the current one ───────
     if enrollment_name:
@@ -984,7 +984,7 @@ def get_academic_progress(student_name, enrollment_name=None):
     cohort_doc = None
     if enrollment.batch:
         cohort_doc = frappe.db.get_value(
-            "Batch",
+            "SLCM Batch",
             enrollment.batch,
             ["batch_name", "batch_code", "term_year", "status", "section"],
             as_dict=True,
@@ -1495,7 +1495,7 @@ def get_batch_filter_options():
     cascading Programme / Academic Year / Term filters in the Student ID
     generator dialogs."""
     batches = frappe.get_all(
-        "Batch",
+        "SLCM Batch",
         fields=["name", "program", "academic_year", "academic_term"],
         order_by="academic_year desc, academic_term asc",
     )
@@ -1540,7 +1540,7 @@ def get_batch_filter_options():
 def _programme_code_for_batch(batch_name):
     """Resolve the Programme code (Programme Master's programme_code, e.g.
     "TLLM") for a Batch, via Batch.program -> Programme.program_code."""
-    programme = frappe.db.get_value("Batch", batch_name, "program")
+    programme = frappe.db.get_value("SLCM Batch", batch_name, "program")
     if not programme:
         return ""
     return frappe.db.get_value("Programme", programme, "program_code") or ""
@@ -1633,7 +1633,7 @@ def download_student_id_bulk_template(batches=None):
 
     batch_names = {s["batch"] for s in students if s.get("batch")}
     batch_rows = frappe.get_all(
-        "Batch",
+        "SLCM Batch",
         filters={"name": ["in", list(batch_names)]},
         fields=["name", "batch_name", "program"],
     ) if batch_names else []
@@ -1758,7 +1758,7 @@ def download_section_bulk_template(batches=None):
 
     batch_names = {s["batch"] for s in students if s.get("batch")}
     batch_rows = frappe.get_all(
-        "Batch",
+        "SLCM Batch",
         filters={"name": ["in", list(batch_names)]},
         fields=["name", "batch_name", "program"],
     ) if batch_names else []

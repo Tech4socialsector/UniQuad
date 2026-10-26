@@ -13,13 +13,13 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Programme",
-   "options": "Batch",
+   "options": "SLCM Batch",
    "reqd": 1
   }
  ],
  "istable": 1,
  "links": [],
- "modified": "2026-04-20 00:00:00.000000",
+ "modified": "2026-10-19 16:30:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Announcement Programme Target",

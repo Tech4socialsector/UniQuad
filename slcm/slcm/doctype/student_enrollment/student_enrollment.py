@@ -97,7 +97,7 @@ class StudentEnrollment(Document):
 
     def fetch_program_and_courses(self):
         if not self.program and self.batch:
-            self.program = frappe.db.get_value("Batch", self.batch, "program")
+            self.program = frappe.db.get_value("SLCM Batch", self.batch, "program")
 
         if self.program and self.batch and not self.enrolled_courses:
             offerings = frappe.get_all(
@@ -128,7 +128,7 @@ class StudentEnrollment(Document):
 
     def _refresh_batch_enrolled_count(self, batch):
         """Recompute the Batch's total_enrolled_count from actual enrollments."""
-        if not batch or not frappe.db.exists("Batch", batch):
+        if not batch or not frappe.db.exists("SLCM Batch", batch):
             return
         count = frappe.db.count(
             "Student Enrollment",
@@ -138,7 +138,7 @@ class StudentEnrollment(Document):
                 "docstatus": ["<", 2],
             },
         )
-        frappe.db.set_value("Batch", batch, "total_enrolled_count", count, update_modified=False)
+        frappe.db.set_value("SLCM Batch", batch, "total_enrolled_count", count, update_modified=False)
 
     def _sync_student_master_status(self):
         """Reflect this enrollment's status on Student Master.

@@ -1035,7 +1035,7 @@ def _resolve_invoice_print_format(student_name):
             # Fallback: find active Student fee structure via programme
             programme = frappe.db.get_value("Student Master", student_name, "programme")
             if programme:
-                program = frappe.db.get_value("Batch", programme, "program")
+                program = frappe.db.get_value("SLCM Batch", programme, "program")
                 if not program and frappe.db.exists("Programme", programme):
                     program = programme
                 if program:

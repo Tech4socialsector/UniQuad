@@ -100,7 +100,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Batch",
-   "options": "Batch"
+   "options": "SLCM Batch"
   },
   {
    "fieldname": "year",
@@ -178,7 +178,7 @@
   }
  ],
  "links": [],
- "modified": "2026-09-16 16:11:28.923436",
+ "modified": "2026-10-19 16:30:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Class Configuration",

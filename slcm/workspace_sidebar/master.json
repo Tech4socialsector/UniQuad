@@ -95,7 +95,7 @@
    "indent": 0,
    "keep_closed": 0,
    "label": "Department",
-   "link_to": "Department",
+   "link_to": "SLCM Department",
    "link_type": "DocType",
    "show_arrow": 0,
    "type": "Link"
@@ -551,7 +551,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-09-29 17:06:36.497874",
+ "modified": "2026-10-19 16:30:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Master",

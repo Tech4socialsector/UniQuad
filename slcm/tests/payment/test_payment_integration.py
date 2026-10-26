@@ -75,7 +75,7 @@ class TestPaymentIntegration(PaymentTestBase):
 					handle_razorpay_webhook()
 
 			# Verify status is NOT Paid
-			self.assertNotEqual(frappe.db.get_value("Payment Request", pr.name, "status"), "Paid")
+			self.assertNotEqual(frappe.db.get_value("SLCM Payment Request", pr.name, "status"), "Paid")
 		finally:
 			self._validate_webhook_signature = False
 			set_encrypted_password("Razorpay Settings", "Razorpay Settings", "dummy_secret", "webhook_secret")
@@ -98,7 +98,7 @@ class TestPaymentIntegration(PaymentTestBase):
 			)
 
 		self.assertEqual(res.get("status"), "failed")
-		self.assertEqual(frappe.db.get_value("Payment Request", pr.name, "status"), "Requested")
+		self.assertEqual(frappe.db.get_value("SLCM Payment Request", pr.name, "status"), "Requested")
 
 	def test_razorpay_api_500(self):
 		"""RP-004: Razorpay API 500 - No payment completion"""
@@ -121,4 +121,4 @@ class TestPaymentIntegration(PaymentTestBase):
 			)
 
 		self.assertEqual(res.get("status"), "failed")
-		self.assertEqual(frappe.db.get_value("Payment Request", pr.name, "status"), "Requested")
+		self.assertEqual(frappe.db.get_value("SLCM Payment Request", pr.name, "status"), "Requested")

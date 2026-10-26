@@ -525,7 +525,7 @@ def _set_student_nav(context, student):
         context.student_name[0].upper() if context.student_name else "S"
     )
     context.programme_name = (
-        frappe.db.get_value("Batch", student.programme, "cohort_name")
+        frappe.db.get_value("SLCM Batch", student.programme, "cohort_name")
         or student.programme or ""
     )
     context.department = student.department or ""

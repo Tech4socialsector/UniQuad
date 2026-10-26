@@ -63,7 +63,7 @@ class AttendanceSummaryReport {
 		});
 		this.ctrls.programme = this._link($grid, "Programme", "Programme");
 		this.ctrls.course = this._link($grid, "Course", "Course");
-		this.ctrls.batch = this._link($grid, "Batch", "Batch");
+		this.ctrls.batch = this._link($grid, "Batch", "SLCM Batch");
 		this.ctrls.section = this._link($grid, "Section", "Section");
 		this.ctrls.student = this._dropdown_multiselect($grid, "Student", (txt) =>
 			new Promise((resolve) => {

@@ -672,7 +672,7 @@
   "custom_options": null,
   "docstatus": 0,
   "doctype": "Dashboard Chart",
-  "document_type": "Batch",
+  "document_type": "SLCM Batch",
   "dynamic_filters_json": null,
   "filters_json": "[]",
   "from_date": null,

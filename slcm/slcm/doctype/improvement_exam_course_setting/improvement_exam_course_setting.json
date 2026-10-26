@@ -27,7 +27,7 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Programme",
-   "options": "Batch"
+   "options": "SLCM Batch"
   },
   {
    "fieldname": "course_offering",
@@ -71,7 +71,7 @@
    "label": "Deadline To"
   }
  ],
- "modified": "2026-05-14 00:00:00.000000",
+ "modified": "2026-10-19 16:30:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Improvement Exam Course Setting",

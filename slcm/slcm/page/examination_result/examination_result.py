@@ -416,17 +416,26 @@ def get_faculty_list(search=""):
 	evaluator_name is a Link to Faculty, so we search the Faculty doctype.
 	"""
 	_check_access()
-	filters = {}
+	or_filters = {}
 	if search:
-		filters["faculty_name"] = ["like", f"%{search}%"]
+		or_filters = {"first_name": ["like", f"%{search}%"], "last_name": ["like", f"%{search}%"]}
 
-	return frappe.get_all(
+	rows = frappe.get_all(
 		"Faculty",
-		filters=filters,
-		fields=["name", "faculty_name", "email", "image"],
-		order_by="faculty_name asc",
+		or_filters=or_filters,
+		fields=["name", "first_name", "last_name", "email", "photo"],
+		order_by="first_name asc",
 		page_length=20,
 	)
+	return [
+		{
+			"name": r.name,
+			"faculty_name": f"{r.first_name or ''} {r.last_name or ''}".strip(),
+			"email": r.email,
+			"image": r.photo,
+		}
+		for r in rows
+	]
 
 
 @frappe.whitelist()
@@ -1128,7 +1137,7 @@ def get_student_hover_info(student, course):
 	batch_name = ""
 	if sm.get("programme"):
 		batch_name = (
-			frappe.db.get_value("Batch", sm["programme"], "batch_name")
+			frappe.db.get_value("SLCM Batch", sm["programme"], "batch_name")
 			or sm["programme"]
 		)
 
@@ -1504,7 +1513,7 @@ def get_student_profile(student):
 	# Get cohort/programme label
 	cohort_name = ""
 	if sm.get("programme"):
-		cohort_name = frappe.db.get_value("Batch", sm["programme"], "cohort_name") or sm["programme"]
+		cohort_name = frappe.db.get_value("SLCM Batch", sm["programme"], "cohort_name") or sm["programme"]
 	sm["cohort_name"] = cohort_name
 	return sm
 

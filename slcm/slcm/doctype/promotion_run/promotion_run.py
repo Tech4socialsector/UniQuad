@@ -30,7 +30,7 @@ def _resolve_target_batch(current_batch, target_academic_year, target_term=None)
 	Programme + Section + (term_year + 1) + Academic Year is what actually
 	identifies the next Batch."""
 	batch = frappe.db.get_value(
-		"Batch", current_batch, ["program", "section", "term_year"], as_dict=True
+		"SLCM Batch", current_batch, ["program", "section", "term_year"], as_dict=True
 	)
 	if not batch or not batch.section or batch.term_year is None:
 		return None
@@ -42,7 +42,7 @@ def _resolve_target_batch(current_batch, target_academic_year, target_term=None)
 		"academic_year": target_academic_year,
 	}
 
-	return frappe.db.get_value("Batch", filters, "name")
+	return frappe.db.get_value("SLCM Batch", filters, "name")
 
 
 def _move_enrollment(enrollment_name, student, next_batch):
@@ -78,7 +78,7 @@ def _new_enrollment_for_batch(student, batch):
 	doc.student = student
 	doc.batch = batch
 	doc.status = "Enrolled"
-	doc.enrollment_date = frappe.db.get_value("Batch", batch, "start_date") or frappe.utils.today()
+	doc.enrollment_date = frappe.db.get_value("SLCM Batch", batch, "start_date") or frappe.utils.today()
 	return doc
 
 
@@ -268,7 +268,7 @@ def process_promotion_run(promotion_run_name):
 			batch_names = list({e.batch for e in enrollments if e.batch})
 			from_years = {
 				b.name: cint(b.term_year)
-				for b in frappe.db.get_all("Batch", filters={"name": ["in", batch_names]}, fields=["name", "term_year"])
+				for b in frappe.db.get_all("SLCM Batch", filters={"name": ["in", batch_names]}, fields=["name", "term_year"])
 			} if batch_names else {}
 			for from_year in set(from_years.values()):
 				if from_year is None:
@@ -520,7 +520,7 @@ def retry_unresolved(promotion_run_name):
 		})
 		from_years = {
 			b.name: cint(b.term_year)
-			for b in frappe.db.get_all("Batch", filters={"name": ["in", unresolved_batches]}, fields=["name", "term_year"])
+			for b in frappe.db.get_all("SLCM Batch", filters={"name": ["in", unresolved_batches]}, fields=["name", "term_year"])
 		} if unresolved_batches else {}
 		for from_year in set(from_years.values()):
 			if from_year is None:

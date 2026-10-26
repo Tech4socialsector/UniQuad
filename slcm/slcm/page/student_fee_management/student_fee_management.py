@@ -634,6 +634,7 @@ def move_to_excess(student, fee_demand, amount, credit_type, remarks=None, acade
 	note.academic_year = academic_year or demand.academic_year
 	note.credit_amount = amount
 	note.source_receipt = source_receipt[0][0] if source_receipt else None
+	note.source_fee_demand = fee_demand
 	note.remarks = _("Moved from due {0} ({1}). {2}").format(
 		fee_demand, demand.fee_component or demand.description or "", remarks
 	)

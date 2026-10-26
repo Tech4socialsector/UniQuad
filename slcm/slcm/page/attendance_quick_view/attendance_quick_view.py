@@ -207,7 +207,7 @@ def get_sections(programme=None, course_offering=None):
 
     filters = {}
     if programme:
-        batches = frappe.get_all("Batch", filters={"program": programme}, pluck="name")
+        batches = frappe.get_all("SLCM Batch", filters={"program": programme}, pluck="name")
         if not batches:
             return []
         filters["batch"] = ["in", batches]
