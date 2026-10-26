@@ -1014,7 +1014,7 @@
    "is_default_module": 0,
    "keep_closed": 0,
    "label": "Payment Request",
-   "link_to": "Payment Request",
+   "link_to": "SLCM Payment Request",
    "link_type": "DocType",
    "open_in_new_tab": 1,
    "show_arrow": 0,
@@ -1133,7 +1133,7 @@
   }
  ],
  "merged_from": "[\"Eligibility\", \"Settings\", \"Offer Letters\", \"Scholarship\", \"INM\", \"Test\", \"Interview\", \"Merit\", \"Reports\", \"Admission Eligibility\", \"MSA\"]",
- "modified": "2026-10-22 10:50:18.085185",
+ "modified": "2026-10-26 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Admission",
