@@ -692,3 +692,216 @@ def send_admission_fee_reminders(current_item=0, total_items=0, is_rejection_onl
             frappe.log_error(frappe.get_traceback(), f"Course Fee Reminder Failed: {assignment.name}")
 
     return sent_count
+
+
+# ---------------------------------------------------------------------------
+# 5. Confirmation Fee Pending Reminder
+# ---------------------------------------------------------------------------
+
+def send_confirmation_fee_reminders(current_item=0, total_items=0, is_rejection_only=False):
+    """
+    Sends reminders to applicants who have an unpaid Confirmation Fee assigned.
+    Uses Applicant Fee Assignment DocType where fee_type='Confirmation Fee' and status='Assigned'.
+    Retrieves confirmation fee deadline and details from Fee Structure (due_date_for_confirmation_fee).
+    """
+    from slcm.admission.doctype.applicant_reminder_email_configuration.applicant_reminder_email_configuration import (
+        should_send_reminder, get_rejection_reason
+    )
+    from slcm.admission.doctype.applicant_reminder_email_log.applicant_reminder_email_log import (
+        log_applicant_reminder_email,
+    )
+    from frappe.utils import today, getdate, formatdate
+
+    cycle_name, cycle_end_date, application_end_date, cycle_status = _get_active_cycle()
+    if not cycle_name:
+        return 0
+
+    today_date = getdate(today())
+
+    fee_assignments = frappe.get_all(
+        "Applicant Fee Assignment",
+        filters={
+            "fee_type": "Confirmation Fee",
+            "status": "Assigned"
+        },
+        fields=["name", "applicant", "applicant_name", "academic_year", "program", "offer_letter", "confirmation_fee", "total_amount", "admission_cycle"],
+        limit=0
+    )
+
+    template_name = "Confirmation Fee Pending Reminder"
+    institution_name = _get_institution_name()
+    sent_count = 0
+
+    for i, assignment in enumerate(fee_assignments):
+        if total_items > 0:
+            frappe.publish_realtime("progress", {
+                "progress": [current_item + i, total_items],
+                "title": "Applicant Reminders",
+                "description": f"Confirmation Fee Reminders: {assignment.applicant}",
+            }, user=frappe.session.user)
+
+        try:
+            if not frappe.db.exists("Applicant", assignment.applicant):
+                continue
+            applicant_doc = frappe.get_doc("Applicant", assignment.applicant)
+            if applicant_doc.status == "Rejected":
+                continue
+            if applicant_doc.admission_cycle and applicant_doc.admission_cycle != cycle_name:
+                continue
+            recipient = applicant_doc.email
+            if not recipient:
+                continue
+
+            # Fetch Offer Letter & Fee Structure details
+            offer_doc = None
+            fee_structure_name = None
+            if assignment.offer_letter and frappe.db.exists("Offer Letter", assignment.offer_letter):
+                offer_doc = frappe.get_doc("Offer Letter", assignment.offer_letter)
+                fee_structure_name = offer_doc.fee_structure
+
+            if not fee_structure_name:
+                offer_name = frappe.db.get_value("Offer Letter", {"applicant": assignment.applicant}, "name")
+                if offer_name:
+                    offer_doc = frappe.get_doc("Offer Letter", offer_name)
+                    fee_structure_name = offer_doc.fee_structure
+
+            if not fee_structure_name:
+                fee_structure_name = frappe.db.get_value("Fee Structure", {
+                    "program": assignment.program or applicant_doc.program,
+                    "academic_year": assignment.academic_year or applicant_doc.academic_year,
+                    "is_confirmation_fee_applicable": 1
+                }, "name")
+
+            fee_structure_doc = None
+            if fee_structure_name and frappe.db.exists("Fee Structure", fee_structure_name):
+                fee_structure_doc = frappe.get_doc("Fee Structure", fee_structure_name)
+
+            # Extract deadline from Fee Structure (due_date_for_confirmation_fee)
+            confirmation_fee_deadline = None
+            if fee_structure_doc and fee_structure_doc.get("due_date_for_confirmation_fee"):
+                confirmation_fee_deadline = fee_structure_doc.due_date_for_confirmation_fee
+            elif offer_doc and offer_doc.get("confirmation_fee_deadline"):
+                confirmation_fee_deadline = offer_doc.confirmation_fee_deadline
+            else:
+                confirmation_fee_deadline = cycle_end_date
+
+            close_date = getdate(confirmation_fee_deadline) if confirmation_fee_deadline else getdate(cycle_end_date)
+
+            if is_rejection_only and today_date <= close_date:
+                continue
+
+            # Get confirmation fee amount
+            confirmation_fee_amount = (
+                assignment.confirmation_fee
+                or (fee_structure_doc.confirmation_fee_amount if fee_structure_doc else None)
+                or assignment.total_amount
+                or 0
+            )
+
+            # Check last reminder sent
+            last_sent = applicant_doc.get("last_confirmation_fee_reminder_sent_on")
+            if not last_sent:
+                last_sent = frappe.db.get_value(
+                    "Applicant Reminder Email Log",
+                    {
+                        "reference_doctype": "Applicant",
+                        "reference_name": assignment.applicant,
+                        "reminder_type": "Confirmation Fee Pending Reminder",
+                        "admission_cycle": cycle_name,
+                    },
+                    "sent_at",
+                    order_by="sent_at desc",
+                )
+
+            if not should_send_reminder("confirmation_fee", last_sent, confirmation_fee_deadline):
+                continue
+
+            if today_date > close_date:
+                # Past deadline -> Reject flow
+                rejection_reason = get_rejection_reason("unpaid_confirmation_fee_rejection_reason") or get_rejection_reason("unpaid_fee_rejection_reason")
+                subject, ok = _send_email_from_template(
+                    "Applicant Application Rejected",
+                    recipient,
+                    {
+                        "candidate_name": assignment.applicant_name or applicant_doc.candidate_name or recipient,
+                        "applicant_id": assignment.applicant,
+                        "program": assignment.program or applicant_doc.program or "",
+                        "rejection_reason": rejection_reason,
+                        "cycle_end_date": formatdate(confirmation_fee_deadline, "dd MMMM yyyy") if confirmation_fee_deadline else formatdate(cycle_end_date),
+                        "institution_name": institution_name,
+                        "admission_portal_url": get_url(get_user_portal_redirect_url(recipient, "/admission-dashboard")),
+                    },
+                    reference_doctype="Applicant",
+                    reference_name=assignment.applicant,
+                )
+                if ok:
+                    rejected_status = frappe.db.get_value("Applicant Status", {"name": "Rejected"}, "name") or "Rejected"
+                    frappe.db.set_value("Applicant", assignment.applicant, "status", rejected_status, update_modified=False)
+                    frappe.db.set_value("Applicant", assignment.applicant, "rejected_reason", rejection_reason, update_modified=False)
+                    frappe.db.set_value("Applicant Fee Assignment", assignment.name, "status", "Cancelled", update_modified=False)
+                    if assignment.offer_letter:
+                        frappe.db.set_value("Offer Letter", assignment.offer_letter, "status", "Expired", update_modified=False)
+                    frappe.db.commit()
+
+                    log_applicant_reminder_email(
+                        recipient=recipient,
+                        subject=subject or "Application Rejected",
+                        reminder_type="Unpaid Confirmation Fee Rejected",
+                        sender=_get_template_sender("Applicant Application Rejected"),
+                        reference_doctype="Applicant",
+                        reference_name=assignment.applicant,
+                        email_template="Applicant Application Rejected",
+                        admission_cycle=cycle_name,
+                    )
+                    sent_count += 1
+                continue
+
+            # Before deadline -> Send Confirmation Fee Pending Reminder
+            if cycle_status == "Closed":
+                continue
+
+            formatted_deadline = formatdate(confirmation_fee_deadline, "dd MMMM yyyy") if confirmation_fee_deadline else ""
+            formatted_amount = f"{float(confirmation_fee_amount):,.2f}".rstrip('0').rstrip('.') if confirmation_fee_amount else ""
+
+            subject, ok = _send_email_from_template(
+                template_name,
+                recipient,
+                {
+                    "candidate_name": assignment.applicant_name or applicant_doc.candidate_name or recipient,
+                    "applicant_id": assignment.applicant,
+                    "program": assignment.program or applicant_doc.program or "",
+                    "confirmation_fee_amount": formatted_amount,
+                    "confirmation_fee_deadline": formatted_deadline,
+                    "due_date": formatted_deadline,
+                    "fee_structure": fee_structure_name or "",
+                    "cycle_end_date": formatted_deadline or formatdate(cycle_end_date),
+                    "institution_name": institution_name,
+                    "admission_portal_url": get_url(get_user_portal_redirect_url(recipient, "/admission-dashboard")),
+                },
+                reference_doctype="Applicant",
+                reference_name=assignment.applicant,
+            )
+            if ok:
+                try:
+                    frappe.db.set_value("Applicant", assignment.applicant, "last_confirmation_fee_reminder_sent_on", now_datetime(), update_modified=False)
+                except Exception:
+                    pass
+                frappe.db.sql("""UPDATE `tabApplicant` SET last_confirmation_fee_reminder_sent_on = %s WHERE name = %s""", (now_datetime(), assignment.applicant))
+
+                log_applicant_reminder_email(
+                    recipient=recipient,
+                    subject=subject,
+                    reminder_type="Confirmation Fee Pending Reminder",
+                    sender=_get_template_sender(template_name),
+                    reference_doctype="Applicant",
+                    reference_name=assignment.applicant,
+                    email_template=template_name,
+                    admission_cycle=cycle_name,
+                )
+                sent_count += 1
+
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), f"Confirmation Fee Reminder Failed: {assignment.name}")
+
+    return sent_count
+
