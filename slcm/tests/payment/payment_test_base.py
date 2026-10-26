@@ -86,7 +86,6 @@ class PaymentTestBase(unittest.TestCase):
 			"Admission Year": dict(frappe.get_all("Admission Year", fields=["name", "is_active"], as_list=True)),
 			"Fee Structure": dict(frappe.get_all("Fee Structure", fields=["name", "status"], as_list=True)),
 			"Academic Year": dict(frappe.get_all("Academic Year", fields=["name", "status"], as_list=True)),
-			"series": dict(frappe.db.sql("SELECT `name`, `current` FROM `tabSeries`")),
 			"razorpay_singles": frappe.db.sql("SELECT field, value FROM `tabSingles` WHERE doctype = 'Razorpay Settings'"),
 			"razorpay_auth": frappe.db.sql("SELECT name, fieldname, password FROM `__Auth` WHERE doctype = 'Razorpay Settings'"),
 			"gateway_accounts": set(frappe.get_all("Payment Gateway Account", pluck="name")),
@@ -107,8 +106,8 @@ class PaymentTestBase(unittest.TestCase):
 				if frappe.db.exists(doctype, name) and frappe.db.get_value(doctype, name, field) != value:
 					frappe.db.set_value(doctype, name, field, value, update_modified=False)
 
-		for series_key, current in snapshot["series"].items():
-			frappe.db.sql("UPDATE `tabSeries` SET `current` = %s WHERE `name` = %s", (current, series_key))
+		# Naming counters are never wound back: background jobs (e.g. ERPNext Journal Entries posted for these
+		# test documents) and real users take numbers while tests run, and lowering the counter reissues them.
 
 		frappe.db.sql("DELETE FROM `tabSingles` WHERE doctype = 'Razorpay Settings'")
 		for field, value in snapshot["razorpay_singles"]:
