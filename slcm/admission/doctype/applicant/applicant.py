@@ -6,6 +6,7 @@ from contextlib import contextmanager
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from slcm.admission.utils.nlsat_portal import get_applicant_login_url
 from frappe.model.naming import getseries, parse_naming_series
 from frappe.utils import validate_email_address, getdate, date_diff, today, now, flt, nowdate, cint
 from slcm.admission.portal_application_web_form import (
@@ -952,7 +953,7 @@ class Applicant(Document):
             or "Admissions Office"
         )
 
-        admission_portal_url = frappe.utils.get_url("/admission/login#login")
+        admission_portal_url = frappe.utils.get_url(get_applicant_login_url(self.foriegn_national) + "#login")
 
         # ── Institution logo ──────────────────────────────────────────────────
         institution_logo = frappe.db.get_single_value("Institution Settings", "logo") or ""
@@ -1427,7 +1428,7 @@ class Applicant(Document):
         institution_logo = frappe.db.get_single_value("Institution Settings", "logo") or ""
         if institution_logo and not institution_logo.startswith("http"):
             institution_logo = frappe.utils.get_url(institution_logo)
-        admission_portal_url = frappe.utils.get_url("/admission/login#login")
+        admission_portal_url = frappe.utils.get_url(get_applicant_login_url(self.foriegn_national) + "#login")
 
         template_context = {
             "doc": doc_dict,
@@ -2294,7 +2295,14 @@ class Applicant(Document):
         else:
             unit = "%"
 
-        display_level = "HSC (Class XII)" if qualification_level == "XII" else qualification_level
+        is_appearing = (getattr(self, "class_xii_status", "") == "Appearing")
+        check_10th_for_appearing = bool(base_rule.get("check_10th_marks_for_appearing_applicants"))
+
+        if qualification_level == "XII" and is_appearing and check_10th_for_appearing:
+            display_level = "Class X (10th)"
+        else:
+            display_level = "HSC (Class XII)" if qualification_level == "XII" else qualification_level
+
         applicant_val = self._get_applicant_value(base_rule)
 
         score_failed = bool(
@@ -2329,19 +2337,12 @@ class Applicant(Document):
         append_lines(display_level, applied_threshold, applicant_val, score_failed)
 
         if qualification_level == "XII":
-            sslc_threshold = None
             if cat_row and cat_row.get("minimum_percentage_sslc"):
                 sslc_threshold = flt(cat_row.minimum_percentage_sslc)
-            elif base_rule.get("sslc_percentage"):
-                sslc_threshold = flt(base_rule.get("sslc_percentage"))
-                
-            if sslc_threshold:
                 applicant_sslc = flt(getattr(self, "class_x_percentage", None) or 0)
                 sslc_failed = bool(sslc_threshold and applicant_sslc > 0 and not self._compare(applicant_sslc, sslc_threshold, operator))
-                
-                # Check if we should append SSLC lines (either failed or missing)
                 if sslc_failed or (sslc_threshold and applicant_sslc <= 0):
-                    append_lines("Class X", sslc_threshold, applicant_sslc, sslc_failed)
+                    append_lines("Class X (SSLC requirement)", sslc_threshold, applicant_sslc, sslc_failed)
 
         if cat_row and (cat_row.get("category") or "").strip():
             if score_lines:
@@ -2487,10 +2488,16 @@ class Applicant(Document):
                     continue
 
                 # Threshold: Category Override or Rule Default
+                qual_level = base_rule.get("qualification_level")
+                is_appearing = (getattr(self, "class_xii_status", "") == "Appearing")
+                check_10th_for_appearing = bool(base_rule.get("check_10th_marks_for_appearing_applicants"))
+
                 if cat_row:
-                    qual_level = base_rule.get("qualification_level")
                     if qual_level == "XII":
-                        required_val = flt(cat_row.minimum_percentage_hsc) if cat_row.minimum_percentage_hsc else self._get_required_value(base_rule)
+                        if is_appearing and check_10th_for_appearing:
+                            required_val = flt(cat_row.minimum_percentage_sslc) if cat_row.minimum_percentage_sslc else self._get_required_value(base_rule)
+                        else:
+                            required_val = flt(cat_row.minimum_percentage_hsc) if cat_row.minimum_percentage_hsc else self._get_required_value(base_rule)
                     elif qual_level == "Undergraduate":
                         required_val = flt(cat_row.minimum_cgpa_ug) if cat_row.minimum_cgpa_ug else self._get_required_value(base_rule)
                     elif qual_level == "Postgraduate":
@@ -2716,22 +2723,30 @@ class Applicant(Document):
             return False
 
         if rule_type in ("HSC Group", "Percentage"):
-            applicant_value = flt(getattr(self, "hsc_percentage", None) or 0)
-            required_value  = self.get_required_academic_value(rule)
+            is_appearing = (getattr(self, "class_xii_status", "") == "Appearing")
+            check_10th_for_appearing = bool(rule.get("check_10th_marks_for_appearing_applicants"))
 
-            if required_value is None:
-                return False
+            if qualification_level == "XII" and is_appearing and check_10th_for_appearing:
+                applicant_value = flt(getattr(self, "class_x_percentage", None) or 0)
+                required_value = self.get_required_academic_value(rule)
+                if required_value is None:
+                    return False
+                passed = self._compare(applicant_value, required_value, operator)
+                if not passed:
+                    return False
+                return True
+            else:
+                applicant_value = flt(getattr(self, "hsc_percentage", None) or 0)
+                required_value  = self.get_required_academic_value(rule)
 
-            passed = self._compare(applicant_value, required_value, operator)
-            if not passed:
-                return False
-                
-            if qualification_level == "XII" and rule.get("sslc_percentage"):
-                sslc_val = flt(getattr(self, "class_x_percentage", None) or 0)
-                if not self._compare(sslc_val, flt(rule.get("sslc_percentage")), operator):
+                if required_value is None:
+                    return False
+
+                passed = self._compare(applicant_value, required_value, operator)
+                if not passed:
                     return False
                     
-            return True
+                return True
 
         return True
 
@@ -2746,21 +2761,33 @@ class Applicant(Document):
         qualification_level = rule.get("qualification_level")
 
         if qualification_level == "XII":
+            is_appearing = (getattr(self, "class_xii_status", "") == "Appearing")
+            check_10th_for_appearing = bool(rule.get("check_10th_marks_for_appearing_applicants"))
+
+            if is_appearing and check_10th_for_appearing:
+                # Check 10th marks against required threshold instead of HSC percentage
+                value = flt(getattr(self, "class_x_percentage", None) or 0)
+                passed = self._compare(value, required_min, operator)
+                if not passed:
+                    return False
+
+                # Check category override for SSLC if defined
+                if cat_row and cat_row.get("minimum_percentage_sslc"):
+                    required_sslc = flt(cat_row.minimum_percentage_sslc)
+                    if not self._compare(value, required_sslc, operator):
+                        return False
+
+                return True
+
             value = flt(getattr(self, "hsc_percentage", None) or 0)
             passed = self._compare(value, required_min, operator)
             if not passed:
                 return False
             
-            # Determine required SSLC percentage
-            required_sslc = None
+            # Check category override for SSLC if defined
             if cat_row and cat_row.get("minimum_percentage_sslc"):
-                required_sslc = flt(cat_row.minimum_percentage_sslc)
-            elif rule.get("sslc_percentage"):
-                required_sslc = flt(rule.get("sslc_percentage"))
-
-            if required_sslc is not None:
                 sslc_val = flt(getattr(self, "class_x_percentage", None) or 0)
-                if not self._compare(sslc_val, required_sslc, operator):
+                if not self._compare(sslc_val, flt(cat_row.minimum_percentage_sslc), operator):
                     return False
             return True
 
@@ -2789,6 +2816,8 @@ class Applicant(Document):
         qualification_level = rule.get("qualification_level")
 
         if qualification_level == "XII":
+            if (getattr(self, "class_xii_status", "") == "Appearing") and rule.get("check_10th_marks_for_appearing_applicants"):
+                return flt(getattr(self, "class_x_percentage", None) or 0)
             return flt(getattr(self, "hsc_percentage", None) or 0)
         elif qualification_level == "Undergraduate":
             values = self._get_ug_cgpa_values()
@@ -2806,6 +2835,8 @@ class Applicant(Document):
 
     def get_applicant_academic_value(self, qualification_level):
         if qualification_level == "XII":
+            if getattr(self, "class_xii_status", "") == "Appearing":
+                return flt(getattr(self, "class_x_percentage", None) or 0)
             return flt(getattr(self, "hsc_percentage", None) or 0)
         if qualification_level == "Undergraduate":
             values = self._get_ug_cgpa_values()
@@ -2816,6 +2847,9 @@ class Applicant(Document):
         return None
 
     def get_required_academic_value(self, rule):
+        if (getattr(self, "class_xii_status", "") == "Appearing") and rule.get("check_10th_marks_for_appearing_applicants"):
+            if rule.get("required_10th_percentage") is not None:
+                return flt(rule.get("required_10th_percentage"))
         if rule.get("required_percentage"):
             return flt(rule["required_percentage"])
         if rule.get("required_cgpa"):
@@ -3160,7 +3194,7 @@ def notify_stage_entry(applicant_doc, stage):
             "title":             f"Stage Update: {stage.stage_name}",
             "message":           f"Your application has moved to the {stage.stage_name} stage.",
             "notification_type": "Stage Update",
-            "link":              "/my-applications",
+            "link":              "/nlsat/my-applications",
             "is_read":           0
         }).insert(ignore_permissions=True)
         frappe.db.commit()
@@ -3982,7 +4016,7 @@ def _send_automated_entrance_test_allocation_email(allocation, email):
         doc_dict["assigned_preferences"] = [p.as_dict() for p in (allocation.assigned_preferences or [])]
         args = {
             "doc": doc_dict,
-            "portal_url": frappe.utils.get_url("/merit-and-scholarship/admission_dashboard?panel=applications"),
+            "portal_url": frappe.utils.get_url("/nlsat/dashboard?panel=applications"),
         }
 
         subject = frappe.render_template(template.subject or "", args)
@@ -4168,7 +4202,7 @@ def _send_international_entrance_test_email(allocation, email):
             or "Admissions Office"
         )
         portal_url = frappe.utils.get_url(
-            "/merit-and-scholarship/admission_dashboard?panel=applications"
+            "/nlsat/dashboard?panel=applications"
         )
 
         # Format test date for display

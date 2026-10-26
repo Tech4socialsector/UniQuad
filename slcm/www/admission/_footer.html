@@ -1,0 +1,307 @@
+{#
+  _footer.html — site footer for the NLSAT portal.
+  Included by slcm/www/admission/admission_base.html; data from get_nlsat_footer_context() (see _footer.py).
+#}
+    <style>
+        .full-bleed-footer {
+            /* Use 100% of body — avoids horizontal scrollbar from 100vw + vertical scrollbar */
+            width: 100%;
+            max-width: none;
+            margin-left: 0;
+            margin-right: 0;
+            position: relative;
+            background: var(--footer-color);
+            color: var(--footer-text);
+            padding: 48px 0 24px;
+            box-sizing: border-box;
+        }
+
+        .footer-container {
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Synchronize with main container */
+        @media (min-width: 1600px) {
+            .footer-container {
+                max-width: 1540px;
+            }
+        }
+
+        @media (min-width: 1920px) {
+            .footer-container {
+                max-width: 1840px;
+            }
+        }
+
+        @media (min-width: 2500px) {
+            .footer-container {
+                max-width: 2300px;
+            }
+        }
+
+        @media (max-width: 1200px) {
+            .footer-container {
+                max-width: 1140px;
+                padding: 0 20px;
+            }
+        }
+
+        @media (max-width: 992px) {
+            .footer-container {
+                max-width: 960px;
+                padding: 0 18px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .footer-container {
+                max-width: 720px;
+                padding: 0 16px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .footer-container {
+                max-width: 100%;
+                padding: 0 14px;
+            }
+        }
+
+        .footer-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 32px;
+        }
+
+        .footer-col {
+            grid-column: span 4;
+        }
+
+        @media (max-width: 1024px) {
+            .footer-col {
+                grid-column: span 6;
+            }
+
+            .footer-col:first-child {
+                grid-column: span 12;
+                margin-bottom: 8px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .footer-col {
+                grid-column: span 12;
+            }
+
+            .footer-col:first-child {
+                margin-bottom: 0;
+            }
+
+            .footer-grid {
+                gap: 40px;
+            }
+        }
+
+        .footer-links-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 480px) {
+            .footer-links-grid {
+                grid-template-columns: 1fr;
+                gap: 32px;
+            }
+        }
+
+        .footer-links-wrapper {
+            margin: 0 40px;
+        }
+
+        @media (max-width: 1024px) {
+            .footer-links-wrapper {
+                margin: 0;
+            }
+        }
+
+        .footer-links {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .footer-links li {
+            margin-bottom: 8px;
+        }
+
+        .footer-links a {
+            color: var(--footer-text);
+            opacity: 0.75;
+            text-decoration: none;
+            font-size: 13px;
+            transition: color 0.2s, opacity 0.2s;
+        }
+
+        .footer-links a:hover {
+            color: var(--primary);
+            opacity: 1;
+        }
+
+        .footer-contact-item a:hover {
+            color: var(--primary);
+        }
+
+        .footer-contact-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .footer-contact-item a {
+            color: inherit;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .footer-bottom {
+            margin-top: 32px;
+            padding-top: 20px;
+            border-top: 1px solid color-mix(in srgb, var(--footer-text) 15%, transparent);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        @media (min-width: 768px) {
+            .footer-bottom {
+                flex-direction: row;
+            }
+        }
+
+        /* ── Footer isolation — fixed size and weight, immune to global rules ── */
+
+        .full-bleed-footer h1,
+        .full-bleed-footer h2,
+        .full-bleed-footer h3,
+        .full-bleed-footer h4,
+        .full-bleed-footer h5,
+        .full-bleed-footer .footer-heading,
+        .full-bleed-footer .footer-col-title,
+        .full-bleed-footer .footer-title {
+            font-size: 14px !important;
+            font-weight: 400 !important;
+        }
+
+        .full-bleed-footer,
+        .full-bleed-footer p,
+        .full-bleed-footer a,
+        .full-bleed-footer span,
+        .full-bleed-footer li,
+        .full-bleed-footer small,
+        .full-bleed-footer label,
+        .full-bleed-footer .text-muted {
+            font-size: 13px !important;
+            font-weight: 300 !important;
+        }
+
+        .full-bleed-footer .footer-bottom,
+        .full-bleed-footer .footer-bottom p,
+        .full-bleed-footer .footer-bottom span,
+        .full-bleed-footer .footer-bottom a {
+            font-size: 13px !important;
+            font-weight: 300 !important;
+        }
+
+        .full-bleed-footer .footer-bottom strong,
+        .full-bleed-footer .footer-bottom b {
+            font-size: 13px !important;
+            font-weight: 400 !important;
+        }
+    </style>
+
+    {# portal_config / institution_logo / admission_footer / pace_footer come from update_website_context;
+       never load Singles via get_doc here (Guest / prod perms). Logic lives in _footer.py. #}
+    {% set footer = get_nlsat_footer_context(
+        portal_config if (portal_config is defined and portal_config) else {},
+        institution_logo if (institution_logo is defined and institution_logo) else '',
+        admission_footer if admission_footer is defined else [],
+        pace_footer if pace_footer is defined else []
+    ) %}
+
+    <footer class="full-bleed-footer">
+        <div class="footer-container">
+            <div class="footer-grid" style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:40px;">
+                <!-- Brand -->
+                <div class="footer-col" style="min-width: 200px;">
+                    <div style="margin-bottom: 16px; display: flex; align-items: flex-start; justify-content: center;">
+                        {% if footer.logo %}
+                            <img src="{{ footer.logo }}" alt="Institution Logo" style="height:200px;width:200px;object-fit:contain;margin-left:-8px;">
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Dynamic Links Column (PACE-only users get the PACE footer columns) -->
+                {% set _footer_cols = footer.columns %}
+
+                {% if _footer_cols and _footer_cols|length > 0 %}
+                <div class="adm-wf-footer-links footer-links-wrapper" style="flex-grow:1;">
+                    <div style="display: flex; flex-wrap: wrap; gap: 30px; justify-content: flex-start; width: 100%;">
+                    {% for col in _footer_cols %}
+                    <div style="min-width: 150px;">
+                        {% if col.title %}
+                        <h4 class="footer-title" style="font-size:14px!important;font-weight:400!important;letter-spacing:.05em;margin:0 0 14px;text-transform:uppercase;">{{ col.title }}</h4>
+                        {% endif %}
+                        <ul class="footer-links" style="display: flex; flex-direction: column; gap: 8px;">
+                            {% for item in col.links %}
+                            <li>
+                                {% if item.route %}
+                                <a href="{{ item.route }}" style="font-size:14px;font-weight:normal;opacity:0.75;word-break: break-word;">{{ item.label }}</a>
+                                {% else %}
+                                <span style="font-size:14px;font-weight:normal;opacity:0.75;display:inline-block;word-break:break-word;">{{ item.label }}</span>
+                                {% endif %}
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Social Icons / Newsletter Button (Right Side) -->
+                {% if footer.show_social %}
+                <div style="display:flex;flex-direction:column;align-items:flex-end;min-width:220px;">
+                    <div style="display:flex;flex-wrap:wrap;gap:12px;width:210px;justify-content:flex-start;">
+                        {% for link in footer.social_links %}
+                        <a href="{{ link.url }}" target="_blank"
+                            style="color: {{ link.color }} !important; font-size: 30px!important; transition: transform 0.2s, opacity 0.2s; display: inline-flex; opacity: 0.9;"
+                            onmouseover="this.style.transform='translateY(-3px)';this.style.opacity='1'"
+                            onmouseout="this.style.transform='none';this.style.opacity='0.9'" title="{{ link.platform }}">
+                            <i class="{{ link.icon }}"></i>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+            </div>
+
+            <!-- Bottom -->
+            <div class="footer-bottom">
+                <p style="font-size: 12px; margin: 0;">
+                    ©{{ footer.year }} {{ footer.title }}. All rights reserved.
+                </p>
+                <p style="font-size: 12px; margin: 0; color: var(--footer-text); opacity: 0.6;">
+                    Powered by <strong style="color: var(--footer-text); font-weight: 400; opacity: 1;">{{ footer.powerd_by }}</strong>
+                </p>
+            </div>
+        </div>
+    </footer>

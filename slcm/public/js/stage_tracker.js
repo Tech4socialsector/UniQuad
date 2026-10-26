@@ -1,6 +1,6 @@
 /*!
  * StageTracker — reusable admission pipeline widget
- * Used by: /my-applications (compact) and /applicant-form (full)
+ * Used by: /nlsat/my-applications (compact) and /applicant-form (full)
  *
  * Usage:
  *   StageTracker.init({
