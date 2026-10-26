@@ -166,7 +166,6 @@ def _map_applicant_to_student(student, applicant, program, admission_cycle, offe
     student.present_address   = applicant.get("correspondence_address") or None
     student.permanent_address = applicant.get("correspondence_address") or None
     student.city              = applicant.get("city") or None
-    student.district          = applicant.get("city") or None
     student.state             = applicant.get("state") or None
     student.pincode           = applicant.get("pincode") or None
     student.passport_available = "No"

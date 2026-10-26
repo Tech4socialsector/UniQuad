@@ -1,0 +1,1646 @@
+{% set _pc = portal_config %}
+{% set _primary   = (_pc.primary_color   if _pc else None) or primary_color   or "#CB2929" %}
+{% set _secondary = (_pc.secondary_color if _pc else None) or secondary_color or "#8B1A1A" %}
+{% set _name      = (_pc.portal_title    if _pc else None) or institution_name or "SLCM" %}
+{% set _logo      = portal_logo or (_pc.logo if _pc else None) or "" %}
+{% set _tagline   = (_pc.portal_tagline  if _pc else None) or portal_tagline   or "Shaping Tomorrow's Legal Minds" %}
+{% set _support   = (_pc.support_email   if _pc else None) or support_email    or "" %}
+{% set _redir     = redirect_to or "/nlsat/my-profile" %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — {{ _name }} Admission Portal</title>
+  <link rel="stylesheet" href="/assets/slcm/css/applicant_portal.css">
+  <style>
+    :root {
+      --primary:   {{ _primary }};
+      --secondary: {{ _secondary }};
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; /* font-family: set via get_typography_style_block */
+    background: #f1f3f5; overflow-x: hidden; }
+
+    /* ─── NOTIFICATIONS ─── */
+    .lp-notify {
+      display: none; align-items: center; gap: 10px;
+      padding: 10px 14px; border-radius: 8px; margin-bottom: 20px;
+      font-size: 1rem; animation: fadeIn .2s ease;
+    }
+    .lp-notify.success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+    .lp-notify.danger,
+    .lp-notify.error   { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+    .lp-notify.info    { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+    .lp-notify .material-symbols-outlined { font-size: 18px; flex-shrink: 0; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: none; } }
+
+    /* ─── FIELD ERRORS ─── */
+    .lp-field-error {
+      color: #dc2626; font-size: 11px!important; font-weight: 400;
+      margin-top: 5px; display: none; animation: fadeIn .2s ease;
+    }
+
+    /* ─── LAYOUT ─── */
+    .lp-wrap { display: flex; min-height: 100vh; flex-direction: row-reverse; }
+
+    /* ─── LEFT — base (desktop ≥1100px) ─── */
+    .lp-left {
+      width: 40%; flex: 0 0 40%;
+      background: #fff; display: flex; flex-direction: column;
+      justify-content: center; padding: 40px 48px;
+      box-shadow: -4px 0 24px rgba(0,0,0,.07); position: relative; z-index: 2;
+      overflow-y: auto;
+    }
+
+    /* brand */
+    .lp-brand { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
+    .lp-brand-icon {
+      width: 50px; height: 50px;
+      background: var(--primary); display: flex; align-items: center;
+      justify-content: center; color: #fff; flex-shrink: 0; overflow: hidden;
+    }
+    .lp-brand-icon img { width: 100%; height: 100%; object-fit: contain; }
+    .lp-brand-icon .material-symbols-outlined { font-size: 26px; }
+    .lp-brand-name { font-size: 26px; font-weight: 400; color: var(--primary); line-height: 1.2; }
+    .lp-brand-sub  { font-size: 10px; font-weight: 400; letter-spacing: .12em;
+                     color: #9ca3af; margin-top: 2px; }
+    .lp-heading { font-size: 20px; font-weight: 400; color: #111827; margin-bottom: 6px; }
+    .lp-sub     { font-size: 12.5px; color: #6b7280; margin-bottom: 20px; line-height: 1.5; }
+
+    /* tabs */
+    .lp-tabs { display: flex; border-bottom: 2px solid #e5e7eb; margin-bottom: 20px; }
+    .lp-tab {
+      padding: 9px 22px; font-size: 11.5px; font-weight: 400;
+      background: none; border: none; cursor: pointer; color: #9ca3af;
+      border-bottom: 3px solid transparent; margin-bottom: -2px;
+      font-family: inherit; transition: color .2s, border-color .2s;
+    }
+    .lp-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+    /* form fields */
+    .lp-field { margin-bottom: 16px; }
+    .lp-label { display: block; font-weight: 400;
+                color: #374151; margin-bottom: 6px; letter-spacing: .02em; }
+    .lp-label .mandatory { color: #ef4444; margin-left: 2px; }
+    .lp-input {
+      width: 100%; padding: 11px 14px; border: 1.5px solid #d1d5db;
+      border-radius: 8px; color: #111827;
+      font-family: inherit; outline: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .lp-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 12%, transparent);
+    }
+    .lp-input.invalid { border-color: #ef4444; }
+    .lp-input::placeholder { color: #9ca3af; }
+    .lp-row   { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+    .lp-forgot { font-size: 12.5px; color: var(--primary); font-weight: 400; text-decoration: none; }
+    .lp-forgot:hover { text-decoration: underline; }
+    .pw-wrap, .lp-input-wrap { position: relative; }
+    
+    .pw-btn  {
+      position: absolute; right: 11px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; cursor: pointer; color: #9ca3af;
+      display: flex; align-items: center; padding: 0;
+    }
+    .pw-btn .material-symbols-outlined { font-size: 18px; }
+    .lp-field-hint { font-size: 11px; color: #9ca3af; margin-top: 4px; }
+    
+    /* Email Verification Status Indicator — Positioned Inside Input */
+    #email-status {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 10px;
+      font-weight: 400;
+      pointer-events: none;
+      z-index: 5;
+      white-space: nowrap;
+      transition: opacity .2s;
+    }
+
+    /* buttons */
+    .lp-btn {
+      width: 100%; padding: 13px; background: var(--primary); color: #fff;
+      border: none; border-radius: 8px; font-size: 12px; font-weight: 400;
+      cursor: pointer; font-family: inherit; letter-spacing: .03em;
+      text-transform: uppercase;
+      transition: opacity .2s, transform .1s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .lp-btn:hover   { opacity: .9; }
+    .lp-btn:active  { transform: scale(.99); }
+    .lp-btn:disabled { opacity: .65; cursor: not-allowed; }
+    .lp-btn .material-symbols-outlined { font-size: 18px; }
+    .lp-btn-spin {
+      width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.4);
+      border-top-color: #fff; border-radius: 50%;
+      animation: spin .6s linear infinite; display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* support */
+    .lp-support { margin-top: 40px; }
+    .lp-support-title {
+      font-size: 10px; font-weight: 400; letter-spacing: .12em;
+      color: #3a3d43; margin-bottom: 14px;
+    }
+    .lp-support-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .lp-support-link {
+      display: flex; align-items: center; gap: 7px;
+      font-size: 12.5px; color: var(--primary); text-decoration: none; transition: color .2s;
+    }
+    .lp-support-link:hover { color: var(--primary); }
+    .lp-support-link .material-symbols-outlined { font-size: 17px; }
+
+    /* ─── RIGHT ─── */
+    .lp-right {
+      flex: 1; position: relative; overflow: hidden; background: #0d1b2a;
+    }
+    .lp-right-bg {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      object-fit: cover; opacity: .68;
+    }
+    .lp-right-overlay {
+      position: absolute; inset: 0;
+      background: linear-gradient(140deg,
+        color-mix(in srgb, var(--primary) 82%, #000) 0%, #0a1628 65%);
+      opacity: .85;
+    }
+    .lp-right-body {
+      position: relative; z-index: 2;
+      display: flex; flex-direction: column;
+      justify-content: end; align-items: flex-start;
+      height: 100%; min-height: 100vh;
+      padding: 20px 20px; color: #fff;
+      overflow-y: auto;
+    }
+    .lp-tagline { font-size: 26px !important; font-weight: 600 !important; line-height: 1.2;
+                  margin-bottom: 20px; max-width: 620px; text-align: center;
+                  align-self: center; margin-left: auto; margin-right: auto; }
+
+    /* grid for cards */
+    .lp-cards-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      width: 100%;
+      align-items: start;
+    }
+    @media (max-width: 1200px) {
+      .lp-cards-grid { grid-template-columns: 1fr; }
+    }
+
+    /* solid card matching Latest Updates style */
+    .glass {
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: none;
+      border-radius: 8px; width: 100%;
+      overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      color: #111827;
+    }
+    .glass-head  { 
+      display: flex; align-items: center; justify-content: space-between; 
+      padding: 16px 20px;
+      background: var(--primary);
+      color: #fff;
+      border-bottom: 1px solid rgba(0,0,0,0.1);
+    }
+    .glass-title { display: flex; align-items: center; gap: 9px; }
+    .glass-title h2 { font-size: 14px !important; font-weight: 400 !important; }
+
+    /* announcement rows */
+    .ann-row {
+      display: flex; align-items: center;
+      padding: 5px 5px; cursor: pointer;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+      transition: background .15s;
+    }
+    .ann-row:last-child { border-bottom: none; }
+    .ann-row:hover { background: rgba(255, 255, 255, 0.5); }
+    .ann-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 6px; }
+    .ann-text { flex: 1; min-width: 0; color: #000000; font-weight:500; }
+    /* Fixed 11px list text: !important beats applicant_portal.css, which sizes
+       every div / span from the Portal Config body font size */
+    .ann-title { line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 11px !important; }
+    .ann-summary {opacity: .7; margin-top: 4px; font-size: 11px !important;
+                   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ann-row .material-symbols-outlined { font-size: 18px; color: #9ca3af;}
+
+    .type-General   { background: #60a5fa; }
+    .type-Important { background: #f87171; }
+    .type-Alert     { background: #f87171; }
+    .type-Event     { background: #34d399; }
+    .type-Deadline  { background: #fbbf24; }
+    .type-default   { background: rgba(255,255,255,.4); }
+
+    /* date rows in Important Dates */
+    .date-item {
+      display: flex; align-items: center;
+      padding: 5px 5px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+      transition: background .15s;
+    }
+    .date-item:last-child { border-bottom: none; }
+    .date-item.clickable { cursor: pointer; }
+    .date-item.clickable:hover { background: rgba(255, 255, 255, 0.5); }
+    .date-item-icon {
+      width: 42px; height: 42px; border-radius: 8px; flex-shrink: 0;
+      background: #f3f4f6; color: var(--primary);
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; font-size: 11px; font-weight: 500;
+      line-height: 1; letter-spacing: .02em;
+    }
+    .date-item-icon .dim { font-size: 16px; font-weight: 500; }
+    .date-item-body { flex: 1; min-width: 0; color: #374151; }
+    .date-item-label { line-height: 1.4; font-size: 11px !important;
+                       white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .date-item-sub { font-size: 11px !important; margin-top: 2px; }
+    /* "No announcements / No Important Dates" messages */
+    .ann-row > span:not(.material-symbols-outlined),
+    .date-item > span:not(.material-symbols-outlined) { font-size: 11px !important; }
+    .date-badge {
+      font-size: 8px; font-weight: 400; letter-spacing: .08em;
+      padding: 2px 6px; border-radius: 99px; flex-shrink: 0;
+      text-transform: uppercase;
+    }
+    .badge-today    { background: #fbbf24; color: #78350f; }
+    .badge-tomorrow { background: #60a5fa; color: #1e3a8a; }
+    .badge-event    { background: #34d399; color: #064e3b; }
+    .badge-deadline { background: #f87171; color: #7f1d1d; }
+    .badge-cycle    { background: rgba(255,255,255,.2); color: #fff; }
+    .badge-apps     { background: rgba(255,255,255,.12); color: rgba(255,255,255,.8); }
+
+    /* event modal */
+    .ev-modal-bg {
+      display: none; position: fixed; inset: 0; z-index: 9000;
+      background: rgba(0,0,0,.6); backdrop-filter: blur(4px);
+      align-items: center; justify-content: center; padding: 20px;
+    }
+    .ev-modal-bg.open { display: flex; }
+    .ev-modal {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-radius: 12px; width: 100%; max-width: 500px;
+      max-height: 88vh; overflow-y: auto;
+      box-shadow: 0 28px 72px rgba(0,0,0,.28);
+      animation: modalIn .22s ease;
+      color: #111827;
+    }
+    .ev-mhead {
+      padding: 20px 24px 16px; 
+      background: var(--primary);
+      color: #fff;
+      border-bottom: 1px solid rgba(0,0,0,0.1);
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+    }
+    .ev-mtitle { font-size: 18px; font-weight: 500; color: #fff; line-height: 1.3; }
+    .ev-mclose {
+      background: rgba(255,255,255,0.2); border: none; border-radius: 50%;
+      width: 32px; height: 32px; cursor: pointer; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; color: #fff;
+      transition: background .15s;
+    }
+    .ev-mclose:hover { background: rgba(255,255,255,0.3); }
+    .ev-mclose .material-symbols-outlined { font-size: 17px; }
+    .ev-mmeta {
+      padding: 10px 24px; background: rgba(0,0,0,0.03);
+      display: flex; flex-wrap: wrap; gap: 14px; border-bottom: 1px solid rgba(0,0,0,0.08);
+    }
+    .ev-mmeta-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #6b7280; }
+    .ev-mmeta-item .material-symbols-outlined { font-size: 15px; color: var(--primary); }
+    .ev-mimg { width: 100%; max-height: 180px; object-fit: cover; display: none; }
+    .ev-mbody { padding: 18px 24px; }
+    .ev-msummary { font-size: 14px; color: #374151; font-weight: 400;
+                   margin-bottom: 12px; line-height: 1.6; }
+    .ev-mcontent { font-size: 13px; color: #4b5563; line-height: 1.75; }
+    .ev-mfooter { padding: 14px 24px; border-top: 1px solid #e5e7eb; }
+    .ev-reg-btn {
+      display: block; width: 100%; padding: 12px; text-align: center;
+      background: var(--primary); color: #fff; border: none; border-radius: 10px;
+      font-size: 13px; font-weight: 400; cursor: pointer; text-decoration: none;
+      font-family: inherit; transition: opacity .2s;
+    }
+    .ev-reg-btn:hover { opacity: .88; }
+
+    /* pagination controls inside glass cards */
+    .card-pager {
+      display: flex; align-items: center; justify-content: space-between;
+      border-top: 1px solid rgba(0, 0, 0, 0.08);
+      background: rgba(255, 255, 255, 0.3);
+    }
+    .card-pager-info { font-size: 12px; color: #6b7280; font-weight: 500; }
+    .card-pager-btns { display: flex; gap: 6px; }
+    .card-pager-btn {
+      background: #fff; border: 1px solid #e5e7eb; color: #374151;
+      width: 28px; height: 28px; border-radius: 6px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; transition: all .15s; font-family: inherit;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .card-pager-btn:hover:not(:disabled) { background: #f3f4f6; border-color: #d1d5db; }
+    .card-pager-btn:disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
+    .lp-social { display: flex; align-items: center; gap: 12px; margin-top: 18px; }
+    .lp-social-icon {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--primary); border: 2px solid #fff;
+      display: flex; align-items: center; justify-content: center; color: #fff;
+    }
+    .lp-social-icon .material-symbols-outlined { font-size: 18px; }
+    .lp-social-text { opacity: .8; }
+
+    /* ─── ANNOUNCEMENT MODAL ─── */
+    .ann-modal-bg {
+      display: none; position: fixed; inset: 0; z-index: 8000;
+      background: rgba(0,0,0,.55); backdrop-filter: blur(4px);
+      align-items: center; justify-content: center; padding: 20px;
+    }
+    .ann-modal-bg.open { display: flex; }
+    .ann-modal {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-radius: 12px; width: 100%; max-width: 520px;
+      max-height: 85vh; overflow-y: auto;
+      box-shadow: 0 24px 64px rgba(0,0,0,.25);
+      animation: modalIn .2s ease;
+      color: #111827;
+    }
+    @keyframes modalIn {
+      from { opacity: 0; transform: translateY(14px) scale(.97); }
+      to   { opacity: 1; transform: none; }
+    }
+    .ann-mhead {
+      padding: 20px 22px 16px; 
+      background: var(--primary);
+      color: #fff;
+      border-bottom: 1px solid rgba(0,0,0,0.1);
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+    }
+    .ann-mtitle { font-size: 17px; font-weight: 500; color: #fff; line-height: 1.3; }
+    .ann-mclose {
+      background: rgba(255,255,255,0.2); border: none; border-radius: 50%;
+      width: 30px; height: 30px; cursor: pointer; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; color: #fff;
+      transition: background .15s;
+    }
+    .ann-mclose:hover { background: rgba(255,255,255,0.3); }
+    .ann-mclose .material-symbols-outlined { font-size: 17px; }
+    .ann-mmeta {
+      padding: 10px 22px; background: rgba(0,0,0,0.03);
+      display: flex; flex-wrap: wrap; gap: 14px; border-bottom: 1px solid rgba(0,0,0,0.08);
+    }
+    .ann-mmeta-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #6b7280; }
+    .ann-mmeta-item .material-symbols-outlined { font-size: 15px; color: var(--primary); }
+    .ann-mimg  { width: 100%; max-height: 200px; object-fit: cover; display: none; }
+    .ann-mbody { padding: 18px 22px; }
+    .ann-msummary { font-size: 14px; color: #374151; font-weight: 400;
+                    margin-bottom: 12px; line-height: 1.6; display: none; }
+    .ann-mcontent { font-size: 13px; color: #4b5563; line-height: 1.7; }
+    .ann-mcontent p  { margin-bottom: 10px; }
+    .ann-mcontent ul { padding-left: 18px; margin-bottom: 10px; }
+
+    /* ══════════════════════════════════════════════════
+       RESPONSIVE — left panel GROWS as screen shrinks,
+       right panel shrinks (flex:1 handles it automatically)
+    ══════════════════════════════════════════════════ */
+
+    /* 4K / 2K (≥2000px): left = 40% of screen */
+    @media (min-width: 2000px) {
+      .lp-left { padding: 72px 80px; }
+      .lp-heading { font-size: 20px; }
+      .lp-sub { font-size: 12.5px; }
+      .lp-input { font-size: 13.5px; padding: 14px 16px; }
+      .lp-btn { font-size: 12px; padding: 16px; }
+      .lp-brand-name { font-size: 26px; }
+      .lp-right-body { padding: 20px 20px; }
+      .lp-tagline { font-size: 21px; max-width: 560px; }
+    }
+
+    /* Large desktop (1400px–1999px) */
+    @media (min-width: 1400px) and (max-width: 1999px) {
+      .lp-left { padding: 60px 56px; }
+      .lp-right-body { padding: 20px 20px; }
+      .lp-tagline { font-size: 21px; max-width: 500px; }
+    }
+
+    /* Medium desktop (1100px–1399px) — default styles apply */
+
+    /* Small desktop (861px–1099px) */
+    @media (min-width: 861px) and (max-width: 1099px) {
+      .lp-left { padding: 44px 36px; }
+      .lp-right-body { padding: 20px 20px; }
+      .lp-tagline { font-size: 21px; max-width: 340px; }
+    }
+
+    /* Tablet (≤860px): right hidden, left fills full screen */
+    @media (max-width: 860px) {
+      .lp-wrap { justify-content: center; background: #fff; }
+      .lp-left {
+        width: 100%; flex: 1; max-width: 540px;
+        margin: 0 auto; padding: 48px 36px;
+        justify-content: flex-start;
+        box-shadow: none; min-height: 100vh;
+      }
+      .lp-right { display: none; }
+    }
+
+    /* Tablet + mobile (≤860px): Announcements and Important Dates move under
+       the login / register form, with fixed font sizes (the portal typography
+       block would otherwise size the card titles from the Portal Config). */
+    @media (max-width: 860px) {
+      .lp-wrap { flex-direction: column; justify-content: flex-start; }
+      .lp-left { flex: 0 0 auto; min-height: 0; padding-bottom: 28px; }
+      /* grows to fill a tall screen, so the photo reaches the bottom */
+      .lp-right { display: block; flex: 1 0 auto; width: 100%; }
+      .lp-right-body {
+        min-height: 0; height: auto; overflow: visible;
+        justify-content: flex-start; padding: 24px 20px 32px;
+      }
+      .lp-tagline { display: none; }
+      .lp-cards-grid {
+        grid-template-columns: 1fr 1fr; gap: 16px;
+        max-width: 760px; margin: 0 auto;
+      }
+
+      .glass-head { padding: 10px 14px; }
+      .glass-title h2 { line-height: 1.3 !important; }
+
+      .ann-row, .date-item { padding: 8px 10px; gap: 10px; }
+      .date-item-icon { width: 34px; height: 34px; }
+      .ann-title, .date-item-label {
+        font-size: 11px !important; line-height: 1.45 !important;
+        white-space: normal; display: -webkit-box;
+        -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+      }
+      .ann-summary, .date-item-sub,
+      .ann-row span:not(.material-symbols-outlined),
+      .date-item span:not(.material-symbols-outlined) {
+        font-size: 11px !important;
+      }
+    }
+
+    /* Mobile (≤600px): one card per row */
+    @media (max-width: 600px) {
+      .lp-cards-grid { grid-template-columns: 1fr; }
+      .lp-right-body { padding: 20px 16px 28px; }
+    }
+
+    /* Mobile (≤600px) */
+    @media (max-width: 600px) {
+      .lp-left { padding: 36px 24px; max-width: 100%; }
+      .lp-heading { font-size: 20px; }
+      .lp-sub { font-size: 12.5px; margin-bottom: 24px; }
+      .lp-brand { margin-bottom: 32px; }
+      .lp-brand-name { font-size: 13px; }
+      .lp-tagline { font-size: 15px; }
+    }
+
+    /* Small mobile (≤480px) */
+    @media (max-width: 480px) {
+      .lp-left { padding: 28px 16px; }
+      .lp-heading { font-size: 20px; }
+      .lp-tabs { margin-bottom: 20px; }
+      .lp-tab { padding: 8px 16px; font-size: 9.5px; }
+      .lp-support-grid { grid-template-columns: 1fr; }
+      .lp-btn { font-size: 12px; padding: 11px; }
+      .lp-support { margin-top: 30px; }
+    }
+  </style>
+
+{{ get_typography_style_block(
+    portal_config.font_family,
+    font_size_heading=portal_config.font_size_heading,
+    font_size_subheading=portal_config.font_size_subheading,
+    font_size_body=portal_config.font_size_body,
+    font_size_form_title=portal_config.font_size_form_title,
+    font_size_toast=portal_config.font_size_toast,
+    primary_color=portal_config.primary_color,
+    secondary_color=portal_config.secondary_color,
+    navbar_color=portal_config.navbar_color,
+    footer_color=portal_config.footer_color,
+    button_border_radius=portal_config.button_border_radius
+) }}
+
+<!-- Meta Pixel Code -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '1279045953496223');
+fbq('track', 'PageView');
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=1279045953496223&ev=PageView&noscript=1"
+/></noscript>
+
+<!-- End Meta Pixel Code -->
+
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=AW-11282568347"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'AW-11282568347');
+</script> 
+
+<!-- Event snippet for Page view conversion page -->
+<script>
+  gtag('event', 'conversion', {
+      'send_to': 'AW-17781995890/Vs1zCLjBw8wbEPLyjp9C',
+      'value': 1.0,
+      'currency': 'INR'
+  });
+</script>
+
+
+</head>
+<body>
+
+<div class="lp-wrap">
+
+  <!-- ══════════ LEFT ══════════ -->
+  <div class="lp-left">
+    <input type="hidden" id="lp-redir" value="{{ _redir }}">
+
+    <!-- Brand -->
+    <div class="lp-brand">
+      <div class="lp-brand-icon">
+        {% if _logo %}
+          <img src="{{ _logo }}" alt="{{ _name }}">
+        {% else %}
+          <span class="material-symbols-outlined">account_balance</span>
+        {% endif %}
+      </div>
+      <div>
+        <h1 class="lp-brand-name">{{ _name }}</h1>
+      </div>
+    </div>
+
+    <h2 class="lp-heading">Welcome Back</h2>
+    <p class="lp-sub">{{ 'International Candidates' if portal_type == 'International' else 'Indian Nationals' }} — Login to access your application and track your status.</p>
+
+    <!-- Tabs -->
+    <div class="lp-tabs">
+      {% if show_register_tab %}
+      <button type="button" class="lp-tab active"        id="tab-register" onclick="lpTab('register')">Register</button>
+      {% endif %}
+      <button type="button" class="lp-tab{% if not show_register_tab %} active{% endif %}" id="tab-login"    onclick="lpTab('login')">Login</button>
+    </div>
+
+    {% if is_closed or not show_register_tab %}
+    <div style="background: #fee2e2; color: #991b1b; padding: 12px 16px; border-radius: 8px; font-size: 13px; font-weight: 400; margin-bottom: 24px; border: 1px solid #fecaca; display: flex; align-items: center; gap: 10px;">
+        <span class="material-symbols-outlined" style="font-size: 20px;">info</span>
+        <div>
+            <div style="font-weight: 400; margin-bottom: 2px;">{{ admission_closed_message }}</div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ── LOGIN PANEL ── -->
+    <div id="panel-login"{% if show_register_tab %} style="display:none;"{% endif %}>
+      <div id="lp-notify-login" class="lp-notify"></div>
+
+      <div id="lp-credentials-step">
+        <div class="lp-field">
+          <label class="lp-label" for="lp-email">Username or email</label>
+          <input class="lp-input" type="text" id="lp-email"
+                 placeholder="username or email" autocomplete="username">
+          <div class="lp-field-error" id="err-lp-email"></div>
+        </div>
+        <div class="lp-field">
+          <div class="lp-row">
+            <label class="lp-label" for="lp-pwd" style="margin-bottom:0;">Password</label>
+            <a href="#forgot" onclick="event.preventDefault(); lpTab('forgot');" class="lp-forgot">Forgot password?</a>
+          </div>
+          <div class="pw-wrap">
+            <input class="lp-input" type="password" id="lp-pwd"
+                   placeholder="••••••••" autocomplete="current-password">
+            <button type="button" class="pw-btn" onclick="lpTogglePw()">
+              <span class="material-symbols-outlined" id="lp-eye">visibility</span>
+            </button>
+          </div>
+          <div class="lp-field-error" id="err-lp-pwd"></div>
+        </div>
+        <button class="lp-btn" id="lp-login-btn" onclick="doLogin()">
+          <div class="lp-btn-spin" id="lp-login-spin"></div>
+          <span id="lp-login-label">Login</span>
+        </button>
+      </div>
+
+      <!-- 2FA OTP step (hidden until 2FA is triggered) -->
+      <div id="lp-otp-step" style="display:none;">
+        <div class="lp-field">
+          <label class="lp-label" id="lp-otp-label-text" for="lp-otp">Verification Code</label>
+          <p id="lp-otp-hint" style="font-size:12px;color:#6b7280;margin-bottom:10px;line-height:1.5;"></p>
+          <input class="lp-input" type="text" id="lp-otp"
+                 placeholder="Enter 6-digit code"
+                 autocomplete="one-time-code" maxlength="10"
+                 oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+          <div class="lp-field-error" id="err-lp-otp"></div>
+        </div>
+        <button class="lp-btn" id="lp-otp-btn" onclick="doVerifyOtp()">
+          <div class="lp-btn-spin" id="lp-otp-spin"></div>
+          <span id="lp-otp-label">Verify</span>
+        </button>
+        <p style="font-size:12px;color:#9ca3af;text-align:center;margin-top:14px;">
+          <a href="#" onclick="lpShowCredentials();return false;"
+             style="color:var(--primary);font-weight:400;text-decoration:none;">Back to login</a>
+        </p>
+      </div>
+    </div>
+
+    <!-- ── REGISTER PANEL ── -->
+    {% if show_register_tab %}
+    <div id="panel-register">
+      <div id="lp-notify-register" class="lp-notify"></div>
+
+      <div class="lp-field">
+        <label class="lp-label" for="reg-name">Name of applicant<span class="mandatory">*</span></label>
+        <input class="lp-input" type="text" id="reg-name"
+               placeholder="Your full name" autocomplete="name"
+               oninput="this.value = this.value.replace(/[^a-zA-Z\s]/g, '');">
+        <div class="lp-field-error" id="err-reg-name"></div>
+      </div>
+      <div class="lp-field">
+        <label class="lp-label" for="reg-email">Email address<span class="mandatory">*</span></label>
+        <div class="lp-input-wrap">
+          <input class="lp-input" type="email" id="reg-email"
+                 placeholder="your @email.com" autocomplete="email">
+          <div id="email-status"></div>
+        </div>
+        <div class="lp-field-hint">{{ register_email_hint or "We will send a verification email with a link to set your password." }}</div>
+        <div class="lp-field-error" id="err-reg-email"></div>
+      </div>
+      <button class="lp-btn" id="lp-reg-btn" onclick="doRegister()">
+        <div class="lp-btn-spin" id="lp-reg-spin"></div>
+        <span class="material-symbols-outlined">person_add</span>
+        <span id="lp-reg-label">Register</span>
+      </button>
+      <p style="font-size:12px;color:#9ca3af;text-align:center;margin-top:14px;">
+        Already registered?
+        <a href="#login" onclick="event.preventDefault(); lpTab('login');"
+           style="color:var(--primary);font-weight:400;text-decoration:none;">Login</a>
+      </p>
+    </div>
+    {% else %}
+    <div id="panel-register-closed" class="lp-admission-closed-msg" style="display: none;">
+      <p>{{ admission_closed_message }}</p>
+    </div>
+    {% endif %}
+
+    <!-- ── FORGOT PASSWORD PANEL ── -->
+    <div id="panel-forgot" style="display:none;">
+      <div id="lp-notify-forgot" class="lp-notify"></div>
+      
+      <p id="forgot-intro" style="font-size:13px;color:#6b7280;margin-bottom:18px;line-height:1.5;">
+        {{ forgot_password_intro or "Enter the email you used to register. We will send a password reset link to that inbox." }}
+      </p>
+
+      <div class="lp-field">
+        <label class="lp-label" for="forgot-email">Email address</label>
+        <input class="lp-input" type="email" id="forgot-email"
+               placeholder="your @email.com" autocomplete="email">
+        <div class="lp-field-error" id="err-forgot-email"></div>
+      </div>
+      
+      <button class="lp-btn" id="lp-forgot-btn" onclick="doForgotPassword()">
+        <div class="lp-btn-spin" id="lp-forgot-spin"></div>
+        <span id="lp-forgot-label">Reset Password</span>
+      </button>
+      
+      <p style="font-size:12px;color:#9ca3af;text-align:center;margin-top:14px;">
+        Remembered your password?
+        <a href="#login" onclick="event.preventDefault(); lpTab('login');"
+           style="color:var(--primary);font-weight:400;text-decoration:none;">Login</a>
+      </p>
+    </div>
+
+    
+  </div><!-- end left -->
+
+  <!-- ══════════ RIGHT ══════════ -->
+  <div class="lp-right">
+    {% if _pc and (_pc.hero_image or _pc.portal_hero) %}
+    <img src="{{ _pc.hero_image or _pc.portal_hero }}" class="lp-right-bg" alt="">
+    {% endif %}
+    <!-- <div class="lp-right-overlay"></div> -->
+    <div class="lp-right-body">
+
+      <h2 class="lp-tagline">{{ _tagline }}</h2>
+
+      <div class="lp-cards-grid">
+
+        <!-- Announcements -->
+        <div class="glass">
+          <div class="glass-head">
+            <div class="glass-title">
+              <h2>Announcements</h2>
+            </div>
+          </div>
+          {% if announcements %}
+          <div style="max-height: 168px; overflow-y: auto; overflow-x: hidden;">
+            {% for ann in announcements %}
+            {% set _t = ann.announcement_type or "General" %}
+            <div class="ann-row" data-ann-idx="{{ loop.index0 }}" onclick="lpAnnOpen({{ loop.index0 }})" title="{{ ann.title }}">
+              <div class="date-item-icon" style="background: rgba(var(--primary-rgb), 0.1); color: var(--primary);">
+                <span class="material-symbols-outlined" style="font-size: 20px !important; color: var(--primary) !important;">campaign</span>
+              </div>
+              <div class="ann-text">
+                <div class="ann-title">{{ ann.title }}</div>
+                {% if ann.summary %}<div class="ann-summary">{{ ann.summary }}</div>{% endif %}
+              </div>
+              <span class="material-symbols-outlined">chevron_right</span>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+            <div class="ann-row" style="cursor:default;justify-content:center;color:#000103 !important;padding:24px 20px;">
+              <span style="font-size:14px;">No announcements have been announced yet.</span>
+            </div>
+          {% endif %}
+
+        </div>
+
+        <!-- Important Dates -->
+        <div class="glass">
+          <div class="glass-head">
+            <div class="glass-title">
+              <h2>Important Dates</h2>
+            </div>
+          </div>
+          {% if important_dates %}
+          <div style="max-height: 168px; overflow-y: auto; overflow-x: hidden;">
+            {% set ev_ns = namespace(count=0) %}
+            {% for item in important_dates %}
+            {% set _is_ev = item.type == 'event' %}
+            <div class="date-item {% if _is_ev %}clickable{% endif %}"
+                 data-date-idx="{{ loop.index0 }}"
+                 title="{{ item.label }}"
+                 {% if _is_ev %}onclick="lpEvOpen({{ ev_ns.count }})"{% endif %}>
+              <div class="date-item-icon" style="background: rgba(var(--primary-rgb), 0.1); color: var(--primary);">
+                <span class="material-symbols-outlined" style="font-size: 20px !important; color: var(--primary) !important;">calendar_month</span>
+              </div>
+              <div class="date-item-body">
+                <div class="date-item-label" style="font-weight: 500; color: #000000;">{{ item.label }}</div>
+                {% if item.event_venue %}<div class="date-item-sub">{{ item.event_venue }}</div>{% endif %}
+              </div>
+              {% if _is_ev %}
+                <span class="material-symbols-outlined" style="font-size:16px;color:#01050e;margin-top:2px;">chevron_right</span>
+              {% endif %}
+            </div>
+            {% if _is_ev %}{% set ev_ns.count = ev_ns.count + 1 %}{% endif %}
+            {% endfor %}
+          </div>
+          {% else %}
+            <div class="date-item" style="cursor:default;justify-content:center;color:#000103;padding:24px 20px;">
+              <span style="font-size:14px;">No Important Dates.</span>
+            </div>
+          {% endif %}
+        </div>
+
+        
+      </div>
+
+      <!-- Social proof -->
+      <!-- <div class="lp-social">
+        <div class="lp-social-icon">
+          <span class="material-symbols-outlined">school</span>
+        </div>
+        <span class="lp-social-text">Join thousands of students who apply each year</span>
+      </div> -->
+
+    </div>
+  </div><!-- end right -->
+</div><!-- end lp-wrap -->
+
+<!-- ══════════ ANNOUNCEMENT MODAL ══════════ -->
+<div class="ann-modal-bg" id="ann-modal-bg" onclick="lpAnnClose(event)">
+  <div class="ann-modal">
+    <div class="ann-mhead">
+      <div class="ann-mtitle" id="ann-mtitle">—</div>
+      <button class="ann-mclose" onclick="lpAnnClose({target:document.getElementById('ann-modal-bg')})">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <div class="ann-mmeta" id="ann-mmeta"></div>
+    <img id="ann-mimg" class="ann-mimg" src="" alt="">
+    <div class="ann-mbody">
+      <div class="ann-msummary" id="ann-msummary"></div>
+      <div class="ann-mcontent" id="ann-mcontent"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ EVENT MODAL ══════════ -->
+<div class="ev-modal-bg" id="ev-modal-bg" onclick="lpEvClose(event)">
+  <div class="ev-modal">
+    <div class="ev-mhead">
+      <div class="ev-mtitle" id="ev-mtitle">Event</div>
+      <button class="ev-mclose" onclick="lpEvClose({target:document.getElementById('ev-modal-bg')})">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <div class="ev-mmeta" id="ev-mmeta"></div>
+    <img id="ev-mimg" class="ev-mimg" src="" alt="">
+    <div class="ev-mbody">
+      <div id="ev-msummary" class="ev-msummary" style="display:none;"></div>
+      <div id="ev-mcontent" class="ev-mcontent"></div>
+    </div>
+    <div class="ev-mfooter" id="ev-mfooter"></div>
+  </div>
+</div>
+
+<script>
+/* ── DATA ── */
+var LP_ANN = [
+  {% for ann in announcements %}
+  {
+    title:   {{ ann.title | tojson }},
+    type:    {{ (ann.announcement_type or "General") | tojson }},
+    summary: {{ (ann.summary or "") | tojson }},
+    content: {{ (ann.content or "") | tojson }},
+    image:   {{ (ann.featured_image or "") | tojson }},
+    date:    {{ (ann.publish_date_formatted or "") | tojson }}
+  }{% if not loop.last %},{% endif %}
+  {% endfor %}
+];
+
+/* Events (important dates — event type) */
+var LP_EVENTS = [
+  {% for item in important_dates if item.type == 'event' %}
+  {
+    title:   {{ item.label | tojson }},
+    date:    {{ item.date_display | tojson }},
+    venue:   {{ (item.event_venue or '') | tojson }},
+    summary: {{ (item.summary or '') | tojson }},
+    content: {{ (item.content or '') | tojson }},
+    image:   {{ (item.image or '') | tojson }},
+    reg_url: {{ (item.reg_url or '') | tojson }},
+    is_logged_in: {{ 'true' if is_logged_in else 'false' }}
+  }{% if not loop.last %},{% endif %}
+  {% endfor %}
+];
+
+var LP_CSRF = "{{ csrf_token or '' }}";
+
+/* ── SAFE HTML (server messages) ── */
+function lpEsc(s) {
+  if (s === undefined || s === null) return '';
+  var d = document.createElement('div');
+  d.textContent = String(s);
+  return d.innerHTML;
+}
+
+/**
+ * Best-effort text from Frappe API JSON: message dict, _server_messages, or exc.
+ */
+function lpExtractFrappeMessage(data, fallback) {
+  if (!data) return fallback || '';
+  var m = data.message;
+  if (m !== undefined && m !== null) {
+    if (typeof m === 'object' && !Array.isArray(m)) {
+      if (m.message) return String(m.message);
+      if (m.exc) return String(m.exc);
+    }
+    if (typeof m === 'string' || typeof m === 'number') return String(m);
+  }
+  if (data._server_messages) {
+    try {
+      var arr = JSON.parse(data._server_messages);
+      for (var i = 0; i < arr.length; i++) {
+        var raw = arr[i];
+        var inner = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        if (inner && inner.message) return String(inner.message);
+      }
+    } catch (e1) { /* ignore */ }
+  }
+  if (data.exc) {
+    var lines = String(data.exc).split('\n').map(function (x) { return x.trim(); }).filter(Boolean);
+    for (var j = lines.length - 1; j >= 0; j--) {
+      var line = lines[j];
+      if (line.indexOf('File ') === 0) continue;
+      if (line.indexOf('Traceback') !== -1) continue;
+      return line.length > 400 ? line.slice(0, 400) + '\u2026' : line;
+    }
+  }
+  return fallback || '';
+}
+
+/* ── NOTIFICATIONS ── */
+function lpNotify(msg, type, panel) {
+  var target = panel === 'login' ? 'lp-notify-login' : 
+               panel === 'register' ? 'lp-notify-register' : 'lp-notify-forgot';
+  var el = document.getElementById(target);
+  if (!el) return;
+  if (!msg) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  type = type || 'info';
+  var icons = { success: 'check_circle', error: 'error', danger: 'error', info: 'info' };
+  el.className = 'lp-notify ' + type;
+  el.innerHTML = '<span class="material-symbols-outlined">' + icons[type] + '</span>' + lpEsc(msg);
+  el.style.display = 'flex';
+}
+
+function lpHandleApiResponse(data, panel, fallbackMsg) {
+  var success = false;
+  var msg = '';
+  
+  if (data) {
+    var res = data.message;
+    if (res) {
+      if (typeof res === 'object' && !Array.isArray(res)) {
+        if (res.status === 'success' || res.status === 'ok' || res.success === true) {
+          success = true;
+        }
+        msg = res.message || res.msg || '';
+      } else if (Array.isArray(res)) {
+        if (res[0] === 1 || res[0] === true) {
+          success = true;
+        }
+        msg = res[1] || '';
+      } else if (typeof res === 'string') {
+        if (res === 'Logged In' || res === 'No App') {
+          success = true;
+        }
+        msg = res;
+      }
+    }
+    
+    if (!msg) {
+      msg = lpExtractFrappeMessage(data, fallbackMsg);
+    }
+  }
+  
+  if (!msg) msg = fallbackMsg || 'Operation failed.';
+  
+  if (data && data.home_page) {
+    success = true;
+  }
+  
+  var notifyType = success ? 'success' : 'danger';
+  lpNotify(msg, notifyType, panel);
+  return success;
+}
+
+function lpSyncUrlHashForTab(t) {
+  t = t || 'login';
+  var want = '#' + (t === 'login' ? 'login' : t === 'register' ? 'register' : 'forgot');
+  if (window.location.hash !== want) {
+    if (window.history && window.history.replaceState) {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search + want);
+    } else {
+      window.location.hash = want.slice(1);
+    }
+  }
+}
+
+/* ── TABS ── */
+function lpTab(t, opts) {
+  opts = opts || {};
+  t = t || 'login';
+  var pLogin = document.getElementById('panel-login');
+  var pReg = document.getElementById('panel-register');
+  var pRegClosed = document.getElementById('panel-register-closed');
+  var pForgot = document.getElementById('panel-forgot');
+  
+  if (pLogin) pLogin.style.display = t==='login' ? '' : 'none';
+  if (pReg) {
+    pReg.style.display = t==='register' ? '' : 'none';
+  } else if (pRegClosed) {
+    pRegClosed.style.display = t==='register' ? '' : 'none';
+  }
+  if (pForgot) pForgot.style.display = t==='forgot' ? '' : 'none';
+  
+  var tLogin = document.getElementById('tab-login');
+  var tReg = document.getElementById('tab-register');
+  if (tLogin) tLogin.classList.toggle('active', t==='login');
+  if (tReg) tReg.classList.toggle('active', t==='register');
+
+  if (!opts.skipHashSync) {
+    lpSyncUrlHashForTab(t);
+  }
+
+  lpNotify(null, null, 'login');
+  lpNotify(null, null, 'register');
+  lpNotify(null, null, 'forgot');
+  document.querySelectorAll('.lp-field-error').forEach(function (el) { el.textContent = ''; el.style.display = 'none'; });
+  document.querySelectorAll('.lp-input').forEach(function (el) { el.classList.remove('invalid'); });
+}
+
+function lpTogglePw() {
+  var i = document.getElementById('lp-pwd');
+  var e = document.getElementById('lp-eye');
+  i.type = i.type==='password' ? 'text' : 'password';
+  e.textContent = i.type==='password' ? 'visibility' : 'visibility_off';
+}
+
+/* ── VALIDATION ── */
+function lpFieldError(fieldId, msg) {
+  var errEl = document.getElementById('err-' + fieldId);
+  var inpEl = document.getElementById(fieldId);
+  if (errEl) { errEl.textContent = msg || ''; errEl.style.display = msg ? 'block' : 'none'; }
+  if (inpEl) { inpEl.classList.toggle('invalid', !!msg); }
+}
+
+function lpValidate(fields, panel) {
+  var ok = true;
+  lpNotify(null, null, panel);
+  fields.forEach(function(f) {
+    lpFieldError(f.id, null);
+    var el = document.getElementById(f.id);
+    var val = el.value.trim();
+    if (!val) { lpFieldError(f.id, f.msg); ok = false; }
+    else if (f.type === 'email') {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) { lpFieldError(f.id, 'Please enter a valid email address.'); ok = false; }
+    } else if (f.type === 'mobile') {
+      if (!/^\d{10}$/.test(val)) { lpFieldError(f.id, 'Please enter a valid 10-digit mobile number.'); ok = false; }
+    } else if (f.type === 'name') {
+      if (/[^a-zA-Z\s]/.test(val)) { lpFieldError(f.id, 'Name should only contain letters.'); ok = false; }
+    }
+  });
+  return ok;
+}
+
+/* ── LOGIN ── */
+var LP_TMP_ID = null;
+var LP_USR = null;
+var LP_PWD = null;
+
+function lpShowCredentials() {
+  document.getElementById('lp-credentials-step').style.display = '';
+  document.getElementById('lp-otp-step').style.display = 'none';
+  document.getElementById('lp-otp').value = '';
+  LP_TMP_ID = null; LP_USR = null; LP_PWD = null;
+  lpNotify(null, null, 'login');
+}
+
+function lpLoginSuccess(redir) {
+  lpNotify('Login successful. Please wait...', 'success', 'login');
+  setTimeout(function() {
+    var defaultDash = '/nlsat/my-profile';
+    if (redir && redir !== '{{ portal_base }}' && redir !== '/nlsat/my-profile' && redir.indexOf('{{ portal_login_url }}') === -1) {
+      window.location.href = redir;
+    } else {
+      window.location.href = defaultDash;
+    }
+  }, 800);
+}
+
+async function doLogin() {
+  if (!lpValidate([
+    { id: 'lp-email', type: 'text', msg: 'Please enter your username.' },
+    { id: 'lp-pwd',   type: 'text', msg: 'Please enter your password.' }
+  ], 'login')) return;
+
+  var btn   = document.getElementById('lp-login-btn');
+  var spin  = document.getElementById('lp-login-spin');
+  var label = document.getElementById('lp-login-label');
+  var redir = document.getElementById('lp-redir').value || '/nlsat/my-profile';
+
+  btn.disabled = true; spin.style.display = 'block'; label.textContent = 'Login';
+
+  LP_USR = document.getElementById('lp-email').value.trim();
+  LP_PWD = document.getElementById('lp-pwd').value;
+
+  var params = new URLSearchParams();
+  params.append('usr', LP_USR);
+  params.append('pwd', LP_PWD);
+  params.append('cmd', 'login');
+
+  try {
+    var resp = await fetch('/api/method/login', { method: 'POST', body: params, headers: { 'X-Frappe-CSRF-Token': LP_CSRF } });
+    var data = await resp.json();
+
+    if (resp.ok && data.verification && data.tmp_id) {
+      LP_TMP_ID = data.tmp_id;
+      var method = (data.verification && data.verification.method) || 'Email';
+      var hint = '';
+      if (method === 'OTP App') {
+        hint = 'Open your authenticator app and enter the 6-digit code shown for this account.';
+      } else if (method === 'SMS') {
+        hint = data.verification.prompt || 'A verification code has been sent to your mobile number.';
+      } else {
+        hint = data.verification.prompt || 'A verification code has been sent to your email address.';
+      }
+      var hintEl = document.getElementById('lp-otp-hint');
+      if (hintEl) hintEl.textContent = hint;
+      document.getElementById('lp-credentials-step').style.display = 'none';
+      document.getElementById('lp-otp-step').style.display = '';
+      document.getElementById('lp-otp').focus();
+      btn.disabled = false; spin.style.display = 'none'; label.textContent = 'Login';
+    } else if (resp.ok && (data.message === 'Logged In' || data.message === 'No App' || data.home_page)) {
+      lpLoginSuccess(redir);
+    } else {
+      lpHandleApiResponse(data, 'login', 'Invalid login credentials.');
+      btn.disabled = false; spin.style.display = 'none'; label.textContent = 'Login';
+    }
+  } catch(e) {
+    lpNotify('Connection error. Please try again.', 'danger', 'login');
+    btn.disabled = false; spin.style.display = 'none'; label.textContent = 'Login';
+  }
+}
+
+/* ── OTP VERIFY ── */
+async function doVerifyOtp() {
+  var otp = document.getElementById('lp-otp').value.trim();
+  if (!otp) { lpFieldError('lp-otp', 'Please enter the verification code.'); return; }
+
+  var btn   = document.getElementById('lp-otp-btn');
+  var spin  = document.getElementById('lp-otp-spin');
+  var label = document.getElementById('lp-otp-label');
+  var redir = document.getElementById('lp-redir').value || '/nlsat/my-profile';
+
+  btn.disabled = true; spin.style.display = 'block'; label.textContent = 'Verifying';
+  lpFieldError('lp-otp', null);
+
+  var params = new URLSearchParams();
+  params.append('cmd', 'login');
+  params.append('otp', otp);
+  params.append('tmp_id', LP_TMP_ID);
+
+  try {
+    var resp = await fetch('/api/method/login', { method: 'POST', body: params, headers: { 'X-Frappe-CSRF-Token': LP_CSRF } });
+    var data = await resp.json();
+
+    if (resp.ok && (data.message === 'Logged In' || data.message === 'No App' || data.home_page)) {
+      lpLoginSuccess(redir);
+    } else if (resp.status === 401) {
+      lpFieldError('lp-otp', 'Invalid verification code. Please try again.');
+      btn.disabled = false; spin.style.display = 'none'; label.textContent = 'Verify';
+    } else {
+      lpHandleApiResponse(data, 'login', 'Verification failed. Please try again.');
+      btn.disabled = false; spin.style.display = 'none'; label.textContent = 'Verify';
+    }
+  } catch(e) {
+    lpNotify('Connection error. Please try again.', 'danger', 'login');
+    btn.disabled = false; spin.style.display = 'none'; label.textContent = 'Verify';
+  }
+}
+
+/* ── FORGOT PASSWORD ── */
+function lpNormalizeResetPayload(data) {
+  var raw = data && data.message;
+  if (raw && typeof raw === 'object' && !Array.isArray(raw) && raw.status) {
+    return { status: raw.status, message: raw.message || '' };
+  }
+  if (raw === 'not found') return { status: 'not_found', message: '' };
+  if (raw === 'not allowed') return { status: 'not_allowed', message: '' };
+  if (raw === 'disabled') return { status: 'disabled', message: '' };
+  return { status: '', message: typeof raw === 'string' ? raw : lpExtractFrappeMessage(data, '') };
+}
+
+async function doForgotPassword() {
+  if (!lpValidate([
+    { id: 'forgot-email', type: 'email', msg: 'Please enter your email address.' }
+  ], 'forgot')) return;
+
+  var btn   = document.getElementById('lp-forgot-btn');
+  var spin  = document.getElementById('lp-forgot-spin');
+  var label = document.getElementById('lp-forgot-label');
+
+  btn.disabled = true; spin.style.display = 'block'; label.textContent = 'Sending...';
+  lpFieldError('forgot-email', null);
+  lpNotify(null, null, 'forgot');
+
+  var email = document.getElementById('forgot-email').value.trim();
+
+  try {
+    var resp = await fetch('/api/method/slcm.api.user.reset_password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Frappe-CSRF-Token': LP_CSRF },
+      body: JSON.stringify({ user: email })
+    });
+    var data = {};
+    try { data = await resp.json(); } catch (e0) { data = {}; }
+
+    var rateLimited = data.exc_type === 'RateLimitExceededError';
+    var parsed = lpNormalizeResetPayload(data);
+    var status = parsed.status;
+    var serverMsg = parsed.message || lpExtractFrappeMessage(data, '');
+
+    if (rateLimited) {
+      lpFieldError('forgot-email', serverMsg || 'Too many password reset attempts. Please try again later.');
+    } else if (resp.ok && (!status || status === 'ok')) {
+      lpNotify(serverMsg || 'A password reset link has been sent. Check your email.', 'success', 'forgot');
+    } else if (status === 'not_found') {
+      lpFieldError('forgot-email', serverMsg || 'No account found for this email address.');
+    } else if (status === 'not_allowed') {
+      lpNotify(serverMsg || 'Password reset is not allowed for this account.', 'danger', 'forgot');
+    } else if (status === 'disabled') {
+      lpNotify(serverMsg || 'This account has been disabled.', 'danger', 'forgot');
+    } else {
+      var errText = serverMsg || lpExtractFrappeMessage(data, '') || 'Could not send reset link. Please try again.';
+      if (resp.status === 404 || status === 'not_found') {
+        lpFieldError('forgot-email', errText);
+      } else {
+        lpNotify(errText, 'danger', 'forgot');
+      }
+    }
+  } catch(e) {
+    lpNotify('Connection error. Please try again.', 'danger', 'forgot');
+  } finally {
+    btn.disabled = false; spin.style.display = 'none'; label.textContent = 'Reset Password';
+  }
+}
+
+/* ── REGISTER ── */
+var EMAIL_CACHE = {};
+var EMAIL_DEBOUNCE_TIMER = null;
+var EMAIL_VERIFICATION_STATUS = null; // 'domain_valid', 'domain_invalid', 'invalid_format', 'verification_error', 'checking', null
+
+function setEmailStatus(msg, color, type) {
+  var el = document.getElementById('email-status');
+  var inp = document.getElementById('reg-email');
+  if (!el || !inp) return;
+  
+  el.textContent = msg;
+  el.style.color = color;
+  EMAIL_VERIFICATION_STATUS = type;
+  
+  if (type === 'domain_invalid' || type === 'invalid_format') {
+    inp.classList.add('invalid');
+  } else {
+    inp.classList.remove('invalid');
+  }
+
+  // Adjust input padding dynamically to prevent text overlap
+  if (msg) {
+    setTimeout(() => {
+      var width = el.offsetWidth;
+      if (width > 0) {
+        inp.style.paddingRight = (width + 20) + 'px';
+      } else {
+        // Fallback estimation
+        inp.style.paddingRight = '120px';
+      }
+    }, 0);
+  } else {
+    inp.style.paddingRight = '';
+  }
+}
+
+function handleEmailInput() {
+  clearTimeout(EMAIL_DEBOUNCE_TIMER);
+  var email = document.getElementById('reg-email').value.trim();
+  
+  if (!email) {
+    setEmailStatus('', '', null);
+    return;
+  }
+  
+  // Basic format check before calling API
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    setEmailStatus('Invalid format', '#dc2626', 'invalid_format');
+    return;
+  }
+  
+  if (EMAIL_CACHE[email]) {
+    applyVerificationResult(EMAIL_CACHE[email]);
+    return;
+  }
+
+  EMAIL_DEBOUNCE_TIMER = setTimeout(verifyEmailInput, 500);
+}
+
+async function verifyEmailInput() {
+  var email = document.getElementById('reg-email').value.trim();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
+  
+  if (EMAIL_CACHE[email]) {
+    applyVerificationResult(EMAIL_CACHE[email]);
+    return;
+  }
+
+  setEmailStatus('Wait...', '#6b7280', 'checking');
+
+  try {
+    var resp = await fetch('/api/method/slcm.api.email_verifier.verify_email', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Frappe-CSRF-Token': LP_CSRF
+      },
+      body: JSON.stringify({ email: email })
+    });
+    var data = await resp.json();
+    var result = data.message;
+    
+    if (result && result.status) {
+      EMAIL_CACHE[email] = result.status;
+      applyVerificationResult(result.status);
+    } else {
+      setEmailStatus('⚠ Error', '#f59e0b', 'verification_error');
+    }
+  } catch (e) {
+    setEmailStatus('⚠ Error', '#f59e0b', 'verification_error');
+  }
+}
+
+function applyVerificationResult(status) {
+  if (status === 'domain_valid') {
+    setEmailStatus('Email verified', '#16a34a', 'domain_valid');
+  } else if (status === 'domain_invalid') {
+    setEmailStatus('Invalid domain', '#dc2626', 'domain_invalid');
+  } else if (status === 'invalid_format') {
+    setEmailStatus('Invalid format', '#dc2626', 'invalid_format');
+  } else {
+    setEmailStatus('⚠ Verification error', '#f59e0b', 'verification_error');
+  }
+}
+
+// TFSS team added this code from here...
+var _lpRegInFlight = false;
+// ...to here (TFSS team)
+
+async function doRegister() {
+  // TFSS team added this code from here...
+  if (_lpRegInFlight) return;
+  // ...to here (TFSS team)
+
+  if (!lpValidate([
+    { id: 'reg-name',   type: 'name',   msg: 'Please enter your full name.' },
+    { id: 'reg-email',  type: 'email',  msg: 'Please enter a valid email address.' }
+  ], 'register')) return;
+
+  // TFSS team added this code from here...
+  _lpRegInFlight = true;
+  // ...to here (TFSS team)
+
+  /* Signup Restriction: Skip for now
+  if (EMAIL_VERIFICATION_STATUS !== 'domain_valid') {
+    lpNotify('Please enter a valid email address.', 'error', 'register');
+    lpFieldError('reg-email', 'Please provide a valid email with a working mail server.');
+    return;
+  } */
+
+  var btn   = document.getElementById('lp-reg-btn');
+  var spin  = document.getElementById('lp-reg-spin');
+  var label = document.getElementById('lp-reg-label');
+
+  btn.disabled = true; spin.style.display = 'block'; label.textContent = 'Create account';
+
+  var name   = document.getElementById('reg-name').value.trim();
+  var email  = document.getElementById('reg-email').value.trim();
+
+  var urlParams = new URLSearchParams(window.location.search);
+  var redirectUrl = urlParams.get('redirect-to') || urlParams.get('redirect_to') || urlParams.get('redirect') || urlParams.get('next') || '{{ portal_base }}';
+
+  try {
+    var resp = await fetch('/api/method/slcm.api.user.custom_sign_up', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Frappe-CSRF-Token': LP_CSRF },
+      body: JSON.stringify({ email: email, full_name: name, redirect_to: redirectUrl })
+    });
+    var data = await resp.json();
+    if (!resp.ok) {
+      lpHandleApiResponse(data, 'register', 'Registration failed.');
+      return;
+    }
+    var success = lpHandleApiResponse(data, 'register', 'Registration failed. Please try again.');
+    if (success) {
+      // TFSS team added this code from here...
+      if (typeof fbq === 'function') fbq('track', 'CompleteRegistration');
+      // ...to here (TFSS team)
+      document.getElementById('reg-name').value = '';
+      document.getElementById('reg-email').value = '';
+      setTimeout(function() { lpTab('login'); }, 1000);
+    }
+  } catch(e) {
+    lpNotify('Connection error. Please try again.', 'danger', 'register');
+  } finally {
+    btn.disabled = false; spin.style.display = 'none'; label.textContent = 'Register';
+    // TFSS team added this code from here...
+    _lpRegInFlight = false;
+    // ...to here (TFSS team)
+  }
+}
+
+/* ── ANNOUNCEMENT MODAL ── */
+function lpAnnOpen(idx) {
+  var a = LP_ANN[idx];
+  if (!a) return;
+  document.getElementById('ann-mtitle').textContent = a.title;
+  var meta = '';
+  if (a.type) meta += '<span class="ann-mmeta-item"><span class="material-symbols-outlined">label</span>' + a.type + '</span>';
+  if (a.date) meta += '<span class="ann-mmeta-item"><span class="material-symbols-outlined">calendar_today</span>' + a.date + '</span>';
+  document.getElementById('ann-mmeta').innerHTML = meta;
+  var img = document.getElementById('ann-mimg');
+  if (a.image) { img.src = a.image; img.style.display = 'block'; } else { img.style.display = 'none'; }
+  var sum = document.getElementById('ann-msummary');
+  if (a.summary && (!a.content || a.content.trim() === '')) { sum.textContent = a.summary; sum.style.display = 'block'; } else { sum.style.display = 'none'; }
+  document.getElementById('ann-mcontent').innerHTML = a.content || '<p style="color:#9ca3af;font-size:13px;">No additional details.</p>';
+  document.getElementById('ann-modal-bg').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function lpAnnClose(evt) {
+  if (evt && evt.target !== document.getElementById('ann-modal-bg')) return;
+  document.getElementById('ann-modal-bg').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+/* ── EVENT MODAL ── */
+/* LP_EVENTS array is indexed by position of event items inside important_dates.
+   We track events separately so the index matches loop.index0 for event-type items only. */
+function lpEvOpen(idx) {
+  var ev = LP_EVENTS[idx];
+  if (!ev) return;
+
+  document.getElementById('ev-mtitle').textContent = ev.title;
+
+  // Meta row: date + venue
+  var meta = '';
+  if (ev.date) meta += '<span class="ev-mmeta-item"><span class="material-symbols-outlined">calendar_today</span>' + ev.date + '</span>';
+  if (ev.venue) meta += '<span class="ev-mmeta-item"><span class="material-symbols-outlined">location_on</span>' + ev.venue + '</span>';
+  document.getElementById('ev-mmeta').innerHTML = meta;
+
+  // Image
+  var img = document.getElementById('ev-mimg');
+  if (ev.image) { img.src = ev.image; img.style.display = 'block'; } else { img.style.display = 'none'; }
+
+  // Summary
+  var sum = document.getElementById('ev-msummary');
+  if (ev.summary && (!ev.content || ev.content.trim() === '')) { sum.textContent = ev.summary; sum.style.display = 'block'; } else { sum.style.display = 'none'; }
+
+  // Content
+  document.getElementById('ev-mcontent').innerHTML = ev.content ||
+    '<p style="color:#9ca3af;font-size:13px;">No additional details available.</p>';
+
+  // Footer: register button (only logged-in users)
+  var footer = document.getElementById('ev-mfooter');
+  if (ev.reg_url) {
+    if (ev.is_logged_in) {
+      footer.innerHTML = '<a href="' + ev.reg_url + '" target="_blank" class="ev-reg-btn">' +
+        '<span class="material-symbols-outlined" style="vertical-align:middle;font-size:16px;margin-right:6px;">event_available</span>' +
+        'Register for Event</a>';
+    } else {
+      footer.innerHTML = '<a href="{{ portal_login_url }}?redirect=' +encodeURIComponent(ev.reg_url) + '" class="ev-reg-btn" style="background:#4b5563;">' +
+        '<span class="material-symbols-outlined" style="vertical-align:middle;font-size:16px;margin-right:6px;">login</span>' +
+        'Login to Register</a>';
+    }
+  } else {
+    footer.innerHTML = '';
+  }
+
+  document.getElementById('ev-modal-bg').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function lpEvClose(evt) {
+  if (evt && evt.target !== document.getElementById('ev-modal-bg')) return;
+  document.getElementById('ev-modal-bg').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    lpAnnClose({ target: document.getElementById('ann-modal-bg') });
+    lpEvClose({ target: document.getElementById('ev-modal-bg') });
+  }
+});
+
+document.addEventListener('keydown', function(e) {
+  if (e.key !== 'Enter') return;
+  var panelLogin = document.getElementById('panel-login');
+  var panelReg = document.getElementById('panel-register');
+  var panelForgot = document.getElementById('panel-forgot');
+  if (panelLogin && panelLogin.style.display !== 'none') {
+    var otpStep = document.getElementById('lp-otp-step');
+    if (otpStep && otpStep.style.display !== 'none') doVerifyOtp();
+    else doLogin();
+  } else if (panelReg && panelReg.style.display !== 'none') doRegister();
+  else if (panelForgot && panelForgot.style.display !== 'none') doForgotPassword();
+});
+
+/* ── INIT ON LOAD ── */
+document.addEventListener('DOMContentLoaded', function() {
+  // Intentionally left empty: do not auto-submit any form on page load.
+  // The keydown Enter handler and button onclick handlers drive form submissions.
+});
+
+/* ── ANNOUNCEMENT PAGINATION (3 per page) ── */
+var _annPage = 0;
+var _ANN_PER = 3;
+
+function initAnnPager() {
+  var rows = document.querySelectorAll('[data-ann-idx]');
+  if (!rows.length) return;
+  _annPage = 0;
+  renderAnnPage(rows);
+}
+
+function renderAnnPage(rows) {
+  rows = rows || document.querySelectorAll('[data-ann-idx]');
+  var total = rows.length;
+  var totalPages = Math.ceil(total / _ANN_PER);
+  var start = _annPage * _ANN_PER;
+  rows.forEach(function(el, i) {
+    el.style.display = (i >= start && i < start + _ANN_PER) ? '' : 'none';
+  });
+  var info = document.getElementById('ann-pager-info');
+  if (info) info.textContent = 'Page ' + (_annPage + 1) + ' / ' + totalPages;
+  var prev = document.getElementById('ann-prev');
+  var next = document.getElementById('ann-next');
+  if (prev) prev.disabled = (_annPage === 0);
+  if (next) next.disabled = (_annPage >= totalPages - 1);
+}
+
+function annPage(dir) {
+  var rows = document.querySelectorAll('[data-ann-idx]');
+  var totalPages = Math.ceil(rows.length / _ANN_PER);
+  _annPage = Math.max(0, Math.min(_annPage + dir, totalPages - 1));
+  renderAnnPage(rows);
+}
+
+/* ── IMPORTANT DATES PAGINATION (4 per page) ── */
+var _datePage = 0;
+var _DATE_PER = 4;
+
+function initDatePager() {
+  var items = document.querySelectorAll('[data-date-idx]');
+  if (!items.length) return;
+  _datePage = 0;
+  renderDatePage(items);
+  // hide pager controls if everything fits on one page
+  var pager = document.getElementById('date-pager');
+  if (pager && items.length <= _DATE_PER) {
+    var btns = pager.querySelector('.card-pager-btns');
+    if (btns) btns.style.display = 'none';
+    var info = document.getElementById('date-pager-info');
+    if (info) info.textContent = '';
+  }
+}
+
+function renderDatePage(items) {
+  items = items || document.querySelectorAll('[data-date-idx]');
+  var total = items.length;
+  var totalPages = Math.ceil(total / _DATE_PER);
+  var start = _datePage * _DATE_PER;
+  items.forEach(function(el, i) {
+    el.style.display = (i >= start && i < start + _DATE_PER) ? 'flex' : 'none';
+  });
+  var info = document.getElementById('date-pager-info');
+  if (info) {
+    if (totalPages > 1) {
+      info.textContent = 'Page ' + (_datePage + 1) + ' / ' + totalPages;
+    } else {
+      info.textContent = '';
+    }
+  }
+  var prev = document.getElementById('date-prev');
+  var next = document.getElementById('date-next');
+  if (prev) prev.disabled = (_datePage === 0);
+  if (next) next.disabled = (_datePage >= totalPages - 1);
+}
+
+function datePage(dir) {
+  var items = document.querySelectorAll('[data-date-idx]');
+  var totalPages = Math.ceil(items.length / _DATE_PER);
+  _datePage = Math.max(0, Math.min(_datePage + dir, totalPages - 1));
+  renderDatePage(items);
+}
+
+/* ── INIT ON LOAD ── */
+document.addEventListener('DOMContentLoaded', function() {
+  
+  function checkHash() {
+    var isClosed = {{ 'true' if not show_register_tab else 'false' }};
+    var defaultTab = isClosed ? 'login' : 'register';
+    var h = (window.location.hash || '').replace(/^#/, '');
+    if (!h || h === defaultTab) {
+      lpTab(defaultTab, { skipHashSync: true });
+      if (!h) {
+        lpSyncUrlHashForTab(defaultTab);
+      }
+    } else if (h === 'forgot' || h === 'register' || h === 'login') {
+      if (h === 'register' && isClosed) {
+        lpTab('login', { skipHashSync: true });
+        lpSyncUrlHashForTab('login');
+      } else {
+        lpTab(h, { skipHashSync: true });
+      }
+    }
+  }
+  window.addEventListener('hashchange', checkHash);
+  checkHash();
+});
+</script>
+
+</body>
+</html>

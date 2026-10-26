@@ -1,0 +1,184 @@
+{% extends "slcm/www/admission/admission_base.html" %}
+{% from "slcm/www/admission/_sidebar.html" import portal_sidebar_css, portal_sidebar_html, portal_sidebar_js %}
+
+{% block title %}Help Desk — Admissions{% endblock %}
+
+{% block adm_container_extra_class %}portal-layout-container{% endblock %}
+
+{% block theme_vars %}
+<style>
+  :root {
+    --primary:   {{ portal_config.get('primary_color', '#1a3c6e') if portal_config and portal_config.get else (portal_config.primary_color if portal_config else '#1a3c6e') }};
+    --secondary: {{ portal_config.get('secondary_color', '#c8a14b') if portal_config and portal_config.get else (portal_config.secondary_color if portal_config else '#c8a14b') }};
+    --accent:    {{ portal_config.get('secondary_color', '#c8a14b') if portal_config and portal_config.get else (portal_config.secondary_color if portal_config else '#c8a14b') }};
+    --primary-light: color-mix(in srgb, var(--primary) 12%, transparent);
+    --primary-mid:   color-mix(in srgb, var(--primary) 25%, transparent);
+    --text-1: #1f2937;
+    --text-2: #374151;
+    --text-3: #6b7280;
+    --text-4: #9ca3af;
+    --border: #e5e7eb;
+    --bg:     #f3f4f6;
+    --card-bg:#ffffff;
+    --navbar-color: {{ portal_config.get('navbar_color','#2B2E4A') if portal_config and portal_config.get else (portal_config.navbar_color if portal_config else '#2B2E4A') }};
+    --radius: 14px;
+  }
+</style>
+{% endblock %}
+
+{% block page_css %}
+{{ get_typography_style_block(
+    portal_config.font_family,
+    font_size_heading=portal_config.font_size_heading,
+    font_size_subheading=portal_config.font_size_subheading,
+    font_size_body=portal_config.font_size_body,
+    font_size_form_title=portal_config.font_size_form_title,
+    font_size_toast=portal_config.font_size_toast,
+    primary_color=portal_config.primary_color,
+    secondary_color=portal_config.secondary_color,
+    navbar_color=portal_config.navbar_color,
+    footer_color=portal_config.footer_color,
+    button_border_radius=portal_config.button_border_radius
+) }}
+
+<style>
+  body,
+  .adm-main,
+  .adm-container {
+    background: #f5f7f8 !important;
+  }
+
+  {{ portal_sidebar_css() }}
+
+  /* ── Helpdesk content card ──────────────────────────── */
+  .hd-card {
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    overflow: hidden;
+    min-height: 80vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  #hd-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 24px;
+    gap: 16px;
+    flex: 1;
+  }
+
+  @keyframes hd-spin { to { transform: rotate(360deg); } }
+
+  #hd-frame {
+    width: 100%;
+    border: none;
+    min-height: 80vh;
+    display: none;
+    flex: 1;
+  }
+
+  /* ── Animations ─────────────────────────────────────── */
+  @keyframes fadeInUp {
+    from { opacity:0; transform:translateY(18px); }
+    to   { opacity:1; transform:translateY(0);    }
+  }
+
+  .fade-in-up {
+    animation: fadeInUp 0.45s cubic-bezier(0.16,1,0.3,1) forwards;
+    opacity: 0;
+  }
+</style>
+<!-- Tailwind CSS -->
+
+{% endblock %}
+
+{% block content %}
+{% set _pc = portal_config if (portal_config and portal_config.get) else frappe.get_doc("Applicant Portal Config", "Applicant Portal Config", ignore_permissions=True) %}
+{% set _mission_txt = (_pc.get('mission_text') if _pc.get else _pc.mission_text) or '' %}
+
+<div class="portal-page-wrapper">
+  <div class="portal-page-inner">
+
+    <!-- ══ SHARED SIDEBAR ══════════════════════════════════════ -->
+    {{ portal_sidebar_html(active='helpdesk', portal_config=portal_config, mission_txt=_mission_txt) }}
+
+    <!-- ══ MAIN CONTENT ══════════════════════════════════════════ -->
+    <main class="portal-content-col" style="display:flex;flex-direction:column;gap:16px;">
+
+      <!-- Page header -->
+      <div class="fade-in-up" style="animation-delay:0.05s;">
+        <h1 style="font-size:26px;font-weight:800;color:var(--primary);margin:0;letter-spacing:-0.02em;">
+          Helpdesk
+        </h1>
+        <p style="font-size:13px;color:#64748b;margin:6px 0 0;">
+          Raise a support ticket or track your existing requests.
+        </p>
+      </div>
+
+      <!-- Helpdesk iframe card -->
+      <div class="hd-card fade-in-up" style="animation-delay:0.12s;">
+        <div id="hd-loading">
+          <span class="ms-icon"
+            style="font-size:48px;color:var(--primary);animation:hd-spin 1.2s linear infinite;">
+            progress_activity
+          </span>
+          <p style="margin:0;font-size:14px;color:#94a3b8;">Loading Helpdesk…</p>
+        </div>
+        <iframe
+          id="hd-frame"
+          src="/helpdesk"
+          title="Helpdesk"
+          allow="same-origin"
+          onload="hdFrameReady()"
+        ></iframe>
+      </div>
+
+    </main>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  'use strict';
+
+  /* ── Iframe ready ──────────────────────────────────────────────── */
+  function hdFrameReady() {
+    var frame   = document.getElementById('hd-frame');
+    var loader  = document.getElementById('hd-loading');
+    if (loader) loader.style.display = 'none';
+    if (frame)  frame.style.display  = 'block';
+  }
+  window.hdFrameReady = hdFrameReady;
+
+  /* ── Resize iframe to fill remaining viewport ─────────────────── */
+  function resizeFrame() {
+    var f = document.getElementById('hd-frame');
+    if (!f) return;
+    var rect      = f.getBoundingClientRect();
+    var remaining = window.innerHeight - rect.top - 8;
+    f.style.minHeight = Math.max(500, remaining) + 'px';
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    /* Fallback: if onload already fired */
+    var frame = document.getElementById('hd-frame');
+    if (frame && frame.contentDocument && frame.contentDocument.readyState === 'complete') {
+      hdFrameReady();
+    }
+    resizeFrame();
+    window.addEventListener('resize', resizeFrame);
+  });
+})();
+</script>
+<script>
+{{ portal_sidebar_js() }}
+</script>
+{% endblock %}
+

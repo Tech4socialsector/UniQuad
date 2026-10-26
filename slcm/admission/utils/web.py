@@ -174,17 +174,17 @@ def _portal_href_for_notification_log(
             dt = (document_type or "").strip()
             ol = _resolve_offer_letter_for_portal(dt, dn, subject, email_content)
             if ol:
-                base = f"/offer_letter/offer-letter-detail?offer={quote(ol, safe='')}"
+                base = f"/nlsat/offer_letter/offer-letter-detail?offer={quote(ol, safe='')}"
             elif dt == "Applicant" and dn:
-                base = f"/my-applications?app={quote(dn, safe='')}"
+                base = f"/nlsat/my-applications?app={quote(dn, safe='')}"
             elif dt in ("Scholarship Application", "Scholarship Scheme", "Scholarship Utilization"):
-                base = "/merit-and-scholarship/scholarships"
+                base = "/nlsat/scholarships"
             elif "Scholarship" in dt:
-                base = "/merit-and-scholarship/scholarships"
+                base = "/nlsat/scholarships"
             elif dt == "User" and dn:
-                base = "/merit-and-scholarship/admission_dashboard?panel=profile"
+                base = "/nlsat/my-profile"
             else:
-                base = "/merit-and-scholarship/admission_dashboard"
+                base = "/nlsat/dashboard"
 
     if notif_log_name:
         base = _append_query_param(base, "notif", notif_log_name)
@@ -242,7 +242,7 @@ def mark_portal_announcement_read(name=None):
 
 
 @frappe.whitelist(methods=["POST", "GET"])
-def get_portal_notifications(notif_page=None, ann_page=None, page_length=None):
+def get_portal_notifications(notif_page=None, ann_page=None, page_length=None, portal_type=None):
     """
     Notifications: Desk Notification Log for session user (paginated).
     Announcements: Portal Announcement with per-user read state (paginated).
@@ -268,7 +268,48 @@ def get_portal_notifications(notif_page=None, ann_page=None, page_length=None):
             "Notification Log", filters={"for_user": user, "read": 0}
         )
 
-        ann_filters = {"is_active": 1, "status": "Published"}
+        # ── Determine which announcements are visible for this portal/user ──
+        from slcm.admission.utils.nlsat_portal import (
+            DOMESTIC, INTERNATIONAL, get_applicant_portal_type, get_current_portal_type,
+            get_candidate_prefix, PACE_PREFIX,
+        )
+        user_app_type = get_applicant_portal_type(user) if user and user != "Guest" else None
+        _resolved_portal = (portal_type or "").strip() or user_app_type or get_current_portal_type()
+        _prefix = get_candidate_prefix(user)
+        _is_pace = (_prefix == PACE_PREFIX) or (_resolved_portal == "PACE")
+
+        DOMESTIC_AUDIENCES = [
+            "Global",
+            "NLSAT \u2013 Domestic",
+            "NLSAT - Domestic",
+            "NLSAT \u2013 Domestic & International",
+            "NLSAT - Domestic & International",
+            "NLSAT \u2013 Domestic and International",
+            "NLSAT - Domestic and International",
+        ]
+        INTERNATIONAL_AUDIENCES = [
+            "Global",
+            "NLSAT \u2013 International",
+            "NLSAT - International",
+            "NLSAT \u2013 Domestic & International",
+            "NLSAT - Domestic & International",
+            "NLSAT \u2013 Domestic and International",
+            "NLSAT - Domestic and International",
+        ]
+        PACE_AUDIENCES = ["Global", "PACE"]
+
+        if _is_pace:
+            _allowed_audiences = PACE_AUDIENCES
+        elif _resolved_portal == INTERNATIONAL:
+            _allowed_audiences = INTERNATIONAL_AUDIENCES
+        else:
+            _allowed_audiences = DOMESTIC_AUDIENCES
+
+        ann_filters = {
+            "is_active": 1,
+            "status": "Published",
+            "target_audience": ["in", _allowed_audiences],
+        }
         ann_total = frappe.db.count("Portal Announcement", filters=ann_filters)
         ann_all_names = frappe.get_all(
             "Portal Announcement",
@@ -367,9 +408,29 @@ def get_portal_notifications(notif_page=None, ann_page=None, page_length=None):
         return {"notifications": [], "announcements": []}
 
 @frappe.whitelist(allow_guest=True)
-def get_public_announcements(target_audience=None):
+def get_public_announcements(target_audience=None, portal_type=None):
     """Returns announcements visible without login"""
     try:
+        DOMESTIC_AUDIENCES = [
+            "Global",
+            "NLSAT \u2013 Domestic",
+            "NLSAT - Domestic",
+            "NLSAT \u2013 Domestic & International",
+            "NLSAT - Domestic & International",
+            "NLSAT \u2013 Domestic and International",
+            "NLSAT - Domestic and International",
+        ]
+        INTERNATIONAL_AUDIENCES = [
+            "Global",
+            "NLSAT \u2013 International",
+            "NLSAT - International",
+            "NLSAT \u2013 Domestic & International",
+            "NLSAT - Domestic & International",
+            "NLSAT \u2013 Domestic and International",
+            "NLSAT - Domestic and International",
+        ]
+        PACE_AUDIENCES = ["Global", "PACE"]
+
         filters = {"is_active": 1, "status": "Published"}
         if target_audience:
             if isinstance(target_audience, str):
@@ -379,6 +440,21 @@ def get_public_announcements(target_audience=None):
                 except Exception:
                     target_audience = [target_audience]
             filters["target_audience"] = ["in", target_audience]
+        elif portal_type:
+            pt = (portal_type or "").strip()
+            if pt == "PACE":
+                filters["target_audience"] = ["in", PACE_AUDIENCES]
+            elif pt in ("International", "NLSAT \u2013 International", "NLSAT - International"):
+                filters["target_audience"] = ["in", INTERNATIONAL_AUDIENCES]
+            else:
+                filters["target_audience"] = ["in", DOMESTIC_AUDIENCES]
+        else:
+            from slcm.admission.utils.nlsat_portal import DOMESTIC, INTERNATIONAL, get_current_portal_type
+            pt = get_current_portal_type()
+            if pt == INTERNATIONAL:
+                filters["target_audience"] = ["in", INTERNATIONAL_AUDIENCES]
+            else:
+                filters["target_audience"] = ["in", DOMESTIC_AUDIENCES]
             
         ann = frappe.get_all("Portal Announcement",
             filters=filters,

@@ -1173,7 +1173,7 @@ function _paceSetupMobileNavDrawer() {
 	if (bellD) {
 		bellD.addEventListener('click', function () {
 			closeDrawer();
-			window.location.href = '/merit-and-scholarship/admission_dashboard';
+			window.location.href = '/pace/my-profile';
 		});
 	}
 	var loD = document.getElementById('slcm-nav-logout-drawer');
@@ -1201,7 +1201,7 @@ function _paceSetupMobileNavDrawer() {
 
 /**
  * Nav + footer matching slcm/admission/web_form/applicant_form.js _buildShell
- * and slcm/www/admission_base.html (Admission, optional PACE Admission, bell, profile, programme grid footer).
+ * and slcm/www/admission/admission_base.html (Admission, optional PACE Admission, bell, profile, programme grid footer).
  */
 function _paceBuildAdmissionShell(ws, cfg, user, uinfo) {
 	if (document.getElementById('slcm-adm-nav')) return;
@@ -1564,7 +1564,7 @@ function _paceBuildAdmissionShell(ws, cfg, user, uinfo) {
 			'<div style="font-size:13px;color:#1e293b;font-weight:400;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px;">' +
 			_paceEsc(user) +
 			'</div></div>' +
-			'<a href="/merit-and-scholarship/admission_dashboard?panel=profile" style="display:flex;align-items:center;gap:10px;padding:12px 16px;text-decoration:none;color:#334155;font-size:14px;font-weight:300;">' +
+			'<a href="/pace/my-profile" style="display:flex;align-items:center;gap:10px;padding:12px 16px;text-decoration:none;color:#334155;font-size:14px;font-weight:300;">' +
 			'<span style="font-family:\'Material Symbols Outlined\' !important;font-size:18px;color:' +
 			primary +
 			'">account_circle</span>Profile</a>' +
@@ -1611,7 +1611,7 @@ function _paceBuildAdmissionShell(ws, cfg, user, uinfo) {
 	var bellBtn = document.getElementById('slcm-bell-btn');
 	if (bellBtn) {
 		bellBtn.addEventListener('click', function () {
-			window.location.href = '/merit-and-scholarship/admission_dashboard';
+			window.location.href = '/pace/my-profile';
 		});
 	}
 
@@ -4579,7 +4579,7 @@ function _paceShowErrorModal(message, customUrl, customLabel) {
 		'background:rgba(0,0,0,0.6)', 'backdrop-filter:blur(5px)'
 	].join(';');
 
-	var url = customUrl || '/merit-and-scholarship/admission_dashboard?panel=profile';
+	var url = customUrl || '/pace/my-profile';
 	var label = customLabel || __('My Profile');
 
 	overlay.innerHTML =

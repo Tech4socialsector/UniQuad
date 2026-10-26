@@ -308,7 +308,7 @@ def _send_merit_email_local(doc, row, email):
         "overall_rank": row.overall_rank or "—",
         "total_score": row.total_score or "0",
         "published_date": pub_date,
-        "portal_link": frappe.utils.get_url(f"/my-applications?app={row.applicant_id}")
+        "portal_link": frappe.utils.get_url(f"/nlsat/my-applications?app={row.applicant_id}")
     }
 
     subject = frappe.render_template(template.subject, args)
@@ -351,7 +351,7 @@ def _send_merit_system_notification_local(doc, row, email):
         message_body = f"""
             <p>The merit list <strong>"{doc.name}"</strong> has been published.</p>
             <p>Your rank and merit score are now available.</p>
-            <p><a href="/my-applications?app={row.applicant_id}" style="color: #16a34a; font-weight: bold;">Click here to view your result.</a></p>
+            <p><a href="/nlsat/my-applications?app={row.applicant_id}" style="color: #16a34a; font-weight: bold;">Click here to view your result.</a></p>
         """
         
         frappe.get_doc({
@@ -363,7 +363,7 @@ def _send_merit_system_notification_local(doc, row, email):
             "document_type": "Merit List",
             "document_name": doc.name,
             "from_user": frappe.session.user,
-            "link": f"/my-applications?app={row.applicant_id}"
+            "link": f"/nlsat/my-applications?app={row.applicant_id}"
         }).insert(ignore_permissions=True)
 
 

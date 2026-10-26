@@ -1107,7 +1107,7 @@ class SeatAllocation(Document):
             message_body = f"""
                 <p>The Seat Allocation for <strong>"{self.name}"</strong> has been published.</p>
                 <p>Your status: <strong>{row.selection_status}</strong></p>
-                <p><a href="/my-applications?app={row.applicant_id}" style="color: #1a3c6e; font-weight: bold;">Click here to view your seat allocation details.</a></p>
+                <p><a href="/nlsat/my-applications?app={row.applicant_id}" style="color: #1a3c6e; font-weight: bold;">Click here to view your seat allocation details.</a></p>
             """
             
             frappe.get_doc({
@@ -1119,7 +1119,7 @@ class SeatAllocation(Document):
                 "document_type": "Seat Allocation",
                 "document_name": self.name,
                 "from_user": frappe.session.user,
-                "link": f"/my-applications?app={row.applicant_id}"
+                "link": f"/nlsat/my-applications?app={row.applicant_id}"
             }).insert(ignore_permissions=True)
 
     @frappe.whitelist()

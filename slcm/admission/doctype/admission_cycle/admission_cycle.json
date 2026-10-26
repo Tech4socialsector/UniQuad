@@ -12,6 +12,7 @@
   "academic_year",
   "approval_reference",
   "enable_applicant_register_tab",
+  "enable_international_register_tab",
   "allow_multiple_applications",
   "application_form_type",
   "enable_scholarship",
@@ -246,7 +247,14 @@
    "default": "1",
    "fieldname": "enable_applicant_register_tab",
    "fieldtype": "Check",
-   "label": "Enable Applicant Register Tab"
+   "label": "Enable Applicant Register Tab (Indian Nationals)"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "1",
+   "fieldname": "enable_international_register_tab",
+   "fieldtype": "Check",
+   "label": "Enable Applicant Register Tab (International)"
   },
   {
    "allow_on_submit": 1,
@@ -273,7 +281,7 @@
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2026-10-16 16:33:17.183286",
+ "modified": "2026-10-22 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Admission Cycle",

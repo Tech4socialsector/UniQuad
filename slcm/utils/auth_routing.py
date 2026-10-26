@@ -1,5 +1,6 @@
 import frappe
 import urllib.parse
+from slcm.admission.utils.nlsat_portal import get_portal_login_url, get_portal_type_from_path
 from werkzeug.exceptions import HTTPException
 from werkzeug.wrappers import Response
 
@@ -91,13 +92,14 @@ def intercept_login():
 
     # 1. Intercept Guest hitting protected Web Forms directly BEFORE Frappe drops the query params
     if frappe.session.user == "Guest":
-        applicant_route = (frappe.get_cached_value("Web Form", "applicant-form", "route") or "admission/application-form").strip("/")
+        applicant_route = (frappe.get_cached_value("Web Form", "applicant-form", "route") or "nlsatadmissions/application-form").strip("/")
         pace_route = (frappe.get_cached_value("Web Form", "pace-application-form", "route") or "paceadmissions/application-form").strip("/")
 
         if (normalized_path.startswith(pace_route) or normalized_path.startswith("pace-application-form")):
             raise AuthRedirect(f"/paceadmissions/login?redirect-to={encoded_url}#register")
         elif (normalized_path.startswith(applicant_route) or normalized_path.startswith("applicant-form")):
-            raise AuthRedirect(f"/admission/login?redirect-to={encoded_url}#register")
+            portal_type = "International" if frappe.form_dict.get("foriegn_national") == "Yes" else None
+            raise AuthRedirect(f"{get_portal_login_url(portal_type)}?redirect-to={encoded_url}#register")
 
         if path.startswith("/student-portal") or path.startswith("/faculty-portal"):
             encoded_url = urllib.parse.quote(path, safe='')
@@ -108,7 +110,7 @@ def intercept_login():
             raise AuthRedirect(f"/portal-login?tab=parent&redirect-to={encoded_url}")
 
     elif frappe.session.user != "Guest":
-        applicant_route = (frappe.get_cached_value("Web Form", "applicant-form", "route") or "admission/application-form").strip("/")
+        applicant_route = (frappe.get_cached_value("Web Form", "applicant-form", "route") or "nlsatadmissions/application-form").strip("/")
         pace_route = (frappe.get_cached_value("Web Form", "pace-application-form", "route") or "paceadmissions/application-form").strip("/")
         
         is_application_form = False
@@ -184,7 +186,7 @@ def intercept_login():
         elif logged_out_from == "pace" or logged_out_from == "paceadmissions":
             raise AuthRedirect("/paceadmissions/login")
         elif logged_out_from == "admission":
-            raise AuthRedirect("/admission/login")
+            raise AuthRedirect(get_portal_login_url())
         elif logged_out_from == "student" or logged_out_from == "faculty":
             raise AuthRedirect("/portal-login?tab=faculty-student")
         elif logged_out_from == "parent":
@@ -195,8 +197,9 @@ def intercept_login():
 
         if "/paceadmissions/application-form" in redirect_to or "/pace/" in redirect_to or "/paceadmissions" in redirect_to:
             raise AuthRedirect(f"/paceadmissions/login?redirect-to={urllib.parse.quote(redirect_to, safe='')}")
-        elif "/applicant-form" in redirect_to or "/admission/" in redirect_to:
-            raise AuthRedirect(f"/admission/login?redirect-to={urllib.parse.quote(redirect_to, safe='')}")
+        elif any(r in redirect_to for r in ("/applicant-form", "/admission/", "/nlsatadmissions", "/nlsat-international")):
+            portal_type = get_portal_type_from_path(urllib.parse.urlparse(redirect_to).path)
+            raise AuthRedirect(f"{get_portal_login_url(portal_type)}?redirect-to={urllib.parse.quote(redirect_to, safe='')}")
         elif "/student-portal" in redirect_to or "/faculty-portal" in redirect_to:
             raise AuthRedirect(f"/portal-login?tab=faculty-student&redirect-to={urllib.parse.quote(redirect_to, safe='')}")
         elif "/parent-portal" in redirect_to:
@@ -452,7 +455,7 @@ def handle_logout(login_manager=None):
         target = "desk"
     elif "/paceadmissions" in referrer or "/pace" in referrer:
         target = "paceadmissions"
-    elif "/admission" in referrer or "/applicant" in referrer:
+    elif "/admission" in referrer or "/nlsat" in referrer or "/applicant" in referrer:
         target = "admission"
     elif "/student-portal" in referrer or "/student/" in referrer:
         target = "student"

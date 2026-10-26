@@ -31,7 +31,7 @@ frappe.ui.form.on('Applicant Fee Assignment', {
             },);
         }
 
-        if (frm.doc.docstatus === 1 && ["Partially Paid", "Paid"].includes(frm.doc.status) && frm.doc.fee_type === "Admission Fee") {
+        if (frm.doc.docstatus === 1 && ["Partially Paid", "Paid"].includes(frm.doc.status) && ["Admission Fee", "Course Fee"].includes(frm.doc.fee_type)) {
             const student_btn = frm.add_custom_button(__('Convert to Student'), function () {
                 frappe.confirm(__('This action will create a Student Master. Continue?'),
                     function () {
@@ -63,7 +63,7 @@ frappe.ui.form.on('Applicant Fee Assignment', {
 
 
 
-        if (frm.doc.docstatus === 1 && ["Assigned", "Partially Paid"].includes(frm.doc.status) && ["Admission Fee", "Confirmation Fee"].includes(frm.doc.fee_type) && frm.doc.offer_letter) {
+        if (frm.doc.docstatus === 1 && ["Assigned", "Partially Paid"].includes(frm.doc.status) && ["Admission Fee", "Confirmation Fee", "Course Fee"].includes(frm.doc.fee_type) && frm.doc.offer_letter) {
             frm.add_custom_button(__('Record Manual Payment'), function () {
                 if (frm.doc.status === "Paid") {
                     frappe.msgprint(__('Fee has already been paid for this assignment.'));

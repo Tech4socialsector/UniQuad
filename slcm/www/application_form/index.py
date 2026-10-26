@@ -1,6 +1,7 @@
 import html
 
 import frappe
+from slcm.admission.utils.nlsat_portal import get_portal_base, get_portal_login_url
 from frappe import _
 from frappe.utils import flt, now, nowdate, strip_html
 
@@ -108,19 +109,19 @@ def start_application(program=None, admission_cycle=None, campus=None, program_l
     Validate program + cycle and redirect to the Applicant web form or /application_form (per cycle).
     """
     if frappe.session.user == "Guest":
-        frappe.local.flags.redirect_location = "/admission/login?redirect-to=/admission"
+        frappe.local.flags.redirect_location = get_portal_login_url() + "?redirect-to=" + get_portal_base()
         raise frappe.Redirect
     program = (program or "").strip()
     admission_cycle = (admission_cycle or "").strip()
     if not program or not admission_cycle:
-        frappe.local.flags.redirect_location = "/admission"
+        frappe.local.flags.redirect_location = get_portal_base()
         raise frappe.Redirect
     exists = frappe.db.exists(
         "Admission Cycle Program",
         {"parent": admission_cycle, "program": program, "is_active": 1},
     )
     if not exists:
-        frappe.local.flags.redirect_location = "/admission"
+        frappe.local.flags.redirect_location = get_portal_base()
         raise frappe.Redirect
     _redirect_portal_to_application_entry(
         program,
@@ -140,7 +141,7 @@ def start_application(program=None, admission_cycle=None, campus=None, program_l
 def get_context(context):
     _check_access(
         allowed_roles=["Applicant", "System Manager", "Administrator"],
-        login_redirect="/admission/login"
+        login_redirect=get_portal_login_url()
     )
     """
     Builds the Jinja context for the application form web page.
@@ -148,7 +149,7 @@ def get_context(context):
     from slcm.admission.utils.portal import admission_cycle_uses_applicant_web_form
 
     if frappe.session.user == "Guest":
-        frappe.local.flags.redirect_location = "/admission/login?redirect-to=/admission"
+        frappe.local.flags.redirect_location = get_portal_login_url() + "?redirect-to=" + get_portal_base()
         raise frappe.Redirect
 
     applicant_name = (frappe.form_dict.get("applicant") or "").strip()
@@ -157,13 +158,13 @@ def get_context(context):
     if applicant_name:
         try:
             if not frappe.db.exists("Applicant", applicant_name):
-                frappe.local.flags.redirect_location = "/my-applications"
+                frappe.local.flags.redirect_location = "/nlsat/my-applications"
                 raise frappe.Redirect
             doc = frappe.get_doc("Applicant", applicant_name)
             user = frappe.session.user
             email = frappe.db.get_value("User", user, "email") or user
             if doc.owner != user and (doc.email or "").lower() != (email or "").lower():
-                frappe.local.flags.redirect_location = "/my-applications"
+                frappe.local.flags.redirect_location = "/nlsat/my-applications"
                 raise frappe.Redirect
             if admission_cycle_uses_applicant_web_form(doc.admission_cycle):
                 frappe.local.flags.redirect_location = f"/applicant-form/{applicant_name}"
@@ -177,7 +178,7 @@ def get_context(context):
             raise
         except Exception:
             frappe.log_error(frappe.get_traceback(), "Application Form — redirect by applicant")
-            frappe.local.flags.redirect_location = "/my-applications"
+            frappe.local.flags.redirect_location = "/nlsat/my-applications"
             raise frappe.Redirect
 
     user = frappe.session.user
@@ -194,7 +195,7 @@ def get_context(context):
                 if admission_cycle_uses_applicant_web_form(url_cycle):
                     _redirect_portal_to_application_entry(url_program, url_cycle, frappe.form_dict)
             else:
-                frappe.local.flags.redirect_location = "/admission"
+                frappe.local.flags.redirect_location = get_portal_base()
                 raise frappe.Redirect
 
     session_sel = (

@@ -35,7 +35,7 @@
    "fieldname": "portal_type",
    "fieldtype": "Select",
    "label": "Portal Type",
-   "options": "Both\nAdmission\nPACE"
+   "options": "Both\nNLSAT \u2013 Domestic\nNLSAT \u2013 International\nNLSAT \u2013 Domestic & International\nPACE"
   },
   {
    "fieldname": "url",
@@ -52,7 +52,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-21 11:03:55.023049",
+ "modified": "2026-10-23 10:06:54.437647",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Important Dates",

@@ -1,0 +1,1576 @@
+{# Website Settings: no "title" field in current Frappe — use app_name / title_prefix via helper. #}
+{% set _wsb = get_portal_website_branding() %}
+{% set ws_title = _wsb.title %}
+{% set ws_banner = _wsb.banner_image %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Admissions{% endblock %} — {{ ws_title or "SLCM" }}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+    <link rel="stylesheet" href="/assets/slcm/css/applicant_portal.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.0/jquery.min.js"></script>
+    <!-- Suppress Tailwind Play CDN production warning in console -->
+    <script>
+        (function() {
+            const _warn = console.warn;
+            console.warn = function(...args) {
+                if (args[0] && typeof args[0] === 'string' && (args[0].includes('cdn.tailwindcss.com') || args[0].includes('tailwindcss'))) {
+                    return;
+                }
+                _warn.apply(console, args);
+            };
+        })();
+    </script>
+    <!-- Tailwind CSS v3 Play CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    {% set campus_logo = frappe.db.get_value("Campus", None, "logo") %}
+    {% set inst_logo = frappe.db.get_single_value("Institution Settings", "logo") %}
+    {% set fav_logo = campus_logo or inst_logo %}
+    {% if fav_logo %}
+    <link rel="icon" href="{{ fav_logo }}">
+    <link rel="shortcut icon" href="{{ fav_logo }}">
+    {% endif %}
+    <style>
+        /* Hide standard Frappe/Website headers & footers */
+        header.navbar,
+        .navbar.navbar-expand,
+        nav.navbar,
+        .web-header,
+        .web-navbar,
+        #navbar-main,
+        header[class*="navbar"],
+        .website-header,
+        .website-footer,
+        footer.footer,
+        #footer-main {
+            display: none !important;
+        }
+
+        .page-content {
+            margin-top: 0 !important;
+            padding-top: 0 !important;
+        }
+
+        .main-section {
+            padding-top: 0 !important;
+        }
+
+        :root {
+
+            --primary: {{ portal_config.get('primary_color','#1a3c6e') if portal_config and portal_config.get else (portal_config.primary_color if portal_config else '#1a3c6e') }};
+            --secondary: {{ portal_config.get('secondary_color','#c8a14b') if portal_config and portal_config.get else (portal_config.secondary_color if portal_config else '#c8a14b') }};
+            --accent: {{ portal_config.get('secondary_color','#c8a14b') if portal_config and portal_config.get else (portal_config.secondary_color if portal_config else '#c8a14b') }};
+            --navbar-color: {{ portal_config.get('navbar_color', '') if portal_config and portal_config.get else (portal_config.navbar_color if portal_config else '') }};
+            --footer-color: {{ portal_config.get('footer_color', '') if portal_config and portal_config.get else (portal_config.footer_color if portal_config else '') }};
+            --footer-text: {{ portal_config.get('footer_text_color', '') if portal_config and portal_config.get else (portal_config.footer_text_color if portal_config else '') }};
+            --primary-light: color-mix(in srgb, var(--primary) 10%, transparent);
+            --text-1: #1f2937;
+            --text-2: #374151;
+            --text-3: #6b7280;
+            --text-4: #9ca3af;
+            --text: #1a1a2e;
+            --muted: #6c757d;
+            --border: #e5e7eb;
+            --card-bg: #ffffff;
+            --bg: {{ portal_config.get('secondary_color','#f3f4f6') if portal_config and portal_config.get else (portal_config.secondary_color if portal_config else '#f3f4f6') }};
+            --success: #16a34a;
+            --warning: #f59e0b;
+            --danger: #dc2626;
+            --radius: 14px;
+        }
+    </style>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        /* One vertical scrollport: overflow-x:hidden on both html and body can force overflow-y:auto on
+           both (CSS 2.1 pairing), which shows two vertical scrollbars. Scroll on html only. */
+        html {
+            overflow-x: clip;
+            overflow-y: auto;
+        }
+
+        body {
+            /* font-family: set via get_typography_style_block */
+                background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding-top: 60px;
+            overflow-x: visible;
+            overflow-y: visible;
+        }
+    </style>
+    {% block theme_vars %}{% endblock %}
+
+    <style>
+        .adm-nav {
+            background: var(--navbar-color);
+            padding: 0 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 60px;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            left: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .adm-nav-brand {
+            display: flex;
+            font-family: var(--text-2);
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: #fff;
+            font-weight: 400;
+            font-size: clamp(14px, 4vw, 18px);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 65%;
+        }
+
+        @media (max-width: 992px) {
+            .adm-nav-brand {
+                font-size: 18px !important;
+                max-width: 85%;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .adm-nav-brand {
+                font-size: 12px !important;
+                max-width: calc(100% - 95px) !important;
+                white-space: normal !important;
+                line-height: 1.2 !important;
+            }
+        }
+
+        .adm-nav-brand img {
+            height: clamp(28px, 6vw, 36px);
+            width: auto;
+            flex-shrink: 0;
+        }
+
+        .adm-nav-links {
+            display: flex;
+            gap: clamp(10px, 2vw, 20px);
+            align-items: center;
+        }
+
+        .adm-nav-links a {
+            color: rgba(255, 255, 255, 0.85);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .adm-nav-links a:hover {
+            color: #fff;
+        }
+
+        /* Avatar button hover ring */
+        #adm-avatar-btn:hover {
+            border-color: rgba(255, 255, 255, 0.7) !important;
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2) !important;
+        }
+
+        /* Prevent text-select on avatar letter */
+        #adm-avatar-btn {
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .nav-btn {
+            background: var(--accent);
+            color: #fff !important;
+            padding: 6px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .nav-btn:hover {
+            opacity: 0.88;
+        }
+
+        .adm-main {
+            min-height: calc(100vh - 120px);
+            padding: 0 0 0 0;
+        }
+
+        .adm-container {
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        .panel-pager {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            padding: 14px 16px 20px;
+            border-top: 1px solid var(--border);
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .panel-pager button {
+            pointer-events: auto;
+            min-width: 32px;
+            height: 32px;
+            padding: 0 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: #fff;
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .panel-pager button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .panel-pager button.panel-pager-active {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+
+        /* Responsive container logic */
+        @media (min-width: 1600px) {
+            .adm-container {
+                max-width: 1540px;
+            }
+        }
+
+        @media (min-width: 1920px) {
+            .adm-container {
+                max-width: 1840px;
+            }
+        }
+
+        @media (min-width: 2500px) {
+            .adm-container {
+                max-width: 2300px;
+            }
+        }
+
+        @media (max-width: 1200px) {
+            .adm-container {
+                max-width: 1140px;
+                padding: 0 20px;
+            }
+        }
+
+        @media (max-width: 992px) {
+            .adm-container {
+                max-width: 960px;
+                padding: 0 18px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .adm-container {
+                max-width: 720px;
+                padding: 0 16px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .adm-container {
+                max-width: 100%;
+                padding: 0 12px;
+                /* overflow-x: hidden; */
+            }
+
+            .adm-main {
+                /* overflow-x: hidden; */
+            }
+
+            .adm-nav {
+                padding: 0 12px;
+            }
+        }
+
+        .adm-footer {
+            background: var(--footer-color);
+            color: var(--text-2);
+            text-align: center;
+            padding: 16px 24px;
+            font-size: 13px;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-primary-adm {
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary-adm:hover {
+            opacity: 0.88;
+            color: #fff;
+        }
+
+        .btn-primary-adm:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-outline-adm {
+            background: transparent;
+            color: var(--primary);
+            border: 1.5px solid var(--primary);
+            padding: 7px 18px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-outline-adm:hover {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        /* Premium confirmation modal */
+        .confirm-overlay-premium {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 100000;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .confirm-overlay-premium[style*="flex"] {
+            animation: confirmFadeIn 0.2s ease-out;
+        }
+
+        @keyframes confirmFadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .confirm-premium-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+        }
+
+        .confirm-premium-card {
+            position: relative;
+            background: #fff;
+            border-radius: 20px;
+            max-width: 420px;
+            width: 100%;
+            padding: 32px 36px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05);
+            animation: confirmSlideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes confirmSlideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px) scale(0.98);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .confirm-premium-icon {
+            width: 56px;
+            height: 56px;
+            margin: 0 auto 20px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 85%, #1e293b) 100%);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            box-shadow: 0 8px 20px color-mix(in srgb, var(--primary) 35%, transparent);
+        }
+
+        .confirm-premium-icon-svg {
+            width: 28px;
+            height: 28px;
+            color: #fff;
+        }
+
+        .confirm-premium-title {
+            font-size: 1.25rem;
+            font-weight: 400;
+            color: #0f172a;
+            margin: 0 0 12px;
+            text-align: center;
+            letter-spacing: -0.02em;
+        }
+
+        .confirm-premium-message {
+            font-size: 15px;
+            line-height: 1.6;
+            color: #475569;
+            margin-bottom: 28px;
+            text-align: center;
+            white-space: pre-line;
+        }
+
+        .confirm-premium-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: stretch;
+        }
+
+        .confirm-premium-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: none;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 10px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        .confirm-premium-close:hover {
+            background: #f1f5f9;
+            color: #475569;
+        }
+
+        .confirm-btn-cancel,
+        .confirm-btn-ok {
+            flex: 1;
+            padding: 12px 20px;
+            font-size: 15px;
+            font-weight: 600;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: none;
+        }
+
+        .confirm-btn-cancel {
+            background: #f1f5f9;
+            color: #475569;
+            border: 1.5px solid #e2e8f0;
+        }
+
+        .confirm-btn-cancel:hover {
+            background: #e2e8f0;
+            color: #334155;
+        }
+
+        .confirm-btn-ok {
+            background: var(--primary);
+            color: #fff;
+            box-shadow: 0 4px 14px color-mix(in srgb, var(--primary) 40%, transparent);
+        }
+
+        .confirm-btn-ok:hover {
+            filter: brightness(1.08);
+            box-shadow: 0 6px 20px color-mix(in srgb, var(--primary) 45%, transparent);
+        }
+
+        .panel-tab {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--muted);
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .panel-tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        /* ── Panel positioning — CSS only, no inline right ───── */
+        #ann-panel {
+            width: min(420px, 95vw);
+            right: min(-420px, -95vw);
+            transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #ann-panel.panel-open {
+            right: 0 !important;
+        }
+
+        @media (max-width: 768px) {
+            #ann-panel {
+                width: 100vw !important;
+                right: -100vw !important;
+            }
+
+            #ann-panel.panel-open {
+                right: 0 !important;
+            }
+        }
+
+        .ann-filter-btn {
+            font-size: 11px;
+            padding: 3px 9px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            background: #fff;
+            color: var(--muted);
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .ann-filter-btn.active,
+        .ann-filter-btn:focus {
+            background: var(--primary) !important;
+            color: #fff !important;
+            border-color: var(--primary) !important;
+        }
+
+        @media (max-width: 480px) {
+            #ann-panel {
+                /* Start below navbar to ensure close button is visible */
+            }
+
+            #ann-panel>div:first-child {
+                padding: 14px 16px 12px;
+            }
+
+            .panel-tab {
+                font-size: 12px;
+                padding: 9px 6px;
+            }
+
+            #ann-filters,
+            #notif-filters {
+                padding: 6px 10px !important;
+                gap: 4px !important;
+            }
+
+            .ann-filter-btn {
+                font-size: 10px !important;
+                padding: 2px 7px !important;
+            }
+        }
+
+        /* ── Hamburger button ─────────────────────────────────── */
+        .nav-hamburger {
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 5px;
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.12);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            padding: 8px;
+            transition: background 0.2s;
+            flex-shrink: 0;
+        }
+
+        .nav-hamburger:hover {
+            background: rgba(255, 255, 255, 0.22);
+        }
+
+        .nav-hamburger.open {
+            background: rgba(255, 255, 255, 0.22);
+        }
+
+        .ham-line {
+            display: block;
+            width: 20px;
+            height: 2px;
+            background: #fff;
+            border-radius: 2px;
+            transition: transform 0.25s ease, opacity 0.2s ease;
+            transform-origin: center;
+        }
+
+        .nav-hamburger.open .ham-line:nth-child(1) {
+            transform: translateY(7px) rotate(45deg);
+        }
+
+        .nav-hamburger.open .ham-line:nth-child(2) {
+            opacity: 0;
+            transform: scaleX(0);
+        }
+
+        .nav-hamburger.open .ham-line:nth-child(3) {
+            transform: translateY(-7px) rotate(-45deg);
+        }
+
+        /* ── Mobile drawer ────────────────────────────────────── */
+        .mobile-drawer {
+            position: fixed;
+            top: 60px;
+            left: 0;
+            right: 0;
+            background: #fff;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.13);
+            z-index: 999;
+            padding: 8px 0 16px;
+            transform: translateY(-10px);
+            opacity: 0;
+            pointer-events: none;
+            transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1),
+                opacity 0.18s ease;
+            border-radius: 0 0 16px 16px;
+        }
+
+        .mobile-drawer.open {
+            transform: translateY(0);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .drawer-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 13px 24px;
+            font-size: 15px;
+            font-weight: 600;
+            color: #1a1a2e;
+            text-decoration: none;
+            transition: background 0.15s;
+            border-left: 3px solid transparent;
+        }
+
+        .drawer-link:hover {
+            background: #f8fafc;
+            border-left-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .drawer-link svg {
+            opacity: 0.6;
+            flex-shrink: 0;
+        }
+
+        .drawer-link:hover svg {
+            opacity: 1;
+        }
+
+        .drawer-link-danger {
+            color: #dc2626;
+        }
+
+        .drawer-link-danger:hover {
+            background: #fef2f2;
+            border-left-color: #dc2626;
+            color: #dc2626;
+        }
+
+        .drawer-divider {
+            height: 1px;
+            background: #f0f0f0;
+            margin: 8px 24px;
+        }
+
+        /* Overlay behind drawer */
+        .drawer-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            top: 60px;
+            background: rgba(0, 0, 0, 0.25);
+            z-index: 998;
+        }
+
+        .drawer-overlay.open {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .adm-nav-links .nav-hide-mobile {
+                display: none;
+            }
+
+
+            /* Panel rules handled in dedicated block above */
+
+            .nav-hamburger {
+                display: flex;
+            }
+
+            /* Hide desktop nav links on mobile — bell stays visible */
+            .nav-hide-mobile {
+                display: none !important;
+            }
+
+            /* Keep logout button hidden on mobile (drawer has it) */
+            .nav-logout-btn {
+                display: none !important;
+            }
+        }
+
+        /* Partylight effect for 'Open' badge */
+        @keyframes partylight-bg {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        @keyframes partylight-pulse-text {
+            0% { transform: scale(1); filter: brightness(1); }
+            100% { transform: scale(1.08); filter: brightness(1.2); }
+        }
+
+        .badge-partylight-text {
+            display: inline-block;
+            font-weight: 900;
+            text-transform: uppercase;
+            background: linear-gradient(-45deg, #ff0055, #ffcc00, #00ff66, #0099ff, #cc00ff, #ff0055);
+            background-size: 400% 400%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: partylight-bg 2s linear infinite, partylight-pulse-text 0.8s ease-in-out infinite alternate;
+            vertical-align: middle;
+            line-height: 1;
+        }
+    </style>
+    {% block page_css %}
+    {% endblock %}
+
+{{ get_typography_style_block(
+    portal_config.font_family,
+    font_size_heading=portal_config.font_size_heading,
+    font_size_subheading=portal_config.font_size_subheading,
+    font_size_body=portal_config.font_size_body,
+    font_size_form_title=portal_config.font_size_form_title,
+    font_size_toast=portal_config.font_size_toast,
+    primary_color=portal_config.primary_color,
+    secondary_color=portal_config.secondary_color,
+    navbar_color=portal_config.navbar_color,
+    footer_color=portal_config.footer_color,
+    button_border_radius=portal_config.button_border_radius
+) }}
+</head>
+
+<body>
+
+    {% if portal_config and portal_config.get %}
+    {% set _pc_title = portal_config.get('portal_title') or '' %}
+    {% set _footer = portal_config.get('footer_text') or '' %}
+    {% set _cemail = portal_config.get('contact_email') or '' %}
+    {% set _active = portal_config.get('portal_active') %}
+    {% set _show_adm_page = portal_config.get('show_admission_page') %}
+    {% set _mmsg = portal_config.get('maintenance_message') or '' %}
+    {% elif portal_config %}
+    {% set _pc_title = portal_config.portal_title or '' %}
+    {% set _footer = portal_config.footer_text or '' %}
+    {% set _cemail = portal_config.contact_email or '' %}
+    {% set _active = portal_config.portal_active %}
+    {% set _show_adm_page = portal_config.show_admission_page %}
+    {% set _mmsg = portal_config.maintenance_message or '' %}
+    {% else %}
+    {% set _pc_title = '' %} {% set _footer = '' %} {% set _cemail = '' %}
+    {% set _active = 1 %} {% set _mmsg = '' %} {% set _show_adm_page = 1 %}
+    {% endif %}
+
+    {# Navbar + mobile drawer — slcm/www/admission/_navbar.html (data: _navbar.py) #}
+    {% set nav = get_nlsat_navbar_context(portal_config, current_path, nlsat_login_url) %}
+    {% include "slcm/www/admission/_navbar.html" %}
+
+    {% if _active == 0 %}
+    <main class="adm-main" style="display:flex;align-items:center;justify-content:center;">
+        <div style="text-align:center;max-width:500px;padding:40px;">
+            <h2 style="color:var(--primary); ">{{ _mmsg | safe if _mmsg else "Temporarily unavailable." }}</h2>
+        </div>
+    </main>
+    {% else %}
+    <main class="adm-main">
+        <div class="adm-container {% block adm_container_extra_class %}{% endblock %}" style="padding-top:12px;">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+    {% endif %}
+
+    {# Footer — slcm/www/admission/_footer.html (data: _footer.py) #}
+    {% include "slcm/www/admission/_footer.html" %}
+
+    <!-- Announcement slide panel -->
+    <div id="ann-overlay" style="display:none;position:fixed;inset:0;top:60px;background:rgba(0,0,0,0.35);z-index:500;"
+        onclick="closeAnnPanel()"></div>
+
+    <div id="ann-panel" style="position:fixed;top:60px;height:calc(100vh - 60px);
+            background:#fff;z-index:501;box-shadow:-4px 0 24px rgba(0,0,0,0.12);
+            display:flex;flex-direction:column;overflow:hidden;">
+
+        <!-- Panel header -->
+        <div style="padding:20px 20px 16px;border-bottom:1px solid var(--border);
+                    display:flex;justify-content:space-between;align-items:center;
+                    flex-shrink:0;">
+            <div style="font-size:16px;font-weight:700;color:var(--primary);">
+                Notifications
+            </div>
+            <button onclick="closeAnnPanel()" style="background:none;border:none;cursor:pointer;color:var(--muted);
+                    display:flex;align-items:center;justify-content:center;
+                    width:32px;height:32px;border-radius:6px;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- Panel tabs -->
+        <div style="display:flex;border-bottom:1px solid var(--border);flex-shrink:0;">
+            <button class="panel-tab active" id="tab-notif" onclick="switchPanelTab('notif')">
+                Notifications
+            </button>
+            <button class="panel-tab" id="tab-ann" onclick="switchPanelTab('ann')">
+                Announcements
+            </button>
+        </div>
+
+        <!-- Notification filters (read state only) -->
+        <div id="notif-filters" style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;padding:8px 12px;
+            border-bottom:1px solid var(--border);flex-shrink:0;">
+            <span style="font-size:11px;color:var(--muted);font-weight:600;">Filter:</span>
+            <button type="button" class="ann-filter-btn notif-read-filter active" data-read="all"
+                onclick="setNotifReadFilter('all', this)">All</button>
+            <button type="button" class="ann-filter-btn notif-read-filter" data-read="unread"
+                onclick="setNotifReadFilter('unread', this)">Unread</button>
+            <button type="button" class="ann-filter-btn notif-read-filter" data-read="read"
+                onclick="setNotifReadFilter('read', this)">Read</button>
+        </div>
+
+        <!-- Announcement filters -->
+        <div id="ann-filters" style="display:none;padding:8px 12px;
+            border-bottom:1px solid var(--border);
+            flex-wrap:wrap;gap:5px;align-items:center;">
+            <span style="font-size:11px;color:var(--muted);font-weight:600;">
+                Filter:
+            </span>
+            <button type="button" class="ann-filter-btn active" data-type="all" onclick="setAnnFilter('all', this)">
+                All
+            </button>
+            <button type="button" class="ann-filter-btn" data-type="Event" onclick="setAnnFilter('Event', this)">
+                Event
+            </button>
+            <button type="button" class="ann-filter-btn" data-type="Announcement"
+                onclick="setAnnFilter('Announcement', this)">
+                Announcement
+            </button>
+            <button type="button" class="ann-filter-btn" data-type="Alert" onclick="setAnnFilter('Alert', this)">
+                Alert
+            </button>
+            <button type="button" class="ann-filter-btn" data-type="Notice" onclick="setAnnFilter('Notice', this)">
+                Notice
+            </button>
+            <button type="button" class="ann-filter-btn" data-type="News" onclick="setAnnFilter('News', this)">
+                News
+            </button>
+        </div>
+
+        <!-- Panel content -->
+        <div id="panel-content" style="flex:1;overflow-y:auto;padding:0;">
+            <div id="panel-loading" style="padding:40px;text-align:center;color:var(--muted);font-size:13px;">
+                Wait...
+            </div>
+        </div>
+
+        <!-- Panel footer -->
+        <!-- <div style="padding:12px 20px;border-top:1px solid var(--border);flex-shrink:0;text-align:center;">
+            <a href="{{ nlsat_portal_base or '/nlsatadmissions' }}" style="font-size:13px;color:var(--primary);
+                                        font-weight:600;text-decoration:none;">
+                View all announcements →
+            </a>
+        </div> -->
+    </div>
+
+    <div id="toast-container"
+        style="position:fixed;top:72px;left:50%;transform:translateX(-50%);z-index:10050;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;max-width:min(440px,94vw);">
+    </div>
+
+    <div id="confirm-overlay" class="confirm-overlay-premium" role="dialog" aria-modal="true"
+        aria-labelledby="confirm-title">
+        <div class="confirm-premium-backdrop"></div>
+        <div class="confirm-premium-card">
+            <button type="button" class="confirm-premium-close"
+                onclick="document.getElementById('confirm-overlay').style.display='none'" aria-label="Close">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+            </button>
+            <div class="confirm-premium-icon" aria-hidden="true">
+                <svg class="confirm-premium-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+            </div>
+            <h3 id="confirm-title" class="confirm-premium-title">Confirm</h3>
+            <div id="confirm-message" class="confirm-premium-message"></div>
+            <div class="confirm-premium-actions">
+                <button id="confirm-cancel" type="button" class="confirm-btn-cancel">Cancel</button>
+                <button id="confirm-ok" type="button" class="confirm-btn-ok">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        window.csrf_token = {{ frappe.session.csrf_token | tojson }};
+        window.session_user = {{ frappe.session.user | tojson }} || 'Guest';
+        // Candidate prefix for shared pages (/nlsat or /pace) and the default landing page
+        window.ADM_PREFIX = {{ nav.prefix | tojson }};
+        window.ADM_HOME_URL = {{ ('/nlsat/dashboard' if nav.prefix == '/nlsat' else nav.profile_url) | tojson }};
+        window.PORTAL_TYPE = {{ (nav.portal_type if nav else None) | tojson }};
+
+        async function apiFetch(method, args, httpMethod = 'POST') {
+            const token = window.csrf_token || (typeof frappe !== 'undefined' ? frappe.csrf_token : '');
+            let url = '/api/method/' + method;
+            let options = {
+                method: httpMethod,
+                headers: { 'Content-Type': 'application/json', 'X-Frappe-CSRF-Token': token }
+            };
+            if (httpMethod.toUpperCase() === 'GET') {
+                if (args && Object.keys(args).length > 0) {
+                    const params = new URLSearchParams();
+                    for (const key in args) { params.append(key, args[key]); }
+                    url += '?' + params.toString();
+                }
+            } else {
+                options.body = JSON.stringify(args || {});
+            }
+            const r = await fetch(url, options);
+            const d = await r.json();
+            if (!r.ok || d.exc) {
+                let msg = 'Server error';
+                if (d._server_messages) {
+                    const msgs = JSON.parse(d._server_messages);
+                    msg = msgs.map(m => JSON.parse(m).message).join('\n');
+                } else if (d.exc) {
+                    try { msg = JSON.parse(d.exc_type) + ': ' + d.exc; } catch (e) { msg = d.exc; }
+                }
+                throw new Error(msg);
+            }
+            return d.message;
+        }
+
+        function showToast(message, type) {
+            type = type || 'info';
+            var colors = { success: '#22c55e', error: '#ef4444', info: '#3b82f6' };
+            var icons = { success: '✓', error: '✕', info: 'ℹ' };
+            var t = document.createElement('div');
+            t.style.cssText = 'background:#fff;border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,0.12);padding:12px 18px;display:flex;align-items:center;gap:10px;font-size:14px;pointer-events:auto;min-width:260px;max-width:100%;border-left:4px solid ' + (colors[type] || '#3b82f6');
+            var ic = document.createElement('span');
+            ic.style.cssText = 'color:' + (colors[type] || '#3b82f6') + ';font-weight:700;font-size:16px;flex-shrink:0;';
+            ic.textContent = icons[type] || 'ℹ';
+            var tx = document.createElement('span');
+            tx.style.cssText = 'word-break:break-word;';
+            tx.textContent = String(message == null ? '' : message);
+            t.appendChild(ic);
+            t.appendChild(tx);
+            var c = document.getElementById('toast-container');
+            if (c) {
+                c.appendChild(t);
+                setTimeout(function () {
+                    t.style.opacity = '0';
+                    t.style.transition = 'opacity 0.3s';
+                    setTimeout(function () { t.remove(); }, 300);
+                }, 4000);
+            }
+        }
+
+        function showConfirm(message, onConfirm) {
+            var o = document.getElementById('confirm-overlay');
+            var m = document.getElementById('confirm-message');
+            var ok = document.getElementById('confirm-ok');
+            var cancel = document.getElementById('confirm-cancel');
+            if (!o) { if (window.confirm(message)) onConfirm(); return; }
+            m.innerHTML = message;
+            o.style.display = 'flex';
+            ok.onclick = function () { o.style.display = 'none'; onConfirm(); };
+            cancel.onclick = function () { o.style.display = 'none'; };
+        }
+
+        // Announcements Slide Panel Logic
+        var _panelTab = 'notif';
+        var _panelData = null;
+        var _notifPage = 0;
+        var _annPage = 0;
+        var PANEL_PAGE_SIZE = 10;
+        var _notifReadFilter = 'all';
+
+        function openAnnPanel() {
+            var panel = document.getElementById('ann-panel');
+            var overlay = document.getElementById('ann-overlay');
+            if (!panel || !overlay) return;
+            panel.classList.add('panel-open');
+            overlay.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+            loadPanelData();
+        }
+
+        function closeAnnPanel() {
+            var panel = document.getElementById('ann-panel');
+            var overlay = document.getElementById('ann-overlay');
+            if (!panel || !overlay) return;
+            panel.classList.remove('panel-open');
+            overlay.style.display = 'none';
+            document.body.style.overflow = '';
+        }
+
+        function switchPanelTab(tab) {
+            _panelTab = tab;
+            ['notif', 'ann'].forEach(t => {
+                document.getElementById('tab-' + t).classList.toggle('active', t === tab);
+            });
+
+            var notifBar = document.getElementById('notif-filters');
+            if (notifBar) {
+                notifBar.style.display = (tab === 'notif') ? 'flex' : 'none';
+            }
+            var filterBar = document.getElementById('ann-filters');
+            if (filterBar) {
+                filterBar.style.display = (tab === 'ann') ? 'flex' : 'none';
+            }
+            renderPanelContent();
+        }
+
+        var _annFilter = 'all';
+        function setAnnFilter(type, btn) {
+            _annFilter = type;
+            document.querySelectorAll('#ann-filters .ann-filter-btn').forEach(function (b) {
+                b.classList.toggle('active', b.getAttribute('data-type') === type);
+            });
+            renderPanelContent();
+        }
+
+        function setNotifReadFilter(val, btn) {
+            _notifReadFilter = val;
+            document.querySelectorAll('.notif-read-filter').forEach(function (b) {
+                b.classList.toggle('active', b.getAttribute('data-read') === val);
+            });
+            renderPanelContent();
+        }
+
+        async function loadPanelData() {
+            const loading = document.getElementById('panel-loading');
+            if (loading) loading.style.display = 'block';
+
+            try {
+                if (window.session_user && window.session_user !== 'Guest') {
+                    _panelData = await apiFetch('slcm.admission.utils.web.get_portal_notifications', {
+                        notif_page: _notifPage,
+                        ann_page: _annPage,
+                        page_length: PANEL_PAGE_SIZE,
+                        portal_type: window.PORTAL_TYPE || ''
+                    });
+                } else {
+                    const params = new URLSearchParams();
+                    if (window.PORTAL_TYPE) {
+                        params.append('portal_type', window.PORTAL_TYPE);
+                    }
+                    const q = params.toString() ? '?' + params.toString() : '';
+                    const r = await fetch('/api/method/slcm.admission.utils.web.get_public_announcements' + q);
+                    const d = await r.json();
+                    _panelData = { notifications: [], announcements: d.message || [] };
+                }
+                updateBadge();
+            } catch (e) {
+                _panelData = { notifications: [], announcements: [] };
+            }
+            renderPanelContent();
+        }
+
+        function updateBadge() {
+            var badgeEl = document.getElementById('bellBadge');
+            if (window.session_user === 'Guest') {
+                if (badgeEl) badgeEl.style.display = 'none';
+                return;
+            }
+            if (!_panelData) return;
+            var uDesk = (_panelData.notif_unread_count != null)
+                ? _panelData.notif_unread_count
+                : (_panelData.notifications || []).filter(function (n) { return !n.is_read; }).length;
+            var uAnn = (_panelData.ann_unread_count != null)
+                ? _panelData.ann_unread_count
+                : (_panelData.announcements || []).filter(function (a) { return !a.is_read; }).length;
+            var unread = uDesk + uAnn;
+            if (badgeEl) {
+                if (unread > 0) {
+                    badgeEl.style.display = 'flex';
+                    badgeEl.textContent = unread > 99 ? '99+' : String(unread);
+                } else {
+                    badgeEl.style.display = 'none';
+                }
+            }
+        }
+
+        function escPanel(s) {
+            return String(s == null ? '' : s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function escAttr(s) {
+            return String(s == null ? '' : s)
+                .replace(/&/g, '&amp;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;')
+                .replace(/</g, '&lt;');
+        }
+
+        function bindPanelRowClicks() {
+            var pc = document.getElementById('panel-content');
+            if (!pc || pc.getAttribute('data-slcm-row-bound') === '1') return;
+            pc.setAttribute('data-slcm-row-bound', '1');
+            pc.addEventListener('click', function (ev) {
+                var annMarkBtn = ev.target.closest('.slcm-ann-mark-read');
+                if (annMarkBtn) {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                    var an = annMarkBtn.getAttribute('data-slcm-an');
+                    if (an) panelMarkAnnReadOnly(an);
+                    return;
+                }
+                var markBtn = ev.target.closest('.slcm-notif-mark-read');
+                if (markBtn) {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                    var mnid = markBtn.getAttribute('data-slcm-nn');
+                    if (mnid) panelMarkNotifReadOnly(mnid);
+                    return;
+                }
+                var nRow = ev.target.closest('.slcm-notif-panel-row');
+                if (nRow) {
+                    var nid = nRow.getAttribute('data-slcm-nn');
+                    var href = nRow.getAttribute('data-slcm-nh');
+                    if (nid !== null && href !== null) {
+                        panelRowClickNotif(ev, nid, href);
+                    }
+                    return;
+                }
+                var aRow = ev.target.closest('.slcm-ann-panel-row');
+                if (aRow) {
+                    var an = aRow.getAttribute('data-slcm-an');
+                    if (an !== null) {
+                        panelRowClickAnn(ev, an);
+                    }
+                }
+            });
+        }
+
+        function buildPanelPager() {
+            if (!_panelData || window.session_user === 'Guest') return '';
+            var pl = _panelData.page_length || PANEL_PAGE_SIZE;
+            if (_panelTab === 'notif') {
+                var total = _panelData.notif_total || 0;
+                var page = _panelData.notif_page || 0;
+                if (total <= pl) return '';
+                var pages = Math.max(1, Math.ceil(total / pl));
+                var html = '<div class="panel-pager"><span>Page ' + (page + 1) + ' / ' + pages + ' · ' + total + ' total</span>';
+                html += '<button type="button" ' + (page <= 0 ? 'disabled' : '') + ' onclick="goPanelNotifPage(' + (page - 1) + ')">Prev</button>';
+                html += '<button type="button" ' + (page >= pages - 1 ? 'disabled' : '') + ' onclick="goPanelNotifPage(' + (page + 1) + ')">Next</button></div>';
+                return html;
+            }
+            if (_panelTab === 'ann') {
+                var totalA = _panelData.ann_total || 0;
+                var pageA = _panelData.ann_page || 0;
+                if (totalA <= pl) return '';
+                var pagesA = Math.max(1, Math.ceil(totalA / pl));
+                var h = '<div class="panel-pager"><span>Page ' + (pageA + 1) + ' / ' + pagesA + ' · ' + totalA + ' total</span>';
+                h += '<button type="button" ' + (pageA <= 0 ? 'disabled' : '') + ' onclick="goPanelAnnPage(' + (pageA - 1) + ')">Prev</button>';
+                h += '<button type="button" ' + (pageA >= pagesA - 1 ? 'disabled' : '') + ' onclick="goPanelAnnPage(' + (pageA + 1) + ')">Next</button></div>';
+                return h;
+            }
+            return '';
+        }
+
+        function goPanelNotifPage(p) {
+            _notifPage = Math.max(0, p);
+            loadPanelData();
+        }
+
+        function goPanelAnnPage(p) {
+            _annPage = Math.max(0, p);
+            loadPanelData();
+        }
+
+        window.goPanelNotifPage = goPanelNotifPage;
+        window.goPanelAnnPage = goPanelAnnPage;
+
+        async function panelMarkNotifReadOnly(nid) {
+            if (!nid || window.session_user === 'Guest') return;
+            try {
+                await apiFetch('slcm.admission.utils.web.mark_notifications_read', { names: [nid] });
+                showToast('Marked as read.', 'success');
+                await loadPanelData();
+            } catch (err) {
+                showToast((err && err.message) ? err.message : 'Could not mark as read.', 'error');
+            }
+        }
+
+        async function panelMarkAnnReadOnly(name) {
+            if (!name || window.session_user === 'Guest') return;
+            try {
+                await apiFetch('slcm.admission.utils.web.mark_portal_announcement_read', { name: name });
+                showToast('Marked as read.', 'success');
+                await loadPanelData();
+            } catch (err) {
+                showToast((err && err.message) ? err.message : 'Could not mark as read.', 'error');
+            }
+        }
+
+        function panelRowClickNotif(ev, name, href) {
+            if (ev) ev.preventDefault();
+            var dest = href || window.ADM_HOME_URL;
+            if (!name || window.session_user === 'Guest') {
+                window.location.href = dest;
+                return;
+            }
+            (async function () {
+                try {
+                    await apiFetch('slcm.admission.utils.web.mark_notifications_read', { names: [name] });
+                } catch (e) {
+                    console.error(e);
+                }
+                window.location.href = dest;
+            })();
+        }
+
+        function panelRowClickAnn(ev, name) {
+            if (ev) ev.preventDefault();
+            window.location.href = window.ADM_PREFIX + '/announcement/' + encodeURIComponent(name);
+        }
+
+        function renderPanelContent() {
+            var content = document.getElementById('panel-content');
+            if (!content) return;
+
+            function formatNotificationDate(dateStr) {
+                if (!dateStr) return '';
+                var mTime = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})(?:\s+|T)(\d{2}):(\d{2}):(\d{2})/);
+                if (mTime) {
+                    var year = mTime[1];
+                    var month = mTime[2];
+                    var day = mTime[3];
+                    var hours = parseInt(mTime[4], 10);
+                    var minutes = mTime[5];
+                    var ampm = hours >= 12 ? 'PM' : 'AM';
+                    hours = hours % 12;
+                    hours = hours ? hours : 12;
+                    var hourStr = String(hours).padStart(2, '0');
+                    return day + '-' + month + '-' + year + ' ' + hourStr + ':' + minutes + ' ' + ampm;
+                }
+                var mDate = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                if (mDate) {
+                    var year = mDate[1];
+                    var month = mDate[2];
+                    var day = mDate[3];
+                    return day + '-' + month + '-' + year;
+                }
+                return dateStr;
+            }
+
+            var loading = document.getElementById('panel-loading');
+            if (loading) loading.style.display = 'none';
+
+            if (!_panelData) return;
+
+            var rawItems = _panelTab === 'notif'
+                ? (_panelData.notifications || [])
+                : (_panelData.announcements || []);
+
+            var items;
+            if (_panelTab === 'notif') {
+                items = rawItems.slice();
+                if (_notifReadFilter === 'unread') {
+                    items = items.filter(function (i) { return i.is_read === 0 || i.is_read === false; });
+                } else if (_notifReadFilter === 'read') {
+                    items = items.filter(function (i) { return i.is_read === 1 || i.is_read === true; });
+                }
+            } else {
+                items = (_annFilter !== 'all')
+                    ? rawItems.filter(function (i) { return (i.announcement_type || '') === _annFilter; })
+                    : rawItems;
+            }
+
+            if (items.length === 0) {
+                var emptyMsg;
+                if (_panelTab === 'notif') {
+                    emptyMsg = (rawItems.length === 0)
+                        ? 'No notifications yet.'
+                        : 'No notifications match the selected filters.';
+                } else {
+                    emptyMsg = 'No announcements matching this filter.';
+                }
+                content.innerHTML = '<div style="padding:48px 20px;text-align:center;color:var(--muted);font-size:13px;">' +
+                    emptyMsg + '</div>';
+                return;
+            }
+
+            content.innerHTML = items.map(function (item) {
+                var isUnread = item.is_read === 0 || item.is_read === false;
+                var bg = isUnread ? '#f0f7ff' : '#fff';
+                var title = item.title || item.message || 'Notification';
+                var date = item.creation || item.publish_date || '';
+                var annType = item.announcement_type || item.notification_type || '';
+                var createdBy = item.owner_fullname || item.owner || '';
+
+                var avatarHtml;
+                if (item.image) {
+                    avatarHtml = '<img src="' + escPanel(item.image) + '" ' +
+                        'style="width:40px;height:40px;border-radius:50%;' +
+                        'object-fit:cover;flex-shrink:0;">';
+                } else {
+                    var colors = {
+                        'Event': ['#dbeafe', '#1e40af'],
+                        'Announcement': ['#fef3c7', '#92400e'],
+                        'Alert': ['#fee2e2', '#991b1b'],
+                        'Notice': ['#e0f2fe', '#0369a1'],
+                        'News': ['#f3e8ff', '#6b21a8'],
+                        'Mention': ['#e0e7ff', '#4338ca'],
+                        'Share': ['#fce7f3', '#9d174d'],
+                        'Assignment': ['#ffedd5', '#9a3412'],
+                        'Energy Point': ['#d1fae5', '#065f46'],
+                        'Info': ['#d1fae5', '#065f46'],
+                    };
+                    var colorPair = colors[annType] || ['var(--primary-light)', 'var(--primary)'];
+                    var initial = (title.charAt(0) || 'N').toUpperCase();
+                    avatarHtml = '<div style="width:40px;height:40px;border-radius:50%;' +
+                        'background:' + colorPair[0] + ';color:' + colorPair[1] + ';' +
+                        'flex-shrink:0;display:flex;align-items:center;justify-content:center;' +
+                        'font-weight:700;font-size:16px;">' + escPanel(initial) + '</div>';
+                }
+
+                var indicator = isUnread
+                    ? '<span style="width:20px;height:20px;border-radius:50%;' +
+                    'border:2px solid var(--primary);flex-shrink:0;margin-top:6px;' +
+                    'display:flex;align-items:center;justify-content:center;">' +
+                    '<span style="width:7px;height:7px;border-radius:50%;background:var(--primary);"></span></span>'
+                    : '<span style="width:20px;height:20px;border-radius:50%;background:#d1fae5;' +
+                    'flex-shrink:0;margin-top:6px;display:flex;align-items:center;justify-content:center;">' +
+                    '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#065f46" stroke-width="3">' +
+                    '<polyline points="20 6 9 17 4 12"/></svg></span>';
+
+                var metaLine = '';
+                if (date) {
+                    var calendarSvg = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--muted); flex-shrink: 0;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>';
+                    var dateFormatted = escPanel(formatNotificationDate(String(date)));
+                    metaLine = '<div style="font-size:11px;color:var(--muted);margin-top:3.5px;' +
+                        'display:flex;gap:5px;align-items:center;">' +
+                        calendarSvg + '<span style="vertical-align:middle;margin-top:1px;">' + dateFormatted + '</span></div>';
+                }
+
+                var msgBlock = '';
+                if (_panelTab === 'notif' && item.message) {
+                    msgBlock = '<div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.35;">' +
+                        escPanel(item.message) + '</div>';
+                }
+
+                var rowDataAttrs = '';
+                if (_panelTab === 'notif') {
+                    var ph = item.portal_href || window.ADM_HOME_URL;
+                    rowDataAttrs = ' class="slcm-notif-panel-row" data-slcm-nn="' + escAttr(item.name) + '" data-slcm-nh="' + escAttr(ph) + '"';
+                } else {
+                    rowDataAttrs = ' class="slcm-ann-panel-row" data-slcm-an="' + escAttr(item.name) + '"';
+                }
+
+                var markReadBtn = '';
+                if (isUnread) {
+                    if (_panelTab === 'notif') {
+                        markReadBtn = '<button type="button" class="slcm-notif-mark-read" data-slcm-nn="' + escAttr(item.name) + '"' +
+                            ' style="font-size:11px;font-weight:600;color:var(--muted);background:none;border:none;padding:0;' +
+                            'cursor:pointer;text-decoration:underline;">Mark as read</button>';
+                    } else {
+                        markReadBtn = '<button type="button" class="slcm-ann-mark-read" data-slcm-an="' + escAttr(item.name) + '"' +
+                            ' style="font-size:11px;font-weight:600;color:var(--muted);background:none;border:none;padding:0;' +
+                            'cursor:pointer;text-decoration:underline;">Mark as read</button>';
+                    }
+                }
+                var fullPageLink = '';
+                if (_panelTab === 'ann') {
+                    fullPageLink = '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:6px;">' +
+                        markReadBtn +
+                        '<span style="font-size:11px;color:var(--primary);font-weight:600;">Open announcement →</span></div>';
+                } else if (_panelTab === 'notif') {
+                    fullPageLink = '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:6px;">' +
+                        markReadBtn +
+                        '<span style="font-size:11px;color:var(--primary);font-weight:600;">Open →</span></div>';
+                }
+
+                return '<div style="padding:12px 16px;border-bottom:1px solid var(--border);' +
+                    'background:' + bg + ';cursor:pointer;"' + rowDataAttrs + '>' +
+                    '<div style="display:flex;align-items:flex-start;gap:10px;">' +
+                    avatarHtml +
+                    '<div style="flex:1;min-width:0;">' +
+                    '<div style="font-size:13px;font-weight:' + (isUnread ? '600' : '400') + ';' +
+                    'color:var(--text);line-height:1.4;">' + escPanel(title) + '</div>' +
+                    msgBlock + metaLine + fullPageLink +
+                    '</div>' + indicator + '</div></div>';
+            }).join('') + buildPanelPager();
+        }
+
+        window.doLogout = function () {
+            showConfirm('Are you sure you want to logout?', async function () {
+                try {
+                    await fetch('/api/method/logout', {
+                        method: 'POST',
+                        headers: {
+                            'X-Frappe-CSRF-Token': window.csrf_token
+                        }
+                    });
+                } catch (e) {
+                    console.error('Logout request failed', e);
+                }
+                var isApplicant = {{ 'true' if nav.has_applicant else 'false' }};
+                var isPaceApplicant = {{ 'true' if nav.has_pace_applicant else 'false' }};
+                
+                var baseLogin = '{{ nlsat_login_url or "/nlsatadmissions/login" }}';
+                if (isApplicant) {
+                    baseLogin = '{{ nlsat_login_url or "/nlsatadmissions/login" }}';
+                } else if (isPaceApplicant) {
+                    baseLogin = '/paceadmissions/login';
+                } else if (window.location.pathname.indexOf('pace') !== -1) {
+                    baseLogin = '/paceadmissions/login';
+                }
+                
+                var currentUrl = encodeURIComponent(window.location.pathname + window.location.search);
+                window.location.href = baseLogin + '?redirect-to=' + currentUrl + '#login';
+            });
+        };
+
+        document.addEventListener('DOMContentLoaded', function () {
+            var bellBtn = document.getElementById('bellBtn');
+            if (bellBtn) {
+                bellBtn.onclick = function (e) {
+                    e.stopPropagation();
+                    openAnnPanel();
+                };
+            }
+
+            var logoutBtn = document.getElementById('logout-btn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    window.doLogout();
+                });
+            }
+
+            if (window.session_user !== 'Guest') {
+                loadPanelData();
+            }
+
+            bindPanelRowClicks();
+
+            // ── Mobile drawer ─────────────────────────────────────────────
+            function toggleDrawer() {
+                var btn = document.getElementById('nav-hamburger');
+                var drawer = document.getElementById('mobile-drawer');
+                var overlay = document.getElementById('drawer-overlay');
+                var isOpen = drawer.classList.contains('open');
+                if (isOpen) {
+                    closeDrawer();
+                } else {
+                    btn.classList.add('open');
+                    btn.setAttribute('aria-expanded', 'true');
+                    drawer.classList.add('open');
+                    drawer.setAttribute('aria-hidden', 'false');
+                    overlay.classList.add('open');
+                    document.body.style.overflow = 'hidden';
+                }
+            }
+            window.closeDrawer = function () {
+                var btn = document.getElementById('nav-hamburger');
+                var drawer = document.getElementById('mobile-drawer');
+                var overlay = document.getElementById('drawer-overlay');
+                if (!btn) return;
+                btn.classList.remove('open');
+                btn.setAttribute('aria-expanded', 'false');
+                drawer.classList.remove('open');
+                drawer.setAttribute('aria-hidden', 'true');
+                overlay.classList.remove('open');
+                document.body.style.overflow = '';
+            }
+            // Close drawer on Escape key
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') {
+                    closeDrawer();
+                    closeAnnPanel();
+                }
+            });
+            // Wire hamburger button
+            var hamBtn = document.getElementById('nav-hamburger');
+            if (hamBtn) hamBtn.addEventListener('click', toggleDrawer);
+
+            // Wire drawer logout
+            var drawerLogoutBtn = document.getElementById('drawer-logout-btn');
+            if (drawerLogoutBtn) {
+                drawerLogoutBtn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    closeDrawer();
+                    window.doLogout();
+                });
+            }
+        });
+    </script>
+    {% block extra_js %}{% endblock %}
+
+</body>
+
+</html>
