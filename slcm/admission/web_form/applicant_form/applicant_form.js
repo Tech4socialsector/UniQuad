@@ -4617,13 +4617,8 @@ function setupPreferenceValidation() {
 				var nat = wf.get_value('nationality');
 				var fn = wf.get_value('foriegn_national');
 
-				if (fn === 'No' && nat !== 'India') {
-					// Domestic candidate: Nationality is always India
-					if (nat) {
-						frappe.msgprint('For Domestic applications, Nationality must be India.');
-					}
-					wf.set_value('nationality', 'India');
-				} else if (fn === 'Yes' && nat === 'India') {
+				if (fn === 'Yes' && nat === 'India') {
+					// International candidate: Nationality cannot be India
 					frappe.msgprint('For International applications, Nationality cannot be India.');
 					wf.set_value('nationality', '');
 				} else if (wf._slcmOnNationalityChangeForState) {

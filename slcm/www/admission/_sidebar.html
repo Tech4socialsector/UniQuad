@@ -337,12 +337,14 @@
     </a>
     {% endif %}
 
+    {% if sb.show_offer_letter %}
     <a href="{{ sb.urls.offer_letter }}"
        class="adm-menu-item {{ 'active' if active == 'offer_letter' else '' }}"
        title="Offer Letter">
       <span class="ms-icon">mail</span>
       Offer Letter
     </a>
+    {% endif %}
     {% endif %}
 
     {% if sb.show_helpdesk %}
