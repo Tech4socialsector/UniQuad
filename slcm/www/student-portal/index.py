@@ -2,6 +2,9 @@ import importlib
 
 import frappe
 
+from slcm.slcm.doctype.academic_term.academic_term import get_current_term
+from slcm.slcm.utils.exam_schedule import get_student_programme
+
 no_cache = 1
 
 
@@ -302,9 +305,9 @@ def get_context(context):
         # ── Student status info ────────────────────────────────
         context.student_status = student.student_status or "Active"
         context.registration_status = student.registration_status or ""
-        context.current_term = student.current_term or ""
-        context.current_year = student.current_year or ""
-        context.year_of_study = _ordinal_year(student.current_year)
+        context.current_term = get_current_term() or ""
+        context.current_year = (enrollment.year_no if enrollment else None) or student.current_year or ""
+        context.year_of_study = _ordinal_year(context.current_year)
         context.academic_year = student.academic_year or ""
         context.is_hosteller = student.is_hosteller or 0
 
@@ -336,7 +339,7 @@ def _get_active_enrollment(student_name):
     enrollments = frappe.get_all(
         "Student Enrollment",
         filters={"student": student_name, "status": "Enrolled"},
-        fields=["name", "cohort", "program", "academic_year", "term_name",
+        fields=["name", "batch", "program", "academic_year", "year_no",
                 "status", "faculty_advisor", "enrollment_date"],
         order_by="creation desc",
         limit=1,
@@ -348,7 +351,7 @@ def _get_active_enrollment(student_name):
     all_enrollments = frappe.get_all(
         "Student Enrollment",
         filters={"student": student_name},
-        fields=["name", "cohort", "program", "academic_year", "term_name",
+        fields=["name", "batch", "program", "academic_year", "year_no",
                 "status", "faculty_advisor", "enrollment_date"],
         order_by="creation desc",
         limit=1,
@@ -381,13 +384,10 @@ def _set_student_nav(context, student):
     context.student_id = student.registration_id or student.name
     context.student_photo = student.passport_size_photo or ""
     context.student_initial = (context.student_name[0]).upper() if context.student_name else "S"
-    prog_name = frappe.db.get_value("Batch", student.programme, "cohort_name") if student.programme else None
-    if not prog_name and student.programme_of_study:
-        prog_name = frappe.db.get_value("Programme", student.programme_of_study, "program_name")
-    context.programme_name = prog_name or student.programme or student.programme_of_study or ""
+    context.programme_name = get_student_programme(student.name)
 
     context.department = student.department or ""
-    context.batch_year = student.batch_year or ""
+    context.batch_year = student.batch or ""
 
 
 def _ordinal_year(val):

@@ -2,6 +2,7 @@ import frappe
 from slcm.slcm.doctype.student_portal_settings.student_portal_settings import (
     get_student_portal_settings,
 )
+from slcm.slcm.utils.exam_schedule import get_student_programme
 
 no_cache = 1
 
@@ -98,14 +99,14 @@ def get_context(context):
         context.active_enrollment = frappe.db.get_value(
             "Student Enrollment",
             {"student": student_name, "status": "Enrolled"},
-            ["name", "program", "academic_year", "term_name", "enrollment_date", "status"],
+            ["name", "program", "academic_year", "year_no", "enrollment_date", "status"],
             as_dict=True,
         )
         if not context.active_enrollment:
             context.active_enrollment = frappe.db.get_value(
                 "Student Enrollment",
                 {"student": student_name},
-                ["name", "program", "academic_year", "term_name", "enrollment_date", "status"],
+                ["name", "program", "academic_year", "year_no", "enrollment_date", "status"],
                 order_by="creation desc",
                 as_dict=True,
             )
@@ -180,12 +181,9 @@ def _set_student_nav(context, student):
     context.student_id      = student.registration_id or student.name
     context.student_photo   = student.passport_size_photo or ""
     context.student_initial = context.student_name[0].upper() if context.student_name else "S"
-    context.programme_name  = (
-        frappe.db.get_value("Batch", student.programme, "cohort_name")
-        or student.programme or ""
-    )
+    context.programme_name  = get_student_programme(student.name)
     context.department = student.department or ""
-    context.batch_year = student.batch_year or ""
+    context.batch_year = student.batch or ""
 
 
 def _set_nav_defaults(context):

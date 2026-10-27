@@ -3,6 +3,7 @@
 
 import frappe
 from frappe import _
+from slcm.slcm.doctype.academic_term.academic_term import get_current_term
 
 from slcm.slcm.utils.result_access import (
 	MARKS_STATUSES,
@@ -831,7 +832,7 @@ def get_course_students_paged(course, exam_plan="", search="", page=1, page_leng
 			params[f"prog_{i}"] = v
 	if f_batches:
 		placeholders = ",".join([f"%(batch_{i})s" for i in range(len(f_batches))])
-		extra_cond += f" AND sm.batch_year IN ({placeholders})"
+		extra_cond += f" AND sm.batch IN ({placeholders})"
 		for i, v in enumerate(f_batches):
 			params[f"batch_{i}"] = v
 	# course_type filter skipped — field lives on Student Enrollment Course, not Student Course Marks
@@ -861,7 +862,7 @@ def get_course_students_paged(course, exam_plan="", search="", page=1, page_leng
 			CONCAT_WS(' ', sm.first_name, sm.last_name) AS student_name,
 			sm.student_status,
 			sm.account_status,
-			sm.batch_year,
+			sm.batch AS batch_year,
 			sm.intake,
 			sm.programme_of_study,
 			sm.passport_size_photo,
@@ -919,7 +920,7 @@ def get_institutional_filter_options(course):
 
 	rows = frappe.db.sql(
 		"""
-		SELECT DISTINCT sm.programme_of_study AS programme, sm.batch_year
+		SELECT DISTINCT sm.programme_of_study AS programme, sm.batch AS batch_year
 		FROM `tabStudent Course Marks` scm
 		LEFT JOIN `tabStudent Master` sm ON sm.name = scm.student
 		WHERE scm.course = %(course)s AND scm.exam_plan = %(exam_plan)s
@@ -1119,17 +1120,17 @@ def get_student_hover_info(student, course):
 	sm = frappe.db.get_value(
 		"Student Master", student,
 		["registration_id", "first_name", "last_name",
-		 "programme", "current_term", "intake", "programme_of_study"],
+		 "batch", "intake", "programme_of_study"],
 		as_dict=True,
 	)
 	if not sm:
 		return {}
 
 	batch_name = ""
-	if sm.get("programme"):
+	if sm.get("batch"):
 		batch_name = (
-			frappe.db.get_value("Batch", sm["programme"], "batch_name")
-			or sm["programme"]
+			frappe.db.get_value("Batch", sm["batch"], "batch_name")
+			or sm["batch"]
 		)
 
 	section_row = frappe.db.sql(
@@ -1149,7 +1150,7 @@ def get_student_hover_info(student, course):
 		"registration_id": sm.registration_id or student,
 		"programme":       sm.programme_of_study or "",
 		"batch":           batch_name,
-		"current_term":    sm.current_term or "",
+		"current_term":    get_current_term() or "",
 		"intake":          sm.intake or "",
 		"section":         section_row[0]["section"] if section_row else "",
 	}
@@ -1437,7 +1438,7 @@ def get_course_students_with_marks(exam_plan, course, search="", page=1, page_le
 			sm.official_email_id,
 			sm.student_status,
 			sm.account_status,
-			sm.batch_year,
+			sm.batch AS batch_year,
 			sm.intake,
 			sm.programme_of_study
 		FROM `tabClass Student` cs
@@ -1495,16 +1496,18 @@ def get_student_profile(student):
 		"Student Master",
 		student,
 		["registration_id", "first_name", "last_name",
-		 "programme", "batch_year", "intake", "student_status",
+		 "batch", "intake", "student_status",
 		 "programme_of_study"],
 		as_dict=True,
 	)
 	if not sm:
 		frappe.throw("Student not found.")
-	# Get cohort/programme label
+	sm["programme"] = sm.get("batch")
+	sm["batch_year"] = sm.get("batch")
+	# Get cohort (Batch) label
 	cohort_name = ""
-	if sm.get("programme"):
-		cohort_name = frappe.db.get_value("Batch", sm["programme"], "cohort_name") or sm["programme"]
+	if sm.get("batch"):
+		cohort_name = frappe.db.get_value("Batch", sm["batch"], "batch_name") or sm["batch"]
 	sm["cohort_name"] = cohort_name
 	return sm
 
@@ -3368,7 +3371,7 @@ def search_students_for_add(course, exam_plan, search="", programme="", batch=""
 		conds += " AND sm.programme_of_study = %(programme)s"
 		params["programme"] = programme
 	if batch:
-		conds += " AND sm.batch_year = %(batch)s"
+		conds += " AND sm.batch = %(batch)s"
 		params["batch"] = batch
 
 	rows = frappe.db.sql(
@@ -3380,7 +3383,7 @@ def search_students_for_add(course, exam_plan, search="", programme="", batch=""
 				COALESCE(NULLIF(sm.middle_name,''), NULL),
 				sm.last_name))   AS student_name,
 			sm.programme_of_study AS programme,
-			sm.batch_year,
+			sm.batch AS batch_year,
 			sm.passport_size_photo AS image
 		FROM `tabStudent Master` sm
 		WHERE sm.name NOT IN (

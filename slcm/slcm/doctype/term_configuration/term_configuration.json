@@ -46,7 +46,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "fetch_from": "term_name.system",
    "fieldname": "system",
    "fieldtype": "Select",
    "in_list_view": 1,
@@ -103,7 +102,7 @@
   }
  ],
  "links": [],
- "modified": "2026-07-09 11:40:07.193231",
+ "modified": "2026-10-27 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Term Configuration",

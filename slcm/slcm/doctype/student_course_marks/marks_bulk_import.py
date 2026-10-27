@@ -351,12 +351,12 @@ def _run_validation_job_impl(import_log, retry_mode=None, triggering_user=None):
                 courses_map[c.name] = c.name
 
     # ── P2: Bulk DB query 3 — All Course Offerings ───────────────────────────
-    # Load ALL offerings once; build a (course_title, cohort, term_name) → name map
-    offerings_map = {}  # (course_title, cohort, term_name) → offering.name
-    for off in frappe.get_all("Course Offering",
-            fields=["name", "course_title", "cohort", "term_name"]):
-        key = (off.course_title, off.cohort, off.term_name)
-        offerings_map[key] = off.name
+    # Load ALL offerings once; build a (course_title, batch, term) → name map
+    offerings_map = {}  # (course_title, batch, term_name / term label) → offering.name
+    for off in _get_batch_offerings():
+        offerings_map[(off.course_title, off.batch, off.term_name)] = off.name
+        if off.term_label:
+            offerings_map[(off.course_title, off.batch, off.term_label)] = off.name
 
     # ── P2: Bulk DB query 4 — Existing marks (duplicate check) ───────────────
     all_student_names = list(set(students_map.values()))
@@ -792,12 +792,40 @@ def resolve_course_offering(course_code, batch, term_name):
         course_name = frappe.db.get_value("Course", {"name": course_code}, "name")
     
     if not course_name: return None
-    
-    return frappe.db.get_value("Course Offering", {
-        "course_title": course_name,
-        "cohort": batch,
-        "term_name": term_name
-    }, "name")
+
+    # latest academic year first, matching the validation map's precedence
+    for off in reversed(_get_batch_offerings(course_title=course_name, batch=batch)):
+        if term_name in (off.term_name, off.term_label):
+            return off.name
+    return None
+
+
+def _get_batch_offerings(course_title=None, batch=None):
+    """Course Offerings with the Batch they serve. Offerings have no cohort:
+    an offering belongs to a batch when its (program, academic_year, year_no)
+    matches a Student Enrollment of that batch. term_label is the Academic
+    Term's term_name (e.g. "Trimester 1"), so imports may use either form."""
+    conditions = ["se.batch IS NOT NULL", "se.batch != ''"]
+    params = {}
+    if course_title:
+        conditions.append("co.course_title = %(course_title)s")
+        params["course_title"] = course_title
+    if batch:
+        conditions.append("se.batch = %(batch)s")
+        params["batch"] = batch
+    return frappe.db.sql(f"""
+        SELECT DISTINCT co.name, co.course_title, co.term_name,
+            at.term_name AS term_label, se.batch
+        FROM `tabCourse Offering` co
+        JOIN `tabStudent Enrollment` se
+            ON se.program = co.program
+            AND se.academic_year = co.academic_year
+            AND se.year_no = co.year_no
+            AND se.status IN ('Enrolled', 'Completed')
+        LEFT JOIN `tabAcademic Term` at ON at.name = co.term_name
+        WHERE {" AND ".join(conditions)}
+        ORDER BY co.academic_year
+    """, params, as_dict=True)
 
 @frappe.whitelist()
 def download_sample_template():
@@ -924,10 +952,13 @@ def download_missing_course_offerings_template(import_log):
                 sm = frappe.db.get_value(
                     "Student Master",
                     {"registration_id": str(student_id)},
-                    ["master_programme", "academic_year"],
+                    ["programme_of_study", "academic_year"],
                     as_dict=True
                 )
-            programme = (sm.master_programme or "") if sm else ""
+            # Student Master.master_programme (removed) was programme_of_study's program_name
+            programme = (
+                frappe.db.get_value("Programme", sm.programme_of_study, "program_name") or ""
+            ) if sm and sm.programme_of_study else ""
             academic_year = (sm.academic_year or "") if sm else ""
             
             unique_offerings[key] = {

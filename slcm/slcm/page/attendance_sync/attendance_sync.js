@@ -163,10 +163,7 @@ frappe.pages["attendance-sync"].on_page_load = function (wrapper) {
 		fieldname: "section_filter",
 		label: "Section",
 		options: "Section",
-		get_query() {
-			const batch = page.fields_dict.batch_filter.get_value();
-			return batch ? { filters: { batch } } : {};
-		},
+		// Sections are global (not tied to a batch): no batch filter.
 		change() {
 			load(wrapper);
 		},

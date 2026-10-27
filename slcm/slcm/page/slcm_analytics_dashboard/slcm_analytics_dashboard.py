@@ -74,22 +74,19 @@ def _build_filters(academic_year=None, term=None, program=None, cohort=None, stu
 
 	if cohort_list:
 		if len(cohort_list) == 1:
-			conditions.append("sm.programme = %(cohort)s")
+			conditions.append("sm.batch = %(cohort)s")
 			params["cohort"] = cohort_list[0]
 		else:
-			conditions.append("sm.programme IN %(cohort)s")
+			conditions.append("sm.batch IN %(cohort)s")
 			params["cohort"] = tuple(cohort_list)
 	elif program_list:
-		prog_filter = program_list[0] if len(program_list) == 1 else program_list
-		if len(program_list) == 1:
-			cohorts = frappe.db.get_all("Batch", filters={"program": prog_filter}, pluck="name")
-		else:
-			cohorts = frappe.db.get_all("Batch", filters=[["program", "in", program_list]], pluck="name")
-		if cohorts:
-			conditions.append("sm.programme IN %(cohorts)s")
-			params["cohorts"] = tuple(cohorts)
-		else:
-			conditions.append("1=0")
+		# Batch no longer carries a programme: resolve students via Student Enrollment,
+		# falling back to Student Master.programme_of_study.
+		conditions.append(
+			"(sm.programme_of_study IN %(program_list)s OR sm.name IN ("
+			"SELECT se.student FROM `tabStudent Enrollment` se WHERE se.program IN %(program_list)s))"
+		)
+		params["program_list"] = tuple(program_list)
 
 	return " AND ".join(conditions), params
 
@@ -109,14 +106,14 @@ def get_filter_options():
 	programs = frappe.db.get_all(
 		"Programme",
 		filters={"program_status": "Active"},
-		fields=["name", "program_name", "program_shortcode"],
+		fields=["name", "program_name", "program_code as program_shortcode"],
 		order_by="program_name asc",
 	)
 
 	cohorts = frappe.db.get_all(
 		"Batch",
-		fields=["name", "cohort_name", "program", "academic_year", "section", "status"],
-		order_by="academic_year desc, cohort_name asc",
+		fields=["name", "batch_name as cohort_name", "academic_year", "status"],
+		order_by="academic_year desc, batch_name asc",
 	)
 
 	terms = frappe.db.get_all(
@@ -296,17 +293,23 @@ def get_student_analytics(academic_year=None, term=None, program=None, cohort=No
 		as_dict=True,
 	)
 
-	# Program-wise enrollment (through Cohort)
+	# Program-wise enrollment (latest Enrolled Student Enrollment, else programme of study)
 	program_dist = frappe.db.sql(
 		f"""
 		SELECT
-			COALESCE(p.program_name, c.program, 'Unknown') AS label,
-			COUNT(sm.name) AS value
-		FROM `tabStudent Master` sm
-		LEFT JOIN `tabBatch` c ON c.name = sm.programme
-		LEFT JOIN `tabProgramme` p ON p.name = c.program
-		{sm_where}
-		GROUP BY c.program
+			COALESCE(p.program_name, x.program, 'Unknown') AS label,
+			COUNT(x.name) AS value
+		FROM (
+			SELECT sm.name, COALESCE((
+				SELECT se.program FROM `tabStudent Enrollment` se
+				WHERE se.student = sm.name AND se.status = 'Enrolled'
+				ORDER BY se.academic_year DESC, se.creation DESC LIMIT 1
+			), sm.programme_of_study) AS program
+			FROM `tabStudent Master` sm
+			{sm_where}
+		) x
+		LEFT JOIN `tabProgramme` p ON p.name = x.program
+		GROUP BY x.program
 		ORDER BY value DESC
 		LIMIT 12
 		""",
@@ -362,12 +365,12 @@ def get_student_analytics(academic_year=None, term=None, program=None, cohort=No
 	cohort_dist = frappe.db.sql(
 		f"""
 		SELECT
-			COALESCE(c.cohort_name, sm.programme, 'Unknown') AS label,
+			COALESCE(c.batch_name, sm.batch, 'Unknown') AS label,
 			COUNT(sm.name) AS value
 		FROM `tabStudent Master` sm
-		LEFT JOIN `tabBatch` c ON c.name = sm.programme
+		LEFT JOIN `tabBatch` c ON c.name = sm.batch
 		{sm_where}
-		GROUP BY sm.programme
+		GROUP BY sm.batch
 		ORDER BY value DESC
 		LIMIT 10
 		""",
@@ -1243,23 +1246,19 @@ def get_programme_analytics(academic_year=None, term=None, program=None, cohort=
 		as_dict=True,
 	)
 
-	dept_distribution = frappe.db.sql(
-		"""
-		SELECT COALESCE(d.department_name, p.department, 'No Department') AS label,
-			   COUNT(p.name) AS value
-		FROM `tabProgramme` p
-		LEFT JOIN `tabDepartment` d ON d.name = p.department
-		GROUP BY p.department ORDER BY value DESC LIMIT 12
-		""",
-		as_dict=True,
-	)
+	# Programme no longer has a department field — nothing to distribute.
+	dept_distribution = []
 
 	# ── Cohorts ───────────────────────────────────────────────────────────────
 	cohort_filters = {}
 	if academic_year:
 		cohort_filters["academic_year"] = academic_year
 	if program:
-		cohort_filters["program"] = program
+		# Batch has no programme: batches with students enrolled in the programme
+		cohort_filters["name"] = ["in", frappe.db.get_all(
+			"Student Enrollment", filters={"program": program, "batch": ["is", "set"]},
+			pluck="batch", distinct=True,
+		) or [""]]
 
 	cohort_status = frappe.db.get_all(
 		"Batch", filters=cohort_filters,
@@ -1329,7 +1328,13 @@ def get_programme_analytics(academic_year=None, term=None, program=None, cohort=
 		co_where_parts.append("co.program = %(program)s")
 		co_params["program"] = program
 	if cohort:
-		co_where_parts.append("co.cohort = %(cohort)s")
+		# Offerings no longer carry a batch: match (program, academic_year, year_no)
+		# of any Enrolled Student Enrollment in that batch.
+		co_where_parts.append(
+			"EXISTS (SELECT 1 FROM `tabStudent Enrollment` cse WHERE cse.batch = %(cohort)s"
+			" AND cse.status = 'Enrolled' AND cse.program = co.program"
+			" AND cse.academic_year = co.academic_year AND cse.year_no = co.year_no)"
+		)
 		co_params["cohort"] = cohort
 
 	co_where = ("WHERE " + " AND ".join(co_where_parts)) if co_where_parts else ""
@@ -1616,11 +1621,11 @@ def get_idcard_analytics(academic_year=None, term=None, program=None, cohort=Non
 
 	program_dist = frappe.db.sql(
 		"""
-		SELECT COALESCE(c.cohort_name, ic.program, 'Unknown') AS label, COUNT(*) AS value
+		SELECT COALESCE(c.batch_name, ic.batch, 'Unknown') AS label, COUNT(*) AS value
 		FROM `tabID Card Generation` ic
-		LEFT JOIN `tabBatch` c ON c.name = ic.program
-		WHERE ic.program IS NOT NULL AND ic.program != ''
-		GROUP BY ic.program ORDER BY value DESC LIMIT 12
+		LEFT JOIN `tabBatch` c ON c.name = ic.batch
+		WHERE ic.batch IS NOT NULL AND ic.batch != ''
+		GROUP BY ic.batch ORDER BY value DESC LIMIT 12
 		""",
 		as_dict=True,
 	)
@@ -1803,7 +1808,7 @@ def get_promotion_analytics(academic_year=None, term=None, program=None, cohort=
 
 	cohort_dist = frappe.db.sql(
 		f"""
-		SELECT COALESCE(c.cohort_name, sp.programme, 'Unknown') AS label,
+		SELECT COALESCE(c.batch_name, sp.programme, 'Unknown') AS label,
 			   COUNT(*) AS value
 		FROM `tabStudent Promotion` sp
 		LEFT JOIN `tabBatch` c ON c.name = sp.programme
@@ -2131,25 +2136,34 @@ def get_drilldown_data(module, dimension, value, academic_year=None, term=None, 
 								"programme", "gender", "student_status"]}
 
 		elif dimension == "program":
-			rows = frappe.db.sql(
-				"""
+			# Student's programme = latest Enrolled Student Enrollment, else programme_of_study
+			student_program_sql = """
 				SELECT sm.name, sm.registration_id, sm.first_name, sm.last_name,
-					   p.program_name, sm.academic_year, sm.student_status
+					   sm.academic_year, sm.student_status,
+					   COALESCE((
+						   SELECT se.program FROM `tabStudent Enrollment` se
+						   WHERE se.student = sm.name AND se.status = 'Enrolled'
+						   ORDER BY se.academic_year DESC, se.creation DESC LIMIT 1
+					   ), sm.programme_of_study) AS program
 				FROM `tabStudent Master` sm
-				LEFT JOIN `tabBatch` c ON c.name = sm.programme
-				LEFT JOIN `tabProgramme` p ON p.name = c.program
-				WHERE p.program_name = %(value)s OR c.program = %(value)s
-				ORDER BY sm.registration_id ASC
+			"""
+			rows = frappe.db.sql(
+				f"""
+				SELECT x.name, x.registration_id, x.first_name, x.last_name,
+					   p.program_name, x.academic_year, x.student_status
+				FROM ({student_program_sql}) x
+				LEFT JOIN `tabProgramme` p ON p.name = x.program
+				WHERE p.program_name = %(value)s OR x.program = %(value)s
+				ORDER BY x.registration_id ASC
 				LIMIT %(limit)s OFFSET %(offset)s
 				""",
 				{"value": value, "limit": page_size, "offset": offset}, as_dict=True,
 			)
 			cnt = frappe.db.sql(
-				"""
-				SELECT COUNT(*) FROM `tabStudent Master` sm
-				LEFT JOIN `tabBatch` c ON c.name = sm.programme
-				LEFT JOIN `tabProgramme` p ON p.name = c.program
-				WHERE p.program_name = %(value)s OR c.program = %(value)s
+				f"""
+				SELECT COUNT(*) FROM ({student_program_sql}) x
+				LEFT JOIN `tabProgramme` p ON p.name = x.program
+				WHERE p.program_name = %(value)s OR x.program = %(value)s
 				""",
 				{"value": value},
 			)
@@ -2159,15 +2173,24 @@ def get_drilldown_data(module, dimension, value, academic_year=None, term=None, 
 								"program_name", "academic_year", "student_status"]}
 
 		elif dimension == "programs_list":
+			# Student's programme = latest Enrolled Student Enrollment, else programme_of_study
+			student_program_sql = """
+				SELECT sm.name, sm.student_status,
+					   COALESCE((
+						   SELECT se.program FROM `tabStudent Enrollment` se
+						   WHERE se.student = sm.name AND se.status = 'Enrolled'
+						   ORDER BY se.academic_year DESC, se.creation DESC LIMIT 1
+					   ), sm.programme_of_study) AS program
+				FROM `tabStudent Master` sm
+			"""
 			rows = frappe.db.sql(
-				"""
+				f"""
 				SELECT p.program_name AS label, p.name AS program_id,
 					   COUNT(sm.name) AS total_students,
 					   SUM(CASE WHEN sm.student_status='Active' THEN 1 ELSE 0 END) AS active,
 					   SUM(CASE WHEN sm.student_status='Graduated' THEN 1 ELSE 0 END) AS graduated
 				FROM `tabProgramme` p
-				LEFT JOIN `tabBatch` c ON c.program = p.name
-				LEFT JOIN `tabStudent Master` sm ON sm.programme = c.name
+				LEFT JOIN ({student_program_sql}) sm ON sm.program = p.name
 				GROUP BY p.name
 				HAVING total_students > 0
 				ORDER BY total_students DESC
@@ -2175,12 +2198,11 @@ def get_drilldown_data(module, dimension, value, academic_year=None, term=None, 
 				""",
 				{"limit": page_size, "offset": offset}, as_dict=True,
 			)
-			total = frappe.db.sql("""
+			total = frappe.db.sql(f"""
 				SELECT COUNT(*) FROM (
 					SELECT p.name
 					FROM `tabProgramme` p
-					LEFT JOIN `tabBatch` c ON c.program = p.name
-					LEFT JOIN `tabStudent Master` sm ON sm.programme = c.name
+					LEFT JOIN ({student_program_sql}) sm ON sm.program = p.name
 					GROUP BY p.name
 					HAVING COUNT(sm.name) > 0
 				) sub
@@ -2191,12 +2213,15 @@ def get_drilldown_data(module, dimension, value, academic_year=None, term=None, 
 		elif dimension == "cohorts_list":
 			rows = frappe.db.sql(
 				"""
-				SELECT c.cohort_name AS label, c.name AS cohort_id,
-					   p.program_name, c.section, c.status,
+				SELECT c.batch_name AS label, c.name AS cohort_id,
+					   (SELECT GROUP_CONCAT(DISTINCT COALESCE(p.program_name, se.program) SEPARATOR ', ')
+						FROM `tabStudent Enrollment` se
+						LEFT JOIN `tabProgramme` p ON p.name = se.program
+						WHERE se.batch = c.name) AS program_name,
+					   c.status,
 					   COUNT(sm.name) AS total_students
 				FROM `tabBatch` c
-				LEFT JOIN `tabProgramme` p ON p.name = c.program
-				LEFT JOIN `tabStudent Master` sm ON sm.programme = c.name
+				LEFT JOIN `tabStudent Master` sm ON sm.batch = c.name
 				GROUP BY c.name
 				HAVING total_students > 0
 				ORDER BY total_students DESC
@@ -2208,25 +2233,29 @@ def get_drilldown_data(module, dimension, value, academic_year=None, term=None, 
 				SELECT COUNT(*) FROM (
 					SELECT c.name
 					FROM `tabBatch` c
-					LEFT JOIN `tabStudent Master` sm ON sm.programme = c.name
+					LEFT JOIN `tabStudent Master` sm ON sm.batch = c.name
 					GROUP BY c.name
 					HAVING COUNT(sm.name) > 0
 				) sub
 			""")[0][0]
 			return {"rows": rows, "total": total,
-					"columns": ["label", "program_name", "section", "status", "total_students"]}
+					"columns": ["label", "program_name", "status", "total_students"]}
 
 		elif dimension == "cohort":
-			cohort_id = frappe.db.get_value("Batch", {"cohort_name": value}, "name") or value
+			cohort_id = frappe.db.get_value("Batch", {"batch_name": value}, "name") or value
 			rows = frappe.db.sql(
 				"""
 				SELECT sm.name, sm.registration_id, sm.first_name, sm.last_name,
-					   c.cohort_name AS cohort, p.program_name,
+					   c.batch_name AS cohort, p.program_name,
 					   sm.academic_year, sm.student_status, sm.gender
 				FROM `tabStudent Master` sm
-				LEFT JOIN `tabBatch` c ON c.name = sm.programme
-				LEFT JOIN `tabProgramme` p ON p.name = c.program
-				WHERE sm.programme = %(cohort_id)s OR c.cohort_name = %(value)s
+				LEFT JOIN `tabBatch` c ON c.name = sm.batch
+				LEFT JOIN `tabProgramme` p ON p.name = COALESCE((
+					SELECT se.program FROM `tabStudent Enrollment` se
+					WHERE se.student = sm.name AND se.status = 'Enrolled'
+					ORDER BY se.academic_year DESC, se.creation DESC LIMIT 1
+				), sm.programme_of_study)
+				WHERE sm.batch = %(cohort_id)s OR c.batch_name = %(value)s
 				ORDER BY sm.registration_id ASC
 				LIMIT %(limit)s OFFSET %(offset)s
 				""",
@@ -2236,8 +2265,8 @@ def get_drilldown_data(module, dimension, value, academic_year=None, term=None, 
 			cnt = frappe.db.sql(
 				"""
 				SELECT COUNT(*) FROM `tabStudent Master` sm
-				LEFT JOIN `tabBatch` c ON c.name = sm.programme
-				WHERE sm.programme = %(cohort_id)s OR c.cohort_name = %(value)s
+				LEFT JOIN `tabBatch` c ON c.name = sm.batch
+				WHERE sm.batch = %(cohort_id)s OR c.batch_name = %(value)s
 				""",
 				{"cohort_id": cohort_id, "value": value},
 			)
@@ -2679,31 +2708,19 @@ def get_drilldown_data(module, dimension, value, academic_year=None, term=None, 
 				filters["program_status"] = value
 			rows = frappe.db.get_all(
 				"Programme", filters=filters,
-				fields=["name", "program_name", "program_shortcode", "department",
+				fields=["name", "program_name", "program_code as program_shortcode",
 						"level_of_study", "program_status"],
 				limit_start=offset, limit_page_length=page_size, order_by="program_name asc",
 			)
 			total = frappe.db.count("Programme", filters=filters)
 			return {"rows": rows, "total": total,
-					"columns": ["program_name", "program_shortcode", "department",
+					"columns": ["program_name", "program_shortcode",
 								"level_of_study", "program_status"]}
 
 		elif dimension == "level_of_study":
 			filters = {}
 			if value and value not in ("all", "All"):
 				filters["level_of_study"] = value
-			rows = frappe.db.get_all(
-				"Programme", filters=filters,
-				fields=["name", "program_name", "department", "level_of_study", "program_status"],
-				limit_start=offset, limit_page_length=page_size, order_by="program_name asc",
-			)
-			total = frappe.db.count("Programme", filters=filters)
-			return {"rows": rows, "total": total,
-					"columns": ["program_name", "department", "level_of_study", "program_status"]}
-
-		elif dimension == "department":
-			dept_id = frappe.db.get_value("Department", {"department_name": value}, "name") or value
-			filters = {"department": dept_id}
 			rows = frappe.db.get_all(
 				"Programme", filters=filters,
 				fields=["name", "program_name", "level_of_study", "program_status"],
@@ -2713,19 +2730,24 @@ def get_drilldown_data(module, dimension, value, academic_year=None, term=None, 
 			return {"rows": rows, "total": total,
 					"columns": ["program_name", "level_of_study", "program_status"]}
 
+		elif dimension == "department":
+			# Programme no longer has a department field — nothing to drill into.
+			return {"rows": [], "total": 0,
+					"columns": ["program_name", "level_of_study", "program_status"]}
+
 		elif dimension == "cohort_status":
 			filters = {}
 			if value and value not in ("all", "All"):
 				filters["status"] = value
 			rows = frappe.db.get_all(
 				"Batch", filters=filters,
-				fields=["name", "batch_name", "program", "section", "academic_year",
-						"status", "total_enrolled_count", "start_date", "end_date"],
-				limit_start=offset, limit_page_length=page_size, order_by="start_date desc",
+				fields=["name", "batch_name", "academic_year",
+						"status", "total_enrolled_count"],
+				limit_start=offset, limit_page_length=page_size, order_by="academic_year desc",
 			)
 			total = frappe.db.count("Batch", filters=filters)
 			return {"rows": rows, "total": total,
-					"columns": ["batch_name", "program", "section", "academic_year",
+					"columns": ["batch_name", "academic_year",
 								"status", "total_enrolled_count"]}
 
 		elif dimension == "enrollment_status":
@@ -2764,7 +2786,7 @@ def get_drilldown_data(module, dimension, value, academic_year=None, term=None, 
 								"status", "enrollment_date"]}
 
 		elif dimension == "cohort_enrollment":
-			cohort_id = frappe.db.get_value("Batch", {"cohort_name": value}, "name") or value
+			cohort_id = frappe.db.get_value("Batch", {"batch_name": value}, "name") or value
 			filters = {"batch": cohort_id}
 			rows = frappe.db.get_all(
 				"Student Enrollment", filters=filters,
@@ -2787,13 +2809,13 @@ def get_drilldown_data(module, dimension, value, academic_year=None, term=None, 
 				filters["program"] = program
 			rows = frappe.db.get_all(
 				"Course Offering", filters=filters,
-				fields=["name", "course_name", "program", "cohort", "faculty",
+				fields=["name", "course_name", "program", "year_no", "faculty",
 						"academic_year", "status"],
 				limit_start=offset, limit_page_length=page_size, order_by="course_name asc",
 			)
 			total = frappe.db.count("Course Offering", filters=filters)
 			return {"rows": rows, "total": total,
-					"columns": ["course_name", "program", "cohort", "faculty",
+					"columns": ["course_name", "program", "year_no", "faculty",
 								"academic_year", "status"]}
 
 		elif dimension == "offering_program":
@@ -2803,13 +2825,13 @@ def get_drilldown_data(module, dimension, value, academic_year=None, term=None, 
 				filters["academic_year"] = academic_year
 			rows = frappe.db.get_all(
 				"Course Offering", filters=filters,
-				fields=["name", "course_name", "cohort", "faculty",
+				fields=["name", "course_name", "program", "year_no", "faculty",
 						"academic_year", "status"],
 				limit_start=offset, limit_page_length=page_size, order_by="course_name asc",
 			)
 			total = frappe.db.count("Course Offering", filters=filters)
 			return {"rows": rows, "total": total,
-					"columns": ["course_name", "cohort", "faculty",
+					"columns": ["course_name", "program", "year_no", "faculty",
 								"academic_year", "status"]}
 
 		elif dimension == "course_enroll_status":
@@ -3016,13 +3038,13 @@ def get_drilldown_data(module, dimension, value, academic_year=None, term=None, 
 			dept_id = frappe.db.get_value("Department", {"department_name": value}, "name") or value
 			filters["department"] = dept_id
 		elif dimension == "program":
-			cohort_id = frappe.db.get_value("Batch", {"cohort_name": value}, "name") or value
-			filters["program"] = cohort_id
+			cohort_id = frappe.db.get_value("Batch", {"batch_name": value}, "name") or value
+			filters["batch"] = cohort_id
 
 		rows = frappe.db.get_all(
 			"ID Card Generation", filters=filters,
 			fields=["name", "student", "student_name", "card_type", "card_status",
-					"department", "program", "issue_date", "expiry_date", "print_count"],
+					"department", "batch", "issue_date", "expiry_date", "print_count"],
 			limit_start=offset, limit_page_length=page_size, order_by="creation desc",
 		)
 		total = frappe.db.count("ID Card Generation", filters=filters)
@@ -3105,7 +3127,7 @@ def get_drilldown_data(module, dimension, value, academic_year=None, term=None, 
 								"attendance_percent", "manual_override"]}
 
 		if dimension == "cohort":
-			cohort_id = frappe.db.get_value("Batch", {"cohort_name": value}, "name") or value
+			cohort_id = frappe.db.get_value("Batch", {"batch_name": value}, "name") or value
 			rows = frappe.db.get_all(
 				"Student Promotion", filters={"programme": cohort_id, "stage": "Published"},
 				fields=["name", "student", "student_name", "programme", "promotion_policy",

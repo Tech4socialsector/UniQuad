@@ -430,7 +430,7 @@ def get_courses_for_plan(exam_plan, search=""):
 			FROM `tabStudent Enrollment` se
 			JOIN `tabStudent Enrollment Course` sec ON sec.parent = se.name
 			JOIN `tabCourse Offering` co ON co.name = sec.course_offering
-			WHERE se.term_name = %(term_name)s
+			WHERE co.term_name = %(term_name)s
 			  AND sec.status = 'Enrolled'
 			GROUP BY co.name
 			""",

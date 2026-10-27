@@ -2,7 +2,6 @@
  "actions": [],
  "allow_import": 1,
  "allow_rename": 1,
- "autoname": "ENR-.YYYY.-.#####",
  "creation": "2025-12-27 10:08:07.751790",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -12,13 +11,11 @@
   "student",
   "student_name",
   "enrollment_date",
-  "term_start_date",
   "column_break_1",
-  "batch",
   "program",
   "academic_year",
-  "term_name",
-  "term_duration_weeks",
+  "year_no",
+  "batch",
   "section",
   "section_courses",
   "enrolled_courses",
@@ -64,14 +61,6 @@
    "reqd": 1
   },
   {
-   "description": "When the Batch's academic term actually begins — distinct from Enrollment Date, which is just when this record was created.",
-   "fetch_from": "batch.start_date",
-   "fieldname": "term_start_date",
-   "fieldtype": "Date",
-   "label": "Term Start Date",
-   "read_only": 1
-  },
-  {
    "fieldname": "column_break_1",
    "fieldtype": "Column Break"
   },
@@ -84,38 +73,34 @@
    "options": "Section"
   },
   {
-   "fetch_from": "batch.program",
    "fieldname": "program",
    "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Programme",
    "options": "Programme",
-   "read_only": 1
+   "reqd": 1
   },
   {
-   "fetch_from": "batch.academic_year",
+   "description": "One enrollment per student, programme and academic year. Defaults to the Batch's academic year.",
    "fieldname": "academic_year",
    "fieldtype": "Link",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Academic Year",
    "options": "Academic Year",
-   "read_only": 1
+   "reqd": 1
   },
   {
-   "fetch_from": "batch.academic_term",
-   "fieldname": "term_name",
-   "fieldtype": "Data",
+   "default": "1",
+   "description": "Year of the programme the student is in (1 = first year). The current term is worked out from term dates, not stored here.",
+   "fieldname": "year_no",
+   "fieldtype": "Int",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Term",
-   "read_only": 1
-  },
-  {
-   "fetch_from": "batch.term_weeks",
-   "fieldname": "term_duration_weeks",
-   "fieldtype": "Int",
-   "label": "Term Duration (Weeks)",
-   "read_only": 1
+   "label": "Year No",
+   "non_negative": 1,
+   "reqd": 1
   },
   {
    "fieldname": "section_courses",
@@ -192,11 +177,11 @@
    "link_fieldname": "student"
   }
  ],
- "modified": "2026-07-14 09:20:23.933500",
+ "modified": "2026-10-27 20:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Student Enrollment",
- "naming_rule": "Expression",
+ "naming_rule": "By script",
  "owner": "Administrator",
  "permissions": [
   {

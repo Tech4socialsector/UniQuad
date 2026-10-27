@@ -337,7 +337,8 @@ def create_invoice(docname):
 			fi.student = student_name
 			fi.program = doc.program
 			fi.academic_year = doc.academic_year
-			fi.academic_term = frappe.db.get_value("Student Master", student_name, "academic_term")
+			from slcm.slcm.doctype.academic_term.academic_term import get_current_term
+			fi.academic_term = get_current_term()
 			fi.applicant_fee_assignment = doc.name
 			fi.invoice_date = frappe.utils.today()
 			fi.due_date = frappe.utils.add_days(frappe.utils.today(), 15)

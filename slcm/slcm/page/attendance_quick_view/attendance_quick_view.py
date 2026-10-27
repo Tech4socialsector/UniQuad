@@ -34,6 +34,20 @@ def _faculty_scope(user):
     return offerings, students, faculty_name
 
 
+def _offering_sections(offerings):
+    """Sections taught in these Course Offerings — taken from the offerings'
+    Faculty table rows (Course Offering itself no longer has a section)."""
+    if not offerings:
+        return []
+    return list({
+        s for s in frappe.get_all(
+            "Course Offering Faculty",
+            filters={"parent": ["in", offerings], "parenttype": "Course Offering"},
+            pluck="section",
+        ) if s
+    })
+
+
 @frappe.whitelist()
 def get_faculty_context():
     """
@@ -55,11 +69,11 @@ def get_faculty_context():
     offering_docs = frappe.get_all(
         "Course Offering",
         filters={"name": ["in", offerings]},
-        fields=["name", "program", "section"],
+        fields=["name", "program"],
     )
 
     programmes = list({o.program for o in offering_docs if o.program})
-    sections = list({o.section for o in offering_docs if o.section})
+    sections = _offering_sections(offerings)
 
     return {
         "restricted": True,
@@ -205,22 +219,13 @@ def get_sections(programme=None, course_offering=None):
     user = frappe.session.user
     offerings, students, faculty_name = _faculty_scope(user)
 
+    # Sections are global (no batch / programme), so `programme` doesn't narrow them.
     filters = {}
-    if programme:
-        batches = frappe.get_all("Batch", filters={"program": programme}, pluck="name")
-        if not batches:
-            return []
-        filters["batch"] = ["in", batches]
 
     if offerings is not None:
         if not offerings:
             return []
-        offering_docs = frappe.get_all(
-            "Course Offering",
-            filters={"name": ["in", offerings]},
-            pluck="section",
-        )
-        visible_sections = [s for s in offering_docs if s]
+        visible_sections = _offering_sections(offerings)
         if not visible_sections:
             return []
         filters["name"] = ["in", visible_sections]

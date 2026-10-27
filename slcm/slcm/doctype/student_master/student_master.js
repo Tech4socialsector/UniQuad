@@ -308,7 +308,8 @@ frappe.ui.form.on("Student Master", {
 											]
 												.filter(Boolean)
 												.join(" "),
-											cohort: frm.doc.programme,
+											program: frm.doc.programme_of_study,
+											batch: frm.doc.batch,
 											academic_year: frm.doc.academic_year,
 										});
 									} else {

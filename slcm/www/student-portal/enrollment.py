@@ -2,6 +2,7 @@ import re
 
 import frappe
 from frappe.utils import getdate, nowdate
+from slcm.slcm.utils.exam_schedule import get_student_programme
 
 no_cache = 1
 
@@ -32,25 +33,25 @@ def get_context(context):
 		enrollments = frappe.get_all(
 			"Student Enrollment",
 			filters={"student": student_name},
-			fields=["name", "cohort", "program", "academic_year", "term_name", "status",
-					"faculty_advisor", "enrollment_date", "term_start_date", "creation"],
+			fields=["name", "batch", "program", "academic_year", "year_no", "status",
+					"faculty_advisor", "enrollment_date", "creation"],
 			order_by="creation desc",
 			ignore_permissions=True,
 		)
 
-		# Newest first: academic year, then term start / enrolment date, then creation
+		# Newest first: academic year, then enrolment date, then creation
 		def _sort_key(e):
 			year = re.match(r"\s*(\d{4})", e.academic_year or "")
-			when = e.term_start_date or e.enrollment_date or getdate(e.creation)
+			when = e.enrollment_date or getdate(e.creation)
 			return (int(year.group(1)) if year else 0, str(when), str(e.creation))
 		enrollments.sort(key=_sort_key, reverse=True)
 
-		# Mark active + upcoming (a Pending enrolment, or one whose term hasn't started)
+		# Mark active + upcoming (a Pending enrolment, or one dated in the future)
 		today = getdate(nowdate())
 		context.active_enrollment = None
 		for e in enrollments:
 			e["is_active"] = e.status == "Enrolled"
-			start = e.term_start_date or e.enrollment_date
+			start = e.enrollment_date
 			e["is_upcoming"] = e.status == "Pending" or bool(
 				e.status == "Enrolled" and start and getdate(start) > today
 			)
@@ -205,7 +206,7 @@ def get_context(context):
 					"course_status": r.status or "Enrolled",
 					"credits": co.get("credit_value") or r.credits or 0,
 					"faculty": ", ".join(faculty),
-					"term": co.get("term_name") or context.active_enrollment.get("term_name") or "",
+					"term": co.get("term_name") or "",
 					# None = no attendance recorded yet (not the same as 0%)
 					"attendance_pct": round(float(att.attendance_percentage or 0), 1) if has_att else None,
 					"eligible": bool(att.eligible_for_exam) if has_att else None,
@@ -248,9 +249,9 @@ def _set_student_nav(context, student):
 	context.student_id = student.registration_id or student.name
 	context.student_photo = student.passport_size_photo or ""
 	context.student_initial = (context.student_name[0]).upper() if context.student_name else "S"
-	context.programme_name = frappe.db.get_value("Batch", student.programme, "cohort_name") or student.programme or ""
+	context.programme_name = get_student_programme(student.name)
 	context.department = student.department or ""
-	context.batch_year = student.batch_year or ""
+	context.batch_year = student.batch or ""
 
 
 def _set_nav_defaults(context):

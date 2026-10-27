@@ -891,11 +891,10 @@ class SLCMAnalyticsDashboard {
 	_refresh_cohort_filter() {
 		if (!this._filter_options) return;
 		const ay   = this.filters.academic_year;
-		const prog = this.filters.program;
 
+		// Batches are standalone (no programme link) — filter by academic year only
 		let cohorts = this._filter_options.cohorts;
 		if (ay)   cohorts = cohorts.filter(c => c.academic_year === ay);
-		if (prog) cohorts = cohorts.filter(c => c.program === prog);
 
 		const $sel = this.$cohort;
 		$sel.html('<option value="">All Cohorts</option>');
@@ -1818,7 +1817,6 @@ class SLCMAnalyticsDashboard {
 						${this._chart_card('sad-pm-prog-status',  'Program Status',          'Active vs Inactive',           '', '')}
 						${this._chart_card('sad-pm-cohort-status','Cohort Status',           'Planned / Active / Completed / Inactive', '', '')}
 						${this._chart_card('sad-pm-level',        'Level of Study',          'UG / PG / Research breakdown', '', '')}
-						${this._chart_card('sad-pm-dept',         'Programs by Department',  'Department-wise count',        '', '')}
 					</div>
 
 					<div class="sad-section-title">Enrollment Analysis</div>
@@ -1843,7 +1841,6 @@ class SLCMAnalyticsDashboard {
 				this._render_donut('#sad-pm-prog-status .sad-chart-body',   d.program_status,      'programme', 'program_status');
 				this._render_donut('#sad-pm-cohort-status .sad-chart-body', d.cohort_status,       'programme', 'cohort_status');
 				this._render_donut('#sad-pm-level .sad-chart-body',         d.level_of_study,      'programme', 'level_of_study');
-				this._render_donut('#sad-pm-dept .sad-chart-body',          d.dept_distribution,   'programme', 'department');
 				this._render_bar_horizontal('#sad-pm-prog-enroll .sad-chart-body',   d.program_enrollment,  { module: 'programme', dimension: 'program_enrollment' });
 				this._render_donut('#sad-pm-enroll-status .sad-chart-body', d.enrollment_status,   'programme', 'enrollment_status');
 				this._render_bar_horizontal('#sad-pm-cohort-enroll .sad-chart-body', d.cohort_enrollment,   { module: 'programme', dimension: 'cohort_enrollment' });
@@ -2210,7 +2207,6 @@ class SLCMAnalyticsDashboard {
 			// ── Programme ────────────────────────────────────────────────
 			'programme:program_status':       { dt: 'Programme',                       filters: f('program_status') },
 			'programme:level_of_study':       { dt: 'Programme',                       filters: f('level_of_study') },
-			'programme:department':           { dt: 'Programme',                       filters: f('department') },
 			'programme:cohort_status':        { dt: 'Batch',                        filters: f('status') },
 			'programme:enrollment_status':    { dt: 'Student Enrollment',            filters: f('enrollment_status') },
 			'programme:course_enroll_status': { dt: 'Student Enrollment',            filters: f('enrollment_status') },
@@ -2223,7 +2219,7 @@ class SLCMAnalyticsDashboard {
 			'idcard:card_status':             { dt: 'ID Card Generation',            filters: f('card_status') },
 			'idcard:card_type':               { dt: 'ID Card Generation',            filters: f('card_type') },
 			'idcard:dept':                    { dt: 'ID Card Generation',            filters: f('department') },
-			'idcard:program':                 { dt: 'ID Card Generation',            filters: f('program') },
+			'idcard:program':                 { dt: 'ID Card Generation',            filters: {} },
 
 			// ── Venue ────────────────────────────────────────────────
 			'venue:booking_status':           { dt: 'Venue Booking',                 filters: f('status') },

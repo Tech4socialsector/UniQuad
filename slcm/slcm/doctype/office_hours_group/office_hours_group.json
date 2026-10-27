@@ -35,7 +35,6 @@
    "unique": 1
   },
   {
-   "fetch_from": "batch.program",
    "fieldname": "program",
    "fieldtype": "Data",
    "in_list_view": 1,
@@ -72,7 +71,6 @@
    "read_only": 1
   },
   {
-   "fetch_from": "batch.academic_term",
    "fieldname": "academic_term",
    "fieldtype": "Data",
    "label": "Academic Term",
@@ -85,7 +83,6 @@
    "options": "Batch"
   },
   {
-   "fetch_from": "batch.section",
    "fieldname": "section",
    "fieldtype": "Data",
    "label": "Section",
@@ -138,7 +135,7 @@
   }
  ],
  "links": [],
- "modified": "2026-07-14 09:54:21.102136",
+ "modified": "2026-10-27 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Office Hours Group",

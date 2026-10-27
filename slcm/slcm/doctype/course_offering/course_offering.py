@@ -2,13 +2,60 @@
 # For license information, please see license.txt
 
 import frappe
+from frappe import _
 from frappe.model.document import Document
+from frappe.utils import cint
 
 
 class CourseOffering(Document):
 	def validate(self):
+		self.validate_term_in_academic_year()
+		self.validate_year_no()
+		self.validate_duplicate_offering()
 		self.validate_faculty_table_sections()
 		self.sync_primary_faculty()
+
+	def validate_term_in_academic_year(self):
+		term_year = frappe.db.get_value("Academic Term", self.term_name, "academic_year")
+		if term_year and term_year != self.academic_year:
+			frappe.throw(
+				_("Academic Term {0} belongs to {1}, not {2}.").format(
+					frappe.bold(self.term_name), term_year, self.academic_year
+				)
+			)
+
+	def validate_year_no(self):
+		if cint(self.year_no) < 1:
+			frappe.throw(_("Year No must be 1 or more."))
+
+		duration = cint(frappe.db.get_value("Programme", self.program, "program_duration"))
+		if duration and cint(self.year_no) > duration:
+			frappe.throw(
+				_("Year No {0} is beyond the {1}-year duration of {2}.").format(
+					self.year_no, duration, self.program
+				)
+			)
+
+	def validate_duplicate_offering(self):
+		"""One offering per programme + course + academic year + term + year."""
+		duplicate = frappe.db.get_value(
+			"Course Offering",
+			{
+				"program": self.program,
+				"course_title": self.course_title,
+				"academic_year": self.academic_year,
+				"term_name": self.term_name,
+				"year_no": self.year_no,
+				"name": ["!=", self.name],
+			},
+			"name",
+		)
+		if duplicate:
+			frappe.throw(
+				_("Course Offering {0} already exists for this programme, course, academic year, term and year.").format(
+					frappe.bold(duplicate)
+				)
+			)
 
 	def validate_faculty_table_sections(self):
 		"""Each section can have only one Primary faculty; a section with no

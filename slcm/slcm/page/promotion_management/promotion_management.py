@@ -15,6 +15,9 @@ import frappe
 from frappe import _
 from frappe.utils import now_datetime, flt, cint, strip_html
 
+from slcm.slcm.doctype.academic_term.academic_term import get_current_term
+from slcm.slcm.doctype.student_enrollment.student_enrollment import create_next_year_enrollment
+
 
 PROMOTED_STATUSES     = ("Promoted", "Override - Promoted")
 NOT_PROMOTED_STATUSES = ("Not Promoted", "Override - Not Promoted")
@@ -204,15 +207,6 @@ def _evaluate_year_promotion(row, policy_dict, has_fee_due):
 	return ev
 
 
-# A student's current Batch is the one on their active Student Enrollment;
-# Student Master.batch is only the fallback (it is often blank or stale).
-CURRENT_BATCH_SQL = """COALESCE(
-	(SELECT se.batch FROM `tabStudent Enrollment` se
-	 WHERE se.student = sm.name AND se.status = 'Enrolled' AND se.docstatus < 2
-	   AND IFNULL(se.batch, '') != ''
-	 ORDER BY se.enrollment_date DESC, se.creation DESC LIMIT 1),
-	NULLIF(sm.batch, ''))"""
-
 # Final grade = moderated/updated grade if present, else the original grade
 # (same rule as Term Result). A grade fails when the course's Grading Schema
 # flags it failed=1; without a schema assignment only "F" counts as a fail.
@@ -271,22 +265,6 @@ def _set_student_year(student, year):
 	}, update_modified=False)
 
 
-def _sync_student_master_batch(student, batch):
-	"""Point Student Master at the student's new Batch. db.set_value skips
-	fetch_from, so the Batch-derived fields are copied explicitly."""
-	b = frappe.db.get_value(
-		"Batch", batch, ["academic_year", "academic_term", "program", "level_of_study"], as_dict=True
-	)
-	if not b:
-		return
-	values = {"batch": batch, "academic_year": b.academic_year, "academic_term": b.academic_term}
-	if b.program:
-		values["programme_of_study"] = b.program
-	if b.level_of_study:
-		values["level_of_study"] = b.level_of_study
-	frappe.db.set_value("Student Master", student, values, update_modified=False)
-
-
 def _year_variants(year):
 	"""Student Master.current_year is stored both as '1' and 'Year 1'."""
 	y = str(year).strip()
@@ -295,32 +273,26 @@ def _year_variants(year):
 
 def _get_students_raw(program, academic_year, from_year):
 	"""
-	Fetch active students for the given program + academic_year + from_year
-	along with their CGPA, backlog count, and attendance average.
+	Students with an Enrolled Student Enrollment for program + academic_year in
+	year of study `from_year`, with their CGPA, backlog count and attendance.
 	"""
 	students = frappe.db.sql(
-		f"""
+		"""
 		SELECT
-			s.student, s.first_name, s.current_cgpa, s.cur_batch AS programme,
-			s.batch_year, s.current_year, c.batch_name AS cohort_name
-		FROM (
-			SELECT
-				sm.name                  AS student,
-				sm.first_name            AS first_name,
-				sm.current_cgpa          AS current_cgpa,
-				sm.year_of_study         AS batch_year,
-				sm.current_year          AS current_year,
-				{CURRENT_BATCH_SQL}      AS cur_batch
-			FROM `tabStudent Master` sm
-			WHERE sm.current_year IN %(from_year)s
-			  AND sm.student_status = 'Active'
-		) s
-		INNER JOIN `tabBatch` c ON c.name = s.cur_batch
-		WHERE c.program = %(program)s
-		  AND c.academic_year = %(academic_year)s
-		ORDER BY s.first_name
+			se.student, se.name AS enrollment, sm.first_name, sm.current_cgpa,
+			se.batch AS programme, sm.year_of_study AS batch_year,
+			se.year_no AS current_year, b.batch_name AS cohort_name
+		FROM `tabStudent Enrollment` se
+		INNER JOIN `tabStudent Master` sm ON sm.name = se.student
+		LEFT JOIN `tabBatch` b ON b.name = se.batch
+		WHERE se.program = %(program)s
+		  AND se.academic_year = %(academic_year)s
+		  AND se.year_no = %(from_year)s
+		  AND se.status = 'Enrolled'
+		  AND sm.student_status = 'Active'
+		ORDER BY sm.first_name
 		""",
-		{"program": program, "academic_year": academic_year, "from_year": _year_variants(from_year)},
+		{"program": program, "academic_year": academic_year, "from_year": cint(from_year)},
 		as_dict=True,
 	)
 
@@ -411,102 +383,49 @@ def _next_academic_year(academic_year):
 	)
 
 
-def _resolve_next_batch(current_cohort):
-	"""Given a Student Enrollment's current Batch, find the Batch for the
-	same program + entry cohort (section) one year_of_study ahead, in the
-	next Academic Year by start date. Returns None if no such Batch exists
-	yet (registrar hasn't created it) or the current batch has no section.
-
-	NOTE: this only covers promotion that happens once per Academic Year.
-	Term-to-term moves inside a year go through Promotion Run (Student
-	Enrollment → Promote Students) instead.
-	"""
-	batch = frappe.db.get_value(
-		"Batch", current_cohort,
-		["program", "section", "term_year", "academic_year"], as_dict=True,
-	)
-	if not batch or not batch.section or batch.term_year is None:
-		return None
-
-	next_ay = _next_academic_year(batch.academic_year)
-	if not next_ay:
-		return None
-
-	return frappe.db.get_value(
-		"Batch",
-		{
-			"program": batch.program,
-			"section": batch.section,
-			"term_year": cint(batch.term_year) + 1,
-			"academic_year": next_ay,
-		},
-		"name",
-	)
-
-
 def _promote_enrollment(student, to_year):
-	"""Mark the student's current Student Enrollment Completed and create a
-	new one in the resolved next Batch. Returns the new enrollment name, or
-	raises if the next Batch doesn't exist yet."""
+	"""Create the student's next-year Student Enrollment (year_no = to_year,
+	next Academic Year) from their current Enrolled one, which becomes
+	Completed. Returns the new (or already existing) enrollment name."""
 	current = frappe.db.get_value(
 		"Student Enrollment",
-		{"student": student, "status": "Enrolled", "docstatus": ["<", 2]},
-		["name", "batch"],
+		{"student": student, "status": "Enrolled", "year_no": cint(to_year) - 1},
+		["name", "academic_year"],
 		as_dict=True,
 		order_by="enrollment_date desc",
 	)
-	if not current or not current.batch:
+	if not current:
 		frappe.throw(
-			_("No active Student Enrollment found for {0} to promote from").format(student)
+			_("No Enrolled Student Enrollment in Year {0} found for {1} to promote from.").format(
+				cint(to_year) - 1, student
+			)
 		)
 
-	next_batch = _resolve_next_batch(current.batch)
-	if not next_batch:
+	next_ay = _next_academic_year(current.academic_year)
+	if not next_ay:
 		frappe.throw(
-			_(
-				"Cannot promote {0}: no Batch found for year {1} following {2}. "
-				"Create the target Batch first."
-			).format(student, to_year, current.batch)
+			_("Cannot promote {0}: no Academic Year starts after {1}. Create it first.").format(
+				student, current.academic_year
+			)
 		)
 
-	existing = frappe.db.exists(
-		"Student Enrollment",
-		{"student": student, "batch": next_batch, "docstatus": ["<", 2]},
-	)
-	if existing:
-		_sync_student_master_batch(student, next_batch)
-		return existing
-
-	# Order matters: completing the old enrollment flips Student Master to
-	# "Graduated"; inserting the new Enrolled one sets it back to "Active".
-	old_doc = frappe.get_doc("Student Enrollment", current.name)
-	old_doc.status = "Completed"
-	old_doc.save(ignore_permissions=True)
-
-	new_doc = frappe.new_doc("Student Enrollment")
-	new_doc.student = student
-	new_doc.batch = next_batch
-	new_doc.status = "Enrolled"
-	new_doc.enrollment_date = frappe.db.get_value("Batch", next_batch, "start_date") or frappe.utils.today()
-	new_doc.insert(ignore_permissions=True)
-	_sync_student_master_batch(student, next_batch)
-	return new_doc.name
+	return create_next_year_enrollment(current.name, next_ay)[0]
 
 
 def _apply_year_promotion(student, to_year):
-	"""Move the student to `to_year` and into the next year's Batch.
+	"""Move the student to `to_year`: a new Student Enrollment for the next
+	Academic Year with year_no = to_year; the old one becomes Completed.
 
-	Year, Batch and enrollment move together inside a savepoint: if the
-	enrollment can't be created (e.g. target Batch not created yet) nothing
-	changes — the student stays in their current year and Batch, the log row
-	shows "Enrollment Failed", and Retry Enrollment completes the move later.
+	Year and enrollment move together inside a savepoint: if the enrollment
+	can't be created (e.g. the next Academic Year doesn't exist yet) nothing
+	changes — the student stays in their current year, the log row shows
+	"Enrollment Failed", and Retry Enrollment completes the move later.
 	"""
 	save_point = "pm_enroll_" + frappe.generate_hash(length=10)
 	msg_count = len(frappe.local.message_log or [])
 	frappe.db.savepoint(save_point)
 	try:
 		name = _promote_enrollment(student, to_year)
-		_set_student_year(student, to_year)
 		frappe.db.release_savepoint(save_point)
 		return {"status": "Enrolled", "to_enrollment": name, "error": None}
 	except Exception as e:
@@ -607,15 +526,16 @@ def get_student_progression(student):
 	)
 	if not sm:
 		return None
-	batch = frappe.db.sql(f"SELECT {CURRENT_BATCH_SQL} FROM `tabStudent Master` sm WHERE sm.name = %s", student)
-	batch = batch[0][0] if batch else None
+	# The student's current position is their latest Enrolled Student Enrollment.
 	b = frappe.db.get_value(
-		"Batch", batch, ["name", "program", "academic_year", "section", "term_year", "batch_name"], as_dict=True,
-	) if batch else None
-
-	import re as _re
-	m = _re.search(r"\d+", str(sm.current_year or ""))
-	year = int(m.group()) if m else 0
+		"Student Enrollment",
+		{"student": student, "status": "Enrolled"},
+		["name", "program", "academic_year", "year_no", "batch"],
+		as_dict=True,
+		order_by="enrollment_date desc, creation desc",
+	)
+	batch = b.batch if b else None
+	year = cint(b.year_no) if b else 0
 
 	out = {
 		"year": year,
@@ -625,22 +545,23 @@ def get_student_progression(student):
 		"next_step": "", "eligibility": None, "last_decision": None,
 	}
 
-	# Term position inside the year: the Batch's term number among the
-	# Batches of the same programme + section in that academic year.
+	# Term position inside the year: today's Academic Term (from term dates)
+	# among the terms of the enrollment's academic year.
 	if b:
-		out["term_no"] = cint(b.term_year) or None
-		filters = {"program": b.program, "academic_year": b.academic_year}
-		if b.section:
-			filters["section"] = b.section
-		term_years = [cint(t) for t in frappe.get_all("Batch", filters=filters, pluck="term_year") if cint(t)]
-		out["terms_in_year"] = max(term_years) if term_years else None
+		terms = frappe.get_all(
+			"Academic Term", filters={"academic_year": b.academic_year}, fields=["name", "term_no"]
+		)
+		current_term = get_current_term()
+		term_no = next((cint(t.term_no) for t in terms if t.name == current_term), 0)
+		out["term_no"] = term_no or None
+		out["terms_in_year"] = max((cint(t.term_no) for t in terms), default=0) or None
 		if out["term_no"] and out["terms_in_year"]:
 			out["is_last_term"] = out["term_no"] >= out["terms_in_year"]
 			if out["is_last_term"]:
 				out["next_step"] = _("Year end — promotion to Year {0} is checked against the Promotion Policy.").format(year + 1) if year else ""
 			else:
-				out["next_step"] = _("Next: Term {0} of {1} — term-to-term promotion is automatic (no policy check).").format(
-					out["term_no"] + 1, out["terms_in_year"])
+				out["next_step"] = _("Term {0} of {1}. Promotion happens once, at the end of the year.").format(
+					out["term_no"], out["terms_in_year"])
 
 	# Latest confirmed decision from the Promotion Log
 	last = frappe.get_all(
@@ -1472,23 +1393,21 @@ def download_formatted_promotion_list(program, academic_year, university_name=No
 	raw_mode = not by_year
 	if raw_mode:
 		raw = frappe.db.sql(
-			f"""
-			SELECT s.student, s.current_year, s.current_cgpa FROM (
-				SELECT sm.name AS student, sm.current_year,
-				       sm.current_cgpa AS current_cgpa, {CURRENT_BATCH_SQL} AS cur_batch
-				FROM `tabStudent Master` sm WHERE sm.student_status = 'Active'
-			) s
-			INNER JOIN `tabBatch` c ON c.name = s.cur_batch
-			WHERE c.program = %(program)s
+			"""
+			SELECT se.student, se.year_no AS current_year, sm.current_cgpa
+			FROM `tabStudent Enrollment` se
+			INNER JOIN `tabStudent Master` sm ON sm.name = se.student
+			WHERE se.program = %(program)s
+			  AND se.academic_year = %(academic_year)s
+			  AND se.status = 'Enrolled'
+			  AND sm.student_status = 'Active'
 			""",
-			{"program": program}, as_dict=True,
+			{"program": program, "academic_year": academic_year}, as_dict=True,
 		)
-		import re as _re
 		for s in raw:
-			m = _re.search(r"\d+", str(s.current_year or ""))
-			if not m:
+			if not cint(s.current_year):
 				continue
-			by_year.setdefault(int(m.group()), []).append(frappe._dict(
+			by_year.setdefault(cint(s.current_year), []).append(frappe._dict(
 				student=s.student, current_cgpa=s.current_cgpa, promotion_status=None, remarks="",
 			))
 		by_year = OrderedDict(sorted(by_year.items()))

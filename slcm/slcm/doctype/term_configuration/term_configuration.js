@@ -24,13 +24,9 @@ frappe.ui.form.on('Term Configuration', {
     },
 
     academic_year: function (frm) {
-        if (frm.doc.academic_year) {
-            // Fetch academic year details
-            frappe.db.get_value('Academic Year', frm.doc.academic_year, 'academic_system', (r) => {
-                if (r && r.academic_system) {
-                    frm.set_value('system', r.academic_system);
-                }
-            });
+        // Academic Year no longer carries an academic system; terms are trimesters.
+        if (frm.doc.academic_year && !frm.doc.system) {
+            frm.set_value('system', 'Trimester');
         }
     }
 });

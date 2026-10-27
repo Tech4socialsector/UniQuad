@@ -8,6 +8,7 @@ import re
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from slcm.slcm.doctype.academic_term.academic_term import get_current_term
 from frappe.utils import flt, get_fullname, getdate, now_datetime, today
 
 # ---------------------------------------------------------------------------
@@ -67,11 +68,25 @@ def _get_valid_fee_structure_for_program(program):
 
 
 def _resolve_program(programme):
-    """Resolve a Cohort name (or bare Program name) to a Program name."""
-    program = frappe.db.get_value("Batch", programme, "program")
-    if not program and frappe.db.exists("Programme", programme):
-        program = programme
-    return program
+    """Resolve a bare Program name to a Program name (a Batch no longer
+    carries a programme)."""
+    if programme and frappe.db.exists("Programme", programme):
+        return programme
+    return None
+
+
+def _get_student_program(student, programme_of_study=None):
+    """A student's programme: their latest Enrolled Student Enrollment's
+    program, falling back to Student Master.programme_of_study."""
+    program = None
+    if student:
+        program = frappe.db.get_value(
+            "Student Enrollment",
+            {"student": student, "status": "Enrolled"},
+            "program",
+            order_by="enrollment_date desc, creation desc",
+        )
+    return program or programme_of_study or None
 
 
 def _calculate_discount(total_fee, applying_scholarship, scholarship_percentage, scholarship_amount):
@@ -248,6 +263,8 @@ class StudentMaster(Document):
         self._sync_active_statuses()
         self._handle_registration_email()
         _rebuild_fee_invoices(self)
+        if not self.is_new() and self.has_value_changed("registration_id"):
+            _sync_enrollment_names([self.name])
 
     def _rebuild_fee_invoices_table(self):
         """Internal: rebuild fee_invoices child rows. Called from on_update and the API."""
@@ -280,7 +297,7 @@ class StudentMaster(Document):
         if self.fee_structure or flt(self.total_program_fee):
             return
 
-        program = _resolve_program(self.batch)
+        program = _get_student_program(self.name, self.programme_of_study)
         if not program:
             return
 
@@ -388,7 +405,7 @@ def _sync_single_student_fee(student_name):
     if not student.batch:
         return False
 
-    program = _resolve_program(student.batch)
+    program = _get_student_program(student.name, student.programme_of_study)
     if not program:
         return False
 
@@ -444,7 +461,7 @@ def sync_fee_structures_for_program(program):
     students = frappe.get_all(
         "Student Master",
         filters={"student_status": "Active"},
-        fields=["name", "batch"],
+        fields=["name", "batch", "programme_of_study"],
         limit=0,
     )
 
@@ -454,7 +471,7 @@ def sync_fee_structures_for_program(program):
     for s in students:
         if not s.batch:
             continue
-        resolved = _resolve_program(s.batch)
+        resolved = _get_student_program(s.name, s.programme_of_study)
         if resolved != program:
             continue
 
@@ -671,7 +688,9 @@ def bulk_student_enrollment(students):
                     student.first_name, student.middle_name, student.last_name
                 ])),
                 "batch":         student.batch,
-                "section":       frappe.db.get_value("Batch", student.batch, "section") or "",
+                "section":       student.section or "",
+                "program":       _get_student_program(student.name, student.programme_of_study),
+                "year_no":       frappe.utils.cint(student.current_year) or 1,
                 "academic_year": student.academic_year,
                 "status":        "Enrolled",
                 "enrollment_date": frappe.utils.today(),
@@ -835,7 +854,7 @@ def _enrollments_by_recency(student_name):
     enrollments = frappe.get_all(
         "Student Enrollment",
         filters={"student": student_name, "docstatus": ["<", 2]},
-        fields=["name", "academic_year", "term_name", "status", "creation"],
+        fields=["name", "academic_year", "year_no", "status", "creation"],
     )
     if not enrollments:
         return []
@@ -887,7 +906,8 @@ def get_academic_progress_list(student_name):
             "name": e.name,
             "academic_year": e.academic_year or "",
             "ay_name": ay_map.get(e.academic_year) or e.academic_year or "",
-            "term_name": e.term_name or "",
+            # Enrollments are per academic year now; label them by year of study.
+            "term_name": f"Year {e.year_no}" if e.year_no else "",
             "status": e.status or "",
             "is_current": idx == 0,
         }
@@ -915,10 +935,11 @@ def get_academic_progress(student_name, enrollment_name=None):
     sm = frappe.db.get_value(
         "Student Master",
         student_name,
-        ["batch", "current_year", "academic_term", "current_cgpa"],
+        ["batch", "section", "current_year", "current_cgpa"],
         as_dict=True,
     )
-    batch_year = frappe.db.get_value("Batch", sm.batch, "section") if sm.batch else ""
+    batch_year = sm.section or ""
+    current_term = get_current_term()
 
     # ── Enrollment: a specific one if requested, else the current one ───────
     if enrollment_name:
@@ -926,7 +947,7 @@ def get_academic_progress(student_name, enrollment_name=None):
             "Student Enrollment",
             {"student": student_name, "docstatus": ["<", 2], "name": enrollment_name},
             [
-                "name", "academic_year", "term_name", "status",
+                "name", "academic_year", "year_no", "status",
                 "program", "batch", "section", "enrollment_date", "faculty_advisor",
             ],
             as_dict=True,
@@ -939,7 +960,7 @@ def get_academic_progress(student_name, enrollment_name=None):
                 "Student Enrollment",
                 recent[0].name,
                 [
-                    "name", "academic_year", "term_name", "status",
+                    "name", "academic_year", "year_no", "status",
                     "program", "batch", "section", "enrollment_date", "faculty_advisor",
                 ],
                 as_dict=True,
@@ -948,7 +969,7 @@ def get_academic_progress(student_name, enrollment_name=None):
     result = {
         "student_name": student_name,
         "current_year": sm.current_year or "",
-        "current_term": sm.academic_term or "",
+        "current_term": current_term or "",
         "current_cgpa": flt(sm.current_cgpa or 0),
         "batch_year": batch_year or "",
         "enrollment": None,
@@ -966,19 +987,22 @@ def get_academic_progress(student_name, enrollment_name=None):
         ay_doc = frappe.db.get_value(
             "Academic Year",
             enrollment.academic_year,
-            ["academic_year_name", "academic_system", "year_start_date", "year_end_date", "status"],
+            ["academic_year_name", "year_start_date", "year_end_date", "status"],
             as_dict=True,
         )
 
-    # Academic term details
+    # Academic term details: the date-based current term, when it falls in
+    # this enrollment's academic year (enrollments don't store a term).
     at_doc = None
-    if enrollment.term_name:
+    if current_term:
         at_doc = frappe.db.get_value(
             "Academic Term",
-            enrollment.term_name,
-            ["term_name", "term_start_date", "term_end_date", "status"],
+            current_term,
+            ["name", "academic_year", "term_name", "term_start_date", "term_end_date", "status"],
             as_dict=True,
         )
+        if at_doc and at_doc.academic_year != enrollment.academic_year:
+            at_doc = None
 
     # Batch / Section details
     cohort_doc = None
@@ -986,7 +1010,7 @@ def get_academic_progress(student_name, enrollment_name=None):
         cohort_doc = frappe.db.get_value(
             "Batch",
             enrollment.batch,
-            ["batch_name", "batch_code", "term_year", "status", "section"],
+            ["batch_name", "batch_code", "status"],
             as_dict=True,
         )
 
@@ -1009,11 +1033,11 @@ def get_academic_progress(student_name, enrollment_name=None):
         "name":                 enrollment.name,
         "academic_year":        enrollment.academic_year or "",
         "ay_name":              ay_doc.academic_year_name if ay_doc else (enrollment.academic_year or ""),
-        "ay_system":            ay_doc.academic_system if ay_doc else "",
+        "ay_system":            "",
         "ay_start":             str(ay_doc.year_start_date) if ay_doc and ay_doc.year_start_date else "",
         "ay_end":               str(ay_doc.year_end_date) if ay_doc and ay_doc.year_end_date else "",
         "ay_status":            ay_doc.status if ay_doc else "",
-        "term_name":            enrollment.term_name or "",
+        "term_name":            at_doc.name if at_doc else "",
         "term_start":           str(at_doc.term_start_date) if at_doc and at_doc.term_start_date else "",
         "term_end":             str(at_doc.term_end_date) if at_doc and at_doc.term_end_date else "",
         "term_status":          at_doc.status if at_doc else "",
@@ -1023,9 +1047,9 @@ def get_academic_progress(student_name, enrollment_name=None):
         "cohort":               enrollment.batch or "",
         "cohort_name":          cohort_doc.batch_name if cohort_doc else (enrollment.batch or ""),
         "cohort_code":          cohort_doc.batch_code if cohort_doc else "",
-        "cohort_term_year":     cohort_doc.term_year if cohort_doc else "",
+        "cohort_term_year":     "",
         "cohort_status":        cohort_doc.status if cohort_doc else "",
-        "cohort_section":       cohort_doc.section if cohort_doc else "",
+        "cohort_section":       enrollment.section or "",
         "batch_year":           enrollment.section or "",
         "faculty_advisor":      enrollment.faculty_advisor or "",
         "faculty_advisor_name": faculty_advisor_name,
@@ -1496,11 +1520,16 @@ def get_batch_filter_options():
     generator dialogs."""
     batches = frappe.get_all(
         "Batch",
-        fields=["name", "program", "academic_year", "academic_term"],
-        order_by="academic_year desc, academic_term asc",
+        fields=["name", "academic_year"],
+        order_by="academic_year desc",
     )
     if not batches:
         return []
+
+    # A Batch no longer carries a programme: take it from its students.
+    batch_programme = _batch_programme_map([b["name"] for b in batches])
+    for b in batches:
+        b["program"] = batch_programme.get(b["name"])
 
     programme_names = list({b["program"] for b in batches if b.get("program")})
     programmes = frappe.get_all(
@@ -1532,15 +1561,57 @@ def get_batch_filter_options():
             "batch":            b["name"],
             "programme_label":  label,
             "academic_year":    b.get("academic_year") or "",
-            "term_name":        b.get("academic_term") or "",
+            "term_name":        "",
         })
     return options
 
 
+def _batch_programme_map(batch_names):
+    """{batch: programme} for the given Batches, from their students' latest
+    Enrolled Student Enrollment, falling back to Student Master.programme_of_study."""
+    if not batch_names:
+        return {}
+    out = {}
+    for r in frappe.get_all(
+        "Student Enrollment",
+        filters={"batch": ["in", list(batch_names)], "status": "Enrolled"},
+        fields=["batch", "program"],
+        order_by="enrollment_date desc, creation desc",
+    ):
+        if r.program:
+            out.setdefault(r.batch, r.program)
+    for r in frappe.get_all(
+        "Student Master",
+        filters={"batch": ["in", list(batch_names)]},
+        fields=["batch", "programme_of_study"],
+    ):
+        if r.programme_of_study:
+            out.setdefault(r.batch, r.programme_of_study)
+    return out
+
+
+def _set_student_programmes(students):
+    """Set s["program"] on each Student Master row: the latest Enrolled
+    Student Enrollment's program, falling back to programme_of_study."""
+    enrolled = {}
+    names = [s["name"] for s in students]
+    if names:
+        for r in frappe.get_all(
+            "Student Enrollment",
+            filters={"student": ["in", names], "status": "Enrolled"},
+            fields=["student", "program"],
+            order_by="enrollment_date desc, creation desc",
+        ):
+            if r.program:
+                enrolled.setdefault(r.student, r.program)
+    for s in students:
+        s["program"] = enrolled.get(s["name"]) or s.get("programme_of_study")
+
+
 def _programme_code_for_batch(batch_name):
     """Resolve the Programme code (Programme Master's programme_code, e.g.
-    "TLLM") for a Batch, via Batch.program -> Programme.program_code."""
-    programme = frappe.db.get_value("Batch", batch_name, "program")
+    "TLLM") for a Batch, via its students' programme -> Programme.program_code."""
+    programme = _batch_programme_map([batch_name]).get(batch_name)
     if not programme:
         return ""
     return frappe.db.get_value("Programme", programme, "program_code") or ""
@@ -1591,14 +1662,24 @@ def apply_student_ids(assignments):
         frappe.throw(_("Not permitted"), frappe.PermissionError)
 
     assignments = frappe.parse_json(assignments) if isinstance(assignments, str) else assignments
-    updated = 0
+    updated = []
     for row in (assignments or []):
         if not row.get("name") or not row.get("student_id"):
             continue
         frappe.db.set_value("Student Master", row["name"], "registration_id", row["student_id"])
-        updated += 1
+        updated.append(row["name"])
+    _sync_enrollment_names(updated)
     frappe.db.commit()
-    return {"updated": updated}
+    return {"updated": len(updated)}
+
+
+def _sync_enrollment_names(students):
+    """Student Enrollments are named by the Student ID: rename them when it changes."""
+    if not students:
+        return
+    from slcm.slcm.doctype.student_enrollment.student_enrollment import sync_enrollment_names
+
+    sync_enrollment_names(students)
 
 
 @frappe.whitelist()
@@ -1624,22 +1705,23 @@ def download_student_id_bulk_template(batches=None):
         filters=filters,
         fields=[
             "name", "first_name", "last_name",
-            "academic_year", "academic_term", "batch", "registration_id",
+            "academic_year", "programme_of_study", "batch", "registration_id",
         ],
         order_by="first_name asc, last_name asc",
     )
     if not students:
         frappe.throw(_("No students found for the selected filters."))
+    _set_student_programmes(students)
 
     batch_names = {s["batch"] for s in students if s.get("batch")}
     batch_rows = frappe.get_all(
         "Batch",
         filters={"name": ["in", list(batch_names)]},
-        fields=["name", "batch_name", "program"],
+        fields=["name", "batch_name"],
     ) if batch_names else []
     batch_info = {b["name"]: b for b in batch_rows}
 
-    programme_names = {b["program"] for b in batch_rows if b.get("program")}
+    programme_names = {s["program"] for s in students if s.get("program")}
     programme_code = {
         p["name"]: p["program_code"] for p in frappe.get_all(
             "Programme",
@@ -1665,9 +1747,9 @@ def download_student_id_bulk_template(batches=None):
         ws.append([
             s["name"],
             student_name,
-            programme_code.get(batch.get("program")) or "",
+            programme_code.get(s.get("program")) or "",
             s.get("academic_year") or "",
-            s.get("academic_term") or "",
+            "",
             batch.get("batch_name") or s.get("batch") or "",
             s.get("registration_id") or "",
         ])
@@ -1707,7 +1789,7 @@ def upload_student_ids_bulk(file_url):
     wb = openpyxl.load_workbook(file_doc.get_full_path(), data_only=True)
     ws = wb.active
 
-    updated = 0
+    updated = []
     skipped = []
     for row in ws.iter_rows(min_row=2, values_only=True):
         if not row or not row[0]:
@@ -1720,10 +1802,11 @@ def upload_student_ids_bulk(file_url):
             skipped.append(student)
             continue
         frappe.db.set_value("Student Master", student, "registration_id", new_id)
-        updated += 1
+        updated.append(student)
 
+    _sync_enrollment_names(updated)
     frappe.db.commit()
-    return {"updated": updated, "skipped": skipped}
+    return {"updated": len(updated), "skipped": skipped}
 
 
 @frappe.whitelist()
@@ -1749,22 +1832,23 @@ def download_section_bulk_template(batches=None):
         filters=filters,
         fields=[
             "name", "first_name", "last_name",
-            "academic_year", "academic_term", "programme", "section",
+            "academic_year", "batch", "programme_of_study", "section",
         ],
         order_by="first_name asc, last_name asc",
     )
     if not students:
         frappe.throw(_("No students found for the selected filters."))
+    _set_student_programmes(students)
 
     batch_names = {s["batch"] for s in students if s.get("batch")}
     batch_rows = frappe.get_all(
         "Batch",
         filters={"name": ["in", list(batch_names)]},
-        fields=["name", "batch_name", "program"],
+        fields=["name", "batch_name"],
     ) if batch_names else []
     batch_info = {b["name"]: b for b in batch_rows}
 
-    programme_names = {b["program"] for b in batch_rows if b.get("program")}
+    programme_names = {s["program"] for s in students if s.get("program")}
     programme_code = {
         p["name"]: p["program_code"] for p in frappe.get_all(
             "Programme",
@@ -1790,7 +1874,7 @@ def download_section_bulk_template(batches=None):
         ws.append([
             s["name"],
             student_name,
-            programme_code.get(batch.get("program")) or "",
+            programme_code.get(s.get("program")) or "",
             s.get("academic_year") or "",
             batch.get("batch_name") or s.get("batch") or "",
             s.get("section") or "",

@@ -40,6 +40,7 @@ from collections import defaultdict
 from slcm.slcm.doctype.rfid_device_room_mapping.rfid_device_room_mapping import (
     get_active_rooms_for_device,
 )
+from slcm.slcm.doctype.academic_term.academic_term import get_current_term
 
 
 # ---------------------------------------------------------------------------
@@ -57,7 +58,7 @@ def get_student_enrollment_context(student):
     enrollment = frappe.get_all(
         "Student Enrollment",
         filters={"student": student, "status": "Enrolled"},
-        fields=["program", "academic_year", "batch", "section", "term_name"],
+        fields=["program", "academic_year", "batch", "section"],
         order_by="enrollment_date desc",
         limit=1,
     )
@@ -70,7 +71,7 @@ def get_student_enrollment_context(student):
         "academic_year": e.get("academic_year"),
         "batch": e.get("batch"),
         "section": e.get("section"),
-        "academic_term": _resolve_academic_term(e.get("academic_year"), e.get("term_name")),
+        "academic_term": get_current_term(),
     }
 
 
@@ -139,16 +140,6 @@ def academic_term_link_query(doctype, txt, searchfield, start, page_len, filters
         LIMIT %(start)s, %(page_len)s
         """,
         params,
-    )
-
-
-def _resolve_academic_term(academic_year, term_name):
-    """Academic Term has no free-text field — match it by academic_year +
-    term_name (Term Master name) against the enrollment's own term_name."""
-    if not academic_year or not term_name:
-        return None
-    return frappe.db.get_value(
-        "Academic Term", {"academic_year": academic_year, "term_name": term_name}
     )
 
 
@@ -462,16 +453,27 @@ def _is_student_in_session(student, session):
 
 
 def _is_student_in_course_offering(student, course_offering):
-    """True if the student is actively enrolled in this Course Offering's cohort."""
+    """True if the student is actively enrolled in this Course Offering."""
     if not course_offering:
         return False
-    cohort = frappe.db.get_value("Course Offering", course_offering, "cohort")
-    if not cohort:
+    if frappe.db.sql("""
+        SELECT 1 FROM `tabStudent Enrollment Course` sec
+        JOIN `tabStudent Enrollment` se ON se.name = sec.parent
+        WHERE sec.course_offering = %s AND se.student = %s AND se.status = 'Enrolled'
+        LIMIT 1
+    """, (course_offering, student)):
+        return True
+    co = frappe.db.get_value(
+        "Course Offering", course_offering, ["program", "academic_year", "year_no"], as_dict=True
+    )
+    if not co or not co.program:
         return False
     return bool(frappe.db.exists("Student Enrollment", {
-        "student":  student,
-        "batch":    cohort,
-        "status":   "Enrolled",
+        "student":       student,
+        "program":       co.program,
+        "academic_year": co.academic_year,
+        "year_no":       co.year_no,
+        "status":        "Enrolled",
     }))
 
 

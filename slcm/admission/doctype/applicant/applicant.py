@@ -3180,7 +3180,9 @@ def set_intake_type(doc, method=None):
     PhD Law                      = Direct Merit
     """
     if doc.program:
-        intake = frappe.db.get_value("Programme", doc.program, "intake_type")
+        # Programme.intake_type has been removed: treat it as empty (keeps
+        # whatever intake_type the applicant already has).
+        intake = None
         if intake:
             doc.intake_type = intake
 

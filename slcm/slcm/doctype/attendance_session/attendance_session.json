@@ -56,7 +56,6 @@
    "options": "Course Schedule\nTime Table\nOffice Hours"
   },
   {
-   "fetch_from": "course_offering.section",
    "fieldname": "section",
    "fieldtype": "Link",
    "label": "Section",
@@ -302,7 +301,7 @@
   }
  ],
  "links": [],
- "modified": "2026-10-12 12:00:00.000000",
+ "modified": "2026-10-27 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Attendance Session",

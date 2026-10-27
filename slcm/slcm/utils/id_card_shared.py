@@ -15,8 +15,10 @@ import tempfile
 
 import frappe
 from frappe import _
-from frappe.utils import get_url, now, today
+from frappe.utils import add_years, cint, get_url, now, today
 from frappe.utils.file_manager import save_file
+
+from slcm.slcm.utils.exam_schedule import get_student_programme
 
 # Valid card_status transitions. Terminal states map to empty list.
 VALID_STATUS_TRANSITIONS = {
@@ -145,7 +147,7 @@ class IDCardCommonMixin:
 			self.phone = student.phone
 			if not self.photo:
 				self.photo = student.passport_size_photo
-			self.batch = student.programme
+			self.batch = student.batch
 			self.programme = student.programme_of_study
 
 		elif self.card_type == "Faculty" and self.faculty:
@@ -177,15 +179,19 @@ class IDCardCommonMixin:
 			self.issue_date = today()
 
 	def _auto_set_expiry_date(self):
-		"""Set expiry_date from the student's Cohort end_date when not provided."""
+		"""Set expiry_date to the end of the student's programme when not provided:
+		the end of the Batch's academic year plus the remaining programme years."""
 		if self.expiry_date:
 			return
 		if self.card_type == "Student" and self.student:
-			programme = frappe.db.get_value("Student Master", self.student, "programme")
-			if programme:
-				cohort_end = frappe.db.get_value("Batch", programme, "end_date")
-				if cohort_end:
-					self.expiry_date = cohort_end
+			batch = frappe.db.get_value("Student Master", self.student, "batch")
+			academic_year = frappe.db.get_value("Batch", batch, "academic_year") if batch else None
+			year_end = frappe.db.get_value("Academic Year", academic_year, "year_end_date") if academic_year else None
+			if year_end:
+				duration = cint(
+					frappe.db.get_value("Programme", get_student_programme(self.student), "program_duration")
+				)
+				self.expiry_date = add_years(year_end, max(duration, 1) - 1)
 
 	def _sync_id_card_issued_on_cancel(self):
 		"""Reset id_card_issued on Student Master if no other active card remains."""
@@ -275,7 +281,7 @@ class IDCardCommonMixin:
 				person.first_name or "",
 				person.academic_year or "",
 				person.programme_of_study or "",
-				person.programme or "",
+				person.batch or "",
 				person.blood_group or "",
 				person.email or "",
 			]

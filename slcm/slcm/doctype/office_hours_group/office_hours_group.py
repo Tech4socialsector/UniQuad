@@ -92,7 +92,11 @@ def get_students(program, course, academic_year=None, academic_term=None, batch=
 		params["academic_year"] = academic_year
 
 	if academic_term:
-		conditions.append("se.term_name = %(academic_term)s")
+		# Enrollments are per academic year (no term): match the term's year.
+		conditions.append(
+			"se.academic_year = (SELECT at.academic_year FROM `tabAcademic Term` at"
+			" WHERE at.name = %(academic_term)s)"
+		)
 		params["academic_term"] = academic_term
 
 	if batch:

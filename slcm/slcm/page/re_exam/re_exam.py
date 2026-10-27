@@ -237,7 +237,7 @@ def get_failed_students(exam_plan, course, search="", page=1, page_length=20):
 				COALESCE(NULLIF(sm.middle_name,''), NULL),
 				sm.last_name))                                                   AS student_name,
 			sm.programme_of_study                                                AS programme,
-			sm.batch_year,
+			sm.batch AS batch_year,
 			sm.passport_size_photo                                               AS image,
 			sm.email,
 			scm.grade,

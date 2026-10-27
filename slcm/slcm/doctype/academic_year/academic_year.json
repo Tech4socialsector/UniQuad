@@ -8,7 +8,7 @@
  "engine": "InnoDB",
  "field_order": [
   "academic_year_name",
-  "academic_system",
+  "is_current_year",
   "year_start_date",
   "year_end_date",
   "status"
@@ -22,14 +22,6 @@
    "label": "Academic Year Name",
    "reqd": 1,
    "unique": 1
-  },
-  {
-   "default": "Semester",
-   "fieldname": "academic_system",
-   "fieldtype": "Select",
-   "label": "Academic System",
-   "options": "\nSemester\nTrimester\nQuarter\nYear",
-   "reqd": 1
   },
   {
    "fieldname": "year_start_date",
@@ -54,12 +46,41 @@
    "label": "Status",
    "options": "\nActive\nInactive",
    "reqd": 1
+  },
+  {
+   "default": "0",
+   "description": "Only one Academic Year can be the current year.",
+   "fieldname": "is_current_year",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Is Current Year"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
- "links": [],
- "modified": "2026-07-13 12:35:16.800742",
+ "links": [
+  {
+   "group": "Academics",
+   "link_doctype": "Academic Term",
+   "link_fieldname": "academic_year"
+  },
+  {
+   "group": "Academics",
+   "link_doctype": "Course Offering",
+   "link_fieldname": "academic_year"
+  },
+  {
+   "group": "Students",
+   "link_doctype": "Student Enrollment",
+   "link_fieldname": "academic_year"
+  },
+  {
+   "group": "Fees",
+   "link_doctype": "Fee Structure",
+   "link_fieldname": "academic_year"
+  }
+ ],
+ "modified": "2026-10-27 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Academic Year",

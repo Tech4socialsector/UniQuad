@@ -1,6 +1,7 @@
 import json
 import frappe
 from frappe.model.document import Document
+from frappe.utils import cint
 
 
 class CourseManagement(Document):
@@ -237,14 +238,32 @@ def generate_offerings_from_curriculum(course_list_doc):
 	if not course_list_doc.batch:
 		return
 
+	# Offerings are keyed by programme + academic year + year no + term (no
+	# cohort); the batch only tells us which year of study this plan is for.
+	year_no = _get_batch_year_no(
+		course_list_doc.batch, course_list_doc.program, course_list_doc.academic_year
+	)
+	if not year_no:
+		return
+
 	for row in course_list_doc.curriculum_courses:
 		if row.course_group_type != "Course" or not row.course or not row.semester:
 			continue
 
+		academic_term = frappe.db.get_value(
+			"Academic Term",
+			{"academic_year": course_list_doc.academic_year, "term_name": row.semester},
+			"name",
+		)
+		if not academic_term:
+			continue
+
 		filters = {
 			"course_title": row.course,
-			"cohort": course_list_doc.batch,
-			"term_name": row.semester,
+			"program": course_list_doc.program,
+			"academic_year": course_list_doc.academic_year,
+			"year_no": year_no,
+			"term_name": academic_term,
 		}
 		existing = frappe.db.get_value("Course Offering", filters, "name")
 
@@ -255,8 +274,9 @@ def generate_offerings_from_curriculum(course_list_doc):
 			else:
 				offering = frappe.new_doc("Course Offering")
 				offering.course_title = row.course
-				offering.cohort = course_list_doc.batch
-				offering.term_name = row.semester
+				offering.academic_year = course_list_doc.academic_year
+				offering.year_no = year_no
+				offering.term_name = academic_term
 
 			offering.program = course_list_doc.program
 			if not offering.status:
@@ -304,22 +324,35 @@ def get_course_dialog_columns():
 # ---------------------------------------------------------------------
 @frappe.whitelist()
 def get_details_from_section(section):
-	if not section:
-		return {}
+	# Sections are global (not tied to a batch / programme), so there is
+	# nothing to derive from one.
+	return {}
 
-	batch = frappe.db.get_value("Section", section, "batch")
-	if not batch:
-		return {}
 
-	program, academic_year = frappe.db.get_value(
-		"Batch", batch, ["program", "academic_year"]
+def _get_batch_year_no(batch, program, academic_year):
+	"""Year of study of `batch` in `academic_year`: taken from the batch's
+	Student Enrollments, else counted from the batch's starting year."""
+	year_no = frappe.db.get_value(
+		"Student Enrollment",
+		{"batch": batch, "program": program, "academic_year": academic_year},
+		"year_no",
 	)
+	if year_no:
+		return cint(year_no)
 
-	return {
-		"program": program,
-		"academic_year": academic_year,
-		"batch": batch,
-	}
+	batch_start = frappe.db.get_value(
+		"Academic Year",
+		frappe.db.get_value("Batch", batch, "academic_year"),
+		"year_start_date",
+	)
+	target_start = frappe.db.get_value("Academic Year", academic_year, "year_start_date")
+	if not batch_start or not target_start or target_start < batch_start:
+		return 0
+
+	return frappe.db.count(
+		"Academic Year",
+		{"year_start_date": ["between", [batch_start, target_start]]},
+	)
 
 
 # ---------------------------------------------------------------------

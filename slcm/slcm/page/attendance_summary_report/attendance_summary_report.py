@@ -102,21 +102,23 @@ def _resolve_offerings_and_roster(academic_year=None, term=None, programme=None,
 		co_filters["program"] = ["in", programmes]
 	if courses:
 		co_filters["course_title"] = ["in", courses]
+	batch_offerings = None
 	if batches:
-		co_filters["cohort"] = ["in", batches]
-	elif sections:
-		# Course Offering.section is very often left blank in this data model
-		# (the section actually assigned to a course is recorded via its
-		# Batch/cohort, not a direct Course-Offering-level field). Only fall
-		# back to deriving the batch from the Section's own `batch` field when
-		# the user didn't already pick a Batch directly — if they picked
-		# both, the explicit Batch filter above already takes precedence.
-		section_batches = frappe.get_all(
-			"Section", filters={"name": ["in", sections]}, pluck="batch"
-		)
-		section_batches = list({b for b in section_batches if b})
-		if section_batches:
-			co_filters["cohort"] = ["in", section_batches]
+		# Offerings have no Batch: a Batch filter means offerings whose
+		# programme / academic year / year no match an Enrolled Student
+		# Enrollment of that batch.
+		batch_offerings = [r[0] for r in frappe.db.sql("""
+			SELECT DISTINCT co.name
+			FROM `tabCourse Offering` co
+			JOIN `tabStudent Enrollment` se
+				ON se.program = co.program
+				AND se.academic_year = co.academic_year
+				AND se.year_no = co.year_no
+			WHERE se.batch IN %(batches)s AND se.status = 'Enrolled'
+		""", {"batches": batches})]
+		if not batch_offerings:
+			return [], []
+		co_filters["name"] = ["in", batch_offerings]
 
 	if user != "Administrator" and not _is_unrestricted(roles):
 		if "slcm_Faculty" not in roles:
@@ -125,6 +127,8 @@ def _resolve_offerings_and_roster(academic_year=None, term=None, programme=None,
 		if not faculty_name:
 			frappe.throw(frappe._("No Faculty record linked to your account."), frappe.PermissionError)
 		visible = _get_faculty_course_offerings(faculty_name)
+		if batch_offerings is not None:
+			visible = [v for v in visible if v in set(batch_offerings)]
 		if not visible:
 			return [], []
 		co_filters["name"] = ["in", visible]
@@ -132,7 +136,7 @@ def _resolve_offerings_and_roster(academic_year=None, term=None, programme=None,
 	offerings = frappe.get_all(
 		"Course Offering",
 		filters=co_filters,
-		fields=["name", "course_title", "section"],
+		fields=["name", "course_title"],
 	)
 	if not offerings:
 		return [], []
@@ -142,6 +146,11 @@ def _resolve_offerings_and_roster(academic_year=None, term=None, programme=None,
 	student_clause = ""
 	if students:
 		student_clause = "AND se.student IN %(students)s"
+	# Sections (and batches) are recorded on the student's enrollment.
+	if batches:
+		student_clause += " AND se.batch IN %(batches)s"
+	if sections:
+		student_clause += " AND se.section IN %(sections)s"
 
 	roster = frappe.db.sql(f"""
 		SELECT sec.course_offering, se.student, se.section, s.first_name, s.last_name,
@@ -152,7 +161,8 @@ def _resolve_offerings_and_roster(academic_year=None, term=None, programme=None,
 		WHERE sec.course_offering IN %(offerings)s
 		AND sec.status = 'Enrolled' AND se.status = 'Enrolled'
 		{student_clause}
-	""", {"offerings": offering_names, "students": students}, as_dict=True)
+	""", {"offerings": offering_names, "students": students, "batches": batches,
+		"sections": sections}, as_dict=True)
 
 	return offerings, roster
 

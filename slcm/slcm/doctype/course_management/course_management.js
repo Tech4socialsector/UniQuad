@@ -87,17 +87,10 @@ frappe.ui.form.on("Course Management", {
 
 	academic_year: function (frm) {
 		if (frm.doc.academic_year) {
-			frappe.db
-				.get_value("Academic Year", frm.doc.academic_year, "academic_system")
-				.then((r) => {
-					if (r.message && r.message.academic_system) {
-						frm.set_value("academic_system", r.message.academic_system).then(() => {
-							frm.trigger("autorefresh");
-						});
-					} else {
-						frm.trigger("autorefresh");
-					}
-				});
+			// Academic Year no longer carries an academic system; terms are trimesters.
+			frm.set_value("academic_system", "Trimester").then(() => {
+				frm.trigger("autorefresh");
+			});
 		} else {
 			frm.trigger("autorefresh");
 		}
@@ -117,18 +110,6 @@ frappe.ui.form.on("Course Management", {
 			section: frm.doc.section
 		});
 		frm.trigger("load_curriculum");
-	},
-
-	batch: function (frm) {
-		if (frm.doc.batch) {
-			frm.set_query("section", function () {
-				return {
-					filters: {
-						batch: frm.doc.batch,
-					},
-				};
-			});
-		}
 	},
 
 	section: function (frm) {

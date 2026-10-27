@@ -21,11 +21,9 @@ frappe.ui.form.on("Office Hours Group", {
 
 
 
+        // Sections are global (not tied to a batch): no batch filter.
         frm.set_query("section", () => {
-            const filters = {};
-            if (frm.doc.batch) filters.batch = frm.doc.batch;
-
-            return { filters: filters };
+            return { filters: {} };
         });
     },
 

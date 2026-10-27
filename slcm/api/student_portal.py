@@ -5,6 +5,7 @@ import frappe
 from frappe import _
 from frappe.utils import add_days, flt, cint, today, nowdate, getdate
 from slcm.api.student_payment import _require_parent_for_student
+from slcm.slcm.utils.exam_schedule import get_student_programme
 
 
 def _get_student():
@@ -1033,18 +1034,14 @@ def _resolve_invoice_print_format(student_name):
         fs_name = frappe.db.get_value("Student Master", student_name, "fee_structure")
         if not fs_name:
             # Fallback: find active Student fee structure via programme
-            programme = frappe.db.get_value("Student Master", student_name, "programme")
-            if programme:
-                program = frappe.db.get_value("Batch", programme, "program")
-                if not program and frappe.db.exists("Programme", programme):
-                    program = programme
-                if program:
-                    fs_name = frappe.db.get_value(
-                        "Fee Structure",
-                        {"program": program, "status": "Active", "applicable": "Student"},
-                        "name",
-                        order_by="valid_from desc, creation desc",
-                    )
+            program = get_student_programme(student_name)
+            if program:
+                fs_name = frappe.db.get_value(
+                    "Fee Structure",
+                    {"program": program, "status": "Active", "applicable": "Student"},
+                    "name",
+                    order_by="valid_from desc, creation desc",
+                )
         if fs_name:
             pf = frappe.db.get_value("Fee Structure", fs_name, "receipt_print_format")
             if pf and frappe.db.exists("Print Format", pf):
@@ -1219,7 +1216,7 @@ def get_portal_notifications():
 						fields=["programme"],
 						ignore_permissions=True,
 					)
-					if not any(t.programme == student.programme for t in targets):
+					if not any(t.programme == student.batch for t in targets):
 						continue
 				elif r.target_audience == "Specific Batch Year(s)":
 					targets = frappe.get_all(
@@ -1228,7 +1225,7 @@ def get_portal_notifications():
 						fields=["batch_year"],
 						ignore_permissions=True,
 					)
-					s_batch = str(student.batch_year or "")
+					s_batch = str(student.batch or "")
 					s_acyr  = str(student.academic_year or "")
 					if not any(
 						str(t.batch_year) == s_batch or (s_acyr and str(t.batch_year) == s_acyr)

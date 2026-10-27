@@ -1,6 +1,7 @@
 import frappe
 from datetime import timedelta, date, datetime
 import calendar
+from slcm.slcm.utils.exam_schedule import get_student_programme
 
 no_cache = 1
 
@@ -411,12 +412,9 @@ def _set_student_nav(context, student):
     context.student_id      = student.registration_id or student.name
     context.student_photo   = student.passport_size_photo or ""
     context.student_initial = context.student_name[0].upper() if context.student_name else "S"
-    context.programme_name  = (
-        frappe.db.get_value("Batch", student.programme, "cohort_name")
-        or student.programme or ""
-    )
+    context.programme_name  = get_student_programme(student.name)
     context.department = student.department or ""
-    context.batch_year = student.batch_year or ""
+    context.batch_year = student.batch or ""
     context.official_email_id = student.official_email_id or ""
     context.personal_email    = student.personal_email or ""
 

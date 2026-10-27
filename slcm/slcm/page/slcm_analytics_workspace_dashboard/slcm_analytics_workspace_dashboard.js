@@ -1396,10 +1396,9 @@ class SLCMWorkspaceAnalyticsDashboard {
 	_refresh_cohort_filter() {
 		if (!this._filter_options || !this._ms_cohort) return;
 		const ay_vals  = this._ms_ay?.get_values()   || [];
-		const prog_vals = this._ms_prog?.get_values() || [];
+		// Batches are standalone (no programme link) — filter by academic year only
 		let cohorts = this._filter_options.cohorts;
 		if (ay_vals.length)   cohorts = cohorts.filter(c => ay_vals.includes(c.academic_year));
-		if (prog_vals.length) cohorts = cohorts.filter(c => prog_vals.includes(c.program));
 		this._ms_cohort.set_options(cohorts);
 	}
 

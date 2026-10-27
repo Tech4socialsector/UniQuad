@@ -246,16 +246,39 @@ class StudentAttendance(Document):
 
 
 @frappe.whitelist()
-def get_enrolled_cohorts(student):
+def get_enrolled_offerings(student):
 	"""
-	Fetch all cohorts that a student is currently enrolled in.
+	Fetch all Course Offerings of the student's active enrollments: the
+	enrollment's enrolled courses, else the offerings of its programme,
+	academic year and year no.
 	Used to filter Course Offerings in the UI.
 	"""
 	if not student:
 		return []
 
-	return frappe.get_all(
+	offerings = []
+	for enrollment in frappe.get_all(
 		"Student Enrollment",
 		filters={"student": student, "status": "Enrolled"},
-		pluck="batch"
-	)
+		fields=["name", "program", "academic_year", "year_no"],
+	):
+		rows = frappe.get_all(
+			"Student Enrollment Course",
+			filters={"parent": enrollment.name, "parenttype": "Student Enrollment"},
+			pluck="course_offering",
+		)
+		rows = [r for r in rows if r]
+		if not rows:
+			rows = frappe.get_all(
+				"Course Offering",
+				filters={
+					"program": enrollment.program,
+					"academic_year": enrollment.academic_year,
+					"year_no": enrollment.year_no,
+					"status": "Active",
+				},
+				pluck="name",
+			)
+		offerings.extend(rows)
+
+	return list(dict.fromkeys(offerings))

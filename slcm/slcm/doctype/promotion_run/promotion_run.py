@@ -5,81 +5,30 @@ import frappe
 from frappe.model.document import Document
 from frappe.utils import now_datetime, cint
 
+from slcm.slcm.doctype.student_enrollment.student_enrollment import (
+	create_next_year_enrollment,
+	get_offerings_for_year,
+)
 from slcm.slcm.page.promotion_management.promotion_management import (
 	_evaluate_student,
 	_get_students_raw,
-	_sync_student_master_batch,
 )
 
 BATCH_SIZE = 25
 ALLOWED_ROLES = ("System Manager", "slcm_Academic Incharge")
 
 
-def _resolve_target_batch(current_batch, target_academic_year, target_term=None):
-	"""Resolve the Batch to promote into, honoring the target academic year
-	the user picked on the Promotion Run (unlike the generic
-	promotion_management._resolve_next_batch, which always auto-picks the
-	chronologically-next Academic Year).
-
-	target_term is intentionally NOT used to filter here: Batch.academic_term
-	is fetched from Programme.academic_term, a single fixed Link the Programme
-	carries — it is the same value on every Batch under that Programme
-	regardless of term_year, not a per-batch "which term is this" marker.
-	Matching against it would silently fail to find real target Batches
-	whenever the Target Term differs from that Programme-wide constant.
-	Programme + Section + (term_year + 1) + Academic Year is what actually
-	identifies the next Batch."""
-	batch = frappe.db.get_value(
-		"Batch", current_batch, ["program", "section", "term_year"], as_dict=True
+def _target_exists(student, program, target_academic_year):
+	return frappe.db.get_value(
+		"Student Enrollment",
+		{"student": student, "program": program, "academic_year": target_academic_year},
+		"name",
 	)
-	if not batch or not batch.section or batch.term_year is None:
-		return None
-
-	filters = {
-		"program": batch.program,
-		"section": batch.section,
-		"term_year": cint(batch.term_year) + 1,
-		"academic_year": target_academic_year,
-	}
-
-	return frappe.db.get_value("Batch", filters, "name")
 
 
-def _move_enrollment(enrollment_name, student, next_batch):
-	"""Complete the current enrollment and create the one in `next_batch`,
-	atomically. Completing the old enrollment flips Student Master to
-	"Graduated" until the new Enrolled one resets it to "Active", so a failed
-	insert must roll back the whole move rather than strand the student."""
-	save_point = "pr_move_" + frappe.generate_hash(length=10)
-	frappe.db.savepoint(save_point)
-	try:
-		old_doc = frappe.get_doc("Student Enrollment", enrollment_name)
-		old_doc.status = "Completed"
-		old_doc.save(ignore_permissions=True)
-
-		new_doc = _new_enrollment_for_batch(student, next_batch)
-		new_doc.insert(ignore_permissions=True)
-
-		# Keep Student Master pointing at the student's current Batch/term.
-		_sync_student_master_batch(student, next_batch)
-	except Exception:
-		frappe.db.rollback(save_point=save_point)
-		raise
-	frappe.db.release_savepoint(save_point)
-	return new_doc.name
-
-
-def _new_enrollment_for_batch(student, batch):
-	"""Build a new Student Enrollment for `batch`, with enrollment_date set to
-	the Batch's own term start — not today's date — so a promoted student's
-	record reflects when their new term actually begins rather than the day
-	the promotion job happened to run."""
-	doc = frappe.new_doc("Student Enrollment")
-	doc.student = student
-	doc.batch = batch
-	doc.status = "Enrolled"
-	doc.enrollment_date = frappe.db.get_value("Batch", batch, "start_date") or frappe.utils.today()
-	return doc
+def _is_final_year(program, year_no):
+	duration = cint(frappe.db.get_value("Programme", program, "program_duration"))
+	return bool(duration) and cint(year_no) >= duration
 
 
 class PromotionRun(Document):
@@ -120,12 +69,10 @@ def _reason_for_skip(evaluation, student):
 
 @frappe.whitelist()
 def get_target_term_courses(student_list, target_academic_year, target_term=None):
-	"""Read-only preview of the Course Offerings the selected students would
-	actually be attached to on promotion — i.e. the exact same
-	{cohort: <target Batch>, status: Active} rows that
-	Student Enrollment.fetch_program_and_courses() attaches when the new
-	enrollment is created. Purely informational: a Batch with no matching
-	Course Offerings yet never blocks promotion."""
+	"""Read-only preview of the Course Offerings the selected students would be
+	attached to on promotion: the Active offerings of their programme for
+	target_academic_year and the next year of study (year_no + 1). Purely
+	informational: missing offerings never block promotion."""
 	_check_permission()
 
 	if isinstance(student_list, str):
@@ -133,51 +80,39 @@ def get_target_term_courses(student_list, target_academic_year, target_term=None
 		student_list = json.loads(student_list) if student_list else None
 
 	if not student_list or not target_academic_year:
-		return {"courses": [], "target_batches": []}
+		return {"courses": [], "target_years": []}
 
-	current_batches = list({
-		b for b in (
-			frappe.db.get_value("Student Enrollment", name, "batch") for name in student_list
-		) if b
+	targets = sorted({
+		(e.program, cint(e.year_no) + 1)
+		for e in frappe.get_all(
+			"Student Enrollment", filters={"name": ["in", student_list]}, fields=["program", "year_no"]
+		)
+		if e.program
 	})
 
-	target_batches = sorted({
-		b for b in (
-			_resolve_target_batch(cb, target_academic_year, target_term) for cb in current_batches
-		) if b
-	})
-
-	if not target_batches:
-		return {"courses": [], "target_batches": []}
-
-	offerings = frappe.get_all(
-		"Course Offering",
-		filters={"cohort": ["in", target_batches], "status": "Active"},
-		fields=["name", "course_title", "course_name", "credit_value", "cohort"],
-		order_by="cohort asc, course_name asc",
-	)
-	courses = [
-		{
-			"course": o.course_title,
-			"course_name": o.course_name,
-			"credits": o.credit_value,
-			"batch": o.cohort,
-		}
-		for o in offerings
-	]
-	return {"courses": courses, "target_batches": target_batches}
+	courses = []
+	for program, year_no in targets:
+		for o in get_offerings_for_year(program, target_academic_year, year_no):
+			courses.append({
+				"course": o.course_title,
+				"course_name": frappe.db.get_value("Course Offering", o.name, "course_name"),
+				"credits": o.credit_value,
+				"year_no": year_no,
+			})
+	return {"courses": courses, "target_years": [f"{p} — Year {y}" for p, y in targets]}
 
 
 @frappe.whitelist()
-def create_and_queue(student_list, target_academic_year, target_term):
+def create_and_queue(student_list, target_academic_year, target_term=None):
 	"""Create a Promotion Run in Queued state and enqueue the background job,
 	restricted to exactly the Student Enrollment names the user checked in the
-	list view. Programme / Source Academic Year / Batch / Section are derived
-	from that selection rather than re-asked in the dialog.
+	list view. Programme / Source Academic Year / Section are derived from that
+	selection rather than re-asked in the dialog.
 
-	Runs started from Student Enrollment are term-to-term moves and always
-	auto-promote every selected student — no Promotion Policy is applied.
-	Policy-checked promotion is year-to-year only (Promotion Management page)."""
+	Each selected enrollment is promoted to the next year of study in
+	target_academic_year (a NEW enrollment with year_no + 1; the old one is
+	marked Completed). No Promotion Policy is applied here; policy-checked
+	promotion is done from the Promotion Management page."""
 	_check_permission()
 
 	if isinstance(student_list, str):
@@ -186,14 +121,16 @@ def create_and_queue(student_list, target_academic_year, target_term):
 
 	if not student_list:
 		frappe.throw(frappe._("Select at least one Student Enrollment to promote."))
-	if not target_academic_year or not target_term:
-		frappe.throw(frappe._("Target Academic Year and Target Term are required."))
+	if not target_academic_year:
+		frappe.throw(frappe._("Target Academic Year is required."))
 
 	enrollments = frappe.db.get_all(
 		"Student Enrollment",
 		filters={"name": ["in", student_list]},
 		fields=["name", "student", "student_name", "batch", "program", "academic_year", "section"],
 	)
+	if any(e.academic_year == target_academic_year for e in enrollments):
+		frappe.throw(frappe._("Target Academic Year must be different from the selected enrollments' academic year."))
 	if not enrollments:
 		frappe.throw(frappe._("None of the selected records could be found."))
 
@@ -214,7 +151,6 @@ def create_and_queue(student_list, target_academic_year, target_term):
 	doc.program = program
 	doc.source_academic_year = source_academic_year
 	doc.target_academic_year = target_academic_year
-	doc.target_term = target_term
 	doc.section = section
 	doc.promotion_policy = None
 	doc.status = "Queued"
@@ -251,7 +187,7 @@ def process_promotion_run(promotion_run_name):
 		enrollments = frappe.db.get_all(
 			"Student Enrollment",
 			filters={"name": ["in", selected]},
-			fields=["name", "student", "student_name", "batch"],
+			fields=["name", "student", "student_name", "batch", "program", "year_no"],
 		)
 
 		doc.db_set("total_students", len(enrollments))
@@ -261,18 +197,11 @@ def process_promotion_run(promotion_run_name):
 		if doc.promotion_policy:
 			policy_dict = frappe.get_doc("Promotion Policy", doc.promotion_policy).as_dict()
 
-		# from_year for the eligibility query: pulled per-student from their own Batch,
-		# since a single run can now span students across different Batches.
+		# from_year for the eligibility query: each enrollment's own year_no,
+		# since a single run can span students in different years.
 		student_eval_map = {}
 		if enrollments and policy_dict:
-			batch_names = list({e.batch for e in enrollments if e.batch})
-			from_years = {
-				b.name: cint(b.term_year)
-				for b in frappe.db.get_all("Batch", filters={"name": ["in", batch_names]}, fields=["name", "term_year"])
-			} if batch_names else {}
-			for from_year in set(from_years.values()):
-				if from_year is None:
-					continue
+			for from_year in {cint(e.year_no) for e in enrollments if cint(e.year_no)}:
 				for row in _get_students_raw(doc.program, doc.source_academic_year, from_year):
 					student_eval_map[row["student"]] = row
 
@@ -336,23 +265,17 @@ def _process_one_student(doc, enrollment, policy_dict, student_eval_map):
 		_append_log(doc, enrollment, "Skipped", "Fee Due", "Student has outstanding Fee Demand(s).")
 		return
 
-	next_batch = _resolve_target_batch(enrollment.batch, doc.target_academic_year, doc.target_term)
-	if not next_batch:
-		_append_log(
-			doc, enrollment, "Skipped", "No Target Batch",
-			f"No target Batch found for {doc.target_academic_year}. Create the Batch first.",
-		)
+	existing = _target_exists(student, enrollment.program, doc.target_academic_year)
+	if existing:
+		_append_log(doc, enrollment, "Skipped", "Already Promoted", "Enrollment already exists for the target academic year.", to_enrollment=existing)
 		return
 
-	existing = frappe.db.exists(
-		"Student Enrollment", {"student": student, "batch": next_batch, "docstatus": ["<", 2]}
-	)
-	if existing:
-		_append_log(doc, enrollment, "Skipped", "Already Promoted", "Enrollment already exists for the target term.", to_enrollment=existing)
+	if _is_final_year(enrollment.program, enrollment.year_no):
+		_append_log(doc, enrollment, "Skipped", "Other", f"Final year (Year {enrollment.year_no}) of {enrollment.program}; nothing to promote to.")
 		return
 
 	try:
-		new_name = _move_enrollment(enrollment.name, student, next_batch)
+		new_name, _created = create_next_year_enrollment(enrollment.name, doc.target_academic_year)
 		_append_log(doc, enrollment, "Promoted", None, None, to_enrollment=new_name)
 	except Exception:
 		frappe.log_error(
@@ -419,23 +342,10 @@ def promote_anyway(promotion_run_name, log_row_name, reason=None):
 	if row.result == "Promoted":
 		frappe.throw(frappe._("This student was already promoted."))
 
-	enrollment = frappe.db.get_value(
-		"Student Enrollment", row.from_enrollment, ["name", "student", "batch"], as_dict=True
-	)
-	if not enrollment:
+	if not frappe.db.exists("Student Enrollment", row.from_enrollment):
 		frappe.throw(frappe._("Original enrollment not found."))
 
-	next_batch = _resolve_target_batch(enrollment.batch, run.target_academic_year, run.target_term)
-	if not next_batch:
-		frappe.throw(frappe._("No target Batch exists yet for this student's next term."))
-
-	existing = frappe.db.exists(
-		"Student Enrollment", {"student": enrollment.student, "batch": next_batch, "docstatus": ["<", 2]}
-	)
-	if existing:
-		new_name = existing
-	else:
-		new_name = _move_enrollment(enrollment.name, enrollment.student, next_batch)
+	new_name, _created = create_next_year_enrollment(row.from_enrollment, run.target_academic_year)
 
 	row.to_enrollment = new_name
 	row.result = "Promoted"
@@ -513,17 +423,11 @@ def retry_unresolved(promotion_run_name):
 
 	student_eval_map = {}
 	if policy_dict:
-		unresolved_batches = list({
-			b for b in (
-				frappe.db.get_value("Student Enrollment", r.from_enrollment, "batch") for r in unresolved
-			) if b
-		})
 		from_years = {
-			b.name: cint(b.term_year)
-			for b in frappe.db.get_all("Batch", filters={"name": ["in", unresolved_batches]}, fields=["name", "term_year"])
-		} if unresolved_batches else {}
-		for from_year in set(from_years.values()):
-			if from_year is None:
+			cint(frappe.db.get_value("Student Enrollment", r.from_enrollment, "year_no")) for r in unresolved
+		}
+		for from_year in from_years:
+			if not from_year:
 				continue
 			for row in _get_students_raw(run.program, run.source_academic_year, from_year):
 				student_eval_map[row["student"]] = row
@@ -531,7 +435,8 @@ def retry_unresolved(promotion_run_name):
 	promoted_now = 0
 	for row in unresolved:
 		enrollment = frappe.db.get_value(
-			"Student Enrollment", row.from_enrollment, ["name", "student", "student_name", "batch"], as_dict=True
+			"Student Enrollment", row.from_enrollment,
+			["name", "student", "student_name", "program", "year_no"], as_dict=True,
 		)
 		if not enrollment:
 			continue
@@ -542,12 +447,10 @@ def retry_unresolved(promotion_run_name):
 
 		fee_blocked = policy_dict.get("block_on_fee_due") and _has_fee_due(enrollment.student)
 		if status == "Promoted" and not fee_blocked:
-			next_batch = _resolve_target_batch(enrollment.batch, run.target_academic_year, run.target_term)
-			if next_batch and not frappe.db.exists(
-				"Student Enrollment", {"student": enrollment.student, "batch": next_batch, "docstatus": ["<", 2]}
-			):
+			if not _target_exists(enrollment.student, enrollment.program, run.target_academic_year) \
+					and not _is_final_year(enrollment.program, enrollment.year_no):
 				try:
-					new_name = _move_enrollment(enrollment.name, enrollment.student, next_batch)
+					new_name, _created = create_next_year_enrollment(enrollment.name, run.target_academic_year)
 				except Exception:
 					frappe.log_error(
 						title=f"Promotion Run {run.name}: retry failed for {enrollment.student}",

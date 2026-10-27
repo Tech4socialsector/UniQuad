@@ -3,6 +3,7 @@ import re
 
 import frappe
 from frappe.utils import add_days, getdate, nowdate
+from slcm.slcm.utils.exam_schedule import get_student_programme
 
 no_cache = 1
 
@@ -140,13 +141,13 @@ def _is_for_student(r, student, student_name):
 			"Announcement Programme Target", filters={"parent": r.name},
 			pluck="programme", ignore_permissions=True,
 		)
-		return student.programme in targets
+		return student.batch in targets
 	if audience == "Specific Batch Year(s)":
 		targets = frappe.get_all(
 			"Announcement Batch Target", filters={"parent": r.name},
 			pluck="batch_year", ignore_permissions=True,
 		)
-		s_batch = str(student.batch_year or "")
+		s_batch = str(student.batch or "")
 		s_acyr = str(student.academic_year or "")
 		return any(str(t) == s_batch or (s_acyr and str(t) == s_acyr) for t in targets)
 	if audience == "Specific Student(s)":
@@ -174,9 +175,9 @@ def _set_student_nav(context, student):
 	context.student_id = student.registration_id or student.name
 	context.student_photo = student.passport_size_photo or ""
 	context.student_initial = (context.student_name[0]).upper() if context.student_name else "S"
-	context.programme_name = frappe.db.get_value("Batch", student.programme, "cohort_name") or student.programme or ""
+	context.programme_name = get_student_programme(student.name)
 	context.department = student.department or ""
-	context.batch_year = student.batch_year or ""
+	context.batch_year = student.batch or ""
 	context.academic_year = student.academic_year or ""
 
 

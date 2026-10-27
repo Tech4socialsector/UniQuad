@@ -698,7 +698,7 @@ def _get_students_for_course(course, exam_plan):
 			WHERE co.course_title = %(course)s
 			  AND sec.status = 'Enrolled'
 			  AND se.status = 'Enrolled'
-			  AND (%(term_name)s IS NULL OR se.term_name = %(term_name)s)
+			  AND (%(term_name)s IS NULL OR co.term_name = %(term_name)s)
 			GROUP BY se.student
 			ORDER BY COALESCE(NULLIF(sm.registration_id, ''), sm.name) ASC
 			""",

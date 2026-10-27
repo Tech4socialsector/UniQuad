@@ -176,14 +176,14 @@ function uq_pct_cell(value, threshold) {
 const UQ_FILTERS = [
 	{ key: "academic_year", label: __("Academic Year"), primary: true },
 	{ key: "academic_term", label: __("Academic Term"), primary: true, parents: { academic_year: "academic_year" } },
-	{ key: "programme", label: __("Programme"), primary: true, parents: { academic_year: "academic_year" } },
-	{ key: "batch", label: __("Batch"), parents: { programme: "programme", academic_year: "academic_year" } },
-	{ key: "section", label: __("Section"), parents: { batch: "batch" } },
+	{ key: "programme", label: __("Programme"), primary: true },
+	{ key: "batch", label: __("Batch"), parents: { academic_year: "academic_year" } },
+	{ key: "section", label: __("Section") },
 	{ key: "faculty", label: __("Faculty") },
 	{
 		key: "course",
 		label: __("Course"),
-		parents: { programme: "programme", batch: "batch", academic_term: "academic_term", academic_year: "academic_year", faculty: "faculty" },
+		parents: { programme: "programme", academic_term: "academic_term", academic_year: "academic_year", faculty: "faculty" },
 	},
 	{ key: "student_status", label: __("Student Status") },
 	{ key: "gender", label: __("Gender") },
@@ -2347,7 +2347,7 @@ class UniquadDashboard {
 				? en
 						.map(
 							(e) => `<div style="margin-bottom:12px"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
-							<strong>${uq_esc(e.term_name || e.academic_year || e.name)}</strong> ${uq_badge(e.status)}
+							<strong>${uq_esc([e.academic_year, e.year_no ? __("Year {0}", [e.year_no]) : ""].filter(Boolean).join(" · ") || e.name)}</strong> ${uq_badge(e.status)}
 							<span class="uq-tile-s">${uq_esc([e.program, e.batch, e.section].filter(Boolean).join(" · "))}</span></div>
 							${table({ rows: e.courses || [] }, [["course", __("Course"), "text"], ["course_type", __("Type"), "text"], ["credits", __("Credits"), "int"], ["status", __("Status"), "badge"], ["grade", __("Grade"), "text"]], __("No courses on this enrolment."))}</div>`
 						)

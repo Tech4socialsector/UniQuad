@@ -24,6 +24,7 @@ import json as _json
 import frappe
 from frappe import _
 from frappe.utils import flt, today, getdate, add_days
+from slcm.slcm.doctype.academic_term.academic_term import get_current_term
 
 # ── Internal helpers ───────────────────────────────────────────────────────
 
@@ -165,7 +166,7 @@ def _create_invoice_from_sm(student_name):
         [
             "total_program_fee", "discount_amount", "scholarship_amount",
             "net_program_fee", "total_paid_amount",
-            "programme", "academic_year",
+            "programme_of_study", "academic_year",
             "first_name", "last_name",
         ],
         as_dict=True,
@@ -191,7 +192,7 @@ def _create_invoice_from_sm(student_name):
         frappe.db.get_value(
             "Student Enrollment",
             {"student": student_name, "status": "Enrolled"},
-            ["name", "academic_year", "term_name", "program"],
+            ["name", "academic_year", "program"],
             as_dict=True,
             order_by="creation desc",
         )
@@ -203,9 +204,9 @@ def _create_invoice_from_sm(student_name):
     invoice = frappe.get_doc({
         "doctype":          "Fee Invoice",
         "student":          student_name,
-        "program":          (enrollment and enrollment.program) or sm.get("programme") or "",
+        "program":          (enrollment and enrollment.program) or sm.get("programme_of_study") or "",
         "academic_year":    (enrollment and enrollment.academic_year) or sm.get("academic_year") or "",
-        "academic_term":    (enrollment and enrollment.term_name) or "",
+        "academic_term":    get_current_term() or "",
         "enrollment":       (enrollment and enrollment.name) or "",
         "invoice_date":     today(),
         "due_date":         add_days(today(), 30),

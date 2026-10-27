@@ -238,7 +238,6 @@
    "read_only": 1
   },
   {
-   "fetch_from": "student.master_programme",
    "fieldname": "programme",
    "fieldtype": "Link",
    "label": "Programme",
@@ -261,7 +260,7 @@
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2026-07-14 11:35:39.490334",
+ "modified": "2026-10-27 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Student Attendance Condonation",

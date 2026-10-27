@@ -182,7 +182,7 @@
       <div class="enr-eyebrow">Active Enrolment</div>
       <h2 class="enr-prog">{{ programme_name or active_enrollment.program or "Programme" }}</h2>
       <div class="enr-chips">
-        {% if active_enrollment.term_name %}<span class="enr-chip"><span class="sp-ms" aria-hidden="true">calendar_month</span>{{ active_enrollment.term_name }}</span>{% endif %}
+        {% if active_enrollment.year_no %}<span class="enr-chip"><span class="sp-ms" aria-hidden="true">calendar_month</span>Year {{ active_enrollment.year_no }}</span>{% endif %}
         {% if active_enrollment.academic_year %}<span class="enr-chip"><span class="sp-ms" aria-hidden="true">event</span>{{ active_enrollment.academic_year }}</span>{% endif %}
         <span class="enr-chip"><span class="sp-ms" aria-hidden="true">tag</span>{{ active_enrollment.name }}</span>
       </div>
@@ -353,12 +353,12 @@
     <summary class="enr-tl-sum">
       <span class="enr-tl-dot" aria-hidden="true"></span>
       <div style="min-width:0;">
-        <div class="enr-tl-title">{{ e.term_name or e.academic_year or "Enrolment" }}{% if e.term_name and e.academic_year and e.academic_year not in e.term_name %} <span class="enr-muted">· {{ e.academic_year }}</span>{% endif %}</div>
+        <div class="enr-tl-title">{{ ("Year " ~ e.year_no) if e.year_no else (e.academic_year or "Enrolment") }}{% if e.year_no and e.academic_year %} <span class="enr-muted">· {{ e.academic_year }}</span>{% endif %}</div>
         <div class="enr-tl-meta">
           {{ e.name }}
           · {{ e.courses | length }} course{{ 's' if e.courses | length != 1 }}
           {% if e.total_credits %}· {{ e.total_credits }} credits{% endif %}
-          {% if e.term_start_date %}· Term starts {{ frappe.utils.formatdate(e.term_start_date, "d MMM yyyy") }}{% elif e.enrollment_date %}· Enrolled {{ frappe.utils.formatdate(e.enrollment_date, "d MMM yyyy") }}{% endif %}
+          {% if e.enrollment_date %}· Enrolled {{ frappe.utils.formatdate(e.enrollment_date, "d MMM yyyy") }}{% endif %}
         </div>
       </div>
       <div class="enr-tl-side">

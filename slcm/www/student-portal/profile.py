@@ -1,5 +1,7 @@
 import frappe
 from slcm.api.student_portal import BANK_DETAIL_FIELDS
+from slcm.slcm.doctype.academic_term.academic_term import get_current_term
+from slcm.slcm.utils.exam_schedule import get_student_programme
 
 no_cache = 1
 
@@ -42,6 +44,12 @@ def get_context(context):
         _set_student_nav(context, student)
 
         full_name = " ".join(filter(None, [student.first_name, student.middle_name, student.last_name]))
+        year_no = frappe.db.get_value(
+            "Student Enrollment",
+            {"student": student.name, "status": "Enrolled"},
+            "year_no",
+            order_by="academic_year desc, year_no desc, creation desc",
+        )
 
         context.profile = {
             "full_name":        full_name or student.name,
@@ -67,12 +75,12 @@ def get_context(context):
 
             "registration_id":  student.registration_id or "",
             "application_number": student.application_number or "",
-            "programme":        student.master_programme or "N/A",
+            "programme":        get_student_programme(student.name) or "N/A",
             "department":       student.department or "AAD",
             "batch_year":       student.batch or "N/A",
             "academic_year":    student.academic_year or "",
-            "current_term":     student.academic_term or "N/A",
-            "current_year":     student.current_year or "",
+            "current_term":     get_current_term() or "N/A",
+            "current_year":     year_no or student.current_year or "",
             "current_cgpa":     round(student.current_cgpa or 0.0, 2),
             "student_status":   student.student_status or "",
             "academic_status":  student.academic_status or "",
@@ -197,7 +205,7 @@ def _set_student_nav(context, student):
     context.student_id = student.registration_id or student.name
     context.student_photo = student.passport_size_photo or ""
     context.student_initial = (context.student_name[0]).upper() if context.student_name else "S"
-    context.programme_name = student.master_programme or "N/A"
+    context.programme_name = get_student_programme(student.name) or "N/A"
     context.department = student.department or "AAD"
     context.batch_year = student.batch or "N/A"
 

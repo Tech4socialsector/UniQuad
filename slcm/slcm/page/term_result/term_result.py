@@ -28,7 +28,7 @@ def _build_student_filter(exam_plan, search="", inst_programmes="", inst_batches
 			params[f"prog_{i}"] = v
 	if f_batches:
 		placeholders = ",".join([f"%(batch_{i})s" for i in range(len(f_batches))])
-		extra_cond += f" AND sm.batch_year IN ({placeholders})"
+		extra_cond += f" AND sm.batch IN ({placeholders})"
 		for i, v in enumerate(f_batches):
 			params[f"batch_{i}"] = v
 
@@ -328,8 +328,10 @@ def download_consolidated_report(exam_plan="", search="", inst_programmes="", in
 		where_cond += " AND sm.academic_year = %(academic_year)s"
 		params["academic_year"] = academic_year
 
+	# Term / year / programme come from the marks' Course Offering (a student
+	# no longer stores a term, and a Batch no longer carries a programme).
 	if trimester:
-		where_cond += " AND sm.academic_term = %(trimester)s"
+		where_cond += " AND co.term_name = %(trimester)s"
 		params["trimester"] = trimester
 
 	if batch:
@@ -337,11 +339,11 @@ def download_consolidated_report(exam_plan="", search="", inst_programmes="", in
 		params["batch"] = batch
 
 	if year:
-		where_cond += " AND sm.term_year = %(year)s"
+		where_cond += " AND co.year_no = %(year)s"
 		params["year"] = year
 
 	if programme:
-		where_cond += " AND coh.program = %(programme)s"
+		where_cond += " AND COALESCE(co.program, sm.programme_of_study) = %(programme)s"
 		params["programme"] = programme
 
 	if search:
@@ -360,7 +362,7 @@ def download_consolidated_report(exam_plan="", search="", inst_programmes="", in
 
 	if f_batches:
 		placeholders = ",".join([f"%(batch_{i})s" for i in range(len(f_batches))])
-		where_cond += f" AND sm.batch_year IN ({placeholders})"
+		where_cond += f" AND sm.batch IN ({placeholders})"
 		for i, v in enumerate(f_batches):
 			params[f"batch_{i}"] = v
 
@@ -373,10 +375,10 @@ def download_consolidated_report(exam_plan="", search="", inst_programmes="", in
 			sm.registration_id,
 			TRIM(CONCAT_WS(' ', sm.first_name, COALESCE(NULLIF(sm.middle_name,''), NULL), sm.last_name)) AS student_name,
 			sm.academic_year,
-			coh.program AS programme_name,
+			COALESCE(co.program, sm.programme_of_study) AS programme_name,
 			sm.specialisation,
 			sm.batch AS batch_year,
-			sm.academic_term AS trimester,
+			co.term_name AS trimester,
 			c.course_code,
 			c.course_name,
 			'' AS course_registration_type,
@@ -398,7 +400,7 @@ def download_consolidated_report(exam_plan="", search="", inst_programmes="", in
 			srp.cumulative_gpa AS cgpa
 		FROM `tabStudent Course Marks` scm
 		INNER JOIN `tabStudent Master` sm ON sm.name = scm.student
-		LEFT JOIN `tabBatch` coh ON coh.name = sm.batch
+		LEFT JOIN `tabCourse Offering` co ON co.name = scm.course_offering
 		LEFT JOIN `tabCourse` c ON c.name = scm.course
 		LEFT JOIN `tabCourse Schema Assignment` csa ON csa.exam_plan = scm.exam_plan AND csa.course = scm.course
 		LEFT JOIN `tabGrading Schema Component` gsc
@@ -588,7 +590,7 @@ def get_term_inst_filter_options(exam_plan):
 		return {"programmes": [], "batches": []}
 	rows = frappe.db.sql(
 		"""
-		SELECT DISTINCT sm.programme_of_study AS programme, sm.batch_year
+		SELECT DISTINCT sm.programme_of_study AS programme, sm.batch AS batch_year
 		FROM `tabStudent Course Marks` scm
 		INNER JOIN `tabStudent Master` sm ON sm.name = scm.student
 		WHERE scm.exam_plan = %(exam_plan)s
@@ -633,7 +635,7 @@ def get_term_students(exam_plan, search="", page=1, page_length=20,
 				sm.last_name))                                                  AS student_name,
 			sm.student_status,
 			sm.programme_of_study AS programme,
-			sm.batch_year,
+			sm.batch AS batch_year,
 			sm.current_cgpa,
 			sm.cumulative_percentage,
 			sm.passport_size_photo                                              AS image,
@@ -681,11 +683,12 @@ def get_student_courses(exam_plan, student):
 		"Student Master",
 		student,
 		["first_name", "middle_name", "last_name", "registration_id",
-		 "email", "programme_of_study", "batch_year", "passport_size_photo", "specialisation"],
+		 "email", "programme_of_study", "batch", "passport_size_photo", "specialisation"],
 		as_dict=True,
 	) or {}
 	if sm:
 		sm["programme"] = sm.pop("programme_of_study", "")
+		sm["batch_year"] = sm.pop("batch", "")
 
 	# ── Course marks with grading schema data ─────────────────────────────────
 	rows = frappe.db.sql(

@@ -8,19 +8,19 @@ frappe.ui.form.on("Student Attendance", {
             frm.set_value('course_offer', '');
             frm.set_value('course', '');
 
-            // Fetch enrolled cohorts
+            // Fetch the student's enrolled course offerings
             frappe.call({
-                method: "slcm.slcm.doctype.student_attendance.student_attendance.get_enrolled_cohorts",
+                method: "slcm.slcm.doctype.student_attendance.student_attendance.get_enrolled_offerings",
                 args: {
                     student: frm.doc.student
                 },
                 callback: function (r) {
                     if (r.message && r.message.length > 0) {
-                        // Filter Course Offering by these cohorts
+                        // Filter Course Offering by these offerings
                         frm.set_query("course_offer", function () {
                             return {
                                 filters: {
-                                    cohort: ["in", r.message]
+                                    name: ["in", r.message]
                                 }
                             };
                         });
@@ -33,7 +33,7 @@ frappe.ui.form.on("Student Attendance", {
                                 }
                             };
                         });
-                        frappe.msgprint(__("Selected student is not enrolled in any active cohorts."));
+                        frappe.msgprint(__("Selected student is not enrolled in any active course offerings."));
                     }
                 }
             });

@@ -1,4 +1,6 @@
 import frappe
+from slcm.slcm.doctype.academic_term.academic_term import get_current_term
+from slcm.slcm.utils.exam_schedule import get_student_programme
 
 no_cache = 1
 
@@ -721,7 +723,7 @@ def get_context(context):
             enrollment = frappe.get_all(
                 "Student Enrollment",
                 filters={"student": student_name, "status": "Enrolled"},
-                fields=["name", "academic_year", "term_name", "cohort", "program"],
+                fields=["name", "academic_year", "year_no", "batch", "program"],
                 order_by="creation desc",
                 limit=1,
                 ignore_permissions=True,
@@ -732,7 +734,7 @@ def get_context(context):
 
         # Student card context
         context.student_status        = student.get("student_status") or ""
-        context.student_term          = student.get("academic_term") or ""
+        context.student_term          = get_current_term() or ""
         context.student_academic_year = (
             student.get("academic_year")
             or (context.current_enrollment.academic_year if context.current_enrollment else "")
@@ -1024,12 +1026,9 @@ def _set_student_nav(context, student):
     context.student_id     = student.registration_id or student.name
     context.student_photo  = student.passport_size_photo or ""
     context.student_initial = (context.student_name[0]).upper() if context.student_name else "S"
-    context.programme_name = (
-        frappe.db.get_value("Batch", student.programme, "cohort_name")
-        or student.programme or ""
-    )
+    context.programme_name = get_student_programme(student.name)
     context.department = student.department or ""
-    context.batch_year = student.batch_year or ""
+    context.batch_year = student.batch or ""
 
 
 def _ensure_student_fee_populated(student):
@@ -1041,13 +1040,8 @@ def _ensure_student_fee_populated(student):
     """
     if frappe.utils.flt(student.total_program_fee):
         return   # already populated — nothing to do
-    if not student.programme:
-        return
-
     try:
-        program = frappe.db.get_value("Batch", student.programme, "program")
-        if not program and frappe.db.exists("Programme", student.programme):
-            program = student.programme
+        program = get_student_programme(student.name)
         if not program:
             return
 

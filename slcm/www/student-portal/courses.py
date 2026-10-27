@@ -1,4 +1,5 @@
 import frappe
+from slcm.slcm.utils.exam_schedule import get_student_programme
 
 no_cache = 1
 
@@ -58,37 +59,29 @@ def get_context(context):
             filters={"student": student_name},
             fields=[
                 "name", "batch", "program", "academic_year",
-                "term_name", "status", "faculty_advisor", "enrollment_date",
+                "year_no", "status", "faculty_advisor", "enrollment_date",
             ],
             order_by="creation desc",
             ignore_permissions=True,
         )
 
-        # If no formal enrollment record, synthesise one from the student's cohort
-        if not enrollments and student.programme:
-            cohort_doc = frappe.db.get_value(
-                "Batch",
-                student.programme,
-                ["name", "cohort_name", "academic_year", "term_name", "status"],
-                as_dict=True,
-            )
-            if cohort_doc:
-                enrollments = [frappe._dict({
-                    "name": None,
-                    "batch": cohort_doc.name,
-                    "program": None,
-                    "academic_year": cohort_doc.academic_year,
-                    "term_name": cohort_doc.term_name,
-                    "status": "Enrolled",
-                    "faculty_advisor": None,
-                    "enrollment_date": None,
-                })]
+        # If no formal enrollment record, synthesise one from the Student Master
+        year_no = frappe.utils.cint(student.current_year)
+        if not enrollments and student.programme_of_study and student.academic_year and year_no:
+            enrollments = [frappe._dict({
+                "name": None,
+                "batch": student.batch,
+                "program": student.programme_of_study,
+                "academic_year": student.academic_year,
+                "year_no": year_no,
+                "status": "Enrolled",
+                "faculty_advisor": None,
+                "enrollment_date": None,
+            })]
 
         enrollment_data = []
 
         for enr in enrollments:
-            cohort = enr.batch
-
             # ── Step 1: courses from Student Enrollment Course child table ──
             child_courses = []
             if enr.name:
@@ -99,12 +92,17 @@ def get_context(context):
                     ignore_permissions=True,
                 )
 
-            # ── Step 2: Course Offerings for this cohort (fallback only) ──
+            # ── Step 2: Course Offerings for this programme + year (fallback only) ──
             cohort_offerings = []
-            if cohort and not child_courses:
+            if enr.program and enr.academic_year and enr.year_no and not child_courses:
                 cohort_offerings = frappe.get_all(
                     "Course Offering",
-                    filters={"cohort": cohort},
+                    filters={
+                        "program": enr.program,
+                        "academic_year": enr.academic_year,
+                        "year_no": enr.year_no,
+                        "status": "Active",
+                    },
                     fields=[
                         "name", "course_name", "course_title",
                         "faculty", "credit_value", "status", "term_name",
@@ -151,7 +149,7 @@ def get_context(context):
                     ))
 
             elif cohort_offerings:
-                # Fallback: show all Course Offerings for the cohort
+                # Fallback: show all Course Offerings for the programme + year
                 for co in cohort_offerings:
                     co_name = co.name or ""
                     att = att_map.get(co_name) or att_map.get(co.course_title) or frappe._dict()
@@ -176,15 +174,10 @@ def get_context(context):
             # Sort: by course name
             courses_out.sort(key=lambda c: c["course_name"])
 
-            # Cohort display name
-            cohort_display = enr.term_name or cohort or "—"
-            if cohort:
-                cn = frappe.db.get_value("Batch", cohort, "cohort_name")
-                if cn:
-                    cohort_display = cn
+            # Programme display name
+            cohort_display = enr.program or enr.batch or "—"
 
-            term_prefix = _get_term_prefix(enr.academic_year)
-            term_label = _get_term_label(enr.term_name, term_prefix)
+            term_label = _get_term_label(enr.year_no, "Year")
 
             enrollment_data.append({
                 "enrollment": enr,
@@ -236,23 +229,10 @@ def get_context(context):
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _get_term_prefix(academic_year):
-    """Return Semester/Trimester/Quarter/Year from Academic Year.academic_system."""
-    if not academic_year:
-        return "Term"
-    try:
-        sys = frappe.db.get_value("Academic Year", academic_year, "academic_system")
-        if sys in ("Semester", "Trimester", "Quarter", "Year"):
-            return sys
-    except Exception:
-        pass
-    return "Term"
-
-
 def _get_term_label(term_raw, prefix="Term"):
-    """Resolve Cohort.term_name to a display label.
+    """Resolve an enrollment's year of study to a display label.
 
-    Cohort.term_name is a free-text Data field — it may hold:
+    The value may be:
       - a plain number ("1", "2")  → formatted as "<prefix> <n>"  e.g. "Semester 1"
       - a full label ("Semester 1", "Trimester 2") → used as-is
     """
@@ -432,13 +412,9 @@ def _set_student_nav(context, student):
     context.student_id = student.registration_id or student.name
     context.student_photo = student.passport_size_photo or ""
     context.student_initial = (context.student_name[0]).upper() if context.student_name else "S"
-    context.programme_name = (
-        frappe.db.get_value("Batch", student.programme, "cohort_name")
-        or student.programme
-        or ""
-    )
+    context.programme_name = get_student_programme(student.name)
     context.department = student.department or ""
-    context.batch_year = student.batch_year or ""
+    context.batch_year = student.batch or ""
 
 
 def _set_nav_defaults(context):

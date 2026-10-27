@@ -2,24 +2,38 @@
 # For license information, please see license.txt
 
 import frappe
-from frappe import _
 from frappe.model.document import Document
-from frappe.utils import date_diff
 
 
 class Batch(Document):
 	def before_save(self):
-		self._calculate_term_duration()
+		if not self.is_new() and self.has_value_changed("academic_year"):
+			self.total_enrolled_count = count_enrolled(self.name, self.academic_year)
 
-	def validate(self):
-		self._validate_dates()
 
-	def _validate_dates(self):
-		if self.start_date and self.end_date and self.end_date < self.start_date:
-			frappe.throw(_("Term End Date cannot be before Term Start Date"))
+def count_enrolled(batch, academic_year):
+	"""Students enrolled in `batch` for `academic_year`, excluding dropped enrollments."""
+	return frappe.db.count(
+		"Student Enrollment",
+		{
+			"batch": batch,
+			"academic_year": academic_year,
+			"status": ["!=", "Dropped"],
+		},
+	)
 
-	def _calculate_term_duration(self):
-		if self.start_date and self.end_date:
-			days = date_diff(self.end_date, self.start_date)
-			self.term_days = days
-			self.term_weeks = days // 7
+
+def update_enrolled_count(batch):
+	"""Recompute Batch.total_enrolled_count for the batch's own academic year."""
+	if not batch:
+		return
+	academic_year = frappe.db.get_value("Batch", batch, "academic_year")
+	if academic_year is None:
+		return
+	frappe.db.set_value(
+		"Batch",
+		batch,
+		"total_enrolled_count",
+		count_enrolled(batch, academic_year),
+		update_modified=False,
+	)

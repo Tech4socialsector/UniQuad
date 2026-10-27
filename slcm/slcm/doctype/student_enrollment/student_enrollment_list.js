@@ -478,21 +478,19 @@ function open_promote_dialog_body(listview, selected, batched, student_list, pro
 				fieldtype: "HTML",
 				options: `<div class="promote-dialog-intro">
 					<span class="info-icon">i</span>
-					<span>${__("Promoting {0} selected student(s){1} to the next term. Choose where they're being promoted to.", [
+					<span>${__("Promoting {0} selected student(s){1} to the next year of study. Each gets a new enrollment (Year + 1) in the target academic year; the current one is marked Completed.", [
 						`<b>${batched.length}</b>`,
 						program ? __(" in <b>{0}</b>", [frappe.utils.escape_html(program)]) : "",
-					])}<br>${__("Term-to-term promotion is automatic — no Promotion Policy is checked. Year-to-year promotion (with policy check) is done from the <b>Promotion Management</b> page.")}</span>
+					])}<br>${__("No Promotion Policy is checked here. Policy-checked promotion is done from the <b>Promotion Management</b> page.")}</span>
 				</div>`,
 			},
 			{ fieldname: "target_academic_year", label: __("Target Academic Year"), fieldtype: "Link", options: "Academic Year", reqd: 1 },
-			{ fieldname: "target_term", label: __("Target Term"), fieldtype: "Link", options: "Academic Term", reqd: 1,
-				description: __("Required — the target Academic Year can have more than one term (e.g. multiple trimesters), so this pins down exactly which Batch to promote students into.") },
 
-			{ fieldname: "sb_courses", fieldtype: "Section Break", label: `&#128218; ${__("Courses in Target Term")}` },
+			{ fieldname: "sb_courses", fieldtype: "Section Break", label: `&#128218; ${__("Courses in the Next Year")}` },
 			{
 				fieldname: "course_preview_html",
 				fieldtype: "HTML",
-				options: `<div class="promote-course-preview"><div class="pcp-empty">${__("Choose a Target Academic Year and Target Term above to preview its courses.")}</div></div>`,
+				options: `<div class="promote-course-preview"><div class="pcp-empty">${__("Choose a Target Academic Year above to preview its courses.")}</div></div>`,
 			},
 		],
 		size: "extra-large",
@@ -507,7 +505,6 @@ function open_promote_dialog_body(listview, selected, batched, student_list, pro
 						args: {
 							student_list,
 							target_academic_year: values.target_academic_year,
-							target_term: values.target_term,
 						},
 						freeze: true,
 						freeze_message: __("Queuing promotion run..."),
@@ -527,26 +524,24 @@ function open_promote_dialog_body(listview, selected, batched, student_list, pro
 
 	const refresh_course_preview = () => {
 		const target_academic_year = dialog.get_value("target_academic_year");
-		const target_term = dialog.get_value("target_term");
 		const $box = dialog.$wrapper.find(".promote-course-preview");
 
 		if (!target_academic_year) {
-			$box.html(`<div class="pcp-empty">${__("Choose a Target Academic Year and Target Term above to preview its courses.")}</div>`);
+			$box.html(`<div class="pcp-empty">${__("Choose a Target Academic Year above to preview its courses.")}</div>`);
 			return;
 		}
 
 		frappe.call({
 			method: "slcm.slcm.doctype.promotion_run.promotion_run.get_target_term_courses",
-			args: { student_list, target_academic_year, target_term },
+			args: { student_list, target_academic_year },
 			callback: (r) => {
 				const courses = (r.message && r.message.courses) || [];
-				const target_batches = (r.message && r.message.target_batches) || [];
-				if (!target_batches.length) {
-					$box.html(`<div class="pcp-empty">${__("No target Batch exists yet for the selected students' next term — create it first, or check back after doing so. Promotion is not blocked by this.")}</div>`);
-					return;
-				}
+				const target_years = (r.message && r.message.target_years) || [];
 				if (!courses.length) {
-					$box.html(`<div class="pcp-empty">${__("No active Course Offerings found yet for the target Batch(es): {0}. Promotion is not blocked by this.", [target_batches.join(", ")])}</div>`);
+					$box.html(`<div class="pcp-empty">${__("No active Course Offerings found yet for {0} in {1}. Promotion is not blocked by this.", [
+						frappe.utils.escape_html(target_years.join(", ") || __("the next year")),
+						frappe.utils.escape_html(target_academic_year),
+					])}</div>`);
 					return;
 				}
 				const rows = courses
@@ -554,15 +549,15 @@ function open_promote_dialog_body(listview, selected, batched, student_list, pro
 						(c) => `<tr>
 							<td>${frappe.utils.escape_html(c.course_name || c.course || "—")}</td>
 							<td>${c.credits != null ? c.credits : "—"}</td>
-							<td>${frappe.utils.escape_html(c.batch || "—")}</td>
+							<td>${__("Year {0}", [c.year_no])}</td>
 						</tr>`
 					)
 					.join("");
 				$box.html(`
-					<div class="pcp-head">${__("{0} active course offering(s) in the target Batch(es)", [courses.length])}</div>
+					<div class="pcp-head">${__("{0} active course offering(s) for the next year", [courses.length])}</div>
 					<table>
 						<thead><tr>
-							<th>${__("Course")}</th><th>${__("Credits")}</th><th>${__("Batch")}</th>
+							<th>${__("Course")}</th><th>${__("Credits")}</th><th>${__("Year")}</th>
 						</tr></thead>
 						<tbody>${rows}</tbody>
 					</table>
@@ -572,7 +567,6 @@ function open_promote_dialog_body(listview, selected, batched, student_list, pro
 	};
 
 	dialog.fields_dict.target_academic_year.df.onchange = refresh_course_preview;
-	dialog.fields_dict.target_term.df.onchange = refresh_course_preview;
 
 	dialog.show();
 }

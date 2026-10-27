@@ -7,112 +7,34 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "program",
-  "program_shortcode",
-  "level_of_study",
   "academic_year",
-  "academic_term",
-  "start_date",
-  "end_date",
-  "term_weeks",
-  "term_days",
-  "column_break_twmb",
   "batch_name",
   "batch_code",
-  "term_year",
   "total_enrolled_count",
-  "status",
-  "section",
-  "programme_name"
+  "status"
  ],
  "fields": [
   {
-   "fieldname": "program",
-   "fieldtype": "Link",
-   "in_standard_filter": 1,
-   "label": "Programme",
-   "options": "Programme",
-   "reqd": 1
-  },
-  {
-   "fetch_from": "program.academic_year",
    "fieldname": "academic_year",
    "fieldtype": "Link",
    "in_list_view": 1,
-   "in_standard_filter": 1,
    "label": "Academic Year",
    "options": "Academic Year",
    "reqd": 1
   },
   {
-   "fetch_from": "program.term_start_date",
-   "fieldname": "start_date",
-   "fieldtype": "Date",
-   "label": "Term Start Date",
-   "reqd": 1
-  },
-  {
-   "fetch_from": "program.term_end_date",
-   "fieldname": "end_date",
-   "fieldtype": "Date",
-   "label": "Term End Date",
-   "reqd": 1
-  },
-  {
-   "fieldname": "term_days",
-   "fieldtype": "Int",
-   "label": "Term Duration (Days)",
-   "read_only": 1
-  },
-  {
-   "fieldname": "term_weeks",
-   "fieldtype": "Int",
-   "label": "Term Duration (Weeks)",
-   "read_only": 1
-  },
-  {
    "default": "Planned",
    "fieldname": "status",
    "fieldtype": "Select",
+   "in_list_view": 1,
    "label": "Status",
    "options": "\nActive\nCompleted\nInactive\nPlanned",
    "reqd": 1
   },
   {
-   "fieldname": "section",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Section",
-   "options": "Section"
-  },
-  {
-   "description": "Term of the Current Year",
-   "fieldname": "term_year",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Term Year"
-  },
-  {
-   "fetch_from": "program.program_code",
-   "fieldname": "program_shortcode",
-   "fieldtype": "Data",
-   "label": "Program shortcode"
-  },
-  {
-   "fieldname": "column_break_twmb",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fetch_from": "program.academic_term",
-   "fieldname": "academic_term",
-   "fieldtype": "Data",
-   "label": "Academic Term"
-  },
-  {
    "fieldname": "batch_name",
    "fieldtype": "Data",
+   "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Batch name",
    "reqd": 1,
@@ -126,39 +48,20 @@
    "unique": 1
   },
   {
+   "default": "0",
+   "description": "Students enrolled in this batch for its academic year (dropped enrollments are not counted). Updated automatically.",
    "fieldname": "total_enrolled_count",
    "fieldtype": "Int",
-   "in_standard_filter": 1,
-   "label": "Total enrolled count"
-  },
-  {
-   "fetch_from": "program.level_of_study",
-   "fieldname": "level_of_study",
-   "fieldtype": "Data",
-   "label": "Level of study"
-  },
-  {
-   "fetch_from": "program.program_name",
-   "fieldname": "programme_name",
-   "fieldtype": "Link",
    "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Programme Name",
-   "options": "Programme Master",
-   "read_only": 1,
-   "reqd": 1
+   "label": "Total enrolled count",
+   "read_only": 1
   }
  ],
  "links": [
   {
    "group": "Students",
    "link_doctype": "Student Enrollment",
-   "link_fieldname": "program"
-  },
-  {
-   "group": "Academics",
-   "link_doctype": "Course Offering",
-   "link_fieldname": "course_title"
+   "link_fieldname": "batch"
   },
   {
    "group": "Students",
@@ -166,7 +69,7 @@
    "link_fieldname": "batch"
   }
  ],
- "modified": "2026-09-16 17:02:38.346702",
+ "modified": "2026-10-27 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Batch",

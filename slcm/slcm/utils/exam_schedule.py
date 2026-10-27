@@ -4,8 +4,8 @@
 """Which exam plans (and which of their courses) a student may see.
 
 The student's courses come from the same source as the student portal Courses
-page — Student Enrollment → Student Enrollment Course — falling back to the
-Course Offerings of the student's cohort when there is no enrollment record.
+page — Student Enrollment → Student Enrollment Course. A student with no
+enrollment record has no courses.
 
 An exam plan is shown for a course only when the student is enrolled in that
 course *in the plan's term* (Exam Plan.term == Course Offering.term_name), so
@@ -14,6 +14,23 @@ the student portal and the parent portal (a parent sees their ward's view).
 """
 
 import frappe
+
+
+def get_student_programme(student):
+	"""Programme of a student: the latest Enrolled Student Enrollment's
+	programme, else Student Master.programme_of_study ("" when neither)."""
+	if not student:
+		return ""
+	return (
+		frappe.db.get_value(
+			"Student Enrollment",
+			{"student": student, "status": "Enrolled", "docstatus": ["<", 2]},
+			"program",
+			order_by="academic_year desc, year_no desc, creation desc",
+		)
+		or frappe.db.get_value("Student Master", student, "programme_of_study")
+		or ""
+	)
 
 
 def get_enrolled_courses(student):
@@ -38,16 +55,8 @@ def get_enrolled_courses(student):
 			as_dict=True,
 		)
 
-	# No enrollment record: the cohort's offerings, as on the Courses page
-	cohort = frappe.db.get_value("Student Master", student, "programme")
-	if not cohort:
-		return []
-	return frappe.get_all(
-		"Course Offering",
-		filters={"cohort": cohort, "status": "Active"},
-		fields=["name as course_offering", "course_title as course", "term_name as term"],
-		ignore_permissions=True,
-	)
+	# No enrollment record: no programme + year of study to derive offerings from
+	return []
 
 
 def get_visible_exam_plans(student):

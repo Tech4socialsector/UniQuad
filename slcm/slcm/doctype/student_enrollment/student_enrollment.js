@@ -1,12 +1,8 @@
 frappe.ui.form.on("Student Enrollment", {
 	refresh(frm) {
-		// Lightweight only - just keep the Section link filtered to this
-		// batch. The auto-fill of enrolled_courses must NOT re-run here,
-		// otherwise simply opening an existing enrollment would wipe out
-		// any manually edited rows (grades, status, faculty overrides).
-		frm.set_query("section", function () {
-			return { filters: { batch: frm.doc.batch } };
-		});
+		// The auto-fill of enrolled_courses must NOT re-run here, otherwise
+		// simply opening an existing enrollment would wipe out any manually
+		// edited rows (grades, status, faculty overrides).
 
 		// Only students who have completed the registration workflow
 		// should be selectable for enrollment.
@@ -18,56 +14,60 @@ frappe.ui.form.on("Student Enrollment", {
 	},
 
 	batch(frm) {
-		// Fires on real user-driven changes only (not on load), which is
-		// exactly when we want to refill enrolled_courses for the new batch.
-		frm.set_query("section", function () {
-			return { filters: { batch: frm.doc.batch } };
-		});
-
-		// 1️⃣ Clear table if batch removed
-		if (!frm.doc.batch) {
-			frm.set_value("section", "");
-			frm.clear_table("enrolled_courses");
-			frm.refresh_field("enrolled_courses");
-			return;
-		}
-
-		// 2️⃣ Clear existing rows before refilling
-		frm.clear_table("enrolled_courses");
-
-		const batch = frm.doc.batch;
-
-		// 3️⃣ Fetch all Open Course Offerings for this batch directly
-		// (Course Offering's own link field is still named "cohort")
-		frappe.db.get_list("Course Offering", {
-			filters: [["cohort", "=", batch], ["status", "=", "Active"]],
-			fields: ["name", "course_title"],
-		}).then((offerings) => {
-			if (!offerings.length) {
-				frm.refresh_field("enrolled_courses");
-				return;
-			}
-
-			frappe.db.get_list("Course", {
-				filters: [["name", "in", offerings.map(o => o.course_title)]],
-				fields: ["name", "course_type"],
-			}).then((courses) => {
-				const course_type_map = {};
-				courses.forEach(c => { course_type_map[c.name] = c.course_type; });
-
-				offerings.forEach((offering) => {
-					const row = frm.add_child("enrolled_courses");
-					frappe.model.set_value(row.doctype, row.name, "course_offering", offering.name);
-					frappe.model.set_value(row.doctype, row.name, "course", offering.course_title);
-					frappe.model.set_value(row.doctype, row.name, "course_type", course_type_map[offering.course_title] || "");
-					frappe.model.set_value(row.doctype, row.name, "status", "Enrolled");
-				});
-
-				frm.refresh_field("enrolled_courses");
+		// A new enrollment starts in the Batch's own academic year.
+		if (frm.doc.batch && !frm.doc.academic_year) {
+			frappe.db.get_value("Batch", frm.doc.batch, "academic_year").then(({ message }) => {
+				if (message && message.academic_year) {
+					frm.set_value("academic_year", message.academic_year);
+				}
 			});
-		});
+		}
+	},
+
+	// These fire on user-driven changes only (not on load), which is exactly
+	// when the course list for the programme's year should be refilled.
+	program(frm) {
+		refill_year_courses(frm);
+	},
+
+	academic_year(frm) {
+		refill_year_courses(frm);
+	},
+
+	year_no(frm) {
+		refill_year_courses(frm);
 	},
 });
+
+// Courses = Active Course Offerings of every term of the academic year for
+// this programme and year of study.
+function refill_year_courses(frm) {
+	frm.clear_table("enrolled_courses");
+	if (!(frm.doc.program && frm.doc.academic_year && frm.doc.year_no)) {
+		frm.refresh_field("enrolled_courses");
+		return;
+	}
+
+	frappe.call({
+		method: "slcm.slcm.doctype.student_enrollment.student_enrollment.get_year_courses",
+		args: {
+			program: frm.doc.program,
+			academic_year: frm.doc.academic_year,
+			year_no: frm.doc.year_no,
+		},
+		callback(r) {
+			(r.message || []).forEach((offering) => {
+				const row = frm.add_child("enrolled_courses");
+				frappe.model.set_value(row.doctype, row.name, "course_offering", offering.name);
+				frappe.model.set_value(row.doctype, row.name, "course", offering.course_title);
+				frappe.model.set_value(row.doctype, row.name, "course_type", offering.course_type || "");
+				frappe.model.set_value(row.doctype, row.name, "credits", offering.credit_value);
+				frappe.model.set_value(row.doctype, row.name, "status", "Enrolled");
+			});
+			frm.refresh_field("enrolled_courses");
+		},
+	});
+}
 
 /*****************************************************
  * ACADEMIC TIMELINE
@@ -128,7 +128,7 @@ function build_academic_timeline_html(terms, current_name) {
 						<span class="timeline-term-year">${frappe.utils.escape_html(term.academic_year || "—")}</span>
 						${is_current ? `<span class="timeline-current-tag">${__("Viewing")}</span>` : ""}
 					</div>
-					<div class="timeline-term-name">${frappe.utils.escape_html(term.term_name || "—")}</div>
+					<div class="timeline-term-name">${term.year_no ? __("Year {0}", [term.year_no]) : "—"}</div>
 					<span class="timeline-status-pill">${frappe.utils.escape_html(__(term.status))}</span>
 				</div>
 			`;

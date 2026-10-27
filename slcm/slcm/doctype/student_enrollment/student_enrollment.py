@@ -4,23 +4,31 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.utils import cint
+
+from slcm.slcm.doctype.batch.batch import update_enrolled_count
 
 
 class StudentEnrollment(Document):
+    def autoname(self):
+        self.name = make_enrollment_name(self.student, self.year_no)
+
     def validate(self):
+        if not self.academic_year and self.batch:
+            self.academic_year = frappe.db.get_value("Batch", self.batch, "academic_year")
+        self.validate_year_no()
         self.validate_duplicate_enrollment()
 
     def before_save(self):
-        self.fetch_program_and_courses()
+        self.fetch_courses()
 
     def on_update(self):
         """Sync Student Master when enrollment status changes."""
         self._sync_student_master_status()
-        self._refresh_batch_enrolled_count(self.batch)
-        if self.has_value_changed("batch"):
-            previous = self.get_doc_before_save()
-            if previous and previous.batch and previous.batch != self.batch:
-                self._refresh_batch_enrolled_count(previous.batch)
+        update_enrolled_count(self.batch)
+        previous = self.get_doc_before_save()
+        if previous and previous.batch and previous.batch != self.batch:
+            update_enrolled_count(previous.batch)
         self._sync_class_configuration_rosters()
 
     def _sync_class_configuration_rosters(self):
@@ -93,52 +101,54 @@ class StudentEnrollment(Document):
         cc.save(ignore_permissions=True)
 
     def after_delete(self):
-        self._refresh_batch_enrolled_count(self.batch)
+        update_enrolled_count(self.batch)
 
-    def fetch_program_and_courses(self):
-        if not self.program and self.batch:
-            self.program = frappe.db.get_value("Batch", self.batch, "program")
+    def fetch_courses(self):
+        """Attach the year's Active Course Offerings (all terms) for this
+        programme + academic year + year, unless courses were already added."""
+        if self.enrolled_courses or not (self.program and self.academic_year and self.year_no):
+            return
 
-        if self.program and self.batch and not self.enrolled_courses:
-            offerings = frappe.get_all(
-                "Course Offering",
-                filters={"cohort": self.batch, "status": "Active"},
-                fields=["name", "course_title"],
+        for offering in get_offerings_for_year(self.program, self.academic_year, self.year_no):
+            self.append("enrolled_courses", {
+                "course_offering": offering.name,
+                "course":          offering.course_title,
+                "course_type":     offering.course_type or "",
+                "credits":         offering.credit_value,
+                "status":          "Enrolled",
+            })
+
+    def validate_year_no(self):
+        if cint(self.year_no) < 1:
+            frappe.throw(_("Year No must be 1 or more."))
+
+        duration = cint(frappe.db.get_value("Programme", self.program, "program_duration"))
+        if duration and cint(self.year_no) > duration:
+            frappe.throw(
+                _("Year No {0} is beyond the {1}-year duration of {2}.").format(
+                    self.year_no, duration, self.program
+                )
             )
-            for offering in offerings:
-                course_type = frappe.db.get_value("Course", offering.course_title, "course_type")
-                self.append("enrolled_courses", {
-                    "course_offering": offering.name,
-                    "course":          offering.course_title,
-                    "course_type":     course_type or "",
-                    "status":          "Enrolled",
-                })
 
     def validate_duplicate_enrollment(self):
-        """Prevent duplicate enrollment for same student + batch + academic_year."""
-        filters = {
-            "student":       self.student,
-            "batch":         self.batch,
-            "academic_year": self.academic_year,
-            "docstatus":     ["<", 2],
-        }
-        existing = frappe.db.exists("Student Enrollment", filters)
-        if existing and existing != self.name:
-            frappe.throw(_("Enrollment already exists for this student in the selected batch"))
-
-    def _refresh_batch_enrolled_count(self, batch):
-        """Recompute the Batch's total_enrolled_count from actual enrollments."""
-        if not batch or not frappe.db.exists("Batch", batch):
-            return
-        count = frappe.db.count(
+        """One enrollment per student + programme + academic year."""
+        existing = frappe.db.get_value(
             "Student Enrollment",
             {
-                "batch": batch,
-                "status": ["not in", ["Dropped"]],
-                "docstatus": ["<", 2],
+                "student":       self.student,
+                "program":       self.program,
+                "academic_year": self.academic_year,
+                "name":          ["!=", self.name],
             },
+            "name",
         )
-        frappe.db.set_value("Batch", batch, "total_enrolled_count", count, update_modified=False)
+        if existing:
+            frappe.throw(
+                _("{0} is already enrolled in {1} for {2} ({3}).").format(
+                    self.student_name or self.student, self.program, self.academic_year,
+                    frappe.bold(existing),
+                )
+            )
 
     def _sync_student_master_status(self):
         """Reflect this enrollment's status on Student Master.
@@ -165,19 +175,191 @@ class StudentEnrollment(Document):
             })
 
 
+def _enrollment_base_name(student, year_no):
+    """The enrollment is named by the Student Master's Student ID
+    (registration_id), falling back to the Student Master name until an ID is
+    assigned. A student has one enrollment per year, so Year 1 is the bare ID
+    and later years add "-Y<n>"."""
+    student_id = (frappe.db.get_value("Student Master", student, "registration_id") or "").strip()
+    student_id = student_id or student
+    return student_id if cint(year_no) <= 1 else f"{student_id}-Y{cint(year_no)}"
+
+
+def make_enrollment_name(student, year_no, exclude=None):
+    """Next free name for a new enrollment; a repeated year (or a Student ID
+    shared by two students) gets a numeric suffix."""
+    base = _enrollment_base_name(student, year_no)
+    name, n = base, 1
+    while name != exclude and frappe.db.exists("Student Enrollment", name):
+        n += 1
+        name = f"{base}-{n}"
+    return name
+
+
+def sync_enrollment_names(students):
+    """Rename the given students' enrollments to match their current Student ID.
+
+    Called whenever a Student ID is assigned or changed. Student IDs can be
+    swapped between students (the ID generator renumbers a whole batch), so a
+    target may still be held by another enrollment in the same run: those wait
+    until it is freed, and a cycle is broken through a temporary name.
+    """
+    from frappe.model.rename_doc import rename_doc
+
+    rows = frappe.get_all(
+        "Student Enrollment",
+        filters={"student": ["in", list(students)]},
+        fields=["name", "student", "year_no"],
+        order_by="student asc, year_no asc, creation asc",
+    )
+    pending, seen = {}, {}
+    for row in rows:
+        base = _enrollment_base_name(row.student, row.year_no)
+        seen[base] = seen.get(base, 0) + 1
+        target = base if seen[base] == 1 else f"{base}-{seen[base]}"
+        if target != row.name:
+            pending[row.name] = target
+
+    def _rename(old, new):
+        rename_doc("Student Enrollment", old, new, force=True,
+                   ignore_permissions=True, show_alert=False, rebuild_search=False)
+
+    while pending:
+        progressed = False
+        for old, new in list(pending.items()):
+            if not frappe.db.exists("Student Enrollment", new):
+                _rename(old, new)
+                del pending[old]
+                progressed = True
+        if progressed:
+            continue
+        old, new = next(iter(pending.items()))
+        del pending[old]
+        if new in pending:
+            # held by another enrollment that is itself moving: park this one
+            tmp = f"{old}~{frappe.generate_hash(length=6)}"
+            _rename(old, tmp)
+            pending[tmp] = new
+        else:
+            # held by an enrollment outside this run: take the next free suffix
+            free = make_enrollment_name(*frappe.db.get_value(
+                "Student Enrollment", old, ["student", "year_no"]), exclude=old)
+            if free != old:
+                _rename(old, free)
+
+
+def _ordinal(n):
+    n = cint(n)
+    suffix = "th" if 11 <= n % 100 <= 13 else {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
+    return f"{n}{suffix}"
+
+
+def create_next_year_enrollment(enrollment_name, target_academic_year):
+    """Promote one Student Enrollment to the next year of study.
+
+    Marks `enrollment_name` Completed (nothing else on it changes) and creates
+    a NEW enrollment with the same programme, batch and section, in
+    `target_academic_year`, with year_no + 1. Student Master's academic year
+    and current year are moved along with it.
+
+    Atomic: a failure rolls everything back. Safe to re-run: if the student
+    already has an enrollment for this programme in the target academic year,
+    nothing changes and that enrollment is returned.
+
+    Returns (enrollment_name, created)."""
+    old = frappe.get_doc("Student Enrollment", enrollment_name)
+
+    existing = frappe.db.get_value(
+        "Student Enrollment",
+        {"student": old.student, "program": old.program, "academic_year": target_academic_year},
+        "name",
+    )
+    if existing:
+        return existing, False
+
+    next_year = cint(old.year_no) + 1
+    duration = cint(frappe.db.get_value("Programme", old.program, "program_duration"))
+    if duration and next_year > duration:
+        frappe.throw(
+            _("{0} is in the final year ({1} of {2}) of {3}. There is no next year to promote to.").format(
+                old.student_name or old.student, old.year_no, duration, old.program
+            ),
+            title=_("Final year"),
+        )
+
+    save_point = "se_promote_" + frappe.generate_hash(length=10)
+    frappe.db.savepoint(save_point)
+    try:
+        # Completing the old enrollment flips Student Master to "Graduated"
+        # until the new Enrolled one sets it back to "Active".
+        old.status = "Completed"
+        old.save(ignore_permissions=True)
+
+        new = frappe.new_doc("Student Enrollment")
+        new.update({
+            "student":         old.student,
+            "program":         old.program,
+            "batch":           old.batch,
+            "section":         old.section,
+            "academic_year":   target_academic_year,
+            "year_no":         next_year,
+            "faculty_advisor": old.faculty_advisor,
+            "status":          "Enrolled",
+            "enrollment_date": frappe.db.get_value("Academic Year", target_academic_year, "year_start_date")
+                               or frappe.utils.today(),
+        })
+        new.insert(ignore_permissions=True)
+
+        frappe.db.set_value("Student Master", old.student, {
+            "academic_year": target_academic_year,
+            "current_year":  str(next_year),
+            "year_of_study": f"{_ordinal(next_year)} Year",
+        }, update_modified=False)
+    except Exception:
+        frappe.db.rollback(save_point=save_point)
+        raise
+    frappe.db.release_savepoint(save_point)
+    return new.name, True
+
+
+def get_offerings_for_year(program, academic_year, year_no):
+    """Active Course Offerings of every term of `academic_year` for this
+    programme and year of study, with the course type."""
+    return frappe.db.sql(
+        """
+        SELECT co.name, co.course_title, co.credit_value, c.course_type
+        FROM `tabCourse Offering` co
+        LEFT JOIN `tabCourse` c ON c.name = co.course_title
+        WHERE co.program = %(program)s
+          AND co.academic_year = %(academic_year)s
+          AND co.year_no = %(year_no)s
+          AND co.status = 'Active'
+        ORDER BY co.term_name, co.course_name
+        """,
+        {"program": program, "academic_year": academic_year, "year_no": cint(year_no)},
+        as_dict=True,
+    )
+
+
+@frappe.whitelist()
+def get_year_courses(program, academic_year, year_no):
+    """Course Offerings to pre-fill on the Student Enrollment form."""
+    return get_offerings_for_year(program, academic_year, year_no)
+
+
 @frappe.whitelist()
 def get_other_terms(student, exclude=None):
-    """List a student's Student Enrollment records across terms, most recent
-    academic year first, for the Academic Timeline on the Student Enrollment
-    form. Pass exclude=None to include every term (the form marks the one
-    currently being viewed); pass a docname to omit just that record."""
+    """List a student's Student Enrollment records (one per academic year),
+    most recent academic year first, for the Academic Timeline on the Student
+    Enrollment form. Pass exclude=None to include every year (the form marks
+    the one currently being viewed); pass a docname to omit just that record."""
     if not student:
         return []
 
     enrollments = frappe.get_all(
         "Student Enrollment",
         filters={"student": student, "docstatus": ["<", 2]},
-        fields=["name", "academic_year", "term_name", "status"],
+        fields=["name", "academic_year", "year_no", "status"],
     )
 
     ay_names = {e.academic_year for e in enrollments if e.academic_year}

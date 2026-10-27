@@ -2,7 +2,7 @@
  "actions": [],
  "allow_import": 1,
  "allow_rename": 1,
- "autoname": "format:{course_title}-{cohort}-{term_name}",
+ "autoname": "format:{course_title}-{program}-{term_name}-Y{year_no}",
  "creation": "2025-12-30 13:03:04.922140",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -10,14 +10,13 @@
   "course_title",
   "course_name",
   "credit_value",
-  "cohort",
+  "is_elective",
   "faculty",
   "column_break_rote",
   "program",
   "academic_year",
   "term_name",
-  "section",
-  "year",
+  "year_no",
   "lms_url",
   "section_break_eyoj",
   "faculty_table",
@@ -34,47 +33,53 @@
    "read_only": 1
   },
   {
-   "fetch_from": "cohort.program",
    "fieldname": "program",
    "fieldtype": "Link",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Programme",
    "options": "Programme",
-   "read_only": 1,
    "reqd": 1
   },
   {
-   "fieldname": "cohort",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Batch",
-   "options": "Batch",
-   "reqd": 1
-  },
-  {
-   "fetch_from": "program.academic_year",
    "fieldname": "academic_year",
    "fieldtype": "Link",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Academic Year",
    "options": "Academic Year",
-   "read_only": 1,
    "reqd": 1
   },
   {
-   "fetch_from": "program.academic_term",
    "fieldname": "term_name",
-   "fieldtype": "Data",
+   "fieldtype": "Link",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Term",
+   "label": "Academic Term",
+   "options": "Academic Term",
    "reqd": 1
   },
   {
-   "description": "Primary faculty. Kept in sync automatically from the Faculty table below \u2014 do not edit both independently.",
+   "default": "1",
+   "description": "Year of the programme this course is taught in (1 = first year).",
+   "fieldname": "year_no",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Year No",
+   "non_negative": 1,
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "description": "Set from the Course type when the course is picked; can be changed per offering.",
+   "fieldname": "is_elective",
+   "fieldtype": "Check",
+   "in_standard_filter": 1,
+   "label": "Is Elective"
+  },
+  {
+   "description": "Primary faculty. Kept in sync automatically from the Faculty table below — do not edit both independently.",
    "fieldname": "faculty",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -99,6 +104,7 @@
    "read_only": 1
   },
   {
+   "default": "Active",
    "fieldname": "status",
    "fieldtype": "Select",
    "in_list_view": 1,
@@ -117,19 +123,6 @@
    "reqd": 1
   },
   {
-   "fieldname": "year",
-   "fieldtype": "Select",
-   "label": "Year",
-   "options": "\n1st\n2nd\n3rd\n4th\n5th"
-  },
-  {
-   "fieldname": "section",
-   "fieldtype": "Link",
-   "hidden": 1,
-   "label": "Section",
-   "options": "Section"
-  },
-  {
    "fieldname": "column_break_rote",
    "fieldtype": "Column Break"
   },
@@ -146,7 +139,7 @@
   }
  ],
  "links": [],
- "modified": "2026-10-06 15:42:37.152486",
+ "modified": "2026-10-27 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Course Offering",

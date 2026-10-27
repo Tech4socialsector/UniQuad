@@ -272,7 +272,8 @@ def auto_reject_below_attendance_floor():
 			if not co_term_name:
 				continue
 
-			term_end_date = frappe.db.get_value("Academic Term", {"term_name": co_term_name}, "term_end_date")
+			# Course Offering.term_name is a Link to Academic Term (its record name)
+			term_end_date = frappe.db.get_value("Academic Term", co_term_name, "term_end_date")
 			if not term_end_date or getdate(term_end_date) >= getdate():
 				continue  # term hasn't ended yet
 

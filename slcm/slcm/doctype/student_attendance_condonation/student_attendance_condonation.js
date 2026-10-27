@@ -78,9 +78,15 @@ frappe.ui.form.on("Student Attendance Condonation", {
 	},
 	student(frm) {
 		if (frm.doc.student) {
-			frappe.db.get_value("Student Master", frm.doc.student, "master_programme", (r) => {
-				if (r && r.master_programme) {
-					frm.set_value("programme", r.master_programme);
+			// Student Master.master_programme was removed: it was the student's
+			// Programme's program_name, so read that instead.
+			frappe.db.get_value("Student Master", frm.doc.student, "programme_of_study", (r) => {
+				if (r && r.programme_of_study) {
+					frappe.db.get_value("Programme", r.programme_of_study, "program_name", (p) => {
+						if (p && p.program_name) {
+							frm.set_value("programme", p.program_name);
+						}
+					});
 				}
 			});
 		} else {

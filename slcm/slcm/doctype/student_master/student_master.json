@@ -39,9 +39,8 @@
   "section_update_log",
   "tab_program_mapping",
   "program_mapping_section",
-  "batch",
   "academic_year",
-  "academic_term",
+  "batch",
   "programme_of_study",
   "pace_programme",
   "level_of_study",
@@ -50,7 +49,6 @@
   "current_year",
   "current_cgpa",
   "cumulative_percentage",
-  "master_programme",
   "tab_personal",
   "personal_details_section",
   "first_name",
@@ -1410,25 +1408,17 @@
    "fieldtype": "Column Break"
   },
   {
-   "fetch_from": "batch.academic_year",
    "fieldname": "academic_year",
-   "fieldtype": "Data",
+   "fieldtype": "Link",
    "label": "Academic year",
-   "length": 15
-  },
-  {
-   "fetch_from": "batch.academic_term",
-   "fieldname": "academic_term",
-   "fieldtype": "Data",
-   "label": "Academic Term",
-   "length": 20
+   "length": 15,
+   "options": "Academic Year"
   },
   {
    "depends_on": "eval:doc.admission_type != 'PACE'",
-   "fetch_from": "batch.program",
    "fieldname": "programme_of_study",
    "fieldtype": "Link",
-   "label": "Programme Of Study",
+   "label": "Programme",
    "options": "Programme"
   },
   {
@@ -1439,12 +1429,10 @@
    "options": "PACE Programme"
   },
   {
-   "fetch_from": "batch.level_of_study",
    "fieldname": "level_of_study",
    "fieldtype": "Data",
    "label": "Level Of Study",
-   "length": 20,
-   "options": "\nUndergraduate\nPostgraduate\nResearch Course\nDiploma"
+   "length": 20
   },
   {
    "fieldname": "section",
@@ -1464,13 +1452,6 @@
    "label": "Section Update Log",
    "options": "Student Section Update Log",
    "read_only": 1
-  },
-  {
-   "fetch_from": "programme_of_study.program_name",
-   "fieldname": "master_programme",
-   "fieldtype": "Link",
-   "label": "Programme",
-   "options": "Programme Master"
   },
   {
    "fieldname": "admit_card_number",
@@ -1767,7 +1748,7 @@
  ],
  "image_field": "passport_size_photo",
  "links": [],
- "modified": "2026-10-12 12:00:00.000000",
+ "modified": "2026-10-27 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Student Master",
