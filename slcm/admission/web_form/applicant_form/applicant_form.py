@@ -4,7 +4,11 @@ import frappe
 from frappe import _
 from frappe.utils import cint, flt, strip_html
 
-from slcm.admission.doctype.applicant.applicant import APPLICATION_SUBMITTED_STATUSES
+from slcm.admission.doctype.applicant.applicant import (
+    APPLICATION_SUBMITTED_STATUSES,
+    state_belongs_to_country as _state_belongs_to_country,
+    state_country_names,
+)
 from slcm.admission.utils.multiprogram_applicant import (
     build_multiprogram_profile_copy_payload,
     pop_multiprogram_profile_copy_from_cache,
@@ -1278,41 +1282,10 @@ def download_portal_application_fee_receipt(applicant_name):
     frappe.local.response.filecontent = pdf
     frappe.local.response.type = "pdf"
 
-# Nationality options spelled differently from the Country used on State records
-NATIONALITY_STATE_COUNTRY_ALIASES = {
-    "united states of america": "United States",
-    "cape verde": "Cabo Verde",
-    "republic of the congo": "Congo",
-    "czechia": "Czech Republic",
-    "the gambia": "Gambia",
-    "federated states of micronesia": "Micronesia",
-    "são tomé and príncipe": "Sao Tome and Principe",
-    "türkiye": "Turkey",
-}
-
-
-def _state_country_names(country):
-    """Lower-cased country names to match against State.country (the given name plus its alias)."""
-    country = (country or "").strip().lower()
-    names = {country}
-    alias = NATIONALITY_STATE_COUNTRY_ALIASES.get(country)
-    if alias:
-        names.add(alias.lower())
-    return tuple(names)
-
-
 @frappe.whitelist(allow_guest=True)
 def state_belongs_to_country(state=None, country=None):
     """True when the State belongs to the given country / nationality. 'Other' is always valid."""
-    state = (state or "").strip()
-    if not state or state.lower() == "other" or not (country or "").strip():
-        return True
-
-    state_country = frappe.db.get_value("State", state, "country")
-    if not state_country:
-        return True
-
-    return state_country.strip().lower() in _state_country_names(country)
+    return _state_belongs_to_country(state, country)
 
 
 @frappe.whitelist(allow_guest=True)
@@ -1352,7 +1325,7 @@ def state_query(doctype=None, txt=None, searchfield=None, start=0, page_len=20, 
             and name like %(txt)s
             order by (case when name = 'Other' then 1 else 0 end), name
             limit %(start)s, %(page_len)s
-        """, dict(params, countries=_state_country_names(country)))
+        """, dict(params, countries=state_country_names(country)))
         return to_results(matched_rows)
 
     rows = frappe.db.sql("""
