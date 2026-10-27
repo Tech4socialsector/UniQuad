@@ -138,7 +138,7 @@
   "attach_files": "",
   "attach_print": 0,
   "channel": "System Notification",
-  "condition": "doc.status==\"Completed\"",
+  "condition": "doc.status==\"Submitted and Paid\"",
   "condition_type": "Python",
   "date_changed": null,
   "datetime_changed": null,

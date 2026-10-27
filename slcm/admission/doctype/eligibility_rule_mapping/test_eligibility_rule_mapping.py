@@ -38,7 +38,7 @@ class TestEligibilityRuleMapping(FrappeTestCase):
             "candidate_name": "Test HSC Applicant",
             "email": "hsc_test@example.com",
             "gender": "Male",
-            "status": "Completed",
+            "status": "Submitted and Paid",
             "evaluation_status": "Eligible",
             "hsc_percentage": 45.0, # lower than 50% baseline
             "class_x_percentage": 55.0, # lower than 60% baseline
@@ -85,7 +85,7 @@ class TestEligibilityRuleMapping(FrappeTestCase):
             "candidate_name": "Test HSC Applicant 2",
             "email": "hsc_test2@example.com",
             "gender": "Male",
-            "status": "Completed",
+            "status": "Submitted and Paid",
             "evaluation_status": "Eligible",
             "hsc_percentage": 38.0, # below 40.0% override
             "class_x_percentage": 55.0,
@@ -120,7 +120,7 @@ class TestEligibilityRuleMapping(FrappeTestCase):
             "candidate_name": "Test UG Applicant",
             "email": "ug_test@example.com",
             "gender": "Male",
-            "status": "Completed",
+            "status": "Submitted and Paid",
             "evaluation_status": "Eligible",
             "whether_scstobc_ncl": "SC",
             "ug_degree_details": [
@@ -182,7 +182,7 @@ class TestEligibilityRuleMapping(FrappeTestCase):
             "candidate_name": "Test HSC Priority Applicant",
             "email": "hsc_priority_test@example.com",
             "gender": "Male",
-            "status": "Completed",
+            "status": "Submitted and Paid",
             "evaluation_status": "Eligible",
             "hsc_percentage": 45.0, # matches SC override (40%) but not Karnataka override (48%)
             "karnataka_category": "Yes",

@@ -116,7 +116,7 @@ def get_summary_cards(where_clause):
 def get_funnel_data(where_clause):
     # Stages for funnel
     stages = [
-        {"label": "Submitted", "statuses": ["Submitted", "Selected", "Waitlisted", "Rejected", "Offer Accepted", "Offer Issued", "Offer Declined", "Offer Expired", "Confirmation Fee Paid", "Full Fee Paid", "Accepted"]},
+        {"label": "Submitted", "statuses": ["Submitted", "Submitted and Paid", "Selected", "Waitlisted", "Rejected", "Offer Accepted", "Offer Issued", "Offer Declined", "Offer Expired", "Confirmation Fee Paid", "Full Fee Paid", "Accepted"]},
         {"label": "Selected", "statuses": ["Selected", "Offer Issued", "Offer Accepted", "Offer Declined", "Offer Expired", "Confirmation Fee Paid", "Full Fee Paid", "Accepted"]},
         {"label": "Offer Issued", "statuses": ["Offer Issued", "Offer Accepted", "Offer Declined", "Offer Expired", "Confirmation Fee Paid", "Full Fee Paid"]},
         {"label": "Offer Accepted", "statuses": ["Offer Accepted", "Confirmation Fee Paid", "Full Fee Paid", "Accepted"]},

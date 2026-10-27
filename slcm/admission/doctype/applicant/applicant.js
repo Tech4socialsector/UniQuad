@@ -384,7 +384,7 @@ frappe.ui.form.on("Applicant", {
             frm.doc.agreement_to_communications &&
             frm.doc.agreement_withdrawal_conditions
         );
-        if (frm.doc.status === "Submitted" && !has_declaration) {
+        if (["Submitted", "Submitted and Paid"].includes(frm.doc.status) && !has_declaration) {
             errors.push(__("You must accept the Declaration & Undertaking before submitting."));
         }
 
