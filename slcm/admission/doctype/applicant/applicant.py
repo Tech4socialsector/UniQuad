@@ -464,11 +464,6 @@ class Applicant(Document):
         scope = scope.strip()
         is_foreign = (self.foriegn_national or "").strip().lower() in ("yes", "true", "1")
         is_dom = (self.foriegn_national or "").strip().lower() in ("no", "false", "0")
-        if not is_foreign and not is_dom and self.nationality:
-            if self.nationality.strip().lower() == "india":
-                is_dom = True
-            else:
-                is_foreign = True
 
         prog_title = frappe.db.get_value("Programme", self.program, "program_name") or self.program
 

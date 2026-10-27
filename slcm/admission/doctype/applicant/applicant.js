@@ -396,9 +396,6 @@ frappe.ui.form.on("Applicant", {
         }
 
         if (frm.doc.nationality && frm.doc.foriegn_national) {
-            if (frm.doc.nationality !== "India" && frm.doc.foriegn_national !== "Yes") {
-                errors.push(__("If Nationality is not India, then 'Foreign National' must be Yes."));
-            }
             if (frm.doc.foriegn_national === "Yes" && frm.doc.nationality === "India") {
                 errors.push(__("If 'Foreign National' is Yes, Nationality cannot be India."));
             }

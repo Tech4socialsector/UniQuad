@@ -286,14 +286,11 @@ def validate_new_application_access(program=None, foriegn_national=None, nationa
         resolved_program_level = prog_row.get("program_level") or ""
         resolved_admission_open_for = (prog_row.get("admission_open_for") or "").strip()
 
-        # Check Domestic vs International admission scope
+        # Check Domestic vs International admission scope.
+        # foriegn_national is the authoritative field; nationality is NOT used as a fallback
+        # because domestic applicants can now choose any nationality.
         is_international = (foriegn_national or "").strip().lower() in ("yes", "true", "1")
         is_domestic = (foriegn_national or "").strip().lower() in ("no", "false", "0")
-        if not is_international and not is_domestic and nationality:
-            if nationality.strip().lower() == "india":
-                is_domestic = True
-            else:
-                is_international = True
 
         # reason="scope": the only refusal that depends on foriegn_national — the portal
         # reverts that field ONLY for this reason (other refusals apply to Yes and No alike).
@@ -554,9 +551,6 @@ def save_applicant_draft(data, ignore_mandatory=True):
             prog_name = frappe.db.get_value("Programme", doc.program, "program_name") or doc.program
             is_foreign = (getattr(doc, "foriegn_national", "") or "").strip().lower() in ("yes", "true", "1")
             is_dom = (getattr(doc, "foriegn_national", "") or "").strip().lower() in ("no", "false", "0")
-            if not is_foreign and not is_dom and getattr(doc, "nationality", None):
-                is_dom = doc.nationality.strip().lower() == "india"
-                is_foreign = not is_dom
 
             if acp_scope == "International" and is_dom:
                 return {
