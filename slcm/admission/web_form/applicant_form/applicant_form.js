@@ -5819,7 +5819,9 @@ function setupCityStateFilter() {
 			var st = wf.get_value(stateFld);
 			return {
 				query: 'slcm.admission.web_form.applicant_form.applicant_form.city_query',
-				filters: { state: st || '' }
+				filters: { state: st || '' },
+				// Autocomplete only sends `params` (see stateQueryFn)
+				params: { state: st || '' }
 			};
 		}
 
