@@ -178,9 +178,25 @@
    "open_in_new_tab": 1,
    "show_arrow": 0,
    "type": "Link"
+  },
+  {
+   "added": 0,
+   "child": 1,
+   "collapsible": 1,
+   "hidden": 0,
+   "icon": "presentation",
+   "indent": 0,
+   "is_default_module": 0,
+   "keep_closed": 0,
+   "label": "Classes",
+   "link_to": "Classes",
+   "link_type": "DocType",
+   "open_in_new_tab": 1,
+   "show_arrow": 0,
+   "type": "Link"
   }
  ],
- "modified": "2026-10-27 19:45:24.594876",
+ "modified": "2026-10-27 22:42:21.981637",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Programme Management",

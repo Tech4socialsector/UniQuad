@@ -15,6 +15,7 @@ frappe.listview_settings["Student Master"] = {
 		add_download_slip_button(listview);
 		add_generate_student_id_button(listview);
 		add_bulk_section_upload_button(listview);
+		style_action_group_button(listview);
 		// Ensure status column is visible
 		ensure_status_column_visible(listview);
 	},
@@ -80,11 +81,25 @@ frappe.listview_settings["Student Master"] = {
 };
 
 /* --------------------------------------------------
+   List View → "Action" dropdown holding all custom buttons
+-------------------------------------------------- */
+const ACTION_GROUP = __("Action");
+
+function style_action_group_button(listview) {
+	listview.page.get_inner_group_button(ACTION_GROUP).children(":not(.dropdown-menu)").css({
+		"background-color": "#000",
+		color: "#fff",
+		"border-color": "#000",
+		"box-shadow": "none",
+	});
+}
+
+/* --------------------------------------------------
    List View → Custom Button in Toolbar
 -------------------------------------------------- */
 function add_listview_status_button(listview) {
 	// Add custom button in toolbar for bulk status update
-	const status_btn = listview.page.add_inner_button(
+	listview.page.add_inner_button(
 		__("Update Status"),
 		function () {
 			const selected = listview.get_checked_items();
@@ -102,15 +117,8 @@ function add_listview_status_button(listview) {
 
 			show_bulk_status_dialog(listview, selected);
 		},
-		__("Update Status")
+		ACTION_GROUP
 	);
-
-	status_btn.css({
-		"background-color": "#000",
-		color: "#fff",
-		"border-color": "#000",
-		"box-shadow": "none",
-	});
 }
 
 /* --------------------------------------------------
@@ -143,7 +151,7 @@ function add_bulk_delete_button(listview) {
 	if (!frappe.user.has_role("System Manager") && frappe.session.user !== "Administrator") return;
 
 	listview.page.add_inner_button(
-		__(""),
+		__("Delete"),
 		function () {
 			const selected = listview.get_checked_items();
 
@@ -186,7 +194,7 @@ function add_bulk_delete_button(listview) {
 				}
 			);
 		},
-		__("Update Status")
+		ACTION_GROUP
 	);
 }
 
@@ -194,7 +202,7 @@ function add_bulk_delete_button(listview) {
    List View → Bulk Enroll
 -------------------------------------------------- */
 function add_bulk_enroll_button(listview) {
-	const btn = listview.page.add_inner_button(__("Enroll"), function () {
+	listview.page.add_inner_button(__("Enroll"), function () {
 		const selected = listview.get_checked_items();
 
 		if (selected.length === 0) {
@@ -261,16 +269,7 @@ function add_bulk_enroll_button(listview) {
 				});
 			}
 		);
-	});
-
-	// Style the button
-	btn.css({
-		"background-color": "black",
-		color: "white",
-		"border-color": "black",
-		"box-shadow": "none",
-	});
-	btn.addClass("btn-black-enroll");
+	}, ACTION_GROUP);
 }
 
 const VALID_TRANSITIONS = {
@@ -486,7 +485,7 @@ function ensure_status_column_visible(listview) {
    List View → Download Registration Slip
 -------------------------------------------------- */
 function add_download_slip_button(listview) {
-	const btn = listview.page.add_inner_button(__("Download Slip"), function () {
+	listview.page.add_inner_button(__("Download Slip"), function () {
 		const selected = listview.get_checked_items();
 
 		if (selected.length === 0) {
@@ -512,14 +511,7 @@ function add_download_slip_button(listview) {
 				download_registration_slip(student.name);
 			}, idx * 600);
 		});
-	});
-
-	btn.css({
-		"background-color": "#000",
-		"color": "#fff",
-		"border-color": "#000",
-		"box-shadow": "none",
-	});
+	}, ACTION_GROUP);
 }
 
 /* --------------------------------------------------
@@ -618,16 +610,9 @@ function inject_status_css() {
    List View → Generate Student ID (Bulk Upload / Auto Generate)
 -------------------------------------------------- */
 function add_generate_student_id_button(listview) {
-	const btn = listview.page.add_inner_button(__("Generate Student ID"), function () {
+	listview.page.add_inner_button(__("Generate Student ID"), function () {
 		show_generate_id_chooser(listview);
-	});
-
-	btn.css({
-		"background-color": "#000",
-		"color": "#fff",
-		"border-color": "#000",
-		"box-shadow": "none",
-	});
+	}, ACTION_GROUP);
 }
 
 function show_generate_id_chooser(listview) {
@@ -922,16 +907,9 @@ function render_bulk_upload_dialog(listview, options) {
 /* ---------------- Bulk Upload Section ---------------- */
 
 function add_bulk_section_upload_button(listview) {
-	const btn = listview.page.add_inner_button(__("Bulk Upload Section"), function () {
+	listview.page.add_inner_button(__("Bulk Upload Section"), function () {
 		show_bulk_section_upload_dialog(listview);
-	});
-
-	btn.css({
-		"background-color": "#000",
-		"color": "#fff",
-		"border-color": "#000",
-		"box-shadow": "none",
-	});
+	}, ACTION_GROUP);
 }
 
 function show_bulk_section_upload_dialog(listview) {
