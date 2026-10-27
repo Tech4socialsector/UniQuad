@@ -53,11 +53,10 @@
   "section_break_kasp",
   "column_break_mxmh",
   "country",
-  "column_break_qdem",
   "state",
-  "column_break_iltt",
+  "column_break_qdem",
   "city",
-  "column_break_coqt",
+  "column_break_iltt",
   "pincode",
   "section_break_azsq",
   "applicant_id",
@@ -104,8 +103,6 @@
   "section_break_vmys",
   "phd_proposal",
   "column_break_nkbo",
-  "phd_program_type",
-  "section_break_cmjy",
   "proposed_phd_topic",
   "others_section",
   "other_degree",
@@ -270,7 +267,7 @@
    "fieldname": "nationality",
    "fieldtype": "Autocomplete",
    "label": "Nationality",
-   "options": "India\nAfghanistan\nAlbania\nAlgeria\nUnited States of America\nAndorra\nAngola\nAntigua and Barbuda\nArgentina\nArmenia\nAustralia\nAustria\nAzerbaijan\nBahamas\nBahrain\nBangladesh\nBarbados\nBelarus\nBelgium\nBelize\nBenin\nBhutan\nBolivia\nBosnia and Herzegovina\nBotswana\nBrazil\nUnited Kingdom\nBrunei\nBulgaria\nBurkina Faso\nBurundi\nCambodia\nCameroon\nCanada\nCape Verde\nCentral African Republic\nChad\nChile\nChina\nColombia\nComoros\nDemocratic Republic of the Congo\nRepublic of the Congo\nCosta Rica\nCroatia\nCuba\nCyprus\nCzechia\nDenmark\nDjibouti\nDominica\nDominican Republic\nNetherlands\nEcuador\nEgypt\nUnited Arab Emirates\nEquatorial Guinea\nEritrea\nEstonia\nEswatini\nEthiopia\nFiji\nPhilippines\nFinland\nFrance\nGabon\nThe Gambia\nGeorgia\nGermany\nGhana\nGreece\nGrenada\nGuatemala\nGuinea\nGuinea-Bissau\nGuyana\nHaiti\nHonduras\nHungary\nIceland\nIndonesia\nIran\nIraq\nIreland\nIsrael\nItaly\nC\u00f4te d'Ivoire\nJamaica\nJapan\nJordan\nKazakhstan\nKenya\nKiribati\nKosovo\nKuwait\nKyrgyzstan\nLaos\nLatvia\nLebanon\nLesotho\nLiberia\nLibya\nLiechtenstein\nLithuania\nLuxembourg\nMadagascar\nMalawi\nMalaysia\nMaldives\nMali\nMalta\nMarshall Islands\nMauritania\nMauritius\nMexico\nFederated States of Micronesia\nMoldova\nMonaco\nMongolia\nMontenegro\nMorocco\nMozambique\nMyanmar\nNamibia\nNauru\nNepal\nNew Zealand\nNicaragua\nNigeria\nNiger\nNorth Korea\nNorth Macedonia\nNorway\nOman\nPakistan\nPalau\nPalestine\nPanama\nPapua New Guinea\nParaguay\nPeru\nPoland\nPortugal\nQatar\nRomania\nRussia\nRwanda\nSaint Kitts and Nevis\nSaint Lucia\nSaint Vincent and the Grenadines\nEl Salvador\nSamoa\nSan Marino\nS\u00e3o Tom\u00e9 and Pr\u00edncipe\nSaudi Arabia\nSenegal\nSerbia\nSeychelles\nSierra Leone\nSingapore\nSlovakia\nSlovenia\nSolomon Islands\nSomalia\nSouth Africa\nSouth Korea\nSouth Sudan\nSpain\nSri Lanka\nSudan\nSuriname\nSweden\nSwitzerland\nSyria\nTaiwan\nTajikistan\nTanzania\nThailand\nTimor-Leste\nTogo\nTonga\nTrinidad and Tobago\nTunisia\nT\u00fcrkiye\nTurkmenistan\nTuvalu\nUganda\nUkraine\nUruguay\nUzbekistan\nVanuatu\nVatican City\nVenezuela\nVietnam\nYemen\nZambia\nZimbabwe",
+   "options": "Afghanistan\nAlbania\nAlgeria\nAndorra\nAngola\nAntigua and Barbuda\nArgentina\nArmenia\nAustralia\nAustria\nAzerbaijan\nBahamas\nBahrain\nBangladesh\nBarbados\nBelarus\nBelgium\nBelize\nBenin\nBhutan\nBolivia\nBosnia and Herzegovina\nBotswana\nBrazil\nBrunei\nBulgaria\nBurkina Faso\nBurundi\nCambodia\nCameroon\nCanada\nCape Verde\nCentral African Republic\nChad\nChile\nChina\nColombia\nComoros\nCosta Rica\nC\u00f4te d'Ivoire\nCroatia\nCuba\nCyprus\nCzechia\nDemocratic Republic of the Congo\nDenmark\nDjibouti\nDominica\nDominican Republic\nEcuador\nEgypt\nEl Salvador\nEquatorial Guinea\nEritrea\nEstonia\nEswatini\nEthiopia\nFederated States of Micronesia\nFiji\nFinland\nFrance\nGabon\nThe Gambia\nGeorgia\nGermany\nGhana\nGreece\nGrenada\nGuatemala\nGuinea\nGuinea-Bissau\nGuyana\nHaiti\nHonduras\nHungary\nIceland\nIndia\nIndonesia\nIran\nIraq\nIreland\nIsrael\nItaly\nJamaica\nJapan\nJordan\nKazakhstan\nKenya\nKiribati\nKosovo\nKuwait\nKyrgyzstan\nLaos\nLatvia\nLebanon\nLesotho\nLiberia\nLibya\nLiechtenstein\nLithuania\nLuxembourg\nMadagascar\nMalawi\nMalaysia\nMaldives\nMali\nMalta\nMarshall Islands\nMauritania\nMauritius\nMexico\nMoldova\nMonaco\nMongolia\nMontenegro\nMorocco\nMozambique\nMyanmar\nNamibia\nNauru\nNepal\nNetherlands\nNew Zealand\nNicaragua\nNiger\nNigeria\nNorth Korea\nNorth Macedonia\nNorway\nOman\nPakistan\nPalau\nPalestine\nPanama\nPapua New Guinea\nParaguay\nPeru\nPhilippines\nPoland\nPortugal\nQatar\nRepublic of the Congo\nRomania\nRussia\nRwanda\nSaint Kitts and Nevis\nSaint Lucia\nSaint Vincent and the Grenadines\nSamoa\nSan Marino\nS\u00e3o Tom\u00e9 and Pr\u00edncipe\nSaudi Arabia\nSenegal\nSerbia\nSeychelles\nSierra Leone\nSingapore\nSlovakia\nSlovenia\nSolomon Islands\nSomalia\nSouth Africa\nSouth Korea\nSouth Sudan\nSpain\nSri Lanka\nSudan\nSuriname\nSweden\nSwitzerland\nSyria\nTaiwan\nTajikistan\nTanzania\nThailand\nTimor-Leste\nTogo\nTonga\nTrinidad and Tobago\nTunisia\nT\u00fcrkiye\nTurkmenistan\nTuvalu\nUganda\nUkraine\nUnited Arab Emirates\nUnited Kingdom\nUnited States of America\nUruguay\nUzbekistan\nVanuatu\nVatican City\nVenezuela\nVietnam\nYemen\nZambia\nZimbabwe",
    "reqd": 1,
    "sort_options": 1
   },
@@ -373,6 +370,7 @@
   {
    "fieldname": "country",
    "fieldtype": "Link",
+   "hidden": 1,
    "label": "Country",
    "options": "Country"
   },
@@ -830,10 +828,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "column_break_coqt",
-   "fieldtype": "Column Break"
-  },
-  {
    "fieldname": "section_break_cmag",
    "fieldtype": "Section Break"
   },
@@ -1091,21 +1085,8 @@
    "mandatory_depends_on": "eval:doc.program_level == \"Research Course\""
   },
   {
-   "depends_on": "eval:doc.program_level == \"Research Course\"",
-   "fieldname": "phd_program_type",
-   "fieldtype": "Select",
-   "label": "PhD Programme Selection",
-   "mandatory_depends_on": "eval:doc.program_level == \"Research Course\"",
-   "options": "\nPh.D (Law)\nPh.D (Social Sciences, Humanities and Public Policy)"
-  },
-  {
    "fieldname": "column_break_nkbo",
    "fieldtype": "Column Break"
-  },
-  {
-   "depends_on": "eval:doc.program_level == \"Research Course\"",
-   "fieldname": "section_break_cmjy",
-   "fieldtype": "Section Break"
   },
   {
    "fieldname": "others_section",
@@ -1362,7 +1343,7 @@
   }
  ],
  "make_attachments_public": 1,
- "modified": "2026-10-20 15:05:34.477986",
+ "modified": "2026-10-26 15:52:57.433923",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Applicant",
