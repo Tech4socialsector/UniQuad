@@ -1,7 +1,6 @@
 {
- "chart_name": "Cohort Status Distribution",
+ "chart_name": "Batch Status Distribution",
  "chart_type": "Group By",
- "currency": "INR",
  "docstatus": 0,
  "doctype": "Dashboard Chart",
  "document_type": "SLCM Batch",
@@ -12,7 +11,7 @@
  "is_public": 1,
  "is_standard": 0,
  "module": "SLCM",
- "name": "Cohort Status Distribution",
+ "name": "Batch Status Distribution",
  "number_of_groups": 0,
  "owner": "Administrator",
  "roles": [],
@@ -22,5 +21,6 @@
  "timespan": "Last Year",
  "type": "Donut",
  "use_report_chart": 0,
- "y_axis": []
+ "y_axis": [],
+ "modified": "2026-10-29 12:30:00.000000"
 }

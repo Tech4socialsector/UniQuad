@@ -272,7 +272,7 @@ fixtures = [
         "filters": [["name", "in", [
             # Programme Management / Registration
             "Total Students", "Active Enrollments", "Active Programs", "Active Courses",
-            "Active Cohorts", "Active Classes",
+            "Active Batches", "Active Classes",
             "Draft", "Selected", "Pending REGO", "Pending FINO", "Pending Registration",
             "Pending Print & Scan", "Pending Residences", "Pending IT",
             "Final Verification REGO", "Completed", "Re-Open",
@@ -304,7 +304,7 @@ fixtures = [
         "filters": [["name", "in", [
             # Programme Management / Registration
             "Student Registration Status", "Student Enrollment by Program",
-            "Cohort Status Distribution", "Classes by Term",
+            "Batch Status Distribution", "Classes by Term",
             # IT Team (ID Card)
             "ID Card Status Distribution", "ID Cards Generated Over Time",
             # Attendance
