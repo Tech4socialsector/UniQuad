@@ -160,14 +160,12 @@
   {
    "fieldname": "program_image",
    "fieldtype": "Attach Image",
-   "label": "Program Image",
-   "reqd": 1
+   "label": "Program Image"
   },
   {
    "fieldname": "program_description",
    "fieldtype": "Text Editor",
-   "label": "Program Description",
-   "reqd": 1
+   "label": "Program Description"
   },
   {
    "fieldname": "eligibility_summary",
@@ -177,8 +175,7 @@
   {
    "fieldname": "brochure_file",
    "fieldtype": "Attach",
-   "label": "Brochure File",
-   "reqd": 1
+   "label": "Brochure File"
   },
   {
    "fieldname": "media",
@@ -382,7 +379,7 @@
   }
  ],
  "make_attachments_public": 1,
- "modified": "2026-10-19 16:30:00.000000",
+ "modified": "2026-10-28 16:09:55.193353",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Programme",
