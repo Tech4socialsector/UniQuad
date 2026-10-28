@@ -1,4 +1,5 @@
 import frappe
+from slcm.slcm.utils.exam_schedule import get_student_programme
 
 no_cache = 1
 
@@ -74,42 +75,43 @@ def get_context(context):
             "Attendance Summary",
             filters={"student": student_name},
             fields=[
-                "name", "course_offering", "course", "department",
-                "academic_year", "term_name",
+                "name", "class_name", "course", "department",
+                "academic_year", "academic_term",
                 "total_classes", "attended_classes",
                 "total_class_hours", "total_attended_class_hours",
                 "total_office_hours", "total_condonation_hours",
                 "attendance_percentage", "minimum_required_percentage",
                 "eligible_for_exam", "last_updated",
             ],
-            order_by="term_name desc, course_offering asc",
+            order_by="academic_term desc, class_name asc",
             ignore_permissions=True,
         )
 
-        # Enrich with Course Offering info
-        student_cos = []          # for Condonation dropdown (Course Offering link)
+        # Enrich with Class info
+        student_cos = []          # for Condonation dropdown (Classes link)
         seen_cos = set()
 
         for s in summaries:
-            co_name = s.course_offering or ""
-            s["course_display"] = co_name or s.course or "Unknown Course"
+            co_name = s.class_name or ""
+            s["term_name"] = s.academic_term or ""
+            s["course_display"] = s.course or co_name or "Unknown Course"
             s["faculty"] = "—"
 
             if co_name:
                 try:
                     co = frappe.db.get_value(
-                        "Course Offering",
+                        "Classes",
                         co_name,
-                        ["course_name", "faculty", "term_name", "course_title", "credit_value"],
+                        ["course_name", "faculty", "faculty_name", "academic_term", "course", "credit"],
                         as_dict=True,
                     )
                     if co:
                         s["course_display"] = co.course_name or s["course_display"]
-                        s["faculty"] = co.faculty or "—"
-                        s["course_code"] = co.course_title or ""
-                        s["credits"] = co.credit_value or ""
-                        if not s.term_name:
-                            s["term_name"] = co.term_name or ""
+                        s["faculty"] = co.faculty_name or co.faculty or "—"
+                        s["course_code"] = co.course or ""
+                        s["credits"] = co.credit or ""
+                        if not s["term_name"]:
+                            s["term_name"] = co.academic_term or ""
                 except Exception:
                     pass
 
@@ -134,11 +136,11 @@ def get_context(context):
             # enforced at final (Programme Chair) approval time.
             s["can_apply_condonation"] = context.allow_condonation
 
-            # Build unique course-offering list for Condonation modal
+            # Build unique class list for Condonation modal
             if co_name and co_name not in seen_cos:
                 seen_cos.add(co_name)
                 student_cos.append({
-                    "course_offering": co_name,
+                    "class_name": co_name,
                     "name": s["course_display"],
                 })
 
@@ -177,7 +179,7 @@ def get_context(context):
                 "Student Attendance Condonation",
                 filters={"student": student_name},
                 fields=[
-                    "name", "course_offering", "course", "number_of_sessions",
+                    "name", "class_name", "course", "number_of_sessions",
                     "number_of_hours", "condonation_reason", "final_status",
                     "faculty_recommendation", "remarks", "creation",
                 ],
@@ -197,9 +199,9 @@ def get_context(context):
                     "Rejected": "var(--sp-danger-bg)",
                 }.get(st, "var(--sp-bg)")
                 # Resolve course display name from summaries
-                app["course_display"] = app.course_offering or app.course or "—"
+                app["course_display"] = app.course or app.class_name or "—"
                 for s in summaries:
-                    if s.course_offering == app.course_offering:
+                    if app.class_name and s.class_name == app.class_name:
                         app["course_display"] = s.get("course_display") or app["course_display"]
                         break
             context.condonation_applications = cond_apps
@@ -233,7 +235,7 @@ def get_context(context):
                     ["attendance_date", "<=", today_date],
                 ],
                 fields=[
-                    "attendance_date", "course_offer", "status",
+                    "attendance_date", "class_name", "course", "status",
                     "in_time", "out_time", "session_type",
                 ],
                 order_by="attendance_date desc",
@@ -265,7 +267,7 @@ def get_context(context):
                     ["attendance_date", "<=", _cal_end_str],
                 ],
                 fields=[
-                    "attendance_date", "course_offer", "course", "status",
+                    "attendance_date", "class_name", "course", "status",
                     "in_time", "out_time", "session_type", "hours_counted",
                     "class_schedule", "instructor", "room",
                 ],
@@ -286,26 +288,26 @@ def get_context(context):
                 _cs_map = {_r.name: _r for _r in _cs_rows}
 
             # ── Course name map: prefer summaries (already resolved) ──
-            # summaries already ran frappe.db.get_value per course_offering
+            # summaries already ran frappe.db.get_value per class
             _summary_display_map = {
-                s.course_offering: s.get("course_display", "")
-                for s in summaries if s.course_offering
+                s.class_name: s.get("course_display", "")
+                for s in summaries if s.class_name
             }
             _summary_faculty_map = {
-                s.course_offering: s.get("faculty", "")
-                for s in summaries if s.course_offering
+                s.class_name: s.get("faculty", "")
+                for s in summaries if s.class_name
             }
-            # Batch-fetch any course_offers not in summaries
+            # Batch-fetch any classes not in summaries
             _co_ids = {
-                str(_r.course_offer) for _r in _cal_att
-                if _r.course_offer and str(_r.course_offer) not in _summary_display_map
+                str(_r.class_name) for _r in _cal_att
+                if _r.class_name and str(_r.class_name) not in _summary_display_map
             }
             _co_extra_map = {}
             if _co_ids:
                 _co_extra_rows = frappe.get_all(
-                    "Course Offering",
+                    "Classes",
                     filters={"name": ["in", list(_co_ids)]},
-                    fields=["name", "course_name", "faculty"],
+                    fields=["name", "course_name", "faculty_name as faculty"],
                     ignore_permissions=True,
                 )
                 _co_extra_map = {_r.name: _r for _r in _co_extra_rows}
@@ -315,7 +317,7 @@ def get_context(context):
             for _r in _cal_att:
                 _d = str(_r.attendance_date)
                 _cs      = _cs_map.get(str(_r.class_schedule or ""), frappe._dict())
-                _co_id   = str(_r.course_offer or "")
+                _co_id   = str(_r.class_name or "")
                 _co_extra = _co_extra_map.get(_co_id, frappe._dict())
 
                 _cname = (
@@ -336,7 +338,7 @@ def get_context(context):
 
                 _sessions_by_date.setdefault(_d, []).append({
                     "course_name":    str(_cname),
-                    "course_offering": str(_r.course_offer or ""),
+                    "class_name":     str(_r.class_name or ""),
                     "session_type":   str(_r.session_type or "Lecture"),
                     "from_time":      _from_time,
                     "to_time":        _to_time,
@@ -359,7 +361,7 @@ def get_context(context):
                         continue
                     _sessions_by_date.setdefault(_oh.date, []).append({
                         "course_name":    str(_grp.course_name or _grp.title or "OH"),
-                        "course_offering": str(_oh.course_offering or ""),
+                        "class_name":     str(_oh.get("class_name") or ""),
                         "session_type":   "Office Hour",
                         "from_time":      str(_oh.from_fmt or ""),
                         "to_time":        str(_oh.to_fmt or ""),
@@ -509,13 +511,9 @@ def _set_student_nav(context, student):
     context.student_id = student.registration_id or student.name
     context.student_photo = student.passport_size_photo or ""
     context.student_initial = (context.student_name[0]).upper() if context.student_name else "S"
-    context.programme_name = (
-        frappe.db.get_value("SLCM Batch", student.programme, "cohort_name")
-        or student.programme
-        or ""
-    )
+    context.programme_name = get_student_programme(student.name)
     context.department = student.department or ""
-    context.batch_year = student.batch_year or ""
+    context.batch_year = student.batch or ""
 
 
 def _set_nav_defaults(context):

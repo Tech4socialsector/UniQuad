@@ -12,7 +12,8 @@
   "column_break_zy1z",
   "week_name",
   "programme",
-  "course_offering",
+  "class_name",
+  "course",
   "section_break_tahh",
   "students"
  ],
@@ -54,11 +55,21 @@
    "reqd": 1
   },
   {
-   "fieldname": "course_offering",
+   "fieldname": "class_name",
    "fieldtype": "Link",
-   "label": "Course Offering",
-   "options": "Course Offering",
+   "in_standard_filter": 1,
+   "label": "Class",
+   "options": "Classes",
    "reqd": 1
+  },
+  {
+   "fetch_from": "class_name.course",
+   "fieldname": "course",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Course",
+   "options": "Course",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_zy1z",
@@ -85,7 +96,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-09 12:34:27.397629",
+ "modified": "2026-10-29 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Student Group",

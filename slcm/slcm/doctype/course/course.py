@@ -13,5 +13,5 @@ class Course(Document):
 
 		course_name = self.course_name.strip().replace("/", "-")
 		
-		self.name = f"{self.course_code.strip()}-{course_name}"
+		self.name = f"{course_name}-{self.course_code.strip()}"
 

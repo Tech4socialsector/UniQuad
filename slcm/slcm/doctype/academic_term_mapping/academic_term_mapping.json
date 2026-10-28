@@ -1,0 +1,55 @@
+{
+ "actions": [],
+ "creation": "2026-10-29 11:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "year_no",
+  "batch",
+  "term"
+ ],
+ "fields": [
+  {
+   "columns": 2,
+   "fieldname": "year_no",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Year",
+   "non_negative": 1,
+   "reqd": 1,
+   "description": "Year of study, e.g. 1 for first-year students."
+  },
+  {
+   "columns": 3,
+   "fieldname": "batch",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Batch",
+   "options": "Batch",
+   "description": "Leave empty to apply to every batch in that year."
+  },
+  {
+   "columns": 4,
+   "fieldname": "term",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Programme Term",
+   "options": "Term Master",
+   "reqd": 1,
+   "description": "The term of the programme cycle these students are in, e.g. Trimester IV for second-year students."
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-10-29 11:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "SLCM",
+ "name": "Academic Term Mapping",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

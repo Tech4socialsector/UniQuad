@@ -1,5 +1,7 @@
 import frappe
+from slcm.slcm.doctype.academic_term.academic_term import get_current_term
 from slcm.slcm.doctype.parent_portal_settings.parent_portal_settings import get_parent_portal_settings
+from slcm.slcm.utils.exam_schedule import get_student_programme
 
 
 def get_parent_wards(email):
@@ -23,9 +25,9 @@ def get_parent_wards(email):
 
 
 _WARD_FIELDS = """
-    sm.name, sm.first_name, sm.last_name, sm.programme,
-    sm.programme_of_study, sm.batch_year, sm.student_status,
-    sm.passport_size_photo, sm.academic_year, sm.academic_term
+    sm.name, sm.first_name, sm.last_name,
+    sm.programme_of_study, sm.batch, sm.student_status,
+    sm.passport_size_photo, sm.academic_year
 """
 
 PREVIEW_ROLES = ("System Manager",)
@@ -170,17 +172,11 @@ def get_parent_context(context):
     context.ward_status = student.student_status or ""
 
     # Programme display name
-    context.ward_programme = ""
-    if student.programme:
-        prog_name = frappe.db.get_value("SLCM Batch", student.programme, "cohort_name")
-        context.ward_programme = prog_name or student.programme
-    elif student.programme_of_study:
-        prog_name = frappe.db.get_value("Programme", student.programme_of_study, "program_name")
-        context.ward_programme = prog_name or student.programme_of_study
+    context.ward_programme = get_student_programme(student.name)
 
-    context.ward_batch = student.batch_year or ""
+    context.ward_batch = student.batch or ""
     context.ward_academic_year = student.academic_year or ""
-    context.ward_term = student.academic_term or ""
+    context.ward_term = get_current_term() or ""
 
     # Every portal link must carry the active ward, otherwise navigating
     # (e.g. back to the dashboard) silently falls back to the first ward.

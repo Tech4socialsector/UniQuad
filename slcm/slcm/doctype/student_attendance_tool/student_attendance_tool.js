@@ -32,7 +32,7 @@ frappe.ui.form.on("Student Attendance Tool", {
 				course_schedule: opts.course_schedule || null,
 				class_schedule: opts.class_schedule || null,
 				office_hours_group: opts.office_hours_group || null,
-				course_offering: null,
+				class_name: null,
 				course: null,
 				section: null,
 				academic_year: null,
@@ -45,7 +45,7 @@ frappe.ui.form.on("Student Attendance Tool", {
 			// across page loads — if the incoming value already equals
 			// what's stored, Frappe's own "value changed" field triggers
 			// won't fire. Don't rely on them: explicitly resolve
-			// course_offering and fetch the roster here instead.
+			// class_name and fetch the roster here instead.
 			return frm.set_value("date", opts.date || frappe.datetime.get_today());
 		}).then(() => {
 			frm.trigger("sync_context");
@@ -59,7 +59,7 @@ frappe.ui.form.on("Student Attendance Tool", {
 		frm.set_value("course_schedule", null);
 		frm.set_value("class_schedule", null);
 		frm.set_value("office_hours_group", null);
-		frm.set_value("course_offering", null);
+		frm.set_value("class_name", null);
 		frm.students_area.empty();
 	},
 
@@ -84,7 +84,7 @@ frappe.ui.form.on("Student Attendance Tool", {
 
 	/* ---------------- Data Fetch ---------------- */
 
-	// Resolve course_offering (and section/date where relevant) from
+	// Resolve class_name (and section/date where relevant) from
 	// whichever link is currently selected, then fetch the roster. Always
 	// called explicitly rather than left to individual field "value changed"
 	// triggers, since those don't fire when the incoming value matches what
@@ -92,18 +92,18 @@ frappe.ui.form.on("Student Attendance Tool", {
 	sync_context(frm) {
 		if (frm.doc.course_schedule) {
 			frappe.db.get_value("Course Schedule", frm.doc.course_schedule,
-				["schedule_date", "course_offering"], (r) => {
+				["schedule_date", "class_name"], (r) => {
 					if (r) {
-						if (r.course_offering) frm.set_value("course_offering", r.course_offering);
+						if (r.class_name) frm.set_value("class_name", r.class_name);
 						if (r.schedule_date && !frm.doc.date) frm.set_value("date", r.schedule_date);
 					}
 					frm.trigger("fetch_students");
 				});
 		} else if (frm.doc.class_schedule) {
 			frappe.db.get_value("Time Table", frm.doc.class_schedule,
-				["schedule_date", "repeat_frequency", "course_offering", "section"], (r) => {
+				["schedule_date", "repeat_frequency", "class_name", "section"], (r) => {
 					if (r) {
-						if (r.course_offering) frm.set_value("course_offering", r.course_offering);
+						if (r.class_name) frm.set_value("class_name", r.class_name);
 						if (r.section) frm.set_value("section", r.section);
 
 						if (!frm.doc.date) {
@@ -119,12 +119,12 @@ frappe.ui.form.on("Student Attendance Tool", {
 				});
 		} else if (frm.doc.office_hours_group) {
 			frappe.db.get_value("Student Group", frm.doc.office_hours_group,
-				"course_offering", (r) => {
-					if (r && r.course_offering) frm.set_value("course_offering", r.course_offering);
+				"class_name", (r) => {
+					if (r && r.class_name) frm.set_value("class_name", r.class_name);
 					frm.trigger("fetch_students");
 				});
 		} else {
-			frm.set_value("course_offering", null);
+			frm.set_value("class_name", null);
 			frm.trigger("fetch_students");
 		}
 	},

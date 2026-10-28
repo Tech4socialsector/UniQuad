@@ -17,7 +17,7 @@ class ParentLoginInviteTool(Document):
         if self.academic_year:
             filters["academic_year"] = self.academic_year
         if self.batch:
-            filters["programme"] = self.batch
+            filters["batch"] = self.batch
 
         students = frappe.get_all(
             "Student Master",

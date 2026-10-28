@@ -590,7 +590,7 @@ body.sp-dark .fee-modal-body [style*="color:#475569"] { color: var(--sp-text-2) 
       <span class="spf-dot-status {{ 'spf-tone-success' if student_status == 'Active' else ('spf-tone-muted' if student_status in ('Graduated', 'Alumni') else 'spf-tone-warning') }}">{{ student_status }}</span>
       {% endif %}
     </div>
-    {% set _term = student_term or (current_enrollment.term_name if current_enrollment else '') %}
+    {% set _term = student_term %}
     {% set _meta = [programme_name, _term, ('Batch ' ~ batch_year) if batch_year else ''] | select | list %}
     {% if _meta %}<div class="spf-student-meta">{% for m in _meta %}{% if not loop.first %}<span class="spf-sep" aria-hidden="true">|</span>{% endif %}{{ m }}{% endfor %}</div>{% endif %}
   </div>

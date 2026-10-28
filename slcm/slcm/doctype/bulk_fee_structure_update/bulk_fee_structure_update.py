@@ -25,33 +25,40 @@ class BulkFeeStructureUpdate(Document):
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _resolve_program_from_cohort(cohort):
-    program = frappe.db.get_value("SLCM Batch", cohort, "program")
-    if not program and frappe.db.exists("Programme", cohort):
-        program = cohort
-    return program
-
-
 def _get_students_for_scope(target_scope, programme, program, batch_year=None, academic_year=None):
-    """Return list of active Student Master dicts matching the scope + optional filters."""
+    """Return list of active Student Master dicts matching the scope + optional filters.
+
+    `programme` is the cohort (Batch). A Batch no longer carries a program, so
+    the "Program" scope takes each student's programme from their Enrolled
+    Student Enrollment, falling back to Student Master.programme_of_study.
+    Student Master has no batch_year field, so `batch_year` is not applied.
+    """
     filters = {"student_status": "Active"}
 
     # Student Master's cohort field is "batch" (formerly "programme").
     if target_scope == "Programme":
         filters["batch"] = programme
     else:
-        # Resolve all cohorts that map to this program
-        cohorts = frappe.get_all("SLCM Batch", filters={"program": program}, pluck="name")
-        if not cohorts:
+        enrolled = set(frappe.get_all(
+            "Student Enrollment",
+            filters={"program": program, "status": "Enrolled"},
+            pluck="student",
+        ))
+        others_enrolled = set(frappe.get_all(
+            "Student Enrollment",
+            filters={"program": ["!=", program], "status": "Enrolled"},
+            pluck="student",
+        )) - enrolled
+        by_master = set(frappe.get_all(
+            "Student Master",
+            filters={"programme_of_study": program},
+            pluck="name",
+        )) - others_enrolled
+        students = enrolled | by_master
+        if not students:
             return []
-        filters["batch"] = ["in", cohorts]
+        filters["name"] = ["in", list(students)]
 
-    if batch_year:
-        # Student Master has no batch year of its own; it comes from the student's fee structure.
-        fee_structures = frappe.get_all("Fee Structure", filters={"batch_year": batch_year}, pluck="name")
-        if not fee_structures:
-            return []
-        filters["fee_structure"] = ["in", fee_structures]
     if academic_year:
         filters["academic_year"] = academic_year
 
@@ -59,7 +66,7 @@ def _get_students_for_scope(target_scope, programme, program, batch_year=None, a
         "Student Master",
         filters=filters,
         fields=[
-            "name", "first_name", "last_name", "batch as programme",
+            "name", "first_name", "last_name", "batch",
             "fee_structure", "total_program_fee", "total_paid_amount",
             "discount_amount", "net_program_fee",
             "applying_scholarship", "scholarship_percentage", "scholarship_amount",
@@ -166,7 +173,7 @@ def preview_bulk_fee_update(doc_name):
         rows.append({
             "student":               s.name,
             "student_name":          full_name,
-            "programme":             s.programme or "",
+            "programme":             s.batch or "",
             "current_fee_structure": s.fee_structure or "(none)",
             "current_total_fee":     flt(s.total_program_fee or 0),
             "new_total_fee":         new_total,

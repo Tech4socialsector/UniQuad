@@ -7,7 +7,7 @@ import frappe
 from frappe.utils import getdate
 from slcm.permissions import (
 	_FULL_ACCESS_ROLES,
-	_get_faculty_course_offerings,
+	_get_faculty_classes,
 	_get_faculty_name,
 )
 
@@ -70,17 +70,17 @@ def _as_list(value):
 	return [value]
 
 
-def _resolve_offerings_and_roster(academic_year=None, term=None, programme=None,
+def _resolve_classes_and_roster(academic_year=None, term=None, programme=None,
 	course=None, batch=None, section=None, student=None):
-	"""Shared first step for every view on this page: build the Course
-	Offering filter from whichever params were passed, apply faculty
-	role-scoping, then resolve the actual student roster (via Student
-	Enrollment / Student Enrollment Course) for the matching offerings.
+	"""Shared first step for every view on this page: build the Classes
+	filter from whichever params were passed, apply faculty role-scoping,
+	then resolve the actual student roster (the classes' Enrolled students)
+	for the matching classes.
 
-	Returns (offerings, roster) where `offerings` is a list of Course
-	Offering dicts (name, course_title, section) and `roster` is a list of
-	dicts (course_offering, student, section, first_name, last_name).
-	Either may be empty — callers should bail out early in that case.
+	Returns (classes, roster) where `classes` is a list of Classes dicts
+	(name, course, section) and `roster` is a list of dicts (class_name,
+	student, section, first_name, last_name). Either may be empty — callers
+	should bail out early in that case.
 	"""
 	user = frappe.session.user
 	roles = set(frappe.get_roles(user))
@@ -93,30 +93,29 @@ def _resolve_offerings_and_roster(academic_year=None, term=None, programme=None,
 	sections = _as_list(section)
 	students = _as_list(student)
 
-	co_filters = {}
+	class_filters = {}
 	if academic_years:
-		co_filters["academic_year"] = ["in", academic_years]
+		class_filters["academic_year"] = ["in", academic_years]
 	if terms:
-		co_filters["term_name"] = ["in", terms]
+		class_filters["academic_term"] = ["in", terms]
 	if programmes:
-		co_filters["program"] = ["in", programmes]
+		class_filters["programme"] = ["in", programmes]
 	if courses:
-		co_filters["course_title"] = ["in", courses]
+		class_filters["course"] = ["in", courses]
+	batch_classes = None
 	if batches:
-		co_filters["cohort"] = ["in", batches]
-	elif sections:
-		# Course Offering.section is very often left blank in this data model
-		# (the section actually assigned to a course is recorded via its
-		# Batch/cohort, not a direct Course-Offering-level field). Only fall
-		# back to deriving the batch from the Section's own `batch` field when
-		# the user didn't already pick a Batch directly — if they picked
-		# both, the explicit Batch filter above already takes precedence.
-		section_batches = frappe.get_all(
-			"Section", filters={"name": ["in", sections]}, pluck="batch"
-		)
-		section_batches = list({b for b in section_batches if b})
-		if section_batches:
-			co_filters["cohort"] = ["in", section_batches]
+		# Classes have no Batch: a Batch filter means classes with an
+		# Enrolled student whose Student Enrollment is of that batch.
+		batch_classes = [r[0] for r in frappe.db.sql("""
+			SELECT DISTINCT ces.parent
+			FROM `tabClass Enrolled Student` ces
+			JOIN `tabStudent Enrollment` se ON se.name = ces.student_enrollment
+			WHERE ces.parenttype = 'Classes' AND ces.status = 'Enrolled'
+			AND se.batch IN %(batches)s AND se.status = 'Enrolled'
+		""", {"batches": batches})]
+		if not batch_classes:
+			return [], []
+		class_filters["name"] = ["in", batch_classes]
 
 	if user != "Administrator" and not _is_unrestricted(roles):
 		if "slcm_Faculty" not in roles:
@@ -124,47 +123,56 @@ def _resolve_offerings_and_roster(academic_year=None, term=None, programme=None,
 		faculty_name = _get_faculty_name(user)
 		if not faculty_name:
 			frappe.throw(frappe._("No Faculty record linked to your account."), frappe.PermissionError)
-		visible = _get_faculty_course_offerings(faculty_name)
+		visible = _get_faculty_classes(faculty_name)
+		if batch_classes is not None:
+			visible = [v for v in visible if v in set(batch_classes)]
 		if not visible:
 			return [], []
-		co_filters["name"] = ["in", visible]
+		class_filters["name"] = ["in", visible]
 
-	offerings = frappe.get_all(
-		"Course Offering",
-		filters=co_filters,
-		fields=["name", "course_title", "section"],
+	classes = frappe.get_all(
+		"Classes",
+		filters=class_filters,
+		fields=["name", "course", "section"],
 	)
-	if not offerings:
+	if not classes:
 		return [], []
 
-	offering_names = [o.name for o in offerings]
+	class_names = [o.name for o in classes]
 
 	student_clause = ""
 	if students:
 		student_clause = "AND se.student IN %(students)s"
+	# Sections (and batches) are recorded on the student's enrollment.
+	if batches:
+		student_clause += " AND se.batch IN %(batches)s"
+	if sections:
+		student_clause += " AND se.section IN %(sections)s"
 
 	roster = frappe.db.sql(f"""
-		SELECT sec.course_offering, se.student, se.section, s.first_name, s.last_name,
-			s.registration_id, s.passport_size_photo
-		FROM `tabStudent Enrollment` se
-		JOIN `tabStudent Enrollment Course` sec ON sec.parent = se.name
+		SELECT ces.parent AS class_name, se.student,
+			COALESCE(NULLIF(ces.section, ''), se.section) AS section,
+			s.first_name, s.last_name, s.registration_id, s.passport_size_photo
+		FROM `tabClass Enrolled Student` ces
+		JOIN `tabStudent Enrollment` se ON se.name = ces.student_enrollment
 		JOIN `tabStudent Master` s ON s.name = se.student
-		WHERE sec.course_offering IN %(offerings)s
-		AND sec.status = 'Enrolled' AND se.status = 'Enrolled'
+		WHERE ces.parenttype = 'Classes' AND ces.parent IN %(classes)s
+		AND ces.status = 'Enrolled' AND se.status = 'Enrolled'
 		{student_clause}
-	""", {"offerings": offering_names, "students": students}, as_dict=True)
+	""", {"classes": class_names, "students": students, "batches": batches,
+		"sections": sections}, as_dict=True)
 
-	return offerings, roster
+	return classes, roster
 
 
-def _student_offerings_map(roster):
-	"""student -> set of course_offering names they're actually enrolled in,
+def _student_classes_map(roster):
+	"""student -> set of class names they're actually enrolled in,
 	from the roster — used to scope monthly/daily totals to only the
-	offerings a given student belongs to (not every offering the filters
+	classes a given student belongs to (not every class the filters
 	matched)."""
 	out = {}
 	for r in roster:
-		out.setdefault(r.student, set()).add(r.course_offering)
+		out.setdefault(r.student, set()).add(r.class_name)
 	return out
 
 
@@ -192,24 +200,24 @@ def _condonation_status(row):
 	return aad_status, pc_status
 
 
-def _condonation_by_student_offering(offering_names, students):
+def _condonation_by_student_class(class_names, students):
 	"""Latest (by creation) non-cancelled condonation request per
-	(course_offering, student) — used as the single row shown when the
+	(class_name, student) — used as the single row shown when the
 	"Include Condonation Report" filter is checked."""
 	records = frappe.db.sql("""
-		SELECT student, course_offering, number_of_hours, condonation_reason,
+		SELECT student, class_name, number_of_hours, condonation_reason,
 			proof_document, final_status, aad_rejected_reason,
 			aad_approve_or_rejected_timestamp, programme_chair_approve_or_rejected_timestamp,
 			creation
 		FROM `tabStudent Attendance Condonation`
-		WHERE course_offering IN %(offerings)s AND student IN %(students)s AND docstatus < 2
+		WHERE class_name IN %(classes)s AND student IN %(students)s AND docstatus < 2
 		ORDER BY creation ASC
-	""", {"offerings": offering_names, "students": students}, as_dict=True)
+	""", {"classes": class_names, "students": students}, as_dict=True)
 
 	out = {}
 	for r in records:
 		# ORDER BY creation ASC + plain overwrite keeps the latest record per key
-		out[(r.course_offering, r.student)] = r
+		out[(r.class_name, r.student)] = r
 	return out
 
 
@@ -224,40 +232,40 @@ def get_data(academic_year=None, term=None, programme=None, course=None, batch=N
 	Attended hours are deliberately summed from the *session's* duration
 	(not Student Attendance.hours_counted, which can hold a stale/default
 	value independent of the session it's linked to) — this guarantees
-	attended hours can never exceed conducted hours for the same offering,
+	attended hours can never exceed conducted hours for the same class,
 	since both are drawn from the same pool of conducted session durations.
 	"""
-	offerings, roster = _resolve_offerings_and_roster(
+	classes, roster = _resolve_classes_and_roster(
 		academic_year, term, programme, course, batch, section, student
 	)
-	if not offerings or not roster:
+	if not classes or not roster:
 		return []
 
-	offering_names = [o.name for o in offerings]
-	course_title_by_offering = {o.name: o.course_title for o in offerings}
-	offering_section_by_offering = {o.name: o.section for o in offerings}
+	class_names = [o.name for o in classes]
+	course_title_by_class = {o.name: o.course for o in classes}
+	class_section_by_class = {o.name: o.section for o in classes}
 	students = list({r.student for r in roster})
 
-	# Scheduled hours — planned Time Table hours per offering
+	# Scheduled hours — planned Time Table hours per class
 	scheduled = frappe.db.sql("""
-		SELECT course_offering, SUM(COALESCE(duration_hours, 0)) as hours
+		SELECT class_name, SUM(COALESCE(duration_hours, 0)) as hours
 		FROM `tabTime Table`
-		WHERE course_offering IN %(offerings)s AND docstatus < 2
-		GROUP BY course_offering
-	""", {"offerings": offering_names}, as_dict=True)
-	scheduled_by_offering = {r.course_offering: r.hours or 0 for r in scheduled}
+		WHERE class_name IN %(classes)s AND docstatus < 2
+		GROUP BY class_name
+	""", {"classes": class_names}, as_dict=True)
+	scheduled_by_class = {r.class_name: r.hours or 0 for r in scheduled}
 
-	# Conducted hours — actually-held Lecture/Tutorial sessions per offering.
+	# Conducted hours — actually-held Lecture/Tutorial sessions per class.
 	# This is the denominator used for attendance_percentage.
 	conducted = frappe.db.sql("""
-		SELECT course_offering, SUM(COALESCE(duration_hours, 0)) as hours
+		SELECT class_name, SUM(COALESCE(duration_hours, 0)) as hours
 		FROM `tabAttendance Session`
-		WHERE course_offering IN %(offerings)s
+		WHERE class_name IN %(classes)s
 		AND session_status = 'Conducted'
 		AND session_type IN ('Lecture', 'Tutorial')
-		GROUP BY course_offering
-	""", {"offerings": offering_names}, as_dict=True)
-	conducted_by_offering = {r.course_offering: r.hours or 0 for r in conducted}
+		GROUP BY class_name
+	""", {"classes": class_names}, as_dict=True)
+	conducted_by_class = {r.class_name: r.hours or 0 for r in conducted}
 
 	# Attended hours — sum the CONDUCTED SESSION's own duration (not the
 	# attendance record's hours_counted) for every session the student was
@@ -265,42 +273,42 @@ def get_data(academic_year=None, term=None, programme=None, course=None, batch=N
 	# "attended hours exceeds conducted hours" bug: both numbers now come
 	# from the exact same `Attendance Session.duration_hours` pool.
 	attended = frappe.db.sql("""
-		SELECT ats.course_offering as course_offering, sa.student,
+		SELECT ats.class_name as class_name, sa.student,
 			SUM(ats.duration_hours) as hours
 		FROM `tabStudent Attendance` sa
 		JOIN `tabAttendance Session` ats ON ats.name = sa.attendance_session
-		WHERE ats.course_offering IN %(offerings)s AND sa.student IN %(students)s
+		WHERE ats.class_name IN %(classes)s AND sa.student IN %(students)s
 		AND sa.status IN ('Present', 'Late', 'Excused')
 		AND ats.session_status = 'Conducted'
 		AND ats.session_type IN ('Lecture', 'Tutorial')
 		AND sa.docstatus < 2
-		GROUP BY ats.course_offering, sa.student
-	""", {"offerings": offering_names, "students": students}, as_dict=True)
-	attended_map = {(r.course_offering, r.student): r.hours or 0 for r in attended}
+		GROUP BY ats.class_name, sa.student
+	""", {"classes": class_names, "students": students}, as_dict=True)
+	attended_map = {(r.class_name, r.student): r.hours or 0 for r in attended}
 
 	min_pct = frappe.db.get_single_value("Attendance Settings", "minimum_attendance_percentage") or 0
 
 	condonation_by_key = {}
 	if include_condonation:
-		condonation_by_key = _condonation_by_student_offering(offering_names, students)
+		condonation_by_key = _condonation_by_student_class(class_names, students)
 
 	rows = []
 	for r in roster:
-		key = (r.course_offering, r.student)
-		conducted_hours = conducted_by_offering.get(r.course_offering, 0)
+		key = (r.class_name, r.student)
+		conducted_hours = conducted_by_class.get(r.class_name, 0)
 		attended_hours = attended_map.get(key, 0)
 		percentage = (attended_hours / conducted_hours * 100) if conducted_hours else 0
-		section_value = r.section or offering_section_by_offering.get(r.course_offering)
+		section_value = r.section or class_section_by_class.get(r.class_name)
 
 		row = {
 			"student": r.student,
 			"student_id": r.registration_id or r.student,
 			"student_name": " ".join(filter(None, [r.first_name, r.last_name])) or r.student,
 			"student_image": r.passport_size_photo,
-			"course_offering": r.course_offering,
-			"course": course_title_by_offering.get(r.course_offering),
+			"class_name": r.class_name,
+			"course": course_title_by_class.get(r.class_name),
 			"section": section_value,
-			"total_scheduled_hours": round(scheduled_by_offering.get(r.course_offering, 0), 2),
+			"total_scheduled_hours": round(scheduled_by_class.get(r.class_name, 0), 2),
 			"total_conducted_hours": round(conducted_hours, 2),
 			"total_attended_hours": round(attended_hours, 2),
 			"attendance_percentage": round(percentage, 2),
@@ -354,15 +362,15 @@ def get_monthly_matrix(academic_year=None, term=None, programme=None, course=Non
 	"""Students × calendar-month matrix. Each cell is that student's
 	attendance % for that month, using the same attended/conducted hours
 	definition as get_data(), just grouped by month instead of totalled."""
-	offerings, roster = _resolve_offerings_and_roster(
+	classes, roster = _resolve_classes_and_roster(
 		academic_year, term, programme, course, batch, section, student
 	)
-	if not offerings or not roster:
+	if not classes or not roster:
 		return {"months": [], "rows": []}
 
-	offering_names = [o.name for o in offerings]
+	class_names = [o.name for o in classes]
 	students = list({r.student for r in roster})
-	student_offerings = _student_offerings_map(roster)
+	student_classes = _student_classes_map(roster)
 	student_name_by_id = {
 		r.student: " ".join(filter(None, [r.first_name, r.last_name])) or r.student
 		for r in roster
@@ -371,34 +379,34 @@ def get_monthly_matrix(academic_year=None, term=None, programme=None, course=Non
 	student_image_by_id = {r.student: r.passport_size_photo for r in roster}
 
 	conducted = frappe.db.sql("""
-		SELECT course_offering, DATE_FORMAT(session_date, '%%Y-%%m') as ym,
+		SELECT class_name, DATE_FORMAT(session_date, '%%Y-%%m') as ym,
 			SUM(COALESCE(duration_hours, 0)) as hours
 		FROM `tabAttendance Session`
-		WHERE course_offering IN %(offerings)s
+		WHERE class_name IN %(classes)s
 		AND session_status = 'Conducted'
 		AND session_type IN ('Lecture', 'Tutorial')
-		GROUP BY course_offering, ym
-	""", {"offerings": offering_names}, as_dict=True)
-	conducted_by_offering_month = {}
+		GROUP BY class_name, ym
+	""", {"classes": class_names}, as_dict=True)
+	conducted_by_class_month = {}
 	all_months = set()
 	for r in conducted:
-		conducted_by_offering_month[(r.course_offering, r.ym)] = r.hours or 0
+		conducted_by_class_month[(r.class_name, r.ym)] = r.hours or 0
 		all_months.add(r.ym)
 
 	attended = frappe.db.sql("""
-		SELECT ats.course_offering as course_offering, sa.student,
+		SELECT ats.class_name as class_name, sa.student,
 			DATE_FORMAT(ats.session_date, '%%Y-%%m') as ym,
 			SUM(ats.duration_hours) as hours
 		FROM `tabStudent Attendance` sa
 		JOIN `tabAttendance Session` ats ON ats.name = sa.attendance_session
-		WHERE ats.course_offering IN %(offerings)s AND sa.student IN %(students)s
+		WHERE ats.class_name IN %(classes)s AND sa.student IN %(students)s
 		AND sa.status IN ('Present', 'Late', 'Excused')
 		AND ats.session_status = 'Conducted'
 		AND ats.session_type IN ('Lecture', 'Tutorial')
 		AND sa.docstatus < 2
-		GROUP BY ats.course_offering, sa.student, ym
-	""", {"offerings": offering_names, "students": students}, as_dict=True)
-	attended_by_offering_student_month = {(r.course_offering, r.student, r.ym): r.hours or 0 for r in attended}
+		GROUP BY ats.class_name, sa.student, ym
+	""", {"classes": class_names, "students": students}, as_dict=True)
+	attended_by_class_student_month = {(r.class_name, r.student, r.ym): r.hours or 0 for r in attended}
 
 	months = sorted(all_months)
 
@@ -406,14 +414,14 @@ def get_monthly_matrix(academic_year=None, term=None, programme=None, course=Non
 
 	rows = []
 	for student in students:
-		own_offerings = student_offerings.get(student, set())
+		own_classes = student_classes.get(student, set())
 		month_data = {}
 		for ym in months:
 			conducted_hours = sum(
-				conducted_by_offering_month.get((off, ym), 0) for off in own_offerings
+				conducted_by_class_month.get((off, ym), 0) for off in own_classes
 			)
 			attended_hours = sum(
-				attended_by_offering_student_month.get((off, student, ym), 0) for off in own_offerings
+				attended_by_class_student_month.get((off, student, ym), 0) for off in own_classes
 			)
 			pct = round((attended_hours / conducted_hours * 100), 2) if conducted_hours else None
 			# Hours are included alongside the percentage so the UI can show
@@ -450,15 +458,15 @@ def get_weekly_matrix(academic_year=None, term=None, programme=None, course=None
 	is labeled/anchored by its Monday rather than MySQL's default
 	Sunday-starts-the-week convention, which would otherwise split the
 	teaching week across two columns)."""
-	offerings, roster = _resolve_offerings_and_roster(
+	classes, roster = _resolve_classes_and_roster(
 		academic_year, term, programme, course, batch, section, student
 	)
-	if not offerings or not roster:
+	if not classes or not roster:
 		return {"weeks": [], "rows": []}
 
-	offering_names = [o.name for o in offerings]
+	class_names = [o.name for o in classes]
 	students = list({r.student for r in roster})
-	student_offerings = _student_offerings_map(roster)
+	student_classes = _student_classes_map(roster)
 	student_name_by_id = {
 		r.student: " ".join(filter(None, [r.first_name, r.last_name])) or r.student
 		for r in roster
@@ -469,37 +477,37 @@ def get_weekly_matrix(academic_year=None, term=None, programme=None, course=None
 	# WEEKDAY() is 0=Monday..6=Sunday, so subtracting it from the date always
 	# lands on that date's Monday regardless of MySQL's default week-start.
 	conducted = frappe.db.sql("""
-		SELECT course_offering,
+		SELECT class_name,
 			DATE_SUB(session_date, INTERVAL WEEKDAY(session_date) DAY) as week_start,
 			SUM(COALESCE(duration_hours, 0)) as hours
 		FROM `tabAttendance Session`
-		WHERE course_offering IN %(offerings)s
+		WHERE class_name IN %(classes)s
 		AND session_status = 'Conducted'
 		AND session_type IN ('Lecture', 'Tutorial')
-		GROUP BY course_offering, week_start
-	""", {"offerings": offering_names}, as_dict=True)
-	conducted_by_offering_week = {}
+		GROUP BY class_name, week_start
+	""", {"classes": class_names}, as_dict=True)
+	conducted_by_class_week = {}
 	all_weeks = set()
 	for r in conducted:
 		wk = str(r.week_start)
-		conducted_by_offering_week[(r.course_offering, wk)] = r.hours or 0
+		conducted_by_class_week[(r.class_name, wk)] = r.hours or 0
 		all_weeks.add(wk)
 
 	attended = frappe.db.sql("""
-		SELECT ats.course_offering as course_offering, sa.student,
+		SELECT ats.class_name as class_name, sa.student,
 			DATE_SUB(ats.session_date, INTERVAL WEEKDAY(ats.session_date) DAY) as week_start,
 			SUM(ats.duration_hours) as hours
 		FROM `tabStudent Attendance` sa
 		JOIN `tabAttendance Session` ats ON ats.name = sa.attendance_session
-		WHERE ats.course_offering IN %(offerings)s AND sa.student IN %(students)s
+		WHERE ats.class_name IN %(classes)s AND sa.student IN %(students)s
 		AND sa.status IN ('Present', 'Late', 'Excused')
 		AND ats.session_status = 'Conducted'
 		AND ats.session_type IN ('Lecture', 'Tutorial')
 		AND sa.docstatus < 2
-		GROUP BY ats.course_offering, sa.student, week_start
-	""", {"offerings": offering_names, "students": students}, as_dict=True)
-	attended_by_offering_student_week = {
-		(r.course_offering, r.student, str(r.week_start)): r.hours or 0 for r in attended
+		GROUP BY ats.class_name, sa.student, week_start
+	""", {"classes": class_names, "students": students}, as_dict=True)
+	attended_by_class_student_week = {
+		(r.class_name, r.student, str(r.week_start)): r.hours or 0 for r in attended
 	}
 
 	weeks = sorted(all_weeks)
@@ -508,14 +516,14 @@ def get_weekly_matrix(academic_year=None, term=None, programme=None, course=None
 
 	rows = []
 	for student in students:
-		own_offerings = student_offerings.get(student, set())
+		own_classes = student_classes.get(student, set())
 		week_data = {}
 		for wk in weeks:
 			conducted_hours = sum(
-				conducted_by_offering_week.get((off, wk), 0) for off in own_offerings
+				conducted_by_class_week.get((off, wk), 0) for off in own_classes
 			)
 			attended_hours = sum(
-				attended_by_offering_student_week.get((off, student, wk), 0) for off in own_offerings
+				attended_by_class_student_week.get((off, student, wk), 0) for off in own_classes
 			)
 			pct = round((attended_hours / conducted_hours * 100), 2) if conducted_hours else None
 			week_data[wk] = None if pct is None else {
@@ -546,10 +554,10 @@ def get_daily_matrix(academic_year=None, term=None, programme=None, course=None,
 	section=None, student=None, from_date=None, to_date=None):
 	"""Students × day matrix for a custom date range, showing EVERY day in
 	that range (like a manual attendance register) — not just days that had
-	a class. Days with no conducted session for a student's own offering are
+	a class. Days with no conducted session for a student's own class are
 	left blank; days with one show "attended/scheduled" hours for that day
 	(a student can have more than one class the same day, so hours are
-	summed across all of that day's sessions for their own offering)."""
+	summed across all of that day's sessions for their own class)."""
 	if not from_date or not to_date:
 		frappe.throw(frappe._("From Date and To Date are required"))
 
@@ -566,15 +574,15 @@ def get_daily_matrix(academic_year=None, term=None, programme=None, course=None,
 		all_days.append(str(d))
 		d = frappe.utils.add_days(d, 1)
 
-	offerings, roster = _resolve_offerings_and_roster(
+	classes, roster = _resolve_classes_and_roster(
 		academic_year, term, programme, course, batch, section, student
 	)
-	if not offerings or not roster:
+	if not classes or not roster:
 		return {"days": [], "rows": []}
 
-	offering_names = [o.name for o in offerings]
+	class_names = [o.name for o in classes]
 	students = list({r.student for r in roster})
-	student_offerings = _student_offerings_map(roster)
+	student_classes = _student_classes_map(roster)
 	student_name_by_id = {
 		r.student: " ".join(filter(None, [r.first_name, r.last_name])) or r.student
 		for r in roster
@@ -583,20 +591,20 @@ def get_daily_matrix(academic_year=None, term=None, programme=None, course=None,
 	student_image_by_id = {r.student: r.passport_size_photo for r in roster}
 
 	sessions = frappe.db.sql("""
-		SELECT name, course_offering, session_date, COALESCE(duration_hours, 0) as duration_hours
+		SELECT name, class_name, session_date, COALESCE(duration_hours, 0) as duration_hours
 		FROM `tabAttendance Session`
-		WHERE course_offering IN %(offerings)s
+		WHERE class_name IN %(classes)s
 		AND session_status = 'Conducted'
 		AND session_type IN ('Lecture', 'Tutorial')
 		AND session_date BETWEEN %(start)s AND %(end)s
-	""", {"offerings": offering_names, "start": start_date, "end": end_date}, as_dict=True)
+	""", {"classes": class_names, "start": start_date, "end": end_date}, as_dict=True)
 
-	# (course_offering, date) -> set of session names held that day
-	sessions_by_offering_date = {}
+	# (class_name, date) -> set of session names held that day
+	sessions_by_class_date = {}
 	session_hours_by_name = {}
 	for s in sessions:
 		d = str(getdate(s.session_date))
-		sessions_by_offering_date.setdefault((s.course_offering, d), set()).add(s.name)
+		sessions_by_class_date.setdefault((s.class_name, d), set()).add(s.name)
 		session_hours_by_name[s.name] = s.duration_hours
 
 	present_sessions_by_student = {}
@@ -614,16 +622,16 @@ def get_daily_matrix(academic_year=None, term=None, programme=None, course=None,
 
 	rows = []
 	for student in students:
-		own_offerings = student_offerings.get(student, set())
+		own_classes = student_classes.get(student, set())
 		present_set = present_sessions_by_student.get(student, set())
 		day_cells = {}
 		# Every day in the selected range becomes a column (like a manual
 		# attendance register) — days with no class for this student's own
-		# offering are simply left out of day_cells and render as blank.
+		# class are simply left out of day_cells and render as blank.
 		for d in all_days:
 			session_set = set()
-			for off in own_offerings:
-				session_set |= sessions_by_offering_date.get((off, d), set())
+			for off in own_classes:
+				session_set |= sessions_by_class_date.get((off, d), set())
 			if not session_set:
 				continue
 			scheduled_hours = sum(session_hours_by_name.get(s, 0) for s in session_set)
@@ -658,45 +666,45 @@ def get_daily_drilldown(student, date, academic_year=None, term=None, programme=
 	"""Per-session detail for one student on one day, used by the Daily tab's
 	cell drill-down. Re-applies the same filters (and therefore the same
 	faculty/role scoping) as get_daily_matrix so a faculty member can't pull
-	up detail for a student/offering outside what they're permitted to see,
+	up detail for a student/class outside what they're permitted to see,
 	then further restricts to just that one student's own enrolled
-	offering(s) — never every offering the page-level filters matched."""
+	class(s) — never every class the page-level filters matched."""
 	if not student or not date:
 		frappe.throw(frappe._("Student and Date are required"))
 
 	target_date = getdate(date)
 
-	offerings, roster = _resolve_offerings_and_roster(
+	classes, roster = _resolve_classes_and_roster(
 		academic_year, term, programme, course, batch, section
 	)
-	if not offerings or not roster:
+	if not classes or not roster:
 		return []
 
-	student_offerings = _student_offerings_map(roster)
-	own_offerings = student_offerings.get(student)
-	if not own_offerings:
+	student_classes = _student_classes_map(roster)
+	own_classes = student_classes.get(student)
+	if not own_classes:
 		# Either the student isn't in the roster this filter combination
-		# resolves to, or isn't enrolled in any matching offering — either
+		# resolves to, or isn't enrolled in any matching class — either
 		# way there is nothing this caller is entitled to see for them.
 		return []
 
-	course_title_by_offering = {o.name: o.course_title for o in offerings}
+	course_title_by_class = {o.name: o.course for o in classes}
 
 	sessions = frappe.db.sql("""
-		SELECT ats.name, ats.course_offering, ats.session_start_time, ats.session_end_time,
+		SELECT ats.name, ats.class_name, ats.session_start_time, ats.session_end_time,
 			ats.instructor, ats.room, ats.duration_hours,
 			sa.status, sa.remarks, sa.in_time, sa.out_time
 		FROM `tabAttendance Session` ats
 		LEFT JOIN `tabStudent Attendance` sa
 			ON sa.attendance_session = ats.name AND sa.student = %(student)s AND sa.docstatus < 2
-		WHERE ats.course_offering IN %(offerings)s
+		WHERE ats.class_name IN %(classes)s
 		AND ats.session_status = 'Conducted'
 		AND ats.session_type IN ('Lecture', 'Tutorial')
 		AND ats.session_date = %(date)s
 		ORDER BY ats.session_start_time
 	""", {
 		"student": student,
-		"offerings": list(own_offerings),
+		"classes": list(own_classes),
 		"date": target_date,
 	}, as_dict=True)
 
@@ -713,7 +721,7 @@ def get_daily_drilldown(student, date, academic_year=None, term=None, programme=
 
 	return [{
 		"session": s.name,
-		"course": course_title_by_offering.get(s.course_offering, s.course_offering),
+		"course": course_title_by_class.get(s.class_name, s.class_name),
 		"from_time": str(s.session_start_time) if s.session_start_time else None,
 		"to_time": str(s.session_end_time) if s.session_end_time else None,
 		"instructor": faculty_name_by_id.get(s.instructor, s.instructor),

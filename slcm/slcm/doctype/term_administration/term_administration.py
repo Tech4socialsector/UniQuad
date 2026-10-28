@@ -81,10 +81,18 @@ def create_classes_by_section(
 def process_bulk_class_creation(
 	program, academic_year, batch, academic_term, course, class_type, faculty, user
 ):
+	# Sections are global (no batch / capacity): use the sections the batch's
+	# enrolled students are in.
+	batch_sections = frappe.get_all(
+		"Student Enrollment",
+		filters={"batch": batch, "status": "Enrolled", "section": ["is", "set"]},
+		distinct=True,
+		pluck="section",
+	)
 	sections = frappe.get_all(
 		"Section",
-		filters={"batch": batch},
-		fields=["name", "section_name", "capacity"],
+		filters={"name": ["in", batch_sections or [""]]},
+		fields=["name", "section_name"],
 	)
 
 	created_count = 0

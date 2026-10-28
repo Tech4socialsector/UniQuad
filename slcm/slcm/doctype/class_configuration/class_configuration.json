@@ -18,7 +18,6 @@
   "programme",
   "year",
   "section_break_course",
-  "course_offering",
   "course",
   "column_break_2",
   "faculty",
@@ -114,13 +113,12 @@
    "label": "Course Details"
   },
   {
-   "fetch_from": "course_offering.course_title",
    "fieldname": "course",
-   "fieldtype": "Data",
+   "fieldtype": "Link",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Course",
-   "options": "Course Offering",
+   "options": "Course",
    "reqd": 1
   },
   {
@@ -169,16 +167,10 @@
    "fieldtype": "Table",
    "label": "Students",
    "options": "Class Student"
-  },
-  {
-   "fieldname": "course_offering",
-   "fieldtype": "Link",
-   "label": "Course Offering",
-   "options": "Course Offering"
   }
  ],
  "links": [],
- "modified": "2026-10-19 16:30:00.000000",
+ "modified": "2026-10-29 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Class Configuration",

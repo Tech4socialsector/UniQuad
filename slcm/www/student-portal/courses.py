@@ -1,4 +1,6 @@
 import frappe
+from slcm.slcm.doctype.student_enrollment.student_enrollment import get_current_logs
+from slcm.slcm.utils.exam_schedule import get_student_programme
 
 no_cache = 1
 
@@ -36,19 +38,19 @@ def get_context(context):
             faculty_meta[str(f.name)] = " ".join(fname) or str(f.name)
 
         # ── Pre-fetch attendance summaries for fast lookup ─────────
-        att_map = {}  # keyed by course_offering and by course
+        att_map = {}  # keyed by class_name and by course
         for s in frappe.get_all(
             "Attendance Summary",
             filters={"student": student_name},
             fields=[
-                "course_offering", "course", "attendance_percentage",
+                "class_name", "course", "attendance_percentage",
                 "total_class_hours", "attended_classes",
                 "total_classes", "eligible_for_exam",
             ],
             ignore_permissions=True,
         ):
-            if s.course_offering:
-                att_map[s.course_offering] = s
+            if s.class_name:
+                att_map[s.class_name] = s
             if s.course:
                 att_map.setdefault(s.course, s)
 
@@ -57,80 +59,113 @@ def get_context(context):
             "Student Enrollment",
             filters={"student": student_name},
             fields=[
-                "name", "batch", "program", "academic_year",
-                "term_name", "status", "faculty_advisor", "enrollment_date",
+                "name", "batch", "program",
+                "status", "faculty_advisor", "enrollment_date",
             ],
             order_by="creation desc",
             ignore_permissions=True,
         )
+        # Current academic year / year of study come from the Academic Log.
+        current_logs = get_current_logs([e.name for e in enrollments])
+        for enr in enrollments:
+            log = current_logs.get(enr.name)
+            enr.academic_year = log.academic_year if log else None
+            enr.year_no = log.year_no if log else None
 
-        # If no formal enrollment record, synthesise one from the student's cohort
-        if not enrollments and student.programme:
-            cohort_doc = frappe.db.get_value(
-                "SLCM Batch",
-                student.programme,
-                ["name", "cohort_name", "academic_year", "term_name", "status"],
-                as_dict=True,
-            )
-            if cohort_doc:
-                enrollments = [frappe._dict({
-                    "name": None,
-                    "batch": cohort_doc.name,
-                    "program": None,
-                    "academic_year": cohort_doc.academic_year,
-                    "term_name": cohort_doc.term_name,
-                    "status": "Enrolled",
-                    "faculty_advisor": None,
-                    "enrollment_date": None,
-                })]
+        # If no formal enrollment record, synthesise one from the Student Master
+        year_no = frappe.utils.cint(student.current_year)
+        if not enrollments and student.programme_of_study and student.academic_year and year_no:
+            enrollments = [frappe._dict({
+                "name": None,
+                "batch": student.batch,
+                "program": student.programme_of_study,
+                "academic_year": student.academic_year,
+                "year_no": year_no,
+                "status": "Enrolled",
+                "faculty_advisor": None,
+                "enrollment_date": None,
+            })]
+
+        # ── Step 1: courses from Student Enrollment Course child table ──
+        # One enrollment now holds the courses of every year, so split them into
+        # one section per (academic year, year of study), newest first.
+        year_sections = []  # [(enrollment view for that year, child course rows)]
+        for enr in enrollments:
+            child_rows = []
+            if enr.name:
+                child_rows = frappe.get_all(
+                    "Student Enrollment Course",
+                    filters={"parent": enr.name, "parenttype": "Student Enrollment"},
+                    fields=["class_name", "course", "credits", "course_type", "status", "grade",
+                            "academic_year", "year_no"],
+                    ignore_permissions=True,
+                )
+            if not child_rows:
+                year_sections.append((enr, []))
+                continue
+
+            groups = {}
+            for row in child_rows:
+                key = (row.academic_year or enr.academic_year or "",
+                       frappe.utils.cint(row.year_no or enr.year_no))
+                groups.setdefault(key, []).append(row)
+
+            current_key = (enr.academic_year or "", frappe.utils.cint(enr.year_no))
+            for (ay, yn), rows in sorted(groups.items(), key=lambda kv: (kv[0][1], kv[0][0]), reverse=True):
+                view = frappe._dict(enr)
+                view.academic_year = ay or None
+                view.year_no = yn or None
+                if (ay, yn) != current_key:
+                    view.status = "Completed"
+                year_sections.append((view, rows))
 
         enrollment_data = []
 
-        for enr in enrollments:
-            cohort = enr.batch
-
-            # ── Step 1: courses from Student Enrollment Course child table ──
-            child_courses = []
-            if enr.name:
-                child_courses = frappe.get_all(
-                    "Student Enrollment Course",
-                    filters={"parent": enr.name},
-                    fields=["course_offering", "course", "credits", "course_type", "status", "grade"],
-                    ignore_permissions=True,
-                )
-
-            # ── Step 2: Course Offerings for this cohort (fallback only) ──
-            cohort_offerings = []
-            if cohort and not child_courses:
-                cohort_offerings = frappe.get_all(
-                    "Course Offering",
-                    filters={"cohort": cohort},
+        for enr, child_courses in year_sections:
+            # ── Step 2: Classes for this programme + year (fallback only) ──
+            # One entry per course (a course taught in several sections has
+            # several Classes).
+            cohort_classes = []
+            if enr.program and enr.academic_year and enr.year_no and not child_courses:
+                seen_courses = set()
+                for cls in frappe.get_all(
+                    "Classes",
+                    filters={
+                        "programme": enr.program,
+                        "academic_year": enr.academic_year,
+                        "year_no": enr.year_no,
+                    },
                     fields=[
-                        "name", "course_name", "course_title",
-                        "faculty", "credit_value", "status", "term_name",
+                        "name", "course_name", "course",
+                        "faculty", "credit", "academic_term",
                     ],
+                    order_by="academic_term asc, name asc",
                     ignore_permissions=True,
-                )
+                ):
+                    if cls.course in seen_courses:
+                        continue
+                    seen_courses.add(cls.course)
+                    cohort_classes.append(cls)
 
             # ── Step 3: build the display list ───────────────────────
             courses_out = []
 
             if child_courses:
-                # course_offering is already on the child row — fetch faculty from it
-                co_names = [ec.course_offering for ec in child_courses if ec.course_offering]
+                # class_name is already on the child row — fetch faculty from it
+                co_names = [ec.class_name for ec in child_courses if ec.class_name]
                 co_details = {}
                 if co_names:
                     for co in frappe.get_all(
-                        "Course Offering",
+                        "Classes",
                         filters={"name": ["in", co_names]},
-                        fields=["name", "course_name", "faculty", "credit_value"],
+                        fields=["name", "course_name", "faculty", "credit as credit_value"],
                         ignore_permissions=True,
                     ):
                         co_details[co.name] = co
 
                 for ec in child_courses:
-                    co = co_details.get(ec.course_offering) or frappe._dict()
-                    co_name = ec.course_offering or ""
+                    co = co_details.get(ec.class_name) or frappe._dict()
+                    co_name = ec.class_name or ""
                     att = att_map.get(co_name) or att_map.get(ec.course) or frappe._dict()
 
                     c_meta = courses_meta.get(ec.course) or {}
@@ -145,30 +180,30 @@ def get_context(context):
                         faculty=fac_name,
                         credits=c_meta.get("credit_value") or co.get("credit_value") or ec.credits or 0,
                         course_type=ec.course_type or "—",
-                        status=ec.status or "Enrolled",
+                        status=ec.status or "Ongoing",
                         att=att,
                         faculty_meta=faculty_meta
                     ))
 
-            elif cohort_offerings:
-                # Fallback: show all Course Offerings for the cohort
-                for co in cohort_offerings:
+            elif cohort_classes:
+                # Fallback: show the Classes of the programme + year
+                for co in cohort_classes:
                     co_name = co.name or ""
-                    att = att_map.get(co_name) or att_map.get(co.course_title) or frappe._dict()
+                    att = att_map.get(co_name) or att_map.get(co.course) or frappe._dict()
 
-                    c_meta = courses_meta.get(co.course_title) or {}
+                    c_meta = courses_meta.get(co.course) or {}
                     fac_id = co.faculty
                     fac_name = faculty_meta.get(str(fac_id)) if fac_id else "—"
 
                     courses_out.append(_build_course_entry(
                         co_name=co_name,
-                        course_id=co.course_title or "",
+                        course_id=co.course or "",
                         course_code=c_meta.get("course_code") or "",
-                        course_name=co.course_name or co.course_title or "—",
+                        course_name=co.course_name or co.course or "—",
                         faculty=fac_name,
-                        credits=c_meta.get("credit_value") or co.credit_value or 0,
+                        credits=c_meta.get("credit_value") or co.credit or 0,
                         course_type="—",
-                        status="Enrolled",
+                        status="Ongoing",
                         att=att,
                         faculty_meta=faculty_meta
                     ))
@@ -176,15 +211,10 @@ def get_context(context):
             # Sort: by course name
             courses_out.sort(key=lambda c: c["course_name"])
 
-            # Cohort display name
-            cohort_display = enr.term_name or cohort or "—"
-            if cohort:
-                cn = frappe.db.get_value("SLCM Batch", cohort, "cohort_name")
-                if cn:
-                    cohort_display = cn
+            # Programme display name
+            cohort_display = enr.program or enr.batch or "—"
 
-            term_prefix = _get_term_prefix(enr.academic_year)
-            term_label = _get_term_label(enr.term_name, term_prefix)
+            term_label = _get_term_label(enr.year_no, "Year")
 
             enrollment_data.append({
                 "enrollment": enr,
@@ -236,23 +266,10 @@ def get_context(context):
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _get_term_prefix(academic_year):
-    """Return Semester/Trimester/Quarter/Year from Academic Year.academic_system."""
-    if not academic_year:
-        return "Term"
-    try:
-        sys = frappe.db.get_value("Academic Year", academic_year, "academic_system")
-        if sys in ("Semester", "Trimester", "Quarter", "Year"):
-            return sys
-    except Exception:
-        pass
-    return "Term"
-
-
 def _get_term_label(term_raw, prefix="Term"):
-    """Resolve Cohort.term_name to a display label.
+    """Resolve an enrollment's year of study to a display label.
 
-    Cohort.term_name is a free-text Data field — it may hold:
+    The value may be:
       - a plain number ("1", "2")  → formatted as "<prefix> <n>"  e.g. "Semester 1"
       - a full label ("Semester 1", "Trimester 2") → used as-is
     """
@@ -288,7 +305,7 @@ def _build_course_entry(co_name, course_id, course_code, course_name, faculty, c
         ["schedule_date", ">=", today_date],
     ]
     if co_name:
-        filters1.append(["course_offering", "=", co_name])
+        filters1.append(["class_name", "=", co_name])
     elif course_id:
         filters1.append(["course", "=", course_id])
 
@@ -305,7 +322,7 @@ def _build_course_entry(co_name, course_id, course_code, course_name, faculty, c
         ["parent_schedule", "is", "not set"],
     ]
     if co_name:
-        filters2.append(["course_offering", "=", co_name])
+        filters2.append(["class_name", "=", co_name])
     elif course_id:
         filters2.append(["course", "=", course_id])
 
@@ -390,14 +407,14 @@ def _build_course_entry(co_name, course_id, course_code, course_name, faculty, c
             })
 
     return {
-        "course_offering": co_name,
+        "class_name": co_name,
         "course": course_id,
         "course_code": course_code,
         "course_name": course_name,
         "faculty": faculty or "—",
         "credits": credits or 0,
         "course_type": course_type or "—",
-        "status": status or "Enrolled",
+        "status": status or "Ongoing",
         "attendance_pct": att_pct,
         "eligible_for_exam": att.get("eligible_for_exam") if att else None,
         "total_class_hours": att.get("total_class_hours") or 0,
@@ -432,13 +449,9 @@ def _set_student_nav(context, student):
     context.student_id = student.registration_id or student.name
     context.student_photo = student.passport_size_photo or ""
     context.student_initial = (context.student_name[0]).upper() if context.student_name else "S"
-    context.programme_name = (
-        frappe.db.get_value("SLCM Batch", student.programme, "cohort_name")
-        or student.programme
-        or ""
-    )
+    context.programme_name = get_student_programme(student.name)
     context.department = student.department or ""
-    context.batch_year = student.batch_year or ""
+    context.batch_year = student.batch or ""
 
 
 def _set_nav_defaults(context):

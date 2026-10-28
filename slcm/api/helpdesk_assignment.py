@@ -19,6 +19,8 @@ for non-portal (email) tickets.
 
 import frappe
 
+from slcm.slcm.utils.exam_schedule import get_student_programme
+
 DEFAULT_EMAIL_TEAM = "PACE Team"
 PACE_TICKET_TYPE = "PACE"
 
@@ -68,38 +70,31 @@ def _get_student(email):
     if not email:
         return None
 
-    # Student Master links Cohort in the 'programme' field; Cohort has 'program' and 'current_year'
     sm = frappe.db.get_value(
         "Student Master",
         {"user": email},
-        ["programme", "current_year"],
+        ["name", "current_year"],
         as_dict=True,
     )
     if not sm:
         sm = frappe.db.get_value(
             "Student Master",
             {"email": email},
-            ["programme", "current_year"],
+            ["name", "current_year"],
             as_dict=True,
         )
     if not sm:
         sm = frappe.db.get_value(
             "Student Master",
             {"official_email_id": email},
-            ["programme", "current_year"],
+            ["name", "current_year"],
             as_dict=True,
         )
     if not sm:
         return None
 
-    # programme field on Student Master is a Link to Cohort.
-    # We need the Program linked from that Cohort.
-    cohort_programme = None
-    if sm.get("programme"):
-        cohort_programme = frappe.db.get_value("SLCM Batch", sm["programme"], "program")
-
     return {
-        "programme": cohort_programme,
+        "programme": get_student_programme(sm.name) or None,
         "current_year": (sm.get("current_year") or "").strip(),
     }
 

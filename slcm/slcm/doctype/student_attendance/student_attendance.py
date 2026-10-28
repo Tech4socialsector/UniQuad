@@ -40,8 +40,8 @@ class StudentAttendance(Document):
 			filters["attendance_date"] = self.attendance_date
 			if self.course_schedule:
 				filters["course_schedule"] = self.course_schedule
-			elif self.course_offer:
-				filters["course_offer"] = self.course_offer
+			elif self.class_name:
+				filters["class_name"] = self.class_name
 			
 			if self.period:
 				filters["period"] = self.period
@@ -77,19 +77,36 @@ class StudentAttendance(Document):
 			if not self.room:
 				self.room = schedule.room
 
-		# Pull course_offer from the linked Attendance Session when not set directly.
-		# This fixes Manual records created without selecting a Course Offering.
-		if not self.course_offer and self.attendance_session:
-			session_co = frappe.db.get_value(
-				"Attendance Session", self.attendance_session, "course_offering"
+		# Pull class_name from the linked Attendance Session when not set directly.
+		# This fixes Manual records created without selecting a Class.
+		if not self.class_name and self.attendance_session:
+			session_class = frappe.db.get_value(
+				"Attendance Session", self.attendance_session, "class_name"
 			)
-			if session_co:
-				self.course_offer = session_co
+			if not session_class:
+				# Sessions created before class_name existed: take their Time Table's
+				class_schedule = frappe.db.get_value(
+					"Attendance Session", self.attendance_session, "class_schedule"
+				)
+				if class_schedule:
+					session_class = frappe.db.get_value("Time Table", class_schedule, "class_name")
+			if session_class:
+				self.class_name = session_class
 
-		# Fetch course from course offering
-		if self.course_offer and not self.course:
-			offering = frappe.get_doc("Course Offering", self.course_offer)
-			self.course = offering.course_title
+		# Fill course / programme / academic year / term from the Class
+		if self.class_name:
+			cls = frappe.db.get_value(
+				"Classes", self.class_name,
+				["course", "programme", "academic_year", "academic_term"], as_dict=True
+			)
+			if cls:
+				self.course = cls.course or self.course
+				if not self.program:
+					self.program = cls.programme
+				if not self.academic_year:
+					self.academic_year = cls.academic_year
+				if not self.academic_term:
+					self.academic_term = cls.academic_term
 
 		# Sync attendance_date → date (both fields are required)
 		if self.attendance_date and not self.date:
@@ -169,40 +186,40 @@ class StudentAttendance(Document):
 		self.trigger_recalculation()
 		self.trigger_session_update()
 	
-	def resolve_course_offerings(self):
+	def resolve_classes(self):
 		"""
-		Return a list of course_offering IDs to recalculate for this record.
+		Return a list of Classes IDs to recalculate for this record.
 
 		Priority order:
-		  1. course_offer directly on the record (RFID / Auto / well-formed Manual)
-		  2. course_offering from the linked Attendance Session
+		  1. class_name directly on the record (RFID / Auto / well-formed Manual)
+		  2. class_name from the linked Attendance Session
 
 		NOTE: a previous fallback that matched all summaries by academic_year alone was
 		removed — it caused every ambiguous record to trigger recalculation for every
 		course in the same year, leading to ghost double-counting.
 		"""
-		if self.course_offer:
-			return [self.course_offer]
+		if self.class_name:
+			return [self.class_name]
 
 		# Fallback — get from the linked session
 		if self.attendance_session:
-			co = frappe.db.get_value("Attendance Session", self.attendance_session, "course_offering")
-			if co:
-				return [co]
+			session_class = frappe.db.get_value("Attendance Session", self.attendance_session, "class_name")
+			if session_class:
+				return [session_class]
 
 		return []
 
 	def trigger_recalculation(self):
-		"""Trigger attendance summary recalculation for all relevant course offerings."""
+		"""Trigger attendance summary recalculation for all relevant classes."""
 		if not self.student:
 			return
 		try:
 			from slcm.slcm.utils.attendance_calculator import calculate_student_attendance
-			for course_offering in self.resolve_course_offerings():
+			for class_name in self.resolve_classes():
 				frappe.enqueue(
 					calculate_student_attendance,
 					student=self.student,
-					course_offering=course_offering,
+					class_name=class_name,
 					queue="short"
 				)
 		except Exception as e:
@@ -246,16 +263,21 @@ class StudentAttendance(Document):
 
 
 @frappe.whitelist()
-def get_enrolled_cohorts(student):
+def get_student_classes(student):
 	"""
-	Fetch all cohorts that a student is currently enrolled in.
-	Used to filter Course Offerings in the UI.
+	Fetch all Classes the student is an Enrolled student of (through their
+	Student Enrollment), newest first.
+	Used to filter the Class link in the UI.
 	"""
 	if not student:
 		return []
 
-	return frappe.get_all(
-		"Student Enrollment",
-		filters={"student": student, "status": "Enrolled"},
-		pluck="batch"
-	)
+	return frappe.db.sql_list("""
+		SELECT DISTINCT ces.parent
+		FROM `tabClass Enrolled Student` ces
+		JOIN `tabStudent Enrollment` se ON se.name = ces.student_enrollment
+		WHERE ces.parenttype = 'Classes'
+		AND ces.status = 'Enrolled'
+		AND se.student = %s
+		ORDER BY ces.parent DESC
+	""", student)

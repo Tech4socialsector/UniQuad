@@ -143,13 +143,13 @@ def _preload_course_resolution(fp_list):
         
     student_map = {}
     if student_names:
-        students = frappe.db.get_all("Student Master", filters={"name": ("in", list(student_names))}, fields=["name", "master_programme", "programme_of_study"])
+        students = frappe.db.get_all("Student Master", filters={"name": ("in", list(student_names))}, fields=["name", "programme_of_study"])
         for s in students:
             pos_prog_name = None
             if s.programme_of_study:
                 pos_prog_name = frappe.db.get_value("Programme", s.programme_of_study, "program_name")
             student_map[s.name] = {
-                "master_programme": s.master_programme,
+                "master_programme": pos_prog_name,  # master_programme (removed) was programme_of_study's program_name
                 "pos_prog_name": pos_prog_name
             }
             

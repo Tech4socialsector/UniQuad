@@ -31,18 +31,6 @@
   {
    "child": 1,
    "collapsible": 0,
-   "icon": "book-open",
-   "indent": 1,
-   "keep_closed": 0,
-   "label": "Course Offering",
-   "link_to": "Course Offering",
-   "link_type": "DocType",
-   "show_arrow": 0,
-   "type": "Link"
-  },
-  {
-   "child": 1,
-   "collapsible": 0,
    "icon": "book",
    "indent": 1,
    "keep_closed": 0,
@@ -355,7 +343,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-07-08 23:52:31.463223",
+ "modified": "2026-10-29 10:30:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Faculty Management",

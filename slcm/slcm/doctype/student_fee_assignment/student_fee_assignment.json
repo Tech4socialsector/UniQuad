@@ -67,7 +67,6 @@
    "read_only": 1
   },
   {
-   "fetch_from": "enrollment.academic_year",
    "fieldname": "academic_year",
    "fieldtype": "Link",
    "label": "Academic Year",
@@ -75,7 +74,6 @@
    "read_only": 1
   },
   {
-   "fetch_from": "enrollment.term_name",
    "fieldname": "academic_term",
    "fieldtype": "Data",
    "label": "Academic Term",
@@ -148,7 +146,7 @@
   }
  ],
  "links": [],
- "modified": "2025-12-31 12:00:00.000000",
+ "modified": "2026-10-28 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Student Fee Assignment",

@@ -47,7 +47,7 @@ def send_condonation_email(template_fieldname, doc, recipients):
 	args = {
 		"doc": doc,
 		"student_name": doc.student_name,
-		"course": frappe.db.get_value("Course Offering", doc.course_offering, "course_name") if doc.course_offering else "",
+		"course": frappe.db.get_value("Course", doc.course, "course_name") if doc.course else "",
 		"programme": doc.programme,
 		"due_date": doc.aad_due_date if doc.final_status == "Pending" else doc.programme_chair_due_date,
 		"remarks": doc.aad_remarks if doc.final_status == "Rejected" and doc.aad_rejected_reason else doc.programme_chair_remarks,
@@ -142,7 +142,7 @@ class StudentAttendanceCondonation(Document):
 		
 	def trigger_recalculation(self):
 		from slcm.slcm.utils.attendance_calculator import calculate_student_attendance
-		calculate_student_attendance(self.student, self.course_offering)
+		calculate_student_attendance(self.student, self.class_name)
 
 	@frappe.whitelist()
 	def aad_decision(self, action, remarks=None, rejected_reason=None):
@@ -257,7 +257,7 @@ def auto_reject_below_attendance_floor():
 			"final_status": ["in", ["Pending", "May Be Approved"]],
 			"docstatus": ["<", 2],
 		},
-		fields=["name", "student", "course_offering", "programme", "programme_chair_approver"],
+		fields=["name", "student", "class_name", "programme", "programme_chair_approver"],
 	)
 
 	processed = 0
@@ -265,21 +265,21 @@ def auto_reject_below_attendance_floor():
 
 	for i, row in enumerate(pending):
 		try:
-			if not row.course_offering:
+			if not row.class_name:
 				continue
 
-			co_term_name = frappe.db.get_value("Course Offering", row.course_offering, "term_name")
-			if not co_term_name:
+			class_term = frappe.db.get_value("Classes", row.class_name, "academic_term")
+			if not class_term:
 				continue
 
-			term_end_date = frappe.db.get_value("Academic Term", {"term_name": co_term_name}, "term_end_date")
+			term_end_date = frappe.db.get_value("Academic Term", class_term, "term_end_date")
 			if not term_end_date or getdate(term_end_date) >= getdate():
 				continue  # term hasn't ended yet
 
-			calculate_student_attendance(row.student, row.course_offering)
+			calculate_student_attendance(row.student, row.class_name)
 			att_pct = flt(frappe.db.get_value(
 				"Attendance Summary",
-				{"student": row.student, "course_offering": row.course_offering},
+				{"student": row.student, "class_name": row.class_name},
 				"attendance_percentage",
 			))
 			if att_pct >= min_cond_pct:

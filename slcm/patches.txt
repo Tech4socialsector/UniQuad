@@ -10,6 +10,7 @@ slcm.patches.v2_0.stash_type_of_issue_assignment_rules
 slcm.patches.v2_0.rename_student_bank_fields_to_savings
 slcm.patches.v2_0.student_promotion_stage
 slcm.patches.v2_0.rename_erpnext_clashing_doctypes
+slcm.patches.v2_0.merge_programmes_and_sections
 
 [post_model_sync]
 
@@ -75,3 +76,9 @@ slcm.patches.v2_0.backfill_student_master_batch
 slcm.patches.v2_0.autoincrement_name_columns_to_varchar
 slcm.patches.v2_0.nlsatadmissions_application_form_links
 slcm.patches.v2_0.nlsat_eligibility_download_links
+slcm.patches.v2_0.academic_core_restructure
+slcm.patches.v2_0.add_programme_management_to_dock
+slcm.patches.v2_0.rename_enrollments_to_student_id #student-id-field
+slcm.patches.v2_0.merge_enrollments_into_academic_log
+slcm.patches.v2_0.remove_course_offering
+slcm.patches.v2_0.student_current_term

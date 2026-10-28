@@ -1,58 +1,37 @@
 {
  "actions": [],
  "allow_import": 1,
- "autoname": "format:{batch}-{section_name}",
+ "allow_rename": 1,
+ "autoname": "field:section_name",
  "creation": "2026-07-09 10:00:00",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "batch",
-  "section_name",
-  "capacity",
-  "status"
+  "section_name"
  ],
  "fields": [
-  {
-   "fieldname": "batch",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Batch",
-   "options": "SLCM Batch",
-   "reqd": 1
-  },
   {
    "fieldname": "section_name",
    "fieldtype": "Data",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Section Name",
-   "reqd": 1
-  },
-  {
-   "fieldname": "capacity",
-   "fieldtype": "Int",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Capacity"
-  },
-  {
-   "default": "Active",
-   "fieldname": "status",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Status",
-   "options": "Active\nInactive",
-   "reqd": 1
+   "reqd": 1,
+   "unique": 1
   }
  ],
- "links": [],
- "modified": "2026-10-19 16:30:00.000000",
+ "links": [
+  {
+   "group": "Students",
+   "link_doctype": "Student Enrollment",
+   "link_fieldname": "section"
+  }
+ ],
+ "modified": "2026-10-27 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Section",
- "naming_rule": "Expression (old style)",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {

@@ -281,7 +281,7 @@ function amLoadAssessments(selectItem) {
   var reselect = selectItem;
   AM.item = '';
   amShow('am-loading', true);
-  amCall('get_assessments', { course_offering: AM.co }, function (r) {
+  amCall('get_assessments', { course: fgCourse(AM.co), academic_term: fgTerm(AM.co) }, function (r) {
     amShow('am-loading', false);
     AM.assessments = r.assessments || [];
     amRenderAssessments();
@@ -337,7 +337,7 @@ function amOpen(name) {
   amRenderAssessments();
   amShow('am-sheet', false);
   amShow('am-loading', true);
-  amCall('get_marks_sheet', { course_offering: AM.co, schedule_item: name }, function (r) {
+  amCall('get_marks_sheet', { course: fgCourse(AM.co), academic_term: fgTerm(AM.co), schedule_item: name }, function (r) {
     amShow('am-loading', false);
     AM.info = r.info;
     AM.students = r.students || [];
@@ -468,14 +468,14 @@ function amSave() {
   if (!rows.length) return;
   document.getElementById('am-save').disabled = true;
   amStatus('busy', 'sync', 'Saving ' + rows.length + '…');
-  amCall('save_marks', { course_offering: AM.co, schedule_item: AM.item, rows: rows }, function (r) {
+  amCall('save_marks', { course: fgCourse(AM.co), academic_term: fgTerm(AM.co), schedule_item: AM.item, rows: rows }, function (r) {
     var errs = {};
     (r.errors || []).forEach(function (e) { errs[e.student] = e.error; });
     /* Keep only the failed rows as unsaved, then reload the saved values */
     var keep = {};
     Object.keys(errs).forEach(function (sid) { if (AM.dirty[sid]) keep[sid] = AM.dirty[sid]; });
     var saved = (r.saved || []).length;
-    amCall('get_marks_sheet', { course_offering: AM.co, schedule_item: AM.item }, function (sheet) {
+    amCall('get_marks_sheet', { course: fgCourse(AM.co), academic_term: fgTerm(AM.co), schedule_item: AM.item }, function (sheet) {
       AM.info = sheet.info;
       AM.students = sheet.students || [];
       AM.dirty = keep;
@@ -499,7 +499,7 @@ function amSave() {
 function amDownloadSheet() {
   if (!AM.co || !AM.item) return;
   window.open('/api/method/' + AM_API + 'download_sheet?' +
-    new URLSearchParams({ course_offering: AM.co, schedule_item: AM.item }).toString(), '_blank');
+    new URLSearchParams({ course: fgCourse(AM.co), academic_term: fgTerm(AM.co), schedule_item: AM.item }).toString(), '_blank');
 }
 
 function amOpenUpload() {
@@ -542,7 +542,7 @@ function amBusyCall(method, args, ok) {
 }
 
 function amUploadArgs(apply) {
-  return { course_offering: AM.co, schedule_item: AM.item, filedata: AM.upload.data, filename: AM.upload.name, apply: apply };
+  return { course: fgCourse(AM.co), academic_term: fgTerm(AM.co), schedule_item: AM.item, filedata: AM.upload.data, filename: AM.upload.name, apply: apply };
 }
 
 function amCheckUpload() {

@@ -11,11 +11,11 @@ frappe.ui.form.on("Grade Appeal", {
 				filters: { student: frm.doc.student },
 			};
 		});
-		// Only offerings of courses the student has marks for in that exam plan
-		frm.set_query("course_offering", () => {
+		// Only courses the student has marks for in that exam plan
+		frm.set_query("course", () => {
 			if (!frm.doc.student || !frm.doc.exam_plan) return {};
 			return {
-				query: "slcm.slcm.doctype.grade_appeal.grade_appeal.offerings_for_student",
+				query: "slcm.slcm.doctype.grade_appeal.grade_appeal.courses_for_student",
 				filters: { student: frm.doc.student, exam_plan: frm.doc.exam_plan },
 			};
 		});
@@ -41,16 +41,16 @@ frappe.ui.form.on("Grade Appeal", {
 
 	student(frm) {
 		frm.set_value("exam_plan", "");
-		frm.set_value("course_offering", "");
+		frm.set_value("course", "");
 	},
 
 	exam_plan(frm) {
-		frm.set_value("course_offering", "");
+		frm.set_value("course", "");
 		frm.set_value("current_grade", "");
 		frm.set_value("current_marks", 0);
 	},
 
-	course_offering(frm) {
+	course(frm) {
 		// Grade/marks are snapshotted on save; clear stale values when the course changes
 		frm.set_value("current_grade", "");
 		frm.set_value("current_marks", 0);

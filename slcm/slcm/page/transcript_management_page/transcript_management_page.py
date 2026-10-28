@@ -147,7 +147,7 @@ def _build_filters(search="", programme="", course="", academic_year="", batch="
         params["department"] = department
 
     if batch:
-        conditions.append("sm.programme = %(batch)s")
+        conditions.append("sm.batch = %(batch)s")
         params["batch"] = batch
 
     if academic_year:
@@ -223,8 +223,8 @@ def get_students(
             sm.email,
             sm.passport_size_photo                              AS photo,
             sm.programme_of_study                               AS programme,
-            sm.programme                                        AS batch_year,
-            sm.current_term,
+            sm.batch                                        AS batch_year,
+            NULL AS current_term,
             sm.academic_year,
             sm.department,
             sm.current_cgpa                                     AS cgpa,
@@ -422,8 +422,8 @@ def get_filter_options():
         as_dict=True,
     )
     # Batch options come from Batch itself, not the stale/unpopulated
-    # Student Master.batch_year column — students link to their Batch via the
-    # (confusingly named) Student Master.programme field.
+    # Student Master.batch_year column — students link to their Batch via
+    # Student Master.batch.
     batches = frappe.db.sql(
         "SELECT name, batch_name FROM `tabSLCM Batch` ORDER BY batch_name ASC LIMIT 500",
         as_dict=True,
@@ -827,7 +827,7 @@ def get_requests(
         conditions.append("sm.academic_year = %(academic_year)s")
         params["academic_year"] = academic_year
     if batch:
-        conditions.append("sm.programme = %(batch)s")
+        conditions.append("sm.batch = %(batch)s")
         params["batch"] = batch
 
     where = "WHERE 1=1" + ("" if not conditions else " AND " + " AND ".join(conditions))
@@ -843,7 +843,7 @@ def get_requests(
             sm.email,
             sm.passport_size_photo                             AS photo,
             sm.programme_of_study                              AS programme,
-            sm.programme                                       AS batch_year,
+            sm.batch                                       AS batch_year,
             sm.academic_year,
             sm.department,
             tr.transcript_type,

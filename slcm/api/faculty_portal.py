@@ -47,17 +47,12 @@ def get_faculty_notifications():
         faculty_name = get_faculty_name()
         if faculty_name:
             today = frappe.utils.today()
-            co_names = frappe.get_all(
-                "Course Offering",
-                filters={"faculty": faculty_name, "status": ["in", ["Open", "Active"]]},
-                pluck="name",
-                ignore_permissions=True,
-            )
+            co_names = _get_faculty_class_names(faculty_name)
             if co_names:
                 pending = frappe.db.count(
                     "Attendance Session",
                     filters={
-                        "course_offering": ["in", co_names],
+                        "class_name": ["in", co_names],
                         "attendance_marked": 0,
                         "session_date": ["<=", today],
                         "session_status": "Scheduled",
@@ -85,7 +80,7 @@ def get_faculty_notifications():
                 cond_pending = frappe.db.count(
                     "Student Attendance Condonation",
                     filters={
-                        "course_offering": ["in", co_names],
+                        "class_name": ["in", co_names],
                         "final_status": "Pending",
                         "faculty_recommendation": ["in", ["", None, "Pending"]],
                     },
@@ -111,17 +106,12 @@ def get_faculty_notifications():
     try:
         fn = get_faculty_name()
         if fn:
-            _co = frappe.get_all(
-                "Course Offering",
-                filters={"faculty": fn, "status": ["in", ["Open", "Active"]]},
-                pluck="name",
-                ignore_permissions=True,
-            )
+            _co = _get_faculty_class_names(fn)
             if _co:
                 pending_sessions = frappe.db.count(
                     "Attendance Session",
                     filters={
-                        "course_offering": ["in", _co],
+                        "class_name": ["in", _co],
                         "attendance_marked": 0,
                         "session_date": ["<=", frappe.utils.today()],
                         "session_status": "Scheduled",
@@ -139,14 +129,9 @@ def get_faculty_notifications():
 
 
 def _assert_session_owned_by_faculty(session, faculty_name):
-    """Raise PermissionError if the session's course offering does not belong to this faculty."""
-    faculty_co_names = frappe.get_all(
-        "Course Offering",
-        filters={"faculty": faculty_name},
-        pluck="name",
-        ignore_permissions=True,
-    )
-    if session.course_offering and session.course_offering not in faculty_co_names:
+    """Raise PermissionError if the session's class does not belong to this faculty."""
+    class_name = session.get("class_name")
+    if class_name and frappe.db.get_value("Classes", class_name, "faculty") != faculty_name:
         frappe.throw("Not permitted", frappe.PermissionError)
 
 
@@ -420,7 +405,8 @@ def save_attendance(session_name, attendance, participation=None):
                 "attendance_session": session_name,
                 "class_schedule": session.class_schedule,
                 "course_schedule": session.course_schedule,
-                "course_offer": session.course_offering,
+                "class_name": session.get("class_name"),
+                "course": session.get("course"),
                 "attendance_date": session.session_date,
                 "date": session.session_date,
                 "session_type": session.session_type,
@@ -496,16 +482,9 @@ def save_condonation_recommendation(doc_name, recommendation):
 
     doc = frappe.get_doc("Student Attendance Condonation", doc_name, ignore_permissions=True)
 
-    # Verify ownership: the condonation's course offering must belong to this faculty.
-    # Use the same co_names list approach used throughout the portal so that empty/None
-    # faculty fields on Course Offering don't cause a false permission denial.
-    faculty_co_names = frappe.get_all(
-        "Course Offering",
-        filters={"faculty": faculty_name},
-        pluck="name",
-        ignore_permissions=True,
-    )
-    if doc.course_offering and doc.course_offering not in faculty_co_names:
+    # Verify ownership: the condonation's class must belong to this faculty.
+    class_name = doc.get("class_name")
+    if class_name and frappe.db.get_value("Classes", class_name, "faculty") != faculty_name:
         frappe.throw("Not permitted", frappe.PermissionError)
 
     doc.faculty_recommendation = recommendation
@@ -722,17 +701,12 @@ def get_dashboard_stats():
 
     today = frappe.utils.today()
 
-    co_names = frappe.get_all(
-        "Course Offering",
-        filters={"faculty": faculty_name, "status": ["in", ["Open", "Active"]]},
-        pluck="name",
-        ignore_permissions=True,
-    )
+    co_names = _get_faculty_class_names(faculty_name)
 
     today_classes = frappe.db.count(
         "Attendance Session",
         filters={
-            "course_offering": ["in", co_names] if co_names else ["in", ["__none__"]],
+            "class_name": ["in", co_names] if co_names else ["in", ["__none__"]],
             "session_date": today,
         },
     ) if co_names else 0
@@ -740,7 +714,7 @@ def get_dashboard_stats():
     pending_att = frappe.db.count(
         "Attendance Session",
         filters={
-            "course_offering": ["in", co_names] if co_names else ["in", ["__none__"]],
+            "class_name": ["in", co_names] if co_names else ["in", ["__none__"]],
             "attendance_marked": 0,
             "session_date": ["<=", today],
             "session_status": "Scheduled",
@@ -756,21 +730,74 @@ def get_dashboard_stats():
 
 # ── Drill-down helpers ─────────────────────────────────────────────────────
 
-def _get_faculty_co_names(faculty_name):
-    """Return list of active course offering names for the faculty."""
-    active_ays = frappe.get_all("Academic Year", filters={"status": "Active"}, pluck="name")
+def _active_academic_years():
+    return frappe.get_all("Academic Year", filters={"status": "Active"}, pluck="name")
+
+
+def _get_faculty_classes(faculty_name, fields=None, active_only=True):
+    """Classes this faculty teaches. With active_only, limited to Active
+    academic years (when any year is marked Active)."""
+    filters = {"faculty": faculty_name}
+    if active_only:
+        active_ays = _active_academic_years()
+        if active_ays:
+            filters["academic_year"] = ["in", active_ays]
     return frappe.get_all(
-        "Course Offering",
-        filters={"faculty": faculty_name, "status": "Active", "academic_year": ["in", active_ays]},
-        pluck="name",
+        "Classes",
+        filters=filters,
+        fields=fields or ["name"],
+        order_by="academic_year desc, academic_term asc, course_name asc",
         ignore_permissions=True,
     )
+
+
+def _get_faculty_class_names(faculty_name, active_only=True):
+    """Return list of (active) class names taught by the faculty."""
+    return [c.name for c in _get_faculty_classes(faculty_name, active_only=active_only)]
+
+
+def _class_label(c):
+    """'Course Name · Section A' / 'Course Name · Group G1' for a Classes row."""
+    group = c.get("group_name") if c.get("class_type") == "Group" else c.get("section")
+    return " · ".join(filter(None, [c.get("course_name") or c.get("course") or c.get("name"), group]))
+
+
+def _class_label_map(class_names):
+    """{class name: display label} for the given Classes."""
+    if not class_names:
+        return {}
+    return {
+        c.name: _class_label(c)
+        for c in frappe.get_all(
+            "Classes",
+            filters={"name": ["in", list(class_names)]},
+            fields=["name", "course", "course_name", "class_type", "section", "group_name"],
+            ignore_permissions=True,
+        )
+    }
+
+
+def _class_student_count(class_name):
+    """Number of Enrolled students in a class."""
+    return frappe.db.count(
+        "Class Enrolled Student",
+        {"parenttype": "Classes", "parent": class_name, "status": "Enrolled"},
+    )
+
+
+def _faculty_teaches_course(faculty_name, course, academic_term=None):
+    """True if the faculty is the faculty of any Classes for `course`
+    (in `academic_term`, when given)."""
+    filters = {"faculty": faculty_name, "course": course}
+    if academic_term:
+        filters["academic_term"] = academic_term
+    return bool(frappe.db.exists("Classes", filters))
 
 
 @frappe.whitelist()
 def get_student_marks_detail(scm_name):
     """Return component-wise marks breakdown for a Student Course Marks record.
-    Only accessible to the faculty who owns the course offering."""
+    Only accessible to a faculty who teaches a class of the course."""
     if frappe.session.user == "Guest":
         frappe.throw("Not permitted", frappe.PermissionError)
 
@@ -780,18 +807,8 @@ def get_student_marks_detail(scm_name):
 
     scm = frappe.get_doc("Student Course Marks", scm_name, ignore_permissions=True)
 
-    # Verify the course belongs to this faculty via Course Offering
-    owns = frappe.db.sql(
-        """
-        SELECT 1
-        FROM `tabCourse Offering` co
-        WHERE co.course_title = %(course)s
-          AND co.faculty = %(faculty)s
-        LIMIT 1
-        """,
-        {"course": scm.course, "faculty": faculty_name},
-    )
-    if not owns:
+    # Verify the course belongs to this faculty via a Class they teach
+    if not _faculty_teaches_course(faculty_name, scm.course, scm.get("academic_term")):
         frappe.throw("Not permitted", frappe.PermissionError)
 
     # Fetch the evaluation schema components with max marks so the edit form
@@ -867,12 +884,7 @@ def save_student_marks(scm_name, component, assessment_type, marks):
     scm = frappe.get_doc("Student Course Marks", scm_name, ignore_permissions=True)
 
     # Verify ownership
-    owns = frappe.db.sql(
-        """SELECT 1 FROM `tabCourse Offering` co
-           WHERE co.course_title = %(course)s AND co.faculty = %(faculty)s LIMIT 1""",
-        {"course": scm.course, "faculty": faculty_name},
-    )
-    if not owns:
+    if not _faculty_teaches_course(faculty_name, scm.course, scm.get("academic_term")):
         frappe.throw("Not permitted", frappe.PermissionError)
 
     # Check Access Result Settings lock + deadline
@@ -922,35 +934,25 @@ def save_student_marks(scm_name, component, assessment_type, marks):
 
 @frappe.whitelist()
 def drilldown_subjects():
-    """Drill-down: all course offerings assigned to this faculty."""
+    """Drill-down: all classes this faculty teaches (active academic years)."""
+    import urllib.parse
+
     if frappe.session.user == "Guest":
         frappe.throw("Not permitted", frappe.PermissionError)
     faculty_name = get_faculty_name()
     if not faculty_name:
         frappe.throw("No faculty record found", frappe.DoesNotExistError)
 
-    active_ays = frappe.get_all("Academic Year", filters={"status": "Active"}, pluck="name")
-
-    offerings = frappe.get_all(
-        "Course Offering",
-        filters={"faculty": faculty_name, "status": "Active", "academic_year": ["in", active_ays]},
-        fields=["name", "course_name", "term_name", "academic_year",
-                "credit_value", "status"],
-        order_by="academic_year desc, term_name asc, course_name asc",
-        ignore_permissions=True,
+    classes = _get_faculty_classes(
+        faculty_name,
+        fields=["name", "course", "course_name", "class_type", "section", "group_name",
+                "academic_term", "academic_year", "credit"],
     )
 
     rows = []
-    for co in offerings:
+    for cls in classes:
         try:
-            enr = frappe.db.sql(
-                """SELECT COUNT(DISTINCT se.student) AS cnt
-                   FROM `tabStudent Enrollment Course` sec
-                   JOIN `tabStudent Enrollment` se ON se.name = sec.parent
-                   WHERE sec.course_offering = %s AND sec.status = 'Enrolled'""",
-                co.name, as_dict=True,
-            )
-            students = (enr[0].cnt or 0) if enr else 0
+            students = _class_student_count(cls.name)
         except Exception:
             students = 0
 
@@ -958,8 +960,8 @@ def drilldown_subjects():
             att = frappe.db.sql(
                 """SELECT AVG(attendance_percentage) AS avg_pct, COUNT(*) AS sess
                    FROM `tabAttendance Session`
-                   WHERE course_offering = %s AND attendance_marked = 1""",
-                co.name, as_dict=True,
+                   WHERE class_name = %s AND attendance_marked = 1""",
+                cls.name, as_dict=True,
             )
             avg_pct = round(float((att[0].avg_pct or 0) if att else 0), 1)
             sessions = (att[0].sess or 0) if att else 0
@@ -967,27 +969,26 @@ def drilldown_subjects():
             avg_pct = 0.0
             sessions = 0
 
-        import urllib.parse
         rows.append({
-            "course_offering": co.name,
-            "course_name": co.course_name or co.name,
-            "course_link": f"/faculty-portal/my-classes?course_offering={urllib.parse.quote(co.name)}",
-            "term": co.term_name or "—",
-            "academic_year": co.academic_year or "—",
-            "credits": co.credit_value or 0,
+            "class_name": cls.name,
+            "course_name": _class_label(cls),
+            "course_link": f"/faculty-portal/my-classes?class_name={urllib.parse.quote(cls.name)}",
+            "term": cls.academic_term or "—",
+            "academic_year": cls.academic_year or "—",
+            "credits": cls.credit or 0,
             "students": students,
             "sessions": sessions,
             "avg_attendance": avg_pct,
-            "status": co.status or "Active",
+            "status": "Active",
             "action_btn": "Mark Attendance",
-            "action_link": f"/faculty-portal/attendance?course_offering={urllib.parse.quote(co.name)}#attendance-sessions-card",
+            "action_link": f"/faculty-portal/attendance?class_name={urllib.parse.quote(cls.name)}#attendance-sessions-card",
         })
 
     return {
-        "title": "Courses",
+        "title": "Classes",
         "hide_count": True,
         "columns": [
-            {"key": "course_name",    "label": "Course Name",      "type": "link", "link_key": "course_link"},
+            {"key": "course_name",    "label": "Class",            "type": "link", "link_key": "course_link"},
             {"key": "term",           "label": "Term",             "type": "text"},
             {"key": "academic_year",  "label": "Academic Year",    "type": "text"},
             {"key": "credits",        "label": "Credits",          "type": "number"},
@@ -1011,7 +1012,7 @@ def drilldown_students():
     if not faculty_name:
         frappe.throw("No faculty record found", frappe.DoesNotExistError)
 
-    co_names = _get_faculty_co_names(faculty_name)
+    co_names = _get_faculty_class_names(faculty_name)
     if not co_names:
         return {"title": "Students", "columns": [], "rows": [], "count": 0}
 
@@ -1024,20 +1025,21 @@ def drilldown_students():
                 sm.registration_id,
                 sm.gender,
                 sm.passport_size_photo,
-                sm.section as student_section,
+                COALESCE(NULLIF(ces.section, ''), sm.section) as student_section,
                 pm.program_name,
-                sec.course_offering,
-                co.course_name,
-                co.term_name,
-                co.academic_year
-            FROM `tabStudent Enrollment Course` sec
-            JOIN `tabStudent Enrollment` se ON se.name = sec.parent
-            JOIN `tabCourse Offering` co ON co.name = sec.course_offering
+                c.name AS class_name,
+                c.course_name,
+                c.academic_term AS term_name,
+                c.academic_year
+            FROM `tabClass Enrolled Student` ces
+            JOIN `tabClasses` c ON c.name = ces.parent
+            JOIN `tabStudent Enrollment` se ON se.name = ces.student_enrollment
             LEFT JOIN `tabStudent Master` sm ON sm.name = se.student
             LEFT JOIN `tabProgramme` pm ON pm.name = se.program
-            WHERE sec.course_offering IN %s
-              AND sec.status = 'Enrolled'
-            ORDER BY co.course_name, sm.last_name, sm.first_name
+            WHERE ces.parenttype = 'Classes'
+              AND ces.parent IN %s
+              AND ces.status = 'Enrolled'
+            ORDER BY c.course_name, sm.last_name, sm.first_name
             """,
             (tuple(co_names),),
             as_dict=True,
@@ -1054,7 +1056,7 @@ def drilldown_students():
             "student_image": r.get("passport_size_photo") or "",
             "gender": r.get("gender") or "—",
             "program": r.get("program_name") or r.get("program") or "—",
-            "course_name": r.get("course_name") or r.get("course_offering", ""),
+            "course_name": r.get("course_name") or r.get("class_name", ""),
             "term": r.get("term_name") or "—",
             "academic_year": r.get("academic_year") or "—",
             "section": r.get("student_section") or "—",
@@ -1094,7 +1096,7 @@ def drilldown_todays_classes():
     if not faculty_name:
         frappe.throw("No faculty record found", frappe.DoesNotExistError)
 
-    co_names = _get_faculty_co_names(faculty_name)
+    co_names = _get_faculty_class_names(faculty_name)
     today = frappe.utils.today()
 
     if not co_names:
@@ -1103,10 +1105,10 @@ def drilldown_todays_classes():
     raw = frappe.get_all(
         "Attendance Session",
         filters=[
-            ["course_offering", "in", co_names],
+            ["class_name", "in", co_names],
             ["session_date", "=", today],
         ],
-        fields=["name", "course_offering", "session_date",
+        fields=["name", "class_name", "session_date",
                 "session_start_time", "session_end_time",
                 "room", "session_status", "total_students",
                 "present_count", "absent_count", "attendance_percentage", "attendance_marked"],
@@ -1114,8 +1116,7 @@ def drilldown_todays_classes():
         ignore_permissions=True,
     )
 
-    co_map = {co: frappe.db.get_value("Course Offering", co, "course_name") or co
-              for co in co_names}
+    co_map = _class_label_map(co_names)
 
     from slcm.utils.faculty_portal import fmt_time
 
@@ -1123,7 +1124,7 @@ def drilldown_todays_classes():
     for s in raw:
         rows.append({
             "session": s.name,
-            "course_name": co_map.get(s.course_offering, s.course_offering),
+            "course_name": co_map.get(s.class_name, s.class_name),
             "date": frappe.utils.formatdate(s.session_date, "dd MMM yyyy"),
             "start_time": fmt_time(s.session_start_time),
             "end_time": fmt_time(s.session_end_time),
@@ -1163,7 +1164,7 @@ def drilldown_pending_attendance():
     if not faculty_name:
         frappe.throw("No faculty record found", frappe.DoesNotExistError)
 
-    co_names = _get_faculty_co_names(faculty_name)
+    co_names = _get_faculty_class_names(faculty_name)
     today = frappe.utils.today()
 
     if not co_names:
@@ -1172,20 +1173,19 @@ def drilldown_pending_attendance():
     raw = frappe.get_all(
         "Attendance Session",
         filters={
-            "course_offering": ["in", co_names],
+            "class_name": ["in", co_names],
             "attendance_marked": 0,
             "session_date": ["<=", today],
             "session_status": "Scheduled",
         },
-        fields=["name", "course_offering", "session_date",
+        fields=["name", "class_name", "session_date",
                 "session_start_time", "session_end_time",
                 "room", "total_students"],
         order_by="session_date asc",
         ignore_permissions=True,
     )
 
-    co_map = {co: frappe.db.get_value("Course Offering", co, "course_name") or co
-              for co in co_names}
+    co_map = _class_label_map(co_names)
 
     from slcm.utils.faculty_portal import fmt_time
 
@@ -1196,7 +1196,7 @@ def drilldown_pending_attendance():
         days_overdue = (today_obj - date_obj).days
         rows.append({
             "session": s.name,
-            "course_name": co_map.get(s.course_offering, s.course_offering),
+            "course_name": co_map.get(s.class_name, s.class_name),
             "date": frappe.utils.formatdate(s.session_date, "dd MMM yyyy"),
             "start_time": fmt_time(s.session_start_time),
             "venue": s.room or "—",
@@ -1289,7 +1289,7 @@ def drilldown_condonation():
     if not faculty_name:
         frappe.throw("No faculty record found", frappe.DoesNotExistError)
 
-    co_names = _get_faculty_co_names(faculty_name)
+    co_names = _get_faculty_class_names(faculty_name)
     if not co_names:
         return {"title": "Condonation Requests", "columns": [], "rows": [], "count": 0}
 
@@ -1297,11 +1297,11 @@ def drilldown_condonation():
         raw = frappe.get_all(
             "Student Attendance Condonation",
             filters={
-                "course_offering": ["in", co_names],
+                "class_name": ["in", co_names],
                 "final_status": "Pending",
                 "faculty_recommendation": ["in", ["", None, "Pending"]],
             },
-            fields=["name", "student", "course_offering",
+            fields=["name", "student", "class_name",
                     "reason", "faculty_recommendation", "final_status", "creation"],
             order_by="creation desc",
             ignore_permissions=True,
@@ -1309,8 +1309,7 @@ def drilldown_condonation():
     except Exception:
         raw = []
 
-    co_map = {co: frappe.db.get_value("Course Offering", co, "course_name") or co
-              for co in co_names}
+    co_map = _class_label_map(co_names)
 
     rows = []
     for r in raw:
@@ -1323,7 +1322,7 @@ def drilldown_condonation():
             "request_id": r.name,
             "student": r.student,
             "student_name": student_name,
-            "course_name": co_map.get(r.course_offering, r.course_offering),
+            "course_name": co_map.get(r.class_name, r.class_name),
             "reason": (r.reason or "—")[:80],
             "faculty_recommendation": r.faculty_recommendation or "Pending",
             "status": r.final_status or "Pending",
@@ -1355,28 +1354,18 @@ def drilldown_student_groups():
     if not faculty_name:
         frappe.throw("No faculty record found", frappe.DoesNotExistError)
 
-    co_names = _get_faculty_co_names(faculty_name)
-    if not co_names:
-        return {"title": "Course Offerings", "columns": [], "rows": [], "count": 0}
-
-    offerings = frappe.get_all(
-        "Course Offering",
-        filters={"name": ["in", co_names]},
-        fields=["name", "course_name", "term_name", "academic_year"],
-        ignore_permissions=True,
+    classes = _get_faculty_classes(
+        faculty_name,
+        fields=["name", "course", "course_name", "class_type", "section", "group_name",
+                "academic_term", "academic_year"],
     )
+    if not classes:
+        return {"title": "Classes", "columns": [], "rows": [], "count": 0}
 
     rows = []
-    for co in offerings:
+    for cls in classes:
         try:
-            enr = frappe.db.sql(
-                """SELECT COUNT(DISTINCT se.student) AS cnt
-                   FROM `tabStudent Enrollment Course` sec
-                   JOIN `tabStudent Enrollment` se ON se.name = sec.parent
-                   WHERE sec.course_offering = %s AND sec.status = 'Enrolled'""",
-                co.name, as_dict=True,
-            )
-            students = (enr[0].cnt or 0) if enr else 0
+            students = _class_student_count(cls.name)
         except Exception:
             students = 0
 
@@ -1385,18 +1374,18 @@ def drilldown_student_groups():
                 att = frappe.db.sql(
                     """SELECT AVG(attendance_percentage) AS avg_pct
                        FROM `tabAttendance Session`
-                       WHERE course_offering = %s AND attendance_marked = 1""",
-                    co.name, as_dict=True,
+                       WHERE class_name = %s AND attendance_marked = 1""",
+                    cls.name, as_dict=True,
                 )
                 avg_pct = round(float((att[0].avg_pct or 0) if att else 0), 1)
             except Exception:
                 avg_pct = 0.0
 
             rows.append({
-                "course_offering": co.name,
-                "course_name": co.course_name or co.name,
-                "term": co.term_name or "—",
-                "academic_year": co.academic_year or "—",
+                "class_name": cls.name,
+                "course_name": _class_label(cls),
+                "term": cls.academic_term or "—",
+                "academic_year": cls.academic_year or "—",
                 "student_count": students,
                 "avg_attendance": avg_pct,
             })
@@ -1404,9 +1393,9 @@ def drilldown_student_groups():
     rows.sort(key=lambda x: x["student_count"], reverse=True)
 
     return {
-        "title": "Course Offerings",
+        "title": "Classes",
         "columns": [
-            {"key": "course_name",    "label": "Course",           "type": "text"},
+            {"key": "course_name",    "label": "Class",            "type": "text"},
             {"key": "term",           "label": "Term",             "type": "text"},
             {"key": "academic_year",  "label": "Academic Year",    "type": "text"},
             {"key": "student_count",  "label": "Students",         "type": "number"},
@@ -1591,19 +1580,17 @@ def _cal_institutional(start, end):
 
 def _cal_timetable(faculty_name, start, end, today):
     base_filters = [["schedule_date", "between", [start, end]], ["docstatus", "<", 2]]
-    fields = ["name", "title", "course", "course_offering", "section", "based_on",
+    fields = ["name", "title", "course", "class_name", "section", "based_on",
               "schedule_date", "from_time", "to_time", "venue", "linked_google_event"]
 
     rows = {r.name: r for r in frappe.get_all(
         "Time Table", filters=base_filters + [["instructor", "=", faculty_name]],
         fields=fields, limit_page_length=0, ignore_permissions=True,
     )}
-    co_names = frappe.get_all(
-        "Course Offering", filters={"faculty": faculty_name}, pluck="name", ignore_permissions=True
-    )
+    co_names = _get_faculty_class_names(faculty_name, active_only=False)
     if co_names:
         for r in frappe.get_all(
-            "Time Table", filters=base_filters + [["course_offering", "in", co_names]],
+            "Time Table", filters=base_filters + [["class_name", "in", co_names]],
             fields=fields, limit_page_length=0, ignore_permissions=True,
         ):
             rows.setdefault(r.name, r)
@@ -1611,10 +1598,10 @@ def _cal_timetable(faculty_name, start, end, today):
         return [], set()
 
     co_titles = {}
-    offering_names = list({r.course_offering for r in rows.values() if r.course_offering})
-    if offering_names:
+    class_names = list({r.class_name for r in rows.values() if r.class_name})
+    if class_names:
         co_titles = dict(frappe.get_all(
-            "Course Offering", filters={"name": ["in", offering_names]},
+            "Classes", filters={"name": ["in", class_names]},
             fields=["name", "course_name"], as_list=True, ignore_permissions=True,
         ))
 
@@ -1646,7 +1633,7 @@ def _cal_timetable(faculty_name, start, end, today):
         items.append({
             "id": f"tt::{r.name}",
             "layer": "timetable",
-            "title": co_titles.get(r.course_offering) or r.title or r.course or "Class",
+            "title": co_titles.get(r.class_name) or r.title or r.course or "Class",
             "start_date": str(date),
             "end_date": str(date),
             "start_time": _hhmm(r.from_time),
@@ -1713,7 +1700,7 @@ def drilldown_weekly_hours():
     if not faculty_name:
         frappe.throw("No faculty record found", frappe.DoesNotExistError)
 
-    co_names = _get_faculty_co_names(faculty_name)
+    co_names = _get_faculty_class_names(faculty_name)
     today = frappe.utils.today()
     week_start = frappe.utils.get_first_day_of_week(today)
 
@@ -1723,19 +1710,18 @@ def drilldown_weekly_hours():
     raw = frappe.get_all(
         "Attendance Session",
         filters=[
-            ["course_offering", "in", co_names],
+            ["class_name", "in", co_names],
             ["session_date", ">=", week_start],
             ["session_date", "<=", today],
         ],
-        fields=["name", "course_offering", "session_date",
+        fields=["name", "class_name", "session_date",
                 "session_start_time", "session_end_time",
                 "room", "total_students", "present_count", "attendance_percentage"],
         order_by="session_date asc, session_start_time asc",
         ignore_permissions=True,
     )
 
-    co_map = {co: frappe.db.get_value("Course Offering", co, "course_name") or co
-              for co in co_names}
+    co_map = _class_label_map(co_names)
 
     from slcm.utils.faculty_portal import fmt_time
 
@@ -1747,7 +1733,7 @@ def drilldown_weekly_hours():
             if secs > 0:
                 duration_hrs = round(secs / 3600, 2)
         rows.append({
-            "course_name": co_map.get(s.course_offering, s.course_offering),
+            "course_name": co_map.get(s.class_name, s.class_name),
             "date": frappe.utils.formatdate(s.session_date, "dd MMM yyyy"),
             "start_time": fmt_time(s.session_start_time),
             "end_time": fmt_time(s.session_end_time),

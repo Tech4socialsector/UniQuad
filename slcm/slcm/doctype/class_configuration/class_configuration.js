@@ -37,17 +37,22 @@ frappe.ui.form.on('Class Configuration', {
 
     batch: function (frm) {
         set_link_filters(frm);
-        if (frm.doc.batch) {
-            frappe.db.get_value('SLCM Batch', frm.doc.batch, ['program', 'academic_term'], (r) => {
-                if (r) {
-                    frm.set_value('programme', r.program || '');
-                    frm.set_value('term', r.academic_term || '');
-                    if (!r.academic_term) {
-                        frappe.show_alert({
-                            message: __('Selected Batch has no Academic Term set'),
-                            indicator: 'orange'
-                        });
-                    }
+        // A Batch no longer carries a programme or term: default the term to
+        // the current (date-based) Active Academic Term.
+        if (frm.doc.batch && !frm.doc.term) {
+            const today = frappe.datetime.get_today();
+            frappe.db.get_value('Academic Term', {
+                status: 'Active',
+                term_start_date: ['<=', today],
+                term_end_date: ['>=', today]
+            }, 'name', (r) => {
+                if (r && r.name) {
+                    frm.set_value('term', r.name);
+                } else {
+                    frappe.show_alert({
+                        message: __('No current Academic Term found'),
+                        indicator: 'orange'
+                    });
                 }
             });
         }

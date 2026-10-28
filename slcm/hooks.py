@@ -48,6 +48,8 @@ doctype_js = {
     "Data Import": "public/js/bulk_upload_template.js",
     # ERPNext Company form: "SLCM Fees" buttons (only loads where ERPNext provides Company)
     "Company": "erpnext_bridge/company.js",
+    # Time Table → Create / View dialogs
+    "Classes": "public/js/class_time_table.js",
 }
 
 # Bulk-upload templates (Download / Upload buttons) on these lists
@@ -55,6 +57,8 @@ doctype_list_js = {
     "Fee Concession": "public/js/bulk_upload_template.js",
     "Fee Payment": "public/js/bulk_upload_template.js",
     "Fee Demand": "public/js/bulk_upload_template.js",
+    # Action → Enroll step-by-step wizard
+    "Student Master": "public/js/enrollment_wizard.js",
 }
 
 doctype_calendar_js = {
@@ -268,7 +272,7 @@ fixtures = [
         "filters": [["name", "in", [
             # Programme Management / Registration
             "Total Students", "Active Enrollments", "Active Programs", "Active Courses",
-            "Active Cohorts", "Open Course Offerings",
+            "Active Cohorts", "Active Classes",
             "Draft", "Selected", "Pending REGO", "Pending FINO", "Pending Registration",
             "Pending Print & Scan", "Pending Residences", "Pending IT",
             "Final Verification REGO", "Completed", "Re-Open",
@@ -279,9 +283,9 @@ fixtures = [
             "Total Attendance Records", "Present Count", "Absent Count", "OD Count",
             "Total Sessions", "Active Sessions", "Pending Condonations", "Pending FA / MFA",
             # Faculty
-            "Faculty My Course Offerings",
+            "Faculty My Classes",
             "Faculty Active Attendance Sessions", "Faculty Pending Condonation Requests",
-            "Faculty Open Course Offerings", "Faculty Office Hours Groups",
+            "Faculty Active Classes", "Faculty Office Hours Groups",
             # Fees Management
             "Total Fee Demands", "Pending Fee Demands", "Overdue Fee Demands",
             "Fee Receipts This Month",
@@ -300,14 +304,14 @@ fixtures = [
         "filters": [["name", "in", [
             # Programme Management / Registration
             "Student Registration Status", "Student Enrollment by Program",
-            "Cohort Status Distribution", "Course Offerings by Status",
+            "Cohort Status Distribution", "Classes by Term",
             # IT Team (ID Card)
             "ID Card Status Distribution", "ID Cards Generated Over Time",
             # Attendance
             "Attendance Status Distribution", "Attendance Trend Over Time",
             "Session Type Breakdown", "FA MFA Application Status",
             # Faculty
-            "Faculty Attendance Trend", "Faculty Course Offerings by Status",
+            "Faculty Attendance Trend", "Faculty Classes by Term",
             # Fees Management
             "Demand Status Distribution", "Demands by Fee Component",
             "Monthly Fee Collection",
@@ -683,6 +687,8 @@ scheduler_events = {
 		"slcm.slcm.doctype.student_attendance_condonation.student_attendance_condonation.auto_reject_below_attendance_floor",
 		# Background sync for settlements if webhooks fail
 		"slcm.api.sync_settlements.daily_sync_settlements",
+		# Student Academic Log — move Ongoing to the next term once a term has ended
+		"slcm.slcm.doctype.student_enrollment.student_enrollment.advance_term_status",
 	]
 }
 
@@ -809,7 +815,7 @@ permission_query_conditions = {
     # Time Table - faculty sees only their assigned groups' schedules
     "Time Table":                      "slcm.permissions.class_schedule_query_conditions",
 
-    # Attendance - faculty sees only records for their assigned Course Offerings
+    # Attendance - faculty sees only records for the classes they teach
     "Attendance Session":              "slcm.permissions.attendance_session_query_conditions",
     "Student Attendance":              "slcm.permissions.student_attendance_query_conditions",
     "Attendance Log":                  "slcm.permissions.attendance_log_query_conditions",

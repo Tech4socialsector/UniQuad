@@ -12,44 +12,46 @@ from frappe import _
 from frappe.utils import flt
 
 
-def calculate_student_attendance(student, course_offering):
+def calculate_student_attendance(student, class_name):
 	"""
-	Calculate attendance for a single student in a specific course offering.
+	Calculate attendance for a single student in a specific class.
 
 	Args:
 		student: Student ID
-		course_offering: Course Offering ID
+		class_name: Classes ID (the taught group)
 
 	Returns:
 		dict: Attendance summary with all calculated fields
 	"""
-	return _calculate_and_save_summary(student, course_offering)
+	if not class_name:
+		return {}
+	return _calculate_and_save_summary(student, class_name)
 
 
-def _calculate_and_save_summary(student, course_offering):
+def _calculate_and_save_summary(student, class_name):
 	# Get or create attendance summary
-	summary = get_or_create_summary(student, course_offering)
+	summary = get_or_create_summary(student, class_name)
 
 	# Get Settings
 	settings = frappe.get_single("Attendance Settings")
 
 	# Calculate sessions
-	sessions_data = calculate_sessions(course_offering)
+	sessions_data = calculate_sessions(class_name)
 
 	# Calculate attendance
-	attendance_data = calculate_attendance_records(student, course_offering)
+	attendance_data = calculate_attendance_records(student, class_name)
 
 	# Calculate office hours
-	office_hours_data = calculate_office_hours(student, course_offering)
+	office_hours_data = calculate_office_hours(student, class_name)
 
 	# Update Office Hours Group Student (Office Hours)
-	update_office_hours_in_group(student, course_offering, office_hours_data['total_hours'])
+	update_office_hours_in_group(student, class_name, office_hours_data['total_hours'])
 
 	# Get condonation
-	condonation_data = get_approved_condonation(student, course_offering)
+	condonation_data = get_approved_condonation(student, class_name)
 
 	# Get FA/MFA hours
-	fa_mfa_data = calculate_fa_mfa_hours(student, course_offering)
+	fa_mfa_data = calculate_fa_mfa_hours(student, class_name)
 
 	# -- Update summary fields --
 	# 0. Total Scheduled Class Hours (all planned sessions from Time Table)
@@ -115,7 +117,7 @@ def _calculate_and_save_summary(student, course_offering):
 
 	# Check FA/MFA status (Override)
 	if not is_eligible:
-		if check_fa_mfa_eligibility(student, course_offering):
+		if check_fa_mfa_eligibility(student, class_name):
 			is_eligible = 1
 			# Optionally log or mark separate field that it is via FA/MFA
 
@@ -123,10 +125,10 @@ def _calculate_and_save_summary(student, course_offering):
 	# summary.eligibility_status = "Eligible" if is_eligible else "Shortage"
 
 	# Populate Application Lists (Condonation & FA/MFA)
-	populate_application_lists(summary, student, course_offering)
+	populate_application_lists(summary, student, class_name)
 
 	# Populate Section
-	summary.section = get_student_section(student, course_offering)
+	summary.section = get_student_section(student, class_name)
 	summary.last_updated = frappe.utils.now()
 
 	_persist_summary(summary)
@@ -151,7 +153,7 @@ def _persist_summary(summary):
 	the whole document.
 
 	This calculation can be triggered many times in quick succession for the
-	same student+course_offering (queued recalculation jobs racing manual
+	same student+class (queued recalculation jobs racing manual
 	saves), and Frappe's normal load -> modify -> doc.save() flow throws
 	TimestampMismatchError whenever another writer touches the row in
 	between — under heavy contention that can fail every retry attempt.
@@ -191,9 +193,9 @@ def _replace_child_rows(summary, table_fieldname):
 		frappe.get_doc(row_dict).db_insert()
 
 
-def calculate_sessions(course_offering):
+def calculate_sessions(class_name):
 	"""
-	Calculate session statistics for a course offering.
+	Calculate session statistics for a class.
 	Returns total hours from Time Table (all scheduled classes).
 	"""
 	# Get total scheduled hours from Time Table.
@@ -212,9 +214,9 @@ def calculate_sessions(course_offering):
 				END
 			), 0) as total_hours
 		FROM `tabTime Table`
-		WHERE course_offering = %s
+		WHERE class_name = %s
 		AND docstatus < 2
-	""", course_offering, as_dict=True)
+	""", class_name, as_dict=True)
 	
 	# Get conducted sessions count from Attendance Session
 	# We still track conducted sessions for reference
@@ -223,10 +225,10 @@ def calculate_sessions(course_offering):
 			COUNT(name) as conducted_sessions,
 			COALESCE(SUM(duration_hours), 0) as conducted_hours
 		FROM `tabAttendance Session`
-		WHERE course_offering = %s
+		WHERE class_name = %s
 		AND session_type IN ('Lecture', 'Tutorial')
 		AND session_status = 'Conducted'
-	""", course_offering, as_dict=True)
+	""", class_name, as_dict=True)
 	
 	result = {
 		'total_hours': 0,
@@ -252,12 +254,12 @@ def calculate_sessions(course_offering):
 
 
 
-def calculate_fa_mfa_hours(student, course_offering):
+def calculate_fa_mfa_hours(student, class_name):
 	"""
-	Calculate approved FA/MFA hours for a student in a course offering.
+	Calculate approved FA/MFA hours for a student in a class (FA/MFA is per course).
 	"""
-	# Get Course ID from Offering
-	course_id = frappe.db.get_value("Course Offering", course_offering, "course_title")
+	# Get Course ID from the Class
+	course_id = frappe.db.get_value("Classes", class_name, "course")
 	
 	if not course_id:
 		return {'total_hours': 0}
@@ -278,35 +280,35 @@ def calculate_fa_mfa_hours(student, course_offering):
 	return {'total_hours': 0}
 
 
-def _get_offering_context(course_offering):
-	"""Fetch course_title and academic_year for a Course Offering."""
+def _get_class_context(class_name):
+	"""Fetch course and academic_year for a Class."""
 	course = None
 	academic_year = None
-	if course_offering:
-		offering = frappe.db.get_value(
-			"Course Offering", course_offering,
-			["course_title", "academic_year"], as_dict=True
+	if class_name:
+		cls = frappe.db.get_value(
+			"Classes", class_name,
+			["course", "academic_year"], as_dict=True
 		)
-		if offering:
-			course = offering.course_title
-			academic_year = offering.academic_year
+		if cls:
+			course = cls.course
+			academic_year = cls.academic_year
 	return course, academic_year
 
 
-def calculate_attendance_records(student, course_offering):
+def calculate_attendance_records(student, class_name):
 	"""
 	Calculate attendance for Regular Class (Lecture/Tutorial).
 	Returns total hours attended across ALL sources (RFID + Manual + Auto).
 
 	Two-tier match:
-	  1. course_offer = offering name  (RFID / Auto / well-formed Manual)
-	  2. course_offer is NULL but course (course_title) matches  (older manual records)
+	  1. class_name = class  (RFID / Auto / well-formed Manual)
+	  2. class_name is NULL but course matches  (older manual records)
 
 	NOTE: a third tier matching solely on academic_year was removed because it caused
-	every null-course_offer record to be counted against ALL offerings in the same year,
+	every null-class record to be counted against ALL classes in the same year,
 	resulting in inflated attendance figures (ghost double-counting).
 	"""
-	course, _academic_year = _get_offering_context(course_offering)
+	course, _academic_year = _get_class_context(class_name)
 
 	attendance = frappe.db.sql("""
 		SELECT
@@ -317,27 +319,27 @@ def calculate_attendance_records(student, course_offering):
 		FROM `tabStudent Attendance`
 		WHERE student = %s
 		AND (
-			course_offer = %s
+			class_name = %s
 			OR (
-				(course_offer IS NULL OR course_offer = '')
+				(class_name IS NULL OR class_name = '')
 				AND course = %s
 			)
 		)
 		AND session_type IN ('Lecture', 'Tutorial')
 		AND docstatus < 2
-	""", (student, course_offering, course), as_dict=True)
+	""", (student, class_name, course), as_dict=True)
 
 	if attendance:
 		return attendance[0]
 	return {'attended_hours': 0}
 
 
-def calculate_office_hours(student, course_offering):
+def calculate_office_hours(student, class_name):
 	"""
 	Calculate office hours attendance for a student.
 	Same two-tier match as calculate_attendance_records.
 	"""
-	course, _academic_year = _get_offering_context(course_offering)
+	course, _academic_year = _get_class_context(class_name)
 
 	office_hours = frappe.db.sql("""
 		SELECT
@@ -345,23 +347,23 @@ def calculate_office_hours(student, course_offering):
 		FROM `tabStudent Attendance`
 		WHERE student = %s
 		AND (
-			course_offer = %s
+			class_name = %s
 			OR (
-				(course_offer IS NULL OR course_offer = '')
+				(class_name IS NULL OR class_name = '')
 				AND course = %s
 			)
 		)
 		AND session_type = 'Office Hour'
 		AND status IN ('Present', 'Late', 'Excused')
 		AND docstatus < 2
-	""", (student, course_offering, course), as_dict=True)
+	""", (student, class_name, course), as_dict=True)
 
 	if office_hours:
 		return office_hours[0]
 	return {'total_hours': 0}
 
 
-def get_approved_condonation(student, course_offering):
+def get_approved_condonation(student, class_name):
 	"""Get approved condonation sessions for a student"""
 	try:
 		condonation = frappe.db.sql("""
@@ -370,10 +372,10 @@ def get_approved_condonation(student, course_offering):
 				COALESCE(SUM(number_of_hours), 0) as hours
 			FROM `tabStudent Attendance Condonation`
 			WHERE student = %s
-			AND course_offering = %s
+			AND class_name = %s
 			AND final_status = 'Approved'
 			AND docstatus = 1
-		""", (student, course_offering), as_dict=True)
+		""", (student, class_name), as_dict=True)
 		
 		if condonation and condonation[0]['sessions']:
 			return condonation[0]
@@ -384,11 +386,11 @@ def get_approved_condonation(student, course_offering):
 	return {'sessions': 0, 'hours': 0}
 
 
-def get_or_create_summary(student, course_offering):
+def get_or_create_summary(student, class_name):
 	"""Get existing summary or create new one"""
 	summary_name = frappe.db.exists("Attendance Summary", {
 		"student": student,
-		"course_offering": course_offering
+		"class_name": class_name
 	})
 	
 	if summary_name:
@@ -397,7 +399,7 @@ def get_or_create_summary(student, course_offering):
 	# Create new summary
 	summary = frappe.new_doc("Attendance Summary")
 	summary.student = student
-	summary.course_offering = course_offering
+	summary.class_name = class_name
 	
 	try:
 		summary.insert(ignore_permissions=True)
@@ -406,37 +408,37 @@ def get_or_create_summary(student, course_offering):
 		# Re-fetch using the deterministic name logic or filters
 		# Re-calculate name logic to find it
 		import hashlib
-		offering_hash = hashlib.md5(course_offering.encode("utf-8")).hexdigest()[:10]
-		name = f"ASU-{student}-{offering_hash}"
+		class_hash = hashlib.md5(class_name.encode("utf-8")).hexdigest()[:10]
+		name = f"ASU-{student}-{class_hash}"
 		summary = frappe.get_doc("Attendance Summary", name)
 		
 	return summary
 
 
 @frappe.whitelist()
-def calculate_course_attendance(course_offering):
-	"""Calculate attendance for all students in a course offering.
-	Uses the same three-tier match as calculate_attendance_records so that
-	Manual records with NULL course_offer are included.
+def calculate_course_attendance(class_name):
+	"""Calculate attendance for all students in a class.
+	Uses the same two-tier match as calculate_attendance_records so that
+	Manual records with NULL class_name are included.
 	"""
-	course, academic_year = _get_offering_context(course_offering)
+	course, academic_year = _get_class_context(class_name)
 
 	students = frappe.db.sql("""
 		SELECT DISTINCT student
 		FROM `tabStudent Attendance`
 		WHERE (
-			course_offer = %s
+			class_name = %s
 			OR (
-				(course_offer IS NULL OR course_offer = '')
+				(class_name IS NULL OR class_name = '')
 				AND course = %s
 			)
 		)
 		AND docstatus < 2
-	""", (course_offering, course), as_dict=True)
+	""", (class_name, course), as_dict=True)
 
 	results = []
 	for student_row in students:
-		result = calculate_student_attendance(student_row.student, course_offering)
+		result = calculate_student_attendance(student_row.student, class_name)
 		results.append(result)
 
 	return results
@@ -444,17 +446,18 @@ def calculate_course_attendance(course_offering):
 
 @frappe.whitelist()
 def calculate_term_attendance(student, academic_term):
-	"""Calculate attendance for all courses in a term for a student"""
-	course_offerings = frappe.db.sql("""
-		SELECT DISTINCT course_offer
+	"""Calculate attendance for all classes in a term for a student"""
+	classes = frappe.db.sql("""
+		SELECT DISTINCT class_name
 		FROM `tabStudent Attendance`
 		WHERE student = %s
 		AND academic_term = %s
+		AND IFNULL(class_name, '') != ''
 	""", (student, academic_term), as_dict=True)
-	
+
 	results = []
-	for course_row in course_offerings:
-		result = calculate_student_attendance(student, course_row.course_offer)
+	for class_row in classes:
+		result = calculate_student_attendance(student, class_row.class_name)
 		results.append(result)
 	
 	return results
@@ -463,12 +466,12 @@ def calculate_term_attendance(student, academic_term):
 @frappe.whitelist()
 def recalculate_all_summaries():
 	"""Recalculate all attendance summaries (scheduled job)"""
-	summaries = frappe.get_all("Attendance Summary", fields=["student", "course_offering"])
+	summaries = frappe.get_all("Attendance Summary", fields=["student", "class_name"])
 	
 	count = 0
 	for summary in summaries:
 		try:
-			calculate_student_attendance(summary.student, summary.course_offering)
+			calculate_student_attendance(summary.student, summary.class_name)
 			count += 1
 		except Exception as e:
 			frappe.log_error(message=f"Error calculating attendance for {summary.student}: {str(e)}", title="Attendance Calculation Error")
@@ -477,7 +480,7 @@ def recalculate_all_summaries():
 
 
 @frappe.whitelist()
-def get_shortage_students(course_offering, threshold=None):
+def get_shortage_students(class_name, threshold=None):
 	"""Get students below attendance threshold"""
 	if not threshold:
 		settings = frappe.get_single("Attendance Settings")
@@ -490,16 +493,16 @@ def get_shortage_students(course_offering, threshold=None):
 			attendance_percentage,
 			eligible_for_exam
 		FROM `tabAttendance Summary`
-		WHERE course_offering = %s
+		WHERE class_name = %s
 		AND attendance_percentage < %s
 		ORDER BY attendance_percentage ASC
-	""", (course_offering, threshold), as_dict=True)
+	""", (class_name, threshold), as_dict=True)
 	
 	return shortage_students
 
 
 @frappe.whitelist()
-def get_eligibility_list(course_offering):
+def get_eligibility_list(class_name):
 	"""Get list of eligible students for exams"""
 	eligible_students = frappe.db.sql("""
 		SELECT 
@@ -508,19 +511,19 @@ def get_eligibility_list(course_offering):
 			attendance_percentage,
 			eligible_for_exam
 		FROM `tabAttendance Summary`
-		WHERE course_offering = %s
+		WHERE class_name = %s
 		AND eligible_for_exam = 1
 		ORDER BY student_name ASC
-	""", course_offering, as_dict=True)
+	""", class_name, as_dict=True)
 	
 	return eligible_students
 
 
 @frappe.whitelist()
-def check_fa_mfa_eligibility(student, course_offering):
-	"""Check if student has an approved FA/MFA application for this course"""
-	# Get Course ID from Offering
-	course_id = frappe.db.get_value("Course Offering", course_offering, "course_title")
+def check_fa_mfa_eligibility(student, class_name):
+	"""Check if student has an approved FA/MFA application for this class's course"""
+	# Get Course ID from the Class
+	course_id = frappe.db.get_value("Classes", class_name, "course")
 	
 	if not course_id:
 		return False
@@ -535,7 +538,7 @@ def check_fa_mfa_eligibility(student, course_offering):
 	return True if exists else False
 
 
-def populate_application_lists(summary, student, course_offering):
+def populate_application_lists(summary, student, class_name):
 	"""
 	Populate Condonation and FA/MFA application tables in Attendance Summary.
 	"""
@@ -546,7 +549,7 @@ def populate_application_lists(summary, student, course_offering):
 		condonation_apps = frappe.get_all("Student Attendance Condonation",
 			filters={
 				"student": student,
-				"course_offering": course_offering,
+				"class_name": class_name,
 				"docstatus": ["<", 2]  # Exclude Cancelled
 			},
 			fields=["name", "condonation_reason", "number_of_sessions", "number_of_hours", "final_status", "proof_document"],
@@ -570,7 +573,7 @@ def populate_application_lists(summary, student, course_offering):
 	
 	try:
 		# Need Course ID for FA/MFA
-		course_id = frappe.db.get_value("Course Offering", course_offering, "course_title")
+		course_id = frappe.db.get_value("Classes", class_name, "course")
 		if course_id:
 			fa_mfa_apps = frappe.get_all("FA MFA Application",
 				filters={
@@ -594,37 +597,33 @@ def populate_application_lists(summary, student, course_offering):
 		frappe.log_error(message=f"Error fetching FA/MFA list: {str(e)}", title="FA/MFA List Fetch Error")
 
 
-def get_student_section(student, course_offering):
-	"""Resolve the student's Section for this Course Offering via Student Enrollment."""
+def get_student_section(student, class_name):
+	"""Resolve the student's Section for this Class from its enrolled-student roster
+	(falls back to the Student Enrollment's section)."""
 	section = frappe.db.sql("""
-		SELECT se.section
-		FROM `tabStudent Enrollment` se
-		JOIN `tabStudent Enrollment Course` sec ON sec.parent = se.name
-		WHERE se.student = %s AND sec.course_offering = %s
-		AND sec.status = 'Enrolled' AND se.status = 'Enrolled'
+		SELECT COALESCE(NULLIF(ces.section, ''), se.section)
+		FROM `tabClass Enrolled Student` ces
+		JOIN `tabStudent Enrollment` se ON se.name = ces.student_enrollment
+		WHERE ces.parenttype = 'Classes' AND ces.parent = %s
+		AND se.student = %s
+		ORDER BY (ces.status = 'Enrolled') DESC
 		LIMIT 1
-	""", (student, course_offering))
+	""", (class_name, student))
 
 	return section[0][0] if section else None
 
 
-def update_office_hours_in_group(student, course_offering, total_hours):
+def update_office_hours_in_group(student, class_name, total_hours):
 	"""
 	Update total_office_hours in Office Hours Group Student doc for Office Hours Groups
 	"""
 	try:
-		# Get Course Context
-		offering = frappe.db.get_value("Course Offering", course_offering, ["course_title", "academic_year", "term_name"], as_dict=True)
-		if not offering:
+		if not class_name:
 			return
 
-		# Find all Office Hours Groups for this course context
-		office_groups = frappe.get_all("Office Hours Group", 
-			filters={
-				"course": offering.course_title,
-				"academic_year": offering.academic_year,
-				"academic_term": offering.term_name,
-			},
+		# Find all Office Hours Groups for this class
+		office_groups = frappe.get_all("Office Hours Group",
+			filters={"class_name": class_name},
 			pluck="name"
 		)
 		

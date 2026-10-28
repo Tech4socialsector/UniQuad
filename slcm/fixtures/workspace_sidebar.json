@@ -183,7 +183,7 @@
     "url": null
    }
   ],
-  "modified": "2026-03-28 09:39:50.411990",
+  "modified": "2026-10-29 10:30:00.000000",
   "module": "SLCM",
   "module_onboarding": null,
   "name": "Admission Fee",
@@ -678,7 +678,7 @@
     "url": null
    }
   ],
-  "modified": "2026-09-08 14:56:32.929265",
+  "modified": "2026-10-29 10:30:00.000000",
   "module": "SLCM",
   "module_onboarding": null,
   "name": "Fees Management",
@@ -722,22 +722,6 @@
     "route_options": null,
     "show_arrow": 0,
     "type": "Section Break",
-    "url": null
-   },
-   {
-    "child": 1,
-    "collapsible": 0,
-    "filters": null,
-    "icon": "book-open",
-    "indent": 1,
-    "keep_closed": 0,
-    "label": "Course Offering",
-    "link_to": "Course Offering",
-    "link_type": "DocType",
-    "navigate_to_tab": null,
-    "route_options": null,
-    "show_arrow": 0,
-    "type": "Link",
     "url": null
    },
    {
@@ -1173,7 +1157,7 @@
     "url": null
    }
   ],
-  "modified": "2026-07-08 23:52:31.463223",
+  "modified": "2026-10-29 10:30:00.000000",
   "module": "SLCM",
   "module_onboarding": null,
   "name": "Faculty Management",

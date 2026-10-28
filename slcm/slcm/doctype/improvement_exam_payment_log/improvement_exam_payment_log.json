@@ -10,8 +10,8 @@
   "student",
   "cb_top",
   "exam_plan",
-  "course_offering",
   "course",
+  "academic_term",
   "section_payment",
   "razorpay_payment_id",
   "razorpay_order_id",
@@ -70,17 +70,19 @@
    "read_only": 1
   },
   {
-   "fieldname": "course_offering",
-   "fieldtype": "Link",
-   "label": "Course Offering",
-   "options": "Course Offering"
-  },
-  {
-   "fetch_from": "course_offering.course_title",
+   "fetch_from": "improvement_exam_registration.course",
    "fieldname": "course",
    "fieldtype": "Link",
    "label": "Course",
    "options": "Course",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "improvement_exam_registration.academic_term",
+   "fieldname": "academic_term",
+   "fieldtype": "Link",
+   "label": "Academic Term",
+   "options": "Academic Term",
    "read_only": 1
   },
   {
@@ -230,7 +232,7 @@
   }
  ],
  "links": [],
- "modified": "2026-05-15 00:00:00.000000",
+ "modified": "2026-10-29 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Improvement Exam Payment Log",

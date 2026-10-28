@@ -891,11 +891,10 @@ class SLCMAnalyticsDashboard {
 	_refresh_cohort_filter() {
 		if (!this._filter_options) return;
 		const ay   = this.filters.academic_year;
-		const prog = this.filters.program;
 
+		// Batches are standalone (no programme link) — filter by academic year only
 		let cohorts = this._filter_options.cohorts;
 		if (ay)   cohorts = cohorts.filter(c => c.academic_year === ay);
-		if (prog) cohorts = cohorts.filter(c => c.program === prog);
 
 		const $sel = this.$cohort;
 		$sel.html('<option value="">All Cohorts</option>');
@@ -1809,7 +1808,7 @@ class SLCMAnalyticsDashboard {
 						${this._kpi('Active Programs',      d.active_programs,      '🏫', 'primary',  `${d.total_programs} total`,               { module:'programme', dimension:'program_status', value:'Active' })}
 						${this._kpi('Active Cohorts',       d.active_cohorts,       '🗂️', 'info',     `${d.total_cohorts} total cohorts`,         { module:'programme', dimension:'cohort_status',  value:'Active' })}
 						${this._kpi('Total Enrollments',    d.total_enrollments,    '🎓', 'success',  `${d.active_enrollments} actively enrolled`, { module:'programme', dimension:'enrollment_status', value:'Enrolled' })}
-						${this._kpi('Open Course Offerings',d.open_offerings,       '📖', 'warning',  `${d.total_offerings} total offerings`,     { module:'programme', dimension:'offering_status', value:'Open' })}
+						${this._kpi('Active Classes',       d.open_offerings,       '📖', 'warning',  `${d.total_offerings} total classes`,       { module:'programme', dimension:'offering_status', value:'Active' })}
 						${this._kpi('Enrollment Rate',      d.enrollment_rate + '%','📊', enroll_rate_color, 'enrolled vs dropped',              { module:'programme', dimension:'enrollment_status', value:'Enrolled' })}
 					</div>
 
@@ -1818,7 +1817,6 @@ class SLCMAnalyticsDashboard {
 						${this._chart_card('sad-pm-prog-status',  'Program Status',          'Active vs Inactive',           '', '')}
 						${this._chart_card('sad-pm-cohort-status','Cohort Status',           'Planned / Active / Completed / Inactive', '', '')}
 						${this._chart_card('sad-pm-level',        'Level of Study',          'UG / PG / Research breakdown', '', '')}
-						${this._chart_card('sad-pm-dept',         'Programs by Department',  'Department-wise count',        '', '')}
 					</div>
 
 					<div class="sad-section-title">Enrollment Analysis</div>
@@ -1832,18 +1830,17 @@ class SLCMAnalyticsDashboard {
 						${this._chart_card('sad-pm-cohort-enroll', 'Top Cohorts by Enrollment','Active cohort headcount',   'Click bar to drill down', '')}
 					</div>
 
-					<div class="sad-section-title">Course Offering Analysis</div>
+					<div class="sad-section-title">Class Analysis</div>
 					<div class="sad-chart-grid">
-						${this._chart_card('sad-pm-offering-status', 'Course Offering Status', 'Open vs Closed',             '', '')}
-						${this._chart_card('sad-pm-offering-prog',   'Offerings by Program',   'Course offering distribution','Click bar to drill down', '')}
-						${this._chart_card('sad-pm-course-status',   'Enrolled Course Status', 'Enrolled vs Dropped courses', '', '')}
+						${this._chart_card('sad-pm-offering-status', 'Class Status',           'Active vs Closed (by academic year)', '', '')}
+						${this._chart_card('sad-pm-offering-prog',   'Classes by Program',     'Class distribution',          'Click bar to drill down', '')}
+						${this._chart_card('sad-pm-course-status',   'Enrolled Course Status', 'Ongoing / Completed / Dropped courses', '', '')}
 					</div>
 				`);
 
 				this._render_donut('#sad-pm-prog-status .sad-chart-body',   d.program_status,      'programme', 'program_status');
 				this._render_donut('#sad-pm-cohort-status .sad-chart-body', d.cohort_status,       'programme', 'cohort_status');
 				this._render_donut('#sad-pm-level .sad-chart-body',         d.level_of_study,      'programme', 'level_of_study');
-				this._render_donut('#sad-pm-dept .sad-chart-body',          d.dept_distribution,   'programme', 'department');
 				this._render_bar_horizontal('#sad-pm-prog-enroll .sad-chart-body',   d.program_enrollment,  { module: 'programme', dimension: 'program_enrollment' });
 				this._render_donut('#sad-pm-enroll-status .sad-chart-body', d.enrollment_status,   'programme', 'enrollment_status');
 				this._render_bar_horizontal('#sad-pm-cohort-enroll .sad-chart-body', d.cohort_enrollment,   { module: 'programme', dimension: 'cohort_enrollment' });
@@ -2210,20 +2207,19 @@ class SLCMAnalyticsDashboard {
 			// ── Programme ────────────────────────────────────────────────
 			'programme:program_status':       { dt: 'Programme',                       filters: f('program_status') },
 			'programme:level_of_study':       { dt: 'Programme',                       filters: f('level_of_study') },
-			'programme:department':           { dt: 'Programme',                       filters: f('department') },
-			'programme:cohort_status':        { dt: 'SLCM Batch',                        filters: f('status') },
+			'programme:cohort_status':        { dt: 'Batch',                        filters: f('status') },
 			'programme:enrollment_status':    { dt: 'Student Enrollment',            filters: f('enrollment_status') },
 			'programme:course_enroll_status': { dt: 'Student Enrollment',            filters: f('enrollment_status') },
 			'programme:program_enrollment':   { dt: 'Student Enrollment',            filters: {} },
 			'programme:cohort_enrollment':    { dt: 'Student Enrollment',            filters: {} },
-			'programme:offering_status':      { dt: 'Course Offering',               filters: f('status') },
-			'programme:offering_program':     { dt: 'Course Offering',               filters: f('program') },
+			'programme:offering_status':      { dt: 'Classes',                       filters: {} },
+			'programme:offering_program':     { dt: 'Classes',                       filters: f('programme') },
 
 			// ── ID Card ────────────────────────────────────────────────
 			'idcard:card_status':             { dt: 'ID Card Generation',            filters: f('card_status') },
 			'idcard:card_type':               { dt: 'ID Card Generation',            filters: f('card_type') },
 			'idcard:dept':                    { dt: 'ID Card Generation',            filters: f('department') },
-			'idcard:program':                 { dt: 'ID Card Generation',            filters: f('program') },
+			'idcard:program':                 { dt: 'ID Card Generation',            filters: {} },
 
 			// ── Venue ────────────────────────────────────────────────
 			'venue:booking_status':           { dt: 'Venue Booking',                 filters: f('status') },

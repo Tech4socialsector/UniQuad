@@ -14,7 +14,7 @@
   "academic_term",
   "section",
   "column_break_1",
-  "course_offering",
+  "class_name",
   "course",
   "instructor",
   "date",
@@ -35,7 +35,6 @@
    "unique": 1
   },
   {
-   "fetch_from": "batch.program",
    "fieldname": "program",
    "fieldtype": "Data",
    "in_list_view": 1,
@@ -55,15 +54,15 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "course_offering",
+   "fieldname": "class_name",
    "fieldtype": "Link",
    "in_list_view": 1,
-   "label": "Course Offering",
-   "options": "Course Offering",
+   "label": "Class",
+   "options": "Classes",
    "reqd": 1
   },
   {
-   "fetch_from": "course_offering.course_title",
+   "fetch_from": "class_name.course",
    "fieldname": "course",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -72,7 +71,6 @@
    "read_only": 1
   },
   {
-   "fetch_from": "batch.academic_term",
    "fieldname": "academic_term",
    "fieldtype": "Data",
    "label": "Academic Term",
@@ -85,7 +83,6 @@
    "options": "SLCM Batch"
   },
   {
-   "fetch_from": "batch.section",
    "fieldname": "section",
    "fieldtype": "Data",
    "label": "Section",
@@ -138,7 +135,7 @@
   }
  ],
  "links": [],
- "modified": "2026-10-19 16:30:00.000000",
+ "modified": "2026-10-29 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Office Hours Group",

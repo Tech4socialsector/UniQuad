@@ -5,6 +5,7 @@ import frappe
 from frappe import _
 from frappe.utils import add_days, flt, cint, today, nowdate, getdate
 from slcm.api.student_payment import _require_parent_for_student
+from slcm.slcm.utils.exam_schedule import get_student_programme
 
 
 def _get_student():
@@ -131,7 +132,7 @@ def submit_fa_mfa_application(
 
 @frappe.whitelist()
 def submit_condonation_application(
-    course_offering,
+    class_name,
     number_of_sessions,
     number_of_hours,
     condonation_reason,
@@ -155,7 +156,7 @@ def submit_condonation_application(
 
     # Validate required fields
     for label, val in [
-        ("Course", course_offering),
+        ("Class", class_name),
         ("Number of Sessions", number_of_sessions),
         ("Number of Hours", number_of_hours),
         ("Reason", condonation_reason),
@@ -173,7 +174,7 @@ def submit_condonation_application(
         "Student Attendance Condonation",
         {
             "student": student,
-            "course_offering": course_offering,
+            "class_name": class_name,
             "final_status": "Pending",
             "docstatus": ["<", 2],
         },
@@ -191,7 +192,7 @@ def submit_condonation_application(
 
     doc = frappe.new_doc("Student Attendance Condonation")
     doc.student = student
-    doc.course_offering = course_offering
+    doc.class_name = class_name
     doc.number_of_sessions = cint(number_of_sessions)
     doc.number_of_hours = flt(number_of_hours)
     doc.condonation_reason = condonation_reason
@@ -375,7 +376,7 @@ def register_office_hours_attendance(session_name):
             "student": student,
             "attendance_date": session.session_date,
             "based_on": "Office Hours",
-            "course_offer": session.course_offering,
+            "class_name": session.get("class_name"),
         },
     )
     if existing:
@@ -393,7 +394,8 @@ def register_office_hours_attendance(session_name):
     doc.based_on = "Office Hours"
     doc.office_hours_group = office_hours_group
     doc.student = student
-    doc.course_offer = session.course_offering
+    doc.class_name = session.get("class_name")
+    doc.course = session.get("course")
     doc.attendance_date = session.session_date
     doc.date = session.session_date
     doc.status = "Present"
@@ -1033,18 +1035,14 @@ def _resolve_invoice_print_format(student_name):
         fs_name = frappe.db.get_value("Student Master", student_name, "fee_structure")
         if not fs_name:
             # Fallback: find active Student fee structure via programme
-            programme = frappe.db.get_value("Student Master", student_name, "programme")
-            if programme:
-                program = frappe.db.get_value("SLCM Batch", programme, "program")
-                if not program and frappe.db.exists("Programme", programme):
-                    program = programme
-                if program:
-                    fs_name = frappe.db.get_value(
-                        "Fee Structure",
-                        {"program": program, "status": "Active", "applicable": "Student"},
-                        "name",
-                        order_by="valid_from desc, creation desc",
-                    )
+            program = get_student_programme(student_name)
+            if program:
+                fs_name = frappe.db.get_value(
+                    "Fee Structure",
+                    {"program": program, "status": "Active", "applicable": "Student"},
+                    "name",
+                    order_by="valid_from desc, creation desc",
+                )
         if fs_name:
             pf = frappe.db.get_value("Fee Structure", fs_name, "receipt_print_format")
             if pf and frappe.db.exists("Print Format", pf):
@@ -1184,10 +1182,10 @@ def get_portal_notifications():
 			return ""
 		return frappe.db.get_value("Course", course, "course_name") or course
 
-	def _offering_name(offering):
-		if not offering:
+	def _class_title(class_name):
+		if not class_name:
 			return ""
-		return frappe.db.get_value("Course Offering", offering, "course_name") or offering
+		return frappe.db.get_value("Classes", class_name, "course_name") or class_name
 
 	try:
 		student = frappe.get_doc("Student Master", student_name, ignore_permissions=True)
@@ -1219,7 +1217,7 @@ def get_portal_notifications():
 						fields=["programme"],
 						ignore_permissions=True,
 					)
-					if not any(t.programme == student.programme for t in targets):
+					if not any(t.programme == student.batch for t in targets):
 						continue
 				elif r.target_audience == "Specific Batch Year(s)":
 					targets = frappe.get_all(
@@ -1228,7 +1226,7 @@ def get_portal_notifications():
 						fields=["batch_year"],
 						ignore_permissions=True,
 					)
-					s_batch = str(student.batch_year or "")
+					s_batch = str(student.batch or "")
 					s_acyr  = str(student.academic_year or "")
 					if not any(
 						str(t.batch_year) == s_batch or (s_acyr and str(t.batch_year) == s_acyr)
@@ -1270,7 +1268,7 @@ def get_portal_notifications():
 			att_summaries = frappe.get_all(
 				"Attendance Summary",
 				filters={"student": student_name},
-				fields=["course_offering", "course"],
+				fields=["course"],
 				ignore_permissions=True,
 			)
 			enrolled_courses = list({s.course for s in att_summaries if s.course})
@@ -1372,7 +1370,7 @@ def get_portal_notifications():
 			cond_apps = frappe.get_all(
 				"Student Attendance Condonation",
 				filters={"student": student_name, "final_status": ["in", ["Approved", "Rejected"]]},
-				fields=["name", "final_status", "course_offering", "modified"],
+				fields=["name", "final_status", "class_name", "modified"],
 				order_by="modified desc",
 				limit=5,
 				ignore_permissions=True,
@@ -1385,7 +1383,7 @@ def get_portal_notifications():
 					"category": "Condonation",
 					"priority": "Important",
 					"title": f"Condonation {app.final_status}",
-					"subtitle": _offering_name(app.course_offering),
+					"subtitle": _class_title(app.class_name),
 					"icon": "check_circle" if app.final_status == "Approved" else "cancel",
 					"link": "/student-portal/attendance",
 					"sort_key": 1,
@@ -1456,13 +1454,7 @@ def get_portal_notifications():
 
 		# ── 7. Upcoming Office Hours ───────────────────────────────
 		try:
-			att_sums = frappe.get_all(
-				"Attendance Summary",
-				filters={"student": student_name},
-				fields=["course_offering"],
-				ignore_permissions=True,
-			)
-			enrolled_co = list({s.course_offering for s in att_sums if s.course_offering})
+			enrolled_co = list(_student_class_names(student_name))
 
 			if enrolled_co:
 				oh_sessions = frappe.get_all(
@@ -1470,9 +1462,9 @@ def get_portal_notifications():
 					filters=[
 						["session_date", ">=", today_str],
 						["session_status", "=", "Scheduled"],
-						["course_offering", "in", enrolled_co],
+						["class_name", "in", enrolled_co],
 					],
-					fields=["name", "session_date", "start_time", "course_offering"],
+					fields=["name", "session_date", "start_time", "class_name"],
 					order_by="session_date asc",
 					limit=3,
 					ignore_permissions=True,
@@ -1490,7 +1482,7 @@ def get_portal_notifications():
 						"category": "OH",
 						"priority": "Normal",
 						"title": "OH Available",
-						"subtitle": _join(_offering_name(sess.course_offering), date_str),
+						"subtitle": _join(_class_title(sess.class_name), date_str),
 						"icon": "school",
 						"link": "/student-portal/attendance",
 						"sort_key": 2,
@@ -1914,17 +1906,14 @@ def initiate_re_exam_registration(exam_plan, course):
     if existing:
         return {"name": existing, "message": "You are already registered for this re-examination."}
 
-    course_offering = frappe.db.get_value(
-        "Course Schema Assignment", {"exam_plan": exam_plan, "course": course}, "course_offering"
-    )
-    if not course_offering:
-        frappe.throw("No Course Offering found for this course/exam plan. Contact administration.")
+    if not frappe.db.exists("Course Schema Assignment", {"exam_plan": exam_plan, "course": course}):
+        frappe.throw("No course schema found for this course/exam plan. Contact administration.")
 
     doc = frappe.new_doc("Re Exam Registration")
     doc.student    = student_name
     doc.exam_plan  = exam_plan
     doc.course     = course
-    doc.course_offering = course_offering
+    doc.academic_term = frappe.db.get_value("Exam Plan", exam_plan, "term")
     doc.re_exam_fee = setting.get("re_exam_fee") or 0
     doc.status         = "Registered"
     doc.payment_status = "Pending"
@@ -2003,17 +1992,14 @@ def initiate_improvement_exam_registration(exam_plan, course):
         if current_count >= int(setting["registration_limit"]):
             frappe.throw("Registration limit has been reached for this improvement exam.")
 
-    course_offering = frappe.db.get_value(
-        "Course Schema Assignment", {"exam_plan": exam_plan, "course": course}, "course_offering"
-    )
-    if not course_offering:
-        frappe.throw("No Course Offering found for this course/exam plan. Contact administration.")
+    if not frappe.db.exists("Course Schema Assignment", {"exam_plan": exam_plan, "course": course}):
+        frappe.throw("No course schema found for this course/exam plan. Contact administration.")
 
     doc = frappe.new_doc("Improvement Exam Registration")
     doc.student         = student_name
     doc.exam_plan       = exam_plan
     doc.course          = course
-    doc.course_offering = course_offering
+    doc.academic_term   = frappe.db.get_value("Exam Plan", exam_plan, "term")
     doc.improvement_fee = setting.get("improvement_fee") or 0
     doc.status          = "Registered"
     doc.payment_status  = "Pending"
@@ -2617,31 +2603,40 @@ def upload_bank_passbook(kind, file_url):
 #  Dashboard calendar (layers: class sessions, university events, OH)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _student_course_offerings(student_name):
-    """Course Offerings the student is enrolled in (Student Enrollment Course
-    rows, plus any with an Attendance Summary — the dashboard's own fallback)."""
+def _student_class_names(student_name):
+    """Classes the student belongs to: those listing one of their Student
+    Enrollments as an Enrolled student, plus the class_name on their Student
+    Enrollment Course rows and Attendance Summaries (the dashboard's own fallback)."""
     cos = set(frappe.db.sql_list(
-        """SELECT DISTINCT sec.course_offering
+        """SELECT DISTINCT ces.parent
+           FROM `tabClass Enrolled Student` ces
+           JOIN `tabStudent Enrollment` se ON se.name = ces.student_enrollment
+           WHERE ces.parenttype = 'Classes' AND ces.status = 'Enrolled'
+             AND se.student = %s AND se.docstatus < 2""",
+        student_name,
+    ))
+    cos.update(frappe.db.sql_list(
+        """SELECT DISTINCT sec.class_name
            FROM `tabStudent Enrollment Course` sec
            JOIN `tabStudent Enrollment` se ON se.name = sec.parent
-           WHERE se.student = %s AND se.docstatus < 2 AND IFNULL(sec.course_offering, '') != ''""",
+           WHERE se.student = %s AND se.docstatus < 2 AND IFNULL(sec.class_name, '') != ''""",
         student_name,
     ))
     cos.update(frappe.get_all(
         "Attendance Summary",
-        filters={"student": student_name, "course_offering": ["is", "set"]},
-        pluck="course_offering",
+        filters={"student": student_name, "class_name": ["is", "set"]},
+        pluck="class_name",
         ignore_permissions=True,
     ))
     return cos
 
 
 def _student_calendar_timetable(student_name, start, end):
-    """Class sessions (Time Table of the student's course offerings) and OH
+    """Class sessions (Time Table of the student's classes) and OH
     sessions (Time Table OH entries whose OH Student Group lists the student)."""
     from slcm.api.faculty_portal import _hhmm
 
-    cos = _student_course_offerings(student_name)
+    cos = _student_class_names(student_name)
     oh_groups = set(frappe.db.sql_list(
         """SELECT DISTINCT sgs.parent FROM `tabStudent Group Student` sgs
            JOIN `tabStudent Group` sg ON sg.name = sgs.parent
@@ -2653,10 +2648,10 @@ def _student_calendar_timetable(student_name, start, end):
         "Time Table",
         filters=[["schedule_date", "between", [start, end]], ["docstatus", "<", 2]],
         or_filters=[
-            ["course_offering", "in", list(cos) or [""]],
+            ["class_name", "in", list(cos) or [""]],
             ["based_on", "=", "Office Hours"],
         ],
-        fields=["name", "title", "course", "course_offering", "based_on", "office_hours_group",
+        fields=["name", "title", "course", "class_name", "based_on", "office_hours_group",
                 "parent_schedule", "schedule_date", "from_time", "to_time", "venue", "instructor"],
         limit_page_length=0,
         ignore_permissions=True,
@@ -2669,7 +2664,7 @@ def _student_calendar_timetable(student_name, start, end):
     )) if roots else {}
 
     co_names = dict(frappe.get_all(
-        "Course Offering", filters={"name": ["in", list({r.course_offering for r in rows if r.course_offering}) or [""]]},
+        "Classes", filters={"name": ["in", list({r.class_name for r in rows if r.class_name}) or [""]]},
         fields=["name", "course_name"], as_list=True, ignore_permissions=True,
     ))
     faculty_ids = {r.instructor for r in rows if r.instructor}
@@ -2684,16 +2679,16 @@ def _student_calendar_timetable(student_name, start, end):
         is_oh = r.based_on == "Office Hours"
         if is_oh:
             group = r.office_hours_group or root_group.get(r.parent_schedule)
-            # The student's own OH group; ungrouped OH falls back to their course offerings
-            if not (group in oh_groups if group else r.course_offering in cos):
+            # The student's own OH group; ungrouped OH falls back to their classes
+            if not (group in oh_groups if group else r.class_name in cos):
                 continue
-        elif r.course_offering not in cos:
+        elif r.class_name not in cos:
             continue
         date = getdate(r.schedule_date)
         items.append({
             "id": f"tt::{r.name}",
             "layer": "oh" if is_oh else "class",
-            "title": co_names.get(r.course_offering) or r.title or r.course or ("OH" if is_oh else "Class"),
+            "title": co_names.get(r.class_name) or r.title or r.course or ("OH" if is_oh else "Class"),
             "start_date": str(date),
             "end_date": str(date),
             "start_time": _hhmm(r.from_time),
@@ -2702,7 +2697,7 @@ def _student_calendar_timetable(student_name, start, end):
             "subtitle": "OH" if is_oh else "Class Session",
             "venue": r.venue or "",
             "faculty": faculty_names.get(str(r.instructor)) or "",
-            "course_offering": r.course_offering or "",
+            "class_name": r.class_name or "",
         })
     return items
 
@@ -2752,12 +2747,12 @@ def _student_calendar_events(student_name, start, end):
 
 
 @frappe.whitelist()
-def get_student_calendar(start, end, course_offering=None):
+def get_student_calendar(start, end, class_name=None):
     """Calendar items between `start` and `end` (inclusive), in three layers:
     "class" (class sessions), "events" (Institutional Calendar entries +
     Events) and "oh" (OH sessions of the student's OH groups).
-    `course_offering` (Timetable page's Course filter) limits the class / OH
-    sessions to that offering; University Events are always shown."""
+    `class_name` (Timetable page's Course filter) limits the class / OH
+    sessions to that class; University Events are always shown."""
     from slcm.api.faculty_portal import _CAL_MAX_DAYS, _cal_institutional
 
     if frappe.session.user == "Guest":
@@ -2775,8 +2770,8 @@ def get_student_calendar(start, end, course_offering=None):
     items, errors = [], []
     try:
         sessions = _student_calendar_timetable(student_name, start, end)
-        if course_offering and course_offering != "all":
-            sessions = [s for s in sessions if s["course_offering"] == course_offering]
+        if class_name and class_name != "all":
+            sessions = [s for s in sessions if s["class_name"] == class_name]
         items += sessions
     except Exception:
         errors.append("class")

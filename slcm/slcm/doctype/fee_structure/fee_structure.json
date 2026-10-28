@@ -10,10 +10,9 @@
   "fee_structure_name",
   "program",
   "academic_year",
+  "year_no",
   "batch_year",
   "program_level",
-  "academic_term",
-  "term_type",
   "column_break_1",
   "student_category",
   "demand_type",
@@ -150,18 +149,15 @@
    "reqd": 1
   },
   {
-   "fieldname": "academic_term",
-   "fieldtype": "Link",
+   "default": "1",
+   "description": "Year of the programme these fees apply to (1 = first year). Fees are per year.",
+   "fieldname": "year_no",
+   "fieldtype": "Int",
+   "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Academic Term",
-   "options": "Academic Term"
-  },
-  {
-   "fieldname": "term_type",
-   "fieldtype": "Select",
-   "in_standard_filter": 1,
-   "label": "Term Type",
-   "options": "\nAnnual\nSemester\nTrimester\nQuarter"
+   "label": "Year No",
+   "non_negative": 1,
+   "reqd": 1
   },
   {
    "fieldname": "column_break_1",
@@ -374,7 +370,7 @@
   }
  ],
  "links": [],
- "modified": "2026-08-31 14:19:56.207220",
+ "modified": "2026-10-27 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Fee Structure",

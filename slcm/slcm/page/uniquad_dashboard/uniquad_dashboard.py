@@ -8,7 +8,7 @@ Security model
   ``permission_query_conditions`` hooks (faculty see only their students / sessions, workflow roles
   see only their stage…) and permlevel field restrictions. A card can therefore never count records
   its viewer could not open.
-* ``frappe.get_all`` is used only to *resolve filter scope* (e.g. which Course Offerings belong to a
+* ``frappe.get_all`` is used only to *resolve filter scope* (e.g. which Classes belong to a
   Programme / Batch) — those names only ever narrow a subsequent permission-checked query; they are never
   returned to the browser.
 * The browser sends only a drilldown *key*, filter values and paging/sort/search. Doctypes, fields,
@@ -179,24 +179,60 @@ class Ctx:
 		"""Programme names selected in the Programme filter, or None when unconstrained."""
 		return sorted(self.programme) if self.programme else None
 
-	def offerings(self, period=False, faculty=False):
-		"""Course Offerings matching the structural filters (programme / batch), optionally
+	def classes(self, period=False, faculty=False):
+		"""Classes matching the structural filters (programme / batch), optionally
 		also the academic period and faculty. None when nothing constrains the set."""
-		key = ("offerings", period, faculty)
+		key = ("classes", period, faculty)
 		if key not in self._cache:
 			f = []
 			progs = self.programmes()
 			if progs is not None:
-				f.append(["program", "in", progs or [NONE]])
+				f.append(["programme", "in", progs or [NONE]])
 			if self.batch:
-				f.append(["cohort", "in", self.batch])
+				f.append(_in("name", self.cohort_classes()))
 			if period and self.academic_year:
 				f.append(["academic_year", "in", self.academic_year])
 			if period and self.academic_term:
-				f.append(["term_name", "in", self.academic_term])
+				f.append(["academic_term", "in", self.academic_term])
 			if faculty and self.faculty:
 				f.append(["faculty", "in", self.faculty])
-			self._cache[key] = frappe.get_all("Course Offering", filters=f, pluck="name") if f else None
+			self._cache[key] = frappe.get_all("Classes", filters=f, pluck="name") if f else None
+		return self._cache[key]
+
+	def class_courses(self, faculty=False):
+		"""Courses of the Classes in structural scope (for course-keyed records such
+		as marks), or None when nothing constrains the set."""
+		classes = self.classes(faculty=faculty)
+		if classes is None:
+			return None
+		key = ("class_courses", faculty)
+		if key not in self._cache:
+			self._cache[key] = list(dict.fromkeys(
+				frappe.get_all("Classes", filters={"name": ["in", classes or [NONE]]}, pluck="course")
+			))
+		return self._cache[key]
+
+	def cohort_classes(self, section=False):
+		"""Classes with a student of an Enrolled Student Enrollment in the selected
+		batch (and, with section=True, section) on their roster."""
+		key = ("cohort_classes", section)
+		if key not in self._cache:
+			se_f = [["status", "=", "Enrolled"]]
+			if self.batch:
+				se_f.append(["batch", "in", self.batch])
+			if section and self.section:
+				se_f.append(["section", "in", self.section])
+			enrollments = frappe.get_all("Student Enrollment", filters=se_f, pluck="name")
+			names = frappe.get_all(
+				"Class Enrolled Student",
+				filters={
+					"parenttype": "Classes",
+					"student_enrollment": ["in", enrollments or [NONE]],
+					"status": ["not in", ["Withdrawn", "Dropped"]],
+				},
+				pluck="parent",
+			)
+			self._cache[key] = list(dict.fromkeys(names))
 		return self._cache[key]
 
 	def exam_plans(self):
@@ -257,36 +293,54 @@ def f_students(ctx):
 	return f
 
 
-def f_offerings(ctx):
+def f_class_list(ctx):
+	"""Filters on the Classes doctype itself."""
 	f = []
 	if ctx.academic_year:
 		f.append(["academic_year", "in", ctx.academic_year])
 	if ctx.academic_term:
-		f.append(["term_name", "in", ctx.academic_term])
+		f.append(["academic_term", "in", ctx.academic_term])
 	progs = ctx.programmes()
 	if progs is not None:
-		f.append(_in("program", progs))
-	if ctx.batch:
-		f.append(["cohort", "in", ctx.batch])
-	if ctx.section:
-		f.append(["section", "in", ctx.section])
+		f.append(_in("programme", progs))
+	if ctx.batch or ctx.section:
+		f.append(_in("name", ctx.cohort_classes(section=True)))
 	if ctx.course:
-		f.append(["course_title", "in", ctx.course])
+		f.append(["course", "in", ctx.course])
 	if ctx.faculty:
 		f.append(["faculty", "in", ctx.faculty])
 	return f
 
 
+def f_running_classes(ctx):
+	"""Classes in scope; without an Academic Year filter, those of the Active
+	academic year(s) (Classes carry no status of their own)."""
+	f = f_class_list(ctx)
+	if not ctx.academic_year:
+		active = frappe.get_all("Academic Year", filters={"status": "Active"}, pluck="name")
+		if active:
+			f.append(["academic_year", "in", active])
+	return f
+
+
 def _structural(ctx, f, field, faculty=False):
-	offs = ctx.offerings(faculty=faculty)
-	if offs is not None:
-		f.append(_in(field, offs))
+	classes = ctx.classes(faculty=faculty)
+	if classes is not None:
+		f.append(_in(field, classes))
+	return f
+
+
+def _structural_courses(ctx, f, faculty=False):
+	"""Course-keyed records (marks): restrict to the courses of the Classes in scope."""
+	courses = ctx.class_courses(faculty=faculty)
+	if courses is not None:
+		f.append(_in("course", courses))
 	return f
 
 
 def f_sessions(ctx, with_dates=True):
 	f = ctx.date_range("session_date") if with_dates else []
-	_structural(ctx, f, "course_offering")
+	_structural(ctx, f, "class_name")
 	if ctx.course:
 		f.append(["course", "in", ctx.course])
 	if ctx.faculty:
@@ -298,7 +352,7 @@ def f_sessions(ctx, with_dates=True):
 
 def f_attendance(ctx):
 	f = ctx.date_range("attendance_date")
-	_structural(ctx, f, "course_offer")
+	_structural(ctx, f, "class_name")
 	if ctx.course:
 		f.append(["course", "in", ctx.course])
 	if ctx.section:
@@ -311,8 +365,8 @@ def f_summary(ctx):
 	if ctx.academic_year:
 		f.append(["academic_year", "in", ctx.academic_year])
 	if ctx.academic_term:
-		f.append(["term_name", "in", ctx.academic_term])
-	_structural(ctx, f, "course_offering", faculty=True)
+		f.append(["academic_term", "in", ctx.academic_term])
+	_structural(ctx, f, "class_name", faculty=True)
 	if ctx.course:
 		f.append(["course", "in", ctx.course])
 	if ctx.section:
@@ -322,7 +376,7 @@ def f_summary(ctx):
 
 def f_classes(ctx, with_dates=True):
 	f = ctx.date_range("schedule_date") if with_dates else []
-	_structural(ctx, f, "course_offering")
+	_structural(ctx, f, "class_name")
 	if ctx.course:
 		f.append(["course", "in", ctx.course])
 	if ctx.faculty:
@@ -347,7 +401,7 @@ def f_marks(ctx):
 	plans = ctx.exam_plans()
 	if plans is not None:
 		f.append(_in("exam_plan", plans))
-	_structural(ctx, f, "course_offering", faculty=True)
+	_structural_courses(ctx, f, faculty=True)
 	if ctx.course:
 		f.append(["course", "in", ctx.course])
 	return f
@@ -362,7 +416,7 @@ def f_condonation(ctx):
 	f = [["docstatus", "<", 2]]
 	if ctx.academic_year:
 		f.append(["academic_year", "in", ctx.academic_year])
-	_structural(ctx, f, "course_offering", faculty=True)
+	_structural(ctx, f, "class_name", faculty=True)
 	if ctx.course:
 		f.append(["course", "in", ctx.course])
 	return f
@@ -395,7 +449,11 @@ def f_batches(ctx):
 		f.append(["academic_year", "in", ctx.academic_year])
 	progs = ctx.programmes()
 	if progs is not None:
-		f.append(_in("program", progs))
+		# Batch has no programme: batches with students enrolled in the programme(s)
+		f.append(_in("name", frappe.get_all(
+			"Student Enrollment", filters=[_in("program", progs), ["batch", "is", "set"]],
+			pluck="batch", distinct=True,
+		)))
 	if ctx.batch:
 		f.append(["name", "in", ctx.batch])
 	return f
@@ -503,10 +561,10 @@ SESSION_COLUMNS = [
 	("session_status", "Status", "badge", True),
 	("marked_label", "Attendance Entry", "badge", False),
 ]
-SESSION_SEARCH = ["name", "course", "course_offering"]
+SESSION_SEARCH = ["name", "course", "class_name"]
 
 CLASS_COLUMNS = [
-	("name", "Class", "form", True),
+	("name", "Schedule Entry", "form", True),
 	("course", "Course", "text", True),
 	("schedule_date", "Date", "date", True),
 	("from_time", "From", "time", True),
@@ -514,40 +572,40 @@ CLASS_COLUMNS = [
 	("instructor_name", "Faculty", "text", False),
 	("venue", "Venue", "text", True),
 	("section", "Section", "text", True),
-	("course_offering", "Course Offering", "text", True),
+	("class_name", "Class", "text", True),
 ]
-CLASS_SEARCH = ["name", "course", "course_offering", "venue"]
+CLASS_SEARCH = ["name", "course", "class_name", "venue"]
 
 SUMMARY_COLUMNS = [
 	("student", "Student ID", "student", True),
 	("student_name", "Student", "text", True),
 	("course", "Course", "text", True),
-	("course_offering", "Course Offering", "text", True),
+	("class_name", "Class", "text", True),
 	("attendance_percentage", "Attendance %", "pct", True),
 	("minimum_required_percentage", "Required %", "pct", True),
 	("total_class_hours", "Hours Conducted", "float", True),
 	("attended_classes", "Hours Attended", "float", True),
 	("absent_hours", "Hours Missed", "float", False),
 	("academic_year", "Academic Year", "text", True),
-	("term_name", "Academic Term", "text", True),
+	("academic_term", "Academic Term", "text", True),
 	("eligible_label", "Exam Eligibility", "badge", False),
 ]
-SUMMARY_SEARCH = ["student", "student_name", "course", "course_offering"]
+SUMMARY_SEARCH = ["student", "student_name", "course", "class_name"]
 
-OFFERING_COLUMNS = [
-	("name", "Course Offering", "offering", True),
+CLASS_LIST_COLUMNS = [
+	("name", "Class", "offering", True),
 	("course_name", "Course", "text", True),
-	("program", "Programme", "text", True),
-	("cohort", "Batch", "text", True),
+	("programme", "Programme", "text", True),
+	("year_no", "Year No", "int", True),
 	("section", "Section", "text", True),
+	("group_name", "Group", "text", True),
 	("faculty_name", "Faculty", "text", False),
-	("term_name", "Academic Term", "text", True),
+	("academic_term", "Academic Term", "text", True),
 	("sessions_held", "Sessions Held", "int", False),
 	("sessions_unmarked", "Not Marked", "int", False),
 	("avg_attendance", "Avg Attendance %", "pct", False),
-	("status", "Status", "badge", True),
 ]
-OFFERING_SEARCH = ["name", "course_name", "course_title", "program", "cohort"]
+CLASS_LIST_SEARCH = ["name", "course_name", "course", "programme"]
 
 APPLICANT_COLUMNS = [
 	("name", "Application", "form", True),
@@ -609,31 +667,31 @@ def _post_summary(rows):
 	return rows
 
 
-def _post_offerings(rows):
+def _post_class_list(rows):
 	_post_faculty(rows, "faculty", "faculty_name")
 	names = [r.name for r in rows]
 	if names and _can("Attendance Session"):
 		held = {
-			g.course_offering: g
+			g.class_name: g
 			for g in frappe.get_list(
 				"Attendance Session",
-				filters={"course_offering": ["in", names], "session_status": "Conducted"},
-				fields=["course_offering", {"COUNT": "*", "as": "n"}, {"AVG": "attendance_percentage", "as": "avg"}],
-				group_by="course_offering",
+				filters={"class_name": ["in", names], "session_status": "Conducted"},
+				fields=["class_name", {"COUNT": "*", "as": "n"}, {"AVG": "attendance_percentage", "as": "avg"}],
+				group_by="class_name",
 				order_by=None,
 			)
 		}
 		unmarked = {
-			g.course_offering: g.v
+			g.class_name: g.v
 			for g in _group(
 				"Attendance Session",
 				[
-					["course_offering", "in", names],
+					["class_name", "in", names],
 					["session_status", "!=", "Cancelled"],
 					["session_date", "<=", nowdate()],
 					["attendance_marked", "=", 0],
 				],
-				"course_offering",
+				"class_name",
 			)
 		}
 		for r in rows:
@@ -697,7 +755,7 @@ DRILLDOWNS = {
 	# Attendance
 	"below_threshold": _drill("Students Below Attendance Threshold", "Attendance Summary", SUMMARY_COLUMNS, lambda c, p: f_summary(c) + [["eligible_for_exam", "=", 0]], SUMMARY_SEARCH, ("attendance_percentage", "asc"), "summary", post=_post_summary, extra_fields=["eligible_for_exam"], description="Student-course records not eligible for exams (attendance below the required %, after condonation and FA/MFA)."),
 	"attendance_summary": _drill("Course-wise Attendance Summary", "Attendance Summary", SUMMARY_COLUMNS, lambda c, p: f_summary(c), SUMMARY_SEARCH, ("attendance_percentage", "asc"), "summary", post=_post_summary, extra_fields=["eligible_for_exam"]),
-	"offering_attendance": _drill("Student Attendance for Course Offering", "Attendance Summary", SUMMARY_COLUMNS, lambda c, p: [["course_offering", "=", p["course_offering"]]], SUMMARY_SEARCH, ("attendance_percentage", "asc"), "all_time", post=_post_summary, extra_fields=["eligible_for_exam"], params={"course_offering": "text"}),
+	"offering_attendance": _drill("Student Attendance for Class", "Attendance Summary", SUMMARY_COLUMNS, lambda c, p: [["class_name", "=", p["class_name"]]], SUMMARY_SEARCH, ("attendance_percentage", "asc"), "all_time", post=_post_summary, extra_fields=["eligible_for_exam"], params={"class_name": "text"}),
 	"unmarked_sessions": _drill("Sessions With Attendance Not Entered", "Attendance Session", SESSION_COLUMNS, lambda c, p: f_sessions(c) + _past_open_sessions() + [["attendance_marked", "=", 0]], SESSION_SEARCH, ("session_date", "desc"), "sessions", post=_post_sessions, extra_fields=["instructor", "attendance_marked"], description="Past, non-cancelled sessions where attendance has not been marked."),
 	"attendance_exceptions": _drill("Attendance Exceptions", "Attendance Session", SESSION_COLUMNS, _session_mode_filters, SESSION_SEARCH, ("session_date", "desc"), "sessions", post=_post_sessions, extra_fields=["instructor", "attendance_marked"], params={"mode": ("unmarked", "low")}),
 	"sessions_conducted": _drill("Sessions Conducted", "Attendance Session", SESSION_COLUMNS, lambda c, p: f_sessions(c) + [["session_status", "=", "Conducted"]], SESSION_SEARCH, ("session_date", "desc"), "sessions", post=_post_sessions, extra_fields=["instructor", "attendance_marked"]),
@@ -708,11 +766,11 @@ DRILLDOWNS = {
 	"todays_classes": _drill("Today's Classes", "Time Table", CLASS_COLUMNS, lambda c, p: f_classes(c, False) + [["schedule_date", "=", nowdate()]], CLASS_SEARCH, ("from_time", "asc"), "classes_nodate", post=lambda r: _post_faculty(r, "instructor", "instructor_name"), extra_fields=["instructor"]),
 	"upcoming_classes": _drill("Upcoming Classes (Next 7 Days)", "Time Table", CLASS_COLUMNS, lambda c, p: f_classes(c, False) + [["schedule_date", "between", [add_days(nowdate(), 1), add_days(nowdate(), 7)]]], CLASS_SEARCH, ("schedule_date", "asc"), "classes_nodate", post=lambda r: _post_faculty(r, "instructor", "instructor_name"), extra_fields=["instructor"]),
 	# Academic structure
-	"offerings": _drill("Course Operations", "Course Offering", OFFERING_COLUMNS, lambda c, p: f_offerings(c) + [["status", "=", "Active"]], OFFERING_SEARCH, ("course_name", "asc"), "offerings", post=_post_offerings, extra_fields=["faculty"]),
+	"offerings": _drill("Course Operations", "Classes", CLASS_LIST_COLUMNS, lambda c, p: f_running_classes(c), CLASS_LIST_SEARCH, ("course_name", "asc"), "offerings", post=_post_class_list, extra_fields=["faculty"], description="Classes of the selected (or the Active) academic year(s)."),
 	"programmes": _drill("Active Programmes", "Programme", [("name", "Programme", "form", True), ("program_name", "Programme Name", "text", True), ("program_code", "Code", "text", True), ("level_of_study", "Level", "text", True), ("program_duration", "Duration (Years)", "int", True), ("program_status", "Status", "badge", True)], lambda c, p: f_programmes(c) + [["program_status", "=", "Active"]], ["name", "program_name", "program_code"], ("program_name", "asc"), "programmes"),
 	"courses": _drill("Active Courses", "Course", [("name", "Course", "form", True), ("course_code", "Code", "text", True), ("course_name", "Course Name", "text", True), ("course_type", "Type", "badge", True), ("credit_value", "Credits", "int", True), ("status", "Status", "badge", True)], lambda c, p: ([["name", "in", c.course]] if c.course else []) + [["status", "=", "Active"]], ["name", "course_code", "course_name"], ("course_name", "asc"), "courses"),
 	"faculty": _drill("Active Faculty", "Faculty", [("name", "Faculty", "form", True), ("faculty_id", "Faculty ID", "text", True), ("first_name", "First Name", "text", True), ("last_name", "Last Name", "text", True), ("designation", "Designation", "text", True), ("is_hod", "HoD", "int", True), ("status", "Status", "badge", True)], lambda c, p: f_faculty(c) + [["status", "=", "Active"]], ["faculty_id", "first_name", "last_name"], ("first_name", "asc"), "faculty"),
-	"batches": _drill("Active Batches", "SLCM Batch", [("name", "Batch", "form", True), ("program", "Programme", "text", True), ("academic_year", "Academic Year", "text", True), ("start_date", "Start", "date", True), ("end_date", "End", "date", True), ("total_enrolled_count", "Enrolled", "int", True), ("status", "Status", "badge", True)], lambda c, p: f_batches(c) + [["status", "=", "Active"]], ["name", "program", "batch_code"], ("name", "asc"), "batches"),
+	"batches": _drill("Active Batches", "Batch", [("name", "Batch", "form", True), ("batch_name", "Batch Name", "text", True), ("batch_code", "Code", "text", True), ("academic_year", "Academic Year", "text", True), ("total_enrolled_count", "Enrolled", "int", True), ("status", "Status", "badge", True)], lambda c, p: f_batches(c) + [["status", "=", "Active"]], ["name", "batch_name", "batch_code"], ("name", "asc"), "batches"),
 	# Admissions
 	"admission_current": _drill("Registered in the Current Admission", "Applicant", APPLICANT_COLUMNS, lambda c, p: f_current_admission(c), APPLICANT_SEARCH, ("creation", "desc"), "current_admission", post=_post_applicants),
 	# Campus residence (Student Master.campus)
@@ -737,7 +795,7 @@ DRILLDOWNS = {
 	"graduated_all_time": _drill("All Graduated / Alumni Students", "Student Master", STUDENT_COLUMNS, lambda c, p: [["student_status", "in", GRADUATED_STATUSES]], STUDENT_SEARCH, ("modified", "desc"), "all_time", all_time=True),
 	"programmes_all_time": _drill("All Programmes", "Programme", [("name", "Programme", "form", True), ("program_name", "Programme Name", "text", True), ("level_of_study", "Level", "text", True), ("program_status", "Status", "badge", True), ("creation", "Created On", "date", True)], lambda c, p: [], ["name", "program_name"], ("creation", "desc"), "all_time", all_time=True),
 	"courses_all_time": _drill("All Courses", "Course", [("name", "Course", "form", True), ("course_code", "Code", "text", True), ("course_name", "Course Name", "text", True), ("course_type", "Type", "badge", True), ("credit_value", "Credits", "int", True), ("status", "Status", "badge", True)], lambda c, p: [], ["name", "course_code", "course_name"], ("course_name", "asc"), "all_time", all_time=True),
-	"years_all_time": _drill("All Academic Years", "Academic Year", [("name", "Academic Year", "form", True), ("academic_system", "System", "text", True), ("year_start_date", "Start", "date", True), ("year_end_date", "End", "date", True), ("status", "Status", "badge", True)], lambda c, p: [], ["name"], ("year_start_date", "desc"), "all_time", all_time=True),
+	"years_all_time": _drill("All Academic Years", "Academic Year", [("name", "Academic Year", "form", True), ("year_start_date", "Start", "date", True), ("year_end_date", "End", "date", True), ("status", "Status", "badge", True)], lambda c, p: [], ["name"], ("year_start_date", "desc"), "all_time", all_time=True),
 	"applications_all_time": _drill("All Applications", "Applicant", APPLICANT_COLUMNS, lambda c, p: [], APPLICANT_SEARCH, ("creation", "desc"), "all_time", post=_post_applicants, all_time=True),
 	"sessions_all_time": _drill("All Sessions Conducted", "Attendance Session", SESSION_COLUMNS, lambda c, p: [["session_status", "=", "Conducted"]], SESSION_SEARCH, ("session_date", "desc"), "all_time", post=_post_sessions, extra_fields=["instructor", "attendance_marked"], all_time=True),
 	"results_all_time": _drill("All Published Results", "Student Result Publish", [("student", "Student ID", "student", True), ("student_name", "Student", "text", False), ("exam_plan", "Exam", "text", True), ("term_gpa", "Term GPA", "float", True), ("cumulative_gpa", "CGPA", "float", True), ("published_on", "Published On", "datetime", True)], lambda c, p: [["is_published", "=", 1]], ["student", "exam_plan"], ("published_on", "desc"), "all_time", post=_post_student_names, all_time=True),
@@ -756,20 +814,24 @@ def _venue_range(ctx):
 	return f
 
 
-def _offering_batches(names):
+def _class_batches(names):
 	names = [n for n in names if n]
-	if not names or not _can("Course Offering"):
+	if not names or not _can("Classes"):
 		return {}
-	return {o.name: o.cohort for o in frappe.get_list("Course Offering", filters={"name": ["in", names]}, fields=["name", "cohort"])}
+	# Classes carry no batch — show Programme + Year No instead
+	return {
+		o.name: " · ".join(filter(None, [o.programme, _("Year {0}").format(o.year_no) if o.year_no else ""]))
+		for o in frappe.get_list("Classes", filters={"name": ["in", names]}, fields=["name", "programme", "year_no"])
+	}
 
 
 def _post_schedule(rows):
 	_post_faculty(rows, "instructor", "instructor_name")
-	batches = _offering_batches({r.get("course_offering") for r in rows})
+	batches = _class_batches({r.get("class_name") for r in rows})
 	now = now_datetime()
 	today = getdate(nowdate())
 	for r in rows:
-		r["batch"] = batches.get(r.get("course_offering")) or ""
+		r["batch"] = batches.get(r.get("class_name")) or ""
 		day = getdate(r.get("schedule_date")) if r.get("schedule_date") else None
 		start = (datetime.datetime.combine(day, datetime.time()) + r["from_time"]) if day and isinstance(r.get("from_time"), datetime.timedelta) else None
 		end = (datetime.datetime.combine(day, datetime.time()) + r["to_time"]) if day and isinstance(r.get("to_time"), datetime.timedelta) else None
@@ -783,18 +845,18 @@ def _post_schedule(rows):
 
 
 def _virtual_offerings_incomplete(ctx, p):
-	"""Course offerings with at least one past, non-cancelled session whose attendance is not marked."""
+	"""Classes with at least one past, non-cancelled session whose attendance is not marked."""
 	if not _can("Attendance Session"):
 		raise frappe.PermissionError
 	rows = frappe.get_list(
 		"Attendance Session",
 		filters=DRILLDOWNS["unmarked_sessions"]["filters"](ctx, {}),
-		fields=["course_offering", "course", {"COUNT": "*", "as": "n"}, {"MIN": "session_date", "as": "oldest"}, {"MAX": "session_date", "as": "latest"}],
-		group_by="course_offering, course",
+		fields=["class_name", "course", {"COUNT": "*", "as": "n"}, {"MIN": "session_date", "as": "oldest"}, {"MAX": "session_date", "as": "latest"}],
+		group_by="class_name, course",
 		order_by=None,
 	)
 	return [
-		frappe._dict(name=r.course_offering or "", course_offering=r.course_offering, course=r.course, sessions_unmarked=cint(r.n), oldest=r.oldest, latest=r.latest)
+		frappe._dict(name=r.class_name or "", class_name=r.class_name, course=r.course, sessions_unmarked=cint(r.n), oldest=r.oldest, latest=r.latest)
 		for r in rows
 	]
 
@@ -929,22 +991,22 @@ SCHEDULE_COLUMNS = [
 	("course", "Course", "text", True),
 	("instructor_name", "Faculty", "text", False),
 	("venue", "Venue", "text", True),
-	("batch", "Batch", "text", False),
+	("batch", "Programme / Year", "text", False),
 	("section", "Section", "text", True),
 	("class_state", "Status", "badge", False),
 	("name", "Class", "form", True),
 ]
 
 DRILLDOWNS.update({
-	"years_active": _drill("Active Academic Years", "Academic Year", [("name", "Academic Year", "form", True), ("academic_system", "System", "text", True), ("year_start_date", "Start", "date", True), ("year_end_date", "End", "date", True), ("status", "Status", "badge", True)], lambda c, p: [["status", "=", "Active"]] + ([["name", "in", c.academic_year]] if c.academic_year else []), ["name"], ("year_start_date", "desc"), "years"),
-	"terms_current": _drill("Current Academic Terms", "Academic Term", [("name", "Academic Term", "form", True), ("academic_year", "Academic Year", "text", True), ("system", "System", "text", True), ("term_start_date", "Start", "date", True), ("term_end_date", "End", "date", True), ("status", "Status", "badge", True)], lambda c, p: _current_terms(c), ["name", "academic_year"], ("term_start_date", "desc"), "years", description="Active terms whose dates include today."),
+	"years_active": _drill("Active Academic Years", "Academic Year", [("name", "Academic Year", "form", True), ("year_start_date", "Start", "date", True), ("year_end_date", "End", "date", True), ("status", "Status", "badge", True)], lambda c, p: [["status", "=", "Active"]] + ([["name", "in", c.academic_year]] if c.academic_year else []), ["name"], ("year_start_date", "desc"), "years"),
+	"terms_current": _drill("Current Academic Terms", "Academic Term", [("name", "Academic Term", "form", True), ("academic_year", "Academic Year", "text", True), ("term_name", "Term", "text", True), ("term_no", "Term No", "int", True), ("term_start_date", "Start", "date", True), ("term_end_date", "End", "date", True), ("status", "Status", "badge", True)], lambda c, p: _current_terms(c), ["name", "academic_year"], ("term_start_date", "desc"), "years", description="Active terms whose dates include today."),
 	"calendar_upcoming": _drill("Upcoming Academic Calendar (Next 30 Days)", "Institutional Calendar", [("name", "Entry", "form", True), ("name1", "Title", "text", True), ("entry_type", "Type", "badge", True), ("start_date", "Start", "date", True), ("end_date", "End", "date", True), ("academic_year", "Academic Year", "text", True)], lambda c, p: [["status", "!=", "Inactive"], ["end_date", ">=", nowdate()], ["start_date", "<=", add_days(nowdate(), 30)]] + ([["academic_year", "in", c.academic_year]] if c.academic_year else []), ["name1", "entry_type"], ("start_date", "asc"), "years"),
 	"students_no_section": _drill("Active Students Without a Section", "Student Master", STUDENT_COLUMNS, lambda c, p: f_students(c) + [["student_status", "=", "Active"], ["section", "is", "not set"]], STUDENT_SEARCH, ("first_name", "asc"), "students"),
 	"classes_no_venue": _drill("Upcoming Classes Without a Venue (Next 14 Days)", "Time Table", CLASS_COLUMNS, lambda c, p: f_classes(c, False) + [["schedule_date", "between", [nowdate(), add_days(nowdate(), 14)]], ["venue", "is", "not set"]], CLASS_SEARCH, ("schedule_date", "asc"), "classes_nodate", post=lambda r: _post_faculty(r, "instructor", "instructor_name"), extra_fields=["instructor"]),
 	"venue_pending": _drill("Venue Requests Pending Allotment", "Venue Booking", [("name", "Booking", "form", True), ("event_name", "Event", "text", True), ("venue", "Venue", "text", True), ("start_datetime", "Starts", "datetime", True), ("end_datetime", "Ends", "datetime", True), ("requester_type", "Requested By", "text", True), ("requester_name", "Requester", "text", True), ("status", "Status", "badge", True)], lambda c, p: [["status", "=", "Pending Allotment"]], ["name", "event_name", "venue", "requester_name"], ("start_datetime", "asc"), "all_time"),
 	"venue_bookings": _drill("Allotted Venue Bookings", "Venue Booking", [("name", "Booking", "form", True), ("event_name", "Event", "text", True), ("venue", "Venue", "text", True), ("building", "Building", "text", True), ("start_datetime", "Starts", "datetime", True), ("end_datetime", "Ends", "datetime", True), ("expected_attendees", "Attendees", "int", True), ("status", "Status", "badge", True)], lambda c, p: _venue_range(c) + [["status", "=", "Allotted"]], ["name", "event_name", "venue"], ("start_datetime", "asc"), "venues"),
-	"todays_schedule": _drill("Today's Schedule", "Time Table", SCHEDULE_COLUMNS, lambda c, p: f_classes(c, False) + [["schedule_date", "=", nowdate()]], CLASS_SEARCH, ("from_time", "asc"), "classes_nodate", post=_post_schedule, extra_fields=["instructor", "course_offering", "schedule_date"]),
-	"offerings_incomplete": _drill("Course Offerings With Attendance Not Entered", None, [("course_offering", "Course Offering", "offering", True), ("course", "Course", "text", True), ("sessions_unmarked", "Sessions Not Marked", "int", True), ("oldest", "Oldest", "date", True), ("latest", "Latest", "date", True)], None, ["course_offering", "course"], ("sessions_unmarked", "desc"), "sessions", virtual=_virtual_offerings_incomplete, description="Grouped from past, non-cancelled sessions without attendance."),
+	"todays_schedule": _drill("Today's Schedule", "Time Table", SCHEDULE_COLUMNS, lambda c, p: f_classes(c, False) + [["schedule_date", "=", nowdate()]], CLASS_SEARCH, ("from_time", "asc"), "classes_nodate", post=_post_schedule, extra_fields=["instructor", "class_name", "schedule_date"]),
+	"offerings_incomplete": _drill("Classes With Attendance Not Entered", None, [("class_name", "Class", "offering", True), ("course", "Course", "text", True), ("sessions_unmarked", "Sessions Not Marked", "int", True), ("oldest", "Oldest", "date", True), ("latest", "Latest", "date", True)], None, ["class_name", "course"], ("sessions_unmarked", "desc"), "sessions", virtual=_virtual_offerings_incomplete, description="Grouped from past, non-cancelled sessions without attendance."),
 	"pending_operations": _drill("Pending Operations", None, PENDING_COLUMNS, None, ["item", "module", "owner", "status"], ("when", "asc"), "pending", virtual=_virtual_pending_operations, description="Open items across modules, oldest first. Up to 50 per source; each source respects your permissions.", params={"module": "optional", "modules": "optional"}),
 	"recent_activity": _drill("Recent Activity", None, ACTIVITY_COLUMNS, None, ["subject", "action", "module", "status", "by"], ("when", "desc"), "activity", virtual=_virtual_recent_activity, description="Latest changes across SLCM modules you can access (up to 200).", params={"modules": "optional"}),
 })
@@ -1238,8 +1300,8 @@ CARDS = [
 	# ── Programme Management (structure + teaching schedule)
 	_card("current_term", "programme", "Current Academic Term", "The active term(s) whose dates include today.", "Academic Term", "years", _current_term_value, drill="terms_current", fmt="text", icon="calendar", action="View terms", sub_fn=_current_term_sub),
 	_card("programmes", "programme", "Active Programmes", "Programmes marked Active.", "Programme", "programmes", _drill_count("programmes"), drill="programmes", icon="graduation", action="View programmes", headline=True),
-	_card("active_offerings", "programme", "Courses Running", "Active course offerings for the selected year, term and programme.", "Course Offering", "offerings", _drill_count("offerings"), drill="offerings", icon="book", action="View courses", headline=True),
-	_card("batches", "programme", "Current Batches", "Batches with status Active.", "SLCM Batch", "batches", _drill_count("batches"), drill="batches", icon="layers", action="View batches"),
+	_card("active_offerings", "programme", "Courses Running", "Classes running in the selected (or the Active) year, term and programme.", "Classes", "offerings", _drill_count("offerings"), drill="offerings", icon="book", action="View courses", headline=True),
+	_card("batches", "programme", "Current Batches", "Batches with status Active.", "Batch", "batches", _drill_count("batches"), drill="batches", icon="layers", action="View batches"),
 	_card("courses", "programme", "Active Courses", "Courses in the course catalogue marked Active.", "Course", "courses", _drill_count("courses"), drill="courses", icon="book"),
 	_card("faculty", "programme", "Active Faculty", "Faculty members with status Active.", "Faculty", "faculty", _drill_count("faculty"), drill="faculty", icon="briefcase", action="View faculty"),
 	_card("years_active", "programme", "Active Academic Years", "Academic years with status Active.", "Academic Year", "years", _drill_count("years_active"), drill="years_active", icon="history"),
@@ -1259,7 +1321,7 @@ CARDS = [
 	_card("below_threshold", "attendance", "Students Below Attendance Threshold", "Students with at least one course where they are not exam-eligible on attendance.", "Attendance Summary", "summary", _below_threshold_students, drill="below_threshold", alert=True, action="View students", icon="alert", headline=True,
 		sub_fn=lambda c: _("{0} course records affected").format(_count("Attendance Summary", DRILLDOWNS["below_threshold"]["filters"](c, {})))),
 	_card("unmarked_sessions", "attendance", "Attendance Not Entered", "Past sessions in the date range that are not cancelled and have no attendance marked.", "Attendance Session", "sessions", _drill_count("unmarked_sessions"), drill="unmarked_sessions", alert=True, action="View sessions", icon="clipboard",
-		sub_fn=lambda c: _("across {0} course offerings").format(_virtual_count("offerings_incomplete")(c))),
+		sub_fn=lambda c: _("across {0} classes").format(_virtual_count("offerings_incomplete")(c))),
 	_card("condonation_pending", "attendance", "Condonation Requests Pending", "Attendance condonation requests awaiting an approval decision.", "Student Attendance Condonation", "condonation", _drill_count("condonation_pending"), drill="condonation_pending", alert=True, action="Review requests", icon="file"),
 	# ── ID Card
 	_card("idcards_generated", "idcard", "ID Cards Generated", "Student ID cards with status Generated or Printed.", "ID Card Generation", "idcards", _drill_count("idcards_generated"), drill="idcards_generated", icon="card", action="View cards", headline=True),
@@ -1535,8 +1597,8 @@ NAV_GROUPS = [
 	]),
 	("programme", "Programme Management", "graduation", [
 		("DocType", "Academic Year", None), ("DocType", "Academic Term", None), ("DocType", "Programme", None),
-		("DocType", "Programme Master", None), ("DocType", "SLCM Batch", None), ("DocType", "Section", None),
-		("DocType", "Course", None), ("DocType", "Course Offering", None), ("DocType", "Course List", None),
+		("DocType", "Programme Master", None), ("DocType", "Batch", None), ("DocType", "Section", None),
+		("DocType", "Course", None), ("DocType", "Classes", None), ("DocType", "Course List", None),
 		("DocType", "Faculty", None), ("DocType", "Time Table", None), ("DocType", "Course Schedule", None),
 		("Page", "timetable-configuration", "Timetable Configuration"), ("DocType", "Institutional Calendar", None),
 		("Page", "academic-management", "Academic Management"),
@@ -1682,18 +1744,19 @@ def get_filter_options():
 
 	years = safe_list("Academic Year", fields=["name", "status", "year_start_date", "year_end_date"], order_by="year_start_date desc")
 	terms = safe_list("Academic Term", fields=["name", "academic_year", "status", "term_start_date", "term_end_date"], order_by="term_start_date desc")
-	programmes = safe_list("Programme", fields=["name", "program_name", "academic_year", "program_status"], order_by="name asc")
-	batches = safe_list("SLCM Batch", fields=["name", "program", "academic_year", "status"], order_by="name asc")
-	sections = safe_list("Section", fields=["name", "batch", "section_name"], order_by="name asc")
+	programmes = safe_list("Programme", fields=["name", "program_name", "program_status"], order_by="name asc")
+	batches = safe_list("Batch", fields=["name", "academic_year", "status"], order_by="name asc")
+	sections = safe_list("Section", fields=["name", "section_name"], order_by="name asc")
 	courses = safe_list("Course", fields=["name", "course_name", "course_code", "status"], order_by="course_name asc")
 	faculty = safe_list("Faculty", fields=["name", "first_name", "last_name", "status"], order_by="first_name asc")
 
-	# course → programmes / batches / terms it is offered in, so Course can cascade from those filters.
+	# course → programmes / terms it is offered in, so Course can cascade from those filters.
+	# (from Classes, which carry no batch.)
 	course_links = {}
-	if _can("Course Offering"):
-		for o in frappe.get_list("Course Offering", fields=["course_title", "program", "cohort", "term_name", "academic_year", "faculty"]):
-			link = course_links.setdefault(o.course_title, {"programme": set(), "batch": set(), "academic_term": set(), "academic_year": set(), "faculty": set()})
-			for key, val in (("programme", o.program), ("batch", o.cohort), ("academic_term", o.term_name), ("academic_year", o.academic_year), ("faculty", o.faculty)):
+	if _can("Classes"):
+		for o in frappe.get_list("Classes", fields=["course", "programme", "academic_term", "academic_year", "faculty"]):
+			link = course_links.setdefault(o.course, {"programme": set(), "academic_term": set(), "academic_year": set(), "faculty": set()})
+			for key, val in (("programme", o.programme), ("academic_term", o.academic_term), ("academic_year", o.academic_year), ("faculty", o.faculty)):
 				if val not in (None, ""):
 					link[key].add(str(val))
 
@@ -1718,11 +1781,11 @@ def get_filter_options():
 			for t in terms
 		],
 		"programme": [
-			{"value": p.name, "label": p.program_name if p.program_name and p.program_name != p.name else p.name, "hint": p.name if p.program_name and p.program_name != p.name else "", "academic_year": p.academic_year}
+			{"value": p.name, "label": p.program_name if p.program_name and p.program_name != p.name else p.name, "hint": p.name if p.program_name and p.program_name != p.name else ""}
 			for p in programmes
 		],
-		"batch": [{"value": b.name, "label": b.name, "programme": b.program, "academic_year": b.academic_year} for b in batches],
-		"section": [{"value": s.name, "label": s.name, "batch": s.batch} for s in sections],
+		"batch": [{"value": b.name, "label": b.name, "academic_year": b.academic_year} for b in batches],
+		"section": [{"value": s.name, "label": s.name} for s in sections],
 		"course": [
 			{"value": c.name, "label": c.course_name or c.name, "hint": c.course_code or "", **{k: sorted(v) for k, v in course_links.get(c.name, {}).items()}}
 			for c in courses
@@ -2079,7 +2142,7 @@ def get_student_profile(student):
 		filters={"name": student},
 		fields=[
 			"name", "first_name", "registration_id", "programme_of_study", "batch", "section", "academic_year",
-			"academic_term", "current_year", "student_status", "academic_status", "registration_status", "admission_type",
+			"current_year", "student_status", "academic_status", "registration_status", "admission_type",
 			"gender", "email", "official_email_id", "phone", "date_of_registration", "id_card_issued", "cumulative_percentage",
 			"modified",
 		],
@@ -2102,7 +2165,7 @@ def get_student_profile(student):
 	attendance = block(
 		"Attendance Summary",
 		filters={"student": student},
-		fields=["course", "course_offering", "academic_year", "term_name", "attendance_percentage", "minimum_required_percentage", "total_class_hours", "attended_classes", "eligible_for_exam", "last_updated"],
+		fields=["course", "class_name", "academic_year", "academic_term as term_name", "attendance_percentage", "minimum_required_percentage", "total_class_hours", "attended_classes", "eligible_for_exam", "last_updated"],
 		order_by="attendance_percentage asc",
 	)
 	sessions = block(
@@ -2119,21 +2182,60 @@ def get_student_profile(student):
 	enrollments = block(
 		"Student Enrollment",
 		filters={"student": student},
-		fields=["name", "program", "batch", "section", "academic_year", "term_name", "status", "enrollment_date"],
+		fields=["name", "program", "batch", "section", "status", "enrollment_date"],
 		order_by="enrollment_date desc",
 	)
 	if enrollments.get("rows"):
+		names = [e["name"] for e in enrollments["rows"]]
 		courses = block(
 			"Student Enrollment Course",
-			filters={"parent": ["in", [e["name"] for e in enrollments["rows"]]], "parenttype": "Student Enrollment"},
-			fields=["parent", "course", "course_offering", "course_type", "credits", "status", "grade"],
+			filters={"parent": ["in", names], "parenttype": "Student Enrollment"},
+			fields=["parent", "course", "class_name", "course_type", "credits", "status", "grade", "academic_year", "year_no"],
 			parent_doctype="Student Enrollment",
 		)
 		by_parent = {}
 		for c in courses.get("rows", []):
 			by_parent.setdefault(c["parent"], []).append(c)
+		log = block(
+			"Student Academic Log",
+			filters={"parent": ["in", names], "parenttype": "Student Enrollment"},
+			fields=["parent", "academic_year", "year_no", "status"],
+			parent_doctype="Student Enrollment",
+		)
+		years = {}
+		for r in log.get("rows", []):
+			years.setdefault(r["parent"], {}).setdefault((r["academic_year"], cint(r["year_no"])), set()).add(r["status"])
+
+		# One entry per enrolment year (from its Academic Log), latest first; each
+		# keeps that year's courses (rows without a year go with the latest year).
+		rows = []
 		for e in enrollments["rows"]:
-			e["courses"] = by_parent.get(e["name"], [])
+			e_courses = by_parent.get(e["name"], [])
+			e_years = sorted(
+				(years.get(e["name"]) or {}).items(),
+				key=lambda kv: (str(frappe.get_cached_value("Academic Year", kv[0][0], "year_start_date") or "") if kv[0][0] else "", kv[0][1]),
+				reverse=True,
+			)
+			if not e_years:
+				rows.append({**e, "courses": e_courses})
+				continue
+			for i, ((academic_year, year_no), statuses) in enumerate(e_years):
+				if "Ongoing" in statuses:
+					status = e["status"]
+				else:
+					status = next((s for s in ("Dropped", "Redo", "Upcoming") if s in statuses), "Completed")
+				rows.append({
+					**e,
+					"academic_year": academic_year,
+					"year_no": year_no,
+					"status": status,
+					"courses": [
+						c for c in e_courses
+						if (c.get("academic_year") == academic_year and (not c.get("year_no") or cint(c["year_no"]) == year_no))
+						or (not c.get("academic_year") and i == 0)
+					],
+				})
+		enrollments["rows"] = rows
 
 	return {
 		"profile": {k: _serialize(v) for k, v in profile.items()},

@@ -10,19 +10,14 @@ class StudentAttendanceTool(Document):
 	pass
 
 
-def _get_enrolled_students(course_offering):
-	"""Roster for a Course Offering, via Student Enrollment / Student Enrollment Course."""
-	if not course_offering:
+def _get_enrolled_students(class_name):
+	"""Roster for a Class: its Enrolled students."""
+	if not class_name:
 		return []
 
-	return frappe.db.sql("""
-		SELECT DISTINCT se.student, se.student_name
-		FROM `tabStudent Enrollment` se
-		JOIN `tabStudent Enrollment Course` sec ON sec.parent = se.name
-		WHERE sec.course_offering = %s
-		AND sec.status = 'Enrolled' AND se.status = 'Enrolled' AND se.docstatus = 0
-		ORDER BY se.student_name
-	""", (course_offering,), as_dict=True)
+	from slcm.slcm.doctype.classes.classes import get_class_students
+
+	return get_class_students(class_name)
 
 
 @frappe.whitelist()
@@ -41,6 +36,11 @@ def get_student_attendance_records(
 
 	if not based_on:
 		frappe.throw(_("Based On is required"))
+
+	# A Time Table entry (class based ones have Based On "Course Schedule")
+	# sent without a Course Schedule is taken as a Time Table request.
+	if based_on == "Course Schedule" and class_schedule and not course_schedule:
+		based_on = "Time Table"
 
 	if based_on == "Course Schedule":
 		if not course_schedule:
@@ -68,13 +68,14 @@ def get_student_attendance_records(
 			ORDER BY sgs.idx
 		""", (office_hours_group,), as_dict=True)
 	else:
-		course_offering = None
+		class_name = None
 		if based_on == "Course Schedule" and course_schedule:
-			course_offering = frappe.db.get_value("Course Schedule", course_schedule, "course_offering")
+			class_name = frappe.db.get_value("Course Schedule", course_schedule, "class_name")
 		elif based_on == "Time Table" and class_schedule:
-			course_offering = frappe.db.get_value("Time Table", class_schedule, "course_offering")
+			class_name = frappe.db.get_value("Time Table", class_schedule, "class_name")
 
-		student_list = _get_enrolled_students(course_offering)
+		# A class-based entry: exactly that class's students.
+		student_list = _get_enrolled_students(class_name)
 
 	if not student_list:
 		return []

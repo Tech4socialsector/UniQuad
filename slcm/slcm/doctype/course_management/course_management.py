@@ -186,7 +186,6 @@ def save_curriculum(
 
 		# Save the document properly
 		doc.save(ignore_permissions=True)
-		generate_offerings_from_curriculum(doc)
 		frappe.db.commit()
 
 		return {"status": "updated", "name": doc.name}
@@ -216,66 +215,9 @@ def save_curriculum(
 
 	# 🔥 INSERT ONLY ONCE
 	doc.insert(ignore_permissions=True)
-	generate_offerings_from_curriculum(doc)
 	frappe.db.commit()
 
 	return {"status": "created", "name": doc.name}
-
-
-# ---------------------------------------------------------------------
-# GENERATE COURSE OFFERINGS FROM CURRICULUM
-# ---------------------------------------------------------------------
-def generate_offerings_from_curriculum(course_list_doc):
-	"""Create/update one Course Offering per (course, batch, semester) in the
-	saved curriculum, so Course Management's plan is what actually drives
-	enrollment instead of requiring offerings to be entered by hand.
-
-	Only runs for batch-specific curricula (a generic, batch-less curriculum
-	has no cohort to scope an offering to, so there is nothing to generate).
-	Cluster rows are skipped since they don't map to a single Course.
-	"""
-	if not course_list_doc.batch:
-		return
-
-	for row in course_list_doc.curriculum_courses:
-		if row.course_group_type != "Course" or not row.course or not row.semester:
-			continue
-
-		filters = {
-			"course_title": row.course,
-			"cohort": course_list_doc.batch,
-			"term_name": row.semester,
-		}
-		existing = frappe.db.get_value("Course Offering", filters, "name")
-
-		message_log_len = len(frappe.message_log)
-		try:
-			if existing:
-				offering = frappe.get_doc("Course Offering", existing)
-			else:
-				offering = frappe.new_doc("Course Offering")
-				offering.course_title = row.course
-				offering.cohort = course_list_doc.batch
-				offering.term_name = row.semester
-
-			offering.program = course_list_doc.program
-			if not offering.status:
-				offering.status = "Active"
-
-			if existing:
-				offering.save(ignore_permissions=True)
-			else:
-				offering.insert(ignore_permissions=True)
-		except Exception:
-			# Drop any message queued by the failed attempt (e.g. a validation
-			# error) so it doesn't leak into the response of what is otherwise
-			# a successful Course Management save.
-			del frappe.message_log[message_log_len:]
-			frappe.log_error(
-				title="Course Offering generation failed",
-				message=frappe.get_traceback(),
-			)
-
 
 
 # ---------------------------------------------------------------------
@@ -304,22 +246,9 @@ def get_course_dialog_columns():
 # ---------------------------------------------------------------------
 @frappe.whitelist()
 def get_details_from_section(section):
-	if not section:
-		return {}
-
-	batch = frappe.db.get_value("Section", section, "batch")
-	if not batch:
-		return {}
-
-	program, academic_year = frappe.db.get_value(
-		"SLCM Batch", batch, ["program", "academic_year"]
-	)
-
-	return {
-		"program": program,
-		"academic_year": academic_year,
-		"batch": batch,
-	}
+	# Sections are global (not tied to a batch / programme), so there is
+	# nothing to derive from one.
+	return {}
 
 
 # ---------------------------------------------------------------------

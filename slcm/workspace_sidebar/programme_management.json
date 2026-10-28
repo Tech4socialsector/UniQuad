@@ -132,8 +132,8 @@
    "icon": "project-1",
    "indent": 0,
    "keep_closed": 0,
-   "label": "Course Offering",
-   "link_to": "Course Offering",
+   "label": "Course",
+   "link_to": "Course",
    "link_type": "DocType",
    "navigate_to_tab": null,
    "route_options": null,
@@ -278,7 +278,7 @@
    "url": null
   }
  ],
- "modified": "2026-10-19 16:30:00.000000",
+ "modified": "2026-10-29 10:30:00.000000",
  "module": "SLCM",
  "name": "Programme Management",
  "standard": 0,

@@ -21,9 +21,8 @@ frappe.ui.form.on("Academic Management System", {
 					"academic_year",
 					"term_start_date",
 					"term_end_date",
-					"system",
+					"term_no",
 					"status",
-					"previous_term",
 				],
 				order_by: "term_start_date desc",
 			},
@@ -45,16 +44,15 @@ frappe.ui.form.on("Academic Management System", {
 								<th>Academic Year</th>
 								<th>Starts</th>
 								<th>Ends</th>
-								<th>System</th>
+								<th>Term No</th>
 								<th>Status</th>
-								<th>Previous Term</th>
 							</tr>
 						</thead>
 						<tbody>
 				`;
 
 				if (terms.length === 0) {
-					html += `<tr><td colspan="7" class="text-center">No Terms Found</td></tr>`;
+					html += `<tr><td colspan="6" class="text-center">No Terms Found</td></tr>`;
 				} else {
 					terms.forEach((term) => {
 						html += `
@@ -63,9 +61,8 @@ frappe.ui.form.on("Academic Management System", {
 								<td>${term.academic_year}</td>
 								<td>${frappe.datetime.str_to_user(term.term_start_date)}</td>
 								<td>${frappe.datetime.str_to_user(term.term_end_date)}</td>
-								<td>${term.system || ""}</td>
+								<td>${term.term_no || ""}</td>
 								<td>${term.status || ""}</td>
-								<td>${term.previous_term || ""}</td>
 							</tr>
 						`;
 					});
@@ -88,8 +85,7 @@ frappe.ui.form.on("Academic Management System", {
 				{
 					label: "Term Name",
 					fieldname: "term_name",
-					fieldtype: "Link",
-					options: "Term Master",
+					fieldtype: "Data",
 					reqd: 1,
 				},
 				{
@@ -120,11 +116,14 @@ frappe.ui.form.on("Academic Management System", {
 					fieldtype: "Section Break",
 				},
 				{
-					label: "System",
-					fieldname: "system",
-					fieldtype: "Select",
-					options: "Semester\nTrimester\nQuarter\nYear",
+					label: "Term No",
+					fieldname: "term_no",
+					fieldtype: "Int",
 					reqd: 1,
+				},
+				{
+					fieldname: "col_break2",
+					fieldtype: "Column Break",
 				},
 				{
 					label: "Status",
@@ -134,22 +133,9 @@ frappe.ui.form.on("Academic Management System", {
 					default: "Active",
 					reqd: 1,
 				},
-				{
-					fieldname: "col_break2",
-					fieldtype: "Column Break",
-				},
-				{
-					label: "Previous Term",
-					fieldname: "previous_term",
-					fieldtype: "Link",
-					options: "Academic Term",
-				},
 			],
 			primary_action_label: "Create",
 			primary_action: function (values) {
-				// Map system to term_type for compatibility
-				values.term_type = values.system;
-
 				frappe.call({
 					method: "frappe.client.insert",
 					args: {
