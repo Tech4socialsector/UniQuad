@@ -102,7 +102,7 @@ class TestEntranceTestModule(FrappeTestCase):
                 app.first_preference = "City A"
                 app.second_preference = "City B"
                 app.third_preference = "City C"
-                app.status = "Completed"
+                app.status = "Submitted and Paid"
                 app.academic_year = self.academic_year
                 app.campus = self.campus
                 app.admission_cycle = self.admission_cycle
@@ -331,11 +331,15 @@ class TestEntranceTestModule(FrappeTestCase):
         return frappe.get_doc("Programme", prog_name)
 
     def _setup_applicant_status(self):
-        if not frappe.db.exists("Applicant Status", "Draft"):
-            doc = frappe.new_doc("Applicant Status")
-            doc.status_name = "Draft"
-            doc.flags.ignore_mandatory = True
-            doc.insert(ignore_permissions=True)
+        for st in ("Draft", "Submitted and Paid"):
+            if not frappe.db.exists("Applicant Status", st):
+                doc = frappe.new_doc("Applicant Status")
+                doc.status_name = st
+                doc.status = st
+                doc.stage_type = "Application"
+                doc.status_type = "Completed" if st == "Submitted and Paid" else "Active"
+                doc.flags.ignore_mandatory = True
+                doc.insert(ignore_permissions=True)
 
     def _create_valid_provider(self, center_name="Valid Center", capacity=10, pwd=0):
         prov = frappe.new_doc("Entrance Test Provider")
@@ -360,7 +364,7 @@ class TestEntranceTestModule(FrappeTestCase):
         app = frappe.new_doc("Applicant")
         app.first_name = "Dummy"
         app.name = applicant_name
-        app.application_status = "Completed"
+        app.application_status = "Submitted and Paid"
         app.flags.ignore_mandatory = True
         app.flags.ignore_links = True
         app.insert(ignore_permissions=True, set_name=applicant_name)
@@ -387,7 +391,7 @@ class TestEntranceTestModule(FrappeTestCase):
         
         comp_app = frappe.new_doc("Applicant")
         comp_app.first_name = "Comp App"
-        comp_app.status = "Completed"
+        comp_app.status = "Submitted and Paid"
         comp_app.academic_year = self.academic_year
         comp_app.campus = self.campus
         comp_app.admission_cycle = self.admission_cycle

@@ -282,14 +282,11 @@ def validate_new_application_access(program=None, foriegn_national=None, nationa
         resolved_program_level = prog_row.get("program_level") or ""
         resolved_admission_open_for = (prog_row.get("admission_open_for") or "").strip()
 
-        # Check Domestic vs International admission scope
+        # Check Domestic vs International admission scope.
+        # foriegn_national is the authoritative field; nationality is NOT used as a fallback
+        # because domestic applicants can now choose any nationality.
         is_international = (foriegn_national or "").strip().lower() in ("yes", "true", "1")
         is_domestic = (foriegn_national or "").strip().lower() in ("no", "false", "0")
-        if not is_international and not is_domestic and nationality:
-            if nationality.strip().lower() == "india":
-                is_domestic = True
-            else:
-                is_international = True
 
         # reason="scope": the only refusal that depends on foriegn_national — the portal
         # reverts that field ONLY for this reason (other refusals apply to Yes and No alike).
@@ -550,9 +547,6 @@ def save_applicant_draft(data, ignore_mandatory=True):
             prog_name = frappe.db.get_value("Programme", doc.program, "program_name") or doc.program
             is_foreign = (getattr(doc, "foriegn_national", "") or "").strip().lower() in ("yes", "true", "1")
             is_dom = (getattr(doc, "foriegn_national", "") or "").strip().lower() in ("no", "false", "0")
-            if not is_foreign and not is_dom and getattr(doc, "nationality", None):
-                is_dom = doc.nationality.strip().lower() == "india"
-                is_foreign = not is_dom
 
             if acp_scope == "International" and is_dom:
                 return {
@@ -663,14 +657,14 @@ def submit_applicant(applicant_name, target_status=None):
 
     current_status = (doc.status or "").strip()
     _ts = (target_status or "Submitted").strip()
-    # The portal may only move an application to Submitted or Completed; any other
+    # The portal may only move an application to Submitted or Submitted and Paid; any other
     # status would bypass the fee check below and the admission workflow.
-    if _ts not in ("Submitted", "Completed"):
+    if _ts not in ("Submitted", "Submitted and Paid"):
         return {"status": "error", "message": _("Invalid target status.")}
 
     if current_status in APPLICATION_SUBMITTED_STATUSES:
-        if current_status == "Submitted" and _ts == "Completed":
-            # Allow upgrading status to Completed after payment
+        if current_status == "Submitted" and _ts == "Submitted and Paid":
+            # Allow upgrading status to Submitted and Paid after payment
             pass
         else:
             return {
@@ -681,7 +675,7 @@ def submit_applicant(applicant_name, target_status=None):
                 "message": _("Application is already submitted."),
             }
 
-    if _ts == "Completed" and current_status not in ("Draft", "Submitted"):
+    if _ts == "Submitted and Paid" and current_status not in ("Draft", "Submitted"):
         return {
             "status": "success",
             "name": doc.name,
@@ -713,7 +707,7 @@ def submit_applicant(applicant_name, target_status=None):
     except Exception:
         frappe.log_error(frappe.get_traceback(), "submit_applicant — pre-submit fee sync")
 
-    if _ts == "Completed" and fee_amount > 0 and fee_status not in ("Paid", "Waived"):
+    if _ts == "Submitted and Paid" and fee_amount > 0 and fee_status not in ("Paid", "Waived"):
         return {"status": "error", "message": _("Application fee must be paid before completing application.")}
 
     # Set Admission Year and Academic Year from current active admission cycle if missing

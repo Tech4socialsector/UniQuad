@@ -151,6 +151,7 @@ function _injectCSS() {
 			'font-size:11px;font-weight:400;letter-spacing:.4px;line-height:1.2;text-transform:uppercase;}',
 		'.slcm-status-draft    {background:#fef3c7;color:#92400e;border:1px solid #fcd34d;}',
 		'.slcm-status-submitted{background:#dcfce7;color:#14532d;border:1px solid #86efac;}',
+		'.slcm-status-submitted-and-paid{background:#fce7f3;color:#9d174d;border:1px solid #fbcfe8;}',
 		'.slcm-status-other    {background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;}',
 		/* Link / Autocomplete dropdowns — look like a native select list (input width, rounded, shadow) */
 		'.web-form .awesomplete > [role="listbox"]{background:#fff;border:1px solid #cbd5e1;border-radius:8px;' +
@@ -771,9 +772,9 @@ function _buildShell(ws, cfg, user, uinfo) {
 			_esc(title) +
 		'</h1>' +
 		'<div class="adm-nav-links">' +
-			(portalActive ? '<a href="/admission" style="color:rgba(255,255,255,.85);text-decoration:none;font-size:14px;font-weight:500;white-space:nowrap;" onmouseover="this.style.color=\'#fff\'" onmouseout="this.style.color=\'rgba(255,255,255,.85)\'">Admission</a>' : '') +
+			(portalActive ? '<a href="' + _nlsatPortalBase() + '" style="color:rgba(255,255,255,.85);text-decoration:none;font-size:14px;font-weight:500;white-space:nowrap;" onmouseover="this.style.color=\'#fff\'" onmouseout="this.style.color=\'rgba(255,255,255,.85)\'">Admission</a>' : '') +
 			// Same route as the admission portal navbar (admission_base.html)
-			'<a href="/merit-and-scholarship/helpdesk" style="color:rgba(255,255,255,.85);text-decoration:none;font-size:14px;font-weight:500;white-space:nowrap;" onmouseover="this.style.color=\'#fff\'" onmouseout="this.style.color=\'rgba(255,255,255,.85)\'">Helpdesk</a>' +
+			'<a href="/nlsat/helpdesk" style="color:rgba(255,255,255,.85);text-decoration:none;font-size:14px;font-weight:500;white-space:nowrap;" onmouseover="this.style.color=\'#fff\'" onmouseout="this.style.color=\'rgba(255,255,255,.85)\'">Helpdesk</a>' +
 			(isGuest
 				? '<a href="/login" style="display:inline-flex;align-items:center;background:' + primary + ';color:#fff;padding:8px 20px;border-radius:8px;font-weight:400;font-size:14px;text-decoration:none;">Login / Apply</a>'
 				: '<div style="position:relative;display:flex;align-items:center;gap:10px;">' +
@@ -791,7 +792,7 @@ function _buildShell(ws, cfg, user, uinfo) {
 							'<div style="font-size:11px;color:#94a3b8;font-weight:300;letter-spacing:.05em;">Signed in as</div>' +
 							'<div style="font-size:13px;color:#1e293b;font-weight:400;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px;">' + _esc(user) + '</div>' +
 						'</div>' +
-						'<a href="/merit-and-scholarship/admission_dashboard?panel=profile" style="display:flex;align-items:center;gap:10px;padding:12px 16px;text-decoration:none;color:#334155;font-size:14px;font-weight:300;">' +
+						'<a href="/nlsat/my-profile" style="display:flex;align-items:center;gap:10px;padding:12px 16px;text-decoration:none;color:#334155;font-size:14px;font-weight:300;">' +
 							'<span style="font-family:\'Material Symbols Outlined\' !important;font-size:18px;color:' + primary + '">account_circle</span>Profile</a>' +
 						'<div style="height:1px;background:#f1f5f9;margin:4px 0;"></div>' +
 						'<a href="javascript:void(0)" id="slcm-nav-logout" style="display:flex;align-items:center;gap:10px;padding:12px 16px;text-decoration:none;color:#ef4444;font-size:14px;font-weight:300;">' +
@@ -818,14 +819,18 @@ function _buildShell(ws, cfg, user, uinfo) {
 	var logoutLink = document.getElementById('slcm-nav-logout');
 	if (logoutLink) {
 		logoutLink.addEventListener('click', function () {
-			frappe.call({ method: 'logout', callback: function () { window.location.href = '/admission/login#login'; } });
+			slcmConfirmLeave(function () {
+				frappe.call({ method: 'logout', callback: function () { window.location.href = _nlsatPortalBase() + '/login#login'; } });
+			});
 		});
 	}
 
 	var bellBtn = document.getElementById('slcm-bell-btn');
 	if (bellBtn) {
 		bellBtn.addEventListener('click', function () {
-			window.location.href = '/merit-and-scholarship/admission_dashboard';
+			slcmConfirmLeave(function () {
+				window.location.href = '/nlsat/dashboard';
+			});
 		});
 	}
 
@@ -917,6 +922,11 @@ function _esc(s) {
 	var d = document.createElement('div');
 	d.textContent = s == null ? '' : String(s);
 	return d.innerHTML;
+}
+
+// NLSAT portal the candidate came from (cookie set by the login page, see nlsat_portal.py)
+function _nlsatPortalBase() {
+	return /(?:^|;\s*)nlsat_portal=International/.test(document.cookie) ? '/nlsat-international' : '/nlsatadmissions';
 }
 
 // ───────────────────────────────────────────────────────────────────
@@ -1070,6 +1080,7 @@ function _statusBadgeClass(status) {
 	var s = status.toLowerCase();
 	if (s === 'draft')     return baseClass + 'slcm-status-draft';
 	if (s === 'submitted') return baseClass + 'slcm-status-submitted';
+	if (s === 'submitted and paid' || s === 'completed') return baseClass + 'slcm-status-submitted-and-paid';
 	return baseClass + 'slcm-status-other';
 }
 
@@ -1232,6 +1243,7 @@ function handleSaveDraft(opts) {
 				// before its async make_input() has finished.
 				try { if (wf && wf.doc) wf.doc.status = 'Draft'; } catch (e) {}
 				frappe.form_dirty = false;
+				window._slcmUserTouched = false;   // saved — later programmatic refreshes are not "unsaved"
 					updateStatusBadge('Draft');
 					if (!(opts && opts.silent)) {
 						showToast('\u2713  ' + (msg.message || 'Draft saved successfully.'), 'success');
@@ -1478,7 +1490,9 @@ function _ensureTopBar() {
 	backBtn.innerHTML = _SVG_BACK + '<span>Back</span>';
 	backBtn.addEventListener('click', function (e) {
 		e.preventDefault();
-		history.back();
+		slcmConfirmLeave(function () {
+			history.back();
+		});
 	});
 
 	var applyWrap = document.createElement('div');
@@ -2559,7 +2573,7 @@ function _showFeeModal(feeDetails, onPaid) {
 				if (d && d.already_paid) {
 					showToast('Application fee has already been paid.', 'success');
 					closeModal();
-					_doFinalSubmit(feeDetails.applicant_name, 'Completed');
+					_doFinalSubmit(feeDetails.applicant_name, 'Submitted and Paid');
 					return;
 				}
 				if (!d || !d.order_id) {
@@ -2628,7 +2642,7 @@ function _openRazorpay(orderData, feeDetails, onPaid, payBtn, closeModal) {
 					if (vr && vr.message && vr.message.status === 'success') {
 						showToast('Payment successful!', 'success');
 						closeModal();
-						_doFinalSubmit(feeDetails.applicant_name, 'Completed');
+						_doFinalSubmit(feeDetails.applicant_name, 'Submitted and Paid');
 					} else {
 						_hideSubmitOverlay();
 						showToast((vr && vr.message && vr.message.message) || 'Verification failed.', 'error');
@@ -2714,7 +2728,7 @@ function _doFinalSubmit(applicantName, targetStatus) {
 					}
 				} catch (e) {}
 
-				if (finalStatus === 'Completed') {
+				if (finalStatus === 'Submitted and Paid' || finalStatus === 'Completed') {
 					// ── Use "After Submission" settings ──────────────────────
 					var wf = frappe.web_form || {};
 					var title = wf.success_title || 'Application Submitted Successfully';
@@ -2891,11 +2905,11 @@ function runSubmitFlow() {
 							if (feeAmount > 0 && !canSubmit) {
 								// ── 4a. Fee required and unpaid ────────────────
 								_showFeeModal(fd, function () {
-									_doFinalSubmit(applicantName, 'Completed');
+									_doFinalSubmit(applicantName, 'Submitted and Paid');
 								});
 							} else {
 								// ── 4b. No fee / already paid → submit ────────
-								_doFinalSubmit(applicantName, 'Completed');
+								_doFinalSubmit(applicantName, 'Submitted and Paid');
 							}
 						},
 						error: function () {
@@ -3863,7 +3877,7 @@ function _slcmShowErrorModal(message, customUrl, customLabel) {
 		'background:rgba(0,0,0,0.6)', 'backdrop-filter:blur(5px)'
 	].join(';');
 
-	var url = customUrl || '/merit-and-scholarship/admission_dashboard?panel=profile';
+	var url = customUrl || '/nlsat/my-profile';
 	var label = customLabel || __('My Profile');
 
 	overlay.innerHTML =
@@ -4605,13 +4619,8 @@ function setupPreferenceValidation() {
 				var nat = wf.get_value('nationality');
 				var fn = wf.get_value('foriegn_national');
 
-				if (fn === 'No' && nat !== 'India') {
-					// Domestic candidate: Nationality is always India
-					if (nat) {
-						frappe.msgprint('For Domestic applications, Nationality must be India.');
-					}
-					wf.set_value('nationality', 'India');
-				} else if (fn === 'Yes' && nat === 'India') {
+				if (fn === 'Yes' && nat === 'India') {
+					// International candidate: Nationality cannot be India
 					frappe.msgprint('For International applications, Nationality cannot be India.');
 					wf.set_value('nationality', '');
 				} else if (wf._slcmOnNationalityChangeForState) {
@@ -6063,7 +6072,7 @@ function slcmSetupPayButton() {
 										payBtnDom.disabled = false;
 										_feePayBtnSetLoading(payBtnDom, false);
 										showToast('Application fee has already been paid.', 'success');
-										_doFinalSubmit(applicantName, 'Completed');
+										_doFinalSubmit(applicantName, 'Submitted and Paid');
 										return;
 									}
 									if (!d || !d.order_id) {
@@ -6074,7 +6083,7 @@ function slcmSetupPayButton() {
 									}
 
 									var onPaid = function () {
-										_doFinalSubmit(applicantName, 'Completed');
+										_doFinalSubmit(applicantName, 'Submitted and Paid');
 									};
 									var closeModal = function () {};
 
@@ -6104,7 +6113,7 @@ function slcmSetupPayButton() {
 							payBtnDom.disabled = false;
 							_feePayBtnSetLoading(payBtnDom, false);
 							showToast('Application fee is already paid or waived.', 'success');
-							_doFinalSubmit(applicantName, 'Completed');
+							_doFinalSubmit(applicantName, 'Submitted and Paid');
 						}
 					},
 					error: function () {
@@ -6144,11 +6153,11 @@ function slcmSetupPayButton() {
 						
 						if (feeAmount > 0 && !canSubmit) {
 							_showFeeModal(fd, function () {
-								_doFinalSubmit(applicantName, 'Completed');
+								_doFinalSubmit(applicantName, 'Submitted and Paid');
 							});
 						} else {
 							showToast('Application fee is already paid or waived.', 'success');
-							_doFinalSubmit(applicantName, 'Completed');
+							_doFinalSubmit(applicantName, 'Submitted and Paid');
 						}
 					},
 					error: function () {
@@ -6192,22 +6201,108 @@ frappe.ready(function() {
 	}, 600);
 });
 
+// ───────────────────────────────────────────────────────────────────
+//  UNSAVED CHANGES — our own "Leave page?" dialog for in-page navigation
+//  (links, Back, Logout, notifications). Browsers do not allow replacing
+//  their native prompt on tab close / refresh, so beforeunload stays for those.
+// ───────────────────────────────────────────────────────────────────
+var _slcmLeaveApproved = false;
+
+/** Only an editable (Draft) application can lose work; submitted/completed ones are read-only. */
+function slcmHasUnsavedChanges() {
+	return !!(window.frappe && frappe.form_dirty) && !slcmApplicationPortalLocked();
+}
+
+function slcmConfirmLeave(proceed) {
+	if (!slcmHasUnsavedChanges()) {
+		proceed();
+		return;
+	}
+	var d = new frappe.ui.Dialog({
+		title: __('Leave this page?'),
+		primary_action_label: __('Stay on page'),
+		primary_action: function () {
+			d.hide();
+		},
+		secondary_action_label: __('Leave page'),
+		secondary_action: function () {
+			d.hide();
+			_slcmLeaveApproved = true;
+			// If the navigation turns out to stay on this document, re-arm the warning
+			setTimeout(function () { _slcmLeaveApproved = false; }, 4000);
+			proceed();
+		},
+	});
+	d.$body.html(
+		'<p style="margin:0;font-size:14px;line-height:1.6;color:#475569;">' +
+			__('You have unsaved changes in your application. If you leave now, anything entered since your last <b>Save Draft</b> will be lost.') +
+			'</p>'
+	);
+	d.show();
+}
+
 frappe.ready(() => {
-    // Prevent registering the event more than once.
-    if (window.slcm_beforeunload_registered) {
-        return;
-    }
+	// Prevent registering the events more than once.
+	if (window.slcm_beforeunload_registered) {
+		return;
+	}
+	window.slcm_beforeunload_registered = true;
 
-    window.slcm_beforeunload_registered = true;
+	// Loading the saved values — and this script's own prefills / server callbacks (fee amount,
+	// programme details …), which can land seconds later — fire change handlers that call
+	// make_form_dirty() before the applicant has touched anything. Only count changes once the
+	// applicant has actually interacted with a field (typing, picking, ticking, uploading).
+	var EDIT_TARGETS = 'input, textarea, select, li, .btn-attach, .datepicker, .modal';
+	['keydown', 'input', 'change', 'pointerdown'].forEach(function (ev) {
+		document.addEventListener(ev, function (e) {
+			if (e.isTrusted && e.target && e.target.closest && e.target.closest(EDIT_TARGETS)) {
+				window._slcmUserTouched = true;
+			}
+		}, true);
+	});
+	var _dirtyPatchN = 0;
+	var _dirtyPatchT = setInterval(function () {
+		var wf = frappe.web_form;
+		if (wf && typeof wf.make_form_dirty === 'function' && !wf._slcmDirtyPatched) {
+			wf._slcmDirtyPatched = true;
+			var origDirty = wf.make_form_dirty;
+			wf.make_form_dirty = function () {
+				if (!window._slcmUserTouched) return;   // programmatic change while loading
+				return origDirty.apply(this, arguments);
+			};
+			if (!window._slcmUserTouched) frappe.form_dirty = false;   // drop anything set before the patch
+		}
+		if ((wf && wf._slcmDirtyPatched) || ++_dirtyPatchN > 100) clearInterval(_dirtyPatchT);
+	}, 100);
 
-    window.addEventListener("beforeunload", (event) => {
-        // Frappe's dirty flag indicates unsaved form changes.
-        if (frappe.form_dirty) {
-            event.preventDefault();
+	// Tab close / refresh / typing a new URL: only the browser's own prompt is possible here.
+	window.addEventListener('beforeunload', (event) => {
+		if (_slcmLeaveApproved || !slcmHasUnsavedChanges()) return;
+		event.preventDefault();
+		event.returnValue = '';
+	});
 
-            // Required for modern browsers to display
-            // their native unsaved-changes confirmation.
-            event.returnValue = "";
-        }
-    });
+	// Any same-tab link that leaves this page → our dialog instead of the browser prompt
+	document.addEventListener(
+		'click',
+		function (e) {
+			if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+			var a = e.target && e.target.closest && e.target.closest('a[href]');
+			if (!a || a.hasAttribute('download')) return;
+			if (a.target && a.target !== '_self') return;
+			var href = (a.getAttribute('href') || '').trim();
+			if (!href || href.charAt(0) === '#' || /^(javascript|mailto|tel):/i.test(href)) return;
+			var url;
+			try { url = new URL(a.href, window.location.href); } catch (err) { return; }
+			if (url.pathname === window.location.pathname && url.search === window.location.search) return;
+			if (!slcmHasUnsavedChanges()) return;
+
+			e.preventDefault();
+			e.stopPropagation();
+			slcmConfirmLeave(function () {
+				window.location.href = url.href;
+			});
+		},
+		true
+	);
 });

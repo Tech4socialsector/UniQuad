@@ -69,10 +69,10 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Fee Type",
-   "options": "Application Fee\nConfirmation Fee\nAdmission Fee"
+   "options": "Application Fee\nConfirmation Fee\nAdmission Fee\nCourse Fee"
   },
   {
-   "depends_on": "eval:doc.fee_type == 'Admission Fee' || doc.fee_type == 'Confirmation Fee'",
+   "depends_on": "eval:doc.fee_type == 'Admission Fee' || doc.fee_type == 'Confirmation Fee' || doc.fee_type == 'Course Fee'",
    "fieldname": "offer_letter",
    "fieldtype": "Link",
    "in_standard_filter": 1,
@@ -174,7 +174,7 @@
   },
   {
    "allow_on_submit": 1,
-   "depends_on": "eval:doc.fee_type == \"Admission Fee\"",
+   "depends_on": "eval:doc.fee_type == \"Admission Fee\" || doc.fee_type == \"Course Fee\"",
    "fieldname": "fee_components",
    "fieldtype": "Table",
    "label": "Fee Components",
@@ -219,7 +219,7 @@
   },
   {
    "default": "0",
-   "depends_on": "eval:doc.fee_type == \"Admission Fee\"",
+   "depends_on": "eval:doc.fee_type == \"Admission Fee\" || doc.fee_type == \"Course Fee\"",
    "fieldname": "accommodation_fee",
    "fieldtype": "Check",
    "label": "Accommodation Fee",

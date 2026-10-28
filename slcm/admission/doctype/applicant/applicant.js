@@ -164,7 +164,7 @@ frappe.ui.form.on("Applicant", {
 
         if (!frm.doc.__islocal) {
             frm.add_custom_button(__("View as Candidate"), function() {
-                window.open(`/my-applications?app=${encodeURIComponent(frm.doc.name)}`, '_blank');
+                window.open(`/nlsat/my-applications?app=${encodeURIComponent(frm.doc.name)}`, '_blank');
             });
         }
 
@@ -294,13 +294,8 @@ frappe.ui.form.on("Applicant", {
     },
 
     nationality: function (frm) {
-        if (frm.doc.foriegn_national === "No" && frm.doc.nationality !== "India") {
-            // Domestic candidate: Nationality is always India
-            if (frm.doc.nationality) {
-                frappe.show_alert({ message: __("For Domestic applications, Nationality must be India."), indicator: "orange" });
-            }
-            frm.set_value("nationality", "India");
-        } else if (frm.doc.foriegn_national === "Yes" && frm.doc.nationality === "India") {
+        if (frm.doc.foriegn_national === "Yes" && frm.doc.nationality === "India") {
+            // International candidate: Nationality cannot be India
             frappe.show_alert({ message: __("For International applications, Nationality cannot be India."), indicator: "orange" });
             frm.set_value("nationality", "");
         }
@@ -389,7 +384,7 @@ frappe.ui.form.on("Applicant", {
             frm.doc.agreement_to_communications &&
             frm.doc.agreement_withdrawal_conditions
         );
-        if (frm.doc.status === "Submitted" && !has_declaration) {
+        if (["Submitted", "Submitted and Paid"].includes(frm.doc.status) && !has_declaration) {
             errors.push(__("You must accept the Declaration & Undertaking before submitting."));
         }
 
@@ -401,9 +396,6 @@ frappe.ui.form.on("Applicant", {
         }
 
         if (frm.doc.nationality && frm.doc.foriegn_national) {
-            if (frm.doc.nationality !== "India" && frm.doc.foriegn_national !== "Yes") {
-                errors.push(__("If Nationality is not India, then 'Foreign National' must be Yes."));
-            }
             if (frm.doc.foriegn_national === "Yes" && frm.doc.nationality === "India") {
                 errors.push(__("If 'Foreign National' is Yes, Nationality cannot be India."));
             }

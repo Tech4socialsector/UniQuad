@@ -17,7 +17,8 @@
   "unit_type",
   "required_cgpa",
   "required_percentage",
-  "sslc_percentage",
+  "check_10th_marks_for_appearing_applicants",
+  "required_10th_percentage",
   "allowed_degrees"
  ],
  "fields": [
@@ -94,10 +95,19 @@
    "precision": "2"
   },
   {
+   "default": "0",
    "depends_on": "eval:doc.qualification_level == 'XII'",
-   "fieldname": "sslc_percentage",
+   "description": "If enabled, applicants who are 'Appearing' for Class XII will have their Class X (10th) percentage checked against the required 10th percentage threshold instead of HSC/CGPA marks.",
+   "fieldname": "check_10th_marks_for_appearing_applicants",
+   "fieldtype": "Check",
+   "label": "Check 10th Marks for Appearing Applicants"
+  },
+  {
+   "depends_on": "eval:doc.qualification_level == 'XII' && doc.check_10th_marks_for_appearing_applicants",
+   "fieldname": "required_10th_percentage",
    "fieldtype": "Percent",
-   "label": "SSLC Required Percentage",
+   "label": "Required 10th Percentage (for Appearing Applicants)",
+   "mandatory_depends_on": "eval:doc.qualification_level == 'XII' && doc.check_10th_marks_for_appearing_applicants",
    "non_negative": 1,
    "precision": "2"
   },

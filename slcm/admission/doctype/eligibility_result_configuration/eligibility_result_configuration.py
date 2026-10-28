@@ -440,7 +440,7 @@ def _send_eligibility_result_email(res):
         doc_dict = res.as_dict()
         args = {
             "doc": doc_dict,
-            "portal_url": get_url("/merit-and-scholarship/admission_dashboard?panel=applications")
+            "portal_url": get_url("/nlsat/dashboard?panel=applications")
         }
 
         subject = frappe.render_template(template.subject, args)
@@ -499,7 +499,7 @@ def _send_eligibility_result_notification(res):
                 <p>Status: <strong>{res.result_status or "Qualified"}</strong></p>
                 <p>Source: <strong>{res.et_source or res.source_type or "—"}</strong></p>
                 <p>Interview Score: <strong>{res.interview_score or 0}</strong></p>
-                <p><a href="/merit-and-scholarship/admission_dashboard?panel=applications" style="color: #16a34a; font-weight: bold;">Click here to view details.</a></p>
+                <p><a href="/nlsat/dashboard?panel=applications" style="color: #16a34a; font-weight: bold;">Click here to view details.</a></p>
             """
             
             frappe.get_doc({
@@ -511,7 +511,7 @@ def _send_eligibility_result_notification(res):
                 "document_type": "Eligibility Result",
                 "document_name": res.name,
                 "from_user": frappe.session.user,
-                "link": "/merit-and-scholarship/admission_dashboard?panel=applications"
+                "link": "/nlsat/dashboard?panel=applications"
             }).insert(ignore_permissions=True)
         except Exception:
             frappe.log_error(message=frappe.get_traceback(), title=f"Eligibility Result Notification Failed: {res.name}")

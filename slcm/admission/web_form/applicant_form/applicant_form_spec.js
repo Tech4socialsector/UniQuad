@@ -1,7 +1,7 @@
 context('Applicant Form Dropdown Filters', () => {
     before(() => {
         cy.login();
-        cy.visit('/admission/application-form/new');
+        cy.visit('/nlsatadmissions/application-form/new');
     });
 
     it('Filters state options based on selected country', () => {
