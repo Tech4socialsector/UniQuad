@@ -13,7 +13,7 @@ def get_doctype_counts():
 		"Department", "Faculty", "Room",
 		"Academic Year", "Academic Term", "Academic Holiday",
 		"Course Master", "Course", "Programme", "Curriculum", "Batch",
-		"Course Offering", "Class Configuration", "Time Table",
+		"Classes", "Class Configuration", "Time Table",
 		"Grading Schema", "Evaluation Schema", "Exam Assessment Type",
 		"Exam Component", "CGPA Percentage Scale",
 		"Course Schema Assignment", "Access Result Settings", "Publish Result Setting",

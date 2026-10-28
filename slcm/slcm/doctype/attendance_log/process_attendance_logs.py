@@ -42,7 +42,6 @@ from slcm.slcm.doctype.rfid_device_room_mapping.rfid_device_room_mapping import 
 )
 from slcm.slcm.doctype.academic_term.academic_term import get_current_term
 from slcm.slcm.doctype.student_enrollment.student_enrollment import (
-    enrollments_in_year,
     get_current_log,
 )
 
@@ -83,9 +82,8 @@ def get_student_enrollment_context(student):
 @frappe.whitelist()
 def academic_year_link_query(doctype, txt, searchfield, start, page_len, filters):
     """Link-field query for Academic Year, scoped (when a Programme is
-    selected) to years that actually have a Course Offering under it —
-    mirrors examination_result.trimester_link_query's use of Course Offering
-    as the Programme <-> Academic Year/Term bridge table."""
+    selected) to years that actually have a Class under it — Classes is the
+    Programme <-> Academic Year/Term bridge table."""
     filters = frappe.parse_json(filters) if isinstance(filters, str) else (filters or {})
     programme = filters.get("programme")
     params = {"txt": f"%{txt}%", "start": int(start or 0), "page_len": int(page_len or 20)}
@@ -96,8 +94,8 @@ def academic_year_link_query(doctype, txt, searchfield, start, page_len, filters
             """
             SELECT DISTINCT ay.name
             FROM `tabAcademic Year` ay
-            JOIN `tabCourse Offering` co ON co.academic_year = ay.name
-            WHERE co.program = %(programme)s AND ay.name LIKE %(txt)s
+            JOIN `tabClasses` cls ON cls.academic_year = ay.name
+            WHERE cls.programme = %(programme)s AND ay.name LIKE %(txt)s
             ORDER BY ay.name ASC
             LIMIT %(start)s, %(page_len)s
             """,
@@ -118,7 +116,7 @@ def academic_year_link_query(doctype, txt, searchfield, start, page_len, filters
 @frappe.whitelist()
 def academic_term_link_query(doctype, txt, searchfield, start, page_len, filters):
     """Link-field query for Academic Term, scoped by the selected Programme
-    and/or Academic Year via Course Offering (co.term_name == Academic Term.name)."""
+    and/or Academic Year via Classes (cls.academic_term == Academic Term.name)."""
     filters = frappe.parse_json(filters) if isinstance(filters, str) else (filters or {})
     programme = filters.get("programme")
     academic_year = filters.get("academic_year")
@@ -127,13 +125,13 @@ def academic_term_link_query(doctype, txt, searchfield, start, page_len, filters
     conditions = ["at.name LIKE %(txt)s"]
     join = ""
     if programme or academic_year:
-        join = "JOIN `tabCourse Offering` co ON co.term_name = at.name"
+        join = "JOIN `tabClasses` cls ON cls.academic_term = at.name"
         if programme:
             params["programme"] = programme
-            conditions.append("co.program = %(programme)s")
+            conditions.append("cls.programme = %(programme)s")
         if academic_year:
             params["academic_year"] = academic_year
-            conditions.append("co.academic_year = %(academic_year)s")
+            conditions.append("cls.academic_year = %(academic_year)s")
 
     return frappe.db.sql(
         f"""
@@ -341,7 +339,7 @@ def _get_or_create_sessions(student, date):
         "Attendance Session",
         filters={"session_date": date, "session_status": ["!=", "Cancelled"], "docstatus": ["<", 2]},
         fields=["name", "session_date", "session_start_time", "session_end_time",
-                "course_schedule", "class_schedule", "course_offering",
+                "course_schedule", "class_schedule", "class_name", "course",
                 "session_type", "duration_hours",
                 "rfid_activated_by", "rfid_activation_time", "rfid_active_until"],
     )
@@ -359,7 +357,7 @@ def _get_or_create_sessions(student, date):
             "status": ["!=", "Cancelled"],
             "docstatus": ["<", 2],
         },
-        fields=["name", "course", "course_offering", "from_time", "to_time",
+        fields=["name", "course", "class_name", "section", "from_time", "to_time",
                 "duration_hours", "instructor", "venue"],
     )
 
@@ -369,8 +367,8 @@ def _get_or_create_sessions(student, date):
         if cs.name in existing_from_schedule:
             continue  # session already exists
 
-        # Check student is enrolled in this course offering
-        if not _is_student_in_course_offering(student, cs.course_offering):
+        # Check student is enrolled in this class
+        if not _is_student_in_class(student, cs.class_name):
             continue
 
         # Auto-create the Attendance Session
@@ -386,10 +384,10 @@ def _get_or_create_sessions(student, date):
         fields=["name", "session_date",
                 "start_time as session_start_time",
                 "end_time as session_end_time",
-                "course_offering"],
+                "class_name", "course"],
     )
     for s in oh_sessions:
-        if _is_student_in_course_offering(student, s.get("course_offering")):
+        if _is_student_in_class(student, s.get("class_name")):
             s["session_type"] = "Office Hour"
             s["type"] = "Office Hour"
             sessions.append(s)
@@ -411,7 +409,9 @@ def _auto_create_session_from_schedule(cs, date):
             "doctype":           "Attendance Session",
             "based_on":          "Time Table",
             "class_schedule":    cs.name,
-            "course_offering":   cs.course_offering,
+            "class_name":        cs.class_name,
+            "course":            cs.course,
+            "section":           cs.get("section"),
             "session_date":      date,
             "session_type":      "Lecture",
             "session_start_time": cs.get("from_time"),
@@ -430,7 +430,8 @@ def _auto_create_session_from_schedule(cs, date):
             "session_start_time": doc.session_start_time,
             "session_end_time":   doc.session_end_time,
             "class_schedule":     cs.name,
-            "course_offering":    cs.course_offering,
+            "class_name":         cs.class_name,
+            "course":             cs.course,
             "session_type":       "Lecture",
             "duration_hours":     duration,
         })
@@ -454,30 +455,21 @@ def _is_student_in_session(student, session):
         return True
 
     # Cohort enrollment
-    return _is_student_in_course_offering(student, session.get("course_offering"))
+    return _is_student_in_class(student, session.get("class_name"))
 
 
-def _is_student_in_course_offering(student, course_offering):
-    """True if the student is actively enrolled in this Course Offering."""
-    if not course_offering:
+def _is_student_in_class(student, class_name):
+    """True if the student is an Enrolled student of this Class (through an
+    Enrolled Student Enrollment)."""
+    if not class_name:
         return False
-    if frappe.db.sql("""
-        SELECT 1 FROM `tabStudent Enrollment Course` sec
-        JOIN `tabStudent Enrollment` se ON se.name = sec.parent
-        WHERE sec.course_offering = %s AND se.student = %s AND se.status = 'Enrolled'
+    return bool(frappe.db.sql("""
+        SELECT 1 FROM `tabClass Enrolled Student` ces
+        JOIN `tabStudent Enrollment` se ON se.name = ces.student_enrollment
+        WHERE ces.parenttype = 'Classes' AND ces.parent = %s
+        AND ces.status = 'Enrolled' AND se.student = %s AND se.status = 'Enrolled'
         LIMIT 1
-    """, (course_offering, student)):
-        return True
-    co = frappe.db.get_value(
-        "Course Offering", course_offering, ["program", "academic_year", "year_no"], as_dict=True
-    )
-    if not co or not co.program:
-        return False
-    return bool(enrollments_in_year(
-        academic_year=co.academic_year,
-        year_no=co.year_no,
-        filters={"student": student, "program": co.program, "status": "Enrolled"},
-    ))
+    """, (class_name, student)))
 
 
 # ---------------------------------------------------------------------------
@@ -584,7 +576,8 @@ def _upsert_class_attendance(student, session, status, logs):
             "doctype":            "Student Attendance",
             "student":            student,
             "attendance_session": session.get("name"),
-            "course_offer":       session.get("course_offering"),
+            "class_name":         session.get("class_name"),
+            "course":             session.get("course"),
             "class_schedule":     session.get("class_schedule"),
             "course_schedule":    session.get("course_schedule"),
             "attendance_date":    getdate(first_log.get("swipe_time")),
@@ -630,7 +623,8 @@ def _upsert_office_hour_attendance(student, session, logs):
             "doctype":            "Student Attendance",
             "student":            student,
             "attendance_session": session.get("name"),
-            "course_offer":       session.get("course_offering"),
+            "class_name":         session.get("class_name"),
+            "course":             session.get("course"),
             "attendance_date":    getdate(first_log.get("swipe_time")),
             "date":               getdate(first_log.get("swipe_time")),
             "status":             "Present",
@@ -736,7 +730,7 @@ def get_unmatched_logs(from_date=None, to_date=None, match_status=None, status_f
                     "session_date": getdate(log.get("swipe_time")),
                     "session_status": ["!=", "Cancelled"],
                 },
-                fields=["name", "course", "course_offering", "session_start_time", "session_end_time",
+                fields=["name", "course", "class_name", "session_start_time", "session_end_time",
                         "instructor", "rfid_activated_by", "rfid_activation_time", "duration_hours"],
             )
             for session in candidate_sessions:
@@ -797,7 +791,8 @@ def sync_attendance_log(log_name, session_name, student=None, synced_via="Class 
             "doctype": "Student Attendance",
             "student": log_doc.student,
             "attendance_session": session.name,
-            "course_offer": session.course_offering,
+            "class_name": session.class_name,
+            "course": session.course,
             "course_schedule": session.course_schedule,
             "attendance_date": getdate(swipe_time),
             "date": getdate(swipe_time),

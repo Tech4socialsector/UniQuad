@@ -37,6 +37,8 @@ frappe.ui.form.on("Office Hours Group", {
             method: "slcm.slcm.doctype.office_hours_group.office_hours_group.get_students",
             args: {
                 program: frm.doc.program,
+                // With a class, its roster; otherwise matched by course
+                class_name: frm.doc.class_name,
                 course: frm.doc.course,
                 academic_year: frm.doc.academic_year,
                 academic_term: frm.doc.academic_term,

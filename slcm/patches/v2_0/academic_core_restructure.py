@@ -33,8 +33,10 @@ ROMAN = {"I": 1, "II": 2, "III": 3, "IV": 4, "V": 5, "VI": 6}
 def execute():
 	refresh_programme_links()
 	clean_academic_terms()
-	backfill_course_offerings()
-	merge_duplicate_course_offerings()
+	# Course Offering was removed later (remove_course_offering); skip on sites past that.
+	if frappe.db.table_exists("Course Offering"):
+		backfill_course_offerings()
+		merge_duplicate_course_offerings()
 	backfill_student_enrollments()
 	backfill_fee_structures()
 	refresh_batch_counts()

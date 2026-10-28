@@ -65,7 +65,7 @@ frappe.ui.form.on('Time Table', {
     },
 
     refresh: function (frm) {
-        frm.set_df_property('course_offering', 'read_only', frm.doc.class_name ? 1 : 0);
+        frm.set_df_property('course', 'read_only', frm.doc.class_name ? 1 : 0);
 
         // Auto-generate title if not set
         if (!frm.doc.title && frm.doc.course) {
@@ -351,9 +351,9 @@ frappe.ui.form.on('Time Table', {
     },
 
     class_name: function (frm) {
-        // Course offering, programme, section, faculty, academic year and term
+        // Course, programme, section, faculty, academic year and term
         // come from the Class (fetch_from); the title names the class.
-        frm.set_df_property('course_offering', 'read_only', frm.doc.class_name ? 1 : 0);
+        frm.set_df_property('course', 'read_only', frm.doc.class_name ? 1 : 0);
         if (!frm.doc.class_name) return;
         frappe.db.get_value('Classes', frm.doc.class_name,
             ['course_name', 'section', 'group_name', 'faculty'], (r) => {
@@ -382,29 +382,15 @@ frappe.ui.form.on('Time Table', {
         frm.events.get_title(frm);
     },
 
-    course_offering: function (frm) {
-        if (frm.doc.course_offering) {
-            frappe.db.get_value("Course Offering", frm.doc.course_offering, ["course_title", "program", "faculty", "term_name"], (r) => {
-                if (r) {
-                    frm.set_value("course", r.course_title);
-                    frm.set_value("programme", r.program);
-                    if (r.faculty && !frm.doc.instructor) frm.set_value("instructor", r.faculty);
-                    // Old Term Configuration link - a class-based entry uses Academic Term instead.
-                    if (r.term_name && !frm.doc.class_name) frm.set_value("term", r.term_name);
-                }
-            });
-        }
-    },
-
     course_schedule: function (frm) {
         if (frm.doc.course_schedule) {
-            frappe.db.get_value("Course Schedule", frm.doc.course_schedule, ["schedule_date", "from_time", "to_time", "room", "course_offering", "instructor"], (r) => {
+            frappe.db.get_value("Course Schedule", frm.doc.course_schedule, ["schedule_date", "from_time", "to_time", "room", "class_name", "instructor"], (r) => {
                 if (r) {
                     frm.set_value("schedule_date", r.schedule_date);
                     frm.set_value("from_time", r.from_time);
                     frm.set_value("to_time", r.to_time);
                     frm.set_value("venue", r.room);
-                    if (r.course_offering) frm.set_value("course_offering", r.course_offering);
+                    if (r.class_name) frm.set_value("class_name", r.class_name);
                     if (r.instructor) frm.set_value("instructor", r.instructor);
                 }
             });
@@ -413,12 +399,12 @@ frappe.ui.form.on('Time Table', {
 
     office_hours_group: function (frm) {
         // Office Hours Group now links to Student Group, which carries no date,
-        // time or faculty - only the course context. Setting course_offering
-        // triggers its own handler to fill course, programme, faculty and term.
+        // time or faculty - only the class context. Setting class_name
+        // fetches course, programme, faculty and term from the Class.
         if (frm.doc.office_hours_group) {
-            frappe.db.get_value("Student Group", frm.doc.office_hours_group, ["course_offering", "programme"], (r) => {
+            frappe.db.get_value("Student Group", frm.doc.office_hours_group, ["class_name", "programme"], (r) => {
                 if (r) {
-                    if (r.course_offering) frm.set_value("course_offering", r.course_offering);
+                    if (r.class_name) frm.set_value("class_name", r.class_name);
                     if (r.programme && !frm.doc.programme) frm.set_value("programme", r.programme);
                 }
             });

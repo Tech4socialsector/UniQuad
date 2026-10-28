@@ -12,7 +12,6 @@
   "class_name",
   "office_hours_group",
   "course_schedule",
-  "course_offering",
   "course",
   "column_break_basic",
   "session_date",
@@ -95,15 +94,7 @@
    "options": "Course Schedule"
   },
   {
-   "fieldname": "course_offering",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Course Offering",
-   "options": "Course Offering"
-  },
-  {
-   "fetch_from": "course_offering.course_title",
+   "fetch_from": "class_name.course",
    "fieldname": "course",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -312,7 +303,7 @@
   }
  ],
  "links": [],
- "modified": "2026-10-28 15:00:00.000000",
+ "modified": "2026-10-29 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Attendance Session",

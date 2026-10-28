@@ -34,7 +34,8 @@ class Classes(Document):
 			self.section = None
 		else:
 			self.group_name = None
-		self.validate_term_and_offering()
+		self.validate_term_and_course()
+		self.validate_duplicate_class()
 		self.validate_students()
 		self.total_students = len(self.enrolled_students)
 
@@ -45,19 +46,41 @@ class Classes(Document):
 	def on_trash(self):
 		sync_class_to_enrollments(self, removed=True)
 
-	def validate_term_and_offering(self):
+	def validate_term_and_course(self):
 		term_year = frappe.db.get_value("Academic Term", self.academic_term, "academic_year")
 		if term_year != self.academic_year:
 			frappe.throw(_("Academic Term {0} does not belong to Academic Year {1}").format(
 				self.academic_term, self.academic_year))
 
-		offering = frappe.db.get_value("Course Offering", self.course_offering,
-			["program", "academic_year", "term_name", "year_no"], as_dict=True)
-		if (offering.program, offering.academic_year, offering.term_name) != (
-			self.programme, self.academic_year, self.academic_term):
-			frappe.throw(_("Course Offering {0} is not offered for this Programme, Academic Year and Term").format(
-				self.course_offering))
-		self.year_no = offering.year_no
+		course = frappe.db.get_value("Course", self.course,
+			["course_name", "course_type", "credit_value", "status"], as_dict=True)
+		if not course:
+			frappe.throw(_("Course {0} does not exist").format(self.course))
+		if course.status == "Inactive" and self.is_new():
+			frappe.throw(_("Course {0} is Inactive").format(course.course_name or self.course))
+		self.course_name = course.course_name
+		self.course_type = course.course_type
+		if not cint(self.credit):
+			self.credit = course.credit_value
+
+		duration = cint(frappe.db.get_value("Programme", self.programme, "program_duration"))
+		if cint(self.year_no) < 1 or (duration and cint(self.year_no) > duration):
+			frappe.throw(_("Year must be between 1 and {0} for {1}").format(duration or 1, self.programme))
+
+	def validate_duplicate_class(self):
+		"""One Section class per course, term and section; one Group class per
+		course, term and group name."""
+		filters = {"course": self.course, "academic_term": self.academic_term,
+			"class_type": self.class_type, "name": ["!=", self.name]}
+		if self.class_type == "Group":
+			filters["group_name"] = self.group_name
+		else:
+			filters["section"] = self.section
+		existing = frappe.db.get_value("Classes", filters)
+		if existing:
+			frappe.throw(_("{0} already has a class for {1} in {2}: {3}").format(
+				self.section or self.group_name, self.course_name or self.course, self.academic_term,
+				frappe.bold(existing)))
 
 	def validate_students(self):
 		seen = set()
@@ -121,37 +144,45 @@ def get_enrollment_students(programme=None, academic_year=None, year_no=None, se
 
 @frappe.whitelist()
 def create_classes(data):
-	"""Create one Classes record per Course Offering, all with the same students.
+	"""Create one Classes record per course picked, all with the same students.
 
-	Section classes that already exist for an offering + section are skipped, not duplicated.
+	data.courses: [{course, faculty, credit}]. A class that already exists for
+	the course, term and section (or group name) is skipped, not duplicated.
 	"""
 	data = frappe._dict(json.loads(data) if isinstance(data, str) else data)
 	frappe.has_permission("Classes", "create", throw=True)
 
-	offerings = [o for o in (data.course_offerings or []) if o]
-	if not offerings:
-		frappe.throw(_("Select at least one Course Offering"))
+	courses = [frappe._dict(c) for c in (data.courses or []) if c and c.get("course")]
+	if not courses:
+		frappe.throw(_("Select at least one Course"))
 	students = list(dict.fromkeys(s for s in (data.students or []) if s))
 	if not students:
 		frappe.throw(_("Add at least one student"))
 
+	class_type = data.class_type or "Section"
 	created, skipped = [], []
-	for offering in offerings:
-		if data.class_type != "Group":
-			existing = frappe.db.get_value("Classes",
-				{"course_offering": offering, "section": data.section, "class_type": "Section"})
-			if existing:
-				skipped.append({"course_offering": offering, "class": existing})
-				continue
+	for c in courses:
+		filters = {"course": c.course, "academic_term": data.academic_term, "class_type": class_type}
+		if class_type == "Group":
+			filters["group_name"] = data.group_name
+		else:
+			filters["section"] = data.section
+		existing = frappe.db.get_value("Classes", filters)
+		if existing:
+			skipped.append({"course": c.course, "class": existing})
+			continue
 		doc = frappe.get_doc({
 			"doctype": "Classes",
-			"class_type": data.class_type or "Section",
+			"class_type": class_type,
 			"academic_year": data.academic_year,
 			"academic_term": data.academic_term,
 			"programme": data.programme,
+			"year_no": cint(data.year_no) or 1,
 			"section": data.section,
 			"group_name": data.group_name,
-			"course_offering": offering,
+			"course": c.course,
+			"faculty": c.faculty,
+			"credit": cint(c.credit),
 			"enrolled_students": [{"student_enrollment": s, "status": "Enrolled"} for s in students],
 		})
 		doc.insert()

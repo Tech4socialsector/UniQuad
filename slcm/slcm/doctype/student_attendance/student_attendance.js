@@ -4,20 +4,20 @@
 frappe.ui.form.on("Student Attendance", {
     student(frm) {
         if (frm.doc.student) {
-            // Clear course offer and course to force re-selection
-            frm.set_value('course_offer', '');
+            // Clear class and course to force re-selection
+            frm.set_value('class_name', '');
             frm.set_value('course', '');
 
-            // Fetch the student's enrolled course offerings
+            // Fetch the classes the student is enrolled in
             frappe.call({
-                method: "slcm.slcm.doctype.student_attendance.student_attendance.get_enrolled_offerings",
+                method: "slcm.slcm.doctype.student_attendance.student_attendance.get_student_classes",
                 args: {
                     student: frm.doc.student
                 },
                 callback: function (r) {
                     if (r.message && r.message.length > 0) {
-                        // Filter Course Offering by these offerings
-                        frm.set_query("course_offer", function () {
+                        // Filter Class by these classes
+                        frm.set_query("class_name", function () {
                             return {
                                 filters: {
                                     name: ["in", r.message]
@@ -26,14 +26,14 @@ frappe.ui.form.on("Student Attendance", {
                         });
                     } else {
                         // If no enrollments, show empty or all? Default to empty to prevent error
-                        frm.set_query("course_offer", function () {
+                        frm.set_query("class_name", function () {
                             return {
                                 filters: {
                                     name: ["in", []] // Force empty
                                 }
                             };
                         });
-                        frappe.msgprint(__("Selected student is not enrolled in any active course offerings."));
+                        frappe.msgprint(__("Selected student is not enrolled in any class."));
                     }
                 }
             });

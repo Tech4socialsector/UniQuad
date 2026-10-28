@@ -671,12 +671,12 @@ frappe.pages['re-exam'].on_page_load = function (wrapper) {
 				{ fieldtype: 'Section Break' },
 				{ label: 'Report Type',   fieldname: 'report_type',   fieldtype: 'Select', options: 'Bulk\nCourse Based', default: 'Bulk' },
 				{ fieldtype: 'Column Break' },
-				{ label: 'Course',        fieldname: 'course',        fieldtype: 'Link',   options: 'Course Offering', depends_on: 'eval:doc.report_type=="Course Based"',
+				{ label: 'Course',        fieldname: 'course',        fieldtype: 'Link',   options: 'Course', depends_on: 'eval:doc.report_type=="Course Based"',
 					get_query() {
-						var filters = {};
-						if (d.get_value('programme')) filters.program = d.get_value('programme');
-						if (d.get_value('trimester'))  filters.term_name = d.get_value('trimester');
-						return { filters: filters };
+						return {
+							query: 'slcm.slcm.page.examination_result.examination_result.course_link_query',
+							filters: { programme: d.get_value('programme'), trimester: d.get_value('trimester') },
+						};
 					} }
 			],
 			primary_action_label: 'Download Excel',
@@ -687,7 +687,7 @@ frappe.pages['re-exam'].on_page_load = function (wrapper) {
 				if (v.programme)     args.programme     = v.programme;
 				if (v.trimester)     args.trimester      = v.trimester;
 				if (v.batch)         args.batch          = v.batch;
-				if (v.report_type === 'Course Based' && v.course) args.course_offering = v.course;
+				if (v.report_type === 'Course Based' && v.course) args.course = v.course;
 				if (!Object.keys(args).length) {
 					frappe.msgprint('Please select at least one filter.');
 					return;

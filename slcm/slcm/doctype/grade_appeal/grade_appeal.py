@@ -24,11 +24,11 @@ class GradeAppeal(Document):
 		self._set_resolution_audit()
 
 	def _set_course(self):
-		"""`course` is fetched from the offering; fall back if the offering has none."""
-		if not self.course and self.course_offering:
-			self.course = frappe.db.get_value("Course Offering", self.course_offering, "course_title")
+		"""`course` is required; the term defaults to the exam plan's term."""
 		if not self.course:
-			frappe.throw("The selected Course Offering is not linked to a Course.")
+			frappe.throw("Please select the Course being appealed.")
+		if not self.academic_term and self.exam_plan:
+			self.academic_term = frappe.db.get_value("Exam Plan", self.exam_plan, "term")
 
 	def _validate_marks_exist(self):
 		if not frappe.db.exists(
@@ -115,23 +115,25 @@ def exam_plans_for_student(doctype, txt, searchfield, start, page_len, filters):
 
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
-def offerings_for_student(doctype, txt, searchfield, start, page_len, filters):
+def courses_for_student(doctype, txt, searchfield, start, page_len, filters):
+	"""Courses the student has marks for in the exam plan."""
 	filters = filters or {}
-	courses = frappe.get_all(
-		"Student Course Marks",
-		filters={"student": filters.get("student"), "exam_plan": filters.get("exam_plan")},
-		pluck="course",
-	)
-	if not courses:
-		return []
 	return frappe.db.sql(
 		"""
-		SELECT co.name, co.course_name, co.course_title
-		FROM `tabCourse Offering` co
-		WHERE co.course_title IN %(courses)s
-		  AND (co.name LIKE %(txt)s OR co.course_name LIKE %(txt)s)
-		ORDER BY co.creation DESC
+		SELECT DISTINCT c.name, c.course_name
+		FROM `tabStudent Course Marks` scm
+		JOIN `tabCourse` c ON c.name = scm.course
+		WHERE scm.student = %(student)s
+		  AND scm.exam_plan = %(exam_plan)s
+		  AND (c.name LIKE %(txt)s OR c.course_name LIKE %(txt)s)
+		ORDER BY c.course_name
 		LIMIT %(start)s, %(page_len)s
 		""",
-		{"courses": tuple(courses), "txt": f"%{txt}%", "start": start, "page_len": page_len},
+		{
+			"student": filters.get("student"),
+			"exam_plan": filters.get("exam_plan"),
+			"txt": f"%{txt}%",
+			"start": start,
+			"page_len": page_len,
+		},
 	)

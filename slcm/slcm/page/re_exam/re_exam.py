@@ -17,46 +17,15 @@ def _check_access():
 		frappe.throw(_("Not permitted"), frappe.PermissionError)
 
 
-def _get_course_offering(exam_plan, course):
-	"""Resolve the Course Offering for a course under this exam plan via its
-	Course Schema Assignment. Throws if none exists yet.
-
-	If the assignment points at a Course Offering that has since been deleted
-	(offerings get regenerated when batches/terms are re-created), fall back to
-	the course's live offering for the exam plan's term and repair the
-	assignment, instead of failing every save with a LinkValidationError."""
-	csa = frappe.db.get_value(
-		"Course Schema Assignment",
-		{"exam_plan": exam_plan, "course": course},
-		["name", "course_offering"],
-		as_dict=True,
-	)
-	course_offering = csa and csa.course_offering
-	if course_offering and frappe.db.exists("Course Offering", course_offering):
-		return course_offering
-
-	term = frappe.db.get_value("Exam Plan", exam_plan, "term")
-	candidates = frappe.get_all(
-		"Course Offering",
-		filters={"course_title": course, **({"term_name": term} if term else {})},
-		pluck="name",
-		order_by="modified desc",
-	)
-	if len(candidates) == 1:
-		if csa:
-			frappe.db.set_value("Course Schema Assignment", csa.name, "course_offering", candidates[0])
-		return candidates[0]
-
-	if course_offering:
+def _get_academic_term(exam_plan, course):
+	"""Academic Term for a course under this exam plan (the plan's term).
+	Throws if the course has no Course Schema Assignment in the plan yet."""
+	if not frappe.db.exists("Course Schema Assignment", {"exam_plan": exam_plan, "course": course}):
 		frappe.throw(
-			_("Course Offering '{0}' linked to course '{1}' in exam plan '{2}' no longer exists. "
-			  "Update its Course Schema Assignment to the current Course Offering.").format(
-				course_offering, course, exam_plan)
+			_("Course '{0}' is not mapped in exam plan '{1}'. "
+			  "Map a Course Schema Assignment for it first.").format(course, exam_plan)
 		)
-	frappe.throw(
-		_("No Course Offering found for course '{0}' in exam plan '{1}'. "
-		  "Map a Course Schema Assignment for it first.").format(course, exam_plan)
-	)
+	return frappe.db.get_value("Exam Plan", exam_plan, "term")
 
 
 @frappe.whitelist()
@@ -148,8 +117,7 @@ def save_re_exam_setting(exam_plan, course, re_exam_fee=None, deadline_from=None
 		doc = frappe.new_doc("Re Exam Course Setting")
 		doc.exam_plan = exam_plan
 		doc.course    = course
-	# Re-resolve every save so a setting saved against a since-deleted offering self-heals
-	doc.course_offering = _get_course_offering(exam_plan, course)
+	doc.academic_term = _get_academic_term(exam_plan, course)
 
 	doc.re_exam_fee   = re_exam_fee   or None
 	doc.deadline_from = deadline_from or None
@@ -424,7 +392,7 @@ def set_student_re_exam_allowed(exam_plan, course, student, is_allowed, override
 		doc = frappe.new_doc("Re Exam Student Override")
 		doc.exam_plan        = exam_plan
 		doc.course           = course
-		doc.course_offering  = _get_course_offering(exam_plan, course)
+		doc.academic_term    = _get_academic_term(exam_plan, course)
 		doc.student          = student
 		doc.is_allowed       = is_allowed
 		doc.override_reason  = override_reason or ""
@@ -526,7 +494,7 @@ def bulk_save_re_exam_setting(exam_plan, re_exam_fee=None, deadline_from=None, d
 			doc = frappe.new_doc("Re Exam Course Setting")
 			doc.exam_plan = exam_plan
 			doc.course    = course
-		doc.course_offering = _get_course_offering(exam_plan, course)
+		doc.academic_term = _get_academic_term(exam_plan, course)
 		doc.re_exam_fee   = re_exam_fee   or None
 		doc.deadline_from = deadline_from or None
 		doc.deadline_to   = deadline_to   or None

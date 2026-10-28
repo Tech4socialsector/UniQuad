@@ -192,29 +192,30 @@ def get_context(context):
 
 def _attach_assessments(exam_plans, student_name):
     """Attach Exam Assessment Schedule rows (assessment date + submission deadlines)
-    to each course on the page, for the course offerings the student is enrolled in.
+    to each course on the page, for the courses the student is studying (Ongoing).
     Assessments whose term has no Exam Plan card get a card of their own."""
-    # Match on course + programme + term rather than the exact Course Offering, so a
-    # student enrolled in a duplicate offering of the same course still sees the schedule.
+    # Match on course + term + the programme of the student's Class (falling back to
+    # the enrolment's programme), so every section of the course sees the schedule.
     rows = frappe.db.sql(
         """
-        SELECT DISTINCT eas.term, item.course_offering, item.course, item.course_name,
+        SELECT DISTINCT eas.term, item.course, item.course_name,
                item.assessment_label, item.assessment_date,
                item.first_submission_deadline, item.second_submission_deadline, item.remarks,
                item.idx
         FROM `tabExam Assessment Schedule Item` item
         JOIN `tabExam Assessment Schedule` eas ON eas.name = item.parent
-        JOIN `tabCourse Offering` co
-          ON co.course_title = item.course
-         AND co.program = eas.programme
-         AND co.term_name = eas.term
-        JOIN `tabStudent Enrollment Course` sec ON sec.course_offering = co.name
+        JOIN `tabStudent Enrollment Course` sec
+          ON sec.course = item.course
+         AND sec.academic_term = eas.term
+         AND sec.parenttype = 'Student Enrollment'
         JOIN `tabStudent Enrollment` se ON se.name = sec.parent
+        LEFT JOIN `tabClasses` cl ON cl.name = sec.class_name
         WHERE item.parenttype = 'Exam Assessment Schedule'
           AND eas.status = 'Active'
           AND se.student = %(student)s
           AND se.status != 'Dropped'
-          AND sec.status = 'Enrolled'
+          AND sec.status = 'Ongoing'
+          AND COALESCE(NULLIF(cl.programme, ''), se.program) = eas.programme
         ORDER BY item.course_name,
                  COALESCE(item.assessment_date, item.first_submission_deadline) IS NULL,
                  COALESCE(item.assessment_date, item.first_submission_deadline),
@@ -326,9 +327,14 @@ def _fmt_dt(dt):
 def _get_attendance(row, student_name, exam_plan):
     if row.attendance_status:
         return row.attendance_status
+    # Attendance Summary is per student per class: read it by course + the plan's term
+    filters = {"student": student_name, "course": row.course}
+    term = frappe.db.get_value("Exam Plan", exam_plan, "term") if exam_plan else None
+    if term:
+        filters["academic_term"] = term
     summary = frappe.db.get_value(
         "Attendance Summary",
-        {"student": student_name, "course": row.course},
+        filters,
         ["attendance_percentage", "eligible_for_exam", "minimum_required_percentage"],
         as_dict=True,
         order_by="modified desc",

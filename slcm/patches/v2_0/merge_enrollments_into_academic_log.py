@@ -165,6 +165,10 @@ def _merge_group(keeper, members):
 
 
 def _backfill_course_rows():
+    # Course Offering was removed later (remove_course_offering); skip on sites past that.
+    if not (frappe.db.table_exists("Course Offering")
+            and frappe.db.has_column("Student Enrollment Course", "course_offering")):
+        return
     frappe.db.sql(
         """UPDATE `tabStudent Enrollment Course` c
            JOIN `tabCourse Offering` co ON co.name = c.course_offering

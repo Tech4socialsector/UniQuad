@@ -146,23 +146,6 @@
    "collapsible": 1,
    "display_depends_on": null,
    "filters": null,
-   "icon": "project-1",
-   "indent": 0,
-   "keep_closed": 0,
-   "label": "Course Offering",
-   "link_to": "Course Offering",
-   "link_type": "DocType",
-   "navigate_to_tab": null,
-   "route_options": null,
-   "show_arrow": 0,
-   "type": "Link",
-   "url": null
-  },
-  {
-   "child": 0,
-   "collapsible": 1,
-   "display_depends_on": null,
-   "filters": null,
    "icon": "users",
    "indent": 0,
    "keep_closed": 0,
@@ -193,7 +176,7 @@
    "url": null
   }
  ],
- "modified": "2026-03-26 11:10:01.301894",
+ "modified": "2026-10-29 10:30:00.000000",
  "module": "SLCM",
  "name": "Student Registration",
  "standard": 0,

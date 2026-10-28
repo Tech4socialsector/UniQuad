@@ -1226,7 +1226,7 @@ def get_placement_analytics(academic_year=None, term=None, program=None, cohort=
 
 @frappe.whitelist()
 def get_programme_analytics(academic_year=None, term=None, program=None, cohort=None, student_status=None):
-	"""Programme structure, cohort health, enrollment, and course offering analytics."""
+	"""Programme structure, cohort health, enrollment, and class (course taught) analytics."""
 	_require_dashboard_access()
 
 	ay_filter   = {"academic_year": academic_year} if academic_year else {}
@@ -1324,33 +1324,37 @@ def get_programme_analytics(academic_year=None, term=None, program=None, cohort=
 		as_dict=True,
 	)
 
-	# ── Course Offerings ──────────────────────────────────────────────────────
+	# ── Classes (courses taught) ──────────────────────────────────────────────
+	# Classes carry no status: a class of an Active academic year is "Active",
+	# any other is "Closed".
 	co_where_parts = []
 	co_params = {}
 	if academic_year:
 		co_where_parts.append("co.academic_year = %(academic_year)s")
 		co_params["academic_year"] = academic_year
 	if program:
-		co_where_parts.append("co.program = %(program)s")
+		co_where_parts.append("co.programme = %(program)s")
 		co_params["program"] = program
 	if cohort:
-		# Offerings no longer carry a batch: match (program, academic_year, year_no)
-		# of any Enrolled Student Enrollment in that batch (via its academic log).
+		# Classes carry no batch: classes with a student of that batch on the roster
 		co_where_parts.append(
-			"EXISTS (SELECT 1 FROM `tabStudent Enrollment` cse WHERE cse.batch = %(cohort)s"
-			" AND cse.status = 'Enrolled' AND cse.program = co.program"
-			f" AND {year_log_exists('cse', 'co.academic_year', 'co.year_no')})"
+			"EXISTS (SELECT 1 FROM `tabClass Enrolled Student` ces"
+			" JOIN `tabStudent Enrollment` cse ON cse.name = ces.student_enrollment"
+			" WHERE ces.parenttype = 'Classes' AND ces.parent = co.name"
+			" AND cse.batch = %(cohort)s)"
 		)
 		co_params["cohort"] = cohort
 
 	co_where = ("WHERE " + " AND ".join(co_where_parts)) if co_where_parts else ""
+	class_state_sql = "IF(cay.status = 'Active', 'Active', 'Closed')"
 
 	offering_status = frappe.db.sql(
 		f"""
-		SELECT COALESCE(NULLIF(co.status, ''), 'Unknown') AS label, COUNT(*) AS value
-		FROM `tabCourse Offering` co
+		SELECT {class_state_sql} AS label, COUNT(*) AS value
+		FROM `tabClasses` co
+		LEFT JOIN `tabAcademic Year` cay ON cay.name = co.academic_year
 		{co_where}
-		GROUP BY co.status ORDER BY value DESC
+		GROUP BY label ORDER BY value DESC
 		""",
 		co_params,
 		as_dict=True,
@@ -1358,11 +1362,11 @@ def get_programme_analytics(academic_year=None, term=None, program=None, cohort=
 
 	offering_by_program = frappe.db.sql(
 		f"""
-		SELECT COALESCE(p.program_name, co.program, 'Unknown') AS label, COUNT(*) AS value
-		FROM `tabCourse Offering` co
-		LEFT JOIN `tabProgramme` p ON p.name = co.program
+		SELECT COALESCE(p.program_name, co.programme, 'Unknown') AS label, COUNT(*) AS value
+		FROM `tabClasses` co
+		LEFT JOIN `tabProgramme` p ON p.name = co.programme
 		{co_where}
-		GROUP BY co.program ORDER BY value DESC LIMIT 12
+		GROUP BY co.programme ORDER BY value DESC LIMIT 12
 		""",
 		co_params,
 		as_dict=True,
@@ -1392,11 +1396,11 @@ def get_programme_analytics(academic_year=None, term=None, program=None, cohort=
 		se_params,
 	)[0][0]
 	total_offerings = frappe.db.sql(
-		f"SELECT COUNT(*) FROM `tabCourse Offering` co {co_where}", co_params
+		f"SELECT COUNT(*) FROM `tabClasses` co {co_where}", co_params
 	)[0][0]
 	open_offerings = frappe.db.sql(
-		f"SELECT COUNT(*) FROM `tabCourse Offering` co {co_where}"
-		+ (" AND " if co_where else " WHERE ") + "co.status = 'Active'",
+		f"SELECT COUNT(*) FROM `tabClasses` co LEFT JOIN `tabAcademic Year` cay ON cay.name = co.academic_year {co_where}"
+		+ (" AND " if co_where else " WHERE ") + "cay.status = 'Active'",
 		co_params,
 	)[0][0]
 
@@ -2338,7 +2342,7 @@ def get_drilldown_data(module, dimension, value, academic_year=None, term=None, 
 				cond_filters["final_status"] = value
 			rows = frappe.db.get_all(
 				"Student Attendance Condonation", filters=cond_filters,
-				fields=["name", "student", "student_name", "course_offering", "course",
+				fields=["name", "student", "student_name", "class_name", "course",
 						"academic_year", "faculty_recommendation", "final_status",
 						"number_of_sessions", "condonation_reason"],
 				limit_start=offset, limit_page_length=page_size, order_by="creation desc",
@@ -2817,39 +2821,39 @@ def get_drilldown_data(module, dimension, value, academic_year=None, term=None, 
 								"status", "enrollment_date"]}
 
 		elif dimension == "offering_status":
-			filters = {}
-			if value and value not in ("all", "All"):
-				filters["status"] = value
-			if academic_year:
-				filters["academic_year"] = academic_year
+			# Classes carry no status: Active = class of an Active academic year
+			filters = [["academic_year", "=", academic_year]] if academic_year else []
 			if program:
-				filters["program"] = program
+				filters.append(["programme", "=", program])
+			if value and value not in ("all", "All"):
+				active_ays = frappe.db.get_all("Academic Year", filters={"status": "Active"}, pluck="name") or [""]
+				filters.append(["academic_year", "in" if value in ("Active", "Open") else "not in", active_ays])
 			rows = frappe.db.get_all(
-				"Course Offering", filters=filters,
-				fields=["name", "course_name", "program", "year_no", "faculty",
-						"academic_year", "status"],
+				"Classes", filters=filters,
+				fields=["name", "course_name", "programme", "year_no", "faculty_name",
+						"academic_year", "academic_term"],
 				limit_start=offset, limit_page_length=page_size, order_by="course_name asc",
 			)
-			total = frappe.db.count("Course Offering", filters=filters)
+			total = frappe.db.count("Classes", filters=filters)
 			return {"rows": rows, "total": total,
-					"columns": ["course_name", "program", "year_no", "faculty",
-								"academic_year", "status"]}
+					"columns": ["course_name", "programme", "year_no", "faculty_name",
+								"academic_year", "academic_term"]}
 
 		elif dimension == "offering_program":
 			prog_id = frappe.db.get_value("Programme", {"program_name": value}, "name") or value
-			filters = {"program": prog_id}
+			filters = {"programme": prog_id}
 			if academic_year:
 				filters["academic_year"] = academic_year
 			rows = frappe.db.get_all(
-				"Course Offering", filters=filters,
-				fields=["name", "course_name", "program", "year_no", "faculty",
-						"academic_year", "status"],
+				"Classes", filters=filters,
+				fields=["name", "course_name", "programme", "year_no", "faculty_name",
+						"academic_year", "academic_term"],
 				limit_start=offset, limit_page_length=page_size, order_by="course_name asc",
 			)
-			total = frappe.db.count("Course Offering", filters=filters)
+			total = frappe.db.count("Classes", filters=filters)
 			return {"rows": rows, "total": total,
-					"columns": ["course_name", "program", "year_no", "faculty",
-								"academic_year", "status"]}
+					"columns": ["course_name", "programme", "year_no", "faculty_name",
+								"academic_year", "academic_term"]}
 
 		elif dimension == "course_enroll_status":
 			filters = {}
@@ -2857,12 +2861,12 @@ def get_drilldown_data(module, dimension, value, academic_year=None, term=None, 
 				filters["status"] = value
 			rows = frappe.db.get_all(
 				"Student Enrollment Course", filters=filters,
-				fields=["name", "course_offering", "course", "status", "parent"],
+				fields=["name", "class_name", "course", "status", "parent"],
 				limit_start=offset, limit_page_length=page_size, order_by="parent asc",
 			)
 			total = frappe.db.count("Student Enrollment Course", filters=filters)
 			return {"rows": rows, "total": total,
-					"columns": ["parent", "course", "course_offering", "status"]}
+					"columns": ["parent", "course", "class_name", "status"]}
 
 	# ── Placement ─────────────────────────────────────────────────────────────
 	elif module == "placement":

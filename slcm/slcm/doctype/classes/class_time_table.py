@@ -20,6 +20,10 @@ from frappe import _
 from frappe.utils import cint, flt, formatdate, get_datetime, getdate, now_datetime, to_timedelta
 
 from slcm.slcm.doctype.classes.classes import get_class_students
+from slcm.slcm.doctype.time_table.time_table import format_time_12h, publish_bulk_progress
+
+# Progress label shown by the Create Time Table dialog while groups are made
+CP_PROGRESS_LABEL = "Creating Class Participation groups"
 
 REPEAT_STEP = {
 	"Daily": relativedelta(days=1),
@@ -32,7 +36,7 @@ def _get_class(class_name):
 	cls = frappe.db.get_value(
 		"Classes",
 		class_name,
-		["name", "class_type", "course_offering", "course_name", "programme", "section", "group_name",
+		["name", "class_type", "course", "course_name", "programme", "section", "group_name",
 		 "academic_year", "academic_term", "faculty", "faculty_name"],
 		as_dict=True,
 	)
@@ -133,22 +137,37 @@ def preview_class_time_table(data):
 			if _overlaps(data.from_time, data.to_time, row.from_time, row.to_time):
 				busy.setdefault((field, getdate(row.schedule_date)), row)
 
+	def slot(row):
+		return f"{format_time_12h(row.from_time)} – {format_time_12h(row.to_time)}"
+
+	def session(row):
+		return row.title or row.course or _("another session")
+
 	rows, errors = [], []
 	for i, d in enumerate(dates):
 		status, note = "ok", ""
+		day = formatdate(d, "EEEE, dd MMMM yyyy")
 		if d in non_teaching:
-			status, note = "holiday", non_teaching[d]
-		elif (clash := busy.get(("venue", d))):
-			status, note = "venue", _("Venue booked: {0}").format(clash.title or clash.course or "")
-		elif (clash := busy.get(("instructor", d))):
-			status, note = "faculty", _("Faculty has {0}").format(clash.title or clash.course or "")
+			status, note = "holiday", _("Non-teaching day: {0}").format(non_teaching[d])
 			if i == 0:
-				# The first date only warns for the faculty (Time Table does the same)
-				status = "faculty_warn"
+				errors.append(_(
+					"{0} is a non-teaching day ({1}) as per the Institutional Calendar. "
+					"Kindly choose a working day for the first session of this class."
+				).format(frappe.bold(day), non_teaching[d]))
+		elif (clash := busy.get(("venue", d))):
+			status = "venue"
+			note = _("Venue already reserved for {0} ({1})").format(session(clash), slot(clash))
+			if i == 0:
+				errors.append(_(
+					"The venue {0} is already reserved on {1} for the {2} time slot ({3}). "
+					"Kindly choose a different date, time slot or venue for this class."
+				).format(frappe.bold(data.venue), frappe.bold(day), slot(clash), frappe.bold(session(clash))))
+		elif (clash := busy.get(("instructor", d))):
+			# Only a venue clash blocks a date; the faculty's other session is a
+			# warning (the session is still created, as in Time Table).
+			status = "faculty_warn"
+			note = _("Faculty already engaged in {0} ({1})").format(session(clash), slot(clash))
 		rows.append({"date": str(d), "date_fmt": formatdate(d, "EEE, dd MMM yyyy"), "status": status, "note": note})
-		if i == 0 and status in ("holiday", "venue"):
-			errors.append(_("The first date {0} cannot be scheduled: {1}. Pick another Schedule Date.").format(
-				formatdate(d), note))
 	return {"dates": rows, "errors": errors}
 
 
@@ -185,6 +204,7 @@ def create_class_time_table(data):
 	if weeks:
 		roster = {s.student: s.student_id for s in _class_roster(cls.name)}
 		label = " ".join(filter(None, [cls.course_name, cls.section or cls.group_name]))
+		publish_bulk_progress(CP_PROGRESS_LABEL, 0, len(weeks))
 		for i, week in enumerate(weeks, start=1):
 			week = frappe._dict(week)
 			outside = [s for s in week.students if s not in roster]
@@ -196,7 +216,7 @@ def create_class_time_table(data):
 				"academic_year": cls.academic_year,
 				"academic_term": cls.academic_term,
 				"programme": cls.programme,
-				"course_offering": cls.course_offering,
+				"class_name": cls.name,
 				"week_name": f"{label} - Week {i}",
 				"students": [{"student": s, "student_id": roster[s] or s} for s in week.students],
 			})
@@ -209,8 +229,10 @@ def create_class_time_table(data):
 				"start_date": week.start_date,
 				"end_date": week.end_date,
 			})
+			publish_bulk_progress(CP_PROGRESS_LABEL, i, len(weeks))
 
-	# after_insert creates the rest of the series and every Attendance Session
+	# after_insert creates the rest of the series and every Attendance Session,
+	# publishing "Scheduling" progress as it goes
 	doc.insert(ignore_permissions=True)
 	occurrences = frappe.db.count("Time Table", {"parent_schedule": doc.name})
 	return {"name": doc.name, "sessions": occurrences + 1, "groups": groups}

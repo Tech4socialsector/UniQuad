@@ -1,7 +1,6 @@
 import json
 import frappe
 from frappe.model.document import Document
-from frappe.utils import cint
 
 
 class CourseManagement(Document):
@@ -187,7 +186,6 @@ def save_curriculum(
 
 		# Save the document properly
 		doc.save(ignore_permissions=True)
-		generate_offerings_from_curriculum(doc)
 		frappe.db.commit()
 
 		return {"status": "updated", "name": doc.name}
@@ -217,85 +215,9 @@ def save_curriculum(
 
 	# 🔥 INSERT ONLY ONCE
 	doc.insert(ignore_permissions=True)
-	generate_offerings_from_curriculum(doc)
 	frappe.db.commit()
 
 	return {"status": "created", "name": doc.name}
-
-
-# ---------------------------------------------------------------------
-# GENERATE COURSE OFFERINGS FROM CURRICULUM
-# ---------------------------------------------------------------------
-def generate_offerings_from_curriculum(course_list_doc):
-	"""Create/update one Course Offering per (course, batch, semester) in the
-	saved curriculum, so Course Management's plan is what actually drives
-	enrollment instead of requiring offerings to be entered by hand.
-
-	Only runs for batch-specific curricula (a generic, batch-less curriculum
-	has no cohort to scope an offering to, so there is nothing to generate).
-	Cluster rows are skipped since they don't map to a single Course.
-	"""
-	if not course_list_doc.batch:
-		return
-
-	# Offerings are keyed by programme + academic year + year no + term (no
-	# cohort); the batch only tells us which year of study this plan is for.
-	year_no = _get_batch_year_no(
-		course_list_doc.batch, course_list_doc.program, course_list_doc.academic_year
-	)
-	if not year_no:
-		return
-
-	for row in course_list_doc.curriculum_courses:
-		if row.course_group_type != "Course" or not row.course or not row.semester:
-			continue
-
-		academic_term = frappe.db.get_value(
-			"Academic Term",
-			{"academic_year": course_list_doc.academic_year, "term_name": row.semester},
-			"name",
-		)
-		if not academic_term:
-			continue
-
-		filters = {
-			"course_title": row.course,
-			"program": course_list_doc.program,
-			"academic_year": course_list_doc.academic_year,
-			"year_no": year_no,
-			"term_name": academic_term,
-		}
-		existing = frappe.db.get_value("Course Offering", filters, "name")
-
-		message_log_len = len(frappe.message_log)
-		try:
-			if existing:
-				offering = frappe.get_doc("Course Offering", existing)
-			else:
-				offering = frappe.new_doc("Course Offering")
-				offering.course_title = row.course
-				offering.academic_year = course_list_doc.academic_year
-				offering.year_no = year_no
-				offering.term_name = academic_term
-
-			offering.program = course_list_doc.program
-			if not offering.status:
-				offering.status = "Active"
-
-			if existing:
-				offering.save(ignore_permissions=True)
-			else:
-				offering.insert(ignore_permissions=True)
-		except Exception:
-			# Drop any message queued by the failed attempt (e.g. a validation
-			# error) so it doesn't leak into the response of what is otherwise
-			# a successful Course Management save.
-			del frappe.message_log[message_log_len:]
-			frappe.log_error(
-				title="Course Offering generation failed",
-				message=frappe.get_traceback(),
-			)
-
 
 
 # ---------------------------------------------------------------------
@@ -327,41 +249,6 @@ def get_details_from_section(section):
 	# Sections are global (not tied to a batch / programme), so there is
 	# nothing to derive from one.
 	return {}
-
-
-def _get_batch_year_no(batch, program, academic_year):
-	"""Year of study of `batch` in `academic_year`: taken from the batch's
-	Student Enrollments, else counted from the batch's starting year."""
-	year_no = frappe.db.sql(
-		"""
-		SELECT l.year_no
-		FROM `tabStudent Academic Log` l
-		INNER JOIN `tabStudent Enrollment` se
-			ON se.name = l.parent AND l.parenttype = 'Student Enrollment'
-		WHERE se.batch = %(batch)s AND se.program = %(program)s
-			AND l.academic_year = %(academic_year)s
-			AND l.status NOT IN ('Redo', 'Dropped')
-			AND IFNULL(l.year_no, 0) > 0
-		LIMIT 1
-		""",
-		{"batch": batch, "program": program, "academic_year": academic_year},
-	)
-	if year_no:
-		return cint(year_no[0][0])
-
-	batch_start = frappe.db.get_value(
-		"Academic Year",
-		frappe.db.get_value("Batch", batch, "academic_year"),
-		"year_start_date",
-	)
-	target_start = frappe.db.get_value("Academic Year", academic_year, "year_start_date")
-	if not batch_start or not target_start or target_start < batch_start:
-		return 0
-
-	return frappe.db.count(
-		"Academic Year",
-		{"year_start_date": ["between", [batch_start, target_start]]},
-	)
 
 
 # ---------------------------------------------------------------------

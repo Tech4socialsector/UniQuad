@@ -465,7 +465,7 @@ class UqTable {
 		this.$scroll.on("click", "[data-offering]", (e) => {
 			e.preventDefault();
 			const o = $(e.currentTarget).attr("data-offering");
-			this.dash.modal.open({ key: "offering_attendance", params: { course_offering: o }, subtitle: o });
+			this.dash.modal.open({ key: "offering_attendance", params: { class_name: o }, subtitle: o });
 		});
 		this.$foot.on("click", "[data-page]", (e) => {
 			this.page = cint($(e.currentTarget).attr("data-page"));
@@ -534,7 +534,7 @@ class UqTable {
 			case "student":
 				return v ? `<button type="button" class="uq-link" data-student="${uq_esc(v)}" title="${__("Open student profile")}">${uq_esc(v)}</button>` : "—";
 			case "offering":
-				return v ? `<button type="button" class="uq-link" data-offering="${uq_esc(v)}" title="${__("View student attendance for this offering")}">${uq_esc(v)}</button>` : "—";
+				return v ? `<button type="button" class="uq-link" data-offering="${uq_esc(v)}" title="${__("View student attendance for this class")}">${uq_esc(v)}</button>` : "—";
 			case "form":
 				return v ? `<a href="${uq_esc(frappe.utils.get_form_link(this.data.doctype, v))}" title="${__("Open record")}">${uq_esc(v)}</a>` : "—";
 			case "record":
@@ -824,7 +824,7 @@ const UQ_TABLES = {
 	applications: { title: __("Application Pipeline"), q: __("Most recently updated applications.") },
 	recent_students: { title: __("Recent Students"), q: __("Which student records changed most recently?") },
 	todays_schedule: { title: __("Today's Schedule"), q: __("What is on the timetable today, and where?"), empty: __("No classes are scheduled for today.") },
-	offerings: { title: __("Course Operations"), q: __("Which running courses have sessions without attendance, or low attendance? Open an offering to see its students.") },
+	offerings: { title: __("Course Operations"), q: __("Which running courses have sessions without attendance, or low attendance? Open a class to see its students.") },
 	attendance_exceptions: { title: __("Attendance Exceptions"), q: __("Which past sessions still need attention?"), params: { mode: "unmarked" }, modes: true },
 	idcards: { title: __("Student ID Cards"), q: __("Latest ID card records and their status.") },
 	fee_payments: { title: __("Recent Fee Payments"), q: __("Payments received within the date range."), empty: __("No fee payments in the selected date range.") },
@@ -2075,7 +2075,7 @@ class UniquadDashboard {
 	card_category(c) {
 		const map = {
 			"Student Master": __("Students"),
-			"Course Offering": __("Courses"),
+			Classes: __("Courses"),
 			Course: __("Courses"),
 			Programme: __("Programmes"),
 			Batch: __("Batches"),

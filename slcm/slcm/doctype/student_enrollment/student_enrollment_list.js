@@ -152,16 +152,28 @@ function add_promotion_buttons(listview) {
 
 /*****************************************************
  * CREATE CLASS
- * One Classes record per Course Offering picked, all with the same students.
+ * One Classes record per course picked, all with the same students.
  * Section: students of one programme section. Group: students picked from any
  * programme / year / section via "Find Students".
  *****************************************************/
 function open_create_class_dialog(listview) {
-	const offering_fields = [
-		{ fieldname: "course_offering", fieldtype: "Link", options: "Course Offering", label: __("Course Offering"), in_list_view: 1, read_only: 1, columns: 4 },
-		{ fieldname: "course_name", fieldtype: "Data", label: __("Course"), in_list_view: 1, read_only: 1, columns: 3 },
-		{ fieldname: "credit_value", fieldtype: "Int", label: __("Credit"), in_list_view: 1, read_only: 1, columns: 1 },
-		{ fieldname: "faculty", fieldtype: "Link", options: "Faculty", label: __("Faculty"), in_list_view: 1, read_only: 1, columns: 2 },
+	const course_fields = [
+		{ fieldname: "course", fieldtype: "Link", options: "Course", label: __("Course"), in_list_view: 1, reqd: 1, columns: 4,
+			get_query: () => ({ filters: { status: "Active" } }),
+			// Picking a course brings its type and credit; faculty is chosen by hand
+			onchange() {
+				const row = this.doc;
+				if (!row || !row.course) return;
+				frappe.db.get_value("Course", row.course, ["course_name", "course_type", "credit_value"]).then(({ message: c }) => {
+					Object.assign(row, { course_name: c.course_name, course_type: c.course_type, credit: c.credit_value });
+					dialog.fields_dict.courses.grid.refresh();
+				});
+			},
+		},
+		{ fieldname: "course_name", fieldtype: "Data", label: __("Course Name"), read_only: 1 },
+		{ fieldname: "course_type", fieldtype: "Data", label: __("Course Type"), in_list_view: 1, read_only: 1, columns: 2 },
+		{ fieldname: "credit", fieldtype: "Int", label: __("Credit"), in_list_view: 1, read_only: 1, columns: 1 },
+		{ fieldname: "faculty", fieldtype: "Link", options: "Faculty", label: __("Faculty"), in_list_view: 1, columns: 3 },
 	];
 	const student_fields = [
 		{ fieldname: "student_enrollment", fieldtype: "Link", options: "Student Enrollment", label: __("Student ID"), in_list_view: 1, read_only: 1, columns: 2 },
@@ -187,26 +199,18 @@ function open_create_class_dialog(listview) {
 			{ fieldname: "academic_year", fieldtype: "Link", options: "Academic Year", label: __("Academic Year"), reqd: 1,
 				onchange: () => {
 					dialog.set_value("academic_term", null);
-					load_offerings();
 					load_section_students();
 				},
 			},
 			{ fieldname: "academic_term", fieldtype: "Link", options: "Academic Term", label: __("Academic Term"), reqd: 1,
 				get_query: () => ({ filters: { academic_year: dialog.get_value("academic_year") } }),
-				onchange: () => load_offerings(),
 			},
 			{ fieldname: "cb_1", fieldtype: "Column Break" },
 			{ fieldname: "programme", fieldtype: "Link", options: "Programme", label: __("Programme"), reqd: 1,
-				onchange: () => {
-					load_offerings();
-					load_section_students();
-				},
+				onchange: () => load_section_students(),
 			},
 			{ fieldname: "year_no", fieldtype: "Int", label: __("Year No"), default: 1, reqd: 1,
-				onchange: () => {
-					load_offerings();
-					load_section_students();
-				},
+				onchange: () => load_section_students(),
 			},
 			{ fieldname: "section", fieldtype: "Link", options: "Section", label: __("Section"),
 				depends_on: "eval:doc.class_type!='Group'", mandatory_depends_on: "eval:doc.class_type!='Group'",
@@ -216,9 +220,9 @@ function open_create_class_dialog(listview) {
 				depends_on: "eval:doc.class_type=='Group'", mandatory_depends_on: "eval:doc.class_type=='Group'",
 			},
 
-			{ fieldname: "sb_offerings", fieldtype: "Section Break", label: __("Course Offerings"),
-				description: __("A class is created for each course offering listed. Remove the ones you don't need.") },
-			{ fieldname: "offerings", fieldtype: "Table", label: __("Course Offerings"), cannot_add_rows: 1, in_place_edit: 0, data: [], fields: offering_fields },
+			{ fieldname: "sb_courses", fieldtype: "Section Break", label: __("Courses"),
+				description: __("Add the courses to create a class for, one class per course. Course type and credit come from the course; pick the faculty for each.") },
+			{ fieldname: "courses", fieldtype: "Table", label: __("Courses"), in_place_edit: 1, data: [], fields: course_fields },
 
 			{ fieldname: "sb_find", fieldtype: "Section Break", label: __("Find Students"), depends_on: "eval:doc.class_type=='Group'",
 				description: __("Leave a filter empty to match all. Students found are added to the list below.") },
@@ -235,10 +239,18 @@ function open_create_class_dialog(listview) {
 		],
 		primary_action_label: __("Create Class"),
 		primary_action(values) {
-			const course_offerings = (values.offerings || []).map((r) => r.course_offering).filter(Boolean);
+			const courses = (values.courses || [])
+				.filter((r) => r.course)
+				.map((r) => ({ course: r.course, faculty: r.faculty, credit: r.credit }));
 			const students = (values.students || []).map((r) => r.student_enrollment).filter(Boolean);
-			if (!course_offerings.length) {
-				frappe.msgprint(__("No Course Offering to create a class for."));
+			if (!courses.length) {
+				frappe.msgprint(__("Add at least one course to create a class for."));
+				return;
+			}
+			const seen = new Set();
+			const repeated = courses.find((c) => seen.has(c.course) || !seen.add(c.course));
+			if (repeated) {
+				frappe.msgprint(__("Course {0} is listed twice.", [repeated.course]));
 				return;
 			}
 			if (!students.length) {
@@ -253,9 +265,10 @@ function open_create_class_dialog(listview) {
 						academic_year: values.academic_year,
 						academic_term: values.academic_term,
 						programme: values.programme,
+						year_no: values.year_no,
 						section: values.section,
 						group_name: values.group_name,
-						course_offerings,
+						courses,
 						students,
 					},
 				},
@@ -270,7 +283,7 @@ function open_create_class_dialog(listview) {
 						: __("No class was created.");
 					if (skipped.length) {
 						html += "<br><br>" + __("Skipped — a class already exists for this section:") + "<br>" +
-							skipped.map((s) => `${frappe.utils.escape_html(s.course_offering)} → ${link(s.class)}`).join("<br>");
+							skipped.map((s) => `${frappe.utils.escape_html(s.course)} → ${link(s.class)}`).join("<br>");
 					}
 					frappe.msgprint({ title: __("Create Class"), message: html, indicator: created.length ? "green" : "orange" });
 				},
@@ -296,29 +309,6 @@ function open_create_class_dialog(listview) {
 			program: s.program,
 			year_no: s.year_no,
 		}));
-	}
-
-	function load_offerings() {
-		const { academic_year, academic_term, programme, year_no } = dialog.get_values(true);
-		if (!academic_year || !academic_term || !programme) {
-			set_table("offerings", []);
-			return;
-		}
-		frappe.db
-			.get_list("Course Offering", {
-				filters: { academic_year, term_name: academic_term, program: programme, year_no: year_no || 1, status: "Active" },
-				fields: ["name", "course_name", "credit_value", "faculty"],
-				order_by: "course_name asc",
-				limit: 0,
-			})
-			.then((list) => {
-				set_table("offerings", list.map((o) => ({
-					course_offering: o.name,
-					course_name: o.course_name,
-					credit_value: o.credit_value,
-					faculty: o.faculty,
-				})));
-			});
 	}
 
 	function load_section_students() {
@@ -755,7 +745,7 @@ function open_promote_dialog_body(listview, selected, batched, student_list, pro
 				const courses = (r.message && r.message.courses) || [];
 				const target_years = (r.message && r.message.target_years) || [];
 				if (!courses.length) {
-					$box.html(`<div class="pcp-empty">${__("No active Course Offerings found yet for {0} in {1}. Promotion is not blocked by this.", [
+					$box.html(`<div class="pcp-empty">${__("No classes have been created yet for {0} in {1}. Promotion is not blocked by this.", [
 						frappe.utils.escape_html(target_years.join(", ") || __("the next year")),
 						frappe.utils.escape_html(target_academic_year),
 					])}</div>`);
@@ -771,7 +761,7 @@ function open_promote_dialog_body(listview, selected, batched, student_list, pro
 					)
 					.join("");
 				$box.html(`
-					<div class="pcp-head">${__("{0} active course offering(s) for the next year", [courses.length])}</div>
+					<div class="pcp-head">${__("{0} course(s) with classes for the next year", [courses.length])}</div>
 					<table>
 						<thead><tr>
 							<th>${__("Course")}</th><th>${__("Credits")}</th><th>${__("Year")}</th>

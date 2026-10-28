@@ -79,3 +79,4 @@ slcm.patches.v2_0.academic_core_restructure
 slcm.patches.v2_0.add_programme_management_to_dock
 slcm.patches.v2_0.rename_enrollments_to_student_id #student-id-field
 slcm.patches.v2_0.merge_enrollments_into_academic_log
+slcm.patches.v2_0.remove_course_offering

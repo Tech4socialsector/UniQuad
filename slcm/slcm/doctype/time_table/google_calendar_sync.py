@@ -153,14 +153,15 @@ def _get_or_create_contact_for_email(email, full_name=None):
 	return contact.name
 
 
-def _get_enrolled_course_offerings(student_name):
-	rows = frappe.get_all(
-		"Attendance Summary",
-		filters={"student": student_name},
-		fields=["course_offering"],
-		ignore_permissions=True,
-	)
-	return {r.course_offering for r in rows if r.course_offering}
+def _get_enrolled_classes(student_name):
+	"""Classes the student is an Enrolled student of (through their Student Enrollment)."""
+	return set(frappe.db.sql_list("""
+		SELECT DISTINCT ces.parent
+		FROM `tabClass Enrolled Student` ces
+		JOIN `tabStudent Enrollment` se ON se.name = ces.student_enrollment
+		WHERE ces.parenttype = 'Classes' AND ces.status = 'Enrolled'
+		AND se.student = %s
+	""", student_name))
 
 
 @frappe.whitelist()
@@ -183,15 +184,15 @@ def sync_student_calendar(email):
 	full_name = " ".join(filter(None, [student.first_name, student.last_name]))
 	contact_name = _get_or_create_contact_for_email(email, full_name)
 
-	course_offerings = _get_enrolled_course_offerings(student.name)
-	if not course_offerings:
+	classes = _get_enrolled_classes(student.name)
+	if not classes:
 		return {"synced": 0, "failed": 0, "message": "No enrolled courses found."}
 
 	today = frappe.utils.getdate()
 	schedule_names = frappe.get_all(
 		"Time Table",
 		filters=[
-			["course_offering", "in", list(course_offerings)],
+			["class_name", "in", list(classes)],
 			["schedule_date", ">=", str(today)],
 			["docstatus", "<", 2],
 		],
@@ -251,9 +252,9 @@ def _get_faculty_for_session_user():
 
 def _get_faculty_upcoming_schedule_names(faculty_name):
 	"""Upcoming Time Table entries the faculty teaches — as instructor or via
-	a Course Offering assigned to them."""
-	course_offerings = frappe.get_all(
-		"Course Offering", filters={"faculty": faculty_name}, pluck="name", ignore_permissions=True
+	a Class assigned to them."""
+	classes = frappe.get_all(
+		"Classes", filters={"faculty": faculty_name}, pluck="name", ignore_permissions=True
 	)
 
 	today = str(frappe.utils.getdate())
@@ -267,11 +268,11 @@ def _get_faculty_upcoming_schedule_names(faculty_name):
 			ignore_permissions=True,
 		)
 	)
-	if course_offerings:
+	if classes:
 		schedule_names.update(
 			frappe.get_all(
 				"Time Table",
-				filters=base_filters + [["course_offering", "in", course_offerings]],
+				filters=base_filters + [["class_name", "in", classes]],
 				pluck="name",
 				limit_page_length=0,
 				ignore_permissions=True,
@@ -293,7 +294,7 @@ def get_faculty_sync_classes():
 def sync_faculty_calendar(email, schedule_names=None):
 	"""Add the requesting faculty member as a Google Calendar attendee on every
 	upcoming class they teach — Time Table entries where they are the
-	instructor or that belong to a Course Offering assigned to them.
+	instructor or that belong to a Class assigned to them.
 
 	`schedule_names` (JSON list) limits the run to that batch; names outside
 	the faculty's own upcoming classes are ignored."""

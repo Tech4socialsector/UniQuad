@@ -298,12 +298,16 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 		});
 		const res = r.message || {};
 		if ((res.errors || []).length) {
-			frappe.msgprint({ title: __("Cannot schedule"), message: res.errors.join("<br>"), indicator: "red" });
+			frappe.msgprint({ title: __("Time Slot Unavailable"), message: res.errors.join("<br><br>"), indicator: "orange" });
 			return false;
 		}
 		this.dates = res.dates || [];
 		if (!this.scheduled_dates().length) {
-			frappe.msgprint(__("Every date in this schedule falls on a holiday or clashes with another booking."));
+			frappe.msgprint({
+				title: __("Time Slot Unavailable"),
+				message: __("None of the sessions in this schedule can be arranged: each date is either a non-teaching day or the venue or faculty is already engaged at this time. Kindly choose another time slot, venue or date range."),
+				indicator: "orange",
+			});
 			return false;
 		}
 
@@ -462,13 +466,13 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 		const warned = this.dates.filter((d) => d.status === "faculty_warn");
 
 		const skipped_html = skipped.length
-			? `<div class="ctt-sub-title">${__("Skipped dates")}</div>
+			? `<div class="ctt-sub-title">${__("Sessions not scheduled")}</div>
 				<div class="ctt-table-wrap" style="max-height:200px"><table class="ctt-table">
 				<tbody>${skipped.map((d) => `<tr><td class="ctt-nowrap">${ctt_esc(d.date_fmt)}</td><td>${ctt_esc(d.note)}</td></tr>`).join("")}</tbody>
 				</table></div>`
 			: "";
 		const warn_html = warned.length
-			? `<div class="ctt-banner warn">${__("Faculty has another class at this time on the first date: {0}", [ctt_esc(warned[0].note)])}</div>`
+			? `<div class="ctt-banner warn">${__("Please note: on {0} session date(s) the faculty has another session at this time ({1}). These sessions will still be scheduled; kindly confirm the faculty's availability.", [warned.length, ctt_esc(warned[0].note)])}</div>`
 			: "";
 
 		const cp_html = this.cp_on()
@@ -505,11 +509,11 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 		data.cp_weeks = this.cp_on()
 			? this.weeks.map((w) => ({ start_date: w.start_date, end_date: w.end_date, students: w.students.map((st) => st.student) }))
 			: [];
+		const progress = this.show_progress(data.cp_weeks.length > 0);
 		frappe.call({
 			method: CTT_METHOD + "create_class_time_table",
 			args: { data },
-			freeze: true,
-			freeze_message: __("Creating the Time Table..."),
+			always: () => progress.close(),
 			callback: (r) => {
 				if (!r.message) return;
 				this.d.hide();
@@ -522,6 +526,46 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 				}, 8);
 			},
 		});
+	}
+
+	/** Spinner with an overall percentage over the dialog while the server
+	 * works. It reports progress (time_table_bulk_progress) while it makes the
+	 * Class Participation groups (first 20% when there are any) and then each
+	 * class of the series (the rest). */
+	show_progress(with_groups) {
+		const $overlay = $(`<div class="ctt-progress">
+			<div class="ctt-progress-box">
+				<div class="ctt-spinner"></div>
+				<div class="ctt-progress-percent">0%</div>
+				<div class="ctt-progress-bar"><div class="ctt-progress-fill"></div></div>
+				<div class="ctt-progress-label">${__("Preparing...")}</div>
+				<div class="ctt-progress-count"></div>
+			</div>
+		</div>`).appendTo(this.d.$wrapper.find(".modal-content"));
+		this.d.$wrapper.find(".modal-footer button, .btn-modal-close").prop("disabled", true);
+
+		let shown = 0;
+		const on_progress = (p) => {
+			const groups = p.label !== "Scheduling";
+			const part = p.total ? p.done / p.total : 1;
+			const overall = !with_groups ? part : groups ? part * 0.2 : 0.2 + part * 0.8;
+			// Never step backwards (e.g. a late group event after scheduling began)
+			shown = Math.max(shown, Math.min(99, Math.round(overall * 100)));
+			$overlay.find(".ctt-progress-percent").text(`${shown}%`);
+			$overlay.find(".ctt-progress-fill").css("width", `${shown}%`);
+			$overlay.find(".ctt-progress-label").text(groups ? __("Creating Class Participation groups...") : __("Creating classes and attendance sessions..."));
+			$overlay.find(".ctt-progress-count").text(p.total
+				? (groups ? __("Week {0} of {1}", [p.done, p.total]) : __("Class {0} of {1}", [p.done, p.total]))
+				: "");
+		};
+		frappe.realtime.on("time_table_bulk_progress", on_progress);
+		return {
+			close: () => {
+				frappe.realtime.off("time_table_bulk_progress", on_progress);
+				this.d.$wrapper.find(".modal-footer button, .btn-modal-close").prop("disabled", false);
+				$overlay.remove();
+			},
+		};
 	}
 };
 
@@ -620,10 +664,15 @@ slcm.class_time_table.CalendarView = class CalendarView {
 				</div>
 				<div class="ctt-session-title">${ctt_esc(info.title || info.name)}</div>
 				<div class="ctt-session-head">
-					<span>${ctt_esc(info.date_fmt)}</span>
-					<span>${ctt_time(info.from_time)} – ${ctt_time(info.to_time)}</span>
-					${info.venue ? `<span>${ctt_esc(info.venue)}</span>` : ""}
-					${info.faculty ? `<span>${ctt_esc(info.faculty)}</span>` : ""}
+					${[
+						[__("Date"), info.date_fmt],
+						[__("Time"), `${ctt_time(info.from_time)} – ${ctt_time(info.to_time)}`],
+						[__("Venue"), info.venue],
+						[__("Faculty"), info.faculty],
+					].map(([label, value]) => `<div class="ctt-session-item">
+						<div class="ctt-session-label">${label}</div>
+						<div class="ctt-session-value">${value ? ctt_esc(value) : `<span class="ctt-muted">${__("Not set")}</span>`}</div>
+					</div>`).join("")}
 				</div>
 				<div class="ctt-tabs">
 					<button class="ctt-tab active" data-tab="att">${__("Attendance")}
@@ -830,8 +879,28 @@ function ctt_inject_css() {
 		}
 		.ctt-dialog .ctt-session-actions { display: flex; gap: 8px; }
 		.ctt-dialog .ctt-session-title { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
-		.ctt-dialog .ctt-session-head { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--text-muted); margin-bottom: 12px; }
-		.ctt-dialog .ctt-session-head span:first-child { color: var(--text-color); font-weight: 600; }
+		.ctt-dialog .ctt-session-head {
+			display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin: 8px 0 14px;
+		}
+		.ctt-dialog .ctt-session-item { border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 12px; min-width: 0; }
+		.ctt-dialog .ctt-session-label { font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); }
+		.ctt-dialog .ctt-session-value { font-size: 13.5px; font-weight: 600; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+		.ctt-dialog .modal-content { position: relative; }
+		.ctt-dialog .ctt-progress {
+			position: absolute; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center;
+			background: color-mix(in srgb, var(--modal-bg, var(--card-bg, #fff)) 88%, transparent); border-radius: inherit;
+		}
+		.ctt-dialog .ctt-progress-box { width: min(360px, 90%); text-align: center; }
+		.ctt-dialog .ctt-spinner {
+			width: 44px; height: 44px; margin: 0 auto 12px; border-radius: 50%;
+			border: 4px solid var(--border-color); border-top-color: var(--primary); animation: ctt-spin 0.9s linear infinite;
+		}
+		@keyframes ctt-spin { to { transform: rotate(360deg); } }
+		.ctt-dialog .ctt-progress-percent { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; }
+		.ctt-dialog .ctt-progress-bar { height: 8px; border-radius: 8px; background: var(--control-bg); overflow: hidden; margin: 10px 0; }
+		.ctt-dialog .ctt-progress-fill { height: 100%; width: 0; background: var(--primary); transition: width 0.3s ease; }
+		.ctt-dialog .ctt-progress-label { font-size: 13.5px; font-weight: 600; }
+		.ctt-dialog .ctt-progress-count { font-size: 12px; color: var(--text-muted); margin-top: 2px; min-height: 16px; }
 		.ctt-dialog .ctt-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border-color); margin-bottom: 12px; }
 		.ctt-dialog .ctt-tab {
 			background: none; border: none; border-bottom: 2px solid transparent; padding: 8px 12px; margin-bottom: -1px;

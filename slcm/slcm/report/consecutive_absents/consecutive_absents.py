@@ -53,7 +53,7 @@ def get_consecutive_absents(filters):
 		
 	# Get absences
 	logs = frappe.db.sql(f"""
-		SELECT student, student_name, attendance_date, course, course_offer
+		SELECT student, student_name, attendance_date, course, class_name
 		FROM `tabStudent Attendance`
 		WHERE {conditions}
 		ORDER BY student, attendance_date DESC

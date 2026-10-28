@@ -1111,8 +1111,8 @@ def get_academic_progress(student_name, enrollment_name=None, academic_year=None
     sec_rows = frappe.get_all(
         "Student Enrollment Course",
         filters={"parent": enrollment.name, "parenttype": "Student Enrollment"},
-        fields=["course_offering", "course", "course_type", "credits", "status", "grade",
-                "academic_year", "year_no"],
+        fields=["class_name", "course", "course_type", "credits", "status", "grade",
+                "academic_year", "year_no", "faculty"],
         order_by="idx asc",
     )
     # enrolled_courses holds every year's courses: keep the viewed year's
@@ -1124,44 +1124,52 @@ def get_academic_progress(student_name, enrollment_name=None, academic_year=None
                 and (not r.year_no or frappe.utils.cint(r.year_no) == frappe.utils.cint(enrollment.year_no)))
             or (not r.academic_year and entry.latest)
         ]
-    co_names = [r.course_offering for r in sec_rows if r.course_offering]
+    co_names = [r.class_name for r in sec_rows if r.class_name]
     co_map = {}
     if co_names:
         for co in frappe.get_all(
-            "Course Offering",
+            "Classes",
             filters={"name": ["in", co_names]},
-            fields=["name", "course_name", "faculty", "credit_value"],
+            fields=["name", "course_name", "faculty", "credit as credit_value"],
             ignore_permissions=True,
         ):
             co_map[co.name] = co
+    # Course names for rows without a class
+    course_names = dict(frappe.get_all(
+        "Course",
+        filters={"name": ["in", list({r.course for r in sec_rows if r.course and not r.class_name})]},
+        fields=["name", "course_name"],
+        as_list=True,
+        ignore_permissions=True,
+    )) if any(r.course and not r.class_name for r in sec_rows) else {}
 
     # ── Attendance percentage per course (from Attendance Summary) ──────────
     att_map = {}
     for a in frappe.get_all(
         "Attendance Summary",
         filters={"student": student_name},
-        fields=["course_offering", "course", "attendance_percentage"],
+        fields=["class_name", "course", "attendance_percentage"],
         ignore_permissions=True,
     ):
-        if a.course_offering:
-            att_map[a.course_offering] = a.attendance_percentage
+        if a.class_name:
+            att_map[a.class_name] = a.attendance_percentage
         if a.course:
             att_map.setdefault(a.course, a.attendance_percentage)
 
     courses = []
     for r in sec_rows:
-        co = co_map.get(r.course_offering) or frappe._dict()
-        att_pct = att_map.get(r.course_offering)
+        co = co_map.get(r.class_name) or frappe._dict()
+        att_pct = att_map.get(r.class_name) if r.class_name else None
         if att_pct is None:
             att_pct = att_map.get(r.course)
         courses.append({
-            "course_offering": r.course_offering or "",
+            "class_name": r.class_name or "",
             "course": r.course or "",
-            "course_name": co.get("course_name") or r.course or "",
+            "course_name": co.get("course_name") or course_names.get(r.course) or r.course or "",
             "course_type": r.course_type or "",
-            "course_status": r.status or "Enrolled",
+            "course_status": r.status or "Ongoing",
             "credit_value": co.get("credit_value") or r.credits or 0,
-            "faculty": co.get("faculty") or "",
+            "faculty": co.get("faculty") or r.faculty or "",
             "grade": r.grade or "",
             "attendance_percentage": att_pct if att_pct is not None else None,
         })

@@ -166,22 +166,18 @@ def submit_appeal(exam_plan, course, appeal_type, reason, supporting_remarks="")
 	marks = frappe.db.get_value(
 		"Student Course Marks",
 		{"student": student_name, "exam_plan": exam_plan, "course": course},
-		["grade", "moderated_grade", "updated_grade", "total_marks", "updated_final_marks", "course_offering"],
+		["grade", "moderated_grade", "updated_grade", "total_marks", "updated_final_marks", "academic_term"],
 		as_dict=True,
 	)
 	if not marks:
 		frappe.throw("No published marks were found for this course.")
-
-	course_offering = _resolve_course_offering(student_name, course, marks.course_offering)
-	if not course_offering:
-		frappe.throw("This course isn't linked to a course offering yet. Please contact the Examination Office.")
 
 	doc = frappe.get_doc({
 		"doctype": "Grade Appeal",
 		"student": student_name,
 		"exam_plan": exam_plan,
 		"course": course,
-		"course_offering": course_offering,
+		"academic_term": marks.academic_term or frappe.db.get_value("Exam Plan", exam_plan, "term"),
 		"appeal_type": appeal_type,
 		"reason": reason,
 		"supporting_remarks": (supporting_remarks or "").strip(),
@@ -193,30 +189,6 @@ def submit_appeal(exam_plan, course, appeal_type, reason, supporting_remarks="")
 	doc.insert(ignore_permissions=True)  # Grade Appeal.validate() rejects active duplicates
 	frappe.db.commit()
 	return {"name": doc.name, "status": doc.status}
-
-
-def _resolve_course_offering(student_name, course, from_marks=None):
-	"""Marks record → student's enrolment → any offering of the course."""
-	if from_marks:
-		return from_marks
-	enrollments = frappe.get_all("Student Enrollment", filters={"student": student_name}, pluck="name")
-	if enrollments:
-		co = frappe.get_all(
-			"Student Enrollment Course",
-			filters={"parent": ["in", enrollments], "parenttype": "Student Enrollment",
-					 "course": course, "course_offering": ["is", "set"]},
-			pluck="course_offering",
-			order_by="creation desc",
-			limit=1,
-			ignore_permissions=True,
-		)
-		if co:
-			return co[0]
-	co = frappe.get_all(
-		"Course Offering", filters={"course_title": course}, pluck="name",
-		order_by="creation desc", limit=1, ignore_permissions=True,
-	)
-	return co[0] if co else None
 
 
 def _shows_total(exam_plan):

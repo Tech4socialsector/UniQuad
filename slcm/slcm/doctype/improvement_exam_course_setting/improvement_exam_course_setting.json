@@ -6,8 +6,8 @@
  "field_order": [
   "exam_plan",
   "programme",
-  "course_offering",
   "course",
+  "academic_term",
   "improvement_fee",
   "registration_limit",
   "deadline_from",
@@ -30,21 +30,20 @@
    "options": "Batch"
   },
   {
-   "fieldname": "course_offering",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Course Offering",
-   "options": "Course Offering",
-   "reqd": 1
-  },
-  {
-   "fetch_from": "course_offering.course_title",
    "fieldname": "course",
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Course",
    "options": "Course",
-   "read_only": 1
+   "reqd": 1
+  },
+  {
+   "fetch_from": "exam_plan.term",
+   "fetch_if_empty": 1,
+   "fieldname": "academic_term",
+   "fieldtype": "Link",
+   "label": "Academic Term",
+   "options": "Academic Term"
   },
   {
    "fieldname": "improvement_fee",
@@ -71,7 +70,7 @@
    "label": "Deadline To"
   }
  ],
- "modified": "2026-05-14 00:00:00.000000",
+ "modified": "2026-10-29 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Improvement Exam Course Setting",

@@ -38,19 +38,19 @@ def get_context(context):
             faculty_meta[str(f.name)] = " ".join(fname) or str(f.name)
 
         # ── Pre-fetch attendance summaries for fast lookup ─────────
-        att_map = {}  # keyed by course_offering and by course
+        att_map = {}  # keyed by class_name and by course
         for s in frappe.get_all(
             "Attendance Summary",
             filters={"student": student_name},
             fields=[
-                "course_offering", "course", "attendance_percentage",
+                "class_name", "course", "attendance_percentage",
                 "total_class_hours", "attended_classes",
                 "total_classes", "eligible_for_exam",
             ],
             ignore_permissions=True,
         ):
-            if s.course_offering:
-                att_map[s.course_offering] = s
+            if s.class_name:
+                att_map[s.class_name] = s
             if s.course:
                 att_map.setdefault(s.course, s)
 
@@ -96,7 +96,7 @@ def get_context(context):
                 child_rows = frappe.get_all(
                     "Student Enrollment Course",
                     filters={"parent": enr.name, "parenttype": "Student Enrollment"},
-                    fields=["course_offering", "course", "credits", "course_type", "status", "grade",
+                    fields=["class_name", "course", "credits", "course_type", "status", "grade",
                             "academic_year", "year_no"],
                     ignore_permissions=True,
                 )
@@ -122,43 +122,50 @@ def get_context(context):
         enrollment_data = []
 
         for enr, child_courses in year_sections:
-            # ── Step 2: Course Offerings for this programme + year (fallback only) ──
-            cohort_offerings = []
+            # ── Step 2: Classes for this programme + year (fallback only) ──
+            # One entry per course (a course taught in several sections has
+            # several Classes).
+            cohort_classes = []
             if enr.program and enr.academic_year and enr.year_no and not child_courses:
-                cohort_offerings = frappe.get_all(
-                    "Course Offering",
+                seen_courses = set()
+                for cls in frappe.get_all(
+                    "Classes",
                     filters={
-                        "program": enr.program,
+                        "programme": enr.program,
                         "academic_year": enr.academic_year,
                         "year_no": enr.year_no,
-                        "status": "Active",
                     },
                     fields=[
-                        "name", "course_name", "course_title",
-                        "faculty", "credit_value", "status", "term_name",
+                        "name", "course_name", "course",
+                        "faculty", "credit", "academic_term",
                     ],
+                    order_by="academic_term asc, name asc",
                     ignore_permissions=True,
-                )
+                ):
+                    if cls.course in seen_courses:
+                        continue
+                    seen_courses.add(cls.course)
+                    cohort_classes.append(cls)
 
             # ── Step 3: build the display list ───────────────────────
             courses_out = []
 
             if child_courses:
-                # course_offering is already on the child row — fetch faculty from it
-                co_names = [ec.course_offering for ec in child_courses if ec.course_offering]
+                # class_name is already on the child row — fetch faculty from it
+                co_names = [ec.class_name for ec in child_courses if ec.class_name]
                 co_details = {}
                 if co_names:
                     for co in frappe.get_all(
-                        "Course Offering",
+                        "Classes",
                         filters={"name": ["in", co_names]},
-                        fields=["name", "course_name", "faculty", "credit_value"],
+                        fields=["name", "course_name", "faculty", "credit as credit_value"],
                         ignore_permissions=True,
                     ):
                         co_details[co.name] = co
 
                 for ec in child_courses:
-                    co = co_details.get(ec.course_offering) or frappe._dict()
-                    co_name = ec.course_offering or ""
+                    co = co_details.get(ec.class_name) or frappe._dict()
+                    co_name = ec.class_name or ""
                     att = att_map.get(co_name) or att_map.get(ec.course) or frappe._dict()
 
                     c_meta = courses_meta.get(ec.course) or {}
@@ -173,30 +180,30 @@ def get_context(context):
                         faculty=fac_name,
                         credits=c_meta.get("credit_value") or co.get("credit_value") or ec.credits or 0,
                         course_type=ec.course_type or "—",
-                        status=ec.status or "Enrolled",
+                        status=ec.status or "Ongoing",
                         att=att,
                         faculty_meta=faculty_meta
                     ))
 
-            elif cohort_offerings:
-                # Fallback: show all Course Offerings for the programme + year
-                for co in cohort_offerings:
+            elif cohort_classes:
+                # Fallback: show the Classes of the programme + year
+                for co in cohort_classes:
                     co_name = co.name or ""
-                    att = att_map.get(co_name) or att_map.get(co.course_title) or frappe._dict()
+                    att = att_map.get(co_name) or att_map.get(co.course) or frappe._dict()
 
-                    c_meta = courses_meta.get(co.course_title) or {}
+                    c_meta = courses_meta.get(co.course) or {}
                     fac_id = co.faculty
                     fac_name = faculty_meta.get(str(fac_id)) if fac_id else "—"
 
                     courses_out.append(_build_course_entry(
                         co_name=co_name,
-                        course_id=co.course_title or "",
+                        course_id=co.course or "",
                         course_code=c_meta.get("course_code") or "",
-                        course_name=co.course_name or co.course_title or "—",
+                        course_name=co.course_name or co.course or "—",
                         faculty=fac_name,
-                        credits=c_meta.get("credit_value") or co.credit_value or 0,
+                        credits=c_meta.get("credit_value") or co.credit or 0,
                         course_type="—",
-                        status="Enrolled",
+                        status="Ongoing",
                         att=att,
                         faculty_meta=faculty_meta
                     ))
@@ -298,7 +305,7 @@ def _build_course_entry(co_name, course_id, course_code, course_name, faculty, c
         ["schedule_date", ">=", today_date],
     ]
     if co_name:
-        filters1.append(["course_offering", "=", co_name])
+        filters1.append(["class_name", "=", co_name])
     elif course_id:
         filters1.append(["course", "=", course_id])
 
@@ -315,7 +322,7 @@ def _build_course_entry(co_name, course_id, course_code, course_name, faculty, c
         ["parent_schedule", "is", "not set"],
     ]
     if co_name:
-        filters2.append(["course_offering", "=", co_name])
+        filters2.append(["class_name", "=", co_name])
     elif course_id:
         filters2.append(["course", "=", course_id])
 
@@ -400,14 +407,14 @@ def _build_course_entry(co_name, course_id, course_code, course_name, faculty, c
             })
 
     return {
-        "course_offering": co_name,
+        "class_name": co_name,
         "course": course_id,
         "course_code": course_code,
         "course_name": course_name,
         "faculty": faculty or "—",
         "credits": credits or 0,
         "course_type": course_type or "—",
-        "status": status or "Enrolled",
+        "status": status or "Ongoing",
         "attendance_pct": att_pct,
         "eligible_for_exam": att.get("eligible_for_exam") if att else None,
         "total_class_hours": att.get("total_class_hours") or 0,

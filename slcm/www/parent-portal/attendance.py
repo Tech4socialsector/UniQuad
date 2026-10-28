@@ -27,32 +27,33 @@ def get_context(context):
         "Attendance Summary",
         filters={"student": student.name},
         fields=[
-            "name", "course_offering", "course", "department",
-            "academic_year", "term_name",
+            "name", "class_name", "course", "department",
+            "academic_year", "academic_term",
             "total_classes", "attended_classes",
             "total_class_hours", "total_attended_class_hours",
             "attendance_percentage", "minimum_required_percentage",
             "eligible_for_exam", "last_updated",
         ],
-        order_by="term_name desc, course_offering asc",
+        order_by="academic_term desc, class_name asc",
         ignore_permissions=True,
     )
 
     for s in summaries:
-        co_name = s.course_offering or ""
-        s["course_display"] = co_name or s.course or "Unknown"
+        co_name = s.class_name or ""
+        s["term_name"] = s.academic_term or ""
+        s["course_display"] = s.course or co_name or "Unknown"
         s["faculty"] = "—"
         if co_name:
             try:
                 co = frappe.db.get_value(
-                    "Course Offering", co_name,
-                    ["course_name", "faculty", "term_name"], as_dict=True,
+                    "Classes", co_name,
+                    ["course_name", "faculty", "faculty_name", "academic_term"], as_dict=True,
                 )
                 if co:
                     s["course_display"] = co.course_name or s["course_display"]
-                    s["faculty"] = co.faculty or "—"
-                    if not s.term_name:
-                        s["term_name"] = co.term_name or ""
+                    s["faculty"] = co.faculty_name or co.faculty or "—"
+                    if not s["term_name"]:
+                        s["term_name"] = co.academic_term or ""
             except Exception:
                 pass
 
@@ -120,7 +121,7 @@ def get_context(context):
                 ["attendance_date", "<=", _cal_end],
             ],
             fields=[
-                "attendance_date", "course_offer", "course", "status",
+                "attendance_date", "class_name", "course", "status",
                 "in_time", "out_time", "session_type", "hours_counted",
                 "class_schedule", "instructor", "room",
             ],
@@ -142,25 +143,25 @@ def get_context(context):
 
         # Course name map from summaries already resolved above
         _summary_display_map = {
-            s.course_offering: s.get("course_display", "")
-            for s in summaries if s.course_offering
+            s.class_name: s.get("course_display", "")
+            for s in summaries if s.class_name
         }
         _summary_faculty_map = {
-            s.course_offering: s.get("faculty", "")
-            for s in summaries if s.course_offering
+            s.class_name: s.get("faculty", "")
+            for s in summaries if s.class_name
         }
 
-        # Batch-fetch any course_offers not in summaries
+        # Batch-fetch any classes not in summaries
         _co_ids = {
-            str(r.course_offer) for r in _cal_att
-            if r.course_offer and str(r.course_offer) not in _summary_display_map
+            str(r.class_name) for r in _cal_att
+            if r.class_name and str(r.class_name) not in _summary_display_map
         }
         _co_extra_map = {}
         if _co_ids:
             _co_extra_rows = frappe.get_all(
-                "Course Offering",
+                "Classes",
                 filters={"name": ["in", list(_co_ids)]},
-                fields=["name", "course_name", "faculty"],
+                fields=["name", "course_name", "faculty_name as faculty"],
                 ignore_permissions=True,
             )
             _co_extra_map = {r.name: r for r in _co_extra_rows}
@@ -170,7 +171,7 @@ def get_context(context):
         for r in _cal_att:
             _d       = str(r.attendance_date)
             _cs      = _cs_map.get(str(r.class_schedule or ""), frappe._dict())
-            _co_id   = str(r.course_offer or "")
+            _co_id   = str(r.class_name or "")
             _co_ext  = _co_extra_map.get(_co_id, frappe._dict())
 
             _cname = (
@@ -191,7 +192,7 @@ def get_context(context):
 
             _sessions_by_date.setdefault(_d, []).append({
                 "course_name":     str(_cname),
-                "course_offering": str(r.course_offer or ""),
+                "class_name":      str(r.class_name or ""),
                 "session_type":    str(r.session_type or "Lecture"),
                 "from_time":       _from_time,
                 "to_time":         _to_time,

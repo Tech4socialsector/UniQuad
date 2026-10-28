@@ -25,10 +25,17 @@ frappe.query_reports["Comprehensive Attendance Report"] = {
             "reqd": 0
         },
         {
-            "fieldname": "course",
-            "label": __("Course Offering"),
+            "fieldname": "class_name",
+            "label": __("Class"),
             "fieldtype": "Link",
-            "options": "Course Offering",
+            "options": "Classes",
+            "reqd": 0
+        },
+        {
+            "fieldname": "course",
+            "label": __("Course"),
+            "fieldtype": "Link",
+            "options": "Course",
             "reqd": 0
         },
         {

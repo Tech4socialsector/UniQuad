@@ -13,9 +13,9 @@
   "department",
   "programme",
   "column_break_czfv",
-  "term_name",
+  "academic_term",
   "section",
-  "course_offering",
+  "class_name",
   "course",
   "attendance_details_section",
   "total_scheduled_class_hours",
@@ -67,7 +67,7 @@
    "read_only": 1
   },
   {
-   "fetch_from": "course_offering.program",
+   "fetch_from": "class_name.programme",
    "fieldname": "programme",
    "fieldtype": "Link",
    "label": "Programme",
@@ -100,16 +100,17 @@
    "read_only": 1
   },
   {
-   "fieldname": "course_offering",
+   "fieldname": "class_name",
    "fieldtype": "Link",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Course Offering",
-   "options": "Course Offering",
-   "reqd": 1
+   "label": "Class",
+   "options": "Classes",
+   "reqd": 1,
+   "search_index": 1
   },
   {
-   "fetch_from": "course_offering.course_title",
+   "fetch_from": "class_name.course",
    "fieldname": "course",
    "fieldtype": "Link",
    "label": "Course",
@@ -117,7 +118,7 @@
    "read_only": 1
   },
   {
-   "fetch_from": "course_offering.academic_year",
+   "fetch_from": "class_name.academic_year",
    "fieldname": "academic_year",
    "fieldtype": "Link",
    "in_standard_filter": 1,
@@ -126,11 +127,12 @@
    "read_only": 1
   },
   {
-   "fetch_from": "course_offering.term_name",
-   "fieldname": "term_name",
-   "fieldtype": "Data",
+   "fetch_from": "class_name.academic_term",
+   "fieldname": "academic_term",
+   "fieldtype": "Link",
    "in_standard_filter": 1,
-   "label": "Term",
+   "label": "Academic Term",
+   "options": "Academic Term",
    "read_only": 1
   },
   {
@@ -236,7 +238,7 @@
   }
  ],
  "links": [],
- "modified": "2026-10-27 18:00:00.000000",
+ "modified": "2026-10-29 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Attendance Summary",

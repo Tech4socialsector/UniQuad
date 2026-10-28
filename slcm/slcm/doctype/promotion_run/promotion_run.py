@@ -7,8 +7,8 @@ from frappe.utils import now_datetime, cint
 
 from slcm.slcm.doctype.student_enrollment.student_enrollment import (
 	CLOSED_LOG_STATUSES,
+	get_classes_for_year,
 	get_current_logs,
-	get_offerings_for_year,
 	promote_enrollment,
 )
 from slcm.slcm.page.promotion_management.promotion_management import (
@@ -85,10 +85,11 @@ def _reason_for_skip(evaluation, student):
 
 @frappe.whitelist()
 def get_target_term_courses(student_list, target_academic_year, target_term=None):
-	"""Read-only preview of the Course Offerings the selected students would be
-	attached to on promotion: the Active offerings of their programme for
-	target_academic_year and the next year of study (year_no + 1). Purely
-	informational: missing offerings never block promotion."""
+	"""Read-only preview of the next year's courses for the selected students:
+	the courses that have classes for their programme in target_academic_year
+	and the next year of study (year_no + 1). Purely informational: courses
+	are added to an enrollment as the student is put in classes, and missing
+	classes never block promotion."""
 	_check_permission()
 
 	if isinstance(student_list, str):
@@ -108,11 +109,11 @@ def get_target_term_courses(student_list, target_academic_year, target_term=None
 
 	courses = []
 	for program, year_no in targets:
-		for o in get_offerings_for_year(program, target_academic_year, year_no):
+		for c in get_classes_for_year(program, target_academic_year, year_no):
 			courses.append({
-				"course": o.course_title,
-				"course_name": frappe.db.get_value("Course Offering", o.name, "course_name"),
-				"credits": o.credit_value,
+				"course": c.course,
+				"course_name": c.course_name,
+				"credits": c.credit,
 				"year_no": year_no,
 			})
 	return {"courses": courses, "target_years": [f"{p} — Year {y}" for p, y in targets]}

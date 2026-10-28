@@ -7,8 +7,8 @@ from frappe.model.document import Document
 
 class CourseSchedule(Document):
 	def validate(self):
-		if not self.course_offering:
-			self.course_offering = self.get_course_offering()
+		if not self.class_name:
+			self.class_name = self.get_class_name()
 
 	def after_insert(self):
 		self.create_attendance_session()
@@ -27,16 +27,16 @@ class CourseSchedule(Document):
 		if exists:
 			return
 
-		course_offering = self.course_offering or self.get_course_offering()
-		if not course_offering:
-			frappe.log_error(f"Could not find Course Offering for Course Schedule {self.name}")
+		class_name = self.class_name or self.get_class_name()
+		if not class_name:
+			frappe.log_error(f"Could not find the Class for Course Schedule {self.name}")
 			return
 
 		doc = frappe.get_doc({
 			"doctype": "Attendance Session",
 			"based_on": "Course Schedule",
 			"course_schedule": self.name,
-			"course_offering": course_offering,
+			"class_name": class_name,
 			"course": self.course,
 			"instructor": self.instructor, # Note: Course Schedule has instructor link
 			"room": self.room,
@@ -48,26 +48,25 @@ class CourseSchedule(Document):
 		})
 		doc.insert(ignore_permissions=True)
 
-	def get_course_offering(self):
-		# Try to find an active course offering for this course and program
-		filters = {
-			"course_title": self.course,
-			"status": "Active"
-		}
+	def get_class_name(self):
+		# Try to find the newest class for this course and programme
+		if not self.course:
+			return None
+		filters = {"course": self.course}
 		if self.program:
-			filters["program"] = self.program
-			
-		offerings = frappe.get_all("Course Offering", filters=filters, limit=1)
-		if offerings:
-			return offerings[0].name
-			
-		# Fallback: try without program
+			filters["programme"] = self.program
+
+		classes = frappe.get_all("Classes", filters=filters, limit=1, order_by="creation desc")
+		if classes:
+			return classes[0].name
+
+		# Fallback: try without programme
 		if self.program:
-			del filters["program"]
-			offerings = frappe.get_all("Course Offering", filters=filters, limit=1)
-			if offerings:
-				return offerings[0].name
-				
+			del filters["programme"]
+			classes = frappe.get_all("Classes", filters=filters, limit=1, order_by="creation desc")
+			if classes:
+				return classes[0].name
+
 		return None
 
 
@@ -90,7 +89,7 @@ def get_events(start, end, filters=None):
 		"Course Schedule",
 		fields=[
 			"name",
-			"course_offering",
+			"class_name",
 			"course",
 			"instructor_name",
 			"room",

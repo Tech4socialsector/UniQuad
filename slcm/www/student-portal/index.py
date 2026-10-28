@@ -70,7 +70,7 @@ def get_context(context):
         att_summaries = frappe.get_all(
             "Attendance Summary",
             filters={"student": student_name},
-            fields=["attendance_percentage", "eligible_for_exam", "course_offering", "course"],
+            fields=["attendance_percentage", "eligible_for_exam", "class_name", "course"],
             order_by="creation desc",
             limit=50,
             ignore_permissions=True,
@@ -79,8 +79,8 @@ def get_context(context):
         # Build a fast lookup map
         att_map = {}
         for s in att_summaries:
-            if s.course_offering:
-                att_map[s.course_offering] = s
+            if s.class_name:
+                att_map[s.class_name] = s
             if s.course:
                 att_map.setdefault(s.course, s)
 
@@ -92,21 +92,21 @@ def get_context(context):
 
         # Enrich att_summaries with course display names and faculty
         for s in att_summaries:
-            co_name = s.course_offering or ""
+            co_name = s.class_name or ""
             s["course_display"] = s.course or co_name or "—"
             s["faculty"] = "—"
             if co_name:
                 try:
                     co = frappe.db.get_value(
-                        "Course Offering", co_name,
-                        ["course_name", "faculty", "credit_value"],
+                        "Classes", co_name,
+                        ["course_name", "faculty", "faculty_name", "credit"],
                         as_dict=True,
                     )
                     if co:
                         if co.course_name:
                             s["course_display"] = co.course_name
-                        s["faculty"] = co.faculty or "—"
-                        s["credits"] = co.credit_value or 0
+                        s["faculty"] = co.faculty_name or co.faculty or "—"
+                        s["credits"] = co.credit or 0
                 except Exception:
                     pass
 
@@ -124,7 +124,7 @@ def get_context(context):
             enrolled_courses = frappe.get_all(
                 "Student Enrollment Course",
                 filters=sec_filters,
-                fields=["course_offering", "course", "credits", "course_type", "status", "grade"],
+                fields=["class_name", "course", "credits", "course_type", "status", "grade"],
                 ignore_permissions=True,
             )
 
@@ -132,7 +132,7 @@ def get_context(context):
         if not enrolled_courses and att_summaries:
             enrolled_courses = [
                 frappe._dict({
-                    "course_offering": s.course_offering or "",
+                    "class_name": s.class_name or "",
                     "course": s.course or "",
                     "credits": s.get("credits") or 0,
                     "course_type": "—",
@@ -172,28 +172,31 @@ def get_context(context):
         # ── Courses Quick View ─────────────────────────────────
         course_display = []
         for ec in enrolled_courses[:6]:
-            co_name = ec.get("course_offering") or ""
+            co_name = ec.get("class_name") or ""
             course_id = ec.course or ""
 
             co_data = frappe._dict()
-            if co_name:
-                try:
-                    co = frappe.db.get_value(
-                        "Course Offering",
+            try:
+                if co_name:
+                    co_data = frappe.db.get_value(
+                        "Classes",
                         co_name,
-                        ["course_name", "faculty", "credit_value", "term_name"],
+                        ["course_name", "faculty_name as faculty", "credit as credit_value",
+                         "academic_term as term_name"],
                         as_dict=True,
-                    )
-                    if co:
-                        co_data = co
-                except Exception:
-                    pass
+                    ) or frappe._dict()
+                elif course_id:
+                    co_data = frappe.db.get_value(
+                        "Course", course_id, ["course_name", "credit_value"], as_dict=True,
+                    ) or frappe._dict()
+            except Exception:
+                pass
 
             att = att_map.get(co_name) or att_map.get(course_id) or frappe._dict()
             att_pct = round(float(att.get("attendance_percentage") or 0), 1)
 
             course_display.append({
-                "course_offering": co_name,
+                "class_name": co_name,
                 "course": course_id,
                 "course_name": co_data.get("course_name") or ec.get("course_name") or course_id or "—",
                 "credits": co_data.get("credit_value") or ec.get("credits") or 0,
@@ -206,38 +209,43 @@ def get_context(context):
         # ── Upcoming / Today's Sessions ─────────────────────────
         today = frappe.utils.today()
         context.calendar_today = today  # My Calendar's "Today"
-        enrolled_co_set = {s.course_offering for s in att_summaries if s.course_offering}
+        from slcm.api.student_portal import _student_class_names
+
+        try:
+            enrolled_co_set = _student_class_names(student_name)
+        except Exception:
+            enrolled_co_set = {s.class_name for s in att_summaries if s.class_name}
         context.todays_classes = []
         if enrolled_co_set:
             try:
                 todays_raw = frappe.get_all(
                     "Time Table",
                     filters=[
-                        ["course_offering", "in", list(enrolled_co_set)],
+                        ["class_name", "in", list(enrolled_co_set)],
                         ["schedule_date", "=", today],
                     ],
                     fields=[
-                        "name", "course", "course_offering", "instructor",
+                        "name", "course", "class_name", "instructor",
                         "from_time", "to_time", "venue", "title",
                     ],
                     order_by="from_time asc",
                     limit=6,
                     ignore_permissions=True,
                 )
-                co_names = [row.course_offering for row in todays_raw if row.course_offering]
+                co_names = [row.class_name for row in todays_raw if row.class_name]
                 co_info = {}
                 if co_names:
                     co_rows = frappe.get_all(
-                        "Course Offering",
+                        "Classes",
                         filters={"name": ["in", co_names]},
-                        fields=["name", "course_name", "faculty"],
+                        fields=["name", "course_name", "faculty_name as faculty"],
                         ignore_permissions=True,
                     )
                     co_info = {row.name: row for row in co_rows}
                 for row in todays_raw:
-                    co = co_info.get(row.course_offering, frappe._dict())
+                    co = co_info.get(row.class_name, frappe._dict())
                     context.todays_classes.append({
-                        "course_name": co.get("course_name") or row.title or row.course or row.course_offering or "Class",
+                        "course_name": co.get("course_name") or row.title or row.course or row.class_name or "Class",
                         "faculty": co.get("faculty") or row.instructor or "",
                         "from_time": _fmt_time(row.from_time),
                         "to_time": _fmt_time(row.to_time),
@@ -252,23 +260,23 @@ def get_context(context):
                 week_raw = frappe.get_all(
                     "Time Table",
                     filters=[
-                        ["course_offering", "in", list(enrolled_co_set)],
+                        ["class_name", "in", list(enrolled_co_set)],
                         ["schedule_date", "between", [today, frappe.utils.add_days(today, 6)]],
                     ],
-                    fields=["course", "course_offering", "schedule_date",
+                    fields=["course", "class_name", "schedule_date",
                             "from_time", "to_time", "venue", "title"],
                     order_by="schedule_date asc, from_time asc",
                     limit=8,
                     ignore_permissions=True,
                 )
-                wk_cos = list({r.course_offering for r in week_raw if r.course_offering})
+                wk_cos = list({r.class_name for r in week_raw if r.class_name})
                 wk_names = dict(frappe.get_all(
-                    "Course Offering", filters={"name": ["in", wk_cos]},
+                    "Classes", filters={"name": ["in", wk_cos]},
                     fields=["name", "course_name"], as_list=True, ignore_permissions=True,
                 )) if wk_cos else {}
                 for r in week_raw:
                     context.week_classes.append({
-                        "course_name": wk_names.get(r.course_offering) or r.title or r.course or "Class",
+                        "course_name": wk_names.get(r.class_name) or r.title or r.course or "Class",
                         "date": frappe.utils.formatdate(r.schedule_date, "EEE, dd MMM"),
                         "is_today": str(r.schedule_date) == str(today),
                         "from_time": _fmt_time(r.from_time),
@@ -284,14 +292,14 @@ def get_context(context):
                     ["session_date", ">=", today],
                     ["status", "=", "Active"],
                 ],
-                fields=["name", "session_date", "start_time", "course_offering",
+                fields=["name", "session_date", "start_time", "class_name",
                         "session_type", "venue"],
                 order_by="session_date asc, start_time asc",
                 limit=10,
                 ignore_permissions=True,
             )
             context.upcoming_sessions = [
-                s for s in upcoming_sessions if s.course_offering in enrolled_co_set
+                s for s in upcoming_sessions if s.class_name in enrolled_co_set
             ][:4]
         except Exception:
             context.upcoming_sessions = []

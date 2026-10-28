@@ -127,21 +127,31 @@ class FAMFAApplication(Document):
 	def trigger_attendance_recalculation(self):
 		"""
 		Recalculate attendance for the Student and Course linked to this application.
-		Since FA/MFA applies to a Course, we need to find relevant Course Offerings.
+		Since FA/MFA applies to a Course, we recalculate every Class of that course
+		(in the application's term, when set) the student is enrolled in.
 		"""
 		try:
-			# Find Course Offerings for this Course
-			offerings = frappe.get_all("Course Offering", filters={"course_title": self.course}, pluck="name")
-			
-			if not offerings:
+			term_cond = "AND cl.academic_term = %(academic_term)s" if self.academic_term else ""
+			classes = frappe.db.sql_list(f"""
+				SELECT DISTINCT cl.name
+				FROM `tabClasses` cl
+				JOIN `tabClass Enrolled Student` ces
+					ON ces.parent = cl.name AND ces.parenttype = 'Classes'
+				JOIN `tabStudent Enrollment` se ON se.name = ces.student_enrollment
+				WHERE cl.course = %(course)s
+				  AND se.student = %(student)s
+				  {term_cond}
+			""", {"course": self.course, "student": self.student, "academic_term": self.academic_term})
+
+			if not classes:
 				return
 
 			from slcm.slcm.utils.attendance_calculator import calculate_student_attendance
-			
-			for offering in offerings:
+
+			for class_name in classes:
 				# Synchronous call for immediate UI update
 				# This handles getting or creating the summary proactively
-				calculate_student_attendance(self.student, offering)
+				calculate_student_attendance(self.student, class_name)
 				
 		except Exception as e:
 			frappe.log_error(f"FA/MFA Recalc Error: {str(e)}")

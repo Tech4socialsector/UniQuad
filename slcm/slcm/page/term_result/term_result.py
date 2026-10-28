@@ -303,7 +303,7 @@ def generate_term_results(exam_plan, student_names, action, select_all=0,
 
 @frappe.whitelist()
 def download_consolidated_report(exam_plan="", search="", inst_programmes="", inst_batches="",
-		course="", course_offering="", academic_year="", programme="", trimester="", batch="", year=""):
+		course="", academic_year="", programme="", trimester="", batch="", year=""):
 
 	f_programmes = frappe.parse_json(inst_programmes) if inst_programmes else []
 	f_batches    = frappe.parse_json(inst_batches)    if inst_batches    else []
@@ -315,12 +315,7 @@ def download_consolidated_report(exam_plan="", search="", inst_programmes="", in
 		where_cond += " AND scm.exam_plan = %(exam_plan)s"
 		params["exam_plan"] = exam_plan
 
-	# course_offering is the modern, precise filter (Course now only lives on
-	# the offering); "course" is kept for backwards compatibility only.
-	if course_offering:
-		where_cond += " AND scm.course_offering = %(course_offering)s"
-		params["course_offering"] = course_offering
-	elif course:
+	if course:
 		where_cond += " AND scm.course = %(course)s"
 		params["course"] = course
 
@@ -328,10 +323,11 @@ def download_consolidated_report(exam_plan="", search="", inst_programmes="", in
 		where_cond += " AND sm.academic_year = %(academic_year)s"
 		params["academic_year"] = academic_year
 
-	# Term / year / programme come from the marks' Course Offering (a student
-	# no longer stores a term, and a Batch no longer carries a programme).
+	# Term comes from the marks row; year / programme from the Class the
+	# student took the course in (a student no longer stores a term, and a
+	# Batch no longer carries a programme).
 	if trimester:
-		where_cond += " AND co.term_name = %(trimester)s"
+		where_cond += " AND scm.academic_term = %(trimester)s"
 		params["trimester"] = trimester
 
 	if batch:
@@ -339,11 +335,11 @@ def download_consolidated_report(exam_plan="", search="", inst_programmes="", in
 		params["batch"] = batch
 
 	if year:
-		where_cond += " AND co.year_no = %(year)s"
+		where_cond += " AND cl.year_no = %(year)s"
 		params["year"] = year
 
 	if programme:
-		where_cond += " AND COALESCE(co.program, sm.programme_of_study) = %(programme)s"
+		where_cond += " AND COALESCE(cl.programme, sm.programme_of_study) = %(programme)s"
 		params["programme"] = programme
 
 	if search:
@@ -375,10 +371,10 @@ def download_consolidated_report(exam_plan="", search="", inst_programmes="", in
 			sm.registration_id,
 			TRIM(CONCAT_WS(' ', sm.first_name, COALESCE(NULLIF(sm.middle_name,''), NULL), sm.last_name)) AS student_name,
 			sm.academic_year,
-			COALESCE(co.program, sm.programme_of_study) AS programme_name,
+			COALESCE(cl.programme, sm.programme_of_study) AS programme_name,
 			sm.specialisation,
 			sm.batch AS batch_year,
-			co.term_name AS trimester,
+			scm.academic_term AS trimester,
 			c.course_code,
 			c.course_name,
 			'' AS course_registration_type,
@@ -400,7 +396,18 @@ def download_consolidated_report(exam_plan="", search="", inst_programmes="", in
 			srp.cumulative_gpa AS cgpa
 		FROM `tabStudent Course Marks` scm
 		INNER JOIN `tabStudent Master` sm ON sm.name = scm.student
-		LEFT JOIN `tabCourse Offering` co ON co.name = scm.course_offering
+		LEFT JOIN `tabClasses` cl ON cl.name = (
+			SELECT cl2.name
+			FROM `tabClasses` cl2
+			INNER JOIN `tabClass Enrolled Student` ces
+				ON ces.parent = cl2.name AND ces.parenttype = 'Classes'
+			INNER JOIN `tabStudent Enrollment` se ON se.name = ces.student_enrollment
+			WHERE cl2.course = scm.course
+			  AND cl2.academic_term = scm.academic_term
+			  AND se.student = scm.student
+			ORDER BY (ces.status = 'Enrolled') DESC
+			LIMIT 1
+		)
 		LEFT JOIN `tabCourse` c ON c.name = scm.course
 		LEFT JOIN `tabCourse Schema Assignment` csa ON csa.exam_plan = scm.exam_plan AND csa.course = scm.course
 		LEFT JOIN `tabGrading Schema Component` gsc

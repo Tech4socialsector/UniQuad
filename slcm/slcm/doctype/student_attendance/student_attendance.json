@@ -20,7 +20,7 @@
   "student",
   "student_name",
   "section_course",
-  "course_offer",
+  "class_name",
   "course",
   "program",
   "academic_year",
@@ -133,14 +133,16 @@
    "label": "Course Details"
   },
   {
-   "fieldname": "course_offer",
+   "fieldname": "class_name",
    "fieldtype": "Link",
    "in_list_view": 1,
-   "label": "Course Offering",
-   "options": "Course Offering"
+   "in_standard_filter": 1,
+   "label": "Class",
+   "options": "Classes",
+   "search_index": 1
   },
   {
-   "fetch_from": "course_offer.course_title",
+   "fetch_from": "class_name.course",
    "fieldname": "course",
    "fieldtype": "Link",
    "label": "Course",
@@ -273,7 +275,7 @@
  ],
  "icon": "fa fa-check-square-o",
  "links": [],
- "modified": "2026-10-09 10:30:00.000000",
+ "modified": "2026-10-29 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Student Attendance",

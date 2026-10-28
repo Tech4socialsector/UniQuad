@@ -266,9 +266,9 @@ body.fp-dark .fg-busy { background: rgba(10,15,30,.65); color: var(--fp-text-1);
 <div class="fp-page-header fade-in" style="background: var(--fp-card, #fff); border: 1px solid var(--fp-border, #e5e7eb); border-radius: 14px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 20px;">
   <div>
     <h1 class="fp-page-title" style="margin: 0; font-size: 18px !important; font-weight: 700 !important;">Grades</h1>
-    <div style="font-size:12.5px;color:var(--fp-text-4);margin-top:2px;" id="fg-subtitle">Enter marks for the students of your course offering</div>
+    <div style="font-size:12.5px;color:var(--fp-text-4);margin-top:2px;" id="fg-subtitle">Enter marks for the students of your classes</div>
   </div>
-  {% if course_offerings %}
+  {% if faculty_courses %}
   {# Grades ⇄ Assessment Marks (1st / 2nd submission marks per scheduled assessment) #}
   <div class="fg-view" role="tablist" aria-label="Marks view">
     <button type="button" class="fg-view-btn fg-view-active" data-view="grades" role="tab" aria-selected="true" onclick="fgSetView('grades')">
@@ -292,9 +292,9 @@ body.fp-dark .fg-busy { background: rgba(10,15,30,.65); color: var(--fp-text-1);
       <label for="fg-co">Course</label>
       <select id="fg-co" onchange="fgChangeCourse()">
         <option value="">— Select a course —</option>
-        {% for co in course_offerings %}
-        <option value="{{ co.name }}" {% if selected_co == co.name %}selected{% endif %}>
-          {{ co.course_name }}{% if co.programme_name %} — {{ co.programme_name }}{% endif %}{% if co.term_name %} · {{ co.term_name }}{% endif %}
+        {% for co in faculty_courses %}
+        <option value="{{ co.key }}" {% if selected_co == co.key %}selected{% endif %}>
+          {{ co.course_name }}{% if co.programme_name %} — {{ co.programme_name }}{% endif %}{% if co.academic_term %} · {{ co.academic_term }}{% endif %}
         </option>
         {% endfor %}
       </select>
@@ -306,7 +306,7 @@ body.fp-dark .fg-busy { background: rgba(10,15,30,.65); color: var(--fp-text-1);
   </div>
 </div>
 
-{% if not course_offerings %}
+{% if not faculty_courses %}
 <div class="fp-card"><div class="fp-empty">
   <span class="fp-ms">grade</span>
   <p class="fp-empty-title">No courses assigned</p>
@@ -314,11 +314,11 @@ body.fp-dark .fg-busy { background: rgba(10,15,30,.65); color: var(--fp-text-1);
 </div></div>
 {% endif %}
 
-<div id="fg-empty" class="fp-card" {% if not course_offerings %}style="display:none;"{% endif %}>
+<div id="fg-empty" class="fp-card" {% if not faculty_courses %}style="display:none;"{% endif %}>
   <div class="fp-empty">
     <span class="fp-ms">grade</span>
     <p class="fp-empty-title">Select a course</p>
-    <p class="fp-empty-sub" id="fg-empty-sub">Choose one of your course offerings above to enter grades.</p>
+    <p class="fp-empty-sub" id="fg-empty-sub">Choose one of your courses above to enter grades.</p>
   </div>
 </div>
 
@@ -389,7 +389,7 @@ body.fp-dark .fg-busy { background: rgba(10,15,30,.65); color: var(--fp-text-1);
   </div>
 </div>
 
-{% if course_offerings %}{% include "slcm/www/faculty-portal/_assessment_marks.html" %}{% endif %}
+{% if faculty_courses %}{% include "slcm/www/faculty-portal/_assessment_marks.html" %}{% endif %}
 
 <div class="fg-toast" id="fg-toast"></div>
 <div class="fg-busy" id="fg-busy"><span class="fp-ms" style="animation:fp-spin .8s linear infinite;margin-right:8px;">sync</span>Please wait…</div>
@@ -438,6 +438,15 @@ var FG = {
   upload: null,     /* {name, data} of the file being uploaded */
 };
 var FG_API = 'slcm.api.faculty_grades.';
+
+/* The course selector value is "<course>::<academic term>" (see marks.py) */
+function fgSplit(key) {
+  key = key || '';
+  var i = key.indexOf('::');
+  return i < 0 ? [key, ''] : [key.slice(0, i), key.slice(i + 2)];
+}
+function fgCourse(key) { return fgSplit(key === undefined ? FG.co : key)[0]; }
+function fgTerm(key) { return fgSplit(key === undefined ? FG.co : key)[1]; }
 
 function fgEsc(s) {
   return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -502,7 +511,8 @@ function fgToast(msg, isError) {
 /* ── Course / exam plan selection ── */
 function fgSetUrl() {
   var p = new URLSearchParams(window.location.search);
-  if (FG.co) p.set('course_offering', FG.co); else p.delete('course_offering');
+  if (FG.co) { p.set('course', fgCourse()); p.set('academic_term', fgTerm()); }
+  else { p.delete('course'); p.delete('academic_term'); }
   if (FG.plan) p.set('exam_plan', FG.plan); else p.delete('exam_plan');
   var qs = p.toString();
   history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : ''));
@@ -523,7 +533,7 @@ function fgChangeCourse() {
 
 /* ── Grades ⇄ Assessment Marks view (same course selector) ── */
 var FG_SUBTITLES = {
-  grades: 'Enter marks for the students of your course offering',
+  grades: 'Enter marks for the students of your classes',
   assessments: 'Enter 1st and 2nd submission marks once an assessment closes, before its marks entry deadline',
 };
 function fgSetView(view) {
@@ -550,8 +560,8 @@ function fgRefreshView() {
   if (subtitle) subtitle.textContent = FG_SUBTITLES[FG.view];
   var emptySub = document.getElementById('fg-empty-sub');
   if (emptySub) emptySub.textContent = isAsmt
-    ? 'Choose one of your course offerings above to see its assessments.'
-    : 'Choose one of your course offerings above to enter grades.';
+    ? 'Choose one of your courses above to see its assessments.'
+    : 'Choose one of your courses above to enter grades.';
 
   if (isAsmt) {
     /* The exam plan picker and grade sheet belong to the Grades view */
@@ -600,7 +610,7 @@ function fgLoad() {
   if (empty) empty.style.display = 'none';
   main.style.display = 'none';
   loading.style.display = '';
-  fgCall('get_grade_sheet', { course_offering: FG.co, exam_plan: FG.plan || null }, function (data) {
+  fgCall('get_grade_sheet', { course: fgCourse(), academic_term: fgTerm(), exam_plan: FG.plan || null }, function (data) {
     loading.style.display = 'none';
     FG.info = data.info; FG.columns = data.columns || []; FG.students = data.students || [];
     FG.plan = FG.info.exam_plan || '';
@@ -698,7 +708,7 @@ function fgRenderSheet() {
   var t = document.getElementById('fg-sheet');
   if (FG.info.view_block || !FG.info.exam_plan) { t.innerHTML = ''; return; }
   if (!FG.students.length) {
-    t.innerHTML = '<tr><td style="padding:40px;color:var(--fp-text-4);">No students are enrolled in this course offering.</td></tr>';
+    t.innerHTML = '<tr><td style="padding:40px;color:var(--fp-text-4);">No students are enrolled in your classes of this course.</td></tr>';
     return;
   }
   var cols = FG.columns, editable = fgCanEdit();
@@ -825,7 +835,7 @@ function fgRefreshSaveBar(tab) {
 /* Save one tracked input → Promise resolving to {ok, msg} */
 function fgSaveOne(inp) {
   var sid = inp.dataset.student, val = inp.value.trim(), kind = inp.dataset.kind;
-  var base = { course_offering: FG.co, exam_plan: FG.plan, student: sid };
+  var base = { course: fgCourse(), academic_term: fgTerm(), exam_plan: FG.plan, student: sid };
   var method, args;
   if (kind === 'mark') {
     method = 'save_mark';
@@ -1039,7 +1049,7 @@ function fgSetStatus(status) {
     confirmLabel: submit ? 'Submit' : 'Set to Draft',
     icon: submit ? 'send' : 'undo',
   }, function () {
-    fgCall('set_status', { course_offering: FG.co, exam_plan: FG.plan, status: status, students: JSON.stringify(ids) }, function (r) {
+    fgCall('set_status', { course: fgCourse(), academic_term: fgTerm(), exam_plan: FG.plan, status: status, students: JSON.stringify(ids) }, function (r) {
       fgToast(r.updated + ' student(s) set to ' + status + (r.skipped_locked ? ' · ' + r.skipped_locked + ' locked by the examination office' : ''));
       fgLoad();
     }, null, true);
@@ -1054,7 +1064,7 @@ function fgAutoGrades() {
     confirmLabel: 'Calculate',
     icon: 'calculate',
   }, function () {
-    fgCall('auto_generate_grades', { course_offering: FG.co, exam_plan: FG.plan }, function (r) {
+    fgCall('auto_generate_grades', { course: fgCourse(), academic_term: fgTerm(), exam_plan: FG.plan }, function (r) {
       fgToast('Grades recalculated for ' + r.updated + ' student(s).');
       fgLoad();
     }, null, true);
@@ -1065,7 +1075,7 @@ function fgAutoGrades() {
 function fgDownloadTemplate() {
   if (!FG.co || !FG.plan) return;
   window.open('/api/method/' + FG_API + 'download_template?' +
-    new URLSearchParams({ course_offering: FG.co, exam_plan: FG.plan }).toString(), '_blank');
+    new URLSearchParams({ course: fgCourse(), academic_term: fgTerm(), exam_plan: FG.plan }).toString(), '_blank');
 }
 function fgOpenUpload() {
   if (fgBlockedByUnsaved()) return;
@@ -1094,7 +1104,7 @@ function fgReadFile(cb) {
 
 function fgCheckUpload() {
   fgReadFile(function () {
-    fgCall('import_marks', { course_offering: FG.co, exam_plan: FG.plan, filedata: FG.upload.data, filename: FG.upload.name, apply: 0 },
+    fgCall('import_marks', { course: fgCourse(), academic_term: fgTerm(), exam_plan: FG.plan, filedata: FG.upload.data, filename: FG.upload.name, apply: 0 },
       function (r) { fgShowUploadResult(r); },
       function (msg) { document.getElementById('fg-up-result').innerHTML = fgBanner('error', fgEsc(msg)); }, true);
   });
@@ -1132,7 +1142,7 @@ function fgDownloadErrors() {
 
 function fgSaveUpload() {
   if (!FG.upload) return;
-  fgCall('import_marks', { course_offering: FG.co, exam_plan: FG.plan, filedata: FG.upload.data, filename: FG.upload.name, apply: 1 },
+  fgCall('import_marks', { course: fgCourse(), academic_term: fgTerm(), exam_plan: FG.plan, filedata: FG.upload.data, filename: FG.upload.name, apply: 1 },
     function (r) {
       if (!r.applied) { fgShowUploadResult(r); return; }
       fgCloseUpload();
@@ -1155,7 +1165,7 @@ function fgShowTab(tab) {
 function fgLoadReexam() {
   var t = document.getElementById('fg-reexam');
   t.innerHTML = '<tr><td style="padding:32px;color:var(--fp-text-4);">Loading…</td></tr>';
-  fgCall('get_reexam_sheet', { course_offering: FG.co, exam_plan: FG.plan }, function (d) {
+  fgCall('get_reexam_sheet', { course: fgCourse(), academic_term: fgTerm(), exam_plan: FG.plan }, function (d) {
     FG.reexam = d;
     fgRenderReexam();
   }, function (msg) { t.innerHTML = '<tr><td style="padding:32px;">' + fgEsc(msg) + '</td></tr>'; });

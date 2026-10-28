@@ -1385,16 +1385,13 @@ def create_re_exam_payment_order(exam_plan, course):
     if existing:
         reg_name = existing.name
     else:
-        course_offering = frappe.db.get_value(
-            "Course Schema Assignment", {"exam_plan": exam_plan, "course": course}, "course_offering"
-        )
-        if not course_offering:
-            frappe.throw(_("No Course Offering found for this course/exam plan. Contact administration."))
+        if not frappe.db.exists("Course Schema Assignment", {"exam_plan": exam_plan, "course": course}):
+            frappe.throw(_("No course schema found for this course/exam plan. Contact administration."))
         doc = frappe.new_doc("Re Exam Registration")
         doc.student         = student_name
         doc.exam_plan       = exam_plan
         doc.course          = course
-        doc.course_offering = course_offering
+        doc.academic_term = frappe.db.get_value("Exam Plan", exam_plan, "term")
         doc.re_exam_fee     = fee_amount
         doc.status          = "Registered"
         doc.payment_status  = "Pending"
@@ -1697,16 +1694,13 @@ def create_improvement_exam_payment_order(exam_plan, course):
             if current_count >= int(setting["registration_limit"]):
                 frappe.throw(_("Registration limit has been reached for this improvement exam."))
 
-        course_offering = frappe.db.get_value(
-            "Course Schema Assignment", {"exam_plan": exam_plan, "course": course}, "course_offering"
-        )
-        if not course_offering:
-            frappe.throw(_("No Course Offering found for this course/exam plan. Contact administration."))
+        if not frappe.db.exists("Course Schema Assignment", {"exam_plan": exam_plan, "course": course}):
+            frappe.throw(_("No course schema found for this course/exam plan. Contact administration."))
         doc = frappe.new_doc("Improvement Exam Registration")
         doc.student          = student_name
         doc.exam_plan        = exam_plan
         doc.course           = course
-        doc.course_offering  = course_offering
+        doc.academic_term  = frappe.db.get_value("Exam Plan", exam_plan, "term")
         doc.improvement_fee  = fee_amount
         doc.status           = "Registered"
         doc.payment_status   = "Pending"
@@ -2386,16 +2380,13 @@ def register_re_exam_for_cash(exam_plan, course):
         return {"status": "already_registered", "registration_name": existing.name}
 
     fee_amount = flt(setting.get("re_exam_fee") or 0)
-    course_offering = frappe.db.get_value(
-        "Course Schema Assignment", {"exam_plan": exam_plan, "course": course}, "course_offering"
-    )
-    if not course_offering:
-        frappe.throw(_("No Course Offering found for this course/exam plan. Contact administration."))
+    if not frappe.db.exists("Course Schema Assignment", {"exam_plan": exam_plan, "course": course}):
+        frappe.throw(_("No course schema found for this course/exam plan. Contact administration."))
     doc = frappe.new_doc("Re Exam Registration")
     doc.student        = student_name
     doc.exam_plan      = exam_plan
     doc.course         = course
-    doc.course_offering = course_offering
+    doc.academic_term = frappe.db.get_value("Exam Plan", exam_plan, "term")
     doc.re_exam_fee    = fee_amount
     doc.status         = "Registered"
     doc.payment_status = "Pending"

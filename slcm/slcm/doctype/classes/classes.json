@@ -16,8 +16,9 @@
   "section",
   "group_name",
   "course_section",
-  "course_offering",
+  "course",
   "course_name",
+  "course_type",
   "year_no",
   "column_break_course",
   "credit",
@@ -82,15 +83,17 @@
    "label": "Course"
   },
   {
-   "fieldname": "course_offering",
+   "fieldname": "course",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Course Offering",
-   "options": "Course Offering",
-   "reqd": 1
+   "label": "Course",
+   "options": "Course",
+   "reqd": 1,
+   "search_index": 1
   },
   {
-   "fetch_from": "course_offering.course_name",
+   "fetch_from": "course.course_name",
    "fieldname": "course_name",
    "fieldtype": "Data",
    "in_list_view": 1,
@@ -98,26 +101,33 @@
    "read_only": 1
   },
   {
-   "fetch_from": "course_offering.year_no",
+   "fetch_from": "course.course_type",
+   "fieldname": "course_type",
+   "fieldtype": "Data",
+   "label": "Course Type",
+   "read_only": 1
+  },
+  {
    "fieldname": "year_no",
    "fieldtype": "Int",
-   "label": "Year No",
-   "read_only": 1
+   "label": "Year",
+   "reqd": 1,
+   "non_negative": 1,
+   "default": "1",
+   "description": "Year of study of the programme this class is for."
   },
   {
    "fieldname": "column_break_course",
    "fieldtype": "Column Break"
   },
   {
-   "fetch_from": "course_offering.credit_value",
+   "fetch_from": "course.credit_value",
    "fetch_if_empty": 1,
    "fieldname": "credit",
    "fieldtype": "Int",
    "label": "Credit"
   },
   {
-   "fetch_from": "course_offering.faculty",
-   "fetch_if_empty": 1,
    "fieldname": "faculty",
    "fieldtype": "Link",
    "in_standard_filter": 1,
@@ -169,7 +179,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-27 22:56:41.022974",
+ "modified": "2026-10-29 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Classes",

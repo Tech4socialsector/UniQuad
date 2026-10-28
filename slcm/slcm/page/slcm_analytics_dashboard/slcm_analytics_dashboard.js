@@ -1808,7 +1808,7 @@ class SLCMAnalyticsDashboard {
 						${this._kpi('Active Programs',      d.active_programs,      '🏫', 'primary',  `${d.total_programs} total`,               { module:'programme', dimension:'program_status', value:'Active' })}
 						${this._kpi('Active Cohorts',       d.active_cohorts,       '🗂️', 'info',     `${d.total_cohorts} total cohorts`,         { module:'programme', dimension:'cohort_status',  value:'Active' })}
 						${this._kpi('Total Enrollments',    d.total_enrollments,    '🎓', 'success',  `${d.active_enrollments} actively enrolled`, { module:'programme', dimension:'enrollment_status', value:'Enrolled' })}
-						${this._kpi('Open Course Offerings',d.open_offerings,       '📖', 'warning',  `${d.total_offerings} total offerings`,     { module:'programme', dimension:'offering_status', value:'Open' })}
+						${this._kpi('Active Classes',       d.open_offerings,       '📖', 'warning',  `${d.total_offerings} total classes`,       { module:'programme', dimension:'offering_status', value:'Active' })}
 						${this._kpi('Enrollment Rate',      d.enrollment_rate + '%','📊', enroll_rate_color, 'enrolled vs dropped',              { module:'programme', dimension:'enrollment_status', value:'Enrolled' })}
 					</div>
 
@@ -1830,11 +1830,11 @@ class SLCMAnalyticsDashboard {
 						${this._chart_card('sad-pm-cohort-enroll', 'Top Cohorts by Enrollment','Active cohort headcount',   'Click bar to drill down', '')}
 					</div>
 
-					<div class="sad-section-title">Course Offering Analysis</div>
+					<div class="sad-section-title">Class Analysis</div>
 					<div class="sad-chart-grid">
-						${this._chart_card('sad-pm-offering-status', 'Course Offering Status', 'Open vs Closed',             '', '')}
-						${this._chart_card('sad-pm-offering-prog',   'Offerings by Program',   'Course offering distribution','Click bar to drill down', '')}
-						${this._chart_card('sad-pm-course-status',   'Enrolled Course Status', 'Enrolled vs Dropped courses', '', '')}
+						${this._chart_card('sad-pm-offering-status', 'Class Status',           'Active vs Closed (by academic year)', '', '')}
+						${this._chart_card('sad-pm-offering-prog',   'Classes by Program',     'Class distribution',          'Click bar to drill down', '')}
+						${this._chart_card('sad-pm-course-status',   'Enrolled Course Status', 'Ongoing / Completed / Dropped courses', '', '')}
 					</div>
 				`);
 
@@ -2212,8 +2212,8 @@ class SLCMAnalyticsDashboard {
 			'programme:course_enroll_status': { dt: 'Student Enrollment',            filters: f('enrollment_status') },
 			'programme:program_enrollment':   { dt: 'Student Enrollment',            filters: {} },
 			'programme:cohort_enrollment':    { dt: 'Student Enrollment',            filters: {} },
-			'programme:offering_status':      { dt: 'Course Offering',               filters: f('status') },
-			'programme:offering_program':     { dt: 'Course Offering',               filters: f('program') },
+			'programme:offering_status':      { dt: 'Classes',                       filters: {} },
+			'programme:offering_program':     { dt: 'Classes',                       filters: f('programme') },
 
 			// ── ID Card ────────────────────────────────────────────────
 			'idcard:card_status':             { dt: 'ID Card Generation',            filters: f('card_status') },

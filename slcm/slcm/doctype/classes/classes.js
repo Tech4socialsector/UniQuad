@@ -7,15 +7,7 @@ frappe.ui.form.on("Classes", {
 		frm.set_query("academic_term", () => ({
 			filters: { academic_year: frm.doc.academic_year },
 		}));
-		// Only offerings for the selected Programme, Year and Term.
-		frm.set_query("course_offering", () => ({
-			filters: {
-				program: frm.doc.programme,
-				academic_year: frm.doc.academic_year,
-				term_name: frm.doc.academic_term,
-				status: "Active",
-			},
-		}));
+		frm.set_query("course", () => ({ filters: { status: "Active" } }));
 		// A Group class may take students from any programme.
 		frm.set_query("student_enrollment", "enrolled_students", () => ({
 			filters:
@@ -46,23 +38,14 @@ frappe.ui.form.on("Classes", {
 
 	academic_year(frm) {
 		frm.set_value("academic_term", null);
-		frm.set_value("course_offering", null);
-	},
-
-	academic_term(frm) {
-		frm.set_value("course_offering", null);
-	},
-
-	programme(frm) {
-		frm.set_value("course_offering", null);
 	},
 });
 
 // Fill the table with the section's enrolled students, skipping ones already listed.
 function get_students(frm) {
 	const { programme, academic_year, year_no, section } = frm.doc;
-	if (!programme || !academic_year || !section || !frm.doc.course_offering) {
-		frappe.msgprint(__("Select Academic Year, Programme, Section and Course Offering first."));
+	if (!programme || !academic_year || !section || !year_no) {
+		frappe.msgprint(__("Select Academic Year, Programme, Year and Section first."));
 		return;
 	}
 	frappe.call({

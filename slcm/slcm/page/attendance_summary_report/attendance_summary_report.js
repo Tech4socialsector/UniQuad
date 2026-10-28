@@ -285,15 +285,14 @@ class AttendanceSummaryReport {
 	}
 
 	_load_terms() {
-		// Term is a plain Data field on Course Offering, not a Link doctype,
-		// so populate the multiselect from the distinct values actually in use.
-		frappe.db.get_list("Course Offering", {
-			fields: ["term_name"],
-			filters: { term_name: ["is", "set"] },
-			group_by: "term_name",
+		// Populate the multiselect from the Academic Terms classes actually use.
+		frappe.db.get_list("Classes", {
+			fields: ["academic_term"],
+			filters: { academic_term: ["is", "set"] },
+			group_by: "academic_term",
 			limit: 0,
 		}).then(rows => {
-			this._term_values = [...new Set(rows.map(r => r.term_name).filter(Boolean))].sort();
+			this._term_values = [...new Set(rows.map(r => r.academic_term).filter(Boolean))].sort();
 		});
 	}
 

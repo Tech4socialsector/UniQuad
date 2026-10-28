@@ -14,7 +14,13 @@ table (Student Academic Log), one row per academic term:
     Dropped   - closed because the enrollment was dropped
 
 Promotion does not create a new enrollment: it closes the current year's rows
-and adds rows (and courses) for the next year to the same record.
+and adds rows for the next year to the same record.
+
+`enrolled_courses` (Student Enrollment Course) lists every course the student
+takes through the programme. A row is added when the student is put in a
+class (sync_class_to_enrollments). Its status follows the term's dates -
+Upcoming, Ongoing, then Completed once the term has ended - unless it is set
+to Carry Forward, Withdrawn or Dropped, which stay as set.
 
 Other modules read the current position with get_current_log() /
 get_current_logs(), or in SQL with current_log_join() / year_log_exists().
@@ -31,6 +37,9 @@ LOG_DOCTYPE = "Student Academic Log"
 OPEN_LOG_STATUSES = ("Ongoing", "Upcoming")
 # Rows that are not part of the student's live position.
 CLOSED_LOG_STATUSES = ("Redo", "Dropped")
+# Enrolled course statuses set by staff; the others follow the term's dates.
+MANUAL_COURSE_STATUSES = ("Carry Forward", "Withdrawn", "Dropped")
+OPEN_COURSE_STATUSES = ("Ongoing", "Upcoming")
 
 
 class StudentEnrollment(Document):
@@ -44,11 +53,9 @@ class StudentEnrollment(Document):
         self.sync_log_sections()
         self.validate_log()
         self.close_log_on_status()
+        self.refresh_course_statuses()
         self.stamp_changed_rows()
         self.validate_duplicate_enrollment()
-
-    def before_save(self):
-        self.fetch_courses()
 
     def on_update(self):
         """Sync Student Master when enrollment status changes."""
@@ -128,7 +135,7 @@ class StudentEnrollment(Document):
                 row.status = closing
         if self.status == "Dropped":
             for row in self.enrolled_courses:
-                if row.status == "Enrolled":
+                if row.status in OPEN_COURSE_STATUSES:
                     row.status = "Dropped"
 
     def stamp_changed_rows(self):
@@ -150,33 +157,19 @@ class StudentEnrollment(Document):
 
     # ── Courses ───────────────────────────────────────────────────────────────
 
-    def fetch_courses(self):
-        """Attach the current year's Active Course Offerings (all terms) when the
-        enrollment has no courses for that year yet."""
-        current = self.current_log()
-        if not (self.program and current):
-            return
-        if any(r.academic_year == current.academic_year and cint(r.year_no) == cint(current.year_no)
-               for r in self.enrolled_courses):
-            return
-        self.add_year_courses(current.academic_year, current.year_no)
-
-    def add_year_courses(self, academic_year, year_no):
-        have = {r.course_offering for r in self.enrolled_courses}
-        for offering in get_offerings_for_year(self.program, academic_year, year_no):
-            if offering.name in have:
+    def refresh_course_statuses(self):
+        """Course rows follow their term: Upcoming before it starts, Ongoing
+        while it runs, Completed after it ends (or once the student has left
+        that academic year in the log). Carry Forward / Withdrawn / Dropped
+        are set by staff and kept."""
+        open_years = {r.academic_year for r in self.academic_log if r.status in OPEN_LOG_STATUSES}
+        for row in self.enrolled_courses:
+            if row.status in MANUAL_COURSE_STATUSES:
                 continue
-            self.append("enrolled_courses", {
-                "course_offering": offering.name,
-                "course":          offering.course_title,
-                "course_type":     offering.course_type or "",
-                "academic_year":   offering.academic_year,
-                "academic_term":   offering.term_name,
-                "year_no":         offering.year_no,
-                "faculty":         offering.faculty,
-                "credits":         offering.credit_value,
-                "status":          "Enrolled",
-            })
+            status = term_course_status(row.academic_term)
+            if status in OPEN_COURSE_STATUSES and row.academic_year and row.academic_year not in open_years:
+                status = "Completed"
+            row.status = status
 
     # ── Class Configuration rosters ───────────────────────────────────────────
 
@@ -184,8 +177,7 @@ class StudentEnrollment(Document):
         """Add/remove this student on the Class Configuration roster of every
         course of their current academic year they are enrolled/dropped in.
 
-        Enrolling a student only attaches a Course Offering to
-        `enrolled_courses` - nothing else in the system puts them on a
+        Nothing else in the system puts them on a
         Class Configuration's student list. Exams/results read that list
         (via the `Class Student` child table) to decide who is eligible for
         a course, so without this a properly enrolled student would be
@@ -207,7 +199,7 @@ class StudentEnrollment(Document):
             if current and row.academic_year and row.academic_year != current.academic_year:
                 continue
 
-            dropped = self.status == "Dropped" or row.status in ("Dropped", "Withdrawn")
+            dropped = self.status == "Dropped" or row.status in MANUAL_COURSE_STATUSES
 
             filters = {"course": row.course, "batch": self.batch}
             if self.section:
@@ -450,10 +442,37 @@ def enrollments_in_year(academic_year=None, year_no=None, filters=None, current_
     )
 
 
+def term_course_status(academic_term, on_date=None):
+    """Upcoming / Ongoing / Completed for a course taught in `academic_term`,
+    from the term's dates (Ongoing when the term or its dates are not set)."""
+    if not academic_term:
+        return "Ongoing"
+    start, end = frappe.get_cached_value("Academic Term", academic_term, ["term_start_date", "term_end_date"]) or (None, None)
+    day = getdate(on_date or today())
+    if start and day < getdate(start):
+        return "Upcoming"
+    if end and day > getdate(end):
+        return "Completed"
+    return "Ongoing"
+
+
 def advance_term_status():
     """Daily: move each Ongoing row whose term has ended on to the next term of
     the same year (Ongoing -> Completed, next Upcoming -> Ongoing). The last
-    term of a year stays Ongoing until the student is promoted."""
+    term of a year stays Ongoing until the student is promoted. Enrolled
+    course rows whose term has started or ended are refreshed too."""
+    stale_courses = frappe.db.sql(
+        """
+        SELECT DISTINCT c.parent
+        FROM `tabStudent Enrollment Course` c
+        INNER JOIN `tabAcademic Term` t ON t.name = c.academic_term
+        WHERE c.parenttype = 'Student Enrollment'
+          AND ((c.status = 'Ongoing' AND t.term_end_date < %(today)s)
+            OR (c.status = 'Upcoming' AND t.term_start_date <= %(today)s))
+        """,
+        {"today": today()},
+        pluck=True,
+    )
     ended = frappe.db.sql(
         f"""
         SELECT l.parent
@@ -468,15 +487,16 @@ def advance_term_status():
         {"today": today()},
         pluck=True,
     )
-    for name in ended:
+    for name in dict.fromkeys(ended + stale_courses):
         doc = frappe.get_doc("Student Enrollment", name)
-        rows = sorted(doc.academic_log, key=_log_sort_key)
-        cur = next(i for i, r in enumerate(rows) if r.status == "Ongoing")
-        nxt = next((r for r in rows[cur + 1:] if r.status == "Upcoming"
-                    and r.academic_year == rows[cur].academic_year), None)
-        if not nxt:
-            continue
-        rows[cur].status, nxt.status = "Completed", "Ongoing"
+        if name in ended:
+            rows = sorted(doc.academic_log, key=_log_sort_key)
+            cur = next(i for i, r in enumerate(rows) if r.status == "Ongoing")
+            nxt = next((r for r in rows[cur + 1:] if r.status == "Upcoming"
+                        and r.academic_year == rows[cur].academic_year), None)
+            if nxt:
+                rows[cur].status, nxt.status = "Completed", "Ongoing"
+        # validate() refreshes the course statuses
         doc.flags.skip_roster_sync = True
         doc.save(ignore_permissions=True)
     frappe.db.commit()
@@ -566,10 +586,10 @@ def promote_enrollment(enrollment_name, target_academic_year, repeat=False):
     """Move one Student Enrollment on to `target_academic_year`.
 
     Promotion (repeat=False): the current year's open log rows become
-    Completed (its Enrolled courses too) and rows for year + 1 are added.
-    Repeat (repeat=True): the current year's rows and Enrolled courses become
-    Redo and rows for the same year are added. Either way the target year's
-    Course Offerings are appended to the courses, and Student Master's
+    Completed (its courses too) and rows for year + 1 are added.
+    Repeat (repeat=True): the current year's rows become Redo, its courses
+    Carry Forward, and rows for the same year are added. The new year's
+    courses are added as the student is put in its classes. Student Master's
     academic year / current year follow (via on_update).
 
     Atomic: a failure rolls everything back. Safe to re-run: if the log already
@@ -611,11 +631,10 @@ def promote_enrollment(enrollment_name, target_academic_year, repeat=False):
             elif row.status in OPEN_LOG_STATUSES:
                 row.status = "Completed"
         for row in doc.enrolled_courses:
-            if row.academic_year == current.academic_year and row.status == "Enrolled":
-                row.status = "Redo" if repeat else "Completed"
+            if row.academic_year == current.academic_year and row.status not in MANUAL_COURSE_STATUSES:
+                row.status = "Carry Forward" if repeat else "Completed"
 
         doc.add_year_log(target_academic_year, next_year)
-        doc.add_year_courses(target_academic_year, next_year)
         doc.status = "Enrolled"
         doc.save(ignore_permissions=True)
     except Exception:
@@ -625,20 +644,19 @@ def promote_enrollment(enrollment_name, target_academic_year, repeat=False):
     return doc.name, True
 
 
-def get_offerings_for_year(program, academic_year, year_no):
-    """Active Course Offerings of every term of `academic_year` for this
-    programme and year of study, with the course type."""
+def get_classes_for_year(program, academic_year, year_no):
+    """The courses that have classes for this programme, academic year and
+    year of study (one row per course and term)."""
     return frappe.db.sql(
         """
-        SELECT co.name, co.course_title, co.credit_value, co.faculty,
-               co.academic_year, co.term_name, co.year_no, c.course_type
-        FROM `tabCourse Offering` co
-        LEFT JOIN `tabCourse` c ON c.name = co.course_title
-        WHERE co.program = %(program)s
-          AND co.academic_year = %(academic_year)s
-          AND co.year_no = %(year_no)s
-          AND co.status = 'Active'
-        ORDER BY co.term_name, co.course_name
+        SELECT cls.course, cls.course_name, cls.course_type, MAX(cls.credit) AS credit,
+               cls.academic_year, cls.academic_term, cls.year_no
+        FROM `tabClasses` cls
+        WHERE cls.programme = %(program)s
+          AND cls.academic_year = %(academic_year)s
+          AND cls.year_no = %(year_no)s
+        GROUP BY cls.course, cls.course_name, cls.course_type, cls.academic_year, cls.academic_term, cls.year_no
+        ORDER BY cls.academic_term, cls.course_name
         """,
         {"program": program, "academic_year": academic_year, "year_no": cint(year_no)},
         as_dict=True,
@@ -647,28 +665,29 @@ def get_offerings_for_year(program, academic_year, year_no):
 
 # ── Class → enrolled courses ──────────────────────────────────────────────────
 
-# Class Enrolled Student status -> Student Enrollment Course status.
+# Class Enrolled Student status -> Student Enrollment Course status. Enrolled
+# (still in the class) has none: the row follows the term's dates.
 CLASS_TO_COURSE_STATUS = {
-    "Enrolled": "Enrolled", "Completed": "Completed", "Failed": "Failed",
-    "Dropped": "Dropped", "Withdrawn": "Withdrawn",
+    "Completed": "Completed", "Carry Forward": "Carry Forward",
+    "Withdrawn": "Withdrawn", "Dropped": "Dropped",
 }
 
 
 def sync_class_to_enrollments(class_doc, removed=False):
     """Write a Classes record onto the enrolled course row of each of its
-    students: class, academic year, term, year, faculty, credits, grade and
-    status. The row is added if the student did not have that course yet.
-    Students taken off the class (or every student, removed=True) only lose
-    the class link; their course row and its status stay as history."""
+    students: course, class, academic year, term, year, faculty, credits,
+    grade and status. The row is added if the student did not have that
+    course in that term yet. Students taken off the class (or every student,
+    removed=True) only lose the class link; their course row and its status
+    stay as history."""
     in_class = {} if removed else {r.student_enrollment: r for r in class_doc.enrolled_students}
+    previous = class_doc.get_doc_before_save() if not removed else None
+    was = {r.student_enrollment: r.status for r in (previous.enrolled_students if previous else [])}
     linked = set(frappe.get_all(
         "Student Enrollment Course",
         filters={"parenttype": "Student Enrollment", "class_name": class_doc.name},
         pluck="parent",
     ))
-    offering = frappe.db.get_value(
-        "Course Offering", class_doc.course_offering, ["course_title", "credit_value"], as_dict=True
-    ) or frappe._dict()
 
     for enrollment in set(in_class) | linked:
         if not frappe.db.exists("Student Enrollment", enrollment):
@@ -676,7 +695,8 @@ def sync_class_to_enrollments(class_doc, removed=False):
         doc = frappe.get_doc("Student Enrollment", enrollment)
         class_row = in_class.get(enrollment)
         row = next((r for r in doc.enrolled_courses if r.class_name == class_doc.name), None) \
-            or next((r for r in doc.enrolled_courses if r.course_offering == class_doc.course_offering), None)
+            or next((r for r in doc.enrolled_courses if not r.class_name and r.course == class_doc.course
+                     and r.academic_term == class_doc.academic_term), None)
 
         if not class_row:
             if row and row.class_name == class_doc.name:
@@ -686,17 +706,24 @@ def sync_class_to_enrollments(class_doc, removed=False):
             continue
 
         if not row:
-            row = doc.append("enrolled_courses", {"course_offering": class_doc.course_offering})
+            row = doc.append("enrolled_courses", {})
+        status = CLASS_TO_COURSE_STATUS.get(class_row.status)
+        if not status and row.status in MANUAL_COURSE_STATUSES and was.get(enrollment) == "Enrolled":
+            # Still in the class: a status staff set on the course row stays.
+            # (A class row moved back to Enrolled resets it to the term's.)
+            status = row.status
         row.update({
-            "course":        offering.course_title or row.course,
+            "course":        class_doc.course,
+            "course_type":   class_doc.course_type,
             "academic_year": class_doc.academic_year,
             "academic_term": class_doc.academic_term,
             "year_no":       class_doc.year_no,
             "class_name":    class_doc.name,
             "faculty":       class_doc.faculty or row.faculty,
-            "credits":       class_doc.credit or offering.credit_value or row.credits,
+            "credits":       class_doc.credit or row.credits,
             "grade":         class_row.grade or row.grade,
-            "status":        CLASS_TO_COURSE_STATUS.get(class_row.status, row.status or "Enrolled"),
+            # validate() fills it from the term's dates when not set
+            "status":        status or term_course_status(class_doc.academic_term),
         })
         doc.flags.skip_roster_sync = True
         doc.save(ignore_permissions=True)
@@ -706,8 +733,8 @@ def sync_class_to_enrollments(class_doc, removed=False):
 
 @frappe.whitelist()
 def get_year_courses(program, academic_year, year_no):
-    """Course Offerings to pre-fill on the Student Enrollment form."""
-    return get_offerings_for_year(program, academic_year, year_no)
+    """Courses that have classes for this programme, academic year and year."""
+    return get_classes_for_year(program, academic_year, year_no)
 
 
 @frappe.whitelist()

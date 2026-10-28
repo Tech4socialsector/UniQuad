@@ -1,18 +1,18 @@
 {
- "chart_name": "Course Offerings by Status",
+ "chart_name": "Classes by Term",
  "chart_type": "Group By",
  "currency": "INR",
  "docstatus": 0,
  "doctype": "Dashboard Chart",
- "document_type": "Course Offering",
+ "document_type": "Classes",
  "filters_json": "[]",
- "group_by_based_on": "status",
+ "group_by_based_on": "academic_term",
  "group_by_type": "Count",
  "idx": 0,
  "is_public": 1,
  "is_standard": 0,
  "module": "SLCM",
- "name": "Course Offerings by Status",
+ "name": "Classes by Term",
  "number_of_groups": 0,
  "owner": "Administrator",
  "roles": [],
@@ -22,5 +22,6 @@
  "timespan": "Last Year",
  "type": "Bar",
  "use_report_chart": 0,
- "y_axis": []
+ "y_axis": [],
+ "modified": "2026-10-29 10:00:00.000000"
 }

@@ -108,30 +108,16 @@ def generate_barcodes(exam_plan, courses=None, copies=1):
 		)
 		courses = list({s.course for s in schedules})
 
-	# Build exam_date and course_offering lookups per course
+	# Build exam_date lookup per course
 	date_lookup = {}
-	offering_lookup = {}
 	for s in frappe.db.get_all(
 		"Exam Course Schedule",
 		filters={"parent": exam_plan, "parenttype": "Exam Plan", "course": ["in", courses]},
-		fields=["course", "course_offering", "exam_date"],
+		fields=["course", "exam_date"],
 	):
 		date_lookup[s.course] = s.exam_date
-		if s.course_offering:
-			offering_lookup[s.course] = s.course_offering
-
-	# Courses whose schedule row has no Course Offering set yet can't get a
-	# valid Exam Barcode (course_offering is mandatory there too) - skip them
-	# with a clear message instead of failing the whole batch.
-	missing_offering = [c for c in courses if c not in offering_lookup]
-	if missing_offering:
-		frappe.msgprint(
-			"Skipped (no Course Offering set on the Course Schedule row): "
-			+ ", ".join(missing_offering),
-			title="Some Courses Skipped",
-			indicator="orange",
-		)
-	courses = [c for c in courses if c in offering_lookup]
+	courses = [c for c in courses if c]
+	academic_term = frappe.db.get_value("Exam Plan", exam_plan, "term")
 
 	# Collect all barcodes already issued under this plan (for uniqueness)
 	used_barcodes = set(
@@ -174,7 +160,8 @@ def generate_barcodes(exam_plan, courses=None, copies=1):
 			doc = frappe.get_doc({
 				"doctype": "Exam Barcode",
 				"exam_plan": exam_plan,
-				"course_offering": offering_lookup.get(course),
+				"course": course,
+				"academic_term": academic_term,
 				"exam_date": date_lookup.get(course),
 				"student": st["student"],
 				"student_name": st["student_name"],
@@ -650,9 +637,10 @@ def _get_students_for_course(course, exam_plan):
 	"""
 	Return list of dicts {student, student_name, registration_id, section}.
 	Primary source: Student Course Marks — the same table used by Examination Result.
-	Falls back to Student Enrollment (Student Enrollment Course + Course Offering, same
-	join as exam_plan_api.get_courses_for_plan) when no Student Course Marks rows exist
-	yet for this exam plan/course — i.e. before anyone has run the marks sync.
+	Falls back to the Enrolled students of the Classes teaching the course in the
+	exam plan's term (same source as exam_plan_api.get_courses_for_plan) when no
+	Student Course Marks rows exist yet for this exam plan/course — i.e. before
+	anyone has run the marks sync.
 	Students are sorted by registration_id ascending.
 	"""
 	rows = frappe.db.sql(
@@ -683,24 +671,19 @@ def _get_students_for_course(course, exam_plan):
 			"""
 			SELECT
 				se.student AS student,
-				CONCAT_WS(' ', sm.first_name, sm.last_name) AS student_name,
-				COALESCE(NULLIF(sm.registration_id, ''), sm.name) AS registration_id,
-				COALESCE(cc.section, '') AS section
-			FROM `tabStudent Enrollment` se
-			INNER JOIN `tabStudent Enrollment Course` sec ON sec.parent = se.name
-			INNER JOIN `tabCourse Offering` co ON co.name = sec.course_offering
+				MAX(CONCAT_WS(' ', sm.first_name, sm.last_name)) AS student_name,
+				MAX(COALESCE(NULLIF(sm.registration_id, ''), sm.name)) AS registration_id,
+				MAX(COALESCE(NULLIF(ces.section, ''), cl.section, '')) AS section
+			FROM `tabClasses` cl
+			INNER JOIN `tabClass Enrolled Student` ces
+				ON ces.parent = cl.name AND ces.parenttype = 'Classes'
+			INNER JOIN `tabStudent Enrollment` se ON se.name = ces.student_enrollment
 			LEFT JOIN `tabStudent Master` sm ON sm.name = se.student
-			LEFT JOIN (
-				SELECT cs.student, cc2.section, cc2.course
-				FROM `tabClass Student` cs
-				INNER JOIN `tabClass Configuration` cc2 ON cc2.name = cs.parent
-			) cc ON cc.student = se.student AND cc.course = co.course_title
-			WHERE co.course_title = %(course)s
-			  AND sec.status = 'Enrolled'
-			  AND se.status = 'Enrolled'
-			  AND (%(term_name)s IS NULL OR co.term_name = %(term_name)s)
+			WHERE cl.course = %(course)s
+			  AND ces.status = 'Enrolled'
+			  AND (%(term_name)s IS NULL OR cl.academic_term = %(term_name)s)
 			GROUP BY se.student
-			ORDER BY COALESCE(NULLIF(sm.registration_id, ''), sm.name) ASC
+			ORDER BY registration_id ASC
 			""",
 			{"course": course, "term_name": term_name},
 			as_dict=True,

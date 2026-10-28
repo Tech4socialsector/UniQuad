@@ -62,27 +62,27 @@ def get_context(context):
 		hist_rows = frappe.get_all(
 			"Student Enrollment Course",
 			filters={"parent": ["in", enr_names], "parenttype": "Student Enrollment"},
-			fields=["parent", "course", "course_offering", "course_type", "credits", "status", "grade", "idx",
+			fields=["parent", "course", "class_name", "course_type", "credits", "status", "grade", "idx",
 					"academic_year", "year_no"],
 			order_by="idx asc",
 			ignore_permissions=True,
 		) if enr_names else []
-		# Older rows may only link a Course Offering — resolve the course through it
-		off_ids = list({r.course_offering for r in hist_rows if r.course_offering and not r.course})
-		off_map = {
+		# Rows may only link a Class — resolve the course through it
+		cls_ids = list({r.class_name for r in hist_rows if r.class_name and not r.course})
+		cls_map = {
 			o.name: o for o in frappe.get_all(
-				"Course Offering",
-				filters={"name": ["in", off_ids]},
-				fields=["name", "course_name", "course_title", "credit_value"],
+				"Classes",
+				filters={"name": ["in", cls_ids]},
+				fields=["name", "course_name", "course", "credit"],
 				ignore_permissions=True,
 			)
-		} if off_ids else {}
+		} if cls_ids else {}
 		for r in hist_rows:
-			o = off_map.get(r.course_offering) if not r.course else None
+			o = cls_map.get(r.class_name) if not r.course else None
 			if o:
-				r.course = o.course_title or None
-				r.offering_name = o.course_name
-				r.offering_credits = o.credit_value
+				r.course = o.course or None
+				r.class_course_name = o.course_name
+				r.class_credits = o.credit
 		course_ids = list({r.course for r in hist_rows if r.course})
 		course_map = {
 			c.name: c for c in frappe.get_all(
@@ -96,15 +96,15 @@ def get_context(context):
 		# Courses grouped per enrolment and year: {(enrollment, academic_year, year_no): [course]}
 		by_year = {}
 		for r in hist_rows:
-			if not (r.course or r.course_offering):
+			if not (r.course or r.class_name):
 				continue  # blank child row — nothing to show
 			c = course_map.get(r.course) or frappe._dict()
 			by_year.setdefault((r.parent, r.academic_year or "", cint(r.year_no)), []).append({
 				"course_code": c.get("course_code") or r.course or "",
-				"course_name": r.get("offering_name") or c.get("course_name") or r.course or r.course_offering,
+				"course_name": r.get("class_course_name") or c.get("course_name") or r.course or r.class_name,
 				"course_type": r.course_type or "Core",
-				"credits": r.credits or r.get("offering_credits") or c.get("credit_value") or 0,
-				"status": r.status or "Enrolled",
+				"credits": r.credits or r.get("class_credits") or c.get("credit_value") or 0,
+				"status": r.status or "Ongoing",
 				"grade": r.grade or "",
 			})
 
@@ -162,7 +162,7 @@ def get_context(context):
 
 		context.enrollments = history
 
-		# ── Course offerings for active enrollment ────────────────
+		# ── Courses (and their classes) for active enrollment ─────
 		active_courses = []
 		dropped_courses = []
 		if context.active_enrollment:
@@ -175,35 +175,28 @@ def get_context(context):
 				r for r in frappe.get_all(
 					"Student Enrollment Course",
 					filters={"parent": enrollment_name, "parenttype": "Student Enrollment"},
-					fields=["course_offering", "course", "course_type", "credits", "status", "grade",
-							"academic_year"],
+					fields=["class_name", "course", "course_type", "credits", "status", "grade",
+							"academic_year", "academic_term", "faculty"],
 					ignore_permissions=True,
 				)
 				if not current_ay or not r.academic_year or r.academic_year == current_ay
 			]
 
-			# Fetch Course Offering details in bulk
-			co_names = [r.course_offering for r in prog_rows if r.course_offering]
+			# Fetch Class details in bulk
+			co_names = [r.class_name for r in prog_rows if r.class_name]
 			co_map = {}
 			if co_names:
 				for co in frappe.get_all(
-					"Course Offering",
+					"Classes",
 					filters={"name": ["in", co_names]},
-					fields=["name", "course_name", "faculty", "credit_value", "term_name"],
+					fields=["name", "course_name", "faculty", "faculty_name", "credit", "academic_term"],
 					ignore_permissions=True,
 				):
 					co_map[co.name] = co
 
-			# Faculty names: the offering's own faculty link, else its faculty table
+			# Faculty names: the class's faculty, else the course row's own faculty link
 			fac_ids = {co.faculty for co in co_map.values() if co.get("faculty")}
-			table_rows = frappe.get_all(
-				"Course Offering Faculty",
-				filters={"parent": ["in", co_names], "parenttype": "Course Offering"},
-				fields=["parent", "faculty", "faculty_name", "is_primary", "idx"],
-				order_by="is_primary desc, idx asc",
-				ignore_permissions=True,
-			) if co_names else []
-			fac_ids.update(r.faculty for r in table_rows if r.faculty)
+			fac_ids.update(r.faculty for r in prog_rows if r.get("faculty"))
 			fac_names = {}
 			if fac_ids:
 				for f in frappe.get_all(
@@ -214,41 +207,34 @@ def get_context(context):
 				):
 					# Faculty names are integers; link fields store them as strings
 					fac_names[str(f.name)] = " ".join(filter(None, [f.first_name, f.last_name])) or str(f.name)
-			table_by_co = {}
-			for r in table_rows:
-				label = r.faculty_name or fac_names.get(str(r.faculty)) or r.faculty
-				if label and label not in table_by_co.setdefault(r.parent, []):
-					table_by_co[r.parent].append(label)
-
 			# Enrich with faculty + attendance
 			for r in prog_rows:
-				co = co_map.get(r.course_offering) or frappe._dict()
+				co = co_map.get(r.class_name) or frappe._dict()
 
 				faculty = []
 				if co.get("faculty"):
-					faculty.append(fac_names.get(str(co.faculty)) or co.faculty)
-				for label in table_by_co.get(r.course_offering, []):
-					if label not in faculty:
-						faculty.append(label)
+					faculty.append(co.get("faculty_name") or fac_names.get(str(co.faculty)) or co.faculty)
+				elif r.get("faculty"):
+					faculty.append(fac_names.get(str(r.faculty)) or r.faculty)
 
 				att = frappe.db.get_value(
 					"Attendance Summary",
-					{"student": student_name, "course_offering": r.course_offering},
+					{"student": student_name, "class_name": r.class_name},
 					["attendance_percentage", "eligible_for_exam"],
 					as_dict=True,
-				) if r.course_offering else None
+				) if r.class_name else None
 				has_att = bool(att)
 
 				entry = {
 					"course": r.course,
 					"course_code": (course_map.get(r.course) or {}).get("course_code") or r.course or "",
-					"course_offering": r.course_offering or "",
-					"course_name": co.get("course_name") or r.course or "—",
+					"class_name": r.class_name or "",
+					"course_name": co.get("course_name") or (course_map.get(r.course) or {}).get("course_name") or r.course or "—",
 					"course_type": r.course_type or "Core",
-					"course_status": r.status or "Enrolled",
-					"credits": co.get("credit_value") or r.credits or 0,
+					"course_status": r.status or "Ongoing",
+					"credits": co.get("credit") or r.credits or 0,
 					"faculty": ", ".join(faculty),
-					"term": co.get("term_name") or "",
+					"term": co.get("academic_term") or r.get("academic_term") or "",
 					# None = no attendance recorded yet (not the same as 0%)
 					"attendance_pct": round(float(att.attendance_percentage or 0), 1) if has_att else None,
 					"eligible": bool(att.eligible_for_exam) if has_att else None,

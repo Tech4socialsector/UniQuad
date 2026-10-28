@@ -82,11 +82,11 @@ class StudentAttendanceTool {
 				.join("")
 				.toUpperCase()
 				.slice(0, 2);
-			let offering_count = (ctx.assigned_offerings || []).length;
+			let class_count = (ctx.assigned_classes || []).length;
 			let group_label =
-				offering_count === 1
-					? "1 Course Offering assigned"
-					: `${offering_count} Course Offerings assigned`;
+				class_count === 1
+					? "1 Class assigned"
+					: `${class_count} Classes assigned`;
 
 			html = `
 				<div class="faculty-banner">
@@ -108,7 +108,7 @@ class StudentAttendanceTool {
 					</div>
 					<div class="faculty-info">
 						<div class="faculty-name" style="color: #856404;">Admin / Programme Chair View</div>
-						<div class="faculty-sub" style="color: #555;">All course offerings are visible</div>
+						<div class="faculty-sub" style="color: #555;">All classes are visible</div>
 					</div>
 					<span class="faculty-badge" style="background: #ffc107; color: #333;">Admin</span>
 				</div>
@@ -185,15 +185,15 @@ class StudentAttendanceTool {
 		$("#attendance_date").val(frappe.datetime.get_today());
 
 		// --- Course Schedule link field ---
-		// Faculty can only pick schedules belonging to their assigned course offerings
+		// Faculty can only pick schedules belonging to their assigned classes
 		let cs_get_query = () => {
-			if (ctx.is_faculty && ctx.assigned_offerings && ctx.assigned_offerings.length > 0) {
-				let offering_names = ctx.assigned_offerings.map((o) => o.name);
+			if (ctx.is_faculty && ctx.assigned_classes && ctx.assigned_classes.length > 0) {
+				let class_names = ctx.assigned_classes.map((c) => c.name);
 				return {
-					filters: { course_offering: ["in", offering_names] },
+					filters: { class_name: ["in", class_names] },
 				};
-			} else if (ctx.is_faculty && (!ctx.assigned_offerings || ctx.assigned_offerings.length === 0)) {
-				return { filters: { name: ["=", "__no_offerings__"] } };
+			} else if (ctx.is_faculty && (!ctx.assigned_classes || ctx.assigned_classes.length === 0)) {
+				return { filters: { name: ["=", "__no_classes__"] } };
 			}
 			return {};
 		};
@@ -213,16 +213,16 @@ class StudentAttendanceTool {
 		});
 		this.course_schedule_field.refresh();
 
-		this.course_offering_field = frappe.ui.form.make_control({
-			parent: $("#course_offering_field"),
+		this.class_name_field = frappe.ui.form.make_control({
+			parent: $("#class_name_field"),
 			df: {
 				fieldtype: "Link",
-				fieldname: "course_offering",
-				options: "Course Offering",
-				placeholder: "Select Course Offering",
+				fieldname: "class_name",
+				options: "Classes",
+				placeholder: "Select Class",
 			},
 		});
-		this.course_offering_field.refresh();
+		this.class_name_field.refresh();
 
 		this.academic_year_field = frappe.ui.form.make_control({
 			parent: $("#academic_year_field"),
@@ -248,7 +248,7 @@ class StudentAttendanceTool {
 
 		// --- Event handlers ---
 		$("#based_on").on("change", function () {
-			me.course_offering_field.set_value("");
+			me.class_name_field.set_value("");
 			me.clear_students();
 		});
 
@@ -266,11 +266,11 @@ class StudentAttendanceTool {
 		}
 
 		frappe.db.get_doc("Course Schedule", course_schedule).then((doc) => {
-			if (doc.course_offering) {
-				frappe.db.get_value("Course Offering", doc.course_offering,
-					["academic_year", "term_name"], (r) => {
+			if (doc.class_name) {
+				frappe.db.get_value("Classes", doc.class_name,
+					["academic_year", "academic_term"], (r) => {
 						if (r && r.academic_year) this.academic_year_field.set_value(r.academic_year);
-						if (r && r.term_name) this.academic_term_field.set_value(r.term_name);
+						if (r && r.academic_term) this.academic_term_field.set_value(r.academic_term);
 					});
 			}
 		});

@@ -14,7 +14,7 @@
   "academic_term",
   "section",
   "column_break_1",
-  "course_offering",
+  "class_name",
   "course",
   "instructor",
   "date",
@@ -54,15 +54,15 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "course_offering",
+   "fieldname": "class_name",
    "fieldtype": "Link",
    "in_list_view": 1,
-   "label": "Course Offering",
-   "options": "Course Offering",
+   "label": "Class",
+   "options": "Classes",
    "reqd": 1
   },
   {
-   "fetch_from": "course_offering.course_title",
+   "fetch_from": "class_name.course",
    "fieldname": "course",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -135,7 +135,7 @@
   }
  ],
  "links": [],
- "modified": "2026-10-27 18:00:00.000000",
+ "modified": "2026-10-29 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Office Hours Group",
