@@ -39,8 +39,10 @@ def execute():
     if not frappe.db.has_column("Student Enrollment", "academic_year"):
         return
 
+    # Sites coming from TFSS never had year_no; cint(None) falls back to year 1 below.
+    year_no = "year_no" if frappe.db.has_column("Student Enrollment", "year_no") else "NULL AS year_no"
     enrollments = frappe.db.sql(
-        """SELECT name, student, program, batch, section, status, academic_year, year_no, creation
+        f"""SELECT name, student, program, batch, section, status, academic_year, {year_no}, creation
            FROM `tabStudent Enrollment`""",
         as_dict=True,
     )
@@ -50,7 +52,7 @@ def execute():
 
     groups = {}
     for e in enrollments:
-        e.academic_year = e.academic_year or frappe.db.get_value("Batch", e.batch, "academic_year")
+        e.academic_year = e.academic_year or frappe.db.get_value("SLCM Batch", e.batch, "academic_year")
         groups.setdefault((e.student, e.program), []).append(e)
 
     touched = set()
@@ -75,9 +77,9 @@ def execute():
     if touched:
         sync_enrollment_names(touched)
 
-    from slcm.slcm.doctype.batch.batch import update_enrolled_count
+    from slcm.slcm.doctype.slcm_batch.slcm_batch import update_enrolled_count
 
-    for batch in frappe.get_all("Batch", pluck="name"):
+    for batch in frappe.get_all("SLCM Batch", pluck="name"):
         update_enrolled_count(batch)
     frappe.db.commit()
 

@@ -12,7 +12,7 @@ def get_doctype_counts():
 		"Gender", "Student Category", "Skill", "SLCM Designation", "Condonation Reason",
 		"SLCM Department", "Faculty", "Room",
 		"Academic Year", "Academic Term", "Academic Holiday",
-		"Course Master", "Course", "Programme", "Curriculum", "Batch",
+		"Course Master", "Course", "Programme", "Curriculum", "SLCM Batch",
 		"Classes", "Class Configuration", "Time Table",
 		"Grading Schema", "Evaluation Schema", "Exam Assessment Type",
 		"Exam Component", "CGPA Percentage Scale",

@@ -290,7 +290,7 @@ def _get_students_raw(program, academic_year, from_year):
 		FROM `tabStudent Enrollment` se
 		{current_log_join()}
 		INNER JOIN `tabStudent Master` sm ON sm.name = se.student
-		LEFT JOIN `tabBatch` b ON b.name = se.batch
+		LEFT JOIN `tabSLCM Batch` b ON b.name = se.batch
 		WHERE se.program = %(program)s
 		  AND sal.academic_year = %(academic_year)s
 		  AND sal.year_no = %(from_year)s

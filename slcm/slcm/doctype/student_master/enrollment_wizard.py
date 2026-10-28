@@ -91,7 +91,7 @@ def get_year_defaults(academic_year):
     term = next((t.name for t in terms if getdate(t.term_start_date) <= now <= getdate(t.term_end_date)), None)
     return {
         "academic_term": term or (terms[0].name if terms else None),
-        "batch": frappe.db.get_value("Batch", {"academic_year": academic_year}, "name", order_by="creation desc"),
+        "batch": frappe.db.get_value("SLCM Batch", {"academic_year": academic_year}, "name", order_by="creation desc"),
     }
 
 

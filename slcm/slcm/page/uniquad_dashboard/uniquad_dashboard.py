@@ -770,7 +770,7 @@ DRILLDOWNS = {
 	"programmes": _drill("Active Programmes", "Programme", [("name", "Programme", "form", True), ("program_name", "Programme Name", "text", True), ("program_code", "Code", "text", True), ("level_of_study", "Level", "text", True), ("program_duration", "Duration (Years)", "int", True), ("program_status", "Status", "badge", True)], lambda c, p: f_programmes(c) + [["program_status", "=", "Active"]], ["name", "program_name", "program_code"], ("program_name", "asc"), "programmes"),
 	"courses": _drill("Active Courses", "Course", [("name", "Course", "form", True), ("course_code", "Code", "text", True), ("course_name", "Course Name", "text", True), ("course_type", "Type", "badge", True), ("credit_value", "Credits", "int", True), ("status", "Status", "badge", True)], lambda c, p: ([["name", "in", c.course]] if c.course else []) + [["status", "=", "Active"]], ["name", "course_code", "course_name"], ("course_name", "asc"), "courses"),
 	"faculty": _drill("Active Faculty", "Faculty", [("name", "Faculty", "form", True), ("faculty_id", "Faculty ID", "text", True), ("first_name", "First Name", "text", True), ("last_name", "Last Name", "text", True), ("designation", "Designation", "text", True), ("is_hod", "HoD", "int", True), ("status", "Status", "badge", True)], lambda c, p: f_faculty(c) + [["status", "=", "Active"]], ["faculty_id", "first_name", "last_name"], ("first_name", "asc"), "faculty"),
-	"batches": _drill("Active Batches", "Batch", [("name", "Batch", "form", True), ("batch_name", "Batch Name", "text", True), ("batch_code", "Code", "text", True), ("academic_year", "Academic Year", "text", True), ("total_enrolled_count", "Enrolled", "int", True), ("status", "Status", "badge", True)], lambda c, p: f_batches(c) + [["status", "=", "Active"]], ["name", "batch_name", "batch_code"], ("name", "asc"), "batches"),
+	"batches": _drill("Active Batches", "SLCM Batch", [("name", "Batch", "form", True), ("batch_name", "Batch Name", "text", True), ("batch_code", "Code", "text", True), ("academic_year", "Academic Year", "text", True), ("total_enrolled_count", "Enrolled", "int", True), ("status", "Status", "badge", True)], lambda c, p: f_batches(c) + [["status", "=", "Active"]], ["name", "batch_name", "batch_code"], ("name", "asc"), "batches"),
 	# Admissions
 	"admission_current": _drill("Registered in the Current Admission", "Applicant", APPLICANT_COLUMNS, lambda c, p: f_current_admission(c), APPLICANT_SEARCH, ("creation", "desc"), "current_admission", post=_post_applicants),
 	# Campus residence (Student Master.campus)
@@ -1301,7 +1301,7 @@ CARDS = [
 	_card("current_term", "programme", "Current Academic Term", "The active term(s) whose dates include today.", "Academic Term", "years", _current_term_value, drill="terms_current", fmt="text", icon="calendar", action="View terms", sub_fn=_current_term_sub),
 	_card("programmes", "programme", "Active Programmes", "Programmes marked Active.", "Programme", "programmes", _drill_count("programmes"), drill="programmes", icon="graduation", action="View programmes", headline=True),
 	_card("active_offerings", "programme", "Courses Running", "Classes running in the selected (or the Active) year, term and programme.", "Classes", "offerings", _drill_count("offerings"), drill="offerings", icon="book", action="View courses", headline=True),
-	_card("batches", "programme", "Current Batches", "Batches with status Active.", "Batch", "batches", _drill_count("batches"), drill="batches", icon="layers", action="View batches"),
+	_card("batches", "programme", "Current Batches", "Batches with status Active.", "SLCM Batch", "batches", _drill_count("batches"), drill="batches", icon="layers", action="View batches"),
 	_card("courses", "programme", "Active Courses", "Courses in the course catalogue marked Active.", "Course", "courses", _drill_count("courses"), drill="courses", icon="book"),
 	_card("faculty", "programme", "Active Faculty", "Faculty members with status Active.", "Faculty", "faculty", _drill_count("faculty"), drill="faculty", icon="briefcase", action="View faculty"),
 	_card("years_active", "programme", "Active Academic Years", "Academic years with status Active.", "Academic Year", "years", _drill_count("years_active"), drill="years_active", icon="history"),
@@ -1597,7 +1597,7 @@ NAV_GROUPS = [
 	]),
 	("programme", "Programme Management", "graduation", [
 		("DocType", "Academic Year", None), ("DocType", "Academic Term", None), ("DocType", "Programme", None),
-		("DocType", "Programme Master", None), ("DocType", "Batch", None), ("DocType", "Section", None),
+		("DocType", "Programme Master", None), ("DocType", "SLCM Batch", None), ("DocType", "Section", None),
 		("DocType", "Course", None), ("DocType", "Classes", None), ("DocType", "Course List", None),
 		("DocType", "Faculty", None), ("DocType", "Time Table", None), ("DocType", "Course Schedule", None),
 		("Page", "timetable-configuration", "Timetable Configuration"), ("DocType", "Institutional Calendar", None),
@@ -1745,7 +1745,7 @@ def get_filter_options():
 	years = safe_list("Academic Year", fields=["name", "status", "year_start_date", "year_end_date"], order_by="year_start_date desc")
 	terms = safe_list("Academic Term", fields=["name", "academic_year", "status", "term_start_date", "term_end_date"], order_by="term_start_date desc")
 	programmes = safe_list("Programme", fields=["name", "program_name", "program_status"], order_by="name asc")
-	batches = safe_list("Batch", fields=["name", "academic_year", "status"], order_by="name asc")
+	batches = safe_list("SLCM Batch", fields=["name", "academic_year", "status"], order_by="name asc")
 	sections = safe_list("Section", fields=["name", "section_name"], order_by="name asc")
 	courses = safe_list("Course", fields=["name", "course_name", "course_code", "status"], order_by="course_name asc")
 	faculty = safe_list("Faculty", fields=["name", "first_name", "last_name", "status"], order_by="first_name asc")

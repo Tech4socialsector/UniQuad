@@ -97,9 +97,9 @@ def clean_academic_terms():
 
 def _batch_year(batch):
 	"""Year of study the old Batch represented (Batch.term_year), or 0."""
-	if not batch or not frappe.db.has_column("Batch", "term_year"):
+	if not batch or not frappe.db.has_column("SLCM Batch", "term_year"):
 		return 0
-	return cint(frappe.db.sql("SELECT term_year FROM `tabBatch` WHERE name = %s", batch)[0][0]) if frappe.db.exists("Batch", batch) else 0
+	return cint(frappe.db.sql("SELECT term_year FROM `tabSLCM Batch` WHERE name = %s", batch)[0][0]) if frappe.db.exists("SLCM Batch", batch) else 0
 
 
 def backfill_course_offerings():
@@ -150,12 +150,16 @@ def merge_duplicate_course_offerings():
 
 
 def backfill_student_enrollments():
+	# Sites coming from TFSS never had Student Enrollment.year_no; merge_enrollments_into_academic_log
+	# fills academic_year from the batch there.
+	if not frappe.db.has_column("Student Enrollment", "year_no"):
+		return
 	for row in frappe.db.sql(
 		"SELECT name, student, batch, academic_year, year_no FROM `tabStudent Enrollment`", as_dict=True
 	):
 		values = {}
 		if not row.academic_year and row.batch:
-			values["academic_year"] = frappe.db.get_value("Batch", row.batch, "academic_year")
+			values["academic_year"] = frappe.db.get_value("SLCM Batch", row.batch, "academic_year")
 		if not cint(row.year_no):
 			year_no = _batch_year(row.batch)
 			if not year_no:
@@ -172,7 +176,7 @@ def backfill_fee_structures():
 
 
 def refresh_batch_counts():
-	from slcm.slcm.doctype.batch.batch import update_enrolled_count
+	from slcm.slcm.doctype.slcm_batch.slcm_batch import update_enrolled_count
 
-	for batch in frappe.get_all("Batch", pluck="name"):
+	for batch in frappe.get_all("SLCM Batch", pluck="name"):
 		update_enrolled_count(batch)

@@ -124,7 +124,7 @@ def _map_applicant_to_student(student, applicant, program, admission_cycle, offe
     # students when the year has several.
     if program and student.academic_year:
         batches = frappe.get_all(
-            "Batch",
+            "SLCM Batch",
             filters={"academic_year": student.academic_year, "status": "Active"},
             pluck="name",
         )

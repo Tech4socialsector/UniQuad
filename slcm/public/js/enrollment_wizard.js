@@ -80,7 +80,7 @@ slcm.enrollment.EnrollmentWizard = class EnrollmentWizard {
 				{ fieldtype: "Link", fieldname: "programme", label: __("Programme"), options: "Programme", reqd: 1,
 					onchange: () => me.render_context() },
 				{
-					fieldtype: "Link", fieldname: "batch", label: __("Batch"), options: "Batch", reqd: 1,
+					fieldtype: "Link", fieldname: "batch", label: __("Batch"), options: "SLCM Batch", reqd: 1,
 					get_query: () => me.year_filter(),
 					description: __("Set on every selected student."),
 					onchange: () => me.render_context(),

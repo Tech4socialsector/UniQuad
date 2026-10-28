@@ -2207,7 +2207,7 @@ class SLCMAnalyticsDashboard {
 			// ── Programme ────────────────────────────────────────────────
 			'programme:program_status':       { dt: 'Programme',                       filters: f('program_status') },
 			'programme:level_of_study':       { dt: 'Programme',                       filters: f('level_of_study') },
-			'programme:cohort_status':        { dt: 'Batch',                        filters: f('status') },
+			'programme:cohort_status':        { dt: 'SLCM Batch',                     filters: f('status') },
 			'programme:enrollment_status':    { dt: 'Student Enrollment',            filters: f('enrollment_status') },
 			'programme:course_enroll_status': { dt: 'Student Enrollment',            filters: f('enrollment_status') },
 			'programme:program_enrollment':   { dt: 'Student Enrollment',            filters: {} },

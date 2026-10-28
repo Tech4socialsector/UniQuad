@@ -185,7 +185,7 @@ class IDCardCommonMixin:
 			return
 		if self.card_type == "Student" and self.student:
 			batch = frappe.db.get_value("Student Master", self.student, "batch")
-			academic_year = frappe.db.get_value("Batch", batch, "academic_year") if batch else None
+			academic_year = frappe.db.get_value("SLCM Batch", batch, "academic_year") if batch else None
 			year_end = frappe.db.get_value("Academic Year", academic_year, "year_end_date") if academic_year else None
 			if year_end:
 				duration = cint(

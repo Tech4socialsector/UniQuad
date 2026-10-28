@@ -31,7 +31,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import cint, getdate, now_datetime, today
 
-from slcm.slcm.doctype.batch.batch import update_enrolled_count
+from slcm.slcm.doctype.slcm_batch.slcm_batch import update_enrolled_count
 
 LOG_DOCTYPE = "Student Academic Log"
 OPEN_LOG_STATUSES = ("Ongoing", "Upcoming")
@@ -76,7 +76,7 @@ class StudentEnrollment(Document):
 
     def set_initial_log(self):
         """A new enrollment starts in Year 1 of the Batch's academic year."""
-        academic_year = frappe.db.get_value("Batch", self.batch, "academic_year") if self.batch else None
+        academic_year = frappe.db.get_value("SLCM Batch", self.batch, "academic_year") if self.batch else None
         if not academic_year:
             frappe.throw(_("Add the first Academic Log row (academic year and year), or pick a Batch that has an Academic Year."))
         self.add_year_log(academic_year, 1)

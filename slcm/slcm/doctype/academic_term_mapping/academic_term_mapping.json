@@ -26,7 +26,7 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Batch",
-   "options": "Batch",
+   "options": "SLCM Batch",
    "description": "Leave empty to apply to every batch in that year."
   },
   {

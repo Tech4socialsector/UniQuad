@@ -1588,7 +1588,7 @@ def get_batch_filter_options():
     cascading Programme / Academic Year / Term filters in the Student ID
     generator dialogs."""
     batches = frappe.get_all(
-        "Batch",
+        "SLCM Batch",
         fields=["name", "academic_year"],
         order_by="academic_year desc",
     )

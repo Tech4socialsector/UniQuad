@@ -1140,7 +1140,7 @@ def get_student_hover_info(student, course):
 	batch_name = ""
 	if sm.get("batch"):
 		batch_name = (
-			frappe.db.get_value("Batch", sm["batch"], "batch_name")
+			frappe.db.get_value("SLCM Batch", sm["batch"], "batch_name")
 			or sm["batch"]
 		)
 
@@ -1520,7 +1520,7 @@ def get_student_profile(student):
 	# Get cohort (Batch) label
 	cohort_name = ""
 	if sm.get("batch"):
-		cohort_name = frappe.db.get_value("Batch", sm["batch"], "batch_name") or sm["batch"]
+		cohort_name = frappe.db.get_value("SLCM Batch", sm["batch"], "batch_name") or sm["batch"]
 	sm["cohort_name"] = cohort_name
 	return sm
 
