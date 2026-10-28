@@ -124,6 +124,7 @@ function build_academic_timeline_html(terms) {
 					<div class="timeline-term-name">${term.year_no ? __("Year {0}", [term.year_no]) : "—"}${
 						term.term_name ? ` · ${frappe.utils.escape_html(term.term_name)}` : ""
 					}</div>
+					${term.term ? `<div class="timeline-term-name">${frappe.utils.escape_html(term.term)}</div>` : ""}
 					<span class="timeline-status-pill">${frappe.utils.escape_html(__(term.status))}</span>
 				</div>
 			`;

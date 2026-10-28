@@ -11,7 +11,9 @@
   "column_break_gvpt",
   "term_start_date",
   "term_end_date",
-  "status"
+  "status",
+  "term_mapping_section",
+  "term_mapping"
  ],
  "fields": [
   {
@@ -69,12 +71,24 @@
    "label": "Status",
    "options": "\nActive\nInactive",
    "reqd": 1
+  },
+  {
+   "fieldname": "term_mapping_section",
+   "fieldtype": "Section Break",
+   "label": "Term Mapping",
+   "description": "Which term of the programme cycle each year of study is in during this academic term. For example in this term, Year 1 (Batch 2027) is in Trimester I and Year 2 (Batch 2026) in Trimester IV."
+  },
+  {
+   "fieldname": "term_mapping",
+   "fieldtype": "Table",
+   "label": "Term Mapping",
+   "options": "Academic Term Mapping"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-29 10:00:00.000000",
+ "modified": "2026-10-29 11:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Academic Term",

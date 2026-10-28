@@ -16,6 +16,23 @@ class AcademicTerm(Document):
 		self.validate_term_no()
 		self.validate_dates()
 		self.validate_overlap()
+		self.validate_term_mapping()
+
+	def on_update(self):
+		apply_term_mapping(self.name)
+
+	def validate_term_mapping(self):
+		"""One row per year and batch (a row without a batch covers the year's
+		other batches)."""
+		seen = {}
+		for row in self.get("term_mapping") or []:
+			if cint(row.year_no) < 1:
+				frappe.throw(_("Term Mapping row {0}: Year must be 1 or more.").format(row.idx))
+			key = (cint(row.year_no), row.batch or "")
+			if key in seen:
+				frappe.throw(_("Term Mapping row {0}: Year {1}{2} is already mapped in row {3}.").format(
+					row.idx, row.year_no, f" ({row.batch})" if row.batch else "", seen[key]))
+			seen[key] = row.idx
 
 	def validate_term_no(self):
 		if cint(self.term_no) < 1:
@@ -71,6 +88,42 @@ class AcademicTerm(Document):
 					formatdate(overlap.term_end_date),
 				)
 			)
+
+
+def get_programme_term(academic_term, year_no, batch=None):
+	"""The Term Master (programme term, e.g. Trimester IV) that students of
+	`year_no` (and `batch`) are in during `academic_term`, from its Term
+	Mapping: the row for that year and batch, else the year's row without a
+	batch. None when it is not mapped."""
+	if not (academic_term and cint(year_no)):
+		return None
+	rows = frappe.get_all(
+		"Academic Term Mapping",
+		filters={"parenttype": "Academic Term", "parent": academic_term, "year_no": cint(year_no)},
+		fields=["batch", "term"],
+	)
+	exact = next((r.term for r in rows if batch and r.batch == batch), None)
+	return exact or next((r.term for r in rows if not r.batch), None)
+
+
+def apply_term_mapping(academic_term):
+	"""After the Term Mapping of `academic_term` changes: refresh the Programme
+	Term on the Academic Log rows of that term, and Current Term on the Student
+	Master of students for whom it is the Ongoing term."""
+	rows = frappe.db.sql(
+		"""SELECT l.name, l.year_no, l.status, l.term, se.batch, se.student
+		   FROM `tabStudent Academic Log` l
+		   JOIN `tabStudent Enrollment` se ON se.name = l.parent
+		   WHERE l.parenttype = 'Student Enrollment' AND l.academic_term = %s""",
+		academic_term,
+		as_dict=True,
+	)
+	for row in rows:
+		term = get_programme_term(academic_term, row.year_no, row.batch)
+		if term != row.term:
+			frappe.db.set_value("Student Academic Log", row.name, "term", term, update_modified=False)
+		if row.status == "Ongoing":
+			frappe.db.set_value("Student Master", row.student, "current_term", term, update_modified=False)
 
 
 def get_current_term(date=None):

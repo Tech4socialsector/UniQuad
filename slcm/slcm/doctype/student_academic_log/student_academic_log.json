@@ -7,6 +7,7 @@
  "field_order": [
   "academic_year",
   "academic_term",
+  "term",
   "year_no",
   "section",
   "status",
@@ -73,7 +74,7 @@
    "columns": 1,
    "fieldname": "updated_by",
    "fieldtype": "Link",
-   "in_list_view": 1,
+   "in_list_view": 0,
    "label": "Updated By",
    "options": "User",
    "read_only": 1
@@ -83,11 +84,21 @@
    "fieldname": "remarks",
    "fieldtype": "Small Text",
    "label": "Remarks"
+  },
+  {
+   "columns": 1,
+   "fieldname": "term",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Programme Term",
+   "options": "Term Master",
+   "read_only": 1,
+   "description": "From the Academic Term's Term Mapping for this year and the student's batch."
   }
  ],
  "istable": 1,
  "links": [],
- "modified": "2026-10-28 14:00:00.000000",
+ "modified": "2026-10-29 11:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Student Academic Log",

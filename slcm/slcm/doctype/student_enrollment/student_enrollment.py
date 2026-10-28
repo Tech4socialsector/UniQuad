@@ -51,6 +51,7 @@ class StudentEnrollment(Document):
         if not self.academic_log:
             self.set_initial_log()
         self.sync_log_sections()
+        self.set_log_terms()
         self.validate_log()
         self.close_log_on_status()
         self.refresh_course_statuses()
@@ -100,6 +101,16 @@ class StudentEnrollment(Document):
         for row in self.academic_log:
             if row.status == "Upcoming" or (row.status == "Ongoing" and not row.section):
                 row.section = self.section
+
+    def set_log_terms(self):
+        """Each row's Programme Term (e.g. Trimester IV) comes from its Academic
+        Term's Term Mapping for the row's year and this enrollment's batch. A
+        row whose term is not mapped keeps what it has."""
+        from slcm.slcm.doctype.academic_term.academic_term import get_programme_term
+
+        for row in self.academic_log:
+            if row.academic_term:
+                row.term = get_programme_term(row.academic_term, row.year_no, self.batch) or row.term
 
     def validate_log(self):
         duration = cint(frappe.db.get_value("Programme", self.program, "program_duration"))
@@ -305,6 +316,7 @@ class StudentEnrollment(Document):
                 "academic_year": current.academic_year,
                 "current_year":  str(cint(current.year_no)),
                 "year_of_study": f"{_ordinal(current.year_no)} Year",
+                "current_term":  current.term,
             })
         frappe.db.set_value("Student Master", self.student, values)
 
@@ -382,7 +394,7 @@ def get_current_logs(enrollments):
     rows = frappe.get_all(
         LOG_DOCTYPE,
         filters={"parenttype": "Student Enrollment", "parent": ["in", enrollments]},
-        fields=["parent", "academic_year", "academic_term", "year_no", "status"],
+        fields=["parent", "academic_year", "academic_term", "term", "year_no", "status"],
     )
     by_parent = {}
     for row in rows:
@@ -395,7 +407,7 @@ def get_log(enrollment):
     rows = frappe.get_all(
         LOG_DOCTYPE,
         filters={"parenttype": "Student Enrollment", "parent": enrollment},
-        fields=["name", "academic_year", "academic_term", "year_no", "status", "updated_on", "updated_by"],
+        fields=["name", "academic_year", "academic_term", "term", "year_no", "status", "updated_on", "updated_by"],
     )
     return sorted(rows, key=_log_sort_key)
 
