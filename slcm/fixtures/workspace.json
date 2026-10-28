@@ -2,6 +2,193 @@
  {
   "app": "slcm",
   "charts": [],
+  "content": "[{\"id\":\"er-hdr-overview\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Overview</b></span>\",\"col\":12}},{\"id\":\"er-nc-1\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Total Exam Plans\",\"col\":3}},{\"id\":\"er-nc-2\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Active Exam Plans\",\"col\":3}},{\"id\":\"er-nc-3\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Courses Mapped\",\"col\":3}},{\"id\":\"er-hdr-reexam\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Re Exam</b></span>\",\"col\":12}},{\"id\":\"er-nc-rx-1\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Re Exam Registrations\",\"col\":3}},{\"id\":\"er-nc-rx-2\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Re Exam Paid\",\"col\":3}},{\"id\":\"er-sc-rx-1\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Re Exam\",\"col\":3}},{\"id\":\"er-sc-rx-2\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Re Exam Registrations\",\"col\":3}},{\"id\":\"er-hdr-improv\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Improvement Exam</b></span>\",\"col\":12}},{\"id\":\"er-nc-ix-1\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Improvement Exam Registrations\",\"col\":3}},{\"id\":\"er-nc-ix-2\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Improvement Exam Paid\",\"col\":3}},{\"id\":\"er-sc-ix-1\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Improvement Exam\",\"col\":3}},{\"id\":\"er-sc-ix-2\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Improvement Exam Registrations\",\"col\":3}},{\"id\":\"er-hdr-access\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Access &amp; Settings</span>\",\"col\":12}},{\"id\":\"er-sc-3\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Result Access Settings\",\"col\":3}},{\"id\":\"K-YiSThWuA\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Term Result Settings\",\"col\":3}},{\"id\":\"er-hdr-results\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Results</b></span>\",\"col\":12}},{\"id\":\"er-sc-1\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Course Results\",\"col\":3}},{\"id\":\"WZHBU8OIJf\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Term Result\",\"col\":3}},{\"id\":\"lnDHp7XAtv\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Publish Result\",\"col\":3}}]",
+  "custom_blocks": [],
+  "docstatus": 0,
+  "doctype": "Workspace",
+  "external_link": null,
+  "for_user": "",
+  "hide_custom": 0,
+  "icon": "clipboard-check",
+  "indicator_color": "green",
+  "is_hidden": 0,
+  "label": "Exam Result",
+  "link_to": null,
+  "link_type": "DocType",
+  "links": [],
+  "modified": "2026-10-12 13:00:00",
+  "module": "SLCM",
+  "name": "Exam Result",
+  "number_cards": [
+   {
+    "label": "Total Exam Plans",
+    "number_card_name": "Total Exam Plans"
+   },
+   {
+    "label": "Active Exam Plans",
+    "number_card_name": "Active Exam Plans"
+   },
+   {
+    "label": "Courses Mapped",
+    "number_card_name": "Courses Mapped"
+   },
+   {
+    "label": "Re Exam Registrations",
+    "number_card_name": "Re Exam Registrations"
+   },
+   {
+    "label": "Re Exam Paid",
+    "number_card_name": "Re Exam Paid"
+   },
+   {
+    "label": "Improvement Exam Registrations",
+    "number_card_name": "Improvement Exam Registrations"
+   },
+   {
+    "label": "Improvement Exam Paid",
+    "number_card_name": "Improvement Exam Paid"
+   }
+  ],
+  "parent_page": null,
+  "public": 1,
+  "quick_lists": [],
+  "restrict_to_domain": null,
+  "roles": [],
+  "sequence_id": 0.0,
+  "shortcuts": [
+   {
+    "color": "Grey",
+    "doc_view": "List",
+    "format": null,
+    "icon": null,
+    "kanban_board": null,
+    "label": "Term Result",
+    "link_to": null,
+    "report_ref_doctype": null,
+    "restrict_to_domain": null,
+    "stats_filter": null,
+    "type": "URL",
+    "url": "/desk/term-result"
+   },
+   {
+    "color": "Grey",
+    "doc_view": "List",
+    "format": null,
+    "icon": null,
+    "kanban_board": null,
+    "label": "Term Result Settings",
+    "link_to": null,
+    "report_ref_doctype": null,
+    "restrict_to_domain": null,
+    "stats_filter": null,
+    "type": "URL",
+    "url": "/desk/result-settings"
+   },
+   {
+    "color": "Purple",
+    "doc_view": "",
+    "format": null,
+    "icon": null,
+    "kanban_board": null,
+    "label": "Course Results",
+    "link_to": "examination-result",
+    "report_ref_doctype": null,
+    "restrict_to_domain": null,
+    "stats_filter": null,
+    "type": "Page",
+    "url": null
+   },
+   {
+    "color": "Grey",
+    "doc_view": "List",
+    "format": null,
+    "icon": null,
+    "kanban_board": null,
+    "label": "Publish Result",
+    "link_to": null,
+    "report_ref_doctype": null,
+    "restrict_to_domain": null,
+    "stats_filter": null,
+    "type": "URL",
+    "url": "/desk/publish-result"
+   },
+   {
+    "color": "Blue",
+    "doc_view": "List",
+    "format": null,
+    "icon": null,
+    "kanban_board": null,
+    "label": "Result Access Settings",
+    "link_to": "Access Result Settings",
+    "report_ref_doctype": null,
+    "restrict_to_domain": null,
+    "stats_filter": null,
+    "type": "DocType",
+    "url": null
+   },
+   {
+    "color": "Red",
+    "doc_view": "",
+    "format": null,
+    "icon": null,
+    "kanban_board": null,
+    "label": "Re Exam",
+    "link_to": "re-exam",
+    "report_ref_doctype": null,
+    "restrict_to_domain": null,
+    "stats_filter": null,
+    "type": "Page",
+    "url": null
+   },
+   {
+    "color": "Red",
+    "doc_view": "List",
+    "format": null,
+    "icon": null,
+    "kanban_board": null,
+    "label": "Re Exam Registrations",
+    "link_to": "Re Exam Registration",
+    "report_ref_doctype": null,
+    "restrict_to_domain": null,
+    "stats_filter": null,
+    "type": "DocType",
+    "url": null
+   },
+   {
+    "color": "Purple",
+    "doc_view": "",
+    "format": null,
+    "icon": null,
+    "kanban_board": null,
+    "label": "Improvement Exam",
+    "link_to": "improvement-exam",
+    "report_ref_doctype": null,
+    "restrict_to_domain": null,
+    "stats_filter": null,
+    "type": "Page",
+    "url": null
+   },
+   {
+    "color": "Purple",
+    "doc_view": "List",
+    "format": null,
+    "icon": null,
+    "kanban_board": null,
+    "label": "Improvement Exam Registrations",
+    "link_to": "Improvement Exam Registration",
+    "report_ref_doctype": null,
+    "restrict_to_domain": null,
+    "stats_filter": null,
+    "type": "DocType",
+    "url": null
+   }
+  ],
+  "title": "Exam Result",
+  "type": "Workspace"
+ },
+ {
+  "app": "slcm",
+  "charts": [],
   "content": "[]",
   "custom_blocks": [],
   "docstatus": 0,
@@ -16,7 +203,7 @@
   "link_to": null,
   "link_type": "DocType",
   "links": [],
-  "modified": "2026-10-29 10:30:00.000000",
+  "modified": "2026-10-29 10:30:00",
   "module": "Admission",
   "name": "Test",
   "number_cards": [],
@@ -47,7 +234,7 @@
   "link_to": null,
   "link_type": null,
   "links": [],
-  "modified": "2026-10-29 10:30:00.000000",
+  "modified": "2026-10-29 10:30:00",
   "module": "SLCM",
   "name": "Venue Bookings",
   "number_cards": [
@@ -272,7 +459,7 @@
   "link_to": null,
   "link_type": "DocType",
   "links": [],
-  "modified": "2026-10-29 10:30:00.000000",
+  "modified": "2026-10-29 10:30:00",
   "module": "SLCM",
   "name": "SLCM Master",
   "number_cards": [],
@@ -559,7 +746,7 @@
     "type": "Link"
    }
   ],
-  "modified": "2026-10-29 10:30:00.000000",
+  "modified": "2026-10-29 10:30:00",
   "module": "Admission",
   "name": "Admission Eligibility",
   "number_cards": [
@@ -926,7 +1113,7 @@
     "type": "Link"
    }
   ],
-  "modified": "2026-10-29 10:30:00.000000",
+  "modified": "2026-10-29 10:30:00",
   "module": "Admission",
   "name": "MSA",
   "number_cards": [
@@ -974,7 +1161,7 @@
   "link_to": null,
   "link_type": "DocType",
   "links": [],
-  "modified": "2026-10-29 10:30:00.000000",
+  "modified": "2026-10-29 10:30:00",
   "module": "SLCM",
   "name": "Exam",
   "number_cards": [],
@@ -1005,7 +1192,7 @@
   "link_to": null,
   "link_type": null,
   "links": [],
-  "modified": "2026-10-29 10:30:00.000000",
+  "modified": "2026-10-29 10:30:00",
   "module": "SLCM",
   "name": "Fees & Payments",
   "number_cards": [],
@@ -1438,7 +1625,7 @@
     "type": "Link"
    }
   ],
-  "modified": "2026-10-29 10:30:00.000000",
+  "modified": "2026-10-29 10:30:00",
   "module": "SLCM",
   "name": "Student Registration",
   "number_cards": [
@@ -1685,7 +1872,7 @@
   "link_to": null,
   "link_type": null,
   "links": [],
-  "modified": "2026-10-29 10:30:00.000000",
+  "modified": "2026-10-29 10:30:00",
   "module": "SLCM",
   "name": "Placement",
   "number_cards": [
@@ -1856,7 +2043,7 @@
   "link_to": null,
   "link_type": null,
   "links": [],
-  "modified": "2026-10-29 10:30:00.000000",
+  "modified": "2026-10-29 10:30:00",
   "module": "SLCM",
   "name": "Hostel Management",
   "number_cards": [],
@@ -2215,7 +2402,7 @@
     "type": "Link"
    }
   ],
-  "modified": "2026-10-29 10:30:00.000000",
+  "modified": "2026-10-29 10:30:00",
   "module": "SLCM",
   "name": "REGO",
   "number_cards": [],
@@ -2388,10 +2575,6 @@
   "app": "slcm",
   "charts": [
    {
-    "chart_name": "Student Enrollment by Program",
-    "label": "Student Enrollment by Programme"
-   },
-   {
     "chart_name": "Batch Status Distribution",
     "label": "Batch Status Distribution"
    },
@@ -2400,7 +2583,7 @@
     "label": "Classes by Term"
    }
   ],
-  "content": "[{\"id\": \"pm_h1\", \"type\": \"paragraph\", \"data\": {\"text\": \"<span class=\\\"h4\\\">Overview</span>\", \"col\": 12}}, {\"id\": \"pm_nc1\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Active Programmes\", \"col\": 3}}, {\"id\": \"pm_nc2\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Active Batches\", \"col\": 3}}, {\"id\": \"pm_nc3\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Active Classes\", \"col\": 3}}, {\"id\": \"pm_nc4\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Active Enrollments\", \"col\": 3}}, {\"id\": \"pm_sp1\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"pm_h3\", \"type\": \"paragraph\", \"data\": {\"text\": \"<span class=\\\"h4\\\">Academic Calendar</span>\", \"col\": 12}}, {\"id\": \"pm_sc1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Academic Year\", \"col\": 3}}, {\"id\": \"pm_sc2\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Academic Term\", \"col\": 3}}, {\"id\": \"pm_sp3\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"pm_h4\", \"type\": \"paragraph\", \"data\": {\"text\": \"<span class=\\\"h4\\\">Programme Structure</span>\", \"col\": 12}}, {\"id\": \"pm_sc3\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Programme\", \"col\": 3}}, {\"id\": \"pm_sc4\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Section\", \"col\": 3}}, {\"id\": \"pm_sc5\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Batch\", \"col\": 3}}, {\"id\": \"pm_sc6\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Course\", \"col\": 3}}, {\"id\": \"pm_sp4\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"pm_h5\", \"type\": \"paragraph\", \"data\": {\"text\": \"<span class=\\\"h4\\\">Enrollment & Classes</span>\", \"col\": 12}}, {\"id\": \"pm_sc7\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Student Master\", \"col\": 3}}, {\"id\": \"pm_sc8\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Student Enrollment\", \"col\": 3}}, {\"id\": \"pm_sc9\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Classes\", \"col\": 3}}, {\"id\": \"pm_sc10\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Time Table\", \"col\": 3}}, {\"id\": \"pm_sc11\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Promotion Run\", \"col\": 3}}, {\"id\": \"pm_sp_an\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"pm_h2\", \"type\": \"paragraph\", \"data\": {\"text\": \"<span class=\\\"h4\\\">Analytics</span>\", \"col\": 12}}, {\"id\": \"pm_ch1\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Student Enrollment by Program\", \"col\": 4}}, {\"id\": \"pm_ch2\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Batch Status Distribution\", \"col\": 4}}, {\"id\": \"pm_ch3\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Classes by Term\", \"col\": 4}}]",
+  "content": "[{\"id\":\"pm_h1\",\"type\":\"paragraph\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Overview</span>\",\"col\":12}},{\"id\":\"pm_nc1\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Active Programmes\",\"col\":3}},{\"id\":\"pm_nc2\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Active Batches\",\"col\":3}},{\"id\":\"pm_nc3\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Active Classes\",\"col\":3}},{\"id\":\"pm_nc4\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Active Enrollments\",\"col\":3}},{\"id\":\"pm_sp1\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"pm_h3\",\"type\":\"paragraph\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Academic Calendar</span>\",\"col\":12}},{\"id\":\"pm_sc1\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Academic Year\",\"col\":3}},{\"id\":\"pm_sc2\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Academic Term\",\"col\":3}},{\"id\":\"pm_sp3\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"pm_h4\",\"type\":\"paragraph\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Programme Structure</span>\",\"col\":12}},{\"id\":\"pm_sc3\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Programme\",\"col\":3}},{\"id\":\"pm_sc4\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Section\",\"col\":3}},{\"id\":\"pm_sc5\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Batch\",\"col\":3}},{\"id\":\"pm_sc6\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Course\",\"col\":3}},{\"id\":\"pm_sp4\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"pm_h5\",\"type\":\"paragraph\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Enrollment &amp; Classes</span>\",\"col\":12}},{\"id\":\"pm_sc7\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Student Master\",\"col\":3}},{\"id\":\"pm_sc8\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Student Enrollment\",\"col\":3}},{\"id\":\"pm_sc9\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Classes\",\"col\":3}},{\"id\":\"pm_sc10\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Time Table\",\"col\":3}},{\"id\":\"pm_sc11\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Promotion Run\",\"col\":3}},{\"id\":\"pm_sp_an\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"pm_h2\",\"type\":\"paragraph\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Analytics</span>\",\"col\":12}},{\"id\":\"pm_ch2\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Batch Status Distribution\",\"col\":4}},{\"id\":\"pm_ch3\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Classes by Term\",\"col\":4}}]",
   "custom_blocks": [],
   "docstatus": 0,
   "doctype": "Workspace",
@@ -2414,7 +2597,7 @@
   "link_to": null,
   "link_type": null,
   "links": [],
-  "modified": "2026-10-29 12:55:00.000000",
+  "modified": "2026-10-29 00:30:37.999936",
   "module": "SLCM",
   "name": "Programme Management",
   "number_cards": [
@@ -2445,79 +2628,156 @@
    {
     "color": "Blue",
     "doc_view": "List",
+    "format": null,
+    "icon": null,
+    "kanban_board": null,
     "label": "Academic Year",
     "link_to": "Academic Year",
-    "type": "DocType"
+    "report_ref_doctype": null,
+    "restrict_to_domain": null,
+    "stats_filter": null,
+    "type": "DocType",
+    "url": null
    },
    {
     "color": "Blue",
     "doc_view": "List",
+    "format": null,
+    "icon": null,
+    "kanban_board": null,
     "label": "Academic Term",
     "link_to": "Academic Term",
-    "type": "DocType"
+    "report_ref_doctype": null,
+    "restrict_to_domain": null,
+    "stats_filter": null,
+    "type": "DocType",
+    "url": null
    },
    {
     "color": "Purple",
     "doc_view": "List",
+    "format": null,
+    "icon": null,
+    "kanban_board": null,
     "label": "Programme",
     "link_to": "Programme",
-    "type": "DocType"
+    "report_ref_doctype": null,
+    "restrict_to_domain": null,
+    "stats_filter": null,
+    "type": "DocType",
+    "url": null
    },
    {
     "color": "Purple",
     "doc_view": "List",
+    "format": null,
+    "icon": null,
+    "kanban_board": null,
     "label": "Section",
     "link_to": "Section",
-    "type": "DocType"
+    "report_ref_doctype": null,
+    "restrict_to_domain": null,
+    "stats_filter": null,
+    "type": "DocType",
+    "url": null
    },
    {
     "color": "Purple",
     "doc_view": "List",
+    "format": null,
+    "icon": null,
+    "kanban_board": null,
     "label": "Batch",
     "link_to": "SLCM Batch",
-    "type": "DocType"
+    "report_ref_doctype": null,
+    "restrict_to_domain": null,
+    "stats_filter": null,
+    "type": "DocType",
+    "url": null
    },
    {
     "color": "Purple",
     "doc_view": "List",
+    "format": null,
+    "icon": null,
+    "kanban_board": null,
     "label": "Course",
     "link_to": "Course",
-    "type": "DocType"
+    "report_ref_doctype": null,
+    "restrict_to_domain": null,
+    "stats_filter": null,
+    "type": "DocType",
+    "url": null
    },
    {
     "color": "Green",
     "doc_view": "List",
+    "format": null,
+    "icon": null,
+    "kanban_board": null,
     "label": "Student Master",
     "link_to": "Student Master",
-    "type": "DocType"
+    "report_ref_doctype": null,
+    "restrict_to_domain": null,
+    "stats_filter": null,
+    "type": "DocType",
+    "url": null
    },
    {
     "color": "Green",
     "doc_view": "List",
+    "format": null,
+    "icon": null,
+    "kanban_board": null,
     "label": "Student Enrollment",
     "link_to": "Student Enrollment",
-    "type": "DocType"
+    "report_ref_doctype": null,
+    "restrict_to_domain": null,
+    "stats_filter": null,
+    "type": "DocType",
+    "url": null
    },
    {
     "color": "Green",
     "doc_view": "List",
+    "format": null,
+    "icon": null,
+    "kanban_board": null,
     "label": "Classes",
     "link_to": "Classes",
-    "type": "DocType"
+    "report_ref_doctype": null,
+    "restrict_to_domain": null,
+    "stats_filter": null,
+    "type": "DocType",
+    "url": null
    },
    {
     "color": "Orange",
     "doc_view": "List",
+    "format": null,
+    "icon": null,
+    "kanban_board": null,
     "label": "Time Table",
     "link_to": "Time Table",
-    "type": "DocType"
+    "report_ref_doctype": null,
+    "restrict_to_domain": null,
+    "stats_filter": null,
+    "type": "DocType",
+    "url": null
    },
    {
     "color": "Orange",
     "doc_view": "List",
+    "format": null,
+    "icon": null,
+    "kanban_board": null,
     "label": "Promotion Run",
     "link_to": "Promotion Run",
-    "type": "DocType"
+    "report_ref_doctype": null,
+    "restrict_to_domain": null,
+    "stats_filter": null,
+    "type": "DocType",
+    "url": null
    }
   ],
   "title": "Programme Management",
@@ -2549,7 +2809,7 @@
   "link_to": null,
   "link_type": null,
   "links": [],
-  "modified": "2026-10-29 10:30:00.000000",
+  "modified": "2026-10-29 10:30:00",
   "module": "SLCM",
   "name": "IT Team",
   "number_cards": [
@@ -2893,7 +3153,7 @@
     "type": "Link"
    }
   ],
-  "modified": "2026-10-29 10:30:00.000000",
+  "modified": "2026-10-29 10:30:00",
   "module": "SLCM",
   "name": "Transcript Management",
   "number_cards": [
@@ -3048,7 +3308,7 @@
   "link_to": null,
   "link_type": "DocType",
   "links": [],
-  "modified": "2026-10-29 10:30:00.000000",
+  "modified": "2026-10-29 10:30:00",
   "module": "SLCM",
   "name": "Examination Management",
   "number_cards": [],
@@ -3201,7 +3461,7 @@
   "link_to": null,
   "link_type": "DocType",
   "links": [],
-  "modified": "2026-10-29 10:30:00.000000",
+  "modified": "2026-10-29 10:30:00",
   "module": "SLCM",
   "name": "Exam Planner",
   "number_cards": [
@@ -3441,7 +3701,7 @@
   "link_to": null,
   "link_type": null,
   "links": [],
-  "modified": "2026-10-29 10:30:00.000000",
+  "modified": "2026-10-29 10:30:00",
   "module": "SLCM",
   "name": "FLE",
   "number_cards": [
@@ -3535,7 +3795,7 @@
   "link_to": null,
   "link_type": null,
   "links": [],
-  "modified": "2026-10-29 10:30:00.000000",
+  "modified": "2026-10-29 10:30:00",
   "module": "SLCM",
   "name": "Attendance",
   "number_cards": [
@@ -3823,7 +4083,7 @@
   "link_to": null,
   "link_type": null,
   "links": [],
-  "modified": "2026-10-29 10:30:00.000000",
+  "modified": "2026-10-29 10:30:00",
   "module": "SLCM",
   "name": "Fees Management",
   "number_cards": [
@@ -4483,7 +4743,7 @@
     "type": "Link"
    }
   ],
-  "modified": "2026-10-29 10:30:00.000000",
+  "modified": "2026-10-29 10:30:00",
   "module": "SLCM",
   "name": "Promotions",
   "number_cards": [

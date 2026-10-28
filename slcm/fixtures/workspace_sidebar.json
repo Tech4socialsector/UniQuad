@@ -183,7 +183,7 @@
     "url": null
    }
   ],
-  "modified": "2026-10-29 10:30:00.000000",
+  "modified": "2026-10-29 10:30:00",
   "module": "SLCM",
   "module_onboarding": null,
   "name": "Admission Fee",
@@ -678,7 +678,7 @@
     "url": null
    }
   ],
-  "modified": "2026-10-29 10:30:00.000000",
+  "modified": "2026-10-29 10:30:00",
   "module": "SLCM",
   "module_onboarding": null,
   "name": "Fees Management",
@@ -1157,7 +1157,7 @@
     "url": null
    }
   ],
-  "modified": "2026-10-29 10:30:00.000000",
+  "modified": "2026-10-29 10:30:00",
   "module": "SLCM",
   "module_onboarding": null,
   "name": "Faculty Management",
