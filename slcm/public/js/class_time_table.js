@@ -10,7 +10,7 @@ const CTT_METHOD = "slcm.slcm.doctype.classes.class_time_table.";
 
 const CTT_STEPS = [
 	{ label: __("Schedule"), sections: ["s1", "s1_repeat"] },
-	{ label: __("Class Participation"), sections: ["s2", "s2_weeks", "s2_preview"] },
+	{ label: __("Class Participation"), sections: ["s2", "s2_weeks", "s2_upload", "s2_preview"] },
 	{ label: __("Summary"), sections: ["s3"] },
 ];
 
@@ -35,6 +35,41 @@ function ctt_time(t) {
 
 function ctt_date(d) {
 	return d ? frappe.datetime.str_to_user(d) : "";
+}
+
+function ctt_download_base64(content, filename, mime) {
+	const bytes = Uint8Array.from(atob(content), (c) => c.charCodeAt(0));
+	const url = URL.createObjectURL(new Blob([bytes], { type: mime }));
+	const a = Object.assign(document.createElement("a"), { href: url, download: filename });
+	document.body.appendChild(a);
+	a.click();
+	a.remove();
+	setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/** The Class Participation weeks: dates, classes, students and their names.
+ * Full width, scrolling inside its box (about 8 weeks in view). */
+function ctt_weeks_table(weeks) {
+	const rows = weeks.map((w, i) => {
+		const warn = !w.classes
+			? `<span class="ctt-badge bad">${__("No class")}</span>`
+			: w.classes > CTT_MAX_CP_HOURS
+				? `<span class="ctt-badge warn">${__("Only {0} recorded", [CTT_MAX_CP_HOURS])}</span>`
+				: "";
+		const names = w.students.map((st) =>
+			`<span class="ctt-pill" title="${ctt_esc(st.student_id)}">${ctt_esc(st.student_name || st.student)}</span>`).join("");
+		return `<tr class="${w.classes ? "" : "ctt-row-bad"}">
+			<td><b>${__("Week {0}", [i + 1])}</b></td>
+			<td class="ctt-nowrap">${ctt_date(w.start_date)} – ${ctt_date(w.end_date)}</td>
+			<td class="ctt-nowrap">${w.classes} ${warn}</td>
+			<td><b>${w.students.length}</b></td>
+			<td><div class="ctt-names">${names}</div></td>
+		</tr>`;
+	}).join("");
+	return `<div class="ctt-table-wrap ctt-weeks-wrap"><table class="ctt-table ctt-weeks-table">
+		<thead><tr><th>${__("Week")}</th><th>${__("Dates")}</th><th>${__("Classes")}</th><th>${__("Students")}</th><th>${__("Names")}</th></tr></thead>
+		<tbody>${rows}</tbody>
+	</table></div>`;
 }
 
 function ctt_class_label(cls) {
@@ -87,6 +122,8 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 		this.dates = [];        // series preview rows from the server
 		this.schedule_key = null;
 		this.weeks = [];        // [{start_date, end_date, students: [row]}]
+		this.upload = null;     // {assign: {student: week no}, problems, file_url} from an uploaded split
+		this.is_busy = false;
 
 		this.make_dialog();
 		this.set_defaults();
@@ -108,8 +145,8 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 				{ fieldtype: "Link", fieldname: "instructor", label: __("Faculty"), options: "Faculty",
 					description: __("Defaults to the class's faculty.") },
 				{ fieldtype: "Link", fieldname: "venue", label: __("Venue"), options: "Venue Master", reqd: 1 },
-				{ fieldtype: "Select", fieldname: "class_schedule_color", label: __("Time Table Color"),
-					options: ["", "Blue", "Green", "Red", "Yellow", "Orange", "Purple", "Pink", "Gray"].join("\n") },
+				{ fieldtype: "Color", fieldname: "color", label: __("Time Table Color"),
+					description: __("Colour of these classes on the calendars.") },
 				{ fieldtype: "Column Break" },
 				{ fieldtype: "Date", fieldname: "schedule_date", label: __("Schedule Date"), reqd: 1,
 					description: __("Date of the first class."), onchange: () => me.on_schedule_change() },
@@ -141,10 +178,18 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 					description: __("From the schedule duration. Fewer weeks makes each one longer."),
 					onchange: () => me.render_weeks() },
 				{ fieldtype: "Select", fieldname: "split_method", label: __("Split Students"),
-					options: ["Alphabetical blocks", "One-by-one"].join("\n"), default: "Alphabetical blocks",
-					description: __("Alphabetical blocks: A–F in week 1, G–L in week 2 ... One-by-one: 1st student to week 1, 2nd to week 2 ..."),
-					onchange: () => me.render_weeks() },
-				{ fieldtype: "Button", fieldname: "split_btn", label: __("Split Students by Week"), click: () => me.render_weeks(true) },
+					options: ["Alphabetical blocks", "One-by-one", "Upload"].join("\n"), default: "Alphabetical blocks",
+					description: __("Alphabetical blocks: A–F in week 1, G–L in week 2 ... One-by-one: 1st student to week 1, 2nd to week 2 ... Upload: set each student's week in an Excel sheet."),
+					onchange: () => me.on_split_method_change() },
+				{ fieldtype: "Button", fieldname: "split_btn", label: __("Split Students by Week"),
+					depends_on: "eval:doc.split_method != 'Upload'", click: () => me.render_weeks(true) },
+				{ fieldtype: "Section Break", fieldname: "s2_upload", label: __("Upload the Week Split") },
+				{ fieldtype: "HTML", fieldname: "cp_upload_help" },
+				{ fieldtype: "Button", fieldname: "cp_download", label: __("Download Excel Template"), click: () => me.download_cp_template() },
+				{ fieldtype: "Column Break" },
+				{ fieldtype: "Attach", fieldname: "cp_file", label: __("Upload Filled Template"),
+					description: __("Upload the template after filling in Week No for every student."),
+					onchange: () => me.read_cp_upload() },
 				{ fieldtype: "Section Break", fieldname: "s2_preview" },
 				{ fieldtype: "HTML", fieldname: "cp_preview_html" },
 
@@ -158,6 +203,17 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 			secondary_action: () => me.back(),
 		});
 		this.d.$wrapper.addClass("ctt-dialog");
+
+		// While a request runs the dialog cannot be closed (close button, Esc,
+		// clicking outside), so the outcome is always seen in it.
+		const hide = this.d.hide.bind(this.d);
+		this.d.hide = (...args) => (this.is_busy ? this.nudge_busy() : hide(...args));
+		this.d.$wrapper.on("hide.bs.modal", (e) => {
+			if (this.is_busy) {
+				e.preventDefault();
+				this.nudge_busy();
+			}
+		});
 	}
 
 	set_defaults() {
@@ -178,6 +234,11 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 		</div>`);
 		this.d.fields_dict.cp_help.$wrapper.html(`<div class="ctt-help">
 			${__("The class's {0} students are split into one Class Participation group per week. Each week, its group's participation is recorded in that week's classes (up to {1} class hours a week).", [this.info.students.length, CTT_MAX_CP_HOURS])}
+		</div>`);
+		this.d.fields_dict.cp_upload_help.$wrapper.html(`<div class="ctt-help">
+			<b>1.</b> ${__("Download the template: every student of the class with a Week No column (pre-filled with the current split), and a Weeks sheet with each week's dates.")}<br>
+			<b>2.</b> ${__("Set the Week No (1 to the number of weeks) for each student and save the file.")}<br>
+			<b>3.</b> ${__("Upload it here. The split is shown below to check before you continue.")}
 		</div>`);
 	}
 
@@ -246,7 +307,7 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 			title: v.title,
 			instructor: v.instructor,
 			venue: v.venue,
-			class_schedule_color: v.class_schedule_color,
+			color: v.color,
 			schedule_date: v.schedule_date,
 			from_time: v.from_time,
 			to_time: v.to_time,
@@ -290,13 +351,10 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 			return false;
 		}
 
-		const r = await frappe.call({
-			method: CTT_METHOD + "preview_class_time_table",
-			args: { data: s },
-			freeze: true,
-			freeze_message: __("Checking dates..."),
-		});
-		const res = r.message || {};
+		const res = await this.run_busy(__("Checking venue availability and holidays for each session date..."), [], () =>
+			frappe.call({ method: CTT_METHOD + "preview_class_time_table", args: { data: s } })
+		);
+		if (!res) return false;
 		if ((res.errors || []).length) {
 			frappe.msgprint({ title: __("Time Slot Unavailable"), message: res.errors.join("<br><br>"), indicator: "orange" });
 			return false;
@@ -337,12 +395,22 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 		return this.d.get_value("create_cp") === "Yes";
 	}
 
+	is_upload() {
+		return this.d.get_value("split_method") === "Upload";
+	}
+
+	on_split_method_change() {
+		this.on_cp_toggle();
+	}
+
 	on_cp_toggle() {
 		const on = this.cp_on();
 		["s2_weeks", "s2_preview"].forEach((fn) => {
 			const sec = this.d.fields_dict[fn];
 			$(sec.wrapper || sec.$wrapper).toggle(this.step === 1 && on);
 		});
+		const up = this.d.fields_dict.s2_upload;
+		$(up.wrapper || up.$wrapper).toggle(this.step === 1 && on && this.is_upload());
 		const one_day = this.schedule_values().repeat_frequency === "Never";
 		["cp_start_date", "cp_end_date", "cp_weeks"].forEach((f) => this.d.set_df_property(f, "read_only", one_day ? 1 : 0));
 		if (on) this.render_weeks();
@@ -381,7 +449,16 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 			weeks.push({ start_date: frappe.datetime.add_days(start, 7 * w0), end_date: e > end ? end : e, students: [] });
 		}
 
-		if (this.d.get_value("split_method") === "One-by-one") {
+		let unassigned = [];
+		if (this.is_upload()) {
+			// The uploaded Week No of each student; anyone without a usable one is listed apart
+			const assign = (this.upload && this.upload.assign) || {};
+			students.forEach((st) => {
+				const no = cint(assign[st.student]);
+				if (no >= 1 && no <= n) weeks[no - 1].students.push(st);
+				else unassigned.push(st);
+			});
+		} else if (this.d.get_value("split_method") === "One-by-one") {
 			students.forEach((st, i) => weeks[i % n].students.push(st));
 		} else {
 			const base = Math.floor(students.length / n);
@@ -398,7 +475,7 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 		weeks.forEach((w) => {
 			w.classes = dates.filter((d) => d >= w.start_date && d <= w.end_date).length;
 		});
-		return { weeks, total, n };
+		return { weeks, total, n, unassigned };
 	}
 
 	render_weeks() {
@@ -414,35 +491,95 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 			return;
 		}
 		this.weeks = res.weeks;
+		this.unassigned = res.unassigned;
 		if (cint(this.d.get_value("cp_weeks")) !== res.n) this.d.set_value("cp_weeks", res.n);
 
-		const rows = res.weeks.map((w, i) => {
-			const warn = !w.classes
-				? `<span class="ctt-badge bad">${__("No class")}</span>`
-				: w.classes > CTT_MAX_CP_HOURS
-					? `<span class="ctt-badge warn">${__("Only {0} recorded", [CTT_MAX_CP_HOURS])}</span>`
-					: "";
-			const names = w.students.map((st) =>
-				`<span class="ctt-pill" title="${ctt_esc(st.student_id)}">${ctt_esc(st.student_name || st.student)}</span>`).join("");
-			return `<tr class="${w.classes ? "" : "ctt-row-bad"}">
-				<td><b>${__("Week {0}", [i + 1])}</b></td>
-				<td class="ctt-nowrap">${ctt_date(w.start_date)} – ${ctt_date(w.end_date)}</td>
-				<td>${w.classes} ${warn}</td>
-				<td><b>${w.students.length}</b></td>
-				<td><div class="ctt-names">${names}</div></td>
-			</tr>`;
-		}).join("");
+		if (this.is_upload() && !this.upload) {
+			$out.html(`<div class="ctt-empty">${__("Download the template, fill in each student's Week No, then upload it to see the split here.")}</div>`);
+			return;
+		}
+		const upload_html = this.is_upload() ? this.upload_notes_html(res) : "";
 
 		const empty = res.weeks.filter((w) => !w.classes).length;
 		$out.html(`
+			${upload_html}
 			<div class="ctt-muted" style="margin-bottom:8px">
-				${__("{0} students split into {1} week(s) of the {2} in this range.", [this.info.students.length, res.n, res.total])}
+				${__("{0} students split into {1} week(s) of the {2} in this range.", [this.info.students.length - res.unassigned.length, res.n, res.total])}
 				${empty ? `<span class="ctt-bad-text">${__("{0} week(s) have no class, so their students get no participation.", [empty])}</span>` : ""}
 			</div>
-			<div class="ctt-table-wrap"><table class="ctt-table">
-				<thead><tr><th>${__("Week")}</th><th>${__("Dates")}</th><th>${__("Classes")}</th><th>${__("Students")}</th><th>${__("Names")}</th></tr></thead>
-				<tbody>${rows}</tbody>
-			</table></div>`);
+			${ctt_weeks_table(res.weeks)}`);
+	}
+
+	/** What the uploaded file gave: rows that could not be used and students
+	 * left without a week. */
+	upload_notes_html(res) {
+		const problems = this.upload.problems || [];
+		const left = res.unassigned || [];
+		if (!problems.length && !left.length) {
+			return `<div class="ctt-banner ok">${__("Every student has a week from the uploaded file.")}</div>`;
+		}
+		const list = (items) => `<ul class="ctt-list">${items.slice(0, 10).map((x) => `<li>${ctt_esc(x)}</li>`).join("")}
+			${items.length > 10 ? `<li>${__("... and {0} more", [items.length - 10])}</li>` : ""}</ul>`;
+		return `<div class="ctt-banner warn">
+			${left.length ? `<b>${__("{0} student(s) have no week yet", [left.length])}</b>${list(left.map((s) => s.student_name || s.student))}` : ""}
+			${problems.length ? `<b>${__("{0} row(s) in the file could not be used", [problems.length])}</b>${list(problems)}` : ""}
+			${__("Correct the file and upload it again.")}
+		</div>`;
+	}
+
+	download_cp_template() {
+		const res = this.build_weeks();
+		if (res.error) {
+			frappe.msgprint(res.error);
+			return;
+		}
+		// Pre-fill with the uploaded split when there is one, else alphabetical blocks
+		let weeks = res.weeks;
+		if (!this.upload) {
+			const students = this.info.students;
+			const base = Math.floor(students.length / res.n), extra = students.length % res.n;
+			let at = 0;
+			weeks = weeks.map((w, i) => {
+				const size = base + (i < extra ? 1 : 0);
+				const chunk = students.slice(at, at + size);
+				at += size;
+				return { ...w, students: chunk };
+			});
+		}
+		this.run_busy(__("Preparing the Excel template..."), [], () =>
+			frappe.call({
+				method: CTT_METHOD + "download_cp_template",
+				args: {
+					class_name: this.cls.name,
+					weeks: weeks.map((w) => ({ start_date: w.start_date, end_date: w.end_date, students: w.students.map((st) => st.student) })),
+				},
+			})
+		).then((m) => m && ctt_download_base64(m.content, m.filename, m.mime));
+	}
+
+	async read_cp_upload() {
+		const file_url = this.d.get_value("cp_file");
+		if (!file_url) {
+			this.upload = null;
+			this.render_weeks();
+			return;
+		}
+		const res = this.build_weeks();
+		const m = await this.run_busy(__("Reading the uploaded file..."), [
+			{ label: "Reading", text: __("Reading the uploaded file..."), unit: __("Row {0} of {1}"), from: 0, to: 100 },
+		], () => frappe.call({
+			method: CTT_METHOD + "read_cp_upload",
+			args: { class_name: this.cls.name, file_url, week_count: res.n || cint(this.d.get_value("cp_weeks")) },
+		}));
+		if (!m) return;
+		this.upload = { ...m, file_url };
+		this.render_weeks();
+		frappe.show_alert({
+			message: m.problems.length || m.missing.length
+				? __("File read: {0} student(s) placed; please review the notes.", [Object.keys(m.assign).length])
+				: __("File read: all {0} students placed in their weeks.", [Object.keys(m.assign).length]),
+			indicator: m.problems.length || m.missing.length ? "orange" : "green",
+		});
 	}
 
 	validate_cp() {
@@ -451,6 +588,20 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 		if (!this.weeks.length) {
 			frappe.msgprint(__("Fix the Class Participation weeks, or choose No."));
 			return false;
+		}
+		if (this.is_upload()) {
+			if (!this.upload) {
+				frappe.msgprint(__("Upload the filled template to split the students, or choose another way to split them."));
+				return false;
+			}
+			if ((this.unassigned || []).length) {
+				frappe.msgprint({
+					title: __("Week Split Incomplete"),
+					message: __("{0} student(s) have no week in the uploaded file. Kindly give every student a Week No and upload the file again.", [this.unassigned.length]),
+					indicator: "orange",
+				});
+				return false;
+			}
 		}
 		return true;
 	}
@@ -476,11 +627,7 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 			: "";
 
 		const cp_html = this.cp_on()
-			? `<div class="ctt-sub-title">${__("Class Participation")}</div>
-				<table class="ctt-table ctt-sum-table"><thead><tr><th>${__("Week")}</th><th>${__("Dates")}</th><th>${__("Classes")}</th><th>${__("Students")}</th></tr></thead>
-				<tbody>${this.weeks.map((w, i) => `<tr><td>${__("Week {0}", [i + 1])}</td>
-					<td class="ctt-nowrap">${ctt_date(w.start_date)} – ${ctt_date(w.end_date)}</td>
-					<td>${w.classes}</td><td>${w.students.length}</td></tr>`).join("")}</tbody></table>`
+			? `<div class="ctt-sub-title">${__("Class Participation")}</div>${ctt_weeks_table(this.weeks)}`
 			: `<div class="ctt-muted">${__("No Class Participation groups will be created.")}</div>`;
 
 		this.d.fields_dict.summary_html.$wrapper.html(`
@@ -504,68 +651,91 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 		return frappe.utils.get_link_title?.("Faculty", instructor) || instructor;
 	}
 
-	create() {
+	async create() {
 		const data = this.schedule_values();
 		data.cp_weeks = this.cp_on()
 			? this.weeks.map((w) => ({ start_date: w.start_date, end_date: w.end_date, students: w.students.map((st) => st.student) }))
 			: [];
-		const progress = this.show_progress(data.cp_weeks.length > 0);
-		frappe.call({
-			method: CTT_METHOD + "create_class_time_table",
-			args: { data },
-			always: () => progress.close(),
-			callback: (r) => {
-				if (!r.message) return;
-				this.d.hide();
-				const m = r.message;
-				frappe.show_alert({
-					message: m.groups.length
-						? __("Time Table {0} created with {1} class(es) and {2} Class Participation group(s).", [m.name, m.sessions, m.groups.length])
-						: __("Time Table {0} created with {1} class(es).", [m.name, m.sessions]),
-					indicator: "green",
-				}, 8);
-			},
-		});
+		// Server progress: the Class Participation groups (first 20% when there
+		// are any), then each class of the series with its Attendance Session.
+		const groups = data.cp_weeks.length > 0;
+		const m = await this.run_busy(__("Creating the Time Table..."), [
+			...(groups ? [{ label: "Creating Class Participation groups", text: __("Creating Class Participation groups..."),
+				unit: __("Week {0} of {1}"), from: 0, to: 20 }] : []),
+			{ label: "Scheduling", text: __("Creating classes and attendance sessions..."),
+				unit: __("Class {0} of {1}"), from: groups ? 20 : 0, to: 100 },
+		], () => frappe.call({ method: CTT_METHOD + "create_class_time_table", args: { data } }));
+		if (!m) return;
+		this.d.hide();
+		frappe.show_alert({
+			message: m.groups.length
+				? __("Time Table {0} created with {1} class(es) and {2} Class Participation group(s).", [m.name, m.sessions, m.groups.length])
+				: __("Time Table {0} created with {1} class(es).", [m.name, m.sessions]),
+			indicator: "green",
+		}, 10);
 	}
 
-	/** Spinner with an overall percentage over the dialog while the server
-	 * works. It reports progress (time_table_bulk_progress) while it makes the
-	 * Class Participation groups (first 20% when there are any) and then each
-	 * class of the series (the rest). */
-	show_progress(with_groups) {
+	/** Run `request` (returns a frappe.call promise) with the dialog locked and
+	 * a spinner over it. `phases` map server progress (time_table_bulk_progress
+	 * labels) onto an overall percentage: [{label, text, unit, from, to}]. With
+	 * no phases (a quick check) the spinner shows without a percentage.
+	 * Resolves to r.message, or null when the request failed (its error is
+	 * shown by frappe.call). */
+	async run_busy(message, phases, request) {
+		const with_percent = phases.length > 0;
 		const $overlay = $(`<div class="ctt-progress">
 			<div class="ctt-progress-box">
 				<div class="ctt-spinner"></div>
-				<div class="ctt-progress-percent">0%</div>
-				<div class="ctt-progress-bar"><div class="ctt-progress-fill"></div></div>
-				<div class="ctt-progress-label">${__("Preparing...")}</div>
+				<div class="ctt-progress-percent" ${with_percent ? "" : 'style="display:none"'}>0%</div>
+				<div class="ctt-progress-bar ${with_percent ? "" : "indeterminate"}"><div class="ctt-progress-fill"></div></div>
+				<div class="ctt-progress-label">${ctt_esc(message)}</div>
 				<div class="ctt-progress-count"></div>
+				<div class="ctt-progress-note">${__("Please keep this window open until it finishes.")}</div>
 			</div>
 		</div>`).appendTo(this.d.$wrapper.find(".modal-content"));
-		this.d.$wrapper.find(".modal-footer button, .btn-modal-close").prop("disabled", true);
+		const $buttons = this.d.$wrapper.find(".modal-footer button, .btn-modal-close");
+		$buttons.prop("disabled", true);
+		this.is_busy = true;
+		this.$busy = $overlay;
 
 		let shown = 0;
 		const on_progress = (p) => {
-			const groups = p.label !== "Scheduling";
+			const phase = phases.find((ph) => ph.label === p.label);
+			if (!phase) return;
 			const part = p.total ? p.done / p.total : 1;
-			const overall = !with_groups ? part : groups ? part * 0.2 : 0.2 + part * 0.8;
-			// Never step backwards (e.g. a late group event after scheduling began)
-			shown = Math.max(shown, Math.min(99, Math.round(overall * 100)));
+			// Never step backwards; 100% only when the request has returned
+			shown = Math.max(shown, Math.min(99, Math.round(phase.from + part * (phase.to - phase.from))));
 			$overlay.find(".ctt-progress-percent").text(`${shown}%`);
 			$overlay.find(".ctt-progress-fill").css("width", `${shown}%`);
-			$overlay.find(".ctt-progress-label").text(groups ? __("Creating Class Participation groups...") : __("Creating classes and attendance sessions..."));
-			$overlay.find(".ctt-progress-count").text(p.total
-				? (groups ? __("Week {0} of {1}", [p.done, p.total]) : __("Class {0} of {1}", [p.done, p.total]))
-				: "");
+			$overlay.find(".ctt-progress-label").text(phase.text);
+			$overlay.find(".ctt-progress-count").text(p.total ? phase.unit.replace("{0}", p.done).replace("{1}", p.total) : "");
 		};
-		frappe.realtime.on("time_table_bulk_progress", on_progress);
-		return {
-			close: () => {
-				frappe.realtime.off("time_table_bulk_progress", on_progress);
-				this.d.$wrapper.find(".modal-footer button, .btn-modal-close").prop("disabled", false);
-				$overlay.remove();
-			},
-		};
+		if (with_percent) frappe.realtime.on("time_table_bulk_progress", on_progress);
+
+		try {
+			const r = await request();
+			if (with_percent) {
+				$overlay.find(".ctt-progress-percent").text("100%");
+				$overlay.find(".ctt-progress-fill").css("width", "100%");
+			}
+			return (r && r.message) || null;
+		} catch (e) {
+			return null;
+		} finally {
+			if (with_percent) frappe.realtime.off("time_table_bulk_progress", on_progress);
+			this.is_busy = false;
+			this.$busy = null;
+			$buttons.prop("disabled", false);
+			$overlay.remove();
+		}
+	}
+
+	/** A close attempt while busy: say why it stays open. */
+	nudge_busy() {
+		if (!this.$busy) return;
+		const $note = this.$busy.find(".ctt-progress-note");
+		$note.addClass("ctt-progress-note-alert");
+		setTimeout(() => $note.removeClass("ctt-progress-note-alert"), 1200);
 	}
 };
 
@@ -901,6 +1071,18 @@ function ctt_inject_css() {
 		.ctt-dialog .ctt-progress-fill { height: 100%; width: 0; background: var(--primary); transition: width 0.3s ease; }
 		.ctt-dialog .ctt-progress-label { font-size: 13.5px; font-weight: 600; }
 		.ctt-dialog .ctt-progress-count { font-size: 12px; color: var(--text-muted); margin-top: 2px; min-height: 16px; }
+		.ctt-dialog .ctt-progress-bar.indeterminate .ctt-progress-fill { width: 35%; animation: ctt-slide 1.2s ease-in-out infinite; }
+		@keyframes ctt-slide { 0% { margin-left: -35%; } 100% { margin-left: 100%; } }
+		.ctt-dialog .ctt-progress-note { font-size: 12px; color: var(--text-muted); margin-top: 10px; transition: color 0.2s; }
+		.ctt-dialog .ctt-progress-note-alert { color: var(--orange-600, #d97706); font-weight: 600; }
+		.ctt-dialog .ctt-weeks-wrap { max-height: 340px; }
+		.ctt-dialog .ctt-weeks-table td { vertical-align: middle; }
+		.ctt-dialog .ctt-weeks-table th:nth-child(1) { width: 11%; }
+		.ctt-dialog .ctt-weeks-table th:nth-child(2) { width: 24%; }
+		.ctt-dialog .ctt-weeks-table th:nth-child(3) { width: 13%; }
+		.ctt-dialog .ctt-weeks-table th:nth-child(4) { width: 11%; }
+		.ctt-dialog .ctt-weeks-table .ctt-names { max-height: 60px; }
+		.ctt-dialog .ctt-list { margin: 4px 0 8px; padding-left: 18px; font-size: 12.5px; }
 		.ctt-dialog .ctt-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border-color); margin-bottom: 12px; }
 		.ctt-dialog .ctt-tab {
 			background: none; border: none; border-bottom: 2px solid transparent; padding: 8px 12px; margin-bottom: -1px;

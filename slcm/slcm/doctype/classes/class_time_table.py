@@ -12,6 +12,8 @@ View Time Table: the class's sessions on a calendar; a session shows its
 attendance and the class participation recorded for it.
 """
 
+import base64
+import io
 import json
 
 import frappe
@@ -22,8 +24,9 @@ from frappe.utils import cint, flt, formatdate, get_datetime, getdate, now_datet
 from slcm.slcm.doctype.classes.classes import get_class_students
 from slcm.slcm.doctype.time_table.time_table import format_time_12h, publish_bulk_progress
 
-# Progress label shown by the Create Time Table dialog while groups are made
+# Progress labels shown by the Create Time Table dialog
 CP_PROGRESS_LABEL = "Creating Class Participation groups"
+UPLOAD_PROGRESS_LABEL = "Reading"
 
 REPEAT_STEP = {
 	"Daily": relativedelta(days=1),
@@ -178,7 +181,7 @@ def create_class_time_table(data):
 	fails nothing is kept.
 
 	data: class_name, schedule_date, from_time, to_time, venue, instructor,
-	repeat_frequency, repeats_till, title, class_schedule_color, and
+	repeat_frequency, repeats_till, title, color, and
 	cp_weeks: [{start_date, end_date, students: [Student Master]}]."""
 	data = frappe._dict(json.loads(data) if isinstance(data, str) else data)
 	frappe.has_permission("Time Table", "create", throw=True)
@@ -196,7 +199,7 @@ def create_class_time_table(data):
 		"repeat_frequency": data.repeat_frequency or "Never",
 		"repeats_till": data.repeats_till if data.repeat_frequency not in (None, "", "Never") else None,
 		"title": data.title,
-		"class_schedule_color": data.class_schedule_color,
+		"color": data.color,
 	})
 
 	groups = []
@@ -236,6 +239,98 @@ def create_class_time_table(data):
 	doc.insert(ignore_permissions=True)
 	occurrences = frappe.db.count("Time Table", {"parent_schedule": doc.name})
 	return {"name": doc.name, "sessions": occurrences + 1, "groups": groups}
+
+
+@frappe.whitelist()
+def download_cp_template(class_name, weeks):
+	"""xlsx to split the class's students into Class Participation weeks by
+	hand: one row per student with the week number to fill in (pre-filled
+	with the dialog's current split), and a Weeks sheet with each week's dates.
+
+	weeks: [{start_date, end_date, students: [Student Master]}]."""
+	frappe.has_permission("Time Table", "create", throw=True)
+	import openpyxl
+	from openpyxl.styles import Font, PatternFill
+
+	weeks = frappe.parse_json(weeks) if isinstance(weeks, str) else weeks or []
+	week_of = {s: i for i, w in enumerate(weeks, start=1) for s in (w.get("students") or [])}
+
+	wb = openpyxl.Workbook()
+	ws = wb.active
+	ws.title = "Students"
+	_xlsx_header(ws, ["Row Key", "Student ID", "Student Name", "Week No"], Font, PatternFill)
+	for s in _class_roster(class_name):
+		ws.append([s.student, s.student_id, s.student_name, week_of.get(s.student)])
+	ws.column_dimensions["A"].hidden = True
+	for col, width in zip("BCD", [16, 34, 12]):
+		ws.column_dimensions[col].width = width
+
+	ref = wb.create_sheet("Weeks")
+	_xlsx_header(ref, ["Week No", "Start Date", "End Date"], Font, PatternFill)
+	for i, w in enumerate(weeks, start=1):
+		ref.append([i, formatdate(w.get("start_date")), formatdate(w.get("end_date"))])
+	for col, width in zip("ABC", [10, 14, 14]):
+		ref.column_dimensions[col].width = width
+
+	output = io.BytesIO()
+	wb.save(output)
+	return {
+		"filename": f"class_participation_{frappe.scrub(class_name)}.xlsx",
+		"content": base64.b64encode(output.getvalue()).decode("utf-8"),
+		"mime": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+	}
+
+
+def _xlsx_header(ws, headers, Font, PatternFill):
+	ws.append(headers)
+	for ci in range(1, len(headers) + 1):
+		cell = ws.cell(row=1, column=ci)
+		cell.font = Font(bold=True, color="FFFFFF")
+		cell.fill = PatternFill("solid", fgColor="3949AB")
+
+
+@frappe.whitelist()
+def read_cp_upload(class_name, file_url, week_count):
+	"""{student: week no} from a filled-in Class Participation template, with
+	the rows that could not be used. Rows are matched by the hidden key, else
+	by Student ID; the week must be 1..week_count. Reports progress
+	(time_table_bulk_progress, label "Reading") as it goes."""
+	frappe.has_permission("Time Table", "create", throw=True)
+	import openpyxl
+
+	file_doc = frappe.get_doc("File", {"file_url": file_url})
+	file_doc.check_permission("read")
+	ws = openpyxl.load_workbook(file_doc.get_full_path(), data_only=True).worksheets[0]
+
+	roster = _class_roster(class_name)
+	by_key = {s.student: s for s in roster}
+	by_id = {str(s.student_id).strip().upper(): s for s in roster if s.student_id}
+	week_count = cint(week_count)
+
+	rows = [r for r in ws.iter_rows(min_row=2, values_only=True) if r and any(v not in (None, "") for v in r)]
+	assign, problems = {}, []
+	step = max(1, len(rows) // 20)
+	publish_bulk_progress(UPLOAD_PROGRESS_LABEL, 0, len(rows))
+	for n, row in enumerate(rows, start=1):
+		key, student_id, name, week = (list(row) + [None] * 4)[:4]
+		s = by_key.get(str(key or "").strip()) or by_id.get(str(student_id or "").strip().upper())
+		label = student_id or name or key
+		if not s:
+			problems.append(_("Row {0}: {1} is not a student of this class.").format(n + 1, label))
+		elif week in (None, ""):
+			problems.append(_("Row {0}: {1} has no Week No.").format(n + 1, s.student_name))
+		elif not str(week).strip().isdigit() or not 1 <= cint(week) <= week_count:
+			problems.append(_("Row {0}: Week No {1} for {2} must be between 1 and {3}.").format(
+				n + 1, week, s.student_name, week_count))
+		elif s.student in assign:
+			problems.append(_("Row {0}: {1} is listed more than once.").format(n + 1, s.student_name))
+		else:
+			assign[s.student] = cint(week)
+		if n % step == 0 or n == len(rows):
+			publish_bulk_progress(UPLOAD_PROGRESS_LABEL, n, len(rows))
+
+	missing = [s.student_name for s in roster if s.student not in assign]
+	return {"assign": assign, "problems": problems, "missing": missing}
 
 
 @frappe.whitelist()
