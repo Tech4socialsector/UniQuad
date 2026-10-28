@@ -294,13 +294,8 @@ frappe.ui.form.on("Applicant", {
     },
 
     nationality: function (frm) {
-        if (frm.doc.foriegn_national === "No" && frm.doc.nationality !== "India") {
-            // Domestic candidate: Nationality is always India
-            if (frm.doc.nationality) {
-                frappe.show_alert({ message: __("For Domestic applications, Nationality must be India."), indicator: "orange" });
-            }
-            frm.set_value("nationality", "India");
-        } else if (frm.doc.foriegn_national === "Yes" && frm.doc.nationality === "India") {
+        // Domestic applicants may hold any nationality; only International cannot be India
+        if (frm.doc.foriegn_national === "Yes" && frm.doc.nationality === "India") {
             frappe.show_alert({ message: __("For International applications, Nationality cannot be India."), indicator: "orange" });
             frm.set_value("nationality", "");
         }
@@ -401,9 +396,6 @@ frappe.ui.form.on("Applicant", {
         }
 
         if (frm.doc.nationality && frm.doc.foriegn_national) {
-            if (frm.doc.nationality !== "India" && frm.doc.foriegn_national !== "Yes") {
-                errors.push(__("If Nationality is not India, then 'Foreign National' must be Yes."));
-            }
             if (frm.doc.foriegn_national === "Yes" && frm.doc.nationality === "India") {
                 errors.push(__("If 'Foreign National' is Yes, Nationality cannot be India."));
             }

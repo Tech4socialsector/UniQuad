@@ -14,6 +14,41 @@ from slcm.admission.portal_application_web_form import (
 )
 from slcm.admission.utils.regulatory import log_audit_trail
 
+# Nationality options spelled differently from the Country used on State records
+NATIONALITY_STATE_COUNTRY_ALIASES = {
+    "united states of america": "United States",
+    "cape verde": "Cabo Verde",
+    "republic of the congo": "Congo",
+    "czechia": "Czech Republic",
+    "the gambia": "Gambia",
+    "federated states of micronesia": "Micronesia",
+    "são tomé and príncipe": "Sao Tome and Principe",
+    "türkiye": "Turkey",
+}
+
+
+def state_country_names(country):
+    """Lower-cased country names to match against State.country (the given name plus its alias)."""
+    country = (country or "").strip().lower()
+    names = {country}
+    alias = NATIONALITY_STATE_COUNTRY_ALIASES.get(country)
+    if alias:
+        names.add(alias.lower())
+    return tuple(names)
+
+
+def state_belongs_to_country(state, country):
+    """True when the State belongs to the given country / nationality. 'Other' is always valid."""
+    state = (state or "").strip()
+    if not state or state.lower() == "other" or not (country or "").strip():
+        return True
+
+    state_country = frappe.db.get_value("State", state, "country")
+    if not state_country:
+        return True
+
+    return state_country.strip().lower() in state_country_names(country)
+
 # Statuses treated as "submitted" for confirmation email, PDF cache, etc.
 APPLICATION_SUBMITTED_STATUSES = frozenset(
     {
@@ -287,15 +322,17 @@ class Applicant(Document):
 
     def _validate_nationality_matches_foreign_national(self):
         """
-        foriegn_national = "No"  → Nationality must be India (filled in automatically when blank).
+        foriegn_national = "No"  → any Nationality (India filled in automatically when blank).
         foriegn_national = "Yes" → Nationality must not be India.
-        Checked on new records and whenever either field (or the status) changes, so older
+        State must belong to the Nationality country ("Other" is always allowed).
+        Checked on new records and whenever a related field (or the status) changes, so older
         inconsistent records don't block unrelated desk edits.
         """
         if not (
             self.is_new()
             or self.has_value_changed("foriegn_national")
             or self.has_value_changed("nationality")
+            or self.has_value_changed("state")
             or self.has_value_changed("status")
         ):
             return
@@ -303,18 +340,20 @@ class Applicant(Document):
         fn = (self.foriegn_national or "").strip()
         nationality = (self.nationality or "").strip()
 
-        if fn == "No":
-            if not nationality:
-                self.nationality = "India"
-            elif nationality.lower() != "india":
-                frappe.throw(
-                    _("For Domestic applicants (Foreign National = No), Nationality must be India."),
-                    title=_("Invalid Nationality"),
-                )
+        if fn == "No" and not nationality:
+            self.nationality = nationality = "India"
         elif fn == "Yes" and nationality.lower() == "india":
             frappe.throw(
                 _("For International applicants (Foreign National = Yes), Nationality cannot be India."),
                 title=_("Invalid Nationality"),
+            )
+
+        if self.state and not state_belongs_to_country(self.state, nationality):
+            frappe.throw(
+                _("The selected State '{0}' does not belong to '{1}'. Please select a State of {1}.").format(
+                    self.state, nationality
+                ),
+                title=_("Invalid State"),
             )
 
     def _validate_degree_country_for_foreign_national(self):
@@ -425,11 +464,6 @@ class Applicant(Document):
         scope = scope.strip()
         is_foreign = (self.foriegn_national or "").strip().lower() in ("yes", "true", "1")
         is_dom = (self.foriegn_national or "").strip().lower() in ("no", "false", "0")
-        if not is_foreign and not is_dom and self.nationality:
-            if self.nationality.strip().lower() == "india":
-                is_dom = True
-            else:
-                is_foreign = True
 
         prog_title = frappe.db.get_value("Programme", self.program, "program_name") or self.program
 

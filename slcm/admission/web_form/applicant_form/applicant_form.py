@@ -4,7 +4,11 @@ import frappe
 from frappe import _
 from frappe.utils import cint, flt, strip_html
 
-from slcm.admission.doctype.applicant.applicant import APPLICATION_SUBMITTED_STATUSES
+from slcm.admission.doctype.applicant.applicant import (
+    APPLICATION_SUBMITTED_STATUSES,
+    state_belongs_to_country as _state_belongs_to_country,
+    state_country_names,
+)
 from slcm.admission.utils.multiprogram_applicant import (
     build_multiprogram_profile_copy_payload,
     pop_multiprogram_profile_copy_from_cache,
@@ -282,14 +286,11 @@ def validate_new_application_access(program=None, foriegn_national=None, nationa
         resolved_program_level = prog_row.get("program_level") or ""
         resolved_admission_open_for = (prog_row.get("admission_open_for") or "").strip()
 
-        # Check Domestic vs International admission scope
+        # Check Domestic vs International admission scope.
+        # foriegn_national is the authoritative field; nationality is NOT used as a fallback
+        # because domestic applicants can now choose any nationality.
         is_international = (foriegn_national or "").strip().lower() in ("yes", "true", "1")
         is_domestic = (foriegn_national or "").strip().lower() in ("no", "false", "0")
-        if not is_international and not is_domestic and nationality:
-            if nationality.strip().lower() == "india":
-                is_domestic = True
-            else:
-                is_international = True
 
         # reason="scope": the only refusal that depends on foriegn_national — the portal
         # reverts that field ONLY for this reason (other refusals apply to Yes and No alike).
@@ -550,9 +551,6 @@ def save_applicant_draft(data, ignore_mandatory=True):
             prog_name = frappe.db.get_value("Programme", doc.program, "program_name") or doc.program
             is_foreign = (getattr(doc, "foriegn_national", "") or "").strip().lower() in ("yes", "true", "1")
             is_dom = (getattr(doc, "foriegn_national", "") or "").strip().lower() in ("no", "false", "0")
-            if not is_foreign and not is_dom and getattr(doc, "nationality", None):
-                is_dom = doc.nationality.strip().lower() == "india"
-                is_foreign = not is_dom
 
             if acp_scope == "International" and is_dom:
                 return {
@@ -1278,41 +1276,10 @@ def download_portal_application_fee_receipt(applicant_name):
     frappe.local.response.filecontent = pdf
     frappe.local.response.type = "pdf"
 
-# Nationality options spelled differently from the Country used on State records
-NATIONALITY_STATE_COUNTRY_ALIASES = {
-    "united states of america": "United States",
-    "cape verde": "Cabo Verde",
-    "republic of the congo": "Congo",
-    "czechia": "Czech Republic",
-    "the gambia": "Gambia",
-    "federated states of micronesia": "Micronesia",
-    "são tomé and príncipe": "Sao Tome and Principe",
-    "türkiye": "Turkey",
-}
-
-
-def _state_country_names(country):
-    """Lower-cased country names to match against State.country (the given name plus its alias)."""
-    country = (country or "").strip().lower()
-    names = {country}
-    alias = NATIONALITY_STATE_COUNTRY_ALIASES.get(country)
-    if alias:
-        names.add(alias.lower())
-    return tuple(names)
-
-
 @frappe.whitelist(allow_guest=True)
 def state_belongs_to_country(state=None, country=None):
     """True when the State belongs to the given country / nationality. 'Other' is always valid."""
-    state = (state or "").strip()
-    if not state or state.lower() == "other" or not (country or "").strip():
-        return True
-
-    state_country = frappe.db.get_value("State", state, "country")
-    if not state_country:
-        return True
-
-    return state_country.strip().lower() in _state_country_names(country)
+    return _state_belongs_to_country(state, country)
 
 
 @frappe.whitelist(allow_guest=True)
@@ -1352,7 +1319,7 @@ def state_query(doctype=None, txt=None, searchfield=None, start=0, page_len=20, 
             and name like %(txt)s
             order by (case when name = 'Other' then 1 else 0 end), name
             limit %(start)s, %(page_len)s
-        """, dict(params, countries=_state_country_names(country)))
+        """, dict(params, countries=state_country_names(country)))
         return to_results(matched_rows)
 
     rows = frappe.db.sql("""

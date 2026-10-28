@@ -630,15 +630,21 @@
         fetch_offers();
     }
 
+    let offer_timer_interval = null;
+
     function start_offer_timers() {
-        const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+        if (offer_timer_interval) {
+            clearInterval(offer_timer_interval);
+            offer_timer_interval = null;
+        }
 
         const update_timers = () => {
+            let has_active_timer = false;
+
             $('.offer-timer').each(function () {
                 const $this = $(this);
-                const $wrapper = $this.closest('.offer-timer-wrapper');
                 const deadline_str = $this.data('deadline');
-                const $label = $this.prev('small'); // To update Expiry label
+                const $label = $this.prev();
                 if (!deadline_str) return;
 
                 let deadline_val = deadline_str;
@@ -649,7 +655,6 @@
                 const distance = deadline - now;
 
                 if (distance < 0) {
-                    clearInterval(x);
                     $this.text("{{ _('EXPIRED') }}");
                     $this.closest('div').css({
                         'background': '#fef2f2',
@@ -659,6 +664,8 @@
                     $this.prev().css('color', '#991b1b');
                     return;
                 }
+
+                has_active_timer = true;
 
                 if (distance > 24 * 60 * 60 * 1000) {
                     // More than 24 hours
@@ -679,10 +686,15 @@
                     $this.text(display);
                 }
             });
+
+            if (!has_active_timer && offer_timer_interval) {
+                clearInterval(offer_timer_interval);
+                offer_timer_interval = null;
+            }
         };
 
-        setInterval(update_timers, 1000);
         update_timers();
+        offer_timer_interval = setInterval(update_timers, 1000);
     }
 
     function render_error(message) {

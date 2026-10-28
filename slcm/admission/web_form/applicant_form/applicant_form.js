@@ -4617,13 +4617,8 @@ function setupPreferenceValidation() {
 				var nat = wf.get_value('nationality');
 				var fn = wf.get_value('foriegn_national');
 
-				if (fn === 'No' && nat !== 'India') {
-					// Domestic candidate: Nationality is always India
-					if (nat) {
-						frappe.msgprint('For Domestic applications, Nationality must be India.');
-					}
-					wf.set_value('nationality', 'India');
-				} else if (fn === 'Yes' && nat === 'India') {
+				// Domestic applicants may hold any nationality; only International cannot be India
+				if (fn === 'Yes' && nat === 'India') {
 					frappe.msgprint('For International applications, Nationality cannot be India.');
 					wf.set_value('nationality', '');
 				} else if (wf._slcmOnNationalityChangeForState) {
@@ -5198,6 +5193,7 @@ frappe.ready(function () {
 	setupStepper();
 	setupDateOfBirthWebForm();
 	scheduleApplicantCountryStateCityFilter();
+	setupShowAllLinkOptions();
 
 	// Frappe Next: validate_section ignores Attach (no .form-control) — patch after web_form exists
 	var _attachSecPatchN = 0;
@@ -5910,6 +5906,11 @@ function setupCityStateFilter() {
 
 			if (!prevState && currentState) {
 				lastState = currentState;
+				// First State pick must match the Nationality too (e.g. Texas under India). Skipped
+				// while Nationality is still empty so a draft loading its values isn't cleared.
+				if (currentState.toLowerCase() !== 'other' && (wf.get_value('nationality') || '').trim()) {
+					checkStateMatchesCountry(currentState);
+				}
 				return;
 			}
 			if (prevState && currentState && prevState.toLowerCase() === currentState.toLowerCase()) return;
@@ -6018,6 +6019,34 @@ function setupCityStateFilter() {
 	}
 
 	return patchBlock('country', 'state', 'city');
+}
+
+/*
+ * Link / Autocomplete dropdowns list every matching option (scrollable, still searchable).
+ * Frappe caps Link searches at 10 results (link_field_results_limit) and Awesomplete renders
+ * at most 99 items; page_length 0 makes search_link return all rows.
+ */
+var SLCM_MAX_DROPDOWN_ITEMS = 100000;
+function setupShowAllLinkOptions() {
+	var Link = frappe.ui && frappe.ui.form && frappe.ui.form.ControlLink;
+	if (Link && !Link.prototype._slcmShowAllPatched) {
+		Link.prototype._slcmShowAllPatched = true;
+		var origArgs = Link.prototype.get_search_args;
+		Link.prototype.get_search_args = function () {
+			var args = origArgs.apply(this, arguments);
+			if (args) args.page_length = 0;
+			return args;
+		};
+	}
+	var AP = window.Awesomplete && window.Awesomplete.prototype;
+	if (AP && !AP._slcmShowAllPatched) {
+		AP._slcmShowAllPatched = true;
+		var origEvaluate = AP.evaluate;
+		AP.evaluate = function () {
+			this.maxItems = SLCM_MAX_DROPDOWN_ITEMS;
+			return origEvaluate.apply(this, arguments);
+		};
+	}
 }
 
 function scheduleApplicantCountryStateCityFilter() {
