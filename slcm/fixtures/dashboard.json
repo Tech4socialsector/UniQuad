@@ -2,7 +2,7 @@
  {
   "cards": [
    {
-    "card": "Total Applicants"
+    "card": "Total Applications"
    },
    {
     "card": "Draft Application"
@@ -11,7 +11,7 @@
     "card": "Submitted Application"
    },
    {
-    "card": "Completed Applications"
+    "card": "Submitted and Paid Application"
    },
    {
     "card": "Selected Applicants"
@@ -23,13 +23,13 @@
     "card": "Rejected Application"
    },
    {
-    "card": "Issued Offers"
+    "card": "Offer Issued Applicants"
    },
    {
-    "card": "Accepted Offers"
+    "card": "Offer Accepted Applicants"
    },
    {
-    "card": "Expired Offers"
+    "card": "Offer Expired Applicants"
    },
    {
     "card": "Confirmation Fee Paid Applicants"
@@ -92,7 +92,7 @@
   "doctype": "Dashboard",
   "is_default": 0,
   "is_standard": 0,
-  "modified": "2026-08-31 16:14:13.452637",
+  "modified": "2026-10-27 16:10:16.750480",
   "module": "Admission",
   "name": "Admission"
  }

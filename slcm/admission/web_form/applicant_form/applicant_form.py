@@ -661,14 +661,14 @@ def submit_applicant(applicant_name, target_status=None):
 
     current_status = (doc.status or "").strip()
     _ts = (target_status or "Submitted").strip()
-    # The portal may only move an application to Submitted or Completed; any other
+    # The portal may only move an application to Submitted or Submitted and Paid; any other
     # status would bypass the fee check below and the admission workflow.
-    if _ts not in ("Submitted", "Completed"):
+    if _ts not in ("Submitted", "Submitted and Paid"):
         return {"status": "error", "message": _("Invalid target status.")}
 
     if current_status in APPLICATION_SUBMITTED_STATUSES:
-        if current_status == "Submitted" and _ts == "Completed":
-            # Allow upgrading status to Completed after payment
+        if current_status == "Submitted" and _ts == "Submitted and Paid":
+            # Allow upgrading status to Submitted and Paid after payment
             pass
         else:
             return {
@@ -679,7 +679,7 @@ def submit_applicant(applicant_name, target_status=None):
                 "message": _("Application is already submitted."),
             }
 
-    if _ts == "Completed" and current_status not in ("Draft", "Submitted"):
+    if _ts == "Submitted and Paid" and current_status not in ("Draft", "Submitted"):
         return {
             "status": "success",
             "name": doc.name,
@@ -711,7 +711,7 @@ def submit_applicant(applicant_name, target_status=None):
     except Exception:
         frappe.log_error(frappe.get_traceback(), "submit_applicant — pre-submit fee sync")
 
-    if _ts == "Completed" and fee_amount > 0 and fee_status not in ("Paid", "Waived"):
+    if _ts == "Submitted and Paid" and fee_amount > 0 and fee_status not in ("Paid", "Waived"):
         return {"status": "error", "message": _("Application fee must be paid before completing application.")}
 
     # Set Admission Year and Academic Year from current active admission cycle if missing

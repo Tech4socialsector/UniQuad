@@ -2,6 +2,46 @@
  {
   "docstatus": 0,
   "doctype": "Applicant Status",
+  "modified": "2026-03-11 14:41:22.044734",
+  "name": "Interview Sheduled",
+  "next_step_note": null,
+  "stage_type": null,
+  "status": "Interview Sheduled",
+  "status_type": null
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Applicant Status",
+  "modified": "2026-03-11 14:43:34.365668",
+  "name": "Accepted",
+  "next_step_note": null,
+  "stage_type": null,
+  "status": "Accepted",
+  "status_type": null
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Applicant Status",
+  "modified": "2026-03-11 09:37:16.017258",
+  "name": "Selected",
+  "next_step_note": null,
+  "stage_type": null,
+  "status": "Selected",
+  "status_type": null
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Applicant Status",
+  "modified": "2026-03-11 09:37:56.172795",
+  "name": "Waitlisted",
+  "next_step_note": null,
+  "stage_type": null,
+  "status": "Waitlisted",
+  "status_type": null
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Applicant Status",
   "modified": "2026-07-01 12:50:34.370525",
   "name": "Fee Paid",
   "next_step_note": "Your course fee payment has been received. Please wait for an update on the next stage of the process.",
@@ -73,10 +113,10 @@
   "docstatus": 0,
   "doctype": "Applicant Status",
   "modified": "2026-07-14 12:25:04.980712",
-  "name": "Completed",
+  "name": "Submitted and Paid",
   "next_step_note": "You have successfully completed and submitted your application. Please follow the instructions provided to proceed with the next stage of the admission process",
   "stage_type": "Application",
-  "status": "Completed",
+  "status": "Submitted and Paid",
   "status_type": "Completed"
  },
  {

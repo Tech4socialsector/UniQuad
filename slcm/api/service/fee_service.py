@@ -1445,7 +1445,7 @@ class FeeService:
         applicant_doc.reload()
         if applicant_doc.status == "Submitted":
             from slcm.admission.web_form.applicant_form.applicant_form import submit_applicant
-            submit_applicant(applicant_doc.name, "Completed")
+            submit_applicant(applicant_doc.name, "Submitted and Paid")
 
         frappe.db.commit()
 

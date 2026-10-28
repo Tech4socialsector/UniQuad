@@ -72,7 +72,7 @@ class EntranceTestGeneration(Document):
                 AND (ee.exempts_entrance_test IS NULL OR ee.exempts_entrance_test = 0)
                 AND app.name NOT IN (SELECT applicant_id FROM `tabEntrance Test Applicant`)
                 AND app.name NOT IN (SELECT applicant FROM `tabEntrance Test Seat Allocation`)
-                AND app.status = 'Completed'
+                AND app.status = 'Submitted and Paid'
                 AND (
                     (app.foriegn_national = 'Yes' AND p.international_entrance_test = 1)
                     OR

@@ -53,7 +53,7 @@ def state_belongs_to_country(state, country):
 APPLICATION_SUBMITTED_STATUSES = frozenset(
     {
         "Submitted",
-        "Completed",
+        "Submitted and Paid",
         "Entrance Test Scheduled",
         "Entrance Test Allocated",
         "Entrance Test Exempted",
@@ -196,14 +196,14 @@ class Applicant(Document):
         self._validate_nationality_matches_foreign_national()
         self._validate_education_percentage_bounds()
 
-        if self.status in ("Submitted", "Completed") and self.has_value_changed("status"):
+        if self.status in ("Submitted", "Submitted and Paid") and self.has_value_changed("status"):
             self._validate_application_limit_before_submit()
-            if self.status == "Completed":
+            if self.status == "Submitted and Paid":
                 self._validate_application_fee_before_submit()
 
         # Only on the submit/complete transition — not on every later desk edit or fee sync
-        # of an already Submitted/Completed record (rules may have changed since).
-        if self.status in ("Submitted", "Completed") and (self.is_new() or self.has_value_changed("status")):
+        # of an already Submitted/Submitted and Paid record (rules may have changed since).
+        if self.status in ("Submitted", "Submitted and Paid") and (self.is_new() or self.has_value_changed("status")):
             self._validate_admission_open_for_scope()
             self._validate_national_test_percentage()
             self._validate_degree_country_for_foreign_national()
@@ -222,7 +222,7 @@ class Applicant(Document):
 
     def validate_dynamic_conditions(self):
         """Enforce dynamic form conditions on the server side."""
-        if self.status not in ("Submitted", "Completed"):
+        if self.status not in ("Submitted", "Submitted and Paid"):
             return
             
         filters = {}
@@ -515,7 +515,7 @@ class Applicant(Document):
             )
 
     def validate_declaration(self):
-        if self.status in ("Submitted", "Completed") and not self.declaration_undertaking:
+        if self.status in ("Submitted", "Submitted and Paid") and not self.declaration_undertaking:
             frappe.throw(
                 "Declaration Undertaking must be accepted before submission.",
                 title="Declaration Required"
@@ -615,7 +615,7 @@ class Applicant(Document):
         old_status = self.flags.get("old_status")
         just_completed = (
             old_status in ("Draft", "Submitted")
-            and self.status == "Completed"
+            and self.status == "Submitted and Paid"
             and self.has_value_changed("status")
         )
 
@@ -1450,7 +1450,7 @@ class Applicant(Document):
             return False
 
         # ── Resolve email template name ────────────────────────────────────────
-        email_template_name = "Application Completed Email"
+        email_template_name = "NLSAT Application Submitted and Paid Email"
         if self.admission_cycle:
             cycle_template = frappe.db.get_value("Admission Cycle", self.admission_cycle, "application_completed_email")
             if cycle_template:
@@ -1480,7 +1480,7 @@ class Applicant(Document):
             "generated_on": frappe.utils.now_datetime().strftime("%d %b %Y, %I:%M %p"),
         }
 
-        email_subject = f"Application Completed — {self.applicant_id or self.name} | {self.program or 'Admissions'}"
+        email_subject = f"Application Submitted and Paid — {self.applicant_id or self.name} | {self.program or 'Admissions'}"
         html_body = None
         email_template = None
 
@@ -3737,8 +3737,8 @@ def _auto_allocate_entrance_test_on_submission(applicant_doc):
         frappe.log_error("Auto Allocate skipped: No applicant_doc or name", "Auto Allocate Debug")
         return
 
-    if applicant_doc.status != "Completed":
-        frappe.log_error(f"Auto Allocate skipped: status is {applicant_doc.status}, not Completed", "Auto Allocate Debug")
+    if applicant_doc.status != "Submitted and Paid":
+        frappe.log_error(f"Auto Allocate skipped: status is {applicant_doc.status}, not Submitted and Paid", "Auto Allocate Debug")
         return
 
     if (getattr(applicant_doc, "evaluation_status", "") or "").strip() != "Eligible":
