@@ -103,6 +103,14 @@ def _batch_year(batch):
 
 
 def backfill_course_offerings():
+	# Sites coming from TFSS never synced year_no / is_elective onto Course Offering (the doctype
+	# is gone from the app by then); add them so this backfill and remove_course_offering can use them.
+	columns = frappe.db.get_table_columns("Course Offering")
+	for column in ("year_no", "is_elective"):
+		if column not in columns:
+			frappe.db.sql_ddl(f"ALTER TABLE `tabCourse Offering` ADD COLUMN `{column}` int(11) NOT NULL DEFAULT 0")
+	frappe.clear_cache(doctype="Course Offering")
+
 	has_cohort = frappe.db.has_column("Course Offering", "cohort")
 	fields = "name, course_title, year_no" + (", cohort" if has_cohort else "")
 	for row in frappe.db.sql(f"SELECT {fields} FROM `tabCourse Offering`", as_dict=True):
