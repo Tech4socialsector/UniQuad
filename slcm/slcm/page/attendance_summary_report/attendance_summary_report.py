@@ -10,6 +10,7 @@ from slcm.permissions import (
 	_get_faculty_course_offerings,
 	_get_faculty_name,
 )
+from slcm.slcm.doctype.student_enrollment.student_enrollment import year_log_exists
 
 def _is_unrestricted(roles):
 	return bool(roles & _FULL_ACCESS_ROLES) or "slcm_Programme Chair" in roles
@@ -107,13 +108,12 @@ def _resolve_offerings_and_roster(academic_year=None, term=None, programme=None,
 		# Offerings have no Batch: a Batch filter means offerings whose
 		# programme / academic year / year no match an Enrolled Student
 		# Enrollment of that batch.
-		batch_offerings = [r[0] for r in frappe.db.sql("""
+		batch_offerings = [r[0] for r in frappe.db.sql(f"""
 			SELECT DISTINCT co.name
 			FROM `tabCourse Offering` co
 			JOIN `tabStudent Enrollment` se
 				ON se.program = co.program
-				AND se.academic_year = co.academic_year
-				AND se.year_no = co.year_no
+				AND {year_log_exists("se", "co.academic_year", "co.year_no")}
 			WHERE se.batch IN %(batches)s AND se.status = 'Enrolled'
 		""", {"batches": batches})]
 		if not batch_offerings:

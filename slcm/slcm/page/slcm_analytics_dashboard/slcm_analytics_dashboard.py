@@ -3,6 +3,12 @@
 
 import frappe
 
+from slcm.slcm.doctype.student_enrollment.student_enrollment import (
+	enrollments_in_year,
+	get_current_logs,
+	year_log_exists,
+)
+
 # Roles permitted to access the analytics dashboard
 _DASHBOARD_ROLES = {
 	"System Manager",
@@ -303,7 +309,7 @@ def get_student_analytics(academic_year=None, term=None, program=None, cohort=No
 			SELECT sm.name, COALESCE((
 				SELECT se.program FROM `tabStudent Enrollment` se
 				WHERE se.student = sm.name AND se.status = 'Enrolled'
-				ORDER BY se.academic_year DESC, se.creation DESC LIMIT 1
+				ORDER BY se.creation DESC LIMIT 1
 			), sm.programme_of_study) AS program
 			FROM `tabStudent Master` sm
 			{sm_where}
@@ -1272,7 +1278,7 @@ def get_programme_analytics(academic_year=None, term=None, program=None, cohort=
 	se_where_parts = []
 	se_params = {}
 	if academic_year:
-		se_where_parts.append("se.academic_year = %(academic_year)s")
+		se_where_parts.append(year_log_exists("se", "%(academic_year)s"))
 		se_params["academic_year"] = academic_year
 	if program:
 		se_where_parts.append("se.program = %(program)s")
@@ -1329,11 +1335,11 @@ def get_programme_analytics(academic_year=None, term=None, program=None, cohort=
 		co_params["program"] = program
 	if cohort:
 		# Offerings no longer carry a batch: match (program, academic_year, year_no)
-		# of any Enrolled Student Enrollment in that batch.
+		# of any Enrolled Student Enrollment in that batch (via its academic log).
 		co_where_parts.append(
 			"EXISTS (SELECT 1 FROM `tabStudent Enrollment` cse WHERE cse.batch = %(cohort)s"
 			" AND cse.status = 'Enrolled' AND cse.program = co.program"
-			" AND cse.academic_year = co.academic_year AND cse.year_no = co.year_no)"
+			f" AND {year_log_exists('cse', 'co.academic_year', 'co.year_no')})"
 		)
 		co_params["cohort"] = cohort
 
@@ -2094,6 +2100,14 @@ def get_rfid_analytics(**kwargs):
 	}
 
 
+def _attach_current_academic_year(rows):
+	"""Set each Student Enrollment row's academic_year to its current log year."""
+	logs = get_current_logs([r.name for r in rows])
+	for r in rows:
+		log = logs.get(r.name)
+		r.academic_year = log.academic_year if log else None
+
+
 @frappe.whitelist()
 def get_drilldown_data(module, dimension, value, academic_year=None, term=None, program=None,
 					   cohort=None, student_status=None, page=1, page_size=25):
@@ -2143,7 +2157,7 @@ def get_drilldown_data(module, dimension, value, academic_year=None, term=None, 
 					   COALESCE((
 						   SELECT se.program FROM `tabStudent Enrollment` se
 						   WHERE se.student = sm.name AND se.status = 'Enrolled'
-						   ORDER BY se.academic_year DESC, se.creation DESC LIMIT 1
+						   ORDER BY se.creation DESC LIMIT 1
 					   ), sm.programme_of_study) AS program
 				FROM `tabStudent Master` sm
 			"""
@@ -2179,7 +2193,7 @@ def get_drilldown_data(module, dimension, value, academic_year=None, term=None, 
 					   COALESCE((
 						   SELECT se.program FROM `tabStudent Enrollment` se
 						   WHERE se.student = sm.name AND se.status = 'Enrolled'
-						   ORDER BY se.academic_year DESC, se.creation DESC LIMIT 1
+						   ORDER BY se.creation DESC LIMIT 1
 					   ), sm.programme_of_study) AS program
 				FROM `tabStudent Master` sm
 			"""
@@ -2253,7 +2267,7 @@ def get_drilldown_data(module, dimension, value, academic_year=None, term=None, 
 				LEFT JOIN `tabProgramme` p ON p.name = COALESCE((
 					SELECT se.program FROM `tabStudent Enrollment` se
 					WHERE se.student = sm.name AND se.status = 'Enrolled'
-					ORDER BY se.academic_year DESC, se.creation DESC LIMIT 1
+					ORDER BY se.creation DESC LIMIT 1
 				), sm.programme_of_study)
 				WHERE sm.batch = %(cohort_id)s OR c.batch_name = %(value)s
 				ORDER BY sm.registration_id ASC
@@ -2755,15 +2769,16 @@ def get_drilldown_data(module, dimension, value, academic_year=None, term=None, 
 			if value and value not in ("all", "All"):
 				filters["status"] = value
 			if academic_year:
-				filters["academic_year"] = academic_year
+				filters["name"] = ["in", enrollments_in_year(academic_year) or [""]]
 			if program:
 				filters["program"] = program
 			rows = frappe.db.get_all(
 				"Student Enrollment", filters=filters,
 				fields=["name", "student", "student_name", "batch as cohort", "program",
-						"academic_year", "status", "enrollment_date"],
+						"status", "enrollment_date"],
 				limit_start=offset, limit_page_length=page_size, order_by="enrollment_date desc",
 			)
+			_attach_current_academic_year(rows)
 			total = frappe.db.count("Student Enrollment", filters=filters)
 			return {"rows": rows, "total": total,
 					"columns": ["student_name", "cohort", "program", "academic_year",
@@ -2773,13 +2788,14 @@ def get_drilldown_data(module, dimension, value, academic_year=None, term=None, 
 			prog_id = frappe.db.get_value("Programme", {"program_name": value}, "name") or value
 			filters = {"program": prog_id}
 			if academic_year:
-				filters["academic_year"] = academic_year
+				filters["name"] = ["in", enrollments_in_year(academic_year) or [""]]
 			rows = frappe.db.get_all(
 				"Student Enrollment", filters=filters,
 				fields=["name", "student", "student_name", "batch as cohort", "program",
-						"academic_year", "status", "enrollment_date"],
+						"status", "enrollment_date"],
 				limit_start=offset, limit_page_length=page_size, order_by="enrollment_date desc",
 			)
+			_attach_current_academic_year(rows)
 			total = frappe.db.count("Student Enrollment", filters=filters)
 			return {"rows": rows, "total": total,
 					"columns": ["student_name", "cohort", "program", "academic_year",
@@ -2791,9 +2807,10 @@ def get_drilldown_data(module, dimension, value, academic_year=None, term=None, 
 			rows = frappe.db.get_all(
 				"Student Enrollment", filters=filters,
 				fields=["name", "student", "student_name", "batch as cohort", "program",
-						"academic_year", "status", "enrollment_date"],
+						"status", "enrollment_date"],
 				limit_start=offset, limit_page_length=page_size, order_by="enrollment_date desc",
 			)
+			_attach_current_academic_year(rows)
 			total = frappe.db.count("Student Enrollment", filters=filters)
 			return {"rows": rows, "total": total,
 					"columns": ["student_name", "cohort", "program", "academic_year",

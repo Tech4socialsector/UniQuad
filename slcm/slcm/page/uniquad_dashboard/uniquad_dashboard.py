@@ -201,8 +201,11 @@ class Ctx:
 
 	def cohort_offerings(self, section=False):
 		"""Course Offerings no longer carry a batch / section: offerings whose
-		(program, academic_year, year_no) match any Enrolled Student Enrollment
-		in the selected batch (and, with section=True, section)."""
+		(program, academic_year, year_no) match the current Academic Log year of
+		any Enrolled Student Enrollment in the selected batch (and, with
+		section=True, section)."""
+		from slcm.slcm.doctype.student_enrollment.student_enrollment import get_current_logs
+
 		key = ("cohort_offerings", section)
 		if key not in self._cache:
 			se_f = [["status", "=", "Enrolled"]]
@@ -210,9 +213,11 @@ class Ctx:
 				se_f.append(["batch", "in", self.batch])
 			if section and self.section:
 				se_f.append(["section", "in", self.section])
+			programs = {r.name: r.program for r in frappe.get_all("Student Enrollment", filters=se_f, fields=["name", "program"])}
 			triples = {
-				(r.program, r.academic_year, r.year_no)
-				for r in frappe.get_all("Student Enrollment", filters=se_f, fields=["program", "academic_year", "year_no"], distinct=True)
+				(programs[name], log.academic_year, cint(log.year_no))
+				for name, log in get_current_logs(list(programs)).items()
+				if log
 			}
 			names = []
 			for program, academic_year, year_no in triples:
@@ -2150,21 +2155,60 @@ def get_student_profile(student):
 	enrollments = block(
 		"Student Enrollment",
 		filters={"student": student},
-		fields=["name", "program", "batch", "section", "academic_year", "year_no", "status", "enrollment_date"],
+		fields=["name", "program", "batch", "section", "status", "enrollment_date"],
 		order_by="enrollment_date desc",
 	)
 	if enrollments.get("rows"):
+		names = [e["name"] for e in enrollments["rows"]]
 		courses = block(
 			"Student Enrollment Course",
-			filters={"parent": ["in", [e["name"] for e in enrollments["rows"]]], "parenttype": "Student Enrollment"},
-			fields=["parent", "course", "course_offering", "course_type", "credits", "status", "grade"],
+			filters={"parent": ["in", names], "parenttype": "Student Enrollment"},
+			fields=["parent", "course", "course_offering", "course_type", "credits", "status", "grade", "academic_year", "year_no"],
 			parent_doctype="Student Enrollment",
 		)
 		by_parent = {}
 		for c in courses.get("rows", []):
 			by_parent.setdefault(c["parent"], []).append(c)
+		log = block(
+			"Student Academic Log",
+			filters={"parent": ["in", names], "parenttype": "Student Enrollment"},
+			fields=["parent", "academic_year", "year_no", "status"],
+			parent_doctype="Student Enrollment",
+		)
+		years = {}
+		for r in log.get("rows", []):
+			years.setdefault(r["parent"], {}).setdefault((r["academic_year"], cint(r["year_no"])), set()).add(r["status"])
+
+		# One entry per enrolment year (from its Academic Log), latest first; each
+		# keeps that year's courses (rows without a year go with the latest year).
+		rows = []
 		for e in enrollments["rows"]:
-			e["courses"] = by_parent.get(e["name"], [])
+			e_courses = by_parent.get(e["name"], [])
+			e_years = sorted(
+				(years.get(e["name"]) or {}).items(),
+				key=lambda kv: (str(frappe.get_cached_value("Academic Year", kv[0][0], "year_start_date") or "") if kv[0][0] else "", kv[0][1]),
+				reverse=True,
+			)
+			if not e_years:
+				rows.append({**e, "courses": e_courses})
+				continue
+			for i, ((academic_year, year_no), statuses) in enumerate(e_years):
+				if "Ongoing" in statuses:
+					status = e["status"]
+				else:
+					status = next((s for s in ("Dropped", "Redo", "Upcoming") if s in statuses), "Completed")
+				rows.append({
+					**e,
+					"academic_year": academic_year,
+					"year_no": year_no,
+					"status": status,
+					"courses": [
+						c for c in e_courses
+						if (c.get("academic_year") == academic_year and (not c.get("year_no") or cint(c["year_no"]) == year_no))
+						or (not c.get("academic_year") and i == 0)
+					],
+				})
+		enrollments["rows"] = rows
 
 	return {
 		"profile": {k: _serialize(v) for k, v in profile.items()},

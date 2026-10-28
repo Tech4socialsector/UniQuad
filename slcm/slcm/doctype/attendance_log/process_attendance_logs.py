@@ -41,6 +41,10 @@ from slcm.slcm.doctype.rfid_device_room_mapping.rfid_device_room_mapping import 
     get_active_rooms_for_device,
 )
 from slcm.slcm.doctype.academic_term.academic_term import get_current_term
+from slcm.slcm.doctype.student_enrollment.student_enrollment import (
+    enrollments_in_year,
+    get_current_log,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -58,7 +62,7 @@ def get_student_enrollment_context(student):
     enrollment = frappe.get_all(
         "Student Enrollment",
         filters={"student": student, "status": "Enrolled"},
-        fields=["program", "academic_year", "batch", "section"],
+        fields=["name", "program", "batch", "section"],
         order_by="enrollment_date desc",
         limit=1,
     )
@@ -66,12 +70,13 @@ def get_student_enrollment_context(student):
         return {}
 
     e = enrollment[0]
+    log = get_current_log(e.name) or frappe._dict()
     return {
         "programme": e.get("program"),
-        "academic_year": e.get("academic_year"),
+        "academic_year": log.get("academic_year"),
         "batch": e.get("batch"),
         "section": e.get("section"),
-        "academic_term": get_current_term(),
+        "academic_term": log.get("academic_term") or get_current_term(),
     }
 
 
@@ -468,13 +473,11 @@ def _is_student_in_course_offering(student, course_offering):
     )
     if not co or not co.program:
         return False
-    return bool(frappe.db.exists("Student Enrollment", {
-        "student":       student,
-        "program":       co.program,
-        "academic_year": co.academic_year,
-        "year_no":       co.year_no,
-        "status":        "Enrolled",
-    }))
+    return bool(enrollments_in_year(
+        academic_year=co.academic_year,
+        year_no=co.year_no,
+        filters={"student": student, "program": co.program, "status": "Enrolled"},
+    ))
 
 
 # ---------------------------------------------------------------------------

@@ -5,6 +5,8 @@ import io
 import openpyxl
 import traceback
 
+from slcm.slcm.doctype.student_enrollment.student_enrollment import year_log_exists
+
 @frappe.whitelist()
 def parse_import_file(file_url, exam_plan, evaluation_schema, exam_component=None,
                       assessment_type=None, re_exam_component=None, re_exam_assessment_type=None):
@@ -803,7 +805,7 @@ def resolve_course_offering(course_code, batch, term_name):
 def _get_batch_offerings(course_title=None, batch=None):
     """Course Offerings with the Batch they serve. Offerings have no cohort:
     an offering belongs to a batch when its (program, academic_year, year_no)
-    matches a Student Enrollment of that batch. term_label is the Academic
+    matches an academic log row of a Student Enrollment of that batch. term_label is the Academic
     Term's term_name (e.g. "Trimester 1"), so imports may use either form."""
     conditions = ["se.batch IS NOT NULL", "se.batch != ''"]
     params = {}
@@ -819,8 +821,7 @@ def _get_batch_offerings(course_title=None, batch=None):
         FROM `tabCourse Offering` co
         JOIN `tabStudent Enrollment` se
             ON se.program = co.program
-            AND se.academic_year = co.academic_year
-            AND se.year_no = co.year_no
+            AND {year_log_exists("se", "co.academic_year", "co.year_no")}
             AND se.status IN ('Enrolled', 'Completed')
         LEFT JOIN `tabAcademic Term` at ON at.name = co.term_name
         WHERE {" AND ".join(conditions)}

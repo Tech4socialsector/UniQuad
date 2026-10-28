@@ -148,7 +148,7 @@
 {% endblock %}
 
 {% macro status_cls(s) -%}
-{{ 'enr-status-ok' if s == 'Enrolled' else ('enr-status-bad' if s in ('Withdrawn', 'Terminated', 'Cancelled') else 'enr-status-done') }}
+{{ 'enr-status-ok' if s in ('Enrolled', 'Ongoing') else ('enr-status-up' if s == 'Upcoming' else ('enr-status-bad' if s in ('Withdrawn', 'Terminated', 'Cancelled', 'Dropped', 'Redo') else 'enr-status-done')) }}
 {%- endmacro %}
 
 {% block content %}
@@ -344,11 +344,11 @@
 {% if enrollments | length > 1 %}
 <div class="enr-section-title fade-in">
   <h2><span class="sp-ms" aria-hidden="true">history</span>Enrolment History</h2>
-  <span class="enr-section-sub">{{ enrollments | length }} enrolments · select one to see its courses</span>
+  <span class="enr-section-sub">{{ enrollments | length }} academic years · select one to see its courses</span>
 </div>
 <div class="enr-timeline fade-in">
   {% for e in enrollments %}
-  {% set _cur = active_enrollment and e.name == active_enrollment.name %}
+  {% set _cur = e.is_current %}
   <details class="enr-tl-item{{ ' is-current' if _cur }}{{ ' is-upcoming' if e.is_upcoming }}">
     <summary class="enr-tl-sum">
       <span class="enr-tl-dot" aria-hidden="true"></span>
@@ -379,13 +379,13 @@
             <td><span class="enr-chip {{ 'enr-type-elec' if c.course_type == 'Elective' else 'enr-type-core' }}">{{ c.course_type }}</span></td>
             <td class="num">{{ c.credits }}</td>
             <td>{{ c.grade or '—' }}</td>
-            <td><span class="enr-pill {{ 'enr-pill-bad' if c.status == 'Dropped' else 'enr-pill-ok' }}">{{ c.status }}</span></td>
+            <td><span class="enr-pill {{ 'enr-pill-bad' if c.status in ('Dropped', 'Withdrawn', 'Failed', 'Redo') else 'enr-pill-ok' }}">{{ c.status }}</span></td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
       {% else %}
-      <div class="enr-muted" style="font-size:12.5px;padding:4px 0 8px;">No courses recorded for this enrolment.</div>
+      <div class="enr-muted" style="font-size:12.5px;padding:4px 0 8px;">No courses recorded for this year.</div>
       {% endif %}
       {% if e.faculty_advisor_name %}<div class="enr-muted" style="font-size:12px;margin-top:8px;">Faculty adviser: {{ e.faculty_advisor_name }}</div>{% endif %}
     </div>

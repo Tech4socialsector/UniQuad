@@ -5,6 +5,8 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import get_time
 
+from slcm.slcm.doctype.student_enrollment.student_enrollment import year_log_exists
+
 class OfficeHoursGroup(Document):
 	def on_update(self):
 		sync_office_hours_session(self)
@@ -88,15 +90,15 @@ def get_students(program, course, academic_year=None, academic_term=None, batch=
 	conditions = ["se.program = %(program)s", "se.status = 'Enrolled'", "se.docstatus < 2"]
 
 	if academic_year:
-		conditions.append("se.academic_year = %(academic_year)s")
+		conditions.append(year_log_exists("se", "%(academic_year)s"))
 		params["academic_year"] = academic_year
 
 	if academic_term:
-		# Enrollments are per academic year (no term): match the term's year.
-		conditions.append(
-			"se.academic_year = (SELECT at.academic_year FROM `tabAcademic Term` at"
-			" WHERE at.name = %(academic_term)s)"
-		)
+		# Match enrollments with a log row in the term's academic year.
+		conditions.append(year_log_exists(
+			"se",
+			"(SELECT at.academic_year FROM `tabAcademic Term` at WHERE at.name = %(academic_term)s)",
+		))
 		params["academic_term"] = academic_term
 
 	if batch:

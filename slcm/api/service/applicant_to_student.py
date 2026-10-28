@@ -759,9 +759,10 @@ def create_student_enrollment(student_name):
         enrollment.batch = student.batch
         # A Batch no longer carries programme/term: set them from the student.
         enrollment.program = student.programme_of_study
-        enrollment.academic_year = student.academic_year
-        enrollment.year_no = 1
         enrollment.section = student.section
+        # Year 1 of the student's academic year; without one, validate() falls back to the Batch's.
+        if student.academic_year:
+            enrollment.add_year_log(student.academic_year, 1)
 
         enrollment.insert(ignore_permissions=True)
         frappe.logger().info(f"[create_student_enrollment] Created {enrollment.name} for Student {student_name}")

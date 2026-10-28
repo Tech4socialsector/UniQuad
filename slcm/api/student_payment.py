@@ -25,6 +25,7 @@ import frappe
 from frappe import _
 from frappe.utils import flt, today, getdate, add_days
 from slcm.slcm.doctype.academic_term.academic_term import get_current_term
+from slcm.slcm.doctype.student_enrollment.student_enrollment import get_current_log
 
 # ── Internal helpers ───────────────────────────────────────────────────────
 
@@ -192,11 +193,12 @@ def _create_invoice_from_sm(student_name):
         frappe.db.get_value(
             "Student Enrollment",
             {"student": student_name, "status": "Enrolled"},
-            ["name", "academic_year", "program"],
+            ["name", "program"],
             as_dict=True,
             order_by="creation desc",
         )
     )
+    current_log = get_current_log(enrollment.name) if enrollment else None
 
     fee_component_name = _ensure_fee_component()
 
@@ -205,8 +207,8 @@ def _create_invoice_from_sm(student_name):
         "doctype":          "Fee Invoice",
         "student":          student_name,
         "program":          (enrollment and enrollment.program) or sm.get("programme_of_study") or "",
-        "academic_year":    (enrollment and enrollment.academic_year) or sm.get("academic_year") or "",
-        "academic_term":    get_current_term() or "",
+        "academic_year":    (current_log and current_log.academic_year) or sm.get("academic_year") or "",
+        "academic_term":    (current_log and current_log.academic_term) or get_current_term() or "",
         "enrollment":       (enrollment and enrollment.name) or "",
         "invoice_date":     today(),
         "due_date":         add_days(today(), 30),

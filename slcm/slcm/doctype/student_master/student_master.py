@@ -690,11 +690,15 @@ def bulk_student_enrollment(students):
                 "batch":         student.batch,
                 "section":       student.section or "",
                 "program":       _get_student_program(student.name, student.programme_of_study),
-                "year_no":       frappe.utils.cint(student.current_year) or 1,
-                "academic_year": student.academic_year,
                 "status":        "Enrolled",
                 "enrollment_date": frappe.utils.today(),
             })
+            # Start the Academic Log at the student's academic year / year of
+            # study; without an academic year it defaults from the Batch.
+            if student.academic_year:
+                new_enrollment.add_year_log(
+                    student.academic_year, frappe.utils.cint(student.current_year) or 1
+                )
 
             new_enrollment.insert()
 
@@ -846,20 +850,54 @@ def _rebuild_fee_invoices(sm_doc):
 
 
 def _enrollments_by_recency(student_name):
-    """Return the student's enrollments ordered by actual academic recency:
-    the enrollment still marked "Enrolled" first, then by the linked
-    Academic Year's start date (most recent first) — NOT by row creation
-    time, since enrollments (e.g. for a past term) may be entered into the
-    system after a later enrollment already exists."""
+    """Return the student's years of study, one entry per enrollment +
+    academic year + year (grouped from each enrollment's Academic Log),
+    ordered by actual academic recency: the current year of the enrollment
+    still marked "Enrolled" first, then by the Academic Year's start date
+    (most recent first) — NOT by row creation time.
+
+    Each entry: name (the enrollment), academic_year, year_no, academic_term
+    (the Ongoing term, if any), status (the enrollment's status for the
+    current year, else Completed/Redo/Dropped from the log) and latest
+    (the enrollment's most recent year)."""
+    from slcm.slcm.doctype.student_enrollment.student_enrollment import get_log
+
     enrollments = frappe.get_all(
         "Student Enrollment",
         filters={"student": student_name, "docstatus": ["<", 2]},
-        fields=["name", "academic_year", "year_no", "status", "creation"],
+        fields=["name", "status", "creation"],
     )
     if not enrollments:
         return []
 
-    ay_names = {e.academic_year for e in enrollments if e.academic_year}
+    entries = []
+    for e in enrollments:
+        years = {}
+        for row in get_log(e.name):  # oldest first
+            years.setdefault((row.academic_year, frappe.utils.cint(row.year_no)), []).append(row)
+        if not years:
+            # An enrollment without an Academic Log is still selectable.
+            entries.append(frappe._dict(
+                name=e.name, academic_year=None, year_no=None, academic_term=None,
+                status=e.status, creation=e.creation, ongoing=True, latest=True,
+            ))
+            continue
+        last_key = list(years)[-1]
+        for (academic_year, year_no), rows in years.items():
+            ongoing = next((r for r in rows if r.status == "Ongoing"), None)
+            statuses = {r.status for r in rows}
+            if ongoing:
+                status = e.status
+            else:
+                status = next((s for s in ("Dropped", "Redo", "Upcoming") if s in statuses), "Completed")
+            entries.append(frappe._dict(
+                name=e.name, academic_year=academic_year, year_no=year_no,
+                academic_term=ongoing.academic_term if ongoing else None,
+                status=status, creation=e.creation, ongoing=bool(ongoing),
+                latest=(academic_year, year_no) == last_key,
+            ))
+
+    ay_names = {e.academic_year for e in entries if e.academic_year}
     ay_start = {}
     if ay_names:
         for ay in frappe.get_all(
@@ -869,21 +907,23 @@ def _enrollments_by_recency(student_name):
         ):
             ay_start[ay.name] = ay.year_start_date
 
-    enrollments.sort(
+    entries.sort(
         key=lambda e: (
-            1 if e.status == "Enrolled" else 0,
+            1 if (e.ongoing and e.status == "Enrolled") else 0,
             getdate(ay_start.get(e.academic_year) or e.creation),
+            frappe.utils.cint(e.year_no),
             str(e.creation),
         ),
         reverse=True,
     )
-    return enrollments
+    return entries
 
 
 @frappe.whitelist()
 def get_academic_progress_list(student_name):
-    """Return all enrollments for a student (current first, then most
-    recent past terms) for the Current/Previous Academic Progress selector."""
+    """Return all years of study of a student (current first, then most
+    recent past years) for the Current/Previous Academic Progress selector.
+    `key` identifies an entry (enrollment + academic year + year)."""
     if not frappe.db.exists("Student Master", student_name):
         frappe.throw(_("Student Master not found: {0}").format(student_name))
     if not frappe.has_permission("Student Master", "read", doc=student_name):
@@ -904,9 +944,11 @@ def get_academic_progress_list(student_name):
     return [
         {
             "name": e.name,
+            "key": f"{e.name}|{e.academic_year or ''}|{e.year_no or ''}",
             "academic_year": e.academic_year or "",
+            "year_no": e.year_no or "",
             "ay_name": ay_map.get(e.academic_year) or e.academic_year or "",
-            # Enrollments are per academic year now; label them by year of study.
+            # One entry per year of the Academic Log; label it by year of study.
             "term_name": f"Year {e.year_no}" if e.year_no else "",
             "status": e.status or "",
             "is_current": idx == 0,
@@ -916,12 +958,13 @@ def get_academic_progress_list(student_name):
 
 
 @frappe.whitelist()
-def get_academic_progress(student_name, enrollment_name=None):
+def get_academic_progress(student_name, enrollment_name=None, academic_year=None, year_no=None):
     """Return academic year, term, semester and enrolled courses for a student.
 
-    By default returns the most recent (current) enrollment. Pass
-    `enrollment_name` to fetch a specific past enrollment instead, for the
-    "Previous Academic Progress" view.
+    By default returns the current year of the most recent enrollment. Pass
+    `enrollment_name` (and `academic_year` / `year_no` from
+    get_academic_progress_list) to fetch a specific past year instead, for
+    the "Previous Academic Progress" view.
 
     Also checks the active Promotion Policy to compute promotion eligibility
     (promotion eligibility always reflects the student's current standing,
@@ -941,30 +984,37 @@ def get_academic_progress(student_name, enrollment_name=None):
     batch_year = sm.section or ""
     current_term = get_current_term()
 
-    # ── Enrollment: a specific one if requested, else the current one ───────
+    # ── Year of an enrollment: a specific one if requested, else the current one
+    recent = _enrollments_by_recency(student_name)
     if enrollment_name:
+        entry = next((
+            x for x in recent
+            if x.name == enrollment_name
+            and (not academic_year or x.academic_year == academic_year)
+            and (not frappe.utils.cint(year_no) or frappe.utils.cint(x.year_no) == frappe.utils.cint(year_no))
+        ), None)
+    else:
+        entry = recent[0] if recent else None
+
+    enrollment = None
+    if entry:
         enrollment = frappe.db.get_value(
             "Student Enrollment",
-            {"student": student_name, "docstatus": ["<", 2], "name": enrollment_name},
+            entry.name,
             [
-                "name", "academic_year", "year_no", "status",
+                "name", "status",
                 "program", "batch", "section", "enrollment_date", "faculty_advisor",
             ],
             as_dict=True,
         )
-    else:
-        recent = _enrollments_by_recency(student_name)
-        enrollment = None
-        if recent:
-            enrollment = frappe.db.get_value(
-                "Student Enrollment",
-                recent[0].name,
-                [
-                    "name", "academic_year", "year_no", "status",
-                    "program", "batch", "section", "enrollment_date", "faculty_advisor",
-                ],
-                as_dict=True,
-            )
+        if enrollment:
+            # The viewed year comes from the Academic Log, not the enrollment.
+            enrollment.update({
+                "academic_year": entry.academic_year,
+                "year_no":       entry.year_no,
+                "academic_term": entry.academic_term,
+                "status":        entry.status,
+            })
 
     result = {
         "student_name": student_name,
@@ -991,13 +1041,14 @@ def get_academic_progress(student_name, enrollment_name=None):
             as_dict=True,
         )
 
-    # Academic term details: the date-based current term, when it falls in
-    # this enrollment's academic year (enrollments don't store a term).
+    # Academic term details: the log's Ongoing term, else the date-based
+    # current term, when it falls in the viewed academic year.
     at_doc = None
-    if current_term:
+    viewed_term = enrollment.academic_term or current_term
+    if viewed_term:
         at_doc = frappe.db.get_value(
             "Academic Term",
-            current_term,
+            viewed_term,
             ["name", "academic_year", "term_name", "term_start_date", "term_end_date", "status"],
             as_dict=True,
         )
@@ -1060,9 +1111,19 @@ def get_academic_progress(student_name, enrollment_name=None):
     sec_rows = frappe.get_all(
         "Student Enrollment Course",
         filters={"parent": enrollment.name, "parenttype": "Student Enrollment"},
-        fields=["course_offering", "course", "course_type", "credits", "status", "grade"],
+        fields=["course_offering", "course", "course_type", "credits", "status", "grade",
+                "academic_year", "year_no"],
         order_by="idx asc",
     )
+    # enrolled_courses holds every year's courses: keep the viewed year's
+    # (rows without a year, from before the Academic Log, go with the latest year).
+    if enrollment.academic_year:
+        sec_rows = [
+            r for r in sec_rows
+            if (r.academic_year == enrollment.academic_year
+                and (not r.year_no or frappe.utils.cint(r.year_no) == frappe.utils.cint(enrollment.year_no)))
+            or (not r.academic_year and entry.latest)
+        ]
     co_names = [r.course_offering for r in sec_rows if r.course_offering]
     co_map = {}
     if co_names:

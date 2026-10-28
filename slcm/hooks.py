@@ -50,6 +50,8 @@ doctype_list_js = {
     "Fee Concession": "public/js/bulk_upload_template.js",
     "Fee Payment": "public/js/bulk_upload_template.js",
     "Fee Demand": "public/js/bulk_upload_template.js",
+    # Action → Enroll step-by-step wizard
+    "Student Master": "public/js/enrollment_wizard.js",
 }
 
 doctype_calendar_js = {
@@ -631,6 +633,8 @@ scheduler_events = {
 		"slcm.slcm.doctype.student_attendance_condonation.student_attendance_condonation.auto_reject_below_attendance_floor",
 		# Background sync for settlements if webhooks fail
 		"slcm.api.sync_settlements.daily_sync_settlements",
+		# Student Academic Log — move Ongoing to the next term once a term has ended
+		"slcm.slcm.doctype.student_enrollment.student_enrollment.advance_term_status",
 	]
 }
 

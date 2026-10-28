@@ -332,13 +332,22 @@ def get_details_from_section(section):
 def _get_batch_year_no(batch, program, academic_year):
 	"""Year of study of `batch` in `academic_year`: taken from the batch's
 	Student Enrollments, else counted from the batch's starting year."""
-	year_no = frappe.db.get_value(
-		"Student Enrollment",
+	year_no = frappe.db.sql(
+		"""
+		SELECT l.year_no
+		FROM `tabStudent Academic Log` l
+		INNER JOIN `tabStudent Enrollment` se
+			ON se.name = l.parent AND l.parenttype = 'Student Enrollment'
+		WHERE se.batch = %(batch)s AND se.program = %(program)s
+			AND l.academic_year = %(academic_year)s
+			AND l.status NOT IN ('Redo', 'Dropped')
+			AND IFNULL(l.year_no, 0) > 0
+		LIMIT 1
+		""",
 		{"batch": batch, "program": program, "academic_year": academic_year},
-		"year_no",
 	)
 	if year_no:
-		return cint(year_no)
+		return cint(year_no[0][0])
 
 	batch_start = frappe.db.get_value(
 		"Academic Year",

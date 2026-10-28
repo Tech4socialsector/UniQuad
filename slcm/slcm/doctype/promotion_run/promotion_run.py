@@ -6,8 +6,10 @@ from frappe.model.document import Document
 from frappe.utils import now_datetime, cint
 
 from slcm.slcm.doctype.student_enrollment.student_enrollment import (
-	create_next_year_enrollment,
+	CLOSED_LOG_STATUSES,
+	get_current_logs,
 	get_offerings_for_year,
+	promote_enrollment,
 )
 from slcm.slcm.page.promotion_management.promotion_management import (
 	_evaluate_student,
@@ -18,12 +20,26 @@ BATCH_SIZE = 25
 ALLOWED_ROLES = ("System Manager", "slcm_Academic Incharge")
 
 
-def _target_exists(student, program, target_academic_year):
-	return frappe.db.get_value(
-		"Student Enrollment",
-		{"student": student, "program": program, "academic_year": target_academic_year},
-		"name",
+def _target_exists(enrollment, target_academic_year):
+	"""The enrollment's Academic Log already reaches the target academic year."""
+	return frappe.db.exists(
+		"Student Academic Log",
+		{
+			"parenttype": "Student Enrollment",
+			"parent": enrollment,
+			"academic_year": target_academic_year,
+			"status": ["not in", list(CLOSED_LOG_STATUSES)],
+		},
 	)
+
+
+def _with_current_year(enrollments):
+	"""Attach academic_year / year_no from each enrollment's current log row."""
+	current = get_current_logs([e.name for e in enrollments])
+	for e in enrollments:
+		log = current.get(e.name) or frappe._dict()
+		e.academic_year, e.year_no = log.academic_year, cint(log.year_no)
+	return enrollments
 
 
 def _is_final_year(program, year_no):
@@ -84,10 +100,10 @@ def get_target_term_courses(student_list, target_academic_year, target_term=None
 
 	targets = sorted({
 		(e.program, cint(e.year_no) + 1)
-		for e in frappe.get_all(
-			"Student Enrollment", filters={"name": ["in", student_list]}, fields=["program", "year_no"]
-		)
-		if e.program
+		for e in _with_current_year(frappe.get_all(
+			"Student Enrollment", filters={"name": ["in", student_list]}, fields=["name", "program"]
+		))
+		if e.program and e.year_no
 	})
 
 	courses = []
@@ -110,9 +126,9 @@ def create_and_queue(student_list, target_academic_year, target_term=None):
 	selection rather than re-asked in the dialog.
 
 	Each selected enrollment is promoted to the next year of study in
-	target_academic_year (a NEW enrollment with year_no + 1; the old one is
-	marked Completed). No Promotion Policy is applied here; policy-checked
-	promotion is done from the Promotion Management page."""
+	target_academic_year (its Academic Log gets the next year's rows; the
+	current year's rows are marked Completed). No Promotion Policy is applied
+	here; policy-checked promotion is done from the Promotion Management page."""
 	_check_permission()
 
 	if isinstance(student_list, str):
@@ -124,11 +140,11 @@ def create_and_queue(student_list, target_academic_year, target_term=None):
 	if not target_academic_year:
 		frappe.throw(frappe._("Target Academic Year is required."))
 
-	enrollments = frappe.db.get_all(
+	enrollments = _with_current_year(frappe.db.get_all(
 		"Student Enrollment",
 		filters={"name": ["in", student_list]},
-		fields=["name", "student", "student_name", "batch", "program", "academic_year", "section"],
-	)
+		fields=["name", "student", "student_name", "batch", "program", "section"],
+	))
 	if any(e.academic_year == target_academic_year for e in enrollments):
 		frappe.throw(frappe._("Target Academic Year must be different from the selected enrollments' academic year."))
 	if not enrollments:
@@ -184,11 +200,11 @@ def process_promotion_run(promotion_run_name):
 
 		import json
 		selected = json.loads(doc.selected_enrollments)
-		enrollments = frappe.db.get_all(
+		enrollments = _with_current_year(frappe.db.get_all(
 			"Student Enrollment",
 			filters={"name": ["in", selected]},
-			fields=["name", "student", "student_name", "batch", "program", "year_no"],
-		)
+			fields=["name", "student", "student_name", "batch", "program"],
+		))
 
 		doc.db_set("total_students", len(enrollments))
 		frappe.db.commit()
@@ -265,9 +281,8 @@ def _process_one_student(doc, enrollment, policy_dict, student_eval_map):
 		_append_log(doc, enrollment, "Skipped", "Fee Due", "Student has outstanding Fee Demand(s).")
 		return
 
-	existing = _target_exists(student, enrollment.program, doc.target_academic_year)
-	if existing:
-		_append_log(doc, enrollment, "Skipped", "Already Promoted", "Enrollment already exists for the target academic year.", to_enrollment=existing)
+	if _target_exists(enrollment.name, doc.target_academic_year):
+		_append_log(doc, enrollment, "Skipped", "Already Promoted", "Academic Log already has the target academic year.", to_enrollment=enrollment.name)
 		return
 
 	if _is_final_year(enrollment.program, enrollment.year_no):
@@ -275,7 +290,7 @@ def _process_one_student(doc, enrollment, policy_dict, student_eval_map):
 		return
 
 	try:
-		new_name, _created = create_next_year_enrollment(enrollment.name, doc.target_academic_year)
+		new_name, _moved = promote_enrollment(enrollment.name, doc.target_academic_year)
 		_append_log(doc, enrollment, "Promoted", None, None, to_enrollment=new_name)
 	except Exception:
 		frappe.log_error(
@@ -330,8 +345,8 @@ def _finalize(doc):
 
 @frappe.whitelist()
 def promote_anyway(promotion_run_name, log_row_name, reason=None):
-	"""Manual override: create the target enrollment for one skipped student,
-	bypassing the policy check."""
+	"""Manual override: promote one skipped student to the target academic
+	year, bypassing the policy check."""
 	_check_permission()
 	run = frappe.get_doc("Promotion Run", promotion_run_name)
 	frappe.has_permission("Promotion Run", "write", doc=run, throw=True)
@@ -345,7 +360,7 @@ def promote_anyway(promotion_run_name, log_row_name, reason=None):
 	if not frappe.db.exists("Student Enrollment", row.from_enrollment):
 		frappe.throw(frappe._("Original enrollment not found."))
 
-	new_name, _created = create_next_year_enrollment(row.from_enrollment, run.target_academic_year)
+	new_name, _moved = promote_enrollment(row.from_enrollment, run.target_academic_year)
 
 	row.to_enrollment = new_name
 	row.result = "Promoted"
@@ -421,23 +436,23 @@ def retry_unresolved(promotion_run_name):
 	if run.promotion_policy:
 		policy_dict = frappe.get_doc("Promotion Policy", run.promotion_policy).as_dict()
 
+	enrollments = {
+		e.name: e for e in _with_current_year(frappe.get_all(
+			"Student Enrollment",
+			filters={"name": ["in", [r.from_enrollment for r in unresolved]]},
+			fields=["name", "student", "student_name", "program"],
+		))
+	}
+
 	student_eval_map = {}
 	if policy_dict:
-		from_years = {
-			cint(frappe.db.get_value("Student Enrollment", r.from_enrollment, "year_no")) for r in unresolved
-		}
-		for from_year in from_years:
-			if not from_year:
-				continue
+		for from_year in {e.year_no for e in enrollments.values() if e.year_no}:
 			for row in _get_students_raw(run.program, run.source_academic_year, from_year):
 				student_eval_map[row["student"]] = row
 
 	promoted_now = 0
 	for row in unresolved:
-		enrollment = frappe.db.get_value(
-			"Student Enrollment", row.from_enrollment,
-			["name", "student", "student_name", "program", "year_no"], as_dict=True,
-		)
+		enrollment = enrollments.get(row.from_enrollment)
 		if not enrollment:
 			continue
 
@@ -447,10 +462,10 @@ def retry_unresolved(promotion_run_name):
 
 		fee_blocked = policy_dict.get("block_on_fee_due") and _has_fee_due(enrollment.student)
 		if status == "Promoted" and not fee_blocked:
-			if not _target_exists(enrollment.student, enrollment.program, run.target_academic_year) \
+			if not _target_exists(enrollment.name, run.target_academic_year) \
 					and not _is_final_year(enrollment.program, enrollment.year_no):
 				try:
-					new_name, _created = create_next_year_enrollment(enrollment.name, run.target_academic_year)
+					new_name, _moved = promote_enrollment(enrollment.name, run.target_academic_year)
 				except Exception:
 					frappe.log_error(
 						title=f"Promotion Run {run.name}: retry failed for {enrollment.student}",

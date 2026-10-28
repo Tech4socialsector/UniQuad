@@ -256,25 +256,30 @@ def get_enrolled_offerings(student):
 	if not student:
 		return []
 
+	from slcm.slcm.doctype.student_enrollment.student_enrollment import get_current_logs
+
 	offerings = []
-	for enrollment in frappe.get_all(
+	enrollments = frappe.get_all(
 		"Student Enrollment",
 		filters={"student": student, "status": "Enrolled"},
-		fields=["name", "program", "academic_year", "year_no"],
-	):
+		fields=["name", "program"],
+	)
+	current_logs = get_current_logs([e.name for e in enrollments])
+	for enrollment in enrollments:
 		rows = frappe.get_all(
 			"Student Enrollment Course",
 			filters={"parent": enrollment.name, "parenttype": "Student Enrollment"},
 			pluck="course_offering",
 		)
 		rows = [r for r in rows if r]
-		if not rows:
+		log = current_logs.get(enrollment.name)
+		if not rows and log and log.academic_year:
 			rows = frappe.get_all(
 				"Course Offering",
 				filters={
 					"program": enrollment.program,
-					"academic_year": enrollment.academic_year,
-					"year_no": enrollment.year_no,
+					"academic_year": log.academic_year,
+					"year_no": log.year_no,
 					"status": "Active",
 				},
 				pluck="name",

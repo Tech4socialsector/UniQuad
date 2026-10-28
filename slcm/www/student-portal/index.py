@@ -3,6 +3,7 @@ import importlib
 import frappe
 
 from slcm.slcm.doctype.academic_term.academic_term import get_current_term
+from slcm.slcm.doctype.student_enrollment.student_enrollment import get_current_log
 from slcm.slcm.utils.exam_schedule import get_student_programme
 
 no_cache = 1
@@ -116,9 +117,13 @@ def get_context(context):
         # ── Course Count from enrollment child rows (Student Enrollment Course) ──
         enrolled_courses = []
         if enrollment:
+            # enrolled_courses holds every year's courses — count the current year's.
+            sec_filters = {"parent": enrollment.name, "parenttype": "Student Enrollment"}
+            if enrollment.academic_year:
+                sec_filters["academic_year"] = enrollment.academic_year
             enrolled_courses = frappe.get_all(
                 "Student Enrollment Course",
-                filters={"parent": enrollment.name},
+                filters=sec_filters,
                 fields=["course_offering", "course", "credits", "course_type", "status", "grade"],
                 ignore_permissions=True,
             )
@@ -339,25 +344,31 @@ def _get_active_enrollment(student_name):
     enrollments = frappe.get_all(
         "Student Enrollment",
         filters={"student": student_name, "status": "Enrolled"},
-        fields=["name", "batch", "program", "academic_year", "year_no",
+        fields=["name", "batch", "program",
                 "status", "faculty_advisor", "enrollment_date"],
         order_by="creation desc",
         limit=1,
         ignore_permissions=True
     )
-    if enrollments:
-        return enrollments[0]
-    # Fallback: any enrollment
-    all_enrollments = frappe.get_all(
-        "Student Enrollment",
-        filters={"student": student_name},
-        fields=["name", "batch", "program", "academic_year", "year_no",
-                "status", "faculty_advisor", "enrollment_date"],
-        order_by="creation desc",
-        limit=1,
-        ignore_permissions=True
-    )
-    return all_enrollments[0] if all_enrollments else None
+    if not enrollments:
+        # Fallback: any enrollment
+        enrollments = frappe.get_all(
+            "Student Enrollment",
+            filters={"student": student_name},
+            fields=["name", "batch", "program",
+                    "status", "faculty_advisor", "enrollment_date"],
+            order_by="creation desc",
+            limit=1,
+            ignore_permissions=True
+        )
+    if not enrollments:
+        return None
+    # Current academic year / year of study come from the Academic Log.
+    enr = enrollments[0]
+    log = get_current_log(enr.name)
+    enr.academic_year = log.academic_year if log else None
+    enr.year_no = log.year_no if log else None
+    return enr
 
 
 def _fmt_time(t):

@@ -1,4 +1,5 @@
 import frappe
+from slcm.slcm.doctype.student_enrollment.student_enrollment import get_current_logs
 from slcm.slcm.utils.exam_schedule import get_student_programme
 
 no_cache = 1
@@ -58,12 +59,18 @@ def get_context(context):
             "Student Enrollment",
             filters={"student": student_name},
             fields=[
-                "name", "batch", "program", "academic_year",
-                "year_no", "status", "faculty_advisor", "enrollment_date",
+                "name", "batch", "program",
+                "status", "faculty_advisor", "enrollment_date",
             ],
             order_by="creation desc",
             ignore_permissions=True,
         )
+        # Current academic year / year of study come from the Academic Log.
+        current_logs = get_current_logs([e.name for e in enrollments])
+        for enr in enrollments:
+            log = current_logs.get(enr.name)
+            enr.academic_year = log.academic_year if log else None
+            enr.year_no = log.year_no if log else None
 
         # If no formal enrollment record, synthesise one from the Student Master
         year_no = frappe.utils.cint(student.current_year)
@@ -79,19 +86,42 @@ def get_context(context):
                 "enrollment_date": None,
             })]
 
-        enrollment_data = []
-
+        # ── Step 1: courses from Student Enrollment Course child table ──
+        # One enrollment now holds the courses of every year, so split them into
+        # one section per (academic year, year of study), newest first.
+        year_sections = []  # [(enrollment view for that year, child course rows)]
         for enr in enrollments:
-            # ── Step 1: courses from Student Enrollment Course child table ──
-            child_courses = []
+            child_rows = []
             if enr.name:
-                child_courses = frappe.get_all(
+                child_rows = frappe.get_all(
                     "Student Enrollment Course",
-                    filters={"parent": enr.name},
-                    fields=["course_offering", "course", "credits", "course_type", "status", "grade"],
+                    filters={"parent": enr.name, "parenttype": "Student Enrollment"},
+                    fields=["course_offering", "course", "credits", "course_type", "status", "grade",
+                            "academic_year", "year_no"],
                     ignore_permissions=True,
                 )
+            if not child_rows:
+                year_sections.append((enr, []))
+                continue
 
+            groups = {}
+            for row in child_rows:
+                key = (row.academic_year or enr.academic_year or "",
+                       frappe.utils.cint(row.year_no or enr.year_no))
+                groups.setdefault(key, []).append(row)
+
+            current_key = (enr.academic_year or "", frappe.utils.cint(enr.year_no))
+            for (ay, yn), rows in sorted(groups.items(), key=lambda kv: (kv[0][1], kv[0][0]), reverse=True):
+                view = frappe._dict(enr)
+                view.academic_year = ay or None
+                view.year_no = yn or None
+                if (ay, yn) != current_key:
+                    view.status = "Completed"
+                year_sections.append((view, rows))
+
+        enrollment_data = []
+
+        for enr, child_courses in year_sections:
             # ── Step 2: Course Offerings for this programme + year (fallback only) ──
             cohort_offerings = []
             if enr.program and enr.academic_year and enr.year_no and not child_courses:

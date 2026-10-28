@@ -1,5 +1,6 @@
 import frappe
 from slcm.slcm.doctype.academic_term.academic_term import get_current_term
+from slcm.slcm.doctype.student_enrollment.student_enrollment import get_current_log
 from slcm.slcm.utils.exam_schedule import get_student_programme
 
 no_cache = 1
@@ -723,12 +724,17 @@ def get_context(context):
             enrollment = frappe.get_all(
                 "Student Enrollment",
                 filters={"student": student_name, "status": "Enrolled"},
-                fields=["name", "academic_year", "year_no", "batch", "program"],
+                fields=["name", "batch", "program"],
                 order_by="creation desc",
                 limit=1,
                 ignore_permissions=True,
             )
             context.current_enrollment = enrollment[0] if enrollment else None
+            if context.current_enrollment:
+                # Current academic year / year of study come from the Academic Log.
+                log = get_current_log(context.current_enrollment.name)
+                context.current_enrollment.academic_year = log.academic_year if log else None
+                context.current_enrollment.year_no = log.year_no if log else None
         except Exception:
             context.current_enrollment = None
 

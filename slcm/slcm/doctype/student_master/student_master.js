@@ -43,26 +43,25 @@ frappe.ui.form.on("Student Master", {
 		// Render custom right-side profile panel
 		frm.trigger("render_profile_sidebar");
 
-		// Custom Status Button
+		// Toolbar: actions grouped by purpose into three dropdowns —
+		// Registration, Fees, Parents — plus Enroll as the one standalone
+		// primary button (added below once eligibility is confirmed).
 		if (!frm.is_new()) {
-			const status_btn = frm.add_custom_button(
-				__("Status"),
+			const REGISTRATION = __("Registration");
+			const FEES = __("Fees");
+			const PARENTS = __("Parents");
+
+			frm.add_custom_button(
+				__("Update Registration Status"),
 				function () {
 					frm.trigger("show_status_dialog");
 				},
-				__("Update Status")
-			).addClass("btn-primary");
-
-			status_btn.css({
-				"background-color": "#000",
-				color: "#fff",
-				"border-color": "#000",
-				"box-shadow": "none",
-			});
+				REGISTRATION
+			);
 
 			// Download Registration Slip
-			const download_btn = frm.add_custom_button(
-				__("Registration Slip"),
+			frm.add_custom_button(
+				__("Download Registration Slip"),
 				function () {
 					const student_name = frm.doc.name;
 					const url = frappe.urllib.get_full_url(
@@ -91,14 +90,12 @@ frappe.ui.form.on("Student Master", {
 							});
 						});
 				},
-				__("Download")
+				REGISTRATION
 			);
 
-			setDarkButtonStyle(download_btn);
-
 			// ── Fee Invoice / Demand Receipts — tabbed dialog ─────────────
-			const inv_dl_btn = frm.add_custom_button(
-				__("⬇ Fee Invoice"),
+			frm.add_custom_button(
+				__("Fee Invoices & Receipts"),
 				function () {
 					frappe.show_alert({ message: __("Loading fee records…"), indicator: "blue" });
 					// Fetch invoices and demands in parallel, then open tabbed dialog
@@ -136,32 +133,22 @@ frappe.ui.form.on("Student Master", {
 						callback: function (r) { demands = r.message || []; _check(); },
 						error:    function ()  { _check(); },
 					});
-				}
+				},
+				FEES
 			);
-			inv_dl_btn.css({
-				"background-color": "#1a3c6e",
-				"color":            "#fff",
-				"border-color":     "#1a3c6e",
-				"font-weight":      "600",
-			});
 
 			// ── View Payment Logs — audit trail dialog ────────────────────
-			const logs_btn = frm.add_custom_button(
-				__("📋 Payment Logs"),
+			frm.add_custom_button(
+				__("Payment Logs"),
 				function () {
 					_show_payment_logs_dialog(frm);
-				}
+				},
+				FEES
 			);
-			logs_btn.css({
-				"background-color": "#4f46e5",
-				"color":            "#fff",
-				"border-color":     "#4f46e5",
-				"font-weight":      "600",
-			});
 
-			// ── Sync Fee Invoices — standalone button ─────────────────────────
-			const sync_btn = frm.add_custom_button(
-				__("🔄 Sync Fee Invoices"),
+			// ── Sync Fee Invoices ─────────────────────────────────────────
+			frm.add_custom_button(
+				__("Sync Fee Invoices"),
 				function () {
 					frappe.show_alert({ message: __("Syncing fee invoices…"), indicator: "blue" });
 					frappe.call({
@@ -179,15 +166,9 @@ frappe.ui.form.on("Student Master", {
 							frappe.show_alert({ message: __("Sync failed. Check error log."), indicator: "red" });
 						},
 					});
-				}
+				},
+				FEES
 			);
-			// Style: teal/green background
-			sync_btn.css({
-				"background-color": "#0d7a5f",
-				"color":            "#fff",
-				"border-color":     "#0d7a5f",
-				"font-weight":      "600",
-			});
 
 			// ── Change Fee Structure (admin override) ──────────────────
 			const admin_roles = ["System Manager", "Administrator", "slcm_FINO Officer"];
@@ -196,23 +177,17 @@ frappe.ui.form.on("Student Master", {
 				|| frappe.session.user === "Administrator";
 
 			if (can_change_fs) {
-				const chg_fs_btn = frm.add_custom_button(
+				frm.add_custom_button(
 					__("Change Fee Structure"),
 					function () {
 						_show_change_fee_structure_dialog(frm);
 					},
-					__("Update Status")
+					FEES
 				);
-				chg_fs_btn.css({
-					"background-color": "#b45309",
-					"color":            "#fff",
-					"border-color":     "#b45309",
-					"font-weight":      "600",
-				});
 			}
 
 			// ── Send Parent Login Invite ───────────────────────────────
-			const parent_invite_btn = frm.add_custom_button(
+			frm.add_custom_button(
 				__("Send Parent Login Invite"),
 				function () {
 					const parents = frm.doc.parents || [];
@@ -265,14 +240,8 @@ frappe.ui.form.on("Student Master", {
 						}
 					);
 				},
-				__("Parents")
+				PARENTS
 			);
-			parent_invite_btn.css({
-				"background-color": "#7c3aed",
-				"color": "#fff",
-				"border-color": "#7c3aed",
-				"font-weight": "600",
-			});
 
 			// Render Academic Progress dashboard
 			frm.trigger("render_academic_progress");
@@ -310,7 +279,6 @@ frappe.ui.form.on("Student Master", {
 												.join(" "),
 											program: frm.doc.programme_of_study,
 											batch: frm.doc.batch,
-											academic_year: frm.doc.academic_year,
 										});
 									} else {
 										frappe.msgprint({
@@ -324,7 +292,7 @@ frappe.ui.form.on("Student Master", {
 								},
 							});
 						}).addClass("btn-primary");
-								setDarkButtonStyle(enroll_btn);
+						setDarkButtonStyle(enroll_btn);
 					}
 				},
 			});
@@ -553,12 +521,18 @@ function _ordinal_year(val) {
 	return `${n}${suffix} Year`;
 }
 
+// `enrollment_name` is the selector value: an entry `key` (enrollment + academic year + year).
 function _load_academic_progress(frm, enrollment_name, enrollments) {
+	const entry = enrollment_name
+		? (enrollments || []).find((en) => (en.key || en.name) === enrollment_name)
+		: null;
 	frappe.call({
 		method: "slcm.slcm.doctype.student_master.student_master.get_academic_progress",
 		args: {
 			student_name: frm.doc.name,
-			enrollment_name: enrollment_name || undefined,
+			enrollment_name: entry ? entry.name : undefined,
+			academic_year: (entry && entry.academic_year) || undefined,
+			year_no: (entry && entry.year_no) || undefined,
 		},
 		callback(r) {
 			const d = r && r.message;
@@ -600,7 +574,7 @@ function _build_progress_selector_html(frm, enrollments, selected_name) {
 	const options = enrollments.map((en) => {
 		const label = `${en.ay_name || en.academic_year || "—"} · ${en.term_name || "—"}` +
 			(en.is_current ? " (Current)" : "");
-		const value = en.name;
+		const value = en.key || en.name;
 		const selected = (selected_name ? value === selected_name : en.is_current) ? "selected" : "";
 		return `<option value="${enc(value)}" ${selected}>${enc(label)}</option>`;
 	}).join("");

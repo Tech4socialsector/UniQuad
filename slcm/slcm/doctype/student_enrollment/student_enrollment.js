@@ -10,78 +10,28 @@ frappe.ui.form.on("Student Enrollment", {
 			return { filters: { registration_status: "Completed" } };
 		});
 
+		// Terms in a log row belong to that row's academic year.
+		frm.set_query("academic_term", "academic_log", (doc, cdt, cdn) => {
+			const row = locals[cdt][cdn];
+			return { filters: row.academic_year ? { academic_year: row.academic_year } : {} };
+		});
+
 		render_academic_timeline(frm);
-	},
-
-	batch(frm) {
-		// A new enrollment starts in the Batch's own academic year.
-		if (frm.doc.batch && !frm.doc.academic_year) {
-			frappe.db.get_value("Batch", frm.doc.batch, "academic_year").then(({ message }) => {
-				if (message && message.academic_year) {
-					frm.set_value("academic_year", message.academic_year);
-				}
-			});
-		}
-	},
-
-	// These fire on user-driven changes only (not on load), which is exactly
-	// when the course list for the programme's year should be refilled.
-	program(frm) {
-		refill_year_courses(frm);
-	},
-
-	academic_year(frm) {
-		refill_year_courses(frm);
-	},
-
-	year_no(frm) {
-		refill_year_courses(frm);
 	},
 });
 
-// Courses = Active Course Offerings of every term of the academic year for
-// this programme and year of study.
-function refill_year_courses(frm) {
-	frm.clear_table("enrolled_courses");
-	if (!(frm.doc.program && frm.doc.academic_year && frm.doc.year_no)) {
-		frm.refresh_field("enrolled_courses");
-		return;
-	}
-
-	frappe.call({
-		method: "slcm.slcm.doctype.student_enrollment.student_enrollment.get_year_courses",
-		args: {
-			program: frm.doc.program,
-			academic_year: frm.doc.academic_year,
-			year_no: frm.doc.year_no,
-		},
-		callback(r) {
-			(r.message || []).forEach((offering) => {
-				const row = frm.add_child("enrolled_courses");
-				frappe.model.set_value(row.doctype, row.name, "course_offering", offering.name);
-				frappe.model.set_value(row.doctype, row.name, "course", offering.course_title);
-				frappe.model.set_value(row.doctype, row.name, "course_type", offering.course_type || "");
-				frappe.model.set_value(row.doctype, row.name, "credits", offering.credit_value);
-				frappe.model.set_value(row.doctype, row.name, "status", "Enrolled");
-			});
-			frm.refresh_field("enrolled_courses");
-		},
-	});
-}
-
 /*****************************************************
  * ACADEMIC TIMELINE
- * Replaces the old "Other Terms" dropdown (a plain list
- * of text-only buttons buried in the toolbar) with an
- * always-visible strip of term cards at the top of the
- * form, so a student's full enrollment history is
- * scannable at a glance instead of hidden in a menu.
+ * A strip of term cards at the top of the form, built
+ * from the Academic Log, so the student's path through
+ * the programme is scannable at a glance.
  *****************************************************/
 const TIMELINE_STATUS_COLOR = {
-	Enrolled: { fg: "#1e7e34", bg: "#e6f4ea" },
+	Ongoing: { fg: "#1e7e34", bg: "#e6f4ea" },
+	Upcoming: { fg: "#92400e", bg: "#fef3c7" },
 	Completed: { fg: "#0d6efd", bg: "#e7f1ff" },
+	Redo: { fg: "#7c3aed", bg: "#f3e8ff" },
 	Dropped: { fg: "#b02a37", bg: "#fdecea" },
-	Pending: { fg: "#92400e", bg: "#fef3c7" },
 };
 
 function render_academic_timeline(frm) {
@@ -96,39 +46,34 @@ function render_academic_timeline(frm) {
 	$wrapper.html(`<div class="academic-timeline academic-timeline-loading">${__("Loading academic timeline...")}</div>`);
 
 	frappe.call({
-		method: "slcm.slcm.doctype.student_enrollment.student_enrollment.get_other_terms",
-		args: { student: frm.doc.student, exclude: null },
+		method: "slcm.slcm.doctype.student_enrollment.student_enrollment.get_academic_timeline",
+		args: { enrollment: frm.doc.name },
 		callback(r) {
 			const terms = r.message || [];
-			if (terms.length <= 1) {
-				// Nothing to navigate between - don't show a timeline of one.
+			if (!terms.length) {
 				$wrapper.empty();
 				return;
 			}
-			$wrapper.html(build_academic_timeline_html(terms, frm.doc.name));
-			$wrapper.find(".timeline-term[data-name]").on("click", function () {
-				const name = $(this).attr("data-name");
-				if (name && name !== frm.doc.name) {
-					frappe.set_route("Form", "Student Enrollment", name);
-				}
-			});
+			$wrapper.html(build_academic_timeline_html(terms));
 		},
 	});
 }
 
-function build_academic_timeline_html(terms, current_name) {
+function build_academic_timeline_html(terms) {
 	const cards = terms
 		.map((term) => {
-			const is_current = term.name === current_name;
+			const is_current = term.status === "Ongoing";
 			const color = TIMELINE_STATUS_COLOR[term.status] || { fg: "#475569", bg: "#f1f5f9" };
 			return `
-				<div class="timeline-term ${is_current ? "is-current" : ""}" data-name="${frappe.utils.escape_html(term.name)}"
+				<div class="timeline-term ${is_current ? "is-current" : ""}"
 					style="--term-fg:${color.fg}; --term-bg:${color.bg};">
 					<div class="timeline-term-top">
 						<span class="timeline-term-year">${frappe.utils.escape_html(term.academic_year || "—")}</span>
-						${is_current ? `<span class="timeline-current-tag">${__("Viewing")}</span>` : ""}
+						${is_current ? `<span class="timeline-current-tag">${__("Current")}</span>` : ""}
 					</div>
-					<div class="timeline-term-name">${term.year_no ? __("Year {0}", [term.year_no]) : "—"}</div>
+					<div class="timeline-term-name">${term.year_no ? __("Year {0}", [term.year_no]) : "—"}${
+						term.term_name ? ` · ${frappe.utils.escape_html(term.term_name)}` : ""
+					}</div>
 					<span class="timeline-status-pill">${frappe.utils.escape_html(__(term.status))}</span>
 				</div>
 			`;

@@ -9,6 +9,12 @@ from frappe.model.document import Document
 from frappe.model.naming import make_autoname
 from frappe.utils import cint, getdate
 
+from slcm.slcm.doctype.student_enrollment.student_enrollment import (
+	enrollments_in_year,
+	get_current_logs,
+	sync_class_to_enrollments,
+)
+
 # Stands in for the section in the name of a Group class.
 GROUP_CODE = "G"
 
@@ -31,6 +37,13 @@ class Classes(Document):
 		self.validate_term_and_offering()
 		self.validate_students()
 		self.total_students = len(self.enrolled_students)
+
+	def on_update(self):
+		# Each student's enrolled course row carries this class, term, year and status.
+		sync_class_to_enrollments(self)
+
+	def on_trash(self):
+		sync_class_to_enrollments(self, removed=True)
 
 	def validate_term_and_offering(self):
 		term_year = frappe.db.get_value("Academic Term", self.academic_term, "academic_year")
@@ -65,22 +78,25 @@ class Classes(Document):
 
 @frappe.whitelist()
 def get_enrollment_students(programme=None, academic_year=None, year_no=None, section=None):
-	"""Active enrollments matching the given filters (any left empty is ignored)."""
+	"""Active enrollments matching the given filters (any left empty is ignored).
+	Academic year and year are matched against the enrollment's Academic Log."""
 	filters = {"status": "Enrolled"}
 	if programme:
 		filters["program"] = programme
-	if academic_year:
-		filters["academic_year"] = academic_year
-	if cint(year_no):
-		filters["year_no"] = cint(year_no)
 	if section:
 		filters["section"] = section
-	return frappe.get_all(
+	if academic_year or cint(year_no):
+		filters["name"] = ["in", enrollments_in_year(academic_year, year_no) or [""]]
+	rows = frappe.get_all(
 		"Student Enrollment",
 		filters=filters,
-		fields=["name", "student_name", "section", "program", "year_no"],
+		fields=["name", "student_name", "section", "program"],
 		order_by="section, name",
 	)
+	current = get_current_logs([r.name for r in rows])
+	for r in rows:
+		r.year_no = cint(year_no) or cint((current.get(r.name) or {}).get("year_no"))
+	return rows
 
 
 @frappe.whitelist()

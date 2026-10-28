@@ -695,7 +695,7 @@ function open_promote_dialog_body(listview, selected, batched, student_list, pro
 				fieldtype: "HTML",
 				options: `<div class="promote-dialog-intro">
 					<span class="info-icon">i</span>
-					<span>${__("Promoting {0} selected student(s){1} to the next year of study. Each gets a new enrollment (Year + 1) in the target academic year; the current one is marked Completed.", [
+					<span>${__("Promoting {0} selected student(s){1} to the next year of study. Each enrollment's Academic Log gets Year + 1 in the target academic year, with that year's courses added; the current year is marked Completed.", [
 						`<b>${batched.length}</b>`,
 						program ? __(" in <b>{0}</b>", [frappe.utils.escape_html(program)]) : "",
 					])}<br>${__("No Promotion Policy is checked here. Policy-checked promotion is done from the <b>Promotion Management</b> page.")}</span>

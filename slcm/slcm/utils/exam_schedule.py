@@ -26,7 +26,7 @@ def get_student_programme(student):
 			"Student Enrollment",
 			{"student": student, "status": "Enrolled", "docstatus": ["<", 2]},
 			"program",
-			order_by="academic_year desc, year_no desc, creation desc",
+			order_by="creation desc",
 		)
 		or frappe.db.get_value("Student Master", student, "programme_of_study")
 		or ""

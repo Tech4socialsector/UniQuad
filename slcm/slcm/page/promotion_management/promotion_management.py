@@ -16,7 +16,11 @@ from frappe import _
 from frappe.utils import now_datetime, flt, cint, strip_html
 
 from slcm.slcm.doctype.academic_term.academic_term import get_current_term
-from slcm.slcm.doctype.student_enrollment.student_enrollment import create_next_year_enrollment
+from slcm.slcm.doctype.student_enrollment.student_enrollment import (
+	current_log_join,
+	get_current_log,
+	promote_enrollment,
+)
 
 
 PROMOTED_STATUSES     = ("Promoted", "Override - Promoted")
@@ -273,21 +277,23 @@ def _year_variants(year):
 
 def _get_students_raw(program, academic_year, from_year):
 	"""
-	Students with an Enrolled Student Enrollment for program + academic_year in
-	year of study `from_year`, with their CGPA, backlog count and attendance.
+	Students with an Enrolled Student Enrollment whose current (Ongoing)
+	Academic Log row is program + academic_year in year of study `from_year`,
+	with their CGPA, backlog count and attendance.
 	"""
 	students = frappe.db.sql(
-		"""
+		f"""
 		SELECT
 			se.student, se.name AS enrollment, sm.first_name, sm.current_cgpa,
 			se.batch AS programme, sm.year_of_study AS batch_year,
-			se.year_no AS current_year, b.batch_name AS cohort_name
+			sal.year_no AS current_year, b.batch_name AS cohort_name
 		FROM `tabStudent Enrollment` se
+		{current_log_join()}
 		INNER JOIN `tabStudent Master` sm ON sm.name = se.student
 		LEFT JOIN `tabBatch` b ON b.name = se.batch
 		WHERE se.program = %(program)s
-		  AND se.academic_year = %(academic_year)s
-		  AND se.year_no = %(from_year)s
+		  AND sal.academic_year = %(academic_year)s
+		  AND sal.year_no = %(from_year)s
 		  AND se.status = 'Enrolled'
 		  AND sm.student_status = 'Active'
 		ORDER BY sm.first_name
@@ -384,16 +390,22 @@ def _next_academic_year(academic_year):
 
 
 def _promote_enrollment(student, to_year):
-	"""Create the student's next-year Student Enrollment (year_no = to_year,
-	next Academic Year) from their current Enrolled one, which becomes
-	Completed. Returns the new (or already existing) enrollment name."""
-	current = frappe.db.get_value(
-		"Student Enrollment",
-		{"student": student, "status": "Enrolled", "year_no": cint(to_year) - 1},
-		["name", "academic_year"],
+	"""Move the student's Enrolled Student Enrollment that is currently in
+	Year to_year - 1 on to Year to_year in the next Academic Year (its current
+	year's log rows become Completed). Returns the enrollment name."""
+	current = frappe.db.sql(
+		f"""
+		SELECT se.name, sal.academic_year
+		FROM `tabStudent Enrollment` se
+		{current_log_join()}
+		WHERE se.student = %(student)s AND se.status = 'Enrolled' AND sal.year_no = %(year)s
+		ORDER BY se.enrollment_date DESC
+		LIMIT 1
+		""",
+		{"student": student, "year": cint(to_year) - 1},
 		as_dict=True,
-		order_by="enrollment_date desc",
 	)
+	current = current[0] if current else None
 	if not current:
 		frappe.throw(
 			_("No Enrolled Student Enrollment in Year {0} found for {1} to promote from.").format(
@@ -409,12 +421,12 @@ def _promote_enrollment(student, to_year):
 			)
 		)
 
-	return create_next_year_enrollment(current.name, next_ay)[0]
+	return promote_enrollment(current.name, next_ay)[0]
 
 
 def _apply_year_promotion(student, to_year):
-	"""Move the student to `to_year`: a new Student Enrollment for the next
-	Academic Year with year_no = to_year; the old one becomes Completed.
+	"""Move the student to `to_year`: the enrollment's Academic Log gets
+	year to_year in the next Academic Year; the current year becomes Completed.
 
 	Year and enrollment move together inside a savepoint: if the enrollment
 	can't be created (e.g. the next Academic Year doesn't exist yet) nothing
@@ -526,14 +538,20 @@ def get_student_progression(student):
 	)
 	if not sm:
 		return None
-	# The student's current position is their latest Enrolled Student Enrollment.
+	# The student's current position is the current Academic Log row of their
+	# latest Enrolled Student Enrollment.
 	b = frappe.db.get_value(
 		"Student Enrollment",
 		{"student": student, "status": "Enrolled"},
-		["name", "program", "academic_year", "year_no", "batch"],
+		["name", "program", "batch"],
 		as_dict=True,
 		order_by="enrollment_date desc, creation desc",
 	)
+	if b:
+		log = get_current_log(b.name) or frappe._dict()
+		b.academic_year, b.year_no = log.academic_year, log.year_no
+		if not b.academic_year:
+			b = None
 	batch = b.batch if b else None
 	year = cint(b.year_no) if b else 0
 
@@ -1394,11 +1412,14 @@ def download_formatted_promotion_list(program, academic_year, university_name=No
 	if raw_mode:
 		raw = frappe.db.sql(
 			"""
-			SELECT se.student, se.year_no AS current_year, sm.current_cgpa
+			SELECT DISTINCT se.student, l.year_no AS current_year, sm.current_cgpa
 			FROM `tabStudent Enrollment` se
+			INNER JOIN `tabStudent Academic Log` l
+				ON l.parent = se.name AND l.parenttype = 'Student Enrollment'
+				AND l.status NOT IN ('Redo', 'Dropped')
 			INNER JOIN `tabStudent Master` sm ON sm.name = se.student
 			WHERE se.program = %(program)s
-			  AND se.academic_year = %(academic_year)s
+			  AND l.academic_year = %(academic_year)s
 			  AND se.status = 'Enrolled'
 			  AND sm.student_status = 'Active'
 			""",
@@ -1475,7 +1496,7 @@ def download_formatted_promotion_list(program, academic_year, university_name=No
 	# year: prefer the year they were actually enrolled into.
 	enrolled_ays = [
 		ay for ay in (
-			frappe.db.get_value("Student Enrollment", x.to_enrollment, "academic_year")
+			(get_current_log(x.to_enrollment) or frappe._dict()).academic_year
 			for rows in by_year.values() for x in rows if x.get("to_enrollment")
 		) if ay
 	]
