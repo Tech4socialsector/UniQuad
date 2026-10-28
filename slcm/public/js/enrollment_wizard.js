@@ -40,6 +40,8 @@ slcm.enrollment.EnrollmentWizard = class EnrollmentWizard {
 		this.selected = new Set();
 		this.ids = [];             // Student ID preview rows, alphabetical
 		this.ids_key = null;       // inputs the ID preview was built from
+		this.id_result = null;     // {summary, all_have_ids} of the preview
+		this.assign_new = new Set(); // students with an ID who get a new one anyway
 		this.sections = {};        // student -> section
 		this.sections_key = null;
 		this.all_sections = [];
@@ -70,14 +72,18 @@ slcm.enrollment.EnrollmentWizard = class EnrollmentWizard {
 					fieldtype: "Link", fieldname: "academic_term", label: __("Academic Term"), options: "Academic Term", reqd: 1,
 					get_query: () => me.year_filter(),
 					description: __("Becomes the student's Ongoing term in the Academic Log."),
+					onchange: () => me.render_context(),
 				},
-				{ fieldtype: "Int", fieldname: "year_no", label: __("Year"), default: 1, reqd: 1, non_negative: 1 },
+				{ fieldtype: "Int", fieldname: "year_no", label: __("Year"), default: 1, reqd: 1, non_negative: 1,
+					onchange: () => me.render_context() },
 				{ fieldtype: "Column Break" },
-				{ fieldtype: "Link", fieldname: "programme", label: __("Programme"), options: "Programme", reqd: 1 },
+				{ fieldtype: "Link", fieldname: "programme", label: __("Programme"), options: "Programme", reqd: 1,
+					onchange: () => me.render_context() },
 				{
 					fieldtype: "Link", fieldname: "batch", label: __("Batch"), options: "Batch", reqd: 1,
 					get_query: () => me.year_filter(),
 					description: __("Set on every selected student."),
+					onchange: () => me.render_context(),
 				},
 
 				// 2. Students
@@ -88,18 +94,26 @@ slcm.enrollment.EnrollmentWizard = class EnrollmentWizard {
 				{ fieldtype: "Section Break", fieldname: "s3" },
 				{
 					fieldtype: "Data", fieldname: "id_format", label: __("Student ID Format"),
-					description: __("Use # for the running number, e.g. M26#### gives M260001, M260002 ..."),
+					description: __("Use # for the running number, e.g. M26### gives M26001, M26002 ... Not needed when every student already has an ID."),
+					onchange: () => me.mark_ids_stale(),
+				},
+				{ fieldtype: "HTML", fieldname: "programme_codes_html" },
+				{ fieldtype: "Column Break" },
+				{
+					fieldtype: "Select", fieldname: "numbering", label: __("Numbering"),
+					options: ["Fill gaps", "Continue after highest"].join("\n"), default: "Fill gaps",
+					description: __("Fill gaps: lowest free numbers from 001. Continue after highest: after the highest number in use. Numbers already held are always skipped."),
 					onchange: () => me.mark_ids_stale(),
 				},
 				{
 					fieldtype: "Int", fieldname: "start_from", label: __("Start From"), non_negative: 1,
-					description: __("Leave empty to continue after the highest number already used with this format."),
+					description: __("Optional: first number to try."),
 					onchange: () => me.mark_ids_stale(),
 				},
-				{ fieldtype: "Column Break" },
 				{
 					fieldtype: "Check", fieldname: "renumber_existing", label: __("Re-number students who already have a Student ID"),
-					onchange: () => me.mark_ids_stale(),
+					description: __("Off: existing Student IDs are kept. Tick a single student in the preview to give only them a new ID."),
+					onchange: () => me.on_renumber_change(),
 				},
 				{ fieldtype: "Button", fieldname: "order_btn", label: __("Order Alphabetically & Preview IDs"), click: () => me.preview_ids() },
 				{ fieldtype: "Section Break", fieldname: "s3_preview" },
@@ -156,6 +170,16 @@ slcm.enrollment.EnrollmentWizard = class EnrollmentWizard {
 			me.visible_students().forEach((s) => (e.target.checked ? me.selected.add(s.name) : me.selected.delete(s.name)));
 			me.render_students();
 		});
+		this.d.fields_dict.id_preview_html.$wrapper.on("change", ".ew-assign-new", (e) => {
+			const name = $(e.target).attr("data-name");
+			if (e.target.checked && !me.d.get_value("id_format")) {
+				e.target.checked = false;
+				frappe.msgprint(__("Enter the Student ID format first, e.g. M26###, to give this student a new ID."));
+				return;
+			}
+			e.target.checked ? me.assign_new.add(name) : me.assign_new.delete(name);
+			me.preview_ids();
+		});
 		this.d.fields_dict.section_preview_html.$wrapper.on("change", ".ew-section-select", (e) => {
 			me.sections[$(e.target).attr("data-name")] = e.target.value || undefined;
 			me.render_section_preview();
@@ -189,9 +213,37 @@ slcm.enrollment.EnrollmentWizard = class EnrollmentWizard {
 		frappe.db.get_list("Section", { fields: ["name"], limit: 0, order_by: "name asc" }).then((rows) => {
 			this.all_sections = rows.map((r) => r.name);
 		});
+		frappe.db.get_list("Programme", { fields: ["name", "program_code"], limit: 0, order_by: "program_code asc" }).then((rows) => {
+			this.programme_codes = rows.filter((r) => r.program_code);
+			this.render_programme_codes();
+		});
+	}
+
+	/** Key under the Student ID format: {code} - {programme}, the selected one first and highlighted. */
+	render_programme_codes() {
+		const rows = this.programme_codes || [];
+		const $w = this.d.fields_dict.programme_codes_html.$wrapper;
+		if (!rows.length) {
+			$w.empty();
+			return;
+		}
+		const esc = frappe.utils.escape_html;
+		const selected = this.d.get_value("programme");
+		const sorted = [...rows].sort((a, b) => (b.name === selected) - (a.name === selected));
+		$w.html(`
+			<div class="ew-codes">
+				<div class="ew-codes-title">${__("Programme codes")}</div>
+				<ul>${sorted.map((r) => `
+					<li class="${r.name === selected ? "is-selected" : ""}">
+						<span class="ew-code">${esc(r.program_code)}</span> – ${esc(r.name)}
+						${r.name === selected ? `<span class="ew-codes-tag">${__("Selected")}</span>` : ""}
+					</li>`).join("")}
+				</ul>
+			</div>`);
 	}
 
 	on_academic_year_change() {
+		this.render_context();
 		if (this._setting_defaults) return;
 		const academic_year = this.d.get_value("academic_year");
 		frappe.call(WIZARD_API + "get_year_defaults", { academic_year }).then(async ({ message }) => {
@@ -218,8 +270,13 @@ slcm.enrollment.EnrollmentWizard = class EnrollmentWizard {
 			});
 		});
 		this.render_steps();
+		this.render_context();
 		this.d.get_secondary_btn().toggle(step > 0);
 		this.d.set_primary_action(step === WIZARD_STEPS.length - 1 ? __("Enroll") : __("Next"), () => this.next());
+		if (step === 2) {
+			this.render_programme_codes();
+			this.enter_ids_step();
+		}
 		if (step === 3) this.on_assignment_type_change();
 		this.d.$wrapper.find(".modal-body").scrollTop(0);
 	}
@@ -233,6 +290,29 @@ slcm.enrollment.EnrollmentWizard = class EnrollmentWizard {
 			</div>`;
 		}).join(`<div class="ew-step-line"></div>`);
 		this.d.fields_dict.steps_html.$wrapper.html(`<div class="ew-steps">${html}</div>`);
+	}
+
+	/** Bar right under the dialog header: what this enrollment is for, kept
+	 * in view on every step. Its own row, so it never crowds the title. */
+	render_context() {
+		const $header = this.d.$wrapper.find(".modal-header");
+		let $ctx = this.d.$wrapper.find(".ew-context");
+		if (!$ctx.length) {
+			$ctx = $(`<div class="ew-context"></div>`).insertAfter($header);
+		}
+		const v = this.d.get_values(true) || {};
+		const esc = frappe.utils.escape_html;
+		const chip = (label, value) => value
+			? `<span class="ew-ctx-chip"><span class="ew-ctx-label">${label}:</span> ${esc(String(value))}</span>`
+			: "";
+		const chips = [
+			chip(__("Programme"), v.programme),
+			chip(__("Academic Year"), v.academic_year),
+			chip(__("Batch"), v.batch),
+			chip(__("Term"), v.academic_term && (frappe.utils.get_link_title?.("Academic Term", v.academic_term) || v.academic_term)),
+			chip(__("Year"), v.year_no),
+		].join("");
+		$ctx.html(chips ? `<span class="ew-ctx-title">${__("Enrolling for")}</span>${chips}` : "").toggle(!!chips);
 	}
 
 	back() {
@@ -364,7 +444,36 @@ slcm.enrollment.EnrollmentWizard = class EnrollmentWizard {
 
 	current_ids_key() {
 		const v = this.d.get_values(true);
-		return JSON.stringify([v.id_format || "", v.start_from || 0, v.renumber_existing || 0, [...this.selected].sort()]);
+		return JSON.stringify([
+			v.id_format || "", v.numbering || "", v.start_from || 0, v.renumber_existing || 0,
+			[...this.selected].sort(), [...this.assign_new].sort(),
+		]);
+	}
+
+	/** Entering the step: when every selected student already has an ID
+	 * there is nothing to assign, so show that straight away. */
+	enter_ids_step() {
+		[...this.assign_new].forEach((s) => this.selected.has(s) || this.assign_new.delete(s));
+		const chosen = this.students.filter((s) => this.selected.has(s.name));
+		const all_have_ids = chosen.length && chosen.every((s) => s.registration_id);
+		if (this.ids_key === this.current_ids_key()) return;
+		if (all_have_ids && !this.d.get_value("renumber_existing") && !this.assign_new.size) {
+			this.preview_ids();
+		} else if (this.ids.length) {
+			this.mark_ids_stale();
+		}
+	}
+
+	on_renumber_change() {
+		if (this.d.get_value("renumber_existing")) {
+			frappe.confirm(
+				__("Every selected student, including those who already have a Student ID, will get a new ID in the format. Existing IDs will be replaced. Continue?"),
+				() => this.mark_ids_stale(),
+				() => this.d.set_value("renumber_existing", 0)
+			);
+		} else {
+			this.mark_ids_stale();
+		}
 	}
 
 	mark_ids_stale() {
@@ -377,54 +486,79 @@ slcm.enrollment.EnrollmentWizard = class EnrollmentWizard {
 
 	async preview_ids() {
 		const v = this.d.get_values(true);
-		if (!v.id_format) {
-			// No format needed when everyone already has a Student ID and keeps it.
-			const chosen = this.students.filter((s) => this.selected.has(s.name));
-			if (v.renumber_existing || chosen.some((s) => !s.registration_id)) {
-				frappe.msgprint(__("Enter the Student ID format first, e.g. M26####."));
-				return;
-			}
-			this.ids = chosen.map((s) => ({
-				student: s.name, student_name: s.student_name, current_id: s.registration_id,
-				student_id: s.registration_id, is_new: false,
-			}));
-			this.ids_key = this.current_ids_key();
-			this.render_id_preview();
+		const key = this.current_ids_key();
+		try {
+			const { message } = await frappe.call({
+				method: WIZARD_API + "preview_student_ids",
+				args: {
+					students: [...this.selected],
+					id_format: v.id_format || null,
+					numbering: v.numbering,
+					start_from: v.start_from || null,
+					renumber_existing: v.renumber_existing || 0,
+					assign_new: [...this.assign_new],
+				},
+				freeze: true,
+			});
+			const m = message || {};
+			this.ids = m.rows || [];
+			this.id_result = m;
+			this.ids_key = key;
+		} catch (e) {
+			// The server's message (e.g. format missing) is already shown.
 			return;
 		}
-		const { message } = await frappe.call({
-			method: WIZARD_API + "preview_student_ids",
-			args: {
-				students: [...this.selected],
-				id_format: v.id_format,
-				start_from: v.start_from || null,
-				renumber_existing: v.renumber_existing || 0,
-			},
-			freeze: true,
-		});
-		this.ids = message || [];
-		this.ids_key = this.current_ids_key();
 		this.render_id_preview();
 	}
 
 	render_id_preview() {
 		const esc = frappe.utils.escape_html;
+		const res = this.id_result || {};
+		const sum = res.summary || {};
 		const fresh = this.ids.filter((r) => r.is_new);
-		const range = fresh.length ? `${esc(fresh[0].student_id)} – ${esc(fresh[fresh.length - 1].student_id)}` : __("none");
+		const range = fresh.length ? ` (${esc(fresh[0].student_id)} – ${esc(fresh[fresh.length - 1].student_id)})` : "";
+		const STATUS = {
+			new: ["ok", __("New")],
+			existing: ["", __("Existing")],
+			other_format: ["warn", __("Existing · different format")],
+			conflict: ["bad", __("Conflict")],
+		};
+		const badge = (r) => {
+			const [cls, label] = STATUS[r.status] || ["", r.status];
+			const extra = r.status === "conflict" && r.conflict_with ? ` ${__("with {0}", [esc(r.conflict_with)])}` : "";
+			return `<span class="ew-badge ${cls}">${label}${extra}</span>`;
+		};
+		// Kept IDs that need attention, and students already ticked, can be given a new ID.
+		const tick = (r) => (["other_format", "conflict"].includes(r.status) || r.assign_new)
+			? `<label class="ew-assign"><input type="checkbox" class="ew-assign-new" data-name="${esc(r.student)}" ${r.assign_new ? "checked" : ""}> ${__("Assign new ID")}</label>`
+			: "";
+
+		const banner = res.all_have_ids && !fresh.length
+			? `<div class="ew-banner ok">${__("All {0} selected students already have a Student ID. Nothing will be changed. Click Next to continue.", [this.ids.length])}</div>`
+			: "";
 		this.d.fields_dict.id_preview_html.$wrapper.html(`
+			${banner}
 			<div class="ew-summary-line">
-				${__("{0} students in alphabetical order. New IDs: {1} ({2}).", [`<b>${this.ids.length}</b>`, `<b>${fresh.length}</b>`, range])}
+				${__("{0} students in alphabetical order", [`<b>${this.ids.length}</b>`])}:
+				<b>${sum.new || 0}</b> ${__("new")}${range} ·
+				<b>${sum.kept || 0}</b> ${__("kept")}${sum.other_format ? ` (<span class="ew-warn-text">${__("{0} in a different format", [sum.other_format])}</span>)` : ""} ·
+				<span class="${sum.conflicts ? "ew-warn" : ""}"><b>${sum.conflicts || 0}</b> ${__("conflicts")}</span>
 				<span class="ew-stale"></span>
 			</div>
 			<div class="ew-table-wrap">
 				<table class="ew-table">
-					<thead><tr><th>#</th><th>${__("Student")}</th><th>${__("Current ID")}</th><th>${__("New Student ID")}</th></tr></thead>
+					<thead><tr>
+						<th>#</th><th>${__("Student")}</th><th>${__("Current ID")}</th><th>${__("Student ID")}</th>
+						<th>${__("Status")}</th><th></th>
+					</tr></thead>
 					<tbody>${this.ids.map((r, i) => `
-						<tr>
+						<tr class="${r.status === "conflict" ? "ew-row-bad" : r.status === "other_format" ? "ew-row-warn" : ""}">
 							<td class="ew-muted">${i + 1}</td>
 							<td><div class="ew-name">${esc(r.student_name || r.student)}</div><div class="ew-sub">${esc(r.student)}</div></td>
 							<td>${r.current_id ? esc(r.current_id) : `<span class="ew-muted">—</span>`}</td>
 							<td><span class="ew-id ${r.is_new ? "new" : ""}">${esc(r.student_id || "—")}</span></td>
+							<td>${badge(r)}</td>
+							<td>${tick(r)}</td>
 						</tr>`).join("")}
 					</tbody>
 				</table>
@@ -433,11 +567,15 @@ slcm.enrollment.EnrollmentWizard = class EnrollmentWizard {
 
 	leave_ids() {
 		if (!this.ids.length || this.ids_key !== this.current_ids_key()) {
-			frappe.msgprint(__("Click <b>Order Alphabetically & Preview IDs</b> to build the Student IDs for the selected students."));
+			frappe.msgprint(__("Click <b>Order Alphabetically & Preview IDs</b> to work out the Student IDs for the selected students."));
 			return false;
 		}
-		if (this.ids.some((r) => !r.student_id)) {
-			frappe.msgprint(__("Every student needs a Student ID."));
+		const conflicts = this.ids.filter((r) => r.status === "conflict");
+		if (conflicts.length) {
+			frappe.msgprint(__(
+				"{0} student(s) have a Student ID that another student also holds, e.g. {1} ({2}). Tick <b>Assign new ID</b> for them or correct the other student first.",
+				[conflicts.length, frappe.utils.escape_html(conflicts[0].student_name), frappe.utils.escape_html(conflicts[0].student_id)]
+			));
 			return false;
 		}
 		return true;
@@ -725,6 +863,33 @@ function inject_wizard_css() {
 	style.id = "enroll-wizard-css";
 	style.innerHTML = `
 		.enroll-wizard .modal-body { min-height: 420px; }
+		.enroll-wizard .ew-context {
+			display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px;
+			padding: 10px var(--padding-lg, 20px);
+			background: var(--subtle-fg, var(--control-bg));
+			border-bottom: 1px solid var(--border-color);
+		}
+		.enroll-wizard .ew-ctx-title {
+			font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+			color: var(--text-muted); margin-right: 4px;
+		}
+		.enroll-wizard .ew-ctx-chip {
+			display: inline-flex; align-items: center; gap: 4px; max-width: 100%; min-width: 0;
+			padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; line-height: 1.5;
+			background: var(--card-bg, var(--bg-color)); border: 1px solid var(--border-color); color: var(--text-color);
+			white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+		}
+		.enroll-wizard .ew-ctx-label { font-weight: 500; color: var(--text-muted); }
+		.enroll-wizard .ew-codes { border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 14px; margin-top: -4px; }
+		.enroll-wizard .ew-codes-title { font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; }
+		.enroll-wizard .ew-codes ul { margin: 0; padding-left: 18px; font-size: 13px; }
+		.enroll-wizard .ew-codes li { padding: 2px 0; }
+		.enroll-wizard .ew-codes li.is-selected { font-weight: 600; }
+		.enroll-wizard .ew-code { font-family: var(--font-family-monospace, monospace); font-weight: 700; color: var(--primary); }
+		.enroll-wizard .ew-codes-tag {
+			margin-left: 6px; padding: 1px 8px; border-radius: 20px; font-size: 11px; font-weight: 600;
+			background: var(--green-highlight-color, #e6f4ea); color: var(--green-700, #166534);
+		}
 		.enroll-wizard .ew-steps {
 			display: flex; align-items: center; gap: 0;
 			padding: 4px 0 16px; margin-bottom: 4px;
@@ -766,6 +931,19 @@ function inject_wizard_css() {
 		.enroll-wizard .ew-warn { color: var(--red-500, #dc2626); font-size: 12px; font-weight: 600; }
 		.enroll-wizard .ew-stale { color: var(--orange-500, #d97706); font-size: 12px; margin-left: 8px; }
 		.enroll-wizard .ew-summary-line { margin-bottom: 10px; font-size: 13px; }
+		.enroll-wizard .ew-banner { padding: 10px 14px; border-radius: 8px; margin-bottom: 10px; font-size: 13px; }
+		.enroll-wizard .ew-banner.ok { background: var(--green-highlight-color, #e6f4ea); color: var(--green-700, #166534); }
+		.enroll-wizard .ew-badge {
+			display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 11.5px; font-weight: 600;
+			background: var(--control-bg); color: var(--text-muted); white-space: nowrap;
+		}
+		.enroll-wizard .ew-badge.ok { background: var(--green-highlight-color, #e6f4ea); color: var(--green-700, #166534); }
+		.enroll-wizard .ew-badge.warn { background: var(--yellow-highlight-color, #fef3c7); color: var(--yellow-800, #92400e); }
+		.enroll-wizard .ew-badge.bad { background: var(--red-highlight-color, #fdecea); color: var(--red-600, #b02a37); }
+		.enroll-wizard .ew-row-warn td { background: var(--yellow-highlight-color, #fffbeb); }
+		.enroll-wizard .ew-row-bad td { background: var(--red-highlight-color, #fef2f2); }
+		.enroll-wizard .ew-warn-text { color: var(--yellow-800, #92400e); }
+		.enroll-wizard .ew-assign { font-size: 12px; font-weight: 500; margin: 0; white-space: nowrap; cursor: pointer; }
 		.enroll-wizard .ew-help { color: var(--text-muted); font-size: 12.5px; line-height: 1.5; padding-top: 4px; }
 		.enroll-wizard .ew-empty { padding: 28px 16px; text-align: center; color: var(--text-muted); border: 1px dashed var(--border-color); border-radius: 8px; }
 		.enroll-wizard .ew-sum-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-bottom: 14px; }

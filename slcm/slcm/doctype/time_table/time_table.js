@@ -65,6 +65,8 @@ frappe.ui.form.on('Time Table', {
     },
 
     refresh: function (frm) {
+        frm.set_df_property('course_offering', 'read_only', frm.doc.class_name ? 1 : 0);
+
         // Auto-generate title if not set
         if (!frm.doc.title && frm.doc.course) {
             frm.trigger('generate_title');
@@ -72,8 +74,10 @@ frappe.ui.form.on('Time Table', {
 
         if (!frm.is_new()) {
             frm.add_custom_button(__('Mark Attendance'), function () {
+                // Attendance for this entry is taken against the Time Table
+                // (its Class gives the roster); only Office Hours differ.
                 frappe.route_options = {
-                    'based_on': frm.doc.based_on || 'Time Table',
+                    'based_on': frm.doc.based_on === 'Office Hours' ? 'Office Hours' : 'Time Table',
                     'class_schedule': frm.doc.name,
                     'date': frm.doc.schedule_date
                 };
@@ -346,6 +350,19 @@ frappe.ui.form.on('Time Table', {
         });
     },
 
+    class_name: function (frm) {
+        // Course offering, programme, section, faculty, academic year and term
+        // come from the Class (fetch_from); the title names the class.
+        frm.set_df_property('course_offering', 'read_only', frm.doc.class_name ? 1 : 0);
+        if (!frm.doc.class_name) return;
+        frappe.db.get_value('Classes', frm.doc.class_name,
+            ['course_name', 'section', 'group_name', 'faculty'], (r) => {
+                if (!r) return;
+                frm.set_value('title', [r.course_name, r.section || r.group_name].filter(Boolean).join(' - '));
+                if (!frm.doc.instructor && r.faculty) frm.set_value('instructor', r.faculty);
+            });
+    },
+
     class_configuration: function (frm) {
         if (frm.doc.class_configuration) {
             // Fetch details from Class Configuration
@@ -371,8 +388,9 @@ frappe.ui.form.on('Time Table', {
                 if (r) {
                     frm.set_value("course", r.course_title);
                     frm.set_value("programme", r.program);
-                    if (r.faculty) frm.set_value("instructor", r.faculty);
-                    if (r.term_name) frm.set_value("term", r.term_name);
+                    if (r.faculty && !frm.doc.instructor) frm.set_value("instructor", r.faculty);
+                    // Old Term Configuration link - a class-based entry uses Academic Term instead.
+                    if (r.term_name && !frm.doc.class_name) frm.set_value("term", r.term_name);
                 }
             });
         }

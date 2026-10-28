@@ -38,8 +38,10 @@ class StudentEnrollment(Document):
         self.name = make_enrollment_name(self.student)
 
     def validate(self):
+        self.validate_section_change()
         if not self.academic_log:
             self.set_initial_log()
+        self.sync_log_sections()
         self.validate_log()
         self.close_log_on_status()
         self.stamp_changed_rows()
@@ -73,7 +75,24 @@ class StudentEnrollment(Document):
 
     def add_year_log(self, academic_year, year_no, current_term=None):
         for row in build_year_log(academic_year, year_no, current_term):
-            self.append("academic_log", row)
+            self.append("academic_log", {**row, "section": self.section})
+
+    def validate_section_change(self):
+        """Section is set on creation; afterwards it only changes through
+        change_section(), which records the move in the Academic Log."""
+        if self.is_new() or self.flags.section_change:
+            return
+        previous = self.get_doc_before_save()
+        if previous and (previous.section or None) != (self.section or None):
+            frappe.throw(_("Use Change Section to move the student to another section, so the move is logged in the Academic Log."))
+
+    def sync_log_sections(self):
+        """Upcoming terms follow the enrollment's Section; an Ongoing row
+        without a section takes it too. Completed / Redo / Dropped rows keep
+        the section the student was in at the time."""
+        for row in self.academic_log:
+            if row.status == "Upcoming" or (row.status == "Ongoing" and not row.section):
+                row.section = self.section
 
     def validate_log(self):
         duration = cint(frappe.db.get_value("Programme", self.program, "program_duration"))
@@ -121,7 +140,7 @@ class StudentEnrollment(Document):
 
         for row in self.academic_log:
             old = old_log.get(row.name)
-            if not old or any(old.get(f) != row.get(f) for f in ("academic_year", "academic_term", "year_no", "status")):
+            if not old or any(old.get(f) != row.get(f) for f in ("academic_year", "academic_term", "year_no", "section", "status")):
                 row.updated_on, row.updated_by = now, user
 
         for row in self.enrolled_courses:
@@ -224,6 +243,24 @@ class StudentEnrollment(Document):
             "email": email,
         })
         cc.save(ignore_permissions=True)
+
+    def _leave_section_rosters(self, section):
+        """Take the student off the Class Configuration rosters of `section`
+        for their current year's courses (after a section change)."""
+        if not (section and self.batch):
+            return
+        current = self.current_log()
+        courses = {
+            r.course for r in self.enrolled_courses
+            if r.course and (not current or not r.academic_year or r.academic_year == current.academic_year)
+        }
+        for course in courses:
+            for name in frappe.get_all(
+                "Class Configuration",
+                filters={"course": course, "batch": self.batch, "section": section},
+                pluck="name",
+            ):
+                self._remove_from_class_roster(name)
 
     def _remove_from_class_roster(self, class_config_name):
         cc = frappe.get_doc("Class Configuration", class_config_name)
@@ -686,6 +723,47 @@ def get_academic_timeline(enrollment):
     for r in rows:
         r.term_name = term_names.get(r.academic_term)
     return rows
+
+
+@frappe.whitelist()
+def change_section(enrollment, to_section, reason=None):
+    """Move a student to another section from the current term on.
+
+    The Ongoing log row and every Upcoming row get `to_section`; the Ongoing
+    row's Remarks note the move (from, to, date, user, reason). Completed rows
+    keep their section. The enrollment, Student Master (with its Section
+    Update Log) and the Class Configuration rosters follow."""
+    doc = frappe.get_doc("Student Enrollment", enrollment)
+    doc.check_permission("write")
+    if not frappe.db.exists("Section", to_section):
+        frappe.throw(_("Section {0} does not exist.").format(to_section))
+    from_section = doc.section
+    if to_section == from_section:
+        frappe.throw(_("The student is already in section {0}.").format(to_section))
+    current = next((r for r in doc.academic_log if r.status == "Ongoing"), None)
+    if doc.status != "Enrolled" or not current:
+        frappe.throw(_("Only an Enrolled student with an Ongoing term in the Academic Log can change section."))
+
+    now = now_datetime()
+    note = _("Section {0} → {1} on {2} by {3}").format(
+        from_section or _("(none)"), to_section,
+        frappe.utils.format_datetime(now), frappe.utils.get_fullname(frappe.session.user),
+    )
+    if reason:
+        note += f": {reason}"
+
+    current.section = to_section
+    current.remarks = "\n".join(filter(None, [current.remarks, note]))
+    doc.section = to_section  # Upcoming rows follow in sync_log_sections()
+    doc.flags.section_change = True
+    doc.save()
+
+    doc._leave_section_rosters(from_section)
+    frappe.db.set_value("Student Master", doc.student, "section", to_section)
+    from slcm.slcm.doctype.student_master.student_master import _append_section_update_log
+    _append_section_update_log(doc.student, to_section, "Success", note, now)
+    doc.add_comment("Info", note)
+    return {"section": to_section, "note": note}
 
 
 @frappe.whitelist()

@@ -17,8 +17,58 @@ frappe.ui.form.on("Student Enrollment", {
 		});
 
 		render_academic_timeline(frm);
+
+		const ongoing = (frm.doc.academic_log || []).find((r) => r.status === "Ongoing");
+		if (!frm.is_new() && frm.doc.status === "Enrolled" && ongoing && frm.perm[0] && frm.perm[0].write) {
+			frm.add_custom_button(__("Change Section"), () => open_change_section_dialog(frm, ongoing));
+		}
 	},
 });
+
+/*****************************************************
+ * CHANGE SECTION
+ * Section is read-only after creation: moves go through
+ * here so they are logged on the Ongoing Academic Log
+ * row (Upcoming rows follow the new section).
+ *****************************************************/
+function open_change_section_dialog(frm, ongoing) {
+	const dialog = new frappe.ui.Dialog({
+		title: __("Change Section"),
+		fields: [
+			{ fieldtype: "Link", fieldname: "academic_year", label: __("Academic Year"), options: "Academic Year",
+				default: ongoing.academic_year, read_only: 1 },
+			{ fieldtype: "Column Break" },
+			{ fieldtype: "Link", fieldname: "academic_term", label: __("Academic Term"), options: "Academic Term",
+				default: ongoing.academic_term, read_only: 1 },
+			{ fieldtype: "Section Break" },
+			{ fieldtype: "Link", fieldname: "from_section", label: __("From Section"), options: "Section",
+				default: frm.doc.section, read_only: 1 },
+			{ fieldtype: "Column Break" },
+			{ fieldtype: "Link", fieldname: "to_section", label: __("To Section"), options: "Section", reqd: 1,
+				get_query: () => ({ filters: frm.doc.section ? { name: ["!=", frm.doc.section] } : {} }) },
+			{ fieldtype: "Section Break" },
+			{ fieldtype: "Small Text", fieldname: "reason", label: __("Reason") },
+			{ fieldtype: "HTML", options: `<div class="text-muted small">${__(
+				"Applies from the current term: the Ongoing and Upcoming Academic Log rows move to the new section and the change is noted on the Ongoing row. Completed terms keep their section."
+			)}</div>` },
+		],
+		primary_action_label: __("Change Section"),
+		primary_action(values) {
+			frappe.call({
+				method: "slcm.slcm.doctype.student_enrollment.student_enrollment.change_section",
+				args: { enrollment: frm.doc.name, to_section: values.to_section, reason: values.reason },
+				freeze: true,
+				freeze_message: __("Changing section..."),
+				callback({ message }) {
+					dialog.hide();
+					frappe.show_alert({ message: (message && message.note) || __("Section changed"), indicator: "green" }, 6);
+					frm.reload_doc();
+				},
+			});
+		},
+	});
+	dialog.show();
+}
 
 /*****************************************************
  * ACADEMIC TIMELINE

@@ -29,6 +29,15 @@ frappe.ui.form.on("Classes", {
 		if (frm.doc.class_type !== "Group") {
 			frm.add_custom_button(__("Get Students"), () => get_students(frm));
 		}
+		// Dialogs in public/js/class_time_table.js
+		if (!frm.is_new() && !frm.is_dirty()) {
+			if (frappe.model.can_create("Time Table")) {
+				frm.add_custom_button(__("Create Time Table"), () => slcm.class_time_table.open_create(frm), __("Time Table"));
+			}
+			if (frappe.model.can_read("Time Table")) {
+				frm.add_custom_button(__("View Time Table"), () => slcm.class_time_table.open_view(frm), __("Time Table"));
+			}
+		}
 	},
 
 	class_type(frm) {

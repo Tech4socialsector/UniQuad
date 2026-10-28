@@ -849,9 +849,8 @@ frappe.ui.form.on("Student Enrollment", {
    Form View → Actions → Status
 -------------------------------------------------- */
 function add_form_status_action_buttons(frm) {
-	// Prevent duplicate buttons
-	frm.clear_custom_buttons();
-
+	// (Frappe clears custom buttons on every refresh; clearing here too would
+	// also drop buttons other refresh handlers add, e.g. Change Section.)
 	const statuses = [
 		{ label: __("Enrolled"), value: "Enrolled" },
 		{ label: __("Dropped"), value: "Dropped" },

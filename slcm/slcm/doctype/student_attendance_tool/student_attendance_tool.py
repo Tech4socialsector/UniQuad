@@ -42,6 +42,11 @@ def get_student_attendance_records(
 	if not based_on:
 		frappe.throw(_("Based On is required"))
 
+	# A Time Table entry (class based ones have Based On "Course Schedule")
+	# sent without a Course Schedule is taken as a Time Table request.
+	if based_on == "Course Schedule" and class_schedule and not course_schedule:
+		based_on = "Time Table"
+
 	if based_on == "Course Schedule":
 		if not course_schedule:
 			frappe.throw(_("Course Schedule is required"))
@@ -68,13 +73,21 @@ def get_student_attendance_records(
 			ORDER BY sgs.idx
 		""", (office_hours_group,), as_dict=True)
 	else:
-		course_offering = None
+		course_offering, class_name = None, None
 		if based_on == "Course Schedule" and course_schedule:
 			course_offering = frappe.db.get_value("Course Schedule", course_schedule, "course_offering")
 		elif based_on == "Time Table" and class_schedule:
-			course_offering = frappe.db.get_value("Time Table", class_schedule, "course_offering")
+			course_offering, class_name = frappe.db.get_value(
+				"Time Table", class_schedule, ["course_offering", "class_name"]
+			) or (None, None)
 
-		student_list = _get_enrolled_students(course_offering)
+		if class_name:
+			# A class-based Time Table entry: exactly that class's students.
+			from slcm.slcm.doctype.classes.classes import get_class_students
+
+			student_list = get_class_students(class_name)
+		else:
+			student_list = _get_enrolled_students(course_offering)
 
 	if not student_list:
 		return []

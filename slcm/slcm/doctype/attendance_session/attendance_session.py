@@ -158,10 +158,20 @@ class AttendanceSession(Document):
 			return frappe.db.get_value("Time Table", tt.parent_schedule, "office_hours_group")
 		return None
 
+	def get_class_name(self):
+		"""Class of this session - its own field, else its Time Table's
+		(sessions created before the field existed)."""
+		if self.class_name:
+			return self.class_name
+		if self.class_schedule:
+			return frappe.db.get_value("Time Table", self.class_schedule, "class_name")
+		return None
+
 	def get_enrolled_students(self):
 		"""Expected roster: the OH Student Group's students for an Office Hour
 		session (OH attendance is kept separate from the class roster), else
-		the students enrolled in this Course Offering."""
+		the Class's students for a class-based session, else the students
+		enrolled in this Course Offering."""
 		if self.session_type == "Office Hour":
 			group = self.get_oh_group()
 			if group and frappe.db.exists("Student Group", group):
@@ -172,6 +182,12 @@ class AttendanceSession(Document):
 					order_by="idx",
 				)
 			return []
+
+		class_name = self.get_class_name()
+		if class_name:
+			from slcm.slcm.doctype.classes.classes import get_class_students
+
+			return [s.student for s in get_class_students(class_name)]
 
 		if not self.course_offering:
 			return []

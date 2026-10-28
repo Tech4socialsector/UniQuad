@@ -70,7 +70,9 @@ def publish_bulk_progress(label, done, total):
 class TimeTable(Document):
     def validate(self):
         """Validate the Time Table entry"""
+        self.set_class_details()
         self.validate_time()
+        self.validate_class_term_dates()
         self.validate_repeat_settings()
         self.validate_office_hours_group()
         self.validate_class_participation_weeks()
@@ -78,6 +80,60 @@ class TimeTable(Document):
         self.check_conflicts()
         self.check_venue_conflict()
         self.calculate_duration()
+
+    def set_class_details(self):
+        """A class-based entry takes its course offering, course, programme,
+        section, academic year / term and (if not set) faculty from the Class,
+        so they always match it - fetch_from alone only runs when the link
+        changes on the form."""
+        if self.based_on != "Course Schedule":
+            return
+        if not self.class_name:
+            # Entries from before Classes (Class Configuration based) still save.
+            if not self.class_configuration:
+                frappe.throw(_("Select the Class to schedule."), title=_("Class Required"))
+            return
+        cls = frappe.db.get_value(
+            "Classes",
+            self.class_name,
+            ["course_offering", "course_name", "programme", "section", "group_name", "class_type",
+             "academic_year", "academic_term", "faculty"],
+            as_dict=True,
+        )
+        if not cls:
+            frappe.throw(_("Class {0} does not exist.").format(self.class_name))
+        self.course_offering = cls.course_offering
+        self.course = frappe.db.get_value("Course Offering", cls.course_offering, "course_title") or self.course
+        self.programme = cls.programme
+        self.section = cls.section
+        self.academic_year = cls.academic_year
+        self.academic_term = cls.academic_term
+        if not self.instructor:
+            self.instructor = cls.faculty
+        if not self.title:
+            self.title = " - ".join(filter(None, [cls.course_name, cls.section or cls.group_name]))
+
+    def validate_class_term_dates(self):
+        """A class runs in its Academic Term: its sessions (and a repeating
+        series) must fall within the term's dates."""
+        if self.based_on != "Course Schedule" or not (self.academic_term and self.schedule_date):
+            return
+        from frappe.utils import formatdate, getdate
+
+        term = frappe.db.get_value(
+            "Academic Term", self.academic_term, ["term_start_date", "term_end_date"], as_dict=True
+        )
+        if not (term and term.term_start_date and term.term_end_date):
+            return
+        start, end = getdate(term.term_start_date), getdate(term.term_end_date)
+        last = getdate(self.repeats_till) if self.repeat_frequency not in (None, "", "Never") and self.repeats_till else getdate(self.schedule_date)
+        if getdate(self.schedule_date) < start or last > end:
+            frappe.throw(
+                _("Class {0} runs in {1} ({2} to {3}): Schedule Date and Repeats Till must be within those dates.").format(
+                    self.class_name, self.academic_term, formatdate(start), formatdate(end)
+                ),
+                title=_("Outside the Academic Term"),
+            )
 
     def check_holiday_conflict(self):
         """Block scheduling a class on a date that Institutional Calendar marks
@@ -361,6 +417,8 @@ class TimeTable(Document):
             "class_schedule": self.name,
             "course_schedule": self.course_schedule if based_on == "Course Schedule" else None,
             "office_hours_group": self.get_session_office_hours_group(),
+            "class_name": self.class_name if based_on == "Course Schedule" else None,
+            "section": self.section,
             "course_offering": self.course_offering,
             "course": self.course,
             "instructor": self.instructor,
@@ -440,6 +498,8 @@ class TimeTable(Document):
         session.based_on = based_on
         session.course_schedule = self.course_schedule if based_on == "Course Schedule" else None
         session.office_hours_group = self.get_session_office_hours_group()
+        session.class_name = self.class_name if based_on == "Course Schedule" else None
+        session.section = self.section
 
         # Save the session
         session.save(ignore_permissions=True)
@@ -654,6 +714,7 @@ def get_timetable_data(term=None, course=None, start_date=None, end_date=None):
             "to_time",
             "venue",
             "color",
+            "class_name",
             "class_configuration",
         ],
         order_by="schedule_date, from_time",
@@ -672,6 +733,7 @@ def get_timetable_data(term=None, course=None, start_date=None, end_date=None):
                 "course": schedule.course,
                 "instructor": schedule.instructor,
                 "venue": schedule.venue,
+                "class_name": schedule.class_name,
                 "class_configuration": schedule.class_configuration,
             }
         })
@@ -687,9 +749,10 @@ def create_time_table(data):
     if isinstance(data, str):
         data = json.loads(data)
     
-    # Create the schedule
+    # Create the schedule (a class-based entry fills its course details from the Class)
     doc = frappe.get_doc({
         "doctype": "Time Table",
+        "class_name": data.get("class_name"),
         "class_configuration": data.get("class_configuration"),
         "course": data.get("course"),
         "instructor": data.get("instructor"),
@@ -730,6 +793,7 @@ def get_events(start, end, filters=None):
     query = """
         SELECT
             name,
+            class_name,
             class_configuration,
             course,
             instructor,
@@ -799,6 +863,7 @@ def get_events(start, end, filters=None):
             "allDay": 0,
             "extendedProps": {
                 "based_on": d.based_on,
+                "class_name": d.class_name,
                 "course": d.course,
                 "course_offering": d.course_offering,
                 "course_schedule": d.course_schedule,
@@ -952,12 +1017,13 @@ def find_sessions(programme=None, section=None, schedule_date=None):
 def get_sessions_roster(time_table_names):
     """Combined student roster across one or more Time Table sessions, shown
     for confirmation before applying a venue/time change to all of them.
-    Resolved via each session's linked Class Configuration's own `students`
-    child table rather than Student Enrollment by section, since Time Table's
-    `section` field is frequently blank while `class_configuration` is
-    reliably set. Multiple sessions sharing the same class_configuration
-    (e.g. several dates of the same recurring class) are de-duplicated."""
+    Resolved via each session's Class (its enrolled students); entries made
+    before Classes fall back to their Class Configuration's `students` table.
+    Sessions sharing a class (e.g. several dates of the same recurring
+    class) are de-duplicated."""
     import json
+
+    from slcm.slcm.doctype.classes.classes import get_class_students
 
     if isinstance(time_table_names, str):
         time_table_names = json.loads(time_table_names)
@@ -966,25 +1032,25 @@ def get_sessions_roster(time_table_names):
     if not time_table_names:
         return {"students": []}
 
-    class_configurations = {
-        row.class_configuration
-        for row in frappe.get_all(
-            "Time Table",
-            filters={"name": ["in", time_table_names]},
-            fields=["class_configuration"],
-        )
-        if row.class_configuration
-    }
-
-    if not class_configurations:
-        return {"students": []}
-
-    students = frappe.get_all(
-        "Class Student",
-        filters={"parent": ["in", list(class_configurations)], "parenttype": "Class Configuration"},
-        fields=["student", "student_name"],
-        order_by="student_name",
+    rows = frappe.get_all(
+        "Time Table",
+        filters={"name": ["in", time_table_names]},
+        fields=["class_name", "class_configuration"],
     )
+    classes = {row.class_name for row in rows if row.class_name}
+    class_configurations = {row.class_configuration for row in rows if row.class_configuration and not row.class_name}
+
+    students = []
+    for class_name in sorted(classes):
+        students += get_class_students(class_name)
+    if class_configurations:
+        students += frappe.get_all(
+            "Class Student",
+            filters={"parent": ["in", list(class_configurations)], "parenttype": "Class Configuration"},
+            fields=["student", "student_name"],
+            order_by="student_name",
+        )
+    students.sort(key=lambda s: s.student_name or "")
 
     # A student enrolled in more than one of the selected classes would
     # otherwise appear once per class - keep one row per student.

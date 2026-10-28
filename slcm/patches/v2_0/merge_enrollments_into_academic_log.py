@@ -40,7 +40,7 @@ def execute():
         return
 
     enrollments = frappe.db.sql(
-        """SELECT name, student, program, batch, status, academic_year, year_no, creation
+        """SELECT name, student, program, batch, section, status, academic_year, year_no, creation
            FROM `tabStudent Enrollment`""",
         as_dict=True,
     )
@@ -116,6 +116,7 @@ def _merge_group(keeper, members):
                     "parentfield": "academic_log",
                     "idx": idx,
                     **row,
+                    "section": member.section,
                     "status": status or row["status"],
                     "updated_on": now,
                     "updated_by": "Administrator",

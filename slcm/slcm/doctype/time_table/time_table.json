@@ -10,9 +10,12 @@
   "naming_series",
   "column_break_1",
   "based_on",
+  "class_name",
   "class_configuration",
   "office_hours_group",
   "section_break_details",
+  "academic_year",
+  "academic_term",
   "term",
   "programme",
   "course_offering",
@@ -52,19 +55,50 @@
   },
   {
    "depends_on": "eval: doc.based_on == \"Course Schedule\"",
-   "fieldname": "class_configuration",
+   "description": "The class being scheduled. Its course offering, programme, section, faculty, academic year and term are filled in, and its students are the attendance roster.",
+   "fieldname": "class_name",
    "fieldtype": "Link",
    "in_list_view": 1,
    "in_standard_filter": 1,
+   "label": "Class",
+   "mandatory_depends_on": "eval: doc.based_on == \"Course Schedule\" && !doc.class_configuration",
+   "options": "Classes",
+   "search_index": 1
+  },
+  {
+   "description": "Replaced by Class; kept for entries created before Classes.",
+   "fieldname": "class_configuration",
+   "fieldtype": "Link",
+   "hidden": 1,
    "label": "Class Configuration",
-   "mandatory_depends_on": "eval: doc.based_on == \"Course Schedule\"",
-   "options": "Class Configuration"
+   "options": "Class Configuration",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "class_name.academic_year",
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Academic Year",
+   "options": "Academic Year",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "class_name.academic_term",
+   "fieldname": "academic_term",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Academic Term",
+   "options": "Academic Term",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_1",
    "fieldtype": "Column Break"
   },
   {
+   "fetch_from": "class_name.faculty",
+   "fetch_if_empty": 1,
    "fieldname": "instructor",
    "fieldtype": "Link",
    "label": "Faculty",
@@ -100,16 +134,15 @@
    "label": "Course Details"
   },
   {
-   "fetch_from": "class_configuration.term",
+   "depends_on": "eval: doc.term",
    "fieldname": "term",
    "fieldtype": "Link",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Term",
-   "options": "Term Configuration"
+   "label": "Term (old)",
+   "options": "Term Configuration",
+   "read_only": 1
   },
   {
-   "fetch_from": "class_configuration.programme",
+   "fetch_from": "class_name.programme",
    "fieldname": "programme",
    "fieldtype": "Link",
    "in_standard_filter": 1,
@@ -125,7 +158,7 @@
    "label": "Course"
   },
   {
-   "fetch_from": "class_configuration.course_offering",
+   "fetch_from": "class_name.course_offering",
    "fieldname": "course_offering",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -138,6 +171,7 @@
    "fieldtype": "Column Break"
   },
   {
+   "fetch_from": "class_name.section",
    "fieldname": "section",
    "fieldtype": "Link",
    "label": "Section",
@@ -273,7 +307,7 @@
   }
  ],
  "links": [],
- "modified": "2026-10-27 18:00:00.000000",
+ "modified": "2026-10-28 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Time Table",

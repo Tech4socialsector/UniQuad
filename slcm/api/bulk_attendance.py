@@ -465,6 +465,8 @@ def mark_attendance(
 				"session_date": date,
 				"based_on": based_on,
 				"class_schedule": class_schedule,
+				"class_name": class_sched.class_name if class_sched else None,
+				"section": class_sched.section if class_sched else None,
 				"course_schedule": course_schedule if based_on == "Course Schedule" else None,
 				"office_hours_group": office_hours_group if based_on == "Office Hours" else None,
 				"course_offering": course_offering,

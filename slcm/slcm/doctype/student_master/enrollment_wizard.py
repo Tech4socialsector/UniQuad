@@ -127,15 +127,47 @@ def get_enrollable_students(programme, academic_year):
 
 # ── Step 3 ────────────────────────────────────────────────────────────────────
 
+def _id_conflicts(rows):
+    """{student: other student} for students whose existing Student ID is also
+    held by another Student Master (inside or outside the selection)."""
+    ids = [r.registration_id for r in rows if r.registration_id]
+    if not ids:
+        return {}
+    holders = {}
+    for h in frappe.get_all("Student Master", filters={"registration_id": ["in", ids]},
+                            fields=["name", "registration_id"]):
+        holders.setdefault(h.registration_id, []).append(h.name)
+    out = {}
+    for r in rows:
+        others = [n for n in holders.get(r.registration_id or "", []) if n != r.name]
+        if others:
+            out[r.name] = others[0]
+    return out
+
+
 @frappe.whitelist()
-def preview_student_ids(students, id_format, start_from=None, renumber_existing=0):
-    """Order `students` alphabetically and give each a Student ID in
-    `id_format`. Students who already have an ID keep it unless
-    renumber_existing. Numbering starts at `start_from`, by default right
-    after the highest number already used with this format."""
+def preview_student_ids(students, id_format=None, start_from=None, renumber_existing=0,
+                        numbering="Fill gaps", assign_new=None):
+    """Order `students` alphabetically and work out each one's Student ID.
+
+    An existing Student ID is never overwritten, except for students listed in
+    `assign_new` or when `renumber_existing` is set. Everyone else without an
+    ID gets the next number in `id_format` (e.g. M26####), skipping numbers
+    already held: numbering "Fill gaps" starts from 1 (or `start_from`),
+    "Continue after highest" right after the highest number in use.
+
+    Each row has a status:
+        new           - assigned now
+        existing      - kept, matches the format
+        other_format  - kept, but does not match the format (can be ticked
+                        into assign_new)
+        conflict      - kept ID is also held by another student; blocks enroll
+
+    `id_format` may be left empty when nobody needs a new ID - e.g. every
+    selected student already has one - and then nothing changes."""
     _check_permission()
     students = frappe.parse_json(students) if isinstance(students, str) else students
-    prefix, width, suffix = _parse_id_format(id_format)
+    assign_new = set(frappe.parse_json(assign_new) if isinstance(assign_new, str) else (assign_new or []))
     renumber_existing = cint(renumber_existing)
 
     rows = frappe.get_all(
@@ -145,30 +177,63 @@ def preview_student_ids(students, id_format, start_from=None, renumber_existing=
     )
     rows.sort(key=_alpha_key)
 
-    to_number = {r.name for r in rows if renumber_existing or not r.registration_id}
-    taken = _existing_ids(prefix, width, suffix, exclude=to_number)
-    number = cint(start_from) or (max(taken, default=0) + 1)
+    to_number = {r.name for r in rows if renumber_existing or not r.registration_id or r.name in assign_new}
+    if to_number and not (id_format or "").strip():
+        frappe.throw(_("{0} student(s) need a new Student ID: enter the Student ID format, e.g. M26####.").format(
+            len(to_number)))
 
+    pattern, taken, number, prefix, width, suffix = None, {}, 0, "", 0, ""
+    if (id_format or "").strip():
+        prefix, width, suffix = _parse_id_format(id_format)
+        pattern = re.compile(rf"{re.escape(prefix)}\d{{{width}}}{re.escape(suffix)}")
+        taken = _existing_ids(prefix, width, suffix, exclude=to_number)
+        if cint(start_from):
+            number = cint(start_from)
+        elif numbering == "Continue after highest":
+            number = max(taken, default=0) + 1
+        else:
+            number = 1
+
+    conflicts = _id_conflicts([r for r in rows if r.name not in to_number])
     out = []
     for r in rows:
-        new_id = None
         if r.name in to_number:
             while number in taken:
                 number += 1
             if len(str(number)) > width:
-                frappe.throw(_("Student ID format {0} has room for {1} digits only; {2} students do not fit.").format(
+                frappe.throw(_("Student ID format {0} has room for {1} digits only: not enough free numbers for {2} students.").format(
                     id_format, width, len(to_number)))
-            new_id = f"{prefix}{number:0{width}d}{suffix}"
+            student_id, status = f"{prefix}{number:0{width}d}{suffix}", "new"
             taken[number] = r.name
             number += 1
+        elif r.name in conflicts:
+            student_id, status = r.registration_id, "conflict"
+        elif pattern and not pattern.fullmatch(r.registration_id):
+            student_id, status = r.registration_id, "other_format"
+        else:
+            student_id, status = r.registration_id, "existing"
         out.append({
             "student": r.name,
             "student_name": _full_name(r),
             "current_id": r.registration_id or "",
-            "student_id": new_id or r.registration_id or "",
-            "is_new": bool(new_id),
+            "student_id": student_id,
+            "status": status,
+            "is_new": status == "new",
+            "conflict_with": conflicts.get(r.name),
+            "assign_new": r.name in assign_new,
         })
-    return out
+
+    count = lambda s: sum(1 for r in out if r["status"] == s)  # noqa: E731
+    return {
+        "rows": out,
+        "summary": {
+            "new": count("new"),
+            "kept": len(out) - count("new"),
+            "other_format": count("other_format"),
+            "conflicts": count("conflict"),
+        },
+        "all_have_ids": not renumber_existing and all(r.registration_id for r in rows),
+    }
 
 
 # ── Step 4 (Upload) ───────────────────────────────────────────────────────────
@@ -275,7 +340,8 @@ def enroll_students(data):
                 raise frappe.ValidationError(_("Already enrolled in {0}.").format(data.programme))
 
             new_id = (r.get("student_id") or "").strip()
-            if new_id and new_id != sm.registration_id:
+            if new_id:
+                # New or kept, the ID must be this student's alone.
                 holder = frappe.db.get_value("Student Master", {"registration_id": new_id, "name": ["!=", student]})
                 if holder:
                     raise frappe.ValidationError(_("Student ID {0} is already used by {1}.").format(new_id, holder))

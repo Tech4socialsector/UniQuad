@@ -43,6 +43,8 @@ app_include_css = []
 doctype_js = {
     "Notification": "public/js/notification_override.js",
     "Data Import": "public/js/bulk_upload_template.js",
+    # Time Table → Create / View dialogs
+    "Classes": "public/js/class_time_table.js",
 }
 
 # Bulk-upload templates (Download / Upload buttons) on these lists

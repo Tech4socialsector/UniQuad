@@ -9,6 +9,7 @@
   "based_on",
   "section",
   "class_schedule",
+  "class_name",
   "office_hours_group",
   "course_schedule",
   "course_offering",
@@ -67,6 +68,16 @@
    "fieldtype": "Link",
    "label": "Time Table",
    "options": "Time Table"
+  },
+  {
+   "description": "From the Time Table. Its students are this session's roster.",
+   "fieldname": "class_name",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Class",
+   "options": "Classes",
+   "read_only": 1,
+   "search_index": 1
   },
   {
    "depends_on": "eval:doc.based_on=='Office Hours'",
@@ -301,7 +312,7 @@
   }
  ],
  "links": [],
- "modified": "2026-10-27 18:00:00.000000",
+ "modified": "2026-10-28 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Attendance Session",

@@ -76,6 +76,26 @@ class Classes(Document):
 					row.idx, row.student_enrollment, program, self.programme))
 
 
+def get_class_students(class_name):
+	"""Students of a class: its Enrolled rows whose enrollment is itself
+	Enrolled, as [{student, student_name}] sorted by name. Used as the roster
+	for Time Table / Attendance Session entries linked to the class."""
+	if not class_name:
+		return []
+	return frappe.db.sql(
+		"""
+		SELECT DISTINCT se.student, se.student_name
+		FROM `tabClass Enrolled Student` ces
+		JOIN `tabStudent Enrollment` se ON se.name = ces.student_enrollment
+		WHERE ces.parent = %s AND ces.parenttype = 'Classes'
+		  AND ces.status = 'Enrolled' AND se.status = 'Enrolled'
+		ORDER BY se.student_name
+		""",
+		(class_name,),
+		as_dict=True,
+	)
+
+
 @frappe.whitelist()
 def get_enrollment_students(programme=None, academic_year=None, year_no=None, section=None):
 	"""Active enrollments matching the given filters (any left empty is ignored).
