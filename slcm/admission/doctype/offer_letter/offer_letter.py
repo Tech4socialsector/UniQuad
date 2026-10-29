@@ -179,7 +179,7 @@ class OfferLetter(Document):
             self.db_set("status", "Payment Completed")
             
             # Update any linked Payment Request
-            frappe.db.set_value("Payment Request", 
+            frappe.db.set_value("SLCM Payment Request", 
                 {"reference_doctype": self.doctype, "reference_name": self.name}, 
                 "status", "Paid")
             # 3. Update Applicant Fee Assignment status to 'Paid'

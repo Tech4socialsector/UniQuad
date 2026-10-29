@@ -312,7 +312,7 @@ class FeeService:
             # Block if a Payment Request for the CURRENT fee amount is already Paid (gateway truth)
             # We filter by creation >= afa.creation to ignore PRs from previous fee stages
             existing_paid_pr = frappe.db.get_value(
-                "Payment Request",
+                "SLCM Payment Request",
                 {
                     "reference_doctype": "Offer Letter", 
                     "reference_name": offer.name, 
@@ -363,7 +363,7 @@ class FeeService:
             }
 
             pr_name = frappe.db.get_value(
-                "Payment Request",
+                "SLCM Payment Request",
                 {
                     "reference_doctype": "Offer Letter",
                     "reference_name": offer.name,
@@ -373,7 +373,7 @@ class FeeService:
                 "name",
                 order_by="creation desc"
             )
-            pr = frappe.get_doc("Payment Request", pr_name) if pr_name else None
+            pr = frappe.get_doc("SLCM Payment Request", pr_name) if pr_name else None
             if pr:
                 pr_status = (pr.status or "").strip()
                 if pr_status == "Paid":
@@ -521,7 +521,7 @@ class FeeService:
 
             # Validate Payment Request ownership
             pr_name = frappe.db.get_value(
-                "Payment Request",
+                "SLCM Payment Request",
                 {
                     "reference_doctype": "Offer Letter",
                     "reference_name": offer.name,
@@ -532,7 +532,7 @@ class FeeService:
             )
             if not pr_name:
                 pr_name = frappe.db.get_value(
-                    "Payment Request",
+                    "SLCM Payment Request",
                     {
                         "reference_doctype": "Offer Letter",
                         "reference_name": offer.name,
@@ -543,7 +543,7 @@ class FeeService:
                 )
             if not pr_name:
                 pr_name = frappe.db.get_value(
-                    "Payment Request",
+                    "SLCM Payment Request",
                     {
                         "reference_doctype": "Offer Letter",
                         "reference_name": offer.name,
@@ -557,17 +557,17 @@ class FeeService:
 
             # Acquire lock on the Payment Request row to prevent deadlock / race condition with webhook
             frappe.db.sql(
-                "SELECT name FROM `tabPayment Request` WHERE name = %s FOR UPDATE",
+                "SELECT name FROM `tabSLCM Payment Request` WHERE name = %s FOR UPDATE",
                 pr_name,
             )
 
             # Reload fresh state AFTER acquiring lock
-            pr = frappe.get_doc("Payment Request", pr_name, check_permission=False)
+            pr = frappe.get_doc("SLCM Payment Request", pr_name, check_permission=False)
             if pr.status == "Paid":
                 return {"status": "success"}
 
             duplicate_paid = frappe.db.exists(
-                "Payment Request",
+                "SLCM Payment Request",
                 {
                     "status": "Paid",
                     "transaction_id": razorpay_payment_id,
@@ -577,7 +577,7 @@ class FeeService:
             if duplicate_paid:
                 frappe.throw(_("This Razorpay payment has already been recorded."))
 
-            pr = frappe.get_doc("Payment Request", pr_name)
+            pr = frappe.get_doc("SLCM Payment Request", pr_name)
             expected_order_id = pr.transaction_id or pr.razorpay_order_id
             if expected_order_id != razorpay_order_id:
                 frappe.throw(_("Payment Request mismatch"))
@@ -771,7 +771,7 @@ class FeeService:
             receipt.remarks = remarks
             
             # Link to existing Payment Request if possible
-            pr = frappe.db.get_value("Payment Request", {"transaction_id": transaction_id}, "name")
+            pr = frappe.db.get_value("SLCM Payment Request", {"transaction_id": transaction_id}, "name")
             if pr:
                 receipt.payment_reference = pr
 
@@ -875,15 +875,15 @@ class FeeService:
         if afa:
             filters["creation"] = (">=", afa.creation)
             
-        pr_name = frappe.db.get_value("Payment Request", filters, "name", order_by="creation desc")
+        pr_name = frappe.db.get_value("SLCM Payment Request", filters, "name", order_by="creation desc")
         
         if not pr_name and transaction_id:
              # Fallback to finding by transaction id if specifically provided
-             pr_name = frappe.db.get_value("Payment Request", 
+             pr_name = frappe.db.get_value("SLCM Payment Request", 
                 {"transaction_id": transaction_id}, "name")
 
         if pr_name:
-            pr = frappe.get_doc("Payment Request", pr_name)
+            pr = frappe.get_doc("SLCM Payment Request", pr_name)
             
             # Removed amount overwrite to prevent corrupting paid PRs
             
@@ -897,7 +897,7 @@ class FeeService:
                         "FeeService: Gateway Not Found"
                     )
         else:
-            pr = frappe.new_doc("Payment Request")
+            pr = frappe.new_doc("SLCM Payment Request")
             pr.reference_doctype = "Offer Letter"
             pr.reference_name = offer.name
             
@@ -958,7 +958,7 @@ class FeeService:
                         "FeeService: Gateway Not Found"
                     )
 
-            frappe.db.set_value("Payment Request", pr.name, update_data, update_modified=True)
+            frappe.db.set_value("SLCM Payment Request", pr.name, update_data, update_modified=True)
             frappe.db.commit()
             if hasattr(frappe.flags, "payment_request_status_from_backend"):
                 del frappe.flags.payment_request_status_from_backend
@@ -1107,7 +1107,7 @@ class FeeService:
         # Final fallback: resolve Razorpay payment ID from the Payment Request
         if not razorpay_payment_id:
             pr_name = frappe.db.get_value(
-                "Payment Request",
+                "SLCM Payment Request",
                 {
                     "reference_doctype": "Offer Letter",
                     "reference_name": offer.name,
@@ -1119,7 +1119,7 @@ class FeeService:
                 order_by="creation asc",
             )
             if pr_name:
-                pr = frappe.get_doc("Payment Request", pr_name)
+                pr = frappe.get_doc("SLCM Payment Request", pr_name)
                 razorpay_payment_id = pr.transaction_id or getattr(pr, "razorpay_payment_id", None)
                 if not amount_paid:
                     amount_paid = flt(pr.amount)
@@ -1194,7 +1194,7 @@ class FeeService:
         Keeps ``razorpay_order_id`` + ``gateway_status`` in sync (same as offer-letter flow)
         so webhooks can resolve the doc and the desk form shows ``captured`` after pay.
         """
-        pr_name = frappe.db.get_value("Payment Request", {
+        pr_name = frappe.db.get_value("SLCM Payment Request", {
             "reference_doctype": "Applicant",
             "reference_name": applicant_doc.name,
             "status": ["!=", "Cancelled"],
@@ -1202,15 +1202,15 @@ class FeeService:
         }, "name", order_by="creation desc")
 
         if not pr_name and transaction_id:
-            pr_name = frappe.db.get_value("Payment Request", {"transaction_id": transaction_id}, "name")
+            pr_name = frappe.db.get_value("SLCM Payment Request", {"transaction_id": transaction_id}, "name")
         if not pr_name and transaction_id:
-            pr_name = frappe.db.get_value("Payment Request", {"razorpay_order_id": transaction_id}, "name")
+            pr_name = frappe.db.get_value("SLCM Payment Request", {"razorpay_order_id": transaction_id}, "name")
 
         amount = flt(applicant_doc.application_fee_amount)
         email_to = applicant_doc.email
 
         if pr_name:
-            pr = frappe.get_doc("Payment Request", pr_name)
+            pr = frappe.get_doc("SLCM Payment Request", pr_name)
             if gateway:
                 if frappe.db.exists("Payment Gateway", gateway):
                     pr.db_set("payment_gateway", gateway)
@@ -1220,7 +1220,7 @@ class FeeService:
                         "FeeService: Gateway Not Found"
                     )
         else:
-            pr = frappe.new_doc("Payment Request")
+            pr = frappe.new_doc("SLCM Payment Request")
             pr.reference_doctype = "Applicant"
             pr.reference_name = applicant_doc.name
             pr.amount = amount
@@ -1251,7 +1251,7 @@ class FeeService:
                 update_data["gateway_status"] = "captured"
                 update_data["paid_on"] = now_datetime()
                 if transaction_id:
-                    prev_oid = frappe.db.get_value("Payment Request", pr.name, "razorpay_order_id")
+                    prev_oid = frappe.db.get_value("SLCM Payment Request", pr.name, "razorpay_order_id")
                     if not prev_oid or str(transaction_id).startswith("order_"):
                         update_data["razorpay_order_id"] = transaction_id
                 if payment_id:
@@ -1270,7 +1270,7 @@ class FeeService:
                         f"Payment Gateway '{gateway}' not found or configured. PR: {pr.name if pr.name else 'NEW'}, Reference: {applicant_doc.name}",
                         "FeeService: Gateway Not Found"
                     )
-            frappe.db.set_value("Payment Request", pr.name, update_data, update_modified=True)
+            frappe.db.set_value("SLCM Payment Request", pr.name, update_data, update_modified=True)
             frappe.db.commit()
             if frappe.flags.get("payment_request_status_from_backend"):
                 del frappe.flags.payment_request_status_from_backend
@@ -1361,7 +1361,7 @@ class FeeService:
             }
 
             pr_name = frappe.db.get_value(
-                "Payment Request",
+                "SLCM Payment Request",
                 {
                     "reference_doctype": "Applicant",
                     "reference_name": applicant_name,
@@ -1369,7 +1369,7 @@ class FeeService:
                 },
                 "name",
             )
-            pr = frappe.get_doc("Payment Request", pr_name) if pr_name else None
+            pr = frappe.get_doc("SLCM Payment Request", pr_name) if pr_name else None
             if pr:
                 pr_status = (pr.status or "").strip()
                 if pr_status == "Paid":
@@ -1472,7 +1472,7 @@ class FeeService:
 
             # Use gateway from Payment Request (created with order), else from Programme Reservation Policy, else default
             pr_gateway = frappe.db.get_value(
-                "Payment Request",
+                "SLCM Payment Request",
                 {"reference_doctype": "Applicant", "reference_name": applicant_name, "transaction_id": razorpay_order_id},
                 "payment_gateway"
             )
@@ -1483,7 +1483,7 @@ class FeeService:
             
             # Validate Payment Request ownership
             pr_name = frappe.db.get_value(
-                "Payment Request",
+                "SLCM Payment Request",
                 {
                     "reference_doctype": "Applicant",
                     "reference_name": applicant.name,
@@ -1494,7 +1494,7 @@ class FeeService:
             )
             if not pr_name:
                 pr_name = frappe.db.get_value(
-                    "Payment Request",
+                    "SLCM Payment Request",
                     {
                         "reference_doctype": "Applicant",
                         "reference_name": applicant.name,
@@ -1505,7 +1505,7 @@ class FeeService:
                 )
             if not pr_name:
                 pr_name = frappe.db.get_value(
-                    "Payment Request",
+                    "SLCM Payment Request",
                     {
                         "reference_doctype": "Applicant",
                         "reference_name": applicant.name,
@@ -1519,17 +1519,17 @@ class FeeService:
 
             # Acquire row-level lock on Payment Request to prevent deadlock / race condition with webhook
             frappe.db.sql(
-                "SELECT name FROM `tabPayment Request` WHERE name = %s FOR UPDATE",
+                "SELECT name FROM `tabSLCM Payment Request` WHERE name = %s FOR UPDATE",
                 pr_name,
             )
 
             # Reload fresh state AFTER acquiring lock
-            pr = frappe.get_doc("Payment Request", pr_name, check_permission=False)
+            pr = frappe.get_doc("SLCM Payment Request", pr_name, check_permission=False)
             if pr.status == "Paid":
                 return {"status": "success"}
 
             duplicate_paid = frappe.db.exists(
-                "Payment Request",
+                "SLCM Payment Request",
                 {
                     "status": "Paid",
                     "transaction_id": razorpay_payment_id,
@@ -1539,7 +1539,7 @@ class FeeService:
             if duplicate_paid:
                 frappe.throw(_("This Razorpay payment has already been recorded."))
 
-            pr = frappe.get_doc("Payment Request", pr_name)
+            pr = frappe.get_doc("SLCM Payment Request", pr_name)
             expected_order_id = pr.transaction_id or pr.razorpay_order_id
             if expected_order_id != razorpay_order_id:
                 frappe.throw(_("Payment Request mismatch"))
@@ -1686,10 +1686,10 @@ class FeeService:
             receipt.upi_id = upi_id
             receipt.remarks = remarks
 
-            pr = frappe.db.get_value("Payment Request", {"transaction_id": transaction_id}, "name")
+            pr = frappe.db.get_value("SLCM Payment Request", {"transaction_id": transaction_id}, "name")
             if not pr:
                 pr = frappe.db.get_value(
-                    "Payment Request",
+                    "SLCM Payment Request",
                     {
                         "reference_doctype": "Applicant",
                         "reference_name": applicant_doc.name,
@@ -1699,7 +1699,7 @@ class FeeService:
                     order_by="modified desc",
                 )
             if pr:
-                if frappe.db.get_value("Payment Request", pr, "docstatus") != 2:
+                if frappe.db.get_value("SLCM Payment Request", pr, "docstatus") != 2:
                     receipt.payment_reference = pr
                 
             receipt.append("fee_components", {
@@ -1726,7 +1726,7 @@ class FeeService:
         """
         if not pr_name:
             return
-        pr = frappe.get_doc("Payment Request", pr_name)
+        pr = frappe.get_doc("SLCM Payment Request", pr_name)
         if pr.reference_doctype != "Applicant" or not pr.reference_name:
             return
         if (pr.status or "").strip() != "Paid":
@@ -1829,7 +1829,7 @@ class FeeService:
         ]
 
         pending_requests = frappe.get_all(
-            "Payment Request",
+            "SLCM Payment Request",
             filters={
                 "status": ["in", ["Requested", "Initiated", "Payment Initiated"]],
                 "modified": ["<", cutoff],
@@ -1839,7 +1839,7 @@ class FeeService:
             fields=fields,
         )
         failed_requests = frappe.get_all(
-            "Payment Request",
+            "SLCM Payment Request",
             filters={
                 "status": "Failed",
                 "modified": [">", failed_cutoff],
@@ -1870,7 +1870,11 @@ class FeeService:
                         f"Reconciliation Scheduler: completed PR={pr_data.name}"
                     )
             except Exception:
-                frappe.db.rollback(save_point=savepoint)
+                try:
+                    frappe.db.rollback(save_point=savepoint)
+                except Exception:
+                    # A commit inside the handler already released the savepoint.
+                    frappe.db.rollback()
                 import traceback; print(f"Exception in reconcile_pending_payments for {pr_data.name}:\n", traceback.format_exc())
                 frappe.log_error(
                     frappe.get_traceback(),
@@ -1879,7 +1883,7 @@ class FeeService:
 
     @staticmethod
     def reconcile_single_payment(payment_request_name):
-        pr_data = frappe.get_doc("Payment Request", payment_request_name)
+        pr_data = frappe.get_doc("SLCM Payment Request", payment_request_name)
         if pr_data.payment_gateway and pr_data.payment_gateway != "Razorpay":
             return {"status": "error", "message": _("Only Razorpay payments can be reconciled manually.")}
 
@@ -1899,9 +1903,9 @@ class FeeService:
 
         if result == "captured":
             payment_id = frappe.db.get_value(
-                "Payment Request", payment_request_name, "razorpay_payment_id"
+                "SLCM Payment Request", payment_request_name, "razorpay_payment_id"
             ) or frappe.db.get_value(
-                "Payment Request", payment_request_name, "transaction_id"
+                "SLCM Payment Request", payment_request_name, "transaction_id"
             )
             return {
                 "status": "success",
@@ -1911,7 +1915,7 @@ class FeeService:
             }
         if result == "failed":
             failure_message = frappe.db.get_value(
-                "Payment Request", payment_request_name, "failure_message"
+                "SLCM Payment Request", payment_request_name, "failure_message"
             )
             return {
                 "status": "error",

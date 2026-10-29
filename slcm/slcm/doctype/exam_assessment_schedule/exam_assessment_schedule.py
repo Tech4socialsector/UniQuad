@@ -54,29 +54,22 @@ class ExamAssessmentSchedule(Document):
 			)
 
 	def validate_rows(self):
-		offerings = {
-			o.name: o
-			for o in frappe.get_all(
-				"Course Offering",
-				filters={"name": ["in", list({r.course_offering for r in self.assessments if r.course_offering})]},
-				fields=["name", "program", "term_name"],
-			)
-		}
+		# Courses taught (as Classes) under this programme in this term
+		taught = set(_term_courses(self.programme, self.term)) if self.programme and self.term else None
 		seen = set()
 		for row in self.assessments:
-			co = offerings.get(row.course_offering)
-			if co and (co.program != self.programme or co.term_name != self.term):
+			if taught is not None and row.course and row.course not in taught:
 				frappe.throw(
-					_("Row {0}: Course Offering {1} does not belong to Programme {2} / Term {3}.").format(
-						row.idx, frappe.bold(row.course_offering), self.programme, self.term
+					_("Row {0}: Course {1} has no Class under Programme {2} / Term {3}.").format(
+						row.idx, frappe.bold(row.course), self.programme, self.term
 					)
 				)
 
-			key = (row.course_offering, (row.assessment_label or "").strip().lower())
+			key = (row.course, (row.assessment_label or "").strip().lower())
 			if key in seen:
 				frappe.throw(
 					_("Row {0}: Assessment {1} is listed more than once for {2}.").format(
-						row.idx, frappe.bold(row.assessment_label), frappe.bold(row.course_name or row.course_offering)
+						row.idx, frappe.bold(row.assessment_label), frappe.bold(row.course_name or row.course)
 					)
 				)
 			seen.add(key)
@@ -109,12 +102,12 @@ class ExamAssessmentSchedule(Document):
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
 def programme_query(doctype, txt, searchfield, start, page_len, filters):
-	"""Programmes that have at least one Course Offering in the selected term."""
+	"""Programmes that have at least one Class in the selected term."""
 	term = (filters or {}).get("term")
 	conditions = ""
 	params = {"txt": f"%{txt}%", "start": start, "page_len": page_len}
 	if term:
-		conditions = "AND p.name IN (SELECT co.program FROM `tabCourse Offering` co WHERE co.term_name = %(term)s)"
+		conditions = "AND p.name IN (SELECT cl.programme FROM `tabClasses` cl WHERE cl.academic_term = %(term)s)"
 		params["term"] = term
 
 	return frappe.db.sql(
@@ -130,20 +123,62 @@ def programme_query(doctype, txt, searchfield, start, page_len, filters):
 	)
 
 
+def _term_courses(programme, term):
+	"""Distinct courses that have a Class under the programme in the term."""
+	return frappe.get_all(
+		"Classes",
+		filters={"programme": programme, "academic_term": term},
+		pluck="course",
+		distinct=True,
+	)
+
+
+@frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
+def course_query(doctype, txt, searchfield, start, page_len, filters):
+	"""Active courses that have a Class under the selected programme/term."""
+	filters = filters or {}
+	conditions = ["c.status = 'Active'", "(c.name LIKE %(txt)s OR c.course_name LIKE %(txt)s)"]
+	params = {"txt": f"%{txt}%", "start": start, "page_len": page_len}
+	cl_conditions = []
+	if filters.get("programme"):
+		cl_conditions.append("cl.programme = %(programme)s")
+		params["programme"] = filters["programme"]
+	if filters.get("term"):
+		cl_conditions.append("cl.academic_term = %(term)s")
+		params["term"] = filters["term"]
+	if cl_conditions:
+		conditions.append(
+			"c.name IN (SELECT cl.course FROM `tabClasses` cl WHERE " + " AND ".join(cl_conditions) + ")"
+		)
+
+	return frappe.db.sql(
+		f"""
+		SELECT c.name, c.course_name
+		FROM `tabCourse` c
+		WHERE {" AND ".join(conditions)}
+		ORDER BY c.course_name
+		LIMIT %(start)s, %(page_len)s
+		""",
+		params,
+	)
+
+
 @frappe.whitelist()
 def get_schema_assessments(programme, term, exam_plan=None):
-	"""Build assessment rows for every active Course Offering of the programme/term,
-	from the Evaluation Schema mapped to it (assessment configs + re-exam configs)."""
-	offerings = frappe.get_all(
-		"Course Offering",
-		filters={"program": programme, "term_name": term, "status": "Active"},
-		fields=["name", "course_title", "course_name"],
+	"""Build assessment rows for every active course taught (as Classes) under the
+	programme/term, from the Evaluation Schema mapped to it (assessment configs +
+	re-exam configs)."""
+	courses = frappe.get_all(
+		"Course",
+		filters={"name": ["in", _term_courses(programme, term) or [""]], "status": "Active"},
+		fields=["name", "course_name"],
 		order_by="course_name asc",
 	)
 
 	rows = []
 	missing_schema = []
-	for co in offerings:
+	for co in courses:
 		schema = _get_mapped_schema(co.name, exam_plan)
 		if not schema:
 			missing_schema.append(co.course_name or co.name)
@@ -170,18 +205,18 @@ def get_schema_assessments(programme, term, exam_plan=None):
 	return {"rows": rows, "missing_schema": missing_schema}
 
 
-def _get_mapped_schema(course_offering, exam_plan=None):
+def _get_mapped_schema(course, exam_plan=None):
 	if exam_plan:
 		schema = frappe.db.get_value(
 			"Course Schema Assignment",
-			{"course_offering": course_offering, "exam_plan": exam_plan},
+			{"course": course, "exam_plan": exam_plan},
 			"evaluation_schema",
 		)
 		if schema:
 			return schema
 	return frappe.db.get_value(
 		"Course Schema Assignment",
-		{"course_offering": course_offering, "evaluation_schema": ["is", "set"]},
+		{"course": course, "evaluation_schema": ["is", "set"]},
 		"evaluation_schema",
 		order_by="modified desc",
 	)
@@ -189,8 +224,7 @@ def _get_mapped_schema(course_offering, exam_plan=None):
 
 def _row(co, cfg, label):
 	return {
-		"course_offering": co.name,
-		"course": co.course_title,
+		"course": co.name,
 		"course_name": co.course_name,
 		"assessment_label": label,
 		"component": cfg.component,

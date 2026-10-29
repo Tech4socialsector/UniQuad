@@ -1,0 +1,246 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "creation": "2026-10-27 22:42:21.656472",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "class_type",
+  "academic_year",
+  "academic_term",
+  "term_no",
+  "column_break_ay",
+  "programme",
+  "section",
+  "group_name",
+  "course_section",
+  "course",
+  "course_name",
+  "course_type",
+  "year_no",
+  "column_break_course",
+  "credit",
+  "faculty",
+  "faculty_name",
+  "students_section",
+  "enrolled_students",
+  "total_students"
+ ],
+ "fields": [
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Academic Year",
+   "options": "Academic Year",
+   "reqd": 1
+  },
+  {
+   "fieldname": "academic_term",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Academic Term",
+   "options": "Academic Term",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "academic_term.term_no",
+   "fieldname": "term_no",
+   "fieldtype": "Int",
+   "label": "Term No",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_ay",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "programme",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Programme",
+   "options": "Programme",
+   "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.class_type!='Group'",
+   "fieldname": "section",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Section",
+   "mandatory_depends_on": "eval:doc.class_type!='Group'",
+   "options": "Section"
+  },
+  {
+   "fieldname": "course_section",
+   "fieldtype": "Section Break",
+   "label": "Course"
+  },
+  {
+   "fieldname": "course",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Course",
+   "options": "Course",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fetch_from": "course.course_name",
+   "fieldname": "course_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Course Name",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "course.course_type",
+   "fieldname": "course_type",
+   "fieldtype": "Data",
+   "label": "Course Type",
+   "read_only": 1
+  },
+  {
+   "fieldname": "year_no",
+   "fieldtype": "Int",
+   "label": "Year",
+   "reqd": 1,
+   "non_negative": 1,
+   "default": "1",
+   "description": "Year of study of the programme this class is for."
+  },
+  {
+   "fieldname": "column_break_course",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "course.credit_value",
+   "fetch_if_empty": 1,
+   "fieldname": "credit",
+   "fieldtype": "Int",
+   "label": "Credit"
+  },
+  {
+   "fieldname": "faculty",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Faculty",
+   "options": "Faculty"
+  },
+  {
+   "fetch_from": "faculty.first_name",
+   "fieldname": "faculty_name",
+   "fieldtype": "Data",
+   "label": "Faculty Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "students_section",
+   "fieldtype": "Section Break",
+   "label": "Enrolled Students"
+  },
+  {
+   "fieldname": "enrolled_students",
+   "fieldtype": "Table",
+   "label": "Enrolled Students",
+   "options": "Class Enrolled Student"
+  },
+  {
+   "fieldname": "total_students",
+   "fieldtype": "Int",
+   "label": "Total Students",
+   "read_only": 1
+  },
+  {
+   "default": "Section",
+   "fieldname": "class_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Class Type",
+   "options": "Section\nGroup",
+   "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.class_type=='Group'",
+   "fieldname": "group_name",
+   "fieldtype": "Data",
+   "label": "Group Name",
+   "mandatory_depends_on": "eval:doc.class_type=='Group'"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-10-29 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "SLCM",
+ "name": "Classes",
+ "naming_rule": "By script",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "slcm_Registrar",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "slcm_Programme Chair",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "slcm_Faculty",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "search_fields": "course_name,section,academic_term",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "course_name",
+ "track_changes": 1
+}

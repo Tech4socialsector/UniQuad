@@ -2,6 +2,7 @@ import frappe
 from frappe import _
 
 def execute(filters=None):
+    filters = filters or {}
     columns = get_columns()
     data = get_data(filters)
     return columns, data
@@ -48,7 +49,7 @@ def get_data(filters):
             gateway_fees,
             gateway_tax,
             net_settled
-        FROM `tabPayment Request`
+        FROM `tabSLCM Payment Request`
         WHERE {where_clause}
         ORDER BY paid_on DESC
     """, as_dict=True)

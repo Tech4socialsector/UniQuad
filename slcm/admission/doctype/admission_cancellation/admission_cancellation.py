@@ -64,7 +64,7 @@ class AdmissionCancellation(Document):
 
 		# ── Fallback: no APR found, try Payment Request on Offer Letter ──
 		pr = frappe.db.get_value(
-			"Payment Request",
+			"SLCM Payment Request",
 			{"reference_doctype": "Offer Letter", "reference_name": offer_name, "status": "Paid"},
 			["name", "amount", "transaction_id"],
 			as_dict=True,

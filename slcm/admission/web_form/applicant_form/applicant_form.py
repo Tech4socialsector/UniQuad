@@ -1282,8 +1282,18 @@ def state_belongs_to_country(state=None, country=None):
     return _state_belongs_to_country(state, country)
 
 
+# The web form's Autocomplete calls these queries directly without a page length, and the
+# dropdowns must list every option — so a missing / 0 page length means "no limit".
+ADDRESS_QUERY_MAX_ROWS = 25000
+
+
+def _address_query_page_len(page_len):
+    page_len = cint(page_len)
+    return page_len if page_len > 0 else ADDRESS_QUERY_MAX_ROWS
+
+
 @frappe.whitelist(allow_guest=True)
-def state_query(doctype=None, txt=None, searchfield=None, start=0, page_len=20, filters=None, **kwargs):
+def state_query(doctype=None, txt=None, searchfield=None, start=0, page_len=0, filters=None, **kwargs):
     if isinstance(filters, str):
         import json
         try:
@@ -1307,7 +1317,7 @@ def state_query(doctype=None, txt=None, searchfield=None, start=0, page_len=20, 
     params = {
         "txt": "%" + (txt or "") + "%",
         "start": cint(start),
-        "page_len": cint(page_len)
+        "page_len": _address_query_page_len(page_len)
     }
 
     if country and country.strip():
@@ -1332,7 +1342,7 @@ def state_query(doctype=None, txt=None, searchfield=None, start=0, page_len=20, 
     return to_results(rows)
 
 @frappe.whitelist(allow_guest=True)
-def city_query(doctype=None, txt=None, searchfield=None, start=0, page_len=20, filters=None, **kwargs):
+def city_query(doctype=None, txt=None, searchfield=None, start=0, page_len=0, filters=None, **kwargs):
     if isinstance(filters, str):
         import json
         try:
@@ -1349,7 +1359,7 @@ def city_query(doctype=None, txt=None, searchfield=None, start=0, page_len=20, f
     params = {
         "txt": "%" + (txt or "") + "%",
         "start": cint(start),
-        "page_len": cint(page_len)
+        "page_len": _address_query_page_len(page_len)
     }
 
     if state and state.strip():

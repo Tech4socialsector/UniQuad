@@ -297,8 +297,8 @@ def lock_attendance(session, reason=None, notice=None, notify_faculty=1):
 def _session_faculty(doc):
 	if doc.instructor:
 		return doc.instructor
-	if doc.course_offering:
-		return frappe.db.get_value("Course Offering", doc.course_offering, "faculty")
+	if doc.class_name:
+		return frappe.db.get_value("Classes", doc.class_name, "faculty")
 	return None
 
 
@@ -311,7 +311,8 @@ def _write_log(doc, action, reason, notice, when, notify):
 			"action": action,
 			"attendance_session": doc.name,
 			"time_table": doc.class_schedule,
-			"course_offering": doc.course_offering,
+			"class_name": doc.class_name,
+			"course": doc.course,
 			"session_date": doc.session_date,
 			"faculty": faculty,
 			"action_by": frappe.session.user,
@@ -334,9 +335,9 @@ def _notify_faculty(doc, faculty, action, reason, notice):
 	if not user:
 		return False
 
-	course = frappe.db.get_value("Course Offering", doc.course_offering, "course_name") if doc.course_offering else None
+	course = frappe.db.get_value("Course", doc.course, "course_name") if doc.course else None
 	when = frappe.utils.formatdate(doc.session_date, "dd MMM yyyy")
-	what = course or doc.course_offering or doc.name
+	what = course or doc.class_name or doc.name
 	if action == "Reopened":
 		subject = _("Attendance reopened: {0} on {1}").format(what, when)
 		body = _("AAD has reopened attendance for this session. You can update it from the Faculty Portal until AAD locks it again.")

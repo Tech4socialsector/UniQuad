@@ -39,18 +39,18 @@
   "section_update_log",
   "tab_program_mapping",
   "program_mapping_section",
-  "batch",
   "academic_year",
-  "academic_term",
+  "batch",
   "programme_of_study",
   "pace_programme",
   "level_of_study",
   "column_break_bgkj",
   "concentration",
   "current_year",
+  "current_term",
+  "year_of_study",
   "current_cgpa",
   "cumulative_percentage",
-  "master_programme",
   "tab_personal",
   "personal_details_section",
   "first_name",
@@ -244,7 +244,6 @@
   "registration_status",
   "tab_academic_progress",
   "academic_progress_html",
-  "year_of_study",
   "admission_tab",
   "total_marks_obtained",
   "exam_attended",
@@ -630,8 +629,9 @@
   {
    "fieldname": "current_year",
    "fieldtype": "Data",
-   "label": "Current Term",
-   "length": 10
+   "label": "Current Year No",
+   "length": 10,
+   "hidden": 1
   },
   {
    "fieldname": "current_cgpa",
@@ -655,8 +655,11 @@
    "bold": 1,
    "fieldname": "year_of_study",
    "fieldtype": "Data",
-   "label": "Year of Study",
-   "length": 10
+   "label": "Current Year",
+   "length": 10,
+   "read_only": 1,
+   "in_standard_filter": 1,
+   "description": "Year of study, e.g. 1st Year. Follows the student's enrollment."
   },
   {
    "fieldname": "academic_progress_html",
@@ -1410,25 +1413,17 @@
    "fieldtype": "Column Break"
   },
   {
-   "fetch_from": "batch.academic_year",
    "fieldname": "academic_year",
-   "fieldtype": "Data",
+   "fieldtype": "Link",
    "label": "Academic year",
-   "length": 15
-  },
-  {
-   "fetch_from": "batch.academic_term",
-   "fieldname": "academic_term",
-   "fieldtype": "Data",
-   "label": "Academic Term",
-   "length": 20
+   "length": 15,
+   "options": "Academic Year"
   },
   {
    "depends_on": "eval:doc.admission_type != 'PACE'",
-   "fetch_from": "batch.program",
    "fieldname": "programme_of_study",
    "fieldtype": "Link",
-   "label": "Programme Of Study",
+   "label": "Programme",
    "options": "Programme"
   },
   {
@@ -1439,12 +1434,10 @@
    "options": "PACE Programme"
   },
   {
-   "fetch_from": "batch.level_of_study",
    "fieldname": "level_of_study",
    "fieldtype": "Data",
    "label": "Level Of Study",
-   "length": 20,
-   "options": "\nUndergraduate\nPostgraduate\nResearch Course\nDiploma"
+   "length": 20
   },
   {
    "fieldname": "section",
@@ -1464,13 +1457,6 @@
    "label": "Section Update Log",
    "options": "Student Section Update Log",
    "read_only": 1
-  },
-  {
-   "fetch_from": "programme_of_study.program_name",
-   "fieldname": "master_programme",
-   "fieldtype": "Link",
-   "label": "Programme",
-   "options": "Programme Master"
   },
   {
    "fieldname": "admit_card_number",
@@ -1751,7 +1737,7 @@
    "fieldname": "batch",
    "fieldtype": "Link",
    "label": "Batch",
-   "options": "Batch"
+   "options": "SLCM Batch"
   },
   {
    "fieldname": "floor",
@@ -1763,11 +1749,20 @@
    "fieldtype": "Select",
    "label": "Campus",
    "options": "\nOn Campus\nOff Campus"
+  },
+  {
+   "fieldname": "current_term",
+   "fieldtype": "Link",
+   "label": "Current Term",
+   "options": "Term Master",
+   "read_only": 1,
+   "in_standard_filter": 1,
+   "description": "Set from the Ongoing term of the student's enrollment (Academic Term \u2192 Term Mapping)."
   }
  ],
  "image_field": "passport_size_photo",
  "links": [],
- "modified": "2026-10-12 12:00:00.000000",
+ "modified": "2026-10-29 11:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Student Master",

@@ -13,9 +13,9 @@ import frappe
 
 
 def execute():
-    if not frappe.db.exists("DocType", "Batch") or not frappe.db.exists("DocType", "Student Enrollment"):
+    if not frappe.db.exists("DocType", "SLCM Batch") or not frappe.db.exists("DocType", "Student Enrollment"):
         return
-    if not frappe.db.has_column("Batch", "total_enrolled_count"):
+    if not frappe.db.has_column("SLCM Batch", "total_enrolled_count"):
         return
 
     counts = frappe.db.sql(
@@ -29,9 +29,9 @@ def execute():
     )
     count_by_batch = {row["cohort"]: row["total"] for row in counts if row["cohort"]}
 
-    for batch_name in frappe.db.get_all("Batch", pluck="name"):
+    for batch_name in frappe.db.get_all("SLCM Batch", pluck="name"):
         frappe.db.set_value(
-            "Batch", batch_name,
+            "SLCM Batch", batch_name,
             "total_enrolled_count", count_by_batch.get(batch_name, 0),
             update_modified=False,
         )

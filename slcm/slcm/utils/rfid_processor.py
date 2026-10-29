@@ -63,7 +63,7 @@ def process_log_entry(log_doc):
 	log_time_str = swipe_time.strftime('%H:%M:%S')
 
 	sessions = frappe.db.sql("""
-		SELECT name, course_schedule, course_offering, session_type, duration_hours
+		SELECT name, course_schedule, class_name, course, session_type, duration_hours
 		FROM `tabAttendance Session`
 		WHERE room IN %s
 		AND session_date = %s
@@ -102,9 +102,9 @@ def process_log_entry(log_doc):
 			doc.source = "RFID"
 			doc.in_time = swipe_time
 			doc.attendance_log = log_doc.name
-			# Ensure course_offer is set so recalculation triggers correctly
-			if not doc.course_offer and session.course_offering:
-				doc.course_offer = session.course_offering
+			# Ensure class_name is set so recalculation triggers correctly
+			if not doc.class_name and session.class_name:
+				doc.class_name = session.class_name
 			# Keep hours_counted aligned with the session duration
 			if session.duration_hours:
 				doc.hours_counted = session.duration_hours
@@ -114,12 +114,13 @@ def process_log_entry(log_doc):
 	else:
 		# Record doesn't exist — session wasn't initialised for this student.
 		# Create it now so RFID presence is captured.
-		if session.course_offering:
+		if session.class_name:
 			new_att = frappe.get_doc({
 				"doctype": "Student Attendance",
 				"student": student,
 				"attendance_session": session.name,
-				"course_offer": session.course_offering,
+				"class_name": session.class_name,
+				"course": session.course,
 				"course_schedule": session.course_schedule,
 				"attendance_date": log_date,
 				"date": log_date,

@@ -15,9 +15,8 @@ def get_intake_for_applicant(applicant_doc_or_name):
     else:
         program = getattr(applicant_doc_or_name, "program", None)
 
-    if not program:
-        return "All"
-    return frappe.db.get_value("Programme", program, "intake_type") or "All"
+    # Programme.intake_type has been removed: treat it as empty -> "All".
+    return "All"
 
 
 def get_cycle_stages(admission_cycle, intake_type=None):

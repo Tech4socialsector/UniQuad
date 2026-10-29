@@ -1,6 +1,8 @@
 import frappe
 
 from slcm.slcm.utils.result_access import arrear_badge, get_reexam_attempts, is_improved
+from slcm.slcm.doctype.academic_term.academic_term import get_current_term
+from slcm.slcm.utils.exam_schedule import get_student_programme
 
 no_cache = 1
 
@@ -524,27 +526,11 @@ def _set_student_nav(context, student):
     context.student_initial = (
         context.student_name[0].upper() if context.student_name else "S"
     )
-    context.programme_name = (
-        frappe.db.get_value("Batch", student.programme, "cohort_name")
-        or student.programme or ""
-    )
+    context.programme_name = get_student_programme(student.name)
     context.department = student.department or ""
-    context.batch_year = student.batch_year or ""
+    context.batch_year = student.batch or ""
     context.academic_year = student.get("academic_year") or ""
-    context.academic_term = student.get("academic_term") or _current_enrollment_term(student.name)
-
-
-def _current_enrollment_term(student_name):
-    """Current trimester from the latest Enrolled Student Enrollment (same as the Fees page)."""
-    try:
-        return frappe.db.get_value(
-            "Student Enrollment",
-            {"student": student_name, "status": "Enrolled"},
-            "term_name",
-            order_by="creation desc",
-        ) or ""
-    except Exception:
-        return ""
+    context.academic_term = get_current_term() or ""
 
 
 def _set_nav_defaults(context):

@@ -864,7 +864,7 @@ body.fp-dark .flatpickr-day.nextMonthDay { color: #5b6b85; }
     {% else %}
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:0;">
       {% for c in todays_courses %}
-      <div class="fp-today-course-card" data-course-offering="{{ c.course_offering }}"
+      <div class="fp-today-course-card" data-class-name="{{ c.class_name }}"
            onclick="fpTodayCardClick(this, event)" style="cursor:pointer;display:flex;flex-direction:column;gap:10px;padding:14px 18px;border-bottom:1px solid var(--fp-border-light);border-right:1px solid var(--fp-border-light);">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
           <div style="font-size:14px;font-weight:700;color:var(--fp-text-1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ c.course_name }}">{{ c.course_name }}</div>
@@ -1008,15 +1008,15 @@ body.fp-dark .flatpickr-day.nextMonthDay { color: #5b6b85; }
           <span class="fp-ms fp-msf-chevron">expand_more</span>
         </button>
         <div class="fp-msf-panel">
-          {# Course name with its programme underneath; the offering ID is in
-             the tooltip, since several offerings can share a course name #}
-          {% for co in course_offerings %}
+          {# Class (course + section/group) with its programme underneath; the class ID is in
+             the tooltip, since several classes can share a course name #}
+          {% for co in faculty_classes %}
           <label class="fp-msf-option fp-msf-option-2line" title="{{ co.name }}">
             <input type="checkbox" value="{{ co.name }}" data-label="{{ co.course_name }}" onchange="fpFilterSessions()" {% if selected_co == co.name %}checked{% endif %}>
             <span class="fp-msf-opt-text">{{ co.course_name }}{% if co.programme_name %}<small>{{ co.programme_name }}</small>{% endif %}</span>
           </label>
           {% endfor %}
-          {% if course_offerings %}
+          {% if faculty_classes %}
           <div class="fp-msf-footer">
             <button type="button" class="fp-msf-footer-btn" onclick="fpMsfSelectAll('fp-co-filter')">Select all</button>
             <button type="button" class="fp-msf-footer-btn fp-msf-clear" onclick="fpMsfClearAll('fp-co-filter')">Clear all</button>
@@ -1118,7 +1118,7 @@ body.fp-dark .flatpickr-day.nextMonthDay { color: #5b6b85; }
         <tbody>
           {% for s in sessions %}
           <tr class="fp-session-row"
-              data-co="{{ s.course_offering }}"
+              data-co="{{ s.class_name }}"
               data-marked="{{ s.computed_status | lower }}"
               data-type="{{ s.session_type }}"
               data-category="{{ s.category }}"
@@ -1139,7 +1139,7 @@ body.fp-dark .flatpickr-day.nextMonthDay { color: #5b6b85; }
               style="cursor:pointer;"
               onclick="attRowClick(this, this.getAttribute('data-session'), this.getAttribute('data-course-name'), this.getAttribute('data-status'))">
             <td data-label="Course" class="fp-as-course">
-              <div class="fp-as-primary" title="{{ s.course_name }} ({{ s.course_offering }})">{{ s.course_name }}</div>
+              <div class="fp-as-primary" title="{{ s.course_name }} ({{ s.class_name }})">{{ s.course_name }}</div>
               {% if s.seq %}<div class="fp-as-seq">{{ 'OH' if s.category == 'oh' else 'Session' }} {{ s.seq }} <span>of {{ s.seq_total }}</span></div>{% endif %}
               {% if s.programme_name %}<div class="fp-as-secondary">{{ s.programme_name }}</div>{% endif %}
             </td>
@@ -1857,18 +1857,18 @@ function fpSortSessions(key) {
   _fpSessionsPage = 1;
   _fpApplySessionsView();
 }
-/* Initial paginate/render pass, then auto-apply course_offering/session from URL */
+/* Initial paginate/render pass, then auto-apply class_name/session from URL */
 (function() {
   _fpRefreshActionLabels();
   _fpApplySessionsView();
 
   var p = new URLSearchParams(window.location.search);
-  var co = p.get('course_offering') || p.get('session');
+  var co = p.get('class_name') || p.get('session');
   if (co) {
     /* If it's a session ID, highlight; if course, filter */
     var box = document.getElementById('fp-co-filter');
     if (box) {
-      /* Check if it's a course offering value */
+      /* Check if it's a class value */
       var cb = box.querySelector('input[type="checkbox"][value="' + CSS.escape(co) + '"]');
       if (cb) { _msfSetValues('fp-co-filter', [co]); fpFilterSessions(); }
     }
@@ -2195,7 +2195,7 @@ function _satRenderSessionStrip(activeSessionName) {
   if (!current || !current.seq) { strip.style.display = 'none'; strip.innerHTML = ''; return false; }
 
   var sessions = _attSessions.filter(function(s) {
-    return s.course_offering === current.course_offering && s.category === current.category
+    return s.class_name === current.class_name && s.category === current.category
       && s.session_date === current.session_date && s.seq;
   }).sort(function(a, b) { return a.seq - b.seq; });
 
@@ -3092,7 +3092,7 @@ function fpCloseMarkModal() {
 var _viewSessionName = null;
 
 /* Sibling slots for a session = other Attendance Sessions for the same
-   course offering, on the same date — sourced from _attSessions (already
+   class, on the same date — sourced from _attSessions (already
    embedded for the current term), so this works whether the session was
    opened from the main table or a Today's Sessions card.
    Falls back to scraping a matching Today's Sessions card if _attSessions
@@ -3104,7 +3104,7 @@ function _fpFindSiblingSlots(sessionName) {
     /* OH is kept separate from class attendance — only group same-kind slots */
     var currentIsOh = current.session_type === 'Office Hour';
     var siblings = _attSessions.filter(function(s) {
-      return s.course_offering === current.course_offering && s.session_date === current.session_date
+      return s.class_name === current.class_name && s.session_date === current.session_date
         && (s.session_type === 'Office Hour') === currentIsOh;
     }).sort(function(a, b) { return (a.from_time_sort || '').localeCompare(b.from_time_sort || ''); });
     if (siblings.length > 1) {

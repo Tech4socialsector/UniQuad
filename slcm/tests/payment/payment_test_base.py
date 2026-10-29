@@ -32,6 +32,9 @@ class MockRazorpayClient:
 TEST_CANDIDATE_NAME = "Test Applicant"
 TEST_PACE_FIRST_NAME = "Pace"
 TEST_PACE_LAST_NAME = "Applicant"
+TEST_PROGRAMME = "Master’s Programme in Public Policy"
+# Dedicated fee structure so offer tests never read or rename a real one.
+TEST_FEE_STRUCTURE = "_Test Fee Structure Payments"
 
 
 class PaymentTestBase(unittest.TestCase):
@@ -70,9 +73,73 @@ class PaymentTestBase(unittest.TestCase):
 		self._orig_request = getattr(frappe.local, "request", None)
 		frappe.local.request = MockRequest(self)
 
+		self._snapshot_site_settings()
 		self.setup_academic_year_and_cycle()
 		self.sync_naming_series_counters()
 		self.setup_gateways()
+
+	def _snapshot_site_settings(self):
+		"""setUp deactivates site-wide records and overwrites Razorpay Settings; capture them so
+		every test restores the site's real configuration afterwards (runs after tearDown, even on failure)."""
+		self._site_snapshot = {
+			"PACE Admission": dict(frappe.get_all("PACE Admission", fields=["name", "status"], as_list=True)),
+			"Admission Year": dict(frappe.get_all("Admission Year", fields=["name", "is_active"], as_list=True)),
+			"Fee Structure": dict(frappe.get_all("Fee Structure", fields=["name", "status"], as_list=True)),
+			"Academic Year": dict(frappe.get_all("Academic Year", fields=["name", "status"], as_list=True)),
+			"razorpay_singles": frappe.db.sql("SELECT field, value FROM `tabSingles` WHERE doctype = 'Razorpay Settings'"),
+			"razorpay_auth": frappe.db.sql("SELECT name, fieldname, password FROM `__Auth` WHERE doctype = 'Razorpay Settings'"),
+			"gateway_accounts": set(frappe.get_all("Payment Gateway Account", pluck="name")),
+			"accounts": set(frappe.get_all("Account", pluck="name")) if frappe.db.table_exists("Account") else set(),
+			"contacts": set(frappe.get_all("Contact", pluck="name")),
+			"fee_components": set(frappe.get_all("Fee Component", pluck="name")),
+			"integration_requests": set(frappe.get_all("Integration Request", pluck="name")),
+		}
+		self.addCleanup(self._restore_site_settings)
+
+	def _restore_site_settings(self):
+		snapshot = self._site_snapshot
+		for doctype, field in (
+			("PACE Admission", "status"), ("Admission Year", "is_active"),
+			("Fee Structure", "status"), ("Academic Year", "status"),
+		):
+			for name, value in snapshot[doctype].items():
+				if frappe.db.exists(doctype, name) and frappe.db.get_value(doctype, name, field) != value:
+					frappe.db.set_value(doctype, name, field, value, update_modified=False)
+
+		# Naming counters are never wound back: background jobs (e.g. ERPNext Journal Entries posted for these
+		# test documents) and real users take numbers while tests run, and lowering the counter reissues them.
+
+		frappe.db.sql("DELETE FROM `tabSingles` WHERE doctype = 'Razorpay Settings'")
+		for field, value in snapshot["razorpay_singles"]:
+			frappe.db.sql("INSERT INTO `tabSingles` (doctype, field, value) VALUES ('Razorpay Settings', %s, %s)", (field, value))
+		frappe.db.sql("DELETE FROM `__Auth` WHERE doctype = 'Razorpay Settings'")
+		for name, fieldname, password in snapshot["razorpay_auth"]:
+			frappe.db.sql(
+				"INSERT INTO `__Auth` (doctype, name, fieldname, password, encrypted) VALUES ('Razorpay Settings', %s, %s, %s, 1)",
+				(name, fieldname, password),
+			)
+
+		# Saving Razorpay Settings makes ERPNext (when installed) create a gateway account and ledger account.
+		for pga in set(frappe.get_all("Payment Gateway Account", pluck="name")) - snapshot["gateway_accounts"]:
+			account = frappe.db.get_value("Payment Gateway Account", pga, "payment_account")
+			frappe.delete_doc("Payment Gateway Account", pga, ignore_permissions=True, force=True)
+			if account and account not in snapshot["accounts"] and not frappe.db.exists("GL Entry", {"account": account}):
+				frappe.delete_doc("Account", account, ignore_permissions=True, force=True)
+
+		# Fee Components the app auto-creates during a test run (e.g. "Application Fee").
+		for component in set(frappe.get_all("Fee Component", pluck="name")) - snapshot["fee_components"]:
+			frappe.delete_doc("Fee Component", component, ignore_permissions=True, force=True)
+
+		# Contacts auto-created for test users, and gateway logs whose test documents are gone.
+		for contact in set(frappe.get_all("Contact", {"email_id": ["like", "%@example.com"]}, pluck="name")) - snapshot["contacts"]:
+			frappe.delete_doc("Contact", contact, ignore_permissions=True, force=True)
+		new_requests = set(frappe.get_all("Integration Request", pluck="name")) - snapshot["integration_requests"]
+		for ir in frappe.get_all("Integration Request", {"name": ["in", list(new_requests) or [""]]}, ["name", "reference_doctype", "reference_docname"]):
+			if not (ir.reference_doctype and ir.reference_docname and frappe.db.exists(ir.reference_doctype, ir.reference_docname)):
+				frappe.delete_doc("Integration Request", ir.name, ignore_permissions=True, force=True)
+
+		frappe.clear_document_cache("Razorpay Settings", "Razorpay Settings")
+		frappe.db.commit()
 
 	def tearDown(self):
 		# Restore request
@@ -118,11 +185,11 @@ class PaymentTestBase(unittest.TestCase):
 
 	def _delete_payment_requests_for(self, ref_doctype, ref_name):
 		for pr_name in frappe.get_all(
-			"Payment Request",
+			"SLCM Payment Request",
 			filters={"reference_doctype": ref_doctype, "reference_name": ref_name},
 			pluck="name",
 		):
-			self._force_delete_doc("Payment Request", pr_name)
+			self._force_delete_doc("SLCM Payment Request", pr_name)
 
 	def _delete_applicant_payment_receipts(self, applicant_name):
 		for receipt in frappe.get_all(
@@ -200,8 +267,10 @@ class PaymentTestBase(unittest.TestCase):
 		return max_val
 
 	def _set_series_counter(self, series_key, value):
+		# Only ever raise a counter: the "" key is shared by every format:{###} DocType on the site,
+		# so lowering it makes unrelated DocTypes reuse existing names.
 		if frappe.db.sql("SELECT `current` FROM `tabSeries` WHERE `name`=%s", (series_key,)):
-			frappe.db.sql("UPDATE `tabSeries` SET `current`=%s WHERE `name`=%s", (value, series_key))
+			frappe.db.sql("UPDATE `tabSeries` SET `current`=GREATEST(`current`, %s) WHERE `name`=%s", (value, series_key))
 		else:
 			frappe.db.sql("INSERT INTO `tabSeries` (`name`, `current`) VALUES (%s, %s)", (series_key, value))
 
@@ -245,6 +314,7 @@ class PaymentTestBase(unittest.TestCase):
 	def setup_academic_year_and_cycle(self):
 		self.academic_year = "2026-27"
 		self.admission_cycle = "2026-May To June"
+		self._ensure_test_programme()
 
 		# Deactivate existing active PACE Admissions, Admission Years and Fee Structures to avoid single active conflicts
 		frappe.db.sql("UPDATE `tabPACE Admission` SET status = 'Closed' WHERE status = 'Active'")
@@ -331,6 +401,20 @@ class PaymentTestBase(unittest.TestCase):
 				})
 				pa.save(ignore_permissions=True)
 
+	def _ensure_test_programme(self):
+		"""Applicant / Offer Letter / Fee Assignment link to this Programme; create it when the site lacks it."""
+		if frappe.db.exists("Programme", TEST_PROGRAMME):
+			return
+		prog = frappe.new_doc("Programme")
+		prog.program_code = "TESTMPP"
+		prog.program_name = TEST_PROGRAMME
+		prog.level_of_study = "Postgraduate"
+		prog.academic_year = self.academic_year
+		prog.flags.ignore_links = True
+		prog.insert(ignore_permissions=True, ignore_mandatory=True, set_name=TEST_PROGRAMME)
+		# addCleanup also runs when a later setUp step fails (tearDown does not).
+		self.addCleanup(self._force_delete_doc, "Programme", prog.name)
+
 	def setup_gateways(self):
 		# Ensure Razorpay settings doc exists and set dummy credentials
 		settings = frappe.get_doc("Razorpay Settings")
@@ -355,7 +439,7 @@ class PaymentTestBase(unittest.TestCase):
 		app.date_of_birth = "2000-01-01"
 		app.academic_year = self.academic_year
 		app.admission_cycle = self.admission_cycle
-		app.program = "Master’s Programme in Public Policy"
+		app.program = TEST_PROGRAMME
 		app.application_fee_status = "Requested"
 		app.application_fee_amount = amount
 		app.insert(ignore_permissions=True, ignore_mandatory=True)
@@ -371,11 +455,11 @@ class PaymentTestBase(unittest.TestCase):
 			self.test_docs.append(fc)
 			fc_name = fc.name
 
-		if not frappe.db.exists("Fee Structure", "FS-2026-00003"):
+		if not frappe.db.exists("Fee Structure", TEST_FEE_STRUCTURE):
 			fs = frappe.new_doc("Fee Structure")
-			fs.fee_structure = "FS-2026-00003"
+			fs.fee_structure = TEST_FEE_STRUCTURE
 			fs.academic_year = self.academic_year
-			fs.program = "Master’s Programme in Public Policy"
+			fs.program = TEST_PROGRAMME
 			fs.total_amount_for_indian = 5000
 			fs.append("fee_components_for_indian", {
 				"fee_component": fc_name,
@@ -385,20 +469,20 @@ class PaymentTestBase(unittest.TestCase):
 			# Bypass autoname using rename_doc
 			fs.flags.ignore_mandatory = True
 			fs.insert(ignore_permissions=True, ignore_mandatory=True)
-			if fs.name != "FS-2026-00003":
-				frappe.rename_doc("Fee Structure", fs.name, "FS-2026-00003", force=True, ignore_if_exists=True)
-				fs = frappe.get_doc("Fee Structure", "FS-2026-00003")
+			if fs.name != TEST_FEE_STRUCTURE:
+				frappe.rename_doc("Fee Structure", fs.name, TEST_FEE_STRUCTURE, force=True, ignore_if_exists=True)
+				fs = frappe.get_doc("Fee Structure", TEST_FEE_STRUCTURE)
 			self.test_docs.append(fs)
 
 		offer = frappe.new_doc("Offer Letter")
 		offer.applicant = applicant_name
-		offer.program = "Master’s Programme in Public Policy"
+		offer.program = TEST_PROGRAMME
 		offer.campus = "Bengaluru"
 		offer.academic_year = self.academic_year
 		offer.admission_year = self.academic_year
 		offer.status = "Accepted"
 		offer.payable_amount = amount
-		offer.fee_structure = "FS-2026-00003"
+		offer.fee_structure = TEST_FEE_STRUCTURE
 		offer.insert(ignore_permissions=True, ignore_mandatory=True)
 		if amount is not None:
 			frappe.db.set_value("Offer Letter", offer.name, "payable_amount", amount, update_modified=False)
@@ -427,7 +511,7 @@ class PaymentTestBase(unittest.TestCase):
 		afa.fee_type = fee_type
 		afa.academic_year = self.academic_year
 		afa.admission_cycle = self.admission_cycle
-		afa.program = "Master’s Programme in Public Policy"
+		afa.program = TEST_PROGRAMME
 		afa.status = "Assigned"
 		afa.total_amount = amount
 		afa.final_payable_amount = amount
@@ -437,6 +521,13 @@ class PaymentTestBase(unittest.TestCase):
 	def create_pace_application(self, email=None):
 		import random
 		email = email or f"pace_{frappe.generate_hash(length=8)}@example.com"
+		# PACE Application.before_save links user_id to the applicant's email, so the User must exist.
+		if not frappe.db.exists("User", email):
+			user = frappe.get_doc({
+				"doctype": "User", "email": email, "first_name": TEST_PACE_FIRST_NAME,
+				"user_type": "Website User", "send_welcome_email": 0,
+			}).insert(ignore_permissions=True)
+			self.register_doc(user)
 		papp = frappe.new_doc("PACE Application")
 		papp.upload_student_photo = "/files/photo.jpg"
 		papp.title = "Mr"
@@ -491,7 +582,7 @@ class PaymentTestBase(unittest.TestCase):
 		return self.register_doc(pafa)
 
 	def create_payment_request(self, ref_doctype, ref_name, transaction_id, amount=1000):
-		pr = frappe.new_doc("Payment Request")
+		pr = frappe.new_doc("SLCM Payment Request")
 		pr.reference_doctype = ref_doctype
 		pr.reference_name = ref_name
 		pr.payment_gateway = "Razorpay"
@@ -507,10 +598,11 @@ class PaymentTestBase(unittest.TestCase):
 		return self.register_doc(pr)
 
 	def create_fee_component(self, name, amount=1000, is_accommodation_fee=0):
+		# Test-owned component: never reuse (and overwrite) a real component with the same name.
+		name = f"_Test {name}"
 		existing = frappe.db.get_value("Fee Component", {"component_name": name}, "name")
 		if existing:
-			# Ensure existing component has the correct amount
-			frappe.db.set_value("Fee Component", existing, "amount", amount)
+			frappe.db.set_value("Fee Component", existing, {"amount": amount, "is_accommodation_fee": is_accommodation_fee})
 			return existing
 
 		fc = frappe.new_doc("Fee Component")
@@ -567,6 +659,11 @@ class PaymentTestBase(unittest.TestCase):
 				return data
 
 		frappe.local.request = MockRequest()
+
+	def sign_webhook_request(self, *args, **kwargs):
+		"""Valid X-Razorpay-Signature for the mocked request body; the webhook rejects unsigned calls."""
+		import hashlib, hmac
+		return hmac.new(b"dummy_secret", frappe.request.get_data(), hashlib.sha256).hexdigest()
 
 	def dispatch_razorpay_webhook(self, payload):
 		from slcm.api.razorpay_webhook import handle_razorpay_webhook

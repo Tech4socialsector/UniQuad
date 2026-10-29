@@ -32,7 +32,7 @@ def create_payment_order(payment_request_name):
 	Returns order_id, amount, currency, key_id for frontend checkout.
 	"""
 	try:
-		pr = frappe.get_doc("Payment Request", payment_request_name)
+		pr = frappe.get_doc("SLCM Payment Request", payment_request_name)
 	except Exception:
 		frappe.throw(_("Payment Request not found: {0}").format(payment_request_name))
 
@@ -164,13 +164,13 @@ def razorpay_webhook():
 	pr_name = None
 	if order_id:
 		pr_name = frappe.db.get_value(
-			"Payment Request",
+			"SLCM Payment Request",
 			{"razorpay_order_id": order_id},
 			"name",
 		)
 		if not pr_name:
 			pr_name = frappe.db.get_value(
-				"Payment Request",
+				"SLCM Payment Request",
 				{"transaction_id": order_id},
 				"name",
 			)
@@ -183,7 +183,7 @@ def razorpay_webhook():
 		frappe.response["http_status_code"] = 200
 		return
 
-	pr = frappe.get_doc("Payment Request", pr_name)
+	pr = frappe.get_doc("SLCM Payment Request", pr_name)
 
 	# Idempotency: if already in a terminal state and we received a terminal webhook, skip duplicate
 	terminal_states = ("captured", "failed", "refunded")
@@ -224,7 +224,7 @@ def razorpay_webhook():
 		# Trigger seat lock / admission confirmation (Offer Letter only)
 		try:
 			from slcm.admission.seat_lock import lock_seat_after_payment
-			lock_seat_after_payment(frappe.get_doc("Payment Request", pr_name))
+			lock_seat_after_payment(frappe.get_doc("SLCM Payment Request", pr_name))
 		except Exception as e:
 			frappe.log_error(
 				message=frappe.get_traceback(),

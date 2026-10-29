@@ -7,7 +7,7 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "course_offering",
+  "class_name",
   "course",
   "instructor",
   "instructor_name",
@@ -26,12 +26,12 @@
  ],
  "fields": [
   {
-   "fieldname": "course_offering",
+   "fieldname": "class_name",
    "fieldtype": "Link",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Course Offering",
-   "options": "Course Offering",
+   "label": "Class",
+   "options": "Classes",
    "reqd": 1
   },
   {
@@ -64,7 +64,7 @@
    "options": "Programme"
   },
   {
-   "fetch_from": "course_offering.course_title",
+   "fetch_from": "class_name.course",
    "fieldname": "course",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -124,7 +124,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-14 14:27:17.091123",
+ "modified": "2026-10-29 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Course Schedule",

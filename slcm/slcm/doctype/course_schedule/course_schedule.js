@@ -6,7 +6,7 @@ frappe.ui.form.on("Course Schedule", {
 		if (
 			!frm.doc.__islocal &&
 			frm.doc.course &&
-			frm.doc.course_offering &&
+			frm.doc.class_name &&
 			frm.doc.instructor &&
 			frm.doc.schedule_date
 		) {

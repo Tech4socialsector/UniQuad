@@ -270,12 +270,12 @@ def check_error(resp):
 # ---------------------------------------------------------------------------
 
 def build_local_map():
-    if not frappe.db.table_exists("Payment Request"):
+    if not frappe.db.table_exists("SLCM Payment Request"):
         return {}
     rows = frappe.db.sql("""
         SELECT razorpay_payment_id AS rzp_pid, transaction_id, reference_doctype, reference_name,
                gateway_response, email_to
-        FROM `tabPayment Request`
+        FROM `tabSLCM Payment Request`
         WHERE status = 'Paid'
           AND (razorpay_payment_id IS NOT NULL OR transaction_id IS NOT NULL)
     """, as_dict=True)

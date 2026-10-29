@@ -55,11 +55,11 @@ class StudentCourseMarks(Document):
 		return False
 
 	def _resolve_grading_schema(self):
-		"""Return grading schema name via Course Schema Assignment (exam_plan + course_offering)."""
-		if self.exam_plan and self.course_offering:
+		"""Return grading schema name via Course Schema Assignment (exam_plan + course)."""
+		if self.exam_plan and self.course:
 			schema = frappe.db.get_value(
 				"Course Schema Assignment",
-				{"exam_plan": self.exam_plan, "course_offering": self.course_offering},
+				{"exam_plan": self.exam_plan, "course": self.course},
 				"grade_schema",
 			)
 			if schema:

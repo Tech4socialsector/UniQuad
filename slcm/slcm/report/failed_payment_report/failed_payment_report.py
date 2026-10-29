@@ -118,7 +118,7 @@ def _get_payment_request_failures(filters, from_date, to_date):
 			pr.razorpay_payment_id AS razorpay_payment_id,
 			pr.razorpay_order_id AS razorpay_order_id,
 			pr.gateway_response AS gateway_response
-		FROM `tabPayment Request` pr
+		FROM `tabSLCM Payment Request` pr
 		WHERE {conditions}
 		ORDER BY pr.modified DESC
 		""",

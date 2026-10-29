@@ -42,14 +42,14 @@ def create_pace_razorpay_order(assignment_name):
         return {"already_paid": True, "message": _("This fee has already been paid.")}
 
     # 1. Get/Create Payment Request
-    pr_name = frappe.db.get_value("Payment Request", {
+    pr_name = frappe.db.get_value("SLCM Payment Request", {
         "reference_doctype": "PACE Applicant Fee Assignment",
         "reference_name": assignment_name,
         "docstatus": ["!=", 2]
     })
 
     if pr_name:
-        pr = frappe.get_doc("Payment Request", pr_name)
+        pr = frappe.get_doc("SLCM Payment Request", pr_name)
         if pr.status == "Paid":
             return {
                 "already_paid": True,
@@ -80,7 +80,7 @@ def create_pace_razorpay_order(assignment_name):
         gateway = frappe.db.get_value("Payment Gateway", {}, "name") or "Razorpay"
 
     if not pr:
-        pr = frappe.new_doc("Payment Request")
+        pr = frappe.new_doc("SLCM Payment Request")
         pr.payment_gateway = gateway
         pr.currency = assignment.currency or "INR"
         pr.amount = amount
@@ -158,7 +158,7 @@ def _update_pace_payment_request(
     import json
 
     pr_name = frappe.db.get_value(
-        "Payment Request",
+        "SLCM Payment Request",
         {
             "reference_doctype": "PACE Applicant Fee Assignment",
             "reference_name": assignment.name,
@@ -171,7 +171,7 @@ def _update_pace_payment_request(
     if not pr_name:
         return
 
-    if frappe.db.get_value("Payment Request", pr_name, "status") == "Paid":
+    if frappe.db.get_value("SLCM Payment Request", pr_name, "status") == "Paid":
         return
 
     update_data = {"status": status}
@@ -202,7 +202,7 @@ def _update_pace_payment_request(
 
     frappe.flags.payment_request_status_from_backend = True
     try:
-        frappe.db.set_value("Payment Request", pr_name, update_data, update_modified=True)
+        frappe.db.set_value("SLCM Payment Request", pr_name, update_data, update_modified=True)
     finally:
         if hasattr(frappe.flags, "payment_request_status_from_backend"):
             del frappe.flags.payment_request_status_from_backend
@@ -226,9 +226,9 @@ def sync_pace_payment_after_gateway_capture(pr_name):
     """
     from frappe.utils import now_datetime
     
-    if not pr_name or not frappe.db.exists("Payment Request", pr_name):
+    if not pr_name or not frappe.db.exists("SLCM Payment Request", pr_name):
         return
-    pr = frappe.get_doc("Payment Request", pr_name)
+    pr = frappe.get_doc("SLCM Payment Request", pr_name)
     if pr.reference_doctype != "PACE Applicant Fee Assignment" or not pr.reference_name:
         return
     if (pr.status or "").strip() != "Paid":

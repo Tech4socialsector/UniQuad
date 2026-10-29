@@ -53,7 +53,7 @@ def get_consecutive_absents(filters):
 		
 	# Get absences
 	logs = frappe.db.sql(f"""
-		SELECT student, student_name, attendance_date, course, course_offer
+		SELECT student, student_name, attendance_date, course, class_name
 		FROM `tabStudent Attendance`
 		WHERE {conditions}
 		ORDER BY student, attendance_date DESC
@@ -88,12 +88,12 @@ def get_consecutive_absents(filters):
 				
 		if consecutive >= threshold:
 			# Get student details
-			student_details = frappe.db.get_value("Student Master", student, ["first_name", "programme"], as_dict=True)
+			student_details = frappe.db.get_value("Student Master", student, ["first_name", "programme_of_study"], as_dict=True)
 			
 			result.append({
 				"student": student,
 				"student_name": student_details.first_name if student_details else "",
-				"program": student_details.programme if student_details else "",
+				"program": student_details.programme_of_study if student_details else "",
 				"consecutive_days": consecutive,
 				"last_absent_date": dates[0]
 			})

@@ -14,7 +14,7 @@
  "is_hidden": 0,
  "label": "Placement",
  "links": [],
- "modified": "2026-02-05 15:30:07.620333",
+ "modified": "2026-10-19 16:30:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Placement",
@@ -107,7 +107,7 @@
    "color": "Grey",
    "doc_view": "List",
    "label": "Company",
-   "link_to": "Company",
+   "link_to": "SLCM Company",
    "stats_filter": "[]",
    "type": "DocType"
   }

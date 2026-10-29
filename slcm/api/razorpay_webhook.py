@@ -108,12 +108,12 @@ def _resolve_pr_from_order_id(order_id):
 
 	pr_name = (
 		frappe.db.get_value(
-			"Payment Request",
+			"SLCM Payment Request",
 			{"razorpay_order_id": order_id, "docstatus": ["!=", 2]},
 			"name",
 		) or
 		frappe.db.get_value(
-			"Payment Request",
+			"SLCM Payment Request",
 			{"transaction_id": order_id, "docstatus": ["!=", 2]},
 			"name",
 		)
@@ -122,7 +122,7 @@ def _resolve_pr_from_order_id(order_id):
 		return None, None, None
 
 	ref_doctype, ref_name = frappe.db.get_value(
-		"Payment Request", pr_name, ["reference_doctype", "reference_name"]
+		"SLCM Payment Request", pr_name, ["reference_doctype", "reference_name"]
 	)
 	return pr_name, ref_doctype, ref_name
 
@@ -165,7 +165,7 @@ def _handle_payment_captured_webhook(event_payload):
 			order_id,
 			payment_id,
 			payment,
-			gateway=frappe.db.get_value("Payment Request", pr_name, "payment_gateway"),
+			gateway=frappe.db.get_value("SLCM Payment Request", pr_name, "payment_gateway"),
 		)
 	except Exception:
 		frappe.log_error(
@@ -189,7 +189,7 @@ def _handle_payment_authorized_webhook(event_payload):
 	if not pr_name or ref_doctype not in ("PACE Applicant Fee Assignment", "Offer Letter", "Applicant"):
 		return
 
-	if frappe.db.get_value("Payment Request", pr_name, "status") == "Paid":
+	if frappe.db.get_value("SLCM Payment Request", pr_name, "status") == "Paid":
 		return
 
 	try:
@@ -201,7 +201,7 @@ def _handle_payment_authorized_webhook(event_payload):
 		)
 
 		frappe.db.set_value(
-			"Payment Request",
+			"SLCM Payment Request",
 			pr_name,
 			{
 				"gateway_status": "authorized",
@@ -212,7 +212,7 @@ def _handle_payment_authorized_webhook(event_payload):
 		)
 
 		expected_paise = get_expected_amount_paise(
-			ref_doctype, ref_name, frappe.db.get_value("Payment Request", pr_name, "amount")
+			ref_doctype, ref_name, frappe.db.get_value("SLCM Payment Request", pr_name, "amount")
 		)
 		rzp_client = get_razorpay_client()
 		captured = capture_authorized_payment(rzp_client, payment, expected_paise)
@@ -230,7 +230,7 @@ def _handle_payment_authorized_webhook(event_payload):
 			order_id,
 			payment_id,
 			captured,
-			gateway=frappe.db.get_value("Payment Request", pr_name, "payment_gateway"),
+			gateway=frappe.db.get_value("SLCM Payment Request", pr_name, "payment_gateway"),
 		)
 		frappe.logger().info(
 			f"Razorpay Webhook: payment.authorized — captured and completed PR={pr_name}"
@@ -265,7 +265,7 @@ def _handle_payment_failed_webhook(event_payload):
 
 	try:
 		current_status, current_gateway_status = frappe.db.get_value(
-			"Payment Request", pr_name, ["status", "gateway_status"]
+			"SLCM Payment Request", pr_name, ["status", "gateway_status"]
 		)
 		if current_status == "Paid":
 			return  # Don't overwrite a successful payment
@@ -275,7 +275,7 @@ def _handle_payment_failed_webhook(event_payload):
 			return
 
 		frappe.db.set_value(
-			"Payment Request",
+			"SLCM Payment Request",
 			pr_name,
 			{
 				"status": "Failed",
@@ -369,17 +369,17 @@ def handle_settlement_processed(payload):
 		if not log_name:
 			# Try Payment Request
 			log_name = frappe.db.get_value(
-				"Payment Request",
+				"SLCM Payment Request",
 				{"razorpay_payment_id": rzp_payment_id, "status": "Paid"},
 				"name"
 			)
 			if not log_name:
 				log_name = frappe.db.get_value(
-					"Payment Request",
+					"SLCM Payment Request",
 					{"transaction_id": rzp_payment_id, "status": "Paid"},
 					"name"
 				)
-			target_doctype = "Payment Request"
+			target_doctype = "SLCM Payment Request"
 
 		if not log_name:
 			continue
@@ -410,7 +410,7 @@ def complete_payment_settlement(target_doctype, log_name, item, settlement_paylo
 		"net_settled":       round(net_paise / 100, 2) if net_paise else round((gross_paise - fee_paise - tax_paise) / 100, 2),
 	}
 
-	if target_doctype == "Payment Request":
+	if target_doctype == "SLCM Payment Request":
 		fields_to_update["settlement_amount"] = round(gross_paise / 100, 2)
 		fields_to_update["settlement_response"] = json.dumps(item, indent=4)
 		fields_to_update["gateway_settlement_status"] = gateway_status

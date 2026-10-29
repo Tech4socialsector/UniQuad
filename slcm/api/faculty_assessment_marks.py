@@ -50,10 +50,10 @@ def _fmt(dt):
 	return frappe.utils.format_datetime(dt, "d MMM yyyy, h:mm a") if dt else ""
 
 
-def _schedule_items(offering):
-	"""Active Exam Assessment Schedule rows for this offering. Matched on
-	course + programme + term (like the student page), so a duplicate offering
-	of the same course still finds its schedule."""
+def _schedule_items(teaching):
+	"""Active Exam Assessment Schedule rows for a course the faculty teaches in
+	a term. Matched on course + term + the programmes of the faculty's Classes
+	(like the student page)."""
 	return frappe.db.sql(
 		"""
 		SELECT item.name, item.parent AS assessment_schedule, eas.exam_plan,
@@ -65,12 +65,16 @@ def _schedule_items(offering):
 		WHERE item.parenttype = 'Exam Assessment Schedule'
 		  AND eas.status = 'Active'
 		  AND item.course = %(course)s
-		  AND eas.programme = %(programme)s
+		  AND eas.programme IN %(programmes)s
 		  AND eas.term = %(term)s
 		ORDER BY COALESCE(item.assessment_date, item.first_submission_deadline) IS NULL,
 		         COALESCE(item.assessment_date, item.first_submission_deadline), item.idx
 		""",
-		{"course": offering.course_title, "programme": offering.program, "term": offering.term_name},
+		{
+			"course": teaching.course,
+			"programmes": tuple(teaching.programmes) or ("__none__",),
+			"term": teaching.academic_term,
+		},
 		as_dict=True,
 	)
 
@@ -119,16 +123,16 @@ def _item_dict(item):
 
 
 def _get_item(ctx, schedule_item):
-	item = next((i for i in _schedule_items(ctx.offering) if i.name == schedule_item), None)
+	item = next((i for i in _schedule_items(ctx.teaching) if i.name == schedule_item), None)
 	if not item:
-		frappe.throw(_("This assessment is not scheduled for your course offering."), frappe.PermissionError)
+		frappe.throw(_("This assessment is not scheduled for your class."), frappe.PermissionError)
 	return item
 
 
-def _ctx_for(course_offering, item=None):
+def _ctx_for(course, academic_term, item=None):
 	"""faculty_grades context, on the schedule's exam plan when it has one.
 	Student Course Marks is keyed by course + exam plan + student."""
-	ctx = _context(course_offering, item.exam_plan if item and item.exam_plan else None)
+	ctx = _context(course, academic_term, item.exam_plan if item and item.exam_plan else None)
 	if item and not ctx.exam_plan:
 		frappe.throw(_("No exam plan is set up for this course yet. Please contact the examination office."))
 	return ctx
@@ -148,22 +152,22 @@ def _max_marks(ctx, item):
 
 
 @frappe.whitelist()
-def get_assessments(course_offering):
-	"""Scheduled assessments of a course offering with their entry window."""
-	ctx = _ctx_for(course_offering)
+def get_assessments(course, academic_term):
+	"""Scheduled assessments of a course (in a term) with their entry window."""
+	ctx = _ctx_for(course, academic_term)
 	return {
-		"course_name": ctx.offering.course_name or ctx.course,
-		"term": ctx.offering.term_name or "",
-		"assessments": [_item_dict(i) for i in _schedule_items(ctx.offering)],
+		"course_name": ctx.teaching.course_name or ctx.course,
+		"term": ctx.academic_term or "",
+		"assessments": [_item_dict(i) for i in _schedule_items(ctx.teaching)],
 	}
 
 
 @frappe.whitelist()
-def get_marks_sheet(course_offering, schedule_item):
+def get_marks_sheet(course, academic_term, schedule_item):
 	"""Enrolled students with their 1st / 2nd submission marks for one assessment."""
-	ctx = _ctx_for(course_offering)
+	ctx = _ctx_for(course, academic_term)
 	item = _get_item(ctx, schedule_item)
-	ctx = _ctx_for(course_offering, item)
+	ctx = _ctx_for(course, academic_term, item)
 	return _sheet(ctx, item)
 
 
@@ -177,7 +181,7 @@ def _sheet(ctx, item):
 	if info["locked"]:
 		info["window_message"] = _("Result entry is locked for this course.")
 
-	students = _enrolled_students(ctx.offering.name)
+	students = _enrolled_students(ctx)
 	existing = {}
 	if students:
 		for r in frappe.db.sql(
@@ -216,13 +220,13 @@ def _sheet(ctx, item):
 
 
 @frappe.whitelist()
-def save_marks(course_offering, schedule_item, rows):
+def save_marks(course, academic_term, schedule_item, rows):
 	"""Save 1st / 2nd submission marks for several students.
 	rows: [{student, first, second, remarks}] — only the changed students.
 	Each student is saved on its own; failures are returned, not raised."""
-	ctx = _ctx_for(course_offering)
+	ctx = _ctx_for(course, academic_term)
 	item = _get_item(ctx, schedule_item)
-	ctx = _ctx_for(course_offering, item)
+	ctx = _ctx_for(course, academic_term, item)
 	_require_open(ctx, item)
 
 	if isinstance(rows, str):
@@ -318,20 +322,20 @@ SHEET_KEY = "key"
 
 
 def _sheet_filename(ctx, item):
-	name = f"{ctx.offering.course_name or ctx.course} - {item.assessment_label}"
+	name = f"{ctx.teaching.course_name or ctx.course} - {item.assessment_label}"
 	return re.sub(r'[\\/:*?"<>|]+', "-", name).strip() + ".xlsx"
 
 
 @frappe.whitelist()
-def download_sheet(course_offering, schedule_item):
+def download_sheet(course, academic_term, schedule_item):
 	"""Excel sheet of the students listed for an assessment, with their
 	current marks — fill it in and upload it with import_sheet."""
 	import openpyxl
 	from openpyxl.styles import Alignment, Font, PatternFill
 
-	ctx = _ctx_for(course_offering)
+	ctx = _ctx_for(course, academic_term)
 	item = _get_item(ctx, schedule_item)
-	ctx = _ctx_for(course_offering, item)
+	ctx = _ctx_for(course, academic_term, item)
 	data = _sheet(ctx, item)
 	info, students = data["info"], data["students"]
 
@@ -372,16 +376,16 @@ def download_sheet(course_offering, schedule_item):
 
 
 @frappe.whitelist()
-def import_sheet(course_offering, schedule_item, filedata, filename="", apply=0):
+def import_sheet(course, academic_term, schedule_item, filedata, filename="", apply=0):
 	"""Check an uploaded sheet (base64) and, with apply=1, save it.
 
 	Every row must be valid before anything is saved: the student is listed for
 	this assessment and not Submitted / Locked, appears once, and marks are
 	numbers within 0..max. A blank cell keeps the value already saved.
 	Returns {ok, errors: [{row, student, column, message}], summary, applied}."""
-	ctx = _ctx_for(course_offering)
+	ctx = _ctx_for(course, academic_term)
 	item = _get_item(ctx, schedule_item)
-	ctx = _ctx_for(course_offering, item)
+	ctx = _ctx_for(course, academic_term, item)
 	_require_open(ctx, item)
 	if not (filename or "").lower().endswith(".xlsx"):
 		frappe.throw(_("Please upload the .xlsx sheet downloaded from this page."))
@@ -422,7 +426,7 @@ def import_sheet(course_offering, schedule_item, filedata, filename="", apply=0)
 			sid = reg_to_student.get(reg, sid)
 		s = listed.get(sid)
 		if not s:
-			errors.append({"row": row_no, "student": who, "column": "", "message": _("Student is not enrolled in this course offering.")})
+			errors.append({"row": row_no, "student": who, "column": "", "message": _("Student is not enrolled in your class.")})
 			continue
 		if sid in seen:
 			errors.append({"row": row_no, "student": who, "column": "", "message": _("Student appears more than once in the file.")})

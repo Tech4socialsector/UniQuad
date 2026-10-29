@@ -10,7 +10,7 @@
    "label": "Student Enrollment by Program"
   }
  ],
- "content": "[{\"id\":\"GtjnAGQxo9\",\"type\":\"paragraph\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Overview</span>\",\"col\":12}},{\"id\":\"5f_jDPrZCQ\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Total Students\",\"col\":4}},{\"id\":\"XkAbbfqUXO\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Active Enrollments\",\"col\":4}},{\"id\":\"V2pyC7HBcs\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Active Programs\",\"col\":4}},{\"id\":\"_QXaMvVNQ0\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Active Courses\",\"col\":4}},{\"id\":\"6OavVTzCj6\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Parent Login Invite Tool\",\"col\":6}},{\"id\":\"sp0\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"reg_pipe_h\",\"type\":\"paragraph\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Registration pipeline</span>\",\"col\":12}},{\"id\":\"rp_nc1\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Draft\",\"col\":3}},{\"id\":\"rp_nc2\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Selected\",\"col\":3}},{\"id\":\"rp_nc3\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Pending REGO\",\"col\":3}},{\"id\":\"rp_nc4\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Pending FINO\",\"col\":3}},{\"id\":\"rp_nc5\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Pending Registration\",\"col\":3}},{\"id\":\"rp_nc6\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Pending Print & Scan\",\"col\":3}},{\"id\":\"rp_nc7\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Pending Residences\",\"col\":3}},{\"id\":\"rp_nc8\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Pending IT\",\"col\":3}},{\"id\":\"rp_nc9\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Final Verification REGO\",\"col\":3}},{\"id\":\"rp_nc10\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Completed\",\"col\":3}},{\"id\":\"rp_nc11\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Re-Open\",\"col\":3}},{\"id\":\"rp_sp\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"kAWWH8xCv2\",\"type\":\"paragraph\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Analytics</span>\",\"col\":12}},{\"id\":\"ch_status\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Student Registration Status\",\"col\":6}},{\"id\":\"ch_program\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Student Enrollment by Program\",\"col\":6}},{\"id\":\"sp_charts\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"gEQzhzckZQ\",\"type\":\"paragraph\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Academic Setup</span>\",\"col\":12}},{\"id\":\"sc_ay\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Academic Year\",\"col\":3}},{\"id\":\"FWefKSrHWj\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Term Master\",\"col\":3}},{\"id\":\"sc_at\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Academic Term\",\"col\":3}},{\"id\":\"e2PNnudvec\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Programme Master\",\"col\":3}},{\"id\":\"sc_prog\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Programme\",\"col\":3}},{\"id\":\"sc_crs\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Course\",\"col\":3}},{\"id\":\"sc_coh\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Batch\",\"col\":3}},{\"id\":\"sc_co\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Course Offering\",\"col\":3}},{\"id\":\"sc_fac\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Faculty\",\"col\":3}},{\"id\":\"sp1\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"H2MPsgQX9w\",\"type\":\"paragraph\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Student Registration</span>\",\"col\":12}},{\"id\":\"sc_sm\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Student Master\",\"col\":3}},{\"id\":\"sc_se\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Student Enrollment\",\"col\":3}},{\"id\":\"sp2\",\"type\":\"spacer\",\"data\":{\"col\":12}}]",
+ "content": "[{\"id\":\"GtjnAGQxo9\",\"type\":\"paragraph\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Overview</span>\",\"col\":12}},{\"id\":\"5f_jDPrZCQ\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Total Students\",\"col\":4}},{\"id\":\"XkAbbfqUXO\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Active Enrollments\",\"col\":4}},{\"id\":\"V2pyC7HBcs\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Active Programs\",\"col\":4}},{\"id\":\"_QXaMvVNQ0\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Active Courses\",\"col\":4}},{\"id\":\"6OavVTzCj6\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Parent Login Invite Tool\",\"col\":6}},{\"id\":\"sp0\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"reg_pipe_h\",\"type\":\"paragraph\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Registration pipeline</span>\",\"col\":12}},{\"id\":\"rp_nc1\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Draft\",\"col\":3}},{\"id\":\"rp_nc2\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Selected\",\"col\":3}},{\"id\":\"rp_nc3\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Pending REGO\",\"col\":3}},{\"id\":\"rp_nc4\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Pending FINO\",\"col\":3}},{\"id\":\"rp_nc5\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Pending Registration\",\"col\":3}},{\"id\":\"rp_nc6\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Pending Print & Scan\",\"col\":3}},{\"id\":\"rp_nc7\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Pending Residences\",\"col\":3}},{\"id\":\"rp_nc8\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Pending IT\",\"col\":3}},{\"id\":\"rp_nc9\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Final Verification REGO\",\"col\":3}},{\"id\":\"rp_nc10\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Completed\",\"col\":3}},{\"id\":\"rp_nc11\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Re-Open\",\"col\":3}},{\"id\":\"rp_sp\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"kAWWH8xCv2\",\"type\":\"paragraph\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Analytics</span>\",\"col\":12}},{\"id\":\"ch_status\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Student Registration Status\",\"col\":6}},{\"id\":\"ch_program\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Student Enrollment by Program\",\"col\":6}},{\"id\":\"sp_charts\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"gEQzhzckZQ\",\"type\":\"paragraph\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Academic Setup</span>\",\"col\":12}},{\"id\":\"sc_ay\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Academic Year\",\"col\":3}},{\"id\":\"FWefKSrHWj\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Term Master\",\"col\":3}},{\"id\":\"sc_at\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Academic Term\",\"col\":3}},{\"id\":\"e2PNnudvec\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Programme Master\",\"col\":3}},{\"id\":\"sc_prog\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Programme\",\"col\":3}},{\"id\":\"sc_crs\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Course\",\"col\":3}},{\"id\":\"sc_coh\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Batch\",\"col\":3}},{\"id\":\"sc_fac\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Faculty\",\"col\":3}},{\"id\":\"sp1\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"H2MPsgQX9w\",\"type\":\"paragraph\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Student Registration</span>\",\"col\":12}},{\"id\":\"sc_sm\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Student Master\",\"col\":3}},{\"id\":\"sc_se\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Student Enrollment\",\"col\":3}},{\"id\":\"sp2\",\"type\":\"spacer\",\"data\":{\"col\":12}}]",
  "creation": "2026-08-05 12:10:23.162425",
  "custom_blocks": [],
  "docstatus": 0,
@@ -51,7 +51,7 @@
    "is_query_report": 0,
    "label": "Department",
    "link_count": 0,
-   "link_to": "Department",
+   "link_to": "SLCM Department",
    "link_type": "DocType",
    "onboard": 1,
    "type": "Link"
@@ -95,18 +95,7 @@
    "is_query_report": 0,
    "label": "Batch",
    "link_count": 0,
-   "link_to": "Batch",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "dependencies": "",
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Course Offering",
-   "link_count": 0,
-   "link_to": "Course Offering",
+   "link_to": "SLCM Batch",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -178,7 +167,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-07-08 13:06:14.867584",
+ "modified": "2026-10-29 10:30:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Student Registration",
@@ -319,15 +308,7 @@
    "color": "Yellow",
    "doc_view": "List",
    "label": "Batch",
-   "link_to": "Batch",
-   "stats_filter": "[]",
-   "type": "DocType"
-  },
-  {
-   "color": "Grey",
-   "doc_view": "List",
-   "label": "Course Offering",
-   "link_to": "Course Offering",
+   "link_to": "SLCM Batch",
    "stats_filter": "[]",
    "type": "DocType"
   },

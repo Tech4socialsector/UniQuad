@@ -32,43 +32,47 @@ def get_context(context):
 
         today = frappe.utils.today()
 
-        # ── Fetch all course offerings for this faculty ────────────
-        raw_offerings = frappe.get_all(
-            "Course Offering",
+        # ── Fetch all classes this faculty teaches ─────────────────
+        raw_classes = frappe.get_all(
+            "Classes",
             filters={"faculty": faculty_name},
-            fields=["name", "course_name", "course_title", "term_name",
-                    "academic_year", "credit_value", "status", "lms_url", "program"],
-            order_by="academic_year desc, term_name asc, course_name asc",
+            fields=["name", "course", "course_name", "class_type", "section", "group_name",
+                    "academic_term", "academic_year", "credit", "programme"],
+            order_by="academic_year desc, academic_term asc, course_name asc",
             ignore_permissions=True,
         )
+        active_years = {r.name for r in _active_academic_years()}
 
-        # ── Enrich each offering ───────────────────────────────────
+        # ── Enrich each class ──────────────────────────────────────
         enriched = []
-        for co in raw_offerings:
-            student_count = _get_student_count(co.name)
-            avg_att, total_sessions = _get_attendance(co.name)
-            pending = _get_pending_sessions(co.name, today)
-            next_session = _get_next_session(co.name, today)
-            students = _get_students(co.name)
+        for cls in raw_classes:
+            student_count = _get_student_count(cls.name)
+            avg_att, total_sessions = _get_attendance(cls.name)
+            pending = _get_pending_sessions(cls.name, today)
+            next_session = _get_next_session(cls.name, today)
+            students = _get_students(cls.name)
+            group = cls.group_name if cls.class_type == "Group" else cls.section
             enriched.append({
-                "name": co.name,
-                "course_name": co.course_name or co.name,
-                "term_name": co.term_name or "—",
-                "academic_year": co.academic_year or "—",
-                "credits": co.credit_value or 0,
+                "name": cls.name,
+                "course": cls.course or "",
+                "course_name": " · ".join(filter(None, [cls.course_name or cls.course or cls.name, group])),
+                "term_name": cls.academic_term or "—",
+                "academic_term": cls.academic_term or "",
+                "academic_year": cls.academic_year or "—",
+                "credits": cls.credit or 0,
                 "student_count": student_count,
                 "avg_attendance": avg_att,
                 "total_sessions": total_sessions,
-                "status": co.status or "Active",
+                # Classes carry no status: a class of an Active academic year is current
+                "status": "Active" if cls.academic_year in active_years else "Closed",
                 "pending_sessions": pending,
                 "next_session": next_session,
                 "students": students,
                 "group_count": 0,
-                "lms_url": co.lms_url or "",
-                "programme": frappe.db.get_value("Programme", co.program, "program_name") if co.program else "",
+                "programme": frappe.db.get_value("Programme", cls.programme, "program_name") if cls.programme else "",
             })
 
-        context.course_offerings = enriched
+        context.faculty_classes = enriched
 
         # ── Filter options ─────────────────────────────────────────
         _set_term_options(context, [(c["term_name"], c["academic_year"]) for c in enriched])
@@ -78,7 +82,7 @@ def get_context(context):
         context.total_courses = len(enriched)
         context.total_students = sum(c["student_count"] for c in enriched)
         context.total_sessions = sum(c["total_sessions"] for c in enriched)
-        context.active_courses = sum(1 for c in enriched if c["status"] in ("Open", "Active"))
+        context.active_courses = sum(1 for c in enriched if c["status"] == "Active")
 
     except Exception as e:
         frappe.log_error(str(e)[:130], "Faculty Portal My Classes")
@@ -89,27 +93,23 @@ def get_context(context):
     return context
 
 
-def _get_student_count(co_name):
+def _get_student_count(class_name):
     try:
-        res = frappe.db.sql(
-            """SELECT COUNT(DISTINCT se.student) AS cnt
-               FROM `tabStudent Enrollment Course` sec
-               JOIN `tabStudent Enrollment` se ON se.name = sec.parent
-               WHERE sec.course_offering = %s AND sec.status = 'Enrolled'""",
-            co_name, as_dict=True,
+        return frappe.db.count(
+            "Class Enrolled Student",
+            {"parenttype": "Classes", "parent": class_name, "status": "Enrolled"},
         )
-        return (res[0].cnt or 0) if res else 0
     except Exception:
         return 0
 
 
-def _get_attendance(co_name):
+def _get_attendance(class_name):
     try:
         rows = frappe.db.sql(
             """SELECT AVG(attendance_percentage) AS avg_pct, COUNT(*) AS sess
                FROM `tabAttendance Session`
-               WHERE course_offering = %s AND attendance_marked = 1""",
-            co_name, as_dict=True,
+               WHERE class_name = %s AND attendance_marked = 1""",
+            class_name, as_dict=True,
         )
         avg_pct = round(float((rows[0].avg_pct or 0) if rows else 0), 1)
         sessions = int((rows[0].sess or 0) if rows else 0)
@@ -118,29 +118,29 @@ def _get_attendance(co_name):
         return 0.0, 0
 
 
-def _get_pending_sessions(co_name, today):
+def _get_pending_sessions(class_name, today):
     """Count sessions that are past/today and have not been marked."""
     try:
         res = frappe.db.sql(
             """SELECT COUNT(*) AS cnt FROM `tabAttendance Session`
-               WHERE course_offering = %s AND attendance_marked = 0
+               WHERE class_name = %s AND attendance_marked = 0
                AND session_date <= %s""",
-            (co_name, today), as_dict=True,
+            (class_name, today), as_dict=True,
         )
         return int((res[0].cnt or 0) if res else 0)
     except Exception:
         return 0
 
 
-def _get_next_session(co_name, today):
+def _get_next_session(class_name, today):
     """Return the next upcoming session date/time/room."""
     try:
         rows = frappe.db.sql(
             """SELECT session_date, session_start_time, session_end_time, room
                FROM `tabAttendance Session`
-               WHERE course_offering = %s AND session_date >= %s
+               WHERE class_name = %s AND session_date >= %s
                ORDER BY session_date ASC, session_start_time ASC LIMIT 1""",
-            (co_name, today), as_dict=True,
+            (class_name, today), as_dict=True,
         )
         if rows:
             s = rows[0]
@@ -155,17 +155,17 @@ def _get_next_session(co_name, today):
         return None
 
 
-def _get_students(co_name):
-    """Return list of enrolled students for a course offering."""
+def _get_students(class_name):
+    """Return list of enrolled students of a class."""
     try:
         rows = frappe.db.sql(
-            """SELECT se.student AS student_id, se.student_name, sm.registration_id
-               FROM `tabStudent Enrollment Course` sec
-               JOIN `tabStudent Enrollment` se ON se.name = sec.parent
+            """SELECT DISTINCT se.student AS student_id, se.student_name, sm.registration_id
+               FROM `tabClass Enrolled Student` ces
+               JOIN `tabStudent Enrollment` se ON se.name = ces.student_enrollment
                LEFT JOIN `tabStudent Master` sm ON sm.name = se.student
-               WHERE sec.course_offering = %s AND sec.status = 'Enrolled'
+               WHERE ces.parenttype = 'Classes' AND ces.parent = %s AND ces.status = 'Enrolled'
                ORDER BY se.student_name""",
-            co_name, as_dict=True,
+            class_name, as_dict=True,
         )
         return [{
             "id": r.student_id,
@@ -233,7 +233,7 @@ def _set_term_options(context, course_terms=()):
 
 
 def _set_defaults(context):
-    context.course_offerings = []
+    context.faculty_classes = []
     context.filter_terms = []
     context.filter_years = []
     context.current_academic_year = ""

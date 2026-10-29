@@ -33,7 +33,7 @@ def get_columns():
 			"fieldname": "program",
 			"label": _("Batch"),
 			"fieldtype": "Link",
-			"options": "Batch",
+			"options": "SLCM Batch",
 			"width": 130
 		},
 		{
@@ -154,27 +154,27 @@ def get_columns():
 	]
 
 
-def _attendance_match_clause(table_alias, offering_alias):
+def _attendance_match_clause(table_alias, class_alias):
 	"""
 	Return the SQL WHERE fragment that matches a Student Attendance row to a
-	Course Offering, handling two cases:
+	Class, handling two cases:
 
-	  1. course_offer is set and matches the offering (RFID / Auto / well-formed Manual)
-	  2. course_offer is NULL but the course Link (course_title) matches (older manual records)
+	  1. class_name is set and matches the class (RFID / Auto / well-formed Manual)
+	  2. class_name is NULL but the course Link matches (older manual records)
 
 	NOTE: a third tier matching solely on academic_year was removed — it caused every
-	null-course record to match ALL offerings in the same year, inflating attendance figures.
+	null-course record to match ALL classes in the same year, inflating attendance figures.
 
 	{sa}  = Student Attendance table alias
-	{co}  = Course Offering table alias (must expose: name, course_title)
+	{cls} = Classes table alias (must expose: name, course)
 	"""
 	return """(
-		{sa}.course_offer = {co}.name
+		{sa}.class_name = {cls}.name
 		OR (
-			({sa}.course_offer IS NULL OR {sa}.course_offer = '')
-			AND {sa}.course = {co}.course_title
+			({sa}.class_name IS NULL OR {sa}.class_name = '')
+			AND {sa}.course = {cls}.course
 		)
-	)""".format(sa=table_alias, co=offering_alias)
+	)""".format(sa=table_alias, cls=class_alias)
 
 
 def get_data(filters):
@@ -190,14 +190,17 @@ def get_data(filters):
 	if filters.get("section"):
 		conditions += " AND att.section = %(section)s"
 		values["section"] = filters["section"]
+	if filters.get("class_name"):
+		conditions += " AND att.class_name = %(class_name)s"
+		values["class_name"] = filters["class_name"]
 	if filters.get("course"):
-		conditions += " AND att.course_offering = %(course)s"
+		conditions += " AND att.course = %(course)s"
 		values["course"] = filters["course"]
 	if filters.get("source"):
 		conditions += (
 			" AND EXISTS ("
 			"  SELECT 1 FROM `tabStudent Attendance` sa_f"
-			"  JOIN `tabCourse Offering` co_f ON co_f.name = att.course_offering"
+			"  JOIN `tabClasses` co_f ON co_f.name = att.class_name"
 			"  WHERE sa_f.student = att.student"
 			"  AND " + _attendance_match_clause("sa_f", "co_f") +
 			"  AND sa_f.source = %(source)s"
@@ -216,7 +219,7 @@ def get_data(filters):
 			att.student_name,
 			s.programme AS program,
 			att.section,
-			COALESCE(co.course_name, att.course_offering) AS course,
+			COALESCE(co.course_name, att.course) AS course,
 			att.total_classes,
 			COALESCE(att.total_class_hours, 0) AS total_class_hours,
 
@@ -270,7 +273,7 @@ def get_data(filters):
 
 		FROM `tabAttendance Summary` att
 		LEFT JOIN `tabStudent Master` s ON att.student = s.name
-		LEFT JOIN `tabCourse Offering` co ON att.course_offering = co.name
+		LEFT JOIN `tabClasses` co ON att.class_name = co.name
 		WHERE att.docstatus < 2
 		{conditions}
 		ORDER BY s.first_name, co.course_name
