@@ -121,6 +121,12 @@ slcm.enrollment.EnrollmentWizard = class EnrollmentWizard {
 
 				// 4. Sections
 				{ fieldtype: "Section Break", fieldname: "s4" },
+				{ fieldtype: "HTML", fieldname: "keep_banner" },
+				{
+					fieldtype: "Check", fieldname: "keep_sections", label: __("Keep each student's current section"), default: 1,
+					description: __("Students who already have a section keep it; only the others are assigned below. Untick to re-assign everyone."),
+					onchange: () => me.on_keep_sections_change(),
+				},
 				{
 					fieldtype: "Select", fieldname: "assignment_type", label: __("Section Assignment"),
 					options: ["Mid-off", "One-by-one", "Manual", "Upload"].join("\n"), default: "Mid-off", reqd: 1,
@@ -583,13 +589,47 @@ slcm.enrollment.EnrollmentWizard = class EnrollmentWizard {
 
 	/* ---------------- 4. sections ---------------- */
 
+	/** Student -> current section, for the selected students whose section still
+	 * exists, when "Keep each student's current section" is on. */
+	kept_sections() {
+		if (!this.d.get_value("keep_sections")) return {};
+		const current = Object.fromEntries(this.students.map((s) => [s.name, s.section]));
+		const kept = {};
+		this.ids.forEach((r) => {
+			const s = current[r.student];
+			if (s && this.all_sections.includes(s)) kept[r.student] = s;
+		});
+		return kept;
+	}
+
+	/** ID rows of the students who still need a section. */
+	rows_to_assign() {
+		const kept = this.kept_sections();
+		return this.ids.filter((r) => !kept[r.student]);
+	}
+
+	all_kept() {
+		return this.ids.length && !this.rows_to_assign().length;
+	}
+
+	on_keep_sections_change() {
+		this.sections = { ...this.kept_sections() };
+		this.sections_key = null;
+		this.on_assignment_type_change();
+	}
+
 	on_assignment_type_change() {
 		const type = this.d.get_value("assignment_type");
 		const by_rows = ["Mid-off", "One-by-one"].includes(type);
+		const all_kept = this.all_kept();
 		if (this.step === 3) {
-			$(this.d.fields_dict.s4_rows.wrapper).toggle(by_rows);
-			$(this.d.fields_dict.s4_upload.wrapper).toggle(type === "Upload");
+			// Nothing to assign: hide the assignment controls altogether.
+			this.d.fields_dict.assignment_type.$wrapper.toggle(!all_kept);
+			this.d.fields_dict.assignment_help.$wrapper.toggle(!all_kept);
+			$(this.d.fields_dict.s4_rows.wrapper).toggle(by_rows && !all_kept);
+			$(this.d.fields_dict.s4_upload.wrapper).toggle(type === "Upload" && !all_kept);
 		}
+		this.render_keep_banner();
 		const help = {
 			"Mid-off": __("Students, in alphabetical order, are cut into consecutive blocks: the first block to the first section, the next block to the second, and so on. Blocks are as even as the room capacities allow."),
 			"One-by-one": __("Students, in alphabetical order, are dealt out in turn: 1st to the first section, 2nd to the second, ... and round again, skipping full rooms."),
@@ -599,11 +639,28 @@ slcm.enrollment.EnrollmentWizard = class EnrollmentWizard {
 		this.d.fields_dict.assignment_help.$wrapper.html(`<div class="ew-help">${help || ""}</div>`);
 
 		// The sections chosen belong to one method: switching starts over.
+		// Kept sections always stay (and are refreshed for the current selection).
 		if (this._last_type && this._last_type !== type) {
 			this.sections = {};
 		}
 		this._last_type = type;
+		const kept = this.kept_sections();
+		Object.keys(this.sections).forEach((s) => this.ids.some((r) => r.student === s) || delete this.sections[s]);
+		Object.assign(this.sections, kept);
 		this.render_section_preview();
+	}
+
+	render_keep_banner() {
+		const $w = this.d.fields_dict.keep_banner.$wrapper;
+		const kept = Object.keys(this.kept_sections()).length;
+		const todo = this.rows_to_assign().length;
+		if (!kept) {
+			$w.empty();
+		} else if (!todo) {
+			$w.html(`<div class="ew-banner ok">${__("All {0} selected students already have a section. Their current sections are kept; no new sections are needed. Click Next to continue.", [kept])}</div>`);
+		} else {
+			$w.html(`<div class="ew-banner">${__("{0} student(s) keep their current section. Assign a section to the other {1} below.", [kept, todo])}</div>`);
+		}
 	}
 
 	section_rows() {
@@ -644,10 +701,10 @@ slcm.enrollment.EnrollmentWizard = class EnrollmentWizard {
 			frappe.msgprint(__("Section {0} is listed more than once.", [dupes[0]]));
 			return;
 		}
-		const students = this.ids.map((r) => r.student);
+		const students = this.rows_to_assign().map((r) => r.student);
 		const counts = this.section_counts(rows, students.length);
 
-		this.sections = {};
+		this.sections = { ...this.kept_sections() };
 		if (type === "Mid-off") {
 			let start = 0;
 			rows.forEach((r, i) => {
@@ -664,14 +721,18 @@ slcm.enrollment.EnrollmentWizard = class EnrollmentWizard {
 				i = (i + 1) % rows.length;
 			});
 		}
-		this.sections_key = JSON.stringify([type, rows, this.ids_key]);
+		this.sections_key = this.split_key(type);
 		this.render_section_preview();
+	}
+
+	split_key(type) {
+		return JSON.stringify([type, this.section_rows(), this.ids_key, this.d.get_value("keep_sections") || 0]);
 	}
 
 	download_template() {
 		frappe.call({
 			method: WIZARD_API + "download_section_template",
-			args: { rows: this.ids.map((r) => ({ ...r, section: this.sections[r.student] || "" })) },
+			args: { rows: this.rows_to_assign().map((r) => ({ ...r, section: this.sections[r.student] || "" })) },
 			freeze: true,
 			callback: ({ message }) => message && download_base64(message.content, message.filename, message.mime),
 		});
@@ -687,8 +748,8 @@ slcm.enrollment.EnrollmentWizard = class EnrollmentWizard {
 			freeze_message: __("Reading file..."),
 		});
 		const m = message || {};
-		this.sections = {};
-		this.ids.forEach((r) => {
+		this.sections = { ...this.kept_sections() };
+		this.rows_to_assign().forEach((r) => {
 			if (m.sections && m.sections[r.student]) this.sections[r.student] = m.sections[r.student];
 		});
 		this.upload_unknown = m.unknown || [];
@@ -708,8 +769,10 @@ slcm.enrollment.EnrollmentWizard = class EnrollmentWizard {
 		const unassigned = this.ids.filter((r) => !this.sections[r.student]).length;
 		const caps = {};
 		this.section_rows().forEach((r) => (caps[r.section] = r.capacity));
+		const kept = this.kept_sections();
+		const assigned_new = this.rows_to_assign().some((r) => this.sections[r.student]);
 
-		if (type !== "Manual" && !Object.keys(counts).length) {
+		if (type !== "Manual" && !assigned_new && !this.all_kept()) {
 			$w.html(`<div class="ew-empty">${
 				type === "Upload" ? __("Upload the filled template to see the sections.") : __("Add the sections and click Split & Preview.")
 			}</div>`);
@@ -719,6 +782,7 @@ slcm.enrollment.EnrollmentWizard = class EnrollmentWizard {
 		const options = (this.section_rows().length ? this.section_rows().map((r) => r.section) : this.all_sections);
 		const cell = (r) => {
 			const s = this.sections[r.student] || "";
+			if (kept[r.student]) return `<span class="ew-pill">${esc(s)}</span> <span class="ew-muted">${__("current")}</span>`;
 			if (type !== "Manual") return s ? `<span class="ew-pill">${esc(s)}</span>` : `<span class="ew-warn">${__("Not assigned")}</span>`;
 			return `<select class="form-control input-xs ew-section-select" data-name="${esc(r.student)}">
 				<option value=""></option>
@@ -752,9 +816,13 @@ slcm.enrollment.EnrollmentWizard = class EnrollmentWizard {
 
 	leave_sections() {
 		const type = this.d.get_value("assignment_type");
+		Object.assign(this.sections, this.kept_sections());
+		if (this.all_kept()) {
+			this.render_summary();
+			return true;
+		}
 		if (["Mid-off", "One-by-one"].includes(type)) {
-			const key = JSON.stringify([type, this.section_rows(), this.ids_key]);
-			if (this.sections_key !== key) {
+			if (this.sections_key !== this.split_key(type)) {
 				frappe.msgprint(__("Click <b>Split & Preview</b> to apply the sections."));
 				return false;
 			}
@@ -792,7 +860,7 @@ slcm.enrollment.EnrollmentWizard = class EnrollmentWizard {
 				${item(__("Students"), `<b>${this.ids.length}</b>`)}
 				${item(__("New Student IDs"), fresh.length
 					? `${fresh.length} (${esc(fresh[0].student_id)} – ${esc(fresh[fresh.length - 1].student_id)})` : __("None"))}
-				${item(__("Section Assignment"), esc(v.assignment_type))}
+				${item(__("Section Assignment"), this.section_assignment_label())}
 			</div>
 			<table class="ew-table ew-sum-table">
 				<thead><tr><th>${__("Section")}</th><th>${__("Students")}</th></tr></thead>
@@ -802,6 +870,14 @@ slcm.enrollment.EnrollmentWizard = class EnrollmentWizard {
 				"Enroll sets the Student ID, Section, Batch, Programme and Academic Year on each Student Master and creates a Student Enrollment starting in Year {0}, {1}.",
 				[esc(String(v.year_no)), esc(v.academic_term)]
 			)}</div>`);
+	}
+
+	section_assignment_label() {
+		const kept = Object.keys(this.kept_sections()).length;
+		const type = frappe.utils.escape_html(this.d.get_value("assignment_type") || "");
+		if (!kept) return type;
+		if (this.all_kept()) return __("Current sections kept");
+		return __("{0} ({1} kept current section)", [type, kept]);
 	}
 
 	enroll() {
@@ -931,7 +1007,7 @@ function inject_wizard_css() {
 		.enroll-wizard .ew-warn { color: var(--red-500, #dc2626); font-size: 12px; font-weight: 600; }
 		.enroll-wizard .ew-stale { color: var(--orange-500, #d97706); font-size: 12px; margin-left: 8px; }
 		.enroll-wizard .ew-summary-line { margin-bottom: 10px; font-size: 13px; }
-		.enroll-wizard .ew-banner { padding: 10px 14px; border-radius: 8px; margin-bottom: 10px; font-size: 13px; }
+		.enroll-wizard .ew-banner { padding: 10px 14px; border-radius: 8px; margin-bottom: 10px; font-size: 13px; background: var(--blue-highlight-color, #e8f1fd); color: var(--blue-700, #1e40af); }
 		.enroll-wizard .ew-banner.ok { background: var(--green-highlight-color, #e6f4ea); color: var(--green-700, #166534); }
 		.enroll-wizard .ew-badge {
 			display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 11.5px; font-weight: 600;
