@@ -2,193 +2,6 @@
  {
   "app": "slcm",
   "charts": [],
-  "content": "[{\"id\":\"er-hdr-overview\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Overview</b></span>\",\"col\":12}},{\"id\":\"er-nc-1\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Total Exam Plans\",\"col\":3}},{\"id\":\"er-nc-2\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Active Exam Plans\",\"col\":3}},{\"id\":\"er-nc-3\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Courses Mapped\",\"col\":3}},{\"id\":\"er-hdr-reexam\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Re Exam</b></span>\",\"col\":12}},{\"id\":\"er-nc-rx-1\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Re Exam Registrations\",\"col\":3}},{\"id\":\"er-nc-rx-2\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Re Exam Paid\",\"col\":3}},{\"id\":\"er-sc-rx-1\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Re Exam\",\"col\":3}},{\"id\":\"er-sc-rx-2\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Re Exam Registrations\",\"col\":3}},{\"id\":\"er-hdr-improv\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Improvement Exam</b></span>\",\"col\":12}},{\"id\":\"er-nc-ix-1\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Improvement Exam Registrations\",\"col\":3}},{\"id\":\"er-nc-ix-2\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Improvement Exam Paid\",\"col\":3}},{\"id\":\"er-sc-ix-1\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Improvement Exam\",\"col\":3}},{\"id\":\"er-sc-ix-2\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Improvement Exam Registrations\",\"col\":3}},{\"id\":\"er-hdr-access\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Access &amp; Settings</span>\",\"col\":12}},{\"id\":\"er-sc-3\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Result Access Settings\",\"col\":3}},{\"id\":\"K-YiSThWuA\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Term Result Settings\",\"col\":3}},{\"id\":\"er-hdr-results\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Results</b></span>\",\"col\":12}},{\"id\":\"er-sc-1\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Course Results\",\"col\":3}},{\"id\":\"WZHBU8OIJf\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Term Result\",\"col\":3}},{\"id\":\"lnDHp7XAtv\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Publish Result\",\"col\":3}}]",
-  "custom_blocks": [],
-  "docstatus": 0,
-  "doctype": "Workspace",
-  "external_link": null,
-  "for_user": "",
-  "hide_custom": 0,
-  "icon": "clipboard-check",
-  "indicator_color": "green",
-  "is_hidden": 0,
-  "label": "Exam Result",
-  "link_to": null,
-  "link_type": "DocType",
-  "links": [],
-  "modified": "2026-10-12 13:00:00",
-  "module": "SLCM",
-  "name": "Exam Result",
-  "number_cards": [
-   {
-    "label": "Total Exam Plans",
-    "number_card_name": "Total Exam Plans"
-   },
-   {
-    "label": "Active Exam Plans",
-    "number_card_name": "Active Exam Plans"
-   },
-   {
-    "label": "Courses Mapped",
-    "number_card_name": "Courses Mapped"
-   },
-   {
-    "label": "Re Exam Registrations",
-    "number_card_name": "Re Exam Registrations"
-   },
-   {
-    "label": "Re Exam Paid",
-    "number_card_name": "Re Exam Paid"
-   },
-   {
-    "label": "Improvement Exam Registrations",
-    "number_card_name": "Improvement Exam Registrations"
-   },
-   {
-    "label": "Improvement Exam Paid",
-    "number_card_name": "Improvement Exam Paid"
-   }
-  ],
-  "parent_page": null,
-  "public": 1,
-  "quick_lists": [],
-  "restrict_to_domain": null,
-  "roles": [],
-  "sequence_id": 0.0,
-  "shortcuts": [
-   {
-    "color": "Grey",
-    "doc_view": "List",
-    "format": null,
-    "icon": null,
-    "kanban_board": null,
-    "label": "Term Result",
-    "link_to": null,
-    "report_ref_doctype": null,
-    "restrict_to_domain": null,
-    "stats_filter": null,
-    "type": "URL",
-    "url": "/desk/term-result"
-   },
-   {
-    "color": "Grey",
-    "doc_view": "List",
-    "format": null,
-    "icon": null,
-    "kanban_board": null,
-    "label": "Term Result Settings",
-    "link_to": null,
-    "report_ref_doctype": null,
-    "restrict_to_domain": null,
-    "stats_filter": null,
-    "type": "URL",
-    "url": "/desk/result-settings"
-   },
-   {
-    "color": "Purple",
-    "doc_view": "",
-    "format": null,
-    "icon": null,
-    "kanban_board": null,
-    "label": "Course Results",
-    "link_to": "examination-result",
-    "report_ref_doctype": null,
-    "restrict_to_domain": null,
-    "stats_filter": null,
-    "type": "Page",
-    "url": null
-   },
-   {
-    "color": "Grey",
-    "doc_view": "List",
-    "format": null,
-    "icon": null,
-    "kanban_board": null,
-    "label": "Publish Result",
-    "link_to": null,
-    "report_ref_doctype": null,
-    "restrict_to_domain": null,
-    "stats_filter": null,
-    "type": "URL",
-    "url": "/desk/publish-result"
-   },
-   {
-    "color": "Blue",
-    "doc_view": "List",
-    "format": null,
-    "icon": null,
-    "kanban_board": null,
-    "label": "Result Access Settings",
-    "link_to": "Access Result Settings",
-    "report_ref_doctype": null,
-    "restrict_to_domain": null,
-    "stats_filter": null,
-    "type": "DocType",
-    "url": null
-   },
-   {
-    "color": "Red",
-    "doc_view": "",
-    "format": null,
-    "icon": null,
-    "kanban_board": null,
-    "label": "Re Exam",
-    "link_to": "re-exam",
-    "report_ref_doctype": null,
-    "restrict_to_domain": null,
-    "stats_filter": null,
-    "type": "Page",
-    "url": null
-   },
-   {
-    "color": "Red",
-    "doc_view": "List",
-    "format": null,
-    "icon": null,
-    "kanban_board": null,
-    "label": "Re Exam Registrations",
-    "link_to": "Re Exam Registration",
-    "report_ref_doctype": null,
-    "restrict_to_domain": null,
-    "stats_filter": null,
-    "type": "DocType",
-    "url": null
-   },
-   {
-    "color": "Purple",
-    "doc_view": "",
-    "format": null,
-    "icon": null,
-    "kanban_board": null,
-    "label": "Improvement Exam",
-    "link_to": "improvement-exam",
-    "report_ref_doctype": null,
-    "restrict_to_domain": null,
-    "stats_filter": null,
-    "type": "Page",
-    "url": null
-   },
-   {
-    "color": "Purple",
-    "doc_view": "List",
-    "format": null,
-    "icon": null,
-    "kanban_board": null,
-    "label": "Improvement Exam Registrations",
-    "link_to": "Improvement Exam Registration",
-    "report_ref_doctype": null,
-    "restrict_to_domain": null,
-    "stats_filter": null,
-    "type": "DocType",
-    "url": null
-   }
-  ],
-  "title": "Exam Result",
-  "type": "Workspace"
- },
- {
-  "app": "slcm",
-  "charts": [],
   "content": "[]",
   "custom_blocks": [],
   "docstatus": 0,
@@ -1111,37 +924,6 @@
   "sequence_id": 4.0,
   "shortcuts": [],
   "title": "MSA",
-  "type": "Workspace"
- },
- {
-  "app": "slcm",
-  "charts": [],
-  "content": "[]",
-  "custom_blocks": [],
-  "docstatus": 0,
-  "doctype": "Workspace",
-  "external_link": null,
-  "for_user": null,
-  "hide_custom": 0,
-  "icon": "",
-  "indicator_color": "green",
-  "is_hidden": 0,
-  "label": "Exam",
-  "link_to": null,
-  "link_type": "DocType",
-  "links": [],
-  "modified": "2026-10-29 10:30:00",
-  "module": "SLCM",
-  "name": "Exam",
-  "number_cards": [],
-  "parent_page": null,
-  "public": 0,
-  "quick_lists": [],
-  "restrict_to_domain": null,
-  "roles": [],
-  "sequence_id": 0.0,
-  "shortcuts": [],
-  "title": "Exam",
   "type": "Workspace"
  },
  {
@@ -2578,7 +2360,7 @@
  {
   "app": "slcm",
   "charts": [],
-  "content": "[{\"id\":\"exam-hdr-planning\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Examination Planning</b></span>\",\"col\":12}},{\"id\":\"exam-sc-planner\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Examination Planner\",\"col\":3}},{\"id\":\"exam-sc-plan\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Exam Plan\",\"col\":3}},{\"id\":\"exam-hdr-results\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Results</b></span>\",\"col\":12}},{\"id\":\"exam-sc-result\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Course Results\",\"col\":3}},{\"id\":\"exam-sc-access\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Access Result Settings\",\"col\":3}},{\"id\":\"exam-hdr-eval\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Evaluation &amp; Grading</span>\",\"col\":12}},{\"id\":\"exam-sc-evalschema\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Evaluation Schema\",\"col\":3}},{\"id\":\"exam-sc-gradeschema\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Grading Schema\",\"col\":3}},{\"id\":\"exam-hdr-masters\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Masters</span>\",\"col\":12}},{\"id\":\"exam-sc-component\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Exam Component\",\"col\":3}},{\"id\":\"exam-sc-assesstype\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Exam Assessment Type\",\"col\":3}}]",
+  "content": "[{\"id\": \"ex-h-run\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Run an exam</b></span>\", \"col\": 12}}, {\"id\": \"ex-s-examination-planner\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Exam Plan\", \"col\": 3}}, {\"id\": \"ex-s-exam-plan\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Exam Plans\", \"col\": 3}}, {\"id\": \"ex-s-exam-assessment-schedule\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Exam Assessment Schedule\", \"col\": 3}}, {\"id\": \"ex-h-marks\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Marks & results</b></span>\", \"col\": 12}}, {\"id\": \"ex-s-examination-result\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Course Results\", \"col\": 3}}, {\"id\": \"ex-s-term-result\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Term Result\", \"col\": 3}}, {\"id\": \"ex-s-publish-result\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Publish Result\", \"col\": 3}}, {\"id\": \"ex-s-result-settings\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Result Settings\", \"col\": 3}}, {\"id\": \"ex-s-exam-barcode-sheet\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Exam Barcode Sheet\", \"col\": 3}}, {\"id\": \"ex-h-after\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>After results</b></span>\", \"col\": 12}}, {\"id\": \"ex-s-re-exam\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Re Exam\", \"col\": 3}}, {\"id\": \"ex-s-improvement-exam\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Improvement Exam\", \"col\": 3}}, {\"id\": \"ex-s-grade-appeal\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Grade Appeal\", \"col\": 3}}, {\"id\": \"ex-h-setup\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Setup (once)</b></span>\", \"col\": 12}}, {\"id\": \"ex-s-evaluation-schema\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Evaluation Schema\", \"col\": 3}}, {\"id\": \"ex-s-grading-schema\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Grading Schema\", \"col\": 3}}, {\"id\": \"ex-s-exam-component\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Exam Component\", \"col\": 3}}, {\"id\": \"ex-s-exam-assessment-type\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Exam Assessment Type\", \"col\": 3}}, {\"id\": \"ex-s-examination-settings\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Examination Settings\", \"col\": 3}}, {\"id\": \"ex-h-records\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Records & reports</b></span>\", \"col\": 12}}, {\"id\": \"ex-s-student-course-marks\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Student Course Marks\", \"col\": 3}}, {\"id\": \"ex-s-course-schema-assignment\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Course Schema Assignment\", \"col\": 3}}, {\"id\": \"ex-s-schema-change-log\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Schema Change Log\", \"col\": 3}}, {\"id\": \"ex-s-marks-import-log\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Marks Import Log\", \"col\": 3}}, {\"id\": \"ex-s-course-schema-mapping-report\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Course Schema Mapping Report\", \"col\": 3}}, {\"id\": \"ex-s-schema-change-audit\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Schema Change Audit\", \"col\": 3}}]",
   "custom_blocks": [],
   "docstatus": 0,
   "doctype": "Workspace",
@@ -2592,7 +2374,7 @@
   "link_to": null,
   "link_type": "DocType",
   "links": [],
-  "modified": "2026-10-29 10:30:00",
+  "modified": "2026-10-29 20:00:00.000000",
   "module": "SLCM",
   "name": "Examination Management",
   "number_cards": [],
@@ -2604,339 +2386,161 @@
   "sequence_id": 0.0,
   "shortcuts": [
    {
+    "color": "Red",
+    "doc_view": "",
+    "label": "Exam Plan",
+    "link_to": "examination-planner",
+    "type": "Page"
+   },
+   {
+    "color": "Red",
+    "doc_view": "List",
+    "label": "Exam Plans",
+    "link_to": "Exam Plan",
+    "type": "DocType"
+   },
+   {
+    "color": "Red",
+    "doc_view": "List",
+    "label": "Exam Assessment Schedule",
+    "link_to": "Exam Assessment Schedule",
+    "type": "DocType"
+   },
+   {
     "color": "Blue",
     "doc_view": "",
-    "format": null,
-    "icon": null,
-    "kanban_board": null,
-    "label": "Examination Planner",
-    "link_to": null,
-    "report_ref_doctype": null,
-    "restrict_to_domain": null,
-    "stats_filter": null,
-    "type": "URL",
-    "url": "/app/examination-planner"
-   },
-   {
-    "color": "Green",
-    "doc_view": "List",
-    "format": null,
-    "icon": null,
-    "kanban_board": null,
-    "label": "Exam Plan",
-    "link_to": "Exam Plan",
-    "report_ref_doctype": null,
-    "restrict_to_domain": null,
-    "stats_filter": null,
-    "type": "DocType",
-    "url": null
-   },
-   {
-    "color": "Purple",
-    "doc_view": "",
-    "format": null,
-    "icon": null,
-    "kanban_board": null,
     "label": "Course Results",
-    "link_to": null,
-    "report_ref_doctype": null,
-    "restrict_to_domain": null,
-    "stats_filter": null,
-    "type": "URL",
-    "url": "/app/examination-result"
+    "link_to": "examination-result",
+    "type": "Page"
+   },
+   {
+    "color": "Blue",
+    "doc_view": "",
+    "label": "Term Result",
+    "link_to": "term-result",
+    "type": "Page"
+   },
+   {
+    "color": "Blue",
+    "doc_view": "",
+    "label": "Publish Result",
+    "link_to": "publish-result",
+    "type": "Page"
+   },
+   {
+    "color": "Blue",
+    "doc_view": "",
+    "label": "Result Settings",
+    "link_to": "result-settings",
+    "type": "Page"
+   },
+   {
+    "color": "Blue",
+    "doc_view": "",
+    "label": "Exam Barcode Sheet",
+    "link_to": "exam-barcode-sheet",
+    "type": "Page"
+   },
+   {
+    "color": "Orange",
+    "doc_view": "",
+    "label": "Re Exam",
+    "link_to": "re-exam",
+    "type": "Page"
+   },
+   {
+    "color": "Orange",
+    "doc_view": "",
+    "label": "Improvement Exam",
+    "link_to": "improvement-exam",
+    "type": "Page"
    },
    {
     "color": "Orange",
     "doc_view": "List",
-    "format": null,
-    "icon": null,
-    "kanban_board": null,
-    "label": "Access Result Settings",
-    "link_to": "Access Result Settings",
-    "report_ref_doctype": null,
-    "restrict_to_domain": null,
-    "stats_filter": null,
-    "type": "DocType",
-    "url": null
+    "label": "Grade Appeal",
+    "link_to": "Grade Appeal",
+    "type": "DocType"
    },
    {
-    "color": "Cyan",
+    "color": "Green",
     "doc_view": "List",
-    "format": null,
-    "icon": null,
-    "kanban_board": null,
     "label": "Evaluation Schema",
     "link_to": "Evaluation Schema",
-    "report_ref_doctype": null,
-    "restrict_to_domain": null,
-    "stats_filter": null,
-    "type": "DocType",
-    "url": null
+    "type": "DocType"
    },
    {
-    "color": "Grey",
+    "color": "Green",
     "doc_view": "List",
-    "format": null,
-    "icon": null,
-    "kanban_board": null,
     "label": "Grading Schema",
     "link_to": "Grading Schema",
-    "report_ref_doctype": null,
-    "restrict_to_domain": null,
-    "stats_filter": null,
-    "type": "DocType",
-    "url": null
+    "type": "DocType"
    },
    {
-    "color": "Grey",
+    "color": "Green",
     "doc_view": "List",
-    "format": null,
-    "icon": null,
-    "kanban_board": null,
     "label": "Exam Component",
     "link_to": "Exam Component",
-    "report_ref_doctype": null,
-    "restrict_to_domain": null,
-    "stats_filter": null,
-    "type": "DocType",
-    "url": null
+    "type": "DocType"
+   },
+   {
+    "color": "Green",
+    "doc_view": "List",
+    "label": "Exam Assessment Type",
+    "link_to": "Exam Assessment Type",
+    "type": "DocType"
+   },
+   {
+    "color": "Green",
+    "doc_view": "List",
+    "label": "Examination Settings",
+    "link_to": "Examination Settings",
+    "type": "DocType"
    },
    {
     "color": "Grey",
     "doc_view": "List",
-    "format": null,
-    "icon": null,
-    "kanban_board": null,
-    "label": "Exam Assessment Type",
-    "link_to": "Exam Assessment Type",
-    "report_ref_doctype": null,
-    "restrict_to_domain": null,
-    "stats_filter": null,
-    "type": "DocType",
-    "url": null
+    "label": "Student Course Marks",
+    "link_to": "Student Course Marks",
+    "type": "DocType"
+   },
+   {
+    "color": "Grey",
+    "doc_view": "List",
+    "label": "Course Schema Assignment",
+    "link_to": "Course Schema Assignment",
+    "type": "DocType"
+   },
+   {
+    "color": "Grey",
+    "doc_view": "List",
+    "label": "Schema Change Log",
+    "link_to": "Schema Change Log",
+    "type": "DocType"
+   },
+   {
+    "color": "Grey",
+    "doc_view": "List",
+    "label": "Marks Import Log",
+    "link_to": "Marks Import Log",
+    "type": "DocType"
+   },
+   {
+    "color": "Grey",
+    "doc_view": "",
+    "label": "Course Schema Mapping Report",
+    "link_to": "Course Schema Mapping Report",
+    "type": "Report"
+   },
+   {
+    "color": "Grey",
+    "doc_view": "",
+    "label": "Schema Change Audit",
+    "link_to": "Schema Change Audit",
+    "type": "Report"
    }
   ],
   "title": "Examination Management",
-  "type": "Workspace"
- },
- {
-  "app": "slcm",
-  "charts": [
-   {
-    "chart_name": "Exam Plans by Status",
-    "label": "Exam Plans by Status"
-   },
-   {
-    "chart_name": "Exam Components by Type",
-    "label": "Exam Components by Type"
-   }
-  ],
-  "content": "[{\"id\":\"ep-hdr-overview\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Overview</b></span>\",\"col\":12}},{\"id\":\"ep-nc-1\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Total Exam Plans\",\"col\":3}},{\"id\":\"ep-nc-2\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Active Exam Plans\",\"col\":3}},{\"id\":\"ep-nc-3\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Courses Mapped\",\"col\":3}},{\"id\":\"ep-nc-4\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Evaluation Schemas\",\"col\":3}},{\"id\":\"ep-nc-5\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Grading Schemas\",\"col\":3}},{\"id\":\"ep-nc-6\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Schema Changes\",\"col\":3}},{\"id\":\"ep-hdr-analytics\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Analytics</span>\",\"col\":12}},{\"id\":\"ep-ch-1\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Exam Plans by Status\",\"col\":6}},{\"id\":\"ep-ch-2\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Exam Components by Type\",\"col\":6}},{\"id\":\"ep-hdr-masters\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Masters</span>\",\"col\":12}},{\"id\":\"ep-sc-1\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Exam Component\",\"col\":3}},{\"id\":\"ep-sc-2\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Exam Assessment Type\",\"col\":3}},{\"id\":\"ep-sc-3\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Exam Plan\",\"col\":3}},{\"id\":\"ep-sc-10\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Exam Barcode Sheet\",\"col\":4}},{\"id\":\"ep-sc-11\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Exam Barcode\",\"col\":4}},{\"id\":\"ep-hdr-eval\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Evaluation &amp; Grading</span>\",\"col\":12}},{\"id\":\"ep-sc-4\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Evaluation Schema\",\"col\":3}},{\"id\":\"ep-sc-5\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Grading Schema\",\"col\":3}},{\"id\":\"ep-hdr-mapping\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Schema Mapping</span>\",\"col\":12}},{\"id\":\"ep-sc-6\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Course Schema Assignment\",\"col\":3}},{\"id\":\"ep-sc-7\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Schema Change Log\",\"col\":3}},{\"id\":\"ep-hdr-reports\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Reports</span>\",\"col\":12}},{\"id\":\"ep-sc-8\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Course Schema Mapping Report\",\"col\":3}},{\"id\":\"ep-sc-9\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Schema Change Audit\",\"col\":3}}]",
-  "custom_blocks": [],
-  "docstatus": 0,
-  "doctype": "Workspace",
-  "external_link": null,
-  "for_user": null,
-  "hide_custom": 0,
-  "icon": "layout-panel-top",
-  "indicator_color": "blue",
-  "is_hidden": 0,
-  "label": "Exam Planner",
-  "link_to": null,
-  "link_type": "DocType",
-  "links": [],
-  "modified": "2026-10-29 10:30:00",
-  "module": "SLCM",
-  "name": "Exam Planner",
-  "number_cards": [
-   {
-    "label": "Total Exam Plans",
-    "number_card_name": "Total Exam Plans"
-   },
-   {
-    "label": "Active Exam Plans",
-    "number_card_name": "Active Exam Plans"
-   },
-   {
-    "label": "Courses Mapped",
-    "number_card_name": "Courses Mapped"
-   },
-   {
-    "label": "Evaluation Schemas",
-    "number_card_name": "Evaluation Schemas"
-   },
-   {
-    "label": "Grading Schemas",
-    "number_card_name": "Grading Schemas"
-   },
-   {
-    "label": "Schema Changes",
-    "number_card_name": "Schema Changes"
-   }
-  ],
-  "parent_page": null,
-  "public": 1,
-  "quick_lists": [],
-  "restrict_to_domain": null,
-  "roles": [],
-  "sequence_id": 0.0,
-  "shortcuts": [
-   {
-    "color": "Blue",
-    "doc_view": "List",
-    "format": null,
-    "icon": null,
-    "kanban_board": null,
-    "label": "Exam Component",
-    "link_to": "Exam Component",
-    "report_ref_doctype": null,
-    "restrict_to_domain": null,
-    "stats_filter": null,
-    "type": "DocType",
-    "url": null
-   },
-   {
-    "color": "Orange",
-    "doc_view": "",
-    "format": null,
-    "icon": "barcode",
-    "kanban_board": null,
-    "label": "Exam Barcode Sheet",
-    "link_to": "exam-barcode-sheet",
-    "report_ref_doctype": null,
-    "restrict_to_domain": null,
-    "stats_filter": null,
-    "type": "Page",
-    "url": null
-   },
-   {
-    "color": "Blue",
-    "doc_view": "List",
-    "format": null,
-    "icon": null,
-    "kanban_board": null,
-    "label": "Exam Assessment Type",
-    "link_to": "Exam Assessment Type",
-    "report_ref_doctype": null,
-    "restrict_to_domain": null,
-    "stats_filter": null,
-    "type": "DocType",
-    "url": null
-   },
-   {
-    "color": "Green",
-    "doc_view": "List",
-    "format": null,
-    "icon": null,
-    "kanban_board": null,
-    "label": "Exam Plan",
-    "link_to": "Exam Plan",
-    "report_ref_doctype": null,
-    "restrict_to_domain": null,
-    "stats_filter": null,
-    "type": "DocType",
-    "url": null
-   },
-   {
-    "color": "Cyan",
-    "doc_view": "List",
-    "format": null,
-    "icon": null,
-    "kanban_board": null,
-    "label": "Evaluation Schema",
-    "link_to": "Evaluation Schema",
-    "report_ref_doctype": null,
-    "restrict_to_domain": null,
-    "stats_filter": null,
-    "type": "DocType",
-    "url": null
-   },
-   {
-    "color": "Grey",
-    "doc_view": "List",
-    "format": null,
-    "icon": null,
-    "kanban_board": null,
-    "label": "Grading Schema",
-    "link_to": "Grading Schema",
-    "report_ref_doctype": null,
-    "restrict_to_domain": null,
-    "stats_filter": null,
-    "type": "DocType",
-    "url": null
-   },
-   {
-    "color": "Purple",
-    "doc_view": "List",
-    "format": null,
-    "icon": null,
-    "kanban_board": null,
-    "label": "Course Schema Assignment",
-    "link_to": "Course Schema Assignment",
-    "report_ref_doctype": null,
-    "restrict_to_domain": null,
-    "stats_filter": null,
-    "type": "DocType",
-    "url": null
-   },
-   {
-    "color": "Grey",
-    "doc_view": "List",
-    "format": null,
-    "icon": null,
-    "kanban_board": null,
-    "label": "Schema Change Log",
-    "link_to": "Schema Change Log",
-    "report_ref_doctype": null,
-    "restrict_to_domain": null,
-    "stats_filter": null,
-    "type": "DocType",
-    "url": null
-   },
-   {
-    "color": "Green",
-    "doc_view": "List",
-    "format": null,
-    "icon": null,
-    "kanban_board": null,
-    "label": "Exam Barcode",
-    "link_to": "Exam Barcode",
-    "report_ref_doctype": null,
-    "restrict_to_domain": null,
-    "stats_filter": null,
-    "type": "DocType",
-    "url": null
-   },
-   {
-    "color": "Grey",
-    "doc_view": "",
-    "format": null,
-    "icon": null,
-    "kanban_board": null,
-    "label": "Course Schema Mapping Report",
-    "link_to": "Course Schema Mapping Report",
-    "report_ref_doctype": "Exam Plan",
-    "restrict_to_domain": null,
-    "stats_filter": null,
-    "type": "Report",
-    "url": null
-   },
-   {
-    "color": "Grey",
-    "doc_view": "",
-    "format": null,
-    "icon": null,
-    "kanban_board": null,
-    "label": "Schema Change Audit",
-    "link_to": "Schema Change Audit",
-    "report_ref_doctype": "Schema Change Log",
-    "restrict_to_domain": null,
-    "stats_filter": null,
-    "type": "Report",
-    "url": null
-   }
-  ],
-  "title": "Exam Planner",
   "type": "Workspace"
  },
  {
@@ -3353,7 +2957,7 @@
     "label": "Monthly Fee Collection"
    }
   ],
-  "content": "[{\"id\": \"fm_h8\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"\\\\&quot;h4\\\\&quot;\\\"><b>Live Statistics</b></span>\", \"col\": 12}}, {\"id\": \"fm_nc1\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Total Fee Demands\", \"col\": 3}}, {\"id\": \"fm_nc2\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Pending Fee Demands\", \"col\": 3}}, {\"id\": \"fm_nc3\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Overdue Fee Demands\", \"col\": 3}}, {\"id\": \"fm_nc4\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Fee Receipts This Month\", \"col\": 3}}, {\"id\": \"fm_h9\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"\\\\&quot;h4\\\\&quot;\\\"><b>Charts</b></span>\", \"col\": 12}}, {\"id\": \"fm_c1\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Demand Status Distribution\", \"col\": 6}}, {\"id\": \"fm_c2\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Demands by Fee Component\", \"col\": 6}}, {\"id\": \"fm_c3\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Monthly Fee Collection\", \"col\": 12}}, {\"id\": \"Agf0R0fTEQ\", \"type\": \"paragraph\", \"data\": {\"text\": \"<span class=\\\"h4\\\">Student Fee Management</span>\", \"col\": 12}}, {\"id\": \"faj1af6Lge\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Student Fees Management\", \"col\": 4}}, {\"id\": \"fr_fee_reports\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Fee Reports\", \"col\": 4}}, {\"id\": \"fc_fee_certificates\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Fee Certificates\", \"col\": 4}}, {\"id\": \"fm_h1\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Fee Configuration</b></span>\", \"col\": 12}}, {\"id\": \"fm_s1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Fee Component\", \"col\": 3}}, {\"id\": \"fm_s2\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Fee Structure\", \"col\": 3}}, {\"id\": \"fm_s3\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Fee Notification\", \"col\": 3}}, {\"id\": \"fm_s4\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Fee Demand Generation Log\", \"col\": 3}}, {\"id\": \"fm_mv1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Student Fee Assignment\", \"col\": 3}}, {\"id\": \"fm_h2\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Fee Demands &amp; Dues</b></span>\", \"col\": 12}}, {\"id\": \"fm_s5\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"All Fee Demands\", \"col\": 3}}, {\"id\": \"fm_s6\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Pending Demands\", \"col\": 3}}, {\"id\": \"fm_s7\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Overdue Demands\", \"col\": 3}}, {\"id\": \"31yWiOOs3y\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Waived Demand\", \"col\": 3}}, {\"id\": \"5n4ZBfun83\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Canelled Demand\", \"col\": 3}}, {\"id\": \"VcuErC2qT2\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Partially Paid Demand\", \"col\": 3}}, {\"id\": \"fm_h3\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Collections &amp; Receipts</b></span>\", \"col\": 12}}, {\"id\": \"fm_s8\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Fee Payment\", \"col\": 3}}, {\"id\": \"fm_s9\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Fee Receipt\", \"col\": 3}}, {\"id\": \"fm_s10\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Bulk Fee Collection\", \"col\": 3}}, {\"id\": \"fm_mv2\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Fee Invoice\", \"col\": 3}}, {\"id\": \"fm_mv3\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Online Payment Log\", \"col\": 3}}, {\"id\": \"fm_mv4\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Payment Request\", \"col\": 3}}, {\"id\": \"fm_h4\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Event-Triggered Demands</b></span>\", \"col\": 12}}, {\"id\": \"fm_s11\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Course Reregistration\", \"col\": 3}}, {\"id\": \"fm_s12\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Revaluation Request\", \"col\": 3}}, {\"id\": \"fm_s13\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Deferral Order\", \"col\": 3}}, {\"id\": \"fm_s14\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Discipline Order\", \"col\": 3}}, {\"id\": \"fm_s15\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Re Exam Registration\", \"col\": 3}}, {\"id\": \"fm_s16\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Hostel Fine\", \"col\": 3}}, {\"id\": \"fm_s26\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Convocation Registration\", \"col\": 3}}, {\"id\": \"fm_mv5\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Re Exam Course Setting\", \"col\": 3}}, {\"id\": \"fm_mv6\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Re Exam Payment Log\", \"col\": 3}}, {\"id\": \"fm_h5\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Waivers &amp; Concessions</b></span>\", \"col\": 12}}, {\"id\": \"fm_s17\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Fee Concession\", \"col\": 3}}, {\"id\": \"fm_s24\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Fee Refund\", \"col\": 3}}, {\"id\": \"fm_s25\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Student Credit Note\", \"col\": 3}}, {\"id\": \"tfXsjKIlRZ\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Fine Imposition\", \"col\": 4}}, {\"id\": \"4yFTbeZwPC\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Stipend Payment\", \"col\": 4}}, {\"id\": \"fm_h6\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Reports</b></span>\", \"col\": 12}}, {\"id\": \"fm_p1\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"text-muted small\\\"><b>Defaulter List</b> \\u2014 Students with unpaid fees past due date | <b>Collection Summary</b> \\u2014 Total money collected by fee type | <b>Fee Demand Register</b> \\u2014 Full ledger of all demands raised | <b>Receipt Register</b> \\u2014 All payment receipts issued</span>\", \"col\": 12}}, {\"id\": \"fm_s18\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Defaulter List\", \"col\": 4}}, {\"id\": \"fm_s19\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Collection Summary\", \"col\": 4}}, {\"id\": \"fm_s20\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Fee Demand Register\", \"col\": 4}}, {\"id\": \"fm_s21\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Receipt Register\", \"col\": 4}}, {\"id\": \"aR-FGREFWn\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Fee Payment Zoho Journal Upload\", \"col\": 4}}, {\"id\": \"idJCwE-Wm6\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Fee Certificate Settings\", \"col\": 4}}, {\"id\": \"mIXBPOVlpI\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Fee Certificate Request\", \"col\": 4}}, {\"id\": \"fm_h7\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Automation &amp; Monitoring</b></span>\", \"col\": 12}}, {\"id\": \"fm_p2\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"text-muted small\\\"><b>Scheduled Jobs</b> run daily at midnight \\u2014 Overdue Marking auto-updates demand status | Reminder Emails sent at 7-day, 1-day before due and 3 days after overdue</span>\", \"col\": 12}}, {\"id\": \"fm_s22\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Scheduled Job Log\", \"col\": 3}}, {\"id\": \"fm_s23\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Error Log\", \"col\": 3}}]",
+  "content": "[{\"id\": \"fm_h8\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"\\\\&quot;h4\\\\&quot;\\\"><b>Live Statistics</b></span>\", \"col\": 12}}, {\"id\": \"fm_nc1\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Total Fee Demands\", \"col\": 3}}, {\"id\": \"fm_nc2\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Pending Fee Demands\", \"col\": 3}}, {\"id\": \"fm_nc3\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Overdue Fee Demands\", \"col\": 3}}, {\"id\": \"fm_nc4\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Fee Receipts This Month\", \"col\": 3}}, {\"id\": \"fm_h9\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"\\\\&quot;h4\\\\&quot;\\\"><b>Charts</b></span>\", \"col\": 12}}, {\"id\": \"fm_c1\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Demand Status Distribution\", \"col\": 6}}, {\"id\": \"fm_c2\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Demands by Fee Component\", \"col\": 6}}, {\"id\": \"fm_c3\", \"type\": \"chart\", \"data\": {\"chart_name\": \"Monthly Fee Collection\", \"col\": 12}}, {\"id\": \"Agf0R0fTEQ\", \"type\": \"paragraph\", \"data\": {\"text\": \"<span class=\\\"h4\\\">Student Fee Management</span>\", \"col\": 12}}, {\"id\": \"faj1af6Lge\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Student Fees Management\", \"col\": 4}}, {\"id\": \"fr_fee_reports\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Fee Reports\", \"col\": 4}}, {\"id\": \"fc_fee_certificates\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Fee Certificates\", \"col\": 4}}, {\"id\": \"fm_h1\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Fee Configuration</b></span>\", \"col\": 12}}, {\"id\": \"fm_s1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Fee Component\", \"col\": 3}}, {\"id\": \"fm_s2\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Fee Structure\", \"col\": 3}}, {\"id\": \"fm_s3\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Fee Notification\", \"col\": 3}}, {\"id\": \"fm_s4\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Fee Demand Generation Log\", \"col\": 3}}, {\"id\": \"fm_mv1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Student Fee Assignment\", \"col\": 3}}, {\"id\": \"fm_h2\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Fee Demands &amp; Dues</b></span>\", \"col\": 12}}, {\"id\": \"fm_s5\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"All Fee Demands\", \"col\": 3}}, {\"id\": \"fm_s6\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Pending Demands\", \"col\": 3}}, {\"id\": \"fm_s7\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Overdue Demands\", \"col\": 3}}, {\"id\": \"31yWiOOs3y\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Waived Demand\", \"col\": 3}}, {\"id\": \"5n4ZBfun83\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Canelled Demand\", \"col\": 3}}, {\"id\": \"VcuErC2qT2\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Partially Paid Demand\", \"col\": 3}}, {\"id\": \"fm_h3\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Collections &amp; Receipts</b></span>\", \"col\": 12}}, {\"id\": \"fm_s8\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Fee Payment\", \"col\": 3}}, {\"id\": \"fm_s9\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Fee Receipt\", \"col\": 3}}, {\"id\": \"fm_s10\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Bulk Fee Collection\", \"col\": 3}}, {\"id\": \"fm_mv2\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Fee Invoice\", \"col\": 3}}, {\"id\": \"fm_mv3\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Online Payment Log\", \"col\": 3}}, {\"id\": \"fm_mv4\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Payment Request\", \"col\": 3}}, {\"id\": \"fm_h4\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Event-Triggered Demands</b></span>\", \"col\": 12}}, {\"id\": \"fm_s11\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Course Reregistration\", \"col\": 3}}, {\"id\": \"fm_s12\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Grade Appeal\", \"col\": 3}}, {\"id\": \"fm_s13\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Deferral Order\", \"col\": 3}}, {\"id\": \"fm_s14\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Discipline Order\", \"col\": 3}}, {\"id\": \"fm_s15\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Re Exam Registration\", \"col\": 3}}, {\"id\": \"fm_s16\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Hostel Fine\", \"col\": 3}}, {\"id\": \"fm_s26\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Convocation Registration\", \"col\": 3}}, {\"id\": \"fm_mv5\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Re Exam Course Setting\", \"col\": 3}}, {\"id\": \"fm_mv6\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Re Exam Payment Log\", \"col\": 3}}, {\"id\": \"fm_h5\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Waivers &amp; Concessions</b></span>\", \"col\": 12}}, {\"id\": \"fm_s17\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Fee Concession\", \"col\": 3}}, {\"id\": \"fm_s24\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Fee Refund\", \"col\": 3}}, {\"id\": \"fm_s25\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Student Credit Note\", \"col\": 3}}, {\"id\": \"tfXsjKIlRZ\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Fine Imposition\", \"col\": 4}}, {\"id\": \"4yFTbeZwPC\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Stipend Payment\", \"col\": 4}}, {\"id\": \"fm_h6\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Reports</b></span>\", \"col\": 12}}, {\"id\": \"fm_p1\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"text-muted small\\\"><b>Defaulter List</b> \\u2014 Students with unpaid fees past due date | <b>Collection Summary</b> \\u2014 Total money collected by fee type | <b>Fee Demand Register</b> \\u2014 Full ledger of all demands raised | <b>Receipt Register</b> \\u2014 All payment receipts issued</span>\", \"col\": 12}}, {\"id\": \"fm_s18\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Defaulter List\", \"col\": 4}}, {\"id\": \"fm_s19\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Collection Summary\", \"col\": 4}}, {\"id\": \"fm_s20\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Fee Demand Register\", \"col\": 4}}, {\"id\": \"fm_s21\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Receipt Register\", \"col\": 4}}, {\"id\": \"aR-FGREFWn\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Fee Payment Zoho Journal Upload\", \"col\": 4}}, {\"id\": \"idJCwE-Wm6\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Fee Certificate Settings\", \"col\": 4}}, {\"id\": \"mIXBPOVlpI\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Fee Certificate Request\", \"col\": 4}}, {\"id\": \"fm_h7\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Automation &amp; Monitoring</b></span>\", \"col\": 12}}, {\"id\": \"fm_p2\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"text-muted small\\\"><b>Scheduled Jobs</b> run daily at midnight \\u2014 Overdue Marking auto-updates demand status | Reminder Emails sent at 7-day, 1-day before due and 3 days after overdue</span>\", \"col\": 12}}, {\"id\": \"fm_s22\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Scheduled Job Log\", \"col\": 3}}, {\"id\": \"fm_s23\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Error Log\", \"col\": 3}}]",
   "custom_blocks": [],
   "docstatus": 0,
   "doctype": "Workspace",
@@ -3556,8 +3160,8 @@
    {
     "color": "Blue",
     "doc_view": "List",
-    "label": "Revaluation Request",
-    "link_to": "Revaluation Request",
+    "label": "Grade Appeal",
+    "link_to": "Grade Appeal",
     "stats_filter": "[]",
     "type": "DocType"
    },

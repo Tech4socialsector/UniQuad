@@ -299,7 +299,7 @@ def _build_course_entry(co_name, course_id, course_code, course_name, faculty, c
     today_date = now.strftime("%Y-%m-%d")
     current_time = now.strftime("%H:%M:%S")
 
-    # Fetch from Time Table instead of Course Schedule
+    # Fetch from Time Table
     # 1. Normal (future) schedules
     filters1 = [
         ["schedule_date", ">=", today_date],

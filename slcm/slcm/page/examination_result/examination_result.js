@@ -1558,7 +1558,7 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 		frappe.confirm('Sync students from Student Enrollment for this course?', function () {
 			frappe.call({
 				method: 'slcm.slcm.page.examination_result.examination_result.sync_students_from_enrollment',
-				args: { course: S.course },
+				args: { course: S.course, exam_plan: S.exam_plan || '' },
 				callback: function (r) {
 					var res = r.message || {};
 					frappe.show_alert({
@@ -1603,6 +1603,7 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 						course:       S.course,
 						class_name:   values.class_name,
 						course_type:  values.course_type,
+						exam_plan:    S.exam_plan || '',
 					},
 					callback: function (r) {
 						var res = r.message || {};

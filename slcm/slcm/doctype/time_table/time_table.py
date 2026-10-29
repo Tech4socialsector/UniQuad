@@ -102,7 +102,7 @@ class TimeTable(Document):
                     self.academic_year = self.academic_year or cls.academic_year
                     self.academic_term = self.academic_term or cls.academic_term
             return
-        if self.based_on != "Course Schedule":
+        if self.based_on != "Class":
             return
         if not self.class_name:
             frappe.throw(_("Select the Class to schedule."), title=_("Class Required"))
@@ -128,7 +128,7 @@ class TimeTable(Document):
     def validate_class_term_dates(self):
         """A class runs in its Academic Term: its sessions (and a repeating
         series) must fall within the term's dates."""
-        if self.based_on != "Course Schedule" or not (self.academic_term and self.schedule_date):
+        if self.based_on != "Class" or not (self.academic_term and self.schedule_date):
             return
         from frappe.utils import formatdate, getdate
 
@@ -386,6 +386,18 @@ class TimeTable(Document):
                     title=_("Venue Conflict"),
                 )
 
+        # Exams (Exam Plan › Course Schedules) use the same Venue Master rooms
+        from slcm.slcm.utils.exam_timetable import exam_booking_clash
+
+        exam = exam_booking_clash(self.venue, self.schedule_date, self.from_time, self.to_time)
+        if exam:
+            frappe.throw(
+                _("Venue {0} is booked for the {1} exam ({2}) from {3} to {4} on {5}.").format(
+                    self.venue, exam.course, exam.exam_plan, exam.start_time, exam.end_time, self.schedule_date
+                ),
+                title=_("Venue Conflict"),
+            )
+
     def times_overlap(self, start1, end1, start2, end2):
         """Check if two time ranges overlap"""
         return to_timedelta(start1) < to_timedelta(end2) and to_timedelta(end1) > to_timedelta(start2)
@@ -427,7 +439,6 @@ class TimeTable(Document):
             "doctype": "Attendance Session",
             "based_on": based_on,
             "class_schedule": self.name,
-            "course_schedule": self.course_schedule if based_on == "Course Schedule" else None,
             "office_hours_group": self.get_session_office_hours_group(),
             # Office Hours entries carry their group's Class too (for the
             # attendance summary); their roster still comes from the group.
@@ -508,7 +519,6 @@ class TimeTable(Document):
         session.instructor = self.instructor
         session.course = self.course
         session.based_on = based_on
-        session.course_schedule = self.course_schedule if based_on == "Course Schedule" else None
         session.office_hours_group = self.get_session_office_hours_group()
         session.class_name = self.class_name
         session.section = self.section
@@ -600,6 +610,10 @@ class TimeTable(Document):
                 )
                 for row in venue_existing:
                     venue_conflicts_by_date.setdefault(getdate(row.schedule_date), []).append(row)
+                from slcm.slcm.utils.exam_timetable import exam_bookings_by_date
+
+                for day, rows in exam_bookings_by_date(self.venue, current_date.date(), end_date.date()).items():
+                    venue_conflicts_by_date.setdefault(day, []).extend(rows)
 
             # First, collect all schedules to create and check for conflicts
             while current_date <= end_date:
@@ -728,7 +742,6 @@ def get_events(start, end, filters=None):
             color,
             title,
             based_on,
-            course_schedule,
             office_hours_group
         FROM `tabTime Table`
         WHERE
@@ -787,7 +800,6 @@ def get_events(start, end, filters=None):
                 "based_on": d.based_on,
                 "class_name": d.class_name,
                 "course": d.course,
-                "course_schedule": d.course_schedule,
                 "office_hours_group": d.office_hours_group,
                 "instructor": instructor_label,
                 "venue": d.venue,
@@ -1017,6 +1029,10 @@ def _apply_updates_to_rows(names, updates):
                     row_doc.to_time, row_doc.from_time, 
                     row_doc.from_time, row_doc.to_time, 
                     row_doc.from_time, row_doc.to_time), as_dict=True)
+            from slcm.slcm.utils.exam_timetable import exam_booking_clash
+            _exam = exam_booking_clash(row_doc.venue, row_doc.schedule_date, row_doc.from_time, row_doc.to_time)
+            if _exam:
+                overlaps.append(frappe._dict(name=f"Exam: {_exam.exam_plan}", from_time=_exam.start_time, to_time=_exam.end_time, based_on="Exam", course=_exam.course))
             
             if overlaps:
                 conflicts.append({
@@ -1177,6 +1193,10 @@ def bulk_update_future_occurrences(time_table_name, updates):
                         dummy.to_time, dummy.from_time, 
                         dummy.from_time, dummy.to_time, 
                         dummy.from_time, dummy.to_time), as_dict=True)
+                from slcm.slcm.utils.exam_timetable import exam_booking_clash
+                _exam = exam_booking_clash(dummy.venue, dummy.schedule_date, dummy.from_time, dummy.to_time)
+                if _exam:
+                    overlaps.append(frappe._dict(name=f"Exam: {_exam.exam_plan}", from_time=_exam.start_time, to_time=_exam.end_time, based_on="Exam", course=_exam.course))
 
                 if overlaps:
                     has_conflict = True

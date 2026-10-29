@@ -75,7 +75,7 @@ def _make_class_schedule(class_name, session_date, from_time, to_time):
 
     doc = frappe.get_doc({
         "doctype":       "Time Table",
-        "based_on":      "Course Schedule",
+        "based_on":      "Class",
         "class_name":    class_name,
         "course":        course,
         "schedule_date": session_date,

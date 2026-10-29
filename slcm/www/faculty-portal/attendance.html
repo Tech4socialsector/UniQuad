@@ -2009,12 +2009,11 @@ function _openSessionPickerModal(bodyHtml, count) {
 /* Called when user picks a session from the picker */
 /* ══════════════════════════════════════════════════════════
    STUDENT ATTENDANCE TOOL — form-based, mirrors desk tool
-   Uses bulk_attendance API: get_students_from_schedule,
+   Uses bulk_attendance API:
    get_students_from_class_schedule, get_students_from_office_hours
 ══════════════════════════════════════════════════════════ */
 var _sat = {
   sessionName     : '',
-  courseSchedule  : '',
   classSchedule   : '',
   officeHoursGroup: '',
   date            : '',
@@ -2382,7 +2381,6 @@ function _renderRfidControl(elId, sessionName) {
 function _satResetForm() {
   _sat.sessionName      = '';
   _sat.modalSlots       = null;
-  _sat.courseSchedule   = '';
   _sat.classSchedule    = '';
   _sat.officeHoursGroup = '';
   _sat.date             = '';
@@ -2390,7 +2388,7 @@ function _satResetForm() {
 
   /* Reset selects */
   var bo = document.getElementById('sat-based-on');
-  if (bo) bo.value = 'Course Schedule';
+  if (bo) bo.value = 'Time Table';
   var dt = document.getElementById('sat-date');
   if (dt) dt.value = _todayIso();
 
@@ -2433,22 +2431,17 @@ function _satSetReadOnly(id, val) {
 
 /* Called when Based On changes — rewrites the right column & shows/hides rows */
 function satBasedOnChange() {
-  var val = (document.getElementById('sat-based-on') || {}).value || 'Course Schedule';
+  var val = (document.getElementById('sat-based-on') || {}).value || 'Time Table';
   var rc  = document.getElementById('sat-right-col');
 
   /* Clear all derived fields */
-  _sat.courseSchedule = '';
   _sat.classSchedule = '';
   _sat.officeHoursGroup = '';
 
   /* Rebuild the right column content */
   if (!rc) return;
 
-  if (val === 'Course Schedule') {
-    rc.innerHTML = '<label class="fp-label">Course Schedule <span style="color:var(--fp-primary);">*</span></label>'
-      + _satTextInput('sat-course-schedule', 'Enter Course Schedule…');
-
-  } else if (val === 'Time Table') {
+  if (val === 'Time Table') {
     rc.innerHTML = '<label class="fp-label">Time Table <span style="color:var(--fp-primary);">*</span></label>'
       + _satTextInput('sat-class-schedule', 'Enter Time Table…');
 
@@ -2478,9 +2471,9 @@ function satDateChange() {
   }
 }
 
-/* ── Get Students button — handles all 4 Based On modes ── */
+/* ── Get Students button — handles each Based On mode ── */
 function satGetStudents() {
-  var basedOn = (document.getElementById('sat-based-on') || {}).value || 'Course Schedule';
+  var basedOn = (document.getElementById('sat-based-on') || {}).value || 'Time Table';
   _sat.date   = (document.getElementById('sat-date') || {}).value || _todayIso();
   var fe = document.getElementById('sat-form-error');
   if (fe) fe.style.display = 'none';
@@ -2490,14 +2483,7 @@ function satGetStudents() {
 
   var apiMethod, apiArgs, labelText;
 
-  if (basedOn === 'Course Schedule') {
-    _sat.courseSchedule = ((document.getElementById('sat-course-schedule') || {}).value || '').trim();
-    if (!_sat.courseSchedule) { _showError('sat-form-error', 'Please enter a Course Schedule.'); return; }
-    apiMethod = 'slcm.api.bulk_attendance.get_students_from_schedule';
-    apiArgs   = { course_schedule: _sat.courseSchedule, attendance_date: _sat.date };
-    labelText = _sat.courseSchedule + '  ·  ' + _sat.date;
-
-  } else if (basedOn === 'Time Table') {
+  if (basedOn === 'Time Table') {
     _sat.classSchedule = ((document.getElementById('sat-class-schedule') || {}).value || '').trim();
     if (!_sat.classSchedule) { _showError('sat-form-error', 'Please enter a Time Table entry.'); return; }
     apiMethod = 'slcm.api.bulk_attendance.get_students_from_class_schedule';
@@ -3055,7 +3041,7 @@ function fpSaveAttendance() {
   }
 
   if (!_sat.date) { onFailed('Date is missing.'); return; }
-  var basedOn        = (document.getElementById('sat-based-on') || {}).value || 'Course Schedule';
+  var basedOn        = (document.getElementById('sat-based-on') || {}).value || 'Time Table';
   var studentsPresent = [];
   var studentsAbsent  = [];
   Object.keys(map).forEach(function(sid) {
@@ -3068,7 +3054,6 @@ function fpSaveAttendance() {
     {
       students_present  : JSON.stringify(studentsPresent),
       students_absent   : JSON.stringify(studentsAbsent),
-      course_schedule   : _sat.courseSchedule   || null,
       class_schedule    : _sat.classSchedule    || null,
       office_hours_group: _sat.officeHoursGroup || null,
       date              : _sat.date,
@@ -4060,7 +4045,6 @@ document.addEventListener('DOMContentLoaded', function() {
           <select id="sat-based-on" onchange="satBasedOnChange()"
                   style="width:100%;padding:9px 12px;border:1.5px solid var(--fp-border);border-radius:var(--fp-radius-sm);font-size:13px;font-family:inherit;color:var(--fp-text-1);background:var(--fp-card);outline:none;cursor:pointer;"
                   onfocus="this.style.borderColor='var(--fp-primary)'" onblur="this.style.borderColor='var(--fp-border)'">
-            <option value="Course Schedule">Course Schedule</option>
             <option value="Time Table">Time Table</option>
             <option value="Office Hours">OH</option>
           </select>

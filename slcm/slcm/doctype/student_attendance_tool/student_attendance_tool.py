@@ -24,7 +24,6 @@ def _get_enrolled_students(class_name):
 def get_student_attendance_records(
 	based_on=None,
 	date=None,
-	course_schedule=None,
 	class_schedule=None,
 	office_hours_group=None,
 ):
@@ -37,14 +36,9 @@ def get_student_attendance_records(
 	if not based_on:
 		frappe.throw(_("Based On is required"))
 
-	# A Time Table entry (class based ones have Based On "Course Schedule")
-	# sent without a Course Schedule is taken as a Time Table request.
-	if based_on == "Course Schedule" and class_schedule and not course_schedule:
+	# A class period (Based On "Class") is taken against its Time Table entry.
+	if based_on == "Class":
 		based_on = "Time Table"
-
-	if based_on == "Course Schedule":
-		if not course_schedule:
-			frappe.throw(_("Course Schedule is required"))
 
 	if based_on == "Time Table":
 		if not class_schedule:
@@ -69,9 +63,7 @@ def get_student_attendance_records(
 		""", (office_hours_group,), as_dict=True)
 	else:
 		class_name = None
-		if based_on == "Course Schedule" and course_schedule:
-			class_name = frappe.db.get_value("Course Schedule", course_schedule, "class_name")
-		elif based_on == "Time Table" and class_schedule:
+		if based_on == "Time Table" and class_schedule:
 			class_name = frappe.db.get_value("Time Table", class_schedule, "class_name")
 
 		# A class-based entry: exactly that class's students.
@@ -107,9 +99,6 @@ def get_student_attendance_records(
 		)
 		.where(StudentAttendance.docstatus < 2)
 	)
-
-	if based_on == "Course Schedule":
-		query = query.where(StudentAttendance.course_schedule == course_schedule)
 
 	if based_on == "Time Table":
 		query = query.where(StudentAttendance.class_schedule == class_schedule)

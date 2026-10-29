@@ -404,7 +404,6 @@ def save_attendance(session_name, attendance, participation=None):
                 "student": row.student,
                 "attendance_session": session_name,
                 "class_schedule": session.class_schedule,
-                "course_schedule": session.course_schedule,
                 "class_name": session.get("class_name"),
                 "course": session.get("course"),
                 "attendance_date": session.session_date,

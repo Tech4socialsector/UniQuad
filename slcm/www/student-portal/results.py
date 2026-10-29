@@ -30,8 +30,8 @@ def get_context(context):
         student = frappe.get_doc("Student Master", student_name)
         _set_student_nav(context, student)
 
-        exam_settings = frappe.get_single("Examination Settings")
-        max_cgpa_for_improvement = float(exam_settings.max_cgpa_for_improvement or 3.0)
+        from slcm.api.student_portal import improvement_cgpa_limit
+        max_cgpa_for_improvement = improvement_cgpa_limit()  # 0 = no limit
 
         # ── Only show exam plans where this student's result is published ──
         publish_records = frappe.get_all(
@@ -62,7 +62,8 @@ def get_context(context):
             # published CGPA below the configured threshold may apply ──
             cgpa_for_eligibility = float(rec.cumulative_gpa) if rec.cumulative_gpa else None
             improvement_cgpa_ok = bool(
-                cgpa_for_eligibility is not None and cgpa_for_eligibility < max_cgpa_for_improvement
+                cgpa_for_eligibility is not None
+                and (not max_cgpa_for_improvement or cgpa_for_eligibility < max_cgpa_for_improvement)
             )
 
             # ── Publish Result Setting ─────────────────────────────

@@ -102,7 +102,6 @@ Run on slcm.local inside a transaction that was rolled back, so no test data was
 | Item | Records | Why it stays (for now) |
 |---|---|---|
 | Course Enrollment | 0 | Unused child table, same as Program Enrollment. Kept because the agreed list was 13. Safe to remove next. |
-| Course Schedule | 0 | Attendance still has a Course Schedule path (Attendance Session, Student Attendance, Student Attendance Tool, faculty portal, Time Table "Based On"). That code has to be removed first. |
 | Programme Master | 0 | Still read by attendance condonation (Programme link), the Zoho journal report (`zoho_course`) and fee certificates (duration). Move these fields to Programme first. |
 | Term Master, Academic Term Mapping | in use | Part of the new flow (programme terms such as Trimester II) |
 | Student Group, Student Group Student, Class Participation Week | in use | Office Hours and Class Participation in the new timetable |
@@ -140,3 +139,32 @@ WHERE IFNULL(class_configuration, '') != '' OR IFNULL(term, '') != '';
 
 - **Code:** revert the commit for this change. The DocType and page folders come back.
 - **Database:** `bench migrate` recreates the DocTypes, pages and tables (empty). Nothing else needs restoring: no records existed, and the Single values were defaults only.
+
+## 8. Follow-up: Course Schedule removed (29 Oct 2026)
+
+Course Schedule had **0 records** on slcm.local. Its attendance code path is gone; attendance runs only on Classes → Time Table (venue = Venue Master) → Attendance Session → Student Attendance / Attendance Summary.
+
+**"Based On" value renamed.** The literal "Course Schedule" was also the **Based On** value of a regular class period on Time Table, Attendance Session, Student Attendance (`based_on`, `attendance_based_on`) and Student Attendance Tool, though those rows never linked a Course Schedule record. That value is now **"Class"**. The options are `Class / Time Table / Office Hours`, and the default is Class. "Time Table" and "Office Hours" are unchanged.
+
+**Patch** `slcm.patches.v2_0.remove_course_schedule` (post model sync) does the following:
+- Renames `Course Schedule` → `Class` in the Based On columns above, in the Student Attendance Tool Single, and in any Property Setter defaults.
+- Deletes sidebar, workspace link and shortcut items to the doctype, plus its Custom Fields and Property Setters (including the `CSH-.YYYY.-` naming series setter) and setters on the removed `course_schedule` fields.
+- Deletes the DocType and drops its table. It **skips** this if the table still holds records.
+
+On slcm.local, migrate renamed the 13 Time Tables and 13 Attendance Sessions to Class. There were no Student Attendance rows.
+
+| Area | Change |
+|---|---|
+| `doctype/course_schedule/` | Deleted |
+| Time Table, Attendance Session, Student Attendance, Student Attendance Tool (JSON) | Removed the `course_schedule` Link field and the `fetch_from: course_schedule.*` on instructor, room and programme. Based On options and `depends_on` now use Class. Student Attendance and Student Attendance Tool show the Time Table link for Class too. |
+| `time_table.py` / `.js` / `_calendar.js` | Class checks use "Class". Removed the copy of `course_schedule` onto sessions, the Course Schedule field handler and the calendar popover row. |
+| `attendance_session.py` / `.js`, `student_attendance.py` | Removed the `course_schedule` copy, toggle, duplicate filter and the Course Schedule detail fetch. Class details now come only from the session's Class. |
+| `student_attendance_tool` (DocType) | A Class entry is taken against its Time Table (`class_schedule`). The Course Schedule branch is removed. |
+| `api/bulk_attendance.py` | Removed `get_students_from_schedule`, `create_bulk_attendance_from_schedule` and their helper `_get_or_create_attendance_session`, and the Course Schedule source in `mark_attendance` and `get_faculty_context`. `mark_attendance` matches sessions by Time Table for Class or Time Table, and now also accepts a plain list of student IDs (as the faculty portal sends). |
+| `page/student_attendance_tool` | Picks a class period's **Time Table** entry (Based On = Class, limited to the faculty's classes) and marks through `mark_attendance` |
+| Faculty portal (`attendance.html` / `.py`, `index.py`) | Removed the "Course Schedule" Based On option and the Course Schedule room lookup. Removed the guest-accessible `debug_venue` endpoint. |
+| RFID (`process_attendance_logs.py`, `rfid_processor.py`), `api/faculty_portal.py`, `permissions.py` | Removed `course_schedule` reads and writes, and Course Schedule as a source of a faculty's classes |
+| `classes/class_time_table.py`, tests | New class Time Tables use Based On = Class |
+| Sidebars, fixtures, dashboards | Removed from the Faculty Management sidebar (app file and fixture), the property setter fixture, the Uniquad Dashboard module list and the SLCM module flow (now Time Table) |
+
+**Other sites:** run ``SELECT COUNT(*) FROM `tabCourse Schedule` `` before deploying. If it is above 0, move those records to the Time Table first. The patch will not delete the doctype while it has records.

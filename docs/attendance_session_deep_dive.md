@@ -6,7 +6,7 @@ This document provides a comprehensive analysis of the **Attendance Session** en
 
 The **Attendance Session** acts as the central anchor for a specific instance of a class or office hour. Think of it as the "container" that holds the attendance records for all students for a specific date and time slot.
 
-*   **Bridge between Plan and Reality**: It connects the *planned* `Course Schedule` (e.g., "Math 101, Mon 9-10 AM") with the *actual* execution of that class.
+*   **Bridge between Plan and Reality**: It connects the *planned* `Time Table` entry (e.g., "Math 101, Mon 9-10 AM") with the *actual* execution of that class.
 *   **Single Source of Truth**: It validates that a class actually happened. If there is no "Attendance Session" record (or if it's not marked as "Conducted"), the system assumes no class took place, and thus no attendance is required.
 *   **Calculation Trigger**: It serves as the trigger point to calculate attendance percentages. When a session is submitted, it updates the `Attendance Summary` for all enrolled students.
 
@@ -47,4 +47,4 @@ While robust, this model has some trade-offs:
 | **Core Role** | The "Container" for class attendance. |
 | **Key Benefit** | Batch processing and validation of class times. |
 | **Primary User** | Instructors (Manual) & System (RFID Auto-matching). |
-| **Critical Setup** | Requires accurate `Course Schedule` and `Student Enrollment`. |
+| **Critical Setup** | Requires an accurate `Time Table` and `Student Enrollment`. |

@@ -308,7 +308,7 @@
         <div class="ga-appeal-top">
           <div style="min-width:0;">
             <div class="ga-appeal-name">{{ a.course_name }}</div>
-            <div class="ga-appeal-meta">{{ a.course_code }} · {{ a.exam_name }} · {{ a.appeal_type }}{% if a.current_grade %} · Grade {{ a.current_grade }}{% endif %}</div>
+            <div class="ga-appeal-meta">{{ a.course_code }} · {{ a.exam_name }} · {{ a.appeal_type }}{% if a.current_grade %} · Grade {{ a.current_grade }}{% if a.status == 'Resolved' and a.revised_grade and a.revised_grade != a.current_grade %} → {{ a.revised_grade }}{% endif %}{% endif %}</div>
           </div>
           {{ status_pill(_s) }}
         </div>

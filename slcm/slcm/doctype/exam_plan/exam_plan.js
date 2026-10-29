@@ -1063,3 +1063,14 @@ function _esc(s) {
 	if (!s) return '';
 	return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
+
+frappe.ui.form.on('Exam Course Schedule', {
+	// Seats follow the venue's capacity; lower them by hand if fewer are usable
+	venue(frm, cdt, cdn) {
+		const row = locals[cdt][cdn];
+		if (!row.venue) return;
+		frappe.db.get_value('Venue Master', row.venue, 'capacity').then((r) => {
+			frappe.model.set_value(cdt, cdn, 'seat_capacity', (r.message && r.message.capacity) || 0);
+		});
+	},
+});

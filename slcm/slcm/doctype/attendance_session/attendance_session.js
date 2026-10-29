@@ -85,6 +85,6 @@ frappe.ui.form.on("Attendance Session", {
 function toggle_fields_based_on(frm) {
     const based_on = frm.doc.based_on;
 
-    frm.toggle_display("class_schedule", based_on === "Time Table");
-    frm.toggle_display("course_schedule", based_on === "Course Schedule");
+    // Class and Time Table sessions both come from a Time Table entry
+    frm.toggle_display("class_schedule", based_on === "Class" || based_on === "Time Table");
 }

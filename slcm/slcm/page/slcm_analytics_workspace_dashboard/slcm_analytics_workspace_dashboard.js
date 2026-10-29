@@ -89,11 +89,10 @@ const SAWD_ATTENDANCE_SUBTABS = [
 	{ key: 'rfid',                 label: 'RFID Analytics',      icon: '📡', workspace: null },
 ];
 
-// Examination module: 3 inner workspace sub-tabs
+// Examination module: 2 inner workspace sub-tabs
 const SAWD_EXAM_SUBTABS = [
-	{ key: 'exam_planner',  label: 'Exam Planner',          icon: '📅', workspace: 'Exam Planner' },
+	{ key: 'examinations',  label: 'Examinations',          icon: '📅', workspace: 'Examination Management' },
 	{ key: 'transcript',    label: 'Transcript Management',  icon: '📄', workspace: 'Transcript Management' },
-	{ key: 'exam_result',   label: 'Exam Result',            icon: '🏆', workspace: 'Exam Result' },
 ];
 
 // ── Utility helpers ───────────────────────────────────────────────────────────
@@ -155,7 +154,7 @@ class SLCMWorkspaceAnalyticsDashboard {
 
 		this.filters          = { academic_year: null, term: null, program: null, cohort: null, student_status: null };
 		this.active_tab       = 'overview';
-		this.active_exam_subtab      = 'exam_planner';
+		this.active_exam_subtab      = 'examinations';
 		this.active_attendance_subtab = 'attendance_workspace';
 		this.workspace_modules = [];   // [{key, label, icon, enabled, available}, ...]
 		this._filter_options  = null;
@@ -165,7 +164,7 @@ class SLCMWorkspaceAnalyticsDashboard {
 		// Restore last-used tab/sub-tab/filters for this user, if any.
 		const saved = sawd_load_state();
 		if (saved.active_tab)              this.active_tab = saved.active_tab;
-		if (saved.active_exam_subtab)      this.active_exam_subtab = saved.active_exam_subtab;
+		if (saved.active_exam_subtab && SAWD_EXAM_SUBTABS.some(t => t.key === saved.active_exam_subtab)) this.active_exam_subtab = saved.active_exam_subtab;
 		if (saved.active_attendance_subtab) this.active_attendance_subtab = saved.active_attendance_subtab;
 		if (saved.filters)                 this.filters = { ...this.filters, ...saved.filters };
 

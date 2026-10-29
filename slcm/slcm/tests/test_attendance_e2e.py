@@ -109,7 +109,7 @@ def _make_class_schedule(class_name, schedule_date, from_time="09:00:00", to_tim
     course = frappe.db.get_value("Classes", class_name, "course")
     doc = frappe.get_doc({
         "doctype":        "Time Table",
-        "based_on":       "Course Schedule",
+        "based_on":       "Class",
         "class_name":     class_name,
         "course":         course,
         "schedule_date":  schedule_date,

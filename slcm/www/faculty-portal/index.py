@@ -6,19 +6,14 @@ no_cache = 1
 
 def _session_venue_map(sessions):
     """Resolve each session's venue the same way the Attendance page does:
-    session room → linked Course Schedule room → linked Time Table venue."""
-    cs_names = list({s.course_schedule for s in sessions if s.course_schedule and not s.room})
+    session room → linked Time Table venue."""
     tt_names = list({s.class_schedule for s in sessions if s.class_schedule and not s.room})
-    cs_room_map = {}
     tt_venue_map = {}
-    if cs_names:
-        cs_room_map = dict(frappe.get_all("Course Schedule", filters={"name": ("in", cs_names)},
-                                          fields=["name", "room"], as_list=True))
     if tt_names:
         tt_venue_map = dict(frappe.get_all("Time Table", filters={"name": ("in", tt_names)},
                                            fields=["name", "venue"], as_list=True))
     return {
-        s.name: s.room or cs_room_map.get(s.course_schedule) or tt_venue_map.get(s.class_schedule) or "—"
+        s.name: s.room or tt_venue_map.get(s.class_schedule) or "—"
         for s in sessions
     }
 
@@ -137,7 +132,7 @@ def get_context(context):
                     ],
                     fields=["name", "class_name", "session_date",
                             "session_start_time", "session_end_time",
-                            "room", "course_schedule", "class_schedule",
+                            "room", "class_schedule",
                             "session_status", "total_students",
                             "present_count", "attendance_percentage", "attendance_marked"],
                     order_by="session_start_time asc",
@@ -201,7 +196,7 @@ def get_context(context):
                     ],
                     fields=["name", "class_name", "session_date",
                             "session_start_time", "session_end_time", "room",
-                            "course_schedule", "class_schedule"],
+                            "class_schedule"],
                     order_by="session_date asc, session_start_time asc",
                     limit=8,
                     ignore_permissions=True,
