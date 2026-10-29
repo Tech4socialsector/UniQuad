@@ -1,7 +1,7 @@
 {
  "app": "slcm",
  "charts": [],
- "content": "[{\"id\": \"mst_00\", \"type\": \"paragraph\", \"data\": {\"text\": \"Master records are the foundation for every SLCM module: Admissions, Enrollment, Examination, Fees and the portals. Set up the academic structure and grading before any student transactions begin.\", \"col\": 12}}, {\"id\": \"mst_01\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Overview</b></span>\", \"col\": 12}}, {\"id\": \"mst_02\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Active Students\", \"col\": 3}}, {\"id\": \"mst_03\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Active Faculty\", \"col\": 3}}, {\"id\": \"mst_04\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Active Programmes\", \"col\": 3}}, {\"id\": \"mst_nc_course\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Active Course Catalogue\", \"col\": 3}}, {\"id\": \"mst_06\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Insights &amp; Tools</b></span>\", \"col\": 12}}, {\"id\": \"mst_07\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Analytics Dashboard\", \"col\": 4}}, {\"id\": \"mst_08\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Workspace Analytics\", \"col\": 4}}, {\"id\": \"mst_09\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Data Entry Map\", \"col\": 4}}, {\"id\": \"mst_sc_uniquad\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Uniquad Dashboard\", \"col\": 4}}, {\"id\": \"mst_10\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Academic Structure</b></span>\", \"col\": 12}}, {\"id\": \"mst_11\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Department\", \"col\": 4}}, {\"id\": \"mst_12\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Programme\", \"col\": 4}}, {\"id\": \"mst_13\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Course\", \"col\": 4}}, {\"id\": \"mst_14\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Curriculum\", \"col\": 4}}, {\"id\": \"mst_15\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Academic Calendar</b></span>\", \"col\": 12}}, {\"id\": \"mst_16\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Academic Year\", \"col\": 4}}, {\"id\": \"mst_17\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Academic Term\", \"col\": 4}}, {\"id\": \"mst_18\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Academic Holiday\", \"col\": 4}}, {\"id\": \"mst_19\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>People</b></span>\", \"col\": 12}}, {\"id\": \"mst_20\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Student Master\", \"col\": 4}}, {\"id\": \"mst_21\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Faculty\", \"col\": 4}}, {\"id\": \"mst_22\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Student Category\", \"col\": 4}}, {\"id\": \"mst_23\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Gender\", \"col\": 4}}, {\"id\": \"mst_24\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Skill\", \"col\": 4}}, {\"id\": \"mst_25\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Assessment &amp; Grading</b></span>\", \"col\": 12}}, {\"id\": \"mst_26\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Exam Component\", \"col\": 4}}, {\"id\": \"mst_27\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Exam Assessment Type\", \"col\": 4}}, {\"id\": \"mst_28\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Evaluation Schema\", \"col\": 4}}, {\"id\": \"mst_29\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Grading Schema\", \"col\": 4}}, {\"id\": \"mst_30\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Course Schema Assignment\", \"col\": 4}}, {\"id\": \"mst_31\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"CGPA Percentage Scale\", \"col\": 4}}, {\"id\": \"mst_32\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Attendance &amp; Examination</b></span>\", \"col\": 12}}, {\"id\": \"mst_33\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Attendance Settings\", \"col\": 4}}, {\"id\": \"mst_34\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Condonation Reason\", \"col\": 4}}, {\"id\": \"mst_35\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Examination Settings\", \"col\": 4}}, {\"id\": \"mst_36\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Publish Result Setting\", \"col\": 4}}, {\"id\": \"mst_37\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Access Result Settings\", \"col\": 4}}, {\"id\": \"mst_38\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Promotion Policy\", \"col\": 4}}, {\"id\": \"mst_39\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Institution Settings</b></span>\", \"col\": 12}}, {\"id\": \"mst_40\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Academic Management System\", \"col\": 4}}, {\"id\": \"mst_41\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Admission Settings\", \"col\": 4}}, {\"id\": \"mst_43\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Transcript Settings\", \"col\": 4}}, {\"id\": \"mst_44\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Portals</b></span>\", \"col\": 12}}, {\"id\": \"mst_45\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Student Portal Settings\", \"col\": 4}}, {\"id\": \"mst_46\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Faculty Portal Settings\", \"col\": 4}}, {\"id\": \"mst_47\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Faculty Portal User Preferences\", \"col\": 4}}, {\"id\": \"mst_48\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Faculty Announcements\", \"col\": 4}}, {\"id\": \"mst_49\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Parent Portal Settings\", \"col\": 4}}, {\"id\": \"mst_50\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Parent Login Invite Tool\", \"col\": 4}}]",
+ "content": "[{\"id\": \"mst_00\", \"type\": \"paragraph\", \"data\": {\"text\": \"Master records are the foundation for every SLCM module: Admissions, Enrollment, Examination, Fees and the portals. Set up the academic structure and grading before any student transactions begin.\", \"col\": 12}}, {\"id\": \"mst_01\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Overview</b></span>\", \"col\": 12}}, {\"id\": \"mst_02\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Active Students\", \"col\": 3}}, {\"id\": \"mst_03\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Active Faculty\", \"col\": 3}}, {\"id\": \"mst_04\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Active Programmes\", \"col\": 3}}, {\"id\": \"mst_nc_course\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Active Course Catalogue\", \"col\": 3}}, {\"id\": \"mst_h1\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Academic Calendar</b></span>\", \"col\": 12}}, {\"id\": \"mst_1_1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Academic Year\", \"col\": 4}}, {\"id\": \"mst_1_2\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Academic Term\", \"col\": 4}}, {\"id\": \"mst_1_3\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Academic Holiday\", \"col\": 4}}, {\"id\": \"mst_h2\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Academic Structure</b></span>\", \"col\": 12}}, {\"id\": \"mst_2_1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Programme\", \"col\": 4}}, {\"id\": \"mst_2_2\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Section\", \"col\": 4}}, {\"id\": \"mst_2_3\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Batch\", \"col\": 4}}, {\"id\": \"mst_2_4\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Course\", \"col\": 4}}, {\"id\": \"mst_h3\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>People</b></span>\", \"col\": 12}}, {\"id\": \"mst_3_1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Student Category\", \"col\": 4}}, {\"id\": \"mst_3_2\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Gender\", \"col\": 4}}, {\"id\": \"mst_3_3\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Skill\", \"col\": 4}}, {\"id\": \"mst_3_4\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Faculty\", \"col\": 4}}, {\"id\": \"mst_3_5\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Student Master\", \"col\": 4}}, {\"id\": \"mst_h4\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Assessment &amp; Grading</b></span>\", \"col\": 12}}, {\"id\": \"mst_4_1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Exam Component\", \"col\": 4}}, {\"id\": \"mst_4_2\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Exam Assessment Type\", \"col\": 4}}, {\"id\": \"mst_4_3\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Evaluation Schema\", \"col\": 4}}, {\"id\": \"mst_4_4\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Grading Schema\", \"col\": 4}}, {\"id\": \"mst_4_5\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Course Schema Assignment\", \"col\": 4}}, {\"id\": \"mst_4_6\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"CGPA Percentage Scale\", \"col\": 4}}, {\"id\": \"mst_h5\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Attendance &amp; Examination</b></span>\", \"col\": 12}}, {\"id\": \"mst_5_1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Attendance Settings\", \"col\": 4}}, {\"id\": \"mst_5_2\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Condonation Reason\", \"col\": 4}}, {\"id\": \"mst_5_3\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Examination Settings\", \"col\": 4}}, {\"id\": \"mst_5_4\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Publish Result Setting\", \"col\": 4}}, {\"id\": \"mst_5_5\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Access Result Settings\", \"col\": 4}}, {\"id\": \"mst_5_6\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Promotion Policy\", \"col\": 4}}, {\"id\": \"mst_h6\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Institution Settings</b></span>\", \"col\": 12}}, {\"id\": \"mst_6_1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Admission Settings\", \"col\": 4}}, {\"id\": \"mst_6_2\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Transcript Settings\", \"col\": 4}}, {\"id\": \"mst_h7\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Portals</b></span>\", \"col\": 12}}, {\"id\": \"mst_7_1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Student Portal Settings\", \"col\": 4}}, {\"id\": \"mst_7_2\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Faculty Portal Settings\", \"col\": 4}}, {\"id\": \"mst_7_3\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Faculty Portal User Preferences\", \"col\": 4}}, {\"id\": \"mst_7_4\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Faculty Announcements\", \"col\": 4}}, {\"id\": \"mst_7_5\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Parent Portal Settings\", \"col\": 4}}, {\"id\": \"mst_7_6\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Parent Login Invite Tool\", \"col\": 4}}, {\"id\": \"mst_h8\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Insights &amp; Tools</b></span>\", \"col\": 12}}, {\"id\": \"mst_8_1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Analytics Dashboard\", \"col\": 4}}, {\"id\": \"mst_8_2\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Workspace Analytics\", \"col\": 4}}, {\"id\": \"mst_8_3\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Data Entry Map\", \"col\": 4}}, {\"id\": \"mst_8_4\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Uniquad Dashboard\", \"col\": 4}}]",
  "creation": "2026-09-29 16:46:03.069278",
  "custom_blocks": [],
  "docstatus": 0,
@@ -14,6 +14,326 @@
  "label": "Master",
  "link_type": "DocType",
  "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Academic Year",
+   "link_count": 0,
+   "link_to": "Academic Year",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Academic Term",
+   "link_count": 0,
+   "link_to": "Academic Term",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Academic Holiday",
+   "link_count": 0,
+   "link_to": "Academic Holiday",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Programme",
+   "link_count": 0,
+   "link_to": "Programme",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Section",
+   "link_count": 0,
+   "link_to": "Section",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Batch",
+   "link_count": 0,
+   "link_to": "SLCM Batch",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Course",
+   "link_count": 0,
+   "link_to": "Course",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Student Category",
+   "link_count": 0,
+   "link_to": "Student Category",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Gender",
+   "link_count": 0,
+   "link_to": "Genders",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Skill",
+   "link_count": 0,
+   "link_to": "Skill",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Faculty",
+   "link_count": 0,
+   "link_to": "Faculty",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Student Master",
+   "link_count": 0,
+   "link_to": "Student Master",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Exam Component",
+   "link_count": 0,
+   "link_to": "Exam Component",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Exam Assessment Type",
+   "link_count": 0,
+   "link_to": "Exam Assessment Type",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Evaluation Schema",
+   "link_count": 0,
+   "link_to": "Evaluation Schema",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Grading Schema",
+   "link_count": 0,
+   "link_to": "Grading Schema",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Course Schema Assignment",
+   "link_count": 0,
+   "link_to": "Course Schema Assignment",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "CGPA Percentage Scale",
+   "link_count": 0,
+   "link_to": "CGPA Percentage Scale",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Attendance Settings",
+   "link_count": 0,
+   "link_to": "Attendance Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Condonation Reason",
+   "link_count": 0,
+   "link_to": "Condonation Reason",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Examination Settings",
+   "link_count": 0,
+   "link_to": "Examination Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Publish Result Setting",
+   "link_count": 0,
+   "link_to": "Publish Result Setting",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Access Result Settings",
+   "link_count": 0,
+   "link_to": "Access Result Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Promotion Policy",
+   "link_count": 0,
+   "link_to": "Promotion Policy",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Admission Settings",
+   "link_count": 0,
+   "link_to": "Admission Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Transcript Settings",
+   "link_count": 0,
+   "link_to": "Transcript Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Student Portal Settings",
+   "link_count": 0,
+   "link_to": "Student Portal Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Faculty Portal Settings",
+   "link_count": 0,
+   "link_to": "Faculty Portal Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Faculty Portal User Preferences",
+   "link_count": 0,
+   "link_to": "Faculty Portal User Preferences",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Faculty Announcements",
+   "link_count": 0,
+   "link_to": "Faculty Announcement",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Parent Portal Settings",
+   "link_count": 0,
+   "link_to": "Parent Portal Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Parent Login Invite Tool",
+   "link_count": 0,
+   "link_to": "Parent Login Invite Tool",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
   {
    "hidden": 0,
    "is_query_report": 0,
@@ -53,339 +373,9 @@
    "link_type": "Page",
    "onboard": 0,
    "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Department",
-   "link_count": 0,
-   "link_to": "SLCM Department",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Programme",
-   "link_count": 0,
-   "link_to": "Programme",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Course",
-   "link_count": 0,
-   "link_to": "Course",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Curriculum",
-   "link_count": 0,
-   "link_to": "Curriculum",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Academic Year",
-   "link_count": 0,
-   "link_to": "Academic Year",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Academic Term",
-   "link_count": 0,
-   "link_to": "Academic Term",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Academic Holiday",
-   "link_count": 0,
-   "link_to": "Academic Holiday",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Student Master",
-   "link_count": 0,
-   "link_to": "Student Master",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Faculty",
-   "link_count": 0,
-   "link_to": "Faculty",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Student Category",
-   "link_count": 0,
-   "link_to": "Student Category",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Gender",
-   "link_count": 0,
-   "link_to": "Gender",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Skill",
-   "link_count": 0,
-   "link_to": "Skill",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Exam Component",
-   "link_count": 0,
-   "link_to": "Exam Component",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Exam Assessment Type",
-   "link_count": 0,
-   "link_to": "Exam Assessment Type",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Evaluation Schema",
-   "link_count": 0,
-   "link_to": "Evaluation Schema",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Grading Schema",
-   "link_count": 0,
-   "link_to": "Grading Schema",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Course Schema Assignment",
-   "link_count": 0,
-   "link_to": "Course Schema Assignment",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "CGPA Percentage Scale",
-   "link_count": 0,
-   "link_to": "CGPA Percentage Scale",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Attendance Settings",
-   "link_count": 0,
-   "link_to": "Attendance Settings",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Condonation Reason",
-   "link_count": 0,
-   "link_to": "Condonation Reason",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Examination Settings",
-   "link_count": 0,
-   "link_to": "Examination Settings",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Publish Result Setting",
-   "link_count": 0,
-   "link_to": "Publish Result Setting",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Access Result Settings",
-   "link_count": 0,
-   "link_to": "Access Result Settings",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Promotion Policy",
-   "link_count": 0,
-   "link_to": "Promotion Policy",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Academic Management System",
-   "link_count": 0,
-   "link_to": "Academic Management System",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Admission Settings",
-   "link_count": 0,
-   "link_to": "Admission Settings",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Transcript Settings",
-   "link_count": 0,
-   "link_to": "Transcript Settings",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Student Portal Settings",
-   "link_count": 0,
-   "link_to": "Student Portal Settings",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Faculty Portal Settings",
-   "link_count": 0,
-   "link_to": "Faculty Portal Settings",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Faculty Portal User Preferences",
-   "link_count": 0,
-   "link_to": "Faculty Portal User Preferences",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Faculty Announcements",
-   "link_count": 0,
-   "link_to": "Faculty Announcement",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Parent Portal Settings",
-   "link_count": 0,
-   "link_to": "Parent Portal Settings",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Parent Login Invite Tool",
-   "link_count": 0,
-   "link_to": "Parent Login Invite Tool",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
   }
  ],
- "modified": "2026-10-19 16:30:00.000000",
+ "modified": "2026-10-29 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Master",
@@ -414,55 +404,6 @@
  "sequence_id": 0.0,
  "shortcuts": [
   {
-   "color": "Grey",
-   "doc_view": "",
-   "label": "Analytics Dashboard",
-   "link_to": "slcm-analytics-dashboard",
-   "type": "Page"
-  },
-  {
-   "color": "Grey",
-   "doc_view": "",
-   "label": "Workspace Analytics",
-   "link_to": "slcm-analytics-workspace-dashboard",
-   "type": "Page"
-  },
-  {
-   "color": "Grey",
-   "doc_view": "",
-   "label": "Data Entry Map",
-   "link_to": "slcm-data-map",
-   "type": "Page"
-  },
-  {
-   "color": "Blue",
-   "doc_view": "List",
-   "label": "Department",
-   "link_to": "SLCM Department",
-   "type": "DocType"
-  },
-  {
-   "color": "Blue",
-   "doc_view": "List",
-   "label": "Programme",
-   "link_to": "Programme",
-   "type": "DocType"
-  },
-  {
-   "color": "Blue",
-   "doc_view": "List",
-   "label": "Course",
-   "link_to": "Course",
-   "type": "DocType"
-  },
-  {
-   "color": "Blue",
-   "doc_view": "List",
-   "label": "Curriculum",
-   "link_to": "Curriculum",
-   "type": "DocType"
-  },
-  {
    "color": "Cyan",
    "doc_view": "List",
    "label": "Academic Year",
@@ -484,17 +425,31 @@
    "type": "DocType"
   },
   {
-   "color": "Green",
+   "color": "Blue",
    "doc_view": "List",
-   "label": "Student Master",
-   "link_to": "Student Master",
+   "label": "Programme",
+   "link_to": "Programme",
    "type": "DocType"
   },
   {
-   "color": "Green",
+   "color": "Grey",
+   "doc_view": "",
+   "label": "Section",
+   "link_to": "Section",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "",
+   "label": "Batch",
+   "link_to": "SLCM Batch",
+   "type": "DocType"
+  },
+  {
+   "color": "Blue",
    "doc_view": "List",
-   "label": "Faculty",
-   "link_to": "Faculty",
+   "label": "Course",
+   "link_to": "Course",
    "type": "DocType"
   },
   {
@@ -508,7 +463,7 @@
    "color": "Green",
    "doc_view": "List",
    "label": "Gender",
-   "link_to": "Gender",
+   "link_to": "Genders",
    "type": "DocType"
   },
   {
@@ -516,6 +471,20 @@
    "doc_view": "List",
    "label": "Skill",
    "link_to": "Skill",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "label": "Faculty",
+   "link_to": "Faculty",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "label": "Student Master",
+   "link_to": "Student Master",
    "type": "DocType"
   },
   {
@@ -605,13 +574,6 @@
   {
    "color": "Grey",
    "doc_view": "",
-   "label": "Academic Management System",
-   "link_to": "Academic Management System",
-   "type": "DocType"
-  },
-  {
-   "color": "Grey",
-   "doc_view": "",
    "label": "Admission Settings",
    "link_to": "Admission Settings",
    "type": "DocType"
@@ -664,6 +626,27 @@
    "label": "Parent Login Invite Tool",
    "link_to": "Parent Login Invite Tool",
    "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "",
+   "label": "Analytics Dashboard",
+   "link_to": "slcm-analytics-dashboard",
+   "type": "Page"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "",
+   "label": "Workspace Analytics",
+   "link_to": "slcm-analytics-workspace-dashboard",
+   "type": "Page"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "",
+   "label": "Data Entry Map",
+   "link_to": "slcm-data-map",
+   "type": "Page"
   },
   {
    "color": "Grey",
