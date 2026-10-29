@@ -305,7 +305,6 @@ class TestFacultyMasters(RollbackTestCase):
 
 	def test_department_on_curriculum_target(self):
 		department = self.make_department()
-		self.assertEqual(frappe.get_meta("Curriculum").get_field("department").options, "SLCM Department")
 		self.assertEqual(frappe.get_meta("Programme").get_field("department").options, "SLCM Department")
 		self.assertTrue(frappe.db.exists("SLCM Department", department.name))
 		if erpnext_installed():

@@ -363,21 +363,6 @@ frappe.ui.form.on('Time Table', {
             });
     },
 
-    class_configuration: function (frm) {
-        if (frm.doc.class_configuration) {
-            // Fetch details from Class Configuration
-            frappe.db.get_value('Class Configuration', frm.doc.class_configuration,
-                ['course', 'faculty', 'programme', 'term'], (r) => {
-                    if (r) {
-                        frm.set_value('course', r.course);
-                        frm.set_value('instructor', r.faculty);
-                        frm.set_value('programme', r.programme);
-                        frm.set_value('term', r.term);
-                    }
-                });
-        }
-    },
-
     course: function (frm) {
         frm.events.get_title(frm);
     },

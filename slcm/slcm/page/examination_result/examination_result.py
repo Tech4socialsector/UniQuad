@@ -1144,12 +1144,17 @@ def get_student_hover_info(student, course):
 			or sm["batch"]
 		)
 
+	# Section of the student's latest Class for this course (a Group class
+	# has none, so its row's own section is used).
 	section_row = frappe.db.sql(
 		"""
-		SELECT cc.section
-		FROM `tabClass Student` cs
-		INNER JOIN `tabClass Configuration` cc ON cs.parent = cc.name
-		WHERE cs.student = %(student)s AND cc.course = %(course)s
+		SELECT COALESCE(NULLIF(ces.section, ''), cl.section) AS section
+		FROM `tabClasses` cl
+		INNER JOIN `tabClass Enrolled Student` ces
+			ON ces.parent = cl.name AND ces.parenttype = 'Classes'
+		INNER JOIN `tabStudent Enrollment` se ON se.name = ces.student_enrollment
+		WHERE se.student = %(student)s AND cl.course = %(course)s
+		ORDER BY cl.creation DESC
 		LIMIT 1
 		""",
 		{"student": student, "course": course},
@@ -1365,139 +1370,6 @@ def write_improvement_marks(scm_name, course, exam_plan, improvement_marks):
 		"improvement_applied":  improvement_applied,
 		"updated_final_marks":  doc.updated_final_marks,
 		"updated_grade":        doc.updated_grade or "",
-	}
-
-
-@frappe.whitelist()
-def get_course_overview(exam_plan, course):
-	"""Return course info panel data for the Course Results page."""
-	_check_access()
-	course_doc = frappe.db.get_value(
-		"Course",
-		course,
-		["course_name", "course_code", "credit_value"],
-		as_dict=True,
-	) or {}
-
-	schema = frappe.db.get_value(
-		"Course Schema Assignment",
-		{"exam_plan": exam_plan, "course": course},
-		["evaluation_schema", "grade_schema"],
-		as_dict=True,
-	) or {}
-	programme = _programme_for_course(course, _plan_term(exam_plan)) if schema else ""
-
-	access = frappe.db.get_value(
-		"Access Result Settings",
-		{"exam_plan": exam_plan, "course": course},
-		["view_access", "edit_access", "mask_student_info", "status",
-		 "auto_generate_grade_access", "edit_grade_access"],
-		as_dict=True,
-	) or {}
-
-	count_row = frappe.db.sql(
-		"""
-		SELECT COUNT(DISTINCT cs.student) AS cnt
-		FROM `tabClass Student` cs
-		INNER JOIN `tabClass Configuration` cc ON cs.parent = cc.name
-		WHERE cc.course = %(course)s
-		""",
-		{"course": course},
-		as_dict=True,
-	)
-
-	return {
-		"course_name":              course_doc.get("course_name", ""),
-		"course_code":              course_doc.get("course_code", ""),
-		"credit_value":             course_doc.get("credit_value", 0),
-		"programme":                programme,
-		"evaluation_schema":        schema.get("evaluation_schema", ""),
-		"grade_schema":             schema.get("grade_schema", ""),
-		"view_access":              int(access.get("view_access", 1)),
-		"edit_access":              int(access.get("edit_access", 1)),
-		"mask_student_info":        int(access.get("mask_student_info", 0)),
-		"auto_generate_grade_access": int(access.get("auto_generate_grade_access", 0)),
-		"edit_grade_access":        int(access.get("edit_grade_access", 0)),
-		"status":                   access.get("status", "UNLOCKED"),
-		"student_count":            (count_row[0]["cnt"] if count_row else 0),
-	}
-
-
-@frappe.whitelist()
-def get_course_students_with_marks(exam_plan, course, search="", page=1, page_length=20):
-	"""
-	Return paginated students enrolled in the course via Class Configuration,
-	along with placeholder marks structure per exam type.
-	"""
-	_check_access()
-	page        = int(page)
-	page_length = int(page_length)
-	offset      = (page - 1) * page_length
-
-	search_cond = ""
-	params      = {"course": course, "lim": page_length, "off": offset}
-
-	if search:
-		search_cond    = "AND (sm.registration_id LIKE %(search)s OR sm.first_name LIKE %(search)s OR sm.last_name LIKE %(search)s)"
-		params["search"] = f"%{search}%"
-
-	students = frappe.db.sql(
-		f"""
-		SELECT DISTINCT
-			sm.name           AS student,
-			sm.registration_id,
-			CONCAT_WS(' ', sm.first_name, sm.last_name) AS student_name,
-			sm.email,
-			sm.official_email_id,
-			sm.student_status,
-			sm.account_status,
-			sm.batch AS batch_year,
-			sm.intake,
-			sm.programme_of_study
-		FROM `tabClass Student` cs
-		INNER JOIN `tabClass Configuration` cc ON cs.parent = cc.name
-		LEFT JOIN `tabStudent Master` sm ON sm.name = cs.student
-		WHERE cc.course = %(course)s
-		{search_cond}
-		ORDER BY sm.registration_id ASC
-		LIMIT %(lim)s OFFSET %(off)s
-		""",
-		params,
-		as_dict=True,
-	)
-
-	total_row = frappe.db.sql(
-		f"""
-		SELECT COUNT(DISTINCT cs.student) AS cnt
-		FROM `tabClass Student` cs
-		INNER JOIN `tabClass Configuration` cc ON cs.parent = cc.name
-		LEFT JOIN `tabStudent Master` sm ON sm.name = cs.student
-		WHERE cc.course = %(course)s
-		{search_cond}
-		""",
-		params,
-		as_dict=True,
-	)
-
-	# Exam types visible for this course (from Result Exam Visibility)
-	visible_types = frappe.db.sql(
-		"""
-		SELECT rev.exam_type, eat.type_name
-		FROM `tabResult Exam Visibility` rev
-		INNER JOIN `tabAccess Result Settings` cra ON rev.parent = cra.name
-		LEFT JOIN `tabExam Assessment Type` eat ON eat.name = rev.exam_type
-		WHERE cra.exam_plan = %(exam_plan)s AND cra.course = %(course)s
-		""",
-		{"exam_plan": exam_plan, "course": course},
-		as_dict=True,
-	)
-
-	return {
-		"students":      students,
-		"total":         (total_row[0]["cnt"] if total_row else 0),
-		"page":          page,
-		"page_length":   page_length,
-		"exam_types":    visible_types,
 	}
 
 

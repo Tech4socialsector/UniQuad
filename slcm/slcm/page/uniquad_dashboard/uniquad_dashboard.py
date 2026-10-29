@@ -1598,10 +1598,9 @@ NAV_GROUPS = [
 	("programme", "Programme Management", "graduation", [
 		("DocType", "Academic Year", None), ("DocType", "Academic Term", None), ("DocType", "Programme", None),
 		("DocType", "Programme Master", None), ("DocType", "SLCM Batch", None), ("DocType", "Section", None),
-		("DocType", "Course", None), ("DocType", "Classes", None), ("DocType", "Course List", None),
+		("DocType", "Course", None), ("DocType", "Classes", None),
 		("DocType", "Faculty", None), ("DocType", "Time Table", None), ("DocType", "Course Schedule", None),
-		("Page", "timetable-configuration", "Timetable Configuration"), ("DocType", "Institutional Calendar", None),
-		("Page", "academic-management", "Academic Management"),
+		("DocType", "Institutional Calendar", None),
 	]),
 	("attendance", "Attendance", "check", [
 		("DocType", "Attendance Session", None), ("DocType", "Student Attendance", None), ("DocType", "Attendance Summary", None),
