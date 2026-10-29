@@ -1299,7 +1299,7 @@
   {
    "fieldname": "city",
    "fieldtype": "Data",
-   "label": "City",
+   "label": "City / District / Taluk",
    "reqd": 1
   },
   {
@@ -1343,7 +1343,7 @@
   }
  ],
  "make_attachments_public": 1,
- "modified": "2026-10-28 14:15:35.178960",
+ "modified": "2026-10-29 17:01:27.374495",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Applicant",
