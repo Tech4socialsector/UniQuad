@@ -83,12 +83,31 @@ class Classes(Document):
 				frappe.bold(existing)))
 
 	def validate_students(self):
+		previous = self.get_doc_before_save()
+		existing = {r.student_enrollment for r in (previous.enrolled_students if previous else [])}
+		enrollments = {
+			e.name: e for e in frappe.get_all(
+				"Student Enrollment",
+				filters={"name": ["in", [r.student_enrollment for r in self.enrolled_students] or [""]]},
+				fields=["name", "student", "status"],
+			)
+		}
+		pace = set(pace_students())
 		seen = set()
 		for row in self.enrolled_students:
 			if row.student_enrollment in seen:
 				frappe.throw(_("Row {0}: Student {1} is added more than once").format(
 					row.idx, row.student_enrollment))
 			seen.add(row.student_enrollment)
+
+			enrollment = enrollments.get(row.student_enrollment) or frappe._dict()
+			if enrollment.student in pace:
+				frappe.throw(_("Row {0}: {1} is a PACE student and cannot be added to a class.").format(
+					row.idx, row.student_name or row.student_enrollment))
+			# Students already in the class stay (history); new ones must be Enrolled.
+			if row.student_enrollment not in existing and enrollment.status != "Enrolled":
+				frappe.throw(_("Row {0}: {1} is not Enrolled (status: {2}), so cannot be added to the class.").format(
+					row.idx, row.student_name or row.student_enrollment, enrollment.status or _("not found")))
 
 			# A Group class may mix programmes, years and sections; a Section class may not.
 			if self.class_type == "Group":
@@ -97,6 +116,16 @@ class Classes(Document):
 			if program != self.programme:
 				frappe.throw(_("Row {0}: Student {1} is enrolled in {2}, not {3}").format(
 					row.idx, row.student_enrollment, program, self.programme))
+
+
+def pace_students():
+	"""Student Masters admitted through PACE (admission type PACE, or a PACE
+	programme set). They are not part of degree classes."""
+	return frappe.get_all(
+		"Student Master",
+		or_filters=[["admission_type", "=", "PACE"], ["pace_programme", "is", "set"]],
+		pluck="name",
+	)
 
 
 def get_class_students(class_name):
@@ -121,9 +150,13 @@ def get_class_students(class_name):
 
 @frappe.whitelist()
 def get_enrollment_students(programme=None, academic_year=None, year_no=None, section=None):
-	"""Active enrollments matching the given filters (any left empty is ignored).
-	Academic year and year are matched against the enrollment's Academic Log."""
+	"""Active (Enrolled) enrollments matching the given filters (any left empty
+	is ignored), without PACE students. Academic year and year are matched
+	against the enrollment's Academic Log."""
 	filters = {"status": "Enrolled"}
+	pace = pace_students()
+	if pace:
+		filters["student"] = ["not in", pace]
 	if programme:
 		filters["program"] = programme
 	if section:
