@@ -101,7 +101,8 @@ def get_year_defaults(academic_year):
 def get_enrollable_students(programme, academic_year):
     """Students with registration Completed in `academic_year` (Student
     Master's Academic Year), of this programme (or with no programme set
-    yet), who are not enrolled in it yet; alphabetical."""
+    yet), who are not enrolled in it yet and are not PACE students;
+    alphabetical."""
     _check_permission()
     if not (programme and academic_year):
         return []
@@ -114,11 +115,11 @@ def get_enrollable_students(programme, academic_year):
             ["programme_of_study", "is", "not set"],
         ],
         fields=["name", "first_name", "middle_name", "last_name", "registration_id",
-                "gender", "batch", "section", "programme_of_study"],
+                "gender", "batch", "section", "programme_of_study", "admission_type", "pace_programme"],
     )
     out = []
     for s in sorted(students, key=_alpha_key):
-        if s.name in enrolled:
+        if s.name in enrolled or s.admission_type == "PACE" or s.pace_programme:
             continue
         s.student_name = _full_name(s)
         out.append(s)

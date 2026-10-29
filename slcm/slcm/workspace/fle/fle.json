@@ -42,7 +42,7 @@
  "is_hidden": 0,
  "label": "FLE",
  "links": [],
- "modified": "2026-05-21 12:01:06.252749",
+ "modified": "2026-10-29 16:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "FLE",
@@ -74,7 +74,7 @@
    "color": "Grey",
    "doc_view": "List",
    "label": "Payment Report",
-   "link_to": "FLE Payment Report",
+   "link_to": "FLE Payment Journal",
    "type": "Report"
   },
   {

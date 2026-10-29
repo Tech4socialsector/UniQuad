@@ -268,17 +268,13 @@ frappe.ui.form.on("Student Master", {
 								},
 								callback: function (r2) {
 									if (r2.message && r2.message.allowed) {
-										frappe.new_doc("Student Enrollment", {
-											student: frm.doc.name,
-											student_name: [
-												frm.doc.first_name,
-												frm.doc.middle_name,
-												frm.doc.last_name,
-											]
-												.filter(Boolean)
-												.join(" "),
-											program: frm.doc.programme_of_study,
-											batch: frm.doc.batch,
+										// Same Enroll wizard as the list (Student ID, section, Academic Log),
+										// with this student pre-selected; the form reloads once enrolled.
+										frappe.require("/assets/slcm/js/enrollment_wizard.js", () => {
+											slcm.enrollment.open_wizard({
+												get_checked_items: () => [{ name: frm.doc.name }],
+												refresh: () => frm.reload_doc(),
+											});
 										});
 									} else {
 										frappe.msgprint({
@@ -543,15 +539,8 @@ function _load_academic_progress(frm, enrollment_name, enrollments) {
 			frm.set_df_property("academic_progress_html", "options", selector_html + body_html);
 			frm.refresh_field("academic_progress_html");
 			_bind_academic_progress_selector(frm, enrollments);
-
-			// Populate Year of Study field only when viewing current progress
-			if (!enrollment_name) {
-				const yr = (d && d.current_year) || frm.doc.current_year;
-				const new_yr_str = _ordinal_year(yr);
-				if (frm.doc.year_of_study !== new_yr_str) {
-					frm.set_value("year_of_study", new_yr_str);
-				}
-			}
+			// Current Year (year_of_study) is kept in sync by the Student Enrollment
+			// on the server; setting it here only marked the form "Not Saved".
 		},
 		error() {
 			const selector_html = _build_progress_selector_html(frm, enrollments, enrollment_name);

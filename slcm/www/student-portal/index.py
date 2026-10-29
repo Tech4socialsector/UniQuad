@@ -318,7 +318,8 @@ def get_context(context):
         # ── Student status info ────────────────────────────────
         context.student_status = student.student_status or "Active"
         context.registration_status = student.registration_status or ""
-        context.current_term = get_current_term() or ""
+        # The student's own programme term (e.g. Trimester IV), as on the registration slip
+        context.current_term = student.current_term or get_current_term() or ""
         context.current_year = (enrollment.year_no if enrollment else None) or student.current_year or ""
         context.year_of_study = _ordinal_year(context.current_year)
         context.academic_year = student.academic_year or ""

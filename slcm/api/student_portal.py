@@ -1217,7 +1217,7 @@ def get_portal_notifications():
 						fields=["programme"],
 						ignore_permissions=True,
 					)
-					if not any(t.programme == student.batch for t in targets):
+					if not any(t.programme == student.programme_of_study for t in targets):
 						continue
 				elif r.target_audience == "Specific Batch Year(s)":
 					targets = frappe.get_all(
