@@ -117,6 +117,13 @@ class StudentAttendanceCondonation(Document):
 		self.proof_document = new_url
 
 	def validate(self):
+		# The student portal doesn't send a programme; take it from the Class
+		# (else the student's programme), as the desk form does.
+		if not self.programme:
+			self.programme = (
+				frappe.db.get_value("Classes", self.class_name, "programme")
+				or frappe.db.get_value("Student Master", self.student, "programme_of_study")
+			)
 		if not self.programme:
 			frappe.throw("Programme is required. Please ensure the student is mapped to a Programme.")
 	
@@ -213,9 +220,7 @@ class StudentAttendanceCondonation(Document):
 			student_email = frappe.db.get_value("Student Master", self.student, "official_email_id") or frappe.db.get_value("Student Master", self.student, "email")
 			if student_email:
 				send_condonation_email("l2_approval_email_template", self, [student_email])
-				
-			self.trigger_recalculation()
-				
+
 		elif action == "reject":
 			if not rejected_reason:
 				frappe.throw("Rejected Reason is mandatory.")
@@ -228,8 +233,11 @@ class StudentAttendanceCondonation(Document):
 			student_email = frappe.db.get_value("Student Master", self.student, "official_email_id") or frappe.db.get_value("Student Master", self.student, "email")
 			if student_email:
 				send_condonation_email("l2_rejected_email_template", self, [student_email])
-				
+
 		self.save(ignore_permissions=True)
+		# After save: the recalculation reads the Approved status from the database.
+		if self.final_status == "Approved":
+			self.trigger_recalculation()
 
 
 def auto_reject_below_attendance_floor():

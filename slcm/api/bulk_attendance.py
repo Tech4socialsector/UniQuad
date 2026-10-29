@@ -460,6 +460,12 @@ def mark_attendance(
 	if attendance_session:
 		assert_session_editable(attendance_session)
 
+	# Each record counts the session's hours (as the Faculty Portal does);
+	# without this they keep the 1-hour default whatever the session length.
+	session_hours = (
+		frappe.db.get_value("Attendance Session", attendance_session, "duration_hours") if attendance_session else None
+	) or 1.0
+
 	# ---------------------------------------------------------
 
 	def upsert(student_id, status):
@@ -486,6 +492,7 @@ def mark_attendance(
 			doc = frappe.get_doc("Student Attendance", existing)
 			doc.status = status
 			doc.source = "Manual"  # Upgrade from Auto placeholder to explicitly marked
+			doc.hours_counted = session_hours
 			doc.save()
 			return "updated"
 
@@ -513,6 +520,7 @@ def mark_attendance(
 				"room": schedule.room if schedule else None,
 				"source": "Manual",
 				"session_type": "Office Hour" if based_on == "Office Hours" else "Lecture",
+				"hours_counted": session_hours,
 			}
 		).insert()
 		return "created"

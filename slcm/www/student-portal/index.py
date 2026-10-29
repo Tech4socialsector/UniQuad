@@ -40,8 +40,9 @@ def get_context(context):
     context.active_page = "dashboard"
 
     # ── Role check: block non-student accounts ────────────────
-    roles = frappe.get_roles(frappe.session.user)
-    has_student_role = "slcm_student" in roles or "Student" in roles
+    # Lower-cased: the role is "slcm_Student" (given on admission)
+    roles = {r.lower() for r in frappe.get_roles(frappe.session.user)}
+    has_student_role = "slcm_student" in roles or "student" in roles
     student_name = _get_student_name()
     if not has_student_role and not student_name:
         context.not_a_student = True
