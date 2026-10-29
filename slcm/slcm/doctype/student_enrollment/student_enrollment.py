@@ -65,8 +65,6 @@ class StudentEnrollment(Document):
         previous = self.get_doc_before_save()
         if previous and previous.batch and previous.batch != self.batch:
             update_enrolled_count(previous.batch)
-        if not self.flags.skip_roster_sync:
-            self._sync_class_configuration_rosters()
 
     # ── Academic log ──────────────────────────────────────────────────────────
 
@@ -181,97 +179,6 @@ class StudentEnrollment(Document):
             if status in OPEN_COURSE_STATUSES and row.academic_year and row.academic_year not in open_years:
                 status = "Completed"
             row.status = status
-
-    # ── Class Configuration rosters ───────────────────────────────────────────
-
-    def _sync_class_configuration_rosters(self):
-        """Add/remove this student on the Class Configuration roster of every
-        course of their current academic year they are enrolled/dropped in.
-
-        Nothing else in the system puts them on a
-        Class Configuration's student list. Exams/results read that list
-        (via the `Class Student` child table) to decide who is eligible for
-        a course, so without this a properly enrolled student would be
-        invisible to exams unless someone manually added them to the class.
-
-        Matches by course + batch, and additionally by section when the
-        student has one set - if a batch has multiple sections offering the
-        same course and the student's section is not recorded, they end up
-        on every matching section's roster since there is nothing to
-        disambiguate with. Courses of earlier years are left alone.
-        """
-        if not self.student or not self.batch:
-            return
-
-        current = self.current_log()
-        for row in self.enrolled_courses:
-            if not row.course:
-                continue
-            if current and row.academic_year and row.academic_year != current.academic_year:
-                continue
-
-            dropped = self.status == "Dropped" or row.status in MANUAL_COURSE_STATUSES
-
-            filters = {"course": row.course, "batch": self.batch}
-            if self.section:
-                filters["section"] = self.section
-
-            class_configs = frappe.get_all(
-                "Class Configuration",
-                filters=filters,
-                pluck="name",
-            )
-            for class_config_name in class_configs:
-                if dropped:
-                    self._remove_from_class_roster(class_config_name)
-                else:
-                    self._add_to_class_roster(class_config_name)
-
-    def _add_to_class_roster(self, class_config_name):
-        cc = frappe.get_doc("Class Configuration", class_config_name)
-        if any(r.student == self.student for r in cc.students):
-            return
-
-        first, middle, last, registration_id, email = frappe.db.get_value(
-            "Student Master",
-            self.student,
-            ["first_name", "middle_name", "last_name", "registration_id", "email"],
-        )
-        student_name = " ".join(filter(None, [first, middle, last]))
-
-        cc.append("students", {
-            "student": self.student,
-            "student_name": student_name,
-            "registration_id": registration_id,
-            "email": email,
-        })
-        cc.save(ignore_permissions=True)
-
-    def _leave_section_rosters(self, section):
-        """Take the student off the Class Configuration rosters of `section`
-        for their current year's courses (after a section change)."""
-        if not (section and self.batch):
-            return
-        current = self.current_log()
-        courses = {
-            r.course for r in self.enrolled_courses
-            if r.course and (not current or not r.academic_year or r.academic_year == current.academic_year)
-        }
-        for course in courses:
-            for name in frappe.get_all(
-                "Class Configuration",
-                filters={"course": course, "batch": self.batch, "section": section},
-                pluck="name",
-            ):
-                self._remove_from_class_roster(name)
-
-    def _remove_from_class_roster(self, class_config_name):
-        cc = frappe.get_doc("Class Configuration", class_config_name)
-        remaining = [r for r in cc.students if r.student != self.student]
-        if len(remaining) == len(cc.students):
-            return
-        cc.set("students", remaining)
-        cc.save(ignore_permissions=True)
 
     def after_delete(self):
         update_enrolled_count(self.batch)
@@ -509,7 +416,6 @@ def advance_term_status():
             if nxt:
                 rows[cur].status, nxt.status = "Completed", "Ongoing"
         # validate() refreshes the course statuses
-        doc.flags.skip_roster_sync = True
         doc.save(ignore_permissions=True)
     frappe.db.commit()
 
@@ -713,7 +619,6 @@ def sync_class_to_enrollments(class_doc, removed=False):
         if not class_row:
             if row and row.class_name == class_doc.name:
                 row.class_name = None
-                doc.flags.skip_roster_sync = True
                 doc.save(ignore_permissions=True)
             continue
 
@@ -737,7 +642,6 @@ def sync_class_to_enrollments(class_doc, removed=False):
             # validate() fills it from the term's dates when not set
             "status":        status or term_course_status(class_doc.academic_term),
         })
-        doc.flags.skip_roster_sync = True
         doc.save(ignore_permissions=True)
 
 
@@ -770,8 +674,8 @@ def change_section(enrollment, to_section, reason=None):
 
     The Ongoing log row and every Upcoming row get `to_section`; the Ongoing
     row's Remarks note the move (from, to, date, user, reason). Completed rows
-    keep their section. The enrollment, Student Master (with its Section
-    Update Log) and the Class Configuration rosters follow."""
+    keep their section. The enrollment and Student Master (with its Section
+    Update Log) follow."""
     doc = frappe.get_doc("Student Enrollment", enrollment)
     doc.check_permission("write")
     if not frappe.db.exists("Section", to_section):
@@ -797,7 +701,6 @@ def change_section(enrollment, to_section, reason=None):
     doc.flags.section_change = True
     doc.save()
 
-    doc._leave_section_rosters(from_section)
     frappe.db.set_value("Student Master", doc.student, "section", to_section)
     from slcm.slcm.doctype.student_master.student_master import _append_section_update_log
     _append_section_update_log(doc.student, to_section, "Success", note, now)

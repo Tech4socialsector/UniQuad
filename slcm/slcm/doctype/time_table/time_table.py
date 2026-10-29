@@ -105,10 +105,7 @@ class TimeTable(Document):
         if self.based_on != "Course Schedule":
             return
         if not self.class_name:
-            # Entries from before Classes (Class Configuration based) still save.
-            if not self.class_configuration:
-                frappe.throw(_("Select the Class to schedule."), title=_("Class Required"))
-            return
+            frappe.throw(_("Select the Class to schedule."), title=_("Class Required"))
         cls = frappe.db.get_value(
             "Classes",
             self.class_name,
@@ -704,92 +701,6 @@ class TimeTable(Document):
 
 
 @frappe.whitelist()
-def get_timetable_data(term=None, course=None, start_date=None, end_date=None):
-    """Get timetable data for calendar view"""
-    filters = {}
-
-    if term:
-        filters["term"] = term
-    if course:
-        filters["course"] = course
-    if start_date and end_date:
-        filters["schedule_date"] = ["between", [start_date, end_date]]
-    
-    schedules = frappe.get_all(
-        "Time Table",
-        filters=filters,
-        fields=[
-            "name",
-            "title",
-            "course",
-            "instructor",
-            "schedule_date",
-            "from_time",
-            "to_time",
-            "venue",
-            "color",
-            "class_name",
-            "class_configuration",
-        ],
-        order_by="schedule_date, from_time",
-    )
-
-    # Format for calendar
-    events = []
-    for schedule in schedules:
-        events.append({
-            "id": schedule.name,
-            "title": schedule.title or schedule.course,
-            "start": f"{schedule.schedule_date}T{schedule.from_time}",
-            "end": f"{schedule.schedule_date}T{schedule.to_time}",
-            "backgroundColor": schedule.color or "#3498db",
-            "extendedProps": {
-                "course": schedule.course,
-                "instructor": schedule.instructor,
-                "venue": schedule.venue,
-                "class_name": schedule.class_name,
-                "class_configuration": schedule.class_configuration,
-            }
-        })
-
-    return events
-
-
-@frappe.whitelist()
-def create_time_table(data):
-    """Create a class schedule from timetable configuration"""
-    import json
-    
-    if isinstance(data, str):
-        data = json.loads(data)
-    
-    # Create the schedule (a class-based entry fills its course details from the Class)
-    doc = frappe.get_doc({
-        "doctype": "Time Table",
-        "class_name": data.get("class_name"),
-        "class_configuration": data.get("class_configuration"),
-        "course": data.get("course"),
-        "instructor": data.get("instructor"),
-        "schedule_date": data.get("schedule_date"),
-        "from_time": data.get("from_time"),
-        "to_time": data.get("to_time"),
-        "venue": data.get("venue"),
-        "repeat_frequency": data.get("repeat_frequency", "Never"),
-        "repeats_till": data.get("repeats_till"),
-        "term": data.get("term"),
-        "programme": data.get("programme"),
-    })
-    
-    doc.insert(ignore_permissions=True)
-    
-    # If repeat is enabled, create recurring schedules
-    if doc.repeat_frequency and doc.repeat_frequency != "Never":
-        doc.create_recurring_schedules()
-    
-    return doc.name
-
-
-@frappe.whitelist()
 def get_events(start, end, filters=None):
     """
     Custom method to get events for FullCalendar.
@@ -807,7 +718,6 @@ def get_events(start, end, filters=None):
         SELECT
             name,
             class_name,
-            class_configuration,
             course,
             instructor,
             schedule_date,
@@ -979,8 +889,8 @@ def find_sessions(programme=None, section=None, schedule_date=None):
     be opened without pre-checking any row, and browsed/filtered from there).
 
     All filters are optional and Section in particular is often blank on real
-    records (Time Table only fetches it from class_name.section, and many
-    rows only have class_configuration set, not class_name) - filtering
+    records (Time Table only fetches it from class_name.section, which a
+    Group class does not have) - filtering
     on it unconditionally would silently hide otherwise-matching sessions, so
     it's applied only when the caller actually provided a value.
     """
@@ -1028,8 +938,7 @@ def find_sessions(programme=None, section=None, schedule_date=None):
 def get_sessions_roster(time_table_names):
     """Combined student roster across one or more Time Table sessions, shown
     for confirmation before applying a venue/time change to all of them.
-    Resolved via each session's Class (its enrolled students); entries made
-    before Classes fall back to their Class Configuration's `students` table.
+    Resolved via each session's Class (its enrolled students).
     Sessions sharing a class (e.g. several dates of the same recurring
     class) are de-duplicated."""
     import json
@@ -1046,21 +955,13 @@ def get_sessions_roster(time_table_names):
     rows = frappe.get_all(
         "Time Table",
         filters={"name": ["in", time_table_names]},
-        fields=["class_name", "class_configuration"],
+        fields=["class_name"],
     )
     classes = {row.class_name for row in rows if row.class_name}
-    class_configurations = {row.class_configuration for row in rows if row.class_configuration and not row.class_name}
 
     students = []
     for class_name in sorted(classes):
         students += get_class_students(class_name)
-    if class_configurations:
-        students += frappe.get_all(
-            "Class Student",
-            filters={"parent": ["in", list(class_configurations)], "parenttype": "Class Configuration"},
-            fields=["student", "student_name"],
-            order_by="student_name",
-        )
     students.sort(key=lambda s: s.student_name or "")
 
     # A student enrolled in more than one of the selected classes would

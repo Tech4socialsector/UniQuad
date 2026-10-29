@@ -653,9 +653,15 @@ def _get_students_for_course(course, exam_plan):
 		FROM `tabStudent Course Marks` scm
 		LEFT JOIN `tabStudent Master` sm ON sm.name = scm.student
 		LEFT JOIN (
-			SELECT cs.student, cc2.section, cc2.course
-			FROM `tabClass Student` cs
-			INNER JOIN `tabClass Configuration` cc2 ON cc2.name = cs.parent
+			SELECT se.student, cl.course,
+			       MAX(COALESCE(NULLIF(ces.section, ''), cl.section)) AS section
+			FROM `tabClasses` cl
+			INNER JOIN `tabExam Plan` ep ON ep.term = cl.academic_term
+			INNER JOIN `tabClass Enrolled Student` ces
+				ON ces.parent = cl.name AND ces.parenttype = 'Classes'
+			INNER JOIN `tabStudent Enrollment` se ON se.name = ces.student_enrollment
+			WHERE ep.name = %(exam_plan)s AND cl.course = %(course)s
+			GROUP BY se.student, cl.course
 		) cc ON cc.student = scm.student AND cc.course = scm.course
 		WHERE scm.exam_plan = %(exam_plan)s
 		  AND scm.course = %(course)s

@@ -39,10 +39,8 @@ frappe.pages['slcm-data-map'].on_page_load = function (wrapper) {
 				{ name: 'Course Master',       dt: 'Course Master' },
 				{ name: 'Course',              dt: 'Course' },
 				{ name: 'Programme',             dt: 'Programme' },
-				{ name: 'Curriculum',          dt: 'Curriculum' },
 				{ name: 'Batch',              dt: 'SLCM Batch' },
 				{ name: 'Classes',             dt: 'Classes' },
-				{ name: 'Class Configuration', dt: 'Class Configuration' },
 				{ name: 'Time Table',      dt: 'Time Table' },
 			],
 		},
@@ -72,7 +70,6 @@ frappe.pages['slcm-data-map'].on_page_load = function (wrapper) {
 			num: 6, emoji: '📋', title: 'Enrollment',
 			note: 'Needs: Stage 5', color: '#06b6d4',
 			docs: [
-				{ name: 'Program Enrollment',        dt: 'Program Enrollment' },
 				{ name: 'Student Enrollment',        dt: 'Student Enrollment' },
 				{ name: 'Student Enrollment Course', dt: 'Student Enrollment Course' },
 			],

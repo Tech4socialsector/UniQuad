@@ -151,6 +151,7 @@ function _injectCSS() {
 			'font-size:11px;font-weight:400;letter-spacing:.4px;line-height:1.2;text-transform:uppercase;}',
 		'.slcm-status-draft    {background:#fef3c7;color:#92400e;border:1px solid #fcd34d;}',
 		'.slcm-status-submitted{background:#dcfce7;color:#14532d;border:1px solid #86efac;}',
+		'.slcm-status-submitted-and-paid{background:#fce7f3;color:#9d174d;border:1px solid #fbcfe8;}',
 		'.slcm-status-other    {background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;}',
 		/* Link / Autocomplete dropdowns — look like a native select list (input width, rounded, shadow) */
 		'.web-form .awesomplete > [role="listbox"]{background:#fff;border:1px solid #cbd5e1;border-radius:8px;' +
@@ -1079,6 +1080,7 @@ function _statusBadgeClass(status) {
 	var s = status.toLowerCase();
 	if (s === 'draft')     return baseClass + 'slcm-status-draft';
 	if (s === 'submitted') return baseClass + 'slcm-status-submitted';
+	if (s === 'submitted and paid' || s === 'completed') return baseClass + 'slcm-status-submitted-and-paid';
 	return baseClass + 'slcm-status-other';
 }
 
@@ -2571,7 +2573,7 @@ function _showFeeModal(feeDetails, onPaid) {
 				if (d && d.already_paid) {
 					showToast('Application fee has already been paid.', 'success');
 					closeModal();
-					_doFinalSubmit(feeDetails.applicant_name, 'Completed');
+					_doFinalSubmit(feeDetails.applicant_name, 'Submitted and Paid');
 					return;
 				}
 				if (!d || !d.order_id) {
@@ -2640,7 +2642,7 @@ function _openRazorpay(orderData, feeDetails, onPaid, payBtn, closeModal) {
 					if (vr && vr.message && vr.message.status === 'success') {
 						showToast('Payment successful!', 'success');
 						closeModal();
-						_doFinalSubmit(feeDetails.applicant_name, 'Completed');
+						_doFinalSubmit(feeDetails.applicant_name, 'Submitted and Paid');
 					} else {
 						_hideSubmitOverlay();
 						showToast((vr && vr.message && vr.message.message) || 'Verification failed.', 'error');
@@ -2726,7 +2728,7 @@ function _doFinalSubmit(applicantName, targetStatus) {
 					}
 				} catch (e) {}
 
-				if (finalStatus === 'Completed') {
+				if (finalStatus === 'Submitted and Paid' || finalStatus === 'Completed') {
 					// ── Use "After Submission" settings ──────────────────────
 					var wf = frappe.web_form || {};
 					var title = wf.success_title || 'Application Submitted Successfully';
@@ -2903,11 +2905,11 @@ function runSubmitFlow() {
 							if (feeAmount > 0 && !canSubmit) {
 								// ── 4a. Fee required and unpaid ────────────────
 								_showFeeModal(fd, function () {
-									_doFinalSubmit(applicantName, 'Completed');
+									_doFinalSubmit(applicantName, 'Submitted and Paid');
 								});
 							} else {
 								// ── 4b. No fee / already paid → submit ────────
-								_doFinalSubmit(applicantName, 'Completed');
+								_doFinalSubmit(applicantName, 'Submitted and Paid');
 							}
 						},
 						error: function () {
@@ -6106,7 +6108,7 @@ function slcmSetupPayButton() {
 										payBtnDom.disabled = false;
 										_feePayBtnSetLoading(payBtnDom, false);
 										showToast('Application fee has already been paid.', 'success');
-										_doFinalSubmit(applicantName, 'Completed');
+										_doFinalSubmit(applicantName, 'Submitted and Paid');
 										return;
 									}
 									if (!d || !d.order_id) {
@@ -6117,7 +6119,7 @@ function slcmSetupPayButton() {
 									}
 
 									var onPaid = function () {
-										_doFinalSubmit(applicantName, 'Completed');
+										_doFinalSubmit(applicantName, 'Submitted and Paid');
 									};
 									var closeModal = function () {};
 
@@ -6147,7 +6149,7 @@ function slcmSetupPayButton() {
 							payBtnDom.disabled = false;
 							_feePayBtnSetLoading(payBtnDom, false);
 							showToast('Application fee is already paid or waived.', 'success');
-							_doFinalSubmit(applicantName, 'Completed');
+							_doFinalSubmit(applicantName, 'Submitted and Paid');
 						}
 					},
 					error: function () {
@@ -6187,11 +6189,11 @@ function slcmSetupPayButton() {
 						
 						if (feeAmount > 0 && !canSubmit) {
 							_showFeeModal(fd, function () {
-								_doFinalSubmit(applicantName, 'Completed');
+								_doFinalSubmit(applicantName, 'Submitted and Paid');
 							});
 						} else {
 							showToast('Application fee is already paid or waived.', 'success');
-							_doFinalSubmit(applicantName, 'Completed');
+							_doFinalSubmit(applicantName, 'Submitted and Paid');
 						}
 					},
 					error: function () {
