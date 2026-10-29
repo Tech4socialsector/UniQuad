@@ -340,6 +340,7 @@ function open_create_class_dialog(listview) {
 		});
 	}
 
+	dialog.$wrapper.addClass("create-class-dialog");
 	dialog.show();
 }
 
@@ -357,6 +358,11 @@ function inject_promotion_button_css() {
 		}
 		.promotion-btn:active {
 			transform: translateY(1px);
+		}
+		/* Create Class: students scroll inside the table (about 8 rows), header stays in view */
+		.create-class-dialog [data-fieldname="students"] .grid-body .rows {
+			max-height: 360px;
+			overflow-y: auto;
 		}
 		.promotion-btn-icon {
 			display: inline-block;

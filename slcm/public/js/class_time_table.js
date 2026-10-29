@@ -171,15 +171,15 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 				{ fieldtype: "Column Break" },
 				{ fieldtype: "HTML", fieldname: "cp_help" },
 				{ fieldtype: "Section Break", fieldname: "s2_weeks", label: __("Weeks") },
-				{ fieldtype: "Date", fieldname: "cp_start_date", label: __("Start Date"), onchange: () => me.render_weeks() },
-				{ fieldtype: "Date", fieldname: "cp_end_date", label: __("End Date"), onchange: () => me.render_weeks() },
+				{ fieldtype: "Date", fieldname: "cp_start_date", label: __("Start Date"), onchange: () => me.on_cp_dates_change() },
+				{ fieldtype: "Date", fieldname: "cp_end_date", label: __("End Date"), onchange: () => me.on_cp_dates_change() },
 				{ fieldtype: "Column Break" },
 				{ fieldtype: "Int", fieldname: "cp_weeks", label: __("Number of Weeks"), non_negative: 1,
-					description: __("From the schedule duration. Fewer weeks makes each one longer."),
+					description: __("Teaching weeks between the dates (weeks with at least one class; holiday weeks are left out). Enter fewer to use only the first ones, one week per group."),
 					onchange: () => me.render_weeks() },
 				{ fieldtype: "Select", fieldname: "split_method", label: __("Split Students"),
-					options: ["Alphabetical blocks", "One-by-one", "Upload"].join("\n"), default: "Alphabetical blocks",
-					description: __("Alphabetical blocks: A–F in week 1, G–L in week 2 ... One-by-one: 1st student to week 1, 2nd to week 2 ... Upload: set each student's week in an Excel sheet."),
+					options: ["Group", "One-by-one", "Random", "Upload"].join("\n"), default: "Group",
+					description: __("Group: alphabetical blocks, A–F in week 1, G–L in week 2 ... One-by-one: 1st student to week 1, 2nd to week 2 ... Random: shuffled, so name order favours no one. Upload: set each student's week in an Excel sheet. Week sizes differ by at most one student."),
 					onchange: () => me.on_split_method_change() },
 				{ fieldtype: "Button", fieldname: "split_btn", label: __("Split Students by Week"),
 					depends_on: "eval:doc.split_method != 'Upload'", click: () => me.render_weeks(true) },
@@ -373,7 +373,7 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 		const key = JSON.stringify([s.schedule_date, last, s.repeat_frequency]);
 		if (key !== this.schedule_key) {
 			this.schedule_key = key;
-			const n = this.max_weeks(s.schedule_date, last);
+			const n = this.teaching_weeks(s.schedule_date, last).length;
 			this.d.set_values({ cp_start_date: s.schedule_date, cp_end_date: last, cp_weeks: n });
 		}
 		return true;
@@ -421,13 +421,58 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 		return Math.ceil((frappe.datetime.get_day_diff(end, start) + 1) / 7);
 	}
 
-	/** Split start..end into n blocks of whole weeks (7-day blocks when n is
-	 * the full number of weeks) and the students into n groups. */
-	build_weeks() {
+	/** The 7-day weeks from start to end that have at least one class; weeks
+	 * with none (holidays, breaks) are left out. */
+	teaching_weeks(start, end) {
+		const dates = this.scheduled_dates();
+		const weeks = [];
+		for (let i = 0; i < this.max_weeks(start, end); i++) {
+			const w0 = frappe.datetime.add_days(start, 7 * i);
+			const w6 = frappe.datetime.add_days(start, 7 * i + 6);
+			const w1 = w6 > end ? end : w6;
+			const classes = dates.filter((d) => d >= w0 && d <= w1).length;
+			if (classes) weeks.push({ start_date: w0, end_date: w1, classes, students: [] });
+		}
+		return weeks;
+	}
+
+	on_cp_dates_change() {
+		// New range: the number of weeks follows its teaching weeks
 		const start = this.d.get_value("cp_start_date");
 		const end = this.d.get_value("cp_end_date");
-		const total = this.max_weeks(start, end);
-		if (!total) return { error: __("Set a Start Date on or before the End Date.") };
+		if (start && end && end >= start) {
+			const n = this.teaching_weeks(start, end).length;
+			if (n && cint(this.d.get_value("cp_weeks")) !== n) {
+				this.d.set_value("cp_weeks", n);
+				return; // its onchange renders
+			}
+		}
+		this.render_weeks();
+	}
+
+	/** Student order for the Random split: shuffled once, re-shuffled only
+	 * when Split Students by Week is clicked. */
+	random_order(reshuffle) {
+		const names = this.info.students.map((st) => st.student);
+		const same = this._random && this._random.length === names.length && names.every((n) => this._random.includes(n));
+		if (reshuffle || !same) {
+			const order = [...names];
+			for (let i = order.length - 1; i > 0; i--) {
+				const j = Math.floor(Math.random() * (i + 1));
+				[order[i], order[j]] = [order[j], order[i]];
+			}
+			this._random = order;
+		}
+		const by_name = Object.fromEntries(this.info.students.map((st) => [st.student, st]));
+		return this._random.map((n) => by_name[n]);
+	}
+
+	/** One group per teaching week (the first n when fewer are asked for);
+	 * students split so week sizes differ by at most one. */
+	build_weeks(reshuffle) {
+		const start = this.d.get_value("cp_start_date");
+		const end = this.d.get_value("cp_end_date");
+		if (!this.max_weeks(start, end)) return { error: __("Set a Start Date on or before the End Date.") };
 		const s = this.schedule_values();
 		const last = this.last_date(s);
 		if (start < s.schedule_date || end > last) {
@@ -436,20 +481,26 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 					[ctt_date(s.schedule_date), ctt_date(last)]),
 			};
 		}
+		const available = this.teaching_weeks(start, end);
+		if (!available.length) return { error: __("No class falls between these dates, so there is no week to split the students into.") };
 
 		const students = this.info.students;
-		let n = cint(this.d.get_value("cp_weeks")) || total;
-		n = Math.max(1, Math.min(n, total, students.length));
+		let n = cint(this.d.get_value("cp_weeks")) || available.length;
+		n = Math.max(1, Math.min(n, available.length, students.length));
+		const weeks = available.slice(0, n);
 
-		const weeks = [];
-		for (let i = 0; i < n; i++) {
-			const w0 = Math.floor((i * total) / n);
-			const w1 = Math.floor(((i + 1) * total) / n);
-			const e = frappe.datetime.add_days(start, 7 * w1 - 1);
-			weeks.push({ start_date: frappe.datetime.add_days(start, 7 * w0), end_date: e > end ? end : e, students: [] });
-		}
-
-		let unassigned = [];
+		const unassigned = [];
+		const method = this.d.get_value("split_method");
+		const deal_blocks = (list) => {
+			// Consecutive blocks, the first (students % n) weeks one larger
+			const base = Math.floor(list.length / n), extra = list.length % n;
+			let at = 0;
+			weeks.forEach((w, i) => {
+				const size = base + (i < extra ? 1 : 0);
+				w.students = list.slice(at, at + size);
+				at += size;
+			});
+		};
 		if (this.is_upload()) {
 			// The uploaded Week No of each student; anyone without a usable one is listed apart
 			const assign = (this.upload && this.upload.assign) || {};
@@ -458,33 +509,25 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 				if (no >= 1 && no <= n) weeks[no - 1].students.push(st);
 				else unassigned.push(st);
 			});
-		} else if (this.d.get_value("split_method") === "One-by-one") {
+		} else if (method === "One-by-one") {
 			students.forEach((st, i) => weeks[i % n].students.push(st));
+		} else if (method === "Random") {
+			deal_blocks(this.random_order(reshuffle));
+			const by = (a, b) => (a.student_name || a.student).localeCompare(b.student_name || b.student);
+			weeks.forEach((w) => w.students.sort(by));
 		} else {
-			const base = Math.floor(students.length / n);
-			const extra = students.length % n;
-			let at = 0;
-			weeks.forEach((w, i) => {
-				const size = base + (i < extra ? 1 : 0);
-				w.students = students.slice(at, at + size);
-				at += size;
-			});
+			deal_blocks(students);
 		}
-
-		const dates = this.scheduled_dates();
-		weeks.forEach((w) => {
-			w.classes = dates.filter((d) => d >= w.start_date && d <= w.end_date).length;
-		});
-		return { weeks, total, n, unassigned };
+		return { weeks, total: this.max_weeks(start, end), available: available.length, n, unassigned };
 	}
 
-	render_weeks() {
+	render_weeks(reshuffle) {
 		const $out = this.d.fields_dict.cp_preview_html.$wrapper;
 		if (!this.cp_on()) {
 			$out.empty();
 			return;
 		}
-		const res = this.build_weeks();
+		const res = this.build_weeks(reshuffle === true);
 		if (res.error) {
 			this.weeks = [];
 			$out.html(`<div class="ctt-empty ctt-bad-text">${ctt_esc(res.error)}</div>`);
@@ -500,12 +543,19 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 		}
 		const upload_html = this.is_upload() ? this.upload_notes_html(res) : "";
 
-		const empty = res.weeks.filter((w) => !w.classes).length;
+		const sizes = res.weeks.map((w) => w.students.length);
+		const no_class = res.total - res.available;
+		const unused = res.available - res.n;
 		$out.html(`
 			${upload_html}
 			<div class="ctt-muted" style="margin-bottom:8px">
-				${__("{0} students split into {1} week(s) of the {2} in this range.", [this.info.students.length - res.unassigned.length, res.n, res.total])}
-				${empty ? `<span class="ctt-bad-text">${__("{0} week(s) have no class, so their students get no participation.", [empty])}</span>` : ""}
+				${__("{0} students split into {1} teaching week(s), {2} per week.", [
+					this.info.students.length - res.unassigned.length, res.n,
+					Math.min(...sizes) === Math.max(...sizes) ? sizes[0] : `${Math.min(...sizes)}–${Math.max(...sizes)}`,
+				])}
+				${__("{0} teaching week(s) between these dates.", [res.available])}
+				${no_class ? __("{0} week(s) without any class (holidays) are left out.", [no_class]) : ""}
+				${unused ? `<span class="ctt-bad-text">${__("The last {0} teaching week(s) will have no Class Participation.", [unused])}</span>` : ""}
 			</div>
 			${ctt_weeks_table(res.weeks)}`);
 	}

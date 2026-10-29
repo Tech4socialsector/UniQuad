@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(wsl -d Ubuntu-24.04 -e bash -lc 'cd ~/frappe-bench/sites && ../env/bin/python /tmp/wipe_academic.py --run && ../env/bin/python /tmp/wipe_academic.py | tail -1')",
+      "PowerShell(wsl -d Ubuntu-24.04 -e bash -lc 'cd ~/frappe-bench/sites && ../env/bin/python /tmp/dock_check.py 2>&1 | grep -v RuntimeWarning; grep -rl \"id=\\\\\"icon-school\\\\\"\\\\|lucide-school\\\\|\\\\\"school\\\\\"\" ~/frappe-bench/apps/frappe/frappe/public/icons 2>/dev/null | head; ls ~/frappe-bench/apps/frappe/frappe/public/icons')",
+      "PowerShell(wsl -d Ubuntu-24.04 -e bash -lc 'python3 /tmp/make_pm_sidebar.py; ls ~/frappe-bench/apps/slcm/slcm/admission/sidebar/admission/; ls ~/frappe-bench/apps/slcm/slcm/admission/sidebar/')",
+      "PowerShell(wsl -d Ubuntu-24.04 -e bash -lc 'cd ~/frappe-bench/sites && ../env/bin/python /tmp/pm_dock.py 2>&1 | grep -v RuntimeWarning; ../env/bin/python /tmp/dock_check.py 2>&1 | grep -v RuntimeWarning | head -16')",
+      "PowerShell(wsl -d Ubuntu-24.04 -e bash -lc 'cd ~/frappe-bench && bench --site slcm.com clear-cache')",
+      "PowerShell(wsl -d Ubuntu-24.04 -e bash -lc 'cd ~/frappe-bench/apps/slcm/docs/production_data && ls -la && wc -l Student_Master_live.csv && head -c 3000 Student_Master_live.csv')",
+      "PowerShell(wsl -d Ubuntu-24.04 -e bash -lc 'python3 /tmp/profile_sm.py')",
+      "PowerShell(wsl -d Ubuntu-24.04 -e bash -lc 'python3 /tmp/profile_sm2.py')",
+      "PowerShell(wsl -d Ubuntu-24.04 -e bash -lc 'cd ~/frappe-bench/sites && ../env/bin/python /tmp/meta_dump.py 2>&1 | grep -v RuntimeWarning')",
+      "PowerShell(wsl -d Ubuntu-24.04 -e bash -lc 'cd ~/frappe-bench/sites && ../env/bin/python /tmp/label_map.py 2>&1 | grep -v RuntimeWarning')",
+      "PowerShell(wsl -d Ubuntu-24.04 -e bash -lc 'cd ~/frappe-bench/sites && ../env/bin/python /tmp/import_students.py 2>&1 | grep -v RuntimeWarning')",
+      "PowerShell(wsl -d Ubuntu-24.04 -e bash -lc 'cd ~/frappe-bench/sites && ../env/bin/python /tmp/import_students.py --run 2>&1 | grep -v RuntimeWarning | tail -8')",
+      "PowerShell(wsl -d Ubuntu-24.04 -e bash -lc 'cd ~/frappe-bench/sites && ../env/bin/python /tmp/verify_import.py 2>&1 | grep -v RuntimeWarning; cd .. && bench --site slcm.com clear-cache')",
+      "PowerShell(wsl -d Ubuntu-24.04 -e bash -lc 'cd ~/frappe-bench/sites && ../env/bin/python /tmp/verify_import.py 2>&1 | grep -v RuntimeWarning | tail -2')",
+      "PowerShell(wsl -d Ubuntu-24.04 -e bash -lc 'cd ~/frappe-bench/sites && ../env/bin/python /tmp/sb_curr.py 2>&1 | grep -v RuntimeWarning; grep -c Curriculum ~/frappe-bench/apps/slcm/slcm/workspace_sidebar/programme_management.json ~/frappe-bench/apps/slcm/slcm/slcm/sidebar/programme_management/programme_management.json')",
+      "PowerShell(wsl -d Ubuntu-24.04 -e bash -lc '~/frappe-bench/env/bin/python /tmp/xlsx_profile.py 2>&1 | grep -v RuntimeWarning')",
+      "PowerShell(wsl -d Ubuntu-24.04 -e bash -lc 'cd ~/frappe-bench/sites && ../env/bin/python /tmp/audit_students.py 2>&1 | grep -v RuntimeWarning')",
+      "PowerShell(wsl -d Ubuntu-24.04 -e bash -lc '~/frappe-bench/env/bin/python /tmp/audit_detail.py 2>&1 | grep -v RuntimeWarning')",
+      "PowerShell(wsl -d Ubuntu-24.04 -e bash -lc 'cd ~/frappe-bench/sites && ../env/bin/python /tmp/fill_official_email.py 2>&1 | grep -v RuntimeWarning')",
+      "PowerShell(wsl -d Ubuntu-24.04 -e bash -lc 'cd ~/frappe-bench/sites && ../env/bin/python /tmp/fill_official_email.py --run 2>&1 | grep -v RuntimeWarning')",
+      "PowerShell(wsl -d Ubuntu-24.04 -e bash -lc 'cd ~/frappe-bench/sites && ../env/bin/python /tmp/fill_rest_email.py 2>&1 | grep -v RuntimeWarning')",
+      "PowerShell(wsl -d Ubuntu-24.04 -e bash -lc 'cd ~/frappe-bench/sites && ../env/bin/python /tmp/fill_rest_email.py --run 2>&1 | grep -v RuntimeWarning | tail -1')",
+      "PowerShell(wsl -d Ubuntu-24.04 -e bash -lc 'cd ~/frappe-bench/sites && ../env/bin/python /tmp/test_students.py 2>&1 | grep -v RuntimeWarning')",
+      "PowerShell(wsl -d Ubuntu-24.04 -e bash -lc 'cd ~/frappe-bench/sites && ../env/bin/python /tmp/test_ids.py 2>&1 | grep -v RuntimeWarning')",
+      "PowerShell(wsl -d Ubuntu-24.04 -e bash -lc 'cd ~/frappe-bench/sites && ../env/bin/python /tmp/test_ids.py --run 2>&1 | grep -v RuntimeWarning | tail -3')",
+      "PowerShell(wsl -d Ubuntu-24.04 -e bash -lc 'bash /tmp/check_enr.sh slcm/public/js/enrollment_wizard.js')",
+      "PowerShell(wsl -d Ubuntu-24.04 -e bash -lc 'bash /tmp/check_enr.sh slcm/slcm/doctype/student_enrollment/student_enrollment_list.js')",
+      "PowerShell(wsl -d Ubuntu-24.04 -e bash -lc 'bash /tmp/check_enr.sh slcm/public/js/class_time_table.js')",
+      "PowerShell(wsl -d Ubuntu-24.04 -e bash -lc 'cd ~/frappe-bench/sites && ../env/bin/python /tmp/as_check.py 2>&1 | grep -v RuntimeWarning')",
+      "PowerShell(wsl -d Ubuntu-24.04 -e bash -lc 'bash /tmp/check_enr.sh slcm/utils/faculty_portal.py')",
+      "PowerShell(wsl -d Ubuntu-24.04 -e bash -lc 'cd ~/frappe-bench/sites && ../env/bin/python /tmp/as_verify.py 2>&1 | grep -v RuntimeWarning')"
+    ]
+  }
+}

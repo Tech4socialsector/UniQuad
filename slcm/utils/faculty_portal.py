@@ -17,6 +17,18 @@ def get_faculty_name():
 
 def _find_faculty_name():
     """
+    Return the Faculty doc name for the current session user, as a string.
+
+    Faculty is named by autoincrement, so the database hands back an int (1)
+    while Link fields (Classes.faculty, ...) hold the text "1". Returning a
+    string keeps ownership checks like `cls.faculty != faculty_name` correct.
+    """
+    name = _lookup_faculty_name()
+    return str(name) if name is not None else None
+
+
+def _lookup_faculty_name():
+    """
     Return the Faculty doc name for the current session user.
 
     Tries six strategies in order:
