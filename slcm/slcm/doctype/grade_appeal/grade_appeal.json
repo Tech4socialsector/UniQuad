@@ -18,7 +18,14 @@
   "current_marks",
   "reason",
   "supporting_remarks",
+  "section_fee",
+  "fee_amount",
+  "cb_fee",
+  "fee_demand",
   "section_resolution",
+  "revised_grade",
+  "revised_marks",
+  "cb_resolution",
   "resolution",
   "resolved_by",
   "resolved_on"
@@ -136,6 +143,50 @@
    "fieldtype": "Datetime",
    "label": "Resolved On",
    "read_only": 1
+  },
+  {
+   "fieldname": "section_fee",
+   "fieldtype": "Section Break",
+   "label": "Revaluation Fee",
+   "depends_on": "eval:doc.fee_amount || doc.fee_demand"
+  },
+  {
+   "fieldname": "fee_amount",
+   "fieldtype": "Currency",
+   "label": "Fee Amount",
+   "read_only": 1,
+   "description": "Revaluation Fee per Paper from Examination Settings, for a Re-evaluation appeal."
+  },
+  {
+   "fieldname": "cb_fee",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "fee_demand",
+   "fieldtype": "Link",
+   "label": "Fee Demand",
+   "options": "Fee Demand",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "revised_grade",
+   "fieldtype": "Data",
+   "label": "Grade After Review",
+   "read_only": 1,
+   "no_copy": 1,
+   "description": "Read from the student's Course Results when the appeal is Resolved. Change marks there first."
+  },
+  {
+   "fieldname": "revised_marks",
+   "fieldtype": "Float",
+   "label": "Marks After Review",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "cb_resolution",
+   "fieldtype": "Column Break"
   }
  ],
  "links": [],

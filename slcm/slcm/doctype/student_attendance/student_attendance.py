@@ -38,9 +38,7 @@ class StudentAttendance(Document):
 		else:
 			# Legacy/Manual checks
 			filters["attendance_date"] = self.attendance_date
-			if self.course_schedule:
-				filters["course_schedule"] = self.course_schedule
-			elif self.class_name:
+			if self.class_name:
 				filters["class_name"] = self.class_name
 			
 			if self.period:
@@ -59,24 +57,7 @@ class StudentAttendance(Document):
 				frappe.throw(_("Attendance already exists for this student on {0}").format(self.attendance_date))
 
 	def fetch_course_details(self):
-		"""Fetch course details based on based_on field."""
-		if self.based_on == "Course Schedule" and self.course_schedule:
-			schedule = frappe.get_doc("Course Schedule", self.course_schedule)
-			if not self.course:
-				self.course = schedule.course
-			if not self.program:
-				self.program = schedule.program
-			if not self.instructor and schedule.instructor:
-				faculty_name = frappe.db.get_value(
-					"Faculty", schedule.instructor, ["first_name", "last_name"], as_dict=True
-				)
-				self.instructor = (
-					" ".join(filter(None, [faculty_name.first_name, faculty_name.last_name]))
-					if faculty_name else schedule.instructor
-				) or schedule.instructor
-			if not self.room:
-				self.room = schedule.room
-
+		"""Fill class, course, programme, year and term from the session and its Class."""
 		# Pull class_name from the linked Attendance Session when not set directly.
 		# This fixes Manual records created without selecting a Class.
 		if not self.class_name and self.attendance_session:

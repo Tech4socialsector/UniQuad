@@ -127,7 +127,6 @@ class AttendanceSession(Document):
 					"student": student_id,
 					"attendance_session": self.name,
 					"class_schedule": self.class_schedule,
-					"course_schedule": self.course_schedule,
 					"class_name": self.get_class_name(),
 					"course": self.course,
 					"attendance_date": self.session_date,

@@ -4177,22 +4177,6 @@
  },
  {
   "default_value": null,
-  "doc_type": "Course Schedule",
-  "docstatus": 0,
-  "doctype": "Property Setter",
-  "doctype_or_field": "DocField",
-  "field_name": "naming_series",
-  "is_system_generated": 1,
-  "modified": "2026-07-14 11:18:17.212678",
-  "module": null,
-  "name": "Course Schedule-naming_series-options",
-  "property": "options",
-  "property_type": "Text",
-  "row_name": null,
-  "value": "CSH-.YYYY.-"
- },
- {
-  "default_value": null,
   "doc_type": "Student Attendance",
   "docstatus": 0,
   "doctype": "Property Setter",

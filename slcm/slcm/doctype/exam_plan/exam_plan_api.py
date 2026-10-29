@@ -75,8 +75,14 @@ def _sync_course_schedules(exam_plan, courses):
 				changed = True
 		if changed:
 			plan_doc.save(ignore_permissions=True)
-	except Exception:
-		pass
+	except Exception as e:
+		# The schemas are already saved; say why the schedule rows were not added
+		frappe.log_error(frappe.get_traceback(), f"Exam Plan {exam_plan}: course schedule sync failed")
+		frappe.msgprint(
+			f"Schemas were saved, but the courses could not be added to the exam schedule: {e}",
+			title="Exam schedule not updated",
+			indicator="orange",
+		)
 
 
 def _send_notification(settings, subject, message):
@@ -275,6 +281,7 @@ def get_schema_detail(name):
 		"description": doc.description,
 		"total_marks": doc.total_marks,
 		"passing_marks": doc.passing_marks,
+		"reexam_result": doc.reexam_result,
 		"schema_components": components,
 		"assessment_configs": assessment_configs,
 		"reexam_configs": reexam_configs,
@@ -343,6 +350,8 @@ def save_schema(data):
 			"substitute_weightage": r.get("substitute_weightage", 100),
 			"effective_marks": r.get("effective_marks", 0),
 		})
+	if data.get("reexam_result"):
+		doc.reexam_result = data["reexam_result"]
 
 	if doc.is_new():
 		doc.insert(ignore_permissions=True)

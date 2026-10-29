@@ -11,7 +11,7 @@ def create_event_demand(student, fee_component_name, amount, demand_type,
 	Returns the created demand name, or None if skipped.
 	"""
 	if not academic_year:
-		academic_year = frappe.get_value("Academic Year", {"is_default": 1}, "name")
+		academic_year = frappe.get_value("Academic Year", {"is_current_year": 1}, "name")
 
 	due_date = add_days(today(), due_days)
 

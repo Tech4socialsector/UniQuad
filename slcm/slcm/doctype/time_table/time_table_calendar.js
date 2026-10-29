@@ -66,9 +66,6 @@ function show_time_table_event_details(event) {
         ["Venue", props.venue],
     ];
 
-    if (props.based_on === "Course Schedule" && props.course_schedule) {
-        rows.push(["Course Schedule", props.course_schedule]);
-    }
     if (props.based_on === "Office Hours" && props.office_hours_group) {
         rows.push(["Office Hours Group", props.office_hours_group]);
     }

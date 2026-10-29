@@ -39,17 +39,12 @@ def get_faculty_context():
 			)
 			seen = {c["name"] for c in primary}
 
-			via_schedule = frappe.get_all(
-				"Course Schedule",
-				filters={"instructor": faculty_name, "docstatus": ["<", 2]},
-				pluck="class_name",
-			)
 			via_timetable = frappe.get_all(
 				"Time Table",
 				filters={"instructor": faculty_name, "docstatus": ["<", 2]},
 				pluck="class_name",
 			)
-			extra_names = {n for n in (via_schedule + via_timetable) if n and n not in seen}
+			extra_names = {n for n in via_timetable if n and n not in seen}
 			if extra_names:
 				extra = frappe.get_all(
 					"Classes",
@@ -109,177 +104,6 @@ def _find_class(course, program, academic_year=None, academic_term=None, section
 	return None
 
 
-def _get_or_create_attendance_session(attendance_date, class_name, based_on):
-	"""
-	Find or create an Attendance Session for this date/class, so that the
-	calculator has a denominator (conducted class hours) for the percentage.
-	Returns the session name or None on failure.
-	"""
-	if not class_name:
-		return None
-
-	filters = {
-		"session_date": attendance_date,
-		"class_name": class_name,
-		"session_type": "Lecture",
-		"docstatus": ("<", 2),
-	}
-
-	existing = frappe.db.exists("Attendance Session", filters)
-	if existing:
-		return existing
-
-	try:
-		sess = frappe.get_doc({
-			"doctype": "Attendance Session",
-			"session_date": attendance_date,
-			"based_on": based_on,
-			"class_name": class_name,
-			"course": frappe.db.get_value("Classes", class_name, "course"),
-			"session_start_time": "09:00:00",
-			"session_end_time": "10:00:00",
-			"duration_hours": 1.0,
-			"session_type": "Lecture",
-			"session_status": "Conducted",
-			"attendance_marked": 1,
-		})
-		sess.flags.skip_auto_attendance = True
-		sess.insert(ignore_permissions=True)
-		return sess.name
-	except Exception as e:
-		frappe.log_error(
-			message=f"Failed to create Attendance Session for {class_name} on {attendance_date}: {e!s}",
-			title="Attendance Session Creation Error",
-		)
-		return None
-
-
-# ------------------------------------------------------------
-# STUDENT FETCH HELPERS (called by the Attendance Tool page)
-# ------------------------------------------------------------
-
-@frappe.whitelist()
-def get_students_from_schedule(course_schedule, attendance_date=None):
-	"""Return active students for a Course Schedule with their existing attendance status."""
-	from slcm.slcm.doctype.student_attendance_tool.student_attendance_tool import (
-		get_student_attendance_records,
-	)
-
-	return get_student_attendance_records(
-		based_on="Course Schedule",
-		date=attendance_date,
-		course_schedule=course_schedule,
-	)
-
-
-# ------------------------------------------------------------
-# BULK ATTENDANCE FROM COURSE SCHEDULE
-# ------------------------------------------------------------
-@frappe.whitelist()
-def create_bulk_attendance_from_schedule(course_schedule, attendance_date, attendance_data, instructor=None):
-	if not course_schedule:
-		frappe.throw(_("Course Schedule is required"))
-
-	if not attendance_date:
-		frappe.throw(_("Attendance Date is required"))
-
-	if get_datetime(attendance_date) > get_datetime():
-		frappe.throw(_("Cannot mark attendance for future dates"))
-
-	schedule = frappe.get_doc("Course Schedule", course_schedule)
-
-	class_name = schedule.class_name
-	if not class_name:
-		frappe.throw(_("Class is required on the Course Schedule"))
-
-	from slcm.slcm.doctype.classes.classes import get_class_students
-
-	students = [s.student for s in get_class_students(class_name)]
-
-	if not students:
-		frappe.throw(_("No active students found"))
-
-	if isinstance(attendance_data, str):
-		attendance_data = json.loads(attendance_data)
-
-	# Ensure an Attendance Session exists so the calculator has a denominator
-	attendance_session = _get_or_create_attendance_session(
-		attendance_date, class_name, "Course Schedule"
-	)
-	if attendance_session:
-		assert_session_editable(attendance_session)
-
-	created, updated, errors = 0, 0, []
-
-	for student in students:
-		status = attendance_data.get(student, "Absent")
-
-		existing = frappe.db.exists(
-			"Student Attendance",
-			{
-				"student": student,
-				"attendance_date": attendance_date,
-				"course_schedule": course_schedule,
-				"based_on": "Course Schedule",
-				"docstatus": ("<", 2),
-			},
-		)
-
-		try:
-			if existing:
-				doc = frappe.get_doc("Student Attendance", existing)
-				doc.status = status
-				if class_name and not doc.class_name:
-					doc.class_name = class_name
-				if attendance_session and not doc.attendance_session:
-					doc.attendance_session = attendance_session
-				doc.save()
-				updated += 1
-			else:
-				frappe.get_doc(
-					{
-						"doctype": "Student Attendance",
-						"student": student,
-						"attendance_date": attendance_date,
-						"date": attendance_date,
-						"status": status,
-						"based_on": "Course Schedule",
-						"course_schedule": course_schedule,
-						"program": schedule.program,
-						"course": schedule.course,
-						"class_name": class_name,
-						"attendance_session": attendance_session,
-						"instructor": _faculty_display_name(instructor or getattr(schedule, "instructor", None)),
-						"room": getattr(schedule, "room", None),
-						"source": "Manual",
-					}
-				).insert()
-				created += 1
-		except Exception as e:
-			errors.append(f"{student}: {e!s}")
-
-	# Trigger Attendance Summary calculation for each affected student
-	if class_name:
-		from slcm.slcm.utils.attendance_calculator import calculate_student_attendance
-		for student in students:
-			try:
-				calculate_student_attendance(student, class_name)
-			except Exception as e:
-				frappe.log_error(
-					message=f"Failed to calculate attendance for {student}: {e!s}",
-					title="Attendance Calculation Error",
-				)
-
-	return {
-		"status": "success",
-		"created": created,
-		"updated": updated,
-		"errors": errors,
-		"message": f"Attendance marked. {'Attendance Summary updated.' if class_name else 'Could not find the Class — Attendance Summary not updated.'}",
-		"total_processed": len(students),
-	}
-
-
 # ------------------------------------------------------------
 # MAIN STUDENT ATTENDANCE TOOL API
 # ------------------------------------------------------------
@@ -287,7 +111,6 @@ def create_bulk_attendance_from_schedule(course_schedule, attendance_date, atten
 def mark_attendance(
 	students_present=None,
 	students_absent=None,
-	course_schedule=None,
 	class_schedule=None,
 	date=None,
 	based_on=None,
@@ -310,7 +133,6 @@ def mark_attendance(
 	students_present = students_present or []
 	students_absent = students_absent or []
 
-	schedule = frappe.get_doc("Course Schedule", course_schedule) if course_schedule else None
 	class_sched = frappe.get_doc("Time Table", class_schedule) if class_schedule else None
 	# Office Hours Group is a Student Group (group_based_on = Office Hours). It
 	# has programme / class_name / academic year & term but no instructor -
@@ -318,29 +140,23 @@ def mark_attendance(
 	office_group = frappe.get_doc("Student Group", office_hours_group) if office_hours_group else None
 
 	program = None
-	if schedule:
-		program = schedule.program
-	elif class_sched:
+	if class_sched:
 		program = class_sched.programme
 	elif office_group:
 		program = office_group.programme
 
 	# Determine Course
 	course = None
-	if schedule:
-		course = schedule.course
-	elif class_sched:
+	if class_sched:
 		course = class_sched.course
 
 	# Determine the Class — prefer the direct link already stored on
-	# whichever source doc this came from (Course Schedule / Time Table /
-	# Office Hours Group all carry their own class_name field), so we don't
+	# whichever source doc this came from (Time Table / Office Hours Group
+	# both carry their own class_name field), so we don't
 	# depend on program/course being resolved first.
 	class_name = None
 
-	if schedule and schedule.class_name:
-		class_name = schedule.class_name
-	elif class_sched and class_sched.class_name:
+	if class_sched and class_sched.class_name:
 		class_name = class_sched.class_name
 	elif office_group and office_group.class_name:
 		class_name = office_group.class_name
@@ -390,10 +206,8 @@ def mark_attendance(
 	if class_name:
 		session_filters["class_name"] = class_name
 
-	if based_on == "Time Table" and class_schedule:
+	if based_on in ("Class", "Time Table") and class_schedule:
 		session_filters["class_schedule"] = class_schedule
-	elif based_on == "Course Schedule" and course_schedule:
-		session_filters["course_schedule"] = course_schedule
 	elif based_on == "Office Hours" and office_hours_group:
 		session_filters["office_hours_group"] = office_hours_group
 		session_filters["session_type"] = "Office Hour"
@@ -441,7 +255,6 @@ def mark_attendance(
 				"class_name": class_name,
 				"course": course,
 				"section": class_sched.section if class_sched else None,
-				"course_schedule": course_schedule if based_on == "Course Schedule" else None,
 				"office_hours_group": office_hours_group if based_on == "Office Hours" else None,
 				"session_start_time": start_time,
 				"session_end_time": end_time,
@@ -481,7 +294,6 @@ def mark_attendance(
 					"student": student_id,
 					"attendance_date": date,
 					"based_on": based_on,
-					"course_schedule": course_schedule,
 					"class_schedule": class_schedule,
 					"office_hours_group": office_hours_group,
 					"docstatus": ("<", 2),
@@ -505,7 +317,6 @@ def mark_attendance(
 				"status": status,
 				"based_on": based_on,
 				"attendance_based_on": based_on,
-				"course_schedule": course_schedule,
 				"class_schedule": class_schedule,
 				"office_hours_group": office_hours_group,
 				"program": program,
@@ -515,9 +326,8 @@ def mark_attendance(
 				"academic_term": office_group.academic_term if office_group else None,
 				"attendance_session": attendance_session,
 				"instructor": _faculty_display_name(
-					schedule.instructor if schedule else class_sched.instructor if class_sched else office_instructor
+					class_sched.instructor if class_sched else office_instructor
 				),
-				"room": schedule.room if schedule else None,
 				"source": "Manual",
 				"session_type": "Office Hour" if based_on == "Office Hours" else "Lecture",
 				"hours_counted": session_hours,
@@ -530,23 +340,23 @@ def mark_attendance(
 
 	for row in students_present:
 		try:
-			student_id = row.get("student")
+			student_id = row.get("student") if isinstance(row, dict) else row
 			result = upsert(student_id, "Present")
 			created += result == "created"
 			updated += result == "updated"
 			affected_students.add(student_id)
 		except Exception as e:
-			errors.append(f"{row.get('student')}: {e!s}")
+			errors.append(f"{row.get('student') if isinstance(row, dict) else row}: {e!s}")
 
 	for row in students_absent:
 		try:
-			student_id = row.get("student")
+			student_id = row.get("student") if isinstance(row, dict) else row
 			result = upsert(student_id, "Absent")
 			created += result == "created"
 			updated += result == "updated"
 			affected_students.add(student_id)
 		except Exception as e:
-			errors.append(f"{row.get('student')}: {e!s}")
+			errors.append(f"{row.get('student') if isinstance(row, dict) else row}: {e!s}")
 
 	# ---------------------------------------------------------
 	# Trigger Session Summary Update AND Student Calculation
@@ -582,6 +392,9 @@ def mark_attendance(
 	}
 
 
+# ------------------------------------------------------------
+# STUDENT FETCH HELPERS (Attendance Tool page, faculty portal)
+# ------------------------------------------------------------
 @frappe.whitelist()
 def get_students_from_class_schedule(class_schedule, attendance_date=None):
 	"""Return active students for a Time Table entry with their existing attendance status."""

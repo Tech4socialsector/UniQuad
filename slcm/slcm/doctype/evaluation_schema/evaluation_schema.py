@@ -9,6 +9,7 @@ class EvaluationSchema(Document):
 	def validate(self):
 		self.sync_reexam_effective_marks()
 		self.validate_component_marks()
+		self.validate_reexam_substitutes()
 
 	def sync_reexam_effective_marks(self):
 		"""Auto-set effective_max_marks for Re-Exam/Makeup schema_components from reexam_configs."""
@@ -30,6 +31,17 @@ class EvaluationSchema(Document):
 		total = sum(c.effective_max_marks or 0 for c in custom_components)
 		if custom_components and total != self.total_marks:
 			self.total_marks = total
+
+	def validate_reexam_substitutes(self):
+		"""Substitute For must name a component this schema actually assesses."""
+		used = {c.component for c in self.schema_components or []} | {a.component for a in self.assessment_configs or []}
+		for row in self.reexam_configs or []:
+			if row.substitute_for and row.substitute_for not in used:
+				frappe.throw(
+					frappe._("Re-Exam Configuration row {0}: Substitute For {1} is not a component of this schema.").format(
+						row.idx, frappe.bold(row.substitute_for)
+					)
+				)
 
 	def _get_component_type(self, component_name):
 		if component_name:

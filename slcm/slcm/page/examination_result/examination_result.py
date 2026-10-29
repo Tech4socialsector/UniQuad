@@ -969,29 +969,105 @@ def get_institutional_filter_options(course):
 	}
 
 
+def apply_attendance_eligibility(exam_plan, course=None):
+	"""Mark students without exam eligibility as Detained (Attendance Status),
+	from Attendance Summary of the plan's term — attendance %, approved
+	condonation hours and FA/MFA are already counted there. A Detained student
+	who has since become eligible is cleared. Students whose class has had no
+	sessions yet, Absent students and Locked rows are left alone."""
+	term = _plan_term(exam_plan)
+	filters = {"exam_plan": exam_plan}
+	if course:
+		filters["course"] = course
+	rows = frappe.get_all(
+		"Student Course Marks", filters=filters,
+		fields=["name", "student", "course", "attendance_status", "status"],
+	)
+	result = {"detained": 0, "cleared": 0, "no_attendance_yet": 0}
+	if not rows or not term:
+		return result
+
+	summaries = {}
+	for s in frappe.get_all(
+		"Attendance Summary",
+		filters={
+			"academic_term": term,
+			"course": ["in", list({r.course for r in rows})],
+			"student": ["in", list({r.student for r in rows})],
+		},
+		fields=["student", "course", "eligible_for_exam", "total_class_hours"],
+		order_by="modified desc",
+	):
+		summaries.setdefault((s.student, s.course), s)
+
+	for r in rows:
+		if r.status == "Locked":
+			continue
+		s = summaries.get((r.student, r.course))
+		if not s or not frappe.utils.flt(s.total_class_hours):
+			result["no_attendance_yet"] += 1
+			continue
+		if not s.eligible_for_exam and r.attendance_status not in ("Absent", "Detained"):
+			frappe.db.set_value("Student Course Marks", r.name, "attendance_status", "Detained")
+			result["detained"] += 1
+		elif s.eligible_for_exam and r.attendance_status == "Detained":
+			frappe.db.set_value("Student Course Marks", r.name, "attendance_status", "")
+			result["cleared"] += 1
+	return result
+
+
 @frappe.whitelist()
-def sync_students_from_enrollment(course):
-	"""Create Student Course Marks records for all students enrolled in this course via Student Enrollment."""
-	# Get the active exam plan and evaluation schema for the course
+def update_attendance_eligibility(exam_plan, course=None):
+	"""Course Results / Exam Plan page button: refresh Detained from attendance."""
 	_check_access()
-	assignment = frappe.db.sql(
+	result = apply_attendance_eligibility(exam_plan, course)
+	frappe.db.commit()
+	return result
+
+
+def _plan_assignment(course, exam_plan=None, academic_term=None):
+	"""Exam plan, evaluation schema and term to sync a course's students into.
+
+	With exam_plan: that plan, which must have the course mapped. Without it
+	(older callers): the course's only mapped plan, preferring the given term;
+	when several plans qualify the user has to pick one, instead of the newest
+	plan being used silently."""
+	rows = frappe.db.sql(
 		"""
 		SELECT csa.exam_plan, csa.evaluation_schema, ep.term AS academic_term
 		FROM `tabCourse Schema Assignment` csa
 		JOIN `tabExam Plan` ep ON ep.name = csa.exam_plan
 		WHERE csa.course = %(course)s
-		ORDER BY FIELD(ep.status, 'Active', 'Inactive') ASC, ep.creation DESC
-		LIMIT 1
+		  AND (%(exam_plan)s = '' OR csa.exam_plan = %(exam_plan)s)
+		  AND (%(exam_plan)s != '' OR IFNULL(ep.status, '') != 'Inactive')
 		""",
-		{"course": course},
+		{"course": course, "exam_plan": exam_plan or ""},
 		as_dict=True,
 	)
-	if not assignment:
+	if not rows:
+		if exam_plan:
+			frappe.throw(f"Course '{course}' has no schema mapped in Exam Plan '{exam_plan}'. Map it on the Exam Plan first.")
 		frappe.throw("No Exam Plan assigned for this course. Please set up a Course Schema Assignment first.")
+	if len(rows) > 1 and academic_term:
+		rows = [r for r in rows if r.academic_term == academic_term] or rows
+	if len(rows) > 1:
+		frappe.throw(
+			"This course is mapped in more than one Exam Plan ("
+			+ ", ".join(r.exam_plan for r in rows)
+			+ "). Select the Exam Plan first."
+		)
+	return rows[0]
 
-	exam_plan         = assignment[0]["exam_plan"]
-	evaluation_schema = assignment[0]["evaluation_schema"] or ""
-	academic_term     = assignment[0]["academic_term"]
+
+@frappe.whitelist()
+def sync_students_from_enrollment(course, exam_plan=None):
+	"""Create Student Course Marks records, in the given exam plan, for every
+	Enrolled student of the Classes teaching this course in the plan's term."""
+	_check_access()
+	assignment = _plan_assignment(course, exam_plan)
+	exam_plan         = assignment["exam_plan"]
+	evaluation_schema = assignment["evaluation_schema"] or ""
+	academic_term     = assignment["academic_term"]
 
 	# Students of this course in the plan's term = Enrolled students of the
 	# Classes teaching the course in that term.
@@ -1037,13 +1113,15 @@ def sync_students_from_enrollment(course):
 		doc.insert(ignore_permissions=True)
 		added += 1
 
+	apply_attendance_eligibility(exam_plan, course)
 	frappe.db.commit()
 	return {"added": added, "skipped": skipped, "total": len(enrolled_students)}
 
 
 @frappe.whitelist()
-def sync_students_from_class(course, class_name, course_type):
-	"""Create Student Course Marks records for all Enrolled students of the given Class."""
+def sync_students_from_class(course, class_name, course_type, exam_plan=None):
+	"""Create Student Course Marks records, in the given exam plan, for all
+	Enrolled students of the given Class."""
 	from slcm.slcm.doctype.classes.classes import get_class_students
 
 	# Validate the class belongs to this course
@@ -1054,25 +1132,14 @@ def sync_students_from_class(course, class_name, course_type):
 	if cls.course != course:
 		frappe.throw("The selected Class does not belong to this course.")
 
-	# Exam plan + evaluation schema: prefer a plan for the class's term
-	assignment = frappe.db.sql(
-		"""
-		SELECT csa.exam_plan, csa.evaluation_schema
-		FROM `tabCourse Schema Assignment` csa
-		JOIN `tabExam Plan` ep ON ep.name = csa.exam_plan
-		WHERE csa.course = %(course)s
-		ORDER BY (ep.term = %(academic_term)s) DESC,
-		         FIELD(ep.status, 'Active', 'Inactive') ASC, ep.creation DESC
-		LIMIT 1
-		""",
-		{"course": course, "academic_term": cls.academic_term},
-		as_dict=True,
-	)
-	if not assignment:
-		frappe.throw("No Exam Plan assigned for this course. Please set up a Course Schema Assignment first.")
-
-	exam_plan         = assignment[0]["exam_plan"]
-	evaluation_schema = assignment[0]["evaluation_schema"] or ""
+	assignment = _plan_assignment(course, exam_plan, cls.academic_term)
+	if assignment["academic_term"] and cls.academic_term != assignment["academic_term"]:
+		frappe.throw(
+			f"Class '{class_name}' runs in {cls.academic_term}, but Exam Plan "
+			f"'{assignment['exam_plan']}' is for {assignment['academic_term']}."
+		)
+	exam_plan         = assignment["exam_plan"]
+	evaluation_schema = assignment["evaluation_schema"] or ""
 
 	# Enrolled students of the class
 	class_students = [r for r in get_class_students(class_name) if r.get("student")]
@@ -1120,6 +1187,7 @@ def sync_students_from_class(course, class_name, course_type):
 			if sec_rows:
 				frappe.db.set_value("Student Enrollment Course", sec_rows[0]["name"], "course_type", course_type)
 
+	apply_attendance_eligibility(exam_plan, course)
 	frappe.db.commit()
 	return {"added": added, "skipped": skipped, "total": len(class_students)}
 
@@ -1829,27 +1897,76 @@ def store_marks_entry(scm_name, component, assessment_type, marks_field, fvalue)
 		)
 
 
+REEXAM_REPLACES_COMPONENT = "Replace substituted component"
+REEXAM_REPLACES_TOTAL = "Replace whole course total"
+
+
 def _recalculate_student_marks(scm_name, course, exam_plan):
-	"""Recalculate total marks and grade for a student. Updates SCM and returns new values.
+	"""Recalculate total marks and grade for a student from the stored marks
+	entries, save them on the Student Course Marks and return the new values.
+	The rules are in compute_student_result."""
+	scm = frappe.db.get_value(
+		"Student Course Marks", scm_name,
+		["attendance_status", "total_marks", "improvement_marks"], as_dict=True,
+	) or frappe._dict()
+	entries = frappe.db.sql(
+		"""
+		SELECT sme.component, sme.assessment_type,
+		       sme.marks, sme.moderated_marks, sme.revaluation_marks
+		FROM `tabStudent Marks Entry` sme
+		WHERE sme.parent = %(scm)s
+		""",
+		{"scm": scm_name},
+		as_dict=True,
+	)
+	values, result = compute_student_result(
+		course, exam_plan, entries,
+		attendance_status=scm.attendance_status,
+		improvement_marks=scm.improvement_marks,
+		stored_total=scm.total_marks,
+	)
+	if values:
+		frappe.db.set_value("Student Course Marks", scm_name, values)
+		frappe.db.commit()
+	return result
 
-	Calculation rules (in priority order for each assessment entry):
-	  1. moderated_marks — set by moderation workflow; takes precedence over marks.
-	  2. If calc_higher_revaluation is enabled on the Evaluation Schema, the
-	     effective per-entry marks = max(moderated_marks or marks, revaluation_marks).
-	  3. Otherwise effective per-entry marks = moderated_marks or marks.
 
-	Re-exam total is computed similarly using Schema Reexam Config rows with
-	calc_higher_reexam controlling whether revaluation_marks are considered.
+def compute_student_result(course, exam_plan, entries, attendance_status=None,
+                           improvement_marks=None, stored_total=None):
+	"""Work out total, grade, re-exam and improvement results for one student.
 
-	The updated_final_marks = max(regular_total, reexam_total).
-	updated_grade is looked up using the Re Exam Composition of the grading schema
-	(when use_reexam_composition is enabled on that schema).
+	Returns (values, result): `values` are the Student Course Marks fields to
+	store, `result` is what the marks screens show. Nothing is written here, so
+	the Student Course Marks form (validate) and Course Results share the rules.
+
+	Per assessment entry (Schema Assessment Config):
+	  1. moderated_marks takes precedence over marks.
+	  2. With calc_higher_revaluation on the Evaluation Schema the entry counts
+	     max(moderated_marks or marks, revaluation_marks). For a Project type
+	     entry revaluation_marks is a deduction instead.
+	  3. The entry adds marks × effective_marks / maximum_marks to the total.
+
+	Pass / fail: a row with "Consider For Pass/Fail" and passing marks fails the
+	course when its marks are below them, as does a component (Evaluation Schema
+	Component) whose weighted marks fall below its passing marks once all its
+	assessments have marks. The grade is then the Grading Schema's failed grade.
+
+	Re-exam (Schema Reexam Config), per the Evaluation Schema's Re-exam Result:
+	  * Replace substituted component: the regular total with the component
+	    named in Substitute For swapped for the re-exam marks.
+	  * Replace whole course total (also used when no row names Substitute For):
+	    the re-exam rows alone.
+	updated_final_marks = max(regular total, re-exam total); improvement marks
+	(write_improvement_marks) apply when higher still.
 	"""
+	none_result = {"total": None, "grade": "", "updated_final_marks": None, "updated_grade": ""}
+
 	# Absent students get grade "Ab" — skip all calculations
-	attendance_status = frappe.db.get_value("Student Course Marks", scm_name, "attendance_status") or ""
-	if attendance_status.lower() == "absent":
-		frappe.db.set_value("Student Course Marks", scm_name, {"grade": "Ab", "total_marks": 0})
-		return {"total": 0, "grade": "Ab", "updated_final_marks": 0, "updated_grade": "Ab"}
+	if (attendance_status or "").lower() == "absent":
+		return (
+			{"grade": "Ab", "total_marks": 0},
+			{"total": 0, "grade": "Ab", "updated_final_marks": 0, "updated_grade": "Ab"},
+		)
 
 	csa = frappe.db.get_value(
 		"Course Schema Assignment",
@@ -1864,29 +1981,20 @@ def _recalculate_student_marks(scm_name, course, exam_plan):
 		# No evaluation schema — fall back to looking up the grade from the stored
 		# total_marks so that existing marks are at least graded correctly.
 		if grade_schema:
-			stored_total = frappe.utils.flt(
-				frappe.db.get_value("Student Course Marks", scm_name, "total_marks") or 0
-			)
+			stored_total  = frappe.utils.flt(stored_total)
 			grade         = _lookup_grade(grade_schema, stored_total)
 			updated_grade = _lookup_grade(grade_schema, stored_total, use_reexam=True)
-			frappe.db.set_value(
-				"Student Course Marks",
-				scm_name,
+			return (
 				{"grade": grade, "updated_grade": updated_grade},
+				{"total": stored_total, "grade": grade, "updated_final_marks": stored_total, "updated_grade": updated_grade},
 			)
-			return {
-				"total":               stored_total,
-				"grade":               grade,
-				"updated_final_marks": stored_total,
-				"updated_grade":       updated_grade,
-			}
-		return {"total": None, "grade": "", "updated_final_marks": None, "updated_grade": ""}
+		return {}, none_result
 
-	# ── Fetch calc settings from evaluation schema ────────────────────────────
+	# ── Calc settings from the evaluation schema ──────────────────────────────
 	calc = frappe.db.get_value(
 		"Evaluation Schema",
 		eval_schema,
-		["calc_higher_revaluation", "calc_higher_reexam"],
+		["calc_higher_revaluation", "calc_higher_reexam", "reexam_result"],
 		as_dict=True,
 	) or {}
 	calc_higher_revaluation = int(calc.get("calc_higher_revaluation") or 0)
@@ -1896,7 +2004,7 @@ def _recalculate_student_marks(scm_name, course, exam_plan):
 	configs = frappe.db.sql(
 		"""
 		SELECT sac.component, sac.assessment_type, sac.maximum_marks, sac.effective_marks,
-		       sac.label, eat.type_name
+		       sac.passing_marks, sac.consider_for_pass_fail, sac.label, eat.type_name
 		FROM `tabSchema Assessment Config` sac
 		LEFT JOIN `tabExam Assessment Type` eat ON eat.name = sac.assessment_type
 		WHERE sac.parent = %(schema)s
@@ -1905,26 +2013,22 @@ def _recalculate_student_marks(scm_name, course, exam_plan):
 		as_dict=True,
 	)
 	if not configs:
-		return {"total": None, "grade": "", "updated_final_marks": None, "updated_grade": ""}
+		return {}, none_result
 
-	# ── Fetch all marks entries for this student ──────────────────────────────
-	entries = frappe.db.sql(
-		"""
-		SELECT sme.component, sme.assessment_type,
-		       sme.marks, sme.moderated_marks, sme.revaluation_marks
-		FROM `tabStudent Marks Entry` sme
-		WHERE sme.parent = %(scm)s
-		""",
-		{"scm": scm_name},
-		as_dict=True,
-	)
 	entry_map = {}
-	for e in entries:
-		key = (e["component"] or "") + "|" + (e["assessment_type"] or "")
+	for e in entries or []:
+		key = (e.get("component") or "") + "|" + (e.get("assessment_type") or "")
 		entry_map[key] = e
+
+	def _weighted(raw, cfg):
+		max_m = frappe.utils.flt(cfg["maximum_marks"] or 0)
+		eff_m = frappe.utils.flt(cfg["effective_marks"] or 0)
+		return raw * (eff_m / max_m) if max_m > 0 and eff_m > 0 else raw
 
 	# ── Regular total ─────────────────────────────────────────────────────────
 	total = 0.0
+	by_component = {}        # component -> weighted marks
+	failed_components = set()
 	for cfg in configs:
 		key   = (cfg["component"] or "") + "|" + (cfg["assessment_type"] or "")
 		e     = entry_map.get(key, {})
@@ -1940,19 +2044,38 @@ def _recalculate_student_marks(scm_name, course, exam_plan):
 			raw_m = max(base, reval)
 		else:
 			raw_m = base
-		max_m = frappe.utils.flt(cfg["maximum_marks"] or 0)
-		eff_m = frappe.utils.flt(cfg["effective_marks"] or 0)
-		if max_m > 0 and eff_m > 0:
-			total += raw_m * (eff_m / max_m)
-		else:
-			total += raw_m
+		weighted = _weighted(raw_m, cfg)
+		total += weighted
+		comp = cfg["component"] or ""
+		by_component[comp] = by_component.get(comp, 0.0) + weighted
+		passing = frappe.utils.flt(cfg.get("passing_marks"))
+		if key in entry_map and cfg.get("consider_for_pass_fail") and passing > 0 and raw_m < passing:
+			failed_components.add(comp)
+
+	# Component pass marks apply once every assessment of the component has marks
+	for comp_row in frappe.get_all(
+		"Evaluation Schema Component",
+		filters={"parent": eval_schema, "parenttype": "Evaluation Schema", "consider_for_pass_fail": 1},
+		fields=["component", "passing_marks"],
+	):
+		passing = frappe.utils.flt(comp_row.passing_marks)
+		comp_keys = [
+			(c["component"] or "") + "|" + (c["assessment_type"] or "")
+			for c in configs if c["component"] == comp_row.component
+		]
+		if passing > 0 and comp_keys and all(k in entry_map for k in comp_keys) \
+				and by_component.get(comp_row.component, 0.0) < passing:
+			failed_components.add(comp_row.component)
 
 	grade = _lookup_grade(grade_schema, total) if grade_schema else ""
+	if failed_components and grade_schema:
+		grade = _failed_grade(grade_schema) or grade
 
 	# ── Re-exam total ─────────────────────────────────────────────────────────
 	reexam_configs = frappe.db.sql(
 		"""
-		SELECT src.component, src.assessment_type, src.maximum_marks, src.effective_marks
+		SELECT src.component, src.assessment_type, src.maximum_marks, src.effective_marks,
+		       src.passing_marks, src.substitute_for
 		FROM `tabSchema Reexam Config` src
 		WHERE src.parent = %(schema)s
 		""",
@@ -1961,6 +2084,7 @@ def _recalculate_student_marks(scm_name, course, exam_plan):
 	)
 
 	reexam_total = 0.0
+	taken = []               # (cfg, raw, weighted) of re-exam rows with marks
 	for cfg in (reexam_configs or []):
 		key   = (cfg["component"] or "") + "|" + (cfg["assessment_type"] or "")
 		e     = entry_map.get(key, {})
@@ -1970,22 +2094,43 @@ def _recalculate_student_marks(scm_name, course, exam_plan):
 			raw_rx = max(base, reval)
 		else:
 			raw_rx = base
-		max_rx = frappe.utils.flt(cfg["maximum_marks"] or 0)
-		eff_rx = frappe.utils.flt(cfg["effective_marks"] or 0)
-		if max_rx > 0 and eff_rx > 0:
-			reexam_total += raw_rx * (eff_rx / max_rx)
-		else:
-			reexam_total += raw_rx
+		weighted = _weighted(raw_rx, cfg)
+		reexam_total += weighted
+		if key in entry_map:
+			taken.append((cfg, raw_rx, weighted))
 
+	reexam_failed = set(failed_components)
+	replace_component = (calc.get("reexam_result") or REEXAM_REPLACES_COMPONENT) == REEXAM_REPLACES_COMPONENT
+	if replace_component and any(c.get("substitute_for") for c in reexam_configs or []):
+		# Keep the other components; swap the substituted one for the re-exam
+		if taken:
+			substituted = {cfg["substitute_for"] for cfg, _raw, _w in taken if cfg.get("substitute_for")}
+			reexam_total = (
+				total
+				- sum(by_component.get(c, 0.0) for c in substituted)
+				+ sum(w for _cfg, _raw, w in taken)
+			)
+			reexam_failed -= substituted
+		else:
+			reexam_total = 0.0
+	elif taken:
+		# The re-exam stands in for the whole course
+		reexam_failed = set()
+	for cfg, raw_rx, _w in taken:
+		passing = frappe.utils.flt(cfg.get("passing_marks"))
+		if passing > 0 and raw_rx < passing:
+			reexam_failed.add(cfg["component"] or "")
+
+	reexam_counts = reexam_total > total
 	updated_final_marks = max(total, reexam_total)
 	# Updated grade uses Re Exam Composition when the schema is configured for it
 	updated_grade = _lookup_grade(grade_schema, updated_final_marks, use_reexam=True) if grade_schema else ""
+	if grade_schema and (reexam_failed if reexam_counts else failed_components):
+		updated_grade = _failed_grade(grade_schema, use_reexam=True) or updated_grade
 
 	# Improvement-exam marks (write_improvement_marks) still count after any
 	# later recalculation — previously an edit here silently dropped them.
-	improvement_marks = frappe.utils.flt(
-		frappe.db.get_value("Student Course Marks", scm_name, "improvement_marks") or 0
-	)
+	improvement_marks = frappe.utils.flt(improvement_marks or 0)
 	improvement_applied = 1 if (improvement_marks > 0 and improvement_marks > total) else 0
 	if improvement_applied and improvement_marks > updated_final_marks:
 		updated_final_marks = improvement_marks
@@ -1997,17 +2142,18 @@ def _recalculate_student_marks(scm_name, course, exam_plan):
 	reexam_grade = ""
 	if grade_schema and reexam_configs and reexam_total > 0:
 		reexam_grade = _lookup_grade(grade_schema, reexam_total, use_reexam=True)
+		if reexam_failed:
+			reexam_grade = _failed_grade(grade_schema, use_reexam=True) or reexam_grade
 
-	frappe.db.set_value("Student Course Marks", scm_name, {
+	values = {
 		"total_marks":        round(total, 2),
 		"grade":              grade,
 		"updated_final_marks": round(updated_final_marks, 2),
 		"updated_grade":      updated_grade,
 		"re_exam_grade":      reexam_grade,
 		"improvement_applied": improvement_applied,
-	})
-	frappe.db.commit()
-	return {
+	}
+	return values, {
 		"total":              round(total, 2),
 		"grade":              grade,
 		"updated_final_marks": round(updated_final_marks, 2),
@@ -2016,6 +2162,17 @@ def _recalculate_student_marks(scm_name, course, exam_plan):
 		"improvement_applied": improvement_applied,
 		"improved":           bool(improvement_applied or updated_final_marks > total),
 	}
+
+
+def _failed_grade(grade_schema_name, use_reexam=False):
+	"""The Grading Schema's failed grade (lowest "Failed" row), "" when it has none."""
+	try:
+		schema = frappe.get_cached_doc("Grading Schema", grade_schema_name)
+	except Exception:
+		return ""
+	rows = schema.reexam_grades if (use_reexam and schema.use_reexam_composition and schema.reexam_grades) else schema.grades
+	failed = sorted((r for r in rows if r.failed), key=lambda r: frappe.utils.flt(r.marks_from))
+	return failed[0].grade if failed else ""
 
 
 def _lookup_grade(grade_schema_name, total_marks, use_reexam=False):

@@ -24,12 +24,11 @@ frappe.ui.form.on("Student Attendance Tool", {
 
 		// Guard so the `based_on` handler below doesn't wipe the values
 		// we're about to set right after (it normally clears
-		// course_schedule/class_schedule/office_hours_group whenever
+		// class_schedule/office_hours_group whenever
 		// based_on changes, which would otherwise race with this).
 		frm.__applying_route_options = true;
-		frm.set_value("based_on", opts.based_on || "Course Schedule").then(() => {
+		frm.set_value("based_on", opts.based_on || "Class").then(() => {
 			return frm.set_value({
-				course_schedule: opts.course_schedule || null,
 				class_schedule: opts.class_schedule || null,
 				office_hours_group: opts.office_hours_group || null,
 				class_name: null,
@@ -56,16 +55,10 @@ frappe.ui.form.on("Student Attendance Tool", {
 
 	based_on(frm) {
 		if (frm.__applying_route_options) return;
-		frm.set_value("course_schedule", null);
 		frm.set_value("class_schedule", null);
 		frm.set_value("office_hours_group", null);
 		frm.set_value("class_name", null);
 		frm.students_area.empty();
-	},
-
-	course_schedule(frm) {
-		if (frm.__applying_route_options) return;
-		frm.trigger("sync_context");
 	},
 
 	class_schedule(frm) {
@@ -90,16 +83,7 @@ frappe.ui.form.on("Student Attendance Tool", {
 	// triggers, since those don't fire when the incoming value matches what
 	// this Single doctype already has stored.
 	sync_context(frm) {
-		if (frm.doc.course_schedule) {
-			frappe.db.get_value("Course Schedule", frm.doc.course_schedule,
-				["schedule_date", "class_name"], (r) => {
-					if (r) {
-						if (r.class_name) frm.set_value("class_name", r.class_name);
-						if (r.schedule_date && !frm.doc.date) frm.set_value("date", r.schedule_date);
-					}
-					frm.trigger("fetch_students");
-				});
-		} else if (frm.doc.class_schedule) {
+		if (frm.doc.class_schedule) {
 			frappe.db.get_value("Time Table", frm.doc.class_schedule,
 				["schedule_date", "repeat_frequency", "class_name", "section"], (r) => {
 					if (r) {
@@ -130,7 +114,7 @@ frappe.ui.form.on("Student Attendance Tool", {
 	},
 
 	fetch_students(frm) {
-		if (frm.doc.course_schedule || frm.doc.class_schedule || frm.doc.office_hours_group) {
+		if (frm.doc.class_schedule || frm.doc.office_hours_group) {
 			frm.students_area.html(
 				"<div style='padding:2rem;text-align:center'>" +
 				"<i class='fa fa-spinner fa-spin'></i> Fetching students..." +
@@ -142,7 +126,6 @@ frappe.ui.form.on("Student Attendance Tool", {
 				args: {
 					based_on: frm.doc.based_on,
 					date: frm.doc.date,
-					course_schedule: frm.doc.course_schedule,
 					class_schedule: frm.doc.class_schedule,
 					office_hours_group: frm.doc.office_hours_group,
 				},
@@ -270,7 +253,6 @@ class StudentsEditor {
 					args: {
 						students_present,
 						students_absent,
-						course_schedule: this.frm.doc.course_schedule,
 						class_schedule: this.frm.doc.class_schedule,
 						office_hours_group: this.frm.doc.office_hours_group,
 						date: this.frm.doc.date,

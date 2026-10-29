@@ -255,7 +255,7 @@ class ProgrammeManagementTestCase(IntegrationTestCase):
 	def time_table_doc(cls, class_name, schedule_date=MONDAY, from_time="09:00:00", to_time="10:00:00", **kwargs):
 		return frappe.get_doc({
 			"doctype": "Time Table",
-			"based_on": "Course Schedule",
+			"based_on": "Class",
 			"class_name": class_name,
 			"schedule_date": schedule_date,
 			"from_time": from_time,
@@ -1080,7 +1080,7 @@ class TestTimeTable(ProgrammeManagementTestCase):
 		doc = self.time_table_doc(self.class_name, from_time="09:00:00", to_time="10:30:00").insert()
 		self.assertEqual(doc.duration_hours, 1.3)
 
-	def test_class_is_required_for_course_schedule(self):
+	def test_class_is_required_for_class_entry(self):
 		with self.assertRaises(frappe.ValidationError):
 			self.time_table_doc(None).insert()
 

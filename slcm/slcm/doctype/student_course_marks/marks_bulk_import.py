@@ -668,6 +668,7 @@ def _process_import_impl(import_log_name, retry_scope=None, triggering_user=None
                 })
             
             doc.flags.ignore_permissions = True
+            doc.flags.keep_imported_result = True  # don't recalculate imported totals / grades
             doc.insert()
             
             detail.db_set("status", "Success")

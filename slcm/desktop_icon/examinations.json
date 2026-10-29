@@ -1,19 +1,19 @@
 {
  "app": "slcm",
  "bg_color": "blue",
- "creation": "2026-05-05 21:40:40.385086",
+ "creation": "2026-10-29 20:00:00.000000",
  "docstatus": 0,
  "doctype": "Desktop Icon",
  "hidden": 0,
- "icon": "layout-panel-top",
+ "icon": "clipboard-check",
  "icon_type": "Link",
  "idx": 0,
- "label": "Exam Planner",
- "link_to": "Exam Planner",
+ "label": "Examinations",
+ "link_to": "Examination Management",
  "link_type": "Workspace Sidebar",
- "modified": "2026-05-22 13:04:39.784180",
+ "modified": "2026-10-29 20:00:00.000000",
  "modified_by": "Administrator",
- "name": "Exam Planner",
+ "name": "Examinations",
  "owner": "Administrator",
  "parent_icon": "Examination Management",
  "restrict_removal": 0,
@@ -40,6 +40,6 @@
    "role": "System Manager"
   }
  ],
- "sidebar": "Exam Planner",
+ "sidebar": "Examination Management",
  "standard": 1
 }
