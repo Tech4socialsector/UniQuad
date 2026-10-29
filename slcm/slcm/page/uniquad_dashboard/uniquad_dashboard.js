@@ -146,7 +146,7 @@ const uq_icon = (name, size = 16, cls = "") =>
 	`<svg class="uq-icon ${cls}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${UQ_ICONS[name] || ""}</svg>`;
 
 const UQ_BADGE = {
-	good: ["Active", "Present", "Completed", "Conducted", "Eligible", "Marked", "Paid", "Approved", "Enrolled", "Yes", "Submitted", "Locked", "Core", "Full Fee Paid", "Offer Accepted"],
+	good: ["Active", "Present", "Completed", "Conducted", "Eligible", "Marked", "Paid", "Approved", "Enrolled", "Yes", "Submitted", "Submitted and Paid", "Locked", "Core", "Full Fee Paid", "Offer Accepted"],
 	warn: ["Pending", "Scheduled", "Draft", "Partially Paid", "May Be Approved", "Postponed", "Late", "Requested", "Planned", "Elective", "Selected", "OD", "Excused"],
 	bad: ["Overdue", "Cancelled", "Absent", "Shortage", "Not Marked", "Rejected", "Inactive", "Dropped", "Withdrawn", "No", "Dormant", "Blocked", "Offer Declined", "Offer Expired"],
 	info: ["Graduated", "Alumni", "Waived"],
