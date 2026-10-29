@@ -241,7 +241,7 @@
    "fieldname": "programme",
    "fieldtype": "Link",
    "label": "Programme",
-   "options": "Programme Master",
+   "options": "Programme",
    "read_only": 1,
    "reqd": 1
   },
@@ -260,11 +260,11 @@
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2026-10-29 10:00:00.000000",
+ "modified": "2026-10-29 16:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Student Attendance Condonation",
- "naming_rule": "By fieldname",
+ "naming_rule": "Expression (old style)",
  "owner": "Administrator",
  "permissions": [
   {

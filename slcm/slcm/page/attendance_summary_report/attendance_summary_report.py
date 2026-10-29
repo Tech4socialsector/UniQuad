@@ -324,8 +324,9 @@ def get_data(academic_year=None, term=None, programme=None, course=None, batch=N
 				# have signed off — while it's Pending/May Be Approved/Rejected,
 				# the "after condonation" percentage stays identical to "before".
 				effective_hours = condoned_hours if condonation.final_status == "Approved" else 0
+				# Condoned hours only make up missed hours: capped at 100%.
 				after_percentage = (
-					(attended_hours + effective_hours) / conducted_hours * 100
+					min(attended_hours + effective_hours, conducted_hours) / conducted_hours * 100
 				) if conducted_hours else 0
 
 				row.update({
