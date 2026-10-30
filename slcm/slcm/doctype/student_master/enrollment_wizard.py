@@ -6,11 +6,13 @@
 Steps (see public/js/enrollment_wizard.js):
     1. Academic setup  - academic year (current by default), term, programme,
                          batch and year of study
-    2. Students        - registration Completed, not yet enrolled in the programme
+    2. Students        - registration Completed in the batch, not yet enrolled
+                         in the programme (any registration year)
     3. Student ID      - a format such as M26#### (the #s are the running
                          number), assigned in alphabetical order
-    4. Sections        - Mid-off / One-by-one (split by section capacities),
-                         Manual, or Upload
+    4. Sections        - split required? No (default): each student keeps the
+                         section on record. Yes: Mid-off / One-by-one (split
+                         by section capacities), Manual, or Upload
     5. Summary         - enroll_students() saves everything
 """
 
@@ -98,18 +100,18 @@ def get_year_defaults(academic_year):
 # ── Step 2 ────────────────────────────────────────────────────────────────────
 
 @frappe.whitelist()
-def get_enrollable_students(programme, academic_year):
-    """Students with registration Completed in `academic_year` (Student
-    Master's Academic Year), of this programme (or with no programme set
-    yet), who are not enrolled in it yet and are not PACE students;
-    alphabetical."""
+def get_enrollable_students(programme, batch):
+    """Students with registration Completed in `batch`, of this programme (or
+    with no programme set yet), who are not enrolled in it yet and are not
+    PACE students; alphabetical. Their registration Academic Year does not
+    matter, so earlier years' students can be enrolled too."""
     _check_permission()
-    if not (programme and academic_year):
+    if not (programme and batch):
         return []
     enrolled = set(frappe.get_all("Student Enrollment", filters={"program": programme}, pluck="student"))
     students = frappe.get_all(
         "Student Master",
-        filters={"registration_status": "Completed", "academic_year": academic_year},
+        filters={"registration_status": "Completed", "batch": batch},
         or_filters=[
             ["programme_of_study", "=", programme],
             ["programme_of_study", "is", "not set"],
@@ -301,7 +303,8 @@ def enroll_students(data):
 
     data: academic_year, academic_term, programme, batch, year_no and rows
     [{student, student_id, section}]. For each student: Student Master gets
-    the Student ID, section, batch, programme and academic year, then a
+    the Student ID, section, batch and programme (its Academic Year, the year
+    of registration, is left as it is), then a
     Student Enrollment is created whose Academic Log starts at the chosen
     year and term. Each student is saved on its own: one failure does not
     stop the rest. Returns {success: [...], failed: [{student, reason}]}."""
@@ -330,7 +333,7 @@ def enroll_students(data):
         try:
             sm = frappe.db.get_value(
                 "Student Master", student,
-                ["name", "first_name", "middle_name", "last_name", "registration_status", "registration_id"],
+                ["name", "first_name", "middle_name", "last_name", "registration_status", "registration_id", "section"],
                 as_dict=True,
             )
             if not sm:
@@ -350,10 +353,11 @@ def enroll_students(data):
             if section and not frappe.db.exists("Section", section):
                 raise frappe.ValidationError(_("Section {0} does not exist.").format(section))
 
+            # Student Master's Academic Year is the year they registered in:
+            # it stays. The enrollment's Academic Log carries the chosen year.
             values = {
                 "batch": data.batch,
                 "programme_of_study": data.programme,
-                "academic_year": data.academic_year,
             }
             if new_id:
                 values["registration_id"] = new_id
@@ -370,7 +374,8 @@ def enroll_students(data):
                 "student_name":    _full_name(sm),
                 "program":         data.programme,
                 "batch":           data.batch,
-                "section":         section or None,
+                # No section given (split not required): the one on record
+                "section":         section or sm.section or None,
                 "status":          "Enrolled",
                 "enrollment_date": today(),
             })

@@ -48,7 +48,11 @@
       "Bash(cd \"//wsl.localhost/Ubuntu-24.04/home/n_l_s_i_u/frappe-bench/apps/slcm/slcm\" && grep -n '\"autoname\"' slcm/doctype/foundations_for_a_legal_education/foundations_for_a_legal_education.json slcm/doctype/student_master/student_master.json slcm/doctype/fle_payment_log/fle_payment_log.json)",
       "PowerShell(wsl -d Ubuntu-24.04 -e bash -lc 'bash /tmp/check_enr.sh slcm/api/helpdesk_assignment.py slcm/api/service/applicant_to_student.py slcm/slcm/doctype/student_master/student_master.py slcm/slcm/doctype/student_master/enrollment_wizard.py slcm/slcm/doctype/student_master/student_master.js slcm/slcm/doctype/student_master/student_master_list.js slcm/admission/utils/withdrawal_sync.py slcm/api/student_portal.py slcm/www/student-portal/announcements.py slcm/www/student-portal/index.py slcm/www/student-portal/profile.py slcm/slcm/utils/parent_portal.py slcm/slcm/doctype/student_announcement/student_announcement.py slcm/hooks.py slcm/slcm/doctype/announcement_programme_target/announcement_programme_target.json slcm/slcm/workspace/fle/fle.json slcm/fixtures/workspace.json slcm/fixtures/dashboard_chart.json')",
       "PowerShell(wsl -d Ubuntu-24.04 -e bash -lc 'cd ~/frappe-bench && bench --site slcm.com migrate 2>&1 | tail -5')",
-      "PowerShell(wsl -d Ubuntu-24.04 -e bash -lc 'cd ~/frappe-bench/sites && ../env/bin/python /tmp/fix_verify.py 2>&1 | grep -v RuntimeWarning')"
+      "PowerShell(wsl -d Ubuntu-24.04 -e bash -lc 'cd ~/frappe-bench/sites && ../env/bin/python /tmp/fix_verify.py 2>&1 | grep -v RuntimeWarning')",
+      "PowerShell(wsl -d Ubuntu-24.04 -- bash /tmp/check_sites.sh)",
+      "PowerShell(wsl -d Ubuntu-24.04 -- bash -lc 'export PATH=$HOME/.local/bin:$PATH; which bench; bash /tmp/check_sites.sh')",
+      "PowerShell(wsl -d Ubuntu-24.04 -- bash /tmp/check_ug.sh)",
+      "PowerShell(wsl -d Ubuntu-24.04 -- python3 /tmp/row13.py)"
     ]
   }
 }

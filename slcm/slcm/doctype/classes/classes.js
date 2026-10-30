@@ -21,6 +21,9 @@ frappe.ui.form.on("Classes", {
 		if (frm.doc.class_type !== "Group") {
 			frm.add_custom_button(__("Get Students"), () => get_students(frm));
 		}
+		if (frm.perm[0] && frm.perm[0].write) {
+			frm.add_custom_button(__("Add / Remove Students"), () => add_remove_students(frm));
+		}
 		// Dialogs in public/js/class_time_table.js
 		if (!frm.is_new() && !frm.is_dirty()) {
 			if (frappe.model.can_create("Time Table")) {
@@ -40,6 +43,36 @@ frappe.ui.form.on("Classes", {
 		frm.set_value("academic_term", null);
 	},
 });
+
+// The class's Enrolled students ticked, others found with any filters (any
+// year); ticked ones not listed are added, unticked ones taken off. Rows with
+// another status (Completed, Withdrawn ...) stay as history.
+function add_remove_students(frm) {
+	const enrolled = (frm.doc.enrolled_students || []).filter((r) => r.status === "Enrolled");
+	slcm.class_students.pick({
+		current: enrolled.map((r) => ({ student_enrollment: r.student_enrollment, student_name: r.student_name, section: r.section })),
+		programme: frm.doc.class_type === "Group" ? "" : frm.doc.programme,
+	}).then((picked) => {
+		if (!picked) return;
+		const keep = new Set(picked.map((r) => r.student_enrollment));
+		const listed = new Set((frm.doc.enrolled_students || []).map((r) => r.student_enrollment));
+		const removed = enrolled.filter((r) => !keep.has(r.student_enrollment));
+		removed.forEach((r) => frappe.model.clear_doc(r.doctype, r.name));
+		const added = picked.filter((r) => !listed.has(r.student_enrollment));
+		added.forEach((r) => frm.add_child("enrolled_students", {
+			student_enrollment: r.student_enrollment,
+			student_name: r.student_name,
+			section: r.section,
+			status: "Enrolled",
+		}));
+		if (!added.length && !removed.length) return;
+		frm.refresh_field("enrolled_students");
+		frm.save().then(() => frappe.show_alert({
+			message: __("{0} student(s) added, {1} removed.", [added.length, removed.length]),
+			indicator: "green",
+		}));
+	});
+}
 
 // Fill the table with the section's enrolled students, skipping ones already listed.
 function get_students(frm) {

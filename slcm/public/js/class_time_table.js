@@ -33,6 +33,14 @@ function ctt_time(t) {
 	return `${h % 12 || 12}:${String(m || 0).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
 }
 
+/** Dark or white text, whichever reads on the given background colour. */
+function ctt_text_color(bg) {
+	const hex = String(bg || "").replace("#", "");
+	if (!/^[0-9a-f]{6}$/i.test(hex)) return "#fff";
+	const [r, g, b] = [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16));
+	return 0.299 * r + 0.587 * g + 0.114 * b > 160 ? "#1f2937" : "#fff";
+}
+
 function ctt_date(d) {
 	return d ? frappe.datetime.str_to_user(d) : "";
 }
@@ -113,11 +121,20 @@ slcm.class_time_table.open_view = (frm) => {
 
 /* ======================= Create Time Table wizard ======================= */
 
+/** Edit one session of the calendar: the Create dialog's Schedule step, filled
+ * with the session, saved for this session or this and the following ones. */
+slcm.class_time_table.open_edit = (frm, info, time_table, on_saved) => {
+	frappe.call({ method: CTT_METHOD + "get_session_for_edit", args: { time_table }, freeze: true }).then((r) => {
+		if (r.message) new slcm.class_time_table.CreateWizard(frm, info, { ...r.message, on_saved });
+	});
+};
+
 slcm.class_time_table.CreateWizard = class CreateWizard {
-	constructor(frm, info) {
+	constructor(frm, info, edit) {
 		this.frm = frm;
 		this.info = info;
 		this.cls = info.class;
+		this.edit = edit || null;  // get_session_for_edit + on_saved, in edit mode
 		this.step = 0;
 		this.dates = [];        // series preview rows from the server
 		this.schedule_key = null;
@@ -134,13 +151,16 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 	make_dialog() {
 		const me = this;
 		this.d = new frappe.ui.Dialog({
-			title: __("Create Time Table"),
+			title: this.edit ? __("Edit Time Table") : __("Create Time Table"),
 			size: "extra-large",
 			fields: [
 				{ fieldtype: "HTML", fieldname: "steps_html" },
 
 				// 1. Schedule
 				{ fieldtype: "Section Break", fieldname: "s1" },
+				{ fieldtype: "Select", fieldname: "apply_to", label: __("Apply Changes To"), hidden: !this.edit,
+					options: ["This occurrence", "This and following occurrences"].join("\n"), default: "This occurrence",
+					onchange: () => me.on_apply_to_change() },
 				{ fieldtype: "Data", fieldname: "title", label: __("Title"), reqd: 1 },
 				{ fieldtype: "Link", fieldname: "instructor", label: __("Faculty"), options: "Faculty",
 					description: __("Defaults to the class's faculty.") },
@@ -167,7 +187,7 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 				// 2. Class Participation
 				{ fieldtype: "Section Break", fieldname: "s2" },
 				{ fieldtype: "Select", fieldname: "create_cp", label: __("Create Class Participation?"),
-					options: "Yes\nNo", default: "Yes", onchange: () => me.on_cp_toggle() },
+					options: "Yes\nNo", default: "No", onchange: () => me.on_cp_toggle() },
 				{ fieldtype: "Column Break" },
 				{ fieldtype: "HTML", fieldname: "cp_help" },
 				{ fieldtype: "Section Break", fieldname: "s2_weeks", label: __("Weeks") },
@@ -220,13 +240,27 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 		const { term_start_date: start, term_end_date: end } = this.info;
 		const today = frappe.datetime.get_today();
 		const first = start && today < start ? start : end && today > end ? start : today;
-		this.d.set_values({
-			title: ctt_class_label(this.cls),
-			instructor: this.cls.faculty,
-			schedule_date: first,
-			repeat_frequency: "Weekly",
-			repeats_till: end || "",
-		});
+		const e = this.edit;
+		this.d.set_values(e
+			? {
+				title: e.title || ctt_class_label(this.cls),
+				instructor: e.instructor,
+				venue: e.venue,
+				color: e.color,
+				schedule_date: e.schedule_date,
+				from_time: e.from_time,
+				to_time: e.to_time,
+				repeat_frequency: e.repeat_frequency,
+				repeats_till: e.repeats_till || "",
+			}
+			: {
+				title: ctt_class_label(this.cls),
+				instructor: this.cls.faculty,
+				schedule_date: first,
+				repeat_frequency: "Weekly",
+				repeats_till: end || "",
+			});
+		if (e) this.on_apply_to_change();
 		this.d.fields_dict.term_html.$wrapper.html(`<div class="ctt-help">
 			${__("Term")}: <b>${ctt_esc(this.info.term_name)}</b><br>
 			${start && end ? `${ctt_date(start)} – ${ctt_date(end)}<br>` : ""}
@@ -257,6 +291,12 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 		this.render_steps();
 		this.render_context();
 		this.d.get_secondary_btn().toggle(step > 0);
+		if (this.edit) {
+			// Editing is the Schedule step alone
+			this.d.fields_dict.steps_html.$wrapper.empty();
+			this.d.set_primary_action(__("Save"), () => this.save_edit());
+			return;
+		}
 		this.d.set_primary_action(step === CTT_STEPS.length - 1 ? __("Create Time Table") : __("Next"), () => this.next());
 		if (step === 2) this.render_summary();
 		this.d.$wrapper.find(".modal-body").scrollTop(0);
@@ -382,6 +422,123 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 	on_schedule_change() {
 		// Re-checked when leaving the step
 		this.dates = [];
+	}
+
+	/* ---------------- edit mode ---------------- */
+
+	edit_future() {
+		return this.d.get_value("apply_to") === "This and following occurrences";
+	}
+
+	/** This occurrence: its own date, time, venue ... This and following: the
+	 * same for every later session; a new Schedule Date, Repeat or Repeats Till
+	 * rebuilds the series from that date. */
+	on_apply_to_change() {
+		const future = this.edit_future();
+		const e = this.edit;
+		this.d.set_df_property("repeat_frequency", "read_only", future ? 0 : 1);
+		this.d.set_df_property("repeats_till", "read_only", future ? 0 : 1);
+		this.d.set_df_property("schedule_date", "description", future
+			? __("First session from here on. A new date rebuilds the following sessions from it.")
+			: __("Date of this session."));
+		this.d.set_df_property("apply_to", "description", future
+			? __("{0} session(s) from {1} to {2}. Changing the Schedule Date, Repeat or Repeats Till rebuilds them from the new date; sessions with marked attendance are kept. Availability is checked before anything changes.",
+				[e.following, ctt_date(e.schedule_date), ctt_date(e.series_end)])
+			: __("Only the session on {0} is updated. Availability is checked before anything changes.", [ctt_date(e.schedule_date)]));
+		if (!future) {
+			// Repeat belongs to the series: back to its saved values
+			this.d.set_value("repeat_frequency", e.repeat_frequency);
+			this.d.set_value("repeats_till", e.repeats_till || "");
+		}
+	}
+
+	async save_edit() {
+		const s = this.schedule_values();
+		const future = this.edit_future();
+		const missing = [
+			[s.title, __("Title")], [s.venue, __("Venue")], [s.schedule_date, __("Schedule Date")],
+			[s.from_time, __("From Time")], [s.to_time, __("To Time")],
+			[!future || s.repeat_frequency === "Never" || s.repeats_till, __("Repeats Till")],
+		].filter(([v]) => !v).map(([, label]) => label);
+		if (missing.length) {
+			frappe.msgprint(__("Please fill: {0}", [missing.join(", ")]));
+			return;
+		}
+		if (s.from_time >= s.to_time) {
+			frappe.msgprint(__("To Time must be after From Time."));
+			return;
+		}
+		const last = future && s.repeat_frequency !== "Never" ? s.repeats_till : s.schedule_date;
+		if (last < s.schedule_date) {
+			frappe.msgprint(__("Repeats Till cannot be before this session's date."));
+			return;
+		}
+		const { term_start_date: ts, term_end_date: te } = this.info;
+		if (ts && te && (s.schedule_date < ts || last > te)) {
+			frappe.msgprint({
+				title: __("Outside the Academic Term"),
+				message: __("{0} runs from {1} to {2}. Sessions must be within those dates.",
+					[this.info.term_name, ctt_date(ts), ctt_date(te)]),
+				indicator: "red",
+			});
+			return;
+		}
+
+		const data = { title: s.title, instructor: s.instructor, venue: s.venue, color: s.color,
+			from_time: s.from_time, to_time: s.to_time, schedule_date: s.schedule_date };
+		if (future) Object.assign(data, { repeat_frequency: s.repeat_frequency, repeats_till: s.repeats_till });
+		const args = { time_table: this.edit.name, data, scope: future ? "future" : "this" };
+
+		// 1. Availability of every date and what would change - nothing saved yet
+		const check = await this.run_busy(__("Checking venue, faculty and holidays for each date..."), [],
+			() => frappe.call({ method: CTT_METHOD + "check_class_time_table_update", args }));
+		if (!check) return;
+		if (check.errors.length) {
+			frappe.msgprint({ title: __("Time Slot Unavailable"), message: check.errors.join("<br>"), indicator: "orange" });
+			return;
+		}
+
+		// 2. Confirm, then save (the server checks again)
+		frappe.confirm(this.edit_confirm_html(check), async () => {
+			const m = await this.run_busy(__("Updating the Time Table..."), [
+				{ label: "Updating", text: __("Updating sessions..."), unit: __("Session {0} of {1}"), from: 0, to: 100 },
+			], () => frappe.call({ method: CTT_METHOD + "update_class_time_table", args }));
+			if (!m) return;
+			this.d.hide();
+			frappe.show_alert({
+				message: m.rebuild
+					? __("Time Table rebuilt: {0} session(s) scheduled, {1} kept.", [m.create, m.keep])
+					: __("{0} session(s) updated.", [m.update]),
+				indicator: "green",
+			}, 7);
+			this.edit.on_saved && this.edit.on_saved();
+		});
+	}
+
+	/** What Save will do, with each date's availability. */
+	edit_confirm_html(check) {
+		const badge = { ok: "ok", faculty_warn: "warn", kept: "", holiday: "bad", venue: "bad" };
+		const label = { ok: __("Available"), faculty_warn: __("Faculty busy"), kept: __("Kept"),
+			holiday: __("Skipped"), venue: __("Skipped") };
+		const rows = check.rows.map((r) => `<tr>
+			<td class="ctt-nowrap">${ctt_esc(r.date_fmt)}</td>
+			<td><span class="ctt-badge ${badge[r.status] || ""}">${label[r.status] || ctt_esc(r.status)}</span></td>
+			<td>${ctt_esc(r.note)}</td>
+		</tr>`).join("");
+		const head = check.rebuild
+			? __("{0} session(s) from this one will be replaced by <b>{1}</b> new session(s).", [check.replace, check.create])
+				+ (check.keep ? " " + __("{0} session(s) with marked attendance are kept.", [check.keep]) : "")
+			: __("<b>{0}</b> session(s) will be updated. Every date is available.", [check.update]);
+		const warn = check.rows.some((r) => r.status === "faculty_warn")
+			? `<div class="ctt-banner warn">${__("The faculty has another session at this time on some dates; kindly confirm their availability.")}</div>` : "";
+		return `<div class="ctt-dialog">
+			<div class="ctt-banner ok">${head}</div>${warn}
+			<div class="ctt-table-wrap" style="max-height:300px"><table class="ctt-table">
+				<thead><tr><th>${__("Date")}</th><th>${__("Status")}</th><th>${__("Note")}</th></tr></thead>
+				<tbody>${rows}</tbody>
+			</table></div>
+			<div class="ctt-muted" style="margin-top:8px">${__("Save these changes?")}</div>
+		</div>`;
 	}
 
 	/** Dates a class is actually created on. */
@@ -806,7 +963,7 @@ slcm.class_time_table.CalendarView = class CalendarView {
 			fields: [{
 				fieldtype: "HTML", fieldname: "calendar_html",
 				options: `<div class="ctt-cal-view">
-						<div class="ctt-legend">${legend}<span class="ctt-muted">${__("Click a class to see its attendance and class participation.")}</span></div>
+						<div class="ctt-legend">${legend}<span class="ctt-muted">${__("Left edge: attendance state; fill: the Time Table Color. Click a class to see its attendance and class participation, or edit it.")}</span></div>
 						<div class="ctt-calendar"></div>
 					</div>
 					<div class="ctt-session-view" style="display:none"></div>`,
@@ -840,8 +997,12 @@ slcm.class_time_table.CalendarView = class CalendarView {
 					args: { class_name: this.cls.name, start: range.startStr.slice(0, 10), end: range.endStr.slice(0, 10) },
 				}).then((r) => {
 					success((r.message || []).map((e) => {
-						const color = (CTT_STATES[e.extendedProps.state] || CTT_STATES.upcoming).color;
-						return Object.assign(e, { backgroundColor: color, borderColor: color, textColor: "#fff" });
+						// The Time Table Color fills the class; its attendance state is the left edge
+						const state = (CTT_STATES[e.extendedProps.state] || CTT_STATES.upcoming).color;
+						const fill = e.extendedProps.color || state;
+						return Object.assign(e, {
+							backgroundColor: fill, borderColor: state, textColor: ctt_text_color(fill), classNames: ["ctt-ev"],
+						});
 					}));
 				}, failure);
 			},
@@ -878,6 +1039,7 @@ slcm.class_time_table.CalendarView = class CalendarView {
 				<div class="ctt-session-bar">
 					<button class="btn btn-default btn-sm ctt-back">&larr; ${__("Back to calendar")}</button>
 					<div class="ctt-session-actions">
+						${frappe.model.can_write("Time Table") ? `<button class="btn btn-default btn-sm ctt-edit">${__("Edit")}</button>` : ""}
 						<button class="btn btn-default btn-sm ctt-open-tt">${__("Open Time Table")}</button>
 						<button class="btn btn-primary btn-sm ctt-mark">${__("Mark Attendance")}</button>
 					</div>
@@ -911,6 +1073,12 @@ slcm.class_time_table.CalendarView = class CalendarView {
 				});
 			});
 			$view.find(".ctt-back").on("click", () => this.show_calendar());
+			$view.find(".ctt-edit").on("click", () => {
+				slcm.class_time_table.open_edit(this.frm, this.info, info.name, () => {
+					// The session may have moved or gone: back to the refreshed calendar
+					this.show_calendar();
+				});
+			});
 			$view.find(".ctt-open-tt").on("click", () => {
 				this.d.hide();
 				frappe.set_route("Form", "Time Table", info.name);
@@ -1084,6 +1252,7 @@ function ctt_inject_css() {
 		.ctt-dialog .ctt-legend-item { display: inline-flex; align-items: center; gap: 6px; }
 		.ctt-dialog .ctt-dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
 		.ctt-dialog .ctt-calendar .fc-event { cursor: pointer; }
+		.ctt-dialog .ctt-calendar .fc-event.ctt-ev { border-width: 0 0 0 5px; border-style: solid; }
 		.ctt-dialog .ctt-calendar .fc .fc-toolbar-title { font-size: 16px; font-weight: 600; }
 		.ctt-dialog .ctt-calendar .fc .fc-button-primary {
 			background: var(--control-bg); color: var(--text-color); border-color: var(--border-color); box-shadow: none;
