@@ -86,9 +86,9 @@ frappe.ui.form.on("Interview Seat Allocation", {
         frm.set_df_property("reschedule_section", "hidden", !is_rescheduled);
 
         // apply applicant restrictions
-        if (frappe.user_roles.includes("Applicant")) {
-            _apply_applicant_permissions(frm);
-        }
+        // if (frappe.user_roles.includes("Applicant")) {
+        //     _apply_applicant_permissions(frm);
+        // }
     },
 
     // ── Applicant field change ───────────────────────────────────────────────

@@ -28,41 +28,6 @@ frappe.ui.form.on("Entrance Test Seat Allocation", {
       return { filters: { name: ["in", preferences] } };
     });
 
-    // ── Role based restrictions ──────────────────────────
-    // Administrator can do everything — skip all restrictions
-    if (frappe.user_roles.includes("Administrator")) {
-      frm.set_df_property("tab_9_tab", "hidden", 0);
-      frm.set_df_property("reschedule_seat_allocation_section", "hidden", 0);
-      frm.set_df_property("section_break_axgb", "hidden", 0);
-      frm.set_df_property("entrance_test_status", "read_only", 0);
-      frm.set_df_property("part_a_total_marks_scored", "read_only", 0);
-      frm.set_df_property("part_a_all_india_rank", "read_only", 0);
-      frm.set_df_property("part_b_total_marks_scored", "read_only", 0);
-      frm.set_df_property("part_b_all_india_rank", "read_only", 0);
-    } else if (frappe.user_roles.includes("Applicant")) {
-      _apply_applicant_permissions(frm);
-
-      // Force status to "Scheduled" for applicants if not already set or invalid
-      if (!frm.doc.entrance_test_status || frm.doc.entrance_test_status === "Not Scheduled" || frm.doc.entrance_test_status === "") {
-        frm.set_value("entrance_test_status", "Scheduled");
-      }
-      // Ensure it remains read-only for applicants at all times
-      frm.set_df_property("entrance_test_status", "read_only", 1);
-    } else {
-      // FOR OTHER ROLES (non-Admin, non-Applicant):
-      // Ensure the Reschedule tab and other sections are ALWAYS visible for them
-      frm.set_df_property("tab_9_tab", "hidden", 0);
-      frm.set_df_property("reschedule_seat_allocation_section", "hidden", 0);
-      frm.set_df_property("section_break_axgb", "hidden", 0);
-
-      // Ensure result and status fields are editable for admins
-      frm.set_df_property("entrance_test_status", "read_only", 0);
-      frm.set_df_property("part_a_total_marks_scored", "read_only", 0);
-      frm.set_df_property("part_a_all_india_rank", "read_only", 0);
-      frm.set_df_property("part_b_total_marks_scored", "read_only", 0);
-      frm.set_df_property("part_b_all_india_rank", "read_only", 0);
-    }
-
   },
 
   download_admit_card: function (frm) {
@@ -262,6 +227,7 @@ frappe.ui.form.on("Entrance Test Seat Allocation", {
         }
       );
     }
+      
   }
 });
 
