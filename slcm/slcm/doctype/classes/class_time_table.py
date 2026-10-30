@@ -139,6 +139,14 @@ def preview_class_time_table(data):
 		):
 			if _overlaps(data.from_time, data.to_time, row.from_time, row.to_time):
 				busy.setdefault((field, getdate(row.schedule_date)), row)
+	if data.get("venue"):
+		# Exams booked in the room count like another session
+		from slcm.slcm.utils.exam_timetable import exam_bookings_by_date
+
+		for day, rows in exam_bookings_by_date(data.venue, dates[0], dates[-1]).items():
+			for row in rows:
+				if _overlaps(data.from_time, data.to_time, row.from_time, row.to_time):
+					busy.setdefault(("venue", day), row)
 
 	def slot(row):
 		return f"{format_time_12h(row.from_time)} – {format_time_12h(row.to_time)}"
@@ -189,7 +197,7 @@ def create_class_time_table(data):
 
 	doc = frappe.get_doc({
 		"doctype": "Time Table",
-		"based_on": "Course Schedule",
+		"based_on": "Class",
 		"class_name": cls.name,
 		"instructor": data.instructor or cls.faculty,
 		"schedule_date": data.schedule_date,

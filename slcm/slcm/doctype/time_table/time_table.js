@@ -367,21 +367,6 @@ frappe.ui.form.on('Time Table', {
         frm.events.get_title(frm);
     },
 
-    course_schedule: function (frm) {
-        if (frm.doc.course_schedule) {
-            frappe.db.get_value("Course Schedule", frm.doc.course_schedule, ["schedule_date", "from_time", "to_time", "room", "class_name", "instructor"], (r) => {
-                if (r) {
-                    frm.set_value("schedule_date", r.schedule_date);
-                    frm.set_value("from_time", r.from_time);
-                    frm.set_value("to_time", r.to_time);
-                    frm.set_value("venue", r.room);
-                    if (r.class_name) frm.set_value("class_name", r.class_name);
-                    if (r.instructor) frm.set_value("instructor", r.instructor);
-                }
-            });
-        }
-    },
-
     office_hours_group: function (frm) {
         // Office Hours Group now links to Student Group, which carries no date,
         // time or faculty - only the class context. Setting class_name

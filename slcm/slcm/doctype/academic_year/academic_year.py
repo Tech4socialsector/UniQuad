@@ -14,17 +14,22 @@ class AcademicYear(Document):
 		self.validate_current_year()
 
 	def validate_dates(self):
+		# getdate(None) is today, so leave blank dates to the mandatory check
+		if not (self.year_start_date and self.year_end_date):
+			return
 		if getdate(self.year_end_date) <= getdate(self.year_start_date):
 			frappe.throw(_("Year End Date must be after Year Start Date."))
 
 	def validate_overlap(self):
 		"""Two date ranges overlap when each one starts on or before the other ends."""
+		if not (self.year_start_date and self.year_end_date):
+			return
 		overlap = frappe.db.get_value(
 			"Academic Year",
 			{
 				"name": ["!=", self.name],
-				"year_start_date": ["<=", self.year_end_date],
-				"year_end_date": [">=", self.year_start_date],
+				"year_start_date": ["<=", getdate(self.year_end_date)],
+				"year_end_date": [">=", getdate(self.year_start_date)],
 			},
 			["name", "year_start_date", "year_end_date"],
 			as_dict=True,

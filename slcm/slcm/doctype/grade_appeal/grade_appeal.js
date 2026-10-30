@@ -31,6 +31,13 @@ frappe.ui.form.on("Grade Appeal", {
 				"orange"
 			);
 		}
+		if (open) {
+			// Marks are changed on the student's Course Results record, then the appeal is Resolved
+			frm.add_custom_button(__("Open Marks"), () => {
+				frappe.call("slcm.slcm.doctype.grade_appeal.grade_appeal.get_marks_record", { grade_appeal: frm.doc.name })
+					.then((r) => r.message && frappe.set_route("Form", "Student Course Marks", r.message));
+			});
+		}
 		if (frm.doc.status === "Submitted") {
 			frm.add_custom_button(__("Start Review"), () => {
 				frm.set_value("status", "Under Review");

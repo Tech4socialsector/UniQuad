@@ -34,7 +34,10 @@ def get_student_programme(student):
 
 
 def get_enrolled_courses(student):
-	"""[{class_name, course, term}] the student is currently studying (Ongoing)."""
+	"""[{class_name, course, term}] of the student's enrolled courses in any term
+	(Upcoming, Ongoing, Completed, Carry Forward). The exam plan's term decides
+	which of them an exam schedule shows, so a schedule is visible before the
+	term starts and stays visible after it ends."""
 	has_enrollment = frappe.db.exists("Student Enrollment", {"student": student, "docstatus": ["<", 2]})
 	if has_enrollment:
 		return frappe.db.sql(
@@ -49,7 +52,7 @@ def get_enrolled_courses(student):
 			WHERE se.student = %(student)s
 			  AND se.docstatus < 2
 			  AND se.status != 'Dropped'
-			  AND sec.status = 'Ongoing'
+			  AND IFNULL(sec.status, '') NOT IN ('Withdrawn', 'Dropped')
 			""",
 			{"student": student},
 			as_dict=True,
@@ -118,6 +121,8 @@ def get_visible_exam_plans(student):
 	visible = {}
 	for p in plans:
 		allowed = (by_term.get(p.term, set()) | termless) if p.term else all_courses
+		# A marks row in the plan (e.g. an arrear attempt of an earlier term's course) also counts
+		allowed = allowed | {m.course for m in marks if m.exam_plan == p.name}
 		courses = plan_courses[p.name] & allowed
 		if courses:
 			visible[p.name] = courses

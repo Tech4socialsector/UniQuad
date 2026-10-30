@@ -63,7 +63,7 @@ def process_log_entry(log_doc):
 	log_time_str = swipe_time.strftime('%H:%M:%S')
 
 	sessions = frappe.db.sql("""
-		SELECT name, course_schedule, class_name, course, session_type, duration_hours
+		SELECT name, class_name, course, session_type, duration_hours
 		FROM `tabAttendance Session`
 		WHERE room IN %s
 		AND session_date = %s
@@ -121,7 +121,6 @@ def process_log_entry(log_doc):
 				"attendance_session": session.name,
 				"class_name": session.class_name,
 				"course": session.course,
-				"course_schedule": session.course_schedule,
 				"attendance_date": log_date,
 				"date": log_date,
 				"session_type": session.session_type or "Lecture",

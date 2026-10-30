@@ -19,7 +19,6 @@
   "course",
   "column_break_2",
   "instructor",
-  "course_schedule",
   "section",
   "section_break_schedule",
   "schedule_date",
@@ -51,14 +50,14 @@
    "options": "CSH-.YYYY.-\nCLS-.YYYY.-"
   },
   {
-   "depends_on": "eval: doc.based_on == \"Course Schedule\" || (doc.based_on == \"Office Hours\" && doc.class_name)",
+   "depends_on": "eval: doc.based_on == \"Class\" || (doc.based_on == \"Office Hours\" && doc.class_name)",
    "description": "The class being scheduled. Its course, programme, section, faculty, academic year and term are filled in, and its students are the attendance roster. Office Hours entries take the class of their Office Hours Group.",
    "fieldname": "class_name",
    "fieldtype": "Link",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Class",
-   "mandatory_depends_on": "eval: doc.based_on == \"Course Schedule\" && !doc.class_configuration",
+   "mandatory_depends_on": "eval: doc.based_on == \"Class\"",
    "options": "Classes",
    "read_only_depends_on": "eval: doc.based_on == \"Office Hours\"",
    "search_index": 1
@@ -94,20 +93,13 @@
    "options": "Faculty"
   },
   {
-   "default": "Course Schedule",
+   "default": "Class",
    "fieldname": "based_on",
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Based On",
-   "options": "Course Schedule\nTime Table\nOffice Hours",
+   "options": "Class\nTime Table\nOffice Hours",
    "reqd": 1
-  },
-  {
-   "fieldname": "course_schedule",
-   "fieldtype": "Link",
-   "hidden": 1,
-   "label": "Course Schedule",
-   "options": "Course Schedule"
   },
   {
    "depends_on": "eval:doc.based_on=='Office Hours'",
@@ -267,7 +259,7 @@
    "read_only": 1
   },
   {
-   "depends_on": "eval: doc.based_on == \"Course Schedule\"",
+   "depends_on": "eval: doc.based_on == \"Class\"",
    "fieldname": "class_participation_tab",
    "fieldtype": "Tab Break",
    "label": "Class Participation"
@@ -280,7 +272,7 @@
   }
  ],
  "links": [],
- "modified": "2026-10-29 15:00:00.000000",
+ "modified": "2026-10-29 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Time Table",

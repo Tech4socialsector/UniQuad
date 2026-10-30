@@ -45,23 +45,18 @@ def _get_faculty_name(user):
 
 def _get_faculty_classes(faculty_name):
     """Return list of Classes names this faculty teaches, derived from
-    Classes.faculty, Course Schedule.instructor, and Time Table.instructor."""
+    Classes.faculty and Time Table.instructor."""
     primary = frappe.get_all(
         "Classes",
         filters={"faculty": faculty_name},
         pluck="name",
-    )
-    via_schedule = frappe.get_all(
-        "Course Schedule",
-        filters={"instructor": faculty_name, "docstatus": ["<", 2]},
-        pluck="class_name",
     )
     via_timetable = frappe.get_all(
         "Time Table",
         filters={"instructor": faculty_name, "docstatus": ["<", 2]},
         pluck="class_name",
     )
-    return list({c for c in (primary + via_schedule + via_timetable) if c})
+    return list({c for c in (primary + via_timetable) if c})
 
 
 def _get_faculty_assigned_students(faculty_name):

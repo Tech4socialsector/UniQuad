@@ -91,6 +91,11 @@ def _calculate_and_save_summary(student, class_name):
 	# Add FA/MFA
 	total_hours_calculated += fa_mfa_data['total_hours']
 
+	# Credits (office hours, condonation, FA/MFA) make up for missed hours;
+	# they can't take a student past the class hours actually conducted.
+	if summary.total_class_hours > 0:
+		total_hours_calculated = min(total_hours_calculated, summary.total_class_hours)
+
 	summary.attended_classes = total_hours_calculated
 
 	# Calculate Percentage

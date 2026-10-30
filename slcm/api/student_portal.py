@@ -1924,6 +1924,11 @@ def initiate_re_exam_registration(exam_plan, course):
     return {"name": doc.name, "message": fee_msg}
 
 
+def improvement_cgpa_limit():
+    """Examination Settings.max_cgpa_for_improvement; 0 when no limit is set."""
+    return flt(frappe.db.get_single_value("Examination Settings", "max_cgpa_for_improvement"))
+
+
 def check_improvement_cgpa_eligibility(student_name, exam_plan):
     """Throw unless the student's published Cumulative GPA for this exam plan
     is below Examination Settings.max_cgpa_for_improvement. Enforced
@@ -1937,8 +1942,8 @@ def check_improvement_cgpa_eligibility(student_name, exam_plan):
     if not cgpa:
         frappe.throw("Your result for this exam plan must be published before you can apply for Improvement Exam.")
 
-    max_cgpa = flt(frappe.db.get_single_value("Examination Settings", "max_cgpa_for_improvement") or 3.0)
-    if flt(cgpa) >= max_cgpa:
+    max_cgpa = improvement_cgpa_limit()
+    if max_cgpa and flt(cgpa) >= max_cgpa:
         frappe.throw(
             f"Improvement Exam is only open to students with a CGPA below {max_cgpa:g}. "
             f"Your current CGPA is {flt(cgpa):g}."

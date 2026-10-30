@@ -88,7 +88,7 @@ def get_context(context):
                 "Attendance Session",
                 filters=session_filters,
                 fields=["name", "class_name", "session_date", "session_type",
-                        "session_start_time", "session_end_time", "room", "course_schedule", "class_schedule",
+                        "session_start_time", "session_end_time", "room", "class_schedule",
                         "session_status", "total_students", "present_count",
                         "absent_count", "attendance_percentage", "attendance_marked",
                         "rfid_activated_by", "rfid_activation_time", "rfid_active_until",
@@ -107,13 +107,7 @@ def get_context(context):
                 )
             } if reopener_ids else {}
             
-            # Pre-fetch rooms from course schedules or time tables if they are missing on the session
-            cs_names = [s.course_schedule for s in raw_sessions if s.course_schedule and not s.room]
-            cs_room_map = {}
-            if cs_names:
-                cs_data = frappe.get_all("Course Schedule", filters={"name": ("in", list(set(cs_names)))}, fields=["name", "room"])
-                cs_room_map = {d.name: d.room for d in cs_data}
-                
+            # Pre-fetch rooms from time tables if they are missing on the session
             tt_names = [s.class_schedule for s in raw_sessions if s.class_schedule and not s.room]
             tt_venue_map = {}
             if tt_names:
@@ -162,7 +156,7 @@ def get_context(context):
                     "from_time": fmt_time(s.session_start_time),
                     "to_time": fmt_time(s.session_end_time),
                     "from_time_sort": _time_sort_key(s.session_start_time),
-                    "venue": s.room or cs_room_map.get(s.course_schedule) or tt_venue_map.get(s.class_schedule) or "—",
+                    "venue": s.room or tt_venue_map.get(s.class_schedule) or "—",
                     "status": s.session_status or "Active",
                     "not_held": s.session_status in NOT_HELD_STATUSES,
                     # Attendance lock (see slcm.slcm.utils.attendance_lock)
@@ -428,13 +422,3 @@ def _set_defaults(context):
     context.condonation_requests = []
     context.pending_condonation = 0
     context.monthly_summary = []
-
-@frappe.whitelist(allow_guest=True)
-def debug_venue():
-    import json
-    sessions = frappe.get_all("Attendance Session", fields=["name", "room", "course_schedule"], limit=5)
-    cs_names = [s.course_schedule for s in sessions if s.course_schedule]
-    cs_data = []
-    if cs_names:
-        cs_data = frappe.get_all("Course Schedule", filters={"name": ["in", cs_names]}, fields=["name", "room"])
-    return {"sessions": sessions, "cs_data": cs_data}

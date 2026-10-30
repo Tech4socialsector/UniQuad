@@ -1599,7 +1599,7 @@ NAV_GROUPS = [
 		("DocType", "Academic Year", None), ("DocType", "Academic Term", None), ("DocType", "Programme", None),
 		("DocType", "Programme Master", None), ("DocType", "SLCM Batch", None), ("DocType", "Section", None),
 		("DocType", "Course", None), ("DocType", "Classes", None),
-		("DocType", "Faculty", None), ("DocType", "Time Table", None), ("DocType", "Course Schedule", None),
+		("DocType", "Faculty", None), ("DocType", "Time Table", None),
 		("DocType", "Institutional Calendar", None),
 	]),
 	("attendance", "Attendance", "check", [
@@ -1637,10 +1637,10 @@ NAV_GROUPS = [
 		("Report", "FLE Applications Report", None), ("Report", "FLE Settlement Report", None),
 	]),
 	("exams", "Examinations", "award", [
-		("Page", "examination-planner", "Examination Planner"), ("DocType", "Exam Plan", None),
+		("Page", "examination-planner", "Exam Plan"), ("DocType", "Exam Plan", "Exam Plans"),
 		("DocType", "Student Course Marks", None), ("DocType", "Student Result Publish", None),
 		("Page", "examination-result", "Examination Result"), ("Page", "publish-result", "Publish Result"),
-		("DocType", "Re Exam Registration", None), ("DocType", "Revaluation Request", None),
+		("DocType", "Re Exam Registration", None), ("DocType", "Grade Appeal", None),
 		("DocType", "Student Transcript", None), ("DocType", "Transcript Request", None),
 		("Report", "Academic Performance GPA Report", None),
 	]),

@@ -13,7 +13,6 @@
   "column_break_1",
   "office_hours_group",
   "section",
-  "course_schedule",
   "class_schedule",
   "attendance_session",
   "section_student",
@@ -49,20 +48,20 @@
    "label": "Attendance Based On"
   },
   {
-   "default": "Course Schedule",
+   "default": "Class",
    "fieldname": "based_on",
    "fieldtype": "Select",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Based On",
-   "options": "Course Schedule\nTime Table\nOffice Hours",
+   "options": "Class\nTime Table\nOffice Hours",
    "reqd": 1
   },
   {
    "fieldname": "attendance_based_on",
    "fieldtype": "Select",
    "label": "Attendance Based On",
-   "options": "RFID\nManual\nQR\nCourse Schedule\nTime Table\nOffice Hours"
+   "options": "RFID\nManual\nQR\nClass\nTime Table\nOffice Hours"
   },
   {
    "fieldname": "column_break_1",
@@ -86,14 +85,7 @@
    "options": "Section"
   },
   {
-   "depends_on": "eval:doc.based_on==\"Course Schedule\"",
-   "fieldname": "course_schedule",
-   "fieldtype": "Link",
-   "label": "Course Schedule",
-   "options": "Course Schedule"
-  },
-  {
-   "depends_on": "eval:doc.based_on==\"Time Table\"",
+   "depends_on": "eval:doc.based_on==\"Class\" || doc.based_on==\"Time Table\"",
    "fieldname": "class_schedule",
    "fieldtype": "Link",
    "label": "Time Table",
@@ -150,7 +142,6 @@
    "read_only": 1
   },
   {
-   "fetch_from": "course_schedule.program",
    "fieldname": "program",
    "fieldtype": "Link",
    "label": "Programme",
@@ -260,7 +251,6 @@
    "read_only": 1
   },
   {
-   "fetch_from": "course_schedule.room",
    "fieldname": "room",
    "fieldtype": "Link",
    "label": "Room",
@@ -275,7 +265,7 @@
  ],
  "icon": "fa fa-check-square-o",
  "links": [],
- "modified": "2026-10-29 10:00:00.000000",
+ "modified": "2026-10-29 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Student Attendance",
