@@ -1,0 +1,62 @@
+{
+ "actions": [],
+ "creation": "2026-03-09 10:32:57.945608",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "stage_name",
+  "step_text",
+  "is_link",
+  "link_url",
+  "link_label"
+ ],
+ "fields": [
+  {
+   "description": "Must match the stage name exactly as it appears in Admission Stage Config",
+   "fieldname": "stage_name",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Stage name",
+   "options": "Stages",
+   "reqd": 1
+  },
+  {
+   "fieldname": "step_text",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "Next step text",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_link",
+   "fieldtype": "Check",
+   "label": "Is Link?"
+  },
+  {
+   "depends_on": "is_link",
+   "fieldname": "link_url",
+   "fieldtype": "Data",
+   "label": "Link URL"
+  },
+  {
+   "depends_on": "is_link",
+   "fieldname": "link_label",
+   "fieldtype": "Data",
+   "label": "Link label"
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-03-16 10:52:12.281418",
+ "modified_by": "Administrator",
+ "module": "Admission",
+ "name": "Admission Stage Next Step",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

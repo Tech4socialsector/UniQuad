@@ -1,0 +1,98 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-02-14 19:39:57.744741",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "current_academic_year",
+  "admission_year",
+  "start_date",
+  "end_date",
+  "bypass_stage_lock",
+  "is_scholarship_available",
+  "is_interview_available",
+  "is_merit_list",
+  "stage_configure"
+ ],
+ "fields": [
+  {
+   "fieldname": "admission_year",
+   "fieldtype": "Data",
+   "label": "Admission Year"
+  },
+  {
+   "fieldname": "start_date",
+   "fieldtype": "Date",
+   "label": "Start Date"
+  },
+  {
+   "fieldname": "end_date",
+   "fieldtype": "Date",
+   "label": "End Date"
+  },
+  {
+   "default": "0",
+   "fieldname": "bypass_stage_lock",
+   "fieldtype": "Check",
+   "label": "Bypass Stage Configuration Lock",
+   "description": "If enabled, allows modifying Admission Stage Config even for Active cycles (Emergency/Debug mode)."
+  },
+  {
+   "default": "0",
+   "fieldname": "is_scholarship_available",
+   "fieldtype": "Check",
+   "label": "Is Scholarship Available?"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_interview_available",
+   "fieldtype": "Check",
+   "label": "Is Interview Available"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_merit_list",
+   "fieldtype": "Check",
+   "label": "Is Merit List?"
+  },
+  {
+   "fieldname": "stage_configure",
+   "fieldtype": "Table",
+   "label": "Stage Configure",
+   "options": "Admission Stages"
+  },
+  {
+   "fieldname": "current_academic_year",
+   "fieldtype": "Link",
+   "label": "Current Academic Year",
+   "options": "Academic Year"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-02-16 12:50:54.038534",
+ "modified_by": "Administrator",
+ "module": "Admission",
+ "name": "Admission Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

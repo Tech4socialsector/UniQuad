@@ -1,0 +1,23 @@
+{
+  "doctype": "DocType",
+  "name": "Admission Dashboard Config",
+  "module": "Admission",
+  "track_changes": 0,
+  "fields": [
+    {"fieldname": "admission_cycle", "fieldtype": "Link", "label": "Admission Cycle", "options": "Admission Cycle", "reqd": 1, "in_list_view": 1},
+    {"fieldname": "total_applications", "fieldtype": "Int", "label": "Total Applications", "read_only": 1},
+    {"fieldname": "submitted_applications", "fieldtype": "Int", "label": "Submitted Applications", "read_only": 1},
+    {"fieldname": "under_evaluation", "fieldtype": "Int", "label": "Under Evaluation", "read_only": 1},
+    {"fieldname": "shortlisted", "fieldtype": "Int", "label": "Shortlisted", "read_only": 1},
+    {"fieldname": "offered", "fieldtype": "Int", "label": "Offered", "read_only": 1},
+    {"fieldname": "accepted", "fieldtype": "Int", "label": "Accepted", "read_only": 1},
+    {"fieldname": "rejected", "fieldtype": "Int", "label": "Rejected", "read_only": 1},
+    {"fieldname": "documents_pending", "fieldtype": "Int", "label": "Documents Pending Verification", "read_only": 1},
+    {"fieldname": "last_refreshed", "fieldtype": "Datetime", "label": "Last Refreshed", "read_only": 1}
+  ],
+  "permissions": [
+    {"role": "System Manager", "read": 1, "write": 1, "create": 1},
+    {"role": "Admission Admin", "read": 1, "write": 1, "create": 1},
+    {"role": "Admission Officer", "read": 1}
+  ]
+}

@@ -1,0 +1,142 @@
+{
+ "doctype": "DocType",
+ "name": "Admission Stage Config",
+ "module": "Admission",
+ "track_changes": 1,
+ "fields": [
+  {
+   "fieldname": "admission_cycle",
+   "fieldtype": "Link",
+   "label": "Admission Cycle",
+   "options": "Admission Cycle",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "stage_name",
+   "fieldtype": "Data",
+   "label": "Stage Name",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "stage_type",
+   "fieldtype": "Select",
+   "label": "Stage Type",
+   "options": "\nApplication\nScreening\nExam\nInterview\nEvaluation\nMerit\nDocument\nFee\nEnrollment",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "is_enabled",
+   "fieldtype": "Check",
+   "label": "Is Enabled",
+   "default": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "is_mandatory",
+   "fieldtype": "Check",
+   "label": "Is Mandatory",
+   "default": 0
+  },
+  {
+   "fieldname": "sequence",
+   "fieldtype": "Int",
+   "label": "Sequence",
+   "reqd": 1
+  },
+  {
+   "fieldname": "is_stage_locked",
+   "fieldtype": "Check",
+   "label": "Is Locked",
+   "read_only": 1
+  },
+  {
+   "fieldname": "evaluation_config",
+   "fieldtype": "Link",
+   "label": "Evaluation Config",
+   "options": "Evaluation Config",
+   "depends_on": "eval:['Interview','Evaluation'].includes(doc.stage_type)"
+  },
+  {
+   "fieldname": "deadline_offset_days",
+   "fieldtype": "Int",
+   "label": "Deadline Offset (Days)"
+  },
+  {
+   "fieldname": "notify_applicant_on_entry",
+   "fieldtype": "Check",
+   "label": "Notify Applicant on Entry",
+   "default": 0
+  },
+  {
+   "fieldname": "notification_template",
+   "fieldtype": "Link",
+   "label": "Notification Template",
+   "options": "Email Template Config",
+   "depends_on": "eval:doc.notify_applicant_on_entry==1"
+  },
+  {
+   "fieldname": "responsible_role",
+   "fieldtype": "Link",
+   "label": "Responsible Role",
+   "options": "Role"
+  },
+  {
+   "fieldname": "requires_approval_to_unlock",
+   "fieldtype": "Check",
+   "label": "Requires Approval to Unlock",
+   "default": 0
+  },
+  {
+   "fieldname": "applicable_workflow",
+   "fieldtype": "Select",
+   "label": "Applicable Workflow",
+   "options": "All\nExternal Test\nInternal Test\nDirect Merit",
+   "default": "All",
+   "in_list_view": 1,
+   "reqd": 0
+  },
+  {
+   "fieldname": "allow_application",
+   "fieldtype": "Check",
+   "label": "Allow Application",
+   "default": "0"
+  },
+  {
+   "fieldname": "is_editable",
+   "fieldtype": "Check",
+   "label": "Allow Applicant Edit",
+   "default": "0"
+  },
+  {
+   "fieldname": "start_date",
+   "fieldtype": "Date",
+   "label": "Stage Start Date"
+  },
+  {
+   "fieldname": "end_date",
+   "fieldtype": "Date",
+   "label": "Stage End Date"
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1
+  },
+  {
+   "role": "Admission Admin",
+   "read": 1,
+   "write": 1,
+   "create": 1
+  },
+  {
+   "role": "Admission Officer",
+   "read": 1
+  }
+ ]
+}

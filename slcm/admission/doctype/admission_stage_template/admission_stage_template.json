@@ -1,0 +1,21 @@
+{
+  "doctype": "DocType",
+  "name": "Admission Stage Template",
+  "module": "Admission",
+  "track_changes": 1,
+  "autoname": "field:template_name",
+  "title_field": "template_name",
+  "fields": [
+    {"fieldname": "template_name", "fieldtype": "Data", "label": "Template Name", "reqd": 1, "in_list_view": 1},
+    {"fieldname": "institution", "fieldtype": "Link", "label": "Institution", "options": "University"},
+    {"fieldname": "applicable_exam_type", "fieldtype": "Link", "label": "Applicable Exam Type", "options": "Exam Type Config", "in_list_view": 1},
+    {"fieldname": "col_break_1", "fieldtype": "Column Break"},
+    {"fieldname": "is_default", "fieldtype": "Check", "label": "Is Default Template", "default": "0", "description": "Auto-applied to new cycles of matching exam type"},
+    {"fieldname": "section_break_stages", "fieldtype": "Section Break", "label": "Stage Definitions"},
+    {"fieldname": "stages", "fieldtype": "Link", "label": "Stages", "options": "Stages"}
+  ],
+  "permissions": [
+    {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
+    {"role": "Admission Admin", "read": 1, "write": 1, "create": 1}
+  ]
+}

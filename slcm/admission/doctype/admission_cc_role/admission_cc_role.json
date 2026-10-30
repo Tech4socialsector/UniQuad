@@ -1,0 +1,10 @@
+{
+  "doctype": "DocType",
+  "name": "Admission CC Role",
+  "module": "Admission",
+  "istable": 1,
+  "fields": [
+    {"fieldname": "role_name", "fieldtype": "Link", "label": "Role", "options": "Role", "reqd": 1, "in_list_view": 1},
+    {"fieldname": "role_email", "fieldtype": "Data", "label": "Email Override", "options": "Email", "in_list_view": 1, "description": "Leave blank to use role's default email. Fill to override."}
+  ]
+}
