@@ -6,7 +6,8 @@
  * Step-by-step dialog:
  *   1. Academic Setup  academic year (current by default), term,
  *                      programme, batch, year
- *   2. Students        registration Completed, not yet enrolled
+ *   2. Students        registration Completed in the batch (any
+ *                      registration year), not yet enrolled
  *   3. Student ID      format like M26####, numbered alphabetically
  *   4. Sections        Mid-off / One-by-one (split by room capacity),
  *                      Manual or Upload
@@ -36,7 +37,7 @@ slcm.enrollment.EnrollmentWizard = class EnrollmentWizard {
 		this.preselected = new Set(preselected.map((r) => r.name));
 		this.step = 0;
 		this.students = [];        // candidates from the server, alphabetical
-		this.loaded_key = null;    // [programme, academic year] the list was loaded for
+		this.loaded_key = null;    // [programme, batch] the list was loaded for
 		this.selected = new Set();
 		this.ids = [];             // Student ID preview rows, alphabetical
 		this.ids_key = null;       // inputs the ID preview was built from
@@ -70,9 +71,8 @@ slcm.enrollment.EnrollmentWizard = class EnrollmentWizard {
 				},
 				{
 					fieldtype: "Link", fieldname: "academic_term", label: __("Academic Term"), options: "Academic Term", reqd: 1,
-					get_query: () => me.year_filter(),
-					description: __("Becomes the student's Ongoing term in the Academic Log."),
-					onchange: () => me.render_context(),
+					description: __("Becomes the student's Ongoing term in the Academic Log. A term of another year switches the Academic Year to it."),
+					onchange: () => me.on_academic_term_change(),
 				},
 				{ fieldtype: "Int", fieldname: "year_no", label: __("Year"), default: 1, reqd: 1, non_negative: 1,
 					onchange: () => me.render_context() },
@@ -81,7 +81,6 @@ slcm.enrollment.EnrollmentWizard = class EnrollmentWizard {
 					onchange: () => me.render_context() },
 				{
 					fieldtype: "Link", fieldname: "batch", label: __("Batch"), options: "SLCM Batch", reqd: 1,
-					get_query: () => me.year_filter(),
 					description: __("Set on every selected student."),
 					onchange: () => me.render_context(),
 				},
@@ -121,6 +120,12 @@ slcm.enrollment.EnrollmentWizard = class EnrollmentWizard {
 
 				// 4. Sections
 				{ fieldtype: "Section Break", fieldname: "s4" },
+				{
+					fieldtype: "Select", fieldname: "split_sections", label: __("Section Split Required?"),
+					options: "No\nYes", default: "No", reqd: 1,
+					description: __("No: every student keeps the section on their student record. Yes: assign sections below."),
+					onchange: () => me.on_assignment_type_change(),
+				},
 				{ fieldtype: "HTML", fieldname: "keep_banner" },
 				{
 					fieldtype: "Check", fieldname: "keep_sections", label: __("Keep each student's current section"), default: 1,
@@ -186,17 +191,31 @@ slcm.enrollment.EnrollmentWizard = class EnrollmentWizard {
 			e.target.checked ? me.assign_new.add(name) : me.assign_new.delete(name);
 			me.preview_ids();
 		});
-		this.d.fields_dict.section_preview_html.$wrapper.on("change", ".ew-section-select", (e) => {
+		const $sections = this.d.fields_dict.section_preview_html.$wrapper;
+		$sections.on("change", ".ew-section-select", (e) => {
 			me.sections[$(e.target).attr("data-name")] = e.target.value || undefined;
 			me.render_section_preview();
+		});
+		// Section Split Required = No: search, section filter, section for those with none
+		$sections.on("input", ".ew-rec-search", (e) => {
+			me.record_search = e.target.value;
+			me.render_record_rows();
+		});
+		$sections.on("change", ".ew-rec-filter", (e) => {
+			me.record_filter = e.target.value;
+			me.render_record_rows();
+		});
+		$sections.on("change", ".ew-rec-select", (e) => {
+			me.record_picks = me.record_picks || {};
+			me.record_picks[$(e.target).attr("data-name")] = e.target.value || undefined;
+			me.render_record_rows();
 		});
 	}
 
 	set_defaults() {
 		frappe.call(WIZARD_API + "get_wizard_defaults").then(async ({ message }) => {
 			const m = message || {};
-			// Term and Batch are filtered by the academic year, so it has to be
-			// in place before they are set (and validated against it).
+			// Year first, without its own term/batch reset; then the defaults.
 			this._setting_defaults = true;
 			await this.d.set_value("academic_year", m.academic_year || "");
 			this._setting_defaults = false;
@@ -259,9 +278,20 @@ slcm.enrollment.EnrollmentWizard = class EnrollmentWizard {
 		});
 	}
 
-	year_filter() {
-		const academic_year = this.d.get_value("academic_year");
-		return { filters: academic_year ? { academic_year } : {} };
+	/** Term and Batch are not filtered by the year, so previous years' students
+	 * can be enrolled. The Academic Log is built from the term's year, so a
+	 * term of another year brings its Academic Year along (keeping the batch). */
+	async on_academic_term_change() {
+		this.render_context();
+		const academic_term = this.d.get_value("academic_term");
+		if (!academic_term) return;
+		const { message } = await frappe.db.get_value("Academic Term", academic_term, "academic_year");
+		const term_year = message && message.academic_year;
+		if (term_year && term_year !== this.d.get_value("academic_year")) {
+			this._setting_defaults = true;
+			await this.d.set_value("academic_year", term_year);
+			this._setting_defaults = false;
+		}
 	}
 
 	/* ---------------- navigation ---------------- */
@@ -353,24 +383,25 @@ slcm.enrollment.EnrollmentWizard = class EnrollmentWizard {
 			frappe.msgprint(__("Please fill: {0}", [missing.join(", ")]));
 			return false;
 		}
-		const key = JSON.stringify([v.programme, v.academic_year]);
+		const key = JSON.stringify([v.programme, v.batch]);
 		if (this.loaded_key !== key) {
-			await this.load_students(v.programme, v.academic_year);
+			await this.load_students(v.programme, v.batch);
 			this.loaded_key = key;
 		}
 		return true;
 	}
 
-	async load_students(programme, academic_year) {
+	/** Students of the batch, whatever year they registered in. */
+	async load_students(programme, batch) {
 		const { message } = await frappe.call({
 			method: WIZARD_API + "get_enrollable_students",
-			args: { programme, academic_year },
+			args: { programme, batch },
 			freeze: true,
 			freeze_message: __("Loading students..."),
 		});
 		this.students = message || [];
 		this.loaded_programme = programme;
-		this.loaded_academic_year = academic_year;
+		this.loaded_batch = batch;
 		const in_list = this.students.filter((s) => this.preselected.has(s.name));
 		this.selected = new Set((in_list.length ? in_list : this.students).map((s) => s.name));
 		this.search = "";
@@ -391,8 +422,8 @@ slcm.enrollment.EnrollmentWizard = class EnrollmentWizard {
 		const $w = this.d.fields_dict.students_html.$wrapper;
 		if (!this.students.length) {
 			$w.html(`<div class="ew-empty">${__(
-				"No students with registration status Completed in {0} are waiting to be enrolled in {1}.",
-				[frappe.utils.escape_html(this.loaded_academic_year || ""), frappe.utils.escape_html(this.loaded_programme || "")]
+				"No students of batch {0} with registration status Completed are waiting to be enrolled in {1}.",
+				[frappe.utils.escape_html(this.loaded_batch || ""), frappe.utils.escape_html(this.loaded_programme || "")]
 			)}</div>`);
 			return;
 		}
@@ -589,6 +620,17 @@ slcm.enrollment.EnrollmentWizard = class EnrollmentWizard {
 
 	/* ---------------- 4. sections ---------------- */
 
+	/** Section Split Required? No leaves every student's section as on record. */
+	split_on() {
+		return this.d.get_value("split_sections") === "Yes";
+	}
+
+	/** Student -> section on their student record (empty when none). */
+	record_sections() {
+		const current = Object.fromEntries(this.students.map((s) => [s.name, s.section]));
+		return Object.fromEntries(this.ids.map((r) => [r.student, current[r.student] || ""]));
+	}
+
 	/** Student -> current section, for the selected students whose section still
 	 * exists, when "Keep each student's current section" is on. */
 	kept_sections() {
@@ -622,12 +664,19 @@ slcm.enrollment.EnrollmentWizard = class EnrollmentWizard {
 		const type = this.d.get_value("assignment_type");
 		const by_rows = ["Mid-off", "One-by-one"].includes(type);
 		const all_kept = this.all_kept();
+		const split = this.split_on();
 		if (this.step === 3) {
-			// Nothing to assign: hide the assignment controls altogether.
-			this.d.fields_dict.assignment_type.$wrapper.toggle(!all_kept);
-			this.d.fields_dict.assignment_help.$wrapper.toggle(!all_kept);
-			$(this.d.fields_dict.s4_rows.wrapper).toggle(by_rows && !all_kept);
-			$(this.d.fields_dict.s4_upload.wrapper).toggle(type === "Upload" && !all_kept);
+			// No split, or nothing to assign: hide the assignment controls altogether.
+			this.d.fields_dict.keep_sections.$wrapper.toggle(split);
+			this.d.fields_dict.assignment_type.$wrapper.toggle(split && !all_kept);
+			this.d.fields_dict.assignment_help.$wrapper.toggle(split && !all_kept);
+			$(this.d.fields_dict.s4_rows.wrapper).toggle(split && by_rows && !all_kept);
+			$(this.d.fields_dict.s4_upload.wrapper).toggle(split && type === "Upload" && !all_kept);
+		}
+		if (!split) {
+			this.d.fields_dict.keep_banner.$wrapper.empty();
+			this.render_record_sections();
+			return;
 		}
 		this.render_keep_banner();
 		const help = {
@@ -648,6 +697,77 @@ slcm.enrollment.EnrollmentWizard = class EnrollmentWizard {
 		Object.keys(this.sections).forEach((s) => this.ids.some((r) => r.student === s) || delete this.sections[s]);
 		Object.assign(this.sections, kept);
 		this.render_section_preview();
+	}
+
+	/** No split: the section each student has on record, which stays; a
+	 * student with none can be given one here (this.record_picks). Search and
+	 * the section filter only narrow the list. The toolbar is drawn once so the
+	 * search box keeps its focus while typing. */
+	render_record_sections() {
+		const esc = frappe.utils.escape_html;
+		const record = this.record_sections();
+		const on_record = [...new Set(Object.values(record).filter(Boolean))].sort();
+		const filter = this.record_filter || "";
+		this.d.fields_dict.section_preview_html.$wrapper.html(`
+			<div class="ew-rec-banner"></div>
+			<div class="ew-toolbar">
+				<input type="text" class="form-control ew-rec-search" placeholder="${__("Search name or ID")}" value="${esc(this.record_search || "")}">
+				<select class="form-control ew-rec-filter" style="max-width:200px">
+					<option value="">${__("All sections")}</option>
+					${on_record.map((s) => `<option value="${esc(s)}" ${s === filter ? "selected" : ""}>${esc(s)}</option>`).join("")}
+					<option value="__none__" ${filter === "__none__" ? "selected" : ""}>${__("None")}</option>
+				</select>
+				<span class="ew-count ew-rec-count"></span>
+			</div>
+			<div class="ew-table-wrap">
+				<table class="ew-table">
+					<thead><tr><th>#</th><th>${__("Student ID")}</th><th>${__("Student")}</th><th>${__("Section")}</th></tr></thead>
+					<tbody class="ew-rec-rows"></tbody>
+				</table>
+			</div>`);
+		this.render_record_rows();
+	}
+
+	render_record_rows() {
+		const esc = frappe.utils.escape_html;
+		const $w = this.d.fields_dict.section_preview_html.$wrapper;
+		const record = this.record_sections();
+		const picks = this.record_picks || {};
+		const q = (this.record_search || "").trim().toLowerCase();
+		const filter = this.record_filter || "";
+		const rows = this.ids
+			.map((r, i) => ({ ...r, no: i + 1 }))
+			.filter((r) => !q || [r.student_id, r.student_name, r.student].some((x) => (x || "").toLowerCase().includes(q)))
+			.filter((r) => !filter || (filter === "__none__" ? !record[r.student] : record[r.student] === filter));
+
+		const none = this.ids.filter((r) => !record[r.student]);
+		const left = none.filter((r) => !picks[r.student]).length;
+		$w.find(".ew-rec-banner").html(`<div class="ew-banner ${left ? "" : "ok"}">${
+			!none.length
+				? __("Sections are not changed: every student keeps the section on their student record.")
+				: left
+					? __("Sections on record are not changed. {0} student(s) have no section: choose one in the list (filter Section: None), or leave it empty.", [left])
+					: __("Sections on record are not changed; the {0} student(s) without one get the section chosen below.", [none.length])
+		}</div>`);
+		$w.find(".ew-rec-count").text(__("{0} of {1} shown", [rows.length, this.ids.length]));
+
+		const cell = (r) => {
+			if (record[r.student]) return `<span class="ew-pill">${esc(record[r.student])}</span>`;
+			const s = picks[r.student] || "";
+			return `<select class="form-control input-xs ew-rec-select" data-name="${esc(r.student)}">
+				<option value="">${__("None")}</option>
+				${this.all_sections.map((o) => `<option value="${esc(o)}" ${o === s ? "selected" : ""}>${esc(o)}</option>`).join("")}
+			</select>`;
+		};
+		$w.find(".ew-rec-rows").html(rows.length
+			? rows.map((r) => `
+				<tr>
+					<td class="ew-muted">${r.no}</td>
+					<td><span class="ew-id ${r.is_new ? "new" : ""}">${esc(r.student_id)}</span></td>
+					<td>${esc(r.student_name || r.student)}</td>
+					<td class="ew-col-section">${cell(r)}</td>
+				</tr>`).join("")
+			: `<tr><td colspan="4" class="ew-muted" style="text-align:center;padding:20px">${__("No students match.")}</td></tr>`);
 	}
 
 	render_keep_banner() {
@@ -815,6 +935,18 @@ slcm.enrollment.EnrollmentWizard = class EnrollmentWizard {
 	}
 
 	leave_sections() {
+		if (!this.split_on()) {
+			// Only sections picked for students with none are sent; for the rest
+			// the server keeps the section on record.
+			const record = this.record_sections();
+			const picks = this.record_picks || {};
+			this.sections = {};
+			this.ids.forEach((r) => {
+				if (!record[r.student] && picks[r.student]) this.sections[r.student] = picks[r.student];
+			});
+			this.render_summary();
+			return true;
+		}
 		const type = this.d.get_value("assignment_type");
 		Object.assign(this.sections, this.kept_sections());
 		if (this.all_kept()) {
@@ -847,8 +979,12 @@ slcm.enrollment.EnrollmentWizard = class EnrollmentWizard {
 		const esc = frappe.utils.escape_html;
 		const fresh = this.ids.filter((r) => r.is_new);
 		const counts = {};
-		this.ids.forEach((r) => (counts[this.sections[r.student]] = (counts[this.sections[r.student]] || 0) + 1));
-		const item = (label, value) => `<div class="ew-sum-item"><div class="ew-sum-label">${label}</div><div class="ew-sum-value">${value}</div></div>`;
+		const sections = this.split_on() ? this.sections : { ...this.record_sections(), ...this.sections };
+		this.ids.forEach((r) => {
+			const s = sections[r.student] || __("None");
+			counts[s] = (counts[s] || 0) + 1;
+		});
+		const item =(label, value) => `<div class="ew-sum-item"><div class="ew-sum-label">${label}</div><div class="ew-sum-value">${value}</div></div>`;
 
 		this.d.fields_dict.summary_html.$wrapper.html(`
 			<div class="ew-sum-grid">
@@ -867,13 +1003,14 @@ slcm.enrollment.EnrollmentWizard = class EnrollmentWizard {
 				<tbody>${Object.keys(counts).sort().map((s) => `<tr><td>${esc(s)}</td><td>${counts[s]}</td></tr>`).join("")}</tbody>
 			</table>
 			<div class="ew-help">${__(
-				"Enroll sets the Student ID, Section, Batch, Programme and Academic Year on each Student Master and creates a Student Enrollment starting in Year {0}, {1}.",
+				"Enroll sets the Student ID, Batch, Programme and (when split) Section on each Student Master - its Academic Year stays the year of registration - and creates a Student Enrollment starting in Year {0}, {1}.",
 				[esc(String(v.year_no)), esc(v.academic_term)]
 			)}</div>`);
 	}
 
 	section_assignment_label() {
-		const kept = Object.keys(this.kept_sections()).length;
+		if (!this.split_on()) return __("Not changed (as on student record)");
+		const kept =Object.keys(this.kept_sections()).length;
 		const type = frappe.utils.escape_html(this.d.get_value("assignment_type") || "");
 		if (!kept) return type;
 		if (this.all_kept()) return __("Current sections kept");
