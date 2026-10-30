@@ -1324,7 +1324,14 @@ class FeeService:
             if fee_amount <= 0:
                 from slcm.api.service.application_fee_service import get_application_fee_for_category, _get_applicant_category
                 category = _get_applicant_category(applicant_name)
-                fee_amount = get_application_fee_for_category(applicant.program, applicant.admission_cycle, category)
+                is_foreign = (applicant.foriegn_national or "").strip() == "Yes"
+                fee_amount = get_application_fee_for_category(
+                    applicant.program,
+                    applicant.admission_cycle,
+                    category,
+                    is_foreign=is_foreign,
+                    applicant=applicant,
+                )
                 if fee_amount > 0:
                     frappe.db.set_value("Applicant", applicant_name, "application_fee_amount", fee_amount)
                     applicant.application_fee_amount = fee_amount
@@ -1348,6 +1355,10 @@ class FeeService:
             if not controller:
                 frappe.throw(_("Payment Gateway '{0}' not found or not configured. Please set up Razorpay (or your gateway) in Payment Gateway doctype.").format(gateway))
 
+            from slcm.api.service.application_fee_service import get_application_fee_doc
+            app_fee_doc = get_application_fee_doc(applicant.admission_cycle)
+            fee_currency = (app_fee_doc and app_fee_doc.currency) or "INR"
+
             payment_details = {
                 "amount": actual_payable,
                 "title": _("Application Fee"),
@@ -1356,7 +1367,7 @@ class FeeService:
                 "reference_docname": applicant_name,
                 "payer_email": applicant.email or "",
                 "payer_name": applicant.candidate_name,
-                "currency": frappe.defaults.get_global_default("currency") or "INR",
+                "currency": fee_currency,
                 "receipt": (applicant_name[:40]) if applicant_name else None
             }
 
@@ -1651,9 +1662,15 @@ class FeeService:
 
             from slcm.api.service.application_fee_service import get_application_fee_for_category, _get_applicant_category
             category = _get_applicant_category(applicant_doc.name)
-            is_foreign = getattr(applicant_doc, "foriegn_national", "") == "Yes"
+            is_foreign = (getattr(applicant_doc, "foriegn_national", "") or "").strip() == "Yes"
             fee_amount = flt(
-                get_application_fee_for_category(applicant_doc.program, applicant_doc.admission_cycle, category, is_foreign=is_foreign)
+                get_application_fee_for_category(
+                    applicant_doc.program,
+                    applicant_doc.admission_cycle,
+                    category,
+                    is_foreign=is_foreign,
+                    applicant=applicant_doc,
+                )
             )
             if fee_amount <= 0:
                 fee_amount = flt(applicant_doc.application_fee_amount or 0)

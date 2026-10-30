@@ -374,30 +374,42 @@ def get_open_programmes():
 # ───────────────────────────────────────────────────────────────────
 
 @frappe.whitelist(allow_guest=False)
-def get_application_fee_amount(program, admission_cycle=None, category=None):
+def get_application_fee_amount(
+    program=None,
+    admission_cycle=None,
+    category=None,
+    gender=None,
+    pwd=None,
+    foriegn_national=None,
+):
     """
     Return the application fee for the given program, admission cycle, and
-    reservation category (whether_scstobc_ncl value: NA | SC | ST | OBC-NCL).
-
-    Looks up Programme Reservation Policy → Programme Reservation Category rows.
-    Falls back to the active Admission Cycle when admission_cycle is blank.
-    Returns 0 when no matching policy or category row is found.
+    applicant demographic criteria based on Application Fee doctype.
     """
-    if not program:
-        return 0
     try:
         cycle = (admission_cycle or "").strip()
         if not cycle:
-            cycle = frappe.db.get_value(
-                "Admission Cycle", {"status": "Active"}, "name", order_by="creation desc"
-            ) or ""
+            cycle = (
+                frappe.db.get_value(
+                    "Admission Cycle", {"status": "Active"}, "name", order_by="creation desc"
+                )
+                or ""
+            )
         if not cycle:
             return 0
 
         from slcm.api.service.application_fee_service import get_application_fee_for_category
 
         cat = (category or "").strip() or None
-        fee = get_application_fee_for_category(program, cycle, cat)
+        is_foreign = (foriegn_national or "").strip() == "Yes"
+        fee = get_application_fee_for_category(
+            program=program,
+            admission_cycle=cycle,
+            category=cat,
+            is_foreign=is_foreign,
+            gender=gender,
+            pwd=pwd,
+        )
         return flt(fee, 2)
     except Exception:
         frappe.log_error(frappe.get_traceback(), "Applicant Web Form — get_application_fee_amount")
@@ -567,16 +579,19 @@ def save_applicant_draft(data, ignore_mandatory=True):
     doc.status = "Draft"
     doc.email              = email
 
-    # Recalculate application fee from Programme Reservation Policy
+    # Recalculate application fee
     if getattr(doc, "program", None) and getattr(doc, "admission_cycle", None):
         try:
             from slcm.api.service.application_fee_service import get_application_fee_for_category
 
-            raw_cat = (getattr(doc, "whether_scstobc_ncl", "") or "").strip()
-            cat     = raw_cat if raw_cat and raw_cat.upper() != "GENERAL" else None
-            foriegn_national = getattr(doc, "foriegn_national", "") or ""
-            is_foreign = foriegn_national == "Yes" if foriegn_national else False
-            computed = flt(get_application_fee_for_category(doc.program, doc.admission_cycle, cat, is_foreign=is_foreign), 2)
+            is_foreign = (getattr(doc, "foriegn_national", "") or "").strip() == "Yes"
+            computed = flt(get_application_fee_for_category(
+                program=doc.program,
+                admission_cycle=doc.admission_cycle,
+                category=getattr(doc, "whether_scstobc_ncl", None),
+                is_foreign=is_foreign,
+                applicant=doc,
+            ), 2)
             fee_status = (getattr(doc, "application_fee_status", "") or "").strip()
             if fee_status not in ("Paid", "Waived"):
                 doc.application_fee_amount = computed
@@ -1139,14 +1154,18 @@ def switch_applicant_program(applicant_name, program):
         try:
             from slcm.api.service.application_fee_service import get_application_fee_for_category
 
-            raw_cat = (getattr(doc, "whether_scstobc_ncl", "") or "").strip()
-            cat = raw_cat if raw_cat and raw_cat.upper() != "GENERAL" else None
             fee_status = (getattr(doc, "application_fee_status", "") or "").strip()
-            foriegn_national = getattr(doc, "foriegn_national", "") or ""
-            is_foreign = foriegn_national == "Yes" if foriegn_national else False
+            is_foreign = (getattr(doc, "foriegn_national", "") or "").strip() == "Yes"
             if fee_status not in ("Paid", "Waived"):
                 doc.application_fee_amount = flt(
-                    get_application_fee_for_category(doc.program, doc.admission_cycle, cat, is_foreign=is_foreign), 2
+                    get_application_fee_for_category(
+                        program=doc.program,
+                        admission_cycle=doc.admission_cycle,
+                        category=getattr(doc, "whether_scstobc_ncl", None),
+                        is_foreign=is_foreign,
+                        applicant=doc,
+                    ),
+                    2,
                 )
         except Exception:
             frappe.log_error(frappe.get_traceback(), "switch_applicant_program — fee recalc")

@@ -5,5 +5,5 @@
 from frappe.model.document import Document
 
 
-class AdmissionSettings(Document):
+class ApplicationFeeCategory(Document):
 	pass

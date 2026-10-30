@@ -242,7 +242,7 @@
    "fieldtype": "Select",
    "in_standard_filter": 1,
    "label": "Gender",
-   "options": "\nMale\nFemale\nTransgender\nPrefer not to say\nOther",
+   "options": "\nMale\nFemale\nPrefer not to say\nOther",
    "reqd": 1
   },
   {
@@ -1343,7 +1343,7 @@
   }
  ],
  "make_attachments_public": 1,
- "modified": "2026-10-29 17:01:27.374495",
+ "modified": "2026-10-30 18:23:37.645511",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Applicant",

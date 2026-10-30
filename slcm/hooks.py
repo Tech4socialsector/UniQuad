@@ -186,7 +186,6 @@ fixtures = [
                 "Entrance Test Result",
                 "Entrance Test Reschedule",
                 "Entrance Test Allocation",
-                "Application Submitted Email",
                 "PACE Application Reminder",
                 "PACE Draft Application Reminder",
                 "PACE Application Submitted",
@@ -237,7 +236,6 @@ fixtures = [
                 "NLSAT Full Fee Paid",
                 "NLSAT Offer Expired / Withdrawn",
                 "NLSAT Application Submitted and Paid Email",
-                "Application Submitted Email"
             ]]
         ]
     },

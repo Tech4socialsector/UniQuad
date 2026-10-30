@@ -121,11 +121,15 @@ def get_context(context):
     context.has_applications = len(cards) > 0
 
     # ── Existing merit/scholarship data ─────────────────────────
-    data = get_applicant_data()
-    if isinstance(data, dict) and "error" in data:
-        context.error = data["error"]
-    else:
-        context.applicant_data = data
+    try:
+        data = get_applicant_data()
+        if isinstance(data, dict) and "error" in data:
+            context.error = data["error"]
+        else:
+            context.applicant_data = data
+    except Exception as e:
+        frappe.log_error(f"Dashboard get_applicant_data failed: {e}", "Dashboard Error")
+        context.applicant_data = []
 
     # ── Current user info ─────────────────────────────────────────
     context.nav_user     = frappe.session.user or ''
