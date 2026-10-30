@@ -731,47 +731,4 @@ def convert_applicant_to_student(applicant_name, program, admission_cycle, offer
     # ── 6. Create Student Enrollment ───────────────────────────────────────────
     # If you want to disable automatic enrollment creation in the future, 
     # simply comment out the line below.
-    create_student_enrollment(student_name)
-
     return {"student_name": student_name, "created": True}
-
-
-def create_student_enrollment(student_name):
-    """
-    Creates the initial Student Enrollment record for a newly converted student.
-    Uses the batch (programme) assigned during the applicant conversion.
-    """
-    try:
-        student = frappe.get_doc("Student Master", student_name)
-        
-        # Enrollment requires a batch
-        if not student.batch:
-            frappe.logger().warning(f"Skipping Student Enrollment for {student_name}: No batch assigned.")
-            return None
-            
-        # Check if enrollment already exists for this batch
-        if frappe.db.exists("Student Enrollment", {"student": student_name, "batch": student.batch}):
-            return None
-            
-        enrollment = frappe.new_doc("Student Enrollment")
-        enrollment.student = student_name
-        enrollment.enrollment_date = frappe.utils.today()
-        enrollment.batch = student.batch
-        # A Batch no longer carries programme/term: set them from the student.
-        enrollment.program = student.programme_of_study
-        enrollment.section = student.section
-        # Year 1 of the student's academic year; without one, validate() falls back to the Batch's.
-        if student.academic_year:
-            enrollment.add_year_log(student.academic_year, 1)
-
-        enrollment.insert(ignore_permissions=True)
-        frappe.logger().info(f"[create_student_enrollment] Created {enrollment.name} for Student {student_name}")
-        
-        return enrollment.name
-        
-    except Exception as e:
-        frappe.log_error(
-            message=frappe.get_traceback(),
-            title=f"Student Enrollment Creation Failed | Student: {student_name}"
-        )
-        return None

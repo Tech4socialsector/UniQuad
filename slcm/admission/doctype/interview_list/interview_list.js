@@ -4,7 +4,7 @@ frappe.ui.form.on("Interview List", {
         // ── Status intro message ───────────────────────────────────────────────
         if (frm.doc.status === "Generated") {
             frm.set_intro(
-                __("Interview List generated. Use the Actions menu to allocate interview slots."),
+                __("Interview List generated. Use the <b>Allocate Slots</b> button below to allocate interview slots."),
                 "blue"
             );
         } else if (frm.doc.status === "In Progress") {
@@ -25,18 +25,8 @@ frappe.ui.form.on("Interview List", {
             let breakdown = Object.entries(cnt)
                 .map(([src, n]) => `<b>${src}:</b> ${n}`)
                 .join("&nbsp;&nbsp;|&nbsp;&nbsp;");
-            frm.dashboard.add_comment(
-                `<span style="font-size:12px;">
-                    Total Applicants: <b>${total}</b>
-                    &nbsp;&nbsp;—&nbsp;&nbsp;${breakdown}
-                </span>`,
-                "blue",
-                true
-            );
         }
 
-        // ── "Allocate Interview Slots" button ─────────────────────────────────
-        frm.remove_custom_button("Allocate Interview Slots");
         
         // Hide only if user is strictly an Interview Staff Member (and not an Admin/Manager)
         let is_staff_only = frappe.user_roles.includes("Interview Staff Member") && 
@@ -45,11 +35,9 @@ frappe.ui.form.on("Interview List", {
                            !frappe.user_roles.includes("Entrance Test Admin");
 
         if (frm.doc.status === "Generated" && !is_staff_only) {
-            frm.add_custom_button(__("Allocate Interview Slots"), function () {
+            frm.add_custom_button(__("Allocate Slots"), function () {
                 open_slot_dialog(frm);
-            }, __("Actions"))
-                .addClass("btn-primary")
-                .css({ "font-weight": "bold" });
+            })
         }
     }
 });
@@ -169,7 +157,7 @@ function _show_slot_dialog(frm, applicants, staff_list) {
                             </span>
                         </div>
                         <div style="position:relative; width:240px;">
-                            <input type="text" id="staff-search-input" placeholder="${__("🔍 Search staff...")}" 
+                            <input type="text" id="staff-search-input" placeholder="${__("Search staff...")}" 
                                    style="width:100%; padding:6px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:12px; outline:none; background:#ffffff; transition:border 0.15s;">
                         </div>
                     </div>
