@@ -732,42 +732,4 @@ def convert_applicant_to_student(applicant_name, program, admission_cycle, offer
     # ── 6. Create Student Enrollment ───────────────────────────────────────────
     # If you want to disable automatic enrollment creation in the future, 
     # simply comment out the line below.
-    create_student_enrollment(student_name)
-
     return {"student_name": student_name, "created": True}
-
-
-def create_student_enrollment(student_name):
-    """
-    Creates the initial Student Enrollment record for a newly converted student.
-    Uses the batch (programme) assigned during the applicant conversion.
-    """
-    try:
-        student = frappe.get_doc("Student Master", student_name)
-        
-        # Enrollment requires a batch
-        if not student.batch:
-            frappe.logger().warning(f"Skipping Student Enrollment for {student_name}: No batch assigned.")
-            return None
-            
-        # Check if enrollment already exists for this batch
-        if frappe.db.exists("Student Enrollment", {"student": student_name, "batch": student.batch}):
-            return None
-            
-        enrollment = frappe.new_doc("Student Enrollment")
-        enrollment.student = student_name
-        enrollment.enrollment_date = frappe.utils.today()
-        enrollment.batch = student.batch
-        
-        # Fields like program, academic_year, and term_name are fetch_from batch
-        enrollment.insert(ignore_permissions=True)
-        frappe.logger().info(f"[create_student_enrollment] Created {enrollment.name} for Student {student_name}")
-        
-        return enrollment.name
-        
-    except Exception as e:
-        frappe.log_error(
-            message=frappe.get_traceback(),
-            title=f"Student Enrollment Creation Failed | Student: {student_name}"
-        )
-        return None

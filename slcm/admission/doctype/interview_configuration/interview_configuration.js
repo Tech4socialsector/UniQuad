@@ -109,9 +109,6 @@ frappe.ui.form.on("Interview Configuration", {
                 frappe.confirm(
                     __(
                         `<div style="text-align: center; padding: 10px;">
-                            <div style="background: #eef2f7; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
-                                <i class="fa fa-info-circle fa-2x" style="color: #007bff;"></i>
-                            </div>
                             <h4 style="font-weight: 800; color: #212529; margin-bottom: 10px;">Confirm Generation</h4>
                             <p style="color: #6c757d; font-size: 14px; line-height: 1.5;">Are you sure you want to generate the Interview list with the following configuration?</p>
                             
@@ -123,7 +120,7 @@ frappe.ui.form.on("Interview Configuration", {
                                     ${program_row}
                                 </table>
                             </div>
-                            <p style="font-size: 12px; color: #adb5bd; font-style: italic;">This process will only fetch new eligible candidates.</p>
+                            <p style="font-size: 12px; color: #adb5bd; font-style: italic;">This process will only fetch eligible candidates.</p>
                         </div>`,
                         [
                             frm.doc.academic_year,
@@ -150,7 +147,7 @@ frappe.ui.form.on("Interview Configuration", {
                     }
                 );
 
-            }).addClass("btn-primary").css({ "font-weight": "bold" });
+            })
         }
 
         // ── "View Interview List" button ──────────────────────────────────────
@@ -262,10 +259,14 @@ function check_programme_settings(frm, show_toast = true) {
                     } else if (frm.doc.applicant_type === "Domestic Applicants") {
                         if (prog.intereview == 0) {
                             missing_msgs.push(`Please Note: For Programme <b>${prog.name}</b>, Domestic applicants do not have an interview stage.`);
+                            frm.set_value("program", "");
+                            return;
                         }
                     } else if (frm.doc.applicant_type === "International Applicants") {
                         if (prog.international_interview == 0) {
                             missing_msgs.push(`Please Note: For Programme <b>${prog.name}</b>, International applicants do not have an interview stage.`);
+                            frm.set_value("program", "");
+                            return;
                         }
                     }
 

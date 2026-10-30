@@ -159,8 +159,6 @@ fixtures = [
     },
     # --- Master data ---
     {"doctype": "Workflow State"},
-    {"doctype": "Applicant Status"},
-    {"doctype": "Stages"},
 
     {"doctype": "PACE Application Status"},
     # --- Email Templates ---
@@ -233,14 +231,6 @@ fixtures = [
                 "Application Submitted Email"
             ]]
         ]
-    },
-    # --- Admission Reminder Email DocTypes ---
-    {
-        "doctype": "Applicant Reminder Email Configuration",
-        "filters": [["name", "=", "Applicant Reminder Email Configuration"]]
-    },
-    {
-        "doctype": "Applicant Reminder Email Log"
     },
     # --- Student Portal Settings (single doctype — ships with defaults) ---
     {

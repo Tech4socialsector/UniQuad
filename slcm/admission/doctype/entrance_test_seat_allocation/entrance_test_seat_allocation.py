@@ -22,6 +22,13 @@ class EntranceTestSeatAllocation(Document):
         # Fetch start/end time from Admission Cycle Entrance Test Details child table
         is_res = (self.is_rescheduled == 1 or self.entrance_test_status == "Rescheduled")
         f_test = self.re_entrance_test_name or self.re_entrance_test_list if is_res else (self.entrance_test_name or self.entrance_test_list)
+
+        if (self.part_a_total_marks_scored or 0) > 75:
+            frappe.throw(_("Part A marks cannot be more than 75."))
+
+        if (self.part_b_total_marks_scored or 0) > 75:
+            frappe.throw(_("Part B marks cannot be more than 75."))
+            
         if self.admission_cycle and f_test:
             filters = {"parent": self.admission_cycle, "entrance_test_name": f_test}
             if self.program_level:
