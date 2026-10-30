@@ -84,3 +84,4 @@ slcm.patches.v2_0.remove_course_offering
 slcm.patches.v2_0.student_current_term
 slcm.patches.v2_0.migrate_applicant_status_completed_to_submitted_and_paid
 slcm.patches.v2_0.remove_course_schedule
+slcm.patches.v2_0.refresh_desktop_layouts
