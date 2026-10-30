@@ -1312,59 +1312,15 @@ function setupSaveDraftButton() {
 var _feeTimer = null;
 
 function updateFeeForCategory() {
-	var wf  = frappe.web_form;
-	var doc = (wf && wf.doc) || {};
-
-	var program = resolveField('program');
-	if (!program) return;
-
-	var feeStatus = (resolveField('application_fee_status') || '').trim();
-	if (feeStatus === 'Paid' || feeStatus === 'Waived') return;
-
-	var category      = resolveField('whether_scstobc_ncl');
-	var admissionCycle = resolveField('admission_cycle');
-
-	frappe.call({
-		method: 'slcm.admission.web_form.applicant_form.applicant_form.get_application_fee_amount',
-		args: {
-			program: program,
-			category: category || '',
-			admission_cycle: admissionCycle || '',
-		},
-		callback: function (r) {
-			if (r && r.message !== undefined && r.message !== null) {
-				var fee = parseFloat(r.message) || 0;
-				try {
-					if (wf && wf.doc) wf.doc.application_fee_amount = fee;
-				} catch (e) {}
-				if (doc && doc !== (wf && wf.doc)) {
-					try { doc.application_fee_amount = fee; } catch (e) {}
-				}
-				// Update the visible Currency control (category change must reflect in UI).
-				try {
-					if (wf && typeof wf.set_value === 'function') {
-						wf.set_value('application_fee_amount', fee);
-					}
-				} catch (e) {}
-			}
-		},
-	});
+	// Fee calculation is done when candidate clicks the submit button.
 }
 
 function scheduleFeeUpdate() {
-	clearTimeout(_feeTimer);
-	_feeTimer = setTimeout(updateFeeForCategory, 350);
+	// Fee calculation is done when candidate clicks the submit button.
 }
 
 function bindFeeListener() {
-	$(document).on(
-		'change',
-		'[data-fieldname="whether_scstobc_ncl"] select, [data-fieldname="whether_scstobc_ncl"] input',
-		scheduleFeeUpdate
-	);
-	if (frappe.web_form && typeof frappe.web_form.on === 'function') {
-		frappe.web_form.on('whether_scstobc_ncl', scheduleFeeUpdate);
-	}
+	// Fee calculation is done when candidate clicks the submit button.
 }
 
 var _feeReceiptBtnInFlight = false;
@@ -2534,7 +2490,9 @@ function _showFeeModal(feeDetails, onPaid) {
 	}
 
 	var feeNum = Number(feeDetails.fee_amount || 0);
-	var amountFormatted = '\u20B9 ' + feeNum.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+	var cur = feeDetails.currency || 'INR';
+	var curPrefix = cur === 'INR' ? '\u20B9 ' : (cur + ' ');
+	var amountFormatted = curPrefix + feeNum.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 	document.getElementById('slcm-fee-amount').textContent = amountFormatted;
 	var payBtnEl = document.getElementById('slcm-fee-pay-btn');
 	if (payBtnEl) {

@@ -42,7 +42,7 @@
    "default": "Active",
    "fieldname": "enable_not_started_reminder",
    "fieldtype": "Select",
-   "label": "Not Started Application Reminder Status",
+   "label": "Not Started Application Reminder",
    "options": "Active\nInactive"
   },
   {
@@ -65,7 +65,7 @@
    "default": "Active",
    "fieldname": "enable_draft_reminder",
    "fieldtype": "Select",
-   "label": "Draft Application Reminder Status",
+   "label": "Draft Application Reminder ",
    "options": "Active\nInactive"
   },
   {
@@ -88,7 +88,7 @@
    "default": "Active",
    "fieldname": "enable_unpaid_fee_reminder",
    "fieldtype": "Select",
-   "label": "Application Fee Reminder Status",
+   "label": "Application Fee Reminder ",
    "options": "Active\nInactive"
   },
   {
@@ -140,7 +140,7 @@
    "default": "Active",
    "fieldname": "enable_admission_fee_reminder",
    "fieldtype": "Select",
-   "label": "Course Fee Reminder Status",
+   "label": "Course Fee Reminder ",
    "options": "Active\nInactive"
   },
   {
@@ -169,7 +169,7 @@
    "default": "Active",
    "fieldname": "enable_confirmation_fee_reminder",
    "fieldtype": "Select",
-   "label": "Confirmation Fee Reminder Status",
+   "label": "Confirmation Fee Reminder ",
    "options": "Active\nInactive"
   },
   {
@@ -187,7 +187,7 @@
  ],
  "issingle": 1,
  "links": [],
- "modified": "2026-10-26 10:01:30.169312",
+ "modified": "2026-10-30 12:13:44.859289",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Applicant Reminder Email Configuration",

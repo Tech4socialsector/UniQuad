@@ -228,7 +228,7 @@ def get_applicant_data():
 
     results = []
     for name in result_names:
-        doc = frappe.get_doc("Eligibility Result", name)
+        doc = frappe.get_doc("Eligibility Result", name, ignore_permissions=True)
         
         # Calculate averaged UG CGPA
         ug_avg = 0
@@ -281,19 +281,20 @@ def get_applicant_data():
         # If neither exists, then it's truly in progress
         if not merit_exists and not allocation_exists:
             # Check if any scholarship is published to allow early application
-            scholarship_available = frappe.db.get_single_value("Admission Settings", "is_scholarship_available")
+            active_cycle = frappe.db.get_value("Admission Cycle", {"status": "Active"}, "enable_scholarship")
+            scholarship_available = bool(active_cycle)
             if not scholarship_available:
                 return {"error": "Your application is under review. Merit lists and scholarships will be visible here once published."}
 
-
     # 2. For each result, get the specific selection statuses from Seat Allocation child tables
-    settings = frappe.get_single("Admission Settings")
+    active_cycle_flag = frappe.db.get_value("Admission Cycle", {"status": "Active"}, "enable_scholarship")
+    is_scholarship_available = bool(active_cycle_flag)
     
     combined_data = []
 
     # If results is empty but we have an app_id, we might want to synthesize a result
     if not results and app_id:
-        app = frappe.get_doc("Applicant", app_id)
+        app = frappe.get_doc("Applicant", app_id, ignore_permissions=True)
         results.append({
             "applicant_id": app_id,
             "candidate_name": app.candidate_name,
@@ -336,7 +337,7 @@ def get_applicant_data():
         
         available_scholarships = []
         applied_scholarships = []
-        if res['applicant_id'] and settings.is_scholarship_available:
+        if res['applicant_id'] and is_scholarship_available:
             from slcm.admission.utils.scholarship_availability import get_available_scholarships_for_dashboard, get_applied_scholarships_for_dashboard
             available_scholarships = get_available_scholarships_for_dashboard(
                 res['applicant_id'], res['admission_cycle'], res['campus'], res['program'], published_statuses

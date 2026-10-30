@@ -6,127 +6,142 @@ from frappe import _
 from frappe.utils import cint, flt
 
 
-def get_application_fee_for_category(program, admission_cycle, category, is_foreign=False):
+def get_application_fee_doc(admission_cycle):
 	"""
-	Returns the application fee amount from Programme Reservation Policy
-	based on program, admission_cycle, and category (Admission Category name).
+	Resolves the Application Fee document for an admission cycle:
+	1. Direct link on Admission Cycle.application_fee
+	2. Fall back to Application Fee matching the cycle's academic_year
+	"""
+	if not admission_cycle:
+		return None
 
-	Look up Programme Reservation Policy for the given program+cycle,
-	then find the Programme Reservation Category row where category_name matches.
-	Returns application_fee or 0 if not found.
+	app_fee_name = frappe.db.get_value("Admission Cycle", admission_cycle, "application_fee")
+	if not app_fee_name:
+		academic_year = frappe.db.get_value("Admission Cycle", admission_cycle, "academic_year")
+		if academic_year:
+			app_fee_name = frappe.db.get_value("Application Fee", {"academic_year": academic_year})
+
+	if app_fee_name:
+		try:
+			return frappe.get_doc("Application Fee", app_fee_name)
+		except Exception:
+			return None
+	return None
+
+
+def get_application_fee_for_category(
+	program=None,
+	admission_cycle=None,
+	category=None,
+	is_foreign=False,
+	applicant=None,
+	gender=None,
+	pwd=None,
+):
 	"""
-	if not program or not admission_cycle:
+	Returns application fee amount from Application Fee linked to admission cycle.
+
+	Priority:
+	1. International candidate (only foriegn_national == "Yes"):
+	   returns international_application_fee.
+	2. Domestic candidate:
+	   a. Women: if gender == "Female" and 'Women' is configured in Application Fee
+	   b. PWD: if pwd == "Yes" and 'PWD' is configured in Application Fee
+	   c. Vertical Category: if category (SC, ST, OBC-NCL, EWS) is configured
+	   d. Fallback to General / Unreserved
+	   e. 0 if no match
+	"""
+	if isinstance(applicant, str):
+		try:
+			applicant = frappe.get_doc("Applicant", applicant)
+		except Exception:
+			applicant = None
+
+	if applicant:
+		if not admission_cycle:
+			admission_cycle = applicant.admission_cycle
+		if not program:
+			program = applicant.program
+		is_foreign = (getattr(applicant, "foriegn_national", "") or "").strip() == "Yes"
+		if gender is None:
+			gender = getattr(applicant, "gender", None)
+		if pwd is None:
+			pwd = getattr(applicant, "pwd", None)
+		if not category:
+			category = getattr(applicant, "whether_scstobc_ncl", None)
+
+	if not admission_cycle:
 		return 0
 
-	acp = frappe.db.get_value(
-		"Admission Cycle Program",
-		{"parent": admission_cycle, "program": program},
-		["reservation_applicable", "application_fee_indian", "application_fee_foreign"],
-		as_dict=True
-	)
-	if acp and not acp.reservation_applicable:
-		return flt(acp.application_fee_foreign if is_foreign else acp.application_fee_indian, 2)
-
-	policy_data = frappe.db.get_value(
-		"Programme Reservation Policy",
-		{"program": program, "admission_cycle": admission_cycle, "status": "Active"},
-		["name", "application_fee_for_foreign"],
-		as_dict=True
-	)
-	if not policy_data:
-		policy_data = frappe.db.get_value(
-			"Programme Reservation Policy",
-			{"program": program, "admission_cycle": admission_cycle},
-			["name", "application_fee_for_foreign"],
-			as_dict=True
-		)
-	if not policy_data:
+	app_fee = get_application_fee_doc(admission_cycle)
+	if not app_fee:
 		return 0
 
-	policy = policy_data.name
+	# 1. International
+	if is_foreign:
+		return flt(getattr(app_fee, "international_application_fee", 0), 2)
 
-	rows = frappe.get_all(
-		"Programme Reservation Category",
-		filters={"parent": policy, "parenttype": "Programme Reservation Policy"},
-		fields=["category_name", "application_fee_for_indian"]
-	)
+	# 2. Domestic
+	fee_map = {}
+	for row in getattr(app_fee, "application_fee_by_category", []):
+		cname = (getattr(row, "admission_category", "") or "").strip().lower()
+		if cname:
+			fee_map[cname] = flt(row.application_fee, 2)
 
-	def _get_fee(row):
-		if is_foreign:
-			return flt(policy_data.application_fee_for_foreign, 2)
-		return flt(row.application_fee_for_indian, 2)
+	# a. Women
+	if (gender or "").strip().lower() == "female":
+		if "women" in fee_map:
+			return fee_map["women"]
 
-	category_str = (category or "").strip()
-	for row in rows:
-		if row.category_name == category_str or (row.category_name and row.category_name.strip() == category_str):
-			return _get_fee(row)
+	# b. PWD
+	if (pwd or "").strip().lower() == "yes":
+		if "pwd" in fee_map:
+			return fee_map["pwd"]
 
-	for row in rows:
-		if (row.category_name or "").lower() in ("general", "gen", "unreserved", ""):
-			return _get_fee(row)
+	# c. Vertical Category
+	if category:
+		cat_key = category.strip().lower()
+		if cat_key in fee_map:
+			return fee_map[cat_key]
+
+	# d. General
+	for gen_key in ("general", "gen", "unreserved"):
+		if gen_key in fee_map:
+			return fee_map[gen_key]
 
 	return 0
 
 
-def get_payment_gateway_for_application_fee(program, admission_cycle):
+def get_payment_gateway_for_application_fee(program=None, admission_cycle=None):
 	"""
-	Returns the Payment Gateway from Programme Reservation Policy for the given program and admission_cycle.
-	Uses the same policy lookup as get_application_fee_for_category (Active first, then any).
+	Returns Payment Gateway from Application Fee document for the admission cycle.
 	"""
-	if not program or not admission_cycle:
+	cycle = admission_cycle or program
+	if cycle and not frappe.db.exists("Admission Cycle", cycle) and admission_cycle:
+		cycle = admission_cycle
+	if not cycle:
 		return None
 
-	acp = frappe.db.get_value(
-		"Admission Cycle Program",
-		{"parent": admission_cycle, "program": program},
-		["reservation_applicable", "payment_gateway"],
-		as_dict=True
-	)
-	if acp and not acp.reservation_applicable:
-		return acp.payment_gateway
-
-	gateway = frappe.db.get_value(
-		"Programme Reservation Policy",
-		{"program": program, "admission_cycle": admission_cycle, "status": "Active"},
-		"payment_gateway"
-	)
-	if not gateway:
-		gateway = frappe.db.get_value(
-			"Programme Reservation Policy",
-			{"program": program, "admission_cycle": admission_cycle},
-			"payment_gateway"
-		)
-	return gateway
+	app_fee = get_application_fee_doc(cycle)
+	if app_fee and getattr(app_fee, "payment_gateway", None):
+		return app_fee.payment_gateway
+	return None
 
 
-def get_payment_receipt_template_for_policy(program, admission_cycle):
+def get_payment_receipt_template_for_policy(program=None, admission_cycle=None):
 	"""
-	Return Print Format name from Programme Reservation Policy (same lookup as fee / gateway).
+	Returns Payment Receipt Template (Print Format) from Application Fee document.
 	"""
-	if not program or not admission_cycle:
+	cycle = admission_cycle or program
+	if cycle and not frappe.db.exists("Admission Cycle", cycle) and admission_cycle:
+		cycle = admission_cycle
+	if not cycle:
 		return None
 
-	acp = frappe.db.get_value(
-		"Admission Cycle Program",
-		{"parent": admission_cycle, "program": program},
-		["reservation_applicable", "payment_receipt_template"],
-		as_dict=True
-	)
-	if acp and not acp.reservation_applicable:
-		return acp.payment_receipt_template
-
-	template = frappe.db.get_value(
-		"Programme Reservation Policy",
-		{"program": program, "admission_cycle": admission_cycle, "status": "Active"},
-		"payment_receipt_template",
-	)
-	if not template:
-		template = frappe.db.get_value(
-			"Programme Reservation Policy",
-			{"program": program, "admission_cycle": admission_cycle},
-			"payment_receipt_template",
-		)
-	return template
+	app_fee = get_application_fee_doc(cycle)
+	if app_fee and getattr(app_fee, "payment_receipt_template", None):
+		return app_fee.payment_receipt_template
+	return None
 
 
 def get_or_create_application_fee_component():
@@ -205,9 +220,16 @@ def sync_application_fee_assignment_for_applicant(applicant_name):
 		return None
 
 	category = _get_applicant_category(applicant_name)
-	is_foreign = applicant.foriegn_national == "Yes"
+	is_foreign = (applicant.foriegn_national or "").strip() == "Yes"
 	fee_amount = flt(
-		get_application_fee_for_category(applicant.program, applicant.admission_cycle, category, is_foreign=is_foreign), 2
+		get_application_fee_for_category(
+			program=applicant.program,
+			admission_cycle=applicant.admission_cycle,
+			category=applicant.whether_scstobc_ncl,
+			is_foreign=is_foreign,
+			applicant=applicant,
+		),
+		2,
 	)
 
 	if fee_amount > 0 and flt(applicant.application_fee_amount or 0) != fee_amount:
@@ -291,52 +313,87 @@ def create_application_fee_assignment(applicant_name):
 
 def _get_applicant_category(applicant_name):
 	"""
-	Get reservation category for fee calculation.
-
+	Get reservation category for fee calculation & assignment.
 	Order of preference:
-	1. Applicant Category child rows – prefer specific reserved categories (SC/ST/OBC-NCL)
-	   over generic ones like "General" / "Unreserved".
-	2. If child rows are missing or only General, fall back to Applicant.whether_scstobc_ncl
-	   when it is set to a reserved value.
+	1. International (if foriegn_national == "Yes")
+	2. Women (if gender == "Female" and configured in Application Fee)
+	3. PWD (if pwd == "Yes" and configured in Application Fee)
+	4. Specific reserved vertical categories (SC/ST/OBC-NCL/EWS)
+	5. General / Unreserved
 	"""
+	if not applicant_name or not frappe.db.exists("Applicant", applicant_name):
+		return None
+
+	app_data = frappe.db.get_value(
+		"Applicant",
+		applicant_name,
+		["admission_cycle", "foriegn_national", "gender", "pwd", "whether_scstobc_ncl"],
+		as_dict=True,
+	)
+	if not app_data:
+		return None
+
+	if (app_data.foriegn_national or "").strip() == "Yes":
+		return "International"
+
+	app_fee = get_application_fee_doc(app_data.admission_cycle)
+	configured_categories = set()
+	if app_fee:
+		for row in getattr(app_fee, "application_fee_by_category", []):
+			if row.admission_category:
+				configured_categories.add(row.admission_category.strip().lower())
+
+	# 1. Women
+	if (app_data.gender or "").strip().lower() == "female" and "women" in configured_categories:
+		return "Women"
+
+	# 2. PWD
+	if (app_data.pwd or "").strip().lower() == "yes" and "pwd" in configured_categories:
+		return "PWD"
+
+	# 3. Vertical category from whether_scstobc_ncl
+	vert = (app_data.whether_scstobc_ncl or "").strip()
+	if vert and vert.lower() in configured_categories:
+		return vert
+
+	# 4. Vertical category from Applicant Category child table
 	rows = frappe.get_all(
 		"Applicant Category",
 		filters={"parent": applicant_name, "parenttype": "Applicant"},
 		fields=["category"],
 		order_by="idx asc",
 	)
-
-	# 1) Prefer explicit categories from child table
 	if rows:
 		for row in rows:
 			name = (row.category or "").strip()
 			if name and name.lower() not in ("general", "gen", "unreserved"):
 				return name
 
-	# 2) Fallback to Applicant.whether_scstobc_ncl when it's a reserved code
-	raw = frappe.db.get_value("Applicant", applicant_name, "whether_scstobc_ncl") or ""
-	code = raw.strip()
-	if code and code.upper() in {"SC", "ST", "OBC-NCL"}:
-		return code
+	if vert and vert.upper() in {"SC", "ST", "OBC-NCL", "EWS"}:
+		return vert
 
-	# 3) Last resort: use first child row (usually General), or None
 	if rows:
-		return (rows[0].category or "").strip() or None
-	return None
+		return (rows[0].category or "").strip() or "General"
+
+	return vert or "General"
 
 
 @frappe.whitelist()
 def get_application_fee_details(applicant_name):
 	"""
-	Returns application fee amount and status for the given Applicant.
+	Returns application fee amount, currency, and status for the given Applicant.
 	Used by the portal UI to show fee and enable/disable pay button.
 	"""
 	applicant = frappe.get_doc("Applicant", applicant_name)
 	category = _get_applicant_category(applicant_name)
-	is_foreign = applicant.foriegn_national == "Yes"
+	is_foreign = (applicant.foriegn_national or "").strip() == "Yes"
 
 	fee_amount = get_application_fee_for_category(
-		applicant.program, applicant.admission_cycle, category, is_foreign=is_foreign
+		program=applicant.program,
+		admission_cycle=applicant.admission_cycle,
+		category=applicant.whether_scstobc_ncl,
+		is_foreign=is_foreign,
+		applicant=applicant,
 	)
 
 	if fee_amount != flt(applicant.application_fee_amount):
@@ -358,13 +415,17 @@ def get_application_fee_details(applicant_name):
 		applicant.program, applicant.admission_cycle
 	)
 
+	app_fee = get_application_fee_doc(applicant.admission_cycle)
+	currency = getattr(app_fee, "currency", None) or "INR"
+
 	return {
 		"applicant_name": applicant_name,
 		"fee_amount": fee_amount,
+		"currency": currency,
 		"application_fee_status": status,
 		"reservation_category": category,
 		"program": applicant.program,
 		"can_submit": status in ("Paid", "Waived"),
 		"online_payment_enabled": True,
-		"payment_gateway": payment_gateway
+		"payment_gateway": payment_gateway,
 	}

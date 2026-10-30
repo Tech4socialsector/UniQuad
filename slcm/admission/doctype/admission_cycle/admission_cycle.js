@@ -131,6 +131,13 @@ frappe.ui.form.on("Admission Cycle", {
             };
         });
 
+        frm.set_query("application_fee", () => {
+            return {
+                filters: {
+                    "academic_year" : frm.doc.academic_year
+                }
+            }
+        })
 
         const today = new Date(frappe.datetime.get_today());
 
