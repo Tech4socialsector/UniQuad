@@ -728,7 +728,7 @@ def convert_applicant_to_student(applicant_name, program, admission_cycle, offer
     except Exception as e:
         frappe.log_error(frappe.get_traceback(), f"Finance sync during conversion failed for {applicant_name}")
 
-    # ── 6. Create Student Enrollment ───────────────────────────────────────────
-    # If you want to disable automatic enrollment creation in the future, 
-    # simply comment out the line below.
+    # No Student Enrollment here: the student is enrolled (Student ID, section,
+    # Academic Log) from Student Master → Enroll once registration is Completed.
+
     return {"student_name": student_name, "created": True}

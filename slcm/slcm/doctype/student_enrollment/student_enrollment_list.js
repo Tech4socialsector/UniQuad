@@ -224,17 +224,9 @@ function open_create_class_dialog(listview) {
 				description: __("Add the courses to create a class for, one class per course. Course type and credit come from the course; pick the faculty for each.") },
 			{ fieldname: "courses", fieldtype: "Table", label: __("Courses"), in_place_edit: 1, data: [], fields: course_fields },
 
-			{ fieldname: "sb_find", fieldtype: "Section Break", label: __("Find Students"), depends_on: "eval:doc.class_type=='Group'",
-				description: __("Leave a filter empty to match all. Students found are added to the list below.") },
-			{ fieldname: "f_programme", fieldtype: "Link", options: "Programme", label: __("Programme") },
-			{ fieldname: "f_academic_year", fieldtype: "Link", options: "Academic Year", label: __("Academic Year") },
-			{ fieldname: "cb_2", fieldtype: "Column Break" },
-			{ fieldname: "f_year_no", fieldtype: "Int", label: __("Year No") },
-			{ fieldname: "f_section", fieldtype: "Link", options: "Section", label: __("Section") },
-			{ fieldname: "f_add", fieldtype: "Button", label: __("Add Students"), click: () => add_group_students() },
-
 			{ fieldname: "sb_students", fieldtype: "Section Break", label: __("Students"),
-				description: __("Every student listed is added to each class. Select rows and delete to leave students out.") },
+				description: __("Every student listed is added to each class. Use Add / Remove Students to add students of any year or take students out.") },
+			{ fieldname: "f_add", fieldtype: "Button", label: __("Add / Remove Students"), click: () => add_remove_students() },
 			{ fieldname: "students", fieldtype: "Table", label: __("Students"), cannot_add_rows: 1, in_place_edit: 0, data: [], fields: student_fields },
 		],
 		primary_action_label: __("Create Class"),
@@ -325,18 +317,16 @@ function open_create_class_dialog(listview) {
 		});
 	}
 
-	function add_group_students() {
+	// Shared picker (public/js/class_student_picker.js): the listed students
+	// ticked, others found from any year; the ticked ones become the list.
+	function add_remove_students() {
 		const v = dialog.get_values(true);
-		frappe.call({
-			method: "slcm.slcm.doctype.classes.classes.get_enrollment_students",
-			args: { programme: v.f_programme, academic_year: v.f_academic_year, year_no: v.f_year_no, section: v.f_section },
-			callback: ({ message }) => {
-				const current = dialog.fields_dict.students.df.data || [];
-				const existing = new Set(current.map((r) => r.student_enrollment));
-				const added = to_student_rows((message || []).filter((s) => !existing.has(s.name)));
-				set_students(current.concat(added));
-				frappe.show_alert({ message: __("Added {0} student(s)", [added.length]), indicator: added.length ? "green" : "orange" });
-			},
+		slcm.class_students.pick({
+			current: dialog.fields_dict.students.df.data || [],
+			programme: is_group() ? "" : v.programme,
+		}).then((picked) => {
+			if (picked) set_students(picked.map(({ student_enrollment, student_name, section, program, year_no }) =>
+				({ student_enrollment, student_name, section, program, year_no })));
 		});
 	}
 

@@ -999,6 +999,11 @@ def _parse_updates(updates):
     updates = {k: v for k, v in updates.items() if k in allowed_fields}
     if not updates:
         frappe.throw(_("No updatable fields were provided."))
+    # Dates arrive as strings; validate compares them with the saved dates.
+    from frappe.utils import getdate
+    for k in ("schedule_date", "repeats_till"):
+        if updates.get(k):
+            updates[k] = getdate(updates[k])
     return updates
 
 

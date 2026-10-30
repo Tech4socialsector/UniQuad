@@ -48,8 +48,8 @@ doctype_js = {
     "Data Import": "public/js/bulk_upload_template.js",
     # ERPNext Company form: "SLCM Fees" buttons (only loads where ERPNext provides Company)
     "Company": "erpnext_bridge/company.js",
-    # Time Table → Create / View dialogs
-    "Classes": "public/js/class_time_table.js",
+    # Time Table → Create / View / Edit dialogs; Add / Remove Students
+    "Classes": ["public/js/class_time_table.js", "public/js/class_student_picker.js"],
 }
 
 # Bulk-upload templates (Download / Upload buttons) on these lists
@@ -59,6 +59,8 @@ doctype_list_js = {
     "Fee Demand": "public/js/bulk_upload_template.js",
     # Action → Enroll step-by-step wizard
     "Student Master": "public/js/enrollment_wizard.js",
+    # Create Class → Add / Remove Students
+    "Student Enrollment": "public/js/class_student_picker.js",
 }
 
 doctype_calendar_js = {
@@ -331,7 +333,7 @@ fixtures = [
         # A fixture copy would be force-imported after it on every migrate and win.
         "filters": [
             ["module", "in", ["SLCM", "Admission", "PACE"]],
-            ["name", "not in", ["Student Portal", "Master"]],
+            ["name", "not in", ["Student Portal", "Master", "FLE"]],
         ]
     },
     # --- Workspace Sidebars ---

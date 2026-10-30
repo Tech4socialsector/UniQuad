@@ -178,6 +178,12 @@ class StudentMaster(Document):
         self._auto_fetch_fee_structure()
         if not self.current_year:
             self.current_year = "1"
+        # Current Year label ("1st Year"); PACE students are not in a degree year.
+        if not self.year_of_study and not (self.admission_type == "PACE" or self.pace_programme):
+            from slcm.slcm.doctype.student_enrollment.student_enrollment import _ordinal
+
+            year = frappe.utils.cint("".join(ch for ch in str(self.current_year) if ch.isdigit())) or 1
+            self.year_of_study = f"{_ordinal(year)} Year"
 
     def before_save(self):
         """Track status and fee structure changes and append to audit history."""
@@ -631,19 +637,23 @@ def validate_new_enrollment(student_id):
             ),
         }
 
-    if not student.batch:
-        return {"allowed": False, "message": "Programme (Cohort) is not set in Student Master."}
+    if student.admission_type == "PACE" or student.pace_programme:
+        return {"allowed": False, "message": "PACE students are not enrolled in degree programmes."}
 
+    if not student.programme_of_study:
+        return {"allowed": False, "message": "Programme is not set in Student Master."}
+
+    # One Student Enrollment per student + programme (its Academic Log holds the years).
     existing_enrollment = frappe.db.exists(
         "Student Enrollment",
-        {"student": student.name, "batch": student.batch, "docstatus": ["<", 2]},
+        {"student": student.name, "program": student.programme_of_study, "docstatus": ["<", 2]},
     )
 
     if existing_enrollment:
         return {
             "allowed": False,
             "message": (
-                f"Student is already enrolled in this Batch ({student.batch}). "
+                f"Student is already enrolled in {student.programme_of_study}. "
                 f"Enrollment ID: {existing_enrollment}"
             ),
         }
@@ -1584,21 +1594,25 @@ def get_payment_logs(student_name):
 
 @frappe.whitelist()
 def get_batch_filter_options():
-    """Return one row per Batch with a human-friendly Programme label, for the
-    cascading Programme / Academic Year / Term filters in the Student ID
-    generator dialogs."""
-    batches = frappe.get_all(
-        "SLCM Batch",
-        fields=["name", "academic_year"],
-        order_by="academic_year desc",
-    )
-    if not batches:
+    """Return one row per Batch + Programme (a Batch such as "2026" is shared by
+    every programme admitted that year) with a human-friendly Programme label,
+    for the cascading Programme / Academic Year filters in the Student ID and
+    Section bulk dialogs. Each row's {batch, program} is what the dialogs send
+    back as a "cohort"."""
+    year_of = dict(frappe.get_all("SLCM Batch", fields=["name", "academic_year"], as_list=True))
+    if not year_of:
         return []
 
-    # A Batch no longer carries a programme: take it from its students.
-    batch_programme = _batch_programme_map([b["name"] for b in batches])
-    for b in batches:
-        b["program"] = batch_programme.get(b["name"])
+    batches = [
+        {"name": r.batch, "program": r.programme_of_study, "academic_year": year_of.get(r.batch)}
+        for r in frappe.get_all(
+            "Student Master",
+            filters={"batch": ["in", list(year_of)], "programme_of_study": ["is", "set"]},
+            fields=["batch", "programme_of_study"],
+            distinct=True,
+        )
+    ]
+    batches.sort(key=lambda b: (b["academic_year"] or "", b["program"] or ""), reverse=True)
 
     programme_names = list({b["program"] for b in batches if b.get("program")})
     programmes = frappe.get_all(
@@ -1628,35 +1642,12 @@ def get_batch_filter_options():
         label = f"{display_name} ({b.get('academic_year') or ''})".strip()
         options.append({
             "batch":            b["name"],
+            "program":          b["program"],
             "programme_label":  label,
             "academic_year":    b.get("academic_year") or "",
             "term_name":        "",
         })
     return options
-
-
-def _batch_programme_map(batch_names):
-    """{batch: programme} for the given Batches, from their students' latest
-    Enrolled Student Enrollment, falling back to Student Master.programme_of_study."""
-    if not batch_names:
-        return {}
-    out = {}
-    for r in frappe.get_all(
-        "Student Enrollment",
-        filters={"batch": ["in", list(batch_names)], "status": "Enrolled"},
-        fields=["batch", "program"],
-        order_by="enrollment_date desc, creation desc",
-    ):
-        if r.program:
-            out.setdefault(r.batch, r.program)
-    for r in frappe.get_all(
-        "Student Master",
-        filters={"batch": ["in", list(batch_names)]},
-        fields=["batch", "programme_of_study"],
-    ):
-        if r.programme_of_study:
-            out.setdefault(r.batch, r.programme_of_study)
-    return out
 
 
 def _set_student_programmes(students):
@@ -1677,51 +1668,69 @@ def _set_student_programmes(students):
         s["program"] = enrolled.get(s["name"]) or s.get("programme_of_study")
 
 
-def _programme_code_for_batch(batch_name):
-    """Resolve the Programme code (Programme Master's programme_code, e.g.
-    "TLLM") for a Batch, via its students' programme -> Programme.program_code."""
-    programme = _batch_programme_map([batch_name]).get(batch_name)
-    if not programme:
-        return ""
-    return frappe.db.get_value("Programme", programme, "program_code") or ""
+def _students_in_cohorts(batches, fields, order_by=None):
+    """Student Master rows for the dialogs' selection: a list of cohorts
+    {batch, program} (or plain Batch names); none = every student. A Batch is
+    shared by all programmes of a year, so a cohort matches batch AND programme."""
+    batches = frappe.parse_json(batches) if isinstance(batches, str) and batches else batches
+    fields = list(dict.fromkeys([*fields, "batch", "programme_of_study"]))
+    if not batches:
+        return frappe.get_all("Student Master", fields=fields, order_by=order_by)
+
+    pairs = {(c.get("batch"), c.get("program")) for c in batches if isinstance(c, dict)}
+    plain = {c for c in batches if isinstance(c, str)}
+    rows = frappe.get_all(
+        "Student Master",
+        filters={"batch": ["in", list({b for b, _p in pairs} | plain)]},
+        fields=fields,
+        order_by=order_by,
+    )
+    return [r for r in rows if r.batch in plain or (r.batch, r.programme_of_study) in pairs]
 
 
 @frappe.whitelist()
 def preview_student_ids(batches):
-    """Given a list of Batch names, recompute Student IDs for EVERY student in
-    those batches (not just ones missing an ID), sorted alphabetically by
-    name, in the form <programme_code><academic_year><seq>, e.g.
-    B20262027001. Re-running this after adding a new student re-sorts the
-    whole group, so a student who now sorts earlier correctly takes over a
-    lower number and everyone after them shifts up - existing IDs are not
-    preserved across runs."""
+    """Given the selected cohorts ({batch, program}), recompute Student IDs for
+    EVERY student in them (not just ones missing an ID), sorted alphabetically
+    by name, numbered per programme in the form
+    <programme_code><academic_year><seq>, e.g. BALLB20262027001. Re-running
+    this after adding a new student re-sorts the whole group, so a student who
+    now sorts earlier correctly takes over a lower number and everyone after
+    them shifts up - existing IDs are not preserved across runs."""
     batches = frappe.parse_json(batches) if isinstance(batches, str) and batches else batches
     if not batches:
-        frappe.throw(_("Please select Programme, Academic Year and Term."))
+        frappe.throw(_("Please select Programme and Academic Year."))
 
-    students = frappe.get_all(
-        "Student Master",
-        filters={"batch": ["in", batches]},
-        fields=["name", "first_name", "last_name", "academic_year", "registration_id"],
+    students = _students_in_cohorts(
+        batches, ["name", "first_name", "last_name", "academic_year", "registration_id"]
     )
     if not students:
         return []
 
-    students.sort(key=lambda s: f"{s.get('first_name') or ''} {s.get('last_name') or ''}".strip().lower())
+    def full_name(s):
+        return f"{s.get('first_name') or ''} {s.get('last_name') or ''}".strip()
 
-    programme_code = _programme_code_for_batch(batches[0])
-    academic_year = (students[0].get("academic_year") or "").replace("-", "").replace(" ", "")
-    prefix = f"{programme_code}{academic_year}"
+    students.sort(key=lambda s: (s.get("programme_of_study") or "", full_name(s).lower()))
+    codes = dict(frappe.get_all(
+        "Programme",
+        filters={"name": ["in", list({s.programme_of_study for s in students if s.programme_of_study})]},
+        fields=["name", "program_code"],
+        as_list=True,
+    ))
 
-    return [
-        {
+    out, seq = [], {}
+    for s in students:
+        # Each programme + year is numbered on its own, with its own code.
+        academic_year = (s.get("academic_year") or "").replace("-", "").replace(" ", "")
+        prefix = f"{codes.get(s.programme_of_study) or ''}{academic_year}"
+        seq[prefix] = seq.get(prefix, 0) + 1
+        out.append({
             "name":         s["name"],
-            "student_name": f"{s.get('first_name') or ''} {s.get('last_name') or ''}".strip(),
-            "student_id":   f"{prefix}{idx + 1:03d}",
+            "student_name": full_name(s),
+            "student_id":   f"{prefix}{seq[prefix]:03d}",
             "current_id":   s.get("registration_id") or "",
-        }
-        for idx, s in enumerate(students)
-    ]
+        })
+    return out
 
 
 @frappe.whitelist()
@@ -1763,19 +1772,9 @@ def download_student_id_bulk_template(batches=None):
     except ImportError:
         frappe.throw(_("openpyxl is not installed. Run: bench pip install openpyxl"))
 
-    batches = frappe.parse_json(batches) if isinstance(batches, str) and batches else batches
-
-    filters = {}
-    if batches:
-        filters["batch"] = ["in", batches]
-
-    students = frappe.get_all(
-        "Student Master",
-        filters=filters,
-        fields=[
-            "name", "first_name", "last_name",
-            "academic_year", "programme_of_study", "batch", "registration_id",
-        ],
+    students = _students_in_cohorts(
+        batches,
+        ["name", "first_name", "last_name", "academic_year", "registration_id"],
         order_by="first_name asc, last_name asc",
     )
     if not students:
@@ -1890,19 +1889,9 @@ def download_section_bulk_template(batches=None):
     except ImportError:
         frappe.throw(_("openpyxl is not installed. Run: bench pip install openpyxl"))
 
-    batches = frappe.parse_json(batches) if isinstance(batches, str) and batches else batches
-
-    filters = {}
-    if batches:
-        filters["batch"] = ["in", batches]
-
-    students = frappe.get_all(
-        "Student Master",
-        filters=filters,
-        fields=[
-            "name", "first_name", "last_name",
-            "academic_year", "batch", "programme_of_study", "section",
-        ],
+    students = _students_in_cohorts(
+        batches,
+        ["name", "first_name", "last_name", "academic_year", "section"],
         order_by="first_name asc, last_name asc",
     )
     if not students:
@@ -2057,8 +2046,20 @@ def upload_sections_bulk(file_url):
 
         try:
             message = _("Section updated to '{0}'.").format(new_section)
-            frappe.db.set_value("Student Master", student, "section", new_section, update_modified=False)
-            _append_section_update_log(student, new_section, "Success", message, now)
+            enrollment = frappe.db.get_value(
+                "Student Enrollment", {"student": student, "status": "Enrolled"}, ["name", "section"], as_dict=True
+            )
+            if enrollment and enrollment.section == new_section:
+                message = _("Already in section '{0}'.").format(new_section)
+                frappe.db.set_value("Student Master", student, "section", new_section, update_modified=False)
+            elif enrollment:
+                # Enrolled: move the enrollment and its Academic Log too (it also
+                # updates Student Master and appends the Section Update Log).
+                from slcm.slcm.doctype.student_enrollment.student_enrollment import change_section
+                message = change_section(enrollment.name, new_section, reason=_("Bulk section upload"))["note"]
+            else:
+                frappe.db.set_value("Student Master", student, "section", new_section, update_modified=False)
+                _append_section_update_log(student, new_section, "Success", message, now)
             updated += 1
             log.append({
                 "student": student,

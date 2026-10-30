@@ -648,13 +648,14 @@ function resolve_selected_batches(dialog, options) {
 
 	if (!prog && !ay && !term) return null; // no filters selected — all students
 
+	// A Batch ("2026") is shared by every programme of the year: send batch + programme.
 	return options
 		.filter((o) =>
 			(!prog || o.programme_label === prog) &&
 			(!ay || o.academic_year === ay) &&
 			(!term || o.term_name === term)
 		)
-		.map((o) => o.batch);
+		.map((o) => ({ batch: o.batch, program: o.program }));
 }
 
 /* ---------------- Auto Generate ---------------- */
@@ -718,7 +719,7 @@ function render_auto_generate_dialog(listview, options) {
 		const batches = resolve_selected_batches(dialog, options);
 		if (!batches || !batches.length) {
 			frappe.msgprint({
-				message: __("Select Programme, Academic Year and Term first."),
+				message: __("Select Programme and Academic Year first."),
 				indicator: "orange",
 			});
 			return;
