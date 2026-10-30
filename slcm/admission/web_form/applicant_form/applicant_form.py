@@ -39,6 +39,8 @@ def get_context(context):
     # Hide Frappe’s default web-form breadcrumb ("Back > APP-…"); custom bar stays in applicant_form.js.
     context.no_breadcrumbs = True
 
+    _hide_child_table_name_field(context)
+
     # Enforce Applicant DocType permissions
     is_new = frappe.form_dict.name == "new" or not frappe.form_dict.name
     if is_new:
@@ -95,6 +97,17 @@ def get_context(context):
         frappe.redirect(f"/{route}/{doc_name}")
 
     return None
+
+
+def _hide_child_table_name_field(context):
+    """
+    Frappe's web form adds a "Name" (row ID) field to every child table that has no
+    title field (web_form.get_in_list_view_fields). Desk never shows it — drop it here too.
+    """
+    wfd = context.get("web_form_doc") or {}
+    for field in wfd.get("web_form_fields") or []:
+        if field.get("fieldtype") == "Table" and field.get("fields"):
+            field["fields"] = [df for df in field["fields"] if df.get("fieldname") != "name"]
 
 
 # ───────────────────────────────────────────────────────────────────
