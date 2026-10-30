@@ -273,9 +273,11 @@ def _push_to_remote(cfg, doc):
             headers={"Authorization": f"token {api_key}:{api_secret}"},
             timeout=15,
         )
-        # A DuplicateEntryError (already pushed earlier) counts as success.
+        # Already pushed earlier counts as success — Frappe reports the
+        # unique source_log_id clash as UniqueValidationError.
         if resp.status_code in (200, 409) or (
-            resp.status_code == 417 and "DuplicateEntryError" in resp.text
+            resp.status_code == 417
+            and ("DuplicateEntryError" in resp.text or "UniqueValidationError" in resp.text)
         ):
             frappe.db.set_value("RFID SQL Punch Log", doc.name, "remote_synced", 1)
         else:
