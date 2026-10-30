@@ -47,7 +47,8 @@ def execute():
         if frappe.db.exists("DocType", new) or not _is_slcm_doctype(old):
             continue
 
-        frappe.db.rename_table(old, new)
+        if frappe.db.table_exists(old, cached=False) and not frappe.db.table_exists(new, cached=False):
+            frappe.db.rename_table(old, new)
         _rename_doctype_meta(old, new)
         _migrate_customizations(old, new)
 
@@ -83,7 +84,8 @@ def _rename_doctype_meta(old, new):
         filters={"parent": new, "fieldtype": ["in", frappe.model.table_fields]},
         pluck="options",
     ):
-        frappe.db.sql(f"UPDATE `tab{child}` SET parenttype = %s WHERE parenttype = %s", (new, old))
+        if frappe.db.table_exists(child, cached=False):
+            frappe.db.sql(f"UPDATE `tab{child}` SET parenttype = %s WHERE parenttype = %s", (new, old))
 
 
 def _migrate_customizations(old, new):
@@ -111,7 +113,11 @@ def _update_doctype_references(old, new, erpnext_modules):
 
 
 def _update_field(doctype, fieldname, old, new, erpnext_modules, type_field=None):
-    meta = frappe.get_meta(doctype)
+    try:
+        meta = frappe.get_meta(doctype)
+    except Exception:
+        return
+
     if meta.is_virtual or meta.module in erpnext_modules:
         return
 
@@ -121,9 +127,14 @@ def _update_field(doctype, fieldname, old, new, erpnext_modules, type_field=None
             frappe.db.set_single_value(doctype, fieldname, new)
         return
 
+    if not frappe.db.table_exists(doctype, cached=True) or not frappe.db.has_column(doctype, fieldname):
+        return
+
     table = frappe.qb.DocType(doctype)
     query = frappe.qb.from_(table).select(table.name).where(table[fieldname] == old)
     if type_field:
+        if not frappe.db.has_column(doctype, type_field):
+            return
         query = query.where(table[type_field] == "DocType")
 
     has_module = frappe.db.has_column(doctype, "module")
@@ -141,9 +152,16 @@ def _update_field(doctype, fieldname, old, new, erpnext_modules, type_field=None
 
 
 def _parent_module(parenttype, parent):
-    if not parenttype or not parent or not frappe.db.has_column(parenttype, "module"):
+    if not parenttype or not parent:
         return None
-    return frappe.db.get_value(parenttype, parent, "module")
+    try:
+        if frappe.db.table_exists(parenttype, cached=True) and frappe.db.has_column(parenttype, "module"):
+            val = frappe.db.get_value(parenttype, parent, "module")
+            if val:
+                return val
+        return frappe.get_meta(parenttype).module
+    except Exception:
+        return None
 
 
 def _update_user_settings(old, new):

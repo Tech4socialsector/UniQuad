@@ -55,16 +55,14 @@
    "fieldname": "pg_degree_certificatebonafide_certificate_to_be_uploaded",
    "fieldtype": "Attach",
    "in_list_view": 1,
-   "label": "PG Degree Certificate / Bonafide",
-   "reqd": 1
+   "label": "PG Degree Certificate / Bonafide"
   },
   {
    "description": "Max 5MB - Supported formats png, jpeg, jpg, pdf",
    "fieldname": "transcriptsmarksheets_to_be_uploaded",
    "fieldtype": "Attach",
    "in_list_view": 1,
-   "label": "Transcripts / Marksheets",
-   "reqd": 1
+   "label": "Transcripts / Marksheets"
   },
   {
    "fieldname": "pg_degree_details_section",
@@ -97,7 +95,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-10-16 14:30:00.000000",
+ "modified": "2026-10-30 10:02:35.753803",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "PG Degree Details",

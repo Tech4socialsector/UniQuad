@@ -143,11 +143,10 @@
    "label": "Interview"
   },
   {
-   "default": "1",
+   "default": "0",
    "fieldname": "merit_list",
    "fieldtype": "Check",
-   "label": "Merit List",
-   "read_only": 1
+   "label": "Merit List"
   },
   {
    "fieldname": "column_break_iwco",
