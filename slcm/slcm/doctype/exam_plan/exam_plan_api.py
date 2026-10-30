@@ -60,23 +60,29 @@ def _check_lock(settings):
 		)
 
 
-def _sync_course_schedules(exam_plan, course_offerings):
-	"""Add course offerings to Exam Plan course_schedules if not already listed."""
-	if not course_offerings:
+def _sync_course_schedules(exam_plan, courses):
+	"""Add courses to Exam Plan course_schedules if not already listed."""
+	if not courses:
 		return
 	try:
 		plan_doc = frappe.get_doc("Exam Plan", exam_plan)
-		existing = {row.course_offering for row in plan_doc.course_schedules}
+		existing = {row.course for row in plan_doc.course_schedules}
 		changed = False
-		for offering in course_offerings:
-			if offering not in existing:
-				plan_doc.append("course_schedules", {"course_offering": offering})
-				existing.add(offering)
+		for course in courses:
+			if course not in existing:
+				plan_doc.append("course_schedules", {"course": course})
+				existing.add(course)
 				changed = True
 		if changed:
 			plan_doc.save(ignore_permissions=True)
-	except Exception:
-		pass
+	except Exception as e:
+		# The schemas are already saved; say why the schedule rows were not added
+		frappe.log_error(frappe.get_traceback(), f"Exam Plan {exam_plan}: course schedule sync failed")
+		frappe.msgprint(
+			f"Schemas were saved, but the courses could not be added to the exam schedule: {e}",
+			title="Exam schedule not updated",
+			indicator="orange",
+		)
 
 
 def _send_notification(settings, subject, message):
@@ -275,6 +281,7 @@ def get_schema_detail(name):
 		"description": doc.description,
 		"total_marks": doc.total_marks,
 		"passing_marks": doc.passing_marks,
+		"reexam_result": doc.reexam_result,
 		"schema_components": components,
 		"assessment_configs": assessment_configs,
 		"reexam_configs": reexam_configs,
@@ -343,6 +350,8 @@ def save_schema(data):
 			"substitute_weightage": r.get("substitute_weightage", 100),
 			"effective_marks": r.get("effective_marks", 0),
 		})
+	if data.get("reexam_result"):
+		doc.reexam_result = data["reexam_result"]
 
 	if doc.is_new():
 		doc.insert(ignore_permissions=True)
@@ -363,12 +372,11 @@ def get_terms():
 
 @frappe.whitelist()
 def get_courses_for_plan(exam_plan, search=""):
-	"""Return course offerings (one row per course+programme) with their schema
-	assignments for the given exam plan's term.
+	"""Return the courses taught in the given exam plan's term (one row per
+	course, across all its Classes/sections) with their schema assignments.
 
-	A course can have multiple offerings in the same term (one per programme) -
-	each offering is its own row here so different programmes can carry their
-	own schema mapping even when they share the same underlying Course.
+	`name` of each row is the Course; `programme` lists the programmes of the
+	Classes teaching it in the term.
 	"""
 	settings = _get_settings()
 	page_length = settings.get("courses_per_page") or 500
@@ -383,65 +391,64 @@ def get_courses_for_plan(exam_plan, search=""):
 		search_cond = " AND (c.course_name LIKE %(s)s OR c.course_code LIKE %(s)s)"
 		params["s"] = f"%{search}%"
 
-	offerings = frappe.db.sql(
+	rows = frappe.db.sql(
 		f"""
 		SELECT
-			co.name          AS name,
-			co.course_title  AS course,
-			co.program       AS programme,
+			cl.course        AS name,
+			cl.course        AS course,
+			GROUP_CONCAT(DISTINCT cl.programme ORDER BY cl.programme SEPARATOR ', ') AS programme,
 			c.course_name    AS course_name,
 			c.course_code    AS course_code,
 			c.credit_value   AS credit_value
-		FROM `tabCourse Offering` co
-		LEFT JOIN `tabCourse` c ON c.name = co.course_title
-		WHERE co.term_name = %(term_name)s
+		FROM `tabClasses` cl
+		LEFT JOIN `tabCourse` c ON c.name = cl.course
+		WHERE cl.academic_term = %(term_name)s
 		{search_cond}
-		ORDER BY c.course_name ASC, co.program ASC
+		GROUP BY cl.course, c.course_name, c.course_code, c.credit_value
+		ORDER BY c.course_name ASC
 		LIMIT %(limit)s
 		""",
 		params,
 		as_dict=True,
 	)
 
-	# Fetch existing assignments, keyed by course_offering (the correct grain -
-	# two offerings of the same course, for different programmes, must be able
-	# to carry independent schema mappings).
+	# Fetch existing assignments, keyed by course (one mapping per course per plan)
 	asgn_map = {}
 	try:
 		assignments = frappe.db.sql(
 			"""
-			SELECT name, course_offering, evaluation_schema, grade_schema
+			SELECT name, course, evaluation_schema, grade_schema
 			FROM `tabCourse Schema Assignment`
 			WHERE exam_plan = %(exam_plan)s
 			""",
 			{"exam_plan": exam_plan},
 			as_dict=True,
 		)
-		asgn_map = {a["course_offering"]: a for a in assignments}
+		asgn_map = {a["course"]: a for a in assignments}
 	except Exception:
 		frappe.log_error(frappe.get_traceback(), "get_courses_for_plan: assignment fetch failed")
 
-	# Fetch enrolled student counts per course offering
+	# Enrolled student counts per course = Enrolled students of its Classes in the term
 	enrolled_map = {}
 	try:
 		enrollment_counts = frappe.db.sql(
 			"""
-			SELECT co.name AS course_offering, COUNT(DISTINCT se.name) AS enrolled_count
-			FROM `tabStudent Enrollment` se
-			JOIN `tabStudent Enrollment Course` sec ON sec.parent = se.name
-			JOIN `tabCourse Offering` co ON co.name = sec.course_offering
-			WHERE se.term_name = %(term_name)s
-			  AND sec.status = 'Enrolled'
-			GROUP BY co.name
+			SELECT cl.course AS course, COUNT(DISTINCT ces.student_enrollment) AS enrolled_count
+			FROM `tabClasses` cl
+			JOIN `tabClass Enrolled Student` ces
+				ON ces.parent = cl.name AND ces.parenttype = 'Classes'
+			WHERE cl.academic_term = %(term_name)s
+			  AND ces.status = 'Enrolled'
+			GROUP BY cl.course
 			""",
 			{"term_name": term_name},
 			as_dict=True,
 		)
-		enrolled_map = {row["course_offering"]: row["enrolled_count"] for row in enrollment_counts}
+		enrolled_map = {row["course"]: row["enrolled_count"] for row in enrollment_counts}
 	except Exception:
 		frappe.log_error(frappe.get_traceback(), "get_courses_for_plan: enrollment count fetch failed")
 
-	for o in offerings:
+	for o in rows:
 		asgn = asgn_map.get(o["name"], {})
 		o["evaluation_schema"] = asgn.get("evaluation_schema") or ""
 		o["grade_schema"] = asgn.get("grade_schema") or ""
@@ -454,7 +461,7 @@ def get_courses_for_plan(exam_plan, search=""):
 		else:
 			o["max_marks"] = ""
 
-	return offerings
+	return rows
 
 
 @frappe.whitelist()
@@ -479,22 +486,20 @@ def save_course_schema(exam_plan, assignments, reason=None):
 		assignments = json.loads(assignments)
 
 	changed_courses = []
-	mapped_offerings = []
+	mapped_courses = []
+	academic_term = frappe.db.get_value("Exam Plan", exam_plan, "term")
 
 	for asgn in assignments:
-		course_offering = asgn.get("course_offering")
 		course = asgn.get("course")
-		if not course_offering:
-			continue
 		if not course:
-			course = frappe.db.get_value("Course Offering", course_offering, "course_title")
+			continue
 
 		eval_schema  = asgn.get("evaluation_schema", _SKIP)
 		grade_schema = asgn.get("grade_schema",      _SKIP)
 
 		rows = frappe.db.sql(
-			"SELECT name FROM `tabCourse Schema Assignment` WHERE exam_plan=%s AND course_offering=%s LIMIT 1",
-			(exam_plan, course_offering),
+			"SELECT name FROM `tabCourse Schema Assignment` WHERE exam_plan=%s AND course=%s LIMIT 1",
+			(exam_plan, course),
 		)
 		existing = rows[0][0] if rows else None
 
@@ -524,7 +529,7 @@ def save_course_schema(exam_plan, assignments, reason=None):
 				if not new_ev and not new_gr:
 					frappe.delete_doc("Course Schema Assignment", existing, ignore_permissions=True)
 				else:
-					mapped_offerings.append(course_offering)
+					mapped_courses.append(course)
 					frappe.db.sql(
 						"""UPDATE `tabCourse Schema Assignment`
 						   SET evaluation_schema=%s, grade_schema=%s, modified=NOW(), modified_by=%s
@@ -561,14 +566,15 @@ def save_course_schema(exam_plan, assignments, reason=None):
 			if ev or gr:
 				doc = frappe.new_doc("Course Schema Assignment")
 				doc.exam_plan         = exam_plan
-				doc.course_offering    = course_offering
+				doc.course            = course
+				doc.academic_term     = academic_term
 				doc.evaluation_schema = ev
 				doc.grade_schema      = gr
 				doc.insert(ignore_permissions=True)
 				changed_courses.append(course)
-				mapped_offerings.append(course_offering)
+				mapped_courses.append(course)
 
-	_sync_course_schedules(exam_plan, mapped_offerings)
+	_sync_course_schedules(exam_plan, mapped_courses)
 	frappe.db.commit()
 
 	# ── Notification ────────────────────────────────────────────────────────
@@ -589,21 +595,22 @@ def save_course_schema(exam_plan, assignments, reason=None):
 
 
 @frappe.whitelist()
-def unmap_course_schema(exam_plan, course_offerings):
-	"""Delete Course Schema Assignment records for the given course offerings."""
+def unmap_course_schema(exam_plan, courses):
+	"""Delete Course Schema Assignment records for the given courses."""
 	import json
 
 	settings = _get_settings()
 	_check_lock(settings)
 
-	if isinstance(course_offerings, str):
-		course_offerings = json.loads(course_offerings)
+	if isinstance(courses, str):
+		courses = json.loads(courses)
 
+	selected = courses
 	courses = []
-	for course_offering in course_offerings:
+	for course in selected:
 		rows = frappe.db.sql(
-			"SELECT name, course FROM `tabCourse Schema Assignment` WHERE exam_plan=%s AND course_offering=%s",
-			(exam_plan, course_offering),
+			"SELECT name, course FROM `tabCourse Schema Assignment` WHERE exam_plan=%s AND course=%s",
+			(exam_plan, course),
 			as_dict=True,
 		)
 		for row in rows:
@@ -632,14 +639,14 @@ def unmap_course_schema(exam_plan, course_offerings):
 def sync_course_schedule_from_assignments(exam_plan):
 	"""Backfill course_schedules from all existing Course Schema Assignments for this exam plan."""
 	assignments = frappe.db.sql(
-		"SELECT DISTINCT course_offering FROM `tabCourse Schema Assignment` WHERE exam_plan=%s",
+		"SELECT DISTINCT course FROM `tabCourse Schema Assignment` WHERE exam_plan=%s",
 		(exam_plan,),
 		as_dict=True,
 	)
-	offerings = [row["course_offering"] for row in assignments if row.get("course_offering")]
-	_sync_course_schedules(exam_plan, offerings)
+	courses = [row["course"] for row in assignments if row.get("course")]
+	_sync_course_schedules(exam_plan, courses)
 	frappe.db.commit()
-	return len(offerings)
+	return len(courses)
 
 
 @frappe.whitelist()

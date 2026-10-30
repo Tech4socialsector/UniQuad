@@ -116,7 +116,7 @@ def check_phd_year_transition():
 		fields=["name", "admission_date", "programme", "academic_year"],
 	)
 
-	current_year = frappe.get_value("Academic Year", {"is_default": 1}, "name")
+	current_year = frappe.get_value("Academic Year", {"is_current_year": 1}, "name")
 
 	for student in phd_students:
 		if not student.admission_date:

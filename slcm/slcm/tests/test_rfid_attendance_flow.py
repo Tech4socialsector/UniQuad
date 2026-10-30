@@ -19,40 +19,30 @@ import unittest
 # ---------------------------------------------------------------------------
 # Test data constants — change these to match real records in your site
 # ---------------------------------------------------------------------------
-TEST_COURSE_OFFERING = None   # auto-detected from first available
+TEST_CLASS           = None   # auto-detected from first available
 TEST_STUDENT         = None   # auto-detected from first enrolled student
 TEST_RFID_UID        = "TEST-RFID-9999"
 TEST_EMP_CODE        = "TEST-RFID-9999"
 
 
 def _get_test_context():
-    """Resolve a real Course Offering and enrolled Student for testing."""
-    offering = frappe.db.get_value(
-        "Course Offering",
-        {"docstatus": ["<", 2]},
-        "name",
-    )
-    if not offering:
+    """Resolve a real Class and one of its enrolled Students for testing."""
+    from slcm.slcm.doctype.classes.classes import get_class_students
+
+    class_name = frappe.db.get_value("Classes", {}, "name", order_by="creation desc")
+    if not class_name:
         return None, None
 
-    # Find a student enrolled in this offering's cohort
-    cohort = frappe.db.get_value("Course Offering", offering, "cohort")
-    if not cohort:
-        return offering, None
-
-    enrollment = frappe.db.get_value(
-        "Student Enrollment",
-        {"cohort": cohort, "status": "Enrolled"},
-        "student",
-    )
-    return offering, enrollment
+    # A student enrolled in this class
+    students = get_class_students(class_name)
+    return class_name, (students[0].student if students else None)
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _cleanup(student, offering):
+def _cleanup(student, class_name):
     """Remove test records created during the test."""
     # Attendance Log
     for name in frappe.db.get_all(
@@ -63,10 +53,10 @@ def _cleanup(student, offering):
         frappe.delete_doc("Attendance Log", name, force=True, ignore_permissions=True)
 
     # Student Attendance
-    if student and offering:
+    if student and class_name:
         for name in frappe.db.get_all(
             "Student Attendance",
-            filters={"student": student, "source": "RFID", "course_offer": offering},
+            filters={"student": student, "source": "RFID", "class_name": class_name},
             pluck="name",
         ):
             frappe.delete_doc("Student Attendance", name, force=True, ignore_permissions=True)
@@ -76,16 +66,17 @@ def _cleanup(student, offering):
     frappe.db.commit()
 
 
-def _make_class_schedule(offering, session_date, from_time, to_time):
+def _make_class_schedule(class_name, session_date, from_time, to_time):
     """Create a minimal Time Table entry for the test."""
     from frappe.utils import time_diff_in_hours
     duration = time_diff_in_hours(to_time, from_time)
 
-    course = frappe.db.get_value("Course Offering", offering, "course_title")
+    course = frappe.db.get_value("Classes", class_name, "course")
 
     doc = frappe.get_doc({
         "doctype":       "Time Table",
-        "course_offering": offering,
+        "based_on":      "Class",
+        "class_name":    class_name,
         "course":        course,
         "schedule_date": session_date,
         "from_time":     from_time,
@@ -125,7 +116,7 @@ def test_01_processor_runs_cleanly():
         return False, str(e)
 
 
-def test_02_rfid_swipe_creates_attendance(offering=None, student=None):
+def test_02_rfid_swipe_creates_attendance(class_name=None, student=None):
     """
     RFID swipe → Attendance Log → process_pending_logs()
     → Student Attendance created with source=RFID
@@ -137,11 +128,11 @@ def test_02_rfid_swipe_creates_attendance(offering=None, student=None):
     from slcm.slcm.doctype.attendance_log.process_attendance_logs import process_pending_logs
     from frappe.utils import add_days
 
-    if not offering or not student:
-        offering, student = _get_test_context()
+    if not class_name or not student:
+        class_name, student = _get_test_context()
 
-    if not offering or not student:
-        return False, "No Course Offering or enrolled Student found in system — add test data first"
+    if not class_name or not student:
+        return False, "No Class or enrolled Student found in system — add test data first"
 
     # Use yesterday so the session is always "over" — avoids "In and Out" wait state
     session_date = add_days(today(), -1)
@@ -159,7 +150,7 @@ def test_02_rfid_swipe_creates_attendance(offering=None, student=None):
         # 1. Skip if attendance already recorded for this date (avoid duplicate error)
         existing_sa = frappe.db.exists("Student Attendance", {
             "student":        student,
-            "course_offer":   offering,
+            "class_name":   class_name,
             "attendance_date": session_date,
         })
         if existing_sa:
@@ -169,7 +160,7 @@ def test_02_rfid_swipe_creates_attendance(offering=None, student=None):
             swipe_out = f"{session_date} 09:55:00"
 
         # 2. Create Time Table entry for that date
-        cs = _make_class_schedule(offering, session_date, from_time, to_time)
+        cs = _make_class_schedule(class_name, session_date, from_time, to_time)
 
         # 3. Set RFID UID on student temporarily
         old_rfid = frappe.db.get_value("Student Master", student, "rfid_uid")
@@ -193,7 +184,7 @@ def test_02_rfid_swipe_creates_attendance(offering=None, student=None):
         # 7. Verify Student Attendance was created with source=RFID
         sa = frappe.db.get_value(
             "Student Attendance",
-            {"student": student, "source": "RFID", "course_offer": offering,
+            {"student": student, "source": "RFID", "class_name": class_name,
              "attendance_date": session_date},
             ["name", "status", "hours_counted"],
             as_dict=True,
@@ -201,7 +192,7 @@ def test_02_rfid_swipe_creates_attendance(offering=None, student=None):
         if not sa:
             return False, (
                 f"No RFID Student Attendance found for student={student}, "
-                f"course_offer={offering}, date={session_date}"
+                f"class_name={class_name}, date={session_date}"
             )
 
         if sa.status != "Present":
@@ -216,12 +207,12 @@ def test_02_rfid_swipe_creates_attendance(offering=None, student=None):
 
         # 8. Verify Attendance Summary updated
         from slcm.slcm.utils.attendance_calculator import calculate_student_attendance
-        calculate_student_attendance(student, offering)
+        calculate_student_attendance(student, class_name)
         frappe.db.commit()
 
         summary = frappe.db.get_value(
             "Attendance Summary",
-            {"student": student, "course_offering": offering},
+            {"student": student, "class_name": class_name},
             ["attendance_percentage", "attended_classes"],
             as_dict=True,
         )
@@ -250,11 +241,11 @@ def test_02_rfid_swipe_creates_attendance(offering=None, student=None):
                 except Exception:
                     pass
         # Remove RFID Student Attendance created by test
-        if student and offering:
+        if student and class_name:
             for name in frappe.db.get_all(
                 "Student Attendance",
                 filters={"student": student, "source": "RFID",
-                         "course_offer": offering, "attendance_date": session_date},
+                         "class_name": class_name, "attendance_date": session_date},
                 pluck="name",
             ):
                 try:
@@ -269,7 +260,7 @@ def test_02_rfid_swipe_creates_attendance(offering=None, student=None):
         frappe.db.commit()
 
 
-def test_03_manual_attendance_recalculates(offering=None, student=None):
+def test_03_manual_attendance_recalculates(class_name=None, student=None):
     """
     Manually saved Student Attendance (source=Manual)
     should trigger Attendance Summary recalculation.
@@ -277,11 +268,11 @@ def test_03_manual_attendance_recalculates(offering=None, student=None):
     """
     from frappe.utils import add_days
 
-    if not offering or not student:
-        offering, student = _get_test_context()
+    if not class_name or not student:
+        class_name, student = _get_test_context()
 
-    if not offering or not student:
-        return False, "No Course Offering or enrolled Student found"
+    if not class_name or not student:
+        return False, "No Class or enrolled Student found"
 
     # Pick the first past date (going back up to 10 days) with no existing record
     test_date = None
@@ -289,7 +280,7 @@ def test_03_manual_attendance_recalculates(offering=None, student=None):
         candidate = add_days(today(), -offset)
         if not frappe.db.exists("Student Attendance", {
             "student":        student,
-            "course_offer":   offering,
+            "class_name":   class_name,
             "attendance_date": candidate,
         }):
             test_date = candidate
@@ -306,7 +297,7 @@ def test_03_manual_attendance_recalculates(offering=None, student=None):
         doc = frappe.get_doc({
             "doctype":        "Student Attendance",
             "student":        student,
-            "course_offer":   offering,
+            "class_name":   class_name,
             "attendance_date": test_date,
             "date":           test_date,
             "status":         "Present",
@@ -319,11 +310,11 @@ def test_03_manual_attendance_recalculates(offering=None, student=None):
         frappe.db.commit()
 
         # Force synchronous recalc with the record present → capture "with" value
-        calculate_student_attendance(student, offering)
+        calculate_student_attendance(student, class_name)
         frappe.db.commit()
         hours_with = frappe.db.get_value(
             "Attendance Summary",
-            {"student": student, "course_offering": offering},
+            {"student": student, "class_name": class_name},
             "attended_classes",
         ) or 0
 
@@ -331,11 +322,11 @@ def test_03_manual_attendance_recalculates(offering=None, student=None):
         frappe.delete_doc("Student Attendance", sa_name, force=True, ignore_permissions=True)
         sa_name = None
         frappe.db.commit()
-        calculate_student_attendance(student, offering)
+        calculate_student_attendance(student, class_name)
         frappe.db.commit()
         hours_without = frappe.db.get_value(
             "Attendance Summary",
-            {"student": student, "course_offering": offering},
+            {"student": student, "class_name": class_name},
             "attended_classes",
         ) or 0
 
@@ -357,34 +348,34 @@ def test_03_manual_attendance_recalculates(offering=None, student=None):
             try:
                 frappe.delete_doc("Student Attendance", sa_name, force=True, ignore_permissions=True)
                 from slcm.slcm.utils.attendance_calculator import calculate_student_attendance
-                calculate_student_attendance(student, offering)
+                calculate_student_attendance(student, class_name)
                 frappe.db.commit()
             except Exception:
                 pass
 
 
-def test_04_condonation_recalculates(offering=None, student=None):
+def test_04_condonation_recalculates(class_name=None, student=None):
     """
     Submitting a condonation application should increase attendance_percentage.
     """
-    if not offering or not student:
-        offering, student = _get_test_context()
+    if not class_name or not student:
+        class_name, student = _get_test_context()
 
-    if not offering or not student:
-        return False, "No Course Offering or enrolled Student found"
+    if not class_name or not student:
+        return False, "No Class or enrolled Student found"
 
     cond_name = None
     try:
         before_pct = frappe.db.get_value(
             "Attendance Summary",
-            {"student": student, "course_offering": offering},
+            {"student": student, "class_name": class_name},
             "attendance_percentage",
         ) or 0
 
         doc = frappe.get_doc({
             "doctype":           "Student Attendance Condonation",
             "student":           student,
-            "course_offering":   offering,
+            "class_name":   class_name,
             "condonation_reason": "Medical Emergency",
             "number_of_sessions": 1,
             "number_of_hours":    1.0,
@@ -398,7 +389,7 @@ def test_04_condonation_recalculates(offering=None, student=None):
 
         after_pct = frappe.db.get_value(
             "Attendance Summary",
-            {"student": student, "course_offering": offering},
+            {"student": student, "class_name": class_name},
             "attendance_percentage",
         ) or 0
 
@@ -416,7 +407,7 @@ def test_04_condonation_recalculates(offering=None, student=None):
             try:
                 frappe.db.delete("Student Attendance Condonation", cond_name)
                 from slcm.slcm.utils.attendance_calculator import calculate_student_attendance
-                calculate_student_attendance(student, offering)
+                calculate_student_attendance(student, class_name)
                 frappe.db.commit()
             except Exception:
                 pass
@@ -427,30 +418,30 @@ def test_04_condonation_recalculates(offering=None, student=None):
 # ---------------------------------------------------------------------------
 
 @frappe.whitelist()
-def run_all(offering=None, student=None):
+def run_all(class_name=None, student=None):
     """
     Run all RFID attendance flow tests.
 
     Usage:
         bench --site slcm.local execute slcm.slcm.tests.test_rfid_attendance_flow.run_all
         bench --site slcm.local execute slcm.slcm.tests.test_rfid_attendance_flow.run_all \
-            --kwargs '{"offering": "CO-2026-001", "student": "STU-0001"}'
+            --kwargs '{"class_name": "CLS-27-1-T1-A-00001", "student": "STU-0001"}'
     """
-    if not offering or not student:
-        offering, student = _get_test_context()
+    if not class_name or not student:
+        class_name, student = _get_test_context()
 
     results = []
     tests = [
         ("T01 — Processor runs cleanly",         lambda: test_01_processor_runs_cleanly()),
-        ("T02 — RFID swipe creates attendance",  lambda: test_02_rfid_swipe_creates_attendance(offering, student)),
-        ("T03 — Manual attendance recalculates", lambda: test_03_manual_attendance_recalculates(offering, student)),
-        ("T04 — Condonation recalculates",       lambda: test_04_condonation_recalculates(offering, student)),
+        ("T02 — RFID swipe creates attendance",  lambda: test_02_rfid_swipe_creates_attendance(class_name, student)),
+        ("T03 — Manual attendance recalculates", lambda: test_03_manual_attendance_recalculates(class_name, student)),
+        ("T04 — Condonation recalculates",       lambda: test_04_condonation_recalculates(class_name, student)),
     ]
 
     print("\n" + "="*65)
     print(f"  RFID Attendance Flow Tests")
     print(f"  Student:  {student or 'NOT FOUND'}")
-    print(f"  Offering: {offering or 'NOT FOUND'}")
+    print(f"  Class: {class_name or 'NOT FOUND'}")
     print("="*65)
 
     all_passed = True
@@ -478,26 +469,26 @@ class TestRFIDAttendanceFlow(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.offering, cls.student = _get_test_context()
+        cls.class_name, cls.student = _get_test_context()
 
     def test_01_processor_runs_cleanly(self):
         passed, msg = test_01_processor_runs_cleanly()
         self.assertTrue(passed, msg)
 
     def test_02_rfid_swipe_creates_attendance(self):
-        if not self.offering or not self.student:
-            self.skipTest("No Course Offering or enrolled Student in system")
-        passed, msg = test_02_rfid_swipe_creates_attendance(self.offering, self.student)
+        if not self.class_name or not self.student:
+            self.skipTest("No Class or enrolled Student in system")
+        passed, msg = test_02_rfid_swipe_creates_attendance(self.class_name, self.student)
         self.assertTrue(passed, msg)
 
     def test_03_manual_attendance_recalculates(self):
-        if not self.offering or not self.student:
-            self.skipTest("No Course Offering or enrolled Student in system")
-        passed, msg = test_03_manual_attendance_recalculates(self.offering, self.student)
+        if not self.class_name or not self.student:
+            self.skipTest("No Class or enrolled Student in system")
+        passed, msg = test_03_manual_attendance_recalculates(self.class_name, self.student)
         self.assertTrue(passed, msg)
 
     def test_04_condonation_recalculates(self):
-        if not self.offering or not self.student:
-            self.skipTest("No Course Offering or enrolled Student in system")
-        passed, msg = test_04_condonation_recalculates(self.offering, self.student)
+        if not self.class_name or not self.student:
+            self.skipTest("No Class or enrolled Student in system")
+        passed, msg = test_04_condonation_recalculates(self.class_name, self.student)
         self.assertTrue(passed, msg)

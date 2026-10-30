@@ -1,5 +1,6 @@
 import frappe
-from frappe.utils import cint, today
+from frappe.utils import add_days, cint, flt, fmt_money, getdate, today
+from slcm.slcm.utils.exam_schedule import get_student_programme
 
 # NOTE: Frappe maps grade-appeal.html → grade_appeal.py (hyphens become
 # underscores), so this file must keep the underscore name to be loaded.
@@ -24,7 +25,7 @@ def get_context(context):
 
 	context.is_guest = False
 	context.active_page = "grade_appeal"
-	context.appeal_types = APPEAL_TYPES
+	context.appeal_types = _appeal_types()
 	context.min_reason_chars = MIN_REASON_CHARS
 	context.appeals = []
 	context.eligible_results = []
@@ -66,7 +67,7 @@ def get_context(context):
 			fields=[
 				"name", "exam_plan", "course", "appeal_type", "status",
 				"current_grade", "current_marks", "reason", "supporting_remarks",
-				"resolution", "submitted_on", "resolved_on", "creation",
+				"resolution", "submitted_on", "resolved_on", "creation", "revised_grade",
 			],
 			order_by="creation desc",
 			limit=50,
@@ -95,6 +96,8 @@ def get_context(context):
 			fields=["exam_plan", "published_on"],
 			ignore_permissions=True,
 		)
+		# Appeal window (Examination Settings): days after the result was published
+		published_plans = [p for p in published_plans if _within_window(p.published_on)]
 		show_total = {p.exam_plan: _shows_total(p.exam_plan) for p in published_plans}
 
 		eligible = []
@@ -156,31 +159,34 @@ def submit_appeal(exam_plan, course, appeal_type, reason, supporting_remarks="")
 	if len(reason) < MIN_REASON_CHARS:
 		frappe.throw(f"Please describe your reason in at least {MIN_REASON_CHARS} characters.")
 
-	if not frappe.db.exists(
+	published_on = frappe.db.get_value(
+		"Student Result Publish",
+		{"student": student_name, "exam_plan": exam_plan, "is_published": 1},
+		"published_on",
+	)
+	if published_on is None and not frappe.db.exists(
 		"Student Result Publish",
 		{"student": student_name, "exam_plan": exam_plan, "is_published": 1},
 	):
 		frappe.throw("You can only appeal results that have been published.")
+	if not _within_window(published_on):
+		frappe.throw("The appeal window for this result has closed.")
 
 	marks = frappe.db.get_value(
 		"Student Course Marks",
 		{"student": student_name, "exam_plan": exam_plan, "course": course},
-		["grade", "moderated_grade", "updated_grade", "total_marks", "updated_final_marks", "course_offering"],
+		["grade", "moderated_grade", "updated_grade", "total_marks", "updated_final_marks", "academic_term"],
 		as_dict=True,
 	)
 	if not marks:
 		frappe.throw("No published marks were found for this course.")
-
-	course_offering = _resolve_course_offering(student_name, course, marks.course_offering)
-	if not course_offering:
-		frappe.throw("This course isn't linked to a course offering yet. Please contact the Examination Office.")
 
 	doc = frappe.get_doc({
 		"doctype": "Grade Appeal",
 		"student": student_name,
 		"exam_plan": exam_plan,
 		"course": course,
-		"course_offering": course_offering,
+		"academic_term": marks.academic_term or frappe.db.get_value("Exam Plan", exam_plan, "term"),
 		"appeal_type": appeal_type,
 		"reason": reason,
 		"supporting_remarks": (supporting_remarks or "").strip(),
@@ -191,31 +197,25 @@ def submit_appeal(exam_plan, course, appeal_type, reason, supporting_remarks="")
 	})
 	doc.insert(ignore_permissions=True)  # Grade Appeal.validate() rejects active duplicates
 	frappe.db.commit()
-	return {"name": doc.name, "status": doc.status}
+	return {"name": doc.name, "status": doc.status, "fee_amount": doc.fee_amount, "fee_demand": doc.fee_demand}
 
 
-def _resolve_course_offering(student_name, course, from_marks=None):
-	"""Marks record → student's enrolment → any offering of the course."""
-	if from_marks:
-		return from_marks
-	enrollments = frappe.get_all("Student Enrollment", filters={"student": student_name}, pluck="name")
-	if enrollments:
-		co = frappe.get_all(
-			"Student Enrollment Course",
-			filters={"parent": ["in", enrollments], "parenttype": "Student Enrollment",
-					 "course": course, "course_offering": ["is", "set"]},
-			pluck="course_offering",
-			order_by="creation desc",
-			limit=1,
-			ignore_permissions=True,
-		)
-		if co:
-			return co[0]
-	co = frappe.get_all(
-		"Course Offering", filters={"course_title": course}, pluck="name",
-		order_by="creation desc", limit=1, ignore_permissions=True,
-	)
-	return co[0] if co else None
+def _appeal_types():
+	"""APPEAL_TYPES with the revaluation fee (Examination Settings) in the hint."""
+	fee = flt(frappe.db.get_single_value("Examination Settings", "revaluation_fee_per_paper"))
+	types = [dict(t) for t in APPEAL_TYPES]
+	if fee:
+		for t in types:
+			if t["value"] == "Re-evaluation":
+				t["hint"] += f" (fee {fmt_money(fee, currency='INR')}, added to your fee dues)"
+	return types
+
+
+def _within_window(published_on):
+	days = cint(frappe.db.get_single_value("Examination Settings", "appeal_window_days"))
+	if not days or not published_on:
+		return True
+	return getdate(today()) <= add_days(getdate(published_on), days)
 
 
 def _shows_total(exam_plan):
@@ -241,9 +241,9 @@ def _set_student_nav(context, student):
 	context.student_id = student.registration_id or student.name
 	context.student_photo = student.passport_size_photo or ""
 	context.student_initial = (context.student_name[0]).upper() if context.student_name else "S"
-	context.programme_name = frappe.db.get_value("Batch", student.programme, "cohort_name") or student.programme or ""
+	context.programme_name = get_student_programme(student.name)
 	context.department = student.department or ""
-	context.batch_year = student.batch_year or ""
+	context.batch_year = student.batch or ""
 
 
 def _set_nav_defaults(context):

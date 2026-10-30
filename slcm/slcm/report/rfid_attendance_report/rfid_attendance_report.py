@@ -44,10 +44,10 @@ def get_filter_options(filter_name, txt=""):
 
     elif filter_name == "programme":
         rows = frappe.db.sql("""
-            SELECT DISTINCT programme AS val
+            SELECT DISTINCT programme_of_study AS val
             FROM `tabStudent Master`
-            WHERE programme IS NOT NULL AND programme != ''
-            ORDER BY programme ASC
+            WHERE programme_of_study IS NOT NULL AND programme_of_study != ''
+            ORDER BY programme_of_study ASC
         """, as_list=True)
 
     elif filter_name == "terminal_alias":
@@ -186,7 +186,7 @@ def _build_where(filters):
     if areas:      _add_in("al.location",        areas,      "a")
     if students:   _add_in("al.student",         students,   "s")
     if acad_years: _add_in("sm.academic_year",   acad_years, "y")
-    if programmes: _add_in("sm.programme",        programmes, "p")
+    if programmes: _add_in("sm.programme_of_study",        programmes, "p")
 
     if filters.get("known_only"):
         conditions.append("(al.student IS NOT NULL AND al.student != '')")
@@ -229,7 +229,7 @@ def _get_data(filters):
             MAX(CASE
                 WHEN al.student IS NOT NULL AND al.student != ''
                 THEN sm.first_name END)                              AS student_name,
-            MAX(sm.programme)                                        AS programme,
+            MAX(sm.programme_of_study)                                        AS programme,
             MAX(sm.academic_year)                                    AS academic_year,
             MIN(al.swipe_time)                                       AS first_swipe,
             MAX(al.swipe_time)                                       AS last_swipe

@@ -10,16 +10,15 @@
   "naming_series",
   "column_break_1",
   "based_on",
-  "class_configuration",
+  "class_name",
   "office_hours_group",
   "section_break_details",
-  "term",
+  "academic_year",
+  "academic_term",
   "programme",
-  "course_offering",
   "course",
   "column_break_2",
   "instructor",
-  "course_schedule",
   "section",
   "section_break_schedule",
   "schedule_date",
@@ -51,40 +50,56 @@
    "options": "CSH-.YYYY.-\nCLS-.YYYY.-"
   },
   {
-   "depends_on": "eval: doc.based_on == \"Course Schedule\"",
-   "fieldname": "class_configuration",
+   "depends_on": "eval: doc.based_on == \"Class\" || (doc.based_on == \"Office Hours\" && doc.class_name)",
+   "description": "The class being scheduled. Its course, programme, section, faculty, academic year and term are filled in, and its students are the attendance roster. Office Hours entries take the class of their Office Hours Group.",
+   "fieldname": "class_name",
    "fieldtype": "Link",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Class Configuration",
-   "mandatory_depends_on": "eval: doc.based_on == \"Course Schedule\"",
-   "options": "Class Configuration"
+   "label": "Class",
+   "mandatory_depends_on": "eval: doc.based_on == \"Class\"",
+   "options": "Classes",
+   "read_only_depends_on": "eval: doc.based_on == \"Office Hours\"",
+   "search_index": 1
+  },
+  {
+   "fetch_from": "class_name.academic_year",
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Academic Year",
+   "options": "Academic Year",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "class_name.academic_term",
+   "fieldname": "academic_term",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Academic Term",
+   "options": "Academic Term",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_1",
    "fieldtype": "Column Break"
   },
   {
+   "fetch_from": "class_name.faculty",
+   "fetch_if_empty": 1,
    "fieldname": "instructor",
    "fieldtype": "Link",
    "label": "Faculty",
    "options": "Faculty"
   },
   {
-   "default": "Course Schedule",
+   "default": "Class",
    "fieldname": "based_on",
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Based On",
-   "options": "Course Schedule\nTime Table\nOffice Hours",
+   "options": "Class\nTime Table\nOffice Hours",
    "reqd": 1
-  },
-  {
-   "fieldname": "course_schedule",
-   "fieldtype": "Link",
-   "hidden": 1,
-   "label": "Course Schedule",
-   "options": "Course Schedule"
   },
   {
    "depends_on": "eval:doc.based_on=='Office Hours'",
@@ -100,16 +115,7 @@
    "label": "Course Details"
   },
   {
-   "fetch_from": "class_configuration.term",
-   "fieldname": "term",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Term",
-   "options": "Term Configuration"
-  },
-  {
-   "fetch_from": "class_configuration.programme",
+   "fetch_from": "class_name.programme",
    "fieldname": "programme",
    "fieldtype": "Link",
    "in_standard_filter": 1,
@@ -117,28 +123,20 @@
    "options": "Programme"
   },
   {
-   "fetch_from": "course_offering.course_title",
+   "fetch_from": "class_name.course",
    "fieldname": "course",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Course"
-  },
-  {
-   "fetch_from": "class_configuration.course_offering",
-   "fieldname": "course_offering",
    "fieldtype": "Link",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Course Offering",
-   "options": "Course Offering"
+   "label": "Course",
+   "options": "Course"
   },
   {
    "fieldname": "column_break_2",
    "fieldtype": "Column Break"
   },
   {
-   "fetch_from": "course_offering.section",
+   "fetch_from": "class_name.section",
    "fieldname": "section",
    "fieldtype": "Link",
    "label": "Section",
@@ -261,7 +259,7 @@
    "read_only": 1
   },
   {
-   "depends_on": "eval: doc.based_on == \"Course Schedule\"",
+   "depends_on": "eval: doc.based_on == \"Class\"",
    "fieldname": "class_participation_tab",
    "fieldtype": "Tab Break",
    "label": "Class Participation"
@@ -274,7 +272,7 @@
   }
  ],
  "links": [],
- "modified": "2026-10-12 12:00:00.000000",
+ "modified": "2026-10-29 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Time Table",

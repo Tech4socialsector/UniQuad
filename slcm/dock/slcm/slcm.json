@@ -20,9 +20,17 @@
    "link_to": "PACE",
    "link_type": "Sidebar",
    "title": "PACE Admission"
+  },
+  {
+   "added": 0,
+   "hidden": 0,
+   "icon": "school",
+   "link_to": "Programme Management",
+   "link_type": "Sidebar",
+   "title": "Programme Management"
   }
  ],
- "modified": "2026-10-21 17:53:31.613050",
+ "modified": "2026-10-29 13:00:00.000000",
  "modified_by": "Administrator",
  "name": "slcm",
  "owner": "Administrator",

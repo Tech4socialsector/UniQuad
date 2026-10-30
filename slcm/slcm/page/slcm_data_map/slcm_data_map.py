@@ -9,16 +9,16 @@ def get_context(context):
 def get_doctype_counts():
 	"""Return record counts for all doctypes shown in the data entry map."""
 	doctypes = [
-		"Gender", "Student Category", "Skill", "Designation", "Condonation Reason",
-		"Department", "Faculty", "Room",
+		"Gender", "Student Category", "Skill", "SLCM Designation", "Condonation Reason",
+		"SLCM Department", "Faculty", "Room",
 		"Academic Year", "Academic Term", "Academic Holiday",
-		"Course Master", "Course", "Programme", "Curriculum", "Batch",
-		"Course Offering", "Class Configuration", "Time Table",
+		"Course Master", "Course", "Programme", "SLCM Batch",
+		"Classes", "Time Table",
 		"Grading Schema", "Evaluation Schema", "Exam Assessment Type",
 		"Exam Component", "CGPA Percentage Scale",
 		"Course Schema Assignment", "Access Result Settings", "Publish Result Setting",
 		"Student Master", "Student Parent",
-		"Program Enrollment", "Student Enrollment", "Student Enrollment Course",
+		"Student Enrollment", "Student Enrollment Course",
 		"Attendance Session", "Attendance Session Student", "Student Attendance",
 		"FA MFA Application", "Student Attendance Condonation",
 		"Exam Plan", "Student Course Marks", "Student Marks Entry",

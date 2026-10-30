@@ -78,7 +78,7 @@
    "in_list_view": 1,
    "label": "Driver",
    "mandatory_depends_on": "eval:doc.card_type == 'Driver'",
-   "options": "Driver"
+   "options": "SLCM Driver"
   },
   {
    "depends_on": "eval:doc.card_type == 'Non-Faculty'",
@@ -155,7 +155,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Department",
-   "options": "Department",
+   "options": "SLCM Department",
    "read_only": 1
   },
   {
@@ -166,7 +166,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Batch",
-   "options": "Batch",
+   "options": "SLCM Batch",
    "read_only": 1
   },
   {
@@ -328,7 +328,7 @@
   }
  ],
  "links": [],
- "modified": "2026-01-30 09:19:11.643285",
+ "modified": "2026-10-19 16:30:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "ID Card Generation",

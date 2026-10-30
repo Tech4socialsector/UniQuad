@@ -140,11 +140,11 @@ class AttendanceQuickView {
 			: null;
 		this.ctrls.programme = this._link($grid, "Programme", "Programme", progFilter);
 
-		// Course Offering — restricted to faculty's visible offerings
-		const coFilter = (ctx.restricted && ctx.course_offerings && ctx.course_offerings.length)
-			? {"name": ["in", ctx.course_offerings]}
+		// Class — restricted to faculty's visible classes
+		const classFilter = (ctx.restricted && ctx.classes && ctx.classes.length)
+			? {"name": ["in", ctx.classes]}
 			: null;
-		this.ctrls.course_offering = this._link($grid, "Course / Offering", "Course Offering", coFilter);
+		this.ctrls.class_name = this._link($grid, "Class", "Classes", classFilter);
 
 		this.ctrls.from_date = this._date($grid, "From Date");
 		this.ctrls.to_date   = this._date($grid, "To Date");
@@ -211,7 +211,7 @@ class AttendanceQuickView {
 	_vals() {
 		return {
 			programme:       this.ctrls.programme.get_value(),
-			course_offering: this.ctrls.course_offering.get_value(),
+			class_name:      this.ctrls.class_name.get_value(),
 			from_date:       this.ctrls.from_date.get_value(),
 			to_date:         this.ctrls.to_date.get_value(),
 			period:          this.ctrls.period.get_value(),
@@ -230,7 +230,7 @@ class AttendanceQuickView {
 
 	_load() {
 		const f = this._vals();
-		if (!f.from_date && !f.to_date && !f.programme && !f.course_offering && !f.period) {
+		if (!f.from_date && !f.to_date && !f.programme && !f.class_name && !f.period) {
 			frappe.msgprint(__("Please select at least one filter before searching."));
 			return;
 		}
@@ -273,7 +273,7 @@ class AttendanceQuickView {
 					<div style="font-size:11px;color:var(--text-muted)">${esc(r.student)}</div>
 				</td>
 				<td>${esc(r.program || "—")}</td>
-				<td>${esc(r.course || r.course_offer || "—")}</td>
+				<td>${esc(r.course || r.class_name || "—")}</td>
 				<td>${r.attendance_date ? frappe.datetime.str_to_user(r.attendance_date) : "—"}</td>
 				<td>${esc(r.period || "—")}</td>
 				<td>${esc(r.session_type || "—")}</td>

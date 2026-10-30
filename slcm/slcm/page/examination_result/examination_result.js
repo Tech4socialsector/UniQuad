@@ -1210,16 +1210,16 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 					},
 					onchange() { d.set_value('course', ''); } },
 				{ fieldtype: 'Section Break' },
-				{ label: 'Batch',         fieldname: 'batch',         fieldtype: 'Link', options: 'Batch' },
+				{ label: 'Batch',         fieldname: 'batch',         fieldtype: 'Link', options: 'SLCM Batch' },
 				{ fieldtype: 'Section Break' },
 				{ label: 'Report Type',   fieldname: 'report_type',   fieldtype: 'Select', options: 'Bulk\nCourse Based', default: 'Bulk' },
 				{ fieldtype: 'Column Break' },
-				{ label: 'Course',        fieldname: 'course',        fieldtype: 'Link',   options: 'Course Offering', depends_on: 'eval:doc.report_type=="Course Based"',
+				{ label: 'Course',        fieldname: 'course',        fieldtype: 'Link',   options: 'Course', depends_on: 'eval:doc.report_type=="Course Based"',
 					get_query() {
-						var filters = {};
-						if (d.get_value('programme')) filters.program = d.get_value('programme');
-						if (d.get_value('trimester'))  filters.term_name = d.get_value('trimester');
-						return { filters: filters };
+						return {
+							query: 'slcm.slcm.page.examination_result.examination_result.course_link_query',
+							filters: { programme: d.get_value('programme'), trimester: d.get_value('trimester') },
+						};
 					} }
 			],
 			primary_action_label: 'Download Excel',
@@ -1230,7 +1230,7 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 				if (v.programme)     args.programme     = v.programme;
 				if (v.trimester)     args.trimester     = v.trimester;
 				if (v.batch)         args.batch         = v.batch;
-				if (v.report_type === 'Course Based' && v.course) args.course_offering = v.course;
+				if (v.report_type === 'Course Based' && v.course) args.course = v.course;
 				if (!Object.keys(args).length) {
 					frappe.msgprint('Please select at least one filter.');
 					return;
@@ -1558,7 +1558,7 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 		frappe.confirm('Sync students from Student Enrollment for this course?', function () {
 			frappe.call({
 				method: 'slcm.slcm.page.examination_result.examination_result.sync_students_from_enrollment',
-				args: { course: S.course },
+				args: { course: S.course, exam_plan: S.exam_plan || '' },
 				callback: function (r) {
 					var res = r.message || {};
 					frappe.show_alert({
@@ -1577,10 +1577,10 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 			title: 'Add Class Students',
 			fields: [
 				{
-					fieldname: 'class_config',
+					fieldname: 'class_name',
 					fieldtype: 'Link',
 					label: 'Class',
-					options: 'Class Configuration',
+					options: 'Classes',
 					reqd: 1,
 					get_query: function () {
 						return { filters: { course: S.course } };
@@ -1598,11 +1598,12 @@ frappe.pages['examination-result'].on_page_load = function (wrapper) {
 			primary_action: function (values) {
 				d.hide();
 				frappe.call({
-					method: 'slcm.slcm.page.examination_result.examination_result.sync_students_from_class_config',
+					method: 'slcm.slcm.page.examination_result.examination_result.sync_students_from_class',
 					args: {
 						course:       S.course,
-						class_config: values.class_config,
+						class_name:   values.class_name,
 						course_type:  values.course_type,
+						exam_plan:    S.exam_plan || '',
 					},
 					callback: function (r) {
 						var res = r.message || {};

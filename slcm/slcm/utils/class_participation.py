@@ -321,7 +321,7 @@ def get_student_participation(student):
 	  attended, participated, held (counts over sessions already held).
 	Uses the same group / slot rules as the faculty portal."""
 	member_rows = frappe.db.sql(
-		"""SELECT sgs.parent AS grp, sg.group_based_on, sg.week_name, sg.course_offering,
+		"""SELECT sgs.parent AS grp, sg.group_based_on, sg.week_name, sg.class_name,
 		          {checks}
 		   FROM `tabStudent Group Student` sgs
 		   JOIN `tabStudent Group` sg ON sg.name = sgs.parent
@@ -376,7 +376,7 @@ def get_student_participation(student):
 	sessions = frappe.get_all(
 		"Attendance Session",
 		filters={"class_schedule": ["in", list(tts) or [""]], "docstatus": ["<", 2]},
-		fields=["name", "class_schedule", "session_date", "session_start_time", "session_type", "course_offering"],
+		fields=["name", "class_schedule", "session_date", "session_start_time", "session_type", "class_name"],
 		order_by="session_date asc, session_start_time asc",
 	)
 	slots = _bulk_session_slots(sessions)
@@ -388,9 +388,9 @@ def get_student_participation(student):
 		fields=["attendance_session", "status"],
 		as_list=True,
 	))
-	co_names = dict(frappe.get_all(
-		"Course Offering",
-		filters={"name": ["in", list({s.course_offering for s in sessions if s.course_offering} | {r.course_offering for _, r in mine.values() if r.course_offering}) or [""]]},
+	class_course_names = dict(frappe.get_all(
+		"Classes",
+		filters={"name": ["in", list({s.class_name for s in sessions if s.class_name} | {r.class_name for _, r in mine.values() if r.class_name}) or [""]]},
 		fields=["name", "course_name"],
 		as_list=True,
 	))
@@ -438,9 +438,10 @@ def get_student_participation(student):
 			lo_hi = week_range.get(group)
 			g = groups[group] = frappe._dict(
 				group=group, kind=kind, title=member.week_name or group,
+				class_name=s.class_name or member.class_name or "",
 				# The sessions' own course (what the student actually attends);
-				# the group's Course Offering field only as a fallback
-				course_name=co_names.get(s.course_offering) or co_names.get(member.course_offering) or "",
+				# the group's Class field only as a fallback
+				course_name=class_course_names.get(s.class_name) or class_course_names.get(member.class_name) or "",
 				start_date_fmt=formatdate(lo_hi[0], "dd MMM yyyy") if lo_hi else "",
 				end_date_fmt=formatdate(lo_hi[1], "dd MMM yyyy") if lo_hi else "",
 				sessions=[], attended=0, participated=0, held=0, sort_key=str(s.session_date),
@@ -449,7 +450,7 @@ def get_student_participation(student):
 		from_fmt, to_fmt = _fmt_12h(s.session_start_time or tt.from_time), _fmt_12h(tt.to_time)
 		g.sessions.append(frappe._dict(
 			date=str(d), date_fmt=formatdate(d, "dd MMM yyyy"), weekday=d.strftime("%a"),
-			from_fmt=from_fmt, to_fmt=to_fmt, course_offering=s.course_offering or "",
+			from_fmt=from_fmt, to_fmt=to_fmt, class_name=s.class_name or "",
 			time=" – ".join(filter(None, [from_fmt, to_fmt])),
 			venue=tt.venue or "", faculty=faculty_names.get(str(tt.instructor)) or "",
 			slot_label=_("{0} Hour").format(HOURS[slot - 1]),

@@ -61,14 +61,11 @@ function show_time_table_event_details(event) {
         ["Time", `${format_time(props.from_time)} - ${format_time(props.to_time)}`],
         ["Duration", props.duration_hours ? `${props.duration_hours} hr` : "-"],
         ["Course", props.course],
-        ["Course Offering", props.course_offering],
+        ["Class", props.class_name],
         ["Faculty", props.instructor],
         ["Venue", props.venue],
     ];
 
-    if (props.based_on === "Course Schedule" && props.course_schedule) {
-        rows.push(["Course Schedule", props.course_schedule]);
-    }
     if (props.based_on === "Office Hours" && props.office_hours_group) {
         rows.push(["Office Hours Group", props.office_hours_group]);
     }

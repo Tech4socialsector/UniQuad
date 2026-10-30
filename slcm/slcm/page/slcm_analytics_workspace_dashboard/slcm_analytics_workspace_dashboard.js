@@ -71,7 +71,7 @@ const SAWD_MODULE_META = {
 	overview:    { icon: '📊', label: 'Overview',    desc: 'Institution-wide KPI summary' },
 	admission:   { icon: '🎯', label: 'Admission',   desc: 'Application pipeline & offers' },
 	students:    { icon: '🎓', label: 'Students',    desc: 'Enrollment & demographics' },
-	programme:   { icon: '📚', label: 'Programme',   desc: 'Programs, cohorts & offerings' },
+	programme:   { icon: '📚', label: 'Programme',   desc: 'Programs, cohorts & classes' },
 	attendance:  { icon: '📋', label: 'Attendance',  desc: 'Session records & trends' },
 	examination: { icon: '📝', label: 'Examination', desc: 'Exams, marks & results' },
 	fees:        { icon: '💰', label: 'Fees',        desc: 'Collection, invoices & trends' },
@@ -89,11 +89,10 @@ const SAWD_ATTENDANCE_SUBTABS = [
 	{ key: 'rfid',                 label: 'RFID Analytics',      icon: '📡', workspace: null },
 ];
 
-// Examination module: 3 inner workspace sub-tabs
+// Examination module: 2 inner workspace sub-tabs
 const SAWD_EXAM_SUBTABS = [
-	{ key: 'exam_planner',  label: 'Exam Planner',          icon: '📅', workspace: 'Exam Planner' },
+	{ key: 'examinations',  label: 'Examinations',          icon: '📅', workspace: 'Examination Management' },
 	{ key: 'transcript',    label: 'Transcript Management',  icon: '📄', workspace: 'Transcript Management' },
-	{ key: 'exam_result',   label: 'Exam Result',            icon: '🏆', workspace: 'Exam Result' },
 ];
 
 // ── Utility helpers ───────────────────────────────────────────────────────────
@@ -155,7 +154,7 @@ class SLCMWorkspaceAnalyticsDashboard {
 
 		this.filters          = { academic_year: null, term: null, program: null, cohort: null, student_status: null };
 		this.active_tab       = 'overview';
-		this.active_exam_subtab      = 'exam_planner';
+		this.active_exam_subtab      = 'examinations';
 		this.active_attendance_subtab = 'attendance_workspace';
 		this.workspace_modules = [];   // [{key, label, icon, enabled, available}, ...]
 		this._filter_options  = null;
@@ -165,7 +164,7 @@ class SLCMWorkspaceAnalyticsDashboard {
 		// Restore last-used tab/sub-tab/filters for this user, if any.
 		const saved = sawd_load_state();
 		if (saved.active_tab)              this.active_tab = saved.active_tab;
-		if (saved.active_exam_subtab)      this.active_exam_subtab = saved.active_exam_subtab;
+		if (saved.active_exam_subtab && SAWD_EXAM_SUBTABS.some(t => t.key === saved.active_exam_subtab)) this.active_exam_subtab = saved.active_exam_subtab;
 		if (saved.active_attendance_subtab) this.active_attendance_subtab = saved.active_attendance_subtab;
 		if (saved.filters)                 this.filters = { ...this.filters, ...saved.filters };
 
@@ -1396,10 +1395,9 @@ class SLCMWorkspaceAnalyticsDashboard {
 	_refresh_cohort_filter() {
 		if (!this._filter_options || !this._ms_cohort) return;
 		const ay_vals  = this._ms_ay?.get_values()   || [];
-		const prog_vals = this._ms_prog?.get_values() || [];
+		// Batches are standalone (no programme link) — filter by academic year only
 		let cohorts = this._filter_options.cohorts;
 		if (ay_vals.length)   cohorts = cohorts.filter(c => ay_vals.includes(c.academic_year));
-		if (prog_vals.length) cohorts = cohorts.filter(c => prog_vals.includes(c.program));
 		this._ms_cohort.set_options(cohorts);
 	}
 
@@ -2391,7 +2389,7 @@ class SLCMWorkspaceAnalyticsDashboard {
 			'students:gender':                { dt: 'Student Master',                 filters: f('gender') },
 			'students:cohort':                { dt: 'Student Master',                 filters: {} },
 			'students:programs_list':         { dt: 'Programme',                        filters: {} },
-			'students:cohorts_list':          { dt: 'Batch',                         filters: {} },
+			'students:cohorts_list':          { dt: 'SLCM Batch',                         filters: {} },
 			'admission:app_status':           { dt: 'Admission Application',          filters: f('status') },
 			'admission:app_program':          { dt: 'Admission Application',          filters: {} },
 			'admission:eligibility_status':   { dt: 'Admission Application',          filters: f('eligibility_status') },
@@ -2407,9 +2405,9 @@ class SLCMWorkspaceAnalyticsDashboard {
 			'examination:improvement_payment':{ dt: 'Improvement Exam Registration',  filters: f('payment_status') },
 			'examination:transcript_status':  { dt: 'Student Transcript',             filters: f('status') },
 			'programme:program_status':       { dt: 'Programme',                        filters: f('program_status') },
-			'programme:cohort_status':        { dt: 'Batch',                         filters: f('status') },
+			'programme:cohort_status':        { dt: 'SLCM Batch',                         filters: f('status') },
 			'programme:enrollment_status':    { dt: 'Student Enrollment',             filters: f('enrollment_status') },
-			'programme:offering_status':      { dt: 'Course Offering',                filters: f('status') },
+			'programme:offering_status':      { dt: 'Classes',                        filters: {} },
 			'fees:payment_status':            { dt: 'Fee Demand',                     filters: f('status') },
 			'fees:demand_type':               { dt: 'Fee Demand',                     filters: f('fee_type') },
 			'hostel:allocation_status':       { dt: 'Hostel Allocation',              filters: f('status') },

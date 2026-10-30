@@ -1,0 +1,112 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 1,
+ "autoname": "field:batch_name",
+ "creation": "2025-12-27 10:08:08.385290",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "academic_year",
+  "batch_name",
+  "batch_code",
+  "total_enrolled_count",
+  "status"
+ ],
+ "fields": [
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Academic Year",
+   "options": "Academic Year",
+   "reqd": 1
+  },
+  {
+   "default": "Planned",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "\nActive\nCompleted\nInactive\nPlanned",
+   "reqd": 1
+  },
+  {
+   "fieldname": "batch_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Batch name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "batch_code",
+   "fieldtype": "Data",
+   "in_standard_filter": 1,
+   "label": "Batch code",
+   "unique": 1
+  },
+  {
+   "default": "0",
+   "description": "Students enrolled in this batch for its academic year (dropped enrollments are not counted). Updated automatically.",
+   "fieldname": "total_enrolled_count",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Total enrolled count",
+   "read_only": 1
+  }
+ ],
+ "links": [
+  {
+   "group": "Students",
+   "link_doctype": "Student Enrollment",
+   "link_fieldname": "batch"
+  },
+  {
+   "group": "Students",
+   "link_doctype": "Student Master",
+   "link_fieldname": "batch"
+  }
+ ],
+ "modified": "2026-10-27 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "SLCM",
+ "name": "SLCM Batch",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "slcm_Student"
+  },
+  {
+   "read": 1,
+   "role": "slcm_Faculty"
+  },
+  {
+   "read": 1,
+   "role": "slcm_Programme Chair"
+  },
+  {
+   "read": 1,
+   "role": "slcm_Registrar"
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

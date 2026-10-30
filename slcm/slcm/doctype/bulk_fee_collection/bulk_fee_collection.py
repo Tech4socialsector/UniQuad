@@ -40,17 +40,15 @@ class BulkFeeCollection(Document):
 			student_totals[d.student] += flt(d.outstanding_amount)
 
 		# Step 3: optionally narrow by batch_year / programme from student master
+		# (Student Master has no batch_year field, so a Batch Year selection can't narrow here.)
 		student_filters = {"student_status": "Active", "name": ["in", list(student_totals.keys())]}
-		if self.batch_year:
-			student_filters["batch_year"] = self.batch_year
 		if self.programme:
-			# programme in Student Master is a Data field — use LIKE for partial match tolerance
-			student_filters["programme"] = ["like", f"%{self.programme}%"]
+			student_filters["programme_of_study"] = ["like", f"%{self.programme}%"]
 
 		students = frappe.get_all(
 			"Student Master",
 			filters=student_filters,
-			fields=["name", "programme"],
+			fields=["name", "programme_of_study"],
 		)
 
 		# Step 4: build child table rows
@@ -132,7 +130,7 @@ class BulkFeeCollection(Document):
 
 				student_doc = frappe.db.get_value(
 					"Student Master", row.student,
-					["first_name", "programme", "academic_year"],
+					["first_name", "programme_of_study", "academic_year"],
 					as_dict=True,
 				) or {}
 

@@ -17,6 +17,7 @@
   "assessment_configs",
   "section_break_reexam",
   "reexam_configs",
+  "reexam_result",
   "section_break_calc",
   "calc_higher_revaluation",
   "calc_higher_makeup",
@@ -85,6 +86,14 @@
    "options": "Schema Reexam Config"
   },
   {
+   "default": "Replace substituted component",
+   "description": "Replace substituted component: the student keeps their other marks and the re-exam marks take the place of the component named in Substitute For (e.g. End Term). Replace whole course total: only the re-exam rows count. Rows without Substitute For always count on their own.",
+   "fieldname": "reexam_result",
+   "fieldtype": "Select",
+   "label": "Re-exam Result",
+   "options": "Replace substituted component\nReplace whole course total"
+  },
+  {
    "fieldname": "section_break_calc",
    "fieldtype": "Section Break",
    "label": "Calculation Settings"
@@ -111,7 +120,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-02 12:15:43.031809",
+ "modified": "2026-10-29 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Evaluation Schema",

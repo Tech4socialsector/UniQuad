@@ -37,7 +37,7 @@ def get_context(context):
             "email": faculty.email or frappe.session.user,
             "phone": faculty.phone or "—",
             "designation": faculty.designation or "—",
-            "department": frappe.db.get_value("Department", faculty.department, "department_name")
+            "department": frappe.db.get_value("SLCM Department", faculty.department, "department_name")
                           if faculty.department else faculty.department or "—",
             "qualification": faculty.qualification or "—",
             "specialization": faculty.specialization or "—",
@@ -50,14 +50,16 @@ def get_context(context):
             "institution": faculty.institution or "—",
         }
 
-        # Active/Open course offerings
-        courses = frappe.get_all(
-            "Course Offering",
-            filters={"faculty": faculty_name, "status": ["in", ["Open", "Active"]]},
-            fields=["name", "course_name", "term_name", "academic_year", "credit_value"],
-            order_by="academic_year desc, term_name asc, course_name asc",
-            ignore_permissions=True,
+        # Classes of the Active academic year(s) taught by this faculty
+        from slcm.api.faculty_portal import _class_label, _get_faculty_classes
+
+        courses = _get_faculty_classes(
+            faculty_name,
+            fields=["name", "course", "course_name", "class_type", "section", "group_name",
+                    "academic_term as term_name", "academic_year", "credit as credit_value"],
         )
+        for c in courses:
+            c.course_name = _class_label(c)
         context.assigned_courses = courses
         context.total_courses = len(courses)
 

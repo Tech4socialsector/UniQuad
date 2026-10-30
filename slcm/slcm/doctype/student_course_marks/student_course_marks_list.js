@@ -261,7 +261,7 @@ function open_marks_import_dialog() {
                     </div>
                     <div style="margin-bottom:12px; display:flex; align-items:center; gap:10px;">
                         <button id="view-full-sheet" class="btn btn-default btn-sm">View Full Sheet</button>
-                        <span class="text-muted" style="font-size:11px;">Reg ID → Student | Course Code+Batch+Term → Offering | Improvement rules auto-applied</span>
+                        <span class="text-muted" style="font-size:11px;">Reg ID → Student | Course Code+Batch+Term → Class | Improvement rules auto-applied</span>
                     </div>
                     <h5 style="margin-bottom:8px;">Parsed Rows Preview</h5>
                     <div id="preview-table-wrapper" style="max-height: 250px; overflow: auto; border: 1px solid #d1d8dd; margin-bottom: 10px;">
@@ -322,12 +322,12 @@ function open_marks_import_dialog() {
                         <div id="validation-summary"></div>
                         <div style="margin-top: 15px;" id="csv-download-buttons">
                             <button id="dl-missing-courses" class="btn btn-danger btn-sm" style="display:none;">Missing Courses</button>
-                            <button id="dl-missing-offerings" class="btn btn-warning btn-sm" style="display:none;">Missing Course Offerings</button>
+                            <button id="dl-missing-classes" class="btn btn-warning btn-sm" style="display:none;">Missing Classes</button>
                             <button id="dl-missing-students" class="btn btn-danger btn-sm" style="display:none;">Missing Students</button>
                         </div>
-                        <div id="missing-offerings" style="display: none; margin-top: 15px;">
-                            <h5><span class="text-danger">Blocked</span>: Missing Course Offerings</h5>
-                            <div id="missing-offerings-table" style="max-height: 150px; overflow: auto; border: 1px solid #d1d8dd;"></div>
+                        <div id="missing-classes" style="display: none; margin-top: 15px;">
+                            <h5><span class="text-danger">Blocked</span>: Missing Classes</h5>
+                            <div id="missing-classes-table" style="max-height: 150px; overflow: auto; border: 1px solid #d1d8dd;"></div>
                         </div>
                         <div id="validation-errors" style="display: none; margin-top: 15px;">
                             <h5>Error Details</h5>
@@ -337,7 +337,7 @@ function open_marks_import_dialog() {
                                     <option value="Failed">Failed</option>
                                     <option value="Missing Student">Missing Student</option>
                                     <option value="Missing Course">Missing Course</option>
-                                    <option value="Missing Course Offering">Missing Course Offering</option>
+                                    <option value="Missing Class">Missing Class</option>
                                     <option value="Duplicate (Skip)">Duplicate (Skip)</option>
                                 </select>
                             </div>
@@ -403,7 +403,7 @@ function open_marks_import_dialog() {
                             // If fallback hit, trigger the render with the saved counts
                             frappe.call({
                                 method: 'slcm.slcm.doctype.student_course_marks.marks_bulk_import.get_errors_page',
-                                args: { import_log: import_log, page: 1, page_size: 20, status_filter: 'Missing Course Offering' },
+                                args: { import_log: import_log, page: 1, page_size: 20, status_filter: 'Missing Class' },
                                 callback: function(r2) {
                                     let missing_groups_list = [];
                                     if (r2.message && r2.message.rows) {
@@ -906,8 +906,8 @@ function open_marks_import_dialog() {
                     <div style="font-size:24px; font-weight:800; color:#dc2626;">${res.missing_course_count || 0}</div>
                 </div>
                 <div style="${cardS} background:#fff7ed; border:1px solid #fed7aa;">
-                    <div style="font-size:9px; color:#ea580c; font-weight:700; text-transform:uppercase; letter-spacing:.5px;">Miss. Offerings</div>
-                    <div style="font-size:24px; font-weight:800; color:#ea580c;">${res.missing_offering_count || 0}</div>
+                    <div style="font-size:9px; color:#ea580c; font-weight:700; text-transform:uppercase; letter-spacing:.5px;">Miss. Classes</div>
+                    <div style="font-size:24px; font-weight:800; color:#ea580c;">${res.missing_class_count || 0}</div>
                 </div>
             </div>`;
         wrapper.find('#validation-summary').html(summary);
@@ -915,29 +915,29 @@ function open_marks_import_dialog() {
         if (res.missing_course_count > 0) {
             wrapper.find('#dl-missing-courses').show().on('click', () => window.open(frappe.urllib.get_full_url('/api/method/slcm.slcm.doctype.student_course_marks.marks_bulk_import.download_missing_courses_template?import_log=' + import_log)));
         }
-        if (res.missing_offering_count > 0) {
-            wrapper.find('#dl-missing-offerings').show().on('click', () => window.open(frappe.urllib.get_full_url('/api/method/slcm.slcm.doctype.student_course_marks.marks_bulk_import.download_missing_course_offerings_template?import_log=' + import_log)));
+        if (res.missing_class_count > 0) {
+            wrapper.find('#dl-missing-classes').show().on('click', () => window.open(frappe.urllib.get_full_url('/api/method/slcm.slcm.doctype.student_course_marks.marks_bulk_import.download_missing_classes_template?import_log=' + import_log)));
         }
         if (res.missing_student_count > 0) {
             wrapper.find('#dl-missing-students').show().on('click', () => window.open(frappe.urllib.get_full_url('/api/method/slcm.slcm.doctype.student_course_marks.marks_bulk_import.download_missing_students?import_log=' + import_log)));
         }
 
-        if (res.missing_offering_groups && res.missing_offering_groups.length > 0) {
+        if (res.missing_class_groups && res.missing_class_groups.length > 0) {
             let mhtml = '<table class="table table-bordered table-condensed" style="font-size: 11px;"><thead><tr><th>Course Code</th><th>Batch</th><th>Term Name</th><th>Affected Rows</th></tr></thead><tbody>';
-            res.missing_offering_groups.forEach(g => {
+            res.missing_class_groups.forEach(g => {
                 mhtml += `<tr><td>${g.course_code}</td><td>${g.batch}</td><td>${g.term_name}</td><td>${g.affected_row_count}</td></tr>`;
             });
             mhtml += '</tbody></table>';
-            wrapper.find('#missing-offerings-table').html(mhtml);
-            wrapper.find('#missing-offerings').show();
+            wrapper.find('#missing-classes-table').html(mhtml);
+            wrapper.find('#missing-classes').show();
         }
 
-        if (res.error_count > 0 || res.missing_student_count > 0 || res.missing_course_count > 0 || res.missing_offering_count > 0 || res.skip_count > 0) {
+        if (res.error_count > 0 || res.missing_student_count > 0 || res.missing_course_count > 0 || res.missing_class_count > 0 || res.skip_count > 0) {
             wrapper.find('#validation-errors').show();
             bind_error_pagination(wrapper, '#errors-prev', '#errors-next', '#errors-page-info', '#errors-table-wrapper', '');
         }
 
-        let issues = res.error_count + res.missing_student_count + res.missing_course_count + res.missing_offering_count + res.skip_count;
+        let issues = res.error_count + res.missing_student_count + res.missing_course_count + res.missing_class_count + res.skip_count;
 
         let cb_html = `
             <div style="display: flex; justify-content: space-between; align-items: center;">

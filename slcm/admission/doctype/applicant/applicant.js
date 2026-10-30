@@ -294,8 +294,8 @@ frappe.ui.form.on("Applicant", {
     },
 
     nationality: function (frm) {
+        // Domestic applicants may hold any nationality; only International cannot be India
         if (frm.doc.foriegn_national === "Yes" && frm.doc.nationality === "India") {
-            // International candidate: Nationality cannot be India
             frappe.show_alert({ message: __("For International applications, Nationality cannot be India."), indicator: "orange" });
             frm.set_value("nationality", "");
         }

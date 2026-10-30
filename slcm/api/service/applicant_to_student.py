@@ -105,10 +105,8 @@ def _map_applicant_to_student(student, applicant, program, admission_cycle, offe
 
     # ── Department & Level of Study (derived from programme/program) ────────────────────────────
     if program:
-        program_data = frappe.db.get_value("Programme", program, ["department", "level_of_study"], as_dict=True)
+        program_data = frappe.db.get_value("Programme", program, ["level_of_study"], as_dict=True)
         if program_data:
-            if program_data.get("department"):
-                student.department = program_data.department
             if program_data.get("level_of_study"):
                 student.level_of_study = program_data.level_of_study
 
@@ -121,21 +119,22 @@ def _map_applicant_to_student(student, applicant, program, admission_cycle, offe
             student.academic_year = derived_year
 
     # ── Batch Assignment ───────────────────────────────────────────────────────
+    # A Batch is a standalone cohort (no programme / term): use the academic
+    # year's only Active batch, or the one already holding this programme's
+    # students when the year has several.
     if program and student.academic_year:
-        batch_data = frappe.db.get_value(
-            "Batch",
-            {
-                "program": program,
-                "academic_year": student.academic_year,
-                "status": "Active"
-            },
-            ["name", "academic_term"],
-            as_dict=True
+        batches = frappe.get_all(
+            "SLCM Batch",
+            filters={"academic_year": student.academic_year, "status": "Active"},
+            pluck="name",
         )
-        if batch_data:
-            student.batch = batch_data.name
-            if batch_data.academic_term:
-                student.academic_term = batch_data.academic_term
+        if len(batches) > 1:
+            batches = [
+                b for b in batches
+                if frappe.db.exists("Student Master", {"batch": b, "programme_of_study": program})
+            ]
+        if batches:
+            student.batch = batches[0]
 
     # ── Name: full candidate_name in first_name only (no split) ──────────────
     full_name = (applicant.get("candidate_name") or "").strip()

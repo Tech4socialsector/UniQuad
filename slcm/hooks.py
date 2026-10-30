@@ -10,8 +10,11 @@ app_description = "Student Life Cycle Management"
 app_email = "tech4socialsector@azimpremjifoundation.org"
 app_license = "mit"
 
-after_install = "slcm.install.after_install"
-after_migrate = "slcm.install.after_migrate"
+# The erpnext_bridge entries are no-ops on sites without ERPNext.
+after_install = ["slcm.install.after_install", "slcm.erpnext_bridge.install.after_migrate"]
+after_migrate = ["slcm.install.after_migrate", "slcm.erpnext_bridge.install.after_migrate"]
+after_app_install = "slcm.erpnext_bridge.install.after_app_install"
+before_app_uninstall = "slcm.erpnext_bridge.install.before_app_uninstall"
 # Apps
 # ------------------
 
@@ -43,6 +46,10 @@ app_include_css = []
 doctype_js = {
     "Notification": "public/js/notification_override.js",
     "Data Import": "public/js/bulk_upload_template.js",
+    # ERPNext Company form: "SLCM Fees" buttons (only loads where ERPNext provides Company)
+    "Company": "erpnext_bridge/company.js",
+    # Time Table → Create / View dialogs
+    "Classes": "public/js/class_time_table.js",
 }
 
 # Bulk-upload templates (Download / Upload buttons) on these lists
@@ -50,6 +57,8 @@ doctype_list_js = {
     "Fee Concession": "public/js/bulk_upload_template.js",
     "Fee Payment": "public/js/bulk_upload_template.js",
     "Fee Demand": "public/js/bulk_upload_template.js",
+    # Action → Enroll step-by-step wizard
+    "Student Master": "public/js/enrollment_wizard.js",
 }
 
 doctype_calendar_js = {
@@ -253,7 +262,7 @@ fixtures = [
         "filters": [["name", "in", [
             # Programme Management / Registration
             "Total Students", "Active Enrollments", "Active Programs", "Active Courses",
-            "Active Cohorts", "Open Course Offerings",
+            "Active Batches", "Active Classes",
             "Draft", "Selected", "Pending REGO", "Pending FINO", "Pending Registration",
             "Pending Print & Scan", "Pending Residences", "Pending IT",
             "Final Verification REGO", "Completed", "Re-Open",
@@ -264,9 +273,9 @@ fixtures = [
             "Total Attendance Records", "Present Count", "Absent Count", "OD Count",
             "Total Sessions", "Active Sessions", "Pending Condonations", "Pending FA / MFA",
             # Faculty
-            "Faculty My Course Offerings",
+            "Faculty My Classes",
             "Faculty Active Attendance Sessions", "Faculty Pending Condonation Requests",
-            "Faculty Open Course Offerings", "Faculty Office Hours Groups",
+            "Faculty Active Classes", "Faculty Office Hours Groups",
             # Fees Management
             "Total Fee Demands", "Pending Fee Demands", "Overdue Fee Demands",
             "Fee Receipts This Month",
@@ -285,14 +294,14 @@ fixtures = [
         "filters": [["name", "in", [
             # Programme Management / Registration
             "Student Registration Status", "Student Enrollment by Program",
-            "Cohort Status Distribution", "Course Offerings by Status",
+            "Batch Status Distribution", "Classes by Term",
             # IT Team (ID Card)
             "ID Card Status Distribution", "ID Cards Generated Over Time",
             # Attendance
             "Attendance Status Distribution", "Attendance Trend Over Time",
             "Session Type Breakdown", "FA MFA Application Status",
             # Faculty
-            "Faculty Attendance Trend", "Faculty Course Offerings by Status",
+            "Faculty Attendance Trend", "Faculty Classes by Term",
             # Fees Management
             "Demand Status Distribution", "Demands by Fee Component",
             "Monthly Fee Collection",
@@ -374,13 +383,58 @@ fixtures = [
 
 # Document Events
 doc_events = {
+    # ERPNext accounting bridge: only queues a background posting after commit, never raises,
+    # and does nothing unless ERPNext is installed and posting is enabled.
+    "Fee Payment": {
+        "on_submit": "slcm.erpnext_bridge.sync.enqueue_sync",
+        "on_cancel": "slcm.erpnext_bridge.sync.enqueue_sync",
+    },
+    "Fee Refund": {
+        "on_submit": "slcm.erpnext_bridge.sync.enqueue_sync",
+        "on_cancel": "slcm.erpnext_bridge.sync.enqueue_sync",
+    },
+    "Student Credit Note": {
+        "on_submit": "slcm.erpnext_bridge.sync.enqueue_sync",
+        "on_cancel": "slcm.erpnext_bridge.sync.enqueue_sync",
+        # "Money Received" can be completed after submit
+        "on_update_after_submit": "slcm.erpnext_bridge.sync.enqueue_sync",
+    },
+    # Excess applied to a due is recorded as an inserted row on the credit note.
+    "Credit Adjustment Row": {
+        "after_insert": "slcm.erpnext_bridge.sync.enqueue_sync",
+        "on_trash": "slcm.erpnext_bridge.sync.enqueue_sync",
+    },
+    "Stipend Payment": {
+        "on_submit": "slcm.erpnext_bridge.sync.enqueue_sync",
+        "on_cancel": "slcm.erpnext_bridge.sync.enqueue_sync",
+    },
+    # Admission, PACE and FLE money (not submittable: posted when created, reversed when deleted).
+    "Applicant Payment Receipt": {
+        "after_insert": "slcm.erpnext_bridge.sync.enqueue_sync",
+        "on_trash": "slcm.erpnext_bridge.sync.enqueue_sync",
+    },
+    "PACE Receipt": {
+        "after_insert": "slcm.erpnext_bridge.sync.enqueue_sync",
+        "on_trash": "slcm.erpnext_bridge.sync.enqueue_sync",
+    },
+    "FLE Payment Log": {
+        "after_insert": "slcm.erpnext_bridge.sync.enqueue_sync",
+    },
+    "Refund Transaction": {
+        "after_insert": "slcm.erpnext_bridge.sync.enqueue_sync",
+        "on_update": "slcm.erpnext_bridge.sync.enqueue_sync",
+    },
+    # ERPNext Company (exists only with ERPNext): validates its "SLCM Fee Accounting" section.
+    "Company": {
+        "validate": "slcm.erpnext_bridge.company.validate_company",
+    },
     "Student Master": {
         "before_save": "slcm.slcm.doctype.student_master.student_master.before_save_hook"
     },
     "Fee Structure": {
         "on_update": "slcm.slcm.doctype.student_master.student_master.on_fee_structure_update"
     },
-    "Payment Request": {
+    "SLCM Payment Request": {
         "before_save": [
             "slcm.admission.notification.utils.set_payment_request_receiver",
             "slcm.api.service.fee_service.update_payment_request_paid_on"
@@ -596,6 +650,8 @@ scheduler_events = {
 		]
 		},
     "all": [],
+	# ERPNext accounting bridge sweeper (no-op without ERPNext / when disabled)
+	"hourly_long": ["slcm.erpnext_bridge.sync.sync_pending"],
 	"hourly": [
 		"slcm.admission.events.auto_update_cycle_status",
         "slcm.admission.utils.notifications.check_and_send_offer_reminders",
@@ -621,6 +677,8 @@ scheduler_events = {
 		"slcm.slcm.doctype.student_attendance_condonation.student_attendance_condonation.auto_reject_below_attendance_floor",
 		# Background sync for settlements if webhooks fail
 		"slcm.api.sync_settlements.daily_sync_settlements",
+		# Student Academic Log — move Ongoing to the next term once a term has ended
+		"slcm.slcm.doctype.student_enrollment.student_enrollment.advance_term_status",
 	]
 }
 
@@ -747,7 +805,7 @@ permission_query_conditions = {
     # Time Table - faculty sees only their assigned groups' schedules
     "Time Table":                      "slcm.permissions.class_schedule_query_conditions",
 
-    # Attendance - faculty sees only records for their assigned Course Offerings
+    # Attendance - faculty sees only records for the classes they teach
     "Attendance Session":              "slcm.permissions.attendance_session_query_conditions",
     "Student Attendance":              "slcm.permissions.student_attendance_query_conditions",
     "Attendance Log":                  "slcm.permissions.attendance_log_query_conditions",

@@ -10,26 +10,20 @@ class StudentAttendanceTool(Document):
 	pass
 
 
-def _get_enrolled_students(course_offering):
-	"""Roster for a Course Offering, via Student Enrollment / Student Enrollment Course."""
-	if not course_offering:
+def _get_enrolled_students(class_name):
+	"""Roster for a Class: its Enrolled students."""
+	if not class_name:
 		return []
 
-	return frappe.db.sql("""
-		SELECT DISTINCT se.student, se.student_name
-		FROM `tabStudent Enrollment` se
-		JOIN `tabStudent Enrollment Course` sec ON sec.parent = se.name
-		WHERE sec.course_offering = %s
-		AND sec.status = 'Enrolled' AND se.status = 'Enrolled' AND se.docstatus = 0
-		ORDER BY se.student_name
-	""", (course_offering,), as_dict=True)
+	from slcm.slcm.doctype.classes.classes import get_class_students
+
+	return get_class_students(class_name)
 
 
 @frappe.whitelist()
 def get_student_attendance_records(
 	based_on=None,
 	date=None,
-	course_schedule=None,
 	class_schedule=None,
 	office_hours_group=None,
 ):
@@ -42,9 +36,9 @@ def get_student_attendance_records(
 	if not based_on:
 		frappe.throw(_("Based On is required"))
 
-	if based_on == "Course Schedule":
-		if not course_schedule:
-			frappe.throw(_("Course Schedule is required"))
+	# A class period (Based On "Class") is taken against its Time Table entry.
+	if based_on == "Class":
+		based_on = "Time Table"
 
 	if based_on == "Time Table":
 		if not class_schedule:
@@ -68,13 +62,12 @@ def get_student_attendance_records(
 			ORDER BY sgs.idx
 		""", (office_hours_group,), as_dict=True)
 	else:
-		course_offering = None
-		if based_on == "Course Schedule" and course_schedule:
-			course_offering = frappe.db.get_value("Course Schedule", course_schedule, "course_offering")
-		elif based_on == "Time Table" and class_schedule:
-			course_offering = frappe.db.get_value("Time Table", class_schedule, "course_offering")
+		class_name = None
+		if based_on == "Time Table" and class_schedule:
+			class_name = frappe.db.get_value("Time Table", class_schedule, "class_name")
 
-		student_list = _get_enrolled_students(course_offering)
+		# A class-based entry: exactly that class's students.
+		student_list = _get_enrolled_students(class_name)
 
 	if not student_list:
 		return []
@@ -106,9 +99,6 @@ def get_student_attendance_records(
 		)
 		.where(StudentAttendance.docstatus < 2)
 	)
-
-	if based_on == "Course Schedule":
-		query = query.where(StudentAttendance.course_schedule == course_schedule)
 
 	if based_on == "Time Table":
 		query = query.where(StudentAttendance.class_schedule == class_schedule)

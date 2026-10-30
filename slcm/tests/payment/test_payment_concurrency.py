@@ -69,7 +69,7 @@ class TestPaymentConcurrency(PaymentTestBase):
 					}
 				}
 				self.bind_webhook_request(payload)
-				with patch("frappe.get_request_header", return_value=None):
+				with patch("frappe.get_request_header", side_effect=self.sign_webhook_request):
 					res = handle_razorpay_webhook()
 				frappe.db.commit()
 				return ("webhook", res)
@@ -90,7 +90,7 @@ class TestPaymentConcurrency(PaymentTestBase):
 				self.fail(f"Concurrency thread '{name}' raised exception: {res}")
 
 		# Assert database integrity
-		receipts = frappe.get_all("Applicant Payment Receipt", filters={"applicant": self.app.name, "docstatus": 1})
+		receipts = frappe.get_all("Applicant Payment Receipt", filters={"applicant": self.app.name, "docstatus": ["<", 2]})
 		self.assertEqual(len(receipts), 1)
 
 	def test_verify_scheduler_race(self):
@@ -98,7 +98,7 @@ class TestPaymentConcurrency(PaymentTestBase):
 		# Modify Payment Request modified date to trigger cutoff
 		from frappe.utils import add_to_date
 		old_time = add_to_date(frappe.utils.now_datetime(), minutes=-20)
-		frappe.db.sql("UPDATE `tabPayment Request` SET modified = %s WHERE name = %s", (old_time, self.pr.name))
+		frappe.db.sql("UPDATE `tabSLCM Payment Request` SET modified = %s WHERE name = %s", (old_time, self.pr.name))
 		frappe.db.commit()
 
 		self.mock_razorpay(
@@ -157,14 +157,14 @@ class TestPaymentConcurrency(PaymentTestBase):
 				self.fail(f"Concurrency thread '{name}' raised exception: {res}")
 
 		# Assert database integrity
-		receipts = frappe.get_all("Applicant Payment Receipt", filters={"applicant": self.app.name, "docstatus": 1})
+		receipts = frappe.get_all("Applicant Payment Receipt", filters={"applicant": self.app.name, "docstatus": ["<", 2]})
 		self.assertEqual(len(receipts), 1)
 
 	def test_triple_race(self):
 		"""TEST 4: Triple Concurrency Race (Verify + Webhook + Scheduler)"""
 		from frappe.utils import add_to_date
 		old_time = add_to_date(frappe.utils.now_datetime(), minutes=-20)
-		frappe.db.sql("UPDATE `tabPayment Request` SET modified = %s WHERE name = %s", (old_time, self.pr.name))
+		frappe.db.sql("UPDATE `tabSLCM Payment Request` SET modified = %s WHERE name = %s", (old_time, self.pr.name))
 		frappe.db.commit()
 
 		self.mock_razorpay(
@@ -220,7 +220,7 @@ class TestPaymentConcurrency(PaymentTestBase):
 					}
 				}
 				self.bind_webhook_request(payload)
-				with patch("frappe.get_request_header", return_value=None):
+				with patch("frappe.get_request_header", side_effect=self.sign_webhook_request):
 					res = handle_razorpay_webhook()
 				frappe.db.commit()
 				return ("webhook", res)
@@ -255,7 +255,7 @@ class TestPaymentConcurrency(PaymentTestBase):
 				self.fail(f"Concurrency thread '{name}' raised exception: {res}")
 
 		# Assert database integrity
-		receipts = frappe.get_all("Applicant Payment Receipt", filters={"applicant": self.app.name, "docstatus": 1})
+		receipts = frappe.get_all("Applicant Payment Receipt", filters={"applicant": self.app.name, "docstatus": ["<", 2]})
 		self.assertEqual(len(receipts), 1)
 
 	def test_20_parallel_verifications(self):
@@ -297,5 +297,5 @@ class TestPaymentConcurrency(PaymentTestBase):
 				self.fail(f"Parallel verification worker raised exception: {res}")
 
 		# Verify exactly one receipt is generated
-		receipts = frappe.get_all("Applicant Payment Receipt", filters={"applicant": self.app.name, "docstatus": 1})
+		receipts = frappe.get_all("Applicant Payment Receipt", filters={"applicant": self.app.name, "docstatus": ["<", 2]})
 		self.assertEqual(len(receipts), 1)

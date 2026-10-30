@@ -9,9 +9,8 @@
   "based_on",
   "section",
   "class_schedule",
+  "class_name",
   "office_hours_group",
-  "course_schedule",
-  "course_offering",
   "course",
   "column_break_basic",
   "session_date",
@@ -47,16 +46,15 @@
  ],
  "fields": [
   {
-   "default": "Course Schedule",
+   "default": "Class",
    "fieldname": "based_on",
    "fieldtype": "Select",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Based On",
-   "options": "Course Schedule\nTime Table\nOffice Hours"
+   "options": "Class\nTime Table\nOffice Hours"
   },
   {
-   "fetch_from": "course_offering.section",
    "fieldname": "section",
    "fieldtype": "Link",
    "label": "Section",
@@ -70,6 +68,16 @@
    "options": "Time Table"
   },
   {
+   "description": "From the Time Table. Its students are this session's roster.",
+   "fieldname": "class_name",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Class",
+   "options": "Classes",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
    "depends_on": "eval:doc.based_on=='Office Hours'",
    "fieldname": "office_hours_group",
    "fieldtype": "Link",
@@ -77,23 +85,7 @@
    "options": "Student Group"
   },
   {
-   "fieldname": "course_schedule",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Course Schedule",
-   "options": "Course Schedule"
-  },
-  {
-   "fieldname": "course_offering",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Course Offering",
-   "options": "Course Offering"
-  },
-  {
-   "fetch_from": "course_offering.course_title",
+   "fetch_from": "class_name.course",
    "fieldname": "course",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -134,14 +126,12 @@
    "label": "Session Details"
   },
   {
-   "fetch_from": "course_schedule.instructor",
    "fieldname": "instructor",
    "fieldtype": "Link",
    "label": "Faculty",
    "options": "Faculty"
   },
   {
-   "fetch_from": "course_schedule.room",
    "fieldname": "room",
    "fieldtype": "Link",
    "label": "Room",
@@ -302,7 +292,7 @@
   }
  ],
  "links": [],
- "modified": "2026-10-12 12:00:00.000000",
+ "modified": "2026-10-29 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Attendance Session",

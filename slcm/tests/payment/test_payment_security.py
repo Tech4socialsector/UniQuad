@@ -156,11 +156,11 @@ class TestPaymentSecurity(PaymentTestBase):
 		# Send same webhook 20 times
 		for _ in range(20):
 			with patch("frappe.request.get_data", return_value=json.dumps(payload).encode("utf-8")), \
-				 patch("frappe.get_request_header", return_value=None):
+				 patch("frappe.get_request_header", side_effect=self.sign_webhook_request):
 				handle_razorpay_webhook()
 
 		# Verify exactly one receipt is generated
-		receipts = frappe.get_all("Applicant Payment Receipt", filters={"applicant": app.name, "docstatus": 1})
+		receipts = frappe.get_all("Applicant Payment Receipt", filters={"applicant": app.name, "docstatus": ["<", 2]})
 		self.assertEqual(len(receipts), 1)
 
 	def test_payment_request_ownership_attack(self):

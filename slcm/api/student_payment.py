@@ -24,6 +24,8 @@ import json as _json
 import frappe
 from frappe import _
 from frappe.utils import flt, today, getdate, add_days
+from slcm.slcm.doctype.academic_term.academic_term import get_current_term
+from slcm.slcm.doctype.student_enrollment.student_enrollment import get_current_log
 
 # ── Internal helpers ───────────────────────────────────────────────────────
 
@@ -165,7 +167,7 @@ def _create_invoice_from_sm(student_name):
         [
             "total_program_fee", "discount_amount", "scholarship_amount",
             "net_program_fee", "total_paid_amount",
-            "programme", "academic_year",
+            "programme_of_study", "academic_year",
             "first_name", "last_name",
         ],
         as_dict=True,
@@ -191,11 +193,12 @@ def _create_invoice_from_sm(student_name):
         frappe.db.get_value(
             "Student Enrollment",
             {"student": student_name, "status": "Enrolled"},
-            ["name", "academic_year", "term_name", "program"],
+            ["name", "program"],
             as_dict=True,
             order_by="creation desc",
         )
     )
+    current_log = get_current_log(enrollment.name) if enrollment else None
 
     fee_component_name = _ensure_fee_component()
 
@@ -203,9 +206,9 @@ def _create_invoice_from_sm(student_name):
     invoice = frappe.get_doc({
         "doctype":          "Fee Invoice",
         "student":          student_name,
-        "program":          (enrollment and enrollment.program) or sm.get("programme") or "",
-        "academic_year":    (enrollment and enrollment.academic_year) or sm.get("academic_year") or "",
-        "academic_term":    (enrollment and enrollment.term_name) or "",
+        "program":          (enrollment and enrollment.program) or sm.get("programme_of_study") or "",
+        "academic_year":    (current_log and current_log.academic_year) or sm.get("academic_year") or "",
+        "academic_term":    (current_log and current_log.academic_term) or get_current_term() or "",
         "enrollment":       (enrollment and enrollment.name) or "",
         "invoice_date":     today(),
         "due_date":         add_days(today(), 30),
@@ -1382,16 +1385,13 @@ def create_re_exam_payment_order(exam_plan, course):
     if existing:
         reg_name = existing.name
     else:
-        course_offering = frappe.db.get_value(
-            "Course Schema Assignment", {"exam_plan": exam_plan, "course": course}, "course_offering"
-        )
-        if not course_offering:
-            frappe.throw(_("No Course Offering found for this course/exam plan. Contact administration."))
+        if not frappe.db.exists("Course Schema Assignment", {"exam_plan": exam_plan, "course": course}):
+            frappe.throw(_("No course schema found for this course/exam plan. Contact administration."))
         doc = frappe.new_doc("Re Exam Registration")
         doc.student         = student_name
         doc.exam_plan       = exam_plan
         doc.course          = course
-        doc.course_offering = course_offering
+        doc.academic_term = frappe.db.get_value("Exam Plan", exam_plan, "term")
         doc.re_exam_fee     = fee_amount
         doc.status          = "Registered"
         doc.payment_status  = "Pending"
@@ -1694,16 +1694,13 @@ def create_improvement_exam_payment_order(exam_plan, course):
             if current_count >= int(setting["registration_limit"]):
                 frappe.throw(_("Registration limit has been reached for this improvement exam."))
 
-        course_offering = frappe.db.get_value(
-            "Course Schema Assignment", {"exam_plan": exam_plan, "course": course}, "course_offering"
-        )
-        if not course_offering:
-            frappe.throw(_("No Course Offering found for this course/exam plan. Contact administration."))
+        if not frappe.db.exists("Course Schema Assignment", {"exam_plan": exam_plan, "course": course}):
+            frappe.throw(_("No course schema found for this course/exam plan. Contact administration."))
         doc = frappe.new_doc("Improvement Exam Registration")
         doc.student          = student_name
         doc.exam_plan        = exam_plan
         doc.course           = course
-        doc.course_offering  = course_offering
+        doc.academic_term  = frappe.db.get_value("Exam Plan", exam_plan, "term")
         doc.improvement_fee  = fee_amount
         doc.status           = "Registered"
         doc.payment_status   = "Pending"
@@ -2383,16 +2380,13 @@ def register_re_exam_for_cash(exam_plan, course):
         return {"status": "already_registered", "registration_name": existing.name}
 
     fee_amount = flt(setting.get("re_exam_fee") or 0)
-    course_offering = frappe.db.get_value(
-        "Course Schema Assignment", {"exam_plan": exam_plan, "course": course}, "course_offering"
-    )
-    if not course_offering:
-        frappe.throw(_("No Course Offering found for this course/exam plan. Contact administration."))
+    if not frappe.db.exists("Course Schema Assignment", {"exam_plan": exam_plan, "course": course}):
+        frappe.throw(_("No course schema found for this course/exam plan. Contact administration."))
     doc = frappe.new_doc("Re Exam Registration")
     doc.student        = student_name
     doc.exam_plan      = exam_plan
     doc.course         = course
-    doc.course_offering = course_offering
+    doc.academic_term = frappe.db.get_value("Exam Plan", exam_plan, "term")
     doc.re_exam_fee    = fee_amount
     doc.status         = "Registered"
     doc.payment_status = "Pending"

@@ -1,10 +1,11 @@
 import frappe
 from datetime import timedelta, date, datetime
 import calendar
+from slcm.slcm.utils.exam_schedule import get_student_programme
 
 no_cache = 1
 
-# Palette – one colour per enrolled course_offering (cycles if > 10)
+# Palette – one colour per enrolled class (cycles if > 10)
 _PALETTE = [
     "#920c24", "#3b82f6", "#10b981", "#6b091a", "#8b5cf6",
     "#ec4899", "#06b6d4", "#84cc16", "#b5364a", "#6366f1",
@@ -129,14 +130,11 @@ def get_context(context):
         context.to_date_iso = str(week_end)
 
 
-        # ── Enrolled course offerings ─────────────────────────────
-        att_summaries = frappe.get_all(
-            "Attendance Summary",
-            filters={"student": student_name},
-            fields=["course_offering", "course"],
-            ignore_permissions=True,
-        )
-        enrolled_co_set = {s.course_offering for s in att_summaries if s.course_offering}
+        # ── Classes the student is enrolled in ────────────────────
+        # (`?course=` carries a Classes name — the Course filter's value)
+        from slcm.api.student_portal import _student_class_names
+
+        enrolled_co_set = _student_class_names(student_name)
 
         # Build colour map (stable order → stable colours)
         color_map = {}
@@ -147,16 +145,16 @@ def get_context(context):
         raw_schedules = []
         if enrolled_co_set:
             filters = [
-                ["course_offering", "in", list(enrolled_co_set)],
+                ["class_name", "in", list(enrolled_co_set)],
                 ["schedule_date", "between", [str(week_start), str(week_end)]],
             ]
             if course_param and course_param != "all":
-                filters.append(["course_offering", "=", course_param])
+                filters.append(["class_name", "=", course_param])
 
             raw_schedules = frappe.get_all(
                 "Time Table",
                 filters=filters,
-                fields=["name", "course", "course_offering", "instructor",
+                fields=["name", "course", "class_name", "instructor",
                         "schedule_date", "from_time", "to_time", "duration_hours",
                         "venue", "title", "color"],
                 order_by="schedule_date asc, from_time asc",
@@ -166,18 +164,18 @@ def get_context(context):
             # ── Also handle weekly-repeating parent schedules ─────
             try:
                 rec_filters = [
-                    ["course_offering", "in", list(enrolled_co_set)],
+                    ["class_name", "in", list(enrolled_co_set)],
                     ["repeat_frequency", "=", "Weekly"],
                     ["schedule_date", "<=", str(week_end)],
                     ["parent_schedule", "is", "not set"],
                 ]
                 if course_param and course_param != "all":
-                    rec_filters.append(["course_offering", "=", course_param])
+                    rec_filters.append(["class_name", "=", course_param])
 
                 recurring = frappe.get_all(
                     "Time Table",
                     filters=rec_filters,
-                    fields=["name", "course", "course_offering", "instructor",
+                    fields=["name", "course", "class_name", "instructor",
                             "schedule_date", "from_time", "to_time", "duration_hours",
                             "venue", "title", "color", "repeats_till"],
                     ignore_permissions=True,
@@ -191,7 +189,7 @@ def get_context(context):
                             if not till or curr <= till:
                                 already = any(
                                     frappe.utils.getdate(s.schedule_date) == curr
-                                    and s.course_offering == r.course_offering
+                                    and s.class_name == r.class_name
                                     and str(s.from_time) == str(r.from_time)
                                     for s in raw_schedules
                                 )
@@ -205,13 +203,12 @@ def get_context(context):
                 pass
 
         # ── Enrich with course display names ──────────────────────
-        co_names = {s.course_offering for s in raw_schedules if s.course_offering}
         co_info_map = {}
         if enrolled_co_set:
             rows = frappe.get_all(
-                "Course Offering",
+                "Classes",
                 filters={"name": ["in", list(enrolled_co_set)]},
-                fields=["name", "course_name", "faculty"],
+                fields=["name", "course_name", "faculty_name as faculty"],
                 ignore_permissions=True,
             )
             co_info_map = {r.name: r for r in rows}
@@ -241,12 +238,12 @@ def get_context(context):
             d_str = str(d)
             if d_str not in schedules_by_day:
                 continue
-            co   = co_info_map.get(s.course_offering, frappe._dict())
+            co   = co_info_map.get(s.class_name, frappe._dict())
             name = (
                 co.get("course_name")
                 or s.get("title")
                 or s.course
-                or s.course_offering
+                or s.class_name
                 or "—"
             )
             
@@ -265,11 +262,11 @@ def get_context(context):
                 height_px = max(20, duration_mins)
                 to_str = _fmt_parsed(eh, em)
             
-            course_code = s.course or s.course_offering
+            course_code = s.course or s.class_name
 
             schedules_by_day[d_str].append({
                 "name":           s.name,
-                "course_offering": s.course_offering or "",
+                "class_name":     s.class_name or "",
                 "course":         course_code,
                 "course_name":    name,
                 "instructor":     faculty_names.get(s.instructor) or s.instructor or co.get("faculty") or "—",
@@ -278,7 +275,7 @@ def get_context(context):
                 "top_px":         top_px,
                 "height_px":      height_px,
                 "venue":          s.venue or "—",
-                "color":          color_map.get(s.course_offering) or s.color or _PALETTE[0],
+                "color":          color_map.get(s.class_name) or s.color or _PALETTE[0],
             })
 
         # ── Clustering for Overlap ─────────────────────────────────
@@ -411,12 +408,9 @@ def _set_student_nav(context, student):
     context.student_id      = student.registration_id or student.name
     context.student_photo   = student.passport_size_photo or ""
     context.student_initial = context.student_name[0].upper() if context.student_name else "S"
-    context.programme_name  = (
-        frappe.db.get_value("Batch", student.programme, "cohort_name")
-        or student.programme or ""
-    )
+    context.programme_name  = get_student_programme(student.name)
     context.department = student.department or ""
-    context.batch_year = student.batch_year or ""
+    context.batch_year = student.batch or ""
     context.official_email_id = student.official_email_id or ""
     context.personal_email    = student.personal_email or ""
 

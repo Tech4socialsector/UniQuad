@@ -127,8 +127,8 @@ class AttendanceSession(Document):
 					"student": student_id,
 					"attendance_session": self.name,
 					"class_schedule": self.class_schedule,
-					"course_schedule": self.course_schedule,
-					"course_offer": self.course_offering,
+					"class_name": self.get_class_name(),
+					"course": self.course,
 					"attendance_date": self.session_date,
 					"date": self.session_date,
 					"session_type": self.session_type,
@@ -158,10 +158,19 @@ class AttendanceSession(Document):
 			return frappe.db.get_value("Time Table", tt.parent_schedule, "office_hours_group")
 		return None
 
+	def get_class_name(self):
+		"""Class of this session - its own field, else its Time Table's
+		(sessions created before the field existed)."""
+		if self.class_name:
+			return self.class_name
+		if self.class_schedule:
+			return frappe.db.get_value("Time Table", self.class_schedule, "class_name")
+		return None
+
 	def get_enrolled_students(self):
 		"""Expected roster: the OH Student Group's students for an Office Hour
 		session (OH attendance is kept separate from the class roster), else
-		the students enrolled in this Course Offering."""
+		the Class's students."""
 		if self.session_type == "Office Hour":
 			group = self.get_oh_group()
 			if group and frappe.db.exists("Student Group", group):
@@ -173,20 +182,13 @@ class AttendanceSession(Document):
 				)
 			return []
 
-		if not self.course_offering:
-			return []
+		class_name = self.get_class_name()
+		if class_name:
+			from slcm.slcm.doctype.classes.classes import get_class_students
 
-		students = frappe.db.sql("""
-			SELECT DISTINCT se.student
-			FROM `tabStudent Enrollment` se
-			JOIN `tabStudent Enrollment Course` sec ON sec.parent = se.name
-			WHERE sec.course_offering = %s
-			AND sec.status = 'Enrolled'
-			AND se.status = 'Enrolled'
-			AND se.docstatus = 0
-		""", (self.course_offering,), as_dict=True)
-		
-		return [s.student for s in students]
+			return [s.student for s in get_class_students(class_name)]
+
+		return []
 
 	def update_student_attendance_status(self):
 		"""Lock attendance records on submit"""
@@ -202,9 +204,10 @@ class AttendanceSession(Document):
 		students = [row.student for row in (self.students or []) if row.student]
 		if not students:
 			students = self.get_enrolled_students()
-		if self.course_offering:
+		class_name = self.get_class_name()
+		if class_name:
 			for student_id in students:
-				calculate_student_attendance(student_id, self.course_offering)
+				calculate_student_attendance(student_id, class_name)
 
 	def before_save(self):
 		"""Calculate summary before saving"""
@@ -255,7 +258,7 @@ class AttendanceSession(Document):
 			if (manually_marked > 0 or rfid_marked > 0) and self.session_status == "Scheduled":
 				self.session_status = "Conducted"
 
-		# Roster: enrolled students for this Course Offering, plus any student
+		# Roster: enrolled students of this Class, plus any student
 		# who already has a real Student Attendance record for this session
 		# (covers manually-added students outside the official enrollment list).
 		roster = set(self.get_enrolled_students())
@@ -337,7 +340,7 @@ def mark_session_conducted(session_name):
 
 
 @frappe.whitelist()
-def get_pending_sessions(instructor=None, course_offering=None):
+def get_pending_sessions(instructor=None, class_name=None):
 	"""Get sessions where attendance is not yet marked"""
 	filters = {
 		"session_status": ["in", ["Scheduled", "Conducted"]],
@@ -347,8 +350,8 @@ def get_pending_sessions(instructor=None, course_offering=None):
 	if instructor:
 		filters["instructor"] = instructor
 	
-	if course_offering:
-		filters["course_offering"] = course_offering
+	if class_name:
+		filters["class_name"] = class_name
 	
 	return frappe.get_all(
 		"Attendance Session",
@@ -371,7 +374,7 @@ def fetch_students_for_session(session_name):
 
 
 @frappe.whitelist()
-def update_attendance_summary_realtime(session_name, course_offering, duration_hours):
+def update_attendance_summary_realtime(session_name, class_name, duration_hours):
 	"""
 	Update Attendance Summary in real-time when Attendance Session times change.
 	Called from client-side JavaScript without requiring a full save.
@@ -384,22 +387,27 @@ def update_attendance_summary_realtime(session_name, course_offering, duration_h
 
 		_check_instructor_or_admin(frappe.get_doc("Attendance Session", session_name))
 
-		# Trigger attendance recalculation for all students in this course offering
+		# Trigger attendance recalculation for all students in this class
 		from slcm.slcm.utils.attendance_calculator import calculate_student_attendance
-		
-		# Get all students who have attendance records for this course offering
+
+		if not class_name:
+			class_name = frappe.get_doc("Attendance Session", session_name).get_class_name()
+		if not class_name:
+			return {"success": False, "message": "Attendance Session has no Class"}
+
+		# Get all students who have attendance records for this class
 		students = frappe.db.sql("""
 			SELECT DISTINCT student
 			FROM `tabStudent Attendance`
-			WHERE course_offer = %s
-		""", course_offering, as_dict=True)
+			WHERE class_name = %s
+		""", class_name, as_dict=True)
 		
 		students_updated = 0
 		
 		# Recalculate attendance for each student
 		for student_row in students:
 			try:
-				calculate_student_attendance(student_row.student, course_offering)
+				calculate_student_attendance(student_row.student, class_name)
 				students_updated += 1
 			except Exception as student_error:
 				frappe.log_error(

@@ -252,7 +252,7 @@
    "fieldname": "programme",
    "fieldtype": "Link",
    "label": "Batch",
-   "options": "Batch",
+   "options": "SLCM Batch",
    "read_only": 1
   },
   {
@@ -270,7 +270,6 @@
   },
   {
    "depends_on": "eval:doc.student",
-   "fetch_from": "programme.program",
    "fieldname": "batch",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -470,7 +469,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-13 09:13:47.116073",
+ "modified": "2026-10-27 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Venue Booking",

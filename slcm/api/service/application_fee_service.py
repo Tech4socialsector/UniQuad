@@ -136,6 +136,7 @@ def get_or_create_application_fee_component():
 	comp = frappe.new_doc("Fee Component")
 	comp.component_name = "Application Fee"
 	comp.component_type = "Other"
+	comp.demand_type = "Non Academic"
 	comp.amount = 0
 	comp.insert(ignore_permissions=True)
 	return comp.name

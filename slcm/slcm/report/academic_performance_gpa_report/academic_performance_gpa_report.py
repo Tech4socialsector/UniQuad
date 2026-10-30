@@ -33,9 +33,9 @@ def get_data(filters):
     if filters.get("student"):
         conditions += " AND srp.student = %(student)s"
     if filters.get("programme"):
-        conditions += " AND sm.programme = %(programme)s"
+        conditions += " AND sm.programme_of_study = %(programme)s"
     if filters.get("batch_year"):
-        conditions += " AND sm.batch_year = %(batch_year)s"
+        conditions += " AND sm.batch = %(batch_year)s"
     if filters.get("is_published"):
         conditions += " AND srp.is_published = 1"
 
@@ -45,8 +45,8 @@ def get_data(filters):
         SELECT
             srp.student,
             sm.student_name,
-            COALESCE(sm.programme, '') AS programme,
-            COALESCE(sm.batch_year, '') AS batch_year,
+            COALESCE(sm.programme_of_study, '') AS programme,
+            COALESCE(sm.batch, '') AS batch_year,
             srp.exam_plan,
             srp.term_gpa,
             srp.term_percentage,

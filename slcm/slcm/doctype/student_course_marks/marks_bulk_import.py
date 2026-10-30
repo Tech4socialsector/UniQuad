@@ -296,7 +296,7 @@ def _run_validation_job_impl(import_log, retry_mode=None, triggering_user=None):
         pass  # No status filter — re-check ALL rows
     elif retry_mode:
         filters["status"] = ["in", ["Failed", "Missing Student", "Missing Course",
-                                    "Missing Course Offering", "Duplicate (Skip)"]]
+                                    "Missing Class", "Duplicate (Skip)"]]
     else:
         filters["status"] = "Pending"
 
@@ -350,25 +350,25 @@ def _run_validation_job_impl(import_log, retry_mode=None, triggering_user=None):
                     fields=["name"]):
                 courses_map[c.name] = c.name
 
-    # ── P2: Bulk DB query 3 — All Course Offerings ───────────────────────────
-    # Load ALL offerings once; build a (course_title, cohort, term_name) → name map
-    offerings_map = {}  # (course_title, cohort, term_name) → offering.name
-    for off in frappe.get_all("Course Offering",
-            fields=["name", "course_title", "cohort", "term_name"]):
-        key = (off.course_title, off.cohort, off.term_name)
-        offerings_map[key] = off.name
+    # ── P2: Bulk DB query 3 — All Classes (course taught to a batch in a term) ─
+    # Load ALL classes once; build a (course, batch, term) → academic_term map
+    terms_map = {}  # (course, batch, academic_term / term label) → academic_term
+    for cl in _get_batch_classes():
+        terms_map[(cl.course, cl.batch, cl.academic_term)] = cl.academic_term
+        if cl.term_label:
+            terms_map[(cl.course, cl.batch, cl.term_label)] = cl.academic_term
 
     # ── P2: Bulk DB query 4 — Existing marks (duplicate check) ───────────────
     all_student_names = list(set(students_map.values()))
-    existing_marks = set()  # set of (student.name, course_offering.name)
+    existing_marks = set()  # set of (student.name, course, academic_term)
     if all_student_names:
         for mk in frappe.get_all("Student Course Marks",
                 filters={"student": ["in", all_student_names]},
-                fields=["student", "course_offering"]):
-            existing_marks.add((mk.student, mk.course_offering))
+                fields=["student", "course", "academic_term"]):
+            existing_marks.add((mk.student, mk.course, mk.academic_term))
 
     # ── Validation loop — now O(1) dict lookups per row ──────────────────────
-    missing_offering_groups = {}
+    missing_class_groups = {}
     updates = {}
 
     for i, item in enumerate(all_items):
@@ -394,20 +394,20 @@ def _run_validation_job_impl(import_log, retry_mode=None, triggering_user=None):
                 status = "Missing Course"
                 error_reason = f"Course Code '{course_code}' does not exist in Course master"
 
-        # 3. Course Offering check
+        # 3. Class check (the course must be taught to the batch in the term)
+        academic_term = None
         if not error_reason:
-            offering_key = (course_name, batch, term_name)
-            course_offering = offerings_map.get(offering_key)
-            if not course_offering:
+            academic_term = terms_map.get((course_name, batch, term_name))
+            if not academic_term:
                 group_key = (course_code, batch, term_name)
-                missing_offering_groups[group_key] = missing_offering_groups.get(group_key, 0) + 1
-                status = "Missing Course Offering"
-                error_reason = (f"No Course Offering for Course '{course_code}', "
+                missing_class_groups[group_key] = missing_class_groups.get(group_key, 0) + 1
+                status = "Missing Class"
+                error_reason = (f"No Class for Course '{course_code}', "
                                 f"Batch '{batch}', Term '{term_name}'")
 
         # 4. Duplicate check
-        if not error_reason and student and course_offering:
-            if (student, course_offering) in existing_marks:
+        if not error_reason and student and academic_term:
+            if (student, course_name, academic_term) in existing_marks:
                 status = "Duplicate (Skip)"
                 error_reason = "Student Course Marks already exists for this combination"
 
@@ -429,11 +429,11 @@ def _run_validation_job_impl(import_log, retry_mode=None, triggering_user=None):
                 "percent": pct
             }, user=triggering_user)
 
-    # Build missing offering groups list from accumulated dict
+    # Build missing class groups list from accumulated dict
     missing_groups_list = [
         {"course_code": k[0], "batch": k[1], "term_name": k[2],
          "affected_row_count": v}
-        for k, v in missing_offering_groups.items()
+        for k, v in missing_class_groups.items()
     ]
     # Merge with any pre-existing groups from DB (if this is a partial revalidate)
     _publish_validation_complete(import_log, triggering_user,
@@ -447,13 +447,13 @@ def _publish_validation_complete(import_log, triggering_user, extra_missing_grou
     skip_count           = frappe.db.count("Marks Import Log Detail", {"import_log": import_log, "status": "Duplicate (Skip)"})
     missing_student_count = frappe.db.count("Marks Import Log Detail", {"import_log": import_log, "status": "Missing Student"})
     missing_course_count  = frappe.db.count("Marks Import Log Detail", {"import_log": import_log, "status": "Missing Course"})
-    missing_off_count     = frappe.db.count("Marks Import Log Detail", {"import_log": import_log, "status": "Missing Course Offering"})
+    missing_off_count     = frappe.db.count("Marks Import Log Detail", {"import_log": import_log, "status": "Missing Class"})
 
     missing_groups_list = extra_missing_groups or []
     if not missing_groups_list and missing_off_count > 0:
         # Rebuild from DB for display
         missing_offs = frappe.get_all("Marks Import Log Detail",
-            {"import_log": import_log, "status": "Missing Course Offering"},
+            {"import_log": import_log, "status": "Missing Class"},
             ["course_code", "term_name", "raw_row_json"])
         groups = {}
         for m in missing_offs:
@@ -481,8 +481,8 @@ def _publish_validation_complete(import_log, triggering_user, extra_missing_grou
         "skip_count": skip_count,
         "missing_student_count": missing_student_count,
         "missing_course_count": missing_course_count,
-        "missing_offering_count": missing_off_count,
-        "missing_offering_groups": missing_groups_list
+        "missing_class_count": missing_off_count,
+        "missing_class_groups": missing_groups_list
     }
     frappe.publish_realtime("marks_validation_complete",
         {"import_log": import_log, **summary}, user=triggering_user)
@@ -497,19 +497,19 @@ def get_validation_summary(import_log):
     skip_count = frappe.db.count("Marks Import Log Detail", {"import_log": import_log, "status": "Duplicate (Skip)"})
     missing_student_count = frappe.db.count("Marks Import Log Detail", {"import_log": import_log, "status": "Missing Student"})
     missing_course_count = frappe.db.count("Marks Import Log Detail", {"import_log": import_log, "status": "Missing Course"})
-    missing_off_count = frappe.db.count("Marks Import Log Detail", {"import_log": import_log, "status": "Missing Course Offering"})
+    missing_off_count = frappe.db.count("Marks Import Log Detail", {"import_log": import_log, "status": "Missing Class"})
     
-    missing_offering_groups = {}
-    missing_offs = frappe.get_all("Marks Import Log Detail", {"import_log": import_log, "status": "Missing Course Offering"}, ["course_code", "term_name", "raw_row_json"])
+    missing_class_groups = {}
+    missing_offs = frappe.get_all("Marks Import Log Detail", {"import_log": import_log, "status": "Missing Class"}, ["course_code", "term_name", "raw_row_json"])
     for m in missing_offs:
         r = json.loads(m.raw_row_json) if m.raw_row_json else {}
         b = r.get("Batch Year", "")
         k = (m.course_code, b, m.term_name)
-        if k not in missing_offering_groups:
-            missing_offering_groups[k] = 0
-        missing_offering_groups[k] += 1
+        if k not in missing_class_groups:
+            missing_class_groups[k] = 0
+        missing_class_groups[k] += 1
 
-    missing_groups_list = [{"course_code": k[0], "batch": k[1], "term_name": k[2], "affected_row_count": v} for k, v in missing_offering_groups.items()]
+    missing_groups_list = [{"course_code": k[0], "batch": k[1], "term_name": k[2], "affected_row_count": v} for k, v in missing_class_groups.items()]
 
     return {
         "import_log": import_log,
@@ -518,8 +518,8 @@ def get_validation_summary(import_log):
         "skip_count": skip_count,
         "missing_student_count": missing_student_count,
         "missing_course_count": missing_course_count,
-        "missing_offering_count": missing_off_count,
-        "missing_offering_groups": missing_groups_list
+        "missing_class_count": missing_off_count,
+        "missing_class_groups": missing_groups_list
     }
 
 @frappe.whitelist()
@@ -541,7 +541,7 @@ def start_bulk_import(import_log, skip_blocked=True):
 def retry_failed_rows(import_log):
     """Re-validate then re-import only failed/missing rows."""
     try:
-        retry_statuses = ["Failed", "Missing Student", "Missing Course", "Missing Course Offering"]
+        retry_statuses = ["Failed", "Missing Student", "Missing Course", "Missing Class"]
         detail_names = frappe.get_all("Marks Import Log Detail",
             filters={"import_log": import_log, "status": ["in", retry_statuses]},
             pluck="name")
@@ -619,17 +619,17 @@ def _process_import_impl(import_log_name, retry_scope=None, triggering_user=None
         
         try:
             student = resolve_student(reg_id)
-            course_offering = resolve_course_offering(course_code, batch, term_name)
-            
+            academic_term = resolve_academic_term(course_code, batch, term_name)
+
             course_name = frappe.db.get_value("Course", {"course_code": course_code}, "name")
             if not course_name:
                 course_name = frappe.db.get_value("Course", {"name": course_code}, "name")
-                
+
             doc = frappe.new_doc("Student Course Marks")
             doc.student = student
             doc.student_id = reg_id
-            doc.course_offering = course_offering
             doc.course = course_name or course_code
+            doc.academic_term = academic_term
             doc.exam_plan = log.exam_plan
             doc.evaluation_schema = log.evaluation_schema
             doc.status = "Submitted"
@@ -668,6 +668,7 @@ def _process_import_impl(import_log_name, retry_scope=None, triggering_user=None
                 })
             
             doc.flags.ignore_permissions = True
+            doc.flags.keep_imported_result = True  # don't recalculate imported totals / grades
             doc.insert()
             
             detail.db_set("status", "Success")
@@ -692,7 +693,7 @@ def _process_import_impl(import_log_name, retry_scope=None, triggering_user=None
     failed_count = frappe.db.count("Marks Import Log Detail", {"import_log": import_log_name, "status": "Failed"})
     missing_student = frappe.db.count("Marks Import Log Detail", {"import_log": import_log_name, "status": "Missing Student"})
     missing_course = frappe.db.count("Marks Import Log Detail", {"import_log": import_log_name, "status": "Missing Course"})
-    missing_off_count = frappe.db.count("Marks Import Log Detail", {"import_log": import_log_name, "status": "Missing Course Offering"})
+    missing_off_count = frappe.db.count("Marks Import Log Detail", {"import_log": import_log_name, "status": "Missing Class"})
     skipped_count = frappe.db.count("Marks Import Log Detail", {"import_log": import_log_name, "status": "Duplicate (Skip)"})
     
     total_failed = failed_count + missing_student + missing_course + missing_off_count
@@ -715,7 +716,7 @@ def _process_import_impl(import_log_name, retry_scope=None, triggering_user=None
             f"    Row errors       : {failed_count}",
             f"    Missing students : {missing_student}",
             f"    Missing courses  : {missing_course}",
-            f"    Missing offerings: {missing_off_count}",
+            f"    Missing classes  : {missing_off_count}",
             f"  Skipped (dupes)    : {skipped_count}",
             "Open the Marks Import Log to view per-row error details.",
         ]
@@ -785,19 +786,47 @@ def resolve_student(registration_id):
     if not registration_id: return None
     return frappe.db.get_value("Student Master", {"registration_id": registration_id}, "name")
 
-def resolve_course_offering(course_code, batch, term_name):
+def resolve_academic_term(course_code, batch, term_name):
+    """Academic Term of the Class that taught the course to the batch in the
+    given term (term_name may be the Academic Term name or its label)."""
     if not (course_code and batch and term_name): return None
     course_name = frappe.db.get_value("Course", {"course_code": course_code}, "name")
     if not course_name:
         course_name = frappe.db.get_value("Course", {"name": course_code}, "name")
-    
+
     if not course_name: return None
-    
-    return frappe.db.get_value("Course Offering", {
-        "course_title": course_name,
-        "cohort": batch,
-        "term_name": term_name
-    }, "name")
+
+    # latest academic year first, matching the validation map's precedence
+    for cl in reversed(_get_batch_classes(course=course_name, batch=batch)):
+        if term_name in (cl.academic_term, cl.term_label):
+            return cl.academic_term
+    return None
+
+
+def _get_batch_classes(course=None, batch=None):
+    """(course, academic_term) of Classes with the Batch they serve. A class
+    serves a batch when one of its enrolled students' Student Enrollment is of
+    that batch. term_label is the Academic Term's term_name (e.g. "Trimester 1"),
+    so imports may use either form."""
+    conditions = ["se.batch IS NOT NULL", "se.batch != ''"]
+    params = {}
+    if course:
+        conditions.append("cl.course = %(course)s")
+        params["course"] = course
+    if batch:
+        conditions.append("se.batch = %(batch)s")
+        params["batch"] = batch
+    return frappe.db.sql(f"""
+        SELECT DISTINCT cl.course, cl.academic_term,
+            at.term_name AS term_label, se.batch, cl.academic_year
+        FROM `tabClasses` cl
+        JOIN `tabClass Enrolled Student` ces
+            ON ces.parent = cl.name AND ces.parenttype = 'Classes'
+        JOIN `tabStudent Enrollment` se ON se.name = ces.student_enrollment
+        LEFT JOIN `tabAcademic Term` at ON at.name = cl.academic_term
+        WHERE {" AND ".join(conditions)}
+        ORDER BY cl.academic_year
+    """, params, as_dict=True)
 
 @frappe.whitelist()
 def download_sample_template():
@@ -844,14 +873,14 @@ def _download_csv(headers, data, filename):
     frappe.response['doctype'] = filename
 
 @frappe.whitelist()
-def download_missing_course_offerings(import_log):
+def download_missing_classes(import_log):
     rows = frappe.db.sql("""
         SELECT course_code, term_name, count(*) as affected_row_count
         FROM `tabMarks Import Log Detail`
-        WHERE import_log = %s AND status = 'Missing Course Offering'
+        WHERE import_log = %s AND status = 'Missing Class'
         GROUP BY course_code, term_name
     """, (import_log,))
-    _download_csv(["Course Code", "Term Name", "Affected Row Count"], rows, "Missing_Course_Offerings.csv")
+    _download_csv(["Course Code", "Term Name", "Affected Row Count"], rows, "Missing_Classes.csv")
 
 @frappe.whitelist()
 def download_missing_courses(import_log):
@@ -894,14 +923,14 @@ def download_missing_courses_template(import_log):
     _download_csv(out[0], out[1:], f"Missing_Courses_Template_{import_log}.csv")
 
 @frappe.whitelist()
-def download_missing_course_offerings_template(import_log):
+def download_missing_classes_template(import_log):
     rows = frappe.db.sql("""
         SELECT DISTINCT course_code, term_name, raw_row_json
         FROM `tabMarks Import Log Detail`
-        WHERE import_log = %s AND status = 'Missing Course Offering'
+        WHERE import_log = %s AND status = 'Missing Class'
     """, import_log, as_dict=True)
     
-    unique_offerings = {}
+    unique_classes = {}
     for r in rows:
         row_data = json.loads(r.raw_row_json) if r.raw_row_json else {}
         code = r.course_code
@@ -909,7 +938,7 @@ def download_missing_course_offerings_template(import_log):
         batch = row_data.get("Batch Year", "")
         
         key = (code, batch, r.term_name)
-        if key not in unique_offerings:
+        if key not in unique_classes:
             course = f"{code}-{name}" if name else code
             
             # Batch has program and academic year linked, but user said:
@@ -924,13 +953,16 @@ def download_missing_course_offerings_template(import_log):
                 sm = frappe.db.get_value(
                     "Student Master",
                     {"registration_id": str(student_id)},
-                    ["master_programme", "academic_year"],
+                    ["programme_of_study", "academic_year"],
                     as_dict=True
                 )
-            programme = (sm.master_programme or "") if sm else ""
+            # Student Master.master_programme (removed) was programme_of_study's program_name
+            programme = (
+                frappe.db.get_value("Programme", sm.programme_of_study, "program_name") or ""
+            ) if sm and sm.programme_of_study else ""
             academic_year = (sm.academic_year or "") if sm else ""
             
-            unique_offerings[key] = {
+            unique_classes[key] = {
                 "course": course,
                 "batch": batch,
                 "programme": programme,
@@ -938,16 +970,15 @@ def download_missing_course_offerings_template(import_log):
                 "term": r.term_name
             }
             
-    out = [["ID", "Course", "Batch", "Programme", "Academic Year", "Term", "Status"]]
-    for key, data in unique_offerings.items():
+    # Course taught to the batch in the term with no Class yet - create these Classes
+    out = [["Course", "Batch", "Programme", "Academic Year", "Academic Term"]]
+    for key, data in unique_classes.items():
         out.append([
-            "",
             data["course"],
             data["batch"],
             data["programme"],
             data["academic_year"],
             data["term"],
-            "Active"
         ])
         
-    _download_csv(out[0], out[1:], f"Missing_Course_Offerings_Template_{import_log}.csv")
+    _download_csv(out[0], out[1:], f"Missing_Classes_Template_{import_log}.csv")

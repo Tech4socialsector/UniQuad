@@ -7,8 +7,8 @@
  "field_order": [
   "student",
   "exam_plan",
-  "course_offering",
   "course",
+  "academic_term",
   "appeal_type",
   "col_break_1",
   "status",
@@ -18,7 +18,14 @@
   "current_marks",
   "reason",
   "supporting_remarks",
+  "section_fee",
+  "fee_amount",
+  "cb_fee",
+  "fee_demand",
   "section_resolution",
+  "revised_grade",
+  "revised_marks",
+  "cb_resolution",
   "resolution",
   "resolved_by",
   "resolved_on"
@@ -41,21 +48,20 @@
    "reqd": 1
   },
   {
-   "fieldname": "course_offering",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Course Offering",
-   "options": "Course Offering",
-   "reqd": 1
-  },
-  {
-   "fetch_from": "course_offering.course_title",
    "fieldname": "course",
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Course",
    "options": "Course",
-   "read_only": 1
+   "reqd": 1
+  },
+  {
+   "fieldname": "academic_term",
+   "fieldtype": "Link",
+   "label": "Academic Term",
+   "options": "Academic Term",
+   "fetch_from": "exam_plan.term",
+   "fetch_if_empty": 1
   },
   {
    "fieldname": "appeal_type",
@@ -137,10 +143,54 @@
    "fieldtype": "Datetime",
    "label": "Resolved On",
    "read_only": 1
+  },
+  {
+   "fieldname": "section_fee",
+   "fieldtype": "Section Break",
+   "label": "Revaluation Fee",
+   "depends_on": "eval:doc.fee_amount || doc.fee_demand"
+  },
+  {
+   "fieldname": "fee_amount",
+   "fieldtype": "Currency",
+   "label": "Fee Amount",
+   "read_only": 1,
+   "description": "Revaluation Fee per Paper from Examination Settings, for a Re-evaluation appeal."
+  },
+  {
+   "fieldname": "cb_fee",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "fee_demand",
+   "fieldtype": "Link",
+   "label": "Fee Demand",
+   "options": "Fee Demand",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "revised_grade",
+   "fieldtype": "Data",
+   "label": "Grade After Review",
+   "read_only": 1,
+   "no_copy": 1,
+   "description": "Read from the student's Course Results when the appeal is Resolved. Change marks there first."
+  },
+  {
+   "fieldname": "revised_marks",
+   "fieldtype": "Float",
+   "label": "Marks After Review",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "cb_resolution",
+   "fieldtype": "Column Break"
   }
  ],
  "links": [],
- "modified": "2026-09-28 11:44:17.860455",
+ "modified": "2026-10-29 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Grade Appeal",

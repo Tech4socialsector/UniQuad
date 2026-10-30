@@ -33,7 +33,7 @@ _WORKFLOW_ROLE_STATUS_MAP = {
 # Roles that can see *all* Student Master records
 _FULL_ACCESS_ROLES = {"System Manager", "slcm_Registrar", "Accounts User"}
 
-# Roles that see only academically-active students (scoped to assigned Course Offerings)
+# Roles that see only academically-active students (scoped to the Classes they teach)
 _ACTIVE_STUDENTS_ROLES = {"slcm_Faculty", "slcm_Programme Chair"}
 
 
@@ -43,44 +43,39 @@ def _get_faculty_name(user):
     return str(name) if name is not None else None
 
 
-def _get_faculty_course_offerings(faculty_name):
-    """Return list of Course Offering names this faculty teaches, derived from
-    Course Offering.faculty, Course Schedule.instructor, and Time Table.instructor."""
+def _get_faculty_classes(faculty_name):
+    """Return list of Classes names this faculty teaches, derived from
+    Classes.faculty and Time Table.instructor."""
     primary = frappe.get_all(
-        "Course Offering",
+        "Classes",
         filters={"faculty": faculty_name},
         pluck="name",
-    )
-    via_schedule = frappe.get_all(
-        "Course Schedule",
-        filters={"instructor": faculty_name, "docstatus": ["<", 2]},
-        pluck="course_offering",
     )
     via_timetable = frappe.get_all(
         "Time Table",
         filters={"instructor": faculty_name, "docstatus": ["<", 2]},
-        pluck="course_offering",
+        pluck="class_name",
     )
-    return list({o for o in (primary + via_schedule + via_timetable) if o})
+    return list({c for c in (primary + via_timetable) if c})
 
 
 def _get_faculty_assigned_students(faculty_name):
     """
-    Return a list of Student Master names enrolled (via Student Enrollment /
-    Student Enrollment Course) in any Course Offering this faculty teaches.
+    Return a list of Student Master names on the roster (Class Enrolled
+    Student, status Enrolled) of any Class this faculty teaches.
     """
-    offerings = _get_faculty_course_offerings(faculty_name)
+    classes = _get_faculty_classes(faculty_name)
 
-    if not offerings:
+    if not classes:
         return []
 
     students = frappe.db.sql("""
         SELECT DISTINCT se.student
-        FROM `tabStudent Enrollment` se
-        JOIN `tabStudent Enrollment Course` sec ON sec.parent = se.name
-        WHERE sec.course_offering IN %(offerings)s
-        AND sec.status = 'Enrolled' AND se.status = 'Enrolled'
-    """, {"offerings": offerings}, pluck=True)
+        FROM `tabClass Enrolled Student` ces
+        JOIN `tabStudent Enrollment` se ON se.name = ces.student_enrollment
+        WHERE ces.parenttype = 'Classes' AND ces.parent IN %(classes)s
+        AND ces.status = 'Enrolled' AND se.status = 'Enrolled'
+    """, {"classes": classes}, pluck=True)
 
     return list(set(students))
 
@@ -106,7 +101,7 @@ def student_master_query_conditions(user):
     if roles & _FULL_ACCESS_ROLES:
         return ""
 
-    # --- Faculty: only students in their assigned Course Offerings ---
+    # --- Faculty: only students of the Classes they teach ---
     if "slcm_Faculty" in roles:
         faculty_name = _get_faculty_name(user)
         if not faculty_name:
@@ -150,7 +145,7 @@ def student_master_query_conditions(user):
 def attendance_session_query_conditions(user):
     """
     Faculty: sessions where they are the instructor OR the session's
-    course_offering is one they teach.
+    class is one they teach.
     Programme Chair / AAD / Admin: unrestricted.
     """
     if user == "Administrator":
@@ -166,16 +161,16 @@ def attendance_session_query_conditions(user):
         if not faculty_name:
             return "1=0"
 
-        offerings = _get_faculty_course_offerings(faculty_name)
+        classes = _get_faculty_classes(faculty_name)
         safe_fac = frappe.db.escape(faculty_name)
 
-        if not offerings:
-            # No offerings yet — only show sessions where they are the direct instructor
+        if not classes:
+            # No classes yet — only show sessions where they are the direct instructor
             return f"`tabAttendance Session`.instructor = {safe_fac}"
 
-        safe_offerings = _escape_list(offerings)
+        safe_classes = _escape_list(classes)
         return (
-            f"(`tabAttendance Session`.course_offering IN ({safe_offerings})"
+            f"(`tabAttendance Session`.class_name IN ({safe_classes})"
             f" OR `tabAttendance Session`.instructor = {safe_fac})"
         )
 
@@ -259,7 +254,7 @@ def attendance_log_query_conditions(user):
 
 def attendance_summary_query_conditions(user):
     """
-    Faculty: summaries for Course Offerings they teach.
+    Faculty: summaries for the Classes they teach.
     Programme Chair / Admin: unrestricted.
     Student: own summary only.
     """
@@ -276,12 +271,12 @@ def attendance_summary_query_conditions(user):
         if not faculty_name:
             return "1=0"
 
-        offerings = _get_faculty_course_offerings(faculty_name)
-        if not offerings:
+        classes = _get_faculty_classes(faculty_name)
+        if not classes:
             return "1=0"
 
-        safe_offerings = _escape_list(offerings)
-        return f"`tabAttendance Summary`.course_offering IN ({safe_offerings})"
+        safe_classes = _escape_list(classes)
+        return f"`tabAttendance Summary`.class_name IN ({safe_classes})"
 
     if "slcm_Student" in roles:
         safe_user = frappe.db.escape(user)
@@ -386,7 +381,7 @@ def fa_mfa_application_query_conditions(user):
 
 def class_schedule_query_conditions(user):
     """
-    Faculty: schedules for Course Offerings they teach OR where they are the
+    Faculty: schedules for the Classes they teach OR where they are the
     direct instructor.
     Programme Chair / AAD / Admin: unrestricted (AAD reopens locked
     attendance from the Time Table entry).
@@ -404,15 +399,15 @@ def class_schedule_query_conditions(user):
         if not faculty_name:
             return "1=0"
 
-        offerings = _get_faculty_course_offerings(faculty_name)
+        classes = _get_faculty_classes(faculty_name)
         safe_fac = frappe.db.escape(faculty_name)
 
-        if not offerings:
+        if not classes:
             return f"`tabTime Table`.instructor = {safe_fac}"
 
-        safe_offerings = _escape_list(offerings)
+        safe_classes = _escape_list(classes)
         return (
-            f"(`tabTime Table`.course_offering IN ({safe_offerings})"
+            f"(`tabTime Table`.class_name IN ({safe_classes})"
             f" OR `tabTime Table`.instructor = {safe_fac})"
         )
 
