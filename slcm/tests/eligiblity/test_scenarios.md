@@ -7,7 +7,6 @@
 **Target DocTypes:**
 - `Eligibility Rule` (`tabEligibility Rule`)
 - `Eligibility Allowed Degree` (`tabEligibility Allowed Degree`)
-- `Eligibility Program` (`tabEligibility Program`)
 - `Eligibility Rule Mapping` (`tabEligibility Rule Mapping`)
 - `National Test` (`tabNational Test`)
 - `National Test Exemption Rule` (`tabNational Test Exemption Rule`)

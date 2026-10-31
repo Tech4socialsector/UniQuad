@@ -162,7 +162,7 @@ Log in as System Manager, then repeat with each role.
 - [ ] SLCM Payment Request list: "Bulk Sync Settlements" button present; Status read-only.
 
 **Fixed features**
-- [ ] CLAT Rank Import and Course Scheduling Tool open and save; still present after `bench migrate`.
+- [ ] Course Scheduling Tool opens and saves; still present after `bench migrate`.
 - [ ] Bulk Fee Structure Update: preview with Update Scope = Programme (cohort) lists that batch's active students; Batch Year filter limits to students whose fee structure has that batch year.
 - [ ] Student portal → Placement: page opens; applying to an open opportunity works.
 - [ ] Analytics dashboard → Placement section loads.

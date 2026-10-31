@@ -20,11 +20,6 @@ def get_data():
                     "type": "doctype",
                     "name": "Admission Year",
                     "label": _("Admission Years"),
-                },
-                {
-                    "type": "doctype",
-                    "name": "Admission Dashboard Config",
-                    "label": _("Dashboard"),
                 }
             ]
         }
