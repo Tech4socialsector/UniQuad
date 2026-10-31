@@ -160,15 +160,10 @@ function open_create_class_dialog(listview) {
 	const course_fields = [
 		{ fieldname: "course", fieldtype: "Link", options: "Course", label: __("Course"), in_list_view: 1, reqd: 1, columns: 4,
 			get_query: () => ({ filters: { status: "Active" } }),
-			// Picking a course brings its type and credit; faculty is chosen by hand
-			onchange() {
-				const row = this.doc;
-				if (!row || !row.course) return;
-				frappe.db.get_value("Course", row.course, ["course_name", "course_type", "credit_value"]).then(({ message: c }) => {
-					Object.assign(row, { course_name: c.course_name, course_type: c.course_type, credit: c.credit_value });
-					dialog.fields_dict.courses.grid.refresh();
-				});
-			},
+			// Picking a course brings its type and credit; faculty is chosen by hand.
+			// Not `this.doc`: the grid shares this handler across rows, bound to the
+			// row that first made its control, so every row is checked instead.
+			onchange: () => fill_course_details(),
 		},
 		{ fieldname: "course_name", fieldtype: "Data", label: __("Course Name"), read_only: 1 },
 		{ fieldname: "course_type", fieldtype: "Data", label: __("Course Type"), in_list_view: 1, read_only: 1, columns: 2 },
@@ -183,6 +178,31 @@ function open_create_class_dialog(listview) {
 		{ fieldname: "year_no", fieldtype: "Int", label: __("Year"), in_list_view: 1, read_only: 1, columns: 1 },
 	];
 	const is_group = () => dialog.get_value("class_type") === "Group";
+
+	// Course Name / Type / Credit for every row whose course changed since they were filled
+	const course_cache = {};
+	function fill_course_details() {
+		const grid = dialog.fields_dict.courses.grid;
+		const all = grid.get_data() || [];
+		const cleared = all.filter((r) => !r.course && r._details_for);
+		cleared.forEach((r) => Object.assign(r, { course_name: "", course_type: "", credit: null, _details_for: null }));
+		const rows = all.filter((r) => r.course && r._details_for !== r.course);
+		if (!rows.length) {
+			if (cleared.length) grid.refresh();
+			return;
+		}
+		Promise.all([...new Set(rows.map((r) => r.course))].map((course) => course_cache[course]
+			? Promise.resolve()
+			: frappe.db.get_value("Course", course, ["course_name", "course_type", "credit_value"])
+				.then(({ message: c }) => (course_cache[course] = c || {}))
+		)).then(() => {
+			rows.forEach((r) => {
+				const c = course_cache[r.course] || {};
+				Object.assign(r, { course_name: c.course_name, course_type: c.course_type, credit: c.credit_value, _details_for: r.course });
+			});
+			grid.refresh();
+		});
+	}
 
 	const dialog = new frappe.ui.Dialog({
 		title: __("Create Class"),
