@@ -209,7 +209,7 @@ function open_create_class_dialog(listview) {
 			{ fieldname: "programme", fieldtype: "Link", options: "Programme", label: __("Programme"), reqd: 1,
 				onchange: () => load_section_students(),
 			},
-			{ fieldname: "year_no", fieldtype: "Int", label: __("Year No"), default: 1, reqd: 1,
+			{ fieldname: "year_no", fieldtype: "Select", label: __("Year"), options: ["1", "2", "3", "4", "5"], default: "1", reqd: 1,
 				onchange: () => load_section_students(),
 			},
 			{ fieldname: "section", fieldtype: "Link", options: "Section", label: __("Section"),

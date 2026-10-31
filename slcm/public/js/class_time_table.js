@@ -9,7 +9,7 @@ frappe.provide("slcm.class_time_table");
 const CTT_METHOD = "slcm.slcm.doctype.classes.class_time_table.";
 
 const CTT_STEPS = [
-	{ label: __("Schedule"), sections: ["s1", "s1_repeat"] },
+	{ label: __("Schedule"), sections: ["s1", "s1_repeat", "s1_term"] },
 	{ label: __("Class Participation"), sections: ["s2", "s2_weeks", "s2_upload", "s2_preview"] },
 	{ label: __("Summary"), sections: ["s3"] },
 ];
@@ -162,26 +162,30 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 					options: ["This occurrence", "This and following occurrences"].join("\n"), default: "This occurrence",
 					onchange: () => me.on_apply_to_change() },
 				{ fieldtype: "Data", fieldname: "title", label: __("Title"), reqd: 1 },
-				{ fieldtype: "Link", fieldname: "instructor", label: __("Faculty"), options: "Faculty",
+				{ fieldtype: "Link", fieldname: "instructor", label: __("Faculty"), options: "Faculty", reqd: 1,
 					description: __("Defaults to the class's faculty.") },
 				{ fieldtype: "Link", fieldname: "venue", label: __("Venue"), options: "Venue Master", reqd: 1 },
-				{ fieldtype: "Color", fieldname: "color", label: __("Time Table Color"),
+				{ fieldtype: "Color", fieldname: "color", label: __("Time Table Color"), reqd: 1,
 					description: __("Colour of these classes on the calendars.") },
 				{ fieldtype: "Column Break" },
 				{ fieldtype: "Date", fieldname: "schedule_date", label: __("Schedule Date"), reqd: 1,
 					description: __("Date of the first class."), onchange: () => me.on_schedule_change() },
-				{ fieldtype: "Time", fieldname: "from_time", label: __("From Time"), reqd: 1 },
-				{ fieldtype: "Time", fieldname: "to_time", label: __("To Time"), reqd: 1 },
+				// 12-hour pickers (Hour / Minute / AM-PM) that keep the hidden
+				// fields in the "HH:MM:SS" Time format the server stores
+				{ fieldtype: "Data", fieldname: "from_time", hidden: 1 },
+				{ fieldtype: "HTML", fieldname: "from_time_html" },
+				{ fieldtype: "Data", fieldname: "to_time", hidden: 1 },
+				{ fieldtype: "HTML", fieldname: "to_time_html" },
 				{ fieldtype: "Section Break", fieldname: "s1_repeat", label: __("Repeat") },
 				{ fieldtype: "Select", fieldname: "repeat_frequency", label: __("Repeat"),
 					options: ["Never", "Daily", "Weekly", "Monthly"].join("\n"), default: "Weekly",
-					onchange: () => me.on_schedule_change() },
+					onchange: () => me.on_repeat_change() },
 				{ fieldtype: "Column Break" },
 				{ fieldtype: "Date", fieldname: "repeats_till", label: __("Repeats Till"),
 					depends_on: "eval:doc.repeat_frequency != 'Never'",
 					mandatory_depends_on: "eval:doc.repeat_frequency != 'Never'",
-					onchange: () => me.on_schedule_change() },
-				{ fieldtype: "Column Break" },
+					onchange: () => me.on_repeat_change() },
+				{ fieldtype: "Section Break", fieldname: "s1_term" },
 				{ fieldtype: "HTML", fieldname: "term_html" },
 
 				// 2. Class Participation
@@ -241,7 +245,9 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 		const today = frappe.datetime.get_today();
 		const first = start && today < start ? start : end && today > end ? start : today;
 		const e = this.edit;
-		this.d.set_values(e
+		this.render_time_picker("from_time", __("From Time"));
+		this.render_time_picker("to_time", __("To Time"));
+		Promise.resolve(this.d.set_values(e
 			? {
 				title: e.title || ctt_class_label(this.cls),
 				instructor: e.instructor,
@@ -259,13 +265,10 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 				schedule_date: first,
 				repeat_frequency: "Weekly",
 				repeats_till: end || "",
-			});
+			})).then(() => ["from_time", "to_time"].forEach((f) => this.sync_time_picker(f)));
 		if (e) this.on_apply_to_change();
-		this.d.fields_dict.term_html.$wrapper.html(`<div class="ctt-help">
-			${__("Term")}: <b>${ctt_esc(this.info.term_name)}</b><br>
-			${start && end ? `${ctt_date(start)} – ${ctt_date(end)}<br>` : ""}
-			${__("All classes must fall within the term. Holidays and weekly offs are skipped.")}
-		</div>`);
+		this.limit_dates_to_term();
+		this.render_term();
 		this.d.fields_dict.cp_help.$wrapper.html(`<div class="ctt-help">
 			${__("The class's {0} students are split into one Class Participation group per week. Each week, its group's participation is recorded in that week's classes (up to {1} class hours a week).", [this.info.students.length, CTT_MAX_CP_HOURS])}
 		</div>`);
@@ -274,6 +277,86 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 			<b>2.</b> ${__("Set the Week No (1 to the number of weeks) for each student and save the file.")}<br>
 			<b>3.</b> ${__("Upload it here. The split is shown below to check before you continue.")}
 		</div>`);
+	}
+
+	/** Hour (1–12), Minute (5-minute steps) and AM/PM selects for a hidden
+	 * Time field; the field gets "HH:MM:SS" once all three are picked. */
+	render_time_picker(fieldname, label) {
+		const opts = (values, placeholder) => `<option value="">${placeholder}</option>`
+			+ values.map((v) => `<option value="${v}">${v}</option>`).join("");
+		const hours = Array.from({ length: 12 }, (_, i) => String(i + 1));
+		const minutes = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, "0"));
+		const $w = this.d.fields_dict[`${fieldname}_html`].$wrapper;
+		$w.html(`<div class="form-group ctt-time-control">
+			<label class="control-label reqd">${label}</label>
+			<div class="ctt-time-pick">
+				<select class="form-control ctt-tp-hour">${opts(hours, __("Hour"))}</select>
+				<span class="ctt-tp-sep">:</span>
+				<select class="form-control ctt-tp-minute">${opts(minutes, __("Min"))}</select>
+				<select class="form-control ctt-tp-ampm">${opts(["AM", "PM"], __("AM / PM"))}</select>
+			</div>
+		</div>`);
+		$w.on("change", "select", () => {
+			const h = $w.find(".ctt-tp-hour").val(), m = $w.find(".ctt-tp-minute").val(), ap = $w.find(".ctt-tp-ampm").val();
+			let value = "";
+			if (h && m && ap) {
+				const hh = (cint(h) % 12) + (ap === "PM" ? 12 : 0);
+				value = `${String(hh).padStart(2, "0")}:${m}:00`;
+			}
+			this.d.set_value(fieldname, value);
+			this.on_schedule_change();
+		});
+	}
+
+	/** Show a hidden Time field's "HH:MM:SS" value in its 12-hour picker. */
+	sync_time_picker(fieldname) {
+		const $w = this.d.fields_dict[`${fieldname}_html`].$wrapper;
+		const value = this.d.get_value(fieldname);
+		if (!value) return;
+		const [h, m] = String(value).split(":").map(Number);
+		const minute = String(m || 0).padStart(2, "0");
+		// A saved minute off the 5-minute steps (e.g. 9:07) is kept as an option
+		const $min = $w.find(".ctt-tp-minute");
+		if (!$min.find(`option[value="${minute}"]`).length) $min.append(`<option value="${minute}">${minute}</option>`);
+		$w.find(".ctt-tp-hour").val(String(h % 12 || 12));
+		$min.val(minute);
+		$w.find(".ctt-tp-ampm").val(h < 12 ? "AM" : "PM");
+	}
+
+	/** Schedule Date and Repeats Till can only be picked within the term. */
+	limit_dates_to_term() {
+		const { term_start_date: start, term_end_date: end } = this.info;
+		if (!(start && end)) return;
+		["schedule_date", "repeats_till"].forEach((f) => {
+			const dp = this.d.fields_dict[f].datepicker;
+			if (dp) dp.update({ minDate: frappe.datetime.str_to_obj(start), maxDate: frappe.datetime.str_to_obj(end) });
+		});
+		this.d.set_df_property("repeats_till", "description",
+			__("Last date of the series, within the term ({0} – {1}).", [ctt_date(start), ctt_date(end)]));
+	}
+
+	/** The term (own row under Repeat) and its Institutional Calendar holidays,
+	 * on which no class is scheduled. */
+	render_term() {
+		const { term_start_date: start, term_end_date: end } = this.info;
+		const holidays = this.info.holidays || [];
+		const rows = holidays.map((h) => `<tr>
+			<td class="ctt-nowrap">${h.start_date === h.end_date ? ctt_date(h.start_date) : `${ctt_date(h.start_date)} – ${ctt_date(h.end_date)}`}</td>
+			<td>${ctt_esc(h.name1)}</td>
+		</tr>`).join("");
+		this.d.fields_dict.term_html.$wrapper.html(`
+			<div class="ctt-help">
+				${__("Term")}: <b>${ctt_esc(this.info.term_name)}</b><br>
+				${start && end ? `${ctt_date(start)} – ${ctt_date(end)}<br>` : ""}
+				${__("All classes must fall within the term. Holidays and weekly offs are skipped.")}
+			</div>
+			<div class="ctt-sub-title">${__("Holidays in this Term ({0})", [holidays.length])}</div>
+			${holidays.length ? `<div class="ctt-table-wrap ctt-holidays-wrap"><table class="ctt-table">
+					<thead><tr><th>${__("Date")}</th><th>${__("Holiday")}</th></tr></thead>
+					<tbody>${rows}</tbody>
+				</table></div>
+				<div class="ctt-banner warn" style="margin-top:8px">${__("No class is scheduled on these holidays: a class of the series that falls on one is skipped, not moved.")}</div>`
+				: `<div class="ctt-muted">${__("No holidays in the Institutional Calendar for this term.")}</div>`}`);
 	}
 
 	/* ---------------- navigation ---------------- */
@@ -364,7 +447,7 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 		const s = this.schedule_values();
 		const missing = [
 			[s.title, __("Title")], [s.venue, __("Venue")], [s.schedule_date, __("Schedule Date")],
-			[s.from_time, __("From Time")], [s.to_time, __("To Time")],
+			[s.from_time, __("From Time")], [s.to_time, __("To Time")], [s.color, __("Time Table Color")],
 			[s.repeat_frequency === "Never" || s.repeats_till, __("Repeats Till")],
 		].filter(([v]) => !v).map(([, label]) => label);
 		if (missing.length) {
@@ -424,6 +507,18 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 		this.dates = [];
 	}
 
+	/** Repeat belongs to the series: editing a session, a new Repeat or
+	 * Repeats Till applies to this and the following occurrences. */
+	on_repeat_change() {
+		this.on_schedule_change();
+		const e = this.edit;
+		if (!e || this.edit_future()) return;
+		const v = this.d.get_values(true) || {};
+		if ((v.repeat_frequency || "Never") === (e.repeat_frequency || "Never") && (v.repeats_till || "") === (e.repeats_till || "")) return;
+		this.d.set_value("apply_to", "This and following occurrences");
+		frappe.show_alert({ message: __("Repeat applies to the series: changes will apply to this and the following occurrences."), indicator: "blue" }, 6);
+	}
+
 	/* ---------------- edit mode ---------------- */
 
 	edit_future() {
@@ -436,8 +531,6 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 	on_apply_to_change() {
 		const future = this.edit_future();
 		const e = this.edit;
-		this.d.set_df_property("repeat_frequency", "read_only", future ? 0 : 1);
-		this.d.set_df_property("repeats_till", "read_only", future ? 0 : 1);
 		this.d.set_df_property("schedule_date", "description", future
 			? __("First session from here on. A new date rebuilds the following sessions from it.")
 			: __("Date of this session."));
@@ -457,7 +550,7 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 		const future = this.edit_future();
 		const missing = [
 			[s.title, __("Title")], [s.venue, __("Venue")], [s.schedule_date, __("Schedule Date")],
-			[s.from_time, __("From Time")], [s.to_time, __("To Time")],
+			[s.from_time, __("From Time")], [s.to_time, __("To Time")], [s.color, __("Time Table Color")],
 			[!future || s.repeat_frequency === "Never" || s.repeats_till, __("Repeats Till")],
 		].filter(([v]) => !v).map(([, label]) => label);
 		if (missing.length) {
@@ -1295,6 +1388,11 @@ function ctt_inject_css() {
 		.ctt-dialog .ctt-progress-note { font-size: 12px; color: var(--text-muted); margin-top: 10px; transition: color 0.2s; }
 		.ctt-dialog .ctt-progress-note-alert { color: var(--orange-600, #d97706); font-weight: 600; }
 		.ctt-dialog .ctt-weeks-wrap { max-height: 340px; }
+		/* Fixed height whatever the number of holidays; rows scroll under the sticky header */
+		.ctt-dialog .ctt-holidays-wrap { height: 172px; max-height: none; overflow-y: auto; }
+		.ctt-dialog .ctt-time-pick { display: flex; align-items: center; gap: 8px; }
+		.ctt-dialog .ctt-time-pick select { flex: 1 1 0; min-width: 0; }
+		.ctt-dialog .ctt-tp-sep { font-weight: 600; color: var(--text-muted); }
 		.ctt-dialog .ctt-weeks-table td { vertical-align: middle; }
 		.ctt-dialog .ctt-weeks-table th:nth-child(1) { width: 11%; }
 		.ctt-dialog .ctt-weeks-table th:nth-child(2) { width: 24%; }

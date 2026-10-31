@@ -18,9 +18,6 @@ frappe.ui.form.on("Classes", {
 	},
 
 	refresh(frm) {
-		if (frm.doc.class_type !== "Group") {
-			frm.add_custom_button(__("Get Students"), () => get_students(frm));
-		}
 		if (frm.perm[0] && frm.perm[0].write) {
 			frm.add_custom_button(__("Add / Remove Students"), () => add_remove_students(frm));
 		}
@@ -71,35 +68,5 @@ function add_remove_students(frm) {
 			message: __("{0} student(s) added, {1} removed.", [added.length, removed.length]),
 			indicator: "green",
 		}));
-	});
-}
-
-// Fill the table with the section's enrolled students, skipping ones already listed.
-function get_students(frm) {
-	const { programme, academic_year, year_no, section } = frm.doc;
-	if (!programme || !academic_year || !section || !year_no) {
-		frappe.msgprint(__("Select Academic Year, Programme, Year and Section first."));
-		return;
-	}
-	frappe.call({
-		method: "slcm.slcm.doctype.classes.classes.get_enrollment_students",
-		args: { programme, academic_year, year_no, section },
-		callback({ message }) {
-			const existing = new Set((frm.doc.enrolled_students || []).map((r) => r.student_enrollment));
-			const rows = (message || []).filter((s) => !existing.has(s.name));
-			rows.forEach((s) => {
-				frm.add_child("enrolled_students", {
-					student_enrollment: s.name,
-					student_name: s.student_name,
-					section: s.section,
-					status: "Enrolled",
-				});
-			});
-			frm.refresh_field("enrolled_students");
-			frappe.show_alert({
-				message: __("Added {0} student(s)", [rows.length]),
-				indicator: rows.length ? "green" : "orange",
-			});
-		},
 	});
 }

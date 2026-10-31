@@ -86,12 +86,32 @@ def get_class_time_table_info(class_name):
 		"term_name": term.term_name or cls.academic_term,
 		"term_start_date": term.term_start_date,
 		"term_end_date": term.term_end_date,
+		"holidays": _term_holidays(term.term_start_date, term.term_end_date),
 		"students": _class_roster(class_name),
 		"entry_count": len(entries),
 		"first_date": entries[0].schedule_date if entries else None,
 		"last_date": entries[-1].schedule_date if entries else None,
 		"next_date": upcoming[0] if upcoming else None,
 	}
+
+
+def _term_holidays(start, end):
+	"""Institutional Calendar holidays overlapping the term; classes on them are
+	skipped (see _check_dates)."""
+	if not (start and end):
+		return []
+	return frappe.get_all(
+		"Institutional Calendar",
+		filters={
+			"entry_type": "Holiday",
+			"start_date": ["<=", end],
+			"end_date": [">=", start],
+			"status": ["!=", "Inactive"],
+			"docstatus": ["<", 2],
+		},
+		fields=["name1", "start_date", "end_date"],
+		order_by="start_date asc",
+	)
 
 
 def _series_dates(schedule_date, repeat_frequency, repeats_till):
@@ -204,6 +224,8 @@ def create_class_time_table(data):
 	data = frappe._dict(json.loads(data) if isinstance(data, str) else data)
 	frappe.has_permission("Time Table", "create", throw=True)
 	cls = _get_class(data.class_name)
+	if not data.color:
+		frappe.throw(_("Time Table Color is required."))
 
 	doc = frappe.get_doc({
 		"doctype": "Time Table",
