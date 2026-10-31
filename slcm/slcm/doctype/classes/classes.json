@@ -26,7 +26,9 @@
   "faculty_name",
   "students_section",
   "enrolled_students",
-  "total_students"
+  "total_students",
+  "schedule_log_tab",
+  "schedule_log_html"
  ],
  "fields": [
   {
@@ -174,12 +176,23 @@
    "fieldtype": "Data",
    "label": "Group Name",
    "mandatory_depends_on": "eval:doc.class_type=='Group'"
+  },
+  {
+   "depends_on": "eval:!doc.__islocal",
+   "fieldname": "schedule_log_tab",
+   "fieldtype": "Tab Break",
+   "label": "Schedule Log"
+  },
+  {
+   "fieldname": "schedule_log_html",
+   "fieldtype": "HTML",
+   "label": "Schedule Log"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-31 12:00:00.000000",
+ "modified": "2026-10-31 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Classes",

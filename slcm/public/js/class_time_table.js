@@ -1127,16 +1127,23 @@ slcm.class_time_table.CalendarView = class CalendarView {
 			const { info, attendance: att } = data;
 			const present = att.counts.Present || 0;
 			const $view = this.d.$wrapper.find(".ctt-session-view");
+			// Edit / Cancel / Swap only for an active session whose attendance is not marked
+			const can_change = frappe.model.can_write("Time Table") && !info.is_cancelled;
+			const open = can_change && !att.marked;
 
 			$view.html(`
 				<div class="ctt-session-bar">
 					<button class="btn btn-default btn-sm ctt-back">&larr; ${__("Back to calendar")}</button>
 					<div class="ctt-session-actions">
-						${frappe.model.can_write("Time Table") ? `<button class="btn btn-default btn-sm ctt-edit">${__("Edit")}</button>` : ""}
+						${can_change ? `<button class="btn btn-default btn-sm ctt-edit">${__("Edit")}</button>` : ""}
+						${open && !info.is_past ? `<button class="btn btn-default btn-sm ctt-swap">${__("Swap Session")}</button>` : ""}
+						${open ? `<button class="btn btn-default btn-sm ctt-cancel-session">${__("Cancel Session")}</button>` : ""}
 						<button class="btn btn-default btn-sm ctt-open-tt">${__("Open Time Table")}</button>
-						<button class="btn btn-primary btn-sm ctt-mark">${__("Mark Attendance")}</button>
+						${info.is_cancelled ? "" : `<button class="btn btn-primary btn-sm ctt-mark">${__("Mark Attendance")}</button>`}
 					</div>
 				</div>
+				${info.is_cancelled ? `<div class="ctt-banner bad"><b>${__("This session is cancelled.")}</b>
+					${info.cancellation_reason ? `${__("Reason")}: ${ctt_esc(info.cancellation_reason)}. ` : ""}${__("Its venue and faculty slot is free for other classes.")}</div>` : ""}
 				<div class="ctt-session-title">${ctt_esc(info.title || info.name)}</div>
 				<div class="ctt-session-head">
 					${[
@@ -1172,6 +1179,8 @@ slcm.class_time_table.CalendarView = class CalendarView {
 					this.show_calendar();
 				});
 			});
+			$view.find(".ctt-cancel-session").on("click", () => this.cancel_session(info));
+			$view.find(".ctt-swap").on("click", () => this.swap_session(info));
 			$view.find(".ctt-open-tt").on("click", () => {
 				this.d.hide();
 				frappe.set_route("Form", "Time Table", info.name);
@@ -1186,6 +1195,139 @@ slcm.class_time_table.CalendarView = class CalendarView {
 			this.d.$wrapper.find(".ctt-cal-view").hide();
 			$view.show();
 			this.d.$wrapper.find(".modal-body").scrollTop(0);
+		});
+	}
+
+	/** Cancel this one session, with a reason; its slot is freed. */
+	cancel_session(info) {
+		const slot = `${info.date_fmt}, ${ctt_time(info.from_time)} – ${ctt_time(info.to_time)}${info.venue ? `, ${info.venue}` : ""}`;
+		const d = new frappe.ui.Dialog({
+			title: __("Cancel Session"),
+			fields: [
+				{ fieldtype: "HTML", options: `<div class="ctt-dialog"><div class="ctt-banner warn">
+					<b>${ctt_esc(info.title)}</b><br>${ctt_esc(slot)}<br>
+					${__("Only this session is cancelled. It stays on the calendar as Cancelled, its venue and faculty slot becomes free for other classes, and it is removed from Google Calendar. This cannot be undone.")}
+				</div></div>` },
+				{ fieldtype: "Small Text", fieldname: "reason", label: __("Reason"), reqd: 1 },
+			],
+			primary_action_label: __("Cancel Session"),
+			primary_action: ({ reason }) => {
+				frappe.confirm(__("Cancel the session on {0}?", [info.date_fmt]), () => {
+					frappe.call({
+						method: CTT_METHOD + "cancel_class_session",
+						args: { time_table: info.name, reason },
+						freeze: true,
+						freeze_message: __("Cancelling the session..."),
+					}).then(() => {
+						d.hide();
+						frappe.show_alert({ message: __("Session on {0} cancelled.", [info.date_fmt]), indicator: "green" }, 6);
+						this.show_session(info.name);
+					});
+				});
+			},
+		});
+		d.show();
+	}
+
+	/** Swap this session's date, time and venue with another course's session
+	 * of the same students (same day or later). */
+	swap_session(info) {
+		frappe.call({ method: CTT_METHOD + "get_swap_candidates", args: { time_table: info.name }, freeze: true }).then(({ message: rows = [] }) => {
+			let picked = null;
+			let search = "";
+			const d = new frappe.ui.Dialog({
+				title: __("Swap Session"),
+				size: "extra-large",
+				fields: [{ fieldtype: "HTML", fieldname: "body" }],
+				primary_action_label: __("Next"),
+				primary_action: () => {
+					if (!picked) {
+						frappe.msgprint(__("Select the session to swap with."));
+						return;
+					}
+					this.confirm_swap(info, picked, d);
+				},
+			});
+			d.$wrapper.addClass("ctt-dialog");
+			const $b = d.fields_dict.body.$wrapper;
+			$b.html(`
+				<div class="ctt-banner ok">${__("This session")}: <b>${ctt_esc(info.title)}</b> · ${ctt_esc(info.date_fmt)},
+					${ctt_time(info.from_time)} – ${ctt_time(info.to_time)}${info.venue ? `, ${ctt_esc(info.venue)}` : ""}</div>
+				<div class="ctt-muted" style="margin-bottom:8px">${__("Pick another course's session for the same students, on the same day or later. The two sessions exchange their date, time and venue; each keeps its own faculty.")}</div>
+				<div style="display:flex;gap:10px;align-items:center;margin-bottom:8px">
+					<input type="text" class="form-control ctt-swap-search" style="max-width:280px" placeholder="${__("Search course, faculty, venue or date")}">
+					<span class="ctt-muted ctt-swap-count"></span>
+				</div>
+				<div class="ctt-table-wrap" style="max-height:50vh"><table class="ctt-table">
+					<thead><tr><th></th><th>${__("Date")}</th><th>${__("Time")}</th><th>${__("Course")}</th><th>${__("Faculty")}</th><th>${__("Venue")}</th></tr></thead>
+					<tbody class="ctt-swap-body"></tbody>
+				</table></div>`);
+			const render = () => {
+				const q = search.trim().toLowerCase();
+				const list = rows.filter((r) => !q || [r.title, r.faculty, r.venue, r.date_fmt, r.class_name]
+					.some((x) => (x || "").toLowerCase().includes(q)));
+				$b.find(".ctt-swap-count").text(__("{0} of {1} session(s)", [list.length, rows.length]));
+				$b.find(".ctt-swap-body").html(list.length ? list.map((r) => `<tr class="ctt-swap-row" data-name="${ctt_esc(r.name)}" style="cursor:pointer">
+					<td><input type="radio" name="ctt-swap-pick" ${picked && picked.name === r.name ? "checked" : ""}></td>
+					<td class="ctt-nowrap">${ctt_esc(r.date_fmt)}</td>
+					<td class="ctt-nowrap">${ctt_time(r.from_time)} – ${ctt_time(r.to_time)}</td>
+					<td>${ctt_esc(r.title)}<div class="ctt-muted">${ctt_esc(r.class_name)}</div></td>
+					<td>${ctt_esc(r.faculty)}</td>
+					<td>${ctt_esc(r.venue)}</td>
+				</tr>`).join("") : `<tr><td colspan="6" class="ctt-empty">${rows.length
+					? __("No session matches the search.")
+					: __("No other course of these students has an upcoming session to swap with.")}</td></tr>`);
+			};
+			$b.on("input", ".ctt-swap-search", (e) => {
+				search = e.target.value;
+				render();
+			});
+			$b.on("click", ".ctt-swap-row", (e) => {
+				picked = rows.find((r) => r.name === $(e.currentTarget).attr("data-name"));
+				render();
+			});
+			render();
+			d.show();
+		});
+	}
+
+	confirm_swap(info, picked, picker) {
+		frappe.call({
+			method: CTT_METHOD + "check_swap",
+			args: { time_table: info.name, other: picked.name },
+			freeze: true,
+			freeze_message: __("Checking venue, faculty and holidays..."),
+		}).then(({ message: m }) => {
+			if (m.errors.length) {
+				frappe.msgprint({ title: __("Cannot Swap"), message: m.errors.map(ctt_esc).join("<br>"), indicator: "red" });
+				return;
+			}
+			const rows = m.moves.map((mv) => `<tr>
+				<td><b>${ctt_esc(mv.title)}</b><div class="ctt-muted">${ctt_esc(mv.class_name)}</div></td>
+				<td>${ctt_esc(mv.before)}</td>
+				<td><b>${ctt_esc(mv.after)}</b></td>
+			</tr>`).join("");
+			const warn = m.warnings.length
+				? `<div class="ctt-banner warn">${m.warnings.map(ctt_esc).join("<br>")}<br>${__("The session is still swapped; kindly confirm the faculty's availability.")}</div>` : "";
+			frappe.confirm(`<div class="ctt-dialog">
+				${warn}
+				<div class="ctt-table-wrap"><table class="ctt-table">
+					<thead><tr><th>${__("Session")}</th><th>${__("Now")}</th><th>${__("After Swap")}</th></tr></thead>
+					<tbody>${rows}</tbody>
+				</table></div>
+				<div class="ctt-muted" style="margin-top:8px">${__("Swap these two sessions? Their attendance sessions move with them, and the change is logged on both classes.")}</div>
+			</div>`, () => {
+				frappe.call({
+					method: CTT_METHOD + "swap_class_sessions",
+					args: { time_table: info.name, other: picked.name },
+					freeze: true,
+					freeze_message: __("Swapping the sessions..."),
+				}).then(() => {
+					picker.hide();
+					frappe.show_alert({ message: __("Sessions swapped."), indicator: "green" }, 6);
+					this.show_calendar();
+				});
+			});
 		});
 	}
 

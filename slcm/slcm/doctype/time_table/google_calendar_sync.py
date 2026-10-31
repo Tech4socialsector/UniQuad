@@ -63,6 +63,9 @@ def sync_time_table_to_google_calendar(doc, method=None, raise_error=False):
 	Calendar via Frappe's existing Event -> Google Calendar sync hooks."""
 	if not (doc.schedule_date and doc.from_time and doc.to_time):
 		return
+	# A cancelled session's event was removed when it was cancelled
+	if doc.get("is_cancelled"):
+		return
 
 	# Document.insert() runs after_insert and then on_update. The after_insert
 	# hook has just pushed this event, so the on_update one would only push it

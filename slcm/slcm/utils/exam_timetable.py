@@ -162,7 +162,7 @@ def check_exam_schedule(plan):
 			# A class in the room at the same time
 			for tt in frappe.get_all(
 				"Time Table",
-				filters={"venue": row.venue, "schedule_date": row.exam_date, "docstatus": ["<", 2]},
+				filters={"venue": row.venue, "schedule_date": row.exam_date, "docstatus": ["<", 2], "is_cancelled": 0},
 				fields=["name", "from_time", "to_time", "course", "title"],
 			):
 				if _overlaps(row.start_time, row.end_time, tt.from_time, tt.to_time):
@@ -184,7 +184,7 @@ def check_exam_schedule(plan):
 		if row.invigilator:
 			for tt in frappe.get_all(
 				"Time Table",
-				filters={"instructor": row.invigilator, "schedule_date": row.exam_date, "docstatus": ["<", 2]},
+				filters={"instructor": row.invigilator, "schedule_date": row.exam_date, "docstatus": ["<", 2], "is_cancelled": 0},
 				fields=["from_time", "to_time", "course", "title"],
 			):
 				if _overlaps(row.start_time, row.end_time, tt.from_time, tt.to_time):

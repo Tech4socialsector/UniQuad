@@ -33,6 +33,9 @@
   "repeat_frequency",
   "repeats_till",
   "parent_schedule",
+  "section_break_cancel",
+  "is_cancelled",
+  "cancellation_reason",
   "section_break_display",
   "title",
   "color",
@@ -200,6 +203,28 @@
    "read_only": 1
   },
   {
+   "depends_on": "is_cancelled",
+   "fieldname": "section_break_cancel",
+   "fieldtype": "Section Break",
+   "label": "Cancellation"
+  },
+  {
+   "default": "0",
+   "description": "Set by Cancel Session on the class's Time Table. A cancelled session stays on the calendar but no longer holds its venue or faculty slot.",
+   "fieldname": "is_cancelled",
+   "fieldtype": "Check",
+   "in_standard_filter": 1,
+   "label": "Cancelled",
+   "read_only": 1
+  },
+  {
+   "depends_on": "is_cancelled",
+   "fieldname": "cancellation_reason",
+   "fieldtype": "Small Text",
+   "label": "Cancellation Reason",
+   "read_only": 1
+  },
+  {
    "fieldname": "section_break_display",
    "fieldtype": "Section Break",
    "label": "Display Settings"
@@ -272,7 +297,7 @@
   }
  ],
  "links": [],
- "modified": "2026-10-29 12:00:00.000000",
+ "modified": "2026-10-31 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Time Table",
