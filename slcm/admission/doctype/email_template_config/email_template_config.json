@@ -15,9 +15,7 @@
     {"fieldname": "subject", "fieldtype": "Data", "label": "Subject", "reqd": 1, "description": "Use placeholders e.g. {{candidate_name}}, {{program}}"},
     {"fieldname": "body", "fieldtype": "Text Editor", "label": "Body", "reqd": 1, "description": "Use placeholders: {{candidate_name}}, {{program}}, {{campus}}, {{applicant_id}}, {{status}}, {{deadline}}, {{offer_amount}}"},
     {"fieldname": "section_break_placeholders", "fieldtype": "Section Break", "label": "Available Placeholders"},
-    {"fieldname": "available_placeholders", "fieldtype": "Small Text", "label": "Available Placeholders", "read_only": 1},
-    {"fieldname": "section_break_cc", "fieldtype": "Section Break", "label": "CC Recipients"},
-    {"fieldname": "cc_roles", "fieldtype": "Table", "label": "CC Roles", "options": "Admission CC Role"}
+    {"fieldname": "available_placeholders", "fieldtype": "Small Text", "label": "Available Placeholders", "read_only": 1}
   ],
   "permissions": [
     {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1},

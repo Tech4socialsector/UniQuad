@@ -37,12 +37,6 @@
    "reqd": 1
   },
   {
-   "fieldname": "admission_round",
-   "fieldtype": "Link",
-   "label": "Admission Round",
-   "options": "Admission Round"
-  },
-  {
    "fieldname": "total_seats",
    "fieldtype": "Int",
    "label": "Total Seats",

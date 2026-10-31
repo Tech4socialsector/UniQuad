@@ -83,16 +83,9 @@ class EmailTemplateConfig(Document):
             )
             return False
         rendered = template.render(context)
-        cc_list = []
-        if template.cc_roles:
-            for r in template.cc_roles:
-                if r.role_email:
-                    cc_list.append(r.role_email)
-        
         frappe.sendmail(
             recipients=[recipient_email],
             sender=frappe.db.get_value("Email Account", template.get("email_account"), "email_id") if template.get("email_account") else None,
-            cc=cc_list,
             subject=rendered["subject"],
             message=rendered["body"],
             now=True

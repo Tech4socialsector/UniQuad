@@ -2165,12 +2165,7 @@ class SLCMAnalyticsDashboard {
 			'students:cohorts_list':          { dt: 'SLCM Batch',                        filters: {} },
 
 			// ── Admission ────────────────────────────────────────────────
-			'admission:app_status':           { dt: 'Admission Application',         filters: f('status') },
-			'admission:app_program':          { dt: 'Admission Application',         filters: {} },
-			'admission:eligibility_status':   { dt: 'Admission Application',         filters: f('eligibility_status') },
-			'admission:test_result_status':   { dt: 'Admission Application',         filters: f('test_result') },
-			'admission:interview_status':     { dt: 'Admission Application',         filters: f('interview_status') },
-			'admission:app_fee_status':       { dt: 'Admission Application',         filters: f('application_fee_status') },
+			'admission:app_fee_status':       { dt: 'Applicant',                     filters: f('application_fee_status') },
 			'admission:status':         { dt: 'Offer Letter',                  filters: f('status') },
 			'admission:cycle_status':         { dt: 'Admission Cycle',               filters: f('status') },
 			'admission:merit_status':         { dt: 'Merit List',                    filters: f('status') },

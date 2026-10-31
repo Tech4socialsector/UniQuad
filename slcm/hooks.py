@@ -663,7 +663,6 @@ scheduler_events = {
 		"slcm.admission.doctype.important_dates.important_dates.update_important_dates_status",
 		"slcm.admission.doctype.waitlist_rule.waitlist_promotion.run_scheduled_waitlist",
 		"slcm.admission.doctype.waitlist_rule.waitlist_promotion.expire_waitlists_past_cutoff",
-		"slcm.admission.events.send_deadline_reminders",
 		"slcm.admission.utils.stage_scheduler.auto_advance_applicant_stages",
 		"slcm.slcm.doctype.student_master.student_master.auto_sync_all_student_fee_structures",
 		"slcm.pace.doctype.pace_admission.pace_admission.auto_close_outdated_admissions",

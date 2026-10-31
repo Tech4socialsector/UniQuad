@@ -1436,76 +1436,6 @@ def get_admission_analytics(academic_year=None, term=None, program=None, cohort=
 	"""Admission pipeline, applicant funnel, cycle, and offer analytics."""
 	_require_dashboard_access()
 
-	adm_where_parts = []
-	adm_params = {}
-
-	if program:
-		adm_where_parts.append("aa.program = %(program)s")
-		adm_params["program"] = program
-
-	if academic_year:
-		adm_where_parts.append(
-			"aa.admission_cycle IN "
-			"(SELECT name FROM `tabAdmission Cycle` WHERE academic_year = %(academic_year)s)"
-		)
-		adm_params["academic_year"] = academic_year
-
-	adm_where = ("WHERE " + " AND ".join(adm_where_parts)) if adm_where_parts else ""
-
-	# Application status pipeline (ordered)
-	app_status_pipeline = frappe.db.sql(
-		f"""
-		SELECT COALESCE(NULLIF(status, ''), 'Unknown') AS label, COUNT(*) AS value
-		FROM `tabAdmission Application` aa
-		{adm_where}
-		GROUP BY status
-		ORDER BY FIELD(status,
-			'Draft','Submitted','Under Review','Shortlisted','Waitlisted',
-			'Offered','Accepted','Rejected','Withdrawn') ASC
-		""",
-		adm_params,
-		as_dict=True,
-	)
-
-	# Eligibility status
-	eligibility_dist = frappe.db.sql(
-		f"""
-		SELECT COALESCE(NULLIF(eligibility_status, ''), 'Pending') AS label, COUNT(*) AS value
-		FROM `tabAdmission Application` aa
-		{adm_where}
-		GROUP BY eligibility_status
-		ORDER BY value DESC
-		""",
-		adm_params,
-		as_dict=True,
-	)
-
-	# Test result status
-	test_result_dist = frappe.db.sql(
-		f"""
-		SELECT COALESCE(NULLIF(test_result_status, ''), 'Pending') AS label, COUNT(*) AS value
-		FROM `tabAdmission Application` aa
-		{adm_where}
-		GROUP BY test_result_status
-		ORDER BY value DESC
-		""",
-		adm_params,
-		as_dict=True,
-	)
-
-	# Interview status
-	interview_dist = frappe.db.sql(
-		f"""
-		SELECT COALESCE(NULLIF(interview_status, ''), 'Not Scheduled') AS label, COUNT(*) AS value
-		FROM `tabAdmission Application` aa
-		{adm_where}
-		GROUP BY interview_status
-		ORDER BY value DESC
-		""",
-		adm_params,
-		as_dict=True,
-	)
-
 	# Offer letter status
 	offer_status_dist = frappe.db.sql(
 		"""
@@ -1550,47 +1480,29 @@ def get_admission_analytics(academic_year=None, term=None, program=None, cohort=
 		as_dict=True,
 	)
 
-	# Program-wise applications
-	program_apps = frappe.db.sql(
-		f"""
-		SELECT COALESCE(p.program_name, aa.program, 'Unknown') AS label, COUNT(*) AS value
-		FROM `tabAdmission Application` aa
-		LEFT JOIN `tabProgramme` p ON p.name = aa.program
-		{adm_where}
-		GROUP BY aa.program
-		ORDER BY value DESC
-		LIMIT 12
-		""",
-		adm_params,
-		as_dict=True,
-	)
-
-	total_applicants = frappe.db.sql(
-		f"SELECT COUNT(*) FROM `tabAdmission Application` aa {adm_where}",
-		adm_params,
-	)[0][0]
-
 	active_cycles   = frappe.db.count("Admission Cycle", filters={"status": "Active"})
 	total_offers    = frappe.db.count("Offer Letter")
 	accepted_offers = frappe.db.count("Offer Letter", filters={"status": "Accepted"})
 	total_merit_lists = frappe.db.count("Merit List")
 
+	# The application pipeline, eligibility / test / interview and programme
+	# widgets read the removed Admission Application doctype; they stay empty.
 	return {
-		"total_applicants":           total_applicants or 0,
+		"total_applicants":           0,
 		"active_cycles":              active_cycles,
 		"total_offers":               total_offers,
 		"accepted_offers":            accepted_offers,
 		"acceptance_rate":            round(accepted_offers / total_offers * 100, 1) if total_offers else 0,
 		"total_merit_lists":          total_merit_lists,
-		"status_pipeline": app_status_pipeline,
-		"eligibility_distribution":   eligibility_dist,
-		"test_result_distribution":   test_result_dist,
-		"interview_distribution":     interview_dist,
+		"status_pipeline":            [],
+		"eligibility_distribution":   [],
+		"test_result_distribution":   [],
+		"interview_distribution":     [],
 		"offer_status_distribution":  offer_status_dist,
 		"merit_list_status":          merit_status_dist,
 		"application_fee_status":     app_fee_dist,
 		"cycle_status":               cycle_status_dist,
-		"program_applications":       program_apps,
+		"program_applications":       [],
 	}
 
 
@@ -2939,20 +2851,9 @@ def get_drilldown_data(module, dimension, value, academic_year=None, term=None, 
 
 	# ── Admission ─────────────────────────────────────────────────────────────
 	elif module == "admission":
+		# Admission Application dimensions: the doctype was removed, nothing to list.
 		if dimension == "app_status":
-			aa_filters = {}
-			if value and value not in ("all", "All"):
-				aa_filters["status"] = value
-			if program:
-				aa_filters["program"] = program
-			rows = frappe.db.get_all(
-				"Admission Application", filters=aa_filters,
-				fields=["name", "applicant", "program", "status", "eligibility_status",
-						"test_result_status", "interview_status", "admission_cycle"],
-				limit_start=offset, limit_page_length=page_size, order_by="creation desc",
-			)
-			total = frappe.db.count("Admission Application", filters=aa_filters)
-			return {"rows": rows, "total": total,
+			return {"rows": [], "total": 0,
 					"columns": ["name", "applicant", "program", "status",
 								"eligibility_status", "test_result_status", "interview_status"]}
 
@@ -3001,18 +2902,7 @@ def get_drilldown_data(module, dimension, value, academic_year=None, term=None, 
 								"program_level", "status", "generated_on"]}
 
 		elif dimension == "app_program":
-			aa_filters = {}
-			if value and value not in ("all", "All"):
-				# value may be program_name; resolve to program id
-				prog_id = frappe.db.get_value("Programme", {"program_name": value}, "name") or value
-				aa_filters["program"] = prog_id
-			rows = frappe.db.get_all(
-				"Admission Application", filters=aa_filters,
-				fields=["name", "applicant", "program", "status", "admission_cycle"],
-				limit_start=offset, limit_page_length=page_size, order_by="creation desc",
-			)
-			total = frappe.db.count("Admission Application", filters=aa_filters)
-			return {"rows": rows, "total": total,
+			return {"rows": [], "total": 0,
 					"columns": ["name", "applicant", "program", "status", "admission_cycle"]}
 
 		elif dimension in ("eligibility_status", "test_result_status",
@@ -3035,18 +2925,8 @@ def get_drilldown_data(module, dimension, value, academic_year=None, term=None, 
 				return {"rows": rows, "total": total,
 						"columns": ["name", "application_fee_status", "creation"]}
 			else:
-				aa_filters = {}
-				field = field_map[dimension]
-				if value and value not in ("all", "All"):
-					aa_filters[field] = value
-				rows = frappe.db.get_all(
-					"Admission Application", filters=aa_filters,
-					fields=["name", "applicant", "program", "status", field],
-					limit_start=offset, limit_page_length=page_size, order_by="creation desc",
-				)
-				total = frappe.db.count("Admission Application", filters=aa_filters)
-				return {"rows": rows, "total": total,
-						"columns": ["name", "applicant", "program", "status", field]}
+				return {"rows": [], "total": 0,
+						"columns": ["name", "applicant", "program", "status", field_map[dimension]]}
 
 	# ── ID Card ───────────────────────────────────────────────────────────────
 	elif module == "idcard":
