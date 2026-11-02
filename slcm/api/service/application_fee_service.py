@@ -112,6 +112,26 @@ def get_application_fee_for_category(
 	return 0
 
 
+def is_application_fee_configured(admission_cycle, category=None, is_foreign=False, gender=None, pwd=None):
+	"""True when the cycle's Application Fee defines a fee for this candidate — including an explicit 0.
+	False when get_application_fee_for_category returned 0 only because nothing matched
+	(no Application Fee for the cycle, or no category / General row)."""
+	app_fee = get_application_fee_doc(admission_cycle) if admission_cycle else None
+	if not app_fee:
+		return False
+	if is_foreign:
+		return app_fee.get("international_application_fee") is not None
+	keys = {(getattr(r, "admission_category", "") or "").strip().lower()
+		for r in getattr(app_fee, "application_fee_by_category", [])}
+	if (gender or "").strip().lower() == "female" and "women" in keys:
+		return True
+	if (pwd or "").strip().lower() == "yes" and "pwd" in keys:
+		return True
+	if category and category.strip().lower() in keys:
+		return True
+	return bool(keys & {"general", "gen", "unreserved"})
+
+
 def get_payment_gateway_for_application_fee(program=None, admission_cycle=None):
 	"""
 	Returns Payment Gateway from Application Fee document for the admission cycle.
@@ -384,6 +404,8 @@ def get_application_fee_details(applicant_name):
 	Returns application fee amount, currency, and status for the given Applicant.
 	Used by the portal UI to show fee and enable/disable pay button.
 	"""
+	from slcm.security.access import assert_owns_applicant
+	assert_owns_applicant(applicant_name)
 	applicant = frappe.get_doc("Applicant", applicant_name)
 	category = _get_applicant_category(applicant_name)
 	is_foreign = (applicant.foriegn_national or "").strip() == "Yes"

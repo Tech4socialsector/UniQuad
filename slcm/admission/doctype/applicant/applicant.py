@@ -493,8 +493,27 @@ class Applicant(Document):
             applicant=self,
         )
 
+        db_status = (frappe.db.get_value("Applicant", self.name, "application_fee_status") or "").strip()
+        if flt(fee_amount, 2) <= 0 and db_status not in ("Paid", "Waived"):
+            from slcm.api.service.application_fee_service import is_application_fee_configured
+            if not is_application_fee_configured(
+                self.admission_cycle, self.whether_scstobc_ncl, is_foreign,
+                getattr(self, "gender", None), getattr(self, "pwd", None),
+            ):
+                # 0 only because no fee is set up for this cycle/category: never treat that as free.
+                frappe.log_error(
+                    title="Application fee not configured",
+                    message=f"Applicant {self.name}: no Application Fee for cycle '{self.admission_cycle}' "
+                            f"/ category '{self.whether_scstobc_ncl}'. Submission was blocked.",
+                )
+                frappe.throw(
+                    _("The application fee for this programme is not set up yet, so the application "
+                      "cannot be submitted. Please contact the admissions office."),
+                    title=_("Application Fee Not Configured"),
+                )
+
         if flt(fee_amount, 2) <= 0:
-            # No fee or zero fee: allow submit without payment; set status to Paid so UI/reports treat as complete
+            # Fee explicitly configured as 0: allow submit without payment; set status to Paid so UI/reports treat as complete
             self.application_fee_status = "Paid"
             if flt(self.application_fee_amount or 0, 2) != flt(fee_amount, 2):
                 self.application_fee_amount = flt(fee_amount, 2)

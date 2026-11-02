@@ -428,7 +428,7 @@ def applicant_query_conditions(user):
 
     # Applicant role restriction
     if "Applicant" in roles:
-        return f"`tabApplicant`.email = '{user}'"
+        return f"`tabApplicant`.email = {frappe.db.escape(user)}"
 
     return ""
 
@@ -455,7 +455,7 @@ def entrance_test_provider_query_conditions(user):
         if not provider_name:
             return "1=0"
 
-        return f"`tabEntrance Test Provider`.name = '{provider_name}'"
+        return f"`tabEntrance Test Provider`.name = {frappe.db.escape(provider_name)}"
 
     return ""
 
@@ -485,10 +485,10 @@ def seat_allocation_query_conditions(user):
         if not provider_name:
             return "1=0"
 
-        return f"`tabEntrance Test Seat Allocation`.entrance_test_provider = '{provider_name}'"
+        return f"`tabEntrance Test Seat Allocation`.entrance_test_provider = {frappe.db.escape(provider_name)}"
 
     if "Applicant" in roles:
-        return f"`tabEntrance Test Seat Allocation`.email = '{user}'"
+        return f"`tabEntrance Test Seat Allocation`.email = {frappe.db.escape(user)}"
 
     return ""
 
@@ -515,7 +515,7 @@ def interview_staff_member_query_conditions(user):
         if not staff_name:
             return "1=0"
 
-        return f"`tabInterview Staff Member`.name = '{staff_name}'"
+        return f"`tabInterview Staff Member`.name = {frappe.db.escape(staff_name)}"
 
     return ""
 
@@ -532,7 +532,7 @@ def interview_seat_allocation_query_conditions(user):
     roles = frappe.get_roles(user)
 
     if "Applicant" in roles:
-        return f"`tabInterview Seat Allocation`.email = '{user}'"
+        return f"`tabInterview Seat Allocation`.email = {frappe.db.escape(user)}"
 
     if "Interview Staff Member" in roles:
 
@@ -545,7 +545,7 @@ def interview_seat_allocation_query_conditions(user):
         if not staff_name:
             return "1=0"
 
-        return f"`tabInterview Seat Allocation`.interview_staff_member = '{staff_name}'"
+        return f"`tabInterview Seat Allocation`.interview_staff_member = {frappe.db.escape(staff_name)}"
 
     return ""
 

@@ -6,6 +6,8 @@ from datetime import datetime
 import json
 import logging
 
+from slcm.security.access import assert_owns_applicant, assert_owns_offer, require_desk_user
+
 def update_payment_request_paid_on(doc, method):
     if doc.status == "Paid" and not doc.paid_on:
         doc.paid_on = frappe.utils.nowdate()
@@ -264,7 +266,6 @@ class FeeService:
 
 
     @staticmethod
-    @frappe.whitelist()
     def create_offer_razorpay_order(offer_name):
         """
         Creates a Razorpay order directly and returns details for the frontend modal.
@@ -495,7 +496,6 @@ class FeeService:
             pass
 
     @staticmethod
-    @frappe.whitelist()
     def verify_offer_payment(razorpay_payment_id, razorpay_order_id, razorpay_signature, offer_name):
         """
         Verifies the Razorpay signature and updates the offer status.
@@ -814,7 +814,6 @@ class FeeService:
 
     @staticmethod
 
-    @frappe.whitelist()
     def log_payment_failure(offer_name, order_id, error_data):
         """
         Logs a payment failure reported by the frontend.
@@ -997,7 +996,6 @@ class FeeService:
 
 
     @staticmethod
-    @frappe.whitelist()
     def create_confirmation_fee_refund(offer_name, refund_percentage):
         """
         Creates a Refund Request for the Confirmation Fee payment on an Offer Letter.
@@ -1309,7 +1307,6 @@ class FeeService:
                     del frappe.flags.payment_request_status_from_backend
 
     @staticmethod
-    @frappe.whitelist()
     def create_application_fee_razorpay_order(applicant_name):
         """Creates Razorpay order for application fee payment."""
         try:
@@ -1463,7 +1460,6 @@ class FeeService:
         frappe.db.commit()
 
     @staticmethod
-    @frappe.whitelist()
     def verify_application_fee_payment(razorpay_payment_id, razorpay_order_id, razorpay_signature, applicant_name):
         """Verifies Razorpay payment for application fee and marks as paid."""
         try:
@@ -1768,7 +1764,6 @@ class FeeService:
         sync_application_fee_assignment_for_applicant(applicant_name)
 
     @staticmethod
-    @frappe.whitelist()
     def process_application_fee_payment(applicant_name, payment_mode="Cash", reference_number=None,
             bank_name=None, cheque_number=None, cheque_date=None, upi_id=None, remarks=None):
         """Records offline/manual application fee payment."""
@@ -1794,7 +1789,6 @@ class FeeService:
         return out
 
     @staticmethod
-    @frappe.whitelist()
     def log_application_fee_payment_failure(applicant_name, order_id, error_data):
         """Logs application fee payment failure."""
         try:
@@ -1945,50 +1939,60 @@ class FeeService:
         return {"status": "info", "message": _("No payment attempts found at Razorpay for this order.")}
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def create_offer_razorpay_order(offer_name):
+    assert_owns_offer(offer_name)
     return FeeService.create_offer_razorpay_order(offer_name)
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def verify_offer_payment(razorpay_payment_id, razorpay_order_id, razorpay_signature, offer_name):
+    # No ownership check: the Razorpay signature binds this payment to the offer's order.
     return FeeService.verify_offer_payment(razorpay_payment_id, razorpay_order_id, razorpay_signature, offer_name)
 
-@frappe.whitelist()
-def process_fee_payment(offer_name, payment_mode="Cash", reference_number=None, 
-                       bank_name=None, cheque_number=None, cheque_date=None, 
+@frappe.whitelist(methods=["POST"])
+def process_fee_payment(offer_name, payment_mode="Cash", reference_number=None,
+                       bank_name=None, cheque_number=None, cheque_date=None,
                        upi_id=None, remarks=None):
+    require_desk_user()
     return FeeService.process_fee_payment(
-        offer_name, payment_mode, reference_number, 
+        offer_name, payment_mode, reference_number,
         bank_name, cheque_number, cheque_date, upi_id, remarks
     )
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def log_payment_failure(offer_name, order_id, error_data):
+    assert_owns_offer(offer_name)
     return FeeService.log_payment_failure(offer_name, order_id, error_data)
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def create_application_fee_razorpay_order(applicant_name):
+    assert_owns_applicant(applicant_name)
     return FeeService.create_application_fee_razorpay_order(applicant_name)
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def verify_application_fee_payment(razorpay_payment_id, razorpay_order_id, razorpay_signature, applicant_name):
+    # No ownership check: the Razorpay signature binds this payment to the applicant's order.
     return FeeService.verify_application_fee_payment(razorpay_payment_id, razorpay_order_id, razorpay_signature, applicant_name)
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def process_application_fee_payment(applicant_name, payment_mode="Cash", reference_number=None,
         bank_name=None, cheque_number=None, cheque_date=None, upi_id=None, remarks=None):
+    require_desk_user()
     return FeeService.process_application_fee_payment(
         applicant_name, payment_mode, reference_number,
         bank_name, cheque_number, cheque_date, upi_id, remarks
     )
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def log_application_fee_payment_failure(applicant_name, order_id, error_data):
+    assert_owns_applicant(applicant_name)
     return FeeService.log_application_fee_payment_failure(applicant_name, order_id, error_data)
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def reconcile_pending_payments():
+    require_desk_user()
     return FeeService.reconcile_pending_payments()
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def reconcile_single_payment(payment_request_name):
+    require_desk_user()
     return FeeService.reconcile_single_payment(payment_request_name)

@@ -86,3 +86,4 @@ slcm.patches.v2_0.migrate_applicant_status_completed_to_submitted_and_paid
 slcm.patches.v2_0.remove_course_schedule
 slcm.patches.v2_0.remove_unused_admission_doctypes
 slcm.patches.v2_0.remove_unwired_admission_doctypes
+slcm.patches.v2_0.make_applicant_files_private

@@ -40,6 +40,9 @@ def get_context(context):
         frappe.local.request.args.get("redirect", "") or
         frappe.local.request.args.get("next", "")
     )
+    # Same-site paths only: the value is echoed into the page and used as a post-login redirect.
+    from slcm.security.access import safe_redirect_path
+    redirect_to = safe_redirect_path(redirect_to, "")
 
     if frappe.session.user != "Guest":
         user_type = frappe.db.get_value("User", frappe.session.user, "user_type") or "Website User"

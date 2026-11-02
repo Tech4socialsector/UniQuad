@@ -16,6 +16,10 @@ PROFILE_FIELD_MAP = {
     "pincode": "pincode",
 }
 
+# The email identifies the applicant (record ownership is checked against it), so the portal never
+# changes it on the User or the Applicant.
+PORTAL_READ_ONLY_FIELDS = {"email"}
+
 # Portal / code uses date_of_birth + address; standard Frappe User uses birth_date + location.
 USER_WRITE_COLUMN_ALIASES = {
     "date_of_birth": ("date_of_birth", "birth_date"),
@@ -107,7 +111,7 @@ def update_user_profile(**kwargs):
     
     # Handle mapped fields from User names
     for user_field in PROFILE_FIELD_MAP.keys():
-        if user_field in kwargs:
+        if user_field in kwargs and user_field not in PORTAL_READ_ONLY_FIELDS:
             val = kwargs[user_field]
             if user_field == "mobile_no" and val:
                 val = sanitize_phone_for_frappe(val)
@@ -116,7 +120,7 @@ def update_user_profile(**kwargs):
     # Also handle alternate names for fields (if coming from older template using Applicant names)
     INV_MAP = {v: k for k, v in PROFILE_FIELD_MAP.items()}
     for k, v in kwargs.items():
-        if k in INV_MAP and INV_MAP[k] not in user_update_dict:
+        if k in INV_MAP and INV_MAP[k] not in user_update_dict and INV_MAP[k] not in PORTAL_READ_ONLY_FIELDS:
             val = v
             if INV_MAP[k] == "mobile_no" and val:
                 val = sanitize_phone_for_frappe(val)
@@ -203,6 +207,8 @@ def update_applicant_from_form(**kwargs):
         # Support User field names as input for Applicant update too
         elif k in PROFILE_FIELD_MAP:
             applicant_update_dict[PROFILE_FIELD_MAP[k]] = v
+    for k in PORTAL_READ_ONLY_FIELDS:
+        applicant_update_dict.pop(k, None)
 
     if not applicant_update_dict:
         return {"success": False, "error": "No valid fields provided for applicant update."}
@@ -210,10 +216,11 @@ def update_applicant_from_form(**kwargs):
     try:
         target_doctype = kwargs.get("doctype") or "Applicant"
         target_docname = kwargs.get("docname") or app_name
-        
+
         if target_doctype == "Applicant":
+            # Always the applicant verified above — never a client-supplied docname.
             # Update Applicant only — User profile is updated only via update_user_profile (portal modal).
-            doc = frappe.get_doc("Applicant", target_docname)
+            doc = frappe.get_doc("Applicant", app_name)
             doc.update(applicant_update_dict)
             doc.save(ignore_permissions=True)
         else:
@@ -238,7 +245,7 @@ def sync_applicant_to_user(doc, method=None):
     """
     return
 
-@frappe.whitelist(methods=["POST", "GET"])
+@frappe.whitelist(methods=["POST"])
 def update_profile(**kwargs):
     """
     Legacy wrapper for existing dashboard functionality.

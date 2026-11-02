@@ -1,5 +1,6 @@
 import frappe
 import json
+from slcm.security.access import require_desk_user
 
 DRAFT_KEY_PREFIX = "admission_wizard_draft_"
 
@@ -69,6 +70,7 @@ def _get_phase_progress():
 
 @frappe.whitelist()
 def save_step_draft(step, data):
+    require_desk_user()
     if isinstance(data, str):
         data = json.loads(data)
     step = int(step)
@@ -104,6 +106,7 @@ def get_draft():
 
 @frappe.whitelist()
 def activate_system():
+    require_desk_user()
     draft = _get_draft()
     errors = _validate_draft(draft)
     if errors:

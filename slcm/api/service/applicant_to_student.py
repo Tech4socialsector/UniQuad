@@ -15,6 +15,7 @@
 
 import frappe
 from frappe.utils import flt, nowdate
+from slcm.security.access import require_desk_user
 
 
 # ── Academic Year Helper ──────────────────────────────────────────────────────
@@ -591,6 +592,7 @@ def convert_applicant_to_student(applicant_name, program, admission_cycle, offer
     Returns:
         dict: {"student_name": str, "created": bool}
     """
+    require_desk_user()
     if not frappe.db.exists("Applicant", applicant_name):
         frappe.throw(frappe._("Applicant {0} not found.").format(applicant_name))
 

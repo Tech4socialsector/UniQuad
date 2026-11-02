@@ -85,6 +85,7 @@
   "hsc_percentage",
   "class_xii_marksheet",
   "sample_bonafide_certificate",
+  "class_xii_bonafide",
   "column_break_ycmo",
   "class_xii_school",
   "if_cgpa_maximum_cgpa_class_xii",
@@ -457,11 +458,12 @@
    "reqd": 1
   },
   {
+   "depends_on": "eval: doc.class_xii_status == \"Completed\"",
    "description": "Max 5MB - Supported formats png, jpeg, jpg, pdf",
    "fieldname": "class_xii_marksheet",
    "fieldtype": "Attach",
-   "label": "Class XII Marksheet / Bonafide Certificate To Be Uploaded",
-   "reqd": 1
+   "label": "Class XII Marksheet Certificate To Be Uploaded",
+   "mandatory_depends_on": "eval: doc.class_xii_status == \"Completed\""
   },
   {
    "depends_on": "eval: doc.program_level == \"Postgraduate\" || doc.program_level == \"Research Course\"",
@@ -1308,6 +1310,13 @@
    "fieldtype": "Data",
    "label": "Guardian Occupation",
    "mandatory_depends_on": "eval:doc.guardian_required == 1 || doc.guardian_required === 'Provide legal guardian details'"
+  },
+  {
+   "depends_on": "eval: doc.class_xii_status == \"Appearing\"",
+   "fieldname": "class_xii_bonafide",
+   "fieldtype": "Attach",
+   "label": "Class XII Bonafide Certificate To Be Uploaded",
+   "mandatory_depends_on": "eval: doc.class_xii_status == \"Appearing\""
   }
  ],
  "grid_page_length": 50,
@@ -1343,7 +1352,7 @@
   }
  ],
  "make_attachments_public": 1,
- "modified": "2026-10-30 18:23:37.645511",
+ "modified": "2026-10-31 18:59:31.952481",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Applicant",

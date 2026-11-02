@@ -3,6 +3,7 @@ import base64
 import mimetypes
 
 import frappe
+from frappe.rate_limiter import rate_limit
 from slcm.admission.utils.nlsat_portal import get_portal_base, get_portal_login_url
 from frappe import _
 from frappe.utils import random_string
@@ -886,7 +887,9 @@ def get_payment_status(docname):
         "payment_status": doc.payment_status,
         "docstatus": doc.docstatus
     }
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist(allow_guest=True, methods=["POST"])
+# Per IP; generous enough for cyber cafes and college labs where many candidates share one address.
+@rate_limit(limit=20, seconds=60 * 60)
 def custom_sign_up(email, full_name, mobile_no=None, redirect_to=None):
     """
     Custom sign-up that bypasses Frappe's core sign_up() to avoid the
@@ -950,7 +953,8 @@ def custom_sign_up(email, full_name, mobile_no=None, redirect_to=None):
         user_doc.db_set("last_reset_password_key_generated_on", add_days(now_datetime(), 30))
 
         parsed = urllib.parse.urlparse(frappe_link)
-        base_redir = redirect_to or get_portal_base()
+        from slcm.security.access import safe_redirect_path
+        base_redir = safe_redirect_path(redirect_to, None) or get_portal_base()
         correct_link = get_url(f"/update-password?{parsed.query}&redirect_to={urllib.parse.quote(base_redir)}")
 
         # Cache redirect for post-password-set
@@ -1208,8 +1212,12 @@ def custom_update_password(new_password, logout_all_sessions=0, key=None, old_pa
         # Validate target redirect path to prevent open redirect vulnerabilities
         if target:
             from frappe.utils import get_url
-            site_url = get_url()
-            if (target.startswith("/") and not target.startswith("//")) or target.startswith(site_url):
+            from slcm.security.access import safe_redirect_path
+            site_url = get_url().rstrip("/")
+            if target.startswith(site_url + "/"):
+                target = target[len(site_url):]
+            target = safe_redirect_path(target, None)
+            if target:
                 return target
 
         if "PACE Applicant" in roles and "Applicant" not in roles:

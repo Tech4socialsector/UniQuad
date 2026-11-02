@@ -7050,7 +7050,7 @@ src="https://www.facebook.com/tr?id=1279045953496223&ev=PageView&noscript=1"
 	async function uploadFileToFrappe(file) {
 	    var fd = new FormData();
 	    fd.append('file', file, file.name);
-	    fd.append('is_private', '0');
+	    fd.append('is_private', '1');  // identity / academic documents are never public
 	    fd.append('folder', 'Home/Attachments');
 
 	    const csrfToken = window.csrf_token || (typeof frappe !== 'undefined' ? frappe.csrf_token : '');
