@@ -356,7 +356,12 @@ fixtures = [
     # Also exclude "Web Form-amount_field": it's created at runtime by the "payments"
     # app (payments/utils/utils.py: create_custom_fields) whenever a Web Form has
     # "Accept Payment" enabled — it's not owned by slcm and shouldn't be a fixture.
-    "Web Form",
+    {
+        "doctype": "Web Form",
+        "filters":[
+            ["name", "in", ["applicant-form", "pace-application-form"]]
+        ]
+    },
     {
         "doctype": "Custom Field",
         "filters": [
