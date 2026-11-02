@@ -228,6 +228,18 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 		});
 		this.d.$wrapper.addClass("ctt-dialog");
 
+		// Edit mode: Delete, for this session or this and the following ones
+		// (the "Apply Changes To" choice); its label follows that choice.
+		if (this.edit && frappe.model.can_delete("Time Table")) {
+			// Frappe's own red button (es-button theme), so it reads the same
+			// at rest, on hover and while disabled
+			this.$delete_btn = frappe.ui.button({
+				label: __("Delete"), variant: "solid", theme: "red", css_class: "ctt-delete-btn", loading_label: "",
+			}).on("click", () => me.delete_edit());
+			this.d.footer.removeClass("hide");
+			this.d.custom_actions.append(this.$delete_btn);
+		}
+
 		// While a request runs the dialog cannot be closed (close button, Esc,
 		// clicking outside), so the outcome is always seen in it.
 		const hide = this.d.hide.bind(this.d);
@@ -538,6 +550,10 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 			? __("{0} session(s) from {1} to {2}. Changing the Schedule Date, Repeat or Repeats Till rebuilds them from the new date; sessions with marked attendance are kept. Availability is checked before anything changes.",
 				[e.following, ctt_date(e.schedule_date), ctt_date(e.series_end)])
 			: __("Only the session on {0} is updated. Availability is checked before anything changes.", [ctt_date(e.schedule_date)]));
+		if (this.$delete_btn) {
+			this.$delete_btn.find(".es-button__label")
+				.text(future ? __("Delete This and Following") : __("Delete This Session"));
+		}
 		if (!future) {
 			// Repeat belongs to the series: back to its saved values
 			this.d.set_value("repeat_frequency", e.repeat_frequency);
@@ -545,7 +561,7 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 		}
 	}
 
-	async save_edit() {
+	async save_edit(drop_cp_weeks) {
 		const s = this.schedule_values();
 		const future = this.edit_future();
 		const missing = [
@@ -580,6 +596,7 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 		const data = { title: s.title, instructor: s.instructor, venue: s.venue, color: s.color,
 			from_time: s.from_time, to_time: s.to_time, schedule_date: s.schedule_date };
 		if (future) Object.assign(data, { repeat_frequency: s.repeat_frequency, repeats_till: s.repeats_till });
+		if (drop_cp_weeks) data.drop_cp_weeks = 1;
 		const args = { time_table: this.edit.name, data, scope: future ? "future" : "this" };
 
 		// 1. Availability of every date and what would change - nothing saved yet
@@ -588,6 +605,11 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 		if (!check) return;
 		if (check.errors.length) {
 			frappe.msgprint({ title: __("Time Slot Unavailable"), message: check.errors.join("<br>"), indicator: "orange" });
+			return;
+		}
+		// Class Participation weeks the new dates no longer reach: delete them, or cancel
+		if ((check.cp_outside || []).length) {
+			this.confirm_cp_weeks_drop(check.cp_outside, () => this.save_edit(true));
 			return;
 		}
 
@@ -608,6 +630,104 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 		});
 	}
 
+	/** Delete this session, or this and the following ones of its series. A dry
+	 * run lists what would go first; sessions with attendance taken are kept. */
+	async delete_edit() {
+		const future = this.edit_future();
+		const args = { time_table: this.edit.name, scope: future ? "future" : "this" };
+		const check = await this.run_busy(__("Checking the sessions to delete..."), [],
+			() => frappe.call({ method: CTT_METHOD + "check_class_time_table_delete", args }));
+		if (!check) return;
+		if (check.errors.length) {
+			frappe.msgprint({ title: __("Cannot Delete"), message: check.errors.join("<br>"), indicator: "orange" });
+			return;
+		}
+		frappe.confirm(this.delete_confirm_html(check, future), async () => {
+			const m = await this.run_busy(__("Deleting sessions..."), [
+				{ label: "Deleting", text: __("Deleting sessions..."), unit: __("Session {0} of {1}"), from: 0, to: 100 },
+			], () => frappe.call({ method: CTT_METHOD + "delete_class_time_table", args }));
+			if (!m) return;
+			this.d.hide();
+			frappe.show_alert({
+				message: m.keep
+					? __("{0} session(s) deleted, {1} kept (attendance taken).", [m.delete, m.keep])
+					: __("{0} session(s) deleted.", [m.delete]),
+				indicator: "green",
+			}, 7);
+			this.edit.on_saved && this.edit.on_saved();
+		});
+	}
+
+	/** What Delete will do: each session and whether it goes or stays. */
+	delete_confirm_html(check, future) {
+		const rows = check.rows.map((r) => `<tr>
+			<td class="ctt-nowrap">${ctt_esc(r.date_fmt)}</td>
+			<td class="ctt-nowrap">${ctt_esc(r.time)}</td>
+			<td>${ctt_esc(r.venue)}</td>
+			<td><span class="ctt-badge ${r.status === "kept" ? "" : "bad"}">${r.status === "kept" ? __("Kept") : __("Delete")}</span></td>
+			<td>${ctt_esc(r.note)}</td>
+		</tr>`).join("");
+		const head = future
+			? __("<b>{0}</b> session(s) from this one will be deleted, with their attendance sessions and calendar events.", [check.delete])
+				+ (check.keep ? " " + __("{0} session(s) with attendance taken are kept.", [check.keep]) : "")
+			: __("This session will be deleted, with its attendance session and calendar event.");
+		const left = check.remaining
+			? __("{0} session(s) of the series remain.", [check.remaining])
+			: __("No session of this series remains.");
+		const warn = check.warnings.length
+			? `<div class="ctt-banner warn">${check.warnings.map(ctt_esc).join("<br>")}</div>` : "";
+		return `<div class="ctt-dialog">
+			<div class="ctt-banner bad">${head} ${left}</div>${warn}
+			<div class="ctt-table-wrap" style="max-height:300px"><table class="ctt-table">
+				<thead><tr><th>${__("Date")}</th><th>${__("Time")}</th><th>${__("Venue")}</th><th>${__("Action")}</th><th>${__("Note")}</th></tr></thead>
+				<tbody>${rows}</tbody>
+			</table></div>
+			<div class="ctt-muted" style="margin-top:8px">${__("This cannot be undone. Delete these sessions?")}</div>
+		</div>`;
+	}
+
+	/** The Class Participation weeks outside the new schedule, in a table, with
+	 * Delete (they are taken off the series and their groups deleted, then the
+	 * save carries on) or Cancel (nothing changes). A week with participation
+	 * already recorded cannot be deleted. */
+	confirm_cp_weeks_drop(weeks, on_delete) {
+		const locked = weeks.filter((w) => w.recorded);
+		const rows = weeks.map((w) => `<tr>
+			<td><b>${__("Week {0}", [w.idx])}</b></td>
+			<td>${ctt_esc(w.week_name)}</td>
+			<td class="ctt-nowrap">${ctt_esc(w.dates)}</td>
+			<td>${w.students}</td>
+			<td>${w.recorded
+				? `<span class="ctt-badge warn">${__("Participation recorded")}</span>`
+				: `<span class="ctt-badge bad">${__("Will be deleted")}</span>`}</td>
+		</tr>`).join("");
+		const d = new frappe.ui.Dialog({
+			title: __("Class Participation Weeks Outside the Schedule"),
+			size: "large",
+			fields: [{ fieldtype: "HTML", options: `<div class="ctt-dialog">
+				<div class="ctt-banner warn">${locked.length
+					? __("{0} week(s) fall outside the new dates. Participation is already recorded in {1} of them, so they cannot be deleted; kindly choose dates that still cover them.", [weeks.length, locked.length])
+					: __("{0} Class Participation week(s) fall outside the new dates. Delete them to continue, or cancel and choose other dates.", [weeks.length])}</div>
+				<div class="ctt-table-wrap" style="max-height:320px"><table class="ctt-table">
+					<thead><tr><th>${__("Week")}</th><th>${__("Group")}</th><th>${__("Dates")}</th><th>${__("Students")}</th><th>${__("Status")}</th></tr></thead>
+					<tbody>${rows}</tbody>
+				</table></div>
+				${locked.length ? "" : `<div class="ctt-muted" style="margin-top:8px">${__("Deleting takes these weeks off the schedule and deletes their student groups. Nothing is saved until you confirm the next step.")}</div>`}
+			</div>` }],
+			secondary_action_label: __("Cancel"),
+			secondary_action: () => d.hide(),
+		});
+		if (!locked.length) {
+			d.set_primary_action(__("Delete Weeks & Continue"), () => {
+				d.hide();
+				on_delete();
+			});
+			// Footer buttons are es-buttons: red through their theme, not .btn-danger
+			d.get_primary_btn().attr("data-theme", "red");
+		}
+		d.show();
+	}
+
 	/** What Save will do, with each date's availability. */
 	edit_confirm_html(check) {
 		const badge = { ok: "ok", faculty_warn: "warn", kept: "", holiday: "bad", venue: "bad" };
@@ -621,6 +741,7 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 		const head = check.rebuild
 			? __("{0} session(s) from this one will be replaced by <b>{1}</b> new session(s).", [check.replace, check.create])
 				+ (check.keep ? " " + __("{0} session(s) with marked attendance are kept.", [check.keep]) : "")
+				+ ((check.drop_weeks || []).length ? " " + __("{0} Class Participation week(s) will be deleted.", [check.drop_weeks.length]) : "")
 			: __("<b>{0}</b> session(s) will be updated. Every date is available.", [check.update]);
 		const warn = check.rows.some((r) => r.status === "faculty_warn")
 			? `<div class="ctt-banner warn">${__("The faculty has another session at this time on some dates; kindly confirm their availability.")}</div>` : "";

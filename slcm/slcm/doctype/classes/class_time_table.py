@@ -584,6 +584,10 @@ def update_class_time_table(time_table, data, scope):
 	plan = _plan_update(tt, data, scope)
 	if plan.errors:
 		frappe.throw("<br>".join(plan.errors), title=_("Time Slot Unavailable"))
+	if plan.cp_outside and not plan.drop_weeks:
+		frappe.throw("<br>".join(
+			_("Class Participation week {0} ({1}) would fall outside the new schedule.").format(w["idx"], w["dates"])
+			for w in plan.cp_outside), title=_("Class Participation Weeks Outside the Schedule"))
 
 	before = {f: tt.get(f) for f in ("schedule_date", "from_time", "to_time", "venue", "instructor", "title")}
 	with no_schedule_log():
@@ -640,7 +644,7 @@ def _plan_update(tt, data, scope):
 	slot = frappe._dict(tt.as_dict())
 	slot.update(updates)
 	plan = frappe._dict(scope=scope, root=root, names=names, updates=updates, rebuild=False,
-		following=[], keep=[], rows=[], errors=[], create=[])
+		following=[], keep=[], rows=[], errors=[], create=[], cp_outside=[], drop_weeks=[])
 
 	if scope == "this":
 		new_date = getdate(data.schedule_date or tt.schedule_date)
@@ -716,15 +720,22 @@ def _plan_update(tt, data, scope):
 					getdate(plan.create[0]) if root_moves else getdate(root.schedule_date),
 					max([getdate(d) for d in plan.create] + list(kept_dates) + earlier),
 				)
-				for row in root.get("class_participation_week_group") or []:
+				# Class Participation weeks the new range no longer reaches: listed
+				# for the user to delete (data.drop_cp_weeks) or to change the dates
+				outside = [
+					row for row in root.get("class_participation_week_group") or []
 					if row.start_date and row.end_date and (
-						getdate(row.end_date) < plan.range[0] or getdate(row.start_date) > plan.range[1]
-					):
+						getdate(row.end_date) < plan.range[0] or getdate(row.start_date) > plan.range[1])
+				]
+				plan.cp_outside = _cp_week_rows(outside)
+				if plan.cp_outside and cint(data.get("drop_cp_weeks")):
+					locked = [w for w in plan.cp_outside if w["recorded"]]
+					if locked:
 						plan.errors.append(_(
-							"Class Participation week {0} ({1} – {2}) would fall outside the new schedule "
-							"({3} – {4}). Kindly choose dates that still cover it."
-						).format(row.idx, formatdate(row.start_date), formatdate(row.end_date),
-							formatdate(plan.range[0]), formatdate(plan.range[1])))
+							"Participation is already recorded for Class Participation week {0}, so it cannot be deleted. "
+							"Kindly choose dates that still cover it."
+						).format(", ".join(str(w["idx"]) for w in locked)))
+					plan.drop_weeks = [w["week"] for w in plan.cp_outside]
 			return plan
 
 	# Same dates (one entry, or this and the following): every one must be free
@@ -734,11 +745,58 @@ def _plan_update(tt, data, scope):
 	return plan
 
 
+def _cp_recorded(group):
+	"""Participation (an hour ticked or a grade given) is recorded in this
+	Class-Participation Student Group."""
+	from slcm.slcm.utils.class_participation import HOURS, hour_fields
+
+	fields = [f for slot in range(1, len(HOURS) + 1) for f in hour_fields(slot)]
+	for row in frappe.get_all("Student Group Student", filters={"parent": group, "parenttype": "Student Group"},
+			fields=fields):
+		if any(flt(row.get(f)) for f in fields):
+			return True
+	return False
+
+
+def _cp_week_rows(rows):
+	"""Class Participation week rows as shown in the Edit dialog's table."""
+	out = []
+	for row in rows:
+		out.append({
+			"idx": row.idx,
+			"week": row.week,
+			"week_name": frappe.db.get_value("Student Group", row.week, "week_name") or row.week,
+			"start_date": str(row.start_date),
+			"end_date": str(row.end_date),
+			"dates": "{0} – {1}".format(formatdate(row.start_date), formatdate(row.end_date)),
+			"students": frappe.db.count("Student Group Student", {"parent": row.week, "parenttype": "Student Group"}),
+			"recorded": _cp_recorded(row.week),
+		})
+	return out
+
+
+def _drop_cp_weeks(names, weeks):
+	"""Take Class Participation weeks off every entry of the series and delete
+	their Student Groups (nothing was recorded in them; a group still linked
+	elsewhere is left as it is)."""
+	if not weeks:
+		return
+	frappe.db.delete("Class Participation Week", {
+		"parenttype": "Time Table", "parent": ["in", list(names) or [""]], "week": ["in", list(weeks)]})
+	for week in weeks:
+		try:
+			frappe.delete_doc("Student Group", week, ignore_permissions=True)
+		except frappe.LinkExistsError:
+			frappe.clear_last_message()
+
+
 def _plan_summary(plan):
 	return {
 		"rebuild": plan.rebuild,
 		"rows": plan.rows,
 		"errors": plan.errors,
+		"cp_outside": [] if plan.drop_weeks else plan.cp_outside,
+		"drop_weeks": plan.drop_weeks,
 		"update": 0 if plan.rebuild else len(plan.following),
 		"replace": len(plan.following) - len(plan.keep) if plan.rebuild else 0,
 		"create": len(plan.create),
@@ -795,9 +853,14 @@ def _rebuild_series(tt, plan):
 	single = plan.freq == "Never" and last == getdate(root.schedule_date)
 	root.repeat_frequency = "Never" if single else (plan.freq if plan.freq != "Never" else root.repeat_frequency)
 	root.repeats_till = None if single else last
-	# Class Participation weeks overlapping the new range's edges are trimmed to it
+	# Class Participation weeks the user chose to delete go first; those
+	# overlapping the new range's edges are trimmed to it
 	start = getdate(root.schedule_date)
+	drop = set(plan.drop_weeks or [])
 	for doc in (root, template):
+		if drop:
+			doc.set("class_participation_week_group",
+				[r for r in doc.get("class_participation_week_group") or [] if r.week not in drop])
 		_fit_cp_weeks(doc, start, last)
 	root.save(ignore_permissions=True)
 
@@ -808,6 +871,167 @@ def _rebuild_series(tt, plan):
 		new.repeat_frequency = "Never"
 		new.repeats_till = None
 		new.insert(ignore_permissions=True)
+
+	if drop:
+		series = [root.name] + frappe.get_all("Time Table", filters={"parent_schedule": root.name}, pluck="name")
+		_drop_cp_weeks(series, drop)
+
+
+# ── Delete sessions (Edit dialog) ─────────────────────────────────────────────
+
+def _with_attendance(names):
+	"""Entries in which attendance was taken; Delete keeps them."""
+	from slcm.slcm.doctype.time_table.time_table import session_has_attendance
+
+	names = list(names) or [""]
+	sessions = frappe.get_all("Attendance Session", filters={"class_schedule": ["in", names]},
+		fields=["name", "class_schedule"])
+	taken = {s.class_schedule for s in sessions if session_has_attendance(s.name)}
+	taken.update(frappe.get_all("Student Attendance", filters={"class_schedule": ["in", names]},
+		pluck="class_schedule", distinct=True))
+	return taken
+
+
+def _plan_delete(tt, scope):
+	"""What Delete would do, worked out without changing anything.
+
+	this    - the one entry.
+	future  - the entry and every later one of its series (cancelled ones too).
+	Entries in which attendance was taken are kept. The rest of the series
+	stays one series: when its first entry goes, the next remaining entry
+	becomes the first and carries the series' Repeat and Class Participation
+	weeks; Repeats Till becomes the last remaining date, and Class
+	Participation weeks with no class left are taken off the schedule."""
+	root, names = _series(tt)
+	entries = frappe.get_all(
+		"Time Table",
+		filters={"name": ["in", names], "docstatus": ["<", 2]},
+		fields=["name", "schedule_date", "from_time", "to_time", "venue", "is_cancelled"],
+		order_by="schedule_date asc, from_time asc",
+	)
+	if scope == "this":
+		targets = [e for e in entries if e.name == tt.name]
+	else:
+		targets = [e for e in entries if getdate(e.schedule_date) >= getdate(tt.schedule_date)]
+	taken = _with_attendance([e.name for e in targets])
+
+	plan = frappe._dict(scope=scope, root=root, delete=[], keep=[], rows=[], errors=[], warnings=[],
+		new_root=None, survivors=[], range=None, cp_drop=[])
+	for e in targets:
+		kept = e.name in taken
+		(plan.keep if kept else plan.delete).append(e.name)
+		plan.rows.append({
+			"name": e.name,
+			"date_fmt": formatdate(e.schedule_date, "EEE, dd MMM yyyy"),
+			"time": "{0} – {1}".format(format_time_12h(e.from_time), format_time_12h(e.to_time)),
+			"venue": e.venue or "",
+			"status": "kept" if kept else "delete",
+			"note": _("Attendance taken: kept") if kept else (_("Cancelled session") if e.is_cancelled else ""),
+		})
+
+	if tt.name in taken:
+		plan.errors.append(_("Attendance was taken in the session on {0}, so it cannot be deleted.").format(
+			formatdate(tt.schedule_date)))
+		return plan
+	if not plan.delete:
+		plan.errors.append(_("Attendance was taken in every session from here on, so there is nothing to delete."))
+		return plan
+
+	gone = set(plan.delete)
+	survivors = [e for e in entries if e.name not in gone]
+	plan.survivors = [e.name for e in survivors]
+	if survivors:
+		if root.name in gone:
+			plan.new_root = survivors[0].name
+		plan.range = (getdate(survivors[0].schedule_date), getdate(survivors[-1].schedule_date))
+		for row in root.get("class_participation_week_group") or []:
+			if row.start_date and row.end_date and (
+				getdate(row.end_date) < plan.range[0] or getdate(row.start_date) > plan.range[1]
+			):
+				plan.cp_drop.append(row.name)
+				plan.warnings.append(_("Class Participation week {0} ({1} – {2}) has no class left and is taken off the schedule; its student group is not deleted.").format(
+					row.idx, formatdate(row.start_date), formatdate(row.end_date)))
+	elif root.get("class_participation_week_group"):
+		plan.warnings.append(_("This deletes every session of the series. Its Class Participation student groups are not deleted."))
+	return plan
+
+
+def _delete_summary(plan):
+	return {
+		"rows": plan.rows,
+		"errors": plan.errors,
+		"warnings": plan.warnings,
+		"delete": len(plan.delete),
+		"keep": len(plan.keep),
+		"remaining": len(plan.survivors),
+	}
+
+
+@frappe.whitelist()
+def check_class_time_table_delete(time_table, scope):
+	"""Dry run of Delete in the Edit dialog: the sessions that would go."""
+	tt = frappe.get_doc("Time Table", time_table)
+	tt.check_permission("delete")
+	return _delete_summary(_plan_delete(tt, scope))
+
+
+@frappe.whitelist(methods=["POST"])
+def delete_class_time_table(time_table, scope):
+	"""Delete this session (scope "this") or this and the following sessions
+	of its series (scope "future"), see _plan_delete. Each deleted entry takes
+	its Attendance Session and Google Calendar event with it."""
+	from slcm.slcm.doctype.class_schedule_log.class_schedule_log import add_log, no_schedule_log
+	from slcm.slcm.doctype.time_table.time_table import quiet_bulk_operation
+
+	tt = frappe.get_doc("Time Table", time_table)
+	tt.check_permission("delete")
+	if scope not in ("this", "future"):
+		frappe.throw(_("Choose this session or this and the following sessions."))
+	plan = _plan_delete(tt, scope)
+	if plan.errors:
+		frappe.throw("<br>".join(plan.errors), title=_("Cannot Delete"))
+
+	root = plan.root
+	with no_schedule_log(), quiet_bulk_operation():
+		if plan.new_root:
+			# The next remaining entry heads the series before the first one goes
+			for name in plan.survivors:
+				frappe.db.set_value("Time Table", name, "parent_schedule",
+					None if name == plan.new_root else plan.new_root, update_modified=False)
+		total = len(plan.delete)
+		publish_bulk_progress("Deleting", 0, total)
+		for done, name in enumerate(reversed(plan.delete), start=1):
+			frappe.delete_doc("Time Table", name, force=1, ignore_permissions=True)
+			publish_bulk_progress("Deleting", done, total)
+
+		if plan.survivors:
+			head = frappe.get_doc("Time Table", plan.new_root or root.name)
+			start, last = plan.range
+			if plan.new_root:
+				head.set("class_participation_week_group", [
+					{"week": r.week, "start_date": r.start_date, "end_date": r.end_date}
+					for r in root.get("class_participation_week_group") or [] if r.name not in plan.cp_drop
+				])
+			else:
+				head.set("class_participation_week_group", [
+					r for r in head.get("class_participation_week_group") or [] if r.name not in plan.cp_drop
+				])
+			single = start == last
+			head.repeat_frequency = "Never" if single else (root.repeat_frequency or "Weekly")
+			head.repeats_till = None if single else last
+			_fit_cp_weeks(head, start, last)
+			head.save(ignore_permissions=True)
+
+	if scope == "this":
+		detail = _("This session deleted.")
+	else:
+		detail = _("This and the following sessions: {0} deleted").format(len(plan.delete))
+		if plan.keep:
+			detail += _(", {0} kept (attendance taken)").format(len(plan.keep))
+		detail += "."
+	add_log(tt.class_name, "Deleted", tt.name, tt.schedule_date, f"{detail} {_slot_text(tt)}")
+	frappe.db.commit()
+	return _delete_summary(plan)
 
 
 # ── Cancel / swap one session ─────────────────────────────────────────────────
