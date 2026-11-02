@@ -781,11 +781,19 @@ def download_admit_card(admit_card):
     except frappe.DoesNotExistError:
         frappe.throw("Admit Card not found")
 
+    user_roles = frappe.get_roles()
+    is_staff = any(role in user_roles for role in ["Admission Admin", "System Manager", "Entrance Test Admin", "Exam Cell"])
+
     if not applicant_name or doc.applicant != applicant_name:
-        if "Admission Admin" not in frappe.get_roles() and "System Manager" not in frappe.get_roles():
+        if not is_staff:
             frappe.throw("Not authorized", frappe.PermissionError)
 
     is_rescheduled = (doc.is_rescheduled == 1 or doc.entrance_test_status == "Rescheduled")
+    if not is_staff:
+        is_published = bool(doc.re_seat_allocation_published) if is_rescheduled else bool(doc.seat_allocation_published)
+        if not is_published:
+            frappe.throw("Admit Card is not published yet.", frappe.PermissionError)
+
     status = doc.re_allocation_status if is_rescheduled else doc.allocation_status
     
     if status not in ["Allocated", "Reallocated"]:

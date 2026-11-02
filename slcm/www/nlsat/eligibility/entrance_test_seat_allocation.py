@@ -30,10 +30,16 @@ def get_context(context):
         return context
 
     doc = frappe.get_doc("Entrance Test Seat Allocation", allocation_name)
-    context.doc = doc
     
     # Check if rescheduled
     is_rescheduled = (doc.is_rescheduled == 1 or doc.entrance_test_status == "Rescheduled")
+    is_published = bool(doc.re_seat_allocation_published) if is_rescheduled else bool(doc.seat_allocation_published)
+
+    if not is_published:
+        context.no_record = True
+        return context
+
+    context.doc = doc
     context.is_rescheduled = is_rescheduled
     
     # Track previous schedule if rescheduled
@@ -121,6 +127,12 @@ def save_provider(allocation_name, selected_provider, is_rescheduled=False):
     if isinstance(is_rescheduled, str):
         is_rescheduled = is_rescheduled.lower() == "true"
 
+    user_roles = frappe.get_roles(user)
+    is_staff = any(role in user_roles for role in ["System Manager", "Entrance Test Admin", "Exam Cell"])
+    is_published = bool(doc.re_seat_allocation_published) if is_rescheduled else bool(doc.seat_allocation_published)
+    if not is_published and not is_staff:
+        frappe.throw(_("Seat allocation has not been published yet."), frappe.PermissionError)
+
     prefs = doc.re_assigned_preferences if is_rescheduled else doc.assigned_preferences
     if not any(p.provider == selected_provider for p in prefs):
         frappe.throw(_("Please choose from your assigned preference centers."))
@@ -173,6 +185,12 @@ def download_admit_card(allocation_name=None, **kwargs):
     is_rescheduled = (doc.is_rescheduled == 1 or doc.entrance_test_status == "Rescheduled")
     status = doc.re_allocation_status if is_rescheduled else doc.allocation_status
     
+    user_roles = frappe.get_roles(user)
+    is_staff = any(role in user_roles for role in ["System Manager", "Entrance Test Admin", "Exam Cell"])
+    is_published = bool(doc.re_seat_allocation_published) if is_rescheduled else bool(doc.seat_allocation_published)
+    if not is_published and not is_staff:
+        frappe.throw(_("Admit Card is not published yet."), frappe.PermissionError)
+
     if status not in ["Allocated", "Reallocated"]:
         frappe.throw(_("Admit Card is only available after seat allocation is confirmed."))
 

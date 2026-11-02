@@ -1701,6 +1701,10 @@ def reject_and_allocate_applicants(applicants, providers, allocation_type=None, 
                     "preference_order": idx
                 })
 
+        # Reset publish state for rescheduled allocation
+        doc.re_seat_allocation_published = 0
+        doc.re_seat_allocation_published_on = None
+
         # Prevent on_update hook from synchronously generating the admit card
         doc.flags.ignore_admit_card_generation = True
         doc.save(ignore_permissions=True)
@@ -2471,5 +2475,253 @@ def download_attendance_sheet_pdf(
             "total_centres": total_centres,
             "is_zip": True
         }
+
+
+@frappe.whitelist()
+def publish_seat_allocations(
+    academic_year,
+    admission_cycle,
+    program_level=None,
+    program=None,
+    entrance_test_list=None,
+    applicant_type=None,
+    allocation_scope="Initial",
+    send_email=1,
+    email_format="Default",
+    custom_email_content=None,
+    selected_names=None
+):
+    """
+    Sets seat_allocation_published = 1 (or re_seat_allocation_published = 1)
+    for Entrance Test Seat Allocation records in bulk matching the filters.
+    Dispatches notification emails and in-app Notification Logs when send_email is 1.
+    """
+    require_desk_user()
+    if not (academic_year and admission_cycle):
+        frappe.throw(_("Academic Year and Admission Cycle are required."))
+
+    import json
+    selected_list = []
+    if selected_names:
+        selected_list = json.loads(selected_names) if isinstance(selected_names, str) else selected_names
+
+    filters = {
+        "academic_year": academic_year,
+        "admission_cycle": admission_cycle
+    }
+    if program_level:
+        filters["program_level"] = program_level
+    if program:
+        filters["program"] = program
+    if entrance_test_list:
+        filters["entrance_test_list"] = entrance_test_list
+    if applicant_type == "Domestic Applicants":
+        filters["is_international_applicant"] = 0
+    elif applicant_type == "International Applicants":
+        filters["is_international_applicant"] = 1
+
+    if selected_list:
+        filters["name"] = ["in", selected_list]
+        if allocation_scope in ("Initial", "Both"):
+            already_pub = frappe.get_all(
+                "Entrance Test Seat Allocation",
+                filters={"name": ["in", selected_list], "seat_allocation_published": 1},
+                fields=["name", "applicant"]
+            )
+            if already_pub:
+                labels = [r.applicant or r.name for r in already_pub[:5]]
+                more = f" and {len(already_pub) - 5} more" if len(already_pub) > 5 else ""
+                frappe.throw(
+                    _("Cannot publish: The following {0} applicant(s) are already published: {1}{2}").format(
+                        len(already_pub), ", ".join(labels), more
+                    ),
+                    title=_("Already Published")
+                )
+        elif allocation_scope == "Rescheduled":
+            already_pub = frappe.get_all(
+                "Entrance Test Seat Allocation",
+                filters={"name": ["in", selected_list], "re_seat_allocation_published": 1},
+                fields=["name", "applicant"]
+            )
+            if already_pub:
+                labels = [r.applicant or r.name for r in already_pub[:5]]
+                more = f" and {len(already_pub) - 5} more" if len(already_pub) > 5 else ""
+                frappe.throw(
+                    _("Cannot publish: The following {0} rescheduled applicant(s) are already published: {1}{2}").format(
+                        len(already_pub), ", ".join(labels), more
+                    ),
+                    title=_("Already Published")
+                )
+
+    records = frappe.get_all(
+        "Entrance Test Seat Allocation",
+        filters=filters,
+        fields=[
+            "name", "applicant", "candidate_name", "email",
+            "allocation_status", "re_allocation_status",
+            "is_rescheduled", "seat_allocation_published",
+            "re_seat_allocation_published", "entrance_test_list"
+        ]
+    )
+
+    if not records:
+        frappe.throw(_("No matching seat allocation records found to publish."))
+
+    total = len(records)
+    notified_count = 0
+    published_count = 0
+    now_ts = frappe.utils.now_datetime()
+
+    from slcm.admission.doctype.entrance_test_list.entrance_test_list import (
+        _send_allocation_email,
+        _send_allocation_notification
+    )
+
+    for i, rec in enumerate(records, start=1):
+        frappe.publish_progress(
+            (i / total) * 100,
+            title=_("Publishing Seat Allocations"),
+            description=_("Publishing {0} of {1}").format(i, total)
+        )
+
+        doc = frappe.get_doc("Entrance Test Seat Allocation", rec.name)
+        is_resched = (doc.is_rescheduled == 1 or doc.entrance_test_status == "Rescheduled")
+
+        should_publish_initial = allocation_scope in ("Initial", "Both")
+        should_publish_resched = allocation_scope in ("Rescheduled", "Both") and is_resched
+
+        if should_publish_initial:
+            doc.db_set("seat_allocation_published", 1, update_modified=False)
+            doc.db_set("seat_allocation_published_on", now_ts, update_modified=False)
+            published_count += 1
+
+        if should_publish_resched:
+            doc.db_set("re_seat_allocation_published", 1, update_modified=False)
+            doc.db_set("re_seat_allocation_published_on", now_ts, update_modified=False)
+            if allocation_scope == "Rescheduled":
+                published_count += 1
+
+        email = doc.email or ""
+        if not email and doc.applicant:
+            try:
+                email = frappe.db.get_value("Applicant", doc.applicant, "email") or ""
+            except Exception:
+                pass
+
+        if frappe.utils.cint(send_email) and email:
+            try:
+                alloc_type = "Allocate Directly" if doc.allocation_status == "Allocated" else "Allow Applicant Selection"
+                _send_allocation_email(
+                    doc,
+                    email,
+                    allocation_type=alloc_type,
+                    email_format=email_format,
+                    custom_email_content=custom_email_content
+                )
+                try:
+                    _send_allocation_notification(doc, email)
+                except Exception:
+                    pass
+                notified_count += 1
+            except Exception:
+                frappe.log_error(title=f"Publish Seat Allocation Email Failed: {doc.name}")
+
+    frappe.db.commit()
+    return {"published": published_count, "notified": notified_count}
+
+
+@frappe.whitelist()
+def get_unpublished_seat_allocations_for_dialog(
+    academic_year=None,
+    admission_cycle=None,
+    program_level=None,
+    program=None,
+    entrance_test_list=None,
+    applicant_type=None,
+    allocation_scope="Initial",
+    applicant=None,
+    filter_applicant=None,
+    filter_candidate_name=None,
+    filter_status=None,
+    filter_program=None,
+    fetch_all_names=0,
+    limit_start=0,
+    limit_page_length=10
+):
+    require_desk_user()
+    if not (academic_year and admission_cycle):
+        return [] if frappe.utils.cint(fetch_all_names) else {"records": [], "total_count": 0, "unique_programs": []}
+
+    filters = {
+        "academic_year": academic_year,
+        "admission_cycle": admission_cycle
+    }
+    if program_level:
+        filters["program_level"] = program_level
+    if program:
+        filters["program"] = program
+    if entrance_test_list:
+        filters["entrance_test_list"] = entrance_test_list
+    if applicant:
+        filters["applicant"] = applicant
+    if applicant_type == "Domestic Applicants":
+        filters["is_international_applicant"] = 0
+    elif applicant_type == "International Applicants":
+        filters["is_international_applicant"] = 1
+
+    if allocation_scope == "Initial":
+        filters["seat_allocation_published"] = 0
+    elif allocation_scope == "Rescheduled":
+        filters["is_rescheduled"] = 1
+        filters["re_seat_allocation_published"] = 0
+    elif allocation_scope == "Both":
+        filters["seat_allocation_published"] = 0
+
+    if filter_applicant:
+        filters["applicant"] = ["like", f"%{filter_applicant}%"]
+    if filter_candidate_name:
+        filters["candidate_name"] = ["like", f"%{filter_candidate_name}%"]
+    if filter_status:
+        filters["allocation_status"] = filter_status
+    if filter_program:
+        filters["program"] = filter_program
+
+    if frappe.utils.cint(fetch_all_names):
+        records = frappe.get_all(
+            "Entrance Test Seat Allocation",
+            filters=filters,
+            fields=["name"],
+            order_by="candidate_name asc"
+        )
+        return [r.name for r in records]
+
+    total_count = frappe.db.count("Entrance Test Seat Allocation", filters=filters)
+    records = frappe.get_all(
+        "Entrance Test Seat Allocation",
+        filters=filters,
+        fields=[
+            "name", "applicant", "candidate_name", "program", "email",
+            "allocation_status", "center_name", "seat_number",
+            "entrance_test_list", "seat_allocation_published",
+            "re_seat_allocation_published", "is_rescheduled"
+        ],
+        start=frappe.utils.cint(limit_start),
+        page_length=frappe.utils.cint(limit_page_length),
+        order_by="candidate_name asc"
+    )
+
+    programs = frappe.get_all(
+        "Entrance Test Seat Allocation",
+        filters={"academic_year": academic_year, "admission_cycle": admission_cycle},
+        fields=["program"],
+        distinct=True
+    )
+    unique_programs = sorted([p.program for p in programs if p.program])
+
+    return {
+        "records": records,
+        "total_count": total_count,
+        "unique_programs": unique_programs
+    }
 
 

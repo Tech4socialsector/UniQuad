@@ -215,34 +215,41 @@ def get_context(context):
                     filters={"applicant": app.name},
                     fields=["entrance_test_name", "center_name",
                             "center_address", "seat_number",
-                            "allocation_status", "name"],
+                            "allocation_status", "name",
+                            "seat_allocation_published",
+                            "re_seat_allocation_published",
+                            "is_rescheduled", "entrance_test_status"],
                     order_by="creation desc", limit=1,
                     ignore_permissions=True
                 )
                 if etrows:
                     et = etrows[0]
-                    test_name = et.get("entrance_test_name") or ""
-                    test_date = ""
-                    test_time = ""
-                    if test_name:
-                        try:
-                            td = frappe.get_doc("Entrance Test List", test_name, ignore_permissions=True)
-                            test_date = frappe.utils.format_date(str(td.get("test_date") or "")[:10], "MMMM d, yyyy") if td.get("test_date") else ""
-                            test_time = str(td.get("test_time") or "")
-                        except Exception: pass
-                    
-                    entrance_tests.append({
-                        "app_id": app.name,
-                        "program_name": app.program_name,
-                        "test_name": test_name,
-                        "test_date": test_date,
-                        "test_time": test_time,
-                        "center_name": et.get("center_name") or "",
-                        "center_address": et.get("center_address") or "",
-                        "seat_number": (et.get("seat_number").split("-")[-1] if et.get("seat_number") else ""),
-                        "admit_status": et.get("allocation_status") or "",
-                        "admit_card_url": f"/api/method/slcm.admission.utils.web.download_admit_card?admit_card={et.get('name')}"
-                    })
+                    is_resched = (et.get("is_rescheduled") == 1 or et.get("entrance_test_status") == "Rescheduled")
+                    is_pub = bool(et.get("re_seat_allocation_published")) if is_resched else bool(et.get("seat_allocation_published"))
+
+                    if is_pub:
+                        test_name = et.get("entrance_test_name") or ""
+                        test_date = ""
+                        test_time = ""
+                        if test_name:
+                            try:
+                                td = frappe.get_doc("Entrance Test List", test_name, ignore_permissions=True)
+                                test_date = frappe.utils.format_date(str(td.get("test_date") or "")[:10], "MMMM d, yyyy") if td.get("test_date") else ""
+                                test_time = str(td.get("test_time") or "")
+                            except Exception: pass
+                        
+                        entrance_tests.append({
+                            "app_id": app.name,
+                            "program_name": app.program_name,
+                            "test_name": test_name,
+                            "test_date": test_date,
+                            "test_time": test_time,
+                            "center_name": et.get("center_name") or "",
+                            "center_address": et.get("center_address") or "",
+                            "seat_number": (et.get("seat_number").split("-")[-1] if et.get("seat_number") else ""),
+                            "admit_status": et.get("allocation_status") or "",
+                            "admit_card_url": f"/api/method/slcm.admission.utils.web.download_admit_card?admit_card={et.get('name')}"
+                        })
             except Exception: pass
 
             # Get Applied Scholarships
