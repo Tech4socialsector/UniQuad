@@ -41,6 +41,28 @@ function ctt_text_color(bg) {
 	return 0.299 * r + 0.587 * g + 0.114 * b > 160 ? "#1f2937" : "#fff";
 }
 
+/* Red (destructive) buttons that work on both Frappe versions in use: newer
+ * desks draw dialog buttons as Espresso es-buttons (coloured through
+ * data-theme; Bootstrap's .btn-danger clashes with them), older ones as
+ * Bootstrap .btn buttons and have no frappe.ui.button. */
+function ctt_danger_button(label) {
+	if (typeof frappe.ui.button === "function") {
+		return frappe.ui.button({ label, variant: "solid", theme: "red", css_class: "ctt-delete-btn", loading_label: "" });
+	}
+	return $(`<button type="button" class="btn btn-danger btn-sm ctt-delete-btn"></button>`).text(label);
+}
+
+function ctt_make_danger($btn) {
+	if ($btn.hasClass("es-button")) $btn.attr("data-theme", "red");
+	else $btn.removeClass("btn-primary").addClass("btn-danger");
+}
+
+function ctt_set_button_label($btn, label) {
+	const $label = $btn.find(".es-button__label");
+	if ($label.length) $label.text(label);
+	else $btn.text(label);
+}
+
 function ctt_date(d) {
 	return d ? frappe.datetime.str_to_user(d) : "";
 }
@@ -231,13 +253,13 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 		// Edit mode: Delete, for this session or this and the following ones
 		// (the "Apply Changes To" choice); its label follows that choice.
 		if (this.edit && frappe.model.can_delete("Time Table")) {
-			// Frappe's own red button (es-button theme), so it reads the same
-			// at rest, on hover and while disabled
-			this.$delete_btn = frappe.ui.button({
-				label: __("Delete"), variant: "solid", theme: "red", css_class: "ctt-delete-btn", loading_label: "",
-			}).on("click", () => me.delete_edit());
-			this.d.footer.removeClass("hide");
-			this.d.custom_actions.append(this.$delete_btn);
+			this.$delete_btn = ctt_danger_button(__("Delete")).on("click", () => me.delete_edit());
+			const $footer = this.d.footer || this.d.$wrapper.find(".modal-footer");
+			$footer.removeClass("hide");
+			const $actions = this.d.custom_actions && this.d.custom_actions.length
+				? this.d.custom_actions : $footer.find(".custom-actions");
+			if ($actions.length) $actions.append(this.$delete_btn);
+			else $footer.prepend(this.$delete_btn);
 		}
 
 		// While a request runs the dialog cannot be closed (close button, Esc,
@@ -294,7 +316,9 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 	/** Hour (1–12), Minute (5-minute steps) and AM/PM selects for a hidden
 	 * Time field; the field gets "HH:MM:SS" once all three are picked. */
 	render_time_picker(fieldname, label) {
-		const opts = (values, placeholder) => `<option value="">${placeholder}</option>`
+		// Hour and Minute start blank ("Hour" / "Min"); AM/PM is always AM or PM
+		// (AM until changed), never a blank "AM / PM" choice
+		const opts = (values, placeholder) => (placeholder ? `<option value="">${placeholder}</option>` : "")
 			+ values.map((v) => `<option value="${v}">${v}</option>`).join("");
 		const hours = Array.from({ length: 12 }, (_, i) => String(i + 1));
 		const minutes = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, "0"));
@@ -305,7 +329,7 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 				<select class="form-control ctt-tp-hour">${opts(hours, __("Hour"))}</select>
 				<span class="ctt-tp-sep">:</span>
 				<select class="form-control ctt-tp-minute">${opts(minutes, __("Min"))}</select>
-				<select class="form-control ctt-tp-ampm">${opts(["AM", "PM"], __("AM / PM"))}</select>
+				<select class="form-control ctt-tp-ampm">${opts(["AM", "PM"])}</select>
 			</div>
 		</div>`);
 		$w.on("change", "select", () => {
@@ -551,8 +575,7 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 				[e.following, ctt_date(e.schedule_date), ctt_date(e.series_end)])
 			: __("Only the session on {0} is updated. Availability is checked before anything changes.", [ctt_date(e.schedule_date)]));
 		if (this.$delete_btn) {
-			this.$delete_btn.find(".es-button__label")
-				.text(future ? __("Delete This and Following") : __("Delete This Session"));
+			ctt_set_button_label(this.$delete_btn, future ? __("Delete This and Following") : __("Delete This Session"));
 		}
 		if (!future) {
 			// Repeat belongs to the series: back to its saved values
@@ -722,8 +745,7 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 				d.hide();
 				on_delete();
 			});
-			// Footer buttons are es-buttons: red through their theme, not .btn-danger
-			d.get_primary_btn().attr("data-theme", "red");
+			ctt_make_danger(d.get_primary_btn());
 		}
 		d.show();
 	}
