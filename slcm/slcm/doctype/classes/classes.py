@@ -175,6 +175,113 @@ def get_enrollment_students(programme=None, academic_year=None, year_no=None, se
 	return rows
 
 
+# Create Class → Import Students sheet. Only Student ID is used to find the
+# student; the other columns are there to help whoever fills the sheet.
+STUDENT_SHEET_COLUMNS = ["Student ID", "Student Name", "Section", "Programme", "Year"]
+
+
+@frappe.whitelist()
+def download_class_students_template():
+	"""Blank Import Students sheet (.xlsx) with the column headings."""
+	from frappe.utils.xlsxutils import make_xlsx
+
+	frappe.has_permission("Classes", "create", throw=True)
+	xlsx = make_xlsx([STUDENT_SHEET_COLUMNS], "Students")
+	frappe.response["filename"] = "class_students_template.xlsx"
+	frappe.response["filecontent"] = xlsx.getvalue()
+	frappe.response["type"] = "binary"
+
+
+def _read_student_sheet(filename, content):
+	"""Rows of an uploaded .xlsx or .csv (base64 content), as lists of cells."""
+	import base64
+
+	from frappe.utils.csvutils import read_csv_content
+	from frappe.utils.xlsxutils import read_xlsx_file_from_attached_file
+
+	try:
+		raw = base64.b64decode((content or "").split(",")[-1])
+	except Exception:
+		frappe.throw(_("The file could not be read. Upload the .xlsx or .csv template."))
+	ext = (filename or "").rsplit(".", 1)[-1].lower()
+	try:
+		if ext == "xlsx":
+			return read_xlsx_file_from_attached_file(fcontent=raw)
+		if ext == "csv":
+			return read_csv_content(raw)
+	except Exception:
+		frappe.throw(_("The file could not be read. Upload the .xlsx or .csv template."))
+	frappe.throw(_("Upload an .xlsx or .csv file (use Download Template)."))
+
+
+@frappe.whitelist(methods=["POST"])
+def import_class_students(filename, content):
+	"""Students listed in an uploaded Import Students sheet.
+
+	Returns {students: rows shaped like get_enrollment_students, not_found,
+	not_enrolled, duplicates}; the last three are [{id, student_name}] (the
+	name from the sheet when there is no record). Only the Student ID column
+	is used to find students."""
+	frappe.has_permission("Classes", "create", throw=True)
+	rows = [[("" if c is None else str(c)).strip() for c in (r or [])] for r in _read_student_sheet(filename, content)]
+
+	# The heading row is the first one with a "Student ID" cell
+	header = next((i for i, r in enumerate(rows) if any(c.lower() == "student id" for c in r)), None)
+	if header is None:
+		frappe.throw(_("The sheet has no Student ID column. Use Download Template and keep its headings."))
+	heads = [c.lower() for c in rows[header]]
+	col = heads.index("student id")
+	name_col = heads.index("student name") if "student name" in heads else None
+
+	ids, duplicates, sheet_names = [], [], {}
+	for r in rows[header + 1:]:
+		sid = r[col].upper() if col < len(r) else ""
+		if sid.endswith(".0"):  # a numeric ID read back from Excel
+			sid = sid[:-2]
+		if not sid:
+			continue
+		sheet_name = r[name_col] if name_col is not None and name_col < len(r) else ""
+		if sid in ids:
+			duplicates.append({"id": sid, "student_name": sheet_name or sheet_names.get(sid, "")})
+		else:
+			ids.append(sid)
+			sheet_names[sid] = sheet_name
+	if not ids:
+		frappe.throw(_("The sheet has no Student IDs under the Student ID heading."))
+
+	records = {
+		r.name.upper(): r
+		for r in frappe.get_all(
+			"Student Enrollment",
+			filters={"name": ["in", ids]},
+			fields=["name", "student", "student_name", "section", "program", "status"],
+		)
+	}
+	pace = set(pace_students())
+	students, not_found, not_enrolled = [], [], []
+	for sid in ids:
+		r = records.get(sid)
+		if not r:
+			not_found.append({"id": sid, "student_name": sheet_names.get(sid, "")})
+		elif r.status != "Enrolled" or r.student in pace:
+			not_enrolled.append({"id": r.name, "student_name": r.student_name,
+				"status": "PACE" if r.student in pace else r.status})
+		else:
+			students.append(r)
+
+	current = get_current_logs([r.name for r in students])
+	return {
+		"students": [
+			{"name": r.name, "student_name": r.student_name, "section": r.section, "program": r.program,
+				"year_no": cint((current.get(r.name) or {}).get("year_no"))}
+			for r in students
+		],
+		"not_found": not_found,
+		"not_enrolled": not_enrolled,
+		"duplicates": duplicates,
+	}
+
+
 @frappe.whitelist()
 def create_classes(data):
 	"""Create one Classes record per course picked, all with the same students.
