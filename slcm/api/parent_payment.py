@@ -169,6 +169,13 @@ def create_payment_order(invoice_name, student_name):
     if flt(inv.outstanding_amount) <= 0:
         frappe.throw(_("There is no outstanding amount on this invoice."))
 
+    # Razorpay-only legacy endpoint; the Parent Portal uses student_payment.parent_create_payment_order,
+    # which also handles Easebuzz.
+    from slcm.slcm.fee import payment_gateway as gw
+    if gw.for_invoice(invoice_name) != gw.RAZORPAY:
+        from slcm.api.student_payment import parent_create_payment_order
+        return parent_create_payment_order(invoice_name, student_name)
+
     frappe.db.set_value(
         "Fee Invoice", invoice_name, "payment_status", "Payment Initiated",
         update_modified=False,
@@ -258,6 +265,7 @@ def confirm_fee_payment(invoice_name, student_name, integration_request,
                 "payment_date":     today(),
                 "payment_mode":     "Online Payment",
                 "reference_number": razorpay_payment_id,
+                "payment_gateway":  "Razorpay",
                 "remarks":          "Paid by parent via Parent Portal",
             })
             fp.insert(ignore_permissions=True)

@@ -26,12 +26,14 @@ from frappe.utils import getdate
 import calendar as _calendar
 import json as _json
 
+from slcm.permissions import AAD_ROLES
+
 
 # ── Filter options API ─────────────────────────────────────────────────────────
 
 @frappe.whitelist()
 def get_filter_options(filter_name, txt=""):
-    frappe.only_for("System Manager")
+    frappe.only_for(("System Manager", *AAD_ROLES))
     txt = (txt or "").strip().lower()
 
     if filter_name == "academic_year":

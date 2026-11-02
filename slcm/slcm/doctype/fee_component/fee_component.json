@@ -10,6 +10,7 @@
   "component_name",
   "component_type",
   "demand_type",
+  "payment_gateway",
   "ledger",
   "column_break_1",
   "is_accommodation_fee",
@@ -45,6 +46,16 @@
    "description": "Fee Demands for this component take this Demand Type."
   },
   {
+   "default": "Razorpay",
+   "description": "Online payments for this component (Fee Demands and Fee Invoices) go through this gateway in the Student and Parent Portals.",
+   "fieldname": "payment_gateway",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Payment Gateway",
+   "options": "Razorpay\nEasebuzz"
+  },
+  {
    "fieldname": "column_break_1",
    "fieldtype": "Column Break"
   },
@@ -78,7 +89,7 @@
   }
  ],
  "links": [],
- "modified": "2026-09-25 12:00:00.000000",
+ "modified": "2026-10-29 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Fee Component",

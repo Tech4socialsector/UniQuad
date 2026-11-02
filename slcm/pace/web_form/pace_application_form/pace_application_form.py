@@ -845,7 +845,7 @@ def log_pace_payment_gateway_closed(
         gateway = frappe.db.get_value("PACE Admission", {"academic_year": assignment.academic_year, "status": "Active"}, "payment_gateway")
     
     if not gateway:
-        gateway = frappe.db.get_value("Payment Gateway", {}, "name") or "Razorpay"
+        gateway = "Razorpay"
 
     # Distinguish modal dismiss (user abandoned) from gateway-reported payment failure.
     # A genuine gateway failure has an error code (e.g. BAD_REQUEST_ERROR, GATEWAY_ERROR).
@@ -1238,7 +1238,6 @@ def verify_pace_payment_signature(
                     "payment_gateway",
                 )
             )
-            or frappe.db.get_value("Payment Gateway", {}, "name")
             or "Razorpay"
         )
 

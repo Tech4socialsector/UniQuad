@@ -346,13 +346,17 @@ def _create_request(transcript_type, num_copies=1, purpose="",
 
 
 @frappe.whitelist()
-def initiate_payment(request_name):
+def initiate_payment(request_name, gateway_aware=0):
     """
     Called when the student clicks the Pay button.
 
-    Creates a Razorpay order directly — no intermediate Payment Request doc needed.
-    All payment data is stored on the Transcript Request itself.
+    The gateway comes from Transcript Fee Settings. Razorpay: creates an order directly (no
+    intermediate Payment Request doc) and returns checkout data. Easebuzz: returns
+    {"gateway": "Easebuzz", "checkout_url"} for a full-page redirect — only for callers that pass
+    gateway_aware=1 (the Student Portal); the Helpdesk panel only speaks Razorpay.
     """
+    from slcm.slcm.fee import payment_gateway as gw
+
     student_name = _require_student()
     req = _owned_request(request_name, student_name)
 
@@ -363,9 +367,33 @@ def initiate_payment(request_name):
     if req.status == "Cancelled":
         frappe.throw(_("This request has been cancelled."))
 
+    gateway = gw.for_transcript()
+    if gateway == gw.EASEBUZZ and not frappe.utils.cint(gateway_aware):
+        frappe.throw(_("Transcript fees are collected through Easebuzz. Please pay from the Student Portal → Transcript Request page."))
+    gw.ensure_ready(gateway)
+    if gateway == gw.EASEBUZZ:
+        from slcm.api.easebuzz_payment import precheck
+        precheck(student_name)
+
     # Mark "Payment Initiated" immediately so the portal shows the right state
     _set_payment_fields(request_name, "created")
     frappe.db.commit()
+
+    if gateway == gw.EASEBUZZ:
+        from slcm.api.easebuzz_payment import start_checkout
+        try:
+            return start_checkout(
+                "transcript", student_name, float(req.fee_amount), {"request_name": request_name},
+                f"Transcript Fee {req.transcript_type}", "/student-portal/transcript-request",
+                reference=("Transcript Request", request_name),
+            )
+        except Exception:
+            _set_payment_fields(
+                request_name, "failed",
+                extra={"payment_status": "Pending", "razorpay_payment_status": ""},
+            )
+            frappe.db.commit()
+            raise
 
     # Get student email for Razorpay prefill
     student_fields = frappe.db.get_value(
@@ -472,17 +500,39 @@ def confirm_payment(request_name, razorpay_payment_id,
             "Payment verification failed. Please contact support with your payment ID: {0}"
         ).format(razorpay_payment_id))
 
+    return mark_request_paid(request_name, student_name, razorpay_payment_id, razorpay_order_id)
+
+
+def mark_request_paid(request_name, student_name, payment_id, order_id, gateway="Razorpay"):
+    """Record a verified gateway payment on the request, email the student and auto-approve
+    (generate the transcript) when configured. Idempotent. Used by confirm_payment (Razorpay)
+    and by the Easebuzz settlement (slcm.api.easebuzz_payment)."""
+    req = _owned_request(request_name, student_name)
+    if req.payment_status == "Paid":
+        paid_with = frappe.db.get_value("Transcript Request", request_name, "payment_reference")
+        if payment_id and paid_with and paid_with != payment_id:
+            # paid twice (two tabs / two orders): keep the second capture visible for a refund
+            from slcm.slcm.fee.payment_ledger import record_unapplied_quietly
+            record_unapplied_quietly(
+                gateway, payment_id, order_id, "Transcript Request", request_name, req.fee_amount, student_name,
+                f"{request_name} was already paid ({paid_with}); payment {payment_id} is a duplicate and needs a refund.",
+            )
+            frappe.db.commit()
+        return {"success": True, "already_paid": True, "status": req.status}
+
     # ── Mark Paid (captured) ───────────────────────────────────────────────────
     _set_payment_fields(
         request_name, "captured",
-        gateway_response={"payment_id": razorpay_payment_id, "order_id": razorpay_order_id},
+        gateway_response={"gateway": gateway, "payment_id": payment_id, "order_id": order_id},
         extra={
             "payment_date":      now_datetime(),
-            "payment_reference": razorpay_payment_id,
+            "payment_reference": payment_id,
             "status":            "Submitted",
             "payment_failure_reason": "",
         },
     )
+    from slcm.slcm.fee.payment_ledger import sync_quietly
+    sync_quietly(payment_id)
     frappe.db.commit()
 
     settings = _get_settings()
@@ -491,7 +541,7 @@ def confirm_payment(request_name, razorpay_payment_id,
         "student_name": _get_student_full_name(student_name),
         "request_name": request_name,
         "transcript_type": req.transcript_type, "fee_amount": req.fee_amount or 0,
-        "payment_id": razorpay_payment_id,
+        "payment_id": payment_id,
     })
 
     # ── Auto-approval ─────────────────────────────────────────────────────────
@@ -522,7 +572,7 @@ def confirm_payment(request_name, razorpay_payment_id,
 
 @frappe.whitelist()
 def record_payment_failure(request_name, error_description="", error_code="",
-                            error_reason="", error_source="", error_step=""):
+                            error_reason="", error_source="", error_step="", payment_id=""):
     """
     Called when Razorpay fires an explicit failure event on the client side
     (razorpay.on('payment.failed', ...)).
@@ -553,6 +603,12 @@ def record_payment_failure(request_name, error_description="", error_code="",
             "status": "Payment Pending",
             "payment_failure_reason": reason,
         },
+    )
+    from slcm.slcm.fee.payment_ledger import record_failure_quietly
+    record_failure_quietly(  # only a real Razorpay payment id keys a request (the value comes from the browser)
+        "Razorpay", payment_id if str(payment_id or "").startswith("pay_") else "", "Transcript Request", request_name, req.fee_amount, student_name, reason, "failed",
+        order_id=req.razorpay_order_id, error_code=error_code,
+        details={"error_code": error_code, "error_reason": error_reason, "error_source": error_source, "error_step": error_step},
     )
     frappe.db.commit()
     return {"success": True, "payment_status": "Payment Failed"}

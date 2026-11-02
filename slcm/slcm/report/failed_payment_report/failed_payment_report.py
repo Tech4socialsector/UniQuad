@@ -92,7 +92,10 @@ def _get_payment_request_failures(filters, from_date, to_date):
 	if filters.get("student"):
 		return []
 
-	conditions = "pr.status = 'Failed'"
+	# Failed portal fee attempts already listed from the Student Fee Payment Log (source "Fee Payment"): demand
+	# failures on both gateways and Razorpay invoice failures (Easebuzz invoice failures write no log row)
+	conditions = """pr.status = 'Failed' AND NOT (pr.reference_doctype = 'Fee Demand'
+		OR (pr.reference_doctype = 'Fee Invoice' AND IFNULL(pr.payment_gateway, 'Razorpay') = 'Razorpay'))"""
 	values = {"to_date": to_date}
 
 	if from_date:

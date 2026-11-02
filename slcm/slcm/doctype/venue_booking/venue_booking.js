@@ -2,7 +2,7 @@
     add_fields: ['status', 'docstatus'],
 
     refresh: function (listview) {
-        if (!frappe.user.has_role(['System Manager', 'Administrator', 'slcm_Registrar'])) return;
+        if (!frappe.user.has_role(['System Manager', 'Administrator', 'slcm_Registrar', 'AAD', 'AAD Staff'])) return;
 
         // ── Guard: run setup only once per listview instance ──────────────────
         if (listview.__vb_bulk_setup) return;
@@ -158,7 +158,7 @@ frappe.ui.form.on('Venue Booking', {
         _toggle_student_field(frm);
 
         const canManage = frappe.user.has_role([
-            'System Manager', 'Administrator', 'slcm_Registrar'
+            'System Manager', 'Administrator', 'slcm_Registrar', 'AAD', 'AAD Staff'
         ]);
 
         // ── Recurring series: link back to the parent, or list this series' occurrences ──

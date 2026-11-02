@@ -27,7 +27,6 @@ from slcm.api.service.razorpay_utils import (
 def _default_payment_gateway():
 	return (
 		frappe.db.get_value("Payment Gateway", {"gateway": "Razorpay"}, "name")
-		or frappe.db.get_value("Payment Gateway", {}, "name")
 		or "Razorpay"
 	)
 

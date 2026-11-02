@@ -5,13 +5,15 @@ import frappe
 import csv
 import io
 
+from slcm.permissions import AAD_ROLES
+
 
 # ── Page data APIs ────────────────────────────────────────────────
 
 @frappe.whitelist()
 def get_rfid_summary():
     """Full page load — stats + unlinked cards + linked cards + live feed."""
-    frappe.only_for("System Manager")
+    frappe.only_for(("System Manager", *AAD_ROLES))
 
     stats = frappe.db.sql("""
         SELECT
@@ -94,7 +96,7 @@ def get_rfid_summary():
 @frappe.whitelist()
 def get_live_feed(since_swipe_time=None):
     """Incremental refresh every 30 s — only new logs + updated stats."""
-    frappe.only_for("System Manager")
+    frappe.only_for(("System Manager", *AAD_ROLES))
 
     stats = frappe.db.sql("""
         SELECT
@@ -140,7 +142,7 @@ def link_rfid_to_student(rfid_uid, student):
     Assign rfid_uid to a Student Master record.
     Backfills all existing Attendance Logs for that UID.
     """
-    frappe.only_for("System Manager")
+    frappe.only_for(("System Manager", *AAD_ROLES))
 
     rfid_uid = (rfid_uid or "").strip()
     student  = (student  or "").strip()
@@ -186,7 +188,7 @@ def link_rfid_to_student(rfid_uid, student):
 @frappe.whitelist()
 def unlink_rfid_from_student(student):
     """Remove the rfid_uid from a Student Master record and clear linked Attendance Logs."""
-    frappe.only_for("System Manager")
+    frappe.only_for(("System Manager", *AAD_ROLES))
     if not frappe.db.exists("Student Master", student):
         frappe.throw(f"Student '{student}' not found.")
     old_uid = frappe.db.get_value("Student Master", student, "rfid_uid")
@@ -211,7 +213,7 @@ def get_export_data():
     program RFID cards: Student ID, Name, Programme, Batch, Department.
     Excludes students who already have an RFID UID assigned.
     """
-    frappe.only_for("System Manager")
+    frappe.only_for(("System Manager", *AAD_ROLES))
 
     rows = frappe.db.sql("""
         SELECT
@@ -234,7 +236,7 @@ def get_export_data():
 @frappe.whitelist()
 def read_uploaded_file(file_url):
     """Read an uploaded CSV or Excel file and return its content as CSV text."""
-    frappe.only_for("System Manager")
+    frappe.only_for(("System Manager", *AAD_ROLES))
 
     import os
     try:
@@ -271,7 +273,7 @@ def bulk_import_rfid(csv_data):
 
     Returns per-row results so UI can show exactly what succeeded/failed.
     """
-    frappe.only_for("System Manager")
+    frappe.only_for(("System Manager", *AAD_ROLES))
 
     results = {"linked": [], "skipped": [], "errors": []}
 

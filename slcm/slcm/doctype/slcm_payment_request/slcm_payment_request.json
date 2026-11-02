@@ -21,12 +21,21 @@
   "failure_message",
   "section_break_gateway",
   "gateway_status",
-  "razorpay_order_id",
-  "razorpay_payment_id",
-  "razorpay_signature",
+  "gateway_order_id",
+  "gateway_payment_id",
+  "payment_method",
   "column_break_gateway_2",
   "paid_on",
+  "bank_reference",
+  "payer_account",
+  "payer_bank",
+  "gateway_error_code",
   "webhook_received",
+  "section_break_razorpay",
+  "razorpay_order_id",
+  "razorpay_payment_id",
+  "column_break_razorpay",
+  "razorpay_signature",
   "amended_from",
   "settlement_details_tab",
   "settlement_section",
@@ -135,8 +144,30 @@
    "fieldname": "gateway_status",
    "fieldtype": "Select",
    "label": "Gateway Status",
-   "options": "created\nauthorized\ncaptured\nfailed\nrefunded",
+   "options": "created\nauthorized\ncaptured\nfailed\nrefunded\nsuccess\nfailure\nusercancelled\ndropped\nbounced",
    "permlevel": 1
+  },
+  {
+   "description": "Razorpay order id or Easebuzz txnid",
+   "fieldname": "gateway_order_id",
+   "fieldtype": "Data",
+   "label": "Gateway Order / Txn ID",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "description": "Razorpay pay_… or Easebuzz easepayid",
+   "fieldname": "gateway_payment_id",
+   "fieldtype": "Data",
+   "label": "Gateway Payment ID",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "payment_method",
+   "fieldtype": "Data",
+   "label": "Payment Method",
+   "read_only": 1
   },
   {
    "fieldname": "razorpay_order_id",
@@ -149,6 +180,10 @@
    "fieldtype": "Data",
    "label": "Razorpay Payment ID",
    "read_only": 1
+  },
+  {
+   "fieldname": "column_break_razorpay",
+   "fieldtype": "Column Break"
   },
   {
    "fieldname": "razorpay_signature",
@@ -167,10 +202,43 @@
    "label": "Paid On"
   },
   {
+   "fieldname": "bank_reference",
+   "fieldtype": "Data",
+   "label": "Bank Reference (RRN / UTR)",
+   "read_only": 1
+  },
+  {
+   "description": "UPI ID, masked card number or wallet",
+   "fieldname": "payer_account",
+   "fieldtype": "Data",
+   "label": "Payer Account / UPI ID",
+   "read_only": 1
+  },
+  {
+   "description": "Net banking bank or card issuer",
+   "fieldname": "payer_bank",
+   "fieldtype": "Data",
+   "label": "Payer Bank",
+   "read_only": 1
+  },
+  {
+   "fieldname": "gateway_error_code",
+   "fieldtype": "Data",
+   "label": "Gateway Error Code",
+   "read_only": 1
+  },
+  {
    "default": "0",
    "fieldname": "webhook_received",
    "fieldtype": "Check",
    "label": "Webhook Received"
+  },
+  {
+   "collapsible": 1,
+   "depends_on": "eval:doc.payment_gateway!='Easebuzz'",
+   "fieldname": "section_break_razorpay",
+   "fieldtype": "Section Break",
+   "label": "Razorpay"
   },
   {
    "fieldname": "amended_from",
@@ -271,7 +339,7 @@
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2026-10-19 16:30:00.000000",
+ "modified": "2026-11-02 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "SLCM Payment Request",
