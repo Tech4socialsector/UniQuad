@@ -181,6 +181,9 @@ def download_admit_card(allocation_name=None, **kwargs):
         frappe.throw(_("You are not authorized to access this admit card."), frappe.PermissionError)
 
     doc = frappe.get_doc("Entrance Test Seat Allocation", allocation_name)
+
+    if getattr(doc, "is_international_applicant", 0):
+        frappe.throw(_("Admit Card is not applicable for international online entrance tests."), frappe.ValidationError)
     
     is_rescheduled = (doc.is_rescheduled == 1 or doc.entrance_test_status == "Rescheduled")
     status = doc.re_allocation_status if is_rescheduled else doc.allocation_status

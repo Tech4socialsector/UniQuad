@@ -788,6 +788,9 @@ def download_admit_card(admit_card):
         if not is_staff:
             frappe.throw("Not authorized", frappe.PermissionError)
 
+    if getattr(doc, "is_international_applicant", 0):
+        frappe.throw(_("Admit Card is not applicable for international online entrance tests."), frappe.ValidationError)
+
     is_rescheduled = (doc.is_rescheduled == 1 or doc.entrance_test_status == "Rescheduled")
     if not is_staff:
         is_published = bool(doc.re_seat_allocation_published) if is_rescheduled else bool(doc.seat_allocation_published)

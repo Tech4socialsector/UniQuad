@@ -457,7 +457,7 @@ frappe.ui.form.on("Applicant", {
         let is_cgpa = !!frm.doc.if_cgpa_maximum_cgpa_class_xii;
 
         if (val < (is_cgpa ? 4 : 35)) {
-            frappe.show_alert({ message: is_cgpa ? __("HSC CGPA must be at least 4.") : __("HSC percentage must be at least 35%."), indicator: "orange" });
+            frappe.show_alert({ message: is_cgpa ? __("HSC CGPA must be at least 4.") : __("HSC percentage must be at least 35%.If CGPA then first add the maximum CGPA"), indicator: "orange" });
             frm.set_value("hsc_percentage", null);
         } else if (val > max_val) {
             frappe.show_alert({ message: is_cgpa ? __(`HSC CGPA cannot exceed ${max_val}.`) : __("HSC percentage cannot exceed 100%."), indicator: "orange" });

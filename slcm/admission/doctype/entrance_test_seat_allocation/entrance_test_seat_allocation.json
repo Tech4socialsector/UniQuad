@@ -51,6 +51,9 @@
   "end_time",
   "admit_card_download",
   "seat_allocation_published_on",
+  "section_break_online_exam",
+  "online_test_link",
+  "online_test_instructions",
   "tab_9_tab",
   "reschedule_seat_allocation_section",
   "re_entrance_test_name",
@@ -64,12 +67,12 @@
   "re_allocation_status",
   "rescheduled_on",
   "rescheduled_by",
+  "re_seat_allocation_published",
   "column_break_gtzu",
   "re_allocated_by",
   "reschedule_reason",
   "re_admit_card_download",
   "is_rescheduled",
-  "re_seat_allocation_published",
   "re_seat_allocation_published_on",
   "tab_part_a",
   "entrance_test_status",
@@ -641,13 +644,31 @@
   {
    "fieldname": "column_break_gtzu",
    "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.is_international_applicant == 1",
+   "fieldname": "section_break_online_exam",
+   "fieldtype": "Section Break",
+   "label": "Online Entrance Test Details"
+  },
+  {
+   "depends_on": "eval:doc.is_international_applicant == 1",
+   "fieldname": "online_test_link",
+   "fieldtype": "Data",
+   "label": "Online Test Link"
+  },
+  {
+   "depends_on": "eval:doc.is_international_applicant == 1",
+   "fieldname": "online_test_instructions",
+   "fieldtype": "Text Editor",
+   "label": "Online Test Instructions"
   }
  ],
  "grid_page_length": 50,
  "image_field": "profile",
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-11-02 15:50:31.441139",
+ "modified": "2026-11-02 18:00:42.795248",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Entrance Test Seat Allocation",
@@ -696,6 +717,44 @@
    "read": 1,
    "report": 1,
    "role": "Entrance Test Provider",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "import": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Admission Admin",
+   "select": 1,
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Campus Admin",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Admission Officer",
    "share": 1,
    "write": 1
   }

@@ -252,6 +252,15 @@ class EntranceTestList(Document):
                 if resolved_end_time:
                     allocation.end_time = resolved_end_time
 
+                if getattr(allocation, "is_international_applicant", 0):
+                    if test_cfg.get("online_test_link"):
+                        allocation.online_test_link = test_cfg.get("online_test_link")
+                    if test_cfg.get("online_test_instructions"):
+                        allocation.online_test_instructions = test_cfg.get("online_test_instructions")
+                else:
+                    allocation.online_test_link = None
+                    allocation.online_test_instructions = None
+
                 allocation.set("assigned_preferences", [])
                 for idx, pdoc in enumerate(provider_list, start=1):
                     allocation.append("assigned_preferences", {
@@ -713,6 +722,11 @@ class EntranceTestList(Document):
 def _send_allocation_email(allocation, email, allocation_type=None, email_format="Default", custom_email_content=None):
     """Send a formal Entrance Test Centre Selection / Allocation email to the applicant."""
     try:
+        if getattr(allocation, "is_international_applicant", 0):
+            from slcm.admission.doctype.applicant.applicant import _send_international_entrance_test_email
+            _send_international_entrance_test_email(allocation, email)
+            return
+
         if allocation_type == "Allocate Directly":
             template_name = "Automated Entrance Test Allocation"
             attach_admit_card = False
@@ -1126,7 +1140,7 @@ def _resolve_entrance_test_details_from_cycle(cycle_name, program=None, program_
     rows = frappe.get_all(
         "Entrance Test Details",
         filters={"parent": cycle_name, "parenttype": "Admission Cycle"},
-        fields=["programme", "programme_level", "entrance_test_name", "entrance_test_date", "start_time", "end_time", "idx"],
+        fields=["programme", "programme_level", "entrance_test_name", "entrance_test_date", "start_time", "end_time", "online_test_link", "online_test_instructions", "idx"],
         order_by="idx asc",
     )
     if not rows:
@@ -1357,6 +1371,14 @@ def publish_seat_allocations_for_test_list(entrance_test_list, selected_names=No
         doc = frappe.get_doc("Entrance Test Seat Allocation", rec.name)
         doc.db_set("seat_allocation_published", 1, update_modified=False)
         doc.db_set("seat_allocation_published_on", now_ts, update_modified=False)
+
+        if doc.applicant:
+            from slcm.admission.doctype.entrance_test_seat_allocation.entrance_test_seat_allocation import (
+                _update_applicant_status_for_entrance_test_status,
+            )
+            _update_applicant_status_for_entrance_test_status(
+                doc.applicant, doc.entrance_test_status or "Scheduled"
+            )
 
         email = doc.email or ""
         if not email and doc.applicant:

@@ -11,7 +11,9 @@
   "entrance_test_name",
   "entrance_test_date",
   "start_time",
-  "end_time"
+  "end_time",
+  "online_test_link",
+  "online_test_instructions"
  ],
  "fields": [
   {
@@ -58,13 +60,26 @@
    "fieldtype": "Time",
    "in_list_view": 1,
    "label": "End Time"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "online_test_link",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Online Test Link"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "online_test_instructions",
+   "fieldtype": "Text Editor",
+   "label": "Online Test Instructions"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-05-06 16:03:43.072151",
+ "modified": "2026-11-02 16:53:16.714426",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Entrance Test Details",

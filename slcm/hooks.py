@@ -238,6 +238,7 @@ fixtures = [
                 "NLSAT Full Fee Paid",
                 "NLSAT Offer Expired / Withdrawn",
                 "NLSAT Application Submitted and Paid Email",
+                "International Entrance Test Allocation"
             ]]
         ]
     },

@@ -4682,7 +4682,7 @@ function setupPreferenceValidation() {
 				var min_val = is_cgpa ? 4 : 35;
 
 				if (hsc < min_val) {
-					frappe.msgprint(is_cgpa ? 'HSC CGPA must be at least 4.' : 'HSC percentage must be at least 35%.');
+					frappe.msgprint(is_cgpa ? 'HSC CGPA must be at least 4.' : 'HSC percentage must be at least 35%. If CGPA then first add the maximum CGPA');
 					clearHscPercentage();
 				} else if (hsc > max_val) {
 					frappe.msgprint(is_cgpa ? 'HSC CGPA cannot exceed ' + max_val + '.' : 'HSC percentage cannot exceed 100%.');

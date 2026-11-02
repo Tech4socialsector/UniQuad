@@ -21,8 +21,12 @@ class EntranceTestSeatAllocation(Document):
 
     def before_save(self):
         # Fetch start/end time from Admission Cycle Entrance Test Details child table
-        is_res = (self.is_rescheduled == 1 or self.entrance_test_status == "Rescheduled")
-        f_test = self.re_entrance_test_name or self.re_entrance_test_list if is_res else (self.entrance_test_name or self.entrance_test_list)
+        is_res = (self.get("is_rescheduled") == 1 or self.get("entrance_test_status") == "Rescheduled")
+        f_test = (
+            (self.get("re_entrance_test_name") or self.get("re_entrance_test_list"))
+            if is_res
+            else (self.get("entrance_test_name") or self.get("entrance_test_list"))
+        )
 
         if (self.part_a_total_marks_scored or 0) > 75:
             frappe.throw(_("Part A marks cannot be more than 75."))
@@ -30,29 +34,42 @@ class EntranceTestSeatAllocation(Document):
         if (self.part_b_total_marks_scored or 0) > 75:
             frappe.throw(_("Part B marks cannot be more than 75."))
             
+        # Check if the applicant is an international applicant
+        if self.applicant:
+            foreign_national = frappe.db.get_value("Applicant", self.applicant, "foriegn_national")
+            self.is_international_applicant = 1 if foreign_national == "Yes" else 0
+        else:
+            self.is_international_applicant = 0
+
         if self.admission_cycle and f_test:
             filters = {"parent": self.admission_cycle, "entrance_test_name": f_test}
             if self.program_level:
                 filters["programme_level"] = self.program_level
             test_details = frappe.db.get_value("Entrance Test Details", 
                 filters, 
-                ["start_time", "end_time"], 
+                ["start_time", "end_time", "online_test_link", "online_test_instructions"], 
                 as_dict=True
             )
             if not test_details and self.program_level:
                 test_details = frappe.db.get_value("Entrance Test Details", 
                     {"parent": self.admission_cycle, "entrance_test_name": f_test}, 
-                    ["start_time", "end_time"], 
+                    ["start_time", "end_time", "online_test_link", "online_test_instructions"], 
                     as_dict=True
                 )
             if test_details:
                 self.start_time = test_details.start_time
                 self.end_time = test_details.end_time
+                # Online Entrance Test details are strictly for international applicants
+                if self.is_international_applicant:
+                    if not self.online_test_link and test_details.online_test_link:
+                        self.online_test_link = test_details.online_test_link
+                    if not self.online_test_instructions and test_details.online_test_instructions:
+                        self.online_test_instructions = test_details.online_test_instructions
 
-        # Check if the applicant is an international applicant
-        if self.applicant:
-            foreign_national = frappe.db.get_value("Applicant", self.applicant, "foriegn_national")
-            self.is_international_applicant = 1 if foreign_national == "Yes" else 0
+        # For domestic applicants, ensure online exam fields are always cleared
+        if not self.is_international_applicant:
+            self.online_test_link = None
+            self.online_test_instructions = None
 
         # Calculate total marks and percentage
         self.total_marks_secured_in_part_a_b = (self.part_a_total_marks_scored or 0) + (self.part_b_total_marks_scored or 0)
@@ -71,16 +88,35 @@ class EntranceTestSeatAllocation(Document):
                 if self.entrance_test_status in ["Attended", "Absent"]:
                     self.attendance_marked_on = now_datetime()
 
-        # Update Applicant's status in DB immediately when user changes to Scheduled/Rescheduled/Absent (same transaction = fast, no refresh needed).
+        # Update Applicant's status in DB:
+        # - Absent: update immediately (exam attendance marked)
+        # - Scheduled / Rescheduled: ONLY update when seat allocation is published to prevent applicant confusion
         if self.applicant and self.entrance_test_status in ("Scheduled", "Rescheduled", "Absent"):
-            status_actually_changed = (
-                self.is_new()
-                or (doc_before and doc_before.entrance_test_status != self.entrance_test_status)
-            )
-            if status_actually_changed:
-                _update_applicant_status_for_entrance_test_status(
-                    self.applicant, self.entrance_test_status
+            is_resched = (self.get("is_rescheduled") == 1 or self.get("entrance_test_status") == "Rescheduled")
+            is_pub = bool(self.get("re_seat_allocation_published")) if is_resched else bool(self.get("seat_allocation_published"))
+
+            if self.entrance_test_status == "Absent":
+                status_actually_changed = (
+                    self.is_new()
+                    or (doc_before and doc_before.entrance_test_status != self.entrance_test_status)
                 )
+                if status_actually_changed:
+                    _update_applicant_status_for_entrance_test_status(
+                        self.applicant, self.entrance_test_status
+                    )
+            elif is_pub:
+                was_pub = False
+                if doc_before:
+                    was_pub = bool(doc_before.get("re_seat_allocation_published")) if is_resched else bool(doc_before.get("seat_allocation_published"))
+
+                status_actually_changed = (
+                    not was_pub
+                    or (doc_before and doc_before.entrance_test_status != self.entrance_test_status)
+                )
+                if status_actually_changed:
+                    _update_applicant_status_for_entrance_test_status(
+                        self.applicant, self.entrance_test_status
+                    )
 
         # Update Applicant's status based on Result Status
         if self.applicant and self.result_status:
@@ -2594,12 +2630,20 @@ def publish_seat_allocations(
             doc.db_set("seat_allocation_published", 1, update_modified=False)
             doc.db_set("seat_allocation_published_on", now_ts, update_modified=False)
             published_count += 1
+            if doc.applicant:
+                _update_applicant_status_for_entrance_test_status(
+                    doc.applicant, doc.entrance_test_status or "Scheduled"
+                )
 
         if should_publish_resched:
             doc.db_set("re_seat_allocation_published", 1, update_modified=False)
             doc.db_set("re_seat_allocation_published_on", now_ts, update_modified=False)
             if allocation_scope == "Rescheduled":
                 published_count += 1
+            if doc.applicant:
+                _update_applicant_status_for_entrance_test_status(
+                    doc.applicant, doc.entrance_test_status or "Scheduled"
+                )
 
         email = doc.email or ""
         if not email and doc.applicant:
