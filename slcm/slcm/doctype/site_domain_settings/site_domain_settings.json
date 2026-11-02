@@ -1,0 +1,91 @@
+{
+ "actions": [],
+ "creation": "2026-11-02 19:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "enabled",
+  "primary_domain",
+  "column_break_site",
+  "site_name",
+  "last_synced",
+  "section_domains",
+  "domains",
+  "instructions_html"
+ ],
+ "fields": [
+  {
+   "default": "1",
+   "description": "Untick to stop every domain redirect below at once (the mappings are kept).",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enable Domain Redirects"
+  },
+  {
+   "description": "The site's main domain (host_name in this site's config, else the site name). It never redirects.",
+   "fieldname": "primary_domain",
+   "fieldtype": "Data",
+   "label": "Primary Domain",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_site",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "This site's name on the bench. Settings here apply to this site only.",
+   "fieldname": "site_name",
+   "fieldtype": "Data",
+   "label": "Site Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_synced",
+   "fieldtype": "Datetime",
+   "label": "Last Synced",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_domains",
+   "fieldtype": "Section Break",
+   "label": "Domains"
+  },
+  {
+   "fieldname": "domains",
+   "fieldtype": "Table",
+   "label": "Domains",
+   "options": "Site Domain Route"
+  },
+  {
+   "fieldname": "instructions_html",
+   "fieldtype": "HTML",
+   "label": "Instructions",
+   "options": "<div class=\"sds-help\" style=\"margin-top:12px;padding:12px 14px;border:1px solid var(--border-color);border-radius:8px;font-size:13px;line-height:1.6\">\n<div style=\"font-weight:600;margin-bottom:4px\">How it works</div>\n<ul style=\"margin:0 0 10px 18px;padding:0\">\n<li>Only the domain's home page is redirected: opening <code>https://&lt;domain&gt;/</code> goes to its <b>Redirect To</b> page. Every other link on that domain opens as usual.</li>\n<li>The domains come from this site only, never from the other sites on the bench: the site name, the site config (<code>host_name</code>, <code>domains</code>), Frappe Cloud when the site is connected to it, and any domain the site has been opened on (<b>Detected</b>).</li>\n<li>Domains cannot be typed in or deleted. To stop a domain's redirect, untick <b>Enabled</b> or clear <b>Redirect To</b>.</li>\n</ul>\n<div style=\"font-weight:600;margin-bottom:4px\">To add a domain</div>\n<ol style=\"margin:0 0 10px 18px;padding:0\">\n<li>Add the domain to this site in Frappe Cloud (Site &rarr; Domains) and wait for it to become Active.</li>\n<li>Open the domain once in a browser, or open this page on that domain and click <b>Sync Domains</b>. It then appears in the table.</li>\n<li>Fill <b>Redirect To</b> with the page path, e.g. <code>/nlsatadmissions</code> or <code>/nlsat-international</code>, tick <b>Enabled</b> and Save. It works at once, without a deploy.</li>\n</ol>\n<div style=\"font-weight:600;margin-bottom:4px;color:var(--red-600,#b02a37)\">Warnings</div>\n<ul style=\"margin:0 0 0 18px;padding:0\">\n<li>The <b>Primary</b> domain cannot be redirected; staff reach the desk through it.</li>\n<li>Do not redirect a domain that staff use to open the desk: its home page will open the redirect page instead.</li>\n<li>Redirect To must be a page of this site starting with <code>/</code> (not <code>/</code> itself and not another website). Check the page opens before saving.</li>\n<li><b>Page Status</b> is checked on save and every day. If the page is deleted or renamed later, it shows <b>Not Found</b>, an entry is added to the Error Log, and the domain opens its normal home page instead of a Page Not Found until Redirect To is fixed.</li>\n<li>Login is separate per domain: being logged in on one domain does not log the user in on another.</li>\n<li>Untick <b>Enable Domain Redirects</b> to turn every redirect off at once if something goes wrong.</li>\n</ul>\n</div>"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-11-02 19:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "SLCM",
+ "name": "Site Domain Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
