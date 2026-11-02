@@ -30,7 +30,7 @@ from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 
 
-from frappe.utils import to_timedelta
+from frappe.utils import getdate, to_timedelta
 from contextlib import contextmanager
 
 
@@ -64,6 +64,16 @@ def publish_bulk_progress(label, done, total):
         "time_table_bulk_progress",
         {"label": label, "done": done, "total": total, "percent": int(done * 100 / total) if total else 100},
         user=frappe.session.user,
+    )
+
+
+def session_has_attendance(session):
+    """Attendance was taken in this Attendance Session: marked, or any student
+    attendance / reopen record points at it."""
+    return bool(
+        frappe.db.get_value("Attendance Session", session, "attendance_marked")
+        or frappe.db.exists("Student Attendance", {"attendance_session": session})
+        or frappe.db.exists("Attendance Reopen Log", {"attendance_session": session})
     )
 
 
@@ -201,6 +211,16 @@ class TimeTable(Document):
 
         add_log(self.class_name, "Deleted", self.name, self.schedule_date,
                 f"{self.title or self.course or ''} {format_time_12h(self.from_time)} – {format_time_12h(self.to_time)}, {self.venue or ''}".strip())
+        self.delete_attendance_sessions()
+
+    def delete_attendance_sessions(self):
+        """The entry's Attendance Session goes with it, so a deleted class is
+        no longer counted as scheduled. A session in which attendance was taken
+        stays; Frappe's link check then refuses a normal delete of the entry."""
+        for session in frappe.get_all("Attendance Session", filters={"class_schedule": self.name}, pluck="name"):
+            if session_has_attendance(session):
+                continue
+            frappe.delete_doc("Attendance Session", session, force=1, ignore_permissions=True)
 
     def validate_time(self):
         """Validate that to_time is after from_time"""
@@ -585,10 +605,20 @@ class TimeTable(Document):
         """Create recurring class schedules based on repeat frequency"""
         if not self.repeats_till:
             return
-        
-        # Prevent duplicate creation if this method is called multiple times
-        if frappe.db.exists("Time Table", {"parent_schedule": self.name}):
-            return
+
+        # Dates the series already has an entry on (sessions kept when it is
+        # rebuilt, e.g. ones with marked attendance, or an earlier run of this
+        # method) get no second entry; every other date is still scheduled.
+        series_root = self.parent_schedule or self.name
+        taken_dates = {
+            getdate(d)
+            for d in frappe.get_all(
+                "Time Table",
+                filters={"name": ["!=", self.name], "docstatus": ["<", 2]},
+                or_filters={"name": series_root, "parent_schedule": ["in", list({series_root, self.name})]},
+                pluck="schedule_date",
+            )
+        }
 
         try:
             current_date = datetime.strptime(str(self.schedule_date), "%Y-%m-%d")
@@ -611,8 +641,6 @@ class TimeTable(Document):
             faculty_overlap_count = 0
             holiday_skip_count = 0
             schedules_to_create = []
-
-            from frappe.utils import getdate
 
             from slcm.slcm.doctype.institutional_calendar.institutional_calendar import (
                 get_non_teaching_dates_in_range,
@@ -666,6 +694,10 @@ class TimeTable(Document):
             # First, collect all schedules to create and check for conflicts
             while current_date <= end_date:
                 date_only = current_date.date()
+
+                if date_only in taken_dates:
+                    current_date += increment
+                    continue
 
                 # Skip dates marked as a Holiday or Weekly Off (e.g. Sunday) in the Institutional Calendar
                 if date_only in non_teaching_dates:
@@ -1305,8 +1337,8 @@ def bulk_update_future_occurrences(time_table_name, updates):
             for name in future_names:
                 # Check if attendance marked
                 session_name = frappe.db.get_value("Attendance Session", {"class_schedule": name})
-                if session_name and frappe.db.get_value("Attendance Session", session_name, "attendance_marked"):
-                    continue # Don't delete marked occurrences
+                if session_name and session_has_attendance(session_name):
+                    continue # Don't delete occurrences whose attendance was taken
                 frappe.delete_doc("Time Table", name, force=1)
 
             # Save the current doc
