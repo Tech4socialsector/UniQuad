@@ -370,7 +370,7 @@
   }
  ],
  "links": [],
- "modified": "2026-10-31 12:00:00.000000",
+ "modified": "2026-11-02 17:31:53.140876",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Fee Structure",
@@ -421,6 +421,14 @@
    "role": "Offer Letter Admin",
    "share": 1,
    "write": 1
+  },
+  {
+   "role": "AAD",
+   "select": 1
+  },
+  {
+   "role": "AAD Staff",
+   "select": 1
   }
  ],
  "row_format": "Dynamic",

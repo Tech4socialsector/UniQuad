@@ -90,3 +90,4 @@ slcm.patches.v2_0.remove_unwired_admission_doctypes
 slcm.patches.v2_0.make_applicant_files_private
 slcm.patches.v2_0.aad_role_access
 slcm.patches.v2_0.aad_desktop_only
+slcm.patches.v2_0.aad_linked_doctype_perms
