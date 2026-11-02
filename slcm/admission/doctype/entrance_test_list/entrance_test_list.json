@@ -99,7 +99,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-10 20:46:51.961676",
+ "modified": "2026-11-02 18:41:09.450240",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Entrance Test List",
@@ -145,5 +145,6 @@
  "rows_threshold_for_grid_search": 20,
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "entrance_test_city"
 }
