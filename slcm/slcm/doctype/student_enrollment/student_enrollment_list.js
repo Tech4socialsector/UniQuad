@@ -160,15 +160,10 @@ function open_create_class_dialog(listview) {
 	const course_fields = [
 		{ fieldname: "course", fieldtype: "Link", options: "Course", label: __("Course"), in_list_view: 1, reqd: 1, columns: 4,
 			get_query: () => ({ filters: { status: "Active" } }),
-			// Picking a course brings its type and credit; faculty is chosen by hand
-			onchange() {
-				const row = this.doc;
-				if (!row || !row.course) return;
-				frappe.db.get_value("Course", row.course, ["course_name", "course_type", "credit_value"]).then(({ message: c }) => {
-					Object.assign(row, { course_name: c.course_name, course_type: c.course_type, credit: c.credit_value });
-					dialog.fields_dict.courses.grid.refresh();
-				});
-			},
+			// Picking a course brings its type and credit; faculty is chosen by hand.
+			// Not `this.doc`: the grid shares this handler across rows, bound to the
+			// row that first made its control, so every row is checked instead.
+			onchange: () => fill_course_details(),
 		},
 		{ fieldname: "course_name", fieldtype: "Data", label: __("Course Name"), read_only: 1 },
 		{ fieldname: "course_type", fieldtype: "Data", label: __("Course Type"), in_list_view: 1, read_only: 1, columns: 2 },
@@ -183,6 +178,31 @@ function open_create_class_dialog(listview) {
 		{ fieldname: "year_no", fieldtype: "Int", label: __("Year"), in_list_view: 1, read_only: 1, columns: 1 },
 	];
 	const is_group = () => dialog.get_value("class_type") === "Group";
+
+	// Course Name / Type / Credit for every row whose course changed since they were filled
+	const course_cache = {};
+	function fill_course_details() {
+		const grid = dialog.fields_dict.courses.grid;
+		const all = grid.get_data() || [];
+		const cleared = all.filter((r) => !r.course && r._details_for);
+		cleared.forEach((r) => Object.assign(r, { course_name: "", course_type: "", credit: null, _details_for: null }));
+		const rows = all.filter((r) => r.course && r._details_for !== r.course);
+		if (!rows.length) {
+			if (cleared.length) grid.refresh();
+			return;
+		}
+		Promise.all([...new Set(rows.map((r) => r.course))].map((course) => course_cache[course]
+			? Promise.resolve()
+			: frappe.db.get_value("Course", course, ["course_name", "course_type", "credit_value"])
+				.then(({ message: c }) => (course_cache[course] = c || {}))
+		)).then(() => {
+			rows.forEach((r) => {
+				const c = course_cache[r.course] || {};
+				Object.assign(r, { course_name: c.course_name, course_type: c.course_type, credit: c.credit_value, _details_for: r.course });
+			});
+			grid.refresh();
+		});
+	}
 
 	const dialog = new frappe.ui.Dialog({
 		title: __("Create Class"),
@@ -209,7 +229,7 @@ function open_create_class_dialog(listview) {
 			{ fieldname: "programme", fieldtype: "Link", options: "Programme", label: __("Programme"), reqd: 1,
 				onchange: () => load_section_students(),
 			},
-			{ fieldname: "year_no", fieldtype: "Int", label: __("Year No"), default: 1, reqd: 1,
+			{ fieldname: "year_no", fieldtype: "Select", label: __("Year"), options: ["1", "2", "3", "4", "5"], default: "1", reqd: 1,
 				onchange: () => load_section_students(),
 			},
 			{ fieldname: "section", fieldtype: "Link", options: "Section", label: __("Section"),
@@ -224,17 +244,9 @@ function open_create_class_dialog(listview) {
 				description: __("Add the courses to create a class for, one class per course. Course type and credit come from the course; pick the faculty for each.") },
 			{ fieldname: "courses", fieldtype: "Table", label: __("Courses"), in_place_edit: 1, data: [], fields: course_fields },
 
-			{ fieldname: "sb_find", fieldtype: "Section Break", label: __("Find Students"), depends_on: "eval:doc.class_type=='Group'",
-				description: __("Leave a filter empty to match all. Students found are added to the list below.") },
-			{ fieldname: "f_programme", fieldtype: "Link", options: "Programme", label: __("Programme") },
-			{ fieldname: "f_academic_year", fieldtype: "Link", options: "Academic Year", label: __("Academic Year") },
-			{ fieldname: "cb_2", fieldtype: "Column Break" },
-			{ fieldname: "f_year_no", fieldtype: "Int", label: __("Year No") },
-			{ fieldname: "f_section", fieldtype: "Link", options: "Section", label: __("Section") },
-			{ fieldname: "f_add", fieldtype: "Button", label: __("Add Students"), click: () => add_group_students() },
-
 			{ fieldname: "sb_students", fieldtype: "Section Break", label: __("Students"),
-				description: __("Every student listed is added to each class. Select rows and delete to leave students out.") },
+				description: __("Every student listed is added to each class. Use Add / Remove Students to add students of any year or take students out.") },
+			{ fieldname: "f_add", fieldtype: "Button", label: __("Add / Remove Students"), click: () => add_remove_students() },
 			{ fieldname: "students", fieldtype: "Table", label: __("Students"), cannot_add_rows: 1, in_place_edit: 0, data: [], fields: student_fields },
 		],
 		primary_action_label: __("Create Class"),
@@ -325,18 +337,16 @@ function open_create_class_dialog(listview) {
 		});
 	}
 
-	function add_group_students() {
+	// Shared picker (public/js/class_student_picker.js): the listed students
+	// ticked, others found from any year; the ticked ones become the list.
+	function add_remove_students() {
 		const v = dialog.get_values(true);
-		frappe.call({
-			method: "slcm.slcm.doctype.classes.classes.get_enrollment_students",
-			args: { programme: v.f_programme, academic_year: v.f_academic_year, year_no: v.f_year_no, section: v.f_section },
-			callback: ({ message }) => {
-				const current = dialog.fields_dict.students.df.data || [];
-				const existing = new Set(current.map((r) => r.student_enrollment));
-				const added = to_student_rows((message || []).filter((s) => !existing.has(s.name)));
-				set_students(current.concat(added));
-				frappe.show_alert({ message: __("Added {0} student(s)", [added.length]), indicator: added.length ? "green" : "orange" });
-			},
+		slcm.class_students.pick({
+			current: dialog.fields_dict.students.df.data || [],
+			programme: is_group() ? "" : v.programme,
+		}).then((picked) => {
+			if (picked) set_students(picked.map(({ student_enrollment, student_name, section, program, year_no }) =>
+				({ student_enrollment, student_name, section, program, year_no })));
 		});
 	}
 

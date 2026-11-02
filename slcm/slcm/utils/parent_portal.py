@@ -27,7 +27,7 @@ def get_parent_wards(email):
 _WARD_FIELDS = """
     sm.name, sm.first_name, sm.last_name,
     sm.programme_of_study, sm.batch, sm.student_status,
-    sm.passport_size_photo, sm.academic_year
+    sm.passport_size_photo, sm.academic_year, sm.current_term
 """
 
 PREVIEW_ROLES = ("System Manager",)
@@ -176,7 +176,8 @@ def get_parent_context(context):
 
     context.ward_batch = student.batch or ""
     context.ward_academic_year = student.academic_year or ""
-    context.ward_term = get_current_term() or ""
+    # The ward's own programme term (e.g. Trimester IV), as on the registration slip
+    context.ward_term = student.get("current_term") or get_current_term() or ""
 
     # Every portal link must carry the active ward, otherwise navigating
     # (e.g. back to the dashboard) silently falls back to the first ward.

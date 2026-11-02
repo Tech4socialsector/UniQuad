@@ -60,10 +60,10 @@
   },
   {
    "fieldname": "year_no",
-   "fieldtype": "Int",
+   "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Year",
-   "non_negative": 1
+   "options": "\n1\n2\n3\n4\n5"
   },
   {
    "description": "Set when the student is added to a class for this course.",
@@ -107,7 +107,7 @@
  ],
  "istable": 1,
  "links": [],
- "modified": "2026-10-29 10:00:00.000000",
+ "modified": "2026-10-31 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Student Enrollment Course",

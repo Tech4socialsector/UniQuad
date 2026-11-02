@@ -6,6 +6,7 @@ from frappe.model.document import Document
 from frappe.utils import escape_html, getdate
 from frappe.utils.data import format_date, get_link_to_form
 from slcm.admission.utils.institution import is_multi_campus_enabled
+from slcm.security.access import require_desk_user
 
 
 APPLICATION_ID_SERIES_PATTERN = re.compile(r"\{(#+)\}")
@@ -465,6 +466,7 @@ def activate_cycle(name):
     Sets status to 'Active' and docstatus to 1 (Submitted) atomically via db_set.
     This ensures the list view never shows 'Draft' for an Active cycle.
     """
+    require_desk_user()
     if not name:
         return {"success": False, "message": _("Missing Cycle Name")}
 
@@ -509,6 +511,7 @@ def close_cycle(name):
     docstatus is intentionally left at 1 (Submitted) so that Frappe
     does NOT render 'Cancelled' in the list and form views.
     """
+    require_desk_user()
     if not name:
         return {"success": False, "message": _("Missing Cycle Name")}
 
@@ -538,6 +541,7 @@ def reopen_cycle(name):
     Sets status back to 'Active' and docstatus back to 1 (Submitted).
     Performs conflict checks (Single Active Cycle + Date Overlaps).
     """
+    require_desk_user()
     if not name:
         return {"success": False, "message": _("Missing Cycle Name")}
 

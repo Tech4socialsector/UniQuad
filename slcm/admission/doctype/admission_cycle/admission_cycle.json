@@ -24,15 +24,9 @@
   "cycle_end_date",
   "application_start_date",
   "application_end_date",
-  "section_break_jwca",
-  "process_completed_message",
-  "column_break_njek",
+  "application_fee",
   "section_break_programs",
   "programs",
-  "section_break_rounds",
-  "enable_multiple_rounds",
-  "section_break_remarks",
-  "remarks",
   "tab_2_tab",
   "section_break_fzif",
   "entrance_test_details",
@@ -119,28 +113,6 @@
    "reqd": 1
   },
   {
-   "fieldname": "section_break_rounds",
-   "fieldtype": "Section Break",
-   "hidden": 1,
-   "label": "Admission Rounds"
-  },
-  {
-   "default": "0",
-   "fieldname": "enable_multiple_rounds",
-   "fieldtype": "Check",
-   "label": "Enable Multiple Rounds"
-  },
-  {
-   "fieldname": "section_break_remarks",
-   "fieldtype": "Section Break",
-   "label": "Remarks"
-  },
-  {
-   "fieldname": "remarks",
-   "fieldtype": "Small Text",
-   "label": "Remarks"
-  },
-  {
    "allow_on_submit": 1,
    "fieldname": "academic_year",
    "fieldtype": "Link",
@@ -160,14 +132,6 @@
    "fieldtype": "Date",
    "label": "Cycle End Date",
    "reqd": 1
-  },
-  {
-   "fieldname": "section_break_jwca",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "column_break_njek",
-   "fieldtype": "Column Break"
   },
   {
    "fieldname": "amended_from",
@@ -210,13 +174,6 @@
    "hidden": 1,
    "label": "Application Form Type",
    "options": "Web From\nCustom From"
-  },
-  {
-   "description": "Ex: \"Congratulations! Your application has been successfully processed.\"",
-   "fieldname": "process_completed_message",
-   "fieldtype": "Data",
-   "hidden": 1,
-   "label": "Process Completed Message"
   },
   {
    "fieldname": "tab_2_tab",
@@ -277,11 +234,18 @@
    "fieldtype": "Table",
    "label": "Application ID Configuration",
    "options": "Application ID Configuration"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "application_fee",
+   "fieldtype": "Link",
+   "label": "Application Fee",
+   "options": "Application Fee"
   }
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2026-10-22 12:00:00.000000",
+ "modified": "2026-10-30 16:02:54.848174",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Admission Cycle",

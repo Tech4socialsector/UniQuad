@@ -4,6 +4,7 @@ from frappe.model.document import Document
 import json
 from frappe import _
 from slcm.admission.utils.institution import is_multi_campus_enabled
+from slcm.security.access import require_desk_user
 
 class AdmissionCycleProgram(Document):
     pass
@@ -12,6 +13,7 @@ class AdmissionCycleProgram(Document):
 def save_categories(admission_cycle, program, total_seats, policy_document=None, reservation_rows=None, 
                     existing_policy=None, payment_gateway=None, payment_receipt_template=None, campus=None,
                     horizontal_rows=None, compartmental_rows=None, status="Active"):
+    require_desk_user()
     if isinstance(reservation_rows, str):
         reservation_rows = json.loads(reservation_rows)
     if isinstance(horizontal_rows, str):
@@ -112,6 +114,7 @@ def save_program_media(program, active, brochure_pdf, media_rows, parent_doctype
     - If a Program Media doc with name == program already exists, it is updated.
     - If not, a new doc is created with name = program.
     """
+    require_desk_user()
     if isinstance(media_rows, str):
         media_rows = json.loads(media_rows)
 

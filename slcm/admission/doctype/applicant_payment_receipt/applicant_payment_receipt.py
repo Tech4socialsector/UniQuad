@@ -106,7 +106,7 @@ def get_bulk_receipts_zip(filters):
 	file_url, summary, errors = process_bulk_receipts_zip(receipts, user=frappe.session.user, output_format=output_format)
 	return file_url
 
-@frappe.whitelist()
+# Background job only (frappe.enqueue); not whitelisted — it switches to the given user.
 def bulk_receipts_zip_worker(receipts, user, output_format="ZIP Archive"):
 	frappe.set_user(user)
 	try:

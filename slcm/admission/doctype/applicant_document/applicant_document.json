@@ -107,7 +107,6 @@
   {
    "role": "Applicant",
    "read": 1,
-   "write": 1,
    "create": 1
   }
  ]

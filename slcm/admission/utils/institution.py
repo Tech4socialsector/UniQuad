@@ -43,26 +43,6 @@ def is_onboarding_complete():
     settings = get_institution_settings()
     return bool(settings.get("onboarding_complete"))
 
-def get_active_quota_policy(program=None, academic_year=None):
-    """
-    Returns active Quota Policy for given program and academic year.
-    Falls back to global policy (no program) if specific not found.
-    """
-    policy = frappe.db.get_value(
-        "Quota Policy",
-        {"program": program, "academic_year": academic_year, "docstatus": 1},
-        "name"
-    )
-    if not policy:
-        policy = frappe.db.get_value(
-            "Quota Policy",
-            {"program": ["is", "not set"], "academic_year": academic_year, "docstatus": 1},
-            "name"
-        )
-    if policy:
-        return frappe.get_doc("Quota Policy", policy)
-    return None
-
 def validate_institution_setup():
     """Raises error if onboarding not complete."""
     if not is_onboarding_complete():

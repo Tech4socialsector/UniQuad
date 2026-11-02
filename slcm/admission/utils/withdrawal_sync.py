@@ -46,7 +46,8 @@ def sync_student_records_for_withdrawn_application(applicant_name, status_remark
 
     remark = status_remark or _("Application withdrawn")
 
-    # Drop active / pending enrollments; leave Completed and already Dropped unchanged
+    # Drop active / pending enrollments; leave Completed and already Dropped unchanged.
+    # Saved (not db.set_value) so the Academic Log and course rows close too.
     for enr in frappe.get_all(
         "Student Enrollment",
         filters={
@@ -55,7 +56,9 @@ def sync_student_records_for_withdrawn_application(applicant_name, status_remark
         },
         pluck="name",
     ):
-        frappe.db.set_value("Student Enrollment", enr, "status", ENROLLMENT_STATUS_DROPPED)
+        doc = frappe.get_doc("Student Enrollment", enr)
+        doc.status = ENROLLMENT_STATUS_DROPPED
+        doc.save(ignore_permissions=True)
 
     frappe.db.set_value(
         "Student Master",

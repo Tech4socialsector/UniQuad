@@ -484,17 +484,36 @@ class Applicant(Document):
         from slcm.api.service.application_fee_service import get_application_fee_for_category
         from slcm.api.service.application_fee_service import _get_applicant_category
 
-        category = _get_applicant_category(self.name)
-        # Same rule as the portal fee calc: foriegn_national decides; nationality is only a fallback
-        fn = (self.foriegn_national or "").strip()
-        if fn:
-            is_foreign = fn == "Yes"
-        else:
-            is_foreign = bool(self.nationality) and self.nationality.strip() != "India"
-        fee_amount = get_application_fee_for_category(self.program, self.admission_cycle, category, is_foreign=is_foreign)
+        is_foreign = (self.foriegn_national or "").strip() == "Yes"
+        fee_amount = get_application_fee_for_category(
+            program=self.program,
+            admission_cycle=self.admission_cycle,
+            category=self.whether_scstobc_ncl,
+            is_foreign=is_foreign,
+            applicant=self,
+        )
+
+        db_status = (frappe.db.get_value("Applicant", self.name, "application_fee_status") or "").strip()
+        if flt(fee_amount, 2) <= 0 and db_status not in ("Paid", "Waived"):
+            from slcm.api.service.application_fee_service import is_application_fee_configured
+            if not is_application_fee_configured(
+                self.admission_cycle, self.whether_scstobc_ncl, is_foreign,
+                getattr(self, "gender", None), getattr(self, "pwd", None),
+            ):
+                # 0 only because no fee is set up for this cycle/category: never treat that as free.
+                frappe.log_error(
+                    title="Application fee not configured",
+                    message=f"Applicant {self.name}: no Application Fee for cycle '{self.admission_cycle}' "
+                            f"/ category '{self.whether_scstobc_ncl}'. Submission was blocked.",
+                )
+                frappe.throw(
+                    _("The application fee for this programme is not set up yet, so the application "
+                      "cannot be submitted. Please contact the admissions office."),
+                    title=_("Application Fee Not Configured"),
+                )
 
         if flt(fee_amount, 2) <= 0:
-            # No fee or zero fee: allow submit without payment; set status to Paid so UI/reports treat as complete
+            # Fee explicitly configured as 0: allow submit without payment; set status to Paid so UI/reports treat as complete
             self.application_fee_status = "Paid"
             if flt(self.application_fee_amount or 0, 2) != flt(fee_amount, 2):
                 self.application_fee_amount = flt(fee_amount, 2)
@@ -581,36 +600,37 @@ class Applicant(Document):
             )
 
             # ── Rich confirmation email with PDF attachment (Immediate) ────
-            try:
-                sent = self.send_submission_confirmation()
-                if sent:
-                    frappe.msgprint(
-                        _("Application Submitted email sent to the applicant successfully."),
-                        alert=True,
-                        indicator="green",
-                    )
-            except Exception:
-                frappe.log_error(
-                    frappe.get_traceback(),
-                    f"Submission confirmation email failed — {self.applicant_id or self.name}"
-                )
+            # Temporarily commented out: do not send email when status is Submitted
+            # try:
+            #     sent = self.send_submission_confirmation()
+            #     if sent:
+            #         frappe.msgprint(
+            #             _("Application Submitted email sent to the applicant successfully."),
+            #             alert=True,
+            #             indicator="green",
+            #         )
+            # except Exception:
+            #     frappe.log_error(
+            #         frappe.get_traceback(),
+            #         f"Submission confirmation email failed — {self.applicant_id or self.name}"
+            #     )
             # ─────────────────────────────────────────────────────────────
 
-            from slcm.admission.utils.notifications import log_communication
-            log_communication(
-                applicant=self.name,
-                communication_type="Email",
-                category="Admission",
-                subject=f"Application Submitted — {self.applicant_id} | {self.program or 'Admissions'}",
-                content=(
-                    f"Submission confirmation email sent for {self.applicant_id}. "
-                    f"Program: {self.program or '—'}, "
-                    f"Cycle: {self.admission_cycle or '—'}, "
-                    f"Campus: {self.campus or '—'}"
-                ),
-                reference_doctype="Applicant",
-                reference_name=self.name
-            )
+            # from slcm.admission.utils.notifications import log_communication
+            # log_communication(
+            #     applicant=self.name,
+            #     communication_type="Email",
+            #     category="Admission",
+            #     subject=f"Application Submitted — {self.applicant_id} | {self.program or 'Admissions'}",
+            #     content=(
+            #         f"Submission confirmation email sent for {self.applicant_id}. "
+            #         f"Program: {self.program or '—'}, "
+            #         f"Cycle: {self.admission_cycle or '—'}, "
+            #         f"Campus: {self.campus or '—'}"
+            #     ),
+            #     reference_doctype="Applicant",
+            #     reference_name=self.name
+            # )
 
         old_status = self.flags.get("old_status")
         just_completed = (

@@ -22,7 +22,7 @@ def get_dashboard_data():
         "campus_status": get_campus_status(applicant.name),
         "pending_actions": get_pending_actions(applicant),
         "documents": get_document_status(applicant.name),
-        "deadlines": get_active_deadlines(applicant.admission_cycle),
+        "deadlines": [],
         "completion": get_completion_percentage(applicant)
     }
 
@@ -105,19 +105,6 @@ def get_document_status(applicant_name):
             "locked": uploaded_doc.is_locked if uploaded_doc else False
         })
     return result
-
-def get_active_deadlines(admission_cycle):
-    if not admission_cycle:
-        return []
-    return frappe.get_all(
-        "Admission Round",
-        filters={
-            "admission_cycle": admission_cycle,
-            "status": ["in", ["Active", "Upcoming"]]
-        },
-        fields=["round_name", "round_type", "application_end", "status"],
-        order_by="application_end asc"
-    )
 
 def get_completion_percentage(applicant):
     fields = [

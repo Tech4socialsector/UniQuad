@@ -1584,7 +1584,7 @@ CHARTS = [
 
 NAV_GROUPS = [
 	("admission", "Admission", "inbox", [
-		("DocType", "Applicant", None), ("DocType", "Admission Cycle", None), ("DocType", "Admission Application", None),
+		("DocType", "Applicant", None), ("DocType", "Admission Cycle", None),
 		("DocType", "Entrance Test", None), ("DocType", "Interview List", None), ("DocType", "Merit List", None),
 		("DocType", "Seat Allocation", None), ("DocType", "Offer Letter", None), ("DocType", "Scholarship Application", None),
 		("Page", "admission-flow-dashboard", "Admission Flow Dashboard"), ("Page", "seat-matrix-dashboard", "Seat Matrix Dashboard"),

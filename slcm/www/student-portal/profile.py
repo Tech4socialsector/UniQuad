@@ -83,7 +83,7 @@ def get_context(context):
             "department":       student.department or "AAD",
             "batch_year":       student.batch or "N/A",
             "academic_year":    student.academic_year or "",
-            "current_term":     get_current_term() or "N/A",
+            "current_term":     student.current_term or get_current_term() or "N/A",
             "current_year":     year_no or student.current_year or "",
             "current_cgpa":     round(student.current_cgpa or 0.0, 2),
             "student_status":   student.student_status or "",

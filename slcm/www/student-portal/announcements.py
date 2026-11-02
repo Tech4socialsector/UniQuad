@@ -141,7 +141,7 @@ def _is_for_student(r, student, student_name):
 			"Announcement Programme Target", filters={"parent": r.name},
 			pluck="programme", ignore_permissions=True,
 		)
-		return student.batch in targets
+		return student.programme_of_study in targets
 	if audience == "Specific Batch Year(s)":
 		targets = frappe.get_all(
 			"Announcement Batch Target", filters={"parent": r.name},

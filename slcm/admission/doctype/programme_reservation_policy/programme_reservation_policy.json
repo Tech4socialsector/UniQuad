@@ -10,12 +10,8 @@
   "admission_cycle",
   "program",
   "campus",
-  "total_seats",
-  "international_seats",
   "col_break_basic",
-  "application_fee_for_foreign",
-  "payment_gateway",
-  "payment_receipt_template",
+  "total_seats",
   "status",
   "section_break_summary",
   "total_allocated",
@@ -88,7 +84,7 @@
    "fieldname": "total_seats",
    "fieldtype": "Int",
    "in_list_view": 1,
-   "label": "Total Seats For Domestic",
+   "label": "Total Seats",
    "reqd": 1
   },
   {
@@ -195,20 +191,6 @@
    "label": "Policy Document"
   },
   {
-   "fieldname": "payment_gateway",
-   "fieldtype": "Link",
-   "label": "Payment Gateway",
-   "options": "Payment Gateway"
-  },
-  {
-   "default": "Applicant Payment Receipt",
-   "fieldname": "payment_receipt_template",
-   "fieldtype": "Link",
-   "label": "Payment Receipt Template",
-   "options": "Print Format",
-   "reqd": 1
-  },
-  {
    "fieldname": "nlsat_config_section",
    "fieldtype": "Section Break",
    "label": "NLSAT Process Configuration"
@@ -227,21 +209,10 @@
    "fieldname": "apply_percentile_cutoff_for_shortlisting",
    "fieldtype": "Check",
    "label": "Apply Percentile Cutoff for Shortlisting"
-  },
-  {
-   "fieldname": "international_seats",
-   "fieldtype": "Int",
-   "label": "International Seats ",
-   "reqd": 1
-  },
-  {
-   "fieldname": "application_fee_for_foreign",
-   "fieldtype": "Currency",
-   "label": "Application Fee for Foreign"
   }
  ],
  "links": [],
- "modified": "2026-09-30 12:46:30.239122",
+ "modified": "2026-10-30 10:52:30.546311",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Programme Reservation Policy",

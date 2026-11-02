@@ -15,6 +15,7 @@
 
 import frappe
 from frappe.utils import flt, nowdate
+from slcm.security.access import require_desk_user
 
 
 # ── Academic Year Helper ──────────────────────────────────────────────────────
@@ -591,6 +592,7 @@ def convert_applicant_to_student(applicant_name, program, admission_cycle, offer
     Returns:
         dict: {"student_name": str, "created": bool}
     """
+    require_desk_user()
     if not frappe.db.exists("Applicant", applicant_name):
         frappe.throw(frappe._("Applicant {0} not found.").format(applicant_name))
 
@@ -728,7 +730,7 @@ def convert_applicant_to_student(applicant_name, program, admission_cycle, offer
     except Exception as e:
         frappe.log_error(frappe.get_traceback(), f"Finance sync during conversion failed for {applicant_name}")
 
-    # ── 6. Create Student Enrollment ───────────────────────────────────────────
-    # If you want to disable automatic enrollment creation in the future, 
-    # simply comment out the line below.
+    # No Student Enrollment here: the student is enrolled (Student ID, section,
+    # Academic Log) from Student Master → Enroll once registration is Completed.
+
     return {"student_name": student_name, "created": True}

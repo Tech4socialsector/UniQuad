@@ -153,11 +153,10 @@
    "fieldtype": "Column Break"
   },
   {
-   "default": "1",
+   "default": "0",
    "fieldname": "seat_allocation",
    "fieldtype": "Check",
-   "label": "Seat Allocation",
-   "read_only": 1
+   "label": "Seat Allocation"
   },
   {
    "default": "1",
@@ -262,7 +261,7 @@
   }
  ],
  "make_attachments_public": 1,
- "modified": "2026-10-29 10:00:00.000000",
+ "modified": "2026-10-30 10:48:46.782482",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Programme",
