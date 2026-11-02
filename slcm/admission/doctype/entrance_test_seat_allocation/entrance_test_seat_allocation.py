@@ -8,6 +8,7 @@ from frappe.utils.pdf import get_pdf
 import os
 import base64
 import re
+from slcm.security.access import require_desk_user
 
 
 
@@ -743,6 +744,7 @@ def update_ranks_by_category(academic_year, admission_cycle, program_level, entr
     Filters: Academic Year, Admission Cycle, Program Level.
     Optional: entrance_test_list, program, applicant_type
     """
+    require_desk_user()
     if not (academic_year and admission_cycle and program_level):
         frappe.throw("Academic Year, Admission Cycle, and Program Level are required for ranking.")
 
@@ -910,6 +912,7 @@ def publish_results(academic_year, admission_cycle, program_level=None, program=
     matching the given filters (Attended applicants) in bulk.
     Also queues result notification emails for each record.
     """
+    require_desk_user()
     if not (academic_year and admission_cycle):
         frappe.throw(_("Academic Year and Admission Cycle are required."))
 
@@ -1101,9 +1104,9 @@ def _send_custom_result_email(doc, email, custom_email_content):
         else:
             subject = "Entrance Test Result"
         
-        # Render the custom content wrapped in the HTML header/footer template to allow variables
-        full_html_template = get_custom_email_html(custom_email_content)
-        message_body = frappe.render_template(full_html_template, args)
+        # Custom content is staff-written: only {{ doc.field }} placeholders are filled, it is never run as Jinja
+        from slcm.security.templating import render_custom_email
+        message_body = render_custom_email(get_custom_email_html, custom_email_content, args)
 
         frappe.sendmail(
             recipients=[email],
@@ -1557,6 +1560,7 @@ def get_unpublished_applicants_for_dialog(
 
 @frappe.whitelist()
 def reject_and_allocate_applicants(applicants, providers, allocation_type=None, send_email=1):
+    require_desk_user()
     if isinstance(applicants, str):
         applicants = json.loads(applicants)
     if isinstance(providers, str):

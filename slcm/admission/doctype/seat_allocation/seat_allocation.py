@@ -2,6 +2,7 @@ import frappe
 import math
 from frappe.model.document import Document
 from frappe.utils import now, get_link_to_form, get_datetime, now_datetime
+from slcm.security.access import require_desk_user
 
 _CATEGORY_CACHE = {}
 
@@ -360,13 +361,10 @@ class SeatAllocation(Document):
 
     def on_trash(self):
         """
-        When a Seat Allocation is deleted, reset the filled counts in the linked PRP
-        and clear the Audit Logs to prevent link errors.
+        When a Seat Allocation is deleted, reset the filled counts in the linked PRP.
+        Its audit logs are kept (hooks.ignore_links_on_delete lets the delete go through).
         """
         self.sync_filled_seats(reset_only=True)
-        
-        # Clear Audit Logs
-        frappe.db.delete("Seat Allocation Audit Log", {"seat_allocation": self.name})
 
     def sync_filled_seats(self, reset_only=False):
         """
@@ -1719,6 +1717,7 @@ def allocate_seats(docname=None):
 
 @frappe.whitelist()
 def publish_allocation(docname=None):
+    require_desk_user()
     if not docname: return
     doc = frappe.get_doc("Seat Allocation", docname) if isinstance(docname, str) else docname
     return doc.publish_allocation()
@@ -1737,6 +1736,7 @@ def get_waitlist_promotion_preview(docname=None):
 
 @frappe.whitelist()
 def run_promotion(promoted_applicants=None, docname=None):
+    require_desk_user()
     if not docname: return
     doc = frappe.get_doc("Seat Allocation", docname) if isinstance(docname, str) else docname
     return doc.run_promotion(promoted_applicants=promoted_applicants)

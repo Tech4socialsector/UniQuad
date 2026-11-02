@@ -381,28 +381,3 @@ def seat_utilization(cycle=None):
     except Exception as e:
         frappe.log_error(f"Seat Utilization failed: {e}", "Compliance")
         return {"error": str(e)}
-
-
-# ─────────────────────────────────────────────
-# CENTRAL DISPATCHER
-# ─────────────────────────────────────────────
-
-def generate_report(config_doc):
-    """
-    Central dispatcher — routes to correct function based on report_type.
-    Called from ComplianceReportConfig.generate()
-    """
-    report_map = {
-        "RTI Response Export": rti_export,
-        "NAAC Admission Summary": naac_report,
-        "UGC Compliance Report": ugc_report,
-        "GDPR Personal Data Export": lambda **kwargs: frappe.throw("Requires applicant. Use GDPR Data Request."),
-        "GDPR Erasure Audit": lambda **kwargs: audit_export(reference_doctype="Applicant"),
-        "Admission Funnel Report": admission_funnel,
-        "Seat Utilization by Category": seat_utilization,
-        "Custom Report": audit_export,
-    }
-    fn = report_map.get(config_doc.report_type)
-    if fn:
-        return fn(cycle=config_doc.filter_by_cycle)
-    return {"error": f"Unknown report type: {config_doc.report_type}"}

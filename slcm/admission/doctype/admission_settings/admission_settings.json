@@ -9,11 +9,9 @@
   "admission_year",
   "start_date",
   "end_date",
-  "bypass_stage_lock",
   "is_scholarship_available",
   "is_interview_available",
-  "is_merit_list",
-  "stage_configure"
+  "is_merit_list"
  ],
  "fields": [
   {
@@ -30,13 +28,6 @@
    "fieldname": "end_date",
    "fieldtype": "Date",
    "label": "End Date"
-  },
-  {
-   "default": "0",
-   "fieldname": "bypass_stage_lock",
-   "fieldtype": "Check",
-   "label": "Bypass Stage Configuration Lock",
-   "description": "If enabled, allows modifying Admission Stage Config even for Active cycles (Emergency/Debug mode)."
   },
   {
    "default": "0",
@@ -57,12 +48,6 @@
    "label": "Is Merit List?"
   },
   {
-   "fieldname": "stage_configure",
-   "fieldtype": "Table",
-   "label": "Stage Configure",
-   "options": "Admission Stages"
-  },
-  {
    "fieldname": "current_academic_year",
    "fieldtype": "Link",
    "label": "Current Academic Year",
@@ -73,7 +58,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-02-16 12:50:54.038534",
+ "modified": "2026-10-31 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Admission Settings",

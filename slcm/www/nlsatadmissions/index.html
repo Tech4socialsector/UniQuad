@@ -1457,7 +1457,7 @@
   {% for grp in (program_groups or []) %}
   <div class="program-level-section mb-14" data-level="{{ grp.key }}">
   <h3 class="tracking-tight mb-8" style="color:var(--primary);font-size:clamp(26px, 3.2vw, 36px) !important;">{{ grp.title }}</h3>
-  <div class="programs-grid gap-4">
+  <div class="programs-grid gap-4" >
     {% for p in grp.programs %}
     {% set _slug = p.get('program_slug') if p.get else (p.program_slug or '') %}
     {% set _img = p.get('program_image') if p.get else (p.program_image or '') %}

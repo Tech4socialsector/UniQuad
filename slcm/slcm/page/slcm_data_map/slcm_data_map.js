@@ -115,7 +115,6 @@ frappe.pages['slcm-data-map'].on_page_load = function (wrapper) {
 			docs: [
 				{ name: 'Admission Cycle',       dt: 'Admission Cycle' },
 				{ name: 'Applicant',             dt: 'Applicant' },
-				{ name: 'Admission Application', dt: 'Admission Application' },
 				{ name: 'Offer Letter',          dt: 'Offer Letter' },
 				{ name: 'Merit List',            dt: 'Merit List' },
 			],

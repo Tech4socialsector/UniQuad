@@ -196,11 +196,7 @@ class ShortlistingMeritList(Document):
                       AND shortlisted_status != ''
                       AND shortlisted_status IS NOT NULL
                 """, {"applicants": tuple(batch)})
-
-        frappe.db.delete("Admission Audit Log", {
-            "reference_doctype": "Shortlisting Merit List",
-            "reference_name": self.name
-        })
+        # Admission Audit Log rows are kept: the trail must survive the record.
 
 @frappe.whitelist()
 def get_generation_progress(docname):

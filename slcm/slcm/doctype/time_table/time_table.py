@@ -172,6 +172,35 @@ class TimeTable(Document):
         if self.flags.in_insert:
             return
         self.update_attendance_session()
+        self.log_edit()
+
+    # Fields whose change is worth a Class Schedule Log row
+    LOGGED_FIELDS = (("schedule_date", "Date"), ("from_time", "From"), ("to_time", "To"),
+                     ("venue", "Venue"), ("instructor", "Faculty"), ("title", "Title"))
+
+    def log_edit(self):
+        """One-off saves (the desk form, calendar drag) log what changed; bulk
+        operations (quiet_bulk_operation) log one summary of their own."""
+        if frappe.flags.tt_bulk_stats is not None or not self.class_name:
+            return
+        before = self.get_doc_before_save()
+        if not before:
+            return
+        changes = [
+            f"{label}: {before.get(f) or '–'} → {self.get(f) or '–'}"
+            for f, label in self.LOGGED_FIELDS
+            if str(before.get(f) or "") != str(self.get(f) or "")
+        ]
+        if changes:
+            from slcm.slcm.doctype.class_schedule_log.class_schedule_log import add_log
+
+            add_log(self.class_name, "Edited", self.name, self.schedule_date, "; ".join(changes))
+
+    def on_trash(self):
+        from slcm.slcm.doctype.class_schedule_log.class_schedule_log import add_log
+
+        add_log(self.class_name, "Deleted", self.name, self.schedule_date,
+                f"{self.title or self.course or ''} {format_time_12h(self.from_time)} – {format_time_12h(self.to_time)}, {self.venue or ''}".strip())
 
     def validate_time(self):
         """Validate that to_time is after from_time"""
@@ -319,7 +348,8 @@ class TimeTable(Document):
                 "schedule_date": self.schedule_date,
                 "venue": self.venue,
                 "title": self.title,
-                "docstatus": ["<", 2] # Exclude cancelled
+                "docstatus": ["<", 2], # Exclude cancelled
+                "is_cancelled": 0,
             }
 
             conflicts = frappe.get_all(
@@ -343,7 +373,8 @@ class TimeTable(Document):
                     "name": ["!=", self.name],
                     "instructor": self.instructor,
                     "schedule_date": self.schedule_date,
-                    "docstatus": ["<", 2]
+                    "docstatus": ["<", 2],
+                    "is_cancelled": 0,
                 },
                 fields=["name", "from_time", "to_time", "course"],
             )
@@ -365,6 +396,9 @@ class TimeTable(Document):
         double-booking itself."""
         if not self.schedule_date or not self.from_time or not self.to_time or not self.venue:
             return
+        # A cancelled session has given up its slot
+        if self.is_cancelled:
+            return
 
         conflicts = frappe.get_all(
             "Time Table",
@@ -373,6 +407,7 @@ class TimeTable(Document):
                 "venue": self.venue,
                 "schedule_date": self.schedule_date,
                 "docstatus": ["<", 2],
+                "is_cancelled": 0,
             },
             fields=["name", "from_time", "to_time", "course"],
         )
@@ -406,9 +441,20 @@ class TimeTable(Document):
         """Create recurring schedules if repeat is enabled"""
         if self.repeat_frequency and self.repeat_frequency != "Never":
             self.create_recurring_schedules()
-        
+
         # Create attendance session for this schedule
         self.create_attendance_session()
+
+        # A new series (or single session) is logged once, on its first entry;
+        # the occurrences it generates carry parent_schedule and are not.
+        if not self.parent_schedule:
+            from slcm.slcm.doctype.class_schedule_log.class_schedule_log import add_log
+
+            count = 1 + frappe.db.count("Time Table", {"parent_schedule": self.name})
+            repeat = self.repeat_frequency if self.repeat_frequency not in (None, "", "Never") else "Once"
+            add_log(self.class_name, "Created", self.name, self.schedule_date,
+                    f"{count} session(s), {repeat}, {format_time_12h(self.from_time)} – {format_time_12h(self.to_time)}, {self.venue or ''}"
+                    + (f", till {self.repeats_till}" if repeat != "Once" and self.repeats_till else ""))
 
     def get_session_office_hours_group(self):
         """Office Hours Group (a Student Group) to carry onto the Attendance Session."""
@@ -586,6 +632,7 @@ class TimeTable(Document):
                         "instructor": self.instructor,
                         "schedule_date": ["between", [current_date.date(), end_date.date()]],
                         "docstatus": ["<", 2],
+                        "is_cancelled": 0,
                     },
                     fields=["name", "schedule_date", "from_time", "to_time", "course"],
                 )
@@ -605,6 +652,7 @@ class TimeTable(Document):
                         "venue": self.venue,
                         "schedule_date": ["between", [current_date.date(), end_date.date()]],
                         "docstatus": ["<", 2],
+                        "is_cancelled": 0,
                     },
                     fields=["name", "schedule_date", "from_time", "to_time", "course"],
                 )
@@ -1024,7 +1072,7 @@ def _apply_updates_to_rows(names, updates):
             overlaps = frappe.db.sql("""
                 SELECT name, from_time, to_time, based_on, course 
                 FROM `tabTime Table` 
-                WHERE venue = %s AND schedule_date = %s AND docstatus < 2 AND name NOT IN %s
+                WHERE venue = %s AND schedule_date = %s AND docstatus < 2 AND is_cancelled = 0 AND name NOT IN %s
                 AND (
                     (from_time < %s AND to_time > %s) OR
                     (from_time < %s AND to_time > %s) OR
@@ -1096,6 +1144,21 @@ def _apply_updates_to_rows(names, updates):
 
     frappe.db.commit()
     return docs_to_save
+
+def _log_bulk_edit(docs, updates):
+    """One Class Schedule Log row per class for a bulk update."""
+    from slcm.slcm.doctype.class_schedule_log.class_schedule_log import add_log
+
+    by_class = {}
+    for d in docs:
+        if d.class_name:
+            by_class.setdefault(d.class_name, []).append(d)
+    for class_name, rows in by_class.items():
+        rows.sort(key=lambda d: str(d.schedule_date))
+        changes = ", ".join(f"{k}: {v}" for k, v in updates.items())
+        add_log(class_name, "Edited", rows[0].name, rows[0].schedule_date,
+                f"{len(rows)} session(s) from {rows[0].schedule_date} to {rows[-1].schedule_date} updated ({changes})")
+
 
 @frappe.whitelist()
 def bulk_update_future_occurrences(time_table_name, updates):
@@ -1188,7 +1251,7 @@ def bulk_update_future_occurrences(time_table_name, updates):
                 overlaps = frappe.db.sql("""
                     SELECT name, from_time, to_time, based_on, course 
                     FROM `tabTime Table` 
-                    WHERE venue = %s AND schedule_date = %s AND docstatus < 2 AND name NOT IN %s
+                    WHERE venue = %s AND schedule_date = %s AND docstatus < 2 AND is_cancelled = 0 AND name NOT IN %s
                     AND (
                         (from_time < %s AND to_time > %s) OR
                         (from_time < %s AND to_time > %s) OR
@@ -1234,21 +1297,26 @@ def bulk_update_future_occurrences(time_table_name, updates):
             
             frappe.throw(html, allow_dangerous_html=True, title=_("Update Blocked"))
 
-        # If no conflicts, delete all un-marked future occurrences in this series
-        future_names = [r.name for r in future_rows if r.name != doc.name]
-        for name in future_names:
-            # Check if attendance marked
-            session_name = frappe.db.get_value("Attendance Session", {"class_schedule": name})
-            if session_name and frappe.db.get_value("Attendance Session", session_name, "attendance_marked"):
-                continue # Don't delete marked occurrences
-            frappe.delete_doc("Time Table", name, force=1)
+        from slcm.slcm.doctype.class_schedule_log.class_schedule_log import add_log, no_schedule_log
 
-        # Save the current doc
-        doc.save(ignore_permissions=True)
-        # Call create_recurring_schedules to regenerate
-        doc.create_recurring_schedules()
-        
+        # If no conflicts, delete all un-marked future occurrences in this series
+        with no_schedule_log():
+            future_names = [r.name for r in future_rows if r.name != doc.name]
+            for name in future_names:
+                # Check if attendance marked
+                session_name = frappe.db.get_value("Attendance Session", {"class_schedule": name})
+                if session_name and frappe.db.get_value("Attendance Session", session_name, "attendance_marked"):
+                    continue # Don't delete marked occurrences
+                frappe.delete_doc("Time Table", name, force=1)
+
+            # Save the current doc
+            doc.save(ignore_permissions=True)
+            # Call create_recurring_schedules to regenerate
+            doc.create_recurring_schedules()
+
         updated_count = len(simulated_dates)
+        add_log(doc.class_name, "Edited", doc.name, doc.schedule_date,
+                f"Series rebuilt from this session: {updated_count} session(s); changed: {', '.join(sorted(updates))}")
 
         return {
             "updated_count": updated_count,
@@ -1258,6 +1326,7 @@ def bulk_update_future_occurrences(time_table_name, updates):
     else:
         # Standard update without regeneration
         docs_to_save = _apply_updates_to_rows([r.name for r in future_rows], updates)
+        _log_bulk_edit(docs_to_save, updates)
 
         return {
             "updated_count": len(docs_to_save),
@@ -1290,6 +1359,7 @@ def bulk_update_selected_occurrences(names, updates):
 
     skipped = len(names) - len(valid_names)
     docs_to_save = _apply_updates_to_rows(valid_names, updates)
+    _log_bulk_edit(docs_to_save, updates)
 
     return {
         "updated_count": len(docs_to_save),

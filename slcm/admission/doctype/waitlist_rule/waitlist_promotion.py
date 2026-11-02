@@ -2,6 +2,7 @@ import frappe
 import math
 from frappe.utils import now_datetime, getdate
 from slcm.admission.doctype.seat_allocation.seat_allocation import get_category_priority, get_applicant_categories
+from slcm.security.access import require_desk_user
 
 
 def _get_program_quotas(campus: str, admission_cycle: str, program: str) -> dict:
@@ -280,6 +281,7 @@ def _process_single_program_waitlist(seat_alloc, program: str, rule_doc) -> list
 
 @frappe.whitelist()
 def run_manual_waitlist(rule: str):
+    require_desk_user()
     rule_doc = frappe.get_doc("Waitlist Rule", rule)
     process_waitlist(rule_doc, ignore_cutoff=True)
     frappe.db.commit()

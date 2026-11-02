@@ -33,11 +33,9 @@ OLD_NAMES = tuple(RENAMED)
 
 # Admission campus fields link to ERPNext's Company on purpose (campus API filters on is_group).
 ALLOWED_OLD_LINKS = {
-	("Admission Report Config", "campus"),
 	("Applicant Campus Preference", "campus"),
 	("Applicant Document", "campus"),
 	("Campus Seat Matrix", "campus"),
-	("Compliance Report Config", "filter_by_campus"),
 	("Portal Announcement", "target_campus"),
 }
 

@@ -6,28 +6,20 @@ no_cache = 1
 def get_context(context):
     from slcm.admission.utils.portal import get_portal_config
     context.portal_config = get_portal_config()
-    
+
+    # Status is shown only to the logged-in applicant, for their own applications;
+    # looking up someone else's by number, email or mobile is not allowed.
+    if frappe.session.user == "Guest":
+        frappe.local.flags.redirect_location = "/nlsatadmissions/login?redirect-to=/nlsat/application-status"
+        raise frappe.Redirect
+
+    user = frappe.session.user
+    filters = {"email": frappe.db.get_value("User", user, "email") or user}
     name = frappe.form_dict.get('name')
-    email = frappe.form_dict.get('email')
-    mobile = frappe.form_dict.get('mobile')
-    
-    # If no params, and user is logged in, try to find their application
-    if not (name or email or mobile) and frappe.session.user != "Guest":
-        email = frappe.session.user
-
-    if not (name or email or mobile):
-        context.error = _("Please provide your Application Number, Email, or Mobile Number to track status.")
-        return
-
-    filters = {}
     if name:
         filters['name'] = name
-    if email:
-        filters['email'] = email
-    if mobile:
-        filters['mobile_number'] = mobile
 
-    applicants = frappe.get_all("Applicant", filters=filters, 
+    applicants = frappe.get_all("Applicant", filters=filters,
                                 fields=["name", "candidate_name", "program", "status", 
                                         "campus", "academic_year", 
                                         "first_preference", "second_preference", "third_preference"],
@@ -39,7 +31,8 @@ def get_context(context):
 
     # Use the first applicant object directly
     context.applicant = applicants[0]
-    
+    doc = frappe.get_doc("Applicant", applicants[0].name)
+
     # Document Status
     try:
         uploaded_docs = frappe.get_all(

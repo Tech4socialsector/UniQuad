@@ -74,7 +74,7 @@ slcm.enrollment.EnrollmentWizard = class EnrollmentWizard {
 					description: __("Becomes the student's Ongoing term in the Academic Log. A term of another year switches the Academic Year to it."),
 					onchange: () => me.on_academic_term_change(),
 				},
-				{ fieldtype: "Int", fieldname: "year_no", label: __("Year"), default: 1, reqd: 1, non_negative: 1,
+				{ fieldtype: "Select", fieldname: "year_no", label: __("Year"), options: ["1", "2", "3", "4", "5"], default: "1", reqd: 1,
 					onchange: () => me.render_context() },
 				{ fieldtype: "Column Break" },
 				{ fieldtype: "Link", fieldname: "programme", label: __("Programme"), options: "Programme", reqd: 1,

@@ -15,36 +15,44 @@ frappe.ui.form.on("Interview Seat Allocation", {
     refresh(frm) {
         calculate_final_cumulative(frm, true);
 
-        // Action buttons when interview_result_status is Pass
-        const is_internal = !frappe.user_roles.includes("Applicant") || frappe.user_roles.includes("System Manager") || frappe.user_roles.includes("Administrator") || frappe.user_roles.includes("Interview Admin");
-        if (frm.doc.interview_result_status === "Pass" && is_internal && frm.doc.is_international_applicant) {
+        if (frm.doc.interview_result_status === "Pass") {
             const hide_all_statuses = ["Selected", "Rejected", "Offer Issued"];
             
             if (!hide_all_statuses.includes(frm.doc.status)) {
                 frm.add_custom_button(__("Select"), function () {
                     frappe.confirm(__("Are you sure you want to mark this applicant as Selected?"), () => {
-                        frappe.db.set_value(frm.doc.doctype, frm.doc.name, "status", "Selected").then(() => frm.reload_doc());
+                        frappe.db.set_value(frm.doc.doctype, frm.doc.name, "status", "Selected").then (() => {
+                            // update_applicant_status(frm.doc.applicant, "Seat Selected");
+                            frm.reload_doc();
+                        })
+
                     });
                 }).removeClass("btn-default").addClass("btn-success").css({"color": "white"});
                 
                 if (frm.doc.status !== "Waitlisted") {
                     frm.add_custom_button(__("Waitlist"), function () {
                         frappe.confirm(__("Are you sure you want to Waitlist this applicant?"), () => {
-                            frappe.db.set_value(frm.doc.doctype, frm.doc.name, "status", "Waitlisted").then(() => frm.reload_doc());
+                            frappe.db.set_value(frm.doc.doctype, frm.doc.name, "status", "Waitlisted").then(() => {
+                                // update_applicant_status(frm.doc.applicant, "Seat Waitlisted");
+                                frm.reload_doc();
+                            });
                         });
                     }).removeClass("btn-default").addClass("btn-warning").css({"color": "white"});
                 }
                 
                 frm.add_custom_button(__("Reject Application"), function () {
                     frappe.confirm(__("Are you sure you want to Reject this applicant?"), () => {
-                        frappe.db.set_value(frm.doc.doctype, frm.doc.name, "status", "Rejected").then(() => frm.reload_doc());
+                        frappe.db.set_value(frm.doc.doctype, frm.doc.name, "status", "Rejected").then(() => {
+                            // update_applicant_status(frm.doc.applicant, "Seat Rejected");
+                            frm.reload_doc();
+                        });
                     });
                 }).removeClass("btn-default").addClass("btn-danger").css({"color": "white"});
             }
         }
 
         // Generate Offer Letter Button for Selected status
-        if (frm.doc.status === "Selected" && is_internal) {
+        if (frm.doc.status === "Selected") {
             frm.add_custom_button(__("Generate Offer Letter"), function () {
                 frappe.confirm(__("Are you sure you want to generate the Offer Letter for this applicant?"), function() {
                     frappe.call({
@@ -255,4 +263,8 @@ function _apply_applicant_permissions(frm) {
         "interview_result_status", "rank", "result_published"
     ];
     result_fields.forEach(f => frm.set_df_property(f, "read_only", 1));
+}
+
+function update_applicant_status(applicant, status){
+    frappe.db.set_value("Applicant", applicant, "status", status);
 }

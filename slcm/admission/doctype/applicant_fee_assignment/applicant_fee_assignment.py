@@ -209,6 +209,7 @@ from slcm.api.service.applicant_to_student import (
 	_sync_scholarship_to_student,
 	convert_applicant_to_student,
 )
+from slcm.security.access import require_desk_user
 
 
 def _map_applicant_to_student(student, applicant, program, admission_cycle, offer_letter_name=None):
@@ -222,6 +223,7 @@ def _map_applicant_to_student(student, applicant, program, admission_cycle, offe
 
 @frappe.whitelist()
 def create_invoice(docname):
+	require_desk_user()
 	doc = frappe.get_doc("Applicant Fee Assignment", docname)
 
 	if doc.fee_type not in ["Admission Fee", "Course Fee"]:
@@ -401,6 +403,7 @@ def bulk_convert_to_student(assignments):
 	Convert multiple Applicant Fee Assignments to Student.
 	Uses background job if batch > 250.
 	"""
+	require_desk_user()
 	if isinstance(assignments, str):
 		assignments = json.loads(assignments)
 	if not assignments:

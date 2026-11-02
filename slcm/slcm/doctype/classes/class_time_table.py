@@ -86,12 +86,32 @@ def get_class_time_table_info(class_name):
 		"term_name": term.term_name or cls.academic_term,
 		"term_start_date": term.term_start_date,
 		"term_end_date": term.term_end_date,
+		"holidays": _term_holidays(term.term_start_date, term.term_end_date),
 		"students": _class_roster(class_name),
 		"entry_count": len(entries),
 		"first_date": entries[0].schedule_date if entries else None,
 		"last_date": entries[-1].schedule_date if entries else None,
 		"next_date": upcoming[0] if upcoming else None,
 	}
+
+
+def _term_holidays(start, end):
+	"""Institutional Calendar holidays overlapping the term; classes on them are
+	skipped (see _check_dates)."""
+	if not (start and end):
+		return []
+	return frappe.get_all(
+		"Institutional Calendar",
+		filters={
+			"entry_type": "Holiday",
+			"start_date": ["<=", end],
+			"end_date": [">=", start],
+			"status": ["!=", "Inactive"],
+			"docstatus": ["<", 2],
+		},
+		fields=["name1", "start_date", "end_date"],
+		order_by="start_date asc",
+	)
 
 
 def _series_dates(schedule_date, repeat_frequency, repeats_till):
@@ -139,7 +159,8 @@ def _check_dates(dates, data, exclude=()):
 	for field in ("venue", "instructor"):
 		if not data.get(field):
 			continue
-		filters = {field: data.get(field), "schedule_date": ["between", [dates[0], dates[-1]]], "docstatus": ["<", 2]}
+		# A cancelled session has given up its slot
+		filters = {field: data.get(field), "schedule_date": ["between", [dates[0], dates[-1]]], "docstatus": ["<", 2], "is_cancelled": 0}
 		if exclude:
 			filters["name"] = ["not in", list(exclude)]
 		for row in frappe.get_all(
@@ -204,6 +225,8 @@ def create_class_time_table(data):
 	data = frappe._dict(json.loads(data) if isinstance(data, str) else data)
 	frappe.has_permission("Time Table", "create", throw=True)
 	cls = _get_class(data.class_name)
+	if not data.color:
+		frappe.throw(_("Time Table Color is required."))
 
 	doc = frappe.get_doc({
 		"doctype": "Time Table",
@@ -364,7 +387,7 @@ def get_class_schedule_events(class_name, start, end):
 			"schedule_date": ["between", [getdate(start), getdate(end)]],
 			"docstatus": ["<", 2],
 		},
-		fields=["name", "title", "course", "schedule_date", "from_time", "to_time", "venue", "instructor", "color"],
+		fields=["name", "title", "course", "schedule_date", "from_time", "to_time", "venue", "instructor", "color", "is_cancelled"],
 		order_by="schedule_date asc, from_time asc",
 	)
 	sessions = {
@@ -380,7 +403,7 @@ def get_class_schedule_events(class_name, start, end):
 	for r in rows:
 		s = sessions.get(r.name) or frappe._dict()
 		start_dt = f"{r.schedule_date} {str(r.from_time).zfill(8)}"
-		if s.session_status == "Cancelled":
+		if r.is_cancelled or s.session_status == "Cancelled":
 			state = "cancelled"
 		elif cint(s.attendance_marked):
 			state = "marked"
@@ -428,6 +451,9 @@ def get_session_details(time_table):
 		"to_time": str(tt.to_time),
 		"venue": tt.venue,
 		"faculty": faculty,
+		"is_cancelled": cint(tt.is_cancelled),
+		"cancellation_reason": tt.cancellation_reason,
+		"is_past": getdate(tt.schedule_date) < getdate(),
 	}
 
 	session = None
@@ -517,6 +543,8 @@ def get_session_for_edit(time_table):
 	series' repeat and range (an occurrence itself is stored as 'Never')."""
 	tt = frappe.get_doc("Time Table", time_table)
 	tt.check_permission("read")
+	if tt.is_cancelled:
+		frappe.throw(_("This session is cancelled and cannot be edited."))
 	root, names = _series(tt)
 	dates = frappe.get_all(
 		"Time Table", filters={"name": ["in", names], "docstatus": ["<", 2]}, pluck="schedule_date"
@@ -546,20 +574,38 @@ def update_class_time_table(time_table, data, scope):
 	the save before anything changes."""
 	from slcm.slcm.doctype.time_table.time_table import _apply_updates_to_rows, quiet_bulk_operation
 
+	from slcm.slcm.doctype.class_schedule_log.class_schedule_log import add_log, no_schedule_log
+
 	data = frappe._dict(json.loads(data) if isinstance(data, str) else data)
 	tt = frappe.get_doc("Time Table", time_table)
 	tt.check_permission("write")
+	if tt.is_cancelled:
+		frappe.throw(_("This session is cancelled and cannot be edited."))
 	plan = _plan_update(tt, data, scope)
 	if plan.errors:
 		frappe.throw("<br>".join(plan.errors), title=_("Time Slot Unavailable"))
 
-	if not plan.rebuild:
-		_apply_updates_to_rows(plan.following, plan.updates)
+	before = {f: tt.get(f) for f in ("schedule_date", "from_time", "to_time", "venue", "instructor", "title")}
+	with no_schedule_log():
+		if not plan.rebuild:
+			_apply_updates_to_rows(plan.following, plan.updates)
+		else:
+			with quiet_bulk_operation():
+				_rebuild_series(tt, plan)
+	summary = _plan_summary(plan)
+	changes = "; ".join(
+		f"{f.replace('_', ' ').title()}: {before[f] or '–'} → {plan.updates[f]}"
+		for f in before if f in plan.updates and str(before[f] or "") != str(plan.updates[f] or "")
+	)
+	if plan.rebuild:
+		detail = _("This and following sessions rebuilt: {0} scheduled, {1} kept.").format(summary["create"], summary["keep"])
+	elif scope == "this":
+		detail = _("This session only.")
 	else:
-		with quiet_bulk_operation():
-			_rebuild_series(tt, plan)
-		frappe.db.commit()
-	return _plan_summary(plan)
+		detail = _("This and the following {0} session(s).").format(summary["update"])
+	add_log(tt.class_name, "Edited", tt.name, tt.schedule_date, f"{detail} {changes}".strip())
+	frappe.db.commit()
+	return summary
 
 
 def _marked(names):
@@ -602,12 +648,18 @@ def _plan_update(tt, data, scope):
 		plan.following = [tt.name]
 		plan.rows = _check_dates([new_date], slot, exclude=[tt.name])["dates"]
 	else:
+		# Cancelled sessions stay as they are (and no new session goes on their date)
 		following = frappe.get_all(
 			"Time Table",
-			filters={"name": ["in", names], "schedule_date": [">=", tt.schedule_date], "docstatus": ["<", 2]},
+			filters={"name": ["in", names], "schedule_date": [">=", tt.schedule_date], "docstatus": ["<", 2], "is_cancelled": 0},
 			fields=["name", "schedule_date"],
 			order_by="schedule_date asc",
 		)
+		cancelled_dates = {getdate(d) for d in frappe.get_all(
+			"Time Table",
+			filters={"name": ["in", names], "schedule_date": [">=", tt.schedule_date], "is_cancelled": 1},
+			pluck="schedule_date",
+		)}
 		plan.following = [r.name for r in following]
 		freq = data.repeat_frequency or "Never"
 		start = getdate(data.schedule_date or tt.schedule_date)
@@ -647,6 +699,8 @@ def _plan_update(tt, data, scope):
 			for row in plan.rows:
 				if getdate(row["date"]) in kept_dates:
 					row["status"], row["note"] = "kept", _("Session with marked attendance is kept as it is")
+				elif getdate(row["date"]) in cancelled_dates:
+					row["status"], row["note"] = "kept", _("Cancelled session: no new session on this date")
 			plan.create = [r["date"] for r in plan.rows if r["status"] in ("ok", "faculty_warn")]
 			first = plan.rows[0] if plan.rows else None
 			if first and first["status"] in ("holiday", "venue"):
@@ -754,3 +808,186 @@ def _rebuild_series(tt, plan):
 		new.repeat_frequency = "Never"
 		new.repeats_till = None
 		new.insert(ignore_permissions=True)
+
+
+# ── Cancel / swap one session ─────────────────────────────────────────────────
+
+def _slot_text(row):
+	return "{0}, {1} – {2}, {3}".format(
+		formatdate(row.schedule_date, "dd MMM yyyy"), format_time_12h(row.from_time),
+		format_time_12h(row.to_time), row.venue or _("no venue"))
+
+
+def _changeable(tt, action):
+	"""A session can be cancelled or swapped while it is active and its
+	attendance is not marked."""
+	if tt.is_cancelled:
+		frappe.throw(_("This session is already cancelled."))
+	if _marked([tt.name]):
+		frappe.throw(_("Attendance is marked for the session on {0}, so it cannot be {1}.").format(
+			formatdate(tt.schedule_date), action))
+
+
+@frappe.whitelist()
+def cancel_class_session(time_table, reason):
+	"""Cancel this one session: it stays on the calendar as Cancelled (with its
+	Attendance Session), and its venue and faculty slot is free for other
+	classes. Removed from Google Calendar."""
+	from slcm.slcm.doctype.class_schedule_log.class_schedule_log import add_log
+	from slcm.slcm.doctype.time_table.google_calendar_sync import delete_linked_google_event
+
+	tt = frappe.get_doc("Time Table", time_table)
+	tt.check_permission("write")
+	reason = (reason or "").strip()
+	if not reason:
+		frappe.throw(_("Enter the reason for cancelling the session."))
+	_changeable(tt, _("cancelled"))
+
+	tt.db_set({"is_cancelled": 1, "cancellation_reason": reason})
+	session = frappe.db.get_value("Attendance Session", {"class_schedule": tt.name}, "name")
+	if session:
+		frappe.db.set_value("Attendance Session", session,
+			{"session_status": "Cancelled", "cancellation_reason": reason})
+	if tt.linked_google_event:
+		delete_linked_google_event(tt)
+		tt.db_set("linked_google_event", None)
+
+	add_log(tt.class_name, "Cancelled", tt.name, tt.schedule_date,
+		_("{0}. Reason: {1}. The venue and faculty slot is free for other classes.").format(_slot_text(tt), reason))
+	return {"name": tt.name}
+
+
+def _swap_filters(tt):
+	"""Sessions of other classes for the same students: same term and
+	programme, and the same section for a section class."""
+	filters = {
+		"based_on": "Class",
+		"class_name": ["!=", tt.class_name],
+		"academic_term": tt.academic_term,
+		"is_cancelled": 0,
+		"docstatus": ["<", 2],
+		"schedule_date": [">=", tt.schedule_date],
+	}
+	if tt.programme:
+		filters["programme"] = tt.programme
+	if tt.section:
+		filters["section"] = tt.section
+	return filters
+
+
+@frappe.whitelist()
+def get_swap_candidates(time_table):
+	"""Sessions this one can swap its slot with: other courses of the same
+	students on the same day or later, not cancelled, attendance not marked."""
+	tt = frappe.get_doc("Time Table", time_table)
+	tt.check_permission("write")
+	_changeable(tt, _("swapped"))
+	if getdate(tt.schedule_date) < getdate():
+		frappe.throw(_("Only today's or upcoming sessions can be swapped."))
+
+	rows = frappe.get_all(
+		"Time Table",
+		filters=_swap_filters(tt),
+		fields=["name", "class_name", "title", "course", "section", "schedule_date", "from_time", "to_time", "venue", "instructor"],
+		order_by="schedule_date asc, from_time asc",
+		limit=500,
+	)
+	marked = _marked([r.name for r in rows])
+	faculty = {f.name: " ".join(filter(None, [f.first_name, f.last_name])) for f in frappe.get_all(
+		"Faculty", filters={"name": ["in", list({r.instructor for r in rows if r.instructor}) or [""]]},
+		fields=["name", "first_name", "last_name"],
+	)}
+	return [{
+		"name": r.name,
+		"class_name": r.class_name,
+		"title": r.title or r.course,
+		"section": r.section,
+		"date": str(r.schedule_date),
+		"date_fmt": formatdate(r.schedule_date, "EEE, dd MMM yyyy"),
+		"from_time": str(r.from_time),
+		"to_time": str(r.to_time),
+		"venue": r.venue,
+		"faculty": faculty.get(r.instructor) or r.instructor or "",
+	} for r in rows if r.name not in marked]
+
+
+def _plan_swap(a, b):
+	"""Each session takes the other's date, time and venue; faculty stay with
+	their course. Checked like any new slot (holiday, venue, the faculty's
+	other classes), not counting the two sessions themselves."""
+	errors, warnings = [], []
+	_changeable(a, _("swapped"))
+	if b.is_cancelled or _marked([b.name]):
+		errors.append(_("The session of {0} on {1} is cancelled or has marked attendance.").format(
+			b.title or b.course, formatdate(b.schedule_date)))
+	if getdate(a.schedule_date) < getdate():
+		errors.append(_("Only today's or upcoming sessions can be swapped."))
+	allowed = _swap_filters(a)
+	if (b.class_name == a.class_name or b.academic_term != a.academic_term
+			or (allowed.get("programme") and b.programme != allowed["programme"])
+			or (allowed.get("section") and b.section != allowed["section"])
+			or getdate(b.schedule_date) < getdate(a.schedule_date)):
+		errors.append(_("{0} cannot be swapped with this session: it must be another course of the same students on the same day or later.").format(
+			b.title or b.course))
+
+	moves = []
+	for doc, slot in ((a, b), (b, a)):
+		new = frappe._dict(schedule_date=slot.schedule_date, from_time=slot.from_time, to_time=slot.to_time, venue=slot.venue)
+		check = _check_dates([new.schedule_date], frappe._dict(new, instructor=doc.instructor), exclude=[a.name, b.name])
+		row = check["dates"][0] if check["dates"] else {"status": "ok", "note": ""}
+		label = doc.title or doc.course
+		if row["status"] in ("holiday", "venue"):
+			errors.append(f"{label}: {row['note']}")
+		elif row["status"] == "faculty_warn":
+			warnings.append(f"{label}: {row['note']}")
+		moves.append({"name": doc.name, "class_name": doc.class_name, "title": label,
+			"before": _slot_text(doc), "after": _slot_text(frappe._dict(new)), "new": new})
+	return frappe._dict(errors=errors, warnings=warnings, moves=moves)
+
+
+@frappe.whitelist()
+def check_swap(time_table, other):
+	"""Dry run of swap_class_sessions: what moves where, and any problem."""
+	a = frappe.get_doc("Time Table", time_table)
+	b = frappe.get_doc("Time Table", other)
+	a.check_permission("write")
+	b.check_permission("write")
+	plan = _plan_swap(a, b)
+	return {"errors": plan.errors, "warnings": plan.warnings,
+		"moves": [{k: m[k] for k in ("name", "class_name", "title", "before", "after")} for m in plan.moves]}
+
+
+@frappe.whitelist()
+def swap_class_sessions(time_table, other):
+	"""Swap the date, time and venue of two sessions (see _plan_swap); their
+	Attendance Sessions and Google Calendar events follow. Logged on both
+	classes."""
+	from slcm.slcm.doctype.class_schedule_log.class_schedule_log import add_log
+	from slcm.slcm.doctype.time_table.google_calendar_sync import sync_time_table_to_google_calendar
+	from slcm.slcm.doctype.time_table.time_table import quiet_bulk_operation
+
+	a = frappe.get_doc("Time Table", time_table)
+	b = frappe.get_doc("Time Table", other)
+	a.check_permission("write")
+	b.check_permission("write")
+	plan = _plan_swap(a, b)
+	if plan.errors:
+		frappe.throw("<br>".join(plan.errors), title=_("Cannot Swap"))
+
+	# Written directly: saving one first would clash with the other still in its slot
+	docs = {a.name: a, b.name: b}
+	for m in plan.moves:
+		doc = docs[m["name"]]
+		doc.update(m["new"])
+		doc.calculate_duration()
+		doc.db_update()
+	with quiet_bulk_operation():
+		for doc in docs.values():
+			doc.update_attendance_session()
+			sync_time_table_to_google_calendar(doc)
+
+	ma, mb = plan.moves
+	for m, other_move in ((ma, mb), (mb, ma)):
+		add_log(m["class_name"], "Swapped", m["name"], m["new"].schedule_date,
+			_("Swapped with {0} ({1}): {2} → {3}").format(other_move["title"], other_move["class_name"], m["before"], m["after"]))
+	return {"moves": [{k: m[k] for k in ("name", "title", "before", "after")} for m in plan.moves]}

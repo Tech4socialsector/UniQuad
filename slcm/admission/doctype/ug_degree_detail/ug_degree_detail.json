@@ -29,14 +29,16 @@
    "fieldname": "degree_certificate",
    "fieldtype": "Attach",
    "in_list_view": 1,
-   "label": "UG Degree Certificate / Bonafide"
+   "label": "UG Degree Certificate / Bonafide",
+   "reqd": 1
   },
   {
    "description": "Max 5MB - Supported formats png, jpeg, jpg, pdf",
    "fieldname": "marksheets",
    "fieldtype": "Attach",
    "in_list_view": 1,
-   "label": "Transcripts / Marksheets"
+   "label": "Transcripts / Marksheets",
+   "reqd": 1
   },
   {
    "fieldname": "college",
@@ -89,7 +91,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-10-30 10:02:15.003872",
+ "modified": "2026-11-02 09:51:44.401462",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "UG Degree Detail",

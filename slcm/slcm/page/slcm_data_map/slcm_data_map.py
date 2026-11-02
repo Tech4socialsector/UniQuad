@@ -26,7 +26,7 @@ def get_doctype_counts():
 		"Improvement Exam Registration", "Grade Appeal",
 		"Exam Barcode", "Student Transcript",
 		"Fee Structure", "Fee Invoice", "Fee Payment",
-		"Admission Cycle", "Applicant", "Admission Application",
+		"Admission Cycle", "Applicant",
 		"Offer Letter", "Merit List",
 		"ID Card Template", "ID Card Generation",
 		"Venue Booking",

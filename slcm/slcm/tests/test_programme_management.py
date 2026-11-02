@@ -683,8 +683,8 @@ class TestStudentEnrollment(ProgrammeManagementTestCase):
 		enrollment = self.make_enrollment()
 		log = [(r.academic_year, r.academic_term, r.year_no, r.status, r.section) for r in enrollment.academic_log]
 		self.assertEqual(log, [
-			(self.ay1, self.t1, 1, "Ongoing", self.section_a),
-			(self.ay1, self.t2, 1, "Upcoming", self.section_a),
+			(self.ay1, self.t1, "1", "Ongoing", self.section_a),
+			(self.ay1, self.t2, "1", "Upcoming", self.section_a),
 		])
 		self.assertTrue(all(r.updated_on and r.updated_by for r in enrollment.academic_log))
 
@@ -811,7 +811,7 @@ class TestStudentEnrollment(ProgrammeManagementTestCase):
 	def test_current_log(self):
 		enrollment = self.make_enrollment()
 		current = get_current_log(enrollment.name)
-		self.assertEqual((current.academic_term, current.year_no, current.status), (self.t1, 1, "Ongoing"))
+		self.assertEqual((current.academic_term, current.year_no, current.status), (self.t1, "1", "Ongoing"))
 
 	def test_promotion_to_next_year(self):
 		enrollment = self.make_enrollment()
@@ -821,9 +821,9 @@ class TestStudentEnrollment(ProgrammeManagementTestCase):
 		enrollment = frappe.get_doc("Student Enrollment", name)
 		log = [(r.academic_year, r.year_no, r.status) for r in enrollment.academic_log]
 		self.assertEqual(log, [
-			(self.ay1, 1, "Completed"),
-			(self.ay1, 1, "Completed"),
-			(self.ay2, 2, "Ongoing"),
+			(self.ay1, "1", "Completed"),
+			(self.ay1, "1", "Completed"),
+			(self.ay2, "2", "Ongoing"),
 		])
 		student = frappe.db.get_value(
 			"Student Master", enrollment.student, ["academic_year", "current_year", "year_of_study"], as_dict=True
@@ -838,7 +838,7 @@ class TestStudentEnrollment(ProgrammeManagementTestCase):
 		promote_enrollment(enrollment.name, self.ay2, repeat=True)
 		enrollment.reload()
 		log = [(r.academic_year, r.year_no, r.status) for r in enrollment.academic_log]
-		self.assertEqual(log, [(self.ay1, 1, "Redo"), (self.ay1, 1, "Redo"), (self.ay2, 1, "Ongoing")])
+		self.assertEqual(log, [(self.ay1, "1", "Redo"), (self.ay1, "1", "Redo"), (self.ay2, "1", "Ongoing")])
 
 	def test_promotion_must_move_forward_in_time(self):
 		enrollment = self.make_enrollment()
@@ -964,7 +964,7 @@ class TestClasses(ProgrammeManagementTestCase):
 		self.assertEqual(row.course, self.course)
 		self.assertEqual(row.class_name, cls_doc.name)
 		self.assertEqual(row.academic_term, self.t1)
-		self.assertEqual(row.year_no, 1)
+		self.assertEqual(row.year_no, "1")
 		self.assertEqual(row.credits, 4)
 		self.assertEqual(str(row.faculty), self.faculty)
 		self.assertEqual(row.status, "Upcoming")  # T1 starts in 2091

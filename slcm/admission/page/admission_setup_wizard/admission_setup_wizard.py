@@ -1,5 +1,6 @@
 import frappe
 import json
+from slcm.security.access import require_desk_user
 
 DRAFT_KEY_PREFIX = "admission_wizard_draft_"
 
@@ -35,10 +36,6 @@ def get_wizard_state():
         "existing": {
             "exam_types": frappe.get_all("Exam Type Config",
                 fields=["name","exam_name","exam_code","exam_category","score_import_method"]),
-            "quota_policies": frappe.get_all("Quota Policy",
-                fields=["name","policy_name"]),
-            "stage_templates": frappe.get_all("Admission Stage Template",
-                fields=["name","template_name"]),
             "document_configs": frappe.db.count("Document Requirement Config"),
             "email_templates": frappe.db.count("Email Template Config", {"is_active": 1}),
             "form_configs": frappe.db.count("Application Form Config")
@@ -54,10 +51,6 @@ def _get_step_status(draft, settings):
         "2": bool(draft.get("step2_done") or settings.institution_name),
         "3": bool(draft.get("exam_types") and len(draft.get("exam_types", [])) > 0)
               or frappe.db.count("Exam Type Config") > 0,
-        "4": bool(draft.get("quota_policy_name") and draft.get("categories"))
-              or frappe.db.count("Quota Policy") > 0,
-        "5": bool(draft.get("template_name") and draft.get("stages"))
-              or frappe.db.count("Admission Stage Template") > 0,
         "6": frappe.db.count("Document Requirement Config") > 0,
         "7": frappe.db.count("Email Template Config", {"is_active": 1}) > 0,
         "8": frappe.db.count("Application Form Config") > 0,
@@ -77,6 +70,7 @@ def _get_phase_progress():
 
 @frappe.whitelist()
 def save_step_draft(step, data):
+    require_desk_user()
     if isinstance(data, str):
         data = json.loads(data)
     step = int(step)
@@ -102,13 +96,6 @@ def save_step_draft(step, data):
         exam_types = data.get("exam_types", [])
         valid = [e for e in exam_types if e.get("exam_name") and e.get("exam_code")]
         draft["exam_types"] = valid
-    elif step == 4:
-        draft["quota_policy_name"] = data.get("quota_policy_name", "")
-        draft["is_legal_mandate"] = frappe.utils.cint(data.get("is_legal_mandate", 0))
-        draft["categories"] = data.get("categories", [])
-    elif step == 5:
-        draft["template_name"] = data.get("template_name", "")
-        draft["stages"] = data.get("stages", [])
 
     _save_draft(draft)
     return {"success": True, "message": "Draft saved. Data will be committed at Step 9."}
@@ -119,6 +106,7 @@ def get_draft():
 
 @frappe.whitelist()
 def activate_system():
+    require_desk_user()
     draft = _get_draft()
     errors = _validate_draft(draft)
     if errors:
@@ -152,44 +140,6 @@ def activate_system():
             })
             doc.insert(ignore_permissions=True)
 
-    # Step 4 — Quota Policy
-    policy_name = draft.get("quota_policy_name", "")
-    if policy_name and not frappe.db.exists("Quota Policy", policy_name):
-        qp = frappe.get_doc({
-            "doctype": "Quota Policy",
-            "policy_name": policy_name,
-            "is_legal_mandate": frappe.utils.cint(draft.get("is_legal_mandate", 0))
-        })
-        for cat in draft.get("categories", []):
-            if cat.get("category_name") and cat.get("category_code"):
-                qp.append("quota_entries", {
-                    "category_name": cat.get("category_name"),
-                    "category_code": cat.get("category_code"),
-                    "mandated_percentage": frappe.utils.flt(cat.get("mandated_percentage") or 0),
-                    "requires_certificate": frappe.utils.cint(cat.get("requires_certificate", 0)),
-                    "certificate_label": cat.get("certificate_label", "")
-                })
-        qp.insert(ignore_permissions=True)
-
-    # Step 5 — Stage Template
-    template_name = draft.get("template_name", "")
-    if template_name and not frappe.db.exists("Admission Stage Template", template_name):
-        st = frappe.get_doc({
-            "doctype": "Admission Stage Template",
-            "template_name": template_name,
-            "is_default": 1
-        })
-        for i, stage in enumerate(draft.get("stages", [])):
-            if stage.get("stage_name"):
-                st.append("stages", {
-                    "stage_name": stage.get("stage_name"),
-                    "stage_type": stage.get("stage_type", "Application"),
-                    "sequence": i + 1,
-                    "is_mandatory": frappe.utils.cint(stage.get("is_mandatory", 0)),
-                    "is_enabled": 1
-                })
-        st.insert(ignore_permissions=True)
-
     # Mark onboarding complete
     settings = frappe.get_single("Institution Settings")
     settings.onboarding_complete = 1
@@ -216,12 +166,6 @@ def _validate_draft(draft):
     exam_types = draft.get("exam_types", [])
     if not exam_types and frappe.db.count("Exam Type Config") == 0:
         errors.append("Step 3: At least one Exam Type is required.")
-    categories = draft.get("categories", [])
-    if not categories and frappe.db.count("Quota Policy") == 0:
-        errors.append("Step 4: At least one Quota Category is required.")
-    stages = draft.get("stages", [])
-    if not stages and frappe.db.count("Admission Stage Template") == 0:
-        errors.append("Step 5: At least one Admission Stage is required.")
     if frappe.db.count("Document Requirement Config") == 0:
         errors.append("Step 6: At least one Document Requirement Config is required.")
     if frappe.db.count("Email Template Config", {"is_active": 1}) == 0:
