@@ -84,8 +84,8 @@
   "class_xii_year_of_completion",
   "hsc_percentage",
   "class_xii_marksheet",
-  "sample_bonafide_certificate",
   "class_xii_bonafide",
+  "sample_bonafide_certificate",
   "column_break_ycmo",
   "class_xii_school",
   "if_cgpa_maximum_cgpa_class_xii",
@@ -1312,7 +1312,7 @@
    "mandatory_depends_on": "eval:doc.guardian_required == 1 || doc.guardian_required === 'Provide legal guardian details'"
   },
   {
-   "depends_on": "eval: doc.class_xii_status == \"Appearing\"",
+   "depends_on": "eval:doc.class_xii_status == \"Appearing\"",
    "fieldname": "class_xii_bonafide",
    "fieldtype": "Attach",
    "label": "Class XII Bonafide Certificate To Be Uploaded",
@@ -1352,7 +1352,7 @@
   }
  ],
  "make_attachments_public": 1,
- "modified": "2026-10-31 18:59:31.952481",
+ "modified": "2026-11-02 09:42:52.610833",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Applicant",
