@@ -316,7 +316,9 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 	/** Hour (1–12), Minute (5-minute steps) and AM/PM selects for a hidden
 	 * Time field; the field gets "HH:MM:SS" once all three are picked. */
 	render_time_picker(fieldname, label) {
-		const opts = (values, placeholder) => `<option value="">${placeholder}</option>`
+		// Hour and Minute start blank ("Hour" / "Min"); AM/PM is always AM or PM
+		// (AM until changed), never a blank "AM / PM" choice
+		const opts = (values, placeholder) => (placeholder ? `<option value="">${placeholder}</option>` : "")
 			+ values.map((v) => `<option value="${v}">${v}</option>`).join("");
 		const hours = Array.from({ length: 12 }, (_, i) => String(i + 1));
 		const minutes = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, "0"));
@@ -327,7 +329,7 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 				<select class="form-control ctt-tp-hour">${opts(hours, __("Hour"))}</select>
 				<span class="ctt-tp-sep">:</span>
 				<select class="form-control ctt-tp-minute">${opts(minutes, __("Min"))}</select>
-				<select class="form-control ctt-tp-ampm">${opts(["AM", "PM"], __("AM / PM"))}</select>
+				<select class="form-control ctt-tp-ampm">${opts(["AM", "PM"])}</select>
 			</div>
 		</div>`);
 		$w.on("change", "select", () => {
