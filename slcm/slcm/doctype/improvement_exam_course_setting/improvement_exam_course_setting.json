@@ -11,7 +11,8 @@
   "improvement_fee",
   "registration_limit",
   "deadline_from",
-  "deadline_to"
+  "deadline_to",
+  "payment_gateway"
  ],
  "fields": [
   {
@@ -68,9 +69,17 @@
    "fieldtype": "Date",
    "in_list_view": 1,
    "label": "Deadline To"
+  },
+  {
+   "default": "Razorpay",
+   "description": "Gateway the student pays this improvement exam fee through.",
+   "fieldname": "payment_gateway",
+   "fieldtype": "Select",
+   "label": "Payment Gateway",
+   "options": "Razorpay\nEasebuzz"
   }
  ],
- "modified": "2026-10-29 10:00:00.000000",
+ "modified": "2026-10-29 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Improvement Exam Course Setting",

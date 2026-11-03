@@ -33,6 +33,11 @@ _WORKFLOW_ROLE_STATUS_MAP = {
 # Roles that can see *all* Student Master records
 _FULL_ACCESS_ROLES = {"System Manager", "slcm_Registrar", "Accounts User"}
 
+# Academic Affairs Department — unrestricted across the Academics desktop
+# (Attendance, Programme Management, Promotions, Student Registration).
+# AAD Staff differ from AAD only by having no delete right (DocPerm).
+AAD_ROLES = {"AAD", "AAD Staff"}
+
 # Roles that see only academically-active students (scoped to the Classes they teach)
 _ACTIVE_STUDENTS_ROLES = {"slcm_Faculty", "slcm_Programme Chair"}
 
@@ -98,7 +103,7 @@ def student_master_query_conditions(user):
     roles = set(frappe.get_roles(user))
 
     # --- Full access ---
-    if roles & _FULL_ACCESS_ROLES:
+    if roles & (_FULL_ACCESS_ROLES | AAD_ROLES):
         return ""
 
     # --- Faculty: only students of the Classes they teach ---
@@ -153,7 +158,7 @@ def attendance_session_query_conditions(user):
 
     roles = set(frappe.get_roles(user))
 
-    if roles & _FULL_ACCESS_ROLES or roles & {"slcm_Programme Chair", "AAD"}:
+    if roles & (_FULL_ACCESS_ROLES | AAD_ROLES) or "slcm_Programme Chair" in roles:
         return ""
 
     if "slcm_Faculty" in roles:
@@ -191,7 +196,7 @@ def student_attendance_query_conditions(user):
 
     roles = set(frappe.get_roles(user))
 
-    if roles & _FULL_ACCESS_ROLES or "slcm_Programme Chair" in roles:
+    if roles & (_FULL_ACCESS_ROLES | AAD_ROLES) or "slcm_Programme Chair" in roles:
         return ""
 
     if "slcm_Faculty" in roles:
@@ -230,7 +235,7 @@ def attendance_log_query_conditions(user):
 
     roles = set(frappe.get_roles(user))
 
-    if roles & _FULL_ACCESS_ROLES or "slcm_Programme Chair" in roles:
+    if roles & (_FULL_ACCESS_ROLES | AAD_ROLES) or "slcm_Programme Chair" in roles:
         return ""
 
     if "slcm_Faculty" in roles:
@@ -263,7 +268,7 @@ def attendance_summary_query_conditions(user):
 
     roles = set(frappe.get_roles(user))
 
-    if roles & _FULL_ACCESS_ROLES or "slcm_Programme Chair" in roles:
+    if roles & (_FULL_ACCESS_ROLES | AAD_ROLES) or "slcm_Programme Chair" in roles:
         return ""
 
     if "slcm_Faculty" in roles:
@@ -303,7 +308,7 @@ def attendance_condonation_query_conditions(user):
 
     roles = set(frappe.get_roles(user))
 
-    if roles & _FULL_ACCESS_ROLES or "slcm_Programme Chair" in roles:
+    if roles & (_FULL_ACCESS_ROLES | AAD_ROLES) or "slcm_Programme Chair" in roles:
         return ""
 
     conditions = []
@@ -322,9 +327,6 @@ def attendance_condonation_query_conditions(user):
             f"`tabStudent Attendance Condonation`.student IN ("
             f"SELECT name FROM `tabStudent Master` WHERE email = {safe_user})"
         )
-        
-    if "AAD" in roles:
-        conditions.append(f"`tabStudent Attendance Condonation`.aad_approver = {frappe.db.escape(user)}")
         
     if "Programme Chair" in roles:
         conditions.append(f"`tabStudent Attendance Condonation`.programme_chair_approver = {frappe.db.escape(user)}")
@@ -350,7 +352,7 @@ def fa_mfa_application_query_conditions(user):
 
     roles = set(frappe.get_roles(user))
 
-    if roles & _FULL_ACCESS_ROLES or "slcm_Programme Chair" in roles:
+    if roles & (_FULL_ACCESS_ROLES | AAD_ROLES) or "slcm_Programme Chair" in roles:
         return ""
 
     if "slcm_Faculty" in roles:
@@ -391,7 +393,7 @@ def class_schedule_query_conditions(user):
 
     roles = set(frappe.get_roles(user))
 
-    if roles & _FULL_ACCESS_ROLES or roles & {"slcm_Programme Chair", "AAD"}:
+    if roles & (_FULL_ACCESS_ROLES | AAD_ROLES) or "slcm_Programme Chair" in roles:
         return ""
 
     if "slcm_Faculty" in roles:
@@ -572,7 +574,7 @@ def venue_booking_query_conditions(user):
     roles = set(frappe.get_roles(user))
 
     # Admin roles see everything
-    admin_roles = {"System Manager", "slcm_Registrar"}
+    admin_roles = {"System Manager", "slcm_Registrar"} | AAD_ROLES
     if admin_roles & roles:
         return ""
 

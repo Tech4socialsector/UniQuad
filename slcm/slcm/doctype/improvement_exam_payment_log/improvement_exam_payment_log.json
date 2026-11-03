@@ -15,6 +15,7 @@
   "section_payment",
   "razorpay_payment_id",
   "razorpay_order_id",
+  "payment_gateway",
   "cb_pay",
   "payment_status",
   "amount",
@@ -100,6 +101,13 @@
    "fieldname": "razorpay_order_id",
    "fieldtype": "Data",
    "label": "Razorpay Order ID"
+  },
+  {
+   "fieldname": "payment_gateway",
+   "fieldtype": "Select",
+   "label": "Payment Gateway",
+   "options": "\nRazorpay\nEasebuzz",
+   "read_only": 1
   },
   {
    "fieldname": "cb_pay",
@@ -232,7 +240,7 @@
   }
  ],
  "links": [],
- "modified": "2026-10-29 10:00:00.000000",
+ "modified": "2026-10-29 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Improvement Exam Payment Log",

@@ -772,24 +772,25 @@ class TimeTable(Document):
             )
             return
 
-        lines = [_("Recurring occurrences created: <b>{0}</b> (plus this schedule)").format(created_count)]
+        message = _("<b>{0}</b> classes scheduled successfully.").format(created_count + 1)
+
+        # Only mention what needs attention; a clean run is just the one line.
+        notes = []
         if holiday_skip_count:
-            lines.append(_("Skipped due to holidays: <b>{0}</b>").format(holiday_skip_count))
+            notes.append(_("{0} skipped (holidays)").format(holiday_skip_count))
         if conflict_count:
-            lines.append(_("Skipped as the venue is already reserved: <b>{0}</b>").format(conflict_count))
+            notes.append(_("{0} skipped (venue already booked)").format(conflict_count))
         if faculty_overlap_count:
-            lines.append(_("Scheduled while the faculty has another session at the same time: <b>{0}</b> (kindly confirm availability)").format(faculty_overlap_count))
-        lines.append(_("Attendance sessions created: <b>{0}</b>").format(stats.sessions_created))
-        if get_active_google_calendar_account():
-            lines.append(_("Synced with Google Calendar: <b>{0}</b>").format(stats.gcal_synced))
-            if stats.gcal_failed:
-                lines.append(
-                    _("Google Calendar sync failed: <b>{0}</b> (see Error Log)").format(stats.gcal_failed)
-                )
+            notes.append(_("{0} overlap with another class of this faculty").format(faculty_overlap_count))
+        if stats.gcal_failed and get_active_google_calendar_account():
+            notes.append(_("{0} failed to sync with Google Calendar (see Error Log)").format(stats.gcal_failed))
+
+        if notes:
+            message += "<ul style='margin:8px 0 0'>" + "".join(f"<li>{note}</li>" for note in notes) + "</ul>"
 
         frappe.msgprint(
-            "<ul style='margin-bottom:0'>" + "".join(f"<li>{line}</li>" for line in lines) + "</ul>",
-            title=_("Scheduling Summary"),
+            message,
+            title=_("Schedule Created"),
             indicator="orange" if (conflict_count or faculty_overlap_count or stats.gcal_failed) else "green",
         )
 

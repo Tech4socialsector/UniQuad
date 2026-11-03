@@ -19,12 +19,12 @@
   "applicant",
   "candidate_name",
   "program",
+  "category",
   "column_break_okdo",
   "email",
   "gender",
   "pwd",
   "date_of_birth",
-  "category",
   "section_break_hynq",
   "mother_name",
   "father_name",
@@ -44,11 +44,16 @@
   "section_break_egoh",
   "allocation_status",
   "allocation_date",
+  "seat_allocation_published",
   "allocated_by",
   "column_break_yrgm",
   "start_time",
   "end_time",
   "admit_card_download",
+  "seat_allocation_published_on",
+  "section_break_online_exam",
+  "online_test_link",
+  "online_test_instructions",
   "tab_9_tab",
   "reschedule_seat_allocation_section",
   "re_entrance_test_name",
@@ -62,11 +67,13 @@
   "re_allocation_status",
   "rescheduled_on",
   "rescheduled_by",
+  "re_seat_allocation_published",
   "column_break_gtzu",
   "re_allocated_by",
   "reschedule_reason",
   "re_admit_card_download",
   "is_rescheduled",
+  "re_seat_allocation_published_on",
   "tab_part_a",
   "entrance_test_status",
   "attendance_marked_on",
@@ -557,6 +564,31 @@
    "label": "Re Admit Card Download "
   },
   {
+   "default": "0",
+   "fieldname": "seat_allocation_published",
+   "fieldtype": "Check",
+   "in_standard_filter": 1,
+   "label": "Seat Allocation Published"
+  },
+  {
+   "fieldname": "seat_allocation_published_on",
+   "fieldtype": "Datetime",
+   "label": "Seat Allocation Published On",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "re_seat_allocation_published",
+   "fieldtype": "Check",
+   "label": "Rescheduled Seat Allocation Published"
+  },
+  {
+   "fieldname": "re_seat_allocation_published_on",
+   "fieldtype": "Datetime",
+   "label": "Rescheduled Seat Allocation Published On",
+   "read_only": 1
+  },
+  {
    "fieldname": "entrance_test_result_card",
    "fieldtype": "Attach",
    "label": "Entrance Test Result Card",
@@ -612,13 +644,31 @@
   {
    "fieldname": "column_break_gtzu",
    "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.is_international_applicant == 1",
+   "fieldname": "section_break_online_exam",
+   "fieldtype": "Section Break",
+   "label": "Online Entrance Test Details"
+  },
+  {
+   "depends_on": "eval:doc.is_international_applicant == 1",
+   "fieldname": "online_test_link",
+   "fieldtype": "Data",
+   "label": "Online Test Link"
+  },
+  {
+   "depends_on": "eval:doc.is_international_applicant == 1",
+   "fieldname": "online_test_instructions",
+   "fieldtype": "Text Editor",
+   "label": "Online Test Instructions"
   }
  ],
  "grid_page_length": 50,
  "image_field": "profile",
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-31 13:15:59.070107",
+ "modified": "2026-11-02 18:00:42.795248",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Entrance Test Seat Allocation",
@@ -667,6 +717,44 @@
    "read": 1,
    "report": 1,
    "role": "Entrance Test Provider",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "import": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Admission Admin",
+   "select": 1,
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Campus Admin",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Admission Officer",
    "share": 1,
    "write": 1
   }

@@ -26,8 +26,108 @@ from frappe import _
 from frappe.utils import flt, today, getdate, add_days
 from slcm.slcm.doctype.academic_term.academic_term import get_current_term
 from slcm.slcm.doctype.student_enrollment.student_enrollment import get_current_log
+from slcm.slcm.fee import payment_gateway as gw
 
 # ── Internal helpers ───────────────────────────────────────────────────────
+
+def _ensure_gateway(gateway, student_name, paid_by_role="Student"):
+    """Refuse up front (before any status is marked "Payment Initiated") when the charge's
+    gateway is not set up, or Easebuzz cannot take this payer (no mobile number)."""
+    gw.ensure_ready(gateway)
+    if gateway == gw.EASEBUZZ:
+        from slcm.api.easebuzz_payment import precheck
+        precheck(student_name, paid_by_role)
+
+
+def _easebuzz_checkout(flow, student_name, amount, intent, productinfo, return_path,
+                       paid_by_role="Student", reference=None, revert=None):
+    """Hosted Easebuzz checkout for a charge whose configured gateway is Easebuzz.
+    Returns {gateway: "Easebuzz", checkout_url, txnid, …}; the portal redirects to checkout_url.
+    ``revert`` undoes the caller's "Payment Initiated" marks if the checkout cannot be created."""
+    from slcm.api.easebuzz_payment import start_checkout
+    try:
+        return start_checkout(
+            flow, student_name, amount, intent, productinfo, return_path,
+            paid_by_role=paid_by_role, reference=reference,
+        )
+    except Exception:
+        if revert:
+            try:
+                revert()
+                frappe.db.commit()
+            except Exception:
+                frappe.log_error(frappe.get_traceback(), f"Easebuzz checkout revert failed — {flow}")
+        raise
+
+
+def _revert_invoice_initiated(invoice_name, student_name):
+    _revert_sm_if_in_flight(invoice_name, student_name)
+    if frappe.db.get_value("Fee Invoice", invoice_name, "payment_status") == "Payment Initiated":
+        frappe.db.set_value("Fee Invoice", invoice_name, "payment_status", "Pending", update_modified=False)
+
+
+def _revert_registration_initiated(doctype, registration_name):
+    if frappe.db.get_value(doctype, registration_name, "payment_status") == "Payment Initiated":
+        frappe.db.set_value(doctype, registration_name, "payment_status", "Pending", update_modified=False)
+
+
+def _parent_return_path(student_name):
+    return f"/parent-portal/fees?ward={student_name}"
+
+
+def _portal_return_path(default):
+    """The student-portal page the payment was started from (re-exam fees can be paid from
+    several pages), else *default*. Only known portal pages are accepted."""
+    from urllib.parse import urlparse
+    from slcm.api.easebuzz_payment import _RETURN_PATHS
+    try:
+        path = urlparse(frappe.get_request_header("Referer") or "").path.rstrip("/")
+    except Exception:
+        path = ""
+    return path if path in _RETURN_PATHS and path.startswith("/student-portal/") else default
+
+
+def _split_by_gateway(demands, re_exams=()):
+    """{gateway: {"demands": [...], "re_exams": [...]}} in first-seen order."""
+    groups = {}
+    for d in demands:
+        groups.setdefault(gw.for_component(d.fee_component), {"demands": [], "re_exams": []})["demands"].append(d)
+    for r in re_exams:
+        groups.setdefault(gw.for_re_exam(r.exam_plan, r.course), {"demands": [], "re_exams": []})["re_exams"].append(r)
+    return groups
+
+
+def _pick_gateway_group(demands, re_exams, payment_gateway):
+    """Resolve which gateway one "Pay All" checkout uses.
+
+    Returns (gateway, None) when every item shares a gateway (or the caller picked one and every
+    item belongs to it), else (None, split_response) describing one checkout per gateway.
+    """
+    groups = _split_by_gateway(demands, re_exams)
+    if payment_gateway:
+        if set(groups) != {payment_gateway}:
+            frappe.throw(_("Some selected charges are not collected through {0}.").format(payment_gateway),
+                         frappe.ValidationError)
+        return payment_gateway, None
+    if len(groups) == 1:
+        return next(iter(groups)), None
+
+    split = []
+    for gateway, g in groups.items():
+        items = [{"label": d.fee_component or d.description or "Charge", "amount": flt(d.outstanding_amount)} for d in g["demands"]]
+        items += [{"label": _("Re-exam: {0}").format(frappe.db.get_value("Course", r.course, "course_name") or r.course),
+                   "amount": flt(r.re_exam_fee)} for r in g["re_exams"]]
+        total = sum(i["amount"] for i in items)
+        split.append({
+            "gateway":               gateway,
+            "ready":                 gw.is_ready(gateway),
+            "total":                 total,
+            "formatted_total":       "₹{:,.0f}".format(total),
+            "demand_names":          [d.name for d in g["demands"]],
+            "re_exam_registrations": [r.name for r in g["re_exams"]],
+            "items":                 [{"label": i["label"], "amount": "₹{:,.0f}".format(i["amount"])} for i in items],
+        })
+    return None, {"status": "split", "groups": split}
 
 def _require_student():
     """Return the Student Master name for the current session user.
@@ -269,6 +369,9 @@ def create_payment_order(invoice_name):
     if flt(inv.outstanding_amount) <= 0:
         frappe.throw(_("There is no outstanding amount on this invoice."))
 
+    gateway = gw.for_invoice(invoice_name)
+    _ensure_gateway(gateway, student_name)
+
     frappe.db.set_value(
         "Fee Invoice", invoice_name, "payment_status", "Payment Initiated", update_modified=False
     )
@@ -288,9 +391,15 @@ def create_payment_order(invoice_name):
         payment_mode="Online Payment",
         from_status=prev_status,
         to_status="Payment Initiated",
-        remarks="Razorpay order created",
+        remarks=f"{gateway} order created",
     )
 
+    if gateway == gw.EASEBUZZ:
+        return _easebuzz_checkout(
+            "invoice", student_name, flt(inv.outstanding_amount), {"invoice": inv.name},
+            f"Fee Payment {inv.name}", "/student-portal/fees", reference=("Fee Invoice", inv.name),
+            revert=lambda: _revert_invoice_initiated(inv.name, student_name),
+        )
     controller = _get_razorpay_controller()
     return _build_order_payload(controller, inv, student_name)
 
@@ -360,6 +469,9 @@ def ensure_invoice_and_create_order():
     inv = frappe._dict(inv)
     inv.outstanding_amount = effective_outstanding
 
+    gateway = gw.for_invoice(inv.name)
+    _ensure_gateway(gateway, student_name)
+
     # ── Mark "Payment Initiated" on both SM and Invoice ───────────────
     invoice_name_for_order = inv.name
     prev_status = frappe.db.get_value(
@@ -390,11 +502,19 @@ def ensure_invoice_and_create_order():
             from_status=prev_status,
             to_status="Payment Initiated",
             remarks=(
-                f"Razorpay order created (ensure_invoice_and_create_order)"
+                f"{gateway} order created (ensure_invoice_and_create_order)"
                 + (f" — pending scholarship ₹{pending_sch:,.2f} applied" if pending_sch > 0 else "")
             ),
         )
 
+    if gateway == gw.EASEBUZZ:
+        result = _easebuzz_checkout(
+            "invoice", student_name, effective_outstanding, {"invoice": inv.name},
+            f"Fee Payment {inv.name}", "/student-portal/fees", reference=("Fee Invoice", inv.name),
+            revert=lambda: _revert_invoice_initiated(inv.name, student_name),
+        )
+        result["invoice_name"] = inv.name
+        return result
     controller = _get_razorpay_controller()
     return _build_order_payload(controller, inv, student_name)
 
@@ -496,6 +616,7 @@ def confirm_fee_payment(invoice_name, integration_request,
                 "payment_date":     today(),
                 "payment_mode":     "Online Payment",
                 "reference_number": razorpay_payment_id,
+                "payment_gateway":  "Razorpay",
             })
             fp.insert(ignore_permissions=True)
             fp.submit()
@@ -578,6 +699,24 @@ def create_demand_payment_order(fee_demand_name):
     payer_phone = sm.get("phone") or ""
 
     component   = demand.fee_component or demand.description or "Fee"
+    gateway     = gw.for_component(demand.fee_component)
+    _ensure_gateway(gateway, student_name)
+
+    if gateway == gw.EASEBUZZ:
+        result = _easebuzz_checkout(
+            "demands", student_name, outstanding, {"demand_names": [fee_demand_name], "re_exam_registrations": []},
+            f"Fee Payment {component}", "/student-portal/fees", reference=("Fee Demand", fee_demand_name),
+        )
+        from slcm.slcm.doctype.student_master.student_master import _append_payment_log
+        _append_payment_log(
+            student_name, "Payment Initiated", amount=outstanding, fee_demand=fee_demand_name,
+            payment_mode="Online Payment", paid_by_role="Student", paid_by_name=payer_name,
+            from_status=demand.status, to_status="Payment Initiated",
+            remarks=f"Easebuzz checkout {result['txnid']} for Fee Demand {fee_demand_name} — {component}",
+        )
+        frappe.db.commit()
+        return result
+
     controller  = _get_razorpay_controller()
 
     try:
@@ -703,8 +842,10 @@ def _payable_re_exams(registration_names, student_name):
     return regs
 
 
-def _mark_re_exams_paid(registration_names, student_name, razorpay_payment_id, razorpay_order_id):
-    """Mark each re-exam registration paid by this combined payment (idempotent)."""
+def _mark_re_exams_paid(registration_names, student_name, razorpay_payment_id, razorpay_order_id,
+                        payment_gateway="Razorpay"):
+    """Mark each re-exam registration paid by this combined payment (idempotent).
+    The razorpay_* arguments carry the gateway's payment / order ids whichever gateway collected it."""
     paid = []
     for n in registration_names:
         reg = frappe.db.get_value(
@@ -720,6 +861,7 @@ def _mark_re_exams_paid(registration_names, student_name, razorpay_payment_id, r
                     "re_exam_registration": n,
                     "razorpay_payment_id":  razorpay_payment_id,
                     "razorpay_order_id":    razorpay_order_id,
+                    "payment_gateway":      payment_gateway,
                     "payment_status":       "Paid",
                     "amount":               flt(reg.re_exam_fee),
                     "settlement_amount":    flt(reg.re_exam_fee),
@@ -750,11 +892,16 @@ def _reset_re_exams(registration_names, student_name, status):
 
 
 @frappe.whitelist()
-def create_bulk_demand_payment_order(fee_demand_names, re_exam_registrations=None):
-    """Create a single Razorpay order that covers multiple Fee Demands at once.
+def create_bulk_demand_payment_order(fee_demand_names, re_exam_registrations=None, payment_gateway=None):
+    """Create a single order that covers multiple Fee Demands at once.
 
     ``fee_demand_names`` is a JSON-encoded list of Fee Demand names; ``re_exam_registrations``
     an optional JSON list of the student's unpaid Re Exam Registrations paid in the same order.
+
+    Each charge's gateway comes from its Fee Component / Re Exam Course Setting. When the
+    selection spans gateways and ``payment_gateway`` is not given, no order is created and
+    ``{"status": "split", "groups": [...]}`` is returned so the portal can offer one checkout
+    per gateway (called again with that group's names and ``payment_gateway``).
 
     Security:
     * Every demand / registration must belong to the calling student (IDOR guard).
@@ -800,6 +947,11 @@ def create_bulk_demand_payment_order(fee_demand_names, re_exam_registrations=Non
     if total <= 0:
         frappe.throw(_("Total outstanding amount is zero."), frappe.ValidationError)
 
+    gateway, split = _pick_gateway_group(demands, re_exams, payment_gateway)
+    if split:
+        return split
+    _ensure_gateway(gateway, student_name)
+
     sm = frappe.db.get_value(
         "Student Master", student_name,
         ["first_name", "last_name", "email", "official_email_id", "phone"],
@@ -817,9 +969,30 @@ def create_bulk_demand_payment_order(fee_demand_names, re_exam_registrations=Non
     if item_count > 3:
         components += f" +{item_count - 3} more"
 
-    controller = _get_razorpay_controller()
-    # Razorpay receipt field: the first demand, else the first re-exam registration
+    # Receipt / reference: the first demand, else the first re-exam registration
     ref_doctype, receipt_ref = ("Fee Demand", demands[0].name) if demands else ("Re Exam Registration", re_exams[0].name)
+
+    if gateway == gw.EASEBUZZ:
+        result = _easebuzz_checkout(
+            "demands", student_name, total,
+            {"demand_names": [d.name for d in demands], "re_exam_registrations": [r.name for r in re_exams]},
+            f"Fee Payment {item_count} items", "/student-portal/fees", reference=(ref_doctype, receipt_ref),
+        )
+        from slcm.slcm.doctype.student_master.student_master import _append_payment_log
+        for d in demands:
+            _append_payment_log(
+                student_name, "Payment Initiated", amount=flt(d.outstanding_amount), fee_demand=d.name,
+                payment_mode="Online Payment", paid_by_role="Student", paid_by_name=payer_name,
+                remarks=f"Easebuzz checkout {result['txnid']} for {len(demands)} demands: {', '.join(x.name for x in demands)}",
+            )
+        for r in re_exams:
+            frappe.db.set_value("Re Exam Registration", r.name, "payment_status", "Payment Initiated", update_modified=False)
+        frappe.db.commit()
+        result.update({"total": total, "components": components,
+                       "demand_names": [d.name for d in demands], "re_exam_registrations": [r.name for r in re_exams]})
+        return result
+
+    controller = _get_razorpay_controller()
 
     try:
         order = controller.create_order(
@@ -979,6 +1152,7 @@ def confirm_bulk_demand_payment(fee_demand_names, integration_request,
         "payment_mode":     "Online Payment",
         "amount":           total,
         "reference_number": razorpay_payment_id,
+        "payment_gateway":  "Razorpay",
         "remarks":          f"Bulk payment — Razorpay order {razorpay_order_id} — {len(demand_rows)} demands",
         "payment_demands":  demand_rows,
     })
@@ -1129,6 +1303,7 @@ def confirm_demand_payment(fee_demand_name, integration_request,
                 "payment_mode":     "Online Payment",
                 "amount":           outstanding,
                 "reference_number": razorpay_payment_id,
+                "payment_gateway":  "Razorpay",
                 "remarks":          f"Razorpay order {razorpay_order_id}",
                 "payment_demands":  [{
                     "fee_demand":        fee_demand_name,
@@ -1193,6 +1368,7 @@ def _fetch_razorpay_payment_details(payment_id):
 
         resp = _requests.get(
             f"https://api.razorpay.com/v1/payments/{payment_id}",
+            params={"expand[]": "card"},  # card last4 / network / issuer (not in the default response)
             auth=(api_key, api_secret),
             timeout=10,
         )
@@ -1356,6 +1532,9 @@ def create_re_exam_payment_order(exam_plan, course):
     if fee_amount <= 0:
         frappe.throw(_("This course has no re-exam fee. Use free registration instead."))
 
+    gateway = gw.for_re_exam(exam_plan, course)
+    _ensure_gateway(gateway, student_name)
+
     # Block override check
     override = frappe.db.get_value(
         "Re Exam Student Override",
@@ -1411,6 +1590,17 @@ def create_re_exam_payment_order(exam_plan, course):
         ["name", "student", "exam_plan", "course", "re_exam_fee", "status", "payment_status"],
         as_dict=True,
     )
+
+    if gateway == gw.EASEBUZZ:
+        course_name = frappe.db.get_value("Course", reg.course, "course_name") or reg.course
+        result = _easebuzz_checkout(
+            "re_exam", student_name, flt(reg.re_exam_fee), {"registration": reg.name},
+            f"Re-Exam Fee {course_name}", _portal_return_path("/student-portal/re-exam"),
+            reference=("Re Exam Registration", reg.name),
+            revert=lambda: _revert_registration_initiated("Re Exam Registration", reg.name),
+        )
+        result.update({"registration_name": reg.name, "course_name": course_name})
+        return result
 
     controller = _get_razorpay_controller()
     return _build_re_exam_order_payload(controller, reg, student_name)
@@ -1489,6 +1679,7 @@ def confirm_re_exam_payment(registration_name, integration_request,
                 "re_exam_registration":       registration_name,
                 "razorpay_payment_id":        razorpay_payment_id,
                 "razorpay_order_id":          razorpay_order_id,
+                "payment_gateway":            "Razorpay",
                 "payment_status":             "Paid",
                 "amount":                     flt(reg_for_log.get("re_exam_fee") or 0),
                 "payment_method":             rzp_details.get("payment_method") or "",
@@ -1667,6 +1858,9 @@ def create_improvement_exam_payment_order(exam_plan, course):
     if fee_amount <= 0:
         frappe.throw(_("This course has no improvement exam fee. Use free registration instead."))
 
+    gateway = gw.for_improvement_exam(exam_plan, course)
+    _ensure_gateway(gateway, student_name)
+
     # Find or create registration
     existing = frappe.db.get_value(
         "Improvement Exam Registration",
@@ -1720,6 +1914,17 @@ def create_improvement_exam_payment_order(exam_plan, course):
         ["name", "student", "exam_plan", "course", "improvement_fee", "status", "payment_status"],
         as_dict=True,
     )
+
+    if gateway == gw.EASEBUZZ:
+        course_name = frappe.db.get_value("Course", reg.course, "course_name") or reg.course
+        result = _easebuzz_checkout(
+            "improvement_exam", student_name, flt(reg.improvement_fee), {"registration": reg.name},
+            f"Improvement Exam Fee {course_name}", _portal_return_path("/student-portal/results"),
+            reference=("Improvement Exam Registration", reg.name),
+            revert=lambda: _revert_registration_initiated("Improvement Exam Registration", reg.name),
+        )
+        result.update({"registration_name": reg.name, "course_name": course_name})
+        return result
 
     controller = _get_razorpay_controller()
     return _build_improvement_exam_order_payload(controller, reg, student_name)
@@ -1791,6 +1996,7 @@ def confirm_improvement_exam_payment(registration_name, integration_request,
                 "improvement_exam_registration":    registration_name,
                 "razorpay_payment_id":              razorpay_payment_id,
                 "razorpay_order_id":                razorpay_order_id,
+                "payment_gateway":                  "Razorpay",
                 "payment_status":                   "Paid",
                 "amount":                           flt(reg_for_log.get("improvement_fee") or 0),
                 "payment_method":                   rzp_details.get("payment_method") or "",
@@ -2658,11 +2864,24 @@ def parent_create_payment_order(invoice_name, student_name):
     if flt(inv.outstanding_amount) <= 0:
         frappe.throw(_("There is no outstanding amount on this invoice."))
 
+    gateway = gw.for_invoice(invoice_name)
+    _ensure_gateway(gateway, student_name, "Parent")
+
     frappe.db.set_value(
         "Fee Invoice", invoice_name, "payment_status", "Payment Initiated",
         update_modified=False,
     )
     frappe.db.commit()
+
+    if gateway == gw.EASEBUZZ:
+        result = _easebuzz_checkout(
+            "invoice", student_name, flt(inv.outstanding_amount), {"invoice": inv.name},
+            f"Fee Payment {inv.name}", _parent_return_path(student_name),
+            paid_by_role="Parent", reference=("Fee Invoice", inv.name),
+            revert=lambda: _revert_invoice_initiated(inv.name, student_name),
+        )
+        result.update({"invoice_name": inv.name, "student_name": student_name})
+        return result
 
     controller = _get_razorpay_controller()
 
@@ -2795,6 +3014,7 @@ def parent_confirm_fee_payment(invoice_name, student_name, integration_request,
                 "payment_date":     today(),
                 "payment_mode":     "Online Payment",
                 "reference_number": razorpay_payment_id,
+                "payment_gateway":  "Razorpay",
                 "remarks":          "Paid by parent via Parent Portal",
             })
             fp.insert(ignore_permissions=True)
@@ -2928,6 +3148,25 @@ def parent_create_demand_payment_order(fee_demand_name, student_name):
     payer_phone = sm.get("phone") or ""
 
     component  = demand.fee_component or demand.description or "Fee"
+    gateway    = gw.for_component(demand.fee_component)
+    _ensure_gateway(gateway, student_name, "Parent")
+
+    if gateway == gw.EASEBUZZ:
+        result = _easebuzz_checkout(
+            "demands", student_name, outstanding, {"demand_names": [fee_demand_name], "re_exam_registrations": []},
+            f"Fee Payment {component}", _parent_return_path(student_name),
+            paid_by_role="Parent", reference=("Fee Demand", fee_demand_name),
+        )
+        from slcm.slcm.doctype.student_master.student_master import _append_payment_log
+        _append_payment_log(
+            student_name, "Payment Initiated", amount=outstanding, fee_demand=fee_demand_name,
+            payment_mode="Online Payment", paid_by_role="Parent", paid_by_name=payer_name,
+            from_status=demand.status, to_status="Payment Initiated",
+            remarks=f"Easebuzz checkout {result['txnid']} for Fee Demand {fee_demand_name} by parent — {component}",
+        )
+        frappe.db.commit()
+        return result
+
     controller = _get_razorpay_controller()
 
     try:
@@ -3040,6 +3279,7 @@ def parent_confirm_demand_payment(fee_demand_name, student_name, integration_req
         "payment_mode":    "Online Payment",
         "amount":          outstanding,
         "reference_number": razorpay_payment_id,
+        "payment_gateway":  "Razorpay",
         "remarks":         f"Parent payment — Razorpay order {razorpay_order_id} — demand {fee_demand_name}",
         "payment_demands": [{
             "fee_demand":         fee_demand_name,
@@ -3075,8 +3315,10 @@ def parent_confirm_demand_payment(fee_demand_name, student_name, integration_req
 
 
 @frappe.whitelist()
-def parent_create_bulk_demand_payment_order(fee_demand_names, student_name):
-    """Create a single Razorpay order covering multiple Fee Demands for a parent.
+def parent_create_bulk_demand_payment_order(fee_demand_names, student_name, payment_gateway=None):
+    """Create a single order covering multiple Fee Demands for a parent.
+
+    Mixed gateways → ``{"status": "split", ...}`` as in create_bulk_demand_payment_order.
 
     Security:
     * Caller must be a non-guest parent linked to student_name.
@@ -3118,6 +3360,11 @@ def parent_create_bulk_demand_payment_order(fee_demand_names, student_name):
     if total <= 0:
         frappe.throw(_("Total outstanding amount is zero."), frappe.ValidationError)
 
+    gateway, split = _pick_gateway_group(demands, [], payment_gateway)
+    if split:
+        return split
+    _ensure_gateway(gateway, student_name, "Parent")
+
     sm = frappe.db.get_value(
         "Student Master", student_name,
         ["first_name", "last_name", "phone"], as_dict=True,
@@ -3135,8 +3382,27 @@ def parent_create_bulk_demand_payment_order(fee_demand_names, student_name):
     if len(demands) > 3:
         components += f" +{len(demands) - 3} more"
 
-    controller  = _get_razorpay_controller()
     receipt_ref = demands[0].name
+
+    if gateway == gw.EASEBUZZ:
+        result = _easebuzz_checkout(
+            "demands", student_name, total,
+            {"demand_names": [d.name for d in demands], "re_exam_registrations": []},
+            f"Fee Payment {len(demands)} items", _parent_return_path(student_name),
+            paid_by_role="Parent", reference=("Fee Demand", receipt_ref),
+        )
+        from slcm.slcm.doctype.student_master.student_master import _append_payment_log
+        for d in demands:
+            _append_payment_log(
+                student_name, "Payment Initiated", amount=flt(d.outstanding_amount), fee_demand=d.name,
+                payment_mode="Online Payment", paid_by_role="Parent", paid_by_name=payer_name,
+                remarks=f"Easebuzz checkout {result['txnid']} by parent for {len(demands)} demands: {', '.join(x.name for x in demands)}",
+            )
+        frappe.db.commit()
+        result.update({"total": total, "components": components, "demand_names": [d.name for d in demands]})
+        return result
+
+    controller  = _get_razorpay_controller()
 
     try:
         order = controller.create_order(
@@ -3265,6 +3531,7 @@ def parent_confirm_bulk_demand_payment(fee_demand_names, student_name, integrati
         "payment_mode":     "Online Payment",
         "amount":           total,
         "reference_number": razorpay_payment_id,
+        "payment_gateway":  "Razorpay",
         "remarks":          f"Parent bulk payment — Razorpay order {razorpay_order_id} — {len(demand_rows)} demands",
         "payment_demands":  demand_rows,
     })

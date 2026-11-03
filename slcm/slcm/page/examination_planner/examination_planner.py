@@ -46,6 +46,28 @@ def _mapped(exam_plan):
 
 # ── Plans ──────────────────────────────────────────────────────────────────────
 
+# ── Lookups used by the Evaluation Schema form ────────────────────────────────
+
+@frappe.whitelist()
+def get_components():
+	return frappe.get_all(
+		"Exam Component",
+		filters={"is_active": 1},
+		fields=["name", "component_name", "component_type"],
+		order_by="component_name asc",
+	)
+
+
+@frappe.whitelist()
+def get_assessment_types():
+	return frappe.get_all(
+		"Exam Assessment Type",
+		filters={"is_active": 1},
+		fields=["name", "type_name", "assessment_type"],
+		order_by="type_name asc",
+	)
+
+
 @frappe.whitelist()
 def get_plans():
 	_check_access()
@@ -60,6 +82,16 @@ def get_plans():
 			"Academic Term", fields=["name", "term_start_date", "term_end_date"], order_by="term_start_date desc"
 		),
 	}
+
+
+@frappe.whitelist()
+def get_plan_list():
+	"""Every exam plan with its step state, for the Examination Management home table."""
+	plans = get_plans()["plans"]
+	for p in plans:
+		p.steps = get_overview(p.name)["steps"]
+		p.created = frappe.db.get_value("Exam Plan", p.name, "creation")
+	return plans
 
 
 @frappe.whitelist()
@@ -155,6 +187,10 @@ def get_mapping(exam_plan):
 		"courses": rows,
 		"evaluation_schemas": frappe.get_all("Evaluation Schema", fields=["name", "total_marks"], order_by="name"),
 		"grade_schemas": frappe.get_all("Grading Schema", fields=["name", "schema_name"], order_by="name"),
+		"setup": {
+			"components": frappe.db.count("Exam Component", {"is_active": 1}),
+			"assessment_types": frappe.db.count("Exam Assessment Type", {"is_active": 1}),
+		},
 	}
 
 
@@ -206,15 +242,99 @@ def get_timetable(exam_plan):
 	return {
 		"rows": rows,
 		"check": check_exam_schedule(plan),
+		"published": cint(plan.timetable_published),
+		**_rooms_and_faculty(),
+		"assessment_schedules": assessment,
+		"programmes": programmes,
+	}
+
+
+def _rooms_and_faculty():
+	return {
 		"venues": frappe.get_all("Venue Master", filters={"is_active": 1}, fields=["name", "capacity"], order_by="name"),
 		"faculty": [
 			{"name": f.name, "label": " ".join(filter(None, [f.first_name, f.last_name])) or f.name}
 			for f in frappe.get_all("Faculty", filters={"status": ["!=", "Inactive"]}, fields=["name", "first_name", "last_name"],
 			                        order_by="first_name", limit=1000)
 		],
-		"assessment_schedules": assessment,
-		"programmes": programmes,
 	}
+
+
+@frappe.whitelist()
+def set_timetable_published(exam_plan, published, reexam=0):
+	"""Show (or hide) the exam or re-exam timetable on the student portal."""
+	_check_access()
+	field = "reexam_timetable_published" if cint(reexam) else "timetable_published"
+	frappe.db.set_value("Exam Plan", exam_plan, field, 1 if cint(published) else 0)
+	frappe.db.commit()
+	return cint(published)
+
+
+# ── 5. Re-exam timetable ───────────────────────────────────────────────────────
+
+@frappe.whitelist()
+def get_reexam_timetable(exam_plan):
+	"""Re-exam sittings: every course with failed students, a re-exam window,
+	registrations or a saved row, with failed / registered counts."""
+	_check_access()
+	from slcm.slcm.utils.exam_timetable import check_exam_schedule
+
+	plan = frappe.get_doc("Exam Plan", exam_plan)
+	failed_grades = set(frappe.get_all("Grading Schema Component", filters={"failed": 1}, pluck="grade", distinct=True))
+	failed = {}
+	for m in frappe.get_all("Student Course Marks", filters={"exam_plan": exam_plan},
+	                        fields=["course", "grade", "updated_grade"]):
+		if (m.updated_grade or m.grade) in failed_grades:
+			failed[m.course] = failed.get(m.course, 0) + 1
+	registered = {}
+	for r in frappe.get_all("Re Exam Registration", filters={"exam_plan": exam_plan, "status": "Registered"}, fields=["course"]):
+		registered[r.course] = registered.get(r.course, 0) + 1
+	windows = set(frappe.get_all("Re Exam Course Setting", filters={"exam_plan": exam_plan}, pluck="course"))
+	have = {r.course for r in plan.reexam_schedules}
+	courses = sorted((set(failed) | set(registered) | windows) - have)
+	names = dict(frappe.get_all("Course", filters={"name": ["in", list(have | set(courses)) or [""]]},
+	                            fields=["name", "course_name"], as_list=True))
+	rows = [{
+		"course": r.course, "course_name": names.get(r.course, ""), "exam_date": r.exam_date,
+		"start_time": str(r.start_time or "")[:5], "end_time": str(r.end_time or "")[:5],
+		"venue": r.venue or "", "invigilator": r.invigilator or "", "seat_capacity": r.seat_capacity or "",
+	} for r in plan.reexam_schedules] + [{
+		"course": c, "course_name": names.get(c, ""), "exam_date": "", "start_time": "", "end_time": "",
+		"venue": "", "invigilator": "", "seat_capacity": "",
+	} for c in courses]
+	for r in rows:
+		r["failed"] = failed.get(r["course"], 0)
+		r["students"] = registered.get(r["course"], 0)
+	return {
+		"rows": rows,
+		"check": check_exam_schedule(plan, reexam=True),
+		"published": cint(plan.reexam_timetable_published),
+		**_rooms_and_faculty(),
+	}
+
+
+@frappe.whitelist()
+def check_reexam_timetable(exam_plan, rows):
+	_check_access()
+	from slcm.slcm.utils.exam_timetable import check_exam_schedule
+
+	plan = frappe.get_doc("Exam Plan", exam_plan)
+	plan.set("reexam_schedules", [_row(r) for r in _load(rows, []) if r.get("course")])
+	for i, r in enumerate(plan.reexam_schedules, 1):
+		r.idx = i
+	return check_exam_schedule(plan, reexam=True)
+
+
+@frappe.whitelist()
+def save_reexam_timetable(exam_plan, rows):
+	"""Replace the plan's re-exam rows (only rows with a date are kept);
+	Exam Plan.validate applies the checks."""
+	_check_access()
+	plan = frappe.get_doc("Exam Plan", exam_plan)
+	plan.set("reexam_schedules", [_row(r) for r in _load(rows, []) if r.get("course") and r.get("exam_date")])
+	plan.save()
+	frappe.db.commit()
+	return True
 
 
 @frappe.whitelist()

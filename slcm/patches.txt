@@ -84,6 +84,15 @@ slcm.patches.v2_0.remove_course_offering
 slcm.patches.v2_0.student_current_term
 slcm.patches.v2_0.migrate_applicant_status_completed_to_submitted_and_paid
 slcm.patches.v2_0.remove_course_schedule
+slcm.patches.v2_0.refresh_desktop_layouts
 slcm.patches.v2_0.remove_unused_admission_doctypes
 slcm.patches.v2_0.remove_unwired_admission_doctypes
 slcm.patches.v2_0.make_applicant_files_private
+slcm.patches.v2_0.aad_role_access
+slcm.patches.v2_0.aad_desktop_only
+slcm.patches.v2_0.aad_linked_doctype_perms
+slcm.patches.v2_0.aad_helpdesk_access
+slcm.patches.v2_0.helpdesk_reply_email_template
+slcm.patches.v2_0.aad_helpdesk_views
+slcm.patches.v2_0.backfill_time_table_faculty_name
+slcm.patches.v2_0.publish_existing_exam_timetables

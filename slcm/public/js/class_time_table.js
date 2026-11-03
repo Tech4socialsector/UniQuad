@@ -187,7 +187,7 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 				{ fieldtype: "Link", fieldname: "instructor", label: __("Faculty"), options: "Faculty", reqd: 1,
 					description: __("Defaults to the class's faculty.") },
 				{ fieldtype: "Link", fieldname: "venue", label: __("Venue"), options: "Venue Master", reqd: 1 },
-				{ fieldtype: "Color", fieldname: "color", label: __("Time Table Color"), reqd: 1,
+				{ fieldtype: "Color", fieldname: "color", label: __("Time Table Color"),
 					description: __("Colour of these classes on the calendars.") },
 				{ fieldtype: "Column Break" },
 				{ fieldtype: "Date", fieldname: "schedule_date", label: __("Schedule Date"), reqd: 1,
@@ -483,7 +483,7 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 		const s = this.schedule_values();
 		const missing = [
 			[s.title, __("Title")], [s.venue, __("Venue")], [s.schedule_date, __("Schedule Date")],
-			[s.from_time, __("From Time")], [s.to_time, __("To Time")], [s.color, __("Time Table Color")],
+			[s.from_time, __("From Time")], [s.to_time, __("To Time")],
 			[s.repeat_frequency === "Never" || s.repeats_till, __("Repeats Till")],
 		].filter(([v]) => !v).map(([, label]) => label);
 		if (missing.length) {
@@ -589,7 +589,7 @@ slcm.class_time_table.CreateWizard = class CreateWizard {
 		const future = this.edit_future();
 		const missing = [
 			[s.title, __("Title")], [s.venue, __("Venue")], [s.schedule_date, __("Schedule Date")],
-			[s.from_time, __("From Time")], [s.to_time, __("To Time")], [s.color, __("Time Table Color")],
+			[s.from_time, __("From Time")], [s.to_time, __("To Time")],
 			[!future || s.repeat_frequency === "Never" || s.repeats_till, __("Repeats Till")],
 		].filter(([v]) => !v).map(([, label]) => label);
 		if (missing.length) {

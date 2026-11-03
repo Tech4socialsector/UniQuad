@@ -29,7 +29,7 @@ from slcm.slcm.doctype.student_master.student_master import (
     _sync_enrollment_names,
 )
 
-ALLOWED_ROLES = ("System Manager", "slcm_Registrar")
+ALLOWED_ROLES = ("System Manager", "slcm_Registrar", "AAD", "AAD Staff")
 
 
 def _check_permission():

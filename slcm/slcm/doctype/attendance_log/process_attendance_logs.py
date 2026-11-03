@@ -40,6 +40,7 @@ from collections import defaultdict
 from slcm.slcm.doctype.rfid_device_room_mapping.rfid_device_room_mapping import (
     get_active_rooms_for_device,
 )
+from slcm.permissions import AAD_ROLES
 from slcm.slcm.doctype.academic_term.academic_term import get_current_term
 from slcm.slcm.doctype.student_enrollment.student_enrollment import (
     get_current_log,
@@ -665,7 +666,7 @@ def get_unmatched_logs(from_date=None, to_date=None, match_status=None, status_f
         can audit past reconciliations, not just review pending ones.
     match_status ("Reason") only applies to the default unresolved view.
     """
-    frappe.only_for(("System Manager", "slcm_Programme Chair"))
+    frappe.only_for(("System Manager", "slcm_Programme Chair", *AAD_ROLES))
 
     if status_filter:
         filters = [
@@ -750,7 +751,7 @@ def sync_attendance_log(log_name, session_name, student=None, synced_via="Class 
     individual Sync dialog ("Class Attendance", the default) vs. the Bulk
     Sync action (passes "Bulk Sync") — purely for the Attendance Sync UI's
     Status column/filter."""
-    frappe.only_for(("System Manager", "slcm_Programme Chair"))
+    frappe.only_for(("System Manager", "slcm_Programme Chair", *AAD_ROLES))
 
     log_doc = frappe.get_doc("Attendance Log", log_name)
     if log_doc.processed:
@@ -844,7 +845,7 @@ def bulk_sync_attendance_logs(from_date, to_date, from_time=None, to_time=None, 
     narrow that window to a time-of-day range within it; venue further
     restricts to taps on devices currently mapped to that Room.
     """
-    frappe.only_for(("System Manager", "slcm_Programme Chair"))
+    frappe.only_for(("System Manager", "slcm_Programme Chair", *AAD_ROLES))
 
     if not from_date or not to_date:
         frappe.throw(_("Select both a From Date and To Date before running Bulk Sync."))

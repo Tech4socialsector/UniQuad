@@ -10,7 +10,11 @@
   "term",
   "status",
   "section_schedule",
-  "course_schedules"
+  "course_schedules",
+  "timetable_published",
+  "section_reexam",
+  "reexam_schedules",
+  "reexam_timetable_published"
  ],
  "fields": [
   {
@@ -46,12 +50,38 @@
    "fieldtype": "Table",
    "label": "Course Schedules",
    "options": "Exam Course Schedule"
+  },
+  {
+   "fieldname": "timetable_published",
+   "fieldtype": "Check",
+   "label": "Publish timetable to students",
+   "default": "0",
+   "description": "Students see exam dates, times and rooms on the portal only after this is ticked."
+  },
+  {
+   "fieldname": "section_reexam",
+   "fieldtype": "Section Break",
+   "label": "Re-exam Schedule",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "reexam_schedules",
+   "fieldtype": "Table",
+   "label": "Re-exam Schedules",
+   "options": "Exam Reexam Schedule"
+  },
+  {
+   "fieldname": "reexam_timetable_published",
+   "fieldtype": "Check",
+   "label": "Publish re-exam timetable to students",
+   "default": "0",
+   "description": "Registered re-exam students see their re-exam date, time and room on the portal after this is ticked."
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-06-02 12:30:31.508772",
+ "modified": "2026-11-03 16:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Exam Plan",

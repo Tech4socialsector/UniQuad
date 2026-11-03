@@ -1285,9 +1285,14 @@ def get_marks_for_students(course, exam_plan, student_ids):
 				"course": course,
 				"academic_term": ["in", list(academic_terms)],
 			},
-			fields=["student", "eligible_for_exam"],
+			fields=["student", "eligible_for_exam", "total_class_hours"],
 		)
-		shortage_students = {r.student for r in att_rows if not r.eligible_for_exam}
+		# A class with no sessions yet has eligible_for_exam = 0 but no shortage
+		# (same rule as apply_attendance_eligibility's "no attendance yet")
+		shortage_students = {
+			r.student for r in att_rows
+			if not r.eligible_for_exam and frappe.utils.flt(r.total_class_hours) > 0
+		}
 
 	# Fetch Approved FA MFA Applications for this course
 	fa_mfa_apps = frappe.db.sql(
@@ -1932,7 +1937,7 @@ def _recalculate_student_marks(scm_name, course, exam_plan):
 
 
 def compute_student_result(course, exam_plan, entries, attendance_status=None,
-                           improvement_marks=None, stored_total=None):
+                           improvement_marks=None, stored_total=None, explain=None):
 	"""Work out total, grade, re-exam and improvement results for one student.
 
 	Returns (values, result): `values` are the Student Course Marks fields to
@@ -1958,6 +1963,9 @@ def compute_student_result(course, exam_plan, entries, attendance_status=None,
 	    the re-exam rows alone.
 	updated_final_marks = max(regular total, re-exam total); improvement marks
 	(write_improvement_marks) apply when higher still.
+
+	explain: optional dict, filled with each step of the calculation for the
+	desk's "how was this calculated" popup (get_marks_breakdown).
 	"""
 	none_result = {"total": None, "grade": "", "updated_final_marks": None, "updated_grade": ""}
 
@@ -2046,6 +2054,12 @@ def compute_student_result(course, exam_plan, entries, attendance_status=None,
 			raw_m = base
 		weighted = _weighted(raw_m, cfg)
 		total += weighted
+		if explain is not None:
+			explain.setdefault("regular", []).append({
+				"component": cfg["component"], "label": cfg.get("label") or cfg.get("type_name") or cfg["assessment_type"],
+				"entered": key in entry_map, "marks": raw_m, "maximum_marks": cfg["maximum_marks"],
+				"effective_marks": cfg["effective_marks"], "weighted": round(weighted, 2),
+			})
 		comp = cfg["component"] or ""
 		by_component[comp] = by_component.get(comp, 0.0) + weighted
 		passing = frappe.utils.flt(cfg.get("passing_marks"))
@@ -2098,6 +2112,12 @@ def compute_student_result(course, exam_plan, entries, attendance_status=None,
 		reexam_total += weighted
 		if key in entry_map:
 			taken.append((cfg, raw_rx, weighted))
+			if explain is not None:
+				explain.setdefault("reexam", []).append({
+					"component": cfg["component"], "label": cfg["assessment_type"], "marks": raw_rx,
+					"maximum_marks": cfg["maximum_marks"], "effective_marks": cfg["effective_marks"],
+					"weighted": round(weighted, 2), "substitute_for": cfg.get("substitute_for"),
+				})
 
 	reexam_failed = set(failed_components)
 	replace_component = (calc.get("reexam_result") or REEXAM_REPLACES_COMPONENT) == REEXAM_REPLACES_COMPONENT
@@ -2123,6 +2143,13 @@ def compute_student_result(course, exam_plan, entries, attendance_status=None,
 
 	reexam_counts = reexam_total > total
 	updated_final_marks = max(total, reexam_total)
+	if explain is not None:
+		explain.update({
+			"total": round(total, 2), "by_component": {k: round(v, 2) for k, v in by_component.items()},
+			"failed_components": sorted(failed_components),
+			"reexam_mode": "component" if replace_component and any(c.get("substitute_for") for c in reexam_configs or []) else "course",
+			"reexam_total": round(reexam_total, 2) if taken else None, "reexam_counts": reexam_counts,
+		})
 	# Updated grade uses Re Exam Composition when the schema is configured for it
 	updated_grade = _lookup_grade(grade_schema, updated_final_marks, use_reexam=True) if grade_schema else ""
 	if grade_schema and (reexam_failed if reexam_counts else failed_components):
@@ -2135,6 +2162,10 @@ def compute_student_result(course, exam_plan, entries, attendance_status=None,
 	if improvement_applied and improvement_marks > updated_final_marks:
 		updated_final_marks = improvement_marks
 		updated_grade = _lookup_grade(grade_schema, improvement_marks) if grade_schema else ""
+	if explain is not None:
+		explain.update({"improvement_marks": improvement_marks or None,
+		                "improvement_counts": bool(improvement_applied and improvement_marks >= updated_final_marks),
+		                "updated_final_marks": round(updated_final_marks, 2), "updated_grade": updated_grade, "grade": grade})
 
 	# Re-exam grade — the grade the re-exam attempt itself maps to (mirrors how
 	# improvement_grade is looked up from the raw improvement_marks alone),
@@ -2162,6 +2193,29 @@ def compute_student_result(course, exam_plan, entries, attendance_status=None,
 		"improvement_applied": improvement_applied,
 		"improved":           bool(improvement_applied or updated_final_marks > total),
 	}
+
+
+@frappe.whitelist()
+def get_marks_breakdown(course, exam_plan, student):
+	"""How a student's Updated Final Marks were worked out (desk only)."""
+	_check_access()
+	scm = frappe.db.get_value(
+		"Student Course Marks", {"course": course, "exam_plan": exam_plan, "student": student},
+		["name", "attendance_status", "improvement_marks", "total_marks"], as_dict=True,
+	)
+	if not scm:
+		frappe.throw(_("No marks record for this student."))
+	entries = frappe.get_all(
+		"Student Marks Entry", filters={"parent": scm.name, "parenttype": "Student Course Marks"},
+		fields=["component", "assessment_type", "marks", "moderated_marks", "revaluation_marks"],
+	)
+	explain = {}
+	compute_student_result(course, exam_plan, entries, scm.attendance_status, scm.improvement_marks, scm.total_marks, explain=explain)
+	csa = frappe.db.get_value("Course Schema Assignment", {"course": course, "exam_plan": exam_plan},
+	                          ["evaluation_schema", "grade_schema"], as_dict=True) or {}
+	explain.update(evaluation_schema=csa.get("evaluation_schema"), grade_schema=csa.get("grade_schema"),
+	               absent=(scm.attendance_status or "").lower() == "absent")
+	return explain
 
 
 def _failed_grade(grade_schema_name, use_reexam=False):

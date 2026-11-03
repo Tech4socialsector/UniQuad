@@ -164,7 +164,7 @@
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2026-10-29 10:00:00.000000",
+ "modified": "2026-11-02 14:26:53.094048",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "FA MFA Application",
@@ -247,6 +247,55 @@
    "permlevel": 2,
    "read": 1,
    "role": "slcm_Faculty"
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "AAD",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "AAD"
+  },
+  {
+   "permlevel": 2,
+   "read": 1,
+   "role": "AAD"
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "AAD Staff",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "AAD Staff"
+  },
+  {
+   "permlevel": 2,
+   "read": 1,
+   "role": "AAD Staff"
   }
  ],
  "row_format": "Dynamic",

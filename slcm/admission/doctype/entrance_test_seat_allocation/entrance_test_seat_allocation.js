@@ -31,10 +31,18 @@ frappe.ui.form.on("Entrance Test Seat Allocation", {
   },
 
   download_admit_card: function (frm) {
+    if (frm.doc.is_international_applicant === 1) {
+      frappe.show_alert({ message: __("Admit Card is not applicable for international online exams."), indicator: "orange" });
+      return;
+    }
     _handle_admit_card_download(frm, false);
   },
 
   re_download_admit_card: function (frm) {
+    if (frm.doc.is_international_applicant === 1) {
+      frappe.show_alert({ message: __("Admit Card is not applicable for international online exams."), indicator: "orange" });
+      return;
+    }
     _handle_admit_card_download(frm, true);
   },
 
@@ -1064,11 +1072,9 @@ function _calculate_total_and_percentage(frm) {
 
 function _handle_international_applicant_visibility(frm) {
   const is_intl = frm.doc.is_international_applicant === 1;
-  // Hide the tab "Seat Allocation"
-  frm.set_df_property("tab_allocation", "hidden", is_intl ? 1 : 0);
 
-  // Hide the individual fields in that tab
-  const fields = [
+  // Hide physical centre/room/seat and admit card fields for international applicants
+  const physical_fields = [
     "entrance_test_provider",
     "assigned_preferences",
     "center_name",
@@ -1080,7 +1086,17 @@ function _handle_international_applicant_visibility(frm) {
     "seat_number",
     "admit_card_download"
   ];
-  fields.forEach(f => {
+  physical_fields.forEach(f => {
     frm.set_df_property(f, "hidden", is_intl ? 1 : 0);
+  });
+
+  // Ensure online test section and fields are displayed for international applicants
+  const online_fields = [
+    "section_break_online_exam",
+    "online_test_link",
+    "online_test_instructions"
+  ];
+  online_fields.forEach(f => {
+    frm.set_df_property(f, "hidden", is_intl ? 0 : 1);
   });
 }

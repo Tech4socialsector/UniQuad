@@ -537,9 +537,10 @@ def get_context(context):
 
         # ── Payment gateway availability ──────────────────────────────────────
         try:
-            context.payment_enabled = bool(
-                frappe.db.get_single_value("Razorpay Settings", "api_key")
-            )
+            # Either portal gateway (Razorpay / Easebuzz) being set up enables online payment;
+            # each charge then goes through its own configured gateway.
+            from slcm.slcm.fee.payment_gateway import EASEBUZZ, RAZORPAY, is_ready
+            context.payment_enabled = is_ready(RAZORPAY) or is_ready(EASEBUZZ)
         except Exception:
             context.payment_enabled = False
         # Admin preview is read-only: payments need a real parent session

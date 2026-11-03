@@ -10,7 +10,7 @@
  "idx": 0,
  "is_standard": "Yes",
  "letter_head": null,
- "modified": "2026-02-09 12:09:45.782420",
+ "modified": "2026-11-02 14:30:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Comprehensive Attendance Report",
@@ -24,7 +24,9 @@
   {"role": "slcm_Faculty"},
   {"role": "slcm_Programme Chair"},
   {"role": "slcm_Registrar"},
-  {"role": "slcm_REGO Officer"}
+  {"role": "slcm_REGO Officer"},
+  {"role": "AAD"},
+  {"role": "AAD Staff"}
  ],
  "timeout": 0
 }

@@ -260,7 +260,9 @@ def _should_post(cfg, key, src, already_posted=False):
 			return True
 		# Only settle money the bridge itself parked in the clearing account.
 		receipt_dt, receipt = settlement_receipt(src)
-		return bool(receipt) and bool(live_journal_entry(receipt_dt, receipt))
+		if not (receipt and live_journal_entry(receipt_dt, receipt)):
+			return False
+		return receipt_dt != "Fee Payment" or _student_settlement_matches(src)
 	if key == "FLE Settlement":
 		if src.settlement_status != "processed" or not cfg.slcm_gateway_charges_account:
 			return False
@@ -278,6 +280,29 @@ def _should_post(cfg, key, src, already_posted=False):
 			return False
 		# Only release money the bridge itself put into Unallocated Fee Receipts.
 		return bool(live_journal_entry("Student Credit Note", src.parent))
+	return False
+
+
+def _student_settlement_matches(pr):
+	"""A student payment's settlement clears the gateway's full capture, but only its Fee Payments were parked in
+	the clearing account: a Pay All that also paid re-exams, or a capture booked short, would over-clear it.
+	Such settlements wait for manual posting (flagged once a day) instead."""
+	ids = [i for i in (pr.get("razorpay_payment_id"), pr.get("transaction_id")) if i]
+	booked = flt(frappe.db.sql(
+		"""select sum(amount) from `tabFee Payment`
+		where reference_number in %(ids)s and docstatus = 1 and payment_mode = 'Online Payment'""",
+		{"ids": ids or [""]},
+	)[0][0])
+	if abs(booked - flt(pr.amount)) <= 0.01:
+		return True
+	flag = f"slcm_erp_settlement_mismatch:{pr.name}"
+	if not frappe.cache().get_value(flag):
+		frappe.cache().set_value(flag, 1, expires_in_sec=86400)
+		frappe.log_error(
+			f"{pr.name}: payment ₹{flt(pr.amount):,.2f}, Fee Payments booked ₹{booked:,.2f}. The settlement was not "
+			"posted automatically: post the difference (re-exam / transcript / unallocated money) by hand.",
+			"SLCM ERPNext settlement needs manual posting",
+		)
 	return False
 
 

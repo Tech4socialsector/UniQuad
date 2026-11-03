@@ -70,7 +70,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-01-13 12:00:00.000000",
+ "modified": "2026-11-02 17:31:53.140876",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Hostel Room",
@@ -91,6 +91,14 @@
   {
    "read": 1,
    "role": "slcm_Student"
+  },
+  {
+   "role": "AAD",
+   "select": 1
+  },
+  {
+   "role": "AAD Staff",
+   "select": 1
   }
  ],
  "sort_field": "modified",

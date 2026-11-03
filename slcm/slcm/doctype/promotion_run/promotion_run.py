@@ -17,7 +17,7 @@ from slcm.slcm.page.promotion_management.promotion_management import (
 )
 
 BATCH_SIZE = 25
-ALLOWED_ROLES = ("System Manager", "slcm_Academic Incharge")
+ALLOWED_ROLES = ("System Manager", "slcm_Academic Incharge", "AAD", "AAD Staff")
 
 
 def _target_exists(enrollment, target_academic_year):

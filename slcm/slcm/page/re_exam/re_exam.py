@@ -93,14 +93,14 @@ def get_re_exam_setting(exam_plan, course):
 	row = frappe.db.get_value(
 		"Re Exam Course Setting",
 		{"exam_plan": exam_plan, "course": course},
-		["name", "re_exam_fee", "deadline_from", "deadline_to"],
+		["name", "re_exam_fee", "deadline_from", "deadline_to", "payment_gateway"],
 		as_dict=True,
 	)
 	return row or {}
 
 
 @frappe.whitelist()
-def save_re_exam_setting(exam_plan, course, re_exam_fee=None, deadline_from=None, deadline_to=None):
+def save_re_exam_setting(exam_plan, course, re_exam_fee=None, deadline_from=None, deadline_to=None, payment_gateway=None):
 	_check_access()
 	if not exam_plan or not course:
 		frappe.throw("Exam Plan and Course are required.")
@@ -122,6 +122,8 @@ def save_re_exam_setting(exam_plan, course, re_exam_fee=None, deadline_from=None
 	doc.re_exam_fee   = re_exam_fee   or None
 	doc.deadline_from = deadline_from or None
 	doc.deadline_to   = deadline_to   or None
+	if payment_gateway:
+		doc.payment_gateway = payment_gateway
 	doc.save(ignore_permissions=True)
 	frappe.db.commit()
 	return {"name": doc.name}
@@ -461,8 +463,8 @@ def mark_re_exam_paid(registration_name, payment_reference=""):
 
 
 @frappe.whitelist()
-def bulk_save_re_exam_setting(exam_plan, re_exam_fee=None, deadline_from=None, deadline_to=None, courses=None):
-	"""Apply the same fee + deadline to selected (or all) courses under an exam plan."""
+def bulk_save_re_exam_setting(exam_plan, re_exam_fee=None, deadline_from=None, deadline_to=None, courses=None, payment_gateway=None):
+	"""Apply the same fee + deadline (+ payment gateway) to selected (or all) courses under an exam plan."""
 	_check_access()
 	import json as _json
 	if not exam_plan:
@@ -498,6 +500,8 @@ def bulk_save_re_exam_setting(exam_plan, re_exam_fee=None, deadline_from=None, d
 		doc.re_exam_fee   = re_exam_fee   or None
 		doc.deadline_from = deadline_from or None
 		doc.deadline_to   = deadline_to   or None
+		if payment_gateway:
+			doc.payment_gateway = payment_gateway
 		doc.save(ignore_permissions=True)
 		updated += 1
 	frappe.db.commit()

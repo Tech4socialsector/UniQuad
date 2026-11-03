@@ -6,6 +6,8 @@ import os
 from frappe.model.document import Document
 from frappe.utils import flt, add_days, getdate, now_datetime
 
+from slcm.permissions import AAD_ROLES
+
 def assign_round_robin_authority(config_doc, authority_table_fieldname, last_index_fieldname, programme):
 	"""
 	Mirrors slcm.pace.assignment_logic.assign_verifier_round_robin.
@@ -341,8 +343,10 @@ def get_permission_query_conditions(user):
 	roles = frappe.get_roles(user)
 	conditions = []
 
-	if "AAD" in roles:
-		conditions.append(f"`tabStudent Attendance Condonation`.aad_approver = {frappe.db.escape(user)}")
+	# AAD / AAD Staff see every condonation; deciding is still limited to the
+	# assigned aad_approver (see aad_decision)
+	if AAD_ROLES & set(roles):
+		return ""
 
 	if "Programme Chair" in roles:
 		conditions.append(f"`tabStudent Attendance Condonation`.programme_chair_approver = {frappe.db.escape(user)}")
@@ -367,7 +371,7 @@ def has_permission(doc, user=None, permission_type=None):
 
 	roles = frappe.get_roles(user)
 
-	if "AAD" in roles and doc.aad_approver == user:
+	if AAD_ROLES & set(roles):
 		return True
 	if "Programme Chair" in roles and doc.programme_chair_approver == user:
 		return True

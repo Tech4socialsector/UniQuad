@@ -172,7 +172,7 @@
   {
    "child": 1,
    "collapsible": 1,
-   "icon": "bar-chart-2",
+   "icon": "chart-no-axes-column",
    "indent": 0,
    "keep_closed": 0,
    "label": "Daily Application Summary",

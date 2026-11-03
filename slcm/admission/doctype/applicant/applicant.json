@@ -658,9 +658,9 @@
   },
   {
    "fieldname": "source_of_information",
-   "fieldtype": "Select",
+   "fieldtype": "Autocomplete",
    "label": "Where did you hear about the programme?",
-   "options": "\nNLSIU Website\nNLSIU Students, Faculty or Alumni\nYoutube\nFacebook / Meta\nLinkedin\nX (Twitter)\nInstagram\nEmail\nNewspaper Advertisement\nOthers",
+   "options": "\nEmail\nFacebook / Meta\nInstagram\nLinkedin\nNewspaper Advertisement\nNLSIU Students, Faculty or Alumni\nNLSIU Website\nOthers\nX (Twitter)\nYoutube",
    "reqd": 1
   },
   {
@@ -1351,8 +1351,8 @@
    "link_fieldname": "applicant"
   }
  ],
- "make_attachments_public": 0,
- "modified": "2026-11-03 12:00:00.000000",
+ "make_attachments_public": 1,
+ "modified": "2026-11-03 14:56:13.718088",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Applicant",

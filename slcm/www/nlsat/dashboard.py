@@ -215,34 +215,56 @@ def get_context(context):
                     filters={"applicant": app.name},
                     fields=["entrance_test_name", "center_name",
                             "center_address", "seat_number",
-                            "allocation_status", "name"],
+                            "allocation_status", "name",
+                            "seat_allocation_published",
+                            "re_seat_allocation_published",
+                            "is_rescheduled", "entrance_test_status",
+                            "is_international_applicant", "allocation_date",
+                            "start_time", "end_time",
+                            "online_test_link", "online_test_instructions"],
                     order_by="creation desc", limit=1,
                     ignore_permissions=True
                 )
                 if etrows:
                     et = etrows[0]
-                    test_name = et.get("entrance_test_name") or ""
-                    test_date = ""
-                    test_time = ""
-                    if test_name:
-                        try:
-                            td = frappe.get_doc("Entrance Test List", test_name, ignore_permissions=True)
-                            test_date = frappe.utils.format_date(str(td.get("test_date") or "")[:10], "MMMM d, yyyy") if td.get("test_date") else ""
-                            test_time = str(td.get("test_time") or "")
-                        except Exception: pass
-                    
-                    entrance_tests.append({
-                        "app_id": app.name,
-                        "program_name": app.program_name,
-                        "test_name": test_name,
-                        "test_date": test_date,
-                        "test_time": test_time,
-                        "center_name": et.get("center_name") or "",
-                        "center_address": et.get("center_address") or "",
-                        "seat_number": (et.get("seat_number").split("-")[-1] if et.get("seat_number") else ""),
-                        "admit_status": et.get("allocation_status") or "",
-                        "admit_card_url": f"/api/method/slcm.admission.utils.web.download_admit_card?admit_card={et.get('name')}"
-                    })
+                    is_resched = (et.get("is_rescheduled") == 1 or et.get("entrance_test_status") == "Rescheduled")
+                    is_pub = bool(et.get("re_seat_allocation_published")) if is_resched else bool(et.get("seat_allocation_published"))
+
+                    if is_pub:
+                        test_name = et.get("entrance_test_name") or ""
+                        test_date = ""
+                        test_time = ""
+                        is_intl = bool(et.get("is_international_applicant"))
+
+                        if is_intl:
+                            if et.get("allocation_date"):
+                                test_date = frappe.utils.format_date(str(et.get("allocation_date"))[:10], "MMMM d, yyyy")
+                            if et.get("start_time"):
+                                start_fmt = frappe.utils.format_time(et.get("start_time"), "hh:mm a")
+                                end_fmt = frappe.utils.format_time(et.get("end_time"), "hh:mm a") if et.get("end_time") else ""
+                                test_time = f"{start_fmt} - {end_fmt}" if end_fmt else start_fmt
+                        elif test_name:
+                            try:
+                                td = frappe.get_doc("Entrance Test List", test_name, ignore_permissions=True)
+                                test_date = frappe.utils.format_date(str(td.get("test_date") or "")[:10], "MMMM d, yyyy") if td.get("test_date") else ""
+                                test_time = str(td.get("test_time") or "")
+                            except Exception: pass
+                        
+                        entrance_tests.append({
+                            "app_id": app.name,
+                            "program_name": app.program_name,
+                            "test_name": test_name,
+                            "test_date": test_date,
+                            "test_time": test_time,
+                            "is_international_applicant": 1 if is_intl else 0,
+                            "online_test_link": et.get("online_test_link") or "",
+                            "online_test_instructions": et.get("online_test_instructions") or "",
+                            "center_name": "" if is_intl else (et.get("center_name") or ""),
+                            "center_address": "" if is_intl else (et.get("center_address") or ""),
+                            "seat_number": "" if is_intl else (et.get("seat_number").split("-")[-1] if et.get("seat_number") else ""),
+                            "admit_status": et.get("allocation_status") or "",
+                            "admit_card_url": "" if is_intl else f"/api/method/slcm.admission.utils.web.download_admit_card?admit_card={et.get('name')}"
+                        })
             except Exception: pass
 
             # Get Applied Scholarships

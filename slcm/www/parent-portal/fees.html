@@ -1473,13 +1473,34 @@ body.pp-dark .ppf-toast-info    { color: #7cc4f2 !important; border-color: rgba(
     if (confirmBtn) confirmBtn.disabled = true;
     ppfBulkSheetClose();
     setBulkBusy(true);
-    showOverlay('Creating payment order…');
+    _ppfBulkOrder(names, '');
+  };
 
+  /* Easebuzz-collected charges: leave for the hosted checkout (the page stays busy meanwhile) */
+  function viaHostedCheckout(order) {
+    if (!window.SlcmGateway || !SlcmGateway.isRedirect(order)) return false;
+    showOverlay('Redirecting to secure payment…');
+    SlcmGateway.redirect(order);
+    return true;
+  }
+
+  /* One checkout for the given demands; demands collected through different gateways come back
+     as a split, and the parent pays one part (one gateway) at a time. */
+  function _ppfBulkOrder(names, gateway) {
+    showOverlay('Creating payment order…');
     ppfCall(
       'slcm.api.student_payment.parent_create_bulk_demand_payment_order',
-      { fee_demand_names: JSON.stringify(names), student_name: STUDENT },
+      { fee_demand_names: JSON.stringify(names), student_name: STUDENT, payment_gateway: gateway || '' },
       function (r) {
         var order = r && r.message;
+        if (window.SlcmGateway && SlcmGateway.isSplit(order)) {
+          hideOverlay();
+          SlcmGateway.chooseSplit(order,
+            function (g) { _ppfBulkOrder(g.demand_names, g.gateway); },
+            function () { setBulkBusy(false); });
+          return;
+        }
+        if (viaHostedCheckout(order)) return;
         if (!order || !order.order_id) {
           hideOverlay(); setBulkBusy(false);
           toast('Error', 'Could not create payment order. Please try again.', 'error');
@@ -1492,7 +1513,7 @@ body.pp-dark .ppf-toast-info    { color: #7cc4f2 !important; border-color: rgba(
             toast('Unavailable', le || 'Payment gateway could not load.', 'error');
             return;
           }
-          _ppfLaunchBulk(order, names);
+          _ppfLaunchBulk(order, order.demand_names || names);
         });
       },
       function (e) {
@@ -1500,7 +1521,7 @@ body.pp-dark .ppf-toast-info    { color: #7cc4f2 !important; border-color: rgba(
         toast('Error', e || 'Could not create payment order.', 'error');
       }
     );
-  };
+  }
 
   function _ppfLaunchBulk(order, names) {
     /* Track whether payment.failed has already fired so ondismiss doesn't
@@ -1606,6 +1627,7 @@ body.pp-dark .ppf-toast-info    { color: #7cc4f2 !important; border-color: rgba(
       function (r) {
         hideOverlay();
         if (!r || !r.message) { setBusy(invName, false); toast('Error', 'Could not initiate payment. Please try again.', 'error'); return; }
+        if (viaHostedCheckout(r.message)) return;
         /* stays busy until Razorpay is dismissed, fails or succeeds */
         openRzp(r.message, invName);
       },

@@ -984,6 +984,11 @@ body.sp-dark .rx-toast {
           setTimeout(function () { window.location.reload(); }, 2500);
           return;
         }
+        if (window.SlcmGateway && SlcmGateway.isRedirect(r.message)) {
+          showOverlay('Redirecting to secure payment…');
+          SlcmGateway.redirect(r.message);   // Easebuzz hosted checkout; returns here with the outcome
+          return;
+        }
         // Attach identifiers so _openModal can update the correct card
         r.message.exam_plan = examPlan;
         r.message.course    = course;

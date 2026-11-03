@@ -4,11 +4,12 @@ from slcm.permissions import (
     _get_faculty_classes,
     _get_faculty_assigned_students,
     _FULL_ACCESS_ROLES,
+    AAD_ROLES,
 )
 
 
 def _is_unrestricted(roles):
-    return bool(roles & _FULL_ACCESS_ROLES) or "slcm_Programme Chair" in roles
+    return bool(roles & (_FULL_ACCESS_ROLES | AAD_ROLES)) or "slcm_Programme Chair" in roles
 
 
 def _faculty_scope(user):

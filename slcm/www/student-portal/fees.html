@@ -581,7 +581,7 @@ body.sp-dark .fee-modal-body [style*="color:#475569"] { color: var(--sp-text-2) 
 <section class="spf-card spf-student fade-in" aria-label="Student">
   <div class="spf-avatar">
     {% if student_photo %}<img src="{{ student_photo }}" alt="" data-fallback="{{ student_initial }}">
-    {% else %}<span aria-hidden="true">{{ student_initial }}</span>{% endif %}
+    {% else %}<svg class="sp-user-icon" viewBox="0 0 24 24" width="60%" height="60%" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>{% endif %}
   </div>
   <div class="spf-student-main">
     <div class="spf-student-name-row">
@@ -1148,6 +1148,14 @@ body.sp-dark .fee-modal-body [style*="color:#475569"] { color: var(--sp-text-2) 
     document.head.appendChild(s);
   }
 
+  /* Easebuzz-collected charges: leave for the hosted checkout (the page stays locked meanwhile) */
+  function viaHostedCheckout(order) {
+    if (!window.SlcmGateway || !SlcmGateway.isRedirect(order)) return false;
+    showOverlay('Redirecting to secure payment…');
+    SlcmGateway.redirect(order);
+    return true;
+  }
+
   /* ── Programme fee: Pay Outstanding (creates/uses the invoice) ─ */
   window.spPayFromStudentMaster = function (btn) {
     btn = btn || document.getElementById('sp-sm-pay-btn') || document.getElementById('sp-sm-pay-btn-empty');
@@ -1156,6 +1164,7 @@ body.sp-dark .fee-modal-body [style*="color:#475569"] { color: var(--sp-text-2) 
     spCall('slcm.api.student_payment.ensure_invoice_and_create_order', {},
       function (r) { hideOverlay();
         if (!r || !r.message) { unlockPay(); toast('Error', 'Could not create invoice. Please try again.', 'error'); return; }
+        if (viaHostedCheckout(r.message)) return;
         openRzp(r.message, r.message.invoice_name); },
       function (e) { hideOverlay(); unlockPay(); toast('Error', e || 'Something went wrong.', 'error'); });
   };
@@ -1169,6 +1178,7 @@ body.sp-dark .fee-modal-body [style*="color:#475569"] { color: var(--sp-text-2) 
     spCall('slcm.api.student_payment.create_payment_order', { invoice_name: name },
       function (r) { hideOverlay();
         if (!r || !r.message) { unlockPay(); toast('Error', 'Could not initiate payment.', 'error'); return; }
+        if (viaHostedCheckout(r.message)) return;
         openRzp(r.message, name); },
       function (e) { hideOverlay(); unlockPay(); toast('Error', e || 'Something went wrong.', 'error'); });
   };
@@ -1233,6 +1243,7 @@ body.sp-dark .fee-modal-body [style*="color:#475569"] { color: var(--sp-text-2) 
       function (r) { hideOverlay();
         if (!r || !r.message) { unlockPay(); toast('Error', 'Could not initiate payment.', 'error'); return; }
         var order = r.message;
+        if (viaHostedCheckout(order)) return;
         ensureRzp(function (le) {
           if (le || typeof Razorpay === 'undefined') { unlockPay(); toast('Unavailable', le || 'Payment gateway could not load.', 'error'); return; }
           var rzp = new Razorpay({
@@ -1296,19 +1307,33 @@ body.sp-dark .fee-modal-body [style*="color:#475569"] { color: var(--sp-text-2) 
     if (confirmBtn) confirmBtn.disabled = true;
     spBulkSheetClose();
     if (!lockPay(btn)) return;
+    _bulkOrder(names, rex, '');
+  };
+  /* One checkout for the given charges; charges collected through different gateways come back
+     as a split, and the payer pays one part (one gateway) at a time. */
+  function _bulkOrder(names, rex, gateway) {
     showOverlay('Creating payment order…');
-    spCall('slcm.api.student_payment.create_bulk_demand_payment_order', { fee_demand_names: JSON.stringify(names), re_exam_registrations: JSON.stringify(rex) },
+    spCall('slcm.api.student_payment.create_bulk_demand_payment_order',
+      { fee_demand_names: JSON.stringify(names), re_exam_registrations: JSON.stringify(rex), payment_gateway: gateway || '' },
       function (r) {
         var order = r && r.message;
+        if (window.SlcmGateway && SlcmGateway.isSplit(order)) {
+          hideOverlay();
+          SlcmGateway.chooseSplit(order,
+            function (g) { _bulkOrder(g.demand_names, g.re_exam_registrations, g.gateway); },
+            function () { unlockPay(); });
+          return;
+        }
+        if (viaHostedCheckout(order)) return;
         if (!order || !order.order_id) { hideOverlay(); unlockPay(); toast('Error', 'Could not create payment order. Please try again.', 'error'); return; }
         ensureRzp(function (le) {
           hideOverlay();
           if (le) { unlockPay(); toast('Unavailable', le, 'error'); return; }
-          _launchBulk(order, names, rex);
+          _launchBulk(order, order.demand_names || names, order.re_exam_registrations || rex);
         });
       },
       function (e) { hideOverlay(); unlockPay(); toast('Error', e || 'Could not create payment order.', 'error'); });
-  };
+  }
   function _launchBulk(order, names, rex) {
     rex = rex || [];
     var failedAlready = false;
@@ -1354,6 +1379,7 @@ body.sp-dark .fee-modal-body [style*="color:#475569"] { color: var(--sp-text-2) 
     spCall('slcm.api.student_payment.create_demand_payment_order', { fee_demand_name: demandName },
       function (r) {
         var order = r && r.message;
+        if (viaHostedCheckout(order)) return;
         if (!order || !order.order_id) { unlockPay(); toast('Error', 'Could not create payment order.', 'error'); return; }
         ensureRzp(function (err) {
           if (err) { unlockPay(); toast('Error', 'Could not load payment gateway.', 'error'); return; }
@@ -1565,7 +1591,7 @@ body.sp-dark .fee-modal-body [style*="color:#475569"] { color: var(--sp-text-2) 
 
   /* Broken photo → initial */
   document.querySelectorAll('.spf-avatar img').forEach(function (img) {
-    function fb() { if (img.parentNode) img.parentNode.textContent = img.getAttribute('data-fallback') || ''; }
+    function fb() { if (img.parentNode) img.outerHTML = window.SP_USER_ICON; }
     if (img.complete && img.naturalWidth === 0) fb(); else img.addEventListener('error', fb);
   });
 

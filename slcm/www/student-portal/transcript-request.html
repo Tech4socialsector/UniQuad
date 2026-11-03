@@ -1133,9 +1133,13 @@ function proceedToPayment() {
 
   spCall(
     'slcm.api.transcript_request.initiate_payment',
-    { request_name: _req.name },
+    { request_name: _req.name, gateway_aware: 1 },
     function(order) {
       if (!order) { _payFailed('Could not create payment order. Please try again.'); return; }
+      if (window.SlcmGateway && SlcmGateway.isRedirect(order)) {
+        SlcmGateway.redirect(order);   // Easebuzz hosted checkout; returns here with the outcome
+        return;
+      }
       if (typeof Razorpay === 'undefined') {
         _loadRzpScript(order);
       } else {
@@ -1221,6 +1225,7 @@ function _openRzpCheckout(order) {
         error_reason:       err.reason || '',
         error_source:       err.source || '',
         error_step:         err.step || '',
+        payment_id:         (err.metadata || {}).payment_id || '',
       }, function(){}, function(){});
     }
     _payFailed(err.description || 'Payment failed. Please try again.');

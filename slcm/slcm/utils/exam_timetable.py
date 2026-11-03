@@ -27,8 +27,14 @@ def _slot(row):
 	return f"{str(row.start_time)[:5]}–{str(row.end_time)[:5]}"
 
 
-def get_exam_bookings(venue=None, start_date=None, end_date=None, exclude_plan=None):
-	"""Exam Course Schedule rows (with date, times and venue) of every Exam Plan."""
+# Exam Plan child tables holding exam sittings, by kind
+EXAM_TABLES = {"exam": "Exam Course Schedule", "reexam": "Exam Reexam Schedule"}
+
+
+def get_exam_bookings(venue=None, start_date=None, end_date=None, exclude_plan=None, exclude_kind=None):
+	"""Exam and re-exam sittings (with date, times and venue) of every Exam Plan.
+	exclude_plan with exclude_kind leaves out that plan's rows of that kind only;
+	exclude_plan alone leaves out all of the plan's rows."""
 	conditions = ["ecs.parenttype = 'Exam Plan'", "ecs.exam_date IS NOT NULL",
 	              "ecs.start_time IS NOT NULL", "ecs.end_time IS NOT NULL", "IFNULL(ecs.venue, '') != ''"]
 	values = {}
@@ -41,20 +47,24 @@ def get_exam_bookings(venue=None, start_date=None, end_date=None, exclude_plan=N
 	if end_date:
 		conditions.append("ecs.exam_date <= %(end)s")
 		values["end"] = getdate(end_date)
-	if exclude_plan:
-		conditions.append("ecs.parent != %(plan)s")
-		values["plan"] = exclude_plan
-	return frappe.db.sql(
-		f"""
-		SELECT ecs.parent AS exam_plan, ecs.name, ecs.idx, ecs.course, ecs.exam_date,
-		       ecs.start_time, ecs.end_time, ecs.venue, ecs.invigilator, ep.term
-		FROM `tabExam Course Schedule` ecs
-		JOIN `tabExam Plan` ep ON ep.name = ecs.parent
-		WHERE {" AND ".join(conditions)}
-		""",
-		values,
-		as_dict=True,
-	)
+	rows = []
+	for kind, table in EXAM_TABLES.items():
+		cond = list(conditions)
+		if exclude_plan and (not exclude_kind or exclude_kind == kind):
+			cond.append("ecs.parent != %(plan)s")
+			values["plan"] = exclude_plan
+		rows += frappe.db.sql(
+			f"""
+			SELECT ecs.parent AS exam_plan, ecs.name, ecs.idx, ecs.course, ecs.exam_date,
+			       ecs.start_time, ecs.end_time, ecs.venue, ecs.invigilator, ep.term, %(kind)s AS kind
+			FROM `tab{table}` ecs
+			JOIN `tabExam Plan` ep ON ep.name = ecs.parent
+			WHERE {" AND ".join(cond)}
+			""",
+			dict(values, kind=kind),
+			as_dict=True,
+		)
+	return rows
 
 
 def exam_booking_clash(venue, date, from_time, to_time):
@@ -95,6 +105,15 @@ def course_students(course, academic_term):
 	))
 
 
+def reexam_students(exam_plan, course):
+	"""Students registered (not cancelled) for the course's re-exam in the plan."""
+	return set(frappe.get_all(
+		"Re Exam Registration",
+		filters={"exam_plan": exam_plan, "course": course, "status": "Registered"},
+		pluck="student",
+	))
+
+
 def _faculty_label(faculty):
 	if not faculty:
 		return ""
@@ -102,9 +121,12 @@ def _faculty_label(faculty):
 	return " ".join(filter(None, [first, last])) or str(faculty)
 
 
-def check_exam_schedule(plan):
-	"""Check an Exam Plan's course schedule rows. Returns {"errors": [...],
-	"warnings": [...]}; each item is {"row", "course", "message"}."""
+def check_exam_schedule(plan, reexam=False):
+	"""Check an Exam Plan's course schedule rows (or, with reexam, its re-exam
+	rows). Returns {"errors": [...], "warnings": [...]}; each item is
+	{"row", "course", "message"}. Re-exams usually fall after the term, so the
+	term-dates rule is skipped for them, and their students are the ones
+	registered for the re-exam."""
 	from slcm.slcm.doctype.institutional_calendar.institutional_calendar import (
 		get_non_teaching_dates_in_range,
 	)
@@ -120,13 +142,14 @@ def check_exam_schedule(plan):
 			"Academic Term", plan.term, ["term_start_date", "term_end_date"]
 		) or (None, None)
 
-	rows = [r for r in plan.course_schedules if r.course]
+	kind = "reexam" if reexam else "exam"
+	rows = [r for r in (plan.reexam_schedules if reexam else plan.course_schedules) if r.course]
 	timed = []
 	for row in rows:
 		if row.start_time and row.end_time and to_timedelta(row.end_time) <= to_timedelta(row.start_time):
 			add(errors, row, _("End time must be after start time."))
 			continue
-		if row.exam_date and term_start and term_end and not (getdate(term_start) <= getdate(row.exam_date) <= getdate(term_end)):
+		if not reexam and row.exam_date and term_start and term_end and not (getdate(term_start) <= getdate(row.exam_date) <= getdate(term_end)):
 			add(errors, row, _("{0} is outside {1} ({2} – {3}).").format(
 				formatdate(row.exam_date), plan.term, formatdate(term_start), formatdate(term_end)))
 			continue
@@ -140,16 +163,24 @@ def check_exam_schedule(plan):
 	non_teaching = get_non_teaching_dates_in_range(dates[0], dates[-1])
 	students = {}
 
-	def students_of(course, term):
-		key = (course, term)
+	def students_of(course, term, row_kind=kind, exam_plan=plan.name):
+		key = (course, term, row_kind, exam_plan)
 		if key not in students:
-			students[key] = course_students(course, term) if term else set()
+			if row_kind == "reexam":
+				students[key] = reexam_students(exam_plan, course)
+			else:
+				students[key] = course_students(course, term) if term else set()
 		return students[key]
 
-	# Exams of other plans in the same dates (rooms, students, invigilators)
+	def students_of_row(r):
+		if r.get("other"):
+			return students_of(r.course, r.term, r.kind, r.exam_plan)
+		return students_of(r.course, plan.term)
+
+	# Other sittings on the same dates: other plans, and this plan's other kind (rooms, students, invigilators)
 	others = [
 		frappe._dict(r, idx=None, other=True)
-		for r in get_exam_bookings(start_date=dates[0], end_date=dates[-1], exclude_plan=plan.name)
+		for r in get_exam_bookings(start_date=dates[0], end_date=dates[-1], exclude_plan=plan.name, exclude_kind=kind)
 	]
 
 	for row in timed:
@@ -175,8 +206,7 @@ def check_exam_schedule(plan):
 			           if r is not row and r.venue == row.venue and getdate(r.exam_date) == day
 			           and _overlaps(row.start_time, row.end_time, r.start_time, r.end_time)]
 			seats = cint(row.seat_capacity) or cint(frappe.db.get_value("Venue Master", row.venue, "capacity"))
-			needed = len(students_of(row.course, plan.term).union(
-				*[students_of(r.course, r.term if r.get("other") else plan.term) for r in sharing]))
+			needed = len(students_of_row(row).union(*[students_of_row(r) for r in sharing]))
 			if seats and needed > seats:
 				together = _(" together with {0}").format(", ".join(sorted({r.course for r in sharing}))) if sharing else ""
 				add(errors, row, _("{0} students{1} but {2} has {3} seats.").format(needed, together, row.venue, seats))
@@ -193,16 +223,17 @@ def check_exam_schedule(plan):
 					break
 
 	# Same students in two exams at the same time (this plan, and other plans of the term)
-	pool = timed + [o for o in others if o.term == plan.term]
+	pool = timed + [o for o in others if o.term == plan.term or o.kind == "reexam" or reexam]
 	for i, a in enumerate(timed):
 		for b in pool[i + 1:]:
 			if getdate(a.exam_date) != getdate(b.exam_date) or a.course == b.course:
 				continue
 			if not _overlaps(a.start_time, a.end_time, b.start_time, b.end_time):
 				continue
-			common = students_of(a.course, plan.term) & students_of(b.course, plan.term)
+			common = students_of_row(a) & students_of_row(b)
 			if common:
-				where = _(" (Exam Plan {0})").format(b.exam_plan) if b.get("other") else ""
+				where = (_(" (re-exam)") if b.get("kind") == "reexam" else "") + (
+					_(" (Exam Plan {0})").format(b.exam_plan) if b.get("other") and b.exam_plan != plan.name else "")
 				add(errors, a, _("{0} student(s) also sit {1}{2} at {3} on {4}.").format(
 					len(common), b.course, where, _slot(b), formatdate(b.exam_date)))
 			if a.invigilator and a.invigilator == b.invigilator:
