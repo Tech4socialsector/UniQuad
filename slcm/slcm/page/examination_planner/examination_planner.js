@@ -122,7 +122,7 @@ class ExamPlanner {
 			const done = o.steps[s.key], open = this.is_open(i);
 			return `<button class="xp-step ${i === this.step ? 'on' : ''} ${open ? '' : 'locked'}" data-i="${i}">
 				<span class="xp-step-n">${i + 1}</span><span class="xp-step-t"><b>${s.label}</b><small>${s.hint}</small></span>
-				${done ? `<span class="xp-pill ok">${__('Done')}</span>` : open ? '' : `<span class="xp-pill warn">${__('Locked')}</span>`}</button>`;
+				${!open ? `<span class="xp-pill warn">${__('Locked')}</span>` : done ? `<span class="xp-pill ok">${__('Done')}</span>` : ''}</button>`;
 		}).join('');
 		this.$root.html(`
 			<div class="xp-head">
@@ -150,9 +150,9 @@ class ExamPlanner {
 	// ── 1. Plan & courses ──────────────────────────────────────────────
 	render_plan() {
 		call('get_mapping', { exam_plan: this.plan }).then((m) => {
-			this.$body.html(this.card(__('Course → schema mapping'),
-				__('Courses taught in the plan\'s term (from Classes). Unmapped courses are pre-filled from the course\'s last plan or the Examination Settings defaults; check them and save.'),
-				'Course Schema Assignment'));
+			this.$body.html(this.card(__('Map each course to its schemas'),
+				__('Every course taught this term needs an Evaluation Schema (how it is marked) and a Grading Schema (how marks become grades).'),
+				''));
 			const $c = this.$body.find('.xp-card-body');
 			const evs = m.evaluation_schemas.map((e) => e.name), gss = m.grade_schemas.map((g) => g.name);
 			const NEW = '__new__';
@@ -163,17 +163,38 @@ class ExamPlanner {
 			const missing = [!evs.length && 'Evaluation Schema', !gss.length && 'Grading Schema'].filter(Boolean);
 			const su = m.setup || {};
 			const setup_todo = !su.components || !su.assessment_types || missing.length;
-			const todo = m.courses.filter((c) => !(c.evaluation_schema && c.grade_schema)).length;
-			const rows = m.courses.map((c) => {
-				const ev = c.evaluation_schema || c.suggest_evaluation_schema || '', gs = c.grade_schema || c.suggest_grade_schema || '';
-				const saved = c.source === 'saved';
-				return `<tr data-course="${esc(c.course)}" data-saved-ev="${esc(c.evaluation_schema || '')}" data-saved-gs="${esc(c.grade_schema || '')}" class="${ev && gs ? '' : 'xp-flag'}">
-					<td><input type="checkbox" class="xp-sel"></td>
-					<td><b>${esc(c.course_code || c.course)}</b><br><small>${esc(c.course_name || '')}</small></td>
-					<td>${esc(c.programme || '')}</td><td class="num">${c.enrolled_students || 0}</td>
-					<td>${sel(evs, ev, 'xp-ev', 'Evaluation Schema')}</td><td>${sel(gss, gs, 'xp-gs', 'Grading Schema')}</td>
-					<td>${saved ? `<span class="xp-pill ok">${__('Saved')}</span>` : c.source ? `<span class="xp-pill info">${esc(c.source)}</span>` : `<span class="xp-pill bad">${__('Not mapped')}</span>`}</td></tr>`;
-			}).join('');
+			const by_course = {};
+			m.courses.forEach((c) => { by_course[c.course] = c; });
+			const mapped = m.courses.filter((c) => c.source === 'saved');
+			const unmapped = m.courses.filter((c) => c.source !== 'saved');
+			const why = (c) => (c.source || '').startsWith('last plan') ? __('Suggested from the last exam plan of this course')
+				: c.source === 'settings default' ? __('Suggested from the defaults in Examination Settings') : '';
+			const head = (c) => `<div class="xp-cr-name"><b>${esc(c.course_name || c.course)}</b>
+				<small>${esc(c.course_code || c.course)} · ${esc(c.programme || '')} · ${__('{0} students', [c.enrolled_students || 0])}</small></div>`;
+
+			const mapped_row = (c) => `<div class="xp-cr" data-course="${esc(c.course)}">
+				${head(c)}
+				<div class="xp-cr-view">
+					<span><small>${__('Evaluation')}</small><b>${esc(c.evaluation_schema)}</b></span>
+					<span><small>${__('Grading')}</small><b>${esc(c.grade_schema)}</b></span>
+					<span class="xp-pill ok">✓ ${__('Mapped')}</span>
+				</div>
+				<div class="xp-cr-edit" style="display:none">${sel(evs, c.evaluation_schema, 'xp-ev', 'Evaluation Schema')}${sel(gss, c.grade_schema, 'xp-gs', 'Grading Schema')}</div>
+				<div class="xp-cr-act">
+					<button class="btn btn-default btn-sm xp-change">${__('Change')}</button>
+					<button class="btn btn-default btn-sm xp-remove">${__('Remove')}</button>
+					<button class="btn btn-primary btn-sm xp-save-one" style="display:none">${__('Save')}</button>
+					<button class="btn btn-default btn-sm xp-cancel" style="display:none">${__('Cancel')}</button>
+				</div></div>`;
+			const unmapped_row = (c) => {
+				const ev = c.suggest_evaluation_schema || '', gs = c.suggest_grade_schema || '';
+				return `<div class="xp-cr todo" data-course="${esc(c.course)}">
+					${head(c)}
+					<div class="xp-cr-edit">${sel(evs, ev, 'xp-ev', 'Evaluation Schema')}${sel(gss, gs, 'xp-gs', 'Grading Schema')}
+						${why(c) ? `<small class="xp-why">${why(c)}</small>` : ''}</div>
+					<div class="xp-cr-act"><button class="btn btn-primary btn-sm xp-save-one">${__('Map')}</button></div></div>`;
+			};
+
 			const item = (n, done, title, hint, btn, cls, blocked) => `<li class="${done ? 'done' : ''}"><span class="xp-dot">${done ? '✓' : n}</span>
 				<div><b>${title}</b><p>${hint}</p></div><div class="xp-actions">${done ? `<span class="xp-pill ok">${done}</span>`
 					: `<button class="btn btn-sm btn-primary ${cls}" ${blocked ? `disabled title="${esc(blocked)}"` : ''}>${btn}</button>`}</div></li>`;
@@ -186,76 +207,90 @@ class ExamPlanner {
 					${item(3, evs.length && __('{0} created', [evs.length]), __('Evaluation Schema'), __('How a course is marked: its components and assessments.'), __('Create Evaluation Schema'), 'xp-new-es',
 						!(su.components && su.assessment_types) && __('Add components and assessment types first'))}
 					${item(4, gss.length && __('{0} created', [gss.length]), __('Grading Schema'), __('How marks become grades and grade points.'), __('Create Grading Schema'), 'xp-new-gs')}
-					</ol>`
-				: todo
-					? `<div class="xp-guide"><b>${__('Next')}</b><span>${__('Pick an Evaluation Schema and a Grade Schema for {0} course(s), then click Save mapping.', [todo])}</span></div>`
-					: `<div class="xp-guide ok"><b>${__('Done')}</b><span>${__('Every course is mapped. Go on to step 2, Exam timetable.')}</span></div>`;
-			$c.html(guide + `
-				<div class="xp-bar"><b>${this.o.counts.courses_mapped} / ${this.o.counts.courses_taught}</b> ${__('courses mapped')}
-					<span class="xp-grow"></span>
-					${missing.length ? '' : `<button class="btn btn-default btn-sm xp-new-es">${__('New Evaluation Schema')}</button>
-					<button class="btn btn-default btn-sm xp-new-gs">${__('New Grading Schema')}</button>`}</div>
-				<div class="xp-table"><table class="table table-sm"><thead><tr><th><input type="checkbox" class="xp-all"></th><th>${__('Course')}</th><th>${__('Programme')}</th><th>${__('Students')}</th>
-					<th>${__('Evaluation Schema')}</th><th>${__('Grade Schema')}</th><th>${__('Filled from')}</th></tr></thead><tbody>${rows || `<tr><td colspan="7">${__('No Classes in this term yet. Create Classes first (Programme Management).')}</td></tr>`}</tbody></table></div>
-				<div class="xp-bar xp-soft xp-bulk"><b class="xp-nsel"></b>${sel(evs, '', 'xp-bulk-ev', 'Evaluation Schema')}${sel(gss, '', 'xp-bulk-gs', 'Grading Schema')}
-					<button class="btn btn-default btn-sm xp-apply">${__('Apply to selected')}</button>
-					<button class="btn btn-default btn-sm xp-unmap">${__('Unmap selected')}</button></div>
-				<div class="xp-bar"><span class="xp-grow"></span><button class="btn btn-primary xp-save" ${m.courses.length ? '' : 'disabled'}>${__('Save mapping')}</button></div>`);
-			const sync_bulk = () => {
-				const n = $c.find('.xp-sel:checked').length;
-				$c.find('.xp-bulk').find('select, button').prop('disabled', !n);
-				$c.find('.xp-nsel').text(n ? __('{0} selected', [n]) : __('Tick courses above to change or unmap several at once'));
-			};
-			$c.find('.xp-all').on('change', (e) => { $c.find('.xp-sel').prop('checked', e.target.checked); sync_bulk(); });
-			$c.on('change', '.xp-sel', sync_bulk);
-			sync_bulk();
+					</ol>` : '';
+			const total = m.courses.length;
+			const progress = total ? `<div class="xp-map-progress"><b>${__('{0} of {1} courses mapped', [mapped.length, total])}</b>
+				<div class="xp-bar-track"><i style="width:${Math.round(mapped.length * 100 / total)}%"></i></div></div>` : '';
+			const suggested = unmapped.filter((c) => c.suggest_evaluation_schema && c.suggest_grade_schema).length;
+
+			$c.html(guide + (total ? `
+				<div class="xp-bar">${progress}<span class="xp-grow"></span>
+					${missing.length ? '' : `<button class="btn btn-default btn-sm xp-new-es">+ ${__('Evaluation Schema')}</button>
+					<button class="btn btn-default btn-sm xp-new-gs">+ ${__('Grading Schema')}</button>`}</div>
+				${unmapped.length ? `<div class="xp-cr-group"><div class="xp-cr-title"><h5>${__('Not mapped yet')} <span class="xp-count">${unmapped.length}</span></h5>
+					${suggested > 1 ? `<button class="btn btn-primary btn-sm xp-map-all">${__('Map all {0} as suggested', [suggested])}</button>` : ''}</div>
+					${unmapped.map(unmapped_row).join('')}</div>` : ''}
+				${mapped.length ? `<div class="xp-cr-group"><div class="xp-cr-title"><h5>${__('Mapped')} <span class="xp-count">${mapped.length}</span></h5></div>
+					${mapped.map(mapped_row).join('')}</div>` : ''}
+				${!unmapped.length ? `<div class="xp-next"><span>✓ ${__('Every course is mapped.')}</span>
+					<button class="btn btn-primary xp-go-next">${__('Continue to step 2: Exam timetable')} →</button></div>` : ''}`
+				: `<div class="xp-guide">${__('No Classes in this term yet. Create Classes first (Programme Management).')}</div>`));
+
 			$c.find('.xp-new-es').on('click', () => this.schema_dialog('Evaluation Schema'));
+			$c.find('.xp-new-gs').on('click', () => this.schema_dialog('Grading Schema'));
 			$c.find('.xp-add-comp').on('click', () => this.masters_dialog('Exam Component'));
 			$c.find('.xp-add-atype').on('click', () => this.masters_dialog('Exam Assessment Type'));
-			$c.find('.xp-new-gs').on('click', () => this.schema_dialog('Grading Schema'));
+			$c.find('.xp-go-next').on('click', () => { this.step = 1; this.refresh(); });
 			// A schema just made in the panel goes to every course still without one
 			Object.entries(this.prefill || {}).forEach(([doctype, name]) => {
-				$c.find(`tbody .xp-select[data-doctype="${doctype}"]`).filter((_, el) => !el.value).val(name).trigger('change');
+				$c.find(`.xp-cr.todo .xp-select[data-doctype="${doctype}"]`).filter((_, el) => !el.value).val(name);
 			});
 			this.prefill = {};
-			// "+ Create new…" in a dropdown opens the form; coming back refreshes the lists
+			// "+ Create new…" in a dropdown opens the panel; the new schema comes back pre-selected
 			$c.on('change', '.xp-select', (e) => {
-				if (e.target.value !== NEW) {
-					$(e.target).closest('tr').toggleClass('xp-flag', !($(e.target).closest('tr').find('.xp-ev').val() && $(e.target).closest('tr').find('.xp-gs').val()));
-					return;
-				}
+				if (e.target.value !== NEW) return;
 				e.target.value = '';
 				this.schema_dialog($(e.target).data('doctype'));
 			});
-			$c.find('.xp-apply').on('click', () => {
-				const ev = $c.find('.xp-bulk-ev').val(), gs = $c.find('.xp-bulk-gs').val();
-				$c.find('tbody tr').each((_, tr) => {
-					if (!$(tr).find('.xp-sel').prop('checked')) return;
-					if (ev) $(tr).find('.xp-ev').val(ev);
-					if (gs) $(tr).find('.xp-gs').val(gs);
-				});
+
+			const save = (rows, changed) => {
+				const go = (reason) => call('save_mapping', { exam_plan: this.plan, assignments: JSON.stringify(rows), reason: reason || '' })
+					.then(() => {
+						frappe.show_alert({ message: rows.length === 1 ? __('{0} mapped', [by_course[rows[0].course].course_name || rows[0].course]) : __('{0} courses mapped', [rows.length]), indicator: 'green' });
+						this.refresh();
+					});
+				if (changed && this.o.settings.require_change_reason) {
+					frappe.prompt({ fieldname: 'reason', fieldtype: 'Small Text', label: __('Why are you changing the schemas?'), reqd: 1 },
+						(v) => go(v.reason), __('Reason for change'), __('Save'));
+				} else go();
+			};
+			const row_values = ($r) => ({ course: $r.data('course'), evaluation_schema: $r.find('.xp-ev').val(), grade_schema: $r.find('.xp-gs').val() });
+
+			$c.find('.xp-save-one').on('click', (e) => {
+				const $r = $(e.currentTarget).closest('.xp-cr'), v = row_values($r);
+				if (!v.evaluation_schema || !v.grade_schema) {
+					frappe.show_alert({ message: __('Pick both an Evaluation Schema and a Grading Schema.'), indicator: 'orange' });
+					return;
+				}
+				const c = by_course[v.course];
+				const changed = c.source === 'saved' && (c.evaluation_schema !== v.evaluation_schema || c.grade_schema !== v.grade_schema);
+				if (c.source === 'saved' && !changed) { $r.find('.xp-cancel').trigger('click'); return; }
+				save([v], changed);
 			});
-			$c.find('.xp-unmap').on('click', () => {
-				const courses = $c.find('tbody tr').filter((_, tr) => $(tr).find('.xp-sel').prop('checked') && $(tr).data('saved-ev')).map((_, tr) => $(tr).data('course')).get();
-				if (!courses.length) { frappe.msgprint(__('Select saved courses to unmap.')); return; }
-				frappe.confirm(__('Remove the schemas of {0} course(s) from this plan?', [courses.length]),
-					() => call('unmap', { exam_plan: this.plan, courses: JSON.stringify(courses) }).then(() => this.refresh()));
+			$c.find('.xp-map-all').on('click', () => {
+				const rows = $c.find('.xp-cr.todo').map((_, r) => row_values($(r))).get().filter((v) => v.evaluation_schema && v.grade_schema);
+				frappe.confirm(__('Map {0} courses with the schemas shown?', [rows.length]), () => save(rows, false));
 			});
-			$c.find('.xp-save').on('click', () => {
-				const assignments = [], changed = [];
-				$c.find('tbody tr[data-course]').each((_, tr) => {
-					const $tr = $(tr), ev = $tr.find('.xp-ev').val(), gs = $tr.find('.xp-gs').val();
-					if (!ev && !gs) return;
-					if ($tr.data('saved-ev') && ($tr.data('saved-ev') !== ev || $tr.data('saved-gs') !== gs)) changed.push($tr.data('course'));
-					assignments.push({ course: $tr.data('course'), evaluation_schema: ev, grade_schema: gs });
-				});
-				if (!assignments.length) { frappe.msgprint(__('Pick schemas first.')); return; }
-				const save = (reason) => call('save_mapping', { exam_plan: this.plan, assignments: JSON.stringify(assignments), reason: reason || '' })
-					.then(() => { frappe.show_alert({ message: __('Mapping saved'), indicator: 'green' }); this.refresh(); });
-				if (changed.length && this.o.settings.require_change_reason) {
-					frappe.prompt({ fieldname: 'reason', fieldtype: 'Small Text', label: __('Reason for changing {0}', [changed.join(', ')]), reqd: 1 },
-						(v) => save(v.reason), __('Change reason'));
-				} else save();
+			$c.find('.xp-change').on('click', (e) => {
+				const $r = $(e.currentTarget).closest('.xp-cr');
+				$r.addClass('editing').find('.xp-cr-view, .xp-change, .xp-remove').hide();
+				$r.find('.xp-cr-edit, .xp-save-one, .xp-cancel').show();
+			});
+			$c.find('.xp-cancel').on('click', (e) => {
+				const $r = $(e.currentTarget).closest('.xp-cr'), c = by_course[$r.data('course')];
+				$r.find('.xp-ev').val(c.evaluation_schema);
+				$r.find('.xp-gs').val(c.grade_schema);
+				$r.removeClass('editing').find('.xp-cr-edit, .xp-save-one, .xp-cancel').hide();
+				$r.find('.xp-cr-view, .xp-change, .xp-remove').show();
+			});
+			$c.find('.xp-remove').on('click', (e) => {
+				const c = by_course[$(e.currentTarget).closest('.xp-cr').data('course')];
+				const warn = this.o.counts.students ? `<br><br>${__('Marks already entered for this course are kept, but they will not be graded until the course is mapped again.')}` : '';
+				frappe.confirm(`${__('Remove the schemas from <b>{0}</b>?', [esc(c.course_name || c.course)])}<br>${__('The course moves back to "Not mapped yet" and you can map it again at any time.')}${warn}`,
+					() => call('unmap', { exam_plan: this.plan, courses: JSON.stringify([c.course]) }).then(() => {
+						frappe.show_alert({ message: __('{0} removed', [c.course_name || c.course]), indicator: 'orange' });
+						this.refresh();
+					}));
 			});
 		});
 	}
@@ -378,7 +413,9 @@ class ExamPlanner {
 				'Exam Assessment Schedule'));
 			const $cards = this.$body.find('.xp-card-body');
 			const venue_opts = (v) => `<option value=""></option>` + t.venues.map((x) => `<option value="${esc(x.name)}" ${x.name === v ? 'selected' : ''}>${esc(x.name)} (${x.capacity || 0})</option>`).join('');
-			const fac_opts = (v) => `<option value=""></option>` + t.faculty.map((x) => `<option value="${esc(x.name)}" ${String(x.name) === String(v) ? 'selected' : ''}>${esc(x.label)}</option>`).join('');
+			const can_add_inv = frappe.model.can_create('Faculty');
+			const fac_opts = (v) => `<option value=""></option>` + t.faculty.map((x) => `<option value="${esc(x.name)}" ${String(x.name) === String(v) ? 'selected' : ''}>${esc(x.label)}</option>`).join('')
+				+ (can_add_inv ? `<option value="__new_invigilator__">+ ${__('Add new invigilator…')}</option>` : '');
 			const rows = t.rows.map((r, i) => `<tr data-i="${i}" data-course="${esc(r.course)}">
 				<td><b>${esc(r.course)}</b><br><small>${esc(r.course_name)}</small></td><td class="num">${r.students}</td>
 				<td><input type="date" class="form-control input-sm xp-d" value="${esc(r.exam_date || '')}"></td>
@@ -392,7 +429,7 @@ class ExamPlanner {
 				<div class="xp-table"><table class="table table-sm xp-tt"><thead><tr><th>${__('Course')}</th><th>${__('Students')}</th><th>${__('Date')}</th><th>${__('Start')}</th><th>${__('End')}</th>
 					<th>${__('Venue (seats)')}</th><th>${__('Seats')}</th><th>${__('Invigilator')}</th><th>${__('Check')}</th></tr></thead><tbody>${rows || `<tr><td colspan="9">${__('Map courses first.')}</td></tr>`}</tbody></table></div>
 				<div class="xp-issues"></div>
-				<div class="xp-bar"><button class="btn btn-default btn-sm xp-new-inv" title="${__('Invigilators are Faculty records. Save the timetable first: unsaved changes are lost when you leave.')}">+ ${__('Add invigilator')}</button>
+				<div class="xp-bar">${can_add_inv ? `<button class="btn btn-default btn-sm xp-new-inv">+ ${__('Add invigilator')}</button>` : ''}
 					<span class="xp-muted">${__('Invigilators come from Faculty.')}</span>
 					<span class="xp-grow"></span><button class="btn btn-default btn-sm xp-run-check">${__('Check')}</button>
 					<button class="btn btn-primary btn-sm xp-save-tt">${__('Save timetable')}</button></div>`);
@@ -423,7 +460,21 @@ class ExamPlanner {
 					: `<div class="xp-alert ok">${__('No clashes.')}${res.warnings.length ? ' ' + __('{0} warning(s).', [res.warnings.length]) : ''}</div>`);
 			};
 			if (t.rows.some((r) => r.exam_date)) show(t.check);
-			$cards.eq(0).find('.xp-new-inv').on('click', () => frappe.new_doc('Faculty'));
+			// A new invigilator is added to every row's list; the row it was picked from gets it selected
+			const add_invigilator = ($select) => this.invigilator_dialog((f) => {
+				t.faculty.push(f);
+				$cards.eq(0).find('.xp-f').each((_, el) => {
+					$(el).find('option[value="__new_invigilator__"]').before(`<option value="${esc(f.name)}">${esc(f.label)}</option>`);
+				});
+				if ($select) $select.val(f.name).data('prev', f.name);
+			});
+			$cards.eq(0).find('.xp-new-inv').on('click', () => add_invigilator());
+			$cards.eq(0).find('.xp-f').each((_, el) => { $(el).data('prev', el.value); });
+			$cards.eq(0).find('.xp-f').on('change', (e) => {
+				if (e.target.value !== '__new_invigilator__') { $(e.target).data('prev', e.target.value); return; }
+				e.target.value = $(e.target).data('prev') || '';
+				add_invigilator($(e.target));
+			});
 			$cards.eq(0).find('.xp-run-check').on('click', () => call('check_timetable', { exam_plan: this.plan, rows: JSON.stringify(collect()) }).then(show));
 			$cards.eq(0).find('.xp-save-tt').on('click', () => call('save_timetable', { exam_plan: this.plan, rows: JSON.stringify(collect()) })
 				.then(() => { frappe.show_alert({ message: __('Timetable saved'), indicator: 'green' }); this.refresh(); }));
@@ -437,6 +488,35 @@ class ExamPlanner {
 			$cards.eq(1).find('.xp-eas').on('click', (e) => call('create_assessment_schedule', { exam_plan: this.plan, programme: $(e.currentTarget).data('p') })
 				.then((name) => frappe.set_route('Form', 'Exam Assessment Schedule', name)));
 		});
+	}
+
+	// New Faculty record from the timetable, without leaving the page
+	invigilator_dialog(done) {
+		const d = new frappe.ui.Dialog({
+			title: __('Add invigilator'),
+			fields: [
+				{ fieldtype: 'HTML', options: `<p class="text-muted small">${__('Invigilators are Faculty records. This adds the person to Faculty and to the invigilator list.')}</p>` },
+				{ fieldname: 'first_name', label: __('First Name'), fieldtype: 'Data', reqd: 1 },
+				{ fieldname: 'last_name', label: __('Last Name'), fieldtype: 'Data' },
+				{ fieldname: 'faculty_id', label: __('Faculty ID'), fieldtype: 'Data', reqd: 1, description: __('Must be unique') },
+				{ fieldtype: 'Column Break' },
+				{ fieldname: 'email', label: __('Email'), fieldtype: 'Data', options: 'Email', reqd: 1 },
+				{ fieldname: 'phone', label: __('Phone'), fieldtype: 'Data', options: 'Phone' },
+				{ fieldname: 'designation', label: __('Designation'), fieldtype: 'Link', options: 'SLCM Designation' },
+				{ fieldtype: 'Section Break' },
+				{ fieldname: 'photo', label: __('Photo'), fieldtype: 'Attach Image', reqd: 1 },
+			],
+			primary_action_label: __('Add invigilator'),
+			primary_action: (v) => {
+				frappe.db.insert({ doctype: 'Faculty', status: 'Active', ...v }).then((doc) => {
+					d.hide();
+					const label = [doc.first_name, doc.last_name].filter(Boolean).join(' ') || doc.name;
+					frappe.show_alert({ message: __('{0} added. Pick them for a course, then Save timetable.', [label]), indicator: 'green' }, 6);
+					done({ name: doc.name, label });
+				});
+			},
+		});
+		d.show();
 	}
 
 	// ── 3. Students ────────────────────────────────────────────────────
@@ -602,8 +682,24 @@ class ExamPlanner {
 			.xp-pill.info{background:var(--bg-blue,#e6edf9);color:var(--text-on-blue,#2d4f8a)}
 			.xp-msg{min-width:220px;white-space:normal}
 			.xp-muted{color:var(--text-muted);font-size:12px}
-			.xp-tt td:first-child{min-width:150px}.xp-tt .xp-d{min-width:140px}.xp-tt .xp-s,.xp-tt .xp-e{min-width:110px}
-			.xp-tt .xp-v{min-width:170px}.xp-tt .xp-c{min-width:70px;width:80px}.xp-tt .xp-f{min-width:150px}.xp-tt .xp-msg{min-width:110px}.xp-msg .xp-pill{display:block;font-weight:600}
+			.xp-map-progress{display:flex;flex-direction:column;gap:6px;min-width:240px}.xp-map-progress b{font-size:13px}
+			.xp-bar-track{height:6px;border-radius:3px;background:var(--gray-200,#e6e9ec);overflow:hidden}.xp-bar-track i{display:block;height:100%;background:var(--er-brand,#920C24)}
+			.xp-cr-group{margin-top:16px}.xp-cr-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+			.xp-cr-title h5{margin:0;font-family:var(--er-font);font-size:14px;font-weight:700}
+			.xp-count{display:inline-block;min-width:22px;text-align:center;font-size:11px;padding:1px 7px;border-radius:999px;background:var(--er-brand-softest,#FBEEF0);color:var(--er-brand,#920C24);margin-left:4px}
+			.xp-cr{display:grid;grid-template-columns:minmax(200px,1.1fr) minmax(0,2fr) auto;gap:16px;align-items:center;border:1px solid var(--border-color);border-radius:10px;padding:12px 14px;margin-bottom:8px;background:var(--card-bg)}
+			.xp-cr.todo{border-left:3px solid var(--er-brand-light,#C4566A)}.xp-cr.editing{border-color:var(--er-brand-border,#E8B4BE);background:var(--er-brand-softest,#FBEEF0)}
+			.xp-cr-name b{display:block;font-size:13.5px}.xp-cr-name small{color:var(--text-muted);font-size:11.5px}
+			.xp-cr-view{display:flex;gap:22px;align-items:center;flex-wrap:wrap}.xp-cr-view span small{display:block;color:var(--text-muted);font-size:11px}
+			.xp-cr-view span b{font-size:13px}.xp-cr-view .xp-pill{margin-left:auto}
+			.xp-cr-edit{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:center}.xp-cr-edit select{min-width:0!important}
+			.xp-why{grid-column:1/-1;color:var(--text-muted);font-size:11.5px}
+			.xp-cr-act{display:flex;gap:6px;justify-content:flex-end;white-space:nowrap}
+			.xp-next{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px;padding:12px 14px;border-radius:10px;background:var(--bg-green,#e5f4ea)}
+			.xp-next span{font-weight:700;color:var(--text-on-green,#1d6b3a)}
+			@media (max-width:860px){.xp-cr{grid-template-columns:1fr}.xp-cr-act{justify-content:flex-start}.xp-cr-edit{grid-template-columns:1fr}}
+			.xp-tt td:first-child{min-width:150px}.xp-table .xp-tt .xp-d{min-width:135px}.xp-table .xp-tt .xp-s,.xp-table .xp-tt .xp-e{min-width:110px}
+			.xp-table .xp-tt .xp-v{min-width:160px}.xp-table .xp-tt input.xp-c{min-width:64px;width:72px}.xp-table .xp-tt .xp-f{min-width:140px}.xp-tt .xp-msg{min-width:90px}.xp-msg .xp-pill{display:block;font-weight:600}
 			.xp-alert{border-radius:8px;padding:8px 12px}.xp-alert.bad{background:var(--bg-red,#fde6e8)}.xp-alert.ok{background:var(--bg-green,#e5f4ea)}
 			.xp-meter{height:8px;border-radius:4px;background:var(--border-color);min-width:90px;overflow:hidden}.xp-meter i{display:block;height:100%;background:var(--er-brand,#920C24)}
 			.xp-kpis{display:flex;flex-wrap:wrap;gap:24px}.xp-kpis b{display:block;font-size:20px;font-family:var(--er-font)}.xp-kpis span{font-size:12px;color:var(--text-muted)}
