@@ -225,8 +225,6 @@ def create_class_time_table(data):
 	data = frappe._dict(json.loads(data) if isinstance(data, str) else data)
 	frappe.has_permission("Time Table", "create", throw=True)
 	cls = _get_class(data.class_name)
-	if not data.color:
-		frappe.throw(_("Time Table Color is required."))
 
 	doc = frappe.get_doc({
 		"doctype": "Time Table",
