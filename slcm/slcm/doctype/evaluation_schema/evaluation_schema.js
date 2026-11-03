@@ -285,22 +285,27 @@ function _inject_styles() {
 			flex-shrink: 0;
 			font-size: 10px;
 		}
-		#es-dynamic-sections .es-ms-panel {
+		/* Panel floats on <body> while open so card/table overflow can't clip it */
+		.es-ms-panel {
 			display: none;
-			position: absolute;
+			position: fixed;
 			z-index: 1050;
 			background: #fff;
 			border: 1px solid #d1d5db;
 			border-radius: 6px;
 			box-shadow: 0 4px 16px rgba(0,0,0,0.12);
 			min-width: 170px;
-			max-height: 200px;
+			max-height: 260px;
 			overflow-y: auto;
+			overscroll-behavior: contain;
 			padding: 4px 0;
-			top: calc(100% + 2px);
-			left: 0;
 		}
-		#es-dynamic-sections .es-ms-item {
+		.es-ms-empty {
+			padding: 6px 12px;
+			font-size: 12px;
+			color: #9ca3af;
+		}
+		.es-ms-item {
 			display: flex;
 			align-items: center;
 			gap: 8px;
@@ -311,8 +316,8 @@ function _inject_styles() {
 			margin: 0;
 			font-weight: 400;
 		}
-		#es-dynamic-sections .es-ms-item:hover { background: #f1f5f9; }
-		#es-dynamic-sections .es-ms-item input[type=checkbox] {
+		.es-ms-item:hover { background: #f1f5f9; }
+		.es-ms-item input[type=checkbox] {
 			accent-color: #6366f1;
 			width: 14px;
 			height: 14px;
@@ -367,6 +372,7 @@ function _comp_type(frm, name) {
 function _render(frm) {
 	const $area = frm.$wrapper.find('#es-dynamic-sections');
 	if (!$area.length) return;
+	_esms_close_all();
 	$area.empty();
 
 	(frm.doc.schema_components || []).filter(r => r.component).forEach(cr => {
@@ -582,6 +588,7 @@ function _make_multiselect(opts, savedVals) {
 	</div>`);
 	const $panel = $(`<div class="es-ms-panel"></div>`);
 
+	if (!opts.length) $panel.append(`<div class="es-ms-empty">No options available</div>`);
 	opts.forEach(o => {
 		const $item = $(`<label class="es-ms-item">
 			<input type="checkbox" value="${_esc(String(o.value))}"/>
@@ -605,21 +612,79 @@ function _make_multiselect(opts, savedVals) {
 	};
 	_refresh();
 
-	$trigger.on('click', function (e) {
-		e.stopPropagation();
-		const wasOpen = $panel.is(':visible');
-		$('.es-ms-panel:visible').hide();
-		if (!wasOpen) $panel.show();
+	/* Place the panel under the trigger, or above it when there is more room there */
+	const _position = () => {
+		const r = $trigger[0].getBoundingClientRect();
+		const gap = 2, edge = 8;
+		const below = window.innerHeight - r.bottom - gap - edge;
+		const above = r.top - gap - edge;
+		const natural = Math.min($panel[0].scrollHeight, 260);
+		const openUp = below < natural && above > below;
+		const width = Math.max(r.width, 170);
+		$panel.css({
+			width: width,
+			maxHeight: Math.max(Math.min(260, openUp ? above : below), 80),
+			left: Math.max(edge, Math.min(r.left, window.innerWidth - width - edge)),
+			top: openUp ? 'auto' : r.bottom + gap,
+			bottom: openUp ? window.innerHeight - r.top + gap : 'auto',
+		});
+	};
+
+	const _onScroll = e => {
+		if ($panel[0].contains(e.target)) return;  // scrolling the list itself
+		_close();
+	};
+	const _onKey = e => { if (e.key === 'Escape') { _close(); $trigger.trigger('focus'); } };
+
+	const _close = () => {
+		if (!$panel.is(':visible')) return;
+		$panel.hide().appendTo($wrap);
+		$(document).off('mousedown.esms keydown.esms');
+		$(window).off('resize.esms');
+		window.removeEventListener('scroll', _onScroll, true);
+		if (_esms_close_active === _close) _esms_close_active = null;
+	};
+
+	const _open = () => {
+		if (_esms_close_active) _esms_close_active();
+		$panel.appendTo(document.body).show();
+		_position();
+		_esms_close_active = _close;
+		$(document).on('mousedown.esms', e => {
+			if (!$wrap[0].contains(e.target) && !$panel[0].contains(e.target)) _close();
+		});
+		$(document).on('keydown.esms', _onKey);
+		$(window).on('resize.esms', _close);
+		window.addEventListener('scroll', _onScroll, true);
+	};
+
+	$trigger.on('click', () => ($panel.is(':visible') ? _close() : _open()));
+	$trigger.on('keydown', e => {
+		if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
+			e.preventDefault();
+			if (!$panel.is(':visible')) _open();
+		}
 	});
-	$panel.on('click', function (e) { e.stopPropagation(); });
 	$panel.on('change', 'input[type=checkbox]', function () {
 		_refresh();
 		$wrap.trigger('esms:change');
 	});
-	$(document).on('click.esms', function () { $panel.hide(); });
 
 	$wrap.getVal = () => $panel.find('input:checked').map((_, el) => el.value).get();
 	return $wrap;
+}
+
+/* Only one multi-select panel is open at a time; this closes it */
+var _esms_close_active = null;
+
+function _esms_close_all() {
+	if (_esms_close_active) _esms_close_active();
+}
+
+/* Close an open panel when leaving the form (registered once; router.off can't unbind) */
+if (!frappe._esms_route_hook) {
+	frappe._esms_route_hook = true;
+	frappe.router.on('change', () => _esms_close_all());
 }
 
 /* ── Re-Exam section ─────────────────────────────── */
@@ -677,6 +742,7 @@ function _render_reexam_sec(frm, $area, comp, lbl, ctype, comp_name) {
 		$sec.find('.es-col-first').text(mode === 'Component' ? 'Component' : 'Assessment Type');
 		const rows = (frm.doc.reexam_configs || []).filter(r => r.component === comp);
 		rows.forEach(r => { r.re_exam_type_category = mode; });
+		_esms_close_all();
 		$sec.find('.es-tbody').empty();
 		if (rows.length) {
 			rows.forEach(r => _add_reexam_row(frm, $sec, comp, r));
@@ -701,136 +767,6 @@ function _add_reexam_row(frm, $sec, comp, data) {
 		frow.re_exam_type_category = mode;
 	}
 	const fn = frow.name;
-
-	/* ── auto-calculate maximum_marks from selected components ── */
-
-	// ===============================
-	// 🔹 Helper: Get Selected Components Safely
-	// ===============================
-	function get_selected_components(row) {
-
-		if (!row.component) return [];
-
-		// Case 1: Array (rare but possible)
-		if (Array.isArray(row.component)) {
-			return row.component.map(c => String(c).trim()).filter(Boolean);
-		}
-
-		// Case 2: String (common in Frappe MultiSelect)
-		if (typeof row.component === "string") {
-			return row.component
-				.split(',')
-				.map(s => s.trim())
-				.filter(Boolean);
-		}
-
-		return [];
-	}
-
-
-	// ===============================
-	// 🔹 Calculate Maximum Marks for One Row
-	// ===============================
-	function calculate_reexam_row(frm, cdt, cdn) {
-
-		let row = locals[cdt][cdn];
-		let selected = get_selected_components(row);
-
-		if (!selected.length) {
-			frappe.model.set_value(cdt, cdn, 'maximum_marks', 0);
-			return;
-		}
-
-		let total = 0;
-
-		(frm.doc.schema_components || []).forEach(comp => {
-			if (selected.includes(comp.component)) {
-				total += flt(comp.effective_max_marks);
-			}
-		});
-
-		total = Math.round(total * 100) / 100;
-
-		frappe.model.set_value(cdt, cdn, 'maximum_marks', total);
-	}
-
-
-	// ===============================
-	// 🔹 Recalculate All Rows
-	// ===============================
-	function recalc_all_reexam(frm) {
-
-		(frm.doc.schema_reexam_config || []).forEach(row => {
-
-			let selected = get_selected_components(row);
-			if (!selected.length) return;
-
-			let total = 0;
-
-			(frm.doc.schema_components || []).forEach(comp => {
-				if (selected.includes(comp.component)) {
-					total += flt(comp.effective_max_marks);
-				}
-			});
-
-			total = Math.round(total * 100) / 100;
-
-			frappe.model.set_value(
-				row.doctype,
-				row.name,
-				'maximum_marks',
-				total
-			);
-		});
-
-		// 🔥 Force UI refresh
-		frm.refresh_field('schema_reexam_config');
-	}
-
-
-	// ===============================
-	// 🔹 Child Table: Schema Reexam Config
-	// ===============================
-	frappe.ui.form.on('Schema Reexam Config', {
-
-		// Trigger when component is changed
-		component: function (frm, cdt, cdn) {
-			calculate_reexam_row(frm, cdt, cdn);
-		},
-
-		// Trigger when row is opened
-		form_render: function (frm, cdt, cdn) {
-			setTimeout(() => {
-				calculate_reexam_row(frm, cdt, cdn);
-			}, 200);
-		}
-	});
-
-
-	// ===============================
-	// 🔹 Schema Components Change Trigger
-	// ===============================
-	frappe.ui.form.on('Evaluation Schema Component', {
-
-		effective_max_marks: function (frm) {
-			recalc_all_reexam(frm);
-		},
-
-		component: function (frm) {
-			recalc_all_reexam(frm);
-		}
-	});
-
-
-	// ===============================
-	// 🔹 Optional: On Form Refresh (Initial Load)
-	// ===============================
-	frappe.ui.form.on('Evaluation Schema', {
-
-		refresh: function (frm) {
-			recalc_all_reexam(frm);
-		}
-	});
 
 	/* ── first column HTML based on mode ── */
 	const _non_reexam_comps = (frm.doc.schema_components || []).filter(cr => {
