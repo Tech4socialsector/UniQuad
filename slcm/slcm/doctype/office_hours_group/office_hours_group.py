@@ -5,6 +5,8 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import get_time
 
+from slcm.slcm.doctype.student_enrollment.student_enrollment import year_log_exists
+
 class OfficeHoursGroup(Document):
 	def on_update(self):
 		sync_office_hours_session(self)
@@ -17,36 +19,11 @@ class OfficeHoursGroup(Document):
 			)
 
 
-def get_course_offering(course, program, academic_term):
-	"""Resolve a Course Offering for this Course/Program/Term. Mirrors the
-	fallback lookup used in Course Schedule (course_schedule.py)."""
-	if not course:
-		return None
-
-	filters = {"course_title": course, "status": "Active"}
-	if program:
-		filters["program"] = program
-	if academic_term:
-		filters["term_name"] = academic_term
-
-	offering = frappe.get_all("Course Offering", filters=filters, limit=1, pluck="name")
-	if offering:
-		return offering[0]
-
-	if program:
-		del filters["program"]
-		offering = frappe.get_all("Course Offering", filters=filters, limit=1, pluck="name")
-		if offering:
-			return offering[0]
-
-	return None
-
-
 def sync_office_hours_session(doc):
 	"""Keep an Office Hours Session in sync with this Office Hours Group so
 	the session shows up under the Student Portal's Office Hours tab."""
-	course_offering = get_course_offering(doc.course, doc.program, doc.academic_term)
-	if not course_offering or not doc.date or not doc.from_time or not doc.to_time or not doc.instructor:
+	class_name = doc.class_name
+	if not class_name or not doc.date or not doc.from_time or not doc.to_time or not doc.instructor:
 		return
 
 	from_time = get_time(doc.from_time)
@@ -62,7 +39,7 @@ def sync_office_hours_session(doc):
 	else:
 		session = frappe.new_doc("Office Hours Session")
 
-	session.course_offering = course_offering
+	session.class_name = class_name
 	session.faculty = doc.instructor
 	session.session_date = doc.date
 	session.start_time = doc.from_time
@@ -77,7 +54,7 @@ def sync_office_hours_session(doc):
 		frappe.db.set_value("Office Hours Group", doc.name, "office_hours_session", session.name)
 
 @frappe.whitelist()
-def get_students(program, course, academic_year=None, academic_term=None, batch=None, section=None):
+def get_students(program, course=None, academic_year=None, academic_term=None, batch=None, section=None, class_name=None):
 	if not program:
 		return []
 
@@ -88,11 +65,15 @@ def get_students(program, course, academic_year=None, academic_term=None, batch=
 	conditions = ["se.program = %(program)s", "se.status = 'Enrolled'", "se.docstatus < 2"]
 
 	if academic_year:
-		conditions.append("se.academic_year = %(academic_year)s")
+		conditions.append(year_log_exists("se", "%(academic_year)s"))
 		params["academic_year"] = academic_year
 
 	if academic_term:
-		conditions.append("se.term_name = %(academic_term)s")
+		# Match enrollments with a log row in the term's academic year.
+		conditions.append(year_log_exists(
+			"se",
+			"(SELECT at.academic_year FROM `tabAcademic Term` at WHERE at.name = %(academic_term)s)",
+		))
 		params["academic_term"] = academic_term
 
 	if batch:
@@ -103,15 +84,25 @@ def get_students(program, course, academic_year=None, academic_term=None, batch=
 		conditions.append("se.section = %(section)s")
 		params["section"] = section
 
-	# Join with Course via Student Enrollment Course → Course Offering
+	# Restrict to the Class's enrolled students, else to students taking
+	# the course (Student Enrollment Course rows)
 	join_course = ""
-	if course:
+	if class_name:
+		join_course = """
+			INNER JOIN `tabClass Enrolled Student` ces
+			ON ces.student_enrollment = se.name
+			AND ces.parenttype = 'Classes'
+			AND ces.parent = %(class_name)s
+			AND ces.status = 'Enrolled'
+		"""
+		params["class_name"] = class_name
+	elif course:
 		join_course = """
 			INNER JOIN `tabStudent Enrollment Course` sec
 			ON sec.parent = se.name
-			INNER JOIN `tabCourse Offering` co
-			ON co.name = sec.course_offering
-			AND co.course_title = %(course)s
+			AND sec.parenttype = 'Student Enrollment'
+			AND sec.course = %(course)s
+			AND sec.status = 'Ongoing'
 		"""
 		params["course"] = course
 

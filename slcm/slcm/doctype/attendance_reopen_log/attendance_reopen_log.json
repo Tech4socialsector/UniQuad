@@ -9,7 +9,8 @@
   "action",
   "attendance_session",
   "time_table",
-  "course_offering",
+  "class_name",
+  "course",
   "session_date",
   "faculty",
   "column_break_main",
@@ -51,12 +52,20 @@
    "read_only": 1
   },
   {
-   "fieldname": "course_offering",
+   "fieldname": "class_name",
    "fieldtype": "Link",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Course Offering",
-   "options": "Course Offering",
+   "label": "Class",
+   "options": "Classes",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "class_name.course",
+   "fieldname": "course",
+   "fieldtype": "Link",
+   "label": "Course",
+   "options": "Course",
    "read_only": 1
   },
   {
@@ -131,7 +140,7 @@
  ],
  "in_create": 1,
  "links": [],
- "modified": "2026-10-12 12:00:00.000000",
+ "modified": "2026-10-29 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Attendance Reopen Log",

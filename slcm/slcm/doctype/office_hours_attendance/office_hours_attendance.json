@@ -9,7 +9,8 @@
   "student",
   "student_name",
   "column_break_basic",
-  "course_offering",
+  "class_name",
+  "course",
   "attendance_date",
   "check_in_time",
   "check_out_time",
@@ -50,11 +51,19 @@
    "fieldtype": "Column Break"
   },
   {
-   "fetch_from": "office_hours_session.course_offering",
-   "fieldname": "course_offering",
+   "fetch_from": "office_hours_session.class_name",
+   "fieldname": "class_name",
    "fieldtype": "Link",
-   "label": "Course Offering",
-   "options": "Course Offering",
+   "label": "Class",
+   "options": "Classes",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "office_hours_session.course",
+   "fieldname": "course",
+   "fieldtype": "Link",
+   "label": "Course",
+   "options": "Course",
    "read_only": 1
   },
   {
@@ -101,7 +110,7 @@
   }
  ],
  "links": [],
- "modified": "2026-02-03 02:26:00.000000",
+ "modified": "2026-10-29 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Office Hours Attendance",

@@ -14,6 +14,41 @@ from slcm.admission.portal_application_web_form import (
 )
 from slcm.admission.utils.regulatory import log_audit_trail
 
+# Nationality options spelled differently from the Country used on State records
+NATIONALITY_STATE_COUNTRY_ALIASES = {
+    "united states of america": "United States",
+    "cape verde": "Cabo Verde",
+    "republic of the congo": "Congo",
+    "czechia": "Czech Republic",
+    "the gambia": "Gambia",
+    "federated states of micronesia": "Micronesia",
+    "são tomé and príncipe": "Sao Tome and Principe",
+    "türkiye": "Turkey",
+}
+
+
+def state_country_names(country):
+    """Lower-cased country names to match against State.country (the given name plus its alias)."""
+    country = (country or "").strip().lower()
+    names = {country}
+    alias = NATIONALITY_STATE_COUNTRY_ALIASES.get(country)
+    if alias:
+        names.add(alias.lower())
+    return tuple(names)
+
+
+def state_belongs_to_country(state, country):
+    """True when the State belongs to the given country / nationality. 'Other' is always valid."""
+    state = (state or "").strip()
+    if not state or state.lower() == "other" or not (country or "").strip():
+        return True
+
+    state_country = frappe.db.get_value("State", state, "country")
+    if not state_country:
+        return True
+
+    return state_country.strip().lower() in state_country_names(country)
+
 # Statuses treated as "submitted" for confirmation email, PDF cache, etc.
 APPLICATION_SUBMITTED_STATUSES = frozenset(
     {
@@ -287,15 +322,17 @@ class Applicant(Document):
 
     def _validate_nationality_matches_foreign_national(self):
         """
-        foriegn_national = "No"  → Domestic applicant; any nationality is allowed.
-        foriegn_national = "Yes" → International applicant; Nationality cannot be India.
-        Checked on new records and whenever either field (or the status) changes, so older
+        foriegn_national = "No"  → any Nationality (India filled in automatically when blank).
+        foriegn_national = "Yes" → Nationality must not be India.
+        State must belong to the Nationality country ("Other" is always allowed).
+        Checked on new records and whenever a related field (or the status) changes, so older
         inconsistent records don't block unrelated desk edits.
         """
         if not (
             self.is_new()
             or self.has_value_changed("foriegn_national")
             or self.has_value_changed("nationality")
+            or self.has_value_changed("state")
             or self.has_value_changed("status")
         ):
             return
@@ -303,11 +340,20 @@ class Applicant(Document):
         fn = (self.foriegn_national or "").strip()
         nationality = (self.nationality or "").strip()
 
-        # Only International applicants are restricted — they cannot have Nationality = India.
-        if fn == "Yes" and nationality.lower() == "india":
+        if fn == "No" and not nationality:
+            self.nationality = nationality = "India"
+        elif fn == "Yes" and nationality.lower() == "india":
             frappe.throw(
                 _("For International applicants (Foreign National = Yes), Nationality cannot be India."),
                 title=_("Invalid Nationality"),
+            )
+
+        if self.state and not state_belongs_to_country(self.state, nationality):
+            frappe.throw(
+                _("The selected State '{0}' does not belong to '{1}'. Please select a State of {1}.").format(
+                    self.state, nationality
+                ),
+                title=_("Invalid State"),
             )
 
     def _validate_degree_country_for_foreign_national(self):
@@ -438,17 +484,36 @@ class Applicant(Document):
         from slcm.api.service.application_fee_service import get_application_fee_for_category
         from slcm.api.service.application_fee_service import _get_applicant_category
 
-        category = _get_applicant_category(self.name)
-        # Same rule as the portal fee calc: foriegn_national decides; nationality is only a fallback
-        fn = (self.foriegn_national or "").strip()
-        if fn:
-            is_foreign = fn == "Yes"
-        else:
-            is_foreign = bool(self.nationality) and self.nationality.strip() != "India"
-        fee_amount = get_application_fee_for_category(self.program, self.admission_cycle, category, is_foreign=is_foreign)
+        is_foreign = (self.foriegn_national or "").strip() == "Yes"
+        fee_amount = get_application_fee_for_category(
+            program=self.program,
+            admission_cycle=self.admission_cycle,
+            category=self.whether_scstobc_ncl,
+            is_foreign=is_foreign,
+            applicant=self,
+        )
+
+        db_status = (frappe.db.get_value("Applicant", self.name, "application_fee_status") or "").strip()
+        if flt(fee_amount, 2) <= 0 and db_status not in ("Paid", "Waived"):
+            from slcm.api.service.application_fee_service import is_application_fee_configured
+            if not is_application_fee_configured(
+                self.admission_cycle, self.whether_scstobc_ncl, is_foreign,
+                getattr(self, "gender", None), getattr(self, "pwd", None),
+            ):
+                # 0 only because no fee is set up for this cycle/category: never treat that as free.
+                frappe.log_error(
+                    title="Application fee not configured",
+                    message=f"Applicant {self.name}: no Application Fee for cycle '{self.admission_cycle}' "
+                            f"/ category '{self.whether_scstobc_ncl}'. Submission was blocked.",
+                )
+                frappe.throw(
+                    _("The application fee for this programme is not set up yet, so the application "
+                      "cannot be submitted. Please contact the admissions office."),
+                    title=_("Application Fee Not Configured"),
+                )
 
         if flt(fee_amount, 2) <= 0:
-            # No fee or zero fee: allow submit without payment; set status to Paid so UI/reports treat as complete
+            # Fee explicitly configured as 0: allow submit without payment; set status to Paid so UI/reports treat as complete
             self.application_fee_status = "Paid"
             if flt(self.application_fee_amount or 0, 2) != flt(fee_amount, 2):
                 self.application_fee_amount = flt(fee_amount, 2)
@@ -535,36 +600,37 @@ class Applicant(Document):
             )
 
             # ── Rich confirmation email with PDF attachment (Immediate) ────
-            try:
-                sent = self.send_submission_confirmation()
-                if sent:
-                    frappe.msgprint(
-                        _("Application Submitted email sent to the applicant successfully."),
-                        alert=True,
-                        indicator="green",
-                    )
-            except Exception:
-                frappe.log_error(
-                    frappe.get_traceback(),
-                    f"Submission confirmation email failed — {self.applicant_id or self.name}"
-                )
+            # Temporarily commented out: do not send email when status is Submitted
+            # try:
+            #     sent = self.send_submission_confirmation()
+            #     if sent:
+            #         frappe.msgprint(
+            #             _("Application Submitted email sent to the applicant successfully."),
+            #             alert=True,
+            #             indicator="green",
+            #         )
+            # except Exception:
+            #     frappe.log_error(
+            #         frappe.get_traceback(),
+            #         f"Submission confirmation email failed — {self.applicant_id or self.name}"
+            #     )
             # ─────────────────────────────────────────────────────────────
 
-            from slcm.admission.utils.notifications import log_communication
-            log_communication(
-                applicant=self.name,
-                communication_type="Email",
-                category="Admission",
-                subject=f"Application Submitted — {self.applicant_id} | {self.program or 'Admissions'}",
-                content=(
-                    f"Submission confirmation email sent for {self.applicant_id}. "
-                    f"Program: {self.program or '—'}, "
-                    f"Cycle: {self.admission_cycle or '—'}, "
-                    f"Campus: {self.campus or '—'}"
-                ),
-                reference_doctype="Applicant",
-                reference_name=self.name
-            )
+            # from slcm.admission.utils.notifications import log_communication
+            # log_communication(
+            #     applicant=self.name,
+            #     communication_type="Email",
+            #     category="Admission",
+            #     subject=f"Application Submitted — {self.applicant_id} | {self.program or 'Admissions'}",
+            #     content=(
+            #         f"Submission confirmation email sent for {self.applicant_id}. "
+            #         f"Program: {self.program or '—'}, "
+            #         f"Cycle: {self.admission_cycle or '—'}, "
+            #         f"Campus: {self.campus or '—'}"
+            #     ),
+            #     reference_doctype="Applicant",
+            #     reference_name=self.name
+            # )
 
         old_status = self.flags.get("old_status")
         just_completed = (
@@ -3134,7 +3200,9 @@ def set_intake_type(doc, method=None):
     PhD Law                      = Direct Merit
     """
     if doc.program:
-        intake = frappe.db.get_value("Programme", doc.program, "intake_type")
+        # Programme.intake_type has been removed: treat it as empty (keeps
+        # whatever intake_type the applicant already has).
+        intake = None
         if intake:
             doc.intake_type = intake
 
@@ -3818,7 +3886,7 @@ def _resolve_entrance_test_config_for_applicant(applicant_doc):
     rows = frappe.get_all(
         "Entrance Test Details",
         filters={"parent": applicant_doc.admission_cycle, "parenttype": "Admission Cycle"},
-        fields=["programme", "programme_level", "entrance_test_name", "entrance_test_date", "start_time", "end_time", "idx"],
+        fields=["programme", "programme_level", "entrance_test_name", "entrance_test_date", "start_time", "end_time", "online_test_link", "online_test_instructions", "idx"],
         order_by="idx asc",
     )
     if not rows:
@@ -4118,6 +4186,8 @@ def _auto_allocate_international_entrance_test(applicant_doc):
     allocation.allocation_date      = test_cfg.get("entrance_test_date")
     allocation.start_time           = test_cfg.get("start_time")
     allocation.end_time             = test_cfg.get("end_time")
+    allocation.online_test_link     = test_cfg.get("online_test_link")
+    allocation.online_test_instructions = test_cfg.get("online_test_instructions")
 
     allocation.applicant            = applicant_doc.name
     allocation.candidate_name       = applicant_doc.candidate_name
@@ -4132,6 +4202,8 @@ def _auto_allocate_international_entrance_test(applicant_doc):
     # Mark as allocated (online); leave center/room/seat fields blank
     allocation.allocation_status    = "Allocated"
     allocation.entrance_test_status = "Scheduled"
+    allocation.seat_allocation_published = 0
+    allocation.seat_allocation_published_on = None
     allocation.allocated_by         = frappe.session.user
     allocation.is_international_applicant = 1
 
@@ -4147,22 +4219,6 @@ def _auto_allocate_international_entrance_test(applicant_doc):
         )
 
     allocation.insert(ignore_permissions=True)
-
-
-    # Send international-specific email (NO admit card attached)
-    try:
-        from slcm.admission.doctype.entrance_test_list.entrance_test_list import (
-            _send_allocation_notification,
-        )
-
-        if allocation.email:
-            _send_international_entrance_test_email(allocation, allocation.email)
-            _send_allocation_notification(allocation, allocation.email)
-    except Exception:
-        frappe.log_error(
-            frappe.get_traceback(),
-            f"International auto allocation email failed for {allocation.name}",
-        )
 
 
 def _send_international_entrance_test_email(allocation, email):
@@ -4207,6 +4263,8 @@ def _send_international_entrance_test_email(allocation, email):
             "entrance_test_name": allocation.entrance_test_name or "Entrance Test",
             "test_date":         test_date_display,
             "program":           allocation.program or "",
+            "online_test_link":  allocation.online_test_link or "",
+            "online_test_instructions": allocation.online_test_instructions or "",
             "institution_name":  institution_name,
             "portal_url":        portal_url,
         }
@@ -4252,6 +4310,24 @@ def _send_international_entrance_test_email(allocation, email):
                 f"{allocation.entrance_test_name or 'Entrance Test'} | "
                 f"{allocation.candidate_name or email}"
             )
+            online_link_row = ""
+            if allocation.online_test_link:
+                online_link_row = f"""
+    <tr>
+      <td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Exam Link</td>
+      <td style="padding:8px;border:1px solid #ddd;">
+        <a href="{allocation.online_test_link}" style="color:#1a5276;font-weight:bold;">{allocation.online_test_link}</a>
+      </td>
+    </tr>"""
+
+            instructions_html = ""
+            if allocation.online_test_instructions:
+                instructions_html = f"""
+  <div style="margin:16px 0;padding:12px;background:#f9f9f9;border:1px solid #e0e0e0;border-radius:4px;">
+    <strong style="color:#333;">Online Exam Instructions:</strong>
+    <div style="margin-top:6px;line-height:1.5;">{allocation.online_test_instructions}</div>
+  </div>"""
+
             message_body = f"""
 <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
   <h2 style="color:#1a5276;">Entrance Test Allocated — Online</h2>
@@ -4278,13 +4354,11 @@ def _send_international_entrance_test_email(allocation, email):
     <tr>
       <td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Programme</td>
       <td style="padding:8px;border:1px solid #ddd;">{allocation.program or '—'}</td>
-    </tr>
-  </table>
+    </tr>{online_link_row}
+  </table>{instructions_html}
   <p>
     As an international applicant, your entrance test will be conducted
-    <strong>online</strong>. Further instructions regarding the online test
-    platform, login credentials, and technical requirements will be shared
-    with you separately.
+    <strong>online</strong>.
   </p>
   <p>
     You can view your application and test details on your admission dashboard:

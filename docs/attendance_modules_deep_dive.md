@@ -99,7 +99,7 @@ The **Attendance Session** is the "Container" for class attendance. It represent
 *   **Accuracy**: Links attendance directly to the specific topic/instructor for that hour.
 
 ### Disadvantages
-*   **Scheduling Rigidity**: Requires the `Course Schedule` to be 100% accurate. Last-minute room or time changes must be updated in the system for RFID matching to work.
+*   **Scheduling Rigidity**: Requires the `Time Table` to be 100% accurate. Last-minute room or time changes must be updated in the system for RFID matching to work.
 
 ---
 

@@ -50,7 +50,7 @@ def test_naming_series_logic():
 			print("FAILED: Designation not fetched from Faculty")
 
 		# Get any existing Department
-		dept = frappe.db.get_value("Department", {}, "name")
+		dept = frappe.db.get_value("SLCM Department", {}, "name")
 		if not dept:
 			# If no department exists, we can't easily guess the schema to create one.
 			# But for testing, maybe we can just use a string if validation is loose on the Link?

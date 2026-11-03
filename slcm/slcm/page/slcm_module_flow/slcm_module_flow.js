@@ -143,8 +143,6 @@ frappe.pages['slcm-module-flow'].on_page_load = function (wrapper) {
 	        <span class="smf-arrow">→</span>
 	        <a class="smf-dt c-blue" onclick="smfNav('application')">📋 Application</a>
 	        <span class="smf-arrow">→</span>
-	        <a class="smf-dt c-yellow" onclick="smfNav('admission-round')">📅 Admission Round</a>
-	        <span class="smf-arrow">→</span>
 	        <a class="smf-dt c-green" onclick="smfNav('merit-list')">🏆 Merit List</a>
 	        <span class="smf-arrow">→</span>
 	        <a class="smf-dt c-green" onclick="smfNav('seat-allotment')">💺 Seat Allotment</a>
@@ -229,9 +227,9 @@ frappe.pages['slcm-module-flow'].on_page_load = function (wrapper) {
 	        <span class="smf-arrow">→</span>
 	        <a class="smf-dt c-yellow" onclick="smfNav('student-batch-name')">👥 Student Batch</a>
 	        <span class="smf-arrow">→</span>
-	        <a class="smf-dt c-yellow" onclick="smfNav('course-offering')">📋 Course Offering</a>
+	        <a class="smf-dt c-yellow" onclick="smfNav('classes')">📋 Classes</a>
 	        <span class="smf-arrow">→</span>
-	        <a class="smf-dt c-orange" onclick="smfNav('course-schedule')">🗓️ Course Schedule</a>
+	        <a class="smf-dt c-orange" onclick="smfNav('time-table')">🗓️ Time Table</a>
 	      </div>
 	    </div>
 	  </div>

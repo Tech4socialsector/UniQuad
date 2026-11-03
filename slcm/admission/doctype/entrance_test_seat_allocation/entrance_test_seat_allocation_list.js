@@ -234,7 +234,12 @@ frappe.listview_settings['Entrance Test Seat Allocation'] = {
                 open_generate_result_card_dialog(listview);
             }, __("Actions"));
 
-            // 4. Publish Result
+            // 4. Publish Seat Allocation
+            listview.page.add_inner_button(__("Publish Seat Allocation"), function () {
+                open_publish_seat_allocation_dialog_for_list(listview);
+            }, __("Actions"));
+
+            // 5. Publish Result
             listview.page.add_inner_button(__("Publish Result"), function () {
                 open_publish_result_dialog(listview);
             }, __("Actions"));
@@ -3698,6 +3703,501 @@ function render_unpublished_applicants_table(pd, html_field, records, total_coun
         if (state.page < total_pages) {
             state.page++;
             update_unpublished_applicants_table(pd, true);
+        }
+    });
+}
+
+/**
+ * Custom Publish Seat Allocation Dialog for List View
+ */
+function open_publish_seat_allocation_dialog_for_list(listview) {
+    const default_ay = get_listview_filter_val(listview, "academic_year");
+    const default_ac = get_listview_filter_val(listview, "admission_cycle");
+    const default_pl = get_listview_filter_val(listview, "program_level");
+
+    let pd = new frappe.ui.Dialog({
+        title: __("Publish Entrance Test Seat Allocation"),
+        size: "extra-large",
+        fields: [
+            { fieldtype: "Section Break", label: __("Filters") },
+            {
+                label: __("Academic Year"),
+                fieldname: "academic_year",
+                fieldtype: "Link",
+                options: "Academic Year",
+                default: default_ay,
+                reqd: 1,
+                change() {
+                    update_unpublished_allocations_table_for_list(pd, false);
+                }
+            },
+            { fieldtype: "Column Break" },
+            {
+                label: __("Admission Cycle"),
+                fieldname: "admission_cycle",
+                fieldtype: "Link",
+                options: "Admission Cycle",
+                default: default_ac,
+                reqd: 1,
+                change() {
+                    update_unpublished_allocations_table_for_list(pd, false);
+                }
+            },
+            { fieldtype: "Column Break" },
+            {
+                label: __("Programme Level"),
+                fieldname: "program_level",
+                fieldtype: "Select",
+                options: "\nUndergraduate\nPostgraduate\nResearch Course",
+                default: default_pl,
+                change() {
+                    pd.set_value("program", "");
+                    update_unpublished_allocations_table_for_list(pd, false);
+                }
+            },
+            { fieldtype: "Section Break" },
+            {
+                label: __("Applicant Type"),
+                fieldname: "applicant_type",
+                fieldtype: "Select",
+                options: "Domestic Applicants\nInternational Applicants\nBoth",
+                default: "Domestic Applicants",
+                change() {
+                    update_unpublished_allocations_table_for_list(pd, false);
+                }
+            },
+            { fieldtype: "Column Break" },
+            {
+                label: __("Programme"),
+                fieldname: "program",
+                fieldtype: "Link",
+                options: "Programme",
+                depends_on: "eval:doc.program_level",
+                change() {
+                    update_unpublished_allocations_table_for_list(pd, false);
+                }
+            },
+            { fieldtype: "Column Break" },
+            {
+                label: __("Entrance Test List"),
+                fieldname: "entrance_test_list",
+                fieldtype: "Link",
+                options: "Entrance Test List",
+                change() {
+                    update_unpublished_allocations_table_for_list(pd, false);
+                }
+            },
+            { fieldtype: "Column Break" },
+            {
+                label: __("Applicant"),
+                fieldname: "applicant",
+                fieldtype: "Link",
+                options: "Applicant",
+                change() {
+                    update_unpublished_allocations_table_for_list(pd, false);
+                }
+            },
+            { fieldtype: "Column Break" },
+            {
+                label: __("Allocation Scope"),
+                fieldname: "allocation_scope",
+                fieldtype: "Select",
+                options: "Initial\nRescheduled\nBoth",
+                default: "Initial",
+                change() {
+                    update_unpublished_allocations_table_for_list(pd, false);
+                }
+            },
+            { fieldtype: "Section Break", label: __("Unpublished Allocations Preview") },
+            {
+                fieldname: "unpublished_allocations_html",
+                fieldtype: "HTML"
+            },
+            { fieldtype: "Section Break", label: __("Email Settings") },
+            {
+                label: __("Send Email Notification"),
+                fieldname: "send_email",
+                fieldtype: "Check",
+                default: 1,
+                onchange: function () {
+                    let is_send = pd.get_value("send_email");
+                    let format = pd.get_value("email_format");
+                    if (pd.fields_dict.email_format) {
+                        pd.fields_dict.email_format.$wrapper.toggle(!!is_send);
+                    }
+                    if (pd.fields_dict.custom_email_content) {
+                        let show_editor = !!(is_send && format === "Custom");
+                        pd.fields_dict.custom_email_content.$wrapper.toggle(show_editor);
+                        if (show_editor) {
+                            setTimeout(() => pd.fields_dict.custom_email_content.refresh(), 50);
+                        }
+                    }
+                }
+            },
+            { fieldtype: "Column Break" },
+            {
+                label: __("Email Format"),
+                fieldname: "email_format",
+                fieldtype: "Select",
+                options: "Default\nCustom",
+                default: "Default",
+                onchange: function () {
+                    let is_send = pd.get_value("send_email");
+                    let format = pd.get_value("email_format");
+                    if (pd.fields_dict.custom_email_content) {
+                        let show_editor = !!(is_send && format === "Custom");
+                        pd.fields_dict.custom_email_content.$wrapper.toggle(show_editor);
+                        if (show_editor) {
+                            setTimeout(() => pd.fields_dict.custom_email_content.refresh(), 50);
+                        }
+                    }
+                }
+            },
+            { fieldtype: "Section Break" },
+            {
+                label: __("Custom Email Content"),
+                fieldname: "custom_email_content",
+                fieldtype: "Text Editor"
+            }
+        ],
+        primary_action_label: __("Publish"),
+        primary_action: function (values) {
+            const selected = pd.unpublished_state.selected_names;
+            if (!selected || selected.length === 0) {
+                frappe.msgprint(__("Please select at least one record to publish."));
+                return;
+            }
+
+            frappe.confirm(
+                __("This will publish seat allocation for <b>{0}</b> applicant(s) and make details visible on the Applicant Portal. Do you want to continue?", [selected.length]),
+                function () {
+                    pd.hide();
+                    frappe.show_progress(__("Publishing Seat Allocations"), 0, 100, __("Updating records and queueing emails..."));
+                    frappe.call({
+                        method: "slcm.admission.doctype.entrance_test_seat_allocation.entrance_test_seat_allocation.publish_seat_allocations",
+                        args: {
+                            academic_year: values.academic_year,
+                            admission_cycle: values.admission_cycle,
+                            program_level: values.program_level,
+                            applicant_type: values.applicant_type,
+                            program: values.program,
+                            entrance_test_list: values.entrance_test_list,
+                            allocation_scope: values.allocation_scope,
+                            send_email: values.send_email ? 1 : 0,
+                            email_format: values.email_format,
+                            custom_email_content: values.custom_email_content,
+                            selected_names: JSON.stringify(selected)
+                        },
+                        callback: function (r) {
+                            frappe.show_progress(__("Publishing Seat Allocations"), 100, 100, __("Completed"));
+                            setTimeout(() => frappe.hide_progress(), 2500);
+                            if (!r.exc && r.message) {
+                                frappe.msgprint({
+                                    title: __("Seat Allocations Published"),
+                                    message: __(
+                                        "<b>{0}</b> records published. <b>{1}</b> notification emails queued.",
+                                        [r.message.published, r.message.notified]
+                                    ),
+                                    indicator: "green"
+                                });
+                                listview.refresh();
+                            }
+                        },
+                        error: function () {
+                            frappe.hide_progress();
+                        }
+                    });
+                }
+            );
+        }
+    });
+
+    pd.listview = listview;
+
+    pd.set_query("admission_cycle", function () {
+        return { filters: { "status": "Active" } };
+    });
+    pd.set_query("program", function () {
+        return {
+            query: "slcm.admission.doctype.entrance_test_generation.entrance_test_generation.get_program_query",
+            filters: {
+                "program_level": pd.get_value("program_level"),
+                "admission_cycle": pd.get_value("admission_cycle")
+            }
+        };
+    });
+    pd.set_query("applicant", function () {
+        let ay = pd.get_value("academic_year");
+        let ac = pd.get_value("admission_cycle");
+        let filters = {};
+        if (ay) filters.academic_year = ay;
+        if (ac) filters.admission_cycle = ac;
+        return { filters: filters };
+    });
+
+    pd.unpublished_state = {
+        page: 1,
+        limit: 10,
+        selected_names: []
+    };
+
+    pd.show();
+
+    if (default_ay || default_ac || default_pl) {
+        pd.set_values({
+            academic_year: default_ay,
+            admission_cycle: default_ac,
+            program_level: default_pl,
+            applicant_type: "Domestic Applicants"
+        });
+    }
+
+    ["academic_year", "admission_cycle", "program_level", "applicant_type", "program", "entrance_test_list", "applicant", "allocation_scope"].forEach(fn => {
+        if (pd.fields_dict[fn] && pd.fields_dict[fn].$input) {
+            pd.fields_dict[fn].$input.on("change blur input", () => {
+                update_unpublished_allocations_table_for_list(pd, false);
+            });
+        }
+    });
+
+    update_unpublished_allocations_table_for_list(pd, false);
+}
+
+function update_unpublished_allocations_table_for_list(pd, is_page_change = false) {
+    const html_field = pd.get_field("unpublished_allocations_html");
+    if (!html_field) return;
+
+    if (!is_page_change) {
+        pd.unpublished_state.page = 1;
+    }
+
+    let args = {
+        academic_year: pd.get_value("academic_year") || "",
+        admission_cycle: pd.get_value("admission_cycle") || "",
+        program_level: pd.get_value("program_level") || "",
+        applicant_type: pd.get_value("applicant_type") || "Domestic Applicants",
+        program: pd.get_value("program") || "",
+        entrance_test_list: pd.get_value("entrance_test_list") || "",
+        applicant: pd.get_value("applicant") || "",
+        allocation_scope: pd.get_value("allocation_scope") || "Initial",
+        filter_applicant: pd.unpublished_state.filter_applicant || "",
+        filter_candidate_name: pd.unpublished_state.filter_candidate_name || "",
+        filter_program: pd.unpublished_state.filter_program || "",
+        limit_start: (pd.unpublished_state.page - 1) * pd.unpublished_state.limit,
+        limit_page_length: pd.unpublished_state.limit
+    };
+
+    html_field.$wrapper.html(`<div class="text-muted"><i class="fa fa-spinner fa-spin"></i> ${__('Loading allocations...')}</div>`);
+
+    frappe.call({
+        method: "slcm.admission.doctype.entrance_test_seat_allocation.entrance_test_seat_allocation.get_unpublished_seat_allocations_for_dialog",
+        args: args,
+        callback: function (r) {
+            if (r && r.message) {
+                render_unpublished_allocations_table_for_list(pd, html_field, r.message.records, r.message.total_count, r.message.unique_programs);
+            }
+        }
+    });
+}
+
+function render_unpublished_allocations_table_for_list(pd, html_field, records, total_count, unique_programs) {
+    let state = pd.unpublished_state;
+    let total_pages = Math.ceil(total_count / state.limit) || 1;
+    let all_page_selected = records.length > 0 && records.every(r => state.selected_names.includes(r.name));
+    let all_selected = total_count > 0 && state.selected_names.length === total_count;
+
+    let html = `
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; font-size: 13px; flex-wrap: wrap; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <label style="margin: 0; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                    <input type="checkbox" class="unpub-alloc-select-all" ${all_selected ? 'checked' : ''}> Select All Applicants
+                </label>
+                <button type="button" class="btn btn-xs btn-default unpub-alloc-select-page">Select Page (${records.length})</button>
+                <button type="button" class="btn btn-xs btn-default unpub-alloc-clear-all">Clear All</button>
+                <span class="text-muted"><span class="unpub-alloc-selected-count" style="font-weight: 700; color: #2b6cb0;">${state.selected_names.length}</span> of <b>${total_count}</b> selected</span>
+            </div>
+            <div>
+                <button type="button" class="btn btn-xs btn-default unpub-alloc-prev" ${state.page <= 1 ? 'disabled' : ''}>« Prev</button>
+                <span style="margin: 0 10px; font-weight: 500;">Page ${state.page} of ${total_pages}</span>
+                <button type="button" class="btn btn-xs btn-default unpub-alloc-next" ${state.page >= total_pages ? 'disabled' : ''}>Next »</button>
+            </div>
+        </div>
+
+        <div style="border: 1px solid #d1d8dd; border-radius: 4px; overflow: hidden; overflow-x: auto;">
+            <table class="table table-bordered table-hover" style="margin-bottom: 0; font-size: 12px; white-space: nowrap;">
+                <thead style="background-color: #f8f9fa;">
+                    <tr>
+                        <th style="width: 40px; text-align: center; vertical-align: middle;">
+                            <input type="checkbox" class="unpub-alloc-page-checkbox" title="${__("Select all on page")}" ${all_page_selected ? 'checked' : ''}>
+                        </th>
+                        <th style="width: 40px; text-align: center; vertical-align: middle;">No.</th>
+                        <th>
+                            <div style="color: #2b6cb0; margin-bottom: 4px;">${__('Applicant ID')}</div>
+                            <input type="text" class="form-control input-xs unpub-alloc-filter" data-filter="filter_applicant" placeholder="${__('Filter ID...')}" value="${state.filter_applicant || ''}" style="height: 24px; padding: 2px 6px; font-size: 11px;">
+                        </th>
+                        <th>
+                            <div style="color: #2b6cb0; margin-bottom: 4px;">${__('Candidate Name')}</div>
+                            <input type="text" class="form-control input-xs unpub-alloc-filter" data-filter="filter_candidate_name" placeholder="${__('Filter Name...')}" value="${state.filter_candidate_name || ''}" style="height: 24px; padding: 2px 6px; font-size: 11px;">
+                        </th>
+                        <th>
+                            <div style="color: #2b6cb0; margin-bottom: 4px;">${__('Programme')}</div>
+                            <select class="form-control input-xs unpub-alloc-filter" data-filter="filter_program" style="height: 24px; padding: 2px 4px; font-size: 11px;">
+                                <option value="">${__('All Programmes')}</option>
+                                ${unique_programs ? unique_programs.map(p => `<option value="${p}" ${state.filter_program === p ? 'selected' : ''}>${p}</option>`).join('') : ''}
+                            </select>
+                        </th>
+                        <th style="vertical-align: middle;">${__('Entrance Test List')}</th>
+                        <th style="vertical-align: middle;">${__('Allocated Centre')}</th>
+                        <th style="vertical-align: middle;">${__('Status')}</th>
+                        <th style="vertical-align: middle;">${__('Scope')}</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    if (!records || records.length === 0) {
+        html += `<tr><td colspan="9" class="text-center text-muted" style="padding: 20px;">No unpublished seat allocations found.</td></tr>`;
+    } else {
+        records.forEach((r, idx) => {
+            let is_checked = state.selected_names.includes(r.name);
+            let row_no = (state.page - 1) * state.limit + idx + 1;
+            let scope_badge = r.is_rescheduled
+                ? `<span class="badge" style="background:#fef3c7; color:#b45309;">Rescheduled</span>`
+                : `<span class="badge" style="background:#e0f2fe; color:#0369a1;">Initial</span>`;
+
+            html += `
+                <tr style="background:${is_checked ? '#f8fafc' : '#ffffff'};">
+                    <td style="text-align: center; vertical-align: middle;">
+                        <input type="checkbox" class="unpub-alloc-select-row" data-name="${r.name}" ${is_checked ? 'checked' : ''}>
+                    </td>
+                    <td style="text-align: center; vertical-align: middle;">${row_no}</td>
+                    <td><b>${r.applicant || r.name}</b></td>
+                    <td>${r.candidate_name || '—'}</td>
+                    <td>${r.program || '—'}</td>
+                    <td>${r.entrance_test_list || '—'}</td>
+                    <td>${r.center_name ? `${r.center_name} ${r.seat_number ? `(${r.seat_number})` : ''}` : '<span class="text-muted">Preferences</span>'}</td>
+                    <td><span class="badge" style="background:#f1f5f9; color:#475569;">${r.allocation_status || 'Allocated'}</span></td>
+                    <td>${scope_badge}</td>
+                </tr>
+            `;
+        });
+    }
+
+    html += `</tbody></table></div>`;
+    html_field.$wrapper.html(html);
+
+    // Filter change handler
+    let filter_timeout = null;
+    html_field.$wrapper.find('.unpub-alloc-filter').on('input change', function () {
+        let filter_name = $(this).attr('data-filter');
+        let val = $(this).val();
+        state[filter_name] = val;
+
+        clearTimeout(filter_timeout);
+        filter_timeout = setTimeout(() => {
+            update_unpublished_allocations_table_for_list(pd, false);
+        }, 400);
+    });
+
+    // Select All Applicants across all pages
+    html_field.$wrapper.find('.unpub-alloc-select-all').on('change', function () {
+        let is_checked = $(this).prop('checked');
+        if (!is_checked) {
+            state.selected_names = [];
+            html_field.$wrapper.find('.unpub-alloc-select-row').prop('checked', false);
+            html_field.$wrapper.find('.unpub-alloc-page-checkbox').prop('checked', false);
+            html_field.$wrapper.find('.unpub-alloc-selected-count').text(0);
+        } else {
+            let chk = $(this);
+            chk.prop('disabled', true);
+            html_field.$wrapper.find('.unpub-alloc-select-row').prop('checked', true);
+            html_field.$wrapper.find('.unpub-alloc-page-checkbox').prop('checked', true);
+
+            frappe.call({
+                method: "slcm.admission.doctype.entrance_test_seat_allocation.entrance_test_seat_allocation.get_unpublished_seat_allocations_for_dialog",
+                args: {
+                    academic_year: pd.get_value("academic_year") || "",
+                    admission_cycle: pd.get_value("admission_cycle") || "",
+                    program_level: pd.get_value("program_level") || "",
+                    applicant_type: pd.get_value("applicant_type") || "Domestic Applicants",
+                    program: pd.get_value("program") || "",
+                    entrance_test_list: pd.get_value("entrance_test_list") || "",
+                    applicant: pd.get_value("applicant") || "",
+                    allocation_scope: pd.get_value("allocation_scope") || "Initial",
+                    filter_applicant: state.filter_applicant || "",
+                    filter_candidate_name: state.filter_candidate_name || "",
+                    filter_program: state.filter_program || "",
+                    fetch_all_names: 1
+                },
+                callback: function (r) {
+                    chk.prop('disabled', false);
+                    if (r && r.message) {
+                        state.selected_names = r.message;
+                        html_field.$wrapper.find('.unpub-alloc-selected-count').text(state.selected_names.length);
+                    }
+                }
+            });
+        }
+    });
+
+    // Page selection helper
+    function toggle_page_selection(select) {
+        records.forEach(r => {
+            if (select && !state.selected_names.includes(r.name)) {
+                state.selected_names.push(r.name);
+            } else if (!select) {
+                state.selected_names = state.selected_names.filter(n => n !== r.name);
+            }
+        });
+        html_field.$wrapper.find('.unpub-alloc-select-row').prop('checked', select);
+        html_field.$wrapper.find('.unpub-alloc-page-checkbox').prop('checked', select);
+        html_field.$wrapper.find('.unpub-alloc-selected-count').text(state.selected_names.length);
+        html_field.$wrapper.find('.unpub-alloc-select-all').prop('checked', total_count > 0 && state.selected_names.length === total_count);
+    }
+
+    html_field.$wrapper.find('.unpub-alloc-select-page').on('click', function () {
+        toggle_page_selection(true);
+    });
+
+    html_field.$wrapper.find('.unpub-alloc-page-checkbox').on('change', function () {
+        toggle_page_selection($(this).prop('checked'));
+    });
+
+    // Clear All selection
+    html_field.$wrapper.find('.unpub-alloc-clear-all').on('click', function () {
+        state.selected_names = [];
+        html_field.$wrapper.find('.unpub-alloc-select-row').prop('checked', false);
+        html_field.$wrapper.find('.unpub-alloc-page-checkbox').prop('checked', false);
+        html_field.$wrapper.find('.unpub-alloc-select-all').prop('checked', false);
+        html_field.$wrapper.find('.unpub-alloc-selected-count').text(0);
+    });
+
+    // Row selection toggle
+    html_field.$wrapper.find('.unpub-alloc-select-row').on('change', function () {
+        let name = $(this).data('name');
+        if ($(this).prop('checked')) {
+            if (!state.selected_names.includes(name)) state.selected_names.push(name);
+        } else {
+            state.selected_names = state.selected_names.filter(n => n !== name);
+        }
+
+        html_field.$wrapper.find('.unpub-alloc-selected-count').text(state.selected_names.length);
+        let all_page_checked = records.length > 0 && html_field.$wrapper.find('.unpub-alloc-select-row:not(:checked)').length === 0;
+        html_field.$wrapper.find('.unpub-alloc-page-checkbox').prop('checked', all_page_checked);
+        html_field.$wrapper.find('.unpub-alloc-select-all').prop('checked', total_count > 0 && state.selected_names.length === total_count);
+    });
+
+    html_field.$wrapper.find('.unpub-alloc-prev').on('click', function () {
+        if (state.page > 1) {
+            state.page--;
+            update_unpublished_allocations_table_for_list(pd, true);
+        }
+    });
+
+    html_field.$wrapper.find('.unpub-alloc-next').on('click', function () {
+        if (state.page < total_pages) {
+            state.page++;
+            update_unpublished_allocations_table_for_list(pd, true);
         }
     });
 }

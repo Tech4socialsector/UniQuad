@@ -18,12 +18,10 @@ frappe.ui.form.on('Exam Assessment Schedule', {
 			filters: frm.doc.term ? { term: frm.doc.term } : {}
 		}));
 
-		frm.set_query('course_offering', 'assessments', () => {
-			const filters = { status: 'Active' };
-			if (frm.doc.programme) filters.program = frm.doc.programme;
-			if (frm.doc.term) filters.term_name = frm.doc.term;
-			return { filters };
-		});
+		frm.set_query('course', 'assessments', () => ({
+			query: `${EAS_PATH}.course_query`,
+			filters: { programme: frm.doc.programme, term: frm.doc.term }
+		}));
 
 		frm.set_query('component', 'assessments', () => ({ filters: { is_active: 1 } }));
 		frm.set_query('assessment_type', 'assessments', () => ({ filters: { is_active: 1 } }));
@@ -65,11 +63,11 @@ function eas_fetch_assessments(frm) {
 
 			// Skip rows already in the table, so dates entered earlier are kept
 			const existing = new Set(
-				(frm.doc.assessments || []).map(d => `${d.course_offering}::${(d.assessment_label || '').trim().toLowerCase()}`)
+				(frm.doc.assessments || []).map(d => `${d.course}::${(d.assessment_label || '').trim().toLowerCase()}`)
 			);
 			let added = 0;
 			rows.forEach(row => {
-				const key = `${row.course_offering}::${(row.assessment_label || '').trim().toLowerCase()}`;
+				const key = `${row.course}::${(row.assessment_label || '').trim().toLowerCase()}`;
 				if (existing.has(key)) return;
 				frm.add_child('assessments', row);
 				existing.add(key);

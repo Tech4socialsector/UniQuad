@@ -36,7 +36,7 @@
    "fieldname": "company",
    "fieldtype": "Link",
    "label": "Company",
-   "options": "Company",
+   "options": "SLCM Company",
    "reqd": 1,
    "in_list_view": 1
   },

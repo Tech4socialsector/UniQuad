@@ -3,68 +3,69 @@
 
 import frappe
 from frappe.model.document import Document
+from frappe.utils import flt
 
 
 class StudentCourseMarks(Document):
 	def validate(self):
-		self._calculate_total()
-		self._assign_grade()
-
-	def _calculate_total(self):
-		total = 0.0
-		for row in self.marks_entries:
-			total += float(row.moderated_marks or row.marks or 0)
-		self.total_marks = total
-
-	def _assign_grade(self):
-		# Only auto-assign if grade not manually set via update fields
-		if self.updated_grade:
+		# Results loaded by Bulk Import Marks carry their own total and grade
+		if self.flags.keep_imported_result:
 			return
-
-		# Don't assign a grade (e.g. "F") until marks have actually been
-		# entered — otherwise every student is treated as graded/failed
-		# from the moment their record is created.
 		if not self._has_marks_entered():
+			self.total_marks = 0
 			self.grade = ""
 			return
+		# Only recalculate when something the result depends on changed, so a
+		# grade set by grade upload / grade override survives e.g. a remark edit
+		if self.is_new() or self.flags.recalculate_result or self._result_inputs_changed():
+			self._recalculate()
 
-		schema_name = self._resolve_grading_schema()
-		if not schema_name:
-			return
+	def _recalculate(self):
+		"""Same rules as Course Results (compute_student_result): weighted
+		marks, component pass marks, re-exam and improvement."""
+		from slcm.slcm.page.examination_result.examination_result import compute_student_result
 
-		try:
-			schema = frappe.get_doc("Grading Schema", schema_name)
-		except frappe.DoesNotExistError:
-			return
+		values, _result = compute_student_result(
+			self.course,
+			self.exam_plan,
+			[row.as_dict() for row in self.marks_entries],
+			attendance_status=self.attendance_status,
+			improvement_marks=self.improvement_marks,
+			stored_total=self.total_marks,
+		)
+		self.update(values)
 
-		effective_marks = float(self.updated_final_marks or self.total_marks or 0)
-		self.grade = schema.get_grade(effective_marks) or self.grade
-		if not self.grade:
-			return
+	def _result_inputs(self, doc):
+		entries = sorted(
+			(
+				row.component or "",
+				row.assessment_type or "",
+				flt(row.marks),
+				flt(row.moderated_marks),
+				flt(row.revaluation_marks),
+			)
+			for row in doc.marks_entries
+		)
+		return (
+			entries,
+			doc.attendance_status or "",
+			flt(doc.improvement_marks),
+			doc.evaluation_schema or "",
+			doc.exam_plan or "",
+			doc.course or "",
+		)
 
-		# Reflect failed status in enrollment_status if not already set
-		if schema.is_failed(effective_marks) and not self.enrollment_status:
-			pass  # enrollment_status is set by admin, not auto
+	def _result_inputs_changed(self):
+		before = self.get_doc_before_save()
+		return not before or self._result_inputs(before) != self._result_inputs(self)
 
 	def _has_marks_entered(self):
-		if self.updated_final_marks not in (None, ""):
+		if self.improvement_marks not in (None, "", 0):
 			return True
 		for row in self.marks_entries:
 			if row.marks not in (None, "") or row.moderated_marks not in (None, ""):
 				return True
-		return False
-
-	def _resolve_grading_schema(self):
-		"""Return grading schema name via Course Schema Assignment (exam_plan + course_offering)."""
-		if self.exam_plan and self.course_offering:
-			schema = frappe.db.get_value(
-				"Course Schema Assignment",
-				{"exam_plan": self.exam_plan, "course_offering": self.course_offering},
-				"grade_schema",
-			)
-			if schema:
-				return schema
-		return None
+		return (self.attendance_status or "").lower() == "absent"
 
 
 @frappe.whitelist()
@@ -82,6 +83,7 @@ def bulk_assign_grades(exam_plan):
 	for r in records:
 		try:
 			doc = frappe.get_doc("Student Course Marks", r.name)
+			doc.flags.recalculate_result = True
 			doc.save(ignore_permissions=True)
 			updated += 1
 		except Exception as e:

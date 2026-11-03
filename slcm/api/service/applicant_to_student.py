@@ -15,6 +15,7 @@
 
 import frappe
 from frappe.utils import flt, nowdate
+from slcm.security.access import require_desk_user
 
 
 # ── Academic Year Helper ──────────────────────────────────────────────────────
@@ -105,10 +106,8 @@ def _map_applicant_to_student(student, applicant, program, admission_cycle, offe
 
     # ── Department & Level of Study (derived from programme/program) ────────────────────────────
     if program:
-        program_data = frappe.db.get_value("Programme", program, ["department", "level_of_study"], as_dict=True)
+        program_data = frappe.db.get_value("Programme", program, ["level_of_study"], as_dict=True)
         if program_data:
-            if program_data.get("department"):
-                student.department = program_data.department
             if program_data.get("level_of_study"):
                 student.level_of_study = program_data.level_of_study
 
@@ -121,21 +120,22 @@ def _map_applicant_to_student(student, applicant, program, admission_cycle, offe
             student.academic_year = derived_year
 
     # ── Batch Assignment ───────────────────────────────────────────────────────
+    # A Batch is a standalone cohort (no programme / term): use the academic
+    # year's only Active batch, or the one already holding this programme's
+    # students when the year has several.
     if program and student.academic_year:
-        batch_data = frappe.db.get_value(
-            "Batch",
-            {
-                "program": program,
-                "academic_year": student.academic_year,
-                "status": "Active"
-            },
-            ["name", "academic_term"],
-            as_dict=True
+        batches = frappe.get_all(
+            "SLCM Batch",
+            filters={"academic_year": student.academic_year, "status": "Active"},
+            pluck="name",
         )
-        if batch_data:
-            student.batch = batch_data.name
-            if batch_data.academic_term:
-                student.academic_term = batch_data.academic_term
+        if len(batches) > 1:
+            batches = [
+                b for b in batches
+                if frappe.db.exists("Student Master", {"batch": b, "programme_of_study": program})
+            ]
+        if batches:
+            student.batch = batches[0]
 
     # ── Name: full candidate_name in first_name only (no split) ──────────────
     full_name = (applicant.get("candidate_name") or "").strip()
@@ -592,6 +592,7 @@ def convert_applicant_to_student(applicant_name, program, admission_cycle, offer
     Returns:
         dict: {"student_name": str, "created": bool}
     """
+    require_desk_user()
     if not frappe.db.exists("Applicant", applicant_name):
         frappe.throw(frappe._("Applicant {0} not found.").format(applicant_name))
 
@@ -729,45 +730,7 @@ def convert_applicant_to_student(applicant_name, program, admission_cycle, offer
     except Exception as e:
         frappe.log_error(frappe.get_traceback(), f"Finance sync during conversion failed for {applicant_name}")
 
-    # ── 6. Create Student Enrollment ───────────────────────────────────────────
-    # If you want to disable automatic enrollment creation in the future, 
-    # simply comment out the line below.
-    create_student_enrollment(student_name)
+    # No Student Enrollment here: the student is enrolled (Student ID, section,
+    # Academic Log) from Student Master → Enroll once registration is Completed.
 
     return {"student_name": student_name, "created": True}
-
-
-def create_student_enrollment(student_name):
-    """
-    Creates the initial Student Enrollment record for a newly converted student.
-    Uses the batch (programme) assigned during the applicant conversion.
-    """
-    try:
-        student = frappe.get_doc("Student Master", student_name)
-        
-        # Enrollment requires a batch
-        if not student.batch:
-            frappe.logger().warning(f"Skipping Student Enrollment for {student_name}: No batch assigned.")
-            return None
-            
-        # Check if enrollment already exists for this batch
-        if frappe.db.exists("Student Enrollment", {"student": student_name, "batch": student.batch}):
-            return None
-            
-        enrollment = frappe.new_doc("Student Enrollment")
-        enrollment.student = student_name
-        enrollment.enrollment_date = frappe.utils.today()
-        enrollment.batch = student.batch
-        
-        # Fields like program, academic_year, and term_name are fetch_from batch
-        enrollment.insert(ignore_permissions=True)
-        frappe.logger().info(f"[create_student_enrollment] Created {enrollment.name} for Student {student_name}")
-        
-        return enrollment.name
-        
-    except Exception as e:
-        frappe.log_error(
-            message=frappe.get_traceback(),
-            title=f"Student Enrollment Creation Failed | Student: {student_name}"
-        )
-        return None

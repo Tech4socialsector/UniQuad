@@ -7,6 +7,7 @@ from slcm.admission.doctype.offer_configuration.offer_configuration import (
     validate_offer_config_fee_deadlines,
 )
 from slcm.api.service.fee_service import FeeService
+from slcm.security.access import assert_owns_applicant, assert_owns_offer, require_desk_user
 
 class OfferService:
     """
@@ -110,7 +111,6 @@ class OfferService:
         return admission_year
 
     @staticmethod
-    @frappe.whitelist()
     def generate_offer(applicant, campus, program, cycle, admission_year=None):
         """
         Main entry point for generating an offer letter.
@@ -440,7 +440,6 @@ class OfferService:
         return True
 
     @staticmethod
-    @frappe.whitelist()
     def expire_offers():
         """
         Scheduled job logic to transition 'Issued' and 'Accepted' offers to 'Expired'
@@ -515,7 +514,6 @@ class OfferService:
         return processed
 
     @staticmethod
-    @frappe.whitelist()
     def bulk_generate_offers(applicants):
         """
         Entry point for bulk generation.
@@ -744,7 +742,6 @@ class OfferService:
         }
 
     @staticmethod
-    @frappe.whitelist()
     def bulk_update_status(offer_names, action, notes=None):
         """
         API endpoint for bulk status updates (Accept/Reject).
@@ -1000,7 +997,6 @@ class OfferService:
         return FeeService.verify_offer_payment(razorpay_payment_id, razorpay_order_id, razorpay_signature, offer_name)
 
     @staticmethod
-    @frappe.whitelist()
     def get_pending_offers_list():
         """
         Fetches all Offers with 'Issued' status that haven't passed their deadline.
@@ -1041,7 +1037,6 @@ class OfferService:
         return valid_offers
 
     @staticmethod
-    @frappe.whitelist()
     def send_bulk_reminders(offer_names=None, email_template=None, send_email=True, send_notification=True, sender_email=None):
         """
         API endpoint to send reminders using an Email Template.
@@ -1202,47 +1197,57 @@ class OfferService:
 
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def generate_offer(applicant, campus, program, cycle, admission_year=None):
+    require_desk_user()
     return OfferService.generate_offer(applicant, campus, program, cycle, admission_year)
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def bulk_generate_offers(applicants):
+    require_desk_user()
     return OfferService.bulk_generate_offers(applicants)
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def bulk_update_status(offer_names, action, notes=None):
+    require_desk_user()
     return OfferService.bulk_update_status(offer_names, action, notes)
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def accept_offer(offer_name, needs_accommodation=None):
+    assert_owns_offer(offer_name)
     # Set a flag so reject_applicant_other_offer knows which offer was just accepted
     frappe.flags.current_offer = offer_name
     return OfferService.accept_offer(offer_name, needs_accommodation)
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def reject_applicant_other_offer(applicant, reason):
+    assert_owns_applicant(applicant)
     return OfferService.reject_applicant_other_offer(applicant, reason)
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def process_fee_payment(offer_name, payment_mode="Cash", reference_number=None):
+    require_desk_user()
     from slcm.api.service.fee_service import FeeService
     return FeeService.process_fee_payment(offer_name, payment_mode, reference_number)
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def reject_offer(offer_name, reason=None):
+    assert_owns_offer(offer_name)
     return OfferService.reject_offer(offer_name, reason)
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def expire_offers():
+    require_desk_user()
     return OfferService.expire_offers()
 
 @frappe.whitelist()
 def get_online_payment_url(offer_name, gateway=None):
+    assert_owns_offer(offer_name)
     return OfferService.get_online_payment_url(offer_name, gateway)
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist(methods=["POST"])
 def create_offer_razorpay_order(offer_name):
+    assert_owns_offer(offer_name)
     from slcm.api.service.fee_service import FeeService
     return FeeService.create_offer_razorpay_order(offer_name)
 
@@ -1253,10 +1258,12 @@ def verify_offer_payment(razorpay_payment_id, razorpay_order_id, razorpay_signat
 
 @frappe.whitelist()
 def get_pending_offers_list():
+    require_desk_user()
     return OfferService.get_pending_offers_list()
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def send_bulk_reminders(offer_names=None, email_template=None, send_email=True, send_notification=True, sender_email=None):
+    require_desk_user()
     return OfferService.send_bulk_reminders(offer_names, email_template, send_email, send_notification, sender_email)
 
 def background_bulk_worker(applicants, user=None):

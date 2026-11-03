@@ -10,7 +10,7 @@ frappe.query_reports["Consecutive Absents"] = {
             "fieldname": "program",
             "label": __("Programme"),
             "fieldtype": "Link",
-            "options": "Batch"
+            "options": "SLCM Batch"
         }
     ]
 };

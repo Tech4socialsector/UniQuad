@@ -31,11 +31,11 @@ class TestDatabaseIntegrity(PaymentTestBase):
 		)
 
 		# DI-001: Payment Request status == Paid, gateway_status == captured
-		self.assertEqual(frappe.db.get_value("Payment Request", pr.name, "status"), "Paid")
-		self.assertEqual(frappe.db.get_value("Payment Request", pr.name, "gateway_status"), "captured")
+		self.assertEqual(frappe.db.get_value("SLCM Payment Request", pr.name, "status"), "Paid")
+		self.assertEqual(frappe.db.get_value("SLCM Payment Request", pr.name, "gateway_status"), "captured")
 
 		# DI-005: Reference document matches
-		self.assertEqual(frappe.db.get_value("Offer Letter", offer.name, "status"), "Payment Completed")
+		self.assertEqual(frappe.db.get_value("Offer Letter", offer.name, "status"), "Full Fee Paid")
 		self.assertEqual(frappe.db.get_value("Applicant Fee Assignment", afa.name, "status"), "Paid")
 
 	def test_receipt_count(self):
@@ -73,7 +73,7 @@ class TestDatabaseIntegrity(PaymentTestBase):
 		pr_a = self.create_payment_request("Offer Letter", offer_a.name, "order_di_a", amount=5000)
 
 		# Make A Paid
-		frappe.db.set_value("Payment Request", pr_a.name, {
+		frappe.db.set_value("SLCM Payment Request", pr_a.name, {
 			"status": "Paid",
 			"gateway_status": "captured",
 			"transaction_id": "pay_di_dup"
@@ -106,7 +106,7 @@ class TestDatabaseIntegrity(PaymentTestBase):
 		self.assertEqual(res.get("status"), "failed")
 		duplicates = frappe.db.sql("""
 			SELECT transaction_id, COUNT(*)
-			FROM `tabPayment Request`
+			FROM `tabSLCM Payment Request`
 			WHERE status = 'Paid' AND transaction_id = 'pay_di_dup'
 			GROUP BY transaction_id
 		""")
@@ -118,6 +118,8 @@ class TestDatabaseIntegrity(PaymentTestBase):
 		app = self.create_applicant(amount=1000)
 		offer = self.create_offer_letter(app.name, amount=5000)
 		afa = self.create_applicant_fee_assignment(offer.name, app.name, amount=5000)
+		# Receipts are only generated for a paid assignment.
+		frappe.db.set_value("Applicant Fee Assignment", afa.name, "status", "Paid")
 
 		# Generate receipt 1
 		r1 = FeeService.generate_receipt(offer, "pay_di_r1", "Online")

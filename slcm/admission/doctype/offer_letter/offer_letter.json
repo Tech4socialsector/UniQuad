@@ -232,7 +232,7 @@
    "link_fieldname": "offer_letter"
   }
  ],
- "modified": "2026-08-18 12:21:19.237149",
+ "modified": "2026-11-02 18:08:01.439512",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Offer Letter",
@@ -282,11 +282,9 @@
    "share": 1
   },
   {
-   "export": 1,
    "print": 1,
    "read": 1,
-   "role": "Applicant",
-   "write": 1
+   "role": "Applicant"
   }
  ],
  "row_format": "Dynamic",

@@ -4,7 +4,7 @@ const FD_EVENT_DEMAND_DOCTYPES = [
 	"Deferral Order",
 	"Convocation Registration",
 	"Re Exam Registration",
-	"Revaluation Request",
+	"Grade Appeal",
 	"Course Reregistration",
 ];
 

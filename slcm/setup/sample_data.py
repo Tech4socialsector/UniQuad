@@ -14,9 +14,9 @@ def create_sample_student():
     # 1. Department                                                         #
     # ------------------------------------------------------------------ #
     dept_name = "Computer Science & Engineering"
-    if not frappe.db.exists("Department", dept_name):
+    if not frappe.db.exists("SLCM Department", dept_name):
         dept = frappe.get_doc({
-            "doctype": "Department",
+            "doctype": "SLCM Department",
             "department_name": dept_name,
             "department_id": "CSE",
             "status": "Active",
@@ -24,7 +24,7 @@ def create_sample_student():
         dept.insert(ignore_permissions=True, ignore_mandatory=True)
         print(f"  [OK] Created Department: {dept.name}")
     else:
-        dept = frappe.get_doc("Department", dept_name)
+        dept = frappe.get_doc("SLCM Department", dept_name)
         print(f"  [--] Department exists:  {dept.name}")
 
     # ------------------------------------------------------------------ #
@@ -74,9 +74,9 @@ def create_sample_student():
     # 4. Cohort                                                             #
     # ------------------------------------------------------------------ #
     cohort_name = "BTech CSE 2025 - Semester 1"
-    if not frappe.db.exists("Batch", cohort_name):
+    if not frappe.db.exists("SLCM Batch", cohort_name):
         cohort = frappe.get_doc({
-            "doctype": "Batch",
+            "doctype": "SLCM Batch",
             "cohort_code": "BTCSE-2025-S1",
             "cohort_name": cohort_name,
             "program": prog.name,
@@ -92,7 +92,7 @@ def create_sample_student():
         cohort.insert(ignore_permissions=True, ignore_mandatory=True)
         print(f"  [OK] Created Cohort:     {cohort.name}")
     else:
-        cohort = frappe.get_doc("Batch", cohort_name)
+        cohort = frappe.get_doc("SLCM Batch", cohort_name)
         print(f"  [--] Cohort exists:      {cohort.name}")
 
     # ------------------------------------------------------------------ #

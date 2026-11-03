@@ -30,10 +30,10 @@ class TestPaymentRecovery(PaymentTestBase):
 		}
 
 		with patch("frappe.request.get_data", return_value=json.dumps(payload).encode("utf-8")), \
-			 patch("frappe.get_request_header", return_value=None):
+			 patch("frappe.get_request_header", side_effect=self.sign_webhook_request):
 			handle_razorpay_webhook()
 
-		self.assertEqual(frappe.db.get_value("Payment Request", pr.name, "status"), "Paid")
+		self.assertEqual(frappe.db.get_value("SLCM Payment Request", pr.name, "status"), "Paid")
 		self.assertEqual(frappe.db.get_value("Applicant", app.name, "application_fee_status"), "Paid")
 
 	def test_webhook_down_scheduler_recovery(self):
@@ -44,7 +44,7 @@ class TestPaymentRecovery(PaymentTestBase):
 		# Make it older than 15 mins to hit scheduler cutoff
 		from frappe.utils import add_to_date
 		old_time = add_to_date(frappe.utils.now_datetime(), minutes=-20)
-		frappe.db.sql("UPDATE `tabPayment Request` SET modified = %s WHERE name = %s", (old_time, pr.name))
+		frappe.db.sql("UPDATE `tabSLCM Payment Request` SET modified = %s WHERE name = %s", (old_time, pr.name))
 		frappe.db.commit()
 
 		self.mock_razorpay(payments_list=[{
@@ -57,7 +57,7 @@ class TestPaymentRecovery(PaymentTestBase):
 
 		FeeService.reconcile_pending_payments()
 
-		self.assertEqual(frappe.db.get_value("Payment Request", pr.name, "status"), "Paid")
+		self.assertEqual(frappe.db.get_value("SLCM Payment Request", pr.name, "status"), "Paid")
 		self.assertEqual(frappe.db.get_value("Applicant", app.name, "application_fee_status"), "Paid")
 
 	def test_scheduler_safety_multiple_runs(self):
@@ -68,7 +68,7 @@ class TestPaymentRecovery(PaymentTestBase):
 		# Trigger cutoff
 		from frappe.utils import add_to_date
 		old_time = add_to_date(frappe.utils.now_datetime(), minutes=-20)
-		frappe.db.sql("UPDATE `tabPayment Request` SET modified = %s WHERE name = %s", (old_time, pr.name))
+		frappe.db.sql("UPDATE `tabSLCM Payment Request` SET modified = %s WHERE name = %s", (old_time, pr.name))
 		frappe.db.commit()
 
 		self.mock_razorpay(payments_list=[{
@@ -83,7 +83,7 @@ class TestPaymentRecovery(PaymentTestBase):
 			FeeService.reconcile_pending_payments()
 
 		# Exactly 1 receipt
-		receipts = frappe.get_all("Applicant Payment Receipt", filters={"applicant": app.name, "docstatus": 1})
+		receipts = frappe.get_all("Applicant Payment Receipt", filters={"applicant": app.name, "docstatus": ["<", 2]})
 		self.assertEqual(len(receipts), 1)
 
 	def test_scheduler_safety_after_completed(self):
@@ -92,14 +92,14 @@ class TestPaymentRecovery(PaymentTestBase):
 		pr = self.create_payment_request("Applicant", app.name, "order_rec_004", amount=1000)
 
 		# Set status to Paid
-		frappe.db.set_value("Payment Request", pr.name, "status", "Paid")
+		frappe.db.set_value("SLCM Payment Request", pr.name, "status", "Paid")
 		frappe.db.set_value("Applicant", app.name, "application_fee_status", "Paid")
 		frappe.db.commit()
 
 		# Force cutoff
 		from frappe.utils import add_to_date
 		old_time = add_to_date(frappe.utils.now_datetime(), minutes=-20)
-		frappe.db.sql("UPDATE `tabPayment Request` SET modified = %s WHERE name = %s", (old_time, pr.name))
+		frappe.db.sql("UPDATE `tabSLCM Payment Request` SET modified = %s WHERE name = %s", (old_time, pr.name))
 		frappe.db.commit()
 
 		self.mock_razorpay(payments_list=[{
@@ -114,7 +114,7 @@ class TestPaymentRecovery(PaymentTestBase):
 		FeeService.reconcile_pending_payments()
 
 		# No new receipts or modifications
-		receipts = frappe.get_all("Applicant Payment Receipt", filters={"applicant": app.name, "docstatus": 1})
+		receipts = frappe.get_all("Applicant Payment Receipt", filters={"applicant": app.name, "docstatus": ["<", 2]})
 		self.assertEqual(len(receipts), 0) # since we didn't call verification path, it stays at 0
 
 	def test_scheduler_safety_authorized_only(self):
@@ -124,7 +124,7 @@ class TestPaymentRecovery(PaymentTestBase):
 
 		from frappe.utils import add_to_date
 		old_time = add_to_date(frappe.utils.now_datetime(), minutes=-20)
-		frappe.db.sql("UPDATE `tabPayment Request` SET modified = %s WHERE name = %s", (old_time, pr.name))
+		frappe.db.sql("UPDATE `tabSLCM Payment Request` SET modified = %s WHERE name = %s", (old_time, pr.name))
 		frappe.db.commit()
 
 		self.mock_razorpay(payments_list=[{
@@ -138,7 +138,7 @@ class TestPaymentRecovery(PaymentTestBase):
 		FeeService.reconcile_pending_payments()
 
 		# Stays in Requested status
-		self.assertEqual(frappe.db.get_value("Payment Request", pr.name, "status"), "Requested")
+		self.assertEqual(frappe.db.get_value("SLCM Payment Request", pr.name, "status"), "Requested")
 		self.assertEqual(frappe.db.get_value("Applicant", app.name, "application_fee_status"), "Requested")
 
 	def test_scheduler_safety_created_only(self):
@@ -148,7 +148,7 @@ class TestPaymentRecovery(PaymentTestBase):
 
 		from frappe.utils import add_to_date
 		old_time = add_to_date(frappe.utils.now_datetime(), minutes=-20)
-		frappe.db.sql("UPDATE `tabPayment Request` SET modified = %s WHERE name = %s", (old_time, pr.name))
+		frappe.db.sql("UPDATE `tabSLCM Payment Request` SET modified = %s WHERE name = %s", (old_time, pr.name))
 		frappe.db.commit()
 
 		self.mock_razorpay(payments_list=[{
@@ -162,5 +162,5 @@ class TestPaymentRecovery(PaymentTestBase):
 		FeeService.reconcile_pending_payments()
 
 		# Stays in Requested status
-		self.assertEqual(frappe.db.get_value("Payment Request", pr.name, "status"), "Requested")
+		self.assertEqual(frappe.db.get_value("SLCM Payment Request", pr.name, "status"), "Requested")
 		self.assertEqual(frappe.db.get_value("Applicant", app.name, "application_fee_status"), "Requested")

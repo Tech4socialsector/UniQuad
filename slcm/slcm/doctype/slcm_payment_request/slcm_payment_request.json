@@ -1,0 +1,392 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "PR-.YYYY.-.#####",
+ "creation": "2026-02-24 18:30:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "payment_details_tab",
+  "reference_doctype",
+  "reference_name",
+  "email_to",
+  "currency",
+  "amount",
+  "status",
+  "column_break_1",
+  "payment_gateway",
+  "payment_url",
+  "transaction_id",
+  "gateway_response",
+  "failure_message",
+  "section_break_gateway",
+  "gateway_status",
+  "razorpay_order_id",
+  "razorpay_payment_id",
+  "razorpay_signature",
+  "column_break_gateway_2",
+  "paid_on",
+  "webhook_received",
+  "amended_from",
+  "settlement_details_tab",
+  "settlement_section",
+  "settlement_id",
+  "settlement_utr",
+  "settlement_date",
+  "settlement_status",
+  "gateway_settlement_status",
+  "column_break_usow",
+  "gateway_fees",
+  "gateway_tax",
+  "net_settled",
+  "settlement_amount",
+  "settlement_response"
+ ],
+ "fields": [
+  {
+   "fieldname": "reference_doctype",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Reference DocType",
+   "options": "DocType",
+   "reqd": 1
+  },
+  {
+   "fieldname": "reference_name",
+   "fieldtype": "Dynamic Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Reference Name",
+   "options": "reference_doctype",
+   "reqd": 1
+  },
+  {
+   "fieldname": "email_to",
+   "fieldtype": "Data",
+   "label": "Email To",
+   "options": "Email"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "label": "Amount",
+   "precision": "2"
+  },
+  {
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "Draft",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Draft\nRequested\nPaid\nCancelled\nFailed",
+   "permlevel": 1
+  },
+  {
+   "fieldname": "payment_gateway",
+   "fieldtype": "Link",
+   "label": "Payment Gateway",
+   "options": "Payment Gateway"
+  },
+  {
+   "fieldname": "payment_url",
+   "fieldtype": "Small Text",
+   "label": "Payment URL",
+   "read_only": 1
+  },
+  {
+   "fieldname": "transaction_id",
+   "fieldtype": "Data",
+   "in_standard_filter": 1,
+   "label": "Transaction ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "gateway_response",
+   "fieldtype": "Code",
+   "label": "Gateway Response",
+   "options": "JSON"
+  },
+  {
+   "fieldname": "failure_message",
+   "fieldtype": "Small Text",
+   "label": "Failure Message",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_gateway",
+   "fieldtype": "Section Break",
+   "label": "Gateway Details"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "gateway_status",
+   "fieldtype": "Select",
+   "label": "Gateway Status",
+   "options": "created\nauthorized\ncaptured\nfailed\nrefunded",
+   "permlevel": 1
+  },
+  {
+   "fieldname": "razorpay_order_id",
+   "fieldtype": "Data",
+   "label": "Razorpay Order ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "razorpay_payment_id",
+   "fieldtype": "Data",
+   "label": "Razorpay Payment ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "razorpay_signature",
+   "fieldtype": "Data",
+   "label": "Razorpay Signature",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_gateway_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "paid_on",
+   "fieldtype": "Datetime",
+   "label": "Paid On"
+  },
+  {
+   "default": "0",
+   "fieldname": "webhook_received",
+   "fieldtype": "Check",
+   "label": "Webhook Received"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "SLCM Payment Request",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "payment_details_tab",
+   "fieldtype": "Tab Break",
+   "label": "Payment Details"
+  },
+  {
+   "fieldname": "settlement_details_tab",
+   "fieldtype": "Tab Break",
+   "label": "Settlement Details"
+  },
+  {
+   "fieldname": "settlement_section",
+   "fieldtype": "Section Break",
+   "label": "Settlement Details"
+  },
+  {
+   "fieldname": "settlement_id",
+   "fieldtype": "Data",
+   "in_standard_filter": 1,
+   "label": "Settlement ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "settlement_utr",
+   "fieldtype": "Data",
+   "label": "UTR Number",
+   "read_only": 1
+  },
+  {
+   "fieldname": "settlement_date",
+   "fieldtype": "Datetime",
+   "label": "Settled At",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "settlement_status",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "Settlement Status",
+   "options": "\nPending\nProcessing\nSettled\nFailed",
+   "read_only": 1
+  },
+  {
+   "fieldname": "settlement_amount",
+   "fieldtype": "Currency",
+   "label": "Settlement Amount",
+   "read_only": 1
+  },
+  {
+   "fieldname": "gateway_fees",
+   "fieldtype": "Currency",
+   "label": "Gateway Fees (INR)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "gateway_tax",
+   "fieldtype": "Currency",
+   "label": "Gateway Tax (INR)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "net_settled",
+   "fieldtype": "Currency",
+   "label": "Net Settled (INR)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "settlement_response",
+   "fieldtype": "Code",
+   "label": "Gateway Settlement Response",
+   "options": "JSON",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_usow",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "gateway_settlement_status",
+   "fieldtype": "Select",
+   "label": "Gateway Settlement Status",
+   "options": "\ncreated\nprocessed\nfailed",
+   "read_only": 1
+  }
+ ],
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-10-19 16:30:00.000000",
+ "modified_by": "Administrator",
+ "module": "SLCM",
+ "name": "SLCM Payment Request",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Academic Admin",
+   "share": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts Manager",
+   "share": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Admission Officer",
+   "share": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Offer Letter Admin",
+   "share": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Campus Admin",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "permlevel": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "All",
+   "share": 1
+  },
+  {
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "permlevel": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [
+  {
+   "color": "Gray",
+   "title": "Draft"
+  },
+  {
+   "color": "Yellow",
+   "title": "Requested"
+  },
+  {
+   "color": "Green",
+   "title": "Paid"
+  },
+  {
+   "color": "Orange",
+   "title": "Cancelled"
+  },
+  {
+   "color": "Red",
+   "title": "Failed"
+  }
+ ],
+ "track_changes": 1
+}

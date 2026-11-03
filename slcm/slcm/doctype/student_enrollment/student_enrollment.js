@@ -1,12 +1,8 @@
 frappe.ui.form.on("Student Enrollment", {
 	refresh(frm) {
-		// Lightweight only - just keep the Section link filtered to this
-		// batch. The auto-fill of enrolled_courses must NOT re-run here,
-		// otherwise simply opening an existing enrollment would wipe out
-		// any manually edited rows (grades, status, faculty overrides).
-		frm.set_query("section", function () {
-			return { filters: { batch: frm.doc.batch } };
-		});
+		// The auto-fill of enrolled_courses must NOT re-run here, otherwise
+		// simply opening an existing enrollment would wipe out any manually
+		// edited rows (grades, status, faculty overrides).
 
 		// Only students who have completed the registration workflow
 		// should be selectable for enrollment.
@@ -14,74 +10,78 @@ frappe.ui.form.on("Student Enrollment", {
 			return { filters: { registration_status: "Completed" } };
 		});
 
+		// Terms in a log row belong to that row's academic year.
+		frm.set_query("academic_term", "academic_log", (doc, cdt, cdn) => {
+			const row = locals[cdt][cdn];
+			return { filters: row.academic_year ? { academic_year: row.academic_year } : {} };
+		});
+
 		render_academic_timeline(frm);
-	},
 
-	batch(frm) {
-		// Fires on real user-driven changes only (not on load), which is
-		// exactly when we want to refill enrolled_courses for the new batch.
-		frm.set_query("section", function () {
-			return { filters: { batch: frm.doc.batch } };
-		});
-
-		// 1️⃣ Clear table if batch removed
-		if (!frm.doc.batch) {
-			frm.set_value("section", "");
-			frm.clear_table("enrolled_courses");
-			frm.refresh_field("enrolled_courses");
-			return;
+		const ongoing = (frm.doc.academic_log || []).find((r) => r.status === "Ongoing");
+		if (!frm.is_new() && frm.doc.status === "Enrolled" && ongoing && frm.perm[0] && frm.perm[0].write) {
+			frm.add_custom_button(__("Change Section"), () => open_change_section_dialog(frm, ongoing));
 		}
-
-		// 2️⃣ Clear existing rows before refilling
-		frm.clear_table("enrolled_courses");
-
-		const batch = frm.doc.batch;
-
-		// 3️⃣ Fetch all Open Course Offerings for this batch directly
-		// (Course Offering's own link field is still named "cohort")
-		frappe.db.get_list("Course Offering", {
-			filters: [["cohort", "=", batch], ["status", "=", "Active"]],
-			fields: ["name", "course_title"],
-		}).then((offerings) => {
-			if (!offerings.length) {
-				frm.refresh_field("enrolled_courses");
-				return;
-			}
-
-			frappe.db.get_list("Course", {
-				filters: [["name", "in", offerings.map(o => o.course_title)]],
-				fields: ["name", "course_type"],
-			}).then((courses) => {
-				const course_type_map = {};
-				courses.forEach(c => { course_type_map[c.name] = c.course_type; });
-
-				offerings.forEach((offering) => {
-					const row = frm.add_child("enrolled_courses");
-					frappe.model.set_value(row.doctype, row.name, "course_offering", offering.name);
-					frappe.model.set_value(row.doctype, row.name, "course", offering.course_title);
-					frappe.model.set_value(row.doctype, row.name, "course_type", course_type_map[offering.course_title] || "");
-					frappe.model.set_value(row.doctype, row.name, "status", "Enrolled");
-				});
-
-				frm.refresh_field("enrolled_courses");
-			});
-		});
 	},
 });
 
 /*****************************************************
+ * CHANGE SECTION
+ * Section is read-only after creation: moves go through
+ * here so they are logged on the Ongoing Academic Log
+ * row (Upcoming rows follow the new section).
+ *****************************************************/
+function open_change_section_dialog(frm, ongoing) {
+	const dialog = new frappe.ui.Dialog({
+		title: __("Change Section"),
+		fields: [
+			{ fieldtype: "Link", fieldname: "academic_year", label: __("Academic Year"), options: "Academic Year",
+				default: ongoing.academic_year, read_only: 1 },
+			{ fieldtype: "Column Break" },
+			{ fieldtype: "Link", fieldname: "academic_term", label: __("Academic Term"), options: "Academic Term",
+				default: ongoing.academic_term, read_only: 1 },
+			{ fieldtype: "Section Break" },
+			{ fieldtype: "Link", fieldname: "from_section", label: __("From Section"), options: "Section",
+				default: frm.doc.section, read_only: 1 },
+			{ fieldtype: "Column Break" },
+			{ fieldtype: "Link", fieldname: "to_section", label: __("To Section"), options: "Section", reqd: 1,
+				get_query: () => ({ filters: frm.doc.section ? { name: ["!=", frm.doc.section] } : {} }) },
+			{ fieldtype: "Section Break" },
+			{ fieldtype: "Small Text", fieldname: "reason", label: __("Reason") },
+			{ fieldtype: "HTML", options: `<div class="text-muted small">${__(
+				"Applies from the current term: the Ongoing and Upcoming Academic Log rows move to the new section and the change is noted on the Ongoing row. Completed terms keep their section."
+			)}</div>` },
+		],
+		primary_action_label: __("Change Section"),
+		primary_action(values) {
+			frappe.call({
+				method: "slcm.slcm.doctype.student_enrollment.student_enrollment.change_section",
+				args: { enrollment: frm.doc.name, to_section: values.to_section, reason: values.reason },
+				freeze: true,
+				freeze_message: __("Changing section..."),
+				callback({ message }) {
+					dialog.hide();
+					frappe.show_alert({ message: (message && message.note) || __("Section changed"), indicator: "green" }, 6);
+					frm.reload_doc();
+				},
+			});
+		},
+	});
+	dialog.show();
+}
+
+/*****************************************************
  * ACADEMIC TIMELINE
- * Replaces the old "Other Terms" dropdown (a plain list
- * of text-only buttons buried in the toolbar) with an
- * always-visible strip of term cards at the top of the
- * form, so a student's full enrollment history is
- * scannable at a glance instead of hidden in a menu.
+ * A strip of term cards at the top of the form, built
+ * from the Academic Log, so the student's path through
+ * the programme is scannable at a glance.
  *****************************************************/
 const TIMELINE_STATUS_COLOR = {
-	Enrolled: { fg: "#1e7e34", bg: "#e6f4ea" },
+	Ongoing: { fg: "#1e7e34", bg: "#e6f4ea" },
+	Upcoming: { fg: "#92400e", bg: "#fef3c7" },
 	Completed: { fg: "#0d6efd", bg: "#e7f1ff" },
+	Redo: { fg: "#7c3aed", bg: "#f3e8ff" },
 	Dropped: { fg: "#b02a37", bg: "#fdecea" },
-	Pending: { fg: "#92400e", bg: "#fef3c7" },
 };
 
 function render_academic_timeline(frm) {
@@ -96,39 +96,35 @@ function render_academic_timeline(frm) {
 	$wrapper.html(`<div class="academic-timeline academic-timeline-loading">${__("Loading academic timeline...")}</div>`);
 
 	frappe.call({
-		method: "slcm.slcm.doctype.student_enrollment.student_enrollment.get_other_terms",
-		args: { student: frm.doc.student, exclude: null },
+		method: "slcm.slcm.doctype.student_enrollment.student_enrollment.get_academic_timeline",
+		args: { enrollment: frm.doc.name },
 		callback(r) {
 			const terms = r.message || [];
-			if (terms.length <= 1) {
-				// Nothing to navigate between - don't show a timeline of one.
+			if (!terms.length) {
 				$wrapper.empty();
 				return;
 			}
-			$wrapper.html(build_academic_timeline_html(terms, frm.doc.name));
-			$wrapper.find(".timeline-term[data-name]").on("click", function () {
-				const name = $(this).attr("data-name");
-				if (name && name !== frm.doc.name) {
-					frappe.set_route("Form", "Student Enrollment", name);
-				}
-			});
+			$wrapper.html(build_academic_timeline_html(terms));
 		},
 	});
 }
 
-function build_academic_timeline_html(terms, current_name) {
+function build_academic_timeline_html(terms) {
 	const cards = terms
 		.map((term) => {
-			const is_current = term.name === current_name;
+			const is_current = term.status === "Ongoing";
 			const color = TIMELINE_STATUS_COLOR[term.status] || { fg: "#475569", bg: "#f1f5f9" };
 			return `
-				<div class="timeline-term ${is_current ? "is-current" : ""}" data-name="${frappe.utils.escape_html(term.name)}"
+				<div class="timeline-term ${is_current ? "is-current" : ""}"
 					style="--term-fg:${color.fg}; --term-bg:${color.bg};">
 					<div class="timeline-term-top">
 						<span class="timeline-term-year">${frappe.utils.escape_html(term.academic_year || "—")}</span>
-						${is_current ? `<span class="timeline-current-tag">${__("Viewing")}</span>` : ""}
+						${is_current ? `<span class="timeline-current-tag">${__("Current")}</span>` : ""}
 					</div>
-					<div class="timeline-term-name">${frappe.utils.escape_html(term.term_name || "—")}</div>
+					<div class="timeline-term-name">${term.year_no ? __("Year {0}", [term.year_no]) : "—"}${
+						term.term_name ? ` · ${frappe.utils.escape_html(term.term_name)}` : ""
+					}</div>
+					${term.term ? `<div class="timeline-term-name">${frappe.utils.escape_html(term.term)}</div>` : ""}
 					<span class="timeline-status-pill">${frappe.utils.escape_html(__(term.status))}</span>
 				</div>
 			`;

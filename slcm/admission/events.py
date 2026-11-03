@@ -1,5 +1,5 @@
 import frappe
-from frappe.utils import now, getdate, today, add_days
+from frappe.utils import now, getdate, today
 from slcm.admission.utils.regulatory import log_audit_trail
 from slcm.admission.doctype.email_template_config.email_template_config import EmailTemplateConfig
 
@@ -120,34 +120,3 @@ def auto_update_cycle_status():
                 cycle.status, new_status, "General"
             )
     frappe.db.commit()
-
-def send_deadline_reminders():
-    tomorrow = add_days(today(), 1)
-    rounds = frappe.get_all(
-        "Admission Round",
-        {
-            "status": "Active",
-            "application_end": ["between", [today(), tomorrow]]
-        },
-        ["name", "round_name", "admission_cycle", "application_end"]
-    )
-    for round_doc in rounds:
-        applicants = frappe.get_all(
-            "Applicant",
-            {
-                "admission_cycle": round_doc.admission_cycle,
-                "status": "Draft"
-            },
-            ["email", "candidate_name"]
-        )
-        for applicant in applicants:
-            EmailTemplateConfig.send(
-                trigger_event="Deadline Reminder",
-                recipient_email=applicant.email,
-                context={
-                    "candidate_name": applicant.candidate_name,
-                    "program": "your selected program",
-                    "deadline": round_doc.application_end,
-                    "action_required": "Application Submission"
-                }
-            )

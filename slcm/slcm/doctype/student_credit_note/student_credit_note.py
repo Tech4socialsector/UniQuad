@@ -2,12 +2,30 @@ import frappe
 from frappe.model.document import Document
 from frappe.utils import flt, today
 
+# Credit types that stand for money the student paid; the others (e.g. Scholarship Credit) carry no cash.
+CASH_CREDIT_TYPES = ("Overpayment", "Advance Deposit")
 
 class StudentCreditNote(Document):
 
 	def validate(self):
 		if flt(self.credit_amount) <= 0:
 			frappe.throw("Credit Amount must be greater than zero.")
+		self.validate_money_received()
+
+	def validate_money_received(self):
+		"""Excess entered by hand for money the student actually paid (a duplicate NEFT, an advance) must say how
+		it came in, so it can be accounted for. Excess moved from a paid due already has that on its payment."""
+		if self.source_fee_demand:
+			return
+		if self.credit_type in CASH_CREDIT_TYPES and not self.received_via:
+			frappe.throw(
+				f"Received Via is required for a {self.credit_type} credit note: record how the money reached the university."
+			)
+		if self.received_via and not self.received_date:
+			frappe.throw("Received Date is required when Received Via is set.")
+
+	def before_update_after_submit(self):
+		self.validate_money_received()
 
 	def on_submit(self):
 		self.db_set("available_credit", flt(self.credit_amount))

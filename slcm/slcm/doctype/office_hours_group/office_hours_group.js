@@ -21,11 +21,9 @@ frappe.ui.form.on("Office Hours Group", {
 
 
 
+        // Sections are global (not tied to a batch): no batch filter.
         frm.set_query("section", () => {
-            const filters = {};
-            if (frm.doc.batch) filters.batch = frm.doc.batch;
-
-            return { filters: filters };
+            return { filters: {} };
         });
     },
 
@@ -39,6 +37,8 @@ frappe.ui.form.on("Office Hours Group", {
             method: "slcm.slcm.doctype.office_hours_group.office_hours_group.get_students",
             args: {
                 program: frm.doc.program,
+                // With a class, its roster; otherwise matched by course
+                class_name: frm.doc.class_name,
                 course: frm.doc.course,
                 academic_year: frm.doc.academic_year,
                 academic_term: frm.doc.academic_term,

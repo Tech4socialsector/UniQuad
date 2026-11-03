@@ -8,8 +8,8 @@
  "field_order": [
   "student",
   "exam_plan",
-  "course_offering",
   "course",
+  "academic_term",
   "re_exam_fee",
   "status",
   "payment_status",
@@ -36,23 +36,22 @@
    "reqd": 1
   },
   {
-   "fieldname": "course_offering",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Course Offering",
-   "options": "Course Offering",
-   "reqd": 1
-  },
-  {
-   "fetch_from": "course_offering.course_title",
    "fieldname": "course",
    "fieldtype": "Link",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Course",
    "options": "Course",
-   "read_only": 1
+   "reqd": 1
+  },
+  {
+   "fetch_from": "exam_plan.term",
+   "fetch_if_empty": 1,
+   "fieldname": "academic_term",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Academic Term",
+   "options": "Academic Term"
   },
   {
    "default": "0",
@@ -91,7 +90,7 @@
   }
  ],
  "links": [],
- "modified": "2026-08-28 10:27:02.870134",
+ "modified": "2026-10-29 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Re Exam Registration",

@@ -24,7 +24,7 @@ class TestStudentAttendanceCondonation(FrappeTestCase):
 		from slcm.doctype.student_attendance_condonation.student_attendance_condonation import StudentAttendanceCondonation
 		doc = StudentAttendanceCondonation({
 			"student": "TEST_STUDENT",
-			"course_offering": "TEST_COURSE",
+			"class_name": "TEST_CLASS",
 			"doctype": "Student Attendance Condonation"
 		})
 		

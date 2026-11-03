@@ -26,17 +26,17 @@ def get_context(context):
         summaries = frappe.get_all(
             "Attendance Summary",
             filters={"student": student.name},
-            fields=["course", "course_offering", "term_name",
+            fields=["course", "class_name", "academic_term as term_name",
                     "total_classes", "attended_classes",
                     "attendance_percentage", "eligible_for_exam"],
-            order_by="term_name desc, course asc",
+            order_by="academic_term desc, course asc",
             ignore_permissions=True,
         )
         for s in summaries:
             s["course_name"] = s.course
-            if s.course_offering:
+            if s.class_name:
                 try:
-                    cn = frappe.db.get_value("Course Offering", s.course_offering, "course_name")
+                    cn = frappe.db.get_value("Classes", s.class_name, "course_name")
                     if cn:
                         s["course_name"] = cn
                 except Exception:
@@ -58,11 +58,11 @@ def get_context(context):
         errors["attendance"] = True
 
     # ── Enrolled courses (Student Enrollment → Student Enrollment Course) ──
-    enrolled_offerings = []
+    enrolled_classes = []
     try:
         rows = frappe.db.sql(
             """
-            SELECT DISTINCT sec.course, sec.course_offering
+            SELECT DISTINCT sec.course, sec.class_name
             FROM   `tabStudent Enrollment Course` sec
             INNER JOIN `tabStudent Enrollment` se
                    ON se.name = sec.parent AND sec.parenttype = 'Student Enrollment'
@@ -71,8 +71,8 @@ def get_context(context):
             student.name,
             as_dict=True,
         )
-        enrolled_offerings = [r.course_offering for r in rows if r.course_offering]
-        enrolled_courses = {r.course or r.course_offering for r in rows}
+        enrolled_classes = [r.class_name for r in rows if r.class_name]
+        enrolled_courses = {r.course or r.class_name for r in rows}
         if enrolled_courses:
             context.course_count = len(enrolled_courses)
         elif not errors.get("attendance"):
@@ -188,22 +188,25 @@ def get_context(context):
         today    = frappe.utils.today()
         end_date = frappe.utils.add_days(today, 7)
 
-        # Course offerings this student is enrolled in or has attendance for
-        active_offerings = sorted(
-            set(enrolled_offerings)
-            | {s.course_offering for s in context.attendance_summaries if s.course_offering}
+        # Classes this student is enrolled in or has attendance for
+        from slcm.api.student_portal import _student_class_names
+
+        active_classes = sorted(
+            set(enrolled_classes)
+            | set(_student_class_names(student.name))
+            | {s.class_name for s in context.attendance_summaries if s.class_name}
         )
 
         schedules = []
-        if active_offerings:
+        if active_classes:
             schedules = frappe.get_all(
                 "Time Table",
                 filters={
                     "schedule_date": ["between", [today, end_date]],
-                    "course_offering": ["in", active_offerings],
+                    "class_name": ["in", active_classes],
                     "status": ["!=", "Cancelled"],
                 },
-                fields=["name", "course", "course_offering", "instructor",
+                fields=["name", "course", "class_name", "instructor",
                         "schedule_date", "from_time", "to_time",
                         "venue", "duration_hours", "status"],
                 order_by="schedule_date asc, from_time asc",
@@ -214,9 +217,9 @@ def get_context(context):
         for sc in schedules:
             # Course display name
             sc["course_name"] = sc.course or "—"
-            if sc.course_offering:
+            if sc.class_name:
                 try:
-                    cn = frappe.db.get_value("Course Offering", sc.course_offering, "course_name")
+                    cn = frappe.db.get_value("Classes", sc.class_name, "course_name")
                     if cn:
                         sc["course_name"] = cn
                 except Exception:

@@ -143,7 +143,7 @@ frappe.pages["attendance-sync"].on_page_load = function (wrapper) {
 		fieldtype: "Link",
 		fieldname: "batch_filter",
 		label: "Batch",
-		options: "Batch",
+		options: "SLCM Batch",
 		get_query() {
 			const filters = {};
 			const programme = page.fields_dict.programme_filter.get_value();
@@ -163,10 +163,7 @@ frappe.pages["attendance-sync"].on_page_load = function (wrapper) {
 		fieldname: "section_filter",
 		label: "Section",
 		options: "Section",
-		get_query() {
-			const batch = page.fields_dict.batch_filter.get_value();
-			return batch ? { filters: { batch } } : {};
-		},
+		// Sections are global (not tied to a batch): no batch filter.
 		change() {
 			load(wrapper);
 		},
@@ -331,7 +328,7 @@ function build_table(wrapper, logs) {
 		const first_session = lesson_candidates[0];
 
 		const class_label = first_session
-			? first_session.course_offering || "-"
+			? first_session.class_name || "-"
 			: log.resolved_rooms && log.resolved_rooms.length
 			? `Room mapped (${log.resolved_rooms.join(", ")}) — no session that day`
 			: "-";
@@ -403,7 +400,7 @@ function open_log_detail_dialog(log) {
 	const student_display = log.student ? `${log.student_name || ""} (${log.student})` : "Unregistered Card";
 
 	const class_name_display = first_session
-		? `${frappe.utils.escape_html(first_session.course_offering || "-")}` +
+		? `${frappe.utils.escape_html(first_session.class_name || "-")}` +
 		  (first_session.course_code ? ` [${frappe.utils.escape_html(first_session.course_code)}]` : "")
 		: "-";
 

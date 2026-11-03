@@ -3,24 +3,15 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "prerequisite_course_offering",
   "prerequisite_course"
  ],
  "fields": [
   {
-   "fieldname": "prerequisite_course_offering",
-   "fieldtype": "Link",
-   "label": "Prerequisite Course Offering",
-   "options": "Course Offering",
-   "reqd": 1
-  },
-  {
-   "fetch_from": "prerequisite_course_offering.course_title",
    "fieldname": "prerequisite_course",
    "fieldtype": "Link",
    "label": "Prerequisite Course",
    "options": "Course",
-   "read_only": 1
+   "reqd": 1
   }
  ],
  "istable": 1,
@@ -28,5 +19,7 @@
  "name": "Course Prerequisite",
  "row_format": "Dynamic",
  "sort_field": "idx",
- "sort_order": "ASC"
+ "sort_order": "ASC",
+ "links": [],
+ "modified": "2026-10-29 10:00:00.000000"
 }

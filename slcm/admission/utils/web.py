@@ -5,76 +5,6 @@ from frappe import _
 from frappe.utils import cint, strip_html
 from urllib.parse import quote
 
-@frappe.whitelist(allow_guest=True)
-def get_base64_image(url):
-    """Returns base64 data URI for a given file URL by reading from local disk."""
-    if not url or url in ('None', ''):
-        return ''
-    
-    path = url.strip('/')
-    possible_paths = [
-        frappe.get_site_path('public', path),
-        frappe.get_site_path(path),
-        frappe.get_site_path('private', path)
-    ]
-    
-    found_path = None
-    import os
-    for p in possible_paths:
-        if os.path.exists(p):
-            found_path = p
-            break
-            
-    if not found_path:
-        return frappe.utils.get_url(url)
-        
-    ext = path.split('.')[-1].lower()
-    mime = 'image/png' if ext == 'png' else 'image/jpeg'
-    
-    try:
-        with open(found_path, 'rb') as f:
-            content = f.read()
-            import base64
-            encoded = base64.b64encode(content).decode('utf-8')
-            return f"data:{mime};base64,{encoded}"
-    except Exception:
-        return frappe.utils.get_url(url)
-
-@frappe.whitelist(allow_guest=True)
-def get_base64_image(url):
-    """Returns base64 data URI for a given file URL by reading from local disk."""
-    if not url or url in ('None', ''):
-        return ''
-    
-    path = url.strip('/')
-    possible_paths = [
-        frappe.get_site_path('public', path),
-        frappe.get_site_path(path),
-        frappe.get_site_path('private', path)
-    ]
-    
-    found_path = None
-    import os
-    for p in possible_paths:
-        if os.path.exists(p):
-            found_path = p
-            break
-            
-    if not found_path:
-        return frappe.utils.get_url(url)
-        
-    ext = path.split('.')[-1].lower()
-    mime = 'image/png' if ext == 'png' else 'image/jpeg'
-    
-    try:
-        with open(found_path, 'rb') as f:
-            content = f.read()
-            import base64
-            encoded = base64.b64encode(content).decode('utf-8')
-            return f"data:{mime};base64,{encoded}"
-    except Exception:
-        return frappe.utils.get_url(url)
-
 @frappe.whitelist(methods=["POST", "GET"])
 def check_existing_application(admission_cycle=None):
     """
@@ -242,7 +172,7 @@ def mark_portal_announcement_read(name=None):
 
 
 @frappe.whitelist(methods=["POST", "GET"])
-def get_portal_notifications(notif_page=None, ann_page=None, page_length=None):
+def get_portal_notifications(notif_page=None, ann_page=None, page_length=None, portal_type=None):
     """
     Notifications: Desk Notification Log for session user (paginated).
     Announcements: Portal Announcement with per-user read state (paginated).
@@ -268,7 +198,48 @@ def get_portal_notifications(notif_page=None, ann_page=None, page_length=None):
             "Notification Log", filters={"for_user": user, "read": 0}
         )
 
-        ann_filters = {"is_active": 1, "status": "Published"}
+        # ── Determine which announcements are visible for this portal/user ──
+        from slcm.admission.utils.nlsat_portal import (
+            DOMESTIC, INTERNATIONAL, get_applicant_portal_type, get_current_portal_type,
+            get_candidate_prefix, PACE_PREFIX,
+        )
+        user_app_type = get_applicant_portal_type(user) if user and user != "Guest" else None
+        _resolved_portal = (portal_type or "").strip() or user_app_type or get_current_portal_type()
+        _prefix = get_candidate_prefix(user)
+        _is_pace = (_prefix == PACE_PREFIX) or (_resolved_portal == "PACE")
+
+        DOMESTIC_AUDIENCES = [
+            "Global",
+            "NLSAT \u2013 Domestic",
+            "NLSAT - Domestic",
+            "NLSAT \u2013 Domestic & International",
+            "NLSAT - Domestic & International",
+            "NLSAT \u2013 Domestic and International",
+            "NLSAT - Domestic and International",
+        ]
+        INTERNATIONAL_AUDIENCES = [
+            "Global",
+            "NLSAT \u2013 International",
+            "NLSAT - International",
+            "NLSAT \u2013 Domestic & International",
+            "NLSAT - Domestic & International",
+            "NLSAT \u2013 Domestic and International",
+            "NLSAT - Domestic and International",
+        ]
+        PACE_AUDIENCES = ["Global", "PACE"]
+
+        if _is_pace:
+            _allowed_audiences = PACE_AUDIENCES
+        elif _resolved_portal == INTERNATIONAL:
+            _allowed_audiences = INTERNATIONAL_AUDIENCES
+        else:
+            _allowed_audiences = DOMESTIC_AUDIENCES
+
+        ann_filters = {
+            "is_active": 1,
+            "status": "Published",
+            "target_audience": ["in", _allowed_audiences],
+        }
         ann_total = frappe.db.count("Portal Announcement", filters=ann_filters)
         ann_all_names = frappe.get_all(
             "Portal Announcement",
@@ -367,9 +338,29 @@ def get_portal_notifications(notif_page=None, ann_page=None, page_length=None):
         return {"notifications": [], "announcements": []}
 
 @frappe.whitelist(allow_guest=True)
-def get_public_announcements(target_audience=None):
+def get_public_announcements(target_audience=None, portal_type=None):
     """Returns announcements visible without login"""
     try:
+        DOMESTIC_AUDIENCES = [
+            "Global",
+            "NLSAT \u2013 Domestic",
+            "NLSAT - Domestic",
+            "NLSAT \u2013 Domestic & International",
+            "NLSAT - Domestic & International",
+            "NLSAT \u2013 Domestic and International",
+            "NLSAT - Domestic and International",
+        ]
+        INTERNATIONAL_AUDIENCES = [
+            "Global",
+            "NLSAT \u2013 International",
+            "NLSAT - International",
+            "NLSAT \u2013 Domestic & International",
+            "NLSAT - Domestic & International",
+            "NLSAT \u2013 Domestic and International",
+            "NLSAT - Domestic and International",
+        ]
+        PACE_AUDIENCES = ["Global", "PACE"]
+
         filters = {"is_active": 1, "status": "Published"}
         if target_audience:
             if isinstance(target_audience, str):
@@ -379,6 +370,21 @@ def get_public_announcements(target_audience=None):
                 except Exception:
                     target_audience = [target_audience]
             filters["target_audience"] = ["in", target_audience]
+        elif portal_type:
+            pt = (portal_type or "").strip()
+            if pt == "PACE":
+                filters["target_audience"] = ["in", PACE_AUDIENCES]
+            elif pt in ("International", "NLSAT \u2013 International", "NLSAT - International"):
+                filters["target_audience"] = ["in", INTERNATIONAL_AUDIENCES]
+            else:
+                filters["target_audience"] = ["in", DOMESTIC_AUDIENCES]
+        else:
+            from slcm.admission.utils.nlsat_portal import DOMESTIC, INTERNATIONAL, get_current_portal_type
+            pt = get_current_portal_type()
+            if pt == INTERNATIONAL:
+                filters["target_audience"] = ["in", INTERNATIONAL_AUDIENCES]
+            else:
+                filters["target_audience"] = ["in", DOMESTIC_AUDIENCES]
             
         ann = frappe.get_all("Portal Announcement",
             filters=filters,
@@ -775,11 +781,22 @@ def download_admit_card(admit_card):
     except frappe.DoesNotExistError:
         frappe.throw("Admit Card not found")
 
+    user_roles = frappe.get_roles()
+    is_staff = any(role in user_roles for role in ["Admission Admin", "System Manager", "Entrance Test Admin", "Exam Cell"])
+
     if not applicant_name or doc.applicant != applicant_name:
-        if "Admission Admin" not in frappe.get_roles() and "System Manager" not in frappe.get_roles():
+        if not is_staff:
             frappe.throw("Not authorized", frappe.PermissionError)
 
+    if getattr(doc, "is_international_applicant", 0):
+        frappe.throw(_("Admit Card is not applicable for international online entrance tests."), frappe.ValidationError)
+
     is_rescheduled = (doc.is_rescheduled == 1 or doc.entrance_test_status == "Rescheduled")
+    if not is_staff:
+        is_published = bool(doc.re_seat_allocation_published) if is_rescheduled else bool(doc.seat_allocation_published)
+        if not is_published:
+            frappe.throw("Admit Card is not published yet.", frappe.PermissionError)
+
     status = doc.re_allocation_status if is_rescheduled else doc.allocation_status
     
     if status not in ["Allocated", "Reallocated"]:

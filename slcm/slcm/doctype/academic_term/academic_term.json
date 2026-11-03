@@ -1,66 +1,46 @@
 {
  "actions": [],
  "allow_import": 1,
- "autoname": "field:term_name",
  "creation": "2025-12-18 11:49:11.173362",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
   "academic_year",
-  "system",
-  "previous_term",
-  "number_of_terms_per_academic_year",
-  "column_break_gvpt",
   "term_name",
-  "term_type",
+  "term_no",
+  "column_break_gvpt",
   "term_start_date",
   "term_end_date",
-  "status"
+  "status",
+  "term_mapping_section",
+  "term_mapping"
  ],
  "fields": [
   {
    "fieldname": "academic_year",
    "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Academic Year",
    "options": "Academic Year",
    "reqd": 1
   },
   {
+   "description": "For example Trimester 1. The record is named \"<Term Name> - <Academic Year>\".",
    "fieldname": "term_name",
-   "fieldtype": "Link",
+   "fieldtype": "Data",
+   "in_list_view": 1,
    "label": "Term Name",
-   "options": "Term Master",
-   "reqd": 1,
-   "unique": 1
-  },
-  {
-   "fieldname": "term_type",
-   "fieldtype": "Select",
-   "hidden": 1,
-   "label": "Term Type",
-   "options": "Semester\nTrimester\nQuarter\nYear"
-  },
-  {
-   "fetch_from": "academic_year.academic_system",
-   "fieldname": "system",
-   "fieldtype": "Select",
-   "label": "Academic System",
-   "options": "\nSemester\nTrimester\nQuarter\nYear",
    "reqd": 1
   },
   {
-   "fieldname": "previous_term",
-   "fieldtype": "Link",
-   "hidden": 1,
-   "label": "Previous Term",
-   "options": "Academic Term"
-  },
-  {
-   "fieldname": "number_of_terms_per_academic_year",
-   "fieldtype": "Select",
-   "hidden": 1,
-   "label": "Number of terms per academic year",
-   "options": "\n1\n2\n3\n4\n5"
+   "description": "Order of the term within the academic year (1, 2, 3).",
+   "fieldname": "term_no",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Term No",
+   "non_negative": 1,
+   "reqd": 1
   },
   {
    "fieldname": "column_break_gvpt",
@@ -85,21 +65,34 @@
    "search_index": 1
   },
   {
+   "default": "Active",
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Status",
    "options": "\nActive\nInactive",
    "reqd": 1
+  },
+  {
+   "fieldname": "term_mapping_section",
+   "fieldtype": "Section Break",
+   "label": "Term Mapping",
+   "description": "Which term of the programme cycle each year of study is in during this academic term. For example in this term, Year 1 (Batch 2027) is in Trimester I and Year 2 (Batch 2026) in Trimester IV."
+  },
+  {
+   "fieldname": "term_mapping",
+   "fieldtype": "Table",
+   "label": "Term Mapping",
+   "options": "Academic Term Mapping"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-04 15:11:15.877345",
+ "modified": "2026-10-29 11:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Academic Term",
- "naming_rule": "By fieldname",
+ "naming_rule": "By script",
  "owner": "Administrator",
  "permissions": [
   {
@@ -133,9 +126,9 @@
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
- "search_fields": "academic_year",
+ "search_fields": "academic_year,term_name",
  "show_title_field_in_link": 1,
- "sort_field": "modified",
+ "sort_field": "term_start_date",
  "sort_order": "DESC",
  "states": [],
  "title_field": "term_name"

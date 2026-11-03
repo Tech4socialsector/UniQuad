@@ -5,10 +5,10 @@ from frappe.utils import flt
 def execute(filters=None):
 	columns = [
 		{
-			"fieldname": "course_offering",
-			"label": _("Course Offering"),
+			"fieldname": "class_name",
+			"label": _("Class"),
 			"fieldtype": "Link",
-			"options": "Course Offering",
+			"options": "Classes",
 			"width": 150
 		},
 		{
@@ -65,28 +65,32 @@ def get_course_completion_data(filters):
 	core_hours = flt(settings.core_course_hours)
 	elective_hours = flt(settings.elective_course_hours)
 	
+	filters = filters or {}
 	conditions = "1=1"
+	params = {}
 	if filters.get("term"):
-		conditions += f" AND co.term_name = '{filters.get('term')}'"
+		conditions += " AND cl.academic_term = %(term)s"
+		params["term"] = filters.get("term")
 	if filters.get("academic_year"):
-		conditions += f" AND co.academic_year = '{filters.get('academic_year')}'"
-		
-	# 2. Fetch Course Offerings with Course details
-	offerings = frappe.db.sql(f"""
+		conditions += " AND cl.academic_year = %(academic_year)s"
+		params["academic_year"] = filters.get("academic_year")
+
+	# 2. Fetch Classes (the taught groups) with Course details
+	classes = frappe.db.sql(f"""
 		SELECT
-			co.name as course_offering,
-			co.course_name as course_name,
+			cl.name as class_name,
+			cl.course_name as course_name,
 			CONCAT_WS(' ', f.first_name, f.last_name) as instructor,
 			c.course_type
-		FROM `tabCourse Offering` co
-		LEFT JOIN `tabCourse` c ON c.name = co.course_title
-		LEFT JOIN `tabFaculty` f ON f.name = co.faculty
+		FROM `tabClasses` cl
+		LEFT JOIN `tabCourse` c ON c.name = cl.course
+		LEFT JOIN `tabFaculty` f ON f.name = cl.faculty
 		WHERE {conditions}
-	""", as_dict=True)
-	
+	""", params, as_dict=True)
+
 	result = []
-	
-	for off in offerings:
+
+	for off in classes:
 		# Determine Planned Hours
 		planned = core_hours # Default
 		if off.course_type == "Elective":
@@ -98,9 +102,9 @@ def get_course_completion_data(filters):
 		stats = frappe.db.sql("""
 			SELECT SUM(duration_hours) as conducted
 			FROM `tabAttendance Session`
-			WHERE course_offering = %s
+			WHERE class_name = %s
 			AND session_status = 'Completed'
-		""", (off.course_offering), as_dict=True)
+		""", (off.class_name,), as_dict=True)
 		
 		conducted = flt(stats[0].conducted) if stats and stats[0].conducted else 0.0
 		
@@ -116,7 +120,7 @@ def get_course_completion_data(filters):
 			status = "Lagging"
 			
 		result.append({
-			"course_offering": off.course_offering,
+			"class_name": off.class_name,
 			"course_name": off.course_name,
 			"instructor": off.instructor,
 			"course_type": off.course_type,

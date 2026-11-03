@@ -36,8 +36,13 @@ def get_active_announcements(student=None, limit=20):
 	student_data = None
 	if student:
 		student_data = frappe.db.get_value(
-			"Student Master", student, ["programme", "batch_year"], as_dict=True
+			"Student Master", student, ["programme_of_study"], as_dict=True
 		)
+		if student_data:
+			# Announcement Programme Target.programme links to Programme;
+			# Student Master has no batch_year field.
+			student_data.programme = student_data.programme_of_study
+			student_data.batch_year = None
 
 	visible = []
 	today_date = getdate(today_str)

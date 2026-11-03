@@ -655,7 +655,15 @@ def get_form_config_for_cycles():
 #  SAVE / SUBMIT API
 # ═══════════════════════════════════════════════════════════════════
 
-@frappe.whitelist()
+PORTAL_PROTECTED_FIELDS = frozenset({
+    "status", "application_fee_status", "application_fee_amount", "fee_waived_by", "fee_waived_on",
+    "current_stage", "merit_score", "evaluation_status", "eligibility_status", "user_id", "owner",
+    "applicant_id", "application_number", "naming_series", "docstatus", "amended_from",
+    "exempts_entrance_test", "exempts_interview", "intereview",
+})
+
+
+@frappe.whitelist(methods=["POST"])
 def save_form(data):
     """
     Save (draft) or submit (final) an Applicant document.
@@ -804,10 +812,10 @@ def save_form(data):
                 if key not in ALLOWED_ALONG_WITH_PARENTS:
                     scalar_data.pop(key, None)
 
-    # On submit, never overwrite fee status/amount from form (set by payment flow)
-    if is_submit:
-        for key in ("application_fee_status", "application_fee_amount"):
-            scalar_data.pop(key, None)
+    # Status, fee and evaluation fields are set by the server (payment, eligibility, staff);
+    # the portal never writes them, on draft save or on submit.
+    for key in PORTAL_PROTECTED_FIELDS:
+        scalar_data.pop(key, None)
 
     prog = (scalar_data.get("program") or getattr(doc, "program", None) or "").strip()
     cyc = (scalar_data.get("admission_cycle") or getattr(doc, "admission_cycle", None) or "").strip()

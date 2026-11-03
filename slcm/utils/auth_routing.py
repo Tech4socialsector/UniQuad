@@ -443,6 +443,7 @@ def handle_logout(login_manager=None):
         return
         
     roles = frappe.get_roles(user)
+    lower_roles = {r.lower() for r in roles}
     
     # Check referrer to see if they logged out from pace, admission or desk
     req = getattr(frappe.local, "request", None)
@@ -471,11 +472,12 @@ def handle_logout(login_manager=None):
             target = "paceadmissions"
         elif "Applicant" in roles:
             target = "admission"
-        elif "slcm_student" in roles or "Student" in roles:
+        # Role names differ in case ("slcm_Student", "slcm_Faculty", "slcm_parent")
+        elif {"slcm_student", "student"} & lower_roles:
             target = "student"
-        elif "slcm_faculty" in roles or "Faculty" in roles:
+        elif {"slcm_faculty", "faculty"} & lower_roles:
             target = "faculty"
-        elif "slcm_parent" in roles or "Parent" in roles:
+        elif {"slcm_parent", "parent"} & lower_roles:
             target = "parent"
         else:
             target = "desk"

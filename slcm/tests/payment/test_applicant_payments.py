@@ -33,11 +33,11 @@ class TestApplicantPayments(PaymentTestBase):
 		self.assertEqual(res.get("status"), "success")
 		
 		# Verify updates
-		self.assertEqual(frappe.db.get_value("Payment Request", pr.name, "status"), "Paid")
+		self.assertEqual(frappe.db.get_value("SLCM Payment Request", pr.name, "status"), "Paid")
 		self.assertEqual(frappe.db.get_value("Applicant", app.name, "application_fee_status"), "Paid")
 		
 		# Verify receipt generated
-		receipts = frappe.get_all("Applicant Payment Receipt", filters={"applicant": app.name, "docstatus": 1})
+		receipts = frappe.get_all("Applicant Payment Receipt", filters={"applicant": app.name, "docstatus": ["<", 2]})
 		self.assertEqual(len(receipts), 1)
 
 	def test_user_closes_browser(self):
@@ -71,7 +71,7 @@ class TestApplicantPayments(PaymentTestBase):
 		frappe.local.request = MockRequest(json.dumps(payload).encode("utf-8"))
 
 		try:
-			with patch("frappe.get_request_header", return_value=None): # skip signature check
+			with patch("frappe.get_request_header", side_effect=self.sign_webhook_request):
 				handle_razorpay_webhook()
 		finally:
 			if orig_req:
@@ -80,9 +80,9 @@ class TestApplicantPayments(PaymentTestBase):
 				delattr(frappe.local, "request")
 
 		# Verify updates
-		self.assertEqual(frappe.db.get_value("Payment Request", pr.name, "status"), "Paid")
+		self.assertEqual(frappe.db.get_value("SLCM Payment Request", pr.name, "status"), "Paid")
 		self.assertEqual(frappe.db.get_value("Applicant", app.name, "application_fee_status"), "Paid")
-		receipts = frappe.get_all("Applicant Payment Receipt", filters={"applicant": app.name, "docstatus": 1})
+		receipts = frappe.get_all("Applicant Payment Receipt", filters={"applicant": app.name, "docstatus": ["<", 2]})
 		self.assertEqual(len(receipts), 1)
 
 	def test_scheduler_recovery(self):
@@ -93,7 +93,7 @@ class TestApplicantPayments(PaymentTestBase):
 		# Modify modified time of Payment Request using direct SQL to bypass hooks
 		from frappe.utils import add_to_date
 		old_time = add_to_date(frappe.utils.now_datetime(), minutes=-20)
-		frappe.db.sql("UPDATE `tabPayment Request` SET modified = %s WHERE name = %s", (old_time, pr.name))
+		frappe.db.sql("UPDATE `tabSLCM Payment Request` SET modified = %s WHERE name = %s", (old_time, pr.name))
 		frappe.db.commit()
 
 		self.mock_razorpay(payments_list=[{
@@ -107,9 +107,9 @@ class TestApplicantPayments(PaymentTestBase):
 		FeeService.reconcile_pending_payments()
 
 		# Verify updates
-		self.assertEqual(frappe.db.get_value("Payment Request", pr.name, "status"), "Paid")
+		self.assertEqual(frappe.db.get_value("SLCM Payment Request", pr.name, "status"), "Paid")
 		self.assertEqual(frappe.db.get_value("Applicant", app.name, "application_fee_status"), "Paid")
-		receipts = frappe.get_all("Applicant Payment Receipt", filters={"applicant": app.name, "docstatus": 1})
+		receipts = frappe.get_all("Applicant Payment Receipt", filters={"applicant": app.name, "docstatus": ["<", 2]})
 		self.assertEqual(len(receipts), 1)
 
 	def test_failed_payment(self):
@@ -170,7 +170,7 @@ class TestApplicantPayments(PaymentTestBase):
 		self.assertEqual(res2.get("status"), "success")
 
 		# Verify exactly one receipt exists
-		receipts = frappe.get_all("Applicant Payment Receipt", filters={"applicant": app.name, "docstatus": 1})
+		receipts = frappe.get_all("Applicant Payment Receipt", filters={"applicant": app.name, "docstatus": ["<", 2]})
 		self.assertEqual(len(receipts), 1)
 
 	def test_tampered_amount(self):

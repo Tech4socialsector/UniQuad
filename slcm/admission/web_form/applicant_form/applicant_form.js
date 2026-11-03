@@ -1312,59 +1312,15 @@ function setupSaveDraftButton() {
 var _feeTimer = null;
 
 function updateFeeForCategory() {
-	var wf  = frappe.web_form;
-	var doc = (wf && wf.doc) || {};
-
-	var program = resolveField('program');
-	if (!program) return;
-
-	var feeStatus = (resolveField('application_fee_status') || '').trim();
-	if (feeStatus === 'Paid' || feeStatus === 'Waived') return;
-
-	var category      = resolveField('whether_scstobc_ncl');
-	var admissionCycle = resolveField('admission_cycle');
-
-	frappe.call({
-		method: 'slcm.admission.web_form.applicant_form.applicant_form.get_application_fee_amount',
-		args: {
-			program: program,
-			category: category || '',
-			admission_cycle: admissionCycle || '',
-		},
-		callback: function (r) {
-			if (r && r.message !== undefined && r.message !== null) {
-				var fee = parseFloat(r.message) || 0;
-				try {
-					if (wf && wf.doc) wf.doc.application_fee_amount = fee;
-				} catch (e) {}
-				if (doc && doc !== (wf && wf.doc)) {
-					try { doc.application_fee_amount = fee; } catch (e) {}
-				}
-				// Update the visible Currency control (category change must reflect in UI).
-				try {
-					if (wf && typeof wf.set_value === 'function') {
-						wf.set_value('application_fee_amount', fee);
-					}
-				} catch (e) {}
-			}
-		},
-	});
+	// Fee calculation is done when candidate clicks the submit button.
 }
 
 function scheduleFeeUpdate() {
-	clearTimeout(_feeTimer);
-	_feeTimer = setTimeout(updateFeeForCategory, 350);
+	// Fee calculation is done when candidate clicks the submit button.
 }
 
 function bindFeeListener() {
-	$(document).on(
-		'change',
-		'[data-fieldname="whether_scstobc_ncl"] select, [data-fieldname="whether_scstobc_ncl"] input',
-		scheduleFeeUpdate
-	);
-	if (frappe.web_form && typeof frappe.web_form.on === 'function') {
-		frappe.web_form.on('whether_scstobc_ncl', scheduleFeeUpdate);
-	}
+	// Fee calculation is done when candidate clicks the submit button.
 }
 
 var _feeReceiptBtnInFlight = false;
@@ -2534,7 +2490,9 @@ function _showFeeModal(feeDetails, onPaid) {
 	}
 
 	var feeNum = Number(feeDetails.fee_amount || 0);
-	var amountFormatted = '\u20B9 ' + feeNum.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+	var cur = feeDetails.currency || 'INR';
+	var curPrefix = cur === 'INR' ? '\u20B9 ' : (cur + ' ');
+	var amountFormatted = curPrefix + feeNum.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 	document.getElementById('slcm-fee-amount').textContent = amountFormatted;
 	var payBtnEl = document.getElementById('slcm-fee-pay-btn');
 	if (payBtnEl) {
@@ -4619,8 +4577,8 @@ function setupPreferenceValidation() {
 				var nat = wf.get_value('nationality');
 				var fn = wf.get_value('foriegn_national');
 
+				// Domestic applicants may hold any nationality; only International cannot be India
 				if (fn === 'Yes' && nat === 'India') {
-					// International candidate: Nationality cannot be India
 					frappe.msgprint('For International applications, Nationality cannot be India.');
 					wf.set_value('nationality', '');
 				} else if (wf._slcmOnNationalityChangeForState) {
@@ -4724,7 +4682,7 @@ function setupPreferenceValidation() {
 				var min_val = is_cgpa ? 4 : 35;
 
 				if (hsc < min_val) {
-					frappe.msgprint(is_cgpa ? 'HSC CGPA must be at least 4.' : 'HSC percentage must be at least 35%.');
+					frappe.msgprint(is_cgpa ? 'HSC CGPA must be at least 4.' : 'HSC percentage must be at least 35%. If CGPA then first add the maximum CGPA');
 					clearHscPercentage();
 				} else if (hsc > max_val) {
 					frappe.msgprint(is_cgpa ? 'HSC CGPA cannot exceed ' + max_val + '.' : 'HSC percentage cannot exceed 100%.');
@@ -5195,6 +5153,7 @@ frappe.ready(function () {
 	setupStepper();
 	setupDateOfBirthWebForm();
 	scheduleApplicantCountryStateCityFilter();
+	setupShowAllLinkOptions();
 
 	// Frappe Next: validate_section ignores Attach (no .form-control) — patch after web_form exists
 	var _attachSecPatchN = 0;
@@ -5820,7 +5779,9 @@ function setupCityStateFilter() {
 			var st = wf.get_value(stateFld);
 			return {
 				query: 'slcm.admission.web_form.applicant_form.applicant_form.city_query',
-				filters: { state: st || '' }
+				filters: { state: st || '' },
+				// Autocomplete only sends `params` (see stateQueryFn)
+				params: { state: st || '' }
 			};
 		}
 
@@ -5907,6 +5868,11 @@ function setupCityStateFilter() {
 
 			if (!prevState && currentState) {
 				lastState = currentState;
+				// First State pick must match the Nationality too (e.g. Texas under India). Skipped
+				// while Nationality is still empty so a draft loading its values isn't cleared.
+				if (currentState.toLowerCase() !== 'other' && (wf.get_value('nationality') || '').trim()) {
+					checkStateMatchesCountry(currentState);
+				}
 				return;
 			}
 			if (prevState && currentState && prevState.toLowerCase() === currentState.toLowerCase()) return;
@@ -6015,6 +5981,34 @@ function setupCityStateFilter() {
 	}
 
 	return patchBlock('country', 'state', 'city');
+}
+
+/*
+ * Link / Autocomplete dropdowns list every matching option (scrollable, still searchable).
+ * Frappe caps Link searches at 10 results (link_field_results_limit) and Awesomplete renders
+ * at most 99 items; page_length 0 makes search_link return all rows.
+ */
+var SLCM_MAX_DROPDOWN_ITEMS = 100000;
+function setupShowAllLinkOptions() {
+	var Link = frappe.ui && frappe.ui.form && frappe.ui.form.ControlLink;
+	if (Link && !Link.prototype._slcmShowAllPatched) {
+		Link.prototype._slcmShowAllPatched = true;
+		var origArgs = Link.prototype.get_search_args;
+		Link.prototype.get_search_args = function () {
+			var args = origArgs.apply(this, arguments);
+			if (args) args.page_length = 0;
+			return args;
+		};
+	}
+	var AP = window.Awesomplete && window.Awesomplete.prototype;
+	if (AP && !AP._slcmShowAllPatched) {
+		AP._slcmShowAllPatched = true;
+		var origEvaluate = AP.evaluate;
+		AP.evaluate = function () {
+			this.maxItems = SLCM_MAX_DROPDOWN_ITEMS;
+			return origEvaluate.apply(this, arguments);
+		};
+	}
 }
 
 function scheduleApplicantCountryStateCityFilter() {

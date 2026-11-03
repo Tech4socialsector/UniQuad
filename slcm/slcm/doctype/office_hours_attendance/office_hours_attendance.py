@@ -40,13 +40,13 @@ class OfficeHoursAttendance(Document):
 
 	def trigger_recalculation(self):
 		"""Trigger attendance summary recalculation"""
-		if self.student and self.course_offering:
+		if self.student and self.class_name:
 			try:
 				from slcm.slcm.utils.attendance_calculator import calculate_student_attendance
 				frappe.enqueue(
 					calculate_student_attendance,
 					student=self.student,
-					course_offering=self.course_offering,
+					class_name=self.class_name,
 					queue="short"
 				)
 			except Exception as e:
@@ -54,22 +54,22 @@ class OfficeHoursAttendance(Document):
 
 
 @frappe.whitelist()
-def get_student_office_hours_attendance(student, course_offering=None):
+def get_student_office_hours_attendance(student, class_name=None):
 	"""Get office hours attendance for a student"""
 	if not frappe.has_permission("Student Master", "read", doc=student):
 		frappe.throw(frappe._("Not permitted"), frappe.PermissionError)
 
 	filters = {"student": student}
 
-	if course_offering:
-		filters["course_offering"] = course_offering
+	if class_name:
+		filters["class_name"] = class_name
 
 	return frappe.get_all(
 		"Office Hours Attendance",
 		filters=filters,
 		fields=[
 			"name", "office_hours_session", "student", "student_name",
-			"course_offering", "attendance_date", "check_in_time",
+			"class_name", "course", "attendance_date", "check_in_time",
 			"check_out_time", "duration_hours", "source", "remarks",
 		],
 		order_by="attendance_date desc"

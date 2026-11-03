@@ -5,7 +5,7 @@
  "doctype": "Page",
  "icon": "layout-panel-top",
  "idx": 0,
- "modified": "2026-04-07 10:17:12.320719",
+ "modified": "2026-10-29 19:30:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "examination-planner",
@@ -16,12 +16,6 @@
    "role": "System Manager"
   },
   {
-   "role": "System Manager"
-  },
-  {
-   "role": "Academics User"
-  },
-  {
    "role": "Academics User"
   }
  ],
@@ -29,5 +23,5 @@
  "standard": "Yes",
  "style": null,
  "system_page": 1,
- "title": "Examination Planner"
+ "title": "Exam Plan"
 }

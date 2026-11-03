@@ -9,9 +9,13 @@ frappe.query_reports["Course Completion"] = {
         },
         {
             "fieldname": "term",
-            "label": __("Term"),
+            "label": __("Academic Term"),
             "fieldtype": "Link",
-            "options": "Term"
+            "options": "Academic Term",
+            "get_query": () => {
+                const academic_year = frappe.query_report.get_filter_value("academic_year");
+                return { filters: academic_year ? { academic_year } : {} };
+            }
         }
     ]
 };

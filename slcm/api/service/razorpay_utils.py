@@ -168,6 +168,18 @@ def sync_business_doc_on_payment_failed(ref_doctype, ref_name, error_desc=None):
 	# PACE assignment stays Assigned — PR carries Failed status for audit
 
 
+def _payment_already_recorded(payment_id):
+	"""A receipt already carries this gateway payment id, i.e. the payment was completed before.
+	(The payment request alone is not enough: the webhook marks it Paid before completion runs.)"""
+	if not payment_id:
+		return False
+	return bool(frappe.db.sql(
+		"""SELECT name FROM `tabApplicant Payment Receipt`
+		WHERE payment_reference = %(pid)s OR transaction_id = %(pid)s LIMIT 1""",
+		{"pid": payment_id},
+	))
+
+
 def complete_admission_payment_from_gateway(
 	ref_doctype, ref_name, pr_name, order_id, payment_id, payment, gateway=None
 ):
@@ -179,11 +191,14 @@ def complete_admission_payment_from_gateway(
 	if not payment or payment.get("status") != "captured":
 		return False
 
-	stored_order = frappe.db.get_value("Payment Request", pr_name, "razorpay_order_id")
+	stored_order = frappe.db.get_value("SLCM Payment Request", pr_name, "razorpay_order_id")
 	if stored_order and stored_order != order_id:
 		return False
 
-	pr_amount = frappe.db.get_value("Payment Request", pr_name, "amount")
+	if _payment_already_recorded(payment_id):
+		return True
+
+	pr_amount = frappe.db.get_value("SLCM Payment Request", pr_name, "amount")
 	expected_paise = get_expected_amount_paise(ref_doctype, ref_name, pr_amount)
 	if not payment_amount_matches(payment, expected_paise):
 		frappe.logger().error(
@@ -195,7 +210,7 @@ def complete_admission_payment_from_gateway(
 	if payment.get("order_id") and payment.get("order_id") != order_id:
 		return False
 
-	gateway = gateway or frappe.db.get_value("Payment Request", pr_name, "payment_gateway")
+	gateway = gateway or frappe.db.get_value("SLCM Payment Request", pr_name, "payment_gateway")
 	response_data = payment
 
 	if ref_doctype == "PACE Applicant Fee Assignment":
@@ -226,7 +241,8 @@ def complete_admission_payment_from_gateway(
 		frappe.db.sql("SELECT name FROM `tabOffer Letter` WHERE name = %s FOR UPDATE", ref_name)
 		offer = frappe.get_doc("Offer Letter", ref_name, check_permission=False)
 		offer.reload()
-		if offer.status == "Payment Completed":
+		# Idempotent for retried / duplicate payment.captured events: this payment is already recorded.
+		if _payment_already_recorded(payment_id):
 			return True
 		if payment.get("currency") != "INR":
 			return False
@@ -266,7 +282,7 @@ def reconcile_payment_request_record(pr_row, rzp_client=None):
 	Returns: captured | failed | pending | skipped
 	"""
 	if isinstance(pr_row, str):
-		pr_row = frappe.get_doc("Payment Request", pr_row).as_dict()
+		pr_row = frappe.get_doc("SLCM Payment Request", pr_row).as_dict()
 
 	ref_doctype = pr_row.get("reference_doctype")
 	if ref_doctype not in ADMISSION_REF_DOCTYPES:
@@ -318,7 +334,7 @@ def reconcile_payment_request_record(pr_row, rzp_client=None):
 
 	if failed_payment:
 		frappe.db.set_value(
-			"Payment Request",
+			"SLCM Payment Request",
 			pr_row.get("name"),
 			{
 				"gateway_status": "failed",

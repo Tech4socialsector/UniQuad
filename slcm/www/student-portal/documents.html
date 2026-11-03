@@ -222,7 +222,7 @@
       <div class="doc-title">Enrolment Certificate</div>
       <div class="doc-meta">
         {{ active_enrollment.academic_year or "Academic year" }}
-        {% if active_enrollment.term_name %} · {{ active_enrollment.term_name }}{% endif %}
+        {% if active_enrollment.year_no %} · Year {{ active_enrollment.year_no }}{% endif %}
         {% if active_enrollment.enrollment_date %} · Enrolled {{ frappe.utils.formatdate(active_enrollment.enrollment_date, "dd MMM yyyy") }}{% endif %}
       </div>
     </div>

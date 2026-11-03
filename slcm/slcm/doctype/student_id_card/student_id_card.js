@@ -17,7 +17,7 @@ frappe.ui.form.on("Student ID Card", {
 
 		frm.fields_dict["driver"].df.onchange = () => {
 			if (frm.doc.driver) {
-				frappe.db.get_doc("Driver", frm.doc.driver).then((doc) => {
+				frappe.db.get_doc("SLCM Driver", frm.doc.driver).then((doc) => {
 					frm.set_value("student_name", doc.driver_name); // Reusing student_name field for Name on Card
 					frm.set_value("phone", doc.phone);
 					frm.set_value("photo", doc.photo);

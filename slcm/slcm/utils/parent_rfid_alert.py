@@ -5,6 +5,8 @@ import frappe
 from frappe.utils import now_datetime, get_datetime, getdate, format_datetime
 from datetime import datetime, timedelta
 
+from slcm.slcm.utils.exam_schedule import get_student_programme
+
 
 def check_and_send_absence_alerts():
     """Hourly scheduled job — alert parents when student has no RFID swipe within threshold."""
@@ -90,7 +92,7 @@ def _get_active_students():
     return frappe.get_all(
         "Student Master",
         filters={"student_status": "Active"},
-        fields=["name", "first_name", "last_name", "programme", "academic_year"],
+        fields=["name", "first_name", "last_name", "academic_year"],
     )
 
 
@@ -128,7 +130,7 @@ def _mark_alerted_today(student):
 
 def _send_alerts(student, parents, last_swipe, settings):
     student_name = f"{student.first_name} {student.last_name or ''}".strip()
-    programme = frappe.db.get_value("Batch", student.programme, "cohort_name") or student.programme or ""
+    programme = get_student_programme(student.name)
     check_time = format_datetime(now_datetime(), "dd MMM yyyy, hh:mm a")
     last_swipe_time = (
         format_datetime(last_swipe, "dd MMM yyyy, hh:mm a") if last_swipe else "No swipe on record"

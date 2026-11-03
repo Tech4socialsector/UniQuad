@@ -117,7 +117,7 @@
    "fieldname": "payment_reference",
    "fieldtype": "Link",
    "label": "Payment Reference",
-   "options": "Payment Request"
+   "options": "SLCM Payment Request"
   },
   {
    "fieldname": "payment_mode",
@@ -252,7 +252,7 @@
   }
  ],
  "links": [],
- "modified": "2026-08-05 11:15:00.055472",
+ "modified": "2026-10-19 16:30:00.000000",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Applicant Payment Receipt",

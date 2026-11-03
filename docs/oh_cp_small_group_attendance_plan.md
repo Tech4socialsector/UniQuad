@@ -23,9 +23,9 @@ Paths are relative to `slcm/` (the package directory). `doctype/` means `slcm/sl
 ### A1. Attendance data model
 
 **Attendance Session** (`doctype/attendance_session/`)
-- `based_on`: `Course Schedule | Time Table | Office Hours`.
+- `based_on`: `Class | Time Table | Office Hours` ("Class" was called "Course Schedule" until 29 Oct 2026).
 - `session_type`: `Lecture | Office Hour | Tutorial`. Note the singular "Office Hour".
-- Links: `course_offering`, `course_schedule`, `class_schedule` (links to Time Table), `office_hours_group`, `section`, `instructor`, `room`.
+- Links: `course_offering`, `class_schedule` (links to Time Table), `office_hours_group`, `section`, `instructor`, `room`.
 - There is no `student_group` field.
 - Child table **Attendance Session Student** has `student`, `student_name`, `status` and `gender`.
 - The roster (`get_enrolled_students`) always comes from course-offering enrolment (Student Enrollment, then Student Enrollment Course). It does this even for OH sessions, so the Office Hours Group roster is never used.
@@ -45,8 +45,7 @@ Paths are relative to `slcm/` (the package directory). `doctype/` means `slcm/sl
 - `session_type` is `"Office Hour"` when `based_on == "Office Hours"`, and `"Lecture"` otherwise.
 - Time Table has no `session_type` field of its own.
 
-**Course Schedule** (`doctype/course_schedule/`)
-- Always creates a `Lecture` session.
+**Course Schedule**: removed on 29 Oct 2026 (see `old_flow_doctype_removal_audit.md` §8).
 
 ### A2. Office Hours: three parallel mechanisms
 

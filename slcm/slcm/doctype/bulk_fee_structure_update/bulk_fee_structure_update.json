@@ -56,7 +56,7 @@
    "fieldname": "programme",
    "fieldtype": "Link",
    "label": "Programme (Cohort)",
-   "options": "Batch"
+   "options": "SLCM Batch"
   },
   {
    "depends_on": "eval:doc.target_scope == 'Programme'",
@@ -84,7 +84,7 @@
    "fieldname": "batch_year",
    "fieldtype": "Link",
    "label": "Batch Year (Optional Filter)",
-   "options": "Batch Year"
+   "options": "Student Batch Name"
   },
   {
    "description": "Optional: restrict the update to students in this academic year only",
@@ -213,7 +213,7 @@
   }
  ],
  "links": [],
- "modified": "2026-05-07 10:00:00.000000",
+ "modified": "2026-10-20 10:30:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Bulk Fee Structure Update",

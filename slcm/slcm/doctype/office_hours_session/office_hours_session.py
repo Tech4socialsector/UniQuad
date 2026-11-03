@@ -36,9 +36,9 @@ class OfficeHoursSession(Document):
 
 
 @frappe.whitelist()
-def get_office_hours_for_course(course_offering, faculty=None):
-	"""Get all office hours sessions for a course"""
-	filters = {"course_offering": course_offering}
+def get_office_hours_for_course(class_name, faculty=None):
+	"""Get all office hours sessions for a class"""
+	filters = {"class_name": class_name}
 	
 	if faculty:
 		filters["faculty"] = faculty
@@ -47,7 +47,7 @@ def get_office_hours_for_course(course_offering, faculty=None):
 		"Office Hours Session",
 		filters=filters,
 		fields=[
-			"name", "course_offering", "course", "course_type", "faculty",
+			"name", "class_name", "course", "course_type", "faculty",
 			"session_date", "start_time", "end_time", "duration_hours",
 			"location", "session_status", "total_students_attended",
 		],

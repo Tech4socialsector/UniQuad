@@ -7,7 +7,6 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "course_offering",
   "course",
   "course_name",
   "course_type",
@@ -16,23 +15,13 @@
  ],
  "fields": [
   {
-   "fieldname": "course_offering",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Course Offering",
-   "options": "Course Offering",
-   "reqd": 1
-  },
-  {
-   "fetch_from": "course_offering.course_title",
    "fieldname": "course",
    "fieldtype": "Link",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Course",
    "options": "Course",
-   "read_only": 1
+   "reqd": 1
   },
   {
    "fetch_from": "course.course_name",
@@ -73,7 +62,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-12-19 15:20:12.194369",
+ "modified": "2026-10-29 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Program Course",

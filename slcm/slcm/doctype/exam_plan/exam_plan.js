@@ -645,11 +645,11 @@ function _csm_render(courses, $ov) {
 			: '<span class="csm-dash">--</span>';
 
 		$tbody.append(`
-			<tr data-course-offering="${_esc(c.name)}"
+			<tr data-course="${_esc(c.name)}"
 			    data-course-name="${_esc(c.course_name || c.course)}"
 			    data-eval="${_esc(c.evaluation_schema || '')}"
 			    data-grade="${_esc(c.grade_schema || '')}">
-				<td><input type="checkbox" class="csm-chk-row" data-course-offering="${_esc(c.name)}"/></td>
+				<td><input type="checkbox" class="csm-chk-row" data-course="${_esc(c.name)}"/></td>
 				<td>
 					<div class="csm-course-name">${_esc(c.course_name || c.course)}</div>
 					${c.course_code ? `<div class="csm-course-code">${_esc(c.course_code)}</div>` : ''}
@@ -668,18 +668,18 @@ function _csm_render(courses, $ov) {
 
 function _csm_selected($ov) {
 	const sel = [];
-	$ov.find('.csm-chk-row:checked').each(function () { sel.push($(this).data('course-offering')); });
+	$ov.find('.csm-chk-row:checked').each(function () { sel.push($(this).attr('data-course')); });
 	return sel;
 }
 
 /* ── Map panel (readonly → confirm → edit flow) ──── */
 function _csm_show_map_panel(exam_plan, selected, $ov) {
-	const courseNames = selected.map(c => $ov.find(`tr[data-course-offering="${c}"]`).data('course-name') || c);
+	const courseNames = selected.map(c => $ov.find(`tr[data-course="${c}"]`).data('course-name') || c);
 	const courseLabel = courseNames.length === 1 ? courseNames[0] : `${courseNames.length} courses`;
 
 	// Common current values across all selected rows
 	const getCommon = attr => {
-		const vals = selected.map(c => $ov.find(`tr[data-course-offering="${c}"]`).attr(attr) || '');
+		const vals = selected.map(c => $ov.find(`tr[data-course="${c}"]`).attr(attr) || '');
 		return vals.every(v => v === vals[0]) ? vals[0] : '';
 	};
 	const preEval = getCommon('data-eval');
@@ -872,8 +872,8 @@ function _csm_show_map_panel(exam_plan, selected, $ov) {
 			return;
 		}
 
-		const assignments = selected.map(course_offering => {
-			const obj = { course_offering };
+		const assignments = selected.map(course => {
+			const obj = { course };
 			if (evalSel) obj.evaluation_schema = evalSel;
 			if (gradeSel) obj.grade_schema = gradeSel;
 			return obj;
@@ -899,8 +899,8 @@ function _csm_show_map_panel(exam_plan, selected, $ov) {
 					return showError(r);
 				}
 				// Update DOM directly (fast path)
-				selected.forEach(course_offering => {
-					const $row = $ov.find(`tr[data-course-offering="${course_offering}"]`);
+				selected.forEach(course => {
+					const $row = $ov.find(`tr[data-course="${course}"]`);
 					if (evalSel) {
 						const lbl = (_evalAll.find(x => x.name === evalSel) || {}).label || evalSel;
 						$row.find('td:nth-child(6)').html(`<span class="csm-badge csm-badge-eval" title="${_esc(evalSel)}">${_esc(lbl)}</span>`);
@@ -923,19 +923,19 @@ function _csm_show_map_panel(exam_plan, selected, $ov) {
 /* ── Unmap panel ──────────────────────────────────── */
 function _csm_show_unmap_panel(exam_plan, selected, $ov) {
 	// Read what's actually mapped from DOM data attributes
-	const courseNames = selected.map(c => $ov.find(`tr[data-course-offering="${c}"]`).data('course-name') || c);
+	const courseNames = selected.map(c => $ov.find(`tr[data-course="${c}"]`).data('course-name') || c);
 	const courseLabel = courseNames.length === 1
 		? courseNames[0]
 		: `${courseNames.length} courses`;
 
 	// Read current mapped values for display
 	const curEval = selected.length === 1
-		? ($ov.find(`tr[data-course-offering="${selected[0]}"]`).attr('data-eval') || '') : '';
+		? ($ov.find(`tr[data-course="${selected[0]}"]`).attr('data-eval') || '') : '';
 	const curGrade = selected.length === 1
-		? ($ov.find(`tr[data-course-offering="${selected[0]}"]`).attr('data-grade') || '') : '';
+		? ($ov.find(`tr[data-course="${selected[0]}"]`).attr('data-grade') || '') : '';
 
-	const hasEval = selected.some(c => !!$ov.find(`tr[data-course-offering="${c}"]`).attr('data-eval'));
-	const hasGrade = selected.some(c => !!$ov.find(`tr[data-course-offering="${c}"]`).attr('data-grade'));
+	const hasEval = selected.some(c => !!$ov.find(`tr[data-course="${c}"]`).attr('data-eval'));
+	const hasGrade = selected.some(c => !!$ov.find(`tr[data-course="${c}"]`).attr('data-grade'));
 
 	if (!hasEval && !hasGrade) {
 		_csm_notify($ov, 'No schemas are mapped to the selected course(s).', 'warn');
@@ -1015,8 +1015,8 @@ function _csm_show_unmap_panel(exam_plan, selected, $ov) {
 				return;
 			}
 			// Update DOM directly
-			selected.forEach(course_offering => {
-				const $row = $ov.find(`tr[data-course-offering="${course_offering}"]`);
+			selected.forEach(course => {
+				const $row = $ov.find(`tr[data-course="${course}"]`);
 				if (doEval) {
 					$row.find('td:nth-child(6)').html('<span class="csm-dash">--</span>');
 					$row.find('td:nth-child(7)').html('<span class="csm-dash">--</span>');
@@ -1036,14 +1036,14 @@ function _csm_show_unmap_panel(exam_plan, selected, $ov) {
 			// Full unmap — delete the record entirely
 			frappe.call({
 				method: 'slcm.slcm.doctype.exam_plan.exam_plan_api.unmap_course_schema',
-				args: { exam_plan, course_offerings: JSON.stringify(selected) },
+				args: { exam_plan, courses: JSON.stringify(selected) },
 				callback: done,
 				error: onError
 			});
 		} else {
 			// Partial unmap — null out only the checked field
-			const assignments = selected.map(course_offering => {
-				const obj = { course_offering };
+			const assignments = selected.map(course => {
+				const obj = { course };
 				if (doEval) obj.evaluation_schema = null;
 				if (doGrade) obj.grade_schema = null;
 				return obj;
@@ -1063,3 +1063,14 @@ function _esc(s) {
 	if (!s) return '';
 	return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
+
+frappe.ui.form.on('Exam Course Schedule', {
+	// Seats follow the venue's capacity; lower them by hand if fewer are usable
+	venue(frm, cdt, cdn) {
+		const row = locals[cdt][cdn];
+		if (!row.venue) return;
+		frappe.db.get_value('Venue Master', row.venue, 'capacity').then((r) => {
+			frappe.model.set_value(cdt, cdn, 'seat_capacity', (r.message && r.message.capacity) || 0);
+		});
+	},
+});

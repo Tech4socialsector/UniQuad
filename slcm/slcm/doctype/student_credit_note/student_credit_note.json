@@ -15,7 +15,14 @@
   "available_credit",
   "used_credit",
   "source_receipt",
+  "source_fee_demand",
   "status",
+  "section_money_received",
+  "received_via",
+  "received_bank_account",
+  "column_break_received",
+  "received_date",
+  "received_reference",
   "section_remarks",
   "remarks",
   "section_adjustments",
@@ -85,6 +92,15 @@
    "options": "Fee Receipt"
   },
   {
+   "description": "The paid due this excess was moved from",
+   "fieldname": "source_fee_demand",
+   "fieldtype": "Link",
+   "label": "Source Fee Demand",
+   "no_copy": 1,
+   "options": "Fee Demand",
+   "read_only": 1
+  },
+  {
    "default": "Draft",
    "fieldname": "status",
    "fieldtype": "Select",
@@ -92,6 +108,47 @@
    "label": "Status",
    "options": "Draft\nActive\nExhausted\nCancelled",
    "read_only": 1
+  },
+  {
+   "collapsible": 0,
+   "depends_on": "eval:!doc.source_fee_demand",
+   "description": "For excess entered by hand (e.g. a duplicate NEFT): how and when the money reached the university. Required for Overpayment and Advance Deposit. Leave empty for Scholarship Credit or when no money was received.",
+   "fieldname": "section_money_received",
+   "fieldtype": "Section Break",
+   "label": "Money Received"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "received_via",
+   "fieldtype": "Select",
+   "label": "Received Via",
+   "mandatory_depends_on": "eval:!doc.source_fee_demand && ['Overpayment','Advance Deposit'].includes(doc.credit_type)",
+   "options": "\nCash\nBank Transfer\nCheque\nCredit Card\nDebit Card\nOther"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.received_via && doc.received_via != 'Cash'",
+   "fieldname": "received_bank_account",
+   "fieldtype": "Select",
+   "label": "University Bank Account",
+   "options": "\nHDFC Bank General 50100508244465\nICICI Bank General 231701001061\nUBI Bank General 520101045114133\nUBI Bank Scholarship 520101045115105"
+  },
+  {
+   "fieldname": "column_break_received",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "received_date",
+   "fieldtype": "Date",
+   "label": "Received Date",
+   "mandatory_depends_on": "eval:doc.received_via"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "received_reference",
+   "fieldtype": "Data",
+   "label": "Reference / UTR"
   },
   {
    "fieldname": "section_remarks",
@@ -126,7 +183,7 @@
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2026-08-28 10:28:55.796048",
+ "modified": "2026-10-20 16:47:54.239129",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Student Credit Note",

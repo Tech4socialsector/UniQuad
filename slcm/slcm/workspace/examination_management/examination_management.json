@@ -1,7 +1,7 @@
 {
  "app": "slcm",
  "charts": [],
- "content": "[{\"id\": \"exam-hdr-planning\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Examination Planning</b></span>\", \"col\": 12}}, {\"id\": \"exam-sc-planner\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Examination Planner\", \"col\": 3}}, {\"id\": \"exam-sc-plan\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Exam Plan\", \"col\": 3}}, {\"id\": \"exam-hdr-results\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Results</b></span>\", \"col\": 12}}, {\"id\": \"exam-sc-result\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Course Results\", \"col\": 3}}, {\"id\": \"exam-sc-access\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Access Result Settings\", \"col\": 3}}, {\"id\": \"exam-hdr-eval\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\">Evaluation &amp; Grading</span>\", \"col\": 12}}, {\"id\": \"exam-sc-evalschema\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Evaluation Schema\", \"col\": 3}}, {\"id\": \"exam-sc-gradeschema\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Grading Schema\", \"col\": 3}}, {\"id\": \"exam-hdr-masters\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\">Masters</span>\", \"col\": 12}}, {\"id\": \"exam-sc-component\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Exam Component\", \"col\": 3}}, {\"id\": \"exam-sc-assesstype\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Exam Assessment Type\", \"col\": 3}}]",
+ "content": "[{\"id\": \"ex-h-run\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Run an exam</b></span>\", \"col\": 12}}, {\"id\": \"ex-s-examination-planner\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Exam Plan\", \"col\": 3}}, {\"id\": \"ex-s-exam-plan\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Exam Plans\", \"col\": 3}}, {\"id\": \"ex-s-exam-assessment-schedule\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Exam Assessment Schedule\", \"col\": 3}}, {\"id\": \"ex-h-marks\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Marks & results</b></span>\", \"col\": 12}}, {\"id\": \"ex-s-examination-result\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Course Results\", \"col\": 3}}, {\"id\": \"ex-s-term-result\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Term Result\", \"col\": 3}}, {\"id\": \"ex-s-publish-result\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Publish Result\", \"col\": 3}}, {\"id\": \"ex-s-result-settings\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Result Settings\", \"col\": 3}}, {\"id\": \"ex-s-exam-barcode-sheet\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Exam Barcode Sheet\", \"col\": 3}}, {\"id\": \"ex-h-after\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>After results</b></span>\", \"col\": 12}}, {\"id\": \"ex-s-re-exam\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Re Exam\", \"col\": 3}}, {\"id\": \"ex-s-improvement-exam\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Improvement Exam\", \"col\": 3}}, {\"id\": \"ex-s-grade-appeal\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Grade Appeal\", \"col\": 3}}, {\"id\": \"ex-h-setup\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Setup (once)</b></span>\", \"col\": 12}}, {\"id\": \"ex-s-evaluation-schema\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Evaluation Schema\", \"col\": 3}}, {\"id\": \"ex-s-grading-schema\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Grading Schema\", \"col\": 3}}, {\"id\": \"ex-s-exam-component\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Exam Component\", \"col\": 3}}, {\"id\": \"ex-s-exam-assessment-type\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Exam Assessment Type\", \"col\": 3}}, {\"id\": \"ex-s-examination-settings\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Examination Settings\", \"col\": 3}}, {\"id\": \"ex-h-records\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Records & reports</b></span>\", \"col\": 12}}, {\"id\": \"ex-s-student-course-marks\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Student Course Marks\", \"col\": 3}}, {\"id\": \"ex-s-course-schema-assignment\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Course Schema Assignment\", \"col\": 3}}, {\"id\": \"ex-s-schema-change-log\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Schema Change Log\", \"col\": 3}}, {\"id\": \"ex-s-marks-import-log\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Marks Import Log\", \"col\": 3}}, {\"id\": \"ex-s-course-schema-mapping-report\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Course Schema Mapping Report\", \"col\": 3}}, {\"id\": \"ex-s-schema-change-audit\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Schema Change Audit\", \"col\": 3}}]",
  "creation": "2026-08-05 12:10:23.234760",
  "custom_blocks": [],
  "docstatus": 0,
@@ -14,7 +14,7 @@
  "label": "Examination Management",
  "link_type": "DocType",
  "links": [],
- "modified": "2026-04-06 17:46:02.561620",
+ "modified": "2026-10-29 20:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Examination Management",
@@ -27,60 +27,158 @@
  "sequence_id": 0.0,
  "shortcuts": [
   {
-   "color": "Blue",
+   "color": "Red",
    "doc_view": "",
-   "label": "Examination Planner",
-   "type": "URL",
-   "url": "/app/examination-planner"
+   "label": "Exam Plan",
+   "link_to": "examination-planner",
+   "type": "Page"
   },
   {
-   "color": "Green",
+   "color": "Red",
    "doc_view": "List",
-   "label": "Exam Plan",
+   "label": "Exam Plans",
    "link_to": "Exam Plan",
    "type": "DocType"
   },
   {
-   "color": "Purple",
+   "color": "Red",
+   "doc_view": "List",
+   "label": "Exam Assessment Schedule",
+   "link_to": "Exam Assessment Schedule",
+   "type": "DocType"
+  },
+  {
+   "color": "Blue",
    "doc_view": "",
    "label": "Course Results",
-   "type": "URL",
-   "url": "/app/examination-result"
+   "link_to": "examination-result",
+   "type": "Page"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "",
+   "label": "Term Result",
+   "link_to": "term-result",
+   "type": "Page"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "",
+   "label": "Publish Result",
+   "link_to": "publish-result",
+   "type": "Page"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "",
+   "label": "Result Settings",
+   "link_to": "result-settings",
+   "type": "Page"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "",
+   "label": "Exam Barcode Sheet",
+   "link_to": "exam-barcode-sheet",
+   "type": "Page"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "",
+   "label": "Re Exam",
+   "link_to": "re-exam",
+   "type": "Page"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "",
+   "label": "Improvement Exam",
+   "link_to": "improvement-exam",
+   "type": "Page"
   },
   {
    "color": "Orange",
    "doc_view": "List",
-   "label": "Access Result Settings",
-   "link_to": "Access Result Settings",
+   "label": "Grade Appeal",
+   "link_to": "Grade Appeal",
    "type": "DocType"
   },
   {
-   "color": "Cyan",
+   "color": "Green",
    "doc_view": "List",
    "label": "Evaluation Schema",
    "link_to": "Evaluation Schema",
    "type": "DocType"
   },
   {
-   "color": "Grey",
+   "color": "Green",
    "doc_view": "List",
    "label": "Grading Schema",
    "link_to": "Grading Schema",
    "type": "DocType"
   },
   {
-   "color": "Grey",
+   "color": "Green",
    "doc_view": "List",
    "label": "Exam Component",
    "link_to": "Exam Component",
    "type": "DocType"
   },
   {
-   "color": "Grey",
+   "color": "Green",
    "doc_view": "List",
    "label": "Exam Assessment Type",
    "link_to": "Exam Assessment Type",
    "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "label": "Examination Settings",
+   "link_to": "Examination Settings",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Student Course Marks",
+   "link_to": "Student Course Marks",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Course Schema Assignment",
+   "link_to": "Course Schema Assignment",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Schema Change Log",
+   "link_to": "Schema Change Log",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Marks Import Log",
+   "link_to": "Marks Import Log",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "",
+   "label": "Course Schema Mapping Report",
+   "link_to": "Course Schema Mapping Report",
+   "type": "Report"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "",
+   "label": "Schema Change Audit",
+   "link_to": "Schema Change Audit",
+   "type": "Report"
   }
  ],
  "title": "Examination Management",

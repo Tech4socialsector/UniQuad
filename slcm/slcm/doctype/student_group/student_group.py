@@ -47,21 +47,21 @@ class StudentGroup(Document):
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
 def programme_query(doctype, txt, searchfield, start, page_len, filters):
-	"""Programmes that have a Course Offering in the selected Academic Year + Term."""
+	"""Programmes that have a Class in the selected Academic Year + Term."""
 	filters = filters or {}
-	conditions = ["co.program IS NOT NULL", "co.program != ''"]
+	conditions = ["cls.programme IS NOT NULL", "cls.programme != ''"]
 	values = {"txt": f"%{txt}%", "start": start, "page_len": page_len}
 	if filters.get("academic_year"):
-		conditions.append("co.academic_year = %(academic_year)s")
+		conditions.append("cls.academic_year = %(academic_year)s")
 		values["academic_year"] = filters["academic_year"]
 	if filters.get("academic_term"):
-		conditions.append("co.term_name = %(academic_term)s")
+		conditions.append("cls.academic_term = %(academic_term)s")
 		values["academic_term"] = filters["academic_term"]
 
 	return frappe.db.sql(
 		f"""SELECT DISTINCT p.name, p.program_name
-		    FROM `tabCourse Offering` co
-		    JOIN `tabProgramme` p ON p.name = co.program
+		    FROM `tabClasses` cls
+		    JOIN `tabProgramme` p ON p.name = cls.programme
 		    WHERE {" AND ".join(conditions)}
 		      AND (p.name LIKE %(txt)s OR p.program_name LIKE %(txt)s)
 		    ORDER BY p.name

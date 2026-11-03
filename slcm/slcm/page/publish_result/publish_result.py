@@ -140,7 +140,7 @@ def get_publish_inst_filter_options(exam_plan):
 
 	rows = frappe.db.sql(
 		"""
-		SELECT DISTINCT sm.programme_of_study AS programme, sm.batch_year
+		SELECT DISTINCT sm.programme_of_study AS programme, sm.batch AS batch_year
 		FROM `tabStudent Course Marks` scm
 		INNER JOIN `tabStudent Master` sm ON sm.name = scm.student
 		WHERE scm.exam_plan = %(exam_plan)s
@@ -193,7 +193,7 @@ def _build_publish_where(exam_plan, search="", status_filter="all",
 			params[f"prog_{i}"] = v
 	if f_batches:
 		placeholders = ",".join([f"%(batch_{i})s" for i in range(len(f_batches))])
-		extra_cond += f" AND sm.batch_year IN ({placeholders})"
+		extra_cond += f" AND sm.batch IN ({placeholders})"
 		for i, v in enumerate(f_batches):
 			params[f"batch_{i}"] = v
 

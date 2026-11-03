@@ -70,7 +70,9 @@ def publish_bulk_progress(label, done, total):
 class TimeTable(Document):
     def validate(self):
         """Validate the Time Table entry"""
+        self.set_class_details()
         self.validate_time()
+        self.validate_class_term_dates()
         self.validate_repeat_settings()
         self.validate_office_hours_group()
         self.validate_class_participation_weeks()
@@ -78,6 +80,72 @@ class TimeTable(Document):
         self.check_conflicts()
         self.check_venue_conflict()
         self.calculate_duration()
+
+    def set_class_details(self):
+        """A class-based entry takes its course, programme, section, academic
+        year / term and (if not set) faculty from the Class, so they always
+        match it - fetch_from alone only runs when the link changes on the
+        form. An Office Hours entry takes its Class (and so its course) from
+        the Office Hours Group."""
+        if self.based_on == "Office Hours":
+            if self.office_hours_group:
+                group_class = frappe.db.get_value("Student Group", self.office_hours_group, "class_name")
+                if group_class:
+                    self.class_name = group_class
+            if self.class_name:
+                cls = frappe.db.get_value(
+                    "Classes", self.class_name, ["course", "programme", "academic_year", "academic_term"], as_dict=True
+                )
+                if cls:
+                    self.course = cls.course or self.course
+                    self.programme = self.programme or cls.programme
+                    self.academic_year = self.academic_year or cls.academic_year
+                    self.academic_term = self.academic_term or cls.academic_term
+            return
+        if self.based_on != "Class":
+            return
+        if not self.class_name:
+            frappe.throw(_("Select the Class to schedule."), title=_("Class Required"))
+        cls = frappe.db.get_value(
+            "Classes",
+            self.class_name,
+            ["course", "course_name", "programme", "section", "group_name", "class_type",
+             "academic_year", "academic_term", "faculty"],
+            as_dict=True,
+        )
+        if not cls:
+            frappe.throw(_("Class {0} does not exist.").format(self.class_name))
+        self.course = cls.course or self.course
+        self.programme = cls.programme
+        self.section = cls.section
+        self.academic_year = cls.academic_year
+        self.academic_term = cls.academic_term
+        if not self.instructor:
+            self.instructor = cls.faculty
+        if not self.title:
+            self.title = " - ".join(filter(None, [cls.course_name, cls.section or cls.group_name]))
+
+    def validate_class_term_dates(self):
+        """A class runs in its Academic Term: its sessions (and a repeating
+        series) must fall within the term's dates."""
+        if self.based_on != "Class" or not (self.academic_term and self.schedule_date):
+            return
+        from frappe.utils import formatdate, getdate
+
+        term = frappe.db.get_value(
+            "Academic Term", self.academic_term, ["term_start_date", "term_end_date"], as_dict=True
+        )
+        if not (term and term.term_start_date and term.term_end_date):
+            return
+        start, end = getdate(term.term_start_date), getdate(term.term_end_date)
+        last = getdate(self.repeats_till) if self.repeat_frequency not in (None, "", "Never") and self.repeats_till else getdate(self.schedule_date)
+        if getdate(self.schedule_date) < start or last > end:
+            frappe.throw(
+                _("Class {0} runs in {1} ({2} to {3}): Schedule Date and Repeats Till must be within those dates.").format(
+                    self.class_name, self.academic_term, formatdate(start), formatdate(end)
+                ),
+                title=_("Outside the Academic Term"),
+            )
 
     def check_holiday_conflict(self):
         """Block scheduling a class on a date that Institutional Calendar marks
@@ -104,6 +172,35 @@ class TimeTable(Document):
         if self.flags.in_insert:
             return
         self.update_attendance_session()
+        self.log_edit()
+
+    # Fields whose change is worth a Class Schedule Log row
+    LOGGED_FIELDS = (("schedule_date", "Date"), ("from_time", "From"), ("to_time", "To"),
+                     ("venue", "Venue"), ("instructor", "Faculty"), ("title", "Title"))
+
+    def log_edit(self):
+        """One-off saves (the desk form, calendar drag) log what changed; bulk
+        operations (quiet_bulk_operation) log one summary of their own."""
+        if frappe.flags.tt_bulk_stats is not None or not self.class_name:
+            return
+        before = self.get_doc_before_save()
+        if not before:
+            return
+        changes = [
+            f"{label}: {before.get(f) or '–'} → {self.get(f) or '–'}"
+            for f, label in self.LOGGED_FIELDS
+            if str(before.get(f) or "") != str(self.get(f) or "")
+        ]
+        if changes:
+            from slcm.slcm.doctype.class_schedule_log.class_schedule_log import add_log
+
+            add_log(self.class_name, "Edited", self.name, self.schedule_date, "; ".join(changes))
+
+    def on_trash(self):
+        from slcm.slcm.doctype.class_schedule_log.class_schedule_log import add_log
+
+        add_log(self.class_name, "Deleted", self.name, self.schedule_date,
+                f"{self.title or self.course or ''} {format_time_12h(self.from_time)} – {format_time_12h(self.to_time)}, {self.venue or ''}".strip())
 
     def validate_time(self):
         """Validate that to_time is after from_time"""
@@ -238,32 +335,33 @@ class TimeTable(Document):
         if not self.schedule_date or not self.from_time or not self.to_time:
             return
 
-        # 1. Check for Duplicate Time Table entry (Same Course Offering, Same Venue,
+        # 1. Check for Duplicate Time Table entry (Same Class, Same Venue,
         # Same Title/Section, Same Date, Overlapping Time). Venue is required and
         # Title carries the section identifier (e.g. "BLM101-Legal Methods-A"), so
-        # parallel sections of the same Course Offering meeting at the same time in
+        # parallel sections of the same course meeting at the same time in
         # different venues/sections are a legitimate schedule, not a duplicate — the
         # venue itself is separately protected by check_venue_conflict().
-        if self.course_offering:
+        if self.class_name:
             filters = {
                 "name": ["!=", self.name],
-                "course_offering": self.course_offering,
+                "class_name": self.class_name,
                 "schedule_date": self.schedule_date,
                 "venue": self.venue,
                 "title": self.title,
-                "docstatus": ["<", 2] # Exclude cancelled
+                "docstatus": ["<", 2], # Exclude cancelled
+                "is_cancelled": 0,
             }
 
             conflicts = frappe.get_all(
                 "Time Table",
                 filters=filters,
-                fields=["name", "from_time", "to_time", "course", "course_offering"],
+                fields=["name", "from_time", "to_time", "course", "class_name"],
             )
 
             for conflict in conflicts:
                 if self.times_overlap(self.from_time, self.to_time, conflict.from_time, conflict.to_time):
                     frappe.throw(
-                        f"Already scheduled same time class {conflict.course} for this Course Offering ({conflict.from_time} - {conflict.to_time})",
+                        f"Already scheduled same time class {conflict.course} for this Class ({conflict.from_time} - {conflict.to_time})",
                         title="Duplicate Schedule"
                     )
 
@@ -275,7 +373,8 @@ class TimeTable(Document):
                     "name": ["!=", self.name],
                     "instructor": self.instructor,
                     "schedule_date": self.schedule_date,
-                    "docstatus": ["<", 2]
+                    "docstatus": ["<", 2],
+                    "is_cancelled": 0,
                 },
                 fields=["name", "from_time", "to_time", "course"],
             )
@@ -297,6 +396,9 @@ class TimeTable(Document):
         double-booking itself."""
         if not self.schedule_date or not self.from_time or not self.to_time or not self.venue:
             return
+        # A cancelled session has given up its slot
+        if self.is_cancelled:
+            return
 
         conflicts = frappe.get_all(
             "Time Table",
@@ -305,6 +407,7 @@ class TimeTable(Document):
                 "venue": self.venue,
                 "schedule_date": self.schedule_date,
                 "docstatus": ["<", 2],
+                "is_cancelled": 0,
             },
             fields=["name", "from_time", "to_time", "course"],
         )
@@ -318,6 +421,18 @@ class TimeTable(Document):
                     title=_("Venue Conflict"),
                 )
 
+        # Exams (Exam Plan › Course Schedules) use the same Venue Master rooms
+        from slcm.slcm.utils.exam_timetable import exam_booking_clash
+
+        exam = exam_booking_clash(self.venue, self.schedule_date, self.from_time, self.to_time)
+        if exam:
+            frappe.throw(
+                _("Venue {0} is booked for the {1} exam ({2}) from {3} to {4} on {5}.").format(
+                    self.venue, exam.course, exam.exam_plan, exam.start_time, exam.end_time, self.schedule_date
+                ),
+                title=_("Venue Conflict"),
+            )
+
     def times_overlap(self, start1, end1, start2, end2):
         """Check if two time ranges overlap"""
         return to_timedelta(start1) < to_timedelta(end2) and to_timedelta(end1) > to_timedelta(start2)
@@ -326,9 +441,20 @@ class TimeTable(Document):
         """Create recurring schedules if repeat is enabled"""
         if self.repeat_frequency and self.repeat_frequency != "Never":
             self.create_recurring_schedules()
-        
+
         # Create attendance session for this schedule
         self.create_attendance_session()
+
+        # A new series (or single session) is logged once, on its first entry;
+        # the occurrences it generates carry parent_schedule and are not.
+        if not self.parent_schedule:
+            from slcm.slcm.doctype.class_schedule_log.class_schedule_log import add_log
+
+            count = 1 + frappe.db.count("Time Table", {"parent_schedule": self.name})
+            repeat = self.repeat_frequency if self.repeat_frequency not in (None, "", "Never") else "Once"
+            add_log(self.class_name, "Created", self.name, self.schedule_date,
+                    f"{count} session(s), {repeat}, {format_time_12h(self.from_time)} – {format_time_12h(self.to_time)}, {self.venue or ''}"
+                    + (f", till {self.repeats_till}" if repeat != "Once" and self.repeats_till else ""))
 
     def get_session_office_hours_group(self):
         """Office Hours Group (a Student Group) to carry onto the Attendance Session."""
@@ -359,9 +485,11 @@ class TimeTable(Document):
             "doctype": "Attendance Session",
             "based_on": based_on,
             "class_schedule": self.name,
-            "course_schedule": self.course_schedule if based_on == "Course Schedule" else None,
             "office_hours_group": self.get_session_office_hours_group(),
-            "course_offering": self.course_offering,
+            # Office Hours entries carry their group's Class too (for the
+            # attendance summary); their roster still comes from the group.
+            "class_name": self.class_name,
+            "section": self.section,
             "course": self.course,
             "instructor": self.instructor,
             "session_date": self.schedule_date,
@@ -436,10 +564,10 @@ class TimeTable(Document):
         session.duration_hours = round(duration_hours, 2)
         session.instructor = self.instructor
         session.course = self.course
-        session.course_offering = self.course_offering
         session.based_on = based_on
-        session.course_schedule = self.course_schedule if based_on == "Course Schedule" else None
         session.office_hours_group = self.get_session_office_hours_group()
+        session.class_name = self.class_name
+        session.section = self.section
 
         # Save the session
         session.save(ignore_permissions=True)
@@ -480,6 +608,7 @@ class TimeTable(Document):
             current_date += increment  # Skip the first date (already created)
             created_count = 0
             conflict_count = 0
+            faculty_overlap_count = 0
             holiday_skip_count = 0
             schedules_to_create = []
 
@@ -503,6 +632,7 @@ class TimeTable(Document):
                         "instructor": self.instructor,
                         "schedule_date": ["between", [current_date.date(), end_date.date()]],
                         "docstatus": ["<", 2],
+                        "is_cancelled": 0,
                     },
                     fields=["name", "schedule_date", "from_time", "to_time", "course"],
                 )
@@ -522,11 +652,16 @@ class TimeTable(Document):
                         "venue": self.venue,
                         "schedule_date": ["between", [current_date.date(), end_date.date()]],
                         "docstatus": ["<", 2],
+                        "is_cancelled": 0,
                     },
                     fields=["name", "schedule_date", "from_time", "to_time", "course"],
                 )
                 for row in venue_existing:
                     venue_conflicts_by_date.setdefault(getdate(row.schedule_date), []).append(row)
+                from slcm.slcm.utils.exam_timetable import exam_bookings_by_date
+
+                for day, rows in exam_bookings_by_date(self.venue, current_date.date(), end_date.date()).items():
+                    venue_conflicts_by_date.setdefault(day, []).extend(rows)
 
             # First, collect all schedules to create and check for conflicts
             while current_date <= end_date:
@@ -538,30 +673,26 @@ class TimeTable(Document):
                     current_date += increment
                     continue
 
-                # Check for conflicts on this date
+                # Only a venue booked for an overlapping time on this date blocks
+                # it. The faculty teaching elsewhere at the same time is a
+                # warning (as for a single entry in check_conflicts).
                 has_conflict = False
-                for conflict in existing_by_date.get(date_only, []):
+                for conflict in venue_conflicts_by_date.get(date_only, []):
                     if self.times_overlap(
                         self.from_time, self.to_time, conflict.from_time, conflict.to_time
                     ):
                         has_conflict = True
                         conflict_count += 1
                         frappe.logger().warning(
-                            f"Skipping schedule on {date_only} due to conflict with {conflict.name}"
+                            f"Skipping schedule on {date_only} due to venue conflict with {conflict.name}"
                         )
                         break
 
-                if not has_conflict:
-                    for conflict in venue_conflicts_by_date.get(date_only, []):
-                        if self.times_overlap(
-                            self.from_time, self.to_time, conflict.from_time, conflict.to_time
-                        ):
-                            has_conflict = True
-                            conflict_count += 1
-                            frappe.logger().warning(
-                                f"Skipping schedule on {date_only} due to venue conflict with {conflict.name}"
-                            )
-                            break
+                if not has_conflict and any(
+                    self.times_overlap(self.from_time, self.to_time, c.from_time, c.to_time)
+                    for c in existing_by_date.get(date_only, [])
+                ):
+                    faculty_overlap_count += 1
 
                 if not has_conflict:
                     schedules_to_create.append(current_date.strftime("%Y-%m-%d"))
@@ -585,12 +716,12 @@ class TimeTable(Document):
                     created_count += 1
                     publish_bulk_progress("Scheduling", created_count, total)
 
-            self.show_scheduling_summary(created_count, conflict_count, holiday_skip_count, stats)
+            self.show_scheduling_summary(created_count, conflict_count, holiday_skip_count, stats, faculty_overlap_count)
         except Exception as e:
             frappe.log_error(message=f"Error creating recurring schedules: {str(e)}", title="Recurring Schedule Creation Error")
             frappe.throw(f"Error creating recurring schedules: {str(e)}")
 
-    def show_scheduling_summary(self, created_count, conflict_count, holiday_skip_count, stats):
+    def show_scheduling_summary(self, created_count, conflict_count, holiday_skip_count, stats, faculty_overlap_count=0):
         """One summary dialog for the whole recurring series, replacing the
         per-occurrence 'Attendance Session updated' / 'Event Synced' toasts."""
         from slcm.slcm.doctype.time_table.google_calendar_sync import get_active_google_calendar_account
@@ -601,7 +732,7 @@ class TimeTable(Document):
 
         if not created_count:
             frappe.msgprint(
-                _("Could not create recurring schedules. All dates were skipped ({0} conflicts, {1} holidays).").format(
+                _("Could not create recurring schedules. All dates were skipped ({0} venue bookings, {1} holidays).").format(
                     conflict_count, holiday_skip_count
                 ),
                 title=_("Scheduling Summary"),
@@ -613,7 +744,9 @@ class TimeTable(Document):
         if holiday_skip_count:
             lines.append(_("Skipped due to holidays: <b>{0}</b>").format(holiday_skip_count))
         if conflict_count:
-            lines.append(_("Skipped due to faculty/venue conflicts: <b>{0}</b>").format(conflict_count))
+            lines.append(_("Skipped as the venue is already reserved: <b>{0}</b>").format(conflict_count))
+        if faculty_overlap_count:
+            lines.append(_("Scheduled while the faculty has another session at the same time: <b>{0}</b> (kindly confirm availability)").format(faculty_overlap_count))
         lines.append(_("Attendance sessions created: <b>{0}</b>").format(stats.sessions_created))
         if get_active_google_calendar_account():
             lines.append(_("Synced with Google Calendar: <b>{0}</b>").format(stats.gcal_synced))
@@ -625,92 +758,8 @@ class TimeTable(Document):
         frappe.msgprint(
             "<ul style='margin-bottom:0'>" + "".join(f"<li>{line}</li>" for line in lines) + "</ul>",
             title=_("Scheduling Summary"),
-            indicator="orange" if (conflict_count or stats.gcal_failed) else "green",
+            indicator="orange" if (conflict_count or faculty_overlap_count or stats.gcal_failed) else "green",
         )
-
-
-@frappe.whitelist()
-def get_timetable_data(term=None, course=None, start_date=None, end_date=None):
-    """Get timetable data for calendar view"""
-    filters = {}
-
-    if term:
-        filters["term"] = term
-    if course:
-        filters["course"] = course
-    if start_date and end_date:
-        filters["schedule_date"] = ["between", [start_date, end_date]]
-    
-    schedules = frappe.get_all(
-        "Time Table",
-        filters=filters,
-        fields=[
-            "name",
-            "title",
-            "course",
-            "instructor",
-            "schedule_date",
-            "from_time",
-            "to_time",
-            "venue",
-            "color",
-            "class_configuration",
-        ],
-        order_by="schedule_date, from_time",
-    )
-
-    # Format for calendar
-    events = []
-    for schedule in schedules:
-        events.append({
-            "id": schedule.name,
-            "title": schedule.title or schedule.course,
-            "start": f"{schedule.schedule_date}T{schedule.from_time}",
-            "end": f"{schedule.schedule_date}T{schedule.to_time}",
-            "backgroundColor": schedule.color or "#3498db",
-            "extendedProps": {
-                "course": schedule.course,
-                "instructor": schedule.instructor,
-                "venue": schedule.venue,
-                "class_configuration": schedule.class_configuration,
-            }
-        })
-
-    return events
-
-
-@frappe.whitelist()
-def create_time_table(data):
-    """Create a class schedule from timetable configuration"""
-    import json
-    
-    if isinstance(data, str):
-        data = json.loads(data)
-    
-    # Create the schedule
-    doc = frappe.get_doc({
-        "doctype": "Time Table",
-        "class_configuration": data.get("class_configuration"),
-        "course": data.get("course"),
-        "instructor": data.get("instructor"),
-        "schedule_date": data.get("schedule_date"),
-        "from_time": data.get("from_time"),
-        "to_time": data.get("to_time"),
-        "venue": data.get("venue"),
-        "repeat_frequency": data.get("repeat_frequency", "Never"),
-        "repeats_till": data.get("repeats_till"),
-        "term": data.get("term"),
-        "programme": data.get("programme"),
-        "course_offering": data.get("course_offering"),
-    })
-    
-    doc.insert(ignore_permissions=True)
-    
-    # If repeat is enabled, create recurring schedules
-    if doc.repeat_frequency and doc.repeat_frequency != "Never":
-        doc.create_recurring_schedules()
-    
-    return doc.name
 
 
 @frappe.whitelist()
@@ -730,7 +779,7 @@ def get_events(start, end, filters=None):
     query = """
         SELECT
             name,
-            class_configuration,
+            class_name,
             course,
             instructor,
             schedule_date,
@@ -740,9 +789,7 @@ def get_events(start, end, filters=None):
             venue,
             color,
             title,
-            course_offering,
             based_on,
-            course_schedule,
             office_hours_group
         FROM `tabTime Table`
         WHERE
@@ -799,9 +846,8 @@ def get_events(start, end, filters=None):
             "allDay": 0,
             "extendedProps": {
                 "based_on": d.based_on,
+                "class_name": d.class_name,
                 "course": d.course,
-                "course_offering": d.course_offering,
-                "course_schedule": d.course_schedule,
                 "office_hours_group": d.office_hours_group,
                 "instructor": instructor_label,
                 "venue": d.venue,
@@ -903,8 +949,8 @@ def find_sessions(programme=None, section=None, schedule_date=None):
     be opened without pre-checking any row, and browsed/filtered from there).
 
     All filters are optional and Section in particular is often blank on real
-    records (Time Table only fetches it from course_offering.section, and many
-    rows only have class_configuration set, not course_offering) - filtering
+    records (Time Table only fetches it from class_name.section, which a
+    Group class does not have) - filtering
     on it unconditionally would silently hide otherwise-matching sessions, so
     it's applied only when the caller actually provided a value.
     """
@@ -920,7 +966,7 @@ def find_sessions(programme=None, section=None, schedule_date=None):
         "Time Table",
         filters=filters,
         # Only the columns the dialog's session table actually renders -
-        # avoid pulling instructor/course_offering/etc. into the response
+        # avoid pulling instructor/class_name/etc. into the response
         # just because they exist on the doctype.
         fields=["name", "course", "programme", "section", "schedule_date", "from_time", "to_time", "venue"],
         order_by="schedule_date desc, from_time",
@@ -952,12 +998,12 @@ def find_sessions(programme=None, section=None, schedule_date=None):
 def get_sessions_roster(time_table_names):
     """Combined student roster across one or more Time Table sessions, shown
     for confirmation before applying a venue/time change to all of them.
-    Resolved via each session's linked Class Configuration's own `students`
-    child table rather than Student Enrollment by section, since Time Table's
-    `section` field is frequently blank while `class_configuration` is
-    reliably set. Multiple sessions sharing the same class_configuration
-    (e.g. several dates of the same recurring class) are de-duplicated."""
+    Resolved via each session's Class (its enrolled students).
+    Sessions sharing a class (e.g. several dates of the same recurring
+    class) are de-duplicated."""
     import json
+
+    from slcm.slcm.doctype.classes.classes import get_class_students
 
     if isinstance(time_table_names, str):
         time_table_names = json.loads(time_table_names)
@@ -966,25 +1012,17 @@ def get_sessions_roster(time_table_names):
     if not time_table_names:
         return {"students": []}
 
-    class_configurations = {
-        row.class_configuration
-        for row in frappe.get_all(
-            "Time Table",
-            filters={"name": ["in", time_table_names]},
-            fields=["class_configuration"],
-        )
-        if row.class_configuration
-    }
-
-    if not class_configurations:
-        return {"students": []}
-
-    students = frappe.get_all(
-        "Class Student",
-        filters={"parent": ["in", list(class_configurations)], "parenttype": "Class Configuration"},
-        fields=["student", "student_name"],
-        order_by="student_name",
+    rows = frappe.get_all(
+        "Time Table",
+        filters={"name": ["in", time_table_names]},
+        fields=["class_name"],
     )
+    classes = {row.class_name for row in rows if row.class_name}
+
+    students = []
+    for class_name in sorted(classes):
+        students += get_class_students(class_name)
+    students.sort(key=lambda s: s.student_name or "")
 
     # A student enrolled in more than one of the selected classes would
     # otherwise appear once per class - keep one row per student.
@@ -1009,6 +1047,11 @@ def _parse_updates(updates):
     updates = {k: v for k, v in updates.items() if k in allowed_fields}
     if not updates:
         frappe.throw(_("No updatable fields were provided."))
+    # Dates arrive as strings; validate compares them with the saved dates.
+    from frappe.utils import getdate
+    for k in ("schedule_date", "repeats_till"):
+        if updates.get(k):
+            updates[k] = getdate(updates[k])
     return updates
 
 
@@ -1029,7 +1072,7 @@ def _apply_updates_to_rows(names, updates):
             overlaps = frappe.db.sql("""
                 SELECT name, from_time, to_time, based_on, course 
                 FROM `tabTime Table` 
-                WHERE venue = %s AND schedule_date = %s AND docstatus < 2 AND name NOT IN %s
+                WHERE venue = %s AND schedule_date = %s AND docstatus < 2 AND is_cancelled = 0 AND name NOT IN %s
                 AND (
                     (from_time < %s AND to_time > %s) OR
                     (from_time < %s AND to_time > %s) OR
@@ -1039,6 +1082,10 @@ def _apply_updates_to_rows(names, updates):
                     row_doc.to_time, row_doc.from_time, 
                     row_doc.from_time, row_doc.to_time, 
                     row_doc.from_time, row_doc.to_time), as_dict=True)
+            from slcm.slcm.utils.exam_timetable import exam_booking_clash
+            _exam = exam_booking_clash(row_doc.venue, row_doc.schedule_date, row_doc.from_time, row_doc.to_time)
+            if _exam:
+                overlaps.append(frappe._dict(name=f"Exam: {_exam.exam_plan}", from_time=_exam.start_time, to_time=_exam.end_time, based_on="Exam", course=_exam.course))
             
             if overlaps:
                 conflicts.append({
@@ -1097,6 +1144,21 @@ def _apply_updates_to_rows(names, updates):
 
     frappe.db.commit()
     return docs_to_save
+
+def _log_bulk_edit(docs, updates):
+    """One Class Schedule Log row per class for a bulk update."""
+    from slcm.slcm.doctype.class_schedule_log.class_schedule_log import add_log
+
+    by_class = {}
+    for d in docs:
+        if d.class_name:
+            by_class.setdefault(d.class_name, []).append(d)
+    for class_name, rows in by_class.items():
+        rows.sort(key=lambda d: str(d.schedule_date))
+        changes = ", ".join(f"{k}: {v}" for k, v in updates.items())
+        add_log(class_name, "Edited", rows[0].name, rows[0].schedule_date,
+                f"{len(rows)} session(s) from {rows[0].schedule_date} to {rows[-1].schedule_date} updated ({changes})")
+
 
 @frappe.whitelist()
 def bulk_update_future_occurrences(time_table_name, updates):
@@ -1189,7 +1251,7 @@ def bulk_update_future_occurrences(time_table_name, updates):
                 overlaps = frappe.db.sql("""
                     SELECT name, from_time, to_time, based_on, course 
                     FROM `tabTime Table` 
-                    WHERE venue = %s AND schedule_date = %s AND docstatus < 2 AND name NOT IN %s
+                    WHERE venue = %s AND schedule_date = %s AND docstatus < 2 AND is_cancelled = 0 AND name NOT IN %s
                     AND (
                         (from_time < %s AND to_time > %s) OR
                         (from_time < %s AND to_time > %s) OR
@@ -1199,6 +1261,10 @@ def bulk_update_future_occurrences(time_table_name, updates):
                         dummy.to_time, dummy.from_time, 
                         dummy.from_time, dummy.to_time, 
                         dummy.from_time, dummy.to_time), as_dict=True)
+                from slcm.slcm.utils.exam_timetable import exam_booking_clash
+                _exam = exam_booking_clash(dummy.venue, dummy.schedule_date, dummy.from_time, dummy.to_time)
+                if _exam:
+                    overlaps.append(frappe._dict(name=f"Exam: {_exam.exam_plan}", from_time=_exam.start_time, to_time=_exam.end_time, based_on="Exam", course=_exam.course))
 
                 if overlaps:
                     has_conflict = True
@@ -1231,21 +1297,26 @@ def bulk_update_future_occurrences(time_table_name, updates):
             
             frappe.throw(html, allow_dangerous_html=True, title=_("Update Blocked"))
 
-        # If no conflicts, delete all un-marked future occurrences in this series
-        future_names = [r.name for r in future_rows if r.name != doc.name]
-        for name in future_names:
-            # Check if attendance marked
-            session_name = frappe.db.get_value("Attendance Session", {"class_schedule": name})
-            if session_name and frappe.db.get_value("Attendance Session", session_name, "attendance_marked"):
-                continue # Don't delete marked occurrences
-            frappe.delete_doc("Time Table", name, force=1)
+        from slcm.slcm.doctype.class_schedule_log.class_schedule_log import add_log, no_schedule_log
 
-        # Save the current doc
-        doc.save(ignore_permissions=True)
-        # Call create_recurring_schedules to regenerate
-        doc.create_recurring_schedules()
-        
+        # If no conflicts, delete all un-marked future occurrences in this series
+        with no_schedule_log():
+            future_names = [r.name for r in future_rows if r.name != doc.name]
+            for name in future_names:
+                # Check if attendance marked
+                session_name = frappe.db.get_value("Attendance Session", {"class_schedule": name})
+                if session_name and frappe.db.get_value("Attendance Session", session_name, "attendance_marked"):
+                    continue # Don't delete marked occurrences
+                frappe.delete_doc("Time Table", name, force=1)
+
+            # Save the current doc
+            doc.save(ignore_permissions=True)
+            # Call create_recurring_schedules to regenerate
+            doc.create_recurring_schedules()
+
         updated_count = len(simulated_dates)
+        add_log(doc.class_name, "Edited", doc.name, doc.schedule_date,
+                f"Series rebuilt from this session: {updated_count} session(s); changed: {', '.join(sorted(updates))}")
 
         return {
             "updated_count": updated_count,
@@ -1255,6 +1326,7 @@ def bulk_update_future_occurrences(time_table_name, updates):
     else:
         # Standard update without regeneration
         docs_to_save = _apply_updates_to_rows([r.name for r in future_rows], updates)
+        _log_bulk_edit(docs_to_save, updates)
 
         return {
             "updated_count": len(docs_to_save),
@@ -1287,6 +1359,7 @@ def bulk_update_selected_occurrences(names, updates):
 
     skipped = len(names) - len(valid_names)
     docs_to_save = _apply_updates_to_rows(valid_names, updates)
+    _log_bulk_edit(docs_to_save, updates)
 
     return {
         "updated_count": len(docs_to_save),
@@ -1376,22 +1449,23 @@ def update_attendance_session_realtime(time_table_name, from_time, to_time, sche
 		session.save(ignore_permissions=True)
 		frappe.db.commit()
 
-		# Trigger attendance recalculation for all students in this course offering
+		# Trigger attendance recalculation for all students in this class
 		# This updates total_class_hours in Attendance Summary
-		if session.course_offering:
+		session_class = session.get_class_name()
+		if session_class:
 			try:
 				from slcm.slcm.utils.attendance_calculator import calculate_student_attendance
-				
-				# Get all students who have attendance records for this course offering
+
+				# Get all students who have attendance records for this class
 				students = frappe.db.sql("""
 					SELECT DISTINCT student
 					FROM `tabStudent Attendance`
-					WHERE course_offer = %s
-				""", session.course_offering, as_dict=True)
-				
+					WHERE class_name = %s
+				""", session_class, as_dict=True)
+
 				# Recalculate attendance for each student
 				for student_row in students:
-					calculate_student_attendance(student_row.student, session.course_offering)
+					calculate_student_attendance(student_row.student, session_class)
 				
 				frappe.db.commit()
 			except Exception as calc_error:

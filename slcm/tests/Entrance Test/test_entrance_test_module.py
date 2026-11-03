@@ -695,3 +695,61 @@ class TestEntranceTestModule(FrappeTestCase):
         allocs[2].reload()
         self.assertEqual(allocs[2].entrance_test_rank, 3)
         self.assertEqual(allocs[2].percentile, 0.0)
+
+    def test_tc_adm_ent_030_publish_seat_allocation_workflow(self):
+        from slcm.admission.doctype.entrance_test_list.entrance_test_list import (
+            publish_seat_allocations_for_test_list,
+            get_unpublished_applicants_for_test_list
+        )
+        from slcm.admission.doctype.entrance_test_seat_allocation.entrance_test_seat_allocation import (
+            publish_seat_allocations,
+            get_unpublished_seat_allocations_for_dialog
+        )
+        from slcm.www.nlsat.eligibility.entrance_test_seat_allocation import download_admit_card
+
+        app_id = "APP-PUB-TEST-01"
+        self._create_dummy_applicant(app_id)
+
+        # 1. Create unpublished allocation
+        alloc = frappe.new_doc("Entrance Test Seat Allocation")
+        alloc.applicant = app_id
+        alloc.candidate_name = "Publish Test Candidate"
+        alloc.academic_year = self.academic_year
+        alloc.admission_cycle = self.admission_cycle
+        alloc.program_level = self.program_level
+        alloc.entrance_test_list = "ETL-TEST-PUB"
+        alloc.allocation_status = "Allocated"
+        alloc.center_name = "Test Center"
+        alloc.seat_allocation_published = 0
+        alloc.flags.ignore_mandatory = True
+        alloc.flags.ignore_links = True
+        alloc.insert(ignore_permissions=True)
+
+        self.assertEqual(alloc.seat_allocation_published, 0)
+        self.assertIsNone(alloc.seat_allocation_published_on)
+
+        # 2. Check get_unpublished_applicants_for_test_list
+        records = get_unpublished_applicants_for_test_list("ETL-TEST-PUB")
+        matching = [r for r in records if r.name == alloc.name]
+        self.assertEqual(len(matching), 1)
+        self.assertEqual(matching[0].seat_allocation_published, 0)
+
+        # 3. Check unauthorized / unpublished admit card download throws PermissionError
+        frappe.set_user(f"{app_id.lower()}@example.com")
+        with self.assertRaises(frappe.PermissionError):
+            download_admit_card(allocation_name=alloc.name)
+
+        frappe.set_user("Administrator")
+
+        # 4. Publish seat allocation
+        result = publish_seat_allocations_for_test_list(
+            entrance_test_list="ETL-TEST-PUB",
+            selected_names=[alloc.name],
+            send_email=0
+        )
+        self.assertEqual(result.get("published"), 1)
+
+        # 5. Verify published state
+        alloc.reload()
+        self.assertEqual(alloc.seat_allocation_published, 1)
+        self.assertIsNotNone(alloc.seat_allocation_published_on)

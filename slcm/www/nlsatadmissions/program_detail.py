@@ -15,7 +15,8 @@ def get_context(context):
         context.portal_config = None
 
     # ── Portal: /nlsatadmissions — Indian Nationals only ──
-    from slcm.admission.utils.nlsat_portal import DOMESTIC, PORTAL_BASES, get_portal_login_url
+    from slcm.admission.utils.nlsat_portal import DOMESTIC, PORTAL_BASES, enforce_portal_access, get_portal_login_url
+    enforce_portal_access(DOMESTIC)
     _req_path = (frappe.request.path if hasattr(frappe, "request") and frappe.request else "") or ""
     context.portal_type      = DOMESTIC
     context.portal_base      = PORTAL_BASES[DOMESTIC]

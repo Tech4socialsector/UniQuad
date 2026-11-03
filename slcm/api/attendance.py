@@ -97,7 +97,7 @@ def create_attendance_log():
 	student = frappe.db.get_value(
 		"Student Master",
 		{"rfid_uid": rfid_uid},
-		["name", "first_name", "last_name", "department", "programme"],
+		["name", "first_name", "last_name", "department", "programme_of_study"],
 		as_dict=True
 	) or frappe._dict()
 
@@ -165,7 +165,7 @@ def create_attendance_log():
 		"student": student.get("name"),
 		"student_name": f"{student.get('first_name')} {student.get('last_name') or ''}".strip(),
 		"department": student.get("department"),
-		"programme": student.get("programme"),
+		"programme": student.get("programme_of_study"),
 		"swipe_time": str(swipe_time),
 		"attendance": attendance_info
 	}

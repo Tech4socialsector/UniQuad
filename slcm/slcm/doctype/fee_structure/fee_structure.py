@@ -32,7 +32,7 @@ class FeeStructure(Document):
 
     def validate_duplicate_active_fee_structure(self):
         """Block saving when another Active fee structure covers an overlapping date range
-        for the same program / year / term / applicable / round / gateway combination.
+        for the same programme / academic year / year no / applicable / round / gateway combination.
 
         Two date ranges [A, B] and [C, D] overlap when A <= D and C <= B.
         An open-ended range (no valid_until) is treated as extending to infinity.
@@ -43,7 +43,7 @@ class FeeStructure(Document):
         filters = {
             "program":         self.program,
             "academic_year":   self.academic_year,
-            "academic_term":   self.academic_term,
+            "year_no":         self.year_no,
             "applicable":      self.applicable,
             "offer_round":     self.offer_round,
             "payment_gateway": self.payment_gateway,
@@ -71,7 +71,7 @@ class FeeStructure(Document):
             if starts_before_their_end and their_start_before_my_end:
                 frappe.throw(_(
                     "Another active Fee Structure ({0}) with an overlapping validity date range "
-                    "already exists for the same Program, Academic Year, Academic Term, "
+                    "already exists for the same Programme, Academic Year, Year No, "
                     "Applicable, and Payment Gateway. Please set non-overlapping Valid From / "
                     "Valid Until dates, or deactivate {0} first."
                 ).format(existing.name))

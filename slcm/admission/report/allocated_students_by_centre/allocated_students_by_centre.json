@@ -3,14 +3,16 @@
  "add_translate_data": 0,
  "columns": [],
  "creation": "2026-08-03 14:18:58.095094",
+ "disable_prepared_report_automation": 0,
  "disabled": 0,
  "docstatus": 0,
  "doctype": "Report",
+ "doctype_to_sync": [],
  "filters": [],
  "idx": 0,
  "is_standard": "Yes",
  "letter_head": null,
- "modified": "2026-08-03 14:18:58.095094",
+ "modified": "2026-11-02 17:28:03.276589",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Allocated Students by Centre",
@@ -28,7 +30,23 @@
   },
   {
    "role": "Entrance Test Provider"
+  },
+  {
+   "role": "Admission Admin"
+  },
+  {
+   "role": "Admission Manager"
+  },
+  {
+   "role": "Admission Officer"
+  },
+  {
+   "role": "Academic Admin"
+  },
+  {
+   "role": "Campus Admin"
   }
  ],
+ "snapshot_report": 0,
  "timeout": 0
 }

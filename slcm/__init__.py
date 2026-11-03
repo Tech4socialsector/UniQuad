@@ -1,4 +1,5 @@
-__version__ = "0.0.1"
+__version__ = "1.0.0"
+__title__ = "SLCM"
 
 # crm/crm/api/doc.py imports get_dynamic_linked_docs and get_linked_docs from
 # frappe.model.delete_doc, but these were removed in frappe v16. Patch them in

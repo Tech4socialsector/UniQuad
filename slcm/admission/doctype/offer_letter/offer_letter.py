@@ -179,7 +179,7 @@ class OfferLetter(Document):
             self.db_set("status", "Payment Completed")
             
             # Update any linked Payment Request
-            frappe.db.set_value("Payment Request", 
+            frappe.db.set_value("SLCM Payment Request", 
                 {"reference_doctype": self.doctype, "reference_name": self.name}, 
                 "status", "Paid")
             # 3. Update Applicant Fee Assignment status to 'Paid'
@@ -240,7 +240,7 @@ def get_bulk_offers_zip(filters):
 	file_url, summary, errors = process_bulk_zip(offers, user=frappe.session.user, output_format=output_format)
 	return file_url
 
-@frappe.whitelist()
+# Background job only (frappe.enqueue); not whitelisted — it switches to the given user.
 def bulk_zip_worker(offers, user, output_format="ZIP Archive"):
 	frappe.set_user(user)
 	try:

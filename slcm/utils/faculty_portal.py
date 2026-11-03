@@ -5,6 +5,29 @@ from slcm.slcm.doctype.faculty_portal_settings.faculty_portal_settings import (
 
 
 def get_faculty_name():
+    """Faculty doc name for the current session user, as a string.
+
+    Faculty is autoincrement-named, so the raw lookup returns an int; Link
+    fields (Classes.faculty, Attendance Session.instructor, ...) hold the
+    name as a string, and comparing the two would never match.
+    """
+    name = _find_faculty_name()
+    return str(name) if name is not None else None
+
+
+def _find_faculty_name():
+    """
+    Return the Faculty doc name for the current session user, as a string.
+
+    Faculty is named by autoincrement, so the database hands back an int (1)
+    while Link fields (Classes.faculty, ...) hold the text "1". Returning a
+    string keeps ownership checks like `cls.faculty != faculty_name` correct.
+    """
+    name = _lookup_faculty_name()
+    return str(name) if name is not None else None
+
+
+def _lookup_faculty_name():
     """
     Return the Faculty doc name for the current session user.
 
@@ -120,7 +143,7 @@ def set_faculty_nav(context, faculty):
     context.faculty_email = faculty.email or frappe.session.user
     context.faculty_designation = faculty.designation or ""
     context.faculty_department = (
-        frappe.db.get_value("Department", faculty.department, "department_name")
+        frappe.db.get_value("SLCM Department", faculty.department, "department_name")
         if faculty.department
         else faculty.department or ""
     )

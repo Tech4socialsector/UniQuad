@@ -19,6 +19,8 @@ for non-portal (email) tickets.
 
 import frappe
 
+from slcm.slcm.utils.exam_schedule import get_student_programme
+
 DEFAULT_EMAIL_TEAM = "PACE Team"
 PACE_TICKET_TYPE = "PACE"
 
@@ -30,6 +32,9 @@ def prefill_student_context_before_insert(doc, method=None):
 
     student = _get_student(doc.raised_by)
     if student:
+        # A converted PACE student is routed like a PACE applicant.
+        if student.get("pace") and not doc.ticket_type:
+            doc.ticket_type = PACE_TICKET_TYPE
         if not doc.custom_programme:
             doc.custom_programme = student.get("programme") or ""
         if not doc.custom_current_year:
@@ -64,42 +69,25 @@ def apply_default_email_team(doc, method=None):
 
 
 def _get_student(email):
-    """Return dict with programme and current_year for the student, or None."""
+    """Return dict with programme and current_year for the student (and pace=True
+    with the PACE Programme for PACE students), or None."""
     if not email:
         return None
 
-    # Student Master links Cohort in the 'programme' field; Cohort has 'program' and 'current_year'
-    sm = frappe.db.get_value(
-        "Student Master",
-        {"user": email},
-        ["programme", "current_year"],
-        as_dict=True,
-    )
-    if not sm:
-        sm = frappe.db.get_value(
-            "Student Master",
-            {"email": email},
-            ["programme", "current_year"],
-            as_dict=True,
-        )
-    if not sm:
-        sm = frappe.db.get_value(
-            "Student Master",
-            {"official_email_id": email},
-            ["programme", "current_year"],
-            as_dict=True,
-        )
+    fields = ["name", "current_year", "admission_type", "pace_programme"]
+    sm = None
+    for key in ("user", "email", "official_email_id"):
+        sm = frappe.db.get_value("Student Master", {key: email}, fields, as_dict=True)
+        if sm:
+            break
     if not sm:
         return None
 
-    # programme field on Student Master is a Link to Cohort.
-    # We need the Program linked from that Cohort.
-    cohort_programme = None
-    if sm.get("programme"):
-        cohort_programme = frappe.db.get_value("Batch", sm["programme"], "program")
+    if sm.admission_type == "PACE" or sm.pace_programme:
+        return {"programme": sm.pace_programme or "", "current_year": "", "pace": True}
 
     return {
-        "programme": cohort_programme,
+        "programme": get_student_programme(sm.name) or None,
         "current_year": (sm.get("current_year") or "").strip(),
     }
 

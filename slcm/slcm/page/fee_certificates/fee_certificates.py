@@ -231,12 +231,19 @@ def get_bulk_students(programme=None, batch=None, academic_year=None, academic_t
 		(programme, "programme_of_study", "programme"),
 		(batch, "batch", "batch"),
 		(academic_year, "academic_year", "academic_year"),
-		(academic_term, "academic_term", "academic_term"),
 	):
 		selected = _as_list(param)
 		if selected:
 			conditions.append(f"{column} IN %({key})s")
 			values[key] = tuple(selected)
+	# A student no longer stores a term: a Term filter matches students in the term's academic year.
+	selected_terms = _as_list(academic_term)
+	if selected_terms:
+		conditions.append(
+			"academic_year IN (SELECT at.academic_year FROM `tabAcademic Term` at"
+			" WHERE at.name IN %(academic_term)s)"
+		)
+		values["academic_term"] = tuple(selected_terms)
 	if cint(active_only):
 		conditions.append("IFNULL(student_status, 'Active') = 'Active'")
 	if search and search.strip():

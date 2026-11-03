@@ -154,7 +154,7 @@ class FeePayment(Document):
 	def _create_fee_receipt(self):
 		student = frappe.db.get_value(
 			"Student Master", self.student,
-			["registration_id", "first_name", "last_name", "programme", "academic_year", "year_of_study"],
+			["registration_id", "first_name", "last_name", "programme_of_study", "academic_year", "year_of_study"],
 			as_dict=True
 		) or {}
 
@@ -163,7 +163,7 @@ class FeePayment(Document):
 			"student": self.student,
 			"student_name": student.get("first_name", ""),
 			"registration_id": student.get("registration_id", ""),
-			"programme": student.get("programme", ""),
+			"programme": student.get("programme_of_study", ""),
 			"academic_year": student.get("academic_year", ""),
 			"year_of_study": student.get("year_of_study", ""),
 			"fee_payment": self.name,

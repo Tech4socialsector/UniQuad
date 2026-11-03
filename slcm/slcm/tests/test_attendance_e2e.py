@@ -43,19 +43,18 @@ def _resolve_context():
     if _ctx:
         return _ctx
 
-    # Course Offering with an enrolled student
-    offering = frappe.db.get_value("Course Offering", {"docstatus": ["<", 2]}, "name")
-    if not offering:
+    # A Class with an enrolled student
+    from slcm.slcm.doctype.classes.classes import get_class_students
+
+    class_name = frappe.db.get_value("Classes", {}, "name", order_by="creation desc")
+    if not class_name:
         return {}
 
-    cohort  = frappe.db.get_value("Course Offering", offering, "cohort")
-    faculty_id = frappe.db.get_value("Course Offering", offering, "faculty")
+    cohort  = frappe.db.get_value("Classes", class_name, "section")
+    faculty_id = frappe.db.get_value("Classes", class_name, "faculty")
 
-    student = frappe.db.get_value(
-        "Student Enrollment",
-        {"cohort": cohort, "status": "Enrolled"},
-        "student",
-    ) if cohort else None
+    class_students = get_class_students(class_name)
+    student = class_students[0].student if class_students else None
 
     # Parent linked to that student (first entry in parents child table)
     parent_email = None
@@ -77,7 +76,7 @@ def _resolve_context():
         faculty_user = frappe.db.get_value("Faculty", faculty_id, "user_id")
 
     _ctx.update({
-        "offering":     offering,
+        "class_name":     class_name,
         "cohort":       cohort,
         "student":      student,
         "faculty_id":   faculty_id,
@@ -92,25 +91,26 @@ def _resolve_context():
 # Shared helpers
 # ---------------------------------------------------------------------------
 
-def _free_date(student, offering, start_offset=-3, max_search=20):
-    """Return the first past date with no existing Student Attendance for this student+offering."""
+def _free_date(student, class_name, start_offset=-3, max_search=20):
+    """Return the first past date with no existing Student Attendance for this student+class_name."""
     for offset in range(start_offset, -(start_offset + max_search), -1):
         candidate = add_days(today(), offset)
         if not frappe.db.exists("Student Attendance", {
             "student":        student,
-            "course_offer":   offering,
+            "class_name":   class_name,
             "attendance_date": candidate,
         }):
             return candidate
     return add_days(today(), -30)
 
 
-def _make_class_schedule(offering, schedule_date, from_time="09:00:00", to_time="10:00:00"):
+def _make_class_schedule(class_name, schedule_date, from_time="09:00:00", to_time="10:00:00"):
     from frappe.utils import time_diff_in_hours
-    course = frappe.db.get_value("Course Offering", offering, "course_title")
+    course = frappe.db.get_value("Classes", class_name, "course")
     doc = frappe.get_doc({
         "doctype":        "Time Table",
-        "course_offering": offering,
+        "based_on":       "Class",
+        "class_name":     class_name,
         "course":         course,
         "schedule_date":  schedule_date,
         "from_time":      from_time,
@@ -130,16 +130,16 @@ def _safe_delete(doctype, name):
         pass
 
 
-def _recalc(student, offering):
+def _recalc(student, class_name):
     from slcm.slcm.utils.attendance_calculator import calculate_student_attendance
-    calculate_student_attendance(student, offering)
+    calculate_student_attendance(student, class_name)
     frappe.db.commit()
 
 
-def _summary(student, offering):
+def _summary(student, class_name):
     return frappe.db.get_value(
         "Attendance Summary",
-        {"student": student, "course_offering": offering},
+        {"student": student, "class_name": class_name},
         ["attendance_percentage", "attended_classes", "total_class_hours",
          "total_office_hours", "total_condonation_hours", "total_fa_mfa_hours",
          "eligible_for_exam"],
@@ -147,10 +147,10 @@ def _summary(student, offering):
     ) or frappe._dict()
 
 
-def _pct(student, offering):
+def _pct(student, class_name):
     return frappe.db.get_value(
         "Attendance Summary",
-        {"student": student, "course_offering": offering},
+        {"student": student, "class_name": class_name},
         "attendance_percentage",
     ) or 0
 
@@ -168,9 +168,9 @@ def s01_rfid_swipe(ctx):
     from slcm.slcm.doctype.attendance_log.process_attendance_logs import process_pending_logs
 
     student  = ctx["student"]
-    offering = ctx["offering"]
+    class_name = ctx["class_name"]
 
-    test_date = _free_date(student, offering)
+    test_date = _free_date(student, class_name)
     swipe_in  = f"{test_date} 09:05:00"
     swipe_out = f"{test_date} 09:52:00"
 
@@ -179,7 +179,7 @@ def s01_rfid_swipe(ctx):
     log2 = None
 
     try:
-        cs = _make_class_schedule(offering, test_date)
+        cs = _make_class_schedule(class_name, test_date)
 
         old_rfid = frappe.db.get_value("Student Master", student, "rfid_uid")
         frappe.db.set_value("Student Master", student, "rfid_uid", _TEST_RFID_UID)
@@ -203,7 +203,7 @@ def s01_rfid_swipe(ctx):
         # Check Student Attendance
         sa = frappe.db.get_value(
             "Student Attendance",
-            {"student": student, "source": "RFID", "course_offer": offering,
+            {"student": student, "source": "RFID", "class_name": class_name,
              "attendance_date": test_date},
             ["name", "status", "hours_counted", "in_time", "out_time"],
             as_dict=True,
@@ -218,8 +218,8 @@ def s01_rfid_swipe(ctx):
             return False, f"in_time/out_time not saved: in={sa.in_time}, out={sa.out_time}"
 
         # Check Attendance Summary
-        _recalc(student, offering)
-        s = _summary(student, offering)
+        _recalc(student, class_name)
+        s = _summary(student, class_name)
         if not s or not s.attendance_percentage:
             return False, "Attendance Summary percentage still 0 after RFID"
 
@@ -240,7 +240,7 @@ def s01_rfid_swipe(ctx):
                 _safe_delete("Attendance Log", lg.name)
         for name in frappe.db.get_all("Student Attendance", filters={
             "student": student, "source": "RFID",
-            "course_offer": offering, "attendance_date": test_date,
+            "class_name": class_name, "attendance_date": test_date,
         }, pluck="name"):
             _safe_delete("Student Attendance", name)
         _safe_delete("Time Table", cs.name if cs else None)
@@ -257,19 +257,19 @@ def s02_faculty_manual(ctx):
     Verifies: Attendance Summary attended_classes increases.
     """
     student  = ctx["student"]
-    offering = ctx["offering"]
+    class_name = ctx["class_name"]
     faculty  = ctx.get("faculty_id")
 
-    test_date = _free_date(student, offering, start_offset=-5)
+    test_date = _free_date(student, class_name, start_offset=-5)
     sa_name   = None
 
     try:
-        before = _summary(student, offering).get("attended_classes") or 0
+        before = _summary(student, class_name).get("attended_classes") or 0
 
         doc = frappe.get_doc({
             "doctype":        "Student Attendance",
             "student":        student,
-            "course_offer":   offering,
+            "class_name":   class_name,
             "attendance_date": test_date,
             "date":           test_date,
             "status":         "Present",
@@ -282,13 +282,13 @@ def s02_faculty_manual(ctx):
         sa_name = doc.name
         frappe.db.commit()
 
-        _recalc(student, offering)
-        after = _summary(student, offering).get("attended_classes") or 0
+        _recalc(student, class_name)
+        after = _summary(student, class_name).get("attended_classes") or 0
 
         if after <= before:
             return False, f"attended_classes did not increase: {before} → {after}"
 
-        pct = _pct(student, offering)
+        pct = _pct(student, class_name)
         return True, (
             f"SA({sa_name}) Faculty={faculty or 'N/A'} | "
             f"attended_classes: {before} → {after} | pct={round(pct,1)}%"
@@ -301,7 +301,7 @@ def s02_faculty_manual(ctx):
     finally:
         _safe_delete("Student Attendance", sa_name)
         if sa_name:
-            _recalc(student, offering)
+            _recalc(student, class_name)
         frappe.db.commit()
 
 
@@ -315,18 +315,18 @@ def s03_office_hours(ctx):
     Verifies: total_office_hours increases in Attendance Summary.
     """
     student  = ctx["student"]
-    offering = ctx["offering"]
+    class_name = ctx["class_name"]
 
-    test_date = _free_date(student, offering, start_offset=-8)
+    test_date = _free_date(student, class_name, start_offset=-8)
     sa_name   = None
 
     try:
-        before_oh = _summary(student, offering).get("total_office_hours") or 0
+        before_oh = _summary(student, class_name).get("total_office_hours") or 0
 
         doc = frappe.get_doc({
             "doctype":        "Student Attendance",
             "student":        student,
-            "course_offer":   offering,
+            "class_name":   class_name,
             "attendance_date": test_date,
             "date":           test_date,
             "status":         "Present",
@@ -338,13 +338,13 @@ def s03_office_hours(ctx):
         sa_name = doc.name
         frappe.db.commit()
 
-        _recalc(student, offering)
-        after_oh = _summary(student, offering).get("total_office_hours") or 0
+        _recalc(student, class_name)
+        after_oh = _summary(student, class_name).get("total_office_hours") or 0
 
         if after_oh <= before_oh:
             return False, f"total_office_hours did not increase: {before_oh} → {after_oh}"
 
-        pct = _pct(student, offering)
+        pct = _pct(student, class_name)
         return True, (
             f"SA({sa_name}) Office Hour 2.0h | "
             f"total_office_hours: {before_oh} → {after_oh} | pct={round(pct,1)}%"
@@ -357,7 +357,7 @@ def s03_office_hours(ctx):
     finally:
         _safe_delete("Student Attendance", sa_name)
         if sa_name:
-            _recalc(student, offering)
+            _recalc(student, class_name)
         frappe.db.commit()
 
 
@@ -371,13 +371,13 @@ def s04_fa_mfa(ctx):
     Verifies: total_fa_mfa_hours and attendance_percentage increase.
     """
     student  = ctx["student"]
-    offering = ctx["offering"]
-    course   = frappe.db.get_value("Course Offering", offering, "course_title")
+    class_name = ctx["class_name"]
+    course   = frappe.db.get_value("Classes", class_name, "course")
 
     app_name = None
 
     try:
-        before = _summary(student, offering)
+        before = _summary(student, class_name)
         before_pct   = before.get("attendance_percentage") or 0
         before_famfa = before.get("total_fa_mfa_hours") or 0
 
@@ -398,7 +398,7 @@ def s04_fa_mfa(ctx):
         app_name = doc.name
         frappe.db.commit()
 
-        after = _summary(student, offering)
+        after = _summary(student, class_name)
         after_pct   = after.get("attendance_percentage") or 0
         after_famfa = after.get("total_fa_mfa_hours") or 0
 
@@ -422,7 +422,7 @@ def s04_fa_mfa(ctx):
                 if doc.docstatus == 1:
                     doc.cancel()
                 frappe.delete_doc("FA MFA Application", app_name, force=True, ignore_permissions=True)
-                _recalc(student, offering)
+                _recalc(student, class_name)
                 frappe.db.commit()
             except Exception:
                 pass
@@ -438,18 +438,18 @@ def s05_condonation(ctx):
     Verifies: total_condonation_hours and attendance_percentage increase.
     """
     student  = ctx["student"]
-    offering = ctx["offering"]
+    class_name = ctx["class_name"]
     cond_name = None
 
     try:
-        before = _summary(student, offering)
+        before = _summary(student, class_name)
         before_pct  = before.get("attendance_percentage") or 0
         before_cond = before.get("total_condonation_hours") or 0
 
         doc = frappe.get_doc({
             "doctype":            "Student Attendance Condonation",
             "student":            student,
-            "course_offering":    offering,
+            "class_name":    class_name,
             "condonation_reason": "Medical Emergency",
             "number_of_sessions": 2,
             "number_of_hours":    2.0,
@@ -461,7 +461,7 @@ def s05_condonation(ctx):
         cond_name = doc.name
         frappe.db.commit()
 
-        after = _summary(student, offering)
+        after = _summary(student, class_name)
         after_pct  = after.get("attendance_percentage") or 0
         after_cond = after.get("total_condonation_hours") or 0
 
@@ -485,7 +485,7 @@ def s05_condonation(ctx):
                 if doc.docstatus == 1:
                     doc.cancel()
                 frappe.delete_doc("Student Attendance Condonation", cond_name, force=True, ignore_permissions=True)
-                _recalc(student, offering)
+                _recalc(student, class_name)
                 frappe.db.commit()
             except Exception:
                 pass
@@ -502,17 +502,17 @@ def s06_parent_portal_visibility(ctx):
     Checks: record exists, percentage is a number, eligible_for_exam is set.
     """
     student  = ctx["student"]
-    offering = ctx["offering"]
+    class_name = ctx["class_name"]
     parent_user = ctx.get("parent_user")
 
     try:
         # Force a recalc so summary is fresh
-        _recalc(student, offering)
+        _recalc(student, class_name)
 
         summaries = frappe.get_all(
             "Attendance Summary",
             filters={"student": student},
-            fields=["course", "course_offering", "attendance_percentage",
+            fields=["course", "class_name", "attendance_percentage",
                     "attended_classes", "total_class_hours", "eligible_for_exam"],
             ignore_permissions=True,
         )
@@ -520,9 +520,9 @@ def s06_parent_portal_visibility(ctx):
         if not summaries:
             return False, "No Attendance Summary records found — parent portal would show 0 courses"
 
-        target = next((s for s in summaries if s.course_offering == offering), None)
+        target = next((s for s in summaries if s.class_name == class_name), None)
         if not target:
-            return False, f"No Attendance Summary for offering={offering}"
+            return False, f"No Attendance Summary for class_name={class_name}"
 
         pct = target.get("attendance_percentage") or 0
         eligible = target.get("eligible_for_exam")
@@ -537,7 +537,7 @@ def s06_parent_portal_visibility(ctx):
             parent_linked = "No parent record on this student"
 
         return True, (
-            f"Offering={offering} pct={round(pct,1)}% eligible={eligible} | "
+            f"Class={class_name} pct={round(pct,1)}% eligible={eligible} | "
             f"Total summaries for student={len(summaries)} | {parent_linked}"
         )
 
@@ -614,7 +614,7 @@ def run_all():
     ctx = _resolve_context()
 
     header_student  = ctx.get("student")  or "NOT FOUND"
-    header_offering = ctx.get("offering") or "NOT FOUND"
+    header_class = ctx.get("class_name") or "NOT FOUND"
     header_faculty  = ctx.get("faculty_id") or "N/A"
     header_parent   = ctx.get("parent_email") or "N/A"
 
@@ -633,7 +633,7 @@ def run_all():
     print("  NLSIU SLCM — Attendance End-to-End Test Suite")
     print("═" * W)
     print(f"  Student : {header_student}")
-    print(f"  Offering: {header_offering}")
+    print(f"  Class: {header_class}")
     print(f"  Faculty : {header_faculty}")
     print(f"  Parent  : {header_parent}")
     print("─" * W)

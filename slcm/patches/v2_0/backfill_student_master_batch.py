@@ -14,7 +14,7 @@ def execute():
 	if frappe.db.has_column("Student Master", "programme"):
 		frappe.db.sql("""
 			UPDATE `tabStudent Master` sm
-			INNER JOIN `tabBatch` b ON b.name = sm.programme
+			INNER JOIN `tabSLCM Batch` b ON b.name = sm.programme
 			SET sm.batch = sm.programme
 			WHERE IFNULL(sm.batch, '') = ''
 		""")
@@ -31,7 +31,7 @@ def execute():
 
 	for s in students:
 		batch = frappe.db.get_value(
-			"Batch",
+			"SLCM Batch",
 			{"program": s.programme_of_study, "academic_year": s.academic_year, "status": "Active"},
 			["name", "academic_term"],
 			as_dict=True,

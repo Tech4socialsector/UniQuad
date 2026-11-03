@@ -43,20 +43,23 @@ def get_context(context):
 
         today = frappe.utils.today()
 
-        # ── Course offerings ────────────────────────────────────────
-        course_offerings = frappe.get_all(
-            "Course Offering",
-            filters={"faculty": faculty_name, "status": ["in", ["Open", "Active"]]},
-            fields=["name", "course_name", "term_name", "academic_year", "program"],
-            order_by="course_name asc",
-            ignore_permissions=True,
+        # ── Classes this faculty teaches (Active academic years) ────
+        from slcm.api.faculty_portal import _class_label, _get_faculty_classes
+
+        faculty_classes = _get_faculty_classes(
+            faculty_name,
+            fields=["name", "course", "course_name", "class_type", "section", "group_name",
+                    "academic_term as term_name", "academic_year", "programme as program"],
         )
-        context.course_offerings = course_offerings
-        co_names = [c.name for c in course_offerings]
-        co_map = {c.name: c for c in course_offerings}
+        for c in faculty_classes:
+            c.course_name = _class_label(c)
+        faculty_classes.sort(key=lambda c: c.course_name or "")
+        context.faculty_classes = faculty_classes
+        co_names = [c.name for c in faculty_classes]
+        co_map = {c.name: c for c in faculty_classes}
 
         # Readable programme name shown under the course in the sessions table
-        programme_ids = list({c.program for c in course_offerings if c.program})
+        programme_ids = list({c.program for c in faculty_classes if c.program})
         programme_names = {
             p.name: p.program_name or p.name
             for p in frappe.get_all(
@@ -67,25 +70,25 @@ def get_context(context):
             )
         } if programme_ids else {}
         # Shown under each course in the Course filter
-        for c in course_offerings:
+        for c in faculty_classes:
             c.programme_name = programme_names.get(c.program) or c.program or ""
 
         # ── Filter from URL params ──────────────────────────────────
-        selected_co = frappe.request.args.get("course_offering", "") if frappe.request else ""
+        selected_co = frappe.request.args.get("class_name", "") if frappe.request else ""
         context.selected_co = selected_co
 
         # ── Attendance Sessions ─────────────────────────────────────
-        session_filters = [["course_offering", "in", co_names]] if co_names else [["name", "=", "__none__"]]
+        session_filters = [["class_name", "in", co_names]] if co_names else [["name", "=", "__none__"]]
         if selected_co and selected_co in co_names:
-            session_filters = [["course_offering", "=", selected_co]]
+            session_filters = [["class_name", "=", selected_co]]
 
         all_sessions = []
         if co_names:
             raw_sessions = frappe.get_all(
                 "Attendance Session",
                 filters=session_filters,
-                fields=["name", "course_offering", "session_date", "session_type",
-                        "session_start_time", "session_end_time", "room", "course_schedule", "class_schedule",
+                fields=["name", "class_name", "session_date", "session_type",
+                        "session_start_time", "session_end_time", "room", "class_schedule",
                         "session_status", "total_students", "present_count",
                         "absent_count", "attendance_percentage", "attendance_marked",
                         "rfid_activated_by", "rfid_activation_time", "rfid_active_until",
@@ -104,13 +107,7 @@ def get_context(context):
                 )
             } if reopener_ids else {}
             
-            # Pre-fetch rooms from course schedules or time tables if they are missing on the session
-            cs_names = [s.course_schedule for s in raw_sessions if s.course_schedule and not s.room]
-            cs_room_map = {}
-            if cs_names:
-                cs_data = frappe.get_all("Course Schedule", filters={"name": ("in", list(set(cs_names)))}, fields=["name", "room"])
-                cs_room_map = {d.name: d.room for d in cs_data}
-                
+            # Pre-fetch rooms from time tables if they are missing on the session
             tt_names = [s.class_schedule for s in raw_sessions if s.class_schedule and not s.room]
             tt_venue_map = {}
             if tt_names:
@@ -126,7 +123,7 @@ def get_context(context):
             task_flags = get_session_task_flags(raw_sessions, today)
 
             for s in raw_sessions:
-                co = co_map.get(s.course_offering, frappe._dict())
+                co = co_map.get(s.class_name, frappe._dict())
                 session_type = s.session_type or "Lecture"
                 session_day = frappe.utils.getdate(s.session_date) if s.session_date else None
                 has_cp = bool(
@@ -143,8 +140,8 @@ def get_context(context):
                 lock = compute_lock_state(s, now=now, lock_hours=lock_hours)
                 all_sessions.append({
                     "name": s.name,
-                    "course_name": co.get("course_name") or s.course_offering,
-                    "course_offering": s.course_offering,
+                    "course_name": co.get("course_name") or s.class_name,
+                    "class_name": s.class_name,
                     "programme_name": programme_names.get(co.get("program")) or co.get("program") or "",
                     "session_date": str(s.session_date) if s.session_date else "",
                     "session_date_fmt": frappe.utils.formatdate(s.session_date, "dd MMM yyyy"),
@@ -159,7 +156,7 @@ def get_context(context):
                     "from_time": fmt_time(s.session_start_time),
                     "to_time": fmt_time(s.session_end_time),
                     "from_time_sort": _time_sort_key(s.session_start_time),
-                    "venue": s.room or cs_room_map.get(s.course_schedule) or tt_venue_map.get(s.class_schedule) or "—",
+                    "venue": s.room or tt_venue_map.get(s.class_schedule) or "—",
                     "status": s.session_status or "Active",
                     "not_held": s.session_status in NOT_HELD_STATUSES,
                     # Attendance lock (see slcm.slcm.utils.attendance_lock)
@@ -183,7 +180,7 @@ def get_context(context):
                 })
 
             # ── Session-wise numbering: Session 1, 2, 3… ────────────────
-            # Chronological per course offering, class sessions and OH
+            # Chronological per class, class sessions and OH
             # numbered separately, sessions that weren't held skipped.
             # Counted over every term so the number never shifts when a
             # term filter is applied.
@@ -192,20 +189,20 @@ def get_context(context):
                 if s["not_held"]:
                     s["seq"] = 0
                     continue
-                key = (s["course_offering"], s["category"])
+                key = (s["class_name"], s["category"])
                 seq_counts[key] = seq_counts.get(key, 0) + 1
                 s["seq"] = seq_counts[key]
             for s in all_sessions:
-                s["seq_total"] = seq_counts.get((s["course_offering"], s["category"]), 0)
+                s["seq_total"] = seq_counts.get((s["class_name"], s["category"]), 0)
 
         # ── Distinct terms present, most recent first ────────────────
         # "Most recent" = the term containing the latest session_date, since
         # Term/Academic Year have no reliable start/end dates to sort by.
-        # Terms are seeded from two sources so a newly-assigned course
-        # offering shows up as a switchable term even before any Attendance
+        # Terms are seeded from two sources so a newly-assigned class
+        # shows up as a switchable term even before any Attendance
         # Session has been created against it:
         #   1. Existing sessions (sorts to the top, real activity).
-        #   2. Course offerings with no sessions yet (sorted after, using
+        #   2. Classes with no sessions yet (sorted after, using
         #      "" as their latest-date so they never outrank real activity).
         term_latest_date = {}
         term_labels = {}
@@ -215,7 +212,7 @@ def get_context(context):
             if key not in term_latest_date or s["session_date"] > term_latest_date[key]:
                 term_latest_date[key] = s["session_date"]
 
-        for co in course_offerings:
+        for co in faculty_classes:
             term_name = co.get("term_name") or "—"
             academic_year = co.get("academic_year") or "—"
             key = f"{term_name}|{academic_year}"
@@ -232,10 +229,10 @@ def get_context(context):
 
         # ── Selected term (only when asked for via ?term=) ──────────
         # Defaulting to the single most recent term hid every session of a
-        # faculty's other active course offerings (e.g. Office Hours in a
-        # Term 2 offering while a Trimester I course had later classes), with
-        # no visible way to switch. Course offerings are already limited to
-        # Open/Active, so show all of them unless a term is requested.
+        # faculty's other active classes (e.g. Office Hours in a
+        # Term 2 class while a Trimester I course had later classes), with
+        # no visible way to switch. Classes are already limited to the
+        # Active academic year(s), so show all of them unless a term is requested.
         selected_term = frappe.request.args.get("term", "") if frappe.request else ""
         if selected_term not in terms:
             selected_term = ""
@@ -249,14 +246,14 @@ def get_context(context):
         context.sessions = sessions
 
         # ── Today's sessions (for the quick-view cards) ──────────────
-        # Grouped by course offering so a course with multiple time slots
+        # Grouped by class so a course with multiple time slots
         # today (e.g. two lecture sections) renders as one card with a
         # slot picker, instead of one card per slot.
         todays_sessions = [s for s in sessions if s["session_date"] == str(today)]
         todays_by_course = {}
         todays_order = []
         for s in todays_sessions:
-            key = s["course_offering"]
+            key = s["class_name"]
             if key not in todays_by_course:
                 todays_by_course[key] = []
                 todays_order.append(key)
@@ -266,7 +263,7 @@ def get_context(context):
         for key in todays_order:
             slots = sorted(todays_by_course[key], key=lambda s: s["from_time"])
             todays_courses.append({
-                "course_offering": key,
+                "class_name": key,
                 "course_name": slots[0]["course_name"],
                 "slots": slots,
             })
@@ -317,10 +314,10 @@ def get_context(context):
             raw_cond = frappe.get_all(
                 "Student Attendance Condonation",
                 filters={
-                    "course_offering": ["in", co_names],
+                    "class_name": ["in", co_names],
                     "final_status": "Pending",
                 },
-                fields=["name", "student", "course_offering", "number_of_sessions",
+                fields=["name", "student", "class_name", "number_of_sessions",
                         "number_of_hours", "condonation_reason", "faculty_recommendation",
                         "final_status", "creation"],
                 order_by="creation desc",
@@ -330,12 +327,12 @@ def get_context(context):
                 student_name = frappe.db.get_value(
                     "Student Master", req.student, "first_name"
                 ) or req.student
-                co = co_map.get(req.course_offering, frappe._dict())
+                co = co_map.get(req.class_name, frappe._dict())
                 condonation_requests.append({
                     "name": req.name,
                     "student": req.student,
                     "student_display": student_name,
-                    "course_display": co.get("course_name") or req.course_offering,
+                    "course_display": co.get("course_name") or req.class_name,
                     "sessions": req.number_of_sessions or 0,
                     "hours": round(float(req.number_of_hours or 0), 1),
                     "reason": req.condonation_reason or "—",
@@ -346,13 +343,13 @@ def get_context(context):
         context.condonation_requests = condonation_requests
         context.pending_condonation = len([r for r in condonation_requests if r["recommendation"] in ("", "Pending", None)])
 
-        # ── Monthly summary per course offering ─────────────────────
+        # ── Monthly summary per class ───────────────────────────────
         monthly_summary = []
         if co_names:
-            for co in course_offerings[:6]:
+            for co in faculty_classes[:6]:
                 att_summary = frappe.db.get_value(
                     "Attendance Summary",
-                    {"course_offering": co.name},
+                    {"class_name": co.name},
                     ["total_classes", "attended_classes", "attendance_percentage"],
                     as_dict=True,
                 )
@@ -411,7 +408,7 @@ def _get_class_participation_ranges(time_table_names):
 
 
 def _set_defaults(context):
-    context.course_offerings = []
+    context.faculty_classes = []
     context.selected_co = ""
     context.sessions = []
     context.todays_sessions = []
@@ -425,13 +422,3 @@ def _set_defaults(context):
     context.condonation_requests = []
     context.pending_condonation = 0
     context.monthly_summary = []
-
-@frappe.whitelist(allow_guest=True)
-def debug_venue():
-    import json
-    sessions = frappe.get_all("Attendance Session", fields=["name", "room", "course_schedule"], limit=5)
-    cs_names = [s.course_schedule for s in sessions if s.course_schedule]
-    cs_data = []
-    if cs_names:
-        cs_data = frappe.get_all("Course Schedule", filters={"name": ["in", cs_names]}, fields=["name", "room"])
-    return {"sessions": sessions, "cs_data": cs_data}

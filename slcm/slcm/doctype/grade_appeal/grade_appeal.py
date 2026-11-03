@@ -3,7 +3,7 @@
 
 import frappe
 from frappe.model.document import Document
-from frappe.utils import now, today
+from frappe.utils import flt, now, today
 
 ACTIVE_STATUSES = ("Submitted", "Under Review")
 CLOSED_STATUSES = ("Resolved", "Rejected")
@@ -22,13 +22,18 @@ class GradeAppeal(Document):
 		self._check_duplicate()
 		self._validate_resolution()
 		self._set_resolution_audit()
+		self._set_fee_amount()
+		self._set_revised_result()
+
+	def after_insert(self):
+		self._raise_revaluation_fee()
 
 	def _set_course(self):
-		"""`course` is fetched from the offering; fall back if the offering has none."""
-		if not self.course and self.course_offering:
-			self.course = frappe.db.get_value("Course Offering", self.course_offering, "course_title")
+		"""`course` is required; the term defaults to the exam plan's term."""
 		if not self.course:
-			frappe.throw("The selected Course Offering is not linked to a Course.")
+			frappe.throw("Please select the Course being appealed.")
+		if not self.academic_term and self.exam_plan:
+			self.academic_term = frappe.db.get_value("Exam Plan", self.exam_plan, "term")
 
 	def _validate_marks_exist(self):
 		if not frappe.db.exists(
@@ -92,6 +97,68 @@ class GradeAppeal(Document):
 			self.resolved_on = None
 			self.resolved_by = None
 
+	def _set_fee_amount(self):
+		"""Re-evaluation is charged per paper (Examination Settings); a Grade
+		Appeal is one paper. The fee is fixed once the demand is raised."""
+		if self.fee_demand:
+			return
+		self.fee_amount = (
+			flt(frappe.db.get_single_value("Examination Settings", "revaluation_fee_per_paper"))
+			if self.appeal_type == "Re-evaluation" else 0
+		)
+
+	def _raise_revaluation_fee(self):
+		if not flt(self.fee_amount) or self.fee_demand:
+			return
+		from slcm.slcm.fee.event_hooks import _get_component_by_type, _get_student_data
+		from slcm.slcm.fee.fee_demand_utils import create_event_demand
+
+		component = _get_component_by_type("Revaluation Fee")
+		if not component:
+			frappe.log_error("Fee Component with type 'Revaluation Fee' not found.", "Grade Appeal")
+			return
+		demand = create_event_demand(
+			student=self.student,
+			fee_component_name=component,
+			amount=self.fee_amount,
+			demand_type=frappe.db.get_value("Fee Component", component, "demand_type") or "Academic",
+			trigger_doctype="Grade Appeal",
+			trigger_name=self.name,
+			description=f"Revaluation Fee — {self.course} ({self.exam_plan})",
+			academic_year=frappe.db.get_value("Academic Term", self.academic_term, "academic_year") if self.academic_term else None,
+			programme=_get_student_data(self.student, ["programme"]).get("programme"),
+		)
+		self.db_set("fee_demand", demand)
+
+	def _set_revised_result(self):
+		"""On Resolved, keep the course's grade/marks after the review next to
+		the appealed ones (marks are changed on Course Results / Student Course
+		Marks, not here)."""
+		if self.status != "Resolved":
+			self.revised_grade = None
+			self.revised_marks = None
+			return
+		marks = frappe.db.get_value(
+			"Student Course Marks",
+			{"student": self.student, "exam_plan": self.exam_plan, "course": self.course},
+			["name", "grade", "moderated_grade", "updated_grade", "total_marks", "updated_final_marks"],
+			as_dict=True,
+		) or frappe._dict()
+		self.revised_grade = marks.updated_grade or marks.moderated_grade or marks.grade or ""
+		self.revised_marks = marks.updated_final_marks or marks.total_marks or 0
+
+
+@frappe.whitelist()
+def get_marks_record(grade_appeal):
+	"""Student Course Marks of the appealed course, for the form's button."""
+	doc = frappe.get_doc("Grade Appeal", grade_appeal)
+	doc.check_permission("read")
+	return frappe.db.get_value(
+		"Student Course Marks",
+		{"student": doc.student, "exam_plan": doc.exam_plan, "course": doc.course},
+		"name",
+	)
+
 
 # ── Link-field queries for the desk form ────────────────────────────────────
 
@@ -115,23 +182,25 @@ def exam_plans_for_student(doctype, txt, searchfield, start, page_len, filters):
 
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
-def offerings_for_student(doctype, txt, searchfield, start, page_len, filters):
+def courses_for_student(doctype, txt, searchfield, start, page_len, filters):
+	"""Courses the student has marks for in the exam plan."""
 	filters = filters or {}
-	courses = frappe.get_all(
-		"Student Course Marks",
-		filters={"student": filters.get("student"), "exam_plan": filters.get("exam_plan")},
-		pluck="course",
-	)
-	if not courses:
-		return []
 	return frappe.db.sql(
 		"""
-		SELECT co.name, co.course_name, co.course_title
-		FROM `tabCourse Offering` co
-		WHERE co.course_title IN %(courses)s
-		  AND (co.name LIKE %(txt)s OR co.course_name LIKE %(txt)s)
-		ORDER BY co.creation DESC
+		SELECT DISTINCT c.name, c.course_name
+		FROM `tabStudent Course Marks` scm
+		JOIN `tabCourse` c ON c.name = scm.course
+		WHERE scm.student = %(student)s
+		  AND scm.exam_plan = %(exam_plan)s
+		  AND (c.name LIKE %(txt)s OR c.course_name LIKE %(txt)s)
+		ORDER BY c.course_name
 		LIMIT %(start)s, %(page_len)s
 		""",
-		{"courses": tuple(courses), "txt": f"%{txt}%", "start": start, "page_len": page_len},
+		{
+			"student": filters.get("student"),
+			"exam_plan": filters.get("exam_plan"),
+			"txt": f"%{txt}%",
+			"start": start,
+			"page_len": page_len,
+		},
 	)

@@ -8,6 +8,7 @@ import traceback
 from frappe.model.document import Document
 from frappe.utils import now_datetime, get_url, get_datetime, format_date, format_time, flt
 from datetime import datetime
+from slcm.security.access import require_desk_user
 
 
 class InterviewSeatAllocation(Document):
@@ -304,9 +305,9 @@ def _send_custom_result_email(doc, email, custom_email_content):
         else:
             subject = f"Interview Result - {doc.interview_list}"
         
-        # Render the custom content wrapped in the HTML header/footer template to allow variables
-        full_html_template = get_custom_email_html(custom_email_content)
-        message_body = frappe.render_template(full_html_template, args)
+        # Custom content is staff-written: only {{ doc.field }} placeholders are filled, it is never run as Jinja
+        from slcm.security.templating import render_custom_email
+        message_body = render_custom_email(get_custom_email_html, custom_email_content, args)
 
         frappe.sendmail(
             recipients=[email],
@@ -704,6 +705,7 @@ def _send_reschedule_notification(doc, email):
 
 @frappe.whitelist()
 def bulk_publish_results(records, send_email=0, email_format="Default", custom_email_content=""):
+    require_desk_user()
     if isinstance(records, str):
         records = json.loads(records)
     send_email = int(send_email)

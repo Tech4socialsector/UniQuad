@@ -1,0 +1,21 @@
+{
+ "color": "#17a2b8",
+ "docstatus": 0,
+ "doctype": "Number Card",
+ "document_type": "SLCM Batch",
+ "filters_json": "[[\"SLCM Batch\", \"status\", \"=\", \"Active\"]]",
+ "function": "Count",
+ "idx": 0,
+ "is_public": 1,
+ "is_standard": 1,
+ "label": "Active Batches",
+ "module": "SLCM",
+ "name": "Active Batches",
+ "owner": "Administrator",
+ "report_function": "Sum",
+ "show_full_number": 0,
+ "show_percentage_stats": 0,
+ "stats_time_interval": "Daily",
+ "type": "Document Type",
+ "modified": "2026-10-29 12:30:00.000000"
+}

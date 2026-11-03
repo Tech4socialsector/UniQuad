@@ -73,9 +73,11 @@
    "options": "Auto\nManual"
   },
   {
+   "description": "The component of this schema that the re-exam replaces, e.g. End Term.",
    "fieldname": "substitute_for",
-   "fieldtype": "Data",
-   "label": "Substitute For"
+   "fieldtype": "Link",
+   "label": "Substitute For",
+   "options": "Exam Component"
   },
   {
    "default": "100",
@@ -92,7 +94,7 @@
  "index_web_pages_for_search": 0,
  "istable": 1,
  "links": [],
- "modified": "2026-03-26 00:00:00.000000",
+ "modified": "2026-10-29 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Schema Reexam Config",

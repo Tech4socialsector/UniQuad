@@ -16,6 +16,10 @@ frappe.ui.form.on("Entrance Test List", {
             frm.add_custom_button(__("Generate Preference"), function () {
                 open_generate_preference_dialog(frm);
             }, __("Actions"));
+
+            frm.add_custom_button(__("Publish Seat Allocation"), function () {
+                open_publish_seat_allocation_dialog(frm);
+            }, __("Actions"));
         }
         
         // Listen to Real-Time Progress Events via WebSockets even after page refresh
@@ -190,12 +194,6 @@ function _show_allocation_dialog(frm, applicants, providers) {
                 }
             },
             {
-                label: __("Send Email"),
-                fieldname: "send_email",
-                fieldtype: "Check",
-                default: 1
-            },
-            {
                 fieldtype: "Column Break"
             },
             {
@@ -363,7 +361,7 @@ function _show_allocation_dialog(frm, applicants, providers) {
         primary_action_label: __("Allocate Seats"),
         primary_action(values) {
             const allocation_type = values.allocation_type || "Allocate Directly";
-            const send_email = values.send_email ? 1 : 0;
+            const send_email = 0;
 
             if (!selected_provider_names.size) {
                 frappe.msgprint(__("Please select at least one Entrance Test Provider."));
@@ -1518,6 +1516,457 @@ function open_generate_preference_dialog(frm) {
 
             render_applicant_table();
             d.show();
+        }
+    });
+}
+
+/**
+ * Dialog to publish Entrance Test Seat Allocations for the current Entrance Test List.
+ */
+function open_publish_seat_allocation_dialog(frm) {
+    frappe.call({
+        method: "slcm.admission.doctype.entrance_test_list.entrance_test_list.get_unpublished_applicants_for_test_list",
+        args: {
+            entrance_test_list: frm.doc.name,
+            return_summary: 1
+        },
+        freeze: true,
+        freeze_message: __("Loading seat allocation records..."),
+        callback: function (r) {
+            if (r.exc) return;
+            const data = r.message || {};
+            const allocations = Array.isArray(data) ? data : (data.allocations || []);
+            const total_count = data.total_count !== undefined ? data.total_count : allocations.length;
+            const published_count = data.published_count !== undefined ? data.published_count : 0;
+            const unpublished_count = data.unpublished_count !== undefined ? data.unpublished_count : allocations.length;
+
+            if (total_count === 0) {
+                frappe.msgprint({
+                    title: __("No Allocations Found"),
+                    message: __("No seat allocation records found for this Entrance Test List. Please allocate seats first."),
+                    indicator: "orange"
+                });
+                return;
+            }
+
+            if (unpublished_count === 0 || allocations.length === 0) {
+                frappe.msgprint({
+                    title: __("All Allocations Published"),
+                    message: __("All <b>{0}</b> seat allocation record(s) for this Entrance Test List are already published.", [total_count]),
+                    indicator: "green"
+                });
+                return;
+            }
+
+            // By default, select all unpublished allocations
+            const selected_names = new Set(allocations.map(a => a.name));
+
+            const unique_programs = [...new Set(allocations.map(a => a.program).filter(Boolean))].sort();
+
+            let filter_applicant = "";
+            let filter_name = "";
+            let filter_program = "";
+            let current_page = 1;
+            let page_size = 20;
+
+            function get_filtered_allocations() {
+                return allocations.filter(a => {
+                    if (filter_applicant) {
+                        const app_id = (a.applicant || a.name || "").toLowerCase();
+                        if (!app_id.includes(filter_applicant.toLowerCase().trim())) return false;
+                    }
+                    if (filter_name) {
+                        const cand_name = (a.candidate_name || "").toLowerCase();
+                        if (!cand_name.includes(filter_name.toLowerCase().trim())) return false;
+                    }
+                    if (filter_program) {
+                        if ((a.program || "").trim() !== filter_program.trim()) return false;
+                    }
+                    return true;
+                });
+            }
+
+            const pd = new frappe.ui.Dialog({
+                title: __("Publish Entrance Test Seat Allocation"),
+                size: "extra-large",
+                fields: [
+                    {
+                        fieldtype: "HTML",
+                        fieldname: "summary_html",
+                        options: `
+                            <div style="display:flex; gap:16px; margin-bottom:16px;">
+                                <div style="flex:1; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; text-align:center;">
+                                    <div style="font-size:11px; text-transform:uppercase; color:#64748b; font-weight:600;">Total Allocated</div>
+                                    <div style="font-size:20px; font-weight:700; color:#1e293b;">${total_count}</div>
+                                </div>
+                                <div style="flex:1; background:#fffbeb; border:1px solid #fef3c7; border-radius:8px; padding:12px; text-align:center;">
+                                    <div style="font-size:11px; text-transform:uppercase; color:#b45309; font-weight:600;">Unpublished</div>
+                                    <div style="font-size:20px; font-weight:700; color:#d97706;">${unpublished_count}</div>
+                                </div>
+                                <div style="flex:1; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:12px; text-align:center;">
+                                    <div style="font-size:11px; text-transform:uppercase; color:#15803d; font-weight:600;">Published</div>
+                                    <div style="font-size:20px; font-weight:700; color:#16a34a;">${published_count}</div>
+                                </div>
+                            </div>
+                        `
+                    },
+                    { fieldtype: "Section Break", label: __("Select Applicants to Publish") },
+                    {
+                        fieldtype: "HTML",
+                        fieldname: "search_and_table_html",
+                        options: `
+                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; margin-bottom: 12px;">
+                                <div style="display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;">
+                                    <div style="flex: 1; min-width: 140px;">
+                                        <label style="font-size: 11px; font-weight: 600; color: #475569; margin-bottom: 4px; display: block;">
+                                            ${__("Applicant ID")}
+                                        </label>
+                                        <input type="text" id="pub-filter-applicant" class="form-control" placeholder="${__("Search ID...")}" style="height: 30px; font-size: 12px; border-radius: 6px; background: #fff;" />
+                                    </div>
+                                    <div style="flex: 1.2; min-width: 160px;">
+                                        <label style="font-size: 11px; font-weight: 600; color: #475569; margin-bottom: 4px; display: block;">
+                                            ${__("Candidate Name")}
+                                        </label>
+                                        <input type="text" id="pub-filter-name" class="form-control" placeholder="${__("Search Name...")}" style="height: 30px; font-size: 12px; border-radius: 6px; background: #fff;" />
+                                    </div>
+                                    <div style="flex: 1.5; min-width: 180px;">
+                                        <label style="font-size: 11px; font-weight: 600; color: #475569; margin-bottom: 4px; display: block;">
+                                            ${__("Programme")}
+                                        </label>
+                                        <select id="pub-filter-program" class="form-control" style="height: 30px; font-size: 12px; border-radius: 6px; background: #fff;">
+                                            <option value="">${__("All Programmes")}</option>
+                                            ${unique_programs.map(p => `<option value="${p}">${p}</option>`).join("")}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <button type="button" id="pub-clear-filters-btn" class="btn btn-default" style="height: 30px; font-size: 11px; padding: 0 10px; border-radius: 6px;">
+                                            <i class="fa fa-refresh"></i> ${__("Reset")}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px; font-size: 12px;">
+                                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                                    <label style="margin: 0; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 12px;">
+                                        <input type="checkbox" id="pub-select-all-filtered-chk" style="cursor: pointer; width: 14px; height: 14px;">
+                                        <span>${__("Select All Applicants")}</span>
+                                    </label>
+                                    <button type="button" id="pub-select-page-btn" class="btn btn-xs btn-default" style="padding: 2px 8px; font-size: 11px; border-radius: 4px;">${__("Select Page")}</button>
+                                    <button type="button" id="pub-clear-all-btn" class="btn btn-xs btn-default" style="padding: 2px 8px; font-size: 11px; border-radius: 4px;">${__("Clear All")}</button>
+                                    <span style="color: #64748b;">
+                                        <span id="pub-selected-counter" style="font-weight: 700; color: #2563eb;">${selected_names.size}</span> ${__("of")} <b>${unpublished_count}</b> ${__("selected")}
+                                    </span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <button type="button" id="pub-prev-btn" class="btn btn-xs btn-default" style="padding: 2px 8px; font-size: 11px; border-radius: 4px;">&laquo; ${__("Prev")}</button>
+                                    <span id="pub-page-info" style="font-weight: 600; color: #334155; margin: 0 4px; font-size: 12px;">Page 1 of 1</span>
+                                    <button type="button" id="pub-next-btn" class="btn btn-xs btn-default" style="padding: 2px 8px; font-size: 11px; border-radius: 4px;">${__("Next")} &raquo;</button>
+                                    <select id="pub-page-size-select" class="form-control input-xs" style="height: 24px; padding: 2px 4px; font-size: 11px; width: auto; border-radius: 4px; display: inline-block;">
+                                        <option value="10">10 / page</option>
+                                        <option value="20" selected>20 / page</option>
+                                        <option value="50">50 / page</option>
+                                        <option value="100">100 / page</option>
+                                        <option value="all">All</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div style="max-height: 380px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 6px;">
+                                <table class="table table-bordered table-hover table-sm" style="margin-bottom: 0; font-size: 12px; white-space: nowrap;">
+                                    <thead style="background: #f1f5f9; position: sticky; top: 0; z-index: 2;">
+                                        <tr>
+                                            <th style="width: 36px; text-align: center; vertical-align: middle;">
+                                                <input type="checkbox" id="pub-master-checkbox" style="cursor: pointer; width: 14px; height: 14px;" title="${__("Select all on this page")}" />
+                                            </th>
+                                            <th style="width: 44px; text-align: center; vertical-align: middle; color: #475569;">No.</th>
+                                            <th style="vertical-align: middle; color: #1e293b;">${__("Applicant ID")}</th>
+                                            <th style="vertical-align: middle; color: #1e293b;">${__("Candidate Name")}</th>
+                                            <th style="vertical-align: middle; color: #1e293b;">${__("Programme")}</th>
+                                            <th style="vertical-align: middle; color: #1e293b;">${__("Allocated Centre / Seat")}</th>
+                                            <th style="vertical-align: middle; color: #1e293b;">${__("Status")}</th>
+                                            <th style="vertical-align: middle; color: #1e293b;">${__("Publish Status")}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="pub-table-body"></tbody>
+                                </table>
+                            </div>
+                        `
+                    },
+                    { fieldtype: "Section Break", label: __("Email Settings") },
+                    {
+                        label: __("Send Email Notification"),
+                        fieldname: "send_email",
+                        fieldtype: "Check",
+                        default: 1,
+                        onchange: function () {
+                            const is_send = pd.get_value("send_email");
+                            const format = pd.get_value("email_format");
+                            if (pd.fields_dict.email_format) {
+                                pd.fields_dict.email_format.$wrapper.toggle(!!is_send);
+                            }
+                            if (pd.fields_dict.custom_email_content) {
+                                pd.fields_dict.custom_email_content.$wrapper.toggle(!!(is_send && format === "Custom"));
+                            }
+                        }
+                    },
+                    { fieldtype: "Column Break" },
+                    {
+                        label: __("Email Format"),
+                        fieldname: "email_format",
+                        fieldtype: "Select",
+                        options: "Default\nCustom",
+                        default: "Default",
+                        onchange: function () {
+                            const is_send = pd.get_value("send_email");
+                            const format = pd.get_value("email_format");
+                            if (pd.fields_dict.custom_email_content) {
+                                const show_editor = !!(is_send && format === "Custom");
+                                pd.fields_dict.custom_email_content.$wrapper.toggle(show_editor);
+                                if (show_editor) {
+                                    setTimeout(() => pd.fields_dict.custom_email_content.refresh(), 50);
+                                }
+                            }
+                        }
+                    },
+                    { fieldtype: "Section Break" },
+                    {
+                        label: __("Custom Email Content"),
+                        fieldname: "custom_email_content",
+                        fieldtype: "Text Editor"
+                    }
+                ],
+                primary_action_label: __("Publish"),
+                primary_action: function (values) {
+                    if (selected_names.size === 0) {
+                        frappe.msgprint(__("Please select at least one applicant to publish."));
+                        return;
+                    }
+
+                    frappe.confirm(
+                        __("Are you sure you want to publish seat allocation for <b>{0}</b> applicant(s)?<br><br>Once published, applicants will be able to view their test centre details on the portal and receive notification emails.", [selected_names.size]),
+                        function () {
+                            pd.hide();
+                            frappe.show_progress(__("Publishing Seat Allocations"), 0, 100, __("Updating records and queueing emails..."));
+
+                            frappe.call({
+                                method: "slcm.admission.doctype.entrance_test_list.entrance_test_list.publish_seat_allocations_for_test_list",
+                                args: {
+                                    entrance_test_list: frm.doc.name,
+                                    selected_names: JSON.stringify(Array.from(selected_names)),
+                                    send_email: values.send_email ? 1 : 0,
+                                    email_format: values.email_format,
+                                    custom_email_content: values.custom_email_content
+                                },
+                                callback: function (r) {
+                                    frappe.show_progress(__("Publishing Seat Allocations"), 100, 100, __("Completed"));
+                                    setTimeout(() => frappe.hide_progress(), 2500);
+
+                                    if (!r.exc && r.message) {
+                                        frappe.msgprint({
+                                            title: __("Seat Allocation Published"),
+                                            message: __(
+                                                "<b>{0}</b> seat allocations published. <b>{1}</b> notification emails queued.",
+                                                [r.message.published, r.message.notified]
+                                            ),
+                                            indicator: "green"
+                                        });
+                                        frm.reload_doc();
+                                    }
+                                },
+                                error: function () {
+                                    frappe.hide_progress();
+                                }
+                            });
+                        }
+                    );
+                }
+            });
+
+            function render_table() {
+                const filtered = get_filtered_allocations();
+                const total_filtered = filtered.length;
+                const total_pages = page_size === "all" ? 1 : (Math.ceil(total_filtered / page_size) || 1);
+                if (current_page > total_pages) current_page = total_pages;
+                if (current_page < 1) current_page = 1;
+
+                const page_records = page_size === "all"
+                    ? filtered
+                    : filtered.slice((current_page - 1) * page_size, current_page * page_size);
+
+                const $tbody = pd.$wrapper.find("#pub-table-body");
+                $tbody.empty();
+
+                if (!page_records.length) {
+                    $tbody.html(`<tr><td colspan="8" style="text-align:center; color:#94a3b8; padding:20px;">${__("No matching records found")}</td></tr>`);
+                } else {
+                    page_records.forEach((a, idx) => {
+                        const is_checked = selected_names.has(a.name);
+                        const is_pub = !!a.seat_allocation_published;
+                        const pub_badge = is_pub
+                            ? `<span class="badge" style="background:#dcfce7; color:#15803d; font-weight:600; padding:2px 8px; border-radius:4px;">${__("Published")}</span>`
+                            : `<span class="badge" style="background:#fef3c7; color:#b45309; font-weight:600; padding:2px 8px; border-radius:4px;">${__("Unpublished")}</span>`;
+
+                        const centre_display = a.center_name ? `${a.center_name} ${a.seat_number ? `(Seat: ${a.seat_number})` : ""}` : `<span style="color:#94a3b8;">${__("Preferences Assigned")}</span>`;
+
+                        const row_no = page_size === "all" ? idx + 1 : (current_page - 1) * page_size + idx + 1;
+
+                        const applicant_link = a.applicant
+                            ? `<a href="/app/applicant/${encodeURIComponent(a.applicant)}" target="_blank" style="font-weight:600; color:#2563eb; text-decoration:underline;">${a.applicant}</a>`
+                            : (a.name || "—");
+
+                        const program_link = a.program
+                            ? `<a href="/app/programme/${encodeURIComponent(a.program)}" target="_blank" style="color:#0369a1; text-decoration:underline;">${a.program}</a>`
+                            : "—";
+
+                        $tbody.append(`
+                            <tr style="background:${is_checked ? "#f8fafc" : "#ffffff"};">
+                                <td style="text-align:center; vertical-align:middle;">
+                                    <input type="checkbox" class="pub-row-check" data-name="${a.name}" ${is_checked ? "checked" : ""} style="cursor: pointer; width: 14px; height: 14px;" />
+                                </td>
+                                <td style="text-align:center; vertical-align:middle; color:#64748b;">${row_no}</td>
+                                <td style="vertical-align:middle;">${applicant_link}</td>
+                                <td style="vertical-align:middle;">${a.candidate_name || "—"}</td>
+                                <td style="vertical-align:middle;">${program_link}</td>
+                                <td style="vertical-align:middle;">${centre_display}</td>
+                                <td style="vertical-align:middle;"><span class="badge" style="background:#e0f2fe; color:#0369a1; padding:2px 6px;">${a.allocation_status || "Allocated"}</span></td>
+                                <td style="vertical-align:middle;">${pub_badge}</td>
+                            </tr>
+                        `);
+                    });
+                }
+
+                pd.$wrapper.find("#pub-selected-counter").text(selected_names.size);
+                pd.$wrapper.find("#pub-page-info").text(__("Page {0} of {1}", [current_page, total_pages]));
+                pd.$wrapper.find("#pub-prev-btn").prop("disabled", current_page <= 1);
+                pd.$wrapper.find("#pub-next-btn").prop("disabled", current_page >= total_pages);
+
+                const all_page_selected = page_records.length > 0 && page_records.every(a => selected_names.has(a.name));
+                pd.$wrapper.find("#pub-master-checkbox").prop("checked", all_page_selected);
+
+                const all_filtered_selected = filtered.length > 0 && filtered.every(a => selected_names.has(a.name));
+                pd.$wrapper.find("#pub-select-all-filtered-chk").prop("checked", all_filtered_selected);
+            }
+
+            let filter_debounce = null;
+            function on_filter_change() {
+                clearTimeout(filter_debounce);
+                filter_debounce = setTimeout(() => {
+                    current_page = 1;
+                    render_table();
+                }, 250);
+            }
+
+            pd.$wrapper.on("input", "#pub-filter-applicant", function () {
+                filter_applicant = $(this).val();
+                on_filter_change();
+            });
+
+            pd.$wrapper.on("input", "#pub-filter-name", function () {
+                filter_name = $(this).val();
+                on_filter_change();
+            });
+
+            pd.$wrapper.on("change", "#pub-filter-program", function () {
+                filter_program = $(this).val();
+                current_page = 1;
+                render_table();
+            });
+
+            pd.$wrapper.on("click", "#pub-clear-filters-btn", function () {
+                filter_applicant = "";
+                filter_name = "";
+                filter_program = "";
+                pd.$wrapper.find("#pub-filter-applicant").val("");
+                pd.$wrapper.find("#pub-filter-name").val("");
+                pd.$wrapper.find("#pub-filter-program").val("");
+                current_page = 1;
+                render_table();
+            });
+
+            // Select All Filtered Applicants checkbox
+            pd.$wrapper.on("change", "#pub-select-all-filtered-chk", function () {
+                const is_checked = $(this).prop("checked");
+                const filtered = get_filtered_allocations();
+                filtered.forEach(a => {
+                    if (is_checked) selected_names.add(a.name);
+                    else selected_names.delete(a.name);
+                });
+                render_table();
+            });
+
+            // Select Page button
+            pd.$wrapper.on("click", "#pub-select-page-btn", function () {
+                const filtered = get_filtered_allocations();
+                const page_records = page_size === "all"
+                    ? filtered
+                    : filtered.slice((current_page - 1) * page_size, current_page * page_size);
+                page_records.forEach(a => selected_names.add(a.name));
+                render_table();
+            });
+
+            // Clear All button
+            pd.$wrapper.on("click", "#pub-clear-all-btn", function () {
+                selected_names.clear();
+                render_table();
+            });
+
+            // Row Checkbox
+            pd.$wrapper.on("change", ".pub-row-check", function () {
+                const name = $(this).attr("data-name");
+                if (this.checked) {
+                    selected_names.add(name);
+                } else {
+                    selected_names.delete(name);
+                }
+                render_table();
+            });
+
+            // Master Table Header Checkbox (toggles current page)
+            pd.$wrapper.on("change", "#pub-master-checkbox", function () {
+                const is_checked = this.checked;
+                const filtered = get_filtered_allocations();
+                const page_records = page_size === "all"
+                    ? filtered
+                    : filtered.slice((current_page - 1) * page_size, current_page * page_size);
+                page_records.forEach(a => {
+                    if (is_checked) selected_names.add(a.name);
+                    else selected_names.delete(a.name);
+                });
+                render_table();
+            });
+
+            // Pagination: Prev, Next, Page Size
+            pd.$wrapper.on("click", "#pub-prev-btn", function () {
+                if (current_page > 1) {
+                    current_page--;
+                    render_table();
+                }
+            });
+
+            pd.$wrapper.on("click", "#pub-next-btn", function () {
+                const filtered = get_filtered_allocations();
+                const total_pages = page_size === "all" ? 1 : (Math.ceil(filtered.length / page_size) || 1);
+                if (current_page < total_pages) {
+                    current_page++;
+                    render_table();
+                }
+            });
+
+            pd.$wrapper.on("change", "#pub-page-size-select", function () {
+                const val = $(this).val();
+                page_size = val === "all" ? "all" : parseInt(val, 10);
+                current_page = 1;
+                render_table();
+            });
+
+            pd.show();
+            render_table();
+
+            // Initial hide for custom email content
+            if (pd.fields_dict.custom_email_content) {
+                pd.fields_dict.custom_email_content.$wrapper.hide();
+            }
         }
     });
 }

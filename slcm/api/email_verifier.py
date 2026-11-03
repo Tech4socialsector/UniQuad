@@ -2,8 +2,10 @@ import frappe
 import re
 import dns.resolver
 from frappe import _
+from frappe.rate_limiter import rate_limit
 
 @frappe.whitelist(allow_guest=True)
+@rate_limit(limit=60, seconds=60 * 60)
 def verify_email(email):
     """
     Verifies an email address using DNS MX record validation.

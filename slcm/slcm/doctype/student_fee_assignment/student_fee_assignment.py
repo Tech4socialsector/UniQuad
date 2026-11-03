@@ -8,8 +8,19 @@ from frappe.model.document import Document
 
 class StudentFeeAssignment(Document):
 	def validate(self):
+		self.set_academic_year()
 		self.calculate_amounts()
 		self.update_status()
+
+	def set_academic_year(self):
+		"""Default the Academic Year to the enrollment's current year (from its Academic Log)."""
+		if self.academic_year or not self.enrollment:
+			return
+		from slcm.slcm.doctype.student_enrollment.student_enrollment import get_current_log
+
+		current = get_current_log(self.enrollment)
+		if current:
+			self.academic_year = current.academic_year
 
 	def on_submit(self):
 		self.create_fee_invoice()

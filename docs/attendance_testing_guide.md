@@ -114,7 +114,6 @@ The **Student Attendance Tool** is the primary UI for marking attendance. It has
 |---|---|---|
 | **Class Schedule** | Daily timetable-based attendance (most common) | Lecture (uses actual class times) |
 | **Student Group** | Ad-hoc attendance not tied to a schedule | Lecture (defaults to 09:00–10:00) |
-| **Course Schedule** | Legacy schedule system | Lecture |
 | **Office Hours** | Faculty office hour attendance tracking | Office Hour |
 
 ### What Happens When You Click "Mark Attendance"

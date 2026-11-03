@@ -6,8 +6,8 @@
  "engine": "InnoDB",
  "field_order": [
   "exam_plan",
-  "course_offering",
   "course",
+  "academic_term",
   "student",
   "is_allowed",
   "override_reason"
@@ -21,19 +21,19 @@
    "reqd": 1
   },
   {
-   "fieldname": "course_offering",
-   "fieldtype": "Link",
-   "label": "Course Offering",
-   "options": "Course Offering",
-   "reqd": 1
-  },
-  {
-   "fetch_from": "course_offering.course_title",
    "fieldname": "course",
    "fieldtype": "Link",
    "label": "Course",
    "options": "Course",
-   "read_only": 1
+   "reqd": 1
+  },
+  {
+   "fetch_from": "exam_plan.term",
+   "fetch_if_empty": 1,
+   "fieldname": "academic_term",
+   "fieldtype": "Link",
+   "label": "Academic Term",
+   "options": "Academic Term"
   },
   {
    "fieldname": "student",
@@ -56,7 +56,7 @@
   }
  ],
  "links": [],
- "modified": "2026-04-24 00:00:00.000000",
+ "modified": "2026-10-29 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Re Exam Student Override",

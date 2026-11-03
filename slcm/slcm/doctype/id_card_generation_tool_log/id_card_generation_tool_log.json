@@ -67,7 +67,7 @@
    "fieldname": "batch",
    "fieldtype": "Link",
    "label": "Batch",
-   "options": "Batch",
+   "options": "SLCM Batch",
    "read_only": 1
   },
   {
@@ -130,7 +130,7 @@
  ],
  "is_submittable": 0,
  "links": [],
- "modified": "2026-01-13 12:00:00.000000",
+ "modified": "2026-10-19 16:30:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "ID Card Generation Tool Log",

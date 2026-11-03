@@ -1,7 +1,7 @@
 import frappe
 from slcm.permissions import (
     _get_faculty_name,
-    _get_faculty_course_offerings,
+    _get_faculty_classes,
     _get_faculty_assigned_students,
     _FULL_ACCESS_ROLES,
 )
@@ -13,7 +13,7 @@ def _is_unrestricted(roles):
 
 def _faculty_scope(user):
     """
-    Return (offerings, students, faculty_name) for the current faculty user,
+    Return (classes, students, faculty_name) for the current faculty user,
     or (None, None, None) if the user has unrestricted access.
     Raises PermissionError if faculty has no linked Faculty record.
     """
@@ -29,42 +29,58 @@ def _faculty_scope(user):
     if not faculty_name:
         frappe.throw(frappe._("No Faculty record linked to your account."), frappe.PermissionError)
 
-    offerings = _get_faculty_course_offerings(faculty_name)
+    classes = _get_faculty_classes(faculty_name)
     students = _get_faculty_assigned_students(faculty_name)
-    return offerings, students, faculty_name
+    return classes, students, faculty_name
+
+
+def _class_sections(classes):
+    """Sections taught in these Classes — the Section classes' own section,
+    plus the sections of their enrolled students (Group classes)."""
+    if not classes:
+        return []
+    sections = set(frappe.get_all("Classes", filters={"name": ["in", classes]}, pluck="section"))
+    sections.update(
+        frappe.get_all(
+            "Class Enrolled Student",
+            filters={"parent": ["in", classes], "parenttype": "Classes"},
+            pluck="section",
+        )
+    )
+    return [s for s in sections if s]
 
 
 @frappe.whitelist()
 def get_faculty_context():
     """
-    Return the programmes, course offerings, and sections visible to the
+    Return the programmes, classes, and sections visible to the
     current user so the JS can restrict filter dropdowns accordingly.
     Returns None for each when the user has unrestricted access.
     """
     user = frappe.session.user
-    offerings, students, faculty_name = _faculty_scope(user)
+    classes, students, faculty_name = _faculty_scope(user)
 
-    if offerings is None:
+    if classes is None:
         # Unrestricted user — no restriction needed
         return {"restricted": False}
 
-    if not offerings:
-        return {"restricted": True, "programmes": [], "course_offerings": [], "sections": []}
+    if not classes:
+        return {"restricted": True, "programmes": [], "classes": [], "sections": []}
 
-    # Derive visible programmes and sections from assigned Course Offerings
-    offering_docs = frappe.get_all(
-        "Course Offering",
-        filters={"name": ["in", offerings]},
-        fields=["name", "program", "section"],
+    # Derive visible programmes and sections from the assigned Classes
+    class_docs = frappe.get_all(
+        "Classes",
+        filters={"name": ["in", classes]},
+        fields=["name", "programme"],
     )
 
-    programmes = list({o.program for o in offering_docs if o.program})
-    sections = list({o.section for o in offering_docs if o.section})
+    programmes = list({c.programme for c in class_docs if c.programme})
+    sections = _class_sections(classes)
 
     return {
         "restricted": True,
         "faculty_name": faculty_name,
-        "course_offerings": offerings,
+        "classes": classes,
         "programmes": programmes,
         "sections": sections,
     }
@@ -73,7 +89,7 @@ def get_faculty_context():
 @frappe.whitelist()
 def get_attendance_data(
     programme=None,
-    course_offering=None,
+    class_name=None,
     from_date=None,
     to_date=None,
     period=None,
@@ -81,7 +97,7 @@ def get_attendance_data(
     section=None,
 ):
     user = frappe.session.user
-    offerings, students, faculty_name = _faculty_scope(user)
+    classes, students, faculty_name = _faculty_scope(user)
 
     conditions = []
     values = {}
@@ -101,9 +117,9 @@ def get_attendance_data(
     if programme:
         conditions.append("sa.program = %(programme)s")
         values["programme"] = programme
-    if course_offering:
-        conditions.append("sa.course_offer = %(course_offering)s")
-        values["course_offering"] = course_offering
+    if class_name:
+        conditions.append("sa.class_name = %(class_name)s")
+        values["class_name"] = class_name
     if period:
         conditions.append("sa.period = %(period)s")
         values["period"] = period
@@ -114,14 +130,15 @@ def get_attendance_data(
         conditions.append("senr.section = %(section)s")
         values["section"] = section
 
-    # Build the Student Enrollment join only when needed for a section filter
+    # Build the class-roster join only when needed for a section filter
     section_join = (
         """LEFT JOIN (
-            SELECT sec.course_offering, se.student, se.section
-            FROM `tabStudent Enrollment` se
-            JOIN `tabStudent Enrollment Course` sec ON sec.parent = se.name
-            WHERE sec.status = 'Enrolled' AND se.status = 'Enrolled'
-        ) senr ON senr.course_offering = sa.course_offer AND senr.student = sa.student"""
+            SELECT ces.parent AS class_name, se.student,
+                COALESCE(NULLIF(ces.section, ''), se.section) AS section
+            FROM `tabClass Enrolled Student` ces
+            JOIN `tabStudent Enrollment` se ON se.name = ces.student_enrollment
+            WHERE ces.parenttype = 'Classes' AND ces.status = 'Enrolled' AND se.status = 'Enrolled'
+        ) senr ON senr.class_name = sa.class_name AND senr.student = sa.student"""
         if section else ""
     )
 
@@ -141,7 +158,7 @@ def get_attendance_data(
             sa.status,
             sa.course,
             sa.program,
-            sa.course_offer,
+            sa.class_name,
             sa.period,
             sa.session_type,
             sa.in_time,
@@ -178,49 +195,40 @@ def get_attendance_data(
 
 
 @frappe.whitelist()
-def get_course_offerings(programme=None):
+def get_classes(programme=None):
     user = frappe.session.user
-    offerings, students, faculty_name = _faculty_scope(user)
+    classes, students, faculty_name = _faculty_scope(user)
 
     filters = {}
     if programme:
-        filters["program"] = programme
+        filters["programme"] = programme
 
-    if offerings is not None:
-        if not offerings:
+    if classes is not None:
+        if not classes:
             return []
-        filters["name"] = ["in", offerings]
+        filters["name"] = ["in", classes]
 
     return frappe.get_all(
-        "Course Offering",
+        "Classes",
         filters=filters,
-        fields=["name", "course_title"],
-        order_by="course_title asc",
+        fields=["name", "course", "course_name"],
+        order_by="course_name asc",
         limit=200,
     )
 
 
 @frappe.whitelist()
-def get_sections(programme=None, course_offering=None):
+def get_sections(programme=None, class_name=None):
     user = frappe.session.user
-    offerings, students, faculty_name = _faculty_scope(user)
+    classes, students, faculty_name = _faculty_scope(user)
 
+    # Sections are global (no batch / programme), so `programme` doesn't narrow them.
     filters = {}
-    if programme:
-        batches = frappe.get_all("Batch", filters={"program": programme}, pluck="name")
-        if not batches:
-            return []
-        filters["batch"] = ["in", batches]
 
-    if offerings is not None:
-        if not offerings:
+    if classes is not None:
+        if not classes:
             return []
-        offering_docs = frappe.get_all(
-            "Course Offering",
-            filters={"name": ["in", offerings]},
-            pluck="section",
-        )
-        visible_sections = [s for s in offering_docs if s]
+        visible_sections = _class_sections(classes)
         if not visible_sections:
             return []
         filters["name"] = ["in", visible_sections]

@@ -86,7 +86,7 @@
   <span class="sp-ms">menu_book</span>
   <p class="sp-empty-title">No courses found</p>
   <p class="sp-empty-sub">
-    No course offerings are linked to your cohort yet.<br>
+    No classes are linked to your cohort yet.<br>
     Please contact the Registrar's Office if this seems incorrect.
   </p>
 </div>
@@ -181,7 +181,7 @@
           {% endif %}
         </div>
 
-        <a href="/student-portal/timetable?course={{ c.course_offering }}" class="sp-course-card-btn">
+        <a href="/student-portal/timetable?course={{ c.class_name | urlencode }}" class="sp-course-card-btn">
           View Timetable <span class="sp-ms" style="font-size:16px;">chevron_right</span>
         </a>
       </div>

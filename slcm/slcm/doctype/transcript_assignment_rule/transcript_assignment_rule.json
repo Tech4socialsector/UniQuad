@@ -22,7 +22,7 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Programme",
-   "options": "Batch"
+   "options": "SLCM Batch"
   },
   {
    "fieldname": "assignee",
@@ -40,7 +40,7 @@
  ],
  "istable": 1,
  "links": [],
- "modified": "2026-06-16 00:00:00.000000",
+ "modified": "2026-10-19 16:30:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Transcript Assignment Rule",

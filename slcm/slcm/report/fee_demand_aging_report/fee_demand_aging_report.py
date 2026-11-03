@@ -39,14 +39,14 @@ def get_data(filters):
     if filters.get("student"):
         conditions += " AND d.student = %(student)s"
     if filters.get("programme"):
-        conditions += " AND sm.programme = %(programme)s"
+        conditions += " AND sm.programme_of_study = %(programme)s"
 
     rows = frappe.db.sql(f"""
         SELECT
             d.name,
             d.student,
             d.student_name,
-            COALESCE(sm.programme, '') AS programme,
+            COALESCE(sm.programme_of_study, '') AS programme,
             d.academic_year,
             d.fee_component,
             d.demand_type,

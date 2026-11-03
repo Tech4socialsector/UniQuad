@@ -4,8 +4,8 @@
 """Faculty portal Grades page (www/faculty-portal/marks).
 
 A faculty version of the desk Course Results page, limited to:
-  * course offerings the faculty is assigned to (Course Offering.faculty),
-  * the students enrolled in that offering,
+  * courses the faculty teaches in a term (Classes.faculty),
+  * the Enrolled students of the faculty's Classes of that course + term,
   * what Access Result Settings allows for the exam plan + course
     (view / edit access and deadlines, the course lock, masking, grade
     override, auto-generate, grade report, visible exam types),
@@ -52,11 +52,8 @@ from slcm.slcm.utils.result_access import (
 )
 from slcm.utils.faculty_portal import get_faculty_name
 
-OFFERING_STATUSES = ("Active", "Open")
-
-
 # ---------------------------------------------------------------------------
-# Context: offering + exam plan + access, all checked
+# Context: course + term + exam plan + access, all checked
 # ---------------------------------------------------------------------------
 
 def _require_faculty():
@@ -68,12 +65,14 @@ def _require_faculty():
 	return faculty
 
 
-def get_faculty_offerings(faculty):
-	"""Course offerings this faculty is assigned to, for the course selector."""
-	offerings = frappe.get_all(
-		"Course Offering",
-		filters={"faculty": faculty, "status": ["in", OFFERING_STATUSES]},
-		fields=["name", "course_title", "course_name", "program", "term_name", "academic_year"],
+def get_faculty_courses(faculty):
+	"""(course, academic_term) pairs this faculty teaches (Classes.faculty),
+	for the course selector — one row per course in a term across the
+	faculty's sections. `classes` lists the faculty's Classes for it."""
+	classes = frappe.get_all(
+		"Classes",
+		filters={"faculty": faculty},
+		fields=["name", "course", "course_name", "programme", "academic_term", "academic_year"],
 		order_by="academic_year desc, course_name asc",
 		ignore_permissions=True,
 	)
@@ -81,34 +80,47 @@ def get_faculty_offerings(faculty):
 		p.name: p.program_name or p.name
 		for p in frappe.get_all(
 			"Programme",
-			filters={"name": ["in", list({o.program for o in offerings if o.program})]},
+			filters={"name": ["in", list({c.programme for c in classes if c.programme})]},
 			fields=["name", "program_name"],
 			ignore_permissions=True,
 		)
-	} if offerings else {}
-	for o in offerings:
-		o.programme_name = programmes.get(o.program) or o.program or ""
-	return offerings
+	} if classes else {}
+	out = {}
+	for c in classes:
+		key = (c.course, c.academic_term)
+		row = out.get(key)
+		if not row:
+			row = out[key] = frappe._dict(
+				course=c.course,
+				course_name=c.course_name or c.course,
+				academic_term=c.academic_term,
+				academic_year=c.academic_year,
+				programme=c.programme or "",
+				programme_name=programmes.get(c.programme) or c.programme or "",
+				classes=[],
+				programmes=[],
+			)
+		row.classes.append(c.name)
+		if c.programme and c.programme not in row.programmes:
+			row.programmes.append(c.programme)
+	return list(out.values())
 
 
-def _exam_plans_for(course, offering, term=None):
-	"""Exam plans with a Course Schema Assignment for this course, limited to
-	the ones this faculty handles: mapped to this offering, or in the
-	offering's term (a duplicate offering of the same course + term). Plans of
-	other terms belong to other offerings. Mapped-to-this-offering first,
-	then Active before Inactive, newest first; one row per plan."""
+def _exam_plans_for(course, academic_term):
+	"""Exam plans with a Course Schema Assignment for this course in the
+	term the faculty teaches it (plans of other terms belong to other
+	classes). Active before Inactive, newest first; one row per plan."""
 	rows = frappe.db.sql(
 		"""
-		SELECT csa.exam_plan, csa.evaluation_schema, csa.grade_schema, csa.course_offering,
+		SELECT csa.exam_plan, csa.evaluation_schema, csa.grade_schema,
 		       ep.exam_name, ep.status AS plan_status, ep.term
 		FROM `tabCourse Schema Assignment` csa
 		JOIN `tabExam Plan` ep ON ep.name = csa.exam_plan
 		WHERE csa.course = %(course)s
-		  AND (csa.course_offering = %(offering)s OR (%(term)s != '' AND ep.term = %(term)s))
-		ORDER BY (csa.course_offering = %(offering)s) DESC,
-		         FIELD(ep.status, 'Active', 'Inactive') ASC, ep.creation DESC
+		  AND ep.term = %(term)s
+		ORDER BY FIELD(ep.status, 'Active', 'Inactive') ASC, ep.creation DESC
 		""",
-		{"course": course, "offering": offering, "term": term or ""},
+		{"course": course, "term": academic_term or ""},
 		as_dict=True,
 	)
 	seen, out = set(), []
@@ -119,21 +131,19 @@ def _exam_plans_for(course, offering, term=None):
 	return out
 
 
-def _context(course_offering, exam_plan=None):
-	"""Everything an endpoint needs, after checking the offering belongs to
-	the logged-in faculty. Throws PermissionError otherwise."""
+def _context(course, academic_term, exam_plan=None):
+	"""Everything an endpoint needs, after checking the logged-in faculty
+	teaches a Class of this course in this term. Throws PermissionError
+	otherwise."""
 	faculty = _require_faculty()
-	co = frappe.db.get_value(
-		"Course Offering",
-		course_offering,
-		["name", "course_title", "course_name", "faculty", "program", "term_name", "academic_year"],
-		as_dict=True,
+	co = next(
+		(c for c in get_faculty_courses(faculty) if c.course == course and c.academic_term == academic_term),
+		None,
 	)
-	# Faculty names can be autonumbered (int 1) while the link stores "1"
-	if not co or str(co.faculty or "") != str(faculty):
-		frappe.throw(_("You are not assigned to this course offering."), frappe.PermissionError)
+	if not co:
+		frappe.throw(_("You are not assigned to a class of this course in this term."), frappe.PermissionError)
 
-	plans = _exam_plans_for(co.course_title, co.name, co.term_name)
+	plans = _exam_plans_for(co.course, co.academic_term)
 	plan = None
 	if exam_plan:
 		plan = next((p for p in plans if p.exam_plan == exam_plan), None)
@@ -144,8 +154,9 @@ def _context(course_offering, exam_plan=None):
 
 	ctx = frappe._dict(
 		faculty=faculty,
-		offering=co,
-		course=co.course_title,
+		teaching=co,
+		course=co.course,
+		academic_term=co.academic_term,
 		plans=plans,
 		plan=plan,
 		exam_plan=plan.exam_plan if plan else None,
@@ -173,24 +184,25 @@ def _require_edit(ctx):
 	assert_course_editable(ctx.exam_plan, ctx.course, for_faculty=True, access=ctx.access)
 
 
-def _enrolled_students(offering):
-	"""Students enrolled in this course offering."""
+def _enrolled_students(ctx):
+	"""Enrolled students of the faculty's Classes of this course in this term."""
 	return frappe.db.sql_list(
 		"""
 		SELECT DISTINCT se.student
-		FROM `tabStudent Enrollment` se
-		JOIN `tabStudent Enrollment Course` sec ON sec.parent = se.name
-		WHERE sec.course_offering = %(offering)s
-		  AND sec.status = 'Enrolled' AND se.status = 'Enrolled'
+		FROM `tabClass Enrolled Student` ces
+		JOIN `tabStudent Enrollment` se ON se.name = ces.student_enrollment
+		WHERE ces.parenttype = 'Classes'
+		  AND ces.parent IN %(classes)s
+		  AND ces.status = 'Enrolled'
 		  AND se.docstatus < 2 AND IFNULL(se.student, '') != ''
 		""",
-		{"offering": offering},
+		{"classes": tuple(ctx.teaching.classes) or ("__none__",)},
 	)
 
 
 def _assert_enrolled(ctx, student):
-	if student not in set(_enrolled_students(ctx.offering.name)):
-		frappe.throw(_("This student is not enrolled in your course offering."), frappe.PermissionError)
+	if student not in set(_enrolled_students(ctx)):
+		frappe.throw(_("This student is not enrolled in your class."), frappe.PermissionError)
 
 
 def _scm(ctx, student, create=False):
@@ -205,7 +217,7 @@ def _scm(ctx, student, create=False):
 		return name
 	doc = frappe.new_doc("Student Course Marks")
 	doc.course = ctx.course
-	doc.course_offering = ctx.offering.name
+	doc.academic_term = ctx.academic_term
 	doc.exam_plan = ctx.exam_plan
 	doc.student = student
 	doc.evaluation_schema = ctx.evaluation_schema or ""
@@ -345,15 +357,15 @@ def _stats(marks, students, failed):
 # ---------------------------------------------------------------------------
 
 @frappe.whitelist()
-def get_grade_sheet(course_offering, exam_plan=None):
-	ctx = _context(course_offering, exam_plan)
+def get_grade_sheet(course, academic_term, exam_plan=None):
+	ctx = _context(course, academic_term, exam_plan)
 	access = ctx.access
 	info = {
-		"course_offering": ctx.offering.name,
 		"course": ctx.course,
-		"course_name": ctx.offering.course_name or ctx.course,
-		"term": ctx.offering.term_name or "",
-		"academic_year": ctx.offering.academic_year or "",
+		"academic_term": ctx.academic_term,
+		"course_name": ctx.teaching.course_name or ctx.course,
+		"term": ctx.academic_term or "",
+		"academic_year": ctx.teaching.academic_year or "",
 		"exam_plans": [
 			{"name": p.exam_plan, "label": p.exam_name or p.exam_plan, "status": p.plan_status}
 			for p in ctx.plans
@@ -388,7 +400,7 @@ def get_grade_sheet(course_offering, exam_plan=None):
 		for c in _visible_columns(ctx)
 	]
 
-	students = _enrolled_students(ctx.offering.name)
+	students = _enrolled_students(ctx)
 	marks = _marks_by_student(ctx, students)
 	rows = []
 	for r in _student_rows(students, info["masked"]):
@@ -413,9 +425,9 @@ def get_grade_sheet(course_offering, exam_plan=None):
 
 
 @frappe.whitelist()
-def save_mark(course_offering, exam_plan, student, component, assessment_type, value, field="marks"):
+def save_mark(course, academic_term, exam_plan, student, component, assessment_type, value, field="marks"):
 	"""Inline marks entry for one regular component."""
-	ctx = _context(course_offering, exam_plan)
+	ctx = _context(course, academic_term, exam_plan)
 	_require_edit(ctx)
 	_assert_enrolled(ctx, student)
 	if field not in ("marks", "revaluation_marks"):
@@ -430,9 +442,9 @@ def save_mark(course_offering, exam_plan, student, component, assessment_type, v
 
 
 @frappe.whitelist()
-def save_grade(course_offering, exam_plan, student, grade):
+def save_grade(course, academic_term, exam_plan, student, grade):
 	"""Grade override — only when Access Result Settings has Edit Grade Access."""
-	ctx = _context(course_offering, exam_plan)
+	ctx = _context(course, academic_term, exam_plan)
 	_require_edit(ctx)
 	if not ctx.access.edit_grade_access:
 		frappe.throw(_("Grade override is not enabled for this course."), frappe.PermissionError)
@@ -446,8 +458,8 @@ def save_grade(course_offering, exam_plan, student, grade):
 
 
 @frappe.whitelist()
-def save_remark(course_offering, exam_plan, student, remark):
-	ctx = _context(course_offering, exam_plan)
+def save_remark(course, academic_term, exam_plan, student, remark):
+	ctx = _context(course, academic_term, exam_plan)
 	_require_edit(ctx)
 	_assert_enrolled(ctx, student)
 	scm = _scm(ctx, student, create=True)
@@ -458,14 +470,14 @@ def save_remark(course_offering, exam_plan, student, remark):
 
 
 @frappe.whitelist()
-def auto_generate_grades(course_offering, exam_plan):
-	"""Recalculate total + grade for every Draft student of the offering —
+def auto_generate_grades(course, academic_term, exam_plan):
+	"""Recalculate total + grade for every Draft student of the course —
 	only when Access Result Settings has Auto Generate Grade Access."""
-	ctx = _context(course_offering, exam_plan)
+	ctx = _context(course, academic_term, exam_plan)
 	_require_edit(ctx)
 	if not ctx.access.auto_generate_grade_access:
 		frappe.throw(_("Auto grade generation is not enabled for this course."), frappe.PermissionError)
-	students = _enrolled_students(ctx.offering.name)
+	students = _enrolled_students(ctx)
 	done = 0
 	for row in frappe.get_all(
 		"Student Course Marks",
@@ -481,16 +493,16 @@ def auto_generate_grades(course_offering, exam_plan):
 
 
 @frappe.whitelist()
-def set_status(course_offering, exam_plan, status, students):
+def set_status(course, academic_term, exam_plan, status, students):
 	"""Mark as Submitted / Mark as Draft for the faculty's own students.
 	Locked rows belong to the examination office and are skipped."""
-	ctx = _context(course_offering, exam_plan)
+	ctx = _context(course, academic_term, exam_plan)
 	_require_edit(ctx)
 	if status not in (STATUS_SUBMITTED, STATUS_DRAFT):
 		frappe.throw(_("Faculty can only set Submitted or Draft."))
 	if isinstance(students, str):
 		students = json.loads(students or "[]")
-	enrolled = set(_enrolled_students(ctx.offering.name))
+	enrolled = set(_enrolled_students(ctx))
 	students = [s for s in (students or []) if s in enrolled]
 	if not students:
 		frappe.throw(_("Select at least one student."))
@@ -535,18 +547,18 @@ def _template_columns(ctx):
 
 
 @frappe.whitelist()
-def download_template(course_offering, exam_plan):
-	"""Excel template for the offering: one row per enrolled student with
+def download_template(course, academic_term, exam_plan):
+	"""Excel template for the course: one row per enrolled student with
 	their current marks. Column A (hidden) is the row key used on import."""
 	import openpyxl
 	from openpyxl.styles import Alignment, Font, PatternFill
 
-	ctx = _context(course_offering, exam_plan)
+	ctx = _context(course, academic_term, exam_plan)
 	_require_view(ctx)
 	cols = _template_columns(ctx)
 	with_grade = bool(ctx.access.edit_grade_access)
 
-	students = _enrolled_students(ctx.offering.name)
+	students = _enrolled_students(ctx)
 	marks = _marks_by_student(ctx, students)
 	rows = _student_rows(students, bool(ctx.access.mask_student_info))
 
@@ -585,20 +597,20 @@ def download_template(course_offering, exam_plan):
 
 	buf = io.BytesIO()
 	wb.save(buf)
-	frappe.response.filename = f"marks_{ctx.offering.name}_{ctx.exam_plan}.xlsx".replace(" ", "_")
+	frappe.response.filename = f"marks_{ctx.course}_{ctx.academic_term}_{ctx.exam_plan}.xlsx".replace(" ", "_")
 	frappe.response.filecontent = buf.getvalue()
 	frappe.response.type = "binary"
 
 
 @frappe.whitelist()
-def import_marks(course_offering, exam_plan, filedata, filename="", apply=0):
+def import_marks(course, academic_term, exam_plan, filedata, filename="", apply=0):
 	"""Validate an uploaded template (base64) and, with apply=1, save it.
 
 	Checks: file type and template format, every student is enrolled in the
-	offering and not Submitted/Locked, marks are numbers within 0..max,
+	faculty's classes and not Submitted/Locked, marks are numbers within 0..max,
 	grades are in the grading schema. Nothing is saved unless every row is
 	valid. Returns {ok, errors: [{row, student, column, message}], summary}."""
-	ctx = _context(course_offering, exam_plan)
+	ctx = _context(course, academic_term, exam_plan)
 	_require_edit(ctx)
 	if not (filename or "").lower().endswith(".xlsx"):
 		frappe.throw(_("Please upload the .xlsx template downloaded from this page."))
@@ -625,7 +637,7 @@ def import_marks(course_offering, exam_plan, filedata, filename="", apply=0):
 	if unknown:
 		frappe.throw(_("These columns are not open for entry: {0}").format(", ".join(unknown)))
 
-	enrolled = set(_enrolled_students(ctx.offering.name))
+	enrolled = set(_enrolled_students(ctx))
 	statuses = {
 		r.student: (r.status or STATUS_DRAFT)
 		for r in frappe.get_all(
@@ -656,7 +668,7 @@ def import_marks(course_offering, exam_plan, filedata, filename="", apply=0):
 		if sid not in enrolled:
 			sid = reg_to_student.get(reg, sid)
 		if sid not in enrolled:
-			errors.append({"row": row_no, "student": who, "column": "", "message": _("Student is not enrolled in this course offering.")})
+			errors.append({"row": row_no, "student": who, "column": "", "message": _("Student is not enrolled in your class.")})
 			continue
 		if sid in seen:
 			errors.append({"row": row_no, "student": who, "column": "", "message": _("Student appears more than once in the file.")})
@@ -709,10 +721,9 @@ def import_marks(course_offering, exam_plan, filedata, filename="", apply=0):
 
 def _paid_registrations(ctx, doctype):
 	"""Paid registrations of this course + exam plan for students enrolled in
-	this offering. Enrolment decides, not the registration's own
-	course_offering field — that isn't reliable (it can point at another
-	section, or even another course)."""
-	enrolled = set(_enrolled_students(ctx.offering.name))
+	the faculty's classes of the course. Class enrolment decides which
+	section's faculty sees the registration."""
+	enrolled = set(_enrolled_students(ctx))
 	rows = frappe.get_all(
 		doctype,
 		filters={
@@ -728,10 +739,10 @@ def _paid_registrations(ctx, doctype):
 
 
 @frappe.whitelist()
-def get_reexam_sheet(course_offering, exam_plan=None):
+def get_reexam_sheet(course, academic_term, exam_plan=None):
 	"""Students with a paid Re Exam / Improvement Exam registration, with
 	their previous result next to the new marks inputs."""
-	ctx = _context(course_offering, exam_plan)
+	ctx = _context(course, academic_term, exam_plan)
 	_require_view(ctx)
 	reexam_regs = _paid_registrations(ctx, "Re Exam Registration")
 	improvement_regs = _paid_registrations(ctx, "Improvement Exam Registration")
@@ -776,11 +787,11 @@ def get_reexam_sheet(course_offering, exam_plan=None):
 
 
 @frappe.whitelist()
-def save_reexam_mark(course_offering, exam_plan, student, component, assessment_type, value):
+def save_reexam_mark(course, academic_term, exam_plan, student, component, assessment_type, value):
 	"""Re-exam marks — only for students with a paid re-exam registration.
 	A student's Submitted status does not block this (re-exam comes after
 	the regular result); the course lock and edit access still apply."""
-	ctx = _context(course_offering, exam_plan)
+	ctx = _context(course, academic_term, exam_plan)
 	_require_edit(ctx)
 	if student not in _paid_registrations(ctx, "Re Exam Registration"):
 		frappe.throw(_("This student has no paid re-exam registration for this course."), frappe.PermissionError)
@@ -797,10 +808,10 @@ def save_reexam_mark(course_offering, exam_plan, student, component, assessment_
 
 
 @frappe.whitelist()
-def save_improvement_mark(course_offering, exam_plan, student, value):
+def save_improvement_mark(course, academic_term, exam_plan, student, value):
 	"""Improvement-exam marks — only for students with a paid improvement
 	registration. Applied to the final result (I badge) when higher."""
-	ctx = _context(course_offering, exam_plan)
+	ctx = _context(course, academic_term, exam_plan)
 	_require_edit(ctx)
 	if student not in _paid_registrations(ctx, "Improvement Exam Registration"):
 		frappe.throw(_("This student has no paid improvement exam registration for this course."), frappe.PermissionError)

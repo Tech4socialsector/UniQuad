@@ -3,6 +3,8 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "section_exam_plans",
+  "allow_multiple_plans_per_term",
   "section_mapping",
   "require_both_schemas",
   "allow_partial_mapping",
@@ -32,9 +34,25 @@
   "cb_display",
   "show_unmapped_courses",
   "section_improvement",
-  "max_cgpa_for_improvement"
+  "max_cgpa_for_improvement",
+  "section_appeal",
+  "revaluation_fee_per_paper",
+  "cb_appeal",
+  "appeal_window_days"
  ],
  "fields": [
+  {
+   "fieldname": "section_exam_plans",
+   "fieldtype": "Section Break",
+   "label": "Exam Plans"
+  },
+  {
+   "default": "0",
+   "fieldname": "allow_multiple_plans_per_term",
+   "fieldtype": "Check",
+   "label": "Allow more than one Exam Plan per term",
+   "description": "Off: one Exam Plan per Academic Term; its evaluation schemas hold every assessment of the term. On: a term can have several plans (e.g. Mid Term and End Term)."
+  },
   {
    "fieldname": "section_mapping",
    "fieldtype": "Section Break",
@@ -203,17 +221,40 @@
    "label": "Improvement Exam"
   },
   {
-   "default": "3.0",
+   "default": "7.0",
    "fieldname": "max_cgpa_for_improvement",
    "fieldtype": "Float",
    "label": "Max CGPA for Improvement Exam",
-   "description": "Students may only apply for Improvement Exam if their published Cumulative GPA for that exam plan is below this value."
+   "description": "Students may only apply for the Improvement Exam when their published Cumulative GPA for that exam plan is below this value. Use the scale of your grading schemas (e.g. 7.0 on a 10-point scale). Leave at 0 for no limit."
+  },
+  {
+   "fieldname": "section_appeal",
+   "fieldtype": "Section Break",
+   "label": "Grade Appeal / Revaluation"
+  },
+  {
+   "fieldname": "revaluation_fee_per_paper",
+   "fieldtype": "Currency",
+   "label": "Revaluation Fee per Paper",
+   "default": "0",
+   "description": "A Re-evaluation Grade Appeal raises a Fee Demand (Fee Component of type Revaluation Fee) for this amount. 0 = free."
+  },
+  {
+   "fieldname": "cb_appeal",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "appeal_window_days",
+   "fieldtype": "Int",
+   "label": "Appeal Window (days after publishing)",
+   "default": "0",
+   "description": "Students can raise an appeal on the portal for this many days after their result is published. 0 = no limit."
   }
  ],
  "idx": 0,
  "issingle": 1,
  "links": [],
- "modified": "2026-07-13 00:00:02.000000",
+ "modified": "2026-10-29 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Examination Settings",

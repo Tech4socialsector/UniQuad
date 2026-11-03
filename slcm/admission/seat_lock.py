@@ -20,13 +20,13 @@ def lock_seat_after_payment(payment_request):
 		return
 	# Resolve to doc if name passed
 	if isinstance(payment_request, str):
-		pr_doc = frappe.get_doc("Payment Request", payment_request)
+		pr_doc = frappe.get_doc("SLCM Payment Request", payment_request)
 	else:
 		pr_doc = payment_request
 	if getattr(pr_doc, "reference_doctype", None) != "Offer Letter":
 		return
 	offer_name = getattr(pr_doc, "reference_name", None) or frappe.db.get_value(
-		"Payment Request", pr_doc.name, "reference_name"
+		"SLCM Payment Request", pr_doc.name, "reference_name"
 	)
 	if not offer_name:
 		return

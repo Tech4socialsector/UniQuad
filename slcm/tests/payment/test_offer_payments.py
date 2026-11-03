@@ -32,7 +32,7 @@ class TestOfferPayments(PaymentTestBase):
 		self.assertEqual(res.get("status"), "success")
 		self.assertEqual(frappe.db.get_value("Offer Letter", offer.name, "status"), "Full Fee Paid")
 		self.assertEqual(frappe.db.get_value("Applicant Fee Assignment", afa.name, "status"), "Paid")
-		self.assertEqual(frappe.db.get_value("Payment Request", pr.name, "status"), "Paid")
+		self.assertEqual(frappe.db.get_value("SLCM Payment Request", pr.name, "status"), "Paid")
 		
 		# Verify receipt exists
 		receipts = frappe.get_all("Applicant Payment Receipt", filters={"offer_letter": offer.name, "docstatus": 0})
@@ -76,7 +76,7 @@ class TestOfferPayments(PaymentTestBase):
 		# Modify modified time of Payment Request to trigger reconciliation
 		from frappe.utils import add_to_date
 		old_time = add_to_date(frappe.utils.now_datetime(), minutes=-20)
-		frappe.db.sql("UPDATE `tabPayment Request` SET modified = %s WHERE name = %s", (old_time, pr.name))
+		frappe.db.sql("UPDATE `tabSLCM Payment Request` SET modified = %s WHERE name = %s", (old_time, pr.name))
 		frappe.db.commit()
 
 		self.mock_razorpay(payments_list=[{
@@ -101,7 +101,7 @@ class TestOfferPayments(PaymentTestBase):
 		pr = self.create_payment_request("Offer Letter", offer.name, "order_ol_004", amount=5000)
 
 		# Set Offer and Assignment as Paid
-		frappe.db.set_value("Offer Letter", offer.name, "status", "Payment Completed")
+		frappe.db.set_value("Offer Letter", offer.name, "status", "Full Fee Paid")
 		frappe.db.set_value("Applicant Fee Assignment", afa.name, "status", "Paid")
 		frappe.db.commit()
 
@@ -162,7 +162,7 @@ class TestOfferPayments(PaymentTestBase):
 
 		from frappe.utils import add_to_date
 		old_time = add_to_date(frappe.utils.now_datetime(), minutes=-20)
-		frappe.db.sql("UPDATE `tabPayment Request` SET modified = %s WHERE name = %s", (old_time, pr.name))
+		frappe.db.sql("UPDATE `tabSLCM Payment Request` SET modified = %s WHERE name = %s", (old_time, pr.name))
 		frappe.db.commit()
 
 		self.mock_razorpay(payments_list=[{

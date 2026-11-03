@@ -277,7 +277,7 @@ def sync_single_payment_settlement(pr_name):
     from slcm.api.razorpay_webhook import complete_payment_settlement
     from frappe import _
 
-    pr = frappe.get_doc("Payment Request", pr_name)
+    pr = frappe.get_doc("SLCM Payment Request", pr_name)
 
     if not pr.razorpay_payment_id:
         frappe.throw(_("No Razorpay Payment ID found on this Payment Request."))
@@ -381,7 +381,7 @@ def sync_single_payment_settlement(pr_name):
         "settlement_date": settlement_date,
     }
 
-    complete_payment_settlement("Payment Request", pr.name, found_item, settlement_payload)
+    complete_payment_settlement("SLCM Payment Request", pr.name, found_item, settlement_payload)
 
     msg = _("Settlement {0} synchronized successfully. Status: {1}").format(settlement_id, settlement_status.title())
     return {
@@ -448,7 +448,7 @@ def run_sync(from_date=None, to_date=None, skip_fle=False):
     pr_rows = frappe.db.sql(
         """
         SELECT name, razorpay_payment_id, transaction_id, amount as paid_amount, settlement_id, gateway_response
-        FROM `tabPayment Request`
+        FROM `tabSLCM Payment Request`
         WHERE status = 'Paid' AND (settlement_status IS NULL OR settlement_status != 'processed')
         """,
         as_dict=True,
@@ -500,7 +500,7 @@ def run_sync(from_date=None, to_date=None, skip_fle=False):
                 by_order_id[gw_order] = (r.name, target_doctype)
 
     process_rows(fle_rows, "FLE Payment Log")
-    process_rows(pr_rows, "Payment Request")
+    process_rows(pr_rows, "SLCM Payment Request")
 
     # ── Step 3: determine year-months to query recon ──────────────────────────
     year_months = set()
@@ -617,7 +617,7 @@ def run_sync(from_date=None, to_date=None, skip_fle=False):
                     "net_settled":       round(net_paise / 100, 2) if net_paise else round((gross_paise - fee_paise - tax_paise) / 100, 2),
                 }
 
-                if target_doctype == "Payment Request":
+                if target_doctype == "SLCM Payment Request":
                     fields_to_update["settlement_amount"] = round(gross_paise / 100, 2)
                     fields_to_update["settlement_response"] = json.dumps(item, indent=4)
 
@@ -656,7 +656,7 @@ def run_sync(from_date=None, to_date=None, skip_fle=False):
         pr_utr_rows = frappe.db.sql(
             """
             SELECT name, settlement_utr
-            FROM `tabPayment Request`
+            FROM `tabSLCM Payment Request`
             WHERE settlement_utr IS NOT NULL
               AND settlement_utr != ''
               AND (settlement_id IS NULL OR settlement_id = '')
@@ -665,7 +665,7 @@ def run_sync(from_date=None, to_date=None, skip_fle=False):
             as_dict=True,
         )
         all_utr_rows = [(r.name, r.settlement_utr, "FLE Payment Log") for r in utr_rows] + \
-                       [(r.name, r.settlement_utr, "Payment Request") for r in pr_utr_rows]
+                       [(r.name, r.settlement_utr, "SLCM Payment Request") for r in pr_utr_rows]
 
         for row_name, row_utr, t_doctype in all_utr_rows:
             key = (row_name, t_doctype)
@@ -690,7 +690,7 @@ def run_sync(from_date=None, to_date=None, skip_fle=False):
                 "settlement_date":   settlement_date,
             }
 
-            if t_doctype == "Payment Request":
+            if t_doctype == "SLCM Payment Request":
                 fields_to_update["gateway_settlement_status"] = status
                 if status == "processed":
                     fields_to_update["settlement_status"] = "Settled"

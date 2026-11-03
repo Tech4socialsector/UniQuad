@@ -9,7 +9,7 @@
     cal_variant       "fill" (default) — fills its parent's height (Dashboard)
                       "page"           — fixed tall body (Timetable page)
     cal_default_view  "day" (default) | "week" | "month" — before a saved choice
-    cal_course        Course Offering to limit Class / OH sessions to
+    cal_course        Class (Classes name) to limit Class / OH sessions to
     cal_title         heading (default "My Calendar")
   Only one per page (fixed element ids).
 #}
@@ -199,7 +199,7 @@
 /* ══ Student dashboard calendar ══════════════════════════════════════
    Same behaviour as the faculty dashboard calendar, fed by
    slcm.api.student_portal.get_student_calendar. Layers:
-     class  — class sessions (Time Table of enrolled course offerings)
+     class  — class sessions (Time Table of the student's classes)
      events — University Events (Institutional Calendar + Events)
      oh     — Office Hours of the student's OH groups                    */
 (function () {
@@ -271,7 +271,7 @@
     var seq = ++reqSeq;
     container.classList.add('is-loading');
     fetch(API + '?start=' + toDS(r.start) + '&end=' + toDS(r.end)
-          + (COURSE ? '&course_offering=' + encodeURIComponent(COURSE) : ''), { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
+          + (COURSE ? '&class_name=' + encodeURIComponent(COURSE) : ''), { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
       .then(function (res) { return res.json().then(function (j) { return { ok: res.ok, body: j }; }); })
       .then(function (res) {
         if (seq !== reqSeq) return;

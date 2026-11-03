@@ -6,6 +6,8 @@ from datetime import datetime
 import json
 import logging
 
+from slcm.security.access import assert_owns_applicant, assert_owns_offer, require_desk_user
+
 def update_payment_request_paid_on(doc, method):
     if doc.status == "Paid" and not doc.paid_on:
         doc.paid_on = frappe.utils.nowdate()
@@ -264,7 +266,6 @@ class FeeService:
 
 
     @staticmethod
-    @frappe.whitelist()
     def create_offer_razorpay_order(offer_name):
         """
         Creates a Razorpay order directly and returns details for the frontend modal.
@@ -312,7 +313,7 @@ class FeeService:
             # Block if a Payment Request for the CURRENT fee amount is already Paid (gateway truth)
             # We filter by creation >= afa.creation to ignore PRs from previous fee stages
             existing_paid_pr = frappe.db.get_value(
-                "Payment Request",
+                "SLCM Payment Request",
                 {
                     "reference_doctype": "Offer Letter", 
                     "reference_name": offer.name, 
@@ -363,7 +364,7 @@ class FeeService:
             }
 
             pr_name = frappe.db.get_value(
-                "Payment Request",
+                "SLCM Payment Request",
                 {
                     "reference_doctype": "Offer Letter",
                     "reference_name": offer.name,
@@ -373,7 +374,7 @@ class FeeService:
                 "name",
                 order_by="creation desc"
             )
-            pr = frappe.get_doc("Payment Request", pr_name) if pr_name else None
+            pr = frappe.get_doc("SLCM Payment Request", pr_name) if pr_name else None
             if pr:
                 pr_status = (pr.status or "").strip()
                 if pr_status == "Paid":
@@ -495,7 +496,6 @@ class FeeService:
             pass
 
     @staticmethod
-    @frappe.whitelist()
     def verify_offer_payment(razorpay_payment_id, razorpay_order_id, razorpay_signature, offer_name):
         """
         Verifies the Razorpay signature and updates the offer status.
@@ -521,7 +521,7 @@ class FeeService:
 
             # Validate Payment Request ownership
             pr_name = frappe.db.get_value(
-                "Payment Request",
+                "SLCM Payment Request",
                 {
                     "reference_doctype": "Offer Letter",
                     "reference_name": offer.name,
@@ -532,7 +532,7 @@ class FeeService:
             )
             if not pr_name:
                 pr_name = frappe.db.get_value(
-                    "Payment Request",
+                    "SLCM Payment Request",
                     {
                         "reference_doctype": "Offer Letter",
                         "reference_name": offer.name,
@@ -543,7 +543,7 @@ class FeeService:
                 )
             if not pr_name:
                 pr_name = frappe.db.get_value(
-                    "Payment Request",
+                    "SLCM Payment Request",
                     {
                         "reference_doctype": "Offer Letter",
                         "reference_name": offer.name,
@@ -557,17 +557,17 @@ class FeeService:
 
             # Acquire lock on the Payment Request row to prevent deadlock / race condition with webhook
             frappe.db.sql(
-                "SELECT name FROM `tabPayment Request` WHERE name = %s FOR UPDATE",
+                "SELECT name FROM `tabSLCM Payment Request` WHERE name = %s FOR UPDATE",
                 pr_name,
             )
 
             # Reload fresh state AFTER acquiring lock
-            pr = frappe.get_doc("Payment Request", pr_name, check_permission=False)
+            pr = frappe.get_doc("SLCM Payment Request", pr_name, check_permission=False)
             if pr.status == "Paid":
                 return {"status": "success"}
 
             duplicate_paid = frappe.db.exists(
-                "Payment Request",
+                "SLCM Payment Request",
                 {
                     "status": "Paid",
                     "transaction_id": razorpay_payment_id,
@@ -577,7 +577,7 @@ class FeeService:
             if duplicate_paid:
                 frappe.throw(_("This Razorpay payment has already been recorded."))
 
-            pr = frappe.get_doc("Payment Request", pr_name)
+            pr = frappe.get_doc("SLCM Payment Request", pr_name)
             expected_order_id = pr.transaction_id or pr.razorpay_order_id
             if expected_order_id != razorpay_order_id:
                 frappe.throw(_("Payment Request mismatch"))
@@ -771,7 +771,7 @@ class FeeService:
             receipt.remarks = remarks
             
             # Link to existing Payment Request if possible
-            pr = frappe.db.get_value("Payment Request", {"transaction_id": transaction_id}, "name")
+            pr = frappe.db.get_value("SLCM Payment Request", {"transaction_id": transaction_id}, "name")
             if pr:
                 receipt.payment_reference = pr
 
@@ -814,7 +814,6 @@ class FeeService:
 
     @staticmethod
 
-    @frappe.whitelist()
     def log_payment_failure(offer_name, order_id, error_data):
         """
         Logs a payment failure reported by the frontend.
@@ -875,15 +874,15 @@ class FeeService:
         if afa:
             filters["creation"] = (">=", afa.creation)
             
-        pr_name = frappe.db.get_value("Payment Request", filters, "name", order_by="creation desc")
+        pr_name = frappe.db.get_value("SLCM Payment Request", filters, "name", order_by="creation desc")
         
         if not pr_name and transaction_id:
              # Fallback to finding by transaction id if specifically provided
-             pr_name = frappe.db.get_value("Payment Request", 
+             pr_name = frappe.db.get_value("SLCM Payment Request", 
                 {"transaction_id": transaction_id}, "name")
 
         if pr_name:
-            pr = frappe.get_doc("Payment Request", pr_name)
+            pr = frappe.get_doc("SLCM Payment Request", pr_name)
             
             # Removed amount overwrite to prevent corrupting paid PRs
             
@@ -897,7 +896,7 @@ class FeeService:
                         "FeeService: Gateway Not Found"
                     )
         else:
-            pr = frappe.new_doc("Payment Request")
+            pr = frappe.new_doc("SLCM Payment Request")
             pr.reference_doctype = "Offer Letter"
             pr.reference_name = offer.name
             
@@ -958,7 +957,7 @@ class FeeService:
                         "FeeService: Gateway Not Found"
                     )
 
-            frappe.db.set_value("Payment Request", pr.name, update_data, update_modified=True)
+            frappe.db.set_value("SLCM Payment Request", pr.name, update_data, update_modified=True)
             frappe.db.commit()
             if hasattr(frappe.flags, "payment_request_status_from_backend"):
                 del frappe.flags.payment_request_status_from_backend
@@ -997,7 +996,6 @@ class FeeService:
 
 
     @staticmethod
-    @frappe.whitelist()
     def create_confirmation_fee_refund(offer_name, refund_percentage):
         """
         Creates a Refund Request for the Confirmation Fee payment on an Offer Letter.
@@ -1107,7 +1105,7 @@ class FeeService:
         # Final fallback: resolve Razorpay payment ID from the Payment Request
         if not razorpay_payment_id:
             pr_name = frappe.db.get_value(
-                "Payment Request",
+                "SLCM Payment Request",
                 {
                     "reference_doctype": "Offer Letter",
                     "reference_name": offer.name,
@@ -1119,7 +1117,7 @@ class FeeService:
                 order_by="creation asc",
             )
             if pr_name:
-                pr = frappe.get_doc("Payment Request", pr_name)
+                pr = frappe.get_doc("SLCM Payment Request", pr_name)
                 razorpay_payment_id = pr.transaction_id or getattr(pr, "razorpay_payment_id", None)
                 if not amount_paid:
                     amount_paid = flt(pr.amount)
@@ -1194,7 +1192,7 @@ class FeeService:
         Keeps ``razorpay_order_id`` + ``gateway_status`` in sync (same as offer-letter flow)
         so webhooks can resolve the doc and the desk form shows ``captured`` after pay.
         """
-        pr_name = frappe.db.get_value("Payment Request", {
+        pr_name = frappe.db.get_value("SLCM Payment Request", {
             "reference_doctype": "Applicant",
             "reference_name": applicant_doc.name,
             "status": ["!=", "Cancelled"],
@@ -1202,15 +1200,15 @@ class FeeService:
         }, "name", order_by="creation desc")
 
         if not pr_name and transaction_id:
-            pr_name = frappe.db.get_value("Payment Request", {"transaction_id": transaction_id}, "name")
+            pr_name = frappe.db.get_value("SLCM Payment Request", {"transaction_id": transaction_id}, "name")
         if not pr_name and transaction_id:
-            pr_name = frappe.db.get_value("Payment Request", {"razorpay_order_id": transaction_id}, "name")
+            pr_name = frappe.db.get_value("SLCM Payment Request", {"razorpay_order_id": transaction_id}, "name")
 
         amount = flt(applicant_doc.application_fee_amount)
         email_to = applicant_doc.email
 
         if pr_name:
-            pr = frappe.get_doc("Payment Request", pr_name)
+            pr = frappe.get_doc("SLCM Payment Request", pr_name)
             if gateway:
                 if frappe.db.exists("Payment Gateway", gateway):
                     pr.db_set("payment_gateway", gateway)
@@ -1220,7 +1218,7 @@ class FeeService:
                         "FeeService: Gateway Not Found"
                     )
         else:
-            pr = frappe.new_doc("Payment Request")
+            pr = frappe.new_doc("SLCM Payment Request")
             pr.reference_doctype = "Applicant"
             pr.reference_name = applicant_doc.name
             pr.amount = amount
@@ -1251,7 +1249,7 @@ class FeeService:
                 update_data["gateway_status"] = "captured"
                 update_data["paid_on"] = now_datetime()
                 if transaction_id:
-                    prev_oid = frappe.db.get_value("Payment Request", pr.name, "razorpay_order_id")
+                    prev_oid = frappe.db.get_value("SLCM Payment Request", pr.name, "razorpay_order_id")
                     if not prev_oid or str(transaction_id).startswith("order_"):
                         update_data["razorpay_order_id"] = transaction_id
                 if payment_id:
@@ -1270,7 +1268,7 @@ class FeeService:
                         f"Payment Gateway '{gateway}' not found or configured. PR: {pr.name if pr.name else 'NEW'}, Reference: {applicant_doc.name}",
                         "FeeService: Gateway Not Found"
                     )
-            frappe.db.set_value("Payment Request", pr.name, update_data, update_modified=True)
+            frappe.db.set_value("SLCM Payment Request", pr.name, update_data, update_modified=True)
             frappe.db.commit()
             if frappe.flags.get("payment_request_status_from_backend"):
                 del frappe.flags.payment_request_status_from_backend
@@ -1309,7 +1307,6 @@ class FeeService:
                     del frappe.flags.payment_request_status_from_backend
 
     @staticmethod
-    @frappe.whitelist()
     def create_application_fee_razorpay_order(applicant_name):
         """Creates Razorpay order for application fee payment."""
         try:
@@ -1324,7 +1321,14 @@ class FeeService:
             if fee_amount <= 0:
                 from slcm.api.service.application_fee_service import get_application_fee_for_category, _get_applicant_category
                 category = _get_applicant_category(applicant_name)
-                fee_amount = get_application_fee_for_category(applicant.program, applicant.admission_cycle, category)
+                is_foreign = (applicant.foriegn_national or "").strip() == "Yes"
+                fee_amount = get_application_fee_for_category(
+                    applicant.program,
+                    applicant.admission_cycle,
+                    category,
+                    is_foreign=is_foreign,
+                    applicant=applicant,
+                )
                 if fee_amount > 0:
                     frappe.db.set_value("Applicant", applicant_name, "application_fee_amount", fee_amount)
                     applicant.application_fee_amount = fee_amount
@@ -1348,6 +1352,10 @@ class FeeService:
             if not controller:
                 frappe.throw(_("Payment Gateway '{0}' not found or not configured. Please set up Razorpay (or your gateway) in Payment Gateway doctype.").format(gateway))
 
+            from slcm.api.service.application_fee_service import get_application_fee_doc
+            app_fee_doc = get_application_fee_doc(applicant.admission_cycle)
+            fee_currency = (app_fee_doc and app_fee_doc.currency) or "INR"
+
             payment_details = {
                 "amount": actual_payable,
                 "title": _("Application Fee"),
@@ -1356,12 +1364,12 @@ class FeeService:
                 "reference_docname": applicant_name,
                 "payer_email": applicant.email or "",
                 "payer_name": applicant.candidate_name,
-                "currency": frappe.defaults.get_global_default("currency") or "INR",
+                "currency": fee_currency,
                 "receipt": (applicant_name[:40]) if applicant_name else None
             }
 
             pr_name = frappe.db.get_value(
-                "Payment Request",
+                "SLCM Payment Request",
                 {
                     "reference_doctype": "Applicant",
                     "reference_name": applicant_name,
@@ -1369,7 +1377,7 @@ class FeeService:
                 },
                 "name",
             )
-            pr = frappe.get_doc("Payment Request", pr_name) if pr_name else None
+            pr = frappe.get_doc("SLCM Payment Request", pr_name) if pr_name else None
             if pr:
                 pr_status = (pr.status or "").strip()
                 if pr_status == "Paid":
@@ -1452,7 +1460,6 @@ class FeeService:
         frappe.db.commit()
 
     @staticmethod
-    @frappe.whitelist()
     def verify_application_fee_payment(razorpay_payment_id, razorpay_order_id, razorpay_signature, applicant_name):
         """Verifies Razorpay payment for application fee and marks as paid."""
         try:
@@ -1472,7 +1479,7 @@ class FeeService:
 
             # Use gateway from Payment Request (created with order), else from Programme Reservation Policy, else default
             pr_gateway = frappe.db.get_value(
-                "Payment Request",
+                "SLCM Payment Request",
                 {"reference_doctype": "Applicant", "reference_name": applicant_name, "transaction_id": razorpay_order_id},
                 "payment_gateway"
             )
@@ -1483,7 +1490,7 @@ class FeeService:
             
             # Validate Payment Request ownership
             pr_name = frappe.db.get_value(
-                "Payment Request",
+                "SLCM Payment Request",
                 {
                     "reference_doctype": "Applicant",
                     "reference_name": applicant.name,
@@ -1494,7 +1501,7 @@ class FeeService:
             )
             if not pr_name:
                 pr_name = frappe.db.get_value(
-                    "Payment Request",
+                    "SLCM Payment Request",
                     {
                         "reference_doctype": "Applicant",
                         "reference_name": applicant.name,
@@ -1505,7 +1512,7 @@ class FeeService:
                 )
             if not pr_name:
                 pr_name = frappe.db.get_value(
-                    "Payment Request",
+                    "SLCM Payment Request",
                     {
                         "reference_doctype": "Applicant",
                         "reference_name": applicant.name,
@@ -1519,17 +1526,17 @@ class FeeService:
 
             # Acquire row-level lock on Payment Request to prevent deadlock / race condition with webhook
             frappe.db.sql(
-                "SELECT name FROM `tabPayment Request` WHERE name = %s FOR UPDATE",
+                "SELECT name FROM `tabSLCM Payment Request` WHERE name = %s FOR UPDATE",
                 pr_name,
             )
 
             # Reload fresh state AFTER acquiring lock
-            pr = frappe.get_doc("Payment Request", pr_name, check_permission=False)
+            pr = frappe.get_doc("SLCM Payment Request", pr_name, check_permission=False)
             if pr.status == "Paid":
                 return {"status": "success"}
 
             duplicate_paid = frappe.db.exists(
-                "Payment Request",
+                "SLCM Payment Request",
                 {
                     "status": "Paid",
                     "transaction_id": razorpay_payment_id,
@@ -1539,7 +1546,7 @@ class FeeService:
             if duplicate_paid:
                 frappe.throw(_("This Razorpay payment has already been recorded."))
 
-            pr = frappe.get_doc("Payment Request", pr_name)
+            pr = frappe.get_doc("SLCM Payment Request", pr_name)
             expected_order_id = pr.transaction_id or pr.razorpay_order_id
             if expected_order_id != razorpay_order_id:
                 frappe.throw(_("Payment Request mismatch"))
@@ -1651,9 +1658,15 @@ class FeeService:
 
             from slcm.api.service.application_fee_service import get_application_fee_for_category, _get_applicant_category
             category = _get_applicant_category(applicant_doc.name)
-            is_foreign = getattr(applicant_doc, "foriegn_national", "") == "Yes"
+            is_foreign = (getattr(applicant_doc, "foriegn_national", "") or "").strip() == "Yes"
             fee_amount = flt(
-                get_application_fee_for_category(applicant_doc.program, applicant_doc.admission_cycle, category, is_foreign=is_foreign)
+                get_application_fee_for_category(
+                    applicant_doc.program,
+                    applicant_doc.admission_cycle,
+                    category,
+                    is_foreign=is_foreign,
+                    applicant=applicant_doc,
+                )
             )
             if fee_amount <= 0:
                 fee_amount = flt(applicant_doc.application_fee_amount or 0)
@@ -1686,10 +1699,10 @@ class FeeService:
             receipt.upi_id = upi_id
             receipt.remarks = remarks
 
-            pr = frappe.db.get_value("Payment Request", {"transaction_id": transaction_id}, "name")
+            pr = frappe.db.get_value("SLCM Payment Request", {"transaction_id": transaction_id}, "name")
             if not pr:
                 pr = frappe.db.get_value(
-                    "Payment Request",
+                    "SLCM Payment Request",
                     {
                         "reference_doctype": "Applicant",
                         "reference_name": applicant_doc.name,
@@ -1699,7 +1712,7 @@ class FeeService:
                     order_by="modified desc",
                 )
             if pr:
-                if frappe.db.get_value("Payment Request", pr, "docstatus") != 2:
+                if frappe.db.get_value("SLCM Payment Request", pr, "docstatus") != 2:
                     receipt.payment_reference = pr
                 
             receipt.append("fee_components", {
@@ -1726,7 +1739,7 @@ class FeeService:
         """
         if not pr_name:
             return
-        pr = frappe.get_doc("Payment Request", pr_name)
+        pr = frappe.get_doc("SLCM Payment Request", pr_name)
         if pr.reference_doctype != "Applicant" or not pr.reference_name:
             return
         if (pr.status or "").strip() != "Paid":
@@ -1751,7 +1764,6 @@ class FeeService:
         sync_application_fee_assignment_for_applicant(applicant_name)
 
     @staticmethod
-    @frappe.whitelist()
     def process_application_fee_payment(applicant_name, payment_mode="Cash", reference_number=None,
             bank_name=None, cheque_number=None, cheque_date=None, upi_id=None, remarks=None):
         """Records offline/manual application fee payment."""
@@ -1777,7 +1789,6 @@ class FeeService:
         return out
 
     @staticmethod
-    @frappe.whitelist()
     def log_application_fee_payment_failure(applicant_name, order_id, error_data):
         """Logs application fee payment failure."""
         try:
@@ -1829,7 +1840,7 @@ class FeeService:
         ]
 
         pending_requests = frappe.get_all(
-            "Payment Request",
+            "SLCM Payment Request",
             filters={
                 "status": ["in", ["Requested", "Initiated", "Payment Initiated"]],
                 "modified": ["<", cutoff],
@@ -1839,7 +1850,7 @@ class FeeService:
             fields=fields,
         )
         failed_requests = frappe.get_all(
-            "Payment Request",
+            "SLCM Payment Request",
             filters={
                 "status": "Failed",
                 "modified": [">", failed_cutoff],
@@ -1870,7 +1881,11 @@ class FeeService:
                         f"Reconciliation Scheduler: completed PR={pr_data.name}"
                     )
             except Exception:
-                frappe.db.rollback(save_point=savepoint)
+                try:
+                    frappe.db.rollback(save_point=savepoint)
+                except Exception:
+                    # A commit inside the handler already released the savepoint.
+                    frappe.db.rollback()
                 import traceback; print(f"Exception in reconcile_pending_payments for {pr_data.name}:\n", traceback.format_exc())
                 frappe.log_error(
                     frappe.get_traceback(),
@@ -1879,7 +1894,7 @@ class FeeService:
 
     @staticmethod
     def reconcile_single_payment(payment_request_name):
-        pr_data = frappe.get_doc("Payment Request", payment_request_name)
+        pr_data = frappe.get_doc("SLCM Payment Request", payment_request_name)
         if pr_data.payment_gateway and pr_data.payment_gateway != "Razorpay":
             return {"status": "error", "message": _("Only Razorpay payments can be reconciled manually.")}
 
@@ -1899,9 +1914,9 @@ class FeeService:
 
         if result == "captured":
             payment_id = frappe.db.get_value(
-                "Payment Request", payment_request_name, "razorpay_payment_id"
+                "SLCM Payment Request", payment_request_name, "razorpay_payment_id"
             ) or frappe.db.get_value(
-                "Payment Request", payment_request_name, "transaction_id"
+                "SLCM Payment Request", payment_request_name, "transaction_id"
             )
             return {
                 "status": "success",
@@ -1911,7 +1926,7 @@ class FeeService:
             }
         if result == "failed":
             failure_message = frappe.db.get_value(
-                "Payment Request", payment_request_name, "failure_message"
+                "SLCM Payment Request", payment_request_name, "failure_message"
             )
             return {
                 "status": "error",
@@ -1924,50 +1939,60 @@ class FeeService:
         return {"status": "info", "message": _("No payment attempts found at Razorpay for this order.")}
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def create_offer_razorpay_order(offer_name):
+    assert_owns_offer(offer_name)
     return FeeService.create_offer_razorpay_order(offer_name)
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def verify_offer_payment(razorpay_payment_id, razorpay_order_id, razorpay_signature, offer_name):
+    # No ownership check: the Razorpay signature binds this payment to the offer's order.
     return FeeService.verify_offer_payment(razorpay_payment_id, razorpay_order_id, razorpay_signature, offer_name)
 
-@frappe.whitelist()
-def process_fee_payment(offer_name, payment_mode="Cash", reference_number=None, 
-                       bank_name=None, cheque_number=None, cheque_date=None, 
+@frappe.whitelist(methods=["POST"])
+def process_fee_payment(offer_name, payment_mode="Cash", reference_number=None,
+                       bank_name=None, cheque_number=None, cheque_date=None,
                        upi_id=None, remarks=None):
+    require_desk_user()
     return FeeService.process_fee_payment(
-        offer_name, payment_mode, reference_number, 
+        offer_name, payment_mode, reference_number,
         bank_name, cheque_number, cheque_date, upi_id, remarks
     )
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def log_payment_failure(offer_name, order_id, error_data):
+    assert_owns_offer(offer_name)
     return FeeService.log_payment_failure(offer_name, order_id, error_data)
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def create_application_fee_razorpay_order(applicant_name):
+    assert_owns_applicant(applicant_name)
     return FeeService.create_application_fee_razorpay_order(applicant_name)
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def verify_application_fee_payment(razorpay_payment_id, razorpay_order_id, razorpay_signature, applicant_name):
+    # No ownership check: the Razorpay signature binds this payment to the applicant's order.
     return FeeService.verify_application_fee_payment(razorpay_payment_id, razorpay_order_id, razorpay_signature, applicant_name)
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def process_application_fee_payment(applicant_name, payment_mode="Cash", reference_number=None,
         bank_name=None, cheque_number=None, cheque_date=None, upi_id=None, remarks=None):
+    require_desk_user()
     return FeeService.process_application_fee_payment(
         applicant_name, payment_mode, reference_number,
         bank_name, cheque_number, cheque_date, upi_id, remarks
     )
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def log_application_fee_payment_failure(applicant_name, order_id, error_data):
+    assert_owns_applicant(applicant_name)
     return FeeService.log_application_fee_payment_failure(applicant_name, order_id, error_data)
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def reconcile_pending_payments():
+    require_desk_user()
     return FeeService.reconcile_pending_payments()
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def reconcile_single_payment(payment_request_name):
+    require_desk_user()
     return FeeService.reconcile_single_payment(payment_request_name)

@@ -18,7 +18,7 @@
 {% endif %}
 
 {# ── Summary Metric Cards ─────────────────────────────────────── #}
-{% if course_offerings %}
+{% if faculty_classes %}
 <div class="fp-metric-grid fade-in">
 
   <div class="fp-metric-card">
@@ -123,8 +123,7 @@
         <span class="fp-ms fp-msf-chevron">expand_more</span>
       </button>
       <div class="fp-msf-panel">
-        <label class="fp-msf-option"><input type="checkbox" value="Open" onchange="fpFilterClasses()"><span>Open</span></label>
-        <label class="fp-msf-option"><input type="checkbox" value="Active" onchange="fpFilterClasses()"><span>Active</span></label>
+                <label class="fp-msf-option"><input type="checkbox" value="Active" onchange="fpFilterClasses()"><span>Active</span></label>
         <label class="fp-msf-option"><input type="checkbox" value="Closed" onchange="fpFilterClasses()"><span>Closed</span></label>
         <div class="fp-msf-footer">
           <button type="button" class="fp-msf-footer-btn" onclick="fpMsfSelectAll('fp-filter-status')">Select all</button>
@@ -135,8 +134,8 @@
 
     <div style="display:flex;align-items:center;gap:8px;margin-left:auto;">
       <span style="font-size:12px;color:var(--fp-text-4);">
-        <strong id="fp-visible-count">{{ course_offerings|length }}</strong>
-        <span style="font-weight:400;"> / {{ course_offerings|length }} courses</span>
+        <strong id="fp-visible-count">{{ faculty_classes|length }}</strong>
+        <span style="font-weight:400;"> / {{ faculty_classes|length }} courses</span>
       </span>
       <button class="fp-btn fp-btn-ghost fp-btn-sm" onclick="fpResetFilters()" title="Reset filters" aria-label="Reset filters">
         <span class="fp-ms">restart_alt</span>
@@ -161,7 +160,7 @@
 </div>
 
 {# ── Course Cards / Empty State ───────────────────────────────── #}
-{% if not course_offerings %}
+{% if not faculty_classes %}
 
 <div class="fp-card fade-in" style="margin-bottom:24px;">
   <div style="padding:56px 32px;text-align:center;">
@@ -187,7 +186,7 @@
 
 {# ── Grid View ──────────────────────────────────────────────────── #}
 <div id="fp-classes-grid" class="fp-mc-grid">
-  {% for co in course_offerings %}
+  {% for co in faculty_classes %}
 
   {% set status_class = 'fp-status-active' if co.status == 'Active' else ('fp-status-active' if co.status == 'Open' else ('fp-status-closed' if co.status == 'Closed' else 'fp-status-upcoming')) %}
 
@@ -260,10 +259,10 @@
 
     {# Actions #}
     <div class="fp-course-actions">
-      <a href="/faculty-portal/attendance?course_offering={{ co.name }}" class="fp-course-action fp-course-action-primary">
+      <a href="/faculty-portal/attendance?class_name={{ co.name | urlencode }}" class="fp-course-action fp-course-action-primary">
         <span class="fp-ms">how_to_reg</span>Attendance
       </a>
-      <a href="/faculty-portal/marks?course_offering={{ co.name }}" class="fp-course-action fp-course-action-primary">
+      <a href="/faculty-portal/marks?course={{ co.course | urlencode }}&academic_term={{ co.academic_term | urlencode }}" class="fp-course-action fp-course-action-primary">
         <span class="fp-ms">grade</span>Grades
       </a>
       <button onclick="fpShowCourseDetails('{{ co.name }}')" class="fp-course-action fp-course-action-primary">
@@ -282,8 +281,8 @@
       <table class="fp-table">
         <thead>
           <tr>
-            <th>Course Code</th>
-            <th>Course Name</th>
+            <th>Class</th>
+            <th>Course</th>
             <th>Term</th>
             <th>Academic Year</th>
             <th>Students</th>
@@ -294,7 +293,7 @@
           </tr>
         </thead>
         <tbody>
-          {% for co in course_offerings %}
+          {% for co in faculty_classes %}
           <tr class="fp-class-row"
               data-year="{{ co.academic_year }}"
               data-term="{{ co.term_name }}"
@@ -319,11 +318,11 @@
             </td>
             <td style="text-align:right;">
               <div style="display:flex;gap:6px;justify-content:flex-end;">
-                <a href="/faculty-portal/attendance?course_offering={{ co.name }}"
+                <a href="/faculty-portal/attendance?class_name={{ co.name | urlencode }}"
                    class="fp-btn fp-btn-sm" style="background:var(--fp-primary);color:#fff;text-decoration:none;">
                   <span class="fp-ms">how_to_reg</span>Attendance
                 </a>
-                <a href="/faculty-portal/marks?course_offering={{ co.name }}"
+                <a href="/faculty-portal/marks?course={{ co.course | urlencode }}&academic_term={{ co.academic_term | urlencode }}"
                    class="fp-btn fp-btn-sm" style="background:var(--fp-primary);color:#fff;text-decoration:none;">
                   <span class="fp-ms">grade</span>Grades
                 </a>
@@ -469,7 +468,7 @@
 <script>
 /* ── Course data store ── */
 var _fpCourses = {};
-{% for co in course_offerings %}
+{% for co in faculty_classes %}
 _fpCourses[{{ co.name | tojson }}] = {
   name:     {{ co.course_name | tojson }},
   id:       {{ co.name | tojson }},
@@ -480,6 +479,7 @@ _fpCourses[{{ co.name | tojson }}] = {
   students: {{ co.student_count }},
   sessions: {{ co.total_sessions }},
   status:   {{ (co.status or 'Active') | tojson }},
+  marksQs:  {{ ('course=' ~ (co.course | urlencode) ~ '&academic_term=' ~ (co.academic_term | urlencode)) | tojson }},
   pending:  {{ co.pending_sessions }},
   next:     {{ co.next_session | tojson }},
   studentList: {{ co.students | tojson }},
@@ -839,10 +839,10 @@ function fpShowCourseDetails(id) {
     // Quick Actions
     '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--fp-text-3);margin:16px 0 8px;">Quick Actions</div>',
     '<div class="fp-cd-actions">',
-      '<a href="/faculty-portal/attendance?course_offering=' + encodeURIComponent(co.id) + '" class="fp-btn fp-btn-primary" style="justify-content:center;text-decoration:none;">',
+      '<a href="/faculty-portal/attendance?class_name=' + encodeURIComponent(co.id) + '" class="fp-btn fp-btn-primary" style="justify-content:center;text-decoration:none;">',
         '<span class="fp-ms">how_to_reg</span>Take Attendance',
       '</a>',
-      '<a href="/faculty-portal/marks?course_offering=' + encodeURIComponent(co.id) + '" class="fp-btn fp-btn-secondary" style="justify-content:center;text-decoration:none;">',
+      '<a href="/faculty-portal/marks?' + co.marksQs + '" class="fp-btn fp-btn-secondary" style="justify-content:center;text-decoration:none;">',
         '<span class="fp-ms">grade</span>Enter Grades',
       '</a>',
     '</div>',

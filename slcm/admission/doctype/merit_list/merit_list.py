@@ -2,6 +2,7 @@ import frappe
 import re
 import json
 from frappe.model.document import Document
+from slcm.security.access import require_desk_user
 
 
 class MeritList(Document):
@@ -40,14 +41,9 @@ class MeritList(Document):
 
     def on_trash(self):
         """
-        When a Merit List is deleted, clear its associated audit logs
-        to prevent Frappe's link constraint errors.
+        Audit logs are kept when a Merit List is deleted (the trail must survive the record);
+        hooks.ignore_links_on_delete lets the delete go through despite their links.
         """
-        frappe.db.delete("Merit Audit Log", {"merit_list": self.name})
-        frappe.db.delete("Admission Audit Log", {
-            "reference_doctype": "Merit List",
-            "reference_name": self.name
-        })
 
     def validate_uniqueness(self):
         """
@@ -172,6 +168,7 @@ def publish_merit_list(merit_list_name):
     Sets status to 'Publishing' during execution and 'Published' once completed.
     Also updates the Application Status of all applicants in the list to 'Merit Published'.
     """
+    require_desk_user()
     doc = frappe.get_doc("Merit List", merit_list_name)
 
     if doc.status == "Published":

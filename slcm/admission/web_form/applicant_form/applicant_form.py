@@ -4,7 +4,11 @@ import frappe
 from frappe import _
 from frappe.utils import cint, flt, strip_html
 
-from slcm.admission.doctype.applicant.applicant import APPLICATION_SUBMITTED_STATUSES
+from slcm.admission.doctype.applicant.applicant import (
+    APPLICATION_SUBMITTED_STATUSES,
+    state_belongs_to_country as _state_belongs_to_country,
+    state_country_names,
+)
 from slcm.admission.utils.multiprogram_applicant import (
     build_multiprogram_profile_copy_payload,
     pop_multiprogram_profile_copy_from_cache,
@@ -34,6 +38,8 @@ def get_context(context):
 
     # Hide Frappe’s default web-form breadcrumb ("Back > APP-…"); custom bar stays in applicant_form.js.
     context.no_breadcrumbs = True
+
+    _hide_child_table_name_field(context)
 
     # Enforce Applicant DocType permissions
     is_new = frappe.form_dict.name == "new" or not frappe.form_dict.name
@@ -91,6 +97,17 @@ def get_context(context):
         frappe.redirect(f"/{route}/{doc_name}")
 
     return None
+
+
+def _hide_child_table_name_field(context):
+    """
+    Frappe's web form adds a "Name" (row ID) field to every child table that has no
+    title field (web_form.get_in_list_view_fields). Desk never shows it — drop it here too.
+    """
+    wfd = context.get("web_form_doc") or {}
+    for field in wfd.get("web_form_fields") or []:
+        if field.get("fieldtype") == "Table" and field.get("fields"):
+            field["fields"] = [df for df in field["fields"] if df.get("fieldname") != "name"]
 
 
 # ───────────────────────────────────────────────────────────────────
@@ -370,30 +387,42 @@ def get_open_programmes():
 # ───────────────────────────────────────────────────────────────────
 
 @frappe.whitelist(allow_guest=False)
-def get_application_fee_amount(program, admission_cycle=None, category=None):
+def get_application_fee_amount(
+    program=None,
+    admission_cycle=None,
+    category=None,
+    gender=None,
+    pwd=None,
+    foriegn_national=None,
+):
     """
     Return the application fee for the given program, admission cycle, and
-    reservation category (whether_scstobc_ncl value: NA | SC | ST | OBC-NCL).
-
-    Looks up Programme Reservation Policy → Programme Reservation Category rows.
-    Falls back to the active Admission Cycle when admission_cycle is blank.
-    Returns 0 when no matching policy or category row is found.
+    applicant demographic criteria based on Application Fee doctype.
     """
-    if not program:
-        return 0
     try:
         cycle = (admission_cycle or "").strip()
         if not cycle:
-            cycle = frappe.db.get_value(
-                "Admission Cycle", {"status": "Active"}, "name", order_by="creation desc"
-            ) or ""
+            cycle = (
+                frappe.db.get_value(
+                    "Admission Cycle", {"status": "Active"}, "name", order_by="creation desc"
+                )
+                or ""
+            )
         if not cycle:
             return 0
 
         from slcm.api.service.application_fee_service import get_application_fee_for_category
 
         cat = (category or "").strip() or None
-        fee = get_application_fee_for_category(program, cycle, cat)
+        is_foreign = (foriegn_national or "").strip() == "Yes"
+        fee = get_application_fee_for_category(
+            program=program,
+            admission_cycle=cycle,
+            category=cat,
+            is_foreign=is_foreign,
+            gender=gender,
+            pwd=pwd,
+        )
         return flt(fee, 2)
     except Exception:
         frappe.log_error(frappe.get_traceback(), "Applicant Web Form — get_application_fee_amount")
@@ -563,16 +592,19 @@ def save_applicant_draft(data, ignore_mandatory=True):
     doc.status = "Draft"
     doc.email              = email
 
-    # Recalculate application fee from Programme Reservation Policy
+    # Recalculate application fee
     if getattr(doc, "program", None) and getattr(doc, "admission_cycle", None):
         try:
             from slcm.api.service.application_fee_service import get_application_fee_for_category
 
-            raw_cat = (getattr(doc, "whether_scstobc_ncl", "") or "").strip()
-            cat     = raw_cat if raw_cat and raw_cat.upper() != "GENERAL" else None
-            foriegn_national = getattr(doc, "foriegn_national", "") or ""
-            is_foreign = foriegn_national == "Yes" if foriegn_national else False
-            computed = flt(get_application_fee_for_category(doc.program, doc.admission_cycle, cat, is_foreign=is_foreign), 2)
+            is_foreign = (getattr(doc, "foriegn_national", "") or "").strip() == "Yes"
+            computed = flt(get_application_fee_for_category(
+                program=doc.program,
+                admission_cycle=doc.admission_cycle,
+                category=getattr(doc, "whether_scstobc_ncl", None),
+                is_foreign=is_foreign,
+                applicant=doc,
+            ), 2)
             fee_status = (getattr(doc, "application_fee_status", "") or "").strip()
             if fee_status not in ("Paid", "Waived"):
                 doc.application_fee_amount = computed
@@ -1135,14 +1167,18 @@ def switch_applicant_program(applicant_name, program):
         try:
             from slcm.api.service.application_fee_service import get_application_fee_for_category
 
-            raw_cat = (getattr(doc, "whether_scstobc_ncl", "") or "").strip()
-            cat = raw_cat if raw_cat and raw_cat.upper() != "GENERAL" else None
             fee_status = (getattr(doc, "application_fee_status", "") or "").strip()
-            foriegn_national = getattr(doc, "foriegn_national", "") or ""
-            is_foreign = foriegn_national == "Yes" if foriegn_national else False
+            is_foreign = (getattr(doc, "foriegn_national", "") or "").strip() == "Yes"
             if fee_status not in ("Paid", "Waived"):
                 doc.application_fee_amount = flt(
-                    get_application_fee_for_category(doc.program, doc.admission_cycle, cat, is_foreign=is_foreign), 2
+                    get_application_fee_for_category(
+                        program=doc.program,
+                        admission_cycle=doc.admission_cycle,
+                        category=getattr(doc, "whether_scstobc_ncl", None),
+                        is_foreign=is_foreign,
+                        applicant=doc,
+                    ),
+                    2,
                 )
         except Exception:
             frappe.log_error(frappe.get_traceback(), "switch_applicant_program — fee recalc")
@@ -1272,45 +1308,24 @@ def download_portal_application_fee_receipt(applicant_name):
     frappe.local.response.filecontent = pdf
     frappe.local.response.type = "pdf"
 
-# Nationality options spelled differently from the Country used on State records
-NATIONALITY_STATE_COUNTRY_ALIASES = {
-    "united states of america": "United States",
-    "cape verde": "Cabo Verde",
-    "republic of the congo": "Congo",
-    "czechia": "Czech Republic",
-    "the gambia": "Gambia",
-    "federated states of micronesia": "Micronesia",
-    "são tomé and príncipe": "Sao Tome and Principe",
-    "türkiye": "Turkey",
-}
-
-
-def _state_country_names(country):
-    """Lower-cased country names to match against State.country (the given name plus its alias)."""
-    country = (country or "").strip().lower()
-    names = {country}
-    alias = NATIONALITY_STATE_COUNTRY_ALIASES.get(country)
-    if alias:
-        names.add(alias.lower())
-    return tuple(names)
-
-
 @frappe.whitelist(allow_guest=True)
 def state_belongs_to_country(state=None, country=None):
     """True when the State belongs to the given country / nationality. 'Other' is always valid."""
-    state = (state or "").strip()
-    if not state or state.lower() == "other" or not (country or "").strip():
-        return True
+    return _state_belongs_to_country(state, country)
 
-    state_country = frappe.db.get_value("State", state, "country")
-    if not state_country:
-        return True
 
-    return state_country.strip().lower() in _state_country_names(country)
+# The web form's Autocomplete calls these queries directly without a page length, and the
+# dropdowns must list every option — so a missing / 0 page length means "no limit".
+ADDRESS_QUERY_MAX_ROWS = 25000
+
+
+def _address_query_page_len(page_len):
+    page_len = cint(page_len)
+    return page_len if page_len > 0 else ADDRESS_QUERY_MAX_ROWS
 
 
 @frappe.whitelist(allow_guest=True)
-def state_query(doctype=None, txt=None, searchfield=None, start=0, page_len=20, filters=None, **kwargs):
+def state_query(doctype=None, txt=None, searchfield=None, start=0, page_len=0, filters=None, **kwargs):
     if isinstance(filters, str):
         import json
         try:
@@ -1334,7 +1349,7 @@ def state_query(doctype=None, txt=None, searchfield=None, start=0, page_len=20, 
     params = {
         "txt": "%" + (txt or "") + "%",
         "start": cint(start),
-        "page_len": cint(page_len)
+        "page_len": _address_query_page_len(page_len)
     }
 
     if country and country.strip():
@@ -1346,7 +1361,7 @@ def state_query(doctype=None, txt=None, searchfield=None, start=0, page_len=20, 
             and name like %(txt)s
             order by (case when name = 'Other' then 1 else 0 end), name
             limit %(start)s, %(page_len)s
-        """, dict(params, countries=_state_country_names(country)))
+        """, dict(params, countries=state_country_names(country)))
         return to_results(matched_rows)
 
     rows = frappe.db.sql("""
@@ -1359,7 +1374,7 @@ def state_query(doctype=None, txt=None, searchfield=None, start=0, page_len=20, 
     return to_results(rows)
 
 @frappe.whitelist(allow_guest=True)
-def city_query(doctype=None, txt=None, searchfield=None, start=0, page_len=20, filters=None, **kwargs):
+def city_query(doctype=None, txt=None, searchfield=None, start=0, page_len=0, filters=None, **kwargs):
     if isinstance(filters, str):
         import json
         try:
@@ -1376,7 +1391,7 @@ def city_query(doctype=None, txt=None, searchfield=None, start=0, page_len=20, f
     params = {
         "txt": "%" + (txt or "") + "%",
         "start": cint(start),
-        "page_len": cint(page_len)
+        "page_len": _address_query_page_len(page_len)
     }
 
     if state and state.strip():

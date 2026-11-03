@@ -978,6 +978,7 @@
         // Candidate prefix for shared pages (/nlsat or /pace) and the default landing page
         window.ADM_PREFIX = {{ nav.prefix | tojson }};
         window.ADM_HOME_URL = {{ ('/nlsat/dashboard' if nav.prefix == '/nlsat' else nav.profile_url) | tojson }};
+        window.PORTAL_TYPE = {{ (nav.portal_type if nav else None) | tojson }};
 
         async function apiFetch(method, args, httpMethod = 'POST') {
             const token = window.csrf_token || (typeof frappe !== 'undefined' ? frappe.csrf_token : '');
@@ -1117,10 +1118,16 @@
                     _panelData = await apiFetch('slcm.admission.utils.web.get_portal_notifications', {
                         notif_page: _notifPage,
                         ann_page: _annPage,
-                        page_length: PANEL_PAGE_SIZE
+                        page_length: PANEL_PAGE_SIZE,
+                        portal_type: window.PORTAL_TYPE || ''
                     });
                 } else {
-                    const r = await fetch('/api/method/slcm.admission.utils.web.get_public_announcements');
+                    const params = new URLSearchParams();
+                    if (window.PORTAL_TYPE) {
+                        params.append('portal_type', window.PORTAL_TYPE);
+                    }
+                    const q = params.toString() ? '?' + params.toString() : '';
+                    const r = await fetch('/api/method/slcm.admission.utils.web.get_public_announcements' + q);
                     const d = await r.json();
                     _panelData = { notifications: [], announcements: d.message || [] };
                 }

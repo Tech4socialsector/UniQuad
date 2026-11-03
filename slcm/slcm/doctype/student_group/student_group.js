@@ -43,7 +43,7 @@ frappe.ui.form.on("Student Group", {
 			filters: { academic_year: frm.doc.academic_year || "" },
 		}));
 
-		// Programme → programmes that have a Course Offering in the selected year + term
+		// Programme → programmes that have a Class in the selected year + term
 		frm.set_query("programme", () => ({
 			query: "slcm.slcm.doctype.student_group.student_group.programme_query",
 			filters: {
@@ -52,12 +52,12 @@ frappe.ui.form.on("Student Group", {
 			},
 		}));
 
-		// Course Offering → matches the selected year, term and programme
-		frm.set_query("course_offering", () => ({
+		// Class → matches the selected year, term and programme
+		frm.set_query("class_name", () => ({
 			filters: {
 				academic_year: frm.doc.academic_year || "",
-				term_name: frm.doc.academic_term || "",
-				program: frm.doc.programme || "",
+				academic_term: frm.doc.academic_term || "",
+				programme: frm.doc.programme || "",
 			},
 		}));
 	},
@@ -72,7 +72,7 @@ frappe.ui.form.on("Student Group", {
 	},
 
 	programme(frm) {
-		frm.set_value("course_offering", "");
+		frm.set_value("class_name", "");
 	},
 
 	refresh(frm) {

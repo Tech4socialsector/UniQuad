@@ -18,8 +18,8 @@ frappe.ui.form.on("Attendance Session", {
         // Bug 8: Toggle field visibility based on based_on value
         toggle_fields_based_on(frm);
 
-        // Bug 11: "Fetch Students" button when course_offering or class_schedule is set and doc is saved
-        if (!frm.is_new() && (frm.doc.course_offering || frm.doc.class_schedule)) {
+        // Bug 11: "Fetch Students" button when class_name or class_schedule is set and doc is saved
+        if (!frm.is_new() && (frm.doc.class_name || frm.doc.class_schedule)) {
             frm.add_custom_button(__("Fetch Students"), function () {
                 frappe.call({
                     method: "slcm.slcm.doctype.attendance_session.attendance_session.fetch_students_for_session",
@@ -85,6 +85,6 @@ frappe.ui.form.on("Attendance Session", {
 function toggle_fields_based_on(frm) {
     const based_on = frm.doc.based_on;
 
-    frm.toggle_display("class_schedule", based_on === "Time Table");
-    frm.toggle_display("course_schedule", based_on === "Course Schedule");
+    // Class and Time Table sessions both come from a Time Table entry
+    frm.toggle_display("class_schedule", based_on === "Class" || based_on === "Time Table");
 }

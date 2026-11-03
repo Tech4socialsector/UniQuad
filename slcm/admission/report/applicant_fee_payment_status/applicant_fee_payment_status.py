@@ -172,7 +172,7 @@ def _sum_receipts_by_offer(offer_letters: list[str]) -> dict[str, float]:
 	pr_rows = frappe.db.sql(
 		f"""
 		SELECT reference_name as ref_name, SUM(amount) AS total_amount
-		FROM `tabPayment Request`
+		FROM `tabSLCM Payment Request`
 		WHERE status = \'Paid\' AND reference_doctype = \'Offer Letter\' AND reference_name IN ({placeholders})
 		GROUP BY reference_name
 		""",
@@ -209,7 +209,7 @@ def _sum_application_fee_receipts_by_applicant(applicants: list[str]) -> dict[st
 	pr_rows = frappe.db.sql(
 		f"""
 		SELECT reference_name as ref_name, SUM(amount) AS total_amount
-		FROM `tabPayment Request`
+		FROM `tabSLCM Payment Request`
 		WHERE status = \'Paid\' AND reference_doctype = \'Applicant\' AND reference_name IN ({placeholders})
 		GROUP BY reference_name
 		""",
@@ -322,7 +322,7 @@ def get_data(filters: dict | None) -> list[dict]:
 	pr_details = {}
 	if all_t_ids:
 		prs = frappe.get_all(
-			"Payment Request",
+			"SLCM Payment Request",
 			filters={"transaction_id": ["in", all_t_ids], "docstatus": 1},
 			fields=[
 				"transaction_id", "settlement_id", "settlement_utr", 

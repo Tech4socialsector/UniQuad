@@ -8,8 +8,8 @@
   "exam_plan__course_section",
   "exam_plan",
   "column_break_wooe",
-  "course_offering",
   "course",
+  "academic_term",
   "course_code",
   "section_evaluators",
   "evaluators",
@@ -41,21 +41,20 @@
    "reqd": 1
   },
   {
-   "fieldname": "course_offering",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Course Offering",
-   "options": "Course Offering",
-   "reqd": 1
-  },
-  {
-   "fetch_from": "course_offering.course_title",
    "fieldname": "course",
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Course",
    "options": "Course",
-   "read_only": 1
+   "reqd": 1
+  },
+  {
+   "fetch_from": "exam_plan.term",
+   "fetch_if_empty": 1,
+   "fieldname": "academic_term",
+   "fieldtype": "Link",
+   "label": "Academic Term",
+   "options": "Academic Term"
   },
   {
    "fetch_from": "course.course_code",
@@ -185,7 +184,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-04-09 00:00:00.000000",
+ "modified": "2026-10-29 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Access Result Settings",

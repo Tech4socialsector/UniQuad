@@ -257,7 +257,7 @@ def get_data(filters: dict | None) -> list[dict]:
 	pr_details = {}
 	if all_t_ids:
 		prs = frappe.get_all(
-			"Payment Request",
+			"SLCM Payment Request",
 			filters={"transaction_id": ["in", all_t_ids], "docstatus": 1},
 			fields=[
 				"transaction_id", "settlement_id", "settlement_utr", 

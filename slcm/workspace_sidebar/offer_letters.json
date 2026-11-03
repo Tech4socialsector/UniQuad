@@ -37,7 +37,7 @@
    "indent": 0,
    "keep_closed": 0,
    "label": "Payment request",
-   "link_to": "Payment Request",
+   "link_to": "SLCM Payment Request",
    "link_type": "DocType",
    "show_arrow": 0,
    "type": "Link"
@@ -138,7 +138,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-09-26 12:51:13.503948",
+ "modified": "2026-10-19 16:30:00.000000",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Offer Letters",

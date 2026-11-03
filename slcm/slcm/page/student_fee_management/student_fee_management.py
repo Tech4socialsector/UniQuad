@@ -57,14 +57,10 @@ def get_filter_options():
 		"""SELECT DISTINCT academic_year FROM `tabStudent Master`
 		WHERE IFNULL(academic_year, '') != '' ORDER BY academic_year DESC"""
 	)
-	# Terms set up in Academic Term plus any term held on a student (students copy theirs from the batch,
-	# so a batch without a term leaves students blank — the master list keeps the filter usable).
+	# Terms set up in Academic Term (a student no longer stores a term).
 	terms = frappe.db.sql(
 		"""SELECT academic_year, name AS academic_term FROM `tabAcademic Term`
 		WHERE IFNULL(status, '') != 'Inactive'
-		UNION
-		SELECT DISTINCT academic_year, academic_term FROM `tabStudent Master`
-		WHERE IFNULL(academic_term, '') != ''
 		ORDER BY academic_term""",
 		as_dict=True,
 	)
@@ -119,7 +115,7 @@ def get_students(
 		f"""SELECT
 			sm.name AS student, sm.first_name AS student_name, sm.registration_id,
 			sm.official_email_id, sm.email, sm.programme_of_study, sm.batch,
-			sm.academic_year, sm.academic_term, sm.section, sm.student_status,
+			sm.academic_year, NULL AS academic_term, sm.section, sm.student_status,
 			IFNULL(fd.demand_count, 0)       AS demand_count,
 			IFNULL(fd.total_payable, 0)      AS total_payable,
 			IFNULL(fd.paid_amount, 0)        AS paid_amount,
@@ -146,13 +142,20 @@ def _student_base(academic_year=None, academic_term=None, programme=None, dues_s
 	# Each filter takes one or more values (multi-select); empty means "no filter".
 	for param, column, key in (
 		(academic_year, "sm.academic_year", "academic_year"),
-		(academic_term, "sm.academic_term", "academic_term"),
 		(programme, "sm.programme_of_study", "programme"),
 	):
 		selected = _as_list(param)
 		if selected:
 			conditions.append(f"{column} IN %({key})s")
 			values[key] = tuple(selected)
+	# A student no longer stores a term: a Term filter matches students in the term's academic year.
+	selected_terms = _as_list(academic_term)
+	if selected_terms:
+		conditions.append(
+			"sm.academic_year IN (SELECT at.academic_year FROM `tabAcademic Term` at"
+			" WHERE at.name IN %(academic_term)s)"
+		)
+		values["academic_term"] = tuple(selected_terms)
 	if search:
 		conditions.append(
 			"(sm.name LIKE %(search)s OR sm.first_name LIKE %(search)s "
@@ -194,7 +197,7 @@ def _student_base(academic_year=None, academic_term=None, programme=None, dues_s
 _SORT_COLUMNS = {
 	"student": ["sm.first_name"],
 	"programme": ["sm.programme_of_study"],
-	"year_term": ["sm.academic_year", "sm.academic_term"],
+	"year_term": ["sm.academic_year"],
 	"batch": ["sm.batch"],
 	"demand_count": ["IFNULL(fd.demand_count, 0)"],
 	"total_payable": ["IFNULL(fd.total_payable, 0)"],
@@ -311,7 +314,7 @@ def get_student_dues(student):
 		student,
 		[
 			"name", "first_name", "registration_id", "official_email_id", "email", "phone",
-			"programme_of_study", "batch", "academic_year", "academic_term", "section",
+			"programme_of_study", "batch", "academic_year", "section",
 			"student_status", "passport_size_photo",
 			"applying_scholarship", "scholarship_type", "scholarship_amount", "scholarship_percentage",
 			"scholarship_approval_date", "fee_waiver_remarks",
@@ -321,7 +324,7 @@ def get_student_dues(student):
 	if profile.programme_of_study:
 		profile.update(
 			frappe.db.get_value(
-				"Programme", profile.programme_of_study, ["program_name", "department"], as_dict=True
+				"Programme", profile.programme_of_study, ["program_name"], as_dict=True
 			)
 			or {}
 		)
@@ -634,6 +637,7 @@ def move_to_excess(student, fee_demand, amount, credit_type, remarks=None, acade
 	note.academic_year = academic_year or demand.academic_year
 	note.credit_amount = amount
 	note.source_receipt = source_receipt[0][0] if source_receipt else None
+	note.source_fee_demand = fee_demand
 	note.remarks = _("Moved from due {0} ({1}). {2}").format(
 		fee_demand, demand.fee_component or demand.description or "", remarks
 	)

@@ -14,6 +14,23 @@ class StudentTranscript(Document):
 
 # ── Superscript helper ────────────────────────────────────────────────────────
 
+def _set_programme_display(sm, student_id):
+    """Fill sm programme / programme_name / batch_year. The programme is the
+    student's latest Enrolled Student Enrollment's program, falling back to
+    Student Master.programme_of_study (a Batch no longer carries one)."""
+    program = frappe.db.get_value(
+        "Student Enrollment",
+        {"student": student_id, "status": "Enrolled"},
+        "program",
+        order_by="enrollment_date desc, creation desc",
+    ) or sm.get("programme_of_study")
+    sm["programme"] = program or ""
+    sm["programme_name"] = (
+        frappe.db.get_value("Programme", program, "program_name") or program
+    ) if program else ""
+    sm["batch_year"] = sm.get("batch") or ""
+
+
 def _grade_with_superscript(grade):
     """
     Convert trailing numeric digits and +/- in a grade to HTML <sup> tags.
@@ -100,7 +117,7 @@ def get_transcript_context(student_id):
         [
             "first_name", "middle_name", "last_name",
             "registration_id", "passport_size_photo",
-            "programme", "batch_year", "academic_year",
+            "batch", "programme_of_study", "academic_year",
             "current_cgpa", "cumulative_percentage",
             "email", "department", "specialisation",
         ],
@@ -111,12 +128,7 @@ def get_transcript_context(student_id):
     sm["full_name"] = " ".join(p.strip() for p in name_parts if p.strip())
 
     # Programme display name
-    prog_id = sm.get("programme")
-    if prog_id:
-        cohort_name = frappe.db.get_value("Batch", prog_id, "cohort_name")
-        sm["programme_name"] = cohort_name or prog_id
-    else:
-        sm["programme_name"] = ""
+    _set_programme_display(sm, student_id)
 
     # ── 3. Fetch all course marks for the student ─────────────────────────────
     rows = frappe.db.sql(
@@ -475,7 +487,7 @@ def get_year_based_transcript_context(student_id):
         [
             "first_name", "middle_name", "last_name",
             "registration_id", "passport_size_photo",
-            "programme", "batch_year", "current_cgpa"
+            "batch", "programme_of_study", "current_cgpa"
         ],
         as_dict=True,
     ) or {}
@@ -484,12 +496,7 @@ def get_year_based_transcript_context(student_id):
     sm["full_name"] = " ".join(p.strip() for p in name_parts if p.strip())
 
     # Programme display name
-    prog_id = sm.get("programme")
-    if prog_id:
-        cohort_name = frappe.db.get_value("Batch", prog_id, "cohort_name")
-        sm["programme_name"] = cohort_name or prog_id
-    else:
-        sm["programme_name"] = ""
+    _set_programme_display(sm, student_id)
 
     # Get all course marks
     rows = frappe.db.sql("""

@@ -5,5 +5,5 @@
 from frappe.model.document import Document
 
 
-class newdoctypebnqkjnnluh(Document):
+class CourseSchedulingTool(Document):
 	pass

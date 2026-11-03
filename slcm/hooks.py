@@ -10,8 +10,11 @@ app_description = "Student Life Cycle Management"
 app_email = "tech4socialsector@azimpremjifoundation.org"
 app_license = "mit"
 
-after_install = "slcm.install.after_install"
-after_migrate = "slcm.install.after_migrate"
+# The erpnext_bridge entries are no-ops on sites without ERPNext.
+after_install = ["slcm.install.after_install", "slcm.erpnext_bridge.install.after_migrate"]
+after_migrate = ["slcm.install.after_migrate", "slcm.erpnext_bridge.install.after_migrate"]
+after_app_install = "slcm.erpnext_bridge.install.after_app_install"
+before_app_uninstall = "slcm.erpnext_bridge.install.before_app_uninstall"
 # Apps
 # ------------------
 
@@ -43,6 +46,10 @@ app_include_css = []
 doctype_js = {
     "Notification": "public/js/notification_override.js",
     "Data Import": "public/js/bulk_upload_template.js",
+    # ERPNext Company form: "SLCM Fees" buttons (only loads where ERPNext provides Company)
+    "Company": "erpnext_bridge/company.js",
+    # Time Table → Create / View / Edit dialogs; Add / Remove Students
+    "Classes": ["public/js/class_time_table.js", "public/js/class_student_picker.js"],
 }
 
 # Bulk-upload templates (Download / Upload buttons) on these lists
@@ -50,6 +57,10 @@ doctype_list_js = {
     "Fee Concession": "public/js/bulk_upload_template.js",
     "Fee Payment": "public/js/bulk_upload_template.js",
     "Fee Demand": "public/js/bulk_upload_template.js",
+    # Action → Enroll step-by-step wizard
+    "Student Master": "public/js/enrollment_wizard.js",
+    # Create Class → Add / Remove Students
+    "Student Enrollment": "public/js/class_student_picker.js",
 }
 
 doctype_calendar_js = {
@@ -159,8 +170,6 @@ fixtures = [
     },
     # --- Master data ---
     {"doctype": "Workflow State"},
-    {"doctype": "Applicant Status"},
-    {"doctype": "Stages"},
 
     {"doctype": "PACE Application Status"},
     # --- Email Templates ---
@@ -179,7 +188,6 @@ fixtures = [
                 "Entrance Test Result",
                 "Entrance Test Reschedule",
                 "Entrance Test Allocation",
-                "Application Submitted Email",
                 "PACE Application Reminder",
                 "PACE Draft Application Reminder",
                 "PACE Application Submitted",
@@ -230,17 +238,9 @@ fixtures = [
                 "NLSAT Full Fee Paid",
                 "NLSAT Offer Expired / Withdrawn",
                 "NLSAT Application Submitted and Paid Email",
-                "Application Submitted Email"
+                "International Entrance Test Allocation"
             ]]
         ]
-    },
-    # --- Admission Reminder Email DocTypes ---
-    {
-        "doctype": "Applicant Reminder Email Configuration",
-        "filters": [["name", "=", "Applicant Reminder Email Configuration"]]
-    },
-    {
-        "doctype": "Applicant Reminder Email Log"
     },
     # --- Student Portal Settings (single doctype — ships with defaults) ---
     {
@@ -263,7 +263,7 @@ fixtures = [
         "filters": [["name", "in", [
             # Programme Management / Registration
             "Total Students", "Active Enrollments", "Active Programs", "Active Courses",
-            "Active Cohorts", "Open Course Offerings",
+            "Active Batches", "Active Classes",
             "Draft", "Selected", "Pending REGO", "Pending FINO", "Pending Registration",
             "Pending Print & Scan", "Pending Residences", "Pending IT",
             "Final Verification REGO", "Completed", "Re-Open",
@@ -274,9 +274,9 @@ fixtures = [
             "Total Attendance Records", "Present Count", "Absent Count", "OD Count",
             "Total Sessions", "Active Sessions", "Pending Condonations", "Pending FA / MFA",
             # Faculty
-            "Faculty My Course Offerings",
+            "Faculty My Classes",
             "Faculty Active Attendance Sessions", "Faculty Pending Condonation Requests",
-            "Faculty Open Course Offerings", "Faculty Office Hours Groups",
+            "Faculty Active Classes", "Faculty Office Hours Groups",
             # Fees Management
             "Total Fee Demands", "Pending Fee Demands", "Overdue Fee Demands",
             "Fee Receipts This Month",
@@ -295,14 +295,14 @@ fixtures = [
         "filters": [["name", "in", [
             # Programme Management / Registration
             "Student Registration Status", "Student Enrollment by Program",
-            "Cohort Status Distribution", "Course Offerings by Status",
+            "Batch Status Distribution", "Classes by Term",
             # IT Team (ID Card)
             "ID Card Status Distribution", "ID Cards Generated Over Time",
             # Attendance
             "Attendance Status Distribution", "Attendance Trend Over Time",
             "Session Type Breakdown", "FA MFA Application Status",
             # Faculty
-            "Faculty Attendance Trend", "Faculty Course Offerings by Status",
+            "Faculty Attendance Trend", "Faculty Classes by Term",
             # Fees Management
             "Demand Status Distribution", "Demands by Fee Component",
             "Monthly Fee Collection",
@@ -334,7 +334,7 @@ fixtures = [
         # A fixture copy would be force-imported after it on every migrate and win.
         "filters": [
             ["module", "in", ["SLCM", "Admission", "PACE"]],
-            ["name", "not in", ["Student Portal", "Master"]],
+            ["name", "not in", ["Student Portal", "Master", "FLE"]],
         ]
     },
     # --- Workspace Sidebars ---
@@ -357,7 +357,12 @@ fixtures = [
     # Also exclude "Web Form-amount_field": it's created at runtime by the "payments"
     # app (payments/utils/utils.py: create_custom_fields) whenever a Web Form has
     # "Accept Payment" enabled — it's not owned by slcm and shouldn't be a fixture.
-    "Web Form",
+    {
+        "doctype": "Web Form",
+        "filters":[
+            ["name", "in", ["applicant-form", "pace-application-form"]]
+        ]
+    },
     {
         "doctype": "Custom Field",
         "filters": [
@@ -384,13 +389,58 @@ fixtures = [
 
 # Document Events
 doc_events = {
+    # ERPNext accounting bridge: only queues a background posting after commit, never raises,
+    # and does nothing unless ERPNext is installed and posting is enabled.
+    "Fee Payment": {
+        "on_submit": "slcm.erpnext_bridge.sync.enqueue_sync",
+        "on_cancel": "slcm.erpnext_bridge.sync.enqueue_sync",
+    },
+    "Fee Refund": {
+        "on_submit": "slcm.erpnext_bridge.sync.enqueue_sync",
+        "on_cancel": "slcm.erpnext_bridge.sync.enqueue_sync",
+    },
+    "Student Credit Note": {
+        "on_submit": "slcm.erpnext_bridge.sync.enqueue_sync",
+        "on_cancel": "slcm.erpnext_bridge.sync.enqueue_sync",
+        # "Money Received" can be completed after submit
+        "on_update_after_submit": "slcm.erpnext_bridge.sync.enqueue_sync",
+    },
+    # Excess applied to a due is recorded as an inserted row on the credit note.
+    "Credit Adjustment Row": {
+        "after_insert": "slcm.erpnext_bridge.sync.enqueue_sync",
+        "on_trash": "slcm.erpnext_bridge.sync.enqueue_sync",
+    },
+    "Stipend Payment": {
+        "on_submit": "slcm.erpnext_bridge.sync.enqueue_sync",
+        "on_cancel": "slcm.erpnext_bridge.sync.enqueue_sync",
+    },
+    # Admission, PACE and FLE money (not submittable: posted when created, reversed when deleted).
+    "Applicant Payment Receipt": {
+        "after_insert": "slcm.erpnext_bridge.sync.enqueue_sync",
+        "on_trash": "slcm.erpnext_bridge.sync.enqueue_sync",
+    },
+    "PACE Receipt": {
+        "after_insert": "slcm.erpnext_bridge.sync.enqueue_sync",
+        "on_trash": "slcm.erpnext_bridge.sync.enqueue_sync",
+    },
+    "FLE Payment Log": {
+        "after_insert": "slcm.erpnext_bridge.sync.enqueue_sync",
+    },
+    "Refund Transaction": {
+        "after_insert": "slcm.erpnext_bridge.sync.enqueue_sync",
+        "on_update": "slcm.erpnext_bridge.sync.enqueue_sync",
+    },
+    # ERPNext Company (exists only with ERPNext): validates its "SLCM Fee Accounting" section.
+    "Company": {
+        "validate": "slcm.erpnext_bridge.company.validate_company",
+    },
     "Student Master": {
         "before_save": "slcm.slcm.doctype.student_master.student_master.before_save_hook"
     },
     "Fee Structure": {
         "on_update": "slcm.slcm.doctype.student_master.student_master.on_fee_structure_update"
     },
-    "Payment Request": {
+    "SLCM Payment Request": {
         "before_save": [
             "slcm.admission.notification.utils.set_payment_request_receiver",
             "slcm.api.service.fee_service.update_payment_request_paid_on"
@@ -399,7 +449,11 @@ doc_events = {
     "Foundations for a Legal Education": {
         "before_save": "slcm.lms_automation.handle_payment_paid"
     },
+    "File": {
+        "before_insert": "slcm.security.files.make_applicant_upload_private"
+    },
     "Applicant": {
+        "validate": "slcm.security.applicant_access.guard_applicant_protected_fields",
         "on_update": "slcm.admission.api.profile.sync_applicant_to_user",
         "on_submit": "slcm.admission.events.on_applicant_submit",
         "on_cancel": "slcm.admission.events.on_applicant_cancel"
@@ -497,6 +551,7 @@ ignore_links_on_delete = ["Admission Audit Log", "Merit Audit Log", "Seat Alloca
 # Request Events
 # ----------------
 before_request = [
+    "slcm.security.api_guard.guard",
     "slcm.utils.auth_routing.intercept_login",
     "slcm.admission.portal_application_web_form.slcm_before_request"
 ]
@@ -606,6 +661,8 @@ scheduler_events = {
 		]
 		},
     "all": [],
+	# ERPNext accounting bridge sweeper (no-op without ERPNext / when disabled)
+	"hourly_long": ["slcm.erpnext_bridge.sync.sync_pending"],
 	"hourly": [
 		"slcm.admission.events.auto_update_cycle_status",
         "slcm.admission.utils.notifications.check_and_send_offer_reminders",
@@ -614,10 +671,10 @@ scheduler_events = {
         "slcm.slcm.utils.parent_rfid_alert.check_and_send_absence_alerts",
 	],
 	"daily": [
+		"slcm.security.discrepancy_check.daily",
 		"slcm.admission.doctype.important_dates.important_dates.update_important_dates_status",
 		"slcm.admission.doctype.waitlist_rule.waitlist_promotion.run_scheduled_waitlist",
 		"slcm.admission.doctype.waitlist_rule.waitlist_promotion.expire_waitlists_past_cutoff",
-		"slcm.admission.events.send_deadline_reminders",
 		"slcm.admission.utils.stage_scheduler.auto_advance_applicant_stages",
 		"slcm.slcm.doctype.student_master.student_master.auto_sync_all_student_fee_structures",
 		"slcm.pace.doctype.pace_admission.pace_admission.auto_close_outdated_admissions",
@@ -631,6 +688,8 @@ scheduler_events = {
 		"slcm.slcm.doctype.student_attendance_condonation.student_attendance_condonation.auto_reject_below_attendance_floor",
 		# Background sync for settlements if webhooks fail
 		"slcm.api.sync_settlements.daily_sync_settlements",
+		# Student Academic Log — move Ongoing to the next term once a term has ended
+		"slcm.slcm.doctype.student_enrollment.student_enrollment.advance_term_status",
 	]
 }
 
@@ -757,7 +816,7 @@ permission_query_conditions = {
     # Time Table - faculty sees only their assigned groups' schedules
     "Time Table":                      "slcm.permissions.class_schedule_query_conditions",
 
-    # Attendance - faculty sees only records for their assigned Course Offerings
+    # Attendance - faculty sees only records for the classes they teach
     "Attendance Session":              "slcm.permissions.attendance_session_query_conditions",
     "Student Attendance":              "slcm.permissions.student_attendance_query_conditions",
     "Attendance Log":                  "slcm.permissions.attendance_log_query_conditions",
@@ -767,9 +826,27 @@ permission_query_conditions = {
 
     # Venue Booking – Faculty/Staff/Student see only their own bookings; Admin/Registrar see all
     "Venue Booking": "slcm.permissions.venue_booking_query_conditions",
+
+    # Applicants see only records linked to their own application
+    "Offer Letter":                "slcm.security.applicant_access.offer_letter_query",
+    "Scholarship Application":     "slcm.security.applicant_access.scholarship_application_query",
+    "Applicant Document":          "slcm.security.applicant_access.applicant_document_query",
+    "Applicant Notification":      "slcm.security.applicant_access.applicant_notification_query",
+    "Applicant Payment Receipt":   "slcm.security.applicant_access.applicant_payment_receipt_query",
+    "Applicant Campus Preference": "slcm.security.applicant_access.applicant_campus_preference_query",
 }
 
 has_permission = {
     "PACE Document Verification": "slcm.pace.doctype.pace_document_verification.pace_document_verification.has_permission",
     "Student Attendance Condonation": "slcm.slcm.doctype.student_attendance_condonation.student_attendance_condonation.has_permission",
+    # Applicants: only records linked to their own application (single-record reads, prints, REST)
+    "Applicant":                     "slcm.security.applicant_access.applicant_has_permission",
+    "Offer Letter":                  "slcm.security.applicant_access.offer_letter_has_permission",
+    "Scholarship Application":       "slcm.security.applicant_access.linked_record_has_permission",
+    "Applicant Document":            "slcm.security.applicant_access.linked_record_has_permission",
+    "Applicant Notification":        "slcm.security.applicant_access.linked_record_has_permission",
+    "Applicant Payment Receipt":     "slcm.security.applicant_access.linked_record_has_permission",
+    "Applicant Campus Preference":   "slcm.security.applicant_access.linked_record_has_permission",
+    "Entrance Test Seat Allocation": "slcm.security.applicant_access.linked_record_has_permission",
+    "Interview Seat Allocation":     "slcm.security.applicant_access.linked_record_has_permission",
 }
