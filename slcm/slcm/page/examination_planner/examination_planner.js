@@ -510,6 +510,14 @@ class ExamPlanner {
 				if ($(el).hasClass('xp-tab')) $(el).toggle(on);
 			});
 			this.$body.find('.xp-rtab').on('click', (e) => { this.tt_tab = $(e.currentTarget).data('tab'); show(); });
+			// like a spreadsheet: a click anywhere in a cell edits it (cursor at the end)
+			this.$body.on('click', '.xp-sheet td', (e) => {
+				if ($(e.target).closest('.xp-in, button, select, a, input').length) return;
+				const el = $(e.currentTarget).find('.xp-in')[0];
+				if (!el) return;
+				el.focus();
+				el.setSelectionRange(el.value.length, el.value.length);
+			});
 			show();
 			this.allocation_sheet(this.$body.find('.xp-tab[data-tab="timetable"]'), t);
 			this.render_evaluation_schedule(this.$body.find('.xp-tab[data-tab="evaluation"]'), t);
@@ -1540,7 +1548,9 @@ class ExamPlanner {
 			.xp-sheet td.xp-blank{background:var(--subtle-fg,#f7f7f7);text-align:center;vertical-align:middle}
 			.xp-sheet td.xp-none{padding:24px;text-align:center;color:var(--text-muted)}
 			.xp-sheet .xp-in{display:block;width:100%;border:0;background:transparent;padding:7px 8px;font:inherit;color:var(--text-color);min-height:34px;field-sizing:content;resize:none;overflow:hidden;line-height:1.35}
-			.xp-sheet .xp-in:focus{outline:2px solid var(--er-brand,#920C24);outline-offset:-2px;background:var(--control-bg,#fff)}
+			.xp-sheet td:has(.xp-in){cursor:text}
+			.xp-sheet .xp-in:focus{outline:none}
+			.xp-sheet td:focus-within{box-shadow:inset 0 0 0 2px var(--er-brand,#920C24);background:var(--control-bg,#fff)}
 			.xp-sheet td.xp-bad,.xp-sheet td.xp-bad .xp-in{background:var(--bg-red,#fde6e8)}.xp-sheet td.xp-warn{background:var(--bg-yellow,#fdf1d2)}
 			.xp-sheet td.xp-txt>.xp-in{text-decoration:underline dotted var(--orange-500,#f59e0b);text-underline-offset:3px}
 			.xp-sub{display:flex;align-items:center;padding:0 8px 6px;font-size:11px}.xp-sheet td.xp-paper-c{position:relative}
