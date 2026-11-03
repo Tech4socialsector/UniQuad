@@ -247,6 +247,16 @@ function open_create_class_dialog(listview) {
 			{ fieldname: "sb_students", fieldtype: "Section Break", label: __("Students"),
 				description: __("Every student listed is added to each class. Use Add / Remove Students to add students of any year or take students out.") },
 			{ fieldname: "f_add", fieldtype: "Button", label: __("Add / Remove Students"), click: () => add_remove_students() },
+			// Group only: fill the student list from a sheet
+			{ fieldname: "import_html", fieldtype: "HTML", depends_on: "eval:doc.class_type=='Group'",
+				options: `<div class="cc-import">
+					<div class="cc-import-actions">
+						<button type="button" class="btn btn-xs btn-default cc-template">${__("Download Template")}</button>
+						<button type="button" class="btn btn-xs btn-default cc-import-btn">${__("Import Students")}</button>
+						<input type="file" class="cc-import-file" accept=".xlsx,.csv" style="display:none">
+					</div>
+					<div class="cc-import-note">${__("Note: download the template, fill one student per row with the columns Student ID, Student Name, Section, Programme and Year, then import the .xlsx or .csv file. Students are matched by Student ID only; name, section, programme and year are taken from the student's record. Imported students are added to the list below, those already listed are kept, and only Enrolled students are added.")}</div>
+				</div>` },
 			{ fieldname: "students", fieldtype: "Table", label: __("Students"), cannot_add_rows: 1, in_place_edit: 0, data: [], fields: student_fields },
 		],
 		primary_action_label: __("Create Class"),
@@ -350,6 +360,91 @@ function open_create_class_dialog(listview) {
 		});
 	}
 
+	/* Import Students (Group): Download Template / Import Students */
+	const $import = dialog.fields_dict.import_html.$wrapper;
+	$import.on("click", ".cc-template", () => {
+		window.open("/api/method/slcm.slcm.doctype.classes.classes.download_class_students_template");
+	});
+	$import.on("click", ".cc-import-btn", () => $import.find(".cc-import-file").val("").trigger("click"));
+	$import.on("change", ".cc-import-file", (e) => {
+		const file = e.target.files && e.target.files[0];
+		if (!file) return;
+		const reader = new FileReader();
+		reader.onload = () => import_students(file.name, reader.result);
+		reader.readAsDataURL(file);
+	});
+
+	function import_students(filename, content) {
+		frappe.call({
+			method: "slcm.slcm.doctype.classes.classes.import_class_students",
+			type: "POST",
+			args: { filename, content },
+			freeze: true,
+			freeze_message: __("Importing students..."),
+		}).then(({ message }) => {
+			const { students = [], not_found = [], not_enrolled = [], duplicates = [] } = message || {};
+			const rows = dialog.fields_dict.students.df.data || [];
+			const listed = new Set(rows.map((r) => r.student_enrollment));
+			const added = to_student_rows(students).filter((r) => !listed.has(r.student_enrollment));
+			set_students(rows.concat(added));
+
+			show_import_result({
+				added,
+				already: students.filter((s) => listed.has(s.name)),
+				not_found, not_enrolled, duplicates,
+			});
+		});
+	}
+
+	// Import result: counts, then one table (Student ID, Name, Status) of every
+	// sheet row, problems first; the table scrolls within a fixed height.
+	function show_import_result({ added, already, not_found, not_enrolled, duplicates }) {
+		const esc = (v) => frappe.utils.escape_html(v == null ? "" : String(v));
+		const STATUS = {
+			not_found: [__("Not Found"), "red"],
+			not_enrolled: [__("Not Enrolled"), "orange"],
+			duplicate: [__("Repeated in Sheet"), "gray"],
+			added: [__("Added"), "green"],
+			already: [__("Already Listed"), "blue"],
+		};
+		const rows = [
+			...not_found.map((s) => ({ id: s.id, name: s.student_name, status: "not_found" })),
+			...not_enrolled.map((s) => ({ id: s.id, name: s.student_name, status: "not_enrolled",
+				note: s.status && s.status !== "Not Enrolled" ? s.status : "" })),
+			...duplicates.map((s) => ({ id: s.id, name: s.student_name, status: "duplicate" })),
+			...added.map((s) => ({ id: s.student_enrollment, name: s.student_name, status: "added" })),
+			...already.map((s) => ({ id: s.name, name: s.student_name, status: "already" })),
+		];
+		const chip = (key, n) => `<div class="cc-res-chip"><span>${STATUS[key][0]}</span><b class="cc-res-${STATUS[key][1]}">${n}</b></div>`;
+		const tag = (r) => `<span class="indicator-pill ${STATUS[r.status][1]}">${STATUS[r.status][0]}${r.note ? ` · ${esc(__(r.note))}` : ""}</span>`;
+		const problems = not_found.length + not_enrolled.length;
+
+		const d = new frappe.ui.Dialog({
+			title: __("Import Students"),
+			size: "large",
+			fields: [{ fieldtype: "HTML", fieldname: "result" }],
+			primary_action_label: __("OK"),
+			primary_action: () => d.hide(),
+		});
+		d.fields_dict.result.$wrapper.html(`
+			<div class="cc-res-chips">
+				${chip("added", added.length)}${chip("already", already.length)}
+				${chip("not_found", not_found.length)}${chip("not_enrolled", not_enrolled.length)}
+				${duplicates.length ? chip("duplicate", duplicates.length) : ""}
+			</div>
+			<div class="cc-res-msg">${problems
+				? __("{0} student(s) could not be added. Check the Student IDs below and import again; students already added stay in the list.", [problems])
+				: __("All students in the sheet are in the list.")}</div>
+			<div class="cc-res-wrap"><table class="cc-res-table">
+				<thead><tr><th>#</th><th>${__("Student ID")}</th><th>${__("Student Name")}</th><th>${__("Status")}</th></tr></thead>
+				<tbody>${rows.length ? rows.map((r, i) => `<tr>
+					<td class="cc-res-idx">${i + 1}</td><td>${esc(r.id)}</td><td>${esc(r.name) || `<span class="text-muted">—</span>`}</td><td>${tag(r)}</td>
+				</tr>`).join("") : `<tr><td colspan="4" class="cc-res-empty">${__("No students in the sheet.")}</td></tr>`}</tbody>
+			</table></div>`);
+		d.$wrapper.addClass("cc-import-result");
+		d.show();
+	}
+
 	dialog.$wrapper.addClass("create-class-dialog");
 	dialog.show();
 }
@@ -370,6 +465,30 @@ function inject_promotion_button_css() {
 			transform: translateY(1px);
 		}
 		/* Create Class: students scroll inside the table (about 8 rows), header stays in view */
+		.create-class-dialog .cc-import { margin: 4px 0 12px; }
+		.create-class-dialog .cc-import-actions { display: flex; gap: 8px; margin-bottom: 6px; }
+		.create-class-dialog .cc-import-note { font-size: 12px; color: var(--text-muted); }
+		.cc-import-result .cc-res-chips { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+		.cc-import-result .cc-res-chip {
+			display: flex; flex-direction: column; min-width: 110px; padding: 8px 12px;
+			border: 1px solid var(--border-color); border-radius: 8px; font-size: 12px; color: var(--text-muted);
+		}
+		.cc-import-result .cc-res-chip b { font-size: 18px; color: var(--text-color); }
+		.cc-import-result .cc-res-green { color: var(--green-700, #166534) !important; }
+		.cc-import-result .cc-res-red { color: var(--red-600, #b02a37) !important; }
+		.cc-import-result .cc-res-orange { color: var(--orange-600, #c2410c) !important; }
+		.cc-import-result .cc-res-msg { font-size: 13px; color: var(--text-muted); margin-bottom: 10px; }
+		.cc-import-result .cc-res-wrap { height: 320px; overflow: auto; border: 1px solid var(--border-color); border-radius: 8px; }
+		.cc-import-result .cc-res-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+		.cc-import-result .cc-res-table th {
+			position: sticky; top: 0; z-index: 1; background: var(--subtle-fg, var(--control-bg));
+			font-size: 11.5px; font-weight: 600; text-transform: uppercase; color: var(--text-muted);
+		}
+		.cc-import-result .cc-res-table th, .cc-import-result .cc-res-table td {
+			padding: 6px 10px; border-bottom: 1px solid var(--border-color); text-align: left;
+		}
+		.cc-import-result .cc-res-idx { width: 44px; color: var(--text-muted); }
+		.cc-import-result .cc-res-empty { padding: 24px; text-align: center; color: var(--text-muted); }
 		.create-class-dialog [data-fieldname="students"] .grid-body .rows {
 			max-height: 360px;
 			overflow-y: auto;
