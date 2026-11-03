@@ -138,16 +138,17 @@ class ExamPlanner {
 	// ── layout ─────────────────────────────────────────────────────────
 	// Screens mounted from slcm/public/js/exam/ are torn down before the step re-renders
 	unmount() {
-		if (this.mounted) this.mounted.destroy();
-		this.mounted = null;
+		(this.mounted || []).forEach((m) => m && m.destroy());
+		this.mounted = [];
 	}
 
-	mount(mod, el, opts) {
-		this.unmount();
-		const token = (this.mount_token = (this.mount_token || 0) + 1);
+	// add: keep the screens already mounted (several on one step)
+	mount(mod, el, opts, add) {
+		if (!add) this.unmount();
+		const token = add ? this.mount_token : (this.mount_token = (this.mount_token || 0) + 1);
 		return EXAM_UI(mod).then((fn) => {
 			if (token !== this.mount_token || !document.body.contains(el)) return;   // step changed meanwhile
-			this.mounted = fn(el, Object.assign({ embedded: true, exam_plan: this.plan }, opts));
+			this.mounted = (this.mounted || []).concat([fn(el, Object.assign({ embedded: true, exam_plan: this.plan }, opts))]);
 		});
 	}
 
@@ -1163,7 +1164,7 @@ class ExamPlanner {
 	// Re-exam sittings, above the Re Exam screen in step 5
 	render_reexam_timetable($el) {
 		call('get_reexam_timetable', { exam_plan: this.plan }).then((t) => {
-			$el.html(`<div class="xp-card-head"><div><h4>${__('Re-exam timetable')}</h4></div></div><div class="xp-tab on xp-rx-sheet"></div>`);
+			$el.html(`<div class="xp-card-head"><div><h4>${__('Re-exam & improvement timetable')}</h4></div></div><div class="xp-tab on xp-rx-sheet"></div>`);
 			this.allocation_sheet($el.find('.xp-rx-sheet'), t, { reexam: true, after_save: () => this.render_reexam_timetable($el) });
 		});
 	}
@@ -1396,35 +1397,204 @@ class ExamPlanner {
 	}
 
 	// ── 5. After results ───────────────────────────────────────────────
+	// Re-exam and improvement are one sitting: one timetable, one registration window, one list of students
 	render_after() {
-		const TABS = [
-			['reexam', __('Re-exam'), 're_exams'],
-			['improvement', __('Improvement'), 'improvement_exams'],
-		];
-		this.after_tab = TABS.some((t) => t[0] === this.after_tab) ? this.after_tab : 'reexam';
-		this.$body.html(this.card(__('After results'),
-			__('For students who failed (re-exam) or want a better grade (improvement). Schedule the re-exams, open the windows and fees, then follow registrations and payments.'), '')
-			+ `<div class="xp-card xp-rtabs-card"><div class="xp-rtabs">${TABS.map(([k, l]) => `<button class="xp-rtab ${k === this.after_tab ? 'on' : ''}" data-tab="${k}">${l}</button>`).join('')}</div>
-			<div class="xp-mount"></div></div>`);
-		this.$body.find('.xp-card-body').first().remove();
-		const $mount = this.$body.find('.xp-rtabs-card .xp-mount');
-		const show = (k) => {
-			this.after_tab = k;
-			this.$body.find('.xp-rtab').removeClass('on').filter(`[data-tab="${k}"]`).addClass('on');
-			this.unmount();
-			$mount.empty();
-			const mod = TABS.find((t) => t[0] === k)[2];
-			if (k === 'reexam') {
-				$mount.html('<div class="xp-rx-carry"></div><div class="xp-rx-tt"></div><div class="xp-rx-screen"></div>');
-				this.render_carry_forward($mount.find('.xp-rx-carry'));
-				this.render_reexam_timetable($mount.find('.xp-rx-tt'));
-				this.mount(mod, $mount.find('.xp-rx-screen')[0], {});
-			} else {
-				this.mount(mod, $mount[0], {});
+		this.unmount();
+		this.$body.html(`<div class="xp-card"><div class="xp-rx-carry"></div><div class="xp-rx-tt"></div></div>
+			<div class="xp-card"><div class="xp-card-head"><div><h4>${__('Re-exam & improvement students')}</h4></div></div><div class="xp-ax"></div></div>`);
+		this.render_carry_forward(this.$body.find('.xp-rx-carry'));
+		this.render_reexam_timetable(this.$body.find('.xp-rx-tt'));
+		this.render_after_students(this.$body.find('.xp-ax'));
+		this.after_tab = null;
+	}
+
+	render_after_students($el) {
+		call('get_after_students', { exam_plan: this.plan }).then((d) => {
+			const rows = d.rows, f = { type: '', course: '', reg: '', pay: '', q: '' }, picked = new Set();
+			const key = (r) => `${r.type}|${r.student}|${r.course}`;
+			const inr = (v) => '₹' + (parseFloat(v) || 0).toLocaleString('en-IN');
+			const opts = (list) => list.map(([v, l]) => `<option value="${esc(v)}">${esc(l)}</option>`).join('');
+			const course_opts = d.courses.map((c) => [c.name, c.course_name]);
+			$el.html(`
+				<div class="xp-bar xp-filters xp-ax-window">
+					<b class="xp-muted" style="align-self:center">${__('Registration window')}</b>
+					<label>${__('Course')}<select class="form-control input-sm" data-w="course"><option value="">${__('All courses')}</option>${opts(course_opts)}</select></label>
+					<label>${__('From')}<input type="date" class="form-control input-sm" data-w="deadline_from"></label>
+					<label>${__('To')}<input type="date" class="form-control input-sm" data-w="deadline_to"></label>
+					<label>${__('Payment gateway')}<select class="form-control input-sm" data-w="payment_gateway">${opts([['Razorpay', 'Razorpay'], ['Easebuzz', 'Easebuzz']])}</select></label>
+					<label>${__('Improvement seats')}<input type="number" min="0" class="form-control input-sm" data-w="registration_limit" placeholder="${__('No limit')}"></label>
+					<button class="btn btn-default btn-sm xp-ax-save" style="align-self:flex-end">${__('Save window')}</button>
+				</div>
+				<div class="xp-bar xp-tools">
+					<button class="btn btn-default btn-sm xp-ax-tpl">${__('Download template')}</button>
+					<button class="btn btn-default btn-sm xp-ax-up">${__('Upload sheet')}</button>
+					<input type="file" accept=".csv" class="xp-ax-file" style="display:none">
+					<button class="btn btn-default btn-sm xp-ax-csv">${__('Export list')}</button>
+					<span class="xp-grow"></span>
+					<button class="btn btn-primary btn-sm xp-ax-enrol">${__('Enrol selected')}</button>
+				</div>
+				<div class="xp-bar xp-filters">
+					<label>${__('Type')}<select class="form-control input-sm" data-f="type"><option value="">${__('Re-exam & improvement')}</option>${opts([['Re-exam', __('Re-exam')], ['Improvement', __('Improvement')]])}</select></label>
+					<label>${__('Course')}<select class="form-control input-sm" data-f="course"><option value="">${__('All courses')}</option>${opts(course_opts)}</select></label>
+					<label>${__('Registration')}<select class="form-control input-sm" data-f="reg"><option value="">${__('All')}</option>${opts([['yes', __('Enrolled')], ['no', __('Not enrolled')], ['blocked', __('Blocked')]])}</select></label>
+					<label>${__('Payment')}<select class="form-control input-sm" data-f="pay"><option value="">${__('All')}</option>${opts([['paid', __('Paid / nothing due')], ['due', __('Fee due')]])}</select></label>
+					<label>${__('Student')}<input class="form-control input-sm" data-f="q" placeholder="${__('Name or ID')}"></label>
+					<span class="xp-count-lines xp-muted"></span>
+				</div>
+				<div class="xp-table"><table class="table table-sm xp-ax-table"><thead><tr>
+					<th style="width:34px"><input type="checkbox" class="xp-ax-all"></th><th>${__('Student')}</th><th>${__('Course')}</th><th>${__('Type')}</th>
+					<th>${__('Grade')}</th><th class="num">${__('Marks')}</th><th>${__('Enrolment')}</th><th class="num">${__('Fee')}</th><th>${__('Payment')}</th><th></th></tr></thead><tbody></tbody></table></div>`);
+
+			// registration window: one course's values, or blank for all courses
+			const load_window = () => {
+				const c = $el.find('[data-w="course"]').val();
+				const fill = (w) => ['deadline_from', 'deadline_to', 'payment_gateway', 'registration_limit'].forEach((k) => $el.find(`[data-w="${k}"]`).val((w || {})[k] || (k === 'payment_gateway' ? 'Razorpay' : '')));
+				if (!c) return fill({});
+				call('get_window', { exam_plan: this.plan, course: c }).then(fill);
+			};
+			$el.find('[data-w="course"]').on('change', load_window);
+			$el.find('.xp-ax-save').on('click', () => {
+				const c = $el.find('[data-w="course"]').val();
+				const courses = c ? [c] : d.courses.map((x) => x.name);
+				const go = () => call('save_window', { exam_plan: this.plan, courses: JSON.stringify(courses),
+					...Object.fromEntries(['deadline_from', 'deadline_to', 'payment_gateway', 'registration_limit'].map((k) => [k, $el.find(`[data-w="${k}"]`).val()])) })
+					.then((n) => frappe.show_alert({ message: __('Window saved for {0} course(s), re-exam and improvement', [n]), indicator: 'green' }));
+				if (c) go(); else frappe.confirm(__('Apply this window to all {0} courses of the plan (re-exam and improvement)?', [courses.length]), go);
+			});
+
+			const shown = () => rows.filter((r) => (!f.type || r.type === f.type) && (!f.course || r.course === f.course)
+				&& (!f.reg || (f.reg === 'yes' ? r.registration : f.reg === 'no' ? !r.registration && r.allowed : !r.allowed))
+				&& (!f.pay || (f.pay === 'paid' ? r.registration && r.paid : r.registration && !r.paid))
+				&& (!f.q || `${r.student_name} ${r.registration_id}`.toLowerCase().includes(f.q.toLowerCase())));
+			const draw = () => {
+				const list = shown();
+				$el.find('tbody').html(list.map((r) => {
+					const can_pick = !r.registration && r.allowed;
+					const pay = !r.registration ? '—' : r.paid ? `<span class="xp-pill ok">${r.fee ? __('Paid') : __('Nothing due')}</span>`
+						: `<span class="xp-pill warn">${r.demand ? __('Demand {0}', [esc(r.demand_status)]) : esc(r.payment_status || __('Pending'))}</span>`;
+					const enrol = r.registration ? `<span class="xp-pill ok">${__('Enrolled')}</span>`
+						: !r.allowed ? `<span class="xp-pill bad">${__('Blocked')}</span>` : `<span class="xp-pill info">${__('Not enrolled')}</span>`;
+					const acts = [
+						can_pick ? `<button class="btn btn-default btn-xs xp-ax-one" data-k="${esc(key(r))}">${__('Enrol')}</button>` : '',
+						r.registration && !r.paid && !r.demand ? `<button class="btn btn-default btn-xs xp-ax-paid" data-k="${esc(key(r))}">${__('Mark paid')}</button>` : '',
+						r.type === 'Re-exam' && !r.registration ? `<button class="btn btn-default btn-xs xp-ax-block" data-k="${esc(key(r))}">${r.allowed ? __('Block') : __('Allow')}</button>` : '',
+					].join(' ');
+					return `<tr><td>${can_pick ? `<input type="checkbox" class="xp-ax-cb" data-k="${esc(key(r))}" ${picked.has(key(r)) ? 'checked' : ''}>` : ''}</td>
+						<td><b>${esc(r.student_name)}</b><br><small class="xp-muted">${esc(r.registration_id)}</small></td>
+						<td>${esc(r.course_name)}</td><td><span class="xp-pill ${r.type === 'Re-exam' ? 'bad' : 'info'}">${__(r.type)}</span></td>
+						<td><b>${esc(r.grade || '—')}</b>${r.mark ? `<sup class="xp-ax-mark">${esc(r.mark)}</sup>` : ''}</td>
+						<td class="num">${r.final_marks == null ? '—' : r.final_marks}</td><td>${enrol}</td>
+						<td class="num">${r.registration ? (r.fee ? inr(r.fee) : '—') : ''}</td><td>${pay}</td><td class="act">${acts}</td></tr>`;
+				}).join('') || `<tr><td colspan="10" class="xp-muted">${rows.length ? __('Nothing matches the filters.') : __('No student needs a re-exam and nobody has registered for improvement.')}</td></tr>`);
+				const pickable = list.filter((r) => !r.registration && r.allowed);
+				$el.find('.xp-count-lines').text(__('{0} of {1} student(s)', [list.length, rows.length]) + (picked.size ? ' · ' + __('{0} selected', [picked.size]) : ''));
+				$el.find('.xp-ax-all').prop('checked', pickable.length && pickable.every((r) => picked.has(key(r))));
+			};
+			const find = (k) => rows.find((r) => key(r) === k);
+			$el.on('change input', '.xp-filters [data-f]', (e) => { f[$(e.target).data('f')] = e.target.value; draw(); });
+			$el.on('change', '.xp-ax-cb', (e) => { const k = $(e.target).data('k'); e.target.checked ? picked.add(k) : picked.delete(k); draw(); });
+			$el.find('.xp-ax-all').on('change', (e) => { shown().filter((r) => !r.registration && r.allowed).forEach((r) => (e.target.checked ? picked.add(key(r)) : picked.delete(key(r)))); draw(); });
+
+			// enrol: a fee raises a Fee Demand; no fee enrols with nothing to pay
+			const enrol_dialog = (list) => {
+				const dlg = new frappe.ui.Dialog({
+					title: __('Enrol {0} student(s)', [list.length]),
+					fields: [
+						{ fieldtype: 'HTML', options: `<p class="text-muted small">${list.map((r) => `${esc(r.student_name)} · ${esc(r.course_name)} (${__(r.type)})`).join('<br>')}</p>` },
+						{ fieldname: 'fee', fieldtype: 'Currency', label: __('Fee per student'), description: __('Leave empty to enrol without a fee. With a fee, a Fee Demand is created for each student.') },
+					],
+					primary_action_label: __('Check'),
+					primary_action: (v) => this.confirm_enrolment(list.map((r) => ({ student: r.student, registration_id: r.registration_id, course: r.course, type: r.type, fee: v.fee || '' })),
+						() => { dlg.hide(); this.render_after_students($el.empty().off()); }),
+				});
+				dlg.show();
+			};
+			$el.on('click', '.xp-ax-one', (e) => enrol_dialog([find($(e.currentTarget).data('k'))]));
+			$el.find('.xp-ax-enrol').on('click', () => {
+				const list = [...picked].map(find).filter(Boolean);
+				if (!list.length) { frappe.show_alert({ message: __('Tick the students to enrol first.'), indicator: 'orange' }); return; }
+				enrol_dialog(list);
+			});
+			$el.on('click', '.xp-ax-paid', (e) => {
+				const r = find($(e.currentTarget).data('k'));
+				frappe.prompt([{ fieldname: 'reference', fieldtype: 'Data', label: __('Payment reference (optional)') }],
+					(v) => call('mark_registration_paid', { kind: r.type, registration: r.registration, reference: v.reference || '' })
+						.then(() => { frappe.show_alert({ message: __('Marked paid'), indicator: 'green' }); this.render_after_students($el.empty().off()); }),
+					__('Mark {0} paid', [r.student_name]), __('Mark paid'));
+			});
+			$el.on('click', '.xp-ax-block', (e) => {
+				const r = find($(e.currentTarget).data('k'));
+				call('set_reexam_allowed', { exam_plan: this.plan, course: r.course, student: r.student, allowed: r.allowed ? 0 : 1 })
+					.then(() => { r.allowed = !r.allowed; picked.delete(key(r)); draw(); });
+			});
+
+			// upload: Registration ID, Student Name, Course, Type (Re-exam / Improvement), Fee
+			const csv = (data, name) => {
+				const text = data.map((row) => row.map((v) => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`).join(',')).join('\n');
+				const a = document.createElement('a');
+				a.href = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8;' }));
+				a.download = name; document.body.appendChild(a); a.click(); a.remove();
+			};
+			$el.find('.xp-ax-tpl').on('click', () => csv([['Registration ID', 'Student Name', 'Course', 'Type', 'Fee'],
+				...rows.filter((r) => !r.registration && r.allowed).map((r) => [r.registration_id, r.student_name, r.course_name, r.type, '']),
+				...(rows.some((r) => !r.registration) ? [] : [['B26001', 'Sample student', (d.courses[0] || {}).course_name || '', 'Improvement', '500']])],
+				`${this.plan} - re-exam and improvement.csv`));
+			$el.find('.xp-ax-csv').on('click', () => csv([['Registration ID', 'Student Name', 'Course', 'Type', 'Grade', 'Mark', 'Marks', 'Enrolment', 'Fee', 'Payment'],
+				...shown().map((r) => [r.registration_id, r.student_name, r.course_name, r.type, r.grade, r.mark, r.final_marks,
+					r.registration ? 'Enrolled' : r.allowed ? 'Not enrolled' : 'Blocked', r.fee || '', r.registration ? (r.paid ? 'Paid' : r.demand_status || r.payment_status) : ''])],
+				`${this.plan} - re-exam and improvement students.csv`));
+			$el.find('.xp-ax-up').on('click', () => $el.find('.xp-ax-file').trigger('click'));
+			$el.find('.xp-ax-file').on('change', (e) => {
+				const file = e.target.files[0];
+				e.target.value = '';
+				if (!file) return;
+				const reader = new FileReader();
+				reader.onload = () => {
+					const lines = String(reader.result).split(/\r?\n/).filter((l) => l.trim());
+					const cells = (l) => (l.match(/("([^"]|"")*"|[^,]*)(,|$)/g) || []).map((c) => c.replace(/,$/, '').replace(/^"|"$/g, '').replace(/""/g, '"').trim());
+					const head = cells(lines[0] || '').map((h) => h.toLowerCase().replace(/[^a-z]+/g, '_'));
+					const col = (...names) => head.findIndex((h) => names.includes(h));
+					const ix = { reg: col('registration_id', 'reg_id', 'id'), name: col('student_name', 'name'), course: col('course', 'course_name', 'subject'),
+						type: col('type', 'exam_type'), fee: col('fee', 'fee_amount', 'amount') };
+					const data = lines.slice(1).map(cells).filter((c) => c.some(Boolean)).map((c) => ({
+						registration_id: ix.reg >= 0 ? c[ix.reg] : '', student_name: ix.name >= 0 ? c[ix.name] : '',
+						course: ix.course >= 0 ? c[ix.course] : '', type: ix.type >= 0 ? c[ix.type] : 'Re-exam', fee: ix.fee >= 0 ? c[ix.fee] : '' }));
+					if (!data.length) { frappe.msgprint(__('No rows found. Use the template: Registration ID, Student Name, Course, Type, Fee.')); return; }
+					this.confirm_enrolment(data, () => this.render_after_students($el.empty().off()));
+				};
+				reader.readAsText(file);
+			});
+			draw();
+		});
+	}
+
+	// Who is enrolled, which demands are raised (shown first; created on the button)
+	confirm_enrolment(rows, done) {
+		const inr = (v) => '₹' + (parseFloat(v) || 0).toLocaleString('en-IN');
+		call('preview_enrolment', { exam_plan: this.plan, rows: JSON.stringify(rows) }).then((p) => {
+			const skipped = p.lines.length - p.enrol;
+			const html = `<div class="xp-alert ${p.enrol ? 'ok' : 'bad'}"><b>${p.enrol}</b> ${__('student(s) will be enrolled')}${p.demands
+				? `; <b>${p.demands}</b> ${__('fee demand(s) totalling')} <b>${inr(p.demand_total)}</b> ${__('will be created')}${p.fee_component ? ` (${esc(p.fee_component)})` : ''}`
+				: '; ' + __('no fee demands')}.${skipped ? ` <b>${skipped}</b> ${__('row(s) skipped')}.` : ''}</div>
+				<div class="xp-table" style="max-height:380px;overflow:auto;margin-top:8px"><table class="table table-sm"><thead><tr>
+				<th>${__('Row')}</th><th>${__('Registration ID')}</th><th>${__('Student')}</th><th>${__('Course')}</th><th>${__('Type')}</th><th class="num">${__('Fee')}</th><th>${__('Will do')}</th><th>${__('Note')}</th></tr></thead><tbody>
+				${p.lines.map((x) => `<tr><td>${x.sheet_row}</td><td>${esc(x.registration_id)}</td><td>${esc(x.student_name)}</td><td>${esc(x.course)}</td><td>${__(x.type)}</td>
+					<td class="num">${x.fee ? inr(x.fee) : '—'}</td>
+					<td>${x.action !== 'enrol' ? `<span class="xp-pill bad">${__('Skip')}</span>` : x.demand ? `<span class="xp-pill ok">${__('Enrol + demand')}</span>` : `<span class="xp-pill ok">${__('Enrol')}</span>`}</td>
+					<td class="xp-muted">${esc(x.note || '')}</td></tr>`).join('')}</tbody></table></div>`;
+			const d = new frappe.ui.Dialog({ title: __('Enrol students'), size: 'extra-large', fields: [{ fieldtype: 'HTML', options: html }],
+				secondary_action_label: __('Close'), secondary_action: () => d.hide() });
+			if (p.enrol) {
+				d.set_primary_action(p.demands ? __('Enrol {0} & create {1} demand(s)', [p.enrol, p.demands]) : __('Enrol {0} student(s)', [p.enrol]), () =>
+					call('enrol_students', { exam_plan: this.plan, rows: JSON.stringify(rows) }).then((r) => {
+						d.hide();
+						frappe.show_alert({ message: __('{0} enrolled', [r.enrolled]) + (r.demands.length ? ', ' + __('{0} fee demand(s) created', [r.demands.length]) : ''), indicator: 'green' }, 6);
+						if (r.errors.length) frappe.msgprint({ title: __('Not enrolled'), message: r.errors.map(esc).join('<br>'), indicator: 'orange' });
+						done && done();
+					}));
 			}
-		};
-		this.$body.find('.xp-rtab').on('click', (e) => show($(e.currentTarget).data('tab')));
-		show(this.after_tab);
+			d.show();
+		});
 	}
 
 	add_styles() {
@@ -1551,6 +1721,7 @@ class ExamPlanner {
 			.xp-pick{position:absolute;z-index:1050;max-height:260px;overflow:auto;background:var(--card-bg,#fff);border:1px solid var(--border-color,#d1d5db);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.14);padding:4px;font-size:12.5px}
 			.xp-pick-i{display:flex;justify-content:space-between;gap:12px;padding:6px 10px;border-radius:5px;cursor:pointer;white-space:nowrap}
 			.xp-pick-i small{color:var(--text-muted)}.xp-pick-i.on,.xp-pick-i:hover{background:var(--er-brand-softest,#FBEEF0);color:var(--er-brand,#920C24)}
+			.xp-ax-mark{color:var(--er-brand,#920C24);font-weight:800;margin-left:1px}.xp-ax-window{margin-bottom:4px}
 			.xp-ce-sheet td{vertical-align:top}.xp-ce-sheet td.xp-subj{padding:6px 8px}.xp-ce-sheet td.xp-subj small{display:block;color:var(--text-muted);font-size:11px}
 			.xp-unsched .xp-soft{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 			.xp-issues ul{margin:6px 0 0;padding-left:18px}.xp-issues li.bad{color:var(--text-on-red,#b0182b)}

@@ -13,6 +13,8 @@ from slcm.slcm.utils.result_access import (
 	get_max_marks,
 	get_reexam_attempts,
 	is_improved,
+	grade_markers,
+	apply_grade_marks,
 	parse_marks,
 	validate_grade,
 )
@@ -1429,9 +1431,9 @@ def get_marks_for_students(course, exam_plan, student_ids):
 	)
 	approved_fa_mfa_students = {row["student"] for row in fa_mfa_apps}
 
-	# Arrear badge: one R per paid re-exam written (R, RR, RRR…); "improved"
-	# (I badge) is separate — see slcm.slcm.utils.result_access
-	attempts = get_reexam_attempts(course, student_ids)
+	# Mark next to the grade: Mfa / RR (carried forward) / R (re-exam) / I
+	# (improvement), one at a time — see slcm.slcm.utils.result_access
+	markers = grade_markers(course, exam_plan, student_ids)
 
 	result = {}
 	for row in header_rows:
@@ -1453,10 +1455,9 @@ def get_marks_for_students(course, exam_plan, student_ids):
 			"improvement_grade":    row["improvement_grade"] or "",
 			"improvement_applied":  int(row["improvement_applied"] or 0),
 			"re_exam_grade":        row["re_exam_grade"] or "",
-			"arrear_marker":        arrear_badge(attempts.get(s, 0)),
-			"improved":             is_improved(row),
 			"entries":              {},
 		}
+		apply_grade_marks(result[s], markers.get(s, ""))
 
 	# Fetch per-assessment marks
 	entry_rows = frappe.db.sql(
@@ -2314,7 +2315,7 @@ def compute_student_result(course, exam_plan, entries, attendance_status=None,
 		"updated_grade":      updated_grade,
 		"re_exam_grade":      reexam_grade,
 		"improvement_applied": improvement_applied,
-		"improved":           bool(improvement_applied or updated_final_marks > total),
+		"improved":           bool(improvement_applied),
 	}
 
 

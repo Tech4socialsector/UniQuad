@@ -387,9 +387,9 @@ body.pp-dark .ppr-sup-arrear { color: #f08da0; }
 
 {# MFA / arrear (R, RR) / improvement-applied (I) markers shown next to a grade #}
 {% macro grade_sup(c) -%}
-{%- if c.mfa == "Yes" -%}<sup class="ppr-sup" title="MFA">MFA</sup>
-{%- elif c.arrear_marker -%}<sup class="ppr-sup ppr-sup-arrear" title="Arrear">{{ c.arrear_marker }}</sup>{%- endif -%}
-{%- if c.improved -%}<sup class="ppr-sup ppr-sup-imp" title="Result improved by a re-exam or improvement exam">I</sup>{%- endif -%}
+{%- if c.mfa == "Yes" -%}<sup class="ppr-sup" title="MFA">Mfa</sup>
+{%- elif c.arrear_marker -%}<sup class="ppr-sup ppr-sup-arrear" title="{{ 'Carried-forward course' if c.arrear_marker == 'RR' else 'Failed and rewrote (re-exam)' }}">{{ c.arrear_marker }}</sup>
+{%- elif c.improved -%}<sup class="ppr-sup ppr-sup-imp" title="Improved after passing (improvement exam)">I</sup>{%- endif -%}
 {%- endmacro %}
 
 {% block content %}

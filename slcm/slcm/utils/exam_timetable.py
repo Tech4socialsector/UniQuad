@@ -166,12 +166,13 @@ def split_by_id_range(rows, student_ids):
 
 
 def reexam_students(exam_plan, course):
-	"""Students registered (not cancelled) for the course's re-exam in the plan."""
-	return set(frappe.get_all(
-		"Re Exam Registration",
-		filters={"exam_plan": exam_plan, "course": course, "status": "Registered"},
-		pluck="student",
-	))
+	"""Students registered (not cancelled) for the course's re-exam or improvement
+	exam in the plan: both sit to the re-exam timetable."""
+	students = set()
+	for doctype in ("Re Exam Registration", "Improvement Exam Registration"):
+		students |= set(frappe.get_all(
+			doctype, filters={"exam_plan": exam_plan, "course": course, "status": "Registered"}, pluck="student"))
+	return students
 
 
 def reexam_student_ids(exam_plan, course):

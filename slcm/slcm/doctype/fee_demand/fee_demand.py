@@ -137,11 +137,11 @@ class FeeDemand(Document):
 		self.save(ignore_permissions=True)
 		self.flags.payment_update = False
 
-		# a re-exam fee paid through its demand marks the registration paid
-		if self.trigger_ref_doctype == "Re Exam Registration" and self.trigger_ref_name:
+		# a re-exam / improvement fee paid through its demand marks the registration paid
+		if self.trigger_ref_doctype in ("Re Exam Registration", "Improvement Exam Registration") and self.trigger_ref_name:
 			reg_status = "Paid" if self.status == "Paid" else None
 			if reg_status or flt(paid_delta) < 0:
-				frappe.db.set_value("Re Exam Registration", self.trigger_ref_name, "payment_status",
+				frappe.db.set_value(self.trigger_ref_doctype, self.trigger_ref_name, "payment_status",
 				                    reg_status or "Pending", update_modified=False)
 
 		self._log_payment_event(paid_delta)

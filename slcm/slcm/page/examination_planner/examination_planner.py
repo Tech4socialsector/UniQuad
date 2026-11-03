@@ -313,9 +313,9 @@ def set_timetable_published(exam_plan, published, reexam=0):
 
 @frappe.whitelist()
 def get_reexam_timetable(exam_plan):
-	"""Re-exam sittings, laid out like the exam timetable (a line per room). Courses
-	with failed students, a re-exam window, registrations or a saved line; the
-	ones without a date are "not in the timetable yet"."""
+	"""Re-exam and improvement sittings, laid out like the exam timetable (a line
+	per room). Courses with failed students, a re-exam / improvement window,
+	registrations or a saved line; the ones without a date need one."""
 	_check_access()
 	from slcm.slcm.utils.exam_timetable import check_exam_schedule
 
@@ -326,10 +326,13 @@ def get_reexam_timetable(exam_plan):
 	                        fields=["course", "grade", "updated_grade"]):
 		if (m.updated_grade or m.grade) in failed_grades:
 			failed[m.course] = failed.get(m.course, 0) + 1
+	# re-exam and improvement students sit to the same timetable
 	registered = {}
-	for r in frappe.get_all("Re Exam Registration", filters={"exam_plan": exam_plan, "status": "Registered"}, fields=["course"]):
-		registered[r.course] = registered.get(r.course, 0) + 1
+	for doctype in ("Re Exam Registration", "Improvement Exam Registration"):
+		for r in frappe.get_all(doctype, filters={"exam_plan": exam_plan, "status": "Registered"}, fields=["course"]):
+			registered[r.course] = registered.get(r.course, 0) + 1
 	windows = set(frappe.get_all("Re Exam Course Setting", filters={"exam_plan": exam_plan}, pluck="course"))
+	windows |= set(frappe.get_all("Improvement Exam Course Setting", filters={"exam_plan": exam_plan}, pluck="course"))
 	have = {r.course for r in plan.reexam_schedules}
 	courses = sorted((set(failed) | set(registered) | windows) - have)
 	names = dict(frappe.get_all("Course", filters={"name": ["in", list(have | set(courses) | set(failed) | set(registered)) or [""]]},
@@ -383,6 +386,71 @@ def carry_forward_all(exam_plan, pairs=None):
 			errors.append(f"{st} · {c}: {e}")
 	frappe.db.commit()
 	return {"added": done, "errors": errors}
+
+
+# ── Re-exam & improvement students (one list) ─────────────────────────────────
+
+@frappe.whitelist()
+def get_after_students(exam_plan):
+	_check_access()
+	from slcm.slcm.utils import after_results as ar
+
+	courses = ar.plan_courses(exam_plan)
+	names = dict(frappe.get_all("Course", filters={"name": ["in", courses or [""]]}, fields=["name", "course_name"], as_list=True))
+	return {"rows": ar.students(exam_plan), "courses": [{"name": c, "course_name": names.get(c, c)} for c in courses]}
+
+
+@frappe.whitelist()
+def get_window(exam_plan, course):
+	_check_access()
+	from slcm.slcm.utils.after_results import get_window as window
+
+	return window(exam_plan, course)
+
+
+@frappe.whitelist()
+def save_window(exam_plan, courses, deadline_from=None, deadline_to=None, payment_gateway=None, registration_limit=None):
+	"""One registration window for the re-exam and the improvement exam of the courses."""
+	_check_access()
+	from slcm.slcm.utils.after_results import save_window as save
+
+	return save(exam_plan, _load(courses, []), deadline_from, deadline_to, payment_gateway, registration_limit)
+
+
+@frappe.whitelist()
+def preview_enrolment(exam_plan, rows, course=None):
+	_check_access()
+	from slcm.slcm.utils.after_results import plan_enrolment
+
+	lines, component = plan_enrolment(exam_plan, _load(rows, []), course)
+	return {"lines": lines, "fee_component": component,
+	        "enrol": sum(1 for x in lines if x["action"] == "enrol"),
+	        "demands": sum(1 for x in lines if x.get("demand")),
+	        "demand_total": sum(x["fee"] for x in lines if x.get("demand"))}
+
+
+@frappe.whitelist()
+def enrol_students(exam_plan, rows, course=None):
+	_check_access()
+	from slcm.slcm.utils.after_results import enrol
+
+	return enrol(exam_plan, _load(rows, []), course)
+
+
+@frappe.whitelist()
+def mark_registration_paid(kind, registration, reference=""):
+	_check_access()
+	from slcm.slcm.utils.after_results import mark_paid
+
+	return mark_paid(kind, registration, reference)
+
+
+@frappe.whitelist()
+def set_reexam_allowed(exam_plan, course, student, allowed, reason=""):
+	_check_access()
+	from slcm.slcm.page.re_exam.re_exam import set_student_re_exam_allowed
+
+	return set_student_re_exam_allowed(exam_plan, course, student, allowed, reason)
 
 
 @frappe.whitelist()

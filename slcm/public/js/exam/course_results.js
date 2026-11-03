@@ -2220,7 +2220,7 @@ slcm.exam_ui.course_results = function (main, opts) {
 				});
 			});
 
-			var mfaStr    = sm.mfa === 'Yes' ? ' <sup class="er2-ann-badge er2-mfa-badge">MFA</sup>' : '';
+			var mfaStr    = sm.mfa === 'Yes' ? ' <sup class="er2-ann-badge er2-mfa-badge" title="MFA">Mfa</sup>' : '';
 			// I = the final result was raised by a re-exam / improvement exam (shown alongside R…)
 			var improvedStr = sm.improved ? ' <sup class="er2-ann-badge er2-improved-badge">I</sup>' : '';
 			var arrearStr = (sm.arrear_marker && sm.arrear_marker !== 'I' && sm.mfa !== 'Yes')
@@ -2241,7 +2241,7 @@ slcm.exam_ui.course_results = function (main, opts) {
 					'<input type="text" class="er2-grade-input" data-student="' + frappe.utils.escape_html(s.student) + '" ' +
 					'value="' + frappe.utils.escape_html(gradeVal) + '" placeholder="—" ' + (isAS ? 'readonly title="Grade withheld — attendance below the required minimum (see Attendance Settings)"' : '') + ' ' +
 					'style="width:60px;height:26px;border:1.5px solid ' + gradeBorderColor + ';border-radius:6px;padding:0 6px;font-size:12px;font-weight:700;text-align:center;outline:none;color:' + gradeColor + ';' + (isAS ? 'background:#FBEEF0;' : '') + '">' +
-					(sm.mfa === 'Yes' ? '<sup class="er2-ann-badge er2-mfa-badge">MFA</sup>' : '') +
+					(sm.mfa === 'Yes' ? '<sup class="er2-ann-badge er2-mfa-badge" title="MFA">Mfa</sup>' : '') +
 					(sm.arrear_marker && sm.arrear_marker !== 'I' && sm.mfa !== 'Yes' ? '<sup class="er2-ann-badge er2-arrear-badge">' + frappe.utils.escape_html(sm.arrear_marker) + '</sup>' : '') +
 					'</span></td>';
 			} else {
@@ -2450,10 +2450,10 @@ slcm.exam_ui.course_results = function (main, opts) {
 								var ufm = r.message.updated_final_marks;
 								var ug = r.message.updated_grade;
 								var sm_ref    = S.marks[student] || {};
-								sm_ref.improved = !!r.message.improved;  // recalculated with this save
+								sm_ref.improved = !!r.message.improved && !sm_ref.arrear_marker && sm_ref.mfa !== 'Yes';  // one mark per grade  // recalculated with this save
 								var isMFA2    = sm_ref.mfa === 'Yes';
 								var isAS2     = !!sm_ref.attendance_shortage || sm_ref.attendance_status === 'Attendance Shortage';
-								var mStr      = isMFA2 ? ' <sup class="er2-ann-badge er2-mfa-badge">MFA</sup>' : '';
+								var mStr      = isMFA2 ? ' <sup class="er2-ann-badge er2-mfa-badge" title="MFA">Mfa</sup>' : '';
 								var arrStr    = (sm_ref.arrear_marker && sm_ref.arrear_marker !== 'I')
 									? ' <sup class="er2-ann-badge er2-arrear-badge">' + frappe.utils.escape_html(sm_ref.arrear_marker) + '</sup>' : '';
 								var impStrNew = sm_ref.improved
@@ -2470,7 +2470,7 @@ slcm.exam_ui.course_results = function (main, opts) {
 									$gi.val(gradeDisp);
 									$gi.prop('readonly', isAS2);
 									$gc.find('sup').remove();
-									if (isMFA2) $gi.after('<sup class="er2-ann-badge er2-mfa-badge">MFA</sup>');
+									if (isMFA2) $gi.after('<sup class="er2-ann-badge er2-mfa-badge" title="MFA">Mfa</sup>');
 									if (sm_ref.arrear_marker && sm_ref.arrear_marker !== 'I') $gi.after('<sup class="er2-ann-badge er2-arrear-badge">' + frappe.utils.escape_html(sm_ref.arrear_marker) + '</sup>');
 								} else {
 									$gc.html(frappe.utils.escape_html(gradeDisp || '—') + mStr + arrStr);
@@ -2484,7 +2484,7 @@ slcm.exam_ui.course_results = function (main, opts) {
 									$ugInput.val(ugDisp);
 									$ugInput.prop('readonly', isAS2);
 									$ugCell.find('sup').remove();
-									if (isMFA2) $ugInput.after('<sup class="er2-ann-badge er2-mfa-badge">MFA</sup>');
+									if (isMFA2) $ugInput.after('<sup class="er2-ann-badge er2-mfa-badge" title="MFA">Mfa</sup>');
 									if (sm_ref.arrear_marker && sm_ref.arrear_marker !== 'I') $ugInput.after('<sup class="er2-ann-badge er2-arrear-badge">' + frappe.utils.escape_html(sm_ref.arrear_marker) + '</sup>');
 								if (sm_ref.improved) $ugInput.after('<sup class="er2-ann-badge er2-improved-badge">I</sup>');
 								} else {
@@ -2562,7 +2562,7 @@ slcm.exam_ui.course_results = function (main, opts) {
 							var isMFA  = S.marks[student].mfa === 'Yes';
 							var isAS   = !!S.marks[student].attendance_shortage || S.marks[student].attendance_status === 'Attendance Shortage';
 							var arrMk  = S.marks[student].arrear_marker || '';
-							var mStr   = isMFA  ? ' <sup class="er2-ann-badge er2-mfa-badge">MFA</sup>' : '';
+							var mStr   = isMFA  ? ' <sup class="er2-ann-badge er2-mfa-badge" title="MFA">Mfa</sup>' : '';
 							var arStr  = (arrMk && arrMk !== 'I') ? ' <sup class="er2-ann-badge er2-arrear-badge">' + frappe.utils.escape_html(arrMk) + '</sup>' : '';
 							var impStrN2 = S.marks[student].improved ? ' <sup class="er2-ann-badge er2-improved-badge">I</sup>' : '';
 							var tg    = isAS ? 'AS' : (S.marks[student].grade || '—');
@@ -2573,7 +2573,7 @@ slcm.exam_ui.course_results = function (main, opts) {
 								$gi2.val(tg);
 								$gi2.prop('readonly', isAS);
 								$gc2.find('sup').remove();
-								if (isMFA) $gi2.after('<sup class="er2-ann-badge er2-mfa-badge">MFA</sup>');
+								if (isMFA) $gi2.after('<sup class="er2-ann-badge er2-mfa-badge" title="MFA">Mfa</sup>');
 								if (arrMk && arrMk !== 'I') $gi2.after('<sup class="er2-ann-badge er2-arrear-badge">' + frappe.utils.escape_html(arrMk) + '</sup>');
 							} else {
 								$gc2.html(frappe.utils.escape_html(tg) + mStr + arStr);
@@ -2584,7 +2584,7 @@ slcm.exam_ui.course_results = function (main, opts) {
 								$ugI.val(ug);
 								$ugI.prop('readonly', isAS);
 								$ugC.find('sup').remove();
-								if (isMFA) $ugI.after('<sup class="er2-ann-badge er2-mfa-badge">MFA</sup>');
+								if (isMFA) $ugI.after('<sup class="er2-ann-badge er2-mfa-badge" title="MFA">Mfa</sup>');
 								if (arrMk && arrMk !== 'I') $ugI.after('<sup class="er2-ann-badge er2-arrear-badge">' + frappe.utils.escape_html(arrMk) + '</sup>');
 								if (S.marks[student].improved) $ugI.after('<sup class="er2-ann-badge er2-improved-badge">I</sup>');
 							} else {
