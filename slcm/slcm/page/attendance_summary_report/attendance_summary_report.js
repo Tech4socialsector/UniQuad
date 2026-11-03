@@ -2,7 +2,7 @@
 
 const ASR_ELIGIBILITY_META = {
 	"Eligible": { color: "#16a34a", bg: "#dcfce7", dot: "🟢" },
-	"Not Eligible": { color: "#dc2626", bg: "#fee2e2", dot: "🔴" },
+	"Not Eligible": { color: "#920C24", bg: "#FBEEF0", dot: "🔴" },
 };
 
 frappe.pages["attendance-summary-report"].on_page_load = function (wrapper) {
@@ -13,6 +13,10 @@ frappe.pages["attendance-summary-report"].on_page_load = function (wrapper) {
 	});
 
 	asr_inject_styles();
+	$(wrapper).addClass("asr-theme");
+	if (!document.getElementById("er-theme-font")) {
+		$("head").append('<link id="er-theme-font" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Merriweather:opsz,wght@18..144,300..900&display=swap">');
+	}
 	// frappe.DataTable's JS is already part of the desk bundle, but its CSS
 	// is only bundled with the report/web_form views — load it explicitly
 	// since this is a plain desk Page.
@@ -428,8 +432,8 @@ class AttendanceSummaryReport {
 
 		const kpis = [
 			{ icon: "users", accent: "blue", value: total, label: __("Students") },
-			{ icon: "percentage", accent: "green", value: `${avg.toFixed(1)}%`, label: __("Average Attendance") },
-			{ icon: "star", accent: "amber", value: eligible, label: __("Eligible") },
+			{ icon: "percentage", accent: "blue", value: `${avg.toFixed(1)}%`, label: __("Average Attendance") },
+			{ icon: "star", accent: "green", value: eligible, label: __("Eligible") },
 			{ icon: "warning", accent: "red", value: not_eligible, label: __("Not Eligible") },
 		];
 
@@ -486,15 +490,15 @@ class AttendanceSummaryReport {
 
 		const columns = [
 			{
-				id: "student_id", name: __("Student ID"), width: 140,
+				id: "student_id", name: __("Student ID"), width: 120,
 				format: (v, row, col, d) => `<span class="asr-link" onclick="frappe.set_route('Form','Student Master','${esc(d.student)}')">${esc(d.student_id)}</span>`,
 			},
 			{
-				id: "student_name", name: __("Student Name"),
+				id: "student_name", name: __("Student Name"), width: 210,
 				format: (v, row, col, d) => `<div class="asr-name-cell">${asr_avatar_html(d.student_image)}<div>${esc(d.student_name)}</div></div>`,
 			},
-			{ id: "course", name: __("Course") },
-			{ id: "section", name: __("Section"), format: (v, row, col, d) => esc(d.section || "—") },
+			{ id: "course", name: __("Course"), width: 220 },
+			{ id: "section", name: __("Section"), width: 90, format: (v, row, col, d) => esc(d.section || "—") },
 			{ id: "total_scheduled_hours", name: __("Scheduled Hrs"), align: "right" },
 			{ id: "total_conducted_hours", name: __("Conducted Hrs"), align: "right" },
 			{ id: "total_attended_hours", name: __("Attended Hrs"), align: "right" },
@@ -513,7 +517,7 @@ class AttendanceSummaryReport {
 				id: "eligibility", name: __("Eligibility"),
 				format: (v, row, col, d) => {
 					const meta = ASR_ELIGIBILITY_META[d.eligibility] || ASR_ELIGIBILITY_META["Not Eligible"];
-					return `<span class="asr-badge" style="color:${meta.color};background:${meta.bg}">${meta.dot} ${__(d.eligibility)}</span>`;
+					return `<span class="asr-badge" style="color:${meta.color};background:${meta.bg}"><i class="asr-dot" style="background:${meta.color}"></i>${__(d.eligibility)}</span>`;
 				},
 			},
 		];
@@ -765,8 +769,8 @@ class AttendanceSummaryReport {
 		const status_meta = {
 			"Present": { color: "#16a34a", bg: "#dcfce7" },
 			"Late": { color: "#d97706", bg: "#fef3c7" },
-			"Excused": { color: "#0284c7", bg: "#e0f2fe" },
-			"Absent": { color: "#dc2626", bg: "#fee2e2" },
+			"Excused": { color: "#475569", bg: "#f1f5f9" },
+			"Absent": { color: "#920C24", bg: "#FBEEF0" },
 			"Not Marked": { color: "#64748b", bg: "#f1f5f9" },
 		};
 
@@ -919,6 +923,16 @@ function asr_inject_styles() {
 	if (document.getElementById("asr-styles")) return;
 	$(`<style id="asr-styles">
 		.asr-page { background: #f8fafc; padding: 4px; }
+		/* NLS theme: Merriweather everywhere on the page, brand #920C24 */
+		.asr-theme .page-head .title-text,
+		.asr-page, .asr-page input, .asr-page select, .asr-page button, .asr-page .dt-cell, .asr-page .form-control {
+			font-family: "Merriweather", Georgia, "Times New Roman", serif;
+		}
+		.asr-page .asr-card-title { color: #920C24; }
+		.asr-page .btn-primary { background: #920C24; border-color: #920C24; }
+		.asr-page .btn-primary:hover { background: #6E091B; border-color: #6E091B; }
+		.asr-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+		.asr-page .dt-header .dt-cell { background: #f8fafc; font-weight: 700; color: #334155; }
 		.asr-card {
 			background: #fff;
 			border: 1px solid #e5e9f0;
@@ -988,7 +1002,7 @@ function asr_inject_styles() {
 			transition: border-color 0.15s;
 		}
 		.asr-msdd-btn:hover { border-color: #94a3b8; }
-		.asr-msdd-btn:focus { outline: none; border-color: #0284c7; box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12); }
+		.asr-msdd-btn:focus { outline: none; border-color: #920C24; box-shadow: 0 0 0 3px rgba(146, 12, 36, 0.12); }
 		.asr-msdd-btn::after {
 			content: "";
 			position: absolute;
@@ -1035,7 +1049,7 @@ function asr_inject_styles() {
 			cursor: pointer;
 			margin: 0;
 		}
-		.asr-msdd-option:hover { background: #f0f6ff; }
+		.asr-msdd-option:hover { background: #FBEEF0; }
 		.asr-msdd-option input[type="checkbox"] { width: 15px; height: 15px; cursor: pointer; flex-shrink: 0; }
 		.asr-msdd-empty { padding: 14px; font-size: 12px; color: #94a3b8; text-align: center; }
 		.asr-month-picker-inputs { display: flex; gap: 8px; }
@@ -1085,7 +1099,7 @@ function asr_inject_styles() {
 			margin-bottom: -1px;
 		}
 		.asr-tab:hover { color: #1e293b; }
-		.asr-tab.active { color: #0284c7; border-bottom-color: #0284c7; }
+		.asr-tab.active { color: #920C24; border-bottom-color: #920C24; }
 
 		.asr-search-row { margin-bottom: 20px; }
 		.asr-search-box {
@@ -1111,7 +1125,7 @@ function asr_inject_styles() {
 			outline: none;
 			transition: border-color 0.15s;
 		}
-		.asr-search-box input:focus { border-color: #0284c7; box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12); }
+		.asr-search-box input:focus { border-color: #920C24; box-shadow: 0 0 0 3px rgba(146, 12, 36, 0.12); }
 
 		.asr-kpi-row {
 			display: grid;
@@ -1137,7 +1151,7 @@ function asr_inject_styles() {
 		.asr-legend-item { display: flex; align-items: center; gap: 6px; }
 		.asr-legend-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
 		.asr-legend-ok { background: #15803d; }
-		.asr-legend-low { background: #dc2626; }
+		.asr-legend-low { background: #920C24; }
 		.asr-kpi-card {
 			background: #fff;
 			border: 1px solid #e5e9f0;
@@ -1163,9 +1177,9 @@ function asr_inject_styles() {
 			justify-content: center;
 			flex-shrink: 0;
 		}
-		.asr-accent-blue .asr-kpi-icon  { background: #e0f2fe; color: #0284c7; }
+		.asr-accent-blue .asr-kpi-icon  { background: #FBEEF0; color: #920C24; }
 		.asr-accent-green .asr-kpi-icon { background: #dcfce7; color: #16a34a; }
-		.asr-accent-red .asr-kpi-icon   { background: #fee2e2; color: #dc2626; }
+		.asr-accent-red .asr-kpi-icon   { background: #F5D9DE; color: #6E091B; }
 		.asr-accent-amber .asr-kpi-icon { background: #fef3c7; color: #d97706; }
 		.asr-kpi-value { font-size: 24px; font-weight: 700; color: #1e293b; line-height: 1.2; }
 		.asr-kpi-label { font-size: 12px; color: #64748b; margin-top: 2px; }
@@ -1173,7 +1187,7 @@ function asr_inject_styles() {
 		.asr-table-card { padding: 0; overflow: hidden; }
 		.asr-datatable-wrap { overflow-x: auto; }
 		.asr-datatable-wrap .dt-scrollable { overflow: visible; }
-		.asr-link { color: #0284c7; cursor: pointer; font-weight: 600; }
+		.asr-link { color: #920C24; cursor: pointer; font-weight: 600; }
 		.asr-link:hover { text-decoration: underline; }
 
 		.asr-progress-wrap { display: flex; align-items: center; gap: 10px; min-width: 120px; }
@@ -1232,7 +1246,7 @@ function asr_inject_styles() {
 		}
 
 		/* Pivot tables (Monthly / Daily) — cell content inside frappe.DataTable */
-		.asr-pivot-name-low { color: #dc2626; font-weight: 600; }
+		.asr-pivot-name-low { color: #920C24; font-weight: 600; }
 		.asr-pivot-subid { font-size: 11px; color: #94a3b8; font-weight: 400; }
 		.asr-name-cell { display: flex; align-items: center; gap: 8px; }
 		.asr-avatar {
@@ -1242,13 +1256,13 @@ function asr_inject_styles() {
 		}
 		.asr-pivot-cell { text-align: center; font-weight: 700; }
 		.asr-pivot-cell.asr-pivot-ok { color: #15803d; }
-		.asr-pivot-cell.asr-pivot-low { color: #dc2626; }
+		.asr-pivot-cell.asr-pivot-low { color: #920C24; }
 		.asr-cell-muted { text-align: center; color: #cbd5e1; }
 
 		.asr-day-cell { text-align: center; font-weight: 700; border-radius: 6px; }
 		.asr-day-full { color: #15803d; background: #f0fdf4; }
 		.asr-day-partial { color: #b45309; background: #fffbeb; }
-		.asr-day-none { color: #dc2626; background: #fef2f2; }
+		.asr-day-none { color: #920C24; background: #FBEEF0; }
 		.asr-day-cell-clickable { cursor: pointer; transition: box-shadow 0.15s; }
 		.asr-day-cell-clickable:hover { box-shadow: inset 0 0 0 2px currentColor; }
 
@@ -1276,7 +1290,7 @@ function asr_inject_styles() {
 			color: #334155;
 			white-space: nowrap;
 		}
-		.asr-drilldown-link { color: #0284c7; font-weight: 600; }
+		.asr-drilldown-link { color: #920C24; font-weight: 600; }
 		.asr-drilldown-total-row td {
 			font-weight: 700;
 			color: #1e293b;
