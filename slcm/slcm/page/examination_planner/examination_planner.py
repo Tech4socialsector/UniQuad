@@ -339,6 +339,43 @@ def get_reexam_timetable(exam_plan):
 
 
 @frappe.whitelist()
+def get_carry_forward(exam_plan):
+	"""Students still failing a course from an earlier Exam Plan (they write the
+	re-exam again until they pass), for this plan's next attempt."""
+	_check_access()
+	from slcm.slcm.utils.reexam_attempts import students_to_carry
+
+	rows = students_to_carry(exam_plan)
+	names = {s.name: s for s in frappe.get_all("Student Master", filters={"name": ["in", [r[0] for r in rows] or [""]]},
+	                                           fields=["name", "first_name", "last_name", "registration_id"])}
+	courses = dict(frappe.get_all("Course", filters={"name": ["in", [r[1] for r in rows] or [""]]}, fields=["name", "course_name"], as_list=True))
+	return [{
+		"student": st, "student_name": " ".join(filter(None, [names[st].first_name, names[st].last_name])) if st in names else st,
+		"registration_id": names[st].registration_id if st in names else "", "course": c, "course_name": courses.get(c, c), "from_plan": src,
+	} for st, c, src in rows]
+
+
+@frappe.whitelist()
+def carry_forward_all(exam_plan, pairs=None):
+	"""Bring the students (all, or the given [[student, course], ...]) into this
+	plan's re-exam with their regular marks."""
+	_check_access()
+	from slcm.slcm.utils.reexam_attempts import carry_forward, students_to_carry
+
+	todo = [tuple(x) for x in _load(pairs, [])] or [(st, c) for st, c, _src in students_to_carry(exam_plan)]
+	done, errors = 0, []
+	for st, c in todo:
+		try:
+			if carry_forward(st, c, exam_plan)[1] == "created":
+				done += 1
+		except frappe.ValidationError as e:
+			frappe.clear_messages()
+			errors.append(f"{st} · {c}: {e}")
+	frappe.db.commit()
+	return {"added": done, "errors": errors}
+
+
+@frappe.whitelist()
 def check_reexam_timetable(exam_plan, rows):
 	_check_access()
 	from slcm.slcm.utils.exam_timetable import check_exam_schedule

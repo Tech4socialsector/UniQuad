@@ -1119,6 +1119,30 @@ class ExamPlanner {
 		});
 	}
 
+	// Students who failed the re-exam of an earlier plan write it again here, until they pass
+	render_carry_forward($el) {
+		call('get_carry_forward', { exam_plan: this.plan }).then((rows) => {
+			if (!rows.length) { $el.empty(); return; }
+			$el.html(`<div class="xp-guide warn"><span><b>${__('{0} student(s) still failing a course from an earlier exam plan.', [rows.length])}</b>
+				${__('They write the re-exam again until they pass. Bring them into this plan\'s re-exam; their regular marks (internals, end term) come with them.')}</span>
+				<div class="xp-guide-actions"><button class="btn btn-primary btn-sm xp-cf-all">${__('Bring all into this re-exam')}</button>
+				<button class="btn btn-default btn-sm xp-cf-list">${__('See the list')}</button></div></div>`);
+			$el.find('.xp-cf-list').on('click', () => {
+				const d = new frappe.ui.Dialog({ title: __('Still failing from earlier exam plans'), size: 'large' });
+				$(d.body).html(`<div class="xp-table"><table class="table table-sm"><thead><tr><th>${__('Student')}</th><th>${__('Course')}</th><th>${__('Last attempt in')}</th></tr></thead><tbody>
+					${rows.map((r) => `<tr><td>${esc(r.student_name)} <small class="xp-muted">${esc(r.registration_id)}</small></td><td>${esc(r.course_name)}</td><td>${esc(r.from_plan)}</td></tr>`).join('')}</tbody></table></div>`);
+				d.show();
+			});
+			$el.find('.xp-cf-all').on('click', () => frappe.confirm(
+				__('Bring {0} student(s) into this plan\'s re-exam? Each gets a marks record here with their regular marks; then open the re-exam window for the course so they can register.', [rows.length]),
+				() => call('carry_forward_all', { exam_plan: this.plan }).then((r) => {
+					frappe.show_alert({ message: __('{0} student(s) added to this re-exam', [r.added]), indicator: 'green' });
+					if (r.errors.length) frappe.msgprint({ title: __('Not added'), message: r.errors.map(esc).join('<br>'), indicator: 'orange' });
+					this.render();
+				})));
+		});
+	}
+
 	// Re-exam sittings, above the Re Exam screen in step 5
 	render_reexam_timetable($el) {
 		call('get_reexam_timetable', { exam_plan: this.plan }).then((t) => {
@@ -1427,7 +1451,8 @@ class ExamPlanner {
 			$mount.empty();
 			const mod = TABS.find((t) => t[0] === k)[2];
 			if (k === 'reexam') {
-				$mount.html('<div class="xp-rx-tt"></div><div class="xp-rx-screen"></div>');
+				$mount.html('<div class="xp-rx-carry"></div><div class="xp-rx-tt"></div><div class="xp-rx-screen"></div>');
+				this.render_carry_forward($mount.find('.xp-rx-carry'));
 				this.render_reexam_timetable($mount.find('.xp-rx-tt'));
 				this.mount(mod, $mount.find('.xp-rx-screen')[0], {});
 			} else {

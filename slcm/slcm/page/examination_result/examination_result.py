@@ -2338,6 +2338,16 @@ def get_marks_breakdown(course, exam_plan, student):
 	                          ["evaluation_schema", "grade_schema"], as_dict=True) or {}
 	explain.update(evaluation_schema=csa.get("evaluation_schema"), grade_schema=csa.get("grade_schema"),
 	               absent=(scm.attendance_status or "").lower() == "absent")
+	# every record of the course: the regular exam, then one re-exam attempt per later plan
+	from slcm.slcm.utils.reexam_attempts import course_attempts
+
+	attempts = course_attempts(student, course)
+	if len(attempts) > 1 or any(a.registered for a in attempts):
+		explain["attempts"] = [{
+			"exam_plan": a.exam_plan, "current": a.exam_plan == exam_plan, "registered": a.registered,
+			"regular_total": a.total_marks, "reexam_marks": a.reexam_marks,
+			"final": a.updated_final_marks, "grade": a.result_grade, "failed": a.failed,
+		} for a in attempts]
 	return explain
 
 
@@ -3381,61 +3391,17 @@ def get_course_statistics(course, exam_plan):
 
 @frappe.whitelist()
 def setup_repeat_exam_marks(student, course, source_exam_plan, target_exam_plan):
-	"""Create (or return existing) Student Course Marks for a student in the
-	target exam plan, copying the evaluation/grade schema from the source.
-	Used when enrolling a student for their 2nd+ arrear attempt.
-	"""
+	"""The student's next re-exam attempt in target_exam_plan: a Student Course
+	Marks record there with the regular marks of their latest record carried
+	over (see slcm.slcm.utils.reexam_attempts). Refused once the student passed."""
 	_check_access()
-	if not all([student, course, source_exam_plan, target_exam_plan]):
-		frappe.throw("student, course, source_exam_plan and target_exam_plan are all required.")
+	if not all([student, course, target_exam_plan]):
+		frappe.throw("student, course and target_exam_plan are all required.")
+	from slcm.slcm.utils.reexam_attempts import carry_forward
 
-	# Return existing record if already present
-	existing = frappe.db.get_value(
-		"Student Course Marks",
-		{"student": student, "course": course, "exam_plan": target_exam_plan},
-		"name",
-	)
-	if existing:
-		return {"name": existing, "status": "existing"}
-
-	# Copy schema assignment from source plan
-	src_assignment = frappe.db.get_value(
-		"Course Schema Assignment",
-		{"exam_plan": source_exam_plan, "course": course},
-		["evaluation_schema", "grade_schema"],
-		as_dict=True,
-	) or {}
-
-	# The repeat attempt is recorded against the course in the target plan's term
-	target_term = _plan_term(target_exam_plan)
-	if not target_term:
-		frappe.throw(f"Target exam plan '{target_exam_plan}' has no Term set.")
-
-	# Ensure a Course Schema Assignment exists in the target plan
-	if src_assignment:
-		tgt_assignment = frappe.db.get_value(
-			"Course Schema Assignment",
-			{"exam_plan": target_exam_plan, "course": course},
-			"name",
-		)
-		if not tgt_assignment:
-			new_csa = frappe.new_doc("Course Schema Assignment")
-			new_csa.exam_plan         = target_exam_plan
-			new_csa.course            = course
-			new_csa.academic_term     = target_term
-			new_csa.evaluation_schema = src_assignment.get("evaluation_schema") or ""
-			new_csa.grade_schema      = src_assignment.get("grade_schema") or ""
-			new_csa.insert(ignore_permissions=True)
-
-	doc = frappe.new_doc("Student Course Marks")
-	doc.student           = student
-	doc.course            = course
-	doc.academic_term     = target_term
-	doc.exam_plan         = target_exam_plan
-	doc.evaluation_schema = src_assignment.get("evaluation_schema") or ""
-	doc.insert(ignore_permissions=True)
+	name, status = carry_forward(student, course, target_exam_plan)
 	frappe.db.commit()
-	return {"name": doc.name, "status": "created"}
+	return {"name": name, "status": status}
 
 
 @frappe.whitelist()

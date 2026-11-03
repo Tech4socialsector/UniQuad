@@ -3722,6 +3722,16 @@ slcm.exam_ui.course_results = function (main, opts) {
 			var parts = ['regular ' + n(x.total)];
 			if (x.reexam_total != null) parts.push('re-exam ' + n(x.reexam_total));
 			if (x.improvement_marks) parts.push('improvement ' + n(x.improvement_marks));
+			if ((x.attempts || []).length) {
+				var k = 0;
+				html += '<h5>Re-exam attempts (until pass)</h5><table><tr><th>Attempt</th><th>Exam plan</th><th class="num">Regular total</th><th class="num">Re-exam marks</th><th class="num">Final</th><th>Grade</th></tr>' +
+					x.attempts.map(function (a, i) {
+						var label = i === 0 ? (a.registered ? 'Regular + re-exam 1' : 'Regular') : 'Re-exam ' + (i + (x.attempts[0].registered ? 1 : 0));
+						return '<tr' + (a.current ? ' class="er2-bd-sum"' : '') + '><td>' + e(label) + (a.current ? ' (this plan)' : '') + '</td><td>' + e(a.exam_plan) + '</td>' +
+							'<td class="num">' + n(a.regular_total) + '</td><td class="num">' + n(a.reexam_marks) + '</td><td class="num">' + n(a.final) + '</td>' +
+							'<td><b style="color:' + (a.failed ? '#b0182b' : '#1d6b3a') + '">' + e(a.grade || '—') + '</b>' + (a.failed ? ' (fail)' : '') + '</td></tr>';
+					}).join('') + '</table>';
+			}
 			html += '<div class="er2-bd-final">Updated final marks = ' + (parts.length > 1 ? 'higher of ' + e(parts.join(', ')) + ' = ' : 'regular total ') + '<b>' + n(x.updated_final_marks) +
 				'</b> → updated grade <b>' + e(x.updated_grade || '—') + '</b></div>';
 		}
