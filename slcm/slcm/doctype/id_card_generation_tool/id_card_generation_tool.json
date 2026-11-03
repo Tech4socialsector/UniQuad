@@ -11,6 +11,7 @@
   "program",
   "column_break_filters",
   "batch",
+  "section",
   "get_students",
   "section_students",
   "student_list",
@@ -63,6 +64,12 @@
    "fieldtype": "Link",
    "label": "Batch",
    "options": "SLCM Batch"
+  },
+  {
+   "fieldname": "section",
+   "fieldtype": "Link",
+   "options": "Section",
+   "label": "Section"
   },
   {
    "fieldname": "get_students",
@@ -158,7 +165,7 @@
  ],
  "issingle": 1,
  "links": [],
- "modified": "2026-11-03 22:30:00.000000",
+ "modified": "2026-11-03 23:45:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "ID Card Generation Tool",

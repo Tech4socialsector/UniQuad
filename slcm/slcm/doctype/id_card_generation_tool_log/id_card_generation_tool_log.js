@@ -36,7 +36,7 @@ const IDCL_CSS = `
 	.idcl-c-new { background: #22c55e; } .idcl-c-regen { background: #3b82f6; } .idcl-c-skip { background: #cbd5e1; } .idcl-c-fail { background: #ef4444; }
 	.idcl-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 13px 18px; border-bottom: 1px solid var(--b); }
 	.idcl-panel-title { font-weight: 600; font-size: 14px; }
-	.idcl-settings { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px 20px; padding: 16px 18px; }
+	.idcl-settings { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px 20px; padding: 16px 18px; }
 	.idcl-setting span { display: block; font-size: 11.5px; color: var(--m); margin-bottom: 3px; }
 	.idcl-setting div { font-size: 13px; font-weight: 500; overflow-wrap: anywhere; }
 	.idcl-setting .muted { color: var(--m); font-weight: 400; }
@@ -284,6 +284,7 @@ function idcl_render(frm) {
 					)}
 					${setting(__("Programme"), doc.program ? esc(doc.program) : __("Any"), !doc.program)}
 					${setting(__("Batch"), doc.batch ? esc(doc.batch) : __("Any"), !doc.batch)}
+					${setting(__("Section"), doc.section ? esc(doc.section) : __("Any"), !doc.section)}
 					${setting(
 						__("Issue date"),
 						doc.issue_date
