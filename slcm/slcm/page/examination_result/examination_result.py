@@ -1059,19 +1059,10 @@ def _plan_assignment(course, exam_plan=None, academic_term=None):
 	return rows[0]
 
 
-@frappe.whitelist()
-def sync_students_from_enrollment(course, exam_plan=None):
-	"""Create Student Course Marks records, in the given exam plan, for every
-	Enrolled student of the Classes teaching this course in the plan's term."""
-	_check_access()
-	assignment = _plan_assignment(course, exam_plan)
-	exam_plan         = assignment["exam_plan"]
-	evaluation_schema = assignment["evaluation_schema"] or ""
-	academic_term     = assignment["academic_term"]
-
-	# Students of this course in the plan's term = Enrolled students of the
-	# Classes teaching the course in that term.
-	enrolled_students = frappe.db.sql(
+def _class_students(course, academic_term, classes=None, exclude_class=None):
+	"""Students (Student Master) Enrolled in the Classes teaching the course in
+	the term: the source of Students & marks. classes / exclude_class narrow it."""
+	return set(frappe.db.sql(
 		"""
 		SELECT DISTINCT se.student
 		FROM `tabClasses` cl
@@ -1081,41 +1072,173 @@ def sync_students_from_enrollment(course, exam_plan=None):
 		WHERE cl.course = %(course)s
 		  AND cl.academic_term = %(academic_term)s
 		  AND ces.status = 'Enrolled'
-		  AND se.student IS NOT NULL
-		  AND se.student != ''
+		  AND IFNULL(se.student, '') != ''
+		  AND (%(no_filter)s OR cl.name IN %(classes)s)
+		  AND cl.name != %(exclude)s
 		""",
-		{"course": course, "academic_term": academic_term},
+		{"course": course, "academic_term": academic_term, "no_filter": classes is None,
+		 "classes": tuple(classes or [""]), "exclude": exclude_class or ""},
+		pluck=True,
+	))
+
+
+def _plans_for(course, academic_term, exam_plan=None):
+	"""Active Exam Plans of the term that have the course mapped (or only exam_plan)."""
+	return frappe.db.sql(
+		"""
+		SELECT csa.exam_plan, csa.evaluation_schema
+		FROM `tabCourse Schema Assignment` csa
+		JOIN `tabExam Plan` ep ON ep.name = csa.exam_plan
+		WHERE csa.course = %(course)s
+		  AND ep.term = %(term)s
+		  AND IFNULL(ep.status, '') != 'Inactive'
+		  AND (%(exam_plan)s = '' OR csa.exam_plan = %(exam_plan)s)
+		""",
+		{"course": course, "term": academic_term, "exam_plan": exam_plan or ""},
 		as_dict=True,
 	)
 
-	if not enrolled_students:
-		frappe.throw("No enrolled students found for this course in its classes for the exam plan's term.")
 
-	added = 0
-	skipped = 0
-	for student in sorted({row["student"] for row in enrolled_students}):
-		exists = frappe.db.exists("Student Course Marks", {
-			"course":     course,
-			"exam_plan":  exam_plan,
-			"student":    student,
-		})
-		if exists:
-			skipped += 1
-			continue
+def _add_course_students(course, exam_plan, evaluation_schema, academic_term, students=None):
+	"""Create the missing Student Course Marks, in the exam plan, for the given
+	students (default: every class student of the course in the term).
+	No access check or commit: callers do both."""
+	if students is None:
+		students = _class_students(course, academic_term)
+	existing = set(frappe.get_all("Student Course Marks",
+		filters={"exam_plan": exam_plan, "course": course}, pluck="student"))
+
+	added = []
+	for student in sorted(set(students) - existing):
 		doc = frappe.new_doc("Student Course Marks")
 		doc.course             = course
 		doc.academic_term      = academic_term
 		doc.exam_plan          = exam_plan
 		doc.student            = student
-		doc.evaluation_schema  = evaluation_schema
+		doc.evaluation_schema  = evaluation_schema or ""
 		doc.status             = "Draft"
 		doc.consider_for_sgpa  = 1
 		doc.insert(ignore_permissions=True)
-		added += 1
+		added.append(student)
 
-	apply_attendance_eligibility(exam_plan, course)
+	return {"added": len(added), "skipped": len(set(students) & existing), "total": len(students), "students": added}
+
+
+def _remove_course_students(course, exam_plan, students):
+	"""Take students who left the course's Classes out of the plan. Only an
+	untouched record goes: Draft, added by the class sync (not by hand), no
+	marks or absence entered and no exam barcode. The rest are kept and
+	returned so the user can decide."""
+	removed, kept = [], []
+	for name in frappe.get_all("Student Course Marks", pluck="name", filters={
+		"exam_plan": exam_plan, "course": course, "student": ["in", list(students) or [""]]}):
+		doc = frappe.get_doc("Student Course Marks", name)
+		has_barcode = frappe.db.exists("Exam Barcode", {"exam_plan": exam_plan, "course": course, "student": doc.student})
+		if doc.status == "Draft" and not doc.manually_added and not doc._has_marks_entered() and not has_barcode:
+			frappe.delete_doc("Student Course Marks", name, ignore_permissions=True)
+			removed.append(doc.student)
+		else:
+			kept.append(doc.student)
+	return removed, kept
+
+
+def _student_names(students):
+	rows = frappe.get_all("Student Master", filters={"name": ["in", list(students) or [""]]},
+		fields=["name", "first_name"])
+	label = {r.name: f"{r.first_name} ({r.name})" if r.first_name else r.name for r in rows}
+	return ", ".join(sorted(label.get(s, s) for s in students))
+
+
+def _enrolled_rows(class_doc):
+	"""Student Masters of a Classes document's Enrolled rows."""
+	enrollments = [r.student_enrollment for r in (class_doc.get("enrolled_students") or []) if r.status == "Enrolled"]
+	return set(frappe.get_all("Student Enrollment",
+		filters={"name": ["in", enrollments or [""]], "student": ["is", "set"]}, pluck="student"))
+
+
+def sync_class_to_exam_plans(class_doc, deleted=False):
+	"""Classes save / delete: keep Students & marks of every active Exam Plan
+	of the term in step with the class. Students Enrolled in the class are
+	added; students who left it (row removed or no longer Enrolled, class
+	deleted or moved to another course/term) and are in no other class of the
+	course are removed when their record is untouched, kept with a warning
+	otherwise. The user is told what changed."""
+	before = None if deleted else class_doc.get_doc_before_save()
+	now = set() if deleted else _enrolled_rows(class_doc)
+	key = (class_doc.course, class_doc.academic_term)
+
+	# (course, term) -> students who may have left it
+	left = {}
+	if deleted:
+		left[key] = _enrolled_rows(class_doc)
+	elif before:
+		was = _enrolled_rows(before)
+		old_key = (before.course, before.academic_term)
+		if old_key == key:
+			left[key] = was - now
+		else:
+			left[old_key] = was
+
+	messages, warnings = [], []
+	for (course, term), students in left.items():
+		if not (students and course and term):
+			continue
+		still = _class_students(course, term, exclude_class=class_doc.name if deleted else None)
+		gone = students - still
+		for p in _plans_for(course, term) if gone else []:
+			removed, kept = _remove_course_students(course, p.exam_plan, gone)
+			if removed:
+				messages.append(_("{0} student(s) removed from {1} in Exam Plan {2}: {3}").format(
+					len(removed), course, p.exam_plan, _student_names(removed)))
+			if kept:
+				warnings.append(_("{0} left the class but stay in {1} in Exam Plan {2}, because marks, a barcode or a "
+					"submitted status already exist, or they were added by hand. Delete their Student Course Marks "
+					"record if they should not sit the exam.").format(_student_names(kept), course, p.exam_plan))
+
+	if now and all(key):
+		for p in _plans_for(*key):
+			r = _add_course_students(key[0], p.exam_plan, p.evaluation_schema, key[1], now)
+			if not r["added"]:
+				continue
+			apply_attendance_eligibility(p.exam_plan, key[0])
+			messages.append(_("{0} student(s) added to {1} in Exam Plan {2} (Students & marks): {3}").format(
+				r["added"], key[0], p.exam_plan, _student_names(r["students"])))
+			if frappe.db.exists("Student Course Marks", {"exam_plan": p.exam_plan, "course": key[0],
+					"status": ["in", ["Submitted", "Locked"]]}):
+				warnings.append(_("Marks for {0} in Exam Plan {1} are already submitted or locked. The new student(s) "
+					"were added as Draft and still need marks.").format(key[0], p.exam_plan))
+
+	for m in messages:
+		frappe.msgprint(m, indicator="green", alert=True)
+	if warnings:
+		frappe.msgprint("<br><br>".join(warnings), title=_("Exam Plan"), indicator="orange")
+
+
+def add_course_students_to_plans(course, academic_term, exam_plan=None):
+	"""A course newly mapped into an Exam Plan brings in the students already
+	in its Classes. Returns how many were added."""
+	added = 0
+	for p in _plans_for(course, academic_term, exam_plan):
+		n = _add_course_students(course, p.exam_plan, p.evaluation_schema, academic_term)["added"]
+		if n:
+			apply_attendance_eligibility(p.exam_plan, course)
+		added += n
+	return added
+
+
+@frappe.whitelist()
+def sync_students_from_enrollment(course, exam_plan=None):
+	"""Create Student Course Marks records, in the given exam plan, for every
+	Enrolled student of the Classes teaching this course in the plan's term."""
+	_check_access()
+	assignment = _plan_assignment(course, exam_plan)
+	result = _add_course_students(
+		course, assignment["exam_plan"], assignment["evaluation_schema"], assignment["academic_term"])
+	if not result["total"]:
+		frappe.throw("No enrolled students found for this course in its classes for the exam plan's term.")
+	apply_attendance_eligibility(assignment["exam_plan"], course)
 	frappe.db.commit()
-	return {"added": added, "skipped": skipped, "total": len(enrolled_students)}
+	return result
 
 
 @frappe.whitelist()

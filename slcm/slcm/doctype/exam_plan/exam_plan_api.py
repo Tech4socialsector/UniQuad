@@ -487,6 +487,7 @@ def save_course_schema(exam_plan, assignments, reason=None):
 
 	changed_courses = []
 	mapped_courses = []
+	new_courses = []
 	academic_term = frappe.db.get_value("Exam Plan", exam_plan, "term")
 
 	for asgn in assignments:
@@ -573,8 +574,10 @@ def save_course_schema(exam_plan, assignments, reason=None):
 				doc.insert(ignore_permissions=True)
 				changed_courses.append(course)
 				mapped_courses.append(course)
+				new_courses.append(course)
 
 	_sync_course_schedules(exam_plan, mapped_courses)
+	_add_class_students(exam_plan, academic_term, new_courses)
 	frappe.db.commit()
 
 	# ── Notification ────────────────────────────────────────────────────────
@@ -592,6 +595,36 @@ def save_course_schema(exam_plan, assignments, reason=None):
 		)
 
 	return True
+
+
+def _add_class_students(exam_plan, academic_term, courses):
+	"""A newly mapped course brings in the students already in its Classes."""
+	from slcm.slcm.page.examination_result.examination_result import add_course_students_to_plans
+
+	if not academic_term:
+		return
+	added, failed = {}, []
+	for course in courses:
+		message_count = len(frappe.local.message_log)
+		frappe.db.savepoint("map_course_students")
+		try:
+			n = add_course_students_to_plans(course, academic_term, exam_plan)
+			if n:
+				added[course] = n
+		except Exception:
+			frappe.db.rollback(save_point="map_course_students")
+			del frappe.local.message_log[message_count:]  # only this step's messages
+			frappe.log_error(f"Adding class students of {course} to {exam_plan}")
+			failed.append(course)
+
+	if added:
+		frappe.msgprint("<br>".join(f"{c}: {n} student(s)" for c, n in added.items()),
+			title="Students added from Classes", indicator="green")
+	if failed:
+		frappe.msgprint(
+			"Students of these courses could not be added from Classes: " + ", ".join(failed)
+			+ ". See the Error Log, or open the course in Students & marks and use Fetch from Enrollment.",
+			title="Students not added", indicator="orange")
 
 
 @frappe.whitelist()

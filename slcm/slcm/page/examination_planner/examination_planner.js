@@ -681,7 +681,7 @@ class ExamPlanner {
 			}, { students: 0, classes: 0, detained: 0, barcodes: 0, entered: 0, marks: 0 });
 
 			this.$body.html(this.card(__('Students & marks'),
-				__('One row per course. Use the buttons above the table for every course at once, or open a course to add students, enter or import marks, and lock it.'), ''));
+				__('One row per course. Students come from Classes on their own: saving a Class adds its enrolled students here and removes students who left (if they have no marks yet). Open a course to enter or import marks, and lock it.'), ''));
 			const $c = this.$body.find('.xp-card-body');
 			$c.html(`
 				<div class="xp-kpis">
@@ -691,7 +691,8 @@ class ExamPlanner {
 					<div><b>${t.entered} / ${t.marks}</b><span>${__('marks entered')}</span></div>
 				</div>
 				<div class="xp-bar">
-					<button class="btn btn-primary btn-sm xp-sync">${__('Add students from Classes')}</button>
+					<!-- Students added to Classes now reach the plan automatically (Classes save / course mapping)
+					<button class="btn btn-primary btn-sm xp-sync">${__('Add students from Classes')}</button> -->
 					<button class="btn btn-default btn-sm xp-elig">${__('Update eligibility')}</button>
 					<button class="btn btn-default btn-sm xp-acc">${__('Marks entry access')}</button>
 					<span class="xp-grow"></span>
@@ -718,10 +719,11 @@ class ExamPlanner {
 
 			const open = (course) => { this.course = course; this.render_course_view(); };
 			$c.find('.xp-crow').on('click', (e) => open($(e.currentTarget).data('course')));
-			$c.find('.xp-sync').on('click', () => call('sync_all_students', { exam_plan: this.plan }).then((r) => {
-				frappe.msgprint(__('{0} added, {1} already in the plan.', [r.added, r.skipped]) + (r.errors.length ? '<br><br>' + r.errors.map(esc).join('<br>') : ''));
-				this.refresh();
-			}));
+			// Add students from Classes: now automatic, see Classes.add_students_to_exam_plans
+			// $c.find('.xp-sync').on('click', () => call('sync_all_students', { exam_plan: this.plan }).then((r) => {
+			// 	frappe.msgprint(__('{0} added, {1} already in the plan.', [r.added, r.skipped]) + (r.errors.length ? '<br><br>' + r.errors.map(esc).join('<br>') : ''));
+			// 	this.refresh();
+			// }));
 			$c.find('.xp-elig').on('click', () => call('update_eligibility', { exam_plan: this.plan }).then((r) => {
 				frappe.msgprint(__('{0} detained, {1} cleared, {2} without attendance yet.', [r.detained, r.cleared, r.no_attendance_yet]));
 				this.refresh();

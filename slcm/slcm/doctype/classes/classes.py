@@ -7,7 +7,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.naming import make_autoname
-from frappe.utils import cint, getdate
+from frappe.utils import cint, getdate, now_datetime
 
 from slcm.slcm.doctype.student_enrollment.student_enrollment import (
 	enrollments_in_year,
@@ -37,14 +37,74 @@ class Classes(Document):
 		self.validate_term_and_course()
 		self.validate_duplicate_class()
 		self.validate_students()
+		self.track_student_changes()
 		self.total_students = len(self.enrolled_students)
+
+	def track_student_changes(self):
+		"""Stamp who added each student and when, and log every student added,
+		removed or changed in status after the class was created. Set here on
+		the server for every path (grid, Add / Remove Students, import, API);
+		values sent by the client for these fields and the log are ignored."""
+		now, user = now_datetime(), frappe.session.user
+		previous = self.get_doc_before_save()
+		if not previous:
+			for row in self.enrolled_students:
+				row.update({"added_on": now, "added_by": user, "added_after_creation": 0})
+			self.set("student_log", [])
+			return
+
+		# The log only grows: rebuild it from the saved rows, then append.
+		self.set("student_log", [r.as_dict() for r in previous.get("student_log") or []])
+
+		def log(action, row, from_status=None, to_status=None):
+			self.append("student_log", {
+				"changed_on": now, "changed_by": user, "action": action,
+				"student_enrollment": row.student_enrollment, "student_name": row.student_name,
+				"from_status": from_status, "to_status": to_status,
+			})
+
+		was = {r.student_enrollment: r for r in previous.enrolled_students}
+		for row in self.enrolled_students:
+			old = was.get(row.student_enrollment)
+			if not old:
+				row.update({"added_on": now, "added_by": user, "added_after_creation": 1})
+				log("Added", row, to_status=row.status)
+				continue
+			row.update({"added_on": old.added_on, "added_by": old.added_by,
+				"added_after_creation": old.added_after_creation})
+			if old.status != row.status:
+				log("Status Changed", row, old.status, row.status)
+
+		staying = {r.student_enrollment for r in self.enrolled_students}
+		for enrollment, old in was.items():
+			if enrollment not in staying:
+				log("Removed", old, from_status=old.status)
 
 	def on_update(self):
 		# Each student's enrolled course row carries this class, term, year and status.
 		sync_class_to_enrollments(self)
+		self.sync_exam_plans()
+
+	def sync_exam_plans(self, deleted=False):
+		# Students & marks of every active Exam Plan mapping this course follows
+		# the class. An exam-side failure must not block the class.
+		from slcm.slcm.page.examination_result.examination_result import sync_class_to_exam_plans
+
+		message_count = len(frappe.local.message_log)
+		frappe.db.savepoint("class_exam_students")
+		try:
+			sync_class_to_exam_plans(self, deleted=deleted)
+		except Exception:
+			frappe.db.rollback(save_point="class_exam_students")
+			del frappe.local.message_log[message_count:]  # only this step's messages
+			frappe.log_error(f"Syncing students of {self.name} to exam plans")
+			frappe.msgprint(_("The class is saved, but Students & marks of the exam plan could not be updated. "
+				"See the Error Log, or use Fetch from Enrollment on the course in the Exam Planner."),
+				indicator="orange", alert=True)
 
 	def on_trash(self):
 		sync_class_to_enrollments(self, removed=True)
+		self.sync_exam_plans(deleted=True)
 
 	def validate_term_and_course(self):
 		term_year = frappe.db.get_value("Academic Term", self.academic_term, "academic_year")

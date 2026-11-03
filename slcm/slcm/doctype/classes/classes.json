@@ -28,7 +28,10 @@
   "enrolled_students",
   "total_students",
   "schedule_log_tab",
-  "schedule_log_html"
+  "schedule_log_html",
+  "student_log_tab",
+  "student_log_html",
+  "student_log"
  ],
  "fields": [
   {
@@ -187,12 +190,32 @@
    "fieldname": "schedule_log_html",
    "fieldtype": "HTML",
    "label": "Schedule Log"
+  },
+  {
+   "depends_on": "eval:!doc.__islocal",
+   "fieldname": "student_log_tab",
+   "fieldtype": "Tab Break",
+   "label": "Student Log"
+  },
+  {
+   "fieldname": "student_log_html",
+   "fieldtype": "HTML",
+   "label": "Student Log"
+  },
+  {
+   "fieldname": "student_log",
+   "fieldtype": "Table",
+   "label": "Student Change Log",
+   "options": "Class Student Log",
+   "hidden": 1,
+   "read_only": 1,
+   "no_copy": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-11-02 14:26:53.094048",
+ "modified": "2026-11-03 19:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Classes",
