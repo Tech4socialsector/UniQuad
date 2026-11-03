@@ -175,8 +175,8 @@ class ExamPlanner {
 			const mapped_row = (c) => `<div class="xp-cr" data-course="${esc(c.course)}">
 				${head(c)}
 				<div class="xp-cr-view">
-					<span><small>${__('Evaluation')}</small><b>${esc(c.evaluation_schema)}</b></span>
-					<span><small>${__('Grading')}</small><b>${esc(c.grade_schema)}</b></span>
+					<span><small>${__('Evaluation')}</small><button class="xp-schema-link" data-doctype="Evaluation Schema" data-name="${esc(c.evaluation_schema)}" title="${__('View schema')}">${esc(c.evaluation_schema)}</button></span>
+					<span><small>${__('Grading')}</small><button class="xp-schema-link" data-doctype="Grading Schema" data-name="${esc(c.grade_schema)}" title="${__('View schema')}">${esc(c.grade_schema)}</button></span>
 					<span class="xp-pill ok">✓ ${__('Mapped')}</span>
 				</div>
 				<div class="xp-cr-edit" style="display:none">${sel(evs, c.evaluation_schema, 'xp-ev', 'Evaluation Schema')}${sel(gss, c.grade_schema, 'xp-gs', 'Grading Schema')}</div>
@@ -191,6 +191,7 @@ class ExamPlanner {
 				return `<div class="xp-cr todo" data-course="${esc(c.course)}">
 					${head(c)}
 					<div class="xp-cr-edit">${sel(evs, ev, 'xp-ev', 'Evaluation Schema')}${sel(gss, gs, 'xp-gs', 'Grading Schema')}
+						<button class="xp-schema-link xp-peek" data-for="xp-ev">${__('View')}</button><button class="xp-schema-link xp-peek" data-for="xp-gs">${__('View')}</button>
 						${why(c) ? `<small class="xp-why">${why(c)}</small>` : ''}</div>
 					<div class="xp-cr-act"><button class="btn btn-primary btn-sm xp-save-one">${__('Map')}</button></div></div>`;
 			};
@@ -231,6 +232,14 @@ class ExamPlanner {
 			$c.find('.xp-add-comp').on('click', () => this.masters_dialog('Exam Component'));
 			$c.find('.xp-add-atype').on('click', () => this.masters_dialog('Exam Assessment Type'));
 			$c.find('.xp-go-next').on('click', () => { this.step = 1; this.refresh(); });
+			$c.on('click', '.xp-schema-link', (e) => {
+				const $b = $(e.currentTarget);
+				if (!$b.data('for')) { this.schema_view($b.data('doctype'), $b.data('name')); return; }
+				const $sel = $b.closest('.xp-cr').find('.' + $b.data('for'));
+				const name = $sel.val();
+				if (!name || name === NEW) { frappe.show_alert({ message: __('Pick a schema first.'), indicator: 'orange' }); return; }
+				this.schema_view($sel.data('doctype'), name);
+			});
 			// A schema just made in the panel goes to every course still without one
 			Object.entries(this.prefill || {}).forEach(([doctype, name]) => {
 				$c.find(`.xp-cr.todo .xp-select[data-doctype="${doctype}"]`).filter((_, el) => !el.value).val(name);
@@ -292,6 +301,56 @@ class ExamPlanner {
 						this.refresh();
 					}));
 			});
+		});
+	}
+
+	// Read-only view of a schema, from the mapping step
+	schema_view(doctype, name) {
+		const grading = doctype === 'Grading Schema';
+		const method = 'slcm.slcm.page.examination_result.examination_result.' + (grading ? 'get_grading_schema_details' : 'get_evaluation_schema_details');
+		frappe.call({ method, args: { name } }).then((r) => {
+			const x = r.message || {};
+			const n = (v) => (v === null || v === undefined || v === '' ? '—' : esc(String(+v === +v ? +v : v)));
+			const yes = (v) => (v ? `<span class="xp-pill bad">${__('Must pass')}</span>` : '');
+			let body;
+			if (grading) {
+				body = `<div class="xp-sv-stats">
+						<span><small>${__('Grading type')}</small><b>${esc(x.grading_type || '—')}</b></span>
+						<span><small>${__('Out of')}</small><b>${n(x.maximum_marks)}</b></span>
+						<span><small>${__('Grades')}</small><b>${(x.grades || []).length}</b></span></div>
+					<table class="xp-sv-table"><thead><tr><th>${__('Grade')}</th><th>${__('Marks')}</th><th class="num">${__('Grade point')}</th><th></th></tr></thead><tbody>
+					${(x.grades || []).map((g) => `<tr class="${g.failed ? 'fail' : ''}"><td><b>${esc(g.grade)}</b>${g.qualitative_meaning ? ` <small>${esc(g.qualitative_meaning)}</small>` : ''}</td>
+						<td>${n(g.marks_from)} ${g.to_operator === '<' ? __('to under') : __('to')} ${n(g.marks_to)}</td>
+						<td class="num">${n(g.grade_point)}</td><td>${g.failed ? `<span class="xp-pill bad">${__('Fail')}</span>` : ''}</td></tr>`).join('')}
+					</tbody></table>`;
+			} else {
+				const comps = x.components || [], asmts = x.assessments || [];
+				body = `<div class="xp-sv-stats">
+						<span><small>${__('Total marks')}</small><b>${n(x.total_marks)}</b></span>
+						<span><small>${__('Pass mark')}</small><b>${n(x.passing_marks)}</b></span>
+						<span><small>${__('Components')}</small><b>${comps.length}</b></span></div>
+					${comps.map((c) => {
+						const rows = asmts.filter((a) => a.component === c.component);
+						return `<div class="xp-sv-comp"><div class="xp-sv-comp-head"><b>${esc(c.component_name || c.component)}</b>
+							<span>${__('{0} marks', [n(c.effective_max_marks)])}${c.passing_marks ? ' · ' + __('pass {0}', [n(c.passing_marks)]) : ''} ${yes(c.consider_for_pass_fail)}</span></div>
+							${rows.length ? `<table class="xp-sv-table"><thead><tr><th>${__('Assessment')}</th><th class="num">${__('Marked out of')}</th><th class="num">${__('Counts as')}</th><th class="num">${__('Pass')}</th></tr></thead><tbody>
+							${rows.map((a) => `<tr><td>${esc(a.label || a.type_name || a.assessment_type)} ${yes(a.consider_for_pass_fail)}</td><td class="num">${n(a.maximum_marks)}</td>
+								<td class="num">${n(a.effective_marks)}</td><td class="num">${a.passing_marks ? n(a.passing_marks) : '—'}</td></tr>`).join('')}
+							</tbody></table>` : `<p class="xp-muted">${__('No assessments')}</p>`}</div>`;
+					}).join('')}
+					<p class="xp-muted">${__('"Counts as" is what the assessment adds to the total; "Must pass" means a student fails the course if they fail that part.')}</p>`;
+			}
+			const d = new frappe.ui.Dialog({
+				title: `${__(doctype)}: ${name}`,
+				size: 'large',
+				fields: [{ fieldtype: 'HTML', fieldname: 'body' }],
+				primary_action_label: __('Close'),
+				primary_action: () => d.hide(),
+				secondary_action_label: __('Open full {0}', [__(doctype)]),
+				secondary_action: () => { d.hide(); frappe.set_route('Form', doctype, name); },
+			});
+			d.fields_dict.body.$wrapper.html(`<div class="xp-sv">${x.description ? `<p>${esc(x.description)}</p>` : ''}${body}</div>`);
+			d.show();
 		});
 	}
 
@@ -682,6 +741,20 @@ class ExamPlanner {
 			.xp-pill.info{background:var(--bg-blue,#e6edf9);color:var(--text-on-blue,#2d4f8a)}
 			.xp-msg{min-width:220px;white-space:normal}
 			.xp-muted{color:var(--text-muted);font-size:12px}
+			.xp-schema-link{background:none;border:0;padding:0;font:inherit;font-weight:700;font-size:13px;color:var(--er-brand,#920C24);text-decoration:underline dotted;text-underline-offset:3px;cursor:pointer;text-align:left}
+			.xp-schema-link:hover{text-decoration-style:solid}.xp-peek{font-size:11.5px;justify-self:start}
+			.xp-sv{font-family:var(--er-font,Georgia,serif);font-size:13px}
+			.xp-sv-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:14px}
+			.xp-sv-stats span{border:1px solid var(--border-color);border-radius:8px;padding:10px 12px;background:var(--er-brand-softest,#FBEEF0)}
+			.xp-sv-stats small{display:block;color:var(--text-muted);font-size:11px}.xp-sv-stats b{font-size:18px;color:var(--er-brand,#920C24)}
+			.xp-sv-comp{border:1px solid var(--border-color);border-radius:8px;margin-bottom:10px;overflow:hidden}
+			.xp-sv-comp-head{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:9px 12px;background:var(--subtle-fg,#f7f7f8)}
+			.xp-sv-comp-head span{color:var(--text-muted);font-size:12px}
+			.xp-sv-table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+			.xp-sv-table th{font-size:11px;color:var(--text-muted);text-align:left;padding:7px 12px;border-bottom:1px solid var(--border-color);font-weight:700}
+			.xp-sv-table td{padding:7px 12px;border-bottom:1px solid var(--border-color)}.xp-sv-table tr:last-child td{border-bottom:0}
+			.xp-sv-table .num{text-align:right}.xp-sv-table tr.fail td{background:var(--bg-red,#fde6e8)}
+			.xp-sv-table td small{color:var(--text-muted)}.xp-sv > .xp-sv-table{border:1px solid var(--border-color);border-radius:8px}
 			.xp-map-progress{display:flex;flex-direction:column;gap:6px;min-width:240px}.xp-map-progress b{font-size:13px}
 			.xp-bar-track{height:6px;border-radius:3px;background:var(--gray-200,#e6e9ec);overflow:hidden}.xp-bar-track i{display:block;height:100%;background:var(--er-brand,#920C24)}
 			.xp-cr-group{margin-top:16px}.xp-cr-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
