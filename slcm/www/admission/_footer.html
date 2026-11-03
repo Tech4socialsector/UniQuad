@@ -263,7 +263,7 @@
                             {% for item in col.links %}
                             <li>
                                 {% if item.route %}
-                                <a href="{{ item.route }}" style="font-size:14px;font-weight:normal;opacity:0.75;word-break: break-word;">{{ item.label }}</a>
+                                <a href="{{ item.route }}" target="_blank" rel="noopener noreferrer" style="font-size:14px;font-weight:normal;opacity:0.75;word-break: break-word;">{{ item.label }}</a>
                                 {% else %}
                                 <span style="font-size:14px;font-weight:normal;opacity:0.75;display:inline-block;word-break:break-word;">{{ item.label }}</span>
                                 {% endif %}
@@ -281,7 +281,7 @@
                 <div style="display:flex;flex-direction:column;align-items:flex-end;min-width:220px;">
                     <div style="display:flex;flex-wrap:wrap;gap:12px;width:210px;justify-content:flex-start;">
                         {% for link in footer.social_links %}
-                        <a href="{{ link.url }}" target="_blank"
+                        <a href="{{ link.url }}" target="_blank" rel="noopener noreferrer"
                             style="color: {{ link.color }} !important; font-size: 30px!important; transition: transform 0.2s, opacity 0.2s; display: inline-flex; opacity: 0.9;"
                             onmouseover="this.style.transform='translateY(-3px)';this.style.opacity='1'"
                             onmouseout="this.style.transform='none';this.style.opacity='0.9'" title="{{ link.platform }}">
