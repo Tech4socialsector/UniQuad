@@ -22,7 +22,7 @@ const IDCT_CSS = `
 	.idct-num.done { background: var(--green-500, #22c55e); color: #fff; }
 	.idct-panel-body { padding: 14px 16px; }
 	.idct-side { position: sticky; top: 72px; display: grid; gap: 16px; }
-	.idct-filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 10px; align-items: end; }
+	.idct-filters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) auto; gap: 10px; align-items: end; }
 	.idct .form-group { margin-bottom: 0; }
 	.idct-filters .frappe-control { margin-bottom: 0; }
 	.idct-filters [data-act='find'] { height: 28px; }
@@ -69,6 +69,25 @@ const IDCT_CSS = `
 	.idct-icon-btn { width: 28px; height: 28px; border-radius: 7px; border: 0; background: transparent; color: var(--m); display: inline-flex;
 		align-items: center; justify-content: center; cursor: pointer; }
 	.idct-icon-btn:hover { background: var(--bg); color: var(--red-600, #dc2626); }
+	.idct-icon-btn.dl:hover { color: var(--a); }
+	.idct-check { width: 16px; height: 16px; margin: 0; cursor: pointer; vertical-align: middle; accent-color: var(--a); }
+	.idct-table th.idct-col-check, .idct-table td.idct-col-check { width: 40px; padding-right: 0; }
+	.idct-table tbody tr.is-selected td { background: rgba(37,99,235,.07); }
+	.idct-table tbody tr.is-selected:hover td { background: rgba(37,99,235,.11); }
+	.idct-status-cell { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+	.idct-selbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 16px; background: var(--t); color: var(--bg);
+		border-bottom: 1px solid var(--b); }
+	.idct-selbar .idct-selbar-count { font-size: 13px; font-weight: 600; margin-right: 6px; }
+	.idct-selbar .btn { display: inline-flex; align-items: center; gap: 6px; height: 28px; border-radius: 8px; font-size: 12px; border: 0;
+		background: rgba(255,255,255,.12); color: var(--bg); }
+	.idct-selbar .btn:hover:not(:disabled) { background: rgba(255,255,255,.22); }
+	.idct-selbar .btn.primary { background: var(--bg); color: var(--t); }
+	.idct-selbar .btn:disabled { opacity: .45; }
+	.idct-selbar .idct-selbar-spacer { flex: 1; }
+	.idct-selbar .idct-link { background: none; border: 0; color: inherit; opacity: .75; font-size: 12px; cursor: pointer; text-decoration: underline; }
+	.idct-scope { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; margin-bottom: 10px; border-radius: 9px;
+		background: rgba(37,99,235,.07); color: var(--a); font-size: 12.5px; font-weight: 500; }
+	.idct-scope button { background: none; border: 0; color: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; padding: 0; }
 	.idct-empty { text-align: center; padding: 48px 24px; color: var(--m); font-size: 13px; }
 	.idct-empty b { display: block; color: var(--t); font-size: 15px; margin-bottom: 6px; }
 	.idct-empty-ico { width: 48px; height: 48px; border-radius: 14px; background: var(--s); color: var(--a); margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; }
@@ -118,6 +137,11 @@ const IDCT_ICONS = {
 	archive:
 		'<rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8M10 12h4"/>',
 	check: '<path d="M20 6 9 17l-5-5"/>',
+	download: '<path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 21h14"/>',
+	trash: '<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/>',
+	printer:
+		'<path d="M6 9V2h12v7"/><rect x="6" y="14" width="12" height="8" rx="1"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>',
+	spark: '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/>',
 };
 const idct_icon = (name, size = 16) =>
 	`<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${IDCT_ICONS[name]}</svg>`;
@@ -131,8 +155,8 @@ function idct_status(row) {
 	return { key: "new", label: __("New card") };
 }
 
-function idct_counts(frm) {
-	const rows = frm.doc.student_list || [];
+function idct_counts(frm, only) {
+	const rows = (frm.doc.student_list || []).filter((r) => !only || only.has(r.student));
 	const c = { total: rows.length, new: 0, has: 0, done: 0, fail: 0, no_photo: 0, with_card: 0 };
 	rows.forEach((r) => {
 		c[idct_status(r).key]++;
@@ -156,10 +180,27 @@ class IDCardBulkConsole {
 		this.preview = null;
 		this.photos = {};
 		this.controls = {};
+		this.selected = new Set();
 	}
 
 	get running() {
 		return !!this.frm.__idc_run;
+	}
+
+	/** The selected students, or null when nothing is selected (= whole list). */
+	get scope() {
+		this.prune_selection();
+		return this.selected.size ? this.selected : null;
+	}
+
+	prune_selection() {
+		const present = new Set((this.frm.doc.student_list || []).map((r) => r.student));
+		[...this.selected].forEach((s) => present.has(s) || this.selected.delete(s));
+	}
+
+	clear_selection() {
+		this.selected.clear();
+		this.refresh();
 	}
 
 	mount() {
@@ -187,6 +228,7 @@ class IDCardBulkConsole {
 									<div data-control="academic_year"></div>
 									<div data-control="program"></div>
 									<div data-control="batch"></div>
+									<div data-control="section"></div>
 									<button class="btn btn-primary btn-sm" data-act="find">${__("Find students")}</button>
 								</div>
 								<div class="idct-addrow">
@@ -302,6 +344,12 @@ class IDCardBulkConsole {
 			label: __("Batch"),
 			placeholder: __("Any batch"),
 		});
+		make("section", {
+			fieldtype: "Link",
+			options: "Section",
+			label: __("Section"),
+			placeholder: __("Any section"),
+		});
 		make("add_student", {
 			fieldtype: "Link",
 			options: "Student Master",
@@ -333,6 +381,7 @@ class IDCardBulkConsole {
 			"academic_year",
 			"program",
 			"batch",
+			"section",
 			"id_card_template",
 			"issue_date",
 			"expiry_date",
@@ -377,6 +426,7 @@ class IDCardBulkConsole {
 			frappe.confirm(__("Remove all students from the list?"), () => {
 				this.frm.doc.student_list = [];
 				this.frm.dirty();
+				this.selected.clear();
 				this.preview_student = null;
 				this.refresh();
 				this.load_preview();
@@ -393,7 +443,53 @@ class IDCardBulkConsole {
 			this.refresh();
 			this.load_preview();
 		});
-		$r.on("click", "a[data-card]", (e) => e.stopPropagation());
+		$r.on("click", "a[data-card], .idct-col-check", (e) => e.stopPropagation());
+		$r.on("change", "[data-select]", (e) => {
+			const student = String($(e.currentTarget).data("select"));
+			if (e.currentTarget.checked) this.selected.add(student);
+			else this.selected.delete(student);
+			this.refresh_selection();
+		});
+		$r.on("change", "[data-select-all]", (e) => {
+			const on = e.currentTarget.checked;
+			this.visible_rows().forEach((r) =>
+				on ? this.selected.add(r.student) : this.selected.delete(r.student)
+			);
+			this.refresh_selection();
+		});
+		$r.on("click", "[data-download-card]", (e) => {
+			e.stopPropagation();
+			const $b = $(e.currentTarget);
+			idct_download_dialog(
+				String($b.data("download-card")),
+				String($b.data("student")),
+				String($b.data("name"))
+			);
+		});
+		$r.on("click", "[data-sel]", (e) => {
+			const act = $(e.currentTarget).data("sel");
+			const scope = this.scope;
+			if (act === "clear") return this.clear_selection();
+			if (act === "generate") return idct_generate(this.frm, scope);
+			if (act === "sheet") return idct_print_sheet(this.frm, scope);
+			if (act === "zip") return idct_zip(this.frm, scope);
+			if (act === "printed") return idct_mark_printed(this.frm, scope);
+			if (act === "remove") {
+				frappe.confirm(
+					__("Remove {0} selected student(s) from the list?", [this.selected.size]),
+					() => {
+						this.frm.doc.student_list = (this.frm.doc.student_list || []).filter(
+							(r) => !this.selected.has(r.student)
+						);
+						this.frm.doc.student_list.forEach((r, i) => (r.idx = i + 1));
+						this.selected.clear();
+						this.frm.dirty();
+						this.refresh();
+						this.load_preview();
+					}
+				);
+			}
+		});
 		$r.on("click", "tr[data-student]", (e) => {
 			this.preview_student = String($(e.currentTarget).data("student"));
 			this.render_list(true);
@@ -403,12 +499,12 @@ class IDCardBulkConsole {
 			this.preview_side = $(e.currentTarget).data("side");
 			this.render_preview();
 		});
-		$r.on("click", "[data-act='generate']", () => idct_generate(this.frm));
+		$r.on("click", "[data-act='generate']", () => idct_generate(this.frm, this.scope));
 		$r.on("click", "[data-out]", (e) => {
 			const out = $(e.currentTarget).data("out");
-			if (out === "sheet") idct_print_sheet(this.frm);
-			if (out === "zip") idct_zip(this.frm);
-			if (out === "printed") idct_mark_printed(this.frm);
+			if (out === "sheet") idct_print_sheet(this.frm, this.scope);
+			if (out === "zip") idct_zip(this.frm, this.scope);
+			if (out === "printed") idct_mark_printed(this.frm, this.scope);
 		});
 	}
 
@@ -531,30 +627,23 @@ class IDCardBulkConsole {
 				22
 			)}</div>
 				<b>${__("No students yet")}</b>${__(
-				"Choose a year, programme or batch above and click Find students."
+				"Choose a year, programme, batch or section above and click Find students."
 			)}</div>`);
 			return;
 		}
 
-		const matches = rows.filter((r) => {
-			if (this.filter === "no_photo") {
-				if (r.has_photo) return false;
-			} else if (this.filter !== "all" && idct_status(r).key !== this.filter) {
-				return false;
-			}
-			return (
-				!this.query ||
-				`${r.student} ${r.student_name || ""}`.toLowerCase().includes(this.query)
-			);
-		});
+		const matches = this.visible_rows();
 		const preview_student = this.current_preview_student();
 		const run = this.frm.__idc_run;
+		const all_on = matches.length > 0 && matches.every((r) => this.selected.has(r.student));
+		const some_on = matches.some((r) => this.selected.has(r.student));
 
 		const body = matches
 			.slice(0, this.limit)
 			.map((r) => {
 				const st = idct_status(r);
 				const photo = this.photos[r.student];
+				const on = this.selected.has(r.student);
 				const initials = (r.student_name || r.student)
 					.split(/\s+/)
 					.map((w) => w[0])
@@ -567,13 +656,21 @@ class IDCardBulkConsole {
 							r.has_photo ? "" : __("No photo: the default avatar will be printed")
 					  }">${esc(initials)}</span>`;
 				const queued = run && st.key === "new";
+				const downloadable = r.current_id_card && (st.key === "done" || st.key === "has");
 				return `<tr data-student="${esc(r.student)}" class="${
 					r.student === preview_student ? "is-preview" : ""
-				}" title="${__("Click to preview this student's card")}">
+				} ${on ? "is-selected" : ""}" title="${__(
+					"Click to preview this student's card"
+				)}">
+					<td class="idct-col-check"><input type="checkbox" class="idct-check" data-select="${esc(
+						r.student
+					)}" ${on ? "checked" : ""} aria-label="${__("Select")}"></td>
 					<td><div class="idct-person">${avatar}<div style="min-width:0"><div class="idct-person-name">${esc(
 					r.student_name || r.student
 				)}</div>
-						<div class="idct-person-id">${esc(r.student)}</div></div></div></td>
+						<div class="idct-person-id">${esc(r.student)}${
+					r.section ? ` · ${__("Section {0}", [esc(r.section)])}` : ""
+				}</div></div></div></td>
 					<td class="idct-col-card">${
 						r.current_id_card
 							? `<a class="idct-card-link" data-card href="/app/id-card-generation/${encodeURIComponent(
@@ -581,9 +678,17 @@ class IDCardBulkConsole {
 							  )}" target="_blank">${esc(r.current_id_card)}</a>`
 							: `<span class="text-muted">—</span>`
 					}</td>
-					<td><span class="idct-status ${queued ? "busy" : st.key}">${
+					<td><div class="idct-status-cell"><span class="idct-status ${queued ? "busy" : st.key}">${
 					queued ? __("Queued") : st.label
-				}</span>
+				}</span>${
+					downloadable
+						? `<button class="idct-icon-btn dl" data-download-card="${esc(
+								r.current_id_card
+						  )}" data-student="${esc(r.student)}" data-name="${esc(
+								r.student_name || r.student
+						  )}" title="${__("Download card")}">${idct_icon("download", 15)}</button>`
+						: ""
+				}</div>
 						${
 							st.detail
 								? `<div class="small text-muted" style="max-width:320px;white-space:normal;margin-top:3px">${esc(
@@ -604,10 +709,14 @@ class IDCardBulkConsole {
 
 		$list.html(
 			matches.length
-				? `<div style="max-height:620px;overflow:auto"><table class="idct-table"><thead><tr><th>${__(
-						"Student"
-				  )}</th>
-					<th class="idct-col-card">${__("ID card")}</th><th>${__(
+				? `<div class="idct-selbar-slot"></div>
+					<div style="max-height:620px;overflow:auto"><table class="idct-table"><thead><tr>
+					<th class="idct-col-check"><input type="checkbox" class="idct-check" data-select-all ${
+						all_on ? "checked" : ""
+					} title="${__("Select all shown")}" aria-label="${__(
+						"Select all shown"
+				  )}"></th>
+					<th>${__("Student")}</th><th class="idct-col-card">${__("ID card")}</th><th>${__(
 						"Status"
 				  )}</th><th></th></tr></thead><tbody>${body}</tbody></table></div>
 					${
@@ -620,24 +729,99 @@ class IDCardBulkConsole {
 					}`
 				: `<div class="idct-empty">${__("No students match this filter.")}</div>`
 		);
+		const head = $list.find("[data-select-all]")[0];
+		if (head) head.indeterminate = some_on && !all_on;
+		this.render_selbar();
+	}
+
+	visible_rows() {
+		return (this.frm.doc.student_list || []).filter((r) => {
+			if (this.filter === "no_photo") {
+				if (r.has_photo) return false;
+			} else if (this.filter !== "all" && idct_status(r).key !== this.filter) {
+				return false;
+			}
+			return (
+				!this.query ||
+				`${r.student} ${r.student_name || ""} ${r.section || ""}`
+					.toLowerCase()
+					.includes(this.query)
+			);
+		});
+	}
+
+	/** Re-render the parts that depend on the selection, keeping scroll position. */
+	refresh_selection() {
+		const $scroll = this.$root.find(".idct-list > div[style*='overflow']");
+		const top = $scroll.scrollTop();
+		this.render_list(true);
+		this.$root.find(".idct-list > div[style*='overflow']").scrollTop(top);
+		this.render_run();
+		this.render_outputs();
+	}
+
+	render_selbar() {
+		const $slot = this.$root.find(".idct-selbar-slot");
+		const scope = this.scope;
+		if (!scope) {
+			$slot.empty();
+			return;
+		}
+		const c = idct_counts(this.frm, scope);
+		const busy = this.running ? "disabled" : "";
+		$slot.html(`<div class="idct-selbar">
+			<span class="idct-selbar-count">${__("{0} selected", [scope.size])}</span>
+			<button class="btn primary" data-sel="generate" ${
+				busy || !c.to_process || !this.frm.doc.id_card_template ? "disabled" : ""
+			}
+				title="${
+					c.to_process
+						? ""
+						: __(
+								"Everyone selected already has a card. Turn on Regenerate to re-render them."
+						  )
+				}">
+				${idct_icon("spark", 14)} ${
+			c.to_process ? __("Generate {0}", [c.to_process]) : __("Generate")
+		}</button>
+			<button class="btn" data-sel="sheet" ${busy || !c.with_card ? "disabled" : ""}>${idct_icon(
+			"printer",
+			14
+		)} ${__("Print sheet")}</button>
+			<button class="btn" data-sel="zip" ${busy || !c.with_card ? "disabled" : ""}>${idct_icon(
+			"download",
+			14
+		)} ${__("Download")}</button>
+			<button class="btn" data-sel="printed" ${busy || !c.with_card ? "disabled" : ""}>${idct_icon(
+			"check",
+			14
+		)} ${__("Mark printed")}</button>
+			<button class="btn" data-sel="remove" ${busy}>${idct_icon("trash", 14)} ${__("Remove")}</button>
+			<span class="idct-selbar-spacer"></span>
+			<button class="idct-link" data-sel="clear">${__("Clear selection")}</button>
+		</div>`);
 	}
 
 	render_run() {
-		const c = idct_counts(this.frm);
+		const scope = this.scope;
+		const c = idct_counts(this.frm, scope);
 		const doc = this.frm.doc;
 		const run = this.frm.__idc_run;
 		let reason = "";
-		if (!c.total) reason = __("Add students first.");
+		if (!c.total) reason = scope ? __("Select students first.") : __("Add students first.");
 		else if (!doc.id_card_template) reason = __("Choose a template first.");
 		else if (!doc.issue_date) reason = __("Set the issue date.");
 		else if (!doc.generate_front && !doc.generate_back)
 			reason = __("Select the front, the back, or both.");
 		else if (!c.to_process)
-			reason = __("Everyone already has a card. Turn on Regenerate to re-render them.");
+			reason = scope
+				? __("Everyone selected already has a card. Turn on Regenerate to re-render them.")
+				: __("Everyone already has a card. Turn on Regenerate to re-render them.");
 
 		const line = (label, value, cls = "") =>
 			`<div class="${cls}"><span>${label}</span><span>${value}</span></div>`;
 		this.$root.find(".idct-run").html(`
+			${idct_scope_note(scope)}
 			<div class="idct-summary" style="margin-top:12px">
 				${line(doc.regenerate_existing ? __("Cards to render") : __("New cards"), c.to_process)}
 				${c.skipped ? line(__("Skipped (already have a card)"), c.skipped) : ""}
@@ -648,7 +832,9 @@ class IDCardBulkConsole {
 					run
 						? __("Generating… {0}/{1}", [run.done, run.total])
 						: c.to_process
-						? __("Generate {0} card(s)", [c.to_process])
+						? scope
+							? __("Generate {0} selected", [c.to_process])
+							: __("Generate {0} card(s)", [c.to_process])
 						: __("Generate cards")
 				}
 			</button>
@@ -660,10 +846,12 @@ class IDCardBulkConsole {
 	}
 
 	render_outputs() {
-		const c = idct_counts(this.frm);
+		const scope = this.scope;
+		const c = idct_counts(this.frm, scope);
 		const disabled = !c.with_card || this.running ? "disabled" : "";
 		const $panel = this.$root.find(".idct-output-panel").css("opacity", c.with_card ? 1 : 0.6);
 		$panel.find(".idct-outputs").html(`
+			${idct_scope_note(scope)}
 			<button class="btn btn-default" data-out="sheet" ${disabled}><span>${__("Print sheet")}<small>${__(
 			"A4 PDF · 300 DPI · crop marks"
 		)}</small></span>${idct_icon("file")}</button>
@@ -676,9 +864,11 @@ class IDCardBulkConsole {
 			${
 				c.with_card
 					? ""
-					: `<div class="idct-note" style="margin:0">${__(
-							"Available once cards are generated."
-					  )}</div>`
+					: `<div class="idct-note" style="margin:0">${
+							scope
+								? __("None of the selected students has a card yet.")
+								: __("Available once cards are generated.")
+					  }</div>`
 			}`);
 	}
 
@@ -779,36 +969,35 @@ class IDCardBulkConsole {
 
 	find_students() {
 		const frm = this.frm;
-		if (!(frm.doc.academic_year || frm.doc.program || frm.doc.batch)) {
+		if (!(frm.doc.academic_year || frm.doc.program || frm.doc.batch || frm.doc.section)) {
 			frappe.show_alert({
-				message: __("Pick a year, programme or batch first."),
+				message: __("Pick a year, programme, batch or section first."),
 				indicator: "orange",
 			});
 			return;
 		}
 		const go = () =>
-			frm
-				.call({
-					doc: frm.doc,
-					method: "get_students",
-					freeze: true,
-					freeze_message: __("Finding students…"),
-				})
-				.then((r) => {
-					this.filter = "all";
-					this.query = "";
-					this.preview_student = null;
-					frm.__idc_last = null;
-					this.refresh();
-					this.load_preview();
-					const n = r.message || 0;
-					frappe.show_alert({
-						message: n
-							? __("{0} student(s) found.", [n])
-							: __("No active students match these filters."),
-						indicator: n ? "green" : "orange",
-					});
+			idct_saving_call(frm, {
+				doc: frm.doc,
+				method: "get_students",
+				freeze: true,
+				freeze_message: __("Finding students…"),
+			}).then((r) => {
+				this.filter = "all";
+				this.query = "";
+				this.selected.clear();
+				this.preview_student = null;
+				frm.__idc_last = null;
+				this.refresh();
+				this.load_preview();
+				const n = r.message || 0;
+				frappe.show_alert({
+					message: n
+						? __("{0} student(s) found.", [n])
+						: __("No active students match these filters."),
+					indicator: n ? "green" : "orange",
 				});
+			});
 		if ((frm.doc.student_list || []).length) {
 			frappe.confirm(
 				__("Replace the current list with the students matching these filters?"),
@@ -831,6 +1020,7 @@ class IDCardBulkConsole {
 		frm.dirty();
 		this.filter = "all";
 		this.query = "";
+		this.selected.clear();
 		this.preview_student = null;
 		frm.__idc_last = null;
 		this.refresh();
@@ -867,15 +1057,43 @@ class IDCardBulkConsole {
 	}
 }
 
-function idct_generate(frm) {
+/** "Applies to N selected" banner shown in the side panels. */
+function idct_scope_note(scope) {
+	return scope
+		? `<div class="idct-scope"><span>${__("Applies to {0} selected student(s)", [
+				scope.size,
+		  ])}</span><button data-sel="clear">${__("Use whole list")}</button></div>`
+		: "";
+}
+
+/**
+ * Call a tool method that saves the tool on the server. Frappe would otherwise
+ * treat the realtime update from our own save as someone else's edit and show
+ * "This form has been modified after you have loaded it".
+ */
+function idct_saving_call(frm, opts) {
+	frappe.ui.form.is_saving = true;
+	// frm.call returns a jQuery jqXHR: it has .always(), not .finally().
+	const request = frm.call(opts);
+	request.always(() => {
+		frappe.ui.form.is_saving = false;
+	});
+	return request;
+}
+
+const idct_students_arg = (scope) => (scope ? JSON.stringify([...scope]) : null);
+
+function idct_generate(frm, scope) {
 	if (frm.__idc_run) return;
-	const c = idct_counts(frm);
+	const c = idct_counts(frm, scope);
 	if (!frm.doc.id_card_template || !c.to_process) return;
 	const lines = [
-		__("Generate <b>{0}</b> card(s) with the <b>{1}</b> template?", [
-			c.to_process,
-			frappe.utils.escape_html(frm.doc.id_card_template),
-		]),
+		__(
+			scope
+				? "Generate <b>{0}</b> card(s) for the selected students with the <b>{1}</b> template?"
+				: "Generate <b>{0}</b> card(s) with the <b>{1}</b> template?",
+			[c.to_process, frappe.utils.escape_html(frm.doc.id_card_template)]
+		),
 	];
 	if (c.no_photo)
 		lines.push(
@@ -884,7 +1102,11 @@ function idct_generate(frm) {
 	if (c.skipped)
 		lines.push(__("{0} student(s) who already have a card will be skipped.", [c.skipped]));
 	frappe.confirm(lines.join("<br><br>"), () => {
-		frm.call("generate_cards").then((r) => {
+		idct_saving_call(frm, {
+			doc: frm.doc,
+			method: "generate_cards",
+			args: { students: idct_students_arg(scope) },
+		}).then((r) => {
 			if (!r.message) return;
 			frm.__idc_last = null;
 			frm.__idc_run = { total: r.message.queued, done: 0 };
@@ -893,7 +1115,7 @@ function idct_generate(frm) {
 	});
 }
 
-function idct_print_sheet(frm) {
+function idct_print_sheet(frm, scope) {
 	const d = new frappe.ui.Dialog({
 		title: __("Print Sheet"),
 		fields: [
@@ -917,7 +1139,7 @@ function idct_print_sheet(frm) {
 			{
 				fieldtype: "HTML",
 				options: `<div class="text-muted small">${__(
-					"Generated and printed cards in this list are included. Each card is logged in the ID Card Print Log."
+					"Generated and printed cards are included. Each card is logged in the ID Card Print Log."
 				)}</div>`,
 			},
 		],
@@ -927,7 +1149,7 @@ function idct_print_sheet(frm) {
 			frm.call({
 				doc: frm.doc,
 				method: "generate_print_layout",
-				args: values,
+				args: { ...values, students: idct_students_arg(scope) },
 				freeze: true,
 				freeze_message: __("Laying out cards…"),
 			}).then((r) => {
@@ -943,10 +1165,140 @@ function idct_print_sheet(frm) {
 	d.show();
 }
 
-function idct_zip(frm) {
+const IDCT_DL_CSS = `
+	.idct-dl-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+	.idct-dl-tile { position: relative; border: 2px solid var(--border-color, #e2e6ea); border-radius: 12px; padding: 12px; cursor: pointer;
+		background: var(--subtle-fg, #f4f5f7); text-align: center; transition: border-color .15s, background .15s; }
+	.idct-dl-tile:hover { border-color: var(--gray-400, #9ca3af); }
+	.idct-dl-tile.on { border-color: var(--primary, #2563eb); background: rgba(37,99,235,.06); }
+	.idct-dl-tile.off { opacity: .45; cursor: default; }
+	.idct-dl-tile img { display: block; margin: 0 auto; max-width: 100%; max-height: 210px; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,.1), 0 8px 20px rgba(15,23,42,.14); }
+	.idct-dl-tile .idct-dl-none { height: 150px; display: flex; align-items: center; justify-content: center; color: var(--text-muted, #6b7280); font-size: 12.5px; }
+	.idct-dl-tick { position: absolute; top: 8px; right: 8px; width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--border-color, #cbd2d9);
+		background: var(--fg-color, #fff); color: #fff; display: flex; align-items: center; justify-content: center; }
+	.idct-dl-tile.on .idct-dl-tick { background: var(--primary, #2563eb); border-color: var(--primary, #2563eb); }
+	.idct-dl-label { margin-top: 10px; font-size: 12.5px; font-weight: 600; }
+	.idct-dl-meta { margin-top: 12px; font-size: 12px; color: var(--text-muted, #6b7280); }
+`;
+
+/** Download a site file under a readable name. Private files come with the
+ * server's stored name in Content-Disposition, which would override `download`. */
+function idct_save_file(file_url, filename) {
+	fetch(frappe.utils.get_file_link(file_url), { credentials: "same-origin" })
+		.then((res) => {
+			if (!res.ok) throw new Error(res.statusText);
+			return res.blob();
+		})
+		.then((blob) => {
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement("a");
+			a.href = url;
+			a.download = filename;
+			document.body.appendChild(a);
+			a.click();
+			a.remove();
+			setTimeout(() => URL.revokeObjectURL(url), 1000);
+		})
+		.catch(() => frappe.msgprint(__("Could not download {0}.", [filename])));
+}
+
+async function idct_download_dialog(card, student, name) {
+	if (!document.getElementById("idct-dl-css"))
+		$(`<style id="idct-dl-css">${IDCT_DL_CSS}</style>`).appendTo("head");
+	const r = await frappe.db.get_value("ID Card Generation", card, [
+		"front_id_image",
+		"back_id_image",
+		"card_status",
+	]);
+	const info = r.message || {};
+	const sides = [
+		{ key: "front", label: __("Front"), url: info.front_id_image },
+		{ key: "back", label: __("Back"), url: info.back_id_image },
+	];
+	const chosen = new Set(sides.filter((x) => x.url).map((x) => x.key));
+	if (!chosen.size) {
+		frappe.msgprint(__("This card has no images yet. Generate it first."));
+		return;
+	}
+	const d = new frappe.ui.Dialog({
+		title: __("Download ID card"),
+		size: "large",
+		fields: [{ fieldtype: "HTML", fieldname: "body" }],
+		primary_action_label: __("Download"),
+		primary_action() {
+			const picked = sides.filter((x) => chosen.has(x.key) && x.url);
+			d.hide();
+			picked.forEach((x, i) => {
+				// Stagger so the browser accepts several downloads from one click.
+				setTimeout(() => idct_save_file(x.url, `${student}_${x.label}.png`), i * 400);
+			});
+		},
+		secondary_action_label: __("Open card"),
+		secondary_action() {
+			window.open(`/app/id-card-generation/${encodeURIComponent(card)}`, "_blank");
+		},
+	});
+	const esc = frappe.utils.escape_html;
+	const render = () => {
+		d.fields_dict.body.$wrapper.html(`
+			<div class="idct-dl-tiles">${sides
+				.map(
+					(x) => `<div class="idct-dl-tile ${
+						x.url ? (chosen.has(x.key) ? "on" : "") : "off"
+					}" data-dl-side="${x.key}" role="checkbox"
+						aria-checked="${chosen.has(x.key)}" tabindex="0">
+						${
+							x.url
+								? `<span class="idct-dl-tick">${
+										chosen.has(x.key) ? idct_icon("check", 12) : ""
+								  }</span>`
+								: ""
+						}
+						${
+							x.url
+								? `<img src="${esc(frappe.utils.get_file_link(x.url))}" alt="${
+										x.label
+								  }">`
+								: `<div class="idct-dl-none">${__("No {0} side", [
+										x.label.toLowerCase(),
+								  ])}</div>`
+						}
+						<div class="idct-dl-label">${x.label}</div>
+					</div>`
+				)
+				.join("")}</div>
+			<div class="idct-dl-meta">${esc(name)} · ${esc(student)} · ${esc(card)} — ${__(
+			"PNG, 300 DPI, CR80 size"
+		)}</div>`);
+		const n = chosen.size;
+		d.get_primary_btn()
+			.prop("disabled", !n)
+			.text(
+				n === 2
+					? __("Download both")
+					: n === 1
+					? __("Download {0}", [sides.find((x) => chosen.has(x.key)).label])
+					: __("Select a side")
+			);
+	};
+	d.fields_dict.body.$wrapper.on("click keydown", "[data-dl-side]", (e) => {
+		if (e.type === "keydown" && e.key !== " " && e.key !== "Enter") return;
+		e.preventDefault();
+		const key = $(e.currentTarget).data("dl-side");
+		if (!sides.find((x) => x.key === key).url) return;
+		if (chosen.has(key)) chosen.delete(key);
+		else chosen.add(key);
+		render();
+	});
+	d.show();
+	render();
+}
+
+function idct_zip(frm, scope) {
 	frm.call({
 		doc: frm.doc,
 		method: "download_zip",
+		args: { students: idct_students_arg(scope) },
 		freeze: true,
 		freeze_message: __("Packing images…"),
 	}).then((r) => {
@@ -954,13 +1306,22 @@ function idct_zip(frm) {
 	});
 }
 
-function idct_mark_printed(frm) {
+function idct_mark_printed(frm, scope) {
 	frappe.confirm(
-		__(
-			"Mark every generated card in this list as <b>Printed</b>? Do this after the cards are physically printed."
-		),
+		scope
+			? __(
+					"Mark the selected students' generated cards as <b>Printed</b>? Do this after the cards are physically printed."
+			  )
+			: __(
+					"Mark every generated card in this list as <b>Printed</b>? Do this after the cards are physically printed."
+			  ),
 		() => {
-			frm.call({ doc: frm.doc, method: "mark_as_printed", freeze: true }).then((r) => {
+			frm.call({
+				doc: frm.doc,
+				method: "mark_as_printed",
+				args: { students: idct_students_arg(scope) },
+				freeze: true,
+			}).then((r) => {
 				frappe.show_alert({
 					message: __("{0} card(s) marked as printed.", [r.message || 0]),
 					indicator: "green",

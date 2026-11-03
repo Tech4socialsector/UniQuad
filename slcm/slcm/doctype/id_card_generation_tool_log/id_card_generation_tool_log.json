@@ -20,6 +20,7 @@
   "academic_year",
   "program",
   "batch",
+  "section",
   "col_break_settings",
   "issue_date",
   "expiry_date",
@@ -143,6 +144,13 @@
    "fieldtype": "Link",
    "label": "Batch",
    "options": "SLCM Batch",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section",
+   "fieldtype": "Link",
+   "options": "Section",
+   "label": "Section",
    "read_only": 1
   },
   {
@@ -274,7 +282,7 @@
  ],
  "is_submittable": 0,
  "links": [],
- "modified": "2026-11-03 23:30:00.000000",
+ "modified": "2026-11-03 23:45:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "ID Card Generation Tool Log",

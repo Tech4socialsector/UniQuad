@@ -34,7 +34,7 @@ def get_student_row(student):
 	"""Row values for adding one student to the list by hand."""
 	frappe.has_permission("Student Master", "read", doc=student, throw=True)
 	values = frappe.db.get_value(
-		"Student Master", student, ["name", "first_name", "passport_size_photo"], as_dict=True
+		"Student Master", student, ["name", "first_name", "passport_size_photo", "section"], as_dict=True
 	)
 	if not values:
 		frappe.throw(_("Student {0} not found.").format(student))
@@ -42,6 +42,7 @@ def get_student_row(student):
 	return {
 		"student": values.name,
 		"student_name": (values.first_name or "").strip(),
+		"section": values.section,
 		"has_photo": 1 if values.passport_size_photo else 0,
 		"current_id_card": existing_card,
 		"status": "Already Exists" if existing_card else "Pending",
@@ -63,6 +64,7 @@ class IDCardGenerationTool(Document):
 		self.academic_year = None
 		self.program = None
 		self.batch = None
+		self.section = None
 		self.id_card_template = None
 		self.issue_date = frappe.utils.today()
 		self.expiry_date = None
@@ -77,9 +79,11 @@ class IDCardGenerationTool(Document):
 	@frappe.whitelist()
 	def get_students(self):
 		self._ensure_not_running()
-		if not any([self.academic_year, self.program, self.batch]):
+		if not any([self.academic_year, self.program, self.batch, self.section]):
 			frappe.throw(
-				_("Select at least one filter (Academic Year, Programme or Batch) before fetching students.")
+				_(
+					"Select at least one filter (Academic Year, Programme, Batch or Section) before fetching students."
+				)
 			)
 
 		filters = {"student_status": "Active"}
@@ -89,11 +93,13 @@ class IDCardGenerationTool(Document):
 			filters["programme_of_study"] = self.program
 		if self.batch:
 			filters["batch"] = self.batch
+		if self.section:
+			filters["section"] = self.section
 
 		students = frappe.get_all(
 			"Student Master",
 			filters=filters,
-			fields=["name", "first_name", "passport_size_photo"],
+			fields=["name", "first_name", "passport_size_photo", "section"],
 			order_by="first_name asc",
 		)
 
@@ -105,6 +111,7 @@ class IDCardGenerationTool(Document):
 				{
 					"student": student.name,
 					"student_name": (student.first_name or "").strip(),
+					"section": student.section,
 					"has_photo": 1 if student.passport_size_photo else 0,
 					"current_id_card": existing_card,
 					"status": "Already Exists" if existing_card else "Pending",
@@ -115,18 +122,28 @@ class IDCardGenerationTool(Document):
 		self.save()
 		return len(students)
 
-	def _rows_to_process(self):
-		"""Rows without an active card, plus every row when regenerating."""
-		if cint(self.regenerate_existing):
+	def _scoped_rows(self, students=None):
+		"""Rows limited to the given students (all rows when none are given)."""
+		students = _parse_students(students)
+		if not students:
 			return list(self.student_list)
-		return [r for r in self.student_list if r.status not in ("Already Exists", "Generated")]
+		return [r for r in self.student_list if r.student in students]
+
+	def _rows_to_process(self, students=None):
+		"""Rows without an active card, plus every row when regenerating."""
+		rows = self._scoped_rows(students)
+		if cint(self.regenerate_existing):
+			return rows
+		return [r for r in rows if r.status not in ("Already Exists", "Generated")]
 
 	def _ensure_not_running(self):
 		if frappe.cache.get_value(RUN_CACHE_KEY):
 			frappe.throw(_("ID cards are being generated right now. Wait for that run to finish."))
 
 	@frappe.whitelist()
-	def generate_cards(self):
+	def generate_cards(self, students=None):
+		"""Queue generation for the list, or only for `students` when given."""
+		students = _parse_students(students)
 		self._ensure_not_running()
 		if not self.id_card_template:
 			frappe.throw(_("Select an ID Card Template."))
@@ -135,11 +152,11 @@ class IDCardGenerationTool(Document):
 		if not self.student_list:
 			frappe.throw(_("No students in the list. Use Get Students first."))
 
-		rows = self._rows_to_process()
+		rows = self._rows_to_process(students)
 		if not rows:
 			frappe.throw(
 				_(
-					"Every student in the list already has an active ID card. "
+					"Every selected student already has an active ID card. "
 					"Tick Regenerate Existing Cards to re-render them."
 				)
 			)
@@ -158,6 +175,7 @@ class IDCardGenerationTool(Document):
 			deduplicate=True,
 			enqueue_after_commit=True,
 			requested_by=frappe.session.user,
+			students=students or None,
 		)
 		return {"queued": len(rows)}
 
@@ -183,8 +201,8 @@ class IDCardGenerationTool(Document):
 	# Output
 	# ------------------------------------------------------------------
 
-	def _generated_cards(self):
-		names = [r.current_id_card for r in self.student_list if r.current_id_card]
+	def _generated_cards(self, students=None):
+		names = [r.current_id_card for r in self._scoped_rows(students) if r.current_id_card]
 		if not names:
 			return []
 		cards = frappe.get_all(
@@ -197,8 +215,8 @@ class IDCardGenerationTool(Document):
 		return [by_name[n] for n in names if n in by_name and by_name[n].front_id_image]
 
 	@frappe.whitelist()
-	def download_zip(self):
-		cards = self._generated_cards()
+	def download_zip(self, students=None):
+		cards = self._generated_cards(students)
 		if not cards:
 			frappe.throw(_("No generated cards in this list yet."))
 
@@ -224,7 +242,7 @@ class IDCardGenerationTool(Document):
 		return saved.file_url
 
 	@frappe.whitelist()
-	def generate_print_layout(self, layout="pairs", crop_marks=1):
+	def generate_print_layout(self, layout="pairs", crop_marks=1, students=None):
 		"""A4 print-ready PDF at 300 DPI.
 
 		layout "pairs": each card's front and back side by side.
@@ -234,7 +252,7 @@ class IDCardGenerationTool(Document):
 
 		from PIL import Image
 
-		cards = self._generated_cards()
+		cards = self._generated_cards(students)
 		if not cards:
 			frappe.throw(_("No generated cards in this list yet."))
 
@@ -278,8 +296,8 @@ class IDCardGenerationTool(Document):
 		return {"file_url": saved.file_url, "cards": len(printed), "pages": page_count}
 
 	@frappe.whitelist()
-	def mark_as_printed(self):
-		names = [c.name for c in self._generated_cards() if c.card_status == "Generated"]
+	def mark_as_printed(self, students=None):
+		names = [c.name for c in self._generated_cards(students) if c.card_status == "Generated"]
 		for name in names:
 			doc = frappe.get_doc("ID Card Generation", name)
 			doc.card_status = "Printed"
@@ -364,7 +382,13 @@ def _layout_pages(items, card_size, layout, crop_marks):
 		yield page
 
 
-def run_bulk_generation(requested_by=None):
+def _parse_students(students):
+	if isinstance(students, str):
+		students = frappe.parse_json(students) if students.strip().startswith("[") else [students]
+	return {s for s in (students or []) if s}
+
+
+def run_bulk_generation(requested_by=None, students=None):
 	"""Background job: generate cards for the rows in the tool, one by one,
 	and record the run in an ID Card Generation Tool Log."""
 	user = requested_by or frappe.session.user
@@ -383,14 +407,15 @@ def run_bulk_generation(requested_by=None):
 
 	try:
 		tool = frappe.get_doc("ID Card Generation Tool")
-		rows = tool._rows_to_process()
+		scope = tool._scoped_rows(students)
+		rows = tool._rows_to_process(students)
 		total = len(rows)
 		sides = [s for s, on in (("front", tool.generate_front), ("back", tool.generate_back)) if cint(on)]
 		processing = {r.name for r in rows}
 		results = {}
 		new_cards = regenerated = skipped = 0
 
-		for row in tool.student_list:
+		for row in scope:
 			if row.name not in processing:
 				skipped += 1
 				results[row.name] = {
@@ -482,19 +507,20 @@ def run_bulk_generation(requested_by=None):
 				"academic_year": tool.academic_year,
 				"program": tool.program,
 				"batch": tool.batch,
+				"section": tool.section,
 				"template_used": tool.id_card_template,
 				"issue_date": tool.issue_date,
 				"expiry_date": tool.expiry_date,
 				"sides": " + ".join(s.title() for s in sides),
 				"regenerate_existing": cint(tool.regenerate_existing),
-				"total_students_selected": len(tool.student_list),
+				"total_students_selected": len(scope),
 				"total_processed": total,
 				"total_id_cards_generated": generated,
 				"new_cards": new_cards,
 				"regenerated_cards": regenerated,
 				"skipped_count": skipped,
 				"failed_count": failed,
-				"missing_photo_count": sum(1 for r in tool.student_list if not r.has_photo),
+				"missing_photo_count": sum(1 for r in scope if not r.has_photo),
 				"generation_mode": "Single" if total == 1 else "Bulk",
 				"generation_status": "Success" if not failed else ("Failed" if not generated else "Partial"),
 				"remarks": _(
@@ -507,7 +533,7 @@ def run_bulk_generation(requested_by=None):
 						"has_photo": row.has_photo,
 						**results[row.name],
 					}
-					for row in tool.student_list
+					for row in scope
 					if row.name in results
 				],
 			}
