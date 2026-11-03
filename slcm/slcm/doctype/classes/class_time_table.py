@@ -22,7 +22,7 @@ from frappe import _
 from frappe.utils import cint, flt, formatdate, get_datetime, getdate, now_datetime, to_timedelta
 
 from slcm.slcm.doctype.classes.classes import get_class_students
-from slcm.slcm.doctype.time_table.time_table import format_time_12h, publish_bulk_progress
+from slcm.slcm.doctype.time_table.time_table import format_time_12h, get_session_status, publish_bulk_progress
 
 # Progress labels shown by the Create Time Table dialog
 CP_PROGRESS_LABEL = "Creating Class Participation groups"
@@ -385,7 +385,7 @@ def get_class_schedule_events(class_name, start, end):
 			"schedule_date": ["between", [getdate(start), getdate(end)]],
 			"docstatus": ["<", 2],
 		},
-		fields=["name", "title", "course", "schedule_date", "from_time", "to_time", "venue", "instructor", "color", "is_cancelled"],
+		fields=["name", "title", "course", "schedule_date", "from_time", "to_time", "venue", "instructor", "color", "is_cancelled", "session_status"],
 		order_by="schedule_date asc, from_time asc",
 	)
 	sessions = {
@@ -416,6 +416,7 @@ def get_class_schedule_events(class_name, start, end):
 			"end": f"{r.schedule_date} {str(r.to_time).zfill(8)}",
 			"extendedProps": {
 				"state": state,
+				"session_status": get_session_status(r, r.session_status),
 				"color": r.color,
 				"venue": r.venue,
 				"present": cint(s.present_count),
@@ -451,6 +452,7 @@ def get_session_details(time_table):
 		"faculty": faculty,
 		"is_cancelled": cint(tt.is_cancelled),
 		"cancellation_reason": tt.cancellation_reason,
+		"session_status": get_session_status(tt, tt.session_status),
 		"is_past": getdate(tt.schedule_date) < getdate(),
 	}
 
@@ -1065,7 +1067,7 @@ def cancel_class_session(time_table, reason):
 		frappe.throw(_("Enter the reason for cancelling the session."))
 	_changeable(tt, _("cancelled"))
 
-	tt.db_set({"is_cancelled": 1, "cancellation_reason": reason})
+	tt.db_set({"is_cancelled": 1, "cancellation_reason": reason, "session_status": "Cancelled"})
 	session = frappe.db.get_value("Attendance Session", {"class_schedule": tt.name}, "name")
 	if session:
 		frappe.db.set_value("Attendance Session", session,
@@ -1202,6 +1204,7 @@ def swap_class_sessions(time_table, other):
 		doc = docs[m["name"]]
 		doc.update(m["new"])
 		doc.calculate_duration()
+		doc.session_status = get_session_status(doc, "Swapped")
 		doc.db_update()
 	with quiet_bulk_operation():
 		for doc in docs.values():

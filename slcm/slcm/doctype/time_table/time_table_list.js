@@ -1,6 +1,15 @@
 frappe.listview_settings["Time Table"] = {
+	add_fields: ["session_status"],
+	get_indicator(doc) {
+		const colors = { Scheduled: "blue", Completed: "green", Cancelled: "red", Swapped: "purple" };
+		const status = doc.session_status || "Scheduled";
+		return [__(status), colors[status] || "gray", `session_status,=,${status}`];
+	},
 	onload(listview) {
 		setup_export_defaults();
+		listview.page.add_menu_item(__("Cancelled Classes Report"), () =>
+			frappe.set_route("query-report", "Cancelled Classes Report")
+		);
 
 		const btn = listview.page.add_inner_button(__("Update Venue / Time"), function () {
 			const selected = listview.get_checked_items();
