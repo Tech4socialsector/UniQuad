@@ -118,7 +118,12 @@ class ExamPlanner {
 			// step 3 covers the server's "students" and "marks" checks
 			o.done = { plan: o.steps.plan, timetable: o.steps.timetable, courses: o.steps.students && o.steps.marks, results: o.steps.results };
 			const first_open = STEPS.findIndex((s) => !s.always && !o.done[s.key]);
-			if (this.step === null || this.step === undefined) this.step = Math.max(0, first_open === -1 ? LAST - 1 : first_open);
+			// a refresh reopens the step last shown for this plan, else the first unfinished one
+			if (this.step === null || this.step === undefined) {
+				let saved = null;
+				try { saved = localStorage.getItem(`xp-step:${plan}`); } catch (e) { /* storage blocked */ }
+				this.step = saved !== null && STEPS[+saved] ? +saved : Math.max(0, first_open === -1 ? LAST - 1 : first_open);
+			}
 			this.render();
 		});
 	}
@@ -169,6 +174,7 @@ class ExamPlanner {
 			this.render();
 		});
 		this.$body = this.$root.find('.xp-body');
+		try { localStorage.setItem(`xp-step:${p.name}`, this.step); } catch (e) { /* storage blocked */ }
 		[this.render_plan, this.render_timetable, this.render_courses, this.render_results, this.render_after][this.step].call(this);
 	}
 
@@ -497,7 +503,10 @@ class ExamPlanner {
 	render_timetable() {
 		call('get_timetable', { exam_plan: this.plan }).then((t) => {
 			this.tt = t;
-			this.tt_tab = this.tt_tab || 'timetable';
+			if (!this.tt_tab) {
+				try { this.tt_tab = localStorage.getItem('xp-tt-tab'); } catch (e) { /* storage blocked */ }
+				this.tt_tab = this.tt_tab === 'evaluation' ? 'evaluation' : 'timetable';
+			}
 			this.$body.html(`<div class="xp-card">
 				<div class="xp-rtabs">
 					<button class="xp-rtab" data-tab="timetable">${__('Exam timetable')}</button>
@@ -509,7 +518,11 @@ class ExamPlanner {
 				$(el).toggleClass('on', on);
 				if ($(el).hasClass('xp-tab')) $(el).toggle(on);
 			});
-			this.$body.find('.xp-rtab').on('click', (e) => { this.tt_tab = $(e.currentTarget).data('tab'); show(); });
+			this.$body.find('.xp-rtab').on('click', (e) => {
+				this.tt_tab = $(e.currentTarget).data('tab');
+				try { localStorage.setItem('xp-tt-tab', this.tt_tab); } catch (err) { /* storage blocked */ }
+				show();
+			});
 			// like a spreadsheet: a click anywhere in a cell edits it (cursor at the end)
 			this.$body.on('click', '.xp-sheet td', (e) => {
 				if ($(e.target).closest('.xp-in, button, select, a, input').length) return;

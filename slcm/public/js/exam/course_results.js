@@ -330,7 +330,7 @@ slcm.exam_ui.course_results = function (main, opts) {
 		.er2-bd td { padding:6px 10px; border-bottom:1px solid #f1f5f9; }
 		.er2-bd .num { text-align:right; }
 		.er2-bd .er2-bd-sum td { font-weight:700; background:#FBEEF0; }
-		.er2-bd .er2-bd-off td { color:#94a3b8; text-decoration:line-through; }
+		.er2-bd .er2-bd-off td { color:#94a3b8; }
 		.er2-bd .er2-bd-note { color:#64748b; font-size:12px; margin:6px 0 0; }
 		.er2-bd .er2-bd-final { margin-top:14px; padding:12px 14px; border-radius:10px; background:#FBEEF0; border:1px solid #E8B4BE; }
 		.er2-bd .er2-bd-final b { color:#920C24; }
