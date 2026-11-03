@@ -1,5 +1,7 @@
 frappe.listview_settings["Time Table"] = {
 	onload(listview) {
+		setup_export_defaults();
+
 		const btn = listview.page.add_inner_button(__("Update Venue / Time"), function () {
 			const selected = listview.get_checked_items();
 
@@ -20,6 +22,48 @@ frappe.listview_settings["Time Table"] = {
 		});
 	},
 };
+
+/* --------------------------------------------------------------------
+   Actions > Export: pre-select the columns people actually want (faculty
+   name, course, section) and leave out the ID / faculty ID columns.
+-------------------------------------------------------------------- */
+const EXPORT_DEFAULT_ON = ["instructor_name", "course", "section"];
+const EXPORT_DEFAULT_OFF = ["name", "instructor"];
+
+function setup_export_defaults() {
+	const BulkOperations = frappe.ui.BulkOperations;
+	if (!BulkOperations || BulkOperations.prototype.__tt_export_patched) return;
+	BulkOperations.prototype.__tt_export_patched = true;
+
+	const original_export = BulkOperations.prototype.export;
+	BulkOperations.prototype.export = function (doctype, docnames) {
+		if (doctype !== "Time Table") return original_export.call(this, doctype, docnames);
+
+		frappe.require("data_import_tools.bundle.js", () => {
+			const DataExporter = frappe.data_import.DataExporter;
+			if (!DataExporter.prototype.__tt_patched) {
+				DataExporter.prototype.__tt_patched = true;
+				const original_show = DataExporter.prototype.setup_on_page_show;
+				DataExporter.prototype.setup_on_page_show = function () {
+					original_show.call(this);
+					if (this.doctype !== "Time Table") return;
+
+					const $parent = this.dialog.get_field("Time Table").$wrapper;
+					const toggle = (fieldnames, checked) =>
+						fieldnames.forEach((fieldname) =>
+							$parent
+								.find(`:checkbox[data-unit="${fieldname}"]`)
+								.prop("checked", checked)
+								.trigger("change")
+						);
+					toggle(EXPORT_DEFAULT_ON, true);
+					toggle(EXPORT_DEFAULT_OFF, false);
+				};
+			}
+			original_export.call(this, doctype, docnames);
+		});
+	};
+}
 
 /* --------------------------------------------------------------------
    Path 1: rows already checked in the list - update exactly those rows.

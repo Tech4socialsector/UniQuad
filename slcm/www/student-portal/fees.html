@@ -581,7 +581,7 @@ body.sp-dark .fee-modal-body [style*="color:#475569"] { color: var(--sp-text-2) 
 <section class="spf-card spf-student fade-in" aria-label="Student">
   <div class="spf-avatar">
     {% if student_photo %}<img src="{{ student_photo }}" alt="" data-fallback="{{ student_initial }}">
-    {% else %}<span aria-hidden="true">{{ student_initial }}</span>{% endif %}
+    {% else %}<svg class="sp-user-icon" viewBox="0 0 24 24" width="60%" height="60%" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>{% endif %}
   </div>
   <div class="spf-student-main">
     <div class="spf-student-name-row">
@@ -1591,7 +1591,7 @@ body.sp-dark .fee-modal-body [style*="color:#475569"] { color: var(--sp-text-2) 
 
   /* Broken photo → initial */
   document.querySelectorAll('.spf-avatar img').forEach(function (img) {
-    function fb() { if (img.parentNode) img.parentNode.textContent = img.getAttribute('data-fallback') || ''; }
+    function fb() { if (img.parentNode) img.outerHTML = window.SP_USER_ICON; }
     if (img.complete && img.naturalWidth === 0) fb(); else img.addEventListener('error', fb);
   });
 

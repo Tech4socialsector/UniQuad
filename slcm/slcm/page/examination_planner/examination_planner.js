@@ -19,6 +19,7 @@ frappe.pages['examination-planner'].on_page_show = function (wrapper) {
 	// Coming back (e.g. after entering marks on Course Results) shows the latest state
 	const planner = wrapper.planner, plan = frappe.get_route()[1];
 	if (!planner || !planner.o) return;
+	planner.take_step_option();
 	if (plan && plan !== planner.plan) planner.open(plan);
 	else planner.refresh();
 };
@@ -30,24 +31,46 @@ const call = (method, args) => frappe.call({ method: API + method, args: args ||
 const STEPS = [
 	{ key: 'plan', label: __('Plan & courses'), hint: __('Map each course to its schemas') },
 	{ key: 'timetable', label: __('Exam timetable'), hint: __('Dates, rooms, invigilators') },
-	{ key: 'students', label: __('Students'), hint: __('From Classes, eligibility, barcodes') },
-	{ key: 'marks', label: __('Marks'), hint: __('Access and entry progress') },
-	{ key: 'results', label: __('Results'), hint: __('Submit, lock, GPA, publish') },
+	{ key: 'courses', label: __('Students & marks'), hint: __('Students, eligibility, barcodes, marks') },
+	{ key: 'results', label: __('Results & publish'), hint: __('Lock, term GPA, publish') },
+	// opens with step 4 and is never "done": re-exams and appeals come and go
+	{ key: 'after', label: __('After results'), hint: __('Re-exam timetable, re-exam, improvement'), always: true },
 ];
+const LAST = STEPS.length - 1;
+// Screens from the result pages, mounted inside steps 3 and 4 (see slcm/public/js/exam/)
+const EXAM_UI = (mod) => new Promise((resolve) => frappe.require(['/assets/slcm/js/exam/common.js', `/assets/slcm/js/exam/${mod}.js`], () => resolve(slcm.exam_ui[mod])));
 
 class ExamPlanner {
 	constructor(page, wrapper) {
 		this.page = page;
-		this.step = 0;
+		this.step = null;   // open() lands on the first unfinished step
+		this.take_step_option();
 		this.$root = $('<div class="xp-wrap"></div>').appendTo(page.main);
 		this.add_styles();
 		page.set_primary_action(__('New Exam Plan'), () => this.new_plan_dialog(), 'add');
 		page.add_inner_button(__('Examination Settings'), () => frappe.set_route('Form', 'Examination Settings'));
 		this.load_plans().then(() => {
-			const plan = frappe.get_route()[1] || (this.plans[0] && this.plans[0].name);
+			// no plan in the URL (e.g. the Re Exam link): reopen the plan last worked on
+			let last = null;
+			try { last = localStorage.getItem('xp-last-plan'); } catch (e) { /* storage blocked */ }
+			const known = (name) => name && this.plans.some((x) => x.name === name);
+			const plan = frappe.get_route()[1] || (known(last) && last) || (this.plans[0] && this.plans[0].name);
 			if (plan) this.open(plan);
 			else this.render_empty();
 		});
+	}
+
+	// Other pages open a given step with frappe.route_options = { step: <0-4> }
+	// (frappe.flags.exam_planner_open is used by the redirecting Re Exam / Improvement routes)
+	take_step_option() {
+		const opt = frappe.flags.exam_planner_open || frappe.route_options;
+		const want = opt && opt.step;
+		if (want === undefined || want === null) return;
+		this.step = Math.min(LAST, Math.max(0, +want || 0));
+		if (opt.after_tab) this.after_tab = opt.after_tab;
+		this.course = null;
+		frappe.flags.exam_planner_open = null;
+		frappe.route_options = null;
 	}
 
 	// ── plans ──────────────────────────────────────────────────────────
@@ -88,11 +111,14 @@ class ExamPlanner {
 
 	open(plan) {
 		this.plan = plan;
+		try { localStorage.setItem('xp-last-plan', plan); } catch (e) { /* storage blocked */ }
 		if (frappe.get_route()[1] !== plan) frappe.set_route('examination-planner', plan);
 		return call('get_overview', { exam_plan: plan }).then((o) => {
 			this.o = o;
-			const first_open = STEPS.findIndex((s) => !o.steps[s.key]);
-			if (this.step === null || this.step === undefined || !this.is_open(this.step)) this.step = Math.max(0, first_open === -1 ? 4 : first_open);
+			// step 3 covers the server's "students" and "marks" checks
+			o.done = { plan: o.steps.plan, timetable: o.steps.timetable, courses: o.steps.students && o.steps.marks, results: o.steps.results };
+			const first_open = STEPS.findIndex((s) => !s.always && !o.done[s.key]);
+			if (this.step === null || this.step === undefined || !this.is_open(this.step)) this.step = Math.max(0, first_open === -1 ? LAST - 1 : first_open);
 			this.render();
 		});
 	}
@@ -100,19 +126,36 @@ class ExamPlanner {
 	refresh() { return this.open(this.plan); }
 
 	is_open(i) {
-		return i === 0 || STEPS.slice(0, i).every((s) => this.o.steps[s.key]);
+		if (STEPS[i].always) return this.is_open(i - 1);
+		return i === 0 || STEPS.slice(0, i).every((s) => this.o.done[s.key]);
 	}
 
 	// ── layout ─────────────────────────────────────────────────────────
+	// Screens mounted from slcm/public/js/exam/ are torn down before the step re-renders
+	unmount() {
+		if (this.mounted) this.mounted.destroy();
+		this.mounted = null;
+	}
+
+	mount(mod, el, opts) {
+		this.unmount();
+		const token = (this.mount_token = (this.mount_token || 0) + 1);
+		return EXAM_UI(mod).then((fn) => {
+			if (token !== this.mount_token || !document.body.contains(el)) return;   // step changed meanwhile
+			this.mounted = fn(el, Object.assign({ embedded: true, exam_plan: this.plan }, opts));
+		});
+	}
+
 	render() {
+		this.unmount();
 		const o = this.o, p = o.plan;
 		const options = this.plans.map((x) => `<option value="${esc(x.name)}" ${x.name === p.name ? 'selected' : ''}>${esc(x.exam_name)} · ${esc(x.term || '')}</option>`).join('');
 		const term = o.term ? `${frappe.datetime.str_to_user(o.term.term_start_date)} – ${frappe.datetime.str_to_user(o.term.term_end_date)}` : __('No term');
 		const steps = STEPS.map((s, i) => {
-			const done = o.steps[s.key], open = this.is_open(i);
+			const done = o.done[s.key], open = this.is_open(i);
 			return `<button class="xp-step ${i === this.step ? 'on' : ''} ${open ? '' : 'locked'}" data-i="${i}">
 				<span class="xp-step-n">${i + 1}</span><span class="xp-step-t"><b>${s.label}</b><small>${s.hint}</small></span>
-				${done ? `<span class="xp-pill ok">${__('Done')}</span>` : open ? '' : `<span class="xp-pill warn">${__('Locked')}</span>`}</button>`;
+				${!open ? `<span class="xp-pill warn">${__('Locked')}</span>` : done ? `<span class="xp-pill ok">${__('Done')}</span>` : ''}</button>`;
 		}).join('');
 		this.$root.html(`
 			<div class="xp-head">
@@ -121,15 +164,16 @@ class ExamPlanner {
 			</div>
 			<div class="xp-steps">${steps}</div>
 			<div class="xp-body"></div>`);
-		this.$root.find('.xp-plan').on('change', (e) => { this.step = null; this.open($(e.target).val()); });
+		this.$root.find('.xp-plan').on('change', (e) => { this.step = null; this.course = null; this.open($(e.target).val()); });
 		this.$root.find('.xp-step').on('click', (e) => {
 			const i = +$(e.currentTarget).data('i');
 			if (!this.is_open(i)) { frappe.show_alert({ message: __('Finish the step before it first.'), indicator: 'orange' }); return; }
 			this.step = i;
+			this.course = null;
 			this.render();
 		});
 		this.$body = this.$root.find('.xp-body');
-		[this.render_plan, this.render_timetable, this.render_students, this.render_marks, this.render_results][this.step].call(this);
+		[this.render_plan, this.render_timetable, this.render_courses, this.render_results, this.render_after][this.step].call(this);
 	}
 
 	card(title, sub, saves) {
@@ -140,30 +184,52 @@ class ExamPlanner {
 	// ── 1. Plan & courses ──────────────────────────────────────────────
 	render_plan() {
 		call('get_mapping', { exam_plan: this.plan }).then((m) => {
-			this.$body.html(this.card(__('Course → schema mapping'),
-				__('Courses taught in the plan\'s term (from Classes). Unmapped courses are pre-filled from the course\'s last plan or the Examination Settings defaults; check them and save.'),
-				'Course Schema Assignment'));
+			this.$body.html(this.card(__('Map each course to its schemas'),
+				__('Every course taught this term needs an Evaluation Schema (how it is marked) and a Grading Schema (how marks become grades).'),
+				''));
 			const $c = this.$body.find('.xp-card-body');
 			const evs = m.evaluation_schemas.map((e) => e.name), gss = m.grade_schemas.map((g) => g.name);
 			const NEW = '__new__';
 			const sel = (list, val, cls, doctype) => `<select class="form-control input-sm xp-select ${cls}" data-doctype="${doctype}">
 				<option value="">${list.length ? __('Select…') : __('None yet')}</option>
-				${list.map((x) => `<option ${x === val ? 'selected' : ''}>${esc(x)}</option>`).join('')}
+				${(val && !list.includes(val) ? [val, ...list] : list).map((x) => `<option ${x === val ? 'selected' : ''}>${esc(x)}</option>`).join('')}
 				<option value="${NEW}">+ ${__('Create new {0}…', [__(doctype)])}</option></select>`;
 			const missing = [!evs.length && 'Evaluation Schema', !gss.length && 'Grading Schema'].filter(Boolean);
 			const su = m.setup || {};
 			const setup_todo = !su.components || !su.assessment_types || missing.length;
-			const todo = m.courses.filter((c) => !(c.evaluation_schema && c.grade_schema)).length;
-			const rows = m.courses.map((c) => {
-				const ev = c.evaluation_schema || c.suggest_evaluation_schema || '', gs = c.grade_schema || c.suggest_grade_schema || '';
-				const saved = c.source === 'saved';
-				return `<tr data-course="${esc(c.course)}" data-saved-ev="${esc(c.evaluation_schema || '')}" data-saved-gs="${esc(c.grade_schema || '')}" class="${ev && gs ? '' : 'xp-flag'}">
-					<td><input type="checkbox" class="xp-sel"></td>
-					<td><b>${esc(c.course_code || c.course)}</b><br><small>${esc(c.course_name || '')}</small></td>
-					<td>${esc(c.programme || '')}</td><td class="num">${c.enrolled_students || 0}</td>
-					<td>${sel(evs, ev, 'xp-ev', 'Evaluation Schema')}</td><td>${sel(gss, gs, 'xp-gs', 'Grading Schema')}</td>
-					<td>${saved ? `<span class="xp-pill ok">${__('Saved')}</span>` : c.source ? `<span class="xp-pill info">${esc(c.source)}</span>` : `<span class="xp-pill bad">${__('Not mapped')}</span>`}</td></tr>`;
-			}).join('');
+			const by_course = {};
+			m.courses.forEach((c) => { by_course[c.course] = c; });
+			const mapped = m.courses.filter((c) => c.source === 'saved');
+			const unmapped = m.courses.filter((c) => c.source !== 'saved');
+			const why = (c) => (c.source || '').startsWith('last plan') ? __('Suggested from the last exam plan of this course')
+				: c.source === 'settings default' ? __('Suggested from the defaults in Examination Settings') : '';
+			const head = (c) => `<div class="xp-cr-name"><b>${esc(c.course_name || c.course)}</b>
+				<small>${esc(c.course_code || c.course)} · ${esc(c.programme || '')} · ${__('{0} students', [c.enrolled_students || 0])}</small></div>`;
+
+			const mapped_row = (c) => `<div class="xp-cr" data-course="${esc(c.course)}">
+				${head(c)}
+				<div class="xp-cr-view">
+					<span><small>${__('Evaluation')}</small><button class="xp-schema-link" data-doctype="Evaluation Schema" data-name="${esc(c.evaluation_schema)}" title="${__('View schema')}">${esc(c.evaluation_schema)}</button></span>
+					<span><small>${__('Grading')}</small><button class="xp-schema-link" data-doctype="Grading Schema" data-name="${esc(c.grade_schema)}" title="${__('View schema')}">${esc(c.grade_schema)}</button></span>
+					<span class="xp-pill ok">✓ ${__('Mapped')}</span>
+				</div>
+				<div class="xp-cr-edit" style="display:none">${sel(evs, c.evaluation_schema, 'xp-ev', 'Evaluation Schema')}${sel(gss, c.grade_schema, 'xp-gs', 'Grading Schema')}</div>
+				<div class="xp-cr-act">
+					<button class="btn btn-default btn-sm xp-change">${__('Change')}</button>
+					<button class="btn btn-default btn-sm xp-remove">${__('Remove')}</button>
+					<button class="btn btn-primary btn-sm xp-save-one" style="display:none">${__('Save')}</button>
+					<button class="btn btn-default btn-sm xp-cancel" style="display:none">${__('Cancel')}</button>
+				</div></div>`;
+			const unmapped_row = (c) => {
+				const ev = c.suggest_evaluation_schema || '', gs = c.suggest_grade_schema || '';
+				return `<div class="xp-cr todo" data-course="${esc(c.course)}">
+					${head(c)}
+					<div class="xp-cr-edit">${sel(evs, ev, 'xp-ev', 'Evaluation Schema')}${sel(gss, gs, 'xp-gs', 'Grading Schema')}
+						<button class="xp-schema-link xp-peek" data-for="xp-ev">${__('View')}</button><button class="xp-schema-link xp-peek" data-for="xp-gs">${__('View')}</button>
+						${why(c) ? `<small class="xp-why">${why(c)}</small>` : ''}</div>
+					<div class="xp-cr-act"><button class="btn btn-primary btn-sm xp-save-one">${__('Map')}</button></div></div>`;
+			};
+
 			const item = (n, done, title, hint, btn, cls, blocked) => `<li class="${done ? 'done' : ''}"><span class="xp-dot">${done ? '✓' : n}</span>
 				<div><b>${title}</b><p>${hint}</p></div><div class="xp-actions">${done ? `<span class="xp-pill ok">${done}</span>`
 					: `<button class="btn btn-sm btn-primary ${cls}" ${blocked ? `disabled title="${esc(blocked)}"` : ''}>${btn}</button>`}</div></li>`;
@@ -176,76 +242,149 @@ class ExamPlanner {
 					${item(3, evs.length && __('{0} created', [evs.length]), __('Evaluation Schema'), __('How a course is marked: its components and assessments.'), __('Create Evaluation Schema'), 'xp-new-es',
 						!(su.components && su.assessment_types) && __('Add components and assessment types first'))}
 					${item(4, gss.length && __('{0} created', [gss.length]), __('Grading Schema'), __('How marks become grades and grade points.'), __('Create Grading Schema'), 'xp-new-gs')}
-					</ol>`
-				: todo
-					? `<div class="xp-guide"><b>${__('Next')}</b><span>${__('Pick an Evaluation Schema and a Grade Schema for {0} course(s), then click Save mapping.', [todo])}</span></div>`
-					: `<div class="xp-guide ok"><b>${__('Done')}</b><span>${__('Every course is mapped. Go on to step 2, Exam timetable.')}</span></div>`;
-			$c.html(guide + `
-				<div class="xp-bar"><b>${this.o.counts.courses_mapped} / ${this.o.counts.courses_taught}</b> ${__('courses mapped')}
-					<span class="xp-grow"></span>
-					${missing.length ? '' : `<button class="btn btn-default btn-sm xp-new-es">${__('New Evaluation Schema')}</button>
-					<button class="btn btn-default btn-sm xp-new-gs">${__('New Grading Schema')}</button>`}</div>
-				<div class="xp-table"><table class="table table-sm"><thead><tr><th><input type="checkbox" class="xp-all"></th><th>${__('Course')}</th><th>${__('Programme')}</th><th>${__('Students')}</th>
-					<th>${__('Evaluation Schema')}</th><th>${__('Grade Schema')}</th><th>${__('Filled from')}</th></tr></thead><tbody>${rows || `<tr><td colspan="7">${__('No Classes in this term yet. Create Classes first (Programme Management).')}</td></tr>`}</tbody></table></div>
-				<div class="xp-bar xp-soft xp-bulk" style="display:none"><b class="xp-nsel"></b>${sel(evs, '', 'xp-bulk-ev', 'Evaluation Schema')}${sel(gss, '', 'xp-bulk-gs', 'Grading Schema')}
-					<button class="btn btn-default btn-sm xp-apply">${__('Apply to selected')}</button>
-					<button class="btn btn-default btn-sm xp-unmap">${__('Unmap selected')}</button></div>
-				<div class="xp-bar"><span class="xp-grow"></span><button class="btn btn-primary xp-save" ${m.courses.length ? '' : 'disabled'}>${__('Save mapping')}</button></div>`);
-			const sync_bulk = () => {
-				const n = $c.find('.xp-sel:checked').length;
-				$c.find('.xp-bulk').toggle(n > 0);
-				$c.find('.xp-nsel').text(__('{0} selected', [n]));
-			};
-			$c.find('.xp-all').on('change', (e) => { $c.find('.xp-sel').prop('checked', e.target.checked); sync_bulk(); });
-			$c.on('change', '.xp-sel', sync_bulk);
+					</ol>` : '';
+			const total = m.courses.length;
+			const progress = total ? `<div class="xp-map-progress"><b>${__('{0} of {1} courses mapped', [mapped.length, total])}</b>
+				<div class="xp-bar-track"><i style="width:${Math.round(mapped.length * 100 / total)}%"></i></div></div>` : '';
+			const suggested = unmapped.filter((c) => c.suggest_evaluation_schema && c.suggest_grade_schema).length;
+
+			$c.html(guide + (total ? `
+				<div class="xp-bar">${progress}<span class="xp-grow"></span>
+					${missing.length ? '' : `<button class="btn btn-default btn-sm xp-new-es">+ ${__('Evaluation Schema')}</button>
+					<button class="btn btn-default btn-sm xp-new-gs">+ ${__('Grading Schema')}</button>`}</div>
+				${unmapped.length ? `<div class="xp-cr-group"><div class="xp-cr-title"><h5>${__('Not mapped yet')} <span class="xp-count">${unmapped.length}</span></h5>
+					${suggested > 1 ? `<button class="btn btn-primary btn-sm xp-map-all">${__('Map all {0} as suggested', [suggested])}</button>` : ''}</div>
+					${unmapped.map(unmapped_row).join('')}</div>` : ''}
+				${mapped.length ? `<div class="xp-cr-group"><div class="xp-cr-title"><h5>${__('Mapped')} <span class="xp-count">${mapped.length}</span></h5></div>
+					${mapped.map(mapped_row).join('')}</div>` : ''}
+				${!unmapped.length ? `<div class="xp-next"><span>✓ ${__('Every course is mapped.')}</span>
+					<button class="btn btn-primary xp-go-next">${__('Continue to step 2: Exam timetable')} →</button></div>` : ''}`
+				: `<div class="xp-guide">${__('No Classes in this term yet. Create Classes first (Programme Management).')}</div>`));
+
 			$c.find('.xp-new-es').on('click', () => this.schema_dialog('Evaluation Schema'));
+			$c.find('.xp-new-gs').on('click', () => this.schema_dialog('Grading Schema'));
 			$c.find('.xp-add-comp').on('click', () => this.masters_dialog('Exam Component'));
 			$c.find('.xp-add-atype').on('click', () => this.masters_dialog('Exam Assessment Type'));
-			$c.find('.xp-new-gs').on('click', () => this.schema_dialog('Grading Schema'));
+			$c.find('.xp-go-next').on('click', () => { this.step = 1; this.refresh(); });
+			$c.on('click', '.xp-schema-link', (e) => {
+				const $b = $(e.currentTarget);
+				if (!$b.data('for')) { this.schema_view($b.data('doctype'), $b.data('name')); return; }
+				const $sel = $b.closest('.xp-cr').find('.' + $b.data('for'));
+				const name = $sel.val();
+				if (!name || name === NEW) { frappe.show_alert({ message: __('Pick a schema first.'), indicator: 'orange' }); return; }
+				this.schema_view($sel.data('doctype'), name);
+			});
 			// A schema just made in the panel goes to every course still without one
 			Object.entries(this.prefill || {}).forEach(([doctype, name]) => {
-				$c.find(`tbody .xp-select[data-doctype="${doctype}"]`).filter((_, el) => !el.value).val(name).trigger('change');
+				$c.find(`.xp-cr.todo .xp-select[data-doctype="${doctype}"]`).filter((_, el) => !el.value).val(name);
 			});
 			this.prefill = {};
-			// "+ Create new…" in a dropdown opens the form; coming back refreshes the lists
+			// "+ Create new…" in a dropdown opens the panel; the new schema comes back pre-selected
 			$c.on('change', '.xp-select', (e) => {
-				if (e.target.value !== NEW) {
-					$(e.target).closest('tr').toggleClass('xp-flag', !($(e.target).closest('tr').find('.xp-ev').val() && $(e.target).closest('tr').find('.xp-gs').val()));
-					return;
-				}
+				if (e.target.value !== NEW) return;
 				e.target.value = '';
 				this.schema_dialog($(e.target).data('doctype'));
 			});
-			$c.find('.xp-apply').on('click', () => {
-				const ev = $c.find('.xp-bulk-ev').val(), gs = $c.find('.xp-bulk-gs').val();
-				$c.find('tbody tr').each((_, tr) => {
-					if (!$(tr).find('.xp-sel').prop('checked')) return;
-					if (ev) $(tr).find('.xp-ev').val(ev);
-					if (gs) $(tr).find('.xp-gs').val(gs);
-				});
+
+			const save = (rows, changed) => {
+				const go = (reason) => call('save_mapping', { exam_plan: this.plan, assignments: JSON.stringify(rows), reason: reason || '' })
+					.then(() => {
+						frappe.show_alert({ message: rows.length === 1 ? __('{0} mapped', [by_course[rows[0].course].course_name || rows[0].course]) : __('{0} courses mapped', [rows.length]), indicator: 'green' });
+						this.refresh();
+					});
+				if (changed && this.o.settings.require_change_reason) {
+					frappe.prompt({ fieldname: 'reason', fieldtype: 'Small Text', label: __('Why are you changing the schemas?'), reqd: 1 },
+						(v) => go(v.reason), __('Reason for change'), __('Save'));
+				} else go();
+			};
+			const row_values = ($r) => ({ course: $r.data('course'), evaluation_schema: $r.find('.xp-ev').val(), grade_schema: $r.find('.xp-gs').val() });
+
+			$c.find('.xp-save-one').on('click', (e) => {
+				const $r = $(e.currentTarget).closest('.xp-cr'), v = row_values($r);
+				if (!v.evaluation_schema || !v.grade_schema) {
+					frappe.show_alert({ message: __('Pick both an Evaluation Schema and a Grading Schema.'), indicator: 'orange' });
+					return;
+				}
+				const c = by_course[v.course];
+				const changed = c.source === 'saved' && (c.evaluation_schema !== v.evaluation_schema || c.grade_schema !== v.grade_schema);
+				if (c.source === 'saved' && !changed) { $r.find('.xp-cancel').trigger('click'); return; }
+				save([v], changed);
 			});
-			$c.find('.xp-unmap').on('click', () => {
-				const courses = $c.find('tbody tr').filter((_, tr) => $(tr).find('.xp-sel').prop('checked') && $(tr).data('saved-ev')).map((_, tr) => $(tr).data('course')).get();
-				if (!courses.length) { frappe.msgprint(__('Select saved courses to unmap.')); return; }
-				frappe.confirm(__('Remove the schemas of {0} course(s) from this plan?', [courses.length]),
-					() => call('unmap', { exam_plan: this.plan, courses: JSON.stringify(courses) }).then(() => this.refresh()));
+			$c.find('.xp-map-all').on('click', () => {
+				const rows = $c.find('.xp-cr.todo').map((_, r) => row_values($(r))).get().filter((v) => v.evaluation_schema && v.grade_schema);
+				frappe.confirm(__('Map {0} courses with the schemas shown?', [rows.length]), () => save(rows, false));
 			});
-			$c.find('.xp-save').on('click', () => {
-				const assignments = [], changed = [];
-				$c.find('tbody tr[data-course]').each((_, tr) => {
-					const $tr = $(tr), ev = $tr.find('.xp-ev').val(), gs = $tr.find('.xp-gs').val();
-					if (!ev && !gs) return;
-					if ($tr.data('saved-ev') && ($tr.data('saved-ev') !== ev || $tr.data('saved-gs') !== gs)) changed.push($tr.data('course'));
-					assignments.push({ course: $tr.data('course'), evaluation_schema: ev, grade_schema: gs });
-				});
-				if (!assignments.length) { frappe.msgprint(__('Pick schemas first.')); return; }
-				const save = (reason) => call('save_mapping', { exam_plan: this.plan, assignments: JSON.stringify(assignments), reason: reason || '' })
-					.then(() => { frappe.show_alert({ message: __('Mapping saved'), indicator: 'green' }); this.refresh(); });
-				if (changed.length && this.o.settings.require_change_reason) {
-					frappe.prompt({ fieldname: 'reason', fieldtype: 'Small Text', label: __('Reason for changing {0}', [changed.join(', ')]), reqd: 1 },
-						(v) => save(v.reason), __('Change reason'));
-				} else save();
+			$c.find('.xp-change').on('click', (e) => {
+				const $r = $(e.currentTarget).closest('.xp-cr');
+				$r.addClass('editing').find('.xp-cr-view, .xp-change, .xp-remove').hide();
+				$r.find('.xp-cr-edit, .xp-save-one, .xp-cancel').show();
 			});
+			$c.find('.xp-cancel').on('click', (e) => {
+				const $r = $(e.currentTarget).closest('.xp-cr'), c = by_course[$r.data('course')];
+				$r.find('.xp-ev').val(c.evaluation_schema);
+				$r.find('.xp-gs').val(c.grade_schema);
+				$r.removeClass('editing').find('.xp-cr-edit, .xp-save-one, .xp-cancel').hide();
+				$r.find('.xp-cr-view, .xp-change, .xp-remove').show();
+			});
+			$c.find('.xp-remove').on('click', (e) => {
+				const c = by_course[$(e.currentTarget).closest('.xp-cr').data('course')];
+				const warn = this.o.counts.students ? `<br><br>${__('Marks already entered for this course are kept, but they will not be graded until the course is mapped again.')}` : '';
+				frappe.confirm(`${__('Remove the schemas from <b>{0}</b>?', [esc(c.course_name || c.course)])}<br>${__('The course moves back to "Not mapped yet" and you can map it again at any time.')}${warn}`,
+					() => call('unmap', { exam_plan: this.plan, courses: JSON.stringify([c.course]) }).then(() => {
+						frappe.show_alert({ message: __('{0} removed', [c.course_name || c.course]), indicator: 'orange' });
+						this.refresh();
+					}));
+			});
+		});
+	}
+
+	// Read-only view of a schema, from the mapping step
+	schema_view(doctype, name) {
+		const grading = doctype === 'Grading Schema';
+		const method = 'slcm.slcm.page.examination_result.examination_result.' + (grading ? 'get_grading_schema_details' : 'get_evaluation_schema_details');
+		frappe.call({ method, args: { name } }).then((r) => {
+			const x = r.message || {};
+			const n = (v) => (v === null || v === undefined || v === '' ? '—' : esc(String(+v === +v ? +v : v)));
+			const yes = (v) => (v ? `<span class="xp-pill bad">${__('Must pass')}</span>` : '');
+			let body;
+			if (grading) {
+				body = `<div class="xp-sv-stats">
+						<span><small>${__('Grading type')}</small><b>${esc(x.grading_type || '—')}</b></span>
+						<span><small>${__('Out of')}</small><b>${n(x.maximum_marks)}</b></span>
+						<span><small>${__('Grades')}</small><b>${(x.grades || []).length}</b></span></div>
+					<table class="xp-sv-table"><thead><tr><th>${__('Grade')}</th><th>${__('Marks')}</th><th class="num">${__('Grade point')}</th><th></th></tr></thead><tbody>
+					${(x.grades || []).map((g) => `<tr class="${g.failed ? 'fail' : ''}"><td><b>${esc(g.grade)}</b>${g.qualitative_meaning ? ` <small>${esc(g.qualitative_meaning)}</small>` : ''}</td>
+						<td>${n(g.marks_from)} ${g.to_operator === '<' ? __('to under') : __('to')} ${n(g.marks_to)}</td>
+						<td class="num">${n(g.grade_point)}</td><td>${g.failed ? `<span class="xp-pill bad">${__('Fail')}</span>` : ''}</td></tr>`).join('')}
+					</tbody></table>`;
+			} else {
+				const comps = x.components || [], asmts = x.assessments || [];
+				body = `<div class="xp-sv-stats">
+						<span><small>${__('Total marks')}</small><b>${n(x.total_marks)}</b></span>
+						<span><small>${__('Pass mark')}</small><b>${n(x.passing_marks)}</b></span>
+						<span><small>${__('Components')}</small><b>${comps.length}</b></span></div>
+					${comps.map((c) => {
+						const rows = asmts.filter((a) => a.component === c.component);
+						return `<div class="xp-sv-comp"><div class="xp-sv-comp-head"><b>${esc(c.component_name || c.component)}</b>
+							<span>${__('{0} marks', [n(c.effective_max_marks)])}${c.passing_marks ? ' · ' + __('pass {0}', [n(c.passing_marks)]) : ''} ${yes(c.consider_for_pass_fail)}</span></div>
+							${rows.length ? `<table class="xp-sv-table"><thead><tr><th>${__('Assessment')}</th><th class="num">${__('Marked out of')}</th><th class="num">${__('Counts as')}</th><th class="num">${__('Pass')}</th></tr></thead><tbody>
+							${rows.map((a) => `<tr><td>${esc(a.label || a.type_name || a.assessment_type)} ${yes(a.consider_for_pass_fail)}</td><td class="num">${n(a.maximum_marks)}</td>
+								<td class="num">${n(a.effective_marks)}</td><td class="num">${a.passing_marks ? n(a.passing_marks) : '—'}</td></tr>`).join('')}
+							</tbody></table>` : `<p class="xp-muted">${__('No assessments')}</p>`}</div>`;
+					}).join('')}
+					<p class="xp-muted">${__('"Counts as" is what the assessment adds to the total; "Must pass" means a student fails the course if they fail that part.')}</p>`;
+			}
+			const d = new frappe.ui.Dialog({
+				title: `${__(doctype)}: ${name}`,
+				size: 'large',
+				fields: [{ fieldtype: 'HTML', fieldname: 'body' }],
+				primary_action_label: __('Close'),
+				primary_action: () => d.hide(),
+				secondary_action_label: __('Open full {0}', [__(doctype)]),
+				secondary_action: () => { d.hide(); frappe.set_route('Form', doctype, name); },
+			});
+			d.fields_dict.body.$wrapper.html(`<div class="xp-sv">${x.description ? `<p>${esc(x.description)}</p>` : ''}${body}</div>`);
+			d.show();
 		});
 	}
 
@@ -362,53 +501,15 @@ class ExamPlanner {
 			this.tt = t;
 			this.$body.html(this.card(__('Exam timetable'),
 				__('Rooms are Venue Master rooms shared with the class Time Table. Checked: term dates, holidays, a class in the room, seats (papers may share a room), the same students in two exams, invigilator.'),
-				'Exam Plan › Course Schedules') + this.card(__('Assessment schedules'),
+				'') + this.card(__('Assessment schedules'),
 				__('Internal assessment dates and marks-entry windows per programme; rows come from the mapped schemas. Faculty enter these marks on the portal.'),
 				'Exam Assessment Schedule'));
 			const $cards = this.$body.find('.xp-card-body');
-			const venue_opts = (v) => `<option value=""></option>` + t.venues.map((x) => `<option value="${esc(x.name)}" ${x.name === v ? 'selected' : ''}>${esc(x.name)} (${x.capacity || 0})</option>`).join('');
-			const fac_opts = (v) => `<option value=""></option>` + t.faculty.map((x) => `<option value="${esc(x.name)}" ${String(x.name) === String(v) ? 'selected' : ''}>${esc(x.label)}</option>`).join('');
-			const rows = t.rows.map((r, i) => `<tr data-i="${i}" data-course="${esc(r.course)}">
-				<td><b>${esc(r.course)}</b><br><small>${esc(r.course_name)}</small></td><td class="num">${r.students}</td>
-				<td><input type="date" class="form-control input-sm xp-d" value="${esc(r.exam_date || '')}"></td>
-				<td><input type="time" class="form-control input-sm xp-s" value="${esc(r.start_time)}"></td>
-				<td><input type="time" class="form-control input-sm xp-e" value="${esc(r.end_time)}"></td>
-				<td><select class="form-control input-sm xp-v">${venue_opts(r.venue)}</select></td>
-				<td><input type="number" class="form-control input-sm xp-c" value="${esc(r.seat_capacity)}" placeholder="${__('room')}"></td>
-				<td><select class="form-control input-sm xp-f">${fac_opts(r.invigilator)}</select></td>
-				<td class="xp-msg"></td></tr>`).join('');
-			$cards.eq(0).html(`
-				<div class="xp-table"><table class="table table-sm"><thead><tr><th>${__('Course')}</th><th>${__('Students')}</th><th>${__('Date')}</th><th>${__('Start')}</th><th>${__('End')}</th>
-					<th>${__('Venue (seats)')}</th><th>${__('Seats')}</th><th>${__('Invigilator')}</th><th>${__('Check')}</th></tr></thead><tbody>${rows || `<tr><td colspan="9">${__('Map courses first.')}</td></tr>`}</tbody></table></div>
-				<div class="xp-issues"></div>
-				<div class="xp-bar"><span class="xp-grow"></span><button class="btn btn-default btn-sm xp-run-check">${__('Check')}</button>
-					<button class="btn btn-primary btn-sm xp-save-tt">${__('Save timetable')}</button></div>`);
-			const collect = () => $cards.eq(0).find('tbody tr[data-course]').map((_, tr) => {
-				const $tr = $(tr);
-				return { course: $tr.data('course'), exam_date: $tr.find('.xp-d').val(), start_time: $tr.find('.xp-s').val(), end_time: $tr.find('.xp-e').val(),
-					venue: $tr.find('.xp-v').val(), seat_capacity: $tr.find('.xp-c').val(), invigilator: $tr.find('.xp-f').val() };
-			}).get();
-			$cards.eq(0).find('.xp-v').on('change', (e) => {
-				const v = t.venues.find((x) => x.name === $(e.target).val());
-				$(e.target).closest('tr').find('.xp-c').val(v ? v.capacity : '');
+			this.publish_bar($cards.eq(0), t.published, false);
+			this.tt_editor($('<div></div>').appendTo($cards.eq(0)), t, {
+				check: 'check_timetable', save: 'save_timetable', saved: __('Timetable saved'),
+				students: __('Students'), empty: __('Map courses first.'),
 			});
-			const show = (res) => {
-				$cards.eq(0).find('.xp-msg').html('');
-				$cards.eq(0).find('tbody tr').removeClass('xp-flag');
-				const items = [...res.errors.map((x) => ({ ...x, bad: 1 })), ...res.warnings];
-				items.forEach((x) => {
-					const $tr = $cards.eq(0).find(`tbody tr[data-i="${x.row - 1}"]`);
-					if (x.bad) $tr.addClass('xp-flag');
-					$tr.find('.xp-msg').append(`<div class="xp-pill ${x.bad ? 'bad' : 'warn'}">${esc(x.message)}</div>`);
-				});
-				$cards.eq(0).find('.xp-issues').html(res.errors.length
-					? `<div class="xp-alert bad">${__('{0} problem(s) to fix before saving.', [res.errors.length])}</div>`
-					: `<div class="xp-alert ok">${__('No clashes.')}${res.warnings.length ? ' ' + __('{0} warning(s).', [res.warnings.length]) : ''}</div>`);
-			};
-			if (t.rows.some((r) => r.exam_date)) show(t.check);
-			$cards.eq(0).find('.xp-run-check').on('click', () => call('check_timetable', { exam_plan: this.plan, rows: JSON.stringify(collect()) }).then(show));
-			$cards.eq(0).find('.xp-save-tt').on('click', () => call('save_timetable', { exam_plan: this.plan, rows: JSON.stringify(collect()) })
-				.then(() => { frappe.show_alert({ message: __('Timetable saved'), indicator: 'green' }); this.refresh(); }));
 
 			const made = new Set(t.assessment_schedules.map((a) => a.programme));
 			$cards.eq(1).html(`
@@ -421,24 +522,202 @@ class ExamPlanner {
 		});
 	}
 
-	// ── 3. Students ────────────────────────────────────────────────────
-	render_students() {
-		call('get_students', { exam_plan: this.plan }).then((rows) => {
-			this.$body.html(this.card(__('Students'),
-				__('Enrolled students of each course\'s Classes in this term. Detained = not eligible in Attendance Summary (attendance %, condonation and FA/MFA counted); classes without sessions yet are left alone.'),
-				'Student Course Marks, Exam Barcode'));
+	// Whether students can see the (re-)exam timetable, with the switch
+	publish_bar($el, published, reexam) {
+		const what = reexam ? __('re-exam timetable') : __('timetable');
+		const $bar = $(`<div class="xp-pub-bar ${published ? 'on' : ''}">
+			<span><b>${published ? '● ' + __('Published') : '○ ' + __('Not published')}</b>
+			${published ? __('Students can see this {0} on the portal.', [what]) : __('Students cannot see this {0} yet. Publish it when the dates are final.', [what])}</span>
+			<span class="xp-grow"></span>
+			<button class="btn btn-sm ${published ? 'btn-default' : 'btn-primary'}">${published ? __('Hide from students') : __('Publish to students')}</button></div>`).appendTo($el);
+		$bar.find('button').on('click', () => {
+			const go = () => call('set_timetable_published', { exam_plan: this.plan, published: published ? 0 : 1, reexam: reexam ? 1 : 0 }).then(() => {
+				frappe.show_alert({ message: published ? __('Hidden from students') : __('Published to students'), indicator: 'green' });
+				this.render();
+			});
+			if (published) go();
+			else frappe.confirm(__('Publish the {0}? Students will see the dates, times and rooms on the portal. Save your changes first.', [what]), go);
+		});
+	}
+
+	// Timetable table (exam or re-exam): dates, rooms, seats, invigilators, with Check / Save
+	tt_editor($el, t, o) {
+		const venue_opts = (v) => `<option value=""></option>` + t.venues.map((x) => `<option value="${esc(x.name)}" ${x.name === v ? 'selected' : ''}>${esc(x.name)} (${x.capacity || 0})</option>`).join('');
+		const can_add_inv = frappe.model.can_create('Faculty');
+		const fac_opts = (v) => `<option value=""></option>` + t.faculty.map((x) => `<option value="${esc(x.name)}" ${String(x.name) === String(v) ? 'selected' : ''}>${esc(x.label)}</option>`).join('')
+			+ (can_add_inv ? `<option value="__new_invigilator__">+ ${__('Add new invigilator…')}</option>` : '');
+		const extra = o.failed ? `<th>${__('Failed')}</th>` : '';
+		const rows = t.rows.map((r, i) => `<tr data-i="${i}" data-course="${esc(r.course)}">
+			<td><b>${esc(r.course)}</b><br><small>${esc(r.course_name)}</small></td>${o.failed ? `<td class="num">${r.failed}</td>` : ''}<td class="num">${r.students}</td>
+			<td><input type="date" class="form-control input-sm xp-d" value="${esc(r.exam_date || '')}"></td>
+			<td><input type="time" class="form-control input-sm xp-s" value="${esc(r.start_time)}"></td>
+			<td><input type="time" class="form-control input-sm xp-e" value="${esc(r.end_time)}"></td>
+			<td><select class="form-control input-sm xp-v">${venue_opts(r.venue)}</select></td>
+			<td><input type="number" class="form-control input-sm xp-c" value="${esc(r.seat_capacity)}" placeholder="${__('room')}"></td>
+			<td><select class="form-control input-sm xp-f">${fac_opts(r.invigilator)}</select></td>
+			<td class="xp-msg"></td></tr>`).join('');
+		const cols = 9 + (o.failed ? 1 : 0);
+		$el.html(`
+			<div class="xp-table"><table class="table table-sm xp-tt"><thead><tr><th>${__('Course')}</th>${extra}<th>${o.students}</th><th>${__('Date')}</th><th>${__('Start')}</th><th>${__('End')}</th>
+				<th>${__('Venue (seats)')}</th><th>${__('Seats')}</th><th>${__('Invigilator')}</th><th>${__('Check')}</th></tr></thead><tbody>${rows || `<tr><td colspan="${cols}">${o.empty}</td></tr>`}</tbody></table></div>
+			<div class="xp-issues"></div>
+			<div class="xp-bar">${can_add_inv ? `<button class="btn btn-default btn-sm xp-new-inv">+ ${__('Add invigilator')}</button>` : ''}
+				<span class="xp-muted">${o.hint || __('Invigilators come from Faculty.')}</span>
+				<span class="xp-grow"></span><button class="btn btn-default btn-sm xp-run-check">${__('Check')}</button>
+				<button class="btn btn-primary btn-sm xp-save-tt" ${t.rows.length ? '' : 'disabled'}>${o.save_label || __('Save timetable')}</button></div>`);
+		const collect = () => $el.find('tbody tr[data-course]').map((_, tr) => {
+			const $tr = $(tr);
+			return { course: $tr.data('course'), exam_date: $tr.find('.xp-d').val(), start_time: $tr.find('.xp-s').val(), end_time: $tr.find('.xp-e').val(),
+				venue: $tr.find('.xp-v').val(), seat_capacity: $tr.find('.xp-c').val(), invigilator: $tr.find('.xp-f').val() };
+		}).get();
+		$el.find('.xp-v').on('change', (e) => {
+			const v = t.venues.find((x) => x.name === $(e.target).val());
+			$(e.target).closest('tr').find('.xp-c').val(v ? v.capacity : '');
+		});
+		const show = (res) => {
+			$el.find('.xp-msg').html('');
+			$el.find('tbody tr').removeClass('xp-flag');
+			const items = [...res.errors.map((x) => ({ ...x, bad: 1 })), ...res.warnings];
+			$el.find('tbody tr[data-course]').each((_, tr) => {
+				if ($(tr).find('.xp-d').val()) $(tr).find('.xp-msg').html(`<span class="xp-pill ok">✓ ${__('OK')}</span>`);
+			});
+			items.forEach((x) => {
+				const $tr = $el.find(`tbody tr[data-i="${x.row - 1}"]`);
+				if ($tr.find('.xp-pill.ok').length) $tr.find('.xp-msg').html('');
+				if (x.bad) $tr.addClass('xp-flag');
+				$tr.find('.xp-msg').append(`<div class="xp-pill ${x.bad ? 'bad' : 'warn'}">${esc(x.message)}</div>`);
+			});
+			$el.find('.xp-issues').html(res.errors.length
+				? `<div class="xp-alert bad">${__('{0} problem(s) to fix before saving.', [res.errors.length])}</div>`
+				: `<div class="xp-alert ok">${__('No clashes.')}${res.warnings.length ? ' ' + __('{0} warning(s).', [res.warnings.length]) : ''}</div>`);
+		};
+		if (t.rows.some((r) => r.exam_date)) show(t.check);
+		// A new invigilator is added to every row's list; the row it was picked from gets it selected
+		const add_invigilator = ($select) => this.invigilator_dialog((f) => {
+			t.faculty.push(f);
+			$el.find('.xp-f').each((_, sel) => {
+				$(sel).find('option[value="__new_invigilator__"]').before(`<option value="${esc(f.name)}">${esc(f.label)}</option>`);
+			});
+			if ($select) $select.val(f.name).data('prev', f.name);
+		});
+		$el.find('.xp-new-inv').on('click', () => add_invigilator());
+		$el.find('.xp-f').each((_, sel) => { $(sel).data('prev', sel.value); });
+		$el.find('.xp-f').on('change', (e) => {
+			if (e.target.value !== '__new_invigilator__') { $(e.target).data('prev', e.target.value); return; }
+			e.target.value = $(e.target).data('prev') || '';
+			add_invigilator($(e.target));
+		});
+		$el.find('.xp-run-check').on('click', () => call(o.check, { exam_plan: this.plan, rows: JSON.stringify(collect()) }).then(show));
+		$el.find('.xp-save-tt').on('click', () => call(o.save, { exam_plan: this.plan, rows: JSON.stringify(collect()) })
+			.then(() => { frappe.show_alert({ message: o.saved, indicator: 'green' }); (o.after_save || (() => this.refresh()))(); }));
+	}
+
+	// Re-exam sittings, above the Re Exam screen in step 5
+	render_reexam_timetable($el) {
+		call('get_reexam_timetable', { exam_plan: this.plan }).then((t) => {
+			$el.html(`<div class="xp-card-head"><div><h4>${__('Re-exam timetable')}</h4>
+				<p>${__('Date, time, room and invigilator for each re-exam. Same checks as the exam timetable (except term dates); seats and clashes count the students registered for the re-exam.')}</p></div></div>`);
+			this.publish_bar($el, t.published, true);
+			this.tt_editor($('<div></div>').appendTo($el), t, {
+				check: 'check_reexam_timetable', save: 'save_reexam_timetable', saved: __('Re-exam timetable saved'),
+				students: __('Registered'), failed: true, save_label: __('Save re-exam timetable'),
+				hint: __('Only rows with a date are saved.'),
+				empty: __('No course needs a re-exam yet: no failed students, re-exam windows or registrations.'),
+				after_save: () => this.render_reexam_timetable($el),
+			});
+		});
+	}
+
+	// New Faculty record from the timetable, without leaving the page
+	invigilator_dialog(done) {
+		const d = new frappe.ui.Dialog({
+			title: __('Add invigilator'),
+			fields: [
+				{ fieldtype: 'HTML', options: `<p class="text-muted small">${__('Invigilators are Faculty records. This adds the person to Faculty and to the invigilator list.')}</p>` },
+				{ fieldname: 'first_name', label: __('First Name'), fieldtype: 'Data', reqd: 1 },
+				{ fieldname: 'last_name', label: __('Last Name'), fieldtype: 'Data' },
+				{ fieldname: 'faculty_id', label: __('Faculty ID'), fieldtype: 'Data', reqd: 1, description: __('Must be unique') },
+				{ fieldtype: 'Column Break' },
+				{ fieldname: 'email', label: __('Email'), fieldtype: 'Data', options: 'Email', reqd: 1 },
+				{ fieldname: 'phone', label: __('Phone'), fieldtype: 'Data', options: 'Phone' },
+				{ fieldname: 'designation', label: __('Designation'), fieldtype: 'Link', options: 'SLCM Designation' },
+				{ fieldtype: 'Section Break' },
+				{ fieldname: 'photo', label: __('Photo'), fieldtype: 'Attach Image', reqd: 1 },
+			],
+			primary_action_label: __('Add invigilator'),
+			primary_action: (v) => {
+				frappe.db.insert({ doctype: 'Faculty', status: 'Active', ...v }).then((doc) => {
+					d.hide();
+					const label = [doc.first_name, doc.last_name].filter(Boolean).join(' ') || doc.name;
+					frappe.show_alert({ message: __('{0} added. Pick them for a course, then Save timetable.', [label]), indicator: 'green' }, 6);
+					done({ name: doc.name, label });
+				});
+			},
+		});
+		d.show();
+	}
+
+	// ── 3. Students & marks ────────────────────────────────────────────
+	render_courses() {
+		if (this.course) return this.render_course_view();
+		Promise.all([call('get_students', { exam_plan: this.plan }), call('get_marks_progress', { exam_plan: this.plan })]).then(([students, marks]) => {
+			const by = {};
+			students.forEach((r) => { by[r.course] = Object.assign({ course: r.course }, r); });
+			marks.forEach((r) => { by[r.course] = Object.assign(by[r.course] || { course: r.course, in_classes: 0, synced: 0, detained: 0, manual: 0, barcodes: 0 }, { mk: r }); });
+			const rows = Object.values(by).sort((a, b) => a.course.localeCompare(b.course));
+			this.course_list = rows.map((r) => r.course);
+			const status = (r) => {
+				const m = r.mk || {}, n = m.students || r.synced || 0;
+				if (!n) return ['bad', __('No students')];
+				if (m.locked >= n) return ['ok', __('Locked')];
+				if ((m.submitted || 0) + (m.locked || 0) >= n) return ['ok', __('Submitted')];
+				if (m.entered >= n) return ['info', __('Marks entered')];
+				if (m.entered) return ['warn', __('In progress')];
+				return ['', __('Not started')];
+			};
+			const t = rows.reduce((a, r) => {
+				a.students += r.synced; a.classes += r.in_classes; a.detained += r.detained; a.barcodes += r.barcodes;
+				a.entered += (r.mk && r.mk.entered) || 0; a.marks += (r.mk && r.mk.students) || 0; return a;
+			}, { students: 0, classes: 0, detained: 0, barcodes: 0, entered: 0, marks: 0 });
+
+			this.$body.html(this.card(__('Students & marks'),
+				__('One row per course. Use the buttons above the table for every course at once, or open a course to add students, enter or import marks, and lock it.'), ''));
 			const $c = this.$body.find('.xp-card-body');
 			$c.html(`
-				<div class="xp-bar"><button class="btn btn-primary btn-sm xp-sync">${__('Sync students for all courses')}</button>
-					<button class="btn btn-default btn-sm xp-elig">${__('Update eligibility from attendance')}</button>
-					<span class="xp-grow"></span>${__('Copies')} <input type="number" class="form-control input-sm xp-copies" value="1" min="1" style="width:70px">
-					<button class="btn btn-default btn-sm xp-bc">${__('Generate barcodes')}</button></div>
-				<div class="xp-table"><table class="table table-sm"><thead><tr><th>${__('Course')}</th><th>${__('In Classes')}</th><th>${__('In plan')}</th><th>${__('Detained')}</th><th>${__('Added by hand')}</th><th>${__('Barcodes')}</th></tr></thead><tbody>
-				${rows.map((r) => `<tr class="${r.synced < r.in_classes ? 'xp-flag' : ''}"><td><b>${esc(r.course)}</b></td><td class="num">${r.in_classes}</td><td class="num">${r.synced}</td>
-					<td class="num">${r.detained ? `<span class="xp-pill bad">${r.detained}</span>` : 0}</td><td class="num">${r.manual}</td><td class="num">${r.barcodes}</td></tr>`).join('')}</tbody></table></div>
-				<div class="xp-bar xp-soft">${__('Single students, arrear attempts, CSV of registration IDs and Class-wise adding stay on')}
-					<a class="xp-link" data-route="examination-result">${__('Course Results')}</a> · <a class="xp-link" data-route="exam-barcode-sheet">${__('Exam Barcode Sheet')}</a> ${__('(attendance sheets)')}</div>`);
-			$c.find('.xp-link').on('click', (e) => frappe.set_route($(e.currentTarget).data('route')));
+				<div class="xp-kpis">
+					<div><b>${t.students}</b><span>${__('students in the plan')}${t.classes > t.students ? ` · ${__('{0} still to add', [t.classes - t.students])}` : ''}</span></div>
+					<div><b>${t.detained}</b><span>${__('detained (attendance)')}</span></div>
+					<div><b>${t.barcodes}</b><span>${__('barcodes')}</span></div>
+					<div><b>${t.entered} / ${t.marks}</b><span>${__('marks entered')}</span></div>
+				</div>
+				<div class="xp-bar">
+					<button class="btn btn-primary btn-sm xp-sync">${__('Add students from Classes')}</button>
+					<button class="btn btn-default btn-sm xp-elig">${__('Update eligibility')}</button>
+					<button class="btn btn-default btn-sm xp-acc">${__('Marks entry access')}</button>
+					<span class="xp-grow"></span>
+					<button class="btn btn-default btn-sm xp-bc">${__('Generate barcodes…')}</button>
+					<button class="btn btn-default btn-sm xp-bc-dl">${__('Download barcode sheet')}</button>
+				</div>
+				<div class="xp-table"><table class="table table-sm xp-ct"><thead><tr>
+					<th>${__('Course')}</th><th class="num">${__('Students')}</th><th class="num">${__('Detained')}</th><th class="num">${__('Barcodes')}</th>
+					<th>${__('Marks entered')}</th><th>${__('Evaluators')}</th><th>${__('Status')}</th><th></th></tr></thead><tbody>
+				${rows.map((r) => {
+					const m = r.mk || {}, n = m.students || 0, pct = n ? Math.round((m.entered || 0) * 100 / n) : 0, [cls, label] = status(r);
+					const missing = r.in_classes - r.synced;
+					return `<tr class="xp-crow" data-course="${esc(r.course)}">
+						<td><b>${esc(r.course)}</b>${missing > 0 ? `<br><small class="xp-warn-text">${__('{0} not added yet', [missing])}</small>` : ''}</td>
+						<td class="num">${r.synced}${r.in_classes && r.in_classes !== r.synced ? ` <small>/ ${r.in_classes}</small>` : ''}</td>
+						<td class="num">${r.detained ? `<span class="xp-pill bad">${r.detained}</span>` : 0}</td>
+						<td class="num">${r.barcodes}${r.synced && r.barcodes < r.synced ? ` <small>/ ${r.synced}</small>` : ''}</td>
+						<td><div class="xp-mk"><div class="xp-meter"><i style="width:${pct}%"></i></div><small>${m.entered || 0} / ${n}</small></div></td>
+						<td><small>${esc((m.evaluators || []).join(', ') || '—')}</small></td>
+						<td><span class="xp-pill ${cls}">${label}</span></td>
+						<td class="act"><button class="btn btn-default btn-sm xp-open">${__('Open')} ›</button></td></tr>`;
+				}).join('') || `<tr><td colspan="8">${__('Map courses in step 1 first.')}</td></tr>`}
+				</tbody></table></div>`);
+
+			const open = (course) => { this.course = course; this.render_course_view(); };
+			$c.find('.xp-crow').on('click', (e) => open($(e.currentTarget).data('course')));
 			$c.find('.xp-sync').on('click', () => call('sync_all_students', { exam_plan: this.plan }).then((r) => {
 				frappe.msgprint(__('{0} added, {1} already in the plan.', [r.added, r.skipped]) + (r.errors.length ? '<br><br>' + r.errors.map(esc).join('<br>') : ''));
 				this.refresh();
@@ -447,89 +726,207 @@ class ExamPlanner {
 				frappe.msgprint(__('{0} detained, {1} cleared, {2} without attendance yet.', [r.detained, r.cleared, r.no_attendance_yet]));
 				this.refresh();
 			}));
-			$c.find('.xp-bc').on('click', () => call('generate_barcodes', { exam_plan: this.plan, copies: $c.find('.xp-copies').val() })
-				.then((r) => { frappe.show_alert({ message: r.message || __('Barcodes generated'), indicator: 'green' }); this.refresh(); }));
+			$c.find('.xp-acc').on('click', () => this.access_screen(rows.length));
+			$c.find('.xp-bc').on('click', () => {
+				const missing = rows.reduce((a, r) => a + Math.max(0, r.synced - r.barcodes), 0);
+				frappe.prompt({ fieldname: 'copies', fieldtype: 'Int', label: __('Copies of each barcode on the sheet'), default: 1, reqd: 1,
+					description: missing ? __('{0} student(s) have no barcode yet and will get one. Existing barcodes never change.', [missing])
+						: __('Every student already has a barcode. This only changes how many copies are printed.') },
+				(v) => call('generate_barcodes', { exam_plan: this.plan, copies: v.copies }).then((r) => {
+					frappe.show_alert({ message: missing ? (r.message || __('Barcodes generated')) : __('Copies updated'), indicator: 'green' });
+					this.refresh();
+				}), __('Generate barcodes'), __('Generate'));
+			});
+			$c.find('.xp-bc-dl').on('click', () => frappe.prompt({ fieldname: 'mode', fieldtype: 'Select', label: __('One sheet per'), reqd: 1, default: 'by_date',
+				options: [{ value: 'by_date', label: __('Exam date') }, { value: 'by_course', label: __('Course') }] },
+				(v) => this.download_barcodes(v.mode), __('Download barcode sheet'), __('Download')));
 		});
 	}
 
-	// ── 4. Marks ───────────────────────────────────────────────────────
-	render_marks() {
-		call('get_marks_progress', { exam_plan: this.plan }).then((rows) => {
-			this.$body.html(this.card(__('Marks access for the whole plan'),
-				__('Applied to every course. Each course\'s Class faculty become its evaluators. Fine-tune one course on Result Settings.'),
-				'Access Result Settings') + this.card(__('Entry progress'),
-				__('Marks are entered on Course Results (desk) or the faculty portal (Grades, Assessment Marks), including Excel import.'), ''));
-			const $cards = this.$body.find('.xp-card-body');
-			const fields = [
-				{ fieldname: 'view_access', label: __('View Access'), fieldtype: 'Check', default: 1 },
-				{ fieldname: 'view_deadline', label: __('View Access Deadline'), fieldtype: 'Datetime' },
-				{ fieldname: 'col1', fieldtype: 'Column Break' },
-				{ fieldname: 'edit_access', label: __('Edit Access'), fieldtype: 'Check', default: 1 },
-				{ fieldname: 'edit_deadline', label: __('Edit Access Deadline'), fieldtype: 'Datetime' },
-				{ fieldname: 'sec', fieldtype: 'Section Break', label: __('Grade / Schema Access') },
-				{ fieldname: 'auto_generate_grade_access', label: __('Auto Generate Grade Access'), fieldtype: 'Check' },
-				{ fieldname: 'edit_grade_access', label: __('Edit Grade Access (Manually / Bulk Upload)'), fieldtype: 'Check' },
-				{ fieldname: 'relative_grading_access', label: __('Complete Relative Grading - Manual Schema Access'), fieldtype: 'Check' },
-				{ fieldname: 'col2', fieldtype: 'Column Break' },
-				{ fieldname: 'mask_student_info', label: __('Mask Student Information'), fieldtype: 'Check' },
-				{ fieldname: 'generate_grade_report', label: __('Generate Grade Report'), fieldtype: 'Check' },
-				{ fieldname: 'moderation_policy_access', label: __('Moderation Policy Access'), fieldtype: 'Check' },
-			];
-			const $form = $('<div></div>').appendTo($cards.eq(0));
-			const fg = new frappe.ui.FieldGroup({ fields, body: $form[0] });
-			fg.make();
-			$cards.eq(0).append(`<div class="xp-bar"><span class="xp-grow"></span><a class="xp-link" data-route="result-settings">${__('Result Settings')}</a>
-				<button class="btn btn-primary btn-sm xp-acc">${__('Apply to every course ({0})', [rows.length])}</button></div>`);
-			$cards.eq(0).find('.xp-acc').on('click', () => {
-				const v = fg.get_values(true);
+	download_barcodes(mode, course) {
+		frappe.call({ method: 'slcm.slcm.page.exam_barcode_sheet.exam_barcode_sheet.export_attendance_excel', freeze: true,
+			args: { exam_plan: this.plan, course: course || '', mode, selected_courses: mode === 'by_course' && !course ? JSON.stringify(this.course_list || []) : '' } })
+			.then((r) => {
+				if (!r.message) return;
+				const a = document.createElement('a');
+				a.href = 'data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,' + r.message.file_content;
+				a.download = r.message.filename;
+				document.body.appendChild(a); a.click(); a.remove();
+			});
+	}
+
+	// One course of step 3: the Course Results screen, inside the planner
+	render_course_view() {
+		const list = this.course_list || [], i = list.indexOf(this.course);
+		this.$body.html(`<div class="xp-card xp-course">
+			<div class="xp-course-head">
+				<button class="btn btn-default btn-sm xp-back">‹ ${__('All courses')}</button>
+				<h4>${esc(this.course)}</h4>
+				<span class="xp-grow"></span>
+				<button class="btn btn-default btn-sm xp-bc-one">${__('Barcode sheet')}</button>
+				${list.length > 1 ? `<button class="btn btn-default btn-sm xp-prev-course" ${i > 0 ? '' : 'disabled'}>‹ ${__('Previous')}</button>
+				<span class="xp-muted">${__('{0} of {1}', [i + 1, list.length])}</span>
+				<button class="btn btn-default btn-sm xp-next-course" ${i >= 0 && i < list.length - 1 ? '' : 'disabled'}>${__('Next')} ›</button>` : ''}
+			</div>
+			<div class="xp-mount"></div></div>`);
+		const go = (course) => { this.course = course; this.render_course_view(); };
+		this.$body.find('.xp-back').on('click', () => { this.course = null; this.refresh(); });
+		this.$body.find('.xp-prev-course').on('click', () => go(list[i - 1]));
+		this.$body.find('.xp-next-course').on('click', () => go(list[i + 1]));
+		this.$body.find('.xp-bc-one').on('click', () => this.download_barcodes('by_course', this.course));
+		this.mount('course_results', this.$body.find('.xp-mount')[0], { course: this.course });
+	}
+
+	// Marks entry access per course: who may view / edit marks (evaluators) and until when.
+	// This is Result Settings' Access screen; the quick form below sets every course at once.
+	access_screen(n) {
+		const d = new frappe.ui.Dialog({ title: __('Marks entry access'), size: 'extra-large' });
+		d.$wrapper.addClass('er-theme');
+		$(d.body).html(`<div class="xp-bar" style="margin-bottom:10px"><span class="xp-muted">${__('Per course: who can view or edit marks, until when, and which evaluators. Use Configure on a row to pick evaluators.')}</span>
+			<span class="xp-grow"></span><button class="btn btn-default btn-sm xp-acc-all">${__('Same settings for all courses…')}</button></div><div class="xp-acc-mount"></div>`);
+		let screen = null;
+		const load = () => {
+			if (screen) screen.destroy();
+			EXAM_UI('result_settings').then((fn) => {
+				screen = fn($(d.body).find('.xp-acc-mount')[0], { embedded: true, exam_plan: this.plan, subtab: 'access_results', only_subtab: true });
+			});
+		};
+		$(d.body).find('.xp-acc-all').on('click', () => this.access_dialog(n, load));
+		d.onhide = () => { if (screen) screen.destroy(); this.refresh(); };
+		d.show();
+		load();
+	}
+
+	// Same marks entry access for every course of the plan
+	access_dialog(n, after) {
+		const fields = [
+			{ fieldname: 'view_access', label: __('View Access'), fieldtype: 'Check', default: 1 },
+			{ fieldname: 'view_deadline', label: __('View Access Deadline'), fieldtype: 'Datetime' },
+			{ fieldname: 'col1', fieldtype: 'Column Break' },
+			{ fieldname: 'edit_access', label: __('Edit Access'), fieldtype: 'Check', default: 1 },
+			{ fieldname: 'edit_deadline', label: __('Edit Access Deadline'), fieldtype: 'Datetime' },
+			{ fieldname: 'sec', fieldtype: 'Section Break', label: __('Grade / Schema Access') },
+			{ fieldname: 'auto_generate_grade_access', label: __('Auto Generate Grade Access'), fieldtype: 'Check' },
+			{ fieldname: 'edit_grade_access', label: __('Edit Grade Access (Manually / Bulk Upload)'), fieldtype: 'Check' },
+			{ fieldname: 'relative_grading_access', label: __('Complete Relative Grading - Manual Schema Access'), fieldtype: 'Check' },
+			{ fieldname: 'col2', fieldtype: 'Column Break' },
+			{ fieldname: 'mask_student_info', label: __('Mask Student Information'), fieldtype: 'Check' },
+			{ fieldname: 'generate_grade_report', label: __('Generate Grade Report'), fieldtype: 'Check' },
+			{ fieldname: 'moderation_policy_access', label: __('Moderation Policy Access'), fieldtype: 'Check' },
+		];
+		const d = new frappe.ui.Dialog({
+			title: __('Marks entry access for all {0} courses', [n]),
+			size: 'large',
+			fields: [{ fieldtype: 'HTML', options: `<p class="text-muted small">${__("Faculty of each course's Classes become its evaluators. To change one course only, open it and use its access settings.")}</p>` }, ...fields],
+			primary_action_label: __('Apply to every course'),
+			primary_action: (v) => {
 				const settings = {};
 				fields.filter((f) => f.fieldtype === 'Check' || f.fieldtype === 'Datetime').forEach((f) => { settings[f.fieldname] = f.fieldtype === 'Check' ? (v[f.fieldname] ? 1 : 0) : (v[f.fieldname] || null); });
-				call('apply_access', { exam_plan: this.plan, settings: JSON.stringify(settings) })
-					.then((n) => { frappe.show_alert({ message: __('Access saved for {0} courses', [n]), indicator: 'green' }); this.refresh(); });
-			});
-			$cards.eq(1).html(`<div class="xp-table"><table class="table table-sm"><thead><tr><th>${__('Course')}</th><th>${__('Evaluators')}</th><th>${__('Access')}</th>
-				<th>${__('Marks entered')}</th><th></th><th>${__('Graded')}</th><th>${__('Submitted')}</th><th>${__('Locked')}</th></tr></thead><tbody>
-				${rows.map((r) => {
-					const pct = r.students ? Math.round((r.entered / r.students) * 100) : 0;
-					return `<tr><td><b>${esc(r.course)}</b></td><td>${esc((r.evaluators || []).join(', ') || '—')}</td>
-						<td>${r.access ? `<span class="xp-pill ${r.access.status === 'LOCKED' ? 'warn' : 'ok'}">${esc(r.access.status)}</span>${r.access.edit_deadline ? `<br><small>${__('edit till')} ${frappe.datetime.str_to_user(r.access.edit_deadline)}</small>` : ''}` : `<span class="xp-pill bad">${__('No access')}</span>`}</td>
-						<td class="num">${r.entered} / ${r.students}</td><td><div class="xp-meter"><i style="width:${pct}%"></i></div></td>
-						<td class="num">${r.graded}</td><td class="num">${r.submitted}</td><td class="num">${r.locked}</td></tr>`;
-				}).join('')}</tbody></table></div>
-				<div class="xp-bar"><span class="xp-grow"></span><a class="xp-link" data-route="examination-result">${__('Open Course Results')}</a></div>`);
-			this.$body.find('.xp-link').on('click', (e) => frappe.set_route($(e.currentTarget).data('route')));
+				call('apply_access', { exam_plan: this.plan, settings: JSON.stringify(settings) }).then((k) => {
+					d.hide();
+					frappe.show_alert({ message: __('Access saved for {0} courses', [k]), indicator: 'green' });
+					if (after) after(); else this.refresh();
+				});
+			},
 		});
+		d.show();
 	}
 
-	// ── 5. Results ─────────────────────────────────────────────────────
+	// ── 4. Results & publish ───────────────────────────────────────────
 	render_results() {
 		call('get_results', { exam_plan: this.plan }).then((r) => {
-			this.$body.html(this.card(__('Results'), __('Run these in order. Each button uses the same function as its own page.'), 'Student Course Marks, Student Result Publish'));
-			const $c = this.$body.find('.xp-card-body');
 			const total = r.marks.Draft + r.marks.Submitted + r.marks.Locked;
-			const item = (n, done, title, desc, btn, cls, page) => `<li class="${done ? 'done' : ''}"><span class="xp-dot">${done ? '✓' : n}</span>
-				<div><b>${title}</b><p>${desc}</p></div><div class="xp-actions">${btn ? `<button class="btn btn-sm ${done ? 'btn-default' : 'btn-primary'} ${cls}">${btn}</button>` : ''}
-				${page ? `<a class="xp-link" data-route="${page[0]}">${page[1]}</a>` : ''}</div></li>`;
+			const TABS = [
+				['term', __('Term results'), 'term_results'],
+				['publish', __('Publish'), 'publish_results'],
+				['settings', __('What students see'), 'result_settings'],
+			];
+			this.results_tab = this.results_tab || 'term';
+			this.$body.html(this.card(__('Results & publish'), __('Five steps, left to right. The tabs below show each student\'s term result, who is published, and what students see.'), '')
+				+ `<div class="xp-card xp-rtabs-card"><div class="xp-rtabs">${TABS.map(([k, l]) => `<button class="xp-rtab ${k === this.results_tab ? 'on' : ''}" data-tab="${k}">${l}</button>`).join('')}</div>
+				<div class="xp-mount"></div></div>`);
+			const $c = this.$body.find('.xp-card-body').first();
+			const FLOW = [
+				{ done: total && !r.marks.Draft, title: __('Submit grades'), desc: __('Draft marks become Submitted; faculty can no longer edit them.'),
+				  status: __('{0} of {1} submitted', [r.marks.Submitted + r.marks.Locked, total]), btn: __('Submit all'), cls: 'xp-submit' },
+				{ done: total && r.marks.Locked === total, title: __('Lock'), desc: __('Marks are frozen. Later changes go through Grade Appeal.'),
+				  status: __('{0} of {1} locked', [r.marks.Locked, total]), btn: __('Lock all'), cls: 'xp-lock' },
+				// the Term results tab's own Generate menu does this (all or selected students)
+				{ done: r.results > 0, title: __('Calculate results'), desc: __('Use Generate in the Term results tab below: term GPA, term % and cumulative GPA.'),
+				  status: r.results ? __('Average term GPA {0}', [r.avg_gpa]) : __('Not calculated yet'), btn: __('Go to Generate'), cls: 'xp-to-term' },
+				{ done: !!r.publish_setting, title: __('What students see'), desc: __('Components, SGPA, e-grade sheet; holds for unpaid fees.'),
+				  status: r.publish_setting ? __('Settings saved') : __('Not set yet'), btn: __('Edit settings'), cls: 'xp-settings' },
+				{ done: r.results && r.published === r.results, title: __('Publish'), desc: __('Results appear on the student and parent portals.'),
+				  status: __('{0} of {1} published', [r.published, r.results]), btn: __('Publish all'), cls: 'xp-pub' },
+			];
+			const next = FLOW.findIndex((f) => !f.done);
+			const stat = (v, l, warn) => `<div class="${warn ? 'warn' : ''}"><b>${v}</b><span>${l}</span></div>`;
 			$c.html(`
-				<div class="xp-kpis"><div><b>${total}</b><span>${__('marks records')}</span></div><div><b>${r.marks.Draft}</b><span>${__('Draft')}</span></div>
-					<div><b>${r.marks.Submitted}</b><span>${__('Submitted')}</span></div><div><b>${r.marks.Locked}</b><span>${__('Locked')}</span></div>
-					<div><b>${r.fails}</b><span>${__('fail grades')}</span></div><div><b>${r.published} / ${r.results}</b><span>${__('published')}</span></div><div><b>${r.avg_gpa}</b><span>${__('average Term GPA')}</span></div></div>
-				<ol class="xp-check">
-					${item(1, total && !r.marks.Draft, __('Submit grades'), __('Every Draft marks record becomes Submitted; faculty can no longer edit them.'), __('Submit all'), 'xp-submit')}
-					${item(2, total && r.marks.Locked === total, __('Lock'), __('Every marks record and every course\'s access becomes Locked. Later changes go through Grade Appeal.'), __('Lock all'), 'xp-lock')}
-					${item(3, r.results > 0, __('Generate term results'), __('Term GPA, Term %, Cumulative GPA / % for every student.'), __('Generate'), 'xp-gen', ['term-result', __('Term Result')])}
-					${item(4, !!r.publish_setting, __('Publish settings'), __('What students see: components, SGPA, e-grade sheet, hold for unpaid fees / feedback.'), '', '', ['result-settings', __('Result Settings')])}
-					${item(5, r.results && r.published === r.results, __('Publish'), __('Results appear on the student and parent portals.'), __('Publish all'), 'xp-pub', ['publish-result', __('Publish Result')])}
-					${item(6, r.re_exam_settings || r.improvement_settings, __('Re-exam and improvement'), __('Open the windows, fees and deadlines; mark payments; enter re-exam / improvement marks.'), '', '', ['re-exam', __('Re Exam')])}
+				<div class="xp-r4-stats">
+					${stat(total, __('marks records'))}${stat(r.marks.Draft, __('draft'))}${stat(r.marks.Submitted, __('submitted'))}${stat(r.marks.Locked, __('locked'))}
+					${stat(r.fails, __('fail grades'), r.fails > 0)}${stat(`${r.published} / ${r.results}`, __('published'))}${stat(r.avg_gpa, __('average term GPA'))}
+				</div>
+				<ol class="xp-flow">
+					${FLOW.map((f, i) => `<li class="${f.done ? 'done' : i === next ? 'next' : ''}">
+						<div class="xp-flow-head"><span class="xp-dot">${f.done ? '✓' : i + 1}</span><b>${f.title}</b></div>
+						<p>${f.desc}</p>
+						<div class="xp-flow-foot"><small>${f.status}</small>
+							<button class="btn btn-sm ${i === next ? 'btn-primary' : 'btn-default'} ${f.cls}">${f.btn}</button></div>
+					</li>`).join('')}
 				</ol>
-				<div class="xp-bar xp-soft"><a class="xp-link" data-route="improvement-exam">${__('Improvement Exam')}</a> · <a href="/desk/grade-appeal">${__('Grade Appeals')}</a></div>`);
-			$c.find('.xp-link').on('click', (e) => frappe.set_route($(e.currentTarget).data('route')));
+				${next === -1 ? `<div class="xp-next"><span>✓ ${__('Results are published.')}</span>
+					<button class="btn btn-default btn-sm xp-go-after">${__('Re-exams and improvement are in step 5')} →</button></div>` : ''}`);
+			this.$body.find('.xp-card-head').first().append(`<button class="btn btn-default btn-sm xp-consolidated">${__('Consolidated report')}</button>`);
+			this.$body.find('.xp-consolidated').on('click', () => EXAM_UI('term_results').then(() => slcm.exam_ui.consolidated_report(this.plan)));
+			$c.find('.xp-go-after').on('click', () => { this.step = 4; this.render(); });
+			const $mount = this.$body.find('.xp-rtabs-card .xp-mount');
+			const show_tab = (k, scroll) => {
+				this.results_tab = k;
+				this.$body.find('.xp-rtab').removeClass('on').filter(`[data-tab="${k}"]`).addClass('on');
+				$mount.empty();
+				this.mount(TABS.find((x) => x[0] === k)[2], $mount[0], k === 'settings' ? { subtab: 'publish', only_subtab: true } : {});
+				if (scroll) this.$body.find('.xp-rtabs-card')[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
+			};
+			this.$body.find('.xp-rtab').on('click', (e) => show_tab($(e.currentTarget).data('tab')));
+			$c.find('.xp-settings').on('click', () => show_tab('settings', true));
+			$c.find('.xp-to-term').on('click', () => show_tab('term', true));
+			show_tab(this.results_tab);
 			const run = (method, args, msg) => call(method, Object.assign({ exam_plan: this.plan }, args)).then((n) => { frappe.show_alert({ message: msg(n), indicator: 'green' }); this.refresh(); });
 			$c.find('.xp-submit').on('click', () => run('set_status_all', { status: 'Submitted' }, (n) => __('{0} submitted', [n])));
 			$c.find('.xp-lock').on('click', () => frappe.confirm(__('Lock every marks record and course of this plan?'), () => run('set_status_all', { status: 'Locked' }, (n) => __('{0} locked', [n]))));
-			$c.find('.xp-gen').on('click', () => run('generate_results', {}, (n) => __('Results for {0} students', [n])));
 			$c.find('.xp-pub').on('click', () => frappe.confirm(__('Publish results of every student in this plan?'), () => run('publish_all', { publish: 1 }, (n) => __('{0} published', [n]))));
 		});
+	}
+
+	// ── 5. After results ───────────────────────────────────────────────
+	render_after() {
+		const TABS = [
+			['reexam', __('Re-exam'), 're_exams'],
+			['improvement', __('Improvement'), 'improvement_exams'],
+		];
+		this.after_tab = TABS.some((t) => t[0] === this.after_tab) ? this.after_tab : 'reexam';
+		this.$body.html(this.card(__('After results'),
+			__('For students who failed (re-exam) or want a better grade (improvement). Schedule the re-exams, open the windows and fees, then follow registrations and payments.'), '')
+			+ `<div class="xp-card xp-rtabs-card"><div class="xp-rtabs">${TABS.map(([k, l]) => `<button class="xp-rtab ${k === this.after_tab ? 'on' : ''}" data-tab="${k}">${l}</button>`).join('')}</div>
+			<div class="xp-mount"></div></div>`);
+		this.$body.find('.xp-card-body').first().remove();
+		const $mount = this.$body.find('.xp-rtabs-card .xp-mount');
+		const show = (k) => {
+			this.after_tab = k;
+			this.$body.find('.xp-rtab').removeClass('on').filter(`[data-tab="${k}"]`).addClass('on');
+			this.unmount();
+			$mount.empty();
+			const mod = TABS.find((t) => t[0] === k)[2];
+			if (k === 'reexam') {
+				$mount.html('<div class="xp-rx-tt"></div><div class="xp-rx-screen"></div>');
+				this.render_reexam_timetable($mount.find('.xp-rx-tt'));
+				this.mount(mod, $mount.find('.xp-rx-screen')[0], {});
+			} else {
+				this.mount(mod, $mount[0], {});
+			}
+		};
+		this.$body.find('.xp-rtab').on('click', (e) => show($(e.currentTarget).data('tab')));
+		show(this.after_tab);
 	}
 
 	add_styles() {
@@ -576,7 +973,65 @@ class ExamPlanner {
 			.xp-pill.warn{background:var(--bg-yellow,#fdf1d2);color:var(--text-on-yellow,#8a5a00)}
 			.xp-pill.bad{background:var(--bg-red,#fde6e8);color:var(--text-on-red,#b0182b)}
 			.xp-pill.info{background:var(--bg-blue,#e6edf9);color:var(--text-on-blue,#2d4f8a)}
-			.xp-msg{min-width:220px;white-space:normal}.xp-msg .xp-pill{display:block;font-weight:600}
+			.xp-msg{min-width:220px;white-space:normal}
+			.xp-muted{color:var(--text-muted);font-size:12px}
+			.xp-pub-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;margin-bottom:12px;border:1px solid var(--border-color);border-radius:10px;background:var(--subtle-fg,#f8fafc)}
+			.xp-pub-bar b{margin-right:6px;color:var(--text-muted)}.xp-pub-bar.on{border-color:var(--bg-green,#cdebd8);background:var(--bg-green,#e5f4ea)}
+			.xp-pub-bar.on b{color:var(--text-on-green,#1d6b3a)}
+			.xp-rx-tt{border:1px solid var(--border-color);border-radius:10px;padding:14px;margin-bottom:16px}
+			.xp-r4-stats{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border:1px solid var(--border-color);border-radius:10px;margin-bottom:14px}
+			.xp-r4-stats>div{padding:10px 12px;border-right:1px solid var(--border-color)}.xp-r4-stats>div:last-child{border-right:0}
+			.xp-r4-stats b{display:block;font-family:var(--er-font);font-size:17px}.xp-r4-stats span{font-size:11.5px;color:var(--text-muted)}
+			.xp-r4-stats .warn b{color:var(--er-brand,#920C24)}
+			.xp-flow{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+			.xp-flow li{display:flex;flex-direction:column;gap:6px;border:1px solid var(--border-color);border-radius:10px;padding:12px;background:var(--card-bg)}
+			.xp-flow li.next{border-color:var(--er-brand,#920C24);box-shadow:0 0 0 1px var(--er-brand,#920C24) inset}
+			.xp-flow-head{display:flex;align-items:center;gap:8px}.xp-flow-head b{font-size:13.5px}.xp-flow .xp-dot{width:24px;height:24px;font-size:12px;flex:none}
+			.xp-flow li p{margin:0;color:var(--text-muted);font-size:12px;flex:1}
+			.xp-flow-foot{display:flex;flex-direction:column;align-items:flex-start;gap:6px}.xp-flow-foot small{color:var(--text-muted);font-size:11.5px}
+			.xp-flow li.done .xp-dot{background:var(--green-500,#1d6b3a);border-color:var(--green-500,#1d6b3a);color:#fff}
+			@media (max-width:1100px){.xp-flow{grid-template-columns:repeat(3,minmax(0,1fr))}.xp-r4-stats{grid-template-columns:repeat(4,minmax(0,1fr))}}
+			@media (max-width:700px){.xp-flow{grid-template-columns:1fr}.xp-r4-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+			.xp-ct tbody tr.xp-crow{cursor:pointer}.xp-ct tbody tr.xp-crow:hover td{background:var(--er-brand-softest,#FBEEF0)}
+			.xp-ct td.act{text-align:right;white-space:nowrap}.xp-ct td small{color:var(--text-muted)}.xp-warn-text{color:var(--text-on-yellow,#8a5a00)!important}
+			.xp-mk{display:flex;align-items:center;gap:8px;min-width:150px}.xp-mk .xp-meter{flex:1}
+			.xp-course-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-bottom:12px;margin-bottom:12px;border-bottom:1px solid var(--border-color)}
+			.xp-course-head h4{margin:0 0 0 6px;font-family:var(--er-font);font-size:16px;font-weight:700}
+			.xp-rtabs{display:flex;gap:4px;border-bottom:1px solid var(--border-color);margin-bottom:14px;overflow-x:auto}
+			.xp-rtab{background:none;border:0;border-bottom:3px solid transparent;padding:8px 14px;font-family:var(--er-font);font-weight:700;font-size:13px;color:var(--text-muted);white-space:nowrap}
+			.xp-rtab.on{color:var(--er-brand,#920C24);border-bottom-color:var(--er-brand,#920C24)}.xp-rtab:hover{color:var(--er-brand,#920C24)}
+			.xp-schema-link{background:none;border:0;padding:0;font:inherit;font-weight:700;font-size:13px;color:var(--er-brand,#920C24);text-decoration:underline dotted;text-underline-offset:3px;cursor:pointer;text-align:left}
+			.xp-schema-link:hover{text-decoration-style:solid}.xp-peek{font-size:11.5px;justify-self:start}
+			.xp-sv{font-family:var(--er-font,Georgia,serif);font-size:13px}
+			.xp-sv-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:14px}
+			.xp-sv-stats span{border:1px solid var(--border-color);border-radius:8px;padding:10px 12px;background:var(--er-brand-softest,#FBEEF0)}
+			.xp-sv-stats small{display:block;color:var(--text-muted);font-size:11px}.xp-sv-stats b{font-size:18px;color:var(--er-brand,#920C24)}
+			.xp-sv-comp{border:1px solid var(--border-color);border-radius:8px;margin-bottom:10px;overflow:hidden}
+			.xp-sv-comp-head{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:9px 12px;background:var(--subtle-fg,#f7f7f8)}
+			.xp-sv-comp-head span{color:var(--text-muted);font-size:12px}
+			.xp-sv-table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+			.xp-sv-table th{font-size:11px;color:var(--text-muted);text-align:left;padding:7px 12px;border-bottom:1px solid var(--border-color);font-weight:700}
+			.xp-sv-table td{padding:7px 12px;border-bottom:1px solid var(--border-color)}.xp-sv-table tr:last-child td{border-bottom:0}
+			.xp-sv-table .num{text-align:right}.xp-sv-table tr.fail td{background:var(--bg-red,#fde6e8)}
+			.xp-sv-table td small{color:var(--text-muted)}.xp-sv > .xp-sv-table{border:1px solid var(--border-color);border-radius:8px}
+			.xp-map-progress{display:flex;flex-direction:column;gap:6px;min-width:240px}.xp-map-progress b{font-size:13px}
+			.xp-bar-track{height:6px;border-radius:3px;background:var(--gray-200,#e6e9ec);overflow:hidden}.xp-bar-track i{display:block;height:100%;background:var(--er-brand,#920C24)}
+			.xp-cr-group{margin-top:16px}.xp-cr-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+			.xp-cr-title h5{margin:0;font-family:var(--er-font);font-size:14px;font-weight:700}
+			.xp-count{display:inline-block;min-width:22px;text-align:center;font-size:11px;padding:1px 7px;border-radius:999px;background:var(--er-brand-softest,#FBEEF0);color:var(--er-brand,#920C24);margin-left:4px}
+			.xp-cr{display:grid;grid-template-columns:minmax(200px,1.1fr) minmax(0,2fr) auto;gap:16px;align-items:center;border:1px solid var(--border-color);border-radius:10px;padding:12px 14px;margin-bottom:8px;background:var(--card-bg)}
+			.xp-cr.todo{border-left:3px solid var(--er-brand-light,#C4566A)}.xp-cr.editing{border-color:var(--er-brand-border,#E8B4BE);background:var(--er-brand-softest,#FBEEF0)}
+			.xp-cr-name b{display:block;font-size:13.5px}.xp-cr-name small{color:var(--text-muted);font-size:11.5px}
+			.xp-cr-view{display:flex;gap:22px;align-items:center;flex-wrap:wrap}.xp-cr-view span small{display:block;color:var(--text-muted);font-size:11px}
+			.xp-cr-view span b{font-size:13px}.xp-cr-view .xp-pill{margin-left:auto}
+			.xp-cr-edit{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:center}.xp-cr-edit select{min-width:0!important}
+			.xp-why{grid-column:1/-1;color:var(--text-muted);font-size:11.5px}
+			.xp-cr-act{display:flex;gap:6px;justify-content:flex-end;white-space:nowrap}
+			.xp-next{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px;padding:12px 14px;border-radius:10px;background:var(--bg-green,#e5f4ea)}
+			.xp-next span{font-weight:700;color:var(--text-on-green,#1d6b3a)}
+			@media (max-width:860px){.xp-cr{grid-template-columns:1fr}.xp-cr-act{justify-content:flex-start}.xp-cr-edit{grid-template-columns:1fr}}
+			.xp-tt td:first-child{min-width:150px}.xp-table .xp-tt .xp-d{min-width:135px}.xp-table .xp-tt .xp-s,.xp-table .xp-tt .xp-e{min-width:110px}
+			.xp-table .xp-tt .xp-v{min-width:160px}.xp-table .xp-tt input.xp-c{min-width:64px;width:72px}.xp-table .xp-tt .xp-f{min-width:140px}.xp-tt .xp-msg{min-width:90px}.xp-msg .xp-pill{display:block;font-weight:600}
 			.xp-alert{border-radius:8px;padding:8px 12px}.xp-alert.bad{background:var(--bg-red,#fde6e8)}.xp-alert.ok{background:var(--bg-green,#e5f4ea)}
 			.xp-meter{height:8px;border-radius:4px;background:var(--border-color);min-width:90px;overflow:hidden}.xp-meter i{display:block;height:100%;background:var(--er-brand,#920C24)}
 			.xp-kpis{display:flex;flex-wrap:wrap;gap:24px}.xp-kpis b{display:block;font-size:20px;font-family:var(--er-font)}.xp-kpis span{font-size:12px;color:var(--text-muted)}

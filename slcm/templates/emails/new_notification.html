@@ -1,0 +1,18 @@
+{#- slcm override of frappe/templates/emails/new_notification.html: Helpdesk ticket
+    assignments carry a ready-made card (slcm.api.helpdesk_assignment.
+    style_ticket_assignment_notification); everything else is frappe's markup. -#}
+{%- if description and description.startswith("<!-- hd-ticket-assignment -->") -%}
+{{ description }}
+{%- else -%}
+<p>
+	<p class="text-color">{{ body_content }}</p>
+</p>
+{% if description %}
+<blockquote>
+	{{ description | markdown }}
+</blockquote>
+{% endif %}
+<div class="more-info">
+	<a href="{{ doc_link }}">{{ _("Open Document") }}</a>
+</div>
+{%- endif %}

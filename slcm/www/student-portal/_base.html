@@ -503,6 +503,17 @@
 <body class="{{ sp_settings.body_classes | default('') }}">
 {# Apply saved dark mode before first paint so pages don't flash light #}
 <script>try { if (localStorage.getItem('sp-dark') === '1') document.body.classList.add('sp-dark'); } catch(e) {}</script>
+<script>
+  // A missing photo file shows the default user icon (registered early, before any image fails)
+  window.SP_USER_ICON = '<svg class="sp-user-icon" viewBox="0 0 24 24" width="60%" height="60%" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>';
+  window.SP_PHOTO = {{ (student_photo or "") | tojson }};
+  document.addEventListener('error', function (e) {
+    var img = e.target;
+    if (img && img.tagName === 'IMG' && window.SP_PHOTO && img.getAttribute('src') === window.SP_PHOTO && img.parentNode) {
+      img.outerHTML = window.SP_USER_ICON;
+    }
+  }, true);
+</script>
 
 {% if not is_guest %}
   {%- set _sp_role1 = frappe.db.get_value("Has Role", {"parent": frappe.session.user, "role": "slcm_student"}, "name") -%}
@@ -587,7 +598,7 @@
         {% if student_photo %}
           <img src="{{ student_photo }}" alt="{{ student_name }}">
         {% else %}
-          {{ student_initial or "S" }}
+          <svg class="sp-user-icon" viewBox="0 0 24 24" width="60%" height="60%" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
         {% endif %}
       </div>
       <!-- <span class="sp-ms" style="font-size: 18px; color: var(--sp-nav-text, #111); cursor: pointer; margin-left: 4px;" onclick="spToggleDropdown()">expand_more</span> -->
@@ -660,7 +671,7 @@
         {% if student_photo %}
           <img src="{{ student_photo }}" alt="{{ student_name }}">
         {% else %}
-          {{ student_initial or "S" }}
+          <svg class="sp-user-icon" viewBox="0 0 24 24" width="60%" height="60%" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
         {% endif %}
       </div>
       <div style="overflow:hidden;">

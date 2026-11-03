@@ -1,0 +1,41 @@
+<!-- hd-ticket-assignment -->
+<div style="font-family: Arial, Helvetica, sans-serif; color: #1f2937; font-size: 14px; line-height: 1.6;">
+
+<p style="margin: 0 0 12px;">Hello,</p>
+
+<p style="margin: 0 0 20px;">Ticket <strong>#{{ ticket.name }}</strong> has been assigned to you.</p>
+
+<table cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse; margin: 0 0 24px; font-size: 14px;">
+	<tr>
+		<td style="padding: 4px 16px 4px 0; color: #6b7280; white-space: nowrap; vertical-align: top;">Subject</td>
+		<td style="padding: 4px 0; font-weight: bold; vertical-align: top;">{{ ticket.subject | e }}</td>
+	</tr>
+	<tr>
+		<td style="padding: 4px 16px 4px 0; color: #6b7280; white-space: nowrap; vertical-align: top;">Raised By</td>
+		<td style="padding: 4px 0; vertical-align: top;">{{ ticket.raised_by | e }}</td>
+	</tr>
+	{% if ticket.ticket_type %}
+	<tr>
+		<td style="padding: 4px 16px 4px 0; color: #6b7280; white-space: nowrap; vertical-align: top;">Ticket Type</td>
+		<td style="padding: 4px 0; vertical-align: top;">{{ ticket.ticket_type | e }}</td>
+	</tr>
+	{% endif %}
+	{% if ticket.agent_group %}
+	<tr>
+		<td style="padding: 4px 16px 4px 0; color: #6b7280; white-space: nowrap; vertical-align: top;">Team</td>
+		<td style="padding: 4px 0; vertical-align: top;">{{ ticket.agent_group | e }}</td>
+	</tr>
+	{% endif %}
+</table>
+
+<table cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 24px;">
+	<tr>
+		<td style="background-color: #2563eb; border-radius: 6px;">
+			<a href="{{ ticket_url }}" target="_blank" rel="noopener noreferrer" style="display: inline-block; padding: 10px 24px; color: #ffffff; text-decoration: none; font-weight: bold; font-size: 14px;">Open Ticket</a>
+		</td>
+	</tr>
+</table>
+
+<p style="margin: 0;">Regards,<br>Support Team</p>
+
+</div>

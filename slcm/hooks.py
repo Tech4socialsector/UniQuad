@@ -342,6 +342,11 @@ fixtures = [
             ["name", "not in", ["Student Portal", "Master", "FLE"]],
         ]
     },
+    # --- Workspace home blocks ---
+    {
+        "doctype": "Custom HTML Block",
+        "filters": [["name", "in", ["Examination Home"]]]
+    },
     # --- Workspace Sidebars ---
     {
         "doctype": "Workspace Sidebar",
@@ -485,15 +490,30 @@ doc_events = {
     "Applicant Document": {
         "on_submit": "slcm.admission.events.on_document_submit"
     },
+    "Notification Log": {
+        "before_insert": "slcm.api.helpdesk_assignment.style_ticket_assignment_notification"
+    },
     "HD Ticket": {
-        "before_insert": "slcm.api.helpdesk_assignment.prefill_student_context_before_insert",
+        "before_insert": [
+            "slcm.api.helpdesk_assignment.prefill_student_context_before_insert",
+            "slcm.api.helpdesk_assignment.route_aad_technical_issue",
+        ],
         "before_validate": "slcm.api.helpdesk_assignment.apply_default_email_team",
         "validate": "slcm.api.helpdesk_facility_visit.validate_preferred_visit_slot"
     },
     "User": {
         "before_insert": "slcm.api.user_events.user_before_insert",
+        "validate": "slcm.api.user_events.grant_helpdesk_customer_role",
         "after_insert": "slcm.api.user_events.send_signup_email",
-        "on_update": "slcm.slcm.utils.academics_desktop.sync_user_layout"
+        "on_update": [
+            "slcm.slcm.utils.academics_desktop.sync_user_layout",
+            "slcm.api.helpdesk_views.sync_user_ticket_views",
+        ]
+    },
+    "HD Agent": {
+        "after_insert": "slcm.api.helpdesk_views.sync_agent_ticket_views",
+        "on_update": "slcm.api.helpdesk_views.sync_agent_ticket_views",
+        "after_delete": "slcm.api.helpdesk_views.sync_agent_ticket_views"
     },
     "Hostel Allocation": {
         "after_insert": "slcm.slcm.fee.event_hooks.on_hostel_allocation_insert",

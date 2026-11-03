@@ -1276,11 +1276,15 @@ def get_portal_notifications():
 			enrolled_courses = list({s.course for s in att_summaries if s.course})
 
 			if enrolled_courses:
+				# only timetables the plan has published to students
+				published_plans = frappe.get_all("Exam Plan", filters={"timetable_published": 1}, pluck="name") or ["__none__"]
 				exam_schedules = frappe.get_all(
 					"Exam Course Schedule",
 					filters=[
 						["course", "in", enrolled_courses],
 						["exam_date", ">=", today_str],
+						["parent", "in", published_plans],
+						["parenttype", "=", "Exam Plan"],
 					],
 					fields=["name", "course", "exam_date", "start_time", "venue"],
 					order_by="exam_date asc",
