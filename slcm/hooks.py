@@ -501,7 +501,15 @@ doc_events = {
         "before_insert": "slcm.api.user_events.user_before_insert",
         "validate": "slcm.api.user_events.grant_helpdesk_customer_role",
         "after_insert": "slcm.api.user_events.send_signup_email",
-        "on_update": "slcm.slcm.utils.academics_desktop.sync_user_layout"
+        "on_update": [
+            "slcm.slcm.utils.academics_desktop.sync_user_layout",
+            "slcm.api.helpdesk_views.sync_user_ticket_views",
+        ]
+    },
+    "HD Agent": {
+        "after_insert": "slcm.api.helpdesk_views.sync_agent_ticket_views",
+        "on_update": "slcm.api.helpdesk_views.sync_agent_ticket_views",
+        "after_delete": "slcm.api.helpdesk_views.sync_agent_ticket_views"
     },
     "Hostel Allocation": {
         "after_insert": "slcm.slcm.fee.event_hooks.on_hostel_allocation_insert",
