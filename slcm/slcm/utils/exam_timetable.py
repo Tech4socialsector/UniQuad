@@ -9,10 +9,15 @@
   students fit its seats.
 * Students of a course are the Enrolled students of the Classes teaching it in
   the plan's Academic Term; two exams of the same students can't overlap.
+* A course may sit in several rooms (classroom allocation sheet): a row with
+  ID Nos. From / To takes the students whose Student ID is in that range, the
+  course's other rows share the students no range covers.
 * Exams fall inside the Academic Term and not on a holiday / weekly off of the
   Institutional Calendar.
 * The invigilator teaching a class at the same time is only a warning.
 """
+
+import re
 
 import frappe
 from frappe import _
@@ -105,6 +110,61 @@ def course_students(course, academic_term):
 	))
 
 
+def course_student_ids(course, academic_term):
+	"""{student: Student ID} of the Classes teaching the course in the term."""
+	return dict(frappe.db.sql(
+		"""
+		SELECT DISTINCT se.student, IFNULL(sm.registration_id, '')
+		FROM `tabClasses` cl
+		JOIN `tabClass Enrolled Student` ces ON ces.parent = cl.name AND ces.parenttype = 'Classes'
+		JOIN `tabStudent Enrollment` se ON se.name = ces.student_enrollment
+		LEFT JOIN `tabStudent Master` sm ON sm.name = se.student
+		WHERE cl.course = %s AND cl.academic_term = %s AND ces.status = 'Enrolled'
+		  AND IFNULL(se.student, '') != ''
+		""",
+		(course, academic_term),
+	))
+
+
+# A Student ID at the start of an "ID Nos." cell: B26001, L25112 & Re-admitted…, LLB/2845/22
+_ID = re.compile(r"[A-Za-z]*[/-]?\d[A-Za-z0-9/-]*")
+
+
+def id_token(text):
+	m = _ID.match((text or "").strip())
+	return m.group(0).upper() if m else None
+
+
+def _in_range(student_id, lo, hi):
+	sid = (student_id or "").strip().upper()
+	if not sid:
+		return False
+	if hi:
+		return lo <= sid <= hi
+	# "From" only (e.g. "B24266, Re-admitted students"): that ID onwards, same ID pattern
+	prefix = re.match(r"[A-Z/]*", lo).group(0)
+	return sid >= lo and sid.startswith(prefix) and len(sid) == len(lo)
+
+
+def split_by_id_range(rows, student_ids):
+	"""Students of each row of one course, in row order: a row whose ID Nos.
+	From starts with a Student ID gets the students in From–To; the other rows
+	(All students, PWD students…) share the students no range covers."""
+	out, ranged = [], set()
+	for r in rows:
+		lo, hi = id_token(r.get("id_from")), id_token(r.get("id_to"))
+		if lo and hi and hi < lo:
+			lo, hi = hi, lo
+		if lo:
+			got = {s for s, sid in student_ids.items() if _in_range(sid, lo, hi)}
+			ranged |= got
+			out.append(got)
+		else:
+			out.append(None)
+	rest = set(student_ids) - ranged
+	return [rest if got is None else got for got in out]
+
+
 def reexam_students(exam_plan, course):
 	"""Students registered (not cancelled) for the course's re-exam in the plan."""
 	return set(frappe.get_all(
@@ -172,9 +232,20 @@ def check_exam_schedule(plan, reexam=False):
 				students[key] = course_students(course, term) if term else set()
 		return students[key]
 
+	# This plan's exam rows: a course split over rooms by Student ID range
+	by_course, row_students = {}, {}
+	if not reexam and plan.term:
+		for r in timed:
+			by_course.setdefault(r.course, []).append(r)
+		for course, group in by_course.items():
+			for r, got in zip(group, split_by_id_range(group, course_student_ids(course, plan.term))):
+				row_students[id(r)] = got
+
 	def students_of_row(r):
 		if r.get("other"):
 			return students_of(r.course, r.term, r.kind, r.exam_plan)
+		if id(r) in row_students:
+			return row_students[id(r)]
 		return students_of(r.course, plan.term)
 
 	# Other sittings on the same dates: other plans, and this plan's other kind (rooms, students, invigilators)
@@ -226,17 +297,18 @@ def check_exam_schedule(plan, reexam=False):
 	pool = timed + [o for o in others if o.term == plan.term or o.kind == "reexam" or reexam]
 	for i, a in enumerate(timed):
 		for b in pool[i + 1:]:
-			if getdate(a.exam_date) != getdate(b.exam_date) or a.course == b.course:
+			if getdate(a.exam_date) != getdate(b.exam_date):
 				continue
 			if not _overlaps(a.start_time, a.end_time, b.start_time, b.end_time):
 				continue
-			common = students_of_row(a) & students_of_row(b)
+			common = students_of_row(a) & students_of_row(b) if a.course != b.course else None
 			if common:
 				where = (_(" (re-exam)") if b.get("kind") == "reexam" else "") + (
 					_(" (Exam Plan {0})").format(b.exam_plan) if b.get("other") and b.exam_plan != plan.name else "")
 				add(errors, a, _("{0} student(s) also sit {1}{2} at {3} on {4}.").format(
 					len(common), b.course, where, _slot(b), formatdate(b.exam_date)))
-			if a.invigilator and a.invigilator == b.invigilator:
+			# one invigilator may watch every paper in a room, not two rooms
+			if a.invigilator and a.invigilator == b.invigilator and a.venue != b.venue:
 				add(errors, a, _("Invigilator {0} is also on duty for {1} at {2}.").format(
 					_faculty_label(a.invigilator), b.course, _slot(b)))
 

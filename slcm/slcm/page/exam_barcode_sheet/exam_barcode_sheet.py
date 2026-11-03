@@ -28,16 +28,33 @@ def get_exam_plans():
 	)
 
 
+def _one_per_course(schedules):
+	"""A course sitting in several rooms (classroom allocation) is one paper here;
+	its rooms are listed together."""
+	out = {}
+	for s in schedules:
+		if s.course not in out:
+			out[s.course] = s
+		else:
+			room = s.venue or s.hall
+			first = out[s.course]
+			rooms = [x for x in (first.venue or first.hall or "").split(", ") if x]
+			if room and room not in rooms:
+				first.venue = ", ".join(rooms + [room])
+				first.hall = None
+	return list(out.values())
+
+
 @frappe.whitelist()
 def get_exam_courses(exam_plan):
 	"""Return courses scheduled under the given exam plan, with dates and barcode counts."""
 	_check_access()
-	schedules = frappe.db.get_all(
+	schedules = _one_per_course(frappe.db.get_all(
 		"Exam Course Schedule",
-		filters={"parent": exam_plan, "parenttype": "Exam Plan"},
+		filters={"parent": exam_plan, "parenttype": "Exam Plan", "course": ["is", "set"]},
 		fields=["course", "exam_date", "start_time", "end_time", "venue", "hall"],
-		order_by="exam_date asc, course asc",
-	)
+		order_by="exam_date asc, course asc, idx asc",
+	))
 
 	if not schedules:
 		return []
@@ -262,12 +279,13 @@ def export_attendance_excel(exam_plan, course=None, mode="by_date",
 	if course:
 		sch_filters["course"] = course
 
-	schedules = frappe.db.get_all(
+	sch_filters["course"] = sch_filters.get("course") or ["is", "set"]
+	schedules = _one_per_course(frappe.db.get_all(
 		"Exam Course Schedule",
 		filters=sch_filters,
 		fields=["course", "exam_date", "start_time", "end_time", "venue", "hall"],
-		order_by="exam_date asc, course asc",
-	)
+		order_by="exam_date asc, course asc, idx asc",
+	))
 
 	# ── Apply date-range filter (by_date mode) ────────────────────────────────
 	if not course and (from_date or to_date):

@@ -5,8 +5,11 @@
 
 1. Plan & courses   Exam Plan + Course Schema Assignment (courses from the
                      Classes of the plan's Academic Term)
-2. Exam timetable    Exam Plan › Course Schedules (Venue Master rooms, checked by
-                     slcm.slcm.utils.exam_timetable) + Exam Assessment Schedules
+2. Exam timetable    Exam Plan › Course Schedules, one row per room as on the
+                     classroom allocation sheet (checked by
+                     slcm.slcm.utils.exam_timetable) + the Continuing Evaluation
+                     Schedule (Exam Assessment Schedules); both download and
+                     import as the office's Excel sheets (slcm.slcm.utils.exam_sheets)
 3. Students          Student Course Marks from Classes, attendance eligibility,
                      Exam Barcodes
 4. Marks             Access Result Settings for every course, entry progress
@@ -113,7 +116,7 @@ def get_overview(exam_plan):
 	taught = {c["course"] for c in plan_api.get_courses_for_plan(exam_plan)}
 	mapped = _mapped(exam_plan)
 	complete_map = {c for c, r in mapped.items() if r.evaluation_schema and r.grade_schema}
-	scheduled = [r for r in plan.course_schedules if r.exam_date and r.start_time and r.end_time and r.venue]
+	scheduled = [r for r in plan.course_schedules if r.exam_date and r.start_time and r.end_time and (r.venue or r.hall)]
 	scm = frappe.get_all(
 		"Student Course Marks", filters={"exam_plan": exam_plan},
 		fields=["course", "status", "total_marks", "grade", "attendance_status"],
@@ -125,7 +128,7 @@ def get_overview(exam_plan):
 	graded = [r for r in scm if r.grade or (r.attendance_status or "") in ("Detained", "Absent")]
 	steps = {
 		"plan": bool(taught) and taught <= complete_map,
-		"timetable": bool(mapped) and len(scheduled) >= len(mapped),
+		"timetable": bool(mapped) and set(mapped) <= {r.course for r in scheduled},
 		"students": bool(mapped) and set(mapped) <= courses_with_students,
 		"marks": bool(scm) and len(graded) == len(scm),
 		"results": bool(results_rows) and all(r.is_published for r in results_rows),
@@ -211,24 +214,27 @@ def unmap(exam_plan, courses):
 @frappe.whitelist()
 def get_timetable(exam_plan):
 	_check_access()
-	from slcm.slcm.utils.exam_timetable import check_exam_schedule, course_students
+	from slcm.slcm.utils.exam_timetable import check_exam_schedule
 
 	plan = frappe.get_doc("Exam Plan", exam_plan)
 	mapped = _mapped(exam_plan)
 	have = {r.course for r in plan.course_schedules}
 	missing = [c for c in mapped if c not in have]   # mapped but not yet in the timetable
 	names = dict(frappe.get_all("Course", filters={"name": ["in", list(set(mapped) | have) or [""]]}, fields=["name", "course_name"], as_list=True))
-	rows = []
-	for r in plan.course_schedules:
-		rows.append({
-			"course": r.course, "course_name": names.get(r.course, ""),
-			"exam_date": r.exam_date, "start_time": str(r.start_time or "")[:5], "end_time": str(r.end_time or "")[:5],
-			"venue": r.venue or "", "invigilator": r.invigilator or "", "seat_capacity": r.seat_capacity or "",
-			"students": len(course_students(r.course, plan.term)) if plan.term else 0,
-		})
+	rows = [{
+		"course": r.course or "", "course_name": names.get(r.course, ""), "paper": r.paper or "",
+		"programme_year": r.programme_year or "", "session": r.session or "",
+		"exam_date": r.exam_date, "start_time": str(r.start_time or "")[:5], "end_time": str(r.end_time or "")[:5],
+		"venue": r.venue or "", "hall": r.hall or "", "invigilator": r.invigilator or "",
+		"invigilator_name": r.invigilator_name or "", "seat_capacity": r.seat_capacity or "",
+		"id_from": r.id_from or "", "id_to": r.id_to or "",
+	} for r in plan.course_schedules]
 	for c in missing:
-		rows.append({"course": c, "course_name": names.get(c, ""), "exam_date": "", "start_time": "", "end_time": "",
-		             "venue": "", "invigilator": "", "seat_capacity": "", "students": len(course_students(c, plan.term)) if plan.term else 0})
+		rows.append({"course": c, "course_name": names.get(c, ""), "paper": "", "programme_year": "", "session": "",
+		             "exam_date": "", "start_time": "", "end_time": "", "venue": "", "hall": "", "invigilator": "",
+		             "invigilator_name": "", "seat_capacity": "", "id_from": "", "id_to": ""})
+	for r, n in zip(rows, _row_counts(plan.term, rows)):
+		r["students"] = n
 	assessment = frappe.get_all(
 		"Exam Assessment Schedule", filters={"exam_plan": exam_plan},
 		fields=["name", "programme", "status"], order_by="programme",
@@ -246,7 +252,26 @@ def get_timetable(exam_plan):
 		**_rooms_and_faculty(),
 		"assessment_schedules": assessment,
 		"programmes": programmes,
+		"courses": [{"name": c, "course_name": names.get(c, c)} for c in mapped],
 	}
+
+
+def _row_counts(term, rows):
+	"""Students sitting each timetable row: a course split over rooms counts
+	the Student IDs in each row's ID Nos. range."""
+	from slcm.slcm.utils.exam_timetable import course_student_ids, split_by_id_range
+
+	counts = [0] * len(rows)
+	if not term:
+		return counts
+	by_course = {}
+	for i, r in enumerate(rows):
+		if r.get("course"):
+			by_course.setdefault(r["course"], []).append(i)
+	for course, idxs in by_course.items():
+		for i, got in zip(idxs, split_by_id_range([rows[i] for i in idxs], course_student_ids(course, term))):
+			counts[i] = len(got)
+	return counts
 
 
 def _rooms_and_faculty():
@@ -342,11 +367,20 @@ def check_timetable(exam_plan, rows):
 	_check_access()
 	from slcm.slcm.utils.exam_timetable import preview_exam_schedule
 
-	return preview_exam_schedule(exam_plan, [_row(r) for r in _load(rows, [])])
+	rows = [_exam_row(r) for r in _load(rows, [])]
+	out = preview_exam_schedule(exam_plan, rows)
+	out["students"] = _row_counts(frappe.db.get_value("Exam Plan", exam_plan, "term"), rows)
+	return out
 
 
 def _row(r):
 	return {k: (r.get(k) or None) for k in ("course", "exam_date", "start_time", "end_time", "venue", "invigilator", "seat_capacity")}
+
+
+# Exam rows also carry the classroom allocation sheet's columns
+def _exam_row(r):
+	return {**_row(r), **{k: (r.get(k) or None) for k in (
+		"paper", "programme_year", "session", "hall", "invigilator_name", "id_from", "id_to")}}
 
 
 @frappe.whitelist()
@@ -354,10 +388,93 @@ def save_timetable(exam_plan, rows):
 	"""Replace the plan's course schedule rows; Exam Plan.validate applies every check."""
 	_check_access()
 	plan = frappe.get_doc("Exam Plan", exam_plan)
-	plan.set("course_schedules", [_row(r) for r in _load(rows, []) if r.get("course")])
+	plan.set("course_schedules", [_exam_row(r) for r in _load(rows, []) if r.get("course") or r.get("paper")])
 	plan.save()
 	frappe.db.commit()
 	return True
+
+
+# ── Excel sheets: classroom allocation sheet + Continuing Evaluation Schedule ─
+
+@frappe.whitelist()
+def download_timetable(exam_plan):
+	_check_access()
+	from slcm.slcm.utils import exam_sheets
+
+	exam_sheets._send(exam_sheets.timetable_workbook(exam_plan),
+	                  exam_sheets._safe_filename(f"{exam_plan} - Exam timetable") + ".xlsx")
+
+
+@frappe.whitelist()
+def import_timetable(exam_plan, file_url, duration_hours=3, apply=0):
+	"""Preview (apply=0) or replace (apply=1) the exam timetable from the sheet."""
+	_check_access()
+	from slcm.slcm.utils import exam_sheets
+
+	return exam_sheets.import_timetable(exam_plan, exam_sheets.file_content(file_url), flt(duration_hours) or 3, cint(apply), file_url)
+
+
+@frappe.whitelist()
+def get_assessment_grid(exam_plan):
+	_check_access()
+	from slcm.slcm.utils.exam_sheets import assessment_grid
+
+	return assessment_grid(exam_plan)
+
+
+@frappe.whitelist()
+def save_assessment_grid(exam_plan, lines):
+	_check_access()
+	from slcm.slcm.utils.exam_sheets import save_assessment_grid as save
+
+	return save(exam_plan, _load(lines, []))
+
+
+@frappe.whitelist()
+def download_assessment_sheet(exam_plan, blank=0):
+	_check_access()
+	from slcm.slcm.utils import exam_sheets
+
+	exam_sheets._send(exam_sheets.assessment_workbook(exam_plan, blank=cint(blank)),
+	                  exam_sheets._safe_filename(f"{exam_plan} - Continuing Evaluation Schedule") + ".xlsx")
+
+
+@frappe.whitelist()
+def import_assessment_sheet(exam_plan, file_url, mapping=None, apply=0):
+	"""Preview (apply=0) or save (apply=1) the Continuing Evaluation Schedule sheet;
+	mapping {subject: course} settles subjects that aren't a course name."""
+	_check_access()
+	from slcm.slcm.utils import exam_sheets
+
+	return exam_sheets.import_assessment_sheet(exam_plan, exam_sheets.file_content(file_url), _load(mapping, {}), cint(apply), file_url)
+
+
+@frappe.whitelist()
+def download_import_issues(exam_plan, file_url, sheet, duration_hours=3, mapping=None):
+	"""The problems the import preview found, one line per sheet row, as Excel."""
+	_check_access()
+	from slcm.slcm.utils import exam_sheets
+
+	content = exam_sheets.file_content(file_url)
+	if sheet == "timetable":
+		issues = exam_sheets.timetable_issues(exam_plan, content, flt(duration_hours) or 3)[2]
+		title = _("Exam timetable import problems")
+	else:
+		issues = exam_sheets.assessment_issues(exam_plan, content, _load(mapping, {}))[2]
+		title = _("Continuing Evaluation Schedule import problems")
+	exam_sheets._send(exam_sheets.issues_workbook(issues, f"{title}: {exam_plan}"),
+	                  exam_sheets._safe_filename(f"{exam_plan} - import problems") + ".xlsx")
+
+
+@frappe.whitelist()
+def download_log_issues(log):
+	_check_access()
+	from slcm.slcm.utils import exam_sheets
+
+	doc = frappe.get_doc("Exam Sheet Import Log", log)
+	issues = [{"sheet_row": x.sheet_row, "level": x.level, "line": x.line, "message": x.message} for x in doc.issues]
+	exam_sheets._send(exam_sheets.issues_workbook(issues, f"{doc.sheet} import problems: {doc.exam_plan} ({doc.name})"),
+	                  exam_sheets._safe_filename(f"{doc.name} - import problems") + ".xlsx")
 
 
 @frappe.whitelist()
