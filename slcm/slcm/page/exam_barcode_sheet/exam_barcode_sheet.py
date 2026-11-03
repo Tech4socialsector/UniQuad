@@ -33,9 +33,11 @@ def _one_per_course(schedules):
 	its rooms are listed together."""
 	out = {}
 	for s in schedules:
-		if s.course not in out:
+		if s.course in out and s.exam_date and not out[s.course].exam_date:
+			out[s.course] = s   # a dated sitting beats a course still waiting for its date
+		elif s.course not in out:
 			out[s.course] = s
-		else:
+		elif s.exam_date:
 			room = s.venue or s.hall
 			first = out[s.course]
 			rooms = [x for x in (first.venue or first.hall or "").split(", ") if x]
@@ -247,7 +249,7 @@ def get_course_students(exam_plan, course):
 
 @frappe.whitelist()
 def export_attendance_excel(exam_plan, course=None, mode="by_date",
-							from_date=None, to_date=None, selected_courses=None):
+							from_date=None, to_date=None, selected_courses=None, selected_dates=None):
 	"""
 	Generate exam attendance Excel.
 
@@ -256,7 +258,8 @@ def export_attendance_excel(exam_plan, course=None, mode="by_date",
 	  'by_date'   — one sheet per exam date (default).
 	  'by_course' — one sheet per course.
 	from_date / to_date:     filter date range (ISO strings); only used in by_date mode.
-	selected_courses (JSON): list of course names; filter for by_course download.
+	selected_courses (JSON): list of course names to include (either mode).
+	selected_dates (JSON):   list of exam dates (ISO) to include (either mode).
 	"""
 	_check_access()
 	import io, base64, json as _json
@@ -271,6 +274,8 @@ def export_attendance_excel(exam_plan, course=None, mode="by_date",
 	to_date          = to_date   or None
 	if isinstance(selected_courses, str):
 		selected_courses = _json.loads(selected_courses) if selected_courses.strip() else None
+	if isinstance(selected_dates, str):
+		selected_dates = _json.loads(selected_dates) if selected_dates.strip() else None
 
 	plan_doc = frappe.get_doc("Exam Plan", exam_plan)
 
@@ -305,11 +310,16 @@ def export_attendance_excel(exam_plan, course=None, mode="by_date",
 		if not schedules:
 			frappe.throw("No courses found within the selected date range.")
 
-	# ── Apply course-list filter (by_course mode) ─────────────────────────────
-	if not course and mode == "by_course" and selected_courses:
+	# ── Apply course-list / exam-date filters (either mode) ───────────────────
+	if not course and selected_courses:
 		schedules = [s for s in schedules if s.course in selected_courses]
 		if not schedules:
 			frappe.throw("None of the selected courses have schedules in this Exam Plan.")
+	if not course and selected_dates:
+		wanted = {str(frappe.utils.getdate(d)) for d in selected_dates}
+		schedules = [s for s in schedules if s.exam_date and str(frappe.utils.getdate(s.exam_date)) in wanted]
+		if not schedules:
+			frappe.throw("No selected course is on the selected dates.")
 
 	if not schedules:
 		frappe.throw("No courses scheduled in this Exam Plan.")

@@ -174,6 +174,13 @@ def reexam_students(exam_plan, course):
 	))
 
 
+def reexam_student_ids(exam_plan, course):
+	"""{student: Student ID} of the students registered for the course's re-exam."""
+	students = list(reexam_students(exam_plan, course))
+	return dict(frappe.get_all("Student Master", filters={"name": ["in", students or [""]]},
+	                           fields=["name", "registration_id"], as_list=True))
+
+
 def _faculty_label(faculty):
 	if not faculty:
 		return ""
@@ -232,13 +239,14 @@ def check_exam_schedule(plan, reexam=False):
 				students[key] = course_students(course, term) if term else set()
 		return students[key]
 
-	# This plan's exam rows: a course split over rooms by Student ID range
+	# This plan's rows: a course split over rooms by Student ID range
 	by_course, row_students = {}, {}
-	if not reexam and plan.term:
+	if reexam or plan.term:
 		for r in timed:
 			by_course.setdefault(r.course, []).append(r)
 		for course, group in by_course.items():
-			for r, got in zip(group, split_by_id_range(group, course_student_ids(course, plan.term))):
+			ids = reexam_student_ids(plan.name, course) if reexam else course_student_ids(course, plan.term)
+			for r, got in zip(group, split_by_id_range(group, ids)):
 				row_students[id(r)] = got
 
 	def students_of_row(r):

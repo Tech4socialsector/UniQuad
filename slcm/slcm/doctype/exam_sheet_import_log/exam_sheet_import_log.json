@@ -24,7 +24,7 @@
    "fieldname": "sheet",
    "fieldtype": "Select",
    "label": "Sheet",
-   "options": "Exam Timetable\nContinuing Evaluation Schedule",
+   "options": "Exam Timetable\nRe-exam Timetable\nContinuing Evaluation Schedule",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "read_only": 1

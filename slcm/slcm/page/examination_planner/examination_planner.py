@@ -256,20 +256,34 @@ def get_timetable(exam_plan):
 	}
 
 
-def _row_counts(term, rows):
+def _sheet_row(r, names):
+	"""A timetable line for the page (exam or re-exam)."""
+	return {
+		"course": r.course or "", "course_name": names.get(r.course, ""), "paper": r.paper or "",
+		"programme_year": r.programme_year or "", "session": r.session or "",
+		"exam_date": r.exam_date or "", "start_time": str(r.start_time or "")[:5], "end_time": str(r.end_time or "")[:5],
+		"venue": r.venue or "", "hall": r.hall or "", "invigilator": r.invigilator or "",
+		"invigilator_name": r.invigilator_name or "", "seat_capacity": r.seat_capacity or "",
+		"id_from": r.id_from or "", "id_to": r.id_to or "",
+	}
+
+
+def _row_counts(term, rows, reexam_plan=None):
 	"""Students sitting each timetable row: a course split over rooms counts
-	the Student IDs in each row's ID Nos. range."""
-	from slcm.slcm.utils.exam_timetable import course_student_ids, split_by_id_range
+	the Student IDs in each row's ID Nos. range. For a re-exam (reexam_plan),
+	the students registered for it."""
+	from slcm.slcm.utils.exam_timetable import course_student_ids, reexam_student_ids, split_by_id_range
 
 	counts = [0] * len(rows)
-	if not term:
+	if not term and not reexam_plan:
 		return counts
 	by_course = {}
 	for i, r in enumerate(rows):
 		if r.get("course"):
 			by_course.setdefault(r["course"], []).append(i)
 	for course, idxs in by_course.items():
-		for i, got in zip(idxs, split_by_id_range([rows[i] for i in idxs], course_student_ids(course, term))):
+		ids = reexam_student_ids(reexam_plan, course) if reexam_plan else course_student_ids(course, term)
+		for i, got in zip(idxs, split_by_id_range([rows[i] for i in idxs], ids)):
 			counts[i] = len(got)
 	return counts
 
@@ -299,8 +313,9 @@ def set_timetable_published(exam_plan, published, reexam=0):
 
 @frappe.whitelist()
 def get_reexam_timetable(exam_plan):
-	"""Re-exam sittings: every course with failed students, a re-exam window,
-	registrations or a saved row, with failed / registered counts."""
+	"""Re-exam sittings, laid out like the exam timetable (a line per room). Courses
+	with failed students, a re-exam window, registrations or a saved line; the
+	ones without a date are "not in the timetable yet"."""
 	_check_access()
 	from slcm.slcm.utils.exam_timetable import check_exam_schedule
 
@@ -317,24 +332,19 @@ def get_reexam_timetable(exam_plan):
 	windows = set(frappe.get_all("Re Exam Course Setting", filters={"exam_plan": exam_plan}, pluck="course"))
 	have = {r.course for r in plan.reexam_schedules}
 	courses = sorted((set(failed) | set(registered) | windows) - have)
-	names = dict(frappe.get_all("Course", filters={"name": ["in", list(have | set(courses)) or [""]]},
+	names = dict(frappe.get_all("Course", filters={"name": ["in", list(have | set(courses) | set(failed) | set(registered)) or [""]]},
 	                            fields=["name", "course_name"], as_list=True))
-	rows = [{
-		"course": r.course, "course_name": names.get(r.course, ""), "exam_date": r.exam_date,
-		"start_time": str(r.start_time or "")[:5], "end_time": str(r.end_time or "")[:5],
-		"venue": r.venue or "", "invigilator": r.invigilator or "", "seat_capacity": r.seat_capacity or "",
-	} for r in plan.reexam_schedules] + [{
-		"course": c, "course_name": names.get(c, ""), "exam_date": "", "start_time": "", "end_time": "",
-		"venue": "", "invigilator": "", "seat_capacity": "",
-	} for c in courses]
-	for r in rows:
+	rows = [_sheet_row(r, names) for r in plan.reexam_schedules] + [_sheet_row(frappe._dict(course=c), names) for c in courses]
+	for r, n in zip(rows, _row_counts(plan.term, rows, exam_plan)):
+		r["students"] = n
 		r["failed"] = failed.get(r["course"], 0)
-		r["students"] = registered.get(r["course"], 0)
 	return {
 		"rows": rows,
 		"check": check_exam_schedule(plan, reexam=True),
 		"published": cint(plan.reexam_timetable_published),
 		**_rooms_and_faculty(),
+		"courses": [{"name": c, "course_name": names.get(c, c)} for c in sorted(c for c in have | set(courses) if c)],
+		"programmes": [],
 	}
 
 
@@ -381,19 +391,26 @@ def check_reexam_timetable(exam_plan, rows):
 	from slcm.slcm.utils.exam_timetable import check_exam_schedule
 
 	plan = frappe.get_doc("Exam Plan", exam_plan)
-	plan.set("reexam_schedules", [_row(r) for r in _load(rows, []) if r.get("course")])
+	rows = [_exam_row(r) for r in _load(rows, [])]
+	plan.set("reexam_schedules", [r for r in rows if r.get("course") or r.get("paper")])
 	for i, r in enumerate(plan.reexam_schedules, 1):
 		r.idx = i
-	return check_exam_schedule(plan, reexam=True)
+	out = check_exam_schedule(plan, reexam=True)
+	# check rows are numbered among the kept ones; map them back to the rows sent
+	kept = [i for i, r in enumerate(rows) if r.get("course") or r.get("paper")]
+	for x in out["errors"] + out["warnings"]:
+		x["row"] = kept[x["row"] - 1] + 1
+	out["students"] = _row_counts(plan.term, rows, exam_plan)
+	return out
 
 
 @frappe.whitelist()
 def save_reexam_timetable(exam_plan, rows):
-	"""Replace the plan's re-exam rows (only rows with a date are kept);
+	"""Replace the plan's re-exam lines (only lines with a date are kept);
 	Exam Plan.validate applies the checks."""
 	_check_access()
 	plan = frappe.get_doc("Exam Plan", exam_plan)
-	plan.set("reexam_schedules", [_row(r) for r in _load(rows, []) if r.get("course") and r.get("exam_date")])
+	plan.set("reexam_schedules", [_exam_row(r) for r in _load(rows, []) if (r.get("course") or r.get("paper")) and r.get("exam_date")])
 	plan.save()
 	frappe.db.commit()
 	return True
@@ -434,21 +451,23 @@ def save_timetable(exam_plan, rows):
 # ── Excel sheets: classroom allocation sheet + Continuing Evaluation Schedule ─
 
 @frappe.whitelist()
-def download_timetable(exam_plan):
+def download_timetable(exam_plan, reexam=0):
 	_check_access()
 	from slcm.slcm.utils import exam_sheets
 
-	exam_sheets._send(exam_sheets.timetable_workbook(exam_plan),
-	                  exam_sheets._safe_filename(f"{exam_plan} - Exam timetable") + ".xlsx")
+	what = "Re-exam timetable" if cint(reexam) else "Exam timetable"
+	exam_sheets._send(exam_sheets.timetable_workbook(exam_plan, cint(reexam)),
+	                  exam_sheets._safe_filename(f"{exam_plan} - {what}") + ".xlsx")
 
 
 @frappe.whitelist()
-def import_timetable(exam_plan, file_url, duration_hours=3, apply=0):
-	"""Preview (apply=0) or replace (apply=1) the exam timetable from the sheet."""
+def import_timetable(exam_plan, file_url, duration_hours=3, apply=0, reexam=0):
+	"""Preview (apply=0) or replace (apply=1) the (re-)exam timetable from the sheet."""
 	_check_access()
 	from slcm.slcm.utils import exam_sheets
 
-	return exam_sheets.import_timetable(exam_plan, exam_sheets.file_content(file_url), flt(duration_hours) or 3, cint(apply), file_url)
+	return exam_sheets.import_timetable(exam_plan, exam_sheets.file_content(file_url), flt(duration_hours) or 3,
+	                                    cint(apply), file_url, cint(reexam))
 
 
 @frappe.whitelist()
@@ -493,9 +512,9 @@ def download_import_issues(exam_plan, file_url, sheet, duration_hours=3, mapping
 	from slcm.slcm.utils import exam_sheets
 
 	content = exam_sheets.file_content(file_url)
-	if sheet == "timetable":
-		issues = exam_sheets.timetable_issues(exam_plan, content, flt(duration_hours) or 3)[2]
-		title = _("Exam timetable import problems")
+	if sheet in ("timetable", "reexam"):
+		issues = exam_sheets.timetable_issues(exam_plan, content, flt(duration_hours) or 3, sheet == "reexam")[2]
+		title = _("Re-exam timetable import problems") if sheet == "reexam" else _("Exam timetable import problems")
 	else:
 		issues = exam_sheets.assessment_issues(exam_plan, content, _load(mapping, {}))[2]
 		title = _("Continuing Evaluation Schedule import problems")
@@ -703,21 +722,3 @@ def publish_all(exam_plan, publish=1):
 	students = frappe.get_all("Student Result Publish", filters={"exam_plan": exam_plan}, pluck="student")
 	return bulk_publish(exam_plan, json.dumps(students), cint(publish))
 
-
-@frappe.whitelist()
-def get_results(exam_plan):
-	_check_access()
-	scm = frappe.get_all("Student Course Marks", filters={"exam_plan": exam_plan}, fields=["status", "grade", "updated_grade"])
-	srp = frappe.get_all("Student Result Publish", filters={"exam_plan": exam_plan},
-	                     fields=["term_gpa", "cumulative_gpa", "is_published"])
-	failed_grades = set(frappe.get_all("Grading Schema Component", filters={"failed": 1}, pluck="grade", distinct=True))
-	return {
-		"marks": {s: sum(1 for r in scm if r.status == s) for s in ("Draft", "Submitted", "Locked")},
-		"fails": sum(1 for r in scm if (r.updated_grade or r.grade) in failed_grades),
-		"results": len(srp),
-		"published": sum(1 for r in srp if r.is_published),
-		"avg_gpa": round(sum(flt(r.term_gpa) for r in srp) / len(srp), 2) if srp else 0,
-		"publish_setting": frappe.db.exists("Publish Result Setting", exam_plan),
-		"re_exam_settings": frappe.db.count("Re Exam Course Setting", {"exam_plan": exam_plan}),
-		"improvement_settings": frappe.db.count("Improvement Exam Course Setting", {"exam_plan": exam_plan}),
-	}

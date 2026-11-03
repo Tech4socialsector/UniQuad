@@ -48,6 +48,10 @@ class ExamPlanner {
 		this.$root = $('<div class="xp-wrap"></div>').appendTo(page.main);
 		this.add_styles();
 		page.set_primary_action(__('New Exam Plan'), () => this.new_plan_dialog(), 'add');
+		page.add_inner_button(__('Consolidated report'), () => {
+			if (!this.plan) return;
+			EXAM_UI('term_results').then(() => slcm.exam_ui.consolidated_report(this.plan));
+		});
 		page.add_inner_button(__('Examination Settings'), () => frappe.set_route('Form', 'Examination Settings'));
 		this.load_plans().then(() => {
 			// no plan in the URL (e.g. the Re Exam link): reopen the plan last worked on
@@ -505,14 +509,15 @@ class ExamPlanner {
 			this.tt = t;
 			if (!this.tt_tab) {
 				try { this.tt_tab = localStorage.getItem('xp-tt-tab'); } catch (e) { /* storage blocked */ }
-				this.tt_tab = this.tt_tab === 'evaluation' ? 'evaluation' : 'timetable';
+				this.tt_tab = ['evaluation', 'barcodes'].includes(this.tt_tab) ? this.tt_tab : 'timetable';
 			}
 			this.$body.html(`<div class="xp-card">
 				<div class="xp-rtabs">
 					<button class="xp-rtab" data-tab="timetable">${__('Exam timetable')}</button>
 					<button class="xp-rtab" data-tab="evaluation">${__('Continuing Evaluation Schedule')}</button>
+					<button class="xp-rtab" data-tab="barcodes">${__('Barcodes')}</button>
 				</div>
-				<div class="xp-tab" data-tab="timetable"></div><div class="xp-tab" data-tab="evaluation"></div></div>`);
+				<div class="xp-tab" data-tab="timetable"></div><div class="xp-tab" data-tab="evaluation"></div><div class="xp-tab" data-tab="barcodes"></div></div>`);
 			const show = () => this.$body.find('.xp-rtab, .xp-tab').each((_, el) => {
 				const on = $(el).data('tab') === this.tt_tab;
 				$(el).toggleClass('on', on);
@@ -534,6 +539,7 @@ class ExamPlanner {
 			show();
 			this.allocation_sheet(this.$body.find('.xp-tab[data-tab="timetable"]'), t);
 			this.render_evaluation_schedule(this.$body.find('.xp-tab[data-tab="evaluation"]'), t);
+			this.render_barcodes(this.$body.find('.xp-tab[data-tab="barcodes"]'));
 		});
 	}
 
@@ -588,11 +594,12 @@ class ExamPlanner {
 		d.show();
 	}
 
-	import_timetable_dialog() {
+	import_timetable_dialog(reexam) {
 		const level = { error: 'bad', warning: 'warn', info: 'info' };
 		this.sheet_import_dialog({
-			title: __('Import exam timetable'), method: 'import_timetable', sheet: 'timetable',
-			help: __('The classroom allocation sheet (same format as Download sheet). It replaces this plan\'s exam timetable. Papers, rooms and invigilators that are not Course / Venue Master / Faculty records are kept as written.'),
+			title: reexam ? __('Import re-exam timetable') : __('Import exam timetable'), method: 'import_timetable', sheet: reexam ? 'reexam' : 'timetable',
+			args: () => (reexam ? { reexam: 1 } : {}),
+			help: __('The classroom allocation sheet (same format as Download sheet). It replaces this plan\'s {0} timetable. Papers, rooms and invigilators that are not Course / Venue Master / Faculty records are kept as written.', [reexam ? __('re-exam') : __('exam')]),
 			fields: [{ fieldname: 'duration_hours', fieldtype: 'Float', label: __('Exam length (hours)'), default: 3,
 			           description: __('Start times come from the session headers; end time = start + this.') }],
 			apply_label: (r) => (!r.valid_lines ? null : r.error_lines
@@ -625,82 +632,12 @@ class ExamPlanner {
 		});
 	}
 
-	// Timetable table (exam or re-exam): dates, rooms, seats, invigilators, with Check / Save
-	tt_editor($el, t, o) {
-		const venue_opts = (v) => `<option value=""></option>` + t.venues.map((x) => `<option value="${esc(x.name)}" ${x.name === v ? 'selected' : ''}>${esc(x.name)} (${x.capacity || 0})</option>`).join('');
-		const can_add_inv = frappe.model.can_create('Faculty');
-		const fac_opts = (v) => `<option value=""></option>` + t.faculty.map((x) => `<option value="${esc(x.name)}" ${String(x.name) === String(v) ? 'selected' : ''}>${esc(x.label)}</option>`).join('')
-			+ (can_add_inv ? `<option value="__new_invigilator__">+ ${__('Add new invigilator…')}</option>` : '');
-		const extra = o.failed ? `<th>${__('Failed')}</th>` : '';
-		const rows = t.rows.map((r, i) => `<tr data-i="${i}" data-course="${esc(r.course)}">
-			<td><b>${esc(r.course)}</b><br><small>${esc(r.course_name)}</small></td>${o.failed ? `<td class="num">${r.failed}</td>` : ''}<td class="num">${r.students}</td>
-			<td><input type="date" class="form-control input-sm xp-d" value="${esc(r.exam_date || '')}"></td>
-			<td><input type="time" class="form-control input-sm xp-s" value="${esc(r.start_time)}"></td>
-			<td><input type="time" class="form-control input-sm xp-e" value="${esc(r.end_time)}"></td>
-			<td><select class="form-control input-sm xp-v">${venue_opts(r.venue)}</select></td>
-			<td><input type="number" class="form-control input-sm xp-c" value="${esc(r.seat_capacity)}" placeholder="${__('room')}"></td>
-			<td><select class="form-control input-sm xp-f">${fac_opts(r.invigilator)}</select></td>
-			<td class="xp-msg"></td></tr>`).join('');
-		const cols = 9 + (o.failed ? 1 : 0);
-		$el.html(`
-			<div class="xp-table"><table class="table table-sm xp-tt"><thead><tr><th>${__('Course')}</th>${extra}<th>${o.students}</th><th>${__('Date')}</th><th>${__('Start')}</th><th>${__('End')}</th>
-				<th>${__('Venue (seats)')}</th><th>${__('Seats')}</th><th>${__('Invigilator')}</th><th>${__('Check')}</th></tr></thead><tbody>${rows || `<tr><td colspan="${cols}">${o.empty}</td></tr>`}</tbody></table></div>
-			<div class="xp-issues"></div>
-			<div class="xp-bar">${can_add_inv ? `<button class="btn btn-default btn-sm xp-new-inv">+ ${__('Add invigilator')}</button>` : ''}
-				<span class="xp-muted">${o.hint || __('Invigilators come from Faculty.')}</span>
-				<span class="xp-grow"></span><button class="btn btn-default btn-sm xp-run-check">${__('Check')}</button>
-				<button class="btn btn-primary btn-sm xp-save-tt" ${t.rows.length ? '' : 'disabled'}>${o.save_label || __('Save timetable')}</button></div>`);
-		const collect = () => $el.find('tbody tr[data-course]').map((_, tr) => {
-			const $tr = $(tr);
-			return { course: $tr.data('course'), exam_date: $tr.find('.xp-d').val(), start_time: $tr.find('.xp-s').val(), end_time: $tr.find('.xp-e').val(),
-				venue: $tr.find('.xp-v').val(), seat_capacity: $tr.find('.xp-c').val(), invigilator: $tr.find('.xp-f').val() };
-		}).get();
-		$el.find('.xp-v').on('change', (e) => {
-			const v = t.venues.find((x) => x.name === $(e.target).val());
-			$(e.target).closest('tr').find('.xp-c').val(v ? v.capacity : '');
-		});
-		const show = (res) => {
-			$el.find('.xp-msg').html('');
-			$el.find('tbody tr').removeClass('xp-flag');
-			const items = [...res.errors.map((x) => ({ ...x, bad: 1 })), ...res.warnings];
-			$el.find('tbody tr[data-course]').each((_, tr) => {
-				if ($(tr).find('.xp-d').val()) $(tr).find('.xp-msg').html(`<span class="xp-pill ok">✓ ${__('OK')}</span>`);
-			});
-			items.forEach((x) => {
-				const $tr = $el.find(`tbody tr[data-i="${x.row - 1}"]`);
-				if ($tr.find('.xp-pill.ok').length) $tr.find('.xp-msg').html('');
-				if (x.bad) $tr.addClass('xp-flag');
-				$tr.find('.xp-msg').append(`<div class="xp-pill ${x.bad ? 'bad' : 'warn'}">${esc(x.message)}</div>`);
-			});
-			$el.find('.xp-issues').html(res.errors.length
-				? `<div class="xp-alert bad">${__('{0} problem(s) to fix before saving.', [res.errors.length])}</div>`
-				: `<div class="xp-alert ok">${__('No clashes.')}${res.warnings.length ? ' ' + __('{0} warning(s).', [res.warnings.length]) : ''}</div>`);
-		};
-		if (t.rows.some((r) => r.exam_date)) show(t.check);
-		// A new invigilator is added to every row's list; the row it was picked from gets it selected
-		const add_invigilator = ($select) => this.invigilator_dialog((f) => {
-			t.faculty.push(f);
-			$el.find('.xp-f').each((_, sel) => {
-				$(sel).find('option[value="__new_invigilator__"]').before(`<option value="${esc(f.name)}">${esc(f.label)}</option>`);
-			});
-			if ($select) $select.val(f.name).data('prev', f.name);
-		});
-		$el.find('.xp-new-inv').on('click', () => add_invigilator());
-		$el.find('.xp-f').each((_, sel) => { $(sel).data('prev', sel.value); });
-		$el.find('.xp-f').on('change', (e) => {
-			if (e.target.value !== '__new_invigilator__') { $(e.target).data('prev', e.target.value); return; }
-			e.target.value = $(e.target).data('prev') || '';
-			add_invigilator($(e.target));
-		});
-		$el.find('.xp-run-check').on('click', () => call(o.check, { exam_plan: this.plan, rows: JSON.stringify(collect()) }).then(show));
-		$el.find('.xp-save-tt').on('click', () => call(o.save, { exam_plan: this.plan, rows: JSON.stringify(collect()) })
-			.then(() => { frappe.show_alert({ message: o.saved, indicator: 'green' }); (o.after_save || (() => this.refresh()))(); }));
-	}
-
 	// Exam timetable as the classroom allocation sheet: a grey row per day, then
 	// Sl. No. | Date | Venue | Year | Forenoon Session | ID Nos. From | To | Invigilator
 	// | Date | the same for the Afternoon. Each line is one room (Exam Course Schedule row).
-	allocation_sheet($el, t) {
+	// o.reexam: the re-exam timetable (Exam Plan › Re-exam Schedules), students = those registered
+	allocation_sheet($el, t, o = {}) {
+		const rx = !!o.reexam;
 		const SESS = ['Forenoon', 'Afternoon'];
 		const DEF = { Forenoon: ['10:00', '13:00'], Afternoon: ['14:30', '17:30'] };
 		const key = (v) => String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -746,7 +683,7 @@ class ExamPlanner {
 				${frappe.model.can_create('Faculty') ? `<button class="btn btn-default btn-sm xp-new-inv">+ ${__('Invigilator')}</button>` : ''}
 				<span class="xp-grow"></span>
 				<button class="btn btn-default btn-sm xp-run-check">${__('Check')}</button>
-				<button class="btn btn-primary btn-sm xp-save-tt">${__('Save timetable')}</button>
+				<button class="btn btn-primary btn-sm xp-save-tt">${rx ? __('Save re-exam timetable') : __('Save timetable')}</button>
 			</div>
 			<div class="xp-pub"></div>
 			<div class="xp-bar xp-filters">
@@ -761,7 +698,7 @@ class ExamPlanner {
 			<div class="xp-unsched"></div>
 			<div class="xp-sheet"></div>
 			<div class="xp-issues"></div>`);
-		this.publish_bar($el.find('.xp-pub'), t.published, false);
+		this.publish_bar($el.find('.xp-pub'), t.published, rx);
 
 		// ── one styled dropdown for Venue / Year / Course / Invigilator cells ──
 		$('.xp-pick').remove();
@@ -831,7 +768,7 @@ class ExamPlanner {
 		const side = (l) => {
 			const cls = cell_cls(l);
 			const tag = l.course
-				? `<span class="xp-ctag" title="${__('Linked course')}">${esc(course_name[l.course] || l.course)} · ${__('{0} students', [l.students || 0])}<button class="xp-unlink" data-k="${l._k}" title="${__('Unlink course')}">×</button></span>`
+				? `<span class="xp-ctag" title="${__('Linked course')}">${esc(course_name[l.course] || l.course)} · ${rx ? __('{0} registered', [l.students || 0]) : __('{0} students', [l.students || 0])}<button class="xp-unlink" data-k="${l._k}" title="${__('Unlink course')}">×</button></span>`
 				: '';
 			return `<td class="${cls} ${l.hall && !l.venue ? 'xp-txt' : ''}" title="${l.hall && !l.venue ? esc(__('Not a Venue Master room: not checked for clashes or seats')) : ''}">${area(l, 'venue', venue_of(l))}</td>
 				<td class="${cls}">${area(l, 'programme_year', l.programme_year)}</td>
@@ -884,8 +821,8 @@ class ExamPlanner {
 			$el.find('.xp-clear-f').toggle(!!filtered);
 
 			const todo = lines.filter((l) => !l.exam_date && (l.course || l.paper));
-			$el.find('.xp-unsched').html(todo.length ? `<div class="xp-soft"><span class="xp-muted">${__('Not in the timetable yet')}:</span>
-				${todo.map((l) => `<button class="btn btn-default btn-xs xp-place" data-k="${l._k}">${esc(paper_of(l))} +</button>`).join(' ')}</div>` : '');
+			$el.find('.xp-unsched').html(todo.length ? `<div class="xp-soft"><span class="xp-muted">${rx ? __('Needs a re-exam date') : __('Not in the timetable yet')}:</span>
+				${todo.map((l) => `<button class="btn btn-default btn-xs xp-place" data-k="${l._k}">${esc(paper_of(l))}${rx ? ` <small>(${__('{0} failed, {1} registered', [l.failed || 0, l.students || 0])})</small>` : ''} +</button>`).join(' ')}</div>` : '');
 
 			const list = lines.flatMap((l) => (issues[l._k] || []).map((x) => ({ ...x, l })));
 			$el.find('.xp-issues').html(summary === null ? '' : list.length
@@ -1002,7 +939,7 @@ class ExamPlanner {
 				[moment(d).format('DD.MM.YYYY'), gone.length]), go);
 		});
 		$el.find('.xp-clear-tt').on('click', () => frappe.confirm(
-			__('Clear the whole exam timetable? Every line is removed and the courses go back to "Not in the timetable yet". Nothing is saved until you click Save timetable.'),
+			(rx ? __('Clear the whole re-exam timetable?') + ' ' : '') + __('Clear the whole exam timetable? Every line is removed and the courses go back to "Not in the timetable yet". Nothing is saved until you click Save timetable.'),
 			() => { unschedule(lines.filter((l) => l.exam_date)); extra_days.clear(); summary = null; draw(); }));
 		$el.on('click', '.xp-place', (e) => {
 			const l = find($(e.currentTarget).data('k'));
@@ -1015,20 +952,23 @@ class ExamPlanner {
 			[{ fieldname: 'd', fieldtype: 'Date', label: __('Exam day'), reqd: 1 }],
 			(v) => { extra_days.add(v.d); draw(); }, __('Add exam day'), __('Add')));
 		$el.find('.xp-new-inv').on('click', () => this.invigilator_dialog((x) => { t.faculty.push(x); }));
-		$el.find('.xp-dl').on('click', () => this.download('download_timetable'));
-		$el.find('.xp-im').on('click', () => this.import_timetable_dialog());
-		$el.find('.xp-log').on('click', () => this.open_import_log('Exam Timetable'));
+		$el.find('.xp-dl').on('click', () => this.download('download_timetable', rx ? { reexam: 1 } : {}));
+		$el.find('.xp-im').on('click', () => this.import_timetable_dialog(rx));
+		$el.find('.xp-log').on('click', () => this.open_import_log(rx ? 'Re-exam Timetable' : 'Exam Timetable'));
 		$el.find('.xp-sheet').on('scroll', hide_pick);
 		$el.find('.xp-run-check').on('click', () => {
 			const p = payload();
-			call('check_timetable', { exam_plan: this.plan, rows: JSON.stringify(p.rows) }).then((res) => {
+			call(rx ? 'check_reexam_timetable' : 'check_timetable', { exam_plan: this.plan, rows: JSON.stringify(p.rows) }).then((res) => {
 				p.order.forEach((l, i) => { l.students = res.students[i]; });
 				take_check(res, (i) => p.order[i]);
 				draw();
 			});
 		});
-		$el.find('.xp-save-tt').on('click', () => call('save_timetable', { exam_plan: this.plan, rows: JSON.stringify(payload().rows) })
-			.then(() => { frappe.show_alert({ message: __('Timetable saved'), indicator: 'green' }); this.refresh(); }));
+		$el.find('.xp-save-tt').on('click', () => call(rx ? 'save_reexam_timetable' : 'save_timetable', { exam_plan: this.plan, rows: JSON.stringify(payload().rows) })
+			.then(() => {
+				frappe.show_alert({ message: rx ? __('Re-exam timetable saved') : __('Timetable saved'), indicator: 'green' });
+				(o.after_save || (() => this.refresh()))();
+			}));
 		draw();
 	}
 
@@ -1094,6 +1034,83 @@ class ExamPlanner {
 		});
 	}
 
+	// Barcodes for the exam timetable's papers: choose the dates and courses, generate, download one or many
+	render_barcodes($el) {
+		const BC = 'slcm.slcm.page.exam_barcode_sheet.exam_barcode_sheet.';
+		const bc = (method, args) => frappe.call({ method: BC + method, args: { exam_plan: this.plan, ...args }, freeze: true }).then((r) => r.message);
+		Promise.all([bc('get_exam_courses'), call('get_students', { exam_plan: this.plan })]).then(([papers, students]) => {
+			papers = papers || [];
+			const count = {};
+			(students || []).forEach((x) => { count[x.course] = x.synced; });
+			const dates = [...new Set(papers.map((p) => p.exam_date).filter(Boolean))].sort();
+			const f = { dates: new Set(), q: '' };
+			const picked = new Set(papers.map((p) => p.course));
+			const day = (d) => (d ? moment(d).format('DD.MM.YYYY ddd') : __('No date'));
+			$el.html(`
+				<div class="xp-bar xp-tools">
+					<label class="xp-muted">${__('Copies of each barcode')} <input type="number" min="1" value="1" class="form-control input-sm xp-bc-copies" style="width:70px;display:inline-block"></label>
+					<button class="btn btn-default btn-sm xp-bc-gen">${__('Generate barcodes')}</button>
+					<span class="xp-grow"></span>
+					<select class="form-control input-sm xp-bc-mode" style="width:200px"><option value="by_date">${__('One sheet per date')}</option><option value="by_course">${__('One sheet per course')}</option></select>
+					<button class="btn btn-primary btn-sm xp-bc-dl">${__('Download selected')}</button>
+				</div>
+				<div class="xp-bar xp-filters">
+					<span class="xp-muted">${__('Exam dates')}:</span>
+					${dates.map((d) => `<button class="btn btn-default btn-xs xp-bc-day" data-d="${d}">${day(d)}</button>`).join('') || `<span class="xp-muted">${__('No dates in the exam timetable yet')}</span>`}
+					<label>${__('Course')}<input class="form-control input-sm xp-bc-q" placeholder="${__('Search')}"></label>
+					<span class="xp-count-lines xp-muted xp-bc-sel"></span>
+				</div>
+				<div class="xp-table"><table class="table table-sm xp-bc"><thead><tr>
+					<th style="width:34px"><input type="checkbox" class="xp-bc-all"></th><th>${__('Date')}</th><th>${__('Time')}</th><th>${__('Course')}</th><th>${__('Rooms')}</th>
+					<th class="num">${__('Students')}</th><th class="num">${__('Barcodes')}</th><th></th></tr></thead><tbody></tbody></table></div>`);
+			const shown = () => papers.filter((p) => (!f.dates.size || f.dates.has(p.exam_date))
+				&& (!f.q || `${p.course_name} ${p.course} ${p.course_code}`.toLowerCase().includes(f.q.toLowerCase())));
+			const draw = () => {
+				const rows = shown();
+				$el.find('.xp-bc-day').each((_, b) => $(b).toggleClass('btn-primary', f.dates.has($(b).data('d'))).toggleClass('btn-default', !f.dates.has($(b).data('d'))));
+				$el.find('tbody').html(rows.map((p) => {
+					const n = count[p.course] || 0, done = p.barcode_count || 0;
+					return `<tr><td><input type="checkbox" class="xp-bc-cb" data-c="${esc(p.course)}" ${picked.has(p.course) ? 'checked' : ''}></td>
+						<td>${day(p.exam_date)}</td><td>${p.start_time ? `${String(p.start_time).slice(0, 5)}–${String(p.end_time || '').slice(0, 5)}` : '—'}</td>
+						<td><b>${esc(p.course_name)}</b><br><small class="xp-muted">${esc(p.course)}</small></td><td>${esc(p.venue || p.hall || '—')}</td>
+						<td class="num">${n}</td><td class="num"><span class="xp-pill ${n && done >= n ? 'ok' : done ? 'warn' : 'bad'}">${done}</span></td>
+						<td class="act"><button class="btn btn-default btn-xs xp-bc-one" data-c="${esc(p.course)}">${__('Download')}</button></td></tr>`;
+				}).join('') || `<tr><td colspan="8" class="xp-muted">${papers.length ? __('Nothing matches the filters.') : __('Put the courses in the exam timetable first.')}</td></tr>`);
+				const sel = rows.filter((p) => picked.has(p.course));
+				$el.find('.xp-bc-sel').text(__('{0} of {1} course(s) selected', [sel.length, rows.length]));
+				$el.find('.xp-bc-all').prop('checked', rows.length && sel.length === rows.length);
+			};
+			const selected = () => shown().filter((p) => picked.has(p.course)).map((p) => p.course);
+			const save_file = (r) => {
+				if (!r) return;
+				const a = document.createElement('a');
+				a.href = 'data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,' + r.file_content;
+				a.download = r.filename;
+				document.body.appendChild(a); a.click(); a.remove();
+			};
+			$el.on('click', '.xp-bc-day', (e) => { const d = $(e.currentTarget).data('d'); f.dates.has(d) ? f.dates.delete(d) : f.dates.add(d); draw(); });
+			$el.find('.xp-bc-q').on('input', (e) => { f.q = e.target.value; draw(); });
+			$el.on('change', '.xp-bc-cb', (e) => { const c = $(e.target).data('c'); e.target.checked ? picked.add(c) : picked.delete(c); draw(); });
+			$el.find('.xp-bc-all').on('change', (e) => { shown().forEach((p) => (e.target.checked ? picked.add(p.course) : picked.delete(p.course))); draw(); });
+			$el.on('click', '.xp-bc-one', (e) => bc('export_attendance_excel', { course: $(e.currentTarget).data('c'), mode: 'by_course' }).then(save_file));
+			$el.find('.xp-bc-dl').on('click', () => {
+				const courses = selected();
+				if (!courses.length) { frappe.show_alert({ message: __('Select at least one course.'), indicator: 'orange' }); return; }
+				bc('export_attendance_excel', { mode: $el.find('.xp-bc-mode').val(), selected_courses: JSON.stringify(courses),
+					selected_dates: f.dates.size ? JSON.stringify([...f.dates]) : '' }).then(save_file);
+			});
+			$el.find('.xp-bc-gen').on('click', () => {
+				const courses = selected();
+				if (!courses.length) { frappe.show_alert({ message: __('Select at least one course.'), indicator: 'orange' }); return; }
+				bc('generate_barcodes', { courses: JSON.stringify(courses), copies: +$el.find('.xp-bc-copies').val() || 1 }).then(() => {
+					frappe.show_alert({ message: __('Barcodes ready for {0} course(s)', [courses.length]), indicator: 'green' });
+					this.render_barcodes($el.empty().off());
+				});
+			});
+			draw();
+		});
+	}
+
 	import_evaluation_dialog() {
 		this.sheet_import_dialog({
 			title: __('Import Continuing Evaluation Schedule'), method: 'import_assessment_sheet', sheet: 'evaluation',
@@ -1146,16 +1163,8 @@ class ExamPlanner {
 	// Re-exam sittings, above the Re Exam screen in step 5
 	render_reexam_timetable($el) {
 		call('get_reexam_timetable', { exam_plan: this.plan }).then((t) => {
-			$el.html(`<div class="xp-card-head"><div><h4>${__('Re-exam timetable')}</h4>
-				<p>${__('Date, time, room and invigilator for each re-exam. Same checks as the exam timetable (except term dates); seats and clashes count the students registered for the re-exam.')}</p></div></div>`);
-			this.publish_bar($el, t.published, true);
-			this.tt_editor($('<div></div>').appendTo($el), t, {
-				check: 'check_reexam_timetable', save: 'save_reexam_timetable', saved: __('Re-exam timetable saved'),
-				students: __('Registered'), failed: true, save_label: __('Save re-exam timetable'),
-				hint: __('Only rows with a date are saved.'),
-				empty: __('No course needs a re-exam yet: no failed students, re-exam windows or registrations.'),
-				after_save: () => this.render_reexam_timetable($el),
-			});
+			$el.html(`<div class="xp-card-head"><div><h4>${__('Re-exam timetable')}</h4></div></div><div class="xp-tab on xp-rx-sheet"></div>`);
+			this.allocation_sheet($el.find('.xp-rx-sheet'), t, { reexam: true, after_save: () => this.render_reexam_timetable($el) });
 		});
 	}
 
@@ -1367,68 +1376,23 @@ class ExamPlanner {
 
 	// ── 4. Results & publish ───────────────────────────────────────────
 	render_results() {
-		call('get_results', { exam_plan: this.plan }).then((r) => {
-			const total = r.marks.Draft + r.marks.Submitted + r.marks.Locked;
-			const TABS = [
-				['term', __('Term results'), 'term_results'],
-				['publish', __('Publish'), 'publish_results'],
-				['settings', __('What students see'), 'result_settings'],
-			];
-			this.results_tab = this.results_tab || 'term';
-			this.$body.html(this.card(__('Results & publish'), __('Five steps, left to right. The tabs below show each student\'s term result, who is published, and what students see.'), '')
-				+ `<div class="xp-card xp-rtabs-card"><div class="xp-rtabs">${TABS.map(([k, l]) => `<button class="xp-rtab ${k === this.results_tab ? 'on' : ''}" data-tab="${k}">${l}</button>`).join('')}</div>
-				<div class="xp-mount"></div></div>`);
-			const $c = this.$body.find('.xp-card-body').first();
-			const FLOW = [
-				{ done: total && !r.marks.Draft, title: __('Submit grades'), desc: __('Draft marks become Submitted; faculty can no longer edit them.'),
-				  status: __('{0} of {1} submitted', [r.marks.Submitted + r.marks.Locked, total]), btn: __('Submit all'), cls: 'xp-submit' },
-				{ done: total && r.marks.Locked === total, title: __('Lock'), desc: __('Marks are frozen. Later changes go through Grade Appeal.'),
-				  status: __('{0} of {1} locked', [r.marks.Locked, total]), btn: __('Lock all'), cls: 'xp-lock' },
-				// the Term results tab's own Generate menu does this (all or selected students)
-				{ done: r.results > 0, title: __('Calculate results'), desc: __('Use Generate in the Term results tab below: term GPA, term % and cumulative GPA.'),
-				  status: r.results ? __('Average term GPA {0}', [r.avg_gpa]) : __('Not calculated yet'), btn: __('Go to Generate'), cls: 'xp-to-term' },
-				{ done: !!r.publish_setting, title: __('What students see'), desc: __('Components, SGPA, e-grade sheet; holds for unpaid fees.'),
-				  status: r.publish_setting ? __('Settings saved') : __('Not set yet'), btn: __('Edit settings'), cls: 'xp-settings' },
-				{ done: r.results && r.published === r.results, title: __('Publish'), desc: __('Results appear on the student and parent portals.'),
-				  status: __('{0} of {1} published', [r.published, r.results]), btn: __('Publish all'), cls: 'xp-pub' },
-			];
-			const next = FLOW.findIndex((f) => !f.done);
-			const stat = (v, l, warn) => `<div class="${warn ? 'warn' : ''}"><b>${v}</b><span>${l}</span></div>`;
-			$c.html(`
-				<div class="xp-r4-stats">
-					${stat(total, __('marks records'))}${stat(r.marks.Draft, __('draft'))}${stat(r.marks.Submitted, __('submitted'))}${stat(r.marks.Locked, __('locked'))}
-					${stat(r.fails, __('fail grades'), r.fails > 0)}${stat(`${r.published} / ${r.results}`, __('published'))}${stat(r.avg_gpa, __('average term GPA'))}
-				</div>
-				<ol class="xp-flow">
-					${FLOW.map((f, i) => `<li class="${f.done ? 'done' : i === next ? 'next' : ''}">
-						<div class="xp-flow-head"><span class="xp-dot">${f.done ? '✓' : i + 1}</span><b>${f.title}</b></div>
-						<p>${f.desc}</p>
-						<div class="xp-flow-foot"><small>${f.status}</small>
-							<button class="btn btn-sm ${i === next ? 'btn-primary' : 'btn-default'} ${f.cls}">${f.btn}</button></div>
-					</li>`).join('')}
-				</ol>
-				${next === -1 ? `<div class="xp-next"><span>✓ ${__('Results are published.')}</span>
-					<button class="btn btn-default btn-sm xp-go-after">${__('Re-exams and improvement are in step 5')} →</button></div>` : ''}`);
-			this.$body.find('.xp-card-head').first().append(`<button class="btn btn-default btn-sm xp-consolidated">${__('Consolidated report')}</button>`);
-			this.$body.find('.xp-consolidated').on('click', () => EXAM_UI('term_results').then(() => slcm.exam_ui.consolidated_report(this.plan)));
-			$c.find('.xp-go-after').on('click', () => { this.step = 4; this.render(); });
-			const $mount = this.$body.find('.xp-rtabs-card .xp-mount');
-			const show_tab = (k, scroll) => {
-				this.results_tab = k;
-				this.$body.find('.xp-rtab').removeClass('on').filter(`[data-tab="${k}"]`).addClass('on');
-				$mount.empty();
-				this.mount(TABS.find((x) => x[0] === k)[2], $mount[0], k === 'settings' ? { subtab: 'publish', only_subtab: true } : {});
-				if (scroll) this.$body.find('.xp-rtabs-card')[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
-			};
-			this.$body.find('.xp-rtab').on('click', (e) => show_tab($(e.currentTarget).data('tab')));
-			$c.find('.xp-settings').on('click', () => show_tab('settings', true));
-			$c.find('.xp-to-term').on('click', () => show_tab('term', true));
-			show_tab(this.results_tab);
-			const run = (method, args, msg) => call(method, Object.assign({ exam_plan: this.plan }, args)).then((n) => { frappe.show_alert({ message: msg(n), indicator: 'green' }); this.refresh(); });
-			$c.find('.xp-submit').on('click', () => run('set_status_all', { status: 'Submitted' }, (n) => __('{0} submitted', [n])));
-			$c.find('.xp-lock').on('click', () => frappe.confirm(__('Lock every marks record and course of this plan?'), () => run('set_status_all', { status: 'Locked' }, (n) => __('{0} locked', [n]))));
-			$c.find('.xp-pub').on('click', () => frappe.confirm(__('Publish results of every student in this plan?'), () => run('publish_all', { publish: 1 }, (n) => __('{0} published', [n]))));
-		});
+		const TABS = [
+			['term', __('Term results'), 'term_results'],
+			['publish', __('Publish'), 'publish_results'],
+			['settings', __('What students see'), 'result_settings'],
+		];
+		this.results_tab = this.results_tab || 'term';
+		this.$body.html(`<div class="xp-card xp-rtabs-card"><div class="xp-rtabs">${TABS.map(([k, l]) => `<button class="xp-rtab ${k === this.results_tab ? 'on' : ''}" data-tab="${k}">${l}</button>`).join('')}</div>
+			<div class="xp-mount"></div></div>`);
+		const $mount = this.$body.find('.xp-mount');
+		const show_tab = (k) => {
+			this.results_tab = k;
+			this.$body.find('.xp-rtab').removeClass('on').filter(`[data-tab="${k}"]`).addClass('on');
+			$mount.empty();
+			this.mount(TABS.find((x) => x[0] === k)[2], $mount[0], k === 'settings' ? { subtab: 'publish', only_subtab: true } : {});
+		};
+		this.$body.find('.xp-rtab').on('click', (e) => show_tab($(e.currentTarget).data('tab')));
+		show_tab(this.results_tab);
 	}
 
 	// ── 5. After results ───────────────────────────────────────────────
@@ -1512,19 +1476,6 @@ class ExamPlanner {
 			.xp-pub-bar b{margin-right:6px;color:var(--text-muted)}.xp-pub-bar.on{border-color:var(--bg-green,#cdebd8);background:var(--bg-green,#e5f4ea)}
 			.xp-pub-bar.on b{color:var(--text-on-green,#1d6b3a)}
 			.xp-rx-tt{border:1px solid var(--border-color);border-radius:10px;padding:14px;margin-bottom:16px}
-			.xp-r4-stats{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border:1px solid var(--border-color);border-radius:10px;margin-bottom:14px}
-			.xp-r4-stats>div{padding:10px 12px;border-right:1px solid var(--border-color)}.xp-r4-stats>div:last-child{border-right:0}
-			.xp-r4-stats b{display:block;font-family:var(--er-font);font-size:17px}.xp-r4-stats span{font-size:11.5px;color:var(--text-muted)}
-			.xp-r4-stats .warn b{color:var(--er-brand,#920C24)}
-			.xp-flow{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
-			.xp-flow li{display:flex;flex-direction:column;gap:6px;border:1px solid var(--border-color);border-radius:10px;padding:12px;background:var(--card-bg)}
-			.xp-flow li.next{border-color:var(--er-brand,#920C24);box-shadow:0 0 0 1px var(--er-brand,#920C24) inset}
-			.xp-flow-head{display:flex;align-items:center;gap:8px}.xp-flow-head b{font-size:13.5px}.xp-flow .xp-dot{width:24px;height:24px;font-size:12px;flex:none}
-			.xp-flow li p{margin:0;color:var(--text-muted);font-size:12px;flex:1}
-			.xp-flow-foot{display:flex;flex-direction:column;align-items:flex-start;gap:6px}.xp-flow-foot small{color:var(--text-muted);font-size:11.5px}
-			.xp-flow li.done .xp-dot{background:var(--green-500,#1d6b3a);border-color:var(--green-500,#1d6b3a);color:#fff}
-			@media (max-width:1100px){.xp-flow{grid-template-columns:repeat(3,minmax(0,1fr))}.xp-r4-stats{grid-template-columns:repeat(4,minmax(0,1fr))}}
-			@media (max-width:700px){.xp-flow{grid-template-columns:1fr}.xp-r4-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
 			.xp-ct tbody tr.xp-crow{cursor:pointer}.xp-ct tbody tr.xp-crow:hover td{background:var(--er-brand-softest,#FBEEF0)}
 			.xp-ct td.act{text-align:right;white-space:nowrap}.xp-ct td small{color:var(--text-muted)}.xp-warn-text{color:var(--text-on-yellow,#8a5a00)!important}
 			.xp-mk{display:flex;align-items:center;gap:8px;min-width:150px}.xp-mk .xp-meter{flex:1}

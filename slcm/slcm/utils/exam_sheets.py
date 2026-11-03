@@ -242,14 +242,20 @@ def _year_labels(term):
 
 # ── Exam timetable (classroom allocation sheet) ───────────────────────────────
 
-def timetable_entries(plan):
-	"""The plan's course schedule rows as sheet lines, by date and session."""
+def _table(reexam):
+	"""Exam Plan child table of the exam (course_schedules) or re-exam (reexam_schedules) timetable."""
+	return "reexam_schedules" if reexam else "course_schedules"
+
+
+def timetable_entries(plan, reexam=False):
+	"""The plan's (re-)exam timetable rows as sheet lines, by date and session."""
 	term = plan.term
-	names = dict(frappe.get_all("Course", filters={"name": ["in", [r.course for r in plan.course_schedules if r.course] or [""]]},
+	sittings = plan.get(_table(reexam)) or []
+	names = dict(frappe.get_all("Course", filters={"name": ["in", [r.course for r in sittings if r.course] or [""]]},
 	                            fields=["name", "course_name"], as_list=True))
 	years = _year_labels(term)
 	out = []
-	for r in plan.course_schedules:
+	for r in sittings:
 		if not r.exam_date:
 			continue
 		out.append(frappe._dict(
@@ -272,9 +278,9 @@ def _date_span(days):
 	return f"{_ordinal(a.day)} {a.strftime('%B')} to {_ordinal(b.day)} {b.strftime('%B %Y')}"
 
 
-def timetable_workbook(exam_plan):
+def timetable_workbook(exam_plan, reexam=False):
 	plan = frappe.get_doc("Exam Plan", exam_plan)
-	entries = timetable_entries(plan)
+	entries = timetable_entries(plan, reexam)
 	days = sorted({e.exam_date for e in entries})
 
 	wb = Workbook()
@@ -289,7 +295,8 @@ def timetable_workbook(exam_plan):
 		_cell(ws, 1, c)
 	_merge(ws, 1, 1, 1, last_col)
 	ws.row_dimensions[1].height = 22.5
-	title = _("{0} End-Term Examination classroom allocation sheet").format(plan.term or plan.exam_name)
+	title = (_("{0} Re-Examination classroom allocation sheet") if reexam
+	         else _("{0} End-Term Examination classroom allocation sheet")).format(plan.term or plan.exam_name)
 	if days:
 		title += f" ({_date_span(days)})"
 	for c in range(1, last_col + 1):
@@ -447,11 +454,11 @@ def resolve_timetable(plan, lines, duration_hours=3):
 	return rows, issues
 
 
-def _check_rows(plan, rows):
-	plan.set("course_schedules", [{k: v for k, v in r.items() if k != "sheet_row"} for r in rows])
-	for i, r in enumerate(plan.course_schedules, 1):
+def _check_rows(plan, rows, reexam=False):
+	plan.set(_table(reexam), [{k: v for k, v in r.items() if k != "sheet_row"} for r in rows])
+	for i, r in enumerate(plan.get(_table(reexam)), 1):
 		r.idx = i
-	return check_exam_schedule(plan)
+	return check_exam_schedule(plan, reexam=reexam)
 
 
 def _line_text(r):
@@ -471,14 +478,14 @@ def _group(issues):
 	               for (lv, msg), r in grouped.items()), key=lambda x: (order[x["level"]], x["sheet_row"]))
 
 
-def timetable_issues(exam_plan, content, duration_hours=3):
+def timetable_issues(exam_plan, content, duration_hours=3, reexam=False):
 	"""Sheet lines -> rows and every issue per sheet row (with its line)."""
 	plan = frappe.get_doc("Exam Plan", exam_plan)
 	lines, issues = parse_timetable(content)
 	rows, more = resolve_timetable(plan, lines, duration_hours)
 	text = {r["sheet_row"]: _line_text(r) for r in rows}
 	issues += more
-	check = _check_rows(plan, rows)
+	check = _check_rows(plan, rows, reexam)
 	for bucket, level in (("errors", "error"), ("warnings", "warning")):
 		for x in check[bucket]:
 			issues.append({"sheet_row": rows[x["row"] - 1]["sheet_row"], "level": level, "message": x["message"]})
@@ -487,12 +494,13 @@ def timetable_issues(exam_plan, content, duration_hours=3):
 	return plan, rows, issues
 
 
-def import_timetable(exam_plan, content, duration_hours=3, apply=False, file_url=None):
+def import_timetable(exam_plan, content, duration_hours=3, apply=False, file_url=None, reexam=False):
 	"""Read a classroom allocation sheet. Without apply: what would be imported,
 	with the timetable checks. With apply: replace the plan's exam timetable with
 	the lines that pass the checks; lines with a problem are skipped and every
 	import is written to an Exam Sheet Import Log."""
-	plan, rows, issues = timetable_issues(exam_plan, content, duration_hours)
+	plan, rows, issues = timetable_issues(exam_plan, content, duration_hours, reexam)
+	sheet = "Re-exam Timetable" if reexam else "Exam Timetable"
 	total = len(rows) + sum(1 for x in issues if x["level"] == "error" and x["sheet_row"] not in {r["sheet_row"] for r in rows})
 	bad = {x["sheet_row"] for x in issues if x["level"] == "error"}
 	keep = [r for r in rows if r["sheet_row"] not in bad]
@@ -507,7 +515,7 @@ def import_timetable(exam_plan, content, duration_hours=3, apply=False, file_url
 		return summary
 	# leaving lines out can't add clashes, but the rest of a shared, over-full room may still fail
 	for _ in range(5):
-		check = _check_rows(plan, keep)
+		check = _check_rows(plan, keep, reexam)
 		if not check["errors"]:
 			break
 		more = {keep[x["row"] - 1]["sheet_row"] for x in check["errors"]}
@@ -515,13 +523,13 @@ def import_timetable(exam_plan, content, duration_hours=3, apply=False, file_url
 		            "line": _line_text(keep[x["row"] - 1])} for x in check["errors"]]
 		keep = [r for r in keep if r["sheet_row"] not in more]
 	if not keep:
-		log = write_import_log("Exam Timetable", exam_plan, file_url, total, 0, issues)
+		log = write_import_log(sheet, exam_plan, file_url, total, 0, issues)
 		frappe.db.commit()
 		frappe.throw(_("No line of the sheet can be imported. See {0}.").format(
 			f'<a href="/desk/exam-sheet-import-log/{log}">{log}</a>'))
 	plan.save()
 	summary.update(imported=len(keep), skipped=total - len(keep),
-	               log=write_import_log("Exam Timetable", exam_plan, file_url, total, len(keep), issues))
+	               log=write_import_log(sheet, exam_plan, file_url, total, len(keep), issues))
 	frappe.db.commit()
 	return summary
 
