@@ -3753,7 +3753,13 @@ or _app.current_stage)) or _status %}
             <span class="et-label">Test Time</span>
             <span class="et-value">
               <span class="material-symbols-outlined" style="font-size:16px;">schedule</span>
-              {{ frappe.utils.get_datetime(et_doc.re_allocation_date if et_is_rescheduled else et_doc.allocation_date).strftime('%I:%M %p') }}
+              {% if et_doc.start_time %}
+                {{ frappe.utils.format_time(et_doc.start_time, 'hh:mm a') }}{% if et_doc.end_time %} - {{ frappe.utils.format_time(et_doc.end_time, 'hh:mm a') }}{% endif %}
+              {% elif et_doc.allocation_date and ' ' in str(et_doc.allocation_date) %}
+                {{ frappe.utils.get_datetime(et_doc.re_allocation_date if et_is_rescheduled else et_doc.allocation_date).strftime('%I:%M %p') }}
+              {% else %}
+                —
+              {% endif %}
             </span>
           </div>
           <div class="et-field">
@@ -3765,6 +3771,29 @@ or _app.current_stage)) or _status %}
             <span class="et-value">{{ et_doc.program or '—' }}</span>
           </div>
         </div>
+        {% if et_doc.online_test_link %}
+        <div style="margin-top: 14px; padding: 14px 16px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <div style="font-weight: 600; font-size: 13px; color: #166534; margin-bottom: 2px;">Online Examination Link</div>
+            <div style="font-size: 13px; color: #15803d; word-break: break-all;">{{ et_doc.online_test_link }}</div>
+          </div>
+          <a href="{{ et_doc.online_test_link }}" target="_blank" rel="noopener noreferrer" class="btn-download-premium" style="background: #16a34a; color: #fff; text-decoration: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; font-size: 13px; display: inline-flex; align-items: center; gap: 6px;">
+            <span class="material-symbols-outlined" style="font-size: 16px;">open_in_new</span>
+            Join Online Exam
+          </a>
+        </div>
+        {% endif %}
+        {% if et_doc.online_test_instructions %}
+        <div style="margin-top: 14px; padding: 14px 16px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+          <div style="font-weight: 600; font-size: 13px; color: #334155; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+            <span class="material-symbols-outlined" style="font-size: 18px; color: #64748b;">info</span>
+            Exam Instructions & Guidelines
+          </div>
+          <div class="online-exam-instructions-content" style="font-size: 13px; color: #475569; line-height: 1.6;">
+            {{ et_doc.online_test_instructions | safe }}
+          </div>
+        </div>
+        {% endif %}
         {% else %}
         <div class="et-new-grid">
           <!-- Tile 1: Test Date -->

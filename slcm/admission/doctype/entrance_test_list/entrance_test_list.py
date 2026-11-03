@@ -219,6 +219,8 @@ class EntranceTestList(Document):
                     allocation.exempts_interview     = getattr(app, "exempts_interview", 0)
                     allocation.allocation_status      = "Not Allocated"
                     allocation.entrance_test_status   = "Scheduled"
+                    allocation.seat_allocation_published = 0
+                    allocation.seat_allocation_published_on = None
                 
                 allocation.pwd = app_pwd
 
@@ -249,6 +251,15 @@ class EntranceTestList(Document):
                     allocation.start_time = resolved_start_time
                 if resolved_end_time:
                     allocation.end_time = resolved_end_time
+
+                if getattr(allocation, "is_international_applicant", 0):
+                    if test_cfg.get("online_test_link"):
+                        allocation.online_test_link = test_cfg.get("online_test_link")
+                    if test_cfg.get("online_test_instructions"):
+                        allocation.online_test_instructions = test_cfg.get("online_test_instructions")
+                else:
+                    allocation.online_test_link = None
+                    allocation.online_test_instructions = None
 
                 allocation.set("assigned_preferences", [])
                 for idx, pdoc in enumerate(provider_list, start=1):
@@ -358,24 +369,8 @@ class EntranceTestList(Document):
                     allocation.allocation_status = "Not Allocated"
                     allocation.save(ignore_permissions=True)
 
-                email = allocation.email or ""
-                if not email and allocation.applicant:
-                    try:
-                        app_email = frappe.db.get_value("Applicant", allocation.applicant, "email")
-                        if app_email:
-                            email = app_email
-                    except Exception:
-                        pass
-
-                if email and frappe.utils.cint(send_email):
-                    try:
-                        _send_allocation_email(allocation, email, allocation_type)
-                        _send_allocation_notification(allocation, email)
-                    except Exception:
-                        frappe.log_error(
-                            message=traceback.format_exc(),
-                            title=f"Allocation Email/Notification Failed: {allocation.name}"
-                        )
+                # Note: Email notifications and portal visibility are deferred until
+                # an administrator explicitly publishes seat allocation.
 
                 # Immediately change the status in the database for tracking and persistence
                 frappe.db.set_value("Entrance Test Applicant", app.name, "allocation_status", "Allocated")
@@ -724,9 +719,14 @@ class EntranceTestList(Document):
         return created_lists
 
 
-def _send_allocation_email(allocation, email, allocation_type=None):
+def _send_allocation_email(allocation, email, allocation_type=None, email_format="Default", custom_email_content=None):
     """Send a formal Entrance Test Centre Selection / Allocation email to the applicant."""
     try:
+        if getattr(allocation, "is_international_applicant", 0):
+            from slcm.admission.doctype.applicant.applicant import _send_international_entrance_test_email
+            _send_international_entrance_test_email(allocation, email)
+            return
+
         if allocation_type == "Allocate Directly":
             template_name = "Automated Entrance Test Allocation"
             attach_admit_card = False
@@ -753,15 +753,20 @@ def _send_allocation_email(allocation, email, allocation_type=None):
 
         subject = frappe.render_template(template.subject, args)
         
-        # Determine the content field correctly
-        message_body = ""
-        if template.get("use_html"):
-            message_body = frappe.render_template(template.response_html, args)
+        if email_format == "Custom" and custom_email_content:
+            from slcm.security.templating import render_custom_email
+            from slcm.admission.doctype.entrance_test_seat_allocation.entrance_test_seat_allocation import get_custom_email_html
+            message_body = render_custom_email(get_custom_email_html, custom_email_content, args)
         else:
-            message_body = frappe.render_template(template.response, args)
+            # Determine the content field correctly
+            message_body = ""
+            if template.get("use_html"):
+                message_body = frappe.render_template(template.response_html, args)
+            else:
+                message_body = frappe.render_template(template.response, args)
 
-        if not message_body:
-            message_body = frappe.render_template(template.get("message") or "", args)
+            if not message_body:
+                message_body = frappe.render_template(template.get("message") or "", args)
             
         # Robust CC handling from the manual 'cc' field added to Email Template
         cc_list = []
@@ -1135,7 +1140,7 @@ def _resolve_entrance_test_details_from_cycle(cycle_name, program=None, program_
     rows = frappe.get_all(
         "Entrance Test Details",
         filters={"parent": cycle_name, "parenttype": "Admission Cycle"},
-        fields=["programme", "programme_level", "entrance_test_name", "entrance_test_date", "start_time", "end_time", "idx"],
+        fields=["programme", "programme_level", "entrance_test_name", "entrance_test_date", "start_time", "end_time", "online_test_link", "online_test_instructions", "idx"],
         order_by="idx asc",
     )
     if not rows:
@@ -1258,4 +1263,148 @@ def _process_seat_allocation_job(entrance_test_list, providers, selected_applica
             },
             user=user
         )
+
+
+@frappe.whitelist()
+def get_unpublished_applicants_for_test_list(entrance_test_list, return_summary=0):
+    """
+    Returns list of unpublished seat allocation records (seat_allocation_published = 0)
+    for an Entrance Test List with candidate details and optional summary counts.
+    """
+    if not entrance_test_list:
+        return {"total_count": 0, "published_count": 0, "unpublished_count": 0, "allocations": []} if frappe.utils.cint(return_summary) else []
+
+    total_count = frappe.db.count("Entrance Test Seat Allocation", {"entrance_test_list": entrance_test_list})
+    published_count = frappe.db.count("Entrance Test Seat Allocation", {"entrance_test_list": entrance_test_list, "seat_allocation_published": 1})
+    unpublished_count = total_count - published_count
+
+    allocations = frappe.get_all(
+        "Entrance Test Seat Allocation",
+        filters={
+            "entrance_test_list": entrance_test_list,
+            "seat_allocation_published": 0
+        },
+        fields=[
+            "name",
+            "applicant",
+            "candidate_name",
+            "program",
+            "email",
+            "allocation_status",
+            "center_name",
+            "entrance_test_provider",
+            "seat_number",
+            "seat_allocation_published",
+            "seat_allocation_published_on"
+        ],
+        order_by="candidate_name asc"
+    )
+
+    if frappe.utils.cint(return_summary):
+        return {
+            "total_count": total_count,
+            "published_count": published_count,
+            "unpublished_count": unpublished_count,
+            "allocations": allocations
+        }
+
+    return allocations
+
+
+@frappe.whitelist()
+def publish_seat_allocations_for_test_list(entrance_test_list, selected_names=None, send_email=1, email_format="Default", custom_email_content=None):
+    """
+    Publishes seat allocations for applicants in an Entrance Test List.
+    Marks seat_allocation_published = 1, seat_allocation_published_on = now.
+    Queues allocation emails and creates in-app Notification Logs if send_email is 1.
+    Validates that selected records are not already published.
+    """
+    if not entrance_test_list:
+        frappe.throw(_("Entrance Test List is required."))
+
+    if isinstance(selected_names, str):
+        selected_names = json.loads(selected_names)
+
+    if not selected_names or len(selected_names) == 0:
+        frappe.throw(_("Please select at least one applicant to publish."))
+
+    # Server-side validation: check if any of the selected records are already published
+    already_published = frappe.get_all(
+        "Entrance Test Seat Allocation",
+        filters={
+            "name": ["in", selected_names],
+            "seat_allocation_published": 1
+        },
+        fields=["name", "applicant", "candidate_name"]
+    )
+    if already_published:
+        pub_labels = [r.applicant or r.name for r in already_published[:5]]
+        more = f" and {len(already_published) - 5} more" if len(already_published) > 5 else ""
+        frappe.throw(
+            _("Cannot publish: The following {0} applicant(s) are already published: {1}{2}").format(
+                len(already_published), ", ".join(pub_labels), more
+            ),
+            title=_("Already Published")
+        )
+
+    filters = {
+        "entrance_test_list": entrance_test_list,
+        "name": ["in", selected_names],
+        "seat_allocation_published": 0
+    }
+
+    records = frappe.get_all("Entrance Test Seat Allocation", filters=filters, fields=["name"])
+    if not records:
+        frappe.throw(_("No unpublished seat allocation records found to publish."))
+
+    total = len(records)
+    notified_count = 0
+    now_ts = frappe.utils.now_datetime()
+
+    for i, rec in enumerate(records, start=1):
+        frappe.publish_progress(
+            (i / total) * 100,
+            title=_("Publishing Seat Allocations"),
+            description=_("Publishing {0} of {1}").format(i, total)
+        )
+
+        doc = frappe.get_doc("Entrance Test Seat Allocation", rec.name)
+        doc.db_set("seat_allocation_published", 1, update_modified=False)
+        doc.db_set("seat_allocation_published_on", now_ts, update_modified=False)
+
+        if doc.applicant:
+            from slcm.admission.doctype.entrance_test_seat_allocation.entrance_test_seat_allocation import (
+                _update_applicant_status_for_entrance_test_status,
+            )
+            _update_applicant_status_for_entrance_test_status(
+                doc.applicant, doc.entrance_test_status or "Scheduled"
+            )
+
+        email = doc.email or ""
+        if not email and doc.applicant:
+            try:
+                email = frappe.db.get_value("Applicant", doc.applicant, "email") or ""
+            except Exception:
+                pass
+
+        if frappe.utils.cint(send_email) and email:
+            try:
+                allocation_type = "Allocate Directly" if doc.allocation_status == "Allocated" else "Allow Applicant Selection"
+                _send_allocation_email(
+                    doc,
+                    email,
+                    allocation_type=allocation_type,
+                    email_format=email_format,
+                    custom_email_content=custom_email_content
+                )
+                try:
+                    _send_allocation_notification(doc, email)
+                except Exception:
+                    pass
+                notified_count += 1
+            except Exception:
+                frappe.log_error(title=f"Publish Seat Allocation Email Failed: {doc.name}")
+
+    frappe.db.commit()
+    return {"published": total, "notified": notified_count}
 

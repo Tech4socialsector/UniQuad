@@ -1,16 +1,13 @@
 """Daily admission-integrity check: money and records that don't add up, or that applicants changed.
 
-Runs as a daily scheduler job (hooks.py). When any check finds rows it writes an Error Log entry and
-emails System Managers / Admission Admins with the counts and record IDs (no personal data).
+Runs as a daily scheduler job (hooks.py). When any check finds rows it writes an Error Log entry
+with the counts and record IDs (no personal data).
 Run by hand: bench --site <site> execute slcm.security.discrepancy_check.run
 """
 
 import json
 
 import frappe
-
-ALERT_ROLES = ("System Manager", "Admission Admin")
-
 
 def _web_users():
 	return set(frappe.get_all("User", {"user_type": "Website User"}, pluck="name"))
@@ -65,16 +62,3 @@ def daily():
 		return
 	body = json.dumps(found, indent=1, default=str)
 	frappe.log_error(title="Admission discrepancy check: issues found", message=body)
-	recipients = frappe.get_all("User", filters={
-		"enabled": 1, "user_type": "System User",
-		"name": ["in", frappe.get_all("Has Role", {"role": ["in", ALERT_ROLES], "parenttype": "User"}, pluck="parent")],
-	}, pluck="email")
-	recipients = [r for r in recipients if r and r not in ("admin@example.com",)]
-	if recipients:
-		frappe.sendmail(
-			recipients=recipients,
-			subject=f"[Admissions] Daily integrity check: {sum(v['count'] for v in found.values())} item(s) to review",
-			message="<p>The daily admission integrity check found records that need review.</p>"
-				"<pre>" + frappe.utils.escape_html(body) + "</pre>"
-				"<p>Details are also in Error Log (\"Admission discrepancy check\").</p>",
-		)

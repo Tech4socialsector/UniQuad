@@ -941,49 +941,55 @@ def get_context(context):
                 ignore_permissions=True)
             if et_rows:
                 et_doc = frappe.get_doc("Entrance Test Seat Allocation", et_rows[0].name, ignore_permissions=True)
-                context.et_doc = et_doc
-                context.et_is_rescheduled = (et_doc.is_rescheduled == 1 or et_doc.entrance_test_status == "Rescheduled")
-                context.et_show_result = (et_doc.entrance_test_status in ["Attended", "Absent"] and et_doc.result_published == 1)
+                et_is_resched = (et_doc.is_rescheduled == 1 or et_doc.entrance_test_status == "Rescheduled")
                 
-                context.et_preferences = []
-                prefs = et_doc.re_assigned_preferences if context.et_is_rescheduled else et_doc.assigned_preferences
-                for p in prefs:
-                    provider_info = frappe.db.get_value("Entrance Test Provider", p.provider, ["center_name", "center_address", "location", "pwd_accessible"], as_dict=True) or {}
-                    context.et_preferences.append({
-                        "provider": p.provider,
-                        "center_name": provider_info.get("center_name") or p.center_name,
-                        "center_address": provider_info.get("center_address") or p.center_address,
-                        "location": provider_info.get("location"),
-                        "pwd_accessible": provider_info.get("pwd_accessible")
-                    })
-                
-                context.et_is_pwd = getattr(applicant, "pwd", None) == "Yes"
-                
-                # Fetch latest details for the currently allocated center
-                current_provider = et_doc.re_entrance_test_provider if context.et_is_rescheduled else et_doc.entrance_test_provider
-                if current_provider:
-                    current_provider_info = frappe.db.get_value("Entrance Test Provider", current_provider, ["location", "center_address", "center_name"], as_dict=True) or {}
-                    context.et_location = current_provider_info.get("location")
-                    context.et_center_address = current_provider_info.get("center_address")
-                    context.et_center_name = current_provider_info.get("center_name")
-                
-                context.et_doc_json = frappe.as_json(et_doc.as_dict())
-                
-                # Add branding and reporting time
-                campus_branding = {"campus_name": et_doc.campus or "Institution of Legal Education", "logo": None}
-                try:
-                    if et_doc.campus:
-                        campus = frappe.get_doc("Campus", et_doc.campus)
-                        campus_branding["campus_name"] = campus.campus_name or et_doc.campus
-                        campus_branding["logo"] = campus.logo
-                except: pass
-                context.et_campus_branding = campus_branding
+                # Only expose entrance test details to applicant if seat allocation is published
+                is_published = bool(et_doc.re_seat_allocation_published) if et_is_resched else bool(et_doc.seat_allocation_published)
 
-                # Reporting time & Test time calculation (45 minutes before start time)
-                from slcm.admission.utils.portal import get_entrance_test_times
-                test_time_str, rep_time_str = get_entrance_test_times(et_doc)
-                context.et_test_time = test_time_str
-                context.et_reporting_time = rep_time_str
+                if is_published:
+                    context.et_doc = et_doc
+                    context.et_is_rescheduled = et_is_resched
+                    context.et_show_result = (et_doc.entrance_test_status in ["Attended", "Absent"] and et_doc.result_published == 1)
+                    
+                    context.et_preferences = []
+                    prefs = et_doc.re_assigned_preferences if context.et_is_rescheduled else et_doc.assigned_preferences
+                    for p in prefs:
+                        provider_info = frappe.db.get_value("Entrance Test Provider", p.provider, ["center_name", "center_address", "location", "pwd_accessible"], as_dict=True) or {}
+                        context.et_preferences.append({
+                            "provider": p.provider,
+                            "center_name": provider_info.get("center_name") or p.center_name,
+                            "center_address": provider_info.get("center_address") or p.center_address,
+                            "location": provider_info.get("location"),
+                            "pwd_accessible": provider_info.get("pwd_accessible")
+                        })
+                    
+                    context.et_is_pwd = getattr(applicant, "pwd", None) == "Yes"
+                    
+                    # Fetch latest details for the currently allocated center
+                    current_provider = et_doc.re_entrance_test_provider if context.et_is_rescheduled else et_doc.entrance_test_provider
+                    if current_provider:
+                        current_provider_info = frappe.db.get_value("Entrance Test Provider", current_provider, ["location", "center_address", "center_name"], as_dict=True) or {}
+                        context.et_location = current_provider_info.get("location")
+                        context.et_center_address = current_provider_info.get("center_address")
+                        context.et_center_name = current_provider_info.get("center_name")
+                    
+                    context.et_doc_json = frappe.as_json(et_doc.as_dict())
+                    
+                    # Add branding and reporting time
+                    campus_branding = {"campus_name": et_doc.campus or "Institution of Legal Education", "logo": None}
+                    try:
+                        if et_doc.campus:
+                            campus = frappe.get_doc("Campus", et_doc.campus)
+                            campus_branding["campus_name"] = campus.campus_name or et_doc.campus
+                            campus_branding["logo"] = campus.logo
+                    except: pass
+                    context.et_campus_branding = campus_branding
+
+                    # Reporting time & Test time calculation (45 minutes before start time)
+                    from slcm.admission.utils.portal import get_entrance_test_times
+                    test_time_str, rep_time_str = get_entrance_test_times(et_doc)
+                    context.et_test_time = test_time_str
+                    context.et_reporting_time = rep_time_str
         except Exception: pass
 
         # Interview details
