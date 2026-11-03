@@ -338,6 +338,11 @@ fixtures = [
             ["name", "not in", ["Student Portal", "Master", "FLE"]],
         ]
     },
+    # --- Workspace home blocks ---
+    {
+        "doctype": "Custom HTML Block",
+        "filters": [["name", "in", ["Examination Home"]]]
+    },
     # --- Workspace Sidebars ---
     {
         "doctype": "Workspace Sidebar",

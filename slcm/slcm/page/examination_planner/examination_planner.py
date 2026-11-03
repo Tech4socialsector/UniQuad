@@ -85,6 +85,16 @@ def get_plans():
 
 
 @frappe.whitelist()
+def get_plan_list():
+	"""Every exam plan with its step state, for the Examination Management home table."""
+	plans = get_plans()["plans"]
+	for p in plans:
+		p.steps = get_overview(p.name)["steps"]
+		p.created = frappe.db.get_value("Exam Plan", p.name, "creation")
+	return plans
+
+
+@frappe.whitelist()
 def create_plan(term, exam_name=None):
 	_check_access()
 	if not term:

@@ -4,13 +4,20 @@ frappe.pages['exam-barcode-sheet'].on_page_load = function (wrapper) {
 		title: 'Exam Barcode Sheet',
 		single_column: true
 	});
+	$(wrapper).addClass('er-theme');
+	if (!document.getElementById('er-theme-font')) {
+		$('head').append(
+			'<link id="er-theme-font" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Merriweather:opsz,wght@18..144,300..900&display=swap">'
+		);
+	}
+	frappe.require('/assets/slcm/css/exam_results_theme.css');
 	new ExamBarcodeSheet(wrapper);
 };
 
 class ExamBarcodeSheet {
 	constructor(wrapper) {
 		this.$body = $(wrapper).find('.page-content');
-		this.$body.css({ padding: '0', background: '#f1f5f9' });
+		this.$body.css({ padding: '0', background: '#f6f4f4' });
 		this.exam_plan = null;
 		this.courses   = [];
 		this.$toolbar  = null;
@@ -23,22 +30,23 @@ class ExamBarcodeSheet {
 		if ($('#eas-styles').length) return;
 		$(`<style id="eas-styles">
 		/* ─── Base ─────────────────────────────────────────────────────── */
-		.eas-page { padding: 20px 24px; }
+		.eas-page { padding: 20px 24px; font-family: var(--er-font, Georgia, serif); }
+		.eas-page button, .eas-page input, .eas-page select { font-family: inherit; }
 
 		/* ─── Filter / header bar ───────────────────────────────────────── */
 		.eas-filter {
 			display:flex; align-items:center; gap:16px; flex-wrap:wrap;
 			padding:18px 24px; margin-bottom:20px;
 			background:#fff; border-radius:14px;
-			border:1px solid #e2e8f0; border-left:4px solid #1e3a8a;
+			border:1px solid #e2e8f0; border-left:4px solid #920C24;
 			box-shadow:0 2px 8px rgba(15,23,42,.06);
 		}
 		.eas-filter-icon {
 			width:44px; height:44px; border-radius:11px; flex-shrink:0;
-			background:linear-gradient(135deg,#1e3a8a,#3b5bdb);
+			background:linear-gradient(135deg,#920C24,#920C24);
 			display:flex; align-items:center; justify-content:center;
 			color:#fff; font-size:18px;
-			box-shadow:0 3px 10px rgba(30,58,138,.35);
+			box-shadow:0 3px 10px rgba(146,12,36,.35);
 		}
 		.eas-filter-text .flt-sup {
 			font-size:10px; font-weight:700; text-transform:uppercase;
@@ -52,12 +60,12 @@ class ExamBarcodeSheet {
 			height:36px !important; padding:0 22px !important;
 			font-size:13px !important; font-weight:600 !important;
 			border-radius:9px !important; border:none !important;
-			background:linear-gradient(135deg,#1e3a8a,#3b5bdb) !important;
-			box-shadow:0 3px 10px rgba(30,58,138,.3) !important;
+			background:linear-gradient(135deg,#920C24,#920C24) !important;
+			box-shadow:0 3px 10px rgba(146,12,36,.3) !important;
 			transition:box-shadow .2s,transform .1s !important;
 		}
 		.eas-load-btn:hover:not(:disabled) {
-			box-shadow:0 5px 14px rgba(30,58,138,.4) !important;
+			box-shadow:0 5px 14px rgba(146,12,36,.4) !important;
 			transform:translateY(-1px) !important;
 		}
 
@@ -78,8 +86,8 @@ class ExamBarcodeSheet {
 			content:''; position:absolute; top:0; left:0; right:0;
 			height:3px; border-radius:14px 14px 0 0;
 		}
-		.sc-plan::before   { background:linear-gradient(90deg,#1e3a8a,#3b5bdb); }
-		.sc-count::before  { background:linear-gradient(90deg,#6366f1,#818cf8); }
+		.sc-plan::before   { background:linear-gradient(90deg,#920C24,#920C24); }
+		.sc-count::before  { background:linear-gradient(90deg,#920C24,#C4566A); }
 		.sc-bc::before     { background:linear-gradient(90deg,#059669,#34d399); }
 		.sc-status::before { background:linear-gradient(90deg,#f59e0b,#fbbf24); }
 		.sc-status.all-ready::before { background:linear-gradient(90deg,#059669,#34d399); }
@@ -89,8 +97,8 @@ class ExamBarcodeSheet {
 			display:flex; align-items:center; justify-content:center;
 			font-size:17px; margin:-2px -4px 6px 8px;
 		}
-		.sc-plan  .eas-stat-icon { background:#eff6ff; color:#1e3a8a; }
-		.sc-count .eas-stat-icon { background:#f0f0ff; color:#6366f1; }
+		.sc-plan  .eas-stat-icon { background:#FBEEF0; color:#920C24; }
+		.sc-count .eas-stat-icon { background:#FBEEF0; color:#920C24; }
 		.sc-bc    .eas-stat-icon { background:#dcfce7; color:#059669; }
 		.sc-status .eas-stat-icon { background:#fef3c7; color:#d97706; }
 		.sc-status.all-ready .eas-stat-icon { background:#dcfce7; color:#059669; }
@@ -120,33 +128,33 @@ class ExamBarcodeSheet {
 			height:34px; padding:0 18px; font-size:12.5px; font-weight:600;
 			border-radius:8px; border:none; cursor:pointer;
 			display:inline-flex; align-items:center; gap:7px;
-			background:linear-gradient(135deg,#059669,#10b981); color:#fff;
-			box-shadow:0 2px 8px rgba(5,150,105,.3);
+			background:linear-gradient(135deg,#6E091B,#920C24); color:#fff;
+			box-shadow:0 2px 8px rgba(146,12,36,.3);
 			transition:box-shadow .2s,transform .1s;
 		}
 		.eas-btn-gen-all:hover {
-			box-shadow:0 4px 12px rgba(5,150,105,.4); transform:translateY(-1px);
+			box-shadow:0 4px 12px rgba(146,12,36,.4); transform:translateY(-1px);
 		}
 		.eas-btn-dl-date {
 			height:34px; padding:0 16px; font-size:12.5px; font-weight:600;
 			border-radius:8px; border:none; cursor:pointer;
 			display:inline-flex; align-items:center; gap:7px;
-			background:linear-gradient(135deg,#1e3a8a,#3b5bdb); color:#fff;
-			box-shadow:0 2px 8px rgba(30,58,138,.3);
+			background:linear-gradient(135deg,#920C24,#920C24); color:#fff;
+			box-shadow:0 2px 8px rgba(146,12,36,.3);
 			transition:box-shadow .2s,transform .1s;
 		}
 		.eas-btn-dl-date:hover:not(:disabled) {
-			box-shadow:0 4px 12px rgba(30,58,138,.4); transform:translateY(-1px);
+			box-shadow:0 4px 12px rgba(146,12,36,.4); transform:translateY(-1px);
 		}
 		.eas-btn-dl-course {
 			height:34px; padding:0 16px; font-size:12.5px; font-weight:600;
 			border-radius:8px; cursor:pointer;
 			display:inline-flex; align-items:center; gap:7px;
-			background:#fff; color:#1e3a8a; border:1.5px solid #bfdbfe;
+			background:#fff; color:#920C24; border:1.5px solid #E8B4BE;
 			transition:background .15s,border-color .15s,transform .1s;
 		}
 		.eas-btn-dl-course:hover:not(:disabled) {
-			background:#eff6ff; border-color:#93c5fd; transform:translateY(-1px);
+			background:#FBEEF0; border-color:#C4566A; transform:translateY(-1px);
 		}
 		.eas-btn-gen-all:disabled,
 		.eas-btn-dl-date:disabled,
@@ -157,24 +165,24 @@ class ExamBarcodeSheet {
 		.eas-date-hdr {
 			display:flex; align-items:center; gap:12px;
 			padding:12px 18px; margin-bottom:10px;
-			background:#fff; border:1px solid #bfdbfe;
+			background:#fff; border:1px solid #E8B4BE;
 			border-radius:12px;
-			box-shadow:0 1px 4px rgba(30,58,138,.06);
+			box-shadow:0 1px 4px rgba(146,12,36,.06);
 		}
 		.eas-date-icon {
 			width:38px; height:38px; border-radius:9px; flex-shrink:0;
-			background:linear-gradient(135deg,#1e3a8a,#3b5bdb);
+			background:linear-gradient(135deg,#920C24,#920C24);
 			display:flex; align-items:center; justify-content:center;
 			color:#fff; font-size:14px;
-			box-shadow:0 2px 6px rgba(30,58,138,.3);
+			box-shadow:0 2px 6px rgba(146,12,36,.3);
 		}
 		.eas-date-text .dt-sup {
 			font-size:10px; font-weight:700; text-transform:uppercase;
 			letter-spacing:.6px; color:#64748b;
 		}
-		.eas-date-text .dt-val { font-size:15px; font-weight:700; color:#1e3a8a; }
+		.eas-date-text .dt-val { font-size:15px; font-weight:700; color:#920C24; }
 		.eas-date-pill {
-			background:#1e3a8a; color:#fff; border-radius:20px;
+			background:#920C24; color:#fff; border-radius:20px;
 			padding:3px 13px; font-size:11px; font-weight:700; margin-left:auto;
 		}
 
@@ -192,10 +200,10 @@ class ExamBarcodeSheet {
 			border-bottom:1px solid #e2e8f0; border-top:none;
 		}
 		.eas-tbl tbody tr { transition:background .12s; }
-		.eas-tbl tbody tr.eas-course-tr:hover { background:#f8faff; }
+		.eas-tbl tbody tr.eas-course-tr:hover { background:#FBEEF0; }
 		.eas-tbl tbody td {
 			padding:13px 14px; vertical-align:middle;
-			border-bottom:1px solid #f1f5f9; border-top:none;
+			border-bottom:1px solid #f6f4f4; border-top:none;
 		}
 		.eas-tbl tbody tr:last-child td { border-bottom:none; }
 
@@ -203,21 +211,21 @@ class ExamBarcodeSheet {
 		.eas-cname { display:flex; align-items:center; gap:10px; }
 		.eas-course-dot {
 			width:10px; height:10px; border-radius:50%; flex-shrink:0;
-			background:linear-gradient(135deg,#3b5bdb,#6366f1);
-			box-shadow:0 0 0 3px #e0e7ff;
+			background:linear-gradient(135deg,#920C24,#920C24);
+			box-shadow:0 0 0 3px #F5D9DE;
 		}
 		.eas-clink {
-			color:#1e3a8a; cursor:pointer; text-decoration:none;
+			color:#920C24; cursor:pointer; text-decoration:none;
 			font-weight:600; font-size:13.5px;
 		}
-		.eas-clink:hover { color:#3b5bdb; text-decoration:underline; }
+		.eas-clink:hover { color:#920C24; text-decoration:underline; }
 		.eas-chevron {
 			font-size:9px; color:#c0c8d8; margin-left:4px;
 			transition:transform .2s ease; display:inline-block;
 		}
 		.eas-code {
 			font-family:Consolas,monospace; font-size:11.5px; color:#64748b;
-			background:#f1f5f9; border:1px solid #e2e8f0;
+			background:#f6f4f4; border:1px solid #e2e8f0;
 			padding:2px 8px; border-radius:5px;
 		}
 
@@ -234,7 +242,7 @@ class ExamBarcodeSheet {
 		}
 		.eas-status-none {
 			display:inline-flex; align-items:center; gap:5px;
-			background:#f1f5f9; color:#94a3b8; border:1px solid #e2e8f0;
+			background:#f6f4f4; color:#94a3b8; border:1px solid #e2e8f0;
 			border-radius:20px; padding:3px 11px; font-size:11.5px; font-weight:600;
 		}
 
@@ -251,19 +259,19 @@ class ExamBarcodeSheet {
 		.eas-btn-dl-row {
 			height:30px; padding:0 11px; font-size:11.5px; font-weight:600;
 			border-radius:7px; border:none;
-			background:linear-gradient(135deg,#1e3a8a,#3b5bdb); color:#fff; cursor:pointer;
+			background:linear-gradient(135deg,#920C24,#920C24); color:#fff; cursor:pointer;
 			display:inline-flex; align-items:center; gap:4px;
-			box-shadow:0 2px 6px rgba(30,58,138,.25);
+			box-shadow:0 2px 6px rgba(146,12,36,.25);
 			transition:box-shadow .15s,transform .1s;
 		}
 		.eas-btn-dl-row:hover:not(:disabled) {
-			box-shadow:0 4px 10px rgba(30,58,138,.35); transform:translateY(-1px);
+			box-shadow:0 4px 10px rgba(146,12,36,.35); transform:translateY(-1px);
 		}
 		.eas-btn-dl-row:disabled { opacity:.4; cursor:not-allowed; transform:none; }
 
 		/* ─── Student detail panel ───────────────────────────────────────── */
 		.eas-detail-row td { padding:0 !important; border:none !important; }
-		.eas-panel { background:#f1f5f9; border-top:2px solid #bfdbfe; }
+		.eas-panel { background:#f6f4f4; border-top:2px solid #E8B4BE; }
 		.eas-panel-inner { padding:18px 20px 20px; }
 
 		/* Panel header */
@@ -271,16 +279,16 @@ class ExamBarcodeSheet {
 			display:flex; align-items:center; justify-content:space-between;
 			flex-wrap:wrap; gap:14px; margin-bottom:0;
 			padding:16px 18px; background:#fff; border-radius:10px;
-			border:1px solid #e2e8f0; border-left:4px solid #3b5bdb;
-			box-shadow:0 1px 4px rgba(30,58,138,.06);
+			border:1px solid #e2e8f0; border-left:4px solid #920C24;
+			box-shadow:0 1px 4px rgba(146,12,36,.06);
 		}
 		.eas-panel-left { display:flex; align-items:center; gap:14px; }
 		.eas-panel-course-icon {
 			width:46px; height:46px; border-radius:12px; flex-shrink:0;
-			background:linear-gradient(135deg,#1e3a8a,#3b5bdb);
+			background:linear-gradient(135deg,#920C24,#920C24);
 			display:flex; align-items:center; justify-content:center;
 			color:#fff; font-size:20px;
-			box-shadow:0 3px 10px rgba(30,58,138,.3);
+			box-shadow:0 3px 10px rgba(146,12,36,.3);
 		}
 		.eas-panel-course-name { font-size:15px; font-weight:700; color:#0f172a; }
 		.eas-panel-course-code {
@@ -333,12 +341,12 @@ class ExamBarcodeSheet {
 			transition:border-color .15s,box-shadow .15s;
 		}
 		.eas-stbl-search:focus {
-			outline:none; border-color:#93c5fd; background:#fff;
-			box-shadow:0 0 0 3px rgba(59,91,219,.1);
+			outline:none; border-color:#C4566A; background:#fff;
+			box-shadow:0 0 0 3px rgba(146,12,36,.1);
 		}
 		.eas-stbl-count {
 			font-size:12px; color:#64748b; white-space:nowrap;
-			background:#f1f5f9; padding:4px 10px; border-radius:20px;
+			background:#f6f4f4; padding:4px 10px; border-radius:20px;
 			font-weight:600; border:1px solid #e2e8f0;
 		}
 		.eas-stbl-hint {
@@ -347,14 +355,14 @@ class ExamBarcodeSheet {
 		}
 		/* ─── Student data table ────────────────────────────────────────────── */
 		.eas-stbl-wrap {
-			border:1px solid #c7d2fe; border-radius:12px;
+			border:1px solid #E8B4BE; border-radius:12px;
 			overflow:hidden; max-height:420px; overflow-y:auto;
-			box-shadow:0 4px 12px rgba(30,58,138,.08);
+			box-shadow:0 4px 12px rgba(146,12,36,.08);
 		}
 		.eas-stbl-wrap::-webkit-scrollbar { width:6px; }
 		.eas-stbl-wrap::-webkit-scrollbar-track { background:#f8fafc; }
-		.eas-stbl-wrap::-webkit-scrollbar-thumb { background:#a5b4fc; border-radius:3px; }
-		.eas-stbl-wrap::-webkit-scrollbar-thumb:hover { background:#818cf8; }
+		.eas-stbl-wrap::-webkit-scrollbar-thumb { background:#C4566A; border-radius:3px; }
+		.eas-stbl-wrap::-webkit-scrollbar-thumb:hover { background:#C4566A; }
 
 		.eas-stbl { width:100%; margin:0; border-collapse:separate; border-spacing:0; font-size:13px; }
 
@@ -363,12 +371,12 @@ class ExamBarcodeSheet {
 			position:sticky; top:0; z-index:10;
 			padding:13px 14px; font-size:10.5px; font-weight:700; text-transform:uppercase;
 			letter-spacing:.7px; color:#fff; white-space:nowrap; user-select:none;
-			background:linear-gradient(135deg,#1e3a8a 0%,#2d50c4 60%,#3b5bdb 100%);
+			background:linear-gradient(135deg,#920C24 0%,#6E091B 60%,#920C24 100%);
 			border-bottom:2px solid rgba(255,255,255,.18); border-top:none;
-			box-shadow:0 2px 6px rgba(30,58,138,.18);
+			box-shadow:0 2px 6px rgba(146,12,36,.18);
 		}
 		.eas-stbl thead th.sortable { cursor:pointer; }
-		.eas-stbl thead th.sortable:hover { background:linear-gradient(135deg,#162d73,#243ea8,#2f4dc0); color:#fff; }
+		.eas-stbl thead th.sortable:hover { background:linear-gradient(135deg,#6E091B,#6E091B,#6E091B); color:#fff; }
 		.eas-stbl thead th .sort-ico {
 			display:inline-flex; flex-direction:column; gap:2px;
 			vertical-align:middle; margin-left:5px; opacity:.5;
@@ -388,8 +396,8 @@ class ExamBarcodeSheet {
 		.eas-stbl tbody tr.eas-stbl-student-row { cursor:pointer; transition:background .12s; }
 		.eas-stbl tbody tr.eas-stbl-student-row:nth-child(odd) { background:#fff; }
 		.eas-stbl tbody tr.eas-stbl-student-row:nth-child(even) { background:#f8fafd; }
-		.eas-stbl tbody tr.eas-stbl-student-row:hover { background:#eff6ff !important; }
-		.eas-stbl tbody tr.eas-stbl-student-row:hover .eas-view-btn { opacity:1 !important; background:#dbeafe; border-color:#93c5fd; color:#1e3a8a; }
+		.eas-stbl tbody tr.eas-stbl-student-row:hover { background:#FBEEF0 !important; }
+		.eas-stbl tbody tr.eas-stbl-student-row:hover .eas-view-btn { opacity:1 !important; background:#F5D9DE; border-color:#C4566A; color:#920C24; }
 		.eas-stbl tbody td {
 			padding:13px 14px; border-bottom:1px solid #eef2f8;
 			border-top:none; border-left:none; border-right:none; vertical-align:middle;
@@ -397,8 +405,8 @@ class ExamBarcodeSheet {
 
 		/* Footer summary row */
 		.eas-stbl tfoot td {
-			padding:10px 14px; background:linear-gradient(90deg,#f8fafc,#eff6ff);
-			border-top:2px solid #c7d2fe; font-size:12px; color:#64748b; font-weight:600;
+			padding:10px 14px; background:linear-gradient(90deg,#f8fafc,#FBEEF0);
+			border-top:2px solid #E8B4BE; font-size:12px; color:#64748b; font-weight:600;
 		}
 
 		/* Row avatar */
@@ -409,10 +417,10 @@ class ExamBarcodeSheet {
 			font-size:13px; font-weight:800; color:#fff;
 			box-shadow:0 2px 6px rgba(0,0,0,.18);
 		}
-		.eas-student-name-text { font-weight:700; color:#1e3a8a; font-size:13.5px; line-height:1.2; }
+		.eas-student-name-text { font-weight:700; color:#920C24; font-size:13.5px; line-height:1.2; }
 		.eas-student-num {
 			font-size:11px; color:#94a3b8; font-weight:700;
-			background:#f1f5f9; width:24px; height:24px;
+			background:#f6f4f4; width:24px; height:24px;
 			border-radius:50%; display:inline-flex; align-items:center;
 			justify-content:center; border:1px solid #e2e8f0;
 		}
@@ -421,11 +429,11 @@ class ExamBarcodeSheet {
 		.eas-reg-badge {
 			display:inline-block; font-family:Consolas,monospace;
 			font-size:11.5px; color:#475569;
-			background:#f1f5f9; border:1px solid #e2e8f0;
+			background:#f6f4f4; border:1px solid #e2e8f0;
 			padding:3px 9px; border-radius:7px;
 		}
 		.eas-sec-badge {
-			display:inline-block; background:#e0e7ff; color:#3730a3;
+			display:inline-block; background:#F5D9DE; color:#6E091B;
 			font-size:11px; font-weight:700; border-radius:7px;
 			padding:3px 10px;
 		}
@@ -453,7 +461,7 @@ class ExamBarcodeSheet {
 			display:inline-flex; align-items:center; justify-content:center;
 			font-size:13px; opacity:0.55; transition:opacity .15s,background .12s,color .12s,border-color .12s,transform .1s;
 		}
-		.eas-view-btn:hover { background:#dbeafe; color:#1e3a8a; opacity:1; transform:scale(1.1); border-color:#93c5fd; }
+		.eas-view-btn:hover { background:#F5D9DE; color:#920C24; opacity:1; transform:scale(1.1); border-color:#C4566A; }
 
 		/* ─── Empty / loading ────────────────────────────────────────────── */
 		.eas-empty {
@@ -462,7 +470,7 @@ class ExamBarcodeSheet {
 		}
 		.eas-empty-icon {
 			width:68px; height:68px; border-radius:18px;
-			background:#f1f5f9; display:flex; align-items:center; justify-content:center;
+			background:#f6f4f4; display:flex; align-items:center; justify-content:center;
 			font-size:30px; color:#cbd5e1; margin:0 auto 16px;
 		}
 		.eas-empty-title { font-size:16px; font-weight:700; color:#475569; margin-bottom:6px; }
@@ -487,10 +495,10 @@ class ExamBarcodeSheet {
 		.eas-avail-box .av-row {
 			display:flex; align-items:center; gap:8px;
 			font-size:12.5px; color:#374151;
-			padding:5px 0; border-bottom:1px solid #f1f5f9;
+			padding:5px 0; border-bottom:1px solid #f6f4f4;
 		}
 		.eas-avail-box .av-row:last-child { border-bottom:none; }
-		.eas-avail-box .av-row i { color:#3b5bdb; width:14px; text-align:center; }
+		.eas-avail-box .av-row i { color:#920C24; width:14px; text-align:center; }
 		.eas-avail-box .av-row .av-cnt { color:#94a3b8; font-size:11.5px; margin-left:auto; }
 
 		/* ─── Dialog: course picker ──────────────────────────────────────── */
@@ -499,7 +507,7 @@ class ExamBarcodeSheet {
 			margin-bottom:10px; padding-bottom:10px; border-bottom:1px solid #e2e8f0;
 		}
 		.eas-pick-header .eas-sel-all {
-			font-size:12px; font-weight:700; color:#1e3a8a; cursor:pointer;
+			font-size:12px; font-weight:700; color:#920C24; cursor:pointer;
 			text-decoration:none; display:flex; align-items:center; gap:5px;
 		}
 		.eas-pick-header .eas-sel-all:hover { text-decoration:underline; }
@@ -510,27 +518,27 @@ class ExamBarcodeSheet {
 			padding:10px 14px; border-radius:9px; cursor:pointer;
 			border:1.5px solid #e2e8f0; background:#fff; transition:all .12s;
 		}
-		.eas-pick-item:hover { background:#f8faff; border-color:#bfdbfe; }
-		.eas-pick-item.is-checked { background:#eff6ff; border-color:#93c5fd; }
+		.eas-pick-item:hover { background:#FBEEF0; border-color:#E8B4BE; }
+		.eas-pick-item.is-checked { background:#FBEEF0; border-color:#C4566A; }
 		.eas-pick-item input[type=checkbox] {
-			width:15px; height:15px; accent-color:#1e3a8a;
+			width:15px; height:15px; accent-color:#920C24;
 			cursor:pointer; flex-shrink:0;
 		}
 		.eas-pick-item .pi-name { font-size:13px; font-weight:600; color:#0f172a; flex:1; }
 		.eas-pick-item .pi-code {
 			font-family:Consolas,monospace; font-size:11px; color:#64748b;
-			background:#f1f5f9; border:1px solid #e2e8f0;
+			background:#f6f4f4; border:1px solid #e2e8f0;
 			padding:1px 6px; border-radius:4px;
 		}
 		.eas-pick-item .pi-badge { font-size:11px; font-weight:700; border-radius:20px; padding:2px 9px; }
 		.eas-pick-item .pi-ready { background:#dcfce7; color:#15803d; border:1px solid #bbf7d0; }
-		.eas-pick-item .pi-none  { background:#f1f5f9; color:#94a3b8; border:1px solid #e2e8f0; }
+		.eas-pick-item .pi-none  { background:#f6f4f4; color:#94a3b8; border:1px solid #e2e8f0; }
 
 		/* ─── Student detail dialog ──────────────────────────────────────── */
 		.eas-std-detail { padding:4px 0; }
 		.eas-std-header {
 			display:flex; align-items:center; gap:18px; padding:22px 24px;
-			background:linear-gradient(135deg,#1e3a8a 0%,#3b5bdb 100%);
+			background:linear-gradient(135deg,#920C24 0%,#920C24 100%);
 			border-radius:14px; margin-bottom:18px;
 		}
 		.eas-std-avatar {
@@ -586,7 +594,7 @@ class ExamBarcodeSheet {
 			background:#f8fafc; border:1px solid #e2e8f0;
 			border-radius:10px; padding:12px 16px; transition:border-color .15s;
 		}
-		.eas-std-field:hover { border-color:#bfdbfe; }
+		.eas-std-field:hover { border-color:#E8B4BE; }
 		.eas-std-field label {
 			font-size:10px; font-weight:700; text-transform:uppercase;
 			letter-spacing:.5px; color:#94a3b8; display:block; margin-bottom:4px;
@@ -596,9 +604,9 @@ class ExamBarcodeSheet {
 			color:#d1d5db; font-style:italic; font-weight:400; font-size:13px;
 		}
 		.eas-std-exam-info {
-			background:linear-gradient(90deg,#eff6ff,#f5f7ff);
-			border:1px solid #bfdbfe; border-radius:10px;
-			padding:12px 16px; font-size:12.5px; color:#1e3a8a;
+			background:linear-gradient(90deg,#FBEEF0,#FBEEF0);
+			border:1px solid #E8B4BE; border-radius:10px;
+			padding:12px 16px; font-size:12.5px; color:#920C24;
 			display:flex; align-items:center; gap:10px; margin-bottom:4px;
 		}
 		</style>`).appendTo('head');
@@ -725,7 +733,7 @@ class ExamBarcodeSheet {
 			<div class="eas-stat-card sc-count">
 				<div class="eas-stat-icon"><i class="fa fa-book"></i></div>
 				<div class="eas-stat-label">Total Courses</div>
-				<div class="eas-stat-val" style="color:#6366f1;">${n_courses}</div>
+				<div class="eas-stat-val" style="color:#920C24;">${n_courses}</div>
 				<div class="eas-stat-sub">scheduled</div>
 			</div>
 			<div class="eas-stat-card sc-bc">
@@ -889,7 +897,7 @@ class ExamBarcodeSheet {
 		if ($panel.children().length) return;
 		$panel.html(`
 			<div style="display:flex;align-items:center;gap:10px;color:#64748b;font-size:13px;padding:8px 0;">
-				<i class="fa fa-spinner fa-spin" style="color:#3b5bdb;"></i>
+				<i class="fa fa-spinner fa-spin" style="color:#920C24;"></i>
 				Loading students for <b>${c.course_name || c.course}</b>…
 			</div>`);
 
@@ -913,7 +921,7 @@ class ExamBarcodeSheet {
 		if (!students.length) {
 			$panel.html(`
 				<div style="padding:12px 0;color:#64748b;font-size:13px;">
-					<i class="fa fa-info-circle" style="color:#93c5fd;"></i>
+					<i class="fa fa-info-circle" style="color:#C4566A;"></i>
 					No students enrolled in <b>${c.course_name || c.course}</b>.
 					Check that students are enrolled in this course for the exam plan's term.
 				</div>`);
@@ -924,7 +932,7 @@ class ExamBarcodeSheet {
 		const done    = students.filter(s => s.has_barcode).length;
 		const pending = total - done;
 		const pct     = Math.round((done / total) * 100);
-		const prog_col = pct === 100 ? '#059669' : pct > 50 ? '#3b5bdb' : '#d97706';
+		const prog_col = pct === 100 ? '#059669' : pct > 50 ? '#920C24' : '#d97706';
 
 		/* Avatar helpers */
 		const _initials = name => {
@@ -933,8 +941,8 @@ class ExamBarcodeSheet {
 			return (name || '?').charAt(0).toUpperCase();
 		};
 		const _avatar_bg = name => {
-			const palette = ['#3b5bdb','#7c3aed','#059669','#d97706',
-			                 '#dc2626','#0891b2','#be185d','#16a34a','#ea580c','#0284c7'];
+			const palette = ['#920C24','#920C24','#059669','#d97706',
+			                 '#dc2626','#C4566A','#920C24','#16a34a','#ea580c','#C4566A'];
 			let h = 0;
 			for (const ch of (name || '')) h = ch.charCodeAt(0) + ((h << 5) - h);
 			return palette[Math.abs(h) % palette.length];
@@ -1026,7 +1034,7 @@ class ExamBarcodeSheet {
 				</div>
 				<span class="eas-stbl-count">${total} student${total !== 1 ? 's' : ''}</span>
 				<span class="eas-stbl-hint">
-					<i class="fa fa-eye" style="color:#3b5bdb;"></i> Click a row to view full details
+					<i class="fa fa-eye" style="color:#920C24;"></i> Click a row to view full details
 				</span>
 			</div>
 
@@ -1055,7 +1063,7 @@ class ExamBarcodeSheet {
 					<tfoot>
 						<tr>
 							<td colspan="2">
-								<i class="fa fa-users" style="color:#3b5bdb;margin-right:4px;"></i>
+								<i class="fa fa-users" style="color:#920C24;margin-right:4px;"></i>
 								${total} student${total !== 1 ? 's' : ''} total
 							</td>
 							<td colspan="2" style="color:#059669;">
@@ -1195,7 +1203,7 @@ class ExamBarcodeSheet {
 		const exam_info = c ? `
 			<div class="eas-std-section-title" style="margin-top:14px;">Exam Context</div>
 			<div class="eas-std-exam-info">
-				<i class="fa fa-book" style="color:#6366f1;"></i>
+				<i class="fa fa-book" style="color:#920C24;"></i>
 				<span><b>Course:</b> ${c.course_name || c.course}</span>
 				&nbsp;·&nbsp;
 				<span><b>Exam Plan:</b> ${this.exam_plan}</span>
