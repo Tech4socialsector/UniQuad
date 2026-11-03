@@ -32,6 +32,12 @@ const IDCG_CSS = `
 	.idcg-person { display: flex; gap: 14px; align-items: center; }
 	.idcg-avatar { width: 56px; height: 56px; border-radius: 14px; object-fit: cover; flex-shrink: 0; background: var(--s); display: flex; align-items: center;
 		justify-content: center; font-weight: 600; font-size: 18px; color: var(--m); }
+	.idcg-avatar-btn { position: relative; padding: 0; border: 0; background: none; border-radius: 14px; cursor: pointer; flex-shrink: 0; }
+	.idcg-avatar-btn::after { content: attr(data-label); position: absolute; inset: 0; border-radius: 14px; background: rgba(15,23,42,.6); color: #fff;
+		font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity .15s; }
+	.idcg-avatar-btn:hover::after, .idcg-avatar-btn:focus-visible::after { opacity: 1; }
+	.idcg-avatar.missing { border: 1.5px dashed var(--orange-400, #fb923c); color: var(--orange-600, #ea580c); }
+	.idcg-alert-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
 	.idcg-person h3 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -.01em; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 	.idcg-person-sub { color: var(--m); font-size: 13px; margin-top: 3px; }
 	.idcg-person-sub a { color: var(--m); }
@@ -56,7 +62,7 @@ const IDCG_CSS = `
 	.idcg-validity { height: 6px; border-radius: 99px; background: var(--s); overflow: hidden; margin-top: 6px; }
 	.idcg-validity > div { height: 100%; border-radius: 99px; background: var(--green-500, #22c55e); }
 	.idcg-alerts { display: grid; gap: 8px; }
-	.idcg-alert { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 10px; font-size: 12.5px; line-height: 1.45;
+	.idcg-alert { display: block; padding: 10px 12px; border-radius: 10px; font-size: 12.5px; line-height: 1.45;
 		background: var(--s); border: 1px solid var(--b); }
 	.idcg-alert b { font-weight: 600; }
 	.idcg-alert.warn { background: rgba(234,88,12,.06); border-color: rgba(234,88,12,.3); }
@@ -183,9 +189,15 @@ function idcg_render_preview(frm) {
 		.slice(0, 2)
 		.join("")
 		.toUpperCase();
-	const avatar = doc.photo
+	const photo_card = ["Student", "Faculty", "Driver"].includes(doc.card_type);
+	const can_photo = photo_card && !void_card && !!(frm.perm[0] && frm.perm[0].write);
+	let avatar = doc.photo
 		? `<img class="idcg-avatar" src="${esc(frappe.utils.get_file_link(doc.photo))}" alt="">`
-		: `<div class="idcg-avatar">${esc(initials)}</div>`;
+		: `<div class="idcg-avatar ${photo_card ? "missing" : ""}">${esc(initials)}</div>`;
+	if (can_photo) {
+		const label = doc.photo ? __("Change") : __("Add photo");
+		avatar = `<button class="idcg-avatar-btn" data-idcg="photo" data-label="${label}" title="${label}">${avatar}</button>`;
+	}
 	const sub = [
 		person ? `<a href="${person.url}">${esc(person.name)}</a>` : "",
 		esc(doc.programme || doc.designation || ""),
@@ -302,12 +314,33 @@ function idcg_render_preview(frm) {
 			)}`,
 		]);
 	}
-	if (!doc.photo && ["Student", "Faculty", "Driver"].includes(doc.card_type) && !void_card) {
+	if (!doc.photo && photo_card && !void_card) {
+		const person_photo = frm.__idcg_person_photo;
+		const source = person ? __(person.doctype) : "";
 		alerts.push([
 			"warn",
-			`<b>${__("No photo.")}</b> ${__(
-				"The default avatar is printed. Add a photo and regenerate the card."
-			)}`,
+			`<b>${__("No photo.")}</b> ${
+				person_photo
+					? __("{0} has a photo, but this card isn't using it yet.", [source])
+					: __("The default avatar is printed on this card.")
+			}
+			${
+				can_photo
+					? `<div class="idcg-alert-actions">
+						${
+							person_photo
+								? `<button class="btn btn-primary btn-xs" data-idcg="person-photo">${__(
+										"Use photo from {0}",
+										[source]
+								  )}</button>`
+								: ""
+						}
+						<button class="btn ${person_photo ? "btn-default" : "btn-primary"} btn-xs" data-idcg="photo">${__(
+							"Upload photo"
+					  )}</button>
+					</div>`
+					: ""
+			}`,
 		]);
 	}
 	if (frm.__idcg_newer) {
@@ -452,6 +485,8 @@ function idcg_render_preview(frm) {
 		if (act === "print") idcg_print(frm);
 		if (act === "regenerate") idcg_regenerate(frm);
 		if (act === "reissue") idcg_reissue(frm);
+		if (act === "photo") idcg_upload_photo(frm);
+		if (act === "person-photo") idcg_use_person_photo(frm);
 	});
 }
 
@@ -484,15 +519,108 @@ function idcg_load_extras(frm) {
 					"name"
 			  )
 			: Promise.resolve(null),
+		link && IDCG_PERSON_PHOTO[frm.doc.card_type]
+			? frappe.db.get_value(link.doctype, link.name, IDCG_PERSON_PHOTO[frm.doc.card_type])
+			: Promise.resolve(null),
 	])
-		.then(([prints, newer]) => {
+		.then(([prints, newer, person]) => {
 			if (frm.doc.name !== name) return;
 			frm.__idcg_extras_for = name;
 			frm.__idcg_prints = prints || [];
 			frm.__idcg_newer = (newer && newer.message && newer.message.name) || null;
+			frm.__idcg_person_photo =
+				(person &&
+					person.message &&
+					person.message[IDCG_PERSON_PHOTO[frm.doc.card_type]]) ||
+				null;
 			idcg_render_preview(frm);
 		})
 		.catch(() => {});
+}
+
+// Photo field on each person doctype (mirrors PERSON_PHOTO_FIELDS on the server).
+const IDCG_PERSON_PHOTO = { Student: "passport_size_photo", Faculty: "photo", Driver: "photo" };
+
+function idcg_save_photo(frm, file_url, update_person, regenerate) {
+	const go = () =>
+		frm
+			.call({
+				doc: frm.doc,
+				method: "update_photo",
+				args: {
+					file_url: file_url || null,
+					update_person: update_person ? 1 : 0,
+					regenerate: regenerate ? 1 : 0,
+				},
+				freeze: true,
+				freeze_message: regenerate
+					? __("Saving the photo and re-rendering the card…")
+					: __("Saving the photo…"),
+			})
+			.then((r) => {
+				if (r.exc) return;
+				frm.reload_doc();
+				frappe.show_alert({
+					message:
+						r.message && r.message.regenerated
+							? __("Photo saved and card regenerated.")
+							: __("Photo saved."),
+					indicator: "green",
+				});
+			});
+	if (frm.is_dirty()) frm.save().then(go);
+	else go();
+}
+
+function idcg_upload_photo(frm) {
+	const person = idcg_person_link(frm.doc);
+	const fields = [
+		{
+			fieldtype: "Attach Image",
+			fieldname: "photo",
+			label: __("Photo"),
+			reqd: 1,
+			description: __("A clear, front-facing passport-style photo prints best."),
+		},
+	];
+	if (person) {
+		fields.push({
+			fieldtype: "Check",
+			fieldname: "update_person",
+			label: __("Also save it on {0} {1}", [__(person.doctype), person.name]),
+			description: __("Future cards for this person will use it too."),
+			default: frm.__idcg_person_photo ? 0 : 1,
+		});
+	}
+	if (frm.doc.id_card_template) {
+		fields.push({
+			fieldtype: "Check",
+			fieldname: "regenerate",
+			label: __("Regenerate the card now"),
+			default: 1,
+		});
+	}
+	const d = new frappe.ui.Dialog({
+		title: frm.doc.photo ? __("Change photo") : __("Add photo"),
+		fields,
+		primary_action_label: __("Save photo"),
+		primary_action(values) {
+			d.hide();
+			idcg_save_photo(frm, values.photo, values.update_person, values.regenerate);
+		},
+	});
+	d.show();
+}
+
+function idcg_use_person_photo(frm) {
+	const person = idcg_person_link(frm.doc);
+	frappe.confirm(
+		__("Use the photo from {0} {1} and regenerate the card?", [
+			__(person.doctype),
+			person.name,
+		]),
+		() => idcg_save_photo(frm, null, 0, !!frm.doc.id_card_template)
+	);
 }
 
 function idcg_regenerate(frm) {
@@ -679,6 +807,7 @@ frappe.ui.form.on("ID Card Generation", {
 		if (frm.__idcg_extras_for !== frm.doc.name) {
 			frm.__idcg_prints = null;
 			frm.__idcg_newer = null;
+			frm.__idcg_person_photo = null;
 		}
 		idcg_render_preview(frm);
 		if (frm.is_new()) return;

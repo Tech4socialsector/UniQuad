@@ -19,6 +19,13 @@ from slcm.slcm.utils import id_card_render
 from slcm.slcm.utils.exam_schedule import get_student_programme
 
 # Valid card_status transitions. Terminal states map to empty list.
+# Where each person type keeps its photo: (doctype, link field on the card, photo field).
+PERSON_PHOTO_FIELDS = {
+	"Student": ("Student Master", "student", "passport_size_photo"),
+	"Faculty": ("Faculty", "faculty", "photo"),
+	"Driver": ("SLCM Driver", "driver", "photo"),
+}
+
 VALID_STATUS_TRANSITIONS = {
 	"Draft": ["Generated", "Cancelled"],
 	"Generated": ["Printed", "Cancelled", "Expired"],
@@ -458,6 +465,43 @@ class IDCardCommonMixin:
 			"authority_signature": to_src(template.authority_signature),
 			"watermark_image": to_src(template.watermark_image),
 		}
+
+	@frappe.whitelist()
+	def update_photo(self, file_url=None, update_person=0, regenerate=1):
+		"""Set the card photo and optionally re-render the card.
+
+		Without `file_url`, the photo saved on the person's record is used.
+		With `update_person`, the new photo is also saved on that record so
+		future cards pick it up."""
+		self.check_permission("write")
+		if self.card_status in ("Cancelled", "Expired"):
+			frappe.throw(_("Cannot change the photo of a {0} card.").format(_(self.card_status)))
+
+		target = PERSON_PHOTO_FIELDS.get(self.card_type)
+		person = self.get(target[1]) if target else None
+
+		if not file_url:
+			if not person:
+				frappe.throw(_("This card is not linked to a person record with a photo."))
+			file_url = frappe.db.get_value(target[0], person, target[2])
+			if not file_url:
+				frappe.throw(_("{0} {1} has no photo yet.").format(_(target[0]), person))
+			update_person = 0
+
+		self.photo = file_url
+		self.save()
+
+		if cint(update_person) and person:
+			frappe.has_permission(target[0], "write", doc=person, throw=True)
+			# Direct update: only the photo changes, so the person's own
+			# validations (registration workflow etc.) are not re-run.
+			frappe.db.set_value(target[0], person, target[2], file_url)
+
+		regenerated = False
+		if cint(regenerate) and self.id_card_template:
+			self.generate_card()
+			regenerated = True
+		return {"photo": self.photo, "regenerated": regenerated}
 
 	# ------------------------------------------------------------------
 	# Cancel and Reissue (Lost Card workflow)
