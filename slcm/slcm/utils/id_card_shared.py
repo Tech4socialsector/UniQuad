@@ -9,15 +9,13 @@ both controllers instead of needing to be duplicated by hand.
 
 import io
 import json
-import os
-import subprocess
-import tempfile
 
 import frappe
 from frappe import _
 from frappe.utils import add_years, cint, get_url, now, today
 from frappe.utils.file_manager import save_file
 
+from slcm.slcm.utils import id_card_render
 from slcm.slcm.utils.exam_schedule import get_student_programme
 
 # Valid card_status transitions. Terminal states map to empty list.
@@ -25,7 +23,7 @@ VALID_STATUS_TRANSITIONS = {
 	"Draft": ["Generated", "Cancelled"],
 	"Generated": ["Printed", "Cancelled", "Expired"],
 	"Printed": ["Cancelled", "Expired"],
-	"Error": ["Draft", "Cancelled"],
+	"Error": ["Draft", "Generated", "Cancelled"],
 	"Expired": [],
 	"Cancelled": [],
 }
@@ -58,6 +56,14 @@ class IDCardCommonMixin:
 
 		self._validate_card_status_transition()
 
+		if not self.expiry_date:
+			frappe.throw(
+				_(
+					"Set the Expiry Date. It could not be worked out from the person's batch or academic year."
+				),
+				title=_("Expiry Date Missing"),
+			)
+
 		# Duplicate active-card check
 		if self.card_status != "Cancelled":
 			self._validate_no_duplicate_active_card()
@@ -71,7 +77,11 @@ class IDCardCommonMixin:
 		# Regenerate QR only when data actually changed or image is missing
 		new_qr_data = self.generate_qr_code_string()
 		self.qr_code_data = new_qr_data
-		if new_qr_data and (new_qr_data != getattr(self, "_old_qr_data", None) or not self.qr_code_image):
+		if (
+			new_qr_data
+			and not self.flags.qr_refreshed
+			and (new_qr_data != getattr(self, "_old_qr_data", None) or not self.qr_code_image)
+		):
 			self.generate_and_save_qr_image()
 
 		self.verification_url = self.generate_verification_url()
@@ -110,10 +120,9 @@ class IDCardCommonMixin:
 		allowed = VALID_STATUS_TRANSITIONS.get(old_status, [])
 		if self.card_status not in allowed:
 			frappe.throw(
-				_(
-					"Cannot change ID Card status from '{0}' to '{1}'. "
-					"Allowed next states: {2}"
-				).format(old_status, self.card_status, ", ".join(allowed) or _("None"))
+				_("Cannot change ID Card status from '{0}' to '{1}'. Allowed next states: {2}").format(
+					old_status, self.card_status, ", ".join(allowed) or _("None")
+				)
 			)
 
 	def _validate_no_duplicate_active_card(self):
@@ -133,22 +142,22 @@ class IDCardCommonMixin:
 		)
 		if existing:
 			frappe.throw(
-				_("Active ID Card {0} already exists for {1} {2}").format(
-					existing, self.card_type, value
-				)
+				_("Active ID Card {0} already exists for {1} {2}").format(existing, self.card_type, value)
 			)
 
 	def _populate_person_fields(self):
 		"""Auto-fill card fields from the linked person document on first insert."""
 		if self.card_type == "Student" and self.student:
 			student = frappe.get_doc("Student Master", self.student)
-			self.student_name = f"{student.first_name} {student.last_name or ''}".strip()
+			self.student_name = f"{student.first_name or ''} {student.get('last_name') or ''}".strip()
 			self.email = student.email
 			self.phone = student.phone
 			if not self.photo:
 				self.photo = student.passport_size_photo
 			self.batch = student.batch
 			self.programme = student.programme_of_study
+			self.date_of_birth = self.date_of_birth or student.dob
+			self.academic_year = self.academic_year or student.academic_year
 
 		elif self.card_type == "Faculty" and self.faculty:
 			faculty = frappe.get_doc("Faculty", self.faculty)
@@ -184,9 +193,16 @@ class IDCardCommonMixin:
 		if self.expiry_date:
 			return
 		if self.card_type == "Student" and self.student:
-			batch = frappe.db.get_value("Student Master", self.student, "batch")
+			batch, student_year = frappe.db.get_value(
+				"Student Master", self.student, ["batch", "academic_year"]
+			) or (None, None)
 			academic_year = frappe.db.get_value("SLCM Batch", batch, "academic_year") if batch else None
-			year_end = frappe.db.get_value("Academic Year", academic_year, "year_end_date") if academic_year else None
+			academic_year = academic_year or student_year
+			year_end = (
+				frappe.db.get_value("Academic Year", academic_year, "year_end_date")
+				if academic_year
+				else None
+			)
 			if year_end:
 				duration = cint(
 					frappe.db.get_value("Programme", get_student_programme(self.student), "program_duration")
@@ -204,7 +220,7 @@ class IDCardCommonMixin:
 			},
 		)
 		if not other_active:
-			frappe.db.set_value("Student Master", self.student, "id_card_issued", 0)
+			frappe.db.set_value("Student Master", self.student, "id_card_issued", "No")
 
 	# ------------------------------------------------------------------
 	# Person document accessor
@@ -266,7 +282,9 @@ class IDCardCommonMixin:
 		fname = f"{self.name}-QR.png"
 		buffer = io.BytesIO()
 		img.save(buffer, format="PNG")
-		saved_file = save_file(fname, buffer.getvalue(), self.doctype, self.name, is_private=1)
+		saved_file = save_file(
+			fname, buffer.getvalue(), self.doctype, self.name, is_private=1, df="qr_code_image"
+		)
 		self.qr_code_image = saved_file.file_url
 
 	def generate_qr_code_string(self):
@@ -325,42 +343,121 @@ class IDCardCommonMixin:
 	# ------------------------------------------------------------------
 
 	@frappe.whitelist()
-	def generate_card(self):
+	def generate_card(self, sides=None):
+		"""Render the card images from the linked template.
+
+		`sides` limits rendering to "front" and/or "back"; by default both
+		sides the template defines are rendered."""
+		if self.card_status in ("Cancelled", "Expired"):
+			frappe.throw(_("Cannot generate a card that is {0}.").format(_(self.card_status)))
+
 		if self.is_new():
+			# Rendering happens right here, so skip the after_insert job.
+			self.flags.skip_auto_generate = True
 			self.save()
 
 		if not self.id_card_template:
 			frappe.throw(_("ID Card Template is required."))
 
+		if isinstance(sides, str):
+			sides = json.loads(sides) if sides.startswith("[") else [sides]
+		sides = [s for s in (sides or ("front", "back")) if s in ("front", "back")]
+		if not sides:
+			frappe.throw(_("Select at least one side (front or back) to generate."))
+
 		template = frappe.get_doc("ID Card Template", self.id_card_template)
 		person = self.get_person_doc()
 
-		if template.template_creation_mode == "Drag and Drop":
-			self.generate_card_from_canvas(template, person)
-		elif template.template_creation_mode == "Jinja Template":
-			self.generate_card_html(template, person)
-		else:
-			from PIL import Image
+		self._refresh_qr()
+		images = self.render_card_images(template, person, sides)
+		if not images:
+			frappe.throw(
+				_("Template {0} has nothing to render on the selected side(s).").format(template.name)
+			)
 
-			front_bg_path = self.get_file_path(template.front_background)
-			back_bg_path = self.get_file_path(template.back_background)
+		for side, content in images.items():
+			saved = save_file(
+				f"{self.name}_{side.capitalize()}.png",
+				content,
+				self.doctype,
+				self.name,
+				is_private=1,
+				df=f"{side}_id_image",
+			)
+			self.set(f"{side}_id_image", saved.file_url)
 
-			if front_bg_path:
-				front_img = Image.open(front_bg_path).convert("RGBA")
-				self.process_side(front_img, template, person, "Front")
-				self.save_image(front_img, f"{self.name}_Front.png", "front_id_image")
-
-			if back_bg_path:
-				back_img = Image.open(back_bg_path).convert("RGBA")
-				self.process_side(back_img, template, person, "Back")
-				self.save_image(back_img, f"{self.name}_Back.png", "back_id_image")
-
-		self.card_status = "Generated"
+		# Regenerating a printed card keeps it Printed.
+		if self.card_status in ("Draft", "Error"):
+			self.card_status = "Generated"
 		self.save()
 
-		# Auto-mark id_card_issued on Student Master
 		if self.card_type == "Student" and self.student:
-			frappe.db.set_value("Student Master", self.student, "id_card_issued", 1)
+			frappe.db.set_value("Student Master", self.student, "id_card_issued", "Yes")
+
+	def _refresh_qr(self):
+		"""Make sure the QR image matches the current card data before rendering."""
+		new_qr_data = self.generate_qr_code_string()
+		if new_qr_data and (new_qr_data != self.qr_code_data or not self.qr_code_image):
+			self.qr_code_data = new_qr_data
+			self.generate_and_save_qr_image()
+		self.flags.qr_refreshed = True
+
+	def render_card_images(self, template, person, sides=("front", "back"), qr_src=None, photo_src=None):
+		"""Return {side: png_bytes} for the template, without saving anything."""
+		mode = template.template_creation_mode
+		images = {}
+
+		if mode == "Drag and Drop":
+			try:
+				data = id_card_render.parse_canvas_data(template.canvas_data)
+			except ValueError:
+				data = None
+			if not data or not id_card_render.visible_elements(data, "front"):
+				frappe.throw(_("Template {0} has no design on the front side.").format(template.name))
+
+			values = id_card_render.get_token_values(self, template, person)
+			sources = self.get_image_sources(template, person, qr_src, photo_src)
+			for side in sides:
+				if side == "back" and not id_card_render.visible_elements(data, "back"):
+					continue
+				images[side] = id_card_render.render_canvas_side(data, side, values, sources)
+
+		elif mode == "Jinja Template":
+			for side in sides:
+				html_src = template.front_html if side == "front" else template.back_html
+				if html_src:
+					images[side] = self._render_jinja_side(html_src, person, template, qr_src, photo_src)
+
+		else:
+			for side in sides:
+				background = template.front_background if side == "front" else template.back_background
+				if background:
+					images[side] = self._render_field_mapping_side(
+						background, template, person, side.capitalize()
+					)
+
+		return images
+
+	def _person_photo(self, person):
+		if self.photo:
+			return self.photo
+		if self.card_type == "Student":
+			return id_card_render._get(person, "passport_size_photo")
+		return id_card_render._get(person, "photo")
+
+	def get_image_sources(self, template, person=None, qr_src=None, photo_src=None):
+		"""<img src> values for the image fields a design can map."""
+		to_src = id_card_render.to_src
+		photo = photo_src or to_src(self._person_photo(person))
+		if not photo:
+			photo = to_src(self.get_file_path("/assets/frappe/images/default-avatar.png"))
+		return {
+			"photo": photo,
+			"qr_code_image": qr_src or to_src(self.qr_code_image),
+			"institute_logo": to_src(template.institute_logo),
+			"authority_signature": to_src(template.authority_signature),
+			"watermark_image": to_src(template.watermark_image),
+		}
 
 	# ------------------------------------------------------------------
 	# Cancel and Reissue (Lost Card workflow)
@@ -410,8 +507,8 @@ class IDCardCommonMixin:
 	@frappe.whitelist()
 	def log_print(self, layout="Single", bulk_print_id=None, total_cards=1):
 		"""Log a print action for this card."""
-		if self.card_status != "Generated":
-			frappe.throw(_("Cannot log print for a card that is not in 'Generated' status."))
+		if self.card_status not in ("Generated", "Printed"):
+			frappe.throw(_("Only generated or printed cards can be printed."))
 
 		current_count = self.print_count or 0
 		self.db_set("print_count", current_count + 1)
@@ -445,239 +542,20 @@ class IDCardCommonMixin:
 		return p_type
 
 	# ------------------------------------------------------------------
-	# Canvas / Jinja / Field-mapping generation modes
+	# Jinja / Field-mapping render modes
 	# ------------------------------------------------------------------
 
-	def generate_card_from_canvas(self, template, student):
-		if not template.canvas_data:
-			frappe.throw(_("No design data found in the selected Drag & Drop Template."))
-
-		try:
-			data = json.loads(template.canvas_data)
-		except Exception:
-			frappe.throw(_("Invalid Canvas Data in Template."))
-
-		if data.get("orientation") == "horizontal":
-			width, height = 1011, 638
-			scale_factor = 3
-		else:
-			width, height = 638, 1011
-			scale_factor = 3
-
-		for side in ["front", "back"]:
-			elements = data.get(side, [])
-			bg_color = data.get("bg_color", {}).get(side, "#ffffff")
-
-			html_content = f"""
-			<html>
-			<head>
-				<style>
-					body {{ margin: 0; padding: 0; background-color: {bg_color}; }}
-					.container {{
-						position: relative;
-						width: {width}px;
-						height: {height}px;
-						overflow: hidden;
-					}}
-					.element {{ position: absolute; }}
-				</style>
-			</head>
-			<body>
-				<div class="container">
-			"""
-
-			for el in elements:
-				x = float(el.get("x", 0)) * scale_factor
-				y = float(el.get("y", 0)) * scale_factor
-				w = float(el.get("width", 0)) * scale_factor
-				h = float(el.get("height", 0)) * scale_factor
-				style = el.get("style", {})
-
-				css_style = f"left: {x}px; top: {y}px;"
-				if "fontSize" in style:
-					size_px = float(style["fontSize"].replace("px", "")) * scale_factor
-					css_style += f" font-size: {size_px}px;"
-				if "fontWeight" in style:
-					css_style += f" font-weight: {style['fontWeight']};"
-				if "color" in style:
-					css_style += f" color: {style['color']};"
-				if "opacity" in style:
-					css_style += f" opacity: {style['opacity']};"
-				if "fontFamily" in style:
-					css_style += f" font-family: {style['fontFamily']}, sans-serif;"
-				if "backgroundColor" in style:
-					css_style += f" background-color: {style['backgroundColor']};"
-				if "borderRadius" in style:
-					css_style += f" border-radius: {style['borderRadius']};"
-				if "clipPath" in style and style["clipPath"] != "none":
-					css_style += f" clip-path: {style['clipPath']}; -webkit-clip-path: {style['clipPath']};"
-
-				for border_side in ["Top", "Bottom", "Left", "Right"]:
-					style_prop = f"border{border_side}Style"
-					width_prop = f"border{border_side}Width"
-					color_prop = f"border{border_side}Color"
-
-					if style_prop in style:
-						b_style = style[style_prop]
-						b_width = style.get(width_prop, "0px")
-						b_color = style.get(color_prop, "#000000")
-
-						try:
-							w_val = float(str(b_width).replace("px", "")) * scale_factor
-							w_css = f"{w_val}px"
-						except Exception:
-							w_css = b_width
-
-						css_side = border_side.lower()
-						css_style += f" border-{css_side}-style: {b_style}; border-{css_side}-width: {w_css}; border-{css_side}-color: {b_color};"
-
-				content = el.get("content", "")
-
-				if el.get("type") == "text":
-					html_content += (
-						f'<div class="element" style="{css_style} white-space: nowrap;">{content}</div>'
-					)
-				elif el.get("type") == "image":
-					if el.get("mapping"):
-						mapping = el.get("mapping")
-						if mapping == "photo":
-							content = (
-								self.get_file_path(self.photo) or "/assets/frappe/images/default-avatar.png"
-							)
-						elif mapping == "institute_logo":
-							content = self.get_file_path(template.institute_logo) or ""
-						elif mapping == "authority_signature":
-							content = self.get_file_path(template.authority_signature) or ""
-							if not content:
-								frappe.log_error(
-									f"Missing Authority Signature for Template: {template.name}",
-									"ID Card Generation Warning",
-								)
-						elif mapping == "qr_code_image":
-							content = self.get_file_path(self.qr_code_image) or ""
-							if not content:
-								frappe.log_error(
-									f"Missing QR Code Image for Card: {self.name}",
-									"ID Card Generation Warning",
-								)
-
-					html_content += f'<div class="element" style="{css_style} width: {w}px; height: {h}px; overflow: hidden;">'
-					if content:
-						html_content += f'<img src="{content}" style="width: 100%; height: 100%; object-fit: cover; display: block;">'
-					html_content += "</div>"
-				elif el.get("type") == "rect":
-					html_content += (
-						f'<div class="element" style="{css_style} width: {w}px; height: {h}px;"></div>'
-					)
-
-			html_content += """
-				</div>
-			</body>
-			</html>
-			"""
-
-			field_map = {
-				"[Student Name]": self.student_name,
-				"[Faculty Name]": self.student_name,
-				"[Driver Name]": self.student_name,
-				"[Visitor Name]": self.student_name,
-				"[Staff Name]": self.student_name,
-				"[Student ID]": getattr(student, "registration_id", None) or self.name,
-				"[Employee ID]": self.faculty,
-				"[Driver ID]": self.driver,
-				"[Blood Group]": getattr(student, "blood_group", ""),
-				"[Phone]": self.phone,
-				"[Email]": self.email,
-				"[Batch]": self.batch,
-				"[Programme]": self.programme,
-				"[Academic Year]": self.academic_year,
-				"[Date of Birth]": frappe.utils.format_date(self.date_of_birth) if self.date_of_birth else "",
-				"[Expiry Date]": frappe.utils.format_date(self.expiry_date) if self.expiry_date else "",
-				"[Department]": self.department,
-				"[Institute Name]": template.institute_name,
-				"[Institute Address]": template.institute_address,
-				"[Address]": getattr(student, "state_of_domicile", ""),
-				"[Designation]": self.designation,
-				"[Company]": self.visitor_company,
-				"[License No]": getattr(student, "license_number", ""),
-				"[Purpose]": self.remarks,
-			}
-
-			for key, val in field_map.items():
-				if val is None:
-					val = ""
-				html_content = html_content.replace(key, str(val))
-
-			self.generate_image_from_raw_html(html_content, f"{side}_id_image", side.capitalize())
-
-	def generate_image_from_raw_html(self, html_content, fieldname, side_label):
-		with tempfile.NamedTemporaryFile(suffix=".html", delete=False, mode="w") as f:
-			f.write(html_content)
-			html_path = f.name
-
-		output_filename = f"{self.name}_{side_label}.png"
-		output_path = os.path.join(tempfile.gettempdir(), output_filename)
-
-		try:
-			from frappe.utils.print_utils import find_or_download_chromium_executable
-
-			chrome_path = find_or_download_chromium_executable()
-			if not chrome_path:
-				frappe.throw(_("Chromium executable not found. Cannot generate ID Card image."))
-
-			window_width = "638" if "width: 638px;" in html_content else "1011"
-			window_height = "1011" if window_width == "638" else "638"
-
-			args = [
-				chrome_path,
-				"--headless",
-				"--disable-gpu",
-				"--no-sandbox",
-				f"--window-size={window_width},{window_height}",
-				"--hide-scrollbars",
-				f"--screenshot={output_path}",
-				f"file://{os.path.abspath(html_path)}",
-			]
-
-			result = subprocess.run(args, capture_output=True, text=True)
-			if result.returncode != 0:
-				frappe.throw(f"Chromium failed: {result.stderr}")
-
-			with open(output_path, "rb") as f:
-				img_content = f.read()
-
-			saved_file = save_file(output_filename, img_content, self.doctype, self.name, is_private=1)
-			self.db_set(fieldname, saved_file.file_url)
-
-		except Exception as e:
-			frappe.throw(f"Error generating from canvas: {e}")
-		finally:
-			if os.path.exists(html_path):
-				os.remove(html_path)
-			if os.path.exists(output_path):
-				os.remove(output_path)
-
-	def generate_card_html(self, template, student):
-		if template.front_html:
-			self.generate_image_from_html(template.front_html, student, template, "front_id_image", "Front")
-		if template.back_html:
-			self.generate_image_from_html(template.back_html, student, template, "back_id_image", "Back")
-
-	def generate_image_from_html(self, html_content, person, template, fieldname, side):
+	def _render_jinja_side(self, html_content, person, template, qr_src=None, photo_src=None):
 		if hasattr(person, "as_dict") and callable(person.as_dict):
 			context = person.as_dict()
 		else:
-			context = person.copy() if person else {}
+			context = dict(person) if person else {}
 
 		context.update(self.as_dict())
 		context.update(template.as_dict())
 
-		person_photo = ""
-		if self.card_type == "Student":
-			person_photo = getattr(person, "passport_size_photo", "")
-		elif self.card_type in ["Faculty", "Driver"]:
-			person_photo = getattr(person, "photo", "")
-
+		person_photo = self.get_file_path(self._person_photo(person)) or ""
+		qr = qr_src or self.get_file_path(self.qr_code_image) or ""
 		context.update(
 			{
 				"doc": self,
@@ -689,58 +567,32 @@ class IDCardCommonMixin:
 				"institute_logo": self.get_file_path(template.institute_logo) or "",
 				"logo_url": self.get_file_path(template.institute_logo) or "",
 				"authority_signature": self.get_file_path(template.authority_signature) or "",
-				"passport_size_photo": self.get_file_path(person_photo) or "",
-				"photo": self.get_file_path(person_photo) or "",
-				"qr_code_image": self.get_file_path(self.qr_code_image) or "",
-				"qr_code": self.get_file_path(self.qr_code_image) or "",
+				"passport_size_photo": photo_src or person_photo,
+				"photo": photo_src or person_photo,
+				"qr_code_image": qr,
+				"qr_code": qr,
 				"institute_logo_url": get_url(template.institute_logo) if template.institute_logo else "",
 			}
 		)
 
 		rendered_html = frappe.render_template(html_content, context)
+		if "width: 638px" in rendered_html.replace("width:638px", "width: 638px"):
+			width, height = 638, 1011
+		else:
+			width, height = 1011, 638
+		return id_card_render.screenshot_html(rendered_html, width, height, 1)
 
-		with tempfile.NamedTemporaryFile(suffix=".html", delete=False, mode="w") as f:
-			f.write(rendered_html)
-			html_path = f.name
+	def _render_field_mapping_side(self, background, template, person, side):
+		from PIL import Image
 
-		output_filename = f"{self.name}_{side}.png"
-		output_path = os.path.join(tempfile.gettempdir(), output_filename)
-
-		try:
-			from frappe.utils.print_utils import find_or_download_chromium_executable
-
-			chrome_path = find_or_download_chromium_executable()
-			if not chrome_path:
-				frappe.throw(_("Chromium executable not found. Cannot generate ID Card image."))
-
-			args = [
-				chrome_path,
-				"--headless",
-				"--disable-gpu",
-				"--no-sandbox",
-				"--window-size=1011,638",
-				"--hide-scrollbars",
-				f"--screenshot={output_path}",
-				f"file://{os.path.abspath(html_path)}",
-			]
-
-			result = subprocess.run(args, capture_output=True, text=True)
-			if result.returncode != 0:
-				frappe.throw(f"Chromium failed with code {result.returncode}: {result.stderr}")
-
-			with open(output_path, "rb") as f:
-				img_content = f.read()
-
-			saved_file = save_file(output_filename, img_content, self.doctype, self.name, is_private=1)
-			self.db_set(fieldname, saved_file.file_url)
-
-		except Exception as e:
-			frappe.throw(f"Error generating ID Card from HTML: {e}")
-		finally:
-			if os.path.exists(html_path):
-				os.remove(html_path)
-			if os.path.exists(output_path):
-				os.remove(output_path)
+		path = self.get_file_path(background)
+		if not path:
+			frappe.throw(_("Background image for the {0} side was not found.").format(side))
+		image = Image.open(path).convert("RGBA")
+		self.process_side(image, template, person, side)
+		buf = io.BytesIO()
+		image.save(buf, format="PNG", dpi=(300, 300))
+		return buf.getvalue()
 
 	def process_side(self, image, template, student, side):
 		from PIL import ImageDraw
@@ -831,34 +683,4 @@ class IDCardCommonMixin:
 		base_image.paste(img_qr, (x, y), img_qr)
 
 	def get_file_path(self, file_url):
-		if not file_url:
-			return None
-		if file_url.startswith("http"):
-			return file_url
-
-		path = None
-		if file_url.startswith("/assets/"):
-			asset_path = file_url.replace("/assets/", "", 1)
-			bench_path = frappe.utils.get_bench_path()
-			full_path = os.path.join(bench_path, "sites", "assets", asset_path)
-			if os.path.exists(full_path):
-				path = full_path
-			elif "default-avatar.png" in file_url:
-				path = frappe.get_app_path("frappe", "public", "images", "default-avatar.png")
-		elif file_url.startswith("/private/files/"):
-			file_name = file_url.replace("/private/files/", "", 1)
-			path = frappe.get_site_path("private", "files", file_name)
-		elif file_url.startswith("/"):
-			path = frappe.get_site_path("public", file_url.lstrip("/"))
-		else:
-			path = frappe.get_site_path("public", file_url)
-
-		if path:
-			return os.path.abspath(path)
-		return None
-
-	def save_image(self, image, filename, fieldname):
-		img_io = io.BytesIO()
-		image.save(img_io, format="PNG", dpi=(300, 300))
-		saved_file = save_file(filename, img_io.getvalue(), self.doctype, self.name, is_private=1)
-		self.db_set(fieldname, saved_file.file_url)
+		return id_card_render.get_file_path(file_url)

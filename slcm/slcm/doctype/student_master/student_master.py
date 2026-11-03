@@ -756,7 +756,7 @@ def _validate_transition_requirements(student, new_status):
             ).format(", ".join(labels)))
 
     elif new_status == "Pending Residences":
-        if not student.id_card_issued:
+        if student.id_card_issued not in ("Yes", "1"):
             frappe.throw(_("Cannot move to Pending Residences. ID Card must be issued."))
         if not student.aadhaar_verified:
             frappe.throw(_("Cannot move to Pending Residences. Aadhaar must be verified."))
@@ -787,7 +787,7 @@ def _validate_transition_requirements(student, new_status):
                 label = frappe.get_meta("Student Master").get_label(doc_field)
                 frappe.throw(_("Cannot complete registration. {0} is not verified.").format(label))
 
-        if not student.id_card_issued:
+        if student.id_card_issued not in ("Yes", "1"):
             frappe.throw(_("Cannot complete registration. ID Card must be issued."))
         if not student.official_email_id:
             frappe.throw(_("Cannot complete registration. Official Email ID must be set."))

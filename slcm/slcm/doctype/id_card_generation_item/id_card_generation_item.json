@@ -7,6 +7,7 @@
  "field_order": [
   "student",
   "student_name",
+  "has_photo",
   "current_id_card",
   "status"
  ],
@@ -17,7 +18,8 @@
    "in_list_view": 1,
    "label": "Student",
    "options": "Student Master",
-   "reqd": 1
+   "reqd": 1,
+   "columns": 2
   },
   {
    "fetch_from": "student.first_name",
@@ -25,26 +27,39 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Student Name",
-   "read_only": 1
+   "read_only": 1,
+   "columns": 3
+  },
+  {
+   "fieldname": "has_photo",
+   "fieldtype": "Check",
+   "label": "Has Photo",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 1,
+   "default": "0"
   },
   {
    "fieldname": "current_id_card",
    "fieldtype": "Link",
-   "label": "Generated ID Card",
+   "label": "ID Card",
    "options": "ID Card Generation",
-   "read_only": 1
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 2
   },
   {
    "fieldname": "status",
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Status",
-   "read_only": 1
+   "read_only": 1,
+   "columns": 2
   }
  ],
  "istable": 1,
  "links": [],
- "modified": "2026-01-12 17:35:32.311722",
+ "modified": "2026-11-03 22:30:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "ID Card Generation Item",

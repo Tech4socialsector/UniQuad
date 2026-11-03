@@ -1,0 +1,78 @@
+{
+ "actions": [],
+ "creation": "2026-11-03 23:30:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "student",
+  "student_name",
+  "result",
+  "id_card",
+  "has_photo",
+  "message"
+ ],
+ "fields": [
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "options": "Student Master",
+   "label": "Student",
+   "in_list_view": 1,
+   "columns": 2,
+   "read_only": 1
+  },
+  {
+   "fieldname": "student_name",
+   "fieldtype": "Data",
+   "label": "Student Name",
+   "in_list_view": 1,
+   "columns": 2,
+   "read_only": 1
+  },
+  {
+   "fieldname": "result",
+   "fieldtype": "Select",
+   "options": "New\nRegenerated\nSkipped\nFailed",
+   "label": "Result",
+   "in_list_view": 1,
+   "columns": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "id_card",
+   "fieldtype": "Link",
+   "options": "ID Card Generation",
+   "label": "ID Card",
+   "in_list_view": 1,
+   "columns": 2,
+   "read_only": 1
+  },
+  {
+   "fieldname": "has_photo",
+   "fieldtype": "Check",
+   "label": "Has Photo",
+   "read_only": 1
+  },
+  {
+   "fieldname": "message",
+   "fieldtype": "Small Text",
+   "label": "Message",
+   "in_list_view": 1,
+   "columns": 3,
+   "read_only": 1
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-11-03 23:30:00.000000",
+ "modified_by": "Administrator",
+ "module": "SLCM",
+ "name": "ID Card Generation Tool Log Item",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

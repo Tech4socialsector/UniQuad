@@ -3,9 +3,58 @@ import os
 import zipfile
 
 import frappe
+from frappe import _
 from frappe.model.document import Document
-from frappe.utils import get_site_path
+from frappe.utils import cint, now, now_datetime, strip_html
 from frappe.utils.file_manager import save_file
+
+from slcm.slcm.utils.id_card_render import get_file_path
+
+RUN_CACHE_KEY = "slcm:id_card_generation_tool:run"
+PROGRESS_EVENT = "id_card_tool_progress"
+
+# A4 at 300 DPI; a CR80 card is 1011 x 638 px at the same resolution.
+A4_PX = (2480, 3508)
+CARD_PX = (1011, 638)
+SHEET_MARGIN = 120
+CARD_GAP = 60
+
+
+def get_active_card(student):
+	return frappe.db.get_value(
+		"ID Card Generation",
+		{"student": student, "card_status": ["not in", ["Cancelled", "Expired"]]},
+		"name",
+		order_by="creation desc",
+	)
+
+
+@frappe.whitelist()
+def get_student_row(student):
+	"""Row values for adding one student to the list by hand."""
+	frappe.has_permission("Student Master", "read", doc=student, throw=True)
+	values = frappe.db.get_value(
+		"Student Master", student, ["name", "first_name", "passport_size_photo"], as_dict=True
+	)
+	if not values:
+		frappe.throw(_("Student {0} not found.").format(student))
+	existing_card = get_active_card(student)
+	return {
+		"student": values.name,
+		"student_name": (values.first_name or "").strip(),
+		"has_photo": 1 if values.passport_size_photo else 0,
+		"current_id_card": existing_card,
+		"status": "Already Exists" if existing_card else "Pending",
+	}
+
+
+@frappe.whitelist()
+def get_student_rows(students):
+	"""Rows for several students at once (used to retry a log's failures)."""
+	students = frappe.parse_json(students) if isinstance(students, str) else students
+	return [
+		get_student_row(s) for s in dict.fromkeys(students or []) if frappe.db.exists("Student Master", s)
+	]
 
 
 class IDCardGenerationTool(Document):
@@ -19,6 +68,7 @@ class IDCardGenerationTool(Document):
 		self.expiry_date = None
 		self.generate_front = 1
 		self.generate_back = 1
+		self.regenerate_existing = 0
 		self.set("student_list", [])
 		self.flags.ignore_mandatory = True
 		self.save()
@@ -26,359 +76,444 @@ class IDCardGenerationTool(Document):
 
 	@frappe.whitelist()
 	def get_students(self):
+		self._ensure_not_running()
 		if not any([self.academic_year, self.program, self.batch]):
 			frappe.throw(
-				"Please select at least one filter (Academic Year, Program, or Batch) "
-				"before fetching students."
+				_("Select at least one filter (Academic Year, Programme or Batch) before fetching students.")
 			)
 
 		filters = {"student_status": "Active"}
-
 		if self.academic_year:
 			filters["academic_year"] = self.academic_year
 		if self.program:
 			filters["programme_of_study"] = self.program
 		if self.batch:
-			filters["programme"] = self.batch
+			filters["batch"] = self.batch
 
 		students = frappe.get_all(
 			"Student Master",
 			filters=filters,
-			fields=["name", "first_name", "last_name"],
+			fields=["name", "first_name", "passport_size_photo"],
+			order_by="first_name asc",
 		)
 
 		self.set("student_list", [])
-
-		if not students:
-			self.save()
-			frappe.throw(
-				"No active students found matching the selected filters. "
-				"Please adjust your filters and try again."
-			)
-
 		for student in students:
-			row = self.append("student_list", {})
-			row.student = student.name
-			row.student_name = f"{student.first_name} {student.last_name or ''}".strip()
-
-			existing_card = frappe.db.exists(
-				"ID Card Generation",
-				{"student": student.name, "card_status": ["!=", "Cancelled"]},
+			existing_card = get_active_card(student.name)
+			self.append(
+				"student_list",
+				{
+					"student": student.name,
+					"student_name": (student.first_name or "").strip(),
+					"has_photo": 1 if student.passport_size_photo else 0,
+					"current_id_card": existing_card,
+					"status": "Already Exists" if existing_card else "Pending",
+				},
 			)
 
-			if existing_card:
-				row.current_id_card = existing_card
-				row.status = "Already Exists"
-			else:
-				row.status = "Pending"
-
+		self.flags.ignore_mandatory = True
 		self.save()
 		return len(students)
 
+	def _rows_to_process(self):
+		"""Rows without an active card, plus every row when regenerating."""
+		if cint(self.regenerate_existing):
+			return list(self.student_list)
+		return [r for r in self.student_list if r.status not in ("Already Exists", "Generated")]
+
+	def _ensure_not_running(self):
+		if frappe.cache.get_value(RUN_CACHE_KEY):
+			frappe.throw(_("ID cards are being generated right now. Wait for that run to finish."))
+
 	@frappe.whitelist()
 	def generate_cards(self):
+		self._ensure_not_running()
 		if not self.id_card_template:
-			frappe.throw("Please select an ID Card Template.")
-
+			frappe.throw(_("Select an ID Card Template."))
+		if not (cint(self.generate_front) or cint(self.generate_back)):
+			frappe.throw(_("Select the front side, the back side, or both."))
 		if not self.student_list:
+			frappe.throw(_("No students in the list. Use Get Students first."))
+
+		rows = self._rows_to_process()
+		if not rows:
 			frappe.throw(
-				"No students in the list. Please use \"Get Students\" to fetch students "
-				"using filters, or add students manually before generating cards."
+				_(
+					"Every student in the list already has an active ID card. "
+					"Tick Regenerate Existing Cards to re-render them."
+				)
 			)
-
-		pending_rows = [r for r in self.student_list if r.status != "Already Exists"]
-		if not pending_rows:
-			frappe.throw(
-				"All students in the list already have an active ID card. "
-				"No new cards need to be generated."
-			)
-
-		generated_count = 0
-
-		for row in self.student_list:
-			try:
-				if row.current_id_card:
-					doc = frappe.get_doc("ID Card Generation", row.current_id_card)
-				else:
-					doc = frappe.new_doc("ID Card Generation")
-					doc.student = row.student
-					doc.issue_date = self.issue_date
-					doc.expiry_date = self.expiry_date
-
-				doc.id_card_template = self.id_card_template
-				doc.generate_card()
-
-				row.current_id_card = doc.name
-				row.status = "Generated"
-				generated_count += 1
-
-			except Exception as e:
-				row.status = f"Error: {e!s}"
-				error_msg = f"ID Card Gen Error for {row.student}: {e!s}"
-				frappe.log_error(error_msg[:140], "ID Card Generation Error")
-
-		# Create Tool Log
-		log = frappe.get_doc(
-			{
-				"doctype": "ID Card Generation Tool Log",
-				"generated_on": frappe.utils.now(),
-				"generated_by": frappe.session.user,
-				"academic_year": self.academic_year,
-				"program": self.program,
-				"batch": self.batch,
-				"template_used": self.id_card_template,
-				"total_students_selected": len(self.student_list or []),
-				"total_id_cards_generated": generated_count,
-				"generation_mode": "Single" if generated_count == 1 else "Bulk",
-				"generation_status": "Success"
-				if generated_count == len(self.student_list)
-				else ("Failed" if generated_count == 0 else "Partial"),
-				"remarks": f"Generated {generated_count}/{len(self.student_list)} cards.",
-			}
-		)
-		log.insert(ignore_permissions=True)
 
 		self.save()
-		frappe.msgprint(f"Generated {generated_count} ID Cards. Log Run ID: {log.name}")
+		frappe.cache.set_value(
+			RUN_CACHE_KEY,
+			{"user": frappe.session.user, "total": len(rows), "done": 0, "started": now()},
+			expires_in_sec=3 * 3600,
+		)
+		frappe.enqueue(
+			"slcm.slcm.doctype.id_card_generation_tool.id_card_generation_tool.run_bulk_generation",
+			queue="long",
+			timeout=4 * 3600,
+			job_id="slcm-id-card-generation-tool",
+			deduplicate=True,
+			enqueue_after_commit=True,
+			requested_by=frappe.session.user,
+		)
+		return {"queued": len(rows)}
+
+	@frappe.whitelist()
+	def get_run_status(self):
+		return frappe.cache.get_value(RUN_CACHE_KEY)
+
+	@frappe.whitelist()
+	def render_preview(self, student=None):
+		"""Front/back preview of the selected template for a student in the list
+		(the first one by default)."""
+		if not self.id_card_template:
+			return None
+		from slcm.slcm.doctype.id_card_template.id_card_template import build_preview
+
+		template = frappe.get_doc("ID Card Template", self.id_card_template)
+		listed = [r.student for r in self.student_list]
+		if student not in listed:
+			student = listed[0] if listed else None
+		return build_preview(template, student)
+
+	# ------------------------------------------------------------------
+	# Output
+	# ------------------------------------------------------------------
+
+	def _generated_cards(self):
+		names = [r.current_id_card for r in self.student_list if r.current_id_card]
+		if not names:
+			return []
+		cards = frappe.get_all(
+			"ID Card Generation",
+			filters={"name": ["in", names], "card_status": ["in", ["Generated", "Printed"]]},
+			fields=["name", "student", "student_name", "card_status", "front_id_image", "back_id_image"],
+		)
+		by_name = {c.name: c for c in cards}
+		# Keep the order of the student list.
+		return [by_name[n] for n in names if n in by_name and by_name[n].front_id_image]
 
 	@frappe.whitelist()
 	def download_zip(self):
-		if not self.student_list:
-			frappe.throw("No students selected")
+		cards = self._generated_cards()
+		if not cards:
+			frappe.throw(_("No generated cards in this list yet."))
 
 		zip_buffer = io.BytesIO()
-
+		added = 0
 		with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
-			for row in self.student_list:
-				if not row.current_id_card:
-					continue
+			for card in cards:
+				for side, url in (("Front", card.front_id_image), ("Back", card.back_id_image)):
+					path = get_file_path(url)
+					if path and os.path.exists(path):
+						zip_file.write(path, arcname=f"{card.student}_{side}.png")
+						added += 1
+		if not added:
+			frappe.throw(_("The card image files could not be found on the server."))
 
-				card_images = frappe.db.get_value(
-					"ID Card Generation",
-					row.current_id_card,
-					["front_id_image", "back_id_image"],
-					as_dict=True,
-				)
-
-				if not card_images:
-					continue
-
-				student_id = row.student
-
-				if card_images.front_id_image:
-					self._add_to_zip(
-						zip_file,
-						card_images.front_id_image,
-						f"{student_id}_Front.png",
-					)
-
-				if card_images.back_id_image:
-					self._add_to_zip(
-						zip_file,
-						card_images.back_id_image,
-						f"{student_id}_Back.png",
-					)
-
-		zip_filename = f"ID_Cards_{self.name}.zip"
-		saved_zip = save_file(
-			zip_filename,
+		saved = save_file(
+			f"ID_Cards_{frappe.utils.nowdate()}.zip",
 			zip_buffer.getvalue(),
 			self.doctype,
 			self.name,
 			is_private=1,
 		)
-
-		return saved_zip.file_url
-
-	def _add_to_zip(self, zip_file, file_url, filename):
-		file_path = self._get_full_path(file_url)
-		if os.path.exists(file_path):
-			zip_file.write(file_path, arcname=filename)
+		return saved.file_url
 
 	@frappe.whitelist()
-	def generate_print_layout(self):
+	def generate_print_layout(self, layout="pairs", crop_marks=1):
+		"""A4 print-ready PDF at 300 DPI.
+
+		layout "pairs": each card's front and back side by side.
+		layout "duplex": a page of fronts followed by a page of backs,
+		mirrored so they line up when printed double-sided (long-edge flip)."""
+		import tempfile
+
 		from PIL import Image
 
-		# Constants for A4 at 300 DPI
-		A4_WIDTH, A4_HEIGHT = 2480, 3508
-		CARD_WIDTH_MM, CARD_HEIGHT_MM = 85.6, 53.98
-		dpmm = 300 / 25.4
+		cards = self._generated_cards()
+		if not cards:
+			frappe.throw(_("No generated cards in this list yet."))
 
-		# Card size in pixels
-		card_w_px = int(CARD_WIDTH_MM * dpmm)
-		card_h_px = int(CARD_HEIGHT_MM * dpmm)
-
-		# Layout configuration
-		margin_x, margin_y = 100, 100
-		gap_x, gap_y = 20, 20
-
-		# We want pairs: FRONT (Left) + BACK (Right)
-		# So a "unit" is 2 cards wide + gap
-		unit_w = (card_w_px * 2) + gap_x
-		unit_h = card_h_px
-
-		cols = (A4_WIDTH - 2 * margin_x) // (unit_w + gap_x)
-		rows = (A4_HEIGHT - 2 * margin_y) // (unit_h + gap_y)
-		units_per_sheet = int(cols * rows)
-
-		if units_per_sheet < 1:
-			frappe.throw("Card size too large for print layout dimensions.")
-
-		image_pairs = []
-
-		for row in self.student_list:
-			if not row.current_id_card:
+		# Only image headers are read here; pixels load page by page.
+		groups = {}
+		for card in cards:
+			front = get_file_path(card.front_id_image)
+			if not front or not os.path.exists(front):
 				continue
+			back = get_file_path(card.back_id_image) if card.back_id_image else None
+			if back and not os.path.exists(back):
+				back = None
+			with Image.open(front) as img:
+				size = CARD_PX if img.width >= img.height else (CARD_PX[1], CARD_PX[0])
+			groups.setdefault(size, []).append((card, front, back))
+		if not groups:
+			frappe.throw(_("The card image files could not be found on the server."))
 
-			# Fetch card details
-			card_doc = frappe.get_doc("ID Card Generation", row.current_id_card)
+		page_count = 0
+		with tempfile.TemporaryDirectory(prefix="idcard-sheet-") as tmp:
+			pdf_path = os.path.join(tmp, "sheet.pdf")
+			for size, items in groups.items():
+				for page in _layout_pages(items, size, layout, cint(crop_marks)):
+					page.save(pdf_path, "PDF", resolution=300, quality=95, append=page_count > 0)
+					page.close()
+					page_count += 1
+			with open(pdf_path, "rb") as f:
+				pdf_bytes = f.read()
 
-			if card_doc.card_status != "Generated":
-				# Skip non-generated cards? Or error?
-				# Let's skip to prevent printing drafts
-				continue
-
-			if card_doc.front_id_image:
-				image_pairs.append(
-					{"doc": card_doc, "front": card_doc.front_id_image, "back": card_doc.back_id_image}
-				)
-
-		if not image_pairs:
-			frappe.throw("No valid generated cards found to print.")
-
-		output_files = []
-
-		# Bulk Print Session ID
 		bulk_print_id = frappe.utils.generate_hash(length=10)
-		total_cards = len(image_pairs)
+		printed = [item[0] for items in groups.values() for item in items]
+		for card in printed:
+			doc = frappe.get_doc("ID Card Generation", card.name)
+			doc.log_print(layout="Bulk", bulk_print_id=bulk_print_id, total_cards=len(printed))
 
-		for i in range(0, len(image_pairs), units_per_sheet):
-			batch_items = image_pairs[i : i + units_per_sheet]
-			sheet_no = (i // units_per_sheet) + 1
+		def clean(s):
+			return "".join(c for c in (s or "") if c.isalnum() or c in ("-", "_")).strip() or "All"
 
-			# Create Sheet
-			sheet = Image.new("RGB", (A4_WIDTH, A4_HEIGHT), "white")
-
-			for idx, item in enumerate(batch_items):
-				col = idx % cols
-				row_idx = idx // cols
-
-				# Calculate positions
-				# Unit X Position
-				u_x = margin_x + col * (unit_w + gap_x)
-				u_y = margin_y + row_idx * (unit_h + gap_y)
-
-				# Front Image (Left)
-				if item["front"]:
-					try:
-						f_img = Image.open(self._get_full_path(item["front"])).convert("RGBA")
-						f_img = f_img.resize((card_w_px, card_h_px), Image.Resampling.LANCZOS)
-						sheet.paste(f_img, (u_x, u_y), f_img)
-					except Exception:
-						pass  # Log error preferably
-
-				# Back Image (Right)
-				if item["back"]:
-					try:
-						b_img = Image.open(self._get_full_path(item["back"])).convert("RGBA")
-						b_img = b_img.resize((card_w_px, card_h_px), Image.Resampling.LANCZOS)
-						# Position: x + card_width + gap
-						b_x = u_x + card_w_px + gap_x
-						sheet.paste(b_img, (b_x, u_y), b_img)
-					except Exception:
-						pass
-
-				# Prepare Log for this user
-				item["doc"].log_print(layout="Bulk", bulk_print_id=bulk_print_id, total_cards=total_cards)
-
-			# Save Sheet
-			sheet_name = f"Sheet_{sheet_no}.png"
-			self._save_temp_image(sheet, sheet_name)
-			output_files.append(sheet_name)
-
-		# Name the ZIP/PDF based on convention
-		# <AcademicYear>_<ProgramCode>_<BatchCode>_ID_Cards.pdf
-		# We use the Generation Tool's filters to name it
-		ay = self.academic_year or "AY"
-		# Get short codes if possible, else use full names passing regex cleanup
-		prog_code = self.program or "All_Prog"
-		batch_code = self.batch or "All_Batch"
-
-		# Sanitize filename components
-		def sanitize(s):
-			return "".join([c for c in s if c.isalnum() or c in ("-", "_")]).strip()
-
-		final_name = f"{sanitize(ay)}_{sanitize(prog_code)}_{sanitize(batch_code)}_ID_Cards.zip"
-
-		zip_buffer = io.BytesIO()
-		with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
-			for fname in output_files:
-				fpath = get_site_path("public", "files", fname)
-				if os.path.exists(fpath):
-					zip_file.write(fpath, fname)
-
-		saved_zip = save_file(
-			final_name,
-			zip_buffer.getvalue(),
-			self.doctype,
-			self.name,
-			is_private=1,
-		)
-
-		return saved_zip.file_url
-
-	def _get_full_path(self, file_url):
-		return frappe.get_site_path("public", file_url.lstrip("/"))
-
-	def _save_temp_image(self, image, filename):
-		img_io = io.BytesIO()
-		image.save(img_io, format="PNG", dpi=(300, 300))
-
-		path = get_site_path("public", "files", filename)
-		with open(path, "wb") as f:
-			f.write(img_io.getvalue())
+		filename = f"{clean(self.academic_year)}_{clean(self.program)}_{clean(self.batch)}_ID_Cards.pdf"
+		saved = save_file(filename, pdf_bytes, self.doctype, self.name, is_private=1)
+		return {"file_url": saved.file_url, "cards": len(printed), "pages": page_count}
 
 	@frappe.whitelist()
-	def get_preview_html(self, template_name, student):
-		return get_preview_html(template_name, student)
+	def mark_as_printed(self):
+		names = [c.name for c in self._generated_cards() if c.card_status == "Generated"]
+		for name in names:
+			doc = frappe.get_doc("ID Card Generation", name)
+			doc.card_status = "Printed"
+			doc.save()
+		return len(names)
 
 
-@frappe.whitelist()
-def get_preview_html(template_name, student):
-	if not template_name or not student:
-		return ""
+def _grid(card_size, unit_w):
+	width = A4_PX[0] - 2 * SHEET_MARGIN
+	height = A4_PX[1] - 2 * SHEET_MARGIN
+	cols = max(1, (width + CARD_GAP) // (unit_w + CARD_GAP))
+	rows = max(1, (height + CARD_GAP) // (card_size[1] + CARD_GAP))
+	# Centre the grid on the page.
+	left = (A4_PX[0] - (cols * unit_w + (cols - 1) * CARD_GAP)) // 2
+	top = (A4_PX[1] - (rows * card_size[1] + (rows - 1) * CARD_GAP)) // 2
+	return cols, rows, left, top
 
-	template = frappe.get_doc("ID Card Template", template_name)
-	student_doc = frappe.get_doc("Student Master", student)
 
-	# Create a dummy ID Card doc for context
-	id_card = frappe.new_doc("ID Card Generation")
-	id_card.student = student
+def _draw_crop_marks(draw, x, y, w, h):
+	length, gap = 22, 6
+	color = (150, 150, 150)
+	for cx, dx in ((x, -1), (x + w, 1)):
+		for cy, dy in ((y, -1), (y + h, 1)):
+			draw.line([(cx + dx * gap, cy), (cx + dx * (gap + length), cy)], fill=color, width=2)
+			draw.line([(cx, cy + dy * gap), (cx, cy + dy * (gap + length))], fill=color, width=2)
 
-	# Create context (Flattened)
-	context = student_doc.as_dict()
-	context.update(template.as_dict())
-	context.update(
-		{
-			"doc": id_card,
-			"student": student_doc,
-			"template": template,
-			"college_name": template.institute_name,
-			"logo_url": template.institute_logo,
-			"qr_code_url": None,
-		}
-	)
 
-	html = "<div class='row'>"
-	if template.front_html:
-		html += "<div class='col-md-6'><h5 class='text-muted'>Front View</h5>"
-		html += f"<div style='border: 1px solid #ddd; padding: 10px; background: white;'>{frappe.render_template(template.front_html, context)}</div>"
-		html += "</div>"
+def _load_card(path, size):
+	from PIL import Image
 
-	if template.back_html:
-		html += "<div class='col-md-6'><h5 class='text-muted'>Back View</h5>"
-		html += f"<div style='border: 1px solid #ddd; padding: 10px; background: white;'>{frappe.render_template(template.back_html, context)}</div>"
-		html += "</div>"
+	with Image.open(path) as img:
+		img = img.convert("RGB")
+		return img.resize(size, Image.Resampling.LANCZOS) if img.size != size else img.copy()
 
-	html += "</div>"
-	return html
+
+def _layout_pages(items, card_size, layout, crop_marks):
+	"""Yield A4 pages one at a time so large batches stay light on memory."""
+	from PIL import Image, ImageDraw
+
+	w, h = card_size
+
+	if layout == "duplex":
+		cols, rows, left, top = _grid(card_size, w)
+		per_page = cols * rows
+		for start in range(0, len(items), per_page):
+			chunk = items[start : start + per_page]
+			front_page = Image.new("RGB", A4_PX, "white")
+			back_page = Image.new("RGB", A4_PX, "white")
+			fd, bd = ImageDraw.Draw(front_page), ImageDraw.Draw(back_page)
+			for idx, (_card, front, back) in enumerate(chunk):
+				col, row = idx % cols, idx // cols
+				y = top + row * (h + CARD_GAP)
+				fx = left + col * (w + CARD_GAP)
+				bx = left + (cols - 1 - col) * (w + CARD_GAP)
+				front_page.paste(_load_card(front, card_size), (fx, y))
+				if back:
+					back_page.paste(_load_card(back, card_size), (bx, y))
+				if crop_marks:
+					_draw_crop_marks(fd, fx, y, w, h)
+					_draw_crop_marks(bd, bx, y, w, h)
+			yield front_page
+			yield back_page
+		return
+
+	unit_w = 2 * w + CARD_GAP
+	cols, rows, left, top = _grid(card_size, unit_w)
+	per_page = cols * rows
+	for start in range(0, len(items), per_page):
+		page = Image.new("RGB", A4_PX, "white")
+		draw = ImageDraw.Draw(page)
+		for idx, (_card, front, back) in enumerate(items[start : start + per_page]):
+			col, row = idx % cols, idx // cols
+			x = left + col * (unit_w + CARD_GAP)
+			y = top + row * (h + CARD_GAP)
+			page.paste(_load_card(front, card_size), (x, y))
+			if crop_marks:
+				_draw_crop_marks(draw, x, y, w, h)
+			if back:
+				page.paste(_load_card(back, card_size), (x + w + CARD_GAP, y))
+				if crop_marks:
+					_draw_crop_marks(draw, x + w + CARD_GAP, y, w, h)
+		yield page
+
+
+def run_bulk_generation(requested_by=None):
+	"""Background job: generate cards for the rows in the tool, one by one,
+	and record the run in an ID Card Generation Tool Log."""
+	user = requested_by or frappe.session.user
+	started_on = now_datetime()
+	total = generated = failed = 0
+	log_name = None
+
+	def publish(done, row=None, finished=False):
+		state = {"user": user, "total": total, "done": done, "generated": generated, "failed": failed}
+		if not finished:
+			frappe.cache.set_value(RUN_CACHE_KEY, state, expires_in_sec=3 * 3600)
+		payload = dict(state, finished=finished, log=log_name)
+		if row is not None:
+			payload.update({"student": row.student, "student_name": row.student_name, "status": row.status})
+		frappe.publish_realtime(PROGRESS_EVENT, payload, user=user)
+
+	try:
+		tool = frappe.get_doc("ID Card Generation Tool")
+		rows = tool._rows_to_process()
+		total = len(rows)
+		sides = [s for s, on in (("front", tool.generate_front), ("back", tool.generate_back)) if cint(on)]
+		processing = {r.name for r in rows}
+		results = {}
+		new_cards = regenerated = skipped = 0
+
+		for row in tool.student_list:
+			if row.name not in processing:
+				skipped += 1
+				results[row.name] = {
+					"result": "Skipped",
+					"id_card": row.current_id_card,
+					"message": _("Already had a card"),
+				}
+
+		for done, row in enumerate(rows, start=1):
+			existing = get_active_card(row.student)
+			if existing and not cint(tool.regenerate_existing):
+				# Someone issued a card since the list was loaded.
+				row.current_id_card = existing
+				row.status = "Already Exists"
+				skipped += 1
+				results[row.name] = {
+					"result": "Skipped",
+					"id_card": existing,
+					"message": _("Card issued while the run was queued"),
+				}
+				frappe.db.set_value(
+					"ID Card Generation Item",
+					row.name,
+					{"current_id_card": existing, "status": row.status},
+					update_modified=False,
+				)
+				frappe.db.commit()
+				publish(done, row)
+				continue
+			try:
+				if existing:
+					doc = frappe.get_doc("ID Card Generation", existing)
+					if tool.issue_date:
+						doc.issue_date = tool.issue_date
+					if tool.expiry_date:
+						doc.expiry_date = tool.expiry_date
+				else:
+					doc = frappe.new_doc("ID Card Generation")
+					doc.card_type = "Student"
+					doc.student = row.student
+					doc.issue_date = tool.issue_date
+					doc.expiry_date = tool.expiry_date or None
+
+				doc.id_card_template = tool.id_card_template
+				doc.generate_card(sides=sides)
+				frappe.db.commit()
+
+				row.current_id_card = doc.name
+				row.status = "Generated"
+				generated += 1
+				if existing:
+					regenerated += 1
+				else:
+					new_cards += 1
+				results[row.name] = {
+					"result": "Regenerated" if existing else "New",
+					"id_card": doc.name,
+					"message": "",
+				}
+			except Exception as e:
+				frappe.db.rollback()
+				message = strip_html(str(e))
+				row.current_id_card = existing
+				row.status = f"Error: {message}"[:140]
+				failed += 1
+				results[row.name] = {"result": "Failed", "id_card": existing, "message": message[:1000]}
+				frappe.log_error(
+					title=f"ID Card Generation Error: {row.student}", message=frappe.get_traceback()
+				)
+
+			frappe.db.set_value(
+				"ID Card Generation Item",
+				row.name,
+				{"current_id_card": row.current_id_card, "status": row.status},
+				update_modified=False,
+			)
+			frappe.db.commit()
+			publish(done, row)
+
+		finished_on = now_datetime()
+		log = frappe.get_doc(
+			{
+				"doctype": "ID Card Generation Tool Log",
+				"generation_tool_run_id": frappe.generate_hash(length=10),
+				"started_on": started_on,
+				"generated_on": finished_on,
+				"duration_seconds": round((finished_on - started_on).total_seconds(), 1),
+				"generated_by": user,
+				"academic_year": tool.academic_year,
+				"program": tool.program,
+				"batch": tool.batch,
+				"template_used": tool.id_card_template,
+				"issue_date": tool.issue_date,
+				"expiry_date": tool.expiry_date,
+				"sides": " + ".join(s.title() for s in sides),
+				"regenerate_existing": cint(tool.regenerate_existing),
+				"total_students_selected": len(tool.student_list),
+				"total_processed": total,
+				"total_id_cards_generated": generated,
+				"new_cards": new_cards,
+				"regenerated_cards": regenerated,
+				"skipped_count": skipped,
+				"failed_count": failed,
+				"missing_photo_count": sum(1 for r in tool.student_list if not r.has_photo),
+				"generation_mode": "Single" if total == 1 else "Bulk",
+				"generation_status": "Success" if not failed else ("Failed" if not generated else "Partial"),
+				"remarks": _(
+					"Generated {0} of {1} cards ({2} new, {3} regenerated); {4} skipped, {5} failed."
+				).format(generated, total, new_cards, regenerated, skipped, failed),
+				"results": [
+					{
+						"student": row.student,
+						"student_name": row.student_name,
+						"has_photo": row.has_photo,
+						**results[row.name],
+					}
+					for row in tool.student_list
+					if row.name in results
+				],
+			}
+		).insert(ignore_permissions=True)
+		log_name = log.name
+		frappe.db.commit()
+	finally:
+		frappe.cache.delete_value(RUN_CACHE_KEY)
+		publish(total, finished=True)

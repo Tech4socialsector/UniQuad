@@ -1,149 +1,1048 @@
-frappe.ui.form.on("ID Card Generation Tool", {
-	refresh: function (frm) {
-		frm.disable_save();
+/* global slcm */
+frappe.provide("slcm.id_card");
 
-		frm.page.set_primary_action(__("Generate Cards"), () => {
-			// Client-side guards
-			if (!frm.doc.id_card_template) {
-				frappe.msgprint({
-					title: __("Missing Template"),
-					message: __("Please select an ID Card Template before generating cards."),
-					indicator: "orange",
-				});
-				return;
+// The tool renders its own screen into `wizard_html`; the standard sections
+// stay hidden and only hold the values sent to the server.
+const IDCT_HIDDEN_SECTIONS = ["section_filters", "section_students", "section_template"];
+const IDCT_PAGE_SIZE = 150;
+
+const IDCT_CSS = `
+	.idct { --b: var(--border-color, #e2e6ea); --m: var(--text-muted, #6b7280); --s: var(--subtle-fg, #f4f5f7);
+		--a: var(--primary, #2563eb); --bg: var(--fg-color, #fff); --t: var(--text-color, #1f2937); color: var(--t); }
+	.idct * { box-sizing: border-box; }
+	.idct-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+	.idct-head h3 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -.01em; }
+	.idct-head p { margin: 4px 0 0; color: var(--m); font-size: 13px; }
+	.idct-layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 20px; align-items: start; }
+	.idct-panel { background: var(--bg); border: 1px solid var(--b); border-radius: 14px; }
+	.idct-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--b); }
+	.idct-panel-title { font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+	.idct-num { width: 22px; height: 22px; border-radius: 50%; background: var(--s); color: var(--m); font-size: 11.5px; font-weight: 600;
+		display: inline-flex; align-items: center; justify-content: center; }
+	.idct-num.done { background: var(--green-500, #22c55e); color: #fff; }
+	.idct-panel-body { padding: 14px 16px; }
+	.idct-side { position: sticky; top: 72px; display: grid; gap: 16px; }
+	.idct-filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 10px; align-items: end; }
+	.idct .form-group { margin-bottom: 0; }
+	.idct-filters .frappe-control { margin-bottom: 0; }
+	.idct-filters [data-act='find'] { height: 28px; }
+	.idct-filters .control-label, .idct-side .control-label { font-size: 11.5px; color: var(--m); margin-bottom: 4px; padding: 0; }
+	.idct-side .frappe-control { margin-bottom: 10px; }
+	.idct-side .help-box { display: none; }
+	.idct-addrow { display: flex; align-items: center; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--b); }
+	.idct-addrow .frappe-control { flex: 1; margin: 0; max-width: 360px; }
+	.idct-addrow .control-label, .idct-addrow .clearfix { display: none; }
+	.idct-addrow .idct-hint { color: var(--m); font-size: 12px; }
+	.idct-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 12px 16px; border-bottom: 1px solid var(--b); }
+	.idct-chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 99px; border: 1px solid var(--b);
+		background: var(--bg); color: var(--t); font-size: 12px; cursor: pointer; white-space: nowrap; }
+	.idct-chip b { font-weight: 600; font-variant-numeric: tabular-nums; color: var(--m); }
+	.idct-chip.active { background: var(--t); border-color: var(--t); color: var(--bg); }
+	.idct-chip.active b { color: inherit; opacity: .75; }
+	.idct-search { margin-left: auto; height: 30px; width: 220px; max-width: 100%; border: 1px solid var(--b); border-radius: 8px; padding: 0 10px;
+		background: var(--control-bg, var(--s)); color: var(--t); font-size: 12.5px; }
+	.idct-search:focus { outline: none; border-color: var(--a); }
+	.idct-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+	.idct-table th { text-align: left; font-weight: 500; font-size: 11.5px; color: var(--m); padding: 8px 16px; border-bottom: 1px solid var(--b);
+		background: var(--s); position: sticky; top: 0; z-index: 1; }
+	.idct-table td { padding: 9px 16px; border-bottom: 1px solid var(--b); vertical-align: middle; }
+	.idct-table tr:last-child td { border-bottom: 0; }
+	.idct-table tbody tr { cursor: pointer; }
+	.idct-table tbody tr:hover td { background: var(--s); }
+	.idct-table tbody tr.is-preview td { background: rgba(37,99,235,.06); }
+	.idct-table tbody tr.is-preview td:first-child { box-shadow: inset 3px 0 0 var(--a); }
+	.idct-person { display: flex; align-items: center; gap: 10px; min-width: 0; }
+	.idct-avatar { width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0; object-fit: cover; background: var(--s);
+		display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: var(--m); }
+	.idct-avatar.missing { border: 1.5px dashed var(--orange-400, #fb923c); color: var(--orange-600, #ea580c); }
+	.idct-person-name { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+	.idct-person-id { color: var(--m); font-size: 11.5px; }
+	.idct-status { display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px; border-radius: 99px; font-size: 11.5px; font-weight: 500; white-space: nowrap; }
+	.idct-status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+	.idct-status.new { background: rgba(37,99,235,.1); color: var(--blue-600, #2563eb); }
+	.idct-status.has { background: var(--s); color: var(--m); }
+	.idct-status.done { background: rgba(34,197,94,.12); color: var(--green-700, #15803d); }
+	.idct-status.fail { background: rgba(220,38,38,.1); color: var(--red-600, #dc2626); }
+	.idct-status.busy { background: rgba(234,88,12,.1); color: var(--orange-600, #ea580c); }
+	.idct-card-link { color: var(--t); font-variant-numeric: tabular-nums; }
+	.idct-card-link:hover { color: var(--a); }
+	.idct-icon-btn { width: 28px; height: 28px; border-radius: 7px; border: 0; background: transparent; color: var(--m); display: inline-flex;
+		align-items: center; justify-content: center; cursor: pointer; }
+	.idct-icon-btn:hover { background: var(--bg); color: var(--red-600, #dc2626); }
+	.idct-empty { text-align: center; padding: 48px 24px; color: var(--m); font-size: 13px; }
+	.idct-empty b { display: block; color: var(--t); font-size: 15px; margin-bottom: 6px; }
+	.idct-empty-ico { width: 48px; height: 48px; border-radius: 14px; background: var(--s); color: var(--a); margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; }
+	.idct-more { padding: 12px 16px; text-align: center; border-top: 1px solid var(--b); }
+	.idct-preview { border-radius: 12px; background: var(--s); padding: 16px; display: flex; align-items: center; justify-content: center; min-height: 190px; }
+	.idct-preview img { display: block; max-width: 100%; max-height: 260px; border-radius: 10px; box-shadow: 0 1px 2px rgba(0,0,0,.1), 0 10px 24px rgba(15,23,42,.16); }
+	.idct-preview-meta { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 10px; font-size: 12px; color: var(--m); }
+	.idct-seg { display: inline-flex; background: var(--s); border-radius: 8px; padding: 2px; }
+	.idct-seg button { border: 0; background: transparent; color: var(--m); font-size: 12px; padding: 3px 10px; border-radius: 6px; cursor: pointer; }
+	.idct-seg button.active { background: var(--bg); color: var(--t); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+	.idct-seg button:disabled { opacity: .4; cursor: default; }
+	.idct-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+	.idct-switch { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 8px 0; font-size: 13px; cursor: pointer; margin: 0; font-weight: 400; }
+	.idct-switch small { display: block; color: var(--m); font-size: 11.5px; margin-top: 1px; }
+	.idct-switch input { width: 16px; height: 16px; margin-top: 2px; flex-shrink: 0; cursor: pointer; }
+	.idct-sides { display: flex; gap: 8px; margin-bottom: 4px; }
+	.idct-sides label { flex: 1; display: flex; align-items: center; gap: 8px; border: 1px solid var(--b); border-radius: 9px; padding: 7px 10px; font-size: 12.5px; cursor: pointer; margin: 0; font-weight: 400; }
+	.idct-sides label.on { border-color: var(--a); background: rgba(37,99,235,.06); }
+	.idct-summary { display: grid; gap: 6px; font-size: 12.5px; margin-bottom: 12px; }
+	.idct-summary div { display: flex; justify-content: space-between; }
+	.idct-summary span:last-child { font-weight: 600; font-variant-numeric: tabular-nums; }
+	.idct-summary .warn { color: var(--orange-600, #ea580c); }
+	.idct-go { width: 100%; height: 42px; font-size: 14px; font-weight: 600; border-radius: 10px; }
+	.idct-note { font-size: 12px; color: var(--m); margin-top: 8px; text-align: center; }
+	.idct-progress { height: 8px; border-radius: 99px; background: var(--s); overflow: hidden; margin: 10px 0 2px; }
+	.idct-progress > div { height: 100%; background: var(--a); border-radius: 99px; transition: width .35s ease; }
+	.idct-banner { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 12px 16px; border-radius: 12px; margin-bottom: 16px; font-size: 13px;
+		border: 1px solid var(--b); background: var(--bg); }
+	.idct-banner.ok { border-color: rgba(34,197,94,.4); background: rgba(34,197,94,.07); }
+	.idct-banner.bad { border-color: rgba(220,38,38,.35); background: rgba(220,38,38,.05); }
+	.idct-banner .idct-banner-text { flex: 1; min-width: 220px; }
+	.idct-banner small { display: block; color: var(--m); }
+	.idct-outputs { display: grid; gap: 8px; }
+	.idct-outputs .btn { display: flex; align-items: center; justify-content: space-between; gap: 10px; text-align: left; height: auto; padding: 9px 12px; border-radius: 9px; }
+	.idct-outputs .btn small { display: block; color: var(--m); font-size: 11.5px; font-weight: 400; }
+	.idct-skeleton { width: 100%; height: 170px; border-radius: 10px; background: linear-gradient(90deg, var(--s), var(--bg), var(--s)); background-size: 200% 100%;
+		animation: idct-shimmer 1.2s infinite; }
+	@keyframes idct-shimmer { to { background-position: -200% 0; } }
+	@media (max-width: 1200px) { .idct-layout { grid-template-columns: minmax(0, 1fr); } .idct-side { position: static; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); } }
+	@media (max-width: 760px) { .idct-filters { grid-template-columns: 1fr; } .idct-search { margin-left: 0; width: 100%; } .idct-col-card { display: none; } }
+`;
+
+const IDCT_ICONS = {
+	users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/>',
+	x: '<path d="M18 6 6 18M6 6l12 12"/>',
+	file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>',
+	archive:
+		'<rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8M10 12h4"/>',
+	check: '<path d="M20 6 9 17l-5-5"/>',
+};
+const idct_icon = (name, size = 16) =>
+	`<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${IDCT_ICONS[name]}</svg>`;
+
+function idct_status(row) {
+	const s = row.status || "Pending";
+	if (s === "Already Exists") return { key: "has", label: __("Has card") };
+	if (s === "Generated") return { key: "done", label: __("Generated") };
+	if (s.startsWith("Error"))
+		return { key: "fail", label: __("Failed"), detail: s.replace(/^Error:\s*/, "") };
+	return { key: "new", label: __("New card") };
+}
+
+function idct_counts(frm) {
+	const rows = frm.doc.student_list || [];
+	const c = { total: rows.length, new: 0, has: 0, done: 0, fail: 0, no_photo: 0, with_card: 0 };
+	rows.forEach((r) => {
+		c[idct_status(r).key]++;
+		if (!r.has_photo) c.no_photo++;
+		if (r.current_id_card) c.with_card++;
+	});
+	// Mirrors IDCardGenerationTool._rows_to_process on the server.
+	c.to_process = frm.doc.regenerate_existing ? c.total : c.new + c.fail;
+	c.skipped = frm.doc.regenerate_existing ? 0 : c.has + c.done;
+	return c;
+}
+
+class IDCardBulkConsole {
+	constructor(frm) {
+		this.frm = frm;
+		this.filter = "all";
+		this.query = "";
+		this.limit = IDCT_PAGE_SIZE;
+		this.preview_side = "front";
+		this.preview_student = null;
+		this.preview = null;
+		this.photos = {};
+		this.controls = {};
+	}
+
+	get running() {
+		return !!this.frm.__idc_run;
+	}
+
+	mount() {
+		if (!document.getElementById("idct-css"))
+			$(`<style id="idct-css">${IDCT_CSS}</style>`).appendTo("head");
+		const $w = this.frm.fields_dict.wizard_html.$wrapper;
+		$w.closest(".section-body").css("max-width", "none");
+		$w.html(`
+			<div class="idct">
+				<div class="idct-head">
+					<div>
+						<h3>${__("Generate ID Cards")}</h3>
+						<p>${__("Pick the students, choose a template, and generate print-ready cards in one go.")}</p>
+					</div>
+				</div>
+				<div class="idct-banner-slot"></div>
+				<div class="idct-layout">
+					<div style="display:grid;gap:16px;min-width:0">
+						<section class="idct-panel">
+							<div class="idct-panel-head"><div class="idct-panel-title"><span class="idct-num" data-step="1">1</span>${__(
+								"Who needs cards?"
+							)}</div></div>
+							<div class="idct-panel-body">
+								<div class="idct-filters">
+									<div data-control="academic_year"></div>
+									<div data-control="program"></div>
+									<div data-control="batch"></div>
+									<button class="btn btn-primary btn-sm" data-act="find">${__("Find students")}</button>
+								</div>
+								<div class="idct-addrow">
+									<div data-control="add_student"></div>
+									<span class="idct-hint">${__("or add one student by name")}</span>
+								</div>
+							</div>
+						</section>
+						<section class="idct-panel">
+							<div class="idct-toolbar"></div>
+							<div class="idct-list"></div>
+						</section>
+					</div>
+					<aside class="idct-side">
+						<section class="idct-panel">
+							<div class="idct-panel-head">
+								<div class="idct-panel-title"><span class="idct-num" data-step="2">2</span>${__(
+									"Card design"
+								)}</div>
+								<a class="idct-edit-template small" target="_blank" style="display:none">${__("Edit template")}</a>
+							</div>
+							<div class="idct-panel-body">
+								<div data-control="id_card_template"></div>
+								<div class="idct-preview"></div>
+								<div class="idct-preview-meta">
+									<span class="idct-preview-caption"></span>
+									<div class="idct-seg">
+										<button data-side="front">${__("Front")}</button>
+										<button data-side="back">${__("Back")}</button>
+									</div>
+								</div>
+							</div>
+						</section>
+						<section class="idct-panel">
+							<div class="idct-panel-head"><div class="idct-panel-title"><span class="idct-num" data-step="3">3</span>${__(
+								"Generate"
+							)}</div></div>
+							<div class="idct-panel-body">
+								<div class="idct-grid2">
+									<div data-control="issue_date"></div>
+									<div data-control="expiry_date"></div>
+								</div>
+								<div class="idct-sides">
+									<label data-flag-label="generate_front"><input type="checkbox" data-flag="generate_front"> ${__(
+										"Front"
+									)}</label>
+									<label data-flag-label="generate_back"><input type="checkbox" data-flag="generate_back"> ${__(
+										"Back"
+									)}</label>
+								</div>
+								<label class="idct-switch">
+									<div>${__("Regenerate existing cards")}<small>${__(
+			"Re-render cards students already have, e.g. after a design change."
+		)}</small></div>
+									<input type="checkbox" data-flag="regenerate_existing">
+								</label>
+								<div class="idct-run"></div>
+							</div>
+						</section>
+						<section class="idct-panel idct-output-panel">
+							<div class="idct-panel-head"><div class="idct-panel-title"><span class="idct-num" data-step="4">4</span>${__(
+								"Print & export"
+							)}</div></div>
+							<div class="idct-panel-body idct-outputs"></div>
+						</section>
+					</aside>
+				</div>
+			</div>`);
+		this.$root = $w.find(".idct");
+		this.make_controls();
+		this.bind();
+	}
+
+	is_mounted() {
+		return !!(this.$root && document.documentElement.contains(this.$root[0]));
+	}
+
+	make_controls() {
+		const frm = this.frm;
+		const make = (key, df) => {
+			const control = frappe.ui.form.make_control({
+				df: {
+					fieldname: `idct_${key}`,
+					...df,
+					onchange: () => {
+						const value = control.get_value() || null;
+						if (df.on_value) return df.on_value(value, control);
+						if ((frm.doc[key] || null) !== value) frm.set_value(key, value);
+					},
+				},
+				parent: this.$root.find(`[data-control='${key}']`)[0],
+				render_input: true,
+			});
+			control.refresh();
+			this.controls[key] = control;
+			return control;
+		};
+		make("academic_year", {
+			fieldtype: "Link",
+			options: "Academic Year",
+			label: __("Academic Year"),
+			placeholder: __("Any year"),
+		});
+		make("program", {
+			fieldtype: "Link",
+			options: "Programme",
+			label: __("Programme"),
+			placeholder: __("Any programme"),
+		});
+		make("batch", {
+			fieldtype: "Link",
+			options: "SLCM Batch",
+			label: __("Batch"),
+			placeholder: __("Any batch"),
+		});
+		make("add_student", {
+			fieldtype: "Link",
+			options: "Student Master",
+			placeholder: __("Add a student…"),
+			get_query: () => ({ filters: { student_status: "Active" } }),
+			on_value: (value, control) => {
+				if (!value) return;
+				control.set_value("");
+				this.add_student(value);
+			},
+		});
+		make("id_card_template", {
+			fieldtype: "Link",
+			options: "ID Card Template",
+			label: __("Template"),
+			placeholder: __("Choose a template"),
+			get_query: () => ({ filters: { card_type: "Student" } }),
+		});
+		make("issue_date", { fieldtype: "Date", label: __("Issue date") });
+		make("expiry_date", {
+			fieldtype: "Date",
+			label: __("Valid till"),
+			placeholder: __("Programme end"),
+		});
+	}
+
+	sync_controls() {
+		[
+			"academic_year",
+			"program",
+			"batch",
+			"id_card_template",
+			"issue_date",
+			"expiry_date",
+		].forEach((key) => {
+			const control = this.controls[key];
+			if (control && (control.get_value() || null) !== (this.frm.doc[key] || null)) {
+				control.set_value(this.frm.doc[key] || "");
 			}
+		});
+		this.$root.find("[data-flag]").each((_, el) => {
+			el.checked = !!this.frm.doc[el.dataset.flag];
+			$(el).closest("[data-flag-label]").toggleClass("on", el.checked);
+		});
+	}
 
-			const rows = frm.doc.student_list || [];
-			if (rows.length === 0) {
-				frappe.msgprint({
-					title: __("No Students"),
-					message: __(
-						'No students in the list. Please click <b>"Get Students"</b> to load students ' +
-						"using filters, or add students manually."
-					),
-					indicator: "orange",
-				});
-				return;
-			}
-
-			const pendingRows = rows.filter((r) => r.status !== "Already Exists");
-			if (pendingRows.length === 0) {
-				frappe.msgprint({
-					title: __("Nothing to Generate"),
-					message: __(
-						"All students in the list already have an active ID card. No new cards to generate."
-					),
-					indicator: "blue",
-				});
-				return;
-			}
-
-			frappe.confirm(
-				__("Generate ID cards for {0} student(s)?", [pendingRows.length]),
-				() => {
-					frm.call("generate_cards").then(() => {
-						frm.reload_doc();
-					});
-				}
+	bind() {
+		const $r = this.$root;
+		$r.on("click", "[data-act='find']", () => this.find_students());
+		$r.on("change", "[data-flag]", (e) => {
+			this.frm.set_value(e.target.dataset.flag, e.target.checked ? 1 : 0);
+			$(e.target).closest("[data-flag-label]").toggleClass("on", e.target.checked);
+		});
+		$r.on("click", "[data-filter]", (e) => {
+			this.filter = $(e.currentTarget).data("filter");
+			this.limit = IDCT_PAGE_SIZE;
+			this.render_list();
+		});
+		$r.on(
+			"input",
+			".idct-search",
+			frappe.utils.debounce((e) => {
+				this.query = e.target.value.trim().toLowerCase();
+				this.limit = IDCT_PAGE_SIZE;
+				this.render_list(true);
+			}, 150)
+		);
+		$r.on("click", "[data-act='more']", () => {
+			this.limit += IDCT_PAGE_SIZE;
+			this.render_list(true);
+		});
+		$r.on("click", "[data-act='clear']", () => {
+			frappe.confirm(__("Remove all students from the list?"), () => {
+				this.frm.doc.student_list = [];
+				this.frm.dirty();
+				this.preview_student = null;
+				this.refresh();
+				this.load_preview();
+			});
+		});
+		$r.on("click", "[data-remove]", (e) => {
+			e.stopPropagation();
+			const name = $(e.currentTarget).data("remove");
+			this.frm.doc.student_list = (this.frm.doc.student_list || []).filter(
+				(r) => r.name !== name
 			);
+			this.frm.doc.student_list.forEach((r, i) => (r.idx = i + 1));
+			this.frm.dirty();
+			this.refresh();
+			this.load_preview();
 		});
+		$r.on("click", "a[data-card]", (e) => e.stopPropagation());
+		$r.on("click", "tr[data-student]", (e) => {
+			this.preview_student = String($(e.currentTarget).data("student"));
+			this.render_list(true);
+			this.load_preview();
+		});
+		$r.on("click", "[data-side]", (e) => {
+			this.preview_side = $(e.currentTarget).data("side");
+			this.render_preview();
+		});
+		$r.on("click", "[data-act='generate']", () => idct_generate(this.frm));
+		$r.on("click", "[data-out]", (e) => {
+			const out = $(e.currentTarget).data("out");
+			if (out === "sheet") idct_print_sheet(this.frm);
+			if (out === "zip") idct_zip(this.frm);
+			if (out === "printed") idct_mark_printed(this.frm);
+		});
+	}
 
-		frm.add_custom_button(__("Reset Filters"), function () {
-			frappe.confirm(
-				__("Reset all filters and clear the student list?"),
-				function () {
-					frm.call("reset_filters").then(() => {
-						frm.reload_doc();
-						frappe.show_alert({ message: __("Filters reset."), indicator: "blue" });
-					});
+	refresh() {
+		if (!this.is_mounted()) return;
+		this.sync_controls();
+		this.render_steps();
+		this.render_banner();
+		this.render_list();
+		this.render_run();
+		this.render_outputs();
+		this.render_preview();
+		this.load_photos();
+	}
+
+	render_steps() {
+		const c = idct_counts(this.frm);
+		const done = {
+			1: c.total > 0,
+			2: !!this.frm.doc.id_card_template,
+			3: c.with_card > 0 && c.to_process === 0,
+			4: false,
+		};
+		this.$root.find("[data-step]").each((_, el) => {
+			const n = +el.dataset.step;
+			$(el)
+				.toggleClass("done", done[n])
+				.html(done[n] ? idct_icon("check", 12) : n);
+		});
+		this.$root.find("[data-act='find'], [data-flag]").prop("disabled", this.running);
+	}
+
+	render_banner() {
+		const run = this.frm.__idc_run;
+		const last = this.frm.__idc_last;
+		let html = "";
+		if (run) {
+			const pct = run.total ? Math.round((run.done / run.total) * 100) : 0;
+			html = `<div class="idct-banner"><div class="idct-banner-text">
+				<b>${__("Generating ID cards… {0} of {1}", [run.done, run.total])}</b>
+				<small>${
+					run.student_name
+						? __("Last: {0}", [frappe.utils.escape_html(run.student_name)])
+						: __("Starting the renderer…")
+				}${run.failed ? " · " + __("{0} failed", [run.failed]) : ""} · ${__(
+				"You can leave this page; it keeps running."
+			)}</small>
+				<div class="idct-progress"><div style="width:${pct}%"></div></div></div></div>`;
+		} else if (last) {
+			html = `<div class="idct-banner ${
+				last.failed ? "bad" : "ok"
+			}"><div class="idct-banner-text">
+				<b>${
+					last.failed
+						? __("{0} generated, {1} failed", [last.generated, last.failed])
+						: __("{0} ID card(s) generated", [last.generated])
+				}</b>
+				<small>${
+					last.failed
+						? __("Use the Failed filter below to see why.")
+						: __("Print them from Print & export.")
+				}</small></div>
+				${
+					last.log
+						? `<a class="btn btn-default btn-sm" href="/app/id-card-generation-tool-log/${encodeURIComponent(
+								last.log
+						  )}">${__("View report")}</a>`
+						: ""
 				}
-			);
-		});
-
-		frm.add_custom_button(__("Get Students"), function () {
-			const hasFilter = frm.doc.academic_year || frm.doc.program || frm.doc.batch;
-			if (!hasFilter) {
-				frappe.msgprint({
-					title: __("No Filters Selected"),
-					message: __(
-						"Please select at least one filter — <b>Academic Year</b>, <b>Program</b>, " +
-						"or <b>Batch</b> — before fetching students."
-					),
-					indicator: "orange",
-				});
-				return;
-			}
-
-			frm.call("get_students").then(() => {
-				frm.refresh_field("student_list");
-				const count = (frm.doc.student_list || []).length;
-				if (count === 0) {
-					frappe.msgprint({
-						title: __("No Students Found"),
-						message: __(
-							"No active students found matching the selected filters. " +
-							"Please adjust your filters and try again."
-						),
-						indicator: "orange",
-					});
-				} else {
-					frappe.show_alert({
-						message: __("{0} student(s) loaded.", [count]),
-						indicator: "green",
-					});
-				}
-			});
-		});
-
-		if (frm.doc.student_list && frm.doc.student_list.length > 0) {
-			frm.add_custom_button(__("Download ZIP"), function () {
-				frm.call("download_zip").then((r) => {
-					if (r.message) {
-						window.open(r.message, "_blank");
-					}
-				});
-			});
-
-			frm.add_custom_button(__("Download Print Layout"), function () {
-				frm.call("generate_print_layout").then((r) => {
-					if (r.message) {
-						window.open(r.message, "_blank");
-					}
-				});
-			});
+				<button class="btn btn-default btn-sm" data-dismiss-banner>${__("Dismiss")}</button></div>`;
 		}
-	},
+		const $slot = this.$root.find(".idct-banner-slot").html(html);
+		$slot.find("[data-dismiss-banner]").on("click", () => {
+			this.frm.__idc_last = null;
+			this.render_banner();
+		});
+	}
 
-	id_card_template: function (frm) {
-		if (frm.doc.id_card_template && frm.doc.student_list && frm.doc.student_list.length > 0) {
-			// Trigger preview update
-			frm.trigger("render_preview");
+	render_list(rows_only) {
+		const rows = this.frm.doc.student_list || [];
+		const c = idct_counts(this.frm);
+		const esc = frappe.utils.escape_html;
+
+		if (!rows_only) {
+			const chip = (key, label, n) =>
+				`<button class="idct-chip ${
+					this.filter === key ? "active" : ""
+				}" data-filter="${key}">${label} <b>${n}</b></button>`;
+			this.$root
+				.find(".idct-toolbar")
+				.html(
+					rows.length
+						? [
+								chip("all", __("All"), c.total),
+								chip("new", __("New card"), c.new),
+								chip("has", __("Has card"), c.has),
+								chip("done", __("Generated"), c.done),
+								c.fail ? chip("fail", __("Failed"), c.fail) : "",
+								c.no_photo ? chip("no_photo", __("No photo"), c.no_photo) : "",
+								`<input class="idct-search" type="search" placeholder="${__(
+									"Search name or ID"
+								)}" value="${esc(this.query)}">`,
+								this.running
+									? ""
+									: `<button class="btn btn-default btn-xs" data-act="clear">${__(
+											"Clear list"
+									  )}</button>`,
+						  ].join("")
+						: `<div class="idct-panel-title"><span class="idct-num">${idct_icon(
+								"users",
+								12
+						  )}</span>${__("Students")}</div>`
+				);
 		}
-	},
 
-	render_preview: function (frm) {
-		if (!frm.doc.id_card_template) return;
-
-		// Take first student for preview
-		let student = null;
-		if (frm.doc.student_list && frm.doc.student_list.length > 0) {
-			student = frm.doc.student_list[0].student;
-		} else {
+		const $list = this.$root.find(".idct-list");
+		if (!rows.length) {
+			$list.html(`<div class="idct-empty"><div class="idct-empty-ico">${idct_icon(
+				"users",
+				22
+			)}</div>
+				<b>${__("No students yet")}</b>${__(
+				"Choose a year, programme or batch above and click Find students."
+			)}</div>`);
 			return;
 		}
 
-		frappe.call({
-			method: "slcm.slcm.doctype.id_card_generation_tool.id_card_generation_tool.get_preview_html",
-			args: {
-				template_name: frm.doc.id_card_template,
-				student: student,
-			},
-			callback: function (r) {
-				if (r.message) {
-					frm.set_df_property("preview_section", "hidden", 0);
-					$(frm.fields_dict["preview_html"].wrapper).html(r.message);
+		const matches = rows.filter((r) => {
+			if (this.filter === "no_photo") {
+				if (r.has_photo) return false;
+			} else if (this.filter !== "all" && idct_status(r).key !== this.filter) {
+				return false;
+			}
+			return (
+				!this.query ||
+				`${r.student} ${r.student_name || ""}`.toLowerCase().includes(this.query)
+			);
+		});
+		const preview_student = this.current_preview_student();
+		const run = this.frm.__idc_run;
+
+		const body = matches
+			.slice(0, this.limit)
+			.map((r) => {
+				const st = idct_status(r);
+				const photo = this.photos[r.student];
+				const initials = (r.student_name || r.student)
+					.split(/\s+/)
+					.map((w) => w[0])
+					.slice(0, 2)
+					.join("")
+					.toUpperCase();
+				const avatar = photo
+					? `<img class="idct-avatar" src="${esc(photo)}" alt="" loading="lazy">`
+					: `<span class="idct-avatar ${r.has_photo ? "" : "missing"}" title="${
+							r.has_photo ? "" : __("No photo: the default avatar will be printed")
+					  }">${esc(initials)}</span>`;
+				const queued = run && st.key === "new";
+				return `<tr data-student="${esc(r.student)}" class="${
+					r.student === preview_student ? "is-preview" : ""
+				}" title="${__("Click to preview this student's card")}">
+					<td><div class="idct-person">${avatar}<div style="min-width:0"><div class="idct-person-name">${esc(
+					r.student_name || r.student
+				)}</div>
+						<div class="idct-person-id">${esc(r.student)}</div></div></div></td>
+					<td class="idct-col-card">${
+						r.current_id_card
+							? `<a class="idct-card-link" data-card href="/app/id-card-generation/${encodeURIComponent(
+									r.current_id_card
+							  )}" target="_blank">${esc(r.current_id_card)}</a>`
+							: `<span class="text-muted">—</span>`
+					}</td>
+					<td><span class="idct-status ${queued ? "busy" : st.key}">${
+					queued ? __("Queued") : st.label
+				}</span>
+						${
+							st.detail
+								? `<div class="small text-muted" style="max-width:320px;white-space:normal;margin-top:3px">${esc(
+										st.detail
+								  )}</div>`
+								: ""
+						}</td>
+					<td style="width:44px;text-align:right">${
+						this.running
+							? ""
+							: `<button class="idct-icon-btn" data-remove="${esc(
+									r.name
+							  )}" title="${__("Remove from list")}">${idct_icon("x", 15)}</button>`
+					}</td>
+				</tr>`;
+			})
+			.join("");
+
+		$list.html(
+			matches.length
+				? `<div style="max-height:620px;overflow:auto"><table class="idct-table"><thead><tr><th>${__(
+						"Student"
+				  )}</th>
+					<th class="idct-col-card">${__("ID card")}</th><th>${__(
+						"Status"
+				  )}</th><th></th></tr></thead><tbody>${body}</tbody></table></div>
+					${
+						matches.length > this.limit
+							? `<div class="idct-more"><button class="btn btn-default btn-xs" data-act="more">${__(
+									"Show more ({0} left)",
+									[matches.length - this.limit]
+							  )}</button></div>`
+							: ""
+					}`
+				: `<div class="idct-empty">${__("No students match this filter.")}</div>`
+		);
+	}
+
+	render_run() {
+		const c = idct_counts(this.frm);
+		const doc = this.frm.doc;
+		const run = this.frm.__idc_run;
+		let reason = "";
+		if (!c.total) reason = __("Add students first.");
+		else if (!doc.id_card_template) reason = __("Choose a template first.");
+		else if (!doc.issue_date) reason = __("Set the issue date.");
+		else if (!doc.generate_front && !doc.generate_back)
+			reason = __("Select the front, the back, or both.");
+		else if (!c.to_process)
+			reason = __("Everyone already has a card. Turn on Regenerate to re-render them.");
+
+		const line = (label, value, cls = "") =>
+			`<div class="${cls}"><span>${label}</span><span>${value}</span></div>`;
+		this.$root.find(".idct-run").html(`
+			<div class="idct-summary" style="margin-top:12px">
+				${line(doc.regenerate_existing ? __("Cards to render") : __("New cards"), c.to_process)}
+				${c.skipped ? line(__("Skipped (already have a card)"), c.skipped) : ""}
+				${c.no_photo ? line(__("Without a photo"), c.no_photo, "warn") : ""}
+			</div>
+			<button class="btn btn-primary idct-go" data-act="generate" ${run || reason ? "disabled" : ""}>
+				${
+					run
+						? __("Generating… {0}/{1}", [run.done, run.total])
+						: c.to_process
+						? __("Generate {0} card(s)", [c.to_process])
+						: __("Generate cards")
 				}
+			</button>
+			<div class="idct-note">${
+				run
+					? __("Running in the background.")
+					: reason || __("Runs in the background; you can keep working.")
+			}</div>`);
+	}
+
+	render_outputs() {
+		const c = idct_counts(this.frm);
+		const disabled = !c.with_card || this.running ? "disabled" : "";
+		const $panel = this.$root.find(".idct-output-panel").css("opacity", c.with_card ? 1 : 0.6);
+		$panel.find(".idct-outputs").html(`
+			<button class="btn btn-default" data-out="sheet" ${disabled}><span>${__("Print sheet")}<small>${__(
+			"A4 PDF · 300 DPI · crop marks"
+		)}</small></span>${idct_icon("file")}</button>
+			<button class="btn btn-default" data-out="zip" ${disabled}><span>${__("Card images")}<small>${__(
+			"ZIP of front and back PNGs"
+		)}</small></span>${idct_icon("archive")}</button>
+			<button class="btn btn-default" data-out="printed" ${disabled}><span>${__(
+			"Mark as printed"
+		)}<small>${__("After printing the cards")}</small></span>${idct_icon("check")}</button>
+			${
+				c.with_card
+					? ""
+					: `<div class="idct-note" style="margin:0">${__(
+							"Available once cards are generated."
+					  )}</div>`
+			}`);
+	}
+
+	load_photos() {
+		const missing = (this.frm.doc.student_list || [])
+			.filter((r) => r.has_photo && !(r.student in this.photos))
+			.map((r) => r.student);
+		if (!missing.length) return;
+		missing.forEach((s) => (this.photos[s] = null));
+		frappe.db
+			.get_list("Student Master", {
+				filters: { name: ["in", missing] },
+				fields: ["name", "passport_size_photo"],
+				limit: missing.length,
+			})
+			.then((list) => {
+				list.forEach((s) => (this.photos[s.name] = s.passport_size_photo || null));
+				this.render_list(true);
+			});
+	}
+
+	current_preview_student() {
+		const rows = this.frm.doc.student_list || [];
+		if (rows.some((r) => r.student === this.preview_student)) return this.preview_student;
+		return rows.length ? rows[0].student : null;
+	}
+
+	load_preview() {
+		const frm = this.frm;
+		const template = frm.doc.id_card_template;
+		this.$root
+			.find(".idct-edit-template")
+			.toggle(!!template)
+			.attr(
+				"href",
+				template ? `/app/id-card-template/${encodeURIComponent(template)}` : "#"
+			);
+		if (!template) {
+			this.preview = null;
+			this.render_preview();
+			return;
+		}
+		const student = this.current_preview_student();
+		const key = `${template}|${student || ""}`;
+		if (this.preview && this.preview.key === key && !this.preview.error) {
+			this.render_preview();
+			return;
+		}
+		const id = (this._preview_id = (this._preview_id || 0) + 1);
+		this.preview = { key, loading: true };
+		this.render_preview();
+		frm.call({ doc: frm.doc, method: "render_preview", args: { student } })
+			.then((r) => {
+				if (id !== this._preview_id) return;
+				this.preview = { key, ...(r.message || {}) };
+				this.render_preview();
+			})
+			.catch(() => {
+				if (id !== this._preview_id) return;
+				this.preview = { key, error: true };
+				this.render_preview();
+			});
+	}
+
+	render_preview() {
+		const p = this.preview;
+		const $box = this.$root.find(".idct-preview");
+		const $cap = this.$root.find(".idct-preview-caption");
+		const $front = this.$root.find(".idct-seg button[data-side='front']");
+		const $back = this.$root.find(".idct-seg button[data-side='back']");
+		const ready = p && !p.loading && !p.error && p.front;
+		$front.prop("disabled", !ready);
+		$back.prop("disabled", !(ready && p.back));
+		const side = ready && p[this.preview_side] ? this.preview_side : "front";
+		$front.toggleClass("active", side === "front");
+		$back.toggleClass("active", side === "back");
+
+		if (!this.frm.doc.id_card_template) {
+			$box.html(
+				`<div class="text-muted small">${__("Choose a template to see the card.")}</div>`
+			);
+			$cap.text("");
+		} else if (!p || p.loading) {
+			$box.html('<div class="idct-skeleton"></div>');
+			$cap.text(__("Rendering…"));
+		} else if (!ready) {
+			$box.html(
+				`<div class="text-muted small">${__(
+					"Preview unavailable. Check the template design."
+				)}</div>`
+			);
+			$cap.text("");
+		} else {
+			$box.html(`<img src="${p[side]}" alt="${side}">`);
+			$cap.text(p.sample ? __("Sample data") : __("Preview: {0}", [p.person || ""]));
+		}
+	}
+
+	find_students() {
+		const frm = this.frm;
+		if (!(frm.doc.academic_year || frm.doc.program || frm.doc.batch)) {
+			frappe.show_alert({
+				message: __("Pick a year, programme or batch first."),
+				indicator: "orange",
+			});
+			return;
+		}
+		const go = () =>
+			frm
+				.call({
+					doc: frm.doc,
+					method: "get_students",
+					freeze: true,
+					freeze_message: __("Finding students…"),
+				})
+				.then((r) => {
+					this.filter = "all";
+					this.query = "";
+					this.preview_student = null;
+					frm.__idc_last = null;
+					this.refresh();
+					this.load_preview();
+					const n = r.message || 0;
+					frappe.show_alert({
+						message: n
+							? __("{0} student(s) found.", [n])
+							: __("No active students match these filters."),
+						indicator: n ? "green" : "orange",
+					});
+				});
+		if ((frm.doc.student_list || []).length) {
+			frappe.confirm(
+				__("Replace the current list with the students matching these filters?"),
+				go
+			);
+		} else {
+			go();
+		}
+	}
+
+	async load_students(students, template) {
+		const frm = this.frm;
+		const rows = await frappe.xcall(
+			"slcm.slcm.doctype.id_card_generation_tool.id_card_generation_tool.get_student_rows",
+			{ students }
+		);
+		frm.doc.student_list = [];
+		rows.forEach((row) => frm.add_child("student_list", row));
+		if (template) frm.set_value("id_card_template", template);
+		frm.dirty();
+		this.filter = "all";
+		this.query = "";
+		this.preview_student = null;
+		frm.__idc_last = null;
+		this.refresh();
+		this.load_preview();
+		frappe.show_alert({
+			message: __("{0} student(s) loaded to retry.", [rows.length]),
+			indicator: "blue",
+		});
+	}
+
+	async add_student(student) {
+		const frm = this.frm;
+		if ((frm.doc.student_list || []).some((r) => r.student === student)) {
+			frappe.show_alert({
+				message: __("{0} is already in the list.", [student]),
+				indicator: "blue",
+			});
+			return;
+		}
+		const row = await frappe.xcall(
+			"slcm.slcm.doctype.id_card_generation_tool.id_card_generation_tool.get_student_row",
+			{
+				student,
+			}
+		);
+		frm.add_child("student_list", row);
+		frm.dirty();
+		this.refresh();
+		this.load_preview();
+		frappe.show_alert({
+			message: __("Added {0}.", [frappe.utils.escape_html(row.student_name || student)]),
+			indicator: "green",
+		});
+	}
+}
+
+function idct_generate(frm) {
+	if (frm.__idc_run) return;
+	const c = idct_counts(frm);
+	if (!frm.doc.id_card_template || !c.to_process) return;
+	const lines = [
+		__("Generate <b>{0}</b> card(s) with the <b>{1}</b> template?", [
+			c.to_process,
+			frappe.utils.escape_html(frm.doc.id_card_template),
+		]),
+	];
+	if (c.no_photo)
+		lines.push(
+			__("{0} student(s) have no photo; the default avatar will be printed.", [c.no_photo])
+		);
+	if (c.skipped)
+		lines.push(__("{0} student(s) who already have a card will be skipped.", [c.skipped]));
+	frappe.confirm(lines.join("<br><br>"), () => {
+		frm.call("generate_cards").then((r) => {
+			if (!r.message) return;
+			frm.__idc_last = null;
+			frm.__idc_run = { total: r.message.queued, done: 0 };
+			if (frm.idct) frm.idct.refresh();
+		});
+	});
+}
+
+function idct_print_sheet(frm) {
+	const d = new frappe.ui.Dialog({
+		title: __("Print Sheet"),
+		fields: [
+			{
+				fieldtype: "Select",
+				fieldname: "layout",
+				label: __("Layout"),
+				options: [
+					{
+						value: "pairs",
+						label: __("Front and back side by side (single-sided printing)"),
+					},
+					{
+						value: "duplex",
+						label: __("Fronts, then mirrored backs (double-sided printing)"),
+					},
+				],
+				default: "pairs",
 			},
+			{ fieldtype: "Check", fieldname: "crop_marks", label: __("Crop marks"), default: 1 },
+			{
+				fieldtype: "HTML",
+				options: `<div class="text-muted small">${__(
+					"Generated and printed cards in this list are included. Each card is logged in the ID Card Print Log."
+				)}</div>`,
+			},
+		],
+		primary_action_label: __("Create PDF"),
+		primary_action(values) {
+			d.hide();
+			frm.call({
+				doc: frm.doc,
+				method: "generate_print_layout",
+				args: values,
+				freeze: true,
+				freeze_message: __("Laying out cards…"),
+			}).then((r) => {
+				if (!r.message) return;
+				window.open(r.message.file_url, "_blank");
+				frappe.show_alert({
+					message: __("{0} card(s) on {1} page(s).", [r.message.cards, r.message.pages]),
+					indicator: "green",
+				});
+			});
+		},
+	});
+	d.show();
+}
+
+function idct_zip(frm) {
+	frm.call({
+		doc: frm.doc,
+		method: "download_zip",
+		freeze: true,
+		freeze_message: __("Packing images…"),
+	}).then((r) => {
+		if (r.message) window.open(r.message, "_blank");
+	});
+}
+
+function idct_mark_printed(frm) {
+	frappe.confirm(
+		__(
+			"Mark every generated card in this list as <b>Printed</b>? Do this after the cards are physically printed."
+		),
+		() => {
+			frm.call({ doc: frm.doc, method: "mark_as_printed", freeze: true }).then((r) => {
+				frappe.show_alert({
+					message: __("{0} card(s) marked as printed.", [r.message || 0]),
+					indicator: "green",
+				});
+			});
+		}
+	);
+}
+
+frappe.ui.form.on("ID Card Generation Tool", {
+	onload(frm) {
+		frappe.realtime.off("id_card_tool_progress");
+		frappe.realtime.on("id_card_tool_progress", (data) => {
+			const f = window.cur_frm;
+			if (!f || f.doctype !== "ID Card Generation Tool") return;
+			if (data.finished) {
+				f.__idc_run = null;
+				f.__idc_last = { generated: data.generated, failed: data.failed, log: data.log };
+				f.reload_doc();
+				return;
+			}
+			f.__idc_run = data;
+			const row = (f.doc.student_list || []).find((r) => r.student === data.student);
+			if (row) row.status = data.status;
+			if (f.idct) f.idct.refresh();
 		});
 	},
+
+	refresh(frm) {
+		frm.disable_save();
+		frm.toggle_display(IDCT_HIDDEN_SECTIONS, false);
+		frm.page.wrapper.find(".layout-side-section").hide();
+		frm.page.clear_primary_action();
+		frm.page.clear_menu();
+		frm.page.add_menu_item(__("Reset everything"), () => {
+			frappe.confirm(__("Clear the filters, template and student list?"), () =>
+				frm.call("reset_filters").then(() => frm.reload_doc())
+			);
+		});
+		frm.page.add_menu_item(__("Generation history"), () =>
+			frappe.set_route("List", "ID Card Generation Tool Log")
+		);
+
+		if (slcm.id_card.pending_tool_template) {
+			frm.set_value("id_card_template", slcm.id_card.pending_tool_template);
+			slcm.id_card.pending_tool_template = null;
+		} else if (!frm.doc.id_card_template) {
+			frappe.db
+				.get_value("ID Card Template", { card_type: "Student", is_default: 1 }, "name")
+				.then((r) => {
+					if (r.message && r.message.name && !frm.doc.id_card_template)
+						frm.set_value("id_card_template", r.message.name);
+				});
+		}
+
+		if (!frm.idct || frm.idct.frm !== frm || !frm.idct.is_mounted()) {
+			frm.idct = new IDCardBulkConsole(frm);
+			frm.idct.mount();
+		}
+
+		// Handed over from a Tool Log's "Retry failed students".
+		const pending = slcm.id_card.pending_tool_students;
+		if (pending && pending.students && pending.students.length) {
+			slcm.id_card.pending_tool_students = null;
+			frm.idct.load_students(pending.students, pending.template);
+		}
+		frm.idct.refresh();
+		frm.idct.load_preview();
+		frm.call("get_run_status").then((r) => {
+			frm.__idc_run = r.message || null;
+			frm.idct.refresh();
+		});
+	},
+
+	id_card_template(frm) {
+		if (!frm.idct) return;
+		frm.idct.refresh();
+		frm.idct.load_preview();
+	},
+	issue_date: (frm) => frm.idct && frm.idct.refresh(),
+	expiry_date: (frm) => frm.idct && frm.idct.refresh(),
+	generate_front: (frm) => frm.idct && frm.idct.refresh(),
+	generate_back: (frm) => frm.idct && frm.idct.refresh(),
+	regenerate_existing: (frm) => frm.idct && frm.idct.refresh(),
 });
