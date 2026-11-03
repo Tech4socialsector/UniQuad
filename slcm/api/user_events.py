@@ -1,5 +1,22 @@
 import frappe
 from slcm.admission.utils.nlsat_portal import get_portal_login_url
+from slcm.permissions import AAD_ROLES
+
+HELPDESK_CUSTOMER_ROLE = "HD Customer"
+
+
+def grant_helpdesk_customer_role(doc, method=None):
+    """
+    Triggered on User validate.
+    AAD / AAD Staff raise Helpdesk tickets as customers (they see only their own
+    tickets). Helpdesk lets a user into the app only with an Agent / HD Customer
+    role, so without it their Helpdesk icon is dropped and the Campus & Support
+    folder opens empty.
+    """
+    roles = {r.role for r in doc.get("roles") or []}
+    if roles & AAD_ROLES and HELPDESK_CUSTOMER_ROLE not in roles and frappe.db.exists("Role", HELPDESK_CUSTOMER_ROLE):
+        doc.append("roles", {"role": HELPDESK_CUSTOMER_ROLE})
+
 
 def user_before_insert(doc, method):
     """

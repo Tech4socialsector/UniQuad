@@ -91,3 +91,5 @@ slcm.patches.v2_0.make_applicant_files_private
 slcm.patches.v2_0.aad_role_access
 slcm.patches.v2_0.aad_desktop_only
 slcm.patches.v2_0.aad_linked_doctype_perms
+slcm.patches.v2_0.aad_helpdesk_access
+slcm.patches.v2_0.helpdesk_reply_email_template

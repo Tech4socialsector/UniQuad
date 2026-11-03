@@ -53,7 +53,13 @@ def filter_boot_icons(bootinfo):
 	if not bootinfo.get("desktop_icons") or not is_desktop_restricted(roles):
 		return
 	allowed = granted_icons(roles)
-	bootinfo.desktop_icons = [i for i in bootinfo.desktop_icons if i.get("name") in allowed]
+	icons = [i for i in bootinfo.desktop_icons if i.get("name") in allowed]
+	# An App folder whose children were all filtered out (here or by an app's
+	# own permission check) opens as "Icon is not correctly configured"
+	parents = {i.get("parent_icon") for i in icons}
+	bootinfo.desktop_icons = [
+		i for i in icons if not (i.get("icon_type") == "App" and not i.get("link") and i.get("label") not in parents)
+	]
 
 
 def sync_user_layout(doc, method=None):
