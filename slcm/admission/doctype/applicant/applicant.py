@@ -998,8 +998,6 @@ class Applicant(Document):
             )
         elif self.program_level in ("Postgraduate", "PG", "LLM"):
             academic_line = f"UG Degree completion: {self.ug_degree_completion or '—'}"
-        elif self.program_level in ("Research Course", "PhD"):
-            academic_line = f"PhD Program Type: {self.phd_program_type or '—'}"
 
         # ── Institution name ─────────────────────────────────────────────────
         institution_name = (

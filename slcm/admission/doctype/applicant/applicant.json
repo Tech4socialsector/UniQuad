@@ -1351,8 +1351,8 @@
    "link_fieldname": "applicant"
   }
  ],
- "make_attachments_public": 1,
- "modified": "2026-11-02 09:42:52.610833",
+ "make_attachments_public": 0,
+ "modified": "2026-11-03 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Applicant",

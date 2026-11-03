@@ -87,7 +87,6 @@ def _map_applicant_to_student(student, applicant, program, admission_cycle, offe
         ug_degree_details (table)   → ug_degree_details (table)
         pg_degree_details (table)   → pg_degree_details (table)
         phd_proposal                → phd_proposal
-        phd_program_type            → phd_programme
         proposed_phd_topic          → proposed_phd_topic
         father_*/mother_*/guardian_*→ parents (child table)
         Offer Letter PDF            → offer_letter
@@ -325,7 +324,6 @@ def _map_applicant_to_student(student, applicant, program, admission_cycle, offe
 
     # ── PhD ───────────────────────────────────────────────────────────────────
     student.phd_proposal      = applicant.get("phd_proposal") or None
-    student.phd_programme     = applicant.get("phd_program_type") or None
     student.proposed_phd_topic = applicant.get("proposed_phd_topic") or None
 
     # ── Parents (child table) ─────────────────────────────────────────────────

@@ -1046,6 +1046,20 @@ function collectDraftData() {
 	var data = {};
 	try { data = wf.get_values(true) || {}; } catch (e) {}
 
+	// Frappe's get_values() leaves out empty fields, so a value the applicant cleared never
+	// reached the server and the old value stayed. Send every empty field as an explicit null.
+	// (PRESERVE below still restores system fields from the loaded doc; tables are handled below.)
+	var NO_NULL_TYPES = ['Table', 'Table MultiSelect', 'Section Break', 'Column Break',
+		'Tab Break', 'Page Break', 'HTML', 'Button', 'Heading', 'Fold'];
+	try {
+		Object.keys((wf && wf.fields_dict) || {}).forEach(function (fn) {
+			var f = wf.fields_dict[fn];
+			if (!f || !f.df || !f.df.fieldname || typeof f.get_value !== 'function') return;
+			if (NO_NULL_TYPES.indexOf(f.df.fieldtype) !== -1) return;
+			if (!Object.prototype.hasOwnProperty.call(data, fn)) data[fn] = null;
+		});
+	} catch (e) {}
+
 	var PRESERVE = [
 		'name', 'program', 'admission_cycle', 'academic_year', 'admission_year',
 		'campus', 'status', 'application_fee_status',
