@@ -1695,7 +1695,6 @@ function _paceBuildAdmissionShell(ws, cfg, user, uinfo) {
 			// Bottom bar
 			'<div style="margin-top:40px;padding-top:24px;border-top:1px solid rgba(0,0,0,0.1);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;">' +
 				'<p style="margin:0;font-size:13px;color:#64748b;opacity:0.8;">© ' + yr + ' ' + _paceEsc(title) + '. All rights reserved.</p>' +
-				'<p style="margin:0;font-size:13px;color:#64748b;opacity:0.8;">Powered by <strong style="color:' + (footerTextCol || secondary) + ';font-weight:400;">' + _paceEsc(powerd) + '</strong></p>' +
 			'</div>' +
 		'</div>';
 	document.body.appendChild(footer);
