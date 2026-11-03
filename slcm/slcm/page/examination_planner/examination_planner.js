@@ -1062,7 +1062,7 @@ class ExamPlanner {
 					<span class="xp-count-lines xp-muted xp-bc-sel"></span>
 				</div>
 				<div class="xp-table"><table class="table table-sm xp-bc"><thead><tr>
-					<th style="width:34px"><input type="checkbox" class="xp-bc-all"></th><th>${__('Date')}</th><th>${__('Time')}</th><th>${__('Course')}</th><th>${__('Rooms')}</th>
+					<th><input type="checkbox" class="xp-bc-all"></th><th>${__('Date')}</th><th>${__('Time')}</th><th>${__('Course')}</th><th>${__('Rooms')}</th>
 					<th class="num">${__('Students')}</th><th class="num">${__('Barcodes')}</th><th></th></tr></thead><tbody></tbody></table></div>`);
 			const shown = () => papers.filter((p) => (!f.dates.size || f.dates.has(p.exam_date))
 				&& (!f.q || `${p.course_name} ${p.course} ${p.course_code}`.toLowerCase().includes(f.q.toLowerCase())));
@@ -1244,14 +1244,14 @@ class ExamPlanner {
 					<th>${__('Course')}</th><th class="num">${__('Students')}</th><th class="num">${__('Detained')}</th><th class="num">${__('Barcodes')}</th>
 					<th>${__('Marks entered')}</th><th>${__('Evaluators')}</th><th>${__('Status')}</th><th></th></tr></thead><tbody>
 				${rows.map((r) => {
-					const m = r.mk || {}, n = m.students || 0, pct = n ? Math.round((m.entered || 0) * 100 / n) : 0, [cls, label] = status(r);
+					const m = r.mk || {}, n = m.students || 0, [cls, label] = status(r);
 					const missing = r.in_classes - r.synced;
 					return `<tr class="xp-crow" data-course="${esc(r.course)}">
 						<td><b>${esc(r.course)}</b>${missing > 0 ? `<br><small class="xp-warn-text">${__('{0} not added yet', [missing])}</small>` : ''}</td>
 						<td class="num">${r.synced}${r.in_classes && r.in_classes !== r.synced ? ` <small>/ ${r.in_classes}</small>` : ''}</td>
 						<td class="num">${r.detained ? `<span class="xp-pill bad">${r.detained}</span>` : 0}</td>
 						<td class="num">${r.barcodes}${r.synced && r.barcodes < r.synced ? ` <small>/ ${r.synced}</small>` : ''}</td>
-						<td><div class="xp-mk"><div class="xp-meter"><i style="width:${pct}%"></i></div><small>${m.entered || 0} / ${n}</small></div></td>
+						<td class="num">${m.entered || 0} / ${n}</td>
 						<td><small>${esc((m.evaluators || []).join(', ') || '—')}</small></td>
 						<td><span class="xp-pill ${cls}">${label}</span></td>
 						<td class="act"><button class="btn btn-default btn-sm xp-open">${__('Open')} ›</button></td></tr>`;
@@ -1400,12 +1400,32 @@ class ExamPlanner {
 	// Re-exam and improvement are one sitting: one timetable, one registration window, one list of students
 	render_after() {
 		this.unmount();
-		this.$body.html(`<div class="xp-card"><div class="xp-rx-carry"></div><div class="xp-rx-tt"></div></div>
-			<div class="xp-card"><div class="xp-card-head"><div><h4>${__('Re-exam & improvement students')}</h4></div></div><div class="xp-ax"></div></div>`);
-		this.render_carry_forward(this.$body.find('.xp-rx-carry'));
+		if (this.after_tab === 'improvement' || this.after_tab === 'reexam') this.after_tab = 'students';   // older links
+		if (!this.after_tab) {
+			try { this.after_tab = localStorage.getItem('xp-after-tab'); } catch (e) { /* storage blocked */ }
+		}
+		this.after_tab = this.after_tab === 'students' ? 'students' : 'timetable';
+		this.$body.html(`<div class="xp-card">
+			<div class="xp-rtabs">
+				<button class="xp-rtab" data-tab="timetable">${__('Timetable')}</button>
+				<button class="xp-rtab" data-tab="students">${__('Students')}</button>
+			</div>
+			<div class="xp-tab" data-tab="timetable"><div class="xp-rx-tt"></div></div>
+			<div class="xp-tab" data-tab="students"><div class="xp-rx-carry"></div><div class="xp-ax"></div></div></div>`);
+		const show = () => this.$body.find('.xp-rtab, .xp-tab').each((_, el) => {
+			const on = $(el).data('tab') === this.after_tab;
+			$(el).toggleClass('on', on);
+			if ($(el).hasClass('xp-tab')) $(el).toggle(on);
+		});
+		this.$body.find('.xp-rtab').on('click', (e) => {
+			this.after_tab = $(e.currentTarget).data('tab');
+			try { localStorage.setItem('xp-after-tab', this.after_tab); } catch (err) { /* storage blocked */ }
+			show();
+		});
+		show();
 		this.render_reexam_timetable(this.$body.find('.xp-rx-tt'));
+		this.render_carry_forward(this.$body.find('.xp-rx-carry'));
 		this.render_after_students(this.$body.find('.xp-ax'));
-		this.after_tab = null;
 	}
 
 	render_after_students($el) {
@@ -1417,13 +1437,13 @@ class ExamPlanner {
 			const course_opts = d.courses.map((c) => [c.name, c.course_name]);
 			$el.html(`
 				<div class="xp-bar xp-filters xp-ax-window">
-					<b class="xp-muted" style="align-self:center">${__('Registration window')}</b>
+					<b>${__('Registration window')}</b>
 					<label>${__('Course')}<select class="form-control input-sm" data-w="course"><option value="">${__('All courses')}</option>${opts(course_opts)}</select></label>
 					<label>${__('From')}<input type="date" class="form-control input-sm" data-w="deadline_from"></label>
 					<label>${__('To')}<input type="date" class="form-control input-sm" data-w="deadline_to"></label>
 					<label>${__('Payment gateway')}<select class="form-control input-sm" data-w="payment_gateway">${opts([['Razorpay', 'Razorpay'], ['Easebuzz', 'Easebuzz']])}</select></label>
 					<label>${__('Improvement seats')}<input type="number" min="0" class="form-control input-sm" data-w="registration_limit" placeholder="${__('No limit')}"></label>
-					<button class="btn btn-default btn-sm xp-ax-save" style="align-self:flex-end">${__('Save window')}</button>
+					<button class="btn btn-primary btn-sm xp-ax-save">${__('Save window')}</button>
 				</div>
 				<div class="xp-bar xp-tools">
 					<button class="btn btn-default btn-sm xp-ax-tpl">${__('Download template')}</button>
@@ -1442,7 +1462,7 @@ class ExamPlanner {
 					<span class="xp-count-lines xp-muted"></span>
 				</div>
 				<div class="xp-table"><table class="table table-sm xp-ax-table"><thead><tr>
-					<th style="width:34px"><input type="checkbox" class="xp-ax-all"></th><th>${__('Student')}</th><th>${__('Course')}</th><th>${__('Type')}</th>
+					<th><input type="checkbox" class="xp-ax-all"></th><th>${__('Student')}</th><th>${__('Course')}</th><th>${__('Type')}</th>
 					<th>${__('Grade')}</th><th class="num">${__('Marks')}</th><th>${__('Enrolment')}</th><th class="num">${__('Fee')}</th><th>${__('Payment')}</th><th></th></tr></thead><tbody></tbody></table></div>`);
 
 			// registration window: one course's values, or blank for all courses
@@ -1648,7 +1668,6 @@ class ExamPlanner {
 			.xp-rx-tt{border:1px solid var(--border-color);border-radius:10px;padding:14px;margin-bottom:16px}
 			.xp-ct tbody tr.xp-crow{cursor:pointer}.xp-ct tbody tr.xp-crow:hover td{background:var(--er-brand-softest,#FBEEF0)}
 			.xp-ct td.act{text-align:right;white-space:nowrap}.xp-ct td small{color:var(--text-muted)}.xp-warn-text{color:var(--text-on-yellow,#8a5a00)!important}
-			.xp-mk{display:flex;align-items:center;gap:8px;min-width:150px}.xp-mk .xp-meter{flex:1}
 			.xp-course-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-bottom:12px;margin-bottom:12px;border-bottom:1px solid var(--border-color)}
 			.xp-course-head h4{margin:0 0 0 6px;font-family:var(--er-font);font-size:16px;font-weight:700}
 			.xp-rtabs{display:flex;gap:4px;border-bottom:1px solid var(--border-color);margin-bottom:14px;overflow-x:auto}
@@ -1686,7 +1705,7 @@ class ExamPlanner {
 			@media (max-width:860px){.xp-cr{grid-template-columns:1fr}.xp-cr-act{justify-content:flex-start}.xp-cr-edit{grid-template-columns:1fr}}
 			.xp-tt td:first-child{min-width:150px}.xp-table .xp-tt .xp-d{min-width:135px}.xp-table .xp-tt .xp-s,.xp-table .xp-tt .xp-e{min-width:110px}
 			.xp-table .xp-tt .xp-v{min-width:160px}.xp-table .xp-tt input.xp-c{min-width:64px;width:72px}.xp-table .xp-tt .xp-f{min-width:140px}.xp-tt .xp-msg{min-width:90px}.xp-msg .xp-pill{display:block;font-weight:600}
-			.xp-tab{display:none;flex-direction:column;gap:10px}.xp-tab.on{display:flex}.xp-card .xp-rtabs{margin-bottom:4px}
+			.xp-tab{display:none;flex-direction:column;gap:12px}.xp-tab.on{display:flex}.xp-card .xp-rtabs{margin-bottom:4px}
 			.xp-tools,.xp-filters{gap:8px}
 			.xp-filters{align-items:flex-end;padding:8px 10px;border:1px solid var(--border-color);border-radius:8px;background:var(--subtle-fg,#f8f8f8)}
 			.xp-filters label{display:flex;flex-direction:column;gap:2px;margin:0;font-size:11px;font-weight:600;color:var(--text-muted)}
@@ -1721,12 +1740,22 @@ class ExamPlanner {
 			.xp-pick{position:absolute;z-index:1050;max-height:260px;overflow:auto;background:var(--card-bg,#fff);border:1px solid var(--border-color,#d1d5db);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.14);padding:4px;font-size:12.5px}
 			.xp-pick-i{display:flex;justify-content:space-between;gap:12px;padding:6px 10px;border-radius:5px;cursor:pointer;white-space:nowrap}
 			.xp-pick-i small{color:var(--text-muted)}.xp-pick-i.on,.xp-pick-i:hover{background:var(--er-brand-softest,#FBEEF0);color:var(--er-brand,#920C24)}
-			.xp-ax-mark{color:var(--er-brand,#920C24);font-weight:800;margin-left:1px}.xp-ax-window{margin-bottom:4px}
+			.xp-ax-mark{color:var(--er-brand,#920C24);font-weight:800;margin-left:1px}
+			.xp-ax{display:flex;flex-direction:column;gap:12px}
+			.xp-ax-window>b{flex-basis:100%;font-size:13px;color:var(--text-color)}
+			.xp-filters label{flex:0 0 auto}.xp-filters [data-f="type"]{width:210px}
+			.xp-ax-table,.xp-bc{margin:0}
+			.xp-ax-table th,.xp-ax-table td,.xp-bc th,.xp-bc td{vertical-align:middle;padding:8px 10px;text-align:left}
+			.xp-table .xp-ax-table td:first-child,.xp-table .xp-bc td:first-child{min-width:0;width:40px;text-align:center}
+			.xp-ax-table th:first-child,.xp-bc th:first-child{width:40px;text-align:center}
+			.xp-ax-table td:nth-child(2),.xp-bc td:nth-child(4){min-width:200px}
+			.xp-ax-table th.num,.xp-ax-table td.num,.xp-bc th.num,.xp-bc td.num{text-align:right}
+			.xp-ax-table td.act,.xp-bc td.act{text-align:right;white-space:nowrap}
+			.xp-ax-table td small,.xp-bc td small{display:block;margin-top:2px}
 			.xp-ce-sheet td{vertical-align:top}.xp-ce-sheet td.xp-subj{padding:6px 8px}.xp-ce-sheet td.xp-subj small{display:block;color:var(--text-muted);font-size:11px}
 			.xp-unsched .xp-soft{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 			.xp-issues ul{margin:6px 0 0;padding-left:18px}.xp-issues li.bad{color:var(--text-on-red,#b0182b)}
 			.xp-alert{border-radius:8px;padding:8px 12px}.xp-alert.bad{background:var(--bg-red,#fde6e8)}.xp-alert.ok{background:var(--bg-green,#e5f4ea)}
-			.xp-meter{height:8px;border-radius:4px;background:var(--border-color);min-width:90px;overflow:hidden}.xp-meter i{display:block;height:100%;background:var(--er-brand,#920C24)}
 			.xp-kpis{display:flex;flex-wrap:wrap;gap:24px}.xp-kpis b{display:block;font-size:20px;font-family:var(--er-font)}.xp-kpis span{font-size:12px;color:var(--text-muted)}
 			.xp-check{list-style:none;margin:0;padding:0}
 			.xp-check li{display:grid;grid-template-columns:32px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--border-color)}
