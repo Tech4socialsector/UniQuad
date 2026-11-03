@@ -1334,14 +1334,14 @@ function show_status_transition_dialog(frm, data) {
    HTML field if present, otherwise silently does nothing.
 ────────────────────────────────────────────────────────────────────────────── */
 const _FEE_STATUS_BADGE = {
-	"Paid":              { bg: "#dcfce7", text: "#166534" },
-	"Partially Paid":    { bg: "#fef3c7", text: "#92400e" },
-	"Unpaid":            { bg: "#fee2e2", text: "#991b1b" },
-	"Payment Initiated": { bg: "#dbeafe", text: "#1e40af" },
-	"Authorized":        { bg: "#d1fae5", text: "#065f46" },
-	"Payment Failed":    { bg: "#fee2e2", text: "#991b1b" },
-	"Payment Cancelled": { bg: "#fef3c7", text: "#92400e" },
-	"Refunded":          { bg: "#ede9fe", text: "#4c1d95" },
+	"Paid":              { bg: "#fbeef0", text: "#920c24" },
+	"Partially Paid":    { bg: "#fbeef0", text: "#920c24" },
+	"Unpaid":            { bg: "#fbeef0", text: "#920c24" },
+	"Payment Initiated": { bg: "#fbeef0", text: "#920c24" },
+	"Authorized":        { bg: "#fbeef0", text: "#920c24" },
+	"Payment Failed":    { bg: "#fbeef0", text: "#920c24" },
+	"Payment Cancelled": { bg: "#fbeef0", text: "#920c24" },
+	"Refunded":          { bg: "#fbeef0", text: "#920c24" },
 };
 
 function _render_finance_tab_analytics(frm) {
@@ -1350,7 +1350,7 @@ function _render_finance_tab_analytics(frm) {
 	// Inject the analytics strip into the fee_payment_log_section header area
 	// We target the section heading of the Payment Log collapsible section
 	const status     = frm.doc.fee_payment_status || "";
-	const sc         = _FEE_STATUS_BADGE[status] || { bg: "#f3f4f6", text: "#374151" };
+	const sc         = _FEE_STATUS_BADGE[status] || { bg: "#fbeef0", text: "#920c24" };
 	const status_badge = status
 		? `<span style="display:inline-block;background:${sc.bg};color:${sc.text};
 		               padding:3px 14px;border-radius:20px;font-size:12px;
@@ -1377,11 +1377,11 @@ function _render_finance_tab_analytics(frm) {
 					Payment Summary
 				</div>
 				<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;">
-					${_mini_stat("Attempts",   a.total_attempts, "#3b82f6")}
-					${_mini_stat("Successful", a.successful,     "#16a34a")}
-					${_mini_stat("Failed",     a.failed,         "#ef4444")}
-					${_mini_stat("Cancelled",  a.cancelled,      "#f59e0b")}
-					${_mini_stat("Refunded",   a.refunded,       "#6366f1")}
+					${_mini_stat("Attempts",   a.total_attempts, "#920c24")}
+					${_mini_stat("Successful", a.successful,     "#920c24")}
+					${_mini_stat("Failed",     a.failed,         "#920c24")}
+					${_mini_stat("Cancelled",  a.cancelled,      "#920c24")}
+					${_mini_stat("Refunded",   a.refunded,       "#920c24")}
 				</div>
 				<div style="margin-left:auto;font-size:11px;color:#94a3b8;">
 					Last attempt: ${last_ts}
@@ -1514,8 +1514,8 @@ function _show_payment_logs_dialog(frm) {
 			$logs_wrap.find(".plog-tab").each(function () {
 				const active = this.getAttribute("data-src") === _active_src;
 				$(this).css({
-					"border-bottom-color": active ? "#6366f1" : "transparent",
-					"color":               active ? "#6366f1" : "#6b7280",
+					"border-bottom-color": active ? "#920c24" : "transparent",
+					"color":               active ? "#920c24" : "#6b7280",
 					"font-weight":         active ? "600"     : "500",
 				});
 			});
@@ -1542,7 +1542,7 @@ function _show_payment_logs_dialog(frm) {
 			const inv = $(this).data("invoice");
 			if (!inv) return;
 			const url = frappe.urllib.get_full_url(
-				`/api/method/frappe.utils.print_format.download_pdf?doctype=Fee+Invoice&name=${encodeURIComponent(inv)}&format=Fee+Invoice+Receipt&no_letterhead=0`
+				`/api/method/slcm.api.student_portal.download_fee_invoice_admin?invoice_name=${encodeURIComponent(inv)}`
 			);
 			window.open(url, "_blank");
 		});
@@ -1577,8 +1577,8 @@ function _show_payment_logs_dialog(frm) {
 					window.open(url, "_blank");
 					frappe.show_alert({ message: `Downloading receipt for ${dem_name}…`, indicator: "blue" });
 					setTimeout(() => {
-						btn.html("✔ Done").css("background", "#16a34a");
-						setTimeout(() => { btn.html(orig).css("background", "#7c3aed").prop("disabled", false); }, 2500);
+						btn.html("✔ Done").css("background", "#6e0919");
+						setTimeout(() => { btn.html(orig).css("background", "#920c24").prop("disabled", false); }, 2500);
 					}, 600);
 				},
 				error: function () {
@@ -1605,7 +1605,7 @@ function _show_payment_logs_dialog(frm) {
 
 		// Hover highlight for clickable cards
 		$logs_wrap.on("mouseenter", ".plog-card[data-open-invoice], .plog-card[data-open-demand]", function () {
-			$(this).css("box-shadow", "0 0 0 2px #6366f1, 0 2px 8px rgba(99,102,241,.15)");
+			$(this).css("box-shadow", "0 0 0 2px #920c24, 0 2px 8px rgba(146,12,36,.15)");
 		}).on("mouseleave", ".plog-card[data-open-invoice], .plog-card[data-open-demand]", function () {
 			$(this).css("box-shadow", "0 1px 3px rgba(0,0,0,.06)");
 		});
@@ -1626,11 +1626,11 @@ function _render_payment_analytics(a) {
 		: "—";
 
 	const tiles = [
-		{ label: "Total Attempts", value: a.total_attempts, color: "#1e40af", bg: "#dbeafe" },
-		{ label: "Successful",     value: a.successful,     color: "#166534", bg: "#dcfce7" },
-		{ label: "Failed",         value: a.failed,         color: "#991b1b", bg: "#fee2e2" },
-		{ label: "Cancelled",      value: a.cancelled,      color: "#92400e", bg: "#fef3c7" },
-		{ label: "Refunded",       value: a.refunded,       color: "#4b5563", bg: "#f3f4f6" },
+		{ label: "Total Attempts", value: a.total_attempts, color: "#920c24", bg: "#fbeef0" },
+		{ label: "Successful",     value: a.successful,     color: "#920c24", bg: "#fbeef0" },
+		{ label: "Failed",         value: a.failed,         color: "#920c24", bg: "#fbeef0" },
+		{ label: "Cancelled",      value: a.cancelled,      color: "#920c24", bg: "#fbeef0" },
+		{ label: "Refunded",       value: a.refunded,       color: "#920c24", bg: "#fbeef0" },
 	];
 
 	const tiles_html = tiles.map(t => `
@@ -1656,20 +1656,20 @@ function _render_payment_analytics(a) {
 
 // Event type → {icon, colour scheme}
 const _PLOG_STYLE = {
-	"Payment Initiated":    { icon: "🚀", dot: "#3b82f6", badge_bg: "#dbeafe", badge_text: "#1e40af" },
-	"Authorized":           { icon: "✅", dot: "#10b981", badge_bg: "#d1fae5", badge_text: "#065f46" },
-	"Captured":             { icon: "💰", dot: "#16a34a", badge_bg: "#dcfce7", badge_text: "#166534" },
-	"Payment Recorded":     { icon: "💰", dot: "#16a34a", badge_bg: "#dcfce7", badge_text: "#166534" },
-	"Payment Failed":       { icon: "❌", dot: "#ef4444", badge_bg: "#fee2e2", badge_text: "#991b1b" },
-	"Payment Cancelled":    { icon: "🚫", dot: "#f59e0b", badge_bg: "#fef3c7", badge_text: "#92400e" },
-	"Refunded":             { icon: "↩️", dot: "#6366f1", badge_bg: "#ede9fe", badge_text: "#4c1d95" },
-	"Partial Paid":         { icon: "⚡", dot: "#f97316", badge_bg: "#ffedd5", badge_text: "#7c2d12" },
-	"Pending Verification": { icon: "⏳", dot: "#a855f7", badge_bg: "#f3e8ff", badge_text: "#581c87" },
-	"Webhook Received":     { icon: "🔔", dot: "#06b6d4", badge_bg: "#cffafe", badge_text: "#155e75" },
-	"Retry Initiated":      { icon: "🔁", dot: "#f59e0b", badge_bg: "#fef3c7", badge_text: "#92400e" },
-	"Manual Status Update": { icon: "✏️", dot: "#6b7280", badge_bg: "#f3f4f6", badge_text: "#374151" },
-	"Bulk Fee Update":      { icon: "📦", dot: "#6b7280", badge_bg: "#f3f4f6", badge_text: "#374151" },
-	"Fee Structure Changed":{ icon: "🔧", dot: "#6b7280", badge_bg: "#f3f4f6", badge_text: "#374151" },
+	"Payment Initiated":    { icon: "🚀", dot: "#920c24", badge_bg: "#fbeef0", badge_text: "#920c24" },
+	"Authorized":           { icon: "✅", dot: "#920c24", badge_bg: "#fbeef0", badge_text: "#920c24" },
+	"Captured":             { icon: "💰", dot: "#920c24", badge_bg: "#fbeef0", badge_text: "#920c24" },
+	"Payment Recorded":     { icon: "💰", dot: "#920c24", badge_bg: "#fbeef0", badge_text: "#920c24" },
+	"Payment Failed":       { icon: "❌", dot: "#920c24", badge_bg: "#fbeef0", badge_text: "#920c24" },
+	"Payment Cancelled":    { icon: "🚫", dot: "#920c24", badge_bg: "#fbeef0", badge_text: "#920c24" },
+	"Refunded":             { icon: "↩️", dot: "#920c24", badge_bg: "#fbeef0", badge_text: "#920c24" },
+	"Partial Paid":         { icon: "⚡", dot: "#920c24", badge_bg: "#fbeef0", badge_text: "#920c24" },
+	"Pending Verification": { icon: "⏳", dot: "#920c24", badge_bg: "#fbeef0", badge_text: "#920c24" },
+	"Webhook Received":     { icon: "🔔", dot: "#920c24", badge_bg: "#fbeef0", badge_text: "#920c24" },
+	"Retry Initiated":      { icon: "🔁", dot: "#920c24", badge_bg: "#fbeef0", badge_text: "#920c24" },
+	"Manual Status Update": { icon: "✏️", dot: "#920c24", badge_bg: "#fbeef0", badge_text: "#920c24" },
+	"Bulk Fee Update":      { icon: "📦", dot: "#920c24", badge_bg: "#fbeef0", badge_text: "#920c24" },
+	"Fee Structure Changed":{ icon: "🔧", dot: "#920c24", badge_bg: "#fbeef0", badge_text: "#920c24" },
 };
 
 function _render_payment_timeline(logs) {
@@ -1691,15 +1691,15 @@ function _render_payment_timeline(logs) {
 	<div class="plog-tab-bar" style="display:flex;gap:0;border-bottom:2px solid #e5e7eb;margin-bottom:16px;">
 		<button class="plog-tab" data-src="invoice"
 		        style="padding:8px 18px;font-size:13px;font-weight:600;border:none;
-		               background:none;cursor:pointer;border-bottom:2.5px solid #6366f1;
-		               color:#6366f1;margin-bottom:-2px;">
-			📄 Fee Invoice <span style="background:#dbeafe;color:#1d4ed8;padding:1px 7px;border-radius:99px;font-size:10px;font-weight:700;margin-left:4px;">${inv_logs.length}</span>
+		               background:none;cursor:pointer;border-bottom:2.5px solid #920c24;
+		               color:#920c24;margin-bottom:-2px;">
+			📄 Fee Invoice <span style="background:#fbeef0;color:#920c24;padding:1px 7px;border-radius:99px;font-size:10px;font-weight:700;margin-left:4px;">${inv_logs.length}</span>
 		</button>
 		<button class="plog-tab" data-src="demand"
 		        style="padding:8px 18px;font-size:13px;font-weight:500;border:none;
 		               background:none;cursor:pointer;border-bottom:2.5px solid transparent;
 		               color:#6b7280;margin-bottom:-2px;">
-			📋 Fee Demand <span style="background:#ede9fe;color:#7c3aed;padding:1px 7px;border-radius:99px;font-size:10px;font-weight:700;margin-left:4px;">${dem_logs.length}</span>
+			📋 Fee Demand <span style="background:#fbeef0;color:#920c24;padding:1px 7px;border-radius:99px;font-size:10px;font-weight:700;margin-left:4px;">${dem_logs.length}</span>
 		</button>
 	</div>
 	<div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
@@ -1717,7 +1717,7 @@ function _render_payment_timeline(logs) {
 			<option value="Webhook Received">Webhook Received</option>
 		</select>
 		<button id="plog-download-csv"
-		        style="background:#374151;color:#fff;border:none;border-radius:8px;
+		        style="background:#920c24;color:#fff;border:none;border-radius:8px;
 		               padding:7px 14px;font-size:13px;cursor:pointer;font-weight:600;
 		               white-space:nowrap;">
 			⬇ Export CSV
@@ -1738,19 +1738,19 @@ function _render_payment_timeline(logs) {
 		// Detect source type via dedicated fee_demand field
 		const is_demand = !!row.fee_demand;
 		const source_badge = is_demand
-			? `<span style="background:#ede9fe;color:#7c3aed;padding:1px 8px;border-radius:99px;font-size:10px;font-weight:700;margin-left:4px;">Fee Demand</span>`
-			: (row.invoice ? `<span style="background:#eff6ff;color:#1d4ed8;padding:1px 8px;border-radius:99px;font-size:10px;font-weight:700;margin-left:4px;">Fee Invoice</span>` : "");
+			? `<span style="background:#fbeef0;color:#920c24;padding:1px 8px;border-radius:99px;font-size:10px;font-weight:700;margin-left:4px;">Fee Demand</span>`
+			: (row.invoice ? `<span style="background:#fbeef0;color:#920c24;padding:1px 8px;border-radius:99px;font-size:10px;font-weight:700;margin-left:4px;">Fee Invoice</span>` : "");
 
 		// Receipt download — invoice events show invoice receipt; demand events show demand receipt
 		const is_captured = ["Captured", "Payment Recorded"].includes(row.event_type);
 		const receipt_btn = is_captured && row.invoice && !is_demand
 			? `<button class="plog-download-receipt" data-invoice="${row.invoice}"
-				style="margin-top:8px;background:#166534;color:#fff;border:none;border-radius:6px;
+				style="margin-top:8px;background:#920c24;color:#fff;border:none;border-radius:6px;
 				       padding:4px 12px;font-size:11px;cursor:pointer;font-weight:600;margin-left:4px;">
 				🧾 Download Receipt</button>`
 			: is_captured && is_demand
 			? `<button class="plog-download-demand-receipt" data-demand="${row.fee_demand}"
-				style="margin-top:8px;background:#7c3aed;color:#fff;border:none;border-radius:6px;
+				style="margin-top:8px;background:#920c24;color:#fff;border:none;border-radius:6px;
 				       padding:4px 12px;font-size:11px;cursor:pointer;font-weight:600;margin-left:4px;">
 				🧾 Download Receipt</button>`
 			: "";
@@ -1759,12 +1759,12 @@ function _render_payment_timeline(logs) {
 		let payer_html = "";
 		if (row.paid_by_role || row.paid_by_name) {
 			const role_colors = {
-				"Parent":  { bg: "#fef3c7", text: "#92400e", icon: "👨‍👩‍👧" },
-				"Student": { bg: "#dbeafe", text: "#1e40af", icon: "🎓" },
-				"Staff":   { bg: "#d1fae5", text: "#065f46", icon: "🏫" },
-				"System":  { bg: "#f3f4f6", text: "#374151", icon: "⚙️" },
+				"Parent":  { bg: "#fbeef0", text: "#920c24", icon: "👨‍👩‍👧" },
+				"Student": { bg: "#fbeef0", text: "#920c24", icon: "🎓" },
+				"Staff":   { bg: "#fbeef0", text: "#920c24", icon: "🏫" },
+				"System":  { bg: "#fbeef0", text: "#920c24", icon: "⚙️" },
 			};
-			const rc = role_colors[row.paid_by_role] || { bg: "#f3f4f6", text: "#374151", icon: "👤" };
+			const rc = role_colors[row.paid_by_role] || { bg: "#fbeef0", text: "#920c24", icon: "👤" };
 			const role_label = row.paid_by_role ? `${rc.icon} ${row.paid_by_role}` : "👤 Unknown";
 			const name_part  = row.paid_by_name  ? ` — ${frappe.utils.escape_html(row.paid_by_name)}` : "";
 			payer_html = `<span style="display:inline-block;background:${rc.bg};color:${rc.text};
@@ -1804,8 +1804,8 @@ function _render_payment_timeline(logs) {
 		let error_html = "";
 		if (row.failure_reason || row.error_message) {
 			const msg = row.failure_reason || row.error_message;
-			error_html = `<div style="margin-top:6px;padding:6px 10px;background:#fee2e2;
-				border-left:3px solid #ef4444;border-radius:4px;font-size:12px;color:#991b1b;">
+			error_html = `<div style="margin-top:6px;padding:6px 10px;background:#fbeef0;
+				border-left:3px solid #920c24;border-radius:4px;font-size:12px;color:#920c24;">
 				⚠ ${msg}</div>`;
 		}
 
@@ -1851,8 +1851,8 @@ function _render_payment_timeline(logs) {
 		     style="display:flex;gap:0;margin-bottom:0;">
 			<!-- Timeline spine -->
 			<div style="display:flex;flex-direction:column;align-items:center;width:28px;flex-shrink:0;">
-				<div style="width:14px;height:14px;border-radius:50%;background:${is_demand ? '#7c3aed' : style.dot};
-				            margin-top:14px;flex-shrink:0;box-shadow:0 0 0 3px ${is_demand ? '#7c3aed' : style.dot}22;"></div>
+				<div style="width:14px;height:14px;border-radius:50%;background:#920c24;
+				            margin-top:14px;flex-shrink:0;box-shadow:0 0 0 3px #920c2422;"></div>
 				<div style="width:2px;flex:1;background:#e5e7eb;display:${line_display};
 				            min-height:20px;"></div>
 			</div>
@@ -1860,8 +1860,8 @@ function _render_payment_timeline(logs) {
 			<div class="plog-card"
 			     ${row.invoice  ? `data-open-invoice="${row.invoice}"` : ""}
 			     ${row.fee_demand ? `data-open-demand="${row.fee_demand}"` : ""}
-			     style="flex:1;background:${is_demand ? '#faf5ff' : '#fff'};
-			            border:1px solid ${is_demand ? '#ddd6fe' : '#e5e7eb'};
+			     style="flex:1;background:#fff;
+			            border:1px solid #e5e7eb;
 			            border-radius:10px;padding:12px 16px;margin:6px 0 6px 10px;
 			            box-shadow:0 1px 3px rgba(0,0,0,.06);
 			            ${(row.invoice || row.fee_demand) ? 'cursor:pointer;' : ''}">
@@ -1896,7 +1896,7 @@ function _render_payment_timeline(logs) {
 			border-radius: 20px; font-size: 11px; font-weight: 500;
 			white-space: nowrap;
 		}
-		#plog-search:focus, #plog-filter-status:focus { border-color: #6366f1; }
+		#plog-search:focus, #plog-filter-status:focus { border-color: #920c24; }
 		.plog-item { transition: opacity .15s; }
 		.plog-item.hidden { display: none !important; }
 	</style>`;

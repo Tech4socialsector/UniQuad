@@ -1295,6 +1295,11 @@ function spCall(method, args, onSuccess, onError) {
 }
 </script>
 
+{# Gateway-aware checkout (Razorpay popup / Easebuzz hosted page) + outcome after an Easebuzz return #}
+<script src="/assets/slcm/js/portal_payment_gateway.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () { if (window.SlcmGateway) SlcmGateway.handleReturn(); });
+</script>
 {% block extra_js %}{% endblock %}
 
 

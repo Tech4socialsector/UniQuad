@@ -146,9 +146,15 @@ class FeeInvoice(Document):
 		"""
 		self.flags.ignore_links = True
 		self.save(ignore_permissions=True) # Ensure amounts are calculated
-		gateway = frappe.db.get_value("Payment Gateway", {}, "name")
-		if not gateway:
-			frappe.throw(_("No Payment Gateway configured in the system."))
+		from slcm.slcm.fee import payment_gateway as gw
+
+		gateway = gw.for_invoice(self.name)
+		if gateway != gw.RAZORPAY:
+			frappe.throw(
+				_("This invoice is collected through {0}. The student or parent can pay it from their portal.").format(gateway)
+			)
+		if not frappe.db.exists("Payment Gateway", gateway):
+			frappe.throw(_("Payment Gateway {0} is not configured.").format(gateway))
 
 		# Create Log
 		log = frappe.get_doc({

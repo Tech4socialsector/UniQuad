@@ -77,7 +77,7 @@
   }
  ],
  "links": [],
- "modified": "2026-09-25 14:50:22.401544",
+ "modified": "2026-11-02 14:26:53.094048",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "RFID Device Room Mapping",
@@ -93,6 +93,29 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "AAD",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "AAD Staff",
    "share": 1,
    "write": 1
   }

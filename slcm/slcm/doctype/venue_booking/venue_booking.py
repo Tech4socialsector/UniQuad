@@ -7,6 +7,8 @@ from frappe import _
 from frappe.utils import get_datetime, getdate, now_datetime
 from frappe.email.doctype.email_template.email_template import get_email_template
 
+from slcm.permissions import AAD_ROLES
+
 WEEKDAY_FIELDS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 
 STATUS_PENDING = "Pending Allotment"
@@ -36,7 +38,7 @@ class VenueBooking(Document):
 			self.status = STATUS_PENDING
 			return
 
-		admin_roles = {"System Manager", "Administrator", "slcm_Registrar"}
+		admin_roles = {"System Manager", "Administrator", "slcm_Registrar"} | AAD_ROLES
 		user_roles = set(frappe.get_roles(frappe.session.user))
 		if admin_roles & user_roles:
 			return  # Admins may change status freely
@@ -697,7 +699,7 @@ def get_venue_bookings(venue=None, from_date=None, to_date=None):
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _require_admin():
-	allowed_roles = {"System Manager", "Administrator", "slcm_Registrar"}
+	allowed_roles = {"System Manager", "Administrator", "slcm_Registrar"} | AAD_ROLES
 	user_roles = set(frappe.get_roles(frappe.session.user))
 	if not (allowed_roles & user_roles):
 		frappe.throw(_("You do not have permission to perform this action."), frappe.PermissionError)
@@ -826,7 +828,7 @@ def _notify_requester(booking_name, new_status, admin_remarks=None):
 
 	@frappe.whitelist()
 	def override_booking(self, target_booking_name, reason):
-		if "AAD" not in frappe.get_roles(frappe.session.user):
+		if not AAD_ROLES & set(frappe.get_roles(frappe.session.user)):
 			frappe.throw(_("Only AAD members can override bookings."))
 
 		if not target_booking_name:

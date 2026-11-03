@@ -898,39 +898,53 @@ def _send_transcript_receipt(request_name):
     frappe.local.response.type        = "pdf"
 
 
+_ADMIN_FEE_DOWNLOAD_ROLES = {
+    "System Manager", "Administrator",
+    "slcm_REGO Officer", "slcm_FINO Officer",
+    "slcm_Registration Officer", "slcm_Registration User",
+    "slcm_Documentation Officer", "slcm_IT Admin",
+    "Accounts Manager", "Accounts User",
+}
+
+
+def _check_admin_fee_download_access(student_name, what):
+    """Allow fee-office roles, or any desk user who can see the owning Student Master
+    (the Payment Audit Trail on Student Master offers these downloads).
+
+    Uses get_list, not has_permission, so student_master_query_conditions applies —
+    portal roles like slcm_Student pass has_permission for every Student Master.
+    """
+    if set(frappe.get_roles(frappe.session.user)) & _ADMIN_FEE_DOWNLOAD_ROLES:
+        return
+    if (
+        student_name
+        and frappe.get_cached_value("User", frappe.session.user, "user_type") == "System User"
+        and frappe.get_list("Student Master", filters={"name": student_name}, pluck="name", limit=1)
+    ):
+        return
+    frappe.throw(
+        frappe._("You do not have permission to download {0}.").format(what),
+        frappe.PermissionError,
+    )
+
+
 @frappe.whitelist()
 def download_fee_invoice_admin(invoice_name):
     """Stream a PDF of any Fee Invoice for admin / REGO office users.
 
     Security:
     * Caller must be authenticated (not Guest).
-    * Caller must have at least one of the allowed admin roles.
-      (System Manager, REGO Officer, FINO Officer, Registration Officer,
-       Registration User, Documentation Officer, IT Admin, or Accounts Manager)
-    * No student-ownership check — admins can download any student's invoice.
+    * Caller must have an admin fee role, or read access to the invoice's Student Master.
     """
     if frappe.session.user == "Guest":
         frappe.throw(frappe._("Please log in."), frappe.AuthenticationError)
-
-    ADMIN_ROLES = {
-        "System Manager", "Administrator",
-        "slcm_REGO Officer", "slcm_FINO Officer",
-        "slcm_Registration Officer", "slcm_Registration User",
-        "slcm_Documentation Officer", "slcm_IT Admin",
-        "Accounts Manager", "Accounts User",
-    }
-    user_roles = set(frappe.get_roles(frappe.session.user))
-    if not user_roles.intersection(ADMIN_ROLES):
-        frappe.throw(
-            frappe._("You do not have permission to download fee invoices."),
-            frappe.PermissionError,
-        )
 
     if not frappe.db.exists("Fee Invoice", invoice_name):
         frappe.throw(frappe._("Invoice not found."), frappe.DoesNotExistError)
 
     # Resolve print format via the invoice's linked student
     student_name = frappe.db.get_value("Fee Invoice", invoice_name, "student")
+    _check_admin_fee_download_access(student_name, frappe._("fee invoices"))
     print_format  = _resolve_invoice_print_format(student_name) if student_name else "Fee Invoice Receipt"
 
     pdf_bytes = _generate_pdf("Fee Invoice", invoice_name, print_format)
@@ -950,28 +964,16 @@ def download_fee_demand_receipt_admin(receipt_name, fee_demand_name=None):
 
     Security:
     * Caller must be authenticated (not Guest).
-    * Caller must have at least one of the allowed admin roles.
-    * No student-ownership check — admins can download any student's receipt.
+    * Caller must have an admin fee role, or read access to the receipt's Student Master.
     """
     if frappe.session.user == "Guest":
         frappe.throw(frappe._("Please log in."), frappe.AuthenticationError)
 
-    ADMIN_ROLES = {
-        "System Manager", "Administrator",
-        "slcm_REGO Officer", "slcm_FINO Officer",
-        "slcm_Registration Officer", "slcm_Registration User",
-        "slcm_Documentation Officer", "slcm_IT Admin",
-        "Accounts Manager", "Accounts User",
-    }
-    user_roles = set(frappe.get_roles(frappe.session.user))
-    if not user_roles.intersection(ADMIN_ROLES):
-        frappe.throw(
-            frappe._("You do not have permission to download fee receipts."),
-            frappe.PermissionError,
-        )
-
     if not frappe.db.exists("Fee Receipt", receipt_name):
         frappe.throw(frappe._("Receipt not found."), frappe.DoesNotExistError)
+
+    student_name = frappe.db.get_value("Fee Receipt", receipt_name, "student")
+    _check_admin_fee_download_access(student_name, frappe._("fee receipts"))
 
     pdf_bytes = _generate_demand_receipt_pdf(receipt_name, fee_demand_name)
 

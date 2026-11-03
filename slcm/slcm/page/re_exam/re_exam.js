@@ -367,6 +367,13 @@ frappe.pages['re-exam'].on_page_load = function (wrapper) {
 							<span class="rx-field-label">Deadline To</span>
 							<input class="rx-input" type="date" id="rx-deadline-to">
 						</div>
+						<div class="rx-field-group">
+							<span class="rx-field-label">Payment Gateway</span>
+							<select class="rx-input" id="rx-gateway" title="Gateway students pay this re-exam fee through">
+								<option value="Razorpay">Razorpay</option>
+								<option value="Easebuzz">Easebuzz</option>
+							</select>
+						</div>
 						<div style="display:flex;align-items:flex-end;padding-bottom:1px;gap:8px;">
 							<button class="rx-save-btn" id="rx-save-settings">
 								<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
@@ -506,6 +513,7 @@ frappe.pages['re-exam'].on_page_load = function (wrapper) {
 	var $feeInput     = $body.find('#rx-fee');
 	var $dlFrom       = $body.find('#rx-deadline-from');
 	var $dlTo         = $body.find('#rx-deadline-to');
+	var $gateway      = $body.find('#rx-gateway');
 	var $saveBtn      = $body.find('#rx-save-settings');
 	var $search       = $body.find('#rx-search');
 	var $countLbl     = $body.find('#rx-count-lbl');
@@ -627,6 +635,7 @@ frappe.pages['re-exam'].on_page_load = function (wrapper) {
 				re_exam_fee:   $feeInput.val()  || null,
 				deadline_from: $dlFrom.val()    || null,
 				deadline_to:   $dlTo.val()      || null,
+				payment_gateway: $gateway.val() || 'Razorpay',
 			},
 			callback: function (r) {
 				$saveBtn.prop('disabled', false).html(
@@ -789,12 +798,13 @@ frappe.pages['re-exam'].on_page_load = function (wrapper) {
 				$feeInput.val(d.re_exam_fee   || '');
 				$dlFrom.val(d.deadline_from   || '');
 				$dlTo.val(d.deadline_to       || '');
+				$gateway.val(d.payment_gateway || 'Razorpay');
 			},
 		});
 	}
 
 	function clearSettings() {
-		$feeInput.val(''); $dlFrom.val(''); $dlTo.val(''); $savedBadge.hide();
+		$feeInput.val(''); $dlFrom.val(''); $dlTo.val(''); $gateway.val('Razorpay'); $savedBadge.hide();
 	}
 
 	function showPlaceholder(title, sub) {
@@ -1053,6 +1063,7 @@ frappe.pages['re-exam'].on_page_load = function (wrapper) {
 		var fee  = $feeInput.val() || '';
 		var from = $dlFrom.val()   || '';
 		var to   = $dlTo.val()     || '';
+		var gateway = $gateway.val() || 'Razorpay';
 
 		// Fetch all courses for this exam plan, then show picker
 		frappe.call({
@@ -1092,6 +1103,7 @@ frappe.pages['re-exam'].on_page_load = function (wrapper) {
 							options: '<div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:8px;padding:10px 14px;margin-bottom:4px;font-size:12.5px;color:#475569;display:flex;gap:16px;flex-wrap:wrap;">' +
 								'<span>Fee: <b style="color:#0f172a;">' + feeLabel + '</b></span>' +
 								'<span>Deadline: <b style="color:#0f172a;">' + fromLabel + '</b> → <b style="color:#0f172a;">' + toLabel + '</b></span>' +
+								'<span>Gateway: <b style="color:#0f172a;">' + frappe.utils.escape_html(gateway) + '</b></span>' +
 								'</div>',
 						},
 						{
@@ -1130,6 +1142,7 @@ frappe.pages['re-exam'].on_page_load = function (wrapper) {
 								re_exam_fee:   fee  || null,
 								deadline_from: from || null,
 								deadline_to:   to   || null,
+								payment_gateway: gateway,
 								courses:       JSON.stringify(checked),
 							},
 							callback: function (r) {

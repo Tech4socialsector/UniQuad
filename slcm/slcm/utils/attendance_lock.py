@@ -23,9 +23,11 @@ import frappe
 from frappe import _
 from frappe.utils import cint, format_datetime, get_datetime, getdate, now_datetime, to_timedelta
 
+from slcm.permissions import AAD_ROLES
+
 DEFAULT_LOCK_HOURS = 24
 LOCK_EXEMPT_ROLES = {"System Manager"}
-REOPEN_ROLES = {"AAD", "System Manager"}
+REOPEN_ROLES = {"System Manager"} | AAD_ROLES
 
 # Attendance Session fields needed to work out its lock state
 SESSION_LOCK_FIELDS = [

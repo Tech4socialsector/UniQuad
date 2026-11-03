@@ -1273,6 +1273,11 @@ function spSubmitImproveReg() {
       'slcm.api.student_payment.create_improvement_exam_payment_order',
       { exam_plan: _spImprovState.examPlan, course: _spImprovState.course },
       function(order) {
+        if (window.SlcmGateway && SlcmGateway.isRedirect(order)) {
+          _spImprovShowMsg('ok', 'lock', 'Redirecting to secure payment…');
+          SlcmGateway.redirect(order);   // Easebuzz hosted checkout; returns here with the outcome
+          return;
+        }
         if (!order || !order.order_id) {
           _spImprovSetBtnBusy(false);
           _spImprovShowMsg('err', 'error', 'Could not create payment order. Please try again.');

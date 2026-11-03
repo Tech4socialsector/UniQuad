@@ -17,6 +17,7 @@ GATEWAY_TO_SYSTEM_STATUS = {
 
 class SLCMPaymentRequest(Document):
 	def validate(self):
+		self.set_common_gateway_ids()
 		if self.amount <= 0:
 			frappe.throw(_("Amount must be greater than zero."))
 		# System status must never be set directly from frontend; only backend/webhook updates it.
@@ -29,11 +30,28 @@ class SLCMPaymentRequest(Document):
 					_("Status cannot be changed from the form. It is updated by the payment gateway webhook.")
 				)
 
+	def set_common_gateway_ids(self):
+		"""Fill the gateway-neutral ids from the Razorpay-named fields (admission / PACE flows write those).
+		Rows updated with db_set are filled by slcm.slcm.fee.payment_ledger.fill_common_ids."""
+		txn = self.transaction_id or ""
+		order_id = self.razorpay_order_id or (txn if txn.startswith("order_") and not self.gateway_order_id else None)
+		if order_id and order_id != self.gateway_order_id:
+			self.gateway_order_id = order_id
+		payment_id = self.razorpay_payment_id or (txn if txn.startswith("pay_") and not self.gateway_payment_id else None)
+		if payment_id and payment_id != self.gateway_payment_id:
+			if self.gateway_payment_id:
+				# a retry on the same request: details looked up for the previous attempt no longer apply
+				self.payment_method = self.bank_reference = self.payer_account = self.payer_bank = None
+			self.gateway_payment_id = payment_id
+
 	def before_save(self):
 		if self.status == "Paid" and not self.paid_on:
 			self.paid_on = frappe.utils.now_datetime()
 
 	def on_submit(self):
+		# Student payments are recorded after the gateway's result (slcm.slcm.fee.payment_ledger): no checkout to create
+		if self.status in ("Paid", "Failed"):
+			return
 		if not self.payment_url:
 			self.get_payment_url()
 
@@ -42,7 +60,7 @@ class SLCMPaymentRequest(Document):
 		Generates the checkout URL using the payments app.
 		"""
 		if not self.payment_gateway:
-			self.payment_gateway = frappe.db.get_value("Payment Gateway", {}, "name")
+			self.payment_gateway = "Razorpay"  # admissions always collect through Razorpay
 		
 		if not self.payment_gateway:
 			frappe.throw(_("Please configure and enable a Payment Gateway."))

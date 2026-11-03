@@ -89,14 +89,14 @@ def get_improvement_setting(exam_plan, course):
     row = frappe.db.get_value(
         "Improvement Exam Course Setting",
         {"exam_plan": exam_plan, "course": course},
-        ["name", "improvement_fee", "registration_limit", "deadline_from", "deadline_to"],
+        ["name", "improvement_fee", "registration_limit", "deadline_from", "deadline_to", "payment_gateway"],
         as_dict=True,
     )
     return row or {}
 
 
 @frappe.whitelist()
-def save_improvement_setting(exam_plan, course, improvement_fee=None, registration_limit=None, deadline_from=None, deadline_to=None):
+def save_improvement_setting(exam_plan, course, improvement_fee=None, registration_limit=None, deadline_from=None, deadline_to=None, payment_gateway=None):
     _check_access()
     if not exam_plan or not course:
         frappe.throw("Exam Plan and Course are required.")
@@ -119,13 +119,15 @@ def save_improvement_setting(exam_plan, course, improvement_fee=None, registrati
     doc.registration_limit = int(registration_limit) if registration_limit else None
     doc.deadline_from = deadline_from or None
     doc.deadline_to = deadline_to or None
+    if payment_gateway:
+        doc.payment_gateway = payment_gateway
     doc.save(ignore_permissions=True)
     frappe.db.commit()
     return {"name": doc.name}
 
 
 @frappe.whitelist()
-def bulk_save_improvement_setting(exam_plan, improvement_fee=None, registration_limit=None, deadline_from=None, deadline_to=None, courses=None):
+def bulk_save_improvement_setting(exam_plan, improvement_fee=None, registration_limit=None, deadline_from=None, deadline_to=None, courses=None, payment_gateway=None):
     _check_access()
     if not exam_plan:
         frappe.throw("Exam Plan is required.")
@@ -160,6 +162,8 @@ def bulk_save_improvement_setting(exam_plan, improvement_fee=None, registration_
         doc.registration_limit = int(registration_limit) if registration_limit else None
         doc.deadline_from = deadline_from or None
         doc.deadline_to = deadline_to or None
+        if payment_gateway:
+            doc.payment_gateway = payment_gateway
         doc.save(ignore_permissions=True)
         updated += 1
     frappe.db.commit()

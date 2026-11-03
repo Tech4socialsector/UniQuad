@@ -7,6 +7,7 @@ import frappe
 from frappe import _
 from frappe.utils import time_diff_in_hours, get_datetime
 
+from slcm.permissions import AAD_ROLES
 from slcm.slcm.utils.attendance_lock import assert_session_editable
 
 
@@ -18,7 +19,7 @@ def get_faculty_context():
 
 	is_faculty = "slcm_Faculty" in roles
 	is_admin = bool(
-		{"System Manager", "slcm_Registrar", "slcm_Programme Chair", "Accounts User"} & roles
+		({"System Manager", "slcm_Registrar", "slcm_Programme Chair", "Accounts User"} | AAD_ROLES) & roles
 	)
 
 	faculty_name = None

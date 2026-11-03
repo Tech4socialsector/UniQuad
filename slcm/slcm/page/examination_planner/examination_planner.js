@@ -12,6 +12,10 @@ frappe.pages['examination-planner'].on_page_load = function (wrapper) {
 };
 
 frappe.pages['examination-planner'].on_page_show = function (wrapper) {
+	// The page is also linked from other sidebars; keep the Examinations one
+	setTimeout(() => {
+		if (frappe.app.sidebar && frappe.app.sidebar.sidebar_title !== 'Examinations') frappe.app.sidebar.setup('Examinations');
+	}, 200);
 	// Coming back (e.g. after entering marks on Course Results) shows the latest state
 	const planner = wrapper.planner, plan = frappe.get_route()[1];
 	if (!planner || !planner.o) return;
@@ -141,7 +145,15 @@ class ExamPlanner {
 				'Course Schema Assignment'));
 			const $c = this.$body.find('.xp-card-body');
 			const evs = m.evaluation_schemas.map((e) => e.name), gss = m.grade_schemas.map((g) => g.name);
-			const sel = (list, val, cls) => `<select class="form-control input-sm ${cls}"><option value=""></option>${list.map((x) => `<option ${x === val ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>`;
+			const NEW = '__new__';
+			const sel = (list, val, cls, doctype) => `<select class="form-control input-sm xp-select ${cls}" data-doctype="${doctype}">
+				<option value="">${list.length ? __('Select…') : __('None yet')}</option>
+				${list.map((x) => `<option ${x === val ? 'selected' : ''}>${esc(x)}</option>`).join('')}
+				<option value="${NEW}">+ ${__('Create new {0}…', [__(doctype)])}</option></select>`;
+			const missing = [!evs.length && 'Evaluation Schema', !gss.length && 'Grading Schema'].filter(Boolean);
+			const su = m.setup || {};
+			const setup_todo = !su.components || !su.assessment_types || missing.length;
+			const todo = m.courses.filter((c) => !(c.evaluation_schema && c.grade_schema)).length;
 			const rows = m.courses.map((c) => {
 				const ev = c.evaluation_schema || c.suggest_evaluation_schema || '', gs = c.grade_schema || c.suggest_grade_schema || '';
 				const saved = c.source === 'saved';
@@ -149,23 +161,61 @@ class ExamPlanner {
 					<td><input type="checkbox" class="xp-sel"></td>
 					<td><b>${esc(c.course_code || c.course)}</b><br><small>${esc(c.course_name || '')}</small></td>
 					<td>${esc(c.programme || '')}</td><td class="num">${c.enrolled_students || 0}</td>
-					<td>${sel(evs, ev, 'xp-ev')}</td><td>${sel(gss, gs, 'xp-gs')}</td>
+					<td>${sel(evs, ev, 'xp-ev', 'Evaluation Schema')}</td><td>${sel(gss, gs, 'xp-gs', 'Grading Schema')}</td>
 					<td>${saved ? `<span class="xp-pill ok">${__('Saved')}</span>` : c.source ? `<span class="xp-pill info">${esc(c.source)}</span>` : `<span class="xp-pill bad">${__('Not mapped')}</span>`}</td></tr>`;
 			}).join('');
-			$c.html(`
+			const item = (n, done, title, hint, btn, cls, blocked) => `<li class="${done ? 'done' : ''}"><span class="xp-dot">${done ? '✓' : n}</span>
+				<div><b>${title}</b><p>${hint}</p></div><div class="xp-actions">${done ? `<span class="xp-pill ok">${done}</span>`
+					: `<button class="btn btn-sm btn-primary ${cls}" ${blocked ? `disabled title="${esc(blocked)}"` : ''}>${btn}</button>`}</div></li>`;
+			const guide = setup_todo
+				? `<div class="xp-guide warn"><b>${__('First, the one-time setup (in this order)')}</b>
+					<span>${__('Every exam plan reuses these. Once they exist this checklist goes away.')}</span></div>
+					<ol class="xp-check">
+					${item(1, su.components && __('{0} created', [su.components]), __('Exam Components'), __('The parts of a course, e.g. Internal, End Term, Re-Exam.'), __('Add components'), 'xp-add-comp')}
+					${item(2, su.assessment_types && __('{0} created', [su.assessment_types]), __('Assessment Types'), __('What is marked, e.g. Quiz, Project, End Term Paper.'), __('Add assessment types'), 'xp-add-atype')}
+					${item(3, evs.length && __('{0} created', [evs.length]), __('Evaluation Schema'), __('How a course is marked: its components and assessments.'), __('Create Evaluation Schema'), 'xp-new-es',
+						!(su.components && su.assessment_types) && __('Add components and assessment types first'))}
+					${item(4, gss.length && __('{0} created', [gss.length]), __('Grading Schema'), __('How marks become grades and grade points.'), __('Create Grading Schema'), 'xp-new-gs')}
+					</ol>`
+				: todo
+					? `<div class="xp-guide"><b>${__('Next')}</b><span>${__('Pick an Evaluation Schema and a Grade Schema for {0} course(s), then click Save mapping.', [todo])}</span></div>`
+					: `<div class="xp-guide ok"><b>${__('Done')}</b><span>${__('Every course is mapped. Go on to step 2, Exam timetable.')}</span></div>`;
+			$c.html(guide + `
 				<div class="xp-bar"><b>${this.o.counts.courses_mapped} / ${this.o.counts.courses_taught}</b> ${__('courses mapped')}
 					<span class="xp-grow"></span>
-					<button class="btn btn-default btn-sm xp-new-es">${__('New Evaluation Schema')}</button>
-					<button class="btn btn-default btn-sm xp-new-gs">${__('New Grading Schema')}</button></div>
+					${missing.length ? '' : `<button class="btn btn-default btn-sm xp-new-es">${__('New Evaluation Schema')}</button>
+					<button class="btn btn-default btn-sm xp-new-gs">${__('New Grading Schema')}</button>`}</div>
 				<div class="xp-table"><table class="table table-sm"><thead><tr><th><input type="checkbox" class="xp-all"></th><th>${__('Course')}</th><th>${__('Programme')}</th><th>${__('Students')}</th>
 					<th>${__('Evaluation Schema')}</th><th>${__('Grade Schema')}</th><th>${__('Filled from')}</th></tr></thead><tbody>${rows || `<tr><td colspan="7">${__('No Classes in this term yet. Create Classes first (Programme Management).')}</td></tr>`}</tbody></table></div>
-				<div class="xp-bar xp-soft"><span>${__('Selected')}:</span>${sel(evs, '', 'xp-bulk-ev')}${sel(gss, '', 'xp-bulk-gs')}
+				<div class="xp-bar xp-soft xp-bulk" style="display:none"><b class="xp-nsel"></b>${sel(evs, '', 'xp-bulk-ev', 'Evaluation Schema')}${sel(gss, '', 'xp-bulk-gs', 'Grading Schema')}
 					<button class="btn btn-default btn-sm xp-apply">${__('Apply to selected')}</button>
-					<button class="btn btn-default btn-sm xp-unmap">${__('Unmap selected')}</button>
-					<span class="xp-grow"></span><button class="btn btn-primary btn-sm xp-save">${__('Save mapping')}</button></div>`);
-			$c.find('.xp-all').on('change', (e) => $c.find('.xp-sel').prop('checked', e.target.checked));
-			$c.find('.xp-new-es').on('click', () => frappe.new_doc('Evaluation Schema'));
-			$c.find('.xp-new-gs').on('click', () => frappe.new_doc('Grading Schema'));
+					<button class="btn btn-default btn-sm xp-unmap">${__('Unmap selected')}</button></div>
+				<div class="xp-bar"><span class="xp-grow"></span><button class="btn btn-primary xp-save" ${m.courses.length ? '' : 'disabled'}>${__('Save mapping')}</button></div>`);
+			const sync_bulk = () => {
+				const n = $c.find('.xp-sel:checked').length;
+				$c.find('.xp-bulk').toggle(n > 0);
+				$c.find('.xp-nsel').text(__('{0} selected', [n]));
+			};
+			$c.find('.xp-all').on('change', (e) => { $c.find('.xp-sel').prop('checked', e.target.checked); sync_bulk(); });
+			$c.on('change', '.xp-sel', sync_bulk);
+			$c.find('.xp-new-es').on('click', () => this.schema_dialog('Evaluation Schema'));
+			$c.find('.xp-add-comp').on('click', () => this.masters_dialog('Exam Component'));
+			$c.find('.xp-add-atype').on('click', () => this.masters_dialog('Exam Assessment Type'));
+			$c.find('.xp-new-gs').on('click', () => this.schema_dialog('Grading Schema'));
+			// A schema just made in the panel goes to every course still without one
+			Object.entries(this.prefill || {}).forEach(([doctype, name]) => {
+				$c.find(`tbody .xp-select[data-doctype="${doctype}"]`).filter((_, el) => !el.value).val(name).trigger('change');
+			});
+			this.prefill = {};
+			// "+ Create new…" in a dropdown opens the form; coming back refreshes the lists
+			$c.on('change', '.xp-select', (e) => {
+				if (e.target.value !== NEW) {
+					$(e.target).closest('tr').toggleClass('xp-flag', !($(e.target).closest('tr').find('.xp-ev').val() && $(e.target).closest('tr').find('.xp-gs').val()));
+					return;
+				}
+				e.target.value = '';
+				this.schema_dialog($(e.target).data('doctype'));
+			});
 			$c.find('.xp-apply').on('click', () => {
 				const ev = $c.find('.xp-bulk-ev').val(), gs = $c.find('.xp-bulk-gs').val();
 				$c.find('tbody tr').each((_, tr) => {
@@ -199,6 +249,113 @@ class ExamPlanner {
 		});
 	}
 
+	// Add several Exam Components / Assessment Types at once, on this page
+	masters_dialog(doctype) {
+		const comp = doctype === 'Exam Component';
+		const [name_f, type_f] = comp ? ['component_name', 'component_type'] : ['type_name', 'assessment_type'];
+		const types = comp ? ['Custom', 'Re Exam', 'Makeup'] : ['Default Assessment', 'Assessment', 'ReExam/Makeup Assessment'];
+		const data = comp
+			? [['Internal', 'Custom'], ['End Term', 'Custom'], ['Re-Exam', 'Re Exam']]
+			: [['Quiz', 'Assessment'], ['Project', 'Assessment'], ['End Term Paper', 'Default Assessment'], ['Re-Exam Paper', 'ReExam/Makeup Assessment']];
+		const d = new frappe.ui.Dialog({
+			title: comp ? __('Add Exam Components') : __('Add Assessment Types'), size: 'large',
+			fields: [
+				{ fieldtype: 'HTML', options: `<p class="text-muted">${comp
+					? __('Custom = a regular part of the course. Re Exam / Makeup = a paper written later that can replace a part. Example rows are filled in; change or delete them.')
+					: __('Assessment = internal work. Default Assessment = the main paper. ReExam/Makeup Assessment = the re-exam paper. Example rows are filled in; change or delete them.')}</p>` },
+				{ fieldname: 'rows', fieldtype: 'Table', in_place_edit: 1, data: data.map(([n, t]) => ({ [name_f]: n, [type_f]: t })), fields: [
+					{ fieldname: name_f, label: __('Name'), fieldtype: 'Data', reqd: 1, in_list_view: 1, columns: 6 },
+					{ fieldname: type_f, label: __('Type'), fieldtype: 'Select', options: types.join('\n'), reqd: 1, in_list_view: 1, columns: 4 },
+				] },
+			],
+			primary_action_label: __('Add'),
+			primary_action: (v) => {
+				const docs = (v.rows || []).filter((r) => r[name_f]).map((r) => ({ doctype, [name_f]: r[name_f], [type_f]: r[type_f], is_active: 1 }));
+				if (!docs.length) { frappe.msgprint(__('Add at least one row.')); return; }
+				frappe.call({ method: 'frappe.client.insert_many', args: { docs }, freeze: true }).then(() => {
+					d.hide();
+					frappe.show_alert({ message: __('{0} added', [docs.length]), indicator: 'green' });
+					this.refresh();
+				});
+			},
+		});
+		d.show();
+	}
+
+	// Create a schema in a panel on this page (no leaving the plan)
+	schema_dialog(doctype) {
+		const evaluation = doctype === 'Evaluation Schema';
+		const num = (fieldname, label, extra) => Object.assign({ fieldname, label, fieldtype: 'Float', in_list_view: 1 }, extra || {});
+		const fields = evaluation ? [
+			{ fieldname: 'schema_name', label: __('Schema Name'), fieldtype: 'Data', reqd: 1, description: __('For example Theory 100 (40 internal + 60 end term)') },
+			{ fieldtype: 'Column Break' },
+			num('total_marks', __('Total Marks'), { default: 100, in_list_view: 0, description: __('Worked out from the component marks on save') }),
+			{ fieldtype: 'Column Break' },
+			num('passing_marks', __('Passing Marks'), { default: 40, in_list_view: 0 }),
+			{ fieldtype: 'Section Break', label: __('Components'), description: __('The parts of the course, e.g. Internal 40 and End Term 60.') },
+			{ fieldname: 'schema_components', fieldtype: 'Table', cannot_add_rows: 0, in_place_edit: 1, data: [], fields: [
+				{ fieldname: 'component', label: __('Component'), fieldtype: 'Link', options: 'Exam Component', reqd: 1, in_list_view: 1, columns: 3 },
+				num('effective_max_marks', __('Max Marks'), { columns: 2 }), num('weightage', __('Weightage'), { columns: 1 }),
+				num('passing_marks', __('Passing Marks'), { columns: 2 }),
+				{ fieldname: 'consider_for_pass_fail', label: __('Must pass'), fieldtype: 'Check', in_list_view: 1, columns: 1 },
+			] },
+			{ fieldtype: 'Section Break', label: __('Assessments'), description: __('What is marked inside each component, e.g. Quiz 20 and Project 20 under Internal.') },
+			{ fieldname: 'assessment_configs', fieldtype: 'Table', in_place_edit: 1, data: [], fields: [
+				{ fieldname: 'component', label: __('Component'), fieldtype: 'Link', options: 'Exam Component', reqd: 1, in_list_view: 1, columns: 2 },
+				{ fieldname: 'assessment_type', label: __('Assessment Type'), fieldtype: 'Link', options: 'Exam Assessment Type', reqd: 1, in_list_view: 1, columns: 2 },
+				{ fieldname: 'label', label: __('Label'), fieldtype: 'Data', in_list_view: 1, columns: 1 },
+				num('maximum_marks', __('Max Marks'), { columns: 1 }), num('effective_marks', __('Effective'), { columns: 1 }),
+				num('passing_marks', __('Pass'), { columns: 1 }),
+				{ fieldname: 'consider_for_pass_fail', label: __('Must pass'), fieldtype: 'Check', in_list_view: 1, columns: 1 },
+			] },
+			{ fieldtype: 'HTML', options: `<p class="text-muted small">${__('Re-exam papers and calculation settings can be added later on the full Evaluation Schema form.')}</p>` },
+		] : [
+			{ fieldname: 'grading_schema_name', label: __('Schema Code'), fieldtype: 'Data', reqd: 1, description: __('For example G10-100') },
+			{ fieldtype: 'Column Break' },
+			{ fieldname: 'schema_name', label: __('Name'), fieldtype: 'Data' },
+			{ fieldtype: 'Column Break' },
+			num('maximum_marks', __('Maximum Marks'), { default: 100, reqd: 1, in_list_view: 0 }),
+			{ fieldname: 'grading_type', label: __('Grading Type'), fieldtype: 'Select', options: 'Absolute\nRelative-Manual\nRelative-Auto', default: 'Absolute' },
+			{ fieldtype: 'Section Break', label: __('Grades'), description: __('An example 10-point scale is filled in; change it to your rules. Tick Failed on fail grades.') },
+			{ fieldname: 'grades', fieldtype: 'Table', in_place_edit: 1, fields: [
+				{ fieldname: 'grade', label: __('Grade'), fieldtype: 'Data', reqd: 1, in_list_view: 1, columns: 1 },
+				{ fieldname: 'from_operator', label: __('From'), fieldtype: 'Select', options: '>=\n>', default: '>=', in_list_view: 1, columns: 1 },
+				num('marks_from', __('Marks From'), { reqd: 1, columns: 2 }),
+				{ fieldname: 'to_operator', label: __('To'), fieldtype: 'Select', options: '<=\n<', default: '<', in_list_view: 1, columns: 1 },
+				num('marks_to', __('Marks To'), { reqd: 1, columns: 2 }),
+				num('grade_point', __('Grade Point'), { reqd: 1, columns: 1 }),
+				{ fieldname: 'failed', label: __('Failed'), fieldtype: 'Check', in_list_view: 1, columns: 1 },
+			], data: [['O', 90, 100, 10], ['A+', 80, 90, 9], ['A', 70, 80, 8], ['B+', 60, 70, 7], ['B', 50, 60, 6], ['C', 40, 50, 5], ['F', 0, 40, 0]]
+				.map(([grade, a, b, gp]) => ({ grade, from_operator: '>=', marks_from: a, to_operator: b === 100 ? '<=' : '<', marks_to: b, grade_point: gp, failed: grade === 'F' ? 1 : 0 })) },
+		];
+		const d = new frappe.ui.Dialog({
+			title: __('New {0}', [__(doctype)]), size: 'extra-large', fields,
+			secondary_action_label: __('Open full form instead'),
+			secondary_action: () => { d.hide(); frappe.new_doc(doctype); },
+			primary_action_label: __('Create'),
+			primary_action: (v) => {
+				const doc = Object.assign({ doctype }, v);
+				const clean = (rows, keys) => (rows || []).filter((r) => keys.every((k) => r[k] !== undefined && r[k] !== null && r[k] !== ''))
+					.map(({ name, idx, __islocal, __checked, ...r }) => r);
+				if (evaluation) {
+					doc.schema_components = clean(v.schema_components, ['component']);
+					doc.assessment_configs = clean(v.assessment_configs, ['component', 'assessment_type']);
+					if (!doc.schema_components.length) { frappe.msgprint(__('Add at least one component.')); return; }
+				} else {
+					doc.grades = clean(v.grades, ['grade']);
+					if (!doc.grades.length) { frappe.msgprint(__('Add at least one grade.')); return; }
+				}
+				frappe.call({ method: 'frappe.client.insert', args: { doc }, freeze: true }).then((r) => {
+					d.hide();
+					frappe.show_alert({ message: __('{0} {1} created and picked for unmapped courses — check and Save mapping', [__(doctype), r.message.name]), indicator: 'green' });
+					this.prefill = Object.assign(this.prefill || {}, { [doctype]: r.message.name });
+					this.refresh();
+				});
+			},
+		});
+		d.show();
+	}
+
 	// ── 2. Exam timetable ──────────────────────────────────────────────
 	render_timetable() {
 		call('get_timetable', { exam_plan: this.plan }).then((t) => {
@@ -224,7 +381,7 @@ class ExamPlanner {
 				<div class="xp-table"><table class="table table-sm"><thead><tr><th>${__('Course')}</th><th>${__('Students')}</th><th>${__('Date')}</th><th>${__('Start')}</th><th>${__('End')}</th>
 					<th>${__('Venue (seats)')}</th><th>${__('Seats')}</th><th>${__('Invigilator')}</th><th>${__('Check')}</th></tr></thead><tbody>${rows || `<tr><td colspan="9">${__('Map courses first.')}</td></tr>`}</tbody></table></div>
 				<div class="xp-issues"></div>
-				<div class="xp-bar"><span class="xp-grow"></span><button class="btn btn-default btn-sm xp-check">${__('Check')}</button>
+				<div class="xp-bar"><span class="xp-grow"></span><button class="btn btn-default btn-sm xp-run-check">${__('Check')}</button>
 					<button class="btn btn-primary btn-sm xp-save-tt">${__('Save timetable')}</button></div>`);
 			const collect = () => $cards.eq(0).find('tbody tr[data-course]').map((_, tr) => {
 				const $tr = $(tr);
@@ -249,7 +406,7 @@ class ExamPlanner {
 					: `<div class="xp-alert ok">${__('No clashes.')}${res.warnings.length ? ' ' + __('{0} warning(s).', [res.warnings.length]) : ''}</div>`);
 			};
 			if (t.rows.some((r) => r.exam_date)) show(t.check);
-			$cards.eq(0).find('.xp-check').on('click', () => call('check_timetable', { exam_plan: this.plan, rows: JSON.stringify(collect()) }).then(show));
+			$cards.eq(0).find('.xp-run-check').on('click', () => call('check_timetable', { exam_plan: this.plan, rows: JSON.stringify(collect()) }).then(show));
 			$cards.eq(0).find('.xp-save-tt').on('click', () => call('save_timetable', { exam_plan: this.plan, rows: JSON.stringify(collect()) })
 				.then(() => { frappe.show_alert({ message: __('Timetable saved'), indicator: 'green' }); this.refresh(); }));
 
@@ -397,7 +554,19 @@ class ExamPlanner {
 			.xp-table{overflow-x:auto;border:1px solid var(--border-color);border-radius:8px}
 			.xp-table table{margin:0}.xp-table th{font-size:12px;color:var(--text-muted);white-space:nowrap;background:var(--subtle-fg)}
 			.xp-table td{vertical-align:middle}.xp-table td:first-child{min-width:180px}.xp-table td.num{text-align:right;font-variant-numeric:tabular-nums}
-			.xp-table select,.xp-table input.form-control{min-width:120px}
+			.xp-table select,.xp-table input.form-control{min-width:160px}
+			.xp-wrap select.form-control,.xp-wrap input.form-control{background-color:var(--control-bg,#fff);border:1px solid var(--border-color,#d1d5db);border-radius:6px;height:32px;color:var(--text-color);font-family:inherit;font-size:13px}
+			.xp-wrap select.form-control{appearance:none;-webkit-appearance:none;padding-right:28px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center}
+			.xp-wrap select.form-control:focus,.xp-wrap input.form-control:focus{border-color:var(--er-brand,#920C24);box-shadow:0 0 0 2px var(--er-brand-soft,#f6dde1)}
+			.xp-wrap .btn-default{background:var(--control-bg,#fff);border:1px solid var(--border-color,#d1d5db);color:var(--text-color)}
+			.xp-wrap .btn-default:hover{border-color:var(--er-brand,#920C24);color:var(--er-brand,#920C24)}
+			.xp-wrap .btn-primary{background:var(--er-brand,#920C24);border-color:var(--er-brand,#920C24);color:#fff}
+			.xp-wrap .btn[disabled]{opacity:.5}
+			.xp-guide{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;border-left:4px solid var(--blue-500,#3b82f6);background:var(--bg-blue,#eff6ff);border-radius:6px;padding:10px 14px}
+			.xp-guide.warn{border-color:var(--orange-500,#f59e0b);background:var(--bg-orange,#fff7ed)}
+			.xp-guide.ok{border-color:var(--green-500,#22c55e);background:var(--bg-green,#f0fdf4)}
+			.xp-guide-actions{display:flex;gap:8px;flex-basis:100%}
+			.xp-wrap .btn[disabled]{cursor:not-allowed}
 			.xp-table tr.xp-flag td{background:var(--bg-red,#fde6e8)}
 			.xp-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.xp-bar select{max-width:220px}
 			.xp-soft{background:var(--subtle-fg);border-radius:8px;padding:8px 10px}

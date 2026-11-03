@@ -11,7 +11,7 @@
  "label": "Programme Management",
  "link_to": "Programme Management",
  "link_type": "Workspace Sidebar",
- "modified": "2026-10-27 19:45:24.565801",
+ "modified": "2026-11-02 14:30:00.000000",
  "modified_by": "Administrator",
  "name": "Programme Management",
  "owner": "Administrator",
@@ -19,16 +19,13 @@
  "restrict_removal": 0,
  "roles": [
   {
-   "role": "slcm_Registrar"
+   "role": "AAD"
   },
   {
-   "role": "slcm_Programme Chair"
+   "role": "AAD Staff"
   },
   {
-   "role": "Campus Admin"
-  },
-  {
-   "role": "Admission Admin"
+   "role": "System Manager"
   }
  ],
  "sidebar": "Programme Management",

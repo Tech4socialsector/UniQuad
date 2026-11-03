@@ -275,7 +275,7 @@
   }
  ],
  "links": [],
- "modified": "2026-05-13 13:32:17.610369",
+ "modified": "2026-11-02 14:26:53.094048",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Promotion Policy",
@@ -298,6 +298,29 @@
    "create": 1,
    "read": 1,
    "role": "Academics User",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "AAD",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "AAD Staff",
+   "share": 1,
    "write": 1
   }
  ],

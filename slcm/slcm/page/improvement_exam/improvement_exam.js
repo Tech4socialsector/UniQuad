@@ -280,6 +280,13 @@ frappe.pages['improvement-exam'].on_page_load = function (wrapper) {
 							<span class="ix-field-label">Deadline To</span>
 							<input class="ix-input" type="date" id="ix-deadline-to">
 						</div>
+						<div class="ix-field-group">
+							<span class="ix-field-label">Payment Gateway</span>
+							<select class="ix-input" id="ix-gateway" title="Gateway students pay this improvement exam fee through">
+								<option value="Razorpay">Razorpay</option>
+								<option value="Easebuzz">Easebuzz</option>
+							</select>
+						</div>
 						<div style="display:flex;align-items:flex-end;padding-bottom:1px;gap:8px;">
 							<button class="ix-save-btn" id="ix-save-settings">
 								<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
@@ -411,6 +418,7 @@ frappe.pages['improvement-exam'].on_page_load = function (wrapper) {
 	var $regLimit     = $body.find('#ix-reg-limit');
 	var $dlFrom       = $body.find('#ix-deadline-from');
 	var $dlTo         = $body.find('#ix-deadline-to');
+	var $gateway      = $body.find('#ix-gateway');
 	var $saveBtn      = $body.find('#ix-save-settings');
 	var $bulkBtn      = $body.find('#ix-bulk-apply');
 	var $search       = $body.find('#ix-search');
@@ -506,6 +514,7 @@ frappe.pages['improvement-exam'].on_page_load = function (wrapper) {
 				registration_limit: $regLimit.val()    || null,
 				deadline_from:      $dlFrom.val()      || null,
 				deadline_to:        $dlTo.val()        || null,
+				payment_gateway:    $gateway.val()     || 'Razorpay',
 			},
 			callback: function (r) {
 				$saveBtn.prop('disabled', false);
@@ -521,7 +530,7 @@ frappe.pages['improvement-exam'].on_page_load = function (wrapper) {
 
 	$bulkBtn.on('click', function () {
 		if (!S.exam_plan) return;
-		frappe.confirm('Apply this fee &amp; deadline to <b>all courses</b> in the selected Exam Plan?', function () {
+		frappe.confirm('Apply this fee, deadline &amp; payment gateway (<b>' + frappe.utils.escape_html($gateway.val() || 'Razorpay') + '</b>) to <b>all courses</b> in the selected Exam Plan?', function () {
 			frappe.call({
 				method: 'slcm.slcm.page.improvement_exam.improvement_exam.bulk_save_improvement_setting',
 				args: {
@@ -530,6 +539,7 @@ frappe.pages['improvement-exam'].on_page_load = function (wrapper) {
 					registration_limit: $regLimit.val()    || null,
 					deadline_from:      $dlFrom.val()      || null,
 					deadline_to:        $dlTo.val()        || null,
+					payment_gateway:    $gateway.val()     || 'Razorpay',
 				},
 				callback: function (r) {
 					if (r.message) {
@@ -573,7 +583,7 @@ frappe.pages['improvement-exam'].on_page_load = function (wrapper) {
 	}
 
 	function loadSettings() {
-		$feeInput.val(''); $regLimit.val(''); $dlFrom.val(''); $dlTo.val('');
+		$feeInput.val(''); $regLimit.val(''); $dlFrom.val(''); $dlTo.val(''); $gateway.val('Razorpay');
 		frappe.call({
 			method: 'slcm.slcm.page.improvement_exam.improvement_exam.get_improvement_setting',
 			args: { exam_plan: S.exam_plan, course: S.course },
@@ -584,12 +594,13 @@ frappe.pages['improvement-exam'].on_page_load = function (wrapper) {
 				$regLimit.val(d.registration_limit || '');
 				$dlFrom.val(d.deadline_from || '');
 				$dlTo.val(d.deadline_to || '');
+				$gateway.val(d.payment_gateway || 'Razorpay');
 			},
 		});
 	}
 
 	function clearSettings() {
-		$feeInput.val(''); $dlFrom.val(''); $dlTo.val('');
+		$feeInput.val(''); $dlFrom.val(''); $dlTo.val(''); $gateway.val('Razorpay');
 	}
 
 	function loadStats() {

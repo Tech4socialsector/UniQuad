@@ -144,6 +144,8 @@ fixtures = [
                 "Applicant", "Interview Staff Member", "Merit Admin", "Scholarship Admin",
                 # --- Parent Portal ---
                 "slcm_parent",
+                # --- Academic Affairs (Academics desktop) ---
+                "AAD", "AAD Staff",
                 # Additional roles
                 "PACE Admission Manager", "PACE Applicant"
             ]]
@@ -391,12 +393,31 @@ fixtures = [
 ]
 
 # Document Events
+# AAD / AAD Staff see only the desktop icons granted to their roles (Academics)
+boot_session = "slcm.slcm.utils.academics_desktop.filter_boot_icons"
+
 doc_events = {
     # ERPNext accounting bridge: only queues a background posting after commit, never raises,
     # and does nothing unless ERPNext is installed and posting is enabled.
     "Fee Payment": {
-        "on_submit": "slcm.erpnext_bridge.sync.enqueue_sync",
-        "on_cancel": "slcm.erpnext_bridge.sync.enqueue_sync",
+        "on_submit": [
+            "slcm.erpnext_bridge.sync.enqueue_sync",
+            # SLCM Payment Request for online (gateway) payments
+            "slcm.slcm.fee.payment_ledger.on_fee_payment",
+        ],
+        "on_cancel": [
+            "slcm.erpnext_bridge.sync.enqueue_sync",
+            "slcm.slcm.fee.payment_ledger.on_fee_payment",
+        ],
+    },
+    "Re Exam Payment Log": {
+        "on_update": "slcm.slcm.fee.payment_ledger.on_exam_payment_log",
+    },
+    "Improvement Exam Payment Log": {
+        "on_update": "slcm.slcm.fee.payment_ledger.on_exam_payment_log",
+    },
+    "Student Fee Payment Log": {
+        "after_insert": "slcm.slcm.fee.payment_ledger.on_payment_log",
     },
     "Fee Refund": {
         "on_submit": "slcm.erpnext_bridge.sync.enqueue_sync",
@@ -471,7 +492,8 @@ doc_events = {
     },
     "User": {
         "before_insert": "slcm.api.user_events.user_before_insert",
-        "after_insert": "slcm.api.user_events.send_signup_email"
+        "after_insert": "slcm.api.user_events.send_signup_email",
+        "on_update": "slcm.slcm.utils.academics_desktop.sync_user_layout"
     },
     "Hostel Allocation": {
         "after_insert": "slcm.slcm.fee.event_hooks.on_hostel_allocation_insert",
@@ -642,7 +664,9 @@ scheduler_events = {
         ],
         "*/15 * * * *": [
             "slcm.admission.utils.scheduler.auto_manage_announcements",
-            "slcm.api.service.fee_service.reconcile_pending_payments"
+            "slcm.api.service.fee_service.reconcile_pending_payments",
+            # Portal payments through Easebuzz whose return / webhook never arrived
+            "slcm.api.easebuzz_payment.reconcile_pending"
         ],
 		# Once per day: expire Issued/Accepted offers past payment_deadline (updates Offer + Applicant via OfferLetter hooks)
 		"15 2 * * *": [
@@ -670,6 +694,8 @@ scheduler_events = {
 	"hourly_long": ["slcm.erpnext_bridge.sync.sync_pending"],
 	"hourly": [
 		"slcm.admission.events.auto_update_cycle_status",
+		# SLCM Payment Request for student payments a doc event missed (before the daily settlement sync)
+		"slcm.slcm.fee.payment_ledger.sync_recent",
         "slcm.admission.utils.notifications.check_and_send_offer_reminders",
         # "slcm.admission.utils.auto_draft.auto_save_all_drafts"
         # Parent RFID absence alert — fires every hour; skips if outside configured window/days

@@ -77,7 +77,7 @@ def create_pace_razorpay_order(assignment_name):
             gateway = frappe.db.get_value("PACE Admission", {"academic_year": assignment.academic_year}, "payment_gateway", order_by="creation desc")
 
     if not gateway:
-        gateway = frappe.db.get_value("Payment Gateway", {}, "name") or "Razorpay"
+        gateway = "Razorpay"
 
     if not pr:
         pr = frappe.new_doc("SLCM Payment Request")

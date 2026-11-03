@@ -3,6 +3,12 @@
 
 frappe.ui.form.on("SLCM Payment Request", {
 	refresh(frm) {
+        if (frm.doc.status === "Failed" && frm.doc.failure_message) {
+            frm.dashboard.set_headline_alert(
+                `<b>${__("Payment failed")}:</b> ${frappe.utils.escape_html(frm.doc.failure_message)}`, "red"
+            );
+        }
+
         if (frm.doc.status !== "Paid" && frm.doc.status !== "Cancelled" && frm.doc.payment_gateway === "Razorpay") {
             frm.add_custom_button(__("Reconcile with Razorpay"), function() {
                 frappe.call({
@@ -23,7 +29,8 @@ frappe.ui.form.on("SLCM Payment Request", {
             });
         }
 
-        if (!frm.is_new() && frm.doc.gateway_status === "captured" && frm.doc.settlement_status != "processed") {
+        // Razorpay settlements only (Easebuzz requests carry gateway status "success")
+        if (!frm.is_new() && frm.doc.payment_gateway !== "Easebuzz" && frm.doc.gateway_status === "captured" && frm.doc.settlement_status != "processed") {
             frm.add_custom_button(__("Sync Settlement"), function() {
                 frappe.call({
                     method: "slcm.api.sync_settlements.sync_single_payment_settlement",
