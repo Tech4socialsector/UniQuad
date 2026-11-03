@@ -506,3 +506,88 @@ def bulk_save_re_exam_setting(exam_plan, re_exam_fee=None, deadline_from=None, d
 		updated += 1
 	frappe.db.commit()
 	return {"updated": updated}
+
+
+# ── Upload Manually: enrol the uploaded students, with a fee demand where a Fee is given ──
+
+def _upload_plan(exam_plan, course, rows):
+	"""What enrolling the uploaded rows would do, row by row: enrol (with or without
+	a fee demand), or why the row is skipped."""
+	from slcm.slcm.fee.event_hooks import reexam_fee_component
+	from slcm.slcm.utils.reexam_attempts import course_attempts
+
+	_get_academic_term(exam_plan, course)
+	component = reexam_fee_component()
+	out = []
+	for i, r in enumerate(rows, 2):   # sheet row 1 is the header
+		reg_id = (r.get("registration_id") or "").strip()
+		fee = frappe.utils.flt(str(r.get("fee") or "").replace(",", "").replace("₹", ""))
+		line = {"sheet_row": i, "registration_id": reg_id, "student_name": r.get("student_name") or "",
+		        "fee": fee, "action": "skip", "note": ""}
+		student = frappe.db.get_value("Student Master", {"registration_id": reg_id}, ["name", "first_name", "last_name"], as_dict=True) if reg_id else None
+		if not student:
+			line["note"] = _("No student with this Registration ID")
+		elif frappe.db.exists("Re Exam Registration", {"student": student.name, "exam_plan": exam_plan, "course": course, "status": ["!=", "Cancelled"]}):
+			line["note"] = _("Already enrolled")
+		else:
+			attempts = course_attempts(student.name, course)
+			last = attempts[-1] if attempts else None
+			line.update(student=student.name, student_name=" ".join(filter(None, [student.first_name, student.last_name])) or line["student_name"])
+			if last and last.result_grade and not last.failed:
+				line["note"] = _("Already passed ({0} in {1})").format(last.result_grade, last.exam_plan)
+			elif fee > 0 and not component:
+				line["note"] = _("No Fee Component of type Examination Fee for the demand")
+			else:
+				here = any(a.exam_plan == exam_plan for a in attempts)
+				line["action"] = "enrol"
+				line["demand"] = fee > 0
+				line["note"] = "" if here else (_("Marks brought over from {0}").format(last.exam_plan) if last
+				                                else _("No marks for this course yet: add the student in Course Results to enter re-exam marks"))
+				line["carry"] = bool(last and not here)
+		out.append(line)
+	return out, component
+
+
+@frappe.whitelist()
+def preview_upload(exam_plan, course, rows):
+	"""Who the uploaded sheet enrols and which fee demands it creates (nothing is saved)."""
+	_check_access()
+	lines, component = _upload_plan(exam_plan, course, json.loads(rows) if isinstance(rows, str) else rows)
+	return {"lines": lines, "fee_component": component,
+	        "enrol": sum(1 for x in lines if x["action"] == "enrol"),
+	        "demands": sum(1 for x in lines if x.get("demand")),
+	        "demand_total": sum(x["fee"] for x in lines if x.get("demand"))}
+
+
+@frappe.whitelist()
+def enroll_upload(exam_plan, course, rows):
+	"""Enrol every valid uploaded student for the re-exam; a Fee gives a Fee Demand
+	(created by the Re Exam Registration hook), no Fee enrols without one."""
+	_check_access()
+	from slcm.slcm.utils.reexam_attempts import carry_forward
+
+	lines, _component = _upload_plan(exam_plan, course, json.loads(rows) if isinstance(rows, str) else rows)
+	term = frappe.db.get_value("Exam Plan", exam_plan, "term")
+	enrolled, demands, errors = 0, [], []
+	for x in lines:
+		if x["action"] != "enrol":
+			continue
+		try:
+			if x.get("carry"):
+				carry_forward(x["student"], course, exam_plan)
+			reg = frappe.get_doc({
+				"doctype": "Re Exam Registration", "student": x["student"], "exam_plan": exam_plan, "course": course,
+				"academic_term": term, "re_exam_fee": x["fee"], "status": "Registered",
+				# nothing to pay without a fee; with one, the Fee Demand is paid (and marks this Paid)
+				"payment_status": "Pending" if x["fee"] > 0 else "Paid",
+				"remarks": _("Enrolled from uploaded sheet") + ("" if x["fee"] > 0 else _("; no re-exam fee")),
+			}).insert(ignore_permissions=True)
+			enrolled += 1
+			demand = frappe.db.get_value("Fee Demand", {"trigger_ref_doctype": "Re Exam Registration", "trigger_ref_name": reg.name}, "name")
+			if demand:
+				demands.append(demand)
+		except Exception as e:
+			frappe.clear_messages()
+			errors.append(f"{x['registration_id']}: {e}")
+	frappe.db.commit()
+	return {"enrolled": enrolled, "demands": demands, "errors": errors}

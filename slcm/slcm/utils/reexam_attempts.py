@@ -52,7 +52,8 @@ def course_attempts(student, course):
 		r.start = _term_start(r.exam_plan)
 		grade = r.updated_grade or r.grade
 		r.result_grade = grade or ""
-		r.failed = bool(grade) and grade in _failed_grades(r.exam_plan, course)
+		# absent ("Ab") hasn't passed either
+		r.failed = bool(grade) and (grade == "Ab" or grade in _failed_grades(r.exam_plan, course))
 		keys = _reexam_keys(r.exam_plan, course)
 		reexam = [e for e in frappe.get_all("Student Marks Entry", filters={"parent": r.name, "parenttype": "Student Course Marks"},
 		                                    fields=["component", "assessment_type", "marks"])

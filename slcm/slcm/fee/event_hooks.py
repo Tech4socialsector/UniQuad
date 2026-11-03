@@ -116,17 +116,24 @@ def on_course_reregistration_cancel(doc):
 
 # ─── 3. Re Exam Registration Submitted (after_insert) ───────────────────────
 
+def reexam_fee_component():
+	return _get_component_by_type("Examination Fee") or _get_component_by_type("Revaluation Fee")
+
+
 def on_reexam_registration_insert(doc, method=None):
-	"""Create Examination Fee demand when exam is registered."""
+	"""Create the Examination Fee demand when a re-exam is registered with a fee;
+	a registration without a fee (e.g. uploaded with an empty Fee) has none."""
 	if doc.status != "Registered":
 		return
 
-	component = _get_component_by_type("Examination Fee") or _get_component_by_type("Revaluation Fee")
+	amount = flt(doc.re_exam_fee)
+	if amount <= 0:
+		return
+
+	component = reexam_fee_component()
 	if not component:
 		frappe.log_error("Fee Component 'Examination Fee' not found.", "EventHooks")
 		return
-
-	amount = flt(doc.re_exam_fee) or 500.0
 
 	student_data = _get_student_data(doc.student)
 
