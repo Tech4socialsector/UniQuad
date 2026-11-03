@@ -12,7 +12,11 @@ app_license = "mit"
 
 # The erpnext_bridge entries are no-ops on sites without ERPNext.
 after_install = ["slcm.install.after_install", "slcm.erpnext_bridge.install.after_migrate"]
-after_migrate = ["slcm.install.after_migrate", "slcm.erpnext_bridge.install.after_migrate"]
+after_migrate = [
+    "slcm.install.after_migrate",
+    "slcm.erpnext_bridge.install.after_migrate",
+    "slcm.slcm.doctype.site_domain_settings.site_domain_settings.sync_after_migrate",
+]
 after_app_install = "slcm.erpnext_bridge.install.after_app_install"
 before_app_uninstall = "slcm.erpnext_bridge.install.before_app_uninstall"
 # Apps
@@ -592,6 +596,8 @@ ignore_links_on_delete = ["Admission Audit Log", "Merit Audit Log", "Seat Alloca
 # Request Events
 # ----------------
 before_request = [
+    # Domain home pages, set in Site Domain Settings (e.g. nlsatadmissions.nls.ac.in → /nlsatadmissions)
+    "slcm.utils.domain_routing.redirect_domain_home",
     "slcm.security.api_guard.guard",
     "slcm.utils.auth_routing.intercept_login",
     "slcm.admission.portal_application_web_form.slcm_before_request"
@@ -717,6 +723,8 @@ scheduler_events = {
 	],
 	"daily": [
 		"slcm.security.discrepancy_check.daily",
+		# Site Domain Settings: re-check each Redirect To page, flag the broken ones
+		"slcm.slcm.doctype.site_domain_settings.site_domain_settings.check_redirect_pages",
 		"slcm.admission.doctype.important_dates.important_dates.update_important_dates_status",
 		"slcm.admission.doctype.waitlist_rule.waitlist_promotion.run_scheduled_waitlist",
 		"slcm.admission.doctype.waitlist_rule.waitlist_promotion.expire_waitlists_past_cutoff",

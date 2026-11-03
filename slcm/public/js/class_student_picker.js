@@ -26,7 +26,15 @@ const CSP_STEPS = [
 slcm.class_students.pick = (opts) =>
 	new Promise((resolve) => {
 		const esc = (v) => frappe.utils.escape_html(v == null ? "" : String(v));
-		const matches = (r, q) => !q || [r.student_enrollment, r.student_name].some((x) => (x || "").toLowerCase().includes(q));
+		// Search by several names / IDs at once, separated by commas: a student
+		// matching any one of them is shown (e.g. "B23002, B23011, akash")
+		const matches = (r, q) => {
+			const terms = (q || "").split(",").map((t) => t.trim()).filter(Boolean);
+			return !terms.length || terms.some((t) =>
+				[r.student_enrollment, r.student_name].some((x) => (x || "").toLowerCase().includes(t)));
+		};
+		const search_note = `<div class="csp-note">${__("Tip: search several students at once by separating names or IDs with commas, e.g. B23002, B23011, Aakash.")}</div>`;
+		const search_ph = __("Search name or ID (comma for several)");
 		const current = new Set((opts.current || []).map((r) => r.student_enrollment));
 		const in_class = new Map((opts.current || []).map((r) => [r.student_enrollment, r]));
 		const removed = new Set(); // existing students marked To Remove
@@ -93,13 +101,14 @@ slcm.class_students.pick = (opts) =>
 
 		$found.html(`
 			<div class="csp-toolbar">
-				<input type="text" class="form-control csp-search csp-found-search" placeholder="${__("Search name or ID")}">
+				<input type="text" class="form-control csp-search csp-found-search" placeholder="${search_ph}">
 				<span class="csp-count csp-found-count"></span>
 				<span class="csp-actions">
 					<button class="btn btn-xs btn-default csp-clear">${__("Clear List")}</button>
 					<button class="btn btn-xs btn-primary csp-add-btn"></button>
 				</span>
 			</div>
+			${search_note}
 			<div class="csp-wrap"><table class="csp-table">
 				<thead><tr><th class="csp-check-col"><input type="checkbox" class="csp-all"></th>${head}<th></th></tr></thead>
 				<tbody class="csp-found-body"></tbody>
@@ -115,7 +124,7 @@ slcm.class_students.pick = (opts) =>
 		$review.html(`
 			<div class="csp-summary"></div>
 			<div class="csp-toolbar">
-				<input type="text" class="form-control csp-search csp-class-search" placeholder="${__("Search name or ID")}">
+				<input type="text" class="form-control csp-search csp-class-search" placeholder="${search_ph}">
 				<select class="form-control csp-status">
 					<option value="">${__("All Statuses")}</option>
 					<option value="Existing">${__("Existing")}</option>
@@ -350,7 +359,8 @@ function csp_inject_css() {
 		.csp-dialog .csp-step.done .csp-step-no { background: var(--green-500, #22c55e); border-color: transparent; color: #fff; }
 		.csp-dialog .csp-step-line { flex: 1 1 24px; min-width: 24px; height: 1px; background: var(--border-color); margin: 0 10px; }
 		.csp-dialog .csp-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 8px; }
-		.csp-dialog .csp-search { max-width: 260px; }
+		.csp-dialog .csp-search { max-width: 320px; }
+		.csp-dialog .csp-note { margin: -2px 0 8px; font-size: 12px; color: var(--text-muted); }
 		.csp-dialog .csp-status { max-width: 170px; }
 		.csp-dialog .csp-count { font-size: 12.5px; color: var(--text-muted); }
 		.csp-dialog .csp-actions { margin-left: auto; display: inline-flex; gap: 8px; }
