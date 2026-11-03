@@ -141,3 +141,21 @@
 	.er-theme .er2-filterrow { display: none !important; }
 	.er-theme .er2-wrap { background: #fff; padding: 0 !important; }
 }
+
+/* ── Calmer colours (2026-11-03) ─────────────────────────────────────────
+   Neutral buttons and surfaces; the brand colour is kept for the primary
+   action, headings and the key numbers. `.er-theme` outranks the per-page
+   <style> blocks of the exam screens. */
+.er-theme .er2-btn.outline-red, .er-theme .er2-btn.outline-indigo, .er-theme .er2-btn.outline-green,
+.er-theme .tr-btn.outline-indigo {
+	background: #fff; border-color: #e2e8f0; color: #334155;
+}
+.er-theme .er2-btn.outline-red:hover, .er-theme .er2-btn.outline-indigo:hover, .er-theme .er2-btn.outline-green:hover,
+.er-theme .tr-btn.outline-indigo:hover {
+	background: #fff; border-color: var(--er-brand); color: var(--er-brand);
+}
+.er-theme .er2-badge.regular, .er-theme .er2-badge.inactive, .er-theme .tr-badge.inactive {
+	background: #f1f5f9; color: #475569;
+}
+.er-theme .er2-rxg-box { background: #fff !important; border-color: #e2e8f0 !important; color: #1e293b !important; }
+.er-theme .er2-rtable td.er2-status-col { background: transparent; }

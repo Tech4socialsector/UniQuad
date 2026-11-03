@@ -67,11 +67,12 @@ def get_context(context):
             ep = frappe.db.get_value(
                 "Exam Plan",
                 exam_plan,
-                ["exam_name", "term", "status"],
+                ["exam_name", "term", "status", "timetable_published", "reexam_timetable_published"],
                 as_dict=True,
             ) or frappe._dict()
             pub = published_map.get(exam_plan)
 
+            # Dates, times and rooms reach students only once the plan publishes them
             schedule_map = {
                 s.course: s
                 for s in frappe.get_all(
@@ -80,7 +81,7 @@ def get_context(context):
                     fields=["course", "exam_date", "start_time", "end_time", "venue", "hall"],
                     ignore_permissions=True,
                 )
-            }
+            } if ep.timetable_published else {}
 
             courses = []
             for course in plan_courses:
@@ -105,6 +106,7 @@ def get_context(context):
                     "has_schedule": bool(sched.exam_date or sched.venue),
                 })
 
+            courses += _reexam_rows(exam_plan, student_name, ep, marks_map)
             courses.sort(key=lambda c: c["course_name"])
             exam_plans.append({
                 "name": exam_plan,
@@ -188,6 +190,50 @@ def get_context(context):
         context.reexam_requests = 0
 
     return context
+
+
+def _reexam_rows(exam_plan, student_name, ep, marks_map):
+    """One row per re-exam the student registered for; its date, time and room
+    show once the plan publishes the re-exam timetable."""
+    courses = frappe.get_all(
+        "Re Exam Registration",
+        filters={"student": student_name, "exam_plan": exam_plan, "status": "Registered"},
+        pluck="course", ignore_permissions=True,
+    )
+    if not courses:
+        return []
+    sched = {
+        s.course: s
+        for s in frappe.get_all(
+            "Exam Reexam Schedule",
+            filters={"parent": exam_plan, "parenttype": "Exam Plan", "course": ["in", courses]},
+            fields=["course", "exam_date", "start_time", "end_time", "venue"],
+            ignore_permissions=True,
+        )
+    } if ep.reexam_timetable_published else {}
+    rows = []
+    for course in courses:
+        c_doc = frappe.db.get_value("Course", course, ["course_name", "course_code"], as_dict=True) or {}
+        s = sched.get(course) or frappe._dict()
+        start = _fmt_time(s.start_time) if s.start_time else ""
+        end = _fmt_time(s.end_time) if s.end_time else ""
+        row = marks_map.get((exam_plan, course))
+        rows.append({
+            "course": course,
+            "course_code": c_doc.get("course_code") or course,
+            "course_name": f"{c_doc.get('course_name') or course} (Re-exam)",
+            "is_reexam": True,
+            "attendance_status": "",
+            "enrollment_status": (row.enrollment_status if row else "") or "Enrolled",
+            "marks_status": "Re-exam",
+            "hall_ticket_status": "Eligible",
+            "exam_date": frappe.utils.formatdate(s.exam_date, "d MMM yyyy") if s.exam_date else "",
+            "_raw_exam_date": s.exam_date,
+            "venue": s.venue or "To be announced",
+            "exam_time": f"{start} – {end}" if start and end else (start or "To be announced"),
+            "has_schedule": bool(s.exam_date or s.venue),
+        })
+    return rows
 
 
 def _attach_assessments(exam_plans, student_name):
@@ -335,11 +381,12 @@ def _get_attendance(row, student_name, exam_plan):
     summary = frappe.db.get_value(
         "Attendance Summary",
         filters,
-        ["attendance_percentage", "eligible_for_exam", "minimum_required_percentage"],
+        ["attendance_percentage", "eligible_for_exam", "minimum_required_percentage", "total_class_hours"],
         as_dict=True,
         order_by="modified desc",
     )
-    if not summary:
+    # no sessions held yet: nothing to judge (same rule as the desk's eligibility check)
+    if not summary or not float(summary.total_class_hours or 0):
         return ""
     if summary.eligible_for_exam:
         return "Present"

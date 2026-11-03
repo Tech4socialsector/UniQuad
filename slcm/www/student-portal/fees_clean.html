@@ -738,7 +738,7 @@
 <div class="sp-student-card fade-in" style="background:#fff; border:1px solid var(--sp-border); border-radius:12px; padding:16px 20px; display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:16px;">
   <div style="display:flex; align-items:center; gap:16px;">
     <div style="width:48px; height:48px; border-radius:50%; background:var(--sp-border-light); overflow:hidden; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-weight:700; color:var(--sp-text-3);">
-      {% if student_photo %}<img src="{{ student_photo }}" style="width:100%; height:100%; object-fit:cover;">{% else %}{{ student_initial }}{% endif %}
+      {% if student_photo %}<img src="{{ student_photo }}" style="width:100%; height:100%; object-fit:cover;">{% else %}<svg class="sp-user-icon" viewBox="0 0 24 24" width="60%" height="60%" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>{% endif %}
     </div>
     <div>
       <div style="font-weight:700; color:var(--sp-text-1); font-size:15px; display:flex; align-items:center; gap:8px;">

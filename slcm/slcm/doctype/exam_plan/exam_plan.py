@@ -11,9 +11,10 @@ class ExamPlan(Document):
 		self.validate_one_plan_per_term()
 		self.fill_seat_capacity()
 		self.validate_course_schedules()
+		self.validate_course_schedules(reexam=True)
 
 	def fill_seat_capacity(self):
-		for row in self.course_schedules:
+		for row in list(self.course_schedules) + list(self.get("reexam_schedules") or []):
 			if row.venue and not row.seat_capacity:
 				row.seat_capacity = frappe.db.get_value("Venue Master", row.venue, "capacity") or 0
 
@@ -29,16 +30,17 @@ class ExamPlan(Document):
 				)
 			)
 
-	def validate_course_schedules(self):
+	def validate_course_schedules(self, reexam=False):
 		"""Exam timetable rules (term dates, holidays, rooms shared with the class
-		Time Table, seats, student clashes): see slcm.slcm.utils.exam_timetable."""
+		Time Table, seats, student clashes): see slcm.slcm.utils.exam_timetable.
+		The re-exam timetable gets the same checks except the term dates."""
 		from slcm.slcm.utils.exam_timetable import check_exam_schedule
 
-		result = check_exam_schedule(self)
+		result = check_exam_schedule(self, reexam=reexam)
 		if result["errors"]:
 			frappe.throw(
 				"<br>".join(_("Row {0} ({1}): {2}").format(e["row"], frappe.bold(e["course"]), e["message"]) for e in result["errors"]),
-				title=_("Exam timetable"),
+				title=_("Re-exam timetable") if reexam else _("Exam timetable"),
 			)
 		for w in result["warnings"]:
 			frappe.msgprint(_("Row {0} ({1}): {2}").format(w["row"], w["course"], w["message"]), indicator="orange", alert=True)

@@ -13,9 +13,9 @@ frappe.ui.form.on('Exam Plan', {
 		frm.add_custom_button(__('Map courses in Exam Planner'), () => open_step(0))
 			.removeClass('btn-default').addClass('btn-primary');
 		frm.add_custom_button(__('Exam timetable'), () => open_step(1), __('Exam Planner'));
-		frm.add_custom_button(__('Students'), () => open_step(2), __('Exam Planner'));
-		frm.add_custom_button(__('Marks'), () => open_step(3), __('Exam Planner'));
-		frm.add_custom_button(__('Results'), () => open_step(4), __('Exam Planner'));
+		frm.add_custom_button(__('Students & marks'), () => open_step(2), __('Exam Planner'));
+		frm.add_custom_button(__('Results & publish'), () => open_step(3), __('Exam Planner'));
+		frm.add_custom_button(__('After results'), () => open_step(4), __('Exam Planner'));
 		frm.set_intro(__('Map courses and schemas, and run this exam, in the {0}.',
 			[`<a href="/desk/examination-planner/${encodeURIComponent(frm.doc.name)}">${__('Exam Planner')}</a>`]), 'blue');
 	}
