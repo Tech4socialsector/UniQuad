@@ -549,8 +549,8 @@ class IDCardCommonMixin:
 	# ------------------------------------------------------------------
 
 	@frappe.whitelist()
-	def log_print(self, layout="Single", bulk_print_id=None, total_cards=1):
-		"""Log a print action for this card."""
+	def log_print(self, layout="Single", bulk_print_id=None, total_cards=1, mark_printed=0):
+		"""Log a print action for this card; optionally move it to Printed."""
 		if self.card_status not in ("Generated", "Printed"):
 			frappe.throw(_("Only generated or printed cards can be printed."))
 
@@ -583,6 +583,11 @@ class IDCardCommonMixin:
 			log.reprint_reason = "Bulk Reprint" if layout == "Bulk" else "Manual Reprint"
 
 		log.insert(ignore_permissions=True)
+
+		if cint(mark_printed) and self.card_status == "Generated":
+			self.reload()
+			self.card_status = "Printed"
+			self.save()
 		return p_type
 
 	# ------------------------------------------------------------------

@@ -736,42 +736,285 @@ function idcg_generate(frm) {
 	run();
 }
 
-function idcg_print(frm) {
-	// Open the window inside the click so pop-up blockers allow it.
-	const w = window.open("", "_blank");
-	if (!w) {
-		frappe.msgprint(__("Allow pop-ups for this site to print cards."));
+const IDCG_PRINT_CSS = `
+	.idcp-preview { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; padding: 18px; border-radius: 12px; background: var(--subtle-fg, #f4f5f7); }
+	.idcp-side { text-align: center; }
+	.idcp-side img { display: block; max-height: 190px; max-width: 300px; border-radius: 10px; box-shadow: 0 1px 2px rgba(0,0,0,.1), 0 8px 22px rgba(15,23,42,.16); }
+	.idcp-side.off img { opacity: .25; filter: grayscale(1); }
+	.idcp-side span { display: block; margin-top: 8px; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted, #6b7280); }
+	.idcp-label { font-size: 12px; font-weight: 600; color: var(--text-muted, #6b7280); margin: 18px 0 8px; }
+	.idcp-printers { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+	.idcp-opt { position: relative; border: 2px solid var(--border-color, #e2e6ea); border-radius: 12px; padding: 12px 14px; cursor: pointer; background: var(--fg-color, #fff); }
+	.idcp-opt:hover { border-color: var(--gray-400, #9ca3af); }
+	.idcp-opt.on { border-color: var(--text-color, #1f2937); background: var(--subtle-fg, #f4f5f7); }
+	.idcp-opt b { display: block; font-size: 13.5px; }
+	.idcp-opt small { display: block; color: var(--text-muted, #6b7280); font-size: 12px; margin-top: 3px; line-height: 1.4; }
+	.idcp-radio { position: absolute; top: 12px; right: 12px; width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--border-color, #cbd2d9); }
+	.idcp-opt.on .idcp-radio { border: 5px solid var(--text-color, #1f2937); }
+	.idcp-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+	.idcp-chip { display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; border: 1px solid var(--border-color, #e2e6ea); border-radius: 9px;
+		font-size: 13px; cursor: pointer; margin: 0; font-weight: 400; }
+	.idcp-chip input { margin: 0; width: 15px; height: 15px; }
+	.idcp-chip.disabled { opacity: .45; cursor: default; }
+	.idcp-note { margin-top: 14px; padding: 10px 12px; border-radius: 10px; background: var(--subtle-fg, #f4f5f7); font-size: 12.5px; color: var(--text-muted, #6b7280); line-height: 1.5; }
+	.idcp-note b { color: var(--text-color, #1f2937); }
+`;
+
+const idcg_full_url = (u) => frappe.urllib.get_full_url(frappe.utils.get_file_link(u));
+
+/** Load an image and report its natural size (null when it fails). */
+function idcg_probe(url) {
+	return new Promise((resolve) => {
+		if (!url) return resolve(null);
+		const img = new Image();
+		img.onload = () => resolve({ url, width: img.naturalWidth, height: img.naturalHeight });
+		img.onerror = () => resolve(null);
+		img.src = url;
+	});
+}
+
+/** Printable HTML for the chosen printer. Card sizes are true CR80 (85.6 x 54 mm). */
+function idcg_print_html(frm, sides, printer) {
+	const esc = frappe.utils.escape_html;
+	const portrait = sides[0].height > sides[0].width;
+	const [w, h] = portrait ? [54, 85.6] : [85.6, 54];
+	const title = esc(`${frm.doc.student_name || frm.doc.name} · ${frm.doc.name}`);
+
+	if (printer === "card") {
+		return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${title}</title><style>
+			@page { size: ${w}mm ${h}mm; margin: 0; }
+			html, body { margin: 0; padding: 0; background: #fff; }
+			.page { width: ${w}mm; height: ${h}mm; overflow: hidden; break-after: page; page-break-after: always; }
+			.page:last-child { break-after: auto; page-break-after: auto; }
+			img { display: block; width: 100%; height: 100%; object-fit: cover; }
+		</style></head><body>${sides
+			.map((s) => `<div class="page"><img src="${esc(s.url)}" alt=""></div>`)
+			.join("")}</body></html>`;
+	}
+
+	// Office printer: A4 with the card(s) at true size and crop marks for cutting.
+	const mark = (style) => `<i style="${style}"></i>`;
+	const marks = [
+		"left:-7mm;top:0;width:5mm;height:0;border-top:.2mm solid #888",
+		"left:-7mm;bottom:0;width:5mm;height:0;border-top:.2mm solid #888",
+		"right:-7mm;top:0;width:5mm;height:0;border-top:.2mm solid #888",
+		"right:-7mm;bottom:0;width:5mm;height:0;border-top:.2mm solid #888",
+		"top:-7mm;left:0;height:5mm;width:0;border-left:.2mm solid #888",
+		"top:-7mm;right:0;height:5mm;width:0;border-left:.2mm solid #888",
+		"bottom:-7mm;left:0;height:5mm;width:0;border-left:.2mm solid #888",
+		"bottom:-7mm;right:0;height:5mm;width:0;border-left:.2mm solid #888",
+	]
+		.map(mark)
+		.join("");
+	return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${title}</title><style>
+		@page { size: A4; margin: 15mm; }
+		html, body { margin: 0; padding: 0; background: #fff; font-family: Arial, Helvetica, sans-serif; color: #444; }
+		.sheet { display: flex; flex-wrap: wrap; justify-content: center; gap: 18mm; padding-top: 20mm; }
+		.cell { text-align: center; }
+		.card { position: relative; width: ${w}mm; height: ${h}mm; }
+		.card img { display: block; width: 100%; height: 100%; object-fit: cover; }
+		.card i { position: absolute; }
+		.cap { margin-top: 9mm; font-size: 8pt; letter-spacing: .08em; text-transform: uppercase; color: #888; }
+		.foot { margin-top: 18mm; text-align: center; font-size: 8pt; color: #999; }
+	</style></head><body>
+		<div class="sheet">${sides
+			.map(
+				(s) =>
+					`<div class="cell"><div class="card"><img src="${esc(
+						s.url
+					)}" alt="">${marks}</div><div class="cap">${s.label}</div></div>`
+			)
+			.join("")}</div>
+		<div class="foot">${title} · ${__("Printed at 100% scale. Cut along the marks.")}</div>
+	</body></html>`;
+}
+
+/** Print an HTML document through a hidden iframe (no pop-up to block). */
+function idcg_print_frame(html) {
+	return new Promise((resolve) => {
+		const frame = document.createElement("iframe");
+		frame.setAttribute("aria-hidden", "true");
+		frame.style.cssText =
+			"position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden";
+		document.body.appendChild(frame);
+		const win = frame.contentWindow;
+		win.document.open();
+		win.document.write(html);
+		win.document.close();
+		const images = [...win.document.images];
+		Promise.all(
+			images.map((img) =>
+				img.complete ? null : new Promise((r) => (img.onload = img.onerror = r))
+			)
+		).then(() => {
+			const cleanup = () => {
+				setTimeout(() => frame.remove(), 500);
+				resolve();
+			};
+			win.addEventListener("afterprint", cleanup, { once: true });
+			win.focus();
+			win.print();
+			// Some browsers never fire afterprint; don't leave the frame behind.
+			setTimeout(cleanup, 120000);
+		});
+	});
+}
+
+function idcg_saved_printer() {
+	try {
+		return localStorage.getItem("slcm_idcard_printer") === "a4" ? "a4" : "card";
+	} catch (e) {
+		return "card";
+	}
+}
+
+async function idcg_print(frm) {
+	if (!document.getElementById("idcg-print-css"))
+		$(`<style id="idcg-print-css">${IDCG_PRINT_CSS}</style>`).appendTo("head");
+	const loaded = await Promise.all([
+		idcg_probe(frm.doc.front_id_image && idcg_full_url(frm.doc.front_id_image)),
+		idcg_probe(frm.doc.back_id_image && idcg_full_url(frm.doc.back_id_image)),
+	]);
+	const sides = [
+		{ key: "front", label: __("Front"), ...(loaded[0] || {}) },
+		{ key: "back", label: __("Back"), ...(loaded[1] || {}) },
+	].filter((s) => s.url);
+	if (!sides.length) {
+		frappe.msgprint(
+			__("The card images could not be loaded. Regenerate the card and try again.")
+		);
 		return;
 	}
-	w.document.write(
-		`<p style="font-family:sans-serif;padding:20px">${__("Preparing the card…")}</p>`
-	);
-	frm.call({ doc: frm.doc, method: "log_print", args: { layout: "Single" } })
-		.then((r) => {
-			if (r.exc) return w.close();
-			const urls = [frm.doc.front_id_image, frm.doc.back_id_image]
-				.filter(Boolean)
-				.map((u) => frappe.urllib.get_full_url(frappe.utils.get_file_link(u)));
-			const probe = new Image();
-			probe.onload = () => {
-				const portrait = probe.naturalHeight > probe.naturalWidth;
-				const [pw, ph] = portrait ? ["54mm", "85.6mm"] : ["85.6mm", "54mm"];
-				w.document.open();
-				w.document.write(`<!DOCTYPE html><html><head><title>${frappe.utils.escape_html(
-					frm.doc.student_name || frm.doc.name
-				)} (${r.message || ""})</title>
-					<style>@page { size: ${pw} ${ph}; margin: 0; } html, body { margin: 0; padding: 0; }
-					img { display: block; width: ${pw}; height: ${ph}; page-break-after: always; break-after: page; }
-					img:last-child { page-break-after: auto; break-after: auto; }</style></head>
-					<body>${urls.map((u) => `<img src="${u}">`).join("")}
-					<script>window.onload = function () { setTimeout(function () { window.print(); }, 200); };<\/script></body></html>`);
-				w.document.close();
-			};
-			probe.onerror = () => w.close();
-			probe.src = urls[0];
-			frm.reload_doc();
-		})
-		.catch(() => w.close());
+
+	const state = {
+		printer: idcg_saved_printer(),
+		sides: new Set(sides.map((s) => s.key)),
+		mark: frm.doc.card_status === "Generated",
+	};
+	const reprint = (frm.doc.print_count || 0) > 0;
+	const d = new frappe.ui.Dialog({
+		title: reprint ? __("Reprint ID card") : __("Print ID card"),
+		size: "large",
+		fields: [{ fieldtype: "HTML", fieldname: "body" }],
+		primary_action_label: __("Print"),
+		primary_action() {
+			const chosen = sides.filter((s) => state.sides.has(s.key));
+			if (!chosen.length) return;
+			try {
+				localStorage.setItem("slcm_idcard_printer", state.printer);
+			} catch (e) {
+				// Private mode: just don't remember the choice.
+			}
+			d.hide();
+			frm.call({
+				doc: frm.doc,
+				method: "log_print",
+				args: { layout: "Single", mark_printed: state.mark ? 1 : 0 },
+			}).then((r) => {
+				if (r.exc) return;
+				idcg_print_frame(idcg_print_html(frm, chosen, state.printer)).then(() =>
+					frm.reload_doc()
+				);
+			});
+		},
+	});
+
+	const esc = frappe.utils.escape_html;
+	const render = () => {
+		const opt = (key, title, sub) => `<div class="idcp-opt ${
+			state.printer === key ? "on" : ""
+		}" data-printer="${key}" role="radio"
+			aria-checked="${
+				state.printer === key
+			}" tabindex="0"><span class="idcp-radio"></span><b>${title}</b><small>${sub}</small></div>`;
+		d.fields_dict.body.$wrapper.html(`
+			<div class="idcp-preview">${["front", "back"]
+				.map((key) => {
+					const s = sides.find((x) => x.key === key);
+					return s
+						? `<div class="idcp-side ${
+								state.sides.has(key) ? "" : "off"
+						  }"><img src="${esc(s.url)}" alt=""><span>${s.label}</span></div>`
+						: "";
+				})
+				.join("")}</div>
+			<div class="idcp-label">${__("Printer")}</div>
+			<div class="idcp-printers">
+				${opt(
+					"card",
+					__("ID card printer"),
+					__(
+						"Each side on its own card-sized page (CR80, 85.6 × 54 mm). Turn on duplex for front and back."
+					)
+				)}
+				${opt(
+					"a4",
+					__("Office printer (A4)"),
+					__("Card at true size on A4 with crop marks, ready to cut and laminate.")
+				)}
+			</div>
+			<div class="idcp-label">${__("Sides")}</div>
+			<div class="idcp-row">
+				${["front", "back"]
+					.map((key) => {
+						const s = sides.find((x) => x.key === key);
+						const label = key === "front" ? __("Front") : __("Back");
+						return `<label class="idcp-chip ${
+							s ? "" : "disabled"
+						}"><input type="checkbox" data-side-pick="${key}" ${
+							state.sides.has(key) ? "checked" : ""
+						} ${s ? "" : "disabled"}> ${label}${s ? "" : ` (${__("none")})`}</label>`;
+					})
+					.join("")}
+				${
+					frm.doc.card_status === "Generated"
+						? `<label class="idcp-chip" style="margin-left:auto"><input type="checkbox" data-mark ${
+								state.mark ? "checked" : ""
+						  }> ${__("Mark card as Printed")}</label>`
+						: ""
+				}
+			</div>
+			<div class="idcp-note">${
+				state.printer === "card"
+					? __(
+							"In the print window choose your card printer, set the paper size to <b>CR80</b> and margins to <b>None</b>."
+					  )
+					: __(
+							"In the print window choose <b>A4</b>, scale <b>100% / Actual size</b> and margins <b>Default</b>. “Fit to page” shrinks the card."
+					  )
+			}${
+			reprint
+				? ` ${__("This is reprint #{0}; it is recorded in the ID Card Print Log.", [
+						(frm.doc.print_count || 0) + 1,
+				  ])}`
+				: ""
+		}</div>`);
+		d.get_primary_btn()
+			.prop("disabled", !state.sides.size)
+			.text(
+				state.sides.size === 2
+					? __("Print both sides")
+					: state.sides.size
+					? __("Print {0}", [state.sides.has("front") ? __("front") : __("back")])
+					: __("Choose a side")
+			);
+	};
+	const $b = d.fields_dict.body.$wrapper;
+	$b.on("click keydown", "[data-printer]", (e) => {
+		if (e.type === "keydown" && e.key !== " " && e.key !== "Enter") return;
+		e.preventDefault();
+		state.printer = $(e.currentTarget).data("printer");
+		render();
+	});
+	$b.on("change", "[data-side-pick]", (e) => {
+		const key = $(e.currentTarget).data("side-pick");
+		if (e.currentTarget.checked) state.sides.add(key);
+		else state.sides.delete(key);
+		render();
+	});
+	$b.on("change", "[data-mark]", (e) => (state.mark = e.currentTarget.checked));
+	d.show();
+	render();
 }
 
 frappe.ui.form.on("ID Card Generation", {
