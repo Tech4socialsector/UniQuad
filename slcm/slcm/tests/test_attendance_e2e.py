@@ -547,23 +547,20 @@ def s06_parent_portal_visibility(ctx):
 
 
 # ---------------------------------------------------------------------------
-# S07 — RFID via Student RFID Card (not rfid_uid on Student Master)
+# S07 — Student RFID Card keeps Student Master.rfid_uid in step
 # ---------------------------------------------------------------------------
 
 def s07_rfid_card_resolution(ctx):
     """
-    Student RFID Card doctype should also resolve to a student.
-    Tests the _resolve_rfid() fallback path in rfid_sql_poller.
+    Saving an Active Student RFID Card sets Student Master.rfid_uid (what the
+    poller matches on); marking it Lost clears it again.
     """
     student = ctx["student"]
     card_name = None
+    old_rfid = frappe.db.get_value("Student Master", student, "rfid_uid")
+    old_active = frappe.get_all("Student RFID Card", filters={"student": student, "card_status": "Active"}, pluck="name")
 
     try:
-        # Ensure rfid_uid on Student Master is blank so it falls through to card lookup
-        old_rfid = frappe.db.get_value("Student Master", student, "rfid_uid")
-        frappe.db.set_value("Student Master", student, "rfid_uid", "")
-
-        # Create a Student RFID Card record
         card = frappe.get_doc({
             "doctype":     "Student RFID Card",
             "student":     student,
@@ -573,30 +570,32 @@ def s07_rfid_card_resolution(ctx):
         })
         card.insert(ignore_permissions=True)
         card_name = card.name
-        frappe.db.commit()
 
-        # Run the resolver
-        from slcm.slcm.utils.rfid_sql_poller import _resolve_rfid
-        result = _resolve_rfid(_TEST_CARD_UID)
+        got = frappe.db.get_value("Student Master", student, "rfid_uid")
+        if got != _TEST_CARD_UID:
+            return False, f"Active card did not reach Student Master: rfid_uid={got!r}"
+        if frappe.db.get_value("Student Master", {"rfid_uid": _TEST_CARD_UID}, "name") != student:
+            return False, "Poller lookup by rfid_uid does not resolve to the student"
 
-        if not result:
-            return False, f"_resolve_rfid('{_TEST_CARD_UID}') returned None — card not found"
-        if result.get("student") != student:
-            return False, (
-                f"Resolved to wrong student: got={result.get('student')}, expected={student}"
-            )
+        card.card_status = "Lost"
+        card.save(ignore_permissions=True)
+        got = frappe.db.get_value("Student Master", student, "rfid_uid")
+        if got:
+            return False, f"Lost card still on Student Master: rfid_uid={got!r}"
+        if card.is_active or not card.deactivated_date:
+            return False, "Lost card should be inactive with a deactivated date"
 
-        return True, (
-            f"Card({card_name}) uid={_TEST_CARD_UID} → student={result['student']} ✓"
-        )
+        return True, f"Card({card_name}) uid={_TEST_CARD_UID} → Student Master and back ✓"
 
     except Exception as e:
         import traceback
         return False, f"{e}\n{traceback.format_exc()}"
 
     finally:
-        frappe.db.set_value("Student Master", student, "rfid_uid", old_rfid or "")
         _safe_delete("Student RFID Card", card_name)
+        for name in old_active:
+            frappe.db.set_value("Student RFID Card", name, {"card_status": "Active", "is_active": 1, "deactivated_date": None})
+        frappe.db.set_value("Student Master", student, "rfid_uid", old_rfid or None)
         frappe.db.commit()
 
 
@@ -625,7 +624,7 @@ def run_all():
         ("S04 — FA/MFA application approval → Summary",            lambda: s04_fa_mfa(ctx)),
         ("S05 — Condonation approval → Summary",                    lambda: s05_condonation(ctx)),
         ("S06 — Parent portal sees correct percentage",             lambda: s06_parent_portal_visibility(ctx)),
-        ("S07 — RFID Card fallback resolution",                     lambda: s07_rfid_card_resolution(ctx)),
+        ("S07 — Student RFID Card syncs Student Master",                     lambda: s07_rfid_card_resolution(ctx)),
     ]
 
     W = 68

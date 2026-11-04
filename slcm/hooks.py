@@ -466,7 +466,11 @@ doc_events = {
         "validate": "slcm.erpnext_bridge.company.validate_company",
     },
     "Student Master": {
-        "before_save": "slcm.slcm.doctype.student_master.student_master.before_save_hook"
+        "before_save": "slcm.slcm.doctype.student_master.student_master.before_save_hook",
+        # RFID UID typed on the form -> Student RFID Card history; cards go with the student
+        "validate": "slcm.slcm.utils.rfid_cards.on_student_master_validate",
+        "on_update": "slcm.slcm.utils.rfid_cards.on_student_master_update",
+        "on_trash": "slcm.slcm.utils.rfid_cards.on_student_master_trash",
     },
     "Fee Structure": {
         "on_update": "slcm.slcm.doctype.student_master.student_master.on_fee_structure_update"
