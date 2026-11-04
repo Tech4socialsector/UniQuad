@@ -6,6 +6,7 @@ import csv
 import io
 
 from slcm.permissions import AAD_ROLES
+from slcm.slcm.utils.rfid_cards import assign_card, remove_wrong_assignment
 
 
 # ── Page data APIs ────────────────────────────────────────────────
@@ -139,46 +140,17 @@ def get_live_feed(since_swipe_time=None):
 @frappe.whitelist()
 def link_rfid_to_student(rfid_uid, student):
     """
-    Assign rfid_uid to a Student Master record.
-    Backfills all existing Attendance Logs for that UID.
+    Make rfid_uid the student's active card: Student Master + Student RFID Card history.
+    Backfills existing swipes for that UID.
     """
     frappe.only_for(("System Manager", *AAD_ROLES))
 
     rfid_uid = (rfid_uid or "").strip()
     student  = (student  or "").strip()
-
-    if not rfid_uid or not student:
-        frappe.throw("Both RFID UID and Student are required.")
-
-    # Prevent duplicate assignment
-    existing = frappe.db.get_value("Student Master", {"rfid_uid": rfid_uid}, "name")
-    if existing and existing != student:
-        frappe.throw(
-            f"RFID UID <b>{rfid_uid}</b> is already assigned to student <b>{existing}</b>. "
-            "Remove it from that student first."
-        )
-
-    # Check student exists
-    if not frappe.db.exists("Student Master", student):
-        frappe.throw(f"Student '{student}' not found.")
-
-    frappe.db.set_value("Student Master", student, "rfid_uid", rfid_uid)
-
-    # Backfill existing logs
-    frappe.db.sql("""
-        UPDATE `tabAttendance Log`
-        SET student = %s
-        WHERE rfid_uid = %s AND (student IS NULL OR student = '')
-    """, (student, rfid_uid))
-
+    linked = assign_card(student, rfid_uid, "Linked in RFID Card Management")
     frappe.db.commit()
 
-    linked = frappe.db.sql("""
-        SELECT COUNT(*) FROM `tabAttendance Log`
-        WHERE rfid_uid = %s AND student = %s
-    """, (rfid_uid, student), as_list=True)[0][0]
     student_name = frappe.db.get_value("Student Master", student, "first_name")
-
     return {
         "success": True,
         "message": f"RFID <b>{rfid_uid}</b> linked to <b>{student_name}</b>. {linked} log(s) updated."
@@ -187,19 +159,11 @@ def link_rfid_to_student(rfid_uid, student):
 
 @frappe.whitelist()
 def unlink_rfid_from_student(student):
-    """Remove the rfid_uid from a Student Master record and clear linked Attendance Logs."""
+    """Undo a wrong link: clear the card from the student, drop its history record and unlink its logs."""
     frappe.only_for(("System Manager", *AAD_ROLES))
     if not frappe.db.exists("Student Master", student):
         frappe.throw(f"Student '{student}' not found.")
-    old_uid = frappe.db.get_value("Student Master", student, "rfid_uid")
-    frappe.db.set_value("Student Master", student, "rfid_uid", None)
-    # Clear student link from all logs for this card so they re-appear as unassigned
-    if old_uid:
-        frappe.db.sql("""
-            UPDATE `tabAttendance Log`
-            SET student = NULL
-            WHERE student = %s AND rfid_uid = %s
-        """, (student, old_uid))
+    old_uid = remove_wrong_assignment(student)
     frappe.db.commit()
     return {"success": True, "message": f"RFID UID '{old_uid}' removed from student."}
 
@@ -297,30 +261,21 @@ def bulk_import_rfid(csv_data):
             })
             continue
 
-        existing = frappe.db.get_value("Student Master", {"rfid_uid": rfid_uid}, "name")
-        if existing and existing != student_id:
-            results["errors"].append({
-                "row": i, "student_id": student_id, "rfid_uid": rfid_uid,
-                "reason": f"RFID UID already assigned to {existing}"
-            })
-            continue
-
+        # each row is all-or-nothing: a failure rolls back only that row
+        frappe.db.savepoint("rfid_import_row")
         try:
-            frappe.db.set_value("Student Master", student_id, "rfid_uid", rfid_uid)
-            frappe.db.sql("""
-                UPDATE `tabAttendance Log`
-                SET student = %s
-                WHERE rfid_uid = %s AND (student IS NULL OR student = '')
-            """, (student_id, rfid_uid))
+            assign_card(student_id, rfid_uid, "Bulk import in RFID Card Management")
             student_name = frappe.db.get_value("Student Master", student_id, "first_name")
             results["linked"].append({
                 "row": i, "student_id": student_id,
                 "student_name": student_name, "rfid_uid": rfid_uid
             })
         except Exception as e:
+            frappe.db.rollback(save_point="rfid_import_row")
+            frappe.clear_messages()
             results["errors"].append({
                 "row": i, "student_id": student_id, "rfid_uid": rfid_uid,
-                "reason": str(e)
+                "reason": frappe.utils.strip_html(str(e)) or "Could not link"
             })
 
     frappe.db.commit()

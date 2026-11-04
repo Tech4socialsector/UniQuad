@@ -135,7 +135,7 @@ class FeeDashboard {
 					<thead><tr><th>${fd_esc(label)}</th><th class="num">${__('Records')}</th>
 						${r.sums.map((s) => `<th class="num">${fd_esc(s.label)}</th>`).join('')}</tr></thead>
 					<tbody>${r.rows.map((x, i) => `<tr>
-						<td><button class="xd-cell-link" data-row="${i}">${fd_esc(x.value || __('Not set'))}</button></td>
+						<td><button class="xd-cell-link" data-row="${i}">${fd_esc(x.sub || x.value || __('Not set'))}</button>${x.sub ? `<small class="xd-sub">${fd_esc(x.value)}</small>` : ''}</td>
 						<td class="num">${fd_num(x.count)}</td>
 						${r.sums.map((s) => `<td class="num">${fd_money(x.sums[s.field])}</td>`).join('')}</tr>`).join('')}
 					</tbody>
@@ -171,6 +171,7 @@ class FeeDashboard {
 			.xd-table tfoot th{position:sticky;bottom:0;color:var(--text-color);border-top:1px solid var(--border-color);border-bottom:0}
 			.xd-table td{padding:8px 10px;border-bottom:1px solid var(--border-color);vertical-align:top}
 			.xd-table .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+			.xd-sub{display:block;color:var(--text-muted);font-size:11px}
 			.xd-cell-link{font:inherit;border:0;background:none;padding:0;color:var(--text-color);font-weight:700;cursor:pointer;text-align:left}
 			.xd-cell-link:hover{color:var(--er-brand,#920C24);text-decoration:underline}
 			.xd-empty{color:var(--text-muted);margin:0;padding:14px}

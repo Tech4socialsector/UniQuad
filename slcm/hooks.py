@@ -43,9 +43,11 @@ web_include_js = ["/assets/slcm/js/fle_theme.js"]
 # app_include_js = "/assets/slcm/js/slcm.js"
 app_include_js = [
     "/assets/slcm/js/student_workspace_redirect.js",
-    "/assets/slcm/js/bulk_email_dialog.js"
+    "/assets/slcm/js/bulk_email_dialog.js",
+    "/assets/slcm/js/sidebar_toggle.js?v=5",
+    "/assets/slcm/js/sidebar_fallback.js?v=1"
 ]
-app_include_css = []
+app_include_css = ["/assets/slcm/css/sidebar_toggle.css?v=5"]
 
 doctype_js = {
     "Notification": "public/js/notification_override.js",
@@ -465,7 +467,11 @@ doc_events = {
         "validate": "slcm.erpnext_bridge.company.validate_company",
     },
     "Student Master": {
-        "before_save": "slcm.slcm.doctype.student_master.student_master.before_save_hook"
+        "before_save": "slcm.slcm.doctype.student_master.student_master.before_save_hook",
+        # RFID UID typed on the form -> Student RFID Card history; cards go with the student
+        "validate": "slcm.slcm.utils.rfid_cards.on_student_master_validate",
+        "on_update": "slcm.slcm.utils.rfid_cards.on_student_master_update",
+        "on_trash": "slcm.slcm.utils.rfid_cards.on_student_master_trash",
     },
     "Fee Structure": {
         "on_update": "slcm.slcm.doctype.student_master.student_master.on_fee_structure_update"
@@ -745,6 +751,8 @@ scheduler_events = {
 		"slcm.slcm.doctype.student_attendance_condonation.student_attendance_condonation.auto_reject_below_attendance_floor",
 		# Background sync for settlements if webhooks fail
 		"slcm.api.sync_settlements.daily_sync_settlements",
+		# Easebuzz payouts → settlement fields on Easebuzz SLCM Payment Requests
+		"slcm.slcm.fee.easebuzz_settlement.daily_sync",
 		# Student Academic Log — move Ongoing to the next term once a term has ended
 		"slcm.slcm.doctype.student_enrollment.student_enrollment.advance_term_status",
 	]

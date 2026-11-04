@@ -104,3 +104,4 @@ slcm.patches.v2_0.backfill_id_card_run_results
 slcm.patches.v2_0.remove_cancelled_classes_report
 slcm.patches.v2_0.backfill_fee_demand_programme
 slcm.patches.v2_0.remove_old_analytics_pages
+slcm.patches.v2_0.create_student_rfid_card_history

@@ -1,0 +1,36 @@
+{
+ "content": null,
+ "creation": "2026-11-04 12:00:00.000000",
+ "docstatus": 0,
+ "doctype": "Page",
+ "icon": "layout-dashboard",
+ "idx": 0,
+ "modified": "2026-11-04 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "SLCM",
+ "name": "programme-dashboard",
+ "owner": "Administrator",
+ "page_name": "programme-dashboard",
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "AAD"
+  },
+  {
+   "role": "AAD Staff"
+  },
+  {
+   "role": "slcm_Programme Chair"
+  },
+  {
+   "role": "slcm_Registrar"
+  }
+ ],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "system_page": 1,
+ "title": "Programme Dashboard"
+}

@@ -120,10 +120,11 @@ class FeeDemand(Document):
 
 		if outstanding <= 0 and paid > 0:
 			self.status = "Paid"
-		elif paid > 0 and outstanding > 0:
-			self.status = "Partially Paid"
+		# past due and not fully paid → Overdue, even when part-paid (same rule as the daily scheduler)
 		elif self.due_date and getdate(self.due_date) < getdate(today()) and outstanding > 0:
 			self.status = "Overdue"
+		elif paid > 0 and outstanding > 0:
+			self.status = "Partially Paid"
 		else:
 			if self.status not in ("Overdue",):
 				self.status = "Pending"

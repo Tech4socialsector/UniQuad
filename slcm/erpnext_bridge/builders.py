@@ -226,8 +226,9 @@ def _settlement(cfg, pr):
 		student = frappe.db.get_value("Fee Payment", receipt, "student")
 	elif receipt_dt == "Applicant Payment Receipt":
 		student = frappe.db.get_value("Applicant Payment Receipt", receipt, "applicant")
-	remark = _("Razorpay settlement {0} | payment {1} | {2} {3} | UTR {4}").format(
-		pr.name, pr.razorpay_payment_id or pr.get("transaction_id") or "-", receipt_dt or "", receipt or "-", pr.settlement_utr or "-"
+	remark = _("{0} settlement {1} | payment {2} | {3} {4} | UTR {5}").format(
+		pr.get("payment_gateway") or "Razorpay", pr.name, pr.razorpay_payment_id or pr.get("transaction_id") or "-",
+		receipt_dt or "", receipt or "-", pr.settlement_utr or "-"
 	)
 	return _settle(cfg, pr, remark, student)
 
@@ -249,7 +250,7 @@ def _settle(cfg, src, remark, student):
 	if gross <= 0:
 		frappe.throw(_("Settlement amount on {0} is zero").format(src.name))
 
-	bank = conf.require(cfg, "default_bank_account", _("Razorpay settles into the Company's default bank account"))
+	bank = conf.require(cfg, "default_bank_account", _("Razorpay and Easebuzz settle into the Company's default bank account"))
 	charges = conf.require(cfg, "slcm_gateway_charges_account")
 	tax_account = cfg.slcm_gateway_gst_account or charges
 

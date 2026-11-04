@@ -48,5 +48,25 @@ frappe.ui.form.on("SLCM Payment Request", {
                 });
             }).addClass("btn-primary");
         }
+
+        // Easebuzz payouts
+        if (frm.doc.docstatus === 1 && frm.doc.payment_gateway === "Easebuzz" && frm.doc.status === "Paid" && frm.doc.settlement_status !== "Settled") {
+            frm.add_custom_button(__("Sync Settlement"), function() {
+                frappe.call({
+                    method: "slcm.slcm.fee.easebuzz_settlement.sync_for_request",
+                    args: {
+                        pr_name: frm.doc.name
+                    },
+                    freeze: true,
+                    freeze_message: __("Checking Easebuzz settlement..."),
+                    callback: function(r) {
+                        if (r.message) {
+                            frappe.msgprint(r.message.message);
+                            frm.reload_doc();
+                        }
+                    }
+                });
+            }).addClass("btn-primary");
+        }
 	},
 });

@@ -3,6 +3,7 @@
  "allow_rename": 1,
  "autoname": "RFID-.#####",
  "creation": "2025-12-30 13:24:56.869511",
+ "custom": 0,
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
@@ -22,19 +23,23 @@
    "in_standard_filter": 1,
    "label": "Student",
    "options": "Student Master",
-   "reqd": 1
+   "reqd": 1,
+   "set_only_once": 1
   },
   {
+   "description": "One record per card. For a replacement card, create a new record; the old one is marked Replaced.",
    "fieldname": "rfid_uid",
    "fieldtype": "Data",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "RFID UID",
    "reqd": 1,
+   "set_only_once": 1,
    "unique": 1
   },
   {
    "default": "Active",
+   "description": "Active is the card attendance uses (copied to Student Master). Any other status removes it from the student.",
    "fieldname": "card_status",
    "fieldtype": "Select",
    "in_list_view": 1,
@@ -45,13 +50,16 @@
   },
   {
    "default": "1",
+   "description": "Follows Card Status",
    "fieldname": "is_active",
    "fieldtype": "Check",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Is Active"
+   "label": "Is Active",
+   "read_only": 1
   },
   {
+   "default": "Today",
    "fieldname": "issued_date",
    "fieldtype": "Date",
    "in_list_view": 1,
@@ -71,7 +79,7 @@
   }
  ],
  "links": [],
- "modified": "2026-11-02 14:26:53.094048",
+ "modified": "2026-11-04 16:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Student RFID Card",
@@ -117,6 +125,5 @@
  "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": [],
- "custom": 0
+ "states": []
 }

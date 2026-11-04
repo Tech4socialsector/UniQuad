@@ -62,6 +62,26 @@ DRILL = {
 		{"program": "Programme", "payment_mode": "Payment mode", "payment_gateway": "Gateway", "university_bank_account": "Bank account"},
 		{"amount": "Received"},
 	),
+	"Student Credit Note": (
+		{"credit_type": "Why it's held", "student": "Student", "status": "Status", "received_via": "Received via", "academic_year": "Academic year"},
+		{"credit_amount": "Credited", "used_credit": "Used on dues", "available_credit": "Available"},
+	),
+	"Fee Refund": (
+		{"refund_source": "Refunded from", "refund_type": "Refund type", "refund_mode": "Mode", "student": "Student", "status": "Status"},
+		{"refund_amount": "Refunded"},
+	),
+	"Fee Concession": (
+		{"concession_type": "Concession type", "fee_component": "Fee component", "student": "Student", "status": "Status"},
+		{"waiver_value": "Concession"},
+	),
+	"University Financial Aid": (
+		{"fa_tier": "FA tier", "programme": "Programme", "year_of_study": "Year", "category": "Category"},
+		{"tuition_facilities": "Tuition", "hostel_mess": "Hostel & mess", "stipend": "Stipend", "loan": "Loan", "total_financial_aid": "Total aid"},
+	),
+	"Stipend Payment": (
+		{"programme": "Programme", "academic_term": "Term", "payment_mode": "Mode", "student": "Student"},
+		{"amount": "Paid"},
+	),
 }
 
 
@@ -79,6 +99,12 @@ def get_breakdown(doctype, filters=None, group_by=None):
 		fields=fields, filters=frappe.parse_json(filters) or {}, group_by=f"{t}.`{group_by}`",
 		order_by=None, as_list=True)
 	out = [{"value": r[0], "count": r[1], "sums": {s: flt(v) for s, v in zip(sums, r[2:])}} for r in rows]
+	if group_by == "student" and out:
+		# show the name next to the ID; the rows themselves were already permission-checked
+		names = dict(frappe.get_all("Student Master", filters={"name": ["in", [r["value"] for r in out if r["value"]]]},
+			fields=["name", "first_name"], as_list=True))
+		for r in out:
+			r["sub"] = names.get(r["value"])
 	first = next(iter(sums))
 	out.sort(key=lambda r: (-r["sums"][first], str(r["value"] or "")))
 	return {
@@ -169,6 +195,12 @@ def get_dashboard(academic_year=None, programme=None, batch=None):
 		_group(_("Excess & refunds"), [
 			_card(_("Excess held"), "Student Credit Note", {"status": "Active", "available_credit": [">", 0]}, "available_credit",
 				_("money students can use or get back"), _("credit notes")),
+			_card(_("Excess received"), "Student Credit Note", {"docstatus": 1}, "credit_amount",
+				_("overpaid, advance, scholarship credit"), _("credit notes")),
+			_card(_("Moved from paid dues"), "Student Credit Note", {"docstatus": 1, "source_fee_demand": ["is", "set"]}, "credit_amount",
+				_("paid dues cancelled or reduced"), _("credit notes")),
+			_card(_("Used on other dues"), "Student Credit Note", {"docstatus": 1, "used_credit": [">", 0]}, "used_credit",
+				_("excess applied to a due"), _("credit notes")),
 			_card(_("Refunds paid"), "Fee Refund", dict(refund_dates, docstatus=1), "refund_amount", "", _("refunds")),
 			_card(_("Refunds in draft"), "Fee Refund", dict(refund_dates, docstatus=0), "refund_amount", _("waiting for approval"), _("refunds")),
 		], _("Programme and Batch don't apply; excess is for any year")),
