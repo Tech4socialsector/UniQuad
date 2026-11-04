@@ -13,9 +13,9 @@
   "docstatus": 0,
   "doctype": "State",
   "modified": "2026-06-29 16:07:35.013152",
-  "name": "Punjab (India)",
+  "name": "Punjab",
   "state_code": "",
-  "state_name": "Punjab (India)"
+  "state_name": "Punjab"
  },
  {
   "country": "Algeria",
@@ -1272,15 +1272,6 @@
   "country": "India",
   "docstatus": 0,
   "doctype": "State",
-  "modified": "2026-05-04 10:36:42.373600",
-  "name": "Punjab",
-  "state_code": null,
-  "state_name": "Punjab"
- },
- {
-  "country": "India",
-  "docstatus": 0,
-  "doctype": "State",
   "modified": "2026-05-04 10:36:48.410234",
   "name": "Rajasthan",
   "state_code": null,
@@ -1393,15 +1384,6 @@
   "name": "Uttar Pradesh",
   "state_code": null,
   "state_name": "Uttar Pradesh"
- },
- {
-  "country": "India",
-  "docstatus": 0,
-  "doctype": "State",
-  "modified": "2026-03-25 17:28:40.083717",
-  "name": "gfds",
-  "state_code": null,
-  "state_name": "gfds"
  },
  {
   "country": "Spain",

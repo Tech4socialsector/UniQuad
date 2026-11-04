@@ -138,6 +138,14 @@ frappe.ui.form.on("Admission Cycle", {
                 : {};
         });
 
+        // Only offer Reservation Policies made for this programme in this cycle.
+        frm.set_query("reservation_policy", "programs", (doc, cdt, cdn) => {
+            const row = locals[cdt][cdn];
+            const filters = { program: row.program || "" };
+            if (!frm.is_new()) filters.admission_cycle = frm.doc.name;
+            return { filters };
+        });
+
         const today = new Date(frappe.datetime.get_today());
 
         if (frm.fields_dict.cycle_start_date && frm.fields_dict.cycle_start_date.datepicker) {
@@ -425,6 +433,26 @@ frappe.ui.form.on("Admission Cycle", {
 });
 
 frappe.ui.form.on("Admission Cycle Program", {
+    program: function (frm, cdt, cdn) {
+        // A policy belongs to one programme; clear it when the programme changes.
+        const row = locals[cdt][cdn];
+        if (row.reservation_policy) {
+            frappe.model.set_value(cdt, cdn, "reservation_policy", "");
+        }
+    },
+
+    reservation_policy: function (frm, cdt, cdn) {
+        // Non-research programmes take Total Seats from the Reservation Policy (field is hidden).
+        const row = locals[cdt][cdn];
+        if (!row.reservation_policy || row.program_level === "Research Course") return;
+        frappe.db.get_value("Programme Reservation Policy", row.reservation_policy, "total_seats").then((r) => {
+            const seats = cint((r && r.message && r.message.total_seats) || 0);
+            if (cint(row.seats) !== seats) {
+                frappe.model.set_value(cdt, cdn, "seats", seats);
+            }
+        });
+    },
+
     campus: function (frm, cdt, cdn) {
         if (!slcm_multi_campus_enabled) return;
         const row = locals[cdt][cdn];
@@ -658,7 +686,12 @@ function open_reservation_policy(frm, row) {
             { fieldtype: "Column Break" },
             { fieldtype: "Link", fieldname: "campus", label: __("Campus"), options: "Campus", read_only: 1, default: row.campus },
             { fieldtype: "Column Break" },
-            { fieldtype: "Int", fieldname: "total_seats", label: __("Total Seats"), read_only: 1, default: row.seats },
+            {
+                fieldtype: "Int", fieldname: "total_seats", label: __("Total Seats"), reqd: 1,
+                // Research rows own their seats; for other levels the policy sets them.
+                read_only: row.program_level === "Research Course" ? 1 : 0,
+                default: row.seats,
+            },
             { fieldtype: "Section Break" },
             { fieldtype: "Link", fieldname: "payment_gateway", label: __("Payment Gateway"), options: "Payment Gateway", reqd: 1 },
             { fieldtype: "Column Break" },
