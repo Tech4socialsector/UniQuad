@@ -69,6 +69,7 @@ slcm.id_card.icon = function (name, size = 16) {
 		templates:
 			'<rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>',
 		upload: '<path d="M12 15V3M7 8l5-5 5 5"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/>',
+		download: '<path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/>',
 		plus: '<path d="M12 5v14M5 12h14"/>',
 		grip: '<circle cx="9" cy="6" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/>',
 		"align-left":
@@ -720,6 +721,9 @@ class IDCardStudio {
 					)}">${i("braces")}</button>
 					<span class="idc-spacer"></span>
 					<div class="idc-health"><button class="idc-btn" data-act="health"></button><div class="idc-health-pop"></div></div>
+					<button class="idc-btn outline" data-act="export" title="${__(
+						"Download this design as a starter file (.json) to import on another site"
+					)}">${i("download")} ${__("Export")}</button>
 					<button class="idc-btn outline" data-act="starters">${i("templates")} ${__("Starters")}</button>
 					<button class="idc-btn primary" data-act="preview">${i("eye")} ${__("Preview")}</button>
 				</div>
@@ -794,6 +798,7 @@ class IDCardStudio {
 				this.zoom = [...zooms].reverse().find((z) => z < this.scale - 0.01) || 0.5;
 				this.render_canvas();
 			} else if (act === "starters") this.open_starters();
+			else if (act === "export") this.export_design();
 			else if (act === "preview") slcm.id_card.show_preview(this.frm);
 			else if (act === "health") {
 				e.stopPropagation();
@@ -2539,11 +2544,46 @@ class IDCardStudio {
 
 	// ----- starters -------------------------------------------------------
 
+	export_design() {
+		const has_design = this.data && (this.data.front.length || this.data.back.length);
+		if (!has_design) {
+			frappe.msgprint(__("The card is empty. Add elements or pick a starter before exporting."));
+			return;
+		}
+		if (this.frm.is_dirty()) {
+			frappe.show_alert({
+				message: __("Exported the design as shown, including unsaved changes."),
+				indicator: "blue",
+			});
+		}
+		slcm.id_card.download_starter({
+			name: this.frm.doc.template_name || (this.frm.is_new() ? __("ID Card Design") : this.frm.doc.name),
+			card_type: this.frm.doc.card_type || "Student",
+			description: this.frm.is_new() ? "" : __("Exported from the {0} template", [this.frm.doc.name]),
+			data: this.data,
+		});
+	}
+
 	open_starters() {
 		const card_type = this.frm.doc.card_type || "Student";
-		const starters = (slcm.id_card.starters || []).slice();
-		let filter = starters.some((s) => s.card_type === card_type) ? "match" : "all";
+		const builtin = (slcm.id_card.starters || []).map((s) => ({ ...s, source: "builtin" }));
 		const ctx = slcm.id_card.design_context(this.frm, this.meta, false);
+		const esc = frappe.utils.escape_html;
+		const api = "slcm.slcm.doctype.id_card_starter.id_card_starter.";
+		const parse = (raw) => {
+			try {
+				const data = typeof raw === "string" ? JSON.parse(raw) : raw;
+				return data && typeof data === "object" ? data : null;
+			} catch (e) {
+				return null;
+			}
+		};
+
+		// Built-in starters show at once; saved starters and templates load after.
+		let gallery = { starters: [], templates: [], can_create: false, can_delete: false };
+		let entries = builtin;
+		let filter = builtin.some((s) => s.card_type === card_type) ? "match" : "all";
+		let shown = [];
 
 		const d = new frappe.ui.Dialog({
 			title: __("Choose a starting point"),
@@ -2552,20 +2592,87 @@ class IDCardStudio {
 		});
 		const $g = d.fields_dict.gallery.$wrapper;
 
+		const load = () =>
+			frappe
+				.xcall(api + "get_gallery", { exclude_template: this.frm.is_new() ? null : this.frm.doc.name })
+				.then((r) => {
+					gallery = r || gallery;
+					const saved = (gallery.starters || [])
+						.map((s) => ({
+							id: s.name,
+							name: s.starter_name || s.name,
+							card_type: s.card_type,
+							description: s.description,
+							data: parse(s.canvas_data),
+							source: "saved",
+						}))
+						.filter((s) => s.data);
+					const templates = (gallery.templates || [])
+						.map((t) => ({
+							id: t.name,
+							name: t.template_name || t.name,
+							card_type: t.card_type,
+							description: __("Copy of the {0} template", [t.name]),
+							data: parse(t.canvas_data),
+							source: "template",
+						}))
+						.filter((t) => t.data);
+					entries = [...saved, ...builtin, ...templates];
+				})
+				.catch(() => {});
+
+		const tab = (key, label, count) =>
+			`<button class="idc-btn ${filter === key ? "active" : "outline"}" data-filter="${key}">${label}${
+				count != null ? ` (${count})` : ""
+			}</button>`;
+
 		const render = () => {
-			const list = starters.filter((s) => filter === "all" || s.card_type === card_type);
+			const saved = entries.filter((s) => s.source === "saved");
+			const templates = entries.filter((s) => s.source === "template");
+			shown = entries.filter((s) => {
+				if (filter === "saved") return s.source === "saved";
+				if (filter === "templates") return s.source === "template";
+				if (s.source === "template") return false;
+				return filter === "all" || s.card_type === card_type;
+			});
+			const has_design = this.data && (this.data.front.length || this.data.back.length);
+			const can_save = gallery.can_create && has_design && filter !== "templates";
 			$g.html(`
 				<div class="idc-gallery-filter">
-					<button class="idc-btn ${filter === "match" ? "active" : "outline"}" data-filter="match">${__(
-				"For {0} cards",
-				[__(card_type)]
-			)}</button>
-					<button class="idc-btn ${filter === "all" ? "active" : "outline"}" data-filter="all">${__(
-				"All starters"
-			)}</button>
+					${tab("match", __("For {0} cards", [__(card_type)]))}
+					${tab("all", __("All starters"))}
+					${tab("saved", __("Saved starters"), saved.length)}
+					${tab("templates", __("From templates"), templates.length)}
 				</div>
 				<div class="idc-gallery">
-					<div class="idc-starter" data-blank="horizontal">
+					${
+						can_save
+							? `<div class="idc-starter" data-save-starter>
+						<div class="idc-starter-thumb"><div class="idc-blank">${slcm.id_card.icon("plus")}</div></div>
+						<div class="idc-starter-body"><div class="idc-starter-title">${__(
+							"Save current design as starter"
+						)}</div><div class="idc-starter-desc">${__(
+							"Reuse this design when creating new templates"
+						)}</div></div>
+					</div>`
+							: ""
+					}
+					${
+						gallery.can_create && filter !== "templates"
+							? `<div class="idc-starter" data-import-starter>
+						<div class="idc-starter-thumb"><div class="idc-blank">${slcm.id_card.icon("upload")}</div></div>
+						<div class="idc-starter-body"><div class="idc-starter-title">${__(
+							"Import starter file"
+						)}</div><div class="idc-starter-desc">${__(
+							"Add a starter exported from another site (.json)"
+						)}</div></div>
+					</div>`
+							: ""
+					}
+					${
+						filter === "saved" || filter === "templates"
+							? ""
+							: `<div class="idc-starter" data-blank="horizontal">
 						<div class="idc-starter-thumb"><div class="idc-blank">${slcm.id_card.icon("plus")}</div></div>
 						<div class="idc-starter-body"><div class="idc-starter-title">${__(
 							"Blank landscape"
@@ -2578,38 +2685,58 @@ class IDCardStudio {
 						<div class="idc-starter-body"><div class="idc-starter-title">${__(
 							"Blank portrait"
 						)}</div><div class="idc-starter-desc">54 × 85.6 mm</div></div>
-					</div>
-					${list
+					</div>`
+					}
+					${shown
 						.map(
-							(s) => `<div class="idc-starter" data-starter="${s.id}">
-								<div class="idc-starter-thumb" data-thumb="${s.id}"></div>
+							(s, i) => `<div class="idc-starter" data-starter="${i}" style="position:relative">
+								<div style="position:absolute;top:6px;right:6px;z-index:2;display:flex;gap:4px">
+									<button class="idc-btn" data-export="${i}" title="${__(
+										"Export as a starter file"
+									)}">${slcm.id_card.icon("download", 14)}</button>
+									${
+										s.source === "saved" && gallery.can_delete
+											? `<button class="idc-btn" data-delete="${i}" title="${__(
+													"Delete this starter"
+											  )}">${slcm.id_card.icon("trash", 14)}</button>`
+											: ""
+									}
+								</div>
+								<div class="idc-starter-thumb" data-thumb="${i}"></div>
 								<div class="idc-starter-body">
-									<div class="idc-starter-title">${frappe.utils.escape_html(s.name)}</div>
-									<div class="idc-starter-desc">${frappe.utils.escape_html(s.description || "")}</div>
-									<span class="idc-pill">${__(s.card_type)}</span><span class="idc-pill">${
-								s.data.orientation === "vertical"
-									? __("Portrait")
-									: __("Landscape")
+									<div class="idc-starter-title">${esc(s.name)}</div>
+									<div class="idc-starter-desc">${esc(s.description || "")}</div>
+									${s.source === "saved" ? `<span class="idc-pill">${__("Saved")}</span>` : ""}
+									${s.source === "template" ? `<span class="idc-pill">${__("Template")}</span>` : ""}
+									<span class="idc-pill">${esc(__(s.card_type || ""))}</span><span class="idc-pill">${
+								s.data.orientation === "vertical" ? __("Portrait") : __("Landscape")
 							}</span>
 									${s.data.back && s.data.back.length ? `<span class="idc-pill">${__("Front + back")}</span>` : ""}
 								</div>
 							</div>`
 						)
 						.join("")}
-				</div>`);
-			list.forEach((s) => {
-				const data = slcm.id_card.normalise(JSON.parse(JSON.stringify(s.data)));
-				const $thumb = $g.find(`[data-thumb='${s.id}']`);
-				$thumb.append(
-					slcm.id_card.render_thumbnail(
-						data,
-						"front",
-						ctx,
-						data.orientation === "vertical" ? 92 : 170,
-						150
-					)
-				);
-				slcm.id_card.apply_fit($thumb);
+				</div>
+				${
+					!shown.length && (filter === "saved" || filter === "templates")
+						? `<div class="idc-starter-desc" style="padding:12px 2px">${
+								filter === "saved"
+									? __("No saved starters yet. Design a card, then use “Save current design as starter”.")
+									: __("No other drag-and-drop templates yet.")
+						  }</div>`
+						: ""
+				}`);
+			shown.forEach((s, i) => {
+				const $thumb = $g.find(`[data-thumb='${i}']`);
+				try {
+					const data = slcm.id_card.normalise(JSON.parse(JSON.stringify(s.data)));
+					$thumb.append(
+						slcm.id_card.render_thumbnail(data, "front", ctx, data.orientation === "vertical" ? 92 : 170, 150)
+					);
+					slcm.id_card.apply_fit($thumb);
+				} catch (e) {
+					$thumb.html(`<span class="idc-starter-desc">${__("Preview unavailable")}</span>`);
+				}
 			});
 		};
 
@@ -2628,29 +2755,169 @@ class IDCardStudio {
 			};
 			const has_design = this.data && (this.data.front.length || this.data.back.length);
 			if (has_design) {
-				frappe.confirm(
-					__("Replace the current design? You can undo this with Ctrl+Z."),
-					go
-				);
+				frappe.confirm(__("Replace the current design? You can undo this with Ctrl+Z."), go);
 			} else go();
+		};
+
+		// Ask for the starter's details, then store `data` as a saved starter.
+		const save_dialog = (title, defaults, data, source_template) => {
+			const sd = new frappe.ui.Dialog({
+				title,
+				fields: [
+					{
+						fieldname: "starter_name",
+						fieldtype: "Data",
+						label: __("Starter Name"),
+						reqd: 1,
+						default: defaults.name || "",
+					},
+					{
+						fieldname: "card_type",
+						fieldtype: "Select",
+						label: __("Card Type"),
+						options: STARTER_CARD_TYPES.join("\n"),
+						default: STARTER_CARD_TYPES.includes(defaults.card_type) ? defaults.card_type : card_type,
+						reqd: 1,
+					},
+					{
+						fieldname: "description",
+						fieldtype: "Small Text",
+						label: __("Description"),
+						default: defaults.description || "",
+					},
+				],
+				primary_action_label: __("Save"),
+				primary_action: (v) => {
+					sd.disable_primary_action();
+					frappe
+						.xcall(api + "save_starter", {
+							starter_name: v.starter_name,
+							card_type: v.card_type,
+							description: v.description,
+							canvas_data: JSON.stringify(data),
+							source_template,
+						})
+						.then(() => {
+							sd.hide();
+							frappe.show_alert({ message: __("Starter saved"), indicator: "green" });
+							filter = "saved";
+							return load().then(render);
+						})
+						.catch(() => sd.enable_primary_action());
+				},
+			});
+			sd.show();
+		};
+
+		const save_current = () =>
+			save_dialog(
+				__("Save as starter"),
+				{ name: this.frm.doc.template_name, card_type },
+				this.data,
+				this.frm.is_new() ? null : this.frm.doc.name
+			);
+
+		const export_starter = (s) => slcm.id_card.download_starter(s);
+
+		const import_starter = () => {
+			const input = document.createElement("input");
+			input.type = "file";
+			input.accept = ".json,application/json";
+			input.onchange = () => {
+				const f = input.files && input.files[0];
+				if (!f) return;
+				if (f.size > 5 * 1024 * 1024) {
+					frappe.msgprint(__("The file is too large for a starter (over 5 MB)."));
+					return;
+				}
+				const reader = new FileReader();
+				reader.onload = () => {
+					const file = parse(reader.result);
+					// Accept our export format, or a bare design copied from Canvas Data.
+					const data = file && (file.slcm_id_card_starter ? file.data : file);
+					if (!data || !Array.isArray(data.front) || !data.front.length) {
+						frappe.msgprint({
+							title: __("Not a starter file"),
+							message: __("{0} doesn't contain an ID card design. Use a file exported from the Starters dialog.", [
+								esc(f.name),
+							]),
+							indicator: "red",
+						});
+						return;
+					}
+					save_dialog(
+						__("Import starter"),
+						{
+							name: (file.slcm_id_card_starter && file.name) || f.name.replace(/(\.idcard-starter)?\.json$/i, ""),
+							card_type: file.slcm_id_card_starter ? file.card_type : card_type,
+							description: file.slcm_id_card_starter ? file.description : "",
+						},
+						data,
+						null
+					);
+				};
+				reader.onerror = () => frappe.msgprint(__("Could not read {0}.", [esc(f.name)]));
+				reader.readAsText(f);
+			};
+			input.click();
 		};
 
 		$g.on("click", "[data-filter]", (e) => {
 			filter = $(e.currentTarget).data("filter");
 			render();
 		});
-		$g.on("click", "[data-blank]", (e) =>
-			apply({ orientation: $(e.currentTarget).data("blank") })
-		);
+		$g.on("click", "[data-blank]", (e) => apply({ orientation: $(e.currentTarget).data("blank") }));
+		$g.on("click", "[data-save-starter]", save_current);
+		$g.on("click", "[data-import-starter]", import_starter);
+		$g.on("click", "[data-export]", (e) => {
+			e.stopPropagation();
+			const s = shown[+$(e.currentTarget).data("export")];
+			if (s) export_starter(s);
+		});
+		$g.on("click", "[data-delete]", (e) => {
+			e.stopPropagation();
+			const s = shown[+$(e.currentTarget).data("delete")];
+			if (!s) return;
+			frappe.confirm(__("Delete the starter {0}?", [esc(s.name)]), () =>
+				frappe.xcall(api + "delete_starter", { name: s.id }).then(() => load().then(render))
+			);
+		});
 		$g.on("click", "[data-starter]", (e) => {
-			const s = starters.find((x) => x.id === $(e.currentTarget).data("starter"));
+			const s = shown[+$(e.currentTarget).data("starter")];
 			if (s) apply(JSON.parse(JSON.stringify(s.data)), s.card_type);
 		});
 
 		d.show();
 		render();
+		load().then(() => {
+			if (filter === "match" && !entries.some((s) => s.source !== "template" && s.card_type === card_type))
+				filter = "all";
+			render();
+		});
 	}
 }
+
+// Download a design as a starter file the Starters dialog can import.
+slcm.id_card.download_starter = function (s) {
+	const file = {
+		slcm_id_card_starter: 1,
+		name: s.name,
+		card_type: s.card_type,
+		description: s.description || "",
+		data: JSON.parse(JSON.stringify(s.data)),
+	};
+	const slug = (s.name || "starter").replace(/[^a-z0-9]+/gi, "_").replace(/^_|_$/g, "") || "starter";
+	const url = URL.createObjectURL(new Blob([JSON.stringify(file, null, 1)], { type: "application/json" }));
+	const a = document.createElement("a");
+	a.href = url;
+	a.download = `${slug}.idcard-starter.json`;
+	document.body.appendChild(a);
+	a.click();
+	a.remove();
+	setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
+
+const STARTER_CARD_TYPES = ["Student", "Faculty", "Driver", "Visitor", "Non-Faculty"];
 
 function round1(n) {
 	return Math.round((+n || 0) * 10) / 10;

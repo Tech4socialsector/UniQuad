@@ -1373,7 +1373,7 @@ function idct_print_sheet(frm, scope) {
 				scope
 					? __("Only the selected students' cards are included.")
 					: __("Every generated card in the list is included.")
-			} ${__("Each card is recorded in the ID Card Print Log.")}</div>`);
+			} ${__("The whole sheet is recorded as one ID Card Print Log.")}</div>`);
 	};
 	const $b = d.fields_dict.body.$wrapper;
 	$b.on("click keydown", "[data-layout]", (e) => {

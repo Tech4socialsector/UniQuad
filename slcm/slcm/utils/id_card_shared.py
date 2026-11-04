@@ -548,47 +548,45 @@ class IDCardCommonMixin:
 	# Print logging
 	# ------------------------------------------------------------------
 
-	@frappe.whitelist()
-	def log_print(self, layout="Single", bulk_print_id=None, total_cards=1, mark_printed=0):
-		"""Log a print action for this card; optionally move it to Printed."""
+	def record_print(self, layout="Single"):
+		"""Count a print of this card and return its ID Card Print Log Item row."""
 		if self.card_status not in ("Generated", "Printed"):
 			frappe.throw(_("Only generated or printed cards can be printed."))
 
-		current_count = self.print_count or 0
-		self.db_set("print_count", current_count + 1)
+		count = (self.print_count or 0) + 1
+		self.db_set("print_count", count)
 
-		p_type = "Original" if (current_count + 1) <= 1 else "Reprint"
+		p_type = "Original" if count <= 1 else "Reprint"
+		return {
+			self._print_log_linkfield: self.name,
+			"card_type": self.card_type,
+			"student": self.student,
+			"student_name": self.student_name,
+			"academic_year": self.academic_year,
+			"department": self.department,
+			"program": self.programme,
+			"batch": self.batch,
+			"print_type": p_type,
+			"reprint_reason": (
+				("Bulk Reprint" if layout == "Bulk" else "Manual Reprint") if p_type == "Reprint" else None
+			),
+			"front_image": self.front_id_image,
+			"back_image": self.back_id_image,
+		}
 
-		if not bulk_print_id:
-			bulk_print_id = frappe.utils.generate_hash(length=10)
+	@frappe.whitelist()
+	def log_print(self, layout="Single", mark_printed=0):
+		"""Log a print action for this card; optionally move it to Printed."""
+		from slcm.slcm.doctype.id_card_print_log.id_card_print_log import insert_print_log
 
-		log = frappe.new_doc("ID Card Print Log")
-		setattr(log, self._print_log_linkfield, self.name)
-		log.student = self.student
-		log.academic_year = self.academic_year
-		log.department = self.department
-		log.program = self.programme
-		log.batch = self.batch
-		log.print_type = p_type
-		log.print_layout = layout
-		log.bulk_print_id = bulk_print_id
-		log.print_action_type = "Bulk" if layout == "Bulk" else "Single"
-		log.total_cards_in_bulk = total_cards
-		log.printed_by = frappe.session.user
-		log.printed_on = frappe.utils.now()
-		log.front_image = self.front_id_image
-		log.back_image = self.back_id_image
-
-		if p_type == "Reprint":
-			log.reprint_reason = "Bulk Reprint" if layout == "Bulk" else "Manual Reprint"
-
-		log.insert(ignore_permissions=True)
+		row = self.record_print(layout)
+		insert_print_log([row], layout)
 
 		if cint(mark_printed) and self.card_status == "Generated":
 			self.reload()
 			self.card_status = "Printed"
 			self.save()
-		return p_type
+		return row["print_type"]
 
 	# ------------------------------------------------------------------
 	# Jinja / Field-mapping render modes

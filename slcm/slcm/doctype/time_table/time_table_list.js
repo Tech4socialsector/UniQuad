@@ -7,30 +7,94 @@ frappe.listview_settings["Time Table"] = {
 	},
 	onload(listview) {
 		setup_export_defaults();
-		listview.page.add_menu_item(__("Cancelled Classes Report"), () =>
-			frappe.set_route("query-report", "Cancelled Classes Report")
+
+		// One dark dropdown for all Time Table tools. Not called "Actions" so it
+		// can't be mistaken for Frappe's bulk Actions menu shown on row selection.
+		const group = __("Time Table Actions");
+		listview.page.add_inner_button(
+			__("Update Venue / Time"),
+			() => {
+				const selected = listview.get_checked_items();
+				if (selected.length) {
+					show_bulk_venue_time_dialog(listview, selected);
+				} else {
+					show_lookup_venue_time_dialog(listview);
+				}
+			},
+			group
 		);
-
-		const btn = listview.page.add_inner_button(__("Update Venue / Time"), function () {
-			const selected = listview.get_checked_items();
-
-			if (selected.length) {
-				show_bulk_venue_time_dialog(listview, selected);
-			} else {
-				show_lookup_venue_time_dialog(listview);
-			}
-		});
-
-		// Stand-alone toolbar button (not buried in the Actions dropdown) so it's
-		// easy to spot at a glance, whether or not rows are checked.
-		btn.css({
-			"background-color": "#000",
-			color: "#fff",
-			"border-color": "#000",
-			"box-shadow": "none",
-		});
+		listview.page.add_inner_button(
+			__("Time Table Report"),
+			() => frappe.set_route("query-report", "Time Table Report", get_report_route_options(listview)),
+			group
+		);
+		listview.page.get_inner_group_button(group).addClass("tt-actions-dark");
+		add_dark_actions_style();
 	},
 };
+
+function add_dark_actions_style() {
+	if (document.getElementById("tt-actions-dark-style")) return;
+	$(`<style id="tt-actions-dark-style">
+		.tt-actions-dark > .btn,
+		.tt-actions-dark > .btn:hover,
+		.tt-actions-dark > .btn:focus,
+		.tt-actions-dark.show > .btn {
+			background-color: #171717;
+			border-color: #171717;
+			color: #fff;
+			box-shadow: none;
+			--icon-stroke: #fff;
+		}
+		.tt-actions-dark > .btn:hover { background-color: #383838; border-color: #383838; }
+	</style>`).appendTo("head");
+}
+
+/* --------------------------------------------------------------------
+   Time Table Report opens with the filters currently applied on the list.
+   Every report filter is sent (blank when unused) so values left over from
+   an earlier visit to the report don't silently narrow the result.
+-------------------------------------------------------------------- */
+const REPORT_EQUAL_FILTERS = [
+	"class_name",
+	"academic_year",
+	"academic_term",
+	"programme",
+	"course",
+	"instructor",
+	"section",
+	"based_on",
+	"session_status",
+];
+
+function get_report_route_options(listview) {
+	const options = { time_table: "", from_date: "", to_date: "", is_cancelled: 0 };
+	REPORT_EQUAL_FILTERS.forEach((f) => (options[f] = ""));
+
+	(listview.get_filters_for_args() || []).forEach(([doctype, field, op, value]) => {
+		if (doctype !== "Time Table" || value === undefined || value === null || value === "") return;
+		op = (op || "").toLowerCase();
+
+		if (field === "name" && (op === "=" || op === "like")) {
+			options.time_table = String(value).replace(/%/g, "");
+		} else if (REPORT_EQUAL_FILTERS.includes(field) && op === "=") {
+			options[field] = value;
+		} else if (field === "is_cancelled" && op === "=") {
+			options.is_cancelled = cint(value);
+		} else if (field === "schedule_date") {
+			if (op === "=") {
+				options.from_date = options.to_date = value;
+			} else if (op === "between" && Array.isArray(value)) {
+				[options.from_date, options.to_date] = value;
+			} else if (op === ">=" || op === ">") {
+				options.from_date = value;
+			} else if (op === "<=" || op === "<") {
+				options.to_date = value;
+			}
+		}
+	});
+	return options;
+}
 
 /* --------------------------------------------------------------------
    Actions > Export: pre-select the columns people actually want (faculty

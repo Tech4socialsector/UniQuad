@@ -8,6 +8,7 @@ from frappe.model.document import Document
 from frappe.utils import cint, now, now_datetime, strip_html
 from frappe.utils.file_manager import save_file
 
+from slcm.slcm.doctype.id_card_print_log.id_card_print_log import insert_print_log
 from slcm.slcm.utils.id_card_render import get_file_path
 
 RUN_CACHE_KEY = "slcm:id_card_generation_tool:run"
@@ -282,11 +283,9 @@ class IDCardGenerationTool(Document):
 			with open(pdf_path, "rb") as f:
 				pdf_bytes = f.read()
 
-		bulk_print_id = frappe.utils.generate_hash(length=10)
 		printed = [item[0] for items in groups.values() for item in items]
-		for card in printed:
-			doc = frappe.get_doc("ID Card Generation", card.name)
-			doc.log_print(layout="Bulk", bulk_print_id=bulk_print_id, total_cards=len(printed))
+		rows = [frappe.get_doc("ID Card Generation", card.name).record_print("Bulk") for card in printed]
+		insert_print_log(rows, layout="Bulk")
 
 		def clean(s):
 			return "".join(c for c in (s or "") if c.isalnum() or c in ("-", "_")).strip() or "All"

@@ -495,18 +495,12 @@ function idcg_load_extras(frm) {
 	const name = frm.doc.name;
 	const link = idcg_person_link(frm.doc);
 	Promise.all([
-		frappe.db.get_list("ID Card Print Log", {
-			filters: { id_card_generation: name },
-			fields: [
-				"printed_on",
-				"printed_by",
-				"print_type",
-				"print_layout",
-				"print_action_type",
-			],
-			order_by: "printed_on desc",
-			limit: 50,
-		}),
+		frappe
+			.xcall("slcm.slcm.doctype.id_card_print_log.id_card_print_log.get_print_history", {
+				doctype: "ID Card Generation",
+				name,
+			})
+			.catch(() => []),
 		link && ["Cancelled", "Expired"].includes(frm.doc.card_status)
 			? frappe.db.get_value(
 					"ID Card Generation",

@@ -38,6 +38,7 @@
   "missing_photo_count",
   "sec_break_results",
   "results",
+  "results_reconstructed",
   "sec_break_remarks",
   "remarks",
   "col_break_1",
@@ -256,6 +257,14 @@
    "label": "Results"
   },
   {
+   "fieldname": "results_reconstructed",
+   "fieldtype": "Check",
+   "label": "Results Rebuilt from Card Records",
+   "read_only": 1,
+   "default": "0",
+   "description": "Set for runs recorded before per-student results were kept; the list was rebuilt from the cards the run produced."
+  },
+  {
    "fieldname": "sec_break_remarks",
    "fieldtype": "Section Break",
    "label": "Remarks",
@@ -282,7 +291,7 @@
  ],
  "is_submittable": 0,
  "links": [],
- "modified": "2026-11-03 23:45:00.000000",
+ "modified": "2026-11-04 10:30:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "ID Card Generation Tool Log",

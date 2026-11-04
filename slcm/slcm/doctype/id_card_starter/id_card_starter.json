@@ -1,0 +1,94 @@
+{
+ "actions": [],
+ "autoname": "field:starter_name",
+ "creation": "2026-11-04 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "starter_name",
+  "card_type",
+  "column_break_meta",
+  "source_template",
+  "description",
+  "section_break_design",
+  "canvas_data"
+ ],
+ "fields": [
+  {
+   "fieldname": "starter_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Starter Name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "default": "Student",
+   "fieldname": "card_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Card Type",
+   "options": "Student\nFaculty\nDriver\nVisitor\nNon-Faculty",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_meta",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "source_template",
+   "fieldtype": "Link",
+   "label": "Saved From",
+   "options": "ID Card Template",
+   "read_only": 1
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  },
+  {
+   "fieldname": "section_break_design",
+   "fieldtype": "Section Break",
+   "label": "Design"
+  },
+  {
+   "description": "Designer JSON, same format as an ID Card Template's canvas data.",
+   "fieldname": "canvas_data",
+   "fieldtype": "Code",
+   "label": "Canvas Data",
+   "options": "JSON",
+   "reqd": 1
+  }
+ ],
+ "links": [],
+ "modified": "2026-11-04 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "SLCM",
+ "name": "ID Card Starter",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "slcm_Registrar"
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "starter_name"
+}
