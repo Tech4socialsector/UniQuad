@@ -5777,8 +5777,12 @@ function patchWebFormValidateSectionForAttach() {
 		}
 
 		if (invalid_values.length || !stage.ok) {
+			var hasMissing = !stage.ok && stage.missing && stage.missing.length;
+			var title = hasMissing && invalid_values.length
+				? __('Mandatory Fields Missing / Invalid Values')
+				: (hasMissing ? __('Mandatory Fields Missing') : __('Invalid Values'));
 			frappe.msgprint({
-				title: __('Error', null, 'Title of the error message in web form'),
+				title: title,
 				message: message,
 				indicator: 'orange',
 			});
