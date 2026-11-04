@@ -9,6 +9,7 @@ from frappe.model.document import Document
 from frappe.utils import now_datetime, get_url, get_datetime, format_date, format_time, flt
 from datetime import datetime
 from slcm.security.access import require_desk_user
+from slcm.admission.utils.nlsat_portal import get_applicant_portal_url
 
 
 class InterviewSeatAllocation(Document):
@@ -291,7 +292,7 @@ def _send_custom_result_email(doc, email, custom_email_content):
         doc_dict = doc.as_dict()
         args = {
             "doc": doc_dict,
-            "portal_url": get_url("/nlsat/dashboard?panel=applications")
+            "portal_url": get_applicant_portal_url("/nlsat/dashboard?panel=applications", user=email)
         }
 
         # Use the header (subject) and sender from the default email template
@@ -337,7 +338,7 @@ def _send_result_notification_email(doc, email):
         doc_dict = doc.as_dict()
         args = {
             "doc": doc_dict,
-            "portal_url": get_url("/nlsat/dashboard?panel=applications")
+            "portal_url": get_applicant_portal_url("/nlsat/dashboard?panel=applications", user=email)
         }
 
         subject = frappe.render_template(template.subject, args)
@@ -599,7 +600,7 @@ def _send_reschedule_email(doc, email):
         doc_dict = doc.as_dict()
         args = {
             "doc": doc_dict,
-            "portal_url": get_url("/nlsat/dashboard?panel=applications")
+            "portal_url": get_applicant_portal_url("/nlsat/dashboard?panel=applications", user=email)
         }
 
         subject = frappe.render_template(template.subject, args)

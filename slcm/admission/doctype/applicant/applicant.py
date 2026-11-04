@@ -6,7 +6,7 @@ from contextlib import contextmanager
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from slcm.admission.utils.nlsat_portal import get_applicant_login_url
+from slcm.admission.utils.nlsat_portal import get_applicant_login_link, get_applicant_portal_url
 from frappe.model.naming import getseries, parse_naming_series
 from frappe.utils import validate_email_address, getdate, date_diff, today, now, flt, nowdate, cint
 from slcm.admission.portal_application_web_form import (
@@ -998,8 +998,6 @@ class Applicant(Document):
             )
         elif self.program_level in ("Postgraduate", "PG", "LLM"):
             academic_line = f"UG Degree completion: {self.ug_degree_completion or '—'}"
-        elif self.program_level in ("Research Course", "PhD"):
-            academic_line = f"PhD Program Type: {self.phd_program_type or '—'}"
 
         # ── Institution name ─────────────────────────────────────────────────
         institution_name = (
@@ -1007,7 +1005,7 @@ class Applicant(Document):
             or "Admissions Office"
         )
 
-        admission_portal_url = frappe.utils.get_url(get_applicant_login_url(self.foriegn_national) + "#login")
+        admission_portal_url = get_applicant_login_link(self.foriegn_national)
 
         # ── Institution logo ──────────────────────────────────────────────────
         institution_logo = frappe.db.get_single_value("Institution Settings", "logo") or ""
@@ -1482,7 +1480,7 @@ class Applicant(Document):
         institution_logo = frappe.db.get_single_value("Institution Settings", "logo") or ""
         if institution_logo and not institution_logo.startswith("http"):
             institution_logo = frappe.utils.get_url(institution_logo)
-        admission_portal_url = frappe.utils.get_url(get_applicant_login_url(self.foriegn_national) + "#login")
+        admission_portal_url = get_applicant_login_link(self.foriegn_national)
 
         template_context = {
             "doc": doc_dict,
@@ -3886,7 +3884,7 @@ def _resolve_entrance_test_config_for_applicant(applicant_doc):
     rows = frappe.get_all(
         "Entrance Test Details",
         filters={"parent": applicant_doc.admission_cycle, "parenttype": "Admission Cycle"},
-        fields=["programme", "programme_level", "entrance_test_name", "entrance_test_date", "start_time", "end_time", "idx"],
+        fields=["programme", "programme_level", "entrance_test_name", "entrance_test_date", "start_time", "end_time", "online_test_link", "online_test_instructions", "idx"],
         order_by="idx asc",
     )
     if not rows:
@@ -4072,7 +4070,7 @@ def _send_automated_entrance_test_allocation_email(allocation, email):
         doc_dict["assigned_preferences"] = [p.as_dict() for p in (allocation.assigned_preferences or [])]
         args = {
             "doc": doc_dict,
-            "portal_url": frappe.utils.get_url("/nlsat/dashboard?panel=applications"),
+            "portal_url": get_applicant_portal_url("/nlsat/dashboard?panel=applications", user=email),
         }
 
         subject = frappe.render_template(template.subject or "", args)
@@ -4186,6 +4184,8 @@ def _auto_allocate_international_entrance_test(applicant_doc):
     allocation.allocation_date      = test_cfg.get("entrance_test_date")
     allocation.start_time           = test_cfg.get("start_time")
     allocation.end_time             = test_cfg.get("end_time")
+    allocation.online_test_link     = test_cfg.get("online_test_link")
+    allocation.online_test_instructions = test_cfg.get("online_test_instructions")
 
     allocation.applicant            = applicant_doc.name
     allocation.candidate_name       = applicant_doc.candidate_name
@@ -4200,6 +4200,8 @@ def _auto_allocate_international_entrance_test(applicant_doc):
     # Mark as allocated (online); leave center/room/seat fields blank
     allocation.allocation_status    = "Allocated"
     allocation.entrance_test_status = "Scheduled"
+    allocation.seat_allocation_published = 0
+    allocation.seat_allocation_published_on = None
     allocation.allocated_by         = frappe.session.user
     allocation.is_international_applicant = 1
 
@@ -4215,22 +4217,6 @@ def _auto_allocate_international_entrance_test(applicant_doc):
         )
 
     allocation.insert(ignore_permissions=True)
-
-
-    # Send international-specific email (NO admit card attached)
-    try:
-        from slcm.admission.doctype.entrance_test_list.entrance_test_list import (
-            _send_allocation_notification,
-        )
-
-        if allocation.email:
-            _send_international_entrance_test_email(allocation, allocation.email)
-            _send_allocation_notification(allocation, allocation.email)
-    except Exception:
-        frappe.log_error(
-            frappe.get_traceback(),
-            f"International auto allocation email failed for {allocation.name}",
-        )
 
 
 def _send_international_entrance_test_email(allocation, email):
@@ -4257,8 +4243,8 @@ def _send_international_entrance_test_email(allocation, email):
             frappe.db.get_single_value("Institution Settings", "institution_name")
             or "Admissions Office"
         )
-        portal_url = frappe.utils.get_url(
-            "/nlsat/dashboard?panel=applications"
+        portal_url = get_applicant_portal_url(
+            "/nlsat/dashboard?panel=applications", foriegn_national="Yes"
         )
 
         # Format test date for display
@@ -4275,6 +4261,8 @@ def _send_international_entrance_test_email(allocation, email):
             "entrance_test_name": allocation.entrance_test_name or "Entrance Test",
             "test_date":         test_date_display,
             "program":           allocation.program or "",
+            "online_test_link":  allocation.online_test_link or "",
+            "online_test_instructions": allocation.online_test_instructions or "",
             "institution_name":  institution_name,
             "portal_url":        portal_url,
         }
@@ -4320,6 +4308,24 @@ def _send_international_entrance_test_email(allocation, email):
                 f"{allocation.entrance_test_name or 'Entrance Test'} | "
                 f"{allocation.candidate_name or email}"
             )
+            online_link_row = ""
+            if allocation.online_test_link:
+                online_link_row = f"""
+    <tr>
+      <td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Exam Link</td>
+      <td style="padding:8px;border:1px solid #ddd;">
+        <a href="{allocation.online_test_link}" style="color:#1a5276;font-weight:bold;">{allocation.online_test_link}</a>
+      </td>
+    </tr>"""
+
+            instructions_html = ""
+            if allocation.online_test_instructions:
+                instructions_html = f"""
+  <div style="margin:16px 0;padding:12px;background:#f9f9f9;border:1px solid #e0e0e0;border-radius:4px;">
+    <strong style="color:#333;">Online Exam Instructions:</strong>
+    <div style="margin-top:6px;line-height:1.5;">{allocation.online_test_instructions}</div>
+  </div>"""
+
             message_body = f"""
 <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
   <h2 style="color:#1a5276;">Entrance Test Allocated — Online</h2>
@@ -4346,13 +4352,11 @@ def _send_international_entrance_test_email(allocation, email):
     <tr>
       <td style="padding:8px;border:1px solid #ddd;font-weight:bold;">Programme</td>
       <td style="padding:8px;border:1px solid #ddd;">{allocation.program or '—'}</td>
-    </tr>
-  </table>
+    </tr>{online_link_row}
+  </table>{instructions_html}
   <p>
     As an international applicant, your entrance test will be conducted
-    <strong>online</strong>. Further instructions regarding the online test
-    platform, login credentials, and technical requirements will be shared
-    with you separately.
+    <strong>online</strong>.
   </p>
   <p>
     You can view your application and test details on your admission dashboard:

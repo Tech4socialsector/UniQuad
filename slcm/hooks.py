@@ -244,6 +244,7 @@ fixtures = [
                 "NLSAT Full Fee Paid",
                 "NLSAT Offer Expired / Withdrawn",
                 "NLSAT Application Submitted and Paid Email",
+                "International Entrance Test Allocation"
             ]]
         ]
     },
@@ -482,6 +483,7 @@ doc_events = {
         "before_insert": "slcm.security.files.make_applicant_upload_private"
     },
     "Applicant": {
+        "before_validate": "slcm.security.files.make_applicant_attachments_private",
         "validate": "slcm.security.applicant_access.guard_applicant_protected_fields",
         "on_update": "slcm.admission.api.profile.sync_applicant_to_user",
         "on_submit": "slcm.admission.events.on_applicant_submit",

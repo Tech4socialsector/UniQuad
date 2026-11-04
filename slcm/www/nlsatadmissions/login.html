@@ -1224,7 +1224,7 @@ async function doForgotPassword() {
     var resp = await fetch('/api/method/slcm.api.user.reset_password', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Frappe-CSRF-Token': LP_CSRF },
-      body: JSON.stringify({ user: email })
+      body: JSON.stringify({ user: email, portal: '{{ portal_base }}' })
     });
     var data = {};
     try { data = await resp.json(); } catch (e0) { data = {}; }
@@ -1405,7 +1405,7 @@ async function doRegister() {
     var resp = await fetch('/api/method/slcm.api.user.custom_sign_up', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Frappe-CSRF-Token': LP_CSRF },
-      body: JSON.stringify({ email: email, full_name: name, redirect_to: redirectUrl })
+      body: JSON.stringify({ email: email, full_name: name, redirect_to: redirectUrl, portal: '{{ portal_base }}' })
     });
     var data = await resp.json();
     if (!resp.ok) {

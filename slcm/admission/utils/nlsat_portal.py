@@ -62,7 +62,8 @@ def set_portal_cookie(portal_type):
 
 
 def get_applicant_portal_type(user=None):
-	"""Portal type of the user's latest Applicant record (foriegn_national = Yes → International)."""
+	"""Portal type of the user's latest Applicant record (foriegn_national = Yes →
+	International), else the portal they signed up on (User.nlsat_portal)."""
 	user = user or frappe.session.user
 	if not user or user == "Guest":
 		return None
@@ -70,8 +71,27 @@ def get_applicant_portal_type(user=None):
 		"Applicant", {"email": user}, "foriegn_national", order_by="creation desc"
 	)
 	if foreign is None:
-		return None
+		return get_user_signup_portal(user)
 	return INTERNATIONAL if (foreign or "").strip() == "Yes" else DOMESTIC
+
+
+USER_PORTAL_FIELD = "nlsat_portal"
+
+
+def get_user_signup_portal(user):
+	"""The portal a user signed up on (User.nlsat_portal), else None."""
+	if not user or user == "Guest" or not frappe.db.has_column("User", USER_PORTAL_FIELD):
+		return None
+	value = frappe.db.get_value("User", user, USER_PORTAL_FIELD)
+	return normalize_portal_type(value) if value else None
+
+
+def set_user_signup_portal(user, portal_type):
+	"""Remember the portal a user signed up on (for emails sent before they apply)."""
+	if portal_type and frappe.db.has_column("User", USER_PORTAL_FIELD):
+		frappe.db.set_value(
+			"User", user, USER_PORTAL_FIELD, normalize_portal_type(portal_type), update_modified=False
+		)
 
 
 def enforce_portal_access(portal_type):
@@ -124,11 +144,130 @@ def get_applicant_login_url(foriegn_national):
 
 
 def get_user_portal_redirect_url(user, path):
-	"""Link (for emails) to `path` via the login page of the user's portal; logged-in users pass straight through."""
+	"""Full link (for emails) to `path` via the login page of the user's portal, on
+	that portal's domain; logged-in users pass straight through."""
 	from urllib.parse import quote
 
 	portal_type = get_applicant_portal_type(user) or DOMESTIC
-	return get_portal_login_url(portal_type) + "?redirect-to=" + quote(path, safe="/")
+	return get_portal_url(
+		get_portal_login_url(portal_type) + "?redirect-to=" + quote(path, safe="/"), portal_type
+	)
+
+
+# ── Portal domains for links in emails ──
+# Each portal can have its own domain (Site Domain Settings: a domain whose
+# Redirect To is the portal's page, e.g. internationaladmissions.nls.ac.in →
+# /nlsat-international). frappe.utils.get_url() always gives the site's
+# host_name (app.nls.ac.in), so links in emails are built here instead.
+
+
+def _portal_from_value(value):
+	"""'International' / 'Domestic' / '/nlsat-international/...' → portal type, else None."""
+	value = (value or "").strip()
+	if not value:
+		return None
+	if value.lower() in (DOMESTIC.lower(), INTERNATIONAL.lower()):
+		return normalize_portal_type(value)
+	if value.startswith("/"):
+		return get_portal_type_from_path(value)
+	return None
+
+
+def get_request_portal_type(*values):
+	"""Portal a sign-up / password-reset request came from: the given values
+	(portal type or page path), then the page it was sent from (Referer), then the
+	portal cookie. None when it cannot be told."""
+	for value in values:
+		portal_type = _portal_from_value(value)
+		if portal_type:
+			return portal_type
+	req = getattr(frappe.local, "request", None)
+	referer = req.headers.get("Referer") if req else None
+	if referer:
+		from urllib.parse import urlparse
+
+		portal_type = get_portal_type_from_path(urlparse(referer).path)
+		if portal_type:
+			return portal_type
+	return get_portal_cookie()
+
+
+def get_portal_domain(portal_type):
+	"""The domain set for a portal in Site Domain Settings (enabled row whose
+	Redirect To is the portal's page), else None."""
+	if not portal_type:
+		return None
+	base = PORTAL_BASES[normalize_portal_type(portal_type)]
+	try:
+		from slcm.utils.domain_routing import get_domain_config
+
+		redirects = get_domain_config().get("redirects") or {}
+	except Exception:
+		return None
+	matches = sorted(d for d, target in redirects.items() if (target or "").split("?")[0].rstrip("/") == base)
+	return matches[0] if matches else None
+
+
+def _request_domain():
+	"""The domain of the current request, only when it is an enabled domain in
+	Site Domain Settings (a Host header is never trusted on its own: a reset
+	link must not point to a domain someone made up)."""
+	req = getattr(frappe.local, "request", None)
+	if not req:
+		return None
+	try:
+		from slcm.utils.domain_routing import get_domain_config, normalize_host
+
+		host = normalize_host(req.host)
+		return host if host and host in (get_domain_config().get("active") or []) else None
+	except Exception:
+		return None
+
+
+def _scheme():
+	from frappe.utils import get_url
+
+	if get_url().startswith("https://") or not frappe.conf.get("developer_mode"):
+		return "https"
+	return "http"
+
+
+def get_portal_site_url(portal_type=None, use_request_host=False):
+	"""'https://<domain>' to use in an email link for a portal.
+
+	use_request_host: the domain the user is on right now (sign-up, password
+	reset), when it is a known domain. Otherwise the portal's own domain, else
+	the site URL (get_url)."""
+	from frappe.utils import get_url
+
+	domain = (use_request_host and _request_domain()) or get_portal_domain(portal_type)
+	if domain:
+		return f"{_scheme()}://{domain}"
+	return get_url().rstrip("/")
+
+
+def get_portal_url(path="", portal_type=None, use_request_host=False):
+	"""Full URL of a site path on the portal's domain (see get_portal_site_url)."""
+	if path and path.startswith(("http://", "https://")):
+		return path
+	base = get_portal_site_url(portal_type, use_request_host)
+	return base + ("/" + path.lstrip("/") if path else "")
+
+
+def get_applicant_portal_url(path="", user=None, foriegn_national=None):
+	"""Full URL for an email to an applicant, on their portal's domain. The portal
+	comes from foriegn_national when given, else from the user's records."""
+	if foriegn_national is not None and str(foriegn_national).strip():
+		portal_type = INTERNATIONAL if str(foriegn_national).strip() == "Yes" else DOMESTIC
+	else:
+		portal_type = get_applicant_portal_type(user) if user else None
+	return get_portal_url(path, portal_type or DOMESTIC)
+
+
+def get_applicant_login_link(foriegn_national, fragment="#login"):
+	"""Full login link (for emails) of an Applicant's portal, on its domain."""
+	portal_type = INTERNATIONAL if (foriegn_national or "").strip() == "Yes" else DOMESTIC
+	return get_portal_url(get_portal_login_url(portal_type) + (fragment or ""), portal_type)
 
 
 # ── Candidate prefix for pages shared by NLSAT and PACE (www/admission) ──

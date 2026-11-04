@@ -63,7 +63,17 @@ def get_reset_password_link(user_doc, send_email=False):
         return link
 
 
-def send_welcome_or_custom_signup_email(user_doc, correct_link, template="new_user"):
+def _site_url_of(link):
+    """'https://host' of an absolute link, else the site URL."""
+    from urllib.parse import urlparse
+
+    parsed = urlparse(link or "")
+    if parsed.scheme and parsed.netloc:
+        return f"{parsed.scheme}://{parsed.netloc}"
+    return frappe.utils.get_url()
+
+
+def send_welcome_or_custom_signup_email(user_doc, correct_link, template="new_user", login_url=None):
     institution = frappe.get_single("Institution Settings")
     enable_custom = getattr(institution, "enable_signup_email", 0)
     has_custom_template = frappe.db.exists("Email Template", "Applicant Registration Email")
@@ -82,7 +92,7 @@ def send_welcome_or_custom_signup_email(user_doc, correct_link, template="new_us
             "set_password_link": correct_link,
             "link": correct_link,
             "reset_password_link": correct_link,
-           "login_url": getattr(institution, "login_url", "") or frappe.utils.get_url(get_portal_login_url()),
+            "login_url": login_url or getattr(institution, "login_url", "") or frappe.utils.get_url(get_portal_login_url()),
             "support_email": getattr(institution, "support_email", ""),
             "link_expiry_hours": getattr(institution, "link_expiry_hours", 24) or 24,
             "doc": user_doc,
@@ -146,7 +156,7 @@ def send_welcome_or_custom_signup_email(user_doc, correct_link, template="new_us
         template,
         dict(
             link=correct_link,
-            site_url=frappe.utils.get_url(),
+            site_url=_site_url_of(correct_link),
             doc=user_doc,
             candidate_name=user_doc.full_name or user_doc.first_name,
             full_name=user_doc.full_name or user_doc.first_name,
@@ -890,7 +900,7 @@ def get_payment_status(docname):
 @frappe.whitelist(allow_guest=True, methods=["POST"])
 # Per IP; generous enough for cyber cafes and college labs where many candidates share one address.
 @rate_limit(limit=20, seconds=60 * 60)
-def custom_sign_up(email, full_name, mobile_no=None, redirect_to=None):
+def custom_sign_up(email, full_name, mobile_no=None, redirect_to=None, portal=None):
     """
     Custom sign-up that bypasses Frappe's core sign_up() to avoid the
     'Please ask your administrator to verify your sign-up' gate caused by
@@ -954,14 +964,26 @@ def custom_sign_up(email, full_name, mobile_no=None, redirect_to=None):
 
         parsed = urllib.parse.urlparse(frappe_link)
         from slcm.security.access import safe_redirect_path
-        base_redir = safe_redirect_path(redirect_to, None) or get_portal_base()
-        correct_link = get_url(f"/update-password?{parsed.query}&redirect_to={urllib.parse.quote(base_redir)}")
+        from slcm.admission.utils.nlsat_portal import (
+            get_portal_url, get_request_portal_type, set_user_signup_portal,
+        )
+
+        # The portal (Domestic / International) the user is signing up on; the
+        # links in the email use the domain they are on (or that portal's domain).
+        portal_type = get_request_portal_type(portal, redirect_to)
+        set_user_signup_portal(user_doc.name, portal_type)
+        base_redir = safe_redirect_path(redirect_to, None) or get_portal_base(portal_type)
+        correct_link = get_portal_url(
+            f"/update-password?{parsed.query}&redirect_to={urllib.parse.quote(base_redir)}",
+            portal_type, use_request_host=True,
+        )
+        login_url = get_portal_url(get_portal_login_url(portal_type), portal_type, use_request_host=True)
 
         # Cache redirect for post-password-set
         frappe.cache().hset("redirect_after_login", user_doc.name, base_redir)
 
         # Send welcome email with set-password link
-        send_welcome_or_custom_signup_email(user_doc, correct_link, template="new_user")
+        send_welcome_or_custom_signup_email(user_doc, correct_link, template="new_user", login_url=login_url)
 
         frappe.db.commit()
         return [1, "Account created! Check your email to set your password and activate your account."]
@@ -1037,9 +1059,12 @@ from frappe.core.doctype.user.user import get_password_reset_limit
 
 @frappe.whitelist(allow_guest=True, methods=["POST"])
 @rate_limit(key="user", limit=get_password_reset_limit, seconds=60 * 60)
-def reset_password(user: str, redirect_to: str = None):
+def reset_password(user: str, redirect_to: str = None, portal: str = None):
     """
     Send password reset email. Returns a dict {status, message} for portal JSON clients.
+
+    portal: the NLSAT portal (Domestic / International, or its page path) the
+    request came from; the links in the email use the domain the user is on.
     """
     try:
         user_doc = frappe.get_doc("User", user)
@@ -1060,16 +1085,36 @@ def reset_password(user: str, redirect_to: str = None):
         from frappe.utils import get_url
         from frappe.utils.user import get_user_fullname
 
-        roles = frappe.get_roles(user_doc.name)
-        if "Applicant" in roles and not redirect_to:
-            redirect_to = "/admission"
+        from slcm.admission.utils.nlsat_portal import (
+            get_applicant_portal_type, get_portal_url, get_request_portal_type,
+        )
+        from slcm.security.access import safe_redirect_path
+        import urllib.parse
 
+        roles = frappe.get_roles(user_doc.name)
+        is_applicant = "Applicant" in roles
+        # NLSAT applicants: the portal of the page they asked from, else their own
+        portal_type = None
+        if is_applicant:
+            portal_type = (
+                get_request_portal_type(portal, redirect_to)
+                or get_applicant_portal_type(user_doc.name)
+            )
+        redirect_to = safe_redirect_path(redirect_to, None) if redirect_to else None
+        if is_applicant and not redirect_to:
+            redirect_to = get_portal_base(portal_type) if portal_type else "/admission"
+
+        # Rebuilt on the domain the user is on (a known domain), not the site's host_name
+        parsed = urllib.parse.urlparse(link)
+        query = parsed.query
+        if redirect_to and "redirect_to" not in query:
+            query += f"&redirect_to={urllib.parse.quote(redirect_to)}"
+        link = get_portal_url(f"/update-password?{query}", portal_type, use_request_host=True)
         if redirect_to:
-            import urllib.parse
-            parsed = urllib.parse.urlparse(link)
-            if "redirect_to" not in parsed.query:
-                link = get_url(f"/update-password?{parsed.query}&redirect_to={urllib.parse.quote(redirect_to)}")
             frappe.cache().hset("redirect_after_login", user_doc.name, redirect_to)
+
+        login_path = get_portal_login_url(portal_type) if portal_type else "/admission/login"
+        login_url = get_portal_url(login_path, portal_type, use_request_host=True)
 
         subject = _("Password Reset")
         created_by = get_user_fullname(frappe.session["user"]) if frappe.session.get("user") else "Administrator"
@@ -1088,7 +1133,7 @@ def reset_password(user: str, redirect_to: str = None):
             "user": user_doc.name,
             "email": user_doc.email or user_doc.name,
             "title": subject,
-            "login_url": getattr(institution, "login_url", "") or get_url("/admission/login"),
+            "login_url": login_url if portal_type else (getattr(institution, "login_url", "") or login_url),
             "created_by": created_by,
             "link": link,
             "reset_password_link": link,

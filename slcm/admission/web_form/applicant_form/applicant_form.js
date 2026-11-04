@@ -849,7 +849,7 @@ function _buildShell(ws, cfg, user, uinfo) {
 				col.links.forEach(function(item) {
 					if (item.route) {
 						var iColor = footerTextCol ? footerTextCol : 'inherit';
-						dynColsHtml += '<li><a href="' + _esc(item.route) + '" style="color:' + iColor + ';font-size:14px;font-weight:normal;text-decoration:none;opacity:0.75;word-break:break-word;">' + _esc(item.label || '') + '</a></li>';
+						dynColsHtml += '<li><a href="' + _esc(item.route) + '" target="_blank" rel="noopener noreferrer" style="color:' + iColor + ';font-size:14px;font-weight:normal;text-decoration:none;opacity:0.75;word-break:break-word;">' + _esc(item.label || '') + '</a></li>';
 					} else {
 						dynColsHtml += '<li><span style="font-size:14px;font-weight:normal;opacity:0.75;display:inline-block;word-break:break-word;color:' + (footerTextCol || 'inherit') + ';">' + _esc(item.label || '') + '</span></li>';
 					}
@@ -883,7 +883,7 @@ function _buildShell(ws, cfg, user, uinfo) {
 				
 				if (icon) {
 					if (iColor === 'inherit' && footerTextCol) iColor = footerTextCol;
-					socialHtml += '<a href="' + _esc(link.url || '') + '" target="_blank" style="color:' + iColor + ' !important;font-size:30px !important;text-decoration:none;transition:transform 0.2s, opacity 0.2s;display:inline-flex;opacity:0.9;" onmouseover="this.style.transform=\'translateY(-3px)\';this.style.opacity=\'1\'" onmouseout="this.style.transform=\'none\';this.style.opacity=\'0.9\'" title="' + _esc(link.platform || '') + '"><i class="' + icon + '"></i></a>';
+					socialHtml += '<a href="' + _esc(link.url || '') + '" target="_blank" rel="noopener noreferrer" style="color:' + iColor + ' !important;font-size:30px !important;text-decoration:none;transition:transform 0.2s, opacity 0.2s;display:inline-flex;opacity:0.9;" onmouseover="this.style.transform=\'translateY(-3px)\';this.style.opacity=\'1\'" onmouseout="this.style.transform=\'none\';this.style.opacity=\'0.9\'" title="' + _esc(link.platform || '') + '"><i class="' + icon + '"></i></a>';
 				}
 			}
 		});
@@ -912,7 +912,6 @@ function _buildShell(ws, cfg, user, uinfo) {
 			// Bottom bar
 			'<div style="margin-top:40px;padding-top:24px;border-top:1px solid rgba(0,0,0,0.1);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;">' +
 				'<p style="margin:0;font-size:13px;color:#64748b;opacity:0.8;">© ' + yr + ' ' + _esc(title) + '. All rights reserved.</p>' +
-				'<p style="margin:0;font-size:13px;color:#64748b;opacity:0.8;">Powered by <strong style="color:' + (footerTextCol || secondary) + ';font-weight:400;">' + _esc(powerd) + '</strong></p>' +
 			'</div>' +
 		'</div>';
 	document.body.appendChild(footer);
@@ -1045,6 +1044,20 @@ function collectDraftData() {
 	var doc = (wf && wf.doc) || {};
 	var data = {};
 	try { data = wf.get_values(true) || {}; } catch (e) {}
+
+	// Frappe's get_values() leaves out empty fields, so a value the applicant cleared never
+	// reached the server and the old value stayed. Send every empty field as an explicit null.
+	// (PRESERVE below still restores system fields from the loaded doc; tables are handled below.)
+	var NO_NULL_TYPES = ['Table', 'Table MultiSelect', 'Section Break', 'Column Break',
+		'Tab Break', 'Page Break', 'HTML', 'Button', 'Heading', 'Fold'];
+	try {
+		Object.keys((wf && wf.fields_dict) || {}).forEach(function (fn) {
+			var f = wf.fields_dict[fn];
+			if (!f || !f.df || !f.df.fieldname || typeof f.get_value !== 'function') return;
+			if (NO_NULL_TYPES.indexOf(f.df.fieldtype) !== -1) return;
+			if (!Object.prototype.hasOwnProperty.call(data, fn)) data[fn] = null;
+		});
+	} catch (e) {}
 
 	var PRESERVE = [
 		'name', 'program', 'admission_cycle', 'academic_year', 'admission_year',
@@ -4682,7 +4695,7 @@ function setupPreferenceValidation() {
 				var min_val = is_cgpa ? 4 : 35;
 
 				if (hsc < min_val) {
-					frappe.msgprint(is_cgpa ? 'HSC CGPA must be at least 4.' : 'HSC percentage must be at least 35%.');
+					frappe.msgprint(is_cgpa ? 'HSC CGPA must be at least 4.' : 'HSC percentage must be at least 35%. If CGPA then first add the maximum CGPA');
 					clearHscPercentage();
 				} else if (hsc > max_val) {
 					frappe.msgprint(is_cgpa ? 'HSC CGPA cannot exceed ' + max_val + '.' : 'HSC percentage cannot exceed 100%.');
