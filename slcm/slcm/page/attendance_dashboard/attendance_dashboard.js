@@ -16,16 +16,23 @@ frappe.pages['attendance-dashboard'].on_page_show = function (wrapper) {
 
 const ad_esc = (v) => frappe.utils.escape_html(v == null ? '' : String(v));
 const ad_num = (v) => format_number(v || 0, null, 0);
-const AD_PERIODS = [['today', __('Today')], ['7d', __('7 days')], ['30d', __('30 days')], ['term', __('This term')], ['all', __('All time')]];
+const AD_PERIODS = [['today', __('Today')], ['7d', __('Last 7 days')], ['30d', __('Last 30 days')], ['term', __('This term')],
+	['all', __('All time')], ['custom', __('Custom range…')]];
+// a typed date counts only once it is complete and plausible (Chrome fires change mid-year, e.g. 0002-…)
+const ad_valid_date = (v) => /^\d{4}-\d{2}-\d{2}$/.test(v || '') && +v.slice(0, 4) >= 2000 && +v.slice(0, 4) <= 2100;
 const AD_API = 'slcm.slcm.page.attendance_dashboard.attendance_dashboard.';
 const AD_STORE = 'attendance_dashboard_filters';
+const AD_REMEMBERED = ['programme', 'academic_term', 'class_name'];
 
 class AttendanceDashboard {
 	constructor(page) {
 		this.page = page;
-		// period + programme / trimester / class; remembered per browser
-		this.f = { period: 'term', programme: '', academic_term: '', class_name: '' };
-		try { Object.assign(this.f, JSON.parse(localStorage.getItem(AD_STORE) || '{}')); } catch (e) { /* storage blocked */ }
+		// programme / trimester / class are remembered per browser; the period always opens on All time
+		this.f = { period: 'all', programme: '', academic_term: '', class_name: '', from_date: '', to_date: '' };
+		try {
+			const saved = JSON.parse(localStorage.getItem(AD_STORE) || '{}') || {};
+			AD_REMEMBERED.forEach((k) => { if (typeof saved[k] === 'string') this.f[k] = saved[k]; });
+		} catch (e) { /* storage blocked or corrupt */ }
 		this.class_list = [];
 		this.$root = $('<div class="xd"></div>').appendTo(page.main);
 		this.$filters = $('<div class="xd-filters"></div>').appendTo(this.$root);
@@ -45,7 +52,22 @@ class AttendanceDashboard {
 	}
 
 	bind() {
-		this.$root.on('click', '.xd-period button', (e) => this.set({ period: $(e.currentTarget).data('p') }));
+		this.$root.on('change', '.xd-f-period', (e) => {
+			const period = e.target.value;
+			if (period !== 'custom') return this.set({ period });
+			// start the custom range from what is on screen, else the last 7 days
+			const today = frappe.datetime.get_today();
+			const d = this.data || {};
+			this.set({
+				period,
+				from_date: ad_valid_date(this.f.from_date) ? this.f.from_date : d.from || frappe.datetime.add_days(today, -6),
+				to_date: ad_valid_date(this.f.to_date) ? this.f.to_date : d.to || today,
+			});
+		});
+		this.$root.on('change', '.xd-f-from, .xd-f-to', () => {
+			clearTimeout(this._date_timer);
+			this._date_timer = setTimeout(() => this.apply_dates(), 350);
+		});
 		this.$root.on('change', '.xd-f-programme', (e) => this.set({ programme: e.target.value, class_name: '' }, true));
 		this.$root.on('change', '.xd-f-term', (e) => this.set({ academic_term: e.target.value, class_name: '' }, true));
 		this.$root.on('change', '.xd-f-class', (e) => this.set({ class_name: e.target.value }));
@@ -56,13 +78,33 @@ class AttendanceDashboard {
 		});
 	}
 
-	set(changes, reload_classes) {
+	set(changes, reload_classes, keep_filters) {
 		Object.assign(this.f, changes);
-		try { localStorage.setItem(AD_STORE, JSON.stringify(this.f)); } catch (e) { /* storage blocked */ }
+		try {
+			localStorage.setItem(AD_STORE, JSON.stringify(Object.fromEntries(AD_REMEMBERED.map((k) => [k, this.f[k]]))));
+		} catch (e) { /* storage blocked */ }
 		(reload_classes ? this.load_classes() : Promise.resolve()).then(() => {
-			this.render_filters();
+			if (!keep_filters) this.render_filters();
 			this.load();
 		});
+	}
+
+	// From/To typed or picked: keep the order valid, then reload without redrawing the inputs
+	apply_dates() {
+		const $from = this.$filters.find('.xd-f-from');
+		const $to = this.$filters.find('.xd-f-to');
+		let from = $from.val();
+		let to = $to.val();
+		if (!ad_valid_date(from) || !ad_valid_date(to)) return;
+		if (from > to) {
+			if (from !== this.f.from_date) to = from; else from = to;
+			$from.val(from);
+			$to.val(to);
+		}
+		$to.attr('min', from);
+		$from.attr('max', to);
+		if (from === this.f.from_date && to === this.f.to_date) return;
+		this.set({ from_date: from, to_date: to }, false, true);
 	}
 
 	load_classes() {
@@ -83,9 +125,16 @@ class AttendanceDashboard {
 		const opt = (v, l, cur) => `<option value="${ad_esc(v)}" ${v === cur ? 'selected' : ''}>${ad_esc(l)}</option>`;
 		const any = f.programme || f.academic_term || f.class_name;
 		this.$filters.html(`
-			<div class="xd-period" role="group" aria-label="${__('Period')}">
-				${AD_PERIODS.map(([k, l]) => `<button class="${k === f.period ? 'on' : ''}" data-p="${k}" aria-pressed="${k === f.period}">${l}</button>`).join('')}
-			</div>
+			<select class="xd-input xd-f-period" aria-label="${__('Period')}">
+				${AD_PERIODS.map(([k, l]) => opt(k, l, f.period)).join('')}
+			</select>
+			${f.period === 'custom' ? `<span class="xd-range-inputs">
+				<input type="date" class="xd-input xd-f-from" value="${ad_esc(f.from_date)}" max="${ad_esc(f.to_date)}"
+					min="2000-01-01" aria-label="${__('From date')}">
+				<span class="xd-muted">${__('to')}</span>
+				<input type="date" class="xd-input xd-f-to" value="${ad_esc(f.to_date)}" min="${ad_esc(f.from_date)}"
+					max="2100-12-31" aria-label="${__('To date')}">
+			</span>` : ''}
 			<select class="xd-input xd-f-programme" aria-label="${__('Programme')}">
 				${opt('', __('All programmes'), f.programme)}${(o.programmes || []).map((p) => opt(p, p, f.programme)).join('')}
 			</select>
@@ -102,10 +151,18 @@ class AttendanceDashboard {
 
 	load() {
 		const f = this.f;
+		const custom = f.period === 'custom';
+		if (custom && !(ad_valid_date(f.from_date) && ad_valid_date(f.to_date))) return Promise.resolve();
+		// only the latest request may render (filters can change while one is in flight)
+		const req = (this._req = (this._req || 0) + 1);
 		return frappe.call({
 			method: AD_API + 'get_dashboard',
-			args: { period: f.period, programme: f.programme, academic_term: f.academic_term, class_name: f.class_name },
+			args: {
+				period: f.period, programme: f.programme, academic_term: f.academic_term, class_name: f.class_name,
+				from_date: custom ? f.from_date : null, to_date: custom ? f.to_date : null,
+			},
 		}).then((r) => {
+			if (req !== this._req) return;
 			this.data = r.message || {};
 			this.render();
 		});
@@ -192,6 +249,7 @@ class AttendanceDashboard {
 			.xd-body{display:flex;flex-direction:column;gap:18px}.xd-range{margin-top:-6px}
 			.xd-input{font-family:inherit;font-size:12.5px;height:32px;border:1px solid var(--border-color);border-radius:8px;background:var(--control-bg,#fff);color:var(--text-color);padding:0 10px;max-width:280px}
 			.xd-input:focus{outline:none;border-color:var(--er-brand,#920C24)}
+			.xd-range-inputs{display:inline-flex;align-items:center;gap:6px}.xd-range-inputs .xd-input{width:150px}
 			.xd-clear{font:inherit;font-size:12px;font-weight:700;border:0;background:none;color:var(--er-brand,#920C24);cursor:pointer}
 			.xd-dd{padding:0;gap:10px}.xd-dd-bar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
 			.xd-ct{background:var(--card-bg);border:1px solid var(--border-color);border-radius:10px;overflow:auto;max-height:60vh;position:relative}
@@ -206,11 +264,6 @@ class AttendanceDashboard {
 			.xd-num-link.bad{color:var(--er-brand,#920C24)}
 			.xd-empty{color:var(--text-muted);margin:0;padding:14px}
 			.xd-muted{color:var(--text-muted);font-size:12px;margin:0}
-			.xd-period{display:inline-flex;border:1px solid var(--border-color);border-radius:8px;overflow:hidden;background:var(--card-bg)}
-			.xd-period button{font:inherit;font-size:12.5px;font-weight:700;border:0;border-right:1px solid var(--border-color);background:none;color:var(--text-color);padding:6px 12px;cursor:pointer}
-			.xd-period button:last-child{border-right:0}
-			.xd-period button:hover{color:var(--er-brand,#920C24)}
-			.xd-period button.on{background:var(--er-brand,#920C24);color:#fff}
 			.xd-group h4{font-size:14px;font-weight:700;margin:0 0 8px}.xd-group h4 small{font-weight:400;color:var(--text-muted);font-size:12px;margin-left:6px}
 			.xd-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
 			.xd-card{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;font:inherit;color:var(--text-color);
@@ -220,7 +273,7 @@ class AttendanceDashboard {
 			.xd-label{font-size:12px;color:var(--text-muted)}
 			.xd-value{font-size:26px;line-height:1.15;font-weight:700;font-variant-numeric:tabular-nums}
 			.xd-card small{font-size:11.5px;color:var(--text-muted);min-height:16px}
-			@media (max-width:600px){.xd-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.xd-value{font-size:22px}.xd-period button{padding:6px 9px}}
+			@media (max-width:600px){.xd-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.xd-value{font-size:22px}.xd-range-inputs{flex-wrap:wrap}}
 		</style>`);
 	}
 }

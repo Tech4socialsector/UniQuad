@@ -41,10 +41,16 @@ def current_term():
 	)
 
 
-def period_range(period, term=None):
+def period_range(period, term=None, from_date=None, to_date=None):
 	"""(from, to, label) for a period key; from/to are None for all time.
-	"This term" uses the chosen trimester's dates, or the current term's."""
+	"This term" uses the chosen trimester's dates, or the current term's.
+	"custom" uses from_date..to_date (swapped if reversed)."""
 	d = getdate(today())
+	if period == "custom":
+		if not (from_date and to_date):
+			frappe.throw(_("Pick both a From and a To date for a custom range."))
+		start, end = sorted([getdate(from_date), getdate(to_date)])
+		return start, end, _("Custom range")
 	if period == "today":
 		return d, d, _("Today")
 	if period == "7d":
@@ -158,8 +164,8 @@ def get_classes(programme=None, academic_term=None):
 
 
 @frappe.whitelist()
-def get_dashboard(period="term", programme=None, academic_term=None, class_name=None):
-	start, end, label = period_range(period, academic_term)
+def get_dashboard(period="all", programme=None, academic_term=None, class_name=None, from_date=None, to_date=None):
+	start, end, label = period_range(period, academic_term, from_date, to_date)
 	classes = _scope(programme, academic_term, class_name)
 	in_cls = {"class_name": ["in", classes]} if classes is not None else {}
 	# Student Attendance and Attendance Summary carry the programme and term themselves
