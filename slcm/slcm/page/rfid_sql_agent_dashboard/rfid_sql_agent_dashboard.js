@@ -37,6 +37,7 @@ frappe.pages["rfid-sql-agent-dashboard"].on_page_load = function (wrapper) {
 		const r = $(e.currentTarget).data("route").split("/");
 		frappe.set_route(...r);
 	});
+	$(wrapper).on("click", "[data-detail]", (e) => open_detail(wrapper, $(e.currentTarget).data("detail")));
 	load(wrapper);
 	if (wrapper._auto_refresh_on) start_auto_refresh(wrapper);
 };
@@ -87,15 +88,14 @@ function build_html() {
 		<div data-slot="setup"></div>
 		<div class="rf-kpis" data-slot="kpis"></div>
 		<div class="rf-two">
-			<section class="rf-panel">
-				<div class="rf-panel-head"><h4>${__("Terminals today")}</h4><span class="rf-muted" data-slot="term-count"></span></div>
-				<div class="rf-scroll" data-slot="terminals"></div>
-			</section>
-			<section class="rf-panel">
-				<div class="rf-panel-head"><h4>${__("What happened to today's swipes")}</h4>
-					<button class="rf-link" data-route="attendance-sync">${__("Attendance Sync")} →</button></div>
-				<div data-slot="outcomes"></div>
-			</section>
+			<button class="rf-drill" data-detail="terminals">
+				<span class="rf-drill-text"><h4>${__("Terminals today")}</h4><small class="rf-muted" data-slot="term-summary"></small></span>
+				<span class="rf-drill-go">${__("View details")} →</span>
+			</button>
+			<button class="rf-drill" data-detail="outcomes">
+				<span class="rf-drill-text"><h4>${__("What happened to today's swipes")}</h4><small class="rf-muted" data-slot="out-summary"></small></span>
+				<span class="rf-drill-go">${__("View details")} →</span>
+			</button>
 		</div>
 		<section class="rf-panel">
 			<div class="rf-panel-head"><h4>${__("Live feed")}</h4><span class="rf-muted" data-slot="feed-count"></span></div>
@@ -214,8 +214,11 @@ function render(wrapper, d) {
 		<span>${k[0]}</span><b>${k[1]}</b><small>${k[2]}</small></button>`).join(""));
 
 	const terms = d.terminals || [];
-	slot(wrapper, "term-count").text(terms.length ? __("{0} terminals", [terms.length]) : "");
-	slot(wrapper, "terminals").html(terms.length ? `<table class="rf-table">
+	const ready = terms.filter((t) => t.registered && t.mapped).length;
+	slot(wrapper, "term-summary").text(terms.length
+		? __("{0} terminals · {1} ready · {2} need setup", [terms.length, ready, terms.length - ready])
+		: __("No swipes today."));
+	wrapper._terminals_html = (terms.length ? `<table class="rf-table">
 		<thead><tr><th>${__("Terminal")}</th><th>${__("Location")}</th><th class="num">${__("Swipes")}</th><th>${__("Last swipe")}</th><th>${__("Setup")}</th></tr></thead>
 		<tbody>${terms.map((t) => `<tr>
 			<td>${rf_esc(t.terminal_id)}</td><td>${rf_esc(t.terminal_alias)}</td><td class="num">${rf_num(t.swipes)}</td>
@@ -226,7 +229,11 @@ function render(wrapper, d) {
 
 	const outs = d.outcomes || [];
 	const total = outs.reduce((a, o) => a + o.n, 0);
-	slot(wrapper, "outcomes").html(outs.length ? outs.map((o) => `<div class="rf-out">
+	const marked = outs.filter((o) => ["Matched", "Manually Synced"].includes(o.status)).reduce((a, o) => a + o.n, 0);
+	slot(wrapper, "out-summary").text(total
+		? __("{0} swipes · {1} became attendance · {2} did not", [rf_num(total), rf_num(marked), rf_num(total - marked)])
+		: __("No swipes today."));
+	wrapper._outcomes_html = (outs.length ? outs.map((o) => `<div class="rf-out">
 		<div class="rf-out-top"><b>${rf_esc(OUTCOME_TEXT[o.status] || o.status)}</b><span>${rf_num(o.n)}</span></div>
 		<div class="rf-bar"><i class="${["Matched", "Manually Synced"].includes(o.status) ? "ok" : ""}" style="width:${Math.max(2, (100 * o.n) / total)}%"></i></div>
 		<small class="rf-muted">${rf_esc(o.status)}</small>
@@ -247,6 +254,28 @@ function render(wrapper, d) {
 	} else {
 		wrapper._rfid_dt.refresh(data, DT_COLUMNS);
 	}
+}
+
+const DETAILS = {
+	terminals: { title: __("Terminals today"), html: "_terminals_html", wide: true },
+	outcomes: { title: __("What happened to today's swipes"), html: "_outcomes_html" },
+};
+
+// snapshot of the panel as of the last refresh
+function open_detail(wrapper, key) {
+	const cfg = DETAILS[key];
+	const d = new frappe.ui.Dialog({
+		title: cfg.title,
+		size: cfg.wide ? "large" : null,
+		fields: [{ fieldtype: "HTML", fieldname: "body" }],
+		...(key === "outcomes" ? {
+			primary_action_label: __("Open Attendance Sync"),
+			primary_action() { d.hide(); frappe.set_route("attendance-sync"); },
+		} : {}),
+	});
+	d.$wrapper.addClass("er-theme");
+	d.fields_dict.body.$wrapper.html(`<div class="rf rf-dialog"><div class="rf-scroll">${wrapper[cfg.html] || ""}</div></div>`);
+	d.show();
 }
 
 function run_now(wrapper) {
@@ -289,11 +318,18 @@ function add_styles() {
 		.rf-btn:hover{background:var(--er-brand,#920C24);color:#fff}
 		.rf-kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
 		.rf-kpi{display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;color:var(--text-color);background:var(--card-bg);
-			border:1px solid var(--border-color);border-left:3px solid var(--er-brand,#920C24);border-radius:10px;padding:12px 14px}
-		.rf-kpi:hover{border-color:var(--er-brand,#920C24);box-shadow:0 2px 10px rgba(146,12,36,.08)}
+			border:1px solid var(--border-color);border-radius:10px;padding:12px 14px}
+		.rf-kpi:hover{background:var(--subtle-fg,var(--gray-50,#fafafa))}
 		.rf-kpi span,.rf-kpi small{font-size:12px;color:var(--text-muted)}
 		.rf-kpi b{font-size:24px;line-height:1.15;font-variant-numeric:tabular-nums}
-		.rf-two{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:16px}
+		.rf-two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+		.rf-drill{display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;color:var(--text-color);
+			background:var(--card-bg);border:1px solid var(--border-color);border-radius:10px;padding:14px 16px;min-width:0}
+		.rf-drill:hover{background:var(--subtle-fg,var(--gray-50,#fafafa))}
+		.rf-drill-text{display:flex;flex-direction:column;gap:4px;min-width:0}
+		.rf-drill-go{color:var(--er-brand,#920C24);font-weight:700;font-size:12px;white-space:nowrap}
+		.rf.rf-dialog{padding:0}
+		.rf-dialog .rf-scroll{max-height:60vh}
 		.rf-panel{background:var(--card-bg);border:1px solid var(--border-color);border-radius:10px;padding:14px 16px;min-width:0}
 		.rf-panel-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:10px;flex-wrap:wrap}
 		.rf-scroll{max-height:340px;overflow:auto;position:relative}
