@@ -1,0 +1,40 @@
+{
+ "app": "slcm",
+ "charts": [],
+ "content": "[{\"id\": \"att-home\", \"type\": \"custom_block\", \"data\": {\"custom_block_name\": \"Attendance Home\", \"col\": 12}}]",
+ "creation": "2026-03-25 21:20:03.520020",
+ "custom_blocks": [
+  {
+   "custom_block_name": "Attendance Home",
+   "label": "Attendance Home"
+  }
+ ],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "external_link": null,
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "calendar",
+ "idx": 0,
+ "indicator_color": "blue",
+ "is_hidden": 0,
+ "label": "Attendance",
+ "link_to": null,
+ "link_type": null,
+ "links": [],
+ "modified": "2026-11-03 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "SLCM",
+ "name": "Attendance",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "restrict_to_domain": null,
+ "roles": [],
+ "sequence_id": 7.0,
+ "shortcuts": [],
+ "title": "Attendance",
+ "type": "Workspace"
+}
