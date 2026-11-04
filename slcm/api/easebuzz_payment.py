@@ -229,7 +229,14 @@ def webhook(**params):
 	if not _verified(params):
 		frappe.local.response["http_status_code"] = 401
 		return "invalid hash"
-	_settle(txnid, params, source="webhook")
+	try:
+		_settle(txnid, params, source="webhook")
+	except Exception:
+		# Answer 200 anyway: Easebuzz would otherwise retry a lasting error until it gives up. The checkout
+		# is still Queued, so reconcile_pending settles it from Easebuzz's own record within 15 minutes.
+		frappe.db.rollback()
+		frappe.log_error(frappe.get_traceback(), f"Easebuzz webhook settle failed — {txnid}")
+		return "logged"
 	return "ok"
 
 
@@ -245,9 +252,10 @@ def get_payment_result(payment_ref):
 	# Only the payer's own request asks Easebuzz (records are then written as the payer anyway);
 	# an admin looking at someone else's checkout just sees its current state.
 	if status == "Queued" and data.get("user") == frappe.session.user:
-		new_status = _reconcile(payment_ref) or status
-		settled_now = new_status == "Completed"
-		status = new_status
+		new_status = _reconcile(payment_ref)
+		if new_status and new_status != UNREACHABLE:
+			settled_now = new_status == "Completed"
+			status = new_status
 
 	outcome = {
 		"Completed": "success",
@@ -304,8 +312,15 @@ def _settle(txnid, txn, source):
 
 	Returns the Integration Request status afterwards (Completed / Failed / Cancelled / Queued).
 	"""
-	frappe.db.sql("SELECT name FROM `tabIntegration Request` WHERE name = %s FOR UPDATE", txnid)
-	ir = frappe.db.get_value("Integration Request", txnid, ["status", "data"], as_dict=True)
+	# End the caller's read-only transaction before locking. Under REPEATABLE READ the reads callers made
+	# first (_intent, settings) pin a snapshot: after waiting for a concurrent return / webhook to settle
+	# this txnid, every plain read below would still see it unsettled and credit the payment twice.
+	# Callers have written nothing yet, so this commit only starts a fresh transaction.
+	frappe.db.commit()
+	rows = frappe.db.sql(
+		"SELECT status, data FROM `tabIntegration Request` WHERE name = %s FOR UPDATE", txnid, as_dict=True
+	)
+	ir = rows[0] if rows else None
 	status = (txn.get("status") or "").strip().lower()
 	if not ir or ir.status == "Completed":
 		return ir and ir.status
@@ -343,11 +358,13 @@ def _settle(txnid, txn, source):
 				f"txnid: {txnid}\nexpected: {data.amount}\nreceived: {txn.get('amount')}",
 				"Easebuzz settle: amount / txnid mismatch",
 			)
+			summary["error"] = "amount or txnid mismatch"
 			frappe.db.set_value(
-				"Integration Request", txnid,
-				{"status": "Failed", "error": json.dumps({**summary, "error": "amount or txnid mismatch"})},
-				update_modified=False,
+				"Integration Request", txnid, {"status": "Failed", "error": json.dumps(summary)}, update_modified=False,
 			)
+			# the charge was not paid: release it from "Payment Initiated" so it can be paid again
+			with _as_user(data.user):
+				flow["failure"](data, payment_id, summary, cancelled=False)
 			# Easebuzz did capture this money: record it (unapplied) so it is refunded, not lost
 			from slcm.slcm.fee.payment_ledger import record_unapplied_capture, _quietly
 
@@ -398,10 +415,18 @@ def _retrieve(txnid):
 		return None
 	payload = response.get("msg") if "msg" in response else response.get("data")
 	rows = payload if isinstance(payload, list) else [payload]
-	for row in rows:
-		if isinstance(row, dict) and str(row.get("txnid") or "") == txnid:
-			return row
-	return None
+	rows = [r for r in rows if isinstance(r, dict) and str(r.get("txnid") or "") == txnid]
+
+	# one txnid can carry several attempts (a failed try, then a successful retry): the capture wins
+	def rank(row):
+		status = str(row.get("status") or "").strip().lower()
+		return 0 if status in _SUCCESS else 1 if status in _PENDING else 2
+
+	return min(rows, key=rank) if rows else None
+
+
+# _reconcile result when Easebuzz could not be asked (network / API error): never expire on it
+UNREACHABLE = "unreachable"
 
 
 def _reconcile(txnid):
@@ -412,6 +437,7 @@ def _reconcile(txnid):
 	except Exception:
 		frappe.db.rollback()
 		frappe.log_error(frappe.get_traceback(), f"Easebuzz reconcile failed — {txnid}")
+		return UNREACHABLE
 	return None
 
 

@@ -107,9 +107,14 @@ DRILL = {
 def get_drilldown(doctype, filters=None):
 	"""Rows of one card grouped by class (or terminal, course...), split by status.
 	Only the dashboard's doctypes are allowed; the query applies the user's permissions."""
-	if doctype not in DRILL or not frappe.has_permission(doctype, "read"):
+	return drilldown(DRILL, doctype, filters)
+
+
+def drilldown(drill, doctype, filters=None):
+	"""get_drilldown for any dashboard: `drill` maps the allowed doctypes as DRILL does."""
+	if doctype not in drill or not frappe.has_permission(doctype, "read"):
 		frappe.throw(_("Not permitted"), frappe.PermissionError)
-	group, split, group_label = DRILL[doctype]
+	group, split, group_label = drill[doctype]
 	filters = frappe.parse_json(filters) or {}
 	t = f"`tab{doctype}`"
 	fields = [f"{t}.`{group}`", f"{t}.`{split}`" if split else "''", "count(*) as n"]

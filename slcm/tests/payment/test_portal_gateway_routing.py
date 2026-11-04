@@ -1434,3 +1434,61 @@ class TestEasebuzzPayouts(GatewayTestCase):
 		self.assertNotIn(pr, [r.name for r in rep.execute({**f, "settlement_status": rep.NOT_SETTLED})[1]])
 		# a hostile filter value is a bound parameter, not SQL
 		self.assertEqual(rep.execute({**f, "settlement_status": "x' or '1'='1"})[1], [])
+
+
+class TestSettleRobustness(GatewayTestCase):
+	"""Review fixes: retry rows from retrieve, unreachable Easebuzz at expiry, mismatch release, webhook errors."""
+
+	def queued(self, days_old=0):
+		frappe.set_user(self.student_user)
+		txn = sp.create_demand_payment_order(self.d_ez)["txnid"]
+		frappe.set_user("Administrator")
+		age = frappe.utils.add_to_date(None, days=-days_old, minutes=-30)
+		frappe.db.set_value("Integration Request", txn, "creation", age, update_modified=False)
+		return txn
+
+	def test_reconcile_prefers_the_successful_retry(self):
+		txn = self.queued()
+		rows = [
+			{"txnid": txn, "status": "failure", "amount": "2500.00", "easepayid": "EZTRY1", "error_Message": "declined"},
+			{"txnid": txn, "status": "success", "amount": "2500.00", "easepayid": "EZTRY2"},
+		]
+		with patch.object(ezs.EasebuzzSettings, "retrieve_transaction", lambda self, t: {"status": True, "msg": rows}):
+			ez.reconcile_pending()
+		self.assertEqual(self.ir_status(txn), "Completed")
+		self.assertEqual(frappe.db.get_value("Fee Demand", self.d_ez, "status"), "Paid")
+
+	def test_unreachable_easebuzz_never_expires_a_checkout(self):
+		txn = self.queued(days_old=3)
+
+		def down(self, t):
+			raise ConnectionError("easebuzz down")
+
+		# the checkout was committed at start in real use; keep this test's (uncommitted) one through rollback
+		with patch.object(ezs.EasebuzzSettings, "retrieve_transaction", down), patch.object(frappe, "log_error"), \
+				patch.object(frappe.db, "rollback", lambda *a, **k: None):
+			ez.reconcile_pending()
+		self.assertEqual(self.ir_status(txn), "Queued")
+
+	def test_mismatch_releases_the_charge(self):
+		txn = self.queued()
+		calls = []
+		flows = {**ez.FLOWS, "demands": {**ez.FLOWS["demands"], "failure": lambda *a, **k: calls.append(k)}}
+		with patch.object(ez, "FLOWS", flows), patch.object(frappe, "log_error"):
+			self.as_guest_callback(ez.complete, signed(txn, 1, easepayid="EZMIS"))
+		self.assertEqual(self.ir_status(txn), "Failed")
+		self.assertEqual(calls, [{"cancelled": False}])
+
+	def test_webhook_error_answers_200_and_leaves_checkout_for_reconcile(self):
+		txn = self.queued()
+
+		def boom(*a, **k):
+			raise frappe.ValidationError("booking failed")
+
+		flows = {**ez.FLOWS, "demands": {**ez.FLOWS["demands"], "success": boom}}
+		with patch.object(ez, "FLOWS", flows), patch.object(frappe, "log_error") as log, \
+				patch.object(frappe.db, "rollback", lambda *a, **k: None):
+			self.assertEqual(self.as_guest_callback(ez.webhook, signed(txn, 2500, easepayid="EZBOOM")), "logged")
+		self.assertTrue(log.called)
+		self.assertNotEqual(frappe.local.response.get("http_status_code"), 500)
+		self.assertEqual(self.ir_status(txn), "Queued")
