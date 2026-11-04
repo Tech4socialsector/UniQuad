@@ -536,6 +536,26 @@ function _buildShell(ws, cfg, user, uinfo) {
 	if (footerCol) { fontCss += '.adm-wf-footer { background-color: ' + footerCol + ' !important; }\n'; }
 	if (footerTextCol) { fontCss += '.adm-wf-footer, .adm-wf-footer a, .adm-wf-footer .text-muted { color: ' + footerTextCol + ' !important; }\n'; }
 	if (btnRadius) { fontCss += '.btn, .submit-btn, .btn-next, .btn-submit-web-form { border-radius: ' + btnRadius + ' !important; }\n'; }
+	// Table "Add row" buttons (UG / PG degree details etc.): primary colour so they stand out
+	fontCss += [
+		'.grid-add-row, .grid-add-multiple-rows {',
+		'  background-color: var(--slcm-primary) !important; border: 1px solid var(--slcm-primary) !important;',
+		'  color: #fff !important; font-weight: 600 !important; padding: 6px 14px !important;',
+		'}',
+		'.grid-add-row:hover, .grid-add-row:focus,',
+		'.grid-add-multiple-rows:hover, .grid-add-multiple-rows:focus {',
+		'  background-color: var(--slcm-primary) !important; color: #fff !important; opacity: 0.88;',
+		'}',
+		// "Editing Row" panel Save button: same size/shape as Frappe's row buttons (btn-sm), primary colour only
+		'.form-in-grid .grid-form-heading .slcm-row-save {',
+		'  background-color: var(--slcm-primary) !important; border-color: var(--slcm-primary) !important;',
+		'  color: #fff !important; box-shadow: none !important;',
+		'}',
+		'.form-in-grid .grid-form-heading .slcm-row-save:hover { opacity: 0.88; }',
+		// Table row with missing mandatory values (set by _slcmValidateChildRowsOnPage on Next)
+		'.grid-row.slcm-row-error > .data-row { box-shadow: inset 0 0 0 2px #dc2626; border-radius: 4px; }',
+		''
+	].join('\n');
 
 	var rootVars = [
 		':root {',
@@ -1265,7 +1285,9 @@ function handleSaveDraft(opts) {
 				} else {
 					var errMsg = (msg && msg.message) || 'Could not save draft.';
 					if (!(opts && opts.silent)) showToast('\u26a0  ' + errMsg, 'error');
-					reject(new Error(errMsg));
+					var saveErr = new Error(errMsg);
+					saveErr.missing_fields = (msg && msg.missing_fields) || null;
+					reject(saveErr);
 				}
 			},
 			error: function () {
@@ -2571,10 +2593,13 @@ function _showFeeModal(feeDetails, onPaid) {
 					_openRazorpay(d, feeDetails, onPaid, payBtn, closeModal);
 				}
 			},
-			error: function () {
+			error: function (r) {
 				payBtn.disabled = false;
 				_feePayBtnSetLoading(payBtn, false);
-				showToast('Network error while creating payment order.', 'error');
+				// A server refusal (e.g. mandatory fields missing) is already shown by Frappe
+				if (!(r && (r._server_messages || r.exc))) {
+					showToast('Network error while creating payment order.', 'error');
+				}
 			},
 		});
 	};
@@ -2712,6 +2737,8 @@ function _doFinalSubmit(applicantName, targetStatus) {
 						window.location.reload();
 					}, 2000);
 				}
+			} else if (msg && msg.missing_fields && msg.missing_fields.length) {
+				_slcmShowMissingFieldsDialog(msg.missing_fields, __('Please fill the following, then submit again:'));
 			} else {
 				showToast('\u26a0  ' + ((msg && msg.message) || 'Submission failed.'), 'error');
 			}
@@ -2897,8 +2924,24 @@ function runSubmitFlow() {
 		})
 		.catch(function (err) {
 			_hideSubmitOverlay();
-			showToast('\u26a0  ' + (err.message || 'Validation failed. Please fill all required fields.'), 'error');
+			if (err && err.missing_fields && err.missing_fields.length) {
+				_slcmShowMissingFieldsDialog(err.missing_fields);
+				return;
+			}
+			showToast('\u26a0  ' + ((err && err.message) || 'Validation failed. Please fill all required fields.'), 'error');
 		});
+}
+
+/** List every mandatory field the server says is still empty (shown before eligibility / payment). */
+function _slcmShowMissingFieldsDialog(missing, intro) {
+	frappe.msgprint({
+		title: __('Mandatory Fields Missing'),
+		indicator: 'red',
+		message: (intro || __('Please fill the following before submitting. No payment has been taken.')) +
+			'<ul style="margin:10px 0 0 18px;">' +
+			missing.map(function (m) { return '<li>' + _slcmEscapeHtml(m) + '</li>'; }).join('') +
+			'</ul>',
+	});
 }
 
 /** Override Frappe's web_form.save so our flow runs when Submit is clicked. */
@@ -4556,12 +4599,52 @@ function makeInputUppercase() {
 
 // ───────────────────────────────────────────────────────────────────
 
+/**
+ * Test-centre preference dropdowns (Link → Entrance Test City) list their options in A–Z order.
+ * Frappe's web form fills Link options newest-first; "TEST 2" sorts before "TEST 10" (numeric aware).
+ */
+var SLCM_PREFERENCE_FIELDS = ['first_preference', 'second_preference', 'third_preference'];
+
+function _slcmSortAutocompleteOptions(field) {
+	if (!field || !field.df) return;
+	var raw = field.df.options;
+	var asString = typeof raw === 'string';
+	var items = raw;
+	if (asString) {
+		var t = raw.trim();
+		if (t.charAt(0) === '[') {
+			try { items = JSON.parse(t); asString = false; } catch (e) { items = raw.split('\n'); }
+		} else {
+			items = raw.split('\n');
+		}
+	}
+	if (!Array.isArray(items) || items.length < 2) return;
+
+	function key(o) {
+		return String((o && typeof o === 'object') ? (o.label || o.value || '') : (o || '')).trim();
+	}
+	var sorted = items
+		.filter(function (o) { return key(o) !== ''; })
+		.sort(function (a, b) {
+			return key(a).localeCompare(key(b), undefined, { numeric: true, sensitivity: 'base' });
+		});
+
+	field.df.options = asString ? sorted.join('\n') : sorted;
+	if (typeof field.set_data === 'function') {
+		try { field.set_data(sorted); } catch (e) { /* options above are used on next open */ }
+	}
+}
+
 function setupPreferenceValidation() {
 	var n = 0;
 	var t = setInterval(function () {
 		var wf = window.frappe && frappe.web_form;
 		if (wf && wf.fields_dict) {
 			clearInterval(t);
+
+			SLCM_PREFERENCE_FIELDS.forEach(function (fn) {
+				_slcmSortAutocompleteOptions(wf.fields_dict[fn]);
+			});
 
 			function validatePreferences() {
 				var f1 = wf.get_value('first_preference');
@@ -4692,10 +4775,10 @@ function setupPreferenceValidation() {
 				var cgpa_max = parseFloat(wf.get_value('if_cgpa_maximum_cgpa_class_xii'));
 				var is_cgpa = (!Number.isNaN(cgpa_max) && cgpa_max > 0);
 				var max_val = is_cgpa ? cgpa_max : 100;
-				var min_val = is_cgpa ? 4 : 35;
 
-				if (hsc < min_val) {
-					frappe.msgprint(is_cgpa ? 'HSC CGPA must be at least 4.' : 'HSC percentage must be at least 35%. If CGPA then first add the maximum CGPA');
+				// No minimum mark here: whether a score is high enough is decided by the eligibility rules.
+				if (hsc < 0) {
+					frappe.msgprint('HSC percentage / CGPA cannot be negative.');
 					clearHscPercentage();
 				} else if (hsc > max_val) {
 					frappe.msgprint(is_cgpa ? 'HSC CGPA cannot exceed ' + max_val + '.' : 'HSC percentage cannot exceed 100%.');
@@ -4760,6 +4843,71 @@ function _slcmPatchGridRowScroll(gridRow) {
 			setTimeout(restore, 60);
 		}
 	};
+}
+
+/**
+ * "Editing Row" panel: adds a "Save" button next to Frappe's row actions (styled in _buildShell).
+ * Save checks the row's visible mandatory fields and closes the panel. The values already live
+ * in the form, so they are stored with the application on "Save Draft" / "Next".
+ * Patched once on the shared GridRow prototype.
+ */
+function _slcmPatchGridRowSave(gridRow) {
+	var proto = gridRow && Object.getPrototypeOf(gridRow);
+	if (!proto || proto._slcmSavePatched || typeof proto.show_form !== 'function') return;
+	proto._slcmSavePatched = true;
+	var origShow = proto.show_form;
+	proto.show_form = function () {
+		var out = origShow.apply(this, arguments);
+		try {
+			_slcmAddRowSaveButton(this);
+		} catch (e) {
+			console.warn('row save button', e);
+		}
+		return out;
+	};
+}
+
+function _slcmAddRowSaveButton(gridRow) {
+	var gf = gridRow.grid_form;
+	if (!gf || !gf.wrapper) return;
+	var $actions = gf.wrapper.find('.grid-form-heading .row-actions');
+	if (!$actions.length || $actions.find('.slcm-row-save').length) return;
+
+	// Same classes as Frappe's own row buttons (btn btn-default btn-sm) so size and font match
+	var $btn = $('<button type="button" class="btn btn-default btn-sm pull-right slcm-row-save"></button>')
+		.text(__('Save'))
+		.appendTo($actions);
+
+	$btn.on('click', function (e) {
+		// The heading's own click handler toggles (closes) the panel — handle it here instead.
+		e.preventDefault();
+		e.stopPropagation();
+
+		var form = gridRow.grid_form;
+		var doc = gridRow.doc || {};
+		var missing = [];
+		(form && form.fields || []).forEach(function (ctrl) {
+			var df = ctrl && ctrl.df;
+			if (!df || !df.reqd || !df.fieldname) return;
+			if (ctrl.disp_status && ctrl.disp_status !== 'Write') return;   // hidden / read-only
+			if (_slcmChildValueEmpty(df, doc[df.fieldname])) missing.push(__(df.label || df.fieldname));
+		});
+
+		if (missing.length) {
+			frappe.msgprint({
+				title: __('Missing Fields'),
+				indicator: 'red',
+				message: __('Please fill the following before saving this row:') +
+					'<ul style="margin:8px 0 0 18px;">' +
+					missing.map(function (l) { return '<li>' + frappe.utils.escape_html(l) + '</li>'; }).join('') +
+					'</ul>',
+			});
+			return;
+		}
+
+		gridRow.toggle_view(false);
+		if (typeof showToast === 'function') showToast(__('Row saved.'), 'success');
+	});
 }
 
 /**
@@ -4833,7 +4981,10 @@ function _slcmSetupDegreeTable(wf, fieldname) {
 		}
 	}
 
-	if (grid.grid_rows && grid.grid_rows.length) _slcmPatchGridRowScroll(grid.grid_rows[0]);
+	if (grid.grid_rows && grid.grid_rows.length) {
+		_slcmPatchGridRowScroll(grid.grid_rows[0]);
+		_slcmPatchGridRowSave(grid.grid_rows[0]);
+	}
 	return true;
 }
 
@@ -5719,6 +5870,9 @@ function _validateStage(wf, $page) {
 		} else if (df.fieldtype === 'Table' && SLCM_DEGREE_TABLES.indexOf(fieldname) !== -1) {
 			// The default (untouched) degree row must not satisfy "table is mandatory"
 			empty = !(Array.isArray(val) && val.some(function (r) { return !_slcmIsBlankDegreeRow(r); }));
+		} else if (SLCM_ZERO_IS_EMPTY_TYPES[df.fieldtype]) {
+			// A cleared Float / Percent input is stored as 0 — for a required field that is "not filled"
+			empty = val === undefined || val === null || val === '' || !parseFloat(val);
 		} else {
 			empty =
 				val === undefined ||
@@ -5746,10 +5900,76 @@ function _validateStage(wf, $page) {
 		}
 	});
 
+	_slcmValidateChildRowsOnPage(wf, $page, missing);
 	_slcmValidateApplicantFormatsOnPage(wf, $page, missing);
 	_slcmValidateDegreeCountryOnPage(wf, $page, missing);
 
 	return { ok: missing.length === 0, missing };
+}
+
+/** Required number fields where 0 means "not entered" (same rule as the server-side check). */
+var SLCM_ZERO_IS_EMPTY_TYPES = { Float: 1, Currency: 1, Percent: 1 };
+
+function _slcmChildValueEmpty(cdf, v) {
+	if (cdf.fieldtype === 'Check') return false;
+	if (v === undefined || v === null) return true;
+	if (SLCM_ZERO_IS_EMPTY_TYPES[cdf.fieldtype]) return !parseFloat(v);
+	if (Array.isArray(v)) return v.length === 0;
+	if (typeof v === 'string') return !v.replace(/<[^>]*>/g, '').trim();
+	return false;
+}
+
+/** depends_on of a child field, evaluated against the row ("eval:..." or a plain fieldname). */
+function _slcmChildDependsOnMet(expr, row, wf) {
+	if (!expr) return true;
+	try {
+		if (expr.indexOf('eval:') === 0) {
+			// eslint-disable-next-line no-new-func
+			return !!(new Function('doc', 'parent', 'return (' + expr.slice(5) + ')')(row, wf.doc || {}));
+		}
+		return !!row[expr];
+	} catch (e) {
+		return true;   // unknown expression — treat the field as shown (server re-checks anyway)
+	}
+}
+
+/**
+ * Required fields INSIDE child-table rows (e.g. Percentage/CGPA in Undergraduate Degree Details).
+ * Frappe's web form only checks that a mandatory table has rows, never the rows' own fields.
+ * The untouched default degree row is skipped (it is dropped before saving).
+ */
+function _slcmValidateChildRowsOnPage(wf, $page, missing) {
+	Object.keys(wf.fields_dict || {}).forEach(function (fieldname) {
+		var fw = wf.fields_dict[fieldname];
+		var df = fw && fw.df;
+		if (!df || df.fieldtype !== 'Table' || !fw.grid) return;
+		if (df.hidden || df.hidden_due_to_dependency) return;
+		if (!_slcmPageContainsFieldname($page, fieldname)) return;
+		if (fw.$wrapper && fw.$wrapper.length && fw.$wrapper.is(':hidden')) return;
+
+		var docfields = fw.grid.docfields || df.fields || [];
+		var tableLabel = (df.label || fieldname).trim();
+		var rows = wf.get_value(fieldname) || [];
+		var gridRows = fw.grid.grid_rows || [];
+
+		rows.forEach(function (row, i) {
+			if (SLCM_DEGREE_TABLES.indexOf(fieldname) !== -1 && _slcmIsBlankDegreeRow(row)) return;
+			var rowMissing = [];
+			docfields.forEach(function (cdf) {
+				if (!cdf || !cdf.reqd || cdf.hidden || !cdf.fieldname) return;
+				if (_slcmWebFormLayoutFieldtype(cdf.fieldtype)) return;
+				if (!_slcmChildDependsOnMet(cdf.depends_on, row, wf)) return;
+				if (_slcmChildValueEmpty(cdf, row[cdf.fieldname])) {
+					rowMissing.push((cdf.label || cdf.fieldname).trim());
+				}
+			});
+			var $rowEl = gridRows[i] && gridRows[i].wrapper;
+			if ($rowEl && $rowEl.length) $rowEl.toggleClass('slcm-row-error', rowMissing.length > 0);
+			rowMissing.forEach(function (l) {
+				missing.push(tableLabel + ' — ' + __('Row') + ' ' + (row.idx || i + 1) + ': ' + l);
+			});
+		});
+	});
 }
 
 /** Country → State (India: rows where State.country = India; otherwise only State "Other") → City (City.state + City.country per masterdata) */
@@ -6110,10 +6330,13 @@ function slcmSetupPayButton() {
 										_openRazorpay(d, fd, onPaid, payBtnDom, closeModal);
 									}
 								},
-								error: function () {
+								error: function (r) {
 									payBtnDom.disabled = false;
 									_feePayBtnSetLoading(payBtnDom, false);
-									showToast('Network error while creating payment order.', 'error');
+									// A server refusal (e.g. mandatory fields missing) is already shown by Frappe
+									if (!(r && (r._server_messages || r.exc))) {
+										showToast('Network error while creating payment order.', 'error');
+									}
 								}
 							});
 						} else {

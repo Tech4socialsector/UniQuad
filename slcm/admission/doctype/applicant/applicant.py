@@ -8,7 +8,7 @@ from frappe import _
 from frappe.model.document import Document
 from slcm.admission.utils.nlsat_portal import get_applicant_login_link, get_applicant_portal_url
 from frappe.model.naming import getseries, parse_naming_series
-from frappe.utils import validate_email_address, getdate, date_diff, today, now, flt, nowdate, cint
+from frappe.utils import validate_email_address, getdate, date_diff, today, now, flt, nowdate, cint, cstr, strip_html
 from slcm.admission.portal_application_web_form import (
 	applicant_portal_application_locked,
 )
@@ -3205,6 +3205,77 @@ def set_intake_type(doc, method=None):
         intake = None
         if intake:
             doc.intake_type = intake
+
+_MANDATORY_NUMERIC_TYPES = {"Float", "Currency", "Percent"}
+
+
+def _mandatory_value_missing(df, value, zero_is_empty):
+    """Same idea as Frappe's mandatory check; optionally a 0 in a number field counts as empty
+    (a cleared Float/Percent input is stored as 0, and 0 is never a real percentage)."""
+    if df.fieldtype == "Check":
+        return False
+    if value is None or value == []:
+        return True
+    if df.fieldtype in _MANDATORY_NUMERIC_TYPES:
+        return zero_is_empty and flt(value) == 0
+    if isinstance(value, list):
+        return not value
+    text = cstr(value)
+    return not (strip_html(text).strip() or "<img" in text)
+
+
+def get_missing_mandatory_fields(doc):
+    """
+    Labels of every mandatory value still missing on an Applicant, including inside child-table
+    rows (e.g. "Undergraduate Degree Details — Row 1: Percentage/CGPA Obtained").
+
+    Mirrors what Frappe enforces when the application leaves Draft (submit_applicant), plus the
+    submit-only checks (national test score, degree Country for foreign nationals), so the
+    portal can stop the applicant BEFORE payment instead of failing after it.
+    Draft saves skip Frappe's own mandatory check (see before_validate), hence this helper.
+    """
+    missing = []
+
+    for df in doc.meta.get("fields", {"reqd": 1}):
+        if df.fieldtype in ("Table", "Table MultiSelect"):
+            if not doc.get(df.fieldname):
+                missing.append(_(df.label or df.fieldname))
+        elif _mandatory_value_missing(df, doc.get(df.fieldname), zero_is_empty=True):
+            missing.append(_(df.label or df.fieldname))
+
+    for tdf in doc.meta.get_table_fields():
+        rows = doc.get(tdf.fieldname) or []
+        if not rows:
+            continue
+        required = frappe.get_meta(tdf.options).get("fields", {"reqd": 1})
+        for row in rows:
+            for df in required:
+                if _mandatory_value_missing(df, row.get(df.fieldname), zero_is_empty=True):
+                    missing.append(
+                        _("{0} — Row {1}: {2}").format(_(tdf.label), row.idx, _(df.label or df.fieldname))
+                    )
+
+    # Submit-only rules from Applicant.validate (they otherwise surface only after payment)
+    if doc.get("national_test_name") and flt(doc.get("percentage")) <= 0:
+        missing.append(_("Score or percentage (National test)"))
+
+    if (doc.get("foriegn_national") or "").strip() == "Yes":
+        for table, label in (
+            ("ug_degree_details", _("Undergraduate Degree Details")),
+            ("pg_degree_details", _("PG Degree Details")),
+        ):
+            for row in doc.get(table) or []:
+                if not (row.get("country") or "").strip():
+                    missing.append(_("{0} — Row {1}: Country").format(label, row.idx))
+
+    return missing
+
+
+def format_missing_mandatory_message(missing):
+    return _("Please fill all mandatory fields before submitting / paying:") + "<ul>" + "".join(
+        f"<li>{frappe.utils.escape_html(m)}</li>" for m in missing
+    ) + "</ul>"
+
 
 def set_admission_details(doc):
     """

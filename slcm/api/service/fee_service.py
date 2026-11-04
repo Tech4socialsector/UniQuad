@@ -1316,6 +1316,15 @@ class FeeService:
             if applicant.application_fee_status == "Waived":
                 frappe.throw(_("Application fee has been waived."))
 
+            # Never take money for an application that can't be submitted afterwards.
+            from slcm.admission.doctype.applicant.applicant import (
+                format_missing_mandatory_message,
+                get_missing_mandatory_fields,
+            )
+            missing = get_missing_mandatory_fields(applicant)
+            if missing:
+                frappe.throw(format_missing_mandatory_message(missing), title=_("Mandatory Fields Missing"))
+
             fee_amount = flt(applicant.application_fee_amount)
             if fee_amount <= 0:
                 from slcm.api.service.application_fee_service import get_application_fee_for_category, _get_applicant_category
@@ -1424,6 +1433,9 @@ class FeeService:
                 "currency": order.get("currency"),
                 "gateway": gateway
             }
+        except frappe.ValidationError:
+            # Expected refusals (already paid, missing mandatory fields, ...) — shown to the user, not logged
+            raise
         except Exception as e:
             frappe.log_error(frappe.get_traceback(), "Application Fee Order Creation Failed")
             raise
