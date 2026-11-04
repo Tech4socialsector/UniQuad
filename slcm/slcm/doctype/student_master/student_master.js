@@ -1,7 +1,27 @@
 // Copyright (c) 2025, Nishanth and contributors
 // For license information, please see license.txt
 
+// UG / PG degree rows are shared with Applicant and Eligibility Result, where their fields are
+// mandatory. In Student Master they are optional: clear "reqd" on this form's grids only.
+// (The server side is relaxed in StudentMaster._validate_mandatory.)
+const SM_OPTIONAL_DEGREE_TABLES = ["ug_degree_details", "pg_degree_details"];
+
+function sm_make_degree_fields_optional(frm) {
+	SM_OPTIONAL_DEGREE_TABLES.forEach((table) => {
+		const grid = frm.fields_dict[table] && frm.fields_dict[table].grid;
+		if (!grid) return;
+		(grid.docfields || []).forEach((df) => {
+			if (df.reqd) grid.update_docfield_property(df.fieldname, "reqd", 0);
+		});
+		grid.refresh();
+	});
+}
+
 frappe.ui.form.on("Student Master", {
+	onload(frm) {
+		sm_make_degree_fields_optional(frm);
+	},
+
 	dob(frm) {
 		if (!frm.doc.dob) return;
 
@@ -37,6 +57,8 @@ frappe.ui.form.on("Student Master", {
 	},
 
 	refresh(frm) {
+		sm_make_degree_fields_optional(frm);
+
 		// Hide default left sidebar
 		$(".layout-side-section").hide();
 

@@ -112,10 +112,39 @@ LOAN_ACCOUNT_FIELDS = (
 # Main DocType class
 # ---------------------------------------------------------------------------
 
+# UG / PG degree child doctypes are shared with Applicant / Eligibility Result (mandatory there);
+# in Student Master their fields are optional.
+OPTIONAL_CHILD_TABLES = ("ug_degree_details", "pg_degree_details")
+
+
 class StudentMaster(Document):
     def validate(self):
         self.validate_status_transition()
         self.validate_bank_details()
+
+    def _validate_mandatory(self):
+        """Frappe's mandatory check, except rows of OPTIONAL_CHILD_TABLES (their child doctype marks
+        fields reqd for the applicant form, not for Student Master)."""
+        if self.flags.ignore_mandatory:
+            return
+
+        missing = self._get_missing_mandatory_fields()
+        for d in self.get_all_children():
+            if d.parentfield in OPTIONAL_CHILD_TABLES:
+                continue
+            missing.extend(d._get_missing_mandatory_fields())
+
+        if not missing:
+            return
+
+        for _fieldname, msg in missing:
+            frappe.msgprint(msg)
+
+        raise frappe.MandatoryError(
+            "[{doctype}, {name}]: {fields}".format(
+                fields=", ".join(each[0] for each in missing), doctype=self.doctype, name=self.name
+            )
+        )
 
     def validate_bank_details(self, reveal_owner=True):
         """Normalise IFSC codes, drop loan details when no education loan was availed, and keep
