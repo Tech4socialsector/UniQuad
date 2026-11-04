@@ -196,8 +196,12 @@ class TimeTable(Document):
 
     def check_holiday_conflict(self):
         """Block scheduling a class on a date that Institutional Calendar marks
-        as a Holiday or a configured Weekly Off day (e.g. Sunday)."""
-        if not self.schedule_date:
+        as a Holiday or a configured Weekly Off day (e.g. Sunday). Bulk Time
+        Table can keep such a day on purpose (allow_non_teaching_day); later
+        edits that leave the date alone are not blocked either."""
+        if not self.schedule_date or self.flags.allow_non_teaching_day:
+            return
+        if not self.is_new() and not self.has_value_changed("schedule_date"):
             return
 
         from slcm.slcm.doctype.institutional_calendar.institutional_calendar import (
