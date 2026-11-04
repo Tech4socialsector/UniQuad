@@ -212,11 +212,11 @@ class AttendanceDashboard {
 			.xd-period button:hover{color:var(--er-brand,#920C24)}
 			.xd-period button.on{background:var(--er-brand,#920C24);color:#fff}
 			.xd-group h4{font-size:14px;font-weight:700;margin:0 0 8px}.xd-group h4 small{font-weight:400;color:var(--text-muted);font-size:12px;margin-left:6px}
-			.xd-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+			.xd-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
 			.xd-card{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;font:inherit;color:var(--text-color);
-				background:var(--card-bg);border:1px solid var(--border-color);border-left:3px solid var(--er-brand,#920C24);border-radius:10px;padding:12px 14px;cursor:pointer}
-			.xd-card:hover{border-color:var(--er-brand,#920C24);box-shadow:0 2px 10px rgba(146,12,36,.08)}
-			.xd-card.zero{border-left-color:var(--border-color)}.xd-card.zero .xd-value{color:var(--text-muted)}
+				background:var(--card-bg);border:1px solid var(--border-color);border-radius:10px;padding:12px 14px;cursor:pointer}
+			.xd-card:hover{background:var(--subtle-fg,var(--gray-50,#fafafa))}
+			.xd-card.zero .xd-value{color:var(--text-muted)}
 			.xd-label{font-size:12px;color:var(--text-muted)}
 			.xd-value{font-size:26px;line-height:1.15;font-weight:700;font-variant-numeric:tabular-nums}
 			.xd-card small{font-size:11.5px;color:var(--text-muted);min-height:16px}
