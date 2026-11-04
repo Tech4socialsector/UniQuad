@@ -345,7 +345,7 @@ fixtures = [
     # --- Workspace home blocks ---
     {
         "doctype": "Custom HTML Block",
-        "filters": [["name", "in", ["Examination Home", "Attendance Home"]]]
+        "filters": [["name", "in", ["Examination Home", "Attendance Home", "Fees Home"]]]
     },
     # --- Workspace Sidebars ---
     {

@@ -18,12 +18,15 @@ class FeeNotification(Document):
 	def _validate_duplicate_components(self):
 		seen = set()
 		for row in self.components:
-			key = (row.fee_component, row.batch_year or "", row.program_level or "")
+			key = (
+				row.fee_component, row.program or "", row.batch or "", row.year_no or "",
+				row.program_level or "All", row.student_category or "All",
+			)
 			if key in seen:
 				frappe.throw(
-					_("Row {0}: Duplicate entry for Fee Component <b>{1}</b> with Batch Year <b>{2}</b> "
-					  "and Program Level <b>{3}</b>. Each combination must be unique.").format(
-						row.idx, row.fee_component, row.batch_year or "—", row.program_level or "—"
+					_("Row {0}: Duplicate entry for Fee Component <b>{1}</b> with the same Programme, "
+					  "Batch, Year No, Program Level and Student Category. Each combination must be unique.").format(
+						row.idx, row.fee_component
 					)
 				)
 			seen.add(key)

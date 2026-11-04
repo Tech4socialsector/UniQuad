@@ -35,9 +35,10 @@ def get_import_log(admission_cycle):
     return frappe.get_all(
         "Admission Audit Log",
         filters={"reference_doctype": "Exam Type Config",
-                 "admission_cycle": admission_cycle},
-        fields=["name", "action", "created_on", "created_by", "remarks"],
-        order_by="created_on desc",
+                 "remarks": ["like", f"Cycle: {admission_cycle} |%"]},
+        fields=["name", "action", "creation as created_on",
+                "performed_by as created_by", "remarks"],
+        order_by="creation desc",
         limit=20
     )
 
@@ -48,8 +49,8 @@ def get_admission_cycles():
         "Admission Cycle",
         filters={"status": ["in", ["Draft", "Active"]]},
         fields=["name", "cycle_name", "admission_year",
-                "status", "exam_type", "application_start", "application_end"],
-        order_by="application_start desc"
+                "status", "application_start_date", "application_end_date"],
+        order_by="application_start_date desc"
     )
 
 @frappe.whitelist()

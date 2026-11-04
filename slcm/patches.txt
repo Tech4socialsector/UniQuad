@@ -101,3 +101,5 @@ slcm.patches.v2_0.backfill_class_student_tracking
 slcm.patches.v2_0.group_id_card_print_logs
 slcm.patches.v2_0.backfill_id_card_run_results
 slcm.patches.v2_0.remove_cancelled_classes_report
+slcm.patches.v2_0.backfill_fee_demand_programme
+slcm.patches.v2_0.remove_old_analytics_pages

@@ -41,26 +41,26 @@
    "label": "Target"
   },
   {
-   "default": "Programme",
-   "description": "Choose whether to update students in a specific Cohort (Programme) or all students in a Program",
+   "default": "Batch",
+   "description": "Choose whether to update students in a specific Batch or all students in a Programme",
    "fieldname": "target_scope",
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Update Scope",
-   "options": "Programme\nProgram",
+   "options": "Batch\nProgramme",
    "reqd": 1
   },
   {
-   "depends_on": "eval:doc.target_scope == 'Programme'",
-   "description": "All active students in this cohort will be affected",
+   "depends_on": "eval:doc.target_scope == 'Batch'",
+   "description": "All active students in this batch will be affected",
    "fieldname": "programme",
    "fieldtype": "Link",
-   "label": "Programme (Cohort)",
+   "label": "Batch",
    "options": "SLCM Batch"
   },
   {
    "depends_on": "eval:doc.target_scope == 'Programme'",
-   "description": "All active students enrolled in this Program (across all cohorts) will be affected",
+   "description": "All active students enrolled in this Programme (across all batches) will be affected",
    "fieldname": "program",
    "fieldtype": "Link",
    "label": "Programme",
@@ -213,7 +213,7 @@
   }
  ],
  "links": [],
- "modified": "2026-10-20 10:30:00.000000",
+ "modified": "2026-11-04 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Bulk Fee Structure Update",

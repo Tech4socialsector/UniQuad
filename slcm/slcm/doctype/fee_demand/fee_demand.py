@@ -30,15 +30,26 @@ class FeeDemand(Document):
 		self._update_status()
 
 	def _fill_from_student(self):
-		"""Student Email ID (and Academic Year when blank) come from the student. A supplied email is
-		checked only when the demand is created, so later email changes never block saving."""
+		"""Student Email ID (and Academic Year, Programme and Batch when blank) come from the student. A
+		supplied email is checked only when the demand is created, so later email changes never block saving."""
 		if not self.student:
 			return
 		sm = frappe.db.get_value(
-			"Student Master", self.student, ["official_email_id", "email", "personal_email", "academic_year"], as_dict=True
+			"Student Master", self.student,
+			["official_email_id", "email", "personal_email", "academic_year", "batch", "programme_of_study"],
+			as_dict=True,
 		)
 		if not sm:
 			return
+		# Programme / Batch: stamped once so dues can be filtered and fined by programme.
+		# Stale links on the student are skipped rather than blocking the demand.
+		if not self.programme and sm.batch and frappe.db.exists("SLCM Batch", sm.batch):
+			self.programme = sm.batch
+		if not self.program:
+			from slcm.slcm.fee.fee_demand_utils import _enrolled_programs
+			program = _enrolled_programs([self.student]).get(self.student) or sm.programme_of_study
+			if program and frappe.db.exists("Programme", program):
+				self.program = program
 		given = (self.student_email or "").strip().lower()
 		known = {(e or "").strip().lower() for e in (sm.official_email_id, sm.email, sm.personal_email)} - {""}
 		if self.is_new() and given and known and given not in known:

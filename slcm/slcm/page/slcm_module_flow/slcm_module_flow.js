@@ -456,7 +456,7 @@ frappe.pages['slcm-module-flow'].on_page_load = function (wrapper) {
 	        </div>
 	        <div class="smf-row-label">Dashboard Pages</div>
 	        <div class="smf-flow">
-	          <a class="smf-dt c-orange" onclick="smfPage('slcm-analytics-dashboard')">📈 Analytics Dashboard</a>
+	          <a class="smf-dt c-orange" onclick="smfPage('uniquad-overall-dashboard')">📈 Uniquad Overall Dashboard</a>
 	          <a class="smf-dt c-orange" onclick="smfPage('examination-result')">📝 Exam Result</a>
 	          <a class="smf-dt c-orange" onclick="smfPage('term-result')">🏆 Term Result</a>
 	          <a class="smf-dt c-orange" onclick="smfPage('publish-result')">📢 Publish Results</a>
