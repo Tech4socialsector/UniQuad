@@ -44,7 +44,8 @@ web_include_js = ["/assets/slcm/js/fle_theme.js"]
 app_include_js = [
     "/assets/slcm/js/student_workspace_redirect.js",
     "/assets/slcm/js/bulk_email_dialog.js",
-    "/assets/slcm/js/sidebar_toggle.js?v=5"
+    "/assets/slcm/js/sidebar_toggle.js?v=5",
+    "/assets/slcm/js/sidebar_fallback.js?v=1"
 ]
 app_include_css = ["/assets/slcm/css/sidebar_toggle.css?v=5"]
 
