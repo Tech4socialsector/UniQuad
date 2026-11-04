@@ -1,13 +1,13 @@
 {
  "actions": [],
- "creation": "2026-02-26 12:00:00",
+ "creation": "2026-11-04 11:47:42.518839",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
   "program",
   "seats",
+  "application_fee",
   "reservation_policy",
-  "intake_type",
   "program_name",
   "col_break_1",
   "is_active",
@@ -15,18 +15,10 @@
   "admission_open_for",
   "program_level",
   "add_reservation_policy",
-  "brochure_url",
-  "section_break_eligibility",
-  "eligibility_hint",
-  "col_break_2",
-  "desciption",
   "section_break_limits",
   "max_applications",
-  "application_count",
-  "add_program_media",
   "col_break_limits",
-  "program_image",
-  "program_media"
+  "application_count"
  ],
  "fields": [
   {
@@ -36,14 +28,6 @@
    "label": "Programme",
    "options": "Programme",
    "reqd": 1
-  },
-  {
-   "fieldname": "intake_type",
-   "fieldtype": "Select",
-   "hidden": 1,
-   "in_list_view": 1,
-   "label": "Intake type",
-   "options": "\nInternal Test\nExternal Test\nDirect Merit"
   },
   {
    "fetch_from": "program.program_name",
@@ -69,11 +53,12 @@
   },
   {
    "allow_on_submit": 1,
-   "fieldname": "seats",
-   "fieldtype": "Int",
+   "description": "Application Fee applied to applicants of this programme (must belong to the cycle's Academic Year)",
+   "fieldname": "application_fee",
+   "fieldtype": "Link",
    "in_list_view": 1,
-   "label": "Total seats",
-   "non_negative": 1,
+   "label": "Application Fee",
+   "options": "Application Fee",
    "reqd": 1
   },
   {
@@ -83,30 +68,6 @@
    "hidden": 1,
    "in_list_view": 1,
    "label": "Show on Portal"
-  },
-  {
-   "collapsible": 1,
-   "fieldname": "section_break_eligibility",
-   "fieldtype": "Section Break",
-   "hidden": 1,
-   "label": "Eligibility and Description"
-  },
-  {
-   "description": "Short text shown on portal card",
-   "fieldname": "eligibility_hint",
-   "fieldtype": "Small Text",
-   "label": "Eligibility summary"
-  },
-  {
-   "fieldname": "col_break_2",
-   "fieldtype": "Column Break"
-  },
-  {
-   "description": "Direct link to program brochure PDF",
-   "fieldname": "brochure_url",
-   "fieldtype": "Data",
-   "hidden": 1,
-   "label": "Brochure URL"
   },
   {
    "collapsible": 1,
@@ -136,53 +97,26 @@
   },
   {
    "allow_on_submit": 1,
-   "description": "Auto-linked when Programme Reservation Policy is saved for this program",
+   "description": "Required for all programmes except Research Course. Total Seats are taken from this policy.",
    "fieldname": "reservation_policy",
    "fieldtype": "Link",
    "label": "Reservation policy",
-   "options": "Programme Reservation Policy",
-   "read_only": 1
-  },
-  {
-   "description": "Featured image shown on the program card. Used if no Program Media is linked.",
-   "fieldname": "program_image",
-   "fieldtype": "Attach Image",
-   "hidden": 1,
-   "label": "Program image"
-  },
-  {
-   "description": "Link to a Program Media record for multiple carousel images on the card.",
-   "fieldname": "program_media",
-   "fieldtype": "Link",
-   "hidden": 1,
-   "label": "Program gallery",
-   "options": "Program Media",
-   "read_only": 1
+   "mandatory_depends_on": "eval:doc.program_level && doc.program_level != \"Research Course\"",
+   "options": "Programme Reservation Policy"
   },
   {
    "allow_on_submit": 1,
    "depends_on": "eval:!doc.reservation_policy && doc.program_level != \"Research Course\"",
    "fieldname": "add_reservation_policy",
    "fieldtype": "Button",
-   "label": "Add Reservation Policy"
-  },
-  {
-   "depends_on": "eval: !doc.program_media",
-   "fieldname": "add_program_media",
-   "fieldtype": "Button",
    "hidden": 1,
-   "label": "Add/Update Program Media"
-  },
-  {
-   "fieldname": "desciption",
-   "fieldtype": "Text Editor",
-   "label": "Desciption"
+   "label": "Add Reservation Policy"
   },
   {
    "fetch_from": "program.level_of_study",
    "fieldname": "program_level",
    "fieldtype": "Data",
-   "label": "Program level",
+   "label": "Programme level",
    "read_only": 1
   },
   {
@@ -193,11 +127,22 @@
    "options": "Domestic\nInternational\nDomestic & International",
    "placeholder": "Select admission scope",
    "reqd": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.program_level == \"Research Course\"",
+   "description": "For other programme levels, seats are taken from the Reservation Policy.",
+   "fieldname": "seats",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Total Seats",
+   "mandatory_depends_on": "eval:doc.program_level == \"Research Course\"",
+   "non_negative": 1
   }
  ],
  "istable": 1,
  "links": [],
- "modified": "2026-10-30 17:44:09.315714",
+ "modified": "2026-11-04 13:00:00.000000",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Admission Cycle Program",

@@ -1390,16 +1390,12 @@
           {% else %}Admissions are currently closed.{% endif %}
         </h2>
       </div>
-      {% if active_cycle %}
-      <a href="{{ '#programs' if _is_cycle_active else 'javascript:void(0)' }}"
-        class="ann-banner-btn {{ 'opacity-60 cursor-not-allowed' if not _is_cycle_active else '' }}"
-        style="{{ 'pointer-events:none;background:#94a3b8;' if not _is_cycle_active else '' }}">
-        {{ 'Apply Now' if _is_cycle_active else ('Yet to Open' if _is_yet_to_open else 'Application Closed') }}
+      {# "Know More" button: shown only when Applicant Portal Config > Know More URL is set #}
+      {% set _know_more = (((portal_config.get('know_more_url') if portal_config.get else portal_config.know_more_url) if portal_config else '') or '') | trim %}
+      {% if _know_more %}
+      <a href="{{ _know_more | e }}" target="_blank" rel="noopener noreferrer" class="ann-banner-btn">
+        Know More
       </a>
-      {% else %}
-      <div class="ann-banner-btn" style="background:#94a3b8;cursor:default;">
-        Stay Tuned
-      </div>
       {% endif %}
     </div>
   </div>

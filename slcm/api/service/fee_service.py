@@ -1316,6 +1316,15 @@ class FeeService:
             if applicant.application_fee_status == "Waived":
                 frappe.throw(_("Application fee has been waived."))
 
+            # Never take money for an application that can't be submitted afterwards.
+            from slcm.admission.doctype.applicant.applicant import (
+                format_missing_mandatory_message,
+                get_missing_mandatory_fields,
+            )
+            missing = get_missing_mandatory_fields(applicant)
+            if missing:
+                frappe.throw(format_missing_mandatory_message(missing), title=_("Mandatory Fields Missing"))
+
             fee_amount = flt(applicant.application_fee_amount)
             if fee_amount <= 0:
                 from slcm.api.service.application_fee_service import get_application_fee_for_category, _get_applicant_category
@@ -1339,7 +1348,9 @@ class FeeService:
 
             from slcm.api.service.application_fee_service import get_payment_gateway_for_application_fee
             gateway = (
-                get_payment_gateway_for_application_fee(applicant.program, applicant.admission_cycle)
+                get_payment_gateway_for_application_fee(
+                    applicant.program, applicant.admission_cycle, getattr(applicant, "campus", None)
+                )
                 or _default_payment_gateway()
             )
             try:
@@ -1352,7 +1363,9 @@ class FeeService:
                 frappe.throw(_("Payment Gateway '{0}' not found or not configured. Please set up Razorpay (or your gateway) in Payment Gateway doctype.").format(gateway))
 
             from slcm.api.service.application_fee_service import get_application_fee_doc
-            app_fee_doc = get_application_fee_doc(applicant.admission_cycle)
+            app_fee_doc = get_application_fee_doc(
+                applicant.admission_cycle, applicant.program, getattr(applicant, "campus", None)
+            )
             fee_currency = (app_fee_doc and app_fee_doc.currency) or "INR"
 
             payment_details = {
@@ -1420,6 +1433,9 @@ class FeeService:
                 "currency": order.get("currency"),
                 "gateway": gateway
             }
+        except frappe.ValidationError:
+            # Expected refusals (already paid, missing mandatory fields, ...) — shown to the user, not logged
+            raise
         except Exception as e:
             frappe.log_error(frappe.get_traceback(), "Application Fee Order Creation Failed")
             raise
@@ -1484,7 +1500,9 @@ class FeeService:
             )
             if not pr_gateway:
                 from slcm.api.service.application_fee_service import get_payment_gateway_for_application_fee
-                pr_gateway = get_payment_gateway_for_application_fee(applicant.program, applicant.admission_cycle)
+                pr_gateway = get_payment_gateway_for_application_fee(
+                    applicant.program, applicant.admission_cycle, getattr(applicant, "campus", None)
+                )
             gateway = pr_gateway or _default_payment_gateway()
             
             # Validate Payment Request ownership
@@ -1682,7 +1700,7 @@ class FeeService:
             receipt.program = applicant_doc.program
             receipt.academic_year = getattr(applicant_doc, "academic_year", None) or None
             tpl = get_payment_receipt_template_for_policy(
-                applicant_doc.program, applicant_doc.admission_cycle
+                applicant_doc.program, applicant_doc.admission_cycle, getattr(applicant_doc, "campus", None)
             )
             if tpl:
                 receipt.payment_receipt_template = tpl

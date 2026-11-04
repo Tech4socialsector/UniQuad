@@ -158,6 +158,11 @@ class ProgrammeReservationPolicy(Document):
                     if row.get("reservation_policy") != self.name:
                         row.reservation_policy = self.name
                         changed = True
+                    # Non-research rows take Total Seats from the policy (hidden on the cycle row).
+                    if (row.get("program_level") or "").strip() != "Research Course" and \
+                            int(row.get("seats") or 0) != int(self.total_seats or 0):
+                        row.seats = int(self.total_seats or 0)
+                        changed = True
                     break
             if changed:
                 cycle_doc.flags.in_reservation_sync = True

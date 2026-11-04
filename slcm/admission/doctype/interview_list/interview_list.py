@@ -8,9 +8,101 @@ import re
 import traceback
 from frappe.model.document import Document
 from frappe.utils import now, get_url, format_date, format_time
+from slcm.admission.interview_generation import InterviewGeneration
 
 
 class InterviewList(Document):
+
+    def validate(self):
+        self._generation().validate_ratios()
+        if self.program:
+            self.program_level = frappe.db.get_value("Programme", self.program, "level_of_study") or self.program_level
+
+    def _generation(self):
+        return InterviewGeneration(self)
+
+    @frappe.whitelist()
+    def get_applicant_counts(self):
+        """Preview eligible applicants using the same rules as list generation."""
+        return self._generation().get_counts()
+
+    @frappe.whitelist()
+    def generate_interview_applicants(self):
+        """Populate this saved draft with the eligible applicants for interview."""
+        self.check_permission("write")
+        if self.status not in ("Draft", "Failed"):
+            frappe.throw(_("Only a Draft or Failed Interview List can be generated."))
+        required_fields = ("academic_year", "campus", "admission_cycle", "program", "applicant_type")
+        if not all(self.get(fieldname) for fieldname in required_fields):
+            frappe.throw(_("Academic Year, Campus, Admission Cycle, Programme, and Applicant Type are required."))
+        if self.interview_applicant:
+            frappe.throw(_("This Interview List already has applicants and cannot be generated again."))
+
+        generation = self._generation()
+        selected_applicants = generation.select(generation.get_eligible_applicants())
+        if not selected_applicants:
+            frappe.throw(_("No eligible applicants were found for this Interview List."))
+
+        for applicant in selected_applicants:
+            if frappe.db.exists("Interview Applicant", {"applicant_id": applicant["applicant_id"]}):
+                continue
+            self.append("interview_applicant", self._interview_applicant_row(applicant))
+
+        if not self.interview_applicant:
+            frappe.throw(_("Eligible applicants are already present in another Interview List."))
+
+        self.status = "List Generated"
+        self.generated_on = now()
+        self.generated_by = frappe.session.user
+        self.save()
+        return {"name": self.name, "count": len(self.interview_applicant)}
+
+    @frappe.whitelist()
+    def publish_interview_schedule(self):
+        """Release every allocated interview schedule to applicants."""
+        self.check_permission("write")
+        if self.status != "Seat Allocation Completed":
+            frappe.throw(_("Complete seat allocation before publishing the interview schedule."))
+
+        allocations = frappe.get_all(
+            "Interview Seat Allocation",
+            {"interview_list": self.name, "interview_status": "Scheduled"},
+            ["name", "email"],
+        )
+        if len(allocations) != len(self.interview_applicant):
+            frappe.throw(_("Every applicant must have a scheduled interview before publishing."))
+
+        for allocation_data in allocations:
+            allocation = frappe.get_doc("Interview Seat Allocation", allocation_data.name)
+            email = allocation_data.email or frappe.db.get_value("Applicant", allocation.applicant, "email")
+            if email:
+                _send_interview_slot_email(allocation, email)
+                _send_interview_slot_notification(allocation, email)
+            frappe.db.set_value("Applicant", allocation.applicant, "status", "Interview Scheduled")
+            allocation.db_set("seat_allocation_published", 1, update_modified=False)
+            allocation.db_set("seat_allocation_published_on", now(), update_modified=False)
+
+        self.status = "Published"
+        self.published_on = now()
+        self.published_by = frappe.session.user
+        self.save()
+        return {"name": self.name, "published": len(allocations)}
+
+    @staticmethod
+    def _interview_applicant_row(applicant):
+        return {
+            "applicant_id": applicant["applicant_id"],
+            "candidate_name": applicant["candidate_name"],
+            "program": applicant["program"],
+            "program_level": applicant["program_level"],
+            "email": applicant["email"],
+            "gender": applicant["gender"],
+            "entrance_test": applicant["entrance_test"],
+            "intereview": applicant["intereview"],
+            "is_international_applicant": applicant.get("foriegn_national") == "Yes",
+            "source_type": applicant["source_type"],
+            "interview_status": "Pending",
+        }
 
     def autoname(self):
         """
@@ -60,6 +152,9 @@ class InterviewList(Document):
             frappe.throw("Please select an Interview Staff Member.")
         if not selected_applicants:
             frappe.throw("No applicants selected.")
+        if self.status not in ("List Generated", "In Progress"):
+            frappe.throw(_("Interview slots can only be allocated after the list is generated."))
+        self.status = "In Progress"
 
         staff = frappe.get_doc("Interview Staff Member", staff_member)
         if not staff.is_active:
@@ -180,13 +275,6 @@ class InterviewList(Document):
                     {"docname": row.applicant_id, "status": "Interview Scheduled"},
                 )
 
-                email = row.email or frappe.db.get_value("Applicant", row.applicant_id, "email")
-                if email:
-                    try:
-                        _send_interview_slot_email(allocation, email)
-                        _send_interview_slot_notification(allocation, email)
-                    except Exception:
-                        frappe.log_error(message=traceback.format_exc(), title=f"Interview Slot Email/Notification Failed: {allocation.name}")
             
             # Commit periodically to update progress
             if i % 5 == 0:
@@ -200,6 +288,8 @@ class InterviewList(Document):
             except Exception:
                 frappe.log_error(message=traceback.format_exc(), title=f"Interviewer Allocation Email/Notification Failed: {self.name}")
 
+        pending = [row for row in self.interview_applicant if row.interview_status != "Scheduled"]
+        self.status = "Seat Allocation Completed" if not pending else "In Progress"
         self.save(ignore_permissions=True)
         frappe.db.commit()
         return created_count

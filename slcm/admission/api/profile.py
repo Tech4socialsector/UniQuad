@@ -1,5 +1,5 @@
 import frappe
-from slcm.utils.phone_utils import sanitize_phone_for_frappe
+from slcm.utils.phone_utils import mobile_with_country_code_error, sanitize_phone_for_frappe
 
 # Strict mapping of fields for synchronization between User and Applicant
 # Mapping: User field name -> Applicant field name
@@ -128,6 +128,11 @@ def update_user_profile(**kwargs):
 
     if not user_update_dict:
         return {"success": False, "error": "No valid fields provided for profile update."}
+
+    if user_update_dict.get("mobile_no"):
+        mobile_error = mobile_with_country_code_error(user_update_dict["mobile_no"])
+        if mobile_error:
+            return {"success": False, "error": mobile_error}
 
     table_cols = _user_table_columns()
     safe_updates = _resolve_user_write_columns(user_update_dict, table_cols)

@@ -603,6 +603,7 @@ def get_portal_config():
             "support_email": config.get("support_email") or "",
             "pace_support_email": config.get("pace_support_email") or "",
             "admission_website_url": config.get("admission_website_url") or "",
+            "know_more_url": (config.get("know_more_url") or "").strip(),
             "pace_website_url": config.get("pace_website_url") or "",
             "social_links": [
                 {
@@ -662,6 +663,7 @@ def get_portal_config():
             "support_email": "",
             "pace_support_email": "",
             "admission_website_url": "",
+            "know_more_url": "",
             "pace_website_url": "",
             "social_links": [],
             "font_family": "Merriweather",

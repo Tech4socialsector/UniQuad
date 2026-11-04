@@ -15,6 +15,41 @@ frappe.ui.form.on("Interview Seat Allocation", {
     refresh(frm) {
         calculate_final_cumulative(frm, true);
 
+        const can_publish = !frm.is_new()
+            && frm.doc.interview_status === "Scheduled"
+            && !frm.doc.seat_allocation_published
+        if (can_publish) {
+            frm.add_custom_button(__("Publish Seat Allocation"), () => {
+                const dialog = new frappe.ui.Dialog({
+                    title: __("Publish Interview Seat Allocation"),
+                    fields: [
+                        { label: __("Send Email Notification"), fieldname: "send_email", fieldtype: "Check", default: 1 },
+                        { label: __("Email Format"), fieldname: "email_format", fieldtype: "Select", options: "Default\nCustom", default: "Default" },
+                        { label: __("Custom Email Content"), fieldname: "custom_email_content", fieldtype: "Text Editor", depends_on: "eval:doc.email_format=='Custom'" },
+                    ],
+                    primary_action_label: __("Publish"),
+                    primary_action(values) {
+                        frappe.call({
+                            method: "slcm.admission.doctype.interview_seat_allocation.interview_seat_allocation.publish_seat_allocations",
+                            args: {
+                                records: [frm.doc.name],
+                                send_email: values.send_email,
+                                email_format: values.email_format,
+                                custom_email_content: values.custom_email_content,
+                            },
+                            freeze: true,
+                            freeze_message: __("Publishing seat allocation…"),
+                            callback: () => {
+                                dialog.hide();
+                                frm.reload_doc();
+                            },
+                        });
+                    },
+                });
+                dialog.show();
+            }, );
+        }
+
         if (frm.doc.interview_result_status === "Pass") {
             const hide_all_statuses = ["Selected", "Rejected", "Offer Issued"];
             
