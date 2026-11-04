@@ -1,0 +1,40 @@
+/* Dashboard pages: sidebar hidden by default, .slcm-sb-toggle shows it (sidebar_toggle.js).
+   The button only appears on dashboards (body.slcm-sb-dashboard). */
+.slcm-sb-toggle { display: none; }
+
+@media (min-width: 768px) {
+	/* hide the parts, not the container: Frappe calls jQuery .show() on the container,
+	   which would leave an inline display:block if the container itself were hidden */
+	body.slcm-sidebar-hidden .body-sidebar-container > * { display: none !important; }
+
+	body.slcm-sb-dashboard .slcm-sb-toggle {
+		display: inline-flex; align-items: center; justify-content: center; flex: none;
+		width: 30px; height: 30px; margin-right: 10px; padding: 0;
+		border: 1px solid var(--border-color); border-radius: 8px;
+		background: var(--card-bg, #fff); color: var(--text-muted); cursor: pointer;
+	}
+	.slcm-sb-toggle:hover { color: #920C24; border-color: #E8B4BE; background: #FBEEF0; }
+	.slcm-sb-toggle[aria-pressed="true"] { color: #920C24; border-color: #E8B4BE; }
+	.slcm-sb-toggle:focus-visible { outline: 2px solid #920C24; outline-offset: 2px; }
+}
+
+/* These pages had no side padding and ran flush against the sidebar or window edge: give their
+   content the same 15px inset as the page header. (Pages that pad themselves are not listed.) */
+@media (min-width: 768px) {
+	#page-student-attendance-tool .layout-main-section,
+	#page-exam-dashboard .layout-main-section,
+	#page-attendance-sync .layout-main-section,
+	#page-fee-reminder-tool .layout-main-section,
+	#page-attendance-quick-view .layout-main-section,
+	#page-improvement-exam .layout-main-section,
+	#page-promotion-management .layout-main-section,
+	#page-re-exam .layout-main-section,
+	#page-term-result .layout-main-section,
+	#page-publish-result .layout-main-section,
+	#page-result-settings .layout-main-section,
+	#page-examination-planner .layout-main-section,
+	#page-examination-result .layout-main-section {
+		padding-left: 15px;
+		padding-right: 15px;
+	}
+}
