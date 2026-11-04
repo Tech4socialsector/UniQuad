@@ -73,15 +73,17 @@ def get_context(context):
             pub = published_map.get(exam_plan)
 
             # Dates, times and rooms reach students only once the plan publishes them
-            schedule_map = {
-                s.course: s
-                for s in frappe.get_all(
-                    "Exam Course Schedule",
-                    filters={"parent": exam_plan, "parenttype": "Exam Plan"},
-                    fields=["course", "exam_date", "start_time", "end_time", "venue", "hall"],
-                    ignore_permissions=True,
-                )
-            } if ep.timetable_published else {}
+            # A course in several rooms: the student's room by Student ID range
+            schedule_map = {}
+            for s in frappe.get_all(
+                "Exam Course Schedule",
+                filters={"parent": exam_plan, "parenttype": "Exam Plan", "course": ["is", "set"]},
+                fields=["course", "exam_date", "start_time", "end_time", "venue", "hall", "id_from", "id_to"],
+                order_by="idx asc",
+                ignore_permissions=True,
+            ) if ep.timetable_published else []:
+                schedule_map.setdefault(s.course, []).append(s)
+            schedule_map = {c: _student_room(rows, student_name) for c, rows in schedule_map.items()}
 
             courses = []
             for course in plan_courses:
@@ -247,7 +249,7 @@ def _attach_assessments(exam_plans, student_name):
         SELECT DISTINCT eas.term, item.course, item.course_name,
                item.assessment_label, item.assessment_date,
                item.first_submission_deadline, item.second_submission_deadline, item.remarks,
-               item.idx
+               item.marks_text, item.date_text, item.idx
         FROM `tabExam Assessment Schedule Item` item
         JOIN `tabExam Assessment Schedule` eas ON eas.name = item.parent
         JOIN `tabStudent Enrollment Course` sec
@@ -330,6 +332,19 @@ def _attach_assessments(exam_plans, student_name):
                 }
 
 
+def _student_room(rows, student):
+    """The course's timetable row the student sits in (rows split by ID Nos. range)."""
+    if len(rows) == 1:
+        return rows[0]
+    from slcm.slcm.utils.exam_timetable import split_by_id_range
+
+    sid = frappe.db.get_value("Student Master", student, "registration_id") or ""
+    for row, got in zip(rows, split_by_id_range(rows, {student: sid})):
+        if student in got:
+            return row
+    return rows[0]
+
+
 def _assessment_entry(r, now):
     start = frappe.utils.get_datetime(r.assessment_date) if r.assessment_date else None
     first = frappe.utils.get_datetime(r.first_submission_deadline) if r.first_submission_deadline else None
@@ -354,10 +369,11 @@ def _assessment_entry(r, now):
     future = [d for d in (start, first, second) if d and d >= now]
     return {
         "label": r.assessment_label,
-        "assessment_date": _fmt_dt(start),
+        # as the office wrote it on the schedule (8th Sept 2026, Rolling submission…)
+        "assessment_date": r.get("date_text") or _fmt_dt(start),
         "first_deadline": _fmt_dt(first),
         "second_deadline": _fmt_dt(second),
-        "remarks": r.remarks or "",
+        "remarks": " · ".join(filter(None, [r.get("marks_text"), r.remarks])),
         "status": status,
         "tone": tone,
         "_next_date": min(future) if future else None,

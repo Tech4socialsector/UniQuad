@@ -229,9 +229,63 @@ def arrear_badge(attempts):
 
 
 def is_improved(row):
-	"""The final result was raised by a re-exam or an improvement exam."""
-	if cint(row.get("improvement_applied")):
-		return True
-	updated = row.get("updated_final_marks")
-	original = row.get("total_marks")
-	return updated is not None and original is not None and flt(updated) > flt(original)
+	"""I: the student had passed and raised the grade with an improvement exam
+	(a re-exam is R, not I)."""
+	return bool(cint(row.get("improvement_applied")))
+
+
+def grade_markers(course, exam_plan, students):
+	"""{student: "RR" | "R"}: the mark next to a student's grade for the course
+	in this exam plan.
+
+	  RR  carried-forward course: the student also has the course in an earlier
+	      exam plan (failed there) and takes it again in this one
+	  R   failed and rewrote it: a paid re-exam registration in this exam plan
+
+	With MFA the grade shows Mfa instead, and I (is_improved) only when there is
+	no R / RR: see grade_marker."""
+	students = [s for s in (students or []) if s]
+	if not course or not exam_plan or not students:
+		return {}
+	term = frappe.db.get_value("Exam Plan", exam_plan, "term")
+	start = frappe.db.get_value("Academic Term", term, "term_start_date") if term else None
+	out = {}
+	for (student,) in frappe.db.sql(
+		"""
+		SELECT DISTINCT student FROM `tabRe Exam Registration`
+		WHERE course = %(course)s AND exam_plan = %(plan)s AND student IN %(students)s
+		  AND status = 'Registered' AND payment_status IN %(paid)s
+		""",
+		{"course": course, "plan": exam_plan, "students": tuple(students), "paid": PAID_STATUSES},
+	):
+		out[student] = "R"
+	if start:
+		for (student,) in frappe.db.sql(
+			"""
+			SELECT DISTINCT scm.student
+			FROM `tabStudent Course Marks` scm
+			JOIN `tabExam Plan` ep ON ep.name = scm.exam_plan
+			JOIN `tabAcademic Term` t ON t.name = ep.term
+			WHERE scm.course = %(course)s AND scm.student IN %(students)s
+			  AND scm.exam_plan != %(plan)s AND t.term_start_date < %(start)s
+			""",
+			{"course": course, "plan": exam_plan, "students": tuple(students), "start": start},
+		):
+			out[student] = "RR"
+	return out
+
+
+def grade_marker(mfa, arrear, improved):
+	"""The one mark shown next to a grade: Mfa, else RR / R, else I."""
+	if mfa == "Yes":
+		return "Mfa"
+	return arrear or ("I" if improved else "")
+
+
+def apply_grade_marks(row, arrear):
+	"""Set row.arrear_marker / row.improved so the screens show one mark:
+	nothing else with Mfa, and I only without R / RR."""
+	mark = grade_marker(row.get("mfa"), arrear, is_improved(row))
+	row["arrear_marker"] = mark if mark in ("R", "RR") else ""
+	row["improved"] = mark == "I"
+	return row

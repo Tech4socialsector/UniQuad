@@ -6,6 +6,8 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "section_card_preview",
+  "card_preview",
   "section_break_data",
   "card_type",
   "faculty",
@@ -48,6 +50,16 @@
   "demo"
  ],
  "fields": [
+  {
+   "fieldname": "section_card_preview",
+   "fieldtype": "Section Break",
+   "depends_on": "eval:!doc.__islocal"
+  },
+  {
+   "fieldname": "card_preview",
+   "fieldtype": "HTML",
+   "label": "Card Preview"
+  },
   {
    "fieldname": "section_break_data",
    "fieldtype": "Section Break",
@@ -201,7 +213,8 @@
    "in_list_view": 1,
    "label": "ID Card Template",
    "options": "ID Card Template",
-   "reqd": 1
+   "reqd": 1,
+   "description": "Templates for the selected card type. The default template is picked automatically."
   },
   {
    "fieldname": "column_break_data",
@@ -229,13 +242,15 @@
    "fieldname": "issue_date",
    "fieldtype": "Date",
    "label": "Issue Date",
-   "reqd": 1
+   "reqd": 1,
+   "default": "Today"
   },
   {
    "fieldname": "expiry_date",
    "fieldtype": "Date",
    "label": "Expiry Date",
-   "reqd": 1
+   "reqd": 0,
+   "description": "Filled in from the student's programme end date. Required for other card types."
   },
   {
    "default": "IDC-.#####",
@@ -247,7 +262,8 @@
   {
    "fieldname": "section_break_images",
    "fieldtype": "Section Break",
-   "label": "Generated Images"
+   "label": "Generated Images",
+   "collapsible": 1
   },
   {
    "fieldname": "front_id_image",
@@ -262,7 +278,8 @@
   {
    "fieldname": "section_break_verification",
    "fieldtype": "Section Break",
-   "label": "Verification"
+   "label": "Verification",
+   "collapsible": 1
   },
   {
    "fieldname": "qr_code_data",
@@ -328,7 +345,7 @@
   }
  ],
  "links": [],
- "modified": "2026-10-19 16:30:00.000000",
+ "modified": "2026-11-03 23:10:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "ID Card Generation",

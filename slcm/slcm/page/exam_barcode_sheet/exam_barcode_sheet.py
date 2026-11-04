@@ -28,16 +28,35 @@ def get_exam_plans():
 	)
 
 
+def _one_per_course(schedules):
+	"""A course sitting in several rooms (classroom allocation) is one paper here;
+	its rooms are listed together."""
+	out = {}
+	for s in schedules:
+		if s.course in out and s.exam_date and not out[s.course].exam_date:
+			out[s.course] = s   # a dated sitting beats a course still waiting for its date
+		elif s.course not in out:
+			out[s.course] = s
+		elif s.exam_date:
+			room = s.venue or s.hall
+			first = out[s.course]
+			rooms = [x for x in (first.venue or first.hall or "").split(", ") if x]
+			if room and room not in rooms:
+				first.venue = ", ".join(rooms + [room])
+				first.hall = None
+	return list(out.values())
+
+
 @frappe.whitelist()
 def get_exam_courses(exam_plan):
 	"""Return courses scheduled under the given exam plan, with dates and barcode counts."""
 	_check_access()
-	schedules = frappe.db.get_all(
+	schedules = _one_per_course(frappe.db.get_all(
 		"Exam Course Schedule",
-		filters={"parent": exam_plan, "parenttype": "Exam Plan"},
+		filters={"parent": exam_plan, "parenttype": "Exam Plan", "course": ["is", "set"]},
 		fields=["course", "exam_date", "start_time", "end_time", "venue", "hall"],
-		order_by="exam_date asc, course asc",
-	)
+		order_by="exam_date asc, course asc, idx asc",
+	))
 
 	if not schedules:
 		return []
@@ -230,7 +249,7 @@ def get_course_students(exam_plan, course):
 
 @frappe.whitelist()
 def export_attendance_excel(exam_plan, course=None, mode="by_date",
-							from_date=None, to_date=None, selected_courses=None):
+							from_date=None, to_date=None, selected_courses=None, selected_dates=None):
 	"""
 	Generate exam attendance Excel.
 
@@ -239,7 +258,8 @@ def export_attendance_excel(exam_plan, course=None, mode="by_date",
 	  'by_date'   — one sheet per exam date (default).
 	  'by_course' — one sheet per course.
 	from_date / to_date:     filter date range (ISO strings); only used in by_date mode.
-	selected_courses (JSON): list of course names; filter for by_course download.
+	selected_courses (JSON): list of course names to include (either mode).
+	selected_dates (JSON):   list of exam dates (ISO) to include (either mode).
 	"""
 	_check_access()
 	import io, base64, json as _json
@@ -254,6 +274,8 @@ def export_attendance_excel(exam_plan, course=None, mode="by_date",
 	to_date          = to_date   or None
 	if isinstance(selected_courses, str):
 		selected_courses = _json.loads(selected_courses) if selected_courses.strip() else None
+	if isinstance(selected_dates, str):
+		selected_dates = _json.loads(selected_dates) if selected_dates.strip() else None
 
 	plan_doc = frappe.get_doc("Exam Plan", exam_plan)
 
@@ -262,12 +284,13 @@ def export_attendance_excel(exam_plan, course=None, mode="by_date",
 	if course:
 		sch_filters["course"] = course
 
-	schedules = frappe.db.get_all(
+	sch_filters["course"] = sch_filters.get("course") or ["is", "set"]
+	schedules = _one_per_course(frappe.db.get_all(
 		"Exam Course Schedule",
 		filters=sch_filters,
 		fields=["course", "exam_date", "start_time", "end_time", "venue", "hall"],
-		order_by="exam_date asc, course asc",
-	)
+		order_by="exam_date asc, course asc, idx asc",
+	))
 
 	# ── Apply date-range filter (by_date mode) ────────────────────────────────
 	if not course and (from_date or to_date):
@@ -287,11 +310,16 @@ def export_attendance_excel(exam_plan, course=None, mode="by_date",
 		if not schedules:
 			frappe.throw("No courses found within the selected date range.")
 
-	# ── Apply course-list filter (by_course mode) ─────────────────────────────
-	if not course and mode == "by_course" and selected_courses:
+	# ── Apply course-list / exam-date filters (either mode) ───────────────────
+	if not course and selected_courses:
 		schedules = [s for s in schedules if s.course in selected_courses]
 		if not schedules:
 			frappe.throw("None of the selected courses have schedules in this Exam Plan.")
+	if not course and selected_dates:
+		wanted = {str(frappe.utils.getdate(d)) for d in selected_dates}
+		schedules = [s for s in schedules if s.exam_date and str(frappe.utils.getdate(s.exam_date)) in wanted]
+		if not schedules:
+			frappe.throw("No selected course is on the selected dates.")
 
 	if not schedules:
 		frappe.throw("No courses scheduled in this Exam Plan.")

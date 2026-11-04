@@ -15,10 +15,10 @@ class BulkFeeStructureUpdate(Document):
         self._validate_inputs()
 
     def _validate_inputs(self):
-        if self.target_scope == "Programme" and not self.programme:
-            frappe.throw(_("Programme (Cohort) is required when Update Scope is 'Programme'."))
+        if self.target_scope == "Batch" and not self.programme:
+            frappe.throw(_("Batch is required when Update Scope is 'Batch'."))
         if self.target_scope == "Programme" and not self.program:
-            frappe.throw(_("Program is required when Update Scope is 'Programme'."))
+            frappe.throw(_("Programme is required when Update Scope is 'Programme'."))
         if self.status == "Applied":
             frappe.throw(_("This Bulk Fee Structure Update has already been applied and cannot be modified."))
 
@@ -29,14 +29,14 @@ def _get_students_for_scope(target_scope, programme, program, batch_year=None, a
     """Return list of active Student Master dicts matching the scope + optional filters.
 
     `programme` is the cohort (Batch). A Batch no longer carries a program, so
-    the "Program" scope takes each student's programme from their Enrolled
+    the "Programme" scope takes each student's programme from their Enrolled
     Student Enrollment, falling back to Student Master.programme_of_study.
     Student Master has no batch_year field, so `batch_year` is not applied.
     """
     filters = {"student_status": "Active"}
 
     # Student Master's cohort field is "batch" (formerly "programme").
-    if target_scope == "Programme":
+    if target_scope == "Batch":
         filters["batch"] = programme
     else:
         enrolled = set(frappe.get_all(

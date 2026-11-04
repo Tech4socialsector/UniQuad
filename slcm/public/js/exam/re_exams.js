@@ -341,10 +341,6 @@ slcm.exam_ui.re_exams = function (main, opts) {
 					</div>
 					<div class="rx-settings-grid">
 						<div class="rx-field-group">
-							<span class="rx-field-label">Re-Exam Fee Amount</span>
-							<input class="rx-input" type="number" id="rx-fee" placeholder="0.00" step="0.01" min="0">
-						</div>
-						<div class="rx-field-group">
 							<span class="rx-field-label">Deadline From</span>
 							<input class="rx-input" type="date" id="rx-deadline-from">
 						</div>
@@ -364,7 +360,7 @@ slcm.exam_ui.re_exams = function (main, opts) {
 								<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
 								Save Settings
 							</button>
-							<button class="rx-bulk-btn" id="rx-bulk-apply" title="Apply this fee &amp; deadline to every course in the selected Exam Plan">
+							<button class="rx-bulk-btn" id="rx-bulk-apply" title="Apply this deadline &amp; gateway to every course in the selected Exam Plan">
 								<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
 								Apply to All Courses
 							</button>
@@ -495,7 +491,6 @@ slcm.exam_ui.re_exams = function (main, opts) {
 	var $statCards    = $body.find('#rx-stat-cards');
 	var $settingsCard = $body.find('#rx-settings-card');
 	var $savedBadge   = $body.find('#rx-saved-badge');
-	var $feeInput     = $body.find('#rx-fee');
 	var $dlFrom       = $body.find('#rx-deadline-from');
 	var $dlTo         = $body.find('#rx-deadline-to');
 	var $gateway      = $body.find('#rx-gateway');
@@ -617,7 +612,6 @@ slcm.exam_ui.re_exams = function (main, opts) {
 			args: {
 				exam_plan:     S.exam_plan,
 				course:        S.course,
-				re_exam_fee:   $feeInput.val()  || null,
 				deadline_from: $dlFrom.val()    || null,
 				deadline_to:   $dlTo.val()      || null,
 				payment_gateway: $gateway.val() || 'Razorpay',
@@ -731,7 +725,6 @@ slcm.exam_ui.re_exams = function (main, opts) {
 			args:   { exam_plan: S.exam_plan, course: S.course },
 			callback: function (r) {
 				var d = r.message || {};
-				$feeInput.val(d.re_exam_fee   || '');
 				$dlFrom.val(d.deadline_from   || '');
 				$dlTo.val(d.deadline_to       || '');
 				$gateway.val(d.payment_gateway || 'Razorpay');
@@ -740,7 +733,7 @@ slcm.exam_ui.re_exams = function (main, opts) {
 	}
 
 	function clearSettings() {
-		$feeInput.val(''); $dlFrom.val(''); $dlTo.val(''); $gateway.val('Razorpay'); $savedBadge.hide();
+		$dlFrom.val(''); $dlTo.val(''); $gateway.val('Razorpay'); $savedBadge.hide();
 	}
 
 	function showPlaceholder(title, sub) {
@@ -996,7 +989,6 @@ slcm.exam_ui.re_exams = function (main, opts) {
 			frappe.show_alert({ message: 'Select an Exam Plan first.', indicator: 'orange' });
 			return;
 		}
-		var fee  = $feeInput.val() || '';
 		var from = $dlFrom.val()   || '';
 		var to   = $dlTo.val()     || '';
 		var gateway = $gateway.val() || 'Razorpay';
@@ -1026,7 +1018,6 @@ slcm.exam_ui.re_exams = function (main, opts) {
 						'</span></label>';
 				}).join('');
 
-				var feeLabel  = fee ? '₹' + parseFloat(fee).toLocaleString('en-IN') : '<span style="color:#94a3b8;">None</span>';
 				var fromLabel = from || '<span style="color:#94a3b8;">—</span>';
 				var toLabel   = to   || '<span style="color:#94a3b8;">—</span>';
 
@@ -1037,7 +1028,6 @@ slcm.exam_ui.re_exams = function (main, opts) {
 							fieldname: 'summary_html',
 							fieldtype: 'HTML',
 							options: '<div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:8px;padding:10px 14px;margin-bottom:4px;font-size:12.5px;color:#475569;display:flex;gap:16px;flex-wrap:wrap;">' +
-								'<span>Fee: <b style="color:#0f172a;">' + feeLabel + '</b></span>' +
 								'<span>Deadline: <b style="color:#0f172a;">' + fromLabel + '</b> → <b style="color:#0f172a;">' + toLabel + '</b></span>' +
 								'<span>Gateway: <b style="color:#0f172a;">' + frappe.utils.escape_html(gateway) + '</b></span>' +
 								'</div>',
@@ -1075,7 +1065,7 @@ slcm.exam_ui.re_exams = function (main, opts) {
 							method: 'slcm.slcm.page.re_exam.re_exam.bulk_save_re_exam_setting',
 							args: {
 								exam_plan:     S.exam_plan,
-								re_exam_fee:   fee  || null,
+								re_exam_fee:   null,
 								deadline_from: from || null,
 								deadline_to:   to   || null,
 								payment_gateway: gateway,
@@ -1287,10 +1277,11 @@ slcm.exam_ui.re_exams = function (main, opts) {
 
 	// ── Download sample template ──────────────────────────────────────────────
 	$body.find('#rx-dl-template').on('click', function () {
-		var headers = ['Registration ID', 'Student Name', 'Programme', 'Batch Year', 'Grade', 'Total Marks'];
+		// Fee: the re-exam fee demand raised for the student; leave it empty to enrol without a fee
+		var headers = ['Registration ID', 'Student Name', 'Programme', 'Batch Year', 'Grade', 'Total Marks', 'Fee'];
 		var sample  = [
-			['REG001', 'John Doe',   'BA LLB (Hons)', '2023', 'F', '32.50'],
-			['REG002', 'Jane Smith', 'BA LLB (Hons)', '2023', 'F', '28.00'],
+			['REG001', 'John Doe',   'BA LLB (Hons)', '2023', 'F', '32.50', '500'],
+			['REG002', 'Jane Smith', 'BA LLB (Hons)', '2023', 'F', '28.00', ''],
 		];
 		var csv  = [headers].concat(sample).map(function (r) {
 			return r.map(function (v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(',');
@@ -1361,9 +1352,69 @@ slcm.exam_ui.re_exams = function (main, opts) {
 			$uploadFilename.text(file.name + ' — ' + parsed.students.length + ' student(s) loaded');
 			$uploadStatus.css('display', 'flex');
 			renderTable(parsed.students);
-			frappe.show_alert({ message: parsed.students.length + ' students loaded from CSV.', indicator: 'green' }, 3);
+			rxConfirmEnrol(parsed.students);
 		};
 		reader.readAsText(file);
+	}
+
+	// Every valid row is enrolled for the re-exam; a row with a Fee also gets a Fee Demand.
+	// Shown first, created on the button.
+	function rxConfirmEnrol(students) {
+		if (!S.exam_plan || !S.course) {
+			frappe.msgprint({ title: 'Pick the course', message: 'Choose the Exam Plan and the Course above, then upload the sheet again to enrol the students.', indicator: 'orange' });
+			return;
+		}
+		var rows = students.map(function (s) { return { registration_id: s.registration_id, student_name: s.student_name, fee: s.fee }; });
+		var e = frappe.utils.escape_html;
+		var inr = function (v) { return '₹' + parseFloat(v || 0).toLocaleString('en-IN'); };
+		frappe.call({
+			method: 'slcm.slcm.page.re_exam.re_exam.preview_upload',
+			args: { exam_plan: S.exam_plan, course: S.course, rows: JSON.stringify(rows) },
+			freeze: true,
+			callback: function (r) {
+				var p = r.message || { lines: [] };
+				var skipped = p.lines.length - p.enrol;
+				var html = '<div style="font-size:13px;margin-bottom:10px;padding:10px 14px;border-radius:8px;background:' + (p.enrol ? '#f0fdf4' : '#FBEEF0') + ';">' +
+					'<b>' + p.enrol + '</b> student(s) will be enrolled for the re-exam' +
+					(p.demands ? '; <b>' + p.demands + '</b> fee demand(s) totalling <b>' + inr(p.demand_total) + '</b> will be created' + (p.fee_component ? ' (' + e(p.fee_component) + ')' : '') : '; no fee demands (no Fee given)') + '.' +
+					(skipped ? ' <b>' + skipped + '</b> row(s) skipped.' : '') + '</div>' +
+					'<div style="max-height:380px;overflow:auto;border:1px solid #e2e8f0;border-radius:8px;"><table class="table table-sm" style="margin:0;font-size:12.5px;">' +
+					'<thead><tr><th>Row</th><th>Registration ID</th><th>Student</th><th style="text-align:right;">Fee</th><th>Will do</th><th>Note</th></tr></thead><tbody>' +
+					p.lines.map(function (x) {
+						var what = x.action !== 'enrol' ? '<span style="color:#b0182b;font-weight:700;">Skip</span>'
+							: x.demand ? '<span style="color:#1d6b3a;font-weight:700;">Enrol + demand ' + inr(x.fee) + '</span>'
+							: '<span style="color:#1d6b3a;font-weight:700;">Enrol</span> <span style="color:#94a3b8;">(no demand)</span>';
+						return '<tr><td>' + x.sheet_row + '</td><td>' + e(x.registration_id) + '</td><td>' + e(x.student_name) + '</td>' +
+							'<td style="text-align:right;">' + (x.fee ? inr(x.fee) : '—') + '</td><td>' + what + '</td><td style="color:#64748b;">' + e(x.note || '') + '</td></tr>';
+					}).join('') + '</tbody></table></div>';
+				var d = new frappe.ui.Dialog({
+					title: 'Enrol uploaded students',
+					size: 'extra-large',
+					fields: [{ fieldname: 'body', fieldtype: 'HTML', options: html }],
+					secondary_action_label: 'Close',
+					secondary_action: function () { d.hide(); },
+				});
+				if (p.enrol) {
+					d.set_primary_action(p.demands ? 'Enrol ' + p.enrol + ' & create ' + p.demands + ' demand(s)' : 'Enrol ' + p.enrol + ' student(s)', function () {
+						d.get_primary_btn().prop('disabled', true);
+						frappe.call({
+							method: 'slcm.slcm.page.re_exam.re_exam.enroll_upload',
+							args: { exam_plan: S.exam_plan, course: S.course, rows: JSON.stringify(rows) },
+							freeze: true,
+							callback: function (res) {
+								var m = res.message || {};
+								d.hide();
+								frappe.show_alert({ message: m.enrolled + ' student(s) enrolled' + (m.demands && m.demands.length ? ', ' + m.demands.length + ' fee demand(s) created' : ''), indicator: 'green' }, 6);
+								if (m.errors && m.errors.length) frappe.msgprint({ title: 'Not enrolled', message: m.errors.map(e).join('<br>'), indicator: 'orange' });
+								loadStats();
+							},
+							error: function () { d.get_primary_btn().prop('disabled', false); },
+						});
+					});
+				}
+				d.show();
+			},
+		});
 	}
 
 	function rxParseCsv(text) {
@@ -1380,6 +1431,7 @@ slcm.exam_ui.re_exams = function (main, opts) {
 			batch: Math.max(hdr.indexOf('batch_year'), hdr.indexOf('batch')),
 			grade: hdr.indexOf('grade'),
 			marks: Math.max(hdr.indexOf('total_marks'), hdr.indexOf('marks'), hdr.indexOf('total')),
+			fee:   Math.max(hdr.indexOf('fee'), hdr.indexOf('re_exam_fee'), hdr.indexOf('fee_amount'), hdr.indexOf('amount')),
 		};
 
 		var students = [];
@@ -1394,6 +1446,7 @@ slcm.exam_ui.re_exams = function (main, opts) {
 				batch_year:      idx.batch >= 0 ? (cols[idx.batch] || '').trim() : '',
 				grade:           idx.grade >= 0 ? (cols[idx.grade] || '').trim() : '',
 				total_marks:     idx.marks >= 0 ? (cols[idx.marks] || '').trim() : '',
+				fee:             idx.fee   >= 0 ? (cols[idx.fee]   || '').trim() : '',
 				is_allowed:      true,
 				override_reason: '',
 				image:           null,

@@ -6,14 +6,20 @@
  "engine": "InnoDB",
  "field_order": [
   "course",
+  "paper",
+  "programme_year",
   "exam_date",
+  "session",
   "start_time",
   "end_time",
   "invigilator",
+  "invigilator_name",
   "col_break_1",
   "venue",
   "hall",
-  "seat_capacity"
+  "seat_capacity",
+  "id_from",
+  "id_to"
  ],
  "fields": [
   {
@@ -22,13 +28,33 @@
    "in_list_view": 1,
    "label": "Course",
    "options": "Course",
-   "reqd": 1
+   "description": "Empty for a combined paper (e.g. PWD students of several courses); the Paper text is shown instead"
+  },
+  {
+   "fieldname": "paper",
+   "fieldtype": "Small Text",
+   "label": "Paper (as on sheet)",
+   "description": "Course text of the allocation sheet; defaults to the course name"
+  },
+  {
+   "fieldname": "programme_year",
+   "fieldtype": "Data",
+   "label": "Year",
+   "in_list_view": 1,
+   "description": "e.g. BA.LLB III year, LL.B (Hons.) I Year, Elective"
   },
   {
    "fieldname": "exam_date",
    "fieldtype": "Date",
    "in_list_view": 1,
    "label": "Exam Date"
+  },
+  {
+   "fieldname": "session",
+   "fieldtype": "Select",
+   "label": "Session",
+   "options": "\nForenoon\nAfternoon",
+   "in_list_view": 1
   },
   {
    "fieldname": "start_time",
@@ -49,6 +75,12 @@
    "options": "Faculty"
   },
   {
+   "fieldname": "invigilator_name",
+   "fieldtype": "Data",
+   "label": "Invigilator (as on sheet)",
+   "description": "Used when the invigilator is not a Faculty record"
+  },
+  {
    "fieldname": "col_break_1",
    "fieldtype": "Column Break"
   },
@@ -61,22 +93,32 @@
    "options": "Venue Master"
   },
   {
-   "description": "Old free-text room. Use Venue.",
+   "description": "Room as written on an imported sheet when it is not a Venue Master room",
    "fieldname": "hall",
    "fieldtype": "Data",
-   "hidden": 1,
-   "label": "Hall / Room"
+   "label": "Room (not in Venue Master)"
   },
   {
    "description": "Filled from the venue's capacity when left empty. Lower it if fewer seats are usable for the exam.",
    "fieldname": "seat_capacity",
    "fieldtype": "Int",
    "label": "Seat Capacity"
+  },
+  {
+   "fieldname": "id_from",
+   "fieldtype": "Small Text",
+   "label": "ID Nos. From",
+   "description": "First Student ID in this room, or text such as All students"
+  },
+  {
+   "fieldname": "id_to",
+   "fieldtype": "Small Text",
+   "label": "ID Nos. To"
   }
  ],
  "istable": 1,
  "links": [],
- "modified": "2026-10-29 20:30:00.000000",
+ "modified": "2026-11-03 21:30:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Exam Course Schedule",

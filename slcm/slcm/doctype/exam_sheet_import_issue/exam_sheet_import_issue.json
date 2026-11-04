@@ -1,0 +1,56 @@
+{
+ "actions": [],
+ "creation": "2026-11-03 22:30:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "istable": 1,
+ "field_order": [
+  "sheet_row",
+  "level",
+  "line",
+  "message"
+ ],
+ "fields": [
+  {
+   "fieldname": "sheet_row",
+   "fieldtype": "Data",
+   "label": "Sheet Row",
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "level",
+   "fieldtype": "Select",
+   "label": "Level",
+   "options": "error\nwarning\ninfo",
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "line",
+   "fieldtype": "Small Text",
+   "label": "Line",
+   "in_list_view": 1,
+   "columns": 3
+  },
+  {
+   "fieldname": "message",
+   "fieldtype": "Small Text",
+   "label": "Message",
+   "in_list_view": 1,
+   "columns": 5
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-11-03 22:30:00.000000",
+ "modified_by": "Administrator",
+ "module": "SLCM",
+ "name": "Exam Sheet Import Issue",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -3,7 +3,7 @@
  "creation": "2026-07-06 00:00:00.000000",
  "doctype": "Page",
  "icon": "fa fa-exchange",
- "modified": "2026-07-06 00:00:00.000000",
+ "modified": "2026-11-03 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "rfid-sql-agent-dashboard",
@@ -14,5 +14,5 @@
    "role": "System Manager"
   }
  ],
- "title": "RFID SQL Agent Dashboard"
+ "title": "RFID Dashboard"
 }

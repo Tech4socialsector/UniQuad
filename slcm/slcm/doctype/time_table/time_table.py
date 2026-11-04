@@ -67,6 +67,38 @@ def publish_bulk_progress(label, done, total):
     )
 
 
+def get_session_status(row, current=None):
+    """Scheduled / Completed / Cancelled / Swapped for a Time Table entry.
+    Cancelled always wins; otherwise a session whose end time has passed is
+    Completed; a swapped one stays Swapped until then; the rest are Scheduled."""
+    from frappe.utils import cint, now_datetime
+
+    if cint(row.get("is_cancelled")):
+        return "Cancelled"
+    if row.get("schedule_date") and row.get("to_time") is not None:
+        end = datetime.combine(getdate(row.get("schedule_date")), datetime.min.time()) + to_timedelta(row.get("to_time"))
+        if end <= now_datetime():
+            return "Completed"
+    return "Swapped" if current == "Swapped" else "Scheduled"
+
+
+def mark_completed_sessions():
+    """Scheduler: move sessions whose end time has passed to Completed."""
+    from frappe.utils import now_datetime
+
+    frappe.db.sql(
+        """
+        UPDATE `tabTime Table`
+        SET session_status = 'Completed'
+        WHERE session_status IN ('Scheduled', 'Swapped')
+            AND is_cancelled = 0
+            AND docstatus < 2
+            AND TIMESTAMP(schedule_date, to_time) <= %s
+        """,
+        now_datetime(),
+    )
+
+
 def session_has_attendance(session):
     """Attendance was taken in this Attendance Session: marked, or any student
     attendance / reopen record points at it."""
@@ -90,6 +122,11 @@ class TimeTable(Document):
         self.check_conflicts()
         self.check_venue_conflict()
         self.calculate_duration()
+        self.set_session_status()
+
+    def set_session_status(self):
+        # A new entry (also a copy of a swapped one) never starts as Swapped
+        self.session_status = get_session_status(self, None if self.is_new() else self.session_status)
 
     def set_class_details(self):
         """A class-based entry takes its course, programme, section, academic
@@ -159,8 +196,12 @@ class TimeTable(Document):
 
     def check_holiday_conflict(self):
         """Block scheduling a class on a date that Institutional Calendar marks
-        as a Holiday or a configured Weekly Off day (e.g. Sunday)."""
-        if not self.schedule_date:
+        as a Holiday or a configured Weekly Off day (e.g. Sunday). Bulk Time
+        Table can keep such a day on purpose (allow_non_teaching_day); later
+        edits that leave the date alone are not blocked either."""
+        if not self.schedule_date or self.flags.allow_non_teaching_day:
+            return
+        if not self.is_new() and not self.has_value_changed("schedule_date"):
             return
 
         from slcm.slcm.doctype.institutional_calendar.institutional_calendar import (

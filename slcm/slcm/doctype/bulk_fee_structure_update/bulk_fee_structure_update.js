@@ -38,7 +38,7 @@ frappe.ui.form.on("Bulk Fee Structure Update", {
 
 	// Reset preview when key fields change
 	target_scope(frm) {
-		if (frm.doc.target_scope === "Programme") frm.set_value("program", "");
+		if (frm.doc.target_scope === "Batch") frm.set_value("program", "");
 		else frm.set_value("programme", "");
 		_reset_preview(frm);
 	},
@@ -55,12 +55,12 @@ frappe.ui.form.on("Bulk Fee Structure Update", {
 
 function _run_preview(frm) {
 	// Client-side validation
-	if (frm.doc.target_scope === "Programme" && !frm.doc.programme) {
-		frappe.msgprint({ title: __("Required"), message: __("Please select a Programme (Cohort)."), indicator: "orange" });
+	if (frm.doc.target_scope === "Batch" && !frm.doc.programme) {
+		frappe.msgprint({ title: __("Required"), message: __("Please select a Batch."), indicator: "orange" });
 		return;
 	}
 	if (frm.doc.target_scope === "Programme" && !frm.doc.program) {
-		frappe.msgprint({ title: __("Required"), message: __("Please select a Program."), indicator: "orange" });
+		frappe.msgprint({ title: __("Required"), message: __("Please select a Programme."), indicator: "orange" });
 		return;
 	}
 	if (!frm.doc.new_fee_structure) {
@@ -110,9 +110,9 @@ function _run_preview(frm) {
 
 function _confirm_and_apply(frm) {
 	const count       = (frm.doc.affected_students || []).length;
-	const scope_label = frm.doc.target_scope === "Programme"
-		? (frm.doc.programme || "selected cohort")
-		: (frm.doc.program   || "selected program");
+	const scope_label = frm.doc.target_scope === "Batch"
+		? (frm.doc.programme || "selected batch")
+		: (frm.doc.program   || "selected programme");
 
 	const inv_warning_html = frm.doc.update_existing_invoices
 		? `<div style="margin-top:10px;padding:10px 14px;background:#fff7ed;border:1px solid #fed7aa;

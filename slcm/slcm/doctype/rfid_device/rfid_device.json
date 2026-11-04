@@ -1,5 +1,6 @@
 {
  "actions": [],
+ "allow_import": 1,
  "allow_rename": 1,
  "autoname": "field:device_id",
  "creation": "2026-02-02 04:00:00",
@@ -86,7 +87,7 @@
   }
  ],
  "links": [],
- "modified": "2026-11-02 14:26:53.094048",
+ "modified": "2026-11-04 12:53:29.888802",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "RFID Device",

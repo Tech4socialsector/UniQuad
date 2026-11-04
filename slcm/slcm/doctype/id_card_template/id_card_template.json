@@ -5,39 +5,55 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "preview_section",
-  "preview_html",
+  "tab_design",
   "section_break_dfcg",
   "template_name",
-  "template_creation_mode",
   "card_type",
+  "column_break_meta",
+  "template_creation_mode",
   "card_size",
   "is_default",
-  "section_break_design",
-  "front_background",
-  "back_background",
-  "column_break_design",
-  "font_family",
-  "base_font_color",
-  "section_break_institute",
-  "institute_name",
-  "institute_logo",
-  "authority_signature",
-  "watermark_image",
-  "institute_address",
-  "validity_text",
-  "section_break_fields",
-  "fields",
-  "section_break_jinja",
-  "front_html",
-  "back_html",
   "drag_drop_section",
   "canvas_editor",
   "canvas_data",
+  "section_break_jinja",
+  "front_html",
+  "back_html",
+  "section_break_design",
+  "front_background",
+  "column_break_design",
+  "back_background",
+  "section_break_fields",
+  "fields",
   "canva_section",
-  "canva_button"
+  "canva_button",
+  "tab_branding",
+  "section_break_institute",
+  "institute_name",
+  "institute_address",
+  "validity_text",
+  "column_break_branding",
+  "institute_logo",
+  "authority_signature",
+  "watermark_image",
+  "section_break_typography",
+  "font_family",
+  "column_break_typography",
+  "base_font_color",
+  "preview_section",
+  "preview_html"
  ],
  "fields": [
+  {
+   "fieldname": "tab_design",
+   "fieldtype": "Tab Break",
+   "label": "Design"
+  },
+  {
+   "fieldname": "section_break_dfcg",
+   "fieldtype": "Section Break",
+   "label": "Template"
+  },
   {
    "fieldname": "template_name",
    "fieldtype": "Data",
@@ -47,15 +63,6 @@
    "unique": 1
   },
   {
-   "default": "Field Mapping",
-   "fieldname": "template_creation_mode",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "label": "Template Creation Mode",
-   "options": "Field Mapping\nJinja Template\nDrag and Drop\nCanva",
-   "reqd": 1
-  },
-  {
    "default": "Student",
    "fieldname": "card_type",
    "fieldtype": "Select",
@@ -63,6 +70,20 @@
    "label": "Card Type",
    "options": "Student\nFaculty\nDriver\nVisitor\nNon-Faculty",
    "reqd": 1
+  },
+  {
+   "fieldname": "column_break_meta",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Drag and Drop",
+   "fieldname": "template_creation_mode",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Creation Mode",
+   "options": "Drag and Drop\nJinja Template\nField Mapping\nCanva",
+   "reqd": 1,
+   "description": "Drag and Drop is the visual designer (recommended). Jinja Template is hand-written HTML. Field Mapping prints text over a background image."
   },
   {
    "default": "CR80",
@@ -78,107 +99,19 @@
    "default": "0",
    "fieldname": "is_default",
    "fieldtype": "Check",
-   "label": "Is Default Template"
-  },
-  {
-   "depends_on": "eval:doc.template_creation_mode == 'Field Mapping'",
-   "fieldname": "section_break_design",
-   "fieldtype": "Section Break",
-   "label": "Design Assets"
-  },
-  {
-   "description": "Recommended: 1016x638 px (300 DPI for CR80)",
-   "fieldname": "front_background",
-   "fieldtype": "Attach Image",
-   "label": "Front Background"
-  },
-  {
-   "description": "Recommended: 1016x638 px (300 DPI for CR80)",
-   "fieldname": "back_background",
-   "fieldtype": "Attach Image",
-   "label": "Back Background"
-  },
-  {
-   "fieldname": "section_break_institute",
-   "fieldtype": "Section Break",
-   "label": "Institute Details"
-  },
-  {
-   "fieldname": "institute_name",
-   "fieldtype": "Data",
-   "label": "Institute Name"
-  },
-  {
-   "fieldname": "institute_logo",
-   "fieldtype": "Attach Image",
-   "label": "Institute Logo"
-  },
-  {
-   "fieldname": "authority_signature",
-   "fieldtype": "Attach Image",
-   "label": "Authority Signature"
-  },
-  {
-   "fieldname": "watermark_image",
-   "fieldtype": "Attach Image",
-   "label": "Default Watermark"
-  },
-  {
-   "fieldname": "institute_address",
-   "fieldtype": "Small Text",
-   "label": "Institute Address"
-  },
-  {
-   "fieldname": "column_break_design",
-   "fieldtype": "Column Break"
-  },
-  {
-   "default": "Arial",
-   "fieldname": "font_family",
-   "fieldtype": "Data",
-   "label": "Default Font Family"
-  },
-  {
-   "default": "#000000",
-   "fieldname": "base_font_color",
-   "fieldtype": "Data",
-   "label": "Base Font Color"
-  },
-  {
-   "description": "e.g., 'Valid until completion of course'",
-   "fieldname": "validity_text",
-   "fieldtype": "Data",
-   "label": "Validity Text"
-  },
-  {
-   "depends_on": "eval:doc.template_creation_mode == 'Field Mapping'",
-   "fieldname": "section_break_fields",
-   "fieldtype": "Section Break",
-   "label": "Field Mapping"
-  },
-  {
-   "fieldname": "fields",
-   "fieldtype": "Table",
-   "label": "Fields",
-   "options": "ID Card Template Field"
-  },
-  {
-   "depends_on": "eval:doc.template_creation_mode == 'Jinja Template'",
-   "description": "If these fields are set, the Design Assets and Field Mapping will be ignored.",
-   "fieldname": "section_break_jinja",
-   "fieldtype": "Section Break",
-   "label": "Jinja Template (Advanced)"
+   "label": "Default for this Card Type",
+   "description": "Pre-selected when generating cards of this type. Only one template per card type can be the default."
   },
   {
    "depends_on": "eval:doc.template_creation_mode == 'Drag and Drop'",
    "fieldname": "drag_drop_section",
    "fieldtype": "Section Break",
-   "label": "Drag & Drop Editor"
+   "label": ""
   },
   {
    "fieldname": "canvas_editor",
    "fieldtype": "HTML",
-   "label": "Editor"
+   "label": ""
   },
   {
    "fieldname": "canvas_data",
@@ -188,15 +121,11 @@
    "options": "JSON"
   },
   {
-   "depends_on": "eval:doc.template_creation_mode == 'Canva'",
-   "fieldname": "canva_section",
+   "depends_on": "eval:doc.template_creation_mode == 'Jinja Template'",
+   "description": "If these fields are set, the Design Assets and Field Mapping will be ignored.",
+   "fieldname": "section_break_jinja",
    "fieldtype": "Section Break",
-   "label": "Canva Integration"
-  },
-  {
-   "fieldname": "canva_button",
-   "fieldtype": "HTML",
-   "label": "Launch Canva"
+   "label": "Jinja Template (Advanced)"
   },
   {
    "fieldname": "front_html",
@@ -211,6 +140,119 @@
    "options": "HTML"
   },
   {
+   "depends_on": "eval:doc.template_creation_mode == 'Field Mapping'",
+   "fieldname": "section_break_design",
+   "fieldtype": "Section Break",
+   "label": "Background Images"
+  },
+  {
+   "description": "Recommended: 1016x638 px (300 DPI for CR80)",
+   "fieldname": "front_background",
+   "fieldtype": "Attach Image",
+   "label": "Front Background"
+  },
+  {
+   "fieldname": "column_break_design",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Recommended: 1016x638 px (300 DPI for CR80)",
+   "fieldname": "back_background",
+   "fieldtype": "Attach Image",
+   "label": "Back Background"
+  },
+  {
+   "depends_on": "eval:doc.template_creation_mode == 'Field Mapping'",
+   "fieldname": "section_break_fields",
+   "fieldtype": "Section Break",
+   "label": "Field Mapping"
+  },
+  {
+   "fieldname": "fields",
+   "fieldtype": "Table",
+   "label": "Fields",
+   "options": "ID Card Template Field"
+  },
+  {
+   "depends_on": "eval:doc.template_creation_mode == 'Canva'",
+   "fieldname": "canva_section",
+   "fieldtype": "Section Break",
+   "label": "Canva (retired)"
+  },
+  {
+   "fieldname": "canva_button",
+   "fieldtype": "HTML",
+   "label": "Launch Canva"
+  },
+  {
+   "fieldname": "tab_branding",
+   "fieldtype": "Tab Break",
+   "label": "Branding"
+  },
+  {
+   "fieldname": "section_break_institute",
+   "fieldtype": "Section Break",
+   "label": "Institute",
+   "description": "Logo, signature and watermark appear wherever the design uses those fields."
+  },
+  {
+   "fieldname": "institute_name",
+   "fieldtype": "Data",
+   "label": "Institute Name"
+  },
+  {
+   "fieldname": "institute_address",
+   "fieldtype": "Small Text",
+   "label": "Institute Address"
+  },
+  {
+   "description": "Available as the Validity Text field, e.g. 'Valid until completion of course'.",
+   "fieldname": "validity_text",
+   "fieldtype": "Data",
+   "label": "Validity Text"
+  },
+  {
+   "fieldname": "column_break_branding",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "institute_logo",
+   "fieldtype": "Attach Image",
+   "label": "Institute Logo"
+  },
+  {
+   "fieldname": "authority_signature",
+   "fieldtype": "Attach Image",
+   "label": "Authority Signature"
+  },
+  {
+   "fieldname": "watermark_image",
+   "fieldtype": "Attach Image",
+   "label": "Watermark Image"
+  },
+  {
+   "fieldname": "section_break_typography",
+   "fieldtype": "Section Break",
+   "label": "Text Defaults",
+   "description": "Used for new text in the designer and by Jinja templates."
+  },
+  {
+   "default": "Arial",
+   "fieldname": "font_family",
+   "fieldtype": "Data",
+   "label": "Default Font Family"
+  },
+  {
+   "fieldname": "column_break_typography",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "#000000",
+   "fieldname": "base_font_color",
+   "fieldtype": "Data",
+   "label": "Base Font Color"
+  },
+  {
    "fieldname": "preview_section",
    "fieldtype": "Section Break",
    "hidden": 1,
@@ -220,14 +262,10 @@
    "fieldname": "preview_html",
    "fieldtype": "HTML",
    "label": "Preview"
-  },
-  {
-   "fieldname": "section_break_dfcg",
-   "fieldtype": "Section Break"
   }
  ],
  "links": [],
- "modified": "2026-01-10 09:15:12.304475",
+ "modified": "2026-11-03 22:30:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "ID Card Template",

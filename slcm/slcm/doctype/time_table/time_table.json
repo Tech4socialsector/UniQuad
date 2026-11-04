@@ -25,6 +25,7 @@
   "schedule_date",
   "from_time",
   "to_time",
+  "session_status",
   "duration_hours",
   "column_break_3",
   "venue",
@@ -186,6 +187,18 @@
    "reqd": 1
   },
   {
+   "default": "Scheduled",
+   "description": "Set automatically: Completed once the end time has passed, Cancelled / Swapped by Cancel Session / Swap Session.",
+   "fieldname": "session_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Session Status",
+   "no_copy": 1,
+   "options": "Scheduled\nCompleted\nCancelled\nSwapped",
+   "read_only": 1
+  },
+  {
    "fieldname": "section_break_repeat",
    "fieldtype": "Section Break",
    "label": "Repeat Settings"
@@ -305,7 +318,7 @@
   }
  ],
  "links": [],
- "modified": "2026-11-03 15:07:05.047290",
+ "modified": "2026-11-03 15:54:47.044370",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Time Table",

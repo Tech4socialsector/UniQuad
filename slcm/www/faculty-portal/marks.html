@@ -690,8 +690,9 @@ function fgRenderHeader(stats) {
 
 /* ── Badges ── */
 function fgBadges(arrear, improved) {
-  return (arrear ? '<span class="fg-badge fg-badge-r" title="Re-exams written">' + fgEsc(arrear) + '</span>' : '') +
-    (improved ? '<span class="fg-badge fg-badge-i" title="Final result improved">I</span>' : '');
+  // one mark per grade: RR carried-forward course, R failed and rewrote (re-exam), I improved after passing
+  return (arrear ? '<span class="fg-badge fg-badge-r" title="' + (arrear === 'RR' ? 'Carried-forward course' : 'Failed and rewrote (re-exam)') + '">' + fgEsc(arrear) + '</span>' : '') +
+    (improved && !arrear ? '<span class="fg-badge fg-badge-i" title="Improved after passing (improvement exam)">I</span>' : '');
 }
 function fgGradeClass(g) {
   if (!g) return '';

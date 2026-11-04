@@ -1,6 +1,6 @@
 import frappe
 from slcm.slcm.utils.parent_portal import get_parent_context
-from slcm.slcm.utils.result_access import arrear_badge, get_reexam_attempts, is_improved
+from slcm.slcm.utils.result_access import grade_marker, grade_markers, is_improved
 
 no_cache = 1
 
@@ -115,9 +115,10 @@ def get_context(context):
                     "improvement_setting_exists": bool(frappe.db.exists(
                         "Improvement Exam Course Setting", {"exam_plan": ep_name, "course": m.course}
                     )),
-                    "arrear_marker":              _get_arrear_marker(student_name, m.course),
+                    "arrear_marker":              "" if m.mfa == "Yes" else _get_arrear_marker(student_name, m.course, ep_name),
                     # I badge: result raised by a re-exam or an improvement exam
-                    "improved":                   is_improved(m),
+                    # one mark per grade: Mfa, else RR / R, else I
+                    "improved":                   grade_marker(m.mfa, "" if m.mfa == "Yes" else _get_arrear_marker(student_name, m.course, ep_name), is_improved(m)) == "I",
                 })
 
             courses_out.sort(key=lambda c: c["course_name"])
@@ -313,7 +314,7 @@ def _get_enrollment_fallback(student_name, course):
         return ""
 
 
-def _get_arrear_marker(student_name, course):
-    """One R per paid re-exam written: R, RR, RRR… (same rule as the student
-    portal and the desk — slcm.slcm.utils.result_access)."""
-    return arrear_badge(get_reexam_attempts(course, [student_name]).get(student_name, 0))
+def _get_arrear_marker(student_name, course, exam_plan):
+    """RR (carried-forward course) or R (re-exam written in this exam plan); same
+    rule as the desk Course Results page (slcm.slcm.utils.result_access)."""
+    return grade_markers(course, exam_plan, [student_name]).get(student_name, "")

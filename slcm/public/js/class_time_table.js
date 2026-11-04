@@ -22,6 +22,20 @@ const CTT_STATES = {
 	cancelled: { label: __("Cancelled"), color: "#9ca3af" },
 };
 
+// Session Status of a Time Table entry (set on the server)
+const CTT_SESSION_STATUS_COLORS = {
+	Scheduled: "#2563eb",
+	Completed: "#16a34a",
+	Cancelled: "#dc2626",
+	Swapped: "#7c3aed",
+};
+
+function ctt_status_badge(status) {
+	if (!status) return "";
+	const color = CTT_SESSION_STATUS_COLORS[status] || "#6b7280";
+	return `<span class="ctt-status" style="background:${color}">${__(status)}</span>`;
+}
+
 // Class Participation records at most this many class hours per week
 const CTT_MAX_CP_HOURS = 6;
 
@@ -1245,7 +1259,8 @@ slcm.class_time_table.CalendarView = class CalendarView {
 			eventDidMount: (arg) => {
 				const p = arg.event.extendedProps;
 				const att = p.state === "marked" ? ` · ${__("Present")} ${p.present}/${p.total}` : "";
-				arg.el.title = `${arg.event.title}${p.venue ? ` · ${p.venue}` : ""} · ${(CTT_STATES[p.state] || {}).label || ""}${att}`;
+				const status = p.session_status ? ` · ${__(p.session_status)}` : "";
+				arg.el.title = `${arg.event.title}${p.venue ? ` · ${p.venue}` : ""}${status} · ${(CTT_STATES[p.state] || {}).label || ""}${att}`;
 			},
 			eventClick: (arg) => {
 				arg.jsEvent.preventDefault();
@@ -1287,7 +1302,7 @@ slcm.class_time_table.CalendarView = class CalendarView {
 				</div>
 				${info.is_cancelled ? `<div class="ctt-banner bad"><b>${__("This session is cancelled.")}</b>
 					${info.cancellation_reason ? `${__("Reason")}: ${ctt_esc(info.cancellation_reason)}. ` : ""}${__("Its venue and faculty slot is free for other classes.")}</div>` : ""}
-				<div class="ctt-session-title">${ctt_esc(info.title || info.name)}</div>
+				<div class="ctt-session-title">${ctt_esc(info.title || info.name)}${ctt_status_badge(info.session_status)}</div>
 				<div class="ctt-session-head">
 					${[
 						[__("Date"), info.date_fmt],
@@ -1644,8 +1659,21 @@ function ctt_inject_css() {
 			display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px;
 			padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid var(--border-color);
 		}
-		.ctt-dialog .ctt-session-actions { display: flex; gap: 8px; }
-		.ctt-dialog .ctt-session-title { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+		.ctt-dialog .ctt-session-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+		/* Dark action buttons, readable on the light and the dark desk theme */
+		.ctt-dialog .ctt-session-bar .btn {
+			background: #1f2937; border: 1px solid #1f2937; color: #fff; box-shadow: none; font-weight: 500;
+		}
+		.ctt-dialog .ctt-session-bar .btn:hover,
+		.ctt-dialog .ctt-session-bar .btn:focus { background: #374151; border-color: #374151; color: #fff; }
+		.ctt-dialog .ctt-session-bar .btn.ctt-mark { background: #000; border-color: #000; }
+		.ctt-dialog .ctt-session-bar .btn.ctt-mark:hover { background: #111827; border-color: #4b5563; }
+		.ctt-dialog .ctt-session-bar .btn.ctt-cancel-session { background: #991b1b; border-color: #991b1b; }
+		.ctt-dialog .ctt-session-bar .btn.ctt-cancel-session:hover { background: #b91c1c; border-color: #b91c1c; }
+		.ctt-dialog .ctt-session-bar .btn.ctt-back { background: transparent; border-color: #4b5563; color: var(--text-color); }
+		.ctt-dialog .ctt-session-bar .btn.ctt-back:hover { background: #1f2937; border-color: #1f2937; color: #fff; }
+		.ctt-dialog .ctt-session-title { font-size: 16px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+		.ctt-dialog .ctt-status { font-size: 11.5px; font-weight: 600; padding: 2px 10px; border-radius: 999px; color: #fff; }
 		.ctt-dialog .ctt-session-head {
 			display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin: 8px 0 14px;
 		}

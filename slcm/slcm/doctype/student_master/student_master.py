@@ -46,25 +46,38 @@ TRANSITION_ROLES = {
 # Fee structure helpers (module-level, reusable across methods and jobs)
 # ---------------------------------------------------------------------------
 
-def _get_valid_fee_structure_for_program(program):
-    """Return the currently date-valid active Fee Structure for the given program, or None."""
-    current_date = today()
-    result = frappe.db.sql(
-        """
-        SELECT name, total_amount_for_indian AS total_amount, valid_from, valid_until
-        FROM `tabFee Structure`
-        WHERE program = %s
-          AND status = 'Active'
-          AND applicable = 'Student'
-          AND valid_from <= %s
-          AND (valid_until IS NULL OR valid_until >= %s)
-        ORDER BY valid_from DESC, creation DESC
-        LIMIT 1
-        """,
-        (program, current_date, current_date),
-        as_dict=True,
-    )
-    return result[0] if result else None
+def _get_valid_fee_structure_for_program(program, year_no=None, category=None, is_foreign=False):
+    """Return the currently date-valid active Fee Structure for the given program, or None.
+
+    With a student's year / category, the structure for that year and category wins
+    (category falls back to "All"); total_amount is the Indian or foreign total.
+    """
+    from slcm.slcm.fee.fee_demand_utils import find_fee_structure, structure_total
+
+    from slcm.slcm.fee.fee_demand_utils import parse_year_no
+
+    fs = find_fee_structure(program, year_no=parse_year_no(year_no) or None, category=category)
+    if not fs:
+        return None
+    fs.total_amount = structure_total(fs, is_foreign)
+    return fs
+
+
+def _student_fs_args(doc):
+    """year_no / category / is_foreign kwargs for _get_valid_fee_structure_for_program."""
+    from slcm.slcm.fee.fee_demand_utils import is_foreign_national
+
+    return {
+        "year_no": doc.get("current_year"),
+        "category": doc.get("quota"),
+        "is_foreign": is_foreign_national(doc.get("nationality")),
+    }
+
+
+def _fs_total_for(fs_doc, student_doc):
+    from slcm.slcm.fee.fee_demand_utils import is_foreign_national, structure_total
+
+    return structure_total(fs_doc, is_foreign_national(student_doc.get("nationality")))
 
 
 def _resolve_program(programme):
@@ -264,7 +277,7 @@ class StudentMaster(Document):
         except Exception:
             return
 
-        total_fee = flt(fs_doc.total_amount_for_indian or 0)
+        total_fee = _fs_total_for(fs_doc, self)
         if total_fee:
             discount = _calculate_discount(
                 total_fee,
@@ -285,7 +298,7 @@ class StudentMaster(Document):
         self.append("fee_structure_history", {
             "fee_structure":       self.fee_structure,
             "fee_structure_label": fs_label,
-            "total_program_fee":   flt(fs_doc.total_amount_for_indian or 0),
+            "total_program_fee":   total_fee,
             "valid_from":          fs_doc.valid_from,
             "valid_until":         fs_doc.valid_until,
             "applied_on":          now_datetime(),
@@ -336,7 +349,7 @@ class StudentMaster(Document):
         if not program:
             return
 
-        fs = _get_valid_fee_structure_for_program(program)
+        fs = _get_valid_fee_structure_for_program(program, **_student_fs_args(self))
         if not fs:
             return
 
@@ -411,6 +424,7 @@ def on_fee_structure_update(doc, method=None):
         or doc.has_value_changed("valid_from")
         or doc.has_value_changed("valid_until")
         or doc.has_value_changed("total_amount_for_indian")
+        or doc.has_value_changed("total_amount_for_foreign")
     )
     if not changed:
         return
@@ -444,7 +458,7 @@ def _sync_single_student_fee(student_name):
     if not program:
         return False
 
-    fs = _get_valid_fee_structure_for_program(program)
+    fs = _get_valid_fee_structure_for_program(program, **_student_fs_args(student))
     if not fs:
         return False
 
@@ -785,7 +799,7 @@ def _validate_transition_requirements(student, new_status):
             ).format(", ".join(labels)))
 
     elif new_status == "Pending Residences":
-        if not student.id_card_issued:
+        if student.id_card_issued not in ("Yes", "1"):
             frappe.throw(_("Cannot move to Pending Residences. ID Card must be issued."))
         if not student.aadhaar_verified:
             frappe.throw(_("Cannot move to Pending Residences. Aadhaar must be verified."))
@@ -816,7 +830,7 @@ def _validate_transition_requirements(student, new_status):
                 label = frappe.get_meta("Student Master").get_label(doc_field)
                 frappe.throw(_("Cannot complete registration. {0} is not verified.").format(label))
 
-        if not student.id_card_issued:
+        if student.id_card_issued not in ("Yes", "1"):
             frappe.throw(_("Cannot complete registration. ID Card must be issued."))
         if not student.official_email_id:
             frappe.throw(_("Cannot complete registration. Official Email ID must be set."))
@@ -1309,7 +1323,7 @@ def change_fee_structure_admin(student_name, new_fee_structure, reason):
     sm = frappe.get_doc("Student Master", student_name, ignore_permissions=True)
     fs = frappe.get_doc("Fee Structure", new_fee_structure)
 
-    total_fee = flt(fs.total_amount_for_indian or 0)
+    total_fee = _fs_total_for(fs, sm)
     discount = _calculate_discount(
         total_fee,
         sm.applying_scholarship,

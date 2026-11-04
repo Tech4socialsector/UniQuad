@@ -146,6 +146,16 @@ def get_context(context):
             if not is_failed:
                 continue
 
+            # Re-exams go on until the student passes: an earlier plan shows only where
+            # the student registered; the course's latest record shows while still failed.
+            from slcm.slcm.utils.reexam_attempts import latest
+
+            registered_here = frappe.db.exists("Re Exam Registration", {
+                "student": student_name, "exam_plan": row.exam_plan, "course": row.course, "status": ["!=", "Cancelled"]})
+            last = latest(student_name, row.course)
+            if not registered_here and (not last or last.exam_plan != row.exam_plan or not last.failed):
+                continue
+
             # Check if admin has explicitly blocked this student
             override = frappe.db.get_value(
                 "Re Exam Student Override",
