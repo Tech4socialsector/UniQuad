@@ -1,16 +1,29 @@
 frappe.ui.form.on("Interview List", {
+    onload: function (frm) {
+        frm.set_query("admission_cycle", () => ({ filters: { status: "Active" } }));
+        frm.set_query("program", () => ({
+            query: "slcm.admission.doctype.entrance_test_generation.entrance_test_generation.get_program_query",
+            filters: {
+                admission_cycle: frm.doc.admission_cycle,
+                campus: frm.doc.campus,
+            },
+        }));
+    },
+
     refresh: function (frm) {
 
         // ── Status intro message ───────────────────────────────────────────────
-        if (frm.doc.status === "Generated") {
+        if (frm.doc.status === "List Generated") {
             frm.set_intro(
                 __("Interview List generated. Use the <b>Allocate Slots</b> button below to allocate interview slots."),
                 "blue"
             );
         } else if (frm.doc.status === "In Progress") {
             frm.set_intro(__("Interview slot allocation is in progress."), "orange");
-        } else if (frm.doc.status === "Completed") {
+        } else if (frm.doc.status === "Seat Allocation Completed") {
             frm.set_intro(__("Interview process completed."), "green");
+        } else if (frm.doc.status === "Published") {
+            frm.set_intro(__("Interview schedule published to applicants."), "green");
         }
 
         // ── Source breakdown dashboard ────────────────────────────────────────
@@ -34,10 +47,53 @@ frappe.ui.form.on("Interview List", {
                            !frappe.user_roles.includes("Interview Admin") && 
                            !frappe.user_roles.includes("Entrance Test Admin");
 
-        if (frm.doc.status === "Generated" && !is_staff_only) {
+        if (frm.doc.status === "Draft" && !frm.is_new() && !is_staff_only) {
+            frm.add_custom_button(__("Preview Eligible Applicants"), () => {
+                frm.call({
+                    method: "get_applicant_counts",
+                    doc: frm.doc,
+                    callback: (r) => {
+                        const counts = r.message || {};
+                        frappe.msgprint(__(
+                            "Eligible: {0}<br>Selected by ratio: {1}",
+                            [counts.total_eligible || 0, counts.selected_count || 0]
+                        ));
+                    },
+                });
+            });
+            frm.add_custom_button(__("Generate Interview List"), () => {
+                frappe.confirm(
+                    __("Generate the interview applicants for this list? This cannot be repeated after applicants are added."),
+                    () => frm.call({
+                        method: "generate_interview_applicants",
+                        doc: frm.doc,
+                        freeze: true,
+                        freeze_message: __("Generating Interview List… Please wait"),
+                        callback: () => frm.reload_doc(),
+                    })
+                );
+            }, __("Actions"));
+        }
+
+        if (frm.doc.status === "List Generated" && !is_staff_only) {
             frm.add_custom_button(__("Allocate Slots"), function () {
                 open_slot_dialog(frm);
             })
+        }
+
+        if (frm.doc.status === "Seat Allocation Completed" && !is_staff_only) {
+            frm.add_custom_button(__("Publish Interview Schedule"), () => {
+                frappe.confirm(
+                    __("Publish interview details and email every applicant?"),
+                    () => frm.call({
+                        method: "publish_interview_schedule",
+                        doc: frm.doc,
+                        freeze: true,
+                        freeze_message: __("Publishing interview schedule…"),
+                        callback: () => frm.reload_doc(),
+                    })
+                );
+            }, __("Actions"));
         }
     }
 });

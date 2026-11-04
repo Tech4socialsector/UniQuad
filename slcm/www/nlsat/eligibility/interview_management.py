@@ -29,6 +29,9 @@ def get_context(context):
         return context
 
     doc = frappe.get_doc("Interview Seat Allocation", allocation_name)
+    if frappe.db.get_value("Interview List", doc.interview_list, "status") != "Published":
+        context.no_record = True
+        return context
     context.doc = doc
 
     # Determine rescheduled state

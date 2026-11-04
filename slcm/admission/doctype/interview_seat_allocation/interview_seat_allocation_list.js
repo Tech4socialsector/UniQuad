@@ -11,6 +11,13 @@ frappe.listview_settings['Interview Seat Allocation'] = {
 
         // show buttons for anyone who is not a pure applicant or when the user is an admin
         if (!is_applicant || is_admin) {
+            if (!listview.page.wrapper.find('.btn-publish-seat-allocations').length) {
+                const button = listview.page.add_inner_button(__('Publish Seat Allocations'), () => {
+                    open_publish_seat_allocations_dialog(listview);
+                }, __('Actions'));
+                button.addClass('btn-publish-seat-allocations');
+            }
+
             // Bulk Publish Results button
             if (!listview.page.wrapper.find('.btn-bulk-publish').length) {
                 const pbbtn = listview.page.add_inner_button(__('Bulk Publish Results'), function () {
@@ -52,6 +59,51 @@ frappe.listview_settings['Interview Seat Allocation'] = {
         }
     }
 };
+
+
+function open_publish_seat_allocations_dialog(listview) {
+    const dialog = new frappe.ui.Dialog({
+        title: __('Publish Interview Seat Allocations'),
+        size: 'extra-large',
+        fields: [
+            { fieldtype: 'HTML', fieldname: 'allocations_html' },
+            { fieldtype: 'Section Break', label: __('Email Settings') },
+            { label: __('Send Email Notification'), fieldname: 'send_email', fieldtype: 'Check', default: 1 },
+            { fieldtype: 'Column Break' },
+            { label: __('Email Format'), fieldname: 'email_format', fieldtype: 'Select', options: 'Default\nCustom', default: 'Default' },
+            { fieldtype: 'Section Break' },
+            { label: __('Custom Email Content'), fieldname: 'custom_email_content', fieldtype: 'Text Editor', depends_on: 'eval:doc.email_format=="Custom"' },
+        ],
+        primary_action_label: __('Publish Allocations'),
+        primary_action(values) {
+            const records = dialog.$wrapper.find('input[name="publish_allocation"]:checked').map(function () { return this.value; }).get();
+            if (!records.length) {
+                frappe.msgprint(__('Select at least one applicant.'));
+                return;
+            }
+            frappe.call({
+                method: 'slcm.admission.doctype.interview_seat_allocation.interview_seat_allocation.publish_seat_allocations',
+                args: { records, send_email: values.send_email, email_format: values.email_format, custom_email_content: values.custom_email_content },
+                freeze: true,
+                freeze_message: __('Publishing seat allocations…'),
+                callback: (r) => {
+                    dialog.hide();
+                    frappe.show_alert({ message: __('Published {0} allocation(s).', [r.message.published]), indicator: 'green' });
+                    listview.refresh();
+                },
+            });
+        },
+    });
+    frappe.call({
+        method: 'slcm.admission.doctype.interview_seat_allocation.interview_seat_allocation.get_unpublished_seat_allocations',
+        callback: (r) => {
+            const rows = r.message || [];
+            const content = rows.length ? `<table class="table table-bordered"><thead><tr><th></th><th>${__('Applicant')}</th><th>${__('Name')}</th><th>${__('Programme')}</th><th>${__('Date')}</th></tr></thead><tbody>${rows.map(row => `<tr><td><input type="checkbox" name="publish_allocation" value="${frappe.utils.escape_html(row.name)}"></td><td>${frappe.utils.escape_html(row.applicant || '')}</td><td>${frappe.utils.escape_html(row.candidate_name || '')}</td><td>${frappe.utils.escape_html(row.program || '')}</td><td>${frappe.datetime.str_to_user(row.interview_date || '')}</td></tr>`).join('')}</tbody></table>` : `<p class="text-muted">${__('No unpublished scheduled seat allocations found.')}</p>`;
+            dialog.fields_dict.allocations_html.$wrapper.html(content);
+        },
+    });
+    dialog.show();
+}
 
 
 // -----------------------------------------------------------------------------

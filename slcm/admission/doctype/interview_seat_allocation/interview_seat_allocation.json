@@ -63,6 +63,8 @@
   "interview_result_status",
   "final_cumulative_score",
   "final_percentage",
+  "seat_allocation_published",
+  "seat_allocation_published_on",
   "result_published",
   "status",
   "tab_entrance_test_result",
@@ -380,6 +382,20 @@
    "fieldtype": "Select",
    "label": "Result",
    "options": "\nPass\nFail"
+  },
+  {
+   "default": "0",
+   "fieldname": "seat_allocation_published",
+   "fieldtype": "Check",
+   "in_standard_filter": 1,
+   "label": "Seat Allocation Published",
+   "read_only": 1
+  },
+  {
+   "fieldname": "seat_allocation_published_on",
+   "fieldtype": "Datetime",
+   "label": "Seat Allocation Published On",
+   "read_only": 1
   },
   {
    "default": "0",
