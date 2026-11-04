@@ -1629,7 +1629,7 @@ function _paceBuildAdmissionShell(ws, cfg, user, uinfo) {
 				col.links.forEach(function(item) {
 					if (item.route) {
 						var iColor = footerTextCol ? footerTextCol : 'inherit';
-						dynColsHtml += '<li><a href="' + _paceEsc(item.route) + '" style="color:' + iColor + ';font-size:14px;text-decoration:none;opacity:0.75;word-break:break-word;">' + _paceEsc(item.label || '') + '</a></li>';
+						dynColsHtml += '<li><a href="' + _paceEsc(item.route) + '" target="_blank" rel="noopener noreferrer" style="color:' + iColor + ';font-size:14px;text-decoration:none;opacity:0.75;word-break:break-word;">' + _paceEsc(item.label || '') + '</a></li>';
 					} else {
 						dynColsHtml += '<li><span style="font-size:14px;opacity:0.75;display:inline-block;word-break:break-word;color:' + (footerTextCol || 'inherit') + ';">' + _paceEsc(item.label || '') + '</span></li>';
 					}
@@ -1661,7 +1661,7 @@ function _paceBuildAdmissionShell(ws, cfg, user, uinfo) {
 				else if (p === 'tiktok') { icon = 'fa-brands fa-tiktok'; iColor = '#000000'; }
 				
 				if (icon) {
-					socialHtml += '<a href="' + _paceEsc(link.url || '') + '" target="_blank" style="color:' + iColor + '!important;font-size:30px!important;text-decoration:none;transition:transform 0.2s, opacity 0.2s;display:inline-flex;opacity:0.9;" onmouseover="this.style.transform=\'translateY(-3px)\';this.style.opacity=\'1\'" onmouseout="this.style.transform=\'none\';this.style.opacity=\'0.9\'" title="' + _paceEsc(link.platform || '') + '"><i class="' + icon + '"></i></a>';
+					socialHtml += '<a href="' + _paceEsc(link.url || '') + '" target="_blank" rel="noopener noreferrer" style="color:' + iColor + '!important;font-size:30px!important;text-decoration:none;transition:transform 0.2s, opacity 0.2s;display:inline-flex;opacity:0.9;" onmouseover="this.style.transform=\'translateY(-3px)\';this.style.opacity=\'1\'" onmouseout="this.style.transform=\'none\';this.style.opacity=\'0.9\'" title="' + _paceEsc(link.platform || '') + '"><i class="' + icon + '"></i></a>';
 				}
 			}
 		});
@@ -1695,7 +1695,6 @@ function _paceBuildAdmissionShell(ws, cfg, user, uinfo) {
 			// Bottom bar
 			'<div style="margin-top:40px;padding-top:24px;border-top:1px solid rgba(0,0,0,0.1);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;">' +
 				'<p style="margin:0;font-size:13px;color:#64748b;opacity:0.8;">© ' + yr + ' ' + _paceEsc(title) + '. All rights reserved.</p>' +
-				'<p style="margin:0;font-size:13px;color:#64748b;opacity:0.8;">Powered by <strong style="color:' + (footerTextCol || secondary) + ';font-weight:400;">' + _paceEsc(powerd) + '</strong></p>' +
 			'</div>' +
 		'</div>';
 	document.body.appendChild(footer);

@@ -1,5 +1,6 @@
 import frappe
 from frappe.utils import now, get_url, fmt_money, flt, nowdate
+from slcm.admission.utils.nlsat_portal import get_applicant_portal_url
 
 try:
     from slcm.admission.utils.notifications import log_communication
@@ -170,7 +171,7 @@ def notify_status_change(applicant, program, old_status, new_status, allocation_
         "merit_total_score": merit_total_score,
         "total_score": merit_total_score,
         "get_url": get_url,
-        "base_url": get_url()
+        "base_url": get_applicant_portal_url(user=email)
     }
 
     try:
@@ -271,23 +272,24 @@ def notify_published_allocation(allocation_name):
     
     # Map applicant_id -> email
     email_map = {}
+    # applicant_id -> portal base URL (its own domain: Domestic / International)
+    base_url_map = {}
     if applicant_ids:
         # Check Applicant records
-        applicants = frappe.get_all("Applicant", 
-            filters={"name": ["in", applicant_ids]}, 
-            fields=["name", "email", "candidate_name"]
+        applicants = frappe.get_all("Applicant",
+            filters={"name": ["in", applicant_ids]},
+            fields=["name", "email", "candidate_name", "foriegn_national"]
         )
         for a in applicants:
             if a.email:
                 email_map[a.name] = a.email
+                base_url_map[a.name] = get_applicant_portal_url(foriegn_national=a.foriegn_national or "No")
 
     # 3. Batch process notifications
     notification_logs = []
     audit_logs = []
     from_user = frappe.session.user if frappe.session.user != "Guest" else "Administrator"
     time_now = now()
-    base_url = get_url()
-
     allowed_statuses = ["Selected", "Waitlisted", "Rejected"]
 
     for row in allocation.selection_applicant:
@@ -324,7 +326,7 @@ def notify_published_allocation(allocation_name):
             "new_status": row.selection_status,
             "allocation_name": allocation_name,
             "get_url": get_url,
-            "base_url": base_url
+            "base_url": base_url_map.get(row.applicant_id) or get_url()
         }
 
         try:
@@ -407,7 +409,7 @@ def notify_scholarship_status(application_name):
 
     scheme_name = frappe.db.get_value("Scholarship Scheme", app.scholarship_scheme, "scheme_name")
     benefit_amount = fmt_money(app.calculated_benefit) if app.calculated_benefit else "0.00"
-    portal_url = get_url("/nlsat/scholarships")
+    portal_url = get_applicant_portal_url("/nlsat/scholarships", user=email)
     
     template_name = "Scholarship Updates"
     
@@ -594,7 +596,7 @@ def notify_refund_processed(refund_request_name):
         "refund_amount": refund_amount_str,
         "razorpay_refund_id": refund.razorpay_refund_id or "N/A",
         "razorpay_payment_id": refund.razorpay_payment_id or "N/A",
-        "portal_url": get_url("/nlsat/my-applications?app=" + str(refund.applicant))
+        "portal_url": get_applicant_portal_url("/nlsat/my-applications?app=" + str(refund.applicant), user=email)
     }
 
     # Render body

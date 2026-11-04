@@ -504,8 +504,12 @@ def save_applicant_draft(data, ignore_mandatory=True):
         
         try:
             import os
-            file_path = frappe.get_site_path(file_url.lstrip("/"))
-            return os.path.exists(file_path)
+            # /private/files/x lives at <site>/private/files/x, but /files/x at <site>/public/files/x.
+            # Public URLs are kept here; Applicant.before_validate switches them to a private copy.
+            rel = file_url.lstrip("/")
+            if rel.startswith("files/"):
+                rel = "public/" + rel
+            return os.path.exists(frappe.get_site_path(rel))
         except Exception:
             return False
 
@@ -1223,13 +1227,23 @@ def switch_applicant_program(applicant_name, program):
 
 
 def _portal_can_access_applicant(applicant_name):
+    """The applicant themself (owner or matching email), or staff ("View as Candidate")
+    who hold write or create permission on Applicant."""
+    from slcm.security.access import is_applicant_only, owns_applicant
+
     user = frappe.session.user
     if user == "Guest":
         return False
-    email = (frappe.db.get_value("User", user, "email") or user or "").lower()
-    row_email = (frappe.db.get_value("Applicant", applicant_name, "email") or "").lower()
-    owner = frappe.db.get_value("Applicant", applicant_name, "owner")
-    return owner == user or (row_email and row_email == email)
+    if owns_applicant(applicant_name, user):
+        return True
+    # Applicant accounts also hold create permission on Applicant, so they must never
+    # fall through to the staff check below (that would expose other applicants' receipts).
+    if is_applicant_only(user):
+        return False
+    return bool(
+        frappe.has_permission("Applicant", "write", doc=applicant_name, user=user)
+        or frappe.has_permission("Applicant", "create", user=user)
+    )
 
 
 def _latest_application_fee_receipt_for_portal(applicant_name):

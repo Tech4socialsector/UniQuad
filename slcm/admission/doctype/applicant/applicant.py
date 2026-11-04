@@ -6,7 +6,7 @@ from contextlib import contextmanager
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from slcm.admission.utils.nlsat_portal import get_applicant_login_url
+from slcm.admission.utils.nlsat_portal import get_applicant_login_link, get_applicant_portal_url
 from frappe.model.naming import getseries, parse_naming_series
 from frappe.utils import validate_email_address, getdate, date_diff, today, now, flt, nowdate, cint
 from slcm.admission.portal_application_web_form import (
@@ -998,8 +998,6 @@ class Applicant(Document):
             )
         elif self.program_level in ("Postgraduate", "PG", "LLM"):
             academic_line = f"UG Degree completion: {self.ug_degree_completion or '—'}"
-        elif self.program_level in ("Research Course", "PhD"):
-            academic_line = f"PhD Program Type: {self.phd_program_type or '—'}"
 
         # ── Institution name ─────────────────────────────────────────────────
         institution_name = (
@@ -1007,7 +1005,7 @@ class Applicant(Document):
             or "Admissions Office"
         )
 
-        admission_portal_url = frappe.utils.get_url(get_applicant_login_url(self.foriegn_national) + "#login")
+        admission_portal_url = get_applicant_login_link(self.foriegn_national)
 
         # ── Institution logo ──────────────────────────────────────────────────
         institution_logo = frappe.db.get_single_value("Institution Settings", "logo") or ""
@@ -1482,7 +1480,7 @@ class Applicant(Document):
         institution_logo = frappe.db.get_single_value("Institution Settings", "logo") or ""
         if institution_logo and not institution_logo.startswith("http"):
             institution_logo = frappe.utils.get_url(institution_logo)
-        admission_portal_url = frappe.utils.get_url(get_applicant_login_url(self.foriegn_national) + "#login")
+        admission_portal_url = get_applicant_login_link(self.foriegn_national)
 
         template_context = {
             "doc": doc_dict,
@@ -4072,7 +4070,7 @@ def _send_automated_entrance_test_allocation_email(allocation, email):
         doc_dict["assigned_preferences"] = [p.as_dict() for p in (allocation.assigned_preferences or [])]
         args = {
             "doc": doc_dict,
-            "portal_url": frappe.utils.get_url("/nlsat/dashboard?panel=applications"),
+            "portal_url": get_applicant_portal_url("/nlsat/dashboard?panel=applications", user=email),
         }
 
         subject = frappe.render_template(template.subject or "", args)
@@ -4245,8 +4243,8 @@ def _send_international_entrance_test_email(allocation, email):
             frappe.db.get_single_value("Institution Settings", "institution_name")
             or "Admissions Office"
         )
-        portal_url = frappe.utils.get_url(
-            "/nlsat/dashboard?panel=applications"
+        portal_url = get_applicant_portal_url(
+            "/nlsat/dashboard?panel=applications", foriegn_national="Yes"
         )
 
         # Format test date for display

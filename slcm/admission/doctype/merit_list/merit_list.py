@@ -289,6 +289,8 @@ def _send_merit_email_local(doc, row, email):
     """
     Sends email using 'Merit List Template' following the Interview style.
     """
+    from slcm.admission.utils.nlsat_portal import get_applicant_portal_url
+
     template_name = "Merit List Template"
     if not frappe.db.exists("Email Template", template_name):
         return
@@ -305,7 +307,7 @@ def _send_merit_email_local(doc, row, email):
         "overall_rank": row.overall_rank or "—",
         "total_score": row.total_score or "0",
         "published_date": pub_date,
-        "portal_link": frappe.utils.get_url(f"/nlsat/my-applications?app={row.applicant_id}")
+        "portal_link": get_applicant_portal_url(f"/nlsat/my-applications?app={row.applicant_id}", user=email)
     }
 
     subject = frappe.render_template(template.subject, args)

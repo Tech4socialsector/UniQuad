@@ -948,7 +948,8 @@ else 'Admissions Open') %}
               </div>
               {% endif %}
 
-              {# ── New Application / Closed CTA ── #}
+              {# ── New Application / Closed CTA: only when the applicant has no application yet ── #}
+              {% if not _apps %}
               <a href="{{ (nlsat_portal_base or '/nlsatadmissions') ~ '#programs' if _is_cycle_active else 'javascript:void(0)' }}"
                 class="{{ 'opacity-60 cursor-not-allowed' if not _is_cycle_active else '' }}" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;margin-top:16px;
                        border-radius:12px;text-decoration:none;border:2px dashed var(--border);
@@ -961,6 +962,7 @@ else 'Admissions Open') %}
                 <span class="ms-icon">{{ 'add_circle' if _is_cycle_active else 'event_busy' }}</span>
                 {{ 'Start New Application' if _is_cycle_active else 'Admissions Currently Closed' }}
               </a>
+              {% endif %}
 
             </section>
 

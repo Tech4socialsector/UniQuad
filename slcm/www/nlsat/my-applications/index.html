@@ -4043,7 +4043,7 @@ or _app.current_stage)) or _status %}
       <div class="ma-card-head" style="border-bottom: 1px solid #bbf7d0; background: rgba(240, 253, 244, 0.5); display: flex; justify-content: space-between; align-items: center;">
         <div class="ma-card-title" style="color: #166534; font-weight: 700;">
           <span class="ico" style="background: #dcfce7; color: #16a34a;"><span class="material-symbols-outlined">military_tech</span></span>
-          Merit Result
+          Results
         </div>
         <span class="result-banner-badge">Published</span>
       </div>
@@ -4056,7 +4056,7 @@ or _app.current_stage)) or _status %}
             <div class="val" style="font-size: 24px; font-weight: 800; color: #000000;">{{ m.overall_rank or '—' }}</div>
           </div>
           <div class="result-score-box" style="background: white; border: 1px solid #bbf7d0; border-radius: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.02); padding: 16px;">
-            <div class="lbl" style="font-size: 10px; font-weight: 600; color: #64748b; margin-bottom: 4px;">Merit Score</div>
+            <div class="lbl" style="font-size: 10px; font-weight: 600; color: #64748b; margin-bottom: 4px;">Score</div>
             <div class="val" style="font-size: 24px; font-weight: 800; color: #000000;">{{ ("%.2f" | format(m.total_score)) if m.total_score else '—' }} <small style="font-size:14px;color:#000000;font-weight:500;">/ {{ eligibility_result.et_total_marks or 150 }}</small></div>
           </div>
         </div>
@@ -4079,7 +4079,7 @@ or _app.current_stage)) or _status %}
       <div class="ma-card-head" style="border-bottom: 1px solid #bbf7d0; background: rgba(240, 253, 244, 0.5); display: flex; justify-content: space-between; align-items: center;">
         <div class="ma-card-title" style="color: #166534; font-weight: 700;">
           <span class="ico" style="background: #dcfce7; color: #16a34a;"><span class="material-symbols-outlined">where_to_vote</span></span>
-          Seat Allocation Result
+          Score Card
         </div>
         {% set r = all_results[0] %}
         {% if r.selection_status %}
@@ -4575,7 +4575,7 @@ LIST / DASHBOARD VIEW
           <span class="qs-value" style="font-size:13px">{{ h.program_name }}</span>
         </div>
         <div class="qs-item">
-          <span class="qs-label"><span class="material-symbols-outlined">military_tech</span>Merit score</span>
+          <span class="qs-label"><span class="material-symbols-outlined">military_tech</span>Score</span>
           <span class="qs-value {% if h.merit_score %}{% else %}muted{% endif %}">{{ (h.merit_score | round(1)) if h.merit_score else 'Pending'
             }}</span>
         </div>
