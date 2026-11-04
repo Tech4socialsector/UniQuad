@@ -1,23 +1,5 @@
 [
  {
-  "country": null,
-  "docstatus": 0,
-  "doctype": "State",
-  "modified": "2026-03-03 19:14:54.728110",
-  "name": "Tamilnadu",
-  "state_code": null,
-  "state_name": "Tamilnadu"
- },
- {
-  "country": "India",
-  "docstatus": 0,
-  "doctype": "State",
-  "modified": "2026-06-29 16:07:35.013152",
-  "name": "Punjab (India)",
-  "state_code": "",
-  "state_name": "Punjab (India)"
- },
- {
   "country": "Algeria",
   "docstatus": 0,
   "doctype": "State",
@@ -1102,9 +1084,9 @@
   "docstatus": 0,
   "doctype": "State",
   "modified": "2026-05-04 10:27:41.002309",
-  "name": "Dadra and Nagar Haveli and Daman and Diu",
+  "name": "Dadra and Nagar Haveli",
   "state_code": null,
-  "state_name": "Dadra and Nagar Haveli and Daman and Diu"
+  "state_name": "Dadra and Nagar Haveli"
  },
  {
   "country": "India",
@@ -45124,5 +45106,14 @@
   "name": "Þingeyjarsveit",
   "state_code": "",
   "state_name": "Þingeyjarsveit"
+ },
+ {
+  "country": "India",
+  "docstatus": 0,
+  "doctype": "State",
+  "modified": "2026-11-04 14:35:59.319020",
+  "name": "Daman and Diu",
+  "state_code": null,
+  "state_name": "Daman and Diu"
  }
 ]
