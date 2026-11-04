@@ -64,6 +64,8 @@ class TestFeeDemandGeneration(IntegrationTestCase):
 			})
 		frappe.db.delete("Fee Demand", {"student": ["in", self.s], "fee_component": COMPONENT})
 
+		# the site's own structures for this programme would clash with (and win over) the test ones
+		frappe.db.set_value("Fee Structure", {"program": program, "status": "Active"}, "status", "Inactive")
 		self.fs_y1 = self._structure("1", "All", indian=1000, foreign=2000)
 		self.fs_y1_sc = self._structure("1", "SC", indian=500)
 		self.fs_y2 = self._structure("2", "All", indian=1500)
