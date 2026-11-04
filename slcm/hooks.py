@@ -745,6 +745,8 @@ scheduler_events = {
 		"slcm.slcm.doctype.student_attendance_condonation.student_attendance_condonation.auto_reject_below_attendance_floor",
 		# Background sync for settlements if webhooks fail
 		"slcm.api.sync_settlements.daily_sync_settlements",
+		# Easebuzz payouts → settlement fields on Easebuzz SLCM Payment Requests
+		"slcm.slcm.fee.easebuzz_settlement.daily_sync",
 		# Student Academic Log — move Ongoing to the next term once a term has ended
 		"slcm.slcm.doctype.student_enrollment.student_enrollment.advance_term_status",
 	]

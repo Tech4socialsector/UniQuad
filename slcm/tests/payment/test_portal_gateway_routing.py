@@ -1326,3 +1326,111 @@ class TestBankCodeCleanup(GatewayTestCase):
 		self.assertEqual(get.call_args.kwargs["auth"][1], "")
 		self.assertEqual(get.call_count, 1)  # cached
 		frappe.cache().delete_value("slcm_razorpay_bank_names")
+
+
+class TestEasebuzzPayouts(GatewayTestCase):
+	"""Easebuzz payouts → settlement fields (slcm.slcm.fee.easebuzz_settlement) and the Payment Settlement Report."""
+
+	def paid_request(self, easepayid):
+		frappe.set_user(self.student_user)
+		txn = sp.create_bulk_demand_payment_order(json.dumps([self.d_ez]))["txnid"]
+		frappe.set_user("Administrator")
+		self.as_guest_callback(ez.complete, signed(txn, 2500, easepayid=easepayid))
+		return txn, frappe.db.get_value("SLCM Payment Request", {"transaction_id": easepayid}, "name")
+
+	def payout(self, easepayid, txnid, paid_out=True):
+		return {
+			"paid_out": paid_out, "payout_actual_date": "Nov-03-2026 10:33:29 AM", "payout_amount": 2455.12,
+			"payout_id": "PAYOUT1", "bank_name": "Test Bank", "account_number": "123456789012",
+			"bank_transaction_id": "UTR123", "service_charge_amount": 44.88, "peb_refunds": [],
+			"peb_transactions": [{
+				"peb_transaction_id": easepayid, "txnid": txnid, "amount": 2500, "peb_service_charge": 38.03,
+				"peb_service_tax": 6.85, "peb_settlement_amount": 2455.12, "transaction_type": "UPI", "status": "settled",
+			}],
+		}
+
+	def response(self, payouts, nxt=None):
+		class Resp:
+			@staticmethod
+			def raise_for_status():
+				pass
+
+			@staticmethod
+			def json():
+				return {"next": nxt, "previous": None, "count": len(payouts), "data": payouts}
+
+		return Resp
+
+	def test_payout_settles_request_with_easebuzz_figures(self):
+		from slcm.slcm.fee import easebuzz_settlement as es
+
+		txn, pr = self.paid_request("EZSET1")
+		with patch.object(es.requests, "post", return_value=self.response([self.payout("EZSET1", txn)])) as post:
+			counts = es.sync_range(add_days(today(), -3), today())
+		self.assertEqual(counts["settled"], 1)
+		body = post.call_args.kwargs["json"]
+		self.assertEqual(set(body), {"merchant_key", "hash", "payout_date"})
+		start, end = body["payout_date"]["start_date"], body["payout_date"]["end_date"]
+		self.assertEqual(body["hash"], ezs.sha512(f"{KEY}|{start}|{end}|{SALT}"))
+		self.assertTrue(re.match(r"^\d{2}-\d{2}-\d{4}$", start))
+		self.assertTrue(post.call_args.args[0].endswith("/settlements/v1/retrieve"))
+
+		row = frappe.db.get_value("SLCM Payment Request", pr, [
+			"settlement_status", "settlement_id", "settlement_utr", "settlement_date", "settlement_amount",
+			"gateway_fees", "gateway_tax", "net_settled", "gateway_settlement_status", "settlement_response",
+		], as_dict=True)
+		self.assertEqual((row.settlement_status, row.settlement_id, row.settlement_utr), ("Settled", "PAYOUT1", "UTR123"))
+		self.assertEqual((flt(row.settlement_amount), flt(row.gateway_fees), flt(row.gateway_tax), flt(row.net_settled)),
+		                 (2500, 38.03, 6.85, 2455.12))
+		self.assertEqual(row.gateway_settlement_status, "processed")
+		self.assertEqual(get_datetime(row.settlement_date), datetime.datetime(2026, 11, 3, 10, 33, 29))
+		self.assertNotIn("123456789012", row.settlement_response)  # bank account masked
+
+		# re-running changes nothing
+		with patch.object(es.requests, "post", return_value=self.response([self.payout("EZSET1", txn)])):
+			self.assertEqual(es.sync_range(add_days(today(), -3), today())["unchanged"], 1)
+
+	def test_scheduled_payout_is_processing_and_unknown_ids_are_skipped(self):
+		from slcm.slcm.fee import easebuzz_settlement as es
+
+		txn, pr = self.paid_request("EZSET2")
+		payouts = [self.payout("EZSET2", txn, paid_out=False), self.payout("EZ_NOT_OURS", "NOTOURS")]
+		counts = es.apply_payouts(payouts)
+		self.assertEqual((counts["settled"], counts["not_found"]), (1, 1))
+		self.assertEqual(frappe.db.get_value("SLCM Payment Request", pr, "settlement_status"), "Processing")
+
+	def test_rejected_request_raises_and_logs_without_secrets(self):
+		from slcm.slcm.fee import easebuzz_settlement as es
+
+		class Bad:
+			@staticmethod
+			def raise_for_status():
+				pass
+
+			@staticmethod
+			def json():
+				return {"status": False, "message": "Invalid hash"}
+
+		with patch.object(es.requests, "post", return_value=Bad), patch.object(frappe, "log_error") as log:
+			self.assertRaises(frappe.ValidationError, es.fetch_payouts, today(), today())
+		self.assertNotIn(SALT, str(log.call_args))
+
+	def test_settlement_report_lists_paid_requests_with_gateway_filter(self):
+		from slcm.slcm.fee import easebuzz_settlement as es
+		from slcm.slcm.report.payment_settlement_report import payment_settlement_report as rep
+
+		txn, pr = self.paid_request("EZSET3")
+		f = {"from_date": add_days(today(), -1), "to_date": today(), "payment_gateway": "Easebuzz"}
+		_cols, data, _m, _c, summary = rep.execute(f)
+		row = next(r for r in data if r.name == pr)
+		self.assertEqual(row.settlement_status, rep.NOT_SETTLED)
+		self.assertIn(pr, [r.name for r in rep.execute({**f, "settlement_status": rep.NOT_SETTLED})[1]])
+		self.assertTrue(all(r.payment_gateway == "Easebuzz" for r in data))
+		self.assertEqual(summary[0]["label"], "Collected")
+
+		es.apply_payouts([self.payout("EZSET3", txn)])
+		settled = rep.execute({**f, "settlement_status": "Settled"})[1]
+		self.assertIn(pr, [r.name for r in settled])
+		self.assertNotIn(pr, [r.name for r in rep.execute({**f, "settlement_status": rep.NOT_SETTLED})[1]])
+		# a hostile filter value is a bound parameter, not SQL
+		self.assertEqual(rep.execute({**f, "settlement_status": "x' or '1'='1"})[1], [])
