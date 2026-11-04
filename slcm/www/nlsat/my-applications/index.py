@@ -903,9 +903,9 @@ def get_context(context):
         try:
             irows = frappe.get_all("Interview Seat Allocation",
                 filters={"applicant": _app_name},
-                fields=["interview_date", "interview_time", "interview_slot_status", "re_interview_date", "is_rescheduled"],
+                fields=["interview_list", "interview_date", "interview_time", "interview_slot_status", "re_interview_date", "is_rescheduled"],
                 order_by="creation desc", limit=1, ignore_permissions=True)
-            if irows:
+            if irows and frappe.db.get_value("Interview List", irows[0].interview_list, "status") == "Published":
                 ir = irows[0]
                 context.interview_status = ir.get("interview_slot_status") or "Scheduled"
                 _idate = ir.get("re_interview_date") if (ir.get("is_rescheduled") or ir.get("interview_slot_status") == "Rescheduled") else ir.get("interview_date")
@@ -935,7 +935,7 @@ def get_context(context):
         try:
             et_rows = frappe.get_all("Entrance Test Seat Allocation",
                 filters={"applicant": _app_name},
-                fields=["name"],
+                fields=["name", "interview_list"],
                 order_by="creation desc",
                 limit=1,
                 ignore_permissions=True)
@@ -1000,7 +1000,7 @@ def get_context(context):
                 order_by="creation desc",
                 limit=1,
                 ignore_permissions=True)
-            if i_rows:
+            if i_rows and frappe.db.get_value("Interview List", i_rows[0].interview_list, "status") == "Published":
                 i_doc = frappe.get_doc("Interview Seat Allocation", i_rows[0].name, ignore_permissions=True)
                 context.interview_doc = i_doc
                 context.interview_is_rescheduled = (i_doc.is_rescheduled == 1 or i_doc.interview_slot_status == "Rescheduled")
