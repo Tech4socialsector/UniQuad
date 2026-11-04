@@ -889,7 +889,12 @@ else 'Admissions Open') %}
       <div class="modal-grid-2col" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
         <div style="grid-column:1/-1;">
           <label class="modal-label">Mobile Number</label>
-          <input id="edit-mobile" type="tel" class="modal-input" placeholder="e.g. 9876543210" />
+          <div style="display:flex;gap:8px;">
+            <input id="edit-mobile-cc" type="tel" class="modal-input" style="width:90px;flex:0 0 90px;"
+              maxlength="5" placeholder="+91" aria-label="Country code" />
+            <input id="edit-mobile" type="tel" class="modal-input" style="flex:1;min-width:0;"
+              maxlength="15" inputmode="numeric" placeholder="e.g. 9876543210" aria-label="Mobile number" />
+          </div>
         </div>
         <div>
           <label class="modal-label">Date of Birth</label>
@@ -1119,18 +1124,68 @@ else 'Admissions Open') %}
       } catch (e) { pd = {}; }
       var mobileInput = document.getElementById('edit-mobile');
 
-    mobileInput.value = pd.mobile_number || '';
+    var ccInput = document.getElementById('edit-mobile-cc');
+    var parsedMobile = splitMobile(pd.mobile_number);
+    ccInput.value = parsedMobile.cc;
+    mobileInput.value = parsedMobile.num;
     document.getElementById('edit-dob').value = pd.date_of_birth || '';
     document.getElementById('edit-gender').value = pd.gender || '';
     document.getElementById('edit-address').value = pd.correspondence_address || '';
 
-    // Digits only for mobile (country code may include + in desk; portal keeps numeric)
-    mobileInput.oninput = function () { this.value = this.value.replace(/[^0-9+]/g, ''); };
+    // Country code: "+" followed by up to 4 digits. Number: digits only.
+    ccInput.oninput = function () {
+      var d = this.value.replace(/\D/g, '').slice(0, 4);
+      this.value = d ? '+' + d : '';
+    };
+    mobileInput.oninput = function () { this.value = this.value.replace(/\D/g, '').slice(0, 15); };
 
     document.getElementById('profile-edit-msg').textContent = '';
     document.getElementById('profile-edit-modal').style.display = 'flex';
     document.body.style.overflow = 'hidden';
   }
+
+    // National-number lengths per country code (same table as the applicant form).
+    var MOBILE_ISD_LENGTHS = {
+      '+91': [10], '+1': [10], '+44': [10], '+971': [9], '+65': [8], '+61': [9, 10], '+966': [9],
+      '+81': [10, 11], '+49': [10, 11], '+33': [9], '+39': [9, 10], '+34': [9], '+86': [11],
+      '+82': [9, 10], '+7': [10], '+55': [10, 11], '+27': [9], '+234': [10], '+20': [10],
+      '+92': [10], '+880': [10], '+62': [10, 11, 12], '+63': [10], '+60': [9, 10], '+66': [9],
+      '+84': [9, 10], '+64': [9, 10]
+    };
+
+    // "+91-9876543210" -> {cc:"+91", num:"9876543210"}; falls back to +91 when no code is stored.
+    function splitMobile(value) {
+      var v = String(value || '').trim();
+      if (!v) return { cc: '+91', num: '' };
+      var i = v.indexOf('-');
+      if (i > 0) {
+        var cc = v.slice(0, i).replace(/\D/g, '');
+        return { cc: cc ? '+' + cc : '+91', num: v.slice(i + 1).replace(/\D/g, '') };
+      }
+      var digits = v.replace(/\D/g, '');
+      if (v.charAt(0) === '+' && digits.indexOf('91') === 0 && digits.length === 12) {
+        return { cc: '+91', num: digits.slice(2) };
+      }
+      return { cc: '+91', num: digits };
+    }
+
+    // Returns an error message, or '' when the mobile number is valid (or left empty).
+    function validateMobile(cc, num) {
+      if (!num) return '';
+      if (!/^\+[1-9]\d{0,3}$/.test(cc)) return 'Enter a valid country code, e.g. +91.';
+      var expected = MOBILE_ISD_LENGTHS[cc];
+      if (expected) {
+        if (expected.indexOf(num.length) === -1) {
+          return 'Mobile number must be ' + expected.join(' or ') + ' digits for ' + cc + '.';
+        }
+      } else if (num.length < 4 || cc.length - 1 + num.length > 15) {
+        return 'Enter a valid mobile number for ' + cc + '.';
+      }
+      if (cc === '+91' && !/^[6-9]/.test(num)) {
+        return 'Indian mobile numbers must start with 6, 7, 8 or 9.';
+      }
+      return '';
+    }
 
     function closeProfileEditModal() {
       document.getElementById('profile-edit-modal').style.display = 'none';
@@ -1145,8 +1200,11 @@ else 'Admissions Open') %}
       var btn = document.getElementById('profile-save-btn');
       var msg = document.getElementById('profile-edit-msg');
 
+      var mobileCc = document.getElementById('edit-mobile-cc').value.trim();
+      var mobileNum = document.getElementById('edit-mobile').value.replace(/\D/g, '');
+
       const args = {
-        mobile_number: document.getElementById('edit-mobile').value.trim(),
+        mobile_number: mobileNum ? mobileCc + '-' + mobileNum : '',
         date_of_birth: document.getElementById('edit-dob').value,
         gender: document.getElementById('edit-gender').value,
         correspondence_address: document.getElementById('edit-address').value.trim(),
@@ -1154,6 +1212,12 @@ else 'Admissions Open') %}
 
       // ── Validation ──────────────────────────────────────────────
       msg.style.color = '#dc2626';
+
+      var mobileErr = validateMobile(mobileCc, mobileNum);
+      if (mobileErr) {
+        msg.textContent = mobileErr;
+        return;
+      }
 
       if (args.date_of_birth) {
         let selectedDate = new Date(args.date_of_birth);

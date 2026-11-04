@@ -22,6 +22,7 @@ Optional / empty:
 from __future__ import unicode_literals
 
 import frappe
+from frappe import _
 
 
 def sanitize_phone_for_frappe(value):
@@ -73,6 +74,36 @@ def sanitize_phone_for_frappe(value):
         return f"+91-{cleaned[3:]}"
         
     return cleaned
+
+
+def mobile_with_country_code_error(value):
+    """
+    Check a "+<country code>-<number>" mobile value. Returns an error message, or None when valid.
+    Uses phonenumbers so the number must be a real number for that country, not just the right length.
+    """
+    value = (value or "").strip()
+    if not value:
+        return None
+    if "-" not in value:
+        return _("Mobile number must include a country code, e.g. +91-9876543210.")
+
+    cc, num = value.split("-", 1)
+    cc = cc.strip()
+    num = num.strip()
+    if not cc.startswith("+") or not cc[1:].isdigit() or not 1 <= len(cc[1:]) <= 4 or cc[1] == "0":
+        return _("Enter a valid country code, e.g. +91.")
+    if not num.isdigit():
+        return _("Mobile number must contain digits only.")
+
+    try:
+        from phonenumbers import NumberParseException, is_valid_number, parse
+
+        parsed = parse(cc + num, None)
+        if parsed.country_code == int(cc[1:]) and is_valid_number(parsed):
+            return None
+    except NumberParseException:
+        pass
+    return _("{0} is not a valid mobile number for country code {1}.").format(num, cc)
 
 
 def validate_phone_with_frappe(phone_number, fieldname):
