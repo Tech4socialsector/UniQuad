@@ -456,8 +456,9 @@ def get_context(context):
                         {"field": "submitted",       "name": "Submitted", "stage_type": "Application"},
                         {"field": "entrance_test",   "name": "Entrance Test",         "stage_type": "Entrance Test"},
                         {"field": "intereview",      "name": "Interview",             "stage_type": "Interview"},
-                        {"field": "merit_list",      "name": "Merit",                 "stage_type": "Merit"},
-                        {"field": "seat_allocation", "name": "Seat Allocation",       "stage_type": "Seat Allocation"},
+                        # Portal labels: Merit → "Results", Seat Allocation → "Score Card" (stage_type unchanged)
+                        {"field": "merit_list",      "name": "Results",               "stage_type": "Merit"},
+                        {"field": "seat_allocation", "name": "Score Card",            "stage_type": "Seat Allocation"},
                         {"field": "offer_letter",    "name": "Offer Letter",          "stage_type": "Offer Letter"},
                         {"field": "admission_fee",   "name": "Admission Fee",         "stage_type": "Admission Fee"},
                         {"field": "enrolled",        "name": "Enrollment",            "stage_type": "Enrollment"},

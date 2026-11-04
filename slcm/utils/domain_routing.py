@@ -76,7 +76,7 @@ MAX_KNOWN = 50
 
 
 def get_domain_config():
-	"""{"enabled", "known": [domains], "redirects": {domain: path}, "ready"}, cached."""
+	"""{"enabled", "known": [domains], "active": [enabled domains], "redirects": {domain: path}, "ready"}, cached."""
 	config = frappe.cache.get_value(CACHE_KEY)
 	if not isinstance(config, dict):
 		config = _load_config()
@@ -101,6 +101,8 @@ def _load_config():
 	return {
 		"enabled": 1 if enabled else 0,
 		"known": [r.domain for r in rows],
+		# enabled domains: links in emails may use these (slcm.admission.utils.nlsat_portal)
+		"active": [r.domain for r in rows if r.enabled],
 		"redirects": {
 			r.domain: r.redirect_to for r in rows if r.enabled and r.redirect_to and not r.is_primary
 		},

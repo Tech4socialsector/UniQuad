@@ -302,6 +302,8 @@ def _send_interviewer_allocation_notification(staff_member, interview_list_name,
 
 def _send_interview_slot_email(allocation, email):
     """Send an interview slot assignment notification using a configurable template."""
+    from slcm.admission.utils.nlsat_portal import get_applicant_portal_url
+
     try:
         template_name = "Interview Allocation"
         if not frappe.db.exists("Email Template", template_name):
@@ -313,7 +315,7 @@ def _send_interview_slot_email(allocation, email):
         doc_dict = allocation.as_dict()
         args = {
             "doc": doc_dict,
-            "portal_url": get_url("/nlsat/dashboard?panel=applications")
+            "portal_url": get_applicant_portal_url("/nlsat/dashboard?panel=applications", user=email)
         }
 
         subject = frappe.render_template(template.subject, args)

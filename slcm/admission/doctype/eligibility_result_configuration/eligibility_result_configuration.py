@@ -428,6 +428,8 @@ class EligibilityResultConfiguration(Document):
 
 def _send_eligibility_result_email(res):
     """Send an eligibility result notification using a configurable template."""
+    from slcm.admission.utils.nlsat_portal import get_applicant_portal_url
+
     try:
         template_name = "Eligibility Result"
         if not frappe.db.exists("Email Template", template_name):
@@ -440,7 +442,7 @@ def _send_eligibility_result_email(res):
         doc_dict = res.as_dict()
         args = {
             "doc": doc_dict,
-            "portal_url": get_url("/nlsat/dashboard?panel=applications")
+            "portal_url": get_applicant_portal_url("/nlsat/dashboard?panel=applications", user=res.email)
         }
 
         subject = frappe.render_template(template.subject, args)

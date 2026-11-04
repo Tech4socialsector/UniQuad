@@ -746,9 +746,11 @@ def _send_allocation_email(allocation, email, allocation_type=None, email_format
             doc_dict["is_reallocation"] = True
             doc_dict["old_center_name"] = getattr(allocation, "old_center_name", "")
         
+        from slcm.admission.utils.nlsat_portal import get_applicant_portal_url
+
         args = {
             "doc": doc_dict,
-            "portal_url": get_url("/nlsat/dashboard?panel=applications")
+            "portal_url": get_applicant_portal_url("/nlsat/dashboard?panel=applications", user=email)
         }
 
         subject = frappe.render_template(template.subject, args)
