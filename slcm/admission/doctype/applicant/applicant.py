@@ -499,11 +499,13 @@ class Applicant(Document):
             if not is_application_fee_configured(
                 self.admission_cycle, self.whether_scstobc_ncl, is_foreign,
                 getattr(self, "gender", None), getattr(self, "pwd", None),
+                program=self.program, campus=getattr(self, "campus", None),
             ):
-                # 0 only because no fee is set up for this cycle/category: never treat that as free.
+                # 0 only because no fee is set up for this programme/category: never treat that as free.
                 frappe.log_error(
                     title="Application fee not configured",
-                    message=f"Applicant {self.name}: no Application Fee for cycle '{self.admission_cycle}' "
+                    message=f"Applicant {self.name}: no Application Fee for programme '{self.program}' "
+                            f"(campus '{getattr(self, 'campus', None)}') in cycle '{self.admission_cycle}' "
                             f"/ category '{self.whether_scstobc_ncl}'. Submission was blocked.",
                 )
                 frappe.throw(

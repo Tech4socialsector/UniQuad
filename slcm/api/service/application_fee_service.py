@@ -6,27 +6,82 @@ from frappe import _
 from frappe.utils import cint, flt
 
 
-def get_application_fee_doc(admission_cycle):
+def get_programme_application_fee_name(admission_cycle, program=None, campus=None):
 	"""
-	Resolves the Application Fee document for an admission cycle:
-	1. Direct link on Admission Cycle.application_fee
-	2. Fall back to Application Fee matching the cycle's academic_year
+	Name of the Application Fee mapped to a programme in Admission Cycle > Programmes.
+
+	Lookup order:
+	1. Row matching cycle + programme + campus
+	2. Any row for cycle + programme that has a fee (applicant campus not set / not matched)
+	3. When no programme is given: the fee shared by every programme row in the cycle (only if unambiguous)
 	"""
 	if not admission_cycle:
 		return None
 
-	app_fee_name = frappe.db.get_value("Admission Cycle", admission_cycle, "application_fee")
+	base = {"parent": admission_cycle, "parenttype": "Admission Cycle", "parentfield": "programs",
+		"application_fee": ["is", "set"]}
+
+	if program:
+		if campus:
+			name = frappe.db.get_value(
+				"Admission Cycle Program", {**base, "program": program, "campus": campus}, "application_fee"
+			)
+			if name:
+				return name
+		return frappe.db.get_value(
+			"Admission Cycle Program", {**base, "program": program}, "application_fee", order_by="idx asc"
+		)
+
+	fees = {
+		r.application_fee
+		for r in frappe.get_all("Admission Cycle Program", filters=base, fields=["application_fee"])
+	}
+	return fees.pop() if len(fees) == 1 else None
+
+
+def get_application_fee_doc(admission_cycle, program=None, campus=None):
+	"""
+	Resolves the Application Fee document for an applicant's programme:
+	1. Application Fee set on the programme row of the Admission Cycle (see get_programme_application_fee_name)
+	2. Fall back to the cycle's academic_year Application Fee, only if that year has just one
+	Returns None (and logs) when nothing is configured or the linked record is missing.
+	"""
+	if not admission_cycle:
+		return None
+
+	app_fee_name = get_programme_application_fee_name(admission_cycle, program, campus)
 	if not app_fee_name:
+		# Fallback only when the Academic Year has exactly one Application Fee; with several,
+		# guessing could charge the wrong fee, so treat it as not configured.
 		academic_year = frappe.db.get_value("Admission Cycle", admission_cycle, "academic_year")
 		if academic_year:
-			app_fee_name = frappe.db.get_value("Application Fee", {"academic_year": academic_year})
+			year_fees = frappe.get_all(
+				"Application Fee", filters={"academic_year": academic_year}, pluck="name", limit=2
+			)
+			if len(year_fees) == 1:
+				app_fee_name = year_fees[0]
 
-	if app_fee_name:
+	if not app_fee_name:
+		return None
+
+	try:
+		return frappe.get_cached_doc("Application Fee", app_fee_name)
+	except frappe.DoesNotExistError:
+		frappe.log_error(
+			title="Application Fee not found",
+			message=f"Application Fee '{app_fee_name}' (cycle '{admission_cycle}', programme '{program}', "
+			f"campus '{campus}') does not exist.",
+		)
+		return None
+
+
+def _resolve_applicant(applicant):
+	if isinstance(applicant, str):
 		try:
-			return frappe.get_doc("Application Fee", app_fee_name)
-		except Exception:
+			return frappe.get_doc("Applicant", applicant)
+		except frappe.DoesNotExistError:
 			return None
-	return None
+	return applicant
 
 
 def get_application_fee_for_category(
@@ -37,9 +92,11 @@ def get_application_fee_for_category(
 	applicant=None,
 	gender=None,
 	pwd=None,
+	campus=None,
 ):
 	"""
-	Returns application fee amount from Application Fee linked to admission cycle.
+	Returns application fee amount from the Application Fee mapped to the applicant's programme
+	in Admission Cycle > Programmes.
 
 	Priority:
 	1. International candidate (only foriegn_national == "Yes"):
@@ -51,17 +108,15 @@ def get_application_fee_for_category(
 	   d. Fallback to General / Unreserved
 	   e. 0 if no match
 	"""
-	if isinstance(applicant, str):
-		try:
-			applicant = frappe.get_doc("Applicant", applicant)
-		except Exception:
-			applicant = None
+	applicant = _resolve_applicant(applicant)
 
 	if applicant:
 		if not admission_cycle:
 			admission_cycle = applicant.admission_cycle
 		if not program:
 			program = applicant.program
+		if not campus:
+			campus = getattr(applicant, "campus", None)
 		is_foreign = (getattr(applicant, "foriegn_national", "") or "").strip() == "Yes"
 		if gender is None:
 			gender = getattr(applicant, "gender", None)
@@ -73,7 +128,7 @@ def get_application_fee_for_category(
 	if not admission_cycle:
 		return 0
 
-	app_fee = get_application_fee_doc(admission_cycle)
+	app_fee = get_application_fee_doc(admission_cycle, program, campus)
 	if not app_fee:
 		return 0
 
@@ -112,11 +167,13 @@ def get_application_fee_for_category(
 	return 0
 
 
-def is_application_fee_configured(admission_cycle, category=None, is_foreign=False, gender=None, pwd=None):
-	"""True when the cycle's Application Fee defines a fee for this candidate — including an explicit 0.
+def is_application_fee_configured(
+	admission_cycle, category=None, is_foreign=False, gender=None, pwd=None, program=None, campus=None
+):
+	"""True when the programme's Application Fee defines a fee for this candidate — including an explicit 0.
 	False when get_application_fee_for_category returned 0 only because nothing matched
-	(no Application Fee for the cycle, or no category / General row)."""
-	app_fee = get_application_fee_doc(admission_cycle) if admission_cycle else None
+	(no Application Fee for the programme/cycle, or no category / General row)."""
+	app_fee = get_application_fee_doc(admission_cycle, program, campus) if admission_cycle else None
 	if not app_fee:
 		return False
 	if is_foreign:
@@ -132,33 +189,27 @@ def is_application_fee_configured(admission_cycle, category=None, is_foreign=Fal
 	return bool(keys & {"general", "gen", "unreserved"})
 
 
-def get_payment_gateway_for_application_fee(program=None, admission_cycle=None):
+def get_payment_gateway_for_application_fee(program=None, admission_cycle=None, campus=None):
 	"""
-	Returns Payment Gateway from Application Fee document for the admission cycle.
+	Returns Payment Gateway from the Application Fee mapped to the programme in the admission cycle.
 	"""
-	cycle = admission_cycle or program
-	if cycle and not frappe.db.exists("Admission Cycle", cycle) and admission_cycle:
-		cycle = admission_cycle
-	if not cycle:
+	if not admission_cycle:
 		return None
 
-	app_fee = get_application_fee_doc(cycle)
+	app_fee = get_application_fee_doc(admission_cycle, program, campus)
 	if app_fee and getattr(app_fee, "payment_gateway", None):
 		return app_fee.payment_gateway
 	return None
 
 
-def get_payment_receipt_template_for_policy(program=None, admission_cycle=None):
+def get_payment_receipt_template_for_policy(program=None, admission_cycle=None, campus=None):
 	"""
-	Returns Payment Receipt Template (Print Format) from Application Fee document.
+	Returns Payment Receipt Template (Print Format) from the programme's Application Fee document.
 	"""
-	cycle = admission_cycle or program
-	if cycle and not frappe.db.exists("Admission Cycle", cycle) and admission_cycle:
-		cycle = admission_cycle
-	if not cycle:
+	if not admission_cycle:
 		return None
 
-	app_fee = get_application_fee_doc(cycle)
+	app_fee = get_application_fee_doc(admission_cycle, program, campus)
 	if app_fee and getattr(app_fee, "payment_receipt_template", None):
 		return app_fee.payment_receipt_template
 	return None
@@ -347,7 +398,7 @@ def _get_applicant_category(applicant_name):
 	app_data = frappe.db.get_value(
 		"Applicant",
 		applicant_name,
-		["admission_cycle", "foriegn_national", "gender", "pwd", "whether_scstobc_ncl"],
+		["admission_cycle", "program", "campus", "foriegn_national", "gender", "pwd", "whether_scstobc_ncl"],
 		as_dict=True,
 	)
 	if not app_data:
@@ -356,7 +407,7 @@ def _get_applicant_category(applicant_name):
 	if (app_data.foriegn_national or "").strip() == "Yes":
 		return "International"
 
-	app_fee = get_application_fee_doc(app_data.admission_cycle)
+	app_fee = get_application_fee_doc(app_data.admission_cycle, app_data.program, app_data.campus)
 	configured_categories = set()
 	if app_fee:
 		for row in getattr(app_fee, "application_fee_by_category", []):
@@ -433,11 +484,8 @@ def get_application_fee_details(applicant_name):
 			"get_application_fee_details — sync_application_fee_assignment_for_applicant",
 		)
 
-	payment_gateway = get_payment_gateway_for_application_fee(
-		applicant.program, applicant.admission_cycle
-	)
-
-	app_fee = get_application_fee_doc(applicant.admission_cycle)
+	app_fee = get_application_fee_doc(applicant.admission_cycle, applicant.program, applicant.campus)
+	payment_gateway = getattr(app_fee, "payment_gateway", None) if app_fee else None
 	currency = getattr(app_fee, "currency", None) or "INR"
 
 	return {

@@ -394,10 +394,12 @@ def get_application_fee_amount(
     gender=None,
     pwd=None,
     foriegn_national=None,
+    campus=None,
 ):
     """
     Return the application fee for the given program, admission cycle, and
-    applicant demographic criteria based on Application Fee doctype.
+    applicant demographic criteria, using the Application Fee mapped to the
+    programme (and campus) in Admission Cycle > Programmes.
     """
     try:
         cycle = (admission_cycle or "").strip()
@@ -422,6 +424,7 @@ def get_application_fee_amount(
             is_foreign=is_foreign,
             gender=gender,
             pwd=pwd,
+            campus=(campus or "").strip() or None,
         )
         return flt(fee, 2)
     except Exception:

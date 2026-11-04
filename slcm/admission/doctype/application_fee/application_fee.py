@@ -5,18 +5,8 @@ from frappe.model.document import Document
 
 
 class ApplicationFee(Document):
-
-    def before_save(self):
-
-        filters = {
-            "academic_year": self.academic_year,
-            "name": ["!=", self.name],
-        }
-
-        if frappe.db.exists("Application Fee", filters):
-            frappe.throw(
-                _("An  application fee already exists for this academic year.")
-            )
+    # Several Application Fees may exist for one Academic Year; each Admission Cycle
+    # programme row picks the one it uses.
 
     def validate(self):
         selected_categories = []

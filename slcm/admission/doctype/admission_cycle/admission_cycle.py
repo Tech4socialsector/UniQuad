@@ -85,7 +85,13 @@ class AdmissionCycle(Document):
         self._validate_cycle_dates_no_overlap()
         self._validate_single_active_cycle()
         self._validate_programs()
+        self._validate_program_application_fees()
         self._validate_application_id_configurations()
+
+    def before_update_after_submit(self):
+        # validate() does not run when a submitted cycle is edited, but the programme rows
+        # (and their Application Fee) can still change, so re-check the fee mapping here.
+        self._validate_program_application_fees()
 
     def on_submit(self):
         """Automatically set status to Active on submission."""
@@ -211,6 +217,40 @@ class AdmissionCycle(Document):
                     )
                 )
             seen.add(key)
+
+    def _validate_program_application_fees(self):
+        """Every programme row needs an Application Fee that exists and belongs to the cycle's Academic Year."""
+        fee_years = {}
+        for row in (self.programs or []):
+            label = row.program_name or row.program or _("Row {0}").format(row.idx)
+            if not row.application_fee:
+                if self.flags.ignore_mandatory:
+                    continue
+                frappe.throw(
+                    _("Row {0}: Application Fee is mandatory for Programme <b>{1}</b>.").format(row.idx, label),
+                    title=_("Application Fee Missing"),
+                )
+
+            if row.application_fee not in fee_years:
+                fee_years[row.application_fee] = frappe.db.get_value(
+                    "Application Fee", row.application_fee, "academic_year"
+                )
+            fee_year = fee_years[row.application_fee]
+            if fee_year is None and not frappe.db.exists("Application Fee", row.application_fee):
+                frappe.throw(
+                    _("Row {0}: Application Fee <b>{1}</b> for Programme <b>{2}</b> does not exist.").format(
+                        row.idx, row.application_fee, label
+                    ),
+                    title=_("Invalid Application Fee"),
+                )
+            if self.academic_year and fee_year and fee_year != self.academic_year:
+                frappe.throw(
+                    _(
+                        "Row {0}: Application Fee <b>{1}</b> for Programme <b>{2}</b> belongs to Academic Year "
+                        "<b>{3}</b>, but this cycle is for <b>{4}</b>."
+                    ).format(row.idx, row.application_fee, label, fee_year, self.academic_year),
+                    title=_("Invalid Application Fee"),
+                )
 
     def _validate_application_id_configurations(self):
         configured_programmes = set()

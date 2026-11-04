@@ -131,13 +131,12 @@ frappe.ui.form.on("Admission Cycle", {
             };
         });
 
-        frm.set_query("application_fee", () => {
-            return {
-                filters: {
-                    "academic_year" : frm.doc.academic_year
-                }
-            }
-        })
+        // Application Fee is chosen per programme row; only offer fees of the cycle's Academic Year.
+        frm.set_query("application_fee", "programs", () => {
+            return frm.doc.academic_year
+                ? { filters: { academic_year: frm.doc.academic_year } }
+                : {};
+        });
 
         const today = new Date(frappe.datetime.get_today());
 

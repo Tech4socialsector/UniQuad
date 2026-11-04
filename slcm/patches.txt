@@ -96,3 +96,4 @@ slcm.patches.v2_0.helpdesk_reply_email_template
 slcm.patches.v2_0.aad_helpdesk_views
 slcm.patches.v2_0.backfill_time_table_faculty_name
 slcm.patches.v2_0.publish_existing_exam_timetables
+slcm.patches.v2_0.move_application_fee_to_cycle_programmes

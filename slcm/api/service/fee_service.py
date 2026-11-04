@@ -1339,7 +1339,9 @@ class FeeService:
 
             from slcm.api.service.application_fee_service import get_payment_gateway_for_application_fee
             gateway = (
-                get_payment_gateway_for_application_fee(applicant.program, applicant.admission_cycle)
+                get_payment_gateway_for_application_fee(
+                    applicant.program, applicant.admission_cycle, getattr(applicant, "campus", None)
+                )
                 or _default_payment_gateway()
             )
             try:
@@ -1352,7 +1354,9 @@ class FeeService:
                 frappe.throw(_("Payment Gateway '{0}' not found or not configured. Please set up Razorpay (or your gateway) in Payment Gateway doctype.").format(gateway))
 
             from slcm.api.service.application_fee_service import get_application_fee_doc
-            app_fee_doc = get_application_fee_doc(applicant.admission_cycle)
+            app_fee_doc = get_application_fee_doc(
+                applicant.admission_cycle, applicant.program, getattr(applicant, "campus", None)
+            )
             fee_currency = (app_fee_doc and app_fee_doc.currency) or "INR"
 
             payment_details = {
@@ -1484,7 +1488,9 @@ class FeeService:
             )
             if not pr_gateway:
                 from slcm.api.service.application_fee_service import get_payment_gateway_for_application_fee
-                pr_gateway = get_payment_gateway_for_application_fee(applicant.program, applicant.admission_cycle)
+                pr_gateway = get_payment_gateway_for_application_fee(
+                    applicant.program, applicant.admission_cycle, getattr(applicant, "campus", None)
+                )
             gateway = pr_gateway or _default_payment_gateway()
             
             # Validate Payment Request ownership
@@ -1682,7 +1688,7 @@ class FeeService:
             receipt.program = applicant_doc.program
             receipt.academic_year = getattr(applicant_doc, "academic_year", None) or None
             tpl = get_payment_receipt_template_for_policy(
-                applicant_doc.program, applicant_doc.admission_cycle
+                applicant_doc.program, applicant_doc.admission_cycle, getattr(applicant_doc, "campus", None)
             )
             if tpl:
                 receipt.payment_receipt_template = tpl
