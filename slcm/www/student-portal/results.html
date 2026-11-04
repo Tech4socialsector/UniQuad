@@ -540,9 +540,9 @@ body.sp-dark .sp-improv-receipt-link { background: var(--sp-primary); box-shadow
 
 {# MFA / arrear (R, RR) / improvement-applied (I) markers shown next to a grade #}
 {% macro grade_sup(c) -%}
-{%- if c.mfa == "Yes" -%}<sup class="spr-sup" title="MFA">MFA</sup>
-{%- elif c.arrear_marker -%}<sup class="spr-sup spr-sup-arrear" title="Arrear">{{ c.arrear_marker }}</sup>{%- endif -%}
-{%- if c.improved -%}<sup class="spr-sup spr-sup-imp" title="Result improved by a re-exam or improvement exam">I</sup>{%- endif -%}
+{%- if c.mfa == "Yes" -%}<sup class="spr-sup" title="MFA">Mfa</sup>
+{%- elif c.arrear_marker -%}<sup class="spr-sup spr-sup-arrear" title="{{ 'Carried-forward course' if c.arrear_marker == 'RR' else 'Failed and rewrote (re-exam)' }}">{{ c.arrear_marker }}</sup>
+{%- elif c.improved -%}<sup class="spr-sup spr-sup-imp" title="Improved after passing (improvement exam)">I</sup>{%- endif -%}
 {%- endmacro %}
 
 {% macro improve_state(c) -%}
@@ -748,7 +748,7 @@ body.sp-dark .sp-improv-receipt-link { background: var(--sp-primary); box-shadow
       <h3 class="spr-card-name" title="{{ c.course_name | e }}">{{ c.course_name }}</h3>
       <div class="spr-chips">
         {{ status_pill(st) }}
-        {% if c.mfa == "Yes" %}<span class="spr-chip spr-chip-mfa">MFA</span>{% endif %}
+        {% if c.mfa == "Yes" %}<span class="spr-chip spr-chip-mfa">Mfa</span>{% endif %}
         <span class="spr-chip" title="{{ res.exam_name | e }}"><span class="sp-ms" aria-hidden="true">event_note</span>{{ res.exam_name }}</span>
         {% if res.term and res.term != res.exam_name %}<span class="spr-chip">{{ res.term }}</span>{% endif %}
       </div>

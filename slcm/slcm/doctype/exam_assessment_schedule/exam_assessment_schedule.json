@@ -13,7 +13,9 @@
   "exam_plan",
   "status",
   "section_assessments",
-  "assessments"
+  "assessments",
+  "section_notes",
+  "course_notes"
  ],
  "fields": [
   {
@@ -72,11 +74,23 @@
    "fieldtype": "Table",
    "label": "Assessments",
    "options": "Exam Assessment Schedule Item"
+  },
+  {
+   "fieldname": "section_notes",
+   "fieldtype": "Section Break",
+   "label": "SGD and Remarks",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "course_notes",
+   "fieldtype": "Table",
+   "label": "Course Notes",
+   "options": "Exam Assessment Course Note"
   }
  ],
  "grid_page_length": 50,
  "links": [],
- "modified": "2026-10-14 00:00:00.000000",
+ "modified": "2026-11-03 21:30:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Exam Assessment Schedule",

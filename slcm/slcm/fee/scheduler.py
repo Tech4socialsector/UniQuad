@@ -107,25 +107,18 @@ def send_due_reminders():
 
 
 def check_phd_year_transition():
-	"""Daily: create correct annual demand for PhD students based on year of study."""
-	from frappe.utils import date_diff
-
-	phd_students = frappe.get_all(
-		"Student Master",
-		filters={"program_type": "PhD", "student_status": "Active"},
-		fields=["name", "admission_date", "programme", "academic_year"],
-	)
+	"""Daily: create the annual demand for research (PhD) students for their current year of study."""
+	from slcm.slcm.fee.fee_demand_utils import LEVEL_MAP, get_student_fee_profiles
 
 	current_year = frappe.get_value("Academic Year", {"is_current_year": 1}, "name")
+	if not current_year:
+		return
+
+	research_level = LEVEL_MAP["PhD"]
+	phd_students = [p for p in get_student_fee_profiles() if p.level == research_level and p.year_no]
 
 	for student in phd_students:
-		if not student.admission_date:
-			continue
-
-		years_elapsed = date_diff(today(), student.admission_date) // 365
-		year_of_study = int(years_elapsed) + 1
-
-		component_type = "Annual Fee (PhD)" if year_of_study <= 3 else "Continuation Fee (PhD)"
+		component_type = "Annual Fee (PhD)" if student.year_no <= 3 else "Continuation Fee (PhD)"
 
 		existing = frappe.db.exists(
 			"Fee Demand",
@@ -139,30 +132,29 @@ def check_phd_year_transition():
 		)
 
 		if not existing:
-			_create_phd_demand(student, component_type, year_of_study, current_year)
+			try:
+				_create_phd_demand(student, component_type, student.year_no, current_year)
+			except Exception:
+				frappe.log_error(frappe.get_traceback(), f"PhD annual demand failed: {student.name}")
 
 	frappe.db.commit()
 
 
 def _create_phd_demand(student, component_type, year_of_study, academic_year):
+	from slcm.slcm.fee.fee_demand_utils import find_fee_structure, get_component_amount
+
 	fee_component = frappe.get_value(
 		"Fee Component", {"component_type": component_type}, "name"
 	)
 	if not fee_component:
 		return
 
-	fee_structure = frappe.get_value(
-		"Fee Structure",
-		{
-			"demand_type": "Academic",
-			"program_level": "PhD",
-			"academic_year": academic_year,
-			"status": "Active",
-		},
-		["name", "total_amount", "due_offset_days"],
-		as_dict=True,
-	)
+	fee_structure = find_fee_structure(student.program, academic_year, year_of_study, student.category)
 	if not fee_structure:
+		return
+
+	amount = get_component_amount(fee_structure.name, fee_component, student.is_foreign, student.category)
+	if not amount:
 		return
 
 	due_date = add_days(today(), fee_structure.due_offset_days or 30)
@@ -176,7 +168,7 @@ def _create_phd_demand(student, component_type, year_of_study, academic_year):
 		"description": f"{component_type} — Year {year_of_study}",
 		"demand_date": today(),
 		"due_date": due_date,
-		"original_amount": fee_structure.total_amount,
+		"original_amount": amount,
 		"trigger_ref_doctype": "Fee Structure",
 		"trigger_ref_name": fee_structure.name,
 	})

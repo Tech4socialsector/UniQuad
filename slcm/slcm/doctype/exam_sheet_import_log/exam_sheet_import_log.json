@@ -1,0 +1,136 @@
+{
+ "actions": [],
+ "autoname": "format:ESIL-{#####}",
+ "creation": "2026-11-03 22:30:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "naming_rule": "Expression",
+ "field_order": [
+  "sheet",
+  "exam_plan",
+  "status",
+  "import_file",
+  "col_break_1",
+  "imported_by",
+  "imported_on",
+  "total_lines",
+  "imported_lines",
+  "skipped_lines",
+  "section_issues",
+  "issues"
+ ],
+ "fields": [
+  {
+   "fieldname": "sheet",
+   "fieldtype": "Select",
+   "label": "Sheet",
+   "options": "Exam Timetable\nRe-exam Timetable\nContinuing Evaluation Schedule",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "exam_plan",
+   "fieldtype": "Link",
+   "label": "Exam Plan",
+   "options": "Exam Plan",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Imported\nImported with skipped lines\nFailed",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "import_file",
+   "fieldtype": "Attach",
+   "label": "Import File",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "imported_by",
+   "fieldtype": "Link",
+   "label": "Imported By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "imported_on",
+   "fieldtype": "Datetime",
+   "label": "Imported On",
+   "in_list_view": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_lines",
+   "fieldtype": "Int",
+   "label": "Lines in Sheet",
+   "read_only": 1
+  },
+  {
+   "fieldname": "imported_lines",
+   "fieldtype": "Int",
+   "label": "Imported",
+   "read_only": 1
+  },
+  {
+   "fieldname": "skipped_lines",
+   "fieldtype": "Int",
+   "label": "Skipped",
+   "in_list_view": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_issues",
+   "fieldtype": "Section Break",
+   "label": "Problems and Notes"
+  },
+  {
+   "fieldname": "issues",
+   "fieldtype": "Table",
+   "label": "Issues",
+   "options": "Exam Sheet Import Issue",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-11-03 22:30:00.000000",
+ "modified_by": "Administrator",
+ "module": "SLCM",
+ "name": "Exam Sheet Import Log",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "delete": 1
+  },
+  {
+   "role": "Academics User",
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "delete": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "exam_plan",
+ "track_changes": 0
+}

@@ -172,8 +172,7 @@ def _log_import(exam_type, cycle, imported, unmatched, method="CSV"):
             "action": f"Exam Score Import ({method})",
             "reference_doctype": "Exam Type Config",
             "reference_name": exam_type,
-            "admission_cycle": cycle,
-            "remarks": f"Imported: {imported} | Unmatched: {unmatched}",
+            "remarks": f"Cycle: {cycle} | Imported: {imported} | Unmatched: {unmatched}",
             "performed_by": frappe.session.user
         }).insert(ignore_permissions=True)
         frappe.db.commit()

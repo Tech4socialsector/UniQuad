@@ -278,6 +278,19 @@
   {
    "child": 1,
    "collapsible": 1,
+   "icon": "upload",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Exam Sheet Import Log",
+   "link_to": "Exam Sheet Import Log",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link",
+   "idx": 22
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
    "icon": "file-text",
    "indent": 0,
    "keep_closed": 0,
@@ -286,7 +299,7 @@
    "link_type": "Report",
    "show_arrow": 0,
    "type": "Link",
-   "idx": 22
+   "idx": 23
   },
   {
    "child": 1,
@@ -299,7 +312,7 @@
    "link_type": "Report",
    "show_arrow": 0,
    "type": "Link",
-   "idx": 23
+   "idx": 24
   }
  ],
  "modified": "2026-11-03 17:10:00.000000",

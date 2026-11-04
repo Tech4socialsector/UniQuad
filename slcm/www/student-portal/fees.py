@@ -1052,23 +1052,11 @@ def _ensure_student_fee_populated(student):
         if not program:
             return
 
-        current_date = frappe.utils.today()
-        fs_rows = frappe.db.sql(
-            """
-            SELECT name, total_amount_for_indian AS total_amount, valid_from, valid_until
-            FROM `tabFee Structure`
-            WHERE program = %s
-              AND status = 'Active'
-              AND applicable = 'Student'
-              AND valid_from <= %s
-              AND (valid_until IS NULL OR valid_until >= %s)
-            ORDER BY valid_from DESC, creation DESC
-            LIMIT 1
-            """,
-            (program, current_date, current_date),
-            as_dict=True,
+        from slcm.slcm.doctype.student_master.student_master import (
+            _get_valid_fee_structure_for_program,
+            _student_fs_args,
         )
-        fs = fs_rows[0] if fs_rows else None
+        fs = _get_valid_fee_structure_for_program(program, **_student_fs_args(student))
         if not fs or not frappe.utils.flt(fs.total_amount):
             return
 

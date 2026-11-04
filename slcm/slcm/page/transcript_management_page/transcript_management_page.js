@@ -14,6 +14,10 @@ frappe.pages["transcript-management-page"].on_page_load = function (wrapper) {
 		title: __("Transcript Management"),
 		single_column: true,
 	});
+	if (!document.getElementById("er-theme-font")) {
+		$("head").append('<link id="er-theme-font" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Merriweather:opsz,wght@18..144,300..900&display=swap">');
+	}
+	$(wrapper).addClass("tm-theme");
 
 	const _origWrapper = wrapper;
 
@@ -62,6 +66,9 @@ frappe.pages["transcript-management-page"].on_page_load = function (wrapper) {
 
 			/* Layout */
 			.tm-wrap { padding: 20px 24px 80px; background: #f7f8fa; min-height: 100%; }
+			/* NLS theme: Merriweather + #920C24 */
+			.tm-theme .page-head .title-text, .tm-wrap { font-family: "Merriweather", Georgia, "Times New Roman", serif; }
+			.tm-wrap button, .tm-wrap input, .tm-wrap select, .tm-wrap textarea { font-family: inherit; }
 
 			/* ── Tabs ── */
 			.tm-tabs {
@@ -75,8 +82,8 @@ frappe.pages["transcript-management-page"].on_page_load = function (wrapper) {
 				border-bottom: 2.5px solid transparent;
 				transition: color 0.15s, border-color 0.15s;
 			}
-			.tm-tab-btn:hover { color: #c84630; }
-			.tm-tab-btn.active { color: #c84630; border-color: #c84630; }
+			.tm-tab-btn:hover { color: #920C24; }
+			.tm-tab-btn.active { color: #920C24; border-color: #920C24; }
 
 			/* ── Requests status chart ── */
 			.tm-req-chart { display: flex; flex-direction: column; gap: 10px; }
@@ -92,7 +99,7 @@ frappe.pages["transcript-management-page"].on_page_load = function (wrapper) {
 				background: #fff; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
 				color: #666; transition: border-color 0.15s, color 0.15s;
 			}
-			.tm-pay-btn:hover { border-color: #c84630; color: #c84630; }
+			.tm-pay-btn:hover { border-color: #920C24; color: #920C24; }
 
 			/* ── Payment details dialog table ── */
 			.tm-pay-detail-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #f0f1f3; font-size: 13px; }
@@ -132,10 +139,10 @@ frappe.pages["transcript-management-page"].on_page_load = function (wrapper) {
 				display: flex; align-items: center; justify-content: center;
 				flex-shrink: 0;
 			}
-			.tm-stat-icon-total    { background: #eff3ff; color: #3b5bdb; }
+			.tm-stat-icon-total    { background: #FBEEF0; color: #920C24; }
 			.tm-stat-icon-interim  { background: #fff3cd; color: #b45309; }
 			.tm-stat-icon-final    { background: #e6f4ea; color: #1a7a36; }
-			.tm-stat-icon-pending  { background: #fdecea; color: #c84630; }
+			.tm-stat-icon-pending  { background: #FBEEF0; color: #920C24; }
 			.tm-stat-body { flex: 1; min-width: 0; }
 			.tm-stat-value {
 				font-size: 22px; font-weight: 700; color: #1a1a2e; line-height: 1;
@@ -170,8 +177,8 @@ frappe.pages["transcript-management-page"].on_page_load = function (wrapper) {
 				height: 34px;
 			}
 			.tm-search-input:focus {
-				border-color: #c84630;
-				box-shadow: 0 0 0 3px rgba(200,70,48,0.1);
+				border-color: #920C24;
+				box-shadow: 0 0 0 3px rgba(146,12,36,0.1);
 			}
 			.tm-search-input::placeholder { color: #aab; }
 
@@ -191,25 +198,25 @@ frappe.pages["transcript-management-page"].on_page_load = function (wrapper) {
 
 			/* Outline / ghost variant */
 			.tm-btn-outline {
-				background: #fff; border-color: #c84630; color: #c84630;
+				background: #fff; border-color: #920C24; color: #920C24;
 			}
 			.tm-btn-outline:hover {
-				background: #c84630; color: #fff;
-				box-shadow: 0 2px 8px rgba(200,70,48,0.2);
+				background: #920C24; color: #fff;
+				box-shadow: 0 2px 8px rgba(146,12,36,0.2);
 			}
 			.tm-btn-outline:hover svg { stroke: #fff; }
 
 			/* Primary filled */
-			.tm-btn-primary { background: #c84630; border-color: #c84630; color: #fff; }
+			.tm-btn-primary { background: #920C24; border-color: #920C24; color: #fff; }
 			.tm-btn-primary:hover {
-				background: #a83828; border-color: #a83828;
-				box-shadow: 0 2px 8px rgba(200,70,48,0.3);
+				background: #6E091B; border-color: #6E091B;
+				box-shadow: 0 2px 8px rgba(146,12,36,0.3);
 			}
 
 			/* Default/neutral */
 			.tm-btn-default { background: #fff; border-color: #d1d8dd; color: #444; }
 			.tm-btn-default:hover {
-				border-color: #c84630; color: #c84630; background: #fff8f7;
+				border-color: #920C24; color: #920C24; background: #FBEEF0;
 			}
 
 			/* Split button group */
@@ -217,7 +224,7 @@ frappe.pages["transcript-management-page"].on_page_load = function (wrapper) {
 			.tm-split-group .tm-btn { border-radius: 0; }
 			.tm-split-group .tm-btn:first-child { border-radius: 6px 0 0 6px; border-right: none; }
 			.tm-split-group .tm-btn:last-child  { border-radius: 0 6px 6px 0; padding: 0 10px; border-left: 1px solid rgba(255,255,255,0.3); }
-			.tm-split-group .tm-btn-outline:last-child { border-left-color: rgba(200,70,48,0.4); }
+			.tm-split-group .tm-btn-outline:last-child { border-left-color: rgba(146,12,36,0.4); }
 
 			/* Dropdown */
 			.tm-dropdown { position: relative; display: inline-flex; }
@@ -235,7 +242,7 @@ frappe.pages["transcript-management-page"].on_page_load = function (wrapper) {
 				padding: 8px 16px; font-size: 13px; color: #333;
 				text-decoration: none; transition: background 0.1s;
 			}
-			.tm-dropdown-menu li a:hover { background: #fdf5f5; color: #c84630; }
+			.tm-dropdown-menu li a:hover { background: #FBEEF0; color: #920C24; }
 			.tm-dropdown-menu .tm-divider { height: 1px; background: #f0f1f3; margin: 4px 0; }
 			.tm-dropdown-menu .tm-menu-label {
 				padding: 6px 16px 4px; font-size: 10px; font-weight: 700;
@@ -249,13 +256,13 @@ frappe.pages["transcript-management-page"].on_page_load = function (wrapper) {
 				display: inline-flex; align-items: center; justify-content: center;
 				transition: border-color 0.15s, background 0.15s; color: #666;
 			}
-			.tm-icon-btn:hover { border-color: #c84630; color: #c84630; background: #fff8f7; }
+			.tm-icon-btn:hover { border-color: #920C24; color: #920C24; background: #FBEEF0; }
 			.tm-icon-btn:focus { outline: none; }
 
 			/* Filter badge on button */
 			.tm-filter-badge {
 				display: inline-flex; align-items: center; justify-content: center;
-				background: #c84630; color: #fff; border-radius: 50%;
+				background: #920C24; color: #fff; border-radius: 50%;
 				font-size: 10px; font-weight: 700; width: 16px; height: 16px; margin-left: 2px;
 			}
 
@@ -283,7 +290,7 @@ frappe.pages["transcript-management-page"].on_page_load = function (wrapper) {
 				height: 34px; cursor: pointer; appearance: auto;
 			}
 			.tm-filter-select:focus {
-				border-color: #c84630; box-shadow: 0 0 0 3px rgba(200,70,48,0.1); background: #fff;
+				border-color: #920C24; box-shadow: 0 0 0 3px rgba(146,12,36,0.1); background: #fff;
 			}
 			.tm-filter-actions {
 				margin-top: 16px; display: flex; gap: 8px; align-items: center;
@@ -294,17 +301,17 @@ frappe.pages["transcript-management-page"].on_page_load = function (wrapper) {
 			.tm-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
 			.tm-tag {
 				display: inline-flex; align-items: center; gap: 4px;
-				padding: 3px 6px 3px 10px; background: #fff0ee;
-				border: 1px solid #fcc; border-radius: 20px;
-				font-size: 11px; color: #c84630; font-weight: 500;
+				padding: 3px 6px 3px 10px; background: #FBEEF0;
+				border: 1px solid #E8B4BE; border-radius: 20px;
+				font-size: 11px; color: #920C24; font-weight: 500;
 			}
 			.tm-tag-remove {
 				background: none; border: none; padding: 0 2px; line-height: 1;
-				cursor: pointer; color: #e08070; font-size: 12px;
+				cursor: pointer; color: #C4566A; font-size: 12px;
 				display: inline-flex; align-items: center; border-radius: 50%;
 				transition: color 0.1s, background 0.1s;
 			}
-			.tm-tag-remove:hover { color: #c84630; background: rgba(200,70,48,0.1); }
+			.tm-tag-remove:hover { color: #920C24; background: rgba(146,12,36,0.1); }
 
 			/* Table card */
 			.tm-table-card {
@@ -346,7 +353,7 @@ frappe.pages["transcript-management-page"].on_page_load = function (wrapper) {
 			}
 			.tm-page-btn:first-child { border-radius: 3px 0 0 3px; }
 			.tm-page-btn:last-child  { border-right: 1px solid #dee2e6; border-radius: 0 3px 3px 0; }
-			.tm-page-btn:hover:not(:disabled) { background: #e9ecef; color: #c84630; border-color: #c84630; z-index: 1; }
+			.tm-page-btn:hover:not(:disabled) { background: #e9ecef; color: #920C24; border-color: #920C24; z-index: 1; }
 			.tm-page-btn:disabled { opacity: 0.45; cursor: not-allowed; background: #f8f9fa; }
 			.tm-page-num {
 				padding: 0 10px; height: 28px;
@@ -355,9 +362,9 @@ frappe.pages["transcript-management-page"].on_page_load = function (wrapper) {
 				cursor: pointer; display: inline-flex; align-items: center;
 				transition: all 0.12s;
 			}
-			.tm-page-num:hover { background: #e9ecef; color: #c84630; }
+			.tm-page-num:hover { background: #e9ecef; color: #920C24; }
 			.tm-page-num.active {
-				background: #c84630; color: #fff; border-color: #c84630;
+				background: #920C24; color: #fff; border-color: #920C24;
 				font-weight: 700; z-index: 1; position: relative;
 			}
 			.tm-page-ellipsis {
@@ -378,12 +385,12 @@ frappe.pages["transcript-management-page"].on_page_load = function (wrapper) {
 				border-right: 1px solid #e4e7ea;
 			}
 			.tm-table thead th:last-child { border-right: none; }
-			.tm-table thead th.tm-col-accent { color: #c84630; }
+			.tm-table thead th.tm-col-accent { color: #920C24; }
 			.tm-table thead th.tm-sortable { cursor: pointer; user-select: none; }
 			.tm-table thead th.tm-sortable:hover { background: #e8eaed; }
 			.tm-table tbody tr { transition: background 0.08s; }
 			.tm-table tbody tr:nth-child(even) { background: #f9fafb; }
-			.tm-table tbody tr:hover { background: #fff3f0 !important; }
+			.tm-table tbody tr:hover { background: #FBEEF0 !important; }
 			.tm-table tbody td {
 				padding: 9px 12px; vertical-align: middle;
 				border-bottom: 1px solid #e9ecef;
@@ -394,8 +401,8 @@ frappe.pages["transcript-management-page"].on_page_load = function (wrapper) {
 
 			/* Sort indicator */
 			.tm-sort-icon { font-size: 10px; color: #ccc; margin-left: 3px; }
-			.tm-sort-icon.asc  { color: #c84630; }
-			.tm-sort-icon.desc { color: #c84630; }
+			.tm-sort-icon.asc  { color: #920C24; }
+			.tm-sort-icon.desc { color: #920C24; }
 
 			/* Avatar */
 			.tm-avatar {
@@ -405,13 +412,13 @@ frappe.pages["transcript-management-page"].on_page_load = function (wrapper) {
 			.tm-avatar-initials {
 				width: 36px; height: 36px; border-radius: 50%;
 				display: inline-flex; align-items: center; justify-content: center;
-				background: linear-gradient(135deg, #c84630, #e06040);
+				background: linear-gradient(135deg, #920C24, #C4566A);
 				color: #fff; font-weight: 700; font-size: 14px; flex-shrink: 0;
 			}
 
 			/* Student name link */
 			.tm-student-link {
-				font-weight: 600; color: #c84630; font-size: 13px; text-decoration: none;
+				font-weight: 600; color: #920C24; font-size: 13px; text-decoration: none;
 			}
 			.tm-student-link:hover { text-decoration: underline; }
 
@@ -429,11 +436,11 @@ frappe.pages["transcript-management-page"].on_page_load = function (wrapper) {
 				background: #d0edda; box-shadow: 0 2px 8px rgba(26,122,54,0.2);
 			}
 			.tm-badge-revoked {
-				background: #fdecea; color: #c0392b; border: 1px solid #f5c0bb;
+				background: #FBEEF0; color: #920C24; border: 1px solid #E8B4BE;
 				cursor: pointer; transition: box-shadow 0.12s;
 			}
 			.tm-badge-revoked:hover {
-				background: #fad7d4; box-shadow: 0 2px 8px rgba(192,57,43,0.15);
+				background: #F5D9DE; box-shadow: 0 2px 8px rgba(146,12,36,0.15);
 			}
 			.tm-badge-pending { background: #fff3cd; color: #856404; border: 1px solid #ffe69c; }
 			.tm-badge-na { color: #ccc; font-weight: 400; }
@@ -448,7 +455,7 @@ frappe.pages["transcript-management-page"].on_page_load = function (wrapper) {
 				white-space: nowrap;
 			}
 			.tm-gen-badge:hover {
-				border-color: #c84630; color: #c84630; background: #fff0ee;
+				border-color: #920C24; color: #920C24; background: #FBEEF0;
 			}
 
 			/* Student status pill */
@@ -458,28 +465,28 @@ frappe.pages["transcript-management-page"].on_page_load = function (wrapper) {
 			}
 			.tm-status-active    { background: #e6f4ea; color: #1a7a36; }
 			.tm-status-inactive  { background: #f0f1f3; color: #666; }
-			.tm-status-graduated { background: #e8f0fe; color: #1a5ccb; }
-			.tm-status-dropped   { background: #fdecea; color: #c0392b; }
+			.tm-status-graduated { background: #F5D9DE; color: #6E091B; }
+			.tm-status-dropped   { background: #FBEEF0; color: #920C24; }
 			.tm-status-alumni    { background: #fef3e6; color: #b45309; }
-			.tm-status-dormant   { background: #f5effe; color: #6b21a8; }
+			.tm-status-dormant   { background: #F5D9DE; color: #6E091B; }
 
 			/* (pagination styles moved to DataTables bottom bar section above) */
 
 			/* Loading spinner */
 			.tm-spinner {
 				width: 28px; height: 28px;
-				border: 3px solid #f0f0f0; border-top-color: #c84630;
+				border: 3px solid #f0f0f0; border-top-color: #920C24;
 				border-radius: 50%; animation: tm-spin 0.8s linear infinite;
 				margin: 0 auto 10px;
 			}
 
 			/* Checkbox styling */
-			.tm-checkbox { width: 15px; height: 15px; cursor: pointer; accent-color: #c84630; }
+			.tm-checkbox { width: 15px; height: 15px; cursor: pointer; accent-color: #920C24; }
 
 			/* ── Selection action bar (fixed at bottom) ── */
 			.tm-sel-bar {
 				position: fixed; bottom: 0; left: 0; right: 0;
-				background: #1e2a3a; color: #fff;
+				background: #6E091B; color: #fff;
 				padding: 0 28px;
 				display: flex; align-items: center; gap: 10px;
 				z-index: 1100;
@@ -1316,7 +1323,7 @@ frappe.pages["transcript-management-page"].on_page_load = function (wrapper) {
 			error: function () {
 				state.loading = false;
 				$(wrapper).find("#tm-tbody").html(`
-					<tr><td colspan="7" style="text-align:center; padding:32px; color:#c84630;">
+					<tr><td colspan="7" style="text-align:center; padding:32px; color:#920C24;">
 						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
 							fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
 							style="display:block;margin:0 auto 8px;opacity:.6;">
@@ -1388,8 +1395,8 @@ frappe.pages["transcript-management-page"].on_page_load = function (wrapper) {
 			let cgpaHtml = `<span style="color:#ccc;">—</span>`;
 			if (s.cgpa !== null && s.cgpa !== undefined && s.cgpa !== "") {
 				const v = parseFloat(s.cgpa);
-				const color = v >= 7.0 ? "#1a7a36" : v >= 5.0 ? "#b45309" : "#c84630";
-				const bg    = v >= 7.0 ? "#e6f4ea" : v >= 5.0 ? "#fef3e6" : "#fdecea";
+				const color = v >= 7.0 ? "#1a7a36" : v >= 5.0 ? "#b45309" : "#920C24";
+				const bg    = v >= 7.0 ? "#e6f4ea" : v >= 5.0 ? "#fef3e6" : "#FBEEF0";
 				cgpaHtml = `<span style="font-weight:700;color:${color};background:${bg};padding:3px 10px;border-radius:20px;font-size:12px;">${v.toFixed(2)}</span>`;
 			}
 
@@ -1724,13 +1731,13 @@ frappe.pages["transcript-management-page"].on_page_load = function (wrapper) {
 	// ── Requests tab: functions ─────────────────────────────────────────────────
 
 	const REQ_STATUS_COLORS = {
-		"Payment Pending": "#c8632f",
-		"Submitted":       "#3b5bdb",
+		"Payment Pending": "#C4566A",
+		"Submitted":       "#920C24",
 		"Under Review":    "#b45309",
 		"Approved":        "#0f8a5f",
 		"Generated":       "#1a7a36",
 		"Delivered":       "#1a7a36",
-		"Rejected":        "#c84630",
+		"Rejected":        "#920C24",
 		"Cancelled":       "#888",
 	};
 
@@ -1867,7 +1874,7 @@ frappe.pages["transcript-management-page"].on_page_load = function (wrapper) {
 					</td>
 					<td>
 						<a href="/app/transcript-request/${encodeURIComponent(row.name)}" target="_blank"
-							style="color:#c84630; font-weight:600; text-decoration:none;">${name}</a>
+							style="color:#920C24; font-weight:600; text-decoration:none;">${name}</a>
 					</td>
 					<td>${sname}<br><span style="color:#999; font-size:11px;">${frappe.utils.escape_html(row.registration_id || "")}</span></td>
 					<td>${frappe.utils.escape_html(transcript_type_label(row.transcript_type) || "")}</td>
@@ -2005,7 +2012,7 @@ frappe.pages["transcript-management-page"].on_page_load = function (wrapper) {
 					${d.payment_failure_reason ? `
 					<div class="tm-pay-detail-row">
 						<span class="tm-pay-detail-label">${__("Failure Reason")}</span>
-						<span class="tm-pay-detail-value" style="color:#c0392b;">${frappe.utils.escape_html(d.payment_failure_reason)}</span>
+						<span class="tm-pay-detail-value" style="color:#920C24;">${frappe.utils.escape_html(d.payment_failure_reason)}</span>
 					</div>` : ""}
 					${gw ? `<div class="tm-pay-detail-label" style="margin-top:12px;">${__("Gateway Response")}</div>
 						<div class="tm-pay-gateway-json">${frappe.utils.escape_html(gw)}</div>` : ""}

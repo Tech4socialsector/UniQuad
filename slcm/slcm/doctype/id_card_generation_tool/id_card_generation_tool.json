@@ -4,29 +4,44 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "section_wizard",
+  "wizard_html",
   "section_filters",
   "academic_year",
   "program",
+  "column_break_filters",
   "batch",
+  "section",
   "get_students",
-  "column_break_options",
+  "section_students",
+  "student_list",
+  "section_template",
   "id_card_template",
   "issue_date",
   "expiry_date",
+  "column_break_options",
   "generate_front",
   "generate_back",
-  "section_students",
-  "student_list",
+  "regenerate_existing",
+  "column_break_preview",
+  "preview_html",
   "generate_cards",
-  "download_zip",
-  "preview_section",
-  "preview_html"
+  "download_zip"
  ],
  "fields": [
   {
+   "fieldname": "section_wizard",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "wizard_html",
+   "fieldtype": "HTML",
+   "label": "Progress"
+  },
+  {
    "fieldname": "section_filters",
    "fieldtype": "Section Break",
-   "label": "Filters"
+   "label": "1 · Select Students"
   },
   {
    "fieldname": "academic_year",
@@ -41,20 +56,42 @@
    "options": "Programme"
   },
   {
+   "fieldname": "column_break_filters",
+   "fieldtype": "Column Break"
+  },
+  {
    "fieldname": "batch",
    "fieldtype": "Link",
    "label": "Batch",
    "options": "SLCM Batch"
   },
   {
+   "fieldname": "section",
+   "fieldtype": "Link",
+   "options": "Section",
+   "label": "Section"
+  },
+  {
    "fieldname": "get_students",
    "fieldtype": "Button",
-   "hidden": 1,
+   "hidden": 0,
    "label": "Get Students"
   },
   {
-   "fieldname": "column_break_options",
-   "fieldtype": "Column Break"
+   "fieldname": "section_students",
+   "fieldtype": "Section Break",
+   "label": "Students"
+  },
+  {
+   "fieldname": "student_list",
+   "fieldtype": "Table",
+   "label": "Student List",
+   "options": "ID Card Generation Item"
+  },
+  {
+   "fieldname": "section_template",
+   "fieldtype": "Section Break",
+   "label": "2 · Template & Validity"
   },
   {
    "fieldname": "id_card_template",
@@ -62,7 +99,8 @@
    "in_list_view": 1,
    "label": "ID Card Template",
    "options": "ID Card Template",
-   "reqd": 1
+   "reqd": 1,
+   "description": "Only Student templates are listed."
   },
   {
    "default": "Today",
@@ -77,7 +115,12 @@
    "fieldtype": "Date",
    "in_list_view": 1,
    "label": "Expiry Date",
-   "reqd": 1
+   "reqd": 0,
+   "description": "Leave empty to use each student's programme end date."
+  },
+  {
+   "fieldname": "column_break_options",
+   "fieldtype": "Column Break"
   },
   {
    "default": "1",
@@ -92,15 +135,20 @@
    "label": "Generate Back"
   },
   {
-   "fieldname": "section_students",
-   "fieldtype": "Section Break",
-   "label": "Students"
+   "fieldname": "regenerate_existing",
+   "fieldtype": "Check",
+   "label": "Regenerate Existing Cards",
+   "default": "0",
+   "description": "Re-render cards for students who already have an active card (e.g. after changing the template)."
   },
   {
-   "fieldname": "student_list",
-   "fieldtype": "Table",
-   "label": "Student List",
-   "options": "ID Card Generation Item"
+   "fieldname": "column_break_preview",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "preview_html",
+   "fieldtype": "HTML",
+   "label": "Preview"
   },
   {
    "fieldname": "generate_cards",
@@ -113,22 +161,11 @@
    "fieldtype": "Button",
    "hidden": 1,
    "label": "Download ZIP"
-  },
-  {
-   "fieldname": "preview_section",
-   "fieldtype": "Section Break",
-   "hidden": 1,
-   "label": "Card Preview"
-  },
-  {
-   "fieldname": "preview_html",
-   "fieldtype": "HTML",
-   "label": "Preview HTML"
   }
  ],
  "issingle": 1,
  "links": [],
- "modified": "2026-10-19 16:30:00.000000",
+ "modified": "2026-11-03 23:45:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "ID Card Generation Tool",

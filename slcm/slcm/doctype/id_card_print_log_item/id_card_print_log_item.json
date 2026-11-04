@@ -1,0 +1,148 @@
+{
+ "actions": [],
+ "creation": "2026-11-04 10:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "id_card_generation",
+  "student_id_card",
+  "card_type",
+  "student",
+  "student_name",
+  "print_type",
+  "reprint_reason",
+  "column_break_card",
+  "academic_year",
+  "department",
+  "program",
+  "batch",
+  "section_break_images",
+  "front_image",
+  "column_break_images",
+  "back_image"
+ ],
+ "fields": [
+  {
+   "fieldname": "id_card_generation",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "columns": 2,
+   "label": "ID Card Generation",
+   "options": "ID Card Generation",
+   "read_only": 1
+  },
+  {
+   "fieldname": "student_id_card",
+   "fieldtype": "Link",
+   "label": "Student ID Card",
+   "options": "Student ID Card",
+   "read_only": 1
+  },
+  {
+   "fieldname": "card_type",
+   "fieldtype": "Data",
+   "label": "Card Type",
+   "read_only": 1
+  },
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "columns": 2,
+   "label": "Student",
+   "options": "Student Master",
+   "read_only": 1
+  },
+  {
+   "fieldname": "student_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "columns": 3,
+   "label": "Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "print_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "columns": 1,
+   "label": "Print Type",
+   "options": "Original\nReprint",
+   "read_only": 1
+  },
+  {
+   "fieldname": "reprint_reason",
+   "fieldtype": "Small Text",
+   "label": "Reason for Reprint",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_card",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "academic_year",
+   "fieldtype": "Link",
+   "label": "Academic Year",
+   "options": "Academic Year",
+   "read_only": 1
+  },
+  {
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "label": "Department",
+   "options": "SLCM Department",
+   "read_only": 1
+  },
+  {
+   "fieldname": "program",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "columns": 2,
+   "label": "Programme",
+   "options": "Programme",
+   "read_only": 1
+  },
+  {
+   "fieldname": "batch",
+   "fieldtype": "Link",
+   "label": "Batch",
+   "options": "SLCM Batch",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_images",
+   "fieldtype": "Section Break",
+   "label": "Printed Images"
+  },
+  {
+   "fieldname": "front_image",
+   "fieldtype": "Attach Image",
+   "label": "Front Image",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_images",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "back_image",
+   "fieldtype": "Attach Image",
+   "label": "Back Image",
+   "read_only": 1
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-11-04 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "SLCM",
+ "name": "ID Card Print Log Item",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

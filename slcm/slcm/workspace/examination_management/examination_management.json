@@ -1,0 +1,36 @@
+{
+ "app": "slcm",
+ "charts": [],
+ "content": "[{\"id\": \"ex-home\", \"type\": \"custom_block\", \"data\": {\"custom_block_name\": \"Examination Home\", \"col\": 12}}]",
+ "creation": "2026-11-03 16:36:50.403634",
+ "custom_blocks": [
+  {
+   "custom_block_name": "Examination Home",
+   "label": "Examination Home"
+  }
+ ],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "hide_custom": 0,
+ "icon": "notebook-text",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Examination Management",
+ "link_type": "DocType",
+ "links": [],
+ "modified": "2026-11-03 16:36:50.403634",
+ "modified_by": "Administrator",
+ "module": "SLCM",
+ "name": "Examination Management",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [],
+ "sequence_id": 0.0,
+ "shortcuts": [],
+ "title": "Examination Management",
+ "type": "Workspace"
+}

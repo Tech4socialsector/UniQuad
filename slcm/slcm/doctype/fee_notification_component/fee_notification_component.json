@@ -7,7 +7,9 @@
   "fee_component",
   "fee_structure",
   "column_break_1",
-  "batch_year",
+  "program",
+  "batch",
+  "year_no",
   "program_level",
   "student_category",
   "amount"
@@ -26,46 +28,66 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Fee Structure",
-   "options": "Fee Structure"
+   "options": "Fee Structure",
+   "description": "Optional. Leave blank to pick each student's Fee Structure by programme, year and category."
   },
   {
    "fieldname": "column_break_1",
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "batch_year",
+   "fieldname": "program",
    "fieldtype": "Link",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Batch Year",
-   "options": "Student Batch Name"
+   "label": "Programme",
+   "options": "Programme",
+   "description": "Blank = all programmes"
+  },
+  {
+   "fieldname": "batch",
+   "fieldtype": "Link",
+   "label": "Batch",
+   "options": "SLCM Batch",
+   "description": "Blank = all batches"
+  },
+  {
+   "fieldname": "year_no",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Year No",
+   "options": "\n1\n2\n3\n4\n5",
+   "description": "Student's current year. Blank = all years"
   },
   {
    "fieldname": "program_level",
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Program Level",
-   "options": "\nUG\nPG\nPhD\nAll",
-   "reqd": 1
+   "options": "\nAll\nUG\nPG\nPhD",
+   "reqd": 1,
+   "default": "All"
   },
   {
    "fieldname": "student_category",
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Student Category",
-   "options": "\nAll\nGeneral\nSC\nST\nOBC\nEWS\nNRI\nOther"
+   "options": "\nAll\nGeneral\nSC\nST\nOBC\nOBC-NCL\nEWS\nNRI\nNA\nOther",
+   "default": "All"
   },
   {
    "fieldname": "amount",
    "fieldtype": "Currency",
    "in_list_view": 1,
-   "label": "Amount",
-   "reqd": 1
+   "label": "Fallback Amount",
+   "reqd": 0,
+   "description": "Charged only when no matching Fee Structure lists this component. Normally leave blank: the amount comes from the student's Fee Structure."
   }
  ],
  "istable": 1,
  "links": [],
- "modified": "2026-05-21 16:38:38.892738",
+ "modified": "2026-11-04 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Fee Notification Component",

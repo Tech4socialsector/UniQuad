@@ -1291,7 +1291,11 @@ def get_portal_notifications():
 					limit=5,
 					ignore_permissions=True,
 				)
+				seen_courses = set()   # a course in several rooms is one exam
 				for es in exam_schedules:
+					if es.course in seen_courses:
+						continue
+					seen_courses.add(es.course)
 					date_str = ""
 					try:
 						date_str = getdate(es.exam_date).strftime("%d %b %Y")

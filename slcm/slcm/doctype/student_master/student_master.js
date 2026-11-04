@@ -59,6 +59,36 @@ frappe.ui.form.on("Student Master", {
 				REGISTRATION
 			);
 
+			// Open the student's active ID card, or start a new one.
+			frm.add_custom_button(
+				__("ID Card"),
+				async function () {
+					const r = await frappe.db.get_value(
+						"ID Card Generation",
+						{
+							student: frm.doc.name,
+							card_status: ["not in", ["Cancelled", "Expired"]],
+						},
+						"name"
+					);
+					if (r.message && r.message.name) {
+						frappe.set_route("Form", "ID Card Generation", r.message.name);
+						return;
+					}
+					const t = await frappe.db.get_value(
+						"ID Card Template",
+						{ card_type: "Student", is_default: 1 },
+						"name"
+					);
+					frappe.new_doc("ID Card Generation", {
+						card_type: "Student",
+						student: frm.doc.name,
+						id_card_template: (t.message && t.message.name) || undefined,
+					});
+				},
+				REGISTRATION
+			);
+
 			// Download Registration Slip
 			frm.add_custom_button(
 				__("Download Registration Slip"),

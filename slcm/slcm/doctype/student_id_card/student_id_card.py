@@ -15,9 +15,12 @@ class StudentIDCard(IDCardCommonMixin, Document):
 	# ------------------------------------------------------------------
 
 	def after_insert(self):
+		if self.flags.skip_auto_generate or not self.id_card_template:
+			return
 		frappe.enqueue(
 			"slcm.slcm.doctype.student_id_card.tasks.generate_id_card_images",
 			queue="short",
+			enqueue_after_commit=True,
 			docname=self.name,
 		)
 

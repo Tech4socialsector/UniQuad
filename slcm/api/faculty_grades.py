@@ -37,15 +37,14 @@ from slcm.slcm.utils.result_access import (
 	STATUS_DRAFT,
 	STATUS_LOCKED,
 	STATUS_SUBMITTED,
-	arrear_badge,
 	assert_course_editable,
 	assert_student_editable,
 	edit_block_reason,
 	get_access,
 	get_max_marks,
-	get_reexam_attempts,
 	get_valid_grades,
-	is_improved,
+	grade_markers,
+	apply_grade_marks,
 	parse_marks,
 	validate_grade,
 	view_block_reason,
@@ -290,11 +289,12 @@ def _marks_by_student(ctx, students):
 		as_dict=True,
 	)
 	out = {r.student: r for r in rows}
-	attempts = get_reexam_attempts(ctx.course, students)
+	markers = grade_markers(ctx.course, ctx.exam_plan, students)
+	mfa = dict(frappe.get_all("Student Course Marks", filters={"name": ["in", [r.name for r in rows] or [""]]}, fields=["name", "mfa"], as_list=True))
 	for r in rows:
 		r.entries = {}
-		r.arrear_marker = arrear_badge(attempts.get(r.student, 0))
-		r.improved = is_improved(r)
+		r.mfa = mfa.get(r.name)
+		apply_grade_marks(r, markers.get(r.student, ""))
 		r.status = r.status or STATUS_DRAFT
 	if rows:
 		for e in frappe.db.sql(
@@ -523,8 +523,10 @@ def set_status(course, academic_term, exam_plan, status, students):
 
 def _with_badges(ctx, student, result):
 	result = dict(result or {})
-	result["arrear_marker"] = arrear_badge(get_reexam_attempts(ctx.course, [student]).get(student, 0))
-	return result
+	row = frappe.db.get_value("Student Course Marks", {"course": ctx.course, "exam_plan": ctx.exam_plan, "student": student},
+	                          ["mfa", "improvement_applied"], as_dict=True) or {}
+	result.update(mfa=row.get("mfa"), improvement_applied=row.get("improvement_applied") or result.get("improvement_applied"))
+	return apply_grade_marks(result, grade_markers(ctx.course, ctx.exam_plan, [student]).get(student, ""))
 
 
 # ---------------------------------------------------------------------------
@@ -821,10 +823,4 @@ def save_improvement_mark(course, academic_term, exam_plan, student, value):
 	if (frappe.db.get_value("Student Course Marks", scm, "status") or "") == STATUS_LOCKED:
 		frappe.throw(_("This student's marks are locked."))
 	result = write_improvement_marks(scm, ctx.course, ctx.exam_plan, value)
-	row = frappe.db.get_value(
-		"Student Course Marks", scm,
-		["total_marks", "updated_final_marks", "improvement_applied"], as_dict=True,
-	)
-	result = _with_badges(ctx, student, result)
-	result["improved"] = is_improved(row)
-	return result
+	return _with_badges(ctx, student, result)

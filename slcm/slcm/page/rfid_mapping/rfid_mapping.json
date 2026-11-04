@@ -3,7 +3,7 @@
  "creation": "2026-06-18 10:00:00.000000",
  "doctype": "Page",
  "icon": "fa fa-id-card",
- "modified": "2026-11-02 14:30:00.000000",
+ "modified": "2026-11-03 18:30:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "rfid-mapping",
@@ -23,5 +23,5 @@
    "role": "AAD Staff"
   }
  ],
- "title": "RFID Mapping"
+ "title": "RFID Card Management"
 }

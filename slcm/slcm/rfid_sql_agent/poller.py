@@ -26,7 +26,7 @@ Flow:
 
 import re
 import frappe
-from frappe.utils import now_datetime, get_datetime
+from frappe.utils import add_to_date, cint, get_datetime, now_datetime, nowdate
 
 
 # ---------------------------------------------------------------------------
@@ -383,20 +383,56 @@ def reset_watermark(new_id=0):
 
 
 @frappe.whitelist()
-def get_dashboard_summary():
-    """Stats + live feed for the RFID SQL Agent Dashboard page."""
+def get_dashboard_summary(feed_limit=500):
+    """Agent health, today's swipes, terminals, setup gaps and the live feed
+    for the RFID SQL Agent Dashboard page."""
     frappe.only_for("System Manager")
 
     cfg = frappe.get_single("RFID SQL Agent Settings")
+    today_start = f"{nowdate()} 00:00:00"
+    day_ago = add_to_date(now_datetime(), days=-1)
 
     stats = frappe.db.sql("""
         SELECT
             COUNT(*)                                        AS total_punches,
             SUM(sync_status = 'Matched')                    AS matched,
             SUM(sync_status = 'Unmatched')                  AS unmatched,
+            SUM(punch_time >= %(today)s)                    AS today,
+            SUM(punch_time >= %(today)s AND sync_status = 'Matched') AS today_matched,
+            COUNT(DISTINCT CASE WHEN punch_time >= %(today)s THEN emp_code END) AS today_cards,
+            SUM(remote_synced = 0)                          AS remote_pending,
             MAX(punch_time)                                 AS last_punch
         FROM `tabRFID SQL Punch Log`
-    """, as_dict=True)[0]
+    """, {"today": today_start}, as_dict=True)[0]
+
+    # what happened to the swipes after they were pulled (Attendance Log is the matching queue)
+    outcomes = frappe.db.sql("""
+        SELECT match_status AS status, COUNT(*) AS n
+        FROM `tabAttendance Log`
+        WHERE source = 'RFID' AND swipe_time >= %(today)s
+        GROUP BY match_status ORDER BY n DESC
+    """, {"today": today_start}, as_dict=True)
+
+    devices = {d.name: d for d in frappe.get_all("RFID Device", fields=["name", "device_name", "is_active"])}
+    mapped = set(frappe.get_all("RFID Device Room Mapping", filters={"is_active": 1}, pluck="device"))
+    terminals = frappe.db.sql("""
+        SELECT terminal_id, MAX(terminal_alias) AS terminal_alias,
+            COUNT(*) AS swipes, MAX(punch_time) AS last_punch
+        FROM `tabRFID SQL Punch Log`
+        WHERE punch_time >= %(today)s
+        GROUP BY terminal_id ORDER BY swipes DESC
+    """, {"today": today_start}, as_dict=True)
+    for t in terminals:
+        t.registered = t.terminal_id in devices
+        t.mapped = t.terminal_id in mapped
+
+    errors = frappe.get_all(
+        "Error Log",
+        filters={"method": ["like", "RFID SQL Agent%"], "creation": [">=", day_ago]},
+        fields=["name", "method", "creation"],
+        order_by="creation desc",
+        limit=50,
+    )
 
     recent = frappe.db.sql("""
         SELECT
@@ -405,13 +441,28 @@ def get_dashboard_summary():
         FROM `tabRFID SQL Punch Log` cpl
         LEFT JOIN `tabStudent Master` sm ON sm.name = cpl.student
         ORDER BY cpl.punch_time DESC
-        LIMIT 5000
-    """, as_dict=True)
+        LIMIT %(limit)s
+    """, {"limit": min(max(cint(feed_limit), 50), 2000)}, as_dict=True)
 
     return {
         "enabled":             bool(cfg.enabled),
         "last_log_id":         cfg.last_log_id,
+        "last_polled_at":      cfg.last_polled_at,
         "poll_interval_seconds": max(60, int(cfg.poll_interval_seconds or 300)),
+        "source":              f"{cfg.db_server or '?'}/{cfg.db_database or '?'}.{cfg.db_table or '?'}",
+        "remote_push":         bool(cfg.enable_remote_push),
+        "remote_site_url":     cfg.remote_site_url if cfg.enable_remote_push else None,
+        "server_now":          now_datetime(),
         "stats":               stats,
+        "outcomes":            outcomes,
+        "terminals":           terminals,
+        "setup": {
+            "devices":         len(devices),
+            "mappings":        len(mapped),
+            "students_with_card": frappe.db.count("Student Master", {"rfid_uid": ["is", "set"], "student_status": "Active"}),
+            "active_students": frappe.db.count("Student Master", {"student_status": "Active"}),
+        },
+        "errors_24h":          len(errors),
+        "last_error":          errors[0] if errors else None,
         "recent":              recent,
     }

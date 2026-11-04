@@ -27,9 +27,12 @@ class IDCardGeneration(IDCardCommonMixin, Document):
 	# ------------------------------------------------------------------
 
 	def after_insert(self):
+		if self.flags.skip_auto_generate or not self.id_card_template:
+			return
 		frappe.enqueue(
 			"slcm.slcm.doctype.id_card_generation.tasks.generate_id_card_images",
 			queue="short",
+			enqueue_after_commit=True,
 			docname=self.name,
 		)
 
@@ -61,3 +64,14 @@ def create_or_update_template(template_data):
 
 	doc.save(ignore_permissions=True)
 	return doc.name
+
+
+@frappe.whitelist()
+def get_default_expiry(student):
+	"""Expiry date a new card for this student would get."""
+	frappe.has_permission("Student Master", "read", doc=student, throw=True)
+	card = frappe.new_doc("ID Card Generation")
+	card.card_type = "Student"
+	card.student = student
+	card._auto_set_expiry_date()
+	return card.expiry_date

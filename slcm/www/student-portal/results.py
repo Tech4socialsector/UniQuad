@@ -1,6 +1,6 @@
 import frappe
 
-from slcm.slcm.utils.result_access import arrear_badge, get_reexam_attempts, is_improved
+from slcm.slcm.utils.result_access import grade_marker, grade_markers, is_improved
 from slcm.slcm.doctype.academic_term.academic_term import get_current_term
 from slcm.slcm.utils.exam_schedule import get_student_programme
 
@@ -140,7 +140,7 @@ def get_context(context):
                 if not enroll_status:
                     enroll_status = _get_enrollment_fallback(student_name, m.course)
 
-                arrear_marker = _get_arrear_marker(student_name, m.course)
+                arrear_marker = "" if m.mfa == "Yes" else _get_arrear_marker(student_name, m.course, ep_name)
 
                 # ── Improvement Exam info ─────────────────────────
                 improv_setting = _get_improvement_setting(ep_name, m.course)
@@ -182,7 +182,8 @@ def get_context(context):
                     "show_total":               show_total,
                     "arrear_marker":            arrear_marker,
                     # I badge: result raised by a re-exam or an improvement exam
-                    "improved":                 is_improved(m),
+                    # one mark per grade: Mfa, else RR / R, else I
+                    "improved":                 grade_marker(m.mfa, arrear_marker, is_improved(m)) == "I",
                     "improvement_available":      bool(improv_setting) and improvement_cgpa_ok,
                     "improvement_setting_exists": bool(improv_setting),
                     "improvement_cgpa_ok":        improvement_cgpa_ok,
@@ -499,10 +500,10 @@ def _get_improvement_registration(student_name, exam_plan, course):
         return None
 
 
-def _get_arrear_marker(student_name, course):
-    """One R per paid re-exam written: R, RR, RRR… (same rule as the desk
-    Course Results page — slcm.slcm.utils.result_access)."""
-    return arrear_badge(get_reexam_attempts(course, [student_name]).get(student_name, 0))
+def _get_arrear_marker(student_name, course, exam_plan):
+    """RR (carried-forward course) or R (re-exam written in this exam plan); same
+    rule as the desk Course Results page (slcm.slcm.utils.result_access)."""
+    return grade_markers(course, exam_plan, [student_name]).get(student_name, "")
 
 
 # ── Nav helpers ───────────────────────────────────────────────────────────────

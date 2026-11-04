@@ -62,42 +62,32 @@ frappe.ui.form.on("Fee Notification", {
 	},
 
 	components_add(frm, cdt, cdn) {
-		// Auto-set program_level to All when a row is added
+		// Auto-set program_level / student_category to All when a row is added
 		let row = frappe.get_doc(cdt, cdn);
 		if (!row.program_level) {
 			frappe.model.set_value(cdt, cdn, "program_level", "All");
+		}
+		if (!row.student_category) {
+			frappe.model.set_value(cdt, cdn, "student_category", "All");
 		}
 	},
 });
 
 // Child table events
 frappe.ui.form.on("Fee Notification Component", {
-	fee_component(frm, cdt, cdn) {
-		let row = frappe.get_doc(cdt, cdn);
-		if (row.fee_component) {
-			// Auto-fill default amount from Fee Component master
-			frappe.db.get_value("Fee Component", row.fee_component, "amount", (r) => {
-				if (r && r.amount && !row.amount) {
-					frappe.model.set_value(cdt, cdn, "amount", r.amount);
-				}
-			});
-		}
-	},
-
 	fee_structure(frm, cdt, cdn) {
 		let row = frappe.get_doc(cdt, cdn);
 		if (row.fee_structure) {
-			// Auto-fill batch_year and program_level from Fee Structure
+			// Narrow the row to the students the chosen Fee Structure is for
 			frappe.db.get_value(
 				"Fee Structure",
 				row.fee_structure,
-				["batch_year", "program_level", "total_amount"],
+				["program", "year_no", "student_category"],
 				(r) => {
-					if (r) {
-						if (r.batch_year) frappe.model.set_value(cdt, cdn, "batch_year", r.batch_year);
-						if (r.program_level) frappe.model.set_value(cdt, cdn, "program_level", r.program_level);
-						if (r.total_amount && !row.amount) frappe.model.set_value(cdt, cdn, "amount", r.total_amount);
-					}
+					if (!r) return;
+					if (r.program) frappe.model.set_value(cdt, cdn, "program", r.program);
+					if (r.year_no) frappe.model.set_value(cdt, cdn, "year_no", r.year_no);
+					if (r.student_category) frappe.model.set_value(cdt, cdn, "student_category", r.student_category);
 				}
 			);
 		}

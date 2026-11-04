@@ -1,2539 +1,3009 @@
 /* global slcm */
-frappe.ui.form.on("ID Card Template", {
-	refresh(frm) {
-		frm.add_custom_button(__("Show Preview"), () => {
-			frm.call("get_preview").then((r) => {
-				if (!r.message) return;
-				// Unhide section
-				frm.set_df_property("preview_section", "hidden", 0);
-				// Inject HTML
-				frm.fields_dict.preview_html.$wrapper.html(r.message);
-				// Force repaint
-				frm.refresh_field("preview_html");
+frappe.provide("slcm.id_card");
+
+// Design units: a landscape CR80 card is 337 x 212.5 (≈ 0.254 mm per unit).
+// The server renders the same layout at 3x, so the designer is WYSIWYG.
+const IDC_UNITS = { horizontal: [337, 212.5], vertical: [212.5, 337] };
+const IDC_MM = { horizontal: "85.6 × 54 mm", vertical: "54 × 85.6 mm" };
+const IDC_SAFE = 8;
+const IDC_FONTS = [
+	["Arial, Helvetica, sans-serif", "Arial"],
+	["Helvetica, Arial, sans-serif", "Helvetica"],
+	["Verdana, sans-serif", "Verdana"],
+	["Tahoma, sans-serif", "Tahoma"],
+	["'Trebuchet MS', sans-serif", "Trebuchet MS"],
+	["Georgia, serif", "Georgia"],
+	["'Times New Roman', serif", "Times New Roman"],
+	["Garamond, serif", "Garamond"],
+	["'Courier New', monospace", "Courier New"],
+];
+const IDC_IMAGE_SOURCES = [
+	["", "Uploaded image"],
+	["photo", "Person photo"],
+	["qr_code_image", "QR code"],
+	["institute_logo", "Institute logo"],
+	["authority_signature", "Authority signature"],
+	["watermark_image", "Watermark"],
+];
+
+// ---------------------------------------------------------------------
+// Shared helpers (designer, thumbnails, preview)
+// ---------------------------------------------------------------------
+
+slcm.id_card.icon = function (name, size = 16) {
+	const paths = {
+		text: '<path d="M4 7V4h16v3M9 20h6M12 4v16"/>',
+		heading: '<path d="M6 4v16M18 4v16M6 12h12"/>',
+		paragraph: '<path d="M4 6h16M4 10h16M4 14h16M4 18h10"/>',
+		image: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/>',
+		square: '<rect x="3" y="5" width="18" height="14" rx="2"/>',
+		circle: '<circle cx="12" cy="12" r="9"/>',
+		line: '<path d="M4 12h16"/>',
+		header: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/>',
+		footer: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 15h18"/>',
+		droplet:
+			'<path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5S12.5 5.5 12 3c-.5 2.5-2 4.9-4 6.5S5 13 5 15a7 7 0 0 0 7 7z"/>',
+		user: '<circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/>',
+		qr: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM18 18h3v3h-3zM14 20h2M20 14v2"/>',
+		building:
+			'<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01"/>',
+		pen: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+		layers: '<path d="m12 2 10 5-10 5L2 7z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/>',
+		eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+		"eye-off":
+			'<path d="M3 3l18 18"/><path d="M10.6 5.1A10 10 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.2M6.6 6.6C3.9 8.4 2 12 2 12s3.5 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/>',
+		lock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+		unlock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.9-1"/>',
+		trash: '<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/>',
+		copy: '<rect x="8" y="8" width="13" height="13" rx="2"/><path d="M4 16V5a2 2 0 0 1 2-2h11"/>',
+		undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/>',
+		redo: '<path d="m15 14 5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h3"/>',
+		"zoom-in": '<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3M11 8v6M8 11h6"/>',
+		"zoom-out": '<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3M8 11h6"/>',
+		guides: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 3v18M3 12h18"/>',
+		magnet: '<path d="M6 4v8a6 6 0 0 0 12 0V4"/><path d="M6 8h4V4M14 4v4h4"/>',
+		braces: '<path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5a2 2 0 0 0 2 2h1M16 21h1a2 2 0 0 0 2-2v-5a2 2 0 0 1 2-2 2 2 0 0 1-2-2V5a2 2 0 0 0-2-2h-1"/>',
+		check: '<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>',
+		alert: '<path d="M12 3 2 21h20z"/><path d="M12 10v5M12 18h.01"/>',
+		info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/>',
+		templates:
+			'<rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>',
+		upload: '<path d="M12 15V3M7 8l5-5 5 5"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/>',
+		download: '<path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/>',
+		plus: '<path d="M12 5v14M5 12h14"/>',
+		grip: '<circle cx="9" cy="6" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/>',
+		"align-left":
+			'<path d="M4 3v18"/><rect x="8" y="6" width="12" height="4" rx="1"/><rect x="8" y="14" width="7" height="4" rx="1"/>',
+		"align-hcenter":
+			'<path d="M12 3v18"/><rect x="5" y="6" width="14" height="4" rx="1"/><rect x="8" y="14" width="8" height="4" rx="1"/>',
+		"align-right":
+			'<path d="M20 3v18"/><rect x="4" y="6" width="12" height="4" rx="1"/><rect x="9" y="14" width="7" height="4" rx="1"/>',
+		"align-top":
+			'<path d="M3 4h18"/><rect x="6" y="8" width="4" height="12" rx="1"/><rect x="14" y="8" width="4" height="7" rx="1"/>',
+		"align-vmiddle":
+			'<path d="M3 12h18"/><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="8" width="4" height="8" rx="1"/>',
+		"align-bottom":
+			'<path d="M3 20h18"/><rect x="6" y="4" width="4" height="12" rx="1"/><rect x="14" y="9" width="4" height="7" rx="1"/>',
+		"text-left": '<path d="M4 6h16M4 10h10M4 14h16M4 18h10"/>',
+		"text-center": '<path d="M4 6h16M7 10h10M4 14h16M7 18h10"/>',
+		"text-right": '<path d="M4 6h16M10 10h10M4 14h16M10 18h10"/>',
+		"to-front": '<path d="M5 3h14M12 21V7M6 13l6-6 6 6"/>',
+		"to-back": '<path d="M5 21h14M12 3v14M6 11l6 6 6-6"/>',
+		forward: '<path d="m6 15 6-6 6 6"/>',
+		backward: '<path d="m6 9 6 6 6-6"/>',
+		swap: '<path d="M7 4 3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"/>',
+	};
+	return `<svg class="idc-icon" viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${
+		paths[name] || ""
+	}</svg>`;
+};
+
+slcm.id_card._meta_cache = {};
+slcm.id_card.get_meta = function (card_type) {
+	card_type = card_type || "Student";
+	if (!slcm.id_card._meta_cache[card_type]) {
+		slcm.id_card._meta_cache[card_type] = frappe
+			.xcall("slcm.slcm.utils.id_card_render.get_designer_meta", { card_type })
+			.catch((e) => {
+				delete slcm.id_card._meta_cache[card_type];
+				throw e;
+			});
+	}
+	return slcm.id_card._meta_cache[card_type];
+};
+
+slcm.id_card.canonical = (meta, key) => (meta.mapping_aliases || {})[key] || key;
+
+// Mirrors id_card_render.fill_text on the server.
+slcm.id_card.fill_text = function (content, values, mapping, meta) {
+	const esc = frappe.utils.escape_html;
+	let out = (content || "").replace(/\{\{\s*([A-Za-z_][A-Za-z0-9_]*)\s*\}\}/g, (m, key) => {
+		key = slcm.id_card.canonical(meta, key);
+		return key in values ? esc(values[key]) : m;
+	});
+	out = out.replace(/\[([^\[\]{}<>]{1,40})\]/g, (m, label) => {
+		let key = meta.legacy_aliases[label.trim().toLowerCase()];
+		if (!key && mapping) key = slcm.id_card.canonical(meta, mapping);
+		return key && key in values ? esc(values[key]) : m;
+	});
+	return out;
+};
+
+slcm.id_card.unknown_tokens = function (content, mapping, meta) {
+	const known = new Set(meta.all_text_keys);
+	const unknown = [];
+	(content || "").replace(/\{\{\s*([A-Za-z_][A-Za-z0-9_]*)\s*\}\}/g, (m, key) => {
+		if (!known.has(slcm.id_card.canonical(meta, key))) unknown.push(m);
+		return m;
+	});
+	(content || "").replace(/\[([^\[\]{}<>]{1,40})\]/g, (m, label) => {
+		if (!meta.legacy_aliases[label.trim().toLowerCase()] && !mapping) unknown.push(m);
+		return m;
+	});
+	return unknown;
+};
+
+// Same filtering as id_card_render.style_to_css, so both render alike.
+slcm.id_card.clean_style = function (style) {
+	const out = {};
+	Object.entries(style || {}).forEach(([key, value]) => {
+		if (value === null || value === undefined || value === "" || typeof value === "boolean")
+			return;
+		if (!/^[A-Za-z]+$/.test(key)) return;
+		if (/[;{}<>"\\]/.test(String(value))) return;
+		out[key] = value;
+	});
+	return out;
+};
+
+slcm.id_card.placeholder = function (kind) {
+	const svgs = {
+		photo: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 120"><rect width="100" height="120" fill="#dfe6ee"/><circle cx="50" cy="45" r="22" fill="#9aa9bb"/><path d="M10 120c4-26 20-40 40-40s36 14 40 40z" fill="#9aa9bb"/></svg>',
+		qr_code_image:
+			'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21 21" shape-rendering="crispEdges"><rect width="21" height="21" fill="#fff"/><path fill="#111" d="M0 0h7v7H0zM1 1v5h5V1zM2 2h3v3H2zM14 0h7v7h-7zM15 1v5h5V1zM16 2h3v3h-3zM0 14h7v7H0zM1 15v5h5v-5zM2 16h3v3H2zM9 0h2v2H9zM9 3h1v3H9zM11 4h2v2h-2zM8 8h3v1H8zM12 8h1v3h-1zM14 9h2v1h-2zM17 8h3v2h-3zM9 10h2v2H9zM0 9h2v2H0zM3 8h2v3H3zM14 12h3v2h-3zM18 12h3v1h-3zM9 14h2v3H9zM12 15h3v2h-3zM16 15h2v3h-2zM19 15h2v2h-2zM12 18h2v3h-2zM15 19h3v2h-3zM19 18h2v3h-2z"/></svg>',
+		institute_logo:
+			'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60"><circle cx="30" cy="30" r="28" fill="#e8edf5" stroke="#9aa9bb" stroke-width="2"/><text x="30" y="35" font-family="Arial" font-size="13" font-weight="bold" text-anchor="middle" fill="#64748b">LOGO</text></svg>',
+		authority_signature:
+			'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 40"><path d="M8 28c10-18 18-20 20-10s4 10 12-4 10 8 18 2 10-10 16 0 14 2 20-4" fill="none" stroke="#334155" stroke-width="2.5" stroke-linecap="round"/></svg>',
+		watermark_image:
+			'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="none" stroke="#94a3b8" stroke-width="4"/><circle cx="50" cy="50" r="30" fill="none" stroke="#94a3b8" stroke-width="3"/></svg>',
+		image: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" fill="#eef2f7"/><path d="M5 17l4-5 3 3 2-2 5 4z" fill="#9aa9bb"/><circle cx="9" cy="8" r="2" fill="#9aa9bb"/></svg>',
+	};
+	return "data:image/svg+xml;utf8," + encodeURIComponent(svgs[kind] || svgs.image);
+};
+
+/** Build one element's DOM. Mirrors id_card_render.element_html. */
+slcm.id_card.build_element = function (el, ctx) {
+	const $el = $('<div class="idc-el"></div>');
+	const base = { position: "absolute", left: (+el.x || 0) + "px", top: (+el.y || 0) + "px" };
+	const style = slcm.id_card.clean_style(el.style);
+
+	if (el.type === "text") {
+		base.whiteSpace = el.wrap ? "normal" : "nowrap";
+		if (el.width) {
+			base.width = +el.width + "px";
+			if (el.fit && !el.wrap) {
+				base.overflow = "hidden";
+				$el.addClass("idc-fit");
+			}
+		}
+		$el.css(base).css(style);
+		$el.html(slcm.id_card.fill_text(el.content, ctx.values, el.mapping, ctx.meta));
+	} else if (el.type === "image") {
+		base.width = (+el.width || 0) + "px";
+		base.height = (+el.height || 0) + "px";
+		base.overflow = "hidden";
+		$el.css(base).css(style);
+		const mapping = el.mapping ? slcm.id_card.canonical(ctx.meta, el.mapping) : null;
+		const src = mapping
+			? ctx.images[mapping]
+			: el.content || slcm.id_card.placeholder("image");
+		const fit = ["cover", "contain", "fill"].includes(el.object_fit) ? el.object_fit : "cover";
+		if (src) {
+			$("<img draggable='false'>")
+				.attr("src", src)
+				.css({ width: "100%", height: "100%", objectFit: fit, display: "block" })
+				.appendTo($el);
+		}
+	} else if (el.type === "rect") {
+		base.width = (+el.width || 0) + "px";
+		base.height = (+el.height || 0) + "px";
+		$el.css(base).css(style);
+	}
+	return $el;
+};
+
+/** Shrink auto-fit text until it fits its box. Mirrors FIT_SCRIPT. */
+slcm.id_card.apply_fit = function ($root) {
+	$root.find(".idc-fit").each(function () {
+		let size = parseFloat(getComputedStyle(this).fontSize) || 12;
+		let i = 0;
+		while (this.scrollWidth > this.clientWidth + 0.5 && size > 4 && i < 200) {
+			size -= 0.25;
+			this.style.fontSize = size + "px";
+			i++;
+		}
+	});
+};
+
+slcm.id_card.design_context = function (frm, meta, show_tokens) {
+	const values = {};
+	(meta.tokens || []).forEach((t) => {
+		if (t.kind === "text") values[t.key] = show_tokens ? `‹${t.label}›` : t.sample;
+	});
+	Object.entries(meta.samples || {}).forEach(([key, sample]) => {
+		if (!(key in values))
+			values[key] = show_tokens ? `‹${(meta.labels || {})[key] || key}›` : sample;
+	});
+	if (!show_tokens) {
+		["institute_name", "institute_address", "validity_text"].forEach((key) => {
+			if (frm && frm.doc[key]) values[key] = frm.doc[key];
+		});
+	}
+	const doc = (frm && frm.doc) || {};
+	return {
+		meta,
+		values,
+		images: {
+			photo: slcm.id_card.placeholder("photo"),
+			qr_code_image: slcm.id_card.placeholder("qr_code_image"),
+			institute_logo: doc.institute_logo || slcm.id_card.placeholder("institute_logo"),
+			authority_signature:
+				doc.authority_signature || slcm.id_card.placeholder("authority_signature"),
+			watermark_image: doc.watermark_image || slcm.id_card.placeholder("watermark_image"),
+		},
+	};
+};
+
+slcm.id_card.normalise = function (data, meta) {
+	data = data && typeof data === "object" ? data : {};
+	if (Array.isArray(data.elements)) data = { front: data.elements, back: [] };
+	data.front = Array.isArray(data.front) ? data.front : [];
+	data.back = Array.isArray(data.back) ? data.back : [];
+	if (!IDC_UNITS[data.orientation]) data.orientation = "horizontal";
+	if (!data.bg_color || typeof data.bg_color !== "object") data.bg_color = {};
+	data.bg_color.front = data.bg_color.front || "#ffffff";
+	data.bg_color.back = data.bg_color.back || "#ffffff";
+	[...data.front, ...data.back].forEach((el) => {
+		if (el.type !== "text") return;
+		// Older designs kept a text box width inside style; it now lives on the element.
+		if (el.style && el.style.width && !el.width) {
+			el.width = parseFloat(el.style.width) || undefined;
+			delete el.style.width;
+		}
+		// Older designs used "[Label]" placeholders; switch them to {{field}} tokens.
+		// The rendered text is identical; the server understands both.
+		if (meta && el.content) {
+			el.content = el.content.replace(/\[([^\[\]{}<>]{1,40})\]/g, (m, label) => {
+				let key = meta.legacy_aliases[label.trim().toLowerCase()];
+				if (!key && el.mapping) key = slcm.id_card.canonical(meta, el.mapping);
+				return key ? `{{${key}}}` : m;
+			});
+			if (!/\[[^\[\]{}<>]{1,40}\]/.test(el.content)) delete el.mapping;
+		}
+	});
+	return data;
+};
+
+/** A static, scaled rendering of one side (used for thumbnails). */
+slcm.id_card.render_thumbnail = function (data, side, ctx, max_w, max_h) {
+	const [w, h] = IDC_UNITS[data.orientation];
+	const scale = Math.min(max_w / w, max_h / h);
+	const $frame = $(
+		`<div class="idc-thumb-frame" style="width:${w * scale}px;height:${h * scale}px"></div>`
+	);
+	const $card = $(
+		`<div class="idc-card" style="width:${w}px;height:${h}px;transform:scale(${scale});background:${
+			data.bg_color[side] || "#fff"
+		}"></div>`
+	).appendTo($frame);
+	(data[side] || [])
+		.filter((el) => !el.hidden)
+		.forEach((el) => $card.append(slcm.id_card.build_element(el, ctx)));
+	return $frame;
+};
+
+slcm.id_card.to_hex = function (color, fallback = "#000000") {
+	if (!color) return fallback;
+	if (/^#[0-9a-f]{6}$/i.test(color)) return color;
+	const ctx = document.createElement("canvas").getContext("2d");
+	ctx.fillStyle = fallback;
+	ctx.fillStyle = color;
+	const out = ctx.fillStyle;
+	return /^#[0-9a-f]{6}$/i.test(out) ? out : fallback;
+};
+
+slcm.id_card.inject_css = function () {
+	if (document.getElementById("idc-studio-css")) return;
+	const css = `
+	.idc-studio { --idc-border: var(--border-color, #e2e6ea); --idc-muted: var(--text-muted, #6b7280); --idc-bg: var(--fg-color, #fff);
+		--idc-subtle: var(--subtle-fg, #f4f5f7); --idc-accent: var(--primary, #2563eb); --idc-text: var(--text-color, #1f2937);
+		border: 1px solid var(--idc-border); border-radius: 12px; background: var(--idc-bg); color: var(--idc-text); overflow: hidden; user-select: none; }
+	.idc-studio .idc-icon { display: block; flex-shrink: 0; }
+	.idc-toolbar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 8px 10px; border-bottom: 1px solid var(--idc-border); background: var(--idc-bg); }
+	.idc-toolbar .idc-sep { width: 1px; height: 22px; background: var(--idc-border); margin: 0 4px; }
+	.idc-toolbar .idc-spacer { flex: 1; }
+	.idc-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 30px; min-width: 30px; padding: 0 8px;
+		border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--idc-text); font-size: 12.5px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+	.idc-btn:hover:not(:disabled) { background: var(--idc-subtle); }
+	.idc-btn:disabled { opacity: .4; cursor: default; }
+	.idc-btn.active { background: var(--idc-subtle); border-color: var(--idc-border); color: var(--idc-accent); }
+	.idc-btn.primary { background: var(--idc-accent); color: #fff; }
+	.idc-btn.primary:hover { filter: brightness(1.08); background: var(--idc-accent); }
+	.idc-btn.outline { border-color: var(--idc-border); }
+	.idc-btn.danger { color: var(--red-600, #dc2626); }
+	.idc-seg { display: inline-flex; padding: 2px; border-radius: 9px; background: var(--idc-subtle); gap: 2px; }
+	.idc-seg .idc-btn { height: 26px; border-radius: 7px; }
+	.idc-seg .idc-btn.active { background: var(--idc-bg); border-color: transparent; box-shadow: 0 1px 2px rgba(0,0,0,.12); color: var(--idc-text); }
+	.idc-count { font-size: 10.5px; color: var(--idc-muted); font-weight: 500; }
+	.idc-zoom-label { min-width: 50px; font-variant-numeric: tabular-nums; }
+	.idc-health { position: relative; }
+	.idc-health .idc-btn.ok { color: var(--green-600, #16a34a); }
+	.idc-health .idc-btn.warn { color: var(--orange-600, #ea580c); }
+	.idc-health-pop { position: absolute; right: 0; top: 36px; width: 320px; max-height: 340px; overflow: auto; z-index: 30; background: var(--idc-bg);
+		border: 1px solid var(--idc-border); border-radius: 10px; box-shadow: 0 12px 32px rgba(0,0,0,.16); padding: 6px; display: none; }
+	.idc-health-pop.open { display: block; }
+	.idc-issue { display: flex; gap: 8px; align-items: flex-start; padding: 8px; border-radius: 8px; font-size: 12.5px; line-height: 1.4; cursor: default; }
+	.idc-issue[data-index] { cursor: pointer; }
+	.idc-issue[data-index]:hover { background: var(--idc-subtle); }
+	.idc-issue.error .idc-icon { color: var(--red-600, #dc2626); }
+	.idc-issue.warn .idc-icon { color: var(--orange-600, #ea580c); }
+	.idc-issue.info .idc-icon { color: var(--blue-500, #3b82f6); }
+	.idc-body { display: grid; grid-template-columns: 236px minmax(0, 1fr) 280px; min-height: 600px; }
+	.idc-left, .idc-right { background: var(--idc-bg); min-width: 0; }
+	.idc-left { border-right: 1px solid var(--idc-border); display: flex; flex-direction: column; }
+	.idc-right { border-left: 1px solid var(--idc-border); max-height: 760px; overflow-y: auto; }
+	.idc-tabs { display: flex; gap: 2px; padding: 8px; border-bottom: 1px solid var(--idc-border); }
+	.idc-tabs .idc-btn { flex: 1; }
+	.idc-left-body { padding: 10px; overflow-y: auto; max-height: 700px; }
+	.idc-group-title { font-size: 10.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--idc-muted); margin: 12px 2px 6px; }
+	.idc-group-title:first-child { margin-top: 2px; }
+	.idc-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+	.idc-tile { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 4px 8px; border: 1px solid var(--idc-border); border-radius: 10px;
+		background: var(--idc-bg); color: var(--idc-text); font-size: 11px; cursor: pointer; text-align: center; line-height: 1.2; }
+	.idc-tile:hover { border-color: var(--idc-accent); color: var(--idc-accent); }
+	.idc-search { width: 100%; height: 32px; border-radius: 8px; border: 1px solid var(--idc-border); background: var(--control-bg, var(--idc-subtle)); padding: 0 10px; font-size: 12.5px; color: var(--idc-text); }
+	.idc-field { display: flex; align-items: center; gap: 8px; width: 100%; padding: 7px 8px; border: 1px solid transparent; border-radius: 8px; background: transparent;
+		color: var(--idc-text); cursor: pointer; text-align: left; }
+	.idc-field:hover { background: var(--idc-subtle); border-color: var(--idc-border); }
+	.idc-field .idc-field-label { font-size: 12.5px; font-weight: 500; }
+	.idc-field .idc-field-sample { font-size: 11px; color: var(--idc-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+	.idc-field .idc-field-text { min-width: 0; flex: 1; }
+	.idc-field-ico { width: 26px; height: 26px; border-radius: 7px; background: var(--idc-subtle); display: flex; align-items: center; justify-content: center; color: var(--idc-muted); flex-shrink: 0; }
+	.idc-layer { display: flex; align-items: center; gap: 6px; padding: 5px 6px; border-radius: 8px; border: 1px solid transparent; cursor: pointer; font-size: 12.5px; }
+	.idc-layer:hover { background: var(--idc-subtle); }
+	.idc-layer.selected { background: var(--idc-subtle); border-color: var(--idc-accent); }
+	.idc-layer.drop-target { border-top: 2px solid var(--idc-accent); }
+	.idc-layer.is-hidden .idc-layer-name { opacity: .45; }
+	.idc-layer-name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+	.idc-layer .idc-grip { color: var(--idc-muted); cursor: grab; }
+	.idc-layer .idc-btn { height: 24px; min-width: 24px; padding: 0 4px; color: var(--idc-muted); }
+	.idc-empty-note { color: var(--idc-muted); font-size: 12.5px; text-align: center; padding: 18px 8px; }
+	.idc-stage-wrap { display: flex; flex-direction: column; min-width: 0; background: var(--idc-subtle); }
+	.idc-stage { flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px 32px; overflow: auto; min-height: 520px;
+		background-image: radial-gradient(circle, rgba(127,127,127,.18) 1px, transparent 1px); background-size: 16px 16px; }
+	.idc-artboard { position: relative; flex-shrink: 0; }
+	.idc-card { position: absolute; left: 0; top: 0; overflow: hidden; transform-origin: top left; font-family: Arial, Helvetica, sans-serif;
+		font-size: 16px; line-height: normal; color: #000; text-align: left; letter-spacing: normal; font-weight: normal; }
+	.idc-card * { box-sizing: border-box; }
+	.idc-artboard .idc-card { box-shadow: 0 1px 2px rgba(0,0,0,.08), 0 10px 30px rgba(15,23,42,.18); border-radius: 3px; }
+	.idc-artboard .idc-el { cursor: move; }
+	.idc-artboard .idc-el.locked { cursor: default; }
+	.idc-artboard .idc-el:hover { outline: 1px dashed rgba(37,99,235,.7); outline-offset: 0; }
+	.idc-overlay { position: absolute; inset: 0; pointer-events: none; }
+	.idc-guide-line { position: absolute; background: rgba(37,99,235,.35); }
+	.idc-safe { position: absolute; border: 1px dashed rgba(234,88,12,.55); border-radius: 2px; }
+	.idc-snap { position: absolute; background: #ec4899; }
+	.idc-sel { position: absolute; border: 1.5px solid var(--idc-accent); }
+	.idc-sel.locked { border-style: dashed; }
+	.idc-handle { position: absolute; width: 9px; height: 9px; background: #fff; border: 1.5px solid var(--idc-accent); border-radius: 2px; pointer-events: auto; }
+	.idc-sel-tag { position: absolute; top: -22px; left: -1px; background: var(--idc-accent); color: #fff; font-size: 10.5px; padding: 2px 6px;
+		border-radius: 4px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+	.idc-stage-foot { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 8px 14px; border-top: 1px solid var(--idc-border);
+		font-size: 11.5px; color: var(--idc-muted); background: var(--idc-bg); }
+	.idc-stage-foot kbd { font-size: 10.5px; padding: 1px 5px; border-radius: 4px; border: 1px solid var(--idc-border); background: var(--idc-subtle); color: var(--idc-text); }
+	.idc-empty { text-align: center; max-width: 420px; padding: 32px; border-radius: 16px; background: var(--idc-bg); border: 1px solid var(--idc-border); box-shadow: 0 10px 30px rgba(15,23,42,.08); }
+	.idc-empty h4 { margin: 12px 0 6px; font-weight: 600; }
+	.idc-empty p { color: var(--idc-muted); font-size: 13px; margin-bottom: 18px; }
+	.idc-empty .idc-empty-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+	.idc-empty-ico { width: 52px; height: 52px; border-radius: 14px; margin: 0 auto; display: flex; align-items: center; justify-content: center; background: var(--idc-subtle); color: var(--idc-accent); }
+	.idc-insp-head { display: flex; align-items: center; gap: 8px; padding: 12px; border-bottom: 1px solid var(--idc-border); }
+	.idc-insp-head .idc-field-ico { color: var(--idc-accent); }
+	.idc-insp-head input { flex: 1; min-width: 0; border: 1px solid transparent; background: transparent; font-weight: 600; font-size: 13px; border-radius: 6px; padding: 3px 6px; color: var(--idc-text); }
+	.idc-insp-head input:hover, .idc-insp-head input:focus { border-color: var(--idc-border); outline: none; }
+	.idc-sec { padding: 12px; border-bottom: 1px solid var(--idc-border); }
+	.idc-sec-title { font-size: 10.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--idc-muted); margin-bottom: 8px; }
+	.idc-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+	.idc-grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+	.idc-row { display: flex; gap: 6px; align-items: center; }
+	.idc-row + .idc-row, .idc-grid2 + .idc-row, .idc-row + .idc-grid2, .idc-grid2 + .idc-grid2, .idc-input + .idc-row, .idc-row + .idc-input { margin-top: 8px; }
+	.idc-input { position: relative; display: block; min-width: 0; }
+	.idc-input > span { display: block; font-size: 11px; color: var(--idc-muted); margin-bottom: 3px; }
+	.idc-input input:not([type=checkbox]):not([type=range]), .idc-input select, .idc-input textarea {
+		width: 100%; height: 30px; border: 1px solid var(--idc-border); border-radius: 7px; padding: 0 8px; font-size: 12.5px; background: var(--control-bg, var(--idc-bg)); color: var(--idc-text); user-select: text; }
+	.idc-input textarea { height: auto; min-height: 56px; padding: 6px 8px; resize: vertical; line-height: 1.4; }
+	.idc-input input:focus, .idc-input select:focus, .idc-input textarea:focus { outline: none; border-color: var(--idc-accent); box-shadow: 0 0 0 2px rgba(37,99,235,.15); }
+	.idc-input input[type=color] { padding: 2px; cursor: pointer; }
+	.idc-input input[type=range] { width: 100%; }
+	.idc-input input:disabled { opacity: .55; }
+	.idc-toggle { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12.5px; margin-top: 8px; }
+	.idc-toggle small { display: block; color: var(--idc-muted); font-size: 11px; }
+	.idc-toggle input { width: 16px; height: 16px; }
+	.idc-thumb-frame { position: relative; overflow: hidden; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,.1), 0 6px 16px rgba(15,23,42,.12); }
+	.idc-thumb-frame .idc-card { pointer-events: none; }
+	.idc-gallery-filter { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+	.idc-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; }
+	.idc-starter { border: 1px solid var(--border-color, #e2e6ea); border-radius: 12px; overflow: hidden; cursor: pointer; background: var(--fg-color, #fff); transition: border-color .15s, box-shadow .15s, transform .15s; }
+	.idc-starter:hover { border-color: var(--primary, #2563eb); box-shadow: 0 8px 22px rgba(15,23,42,.12); transform: translateY(-2px); }
+	.idc-starter-thumb { height: 170px; display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--subtle-fg, #f4f5f7); }
+	.idc-starter-body { padding: 10px 12px; }
+	.idc-starter-title { font-weight: 600; font-size: 13px; }
+	.idc-starter-desc { font-size: 11.5px; color: var(--text-muted, #6b7280); margin-top: 2px; }
+	.idc-pill { display: inline-block; font-size: 10.5px; padding: 1px 7px; border-radius: 99px; background: var(--subtle-fg, #f4f5f7); color: var(--text-muted, #6b7280); margin-top: 6px; margin-right: 4px; }
+	.idc-blank { width: 70px; height: 44px; border: 2px dashed var(--border-color, #cbd2d9); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: var(--text-muted, #6b7280); }
+	.idc-blank.portrait { width: 44px; height: 70px; }
+	.idc-preview-grid { display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; padding: 8px 0 4px; }
+	.idc-preview-side { text-align: center; }
+	.idc-preview-side .idc-preview-label { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted, #6b7280); margin-bottom: 8px; }
+	.idc-preview-side img { display: block; max-width: 100%; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,.1), 0 12px 30px rgba(15,23,42,.18); }
+	.idc-preview-note { text-align: center; color: var(--text-muted, #6b7280); font-size: 12px; margin-top: 14px; }
+	.idc-loading { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 220px; color: var(--text-muted, #6b7280); font-size: 13px; }
+	.idc-spinner { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--border-color, #e2e6ea); border-top-color: var(--primary, #2563eb); animation: idc-spin .8s linear infinite; }
+	@keyframes idc-spin { to { transform: rotate(360deg); } }
+	@media (max-width: 1180px) {
+		.idc-body { grid-template-columns: 210px minmax(0, 1fr); }
+		.idc-right { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--idc-border); max-height: none; }
+	}
+	@media (max-width: 760px) {
+		.idc-body { grid-template-columns: minmax(0, 1fr); }
+		.idc-left { border-right: 0; border-bottom: 1px solid var(--idc-border); }
+	}`;
+	$(`<style id="idc-studio-css">${css}</style>`).appendTo("head");
+};
+
+// ---------------------------------------------------------------------
+// Preview dialog (server-rendered, for every creation mode)
+// ---------------------------------------------------------------------
+
+slcm.id_card.show_preview = function (frm) {
+	slcm.id_card.inject_css();
+	const card_type = frm.doc.card_type || "Student";
+	const person_doctype = {
+		Student: "Student Master",
+		Faculty: "Faculty",
+		Driver: "SLCM Driver",
+	}[card_type];
+	const fields = [];
+	if (person_doctype) {
+		fields.push({
+			fieldtype: "Link",
+			fieldname: "person",
+			options: person_doctype,
+			label: __("Preview as"),
+			description: __("Leave empty to preview with sample data."),
+			onchange: () => render(),
+		});
+	}
+	fields.push({ fieldtype: "HTML", fieldname: "result" });
+
+	const d = new frappe.ui.Dialog({ title: __("Card Preview"), size: "extra-large", fields });
+	// Focusing the person field would open its dropdown over the preview.
+	d.focus_on_first_input = () => {};
+	let request = 0;
+	const render = () => {
+		const id = ++request;
+		const $result = d.fields_dict.result.$wrapper;
+		$result.html(
+			`<div class="idc-loading"><div class="idc-spinner"></div>${__(
+				"Rendering exactly as it will print…"
+			)}</div>`
+		);
+		frm.call({
+			method: "render_preview",
+			doc: frm.doc,
+			args: { person: person_doctype ? d.get_value("person") || null : null },
+		})
+			.then((r) => {
+				if (id !== request) return;
+				const res = r.message || {};
+				const sides = ["front", "back"].filter((s) => res[s]);
+				$result.html(`
+					<div class="idc-preview-grid">
+						${sides
+							.map(
+								(s) => `<div class="idc-preview-side" style="max-width:${
+									res.orientation === "vertical" ? 300 : 460
+								}px">
+									<div class="idc-preview-label">${s === "front" ? __("Front") : __("Back")}</div>
+									<img src="${res[s]}" alt="${s}">
+								</div>`
+							)
+							.join("")}
+					</div>
+					<div class="idc-preview-note">${
+						res.sample
+							? __("Sample data shown. Pick a person above to check real data.")
+							: __("Rendered for {0}.", [frappe.utils.escape_html(res.person || "")])
+					} ${__("This is the exact image that will be generated.")}</div>`);
+			})
+			.catch(() => {
+				if (id === request)
+					$result.html(
+						`<div class="idc-empty-note">${__(
+							"Preview failed. Check the design and try again."
+						)}</div>`
+					);
+			});
+	};
+	d.show();
+	render();
+};
+
+// ---------------------------------------------------------------------
+// Designer
+// ---------------------------------------------------------------------
+
+class IDCardStudio {
+	constructor(frm) {
+		this.frm = frm;
+		this.docname = frm.docname;
+		this.$wrapper = frm.fields_dict.canvas_editor.$wrapper;
+		this.side = "front";
+		this.selected = null;
+		this.zoom = null; // null = fit to stage
+		this.scale = 1;
+		this.history = [];
+		this.future = [];
+		this.show_guides = true;
+		this.snap = true;
+		this.show_tokens = false;
+		this.left_tab = "add";
+		this.field_query = "";
+		this.active = false;
+	}
+
+	async init() {
+		slcm.id_card.inject_css();
+		this.$wrapper.html(
+			`<div class="idc-loading"><div class="idc-spinner"></div>${__(
+				"Loading designer…"
+			)}</div>`
+		);
+		try {
+			await frappe.require("/assets/slcm/js/id_card_starters.js");
+			this.meta = await slcm.id_card.get_meta(this.frm.doc.card_type);
+		} catch (e) {
+			this.$wrapper.html(
+				`<div class="idc-empty-note">${__(
+					"Could not load the designer. Reload the page to try again."
+				)}</div>`
+			);
+			return;
+		}
+		this.load_from_doc();
+		this.render_shell();
+		this.bind_global();
+		this.refresh_all();
+	}
+
+	destroy() {
+		$(document).off(".idcstudio");
+		$(window).off(".idcstudio");
+	}
+
+	load_from_doc() {
+		const raw = this.frm.doc.canvas_data;
+		this.data = null;
+		if (raw && raw !== "{}" && raw !== "[]") {
+			try {
+				this.data = slcm.id_card.normalise(JSON.parse(raw), this.meta);
+			} catch (e) {
+				this.data = null;
+			}
+		}
+		this.last_json = raw || "";
+		this.history = [];
+		this.future = [];
+		this.selected = null;
+	}
+
+	/** Called on form refresh: keep state when the doc still matches. */
+	sync_from_doc() {
+		if (!this.$root || !$.contains(document.documentElement, this.$root[0])) {
+			this.load_from_doc();
+			this.render_shell();
+			this.refresh_all();
+			return;
+		}
+		if ((this.frm.doc.canvas_data || "") !== this.last_json) {
+			this.load_from_doc();
+		}
+		this.docname = this.frm.docname;
+		this.refresh_all();
+	}
+
+	async on_card_type_change() {
+		try {
+			this.meta = await slcm.id_card.get_meta(this.frm.doc.card_type);
+		} catch (e) {
+			return;
+		}
+		this.render_left();
+		this.refresh_all();
+	}
+
+	get elements() {
+		return this.data ? this.data[this.side] : [];
+	}
+
+	get units() {
+		return IDC_UNITS[(this.data && this.data.orientation) || "horizontal"];
+	}
+
+	ensure_data(orientation) {
+		if (!this.data) {
+			this.data = slcm.id_card.normalise({ orientation: orientation || "horizontal" });
+		}
+	}
+
+	// ----- persistence & history ------------------------------------
+
+	commit() {
+		const json = this.data ? JSON.stringify(this.data) : "";
+		if (json === this.last_json) return;
+		this.history.push(this.last_json);
+		if (this.history.length > 100) this.history.shift();
+		this.future = [];
+		this.last_json = json;
+		this.frm.set_value("canvas_data", json);
+		this.refresh_chrome();
+	}
+
+	undo() {
+		if (!this.history.length) return;
+		this.future.push(this.last_json);
+		this.restore(this.history.pop());
+	}
+
+	redo() {
+		if (!this.future.length) return;
+		this.history.push(this.last_json);
+		this.restore(this.future.pop());
+	}
+
+	restore(json) {
+		this.last_json = json;
+		this.data = json ? slcm.id_card.normalise(JSON.parse(json), this.meta) : null;
+		this.selected = null;
+		this.frm.set_value("canvas_data", json);
+		this.refresh_all();
+	}
+
+	// ----- shell ------------------------------------------------------
+
+	render_shell() {
+		const i = slcm.id_card.icon;
+		this.$wrapper.html(`
+			<div class="idc-studio" tabindex="-1">
+				<div class="idc-toolbar">
+					<div class="idc-seg" data-group="side">
+						<button class="idc-btn" data-side="front">${__(
+							"Front"
+						)} <span class="idc-count" data-count="front"></span></button>
+						<button class="idc-btn" data-side="back">${__(
+							"Back"
+						)} <span class="idc-count" data-count="back"></span></button>
+					</div>
+					<div class="idc-seg" data-group="orientation">
+						<button class="idc-btn" data-orientation="horizontal" title="${__("Landscape")}">${__(
+			"Landscape"
+		)}</button>
+						<button class="idc-btn" data-orientation="vertical" title="${__("Portrait")}">${__(
+			"Portrait"
+		)}</button>
+					</div>
+					<span class="idc-sep"></span>
+					<button class="idc-btn" data-act="undo" title="${__("Undo")} (Ctrl+Z)">${i("undo")}</button>
+					<button class="idc-btn" data-act="redo" title="${__("Redo")} (Ctrl+Shift+Z)">${i("redo")}</button>
+					<span class="idc-sep"></span>
+					<button class="idc-btn" data-act="zoom-out" title="${__("Zoom out")}">${i("zoom-out")}</button>
+					<button class="idc-btn idc-zoom-label" data-act="zoom-fit" title="${__("Fit to screen")}"></button>
+					<button class="idc-btn" data-act="zoom-in" title="${__("Zoom in")}">${i("zoom-in")}</button>
+					<span class="idc-sep"></span>
+					<button class="idc-btn" data-studio-toggle="show_guides" title="${__(
+						"Centre lines and safe area"
+					)}">${i("guides")}</button>
+					<button class="idc-btn" data-studio-toggle="snap" title="${__(
+						"Snap to guides and elements (hold Alt to bypass)"
+					)}">${i("magnet")}</button>
+					<button class="idc-btn" data-studio-toggle="show_tokens" title="${__(
+						"Show field names instead of sample data"
+					)}">${i("braces")}</button>
+					<span class="idc-spacer"></span>
+					<div class="idc-health"><button class="idc-btn" data-act="health"></button><div class="idc-health-pop"></div></div>
+					<button class="idc-btn outline" data-act="export" title="${__(
+						"Download this design as a starter file (.json) to import on another site"
+					)}">${i("download")} ${__("Export")}</button>
+					<button class="idc-btn outline" data-act="starters">${i("templates")} ${__("Starters")}</button>
+					<button class="idc-btn primary" data-act="preview">${i("eye")} ${__("Preview")}</button>
+				</div>
+				<div class="idc-body">
+					<aside class="idc-left">
+						<div class="idc-tabs">
+							<button class="idc-btn" data-tab="add">${i("plus", 14)} ${__("Add")}</button>
+							<button class="idc-btn" data-tab="fields">${i("braces", 14)} ${__("Fields")}</button>
+							<button class="idc-btn" data-tab="layers">${i("layers", 14)} ${__("Layers")}</button>
+						</div>
+						<div class="idc-left-body"></div>
+					</aside>
+					<div class="idc-stage-wrap">
+						<div class="idc-stage"></div>
+						<div class="idc-stage-foot">
+							<span class="idc-dims"></span>
+							<span><kbd>←↑→↓</kbd> ${__("nudge")} · <kbd>Shift</kbd> ×10 · <kbd>Ctrl D</kbd> ${__(
+			"duplicate"
+		)} · <kbd>Del</kbd> ${__("remove")} · <kbd>Alt</kbd> ${__("no snap")}</span>
+						</div>
+					</div>
+					<aside class="idc-right"></aside>
+				</div>
+			</div>`);
+
+		this.$root = this.$wrapper.find(".idc-studio");
+		// Form sections are capped at 900px; the designer uses the full width.
+		this.$wrapper.closest(".section-body").css("max-width", "none");
+		this.$stage = this.$root.find(".idc-stage");
+		this.$left = this.$root.find(".idc-left-body");
+		this.$right = this.$root.find(".idc-right");
+		this.bind_shell();
+		this.render_left();
+	}
+
+	bind_shell() {
+		const $r = this.$root;
+		$r.on("click", "[data-side]", (e) => {
+			this.side = $(e.currentTarget).data("side");
+			this.selected = null;
+			this.refresh_all();
+		});
+		$r.on("click", "[data-orientation]", (e) => {
+			const o = $(e.currentTarget).data("orientation");
+			this.ensure_data(o);
+			if (this.data.orientation === o) return;
+			this.data.orientation = o;
+			this.commit();
+			this.refresh_all();
+		});
+		$r.on("click", "[data-tab]", (e) => {
+			this.left_tab = $(e.currentTarget).data("tab");
+			this.render_left();
+		});
+		$r.on("click", "[data-studio-toggle]", (e) => {
+			const key = $(e.currentTarget).data("studio-toggle");
+			this[key] = !this[key];
+			this.refresh_all();
+		});
+		$r.on("click", "[data-act]", (e) => {
+			const act = $(e.currentTarget).data("act");
+			const zooms = [0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3, 4];
+			if (act === "undo") this.undo();
+			else if (act === "redo") this.redo();
+			else if (act === "zoom-fit") {
+				this.zoom = null;
+				this.render_canvas();
+			} else if (act === "zoom-in") {
+				this.zoom = zooms.find((z) => z > this.scale + 0.01) || 4;
+				this.render_canvas();
+			} else if (act === "zoom-out") {
+				this.zoom = [...zooms].reverse().find((z) => z < this.scale - 0.01) || 0.5;
+				this.render_canvas();
+			} else if (act === "starters") this.open_starters();
+			else if (act === "export") this.export_design();
+			else if (act === "preview") slcm.id_card.show_preview(this.frm);
+			else if (act === "health") {
+				e.stopPropagation();
+				$r.find(".idc-health-pop").toggleClass("open");
+			}
+		});
+		$r.on("click", ".idc-issue[data-index]", (e) => {
+			const $i = $(e.currentTarget);
+			this.side = $i.data("issue-side");
+			this.selected = +$i.data("index");
+			$r.find(".idc-health-pop").removeClass("open");
+			this.refresh_all();
+		});
+
+		// Canvas interaction
+		this.$stage.on("mousedown", ".idc-handle", (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			this.active = true;
+			this.start_resize(e, $(e.currentTarget).data("dir"));
+		});
+		this.$stage.on("mousedown", ".idc-artboard .idc-el", (e) => {
+			if (e.button !== 0) return;
+			e.preventDefault();
+			e.stopPropagation();
+			this.active = true;
+			this.start_drag(e, +$(e.currentTarget).attr("data-index"));
+		});
+		this.$stage.on("dblclick", ".idc-artboard .idc-el", () => {
+			this.$right.find("[data-prop='content']").trigger("focus").trigger("select");
+		});
+		this.$stage.on("mousedown", (e) => {
+			if ($(e.target).closest(".idc-el, .idc-handle, .idc-empty").length) return;
+			if (this.selected !== null) {
+				this.selected = null;
+				this.refresh_selection();
+			}
+		});
+		this.$stage.on("click", "[data-empty]", (e) => {
+			const what = $(e.currentTarget).data("empty");
+			if (what === "starters") return this.open_starters();
+			this.ensure_data(what);
+			this.commit();
+			this.refresh_all();
+		});
+
+		this.bind_left();
+		this.bind_inspector();
+	}
+
+	bind_global() {
+		this.destroy();
+		$(document).on("mousedown.idcstudio", (e) => {
+			this.active = !!(this.$root && this.$root[0].contains(e.target));
+			if (!$(e.target).closest(".idc-health").length && this.$root) {
+				this.$root.find(".idc-health-pop").removeClass("open");
+			}
+		});
+		$(document).on("keydown.idcstudio", (e) => this.on_key(e));
+		$(window).on(
+			"resize.idcstudio",
+			frappe.utils.debounce(() => {
+				if (this.zoom === null && this.$root && this.$root.is(":visible"))
+					this.render_canvas();
+			}, 150)
+		);
+	}
+
+	on_key(e) {
+		if (
+			!this.active ||
+			!this.$root ||
+			!this.$root.is(":visible") ||
+			window.cur_frm !== this.frm
+		)
+			return;
+		if ($(e.target).is("input, textarea, select, [contenteditable=true]")) return;
+		if ($(".modal.show").length) return;
+		const mod = e.ctrlKey || e.metaKey;
+		const key = e.key;
+		let handled = true;
+
+		if (mod && key.toLowerCase() === "z") e.shiftKey ? this.redo() : this.undo();
+		else if (mod && key.toLowerCase() === "y") this.redo();
+		else if (mod && key.toLowerCase() === "d") this.duplicate();
+		else if (mod && key.toLowerCase() === "c") this.copy();
+		else if (mod && key.toLowerCase() === "v") this.paste();
+		else if (!mod && (key === "Delete" || key === "Backspace")) this.remove();
+		else if (!mod && key === "Escape") {
+			this.selected = null;
+			this.refresh_selection();
+		} else if (!mod && key.startsWith("Arrow")) {
+			const el = this.current();
+			if (!el || el.locked) return;
+			const step = e.shiftKey ? 10 : 1;
+			if (key === "ArrowLeft") el.x = round1(+el.x - step);
+			if (key === "ArrowRight") el.x = round1(+el.x + step);
+			if (key === "ArrowUp") el.y = round1(+el.y - step);
+			if (key === "ArrowDown") el.y = round1(+el.y + step);
+			this.render_canvas();
+			this.commit_debounced();
+			this.render_inspector();
+		} else handled = false;
+
+		if (handled) e.preventDefault();
+	}
+
+	commit_debounced() {
+		clearTimeout(this._commit_timer);
+		this._commit_timer = setTimeout(() => this.commit(), 350);
+	}
+
+	// ----- refresh pipeline -----------------------------------------
+
+	refresh_all() {
+		if (!this.$root) return;
+		if (this.selected !== null && !this.elements[this.selected]) this.selected = null;
+		this.render_canvas();
+		this.render_inspector();
+		this.refresh_chrome();
+	}
+
+	refresh_chrome() {
+		this.render_toolbar();
+		this.render_health();
+		if (this.left_tab === "layers") this.render_left();
+	}
+
+	refresh_selection() {
+		this.$stage.find(".idc-el").removeClass("is-selected");
+		this.render_overlay();
+		this.render_inspector();
+		if (this.left_tab === "layers") this.render_left();
+	}
+
+	render_toolbar() {
+		const $r = this.$root;
+		$r.find("[data-side]").each((_, b) =>
+			$(b).toggleClass("active", $(b).data("side") === this.side)
+		);
+		const orientation = (this.data && this.data.orientation) || "horizontal";
+		$r.find("[data-orientation]").each((_, b) =>
+			$(b).toggleClass("active", $(b).data("orientation") === orientation)
+		);
+		["front", "back"].forEach((s) => {
+			const n = this.data ? this.data[s].length : 0;
+			$r.find(`[data-count='${s}']`).text(n ? `(${n})` : "");
+		});
+		$r.find("[data-act='undo']").prop("disabled", !this.history.length);
+		$r.find("[data-act='redo']").prop("disabled", !this.future.length);
+		$r.find("[data-studio-toggle]").each((_, b) =>
+			$(b).toggleClass("active", !!this[$(b).data("studio-toggle")])
+		);
+		$r.find(".idc-zoom-label").text(Math.round(this.scale * 100) + "%");
+		$r.find(".idc-dims").text(
+			`${IDC_MM[orientation]} · CR80 · ${this.side === "front" ? __("Front") : __("Back")}`
+		);
+	}
+
+	// ----- canvas -------------------------------------------------------
+
+	compute_scale() {
+		if (this.zoom) return this.zoom;
+		const [w, h] = this.units;
+		const avail_w = Math.max(this.$stage.innerWidth() - 72, 200);
+		const avail_h = 560;
+		return Math.max(
+			0.5,
+			Math.min(3, Math.floor(Math.min(avail_w / w, avail_h / h) * 20) / 20)
+		);
+	}
+
+	render_canvas() {
+		if (!this.data) {
+			this.render_empty();
+			return;
+		}
+		const [w, h] = this.units;
+		this.scale = this.compute_scale();
+		const s = this.scale;
+		const ctx = slcm.id_card.design_context(this.frm, this.meta, this.show_tokens);
+
+		const $art = $(
+			`<div class="idc-artboard" style="width:${w * s}px;height:${h * s}px"></div>`
+		);
+		const $card = $(
+			`<div class="idc-card" style="width:${w}px;height:${h}px;transform:scale(${s});background:${
+				this.data.bg_color[this.side] || "#fff"
+			}"></div>`
+		).appendTo($art);
+		this.elements.forEach((el, index) => {
+			if (el.hidden) return;
+			const $el = slcm.id_card.build_element(el, ctx).attr("data-index", index);
+			if (el.locked) $el.addClass("locked");
+			$card.append($el);
+		});
+		$art.append('<div class="idc-overlay"></div>');
+
+		this.$stage.empty().append($art);
+		this.$card = $card;
+		this.$overlay = $art.find(".idc-overlay");
+		slcm.id_card.apply_fit($card);
+		this.render_overlay();
+		this.$root.find(".idc-zoom-label").text(Math.round(s * 100) + "%");
+	}
+
+	render_empty() {
+		const i = slcm.id_card.icon;
+		this.$stage.html(`
+			<div class="idc-empty">
+				<div class="idc-empty-ico">${i("templates", 26)}</div>
+				<h4>${__("Design your ID card")}</h4>
+				<p>${__(
+					"Start from a ready-made starter, or begin with a blank card and add fields from the left panel."
+				)}</p>
+				<div class="idc-empty-actions">
+					<button class="idc-btn primary" data-empty="starters">${i("templates")} ${__(
+			"Browse starters"
+		)}</button>
+					<button class="idc-btn outline" data-empty="horizontal">${__("Blank landscape")}</button>
+					<button class="idc-btn outline" data-empty="vertical">${__("Blank portrait")}</button>
+				</div>
+			</div>`);
+		this.$card = null;
+	}
+
+	/** Unscaled box of an element on the current side, measured from the DOM. */
+	box(index) {
+		const node = this.$card && this.$card.find(`[data-index='${index}']`)[0];
+		if (!node) return null;
+		return {
+			x: node.offsetLeft,
+			y: node.offsetTop,
+			w: node.offsetWidth,
+			h: node.offsetHeight,
+		};
+	}
+
+	render_overlay(snap_lines) {
+		if (!this.$overlay) return;
+		const s = this.scale;
+		const [w, h] = this.units;
+		let html = "";
+		if (this.show_guides) {
+			html += `<div class="idc-guide-line" style="left:${
+				(w / 2) * s
+			}px;top:0;bottom:0;width:1px"></div>`;
+			html += `<div class="idc-guide-line" style="top:${
+				(h / 2) * s
+			}px;left:0;right:0;height:1px"></div>`;
+			html += `<div class="idc-safe" style="left:${IDC_SAFE * s}px;top:${
+				IDC_SAFE * s
+			}px;width:${(w - 2 * IDC_SAFE) * s}px;height:${(h - 2 * IDC_SAFE) * s}px" title="${__(
+				"Safe area"
+			)}"></div>`;
+		}
+		(snap_lines || []).forEach((g) => {
+			html +=
+				g.axis === "x"
+					? `<div class="idc-snap" style="left:${
+							g.pos * s
+					  }px;top:-8px;bottom:-8px;width:1px"></div>`
+					: `<div class="idc-snap" style="top:${
+							g.pos * s
+					  }px;left:-8px;right:-8px;height:1px"></div>`;
+		});
+
+		const el = this.current();
+		const b = el && !el.hidden ? this.box(this.selected) : null;
+		if (b) {
+			const dirs = el.locked
+				? []
+				: el.type === "text"
+				? ["w", "e"]
+				: ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
+			const pos = {
+				nw: [0, 0],
+				n: [0.5, 0],
+				ne: [1, 0],
+				e: [1, 0.5],
+				se: [1, 1],
+				s: [0.5, 1],
+				sw: [0, 1],
+				w: [0, 0.5],
+			};
+			const cursors = {
+				nw: "nwse",
+				se: "nwse",
+				ne: "nesw",
+				sw: "nesw",
+				n: "ns",
+				s: "ns",
+				e: "ew",
+				w: "ew",
+			};
+			const bw = b.w * s;
+			const bh = b.h * s;
+			html += `<div class="idc-sel ${el.locked ? "locked" : ""}" style="left:${
+				b.x * s - 1
+			}px;top:${b.y * s - 1}px;width:${bw + 2}px;height:${bh + 2}px">
+				<div class="idc-sel-tag">${el.locked ? "🔒 " : ""}${Math.round(b.w)} × ${Math.round(b.h)}</div>
+				${dirs
+					.map(
+						(d) =>
+							`<div class="idc-handle" data-dir="${d}" style="left:${
+								pos[d][0] * (bw + 2) - 5
+							}px;top:${pos[d][1] * (bh + 2) - 5}px;cursor:${
+								cursors[d]
+							}-resize"></div>`
+					)
+					.join("")}
+			</div>`;
+		}
+		this.$overlay.html(html);
+	}
+
+	current() {
+		return this.selected === null ? null : this.elements[this.selected] || null;
+	}
+
+	select(index) {
+		if (this.selected === index) return;
+		this.selected = index;
+		this.refresh_selection();
+	}
+
+	// ----- drag / resize / snap -------------------------------------
+
+	snap_candidates(skip_index) {
+		const [w, h] = this.units;
+		const xs = [0, w / 2, w, IDC_SAFE, w - IDC_SAFE];
+		const ys = [0, h / 2, h, IDC_SAFE, h - IDC_SAFE];
+		this.elements.forEach((el, i) => {
+			if (i === skip_index || el.hidden) return;
+			const b = this.box(i);
+			if (!b) return;
+			xs.push(b.x, b.x + b.w / 2, b.x + b.w);
+			ys.push(b.y, b.y + b.h / 2, b.y + b.h);
+		});
+		return { xs, ys };
+	}
+
+	snap_axis(start, size, targets) {
+		const threshold = 5 / this.scale;
+		let best = null;
+		[0, size / 2, size].forEach((offset) => {
+			targets.forEach((t) => {
+				const d = t - (start + offset);
+				if (Math.abs(d) <= threshold && (!best || Math.abs(d) < Math.abs(best.d)))
+					best = { d, pos: t };
 			});
 		});
+		return best;
+	}
+
+	start_drag(e, index) {
+		this.select(index);
+		const el = this.current();
+		if (!el || el.locked) return;
+		const s = this.scale;
+		const b = this.box(index);
+		const start = { mx: e.clientX, my: e.clientY, x: +el.x || 0, y: +el.y || 0 };
+		// The DOM box can be offset from x/y by margins in legacy styles.
+		const off = { x: b.x - start.x, y: b.y - start.y };
+		const targets = this.snap ? this.snap_candidates(index) : null;
+		const $node = this.$card.find(`[data-index='${index}']`);
+		let moved = false;
+
+		const move = (ev) => {
+			let dx = (ev.clientX - start.mx) / s;
+			let dy = (ev.clientY - start.my) / s;
+			if (!moved && Math.abs(dx * s) < 2 && Math.abs(dy * s) < 2) return;
+			moved = true;
+			if (ev.shiftKey) Math.abs(dx) > Math.abs(dy) ? (dy = 0) : (dx = 0);
+			let nx = start.x + dx;
+			let ny = start.y + dy;
+			const lines = [];
+			if (targets && !ev.altKey) {
+				const sx = this.snap_axis(nx + off.x, b.w, targets.xs);
+				const sy = this.snap_axis(ny + off.y, b.h, targets.ys);
+				if (sx) {
+					nx += sx.d;
+					lines.push({ axis: "x", pos: sx.pos });
+				}
+				if (sy) {
+					ny += sy.d;
+					lines.push({ axis: "y", pos: sy.pos });
+				}
+			}
+			el.x = round1(nx);
+			el.y = round1(ny);
+			$node.css({ left: el.x + "px", top: el.y + "px" });
+			this.render_overlay(lines);
+		};
+		const up = () => {
+			$(document).off("mousemove.idcdrag mouseup.idcdrag");
+			this.render_overlay();
+			if (moved) {
+				this.commit();
+				this.render_inspector();
+			}
+		};
+		$(document).on("mousemove.idcdrag", move).on("mouseup.idcdrag", up);
+	}
+
+	start_resize(e, dir) {
+		const el = this.current();
+		if (!el || el.locked) return;
+		const s = this.scale;
+		const b = this.box(this.selected);
+		const start = {
+			mx: e.clientX,
+			my: e.clientY,
+			x: +el.x || 0,
+			y: +el.y || 0,
+			w: el.type === "text" ? +el.width || b.w : +el.width || b.w,
+			h: +el.height || b.h,
+		};
+		const ratio = start.w / (start.h || 1);
+		const index = this.selected;
+
+		const move = (ev) => {
+			const dx = (ev.clientX - start.mx) / s;
+			const dy = (ev.clientY - start.my) / s;
+			let { x, y, w, h } = start;
+			if (dir.includes("e")) w = start.w + dx;
+			if (dir.includes("w")) {
+				w = start.w - dx;
+				x = start.x + dx;
+			}
+			if (dir.includes("s")) h = start.h + dy;
+			if (dir.includes("n")) {
+				h = start.h - dy;
+				y = start.y + dy;
+			}
+			if (ev.shiftKey && dir.length === 2 && el.type !== "text") {
+				h = w / ratio;
+				if (dir.includes("n")) y = start.y + (start.h - h);
+			}
+			if (w < 4) {
+				if (dir.includes("w")) x -= 4 - w;
+				w = 4;
+			}
+			if (h < 2) {
+				if (dir.includes("n")) y -= 2 - h;
+				h = 2;
+			}
+			el.x = round1(x);
+			el.width = round1(w);
+			if (el.type !== "text") {
+				el.y = round1(y);
+				el.height = round1(h);
+			}
+			this.render_canvas();
+			this.selected = index;
+			this.render_overlay();
+		};
+		const up = () => {
+			$(document).off("mousemove.idcdrag mouseup.idcdrag");
+			this.commit();
+			this.render_inspector();
+		};
+		$(document).on("mousemove.idcdrag", move).on("mouseup.idcdrag", up);
+	}
+
+	// ----- element operations -------------------------------------------
+
+	add(el, opts = {}) {
+		this.ensure_data();
+		const [w, h] = this.units;
+		if (el.x === undefined) el.x = round1(Math.max(IDC_SAFE, (w - (el.width || 80)) / 2));
+		if (el.y === undefined) el.y = round1(Math.max(IDC_SAFE, (h - (el.height || 16)) / 2));
+		el.style = el.style || {};
+		if (opts.to_back) {
+			this.elements.unshift(el);
+			this.selected = 0;
+		} else {
+			this.elements.push(el);
+			this.selected = this.elements.length - 1;
+		}
+		this.commit();
+		this.refresh_all();
+		if (el.type === "text" && opts.focus) {
+			setTimeout(
+				() => this.$right.find("[data-prop='content']").trigger("focus").trigger("select"),
+				30
+			);
+		}
+	}
+
+	remove() {
+		if (this.selected === null) return;
+		this.elements.splice(this.selected, 1);
+		this.selected = null;
+		this.commit();
+		this.refresh_all();
+	}
+
+	duplicate() {
+		const el = this.current();
+		if (!el) return;
+		const copy = JSON.parse(JSON.stringify(el));
+		copy.x = round1(+copy.x + 8);
+		copy.y = round1(+copy.y + 8);
+		copy.locked = false;
+		this.elements.splice(this.selected + 1, 0, copy);
+		this.selected += 1;
+		this.commit();
+		this.refresh_all();
+	}
+
+	copy() {
+		const el = this.current();
+		if (el) {
+			slcm.id_card._clipboard = JSON.stringify(el);
+			frappe.show_alert(
+				{ message: __("Copied. Paste on either side with Ctrl+V."), indicator: "blue" },
+				2
+			);
+		}
+	}
+
+	paste() {
+		if (!slcm.id_card._clipboard) return;
+		const el = JSON.parse(slcm.id_card._clipboard);
+		el.x = round1(+el.x + 6);
+		el.y = round1(+el.y + 6);
+		this.ensure_data();
+		this.elements.push(el);
+		this.selected = this.elements.length - 1;
+		this.commit();
+		this.refresh_all();
+	}
+
+	copy_to_other_side() {
+		const el = this.current();
+		if (!el) return;
+		const other = this.side === "front" ? "back" : "front";
+		this.data[other].push(JSON.parse(JSON.stringify(el)));
+		this.commit();
+		frappe.show_alert(
+			{
+				message: __("Copied to the {0}.", [other === "front" ? __("front") : __("back")]),
+				indicator: "green",
+			},
+			2
+		);
+	}
+
+	move_layer(from, to) {
+		const list = this.elements;
+		if (from === to || from < 0 || to < 0 || from >= list.length || to >= list.length) return;
+		const [el] = list.splice(from, 1);
+		list.splice(to, 0, el);
+		this.selected = to;
+		this.commit();
+		this.refresh_all();
+	}
+
+	align(where) {
+		const el = this.current();
+		const b = el && this.box(this.selected);
+		if (!b) return;
+		const [w, h] = this.units;
+		const off = { x: b.x - (+el.x || 0), y: b.y - (+el.y || 0) };
+		if (where === "left") el.x = round1(IDC_SAFE - off.x);
+		if (where === "hcenter") el.x = round1((w - b.w) / 2 - off.x);
+		if (where === "right") el.x = round1(w - IDC_SAFE - b.w - off.x);
+		if (where === "top") el.y = round1(IDC_SAFE - off.y);
+		if (where === "vmiddle") el.y = round1((h - b.h) / 2 - off.y);
+		if (where === "bottom") el.y = round1(h - IDC_SAFE - b.h - off.y);
+		this.commit();
+		this.refresh_all();
+	}
+
+	upload_image(callback) {
+		new frappe.ui.FileUploader({
+			doctype: this.frm.is_new() ? undefined : this.frm.doctype,
+			docname: this.frm.is_new() ? undefined : this.frm.docname,
+			folder: "Home/Attachments",
+			make_attachments_public: true,
+			restrictions: { allowed_file_types: ["image/*"] },
+			on_success: (file) => {
+				if (!file || !file.file_url) return;
+				const img = new Image();
+				img.onload = () => callback(file.file_url, img.naturalWidth, img.naturalHeight);
+				img.onerror = () => callback(file.file_url, 0, 0);
+				img.src = file.file_url;
+			},
+		});
+	}
+
+	layer_name(el) {
+		if (el.name) return el.name;
+		if (el.type === "text") {
+			const labels = { ...(this.meta.labels || {}) };
+			(this.meta.tokens || []).forEach((t) => (labels[t.key] = t.label));
+			const text = (el.content || "")
+				.replace(
+					/\{\{\s*([A-Za-z_]+)\s*\}\}/g,
+					(m, k) => labels[slcm.id_card.canonical(this.meta, k)] || k
+				)
+				.replace(/<[^>]*>/g, " ")
+				.trim();
+			return text || __("Text");
+		}
+		if (el.type === "image") {
+			const src = IDC_IMAGE_SOURCES.find(([k]) => k === (el.mapping || ""));
+			return el.mapping && src ? src[1] : __("Image");
+		}
+		if (el.style && el.style.borderRadius === "50%") return __("Circle");
+		return __("Shape");
+	}
+
+	layer_icon(el) {
+		if (el.type === "text") return "text";
+		if (el.type === "image") {
+			return (
+				{
+					photo: "user",
+					qr_code_image: "qr",
+					institute_logo: "building",
+					authority_signature: "pen",
+					watermark_image: "droplet",
+				}[el.mapping] || "image"
+			);
+		}
+		return el.style && el.style.borderRadius === "50%" ? "circle" : "square";
+	}
+
+	// ----- left panel -------------------------------------------------
+
+	render_left() {
+		if (!this.$root) return;
+		this.$root
+			.find("[data-tab]")
+			.each((_, b) => $(b).toggleClass("active", $(b).data("tab") === this.left_tab));
+		const i = slcm.id_card.icon;
+
+		if (this.left_tab === "add") {
+			const tile = (act, icon, label) =>
+				`<button class="idc-tile" data-add="${act}">${i(
+					icon,
+					20
+				)}<span>${label}</span></button>`;
+			this.$left.html(`
+				<div class="idc-group-title">${__("Text")}</div>
+				<div class="idc-tiles">
+					${tile("heading", "heading", __("Heading"))}
+					${tile("text", "text", __("Text"))}
+					${tile("paragraph", "paragraph", __("Paragraph"))}
+				</div>
+				<div class="idc-group-title">${__("Shapes")}</div>
+				<div class="idc-tiles">
+					${tile("rect", "square", __("Rectangle"))}
+					${tile("circle", "circle", __("Circle"))}
+					${tile("line", "line", __("Line"))}
+					${tile("header", "header", __("Header band"))}
+					${tile("footer", "footer", __("Footer band"))}
+				</div>
+				<div class="idc-group-title">${__("Images")}</div>
+				<div class="idc-tiles">
+					${tile("image", "upload", __("Upload image"))}
+					${tile("background", "image", __("Background"))}
+					${tile("map:watermark_image", "droplet", __("Watermark"))}
+				</div>
+				<div class="idc-group-title">${__("Quick fields")}</div>
+				<div class="idc-tiles">
+					${tile("map:photo", "user", __("Photo"))}
+					${tile("token:student_name", "text", __("Name"))}
+					${tile("token:student_id", "braces", __("ID number"))}
+					${tile("map:qr_code_image", "qr", __("QR code"))}
+					${tile("map:institute_logo", "building", __("Logo"))}
+					${tile("map:authority_signature", "pen", __("Signature"))}
+				</div>`);
+		} else if (this.left_tab === "fields") {
+			const q = this.field_query.toLowerCase();
+			const groups = {};
+			(this.meta.tokens || [])
+				.filter((t) => !q || t.label.toLowerCase().includes(q) || t.key.includes(q))
+				.forEach((t) => (groups[t.group] = groups[t.group] || []).push(t));
+			const icon_for = (t) =>
+				t.kind === "image"
+					? {
+							photo: "user",
+							qr_code_image: "qr",
+							institute_logo: "building",
+							authority_signature: "pen",
+							watermark_image: "droplet",
+					  }[t.key]
+					: "braces";
+			const list = Object.entries(groups)
+				.map(
+					([group, tokens]) => `
+					<div class="idc-group-title">${__(group)}</div>
+					${tokens
+						.map(
+							(t) => `<button class="idc-field" data-add="${
+								t.kind === "image" ? "map" : "token"
+							}:${t.key}" title="${__("Add to card")}">
+								<span class="idc-field-ico">${i(icon_for(t), 14)}</span>
+								<span class="idc-field-text"><div class="idc-field-label">${frappe.utils.escape_html(
+									t.label
+								)}</div>
+								<div class="idc-field-sample">${
+									t.kind === "image"
+										? __("Image")
+										: frappe.utils.escape_html(t.sample || "")
+								}</div></span>
+							</button>`
+						)
+						.join("")}`
+				)
+				.join("");
+			this.$left.html(`
+				<input class="idc-search" type="search" placeholder="${__(
+					"Search fields…"
+				)}" value="${frappe.utils.escape_html(this.field_query)}">
+				${list || `<div class="idc-empty-note">${__("No matching fields")}</div>`}
+				<div class="idc-empty-note" style="text-align:left;padding:12px 2px">${__(
+					"Tip: to put a field inside existing text, select the text and use <b>Insert field</b> in the panel on the right."
+				)}</div>`);
+		} else {
+			const els = this.elements;
+			if (!els.length) {
+				this.$left.html(
+					`<div class="idc-empty-note">${__("No elements on this side yet.")}</div>`
+				);
+				return;
+			}
+			const rows = els
+				.map((el, index) => ({ el, index }))
+				.reverse()
+				.map(
+					({ el, index }) => `
+					<div class="idc-layer ${index === this.selected ? "selected" : ""} ${
+						el.hidden ? "is-hidden" : ""
+					}" data-layer="${index}" draggable="true">
+						<span class="idc-grip">${i("grip", 14)}</span>
+						<span class="idc-field-ico" style="width:22px;height:22px">${i(this.layer_icon(el), 13)}</span>
+						<span class="idc-layer-name">${frappe.utils.escape_html(this.layer_name(el))}</span>
+						<button class="idc-btn" data-layer-act="hidden" title="${el.hidden ? __("Show") : __("Hide")}">${i(
+						el.hidden ? "eye-off" : "eye",
+						14
+					)}</button>
+						<button class="idc-btn" data-layer-act="locked" title="${
+							el.locked ? __("Unlock") : __("Lock")
+						}">${i(el.locked ? "lock" : "unlock", 14)}</button>
+					</div>`
+				)
+				.join("");
+			this.$left.html(
+				`<div class="idc-empty-note" style="text-align:left;padding:2px 2px 8px">${__(
+					"Top of the list is in front. Drag to reorder."
+				)}</div>${rows}`
+			);
+		}
+	}
+
+	bind_left() {
+		const $l = this.$left;
+		$l.on("input", ".idc-search", (e) => {
+			this.field_query = e.target.value;
+			const pos = e.target.selectionStart;
+			this.render_left();
+			const input = this.$left.find(".idc-search")[0];
+			input.focus();
+			input.setSelectionRange(pos, pos);
+		});
+		$l.on("click", "[data-add]", (e) =>
+			this.add_from_palette(String($(e.currentTarget).data("add")))
+		);
+		$l.on("click", "[data-layer]", (e) => {
+			if ($(e.target).closest("[data-layer-act]").length) return;
+			this.select(+$(e.currentTarget).data("layer"));
+		});
+		$l.on("click", "[data-layer-act]", (e) => {
+			e.stopPropagation();
+			const index = +$(e.currentTarget).closest("[data-layer]").data("layer");
+			const key = $(e.currentTarget).data("layer-act");
+			const el = this.elements[index];
+			el[key] = !el[key];
+			if (!el[key]) delete el[key];
+			this.commit();
+			this.refresh_all();
+		});
+		$l.on("dragstart", "[data-layer]", (e) => {
+			this._drag_layer = +$(e.currentTarget).data("layer");
+			e.originalEvent.dataTransfer.effectAllowed = "move";
+			e.originalEvent.dataTransfer.setData("text/plain", String(this._drag_layer));
+		});
+		$l.on("dragover", "[data-layer]", (e) => {
+			e.preventDefault();
+			$l.find(".drop-target").removeClass("drop-target");
+			$(e.currentTarget).addClass("drop-target");
+		});
+		$l.on("dragleave", "[data-layer]", (e) => $(e.currentTarget).removeClass("drop-target"));
+		$l.on("drop", "[data-layer]", (e) => {
+			e.preventDefault();
+			const to = +$(e.currentTarget).data("layer");
+			if (this._drag_layer !== undefined) this.move_layer(this._drag_layer, to);
+			this._drag_layer = undefined;
+		});
+		$l.on("dragend", "[data-layer]", () => $l.find(".drop-target").removeClass("drop-target"));
+	}
+
+	add_from_palette(action) {
+		this.ensure_data();
+		const [w, h] = this.units;
+		const [kind, key] = action.split(":");
+		const font = this.frm.doc.font_family || "Arial, Helvetica, sans-serif";
+		const color = this.frm.doc.base_font_color || "#111827";
+
+		if (kind === "token") {
+			const bold = key === "student_name";
+			return this.add({
+				type: "text",
+				content: `{{${key}}}`,
+				style: {
+					fontSize: bold ? "16px" : "11px",
+					fontWeight: bold ? "bold" : "normal",
+					color,
+					fontFamily: font,
+				},
+			});
+		}
+		if (kind === "map") {
+			const sizes = {
+				photo: [64, 78],
+				qr_code_image: [56, 56],
+				institute_logo: [40, 40],
+				authority_signature: [70, 28],
+				watermark_image: [140, 140],
+			};
+			const [ew, eh] = sizes[key] || [60, 60];
+			const el = {
+				type: "image",
+				mapping: key,
+				content: "",
+				width: ew,
+				height: eh,
+				style: { opacity: 1 },
+			};
+			if (key === "authority_signature" || key === "institute_logo")
+				el.object_fit = "contain";
+			if (key === "photo") el.style.borderRadius = "6px";
+			if (key === "watermark_image") {
+				el.object_fit = "contain";
+				el.style.opacity = 0.12;
+				return this.add(el, { to_back: true });
+			}
+			return this.add(el);
+		}
+		const presets = {
+			heading: {
+				type: "text",
+				content: __("Heading"),
+				style: { fontSize: "18px", fontWeight: "bold", color, fontFamily: font },
+			},
+			text: {
+				type: "text",
+				content: __("Your text"),
+				style: { fontSize: "11px", color, fontFamily: font },
+			},
+			paragraph: {
+				type: "text",
+				content: __(
+					"Use this card for identification on campus. If found, please return it to the institute."
+				),
+				width: 160,
+				wrap: true,
+				style: { fontSize: "8px", lineHeight: "1.35", color, fontFamily: font },
+			},
+			rect: {
+				type: "rect",
+				width: 100,
+				height: 50,
+				style: { backgroundColor: "#e5e7eb", opacity: 1 },
+			},
+			circle: {
+				type: "rect",
+				width: 50,
+				height: 50,
+				style: { backgroundColor: "#dbeafe", borderRadius: "50%", opacity: 1 },
+			},
+			line: {
+				type: "rect",
+				width: 120,
+				height: 1.5,
+				style: { backgroundColor: "#111827", opacity: 1 },
+			},
+			header: {
+				type: "rect",
+				x: 0,
+				y: 0,
+				width: w,
+				height: 40,
+				style: { backgroundColor: "#1e3a8a", opacity: 1 },
+			},
+			footer: {
+				type: "rect",
+				x: 0,
+				y: round1(h - 24),
+				width: w,
+				height: 24,
+				style: { backgroundColor: "#1e3a8a", opacity: 1 },
+			},
+		};
+		if (presets[kind])
+			return this.add(JSON.parse(JSON.stringify(presets[kind])), { focus: kind !== "rect" });
+
+		if (kind === "image" || kind === "background") {
+			this.upload_image((url, nw, nh) => {
+				if (kind === "background") {
+					this.add(
+						{
+							type: "image",
+							content: url,
+							x: 0,
+							y: 0,
+							width: w,
+							height: h,
+							name: __("Background"),
+							style: { opacity: 1 },
+						},
+						{ to_back: true }
+					);
+					return;
+				}
+				const max = 90;
+				const r = nw && nh ? nw / nh : 1;
+				const ew = r >= 1 ? max : round1(max * r);
+				const eh = r >= 1 ? round1(max / r) : max;
+				this.add({
+					type: "image",
+					content: url,
+					width: ew,
+					height: eh,
+					object_fit: "contain",
+					style: { opacity: 1 },
+				});
+			});
+		}
+	}
+
+	// ----- inspector ------------------------------------------------------
+
+	render_inspector() {
+		if (!this.$right) return;
+		const el = this.current();
+		this.$right.html(el ? this.inspector_html(el) : this.card_panel_html());
+		if (this.$card) this.$card.find(".idc-el").removeClass("is-selected");
+	}
+
+	card_panel_html() {
+		const i = slcm.id_card.icon;
+		if (!this.data) {
+			return `<div class="idc-sec"><div class="idc-empty-note">${__(
+				"Pick a starter or a blank card to begin."
+			)}</div></div>`;
+		}
+		const bg = slcm.id_card.to_hex(this.data.bg_color[this.side], "#ffffff");
+		const issues = this.issues();
+		return `
+			<div class="idc-insp-head"><span class="idc-field-ico">${i(
+				"square",
+				14
+			)}</span><b style="font-size:13px">${__("Card")} · ${
+			this.side === "front" ? __("Front") : __("Back")
+		}</b></div>
+			<div class="idc-sec">
+				<div class="idc-sec-title">${__("Background")}</div>
+				<div class="idc-row">
+					<label class="idc-input" style="flex:1"><span>${__(
+						"Colour"
+					)}</span><input type="color" data-card="bg" value="${bg}"></label>
+					<button class="idc-btn outline" data-card="bg-both" style="margin-top:16px">${__(
+						"Use on both sides"
+					)}</button>
+				</div>
+			</div>
+			<div class="idc-sec">
+				<div class="idc-sec-title">${__("Print check")}</div>
+				${
+					issues.length
+						? issues.map((x) => this.issue_html(x)).join("")
+						: `<div class="idc-issue info">${i("check")}<div>${__(
+								"Looks ready to print."
+						  )}</div></div>`
+				}
+			</div>
+			<div class="idc-sec">
+				<div class="idc-empty-note" style="text-align:left;padding:0">${__(
+					"Click an element on the card to edit it. Add text, images and data fields from the left panel."
+				)}</div>
+			</div>`;
+	}
+
+	inspector_html(el) {
+		const i = slcm.id_card.icon;
+		const esc = frappe.utils.escape_html;
+		const st = el.style || {};
+		const b = this.box(this.selected) || { w: el.width || 0, h: el.height || 0 };
+		const rot = (/rotate\((-?[\d.]+)deg\)/.exec(st.transform || "") || [0, 0])[1];
+		const num = (prop, label, value, extra = "") =>
+			`<label class="idc-input"><span>${label}</span><input type="number" step="0.5" data-prop="${prop}" data-type="num" value="${
+				value === undefined || value === "" ? "" : round1(+value)
+			}" ${extra}></label>`;
+
+		let html = `
+			<div class="idc-insp-head">
+				<span class="idc-field-ico">${i(this.layer_icon(el), 14)}</span>
+				<input data-prop="name" data-type="str" value="${esc(el.name || "")}" placeholder="${esc(
+			this.layer_name(el)
+		)}" title="${__("Rename layer")}">
+				<button class="idc-btn" data-el="duplicate" title="${__("Duplicate")} (Ctrl+D)">${i(
+			"copy",
+			15
+		)}</button>
+				<button class="idc-btn" data-el="lock" title="${el.locked ? __("Unlock") : __("Lock")}">${i(
+			el.locked ? "lock" : "unlock",
+			15
+		)}</button>
+				<button class="idc-btn danger" data-el="remove" title="${__("Delete")} (Del)">${i(
+			"trash",
+			15
+		)}</button>
+			</div>`;
+
+		if (el.type === "text") {
+			const tokens = (this.meta.tokens || []).filter((t) => t.kind === "text");
+			const font_options = IDC_FONTS.map(
+				([v, l]) =>
+					`<option value="${esc(v)}" ${
+						st.fontFamily === v ? "selected" : ""
+					}>${l}</option>`
+			);
+			if (st.fontFamily && !IDC_FONTS.some(([v]) => v === st.fontFamily)) {
+				font_options.unshift(
+					`<option value="${esc(st.fontFamily)}" selected>${esc(st.fontFamily)}</option>`
+				);
+			}
+			const weight_bold = ["bold", "600", "700", "800", "900"].includes(
+				String(st.fontWeight)
+			);
+			const align = st.textAlign || "left";
+			html += `
+				<div class="idc-sec">
+					<div class="idc-sec-title">${__("Content")}</div>
+					<label class="idc-input"><textarea data-prop="content" data-type="str" rows="2">${esc(
+						el.content || ""
+					)}</textarea></label>
+					<div class="idc-row">
+						<label class="idc-input" style="flex:1"><select data-insert-token>
+							<option value="">${__("Insert field…")}</option>
+							${tokens.map((t) => `<option value="${t.key}">${esc(t.label)}</option>`).join("")}
+						</select></label>
+					</div>
+				</div>
+				<div class="idc-sec">
+					<div class="idc-sec-title">${__("Typography")}</div>
+					<label class="idc-input"><span>${__(
+						"Font"
+					)}</span><select data-prop="style.fontFamily" data-type="str">${font_options.join(
+				""
+			)}</select></label>
+					<div class="idc-grid2">
+						<label class="idc-input"><span>${__(
+							"Size"
+						)}</span><input type="number" min="3" step="0.5" data-prop="style.fontSize" data-type="px" value="${
+				parseFloat(st.fontSize) || 16
+			}"></label>
+						<label class="idc-input"><span>${__(
+							"Colour"
+						)}</span><input type="color" data-prop="style.color" data-type="str" value="${slcm.id_card.to_hex(
+				st.color,
+				"#000000"
+			)}"></label>
+					</div>
+					<div class="idc-row">
+						<div class="idc-seg">
+							<button class="idc-btn ${weight_bold ? "active" : ""}" data-text="bold" title="${__(
+				"Bold"
+			)}"><b>B</b></button>
+							<button class="idc-btn ${
+								st.fontStyle === "italic" ? "active" : ""
+							}" data-text="italic" title="${__("Italic")}"><i>I</i></button>
+							<button class="idc-btn ${
+								st.textDecoration === "underline" ? "active" : ""
+							}" data-text="underline" title="${__("Underline")}"><u>U</u></button>
+						</div>
+						<div class="idc-seg">
+							${["left", "center", "right"]
+								.map(
+									(a) =>
+										`<button class="idc-btn ${
+											align === a ? "active" : ""
+										}" data-text-align="${a}" title="${__(a)}">${i(
+											"text-" + a,
+											15
+										)}</button>`
+								)
+								.join("")}
+						</div>
+					</div>
+					<div class="idc-grid2">
+						<label class="idc-input"><span>${__(
+							"Letter spacing"
+						)}</span><input type="number" step="0.1" data-prop="style.letterSpacing" data-type="px" value="${
+				parseFloat(st.letterSpacing) || 0
+			}"></label>
+						<label class="idc-input"><span>${__(
+							"Line height"
+						)}</span><input type="number" step="0.05" min="0.6" data-prop="style.lineHeight" data-type="str" value="${
+				st.lineHeight && st.lineHeight !== "normal" ? parseFloat(st.lineHeight) : ""
+			}" placeholder="${__("Auto")}"></label>
+					</div>
+					<label class="idc-input" style="margin-top:8px"><span>${__(
+						"Letter case"
+					)}</span><select data-prop="style.textTransform" data-type="str">
+						${[
+							["", __("As typed")],
+							["uppercase", "UPPERCASE"],
+							["capitalize", "Title Case"],
+							["lowercase", "lowercase"],
+						]
+							.map(
+								([v, l]) =>
+									`<option value="${v}" ${
+										(st.textTransform || "") === v ? "selected" : ""
+									}>${l}</option>`
+							)
+							.join("")}
+					</select></label>
+				</div>
+				<div class="idc-sec">
+					<div class="idc-sec-title">${__("Text box")}</div>
+					<label class="idc-toggle"><div>${__("Fixed width")}<small>${__(
+				"Needed for alignment and wrapping"
+			)}</small></div><input type="checkbox" data-textbox="width" ${
+				el.width ? "checked" : ""
+			}></label>
+					<label class="idc-toggle"><div>${__(
+						"Wrap onto lines"
+					)}</div><input type="checkbox" data-textbox="wrap" ${
+				el.wrap ? "checked" : ""
+			} ${el.width ? "" : "disabled"}></label>
+					<label class="idc-toggle"><div>${__("Shrink to fit")}<small>${__(
+				"Long names get smaller instead of overflowing"
+			)}</small></div><input type="checkbox" data-textbox="fit" ${el.fit ? "checked" : ""} ${
+				el.width && !el.wrap ? "" : "disabled"
+			}></label>
+				</div>`;
+		}
+
+		if (el.type === "image") {
+			const radius =
+				st.borderRadius === "50%"
+					? "circle"
+					: st.clipPath && st.clipPath !== "none"
+					? "triangle"
+					: parseFloat(st.borderRadius) > 0
+					? "rounded"
+					: "rect";
+			html += `
+				<div class="idc-sec">
+					<div class="idc-sec-title">${__("Image")}</div>
+					<label class="idc-input"><span>${__("Source")}</span><select data-image="mapping">
+						${IDC_IMAGE_SOURCES.map(
+							([v, l]) =>
+								`<option value="${v}" ${
+									(el.mapping || "") === v ? "selected" : ""
+								}>${__(l)}</option>`
+						).join("")}
+					</select></label>
+					${
+						el.mapping
+							? ""
+							: `<div class="idc-row"><button class="idc-btn outline" data-image="upload" style="flex:1">${i(
+									"upload",
+									14
+							  )} ${
+									el.content && !/placehold\.co/.test(el.content)
+										? __("Replace image")
+										: __("Upload image")
+							  }</button></div>`
+					}
+					<div class="idc-grid2">
+						<label class="idc-input"><span>${__("Fit")}</span><select data-prop="object_fit" data-type="str">
+							<option value="cover" ${
+								el.object_fit !== "contain" && el.object_fit !== "fill"
+									? "selected"
+									: ""
+							}>${__("Fill (crop)")}</option>
+							<option value="contain" ${el.object_fit === "contain" ? "selected" : ""}>${__(
+				"Fit inside"
+			)}</option>
+							<option value="fill" ${el.object_fit === "fill" ? "selected" : ""}>${__("Stretch")}</option>
+						</select></label>
+						<label class="idc-input"><span>${__("Shape")}</span><select data-image="shape">
+							<option value="rect" ${radius === "rect" ? "selected" : ""}>${__("Square corners")}</option>
+							<option value="rounded" ${radius === "rounded" ? "selected" : ""}>${__("Rounded")}</option>
+							<option value="circle" ${radius === "circle" ? "selected" : ""}>${__("Circle")}</option>
+							<option value="triangle" ${radius === "triangle" ? "selected" : ""}>${__("Triangle")}</option>
+						</select></label>
+					</div>
+				</div>`;
+		}
+
+		if (el.type === "rect") {
+			html += `
+				<div class="idc-sec">
+					<div class="idc-sec-title">${__("Fill")}</div>
+					<div class="idc-grid2">
+						<label class="idc-input"><span>${__(
+							"Colour"
+						)}</span><input type="color" data-prop="style.backgroundColor" data-type="str" value="${slcm.id_card.to_hex(
+				st.backgroundColor,
+				"#e5e7eb"
+			)}"></label>
+						<label class="idc-input"><span>${__(
+							"Corner radius"
+						)}</span><input type="number" min="0" step="0.5" data-prop="style.borderRadius" data-type="radius" value="${
+				st.borderRadius === "50%" ? "" : parseFloat(st.borderRadius) || 0
+			}" placeholder="${st.borderRadius === "50%" ? __("Circle") : ""}"></label>
+					</div>
+				</div>`;
+		}
+
+		html += `
+			<div class="idc-sec">
+				<div class="idc-sec-title">${__("Position & size")}</div>
+				<div class="idc-grid2">
+					${num("x", "X", el.x)}
+					${num("y", "Y", el.y)}
+					${num(
+						"width",
+						__("Width"),
+						el.type === "text" ? el.width : el.width,
+						el.type === "text" && !el.width ? `placeholder="${__("Auto")}"` : ""
+					)}
+					${
+						el.type === "text"
+							? `<label class="idc-input"><span>${__(
+									"Height"
+							  )}</span><input type="number" value="${round1(
+									b.h
+							  )}" disabled></label>`
+							: num("height", __("Height"), el.height)
+					}
+				</div>
+				<div class="idc-grid2">
+					<label class="idc-input"><span>${__(
+						"Rotation°"
+					)}</span><input type="number" step="1" data-prop="rotation" data-type="num" value="${
+			+rot || 0
+		}"></label>
+					<label class="idc-input"><span>${__("Opacity")} <b data-opacity-label>${Math.round(
+			(st.opacity === undefined ? 1 : +st.opacity) * 100
+		)}%</b></span>
+						<input type="range" min="0" max="1" step="0.05" data-prop="style.opacity" data-type="num" value="${
+							st.opacity === undefined ? 1 : st.opacity
+						}"></label>
+				</div>
+			</div>
+			<div class="idc-sec">
+				<div class="idc-sec-title">${__("Align to card")}</div>
+				<div class="idc-row" style="justify-content:space-between">
+					${["left", "hcenter", "right", "top", "vmiddle", "bottom"]
+						.map(
+							(a) =>
+								`<button class="idc-btn outline" data-align="${a}" title="${__(
+									"Align"
+								)} ${a}">${i("align-" + a, 15)}</button>`
+						)
+						.join("")}
+				</div>
+				<div class="idc-sec-title" style="margin-top:12px">${__("Arrange")}</div>
+				<div class="idc-row" style="justify-content:space-between">
+					<button class="idc-btn outline" data-arrange="back" title="${__("Send to back")}">${i(
+			"to-back",
+			15
+		)}</button>
+					<button class="idc-btn outline" data-arrange="backward" title="${__("Send backward")}">${i(
+			"backward",
+			15
+		)}</button>
+					<button class="idc-btn outline" data-arrange="forward" title="${__("Bring forward")}">${i(
+			"forward",
+			15
+		)}</button>
+					<button class="idc-btn outline" data-arrange="front" title="${__("Bring to front")}">${i(
+			"to-front",
+			15
+		)}</button>
+					<button class="idc-btn outline" data-el="other-side" title="${__("Copy to the other side")}">${i(
+			"swap",
+			15
+		)}</button>
+				</div>
+			</div>`;
+
+		if (el.type !== "text") {
+			const bs = this.border_settings(el);
+			html += `
+				<div class="idc-sec">
+					<div class="idc-sec-title">${__("Border")}</div>
+					<div class="idc-grid3">
+						<label class="idc-input"><span>${__("Style")}</span><select data-border="style">
+							${["none", "solid", "dashed", "dotted", "double"]
+								.map(
+									(v) =>
+										`<option value="${v}" ${
+											bs.style === v ? "selected" : ""
+										}>${__(v)}</option>`
+								)
+								.join("")}
+						</select></label>
+						<label class="idc-input"><span>${__(
+							"Width"
+						)}</span><input type="number" min="0" step="0.5" data-border="width" value="${
+				bs.width
+			}"></label>
+						<label class="idc-input"><span>${__(
+							"Colour"
+						)}</span><input type="color" data-border="color" value="${slcm.id_card.to_hex(
+				bs.color,
+				"#000000"
+			)}"></label>
+					</div>
+					<div class="idc-row" style="margin-top:8px">
+						${["top", "right", "bottom", "left"]
+							.map(
+								(sd) =>
+									`<label class="idc-toggle" style="margin:0;gap:4px"><input type="checkbox" data-border="${sd}" ${
+										bs[sd] ? "checked" : ""
+									}> ${__(sd)}</label>`
+							)
+							.join("")}
+					</div>
+				</div>`;
+		}
+		return html;
+	}
+
+	border_settings(el) {
+		if (el.border_settings) return el.border_settings;
+		const st = el.style || {};
+		if (st.borderStyle && st.borderStyle !== "none") {
+			return {
+				style: st.borderStyle,
+				width: parseFloat(st.borderWidth) || 1,
+				color: st.borderColor || "#000000",
+				top: true,
+				right: true,
+				bottom: true,
+				left: true,
+			};
+		}
+		return {
+			style: "none",
+			width: 1,
+			color: "#000000",
+			top: true,
+			right: true,
+			bottom: true,
+			left: true,
+		};
+	}
+
+	apply_border(el, bs) {
+		el.border_settings = bs;
+		el.style = el.style || {};
+		[
+			"border",
+			"borderWidth",
+			"borderStyle",
+			"borderColor",
+			"borderTop",
+			"borderRight",
+			"borderBottom",
+			"borderLeft",
+		].forEach((k) => delete el.style[k]);
+		["Top", "Right", "Bottom", "Left"].forEach((side) => {
+			const on = bs[side.toLowerCase()] && bs.style !== "none";
+			el.style[`border${side}Style`] = on ? bs.style : "none";
+			el.style[`border${side}Width`] = on ? `${+bs.width || 0}px` : "0px";
+			el.style[`border${side}Color`] = bs.color;
+		});
+	}
+
+	set_prop(el, prop, type, raw) {
+		let value = raw;
+		if (type === "num") value = raw === "" ? undefined : parseFloat(raw);
+		if (type === "px") value = raw === "" ? undefined : `${parseFloat(raw)}px`;
+		if (type === "radius") value = raw === "" ? undefined : `${parseFloat(raw)}px`;
+		if (type === "num" && Number.isNaN(value)) return;
+
+		if (prop === "rotation") {
+			el.style = el.style || {};
+			if (value) el.style.transform = `rotate(${value}deg)`;
+			else delete el.style.transform;
+			return;
+		}
+		if (prop.startsWith("style.")) {
+			const key = prop.slice(6);
+			el.style = el.style || {};
+			if (value === undefined || value === "") delete el.style[key];
+			else el.style[key] = value;
+			if (key === "letterSpacing" && parseFloat(raw) === 0) delete el.style[key];
+			return;
+		}
+		if (value === undefined || value === "") delete el[prop];
+		else el[prop] = value;
+	}
+
+	bind_inspector() {
+		const $p = this.$right;
+		const live = (e) => {
+			const el = this.current();
+			if (!el) return;
+			const $t = $(e.currentTarget);
+			this.set_prop(el, $t.data("prop"), $t.data("type"), $t.val());
+			if ($t.data("prop") === "style.opacity")
+				$p.find("[data-opacity-label]").text(Math.round(+$t.val() * 100) + "%");
+			this.render_canvas();
+		};
+		$p.on("input", "[data-prop]", live);
+		$p.on("change", "[data-prop]", (e) => {
+			live(e);
+			this.commit();
+			if ($(e.currentTarget).data("prop") === "name") this.render_left();
+		});
+		$p.on("keydown", "[data-prop]", (e) => {
+			if (e.key === "Escape") e.currentTarget.blur();
+		});
+
+		$p.on("change", "[data-insert-token]", (e) => {
+			const key = e.target.value;
+			const el = this.current();
+			if (!key || !el) return;
+			const $ta = $p.find("[data-prop='content']");
+			const ta = $ta[0];
+			const token = `{{${key}}}`;
+			const text = el.content || "";
+			const start =
+				ta && document.activeElement === ta
+					? ta.selectionStart
+					: this._caret ?? text.length;
+			const end =
+				ta && document.activeElement === ta ? ta.selectionEnd : this._caret ?? text.length;
+			el.content = text.slice(0, start) + token + text.slice(end);
+			delete el.mapping;
+			this.commit();
+			this.refresh_all();
+		});
+		$p.on(
+			"keyup click blur",
+			"[data-prop='content']",
+			(e) => (this._caret = e.currentTarget.selectionStart)
+		);
+
+		$p.on("click", "[data-el]", (e) => {
+			const act = $(e.currentTarget).data("el");
+			const el = this.current();
+			if (!el) return;
+			if (act === "duplicate") this.duplicate();
+			else if (act === "remove") this.remove();
+			else if (act === "other-side") this.copy_to_other_side();
+			else if (act === "lock") {
+				el.locked = !el.locked;
+				if (!el.locked) delete el.locked;
+				this.commit();
+				this.refresh_all();
+			}
+		});
+		$p.on("click", "[data-align]", (e) => this.align($(e.currentTarget).data("align")));
+		$p.on("click", "[data-arrange]", (e) => {
+			const n = this.elements.length - 1;
+			const at = this.selected;
+			const to = {
+				back: 0,
+				backward: Math.max(0, at - 1),
+				forward: Math.min(n, at + 1),
+				front: n,
+			}[$(e.currentTarget).data("arrange")];
+			this.move_layer(at, to);
+		});
+		$p.on("click", "[data-text]", (e) => {
+			const el = this.current();
+			if (!el) return;
+			const st = (el.style = el.style || {});
+			const what = $(e.currentTarget).data("text");
+			if (what === "bold")
+				st.fontWeight = ["bold", "600", "700", "800", "900"].includes(
+					String(st.fontWeight)
+				)
+					? "normal"
+					: "bold";
+			if (what === "italic")
+				st.fontStyle === "italic" ? delete st.fontStyle : (st.fontStyle = "italic");
+			if (what === "underline")
+				st.textDecoration === "underline"
+					? delete st.textDecoration
+					: (st.textDecoration = "underline");
+			this.commit();
+			this.refresh_all();
+		});
+		$p.on("click", "[data-text-align]", (e) => {
+			const el = this.current();
+			if (!el) return;
+			const a = $(e.currentTarget).data("text-align");
+			el.style = el.style || {};
+			if (a !== "left" && !el.width) {
+				// Alignment only shows inside a fixed-width box.
+				const b = this.box(this.selected);
+				el.width = round1(Math.max(b ? b.w : 80, 80));
+			}
+			if (a === "left") delete el.style.textAlign;
+			else el.style.textAlign = a;
+			this.commit();
+			this.refresh_all();
+		});
+		$p.on("change", "[data-textbox]", (e) => {
+			const el = this.current();
+			if (!el) return;
+			const key = $(e.currentTarget).data("textbox");
+			const on = e.currentTarget.checked;
+			if (key === "width") {
+				if (on) {
+					const b = this.box(this.selected);
+					el.width = round1(b ? b.w : 100);
+				} else {
+					delete el.width;
+					delete el.wrap;
+					delete el.fit;
+				}
+			} else if (on) {
+				el[key] = true;
+				if (key === "wrap") delete el.fit;
+			} else delete el[key];
+			this.commit();
+			this.refresh_all();
+		});
+		$p.on("change", "[data-image='mapping']", (e) => {
+			const el = this.current();
+			if (!el) return;
+			const v = e.target.value;
+			if (v) {
+				el.mapping = v;
+				el.content = "";
+			} else {
+				delete el.mapping;
+			}
+			this.commit();
+			this.refresh_all();
+			if (!v) this.upload_selected();
+		});
+		$p.on("click", "[data-image='upload']", () => this.upload_selected());
+		$p.on("change", "[data-image='shape']", (e) => {
+			const el = this.current();
+			if (!el) return;
+			const st = (el.style = el.style || {});
+			const shape = e.target.value;
+			delete st.clipPath;
+			if (shape === "circle") st.borderRadius = "50%";
+			else if (shape === "rounded") st.borderRadius = "8px";
+			else delete st.borderRadius;
+			if (shape === "triangle") st.clipPath = "polygon(50% 0%, 0% 100%, 100% 100%)";
+			el.shape = shape === "triangle" ? "triangle" : shape === "circle" ? "circle" : "rect";
+			this.commit();
+			this.refresh_all();
+		});
+		$p.on("input change", "[data-border]", (e) => {
+			const el = this.current();
+			if (!el) return;
+			const bs = { ...this.border_settings(el) };
+			const key = $(e.currentTarget).data("border");
+			bs[key] =
+				e.currentTarget.type === "checkbox"
+					? e.currentTarget.checked
+					: e.currentTarget.value;
+			if (key === "width") bs.width = parseFloat(bs.width) || 0;
+			if (key !== "style" && bs.style === "none" && e.type === "change" && key !== "color")
+				bs.style = "solid";
+			this.apply_border(el, bs);
+			this.render_canvas();
+			if (e.type === "change") {
+				this.commit();
+				if (key !== "color") this.render_inspector();
+			}
+		});
+		$p.on("input", "[data-card='bg']", (e) => {
+			this.data.bg_color[this.side] = e.target.value;
+			this.render_canvas();
+		});
+		$p.on("change", "[data-card='bg']", () => this.commit());
+		$p.on("click", "[data-card='bg-both']", () => {
+			this.data.bg_color.front = this.data.bg_color.back = this.data.bg_color[this.side];
+			this.commit();
+			frappe.show_alert(
+				{ message: __("Background applied to both sides."), indicator: "green" },
+				2
+			);
+		});
+	}
+
+	upload_selected() {
+		const index = this.selected;
+		const side = this.side;
+		this.upload_image((url) => {
+			const el = this.data[side][index];
+			if (!el) return;
+			el.content = url;
+			delete el.mapping;
+			this.commit();
+			this.refresh_all();
+		});
+	}
+
+	// ----- print check --------------------------------------------------
+
+	issues() {
+		const out = [];
+		if (!this.data) return out;
+		const doc = this.frm.doc;
+		const [w, h] = this.units;
+		const seen = new Set();
+		const once = (key, issue) => {
+			if (!seen.has(key)) {
+				seen.add(key);
+				out.push(issue);
+			}
+		};
+		let has_photo = false;
+		let has_qr = false;
+
+		["front", "back"].forEach((side) => {
+			this.data[side].forEach((el, index) => {
+				if (el.hidden) return;
+				const ref = { side, index };
+				const name = this.layer_name(el);
+				if (el.type === "text") {
+					const unknown = slcm.id_card.unknown_tokens(el.content, el.mapping, this.meta);
+					if (unknown.length) {
+						out.push({
+							level: "error",
+							...ref,
+							text: __("“{0}” uses unknown field {1}; it will print as typed.", [
+								name,
+								unknown.join(", "),
+							]),
+						});
+					}
+					if (side === this.side && !(el.style && el.style.transform)) {
+						const b = this.box(index);
+						if (
+							b &&
+							(b.x < -1 || b.y < -1 || b.x + b.w > w + 1 || b.y + b.h > h + 1)
+						) {
+							out.push({
+								level: "warn",
+								...ref,
+								text: __("“{0}” runs past the card edge and will be cut off.", [
+									name,
+								]),
+							});
+						}
+					}
+				}
+				if (el.type === "image") {
+					if (el.mapping === "photo") has_photo = true;
+					if (el.mapping === "qr_code_image") has_qr = true;
+					const needs = {
+						institute_logo: __("Institute Logo"),
+						authority_signature: __("Authority Signature"),
+						watermark_image: __("Watermark Image"),
+					};
+					if (needs[el.mapping] && !doc[el.mapping]) {
+						once(el.mapping, {
+							level: "warn",
+							...ref,
+							text: __(
+								"Upload the {0} in the Branding tab; it is blank on cards now.",
+								[needs[el.mapping]]
+							),
+						});
+					}
+					if (!el.mapping && (!el.content || /placehold\.co/.test(el.content))) {
+						out.push({
+							level: "warn",
+							...ref,
+							text: __("“{0}” is a placeholder. Upload the real image.", [name]),
+						});
+					}
+				}
+			});
+		});
+		if (!this.data.front.filter((el) => !el.hidden).length)
+			out.unshift({ level: "error", text: __("The front side is empty.") });
+		if (!has_photo && ["Student", "Faculty", "Driver"].includes(doc.card_type || "Student")) {
+			out.push({ level: "info", text: __("There is no photo on the card.") });
+		}
+		if (!has_qr)
+			out.push({
+				level: "info",
+				text: __("There is no QR code, so the card can't be verified by scanning."),
+			});
+		return out;
+	}
+
+	issue_html(x) {
+		const icon = { error: "alert", warn: "alert", info: "info" }[x.level];
+		const ref =
+			x.index === undefined ? "" : `data-issue-side="${x.side}" data-index="${x.index}"`;
+		return `<div class="idc-issue ${x.level}" ${ref}>${slcm.id_card.icon(
+			icon
+		)}<div>${frappe.utils.escape_html(x.text)}</div></div>`;
+	}
+
+	render_health() {
+		if (!this.$root) return;
+		const issues = this.issues();
+		const serious = issues.filter((x) => x.level !== "info").length;
+		const $btn = this.$root.find("[data-act='health']");
+		$btn.removeClass("ok warn")
+			.addClass(serious ? "warn" : "ok")
+			.html(
+				serious
+					? `${slcm.id_card.icon("alert")} ${__("{0} to review", [serious])}`
+					: `${slcm.id_card.icon("check")} ${__("Print ready")}`
+			);
+		this.$root
+			.find(".idc-health-pop")
+			.html(
+				issues.length
+					? issues.map((x) => this.issue_html(x)).join("")
+					: `<div class="idc-issue info">${slcm.id_card.icon("check")}<div>${__(
+							"Looks ready to print."
+					  )}</div></div>`
+			);
+	}
+
+	// ----- starters -------------------------------------------------------
+
+	export_design() {
+		const has_design = this.data && (this.data.front.length || this.data.back.length);
+		if (!has_design) {
+			frappe.msgprint(__("The card is empty. Add elements or pick a starter before exporting."));
+			return;
+		}
+		if (this.frm.is_dirty()) {
+			frappe.show_alert({
+				message: __("Exported the design as shown, including unsaved changes."),
+				indicator: "blue",
+			});
+		}
+		slcm.id_card.download_starter({
+			name: this.frm.doc.template_name || (this.frm.is_new() ? __("ID Card Design") : this.frm.doc.name),
+			card_type: this.frm.doc.card_type || "Student",
+			description: this.frm.is_new() ? "" : __("Exported from the {0} template", [this.frm.doc.name]),
+			data: this.data,
+		});
+	}
+
+	open_starters() {
+		const card_type = this.frm.doc.card_type || "Student";
+		const builtin = (slcm.id_card.starters || []).map((s) => ({ ...s, source: "builtin" }));
+		const ctx = slcm.id_card.design_context(this.frm, this.meta, false);
+		const esc = frappe.utils.escape_html;
+		const api = "slcm.slcm.doctype.id_card_starter.id_card_starter.";
+		const parse = (raw) => {
+			try {
+				const data = typeof raw === "string" ? JSON.parse(raw) : raw;
+				return data && typeof data === "object" ? data : null;
+			} catch (e) {
+				return null;
+			}
+		};
+
+		// Built-in starters show at once; saved starters and templates load after.
+		let gallery = { starters: [], templates: [], can_create: false, can_delete: false };
+		let entries = builtin;
+		let filter = builtin.some((s) => s.card_type === card_type) ? "match" : "all";
+		let shown = [];
+
+		const d = new frappe.ui.Dialog({
+			title: __("Choose a starting point"),
+			size: "extra-large",
+			fields: [{ fieldtype: "HTML", fieldname: "gallery" }],
+		});
+		const $g = d.fields_dict.gallery.$wrapper;
+
+		const load = () =>
+			frappe
+				.xcall(api + "get_gallery", { exclude_template: this.frm.is_new() ? null : this.frm.doc.name })
+				.then((r) => {
+					gallery = r || gallery;
+					const saved = (gallery.starters || [])
+						.map((s) => ({
+							id: s.name,
+							name: s.starter_name || s.name,
+							card_type: s.card_type,
+							description: s.description,
+							data: parse(s.canvas_data),
+							source: "saved",
+						}))
+						.filter((s) => s.data);
+					const templates = (gallery.templates || [])
+						.map((t) => ({
+							id: t.name,
+							name: t.template_name || t.name,
+							card_type: t.card_type,
+							description: __("Copy of the {0} template", [t.name]),
+							data: parse(t.canvas_data),
+							source: "template",
+						}))
+						.filter((t) => t.data);
+					entries = [...saved, ...builtin, ...templates];
+				})
+				.catch(() => {});
+
+		const tab = (key, label, count) =>
+			`<button class="idc-btn ${filter === key ? "active" : "outline"}" data-filter="${key}">${label}${
+				count != null ? ` (${count})` : ""
+			}</button>`;
+
+		const render = () => {
+			const saved = entries.filter((s) => s.source === "saved");
+			const templates = entries.filter((s) => s.source === "template");
+			shown = entries.filter((s) => {
+				if (filter === "saved") return s.source === "saved";
+				if (filter === "templates") return s.source === "template";
+				if (s.source === "template") return false;
+				return filter === "all" || s.card_type === card_type;
+			});
+			const has_design = this.data && (this.data.front.length || this.data.back.length);
+			const can_save = gallery.can_create && has_design && filter !== "templates";
+			$g.html(`
+				<div class="idc-gallery-filter">
+					${tab("match", __("For {0} cards", [__(card_type)]))}
+					${tab("all", __("All starters"))}
+					${tab("saved", __("Saved starters"), saved.length)}
+					${tab("templates", __("From templates"), templates.length)}
+				</div>
+				<div class="idc-gallery">
+					${
+						can_save
+							? `<div class="idc-starter" data-save-starter>
+						<div class="idc-starter-thumb"><div class="idc-blank">${slcm.id_card.icon("plus")}</div></div>
+						<div class="idc-starter-body"><div class="idc-starter-title">${__(
+							"Save current design as starter"
+						)}</div><div class="idc-starter-desc">${__(
+							"Reuse this design when creating new templates"
+						)}</div></div>
+					</div>`
+							: ""
+					}
+					${
+						gallery.can_create && filter !== "templates"
+							? `<div class="idc-starter" data-import-starter>
+						<div class="idc-starter-thumb"><div class="idc-blank">${slcm.id_card.icon("upload")}</div></div>
+						<div class="idc-starter-body"><div class="idc-starter-title">${__(
+							"Import starter file"
+						)}</div><div class="idc-starter-desc">${__(
+							"Add a starter exported from another site (.json)"
+						)}</div></div>
+					</div>`
+							: ""
+					}
+					${
+						filter === "saved" || filter === "templates"
+							? ""
+							: `<div class="idc-starter" data-blank="horizontal">
+						<div class="idc-starter-thumb"><div class="idc-blank">${slcm.id_card.icon("plus")}</div></div>
+						<div class="idc-starter-body"><div class="idc-starter-title">${__(
+							"Blank landscape"
+						)}</div><div class="idc-starter-desc">85.6 × 54 mm</div></div>
+					</div>
+					<div class="idc-starter" data-blank="vertical">
+						<div class="idc-starter-thumb"><div class="idc-blank portrait">${slcm.id_card.icon(
+							"plus"
+						)}</div></div>
+						<div class="idc-starter-body"><div class="idc-starter-title">${__(
+							"Blank portrait"
+						)}</div><div class="idc-starter-desc">54 × 85.6 mm</div></div>
+					</div>`
+					}
+					${shown
+						.map(
+							(s, i) => `<div class="idc-starter" data-starter="${i}" style="position:relative">
+								<div style="position:absolute;top:6px;right:6px;z-index:2;display:flex;gap:4px">
+									<button class="idc-btn" data-export="${i}" title="${__(
+										"Export as a starter file"
+									)}">${slcm.id_card.icon("download", 14)}</button>
+									${
+										s.source === "saved" && gallery.can_delete
+											? `<button class="idc-btn" data-delete="${i}" title="${__(
+													"Delete this starter"
+											  )}">${slcm.id_card.icon("trash", 14)}</button>`
+											: ""
+									}
+								</div>
+								<div class="idc-starter-thumb" data-thumb="${i}"></div>
+								<div class="idc-starter-body">
+									<div class="idc-starter-title">${esc(s.name)}</div>
+									<div class="idc-starter-desc">${esc(s.description || "")}</div>
+									${s.source === "saved" ? `<span class="idc-pill">${__("Saved")}</span>` : ""}
+									${s.source === "template" ? `<span class="idc-pill">${__("Template")}</span>` : ""}
+									<span class="idc-pill">${esc(__(s.card_type || ""))}</span><span class="idc-pill">${
+								s.data.orientation === "vertical" ? __("Portrait") : __("Landscape")
+							}</span>
+									${s.data.back && s.data.back.length ? `<span class="idc-pill">${__("Front + back")}</span>` : ""}
+								</div>
+							</div>`
+						)
+						.join("")}
+				</div>
+				${
+					!shown.length && (filter === "saved" || filter === "templates")
+						? `<div class="idc-starter-desc" style="padding:12px 2px">${
+								filter === "saved"
+									? __("No saved starters yet. Design a card, then use “Save current design as starter”.")
+									: __("No other drag-and-drop templates yet.")
+						  }</div>`
+						: ""
+				}`);
+			shown.forEach((s, i) => {
+				const $thumb = $g.find(`[data-thumb='${i}']`);
+				try {
+					const data = slcm.id_card.normalise(JSON.parse(JSON.stringify(s.data)));
+					$thumb.append(
+						slcm.id_card.render_thumbnail(data, "front", ctx, data.orientation === "vertical" ? 92 : 170, 150)
+					);
+					slcm.id_card.apply_fit($thumb);
+				} catch (e) {
+					$thumb.html(`<span class="idc-starter-desc">${__("Preview unavailable")}</span>`);
+				}
+			});
+		};
+
+		const apply = (data, starter_card_type) => {
+			const go = () => {
+				this.data = slcm.id_card.normalise(data);
+				this.side = "front";
+				this.selected = null;
+				this.zoom = null;
+				this.commit();
+				this.refresh_all();
+				d.hide();
+				if (starter_card_type && starter_card_type !== card_type && this.frm.is_new()) {
+					this.frm.set_value("card_type", starter_card_type);
+				}
+			};
+			const has_design = this.data && (this.data.front.length || this.data.back.length);
+			if (has_design) {
+				frappe.confirm(__("Replace the current design? You can undo this with Ctrl+Z."), go);
+			} else go();
+		};
+
+		// Ask for the starter's details, then store `data` as a saved starter.
+		const save_dialog = (title, defaults, data, source_template) => {
+			const sd = new frappe.ui.Dialog({
+				title,
+				fields: [
+					{
+						fieldname: "starter_name",
+						fieldtype: "Data",
+						label: __("Starter Name"),
+						reqd: 1,
+						default: defaults.name || "",
+					},
+					{
+						fieldname: "card_type",
+						fieldtype: "Select",
+						label: __("Card Type"),
+						options: STARTER_CARD_TYPES.join("\n"),
+						default: STARTER_CARD_TYPES.includes(defaults.card_type) ? defaults.card_type : card_type,
+						reqd: 1,
+					},
+					{
+						fieldname: "description",
+						fieldtype: "Small Text",
+						label: __("Description"),
+						default: defaults.description || "",
+					},
+				],
+				primary_action_label: __("Save"),
+				primary_action: (v) => {
+					sd.disable_primary_action();
+					frappe
+						.xcall(api + "save_starter", {
+							starter_name: v.starter_name,
+							card_type: v.card_type,
+							description: v.description,
+							canvas_data: JSON.stringify(data),
+							source_template,
+						})
+						.then(() => {
+							sd.hide();
+							frappe.show_alert({ message: __("Starter saved"), indicator: "green" });
+							filter = "saved";
+							return load().then(render);
+						})
+						.catch(() => sd.enable_primary_action());
+				},
+			});
+			sd.show();
+		};
+
+		const save_current = () =>
+			save_dialog(
+				__("Save as starter"),
+				{ name: this.frm.doc.template_name, card_type },
+				this.data,
+				this.frm.is_new() ? null : this.frm.doc.name
+			);
+
+		const export_starter = (s) => slcm.id_card.download_starter(s);
+
+		const import_starter = () => {
+			const input = document.createElement("input");
+			input.type = "file";
+			input.accept = ".json,application/json";
+			input.onchange = () => {
+				const f = input.files && input.files[0];
+				if (!f) return;
+				if (f.size > 5 * 1024 * 1024) {
+					frappe.msgprint(__("The file is too large for a starter (over 5 MB)."));
+					return;
+				}
+				const reader = new FileReader();
+				reader.onload = () => {
+					const file = parse(reader.result);
+					// Accept our export format, or a bare design copied from Canvas Data.
+					const data = file && (file.slcm_id_card_starter ? file.data : file);
+					if (!data || !Array.isArray(data.front) || !data.front.length) {
+						frappe.msgprint({
+							title: __("Not a starter file"),
+							message: __("{0} doesn't contain an ID card design. Use a file exported from the Starters dialog.", [
+								esc(f.name),
+							]),
+							indicator: "red",
+						});
+						return;
+					}
+					save_dialog(
+						__("Import starter"),
+						{
+							name: (file.slcm_id_card_starter && file.name) || f.name.replace(/(\.idcard-starter)?\.json$/i, ""),
+							card_type: file.slcm_id_card_starter ? file.card_type : card_type,
+							description: file.slcm_id_card_starter ? file.description : "",
+						},
+						data,
+						null
+					);
+				};
+				reader.onerror = () => frappe.msgprint(__("Could not read {0}.", [esc(f.name)]));
+				reader.readAsText(f);
+			};
+			input.click();
+		};
+
+		$g.on("click", "[data-filter]", (e) => {
+			filter = $(e.currentTarget).data("filter");
+			render();
+		});
+		$g.on("click", "[data-blank]", (e) => apply({ orientation: $(e.currentTarget).data("blank") }));
+		$g.on("click", "[data-save-starter]", save_current);
+		$g.on("click", "[data-import-starter]", import_starter);
+		$g.on("click", "[data-export]", (e) => {
+			e.stopPropagation();
+			const s = shown[+$(e.currentTarget).data("export")];
+			if (s) export_starter(s);
+		});
+		$g.on("click", "[data-delete]", (e) => {
+			e.stopPropagation();
+			const s = shown[+$(e.currentTarget).data("delete")];
+			if (!s) return;
+			frappe.confirm(__("Delete the starter {0}?", [esc(s.name)]), () =>
+				frappe.xcall(api + "delete_starter", { name: s.id }).then(() => load().then(render))
+			);
+		});
+		$g.on("click", "[data-starter]", (e) => {
+			const s = shown[+$(e.currentTarget).data("starter")];
+			if (s) apply(JSON.parse(JSON.stringify(s.data)), s.card_type);
+		});
+
+		d.show();
+		render();
+		load().then(() => {
+			if (filter === "match" && !entries.some((s) => s.source !== "template" && s.card_type === card_type))
+				filter = "all";
+			render();
+		});
+	}
+}
+
+// Download a design as a starter file the Starters dialog can import.
+slcm.id_card.download_starter = function (s) {
+	const file = {
+		slcm_id_card_starter: 1,
+		name: s.name,
+		card_type: s.card_type,
+		description: s.description || "",
+		data: JSON.parse(JSON.stringify(s.data)),
+	};
+	const slug = (s.name || "starter").replace(/[^a-z0-9]+/gi, "_").replace(/^_|_$/g, "") || "starter";
+	const url = URL.createObjectURL(new Blob([JSON.stringify(file, null, 1)], { type: "application/json" }));
+	const a = document.createElement("a");
+	a.href = url;
+	a.download = `${slug}.idcard-starter.json`;
+	document.body.appendChild(a);
+	a.click();
+	a.remove();
+	setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
+
+const STARTER_CARD_TYPES = ["Student", "Faculty", "Driver", "Visitor", "Non-Faculty"];
+
+function round1(n) {
+	return Math.round((+n || 0) * 10) / 10;
+}
+
+slcm.id_card.IDCardStudio = IDCardStudio;
+
+// ---------------------------------------------------------------------
+// Form
+// ---------------------------------------------------------------------
+
+frappe.ui.form.on("ID Card Template", {
+	refresh(frm) {
+		// The designer needs the full width of the form.
+		frm.page.wrapper
+			.find(".layout-side-section")
+			.toggle(frm.doc.template_creation_mode !== "Drag and Drop");
+
+		const modes = ["Drag and Drop", "Jinja Template", "Field Mapping"];
+		if (frm.doc.template_creation_mode === "Canva") modes.push("Canva");
+		frm.set_df_property("template_creation_mode", "options", modes.join("\n"));
+
+		frm.add_custom_button(__("Preview"), () => slcm.id_card.show_preview(frm));
+
+		if (!frm.is_new()) {
+			if ((frm.doc.card_type || "Student") === "Student") {
+				frm.add_custom_button(
+					__("Generate for Students"),
+					() => {
+						slcm.id_card.pending_tool_template = frm.doc.name;
+						frappe.set_route("Form", "ID Card Generation Tool");
+					},
+					__("Use Template")
+				);
+			}
+			frm.add_custom_button(
+				__("Create a Single Card"),
+				() =>
+					frappe.new_doc("ID Card Generation", {
+						card_type: frm.doc.card_type || "Student",
+						id_card_template: frm.doc.name,
+					}),
+				__("Use Template")
+			);
+		}
 
 		frm.trigger("render_editor");
 	},
 
 	template_creation_mode(frm) {
+		frm.page.wrapper
+			.find(".layout-side-section")
+			.toggle(frm.doc.template_creation_mode !== "Drag and Drop");
 		frm.trigger("render_editor");
 	},
 
 	card_type(frm) {
-		frm.trigger("render_editor");
+		if (frm.idc_studio) frm.idc_studio.on_card_type_change();
 	},
+
+	institute_logo: (frm) => frm.idc_studio && frm.idc_studio.refresh_all(),
+	authority_signature: (frm) => frm.idc_studio && frm.idc_studio.refresh_all(),
+	watermark_image: (frm) => frm.idc_studio && frm.idc_studio.refresh_all(),
+	institute_name: (frm) => frm.idc_studio && frm.idc_studio.refresh_all(),
 
 	render_editor(frm) {
 		if (frm.doc.template_creation_mode === "Drag and Drop") {
-			new IDCardEditor(frm);
+			const studio = frm.idc_studio;
+			const same_doc =
+				studio &&
+				(studio.docname === frm.docname ||
+					(frm.doc.canvas_data || "") === studio.last_json);
+			if (studio && same_doc && studio.$root) {
+				studio.sync_from_doc();
+			} else {
+				if (studio) studio.destroy();
+				frm.idc_studio = new IDCardStudio(frm);
+				frm.idc_studio.init();
+			}
 		} else if (frm.doc.template_creation_mode === "Canva") {
-			let wrapper = frm.fields_dict.canva_button.$wrapper;
-			wrapper.html(`
-                <div style="text-align: center; padding: 50px; background: #f0f4f8; border-radius: 8px;">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/0/08/Canva_icon_2021.svg" style="width: 64px; margin-bottom: 20px;">
-                    <h4>Design with Canva</h4>
-                    <p>Create stunning ID cards using Canva's design tools.</p>
-                    <button class="btn btn-primary" onclick="window.open('https://www.canva.com', '_blank')">Open Canva</button>
-                    <p class="text-muted small mt-2">After designing, export as Image and upload to design assets, or paste HTML if supported.</p>
-                </div>
-            `);
+			frm.fields_dict.canva_button.$wrapper.html(`
+				<div class="alert alert-warning" style="margin:0">
+					${__(
+						"Canva mode is retired. Export your Canva design as PNG, switch to <b>Drag and Drop</b>, and add it with <b>Add → Background</b>. Then place data fields on top."
+					)}
+				</div>`);
 		}
 	},
 });
-
-class IDCardEditor {
-	constructor(frm) {
-		this.frm = frm;
-		this.wrapper = frm.fields_dict.canvas_editor.$wrapper;
-		this.show_guides = true; // Default to showing guides
-
-		// Ensure dependencies are loaded before doing anything
-		frappe.require("/assets/slcm/js/student_id_card_templates.js").then(() => {
-			this.init();
-		});
-	}
-
-	init() {
-		let raw_data = this.frm.doc.canvas_data;
-		if (!raw_data || raw_data === "{}" || raw_data === "[]") {
-			// DEFAULT: Auto-load NLSIU Style
-			this.load_default_template("nlsiu_style");
-			return;
-		} else {
-			try {
-				let parsed = JSON.parse(raw_data);
-				if (Array.isArray(parsed.elements)) {
-					this.data = {
-						front: parsed.elements,
-						back: [],
-						orientation: "horizontal",
-						bg_color: { front: "#ffffff", back: "#ffffff" },
-					};
-				} else {
-					this.data = parsed;
-					if (!this.data.orientation) this.data.orientation = "horizontal";
-					if (!this.data.bg_color)
-						this.data.bg_color = { front: "#ffffff", back: "#ffffff" };
-				}
-			} catch (e) {
-				this.load_default_template("nlsiu_style"); // Fallback to default
-				return;
-			}
-		}
-
-		this.current_side = "front";
-		this.scale = 2;
-		this.render();
-	}
-
-	render_template_selector() {
-		// Dependencies are already loaded in constructor
-
-		let templates_html = "";
-		if (slcm.templates && slcm.templates.registry) {
-			templates_html = slcm.templates.registry
-				.map((t) => {
-					// Generate Preview HTML
-					let preview_html = t.front_template_html || "";
-
-					// Replace Jinja/Handlebars tags with placeholders for preview
-					preview_html = preview_html
-						.replace(/{{ institute_logo }}/g, "https://placehold.co/80x80?text=Logo")
-						.replace(
-							/{{ passport_size_photo }}/g,
-							"https://placehold.co/100x100?text=Photo"
-						)
-						.replace(/{{ qr_code_image }}/g, "https://placehold.co/80x80?text=QR")
-						.replace(
-							/{{ authority_signature }}/g,
-							"https://placehold.co/60x30?text=Sign"
-						)
-						.replace(/{{ student_name }}/g, "John Doe")
-						.replace(/{{ institute_name }}/g, "Institute Name")
-						.replace(/{{.*?}}/g, "..."); // Generic catch-all for other fields
-
-					// Calculate scale and dimensions
-					// Vertical: 638x1011
-					// Horizontal: 1011x638
-					let scale = 0.14;
-					let original_w = t.orientation === "Vertical" ? 638 : 1011;
-					let original_h = t.orientation === "Vertical" ? 1011 : 638;
-
-					let scaled_w = original_w * scale;
-					let scaled_h = original_h * scale;
-
-					let preview_container = `<div style="width: ${scaled_w}px; height: ${scaled_h}px; position: relative; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); background-color: white;">
-                                            <div style="width: ${original_w}px; height: ${original_h}px; transform: scale(${scale}); transform-origin: top left; position: absolute; top: 0; left: 0;">
-                                                ${preview_html}
-                                            </div>
-                                         </div>`;
-
-					return `
-                 <div class="col-sm-4" style="margin-bottom: 20px;">
-                    <div class="tpl-card template-select" data-template="${t.template_id}">
-                        <div class="tpl-preview">
-                            ${preview_container}
-                        </div>
-                        <div class="tpl-body">
-                            <div class="tpl-title">${t.template_name}</div>
-                            <div class="tpl-desc">${t.orientation}</div>
-                        </div>
-                    </div>
-                </div>`;
-				})
-				.join("");
-		}
-
-		this.wrapper.html(`
-            <style>
-                .tpl-card { border: 1px solid #ddd; border-radius: 8px; overflow: hidden; transition: all 0.2s; cursor: pointer; background: #fff; height: 100%; position: relative; }
-                .tpl-card:hover { border-color: #3498db; transform: translateY(-3px); box-shadow: 0 6px 12px rgba(0,0,0,0.1); }
-                .tpl-preview { height: 160px; background: #f4f6f9; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid #eee; position: relative; overflow: hidden; }
-                .tpl-body { padding: 20px; text-align: center; }
-                .tpl-title { font-weight: bold; font-size: 16px; margin-bottom: 5px; color: #333; }
-                .tpl-desc { font-size: 13px; color: #777; line-height: 1.4; }
-                .select-container { max-width: 900px; margin: 0 auto; padding: 40px 20px; }
-            </style>
-            <div class="select-container">
-                <div style="text-align: center; margin-bottom: 40px;">
-                    <h3 style="margin-bottom: 10px;">Select a Template</h3>
-                    <p class="text-muted">Choose a starting point.</p>
-                </div>
-                <div class="row">
-                    <!-- Blank Options -->
-                    <div class="col-sm-4" style="margin-bottom: 20px;">
-                        <div class="tpl-card template-select" data-template="empty">
-                            <div class="tpl-preview">
-                                <div style="font-size: 40px; color: #ccc;">+</div>
-                            </div>
-                            <div class="tpl-body">
-                                <div class="tpl-title">Blank Canvas</div>
-                                <div class="tpl-desc">Start from scratch</div>
-                            </div>
-                        </div>
-                    </div>
-                    ${templates_html}
-                </div>
-            </div>
-        `);
-		this.wrapper.find(".template-select").on("click", (e) => {
-			let t = $(e.currentTarget).closest(".template-select").data("template");
-			this.load_default_template(t);
-		});
-	}
-
-	load_default_template(type) {
-		this.data = {
-			front: [],
-			back: [],
-			orientation: "horizontal",
-			bg_color: { front: "#ffffff", back: "#ffffff" },
-		};
-
-		if (type === "empty") {
-			// Already initialized empty
-		} else {
-			// 1. Explicit Check for NLSIU Style (Fail-Safe Default)
-			if (type === "nlsiu_style") {
-				// Orientation: Vertical (Portrait)
-				this.data.orientation = "vertical";
-				this.data.bg_color.front = "#ffffff";
-
-				// --- FRONT SIDE ---
-
-				// 1. Right-Side Vertical Header Strip
-				// Strip
-				this.data.front.push({
-					type: "rect",
-					x: 172.5, // 212.5 - 40 (approx width of strip)
-					y: 0,
-					width: 40, // 128px / 3 (scale 1mm ~ 3.78px) -> ~34mm. Let's approx 40.
-					height: 337, // Full height
-					style: {
-						backgroundColor: "#ffffff",
-						borderLeftWidth: "1px",
-						borderLeftStyle: "solid",
-						borderLeftColor: "#000",
-					},
-				});
-
-				// Logo (Top Right inside strip)
-				this.data.front.push({
-					type: "image",
-					mapping: "institute_logo",
-					content: "https://placehold.co/60x60?text=LOGO",
-					x: 177.5,
-					y: 10,
-					width: 30,
-					height: 30,
-					style: { opacity: 1 },
-				});
-
-				// Divider Line
-				this.data.front.push({
-					type: "rect",
-					x: 177.5,
-					y: 45,
-					width: 30,
-					height: 0.5,
-					style: { backgroundColor: "#000" },
-				});
-
-				// Vertical Text: University Name
-				// Since we can't easily rotate text in this simple editor 90 degrees correctly for reading top-down with multi-line support perfectly,
-				// we will simulate it or use the 'vertical-rl' trick if the editor supports raw style injection well.
-				// However, standard text element rotation in these editors usually rotates the whole block.
-				// Let's assume the editor's renderer handles rotation.
-				// If not, we provided the HTML template which is the source of truth for generation.
-				// This drag-drop is an approximation for the user to see "something" works.
-				// BUT user said "Drag-and-Drop template MUST render IDENTICAL to static HTML".
-				// So I will try to approximate best efforts.
-
-				this.data.front.push({
-					type: "text",
-					content: "NATIONAL LAW SCHOOL OF INDIA UNIVERSITY",
-					x: 100, // Adjusted X because rotation pivots center
-					y: 150,
-					style: {
-						fontSize: "8px",
-						fontWeight: "bold",
-						fontFamily: "'Times New Roman', serif",
-						transform: "rotate(90deg)", // Rotates CW, reading Top-to-Bottom
-						width: "250px",
-						textAlign: "center",
-						letterSpacing: "0.5px",
-					},
-				});
-
-				this.data.front.push({
-					type: "text",
-					content: "BENGALURU",
-					x: 100,
-					y: 200, // Further down
-					style: {
-						fontSize: "8px",
-						fontWeight: "bold",
-						fontFamily: "'Times New Roman', serif",
-						transform: "rotate(90deg)",
-						width: "250px",
-						textAlign: "center",
-					},
-				});
-
-				this.data.front.push({
-					type: "text",
-					content: "STUDENT IDENTITY CARD",
-					x: 100,
-					y: 230,
-					style: {
-						fontSize: "6px",
-						fontFamily: "Arial, sans-serif",
-						transform: "rotate(90deg)",
-						width: "250px",
-						textAlign: "center",
-						marginTop: "10px",
-					},
-				});
-
-				// 2. Main Content (Left Side)
-
-				// Photo (Top Left)
-				this.data.front.push({
-					type: "image",
-					mapping: "photo",
-					content: "/assets/frappe/images/default-avatar.png",
-					x: 20,
-					y: 20,
-					width: 60,
-					height: 75,
-					style: {
-						opacity: 1,
-						borderWidth: "1px",
-						borderStyle: "solid",
-						borderColor: "#000",
-						borderRadius: "0",
-					},
-				});
-
-				// Details Section (Labels and Values)
-				// NAME
-				this.data.front.push({
-					type: "text",
-					content: "NAME",
-					x: 20,
-					y: 110,
-					style: { fontSize: "7px", fontWeight: "bold", fontFamily: "Arial" },
-				});
-				this.data.front.push({
-					type: "text",
-					content: ":",
-					x: 60,
-					y: 110,
-					style: { fontSize: "7px", fontWeight: "bold" },
-				});
-				this.data.front.push({
-					type: "text",
-					mapping: "student_name",
-					content: "[NAME]",
-					x: 65,
-					y: 110,
-					style: { fontSize: "7px", fontWeight: "bold", textTransform: "uppercase" },
-				});
-
-				// ID No
-				this.data.front.push({
-					type: "text",
-					content: "ID No",
-					x: 20,
-					y: 125,
-					style: { fontSize: "7px", fontWeight: "bold", fontFamily: "Arial" },
-				});
-				this.data.front.push({
-					type: "text",
-					content: ":",
-					x: 60,
-					y: 125,
-					style: { fontSize: "7px", fontWeight: "bold" },
-				});
-				this.data.front.push({
-					type: "text",
-					mapping: "student_id",
-					content: "[Student ID]",
-					x: 65,
-					y: 125,
-					style: { fontSize: "7px", fontWeight: "bold" },
-				});
-
-				// COURSE
-				this.data.front.push({
-					type: "text",
-					content: "COURSE",
-					x: 20,
-					y: 140,
-					style: { fontSize: "7px", fontWeight: "bold", fontFamily: "Arial" },
-				});
-				this.data.front.push({
-					type: "text",
-					content: ":",
-					x: 60,
-					y: 140,
-					style: { fontSize: "7px", fontWeight: "bold" },
-				});
-				this.data.front.push({
-					type: "text",
-					mapping: "program",
-					content: "[COURSE]",
-					x: 65,
-					y: 140,
-					style: { fontSize: "7px", fontWeight: "bold", textTransform: "uppercase" },
-				});
-
-				// BLOOD GROUP
-				this.data.front.push({
-					type: "text",
-					content: "BLOOD GROUP",
-					x: 20,
-					y: 155,
-					style: { fontSize: "7px", fontWeight: "bold", fontFamily: "Arial" },
-				});
-				this.data.front.push({
-					type: "text",
-					content: ":",
-					x: 60,
-					y: 155,
-					style: { fontSize: "7px", fontWeight: "bold" },
-				});
-				this.data.front.push({
-					type: "text",
-					mapping: "blood_group",
-					content: "[Group]",
-					x: 65,
-					y: 155,
-					style: { fontSize: "7px", fontWeight: "bold" },
-				});
-
-				// Signature (Bottom Left)
-				this.data.front.push({
-					type: "image",
-					mapping: "authority_signature",
-					content: "https://placehold.co/60x30?text=Sign",
-					x: 20,
-					y: 280,
-					width: 40,
-					height: 20,
-					style: { opacity: 1 },
-				});
-				this.data.front.push({
-					type: "text",
-					content: "Registrar",
-					x: 20,
-					y: 300,
-					style: { fontSize: "6px", fontWeight: "bold", fontFamily: "Arial" },
-				});
-
-				// --- BACK SIDE ---
-
-				// Warning Box (Bottom Center-ish)
-				this.data.back.push({
-					type: "rect",
-					x: 20,
-					y: 290,
-					width: 140,
-					height: 30,
-					style: {
-						backgroundColor: "transparent",
-						borderWidth: "1px",
-						borderStyle: "solid",
-						borderColor: "#000",
-					},
-				});
-				this.data.back.push({
-					type: "text",
-					content: "THIS CARD IS TO BE CARRIED BY YOU AT ALL TIMES",
-					x: 25,
-					y: 300,
-					style: {
-						fontSize: "6px",
-						fontWeight: "bold",
-						textAlign: "center",
-						width: "130px",
-					},
-				});
-
-				// Instructions List
-				// Since drag-drop text is usually single block, we'll try to use one block with newlines if supported,
-				// or separate lines. Separate lines allow better control.
-
-				this.data.back.push({
-					type: "text",
-					content:
-						"1. The card should be produced on demand to security staff or any other authorised person.",
-					x: 20,
-					y: 40,
-					style: { fontSize: "6px", width: "140px", lineHeight: "1.5" },
-				});
-				this.data.back.push({
-					type: "text",
-					content:
-						"2. Loss of this card must be immediately reported to pmc@nls.ac.in or itsupport@nls.ac.in.",
-					x: 20,
-					y: 80,
-					style: { fontSize: "6px", width: "140px", lineHeight: "1.5" },
-				});
-				this.data.back.push({
-					type: "text",
-					content:
-						"3. This card is non-transferable and must be surrendered immediately after graduation or cessation of employment/contract.",
-					x: 20,
-					y: 120,
-					style: { fontSize: "6px", width: "140px", lineHeight: "1.5" },
-				});
-				this.data.back.push({
-					type: "text",
-					content:
-						"4. If found, please return the card to NLSIU Bangalore (Ph: 23213160/23160532/33/35)",
-					x: 20,
-					y: 170,
-					style: { fontSize: "6px", width: "140px", lineHeight: "1.5" },
-				});
-
-				// Vertical Strip (Right)
-				this.data.back.push({
-					type: "rect",
-					x: 172.5,
-					y: 0,
-					width: 40,
-					height: 337,
-					style: {
-						backgroundColor: "#ffffff",
-						borderLeftWidth: "1px",
-						borderLeftStyle: "solid",
-						borderLeftColor: "#000",
-					},
-				});
-				this.data.back.push({
-					type: "text",
-					content: "INSTRUCTIONS :",
-					x: 100,
-					y: 150,
-					style: {
-						fontSize: "8px",
-						fontWeight: "bold",
-						fontFamily: "'Times New Roman', serif",
-						transform: "rotate(90deg)",
-						width: "250px",
-						textAlign: "center",
-						letterSpacing: "1px",
-					},
-				});
-				// DONE NLSIU
-			}
-
-			// 2. Fetch from registry
-
-			const tmpl = slcm.templates.get(type);
-			if (tmpl) {
-				this.data.orientation = tmpl.orientation.toLowerCase();
-				// We can't drag&drop the HTML template (it's string).
-				// However, the USER's screenshot shows "Drag & Drop Editor"
-				// And my templates are "Jinja HTML" templates.
-				// This is a conflict: Drag & Drop editor expects a JSON array of elements, not raw HTML string.
-
-				// Solution:
-				// If the user selects a "Jinja Template" to start with in "Drag & Drop",
-				// we should ideally switch mode OR just put a helpful message?
-				// Or, maybe I should convert my HTML templates to "Canvas Data"?
-				// That's too complex for now.
-
-				// Alternative: Just set the orientation and maybe a placeholder background?
-				// Or better: Let's just create "Canvas Data" representations for my new templates?
-				// That's duplication.
-
-				// Re-reading user request: "Refactor... decoupling template handling".
-				// The user wants these templates to be available.
-				// The "Student ID Card" generation creates a card from a template.
-				// The "ID Card Template" editor CREATES a template.
-
-				// So when user selects "Test Visitor ID" in this editor,
-				// it should populate the editor with elements that match "Test Visitor ID".
-
-				// Since my templates are defined as HTML, I can't easily convert them to drag-and-drop elements here without parsing.
-
-				// QUICK FIX: For now, I will just set the orientation.
-				// Ideally, these presets in the editor should be "Starter Templates" defined as JSON, not HTML.
-				// But since I defined them as HTML in `student_id_card_templates.js`...
-
-				// frappe.msgprint(__("Selected template is an HTML Preset. Editor will be set to match orientation, but elements cannot be edited individually."));
-				// We could potentially set the background image if available?
-
-				// Wait, if I set 'canvas_data' to null but 'front_html' to the value, maybe it works?
-				// But this is the EDITOR. It edits `canvas_data`.
-
-				// For the purpose of "Test Visitor ID", let's just create a basic "Canvas" version of it here manually for the "Test Visitor ID" case,
-				// or just acknowledge the limitation.
-
-				// --- MAPPINGS ---
-
-				if (type === "uni_std_vert") {
-					// University Standard - Vertical
-					this.data.orientation = "vertical";
-					this.data.bg_color.front = "#ffffff";
-
-					// Front
-					// Header Blue
-					this.data.front.push({
-						type: "rect",
-						x: 0,
-						y: 0,
-						width: 212.5,
-						height: 60,
-						style: { backgroundColor: "#002147", opacity: 1 },
-					});
-					// Logo
-					this.data.front.push({
-						type: "image",
-						mapping: "institute_logo",
-						content: "https://placehold.co/60x60?text=LOGO",
-						x: 76,
-						y: 5,
-						width: 30,
-						height: 30,
-						style: { opacity: 1, borderRadius: "0" },
-					});
-					this.data.front.push({
-						type: "text",
-						mapping: "institute_name",
-						content: "[Institute Name]",
-						x: 10,
-						y: 40,
-						style: {
-							fontSize: "10px",
-							fontWeight: "bold",
-							color: "#ffffff",
-							textAlign: "center",
-							width: "192px",
-						},
-					});
-
-					// Photo Circle
-					this.data.front.push({
-						type: "image",
-						mapping: "photo",
-						content: "/assets/frappe/images/default-avatar.png",
-						x: 66,
-						y: 80,
-						width: 80,
-						height: 80,
-						style: {
-							opacity: 1,
-							borderRadius: "50%",
-							borderWidth: "4px",
-							borderStyle: "solid",
-							borderColor: "#f0f0f0",
-						},
-						shape: "circle",
-					});
-
-					// Name & Details
-					this.data.front.push({
-						type: "text",
-						mapping: "student_name",
-						content: "[Student Name]",
-						x: 10,
-						y: 170,
-						style: {
-							fontSize: "14px",
-							fontWeight: "bold",
-							color: "#333",
-							textAlign: "center",
-							width: "192px",
-						},
-					});
-					this.data.front.push({
-						type: "text",
-						mapping: "batch",
-						content: "[Batch]",
-						x: 10,
-						y: 190,
-						style: {
-							fontSize: "10px",
-							color: "#666",
-							textAlign: "center",
-							width: "192px",
-						},
-					});
-
-					this.data.front.push({
-						type: "text",
-						mapping: "student_id",
-						content: "ID: [Student ID]",
-						x: 30,
-						y: 220,
-						style: { fontSize: "10px", color: "#444" },
-					});
-					this.data.front.push({
-						type: "text",
-						mapping: "programme",
-						content: "Prog: [Programme]",
-						x: 30,
-						y: 235,
-						style: { fontSize: "10px", color: "#444" },
-					});
-					this.data.front.push({
-						type: "text",
-						mapping: "date_of_birth",
-						content: "DOB: [Date of Birth]",
-						x: 30,
-						y: 250,
-						style: { fontSize: "10px", color: "#444" },
-					});
-
-					// Footer
-					this.data.front.push({
-						type: "text",
-						content: "STUDENT ID CARD",
-						x: 10,
-						y: 310,
-						style: {
-							fontSize: "10px",
-							fontWeight: "bold",
-							color: "#002147",
-							textAlign: "center",
-							width: "192px",
-						},
-					});
-
-					// Back
-					this.data.back.push({
-						type: "text",
-						content: "Terms & Conditions",
-						x: 20,
-						y: 20,
-						style: {
-							fontSize: "12px",
-							fontWeight: "bold",
-							borderBottom: "1px solid #002147",
-							color: "#002147",
-						},
-					});
-					this.data.back.push({
-						type: "text",
-						content: "- This card is property of institute.",
-						x: 20,
-						y: 45,
-						style: { fontSize: "8px" },
-					});
-					this.data.back.push({
-						type: "text",
-						content: "- Return if found.",
-						x: 20,
-						y: 55,
-						style: { fontSize: "8px" },
-					});
-
-					this.data.back.push({
-						type: "text",
-						mapping: "phone",
-						content: "Emergency: [Phone]",
-						x: 20,
-						y: 100,
-						style: { fontSize: "10px" },
-					});
-					this.data.back.push({
-						type: "text",
-						mapping: "blood_group",
-						content: "Blood Group: [Blood Group]",
-						x: 20,
-						y: 115,
-						style: { fontSize: "10px" },
-					});
-					this.data.back.push({
-						type: "text",
-						mapping: "expiry_date",
-						content: "Valid Until: [Expiry Date]",
-						x: 20,
-						y: 130,
-						style: { fontSize: "10px" },
-					});
-
-					// Signature & QR
-					this.data.back.push({
-						type: "image",
-						mapping: "authority_signature",
-						content: "https://placehold.co/60x30?text=Sign",
-						x: 20,
-						y: 260,
-						width: 50,
-						height: 25,
-						style: { opacity: 1 },
-					});
-					this.data.back.push({
-						type: "text",
-						content: "Registrar",
-						x: 20,
-						y: 285,
-						style: { fontSize: "8px" },
-					});
-
-					this.data.back.push({
-						type: "image",
-						mapping: "qr_code_image",
-						content: "https://placehold.co/60x60?text=QR",
-						x: 100,
-						y: 250,
-						width: 80,
-						height: 80,
-						style: { opacity: 1 },
-					});
-				} else if (type === "uni_std_horiz") {
-					// University Standard - Horizontal
-					this.data.orientation = "horizontal";
-					this.data.bg_color.front = "#ffffff";
-
-					// Left Sidebar Blue
-					this.data.front.push({
-						type: "rect",
-						x: 0,
-						y: 0,
-						width: 116,
-						height: 212.5,
-						style: { backgroundColor: "#002147", opacity: 1 },
-					});
-
-					// Photo
-					this.data.front.push({
-						type: "image",
-						mapping: "photo",
-						content: "/assets/frappe/images/default-avatar.png",
-						x: 20,
-						y: 30,
-						width: 75,
-						height: 75,
-						style: {
-							opacity: 1,
-							borderRadius: "5px",
-							borderWidth: "2px",
-							borderStyle: "solid",
-							borderColor: "#ffffff",
-						},
-					});
-
-					this.data.front.push({
-						type: "text",
-						content: "STUDENT",
-						x: 10,
-						y: 120,
-						style: {
-							fontSize: "10px",
-							color: "#ffffff",
-							opacity: 0.8,
-							textAlign: "center",
-							width: "96px",
-						},
-					});
-					this.data.front.push({
-						type: "text",
-						mapping: "student_id",
-						content: "[Student ID]",
-						x: 10,
-						y: 135,
-						style: {
-							fontSize: "14px",
-							fontWeight: "bold",
-							color: "#ffffff",
-							textAlign: "center",
-							width: "96px",
-						},
-					});
-
-					// Right Side content
-					this.data.front.push({
-						type: "image",
-						mapping: "institute_logo",
-						content: "https://placehold.co/60x60?text=LOGO",
-						x: 130,
-						y: 15,
-						width: 25,
-						height: 25,
-						style: { opacity: 1 },
-					});
-					this.data.front.push({
-						type: "text",
-						mapping: "institute_name",
-						content: "[Institute Name]",
-						x: 160,
-						y: 20,
-						style: { fontSize: "14px", fontWeight: "bold", color: "#002147" },
-					});
-
-					this.data.front.push({
-						type: "text",
-						mapping: "student_name",
-						content: "[Student Name]",
-						x: 130,
-						y: 60,
-						style: { fontSize: "18px", fontWeight: "bold", color: "#333" },
-					});
-					this.data.front.push({
-						type: "text",
-						content: "[Programme] | [Batch]",
-						x: 130,
-						y: 85,
-						style: { fontSize: "10px", color: "#666", width: "200px" },
-					}); // Combined static text approximation
-
-					this.data.front.push({
-						type: "text",
-						mapping: "expiry_date",
-						content: "Valid To: [Expiry Date]",
-						x: 130,
-						y: 120,
-						style: { fontSize: "10px", color: "#444" },
-					});
-
-					// Watermark
-					this.data.front.push({
-						type: "image",
-						mapping: "institute_logo",
-						content: "https://placehold.co/60x60?text=LOGO",
-						x: 280,
-						y: 160,
-						width: 40,
-						height: 40,
-						style: { opacity: 0.1 },
-					});
-
-					// Back
-					this.data.back.push({
-						type: "rect",
-						x: 0,
-						y: 0,
-						width: 20,
-						height: 212.5,
-						style: { backgroundColor: "#cecece", opacity: 1 },
-					});
-					this.data.back.push({
-						type: "text",
-						content: "INSTRUCTIONS",
-						x: 30,
-						y: 20,
-						style: { fontSize: "12px", fontWeight: "bold" },
-					});
-					this.data.back.push({
-						type: "text",
-						content: "Carry always. Report loss.",
-						x: 30,
-						y: 40,
-						style: { fontSize: "10px" },
-					});
-
-					this.data.back.push({
-						type: "text",
-						mapping: "institute_address",
-						content: "Addr: [Address]",
-						x: 30,
-						y: 80,
-						style: { fontSize: "10px", width: "150px" },
-					});
-					this.data.back.push({
-						type: "text",
-						mapping: "phone",
-						content: "Ph: [Phone]",
-						x: 30,
-						y: 110,
-						style: { fontSize: "10px" },
-					});
-
-					this.data.back.push({
-						type: "image",
-						mapping: "authority_signature",
-						content: "https://placehold.co/60x30?text=Sign",
-						x: 30,
-						y: 150,
-						width: 50,
-						height: 25,
-						style: { opacity: 1 },
-					});
-
-					// QR Right
-					this.data.back.push({
-						type: "image",
-						mapping: "qr_code_image",
-						content: "https://placehold.co/100x100?text=QR",
-						x: 230,
-						y: 50,
-						width: 80,
-						height: 80,
-						style: { opacity: 1 },
-					});
-					this.data.back.push({
-						type: "text",
-						content: "Scan to Verify",
-						x: 230,
-						y: 135,
-						style: {
-							fontSize: "8px",
-							color: "#888",
-							textAlign: "center",
-							width: "80px",
-						},
-					});
-				} else if (type === "hostel_id") {
-					// Hostel ID
-					this.data.orientation = "vertical";
-					this.data.bg_color.front = "#f4f7f6";
-
-					// Header
-					this.data.front.push({
-						type: "rect",
-						x: 0,
-						y: 0,
-						width: 212.5,
-						height: 50,
-						style: { backgroundColor: "#2c3e50", opacity: 1 },
-					});
-					this.data.front.push({
-						type: "image",
-						mapping: "institute_logo",
-						content: "https://placehold.co/60x60?text=LOGO",
-						x: 10,
-						y: 10,
-						width: 30,
-						height: 30,
-						style: { opacity: 1 },
-					});
-					this.data.front.push({
-						type: "text",
-						content: "HOSTEL RESIDENT",
-						x: 50,
-						y: 18,
-						style: { fontSize: "14px", fontWeight: "bold", color: "#ffffff" },
-					});
-
-					// Photo
-					this.data.front.push({
-						type: "image",
-						mapping: "photo",
-						content: "/assets/frappe/images/default-avatar.png",
-						x: 56,
-						y: 70,
-						width: 100,
-						height: 100,
-						style: { opacity: 1, borderRadius: "10px" },
-					});
-
-					// Name
-					this.data.front.push({
-						type: "text",
-						mapping: "student_name",
-						content: "[Student Name]",
-						x: 10,
-						y: 190,
-						style: {
-							fontSize: "16px",
-							fontWeight: "bold",
-							color: "#2c3e50",
-							textAlign: "center",
-							width: "192px",
-						},
-					});
-					this.data.front.push({
-						type: "text",
-						content: "Room: Block B",
-						x: 10,
-						y: 215,
-						style: {
-							fontSize: "12px",
-							color: "#7f8c8d",
-							textAlign: "center",
-							width: "192px",
-						},
-					});
-
-					// Details
-					this.data.front.push({
-						type: "text",
-						mapping: "student_id",
-						content: "ID: [Student ID]",
-						x: 20,
-						y: 250,
-						style: { fontSize: "10px" },
-					});
-					this.data.front.push({
-						type: "text",
-						mapping: "blood_group",
-						content: "Blood: [Blood Group]",
-						x: 20,
-						y: 265,
-						style: { fontSize: "10px" },
-					});
-					this.data.front.push({
-						type: "text",
-						mapping: "phone",
-						content: "Emerg: [Phone]",
-						x: 20,
-						y: 280,
-						style: { fontSize: "10px" },
-					});
-
-					// Footer Strip
-					this.data.front.push({
-						type: "rect",
-						x: 0,
-						y: 327,
-						width: 212.5,
-						height: 10,
-						style: { backgroundColor: "#e74c3c", opacity: 1 },
-					});
-
-					// Back
-					this.data.back.push({
-						type: "image",
-						mapping: "qr_code_image",
-						content: "https://placehold.co/100x100?text=QR",
-						x: 56,
-						y: 50,
-						width: 100,
-						height: 100,
-						style: { opacity: 1 },
-					});
-					this.data.back.push({
-						type: "text",
-						content: "GATE PASS",
-						x: 10,
-						y: 170,
-						style: { fontSize: "16px", textAlign: "center", width: "192px" },
-					});
-					this.data.back.push({
-						type: "text",
-						content: "Use for Entry/Exit",
-						x: 10,
-						y: 195,
-						style: { fontSize: "10px", textAlign: "center", width: "192px" },
-					});
-				} else if (type === "library_card") {
-					// Library Card
-					this.data.orientation = "horizontal";
-					this.data.bg_color.front = "#fffbe7";
-
-					// Border handled by rect? or custom CSS. Just layout elements.
-					this.data.front.push({
-						type: "rect",
-						x: 5,
-						y: 5,
-						width: 327,
-						height: 202.5,
-						style: {
-							backgroundColor: "transparent",
-							opacity: 1,
-							borderWidth: "4px",
-							borderStyle: "double",
-							borderColor: "#5d4037",
-						},
-					}); // Faux border
-
-					this.data.front.push({
-						type: "image",
-						mapping: "institute_logo",
-						content: "https://placehold.co/60x60?text=LOGO",
-						x: 20,
-						y: 20,
-						width: 40,
-						height: 40,
-						style: { opacity: 1 },
-					});
-
-					this.data.front.push({
-						type: "text",
-						content: "LIBRARY CARD",
-						x: 0,
-						y: 20,
-						style: {
-							fontSize: "20px",
-							fontWeight: "bold",
-							color: "#5d4037",
-							textAlign: "center",
-							width: "337px",
-						},
-					});
-					this.data.front.push({
-						type: "text",
-						mapping: "institute_name",
-						content: "[Institute Name]",
-						x: 0,
-						y: 45,
-						style: {
-							fontSize: "10px",
-							fontStyle: "italic",
-							textAlign: "center",
-							width: "337px",
-						},
-					});
-
-					// Photo left
-					this.data.front.push({
-						type: "image",
-						mapping: "photo",
-						content: "/assets/frappe/images/default-avatar.png",
-						x: 30,
-						y: 70,
-						width: 60,
-						height: 75,
-						style: {
-							opacity: 1,
-							borderWidth: "1px",
-							borderStyle: "solid",
-							borderColor: "#5d4037",
-						},
-					});
-
-					// Details Right
-					this.data.front.push({
-						type: "text",
-						mapping: "student_name",
-						content: "[Student Name]",
-						x: 110,
-						y: 80,
-						style: {
-							fontSize: "16px",
-							fontWeight: "bold",
-							color: "#3e2723",
-							borderBottom: "1px solid #5d4037",
-						},
-					});
-					this.data.front.push({
-						type: "text",
-						mapping: "student_id",
-						content: "Mem ID: [Student ID]",
-						x: 110,
-						y: 110,
-						style: { fontSize: "12px" },
-					});
-					this.data.front.push({
-						type: "text",
-						mapping: "programme",
-						content: "Prog: [Programme]",
-						x: 110,
-						y: 130,
-						style: { fontSize: "12px" },
-					});
-
-					// QR
-					this.data.front.push({
-						type: "image",
-						mapping: "qr_code_image",
-						content: "https://placehold.co/50x50?text=QR",
-						x: 280,
-						y: 150,
-						width: 40,
-						height: 40,
-						style: { opacity: 1 },
-					});
-				} else if (type === "visitor_id") {
-					// Visitor ID
-					this.data.orientation = "vertical";
-					this.data.bg_color.front = "#ffffff";
-
-					// Top Orange Bar
-					this.data.front.push({
-						type: "rect",
-						x: 0,
-						y: 0,
-						width: 212.5,
-						height: 20,
-						style: { backgroundColor: "#FFAB00", opacity: 1 },
-					});
-
-					this.data.front.push({
-						type: "text",
-						content: "VISITOR",
-						x: 10,
-						y: 40,
-						style: {
-							fontSize: "28px",
-							color: "#F57C00",
-							textAlign: "center",
-							width: "192px",
-							fontWeight: "bold",
-						},
-					});
-					this.data.front.push({
-						type: "text",
-						content: "Temporary Pass",
-						x: 10,
-						y: 70,
-						style: {
-							fontSize: "12px",
-							color: "#666",
-							textAlign: "center",
-							width: "192px",
-						},
-					});
-
-					// Box
-					this.data.front.push({
-						type: "rect",
-						x: 20,
-						y: 100,
-						width: 172.5,
-						height: 80,
-						style: {
-							backgroundColor: "transparent",
-							opacity: 1,
-							borderWidth: "2px",
-							borderStyle: "dashed",
-							borderColor: "#ccc",
-						},
-					});
-
-					this.data.front.push({
-						type: "text",
-						mapping: "student_name",
-						content: "[Name]",
-						x: 30,
-						y: 120,
-						style: {
-							fontSize: "16px",
-							fontWeight: "bold",
-							textAlign: "center",
-							width: "152px",
-						},
-					});
-					this.data.front.push({
-						type: "text",
-						content: "Valid for 1 Day",
-						x: 30,
-						y: 150,
-						style: {
-							fontSize: "12px",
-							color: "#888",
-							textAlign: "center",
-							width: "152px",
-						},
-					});
-
-					// QR
-					this.data.front.push({
-						type: "image",
-						mapping: "qr_code_image",
-						content: "https://placehold.co/100x100?text=QR",
-						x: 71,
-						y: 200,
-						width: 70,
-						height: 70,
-						style: { opacity: 1 },
-					});
-				} else if (type === "faculty_id") {
-					// Faculty ID - Red Theme
-					this.data.orientation = "vertical";
-					this.data.bg_color.front = "#ffffff";
-
-					// Header Red
-					this.data.front.push({
-						type: "rect",
-						x: 0,
-						y: 0,
-						width: 212.5,
-						height: 60,
-						style: { backgroundColor: "#8B0000", opacity: 1 },
-					});
-					// Logo
-					this.data.front.push({
-						type: "image",
-						mapping: "institute_logo",
-						content: "https://placehold.co/60x60?text=LOGO",
-						x: 76,
-						y: 5,
-						width: 30,
-						height: 30,
-						style: { opacity: 1, borderRadius: "0" },
-					});
-					this.data.front.push({
-						type: "text",
-						mapping: "institute_name",
-						content: "[Institute Name]",
-						x: 10,
-						y: 40,
-						style: {
-							fontSize: "10px",
-							fontWeight: "bold",
-							color: "#ffffff",
-							textAlign: "center",
-							width: "192px",
-						},
-					});
-
-					// Photo Square Red Border
-					this.data.front.push({
-						type: "image",
-						mapping: "photo",
-						content: "/assets/frappe/images/default-avatar.png",
-						x: 66,
-						y: 80,
-						width: 80,
-						height: 80,
-						style: {
-							opacity: 1,
-							borderRadius: "5px",
-							borderWidth: "4px",
-							borderStyle: "solid",
-							borderColor: "#8B0000",
-						},
-					});
-
-					// Name & Details
-					this.data.front.push({
-						type: "text",
-						mapping: "student_name",
-						content: "[Faculty Name]",
-						x: 10,
-						y: 170,
-						style: {
-							fontSize: "14px",
-							fontWeight: "bold",
-							color: "#333",
-							textAlign: "center",
-							width: "192px",
-						},
-					});
-					this.data.front.push({
-						type: "text",
-						content: "FACULTY",
-						x: 10,
-						y: 190,
-						style: {
-							fontSize: "12px",
-							fontWeight: "bold",
-							color: "#8B0000",
-							textAlign: "center",
-							width: "192px",
-						},
-					});
-
-					this.data.front.push({
-						type: "text",
-						mapping: "student_id",
-						content: "ID: [Employee ID]",
-						x: 20,
-						y: 220,
-						style: { fontSize: "10px", color: "#444" },
-					});
-					this.data.front.push({
-						type: "text",
-						mapping: "department",
-						content: "Dept: [Department]",
-						x: 20,
-						y: 235,
-						style: { fontSize: "10px", color: "#444" },
-					});
-
-					// Footer
-					this.data.front.push({
-						type: "rect",
-						x: 0,
-						y: 327,
-						width: 212.5,
-						height: 10,
-						style: { backgroundColor: "#8B0000", opacity: 1 },
-					});
-
-					// Back
-					this.data.back.push({
-						type: "image",
-						mapping: "institute_logo",
-						content: "https://placehold.co/60x60?text=LOGO",
-						x: 90,
-						y: 20,
-						width: 30,
-						height: 30,
-						style: { opacity: 1 },
-					});
-					this.data.back.push({
-						type: "text",
-						content: "Use this card for:",
-						x: 20,
-						y: 60,
-						style: { fontSize: "10px", width: "170px" },
-					});
-					this.data.back.push({
-						type: "text",
-						content: "- Campus Access",
-						x: 20,
-						y: 75,
-						style: { fontSize: "10px" },
-					});
-					this.data.back.push({
-						type: "text",
-						content: "- Library Privileges",
-						x: 20,
-						y: 90,
-						style: { fontSize: "10px" },
-					});
-
-					this.data.back.push({
-						type: "text",
-						mapping: "phone",
-						content: "Emergency: [Phone]",
-						x: 20,
-						y: 130,
-						style: { fontSize: "10px" },
-					});
-					this.data.back.push({
-						type: "text",
-						mapping: "blood_group",
-						content: "Blood: [Blood Group]",
-						x: 20,
-						y: 145,
-						style: { fontSize: "10px" },
-					});
-
-					this.data.back.push({
-						type: "image",
-						mapping: "qr_code_image",
-						content: "https://placehold.co/100x100?text=QR",
-						x: 66,
-						y: 240,
-						width: 80,
-						height: 80,
-						style: { opacity: 1 },
-					});
-				} else if (type === "driver_id") {
-					// Driver ID - Green Theme
-					this.data.orientation = "horizontal";
-					this.data.bg_color.front = "#ffffff";
-
-					this.data.front.push({
-						type: "rect",
-						x: 0,
-						y: 0,
-						width: 337,
-						height: 212.5,
-						style: {
-							backgroundColor: "transparent",
-							opacity: 1,
-							borderWidth: "4px",
-							borderStyle: "solid",
-							borderColor: "#336600",
-						},
-					});
-
-					// Sidebar Green
-					this.data.front.push({
-						type: "rect",
-						x: 0,
-						y: 0,
-						width: 80,
-						height: 212.5,
-						style: { backgroundColor: "#336600", opacity: 1 },
-					});
-					this.data.front.push({
-						type: "text",
-						content: "DRIVER",
-						x: -20,
-						y: 100,
-						style: {
-							fontSize: "16px",
-							fontWeight: "bold",
-							color: "#ffffff",
-							transform: "rotate(-90deg)",
-						},
-					});
-
-					// Header
-					this.data.front.push({
-						type: "image",
-						mapping: "institute_logo",
-						content: "https://placehold.co/60x60?text=LOGO",
-						x: 90,
-						y: 15,
-						width: 30,
-						height: 30,
-						style: { opacity: 1 },
-					});
-					this.data.front.push({
-						type: "text",
-						mapping: "institute_name",
-						content: "[Institute Name]",
-						x: 130,
-						y: 20,
-						style: { fontSize: "12px", fontWeight: "bold", color: "#336600" },
-					});
-					this.data.front.push({
-						type: "text",
-						content: "Transport Dept",
-						x: 130,
-						y: 35,
-						style: { fontSize: "10px", color: "#555" },
-					});
-
-					// Photo Box
-					this.data.front.push({
-						type: "rect",
-						x: 90,
-						y: 60,
-						width: 70,
-						height: 80,
-						style: {
-							backgroundColor: "#eee",
-							opacity: 1,
-							borderWidth: "1px",
-							borderStyle: "solid",
-							borderColor: "#ccc",
-						},
-					});
-					this.data.front.push({
-						type: "image",
-						mapping: "photo",
-						content: "/assets/frappe/images/default-avatar.png",
-						x: 92,
-						y: 62,
-						width: 66,
-						height: 76,
-						style: { opacity: 1 },
-					});
-
-					// Details
-					this.data.front.push({
-						type: "text",
-						mapping: "student_name",
-						content: "[Driver Name]",
-						x: 170,
-						y: 70,
-						style: { fontSize: "16px", fontWeight: "bold", color: "#333" },
-					});
-					this.data.front.push({
-						type: "text",
-						mapping: "student_id",
-						content: "ID: [ID]",
-						x: 170,
-						y: 95,
-						style: { fontSize: "12px" },
-					});
-					this.data.front.push({
-						type: "text",
-						mapping: "phone",
-						content: "[Phone]",
-						x: 170,
-						y: 110,
-						style: { fontSize: "12px" },
-					});
-
-					// Back
-					this.data.back.push({
-						type: "text",
-						content: "Vehicle Rules:",
-						x: 20,
-						y: 20,
-						style: { fontSize: "12px", fontWeight: "bold" },
-					});
-					this.data.back.push({
-						type: "text",
-						content: "1. Carry card on duty.",
-						x: 20,
-						y: 40,
-						style: { fontSize: "10px" },
-					});
-					this.data.back.push({
-						type: "text",
-						content: "2. Follow traffic rules.",
-						x: 20,
-						y: 55,
-						style: { fontSize: "10px" },
-					});
-
-					this.data.back.push({
-						type: "image",
-						mapping: "qr_code_image",
-						content: "https://placehold.co/100x100?text=QR",
-						x: 250,
-						y: 150,
-						width: 50,
-						height: 50,
-						style: { opacity: 1 },
-					});
-				} else if (type === "test_visitor_id") {
-					// Manual JSON mapping for Test Visitor ID to demonstrate editor capabilities
-					this.data.orientation = "vertical";
-					this.data.bg_color.front = "#e0f7fa";
-
-					// Title
-					this.data.front.push({
-						type: "text",
-						content: "TEST VISITOR",
-						x: 10,
-						y: 40,
-						style: {
-							fontSize: "24px",
-							fontWeight: "bold",
-							color: "#006064",
-							textAlign: "center",
-							width: "192px",
-						},
-					});
-					this.data.front.push({
-						type: "text",
-						content: "Debugging Template",
-						x: 10,
-						y: 70,
-						style: {
-							fontSize: "12px",
-							color: "#555",
-							textAlign: "center",
-							width: "192px",
-						},
-					});
-
-					// Fields
-					this.data.front.push({
-						type: "text",
-						mapping: "student_name",
-						content: "Name: [Student Name]",
-						x: 20,
-						y: 110,
-						style: { fontSize: "14px", fontWeight: "bold" },
-					});
-					this.data.front.push({
-						type: "text",
-						mapping: "student_id",
-						content: "ID: [Student ID]",
-						x: 20,
-						y: 130,
-						style: { fontSize: "14px" },
-					});
-					this.data.front.push({
-						type: "text",
-						mapping: "department",
-						content: "Dept: [Department]",
-						x: 20,
-						y: 150,
-						style: { fontSize: "14px" },
-					});
-
-					// QR Code
-					this.data.front.push({
-						type: "image",
-						mapping: "qr_code_image",
-						content: "https://placehold.co/100x100?text=QR",
-						x: 56,
-						y: 200,
-						width: 100,
-						height: 100,
-						style: {
-							opacity: 1,
-							borderWidth: "2px",
-							borderStyle: "solid",
-							borderColor: "#000",
-						},
-					});
-					this.data.front.push({
-						type: "text",
-						content: "QR Code Check",
-						x: 10,
-						y: 310,
-						style: { fontSize: "12px", textAlign: "center", width: "192px" },
-					});
-				}
-			}
-		}
-
-		this.current_side = "front";
-		this.scale = 2;
-		this.save();
-		this.render();
-	}
-
-	render() {
-		let width, height;
-		if (this.data.orientation === "horizontal") {
-			width = 337;
-			height = 212.5;
-		} else {
-			width = 212.5;
-			height = 337;
-		}
-
-		this.wrapper.html(`
-            <style>
-                .tool-btn { text-align: left; margin-bottom: 5px; }
-                .canvas-element { user-select: none; box-sizing: border-box; }
-                .canvas-element:hover { outline: 1px dashed #999; }
-                .canvas-element.selected { outline: 1px solid blue; }
-                .prop-label { font-size: 11px; color: #777; margin-bottom: 2px; display: block; letter-spacing: 0.5px; }
-                .tool-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; margin-bottom: 4px; }
-                .tool-grid .tool-btn { margin-bottom: 0; }
-                .panel { margin-bottom: 12px; }
-                .panel-heading { font-weight: 600; }
-            </style>
-            <div class="row">
-                <div class="col-md-4">
-                    <div class="panel panel-default">
-                        <div class="panel-heading">Card Settings</div>
-                        <div class="panel-body" style="padding: 10px;">
-                            <div class="form-group">
-                                <label class="prop-label">ORIENTATION</label>
-                                <div class="btn-group btn-group-justified btn-group-sm">
-                                    <div class="btn-group">
-                                        <button class="btn btn-default ${
-											this.data.orientation === "horizontal" ? "active" : ""
-										}" data-action="set_orientation" data-val="horizontal">Landscape</button>
-                                    </div>
-                                    <div class="btn-group">
-                                        <button class="btn btn-default ${
-											this.data.orientation === "vertical" ? "active" : ""
-										}" data-action="set_orientation" data-val="vertical">Portrait</button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label class="prop-label">ACTIVE SIDE</label>
-                                <div class="btn-group btn-group-justified btn-group-sm">
-                                    <div class="btn-group">
-                                        <button class="btn btn-default ${
-											this.current_side === "front" ? "active" : ""
-										}" data-side="front">Front</button>
-                                    </div>
-                                    <div class="btn-group">
-                                        <button class="btn btn-default ${
-											this.current_side === "back" ? "active" : ""
-										}" data-side="back">Back</button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee;">
-                                <button class="btn btn-danger btn-block btn-sm" id="btn-change-template">
-                                    <i class="fa fa-refresh"></i> Reset / Change Template
-                                </button>
-                            </div>
-                            <div style="margin-top: 4px;">
-                                <label class="checkbox-inline" style="font-size: 11px; margin-left: 0;">
-                                    <input type="checkbox" id="toggle-guides" ${
-										this.show_guides ? "checked" : ""
-									}> Show Guides
-                                </label>
-                             </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="panel panel-default">
-                        <div class="panel-heading">Tools &amp; Fields</div>
-                        <div class="panel-body" style="padding: 10px; max-height: 260px; overflow-y: auto;">
-                            <label class="prop-label">DESIGN</label>
-                            <div class="tool-grid">
-                                <button class="btn btn-default btn-block btn-xs tool-btn" data-action="add_text">Add Text</button>
-                                <button class="btn btn-default btn-block btn-xs tool-btn" data-action="add_image">Add Image</button>
-                                <button class="btn btn-default btn-block btn-xs tool-btn" data-action="add_watermark">Add Watermark</button>
-                                <button class="btn btn-default btn-block btn-xs tool-btn" data-action="add_shape" data-shape="box">Add Box</button>
-                                <button class="btn btn-default btn-block btn-xs tool-btn" data-action="add_shape" data-shape="header">Add Header</button>
-                                <button class="btn btn-default btn-block btn-xs tool-btn" data-action="add_shape" data-shape="footer">Add Footer</button>
-                            </div>
-
-                            <hr style="margin: 8px 0;">
-                            <label class="prop-label">FIELDS</label>
-                            <div class="tool-grid">${this.get_field_buttons_html()}</div>
-
-                            <hr style="margin: 8px 0;">
-                            <label class="prop-label">INSTITUTE</label>
-                            <div class="tool-grid">
-                                <button class="btn btn-default btn-block btn-xs tool-btn" data-action="add_field" data-field="institute_logo">Institute Logo</button>
-                                <button class="btn btn-default btn-block btn-xs tool-btn" data-action="add_field" data-field="authority_signature">Authority Signature</button>
-                                <button class="btn btn-default btn-block btn-xs tool-btn" data-action="add_field" data-field="institute_name">Institute Name</button>
-                                <button class="btn btn-default btn-block btn-xs tool-btn" data-action="add_field" data-field="address">Address</button>
-                                <button class="btn btn-default btn-block btn-xs tool-btn" data-action="add_field" data-field="institute_address">Institute Address</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="panel panel-default">
-                         <div class="panel-heading">Properties</div>
-                         <div id="element-properties" class="panel-body" style="max-height: 260px; overflow-y: auto;"></div>
-                    </div>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="panel panel-default">
-                        <div class="panel-heading" style="text-align: center; letter-spacing: 1px;">
-                            ${this.current_side.toUpperCase()}
-                        </div>
-                        <div class="panel-body" style="padding: 0;">
-                            <div id="card-canvas-container" style="
-                                width: 100%;
-                                min-height: 460px;
-                                display: flex;
-                                justify-content: center;
-                                align-items: center;
-                                background: repeating-linear-gradient(45deg, #f3f3f3, #f3f3f3 10px, #ececec 10px, #ececec 20px);
-                                padding: 32px;
-                                box-sizing: border-box;
-                            ">
-
-                        <div id="card-canvas-wrapper" style="
-                            position: relative;
-                            width: ${width * this.scale}px;
-                            height: ${height * this.scale}px;
-                            flex-shrink: 0;
-                        ">
-                            <div id="card-canvas" style="
-                                width: ${width}px;
-                                height: ${height}px;
-                                background: ${this.data.bg_color[this.current_side] || "#ffffff"};
-                                position: absolute;
-                                top: 0;
-                                left: 0;
-                                overflow: hidden;
-                                border-radius: 10px;
-                                transform: scale(${this.scale});
-                                transform-origin: top left;
-                                box-shadow: 0 6px 16px rgba(0,0,0,0.18);
-                                z-index: 10;
-                            ">
-                            </div>
-                            <!-- Alignment Guides Overlay -->
-                            <div id="canvas-guides" style="
-                                position: absolute; top:0; left:0; pointer-events: none; z-index: 5;
-                                width: ${width}px; height: ${height}px;
-                                transform: scale(${this.scale}); transform-origin: top left;
-                                border: 1px dashed transparent;
-                            ">
-                                 ${
-										this.show_guides
-											? `
-                                    <div style="position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: rgba(0, 150, 255, 0.5); transform: translateX(-50%);"></div>
-                                    <div style="position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: rgba(0, 150, 255, 0.5); transform: translateY(-50%);"></div>
-                                 `
-											: ""
-									}
-                            </div>
-                        </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `);
-
-		this.canvas = this.wrapper.find("#card-canvas");
-		this.properties = this.wrapper.find("#element-properties");
-		this.show_properties(-1); // Default view
-		this.bind_events();
-		this.load_elements();
-	}
-
-	get_field_buttons_html() {
-		let type = this.frm.doc.card_type || "Student";
-		let fields = [];
-
-		// Common Fields
-		let common = [
-			{ label: "QR Code", field: "qr_code_image" },
-			{ label: "Issue Date", field: "issue_date" },
-			{ label: "Expiry Date", field: "expiry_date" },
-		];
-
-		if (type === "Student") {
-			fields = [
-				{ label: "Student Name", field: "student_name" },
-				{ label: "Student Photo", field: "photo" },
-				{ label: "Student ID", field: "student_id" },
-				{ label: "Blood Group", field: "blood_group" },
-				{ label: "Date of Birth", field: "date_of_birth" },
-				{ label: "Academic Year", field: "academic_year" },
-				{ label: "Batch", field: "batch" },
-				{ label: "Programme", field: "programme" },
-				{ label: "Email", field: "email" },
-				{ label: "Phone", field: "phone" },
-				{ label: "Address", field: "address" },
-			];
-		} else if (type === "Faculty") {
-			fields = [
-				{ label: "Faculty Name", field: "student_name", content: "[Faculty Name]" },
-				{ label: "Photo", field: "photo" },
-				{ label: "Employee ID", field: "student_id", content: "[Employee ID]" },
-				{ label: "Designation", field: "designation", content: "[Designation]" },
-				{ label: "Department", field: "department" },
-				{ label: "Email", field: "email" },
-				{ label: "Phone", field: "phone" },
-				{ label: "Blood Group", field: "blood_group" },
-			];
-		} else if (type === "Driver") {
-			fields = [
-				{ label: "Driver Name", field: "student_name", content: "[Driver Name]" },
-				{ label: "Photo", field: "photo" },
-				{ label: "Driver ID", field: "student_id", content: "[Driver ID]" },
-				{ label: "License No", field: "license_number", content: "[License No]" },
-				{ label: "Phone", field: "phone" },
-				{ label: "Blood Group", field: "blood_group" },
-			];
-		} else if (type === "Visitor") {
-			fields = [
-				{ label: "Visitor Name", field: "student_name", content: "[Visitor Name]" },
-				{ label: "Company", field: "visitor_company", content: "[Company]" },
-				{ label: "Phone", field: "phone" },
-				{ label: "Purpose", field: "purpose", content: "[Purpose]" },
-			];
-		} else if (type === "Non-Faculty") {
-			fields = [
-				{ label: "Staff Name", field: "student_name", content: "[Staff Name]" },
-				{ label: "Designation", field: "designation", content: "[Designation]" },
-				{ label: "Department", field: "department" },
-				{ label: "Company", field: "visitor_company", content: "[Company]" },
-				{ label: "Email", field: "email" },
-				{ label: "Phone", field: "phone" },
-			];
-		}
-
-		// Merge common
-		fields = fields.concat(common);
-
-		return fields
-			.map((f) => {
-				let contentAttr = f.content ? `data-content="${f.content}"` : "";
-				return `<button class="btn btn-default btn-block btn-xs tool-btn" data-action="add_field" data-field="${f.field}" ${contentAttr}>${f.label}</button>`;
-			})
-			.join("");
-	}
-
-	bind_events() {
-		this.wrapper.find('[data-action="set_orientation"]').on("click", (e) => {
-			this.data.orientation = $(e.target).data("val");
-			this.save();
-			this.render();
-		});
-
-		this.wrapper.find("#btn-change-template").on("click", () => {
-			frappe.confirm(
-				"Are you sure you want to change the template? This will discard your current design and unsaved changes.",
-				() => {
-					this.data = {
-						front: [],
-						back: [],
-						orientation: "horizontal",
-						bg_color: { front: "#ffffff", back: "#ffffff" },
-					};
-					this.save();
-					this.render_template_selector();
-				}
-			);
-		});
-
-		this.wrapper.find("[data-side]").on("click", (e) => {
-			e.preventDefault();
-			this.current_side = $(e.target).data("side");
-			this.render();
-		});
-
-		this.wrapper.find('[data-action="add_text"]').on("click", () => {
-			this.add_element({
-				type: "text",
-				content: "New Text",
-				x: 20,
-				y: 50,
-				style: {
-					fontSize: "12px",
-					fontWeight: "normal",
-					color: "#000000",
-					fontFamily: "Arial",
-					opacity: 1,
-				},
-			});
-		});
-
-		this.wrapper.find('[data-action="add_image"]').on("click", () => {
-			this.add_element({
-				type: "image",
-				content: "https://placehold.co/100x100",
-				x: 20,
-				y: 50,
-				width: 50,
-				height: 50,
-				style: { opacity: 1 },
-			});
-		});
-
-		this.wrapper.find('[data-action="add_watermark"]').on("click", () => {
-			let w = this.data.orientation === "horizontal" ? 337 : 212.5;
-			let h = this.data.orientation === "horizontal" ? 212.5 : 337;
-			let img =
-				this.frm.doc.watermark_image || "https://placehold.co/200x200?text=Watermark";
-			this.add_element(
-				{
-					type: "image",
-					content: img,
-					x: (w - 150) / 2,
-					y: (h - 150) / 2,
-					width: 150,
-					height: 150,
-					style: { opacity: 0.2 },
-				},
-				true
-			); // Send to back
-		});
-
-		this.wrapper.find('[data-action="add_shape"]').on("click", (e) => {
-			let shape = $(e.target).data("shape");
-			let w = this.data.orientation === "horizontal" ? 337 : 212.5;
-			let h = this.data.orientation === "horizontal" ? 212.5 : 337;
-			let el = { type: "rect", style: { backgroundColor: "#3498db", opacity: 1 } };
-
-			if (shape === "header") {
-				el.x = 0;
-				el.y = 0;
-				el.width = w;
-				el.height = 40;
-			} else if (shape === "footer") {
-				el.x = 0;
-				el.y = h - 40;
-				el.width = w;
-				el.height = 40;
-			} else {
-				el.x = 20;
-				el.y = 20;
-				el.width = 100;
-				el.height = 50;
-			}
-			this.add_element(el);
-		});
-
-		this.wrapper.find('[data-action="add_field"]').on("click", (e) => {
-			let field = $(e.currentTarget).data("field");
-			let el = { x: 20, y: 50, style: { opacity: 1 } };
-			if (
-				["photo", "institute_logo", "authority_signature", "qr_code_image"].includes(field)
-			) {
-				el.type = "image";
-				el.mapping = field;
-				el.width = 60;
-				el.height = 60;
-				if (field === "photo") el.content = "/assets/frappe/images/default-avatar.png";
-				else if (field === "qr_code_image")
-					el.content = "https://placehold.co/60x60?text=QR";
-				else el.content = "https://placehold.co/60x60?text=IMG";
-			} else {
-				el.type = "text";
-				el.mapping = field;
-				let customContent = $(e.currentTarget).data("content");
-				el.content = customContent ? customContent : `[${$(e.currentTarget).text()}]`;
-				el.style.fontSize = "12px";
-				el.style.fontWeight = "bold";
-				el.style.color = "#000000";
-			}
-			this.add_element(el);
-		});
-
-		this.wrapper.find("#toggle-guides").on("change", (e) => {
-			this.show_guides = $(e.target).is(":checked");
-			this.render();
-		});
-	}
-
-	add_element(el_data, send_to_back) {
-		if (!this.data[this.current_side]) this.data[this.current_side] = [];
-		if (send_to_back) {
-			this.data[this.current_side].unshift(el_data);
-			this.render_element(el_data, 0);
-		} else {
-			this.data[this.current_side].push(el_data);
-			this.render_element(el_data, this.data[this.current_side].length - 1);
-		}
-		this.save();
-		this.load_elements(); // Reload to correct z-index
-	}
-
-	load_elements() {
-		this.canvas.empty();
-		let elements = this.data[this.current_side] || [];
-		elements.forEach((el, index) => {
-			this.render_element(el, index);
-		});
-	}
-
-	render_element(el, index) {
-		let el_dom;
-		let opacity = el.style && el.style.opacity !== undefined ? el.style.opacity : 1;
-
-		if (el.type === "text") {
-			el_dom = $(
-				`<div class="canvas-element" data-index="${index}" style="position: absolute; left: ${el.x}px; top: ${el.y}px; white-space: nowrap;">${el.content}</div>`
-			);
-			if (el.style) el_dom.css(el.style);
-		} else if (el.type === "image") {
-			el_dom =
-				$(`<div class="canvas-element" data-index="${index}" style="position: absolute; left: ${el.x}px; top: ${el.y}px; width: ${el.width}px; height: ${el.height}px; opacity: ${opacity}; overflow: hidden;">
-                <img src="${el.content}" style="width: 100%; height: 100%; object-fit: cover; pointer-events: none;">
-            </div>`);
-			if (el.style) el_dom.css(el.style);
-		} else if (el.type === "rect") {
-			el_dom = $(
-				`<div class="canvas-element" data-index="${index}" style="position: absolute; left: ${el.x}px; top: ${el.y}px; width: ${el.width}px; height: ${el.height}px;"></div>`
-			);
-			if (el.style) el_dom.css(el.style);
-		}
-
-		el_dom.on("mousedown", (e) => {
-			e.preventDefault();
-			e.stopPropagation();
-			this.select_element(index, el_dom);
-			let startX = e.clientX,
-				startY = e.clientY;
-			let elemLeft = el.x,
-				elemTop = el.y;
-
-			let moveHandler = (moveEvent) => {
-				let dx = (moveEvent.clientX - startX) / this.scale;
-				let dy = (moveEvent.clientY - startY) / this.scale;
-				el.x = elemLeft + dx;
-				el.y = elemTop + dy;
-				el_dom.css({ left: el.x + "px", top: el.y + "px" });
-			};
-			let upHandler = () => {
-				$(document).off("mousemove", moveHandler);
-				$(document).off("mouseup", upHandler);
-				this.save();
-				this.show_properties(index);
-			};
-			$(document).on("mousemove", moveHandler);
-			$(document).on("mouseup", upHandler);
-		});
-		this.canvas.append(el_dom);
-	}
-
-	select_element(index, dom) {
-		this.canvas.find(".canvas-element").removeClass("selected");
-		dom.addClass("selected");
-		this.show_properties(index);
-	}
-
-	show_properties(index) {
-		if (index === -1 || !this.data[this.current_side][index]) {
-			// Global Properties
-			this.properties.html(`
-               <div class="form-group">
-                    <label class="prop-label">CANVAS BACKGROUND</label>
-                    <input type="color" class="form-control input-sm global-bg-change" value="${
-						this.data.bg_color[this.current_side] || "#ffffff"
-					}">
-               </div>
-               <p class="text-muted text-center" style="margin-top: 20px;">Select an element to edit.</p>
-             `);
-			this.wrapper.find(".global-bg-change").on("change", (e) => {
-				this.data.bg_color[this.current_side] = $(e.target).val();
-				this.save();
-				this.render();
-			});
-			return;
-		}
-
-		let el = this.data[this.current_side][index];
-		let opacity = el.style && el.style.opacity !== undefined ? el.style.opacity : 1;
-
-		let html = `
-            <div class="row">
-                <div class="col-xs-6">
-                     <label class="prop-label">X POS</label>
-                     <input type="number" class="form-control input-sm prop-change" data-prop="x" value="${Math.round(
-							el.x
-						)}">
-                </div>
-                <div class="col-xs-6">
-                     <label class="prop-label">Y POS</label>
-                     <input type="number" class="form-control input-sm prop-change" data-prop="y" value="${Math.round(
-							el.y
-						)}">
-                </div>
-            </div>
-        `;
-
-		if (el.type === "rect" || el.type === "image") {
-			html += `
-            <div class="row" style="margin-top: 5px;">
-                <div class="col-xs-6">
-                     <label class="prop-label">WIDTH</label>
-                     <input type="number" class="form-control input-sm prop-change" data-prop="width" value="${Math.round(
-							el.width
-						)}">
-                </div>
-                <div class="col-xs-6">
-                     <label class="prop-label">HEIGHT</label>
-                     <input type="number" class="form-control input-sm prop-change" data-prop="height" value="${Math.round(
-							el.height
-						)}">
-                </div>
-            </div>`;
-
-			if (el.type === "image") {
-				html += `
-                <div style="margin-top: 10px;">
-                    <label class="prop-label">SHAPE</label>
-                    <select class="form-control input-sm shape-change">
-                        <option value="rect" ${
-							!el.shape || el.shape === "rect" ? "selected" : ""
-						}>Rectangle</option>
-                        <option value="circle" ${
-							el.shape === "circle" ? "selected" : ""
-						}>Circle</option>
-                        <option value="triangle" ${
-							el.shape === "triangle" ? "selected" : ""
-						}>Triangle</option>
-                    </select>
-                </div>`;
-			}
-
-			// Border Controls for Rect and Image
-			let bs = el.border_settings || {
-				style: "none",
-				width: 1,
-				color: "#000000",
-				top: false,
-				bottom: false,
-				left: false,
-				right: false,
-			};
-			html += `
-            <div style="margin-top: 10px; background: #f9f9f9; padding: 5px; border: 1px solid #ddd;">
-                <label class="prop-label">BORDER</label>
-                <div class="row">
-                    <div class="col-xs-6">
-                        <label class="prop-label" style="font-weight:normal">Style</label>
-                        <select class="form-control input-sm border-change" data-key="style">
-                            <option value="none" ${
-								bs.style === "none" ? "selected" : ""
-							}>None</option>
-                            <option value="solid" ${
-								bs.style === "solid" ? "selected" : ""
-							}>Solid</option>
-                            <option value="double" ${
-								bs.style === "double" ? "selected" : ""
-							}>Double</option>
-                            <option value="dashed" ${
-								bs.style === "dashed" ? "selected" : ""
-							}>Dashed</option>
-                        </select>
-                    </div>
-                    <div class="col-xs-6">
-                        <label class="prop-label" style="font-weight:normal">Width (px)</label>
-                        <input type="number" class="form-control input-sm border-change" data-key="width" value="${
-							bs.width
-						}">
-                    </div>
-                </div>
-                <div class="row" style="margin-top: 5px;">
-                    <div class="col-xs-12">
-                        <label class="prop-label" style="font-weight:normal">Color</label>
-                        <input type="color" class="form-control input-sm border-change" data-key="color" value="${
-							bs.color
-						}">
-                    </div>
-                </div>
-                <div class="row" style="margin-top: 5px;">
-                    <div class="col-xs-12">
-                        <label class="prop-label" style="font-weight:normal">Sides</label>
-                        <label class="checkbox-inline" style="font-size: 11px;">
-                            <input type="checkbox" class="border-change" data-key="top" ${
-								bs.top ? "checked" : ""
-							}> Top
-                        </label>
-                        <label class="checkbox-inline" style="font-size: 11px;">
-                             <input type="checkbox" class="border-change" data-key="bottom" ${
-									bs.bottom ? "checked" : ""
-								}> Bot
-                        </label>
-                        <label class="checkbox-inline" style="font-size: 11px;">
-                             <input type="checkbox" class="border-change" data-key="left" ${
-									bs.left ? "checked" : ""
-								}> Left
-                        </label>
-                        <label class="checkbox-inline" style="font-size: 11px;">
-                             <input type="checkbox" class="border-change" data-key="right" ${
-									bs.right ? "checked" : ""
-								}> Right
-                        </label>
-                    </div>
-                </div>
-            </div>`;
-		}
-
-		html += `<div style="margin-top: 10px;">
-             <label class="prop-label">OPACITY (${opacity})</label>
-             <input type="range" class="style-change" data-style="opacity" min="0" max="1" step="0.1" value="${opacity}" style="width:100%">
-        </div>`;
-
-		html += `<div style="margin-top: 10px; display: flex; gap: 5px;">
-            <button class="btn btn-default btn-xs flex-grow tool-action" data-tool="center_h" title="Center Horizontal"><i class="fa fa-arrows-h"></i> Center H</button>
-            <button class="btn btn-default btn-xs flex-grow tool-action" data-tool="center_v" title="Center Vertical"><i class="fa fa-arrows-v"></i> Center V</button>
-        </div>`;
-
-		html += `<div style="margin-top: 5px; display: flex; gap: 5px;">
-            <button class="btn btn-default btn-xs flex-grow tool-action" data-tool="bring_front" title="Bring to Front"><i class="fa fa-level-up"></i> Front</button>
-            <button class="btn btn-default btn-xs flex-grow tool-action" data-tool="send_back" title="Send to Back"><i class="fa fa-level-down"></i> Back</button>
-        </div>`;
-
-		if (el.type === "text") {
-			html += `<hr style="margin: 10px 0;">
-                <label class="prop-label">TEXT CONTENT</label>
-                <input type="text" class="form-control input-sm prop-change" data-prop="content" value="${
-					el.content
-				}" ${el.mapping ? "readonly" : ""}>
-                <div class="row" style="margin-top:5px;">
-                    <div class="col-xs-6">
-                        <label class="prop-label">SIZE</label>
-                        <input type="text" class="form-control input-sm style-change" data-style="fontSize" value="${
-							el.style.fontSize
-						}">
-                    </div>
-                    <div class="col-xs-6">
-                        <label class="prop-label">COLOR</label>
-                        <input type="color" class="form-control input-sm style-change" data-style="color" value="${
-							el.style.color
-						}">
-                    </div>
-                </div>`;
-		} else if (el.type === "rect") {
-			html += `<hr style="margin: 10px 0;">
-                <label class="prop-label">FILL COLOR</label>
-                <input type="color" class="form-control input-sm style-change" data-style="backgroundColor" value="${el.style.backgroundColor}">`;
-		}
-
-		html += `<hr><button class="btn btn-danger btn-sm btn-block remove-el">Internal Remove</button>`;
-
-		this.properties.html(html);
-		this.bind_property_events(index);
-	}
-
-	bind_property_events(index) {
-		let el = this.data[this.current_side][index];
-
-		this.properties.find(".prop-change").on("change", (e) => {
-			let prop = $(e.target).data("prop");
-			let val = $(e.target).val();
-			if (["x", "y", "width", "height"].includes(prop)) val = parseFloat(val);
-			el[prop] = val;
-			this.load_elements();
-			this.canvas.find(`[data-index="${index}"]`).addClass("selected");
-			this.save();
-		});
-
-		this.properties.find(".style-change").on("input change", (e) => {
-			let style = $(e.target).data("style");
-			let val = $(e.target).val();
-			if (!el.style) el.style = {};
-			el.style[style] = val;
-			this.load_elements();
-			this.canvas.find(`[data-index="${index}"]`).addClass("selected");
-			this.save();
-			// Live update opacity label
-			if (style === "opacity") $(e.target).prev().text(`OPACITY (${val})`);
-		});
-
-		this.properties.find(".tool-action").on("click", (e) => {
-			let tool = $(e.currentTarget).data("tool");
-			let w_canvas = this.data.orientation === "horizontal" ? 337 : 212.5;
-			let h_canvas = this.data.orientation === "horizontal" ? 212.5 : 337;
-
-			if (tool === "center_h") {
-				el.x =
-					(w_canvas -
-						(el.width || $(this.canvas.find(`[data-index="${index}"]`)).width())) /
-					2;
-			} else if (tool === "center_v") {
-				el.y =
-					(h_canvas -
-						(el.height || $(this.canvas.find(`[data-index="${index}"]`)).height())) /
-					2;
-			} else if (tool === "bring_front") {
-				this.data[this.current_side].splice(index, 1);
-				this.data[this.current_side].push(el);
-				this.save();
-				this.load_elements();
-				return; // Index changed
-			} else if (tool === "send_back") {
-				this.data[this.current_side].splice(index, 1);
-				this.data[this.current_side].unshift(el);
-				this.save();
-				this.load_elements();
-				return; // Index changed
-			}
-			this.load_elements();
-			this.canvas.find(`[data-index="${index}"]`).addClass("selected");
-			this.save();
-		});
-
-		this.properties.find(".remove-el").on("click", () => {
-			this.data[this.current_side].splice(index, 1);
-			this.show_properties(-1);
-			this.load_elements();
-			this.save();
-		});
-
-		// Shape Handler
-		this.properties.find(".shape-change").on("change", (e) => {
-			let shape = $(e.target).val();
-			el.shape = shape;
-			if (!el.style) el.style = {};
-
-			if (shape === "circle") {
-				el.style.borderRadius = "50%";
-				el.style.clipPath = "none";
-			} else if (shape === "triangle") {
-				el.style.borderRadius = "0";
-				el.style.clipPath = "polygon(50% 0%, 0% 100%, 100% 100%)";
-			} else {
-				el.style.borderRadius = "0";
-				el.style.clipPath = "none";
-			}
-			this.load_elements();
-			this.canvas.find(`[data-index="${index}"]`).addClass("selected");
-			this.save();
-		});
-
-		// Border Handler
-		this.properties.find(".border-change").on("change input", (e) => {
-			let key = $(e.target).data("key");
-			let val;
-			if ($(e.target).attr("type") === "checkbox") {
-				val = $(e.target).is(":checked");
-			} else {
-				val = $(e.target).val();
-			}
-
-			if (!el.border_settings)
-				el.border_settings = {
-					style: "none",
-					width: 1,
-					color: "#000000",
-					top: false,
-					bottom: false,
-					left: false,
-					right: false,
-				};
-			el.border_settings[key] = val;
-
-			if (!el.style) el.style = {};
-
-			// Helper to apply per-side props
-			const sides = ["top", "bottom", "left", "right"];
-			const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
-
-			sides.forEach((side) => {
-				if (el.border_settings[side] && el.border_settings.style !== "none") {
-					el.style[`border${cap(side)}Style`] = el.border_settings.style;
-					el.style[`border${cap(side)}Width`] = el.border_settings.width + "px";
-					el.style[`border${cap(side)}Color`] = el.border_settings.color;
-				} else {
-					el.style[`border${cap(side)}Style`] = "none";
-					el.style[`border${cap(side)}Width`] = "0px";
-				}
-			});
-
-			this.load_elements();
-			this.canvas.find(`[data-index="${index}"]`).addClass("selected");
-			this.save();
-		});
-	}
-
-	save() {
-		this.frm.set_value("canvas_data", JSON.stringify(this.data));
-	}
-}

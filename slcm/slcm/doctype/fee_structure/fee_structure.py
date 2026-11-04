@@ -32,7 +32,8 @@ class FeeStructure(Document):
 
     def validate_duplicate_active_fee_structure(self):
         """Block saving when another Active fee structure covers an overlapping date range
-        for the same programme / academic year / year no / applicable / round / gateway combination.
+        for the same programme / academic year / year no / category / applicable / round / gateway combination.
+        A blank category and "All" count as the same (general) category.
 
         Two date ranges [A, B] and [C, D] overlap when A <= D and C <= B.
         An open-ended range (no valid_until) is treated as extending to infinity.
@@ -54,8 +55,13 @@ class FeeStructure(Document):
         existing_list = frappe.get_all(
             "Fee Structure",
             filters=filters,
-            fields=["name", "valid_from", "valid_until"],
+            fields=["name", "valid_from", "valid_until", "student_category"],
         )
+        my_category = self.student_category if self.student_category not in ("", "All", None) else ""
+        existing_list = [
+            e for e in existing_list
+            if (e.student_category if e.student_category not in ("", "All", None) else "") == my_category
+        ]
 
         my_from  = _to_date(self.valid_from)
         my_until = _to_date(self.valid_until)  # None → open-ended
@@ -72,7 +78,7 @@ class FeeStructure(Document):
                 frappe.throw(_(
                     "Another active Fee Structure ({0}) with an overlapping validity date range "
                     "already exists for the same Programme, Academic Year, Year No, "
-                    "Applicable, and Payment Gateway. Please set non-overlapping Valid From / "
+                    "Student Category, Applicable, and Payment Gateway. Please set non-overlapping Valid From / "
                     "Valid Until dates, or deactivate {0} first."
                 ).format(existing.name))
 
@@ -136,6 +142,7 @@ class FeeStructure(Document):
                 or self.has_value_changed("valid_from")
                 or self.has_value_changed("valid_until")
                 or self.has_value_changed("total_amount_for_indian")
+                or self.has_value_changed("total_amount_for_foreign")
             ):
                 frappe.enqueue(
                     "slcm.slcm.doctype.student_master.student_master.sync_fee_structures_for_program",

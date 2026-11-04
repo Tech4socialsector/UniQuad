@@ -1,5 +1,5 @@
 // Copyright (c) 2026, Nishanth and contributors
-// RFID Card Management — NLSIU colours, British spelling
+// RFID Card Management — NLS theme (#920C24 + Merriweather), British spelling
 
 frappe.pages["rfid-mapping"].on_page_load = function (wrapper) {
 	frappe.ui.make_app_page({
@@ -7,6 +7,9 @@ frappe.pages["rfid-mapping"].on_page_load = function (wrapper) {
 		title: "RFID Card Management",
 		single_column: true,
 	});
+	if (!document.getElementById("er-theme-font")) {
+		$("head").append('<link id="er-theme-font" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Merriweather:opsz,wght@18..144,300..900&display=swap">');
+	}
 
 	wrapper._rfid = {
 		live_interval:      null,
@@ -778,7 +781,7 @@ function dl_file(content, name, mime) {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// HTML — NLSIU colours only (#2b2e4a navy, #8b1a1a maroon, #c9a84c gold)
+// HTML — NLS colours only (#920C24 scale), Merriweather
 // British spelling throughout
 // ─────────────────────────────────────────────────────────────────
 function build_html() {
@@ -786,24 +789,25 @@ function build_html() {
 <style>
 /* ── Colour tokens ── */
 :root {
-	--navy:   #2b2e4a;
-	--maroon: #8b1a1a;
-	--gold:   #c9a84c;
-	--navy-lt:#e8e9f0;
-	--navy-mid:#4a4e78;
-	--bg:     #f4f4f7;
+	--navy:   #920C24;
+	--maroon: #920C24;
+	--gold:   #C4566A;
+	--navy-lt:#FBEEF0;
+	--navy-mid:#6E091B;
+	--bg:     #f8fafc;
 	--white:  #ffffff;
-	--border: #d0d2e0;
+	--border: #E8B4BE;
 }
 
-.rfid-wrap { padding:20px 24px; background:var(--bg); min-height:100vh; font-family:inherit; }
+.rfid-wrap { padding:20px 24px; background:var(--bg); min-height:100vh; font-family:"Merriweather", Georgia, "Times New Roman", serif; }
+.rfid-wrap button, .rfid-wrap input, .rfid-wrap select { font-family:inherit; }
 
 /* ── Status bar ── */
 .rfid-status {
 	display:flex; align-items:center; gap:10px;
 	padding:10px 16px; background:var(--white);
 	border-left:4px solid var(--navy); border-radius:6px;
-	box-shadow:0 1px 3px rgba(43,46,74,.1);
+	box-shadow:0 1px 3px rgba(146,12,36,.1);
 	margin-bottom:20px; font-size:.84rem; color:var(--navy);
 }
 .sync-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
@@ -828,7 +832,7 @@ function build_html() {
 .stat-card {
 	background:var(--white); border-radius:8px; padding:16px 18px;
 	border-top:4px solid var(--border);
-	box-shadow:0 1px 4px rgba(43,46,74,.08);
+	box-shadow:0 1px 4px rgba(146,12,36,.08);
 }
 .sc-navy   { border-top-color:var(--navy);   }
 .sc-maroon { border-top-color:var(--maroon); }
@@ -865,7 +869,7 @@ function build_html() {
 .r-panel {
 	display:none; background:var(--white);
 	border-radius:0 8px 8px 8px;
-	box-shadow:0 2px 8px rgba(43,46,74,.08);
+	box-shadow:0 2px 8px rgba(146,12,36,.08);
 	padding:20px;
 }
 
@@ -952,7 +956,7 @@ function build_html() {
 	border:none; border-radius:6px; padding:5px 13px;
 	font-size:.8rem; font-weight:600; cursor:pointer; white-space:nowrap;
 }
-.btn-assign:hover { background:#6d1414; }
+.btn-assign:hover { background:#6E091B; }
 
 /* ── All-assigned message ── */
 .all-ok {
@@ -996,7 +1000,7 @@ function build_html() {
 	border:1.5px solid var(--border); border-radius:6px;
 	color:var(--navy); background:var(--white); outline:none;
 }
-.dt-search:focus { border-color:var(--navy); box-shadow:0 0 0 2px rgba(43,46,74,.12); }
+.dt-search:focus { border-color:var(--navy); box-shadow:0 0 0 2px rgba(146,12,36,.12); }
 .dt-search::placeholder { color:#bbb; }
 .dt-pagination { display:flex; align-items:center; gap:8px; flex-shrink:0; }
 .dt-page-info { font-size:.78rem; color:#888; white-space:nowrap; }

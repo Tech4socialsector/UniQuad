@@ -346,7 +346,7 @@ fixtures = [
     # --- Workspace home blocks ---
     {
         "doctype": "Custom HTML Block",
-        "filters": [["name", "in", ["Examination Home"]]]
+        "filters": [["name", "in", ["Examination Home", "Attendance Home", "Fees Home"]]]
     },
     # --- Workspace Sidebars ---
     {
@@ -682,7 +682,9 @@ scheduler_events = {
 			"slcm.admission.doctype.waitlist_rule.waitlist_promotion.run_scheduled_waitlist"
 		],
         "*/5 * * * *": [
-            "slcm.api.helpdesk_escalation.run_sla_escalation"
+            "slcm.api.helpdesk_escalation.run_sla_escalation",
+            # Time Table sessions whose end time has passed -> Completed
+            "slcm.slcm.doctype.time_table.time_table.mark_completed_sessions"
         ],
         "*/15 * * * *": [
             "slcm.admission.utils.scheduler.auto_manage_announcements",
