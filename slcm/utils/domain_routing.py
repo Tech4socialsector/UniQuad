@@ -153,6 +153,11 @@ def redirect_domain_home():
 	try:
 		if request.path not in ("", "/") or not config.get("enabled"):
 			return
+		# Only page visits. frappe.call() may POST RPC calls to "/" with a `cmd`
+		# form field (frappe.request.url = "/"); redirecting those turns every
+		# server call on the domain into the home page HTML.
+		if request.method not in ("GET", "HEAD") or frappe.form_dict.get("cmd"):
+			return
 		target = (config.get("redirects") or {}).get(host)
 		if not target or not target_page_ok(target):
 			return

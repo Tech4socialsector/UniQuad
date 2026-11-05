@@ -552,6 +552,13 @@ function _buildShell(ws, cfg, user, uinfo) {
 		'  color: #fff !important; box-shadow: none !important;',
 		'}',
 		'.form-in-grid .grid-form-heading .slcm-row-save:hover { opacity: 0.88; }',
+		// "Editing Row" panel: applicants only need Save / Delete — hide row-reordering/copy actions
+		'.form-in-grid .grid-form-heading .grid-insert-row-below,',
+		'.form-in-grid .grid-form-heading .grid-insert-row,',
+		'.form-in-grid .grid-form-heading .grid-duplicate-row,',
+		'.form-in-grid .grid-form-heading .grid-move-row { display: none !important; }',
+		// Footer "Discard" button: not offered to applicants (kept in DOM — Save Draft is positioned before it)
+		'.web-form-footer .discard-btn { display: none !important; }',
 		// Table row with missing mandatory values (set by _slcmValidateChildRowsOnPage on Next)
 		'.grid-row.slcm-row-error > .data-row { box-shadow: inset 0 0 0 2px #dc2626; border-radius: 4px; }',
 		''
@@ -814,6 +821,8 @@ function _buildShell(ws, cfg, user, uinfo) {
 						'</div>' +
 						'<a href="/nlsat/my-profile" style="display:flex;align-items:center;gap:10px;padding:12px 16px;text-decoration:none;color:#334155;font-size:14px;font-weight:300;">' +
 							'<span style="font-family:\'Material Symbols Outlined\' !important;font-size:18px;color:' + primary + '">account_circle</span>Profile</a>' +
+						'<a href="/nlsat/dashboard?panel=applications" style="display:flex;align-items:center;gap:10px;padding:12px 16px;text-decoration:none;color:#334155;font-size:14px;font-weight:300;">' +
+							'<span style="font-family:\'Material Symbols Outlined\' !important;font-size:18px;color:' + primary + '">description</span>My Applications</a>' +
 						'<div style="height:1px;background:#f1f5f9;margin:4px 0;"></div>' +
 						'<a href="javascript:void(0)" id="slcm-nav-logout" style="display:flex;align-items:center;gap:10px;padding:12px 16px;text-decoration:none;color:#ef4444;font-size:14px;font-weight:300;">' +
 							'<span style="font-family:\'Material Symbols Outlined\' !important;font-size:18px;color:#ef4444">logout</span>Logout</a>' +
