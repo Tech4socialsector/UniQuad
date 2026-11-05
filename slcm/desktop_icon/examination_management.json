@@ -11,7 +11,7 @@
  "link": "",
  "link_type": "External",
  "logo_url": "",
- "modified": "2026-05-22 13:04:12.339602",
+ "modified": "2026-11-05 12:00:00.000000",
  "modified_by": "Administrator",
  "name": "Examination Management",
  "owner": "Administrator",
@@ -37,6 +37,9 @@
   },
   {
    "role": "System Manager"
+  },
+  {
+   "role": "AAD"
   }
  ],
  "standard": 1

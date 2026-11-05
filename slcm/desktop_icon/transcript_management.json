@@ -5,11 +5,13 @@
  "docstatus": 0,
  "doctype": "Desktop Icon",
  "hidden": 0,
+ "icon": "file-text",
  "icon_type": "Link",
  "idx": 0,
  "label": "Transcript Management",
+ "link_to": "Transcript Management",
  "link_type": "Workspace Sidebar",
- "modified": "2026-10-30 00:00:00.000000",
+ "modified": "2026-11-05 12:00:00.000000",
  "modified_by": "Administrator",
  "name": "Transcript Management",
  "owner": "Administrator",
@@ -36,10 +38,11 @@
   },
   {
    "role": "System Manager"
+  },
+  {
+   "role": "AAD"
   }
  ],
  "sidebar": "Transcript Management",
- "standard": 1,
- "link_to": "Transcript Management",
- "icon": "file-text"
+ "standard": 1
 }

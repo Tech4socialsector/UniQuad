@@ -4,7 +4,7 @@
 import frappe
 from frappe import _
 
-EXAM_BARCODE_SHEET_ROLES = {"System Manager", "Academics User"}
+EXAM_BARCODE_SHEET_ROLES = {"System Manager", "Academics User", "AAD"}
 
 
 def _check_access():

@@ -19,7 +19,7 @@ from slcm.slcm.utils.result_access import (
 	validate_grade,
 )
 
-EXAMINATION_RESULT_ROLES = {"System Manager", "Academics User"}
+EXAMINATION_RESULT_ROLES = {"System Manager", "Academics User", "AAD"}
 
 
 def _check_access():
