@@ -190,7 +190,7 @@ class AttendanceDashboard {
 	drill(card) {
 		frappe.xcall(AD_API + 'get_drilldown', { doctype: card.doctype, filters: card.filters || {} }).then((r) => {
 			const d = new frappe.ui.Dialog({
-				title: `${card.label} · ${ad_num(r.total)}`,
+				title: ad_esc(`${card.label} · ${ad_num(r.total)}`),
 				size: 'extra-large',
 				fields: [{ fieldtype: 'HTML', fieldname: 'body' }],
 				primary_action_label: __('Open full list'),

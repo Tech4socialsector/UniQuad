@@ -3,11 +3,38 @@
 # Dashboard and shares its helpers, so every count is permission-checked and a
 # doctype the user can't read is left out.
 
+import csv
+import io
+
 import frappe
 from frappe import _
-from frappe.utils import add_days, today
+from frappe.utils import add_days, cint, today
 
-from slcm.slcm.page.attendance_dashboard.attendance_dashboard import _card, _group, current_term, drilldown
+from slcm.slcm.page.attendance_dashboard.attendance_dashboard import (
+	_card,
+	_count,
+	_group,
+	clean_filters,
+	current_term,
+	drilldown,
+)
+
+EXPORT_LIMIT = 20000
+
+# Records view inside the drill-down: the columns shown (after ID) for each doctype
+RECORD_FIELDS = {
+	"Academic Year": ["academic_year_name", "year_start_date", "year_end_date", "status", "is_current_year"],
+	"Academic Term": ["academic_year", "term_start_date", "term_end_date", "status"],
+	"Programme": ["program_name", "level_of_study", "program_duration", "program_status"],
+	"SLCM Batch": ["batch_name", "batch_code", "academic_year", "status", "total_enrolled_count"],
+	"Section": ["section_name"],
+	"Course": ["course_name", "course_code", "course_type", "credit_value", "status"],
+	"Student Master": ["first_name", "registration_id", "programme_of_study", "section", "batch", "student_status"],
+	"Student Enrollment": ["student", "student_name", "program", "section", "batch", "status", "enrollment_date"],
+	"Classes": ["course_name", "programme", "academic_term", "section", "class_type", "faculty_name", "total_students"],
+	"Time Table": ["schedule_date", "from_time", "to_time", "course", "section", "programme", "instructor_name", "venue", "session_status"],
+	"Promotion Run": ["program", "source_term", "target_term", "status", "total_students", "promoted_count", "skipped_count", "run_on"],
+}
 
 # Drill-down: how a card's records split up. doctype -> (group by, split columns by, group label)
 DRILL = {
@@ -30,6 +57,85 @@ def get_drilldown(doctype, filters=None):
 	return drilldown(DRILL, doctype, filters)
 
 
+def _check(doctype):
+	if doctype not in DRILL or not frappe.has_permission(doctype, "read"):
+		frappe.throw(_("Not permitted"), frappe.PermissionError)
+
+
+def _columns(doctype):
+	"""ID plus the RECORD_FIELDS the user may read (field-level permissions applied)."""
+	meta = frappe.get_meta(doctype)
+	permitted = set(meta.get_permitted_fieldnames())
+	cols = [{"fieldname": "name", "label": _("ID"), "fieldtype": "Data"}]
+	for f in RECORD_FIELDS.get(doctype, []):
+		df = meta.get_field(f)
+		if df and f in permitted:
+			cols.append({"fieldname": f, "label": _(df.label), "fieldtype": df.fieldtype})
+	return cols
+
+
+def _records(doctype, filters, sort_by, sort_order, start, page_length):
+	cols = _columns(doctype)
+	if sort_by not in {c["fieldname"] for c in cols} | {"modified"}:
+		sort_by = "modified"
+	sort_order = "asc" if str(sort_order).lower() == "asc" else "desc"
+	t = f"`tab{doctype}`"
+	rows = frappe.get_list(doctype, filters=filters, fields=[c["fieldname"] for c in cols],
+		order_by=f"{t}.`{sort_by}` {sort_order}, {t}.`name` {sort_order}", start=start, page_length=page_length)
+	return cols, rows, sort_by, sort_order
+
+
+@frappe.whitelist()
+def get_records(doctype, filters=None, sort_by=None, sort_order="desc", start=0, page_length=50):
+	"""One page of the records behind a drill-down number, with the user's permissions applied."""
+	_check(doctype)
+	filters = clean_filters(doctype, filters)
+	start = max(cint(start), 0)
+	page_length = min(max(cint(page_length), 1), 500)
+	cols, rows, sort_by, sort_order = _records(doctype, filters, sort_by, sort_order, start, page_length)
+	return {"columns": cols, "rows": rows, "total": _count(doctype, filters), "start": start,
+		"page_length": page_length, "sort_by": sort_by, "sort_order": sort_order}
+
+
+def _cell(v):
+	"""CSV value; text that a spreadsheet would run as a formula is prefixed with a quote."""
+	if v is None:
+		return ""
+	if isinstance(v, (int, float)):
+		return v
+	v = str(v)
+	return "'" + v if v[:1] in ("=", "+", "-", "@", "\t", "\r") else v
+
+
+@frappe.whitelist(methods=["POST"])
+def export_drilldown(doctype, filters=None, view="records", sort_by=None, sort_order="desc"):
+	"""CSV of the drill-down: its records, or its breakdown table. Same permissions as on screen."""
+	_check(doctype)
+	filters = clean_filters(doctype, filters)
+	if view == "breakdown":
+		r = drilldown(DRILL, doctype, filters)
+		by_class = r["group"] == "class_name"
+		header = [r["group_label"]] + ([_("Course"), _("Section"), _("Programme"), _("Trimester")] if by_class else [])
+		header += r["splits"] + [_("Total")]
+		rows = [[x["value"] or _("Not set")]
+			+ ([x.get("course_name"), x.get("section"), x.get("programme"), x.get("academic_term")] if by_class else [])
+			+ [x["split"].get(sp, 0) for sp in r["splits"]] + [x["total"]] for x in r["rows"]]
+	else:
+		if _count(doctype, filters) > EXPORT_LIMIT:
+			frappe.throw(_("More than {0} records. Narrow the filters first.").format(EXPORT_LIMIT))
+		cols, data, _sort, _order = _records(doctype, filters, sort_by, sort_order, 0, EXPORT_LIMIT)
+		header = [c["label"] for c in cols]
+		rows = [[d.get(c["fieldname"]) for c in cols] for d in data]
+
+	out = io.StringIO()
+	writer = csv.writer(out)
+	writer.writerow([_cell(h) for h in header])
+	writer.writerows([[_cell(v) for v in row] for row in rows])
+	frappe.response["filename"] = f"{doctype} {today()}.csv"
+	frappe.response["filecontent"] = "﻿" + out.getvalue()
+	frappe.response["type"] = "download"
+
+
 @frappe.whitelist()
 def get_filter_options():
 	return {
@@ -41,19 +147,53 @@ def get_filter_options():
 
 
 def _f(**pairs):
-	"""Filters from field=value pairs, skipping the empty ones."""
-	return {k: v for k, v in pairs.items() if v}
+	"""Filters from field=values pairs: one value matches it, several match any of them; empty ones are skipped."""
+	return {k: (v[0] if len(v) == 1 else ["in", v]) if isinstance(v, list) else v for k, v in pairs.items() if v}
+
+
+def _values(doctype, value):
+	"""A filter sent by the page: a JSON list (or one name) of existing `doctype` records."""
+	if not value:
+		return []
+	if isinstance(value, str):
+		try:
+			value = frappe.parse_json(value) if value.lstrip().startswith("[") else [value]
+		except ValueError:
+			value = None
+	if not isinstance(value, list) or len(value) > 500 or not all(isinstance(v, str) and v for v in value):
+		frappe.throw(_("Invalid filters"), frappe.ValidationError)
+	value = list(dict.fromkeys(value))
+	if len(frappe.get_all(doctype, filters={"name": ["in", value]}, pluck="name")) != len(value):
+		frappe.throw(_("A filter no longer exists: {0}. Reset the filters and try again.").format(_(doctype)))
+	return value
 
 
 @frappe.whitelist()
 def get_dashboard(programme=None, academic_year=None, academic_term=None):
+	"""Each filter is a JSON list of names (or one name); empty means all."""
 	d = today()
-	if academic_term and not academic_year:
-		academic_year = frappe.db.get_value("Academic Term", academic_term, "academic_year")
+	programme = _values("Programme", programme)
+	academic_year = _values("Academic Year", academic_year)
+	academic_term = _values("Academic Term", academic_term)
+	# trimesters must belong to the chosen years; with no year chosen, the trimesters' own years apply
+	if academic_term:
+		term_years = dict(frappe.get_all("Academic Term", filters={"name": ["in", academic_term]}, fields=["name", "academic_year"], as_list=True))
+		if academic_year:
+			academic_term = [t for t in academic_term if term_years.get(t) in academic_year]
+			if not academic_term:
+				frappe.throw(_("The selected trimesters are not in the selected academic years."))
+		else:
+			academic_year = sorted({y for y in term_years.values() if y})
 	term_now = (current_term() or {}).get("name")
-	# the "This term" card only makes sense when the current term is in the chosen year
-	if term_now and academic_year and frappe.db.get_value("Academic Term", term_now, "academic_year") != academic_year:
+	# the "This term" card only makes sense when the current term is in a chosen year
+	if term_now and academic_year and frappe.db.get_value("Academic Term", term_now, "academic_year") not in academic_year:
 		term_now = None
+
+	# name the running term only when it is among the terms counted
+	if term_now and (not academic_term or term_now in academic_term):
+		running_hint = term_now
+	else:
+		running_hint = _("current term is not in the filters") if (academic_term or academic_year) else _("no term covers today")
 
 	year = _f(name=academic_year)
 	term = _f(academic_year=academic_year, name=academic_term)
@@ -73,7 +213,7 @@ def get_dashboard(programme=None, academic_year=None, academic_term=None):
 			_card(_("Current year"), "Academic Year", dict(year, is_current_year=1), _("marked as current")),
 			_card(_("Academic terms"), "Academic Term", term),
 			_card(_("Running now"), "Academic Term", dict(term, term_start_date=["<=", d], term_end_date=[">=", d]),
-				term_now or _("no term covers today")),
+				running_hint),
 			_card(_("Upcoming terms"), "Academic Term", dict(term, term_start_date=[">", d]), _("not started yet")),
 		], _("follows the academic year and trimester")),
 		_group(_("Programme structure"), [
