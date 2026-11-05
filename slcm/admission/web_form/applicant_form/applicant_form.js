@@ -557,6 +557,8 @@ function _buildShell(ws, cfg, user, uinfo) {
 		'.form-in-grid .grid-form-heading .grid-insert-row,',
 		'.form-in-grid .grid-form-heading .grid-duplicate-row,',
 		'.form-in-grid .grid-form-heading .grid-move-row { display: none !important; }',
+		// Footer "Discard" button: not offered to applicants (kept in DOM — Save Draft is positioned before it)
+		'.web-form-footer .discard-btn { display: none !important; }',
 		// Table row with missing mandatory values (set by _slcmValidateChildRowsOnPage on Next)
 		'.grid-row.slcm-row-error > .data-row { box-shadow: inset 0 0 0 2px #dc2626; border-radius: 4px; }',
 		''
