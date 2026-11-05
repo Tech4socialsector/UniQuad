@@ -629,9 +629,9 @@
   {
    "fieldname": "current_year",
    "fieldtype": "Data",
+   "hidden": 1,
    "label": "Current Year No",
-   "length": 10,
-   "hidden": 1
+   "length": 10
   },
   {
    "fieldname": "current_cgpa",
@@ -653,13 +653,13 @@
   },
   {
    "bold": 1,
+   "description": "Year of study, e.g. 1st Year. Follows the student's enrollment.",
    "fieldname": "year_of_study",
    "fieldtype": "Data",
+   "in_standard_filter": 1,
    "label": "Current Year",
    "length": 10,
-   "read_only": 1,
-   "in_standard_filter": 1,
-   "description": "Year of study, e.g. 1st Year. Follows the student's enrollment."
+   "read_only": 1
   },
   {
    "fieldname": "academic_progress_html",
@@ -931,34 +931,29 @@
    "fieldname": "class_x_completion_year",
    "fieldtype": "Data",
    "label": "Year of Completion (Class X)",
-   "length": 10,
-   "mandatory_depends_on": "eval:doc.admission_type != \"PACE\""
+   "length": 10
   },
   {
    "fieldname": "class_x_percentage",
    "fieldtype": "Float",
-   "label": "Percentage/CGPA obtained (Class X)",
-   "mandatory_depends_on": "eval:doc.admission_type != \"PACE\""
+   "label": "Percentage/CGPA obtained (Class X)"
   },
   {
    "fieldname": "class_x_school",
    "fieldtype": "Data",
    "label": "School/College/University (Class X)",
-   "length": 140,
-   "mandatory_depends_on": "eval:doc.admission_type != \"PACE\""
+   "length": 140
   },
   {
    "fieldname": "class_x_board",
    "fieldtype": "Data",
    "label": "Board (Class X)",
-   "length": 100,
-   "mandatory_depends_on": "eval:doc.admission_type != \"PACE\""
+   "length": 100
   },
   {
    "fieldname": "class_x_max_cgpa",
    "fieldtype": "Float",
-   "label": "If CGPA, maximum CGPA (Class X)",
-   "mandatory_depends_on": "eval:doc.admission_type != \"PACE\""
+   "label": "If CGPA, maximum CGPA (Class X)"
   },
   {
    "fieldname": "column_break_academics_1",
@@ -973,41 +968,35 @@
    "fieldname": "class_xii_exam_name",
    "fieldtype": "Data",
    "label": "Name of Examination (Class XII/Equivalent - as per marksheet)",
-   "length": 140,
-   "mandatory_depends_on": "eval:doc.admission_type != \"PACE\""
+   "length": 140
   },
   {
    "fieldname": "class_xii_completion_year",
    "fieldtype": "Data",
    "label": "Year of Completion (Class XII/Equivalent)",
-   "length": 10,
-   "mandatory_depends_on": "eval:doc.admission_type != \"PACE\""
+   "length": 10
   },
   {
    "fieldname": "class_xii_school",
    "fieldtype": "Data",
    "label": "School/College/University (Class XII/Equivalent)",
-   "length": 140,
-   "mandatory_depends_on": "eval:doc.admission_type != \"PACE\""
+   "length": 140
   },
   {
    "fieldname": "class_xii_board",
    "fieldtype": "Data",
    "label": "Board (Class XII/Equivalent)",
-   "length": 100,
-   "mandatory_depends_on": "eval:doc.admission_type != \"PACE\""
+   "length": 100
   },
   {
    "fieldname": "class_xii_percentage",
    "fieldtype": "Float",
-   "label": "Percentage/CGPA obtained (Class XII/Equivalent)",
-   "mandatory_depends_on": "eval:doc.admission_type != \"PACE\""
+   "label": "Percentage/CGPA obtained (Class XII/Equivalent)"
   },
   {
    "fieldname": "class_xii_max_cgpa",
    "fieldtype": "Float",
-   "label": "If CGPA, maximum CGPA (Class XII/Equivalent)",
-   "mandatory_depends_on": "eval:doc.admission_type != \"PACE\""
+   "label": "If CGPA, maximum CGPA (Class XII/Equivalent)"
   },
   {
    "fieldname": "tab_account",
@@ -1196,14 +1185,12 @@
   {
    "fieldname": "std_x_marksheet",
    "fieldtype": "Attach",
-   "label": "STD X Marksheet",
-   "mandatory_depends_on": "eval:doc.admission_type != \"PACE\""
+   "label": "STD X Marksheet"
   },
   {
    "fieldname": "class_xii_marksheet",
    "fieldtype": "Attach",
-   "label": "Class XII Marksheet/Equivalent (Max 5MB - png, jpeg, jpg, pdf)",
-   "mandatory_depends_on": "eval:doc.admission_type != \"PACE\""
+   "label": "Class XII Marksheet/Equivalent (Max 5MB - png, jpeg, jpg, pdf)"
   },
   {
    "fieldname": "transfer_certificate",
@@ -1751,18 +1738,18 @@
    "options": "\nOn Campus\nOff Campus"
   },
   {
+   "description": "Set from the Ongoing term of the student's enrollment (Academic Term \u2192 Term Mapping).",
    "fieldname": "current_term",
    "fieldtype": "Link",
+   "in_standard_filter": 1,
    "label": "Current Term",
    "options": "Term Master",
-   "read_only": 1,
-   "in_standard_filter": 1,
-   "description": "Set from the Ongoing term of the student's enrollment (Academic Term \u2192 Term Mapping)."
+   "read_only": 1
   }
  ],
  "image_field": "passport_size_photo",
  "links": [],
- "modified": "2026-11-02 14:26:53.094048",
+ "modified": "2026-11-04 17:30:01.470612",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Student Master",

@@ -3,13 +3,14 @@ import re
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import escape_html, getdate
+from frappe.utils import cint, escape_html, getdate
 from frappe.utils.data import format_date, get_link_to_form
 from slcm.admission.utils.institution import is_multi_campus_enabled
 from slcm.security.access import require_desk_user
 
 
 APPLICATION_ID_SERIES_PATTERN = re.compile(r"\{(#+)\}")
+RESEARCH_COURSE = "Research Course"
 
 
 def _is_valid_application_id_format(application_id_format):
@@ -85,7 +86,15 @@ class AdmissionCycle(Document):
         self._validate_cycle_dates_no_overlap()
         self._validate_single_active_cycle()
         self._validate_programs()
+        self._validate_program_application_fees()
+        self._apply_program_seat_rules()
         self._validate_application_id_configurations()
+
+    def before_update_after_submit(self):
+        # validate() does not run when a submitted cycle is edited, but the programme rows
+        # (Application Fee, Reservation Policy, seats) can still change, so re-check them here.
+        self._validate_program_application_fees()
+        self._apply_program_seat_rules()
 
     def on_submit(self):
         """Automatically set status to Active on submission."""
@@ -212,6 +221,111 @@ class AdmissionCycle(Document):
                 )
             seen.add(key)
 
+    def _validate_program_application_fees(self):
+        """Every programme row needs an Application Fee that exists and belongs to the cycle's Academic Year."""
+        fee_years = {}
+        for row in (self.programs or []):
+            label = row.program_name or row.program or _("Row {0}").format(row.idx)
+            if not row.application_fee:
+                if self.flags.ignore_mandatory:
+                    continue
+                frappe.throw(
+                    _("Row {0}: Application Fee is mandatory for Programme <b>{1}</b>.").format(row.idx, label),
+                    title=_("Application Fee Missing"),
+                )
+
+            if row.application_fee not in fee_years:
+                fee_years[row.application_fee] = frappe.db.get_value(
+                    "Application Fee", row.application_fee, "academic_year"
+                )
+            fee_year = fee_years[row.application_fee]
+            if fee_year is None and not frappe.db.exists("Application Fee", row.application_fee):
+                frappe.throw(
+                    _("Row {0}: Application Fee <b>{1}</b> for Programme <b>{2}</b> does not exist.").format(
+                        row.idx, row.application_fee, label
+                    ),
+                    title=_("Invalid Application Fee"),
+                )
+            if self.academic_year and fee_year and fee_year != self.academic_year:
+                frappe.throw(
+                    _(
+                        "Row {0}: Application Fee <b>{1}</b> for Programme <b>{2}</b> belongs to Academic Year "
+                        "<b>{3}</b>, but this cycle is for <b>{4}</b>."
+                    ).format(row.idx, row.application_fee, label, fee_year, self.academic_year),
+                    title=_("Invalid Application Fee"),
+                )
+
+    def _apply_program_seat_rules(self):
+        """
+        Research Course rows: Total Seats entered on the row (required); Reservation Policy optional.
+        Other rows: Reservation Policy required and must be for this cycle + programme;
+        Total Seats are copied from the policy (the field is hidden on the row).
+        """
+        level_cache = {}
+        for row in (self.programs or []):
+            if not row.program:
+                continue
+            label = row.program_name or row.program
+
+            level = (row.program_level or "").strip()
+            if not level or level == "false":
+                # Repair rows whose fetched level was lost (e.g. the old "=!" form expression).
+                if row.program not in level_cache:
+                    level_cache[row.program] = frappe.db.get_value("Programme", row.program, "level_of_study") or ""
+                level = level_cache[row.program]
+                row.program_level = level
+
+            if level == RESEARCH_COURSE:
+                if row.seats in (None, "") and not self.flags.ignore_mandatory:
+                    frappe.throw(
+                        _("Row {0}: Total Seats is mandatory for Research Course <b>{1}</b>.").format(row.idx, label),
+                        title=_("Total Seats Missing"),
+                    )
+                if cint(row.seats) < 0:
+                    frappe.throw(
+                        _("Row {0}: Total Seats for <b>{1}</b> cannot be negative.").format(row.idx, label),
+                        title=_("Invalid Total Seats"),
+                    )
+                continue
+
+            if not row.reservation_policy:
+                if self.flags.ignore_mandatory:
+                    continue
+                frappe.throw(
+                    _("Row {0}: Reservation Policy is mandatory for <b>{1}</b> ({2}).").format(
+                        row.idx, label, level or _("no programme level")
+                    ),
+                    title=_("Reservation Policy Missing"),
+                )
+
+            policy = frappe.db.get_value(
+                "Programme Reservation Policy",
+                row.reservation_policy,
+                ["program", "admission_cycle", "total_seats"],
+                as_dict=True,
+            )
+            if not policy:
+                frappe.throw(
+                    _("Row {0}: Reservation Policy <b>{1}</b> does not exist.").format(row.idx, row.reservation_policy),
+                    title=_("Invalid Reservation Policy"),
+                )
+            if policy.program and policy.program != row.program:
+                frappe.throw(
+                    _("Row {0}: Reservation Policy <b>{1}</b> is for Programme <b>{2}</b>, not <b>{3}</b>.").format(
+                        row.idx, row.reservation_policy, policy.program, row.program
+                    ),
+                    title=_("Invalid Reservation Policy"),
+                )
+            if policy.admission_cycle and not self.is_new() and policy.admission_cycle != self.name:
+                frappe.throw(
+                    _("Row {0}: Reservation Policy <b>{1}</b> belongs to Admission Cycle <b>{2}</b>.").format(
+                        row.idx, row.reservation_policy, policy.admission_cycle
+                    ),
+                    title=_("Invalid Reservation Policy"),
+                )
+
+            row.seats = cint(policy.total_seats)
+
     def _validate_application_id_configurations(self):
         configured_programmes = set()
         for row in self.application_id_configuration or []:
@@ -272,9 +386,11 @@ class AdmissionCycle(Document):
         """
         Sync total_seats from cycle programs to linked Reservation Policies.
         Recalculates category seats based on percentage if seats changed.
+        Only Research Course rows own their seats; for other levels the policy is the
+        source of truth (row.seats is copied from it), so nothing is pushed back.
         """
         for row in (self.programs or []):
-            if row.reservation_policy:
+            if row.reservation_policy and (row.program_level or "").strip() == RESEARCH_COURSE:
                 try:
                     policy = frappe.get_doc("Programme Reservation Policy", row.reservation_policy)
                     if int(policy.total_seats or 0) != int(row.seats or 0):

@@ -6,6 +6,8 @@ from frappe.utils import cint, flt, strip_html
 
 from slcm.admission.doctype.applicant.applicant import (
     APPLICATION_SUBMITTED_STATUSES,
+    format_missing_mandatory_message,
+    get_missing_mandatory_fields,
     state_belongs_to_country as _state_belongs_to_country,
     state_country_names,
 )
@@ -394,10 +396,12 @@ def get_application_fee_amount(
     gender=None,
     pwd=None,
     foriegn_national=None,
+    campus=None,
 ):
     """
     Return the application fee for the given program, admission cycle, and
-    applicant demographic criteria based on Application Fee doctype.
+    applicant demographic criteria, using the Application Fee mapped to the
+    programme (and campus) in Admission Cycle > Programmes.
     """
     try:
         cycle = (admission_cycle or "").strip()
@@ -422,6 +426,7 @@ def get_application_fee_amount(
             is_foreign=is_foreign,
             gender=gender,
             pwd=pwd,
+            campus=(campus or "").strip() or None,
         )
         return flt(fee, 2)
     except Exception:
@@ -615,6 +620,18 @@ def save_applicant_draft(data, ignore_mandatory=True):
         except Exception:
             frappe.log_error(frappe.get_traceback(), "save_applicant_draft — fee recalc")
 
+    # Final submit (ignore_mandatory=False): the doc is still "Draft" here and Applicant.before_validate
+    # skips Frappe's mandatory check for Drafts, so check explicitly — including child-table rows —
+    # and stop before eligibility / payment instead of failing after the applicant has paid.
+    if not ignore_mandatory:
+        missing = get_missing_mandatory_fields(doc)
+        if missing:
+            return {
+                "status": "error",
+                "message": format_missing_mandatory_message(missing),
+                "missing_fields": missing,
+            }
+
     doc.flags.ignore_mandatory  = ignore_mandatory
     doc.flags.ignore_permissions = True
     doc.flags.ignore_validate   = ignore_mandatory   # run validators when enforcing mandatory
@@ -722,6 +739,14 @@ def submit_applicant(applicant_name, target_status=None):
 
     if current_status and current_status not in ("Draft", "Submitted"):
         return {"status": "error", "message": _("Only Draft or Submitted applications can be updated here.")}
+
+    missing = get_missing_mandatory_fields(doc)
+    if missing:
+        return {
+            "status": "error",
+            "message": format_missing_mandatory_message(missing),
+            "missing_fields": missing,
+        }
 
     # Guard: fee must be paid / waived (or zero)
     fee_amount = flt(doc.application_fee_amount or 0)

@@ -41,6 +41,7 @@
   "admission_tab",
   "section_break_branding",
   "hero_image",
+  "know_more_url",
   "col_break_1",
   "admission_website_url",
   "button_border_radius",
@@ -743,12 +744,19 @@
    "fieldname": "show_admission_page",
    "fieldtype": "Check",
    "label": "Show Admission Page"
+  },
+  {
+   "description": "Shown as a \"Know More\" button on the admissions announcement banner (opens in a new tab). Leave empty to hide the button.",
+   "fieldname": "know_more_url",
+   "fieldtype": "Data",
+   "label": "Know More URL",
+   "options": "URL"
   }
  ],
  "issingle": 1,
  "links": [],
  "make_attachments_public": 1,
- "modified": "2026-10-30 17:32:19.000517",
+ "modified": "2026-11-04 16:00:00.000000",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Applicant Portal Config",

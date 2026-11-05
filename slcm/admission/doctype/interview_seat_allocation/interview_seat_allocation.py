@@ -12,6 +12,61 @@ from slcm.security.access import require_desk_user
 from slcm.admission.utils.nlsat_portal import get_applicant_portal_url
 
 
+@frappe.whitelist()
+def get_unpublished_seat_allocations(interview_list=None):
+    require_desk_user()
+    filters = {"interview_status": "Scheduled", "seat_allocation_published": 0}
+    if interview_list:
+        filters["interview_list"] = interview_list
+    return frappe.get_all(
+        "Interview Seat Allocation", filters,
+        ["name", "applicant", "candidate_name", "email", "program", "interview_date", "interview_time"],
+        order_by="candidate_name asc",
+    )
+
+
+@frappe.whitelist()
+def publish_seat_allocations(records, send_email=1, email_format="Default", custom_email_content=""):
+    require_desk_user()
+    if isinstance(records, str):
+        records = json.loads(records)
+    if not records:
+        frappe.throw(_("Select at least one interview seat allocation."))
+
+    from slcm.admission.doctype.interview_list.interview_list import _send_interview_slot_email, _send_interview_slot_notification
+
+    published = 0
+    interview_lists = set()
+    for name in records:
+        allocation = frappe.get_doc("Interview Seat Allocation", name)
+        if allocation.seat_allocation_published or allocation.interview_status != "Scheduled":
+            continue
+        allocation.db_set("seat_allocation_published", 1, update_modified=False)
+        allocation.db_set("seat_allocation_published_on", now_datetime(), update_modified=False)
+        frappe.db.set_value("Applicant", allocation.applicant, "status", "Interview Scheduled")
+        if int(send_email):
+            email = allocation.email or frappe.db.get_value("Applicant", allocation.applicant, "email")
+            if email:
+                if email_format == "Custom" and custom_email_content:
+                    frappe.sendmail(recipients=[email], subject=_("Interview Schedule Published"), message=custom_email_content)
+                else:
+                    _send_interview_slot_email(allocation, email)
+                _send_interview_slot_notification(allocation, email)
+        published += 1
+        interview_lists.add(allocation.interview_list)
+
+    for interview_list in interview_lists:
+        total = frappe.db.count("Interview Seat Allocation", {"interview_list": interview_list, "interview_status": "Scheduled"})
+        released = frappe.db.count("Interview Seat Allocation", {"interview_list": interview_list, "seat_allocation_published": 1})
+        if total and total == released:
+            frappe.db.set_value(
+                "Interview List",
+                interview_list,
+                {"status": "Published", "published_on": now_datetime(), "published_by": frappe.session.user},
+            )
+    return {"published": published}
+
+
 class InterviewSeatAllocation(Document):
     def validate(self):
         if self.interview_score and self.interview_score > 30:
