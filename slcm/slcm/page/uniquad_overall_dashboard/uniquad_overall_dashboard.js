@@ -174,6 +174,8 @@ class UniquadOverallDashboard {
 
 				<div class="uod-pane" data-pane="dash">
 					<div class="uod-jump" id="uod-jump"></div>
+					<div id="uod-overview"></div>
+					<div class="uod-section-title uod-headline-title"><span>${__('Regular admission funnel')}</span></div>
 					<div class="uod-cards" id="uod-cards"></div>
 					<div class="uod-board" id="uod-board"></div>
 				</div>
@@ -361,8 +363,10 @@ class UniquadOverallDashboard {
 		return t === undefined ? null : t;
 	}
 	money(v) { return format_currency(v || 0, frappe.boot.sysdefaults.currency || 'INR', 0); }
+	unused(c) { const d = this.card_data(c.key); return !!(d && d.unused); }
 	sub_of(c) {
 		const d = this.card_data(c.key);
+		if (d && d.unused) return __('not recorded in Uniquad yet');
 		if (c.sum && d && d.amount !== null && d.amount !== undefined) return this.money(d.amount);
 		if (c.sub) return c.sub;
 		if (!c.pct) return '';
@@ -395,7 +399,7 @@ class UniquadOverallDashboard {
 
 	render_board() {
 		const seen = new Set();
-		const html = this.meta.board.map(sec => {
+		const section_html = (sec) => {
 			// A section whose every card the user cannot read is left out.
 			const tiles = sec.tiles.filter(t => t.cards.some(c => this.allowed(c.key)));
 			if (!tiles.length) return '';
@@ -405,7 +409,12 @@ class UniquadOverallDashboard {
 			const note = is_stu ? `<span class="uod-section-note">${this.n(this.data.stu_total)} ${__('student records in scope')}</span>` : '';
 			return `<div class="uod-section" ${anchor}><div class="uod-section-title"><span>${this.esc(sec.title)}</span>${note}</div>
 				<div class="uod-tiles">${tiles.map(t => this.tile_html(t)).join('')}</div></div>`;
-		}).join('');
+		};
+		// "At a glance" sits above the admission funnel; every other section below it.
+		const $o = this.$root.find('#uod-overview').html(this.meta.board.filter(sec => sec.key === 'overview').map(section_html).join(''));
+		$o.find('.uod-section').first().css('margin-top', 0);
+		this.bind_click($o.find('[data-card]'), (el) => this.drill_card($(el).data('card')));
+		const html = this.meta.board.filter(sec => sec.key !== 'overview').map(section_html).join('');
 		const $b = this.$root.find('#uod-board').html(html);
 		this.bind_click($b.find('[data-card]'), (el) => this.drill_card($(el).data('card')));
 		const chips = this.meta.modules.filter(m => seen.has(m.key))
@@ -420,25 +429,27 @@ class UniquadOverallDashboard {
 	tile_html(t) {
 		const guide = t.cards.map(c => `${c.label}: ${c.guide || ''}`).join('\n');
 		const click = (c) => this.allowed(c.key) ? `is-click" data-card="${c.key}" tabindex="0" role="button` : 'is-denied" title="' + __('You do not have access to these records');
-		const share = (c, v) => v === null ? '' : this.share_html(v, this.base_of(c));
+		const share = (c, v) => v === null || this.unused(c) ? '' : this.share_html(v, this.base_of(c));
+		const value = (c, v) => this.unused(c) ? '—' : this.n(v);
 		if (t.cards.length === 1) {
 			const c = t.cards[0];
 			const v = this.card_count(c.key);
 			const color = ['action', 'time'].includes(c.tone) && v ? `color:${UOD_TONES[c.tone]}` : '';
 			return `<div class="uod-tile uod-tile-1 ${click(c)}">
 				<div class="uod-tile-head"><span class="uod-tile-title">${this.esc(t.title)}</span>${this.info_html(guide)}</div>
-				<div class="uod-kpi-value" style="${color}">${this.n(v)}${share(c, v)}</div>
+				<div class="uod-kpi-value" style="${color}">${value(c, v)}${share(c, v)}</div>
 				<div class="uod-kpi-sub">${this.esc(this.sub_of(c))}</div>
 			</div>`;
 		}
 		const halves = t.cards.map(c => {
 			const v = this.card_count(c.key);
-			const color = c.tone === 'action' && v ? `color:${UOD_TONES.action}` : '';
-			const flag = c.tone === 'action' && v ? `<span class="uod-flag">${__('Action')}</span>` : '';
+			const live = v && !this.unused(c);
+			const color = c.tone === 'action' && live ? `color:${UOD_TONES.action}` : '';
+			const flag = c.tone === 'action' && live ? `<span class="uod-flag">${__('Action')}</span>` : '';
 			const sub = this.sub_of(c);
 			return `<div class="uod-half ${click(c)}">
 				<div class="uod-half-label"><span class="uod-dot" style="--c:${UOD_TONES[c.tone] || UOD_TONES.neutral}"></span>${this.esc(c.label)}${flag}</div>
-				<div class="uod-kpi-value" style="${color}">${this.n(v)}${share(c, v)}</div>
+				<div class="uod-kpi-value" style="${color}">${value(c, v)}${share(c, v)}</div>
 				${sub ? `<div class="uod-kpi-sub">${this.esc(sub)}</div>` : ''}
 			</div>`;
 		}).join('');
@@ -1354,6 +1365,7 @@ const UOD_CSS = `
 .uod-tl-today span { position:relative; background:var(--bg-soft); padding:0 10px; font-size:11px; font-weight:700; color:#A16207; text-transform:uppercase; letter-spacing:.05em; }
 @media (max-width:600px) { .uod-tlp-stats { grid-template-columns:repeat(2, minmax(0,1fr)); } .uod-tlg { grid-template-columns:minmax(0,1fr); gap:4px; }
 	.uod-tlg-date { text-align:left; flex-direction:row; gap:6px; padding-top:0; } .uod-tli { grid-template-columns:minmax(0,1fr); } .uod-tli-time:empty { display:none; } }
+.uod-headline-title { margin:22px 2px 10px; }
 /* module jump bar */
 /* Pinned while the board scrolls (the v16 desk scrolls .main-section, which is the sticky container). */
 .uod-jump { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin:-4px -6px 14px; padding:8px 6px; position:sticky; top:0; z-index:20;
