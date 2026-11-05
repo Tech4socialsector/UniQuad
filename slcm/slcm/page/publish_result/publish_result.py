@@ -6,7 +6,7 @@ import json
 from frappe import _
 from frappe.utils import now_datetime
 
-PUBLISH_RESULT_ROLES = {"System Manager", "Academics User"}
+PUBLISH_RESULT_ROLES = {"System Manager", "Academics User", "AAD"}
 
 
 def _check_access():

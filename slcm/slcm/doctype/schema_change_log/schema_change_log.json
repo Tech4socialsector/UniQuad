@@ -105,7 +105,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-29 10:00:00.000000",
+ "modified": "2026-11-05 10:45:26.728553",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Schema Change Log",
@@ -122,6 +122,13 @@
    "create": 1,
    "read": 1,
    "role": "Academics User"
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "role": "AAD",
+   "write": 0
   }
  ],
  "row_format": "Dynamic",

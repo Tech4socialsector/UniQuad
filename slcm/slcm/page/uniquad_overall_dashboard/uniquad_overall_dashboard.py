@@ -127,6 +127,10 @@ PENDING_CONDONATION = ["Pending", "May Be Approved"]
 OPEN_DEMAND = ["Pending", "Partially Paid", "Overdue"]
 TRANSCRIPT_OPEN = ["Payment Pending", "Submitted", "Under Review", "Approved"]
 PROMOTED = ["Promoted", "Override - Promoted"]
+# Razorpay success states. Live FLE records a successful payment as "Authorized".
+FLE_PAID = ["Authorized", "Captured"]
+SETTLED = ["processed", "Settled"]
+PACE_PAY_REF = "PACE Applicant Fee Assignment"
 NOT_PROMOTED = ["Not Promoted", "Override - Not Promoted"]
 
 
@@ -196,10 +200,10 @@ def _classes_of(ctx):
 #   the student's programme), "@class" (scope via Classes.programme) or None.
 # year / date / gender / category / cycle: fields the filters map onto.
 # columns: (field, label, type) — type drives rendering on the client.
-def _src(doctype, label, columns, search, sort, prog=None, year=None, date=None, date_is_date=True,
+def _src(doctype, label, columns, search, sort, prog=None, year=None, date=None,
 		gender=None, category=None, cycle=None, base=None, person=None):
 	return {"doctype": doctype, "label": label, "columns": columns, "search": search, "sort": sort,
-		"prog": prog, "year": year, "date": date, "date_is_date": date_is_date, "gender": gender,
+		"prog": prog, "year": year, "date": date, "gender": gender,
 		"category": category, "cycle": cycle, "base": base or [], "person": person}
 
 
@@ -212,7 +216,7 @@ SOURCES = {
 			("application_fee_status", _("App. fee"), "text"), ("email", _("Email"), "text"), ("mobile_number", _("Mobile"), "text"),
 			("creation", _("Applied on"), "date"), ("days", _("In pipeline"), "days")],
 		["name", "candidate_name", "email", "mobile_number"], "creation",
-		prog="program", year="academic_year", date="creation", date_is_date=False, gender="gender",
+		prog="program", year="academic_year", date="creation", gender="gender",
 		category="whether_scstobc_ncl", cycle="admission_cycle", person="app"),
 	"stu": _src(STU, _("Students"),
 		[("name", _("Student ID"), "student"), ("first_name", _("Student"), "person"), ("programme_of_study", _("Programme"), "programme"),
@@ -220,7 +224,7 @@ SOURCES = {
 			("student_status", _("Student status"), "text"), ("application_number", _("Application"), "text"),
 			("email", _("Email"), "text"), ("phone", _("Phone"), "text"), ("creation", _("Created on"), "date")],
 		["name", "first_name", "email", "phone", "application_number"], "creation",
-		prog="programme_of_study", year="academic_year", date="creation", date_is_date=False, gender="gender",
+		prog="programme_of_study", year="academic_year", date="creation", gender="gender",
 		category="quota", person="stu"),
 	"isa": _src(ISA, _("Interview slots"),
 		[("applicant", _("Applicant ID"), "applicant"), ("candidate_name", _("Applicant"), "text"), ("program", _("Programme"), "programme"),
@@ -234,7 +238,7 @@ SOURCES = {
 			("action", _("Action"), "text"), ("field_changed", _("Field"), "text"), ("old_value", _("From"), "text"),
 			("new_value", _("To"), "text"), ("performed_by", _("Changed by"), "text"), ("remarks", _("Reason"), "text")],
 		["applicant", "action", "remarks", "performed_by"], "performed_on",
-		prog="program", date="performed_on", date_is_date=False, base=[["applicant", "is", "set"]]),
+		prog="program", date="performed_on", base=[["applicant", "is", "set"]]),
 	"enr": _src("Student Enrollment", _("Enrolments"),
 		[("name", _("Enrolment"), "id"), ("student", _("Student ID"), "student"), ("program", _("Programme"), "programme"),
 			("batch", _("Batch"), "text"), ("section", _("Section"), "text"), ("faculty_advisor", _("Advisor"), "text"),
@@ -305,7 +309,7 @@ SOURCES = {
 		[("name", _("Appeal"), "id"), ("student", _("Student ID"), "student"), ("course", _("Course"), "text"),
 			("exam_plan", _("Exam plan"), "text"), ("appeal_type", _("Type"), "text"), ("current_grade", _("Grade"), "text"),
 			("revised_grade", _("Revised"), "text"), ("submitted_on", _("Submitted"), "datetime"), ("status", _("Status"), "text")],
-		["name", "student", "course"], "submitted_on", prog="@student", date="submitted_on", date_is_date=False),
+		["name", "student", "course"], "submitted_on", prog="@student", date="submitted_on"),
 	"dem": _src("Fee Demand", _("Fee demands"),
 		[("name", _("Demand"), "id")] + C_STUDENT + [("program", _("Programme"), "programme"), ("fee_component", _("Component"), "text"),
 			("net_payable", _("Payable"), "currency"), ("paid_amount", _("Paid"), "currency"),
@@ -338,7 +342,7 @@ SOURCES = {
 		[("name", _("Booking"), "id"), ("event_name", _("Event"), "text"), ("venue", _("Venue"), "text"), ("building", _("Building"), "text"),
 			("start_datetime", _("Starts"), "datetime"), ("end_datetime", _("Ends"), "datetime"), ("requester_type", _("Requested by"), "text"),
 			("requester_name", _("Requester"), "text"), ("status", _("Status"), "text")],
-		["name", "event_name", "venue", "requester_name"], "start_datetime", date="start_datetime", date_is_date=False),
+		["name", "event_name", "venue", "requester_name"], "start_datetime", date="start_datetime"),
 	"pace": _src("PACE Application", _("PACE applications"),
 		[("name", _("Application"), "id"), ("applicant_name", _("Applicant"), "text"), ("programme", _("PACE programme"), "text"),
 			("academic_year", _("Academic year"), "text"), ("email_address", _("Email"), "text"),
@@ -347,7 +351,7 @@ SOURCES = {
 	"penq": _src("PACE Enquiry", _("PACE enquiries"),
 		[("name", _("Enquiry"), "id"), ("full_name", _("Name"), "text"), ("email", _("Email"), "text"), ("phone", _("Phone"), "text"),
 			("programme_of_interest", _("Programme"), "text"), ("submitted_on", _("Submitted"), "datetime"), ("status", _("Status"), "text")],
-		["name", "full_name", "email"], "submitted_on", date="submitted_on", date_is_date=False),
+		["name", "full_name", "email"], "submitted_on", date="submitted_on"),
 	"pdv": _src("PACE Document Verification", _("PACE document checks"),
 		[("name", _("Verification"), "id"), ("application", _("Application"), "text"), ("applicant_name", _("Applicant"), "text"),
 			("programme", _("PACE programme"), "text"), ("assigned_verifier", _("Verifier"), "text"),
@@ -366,31 +370,61 @@ SOURCES = {
 		C_STUDENT + [("current_year", _("Year"), "text"), ("target_year", _("To year"), "text"), ("promotion_status", _("Decision"), "text"),
 			("current_cgpa", _("CGPA"), "text"), ("backlog_count", _("Backlogs"), "text"), ("attendance_percent", _("Attendance"), "pct"),
 			("stage", _("Stage"), "text"), ("enrollment_status", _("Next-year enrolment"), "text"), ("published_on", _("Published"), "datetime")],
-		["student", "student_name"], "modified", prog="@student", date="processed_on", date_is_date=False),
+		["student", "student_name"], "modified", prog="@student", date="processed_on"),
 	"prun": _src("Promotion Run", _("Promotion runs"),
 		[("name", _("Run"), "id"), ("program", _("Programme"), "programme"), ("source_academic_year", _("From year"), "text"),
 			("target_academic_year", _("To year"), "text"), ("batch", _("Batch"), "text"), ("total_students", _("Students"), "text"),
 			("promoted_count", _("Promoted"), "text"), ("skipped_count", _("Skipped"), "text"), ("run_on", _("Run on"), "datetime"),
 			("status", _("Status"), "text")],
-		["name", "program", "batch"], "run_on", prog="program", year="source_academic_year", date="run_on", date_is_date=False),
+		["name", "program", "batch"], "run_on", prog="program", year="source_academic_year", date="run_on"),
 	"ppol": _src("Promotion Policy", _("Promotion policies"),
 		[("name", _("Policy"), "id"), ("title", _("Title"), "text"), ("program", _("Programme"), "programme"),
 			("academic_year", _("Academic year"), "text"), ("from_year", _("From year"), "text"), ("to_year", _("To year"), "text"),
 			("min_cgpa", _("Min CGPA"), "text"), ("min_attendance_percent", _("Min attendance"), "pct"), ("status", _("Status"), "text")],
 		["name", "title", "program"], "modified", prog="program", year="academic_year"),
+	"pfa": _src("PACE Applicant Fee Assignment", _("PACE fee assignments"),
+		[("name", _("Assignment"), "id"), ("applicant", _("Application"), "text"), ("applicant_name", _("Applicant"), "text"),
+			("program", _("PACE programme"), "text"), ("fee_type", _("Fee"), "text"), ("nationality_type", _("Nationality"), "text"),
+			("final_payable_amount", _("Payable"), "currency"), ("assignment_date", _("Assigned on"), "date"),
+			("payment_date", _("Paid on"), "date"), ("status", _("Status"), "text")],
+		["name", "applicant", "applicant_name", "transaction_id"], "assignment_date", year="academic_year", date="assignment_date"),
+	"prc": _src("PACE Receipt", _("PACE receipts"),
+		[("name", _("Receipt"), "id"), ("pace_application", _("Application"), "text"), ("applicant_name", _("Applicant"), "text"),
+			("program", _("PACE programme"), "text"), ("fee_type", _("Fee"), "text"), ("amount", _("Amount"), "currency"),
+			("payment_date", _("Paid on"), "date"), ("transaction_id", _("Transaction"), "text")],
+		["name", "pace_application", "applicant_name", "transaction_id"], "payment_date", year="academic_year", date="payment_date"),
+	"spr": _src("SLCM Payment Request", _("PACE online payments"),
+		[("name", _("Payment request"), "id"), ("reference_name", _("Fee assignment"), "text"), ("email_to", _("Payer"), "text"),
+			("amount", _("Amount"), "currency"), ("status", _("Status"), "text"), ("gateway_status", _("Gateway"), "text"),
+			("payment_method", _("Method"), "text"), ("paid_on", _("Paid on"), "date"), ("settlement_status", _("Settlement"), "text"),
+			("net_settled", _("Net settled"), "currency"), ("gateway_fees", _("Gateway fees"), "currency"), ("creation", _("Created"), "datetime")],
+		["name", "reference_name", "email_to", "transaction_id", "razorpay_payment_id"], "creation",
+		date="creation", base=[["reference_doctype", "=", PACE_PAY_REF], ["docstatus", "<", 2]]),
+	"flp": _src("FLE Payment Log", _("FLE payments"),
+		[("name", _("Payment"), "id"), ("reference_no", _("Registration"), "text"), ("full_name", _("Candidate"), "text"),
+			("email", _("Email"), "text"), ("payment_status", _("Status"), "text"), ("paid_amount", _("Amount"), "currency"),
+			("transaction_date", _("Paid on"), "datetime"), ("settlement_status", _("Settlement"), "text"),
+			("net_settled", _("Net settled"), "currency"), ("transaction_id", _("Transaction"), "text")],
+		["name", "reference_no", "full_name", "email", "transaction_id"], "transaction_date", date="transaction_date"),
 	"fle": _src("Foundations for a Legal Education", _("FLE registrations"),
 		[("name", _("Registration"), "id"), ("candidate_name", _("Candidate"), "text"), ("candidate_email_id", _("Email"), "text"),
 			("last_class_attended", _("Last class"), "text"), ("timestamp", _("Registered"), "datetime"),
 			("enrollment_status", _("Enrolment"), "text"), ("payment_status", _("Payment"), "text"), ("paid_amount", _("Paid"), "currency")],
-		["name", "candidate_name", "candidate_email_id"], "timestamp", date="timestamp", date_is_date=False),
+		["name", "candidate_name", "candidate_email_id"], "timestamp", date="timestamp"),
 }
+
+
+def _is_date_field(doctype, field):
+	"""True for a Date field; Datetime fields (and creation) need the time on the bounds."""
+	df = frappe.get_meta(doctype).get_field(field)
+	return bool(df and df.fieldtype == "Date")
 
 
 def src_filters(kind, ctx, with_dates=True):
 	s = SOURCES[kind]
 	out = list(s["base"])
 	if with_dates and s["date"]:
-		out += _date_range(ctx, s["date"], s["date_is_date"])
+		out += _date_range(ctx, s["date"], _is_date_field(s["doctype"], s["date"]))
 	if ctx.programmes:
 		if s["prog"] == "@student":
 			out.append(_in("student", _students_of(ctx)))
@@ -455,10 +489,13 @@ def f_stu(ctx, with_dates=True):
 # query). filters(ctx) / or_filters(ctx): extra conditions. dates: False =
 # "right now" backlog card that ignores the date range. sum: currency field
 # totalled alongside the count.
+# unused_if: key of the "positive" card of a pair. When that card is 0 the field
+# is not being filled in at all, so this card would claim 100% — it is shown as
+# "not recorded yet" instead.
 def _card(key, label, tone, kind="app", statuses=None, filters=None, or_filters=None, sub=None, guide=None,
-		pct=True, dates=True, sum=None):
+		pct=True, dates=True, sum=None, unused_if=None):
 	return {"key": key, "label": label, "tone": tone, "kind": kind, "statuses": statuses, "filters": filters,
-		"or_filters": or_filters, "sub": sub, "guide": guide, "pct": pct, "dates": dates, "sum": sum}
+		"or_filters": or_filters, "sub": sub, "guide": guide, "pct": pct, "dates": dates, "sum": sum, "unused_if": unused_if}
 
 
 CARDS = {}
@@ -511,6 +548,28 @@ def _build_registry():
 
 	def app(key, label, tone, statuses, guide, sub=None):
 		return _card(key, label, tone, statuses=statuses, guide=guide, sub=sub)
+
+	# ── At a glance (one figure per programme family, above the admission funnel) ──
+	section("overview", _("At a glance"), [
+		tile(_("Students"), "users", [_card("ov_students", _("Active students"), "good", kind="stu", pct=False, dates=False,
+			filters=_f(["student_status", "=", "Active"]), sub=_("Student Master, status Active"), guide=_("All active students in scope (any date)."))]),
+		tile(_("Regular admission"), "file", [_card("ov_apps", _("Applications"), "neutral", pct=False, sub=_("Applicant records in the dates"),
+			guide=_("Regular admission applications (Applicant) created in the selected dates."))]),
+		tile(_("PACE"), "award", [
+			_card("ov_pace_apps", _("Applications"), "info", kind="pace", pct=False, filters=_f(["status", "!=", "Draft"]),
+				guide=_("PACE applications submitted (not Draft) in the selected dates.")),
+			_card("ov_pace_enr", _("Enrolled"), "good", kind="pace", pct=False, filters=lambda c: [_in("status", _pace_statuses("enrolled"))],
+				guide=_("PACE applications at an enrolment stage."))]),
+		tile(_("FLE"), "users", [
+			_card("ov_fle", _("Registrations"), "info", kind="fle", pct=False, guide=_("FLE registrations in the selected dates.")),
+			_card("ov_fle_paid", _("Paid"), "good", kind="fle", pct=False, filters=_f(["payment_status", "in", FLE_PAID]),
+				guide=_("FLE registrations whose payment is Authorized or Captured."))]),
+		tile(_("Money received"), "coins", [
+			_card("ov_pace_money", _("PACE"), "good", kind="spr", pct=False, filters=_f(["status", "=", "Paid"]), sum="amount",
+				guide=_("PACE online payments (SLCM Payment Request) with status Paid, created in the selected dates.")),
+			_card("ov_fle_money", _("FLE"), "good", kind="flp", pct=False, filters=_f(["payment_status", "in", FLE_PAID]), sum="paid_amount",
+				guide=_("FLE payments (FLE Payment Log) Authorized or Captured, in the selected dates."))]),
+	])
 
 	# ── Admission ──
 	section("admission", _("Admission · application & test"), [
@@ -595,10 +654,10 @@ def _build_registry():
 	section("registration", _("Onboarding"), [
 		tile(_("Laptop"), "idcard", [
 			stu("laptop_yes", _("Laptop issued"), "good", [["laptop_issued", "=", "Yes"]], _("Student Master: Laptop Issued = Yes.")),
-			stu("laptop_no", _("Not issued"), "action", [["laptop_issued", "!=", "Yes"]], _("Student Master: Laptop Issued is No or empty."))]),
+			stu("laptop_no", _("Not issued"), "action", [["laptop_issued", "!=", "Yes"]], _("Student Master: Laptop Issued is No or empty."), unused_if="laptop_yes")]),
 		tile(_("Bank details"), "coins", [
 			stu("bank_yes", _("Submitted"), "good", [["bank_details_submitted", "=", 1]], _("The student has submitted bank details on the portal.")),
-			stu("bank_no", _("Pending"), "action", [["bank_details_submitted", "=", 0]], _("Bank details not submitted yet."))]),
+			stu("bank_no", _("Pending"), "action", [["bank_details_submitted", "=", 0]], _("Bank details not submitted yet."), unused_if="bank_yes")]),
 		tile(_("Residence"), "door", [
 			stu("hostel_yes", _("Room allocated"), "good", [["hostel", "is", "set"]], _("A hostel is set on the student record.")),
 			stu("hostel_wait", _("Waiting for a room"), "action", [["needs_accommodation", "=", "Yes"], ["hostel", "is", "not set"]],
@@ -607,7 +666,8 @@ def _build_registry():
 			stu("docs_yes", _("Verified"), "good", [["aadhaar_verified", "=", 1], ["offer_letter_verified", "=", 1], ["student_declaration_verified", "=", 1]],
 				_("Aadhaar, offer letter and student declaration are all marked verified.")),
 			_card("docs_no", _("Pending"), "action", kind="stu", guide=_("At least one of Aadhaar, offer letter or student declaration is not verified yet."),
-				or_filters=lambda c: [["aadhaar_verified", "=", 0], ["offer_letter_verified", "=", 0], ["student_declaration_verified", "=", 0]])]),
+				or_filters=lambda c: [["aadhaar_verified", "=", 0], ["offer_letter_verified", "=", 0], ["student_declaration_verified", "=", 0]],
+				unused_if="docs_yes")]),
 	])
 
 	# ── Programme Management ──
@@ -671,7 +731,7 @@ def _build_registry():
 			card("idc_dead", _("Cancelled / expired"), "neutral", "idc", [["card_status", "in", ["Cancelled", "Expired"]]], _("Student ID cards Cancelled or Expired."), dates=False)]),
 		tile(_("Students"), "users", [
 			stu("id_yes", _("ID card issued"), "good", [["id_card_issued", "=", "Yes"]], _("Student Master: ID Card Issued = Yes.")),
-			stu("id_no", _("Not issued"), "action", [["id_card_issued", "!=", "Yes"]], _("Student Master: ID Card Issued is No or empty."))]),
+			stu("id_no", _("Not issued"), "action", [["id_card_issued", "!=", "Yes"]], _("Student Master: ID Card Issued is No or empty."), unused_if="id_yes")]),
 	])
 
 	# ── Fees ──
@@ -690,7 +750,8 @@ def _build_registry():
 			card("con_ok", _("Concessions"), "info", "con", [["status", "=", "Approved"]], _("Approved fee concessions in the selected dates."), sum="waiver_value")]),
 		tile(_("Student fee status"), "users", [
 			stu("fee_paid", _("Fees paid"), "good", [["fee_payment_status", "=", "Paid"]], _("Student Master: Fee Payment Status = Paid.")),
-			stu("fee_due", _("Not fully paid"), "action", [["fee_payment_status", "!=", "Paid"]], _("Student Master: Fee Payment Status is anything other than Paid."))]),
+			stu("fee_due", _("Not fully paid"), "action", [["fee_payment_status", "!=", "Paid"]], _("Student Master: Fee Payment Status is anything other than Paid."),
+				unused_if="fee_paid")]),
 	])
 
 	# ── Venue Booking ──
@@ -710,28 +771,75 @@ def _build_registry():
 			card("penq_new", _("New"), "action", "penq", [["status", "=", "New"]], _("PACE enquiries not yet contacted (any date)."), dates=False),
 			card("penq_contacted", _("Contacted"), "good", "penq", [["status", "=", "Contacted"]], _("PACE enquiries contacted, submitted in the selected dates."))]),
 		tile(_("Applications"), "file", [
-			_card("pace_progress", _("In progress"), "info", kind="pace", pct=False, filters=lambda c: [_in("status", _pace_statuses("progress"))],
-				guide=_("PACE applications whose status is neither closed nor enrolled.")),
+			_card("pace_progress", _("In progress"), "info", kind="pace", pct=False,
+				filters=lambda c: [_in("status", [x for x in _pace_statuses("progress") if x != "Draft"])],
+				guide=_("PACE applications submitted and still moving (not Draft, closed or enrolled).")),
 			_card("pace_enrolled", _("Enrolled"), "good", kind="pace", pct=False, filters=lambda c: [_in("status", _pace_statuses("enrolled"))],
 				guide=_("PACE applications at an enrolment stage."))]),
+		tile(_("Drafts & withdrawals"), "pen", [
+			card("pace_draft", _("Draft"), "action", "pace", [["status", "=", "Draft"]], _("PACE applications started but not submitted.")),
+			_card("pace_closed", _("Withdrawn / rejected"), "bad", kind="pace", pct=False, filters=lambda c: [_in("status", _pace_statuses("closed"))],
+				guide=_("PACE applications Withdrawn or Rejected."))]),
 		tile(_("Document checks"), "filesign", [
-			card("pdv_pending", _("Pending"), "action", "pdv", [["status", "=", "Pending"]], _("PACE document verifications pending."), dates=False),
+			card("pdv_verified", _("Verified"), "good", "pdv", [["status", "=", "Verified"]], _("PACE document verifications completed."), dates=False),
 			card("pdv_returned", _("Returned for correction"), "bad", "pdv", [["status", "=", "Returned for Correction"]],
 				_("PACE document verifications sent back to the applicant."), dates=False)]),
+		tile(_("Documents pending"), "clock", [card("pdv_pending", _("Pending"), "action", "pdv", [["status", "=", "Pending"]],
+			_("PACE document verifications waiting for a verifier."), dates=False)]),
+	])
+	section("pace", _("PACE · fees"), [
+		tile(_("Application fee"), "coins", [
+			card("pfa_app_paid", _("Paid"), "good", "pfa", [["fee_type", "=", "Application Fee"], ["status", "in", ["Paid", "Enrolled"]]],
+				_("PACE application-fee assignments Paid, assigned in the selected dates."), sum="final_payable_amount"),
+			card("pfa_app_due", _("Pending"), "action", "pfa", [["fee_type", "=", "Application Fee"], ["status", "in", ["Assigned", "Partially Paid"]]],
+				_("PACE application-fee assignments not yet paid (Assigned or Partially Paid)."), sum="final_payable_amount")]),
+		tile(_("Course fee"), "coins", [
+			card("pfa_course_paid", _("Paid"), "good", "pfa", [["fee_type", "=", "Course Fee"], ["status", "in", ["Paid", "Enrolled"]]],
+				_("PACE course-fee assignments Paid (or Enrolled), assigned in the selected dates."), sum="final_payable_amount"),
+			card("pfa_course_due", _("Pending"), "action", "pfa", [["fee_type", "=", "Course Fee"], ["status", "in", ["Assigned", "Partially Paid"]]],
+				_("PACE course-fee assignments not yet paid (Assigned or Partially Paid)."), sum="final_payable_amount")]),
+		tile(_("Online payments"), "send", [
+			card("spr_paid", _("Paid"), "good", "spr", [["status", "=", "Paid"]], _("Razorpay payment requests for PACE fees with status Paid."), sum="amount"),
+			card("spr_failed", _("Failed"), "bad", "spr", [["status", "=", "Failed"]], _("Razorpay payment requests for PACE fees that failed."), sum="amount")]),
+		tile(_("Payment links not paid"), "alert", [card("spr_requested", _("Sent, not yet paid"), "action", "spr", [["status", "=", "Requested"]],
+			_("Payment requests sent to PACE applicants and not paid yet."), sum="amount")]),
+		tile(_("Settlement"), "handshake", [
+			card("spr_settled", _("Net settled"), "good", "spr", [["status", "=", "Paid"], ["settlement_status", "in", SETTLED]],
+				_("Paid PACE payments the gateway has settled to the bank; the figure is the net amount settled."), sum="net_settled"),
+			card("spr_fees", _("Gateway charges"), "neutral", "spr", [["status", "=", "Paid"], ["settlement_status", "in", SETTLED]],
+				_("Gateway fees deducted on those settled PACE payments."), sum="gateway_fees")]),
+		tile(_("Receipts issued"), "file", [card("prc_all", _("Receipts"), "info", "prc", [],
+			_("PACE receipts generated, payment date in the selected range."), sum="amount")]),
 	])
 
 	# ── FLE ──
 	section("fle", _("FLE · Foundations for a Legal Education"), [
 		tile(_("Registrations"), "users", [card("fle_all", _("Registrations"), "info", "fle", [], _("FLE registrations in the selected dates."))]),
 		tile(_("Enrolment"), "check", [
-			card("fle_enrolled", _("Enrolled"), "good", "fle", [["enrollment_status", "in", ["Enrolled", "In Progress", "Completed"]]],
-				_("FLE candidates Enrolled, In Progress or Completed.")),
-			card("fle_unpaid", _("Payment not captured"), "action", "fle", [["payment_status", "!=", "Captured"]],
-				_("FLE registrations whose payment has not been captured."))]),
+			card("fle_enrolled", _("Enrolled"), "good", "fle", [["enrollment_status", "in", ["Enrolled", "Completed", "Certificate Issued"]]],
+				_("FLE candidates Enrolled, Completed or Certificate Issued.")),
+			card("fle_inprogress", _("In progress"), "info", "fle", [["enrollment_status", "=", "In Progress"]],
+				_("FLE registrations still In Progress (not yet enrolled)."))]),
+		tile(_("Payment"), "coins", [
+			card("fle_paid", _("Paid"), "good", "fle", [["payment_status", "in", FLE_PAID]], _("FLE registrations whose payment is Authorized or Captured.")),
+			card("fle_unpaid", _("Not paid"), "action", "fle", [["payment_status", "not in", FLE_PAID]],
+				_("FLE registrations whose payment is initiated, failed, cancelled or missing."))]),
 		tile(_("LMS access"), "alert", [card("fle_no_lms", _("Paid, no LMS account"), "action", "fle",
-			[["payment_status", "=", "Captured"], ["lms_account_created", "=", 0]], _("Paid FLE candidates who do not have an LMS account yet."))]),
+			[["payment_status", "in", FLE_PAID], ["lms_account_created", "=", 0]], _("Paid FLE candidates who do not have an LMS account yet."))]),
 		tile(_("Certificates"), "award", [card("fle_cert", _("Certificate issued"), "good", "fle", [["enrollment_status", "=", "Certificate Issued"]],
 			_("FLE candidates whose certificate has been issued."))]),
+	])
+	section("fle", _("FLE · fees"), [
+		tile(_("Amount collected"), "coins", [
+			card("flp_paid", _("Collected"), "good", "flp", [["payment_status", "in", FLE_PAID]],
+				_("FLE payments (FLE Payment Log) Authorized or Captured, in the selected dates."), sum="paid_amount"),
+			card("flp_failed", _("Failed / refunded"), "bad", "flp", [["payment_status", "not in", FLE_PAID]],
+				_("FLE payment log entries that failed, were refunded or are still pending."), sum="paid_amount")]),
+		tile(_("Settlement"), "handshake", [
+			card("flp_settled", _("Net settled"), "good", "flp", [["payment_status", "in", FLE_PAID], ["settlement_status", "in", SETTLED]],
+				_("Paid FLE payments settled to the bank; the figure is the net amount settled."), sum="net_settled"),
+			card("flp_unsettled", _("Not settled yet"), "action", "flp", [["payment_status", "in", FLE_PAID], ["settlement_status", "not in", SETTLED]],
+				_("Paid FLE payments the gateway has not settled yet."), sum="paid_amount")]),
 	])
 
 	# ── Examinations ──
@@ -896,6 +1004,11 @@ def _dashboard(ctx):
 				rows = frappe.get_list(doctype, filters=filters, or_filters=or_filters, fields=[{"SUM": card["sum"], "as": "s"}], order_by=None)
 				amount = flt(rows[0].s) if rows else 0
 		cards[key] = {"total": sum(by.values()), "by": by, "amount": amount}
+
+	for key, card in CARDS.items():
+		ref = cards.get(card["unused_if"]) if card["unused_if"] else None
+		if cards.get(key) and ref is not None and ref["total"] == 0:
+			cards[key]["unused"] = True
 
 	# Base for "% of …" on each module's cards: everything in scope for that source.
 	for kind in {c["kind"] for c in CARDS.values() if c["pct"]} - denied:

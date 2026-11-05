@@ -5,7 +5,7 @@
  "doctype": "Page",
  "icon": "send",
  "idx": 0,
- "modified": "2026-04-09 00:00:00.000000",
+ "modified": "2026-11-05 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "publish-result",
@@ -17,6 +17,9 @@
   },
   {
    "role": "Academics User"
+  },
+  {
+   "role": "AAD"
   }
  ],
  "script": null,

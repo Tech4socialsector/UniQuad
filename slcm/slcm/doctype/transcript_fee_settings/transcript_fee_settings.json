@@ -272,7 +272,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-29 12:00:00.000000",
+ "modified": "2026-11-05 10:45:38.772249",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Transcript Fee Settings",
@@ -285,6 +285,16 @@
    "print": 1,
    "read": 1,
    "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "AAD",
    "share": 1,
    "write": 1
   }

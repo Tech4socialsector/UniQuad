@@ -120,7 +120,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-29 18:00:00.000000",
+ "modified": "2026-11-05 10:45:26.728553",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Evaluation Schema",
@@ -160,6 +160,18 @@
    "read": 1,
    "report": 1,
    "role": "slcm_Programme Chair"
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "AAD",
+   "share": 1,
+   "write": 1
   }
  ],
  "row_format": "Dynamic",

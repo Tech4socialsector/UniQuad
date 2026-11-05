@@ -5,7 +5,7 @@ import frappe
 import json
 from frappe import _
 
-RE_EXAM_ROLES = {"System Manager", "Academics User"}
+RE_EXAM_ROLES = {"System Manager", "Academics User", "AAD"}
 
 
 def _check_access():

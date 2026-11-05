@@ -5,7 +5,7 @@
  "doctype": "Page",
  "icon": "file-spreadsheet",
  "idx": 0,
- "modified": "2026-11-03 15:40:00.000000",
+ "modified": "2026-11-05 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "consolidated-report",
@@ -17,6 +17,9 @@
   },
   {
    "role": "Academics User"
+  },
+  {
+   "role": "AAD"
   }
  ],
  "script": null,
