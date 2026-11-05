@@ -9,7 +9,7 @@
  "filters": [],
  "idx": 0,
  "is_standard": "Yes",
- "modified": "2026-03-26 00:00:00.000000",
+ "modified": "2026-11-05 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Course Schema Mapping Report",
@@ -19,7 +19,14 @@
  "report_name": "Course Schema Mapping Report",
  "report_type": "Script Report",
  "roles": [
-  {"role": "System Manager"},
-  {"role": "Academics User"}
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Academics User"
+  },
+  {
+   "role": "AAD"
+  }
  ]
 }

@@ -110,12 +110,38 @@ def get_drilldown(doctype, filters=None):
 	return drilldown(DRILL, doctype, filters)
 
 
+FILTER_OPS = {"=", "!=", "<", ">", "<=", ">=", "in", "not in", "is", "between", "like", "not like"}
+
+
+def clean_filters(doctype, filters):
+	"""Filters sent by a dashboard page: a dict of real fields of `doctype`, each a value or
+	[operator, value] with a known operator. Anything else is refused without echoing it back."""
+	try:
+		filters = frappe.parse_json(filters) if isinstance(filters, str) else filters
+	except ValueError:
+		filters = None
+		frappe.throw(_("Invalid filters"), frappe.ValidationError)
+	if not filters:
+		return {}
+	if not isinstance(filters, dict):
+		frappe.throw(_("Invalid filters"), frappe.ValidationError)
+	valid = set(frappe.get_meta(doctype).get_valid_columns()) | {"name"}
+	for field, value in filters.items():
+		if field not in valid or isinstance(value, dict):
+			frappe.throw(_("Invalid filters"), frappe.ValidationError)
+		if isinstance(value, (list, tuple)):
+			op = str(value[0]).lower() if len(value) == 2 else None
+			if op not in FILTER_OPS or (op == "is" and value[1] not in ("set", "not set")):
+				frappe.throw(_("Invalid filters"), frappe.ValidationError)
+	return filters
+
+
 def drilldown(drill, doctype, filters=None):
 	"""get_drilldown for any dashboard: `drill` maps the allowed doctypes as DRILL does."""
 	if doctype not in drill or not frappe.has_permission(doctype, "read"):
 		frappe.throw(_("Not permitted"), frappe.PermissionError)
 	group, split, group_label = drill[doctype]
-	filters = frappe.parse_json(filters) or {}
+	filters = clean_filters(doctype, filters)
 	t = f"`tab{doctype}`"
 	fields = [f"{t}.`{group}`", f"{t}.`{split}`" if split else "''", "count(*) as n"]
 	sql = DatabaseQuery(doctype).execute(
@@ -132,9 +158,10 @@ def drilldown(drill, doctype, filters=None):
 		r["split"][sp] = r["split"].get(sp, 0) + n
 		splits[sp] = splits.get(sp, 0) + n
 
-	if group == "class_name":
-		info = {c.name: c for c in frappe.get_all("Classes", filters={"name": ["in", [k for k in rows if k] or ["__none__"]]},
-			fields=["name", "course_name", "section", "programme", "academic_term"])}
+	# class details only for classes the user may read; others show their ID alone
+	if group == "class_name" and frappe.has_permission("Classes", "read"):
+		info = {c.name: c for c in frappe.get_list("Classes", filters={"name": ["in", [k for k in rows if k] or ["__none__"]]},
+			fields=["name", "course_name", "section", "programme", "academic_term"], limit=0)}
 		for r in rows.values():
 			c = info.get(r["value"]) or {}
 			r.update(course_name=c.get("course_name"), section=c.get("section"),
