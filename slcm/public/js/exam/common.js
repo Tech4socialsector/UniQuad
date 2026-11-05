@@ -20,7 +20,8 @@ slcm.exam_ui.consolidated_report = function (exam_plan) {
 		var d = new frappe.ui.Dialog({
 			title: 'Download Consolidated Report',
 			fields: [
-				{ label: 'Exam Plan',     fieldname: 'exam_plan',     fieldtype: 'Link',   options: 'Exam Plan',     default: exam_plan || '' },
+				{ label: 'Exam Plan',     fieldname: 'exam_plan',     fieldtype: 'Link',   options: 'Exam Plan',     default: exam_plan || '',
+					onchange() { d.set_value('course', ''); } },
 				{ fieldtype: 'Column Break' },
 				{ label: 'Academic Year', fieldname: 'academic_year', fieldtype: 'Link',   options: 'Academic Year' },
 				{ fieldtype: 'Section Break' },
@@ -44,7 +45,7 @@ slcm.exam_ui.consolidated_report = function (exam_plan) {
 					get_query() {
 						return {
 							query: 'slcm.slcm.page.examination_result.examination_result.course_link_query',
-							filters: { programme: d.get_value('programme'), trimester: d.get_value('trimester') },
+							filters: { exam_plan: d.get_value('exam_plan'), programme: d.get_value('programme'), trimester: d.get_value('trimester') },
 						};
 					} }
 			],
@@ -56,7 +57,11 @@ slcm.exam_ui.consolidated_report = function (exam_plan) {
 				if (v.programme)     args.programme     = v.programme;
 				if (v.trimester)     args.trimester      = v.trimester;
 				if (v.batch)         args.batch          = v.batch;
-				if (v.report_type === 'Course Based' && v.course) {
+				if (v.report_type === 'Course Based') {
+					if (!v.course) {
+						frappe.msgprint({ message: __('Pick the Course, or set Report Type to Bulk for all courses.'), indicator: 'orange' });
+						return;
+					}
 					args.course = v.course;
 				}
 				if (!Object.keys(args).length) {
