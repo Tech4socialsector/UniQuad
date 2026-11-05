@@ -1,0 +1,1162 @@
+{#- ================================================================ NLSIU — Applicant Application
+Form — Print Format v22 CHANGES: - Photo moved to LEFT side; details flow to RIGHT - Other
+Information section fully conditional: hidden when no relevant data exists CORE DESIGN: ONE single
+10-column grid used for EVERY section (10% each) Allows flexible layouts: - 4-col data rows: L(2),
+V(3), L(2), V(3) - Photo-LEFT rows: Photo(2), L(2), V(2), L(2), V(2) - Wide rows: L(2), V(8)
+Vertical boundaries: Middle border is at column 5 (50%), ensuring all 4-column sections align
+perfectly. ================================================================ -#} {%- set _site =
+frappe.utils.get_url() -%} {%- macro f(v) -%}{%- if v and v != 'None' -%}{{ v }}{%- else
+-%}&mdash;{%- endif -%}{%- endmacro -%} {%- macro fd(v) -%}{%- if v -%}{{
+frappe.utils.formatdate(v,'dd-MM-yyyy') }}{%- else -%}&mdash;{%- endif -%}{%- endmacro -%} {%- set
+is_phd = (doc.program_level or '') | lower in ['phd', 'research course'] -%} {%- set _pwd_val = (doc.pwd or '') | lower -%} {%- set _ka_any =
+doc.ka_study_7yrs or doc.ka_defence_child or doc.ka_govt_child or doc.ka_ais_child or
+doc.ka_capf_child -%} {%- set _gr_raw = (doc.guardian_required or '') | string | lower | trim -%}
+{%- set show_guardian = _gr_raw in ['provide legal guardian details', 'yes', '1', 'true'] -%} {#- Address -#} {%- set _addr_parts =
+[] -%} {%- if doc.correspondence_address and doc.correspondence_address not in ['None',''] -%}{%-
+set _ = _addr_parts.append(doc.correspondence_address) -%}{%- endif -%} {%- if doc.city and
+doc.city not in ['None',''] -%}{%- set _ = _addr_parts.append(doc.city) -%}{%- endif -%} {%- if
+doc.state and doc.state not in ['None',''] -%}{%- set _ = _addr_parts.append(doc.state) -%}{%-
+endif -%} {%- set _addr_str = _addr_parts | join(', ') -%} {%- if doc.pincode and doc.pincode not
+in ['None',''] -%}{%- set _addr_str = _addr_str ~ (' – ' if _addr_str else '') ~ doc.pincode -%}{%-
+endif -%} {#- Photo -#} {%- set _photo_src = '' -%} {%- if doc.candidate_photo -%} {%- set _pb64 =
+get_file_b64(doc.candidate_photo) -%} {%- if _pb64 -%} {%- set _pext =
+(doc.candidate_photo.split('.')[-1] | lower) -%} {%- set _pmime = 'image/jpeg' if _pext in
+['jpg','jpeg'] else ('image/png' if _pext == 'png' else 'image/webp') -%} {%- set _photo_src =
+'data:' ~ _pmime ~ ';base64,' ~ _pb64 -%} {%- else -%} {%- set _photo_src = _site ~
+doc.candidate_photo -%} {%- endif -%} {%- endif -%} {#- Logo -#} {%- set _logo_src = '' -%} {%- set
+_logo_path = frappe.db.get_single_value('Institution Settings','logo') -%} {%- if _logo_path -%}
+{%- set _lb64 = get_file_b64(_logo_path) -%} {%- if _lb64 -%} {%- set _lext =
+(_logo_path.split('.')[-1] | lower) -%} {%- set _lmime = 'image/jpeg' if _lext in ['jpg','jpeg']
+else ('image/png' if _lext == 'png' else 'image/svg+xml') -%} {%- set _logo_src = 'data:' ~ _lmime
+~ ';base64,' ~ _lb64 -%} {%- else -%} {%- set _logo_src = _site ~ _logo_path -%} {%- endif -%} {%-
+endif -%} {#- Other Information visibility flags -#} {%- set _has_source =
+doc.source_of_information and doc.source_of_information not in ['None',''] -%} {%- set _has_mention
+= doc.please_mention and doc.please_mention not in ['None',''] -%} {%- set _show_other = _has_source -%}
+
+<meta name="viewport" content="width=794, initial-scale=1.0" />
+<link
+	href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&display=swap"
+	rel="stylesheet"
+/>
+<style>
+	/* ═══════════════════════════════════════════════════════════
+   PAGE SETUP
+═══════════════════════════════════════════════════════════ */
+	@page {
+		size: 210mm 297mm;
+		margin: 10mm 8mm;
+	}
+
+	*,
+	*::before,
+	*::after {
+		box-sizing: border-box;
+		margin: 0;
+		padding: 0;
+	}
+
+	/* Reset all Frappe wrapper elements */
+	html,
+	body,
+	#page-body,
+	.print-format-gutter,
+	.print-format,
+	.page-break,
+	.letter-head,
+	.letter-head-content,
+	form[data-doctype],
+	.layout-main,
+	.layout-main-section,
+	.frappe-card {
+		margin: 0 !important;
+		padding: 0 !important;
+		border: none !important;
+		background: transparent !important;
+		width: auto !important;
+		max-width: none !important;
+	}
+
+	html,
+	body {
+		font-family: "Merriweather", serif;
+		font-size: 8.5px;
+		color: #111;
+		background: #fff;
+		-webkit-print-color-adjust: exact;
+		print-color-adjust: exact;
+	}
+
+	/* ── Outer page box ─────────────────────────────────────── */
+	.pf-page {
+		width: 100%;
+		margin: 0;
+		padding: 0;
+		border: 2px solid #7b1a1a;
+		background: #fff;
+		display: block;
+		overflow: hidden;
+	}
+
+	@media screen {
+		html,
+		body {
+			background: #888;
+		}
+
+		.pf-page {
+			width: 760px;
+			max-width: 760px;
+			margin: 20px auto !important;
+			box-shadow: 0 6px 28px rgba(0, 0, 0, 0.45);
+		}
+	}
+
+	@media print {
+		html,
+		body {
+			width: 100%;
+			margin: 0;
+			padding: 0;
+			background: #fff;
+		}
+
+		.pf-page {
+			width: 100%;
+			margin: 0 !important;
+			page-break-after: always;
+		}
+
+		.pf-page:last-child {
+			page-break-after: auto;
+		}
+	}
+
+	/* ═══════════════════════════════════════════════════════════
+   HEADER BAR
+═══════════════════════════════════════════════════════════ */
+	.hdr {
+		width: 100%;
+		border-collapse: collapse;
+		table-layout: fixed;
+		background: #7b1a1a !important;
+		border-bottom: 2px solid #5a0e0e;
+		-webkit-print-color-adjust: exact !important;
+		print-color-adjust: exact !important;
+	}
+
+	.hdr-logo-td {
+		width: 68px;
+		padding: 9px 10px;
+		text-align: center;
+		vertical-align: middle;
+		background: #7b1a1a !important;
+		-webkit-print-color-adjust: exact !important;
+		print-color-adjust: exact !important;
+	}
+
+	.hdr-text-td {
+		padding: 9px 8px;
+		text-align: center;
+		vertical-align: middle;
+		background: #7b1a1a !important;
+		-webkit-print-color-adjust: exact !important;
+		print-color-adjust: exact !important;
+	}
+
+	.logo-box {
+		width: 46px;
+		height: 46px;
+		background: #fff !important;
+		border-radius: 4px;
+		display: inline-block;
+		overflow: hidden;
+		-webkit-print-color-adjust: exact !important;
+		print-color-adjust: exact !important;
+	}
+
+	.logo-box img {
+		width: 40px;
+		height: 40px;
+		display: block;
+		margin: 3px auto;
+	}
+
+	.logo-txt {
+		font-size: 6pt;
+		color: #7b1a1a;
+		font-weight: bold;
+		line-height: 46px;
+	}
+
+	.hdr-inst {
+		font-size: 11pt;
+		font-weight: bold;
+		text-transform: uppercase;
+		letter-spacing: 0.6px;
+		line-height: 1.3;
+		color: #fff !important;
+		-webkit-print-color-adjust: exact !important;
+		print-color-adjust: exact !important;
+	}
+
+	.hdr-sub {
+		font-size: 5.5pt;
+		letter-spacing: 1.2px;
+		text-transform: uppercase;
+		margin-top: 3px;
+		color: #ffcccc !important;
+		-webkit-print-color-adjust: exact !important;
+		print-color-adjust: exact !important;
+	}
+
+	/* ── Title strip ──────────────────────────────────────────── */
+	.title-bar {
+		width: 100%;
+		text-align: center;
+		padding: 7px 10px;
+		background: #fff8f8 !important;
+		border-bottom: 1px solid #7b1a1a;
+		-webkit-print-color-adjust: exact !important;
+		print-color-adjust: exact !important;
+	}
+
+	.title-main {
+		font-size: 10pt;
+		font-weight: bold;
+		color: #5a0000;
+	}
+
+	.title-sub {
+		font-size: 6.5pt;
+		color: #666;
+		margin-top: 2px;
+	}
+
+	.title-sep {
+		margin: 0 6px;
+		color: #ccc;
+	}
+
+	/* ═══════════════════════════════════════════════════════════
+   UNIFIED FORM TABLE
+═══════════════════════════════════════════════════════════ */
+	.ft {
+		width: 100%;
+		border-collapse: collapse;
+		table-layout: fixed;
+		border: 1px solid #7b1a1a;
+		margin: 0;
+		margin-bottom: -1px;
+	}
+
+	.ft-last {
+		margin-bottom: 0;
+	}
+
+	.ft td {
+		border: 1px solid #7b1a1a;
+		padding: 5px 8px;
+		vertical-align: middle;
+		font-size: 8px;
+		line-height: 1.5;
+		word-wrap: break-word;
+		overflow-wrap: break-word;
+		word-break: break-word;
+		page-break-inside: avoid;
+	}
+
+	.ft tr {
+		page-break-inside: avoid;
+		break-inside: avoid;
+	}
+
+	.ft tr.sec-row {
+		page-break-after: avoid;
+		break-after: avoid;
+	}
+
+	.ft tr.sub-row {
+		page-break-after: avoid;
+		break-after: avoid;
+	}
+
+	/* ── Section header (dark maroon band) ───────────────────── */
+	td.sec {
+		background-color: #7b1a1a !important;
+		color: #fff !important;
+		font-weight: bold !important;
+		font-size: 7.5pt;
+		letter-spacing: 0.4px;
+		text-transform: uppercase;
+		padding: 5px 10px;
+		border: 1px solid #5a0e0e !important;
+		-webkit-print-color-adjust: exact !important;
+		print-color-adjust: exact !important;
+	}
+
+	/* ── Sub-section header (grey band) ──────────────────────── */
+	td.subsec {
+		background-color: #ebebeb !important;
+		color: #111 !important;
+		font-weight: bold !important;
+		font-size: 7pt;
+		padding: 4px 10px;
+		border: 1px solid #7b1a1a !important;
+		-webkit-print-color-adjust: exact !important;
+		print-color-adjust: exact !important;
+	}
+
+	/* ── Label cell ───────────────────────────────────────────── */
+	td.lbl {
+		font-weight: bold;
+		font-size: 7.5px;
+		color: #111 !important;
+		background-color: #f0f0f0 !important;
+		-webkit-print-color-adjust: exact !important;
+		print-color-adjust: exact !important;
+	}
+
+	/* ── Value cell ───────────────────────────────────────────── */
+	td.val {
+		font-weight: normal;
+		font-size: 8px;
+		color: #111;
+		background-color: #fff !important;
+		-webkit-print-color-adjust: exact !important;
+		print-color-adjust: exact !important;
+	}
+
+	/* ── Photo cell (leftmost, rowspan) ─────────────────────── */
+	td.photo-td {
+		text-align: center;
+		vertical-align: middle !important;
+		padding: 8px 8px !important;
+		background: #fafafa !important;
+		-webkit-print-color-adjust: exact !important;
+		print-color-adjust: exact !important;
+		border: 1px solid #7b1a1a;
+	}
+
+	td.photo-td img {
+		width: 88px;
+		height: 112px;
+		max-width: 100%;
+		max-height: 112px;
+		display: block;
+		margin: 0 auto 5px;
+		border: 1px solid #7b1a1a;
+		object-fit: cover;
+	}
+
+	.photo-empty {
+		width: 88px;
+		height: 112px;
+		max-width: 100%;
+		background: #f5f5f5 !important;
+		border: 1px dashed #7b1a1a;
+		display: block;
+		text-align: center;
+		padding-top: 34px;
+		font-size: 5.5pt;
+		color: #aaa;
+		margin: 0 auto 5px;
+		-webkit-print-color-adjust: exact !important;
+		print-color-adjust: exact !important;
+	}
+
+	.photo-cap {
+		font-size: 5.5pt;
+		color: #777;
+		text-align: center;
+		line-height: 1.5;
+	}
+
+	/* ═══════════════════════════════════════════════════════════
+   STATUS BADGES
+═══════════════════════════════════════════════════════════ */
+	.bg {
+		background: #1e6b1e !important;
+		color: #fff !important;
+		font-weight: bold;
+		padding: 2px 7px;
+		border-radius: 2px;
+		font-size: 7px;
+		display: inline-block;
+		white-space: normal;
+		word-break: break-word;
+		line-height: 1.5;
+		-webkit-print-color-adjust: exact !important;
+		print-color-adjust: exact !important;
+	}
+
+	.by {
+		background: #9a4500 !important;
+		color: #fff !important;
+		font-weight: bold;
+		padding: 2px 7px;
+		border-radius: 2px;
+		font-size: 7px;
+		display: inline-block;
+		white-space: normal;
+		word-break: break-word;
+		line-height: 1.5;
+		-webkit-print-color-adjust: exact !important;
+		print-color-adjust: exact !important;
+	}
+
+	.br {
+		background: #a01212 !important;
+		color: #fff !important;
+		font-weight: bold;
+		padding: 2px 7px;
+		border-radius: 2px;
+		font-size: 7px;
+		display: inline-block;
+		white-space: normal;
+		word-break: break-word;
+		line-height: 1.5;
+		-webkit-print-color-adjust: exact !important;
+		print-color-adjust: exact !important;
+	}
+
+	.bgy {
+		background: #383838 !important;
+		color: #fff !important;
+		font-weight: bold;
+		padding: 2px 7px;
+		border-radius: 2px;
+		font-size: 7px;
+		display: inline-block;
+		white-space: normal;
+		word-break: break-word;
+		line-height: 1.5;
+		-webkit-print-color-adjust: exact !important;
+		print-color-adjust: exact !important;
+	}
+
+	/* ═══════════════════════════════════════════════════════════
+   DEGREE INNER TABLE
+═══════════════════════════════════════════════════════════ */
+	.deg {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: 7pt;
+	}
+
+	.deg th {
+		background: #ebebeb !important;
+		color: #111 !important;
+		font-weight: bold;
+		padding: 3px 6px;
+		border: 1px solid #7b1a1a;
+		text-align: left;
+		-webkit-print-color-adjust: exact !important;
+	}
+
+	.deg td {
+		padding: 3px 6px;
+		border: 1px solid #7b1a1a;
+		vertical-align: middle;
+		word-break: break-word;
+		background: #fff !important;
+		page-break-inside: avoid;
+	}
+
+	.deg tr {
+		page-break-inside: avoid;
+		break-inside: avoid;
+	}
+
+	.deg tr:nth-child(even) td {
+		background: #fdf5f5 !important;
+		-webkit-print-color-adjust: exact !important;
+		print-color-adjust: exact !important;
+	}
+
+	/* ═══════════════════════════════════════════════════════════
+   DECLARATION / SIGNATURE / FOOTER
+═══════════════════════════════════════════════════════════ */
+	.decl {
+		padding: 7px 14px;
+		font-size: 8px;
+		line-height: 1.7;
+		color: #111;
+		background: #fff8f8 !important;
+		border-top: 1px solid #7b1a1a;
+		-webkit-print-color-adjust: exact !important;
+		print-color-adjust: exact !important;
+		page-break-inside: avoid;
+	}
+
+	.decl-item {
+		margin-bottom: 5px;
+	}
+
+	.decl-row {
+		display: table;
+		width: 100%;
+	}
+
+	.chk-cell {
+		display: table-cell;
+		width: 18px;
+		vertical-align: top;
+		font-size: 10pt;
+		line-height: 1.1;
+		color: #7b1a1a;
+	}
+
+	.decl-text {
+		display: table-cell;
+		vertical-align: top;
+	}
+
+	.invig {
+		text-align: center;
+		font-size: 7.5px;
+		font-style: italic;
+		color: #555;
+		padding: 4px 10px;
+		background: #f5f0f0 !important;
+		border-top: 1px solid #7b1a1a;
+		-webkit-print-color-adjust: exact !important;
+		print-color-adjust: exact !important;
+		page-break-inside: avoid;
+	}
+
+	.sig-tbl {
+		width: 100%;
+		border-collapse: collapse;
+		border-top: 1px solid #7b1a1a;
+		page-break-inside: avoid;
+	}
+
+	.sig-tbl td {
+		border: 1px solid #7b1a1a;
+		padding: 4px 12px 20px;
+		text-align: center;
+		font-size: 7pt;
+		vertical-align: bottom;
+		width: 50%;
+	}
+
+	.sig-head {
+		font-weight: bold;
+		background: #ebebeb !important;
+		-webkit-print-color-adjust: exact !important;
+		print-color-adjust: exact !important;
+	}
+
+	.sig-space {
+		height: 34px;
+		display: block;
+	}
+
+	.footer {
+		border-top: 1px solid #7b1a1a;
+		text-align: center;
+		font-size: 7px;
+		color: #888;
+		padding: 4px 8px;
+		background: #fff8f8 !important;
+		-webkit-print-color-adjust: exact !important;
+		print-color-adjust: exact !important;
+		page-break-inside: avoid;
+	}
+
+	.end-mark {
+		text-align: center;
+		font-size: 9pt;
+		font-weight: bold;
+		color: #111;
+		padding: 10px 8px 6px;
+		letter-spacing: 0.15em;
+		page-break-inside: avoid;
+	}
+</style>
+
+{# ═══════════════════════════════════════════════════════════ PAGE
+═══════════════════════════════════════════════════════════ #}
+<div class="pf-page">
+	{# HEADER #}
+	<table class="hdr" cellspacing="0" cellpadding="0">
+		<tr>
+			<td class="hdr-logo-td" width="68">
+				<div class="logo-box">
+					{%- if _logo_src -%}<img src="{{ _logo_src }}" alt="NLSIU" /> {%- else -%}<span
+						class="logo-txt"
+						>NLSIU</span
+					>{%- endif -%}
+				</div>
+			</td>
+			<td class="hdr-text-td">
+				<div class="hdr-inst">National Law School of India University</div>
+				<div class="hdr-sub">
+					Bengaluru &nbsp;&middot;&nbsp; Office of Admissions &nbsp;&middot;&nbsp;
+					Examination Cell
+				</div>
+			</td>
+		</tr>
+	</table>
+
+	{# TITLE #}
+	<div class="title-bar">
+		<div class="title-main">
+			Application Form{%- if doc.program %} &mdash; {{ doc.program }}{%- endif -%}
+		</div>
+		<div class="title-sub">
+			Admission to {{ doc.program or '' }} {%- if doc.academic_year -%}<span
+				class="title-sep"
+				>|</span
+			>{{ doc.academic_year }}{%- endif -%} {%- if doc.name -%}<span class="title-sep"
+				>|</span
+			>{{ doc.name }}{%- endif -%}
+		</div>
+	</div>
+
+	{# ═══════════════════════════════════════════════════════ SECTION 1 — PERSONAL INFORMATION
+	Photo is on the LEFT (cols 1-2, rowspan=6). All data rows flow to the RIGHT (cols 3-10).
+	10-column grid: each col = 10% Photo occupies cols 1-2 (20%) with rowspan=6 Data rows use cols
+	3-10 (80%) split as: L(2) V(2) L(2) V(2) = cols 3,4,5,6,7,8,9,10
+	═══════════════════════════════════════════════════════ #}
+
+	<table class="ft" cellspacing="0" cellpadding="0">
+		<colgroup>
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+		</colgroup>
+
+		{# Section header — spans all 10 cols #}
+		<tr class="sec-row">
+			<td colspan="10" class="sec">1. Personal Information</td>
+		</tr>
+
+		{# Row 1: Photo (LEFT, rowspan=6) + App No + Status #}
+		<tr>
+			<td class="lbl" colspan="2">Application No</td>
+			<td class="val" colspan="2">{{ doc.name }}</td>
+			{%- set _st = doc.status or 'Draft' -%}
+			<td class="lbl" colspan="2">Status</td>
+			<td class="val" colspan="2">
+				{%- if _st in ['Approved','Admitted','Allocated','Verified'] -%}<span class="bg"
+					>{{ _st }}</span
+				>
+				{%- elif _st in ['Pending','Under Review','Submitted','Entrance Test
+				Scheduled','Fee Paid','fee paid'] -%}<span class="by">{{ _st }}</span> {%- elif _st
+				in ['Rejected','Cancelled'] -%}<span class="br">{{ _st }}</span> {%- else -%}<span
+					class="bgy"
+					>{{ _st }}</span
+				>{%- endif -%}
+			</td>
+			<td class="photo-td" colspan="2" rowspan="6">
+				{%- if _photo_src -%}
+				<img src="{{ _photo_src }}" alt="Candidate Photo" />
+				{%- else -%}
+				<div class="photo-empty">Photo<br />Not<br />Uploaded</div>
+				{%- endif -%}
+				<div class="photo-cap">Candidate's<br />Photograph</div>
+			</td>
+		</tr>
+
+		{# Row 2: Candidate's Name #}
+		<tr>
+			<td class="lbl" colspan="2">Candidate's Name</td>
+			<td class="val" colspan="6">
+				{{ f(doc.candidate_name) }}
+			</td>
+		</tr>
+
+		{# Row 3: DOB #}
+		<tr>
+			<td class="lbl" colspan="2">Date of Birth</td>
+			<td class="val" colspan="6">{{ fd(doc.date_of_birth) }}</td>
+		</tr>
+
+		{# Row 4: Gender #}
+		<tr>
+			<td class="lbl" colspan="2">Gender</td>
+			<td class="val" colspan="6">{{ f(doc.gender) }}</td>
+		</tr>
+
+		{# Row 5: Nationality + Religion #}
+		<tr>
+			<td class="lbl" colspan="2">Nationality</td>
+			<td class="val" colspan="2">{{ f(doc.nationality) }}</td>
+			<td class="lbl" colspan="2">Religion</td>
+			<td class="val" colspan="2">{{ f(doc.religion) }}</td>
+		</tr>
+
+		{# Row 6: Mobile + Alternate Contact (still inside rowspan) #}
+		<tr>
+			<td class="lbl" colspan="2">Mobile Number</td>
+			<td class="val" colspan="2">{{ f(doc.mobile_number) }}</td>
+			<td class="lbl" colspan="2">Alternate Contact</td>
+			<td class="val" colspan="2">{{ f(doc.alternate_contact) }}</td>
+		</tr>
+
+		{# Rows below photo rowspan — full 10 cols #}
+		<tr>
+			<td class="lbl" colspan="2">Email Address</td>
+			<td class="val" colspan="8">{{ f(doc.email) }}</td>
+		</tr>
+		<tr>
+			<td class="lbl" colspan="2">Programme Applied</td>
+			<td class="val" colspan="2">{{ f(doc.program) }}</td>
+			<td class="lbl" colspan="2">Academic Year</td>
+			<td class="val" colspan="4">{{ f(doc.academic_year) }}</td>
+		</tr>
+		<tr>
+			<td class="lbl" colspan="2">Annual Household Income</td>
+			<td class="val" colspan="8">{{ f(doc.annual_house_hold_income) }}</td>
+		</tr>
+		<tr>
+			<td class="lbl" colspan="2">Correspondence Address</td>
+			<td class="val" colspan="8">
+				{%- if _addr_str -%}{{ _addr_str }}{%- else -%}&mdash;{%- endif -%}
+			</td>
+		</tr>
+	</table>
+
+	{# ═══════════════════════════════════════════════════════ SECTION 2 — FAMILY INFORMATION
+	═══════════════════════════════════════════════════════ #}
+	<table class="ft" cellspacing="0" cellpadding="0">
+		<colgroup>
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+		</colgroup>
+
+		<tr class="sec-row">
+			<td colspan="10" class="sec">2. Family Information</td>
+		</tr>
+
+		<tr class="sub-row">
+			<td colspan="10" class="subsec">Father's Details</td>
+		</tr>
+		<tr>
+			<td class="lbl" colspan="2">Father's Name</td>
+			<td class="val" colspan="4">{{ f(doc.father_name) }}</td>
+			<td class="lbl" colspan="2">Occupation</td>
+			<td class="val" colspan="2">{{ f(doc.father_occupation) }}</td>
+		</tr>
+		<tr>
+			<td class="lbl" colspan="2">Mobile</td>
+			<td class="val" colspan="4">{{ f(doc.father_mobile) }}</td>
+			<td class="lbl" colspan="2">Father's Email</td>
+			<td class="val" colspan="2">{{ f(doc.father_email) }}</td>
+		</tr>
+
+		<tr class="sub-row">
+			<td colspan="10" class="subsec">Mother's Details</td>
+		</tr>
+		<tr>
+			<td class="lbl" colspan="2">Mother's Name</td>
+			<td class="val" colspan="4">{{ f(doc.mother_name) }}</td>
+			<td class="lbl" colspan="2">Occupation</td>
+			<td class="val" colspan="2">{{ f(doc.mother_occupation) }}</td>
+		</tr>
+		<tr>
+			<td class="lbl" colspan="2">Mobile</td>
+			<td class="val" colspan="4">{{ f(doc.mother_mobile) }}</td>
+			<td class="lbl" colspan="2">Mother's Email</td>
+			<td class="val" colspan="2">{{ f(doc.mother_email) }}</td>
+		</tr>
+
+		{%- if show_guardian -%}
+		<tr class="sub-row">
+			<td colspan="10" class="subsec">Guardian's Details</td>
+		</tr>
+		<tr>
+			<td class="lbl" colspan="2">Guardian's Name</td>
+			<td class="val" colspan="3">{{ f(doc.guardian_name) }}</td>
+			<td class="lbl" colspan="2">Guardian's Mobile</td>
+			<td class="val" colspan="3">{{ f(doc.guardian_mobile) }}</td>
+		</tr>
+		<tr>
+			<td class="lbl" colspan="2">Guardian's Email</td>
+			<td class="val" colspan="3">{{ f(doc.guardian_email) }}</td>
+			<td class="lbl" colspan="2">Guardian\'s Occupation</td>
+			<td class="val" colspan="3">{{ f(doc.guardian_occupation) }}</td>
+		</tr>
+		{%- endif -%}
+	</table>
+
+	{# ═══════════════════════════════════════════════════════ SECTION 3 — ACADEMIC DETAILS
+	═══════════════════════════════════════════════════════ #}
+	<table class="ft" cellspacing="0" cellpadding="0">
+		<colgroup>
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+		</colgroup>
+
+		<tr class="sec-row">
+			<td colspan="10" class="sec">3. Academic Details</td>
+		</tr>
+
+		<tr class="sub-row">
+			<td colspan="10" class="subsec">Class X &mdash; Secondary School</td>
+		</tr>
+		<tr>
+			<td class="lbl" colspan="2">School Name</td>
+			<td class="val" colspan="8">{{ f(doc.class_x_school) }}</td>
+		</tr>
+		<tr>
+			<td class="lbl" colspan="2">Board</td>
+			<td class="val" colspan="3">{{ f(doc.class_x_board) }}</td>
+			<td class="lbl" colspan="2">Year of Completion</td>
+			<td class="val" colspan="3">{{ f(doc.class_x_year_of_completion) }}</td>
+		</tr>
+
+		<tr class="sub-row">
+			<td colspan="10" class="subsec">Class XII &mdash; Higher Secondary</td>
+		</tr>
+		<tr>
+			<td class="lbl" colspan="2">Examination Name</td>
+			<td class="val" colspan="8">{{ f(doc.class_xii_name_of_examination) }}</td>
+		</tr>
+		<tr>
+			<td class="lbl" colspan="2">School / College</td>
+			<td class="val" colspan="8">{{ f(doc.class_xii_school) }}</td>
+		</tr>
+		<tr>
+			<td class="lbl" colspan="2">Board</td>
+			<td class="val" colspan="3">{{ f(doc.class_xii_board) }}</td>
+			<td class="lbl" colspan="2">Year of Completion</td>
+			<td class="val" colspan="3">{{ f(doc.class_xii_year_of_completion) }}</td>
+		</tr>
+
+		{%- if doc.hsc_percentage -%}
+		<tr>
+			<td class="lbl" colspan="2">HSC Percentage</td>
+			<td class="val" colspan="8">{{ f(doc.hsc_percentage) }}</td>
+		</tr>
+		{%- endif -%} {%- if doc.national_test_name or doc.percentage -%}
+		<tr class="sub-row">
+			<td colspan="10" class="subsec">National / Entrance Test</td>
+		</tr>
+		<tr>
+			<td class="lbl" colspan="2">Test Name</td>
+			<td class="val" colspan="3">{{ f(doc.national_test_name) }}</td>
+			<td class="lbl" colspan="2">Percentage</td>
+			<td class="val" colspan="3">{{ f(doc.percentage) }}</td>
+		</tr>
+		{%- endif -%} {%- if not is_phd and doc.ug_degree_details -%}
+		<tr class="sub-row">
+			<td colspan="10" class="subsec">Undergraduate Degree(s)</td>
+		</tr>
+		<tr>
+			<td colspan="10" style="padding: 5px 7px; background: #fff !important">
+				<table class="deg">
+					<tr>
+						<th style="width: 30%">Programme</th>
+						<th style="width: 40%">College / University</th>
+						<th style="width: 15%">Year</th>
+						<th style="width: 15%">% / CGPA</th>
+					</tr>
+					{%- for d in doc.ug_degree_details -%}
+					<tr>
+						<td>{{ f(d.ug_program) }}</td>
+						<td>{{ f(d.college) }}</td>
+						<td>{{ f(d.year_of_completion) }}</td>
+						<td>{{ f(d.ug_cgpa) }}</td>
+					</tr>
+					{%- else -%}
+					<tr>
+						<td colspan="4" style="color: #999; text-align: center">&mdash;</td>
+					</tr>
+					{%- endfor -%}
+				</table>
+			</td>
+		</tr>
+		{%- if doc.ug_degree_completion -%}
+		<tr>
+			<td class="lbl" colspan="2">UG Completion Status</td>
+			<td class="val" colspan="8">{{ f(doc.ug_degree_completion) }}</td>
+		</tr>
+		{%- endif -%} {%- endif -%} {%- if is_phd -%}
+		<tr class="sub-row">
+			<td colspan="10" class="subsec">Undergraduate Degree(s)</td>
+		</tr>
+		<tr>
+			<td colspan="10" style="padding: 5px 7px; background: #fff !important">
+				<table class="deg">
+					<tr>
+						<th style="width: 30%">Programme</th>
+						<th style="width: 40%">College / University</th>
+						<th style="width: 15%">Year</th>
+						<th style="width: 15%">% / CGPA</th>
+					</tr>
+					{%- for d in (doc.ug_degree_details or []) -%}
+					<tr>
+						<td>{{ f(d.ug_program) }}</td>
+						<td>{{ f(d.college) }}</td>
+						<td>{{ f(d.year_of_completion) }}</td>
+						<td>{{ f(d.ug_cgpa) }}</td>
+					</tr>
+					{%- else -%}
+					<tr>
+						<td colspan="4" style="color: #999; text-align: center">&mdash;</td>
+					</tr>
+					{%- endfor -%}
+				</table>
+			</td>
+		</tr>
+		<tr class="sub-row">
+			<td colspan="10" class="subsec">Postgraduate Degree(s)</td>
+		</tr>
+		<tr>
+			<td colspan="10" style="padding: 5px 7px; background: #fff !important">
+				<table class="deg">
+					<tr>
+						<th style="width: 30%">Programme</th>
+						<th style="width: 40%">College / University</th>
+						<th style="width: 15%">Year</th>
+						<th style="width: 15%">% / CGPA</th>
+					</tr>
+					{%- for d in (doc.pg_degree_details or []) -%}
+					<tr>
+						<td>{{ f(d.pg_program) }}</td>
+						<td>{{ f(d.collegeuniversity) }}</td>
+						<td>{{ f(d.year_of_completion) }}</td>
+						<td>{{ f(d.pg_cgpa) }}</td>
+					</tr>
+					{%- else -%}
+					<tr>
+						<td colspan="4" style="color: #999; text-align: center">&mdash;</td>
+					</tr>
+					{%- endfor -%}
+				</table>
+			</td>
+		</tr>
+		{%- if doc.proposed_phd_topic -%}
+		<tr class="sub-row">
+			<td colspan="10" class="subsec">PhD Programme Details</td>
+		</tr>
+		{%- if doc.proposed_phd_topic -%}
+		<tr>
+			<td class="lbl" colspan="2">Proposed PhD Topic</td>
+			<td class="val" colspan="8">{{ f(doc.proposed_phd_topic) }}</td>
+		</tr>
+		{%- endif -%} {%- endif -%} {%- endif -%} {%- if doc.post_degree_work_experience or
+		doc.years_of_work_experience -%}
+		<tr class="sub-row">
+			<td colspan="10" class="subsec">Work Experience</td>
+		</tr>
+		<tr>
+			<td class="lbl" colspan="2">Work Experience</td>
+			<td class="val" colspan="3">{{ f(doc.post_degree_work_experience) }}</td>
+			<td class="lbl" colspan="2">Years of Experience</td>
+			<td class="val" colspan="3">{{ f(doc.years_of_work_experience) }}</td>
+		</tr>
+		{%- endif -%}
+	</table>
+
+	{# ═══════════════════════════════════════════════════════ SECTION 4 — RESERVATION / CATEGORY
+	═══════════════════════════════════════════════════════ #}
+	<table class="ft" cellspacing="0" cellpadding="0">
+		<colgroup>
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+		</colgroup>
+
+		<tr class="sec-row">
+			<td colspan="10" class="sec">4. Reservation / Category Details</td>
+		</tr>
+		<tr>
+			<td class="lbl" colspan="2">Reservation Category</td>
+			<td class="val" colspan="3">{{ f(doc.whether_scstobc_ncl) }}</td>
+			<td class="lbl" colspan="2">Karnataka Candidate</td>
+			<td class="val" colspan="3">{{ f(doc.karnataka_category) }}</td>
+		</tr>
+
+		{%- if doc.caste_certificate -%}
+		<tr>
+			<td class="lbl" colspan="2">Caste Certificate</td>
+			<td class="val" colspan="8">Uploaded</td>
+		</tr>
+		{%- endif -%} {%- if _pwd_val and _pwd_val not in ['no','none',''] -%}
+		<tr class="sub-row">
+			<td colspan="10" class="subsec">Persons with Disability (PwD)</td>
+		</tr>
+		<tr>
+			<td class="lbl" colspan="2">PwD Status</td>
+			<td class="val" colspan="3">{{ f(doc.pwd) }}</td>
+			<td class="lbl" colspan="2">PwD Certificate</td>
+			<td class="val" colspan="3">
+				{% if doc.pwd_certificate %}Uploaded{% else %}&mdash;{% endif %}
+			</td>
+		</tr>
+		<tr>
+			<td class="lbl" colspan="2">Requires Special Test</td>
+			<td class="val" colspan="4">{{ f(doc.pwd_required_test) }}</td>
+			<td class="lbl" colspan="2">Scribe Allotment</td>
+			<td class="val" colspan="2">{{ f(doc.scribe_allotment) }}</td>
+		</tr>
+		{%- endif -%} {%- if doc.karnataka_category and doc.karnataka_category not in ['None','']
+		and _ka_any -%}
+		<tr class="sub-row">
+			<td colspan="10" class="subsec">Karnataka Category</td>
+		</tr>
+		{%- if doc.ka_study_7yrs -%}
+		<tr>
+			<td class="lbl" colspan="2">Studied in Karnataka (7 yrs)</td>
+			<td class="val" colspan="4">Yes</td>
+			<td class="lbl" colspan="2">Certificate</td>
+			<td class="val" colspan="2">
+				{% if doc.ka_study_7yrs_certificate %}Uploaded{% else %}&mdash;{% endif %}
+			</td>
+		</tr>
+		{%- endif -%} {%- if doc.ka_defence_child -%}
+		<tr>
+			<td class="lbl" colspan="2">Child of Defence Personnel</td>
+			<td class="val" colspan="4">Yes</td>
+			<td class="lbl" colspan="2">Certificate</td>
+			<td class="val" colspan="2">
+				{% if doc.ka_defence_child_certificate %}Uploaded{% else %}&mdash;{% endif %}
+			</td>
+		</tr>
+		{%- endif -%} {%- if doc.ka_govt_child -%}
+		<tr>
+			<td class="lbl" colspan="2">Child of Karnataka Govt. Employee</td>
+			<td class="val" colspan="4">Yes</td>
+			<td class="lbl" colspan="2">Certificate</td>
+			<td class="val" colspan="2">
+				{% if doc.ka_govt_child_certificate %}Uploaded{% else %}&mdash;{% endif %}
+			</td>
+		</tr>
+		{%- endif -%} {%- if doc.ka_ais_child -%}
+		<tr>
+			<td class="lbl" colspan="2">Child of AIS Officer</td>
+			<td class="val" colspan="4">Yes</td>
+			<td class="lbl" colspan="2">Certificate</td>
+			<td class="val" colspan="2">
+				{% if doc.ka_ais_child_certificate %}Uploaded{% else %}&mdash;{% endif %}
+			</td>
+		</tr>
+		{%- endif -%} {%- if doc.ka_capf_child -%}
+		<tr>
+			<td class="lbl" colspan="2">Child of CAPF Personnel</td>
+			<td class="val" colspan="4">Yes</td>
+			<td class="lbl" colspan="2">Certificate</td>
+			<td class="val" colspan="2">
+				{% if doc.ka_capf_child_certificate %}Uploaded{% else %}&mdash;{% endif %}
+			</td>
+		</tr>
+		{%- endif -%} {%- endif -%}
+	</table>
+
+	{# ═══════════════════════════════════════════════════════ SECTION 5 — OTHER INFORMATION Only
+	rendered when at least one of: source_of_information or cv has data. "Please Mention" row shown
+	only when please_mention has a value AND source_of_information is also present (it's a
+	sub-field of "Others"). ═══════════════════════════════════════════════════════ #} {%- if
+	_show_other -%}
+	<table class="ft ft-last" cellspacing="0" cellpadding="0">
+		<colgroup>
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+			<col style="width: 10%" />
+		</colgroup>
+
+		<tr class="sec-row">
+			<td colspan="10" class="sec">5. Other Information</td>
+		</tr>
+
+		{%- if _has_source -%}
+		<tr>
+			<td class="lbl" colspan="2">Source of Information</td>
+			<td class="val" colspan="4">{{ f(doc.source_of_information) }}</td>
+			{%- if _has_mention -%}
+			<td class="lbl" colspan="2">Please Mention</td>
+			<td class="val" colspan="2">{{ f(doc.please_mention) }}</td>
+			{%- else -%}
+			<td colspan="4"></td>
+			{%- endif -%}
+		</tr>
+		{%- endif -%}
+	</table>
+	{%- else -%} {# No other info — still need ft-last on the previous table to close borders
+	cleanly #} {# The reservation table above gets ft-last class in this case #} {%- endif -%} {#
+	DECLARATION #}
+	<div class="decl">
+		<div class="decl-item">
+			<div class="decl-row">
+				<span class="chk-cell"
+					>{{ '&#9745;' if doc.authorisation_information else '&#9744;' }}</span
+				>
+				<span class="decl-text"
+					>Authorisation & Information: I declare that the information provided is true and complete. False
+					information may lead to disqualification or cancellation of admission.</span
+				>
+			</div>
+		</div>
+		<div class="decl-item">
+			<div class="decl-row">
+				<span class="chk-cell"
+					>{{ '&#9745;' if doc.agreement_to_communications else '&#9744;' }}</span
+				>
+				<span class="decl-text"
+					>Agreement to Communications: I agree to receive communications regarding my application.</span
+				>
+			</div>
+		</div>
+		<div class="decl-item">
+			<div class="decl-row">
+				<span class="chk-cell"
+					>{{ '&#9745;' if doc.agreement_withdrawal_conditions else '&#9744;' }}</span
+				>
+				<span class="decl-text"
+					>Agreement on Withdrawal Conditions: I have read and agree to the conditions related to withdrawal.</span
+				>
+			</div>
+		</div>
+
+	</div>
+
+
+	<div class="footer">
+		National Law School of India University, Nagarbhavi, Bengaluru &ndash; 560 072
+		&nbsp;|&nbsp; https://www.nls.ac.in &nbsp;|&nbsp; Application ID: {{ doc.name }} &nbsp;|&nbsp;
+		Printed: {{ frappe.utils.formatdate(frappe.utils.nowdate(),'dd-MM-yyyy') }}
+	</div>
+
+	<div class="end-mark">*********</div>
+</div>
+{# END PAGE #}
