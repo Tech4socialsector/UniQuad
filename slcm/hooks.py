@@ -16,6 +16,7 @@ after_migrate = [
     "slcm.install.after_migrate",
     "slcm.erpnext_bridge.install.after_migrate",
     "slcm.slcm.doctype.site_domain_settings.site_domain_settings.sync_after_migrate",
+    "slcm.setup.nlsiu_admin_role.sync",
 ]
 after_app_install = "slcm.erpnext_bridge.install.after_app_install"
 before_app_uninstall = "slcm.erpnext_bridge.install.before_app_uninstall"
