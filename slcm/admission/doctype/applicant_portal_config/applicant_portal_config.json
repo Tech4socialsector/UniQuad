@@ -6,6 +6,7 @@
  "field_order": [
   "portal_settings_tab",
   "portal_title",
+  "title_suffix",
   "portal_subtitle",
   "branding_section",
   "primary_color",
@@ -98,6 +99,7 @@
   "route",
   "pace_footer",
   "pace_tagline",
+  "pace_title_suffix",
   "enable_pace_site_configuration_section",
   "show_hero_section",
   "hero_background_image",
@@ -123,6 +125,13 @@
    "in_list_view": 1,
    "label": "Portal title",
    "reqd": 1
+  },
+  {
+   "default": "NLSAT",
+   "description": "Brand name shown after the page name in the browser tab and in Google search results for the NLSAT admission portals (Indian Nationals and International). Format: Page Name — Title Suffix. Example: National Law School of India University — NLSAT. Keep it short and public-facing. If left blank, NLSAT is used. Google shows the new title only after it re-crawls the site, which can take a few days.",
+   "fieldname": "title_suffix",
+   "fieldtype": "Data",
+   "label": "Title Suffix (Browser Tab / Google)"
   },
   {
    "fieldname": "portal_subtitle",
@@ -740,6 +749,13 @@
    "label": "PACE Login Page tagline / Subtitle"
   },
   {
+   "default": "NLSIU PACE",
+   "description": "Brand name shown after the page name in the browser tab and in Google search results for PACE pages (/paceadmissions and /pace/...). Format: Page Name — PACE Title Suffix. Example: My PACE Applications — NLSIU PACE. If left blank, NLSIU PACE is used.",
+   "fieldname": "pace_title_suffix",
+   "fieldtype": "Data",
+   "label": "PACE Title Suffix (Browser Tab / Google)"
+  },
+  {
    "default": "0",
    "fieldname": "show_admission_page",
    "fieldtype": "Check",
@@ -756,7 +772,7 @@
  "issingle": 1,
  "links": [],
  "make_attachments_public": 1,
- "modified": "2026-11-04 16:00:00.000000",
+ "modified": "2026-11-06 13:00:00.000000",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Applicant Portal Config",

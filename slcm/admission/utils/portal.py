@@ -557,6 +557,9 @@ def get_portal_config():
         sizes = resolve_sizes(config)
         return {
             "portal_title": config.portal_title or "Admissions",
+            # Browser-tab / search-result suffix ("<page> — <suffix>"), see admission_base.html
+            "title_suffix": (config.get("title_suffix") or "").strip() or "NLSAT",
+            "pace_title_suffix": (config.get("pace_title_suffix") or "").strip() or "NLSIU PACE",
             "portal_subtitle": config.portal_subtitle or "",
             "hero_image": config.hero_image or "",
             # Colours
@@ -624,6 +627,8 @@ def get_portal_config():
         # DocType not yet configured — return safe defaults
         return {
             "portal_title": "Admissions",
+            "title_suffix": "NLSAT",
+            "pace_title_suffix": "NLSIU PACE",
             "portal_subtitle": "",
             "hero_image": "",
             # Colours
