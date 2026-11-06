@@ -33,6 +33,7 @@
   "entrance_test_details",
   "amended_from",
   "application_naming_tab",
+  "application_id_digits",
   "application_id_configuration"
  ],
  "fields": [
@@ -245,6 +246,15 @@
    "label": "Application Naming"
   },
   {
+   "allow_on_submit": 1,
+   "description": "Optional fixed part followed by one # per digit, e.g. 7#####. ID = programme code + this: code B gives B700001, B700002, … The number is shared by all programmes in this cycle (B700001, A700002, …).",
+   "fieldname": "application_id_digits",
+   "fieldtype": "Data",
+   "label": "Digit Count",
+   "mandatory_depends_on": "eval:(doc.application_id_configuration || []).length > 0",
+   "placeholder": "7#####"
+  },
+  {
    "allow_bulk_edit": 1,
    "allow_on_submit": 1,
    "fieldname": "application_id_configuration",
@@ -255,7 +265,7 @@
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2026-11-05 12:00:00.000000",
+ "modified": "2026-11-06 21:00:00.000000",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Admission Cycle",

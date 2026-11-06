@@ -1,3 +1,4 @@
+import hashlib
 import json
 import re
 import traceback
@@ -7,7 +8,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from slcm.admission.utils.nlsat_portal import get_applicant_login_link, get_applicant_portal_url
-from frappe.model.naming import getseries, parse_naming_series
+from frappe.model.naming import getseries
 from frappe.utils import validate_email_address, getdate, date_diff, today, now, flt, nowdate, cint, cstr, strip_html
 from slcm.admission.portal_application_web_form import (
 	applicant_portal_application_locked,
@@ -86,66 +87,94 @@ SUBMISSION_ENTRY_STATUSES = frozenset(
 )
 
 
-APPLICATION_ID_SERIES = "Applicant Application Number"
-APPLICATION_ID_SERIES_PATTERN = re.compile(r"\{(#+)\}")
+# Application ID = programme code + fixed part of Digit Count + zero-padded running number
+# (Admission Cycle → Application Naming). One counter per Admission Cycle, shared by every
+# programme and by domestic and international applicants: B700001, A700002, F700003, …
+APPLICATION_ID_SERIES_PREFIX = "Applicant Application ID::"
+_SERIES_NAME_MAX_LENGTH = 100  # tabSeries.name is varchar(100)
 
 
-def _render_application_id(application_id_format, applicant):
-    """Render a Frappe format string with an Applicant-wide running number."""
-    format_value = application_id_format.removeprefix("format:")
-    series_found = False
+def application_id_series_key(admission_cycle):
+    """tabSeries key holding the running number for one Admission Cycle."""
+    key = APPLICATION_ID_SERIES_PREFIX + admission_cycle
+    if len(key) > _SERIES_NAME_MAX_LENGTH:
+        key = APPLICATION_ID_SERIES_PREFIX + hashlib.md5(admission_cycle.encode("utf-8")).hexdigest()
+    return key
 
-    def replace_parameter(match):
-        nonlocal series_found
-        parameter = match.group(1)
-        if set(parameter) == {"#"}:
-            if series_found:
-                return ""
-            series_found = True
-            return getseries(APPLICATION_ID_SERIES, len(parameter))
-        return parse_naming_series([parameter], doc=applicant)
 
-    return APPLICATION_ID_SERIES_PATTERN.sub(replace_parameter, format_value)
+def get_active_admission_cycle():
+    """The Active (not cancelled) Admission Cycle; only one may be Active at a time."""
+    return frappe.db.get_value(
+        "Admission Cycle",
+        {"status": "Active", "docstatus": ["!=", 2]},
+        "name",
+        order_by="modified desc",
+    )
+
+
+def get_application_id_settings(admission_cycle, program, foriegn_national=None):
+    """
+    (prefix, digit_count) for this programme in the cycle — prefix = programme code + the fixed
+    part of Digit Count (B + 7##### → ("B7", 5) → B700001) — or None when the cycle has no
+    Digit Count / the programme has no code (the Applicant then keeps the default naming).
+    """
+    if not admission_cycle or not program:
+        return None
+
+    # Imported here: admission_cycle.py imports nothing from this module, but keep it lazy anyway.
+    from slcm.admission.doctype.admission_cycle.admission_cycle import parse_application_id_number_format
+
+    number_format = parse_application_id_number_format(
+        frappe.db.get_value("Admission Cycle", admission_cycle, "application_id_digits")
+    )
+    if not number_format:
+        return None
+    fixed, digits = number_format
+
+    row = frappe.db.get_value(
+        "Application ID Configuration",
+        {"parent": admission_cycle, "parenttype": "Admission Cycle", "programme": program},
+        ["domestic_application_id_format", "international_application_id_format"],
+        as_dict=True,
+    )
+    if not row:
+        return None
+
+    domestic_code = (row.domestic_application_id_format or "").strip()
+    international_code = (row.international_application_id_format or "").strip()
+    is_foreign = (foriegn_national or "").strip() == "Yes"
+    code = (international_code or domestic_code) if is_foreign else domestic_code
+    if not code:
+        return None
+    return code.upper() + fixed, digits
+
+
+def next_application_id(admission_cycle, code, digits):
+    """Take the next number of the cycle's series; skip numbers whose ID already exists."""
+    key = application_id_series_key(admission_cycle)
+    for _attempt in range(1000):
+        application_id = f"{code}{getseries(key, digits)}"
+        if not frappe.db.exists("Applicant", application_id):
+            return application_id
+    frappe.throw(_("Could not generate a free Application ID for Admission Cycle {0}.").format(admission_cycle))
 
 
 class Applicant(Document):
 
     def autoname(self):
-        application_number = self._get_configured_application_number()
-        if application_number:
-            self.name = application_number
-            self.applicant_id = application_number
+        """Name = configured Application ID (see Admission Cycle → Application Naming).
+        Without a configuration Frappe falls back to the DocType's autoname (APP-YYYY-#####)."""
+        admission_cycle = self.admission_cycle or get_active_admission_cycle()
+        settings = get_application_id_settings(admission_cycle, self.program, self.foriegn_national)
+        if not settings:
+            return
 
-    def _get_configured_application_number(self):
-        application_id_format = self._get_application_id_format()
-        if not application_id_format:
-            return None
-
-        return _render_application_id(application_id_format, self)
-
-    def _get_application_id_format(self):
-        if not self.admission_cycle or not self.program:
-            return None
-
-        configuration = frappe.db.get_value(
-            "Application ID Configuration",
-            {
-                "parent": self.admission_cycle,
-                "parenttype": "Admission Cycle",
-                "programme": self.program,
-            },
-            ["domestic_application_id_format", "international_application_id_format"],
-            as_dict=True,
-        )
-        if not configuration:
-            return None
-
-        fieldname = (
-            "international_application_id_format"
-            if (self.foriegn_national or "").strip() == "Yes"
-            else "domestic_application_id_format"
-        )
-        return (configuration.get(fieldname) or "").strip() or None
+        code, digits = settings
+        if not self.admission_cycle:
+            self.admission_cycle = admission_cycle
+        application_id = next_application_id(admission_cycle, code, digits)
+        self.name = application_id
+        self.applicant_id = application_id
 
     # ──────────────────────────────────────────────
     # VALIDATE
