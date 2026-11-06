@@ -1,7 +1,7 @@
 import frappe
 from slcm.admission.utils.nlsat_portal import get_portal_login_url
 from slcm.admission.doctype.eligibility_result.eligibility_result import get_applicant_data
-from slcm.admission.utils.portal import get_portal_config
+from slcm.admission.utils.portal import get_portal_config, build_existing_applicant_portal_url
 from slcm.admission.utils.scholarship_availability import get_available_scholarships_for_dashboard, get_applied_scholarships_for_dashboard
 
 no_cache = 1
@@ -195,6 +195,11 @@ def get_context(context):
             app["program_image"] = frappe.db.get_value("Programme", prog, "program_image") if prog else None
             # current_stage is a plain field value — no Stage Master lookup
             app["current_stage_name"] = app.get("current_stage") or ""
+            # Draft cards get an Edit button that opens the application form directly
+            app["edit_url"] = (
+                build_existing_applicant_portal_url(app.name, app.get("admission_cycle"), edit=True)
+                if (app.get("status") or "Draft") == "Draft" else ""
+            )
     except Exception as e:
         frappe.log_error(frappe.get_traceback(), "Dashboard my_applications query failed")
         context.my_applications = []

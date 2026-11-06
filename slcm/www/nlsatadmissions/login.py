@@ -102,7 +102,8 @@ def get_context(context):
                 active_cycle_name,
                 ["cycle_start_date", "cycle_end_date",
                  "application_start_date", "application_end_date", "admission_year",
-                 "enable_applicant_register_tab", "academic_year"],
+                 "enable_applicant_register_tab", "applicant_register_closed_message",
+                 "academic_year"],
                 as_dict=True,
             ) or {}
             active_cycle = frappe._dict({
@@ -142,6 +143,12 @@ def get_context(context):
         else:
             context.display_year = ""
             context.admission_closed_message = _("Admission is Closed Now")
+
+        # Configured message when the Register tab is disabled on the active cycle
+        if active_cycle_name and not cint(row.get("enable_applicant_register_tab")):
+            custom_msg = (row.get("applicant_register_closed_message") or "").strip()
+            if custom_msg:
+                context.admission_closed_message = frappe.utils.escape_html(custom_msg)
     except Exception:
         frappe.log_error(frappe.get_traceback(), "login: active_cycle fetch")
 

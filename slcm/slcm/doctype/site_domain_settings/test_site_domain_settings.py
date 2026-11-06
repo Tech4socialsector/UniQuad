@@ -40,14 +40,25 @@ class TestSiteDomainSettings(IntegrationTestCase):
 		doc.save()
 		return doc
 
-	def visit(self, host, path="/", query=b""):
-		frappe.local.request = SimpleNamespace(host=host, path=path, query_string=query)
+	def visit(self, host, path="/", query=b"", method="GET", form=None):
+		frappe.local.request = SimpleNamespace(host=host, path=path, query_string=query, method=method)
+		saved_form = frappe.local.form_dict
+		frappe.local.form_dict = frappe._dict(form or {})
 		try:
 			R.redirect_domain_home()
 		except AuthRedirect as e:
 			return e.location
 		finally:
 			del frappe.local.request
+			frappe.local.form_dict = saved_form
+
+	def test_server_calls_to_root_not_redirected(self):
+		# frappe.call() can POST RPC calls to "/" with a `cmd` field; redirecting them
+		# returned the home page HTML to every server call on the domain.
+		self.assertIsNone(self.visit(D1, method="POST", form={"cmd": "frappe.client.get_value"}))
+		self.assertIsNone(self.visit(D1, method="POST"))
+		self.assertIsNone(self.visit(D1, form={"cmd": "frappe.client.get_value"}))  # GET RPC
+		self.assertEqual(self.visit(D1, method="HEAD"), "/nlsatadmissions")
 
 	def test_home_page_redirects_per_domain(self):
 		self.assertEqual(self.visit(D1), "/nlsatadmissions")  # leading / added

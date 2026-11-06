@@ -136,6 +136,16 @@
                         <span class="material-symbols-outlined" style="font-size:18px;color:var(--primary,#1a3c6e)">account_circle</span>
                         Profile
                     </a>
+                    {% if nav.portal_type != "PACE" %}
+                    <!-- My Applications -->
+                    <a href="/nlsat/dashboard?panel=applications" style="display:flex;align-items:center;gap:10px;
+                              padding:12px 16px;text-decoration:none;color:#334155;
+                              font-size:14px;font-weight:600;transition:background 0.15s;"
+                        onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+                        <span class="material-symbols-outlined" style="font-size:18px;color:var(--primary,#1a3c6e)">description</span>
+                        My Applications
+                    </a>
+                    {% endif %}
                     <!-- Divider -->
                     <div style="height:1px;background:#f1f5f9;margin:4px 0;"></div>
                     <!-- Logout -->

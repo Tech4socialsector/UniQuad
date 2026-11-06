@@ -3115,12 +3115,6 @@ or _app.current_stage)) or _status %}
             </div>
             <div class="app-id-row" style="margin-top:0; gap:16px;">
               <span class="app-submitted-date">Submitted On: {{ _subdate }}</span>
-              {% if _cycle %}
-              <span class="app-submitted-date" style="display:flex; align-items:center; gap:16px;">
-                <span style="color:var(--border);">|</span>
-                Admission Cycle: {{ _cycle }}
-              </span>
-              {% endif %}
             </div>
           </div>
 
@@ -4021,10 +4015,6 @@ or _app.current_stage)) or _status %}
         <!-- Meta Info Footer -->
         <div style="margin-top: 24px; padding-top: 16px; border-top: 1px dashed #bbf7d0; display: flex; flex-wrap: wrap; gap: 20px; font-size: 12px; color: #64748b;">
           <div style="display: flex; align-items: center; gap: 6px;">
-            <span class="material-symbols-outlined" style="font-size: 16px;">sync</span>
-            Cycle: <span style="font-weight: 600; color: #334155;">{{ eligibility_result.admission_cycle }}</span>
-          </div>
-          <div style="display: flex; align-items: center; gap: 6px;">
             <span class="material-symbols-outlined" style="font-size: 16px;">corporate_fare</span>
             Campus: <span style="font-weight: 600; color: #334155;">{{ eligibility_result.campus }}</span>
           </div>
@@ -4231,11 +4221,7 @@ or _app.current_stage)) or _status %}
           <div class="ns-deadline-row" role="note">
             <span class="material-symbols-outlined" aria-hidden="true">calendar_today</span>
             <span class="ns-deadline-text">
-              {% if admission_cycle_end_date_formatted %}
-              Complete all steps before <strong>{{ admission_cycle_end_date_formatted | e }}</strong>
-              {% else %}
-              Complete all steps before <strong>your cycle deadline</strong>
-              {% endif %}
+              Complete all steps before <strong>the deadline</strong>
             </span>
           </div>
           {% endif %}
