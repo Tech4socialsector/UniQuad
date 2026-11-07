@@ -557,6 +557,8 @@ def get_portal_config():
         sizes = resolve_sizes(config)
         return {
             "portal_title": config.portal_title or "Admissions",
+            # NLSAT landing-page tab / search-result suffix ("<portal title> — <suffix>"), see admission_base.html
+            "title_suffix": (config.get("title_suffix") or "").strip() or "NLSAT",
             "portal_subtitle": config.portal_subtitle or "",
             "hero_image": config.hero_image or "",
             # Colours
@@ -624,6 +626,7 @@ def get_portal_config():
         # DocType not yet configured — return safe defaults
         return {
             "portal_title": "Admissions",
+            "title_suffix": "NLSAT",
             "portal_subtitle": "",
             "hero_image": "",
             # Colours

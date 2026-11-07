@@ -4385,6 +4385,55 @@ function slcmClearDefaultZeroNumericFields() {
 	}
 }
 
+/**
+ * "If details of both the parents are unavailable…" (guardian_required) must read "Not Applicable"
+ * from the start. Frappe only applies the Web Form Field default, and the live record can lose it
+ * (Desk edits are newer than the JSON), so the value was empty until Save Draft filled it from the
+ * DocType default. Fill it client-side only when empty, so saved choices are never overwritten.
+ */
+var SLCM_GUARDIAN_DEFAULT = 'Not Applicable';
+
+function slcmEnsureGuardianRequiredDefault() {
+	var wf = window.frappe && frappe.web_form;
+	if (!wf || !wf.fields_dict || !wf.fields_dict.guardian_required) return;
+	if (!wf.is_new && !wf.in_edit_mode) return;
+	if (wf.doc && Number(wf.doc.docstatus) === 1) return;
+	var v;
+	try {
+		v = wf.get_value('guardian_required');
+	} catch (e) {
+		return;
+	}
+	if (v !== undefined && v !== null && String(v).trim() !== '') return;
+	try {
+		var p = wf.set_value('guardian_required', SLCM_GUARDIAN_DEFAULT);
+		var refresh = function () {
+			try { wf.refresh_dependency(); } catch (e2) {}
+		};
+		if (p && typeof p.then === 'function') p.then(refresh);
+		else refresh();
+	} catch (e3) {}
+}
+
+function setupGuardianRequiredDefault() {
+	var hooked = false;
+	var n = 0;
+	// Poll a few seconds: covers late web_form init and the multi-programme profile copy.
+	var t = setInterval(function () {
+		var wf = window.frappe && frappe.web_form;
+		if (!hooked && wf && wf.events && wf.events.on) {
+			hooked = true;
+			try {
+				wf.events.on('after_load', function () {
+					setTimeout(slcmEnsureGuardianRequiredDefault, 0);
+				});
+			} catch (e) {}
+		}
+		slcmEnsureGuardianRequiredDefault();
+		if (++n > 20) clearInterval(t);
+	}, 250);
+}
+
 function setupDateOfBirthWebForm() {
 	function tick() {
 		var wf = window.frappe && frappe.web_form;
@@ -5325,6 +5374,7 @@ frappe.ready(function () {
 	// Stepper / Stages
 	setupStepper();
 	setupDateOfBirthWebForm();
+	setupGuardianRequiredDefault();
 	scheduleApplicantCountryStateCityFilter();
 	setupShowAllLinkOptions();
 

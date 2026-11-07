@@ -9,15 +9,34 @@ from slcm.admission.utils.institution import is_multi_campus_enabled
 from slcm.security.access import require_desk_user
 
 
-APPLICATION_ID_SERIES_PATTERN = re.compile(r"\{(#+)\}")
 RESEARCH_COURSE = "Research Course"
 
+# Application Naming tab: "Digit Count" is an optional fixed part followed by one # per digit
+# (7##### = "7" + 5 digits). Each programme row carries a code such as B, so the Application
+# IDs become B700001, A700002, … (code + fixed part + running number).
+APPLICATION_ID_MIN_DIGITS = 3
+APPLICATION_ID_MAX_DIGITS = 10
+APPLICATION_ID_CODE_PATTERN = re.compile(r"^[A-Z0-9][A-Z0-9\-_/]{0,19}$")
+APPLICATION_ID_NUMBER_FORMAT_PATTERN = re.compile(r"^([A-Z0-9\-_/]{0,10})(#+)$")
 
-def _is_valid_application_id_format(application_id_format):
-    if not (application_id_format or "").startswith("format:"):
-        return False
-    series_tokens = APPLICATION_ID_SERIES_PATTERN.findall(application_id_format)
-    return len(series_tokens) == 1 and 5 <= len(series_tokens[0]) <= 6
+
+def parse_application_id_number_format(value):
+    """'7#####' → ('7', 5); '######' → ('', 6). None when empty or invalid."""
+    match = APPLICATION_ID_NUMBER_FORMAT_PATTERN.match((value or "").strip().upper())
+    if not match:
+        return None
+    fixed, hashes = match.groups()
+    if not APPLICATION_ID_MIN_DIGITS <= len(hashes) <= APPLICATION_ID_MAX_DIGITS:
+        return None
+    return fixed, len(hashes)
+
+
+def normalize_application_id_code(value):
+    return (value or "").strip().upper()
+
+
+def is_valid_application_id_code(code):
+    return bool(APPLICATION_ID_CODE_PATTERN.match(code or ""))
 
 
 def _overlap_rows_with_labels(overlaps):
@@ -95,6 +114,8 @@ class AdmissionCycle(Document):
         # (Application Fee, Reservation Policy, seats) can still change, so re-check them here.
         self._validate_program_application_fees()
         self._apply_program_seat_rules()
+        # The Application Naming tab is editable after submit as well.
+        self._validate_application_id_configurations()
 
     def on_submit(self):
         """Automatically set status to Active on submission."""
@@ -327,10 +348,28 @@ class AdmissionCycle(Document):
             row.seats = cint(policy.total_seats)
 
     def _validate_application_id_configurations(self):
+        rows = self.application_id_configuration or []
+
+        digits_value = (self.get("application_id_digits") or "").strip().upper()
+        self.application_id_digits = digits_value
+        if digits_value and not parse_application_id_number_format(digits_value):
+            frappe.throw(
+                _(
+                    "Digit Count must end with {0} to {1} # characters (one per digit), optionally "
+                    "preceded by fixed letters/digits, e.g. 7##### or ######."
+                ).format(APPLICATION_ID_MIN_DIGITS, APPLICATION_ID_MAX_DIGITS),
+                title=_("Invalid Digit Count"),
+            )
+        if rows and not digits_value:
+            frappe.throw(
+                _("Enter the Digit Count (e.g. ######) in the Application Naming tab."),
+                title=_("Digit Count Required"),
+            )
+
         configured_programmes = set()
-        for row in self.application_id_configuration or []:
+        for row in rows:
             if not row.programme:
-                frappe.throw(_("Programme is required for each Application ID Configuration row."))
+                frappe.throw(_("Row {0}: Programme is required in Application ID Configuration.").format(row.idx))
 
             if row.programme in configured_programmes:
                 frappe.throw(
@@ -340,26 +379,27 @@ class AdmissionCycle(Document):
                 )
             configured_programmes.add(row.programme)
 
-            formats = {
-                _("Domestic"): row.domestic_application_id_format,
-                _("International"): row.international_application_id_format,
-            }
-            for label, application_id_format in formats.items():
-                if not _is_valid_application_id_format(application_id_format):
-                    frappe.throw(
-                        _(
-                            "{0} Application ID Format for Programme {1} must use Frappe format syntax "
-                            "and contain exactly one five- or six-digit series, for example "
-                            "format:B6{{######}}."
-                        ).format(label, frappe.bold(row.programme))
-                    )
-
-            if row.domestic_application_id_format == row.international_application_id_format:
+            row.domestic_application_id_format = normalize_application_id_code(row.domestic_application_id_format)
+            row.international_application_id_format = normalize_application_id_code(
+                row.international_application_id_format
+            )
+            if not row.domestic_application_id_format:
                 frappe.throw(
-                    _("Domestic and International Application ID Formats must differ for Programme {0}.").format(
-                        frappe.bold(row.programme)
+                    _("Row {0}: Domestic Code is required for Programme {1}.").format(
+                        row.idx, frappe.bold(row.programme)
                     )
                 )
+            for label, code in (
+                (_("Domestic Code"), row.domestic_application_id_format),
+                (_("International Code"), row.international_application_id_format),
+            ):
+                if code and not is_valid_application_id_code(code):
+                    frappe.throw(
+                        _(
+                            "Row {0}: {1} {2} for Programme {3} may use only letters, digits, - _ / "
+                            "(max 20 characters), e.g. B7."
+                        ).format(row.idx, label, frappe.bold(code), frappe.bold(row.programme))
+                    )
 
     def get_active_programs(self):
         """Returns list of active program rows in this cycle."""

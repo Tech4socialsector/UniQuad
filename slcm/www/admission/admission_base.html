@@ -10,7 +10,15 @@
 
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Admissions{% endblock %} — {{ ws_title or "SLCM" }}</title>
+    {# Tab / search-result title.
+       NLSAT home pages (/nlsatadmissions, /nlsat-international): "<Portal title> — <Title Suffix>",
+       Title Suffix from Applicant Portal Config (e.g. "National Law School of India University — NLSAT").
+       Every other page: its own name only ("My Profile", "Helpdesk", "My Applications").
+       Not Website Settings app_name — that is the internal app name (SLCM) and leaks into Google. #}
+    {% set _cp = ((current_path or path or "") | string).strip("/") %}
+    {% set _pc = portal_config or {} %}
+    {% set _title_suffix = (_pc.get("title_suffix") or "NLSAT") if _cp in ("nlsatadmissions", "nlsat-international") else "" %}
+    <title>{% block title %}Admissions{% endblock %}{% if _title_suffix %} — {{ _title_suffix }}{% endif %}</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
     <link rel="stylesheet" href="/assets/slcm/css/applicant_portal.css">
