@@ -5908,6 +5908,31 @@ function _slcmWebFormLayoutFieldtype(ft) {
  * _validateStage — required (and conditionally required) fields on one page.
  * Returns an object with ok (boolean) and missing (string[]). This file is Jinja-rendered by Frappe Web Form — never use literal double-open-brace sequences in source.
  */
+/** "Whether Karnataka" = Yes: one option under "Which of the following applies to you" must be ticked. */
+var SLCM_KARNATAKA_OPTION_FIELDS = ['ka_study_7yrs', 'ka_defence_child', 'ka_govt_child', 'ka_ais_child', 'ka_capf_child'];
+function _slcmValidateKarnatakaOptionOnPage(wf, $page, missing) {
+	if (wf.get_value('karnataka_category') !== 'Yes') return;
+	if (!$page.find('[data-fieldname="ka_study_7yrs"]').length) return;
+	var ticked = SLCM_KARNATAKA_OPTION_FIELDS.some(function (f) {
+		return !!cint(wf.get_value(f));
+	});
+	if (ticked) return;
+	SLCM_KARNATAKA_OPTION_FIELDS.forEach(function (f) {
+		var fw = wf.fields_dict[f];
+		fw && fw.$wrapper && fw.$wrapper.find('input[type="checkbox"]').addClass('slcm-field-error');
+	});
+	missing.push(__('Which of the following applies to you: please select one option'));
+}
+if (window.jQuery) {
+	jQuery(document).on('change', SLCM_KARNATAKA_OPTION_FIELDS.map(function (f) {
+		return '[data-fieldname="' + f + '"] input[type="checkbox"]';
+	}).join(', '), function () {
+		jQuery(SLCM_KARNATAKA_OPTION_FIELDS.map(function (f) {
+			return '[data-fieldname="' + f + '"] input[type="checkbox"]';
+		}).join(', ')).removeClass('slcm-field-error');
+	});
+}
+
 /** Foreign nationals: every filled UG / PG degree row on this page needs a Country. */
 function _slcmValidateDegreeCountryOnPage(wf, $page, missing) {
 	if (wf.get_value('foriegn_national') !== 'Yes') return;
@@ -6000,6 +6025,7 @@ function _validateStage(wf, $page) {
 	_slcmValidateChildRowsOnPage(wf, $page, missing);
 	_slcmValidateApplicantFormatsOnPage(wf, $page, missing);
 	_slcmValidateDegreeCountryOnPage(wf, $page, missing);
+	_slcmValidateKarnatakaOptionOnPage(wf, $page, missing);
 
 	return { ok: missing.length === 0, missing };
 }

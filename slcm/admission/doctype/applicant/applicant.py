@@ -320,11 +320,20 @@ class Applicant(Document):
 
     def _validate_single_karnataka_reservation(self):
         """Only one "Which of the following applies to you" option may be ticked.
-        Checked only when one of these boxes changes, so older records are not blocked."""
+        When "Whether Karnataka" is Yes, one option is required at submission.
+        Checked only on submit or when one of these boxes changes, so older records are not blocked."""
         fields = self.KARNATAKA_RESERVATION_FIELDS
+        ticked = [f for f in fields if cint(self.get(f))]
+        submitting = self.status in ("Submitted", "Submitted and Paid") and (
+            self.is_new() or self.has_value_changed("status")
+        )
+        if submitting and self.get("karnataka_category") == "Yes" and not ticked:
+            frappe.throw(
+                _("Please select one option under 'Which of the following applies to you'."),
+                title=_("Karnataka Reservation"),
+            )
         if not self.is_new() and not any(self.has_value_changed(f) for f in fields):
             return
-        ticked = [f for f in fields if cint(self.get(f))]
         if len(ticked) > 1:
             labels = ", ".join(_(self.meta.get_label(f)) for f in ticked)
             frappe.throw(
