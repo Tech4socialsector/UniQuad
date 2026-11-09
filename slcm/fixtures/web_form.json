@@ -1293,7 +1293,7 @@
   "meta_description": null,
   "meta_image": null,
   "meta_title": "Application Form",
-  "modified": "2026-11-09 18:00:00",
+  "modified": "2026-11-09 19:00:00",
   "module": "Admission",
   "name": "applicant-form",
   "payment_button_help": null,
@@ -3605,7 +3605,7 @@
     "placeholder": null,
     "precision": "",
     "read_only": 0,
-    "read_only_depends_on": null,
+    "read_only_depends_on": "eval:doc.ka_defence_child || doc.ka_govt_child || doc.ka_ais_child || doc.ka_capf_child",
     "reqd": 0,
     "show_in_filter": 0
    },
@@ -3645,7 +3645,7 @@
     "placeholder": null,
     "precision": "",
     "read_only": 0,
-    "read_only_depends_on": null,
+    "read_only_depends_on": "eval:doc.ka_study_7yrs || doc.ka_govt_child || doc.ka_ais_child || doc.ka_capf_child",
     "reqd": 0,
     "show_in_filter": 0
    },
@@ -3685,7 +3685,7 @@
     "placeholder": null,
     "precision": "",
     "read_only": 0,
-    "read_only_depends_on": null,
+    "read_only_depends_on": "eval:doc.ka_study_7yrs || doc.ka_defence_child || doc.ka_ais_child || doc.ka_capf_child",
     "reqd": 0,
     "show_in_filter": 0
    },
@@ -3725,7 +3725,7 @@
     "placeholder": null,
     "precision": "",
     "read_only": 0,
-    "read_only_depends_on": null,
+    "read_only_depends_on": "eval:doc.ka_study_7yrs || doc.ka_defence_child || doc.ka_govt_child || doc.ka_capf_child",
     "reqd": 0,
     "show_in_filter": 0
    },
@@ -3765,7 +3765,7 @@
     "placeholder": null,
     "precision": "",
     "read_only": 0,
-    "read_only_depends_on": null,
+    "read_only_depends_on": "eval:doc.ka_study_7yrs || doc.ka_defence_child || doc.ka_govt_child || doc.ka_ais_child",
     "reqd": 0,
     "show_in_filter": 0
    },

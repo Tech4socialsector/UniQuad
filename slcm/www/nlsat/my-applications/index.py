@@ -238,60 +238,35 @@ def get_context(context):
             # Fetch the actual applicant doc for fields
             target_applicant = frappe.get_doc("Applicant", doc_lookup_name, ignore_permissions=True)
 
-            # Standard fields in Applicant DocType
-            standard_checklist = [
-                {"label": "10th Certificate", "field": "class_x_marksheet", "required": True, "accept": ".pdf,.jpg,.jpeg,.png", "max_size_mb": 5},
-                {"label": "12th Certificate", "field": "class_xii_marksheet", "required": True, "accept": ".pdf,.jpg,.jpeg,.png", "max_size_mb": 5},
-                {"label": "ID Proof", "field": "id_proof", "required": True, "accept": ".pdf,.jpg,.jpeg,.png", "max_size_mb": 5},
-                {"label": "Photo", "field": "candidate_photo", "required": True, "accept": ".jpg,.jpeg,.png", "max_size_mb": 1},
-
-            ]
-
-            # Optional / Conditional fields
-            if target_applicant.whether_scstobc_ncl and target_applicant.whether_scstobc_ncl not in ["NA", "General"]:
-                standard_checklist.append({"label": "Category Certificate", "field": "caste_certificate", "required": True, "accept": ".jpg,.jpeg,.png", "max_size_mb": 5})
-                
-            if target_applicant.pwd == "Yes":
-                standard_checklist.append({"label": "PwD Certificate", "field": "pwd_certificate", "required": True, "accept": ".jpg,.jpeg,.png", "max_size_mb": 5})
-                
-            if target_applicant.program_level == "Research Course":
-                standard_checklist.append({"label": "Research Proposal", "field": "phd_proposal", "required": True, "accept": ".pdf,.jpg,.jpeg,.png", "max_size_mb": 5})
-            
-            # Special case for Karnataka category
-            if getattr(target_applicant, "ka_study_7yrs", 0):
-                standard_checklist.append({"label": "Karnataka Study Certificate", "field": "ka_study_7yrs_certificate", "required": True, "accept": ".jpg,.jpeg,.png", "max_size_mb": 5})
-            if getattr(target_applicant, "ka_defence_child", 0):
-                standard_checklist.append({"label": "Karnataka Defence Child Certificate", "field": "ka_defence_child_certificate", "required": True, "accept": ".jpg,.jpeg,.png", "max_size_mb": 5})
-            if getattr(target_applicant, "ka_govt_child", 0):
-                standard_checklist.append({"label": "Karnataka Govt Child Certificate", "field": "ka_govt_child_certificate", "required": True, "accept": ".jpg,.jpeg,.png", "max_size_mb": 5})
-            if getattr(target_applicant, "ka_ais_child", 0):
-                standard_checklist.append({"label": "Karnataka AIS Child Certificate", "field": "ka_ais_child_certificate", "required": True, "accept": ".jpg,.jpeg,.png", "max_size_mb": 5})
-            if getattr(target_applicant, "ka_capf_child", 0):
-                standard_checklist.append({"label": "Karnataka CAPF Child Certificate", "field": "ka_capf_child_certificate", "required": True, "accept": ".jpg,.jpeg,.png", "max_size_mb": 5})
-
-            for item in standard_checklist:
-                field = item["field"]
+            # Checklist follows the application form's order and labels
+            # (Candidate Photo → ID Proof → Class X → Class XII → UG → PG → PhD Proposal
+            #  → Category → PWD → Karnataka reservation certificate).
+            def add_field_doc(label, field, accept=".pdf,.jpg,.jpeg,.png", max_size_mb=5):
                 val = target_applicant.get(field)
-                
                 context.app_documents.append({
-                    "document_name": item["label"],
-                    "document_type": item["label"],
+                    "document_name": label,
+                    "document_type": label,
                     "is_uploaded": bool(val),
                     "file_url": val,
                     "field": field,
                     "doc_name": "",
                     "source": "field",
-                    "required": item["required"],
-                    "accept": item.get("accept", ".pdf,.jpg,.jpeg,.png"),
-                    "max_size_mb": item.get("max_size_mb", 5)
+                    "required": True,
+                    "accept": accept,
+                    "max_size_mb": max_size_mb,
                 })
 
-            # Child tables
+            add_field_doc("Candidate Photo", "candidate_photo", accept=".jpg,.jpeg,.png", max_size_mb=1)
+            add_field_doc("ID Proof (Govt. issued photo ID)", "id_proof")
+            add_field_doc("Class X Marksheet To Be Uploaded", "class_x_marksheet")
+            add_field_doc("Class XII Marksheet To Be Uploaded", "class_xii_marksheet")
+
+            # Child tables (UG, then PG) — same position as in the form
             if target_applicant.program_level in ["Postgraduate", "Research Course"]:
                 for row in target_applicant.get("ug_degree_details", []):
                     context.app_documents.append({
-                        "document_name": f"UG Certificate ({row.ug_program or 'Degree'})",
-                        "document_type": "UG degree certificate / Bonafide",
+                        "document_name": f"UG Degree Certificate / Bonafide ({row.ug_program or 'Degree'})",
+                        "document_type": "UG Degree Certificate / Bonafide",
                         "is_uploaded": bool(row.degree_certificate),
                         "file_url": row.degree_certificate,
                         "field": "degree_certificate",
@@ -302,7 +277,7 @@ def get_context(context):
                         "max_size_mb": 5
                     })
                     context.app_documents.append({
-                        "document_name": f"UG Marksheets ({row.ug_program or 'Degree'})",
+                        "document_name": f"Transcripts / Marksheets ({row.ug_program or 'Degree'})",
                         "document_type": "Transcripts / Marksheets",
                         "is_uploaded": bool(row.marksheets),
                         "file_url": row.marksheets,
@@ -317,8 +292,8 @@ def get_context(context):
             if target_applicant.program_level == "Research Course":
                 for row in target_applicant.get("pg_degree_details", []):
                     context.app_documents.append({
-                        "document_name": f"PG Certificate ({row.pg_program or 'Degree'})",
-                        "document_type": "PG degree certificate / Bonafide",
+                        "document_name": f"PG Degree Certificate / Bonafide ({row.pg_program or 'Degree'})",
+                        "document_type": "PG Degree Certificate / Bonafide",
                         "is_uploaded": bool(row.pg_degree_certificatebonafide_certificate_to_be_uploaded),
                         "file_url": row.pg_degree_certificatebonafide_certificate_to_be_uploaded,
                         "field": "pg_degree_certificatebonafide_certificate_to_be_uploaded",
@@ -329,7 +304,7 @@ def get_context(context):
                         "max_size_mb": 5
                     })
                     context.app_documents.append({
-                        "document_name": f"PG Marksheets ({row.pg_program or 'Degree'})",
+                        "document_name": f"Transcripts / Marksheets ({row.pg_program or 'Degree'})",
                         "document_type": "Transcripts / Marksheets",
                         "is_uploaded": bool(row.transcriptsmarksheets_to_be_uploaded),
                         "file_url": row.transcriptsmarksheets_to_be_uploaded,
@@ -340,6 +315,26 @@ def get_context(context):
                         "accept": ".pdf,.jpg,.jpeg,.png",
                         "max_size_mb": 5
                     })
+
+            if target_applicant.program_level == "Research Course":
+                add_field_doc("PhD Proposal Upload", "phd_proposal")
+
+            if target_applicant.whether_scstobc_ncl and target_applicant.whether_scstobc_ncl not in ["NA", "General"]:
+                add_field_doc("Category Certificate", "caste_certificate", accept=".jpg,.jpeg,.png")
+
+            if target_applicant.pwd == "Yes":
+                add_field_doc("PWD Certificate", "pwd_certificate", accept=".jpg,.jpeg,.png")
+
+            # Karnataka reservation: the form labels the upload "Certificate" under the ticked option.
+            for check_field, option_label in (
+                ("ka_study_7yrs", "Studied 7 years in Karnataka"),
+                ("ka_defence_child", "Child of Defence / Ex-Serviceman"),
+                ("ka_govt_child", "Child of Karnataka cadre AIS employee"),
+                ("ka_ais_child", "Child of CAPF employee"),
+                ("ka_capf_child", "Child of Central Armed Police Force employee"),
+            ):
+                if target_applicant.get(check_field):
+                    add_field_doc(f"Certificate ({option_label})", f"{check_field}_certificate", accept=".jpg,.jpeg,.png")
         except Exception as e:
             frappe.log_error(f"Document checklist error: {e}")
 
