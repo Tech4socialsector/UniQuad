@@ -5,6 +5,7 @@
 	Mode of Payment -> Mode of Payment Account      payment mode -> cash / bank / gateway clearing ledger
 	Bank Account (is_company_account)               SLCM "University Bank Account" -> bank ledger (by account no.)
 	Account (by name)                               Fee Component "Ledger" (or its name) -> income ledger
+	Account (SLCM Fee Components)                   same, for charts whose account names differ from SLCM's
 """
 
 import re
@@ -29,6 +30,13 @@ COMPANY_FIELDS = (
 )
 ACCOUNT_FIELDS = tuple(f for f in COMPANY_FIELDS if f.endswith("_account"))
 ONLINE_MODES = ("Online Payment",)
+# Fees paid on no Fee Payment (re-exam / improvement exam online or at the counter, transcripts online): the
+# name each one's income ledger is looked up by - an Account of that name, or one listing it under SLCM Fee Components.
+EXAM_FEE_NAMES = {
+	"Re Exam Payment Log": "Re Exam Fee",
+	"Improvement Exam Payment Log": "Improvement Exam Fee",
+	"Transcript Request": "Transcript Fee",
+}
 MOVED_FROM_DUE = re.compile(r"^Moved from due (\S+)")
 
 
@@ -82,16 +90,70 @@ def component_ledger_name(component):
 
 
 def component_account(cfg, component):
-	"""Ledger for a Fee Component: the Account named like its Ledger, else the default fee income ledger.
-	Returns (account, used_default)."""
-	name = component_ledger_name(component)
-	if name:
-		account = frappe.db.get_value(
-			"Account", {"company": cfg.company, "account_name": name, "is_group": 0, "disabled": 0}, "name"
-		)
-		if account:
-			return account, False
+	"""Ledger for a Fee Component: the Account named like its Ledger, else the Account listing its Ledger or name
+	under SLCM Fee Components, else the default fee income ledger. Returns (account, used_default)."""
+	account, _how = resolve_component(cfg, component)
+	if account:
+		return account, False
 	return require(cfg, "slcm_default_fee_income_account", _("Fee Component {0}").format(component or "-")), True
+
+
+def resolve_component(cfg, component):
+	"""(account, how) without falling back to the default ledger; (None, None) when unmapped."""
+	name = component_ledger_name(component)
+	account = name and _exact_account(cfg, name)
+	if account:
+		return account, "Same name"
+	account = mapped_account(cfg, name) or mapped_account(cfg, component)
+	return (account, "SLCM Fee Components") if account else (None, None)
+
+
+# The bridge posts without a Party, so Receivable / Payable ledgers can never take SLCM postings.
+POSTABLE = {"is_group": 0, "disabled": 0, "account_type": ("not in", ("Receivable", "Payable"))}
+
+
+def _exact_account(cfg, account_name):
+	return frappe.db.get_value("Account", {"company": cfg.company, "account_name": account_name, **POSTABLE}, "name")
+
+
+def mapped_account(cfg, slcm_name):
+	"""This company's ledger listing slcm_name (case-insensitive) under SLCM Fee Components, or None."""
+	key = (slcm_name or "").strip().lower()
+	if not key or not frappe.get_meta("Account").has_field("slcm_fee_components"):
+		return None
+	rows = frappe.get_all(
+		"Account",
+		filters={"company": cfg.company, "slcm_fee_components": ("is", "set"), **POSTABLE},
+		fields=["name", "slcm_fee_components"],
+		order_by="lft",
+	)
+	for row in rows:
+		if key in fee_component_lines(row.slcm_fee_components):
+			return row.name
+	return None
+
+
+def fee_component_lines(value):
+	"""Lower-cased, de-blanked lines of an Account's SLCM Fee Components."""
+	return [line.strip().lower() for line in (value or "").splitlines() if line.strip()]
+
+
+def slcm_fee_names():
+	"""Every SLCM name a posting looks an account up by, as {lower-case: (name, source)}."""
+	names = {}
+	for comp in frappe.get_all("Fee Component", fields=["name", "ledger"], order_by="name"):
+		names.setdefault(comp.name.lower(), (comp.name, _("Fee Component")))
+		ledger = normalise_ledger(comp.ledger)
+		if ledger:
+			names.setdefault(ledger.lower(), (ledger, _("Ledger of {0}").format(comp.name)))
+	field = frappe.get_meta("PACE Receipt").get_field("fee_type")
+	for fee_type in ((field.options or "") if field else "").split("\n"):
+		if fee_type.strip():
+			names.setdefault(f"pace {fee_type.strip().lower()}", (f"PACE {fee_type.strip()}", _("PACE Receipt")))
+	names.setdefault("fle course fee", ("FLE Course Fee", _("FLE Payment Log")))
+	for doctype, name in EXAM_FEE_NAMES.items():
+		names.setdefault(name.lower(), (name, _(doctype)))
+	return names
 
 
 def mode_of_payment_account(cfg, mode):
@@ -141,10 +203,8 @@ def gateway_clearing_account(cfg):
 
 
 def account_named(cfg, account_name):
-	"""This company's ledger with that name (e.g. 'PACE Course Fee'), or None."""
-	return frappe.db.get_value(
-		"Account", {"company": cfg.company, "account_name": account_name, "is_group": 0, "disabled": 0}, "name"
-	)
+	"""This company's ledger with that name (e.g. 'PACE Course Fee') or listing it under SLCM Fee Components, or None."""
+	return _exact_account(cfg, account_name) or mapped_account(cfg, account_name)
 
 
 def payment_out_account(cfg, mode):

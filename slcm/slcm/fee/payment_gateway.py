@@ -1,7 +1,8 @@
 """Which online payment gateway collects a given student/parent portal charge.
 
 The gateway is configured where the charge is defined, never chosen by the payer:
-* Fee Demand / Fee Invoice  → its Fee Component's ``payment_gateway``
+* Fee Demand               → its Fee Component's ``payment_gateway``
+* Fee Invoice (programme)  → its Fee Structure's Payment Gateway, else its components'
 * Re-exam fee               → Re Exam Course Setting (exam plan + course)
 * Improvement exam fee      → Improvement Exam Course Setting (exam plan + course)
 * Transcript fee            → Transcript Fee Settings
@@ -33,8 +34,32 @@ def for_demand(fee_demand):
 	return for_component(frappe.db.get_value("Fee Demand", fee_demand, "fee_component"))
 
 
+def for_fee_structure(fee_structure):
+	"""The Fee Structure's online Payment Gateway, or None when it has none we can collect through."""
+	if not fee_structure:
+		return None
+	fs = frappe.db.get_value("Fee Structure", fee_structure, ["online_payment", "payment_gateway"], as_dict=True)
+	if fs and fs.online_payment and fs.payment_gateway in GATEWAYS:
+		return fs.payment_gateway
+	return None
+
+
+def _invoice_fee_structure(invoice_name):
+	"""The Fee Structure an invoice was priced from: its Student Fee Assignment's, else the student's."""
+	inv = frappe.db.get_value("Fee Invoice", invoice_name, ["fee_assignment", "student"], as_dict=True)
+	if not inv:
+		return None
+	return (
+		inv.fee_assignment and frappe.db.get_value("Student Fee Assignment", inv.fee_assignment, "fee_structure")
+	) or (inv.student and frappe.db.get_value("Student Master", inv.student, "fee_structure"))
+
+
 def for_invoice(invoice_name):
-	"""Gateway of an invoice's components; they must all agree (one checkout per invoice)."""
+	"""Gateway of a programme-fee invoice: its Fee Structure's Payment Gateway; without one, the gateway
+	of the invoice's components, which must all agree (one checkout per invoice)."""
+	gateway = for_fee_structure(_invoice_fee_structure(invoice_name))
+	if gateway:
+		return gateway
 	components = frappe.get_all(
 		"Fee Component Child",
 		filters={"parent": invoice_name, "parenttype": "Fee Invoice"},

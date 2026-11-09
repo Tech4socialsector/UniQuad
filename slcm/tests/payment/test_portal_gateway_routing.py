@@ -533,6 +533,80 @@ class TestOtherFlows(GatewayTestCase):
 		row = frappe.db.get_value("Transcript Request", req.name, ["payment_status", "payment_reference"], as_dict=True)
 		self.assertEqual((row.payment_status, row.payment_reference), ("Paid", "EZTRN"))
 
+	def _pending_transcript(self, copies=1):
+		req = frappe.get_doc({
+			"doctype": "Transcript Request", "student": self.student, "transcript_type": "Interim Transcript",
+			"num_copies": copies, "requested_on": today(), "payment_required": 1, "fee_amount": 300 * copies,
+			"payment_status": "Pending", "status": "Payment Pending", "urgency": "Normal",
+		})
+		req.flags.ignore_links = req.flags.ignore_mandatory = req.flags.ignore_validate = True
+		req.db_insert()
+		return req
+
+	def test_helpdesk_transcript_returns_to_support_form(self):
+		from slcm.api import transcript_request as tr
+
+		frappe.db.set_single_value("Transcript Fee Settings", "payment_gateway", "Easebuzz")
+		req = self._pending_transcript()
+		frappe.set_user(self.student_user)
+		txn = tr.initiate_payment(req.name, gateway_aware=1, return_path="/student-portal/support?new=1")["txnid"]
+		self.as_guest_callback(ez.complete, signed(txn, 300, status="userCancelled", easepayid=""))
+		self.assertIn("/student-portal/support?new=1&payment_ref=", frappe.local.response.get("location"))
+		frappe.set_user(self.student_user)
+		back = tr.get_gateway_return_request(txn)
+		self.assertEqual((back.name, back.payment_status), (req.name, "Payment Cancelled"))
+
+		txn = tr.initiate_payment(req.name, gateway_aware=1, return_path="/student-portal/support?new=1")["txnid"]
+		self.assertEqual(self.settle(txn, 300, "EZHDK"), "Completed")
+		frappe.set_user(self.student_user)
+		back = tr.get_gateway_return_request(txn)
+		self.assertEqual((back.name, back.payment_status, back.payment_reference), (req.name, "Paid", "EZHDK"))
+
+	def test_transcript_return_path_is_allowlisted(self):
+		from slcm.api import transcript_request as tr
+
+		frappe.db.set_single_value("Transcript Fee Settings", "payment_gateway", "Easebuzz")
+		req = self._pending_transcript()
+		frappe.set_user(self.student_user)
+		txn = tr.initiate_payment(req.name, gateway_aware=1, return_path="https://evil.example/x")["txnid"]
+		self.as_guest_callback(ez.complete, signed(txn, 300, status="failure", easepayid=""))
+		self.assertIn("/student-portal/transcript-request?payment_ref=", frappe.local.response.get("location"))
+
+	def test_return_request_is_payer_only(self):
+		from slcm.api import transcript_request as tr
+
+		frappe.db.set_single_value("Transcript Fee Settings", "payment_gateway", "Easebuzz")
+		req = self._pending_transcript()
+		frappe.set_user(self.student_user)
+		txn = tr.initiate_payment(req.name, gateway_aware=1)["txnid"]
+		frappe.db.set_value("Integration Request", txn, "data", frappe.as_json({
+			**frappe.parse_json(frappe.db.get_value("Integration Request", txn, "data")), "user": "someone@else.test",
+		}))
+		self.assertRaises(frappe.PermissionError, tr.get_gateway_return_request, txn)
+		self.assertRaises(frappe.PermissionError, tr.get_gateway_return_request, "not-a-txn")
+
+	def test_helpdesk_retry_reuses_unpaid_request(self):
+		from slcm.api import transcript_request as tr
+
+		frappe.db.set_single_value("Transcript Fee Settings", {"allow_interim": 1, "enable_payment": 1})
+		req = self._pending_transcript()
+		frappe.set_user(self.student_user)
+		self.assertRaises(frappe.ValidationError, tr.create_request, "Interim Transcript", 1, "Visa")
+		again = tr.create_request("Interim Transcript", 1, "Visa", "Hard Copy (Physical)", reuse_unpaid=1)
+		self.assertEqual(again["name"], req.name)
+		self.assertEqual(frappe.db.get_value("Transcript Request", req.name, "purpose"), "Visa")
+
+	def test_helpdesk_retry_with_other_copies_cancels_old_attempt(self):
+		from slcm.api import transcript_request as tr
+
+		frappe.db.set_single_value("Transcript Fee Settings", {"allow_interim": 1, "enable_payment": 1})
+		req = self._pending_transcript()
+		frappe.set_user(self.student_user)
+		fresh = tr.create_request("Interim Transcript", 2, "Visa", reuse_unpaid=1)
+		self.assertNotEqual(fresh["name"], req.name)
+		self.assertEqual(frappe.db.get_value("Transcript Request", req.name, "status"), "Cancelled")
+		self.assertEqual(frappe.db.get_value("Transcript Request", fresh["name"], "num_copies"), 2)
+
 	def test_invoice_with_mixed_components_is_refused(self):
 		inv = frappe.get_doc({
 			"doctype": "Fee Invoice", "student": self.student, "invoice_date": today(), "due_date": add_days(today(), 10),
@@ -1492,3 +1566,55 @@ class TestSettleRobustness(GatewayTestCase):
 		self.assertTrue(log.called)
 		self.assertNotEqual(frappe.local.response.get("http_status_code"), 500)
 		self.assertEqual(self.ir_status(txn), "Queued")
+
+
+class TestFeeStructureGateway(GatewayTestCase):
+	"""Programme-fee invoices follow the Fee Structure's Payment Gateway; admission payments stay on Razorpay."""
+
+	def make_structure(self, gateway, online=1):
+		fs = frappe.get_doc({
+			"doctype": "Fee Structure", "fee_structure_name": f"_GW FS {gateway} {online} {frappe.generate_hash(length=5)}",
+			"applicable": "Student", "online_payment": online, "payment_gateway": gateway if online else None,
+			"status": "Active",
+		})
+		fs.flags.ignore_mandatory = fs.flags.ignore_links = fs.flags.ignore_validate = True
+		fs.insert(ignore_permissions=True)
+		return fs.name
+
+	def program_fee_invoice(self, **extra):
+		inv = frappe.get_doc({
+			"doctype": "Fee Invoice", "student": self.student, "invoice_date": today(), "due_date": add_days(today(), 10),
+			# the portal's own invoices carry one generic, Razorpay-collected "Program Fee" line
+			"fee_components": [{"fee_component": self.comp_rzp, "amount": 900, "total_amount": 900}],
+			**extra,
+		})
+		inv.flags.ignore_links = inv.flags.ignore_mandatory = True
+		inv.insert(ignore_permissions=True)
+		return inv.name
+
+	def test_invoice_follows_the_students_fee_structure(self):
+		frappe.db.set_value("Student Master", self.student, "fee_structure", self.make_structure("Easebuzz"))
+		inv = self.program_fee_invoice()
+		self.assertEqual(gw.for_invoice(inv), "Easebuzz")
+		frappe.set_user(self.student_user)
+		self.assertEqual(sp.create_payment_order(inv)["gateway"], "Easebuzz")
+
+	def test_structure_without_online_payment_falls_back_to_components(self):
+		frappe.db.set_value("Student Master", self.student, "fee_structure", self.make_structure("Easebuzz", online=0))
+		self.assertEqual(gw.for_invoice(self.program_fee_invoice()), "Razorpay")
+
+	def test_fee_assignment_structure_wins_over_the_students(self):
+		frappe.db.set_value("Student Master", self.student, "fee_structure", self.make_structure("Easebuzz"))
+		sfa = frappe.get_doc({
+			"doctype": "Student Fee Assignment", "student": self.student, "fee_structure": self.make_structure("Razorpay"),
+		})
+		sfa.flags.ignore_mandatory = sfa.flags.ignore_links = sfa.flags.ignore_validate = True
+		sfa.insert(ignore_permissions=True)
+		self.assertEqual(gw.for_invoice(self.program_fee_invoice(fee_assignment=sfa.name)), "Razorpay")
+
+	def test_offer_letter_payments_stay_on_razorpay(self):
+		from slcm.api.service.fee_service import _offer_payment_gateway
+
+		self.assertEqual(_offer_payment_gateway(self.make_structure("Easebuzz")), "Razorpay")
+		self.assertEqual(_offer_payment_gateway(self.make_structure("Razorpay")), "Razorpay")
+		self.assertEqual(_offer_payment_gateway(None), "Razorpay")

@@ -4,6 +4,9 @@ Receipt  (Fee Payment)            Dr Cash / Bank / Gateway Clearing      Cr Fee 
                                                                          Cr Unallocated Fee Receipts (part not allocated)
 Refund   (Fee Refund)             Dr Fee Refunds (or the deposit ledger) Cr Cash / Bank
          from excess              Dr Unallocated Fee Receipts            Cr Cash / Bank
+Counter exam fee  (exam pay. log)  Dr Cash / Bank (by payment mode)      Cr Re-exam / improvement exam fee ledger
+Online receipt    (Payment Req.)  Dr Gateway Clearing                    Cr Re-exam / transcript fee ledger
+  (no Fee Payment: "Gateway Receipt")                                    Cr Unallocated Fee Receipts (not applied)
 Gateway settlement (Payment Req.) Dr Bank (net) + Gateway Charges + GST  Cr Gateway Clearing (gross)
 Moved to excess (Credit Note)     Dr Fee ledger of the due (+ Output GST) Cr Unallocated Fee Receipts
 Excess adjusted to a due (row)    Dr Unallocated Fee Receipts            Cr Fee ledger of the due (+ Output GST)
@@ -28,6 +31,7 @@ def build_entry(cfg, src, key=None):
 		"Fee Payment": _receipt,
 		"Fee Refund": _refund,
 		"SLCM Payment Request": _settlement,
+		"Gateway Receipt": _gateway_receipt,
 		"Student Credit Note": _moved_to_excess,
 		"Credit Adjustment Row": _excess_adjusted,
 		"Applicant Payment Receipt": _applicant_receipt,
@@ -36,6 +40,8 @@ def build_entry(cfg, src, key=None):
 		"FLE Settlement": _fle_settlement,
 		"Stipend Payment": _stipend,
 		"Refund Transaction": _gateway_refund,
+		"Re Exam Payment Log": _counter_exam_receipt,
+		"Improvement Exam Payment Log": _counter_exam_receipt,
 	}[key or src.doctype]
 	entry = builder(cfg, src)
 	_check_balanced(entry["lines"])
@@ -226,6 +232,10 @@ def _settlement(cfg, pr):
 		student = frappe.db.get_value("Fee Payment", receipt, "student")
 	elif receipt_dt == "Applicant Payment Receipt":
 		student = frappe.db.get_value("Applicant Payment Receipt", receipt, "applicant")
+	elif receipt_dt == "Gateway Receipt":
+		from slcm.erpnext_bridge.sync import gateway_student
+
+		student = gateway_student(pr)
 	remark = _("{0} settlement {1} | payment {2} | {3} {4} | UTR {5}").format(
 		pr.get("payment_gateway") or "Razorpay", pr.name, pr.razorpay_payment_id or pr.get("transaction_id") or "-",
 		receipt_dt or "", receipt or "-", pr.settlement_utr or "-"
@@ -264,6 +274,68 @@ def _settle(cfg, src, remark, student):
 		"student": student,
 		"programme": _programme_of(None, student),
 		"lines": lines,
+	}
+
+
+# ── student online payments with no Fee Payment ────────────────────────────────
+
+
+def _gateway_receipt(cfg, pr):
+	"""Money a student paid online that no Fee Payment books: re-exam, improvement exam and transcript fees go to
+	their ledgers, anything captured but not applied is held as Unallocated Fee Receipts until refunded or applied."""
+	from slcm.erpnext_bridge.sync import gateway_receipt_amount, gateway_student
+	from slcm.slcm.fee.payment_ledger import _records
+
+	amount = gateway_receipt_amount(pr)
+	if amount <= 0:
+		frappe.throw(_("{0}: nothing left to book beyond its Fee Payments").format(pr.name))
+	credits = defaultdict(float)
+	booked, paid_for = 0.0, []
+	for r in _records(pr.transaction_id):
+		if r.doctype == "Fee Payment" or booked >= amount:
+			continue
+		name = conf.EXAM_FEE_NAMES[r.doctype]
+		account = conf.account_named(cfg, name) or conf.require(cfg, "slcm_default_fee_income_account", name)
+		share = flt(min(flt(r.amount), amount - booked), PRECISION)
+		credits[account] += share
+		booked = flt(booked + share, PRECISION)
+		paid_for.append(f"{r.doctype} {r.name}")
+	unallocated = flt(amount - booked, PRECISION)
+	if unallocated > 0:
+		credits[conf.require(cfg, "slcm_unallocated_fee_account", _("online payment {0} not applied").format(pr.name))] += unallocated
+		paid_for.append(_("not applied {0}").format(unallocated))
+
+	clearing = conf.gateway_clearing_account(cfg)
+	student = gateway_student(pr)
+	return {
+		"posting_date": getdate(pr.paid_on or pr.creation),
+		"cash_account": clearing,
+		"reference": pr.transaction_id,
+		"remark": _("SLCM online payment {0} ({1}) | request {2} | {3}").format(
+			pr.transaction_id, pr.payment_gateway or "-", pr.name, ", ".join(paid_for)
+		),
+		"student": student,
+		"programme": _programme_of(None, student),
+		"lines": [(clearing, amount, 0.0)] + [(acc, 0.0, flt(cr, PRECISION)) for acc, cr in credits.items()],
+	}
+
+
+def _counter_exam_receipt(cfg, log):
+	"""A re-exam / improvement exam fee paid at the counter ('Mark as Paid'): into the mode's cash or bank ledger."""
+	name = conf.EXAM_FEE_NAMES[log.doctype]
+	income = conf.account_named(cfg, name) or conf.require(cfg, "slcm_default_fee_income_account", name)
+	cash_account = conf.receipt_cash_account(cfg, log.payment_method)
+	amount = flt(log.amount, PRECISION)
+	return {
+		"posting_date": getdate(log.transaction_date),
+		"cash_account": cash_account,
+		"reference": log.transaction_id or log.name,
+		"remark": _("SLCM {0} {1} | {2} | {3} paid at the counter ({4})").format(
+			log.doctype, log.name, log.student or "-", name, log.payment_method
+		),
+		"student": log.student,
+		"programme": _programme_of(None, log.student),
+		"lines": [(cash_account, amount, 0.0), (income, 0.0, amount)],
 	}
 
 
