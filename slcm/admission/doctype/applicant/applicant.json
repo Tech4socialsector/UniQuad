@@ -546,7 +546,8 @@
    "depends_on": "eval:doc.karnataka_category === \"Yes\"",
    "fieldname": "ka_study_7yrs",
    "fieldtype": "Check",
-   "label": "Studied for not less than 7 years in a recognized educational institution in Karnataka"
+   "label": "Studied for not less than 7 years in a recognized educational institution in Karnataka",
+   "read_only_depends_on": "eval:doc.ka_defence_child || doc.ka_govt_child || doc.ka_ais_child || doc.ka_capf_child"
   },
   {
    "depends_on": "eval:doc.ka_study_7yrs",
@@ -562,7 +563,8 @@
    "description": "Child of defence personnel/ex-serviceman, who at the time of joining service, has declared their hometown to be in the State of Karnataka, and who have served or are serving outside Karnataka, corresponding to the candidate\u2019s years of study outside Karnataka",
    "fieldname": "ka_defence_child",
    "fieldtype": "Check",
-   "label": "Child of Defence / Ex-Serviceman (Karnataka)"
+   "label": "Child of Defence / Ex-Serviceman (Karnataka)",
+   "read_only_depends_on": "eval:doc.ka_study_7yrs || doc.ka_govt_child || doc.ka_ais_child || doc.ka_capf_child"
   },
   {
    "depends_on": "eval:doc.ka_defence_child",
@@ -578,7 +580,8 @@
    "description": "Child of a serving or retired employee belonging to the Karnataka cadre of the All India Services (IAS/IFS/IPS), who has served or is serving outside Karnataka corresponding to the candidate's years of study outside Karnataka",
    "fieldname": "ka_govt_child",
    "fieldtype": "Check",
-   "label": "Child of Karnataka cadre AIS employee (IAS/IFS/IPS)"
+   "label": "Child of Karnataka cadre AIS employee (IAS/IFS/IPS)",
+   "read_only_depends_on": "eval:doc.ka_study_7yrs || doc.ka_defence_child || doc.ka_ais_child || doc.ka_capf_child"
   },
   {
    "depends_on": "eval:doc.ka_govt_child",
@@ -594,7 +597,8 @@
    "description": "Child of an employee of the Karnataka State Government who has served or are serving outside Karnataka corresponding to the candidate's years of study outside Karnataka.",
    "fieldname": "ka_ais_child",
    "fieldtype": "Check",
-   "label": "Child of CAPF employee with Karnataka"
+   "label": "Child of CAPF employee with Karnataka",
+   "read_only_depends_on": "eval:doc.ka_study_7yrs || doc.ka_defence_child || doc.ka_govt_child || doc.ka_capf_child"
   },
   {
    "depends_on": "eval:doc.ka_ais_child",
@@ -610,7 +614,8 @@
    "description": "Child of a working or retired employee in the Central Armed Police Force service, who upon joining service declared their hometown to be in the State of Karnataka, and who has served or is serving outside Karnataka, corresponding to the candidate's years of study outside Karnataka",
    "fieldname": "ka_capf_child",
    "fieldtype": "Check",
-   "label": "Child of Central Armed Police Force employee (Karnataka)"
+   "label": "Child of Central Armed Police Force employee (Karnataka)",
+   "read_only_depends_on": "eval:doc.ka_study_7yrs || doc.ka_defence_child || doc.ka_govt_child || doc.ka_ais_child"
   },
   {
    "depends_on": "eval:doc.ka_capf_child",
@@ -1351,7 +1356,7 @@
   }
  ],
  "make_attachments_public": 1,
- "modified": "2026-11-09 18:00:00.000000",
+ "modified": "2026-11-09 19:00:00.000000",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Applicant",

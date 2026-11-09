@@ -28,7 +28,7 @@
  "login_required": 1,
  "max_attachment_size": 0,
  "meta_title": "Application Form",
- "modified": "2026-11-09 18:00:00.000000",
+ "modified": "2026-11-09 19:00:00.000000",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "applicant-form",
@@ -1656,6 +1656,7 @@
    "max_value": 0,
    "precision": "",
    "read_only": 0,
+   "read_only_depends_on": "eval:doc.ka_defence_child || doc.ka_govt_child || doc.ka_ais_child || doc.ka_capf_child",
    "reqd": 0,
    "show_in_filter": 0
   },
@@ -1688,6 +1689,7 @@
    "max_value": 0,
    "precision": "",
    "read_only": 0,
+   "read_only_depends_on": "eval:doc.ka_study_7yrs || doc.ka_govt_child || doc.ka_ais_child || doc.ka_capf_child",
    "reqd": 0,
    "show_in_filter": 0
   },
@@ -1720,6 +1722,7 @@
    "max_value": 0,
    "precision": "",
    "read_only": 0,
+   "read_only_depends_on": "eval:doc.ka_study_7yrs || doc.ka_defence_child || doc.ka_ais_child || doc.ka_capf_child",
    "reqd": 0,
    "show_in_filter": 0
   },
@@ -1752,6 +1755,7 @@
    "max_value": 0,
    "precision": "",
    "read_only": 0,
+   "read_only_depends_on": "eval:doc.ka_study_7yrs || doc.ka_defence_child || doc.ka_govt_child || doc.ka_capf_child",
    "reqd": 0,
    "show_in_filter": 0
   },
@@ -1784,6 +1788,7 @@
    "max_value": 0,
    "precision": "",
    "read_only": 0,
+   "read_only_depends_on": "eval:doc.ka_study_7yrs || doc.ka_defence_child || doc.ka_govt_child || doc.ka_ais_child",
    "reqd": 0,
    "show_in_filter": 0
   },

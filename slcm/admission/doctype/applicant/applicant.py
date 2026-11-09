@@ -227,6 +227,7 @@ class Applicant(Document):
             on_submit=self.status in ("Submitted", "Submitted and Paid")
             and (self.is_new() or self.has_value_changed("status"))
         )
+        self._validate_single_karnataka_reservation()
 
         if self.status in ("Submitted", "Submitted and Paid") and self.has_value_changed("status"):
             self._validate_application_limit_before_submit()
@@ -307,6 +308,28 @@ class Applicant(Document):
             frappe.throw(
                 f"Invalid email address: {self.email}",
                 title="Invalid Email"
+            )
+
+    KARNATAKA_RESERVATION_FIELDS = (
+        "ka_study_7yrs",
+        "ka_defence_child",
+        "ka_govt_child",
+        "ka_ais_child",
+        "ka_capf_child",
+    )
+
+    def _validate_single_karnataka_reservation(self):
+        """Only one "Which of the following applies to you" option may be ticked.
+        Checked only when one of these boxes changes, so older records are not blocked."""
+        fields = self.KARNATAKA_RESERVATION_FIELDS
+        if not self.is_new() and not any(self.has_value_changed(f) for f in fields):
+            return
+        ticked = [f for f in fields if cint(self.get(f))]
+        if len(ticked) > 1:
+            labels = ", ".join(_(self.meta.get_label(f)) for f in ticked)
+            frappe.throw(
+                _("Please select only one option under 'Which of the following applies to you'. Selected: {0}").format(labels),
+                title=_("Karnataka Reservation"),
             )
 
     def _validate_education_percentage_bounds(self, on_submit=False):

@@ -4312,37 +4312,31 @@ function applyQueryStringPrefill() {
 	}, 80);
 }
 
-/** Latest DOB still allowed: 17 full years completed today (no future dates). */
+/** Latest DOB allowed: 31 December of (current year − 6). E.g. in 2026 → 31-12-2020. */
+var SLCM_DOB_YEARS_BACK = 6;
 function _slcmMaxDateOfBirth() {
-	var d = new Date();
+	var d = new Date(new Date().getFullYear() - SLCM_DOB_YEARS_BACK, 11, 31);
 	d.setHours(0, 0, 0, 0);
-	d.setFullYear(d.getFullYear() - 17);
 	return d;
 }
 
-/** Completed age in years from yyyy-mm-dd (or null if invalid). -1 if date is in the future. */
-function _slcmAgeCompletedYears(dobVal) {
-	if (dobVal === undefined || dobVal === null || dobVal === '') return null;
-	var s = String(dobVal).trim();
-	var parts = s.split('-');
-	if (parts.length < 3) return null;
-	var y = parseInt(parts[0], 10);
-	var mo = parseInt(parts[1], 10) - 1;
-	var day = parseInt(parts[2], 10);
-	if (isNaN(y) || isNaN(mo) || isNaN(day)) return null;
-	var birth = new Date(y, mo, day);
-	if (isNaN(birth.getTime())) return null;
-	var today = new Date();
-	today.setHours(0, 0, 0, 0);
-	birth.setHours(0, 0, 0, 0);
-	if (birth > today) return -1;
-	var age = today.getFullYear() - birth.getFullYear();
-	var md = today.getMonth() - birth.getMonth();
-	if (md < 0 || (md === 0 && today.getDate() < birth.getDate())) age--;
-	return age;
+/** True when yyyy-mm-dd is a valid date on or before _slcmMaxDateOfBirth(). */
+function _slcmDobAllowed(dobVal) {
+	if (dobVal === undefined || dobVal === null || dobVal === '') return false;
+	var parts = String(dobVal).trim().split('-');
+	if (parts.length < 3) return false;
+	var d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+	if (isNaN(d.getTime())) return false;
+	d.setHours(0, 0, 0, 0);
+	return d <= _slcmMaxDateOfBirth();
 }
 
-/** Web Form: cap DOB datepicker (max = today − 17 years) and enforce age on change. */
+/** "31-12-2020" style label for messages. */
+function _slcmMaxDobLabel() {
+	return '31-12-' + _slcmMaxDateOfBirth().getFullYear();
+}
+
+/** Web Form: cap DOB datepicker (max = 31 Dec of current year − 6), hide "Today", enforce on change. */
 function _slcmTryPatchDateOfBirth(wf) {
 	if (!wf || !wf.fields_dict) return;
 	var fd = wf.fields_dict.date_of_birth;
@@ -4353,17 +4347,20 @@ function _slcmTryPatchDateOfBirth(wf) {
 		try {
 			fd.datepicker.update({ maxDate: maxD });
 		} catch (e) { /* ignore */ }
+		// Hide the "Today" button (and its footer strip) for the DOB picker only.
+		if (fd.datepicker.$datepicker) {
+			fd.datepicker.$datepicker.find('.datepicker--buttons, [data-action="today"]').hide();
+		}
 	}
 
 	if (!fd._slcmDobListeners && fd.$input && fd.$input.length) {
 		fd._slcmDobListeners = true;
 		fd.$input.on('change.slcmdob', function () {
 			var v = wf.get_value && wf.get_value('date_of_birth');
-			var age = _slcmAgeCompletedYears(v);
-			if (v && (age === null || age < 17)) {
+			if (v && !_slcmDobAllowed(v)) {
 				frappe.msgprint({
 					title: __('Invalid Date of Birth'),
-					message: __('Applicant must be at least 17 years old. The date cannot be in the future.'),
+					message: __('Date of Birth must be on or before {0}.', [_slcmMaxDobLabel()]),
 					indicator: 'red',
 				});
 				if (typeof wf.set_value === 'function') {
@@ -5985,10 +5982,9 @@ function _validateStage(wf, $page) {
 		var errSel =
 			'.form-control, .attached-file, .input-with-feedback, .btn-attach, .control-value, input[type="checkbox"], .checkbox';
 		if (fieldname === 'date_of_birth' && !empty && df.fieldtype === 'Date') {
-			const age = _slcmAgeCompletedYears(val);
-			if (age === null || age < 17) {
+			if (!_slcmDobAllowed(val)) {
 				fw.$wrapper && fw.$wrapper.find(errSel).addClass('slcm-field-error');
-				missing.push((df.label || fieldname).trim() + ': ' + __('must be at least 17 years old'));
+				missing.push((df.label || fieldname).trim() + ': ' + __('must be on or before {0}', [_slcmMaxDobLabel()]));
 				return;
 			}
 		}
