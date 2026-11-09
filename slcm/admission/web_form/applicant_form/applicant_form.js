@@ -5693,12 +5693,35 @@ function _renderStepper(wf) {
 
 		if (targetIdx > currentIdx) {
 			const skip = _slcmStepperSkipForwardValidation(wf);
-			const check = skip ? { ok: true, missing: [] } : _validateStage(wf, $($pages.get(currentIdx)));
+			// Validate every visible step from the current one up to (not including) the target,
+			// like pressing Next repeatedly. Each page is shown before it is checked because
+			// _validateStage ignores fields on hidden pages. Stop on the first incomplete step.
+			let check = { ok: true, missing: [] };
+			let failedIdx = currentIdx;
+			if (!skip) {
+				const stepsArr = window._slcm_wf_steps || [];
+				for (let i = currentIdx; i < targetIdx; i++) {
+					const step = stepsArr.find(function (s) { return s.index === i; });
+					if (i !== currentIdx && step && !slcmEvalDependsOn(step.depends_on)) continue;
+					if (i !== currentIdx) goToWebFormPage(i);
+					check = _validateStage(wf, $($pages.get(i)));
+					if (!check.ok) {
+						failedIdx = i;
+						break;
+					}
+				}
+			}
 			if (check.ok) {
 				goToWebFormPage(targetIdx);
 				setTimeout(updateStepperUI, 50);
 			} else {
-				var base = __('Please fill all required fields before proceeding.');
+				setTimeout(updateStepperUI, 50);
+				var stepLabel = failedIdx !== currentIdx
+					? ($('.slcm-step[data-index="' + failedIdx + '"] .slcm-step-label').text() || '').trim()
+					: '';
+				var base = stepLabel
+					? __('Please complete "{0}" before moving ahead.', [stepLabel])
+					: __('Please fill all required fields before proceeding.');
 				if (check.missing && check.missing.length && typeof frappe !== 'undefined' && frappe.msgprint) {
 					frappe.msgprint({
 						title: __('Required fields'),
