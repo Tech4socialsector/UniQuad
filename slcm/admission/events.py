@@ -15,7 +15,7 @@ def on_applicant_submit(doc, method):
         context={
             "candidate_name": doc.candidate_name,
             "program": doc.program,
-            "applicant_id": doc.applicant_id,
+            "applicant_id": doc.name,
             "submission_date": now()
         }
     )
