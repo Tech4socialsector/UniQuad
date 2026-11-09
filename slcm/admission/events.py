@@ -55,7 +55,7 @@ def on_merit_list_publish(doc, method):
             context={
                 "candidate_name": applicant.candidate_name,
                 "program": applicant.program,
-                "applicant_id": applicant.applicant_id,
+                "applicant_id": applicant.name,
                 "status": "Listed in Merit List",
                 "old_status": applicant.status,
                 "campus": doc.campus

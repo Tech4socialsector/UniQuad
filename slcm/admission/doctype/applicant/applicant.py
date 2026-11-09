@@ -174,7 +174,6 @@ class Applicant(Document):
             self.admission_cycle = admission_cycle
         application_id = next_application_id(admission_cycle, code, digits)
         self.name = application_id
-        self.applicant_id = application_id
 
     # ──────────────────────────────────────────────
     # VALIDATE
@@ -631,8 +630,6 @@ class Applicant(Document):
             if st_db == "Draft" and (self.status or "").strip() == "Draft":
                 self.flags.ignore_validate_update_after_submit = True
 
-        if not self.applicant_id:
-            self.applicant_id = frappe.generate_hash(length=8).upper()
         doc_before = self.get_doc_before_save()
         if doc_before:
             self.flags.old_status = doc_before.status
@@ -693,7 +690,7 @@ class Applicant(Document):
             # except Exception:
             #     frappe.log_error(
             #         frappe.get_traceback(),
-            #         f"Submission confirmation email failed — {self.applicant_id or self.name}"
+            #         f"Submission confirmation email failed — {self.name}"
             #     )
             # ─────────────────────────────────────────────────────────────
 
@@ -702,9 +699,9 @@ class Applicant(Document):
             #     applicant=self.name,
             #     communication_type="Email",
             #     category="Admission",
-            #     subject=f"Application Submitted — {self.applicant_id} | {self.program or 'Admissions'}",
+            #     subject=f"Application Submitted — {self.name} | {self.program or 'Admissions'}",
             #     content=(
-            #         f"Submission confirmation email sent for {self.applicant_id}. "
+            #         f"Submission confirmation email sent for {self.name}. "
             #         f"Program: {self.program or '—'}, "
             #         f"Cycle: {self.admission_cycle or '—'}, "
             #         f"Campus: {self.campus or '—'}"
@@ -1132,7 +1129,7 @@ class Applicant(Document):
         }
 
         # ── Resolve email subject and body ────────────────────────────────────
-        email_subject = f"Application Submitted — {self.applicant_id or self.name} | {self.program or 'Admissions'}"
+        email_subject = f"Application Submitted — {self.name} | {self.program or 'Admissions'}"
         html_body = None
         email_template = None
 
@@ -1169,7 +1166,7 @@ class Applicant(Document):
             attachments = []
             if pdf_content:
                 attachments.append({
-                    "fname": f"Application_Form_{self.applicant_id or self.name}.pdf",
+                    "fname": f"Application_Form_{self.name}.pdf",
                     "fcontent": pdf_content
                 })
             elif self.application_form:
@@ -1177,7 +1174,7 @@ class Applicant(Document):
         except Exception:
             frappe.log_error(
                 frappe.get_traceback(),
-                f"PDF generation failed for {self.applicant_id or self.name} using format '{print_format_name}'"
+                f"PDF generation failed for {self.name} using format '{print_format_name}'"
             )
             attachments = []
 
@@ -1565,7 +1562,7 @@ class Applicant(Document):
 
         template_context = {
             "doc": doc_dict,
-            "applicant_id": self.applicant_id or self.name,
+            "applicant_id": self.name,
             "applicant_document_id": self.name,
             "candidate_name": self.candidate_name or "",
             "program": self.program or "—",
@@ -1579,7 +1576,7 @@ class Applicant(Document):
             "generated_on": frappe.utils.now_datetime().strftime("%d %b %Y, %I:%M %p"),
         }
 
-        email_subject = f"Application Submitted and Paid — {self.applicant_id or self.name} | {self.program or 'Admissions'}"
+        email_subject = f"Application Submitted and Paid — {self.name} | {self.program or 'Admissions'}"
         html_body = None
         email_template = None
 
@@ -1613,7 +1610,7 @@ class Applicant(Document):
                 pdf_content = self.generate_application_pdf()
             if pdf_content:
                 attachments.append({
-                    "fname": f"Application_Form_{self.applicant_id or self.name}.pdf",
+                    "fname": f"Application_Form_{self.name}.pdf",
                     "fcontent": pdf_content
                 })
         except Exception:
@@ -1649,7 +1646,7 @@ class Applicant(Document):
                 
                 if receipt_pdf_content:
                     attachments.append({
-                        "fname": f"Payment_Receipt_{self.applicant_id or self.name}.pdf",
+                        "fname": f"Payment_Receipt_{self.name}.pdf",
                         "fcontent": receipt_pdf_content
                     })
         except Exception:
@@ -3150,10 +3147,7 @@ def _sync_status_from_eligibility_evaluation(applicant_doc):
     """
     if not getattr(applicant_doc, "name", None):
         return
-    ev = _get_eligibility_evaluation_for_applicant(
-        applicant_doc.name,
-        getattr(applicant_doc, "applicant_id", None),
-    )
+    ev = _get_eligibility_evaluation_for_applicant(applicant_doc.name)
     if not ev or ev.get("evaluation_status") != "Eligible":
         return
     if not _truthy(ev.get("exempts_entrance_test")) and not _truthy(ev.get("exempts_interview")):
@@ -3482,7 +3476,7 @@ def save_application_form_pdf_to_applicant(applicant_doc, pdf_content):
         from frappe.utils.file_manager import save_file
 
         _clear_application_form_attachment_files(applicant_doc.name)
-        fname = f"Application_Form_{applicant_doc.applicant_id or applicant_doc.name}.pdf"
+        fname = f"Application_Form_{applicant_doc.name}.pdf"
         file_doc = save_file(
             fname,
             pdf_content,
@@ -3763,14 +3757,6 @@ def background_bulk_worker(applicants, print_format, user=None, sync=False):
     from_cache_count = 0
     generated_count = 0
 
-    # One query for filenames — avoids N get_value round-trips (small vs PDF cost).
-    id_rows = frappe.get_all(
-        "Applicant",
-        filters={"name": ["in", applicants]},
-        fields=["name", "applicant_id"],
-    )
-    id_by_name = {r.name: (r.applicant_id or r.name) for r in id_rows}
-
     zip_buffer = BytesIO()
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
         for i, name in enumerate(applicants):
@@ -3804,8 +3790,7 @@ def background_bulk_worker(applicants, print_format, user=None, sync=False):
                         user=user,
                     )
 
-                applicant_id = id_by_name.get(name) or name
-                zip_file.writestr(f"{applicant_id}.pdf", pdf_content)
+                zip_file.writestr(f"{name}.pdf", pdf_content)
                 success_count += 1
 
             except Exception as e:

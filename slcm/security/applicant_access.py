@@ -24,7 +24,7 @@ APPLICANT_LINK = {
 APPLICANT_PROTECTED_FIELDS = (
 	"status", "application_fee_status", "application_fee_amount", "fee_waived_by", "fee_waived_on",
 	"current_stage", "merit_score", "evaluation_status", "eligibility_status", "user_id", "email",
-	"exempts_entrance_test", "exempts_interview", "applicant_id", "application_number", "intereview",
+	"exempts_entrance_test", "exempts_interview", "application_number", "intereview",
 )
 
 # Requests that write a document straight from client data (as opposed to dedicated endpoints).

@@ -658,7 +658,7 @@ def get_form_config_for_cycles():
 PORTAL_PROTECTED_FIELDS = frozenset({
     "status", "application_fee_status", "application_fee_amount", "fee_waived_by", "fee_waived_on",
     "current_stage", "merit_score", "evaluation_status", "eligibility_status", "user_id", "owner",
-    "applicant_id", "application_number", "naming_series", "docstatus", "amended_from",
+    "application_number", "naming_series", "docstatus", "amended_from",
     "exempts_entrance_test", "exempts_interview", "intereview",
 })
 

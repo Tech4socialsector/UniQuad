@@ -49,7 +49,7 @@ class ApplicantDashboard {
                         <div class="row align-items-center">
                             <div class="col-md-8">
                                 <h2 class="mb-1 fw-bold text-white">${applicant.candidate_name}</h2>
-                                <p class="mb-2 opacity-75">Application ID: ${applicant.applicant_id || 'N/A'}</p>
+                                <p class="mb-2 opacity-75">Application ID: ${applicant.name || 'N/A'}</p>
                                 <div class="d-flex align-items-center mt-3">
                                     <span class="badge rounded-pill bg-white text-primary px-3 py-2 me-3 fw-bold">
                                         ${applicant.status}

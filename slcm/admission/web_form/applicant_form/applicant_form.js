@@ -1091,7 +1091,7 @@ function collectDraftData() {
 	var PRESERVE = [
 		'name', 'program', 'admission_cycle', 'academic_year', 'admission_year',
 		'campus', 'status', 'application_fee_status',
-		'application_fee_amount', 'program_level', 'applicant_id',
+		'application_fee_amount', 'program_level',
 	];
 	var ref = frappe.reference_doc || {};
 	PRESERVE.forEach(function (k) {

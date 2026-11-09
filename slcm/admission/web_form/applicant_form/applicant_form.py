@@ -493,7 +493,7 @@ def save_applicant_draft(data, ignore_mandatory=True):
     # Server-controlled fields: never accept these from the portal payload
     # (e.g. a client could otherwise post application_fee_status="Paid" and skip payment).
     PROTECTED_FIELDS = {
-        "status", "email", "workflow_state", "applicant_id", "rejected_reason",
+        "status", "email", "workflow_state", "rejected_reason",
         "application_fee_status", "application_fee_amount",
         "fee_waived_by", "fee_waived_on",
     }
@@ -1014,7 +1014,7 @@ def _portal_existing_applicant_same_program_cycle_campus(
     campus_key = (campus or "").strip()
     rows = frappe.db.sql(
         """
-        SELECT name, applicant_id FROM `tabApplicant`
+        SELECT name FROM `tabApplicant`
         WHERE name != %(exclude)s
           AND program = %(program)s
           AND admission_cycle = %(cycle)s
@@ -1081,7 +1081,7 @@ def get_applicant_programs_already_applied(applicant_name):
             exclude_name=applicant_name,
         )
         if dup:
-            out[prog] = ((dup[1] or "").strip() or dup[0])
+            out[prog] = dup[0]
     return {"already_applied": out}
 
 
@@ -1172,7 +1172,7 @@ def switch_applicant_program(applicant_name, program):
         exclude_name=doc.name,
     )
     if dup:
-        aid = (dup[1] or "").strip() or dup[0]
+        aid = dup[0]
         return {
             "status": "error",
             "message": _(
