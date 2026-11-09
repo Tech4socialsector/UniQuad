@@ -9,7 +9,7 @@ from frappe import _
 from frappe.model.document import Document
 from slcm.admission.utils.nlsat_portal import get_applicant_login_link, get_applicant_portal_url
 from frappe.model.naming import getseries
-from frappe.utils import validate_email_address, getdate, date_diff, today, now, flt, nowdate, cint, cstr, strip_html
+from frappe.utils import validate_email_address, getdate, now, flt, nowdate, cint, cstr, strip_html
 from slcm.admission.portal_application_web_form import (
 	applicant_portal_application_locked,
 )
@@ -223,7 +223,10 @@ class Applicant(Document):
         set_intake_type(self)
         set_admission_details(self)
         self._validate_nationality_matches_foreign_national()
-        self._validate_education_percentage_bounds()
+        self._validate_education_percentage_bounds(
+            on_submit=self.status in ("Submitted", "Submitted and Paid")
+            and (self.is_new() or self.has_value_changed("status"))
+        )
 
         if self.status in ("Submitted", "Submitted and Paid") and self.has_value_changed("status"):
             self._validate_application_limit_before_submit()
@@ -306,28 +309,43 @@ class Applicant(Document):
                 title="Invalid Email"
             )
 
-    def validate_age(self):
-        if self.date_of_birth:
-            age = date_diff(today(), self.date_of_birth) / 365
-            if age < 17:
-                frappe.throw(
-                    "Applicant must be at least 17 years old.",
-                    title="Age Restriction"
-                )
-
-    def _validate_education_percentage_bounds(self):
-        """Class X % and HSC % use 0–100 scale (CGPA uses separate fields)."""
-        for fieldname, label in (
-            ("class_x_percentage", _("Class X percentage")),
-            ("hsc_percentage", _("HSC / Class XII percentage")),
+    def _validate_education_percentage_bounds(self, on_submit=False):
+        """
+        Percentage-or-CGPA scores (Class X, Class XII, UG rows, PG rows): above 0, at most 100,
+        or at most the maximum CGPA when one is entered. No minimum mark here: whether a score is
+        high enough is decided by the eligibility rules.
+        0 means "not entered" while drafting; on submit a required score of 0 is rejected.
+        """
+        # (doc, score field, maximum-CGPA field, label, required on submit)
+        checks = [
+            (self, "class_x_percentage", "class_x_cgpa", _("Class X percentage / CGPA"), True),
+            (self, "hsc_percentage", "if_cgpa_maximum_cgpa_class_xii", _("Class XII percentage / CGPA"),
+             (self.get("class_xii_status") or "") == "Completed"),
+        ]
+        for table, score_field, max_field, label in (
+            ("ug_degree_details", "ug_cgpa", "if_ug_cgpa", _("UG degree percentage / CGPA")),
+            ("pg_degree_details", "pg_cgpa", "if_pg_cgpa", _("PG degree percentage / CGPA")),
         ):
-            val = getattr(self, fieldname, None)
-            if val is None:
+            for row in self.get(table) or []:
+                checks.append((row, score_field, max_field, _("{0} (row {1})").format(label, row.idx), True))
+
+        for doc, score_field, max_field, label, required in checks:
+            score = flt(doc.get(score_field))
+            max_cgpa = flt(doc.get(max_field))
+            if score == 0:
+                if on_submit and required:
+                    frappe.throw(_("{0} must be greater than 0.").format(label), title=_("Invalid value"))
                 continue
-            v = flt(val)
-            if v < 0 or v > 100:
+            if score < 0:
+                frappe.throw(_("{0} must be greater than 0.").format(label), title=_("Invalid value"))
+            if max_cgpa > 0 and score > max_cgpa:
                 frappe.throw(
-                    _("{0} must be between 0 and 100.").format(label),
+                    _("{0} cannot be greater than the maximum CGPA ({1}).").format(label, max_cgpa),
+                    title=_("Invalid value"),
+                )
+            if max_cgpa <= 0 and score > 100:
+                frappe.throw(
+                    _("{0} cannot be greater than 100. If this is a CGPA, enter the maximum CGPA.").format(label),
                     title=_("Invalid value"),
                 )
 
