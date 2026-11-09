@@ -62,14 +62,14 @@
    "in_list_view": 1,
    "label": "Percentage/CGPA Obtained (UG degree)",
    "non_negative": 1,
-   "precision": "1",
+   "precision": "2",
    "reqd": 1
   },
   {
    "fieldname": "board_uni_ug",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Board/University (UG Degree)"
+   "label": "University (UG Degree)"
   },
   {
    "fieldname": "country",
@@ -91,7 +91,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-11-02 09:51:44.401462",
+ "modified": "2026-11-09 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "UG Degree Detail",

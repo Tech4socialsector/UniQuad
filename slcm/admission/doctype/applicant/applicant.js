@@ -316,62 +316,22 @@ frappe.ui.form.on("Applicant", {
 
         let errors = [];
 
-        // HSC Percentage
-        if (frm.doc.hsc_percentage !== undefined && frm.doc.hsc_percentage !== null && frm.doc.hsc_percentage !== "") {
-            let max_val = frm.doc.if_cgpa_maximum_cgpa_class_xii ? frm.doc.if_cgpa_maximum_cgpa_class_xii : 100;
-            let is_cgpa = !!frm.doc.if_cgpa_maximum_cgpa_class_xii;
-            if (frm.doc.hsc_percentage < (is_cgpa ? 4 : 35)) {
-                errors.push(is_cgpa ? __("HSC CGPA should be at least 4") : __("HSC percentage should be above 35%"));
-            } else if (frm.doc.hsc_percentage > max_val) {
-                errors.push(is_cgpa ? __(`HSC CGPA cannot be more than ${max_val}`) : __("HSC percentage cannot be more than 100%"));
-            }
+        // Percentage / CGPA scores: above 0, at most 100 — or at most the maximum CGPA when one
+        // is entered. No minimum mark: the eligibility rules decide whether a score is high enough.
+        const score_err = (label, value, max_cgpa) => {
+            const msg = slcm_score_error(label, value, max_cgpa);
+            if (msg) errors.push(msg);
+        };
+        score_err(__("Class X percentage / CGPA"), frm.doc.class_x_percentage, frm.doc.class_x_cgpa);
+        if (frm.doc.class_xii_status === "Completed") {
+            score_err(__("Class XII percentage / CGPA"), frm.doc.hsc_percentage, frm.doc.if_cgpa_maximum_cgpa_class_xii);
         }
-
-        // UG CGPA (child table)
-        if (frm.doc.ug_degree_details && frm.doc.ug_degree_details.length) {
-            frm.doc.ug_degree_details.forEach(row => {
-                if (row.ug_cgpa !== undefined && row.ug_cgpa !== null && row.ug_cgpa !== "") {
-                    let is_cgpa = !!row.if_ug_cgpa;
-                    let max_val = is_cgpa ? row.if_ug_cgpa : 100;
-                    
-                    if (row.ug_cgpa < (is_cgpa ? 4 : 35) || row.ug_cgpa > max_val) {
-                        if (is_cgpa) {
-                            errors.push(__("UG CGPA for degree \"{0}\" should be between 4 and {1}",
-                                [row.ug_program || __("(unnamed)"), max_val]));
-                        } else if (row.ug_cgpa < 35) {
-                            errors.push(__("UG score for degree \"{0}\" is less than 35. If entering CGPA, please provide the Maximum CGPA; otherwise, Percentage must be between 35 and 100",
-                                [row.ug_program || __("(unnamed)")]));
-                        } else {
-                            errors.push(__("UG Percentage for degree \"{0}\" cannot be more than 100",
-                                [row.ug_program || __("(unnamed)")]));
-                        }
-                    }
-                }
-            });
-        }
-
-        // PG CGPA (child table)
-        if (frm.doc.pg_degree_details && frm.doc.pg_degree_details.length) {
-            frm.doc.pg_degree_details.forEach(row => {
-                if (row.pg_cgpa !== undefined && row.pg_cgpa !== null && row.pg_cgpa !== "") {
-                    let is_cgpa = !!row.if_pg_cgpa;
-                    let max_val = is_cgpa ? row.if_pg_cgpa : 100;
-                    
-                    if (row.pg_cgpa < (is_cgpa ? 4 : 35) || row.pg_cgpa > max_val) {
-                        if (is_cgpa) {
-                            errors.push(__("PG CGPA for degree \"{0}\" should be between 4 and {1}",
-                                [row.pg_program || __("(unnamed)"), max_val]));
-                        } else if (row.pg_cgpa < 35) {
-                            errors.push(__("PG score for degree \"{0}\" is less than 35. If entering CGPA, please provide the Maximum CGPA; otherwise, Percentage must be between 35 and 100",
-                                [row.pg_program || __("(unnamed)")]));
-                        } else {
-                            errors.push(__("PG Percentage for degree \"{0}\" cannot be more than 100",
-                                [row.pg_program || __("(unnamed)")]));
-                        }
-                    }
-                }
-            });
-        }
+        (frm.doc.ug_degree_details || []).forEach(row => {
+            score_err(__("UG degree \"{0}\" percentage / CGPA", [row.ug_program || __("(unnamed)")]), row.ug_cgpa, row.if_ug_cgpa);
+        });
+        (frm.doc.pg_degree_details || []).forEach(row => {
+            score_err(__("PG degree \"{0}\" percentage / CGPA", [row.pg_program || __("(unnamed)")]), row.pg_cgpa, row.if_pg_cgpa);
+        });
 
         // When National test is selected, percentage is required
         if (frm.doc.national_test_name && (frm.doc.percentage === undefined || frm.doc.percentage === null || frm.doc.percentage === "")) {
@@ -450,19 +410,11 @@ frappe.ui.form.on("Applicant", {
 
     // ── HSC PERCENTAGE ───────────────────────
     hsc_percentage: function (frm) {
-        const val = frm.doc.hsc_percentage;
-        if (val === null || val === undefined || val === "") return;
+        slcm_alert_score(__("Class XII percentage / CGPA"), frm.doc.hsc_percentage, frm.doc.if_cgpa_maximum_cgpa_class_xii);
+    },
 
-        let max_val = frm.doc.if_cgpa_maximum_cgpa_class_xii ? frm.doc.if_cgpa_maximum_cgpa_class_xii : 100;
-        let is_cgpa = !!frm.doc.if_cgpa_maximum_cgpa_class_xii;
-
-        if (val < (is_cgpa ? 4 : 35)) {
-            frappe.show_alert({ message: is_cgpa ? __("HSC CGPA must be at least 4.") : __("HSC percentage must be at least 35%.If CGPA then first add the maximum CGPA"), indicator: "orange" });
-            frm.set_value("hsc_percentage", null);
-        } else if (val > max_val) {
-            frappe.show_alert({ message: is_cgpa ? __(`HSC CGPA cannot exceed ${max_val}.`) : __("HSC percentage cannot exceed 100%."), indicator: "orange" });
-            frm.set_value("hsc_percentage", null);
-        }
+    class_x_percentage: function (frm) {
+        slcm_alert_score(__("Class X percentage / CGPA"), frm.doc.class_x_percentage, frm.doc.class_x_cgpa);
     },
 
     // ── CAMPUS PREFERENCES ───────────────────
@@ -532,15 +484,31 @@ function toggle_degree_country_column(frm) {
     });
 }
 
+// Percentage / CGPA score check shared by Class X, Class XII, UG and PG:
+// above 0, at most 100 — or at most the maximum CGPA when one is entered. No minimum mark.
+function slcm_score_error(label, value, max_cgpa) {
+    if (value === undefined || value === null || value === "") return null;
+    const score = flt(value);
+    const max = flt(max_cgpa);
+    if (score <= 0) return __("{0} must be greater than 0.", [label]);
+    if (max > 0 && score > max) return __("{0} cannot be greater than the maximum CGPA ({1}).", [label, max]);
+    if (max <= 0 && score > 100) {
+        return __("{0} cannot be greater than 100. If this is a CGPA, enter the maximum CGPA first.", [label]);
+    }
+    return null;
+}
+
+// On field change: warn only (0 = not entered yet). Saving is blocked by validate() above.
+function slcm_alert_score(label, value, max_cgpa) {
+    if (!flt(value)) return;
+    const msg = slcm_score_error(label, value, max_cgpa);
+    if (msg) frappe.show_alert({ message: msg, indicator: "orange" }, 6);
+}
+
 frappe.ui.form.on("UG Degree Detail", {
     ug_cgpa: function (frm, cdt, cdn) {
         const row = locals[cdt][cdn];
-        if (row.ug_cgpa === null || row.ug_cgpa === undefined || row.ug_cgpa === "") return;
-
-        if (row.ug_cgpa < 4 || row.ug_cgpa > 10) {
-            frappe.show_alert({ message: __("UG CGPA must be between 4 and 10."), indicator: "orange" });
-            frappe.model.set_value(cdt, cdn, "ug_cgpa", null);
-        }
+        slcm_alert_score(__("UG degree percentage / CGPA"), row.ug_cgpa, row.if_ug_cgpa);
     }
 });
 
@@ -550,11 +518,6 @@ frappe.ui.form.on("UG Degree Detail", {
 frappe.ui.form.on("PG Degree Details", {
     pg_cgpa: function (frm, cdt, cdn) {
         const row = locals[cdt][cdn];
-        if (row.pg_cgpa === null || row.pg_cgpa === undefined || row.pg_cgpa === "") return;
-
-        if (row.pg_cgpa < 4 || row.pg_cgpa > 10) {
-            frappe.show_alert({ message: __("PG CGPA must be between 4 and 10."), indicator: "orange" });
-            frappe.model.set_value(cdt, cdn, "pg_cgpa", null);
-        }
+        slcm_alert_score(__("PG degree percentage / CGPA"), row.pg_cgpa, row.if_pg_cgpa);
     }
 });

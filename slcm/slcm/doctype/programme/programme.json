@@ -12,6 +12,7 @@
   "level_of_study",
   "program_duration",
   "program_status",
+  "programme_url",
   "column_break_aosh",
   "program_image",
   "program_slug",
@@ -243,6 +244,12 @@
    "fieldtype": "Code",
    "label": "International Application Form Link",
    "read_only": 1
+  },
+  {
+   "fieldname": "programme_url",
+   "fieldtype": "Data",
+   "label": "Programme URL",
+   "options": "URL"
   }
  ],
  "grid_page_length": 50,
@@ -261,7 +268,7 @@
   }
  ],
  "make_attachments_public": 1,
- "modified": "2026-11-02 14:26:53.094048",
+ "modified": "2026-11-09 11:14:29.365549",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Programme",

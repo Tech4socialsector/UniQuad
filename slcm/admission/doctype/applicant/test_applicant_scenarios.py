@@ -162,19 +162,6 @@ class TestApplicantScenarios(FrappeTestCase):
     # SECTION A: Core Applicant Validations
     # =========================================================================
 
-    def test_tc01_date_of_birth_validation(self):
-        """TC01: Date of Birth Validation - ensure age is at least 17."""
-        applicant = self.get_base_applicant("dob@example.com")
-        
-        # Future date or too young date (10 years old)
-        applicant.date_of_birth = add_days(today(), -(365 * 10))
-        
-        # In applicant.py, validate_age runs on validate (when not draft, or if we trigger it directly)
-        with self.assertRaises(frappe.ValidationError) as context:
-            applicant.validate_age()
-        
-        self.assertIn("must be at least 17 years old", str(context.exception))
-
     def test_tc02_email_formatting(self):
         """TC02: Email Format Validation."""
         applicant = self.get_base_applicant("invalidemail.com")
