@@ -4534,8 +4534,48 @@ function setupSlcmFieldErrorClear() {
 			var $t = $(this);
 			$t.removeClass('slcm-field-error');
 			$t.closest('.frappe-control').find('.slcm-field-error').removeClass('slcm-field-error');
+			// Another field's value may have made a conditionally-mandatory field optional
+			// (e.g. guardian_required → parents' details); drop their stale red outline too.
+			setTimeout(_slcmClearStaleConditionalErrors, 0);
+			setTimeout(_slcmClearStaleConditionalErrors, 400);
 		}
 	);
+}
+
+/**
+ * Remove the red outline from empty fields whose mandatory_depends_on no longer holds.
+ * Fields that are still required, or that hold a value (may carry a format error), are untouched.
+ */
+function _slcmClearStaleConditionalErrors() {
+	var wf = window.frappe && frappe.web_form;
+	if (!wf || !wf.fields_dict || !wf.doc) return;
+	Object.keys(wf.fields_dict).forEach(function (fieldname) {
+		var fw = wf.fields_dict[fieldname];
+		var df = fw && fw.df;
+		if (!df || df.reqd || !df.mandatory_depends_on || !fw.$wrapper) return;
+		var $err = fw.$wrapper.find('.slcm-field-error');
+		if (!$err.length) return;
+		var required = false;
+		try {
+			var expr = String(df.mandatory_depends_on).replace(/^eval:/, '');
+			// eslint-disable-next-line no-new-func
+			required = !!new Function('doc', 'return (' + expr + ')')(wf.doc);
+		} catch (e) {
+			return;
+		}
+		if (required) return;
+		var val;
+		try {
+			val = wf.get_value(fieldname);
+		} catch (e2) {
+			return;
+		}
+		var s = val === undefined || val === null ? '' : String(val).trim();
+		// Phone controls store just the country code ("+91-") when left blank
+		if (df.fieldtype === 'Phone' && s.indexOf('-') > -1 && !s.split('-').slice(1).join('').trim()) s = '';
+		if (s) return;
+		$err.removeClass('slcm-field-error');
+	});
 }
 
 /**
