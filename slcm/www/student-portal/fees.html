@@ -601,7 +601,7 @@ body.sp-dark .fee-modal-body [style*="color:#475569"] { color: var(--sp-text-2) 
   </dl>
   {% if _summary_ok %}
   <div class="spf-student-status">
-    {% if has_dues or other_outstanding > 0 or _err.demands or _err.re_exams or _err.hostel_fines %}
+    {% if has_any_dues %}
     <span class="spf-status-badge spf-status-badge-due"><span class="sp-ms" aria-hidden="true">error</span>Pending</span>
     {% else %}
     <span class="spf-status-badge spf-status-badge-paid"><span class="sp-ms" aria-hidden="true">check_circle</span>No Dues</span>

@@ -295,7 +295,7 @@ def charge_rows(student, demands, invoices, re_exams, fines):
 			amount=flt_(inv.get("final_payable_amount") or inv.get("total_amount")), paid=flt_(inv.get("paid_amount")),
 			waiver=flt_(inv.get("scholarship_amount")), outstanding=out,
 			status=inv.get("display_status") or inv.status or "Unpaid",
-			receipt=(rcpts[-1].receipt_name if rcpts else ""), re_exam_receipt="", invoice=inv.name,
+			receipt=(((rcpts[-1] or {}).get("receipt_name") or "") if rcpts else ""), re_exam_receipt="", invoice=inv.name,
 			academic_year=inv.get("academic_year") or "", can_pay=False,
 		))
 
@@ -388,7 +388,7 @@ def _attach_details(student, rows, invoices):
 		for i, pay in enumerate(inv.get("payments") or []):
 			if pay.get("is_rzp_only"):
 				continue
-			rc = rcpts[i].receipt_name if i < len(rcpts) else ""
+			rc = ((rcpts[i] or {}).get("receipt_name") or "") if i < len(rcpts) else ""
 			row.details.append(_detail(
 				"payment", pay.get("payment_date"), "Payment",
 				" · ".join(filter(None, [pay.get("payment_mode"), pay.get("reference_number")])),
@@ -492,3 +492,20 @@ def charge_cards(rows):
 		if rs:
 			cards.append(card(label, rs))
 	return cards
+
+
+def has_outstanding_dues(context, errors=None):
+	"""True when the student owes anything: programme fees, Fee Demands, re-exam fees or hostel fines.
+
+	Shared by the student and parent Fees pages so their Pending / No Dues badge always agrees.
+	When a dues section failed to load we cannot prove there are no dues, so it counts as pending."""
+	errors = errors or {}
+	if errors.get("demands") or errors.get("re_exams") or errors.get("hostel_fines"):
+		return True
+	if context.get("has_dues"):
+		return True
+	if flt(context.get("demand_outstanding")) > 0 or flt(context.get("other_outstanding")) > 0:
+		return True
+	return any(
+		r.get("group") != "Other" and flt(r.get("outstanding")) > 0 for r in (context.get("charge_rows") or [])
+	)
