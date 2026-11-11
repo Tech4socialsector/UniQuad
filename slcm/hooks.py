@@ -94,6 +94,7 @@ webform_include_js = {
 jinja = {
 	"methods": [
 		"slcm.admission.utils.jinja.get_file_b64",
+		"slcm.admission.utils.jinja.get_merriweather_font_css",
 		"slcm.slcm.doctype.student_transcript.student_transcript.get_transcript_context",
 		"slcm.slcm.doctype.student_transcript.student_transcript.get_year_based_transcript_context",
 		"slcm.slcm.doctype.student_portal_settings.student_portal_settings.get_student_portal_settings",
@@ -394,9 +395,11 @@ fixtures = [
         ]
     },
     # --- Transcript Print Format ---
+    # "Applicant Application Form" is deliberately NOT a fixture: its HTML is maintained in the
+    # Print Format UI per site, and fixtures are force-imported on every migrate (would overwrite it).
     {
         "doctype": "Print Format",
-        "filters": [["name", "in", ["Student Transcript", "Seat Allocation Result Notification","NLSAT Offer Letter", "Applicant Application Form"]]]
+        "filters": [["name", "in", ["Student Transcript", "Seat Allocation Result Notification","NLSAT Offer Letter"]]]
     },
     {
         "doctype": "Venue Type",

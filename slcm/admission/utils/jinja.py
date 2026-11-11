@@ -49,5 +49,64 @@ def get_file_b64(file_url):
             
     except Exception:
         pass
-        
+
     return ""
+
+
+_MERRIWEATHER_FACES = (
+    # (file in slcm/public/fonts, font-weight, font-style)
+    ("Merriweather-Regular.ttf", "400", "normal"),
+    ("Merriweather-Bold.ttf", "700", "normal"),
+    ("Merriweather-Italic.ttf", "400", "italic"),
+)
+_merriweather_css_cache = None
+
+
+def get_merriweather_font_css():
+    """CSS that embeds the app's bundled Merriweather TTFs (base64) and makes every element use it.
+
+    Use inside a print format's <style> block: {{ get_merriweather_font_css() }}
+    Works offline in wkhtmltopdf / Chrome PDF — no Google Fonts request needed.
+    """
+    global _merriweather_css_cache
+    if _merriweather_css_cache is not None:
+        return _merriweather_css_cache
+
+    faces = []
+    for filename, weight, style in _MERRIWEATHER_FACES:
+        path = frappe.get_app_path("slcm", "public", "fonts", filename)
+        if not os.path.exists(path):
+            continue
+        with open(path, "rb") as f:
+            data = base64.b64encode(f.read()).decode()
+        # "src:/**/url(" — the empty comment stops frappe's expand_relative_urls (run on every
+        # server-side PDF) from matching ":url(" and appending " !important" after the url(),
+        # which turns this into an invalid src and wkhtmltopdf silently drops the font.
+        faces.append(
+            "@font-face{font-family:'Merriweather';"
+            f"src:/**/url(data:font/ttf;base64,{data}) format('truetype');"
+            f"font-weight:{weight};font-style:{style};}}"
+        )
+    css = ""
+    if faces:
+        css = "".join(faces) + "html,body,body *{font-family:'Merriweather',serif !important;}"
+    _merriweather_css_cache = css
+    return css
+
+
+def embed_merriweather_for_pdf(html):
+    """For server-side PDFs: if the HTML wants Merriweather, drop the Google Fonts link/import
+    (unreachable for wkhtmltopdf on the server) and embed the bundled font instead."""
+    import re
+
+    if not html or "merriweather" not in html.lower() or "@font-face{font-family:'Merriweather'" in html:
+        return html
+    html = re.sub(r"<link[^>]*fonts\.googleapis\.com[^>]*>", "", html)
+    html = re.sub(r"@import\s+url\([^)]*fonts\.googleapis\.com[^)]*\);?", "", html)
+    css = get_merriweather_font_css()
+    if not css:
+        return html
+    style = f"<style>{css}</style>"
+    if re.search(r"<head[^>]*>", html, re.I):
+        return re.sub(r"<head[^>]*>", lambda m: m.group(0) + style, html, count=1, flags=re.I)
+    return style + html

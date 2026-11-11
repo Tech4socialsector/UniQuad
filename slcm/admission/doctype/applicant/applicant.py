@@ -1001,6 +1001,17 @@ class Applicant(Document):
                         img["src"] = f"data:{mime_type};base64,{encoded}"
                 else:
                     img["src"] = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+
+            # The Google Fonts <link> was stripped above, so a template that asks for Merriweather
+            # would fall back to a default sans font in the PDF. Embed the app's bundled TTFs instead
+            # (unless the template already does via {{ get_merriweather_font_css() }}).
+            if "merriweather" in html.lower() and "@font-face{font-family:'Merriweather'" not in html:
+                from slcm.admission.utils.jinja import get_merriweather_font_css
+                font_css = get_merriweather_font_css()
+                if font_css:
+                    style = soup.new_tag("style")
+                    style.string = font_css
+                    (soup.head or soup).insert(0, style)
             return str(soup)
         except Exception:
             frappe.log_error(title="prepare_html_for_pdf error", message=frappe.get_traceback())

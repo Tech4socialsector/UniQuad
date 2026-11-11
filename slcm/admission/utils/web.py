@@ -885,9 +885,20 @@ def download_application(applicant_name):
     pdf_content = None
     last_error = None
 
-    # Prefer wkhtmltopdf as it is more stable in web context for this environment.
-    # Fallback to Chrome if wkhtmltopdf fails.
-    for generator in ("wkhtmltopdf", "chrome"):
+    # Same builder as the PDF attached on submission: strips the Google Fonts link (wkhtmltopdf
+    # can't reach it from the server), embeds the bundled Merriweather fonts and inlines images.
+    # A plain frappe.get_print(as_pdf=True) skips that, so the PDF fell back to a default font.
+    try:
+        pdf_content = applicant.get_application_pdf_content()
+    except Exception as e:
+        last_error = e
+        frappe.log_error(
+            title="Application Download: prepared PDF failed, falling back",
+            message=frappe.get_traceback(),
+        )
+
+    # Fallbacks: plain wkhtmltopdf, then Chrome.
+    for generator in (() if pdf_content else ("wkhtmltopdf", "chrome")):
         try:
             # For Chrome, we can try to pass options if the frappe version supports it
             pdf_generator_options = {}
