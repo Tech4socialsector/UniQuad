@@ -67,7 +67,8 @@ def get_context(context):
             ep = frappe.db.get_value(
                 "Exam Plan",
                 exam_plan,
-                ["exam_name", "term", "status", "timetable_published", "reexam_timetable_published"],
+                ["exam_name", "term", "status", "timetable_published", "reexam_timetable_published",
+                 "timetable_show_invigilator", "reexam_show_invigilator"],
                 as_dict=True,
             ) or frappe._dict()
             pub = published_map.get(exam_plan)
@@ -78,7 +79,8 @@ def get_context(context):
             for s in frappe.get_all(
                 "Exam Course Schedule",
                 filters={"parent": exam_plan, "parenttype": "Exam Plan", "course": ["is", "set"]},
-                fields=["course", "exam_date", "start_time", "end_time", "venue", "hall", "id_from", "id_to"],
+                fields=["course", "exam_date", "start_time", "end_time", "venue", "hall", "id_from", "id_to",
+                        "invigilator", "invigilator_name"],
                 order_by="idx asc",
                 ignore_permissions=True,
             ) if ep.timetable_published else []:
@@ -105,10 +107,11 @@ def get_context(context):
                     "_raw_exam_date": sched.exam_date,
                     "venue": " | ".join(filter(None, [sched.venue, sched.hall])) or "To be announced",
                     "exam_time": f"{start} – {end}" if start and end else (start or "To be announced"),
+                    "invigilator": _invigilator(sched) if ep.timetable_show_invigilator else "",
                     "has_schedule": bool(sched.exam_date or sched.venue),
                 })
 
-            courses += _reexam_rows(exam_plan, student_name, ep, marks_map)
+            # Exam dates and re-exam papers are on the Exam Timetable page
             courses.sort(key=lambda c: c["course_name"])
             exam_plans.append({
                 "name": exam_plan,
@@ -140,14 +143,6 @@ def get_context(context):
         next_exam_course = None
         for plan in exam_plans:
             for course in plan["courses"]:
-                raw = course.get("_raw_exam_date")
-                is_up = bool(raw and raw >= _today)
-                course["is_upcoming"] = is_up
-                if is_up:
-                    upcoming_count += 1
-                    if next_exam_date is None or raw < next_exam_date:
-                        next_exam_date = raw
-                        next_exam_course = course.get("course_name", "")
 
                 # Assessments / submission deadlines from Exam Assessment Schedule
                 for a in course.get("assessments", []):
@@ -166,15 +161,10 @@ def get_context(context):
         context.next_exam_course = next_exam_course or ""
         context.results_published = sum(1 for p in exam_plans if p["is_published"])
 
-        # Re-exam requests count
-        try:
-            reexam_count = frappe.db.count(
-                "Re-Examination Request",
-                filters={"student": student_name, "status": ["in", ["Pending", "Approved", "Submitted"]]},
-            )
-        except Exception:
-            reexam_count = 0
-        context.reexam_requests = reexam_count
+        # Re-exams the student has registered for
+        context.reexam_requests = frappe.db.count(
+            "Re Exam Registration", filters={"student": student_name, "status": "Registered"}
+        )
 
     except Exception as exc:
         frappe.log_error(f"Exam Schedule error: {exc}", "Student Portal Exam Schedule")
@@ -192,50 +182,6 @@ def get_context(context):
         context.reexam_requests = 0
 
     return context
-
-
-def _reexam_rows(exam_plan, student_name, ep, marks_map):
-    """One row per re-exam the student registered for; its date, time and room
-    show once the plan publishes the re-exam timetable."""
-    courses = frappe.get_all(
-        "Re Exam Registration",
-        filters={"student": student_name, "exam_plan": exam_plan, "status": "Registered"},
-        pluck="course", ignore_permissions=True,
-    )
-    if not courses:
-        return []
-    sched = {
-        s.course: s
-        for s in frappe.get_all(
-            "Exam Reexam Schedule",
-            filters={"parent": exam_plan, "parenttype": "Exam Plan", "course": ["in", courses]},
-            fields=["course", "exam_date", "start_time", "end_time", "venue"],
-            ignore_permissions=True,
-        )
-    } if ep.reexam_timetable_published else {}
-    rows = []
-    for course in courses:
-        c_doc = frappe.db.get_value("Course", course, ["course_name", "course_code"], as_dict=True) or {}
-        s = sched.get(course) or frappe._dict()
-        start = _fmt_time(s.start_time) if s.start_time else ""
-        end = _fmt_time(s.end_time) if s.end_time else ""
-        row = marks_map.get((exam_plan, course))
-        rows.append({
-            "course": course,
-            "course_code": c_doc.get("course_code") or course,
-            "course_name": f"{c_doc.get('course_name') or course} (Re-exam)",
-            "is_reexam": True,
-            "attendance_status": "",
-            "enrollment_status": (row.enrollment_status if row else "") or "Enrolled",
-            "marks_status": "Re-exam",
-            "hall_ticket_status": "Eligible",
-            "exam_date": frappe.utils.formatdate(s.exam_date, "d MMM yyyy") if s.exam_date else "",
-            "_raw_exam_date": s.exam_date,
-            "venue": s.venue or "To be announced",
-            "exam_time": f"{start} – {end}" if start and end else (start or "To be announced"),
-            "has_schedule": bool(s.exam_date or s.venue),
-        })
-    return rows
 
 
 def _attach_assessments(exam_plans, student_name):
@@ -330,6 +276,17 @@ def _attach_assessments(exam_plans, student_name):
                     "date": _fmt_dt(nxt["_next_date"]),
                     "label": nxt["label"],
                 }
+
+
+def _invigilator(row):
+    """Invigilator as typed on the sheet, else the linked Faculty's name."""
+    if row.get("invigilator_name"):
+        return row.invigilator_name
+    if row.get("invigilator"):
+        from slcm.slcm.utils.exam_timetable import _faculty_label
+
+        return _faculty_label(row.invigilator)
+    return ""
 
 
 def _student_room(rows, student):

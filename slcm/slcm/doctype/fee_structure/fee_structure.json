@@ -245,6 +245,7 @@
   },
   {
    "depends_on": "eval:doc.online_payment == 1",
+   "description": "Collects this structure's programme fees on the Student and Parent Portal (Razorpay or Easebuzz). Admission (Offer Letter) payments always use Razorpay.",
    "fieldname": "payment_gateway",
    "fieldtype": "Link",
    "in_standard_filter": 1,
@@ -372,7 +373,7 @@
   }
  ],
  "links": [],
- "modified": "2026-11-04 12:00:00.000000",
+ "modified": "2026-11-06 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Fee Structure",

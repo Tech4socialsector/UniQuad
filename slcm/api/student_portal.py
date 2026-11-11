@@ -1305,12 +1305,12 @@ def get_portal_notifications():
 						"id": f"exam_schedule:{es.name}",
 						"date": _iso(es.exam_date),
 						"type": "exam_schedule",
-						"category": "Assessment Schedule",
+						"category": "Exam Timetable",
 						"priority": "Important",
-						"title": f"Assessment: {_course_name(es.course)}",
+						"title": f"Exam: {_course_name(es.course)}",
 						"subtitle": _join(date_str, es.venue),
-						"icon": "event_note",
-						"link": "/student-portal/exam-schedule",
+						"icon": "calendar_month",
+						"link": "/student-portal/exam-timetable",
 						"sort_key": 1,
 					})
 		except Exception:

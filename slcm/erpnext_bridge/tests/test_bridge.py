@@ -26,7 +26,12 @@ OTHER_SOURCES = (
 	("FLE Payment Log", "full_name"),
 	("Refund Transaction", "failure_reason"),
 	("Stipend Payment", "remarks"),
+	("Re Exam Payment Log", "failure_reason"),
+	("Re Exam Registration", "remarks"),
+	("Mess Payment", "remarks"),
+	("Hostel Refund Request", "reason"),
 )
+TEST_MESS = "ERP Bridge Test Mess"
 SAVED_FIELDS = (*conf.COMPANY_FIELDS, "default_cash_account", "default_bank_account")
 
 
@@ -113,6 +118,9 @@ class TestSLCMERPNextBridge(IntegrationTestCase):
 
 	def _delete_test_records(self, names, requests, sources, like):
 		frappe.db.commit()  # fresh snapshot after waiting on the locks
+		# Accounts from the SLCM Fee Components tests (matched by name: one is renamed to a ledger's name).
+		for name in frappe.get_all("Account", filters={"name": like}, pluck="name"):
+			frappe.delete_doc("Account", name, force=True, ignore_permissions=True)
 		for name in frappe.get_all("Journal Entry", filters={"slcm_reference_name": ("in", names or ["-"])}, pluck="name"):
 			# A background worker may be cancelling the same entry (doc_events); always work on a fresh copy.
 			je = frappe.get_doc("Journal Entry", name)
@@ -120,7 +128,9 @@ class TestSLCMERPNextBridge(IntegrationTestCase):
 				je.cancel()
 			frappe.delete_doc("Journal Entry", name, force=True, ignore_permissions=True)
 		for name in requests:
-			frappe.delete_doc("SLCM Payment Request", name, force=True, ignore_permissions=True)
+			# Paid student requests are submitted (as the payment ledger keeps them): remove the rows directly.
+			frappe.db.delete("Comment", {"reference_doctype": "SLCM Payment Request", "reference_name": name})
+			frappe.db.delete("SLCM Payment Request", {"name": name})
 		for name in frappe.get_all("Student Credit Note", filters={"remarks": like}, pluck="name"):
 			# Submitted and possibly used, so it cannot be cancelled or deleted through the controller.
 			frappe.db.delete("Credit Adjustment Row", {"parent": name, "parenttype": "Student Credit Note"})
@@ -139,6 +149,8 @@ class TestSLCMERPNextBridge(IntegrationTestCase):
 		for component in (TEST_COMPONENT, TEST_GST_COMPONENT):
 			if frappe.db.exists("Fee Component", component):
 				frappe.delete_doc("Fee Component", component, force=True, ignore_permissions=True)
+		if frappe.db.exists("Mess", TEST_MESS):
+			frappe.delete_doc("Mess", TEST_MESS, force=True, ignore_permissions=True)
 		for name in names:
 			for dt in sync.SOURCES:
 				frappe.db.delete("Error Log", {"method": sync.ERROR_TITLE.format(dt, name)})
@@ -305,6 +317,116 @@ class TestSLCMERPNextBridge(IntegrationTestCase):
 		self.assertEqual(rows[conf.gateway_clearing_account(self.cfg)].credit, 10000)
 		self.assertEqual(rows[self.saved.default_bank_account].debit, 9764)
 		self.assertEqual(rows[self.saved.slcm_gateway_charges_account].debit, 200)
+
+	def paid_request(self, amount, reference_doctype="Fee Demand", reference_name=None):
+		"""A student's online payment as the payment ledger records it (Paid, submitted, keyed on the payment id)."""
+		pr = frappe.get_doc(
+			{
+				"doctype": "SLCM Payment Request",
+				"reference_doctype": reference_doctype,
+				"reference_name": reference_name or self.demand(amount=amount),
+				"amount": amount,
+				"currency": "INR",
+				"status": "Paid",
+				"transaction_id": PAY_ID,
+				"razorpay_payment_id": PAY_ID,
+				"paid_on": f"{self.date} 10:00:00",
+				"gateway_response": frappe.as_json({"student": self.student, "records": []}),
+			}
+		).insert(ignore_permissions=True)
+		pr.submit()
+		frappe.db.commit()
+		return pr
+
+	def settle(self, pr, amount, fees=0.0, tax=0.0):
+		frappe.db.set_value(
+			"SLCM Payment Request",
+			pr.name,
+			{"settlement_status": "Settled", "settlement_date": f"{self.date} 09:00:00", "settlement_amount": amount,
+			 "gateway_fees": fees, "gateway_tax": tax, "net_settled": amount - fees - tax},
+		)
+		frappe.db.commit()
+
+	def test_online_payment_without_fee_payment_is_held_then_rebooked_and_settled(self):
+		clearing = conf.gateway_clearing_account(self.cfg)
+		held = self.saved.slcm_unallocated_fee_account
+		pr = self.paid_request(5000)
+		self.assertEqual(sync.sync_document("Gateway Receipt", pr.name), "Posted", sync.last_error("Gateway Receipt", pr.name))
+		rows = self.je_rows(sync.live_journal_entry("Gateway Receipt", pr.name))
+		self.assertEqual((rows[clearing].debit, rows[held].credit), (5000, 5000))
+
+		# A Fee Payment later books part of the capture (kept at 5000, as Easebuzz reports what it captured).
+		first = sync.live_journal_entry("Gateway Receipt", pr.name)
+		with patch("slcm.slcm.fee.payment_ledger.on_fee_payment"):
+			fp = self.pay(self.demand(amount=3000), 3000, mode="Online Payment", ref=PAY_ID)
+		sync.sync_document("Fee Payment", fp.name)
+		params = {"from_date": self.cfg.slcm_posting_from_date, "limit": 500, "recent": add_days(self.date, -1)}
+		self.assertIn(pr.name, sync._pending("Gateway Receipt", sync.SOURCES["Gateway Receipt"], params))  # amount moved
+		sync.sync_pending()
+		live = sync.live_journal_entry("Gateway Receipt", pr.name)
+		self.assertNotEqual(live, first)
+		self.assertEqual(frappe.db.get_value("Journal Entry", first, "docstatus"), 2)
+		self.assertEqual(self.je_rows(live)[held].credit, 2000)
+		self.assertEqual(sync.sync_document("Gateway Receipt", pr.name), "Posted")  # unchanged: no rebook
+		self.assertEqual(sync.live_journal_entry("Gateway Receipt", pr.name), live)
+
+		# The settlement clears the whole capture: Fee Payment 3000 + held 2000.
+		self.settle(pr, 5000, fees=100, tax=18)
+		self.assertEqual(sync.sync_document("SLCM Payment Request", pr.name), "Posted", sync.last_error("SLCM Payment Request", pr.name))
+		rows = self.je_rows(sync.live_journal_entry("SLCM Payment Request", pr.name))
+		self.assertEqual(rows[clearing].credit, 5000)
+		self.assertEqual(rows[self.saved.default_bank_account].debit, 4882)
+
+	def test_online_transcript_fee_posts_to_its_ledger(self):
+		pr = self.paid_request(1500)
+		record = frappe._dict(doctype="Transcript Request", name="TR-ERPTEST", amount=1000, student=self.student)
+		with patch("slcm.slcm.fee.payment_ledger._records", return_value=[record]):
+			self.assertEqual(sync.sync_document("Gateway Receipt", pr.name), "Posted", sync.last_error("Gateway Receipt", pr.name))
+		rows = self.je_rows(sync.live_journal_entry("Gateway Receipt", pr.name))
+		ledger = conf.account_named(self.cfg, "Transcript Fee") or self.saved.slcm_default_fee_income_account
+		self.assertEqual(rows[ledger].credit, 1000)
+		self.assertEqual(rows[self.saved.slcm_unallocated_fee_account].credit, 500)
+		self.assertEqual(rows[conf.gateway_clearing_account(self.cfg)].debit, 1500)
+
+	def test_gateway_receipt_skips_refunded_admission_and_fully_booked_payments(self):
+		pr = self.paid_request(2000)
+		self.assertEqual(sync.sync_document("Gateway Receipt", pr.name), "Posted")
+		frappe.db.set_value("SLCM Payment Request", pr.name, "gateway_status", "refunded")
+		frappe.db.commit()
+		self.assertEqual(sync.sync_document("Gateway Receipt", pr.name), "Cancelled")
+		frappe.db.set_value("SLCM Payment Request", pr.name, {"gateway_status": "captured", "reference_doctype": "Applicant"})
+		frappe.db.commit()
+		self.assertIsNone(sync.sync_document("Gateway Receipt", pr.name))  # admission: its receipt books it
+		frappe.db.set_value("SLCM Payment Request", pr.name, "reference_doctype", "Fee Demand")
+		frappe.db.commit()
+		with patch("slcm.slcm.fee.payment_ledger.on_fee_payment"):
+			self.pay(self.demand(amount=2000), 2000, mode="Online Payment", ref=PAY_ID)
+		self.assertIsNone(sync.sync_document("Gateway Receipt", pr.name))  # all on the Fee Payment
+
+	def test_counter_exam_fee_posts_to_cash_and_online_logs_are_left_to_their_request(self):
+		from slcm.slcm.fee.counter_payment import record_counter_payment
+
+		reg = frappe.get_doc(
+			{"doctype": "Re Exam Registration", "student": self.student, "re_exam_fee": 750, "payment_status": "Pending",
+			 "status": "Registered", "remarks": TAG}
+		).insert(ignore_permissions=True, ignore_links=True, ignore_mandatory=True)
+		self.assertRaises(frappe.ValidationError, record_counter_payment, reg.doctype, reg.name, "Online Payment", self.date)
+		log = record_counter_payment(reg.doctype, reg.name, "Cash", self.date, "RB-12")
+		frappe.db.set_value("Re Exam Payment Log", log, "failure_reason", TAG)
+		frappe.db.commit()
+		self.assertEqual(frappe.db.get_value(reg.doctype, reg.name, "payment_status"), "Paid")
+		self.assertRaises(frappe.ValidationError, record_counter_payment, reg.doctype, reg.name, "Cash", self.date)
+
+		self.assertEqual(sync.sync_document("Re Exam Payment Log", log), "Posted", sync.last_error("Re Exam Payment Log", log))
+		rows = self.je_rows(sync.live_journal_entry("Re Exam Payment Log", log))
+		ledger = conf.account_named(self.cfg, "Re Exam Fee") or self.saved.slcm_default_fee_income_account
+		self.assertEqual(rows[ledger].credit, 750)
+		self.assertEqual(rows[conf.receipt_cash_account(self.cfg, "Cash")].debit, 750)
+
+		# a gateway log is booked on its Payment Request (Gateway Receipt), never here
+		frappe.db.set_value("Re Exam Payment Log", log, {"razorpay_payment_id": PAY_ID, "payment_gateway": "Razorpay"})
+		frappe.db.commit()
+		self.assertEqual(sync.sync_document("Re Exam Payment Log", log), "Cancelled")
 
 	def test_documents_before_start_date_are_not_posted(self):
 		self.set_company(slcm_posting_from_date=add_days(self.date, 1))
@@ -662,6 +784,44 @@ class TestSLCMERPNextBridge(IntegrationTestCase):
 		self.assertEqual(rows[self.saved.slcm_fee_refund_account].debit, 2500)
 		self.assertEqual(rows[conf.gateway_clearing_account(self.cfg)].credit, 2500)
 
+	def test_mess_payment_posts_rebooks_an_edit_and_delete_reverses(self):
+		if not frappe.db.exists("Mess", TEST_MESS):
+			frappe.get_doc({"doctype": "Mess", "mess_name": TEST_MESS}).insert(ignore_permissions=True)
+		mp = frappe.get_doc(
+			{"doctype": "Mess Payment", "student": self.student, "mess": TEST_MESS, "payment_date": self.date,
+			 "mode_of_payment": "Online", "amount": 1800, "remarks": TAG}
+		).insert(ignore_permissions=True)
+		frappe.db.commit()
+		self.assertEqual(sync.sync_document("Mess Payment", mp.name), "Posted")
+		rows = self.je_rows(sync.live_journal_entry("Mess Payment", mp.name))
+		# no gateway for mess: 'Online' is a transfer into the bank, never the clearing account
+		self.assertEqual(rows[self.saved.default_bank_account].debit, 1800)
+		first = sync.live_journal_entry("Mess Payment", mp.name)
+		mp.amount = 2000
+		mp.save(ignore_permissions=True)
+		frappe.db.commit()
+		self.assertEqual(sync.sync_document("Mess Payment", mp.name), "Posted")
+		self.assertNotEqual(sync.live_journal_entry("Mess Payment", mp.name), first)
+		self.assertEqual(self.je_rows(sync.live_journal_entry("Mess Payment", mp.name))[self.saved.default_bank_account].debit, 2000)
+		self.deleted_sources.append(mp.name)
+		mp.delete(ignore_permissions=True)
+		frappe.db.commit()
+		self.assertEqual(sync.sync_document("Mess Payment", mp.name), "Cancelled")
+
+	def test_hostel_refund_posts_only_when_processed(self):
+		hr = frappe.get_doc(
+			{"doctype": "Hostel Refund Request", "student": self.student, "amount": 1200, "reason": TAG}
+		).insert(ignore_permissions=True)
+		frappe.db.commit()
+		self.assertIsNone(sync.sync_document("Hostel Refund Request", hr.name))
+		hr.update({"status": "Processed", "refund_mode": "Cash", "processed_on": self.date})
+		hr.save(ignore_permissions=True)
+		frappe.db.commit()
+		self.assertEqual(sync.sync_document("Hostel Refund Request", hr.name), "Posted")
+		rows = self.je_rows(sync.live_journal_entry("Hostel Refund Request", hr.name))
+		self.assertEqual(rows[self.saved.slcm_fee_refund_account].debit, 1200)
+		self.assertEqual(rows[conf.payment_out_account(self.cfg, "Cash")].credit, 1200)
+
 	def test_reconciliation_report_lists_every_source(self):
 		from slcm.erpnext_bridge.report.slcm_erpnext_reconciliation import slcm_erpnext_reconciliation as rec
 
@@ -795,3 +955,81 @@ class TestSLCMERPNextBridge(IntegrationTestCase):
 		setup_fee_accounting(self.company)
 		self.assertEqual(counts(), before)
 		self.assertEqual(frappe.db.get_value("Company", self.company, list(SAVED_FIELDS), as_dict=True), self.saved)
+
+	# ── Account "SLCM Fee Components" ──────────────────────────────────────────────────────────────────────────
+
+	def _new_account(self, name, root_type="Income", **extra):
+		parent = frappe.db.get_value(
+			"Account",
+			{"company": self.company, "root_type": root_type, "is_group": 1, "parent_account": ("is", "not set")},
+			"name",
+		)
+		return frappe.get_doc(
+			{"doctype": "Account", "company": self.company, "account_name": f"{TAG} {name}", "parent_account": parent, **extra}
+		)
+
+	def _unlisted_name(self):
+		"""A real SLCM fee name that no account of this company takes yet (by name or listing)."""
+		for key, (name, _source) in sorted(conf.slcm_fee_names().items()):
+			if frappe.db.exists("Fee Component", name) and conf.resolve_component(self.cfg, name)[0]:
+				continue  # posts by its Ledger's name
+			if not conf._exact_account(self.cfg, name) and not conf.mapped_account(self.cfg, name):
+				return name
+		self.skipTest("Every SLCM fee name already has an account")
+
+	def test_fee_components_rejects_unknown_repeated_and_wrong_accounts(self):
+		name = self._unlisted_name()
+		cases = (
+			("Income", {"slcm_fee_components": "No Such Fee Component"}),
+			("Income", {"slcm_fee_components": f"{name}\n{name.upper()}"}),
+			("Income", {"slcm_fee_components": name, "is_group": 1}),
+			("Asset", {"slcm_fee_components": name, "account_type": "Receivable"}),
+			("Expense", {"slcm_fee_components": name}),
+		)
+		for root_type, extra in cases:
+			with self.subTest(root_type=root_type, **extra):
+				self.assertRaises(frappe.ValidationError, self._new_account("Bad", root_type, **extra).insert)
+
+	def test_fee_components_one_account_per_name_and_canonical_spelling(self):
+		name = self._unlisted_name()
+		first = self._new_account("First", slcm_fee_components=f"  {name.lower()} \n\n").insert()
+		self.assertEqual(first.slcm_fee_components, name)
+		self.assertEqual(conf.mapped_account(self.cfg, name), first.name)
+		self.assertRaises(frappe.ValidationError, self._new_account("Second", slcm_fee_components=name).insert)
+
+	def test_receivable_account_never_takes_slcm_postings(self):
+		name = conf.component_ledger_name(self.tuition)
+		own, _default = conf.component_account(self.cfg, self.tuition)
+		doc = self._new_account("Receivable", "Asset", account_type="Receivable")
+		doc.insert()
+		frappe.db.set_value("Account", doc.name, "account_name", name)  # same name as the tuition ledger
+		self.assertEqual(conf.component_account(self.cfg, self.tuition), (own, False))
+
+	def test_map_slcm_fees_moves_unmaps_and_respects_exact_names(self):
+		from slcm.erpnext_bridge.company import save_fee_mapping
+
+		name = self._unlisted_name()
+		first, second = self._new_account("Map A").insert(), self._new_account("Map B").insert()
+		save_fee_mapping(self.company, {name: first.name})
+		self.assertEqual(conf.mapped_account(self.cfg, name), first.name)
+		save_fee_mapping(self.company, {name: second.name})  # moved in one save
+		self.assertEqual(conf.mapped_account(self.cfg, name), second.name)
+		self.assertFalse(frappe.db.get_value("Account", first.name, "slcm_fee_components"))
+		save_fee_mapping(self.company, {name: ""})
+		self.assertIsNone(conf.mapped_account(self.cfg, name))
+
+		exact = self._new_account("Exact").insert()
+		frappe.db.set_value("Account", exact.name, "account_name", name)
+		self.assertRaises(frappe.ValidationError, save_fee_mapping, self.company, {name: first.name})
+		self.assertEqual(save_fee_mapping(self.company, {name: exact.name}), "No changes.")
+
+	def test_fee_mapping_lists_every_slcm_name(self):
+		from slcm.erpnext_bridge.company import fee_mapping
+
+		rows = fee_mapping(self.company)["rows"]
+		names = {r["name"] for r in rows}
+		self.assertTrue(set(frappe.get_all("Fee Component", pluck="name")) <= names)
+		self.assertIn("FLE Course Fee", names)
+		tuition = next(r for r in rows if r["name"] == self.tuition)
+		self.assertTrue(tuition["ok"])
+		self.assertEqual(tuition["account"], conf.component_account(self.cfg, self.tuition)[0])

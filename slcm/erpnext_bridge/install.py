@@ -66,6 +66,19 @@ CUSTOM_FIELDS = {
 		_data("slcm_student", "Student", "slcm_column_break", in_standard_filter=1),
 		_data("slcm_programme", "Programme", "slcm_student"),
 	],
+	# Lets a chart with its own account names (e.g. NLSIU's audited chart) take SLCM postings without renaming.
+	"Account": [
+		{
+			"fieldname": "slcm_fee_components",
+			"fieldtype": "Small Text",
+			"label": "SLCM Fee Components",
+			"insert_after": "account_type",
+			"depends_on": "eval:!doc.is_group",
+			"description": "One per line: SLCM Fee Components, Ledgers, 'PACE [fee type]', 'FLE Course Fee', "
+			"'Re Exam Fee', 'Improvement Exam Fee' or 'Transcript Fee' that post to this account when no account "
+			"has that exact name. Easiest from Company > SLCM Fees > Map SLCM Fees; checked on save.",
+		},
+	],
 	# Bridge settings live on the Company they post to. Cost center, cash and bank come from the Company's own
 	# defaults; payment modes from Mode of Payment; university banks from Bank Account.
 	"Company": [
@@ -84,10 +97,12 @@ CUSTOM_FIELDS = {
 			"insert_after": "slcm_fee_tab",
 			"collapsible": 1,
 			"description": "Posts SLCM money to this company as Journal Entries (cash basis): student, admission, "
-			"PACE and FLE receipts, refunds, stipends, student excess and Razorpay settlements. Cash, bank and cost "
-			"center come from this company's defaults, payment-mode accounts from Mode of Payment, university banks "
-			"from Bank Account, each Fee Component's income ledger from the Account named like its Ledger, and PACE / "
-			"FLE income from the Accounts named 'PACE <fee type>' and 'FLE Course Fee'.",
+			"PACE and FLE receipts, online and counter re-exam / improvement exam / transcript fees, refunds, "
+			"stipends, student excess and gateway settlements. Cash, bank and cost center come from this company's "
+			"defaults, payment-mode accounts from Mode of Payment, university banks from Bank Account. Each SLCM fee "
+			"name posts to the Account named exactly like it, else the Account listing it under 'SLCM Fee "
+			"Components'. A new company: save it, click SLCM Fees > Create SLCM Fee Ledgers (standard chart) or "
+			"Map SLCM Fees (own chart), then Check Fee Mapping before ticking Enable.",
 		},
 		{
 			"fieldname": "slcm_enable_fee_posting",
@@ -114,7 +129,8 @@ CUSTOM_FIELDS = {
 			"slcm_default_fee_income_account",
 			"Default Fee Income Account",
 			"slcm_posting_from_date",
-			"For Fee Components whose Ledger has no Account of the same name",
+			"For SLCM fees with no Account of the same name and none listing them under 'SLCM Fee Components'. "
+			"Leave blank to stop such fees from posting (they wait, with an Error Log) until they are mapped.",
 		),
 		{"fieldname": "slcm_fee_column_break", "fieldtype": "Column Break", "insert_after": "slcm_default_fee_income_account"},
 		_account(
@@ -127,7 +143,12 @@ CUSTOM_FIELDS = {
 		_account(
 			"slcm_output_gst_account", "Output GST on Fees Account", "slcm_unallocated_fee_account", "GST in taxable Fee Components"
 		),
-		_account("slcm_fee_refund_account", "Fee Refunds Account", "slcm_output_gst_account", "Expense for Fee Refunds"),
+		_account(
+			"slcm_fee_refund_account",
+			"Fee Refunds Account",
+			"slcm_output_gst_account",
+			"Debited for fee refunds (an expense, or a contra-income account under fee income)",
+		),
 		_account(
 			"slcm_gateway_charges_account", "Payment Gateway Charges Account", "slcm_fee_refund_account", "Razorpay fees"
 		),

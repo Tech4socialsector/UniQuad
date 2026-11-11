@@ -616,21 +616,38 @@ class ExamPlanner {
 	}
 
 	// Whether students can see the (re-)exam timetable, with the switch
-	publish_bar($el, published, reexam) {
+	publish_bar($el, published, reexam, show_invigilator) {
 		const what = reexam ? __('re-exam timetable') : __('timetable');
 		const $bar = $(`<div class="xp-pub-bar ${published ? 'on' : ''}">
-			<span><b>${published ? '● ' + __('Published') : '○ ' + __('Not published')}</b>
+			<span><b>${published ? '● ' + (show_invigilator ? __('Published with invigilators') : __('Published without invigilators')) : '○ ' + __('Not published')}</b>
 			${published ? __('Students can see this {0} on the portal.', [what]) : __('Students cannot see this {0} yet. Publish it when the dates are final.', [what])}</span>
 			<span class="xp-grow"></span>
-			<button class="btn btn-sm ${published ? 'btn-default' : 'btn-primary'}">${published ? __('Hide from students') : __('Publish to students')}</button></div>`).appendTo($el);
-		$bar.find('button').on('click', () => {
-			const go = () => call('set_timetable_published', { exam_plan: this.plan, published: published ? 0 : 1, reexam: reexam ? 1 : 0 }).then(() => {
-				frappe.show_alert({ message: published ? __('Hidden from students') : __('Published to students'), indicator: 'green' });
-				this.render();
-			});
-			if (published) go();
-			else frappe.confirm(__('Publish the {0}? Students will see the dates, times and rooms on the portal. Save your changes first.', [what]), go);
+			${published ? `<button class="btn btn-sm btn-default xp-pub-change">${__('Change')}</button>
+				<button class="btn btn-sm btn-default xp-pub-hide">${__('Hide from students')}</button>`
+				: `<button class="btn btn-sm btn-primary xp-pub-open">${__('Publish to students')}</button>`}</div>`).appendTo($el);
+		const save = (pub, invig) => call('set_timetable_published', {
+			exam_plan: this.plan, published: pub, reexam: reexam ? 1 : 0, show_invigilator: invig ? 1 : 0,
+		}).then(() => {
+			frappe.show_alert({ message: !pub ? __('Hidden from students') : invig ? __('Published with invigilator names') : __('Published without invigilator names'), indicator: 'green' });
+			this.render();
 		});
+		const ask = () => {
+			const d = new frappe.ui.Dialog({
+				title: published ? __('Change what students see') : __('Publish the {0}', [what]),
+				fields: [
+					{ fieldtype: 'HTML', options: `<p>${__('Students will see their exam date, time and room on the portal. Save your changes to the timetable first.')}</p>` },
+					{ fieldname: 'invigilator', fieldtype: 'Select', label: __('Invigilator names'), reqd: 1,
+					  options: [__('Without invigilator'), __('With invigilator')].join('\n'),
+					  default: show_invigilator ? __('With invigilator') : __('Without invigilator'),
+					  description: __('With invigilator: each student also sees who invigilates their room.') },
+				],
+				primary_action_label: published ? __('Save') : __('Publish'),
+				primary_action: (v) => { d.hide(); save(1, v.invigilator === __('With invigilator')); },
+			});
+			d.show();
+		};
+		$bar.find('.xp-pub-open, .xp-pub-change').on('click', ask);
+		$bar.find('.xp-pub-hide').on('click', () => save(0, 0));
 	}
 
 	// Exam timetable as the classroom allocation sheet: a grey row per day, then
@@ -699,7 +716,7 @@ class ExamPlanner {
 			<div class="xp-unsched"></div>
 			<div class="xp-sheet"></div>
 			<div class="xp-issues"></div>`);
-		this.publish_bar($el.find('.xp-pub'), t.published, rx);
+		this.publish_bar($el.find('.xp-pub'), t.published, rx, t.show_invigilator);
 
 		// ── one styled dropdown for Venue / Year / Course / Invigilator cells ──
 		$('.xp-pick').remove();

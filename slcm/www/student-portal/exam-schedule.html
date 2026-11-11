@@ -891,9 +891,7 @@
             </div>
           </td>
           <td data-label="Assessment Date">
-            {% if course.exam_date %}
-            <div class="es-date-main">{{ course.exam_date }}</div>
-            {% elif course.next_assessment %}
+            {% if course.next_assessment %}
             <div class="es-date-main">{{ course.next_assessment.date }}</div>
             <div class="es-time-sub">Next: {{ course.next_assessment.label }}</div>
             {% else %}
@@ -919,8 +917,6 @@
               {{ course.assessments | length }} Assessment{{ "s" if course.assessments | length != 1 else "" }}
               <span class="sp-ms es-asmt-chevron">expand_more</span>
             </button>
-            {% elif course.has_schedule %}
-            <span class="es-badge es-badge-scheduled">Scheduled</span>
             {% else %}
             <span class="es-tba">To be announced</span>
             {% endif %}

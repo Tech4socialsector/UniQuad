@@ -33,7 +33,16 @@ class StudentGroup(Document):
 		self.name = name
 
 	def validate(self):
+		self._set_missing_student_ids()
 		self._clear_other_group_type()
+
+	def _set_missing_student_ids(self):
+		"""Student ID is mandatory but fetched from the student's Registration
+		ID, which new students may not have yet — fall back to the Student
+		Master ID so the group can still be saved."""
+		for row in self.students:
+			if row.student and not row.student_id:
+				row.student_id = row.student
 
 	def _clear_other_group_type(self):
 		"""The child rows only show the section for this group type — clear

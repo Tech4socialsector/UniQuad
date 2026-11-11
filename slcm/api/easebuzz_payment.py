@@ -51,6 +51,7 @@ _RETURN_PATHS = (
 	"/student-portal/re-exam",
 	"/student-portal/results",
 	"/student-portal/transcript-request",
+	"/student-portal/support",
 	"/parent-portal/fees",
 )
 

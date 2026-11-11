@@ -249,6 +249,7 @@ def get_timetable(exam_plan):
 		"rows": rows,
 		"check": check_exam_schedule(plan),
 		"published": cint(plan.timetable_published),
+		"show_invigilator": cint(plan.timetable_show_invigilator),
 		**_rooms_and_faculty(),
 		"assessment_schedules": assessment,
 		"programmes": programmes,
@@ -300,11 +301,18 @@ def _rooms_and_faculty():
 
 
 @frappe.whitelist()
-def set_timetable_published(exam_plan, published, reexam=0):
-	"""Show (or hide) the exam or re-exam timetable on the student portal."""
+def set_timetable_published(exam_plan, published, reexam=0, show_invigilator=0):
+	"""Show (or hide) the exam or re-exam timetable on the student portal, with or
+	without the invigilator names."""
 	_check_access()
-	field = "reexam_timetable_published" if cint(reexam) else "timetable_published"
-	frappe.db.set_value("Exam Plan", exam_plan, field, 1 if cint(published) else 0)
+	field, invig = (
+		("reexam_timetable_published", "reexam_show_invigilator") if cint(reexam)
+		else ("timetable_published", "timetable_show_invigilator")
+	)
+	frappe.db.set_value("Exam Plan", exam_plan, {
+		field: 1 if cint(published) else 0,
+		invig: 1 if cint(published) and cint(show_invigilator) else 0,
+	})
 	frappe.db.commit()
 	return cint(published)
 
@@ -345,6 +353,7 @@ def get_reexam_timetable(exam_plan):
 		"rows": rows,
 		"check": check_exam_schedule(plan, reexam=True),
 		"published": cint(plan.reexam_timetable_published),
+		"show_invigilator": cint(plan.reexam_show_invigilator),
 		**_rooms_and_faculty(),
 		"courses": [{"name": c, "course_name": names.get(c, c)} for c in sorted(c for c in have | set(courses) if c)],
 		"programmes": [],

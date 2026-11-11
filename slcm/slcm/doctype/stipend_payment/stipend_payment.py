@@ -20,6 +20,14 @@ class StipendPayment(Document):
 		self.db_set("status", "Cancelled", update_modified=False)
 		self._log_to_student("Cancelled")
 
+	def on_trash(self):
+		# Drop this payment's rows from the Student Master stipend log; a dangling
+		# Link would otherwise block every later save of that Student Master.
+		frappe.db.delete(
+			"Student Stipend Log",
+			{"stipend_payment": self.name, "parenttype": "Student Master", "parentfield": "stipend_log"},
+		)
+
 	def _log_to_student(self, status):
 		from slcm.slcm.doctype.student_master.student_master import _append_stipend_log
 

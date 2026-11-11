@@ -15,6 +15,7 @@ SOURCE_LABELS = {
 	"Fee Payment": _("Fee Receipts"),
 	"Fee Refund": _("Fee Refunds"),
 	"SLCM Payment Request": _("Gateway Settlements"),
+	"Gateway Receipt": _("Online Exam, Transcript & Unapplied Receipts"),
 	"Student Credit Note": _("Moved to Excess"),
 	"Credit Adjustment Row": _("Excess Adjusted"),
 	"Applicant Payment Receipt": _("Admission Receipts"),
@@ -23,6 +24,10 @@ SOURCE_LABELS = {
 	"FLE Settlement": _("Gateway Settlements"),
 	"Stipend Payment": _("Stipends"),
 	"Refund Transaction": _("Admission Refunds"),
+	"Re Exam Payment Log": _("Counter Exam Fees"),
+	"Improvement Exam Payment Log": _("Counter Exam Fees"),
+	"Mess Payment": _("Mess Receipts"),
+	"Hostel Refund Request": _("Hostel Refunds"),
 }
 
 MEASURES = (

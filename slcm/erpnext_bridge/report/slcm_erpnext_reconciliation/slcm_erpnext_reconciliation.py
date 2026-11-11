@@ -9,7 +9,7 @@ from frappe.utils import cint, flt, getdate
 
 from slcm.erpnext_bridge import config as conf
 from slcm.erpnext_bridge import erpnext_installed
-from slcm.erpnext_bridge.sync import SOURCES, last_error, settlement_receipt
+from slcm.erpnext_bridge.sync import SOURCES, gateway_student, last_error, settlement_receipt
 
 # Receipts and payments: (who paid / was paid, amount, mode) as SQL on `src`. Date and "active" come from SOURCES,
 # so this report and the posting can never disagree about what should be booked.
@@ -21,6 +21,10 @@ DIRECT = {
 	"PACE Receipt": ("src.pace_application", "src.amount", "'Online'"),
 	"FLE Payment Log": ("src.reference_no", "src.paid_amount", "'Online'"),
 	"Refund Transaction": ("src.refund_request", "src.refund_amount", "'Razorpay refund'"),
+	"Re Exam Payment Log": ("src.student", "src.amount", "src.payment_method"),
+	"Improvement Exam Payment Log": ("src.student", "src.amount", "src.payment_method"),
+	"Mess Payment": ("src.student", "src.amount", "src.mode_of_payment"),
+	"Hostel Refund Request": ("src.student", "src.amount", "src.refund_mode"),
 }
 
 
@@ -35,6 +39,8 @@ def execute(filters=None):
 	for key in DIRECT:
 		if filters.source in (None, "", key):
 			rows += get_sources(filters, key)
+	if filters.source in (None, "", "Gateway Receipt"):
+		rows += get_gateway_receipts(filters)
 	if filters.source in (None, "", "SLCM Payment Request"):
 		rows += get_settlements(filters)
 	if filters.source in (None, "", "FLE Settlement"):
@@ -134,6 +140,40 @@ def _date_conditions(filters, expr):
 	return "".join(f" and {c}" for c in conditions), values
 
 
+def get_gateway_receipts(filters):
+	"""Student online payments no Fee Payment books (re-exam, transcript, captured but not applied)."""
+	source = SOURCES["Gateway Receipt"]
+	active = f"coalesce(({source['active']}), 0)"
+	date_where, values = _date_conditions(filters, source["date"])
+	records = frappe.db.sql(
+		f"""select src.name, {source["date"]} as date, src.gateway_response, src.payment_gateway,
+			({source["amount"]}) as amount, {active} as active
+		from `tabSLCM Payment Request` src
+		where ({active} or {_has_entry("Gateway Receipt")}){date_where}""",
+		values,
+		as_dict=True,
+	)
+	rows = []
+	for d in records:
+		student = gateway_student(d)
+		if filters.student and student != filters.student:
+			continue
+		rows.append(
+			{
+				"reference_doctype": "SLCM Payment Request",
+				"reference_name": d.name,
+				"key": ("Gateway Receipt", d.name),
+				"date": getdate(d.date) if d.date else None,
+				"student": student,
+				"mode": _("{0} (no Fee Payment)").format(d.payment_gateway or _("Online")),
+				"slcm_state": _("Paid") if d.active else _("Not active"),
+				"active": bool(d.active),
+				"slcm_amount": flt(d.amount, 2) if d.active else 0.0,
+			}
+		)
+	return rows
+
+
 def get_settlements(filters):
 	"""Razorpay settlements of student, admission and PACE payments."""
 	date_where, values = _date_conditions(filters, "date(src.settlement_date)")
@@ -153,6 +193,8 @@ def get_settlements(filters):
 			student = frappe.db.get_value("Fee Payment", receipt, "student")
 		elif receipt_dt == "Applicant Payment Receipt":
 			student = frappe.db.get_value("Applicant Payment Receipt", receipt, "applicant")
+		elif receipt_dt == "Gateway Receipt":
+			student = gateway_student(frappe.db.get_value("SLCM Payment Request", d.name, ["gateway_response"], as_dict=True))
 		if filters.student and student != filters.student:
 			continue
 		d.active = d.docstatus < 2 and d.settlement_status == "Settled"

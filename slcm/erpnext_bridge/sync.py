@@ -10,12 +10,14 @@ Error Log (once per document per day) and is retried by the hourly sweeper, neve
 """
 
 import hashlib
+import json
 
 import frappe
 from frappe.utils import add_to_date, cint, flt, getdate
 
 from slcm.erpnext_bridge import config as conf
 from slcm.erpnext_bridge.builders import build_entry, make_journal_entry
+from slcm.slcm.fee.payment_ledger import LEDGER_DOCTYPES
 
 FLE_PAID = ("Authorized", "Captured")
 # One FLE payment can log several callbacks (Authorized, then Captured): only the first paid log of a payment posts.
@@ -23,6 +25,8 @@ FLE_FIRST_PAID_LOG = """src.payment_status in ('Authorized', 'Captured') and src
 	and not exists (select 1 from `tabFLE Payment Log` o where o.reference_no = src.reference_no
 		and ifnull(o.transaction_id, '') = ifnull(src.transaction_id, '')
 		and o.payment_status in ('Authorized', 'Captured') and o.paid_amount > 0 and o.creation < src.creation)"""
+COUNTER_PAID = """src.payment_status = 'Paid' and src.amount > 0
+	and ifnull(src.razorpay_payment_id, '') = '' and ifnull(src.payment_gateway, '') = ''"""
 
 # Every SLCM source the bridge posts, keyed by the name stored on the Journal Entry (slcm_reference_doctype).
 #   table        the DocType holding it, when the key is not a DocType itself
@@ -43,6 +47,19 @@ SOURCES = {
 		"active": "src.status = 'Processed' and src.refund_amount > 0", "stage": 1,
 	},
 	"Stipend Payment": {"date_field": "payment_date", "date": "src.payment_date", "active": "src.docstatus = 1 and src.amount > 0", "stage": 1},
+	# exam fees paid at the counter (no gateway); online ones are booked on their Payment Request (Gateway Receipt)
+	"Re Exam Payment Log": {"date_field": "transaction_date", "date": "date(src.transaction_date)", "active": COUNTER_PAID, "stage": 1},
+	"Improvement Exam Payment Log": {
+		"date_field": "transaction_date", "date": "date(src.transaction_date)", "active": COUNTER_PAID, "stage": 1,
+	},
+	# hostel and mess office: not submittable, so an edited amount is rebooked ("amount")
+	"Mess Payment": {
+		"date_field": "payment_date", "date": "src.payment_date", "active": "src.amount > 0", "amount": "src.amount", "stage": 1,
+	},
+	"Hostel Refund Request": {
+		"date_field": "processed_on", "date": "src.processed_on",
+		"active": "src.status = 'Processed' and src.amount > 0", "amount": "src.amount", "stage": 1,
+	},
 	# Razorpay settlements: posted once the receipt they clear is posted
 	"SLCM Payment Request": {
 		"date_field": "settlement_date", "date": "date(src.settlement_date)",
@@ -67,6 +84,22 @@ SOURCES = {
 				and nje.slcm_reference_name = src.parent and nje.docstatus < 2)""",
 		"stage": 3,
 	},
+}
+# A student's online payment (the SLCM Payment Request the payment ledger keeps per gateway payment) that no
+# Fee Payment books: re-exam, improvement exam and transcript fees, and money captured but not applied. What is
+# left of the capture after the Fee Payments and the excess entered by hand for the same payment id.
+GATEWAY_RECEIPT_AMOUNT = """src.amount
+	- coalesce((select sum(fp.amount) from `tabFee Payment` fp where fp.reference_number = src.transaction_id
+		and fp.docstatus = 1 and fp.payment_mode = 'Online Payment'), 0)
+	- coalesce((select sum(cn.credit_amount) from `tabStudent Credit Note` cn
+		where cn.received_reference = src.transaction_id and cn.docstatus = 1
+		and ifnull(cn.received_via, '') != '' and ifnull(cn.source_fee_demand, '') = ''), 0)"""
+GATEWAY_RECEIPT_ACTIVE = f"""src.docstatus = 1 and src.status = 'Paid' and ifnull(src.transaction_id, '') != ''
+	and src.reference_doctype in ({", ".join(f"'{dt}'" for dt in LEDGER_DOCTYPES)})
+	and ifnull(src.gateway_status, '') != 'refunded' and ({GATEWAY_RECEIPT_AMOUNT}) > 0.005"""
+SOURCES["Gateway Receipt"] = {
+	"table": "SLCM Payment Request", "date_field": "paid_on", "date": "date(src.paid_on)",
+	"active": GATEWAY_RECEIPT_ACTIVE, "amount": GATEWAY_RECEIPT_AMOUNT, "stage": 1,
 }
 ERROR_TITLE = "SLCM ERPNext posting failed: {0} {1}"
 
@@ -144,7 +177,35 @@ def settlement_receipt(pr):
 			name = frappe.db.get_value(dt, {"transaction_id": ("in", ids), "docstatus": ("<", 2)}, "name")
 		if name:
 			return dt, name
+	# re-exam / transcript / unapplied money: booked on the request itself
+	if pr.get("name") and live_journal_entry("Gateway Receipt", pr.name):
+		return "Gateway Receipt", pr.name
 	return None, None
+
+
+def is_counter_payment(log):
+	"""An exam fee paid at the counter: Paid, with no gateway and no gateway payment id (see COUNTER_PAID)."""
+	return (
+		log.payment_status == "Paid" and flt(log.amount) > 0
+		and not log.get("razorpay_payment_id") and not log.get("payment_gateway")
+	)
+
+
+def gateway_receipt_amount(pr):
+	"""What a student's online payment brought in beyond its Fee Payments (see GATEWAY_RECEIPT_AMOUNT)."""
+	value = frappe.db.sql(
+		f"select {GATEWAY_RECEIPT_AMOUNT} from `tabSLCM Payment Request` src where src.name = %s", pr.name
+	)
+	return flt(value[0][0], 2) if value else 0.0
+
+
+def gateway_student(pr):
+	"""The student the payment ledger recorded on a request."""
+	try:
+		data = json.loads(pr.get("gateway_response") or "{}")
+	except ValueError:
+		return None
+	return data.get("student") if isinstance(data, dict) else None
 
 
 def fle_first_paid_log(log):
@@ -211,6 +272,12 @@ def _sync(cfg, key, dn, repost):
 	live = next((je.name for je in entries if je.docstatus in (0, 1)), None)
 	want = bool(src) and _should_post(cfg, key, src, already_posted=bool(live))
 
+	if want and live and SOURCES[key].get("amount") and _entry_changed(cfg, key, src, live):
+		# The money behind it moved (a Fee Payment took part of it, a record was refunded or attached): rebook.
+		_cancel_journal_entry(live)
+		make_journal_entry(cfg, src, build_entry(cfg, src, key), key)
+		return "Posted"
+
 	if want and not live:
 		if entries and not repost:
 			# Posted before and the Journal Entry was cancelled in ERPNext while SLCM still has the document
@@ -224,6 +291,19 @@ def _sync(cfg, key, dn, repost):
 		return "Cancelled"
 
 	return "Posted" if live else None
+
+
+def _entry_changed(cfg, key, src, journal_entry):
+	"""True when the live Journal Entry no longer books what the source would post now (per account, net)."""
+	want = {}
+	for account, debit, credit in build_entry(cfg, src, key)["lines"]:
+		want[account] = flt(want.get(account, 0) + flt(debit) - flt(credit), 2)
+	have = {}
+	for row in frappe.get_all(
+		"Journal Entry Account", filters={"parent": journal_entry}, fields=["account", "debit", "credit"]
+	):
+		have[row.account] = flt(have.get(row.account, 0) + flt(row.debit) - flt(row.credit), 2)
+	return {a: v for a, v in want.items() if v} != {a: v for a, v in have.items() if v}
 
 
 def posting_date(key, src):
@@ -251,6 +331,18 @@ def _should_post(cfg, key, src, already_posted=False):
 		return src.payment_status in FLE_PAID and flt(src.paid_amount) > 0 and fle_first_paid_log(src) == src.name
 	if key == "Refund Transaction":
 		return src.status == "Processed" and flt(src.refund_amount) > 0
+	if key in ("Re Exam Payment Log", "Improvement Exam Payment Log"):
+		return is_counter_payment(src)
+	if key == "Mess Payment":
+		return flt(src.amount) > 0
+	if key == "Hostel Refund Request":
+		return src.status == "Processed" and flt(src.amount) > 0
+	if key == "Gateway Receipt":
+		return (
+			src.docstatus == 1 and src.status == "Paid" and bool(src.transaction_id)
+			and src.reference_doctype in LEDGER_DOCTYPES and src.gateway_status != "refunded"
+			and gateway_receipt_amount(src) > 0.005
+		)
 	if key == "SLCM Payment Request":
 		if src.docstatus == 2 or src.settlement_status != "Settled":
 			return False
@@ -262,7 +354,7 @@ def _should_post(cfg, key, src, already_posted=False):
 		receipt_dt, receipt = settlement_receipt(src)
 		if not (receipt and live_journal_entry(receipt_dt, receipt)):
 			return False
-		return receipt_dt != "Fee Payment" or _student_settlement_matches(src)
+		return receipt_dt not in ("Fee Payment", "Gateway Receipt") or _student_settlement_matches(src)
 	if key == "FLE Settlement":
 		if src.settlement_status != "processed" or not cfg.slcm_gateway_charges_account:
 			return False
@@ -284,23 +376,32 @@ def _should_post(cfg, key, src, already_posted=False):
 
 
 def _student_settlement_matches(pr):
-	"""A student payment's settlement clears the gateway's full capture, but only its Fee Payments were parked in
-	the clearing account: a Pay All that also paid re-exams, or a capture booked short, would over-clear it.
-	Such settlements wait for manual posting (flagged once a day) instead."""
+	"""A student payment's settlement clears the gateway's full capture: only post it once everything that capture
+	brought in is parked in the clearing account - its Fee Payments, excess entered by hand for it and its own
+	Gateway Receipt (re-exam / transcript / unapplied money). Until then it waits (flagged once a day)."""
 	ids = [i for i in (pr.get("razorpay_payment_id"), pr.get("transaction_id")) if i]
 	booked = flt(frappe.db.sql(
 		"""select sum(amount) from `tabFee Payment`
 		where reference_number in %(ids)s and docstatus = 1 and payment_mode = 'Online Payment'""",
 		{"ids": ids or [""]},
 	)[0][0])
+	booked += flt(frappe.db.sql(
+		"""select sum(credit_amount) from `tabStudent Credit Note` where received_reference in %(ids)s
+		and docstatus = 1 and ifnull(received_via, '') != '' and ifnull(source_fee_demand, '') = ''""",
+		{"ids": ids or [""]},
+	)[0][0])
+	receipt = live_journal_entry("Gateway Receipt", pr.name)
+	if receipt:
+		booked += flt(frappe.db.get_value("Journal Entry", receipt, "total_debit"))
 	if abs(booked - flt(pr.amount)) <= 0.01:
 		return True
 	flag = f"slcm_erp_settlement_mismatch:{pr.name}"
 	if not frappe.cache().get_value(flag):
 		frappe.cache().set_value(flag, 1, expires_in_sec=86400)
 		frappe.log_error(
-			f"{pr.name}: payment ₹{flt(pr.amount):,.2f}, Fee Payments booked ₹{booked:,.2f}. The settlement was not "
-			"posted automatically: post the difference (re-exam / transcript / unallocated money) by hand.",
+			f"{pr.name}: payment ₹{flt(pr.amount):,.2f}, booked in ERPNext ₹{booked:,.2f} (Fee Payments and the "
+			"request's Gateway Receipt). The settlement waits: check the receipts on the SLCM ERPNext Reconciliation "
+			"report; it posts on the next hourly sync once they add up.",
 			"SLCM ERPNext settlement needs manual posting",
 		)
 	return False
@@ -354,7 +455,7 @@ def sync_pending(limit=500):
 	cfg = conf.get_config()
 	if not cfg or not cfg.slcm_posting_from_date:
 		return None
-	params = {"from_date": cfg.slcm_posting_from_date, "limit": cint(limit)}
+	params = {"from_date": cfg.slcm_posting_from_date, "limit": cint(limit), "recent": add_to_date(None, days=-1)}
 
 	total = 0
 	for stage in (1, 2, 3):
@@ -377,11 +478,19 @@ def _pending(key, source, params):
 	ever_posted = """exists (select 1 from `tabJournal Entry` je where je.slcm_reference_doctype = %(dt)s
 		and je.slcm_reference_name = src.name)"""
 	active = f"coalesce(({source['active']}), 0)"
+	changed = "0"
+	if source.get("amount"):
+		# Posted, but the amount behind it moved, or the record changed lately (e.g. a capture attached to a
+		# re-exam): sync_document compares and rebooks only what really differs.
+		latest = """(select {0} from `tabJournal Entry` je where je.slcm_reference_doctype = %(dt)s
+			and je.slcm_reference_name = src.name and je.docstatus < 2 order by je.creation desc limit 1)"""
+		changed = f"""(abs({latest.format("je.total_debit")} - ({source["amount"]})) > 0.005
+			or (src.modified >= %(recent)s and src.modified > {latest.format("je.creation")}))"""
 	return frappe.db.sql(
 		f"""
 		select src.name from `tab{table_of(key)}` src
 		where {source["date"]} >= %(from_date)s
-			and (({active} and not {ever_posted}) or (not {active} and {posted}))
+			and (({active} and not {ever_posted}) or (not {active} and {posted}) or ({active} and {posted} and {changed}))
 		order by {source["date"]}
 		limit %(limit)s
 		""",

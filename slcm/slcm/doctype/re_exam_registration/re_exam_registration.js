@@ -50,40 +50,36 @@ frappe.ui.form.on("Re Exam Registration", {
 
         // ── Mark as Paid (visible when not terminal) ─────────────────
         if (!isTerminal) {
+            // Counter payment: records the mode, date and amount as a payment log (posted to ERPNext when enabled)
             frm.add_custom_button(__("Mark as Paid"), function () {
-                frappe.prompt(
-                    {
-                        label: __("Payment Reference"),
-                        fieldname: "payment_reference",
-                        fieldtype: "Data",
-                        reqd: 0,
-                        description: __("Cheque / DD number or any offline reference"),
-                    },
-                    function (values) {
-                        frappe.call({
-                            method: "frappe.client.set_value",
-                            args: {
-                                doctype: "Re Exam Registration",
-                                name: frm.doc.name,
-                                fieldname: {
-                                    payment_status:    "Paid",
-                                    payment_reference: values.payment_reference || "",
+                frappe.call("slcm.slcm.fee.counter_payment.get_counter_modes").then(({ message: modes }) => {
+                    frappe.prompt(
+                        [
+                            { label: __("Payment Mode"), fieldname: "payment_mode", fieldtype: "Select", options: modes, reqd: 1, default: "Cash" },
+                            { label: __("Payment Date"), fieldname: "payment_date", fieldtype: "Date", reqd: 1, default: frappe.datetime.get_today() },
+                            {
+                                label: __("Payment Reference"),
+                                fieldname: "reference",
+                                fieldtype: "Data",
+                                description: __("Cheque / DD / UTR number or receipt book number"),
+                            },
+                        ],
+                        function (values) {
+                            frappe.call({
+                                method: "slcm.slcm.fee.counter_payment.record_counter_payment",
+                                args: { doctype: "Re Exam Registration", name: frm.doc.name, ...values },
+                                freeze: true,
+                                freeze_message: __("Updating…"),
+                                callback: function () {
+                                    frm.reload_doc();
+                                    frappe.show_alert({ message: __("Payment recorded"), indicator: "green" });
                                 },
-                            },
-                            freeze: true,
-                            freeze_message: __("Updating…"),
-                            callback: function () {
-                                frm.reload_doc();
-                                frappe.show_alert({
-                                    message: __("Payment status updated to Paid"),
-                                    indicator: "green",
-                                });
-                            },
-                        });
-                    },
-                    __("Mark as Paid"),
-                    __("Confirm")
-                );
+                            });
+                        },
+                        __("Mark as Paid"),
+                        __("Confirm")
+                    );
+                });
             }).addClass("btn-success");
         }
 

@@ -31,6 +31,16 @@ def _default_payment_gateway():
 	)
 
 
+def _offer_payment_gateway(fee_structure):
+	"""Gateway for an Offer Letter (admission) payment. Admission checkout is Razorpay-only, so the Fee
+	Structure's gateway is used only when it is a Razorpay one: the same structure can name Easebuzz for
+	the student's portal programme fees (slcm.slcm.fee.payment_gateway.for_invoice)."""
+	gateway = frappe.db.get_value("Fee Structure", fee_structure, "payment_gateway") if fee_structure else None
+	if gateway and frappe.db.get_value("Payment Gateway", gateway, "gateway") == "Razorpay":
+		return gateway
+	return _default_payment_gateway()
+
+
 class FeeService:
     """
     Fee and Payment Service Layer.
@@ -342,10 +352,7 @@ class FeeService:
                     frappe.throw(_("Payment blocked: The Full Fee deadline ({0}) has passed.").format(offer.payment_deadline))
 
             # 2. Get Dynamic Gateway from Fee Structure
-            gateway = frappe.db.get_value("Fee Structure", offer.fee_structure, "payment_gateway")
-            if not gateway:
-                # Fallback to system default if not set on Fee Structure
-                gateway = _default_payment_gateway()
+            gateway = _offer_payment_gateway(offer.fee_structure)
 
             from payments.utils import get_payment_gateway_controller
             controller = get_payment_gateway_controller(gateway)
@@ -514,9 +521,7 @@ class FeeService:
             if offer.status == "Payment Completed":
                 return {"status": "success"}
 
-            gateway = frappe.db.get_value("Fee Structure", offer.fee_structure, "payment_gateway")
-            if not gateway:
-                gateway = _default_payment_gateway()
+            gateway = _offer_payment_gateway(offer.fee_structure)
 
             # Validate Payment Request ownership
             pr_name = frappe.db.get_value(
@@ -819,7 +824,7 @@ class FeeService:
         """
         try:
             offer = frappe.get_doc("Offer Letter", offer_name)
-            gateway = frappe.db.get_value("Fee Structure", offer.fee_structure, "payment_gateway")
+            gateway = _offer_payment_gateway(offer.fee_structure)
             
             if isinstance(error_data, str):
                 try:
