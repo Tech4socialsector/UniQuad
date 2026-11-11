@@ -864,7 +864,8 @@ function add_remove_rfid_button(listview) {
 	listview.page.add_inner_button(__("Remove RFID Card"), function () {
 		const students = listview.get_checked_items(true);
 		if (!students.length) {
-			frappe.msgprint({ title: __("No Selection"), message: __("Tick the students whose card should be removed."), indicator: "orange" });
+			// nothing ticked in the list: pick the students in a dialog
+			frappe.require("/assets/slcm/js/rfid_unmap.js", () => slcm.rfid_unmap.pick({ on_done: () => listview.refresh() }));
 			return;
 		}
 		frappe.require("/assets/slcm/js/rfid_unmap.js", () => slcm.rfid_unmap.ask({

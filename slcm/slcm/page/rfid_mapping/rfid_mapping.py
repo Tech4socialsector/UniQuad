@@ -302,14 +302,71 @@ def unlink_rfid_from_student(student):
 	}
 
 
+# picker filter -> Student Master field
+STUDENT_FILTERS = {"programme": "programme_of_study", "batch": "batch", "academic_year": "academic_year", "section": "section"}
+PICK_LIMIT = 500
+MAX_UNMAP = 5000
+
+
+MAX_FILTER_VALUES = 100
+
+
+def _filter_values(value):
+	"""One value or a list (multi-select) -> clean list of strings; anything else is refused."""
+	if value in (None, "", []):
+		return []
+	if isinstance(value, str):
+		value = frappe.parse_json(value) if value.strip().startswith("[") else [value]
+	if not isinstance(value, (list, tuple)) or not all(isinstance(v, (str, int)) for v in value):
+		frappe.throw(_("Filter values must be text."))
+	values = list(dict.fromkeys(str(v).strip() for v in value if str(v).strip()))
+	if len(values) > MAX_FILTER_VALUES:
+		frappe.throw(_("Choose at most {0} values in one filter.").format(MAX_FILTER_VALUES))
+	return values
+
+
+@frappe.whitelist()
+def students_with_cards(txt="", filters=None):
+	"""Students who have a card, for the "Remove RFID Card" picker: search by Student ID, name, email or card,
+	narrowed by Programme / Batch / Academic Year / Section (each one value or several). Returns {rows, total, limit}."""
+	_check_access()
+	filters = frappe.parse_json(filters) if isinstance(filters, str) else (filters or {})
+	if not isinstance(filters, dict):
+		frappe.throw(_("Invalid filters."))
+	conditions, values = ["IFNULL(rfid_uid, '') != ''"], {}
+	for key, field in STUDENT_FILTERS.items():
+		chosen = _filter_values(filters.get(key))
+		if chosen:
+			conditions.append(f"`{field}` IN %({key})s")
+			values[key] = tuple(chosen)
+	if (txt or "").strip():
+		conditions.append("""(registration_id LIKE %(txt)s OR first_name LIKE %(txt)s
+			OR official_email_id LIKE %(txt)s OR rfid_uid LIKE %(txt)s OR name LIKE %(txt)s)""")
+		values["txt"] = f"%{txt.strip()[:140]}%"
+	where = " AND ".join(conditions)
+	total = frappe.db.sql(f"SELECT COUNT(*) FROM `tabStudent Master` WHERE {where}", values)[0][0]
+	rows = frappe.db.sql(f"""
+		SELECT name, registration_id AS student_id, first_name AS student_name, rfid_uid,
+		       programme_of_study AS programme, batch, academic_year, section
+		FROM `tabStudent Master` WHERE {where}
+		ORDER BY registration_id, name LIMIT {PICK_LIMIT}
+	""", values, as_dict=True)
+	return {"rows": rows, "total": total, "limit": PICK_LIMIT}
+
+
 @frappe.whitelist()
 def unmap_cards(students, reason):
 	"""Take the current card off one or many students (see rfid_cards.unmap_card for what each reason does).
 	Each student is done on its own: one failure never undoes the others. Returns one result per student."""
 	_check_access()
-	students = [s for s in dict.fromkeys(frappe.parse_json(students) or []) if s]
+	students = frappe.parse_json(students) if isinstance(students, str) else students
+	if not isinstance(students, (list, tuple)):
+		frappe.throw(_("Select at least one student."))
+	students = [str(s).strip() for s in dict.fromkeys(students) if s and str(s).strip()]
 	if not students:
 		frappe.throw(_("Select at least one student."))
+	if len(students) > MAX_UNMAP:
+		frappe.throw(_("Remove at most {0} cards at a time.").format(MAX_UNMAP))
 	if reason not in UNMAP_REASONS:
 		frappe.throw(_("Choose why the card is being removed."))
 

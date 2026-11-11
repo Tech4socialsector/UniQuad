@@ -249,6 +249,52 @@ def unmap_card(student, reason):
 	return uid
 
 
+@frappe.whitelist()
+def get_card_status(student):
+	"""RFID card picture for the Student Master form: current card and its record, every card the student has
+	had, the latest change and swipe counts. Needs read access to the student."""
+	from slcm.permissions import AAD_ROLES
+
+	if not frappe.db.exists("Student Master", student):
+		frappe.throw(_("Student {0} not found.").format(student))
+	frappe.has_permission("Student Master", "read", student, throw=True)
+
+	uid = (frappe.db.get_value("Student Master", student, "rfid_uid") or "").strip()
+	cards = frappe.get_all(
+		"Student RFID Card",
+		filters={"student": student},
+		fields=["name", "rfid_uid", "card_status", "issued_date", "deactivated_date"],
+		order_by="creation desc",
+	)
+	current = next((c for c in cards if c.rfid_uid == uid), None) if uid else None
+	if not uid:
+		state = "none"
+	elif current and current.card_status == "Active":
+		state = "active"
+	else:
+		state = "unrecorded"  # Student Master has a card with no Active history row (set before card history existed)
+
+	log = frappe.db.get_value(
+		CHANGE_LOG, student, ["last_change", "last_changed_on", "last_changed_by", "change_count"], as_dict=True
+	) if frappe.db.table_exists(CHANGE_ROW) else None
+	last_source = frappe.db.get_value(
+		CHANGE_ROW, {"parent": student, "parenttype": CHANGE_LOG}, "source", order_by="changed_on desc, idx desc"
+	) if log else None
+	swipes = frappe.db.sql(
+		"SELECT COUNT(*), MAX(swipe_time) FROM `tabAttendance Log` WHERE student = %s", student
+	)[0]
+	return {
+		"rfid_uid": uid or None,
+		"state": state,
+		"card": current,
+		"cards": cards,
+		"change_log": dict(log, source=last_source, changed_by_name=frappe.utils.get_fullname(log.last_changed_by)) if log else None,
+		"swipes": swipes[0] or 0,
+		"last_swipe": swipes[1],
+		"can_manage": bool(set(frappe.get_roles()) & {"System Manager", *AAD_ROLES}),
+	}
+
+
 def on_student_master_validate(doc, method=None):
 	"""Reject an unusable RFID UID before the Student Master row is written."""
 	doc.rfid_uid = (doc.rfid_uid or "").strip() or None
