@@ -1,1228 +1,915 @@
 // Copyright (c) 2026, Nishanth and contributors
-// RFID Card Management — NLS theme (#920C24 + Merriweather), British spelling
+// RFID Card Management — NLSIU theme (#920C24 + Merriweather), British spelling.
+// People only ever see/type the Student ID (registration_id, e.g. L26001);
+// the system name (STUD-2026-xxxxx) is used internally for links only.
+
+const RF_API = "slcm.slcm.page.rfid_mapping.rfid_mapping.";
+const RF_REFRESH_SECS = 30;
+const RF_FEED_MAX = 200;
 
 frappe.pages["rfid-mapping"].on_page_load = function (wrapper) {
-	frappe.ui.make_app_page({
-		parent: wrapper,
-		title: "RFID Card Management",
-		single_column: true,
-	});
+	frappe.ui.make_app_page({ parent: wrapper, title: "RFID Card Management", single_column: true });
+
 	if (!document.getElementById("er-theme-font")) {
 		$("head").append('<link id="er-theme-font" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Merriweather:opsz,wght@18..144,300..900&display=swap">');
 	}
+	if (!document.getElementById("rfid-mapping-css")) {
+		$("head").append(`<style id="rfid-mapping-css">${rf_css()}</style>`);
+	}
 
-	wrapper._rfid = {
-		live_interval:      null,
-		countdown_interval: null,
-		countdown_val:      30,
-		last_swipe_time:    null,
-		unassigned_dt:      null,
-		linked_dt:          null,
-		feed_dt:            null,
-	};
+	wrapper._rfid = { live_interval: null, countdown_interval: null, countdown: RF_REFRESH_SECS, last_swipe_time: null, busy: false };
 
-	$(build_html()).appendTo($(wrapper).find(".page-content, .layout-main-section").first());
-	bind_events(wrapper);
-	full_load(wrapper);
+	const $body = $(wrapper).find(".page-content, .layout-main-section").first();
+	$(rf_html()).appendTo($body);
 
-	wrapper._rfid.live_interval      = setInterval(() => live_refresh(wrapper), 30000);
-	wrapper._rfid.countdown_interval = setInterval(() => tick(wrapper), 1000);
+	rf_init_tables(wrapper);
+	rf_bind(wrapper);
+	rf_full_load(wrapper);
+	rf_start_timers(wrapper);
 };
 
 frappe.pages["rfid-mapping"].on_page_show = function (wrapper) {
-	if (!wrapper._rfid) return;
-	if (!wrapper._rfid.live_interval) {
-		wrapper._rfid.countdown_val      = 30;
-		wrapper._rfid.live_interval      = setInterval(() => live_refresh(wrapper), 30000);
-		wrapper._rfid.countdown_interval = setInterval(() => tick(wrapper), 1000);
-	}
-	// Always reset display countdown on page show
-	$(wrapper).find("#next-refresh").text(wrapper._rfid.countdown_val || 30);
+	if (wrapper._rfid && !wrapper._rfid.live_interval) rf_start_timers(wrapper);
 };
 
 frappe.pages["rfid-mapping"].on_page_hide = function (wrapper) {
 	if (!wrapper._rfid) return;
 	clearInterval(wrapper._rfid.live_interval);
 	clearInterval(wrapper._rfid.countdown_interval);
-	wrapper._rfid.live_interval      = null;
-	wrapper._rfid.countdown_interval = null;
+	wrapper._rfid.live_interval = wrapper._rfid.countdown_interval = null;
 };
+
+function rf_start_timers(wrapper) {
+	const st = wrapper._rfid;
+	st.countdown = RF_REFRESH_SECS;
+	$(wrapper).find("#rf-countdown").text(st.countdown);
+	st.live_interval = setInterval(() => rf_live_refresh(wrapper), RF_REFRESH_SECS * 1000);
+	st.countdown_interval = setInterval(() => {
+		st.countdown = st.countdown <= 1 ? RF_REFRESH_SECS : st.countdown - 1;
+		$(wrapper).find("#rf-countdown").text(st.countdown);
+	}, 1000);
+}
 
 // ─────────────────────────────────────────────────────────────────
 // Data loading
 // ─────────────────────────────────────────────────────────────────
-function full_load(wrapper) {
-	set_dot(wrapper, "syncing");
+function rf_full_load(wrapper) {
+	rf_set_status(wrapper, "syncing");
 	frappe.call({
-		method: "slcm.slcm.page.rfid_mapping.rfid_mapping.get_rfid_summary",
+		method: RF_API + "get_rfid_summary",
 		callback(r) {
-			if (!r.message) return;
 			const d = r.message;
-			render_stats(wrapper, d.stats, d.student_stats);
-			render_unassigned(wrapper, d.unlinked_cards);
-			render_student_cards(wrapper, d.linked_students);
-			render_feed(wrapper, d.recent_logs, true);
+			if (!d) return;
+			rf_render_stats(wrapper, d.stats, d.student_stats);
+			wrapper._rfid.unassigned.refresh(d.unlinked_cards || []);
+			wrapper._rfid.linked.refresh(d.linked_students || []);
+			wrapper._rfid.feed.refresh(d.recent_logs || []);
+			rf_set_count(wrapper, "unassigned", (d.unlinked_cards || []).length);
+			rf_set_count(wrapper, "linked", (d.linked_students || []).length);
 			wrapper._rfid.last_swipe_time = d.stats.last_swipe || null;
-			set_dot(wrapper, "live");
-			wrapper._rfid.countdown_val = 30;
+			wrapper._rfid.countdown = RF_REFRESH_SECS;
+			rf_set_status(wrapper, "live");
 		},
+		error: () => rf_set_status(wrapper, "error"),
 	});
 }
 
-function live_refresh(wrapper) {
-	set_dot(wrapper, "syncing");
+function rf_live_refresh(wrapper) {
+	if (wrapper._rfid.busy) return;
+	wrapper._rfid.busy = true;
+	rf_set_status(wrapper, "syncing");
 	frappe.call({
-		method: "slcm.slcm.page.rfid_mapping.rfid_mapping.get_live_feed",
+		method: RF_API + "get_live_feed",
 		args: { since_swipe_time: wrapper._rfid.last_swipe_time || "" },
 		callback(r) {
-			if (!r.message) return;
 			const d = r.message;
-			render_stats(wrapper, d.stats, null);
-			if (d.new_logs && d.new_logs.length) {
-				wrapper._rfid.feed_dt.prepend(d.new_logs);
-				wrapper._rfid.last_swipe_time = d.stats.last_swipe;
-				frappe.show_alert({ message: `${d.new_logs.length} new swipe(s)`, indicator: "green" }, 4);
-			}
-			set_dot(wrapper, "live");
-			wrapper._rfid.countdown_val = 30;
+			if (!d) return;
+			rf_render_stats(wrapper, d.stats, null);
+			const added = wrapper._rfid.feed.prepend(d.new_logs || []);
+			if (d.stats.last_swipe) wrapper._rfid.last_swipe_time = d.stats.last_swipe;
+			if (added) frappe.show_alert({ message: __("{0} new swipe(s)", [added]), indicator: "green" }, 4);
+			wrapper._rfid.countdown = RF_REFRESH_SECS;
+			rf_set_status(wrapper, "live");
 		},
+		error: () => rf_set_status(wrapper, "error"),
+		always: () => (wrapper._rfid.busy = false),
 	});
 }
 
-// ─────────────────────────────────────────────────────────────────
-// Stats
-// ─────────────────────────────────────────────────────────────────
-function render_stats(wrapper, s, ss) {
-	const $w = $(wrapper);
-	$w.find("#st-total").text(fmt(s.total_logs));
-	$w.find("#st-linked").text(fmt(s.linked_logs));
-	$w.find("#st-unlinked").text(fmt(s.unlinked_logs));
-
-	if (ss) {
-		$w.find("#st-students").text(fmt(ss.total_students));
-		$w.find("#st-with-card").text(fmt(ss.students_with_rfid));
-		$w.find("#st-no-card").text(fmt(ss.students_without_rfid));
-	}
-
-	// Update tab badges independently
-	const u = parseInt(s.unlinked_logs) || 0;
-	$w.find("#count-unassigned").text(u).toggle(u > 0);
-	const l = parseInt(s.linked_logs) || 0;
-	$w.find("#count-linked").text(l).toggle(l > 0);
-}
-
-// ─────────────────────────────────────────────────────────────────
-// Tab switching
-// ─────────────────────────────────────────────────────────────────
-function bind_events(wrapper) {
-	const $w = $(wrapper);
-
-	$w.on("click", ".r-tab", function () {
-		$w.find(".r-tab").removeClass("r-tab-active");
-		$(this).addClass("r-tab-active");
-		$w.find(".r-panel").hide();
-		$w.find("#panel-" + $(this).data("tab")).show();
-	});
-
-	$w.on("click", ".btn-assign",        function () { show_assign_dialog($(this).data("uid"), wrapper); });
-	$w.on("click", "#btn-export-vendor", () => do_export(wrapper));
-	$w.on("click", "#btn-bulk-import",   () => show_import_dialog(wrapper));
-	$w.on("click", "#btn-refresh-now",   () => refresh_now(wrapper));
-}
-
-// ─────────────────────────────────────────────────────────────────
-// Manual "Refresh Now" — force an immediate SQL Server pull
-// ─────────────────────────────────────────────────────────────────
-function refresh_now(wrapper) {
-	const $btn = $(wrapper).find("#btn-refresh-now");
-	$btn.prop("disabled", true).find(".btn-refresh-label").text("Refreshing…");
-	set_dot(wrapper, "syncing");
-
+function rf_refresh_now(wrapper) {
+	const $btn = $(wrapper).find("#rf-refresh");
+	$btn.prop("disabled", true).addClass("is-loading");
+	rf_set_status(wrapper, "syncing");
 	frappe.call({
-		method: "slcm.slcm.utils.rfid_sql_poller.poll_now",
+		method: RF_API + "pull_now",
 		callback(r) {
-			$btn.prop("disabled", false).find(".btn-refresh-label").text("Refresh Now");
-			if (r.message && r.message.success) {
-				frappe.show_alert({ message: r.message.message, indicator: "green" }, 5);
-			} else {
-				frappe.msgprint({
-					title: "Refresh Failed",
-					message: r.message ? r.message.message : "Unknown error.",
-					indicator: "red",
-				});
-			}
-			full_load(wrapper);
+			const m = r.message || {};
+			if (m.success) frappe.show_alert({ message: m.message, indicator: "green" }, 5);
+			else frappe.msgprint({ title: __("Refresh failed"), message: m.message || __("Unknown error."), indicator: "red" });
+			rf_full_load(wrapper);
 		},
-		error() {
-			$btn.prop("disabled", false).find(".btn-refresh-label").text("Refresh Now");
-			set_dot(wrapper, "live");
-		},
+		error: () => rf_set_status(wrapper, "error"),
+		always: () => $btn.prop("disabled", false).removeClass("is-loading"),
 	});
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Generic lightweight DataTable
+// Stats & status
 // ─────────────────────────────────────────────────────────────────
-function make_datatable(config) {
-	const {
-		wrapper,
-		data: initial_data,
-		columns,
-		page_size = 25,
-		empty_msg = "No records found.",
-		on_action,
-	} = config;
+function rf_render_stats(wrapper, s, ss) {
+	const $w = $(wrapper);
+	const total = cint(s.total_logs), linked = cint(s.linked_logs), unlinked = cint(s.unlinked_logs);
+	$w.find("#st-total").text(rf_fmt(total));
+	$w.find("#st-linked").text(rf_fmt(linked));
+	$w.find("#st-unlinked").text(rf_fmt(unlinked));
+	rf_meter($w.find("#mt-swipes"), linked, total, __("of swipes identified"));
+	$w.find("#st-last-swipe").text(s.last_swipe ? frappe.datetime.prettyDate(s.last_swipe) : "—");
 
-	let _data        = initial_data ? initial_data.slice() : [];
-	let _filtered    = _data.slice();
-	let _sort_col    = null;
-	let _sort_dir    = "asc";   // "asc" or "desc"
-	let _page        = 0;       // 0-indexed current page
-	let _query       = "";
+	if (!ss) return;
+	const students = cint(ss.total_students), withc = cint(ss.students_with_rfid), noid = cint(ss.students_without_id);
+	$w.find("#st-students").text(rf_fmt(students));
+	$w.find("#st-with-card").text(rf_fmt(withc));
+	$w.find("#st-no-card").text(rf_fmt(cint(ss.students_without_rfid)));
+	rf_meter($w.find("#mt-students"), withc, students, __("of students carry a card"));
 
-	// ── DOM refs ──
-	const $toolbar   = wrapper.find(".dt-toolbar");
-	const $search    = wrapper.find(".dt-search");
-	const $page_info = wrapper.find(".dt-page-info");
-	const $btn_prev  = wrapper.find(".dt-btn-prev");
-	const $btn_next  = wrapper.find(".dt-btn-next");
-	const $tbody     = wrapper.find("tbody");
-	const $thead     = wrapper.find("thead tr");
+	const $warn = $w.find("#rf-noid");
+	if (noid > 0) {
+		$warn.find(".rf-noid-count").text(rf_fmt(noid));
+		$warn.show();
+	} else $warn.hide();
+}
 
-	// ── Wire up column headers ──
-	$thead.find("th").each(function (i) {
-		const col = columns[i];
-		if (!col || col.sortable === false) return;
-		$(this).addClass("th-sort").on("click", function () {
-			if (_sort_col === i) {
-				_sort_dir = _sort_dir === "asc" ? "desc" : "asc";
-			} else {
-				_sort_col = i;
-				_sort_dir = "asc";
-			}
-			_page = 0;
-			_apply_sort();
-			_render();
-		});
+function rf_meter($m, part, whole, label) {
+	const pct = whole ? Math.round((part / whole) * 100) : 0;
+	$m.find(".rf-meter-fill").css("width", pct + "%");
+	$m.find(".rf-meter-lbl").text(`${pct}% ${label}`);
+}
+
+function rf_set_count(wrapper, tab, n) {
+	$(wrapper).find(`#count-${tab}`).text(rf_fmt(n)).toggle(n > 0);
+}
+
+function rf_set_status(wrapper, state) {
+	const $s = $(wrapper).find("#rf-status");
+	$s.removeClass("is-live is-syncing is-error").addClass("is-" + state);
+	$s.find(".rf-status-text").text(
+		{ live: __("Live"), syncing: __("Syncing…"), error: __("Connection problem") }[state]
+	);
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Events
+// ─────────────────────────────────────────────────────────────────
+function rf_bind(wrapper) {
+	const $w = $(wrapper);
+	$w.on("click", ".rf-tab", function () {
+		const tab = $(this).data("tab");
+		$w.find(".rf-tab").removeClass("active").attr("aria-selected", "false");
+		$(this).addClass("active").attr("aria-selected", "true");
+		$w.find(".rf-panel").removeClass("active");
+		$w.find("#panel-" + tab).addClass("active");
 	});
-
-	// ── Wire up search ──
-	$search.on("input", function () {
-		_query = $(this).val().toLowerCase();
-		_page  = 0;
-		_apply_filter();
-		_render();
+	$w.on("click", "#rf-refresh", () => rf_refresh_now(wrapper));
+	$w.on("click", "#rf-export", () => rf_export());
+	$w.on("click", "#rf-import", () => rf_import_dialog(wrapper));
+	$w.on("click", "[data-assign]", function () { rf_assign_dialog($(this).attr("data-assign"), wrapper); });
+	$w.on("click", "[data-unlink]", function () {
+		rf_unlink($(this).attr("data-unlink"), $(this).attr("data-label"), $(this).attr("data-uid"), wrapper);
 	});
+}
 
-	// ── Wire up pagination ──
-	$btn_prev.on("click", function () {
-		if (_page > 0) { _page--; _render(); }
-	});
-	$btn_next.on("click", function () {
-		const max_page = Math.max(0, Math.ceil(_filtered.length / page_size) - 1);
-		if (_page < max_page) { _page++; _render(); }
-	});
+// ─────────────────────────────────────────────────────────────────
+// Lightweight table: search + sort + pagination. Created once, refreshed with data.
+// ─────────────────────────────────────────────────────────────────
+function rf_table({ $root, columns, search_keys, page_size = 25, empty_msg, default_sort, row_key }) {
+	let data = [], view = [], query = "", page = 0;
+	let sort = default_sort ? { ...default_sort } : null;
 
-	// ── Internal: apply text filter ──
-	function _apply_filter() {
-		if (!_query) {
-			_filtered = _data.slice();
-		} else {
-			_filtered = _data.filter(row => {
-				return columns.some(col => {
-					if (col.searchable === false) return false;
-					const val = row[col.key];
-					return val && String(val).toLowerCase().indexOf(_query) !== -1;
-				});
+	const $thead = $root.find("thead tr");
+	const $tbody = $root.find("tbody");
+	const $info = $root.find(".rf-page-info");
+	const $prev = $root.find(".rf-prev");
+	const $next = $root.find(".rf-next");
+
+	$thead.html(columns.map((c, i) =>
+		`<th data-i="${i}" class="${c.cls || ""} ${c.sortable === false ? "" : "sortable"}">${c.label}</th>`).join(""));
+
+	$thead.on("click", "th.sortable", function () {
+		const key = columns[$(this).data("i")].key;
+		sort = sort && sort.key === key ? { key, dir: sort.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" };
+		page = 0; apply(); render();
+	});
+	$root.find(".rf-search").on("input", frappe.utils.debounce(function () {
+		query = ($(this).val() || "").trim().toLowerCase();
+		page = 0; apply(); render();
+	}, 150));
+	$prev.on("click", () => { if (page > 0) { page--; render(); } });
+	$next.on("click", () => { if ((page + 1) * page_size < view.length) { page++; render(); } });
+
+	function apply() {
+		view = !query ? data.slice() : data.filter(r =>
+			search_keys.some(k => r[k] != null && String(r[k]).toLowerCase().includes(query)));
+		if (sort) {
+			const { key, dir } = sort;
+			view.sort((a, b) => {
+				const av = a[key] ?? "", bv = b[key] ?? "";
+				const cmp = typeof av === "number" && typeof bv === "number"
+					? av - bv : String(av).localeCompare(String(bv), undefined, { numeric: true });
+				return dir === "asc" ? cmp : -cmp;
 			});
 		}
-		_apply_sort_in_place();
 	}
 
-	// ── Internal: sort _filtered in place ──
-	function _apply_sort_in_place() {
-		if (_sort_col === null) return;
-		const col = columns[_sort_col];
-		if (!col || col.sortable === false) return;
-		const key = col.sort_key || col.key;
-		_filtered.sort((a, b) => {
-			const av = a[key] == null ? "" : a[key];
-			const bv = b[key] == null ? "" : b[key];
-			let cmp;
-			if (typeof av === "number" && typeof bv === "number") {
-				cmp = av - bv;
-			} else {
-				cmp = String(av).localeCompare(String(bv));
-			}
-			return _sort_dir === "asc" ? cmp : -cmp;
+	function render() {
+		$thead.find("th").removeClass("asc desc").each(function () {
+			if (sort && columns[$(this).data("i")].key === sort.key) $(this).addClass(sort.dir);
 		});
-	}
-
-	// ── Internal: apply sort then re-filter ──
-	function _apply_sort() {
-		_apply_sort_in_place();
-	}
-
-	// ── Internal: render current page ──
-	function _render() {
-		// Update sort indicators on headers
-		$thead.find("th").each(function (i) {
-			$(this).removeClass("asc desc");
-			if (i === _sort_col) {
-				$(this).addClass(_sort_dir);
-			}
-		});
-
-		const total  = _filtered.length;
-		const start  = _page * page_size;
-		const end    = Math.min(start + page_size, total);
-		const page_rows = _filtered.slice(start, end);
-
-		// Update pagination info
-		if (total === 0) {
-			$page_info.text("No results");
-		} else {
-			$page_info.text(`Showing ${start + 1}–${end} of ${total}`);
-		}
-
+		const total = view.length;
 		const max_page = Math.max(0, Math.ceil(total / page_size) - 1);
-		$btn_prev.prop("disabled", _page === 0);
-		$btn_next.prop("disabled", _page >= max_page);
+		page = Math.min(page, max_page);
+		const start = page * page_size, end = Math.min(start + page_size, total);
 
-		// Render rows
-		$tbody.empty();
-		if (!page_rows.length) {
-			const colspan = columns.length;
-			$tbody.append(`<tr><td colspan="${colspan}">${empty_msg}</td></tr>`);
+		$info.text(total ? __("{0}–{1} of {2}", [rf_fmt(start + 1), rf_fmt(end), rf_fmt(total)]) : "");
+		$prev.prop("disabled", page === 0);
+		$next.prop("disabled", page >= max_page);
+
+		if (!total) {
+			const msg = data.length ? __("Nothing matches your search.") : empty_msg;
+			$tbody.html(`<tr class="rf-empty"><td colspan="${columns.length}">${msg}</td></tr>`);
 			return;
 		}
+		$tbody.html(view.slice(start, end).map(row =>
+			`<tr>${columns.map(c => `<td class="${c.cls || ""}">${c.render ? c.render(row) : rf_esc(row[c.key])}</td>`).join("")}</tr>`
+		).join(""));
+	}
 
-		page_rows.forEach(row => {
-			const cells = columns.map(col => {
-				const html = col.render ? col.render(row) : esc(row[col.key] != null ? row[col.key] : "—");
-				return `<td>${html}</td>`;
-			}).join("");
-			$tbody.append(`<tr>${cells}</tr>`);
-		});
-
-		// Re-bind action buttons (on_action callback)
-		if (on_action) {
-			$tbody.find("[data-action]").on("click", function () {
-				const $el  = $(this);
-				const action = $el.data("action");
-				const key_val = $el.data("row-key");
-				const row = _filtered.find(r => String(r[config.row_key || "_key"]) === String(key_val)) || null;
-				on_action(action, row, $el);
+	return {
+		refresh(rows) { data = (rows || []).slice(); apply(); render(); },
+		// add rows to the top (live feed); returns how many were actually new
+		prepend(rows) {
+			const keys = new Set(data.map(row_key));
+			const fresh = (rows || []).filter(r => { const k = row_key(r); if (keys.has(k)) return false; keys.add(k); return true; });
+			if (!fresh.length) return 0;
+			data = fresh.concat(data).slice(0, RF_FEED_MAX);
+			apply(); render();
+			const fresh_keys = new Set(fresh.map(row_key));
+			$tbody.find("tr").each(function (i) {
+				const row = view[page * page_size + i];
+				if (row && fresh_keys.has(row_key(row))) $(this).addClass("rf-flash");
 			});
-		}
-	}
-
-	// ── Public API ──
-	function refresh(new_data) {
-		_data     = new_data ? new_data.slice() : [];
-		_page     = 0;
-		_apply_filter();
-		_render();
-	}
-
-	function prepend(rows) {
-		if (!rows || !rows.length) return;
-
-		// Dedup by rfid_uid|swipe_time key
-		const existing_keys = new Set(
-			_data.map(r => (r.rfid_uid || "") + "|" + (r.swipe_time || r.swipe_time || ""))
-		);
-
-		const new_rows = rows.filter(r => {
-			const k = (r.rfid_uid || "") + "|" + (r.swipe_time || "");
-			if (existing_keys.has(k)) return false;
-			existing_keys.add(k);
-			return true;
-		});
-
-		if (!new_rows.length) return;
-
-		_data = new_rows.concat(_data);
-		// Trim to 200 max
-		if (_data.length > 200) _data = _data.slice(0, 200);
-
-		_apply_filter();
-		_render();
-
-		// Gold flash on newly prepended rows (first N rows in tbody)
-		const flash_count = Math.min(new_rows.length, page_size);
-		$tbody.find("tr").slice(0, flash_count).each(function () {
-			const $tds = $(this).find("td");
-			$tds.css({ background: "#d0d4e8", transition: "" });
-			setTimeout(() => $tds.css({ background: "", transition: "background 3s" }), 100);
-			setTimeout(() => $tds.css("background", ""), 3100);
-		});
-	}
-
-	// Initial render (with default sort if set by config)
-	if (config.default_sort_col !== undefined) {
-		_sort_col = config.default_sort_col;
-		_sort_dir = config.default_sort_dir || "desc";
-		_apply_sort_in_place();
-	}
-	_render();
-
-	return { refresh, prepend };
+			return fresh.length;
+		},
+	};
 }
 
-// ─────────────────────────────────────────────────────────────────
-// TAB 1 — Unassigned Cards
-// ─────────────────────────────────────────────────────────────────
-function render_unassigned(wrapper, cards) {
+function rf_init_tables(wrapper) {
 	const $w = $(wrapper);
-	const uCount = cards ? cards.length : 0;
-	$w.find("#count-unassigned").text(uCount).toggle(uCount > 0);
+	const st = wrapper._rfid;
 
-	const columns = [
-		{
-			key: "rfid_uid", label: "RFID UID (emp_code)",
-			sortable: true, searchable: true,
-			render: row => `<code class="uid">${esc(row.rfid_uid)}</code>`,
-		},
-		{
-			key: "swipe_count", label: "Total Swipes",
-			sortable: true, searchable: false,
-			render: row => `<span class="pill-count">${row.swipe_count || 0}</span>`,
-		},
-		{
-			key: "terminal_id", label: "Terminal ID",
-			sortable: true, searchable: true,
-			render: row => `<span class="muted tc">${esc(row.terminal_id || "—")}</span>`,
-		},
-		{
-			key: "terminal", label: "Terminal / Room",
-			sortable: true, searchable: true,
-			render: row => `<span class="pill-room">${esc(row.terminal || "—")}</span>`,
-		},
-		{
-			key: "area", label: "Area",
-			sortable: true, searchable: true,
-			render: row => `<span class="muted">${esc(row.area || "—")}</span>`,
-		},
-		{
-			key: "last_seen", label: "Last Punch Time",
-			sort_key: "last_seen",
-			sortable: true, searchable: false,
-			render: row => `<span class="muted">${row.last_seen ? frappe.datetime.str_to_user(row.last_seen) : "—"}</span>`,
-		},
-		{
-			key: "_action", label: "Action",
-			sortable: false, searchable: false,
-			render: row => `<button class="btn-assign" data-uid="${esc(row.rfid_uid)}">
-				<i class="fa fa-link"></i> Assign Student
-			</button>`,
-		},
-	];
-
-	const empty_html = !cards || !cards.length
-		? `<div class="all-ok"><i class="fa fa-check-circle"></i>All RFID cards are assigned to students.</div>`
-		: `<div class="tc muted" style="padding:32px">No matching records.</div>`;
-
-	wrapper._rfid.unassigned_dt = make_datatable({
-		wrapper:   $w.find("#panel-unassigned"),
-		data:      cards || [],
-		columns,
-		page_size: 25,
-		empty_msg: `<div class="tc muted" style="padding:32px">${!cards || !cards.length ? "All RFID cards are assigned to students." : "No matching records."}</div>`,
-	});
-}
-
-// ─────────────────────────────────────────────────────────────────
-// TAB 2 — Student Cards
-// ─────────────────────────────────────────────────────────────────
-function render_student_cards(wrapper, students) {
-	const $w = $(wrapper);
-	const lCount = students ? students.length : 0;
-	$w.find("#count-linked").text(lCount).toggle(lCount > 0);
-
-	const columns = [
-		{
-			key: "student_name", label: "Student",
-			sortable: true, searchable: true,
-			render: row => `<a class="stud-link" href="/app/student-master/${esc(row.student_id)}" target="_blank">
-				${esc(row.student_name || row.student_id)}
-			</a>
-			<div class="sub-id">${esc(row.student_id)}</div>`,
-		},
-		{
-			key: "rfid_uid", label: "RFID UID",
-			sortable: true, searchable: true,
-			render: row => `<code class="uid">${esc(row.rfid_uid)}</code>`,
-		},
-		{
-			key: "programme", label: "Programme",
-			sortable: true, searchable: true,
-			render: row => esc(row.programme || "—"),
-		},
-		{
-			key: "batch_year", label: "Batch",
-			sortable: true, searchable: false,
-			render: row => esc(row.batch_year || "—"),
-		},
-		{
-			key: "department", label: "Department",
-			sortable: true, searchable: true,
-			render: row => esc(row.department || "—"),
-		},
-		{
-			key: "total_swipes", label: "Total Swipes",
-			sortable: true, searchable: false,
-			render: row => `<span class="pill-count">${row.total_swipes || 0}</span>`,
-		},
-		{
-			key: "last_swipe", label: "Last Punch Time",
-			sort_key: "last_swipe",
-			sortable: true, searchable: false,
-			render: row => `<span class="muted">${row.last_swipe ? frappe.datetime.str_to_user(row.last_swipe) : "Never"}</span>`,
-		},
-	];
-
-	wrapper._rfid.linked_dt = make_datatable({
-		wrapper:   $w.find("#panel-linked"),
-		data:      students || [],
-		columns,
-		page_size: 25,
-		empty_msg: `<div class="tc muted" style="padding:32px">No students have cards assigned yet.</div>`,
-	});
-}
-
-// ─────────────────────────────────────────────────────────────────
-// TAB 3 — Live Punch Feed
-// ─────────────────────────────────────────────────────────────────
-function render_feed(wrapper, logs, clear) {
-	const $w = $(wrapper);
-
-	// If already initialised and not a full clear, just add rows
-	if (wrapper._rfid.feed_dt && !clear) {
-		wrapper._rfid.feed_dt.prepend(logs || []);
-		return;
-	}
-
-	const columns = [
-		{
-			key: "rfid_uid", label: "RFID UID (emp_code)",
-			sortable: false, searchable: true,
-			render: row => `<code class="uid">${esc(row.rfid_uid)}</code>`,
-		},
-		{
-			key: "student_name", label: "Student",
-			sortable: false, searchable: true,
-			render: row => row.student
-				? `<a class="stud-link" href="/app/student-master/${esc(row.student)}" target="_blank">
-					<i class="fa fa-user-circle"></i> ${esc(row.student_name || row.student)}</a>`
-				: `<span class="unknown-lbl"><i class="fa fa-question-circle"></i> Unknown — assign card</span>`,
-		},
-		{
-			key: "device_id", label: "Terminal ID",
-			sortable: false, searchable: true,
-			render: row => `<span class="muted tc">${esc(row.device_id || "—")}</span>`,
-		},
-		{
-			key: "terminal_alias", label: "Terminal / Room",
-			sortable: false, searchable: true,
-			render: row => `<span class="pill-room">${esc(row.terminal_alias || "—")}</span>`,
-		},
-		{
-			key: "area_alias", label: "Area",
-			sortable: false, searchable: true,
-			render: row => `<span class="muted">${esc(row.area_alias || "—")}</span>`,
-		},
-		{
-			key: "swipe_time", label: "Punch Time",
-			sort_key: "swipe_time",
-			sortable: true, searchable: false,
-			render: row => `<span class="muted">${row.swipe_time ? frappe.datetime.str_to_user(row.swipe_time) : "—"}</span>`,
-		},
-		{
-			key: "processed", label: "Status",
-			sortable: false, searchable: false,
-			render: row => row.processed
-				? `<span class="pill-done">Processed</span>`
-				: `<span class="pill-pend">Pending</span>`,
-		},
-	];
-
-	wrapper._rfid.feed_dt = make_datatable({
-		wrapper:          $w.find("#panel-feed"),
-		data:             logs || [],
-		columns,
-		page_size:        25,
-		empty_msg:        `<div class="tc muted" style="padding:32px">No swipes yet.</div>`,
-		default_sort_col: 5,   // Punch Time column index
-		default_sort_dir: "desc",
-	});
-}
-
-// Legacy wrapper kept so nothing else breaks — now delegates to feed_dt
-function prepend_feed(wrapper, logs) {
-	if (wrapper._rfid && wrapper._rfid.feed_dt) {
-		wrapper._rfid.feed_dt.prepend(logs);
-	}
-}
-
-// ─────────────────────────────────────────────────────────────────
-// Assign Student dialog
-// ─────────────────────────────────────────────────────────────────
-function show_assign_dialog(rfid_uid, wrapper) {
-	const d = new frappe.ui.Dialog({
-		title: "Assign Student to RFID Card",
-		fields: [
-			{
-				fieldname: "uid_html", fieldtype: "HTML",
-				options: `<div class="dlg-uid-box">
-					<div class="dlg-lbl">RFID UID (programmed on card by vendor)</div>
-					<div class="dlg-val">${esc(rfid_uid)}</div>
-					<div class="dlg-hint">This value is read directly from the physical RFID terminal.</div>
-				</div>`,
-			},
-			{ fieldname: "sb", fieldtype: "Section Break",
-			  label: "Which student owns this card?" },
-			{
-				fieldname: "student", fieldtype: "Link",
-				label: "Student", options: "Student Master", reqd: 1,
-				get_query: () => ({ filters: [["rfid_uid", "is", "not set"]] }),
-				description: "Only students without a card assigned are shown.",
-			},
+	st.unassigned = rf_table({
+		$root: $w.find("#panel-unassigned"),
+		search_keys: ["rfid_uid", "terminal_id", "terminal", "area"],
+		default_sort: { key: "last_seen", dir: "desc" },
+		empty_msg: `<div class="rf-allgood"><i class="fa fa-check-circle"></i>${__("Every card seen on the readers belongs to a student.")}</div>`,
+		columns: [
+			{ key: "rfid_uid", label: __("RFID UID"), render: r => `<span class="rf-uid">${rf_esc(r.rfid_uid)}</span>` },
+			{ key: "swipe_count", label: __("Swipes"), cls: "num", render: r => `<span class="rf-num">${rf_fmt(r.swipe_count)}</span>` },
+			{ key: "terminal", label: __("Room"), render: r => r.terminal ? `<span class="rf-chip">${rf_esc(r.terminal)}</span>` : rf_dash() },
+			{ key: "terminal_id", label: __("Terminal"), render: r => rf_muted(r.terminal_id) },
+			{ key: "area", label: __("Area"), render: r => rf_muted(r.area) },
+			{ key: "last_seen", label: __("Last seen"), render: r => rf_when(r.last_seen) },
+			{ key: "_a", label: "", sortable: false, cls: "act",
+			  render: r => `<button class="rf-btn rf-btn-primary rf-btn-sm" data-assign="${rf_esc(r.rfid_uid)}"><i class="fa fa-link"></i> ${__("Assign")}</button>` },
 		],
-		primary_action_label: "Assign and Save",
-		primary_action(val) {
+	});
+
+	st.linked = rf_table({
+		$root: $w.find("#panel-linked"),
+		search_keys: ["student_id", "student_name", "rfid_uid", "programme", "batch_year", "department"],
+		default_sort: { key: "student_id", dir: "asc" },
+		empty_msg: __("No student has a card yet."),
+		columns: [
+			{ key: "student_id", label: __("Student ID"), render: r => rf_sid(r.student_id) },
+			{ key: "student_name", label: __("Student"),
+			  render: r => `<a class="rf-link" href="/app/student-master/${encodeURIComponent(r.student)}" target="_blank" rel="noopener">${rf_esc(r.student_name || r.student_id)}</a>` },
+			{ key: "rfid_uid", label: __("RFID UID"), render: r => `<span class="rf-uid">${rf_esc(r.rfid_uid)}</span>` },
+			{ key: "programme", label: __("Programme"), render: r => rf_muted(r.programme) },
+			{ key: "batch_year", label: __("Batch"), render: r => rf_muted(r.batch_year) },
+			{ key: "total_swipes", label: __("Swipes"), cls: "num", render: r => `<span class="rf-num">${rf_fmt(r.total_swipes)}</span>` },
+			{ key: "last_swipe", label: __("Last swipe"), render: r => r.last_swipe ? rf_when(r.last_swipe) : rf_muted(__("Never")) },
+			{ key: "_a", label: "", sortable: false, cls: "act",
+			  render: r => cint(r.has_active_card)
+				? `<button class="rf-btn rf-btn-ghost rf-btn-sm" title="${__("Remove a wrongly linked card")}"
+					data-unlink="${rf_esc(r.student)}" data-uid="${rf_esc(r.rfid_uid)}"
+					data-label="${rf_esc((r.student_name || "") + (r.student_id ? " (" + r.student_id + ")" : ""))}">
+					<i class="fa fa-unlink"></i> ${__("Unlink")}</button>`
+				: "" },
+		],
+	});
+
+	st.feed = rf_table({
+		$root: $w.find("#panel-feed"),
+		search_keys: ["rfid_uid", "student_id", "student_name", "device_id", "terminal_alias", "area_alias"],
+		default_sort: { key: "swipe_time", dir: "desc" },
+		row_key: r => `${r.rfid_uid || ""}|${r.swipe_time || ""}|${r.device_id || ""}`,
+		empty_msg: __("No swipes yet."),
+		columns: [
+			{ key: "swipe_time", label: __("Time"), render: r => rf_when(r.swipe_time) },
+			{ key: "rfid_uid", label: __("RFID UID"), render: r => `<span class="rf-uid">${rf_esc(r.rfid_uid)}</span>` },
+			{ key: "student_name", label: __("Student"),
+			  render: r => r.student
+				? `<a class="rf-link" href="/app/student-master/${encodeURIComponent(r.student)}" target="_blank" rel="noopener">${rf_esc(r.student_name || r.student_id)}</a> ${rf_sid(r.student_id)}`
+				: `<span class="rf-unknown"><i class="fa fa-question-circle"></i> ${__("Unassigned card")}</span>` },
+			{ key: "terminal_alias", label: __("Room"), render: r => r.terminal_alias ? `<span class="rf-chip">${rf_esc(r.terminal_alias)}</span>` : rf_dash() },
+			{ key: "area_alias", label: __("Area"), render: r => rf_muted(r.area_alias) },
+			{ key: "processed", label: __("Status"),
+			  render: r => cint(r.processed) ? `<span class="rf-tag ok">${__("Processed")}</span>` : `<span class="rf-tag warn">${__("Pending")}</span>` },
+		],
+	});
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Assign a card — search by Student ID / name
+// ─────────────────────────────────────────────────────────────────
+function rf_assign_dialog(rfid_uid, wrapper) {
+	let selected = null;
+	const d = new frappe.ui.Dialog({
+		title: __("Assign card"),
+		fields: [
+			{ fieldname: "card", fieldtype: "HTML", options: `
+				<div class="rf-card-hero">
+					<div class="rf-card-chip"><i class="fa fa-id-card-o"></i></div>
+					<div>
+						<div class="rf-eyebrow">${__("RFID UID read from the terminal")}</div>
+						<div class="rf-card-uid">${rf_esc(rfid_uid)}</div>
+					</div>
+				</div>` },
+			{ fieldname: "q", fieldtype: "Data", label: __("Find student"),
+			  placeholder: __("Type a Student ID (e.g. L26001) or name") },
+			{ fieldname: "results", fieldtype: "HTML" },
+		],
+		primary_action_label: __("Assign card"),
+		primary_action() {
+			if (!selected) { frappe.show_alert({ message: __("Pick a student first."), indicator: "orange" }); return; }
+			d.get_primary_btn().prop("disabled", true);
 			frappe.call({
-				method: "slcm.slcm.page.rfid_mapping.rfid_mapping.link_rfid_to_student",
-				args: { rfid_uid, student: val.student },
-				freeze: true, freeze_message: "Saving...",
+				method: RF_API + "link_rfid_to_student",
+				args: { rfid_uid, student: selected.name },
+				freeze: true, freeze_message: __("Linking card…"),
 				callback(r) {
 					if (r.message && r.message.success) {
 						frappe.show_alert({ message: r.message.message, indicator: "green" }, 6);
 						d.hide();
-						full_load(wrapper);
-					} else {
-						frappe.msgprint({
-							message: r.message ? r.message.message : "Failed.",
-							indicator: "red",
-						});
+						rf_full_load(wrapper);
 					}
 				},
+				always: () => d.get_primary_btn().prop("disabled", false),
 			});
 		},
 	});
+	d.$wrapper.addClass("rf-dlg");
+	const $res = d.fields_dict.results.$wrapper;
+	let seq = 0;
+
+	const search = frappe.utils.debounce(txt => {
+		const my = ++seq;
+		$res.html(`<div class="rf-pick-empty">${__("Searching…")}</div>`);
+		frappe.call({
+			method: RF_API + "search_students",
+			args: { txt, only_without_card: 1 },
+			callback(r) {
+				if (my !== seq) return; // a newer search is running
+				const rows = r.message || [];
+				if (!rows.length) {
+					$res.html(`<div class="rf-pick-empty">${txt ? __("No student without a card matches “{0}”.", [rf_esc(txt)]) : __("Every student with a Student ID already has a card.")}</div>`);
+					return;
+				}
+				$res.html(`<div class="rf-pick">${rows.map((s, i) => `
+					<button type="button" class="rf-pick-row ${selected && selected.name === s.name ? "on" : ""}" data-i="${i}">
+						${rf_sid(s.student_id)}
+						<span class="rf-pick-main">
+							<span class="rf-pick-name">${rf_esc(s.student_name)}</span>
+							<span class="rf-pick-meta">${rf_esc([s.programme, s.batch_year, s.academic_status].filter(Boolean).join(" · "))}</span>
+						</span>
+						<i class="fa fa-check-circle rf-pick-tick"></i>
+					</button>`).join("")}</div>`);
+				$res.find(".rf-pick-row").on("click", function () {
+					selected = rows[$(this).data("i")];
+					$res.find(".rf-pick-row").removeClass("on");
+					$(this).addClass("on");
+					d.set_title(__("Assign card to {0}", [selected.student_id]));
+				});
+			},
+		});
+	}, 250);
+
+	d.fields_dict.q.$input.on("input", function () {
+		selected = null;
+		d.set_title(__("Assign card"));
+		search(($(this).val() || "").trim());
+	});
 	d.show();
+	search("");
+	setTimeout(() => d.fields_dict.q.$input.trigger("focus"), 250);
+}
+
+function rf_unlink(student, label, uid, wrapper) {
+	frappe.confirm(
+		__("Remove card {0} from {1}? Their swipes on this card will show as unassigned again.", [`<b>${rf_esc(uid)}</b>`, `<b>${rf_esc(label)}</b>`]),
+		() => frappe.call({
+			method: RF_API + "unlink_rfid_from_student",
+			args: { student },
+			freeze: true,
+			callback(r) {
+				if (!r.message) return;
+				frappe.show_alert({ message: r.message.message, indicator: r.message.success ? "green" : "orange" }, 5);
+				rf_full_load(wrapper);
+			},
+		})
+	);
 }
 
 // ─────────────────────────────────────────────────────────────────
 // Export for vendor
 // ─────────────────────────────────────────────────────────────────
-function do_export(wrapper) {
+function rf_export() {
 	frappe.call({
-		method: "slcm.slcm.page.rfid_mapping.rfid_mapping.get_export_data",
+		method: RF_API + "get_export_data",
+		freeze: true, freeze_message: __("Preparing list…"),
 		callback(r) {
-			if (!r.message || !r.message.length) {
-				frappe.msgprint("All students already have cards assigned."); return;
+			const { rows = [], missing_id = 0 } = r.message || {};
+			const skipped = missing_id
+				? `<br><br>${__("{0} student(s) without a Student ID were left out — they cannot be matched when the file comes back.", [`<b>${rf_fmt(missing_id)}</b>`])}`
+				: "";
+			if (!rows.length) {
+				frappe.msgprint({ title: __("Nothing to export"), message: __("Every active student with a Student ID already has a card.") + skipped });
+				return;
 			}
-			const rows    = r.message;
-			const headers = ["student_id", "student_name", "programme",
-			                 "batch_year", "department", "email", "rfid_uid"];
-			let csv = headers.join(",") + "\n";
-			rows.forEach(row => {
-				csv += headers.map(h => `"${String(row[h] || "").replace(/"/g, '""')}"`).join(",") + "\n";
-			});
-			dl_file(csv, "rfid_student_list.csv", "text/csv");
-			frappe.show_alert({ message: `Exported ${rows.length} student(s) for vendor`, indicator: "blue" }, 5);
+			const headers = ["student_id", "student_name", "programme", "batch_year", "department", "email", "rfid_uid"];
+			const csv = [headers.join(",")].concat(rows.map(row => headers.map(h => rf_csv_cell(row[h])).join(","))).join("\r\n");
+			rf_download("﻿" + csv, `rfid_vendor_list_${frappe.datetime.get_today()}.csv`, "text/csv;charset=utf-8");
+			if (skipped) frappe.msgprint({ title: __("Exported {0} student(s)", [rf_fmt(rows.length)]), message: skipped.slice(8), indicator: "orange" });
+			else frappe.show_alert({ message: __("Exported {0} student(s) for the vendor", [rf_fmt(rows.length)]), indicator: "blue" }, 5);
 		},
 	});
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Bulk Import dialog — file upload + paste
+// Bulk import — upload / paste → preview → confirm
 // ─────────────────────────────────────────────────────────────────
-function show_import_dialog(wrapper) {
+function rf_import_dialog(wrapper) {
 	const d = new frappe.ui.Dialog({
-		title: "Bulk Import RFID Assignments",
+		title: __("Import card assignments"),
+		size: "large",
 		fields: [
-			{
-				fieldname: "how_html", fieldtype: "HTML",
-				options: `<div class="import-info">
-					<div class="import-title">How to use</div>
-					<ol class="import-steps">
-						<li>Click <strong>Export for Vendor</strong> — downloads a CSV with all student IDs and names.</li>
-						<li>Send the CSV to the vendor. They fill the <code>rfid_uid</code> column for each student.</li>
-						<li>Upload the completed CSV or Excel (.xlsx) here, or paste it below.</li>
-					</ol>
-					<div style="margin-top:10px">
-						<strong>Required columns:</strong>
-						<code class="uid" style="margin-left:6px">student_id</code>
-						<code class="uid" style="margin-left:6px">rfid_uid</code>
-						&nbsp;·&nbsp; Accepts <strong>.csv</strong> or <strong>.xlsx</strong>
-					</div>
-					<button class="btn-outline" id="dl-template" style="margin-top:12px; font-size:.8rem; padding:5px 12px">
-						<i class="fa fa-download"></i> Download Sample Template
-					</button>
-				</div>`,
-			},
-			{ fieldname: "sb1", fieldtype: "Section Break", label: "Upload CSV File" },
-			{
-				fieldname: "file_upload", fieldtype: "Attach",
-				label: "Choose File",
-				description: "Upload the CSV or Excel (.xlsx) file returned by the vendor.",
-			},
-			{ fieldname: "sb2", fieldtype: "Section Break",
-			  label: "— or Paste CSV Content Directly —" },
-			{
-				fieldname: "csv_paste", fieldtype: "Code",
-				label: "Paste CSV here", options: "None",
-				description: "Format: student_id,rfid_uid — one row per student.",
-			},
+			{ fieldname: "how", fieldtype: "HTML", options: `
+				<ol class="rf-steps">
+					<li><b>${__("Export for vendor")}</b><span>${__("CSV of students without a card, keyed by Student ID")}</span></li>
+					<li><b>${__("Vendor fills rfid_uid")}</b><span>${__("One card per row — leave the student_id column as it is")}</span></li>
+					<li><b>${__("Upload here")}</b><span>${__("Check the preview, then confirm")}</span></li>
+				</ol>
+				<div class="rf-cols">
+					${__("Required columns")}: <span class="rf-uid">student_id</span> <span class="rf-uid">rfid_uid</span>
+					<span class="rf-cols-note">${__("student_id is the Student ID, e.g. L26001 · .csv or .xlsx")}</span>
+					<a class="rf-textlink" id="rf-template"><i class="fa fa-download"></i> ${__("Sample template")}</a>
+				</div>` },
+			{ fieldname: "file_upload", fieldtype: "Attach", label: __("Upload file"),
+			  options: { restrictions: { allowed_file_types: [".csv", ".xlsx"] } } },
+			{ fieldname: "paste_sb", fieldtype: "Section Break", label: __("Or paste CSV"), collapsible: 1 },
+			{ fieldname: "csv_paste", fieldtype: "Code", options: "None",
+			  description: __("First line: student_id,rfid_uid — then one student per line.") },
 		],
-		primary_action_label: "Import",
+		primary_action_label: __("Preview"),
 		primary_action(val) {
-			const pasted = (val.csv_paste || "").trim();
-			if (val.file_upload) {
-				// Read file content server-side to handle both private and public files
-				frappe.call({
-					method: "slcm.slcm.page.rfid_mapping.rfid_mapping.read_uploaded_file",
-					args: { file_url: val.file_upload },
-					callback(fr) {
-						if (fr.message && fr.message.success) {
-							run_import(fr.message.content, d, wrapper);
-						} else {
-							frappe.msgprint(fr.message ? fr.message.error : "Failed to read uploaded file.");
-						}
-					},
-				});
-			} else if (pasted) {
-				run_import(pasted, d, wrapper);
-			} else {
-				frappe.msgprint("Please upload a CSV file or paste CSV content.");
+			const source = val.file_upload ? { file_url: val.file_upload } : { csv_data: (val.csv_paste || "").trim() };
+			if (!source.file_url && !source.csv_data) {
+				frappe.show_alert({ message: __("Upload a file or paste CSV first."), indicator: "orange" });
+				return;
 			}
+			frappe.call({
+				method: RF_API + "bulk_import_rfid",
+				args: { ...source, dry_run: 1 },
+				freeze: true, freeze_message: __("Checking file…"),
+				callback(r) {
+					if (!r.message) return;
+					d.hide();
+					rf_preview_dialog(r.message, source, wrapper, d);
+				},
+			});
 		},
 	});
-
+	d.$wrapper.addClass("rf-dlg");
+	d.$wrapper.find("#rf-template").on("click", () =>
+		rf_download("student_id,rfid_uid\r\nL26001,B24221\r\nL26002,LLB/2690/2020\r\n", "rfid_import_template.csv", "text/csv"));
 	d.show();
-	setTimeout(() => {
-		d.$wrapper.find("#dl-template").on("click", () => {
-			const csv = "student_id,rfid_uid\nSTUD-2026-00001,B23012\nSTUD-2026-00002,LLB/2699/2020\n";
-			dl_file(csv, "rfid_import_template.csv", "text/csv");
-		});
-	}, 300);
 }
 
-function run_import(csv_text, dialog, wrapper) {
-	frappe.call({
-		method: "slcm.slcm.page.rfid_mapping.rfid_mapping.bulk_import_rfid",
-		args: { csv_data: csv_text },
-		freeze: true, freeze_message: "Importing...",
-		callback(r) {
-			dialog.hide();
-			if (!r.message) return;
-			const res = r.message;
-			let html = `<p style="font-size:1rem; margin-bottom:12px">${res.message}</p>`;
+const RF_STATUS = {
+	ready:     { label: __("Will link"),  cls: "ok" },
+	linked:    { label: __("Linked"),     cls: "ok" },
+	unchanged: { label: __("No change"),  cls: "info" },
+	skipped:   { label: __("Skipped"),    cls: "info" },
+	error:     { label: __("Problem"),    cls: "err" },
+};
 
-			if (res.results.linked.length) {
-				html += `<p class="result-ok"><i class="fa fa-check-circle"></i> Linked (${res.results.linked.length})</p><ul>`;
-				res.results.linked.forEach(row =>
-					html += `<li>${esc(row.student_name)} &mdash; <code>${esc(row.rfid_uid)}</code></li>`);
-				html += "</ul>";
-			}
-			if (res.results.skipped.length) {
-				html += `<p class="result-skip"><i class="fa fa-minus-circle"></i> Skipped (${res.results.skipped.length})</p><ul>`;
-				res.results.skipped.forEach(row =>
-					html += `<li>Row ${row.row}: ${esc(row.reason)}</li>`);
-				html += "</ul>";
-			}
-			if (res.results.errors.length) {
-				html += `<p class="result-err"><i class="fa fa-times-circle"></i> Errors (${res.results.errors.length})</p><ul>`;
-				res.results.errors.forEach(row =>
-					html += `<li>Row ${row.row}: ${esc(row.reason)} &mdash; <code>${esc(row.rfid_uid)}</code></li>`);
-				html += "</ul>";
-			}
-			frappe.msgprint({ title: "Import Results", message: html });
-			full_load(wrapper);
+function rf_result_html(res) {
+	const c = res.counts || {};
+	const done = c.linked || 0, ready = c.ready || 0, err = c.error || 0, other = (c.unchanged || 0) + (c.skipped || 0);
+	const tiles = [
+		res.dry_run ? [ready, __("ready to link"), "ok"] : [done, __("linked"), "ok"],
+		[err, __("with problems"), "err"],
+		[other, __("no change / skipped"), "info"],
+	].map(([n, l, cls]) => `<div class="rf-sum ${cls}"><b>${rf_fmt(n)}</b><span>${l}</span></div>`).join("");
+
+	// problems first, then the rest in file order
+	const order = { error: 0, ready: 1, linked: 1, unchanged: 2, skipped: 3 };
+	const rows = (res.rows || []).slice().sort((a, b) => (order[a.status] - order[b.status]) || a.row - b.row);
+	const body = rows.map(r => {
+		const s = RF_STATUS[r.status] || RF_STATUS.skipped;
+		const note = r.reason ? rf_esc(r.reason)
+			: r.replaces ? __("Replaces card {0}", [`<span class="rf-uid">${rf_esc(r.replaces)}</span>`])
+			: r.swipes != null ? __("{0} swipe(s) matched", [r.swipes]) : "";
+		return `<tr>
+			<td class="num rf-dim">${r.row}</td>
+			<td>${rf_sid(r.student_id)}</td>
+			<td>${rf_esc(r.student_name) || rf_dash()}</td>
+			<td>${r.rfid_uid ? `<span class="rf-uid">${rf_esc(r.rfid_uid)}</span>` : rf_dash()}</td>
+			<td><span class="rf-tag ${s.cls}">${s.label}</span></td>
+			<td class="rf-note">${note}</td>
+		</tr>`;
+	}).join("");
+
+	return `<div class="rf-sums">${tiles}</div>
+		<div class="rf-tablebox rf-tablebox-sm"><table class="rf-table">
+			<thead><tr><th class="num">${__("Row")}</th><th>${__("Student ID")}</th><th>${__("Student")}</th><th>${__("RFID UID")}</th><th>${__("Result")}</th><th>${__("Note")}</th></tr></thead>
+			<tbody>${body || `<tr class="rf-empty"><td colspan="6">${__("The file has no data rows.")}</td></tr>`}</tbody>
+		</table></div>`;
+}
+
+function rf_preview_dialog(res, source, wrapper, input_dialog) {
+	const ready = (res.counts || {}).ready || 0;
+	const d = new frappe.ui.Dialog({
+		title: __("Check before importing"),
+		size: "extra-large",
+		fields: [{ fieldname: "body", fieldtype: "HTML", options: rf_result_html(res) }],
+		primary_action_label: ready ? __("Link {0} card(s)", [rf_fmt(ready)]) : __("Nothing to link"),
+		primary_action() {
+			if (!ready) return;
+			frappe.call({
+				method: RF_API + "bulk_import_rfid",
+				args: { ...source, dry_run: 0 },
+				freeze: true, freeze_message: __("Linking cards…"),
+				callback(r) {
+					if (!r.message) return;
+					d.set_title(__("Import finished"));
+					d.fields_dict.body.$wrapper.html(rf_result_html(r.message));
+					d.get_primary_btn().hide();
+					d.set_secondary_action_label(__("Close"));
+					d.set_secondary_action(() => d.hide());
+					rf_full_load(wrapper);
+				},
+			});
 		},
+		secondary_action_label: __("Back"),
+		secondary_action() { d.hide(); input_dialog.show(); },
 	});
-}
-
-// ─────────────────────────────────────────────────────────────────
-// Sync dot and countdown
-// ─────────────────────────────────────────────────────────────────
-function set_dot(wrapper, state) {
-	const $d = $(wrapper).find("#sync-dot");
-	const $t = $(wrapper).find("#sync-text");
-	$d.removeClass("dot-live dot-syncing");
-	if (state === "live") {
-		$d.addClass("dot-live");
-		$t.text("Live — SQL Server syncs automatically every minute");
-	} else {
-		$d.addClass("dot-syncing");
-		$t.text("Syncing…");
-	}
-}
-
-function tick(wrapper) {
-	if (!wrapper._rfid) return;
-	wrapper._rfid.countdown_val = (wrapper._rfid.countdown_val || 30) - 1;
-	if (wrapper._rfid.countdown_val <= 0) wrapper._rfid.countdown_val = 30;
-	$(wrapper).find("#next-refresh").text(wrapper._rfid.countdown_val);
+	d.$wrapper.addClass("rf-dlg");
+	if (!ready) d.get_primary_btn().prop("disabled", true);
+	d.show();
 }
 
 // ─────────────────────────────────────────────────────────────────
 // Utilities
 // ─────────────────────────────────────────────────────────────────
-const esc = s => frappe.utils.escape_html(String(s || ""));
-const fmt = n => parseInt(n || 0).toLocaleString();
-function dl_file(content, name, mime) {
-	const a = document.createElement("a");
-	a.href = URL.createObjectURL(new Blob([content], { type: mime }));
-	a.download = name; a.click();
-	URL.revokeObjectURL(a.href);
+const rf_esc = s => (s == null ? "" : frappe.utils.escape_html(String(s)));
+const rf_fmt = n => (parseInt(n, 10) || 0).toLocaleString("en-IN");
+const rf_dash = () => `<span class="rf-dim">—</span>`;
+const rf_muted = v => (v ? `<span class="rf-dim">${rf_esc(v)}</span>` : rf_dash());
+const rf_sid = v => (v ? `<span class="rf-sid">${rf_esc(v)}</span>` : `<span class="rf-sid none">${__("No ID")}</span>`);
+const rf_when = v => v
+	? `<span class="rf-when">${rf_esc(frappe.datetime.str_to_user(v))}<small>${rf_esc(frappe.datetime.prettyDate(v))}</small></span>`
+	: rf_dash();
+
+function rf_csv_cell(v) {
+	let s = v == null ? "" : String(v);
+	if (/^[=+\-@\t\r]/.test(s)) s = "'" + s; // stop spreadsheet formula injection
+	return `"${s.replace(/"/g, '""')}"`;
+}
+
+function rf_download(content, name, mime) {
+	const url = URL.createObjectURL(new Blob([content], { type: mime }));
+	const a = Object.assign(document.createElement("a"), { href: url, download: name });
+	document.body.appendChild(a);
+	a.click();
+	a.remove();
+	setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 // ─────────────────────────────────────────────────────────────────
-// HTML — NLS colours only (#920C24 scale), Merriweather
-// British spelling throughout
+// Markup
 // ─────────────────────────────────────────────────────────────────
-function build_html() {
+function rf_toolbar(placeholder) {
+	return `<div class="rf-toolbar">
+		<label class="rf-searchbox"><i class="fa fa-search"></i><input class="rf-search" type="search" placeholder="${placeholder}"></label>
+		<div class="rf-pager">
+			<span class="rf-page-info"></span>
+			<button class="rf-iconbtn rf-prev" aria-label="${__("Previous page")}" disabled><i class="fa fa-chevron-left"></i></button>
+			<button class="rf-iconbtn rf-next" aria-label="${__("Next page")}" disabled><i class="fa fa-chevron-right"></i></button>
+		</div>
+	</div>
+	<div class="rf-tablebox"><table class="rf-table"><thead><tr></tr></thead>
+		<tbody><tr class="rf-empty"><td>${__("Loading…")}</td></tr></tbody></table></div>`;
+}
+
+function rf_html() {
 	return `
-<style>
-/* ── Colour tokens ── */
-:root {
-	--navy:   #920C24;
-	--maroon: #920C24;
-	--gold:   #C4566A;
-	--navy-lt:#FBEEF0;
-	--navy-mid:#6E091B;
-	--bg:     #f8fafc;
-	--white:  #ffffff;
-	--border: #E8B4BE;
-}
-
-.rfid-wrap { padding:20px 24px; background:var(--bg); min-height:100vh; font-family:"Merriweather", Georgia, "Times New Roman", serif; }
-.rfid-wrap button, .rfid-wrap input, .rfid-wrap select { font-family:inherit; }
-
-/* ── Status bar ── */
-.rfid-status {
-	display:flex; align-items:center; gap:10px;
-	padding:10px 16px; background:var(--white);
-	border-left:4px solid var(--navy); border-radius:6px;
-	box-shadow:0 1px 3px rgba(146,12,36,.1);
-	margin-bottom:20px; font-size:.84rem; color:var(--navy);
-}
-.sync-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
-.dot-live    { background:#28a745; box-shadow:0 0 0 3px rgba(40,167,69,.25); }
-.dot-syncing { background:var(--gold); animation:blink 1s infinite; }
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
-.cdown { margin-left:auto; font-size:.78rem; color:var(--navy-mid); }
-
-/* ── Section label ── */
-.sec-lbl {
-	font-size:.68rem; font-weight:700; letter-spacing:.08em;
-	color:var(--navy); text-transform:uppercase;
-	border-left:3px solid var(--navy); padding-left:8px;
-	margin-bottom:10px;
-}
-
-/* ── Stat cards grid ── */
-.stats-grid { display:grid; gap:14px; margin-bottom:18px; }
-.g4 { grid-template-columns:repeat(4,1fr); }
-.g3 { grid-template-columns:repeat(3,1fr); }
-
-.stat-card {
-	background:var(--white); border-radius:8px; padding:16px 18px;
-	border-top:4px solid var(--border);
-	box-shadow:0 1px 4px rgba(146,12,36,.08);
-}
-.sc-navy   { border-top-color:var(--navy);   }
-.sc-maroon { border-top-color:var(--maroon); }
-.sc-gold   { border-top-color:var(--gold);   }
-.sc-mid    { border-top-color:var(--navy-mid); }
-
-.stat-num  { font-size:1.8rem; font-weight:700; line-height:1.1; margin-bottom:3px; }
-.sn-navy   { color:var(--navy);   }
-.sn-maroon { color:var(--maroon); }
-.sn-gold   { color:var(--gold);   }
-.sn-mid    { color:var(--navy-mid); }
-
-.stat-lbl  { font-size:.78rem; color:#777; }
-.stat-sub  { font-size:.7rem;  color:#bbb; margin-top:2px; }
-
-/* ── Tabs ── */
-.rfid-tabs {
-	display:flex; border-bottom:3px solid var(--navy); margin-bottom:0; gap:0;
-}
-.r-tab {
-	padding:10px 22px; border:none; background:none; cursor:pointer;
-	font-size:.88rem; font-weight:500; color:var(--navy-mid);
-	border-radius:6px 6px 0 0; transition:background .15s, color .15s;
-}
-.r-tab:hover { background:var(--navy-lt); color:var(--navy); }
-.r-tab.r-tab-active { background:var(--navy); color:var(--white); font-weight:700; }
-.badge-unlinked {
-	display:inline-block; background:var(--maroon); color:var(--white);
-	border-radius:10px; padding:1px 8px; font-size:.7rem; margin-left:5px;
-	vertical-align:middle; font-weight:700;
-}
-
-/* ── Panels ── */
-.r-panel {
-	display:none; background:var(--white);
-	border-radius:0 8px 8px 8px;
-	box-shadow:0 2px 8px rgba(146,12,36,.08);
-	padding:20px;
-}
-
-/* ── Panel header ── */
-.panel-hdr {
-	display:flex; justify-content:space-between; align-items:flex-start;
-	gap:14px; flex-wrap:wrap; margin-bottom:16px;
-}
-.panel-title { font-size:1rem; font-weight:700; color:var(--navy); }
-.panel-hint  { font-size:.82rem; color:#777; margin-top:3px; line-height:1.6; }
-.panel-actions { display:flex; gap:8px; flex-shrink:0; }
-
-/* ── Feed info box ── */
-.feed-info {
-	background:var(--navy-lt); border-left:4px solid var(--navy);
-	border-radius:6px; padding:14px 16px; margin-bottom:16px;
-	font-size:.85rem; color:#444; line-height:1.7;
-}
-.feed-info strong { color:var(--navy); }
-.feed-info code   { background:#d8daea; padding:1px 6px; border-radius:4px;
-                    color:var(--navy); font-size:.82rem; }
-
-/* ── Tables ── */
-.tbl-outer { overflow-x:auto; border:1px solid var(--border); border-radius:8px; }
-.tbl-scroll { overflow-x:auto; overflow-y:auto; max-height:500px;
-              border:1px solid var(--border); border-radius:8px; }
-
-.rfid-tbl { font-size:.85rem; margin:0; width:100%; border-collapse:collapse; }
-.rfid-tbl thead th {
-	background:var(--navy); color:var(--white);
-	font-size:.75rem; font-weight:700; text-transform:uppercase;
-	letter-spacing:.05em; padding:11px 13px; white-space:nowrap; position:sticky; top:0; z-index:1;
-}
-.rfid-tbl tbody tr { border-bottom:1px solid #eeeef3; }
-.rfid-tbl tbody tr:hover { background:var(--navy-lt); }
-.rfid-tbl tbody td { padding:10px 13px; vertical-align:middle; }
-
-/* ── Inline elements ── */
-.uid {
-	background:#eeeef4; color:var(--navy); padding:3px 9px;
-	border-radius:4px; font-family:monospace; font-size:.82rem; font-weight:600;
-}
-.pill-room {
-	background:var(--navy-lt); color:var(--navy);
-	padding:3px 10px; border-radius:12px; font-size:.78rem; font-weight:600;
-}
-.pill-count {
-	background:var(--navy); color:var(--white);
-	padding:2px 10px; border-radius:12px; font-size:.8rem; font-weight:700;
-}
-.pill-done {
-	background:#d4edda; color:#155724;
-	padding:2px 10px; border-radius:12px; font-size:.75rem; font-weight:600;
-}
-.pill-pend {
-	background:#fef3cd; color:#856404;
-	padding:2px 10px; border-radius:12px; font-size:.75rem; font-weight:600;
-}
-.unknown-lbl { color:var(--maroon); font-size:.84rem; font-weight:600; }
-.muted { color:#888; font-size:.82rem; }
-.tc { text-align:center; }
-.stud-link { color:var(--navy); font-weight:600; text-decoration:none; }
-.stud-link:hover { color:var(--maroon); text-decoration:underline; }
-.sub-id { font-size:.72rem; color:#aaa; }
-.tbl-footer { font-size:.74rem; color:#aaa; margin-top:6px; padding:0 4px; }
-
-/* ── Buttons ── */
-.btn-navy {
-	background:var(--navy); color:var(--white);
-	border:none; border-radius:6px; padding:7px 14px;
-	font-size:.83rem; font-weight:600; cursor:pointer;
-}
-.btn-navy:hover { background:var(--navy-mid); }
-
-.btn-outline {
-	background:var(--white); color:var(--navy);
-	border:1.5px solid var(--navy); border-radius:6px; padding:6px 14px;
-	font-size:.83rem; font-weight:600; cursor:pointer;
-}
-.btn-outline:hover { background:var(--navy-lt); }
-
-.btn-assign {
-	background:var(--maroon); color:var(--white);
-	border:none; border-radius:6px; padding:5px 13px;
-	font-size:.8rem; font-weight:600; cursor:pointer; white-space:nowrap;
-}
-.btn-assign:hover { background:#6E091B; }
-
-/* ── All-assigned message ── */
-.all-ok {
-	text-align:center; padding:48px 20px;
-	background:#f0fff4; border:2px dashed #28a745;
-	border-radius:10px; color:#28a745;
-	font-size:1rem; font-weight:600;
-}
-.all-ok i { font-size:2.2rem; display:block; margin-bottom:10px; }
-
-/* ── Import info box ── */
-.import-info { background:var(--navy-lt); border-radius:8px; padding:14px 16px; }
-.import-title { font-weight:700; color:var(--navy); margin-bottom:8px; }
-.import-steps { margin:0; padding-left:20px; color:#444;
-                font-size:.87rem; line-height:1.9; }
-
-/* ── Assign dialog ── */
-.dlg-uid-box {
-	background:var(--navy-lt); border-left:4px solid var(--navy);
-	border-radius:6px; padding:14px 16px;
-}
-.dlg-lbl  { font-size:.72rem; font-weight:700; text-transform:uppercase;
-            letter-spacing:.06em; color:var(--navy-mid); }
-.dlg-val  { font-size:1.35rem; font-weight:700; font-family:monospace;
-            color:var(--navy); margin:5px 0 3px; }
-.dlg-hint { font-size:.78rem; color:#aaa; }
-
-/* ── Import results ── */
-.result-ok   { color:#155724; font-weight:600; margin-bottom:4px; }
-.result-skip { color:var(--navy-mid); font-weight:600; margin-bottom:4px; }
-.result-err  { color:var(--maroon); font-weight:600; margin-bottom:4px; }
-
-/* ── DataTable toolbar ── */
-.dt-toolbar {
-	display:flex; align-items:center; justify-content:space-between;
-	gap:12px; flex-wrap:wrap; margin-bottom:10px;
-}
-.dt-search {
-	flex:1; min-width:180px; max-width:320px;
-	padding:6px 12px; font-size:.84rem;
-	border:1.5px solid var(--border); border-radius:6px;
-	color:var(--navy); background:var(--white); outline:none;
-}
-.dt-search:focus { border-color:var(--navy); box-shadow:0 0 0 2px rgba(146,12,36,.12); }
-.dt-search::placeholder { color:#bbb; }
-.dt-pagination { display:flex; align-items:center; gap:8px; flex-shrink:0; }
-.dt-page-info { font-size:.78rem; color:#888; white-space:nowrap; }
-.dt-btn {
-	background:var(--white); color:var(--navy);
-	border:1.5px solid var(--navy); border-radius:6px;
-	padding:4px 12px; font-size:.8rem; font-weight:600; cursor:pointer;
-}
-.dt-btn:hover:not(:disabled) { background:var(--navy-lt); }
-.dt-btn:disabled { color:#bbb; border-color:#ddd; cursor:default; }
-
-/* ── Sortable header indicators ── */
-.th-sort { cursor:pointer; user-select:none; }
-.th-sort:hover { background:var(--navy-mid); }
-.th-sort.asc::after  { content:" ▲"; font-size:.65rem; opacity:.85; }
-.th-sort.desc::after { content:" ▼"; font-size:.65rem; opacity:.85; }
-</style>
-
 <div class="rfid-wrap">
-
-	<!-- Status bar -->
-	<div class="rfid-status">
-		<div class="sync-dot dot-live" id="sync-dot"></div>
-		<span id="sync-text">Live — SQL Server syncs automatically every minute</span>
-		<span class="cdown">Display refreshes in <strong id="next-refresh">30</strong>s</span>
-		<button class="btn-outline" id="btn-refresh-now" style="margin-left:14px">
-			<i class="fa fa-refresh"></i> <span class="btn-refresh-label">Refresh Now</span>
-		</button>
-	</div>
-
-	<!-- Swipe log stats (matches SQL Server columns) -->
-	<div class="sec-lbl">Swipe Log Statistics</div>
-	<div class="stats-grid g3" style="margin-bottom:22px">
-		<div class="stat-card sc-navy">
-			<div class="stat-num sn-navy" id="st-total">—</div>
-			<div class="stat-lbl">Total Swipes Imported</div>
-			<div class="stat-sub">
-				from dbo.iclock_trans_ajim &nbsp;·&nbsp;
-				<a href="/app/attendance-log" target="_blank" style="color:var(--navy-mid); font-size:.72rem">
-					View Log →
-				</a>
+	<header class="rf-head">
+		<div>
+			<div class="rf-eyebrow">${__("Attendance · RFID")}</div>
+			<h1 class="rf-title">${__("RFID Card Management")}</h1>
+			<p class="rf-sub">${__("Match cards seen on the classroom readers to students by their Student ID.")}</p>
+		</div>
+		<div class="rf-head-side">
+			<div class="rf-status is-live" id="rf-status" title="${__("SQL Server is pulled every minute in the background")}">
+				<span class="rf-dot"></span><span class="rf-status-text">${__("Live")}</span>
+				<span class="rf-status-sep"></span>
+				<span>${__("refresh in")} <b id="rf-countdown">${RF_REFRESH_SECS}</b>s</span>
 			</div>
+			<button class="rf-btn rf-btn-ghost" id="rf-refresh"><i class="fa fa-refresh"></i> ${__("Pull now")}</button>
 		</div>
-		<div class="stat-card sc-gold">
-			<div class="stat-num sn-gold" id="st-linked">—</div>
-			<div class="stat-lbl">Swipes Identified</div>
-			<div class="stat-sub">card matched to a known student</div>
-		</div>
-		<div class="stat-card sc-maroon">
-			<div class="stat-num sn-maroon" id="st-unlinked">—</div>
-			<div class="stat-lbl">Swipes Unidentified</div>
-			<div class="stat-sub">card not yet assigned — resolve below</div>
-		</div>
+	</header>
+
+	<div class="rf-banner" id="rf-noid" style="display:none">
+		<i class="fa fa-exclamation-triangle"></i>
+		<div>${__("{0} student(s) have no Student ID yet. They are left out of the vendor export and cannot be picked when assigning a card.", ['<b class="rf-noid-count">0</b>'])}
+			<a class="rf-textlink" href="/app/student-master?registration_id=%5B%22is%22%2C%22not%20set%22%5D" target="_blank" rel="noopener">${__("Show them")} →</a></div>
 	</div>
 
-	<!-- Student card stats -->
-	<div class="sec-lbl">Student RFID Card Status</div>
-	<div class="stats-grid g3" style="margin-bottom:28px">
-		<div class="stat-card sc-navy">
-			<div class="stat-num sn-navy" id="st-students">—</div>
-			<div class="stat-lbl">Total Students</div>
+	<section class="rf-kpis">
+		<div class="rf-kpi-group">
+			<div class="rf-kpi-head"><span>${__("Swipes")}</span>
+				<a class="rf-textlink" href="/app/attendance-log" target="_blank" rel="noopener">${__("Attendance Log")} →</a></div>
+			<div class="rf-kpi-row">
+				<div class="rf-kpi"><b id="st-total">—</b><span>${__("Imported")}</span></div>
+				<div class="rf-kpi"><b id="st-linked">—</b><span>${__("Identified")}</span></div>
+				<div class="rf-kpi alert"><b id="st-unlinked">—</b><span>${__("Unidentified")}</span></div>
+			</div>
+			<div class="rf-meter" id="mt-swipes"><div class="rf-meter-bar"><div class="rf-meter-fill"></div></div>
+				<div class="rf-meter-foot"><span class="rf-meter-lbl"></span><span>${__("Last swipe")} <b id="st-last-swipe">—</b></span></div></div>
 		</div>
-		<div class="stat-card sc-gold">
-			<div class="stat-num sn-gold" id="st-with-card">—</div>
-			<div class="stat-lbl">Cards Assigned</div>
+		<div class="rf-kpi-group">
+			<div class="rf-kpi-head"><span>${__("Student cards")}</span>
+				<a class="rf-textlink" href="/app/student-rfid-card" target="_blank" rel="noopener">${__("Card history")} →</a></div>
+			<div class="rf-kpi-row">
+				<div class="rf-kpi"><b id="st-students">—</b><span>${__("Students")}</span></div>
+				<div class="rf-kpi"><b id="st-with-card">—</b><span>${__("With card")}</span></div>
+				<div class="rf-kpi alert"><b id="st-no-card">—</b><span>${__("Without card")}</span></div>
+			</div>
+			<div class="rf-meter" id="mt-students"><div class="rf-meter-bar"><div class="rf-meter-fill"></div></div>
+				<div class="rf-meter-foot"><span class="rf-meter-lbl"></span></div></div>
 		</div>
-		<div class="stat-card sc-maroon">
-			<div class="stat-num sn-maroon" id="st-no-card">—</div>
-			<div class="stat-lbl">No Card Assigned Yet</div>
-		</div>
-	</div>
+	</section>
 
-	<!-- Tabs -->
-	<div class="rfid-tabs">
-		<button class="r-tab r-tab-active" data-tab="unassigned">
-			<i class="fa fa-id-card"></i>&nbsp;
-			Unassigned Cards
-			<span class="badge-unlinked" style="display:none" id="count-unassigned">0</span>
-		</button>
-		<button class="r-tab" data-tab="linked">
-			<i class="fa fa-users"></i>&nbsp;
-			Student Cards
-			<span class="badge-unlinked" style="background:var(--gold); display:none" id="count-linked">0</span>
-		</button>
-		<button class="r-tab" data-tab="feed">
-			<i class="fa fa-rss"></i>&nbsp;
-			Live Punch Feed
-		</button>
-	</div>
+	<nav class="rf-tabs" role="tablist">
+		<button class="rf-tab active" data-tab="unassigned" role="tab" aria-selected="true">
+			${__("Unassigned cards")} <span class="rf-count" id="count-unassigned" style="display:none"></span></button>
+		<button class="rf-tab" data-tab="linked" role="tab" aria-selected="false">
+			${__("Student cards")} <span class="rf-count" id="count-linked" style="display:none"></span></button>
+		<button class="rf-tab" data-tab="feed" role="tab" aria-selected="false">
+			<span class="rf-dot sm"></span> ${__("Live feed")}</button>
+	</nav>
 
-	<!-- ══ TAB 1: Unassigned ══ -->
-	<div class="r-panel" id="panel-unassigned" style="display:block">
-		<div class="panel-hdr">
+	<section class="rf-panel active" id="panel-unassigned">
+		<div class="rf-panel-head">
 			<div>
-				<div class="panel-title">Unassigned RFID Cards</div>
-				<div class="panel-hint">
-					These RFID UIDs are coming from the readers but no student is linked yet.<br>
-					<strong>One at a time:</strong> click <em>Assign Student</em> for each card.&nbsp;
-					<strong>In bulk:</strong> Export → vendor fills UIDs → Import back.
-				</div>
+				<h2>${__("Cards nobody owns yet")}</h2>
+				<p>${__("Assign one card at a time, or export the student list for the vendor and import it back filled in.")}</p>
 			</div>
-			<div class="panel-actions">
-				<button class="btn-outline" id="btn-export-vendor">
-					<i class="fa fa-download"></i> Export for Vendor
-				</button>
-				<button class="btn-navy" id="btn-bulk-import">
-					<i class="fa fa-upload"></i> Bulk Import CSV
-				</button>
+			<div class="rf-actions">
+				<button class="rf-btn rf-btn-ghost" id="rf-export"><i class="fa fa-download"></i> ${__("Export for vendor")}</button>
+				<button class="rf-btn rf-btn-primary" id="rf-import"><i class="fa fa-upload"></i> ${__("Import file")}</button>
 			</div>
 		</div>
-		<div class="dt-toolbar">
-			<input class="dt-search" type="search" placeholder="Search RFID UID, terminal, area…">
-			<div class="dt-pagination">
-				<span class="dt-page-info"></span>
-				<button class="dt-btn dt-btn-prev" disabled>&#8592; Previous</button>
-				<button class="dt-btn dt-btn-next" disabled>Next &#8594;</button>
-			</div>
-		</div>
-		<div class="tbl-scroll">
-			<table class="rfid-tbl">
-				<thead>
-					<tr>
-						<th>RFID UID (emp_code)</th>
-						<th class="tc">Total Swipes</th>
-						<th class="tc">Terminal ID (terminal_id)</th>
-						<th>Terminal / Room (terminal_alias)</th>
-						<th>Area (area_alias)</th>
-						<th>Last Punch Time</th>
-						<th style="width:155px">Action</th>
-					</tr>
-				</thead>
-				<tbody id="tbody-unassigned">
-					<tr><td colspan="7" class="tc muted" style="padding:32px">Loading…</td></tr>
-				</tbody>
-			</table>
-		</div>
-	</div>
+		${rf_toolbar(__("Search card, room, terminal…"))}
+	</section>
 
-	<!-- ══ TAB 2: Student Cards ══ -->
-	<div class="r-panel" id="panel-linked">
-		<div class="panel-hdr">
+	<section class="rf-panel" id="panel-linked">
+		<div class="rf-panel-head">
 			<div>
-				<div class="panel-title">Student Cards Assigned</div>
-				<div class="panel-hint">
-					Each student below has an RFID card. Their punches are automatically
-					linked to attendance records.
-				</div>
+				<h2>${__("Students with a card")}</h2>
+				<p>${__("Swipes on these cards count towards attendance automatically. Unlink only when a card was given to the wrong student.")}</p>
 			</div>
 		</div>
-		<div class="dt-toolbar">
-			<input class="dt-search" type="search" placeholder="Search student, RFID, programme, department…">
-			<div class="dt-pagination">
-				<span class="dt-page-info"></span>
-				<button class="dt-btn dt-btn-prev" disabled>&#8592; Previous</button>
-				<button class="dt-btn dt-btn-next" disabled>Next &#8594;</button>
-			</div>
-		</div>
-		<div class="tbl-scroll">
-			<table class="rfid-tbl">
-				<thead>
-					<tr>
-						<th>Student</th>
-						<th>RFID UID (emp_code)</th>
-						<th>Programme</th>
-						<th>Batch</th>
-						<th>Department</th>
-						<th class="tc">Total Swipes</th>
-						<th>Last Punch Time</th>
-					</tr>
-				</thead>
-				<tbody id="tbody-linked">
-					<tr><td colspan="7" class="tc muted" style="padding:32px">Loading…</td></tr>
-				</tbody>
-			</table>
-		</div>
-	</div>
+		${rf_toolbar(__("Search Student ID, name, card, programme…"))}
+	</section>
 
-	<!-- ══ TAB 3: Live Punch Feed ══ -->
-	<div class="r-panel" id="panel-feed">
-		<div class="feed-info">
-			<strong>What is the Live Punch Feed?</strong><br>
-			Every time a student swipes their RFID card at a classroom terminal,
-			the machine logs it in the SQL Server database (<code>dbo.iclock_trans_ajim</code>)
-			with the columns: <code>emp_code</code>, <code>punch_time</code>,
-			<code>terminal_alias</code>, <code>area_alias</code>.<br><br>
-			SLCM pulls those records every <strong>minute</strong> automatically in the background,
-			or immediately if you click <strong>Refresh Now</strong> above.
-			This page refreshes the display every <strong>30 seconds</strong> —
-			new rows appear at the <strong>top</strong>, highlighted briefly.
-			A student showing <em>Unknown</em> means that card is not yet assigned —
-			go to the <strong>Unassigned Cards</strong> tab to fix it.
-		</div>
-		<div class="dt-toolbar">
-			<input class="dt-search" type="search" placeholder="Search RFID UID, student, terminal, area…">
-			<div class="dt-pagination">
-				<span class="dt-page-info"></span>
-				<button class="dt-btn dt-btn-prev" disabled>&#8592; Previous</button>
-				<button class="dt-btn dt-btn-next" disabled>Next &#8594;</button>
+	<section class="rf-panel" id="panel-feed">
+		<div class="rf-panel-head">
+			<div>
+				<h2>${__("Latest swipes")}</h2>
+				<p>${__("The last {0} swipes from the readers (SQL Server dbo.iclock_trans_ajim). New swipes appear at the top and are highlighted.", [RF_FEED_MAX])}</p>
 			</div>
 		</div>
-		<div class="tbl-scroll">
-			<table class="rfid-tbl">
-				<thead>
-					<tr>
-						<th>RFID UID (emp_code)</th>
-						<th>Student</th>
-						<th class="tc">Terminal ID (terminal_id)</th>
-						<th>Terminal / Room (terminal_alias)</th>
-						<th>Area (area_alias)</th>
-						<th>Punch Time</th>
-						<th>Status</th>
-					</tr>
-				</thead>
-				<tbody id="tbody-feed">
-					<tr><td colspan="7" class="tc muted" style="padding:32px">Loading…</td></tr>
-				</tbody>
-			</table>
-		</div>
-		<div class="tbl-footer">
-			All records are in the Attendance Log doctype. Use the search box to filter.
-		</div>
-	</div>
-
+		${rf_toolbar(__("Search card, Student ID, student, room…"))}
+	</section>
 </div>`;
+}
+
+function rf_css() {
+	return `
+.rfid-wrap, .rf-dlg {
+	--rf-brand: #920C24; --rf-brand-dk: #6E091B; --rf-brand-50: #FBF1F3; --rf-brand-100: #F5DDE2;
+	--rf-ink: #1F1A1C; --rf-ink-2: #5C5457; --rf-ink-3: #8E8588;
+	--rf-surface: #FFFFFF; --rf-canvas: #F7F5F5; --rf-line: #ECE6E7; --rf-line-2: #F4F0F1;
+	--rf-ok: #1E7B4C; --rf-ok-bg: #E7F5EE; --rf-warn: #8A5A00; --rf-warn-bg: #FFF4DB;
+	--rf-info: #4B5563; --rf-info-bg: #F1F2F4; --rf-err: #B42318; --rf-err-bg: #FDECEA;
+	--rf-serif: "Merriweather", Georgia, "Times New Roman", serif;
+	--rf-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+[data-theme="dark"] .rfid-wrap, [data-theme="dark"] .rf-dlg {
+	--rf-brand: #E0566F; --rf-brand-dk: #F07A8F; --rf-brand-50: #2A1A1E; --rf-brand-100: #3A2228;
+	--rf-ink: #F2EDEE; --rf-ink-2: #C2B8BB; --rf-ink-3: #8E8588;
+	--rf-surface: #1E1B1C; --rf-canvas: #161314; --rf-line: #332C2E; --rf-line-2: #282223;
+	--rf-ok: #5CC995; --rf-ok-bg: #16291F; --rf-warn: #F2C063; --rf-warn-bg: #2E2614;
+	--rf-info: #B6BCC6; --rf-info-bg: #24272B; --rf-err: #F28B82; --rf-err-bg: #2E1A18;
+}
+.rfid-wrap { font-family: var(--rf-serif); color: var(--rf-ink); background: var(--rf-canvas);
+	padding: 28px 32px 48px; min-height: 100vh; font-size: 14px; line-height: 1.55; }
+.rfid-wrap button, .rfid-wrap input, .rf-dlg .modal-body button, .rf-dlg .modal-body input { font-family: inherit; }
+.rf-dlg .modal-content { font-family: var(--rf-serif); }
+.rf-dlg .modal-title { font-weight: 700; color: var(--rf-ink); }
+.rfid-wrap h1, .rfid-wrap h2 { font-family: var(--rf-serif); margin: 0; color: var(--rf-ink); }
+
+/* header */
+.rf-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; flex-wrap: wrap; margin-bottom: 24px; }
+.rf-eyebrow { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--rf-brand); font-weight: 700; margin-bottom: 6px; }
+.rf-title { font-size: 28px; font-weight: 800; letter-spacing: -.01em; line-height: 1.2; }
+.rf-sub { margin: 6px 0 0; color: var(--rf-ink-2); font-weight: 300; }
+.rf-head-side { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.rf-status { display: inline-flex; align-items: center; gap: 8px; padding: 7px 14px; border-radius: 999px;
+	background: var(--rf-surface); border: 1px solid var(--rf-line); font-size: 12.5px; color: var(--rf-ink-2); }
+.rf-status-text { font-weight: 700; color: var(--rf-ink); }
+.rf-status-sep { width: 1px; height: 14px; background: var(--rf-line); }
+.rf-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--rf-ok); box-shadow: 0 0 0 0 rgba(30,123,76,.5); animation: rf-pulse 2s infinite; }
+.rf-dot.sm { width: 7px; height: 7px; display: inline-block; vertical-align: middle; margin-right: 2px; }
+.rf-status.is-syncing .rf-dot { background: #D99A00; animation: rf-blink .9s infinite; }
+.rf-status.is-error .rf-dot { background: var(--rf-err); animation: none; }
+@keyframes rf-pulse { 0% { box-shadow: 0 0 0 0 rgba(30,123,76,.45); } 70% { box-shadow: 0 0 0 7px rgba(30,123,76,0); } 100% { box-shadow: 0 0 0 0 rgba(30,123,76,0); } }
+@keyframes rf-blink { 50% { opacity: .3; } }
+
+/* buttons */
+.rf-btn { display: inline-flex; align-items: center; gap: 7px; border-radius: 8px; padding: 8px 15px; font-size: 13px;
+	font-weight: 700; cursor: pointer; border: 1px solid transparent; transition: background .15s, border-color .15s, color .15s; white-space: nowrap; }
+.rf-btn:focus-visible, .rf-iconbtn:focus-visible, .rf-tab:focus-visible, .rf-pick-row:focus-visible { outline: 2px solid var(--rf-brand); outline-offset: 2px; }
+.rf-btn:disabled { opacity: .55; cursor: default; }
+.rf-btn-primary { background: var(--rf-brand); color: #fff; }
+.rf-btn-primary:hover:not(:disabled) { background: var(--rf-brand-dk); }
+.rf-btn-ghost { background: var(--rf-surface); color: var(--rf-brand); border-color: var(--rf-line); }
+.rf-btn-ghost:hover:not(:disabled) { border-color: var(--rf-brand); background: var(--rf-brand-50); }
+.rf-btn-sm { padding: 5px 11px; font-size: 12px; }
+.rf-btn.is-loading .fa-refresh { animation: rf-spin .8s linear infinite; }
+@keyframes rf-spin { to { transform: rotate(360deg); } }
+.rf-iconbtn { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--rf-line); background: var(--rf-surface);
+	color: var(--rf-ink-2); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.rf-iconbtn:hover:not(:disabled) { border-color: var(--rf-brand); color: var(--rf-brand); }
+.rf-iconbtn:disabled { opacity: .4; cursor: default; }
+.rf-textlink { color: var(--rf-brand); font-weight: 700; font-size: 12.5px; cursor: pointer; text-decoration: none; white-space: nowrap; }
+.rf-textlink:hover { text-decoration: underline; color: var(--rf-brand-dk); }
+
+/* banner */
+.rf-banner { display: flex; gap: 12px; align-items: flex-start; background: var(--rf-warn-bg); color: var(--rf-warn);
+	border-radius: 10px; padding: 12px 16px; margin-bottom: 20px; font-size: 13px; }
+.rf-banner .fa { margin-top: 3px; }
+.rf-banner .rf-textlink { color: var(--rf-warn); margin-left: 6px; }
+
+/* KPIs */
+.rf-kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 28px; }
+.rf-kpi-group { background: var(--rf-surface); border: 1px solid var(--rf-line); border-radius: 14px; padding: 18px 20px 16px; }
+.rf-kpi-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px;
+	font-size: 11px; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; color: var(--rf-ink-3); }
+.rf-kpi-head .rf-textlink { text-transform: none; letter-spacing: 0; font-size: 12px; }
+.rf-kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.rf-kpi b { display: block; font-size: 26px; font-weight: 800; line-height: 1.15; color: var(--rf-ink); font-variant-numeric: tabular-nums; }
+.rf-kpi span { font-size: 12.5px; color: var(--rf-ink-2); }
+.rf-kpi.alert b { color: var(--rf-brand); }
+.rf-meter { margin-top: 16px; }
+.rf-meter-bar { height: 6px; background: var(--rf-line-2); border-radius: 999px; overflow: hidden; }
+.rf-meter-fill { height: 100%; width: 0; background: var(--rf-brand); border-radius: 999px; transition: width .6s ease; }
+.rf-meter-foot { display: flex; justify-content: space-between; gap: 10px; margin-top: 7px; font-size: 12px; color: var(--rf-ink-3); }
+.rf-meter-foot b { color: var(--rf-ink-2); font-weight: 700; }
+
+/* tabs */
+.rf-tabs { display: inline-flex; gap: 4px; padding: 4px; background: var(--rf-surface); border: 1px solid var(--rf-line);
+	border-radius: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.rf-tab { border: 0; background: transparent; padding: 8px 16px; border-radius: 9px; font-size: 13px; font-weight: 700;
+	color: var(--rf-ink-2); cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: background .15s, color .15s; }
+.rf-tab:hover { color: var(--rf-brand); background: var(--rf-brand-50); }
+.rf-tab.active { background: var(--rf-brand); color: #fff; }
+.rf-count { font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: var(--rf-brand-100); color: var(--rf-brand); font-variant-numeric: tabular-nums; }
+.rf-tab.active .rf-count { background: rgba(255,255,255,.22); color: #fff; }
+
+/* panels */
+.rf-panel { display: none; background: var(--rf-surface); border: 1px solid var(--rf-line); border-radius: 14px; padding: 22px 22px 18px; }
+.rf-panel.active { display: block; }
+.rf-panel-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+.rf-panel-head h2 { font-size: 18px; font-weight: 800; }
+.rf-panel-head p { margin: 4px 0 0; color: var(--rf-ink-2); font-weight: 300; max-width: 640px; }
+.rf-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* toolbar */
+.rf-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.rf-searchbox { position: relative; flex: 1; max-width: 360px; min-width: 200px; margin: 0; }
+.rf-searchbox .fa { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--rf-ink-3); font-size: 12px; }
+.rf-search { width: 100%; padding: 8px 12px 8px 34px; border: 1px solid var(--rf-line); border-radius: 9px; font-size: 13px;
+	background: var(--rf-canvas); color: var(--rf-ink); outline: none; transition: border-color .15s, box-shadow .15s, background .15s; }
+.rf-search:focus { border-color: var(--rf-brand); background: var(--rf-surface); box-shadow: 0 0 0 3px var(--rf-brand-100); }
+.rf-pager { display: flex; align-items: center; gap: 6px; }
+.rf-page-info { font-size: 12.5px; color: var(--rf-ink-3); margin-right: 6px; font-variant-numeric: tabular-nums; }
+
+/* table */
+.rf-tablebox { border: 1px solid var(--rf-line); border-radius: 10px; overflow: auto; max-height: 560px; }
+.rf-tablebox-sm { max-height: 420px; }
+.rf-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; margin: 0; }
+.rf-table thead th { position: sticky; top: 0; z-index: 1; background: var(--rf-canvas); color: var(--rf-ink-3);
+	font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; text-align: left;
+	padding: 10px 14px; border-bottom: 1px solid var(--rf-line); white-space: nowrap; }
+.rf-table th.sortable { cursor: pointer; user-select: none; }
+.rf-table th.sortable:hover { color: var(--rf-brand); }
+.rf-table th.asc::after { content: "↑"; margin-left: 5px; color: var(--rf-brand); }
+.rf-table th.desc::after { content: "↓"; margin-left: 5px; color: var(--rf-brand); }
+.rf-table td { padding: 11px 14px; border-bottom: 1px solid var(--rf-line-2); vertical-align: middle; color: var(--rf-ink); }
+.rf-table tbody tr:last-child td { border-bottom: 0; }
+.rf-table tbody tr:hover td { background: var(--rf-brand-50); }
+.rf-table .num { text-align: right; }
+.rf-table .act { text-align: right; width: 1%; white-space: nowrap; }
+.rf-table tr.rf-empty td { text-align: center; padding: 40px 16px; color: var(--rf-ink-3); }
+.rf-table tr.rf-flash td { animation: rf-flash 3s ease-out; }
+@keyframes rf-flash { from { background: #FFE9A8; } to { background: transparent; } }
+
+/* inline bits */
+.rf-uid { font-family: var(--rf-mono); font-size: 12px; font-weight: 600; color: var(--rf-ink); background: var(--rf-line-2);
+	border: 1px solid var(--rf-line); padding: 2px 8px; border-radius: 6px; white-space: nowrap; }
+.rf-sid { font-family: var(--rf-mono); font-size: 12px; font-weight: 700; color: var(--rf-brand); background: var(--rf-brand-50);
+	border: 1px solid var(--rf-brand-100); padding: 2px 8px; border-radius: 6px; white-space: nowrap; }
+.rf-sid.none { color: var(--rf-ink-3); background: var(--rf-line-2); border-color: var(--rf-line); font-family: var(--rf-serif); font-weight: 400; }
+.rf-chip { font-size: 12px; font-weight: 700; color: var(--rf-ink-2); background: var(--rf-line-2); padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+.rf-num { font-variant-numeric: tabular-nums; font-weight: 700; }
+.rf-dim { color: var(--rf-ink-3); }
+.rf-link { color: var(--rf-ink); font-weight: 700; text-decoration: none; }
+.rf-link:hover { color: var(--rf-brand); text-decoration: underline; }
+.rf-when { display: inline-flex; flex-direction: column; line-height: 1.3; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.rf-when small { color: var(--rf-ink-3); font-size: 11.5px; }
+.rf-unknown { color: var(--rf-brand); font-weight: 700; font-size: 12.5px; }
+.rf-tag { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 2px 10px; border-radius: 999px; white-space: nowrap; }
+.rf-tag.ok { color: var(--rf-ok); background: var(--rf-ok-bg); }
+.rf-tag.warn { color: var(--rf-warn); background: var(--rf-warn-bg); }
+.rf-tag.info { color: var(--rf-info); background: var(--rf-info-bg); }
+.rf-tag.err { color: var(--rf-err); background: var(--rf-err-bg); }
+.rf-allgood { color: var(--rf-ok); font-weight: 700; }
+.rf-allgood .fa { display: block; font-size: 28px; margin-bottom: 8px; }
+
+/* assign dialog */
+.rf-card-hero { display: flex; align-items: center; gap: 16px; padding: 16px 18px; border-radius: 12px;
+	background: linear-gradient(135deg, #920C24, #5A0716); color: #fff; margin-bottom: 4px; }
+.rf-card-hero .rf-eyebrow { color: rgba(255,255,255,.75); margin-bottom: 2px; }
+.rf-card-chip { width: 44px; height: 44px; border-radius: 10px; background: rgba(255,255,255,.15); display: flex; align-items: center; justify-content: center; font-size: 20px; }
+.rf-card-uid { font-family: var(--rf-mono); font-size: 22px; font-weight: 700; letter-spacing: .02em; }
+.rf-pick { display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow: auto; padding: 2px; }
+.rf-pick-row { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 10px 12px; border-radius: 10px;
+	border: 1px solid var(--rf-line); background: var(--rf-surface); cursor: pointer; transition: border-color .15s, background .15s; }
+.rf-pick-row:hover { border-color: var(--rf-brand-100); background: var(--rf-brand-50); }
+.rf-pick-row.on { border-color: var(--rf-brand); background: var(--rf-brand-50); box-shadow: 0 0 0 2px var(--rf-brand-100); }
+.rf-pick-main { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.rf-pick-name { font-weight: 700; color: var(--rf-ink); }
+.rf-pick-meta { font-size: 12px; color: var(--rf-ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rf-pick-tick { color: var(--rf-brand); font-size: 18px; opacity: 0; transition: opacity .15s; }
+.rf-pick-row.on .rf-pick-tick { opacity: 1; }
+.rf-pick-empty { padding: 20px; text-align: center; color: var(--rf-ink-3); border: 1px dashed var(--rf-line); border-radius: 10px; }
+
+/* import dialog */
+.rf-steps { list-style: none; counter-reset: s; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 0; margin: 0 0 14px; }
+.rf-steps li { counter-increment: s; background: var(--rf-canvas); border: 1px solid var(--rf-line); border-radius: 10px; padding: 12px 14px 12px 46px; position: relative; font-size: 13px; }
+.rf-steps li::before { content: counter(s); position: absolute; left: 14px; top: 12px; width: 22px; height: 22px; border-radius: 50%;
+	background: var(--rf-brand); color: #fff; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.rf-steps b { display: block; color: var(--rf-ink); }
+.rf-steps span { color: var(--rf-ink-3); font-size: 12px; }
+.rf-cols { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; color: var(--rf-ink-2); margin-bottom: 6px; }
+.rf-cols-note { color: var(--rf-ink-3); font-size: 12px; }
+.rf-cols .rf-textlink { margin-left: auto; }
+.rf-sums { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+.rf-sum { border-radius: 10px; padding: 12px 14px; border: 1px solid var(--rf-line); }
+.rf-sum b { display: block; font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.rf-sum span { font-size: 12.5px; color: var(--rf-ink-2); }
+.rf-sum.ok b { color: var(--rf-ok); } .rf-sum.err b { color: var(--rf-err); } .rf-sum.info b { color: var(--rf-info); }
+.rf-note { color: var(--rf-ink-2); font-size: 12.5px; }
+
+@media (max-width: 1100px) { .rf-kpis { grid-template-columns: 1fr; } }
+@media (max-width: 720px) {
+	.rfid-wrap { padding: 18px 14px 32px; }
+	.rf-title { font-size: 22px; }
+	.rf-kpi b { font-size: 21px; }
+	.rf-steps, .rf-sums { grid-template-columns: 1fr; }
+	.rf-searchbox { max-width: none; }
+}`;
 }

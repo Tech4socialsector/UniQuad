@@ -550,15 +550,20 @@ def get_context(context):
         # Payer details for Razorpay prefill (parent pays on behalf of ward)
         try:
             parent_user = frappe.session.user
+            # The parent's row on this ward's Student Master (Parent Details table)
             parent_doc = frappe.db.get_value(
-                "Parent Guardian",
-                {"email": parent_user},
-                ["full_name", "email", "mobile_number"],
+                "Student Parent",
+                {"parent": student_name, "parenttype": "Student Master", "email": parent_user},
+                ["first_name", "email", "phone"],
                 as_dict=True,
             ) or {}
-            context.payer_name  = parent_doc.get("full_name") or parent_user
+            context.payer_name  = (
+                parent_doc.get("first_name")
+                or frappe.db.get_value("User", parent_user, "full_name")
+                or parent_user
+            )
             context.payer_email = parent_doc.get("email") or parent_user
-            context.payer_phone = parent_doc.get("mobile_number") or ""
+            context.payer_phone = parent_doc.get("phone") or ""
         except Exception:
             context.payer_name  = ""
             context.payer_email = frappe.session.user
@@ -566,7 +571,7 @@ def get_context(context):
 
         context.ward_student_name = student_name
         context.ward_enrolment_no = (
-            getattr(sm, "enrolment_number", "") or getattr(sm, "student_id", "") or sm.name
+            sm.get("registration_id") or sm.name
         )
 
         _build_view_model(context, errors)
@@ -686,7 +691,7 @@ def _build_view_model(context, errors):
         frappe.utils.getdate(r.due_date) if r.due_date else today,
     ))
     context.summary_rows = rows
-    from slcm.slcm.fee.portal_charges import charge_cards, charge_rows, demand_type_cards
+    from slcm.slcm.fee.portal_charges import charge_cards, charge_rows, demand_type_cards, has_outstanding_dues
 
     context.demand_type_cards = demand_type_cards(context.fee_demands)
     # One list of every charge (paid ones too) and the Overall / Academic / Non Academic cards
@@ -697,6 +702,7 @@ def _build_view_model(context, errors):
         context.charge_rows = []
         errors["demands"] = True
     context.charge_cards = charge_cards(context.charge_rows)
+    context.has_any_dues = has_outstanding_dues(context, errors)
     context.outstanding_rows = [r for r in rows if not r.get("is_paid")]
     context.outstanding_overdue_count = sum(1 for r in context.outstanding_rows if r.is_overdue)
     context.outstanding_pending_count = len(context.outstanding_rows) - context.outstanding_overdue_count
@@ -784,6 +790,7 @@ def _set_defaults(context):
     context.total_payable           = 0.0
     context.total_outstanding       = 0.0
     context.has_dues                = False
+    context.has_any_dues            = False
     context.sm_fee_status           = ""
     context.fee_structure_name      = ""
     context.fee_structure_doc_name  = ""
