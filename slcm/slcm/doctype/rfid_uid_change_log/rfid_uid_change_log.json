@@ -1,0 +1,155 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "creation": "2026-11-11 12:00:00.000000",
+ "custom": 0,
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "student",
+  "student_id",
+  "student_name",
+  "change_type",
+  "column_break_a",
+  "old_rfid_uid",
+  "new_rfid_uid",
+  "changed_by",
+  "changed_on",
+  "section_b",
+  "source",
+  "message"
+ ],
+ "fields": [
+  {
+   "default": "RUCL-.YYYY.-.#####",
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "label": "Series",
+   "options": "RUCL-.YYYY.-.#####",
+   "read_only": 1
+  },
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Student",
+   "options": "Student Master",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "student_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Student ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "student_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Student Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "change_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Change",
+   "options": "Assigned\nChanged\nRemoved",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_a",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "old_rfid_uid",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "From RFID UID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "new_rfid_uid",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "To RFID UID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "changed_by",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Changed By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "changed_on",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Changed On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_b",
+   "fieldtype": "Section Break"
+  },
+  {
+   "description": "Screen or process that made the change",
+   "fieldname": "source",
+   "fieldtype": "Data",
+   "in_standard_filter": 1,
+   "label": "Changed From",
+   "read_only": 1
+  },
+  {
+   "fieldname": "message",
+   "fieldtype": "Small Text",
+   "label": "Message",
+   "read_only": 1
+  }
+ ],
+ "in_create": 1,
+ "links": [],
+ "modified": "2026-11-11 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "SLCM",
+ "name": "RFID UID Change Log",
+ "naming_rule": "By \"naming_series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "delete": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager"
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "AAD"
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "AAD Staff"
+  }
+ ],
+ "show_title_field_in_link": 0,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "student_name"
+}

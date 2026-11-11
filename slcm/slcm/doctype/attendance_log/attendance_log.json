@@ -4,6 +4,7 @@
  "allow_rename": 1,
  "autoname": "LOG-.YYYY.-.#####",
  "creation": "2025-12-30 13:24:56.562719",
+ "custom": 0,
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
@@ -36,7 +37,8 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "RFID UID",
-   "reqd": 1
+   "reqd": 1,
+   "search_index": 1
   },
   {
    "fieldname": "student",
@@ -44,7 +46,8 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Student",
-   "options": "Student Master"
+   "options": "Student Master",
+   "search_index": 1
   },
   {
    "description": "Denormalized from the student's active Student Enrollment at the time this log was created/synced — used to filter the Attendance Sync UI without a join.",
@@ -256,6 +259,5 @@
  "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": [],
- "custom": 0
+ "states": []
 }

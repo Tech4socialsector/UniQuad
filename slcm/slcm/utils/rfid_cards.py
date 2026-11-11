@@ -7,6 +7,11 @@ Student Master.rfid_uid is the card attendance matching reads (poller, RFID
 processor). Student RFID Card is the history of every card a student has had:
 one Active card at most, older ones Replaced / Lost / Blocked / Damaged.
 
+Every change of Student Master.rfid_uid goes through set_student_uid() (or is
+logged by on_student_master_update for form edits) and is recorded in
+"RFID UID Change Log": who, when, from -> to, and which screen did it.
+Callers name the screen with `with change_source("..."):`.
+
 Every path keeps the two in step:
   * Student RFID Card saved        -> StudentRFIDCard.on_update -> sync_student_master()
   * RFID Card Management link/bulk -> assign_card()
@@ -14,11 +19,64 @@ Every path keeps the two in step:
   * Student Master rfid_uid edited -> on_student_master_validate() / _update() (doc_events)
 """
 
+from contextlib import contextmanager
+
 import frappe
 from frappe import _
-from frappe.utils import today
+from frappe.utils import now_datetime, today
 
 INACTIVE_STATUSES = ("Blocked", "Lost", "Damaged", "Replaced")
+
+
+@contextmanager
+def change_source(label):
+	"""Name the screen/process making RFID changes, for the change log. The outermost caller wins."""
+	prev = frappe.flags.get("rfid_change_source")
+	frappe.flags.rfid_change_source = prev or label
+	try:
+		yield
+	finally:
+		frappe.flags.rfid_change_source = prev
+
+
+def log_uid_change(student, old_uid, new_uid, source=None, message=None):
+	"""Record one change of a student's RFID UID. Never blocks the change itself."""
+	old_uid = (old_uid or "").strip()
+	new_uid = (new_uid or "").strip()
+	if old_uid == new_uid or not frappe.db.table_exists("RFID UID Change Log"):
+		return
+	sm = frappe.db.get_value("Student Master", student, ["registration_id", "first_name"], as_dict=True) or {}
+	change_type = "Assigned" if not old_uid else "Removed" if not new_uid else "Changed"
+	source = frappe.flags.get("rfid_change_source") or source or _("System")
+	if not message:
+		message = {
+			"Assigned": _("Card {0} assigned"),
+			"Removed": _("Card {0} removed"),
+			"Changed": _("Card changed from {0} to {1}"),
+		}[change_type].format(old_uid or new_uid, new_uid)
+	frappe.get_doc({
+		"doctype": "RFID UID Change Log",
+		"student": student,
+		"student_id": sm.get("registration_id"),
+		"student_name": sm.get("first_name"),
+		"change_type": change_type,
+		"old_rfid_uid": old_uid or None,
+		"new_rfid_uid": new_uid or None,
+		"changed_by": frappe.session.user,
+		"changed_on": now_datetime(),
+		"source": source,
+		"message": message,
+	}).insert(ignore_permissions=True)
+
+
+def set_student_uid(student, new_uid, source=None):
+	"""Write Student Master.rfid_uid and log the change."""
+	new_uid = (new_uid or "").strip() or None
+	old_uid = frappe.db.get_value("Student Master", student, "rfid_uid")
+	if (old_uid or None) == new_uid:
+		return
+	frappe.db.set_value("Student Master", student, "rfid_uid", new_uid)
+	log_uid_change(student, old_uid, new_uid, source)
 
 
 def _card_by_uid(rfid_uid):
@@ -60,11 +118,11 @@ def sync_student_master(card):
 			old.save(ignore_permissions=True)
 
 		if current != card.rfid_uid:
-			frappe.db.set_value("Student Master", card.student, "rfid_uid", card.rfid_uid)
+			set_student_uid(card.student, card.rfid_uid, _("Student RFID Card"))
 		backfill_logs(card.student, card.rfid_uid)
 
 	elif current == card.rfid_uid:
-		frappe.db.set_value("Student Master", card.student, "rfid_uid", None)
+		set_student_uid(card.student, None, _("Student RFID Card ({0})").format(card.card_status))
 
 
 def check_assignable(student, rfid_uid):
@@ -132,7 +190,7 @@ def remove_wrong_assignment(student):
 	card = frappe.db.get_value("Student RFID Card", {"rfid_uid": old_uid, "student": student}, "name")
 	if card:
 		frappe.delete_doc("Student RFID Card", card, ignore_permissions=True, force=True)
-	frappe.db.set_value("Student Master", student, "rfid_uid", None)
+	set_student_uid(student, None, _("Wrong card removed"))
 	frappe.db.sql(
 		"UPDATE `tabAttendance Log` SET student = NULL WHERE student = %s AND rfid_uid = %s", (student, old_uid)
 	)
@@ -158,6 +216,7 @@ def on_student_master_update(doc, method=None):
 	before = doc.get_doc_before_save()
 	old_uid = (before.rfid_uid or "").strip() if before else ""
 	new_uid = (doc.rfid_uid or "").strip()
+	log_uid_change(doc.name, old_uid, new_uid, _("Student Master form"))
 
 	if new_uid:
 		assign_card(doc.name, new_uid, _("Set on Student Master"))

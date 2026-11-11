@@ -1,6 +1,7 @@
 {
  "actions": [],
  "creation": "2026-07-06 00:00:00.000000",
+ "custom": 0,
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
@@ -52,7 +53,17 @@
   "remote_site_url",
   "column_break_remote",
   "remote_api_key",
-  "remote_api_secret"
+  "remote_api_secret",
+  "tab_student_map",
+  "student_map_note",
+  "map_source_table",
+  "map_code_column",
+  "map_name_columns",
+  "column_break_map",
+  "map_student_field",
+  "map_ignore_case",
+  "map_include_name_mismatch",
+  "map_last_run"
  ],
  "fields": [
   {
@@ -353,11 +364,74 @@
    "fieldname": "remote_api_secret",
    "fieldtype": "Password",
    "label": "Remote API Secret"
+  },
+  {
+   "fieldname": "tab_student_map",
+   "fieldtype": "Tab Break",
+   "label": "Student Map"
+  },
+  {
+   "fieldname": "student_map_note",
+   "fieldtype": "HTML",
+   "label": "Student Map Note",
+   "options": "<div style=\"background:#f9f0f0;border-left:4px solid #920C24;border-radius:6px;padding:12px 16px;line-height:1.6\"><b>Student Map</b> reads every card code and name from the device database (etpdb) and links the card to the Student Master record whose field below has the same value (by default the Student ID).<br>Nothing is hard-coded: if the device software is upgraded or the table changes, use <b>Find Name Columns</b> to pick the new table/columns, then <b>Student Map</b> to preview before anything is saved.</div>"
+  },
+  {
+   "default": "personnel_employee",
+   "description": "Table or view in the device database that holds one row per person (e.g. personnel_employee or dbo.personnel_employee).",
+   "fieldname": "map_source_table",
+   "fieldtype": "Data",
+   "label": "Names Table / View"
+  },
+  {
+   "default": "emp_code",
+   "description": "Column with the code the card sends to the reader (same value as emp_code in swipes).",
+   "fieldname": "map_code_column",
+   "fieldtype": "Data",
+   "label": "Card Code Column"
+  },
+  {
+   "default": "first_name,last_name",
+   "description": "One or more columns, comma separated. They are joined with a space to make the name.",
+   "fieldname": "map_name_columns",
+   "fieldtype": "Data",
+   "label": "Name Column(s)"
+  },
+  {
+   "fieldname": "column_break_map",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "registration_id",
+   "description": "Field name in Student Master that equals the card code. registration_id = Student ID.",
+   "fieldname": "map_student_field",
+   "fieldtype": "Data",
+   "label": "Match To Student Master Field"
+  },
+  {
+   "default": "1",
+   "fieldname": "map_ignore_case",
+   "fieldtype": "Check",
+   "label": "Ignore Case And Spaces When Matching"
+  },
+  {
+   "default": "0",
+   "description": "Off: rows whose device name does not look like the Student Master name are held back for review.",
+   "fieldname": "map_include_name_mismatch",
+   "fieldtype": "Check",
+   "label": "Map Even When Names Differ"
+  },
+  {
+   "fieldname": "map_last_run",
+   "fieldtype": "Link",
+   "label": "Last Student Map Run",
+   "options": "RFID Student Map Log",
+   "read_only": 1
   }
  ],
  "issingle": 1,
  "links": [],
- "modified": "2026-07-06 00:00:00.000000",
+ "modified": "2026-11-11 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "RFID SQL Agent Settings",
@@ -379,6 +453,5 @@
  ],
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": [],
- "custom": 0
+ "states": []
 }
