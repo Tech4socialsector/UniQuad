@@ -6,6 +6,7 @@
  "field_order": [
   "portal_settings_tab",
   "portal_title",
+  "title_suffix",
   "portal_subtitle",
   "branding_section",
   "primary_color",
@@ -123,6 +124,13 @@
    "in_list_view": 1,
    "label": "Portal title",
    "reqd": 1
+  },
+  {
+   "default": "NLSAT",
+   "description": "Brand name shown after the Portal title in the browser tab and in Google search results, on the NLSAT home pages only (Indian Nationals: /nlsatadmissions, International: /nlsat-international). Format: Portal title — Title Suffix. Example: National Law School of India University — NLSAT. Other pages (My Profile, Helpdesk, My Applications, etc.) show only their own page name. Keep it short and public-facing. If left blank, NLSAT is used. Google shows the new title only after it re-crawls the site, which can take a few days.",
+   "fieldname": "title_suffix",
+   "fieldtype": "Data",
+   "label": "Title Suffix (Browser Tab / Google)"
   },
   {
    "fieldname": "portal_subtitle",
@@ -756,7 +764,7 @@
  "issingle": 1,
  "links": [],
  "make_attachments_public": 1,
- "modified": "2026-11-04 16:00:00.000000",
+ "modified": "2026-11-06 13:00:00.000000",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Applicant Portal Config",

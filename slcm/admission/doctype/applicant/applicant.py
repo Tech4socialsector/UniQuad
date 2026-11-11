@@ -1,3 +1,4 @@
+import hashlib
 import json
 import re
 import traceback
@@ -7,8 +8,8 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from slcm.admission.utils.nlsat_portal import get_applicant_login_link, get_applicant_portal_url
-from frappe.model.naming import getseries, parse_naming_series
-from frappe.utils import validate_email_address, getdate, date_diff, today, now, flt, nowdate, cint, cstr, strip_html
+from frappe.model.naming import getseries
+from frappe.utils import validate_email_address, getdate, now, flt, nowdate, cint, cstr, strip_html
 from slcm.admission.portal_application_web_form import (
 	applicant_portal_application_locked,
 )
@@ -86,66 +87,94 @@ SUBMISSION_ENTRY_STATUSES = frozenset(
 )
 
 
-APPLICATION_ID_SERIES = "Applicant Application Number"
-APPLICATION_ID_SERIES_PATTERN = re.compile(r"\{(#+)\}")
+# Application ID = programme code + fixed part of Digit Count + zero-padded running number
+# (Admission Cycle → Application Naming). One counter per Admission Cycle, shared by every
+# programme and by domestic and international applicants: B700001, A700002, F700003, …
+APPLICATION_ID_SERIES_PREFIX = "Applicant Application ID::"
+_SERIES_NAME_MAX_LENGTH = 100  # tabSeries.name is varchar(100)
 
 
-def _render_application_id(application_id_format, applicant):
-    """Render a Frappe format string with an Applicant-wide running number."""
-    format_value = application_id_format.removeprefix("format:")
-    series_found = False
+def application_id_series_key(admission_cycle):
+    """tabSeries key holding the running number for one Admission Cycle."""
+    key = APPLICATION_ID_SERIES_PREFIX + admission_cycle
+    if len(key) > _SERIES_NAME_MAX_LENGTH:
+        key = APPLICATION_ID_SERIES_PREFIX + hashlib.md5(admission_cycle.encode("utf-8")).hexdigest()
+    return key
 
-    def replace_parameter(match):
-        nonlocal series_found
-        parameter = match.group(1)
-        if set(parameter) == {"#"}:
-            if series_found:
-                return ""
-            series_found = True
-            return getseries(APPLICATION_ID_SERIES, len(parameter))
-        return parse_naming_series([parameter], doc=applicant)
 
-    return APPLICATION_ID_SERIES_PATTERN.sub(replace_parameter, format_value)
+def get_active_admission_cycle():
+    """The Active (not cancelled) Admission Cycle; only one may be Active at a time."""
+    return frappe.db.get_value(
+        "Admission Cycle",
+        {"status": "Active", "docstatus": ["!=", 2]},
+        "name",
+        order_by="modified desc",
+    )
+
+
+def get_application_id_settings(admission_cycle, program, foriegn_national=None):
+    """
+    (prefix, digit_count) for this programme in the cycle — prefix = programme code + the fixed
+    part of Digit Count (B + 7##### → ("B7", 5) → B700001) — or None when the cycle has no
+    Digit Count / the programme has no code (the Applicant then keeps the default naming).
+    """
+    if not admission_cycle or not program:
+        return None
+
+    # Imported here: admission_cycle.py imports nothing from this module, but keep it lazy anyway.
+    from slcm.admission.doctype.admission_cycle.admission_cycle import parse_application_id_number_format
+
+    number_format = parse_application_id_number_format(
+        frappe.db.get_value("Admission Cycle", admission_cycle, "application_id_digits")
+    )
+    if not number_format:
+        return None
+    fixed, digits = number_format
+
+    row = frappe.db.get_value(
+        "Application ID Configuration",
+        {"parent": admission_cycle, "parenttype": "Admission Cycle", "programme": program},
+        ["domestic_application_id_format", "international_application_id_format"],
+        as_dict=True,
+    )
+    if not row:
+        return None
+
+    domestic_code = (row.domestic_application_id_format or "").strip()
+    international_code = (row.international_application_id_format or "").strip()
+    is_foreign = (foriegn_national or "").strip() == "Yes"
+    code = (international_code or domestic_code) if is_foreign else domestic_code
+    if not code:
+        return None
+    return code.upper() + fixed, digits
+
+
+def next_application_id(admission_cycle, code, digits):
+    """Take the next number of the cycle's series; skip numbers whose ID already exists."""
+    key = application_id_series_key(admission_cycle)
+    for _attempt in range(1000):
+        application_id = f"{code}{getseries(key, digits)}"
+        if not frappe.db.exists("Applicant", application_id):
+            return application_id
+    frappe.throw(_("Could not generate a free Application ID for Admission Cycle {0}.").format(admission_cycle))
 
 
 class Applicant(Document):
 
     def autoname(self):
-        application_number = self._get_configured_application_number()
-        if application_number:
-            self.name = application_number
-            self.applicant_id = application_number
+        """Name = configured Application ID (see Admission Cycle → Application Naming).
+        Without a configuration Frappe falls back to the DocType's autoname (APP-YYYY-#####)."""
+        admission_cycle = self.admission_cycle or get_active_admission_cycle()
+        settings = get_application_id_settings(admission_cycle, self.program, self.foriegn_national)
+        if not settings:
+            return
 
-    def _get_configured_application_number(self):
-        application_id_format = self._get_application_id_format()
-        if not application_id_format:
-            return None
-
-        return _render_application_id(application_id_format, self)
-
-    def _get_application_id_format(self):
-        if not self.admission_cycle or not self.program:
-            return None
-
-        configuration = frappe.db.get_value(
-            "Application ID Configuration",
-            {
-                "parent": self.admission_cycle,
-                "parenttype": "Admission Cycle",
-                "programme": self.program,
-            },
-            ["domestic_application_id_format", "international_application_id_format"],
-            as_dict=True,
-        )
-        if not configuration:
-            return None
-
-        fieldname = (
-            "international_application_id_format"
-            if (self.foriegn_national or "").strip() == "Yes"
-            else "domestic_application_id_format"
-        )
-        return (configuration.get(fieldname) or "").strip() or None
+        code, digits = settings
+        if not self.admission_cycle:
+            self.admission_cycle = admission_cycle
+        application_id = next_application_id(admission_cycle, code, digits)
+        self.name = application_id
+        self.applicant_id = application_id
 
     # ──────────────────────────────────────────────
     # VALIDATE
@@ -194,7 +223,11 @@ class Applicant(Document):
         set_intake_type(self)
         set_admission_details(self)
         self._validate_nationality_matches_foreign_national()
-        self._validate_education_percentage_bounds()
+        self._validate_education_percentage_bounds(
+            on_submit=self.status in ("Submitted", "Submitted and Paid")
+            and (self.is_new() or self.has_value_changed("status"))
+        )
+        self._validate_single_karnataka_reservation()
 
         if self.status in ("Submitted", "Submitted and Paid") and self.has_value_changed("status"):
             self._validate_application_limit_before_submit()
@@ -277,28 +310,65 @@ class Applicant(Document):
                 title="Invalid Email"
             )
 
-    def validate_age(self):
-        if self.date_of_birth:
-            age = date_diff(today(), self.date_of_birth) / 365
-            if age < 17:
-                frappe.throw(
-                    "Applicant must be at least 17 years old.",
-                    title="Age Restriction"
-                )
+    KARNATAKA_RESERVATION_FIELDS = (
+        "ka_study_7yrs",
+        "ka_defence_child",
+        "ka_govt_child",
+        "ka_ais_child",
+        "ka_capf_child",
+    )
 
-    def _validate_education_percentage_bounds(self):
-        """Class X % and HSC % use 0–100 scale (CGPA uses separate fields)."""
-        for fieldname, label in (
-            ("class_x_percentage", _("Class X percentage")),
-            ("hsc_percentage", _("HSC / Class XII percentage")),
+    def _validate_single_karnataka_reservation(self):
+        """Only one "Which of the following applies to you" option may be ticked.
+        Checked only when one of these boxes changes, so older records are not blocked."""
+        fields = self.KARNATAKA_RESERVATION_FIELDS
+        if not self.is_new() and not any(self.has_value_changed(f) for f in fields):
+            return
+        ticked = [f for f in fields if cint(self.get(f))]
+        if len(ticked) > 1:
+            labels = ", ".join(_(self.meta.get_label(f)) for f in ticked)
+            frappe.throw(
+                _("Please select only one option under 'Which of the following applies to you'. Selected: {0}").format(labels),
+                title=_("Karnataka Reservation"),
+            )
+
+    def _validate_education_percentage_bounds(self, on_submit=False):
+        """
+        Percentage-or-CGPA scores (Class X, Class XII, UG rows, PG rows): above 0, at most 100,
+        or at most the maximum CGPA when one is entered. No minimum mark here: whether a score is
+        high enough is decided by the eligibility rules.
+        0 means "not entered" while drafting; on submit a required score of 0 is rejected.
+        """
+        # (doc, score field, maximum-CGPA field, label, required on submit)
+        checks = [
+            (self, "class_x_percentage", "class_x_cgpa", _("Class X percentage / CGPA"), True),
+            (self, "hsc_percentage", "if_cgpa_maximum_cgpa_class_xii", _("Class XII percentage / CGPA"),
+             (self.get("class_xii_status") or "") == "Completed"),
+        ]
+        for table, score_field, max_field, label in (
+            ("ug_degree_details", "ug_cgpa", "if_ug_cgpa", _("UG degree percentage / CGPA")),
+            ("pg_degree_details", "pg_cgpa", "if_pg_cgpa", _("PG degree percentage / CGPA")),
         ):
-            val = getattr(self, fieldname, None)
-            if val is None:
+            for row in self.get(table) or []:
+                checks.append((row, score_field, max_field, _("{0} (row {1})").format(label, row.idx), True))
+
+        for doc, score_field, max_field, label, required in checks:
+            score = flt(doc.get(score_field))
+            max_cgpa = flt(doc.get(max_field))
+            if score == 0:
+                if on_submit and required:
+                    frappe.throw(_("{0} must be greater than 0.").format(label), title=_("Invalid value"))
                 continue
-            v = flt(val)
-            if v < 0 or v > 100:
+            if score < 0:
+                frappe.throw(_("{0} must be greater than 0.").format(label), title=_("Invalid value"))
+            if max_cgpa > 0 and score > max_cgpa:
                 frappe.throw(
-                    _("{0} must be between 0 and 100.").format(label),
+                    _("{0} cannot be greater than the maximum CGPA ({1}).").format(label, max_cgpa),
+                    title=_("Invalid value"),
+                )
+            if max_cgpa <= 0 and score > 100:
+                frappe.throw(
+                    _("{0} cannot be greater than 100. If this is a CGPA, enter the maximum CGPA.").format(label),
                     title=_("Invalid value"),
                 )
 

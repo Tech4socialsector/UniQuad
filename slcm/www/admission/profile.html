@@ -50,7 +50,7 @@ else 'Admissions Open') %}
   _completion_fields=[_pmobile, _pdob, _pgender, _paddr] %} {% set
   _filled_count=namespace(v=0) %} {% for f in _completion_fields %}{% if f %}{% set _filled_count.v=_filled_count.v + 1
   %}{% endif %}{% endfor %} {% set _completion_pct=((_filled_count.v / 4) * 100) | round | int %} {# Documents #} {% set
-  _docs=app_documents or [] %} {% block title %}My Profile — Admissions{% endblock %}
+  _docs=app_documents or [] %} {% block title %}My Profile{% endblock %}
 
 {% block adm_container_extra_class %}portal-layout-container{% endblock %}
 

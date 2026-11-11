@@ -557,6 +557,8 @@ def get_portal_config():
         sizes = resolve_sizes(config)
         return {
             "portal_title": config.portal_title or "Admissions",
+            # NLSAT landing-page tab / search-result suffix ("<portal title> — <suffix>"), see admission_base.html
+            "title_suffix": (config.get("title_suffix") or "").strip() or "NLSAT",
             "portal_subtitle": config.portal_subtitle or "",
             "hero_image": config.hero_image or "",
             # Colours
@@ -624,6 +626,7 @@ def get_portal_config():
         # DocType not yet configured — return safe defaults
         return {
             "portal_title": "Admissions",
+            "title_suffix": "NLSAT",
             "portal_subtitle": "",
             "hero_image": "",
             # Colours
@@ -845,6 +848,14 @@ def api_get_all_program_statuses(cycle):
     
     return {a.program: a.status for a in apps}
 
+def _external_url(url):
+    """Typed-in website link: add https:// when the scheme is missing ("www.nls.ac.in/x")."""
+    url = (url or "").strip()
+    if not url or url.startswith(("http://", "https://", "/")):
+        return url
+    return "https://" + url
+
+
 @frappe.whitelist(allow_guest=True)
 def get_active_programs():
     """
@@ -888,11 +899,13 @@ def get_active_programs():
                     p["campus_label"] = p.get("campus")
             # Fetch slug, abbreviation, and other details from Program
             prog_info = frappe.db.get_value("Programme", p.program,
-                ["program_slug", "program_code", "program_duration", "program_image", "program_description", "brochure_file", "level_of_study", "application_form_link", "international_application_form_link"],
+                ["program_slug", "program_code", "program_duration", "program_image", "program_description", "brochure_file", "level_of_study", "application_form_link", "international_application_form_link", "programme_url"],
                 as_dict=True
             )
             if prog_info:
                 prog_info = frappe._dict(prog_info)
+                # Programme card "View more" link: this URL first, Admission Website URL as fallback
+                p["programme_url"] = _external_url(prog_info.programme_url)
                 p["program_slug"] = prog_info.program_slug or _re.sub(r'[^a-z0-9]+', '-', (p.program or "").lower()).strip('-')
                 p["program_abbreviation"] = prog_info.program_code
                 p["duration"] = f"{prog_info.program_duration} Years" if prog_info.program_duration else ""
@@ -910,6 +923,7 @@ def get_active_programs():
                 p["brochure_file"] = ""
                 p["application_form_link"] = ""
                 p["international_application_form_link"] = ""
+                p["programme_url"] = ""
 
             p["description"] = p.get("desciption") or ""
             

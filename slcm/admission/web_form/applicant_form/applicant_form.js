@@ -3492,17 +3492,28 @@ var SLCM_APPLICANT_YEAR_4_FIELDS = {
 	class_xii_year_of_completion: 1,
 	year_of_completion: 1,
 };
-var SLCM_APPLICANT_MAX10_P2_FIELDS = {
+/** "If CGPA, maximum CGPA" fields — optional; no upper limit, not negative, at most 2 decimals. */
+var SLCM_APPLICANT_MAX_CGPA_FIELDS = {
 	class_x_cgpa: 1,
 	if_cgpa_maximum_cgpa_class_xii: 1,
-	ug_cgpa: 1,
-	pg_cgpa: 1,
+	if_ug_cgpa: 1,
+	if_pg_cgpa: 1,
 };
 
-/** Percentage fields (0–100, 2 decimal places) — not CGPA-on-10 scale. */
+/**
+ * "Percentage or CGPA" score fields → their "maximum CGPA" field (same doc, or same child row).
+ * Basic check only: above 0, at most 100 — or at most the maximum CGPA when one is entered.
+ * No minimum mark: whether a score is high enough is decided by the eligibility rules.
+ */
+var SLCM_APPLICANT_SCORE_MAX_FIELD = {
+	class_x_percentage: 'class_x_cgpa',
+	hsc_percentage: 'if_cgpa_maximum_cgpa_class_xii',
+	ug_cgpa: 'if_ug_cgpa',
+	pg_cgpa: 'if_pg_cgpa',
+};
+
+/** Plain percentage fields (0–100, 2 decimal places). */
 var SLCM_APPLICANT_MAX100_P2_FIELDS = {
-	class_x_percentage: 1,
-	hsc_percentage: 1,
 	/** National test “Score or percentage” — percentage or normalized score up to 100. */
 	percentage: 1,
 };
@@ -3512,9 +3523,47 @@ function _slcmApplicantFormatRuleField(fieldname) {
 	if (fieldname === SLCM_APPLICANT_PINCODE_FIELD) return true;
 	return !!(
 		SLCM_APPLICANT_YEAR_4_FIELDS[fieldname] ||
-		SLCM_APPLICANT_MAX10_P2_FIELDS[fieldname] ||
-		SLCM_APPLICANT_MAX100_P2_FIELDS[fieldname]
+		SLCM_APPLICANT_MAX_CGPA_FIELDS[fieldname] ||
+		SLCM_APPLICANT_MAX100_P2_FIELDS[fieldname] ||
+		SLCM_APPLICANT_SCORE_MAX_FIELD[fieldname]
 	);
+}
+
+/**
+ * Maximum CGPA paired with a score control: read from the same child row (open row form or
+ * row data) for UG / PG, or from the form for Class X / XII. Empty / 0 = a percentage.
+ */
+function _slcmScoreMaxForControl(wf, $w, fieldname) {
+	var maxFn = SLCM_APPLICANT_SCORE_MAX_FIELD[fieldname];
+	if (!maxFn || !wf) return null;
+	var $row = $w.closest('.grid-row');
+	if (!$row.length) return wf.get_value(maxFn);
+
+	var $max = $row.find('.frappe-control[data-fieldname="' + maxFn + '"] input:visible').first();
+	if ($max.length) return $max.val();
+	var tbl = $row.parents('.frappe-control[data-fieldtype="Table"]').first().attr('data-fieldname');
+	var name = $row.attr('data-name');
+	var rows = (tbl && wf.get_value(tbl)) || [];
+	for (var i = 0; i < rows.length; i++) {
+		if (rows[i] && rows[i].name === name) return rows[i][maxFn];
+	}
+	return null;
+}
+
+/** On leaving a score field: tell the applicant straight away if the value is out of range. */
+function _slcmCheckScoreOnBlur(input, fieldname) {
+	var wf = window.frappe && frappe.web_form;
+	var $w = $(input).closest('.frappe-control');
+	var raw = String(input.value || '').trim();
+	var $err = $w.find('.form-control, .input-with-feedback');
+	if (raw === '') {
+		$err.removeClass('slcm-field-error');
+		return;
+	}
+	var label = ($w.find('label.control-label').first().text() || fieldname).trim();
+	var err = _slcmApplicantFormatError(fieldname, raw, label, _slcmScoreMaxForControl(wf, $w, fieldname), true);
+	$err.toggleClass('slcm-field-error', !!err);
+	if (err) frappe.show_alert({ message: err, indicator: 'orange' }, 6);
 }
 
 function _slcmApplicantControlFieldname(el) {
@@ -3536,13 +3585,40 @@ function _slcmClampDecimalInputEl(input, maxVal, precision) {
 
 /**
  * Server-style format check. @param rawVal string or number from control / get_value.
+ * @param maxCgpa  score fields only: the paired "maximum CGPA" value (empty / 0 = percentage).
+ * @param zeroIsError  score fields only: report 0 (on blur). In the page / row checks a 0 score
+ *                     is left to the required-field check, which already reports it as not filled.
  * @returns {string|null} user-facing error line or null if OK / not applicable / empty.
  */
-function _slcmApplicantFormatError(fieldname, rawVal, label) {
+function _slcmApplicantFormatError(fieldname, rawVal, label, maxCgpa, zeroIsError) {
 	var lbl = (label || fieldname || '').trim() || fieldname;
 	if (rawVal === undefined || rawVal === null) return null;
 	var s0 = typeof rawVal === 'string' ? rawVal.trim() : String(rawVal);
 	if (s0 === '') return null;
+
+	if (SLCM_APPLICANT_SCORE_MAX_FIELD[fieldname]) {
+		var sc = typeof rawVal === 'number' ? rawVal : parseFloat(s0);
+		if (Number.isNaN(sc)) {
+			return lbl + ': ' + __('Enter a valid number');
+		}
+		if (sc === 0 && !zeroIsError) return null;
+		if (sc <= 0) {
+			return lbl + ': ' + __('Must be greater than 0');
+		}
+		var mx = parseFloat(maxCgpa);
+		var isCgpa = !Number.isNaN(mx) && mx > 0;
+		if (isCgpa && sc > mx) {
+			return lbl + ': ' + __('CGPA cannot be greater than the maximum CGPA ({0})', [mx]);
+		}
+		if (!isCgpa && sc > 100) {
+			return lbl + ': ' + __('Percentage cannot be greater than 100. If this is a CGPA, enter the maximum CGPA first.');
+		}
+		var roundedSc = Math.round(sc * 100) / 100;
+		if (Math.abs(sc - roundedSc) > 1e-6) {
+			return lbl + ': ' + __('Use at most 2 decimal places');
+		}
+		return null;
+	}
 
 	if (fieldname === SLCM_APPLICANT_PINCODE_FIELD) {
 		var digits = s0.replace(/\D/g, '');
@@ -3571,15 +3647,8 @@ function _slcmApplicantFormatError(fieldname, rawVal, label) {
 		if (n100 < 0) {
 			return lbl + ': ' + __('Cannot be negative');
 		}
-		var max_val = 100;
-		if (fieldname === 'hsc_percentage' && window.frappe && frappe.web_form) {
-			var cgpa_max = parseFloat(frappe.web_form.get_value('if_cgpa_maximum_cgpa_class_xii'));
-			if (!Number.isNaN(cgpa_max) && cgpa_max > 0) {
-				max_val = cgpa_max;
-			}
-		}
-		if (n100 > max_val) {
-			return lbl + ': ' + __('Cannot be greater than ' + max_val);
+		if (n100 > 100) {
+			return lbl + ': ' + __('Cannot be greater than 100');
 		}
 		var rounded100 = Math.round(n100 * 100) / 100;
 		if (Math.abs(n100 - rounded100) > 1e-6) {
@@ -3588,16 +3657,13 @@ function _slcmApplicantFormatError(fieldname, rawVal, label) {
 		return null;
 	}
 
-	if (SLCM_APPLICANT_MAX10_P2_FIELDS[fieldname]) {
+	if (SLCM_APPLICANT_MAX_CGPA_FIELDS[fieldname]) {
 		var n = typeof rawVal === 'number' ? rawVal : parseFloat(s0);
 		if (Number.isNaN(n)) {
 			return lbl + ': ' + __('Enter a valid number');
 		}
 		if (n < 0) {
 			return lbl + ': ' + __('Cannot be negative');
-		}
-		if (n > 10) {
-			return lbl + ': ' + __('Cannot be greater than 10');
 		}
 		var rounded = Math.round(n * 100) / 100;
 		if (Math.abs(n - rounded) > 1e-6) {
@@ -3609,12 +3675,16 @@ function _slcmApplicantFormatError(fieldname, rawVal, label) {
 	return null;
 }
 
-/** Walk visible controls (includes child-table rows; multiple same fieldname allowed). */
+/**
+ * Walk visible parent-form controls. Child-table rows are checked from row data in
+ * _slcmValidateChildRowsOnPage (a closed row has no inputs to read).
+ */
 function _slcmValidateApplicantFormatsOnPage(wf, $page, missing) {
 	var errSel = '.form-control, .input-with-feedback, .control-value';
 	$page.find('.frappe-control[data-fieldname]').each(function () {
 		var $w = $(this);
 		if ($w.is(':hidden')) return;
+		if ($w.closest('.grid-row').length) return;
 		var fn = $w.attr('data-fieldname');
 		if (!_slcmApplicantFormatRuleField(fn)) return;
 
@@ -3629,7 +3699,7 @@ function _slcmValidateApplicantFormatsOnPage(wf, $page, missing) {
 			dfLbl = fd && fd.df && fd.df.label ? fd.df.label : '';
 		} catch (e1) { /* child row may omit parent fields_dict */ }
 
-		var err = _slcmApplicantFormatError(fn, raw, dfLbl || fn);
+		var err = _slcmApplicantFormatError(fn, raw, dfLbl || fn, _slcmScoreMaxForControl(wf, $w, fn));
 		if (err) {
 			$w.find(errSel).addClass('slcm-field-error');
 			missing.push(err);
@@ -3665,10 +3735,11 @@ function setupApplicantFieldBoundaries() {
 			var t = e.target;
 			if (!t || t.tagName !== 'INPUT') return;
 			var fn = _slcmApplicantControlFieldname(t);
-			if (fn && SLCM_APPLICANT_MAX100_P2_FIELDS[fn]) {
+			if (fn && SLCM_APPLICANT_SCORE_MAX_FIELD[fn]) {
+				// Validate, never clamp: silently turning 60 into 10 would hide the mistake
+				_slcmCheckScoreOnBlur(t, fn);
+			} else if (fn && SLCM_APPLICANT_MAX100_P2_FIELDS[fn]) {
 				_slcmClampDecimalInputEl(t, 100, 2);
-			} else if (fn && SLCM_APPLICANT_MAX10_P2_FIELDS[fn]) {
-				_slcmClampDecimalInputEl(t, 10, 2);
 			}
 		},
 		true
@@ -4241,37 +4312,31 @@ function applyQueryStringPrefill() {
 	}, 80);
 }
 
-/** Latest DOB still allowed: 17 full years completed today (no future dates). */
+/** Latest DOB allowed: 31 December of (current year − 6). E.g. in 2026 → 31-12-2020. */
+var SLCM_DOB_YEARS_BACK = 6;
 function _slcmMaxDateOfBirth() {
-	var d = new Date();
+	var d = new Date(new Date().getFullYear() - SLCM_DOB_YEARS_BACK, 11, 31);
 	d.setHours(0, 0, 0, 0);
-	d.setFullYear(d.getFullYear() - 17);
 	return d;
 }
 
-/** Completed age in years from yyyy-mm-dd (or null if invalid). -1 if date is in the future. */
-function _slcmAgeCompletedYears(dobVal) {
-	if (dobVal === undefined || dobVal === null || dobVal === '') return null;
-	var s = String(dobVal).trim();
-	var parts = s.split('-');
-	if (parts.length < 3) return null;
-	var y = parseInt(parts[0], 10);
-	var mo = parseInt(parts[1], 10) - 1;
-	var day = parseInt(parts[2], 10);
-	if (isNaN(y) || isNaN(mo) || isNaN(day)) return null;
-	var birth = new Date(y, mo, day);
-	if (isNaN(birth.getTime())) return null;
-	var today = new Date();
-	today.setHours(0, 0, 0, 0);
-	birth.setHours(0, 0, 0, 0);
-	if (birth > today) return -1;
-	var age = today.getFullYear() - birth.getFullYear();
-	var md = today.getMonth() - birth.getMonth();
-	if (md < 0 || (md === 0 && today.getDate() < birth.getDate())) age--;
-	return age;
+/** True when yyyy-mm-dd is a valid date on or before _slcmMaxDateOfBirth(). */
+function _slcmDobAllowed(dobVal) {
+	if (dobVal === undefined || dobVal === null || dobVal === '') return false;
+	var parts = String(dobVal).trim().split('-');
+	if (parts.length < 3) return false;
+	var d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+	if (isNaN(d.getTime())) return false;
+	d.setHours(0, 0, 0, 0);
+	return d <= _slcmMaxDateOfBirth();
 }
 
-/** Web Form: cap DOB datepicker (max = today − 17 years) and enforce age on change. */
+/** "31-12-2020" style label for messages. */
+function _slcmMaxDobLabel() {
+	return '31-12-' + _slcmMaxDateOfBirth().getFullYear();
+}
+
+/** Web Form: cap DOB datepicker (max = 31 Dec of current year − 6), hide "Today", enforce on change. */
 function _slcmTryPatchDateOfBirth(wf) {
 	if (!wf || !wf.fields_dict) return;
 	var fd = wf.fields_dict.date_of_birth;
@@ -4282,17 +4347,20 @@ function _slcmTryPatchDateOfBirth(wf) {
 		try {
 			fd.datepicker.update({ maxDate: maxD });
 		} catch (e) { /* ignore */ }
+		// Hide the "Today" button (and its footer strip) for the DOB picker only.
+		if (fd.datepicker.$datepicker) {
+			fd.datepicker.$datepicker.find('.datepicker--buttons, [data-action="today"]').hide();
+		}
 	}
 
 	if (!fd._slcmDobListeners && fd.$input && fd.$input.length) {
 		fd._slcmDobListeners = true;
 		fd.$input.on('change.slcmdob', function () {
 			var v = wf.get_value && wf.get_value('date_of_birth');
-			var age = _slcmAgeCompletedYears(v);
-			if (v && (age === null || age < 17)) {
+			if (v && !_slcmDobAllowed(v)) {
 				frappe.msgprint({
 					title: __('Invalid Date of Birth'),
-					message: __('Applicant must be at least 17 years old. The date cannot be in the future.'),
+					message: __('Date of Birth must be on or before {0}.', [_slcmMaxDobLabel()]),
 					indicator: 'red',
 				});
 				if (typeof wf.set_value === 'function') {
@@ -4383,6 +4451,55 @@ function slcmClearDefaultZeroNumericFields() {
 			} catch (e2) {}
 		}
 	}
+}
+
+/**
+ * "If details of both the parents are unavailable…" (guardian_required) must read "Not Applicable"
+ * from the start. Frappe only applies the Web Form Field default, and the live record can lose it
+ * (Desk edits are newer than the JSON), so the value was empty until Save Draft filled it from the
+ * DocType default. Fill it client-side only when empty, so saved choices are never overwritten.
+ */
+var SLCM_GUARDIAN_DEFAULT = 'Not Applicable';
+
+function slcmEnsureGuardianRequiredDefault() {
+	var wf = window.frappe && frappe.web_form;
+	if (!wf || !wf.fields_dict || !wf.fields_dict.guardian_required) return;
+	if (!wf.is_new && !wf.in_edit_mode) return;
+	if (wf.doc && Number(wf.doc.docstatus) === 1) return;
+	var v;
+	try {
+		v = wf.get_value('guardian_required');
+	} catch (e) {
+		return;
+	}
+	if (v !== undefined && v !== null && String(v).trim() !== '') return;
+	try {
+		var p = wf.set_value('guardian_required', SLCM_GUARDIAN_DEFAULT);
+		var refresh = function () {
+			try { wf.refresh_dependency(); } catch (e2) {}
+		};
+		if (p && typeof p.then === 'function') p.then(refresh);
+		else refresh();
+	} catch (e3) {}
+}
+
+function setupGuardianRequiredDefault() {
+	var hooked = false;
+	var n = 0;
+	// Poll a few seconds: covers late web_form init and the multi-programme profile copy.
+	var t = setInterval(function () {
+		var wf = window.frappe && frappe.web_form;
+		if (!hooked && wf && wf.events && wf.events.on) {
+			hooked = true;
+			try {
+				wf.events.on('after_load', function () {
+					setTimeout(slcmEnsureGuardianRequiredDefault, 0);
+				});
+			} catch (e) {}
+		}
+		slcmEnsureGuardianRequiredDefault();
+		if (++n > 20) clearInterval(t);
+	}, 250);
 }
 
 function setupDateOfBirthWebForm() {
@@ -4758,45 +4875,8 @@ function setupPreferenceValidation() {
 			_slcmToggleDegreeCountry(wf);
 			// Saved drafts load asynchronously — re-apply once their values are in
 			setTimeout(function () { _slcmToggleDegreeCountry(wf); }, 1500);
-			/*
-			 * Freeze guard — hsc_percentage is numeric, so set_value('') stores 0 and fires this
-			 * handler again: 0 < 35 → msgprint + clear → 0 → … an endless synchronous loop that
-			 * froze the page behind a stuck dialog. It hit every saved draft with an empty HSC
-			 * (stored as 0) as soon as the draft was reopened.
-			 * 0 / empty now means "not entered", and our own clearing never re-validates.
-			 */
-			var _slcmHscClearing = false;
-
-			function clearHscPercentage() {
-				_slcmHscClearing = true;
-				Promise.resolve()
-					.then(function () { return wf.set_value('hsc_percentage', ''); })
-					.catch(function () {})
-					.then(function () { _slcmHscClearing = false; });
-			}
-
-			function validateHscPercentage() {
-				if (_slcmHscClearing) return;
-				var raw = wf.get_value('hsc_percentage');
-				var hsc = parseFloat(raw);
-				if (raw === '' || raw === null || raw === undefined || Number.isNaN(hsc) || hsc === 0) return;
-
-				var cgpa_max = parseFloat(wf.get_value('if_cgpa_maximum_cgpa_class_xii'));
-				var is_cgpa = (!Number.isNaN(cgpa_max) && cgpa_max > 0);
-				var max_val = is_cgpa ? cgpa_max : 100;
-
-				// No minimum mark here: whether a score is high enough is decided by the eligibility rules.
-				if (hsc < 0) {
-					frappe.msgprint('HSC percentage / CGPA cannot be negative.');
-					clearHscPercentage();
-				} else if (hsc > max_val) {
-					frappe.msgprint(is_cgpa ? 'HSC CGPA cannot exceed ' + max_val + '.' : 'HSC percentage cannot exceed 100%.');
-					clearHscPercentage();
-				}
-			}
-
-			wf.on('hsc_percentage', validateHscPercentage);
-			wf.on('if_cgpa_maximum_cgpa_class_xii', validateHscPercentage);
+			// Class X / XII / UG / PG score checks (above 0, ≤ 100 or ≤ maximum CGPA) run on blur
+			// and on "Next" — see SLCM_APPLICANT_SCORE_MAX_FIELD. They never clear the field.
 		}
 		if (++n > 100) clearInterval(t);
 	}, 200);
@@ -4901,12 +4981,16 @@ function _slcmAddRowSaveButton(gridRow) {
 			if (ctrl.disp_status && ctrl.disp_status !== 'Write') return;   // hidden / read-only
 			if (_slcmChildValueEmpty(df, doc[df.fieldname])) missing.push(__(df.label || df.fieldname));
 		});
+		var visibleDfs = (form && form.fields || [])
+			.filter(function (ctrl) { return ctrl && ctrl.df && (!ctrl.disp_status || ctrl.disp_status === 'Write'); })
+			.map(function (ctrl) { return ctrl.df; });
+		_slcmRowFormatErrors(visibleDfs, doc, null).forEach(function (err) { missing.push(err); });
 
 		if (missing.length) {
 			frappe.msgprint({
-				title: __('Missing Fields'),
+				title: __('Please check this row'),
 				indicator: 'red',
-				message: __('Please fill the following before saving this row:') +
+				message: __('Please fix the following before saving this row:') +
 					'<ul style="margin:8px 0 0 18px;">' +
 					missing.map(function (l) { return '<li>' + frappe.utils.escape_html(l) + '</li>'; }).join('') +
 					'</ul>',
@@ -5325,6 +5409,7 @@ frappe.ready(function () {
 	// Stepper / Stages
 	setupStepper();
 	setupDateOfBirthWebForm();
+	setupGuardianRequiredDefault();
 	scheduleApplicantCountryStateCityFilter();
 	setupShowAllLinkOptions();
 
@@ -5897,10 +5982,9 @@ function _validateStage(wf, $page) {
 		var errSel =
 			'.form-control, .attached-file, .input-with-feedback, .btn-attach, .control-value, input[type="checkbox"], .checkbox';
 		if (fieldname === 'date_of_birth' && !empty && df.fieldtype === 'Date') {
-			const age = _slcmAgeCompletedYears(val);
-			if (age === null || age < 17) {
+			if (!_slcmDobAllowed(val)) {
 				fw.$wrapper && fw.$wrapper.find(errSel).addClass('slcm-field-error');
-				missing.push((df.label || fieldname).trim() + ': ' + __('must be at least 17 years old'));
+				missing.push((df.label || fieldname).trim() + ': ' + __('must be on or before {0}', [_slcmMaxDobLabel()]));
 				return;
 			}
 		}
@@ -5976,6 +6060,7 @@ function _slcmValidateChildRowsOnPage(wf, $page, missing) {
 					rowMissing.push((cdf.label || cdf.fieldname).trim());
 				}
 			});
+			_slcmRowFormatErrors(docfields, row, wf).forEach(function (err) { rowMissing.push(err); });
 			var $rowEl = gridRows[i] && gridRows[i].wrapper;
 			if ($rowEl && $rowEl.length) $rowEl.toggleClass('slcm-row-error', rowMissing.length > 0);
 			rowMissing.forEach(function (l) {
@@ -5983,6 +6068,25 @@ function _slcmValidateChildRowsOnPage(wf, $page, missing) {
 			});
 		});
 	});
+}
+
+/**
+ * Format rules (score vs maximum CGPA, 4-digit year, …) for one child row, from the row data.
+ * Empty / 0 values are skipped — the required-field check reports those.
+ */
+function _slcmRowFormatErrors(docfields, row, wf) {
+	var errs = [];
+	(docfields || []).forEach(function (cdf) {
+		if (!cdf || !cdf.fieldname || cdf.hidden) return;
+		if (!_slcmApplicantFormatRuleField(cdf.fieldname)) return;
+		if (wf && !_slcmChildDependsOnMet(cdf.depends_on, row, wf)) return;
+		var v = row[cdf.fieldname];
+		if (v === undefined || v === null || v === '' || v === 0) return;
+		var maxFn = SLCM_APPLICANT_SCORE_MAX_FIELD[cdf.fieldname];
+		var err = _slcmApplicantFormatError(cdf.fieldname, v, __(cdf.label || cdf.fieldname), maxFn ? row[maxFn] : null);
+		if (err) errs.push(err);
+	});
+	return errs;
 }
 
 /** Country → State (India: rows where State.country = India; otherwise only State "Other") → City (City.state + City.country per masterdata) */
