@@ -1865,7 +1865,8 @@ def _generate_pdf(doctype, name, print_format):
             as_pdf=False,
             no_letterhead=0,
         )
-        return get_pdf(html)
+        from slcm.admission.utils.jinja import embed_merriweather_for_pdf
+        return get_pdf(embed_merriweather_for_pdf(html))
     except Exception:
         frappe.log_error(frappe.get_traceback(), "_generate_pdf")
         frappe.throw(

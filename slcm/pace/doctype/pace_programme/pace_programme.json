@@ -9,6 +9,7 @@
     "field_order": [
         "programme_name",
         "programme_code",
+        "zoho_course",
         "programme_prefix",
         "route",
         "contact_email",
@@ -46,6 +47,12 @@
             "fieldname": "programme_code",
             "fieldtype": "Data",
             "label": "Programme Code"
+        },
+        {
+            "description": "Course name exactly as in Zoho Books. Used in the Course column of the Zoho journal upload.",
+            "fieldname": "zoho_course",
+            "fieldtype": "Data",
+            "label": "Zoho Books Course"
         },
         {
             "fieldname": "route",
@@ -210,7 +217,7 @@
     "index_web_pages_for_search": 1,
     "links": [],
     "make_attachments_public": 1,
- "modified": "2026-08-03 15:53:40.936652",
+ "modified": "2026-11-11 15:00:00.000000",
  "modified_by": "Administrator",
     "module": "PACE",
     "name": "PACE Programme",

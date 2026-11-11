@@ -12,6 +12,7 @@
   "level_of_study",
   "program_duration",
   "program_status",
+  "zoho_course",
   "programme_url",
   "column_break_aosh",
   "program_image",
@@ -86,6 +87,12 @@
    "label": "Status",
    "options": "\nActive\nInactive",
    "reqd": 1
+  },
+  {
+   "description": "Course name exactly as in Zoho Books. Used in the Course column of the Zoho journal upload.",
+   "fieldname": "zoho_course",
+   "fieldtype": "Data",
+   "label": "Zoho Books Course"
   },
   {
    "fieldname": "portal_details_tab",
@@ -268,7 +275,7 @@
   }
  ],
  "make_attachments_public": 1,
- "modified": "2026-11-09 11:14:29.365549",
+ "modified": "2026-11-11 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Programme",

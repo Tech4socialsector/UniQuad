@@ -328,7 +328,7 @@ class Applicant(Document):
         )
         if submitting and self.get("karnataka_category") == "Yes" and not ticked:
             frappe.throw(
-                _("Please select one option under 'Which of the following applies to you'."),
+                _("Please select one option under 'Which of the following applies to you (Karnataka Category)'."),
                 title=_("Karnataka Reservation"),
             )
         if not self.is_new() and not any(self.has_value_changed(f) for f in fields):
@@ -336,7 +336,7 @@ class Applicant(Document):
         if len(ticked) > 1:
             labels = ", ".join(_(self.meta.get_label(f)) for f in ticked)
             frappe.throw(
-                _("Please select only one option under 'Which of the following applies to you'. Selected: {0}").format(labels),
+                _("Please select only one option under 'Which of the following applies to you (Karnataka Category)'. Selected: {0}").format(labels),
                 title=_("Karnataka Reservation"),
             )
 
@@ -1001,6 +1001,17 @@ class Applicant(Document):
                         img["src"] = f"data:{mime_type};base64,{encoded}"
                 else:
                     img["src"] = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+
+            # The Google Fonts <link> was stripped above, so a template that asks for Merriweather
+            # would fall back to a default sans font in the PDF. Embed the app's bundled TTFs instead
+            # (unless the template already does via {{ get_merriweather_font_css() }}).
+            if "merriweather" in html.lower() and "@font-face{font-family:'Merriweather'" not in html:
+                from slcm.admission.utils.jinja import get_merriweather_font_css
+                font_css = get_merriweather_font_css()
+                if font_css:
+                    style = soup.new_tag("style")
+                    style.string = font_css
+                    (soup.head or soup).insert(0, style)
             return str(soup)
         except Exception:
             frappe.log_error(title="prepare_html_for_pdf error", message=frappe.get_traceback())

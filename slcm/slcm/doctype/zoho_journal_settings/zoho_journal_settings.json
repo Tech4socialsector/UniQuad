@@ -1,0 +1,102 @@
+{
+ "actions": [],
+ "creation": "2026-11-11 15:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "regular_section",
+  "regular_application_fee_component",
+  "regular_bank_account",
+  "regular_department",
+  "pace_section",
+  "pace_application_fee_component",
+  "pace_bank_account",
+  "pace_department"
+ ],
+ "fields": [
+  {
+   "description": "Used by the Fee Payment Zoho Journal Upload report for NLSAT / regular programme application fees.",
+   "fieldname": "regular_section",
+   "fieldtype": "Section Break",
+   "label": "Regular Programme Application Fee"
+  },
+  {
+   "default": "Application Fee",
+   "description": "The credit Account is this Fee Component's Ledger (falls back to \"Application Fee  - Regular Programmes\").",
+   "fieldname": "regular_application_fee_component",
+   "fieldtype": "Link",
+   "label": "Fee Component",
+   "options": "Fee Component"
+  },
+  {
+   "default": "UBI Bank General 520101045114133",
+   "description": "Debit Account (bank) for the journal.",
+   "fieldname": "regular_bank_account",
+   "fieldtype": "Data",
+   "label": "Bank Account"
+  },
+  {
+   "default": "AAD",
+   "fieldname": "regular_department",
+   "fieldtype": "Data",
+   "label": "Department"
+  },
+  {
+   "fieldname": "pace_section",
+   "fieldtype": "Section Break",
+   "label": "PACE Application Fee"
+  },
+  {
+   "description": "The credit Account is this Fee Component's Ledger (falls back to \"Application Fee - PACE Programmes\").",
+   "fieldname": "pace_application_fee_component",
+   "fieldtype": "Link",
+   "label": "Fee Component",
+   "options": "Fee Component"
+  },
+  {
+   "default": "UBI Bank PACE 520101045120011",
+   "description": "Debit Account (bank) for the journal.",
+   "fieldname": "pace_bank_account",
+   "fieldtype": "Data",
+   "label": "Bank Account"
+  },
+  {
+   "default": "PACE",
+   "fieldname": "pace_department",
+   "fieldtype": "Data",
+   "label": "Department"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-11-11 15:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "SLCM",
+ "name": "Zoho Journal Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Accounts Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

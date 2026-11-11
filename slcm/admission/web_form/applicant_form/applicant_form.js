@@ -1110,7 +1110,116 @@ function collectDraftData() {
 			data[ct] = data[ct].filter(function (row) { return !_slcmIsBlankDegreeRow(row); });
 		}
 	});
+
+	// Values typed into a field that is now hidden by its "depends_on" (e.g. Karnataka options
+	// after "Whether Karnataka" went back to No) stay in the browser while the applicant edits,
+	// but are not stored: blank them in the payload. The form is cleared after a successful save.
+	try {
+		var hiddenFns = _slcmFieldsHiddenByDependency(data);
+		hiddenFns.forEach(function (fn) { data[fn] = _slcmEmptyValueFor(wf.fields_dict[fn]); });
+		window._slcmHiddenClearedOnSave = hiddenFns;
+	} catch (e) {
+		window._slcmHiddenClearedOnSave = [];
+	}
 	return data;
+}
+
+// ───────────────────────────────────────────────────────────────────
+//  HIDDEN-BY-DEPENDENCY CLEANUP — applied only when the applicant saves
+// ───────────────────────────────────────────────────────────────────
+var _SLCM_LAYOUT_TYPES = ['Section Break', 'Column Break', 'Tab Break', 'Page Break', 'Fold',
+	'HTML', 'Button', 'Heading'];
+
+function _slcmEvalDependsOn(expr, doc) {
+	if (!expr) return true;
+	if (typeof expr === 'boolean') return expr;
+	if (typeof expr !== 'string') return true;
+	try {
+		if (expr.substr(0, 5) === 'eval:') {
+			return !!frappe.utils.eval(expr.substr(5), { doc: doc, parent: doc });
+		}
+		if (expr.substr(0, 3) === 'fn:') return true;   // form-script conditions: not evaluable here
+		var v = doc[expr];
+		return Array.isArray(v) ? !!v.length : !!v;
+	} catch (e) {
+		return true;   // unreadable condition → keep the value (never clear by mistake)
+	}
+}
+
+function _slcmHasValue(v) {
+	if (v === null || v === undefined || v === '') return false;
+	if (Array.isArray(v)) return v.length > 0;
+	if (v === 0 || v === '0') return false;
+	return true;
+}
+
+function _slcmEmptyValueFor(field) {
+	var ft = field && field.df && field.df.fieldtype;
+	if (ft === 'Table' || ft === 'Table MultiSelect') return [];
+	if (ft === 'Check') return 0;
+	return null;
+}
+
+/**
+ * Fieldnames whose own depends_on, or whose enclosing Section / Column depends_on, is false
+ * for the values about to be saved. Repeats until stable, since blanking one hidden field
+ * can hide further fields that depend on it.
+ */
+function _slcmFieldsHiddenByDependency(data) {
+	var wf = frappe.web_form;
+	if (!wf || !Array.isArray(wf.fields)) return [];
+	var evalDoc = $.extend({}, frappe.reference_doc || {}, wf.doc || {}, data);
+	var cleared = {};
+
+	for (var pass = 0; pass < 10; pass++) {
+		var changed = false;
+		var sectionShown = true, columnShown = true;
+		wf.fields.forEach(function (df) {
+			if (!df) return;
+			var ft = df.fieldtype;
+			if (ft === 'Section Break' || ft === 'Tab Break' || ft === 'Page Break') {
+				sectionShown = _slcmEvalDependsOn(df.depends_on, evalDoc);
+				columnShown = true;
+				return;
+			}
+			if (ft === 'Column Break') {
+				columnShown = _slcmEvalDependsOn(df.depends_on, evalDoc);
+				return;
+			}
+			if (_SLCM_LAYOUT_TYPES.indexOf(ft) !== -1 || !df.fieldname) return;
+			if (cint(df.hidden)) return;   // statically hidden / script-managed fields: leave alone
+			if (cleared[df.fieldname]) return;
+			var shown = sectionShown && columnShown && _slcmEvalDependsOn(df.depends_on, evalDoc);
+			if (!shown && _slcmHasValue(evalDoc[df.fieldname])) {
+				cleared[df.fieldname] = true;
+				evalDoc[df.fieldname] = _slcmEmptyValueFor(wf.fields_dict[df.fieldname]);
+				changed = true;
+			}
+		});
+		if (!changed) break;
+	}
+	return Object.keys(cleared);
+}
+
+/** After a successful save, blank the hidden fields in the form too, so re-showing them starts fresh. */
+function _slcmClearSavedHiddenFields() {
+	var wf = frappe.web_form;
+	var fns = window._slcmHiddenClearedOnSave || [];
+	window._slcmHiddenClearedOnSave = [];
+	if (!wf || !fns.length) return Promise.resolve();
+	var jobs = fns.map(function (fn) {
+		var empty = _slcmEmptyValueFor(wf.fields_dict[fn]);
+		try {
+			if (wf.doc) wf.doc[fn] = empty;
+			return Promise.resolve(wf.set_value(fn, empty)).catch(function () {});
+		} catch (e) {
+			return Promise.resolve();
+		}
+	});
+	return Promise.all(jobs).then(function () {
+		frappe.form_dirty = false;
+		window._slcmUserTouched = false;
+	});
 }
 
 // ───────────────────────────────────────────────────────────────────
@@ -1284,6 +1393,7 @@ function handleSaveDraft(opts) {
 				// cascade that would call set_formatted_input on the phone control
 				// before its async make_input() has finished.
 				try { if (wf && wf.doc) wf.doc.status = 'Draft'; } catch (e) {}
+				_slcmClearSavedHiddenFields();     // hidden-by-depends_on values were not stored — drop them here too
 				frappe.form_dirty = false;
 				window._slcmUserTouched = false;   // saved — later programmatic refreshes are not "unsaved"
 					updateStatusBadge('Draft');
@@ -5986,7 +6096,7 @@ function _slcmValidateKarnatakaOptionOnPage(wf, $page, missing) {
 		var fw = wf.fields_dict[f];
 		fw && fw.$wrapper && fw.$wrapper.find('input[type="checkbox"]').addClass('slcm-field-error');
 	});
-	missing.push(__('Which of the following applies to you: please select one option'));
+	missing.push(__('Which of the following applies to you (Karnataka Category): please select one option'));
 }
 if (window.jQuery) {
 	jQuery(document).on('change', SLCM_KARNATAKA_OPTION_FIELDS.map(function (f) {
