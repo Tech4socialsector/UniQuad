@@ -399,7 +399,7 @@ fixtures = [
     # Print Format UI per site, and fixtures are force-imported on every migrate (would overwrite it).
     {
         "doctype": "Print Format",
-        "filters": [["name", "in", ["Student Transcript", "Seat Allocation Result Notification","NLSAT Offer Letter"]]]
+        "filters": [["name", "in", ["Student Transcript", "Seat Allocation Result Notification","NLSAT Offer Letter", "Applicant Application Form"]]]
     },
     {
         "doctype": "Venue Type",
