@@ -62,6 +62,8 @@ function rf_full_load(wrapper) {
 			if (!d) return;
 			rf_render_stats(wrapper, d.stats, d.student_stats);
 			wrapper._rfid.unassigned.refresh(d.unlinked_cards || []);
+			const with_card = new Set((d.linked_students || []).filter(x => cint(x.has_active_card)).map(x => x.student));
+			wrapper._rfid.selected.forEach(s => { if (!with_card.has(s)) wrapper._rfid.selected.delete(s); });
 			wrapper._rfid.linked.refresh(d.linked_students || []);
 			wrapper._rfid.feed.refresh(d.recent_logs || []);
 			rf_set_count(wrapper, "unassigned", (d.unlinked_cards || []).length);
@@ -85,9 +87,8 @@ function rf_live_refresh(wrapper) {
 			const d = r.message;
 			if (!d) return;
 			rf_render_stats(wrapper, d.stats, null);
-			const added = wrapper._rfid.feed.prepend(d.new_logs || []);
+			wrapper._rfid.feed.prepend(d.new_logs || []);
 			if (d.stats.last_swipe) wrapper._rfid.last_swipe_time = d.stats.last_swipe;
-			if (added) frappe.show_alert({ message: __("{0} new swipe(s)", [added]), indicator: "green" }, 4);
 			wrapper._rfid.countdown = RF_REFRESH_SECS;
 			rf_set_status(wrapper, "live");
 		},
@@ -179,12 +180,46 @@ function rf_bind(wrapper) {
 	$w.on("click", "[data-unlink]", function () {
 		rf_unlink($(this).attr("data-unlink"), $(this).attr("data-label"), $(this).attr("data-uid"), wrapper);
 	});
+	const st = () => wrapper._rfid;
+	$w.on("change", ".rcm-sel", function () {
+		const student = $(this).attr("data-student");
+		this.checked ? st().selected.add(student) : st().selected.delete(student);
+		rf_sel_sync(wrapper);
+	});
+	$w.on("change", ".rcm-sel-page", function () {
+		(st().linked_page || []).filter(r => cint(r.has_active_card))
+			.forEach(r => (this.checked ? st().selected.add(r.student) : st().selected.delete(r.student)));
+		$w.find(".rcm-sel").prop("checked", this.checked);
+		rf_sel_sync(wrapper);
+	});
+	$w.on("click", "#rcm-sel-matching", () => {
+		(st().linked_view || []).filter(r => cint(r.has_active_card)).forEach(r => st().selected.add(r.student));
+		$w.find(".rcm-sel").prop("checked", true);
+		rf_sel_sync(wrapper);
+	});
+	$w.on("click", "#rcm-sel-clear", () => {
+		st().selected.clear();
+		$w.find(".rcm-sel, .rcm-sel-page").prop("checked", false);
+		rf_sel_sync(wrapper);
+	});
+	$w.on("click", "#rcm-unmap-selected", () => rf_unmap(wrapper, [...st().selected]));
+}
+
+// Ticked-student count on the button, and the page's "tick all" box
+function rf_sel_sync(wrapper) {
+	const st = wrapper._rfid, $w = $(wrapper);
+	const n = st.selected.size;
+	const page = (st.linked_page || []).filter(r => cint(r.has_active_card));
+	$w.find(".rcm-sel-page").prop("checked", page.length > 0 && page.every(r => st.selected.has(r.student)));
+	$w.find("#rcm-unmap-selected").prop("disabled", !n)
+		.html(`<i class="fa fa-unlink"></i> ${n ? __("Remove card from {0} selected", [n]) : __("Remove card from selected")}`);
+	$w.find("#rcm-sel-clear").prop("disabled", !n);
 }
 
 // ─────────────────────────────────────────────────────────────────
 // Lightweight table: search + sort + pagination. Created once, refreshed with data.
 // ─────────────────────────────────────────────────────────────────
-function rf_table({ $root, columns, search_keys, page_size = 25, empty_msg, default_sort, row_key }) {
+function rf_table({ $root, columns, search_keys, page_size = 25, empty_msg, default_sort, row_key, on_render }) {
 	let data = [], view = [], query = "", page = 0;
 	let sort = default_sort ? { ...default_sort } : null;
 
@@ -239,11 +274,13 @@ function rf_table({ $root, columns, search_keys, page_size = 25, empty_msg, defa
 		if (!total) {
 			const msg = data.length ? __("Nothing matches your search.") : empty_msg;
 			$tbody.html(`<tr class="rcm-empty"><td colspan="${columns.length}">${msg}</td></tr>`);
+			if (on_render) on_render([], view);
 			return;
 		}
 		$tbody.html(view.slice(start, end).map(row =>
 			`<tr>${columns.map(c => `<td class="${c.cls || ""}">${c.render ? c.render(row) : rf_esc(row[c.key])}</td>`).join("")}</tr>`
 		).join(""));
+		if (on_render) on_render(view.slice(start, end), view);
 	}
 
 	return {
@@ -286,12 +323,20 @@ function rf_init_tables(wrapper) {
 		],
 	});
 
+	st.selected = new Set(); // Student Master names ticked for "Remove card from selected"
 	st.linked = rf_table({
 		$root: $w.find("#panel-linked"),
 		search_keys: ["student_id", "student_name", "rfid_uid", "programme", "batch_year", "department"],
 		default_sort: { key: "student_id", dir: "asc" },
 		empty_msg: __("No student has a card yet."),
+		on_render: (page_rows, all_rows) => { st.linked_page = page_rows; st.linked_view = all_rows; rf_sel_sync(wrapper); },
 		columns: [
+			{ key: "_sel", sortable: false, cls: "sel",
+			  label: `<input type="checkbox" class="rcm-sel-page" aria-label="${__("Tick every student on this page")}">`,
+			  render: r => cint(r.has_active_card)
+				? `<input type="checkbox" class="rcm-sel" data-student="${rf_esc(r.student)}" ${st.selected.has(r.student) ? "checked" : ""}
+					aria-label="${rf_esc(__("Tick {0}", [r.student_name || r.student_id]))}">`
+				: "" },
 			{ key: "student_id", label: __("Student ID"), render: r => rf_sid(r.student_id) },
 			{ key: "student_name", label: __("Student"),
 			  render: r => `<a class="rcm-link" href="/app/student-master/${encodeURIComponent(r.student)}" target="_blank" rel="noopener">${rf_esc(r.student_name || r.student_id)}</a>` },
@@ -417,19 +462,27 @@ function rf_assign_dialog(rfid_uid, wrapper) {
 }
 
 function rf_unlink(student, label, uid, wrapper) {
-	frappe.confirm(
-		__("Remove card {0} from {1}? Their swipes on this card will show as unassigned again.", [`<b>${rf_esc(uid)}</b>`, `<b>${rf_esc(label)}</b>`]),
-		() => frappe.call({
-			method: RF_API + "unlink_rfid_from_student",
-			args: { student },
-			freeze: true,
-			callback(r) {
-				if (!r.message) return;
-				frappe.show_alert({ message: r.message.message, indicator: r.message.success ? "green" : "orange" }, 5);
-				rf_full_load(wrapper);
-			},
-		})
-	);
+	rf_unmap(wrapper, [student], `${label} · ${uid}`);
+}
+
+// Remove the cards of one or many students (asks why first; see slcm.rfid_unmap)
+function rf_unmap(wrapper, students, what) {
+	if (!students.length) return;
+	frappe.require("/assets/slcm/js/rfid_unmap.js", () => slcm.rfid_unmap.ask({
+		what: what || (students.length === 1 ? __("1 student") : __("{0} students", [students.length])),
+		on_confirm(reason) {
+			frappe.call({
+				method: RF_API + "unmap_cards",
+				args: { students, reason },
+				freeze: true, freeze_message: __("Removing cards…"),
+				callback(r) {
+					slcm.rfid_unmap.show_results(r.message);
+					students.forEach(s => wrapper._rfid.selected.delete(s));
+					rf_full_load(wrapper);
+				},
+			});
+		},
+	}));
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -714,7 +767,12 @@ function rf_html() {
 		<div class="rcm-panel-head">
 			<div>
 				<h2>${__("Students with a card")}</h2>
-				<p>${__("Swipes on these cards count towards attendance automatically. Unlink only when a card was given to the wrong student.")}</p>
+				<p>${__("Swipes on these cards count towards attendance automatically. Tick students to remove their cards in one go, or use Unlink on a row.")}</p>
+			</div>
+			<div class="rcm-actions">
+				<button class="rcm-btn rcm-btn-ghost" id="rcm-sel-matching"><i class="fa fa-check-square-o"></i> ${__("Tick all matching")}</button>
+				<button class="rcm-btn rcm-btn-ghost" id="rcm-sel-clear" disabled>${__("Clear ticks")}</button>
+				<button class="rcm-btn rcm-btn-primary" id="rcm-unmap-selected" disabled><i class="fa fa-unlink"></i> ${__("Remove card from selected")}</button>
 			</div>
 		</div>
 		${rf_toolbar(__("Search Student ID, name, card, programme…"))}
@@ -853,6 +911,8 @@ function rf_css() {
 	font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; text-align: left;
 	padding: 10px 14px; border-bottom: 1px solid var(--rcm-line); white-space: nowrap; }
 .rcm-table th.sortable { cursor: pointer; user-select: none; }
+.rcm-table th.sel, .rcm-table td.sel { width: 36px; padding-right: 0; }
+.rcm-table .sel input { width: 15px; height: 15px; cursor: pointer; vertical-align: middle; }
 .rcm-table th.sortable:hover { color: var(--rcm-brand); }
 .rcm-table th.asc::after { content: "↑"; margin-left: 5px; color: var(--rcm-brand); }
 .rcm-table th.desc::after { content: "↓"; margin-left: 5px; color: var(--rcm-brand); }

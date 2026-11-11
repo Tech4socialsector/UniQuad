@@ -13,6 +13,7 @@ Flow
   1. preview()   reads etpdb once, classifies every record, caches the raw records
   2. apply()     creates an "RFID Student Map Log" and runs the mapping in the background
   3. manual_map() maps rows the run could not, straight from the log
+  4. unmap_rows() takes cards back off students, straight from the log (the row can then be mapped again)
 
 Which table/columns hold the code and name, and which Student Master field
 they match, all come from RFID SQL Agent Settings -> Student Map (nothing
@@ -27,7 +28,7 @@ from frappe import _
 from frappe.utils import cint, now_datetime
 
 from slcm.permissions import AAD_ROLES
-from slcm.slcm.utils.rfid_cards import assign_card, change_source
+from slcm.slcm.utils.rfid_cards import UNMAP_REASONS, assign_card, change_source, unmap_card
 
 SETTINGS = "RFID SQL Agent Settings"
 LOG = "RFID Student Map Log"
@@ -35,7 +36,8 @@ LOG_ITEM = "RFID Student Map Log Item"
 CACHE_PREFIX = "rfid_student_map:"
 CACHE_SECS = 30 * 60
 INACTIVE_STUDENT = ("Graduated", "Dropped", "Alumni", "Withdrawn")
-MANUAL_OK = ("Not Matched", "Conflict", "Skipped", "Failed")
+MANUAL_OK = ("Not Matched", "Conflict", "Skipped", "Failed", "Unmapped")
+UNMAP_OK = ("Mapped", "Manually Mapped", "Already Mapped")
 _IDENT = re.compile(r"^[A-Za-z_][\w]*(\.[A-Za-z_][\w]*)*$")
 
 COUNT_FIELDS = {
@@ -46,6 +48,7 @@ COUNT_FIELDS = {
 	"Conflict": "conflicts",
 	"Skipped": "skipped",
 	"Failed": "failed",
+	"Unmapped": "unmapped",
 }
 
 
@@ -235,6 +238,23 @@ def _card_owners():
 	return owners
 
 
+def _removed_pairs():
+	"""(student, card) pairs whose last change in the RFID UID Change Log took the card off the student. An
+	automatic run must not put such a card back (a card marked Lost would even become active again)."""
+	if not frappe.db.table_exists("RFID UID Change Log Entry"):
+		return set()
+	state = {}
+	for r in frappe.db.sql("""SELECT log.student, c.old_rfid_uid, c.new_rfid_uid
+		FROM `tabRFID UID Change Log Entry` c
+		JOIN `tabRFID UID Change Log` log ON log.name = c.parent AND c.parenttype = 'RFID UID Change Log'
+		ORDER BY c.changed_on, c.idx""", as_dict=True):
+		if r.old_rfid_uid:
+			state[(r.student, r.old_rfid_uid.strip())] = False
+		if r.new_rfid_uid:
+			state[(r.student, r.new_rfid_uid.strip())] = True
+	return {pair for pair, linked in state.items() if not linked}
+
+
 def _classify(records, conf, include_name_mismatch):
 	"""Decide what happens to every device record. Status: Ready | Already Mapped | Not Matched | Conflict | Skipped."""
 	students = _students(conf)
@@ -245,6 +265,7 @@ def _classify(records, conf, include_name_mismatch):
 		if k:
 			by_key.setdefault(k, []).append(s)
 	owners = _card_owners()
+	removed = _removed_pairs()
 
 	rows, seen, invalid, device_keys = [], {}, 0, set()
 	for code, device_name in records:
@@ -294,6 +315,8 @@ def _classify(records, conf, include_name_mismatch):
 				other.get("first_name") or owner, other.get("registration_id") or owner))
 		elif current:
 			row.update(status="Conflict", message=_("Student already has card {0}").format(current))
+		elif (sm.name, code) in removed:
+			row.update(status="Skipped", message=_("Card was taken off this student by hand — map by hand to link it again"))
 		elif row["name_check"] == "Different" and not include_name_mismatch:
 			row.update(status="Skipped", message=_("Names differ — check and map by hand if correct"))
 		else:
@@ -480,6 +503,88 @@ def manual_map(log_name, mappings):
 				frappe.db.rollback(save_point="rfid_manual_row")
 				frappe.clear_messages()
 				results.append({"row": row_name, "ok": False, "message": frappe.utils.strip_html(str(e))})
+
+	_finish(log_name)
+	frappe.db.commit()
+	return results
+
+
+@frappe.whitelist()
+def run_card_changes(log_name, student=None, txt=None, start=0, page_len=50):
+	"""Card changes newest first, a page at a time: those this log made (its run, manual mapping and unmapping),
+	or, when a student is given, every card change of that student from any screen. Returns {rows, total}."""
+	_check_access()
+	conditions, values = [], {}
+	if student:
+		conditions.append("log.student = %(student)s")
+		values["student"] = student
+	else:
+		conditions.append("c.source LIKE %(source)s")
+		values["source"] = f"%{log_name}%"
+	if txt:
+		conditions.append("""(log.student_id LIKE %(txt)s OR log.student_name LIKE %(txt)s
+			OR c.old_rfid_uid LIKE %(txt)s OR c.new_rfid_uid LIKE %(txt)s)""")
+		values["txt"] = f"%{txt.strip()}%"
+	base = f"""FROM `tabRFID UID Change Log Entry` c
+		JOIN `tabRFID UID Change Log` log ON log.name = c.parent AND c.parenttype = 'RFID UID Change Log'
+		WHERE {" AND ".join(conditions)}"""
+	total = frappe.db.sql(f"SELECT COUNT(*) {base}", values)[0][0]
+	rows = frappe.db.sql(f"""
+		SELECT log.name AS log, log.student_id, log.student_name, c.change_type, c.old_rfid_uid, c.new_rfid_uid,
+		       c.changed_on, c.changed_by, c.source
+		{base}
+		ORDER BY c.changed_on DESC, c.idx DESC
+		LIMIT %(page_len)s OFFSET %(start)s
+	""", {**values, "page_len": min(cint(page_len) or 50, 500), "start": max(cint(start), 0)}, as_dict=True)
+	return {"rows": rows, "total": total}
+
+
+@frappe.whitelist()
+def unmap_rows(log_name, rows, reason):
+	"""rows: log item names. Takes each row's card off its student (see rfid_cards.unmap_card for the reasons).
+	A row is only undone while the student still has that row's card; a student who has since got another
+	card is left alone."""
+	_check_access()
+	rows = [r for r in dict.fromkeys(frappe.parse_json(rows) or []) if r]
+	if not frappe.db.exists(LOG, log_name):
+		frappe.throw(_("Log {0} not found.").format(log_name))
+	if frappe.db.get_value(LOG, log_name, "status") == "In Progress":
+		frappe.throw(_("Wait for this run to finish before removing cards."))
+	if not rows:
+		frappe.throw(_("Select at least one row."))
+	if reason not in UNMAP_REASONS:
+		frappe.throw(_("Choose why the card is being removed."))
+
+	results = []
+	with change_source(_("Student Map {0} — unmapped ({1})").format(log_name, reason)):
+		for row_name in rows:
+			item = frappe.db.get_value(LOG_ITEM, {"name": row_name, "parent": log_name},
+			                           ["name", "rfid_uid", "status", "student", "student_id"], as_dict=True)
+			if not item:
+				continue
+			label = item.student_id or item.student or item.rfid_uid
+			if item.status not in UNMAP_OK or not item.student:
+				results.append({"row": row_name, "ok": False, "message": _("{0}: row is {1}, nothing to remove").format(label, item.status)})
+				continue
+			current = (frappe.db.get_value("Student Master", item.student, "rfid_uid") or "").strip()
+			if current != (item.rfid_uid or "").strip():
+				results.append({"row": row_name, "ok": False, "message": (
+					_("{0}: student now has card {1}, not {2}; left as is").format(label, current, item.rfid_uid) if current
+					else _("{0}: card {1} is already off this student").format(label, item.rfid_uid))})
+				continue
+			frappe.db.savepoint("rfid_unmap_row")
+			try:
+				unmap_card(item.student, reason)
+				frappe.db.set_value(LOG_ITEM, item.name, {
+					"status": "Unmapped",
+					"message": _("Card removed ({0}) by {1}").format(reason, frappe.session.user),
+					"mapped_by": frappe.session.user, "mapped_on": now_datetime(),
+				}, update_modified=False)
+				results.append({"row": row_name, "ok": True, "message": _("{0}: card {1} removed").format(label, item.rfid_uid)})
+			except Exception as e:
+				frappe.db.rollback(save_point="rfid_unmap_row")
+				frappe.clear_messages()
+				results.append({"row": row_name, "ok": False, "message": "{0}: {1}".format(label, frappe.utils.strip_html(str(e)))})
 
 	_finish(log_name)
 	frappe.db.commit()

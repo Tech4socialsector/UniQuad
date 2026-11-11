@@ -8,14 +8,16 @@ processor). Student RFID Card is the history of every card a student has had:
 one Active card at most, older ones Replaced / Lost / Blocked / Damaged.
 
 Every change of Student Master.rfid_uid goes through set_student_uid() (or is
-logged by on_student_master_update for form edits) and is recorded in
-"RFID UID Change Log": who, when, from -> to, and which screen did it.
+logged by on_student_master_update for form edits) and is recorded in the
+student's "RFID UID Change Log": one log per student, one row per change
+(who, when, from -> to, and which screen did it).
 Callers name the screen with `with change_source("..."):`.
 
 Every path keeps the two in step:
   * Student RFID Card saved        -> StudentRFIDCard.on_update -> sync_student_master()
   * RFID Card Management link/bulk -> assign_card()
   * RFID Card Management unlink    -> remove_wrong_assignment()
+  * Unmap (one or many, any screen) -> unmap_card()
   * Student Master rfid_uid edited -> on_student_master_validate() / _update() (doc_events)
 """
 
@@ -26,6 +28,10 @@ from frappe import _
 from frappe.utils import now_datetime, today
 
 INACTIVE_STATUSES = ("Blocked", "Lost", "Damaged", "Replaced")
+CHANGE_LOG = "RFID UID Change Log"
+CHANGE_ROW = "RFID UID Change Log Entry"
+# Why a card is taken off a student. "Wrong student" undoes the link; the others retire the card.
+UNMAP_REASONS = ("Wrong student", "Lost", "Damaged", "Blocked")
 
 
 @contextmanager
@@ -40,10 +46,10 @@ def change_source(label):
 
 
 def log_uid_change(student, old_uid, new_uid, source=None, message=None):
-	"""Record one change of a student's RFID UID. Never blocks the change itself."""
+	"""Add one change of a student's RFID UID to their change log. Never blocks the change itself."""
 	old_uid = (old_uid or "").strip()
 	new_uid = (new_uid or "").strip()
-	if old_uid == new_uid or not frappe.db.table_exists("RFID UID Change Log"):
+	if old_uid == new_uid or not frappe.db.table_exists(CHANGE_ROW):
 		return
 	sm = frappe.db.get_value("Student Master", student, ["registration_id", "first_name"], as_dict=True) or {}
 	change_type = "Assigned" if not old_uid else "Removed" if not new_uid else "Changed"
@@ -54,19 +60,32 @@ def log_uid_change(student, old_uid, new_uid, source=None, message=None):
 			"Removed": _("Card {0} removed"),
 			"Changed": _("Card changed from {0} to {1}"),
 		}[change_type].format(old_uid or new_uid, new_uid)
-	frappe.get_doc({
-		"doctype": "RFID UID Change Log",
-		"student": student,
-		"student_id": sm.get("registration_id"),
-		"student_name": sm.get("first_name"),
+	changed_on = now_datetime()
+
+	if frappe.db.exists(CHANGE_LOG, student):
+		log = frappe.get_doc(CHANGE_LOG, student)
+	else:
+		log = frappe.new_doc(CHANGE_LOG)
+		log.student = student
+	log.append("changes", {
+		"changed_on": changed_on,
 		"change_type": change_type,
 		"old_rfid_uid": old_uid or None,
 		"new_rfid_uid": new_uid or None,
 		"changed_by": frappe.session.user,
-		"changed_on": now_datetime(),
 		"source": source,
 		"message": message,
-	}).insert(ignore_permissions=True)
+	})
+	log.update({
+		"student_id": sm.get("registration_id"),
+		"student_name": sm.get("first_name"),
+		"current_rfid_uid": new_uid or None,
+		"last_change": change_type,
+		"last_changed_on": changed_on,
+		"last_changed_by": frappe.session.user,
+		"change_count": len(log.changes),
+	})
+	log.save(ignore_permissions=True)
 
 
 def set_student_uid(student, new_uid, source=None):
@@ -202,6 +221,34 @@ def remove_wrong_assignment(student):
 	return old_uid
 
 
+def unmap_card(student, reason):
+	"""Take the student's current card off them. Returns the card UID, or None when they had no card.
+
+	Wrong student            the link was a mistake: the card history row is dropped and the card's swipes
+	                         go back to unassigned, so the card can be given to the right student.
+	Lost / Damaged / Blocked the card was the student's: history and past attendance stay, the card is
+	                         marked with the reason and stops counting. It cannot be given to anyone else.
+	"""
+	if reason not in UNMAP_REASONS:
+		frappe.throw(_("Choose why the card is being removed: {0}.").format(", ".join(UNMAP_REASONS)))
+	uid = (frappe.db.get_value("Student Master", student, "rfid_uid") or "").strip()
+	if not uid:
+		return None
+	if reason == "Wrong student":
+		return remove_wrong_assignment(student)
+
+	existing = _card_by_uid(uid)
+	if existing and existing.student != student:
+		# history says another student had this card: leave that row alone, just clear this student
+		set_student_uid(student, None, _("Card removed ({0})").format(reason))
+		return uid
+	card = frappe.get_doc("Student RFID Card", existing.name) if existing else frappe.new_doc("Student RFID Card")
+	card.update({"student": student, "rfid_uid": uid, "card_status": reason})
+	card.remarks = "\n".join(filter(None, [card.remarks, _("Removed from the student: {0}").format(reason)]))
+	card.save(ignore_permissions=True)  # on_update -> sync_student_master() clears Student Master.rfid_uid
+	return uid
+
+
 def on_student_master_validate(doc, method=None):
 	"""Reject an unusable RFID UID before the Student Master row is written."""
 	doc.rfid_uid = (doc.rfid_uid or "").strip() or None
@@ -233,6 +280,8 @@ def on_student_master_update(doc, method=None):
 
 
 def on_student_master_trash(doc, method=None):
-	"""Card history goes with the student (runs before Frappe's link check)."""
+	"""Card history and change log go with the student (runs before Frappe's link check)."""
 	for name in frappe.get_all("Student RFID Card", filters={"student": doc.name}, pluck="name"):
 		frappe.delete_doc("Student RFID Card", name, ignore_permissions=True, force=True)
+	if frappe.db.exists(CHANGE_LOG, doc.name):
+		frappe.delete_doc(CHANGE_LOG, doc.name, ignore_permissions=True, force=True)

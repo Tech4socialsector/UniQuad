@@ -24,6 +24,9 @@ frappe.provide("slcm.rfid_student_map");
 	const esc = (s) => (s == null ? "" : frappe.utils.escape_html(String(s)));
 	const fmt = (n) => (parseInt(n, 10) || 0).toLocaleString("en-IN");
 	const dash = '<span class="rsm-dim">—</span>';
+	const log_links = () => `<span class="rsm-links">
+		<a href="/app/rfid-student-map-log" target="_blank" rel="noopener"><i class="fa fa-history"></i> ${__("Student Map Log")}</a>
+		<a href="/app/rfid-uid-change-log" target="_blank" rel="noopener"><i class="fa fa-exchange"></i> ${__("RFID UID Change Log")}</a></span>`;
 
 	slcm.rfid_student_map.status_tag = (status) => {
 		const s = STATUS[status] || { label: status || "—", cls: "info" };
@@ -53,27 +56,32 @@ frappe.provide("slcm.rfid_student_map");
 	--rsm-ok:#5CC995; --rsm-ok-bg:#16291F; --rsm-warn:#F2C063; --rsm-warn-bg:#2E2614;
 	--rsm-info:#B6BCC6; --rsm-info-bg:#24272B; --rsm-err:#F28B82; --rsm-err-bg:#2E1A18;
 }
-.rsm-dlg .modal-content { font-family:"Merriweather", Georgia, serif; }
-.rsm-dlg .modal-title { font-weight:700; }
+.rsm-dlg .modal-content { font-family:"Merriweather", Georgia, serif; border-top:4px solid #920C24; }
+.rsm-dlg .modal-title { font-weight:800; color:#920C24; letter-spacing:-.01em; }
+.rsm-dlg .modal-footer .btn-primary { background:#920C24; border-color:#920C24; color:#fff; font-weight:700; }
+.rsm-dlg .modal-footer .btn-primary:hover:not(:disabled) { background:#6E091B; border-color:#6E091B; }
+.rsm-dlg .modal-footer .btn-secondary { font-weight:700; }
+[data-theme="dark"] .rsm-dlg .modal-title { color:#E0566F; }
 .rsm-scope button, .rsm-scope input { font-family:inherit; }
 .rsm-meta { display:flex; flex-wrap:wrap; gap:8px 16px; align-items:center; margin-bottom:16px; font-size:12.5px; color:var(--rsm-ink-2); }
 .rsm-meta b { color:var(--rsm-ink); }
+.rsm-links { display:inline-flex; gap:14px; }
+.rsm-links a { color:var(--rsm-brand); font-weight:700; text-decoration:none; white-space:nowrap; }
+.rsm-links a:hover { text-decoration:underline; color:var(--rsm-brand-dk); }
+.rsm-links .fa { margin-right:3px; }
 .rsm-code { font-family:var(--rsm-mono); font-size:12px; background:var(--rsm-line-2); border:1px solid var(--rsm-line); padding:1px 7px; border-radius:6px; }
 .rsm-toggle { margin-left:auto; display:inline-flex; align-items:center; gap:8px; cursor:pointer; font-weight:700; color:var(--rsm-ink); margin-bottom:0; }
 .rsm-toggle input { margin:0; accent-color:var(--rsm-brand); }
-.rsm-kpis { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px; margin-bottom:18px; }
-.rsm-kpi { text-align:left; border:1px solid var(--rsm-line); background:var(--rsm-surface); border-radius:12px; padding:12px 14px; cursor:pointer;
-	transition:border-color .15s, box-shadow .15s, transform .15s; position:relative; overflow:hidden; }
-.rsm-kpi::before { content:""; position:absolute; inset:0 auto 0 0; width:4px; background:var(--rsm-line); }
-.rsm-kpi.ok::before { background:var(--rsm-ok); } .rsm-kpi.warn::before { background:#D99A00; }
-.rsm-kpi.err::before { background:var(--rsm-err); } .rsm-kpi.brand::before { background:var(--rsm-brand); }
-.rsm-kpi:hover { border-color:var(--rsm-brand-100); transform:translateY(-1px); }
-.rsm-kpi.on { border-color:var(--rsm-brand); box-shadow:0 0 0 2px var(--rsm-brand-100); }
-.rsm-kpi.static { cursor:default; } .rsm-kpi.static:hover { transform:none; border-color:var(--rsm-line); }
-.rsm-kpi b { display:block; font-size:24px; font-weight:800; line-height:1.2; font-variant-numeric:tabular-nums; }
-.rsm-kpi.ok b { color:var(--rsm-ok); } .rsm-kpi.err b { color:var(--rsm-err); } .rsm-kpi.warn b { color:var(--rsm-warn); } .rsm-kpi.brand b { color:var(--rsm-brand); }
-.rsm-kpi span { font-size:12px; color:var(--rsm-ink-2); display:block; }
-.rsm-kpi small { font-size:11px; color:var(--rsm-ink-3); display:block; margin-top:2px; }
+.rsm-kpis { display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:10px; margin-bottom:18px; }
+.rsm-kpi { text-align:left; border:1px solid var(--rsm-line); background:var(--rsm-surface); border-radius:10px; padding:12px 14px; cursor:pointer;
+	transition:border-color .15s, background .15s; }
+.rsm-kpi:hover { border-color:var(--rsm-brand); }
+.rsm-kpi.on { border-color:var(--rsm-brand); background:var(--rsm-brand-50); }
+.rsm-kpi.static { cursor:default; } .rsm-kpi.static:hover { border-color:var(--rsm-line); }
+.rsm-kpi b { display:block; font-size:24px; font-weight:800; line-height:1.2; color:var(--rsm-ink); font-variant-numeric:tabular-nums; }
+.rsm-kpi.ok b { color:var(--rsm-brand); }
+.rsm-kpi span { font-size:12.5px; font-weight:700; color:var(--rsm-ink); display:block; margin-top:2px; }
+.rsm-kpi small { font-size:11px; color:var(--rsm-ink-3); display:block; margin-top:1px; }
 .rsm-toolbar { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:10px; }
 .rsm-search { flex:1; max-width:380px; padding:8px 12px; border:1px solid var(--rsm-line); border-radius:9px; background:var(--rsm-canvas); color:var(--rsm-ink); font-size:13px; outline:none; }
 .rsm-search:focus { border-color:var(--rsm-brand); background:var(--rsm-surface); box-shadow:0 0 0 3px var(--rsm-brand-100); }
@@ -82,8 +90,8 @@ frappe.provide("slcm.rfid_student_map");
 .rsm-iconbtn:disabled { opacity:.4; cursor:default; }
 .rsm-tablebox { border:1px solid var(--rsm-line); border-radius:10px; overflow:auto; max-height:52vh; }
 .rsm-table { width:100%; border-collapse:separate; border-spacing:0; font-size:12.5px; margin:0; }
-.rsm-table th { position:sticky; top:0; z-index:1; background:var(--rsm-canvas); color:var(--rsm-ink-3); font-size:10.5px; letter-spacing:.08em;
-	text-transform:uppercase; font-weight:700; padding:9px 12px; border-bottom:1px solid var(--rsm-line); white-space:nowrap; text-align:left; }
+.rsm-table th { position:sticky; top:0; z-index:1; background:var(--rsm-brand-50); color:var(--rsm-brand); font-size:11px; letter-spacing:.06em;
+	text-transform:uppercase; font-weight:800; padding:10px 12px; border-bottom:2px solid var(--rsm-brand-100); white-space:nowrap; text-align:left; }
 .rsm-table td { padding:9px 12px; border-bottom:1px solid var(--rsm-line-2); vertical-align:middle; }
 .rsm-table tbody tr:hover td { background:var(--rsm-brand-50); }
 .rsm-table .rsm-empty td { text-align:center; padding:36px; color:var(--rsm-ink-3); }
@@ -91,9 +99,10 @@ frappe.provide("slcm.rfid_student_map");
 .rsm-arrow { color:var(--rsm-ink-3); }
 .rsm-dim { color:var(--rsm-ink-3); }
 .rsm-note { color:var(--rsm-ink-2); font-size:12px; }
-.rsm-tag { display:inline-block; font-size:11px; font-weight:700; padding:2px 9px; border-radius:999px; white-space:nowrap; }
-.rsm-tag.ok { color:var(--rsm-ok); background:var(--rsm-ok-bg); } .rsm-tag.warn { color:var(--rsm-warn); background:var(--rsm-warn-bg); }
-.rsm-tag.info { color:var(--rsm-info); background:var(--rsm-info-bg); } .rsm-tag.err { color:var(--rsm-err); background:var(--rsm-err-bg); }
+.rsm-tag { display:inline-block; font-size:11px; font-weight:700; padding:2px 9px; border-radius:999px; white-space:nowrap;
+	color:var(--rsm-ink-2); background:var(--rsm-line-2); border:1px solid var(--rsm-line); }
+.rsm-tag.ok { color:var(--rsm-brand); background:var(--rsm-brand-50); border-color:var(--rsm-brand-100); }
+.rsm-tag.err { color:#fff; background:var(--rsm-brand); border-color:var(--rsm-brand); }
 .rsm-state { text-align:center; padding:48px 20px; color:var(--rsm-ink-2); }
 .rsm-state .fa { font-size:30px; color:var(--rsm-brand); display:block; margin-bottom:12px; }
 .rsm-state h4 { font-family:var(--rsm-serif); font-weight:800; margin:0 0 6px; color:var(--rsm-ink); }
@@ -188,6 +197,7 @@ frappe.provide("slcm.rfid_student_map");
 				<div class="rsm-meta">
 					<span>${__("Source")}: <span class="rsm-code">${esc(data.source)}</span></span>
 					<span>${__("Rule")}: <b>${esc(data.match_rule)}</b></span>
+					${log_links()}
 					${data.has_names
 						? `<label class="rsm-toggle"><input type="checkbox" ${include ? "checked" : ""} data-act="include">
 							${__("Map even when names differ")}</label>`
@@ -258,7 +268,7 @@ frappe.provide("slcm.rfid_student_map");
 				<td>${esc(r.device_name) || dash}</td>
 				<td class="rsm-arrow">→</td>
 				<td>${r.student_id ? `<span class="rsm-sid">${esc(r.student_id)}</span>` : dash}</td>
-				<td>${esc(r.student_name) || dash}</td>
+				<td><b>${esc(r.student_name) || dash}</b></td>
 				<td class="rsm-dim">${esc(r.student_email) || dash}</td>
 				<td>${r.name_check === "Same" ? `<span class="rsm-tag ok">${__("Same")}</span>`
 					: r.name_check === "Different" ? `<span class="rsm-tag warn">${__("Different")}</span>` : dash}</td>
@@ -281,6 +291,7 @@ frappe.provide("slcm.rfid_student_map");
 			$b.html(`
 				<div class="rsm-meta">
 					<span>${__("These cards will be linked to the Student Master records below. Nothing has been saved yet.")}</span>
+					${log_links()}
 				</div>
 				<div class="rsm-kpis">
 					${tile(ready_rows.length, __("Will be mapped"), "ok", __("card → Student Master"))}
@@ -377,7 +388,7 @@ frappe.provide("slcm.rfid_student_map");
 			$b.html(`<div class="rsm-state" style="padding-bottom:20px">
 					<i class="fa ${ok ? "fa-check-circle" : "fa-times-circle"}"></i>
 					<h4>${ok ? __("Done") : __("The run stopped with an error")}</h4>
-					<p>${__("Status")}: ${esc(__(m.status))}</p></div>
+					<p>${__("Status")}: ${esc(__(m.status))}</p>${log_links()}</div>
 				<div class="rsm-kpis">
 					${tile(m.mapped, __("Mapped"), "ok")}
 					${tile(m.failed, __("Failed"), "err")}

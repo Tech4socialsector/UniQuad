@@ -16,7 +16,7 @@ import frappe
 from frappe import _
 
 from slcm.permissions import AAD_ROLES
-from slcm.slcm.utils.rfid_cards import assign_card, change_source, remove_wrong_assignment
+from slcm.slcm.utils.rfid_cards import UNMAP_REASONS, assign_card, change_source, remove_wrong_assignment, unmap_card
 
 FEED_LIMIT = 200  # rows of live punch feed sent to the browser
 
@@ -300,6 +300,41 @@ def unlink_rfid_from_student(student):
 		"success": True,
 		"message": _("Card {0} removed from {1}.").format(frappe.bold(old_uid), frappe.bold(_student_label(sm))),
 	}
+
+
+@frappe.whitelist()
+def unmap_cards(students, reason):
+	"""Take the current card off one or many students (see rfid_cards.unmap_card for what each reason does).
+	Each student is done on its own: one failure never undoes the others. Returns one result per student."""
+	_check_access()
+	students = [s for s in dict.fromkeys(frappe.parse_json(students) or []) if s]
+	if not students:
+		frappe.throw(_("Select at least one student."))
+	if reason not in UNMAP_REASONS:
+		frappe.throw(_("Choose why the card is being removed."))
+
+	results = []
+	with change_source(_("RFID Card Management — Unmap ({0})").format(reason)):
+		for student in students:
+			sm = frappe.db.get_value("Student Master", student, ["name", "registration_id", "first_name"], as_dict=True)
+			if not sm:
+				results.append({"student": student, "ok": False, "message": _("{0}: student not found").format(student)})
+				continue
+			frappe.db.savepoint("rfid_unmap_row")
+			try:
+				uid = unmap_card(student, reason)
+				results.append({
+					"student": student, "ok": bool(uid), "rfid_uid": uid,
+					"message": _("{0}: card {1} removed").format(_student_label(sm), uid) if uid
+					else _("{0}: has no card").format(_student_label(sm)),
+				})
+			except Exception as e:
+				frappe.db.rollback(save_point="rfid_unmap_row")
+				frappe.clear_messages()
+				results.append({"student": student, "ok": False,
+				                "message": "{0}: {1}".format(_student_label(sm), frappe.utils.strip_html(str(e)))})
+	frappe.db.commit()
+	return results
 
 
 # ── Export for vendor ─────────────────────────────────────────────

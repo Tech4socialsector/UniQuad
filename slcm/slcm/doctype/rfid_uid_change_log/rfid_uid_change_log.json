@@ -1,66 +1,47 @@
 {
  "actions": [],
- "autoname": "naming_series:",
+ "autoname": "field:student",
  "creation": "2026-11-11 12:00:00.000000",
  "custom": 0,
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "naming_series",
   "student",
   "student_id",
   "student_name",
-  "change_type",
   "column_break_a",
-  "old_rfid_uid",
-  "new_rfid_uid",
-  "changed_by",
-  "changed_on",
-  "section_b",
-  "source",
-  "message"
+  "current_rfid_uid",
+  "last_change",
+  "last_changed_on",
+  "last_changed_by",
+  "change_count",
+  "section_changes",
+  "changes"
  ],
  "fields": [
   {
-   "default": "RUCL-.YYYY.-.#####",
-   "fieldname": "naming_series",
-   "fieldtype": "Select",
-   "hidden": 1,
-   "label": "Series",
-   "options": "RUCL-.YYYY.-.#####",
-   "read_only": 1
-  },
-  {
    "fieldname": "student",
    "fieldtype": "Link",
-   "in_standard_filter": 1,
    "label": "Student",
    "options": "Student Master",
+   "in_standard_filter": 1,
+   "reqd": 1,
    "read_only": 1,
    "search_index": 1
   },
   {
    "fieldname": "student_id",
    "fieldtype": "Data",
+   "label": "Student ID",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "label": "Student ID",
    "read_only": 1
   },
   {
    "fieldname": "student_name",
    "fieldtype": "Data",
-   "in_list_view": 1,
    "label": "Student Name",
-   "read_only": 1
-  },
-  {
-   "fieldname": "change_type",
-   "fieldtype": "Select",
    "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Change",
-   "options": "Assigned\nChanged\nRemoved",
    "read_only": 1
   },
   {
@@ -68,60 +49,66 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "old_rfid_uid",
+   "fieldname": "current_rfid_uid",
    "fieldtype": "Data",
+   "label": "Current RFID UID",
    "in_list_view": 1,
-   "label": "From RFID UID",
-   "read_only": 1
-  },
-  {
-   "fieldname": "new_rfid_uid",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "To RFID UID",
-   "read_only": 1
-  },
-  {
-   "fieldname": "changed_by",
-   "fieldtype": "Link",
    "in_standard_filter": 1,
-   "label": "Changed By",
-   "options": "User",
+   "description": "Card the student has after the latest change; blank when they have none",
    "read_only": 1
   },
   {
-   "fieldname": "changed_on",
+   "fieldname": "last_change",
+   "fieldtype": "Select",
+   "label": "Last Change",
+   "options": "Assigned\nChanged\nRemoved",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_changed_on",
    "fieldtype": "Datetime",
+   "label": "Last Changed On",
    "in_list_view": 1,
-   "label": "Changed On",
    "read_only": 1
   },
   {
-   "fieldname": "section_b",
-   "fieldtype": "Section Break"
-  },
-  {
-   "description": "Screen or process that made the change",
-   "fieldname": "source",
-   "fieldtype": "Data",
+   "fieldname": "last_changed_by",
+   "fieldtype": "Link",
+   "label": "Last Changed By",
+   "options": "User",
    "in_standard_filter": 1,
-   "label": "Changed From",
    "read_only": 1
   },
   {
-   "fieldname": "message",
-   "fieldtype": "Small Text",
-   "label": "Message",
+   "fieldname": "change_count",
+   "fieldtype": "Int",
+   "label": "Changes",
+   "in_list_view": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_changes",
+   "fieldtype": "Section Break",
+   "label": "Changes"
+  },
+  {
+   "fieldname": "changes",
+   "fieldtype": "Table",
+   "label": "Changes",
+   "options": "RFID UID Change Log Entry",
+   "description": "Every card assigned to, changed on or removed from this student, oldest first",
    "read_only": 1
   }
  ],
  "in_create": 1,
  "links": [],
- "modified": "2026-11-11 12:00:00.000000",
+ "modified": "2026-11-11 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "RFID UID Change Log",
- "naming_rule": "By \"naming_series\" field",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {
@@ -148,7 +135,7 @@
   }
  ],
  "show_title_field_in_link": 0,
- "sort_field": "creation",
+ "sort_field": "last_changed_on",
  "sort_order": "DESC",
  "states": [],
  "title_field": "student_name"

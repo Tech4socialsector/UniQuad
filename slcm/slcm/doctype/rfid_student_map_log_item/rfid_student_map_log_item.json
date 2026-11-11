@@ -76,7 +76,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Pending\nMapped\nManually Mapped\nAlready Mapped\nNot Matched\nConflict\nSkipped\nFailed",
+   "options": "Pending\nMapped\nManually Mapped\nAlready Mapped\nNot Matched\nConflict\nSkipped\nFailed\nUnmapped",
    "read_only": 1
   },
   {

@@ -16,6 +16,7 @@ frappe.listview_settings["Student Master"] = {
 		add_generate_student_id_button(listview);
 		add_bulk_section_upload_button(listview);
 		add_student_map_button(listview);
+		add_remove_rfid_button(listview);
 		style_action_group_button(listview);
 		// Ensure status column is visible
 		ensure_status_column_visible(listview);
@@ -854,6 +855,33 @@ function add_student_map_button(listview) {
 	listview.page.add_inner_button(__("Student Map (RFID)"), function () {
 		frappe.require("/assets/slcm/js/rfid_student_map.js", () =>
 			slcm.rfid_student_map.open({ on_done: () => listview.refresh() }));
+	}, ACTION_GROUP);
+}
+
+function add_remove_rfid_button(listview) {
+	const allowed = ["System Manager", "AAD", "AAD Staff"].some((r) => frappe.user.has_role(r));
+	if (!allowed && frappe.session.user !== "Administrator") return;
+	listview.page.add_inner_button(__("Remove RFID Card"), function () {
+		const students = listview.get_checked_items(true);
+		if (!students.length) {
+			frappe.msgprint({ title: __("No Selection"), message: __("Tick the students whose card should be removed."), indicator: "orange" });
+			return;
+		}
+		frappe.require("/assets/slcm/js/rfid_unmap.js", () => slcm.rfid_unmap.ask({
+			what: students.length === 1 ? __("1 student") : __("{0} students", [students.length]),
+			on_confirm(reason) {
+				frappe.call({
+					method: "slcm.slcm.page.rfid_mapping.rfid_mapping.unmap_cards",
+					args: { students, reason },
+					freeze: true, freeze_message: __("Removing cards…"),
+					callback(r) {
+						slcm.rfid_unmap.show_results(r.message);
+						listview.clear_checked_items();
+						listview.refresh();
+					},
+				});
+			},
+		}));
 	}, ACTION_GROUP);
 }
 

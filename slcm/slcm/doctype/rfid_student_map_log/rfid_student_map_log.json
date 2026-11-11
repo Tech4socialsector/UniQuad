@@ -28,6 +28,7 @@
   "conflicts",
   "skipped",
   "failed",
+  "unmapped",
   "section_items",
   "items"
  ],
@@ -169,6 +170,13 @@
    "fieldtype": "Int",
    "label": "Failed",
    "read_only": 1
+  },
+  {
+   "fieldtype": "Int",
+   "read_only": 1,
+   "fieldname": "unmapped",
+   "label": "Unmapped",
+   "description": "Cards taken back off students from this log"
   },
   {
    "fieldname": "section_items",
