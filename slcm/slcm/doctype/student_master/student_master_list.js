@@ -15,6 +15,7 @@ frappe.listview_settings["Student Master"] = {
 		add_download_slip_button(listview);
 		add_generate_student_id_button(listview);
 		add_bulk_section_upload_button(listview);
+		add_student_map_button(listview);
 		style_action_group_button(listview);
 		// Ensure status column is visible
 		ensure_status_column_visible(listview);
@@ -840,6 +841,20 @@ function render_bulk_upload_dialog(listview, options) {
 	});
 
 	dialog.show();
+}
+
+/* --------------------------------------------------
+   List View → Action → Student Map (RFID)
+   Links RFID card codes from the device database (etpdb) to students by Student ID.
+   Same roles as the server API (System Manager, AAD, AAD Staff).
+-------------------------------------------------- */
+function add_student_map_button(listview) {
+	const allowed = ["System Manager", "AAD", "AAD Staff"].some((r) => frappe.user.has_role(r));
+	if (!allowed && frappe.session.user !== "Administrator") return;
+	listview.page.add_inner_button(__("Student Map (RFID)"), function () {
+		frappe.require("/assets/slcm/js/rfid_student_map.js", () =>
+			slcm.rfid_student_map.open({ on_done: () => listview.refresh() }));
+	}, ACTION_GROUP);
 }
 
 /* ---------------- Bulk Upload Section ---------------- */

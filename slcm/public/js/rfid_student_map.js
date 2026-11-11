@@ -188,8 +188,10 @@ frappe.provide("slcm.rfid_student_map");
 				<div class="rsm-meta">
 					<span>${__("Source")}: <span class="rsm-code">${esc(data.source)}</span></span>
 					<span>${__("Rule")}: <b>${esc(data.match_rule)}</b></span>
-					<label class="rsm-toggle"><input type="checkbox" ${include ? "checked" : ""} data-act="include">
-						${__("Map even when names differ")}</label>
+					${data.has_names
+						? `<label class="rsm-toggle"><input type="checkbox" ${include ? "checked" : ""} data-act="include">
+							${__("Map even when names differ")}</label>`
+						: `<span class="rsm-toggle rsm-tag warn" style="cursor:default">${__("No names in this source — matching by Student ID only")}</span>`}
 				</div>
 				<div class="rsm-kpis">
 					${kpi("all", __("Device records"), "brand", __("people in etpdb"))}
@@ -197,7 +199,7 @@ frappe.provide("slcm.rfid_student_map");
 					${kpi("already_mapped", __("Already mapped"), "", __("no change needed"))}
 					${kpi("not_matched", __("Not matched"), "warn", __("no student with this ID"))}
 					${kpi("conflicts", __("Conflicts"), "err", __("need a decision"))}
-					${kpi("names_differ", __("Names differ"), "warn", include ? __("will still be mapped") : __("held back"))}
+					${data.has_names ? kpi("names_differ", __("Names differ"), "warn", include ? __("will still be mapped") : __("held back")) : ""}
 					${kpi("students_not_on_device", __("Students not in etpdb"), "", __("active, no card"), true)}
 				</div>
 				<div class="rsm-toolbar">
@@ -265,22 +267,87 @@ frappe.provide("slcm.rfid_student_map");
 				: `<tr class="rsm-empty"><td colspan="9">${__("Nothing to show here.")}</td></tr>`);
 		}
 
+		// Step 2: review exactly what will be linked before anything is saved
 		function confirm_apply() {
-			const ready = (data && data.kpi.ready) || 0;
-			if (!ready) return;
-			frappe.confirm(
-				__("Link {0} card(s) to students now? Rows that are not matched or in conflict are only logged — you can map them by hand from the log afterwards.", [`<b>${fmt(ready)}</b>`]),
-				() => frappe.call({
-					method: API + "apply",
-					args: { token: data.token, include_name_mismatch: include ? 1 : 0 },
-					freeze: true, freeze_message: __("Starting…"),
-					callback(r) {
-						if (!r.message) return;
-						log_name = r.message.log;
-						show_progress();
-					},
-				})
-			);
+			const ready_rows = (data && data.rows || []).filter((r) => r.status === "Ready");
+			if (!ready_rows.length) return;
+			const k = data.kpi;
+			const differ = ready_rows.filter((r) => r.name_check === "Different").length;
+			const left = (k.not_matched || 0) + (k.conflicts || 0) + (k.skipped || 0);
+			const tile = (n, label, cls, hint) =>
+				`<div class="rsm-kpi static ${cls}"><b>${fmt(n)}</b><span>${label}</span>${hint ? `<small>${hint}</small>` : ""}</div>`;
+
+			d.set_title(__("Student Map — review before mapping"));
+			$b.html(`
+				<div class="rsm-meta">
+					<span>${__("These cards will be linked to the Student Master records below. Nothing has been saved yet.")}</span>
+				</div>
+				<div class="rsm-kpis">
+					${tile(ready_rows.length, __("Will be mapped"), "ok", __("card → Student Master"))}
+					${data.has_names ? tile(differ, __("Names differ"), "warn", __("mapped by Student ID")) : ""}
+					${tile(k.already_mapped, __("Already mapped"), "", __("left as they are"))}
+					${tile(left, __("Not mapped now"), "warn", __("logged — map by hand later"))}
+				</div>
+				<div class="rsm-toolbar">
+					<input class="rsm-search" type="search" placeholder="${__("Search code, Student ID, name, email…")}">
+					<div class="rsm-pager"><span class="rsm-page-info"></span></div>
+				</div>
+				<div class="rsm-tablebox"><table class="rsm-table">
+					<thead><tr><th>#</th><th>${__("Card code")}</th>${data.has_names ? `<th>${__("Name in etpdb")}</th>` : ""}<th></th>
+						<th>${__("Student ID")}</th><th>${__("Student name")}</th><th>${__("Email")}</th><th>${__("Programme")}</th><th>${__("Batch")}</th>
+						${data.has_names ? `<th>${__("Name check")}</th>` : ""}</tr></thead>
+					<tbody></tbody></table></div>`);
+
+			const draw = (q) => {
+				const rows = ready_rows.filter((r) => !q ||
+					["rfid_uid", "device_name", "student_id", "student_name", "student_email", "programme", "batch"]
+						.some((f) => r[f] && String(r[f]).toLowerCase().includes(q)));
+				const shown = rows.slice(0, 500);
+				$b.find(".rsm-page-info").text(rows.length > 500
+					? __("Showing 500 of {0} — search to find one", [fmt(rows.length)]) : __("{0} card(s)", [fmt(rows.length)]));
+				$b.find("tbody").html(shown.map((r, i) => `<tr>
+					<td class="rsm-dim">${i + 1}</td>
+					<td><span class="rsm-code">${esc(r.rfid_uid)}</span></td>
+					${data.has_names ? `<td>${esc(r.device_name) || dash}</td>` : ""}
+					<td class="rsm-arrow">→</td>
+					<td><span class="rsm-sid">${esc(r.student_id || r.student)}</span></td>
+					<td><b>${esc(r.student_name) || dash}</b></td>
+					<td class="rsm-dim">${esc(r.student_email) || dash}</td>
+					<td class="rsm-dim">${esc(r.programme) || dash}</td>
+					<td class="rsm-dim">${esc(r.batch) || dash}</td>
+					${data.has_names ? `<td>${r.name_check === "Different" ? `<span class="rsm-tag warn">${__("Different")}</span>`
+						: r.name_check === "Same" ? `<span class="rsm-tag ok">${__("Same")}</span>` : dash}</td>` : ""}
+				</tr>`).join("") || `<tr class="rsm-empty"><td colspan="10">${__("Nothing matches your search.")}</td></tr>`);
+			};
+			$b.find(".rsm-search").on("input", frappe.utils.debounce(function () { draw((this.value || "").trim().toLowerCase()); }, 150));
+			draw("");
+
+			d.set_primary_action(__("Map {0} student(s)", [fmt(ready_rows.length)]), () => start_apply());
+			d.get_primary_btn().prop("disabled", false);
+			d.set_secondary_action_label(__("Back"));
+			d.set_secondary_action(() => {
+				d.set_title(__("Student Map"));
+				d.set_secondary_action_label(__("Close"));
+				d.set_secondary_action(() => d.hide());
+				render();
+			});
+		}
+
+		function start_apply() {
+			d.get_primary_btn().prop("disabled", true);
+			frappe.call({
+				method: API + "apply",
+				args: { token: data.token, include_name_mismatch: include ? 1 : 0 },
+				freeze: true, freeze_message: __("Starting…"),
+				callback(r) {
+					if (!r.message) return;
+					log_name = r.message.log;
+					d.set_secondary_action_label(__("Close"));
+					d.set_secondary_action(() => d.hide());
+					show_progress();
+				},
+				error: () => d.get_primary_btn().prop("disabled", false),
+			});
 		}
 
 		function show_progress() {
@@ -319,6 +386,20 @@ frappe.provide("slcm.rfid_student_map");
 					${tile(m.conflicts, __("Conflicts"), "err")}
 					${tile(m.skipped, __("Held back"), "warn")}
 				</div>`);
+			$b.append(`<div class="rsm-tablebox" style="margin-top:4px"><table class="rsm-table">
+				<thead><tr><th>${__("Card code")}</th><th></th><th>${__("Student ID")}</th><th>${__("Student name")}</th>
+					<th>${__("Email")}</th><th>${__("Result")}</th><th>${__("Note")}</th></tr></thead>
+				<tbody><tr class="rsm-empty"><td colspan="7">${__("Loading…")}</td></tr></tbody></table></div>`);
+			frappe.db.get_doc(LOG, log_name).then((doc) => {
+				const rows = (doc.items || []).filter((r) => ["Mapped", "Failed"].includes(r.status))
+					.sort((a, b) => (a.status === "Failed" ? -1 : 0) - (b.status === "Failed" ? -1 : 0));
+				$b.find("tbody").html(rows.slice(0, 500).map((r) => `<tr>
+					<td><span class="rsm-code">${esc(r.rfid_uid)}</span></td><td class="rsm-arrow">→</td>
+					<td>${r.student_id ? `<span class="rsm-sid">${esc(r.student_id)}</span>` : dash}</td>
+					<td><b>${esc(r.student_name) || dash}</b></td><td class="rsm-dim">${esc(r.student_email) || dash}</td>
+					<td>${slcm.rfid_student_map.status_tag(r.status)}</td><td class="rsm-note">${esc(r.message)}</td></tr>`).join("")
+					|| `<tr class="rsm-empty"><td colspan="7">${__("No cards were linked in this run.")}</td></tr>`);
+			});
 			d.set_primary_action(__("Open log"), () => {
 				d.hide();
 				frappe.set_route("Form", LOG, log_name);

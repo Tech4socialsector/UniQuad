@@ -72,7 +72,9 @@ def _config():
 	conf = frappe._dict(
 		table=_ident(val("map_source_table", "personnel_employee"), _("Names Table / View")),
 		code_col=_ident(val("map_code_column", cfg.sql_empcode_column or "emp_code"), _("Card Code Column")),
-		name_cols=[_ident(c, _("Name Column(s)")) for c in str(val("map_name_columns", "first_name,last_name")).split(",") if c.strip()],
+		name_cols=[_ident(c, _("Name Column(s)")) for c in str(
+			"first_name,last_name" if cfg.get("map_name_columns") is None else cfg.map_name_columns
+		).split(",") if c.strip()],
 		student_field=(val("map_student_field", "registration_id") or "registration_id").strip(),
 		ignore_case=cint(val("map_ignore_case", 1)),
 		include_name_mismatch=cint(val("map_include_name_mismatch", 0)),
@@ -112,12 +114,24 @@ def _fetch_device_records(conf, limit=None):
 	"""[(code, name), …] from the device database."""
 	cols = [conf.code_col] + conf.name_cols
 	top = f"TOP {int(limit)} " if limit else ""
+	# codes only (e.g. the swipes view): one row per card instead of one per swipe
+	distinct = "" if conf.name_cols else "DISTINCT "
 	try:
-		rows = _query(f"SELECT {top}{', '.join(cols)} FROM {conf.table} WHERE {conf.code_col} IS NOT NULL")
+		rows = _query(f"SELECT {distinct}{top}{', '.join(cols)} FROM {conf.table} WHERE {conf.code_col} IS NOT NULL")
 	except frappe.ValidationError:
 		raise
 	except Exception as e:
-		frappe.throw(_("Could not read {0} from the device database: {1}").format(frappe.bold(conf.table), e))
+		err = str(e)
+		if "229" in err or "permission was denied" in err.lower():
+			login = (frappe.db.get_single_value(SETTINGS, "db_login") or "").strip() or "the SQL login"
+			frappe.throw(
+				_("The SQL Server login {0} is not allowed to read {1}.<br><br>"
+				  "Either ask the SQL Server admin to give it read access (see the Student Map tab for the exact SQL), "
+				  "or use <b>Student Map Tools → Find Name Columns</b> to pick a table this login can read. "
+				  "Leave Name Column(s) empty to match by Student ID only.").format(frappe.bold(login), frappe.bold(conf.table)),
+				title=_("No permission on {0}").format(conf.table),
+			)
+		frappe.throw(_("Could not read {0} from the device database: {1}").format(frappe.bold(conf.table), err))
 	out = []
 	for r in rows:
 		code = _text(r[0])
@@ -131,9 +145,10 @@ def discover_name_sources():
 	"""Tables in the device database that have a code column and a name column — to pick in the UI."""
 	frappe.only_for("System Manager")
 	rows = _query("""
-		SELECT TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, DATA_TYPE
-		FROM INFORMATION_SCHEMA.COLUMNS
-		ORDER BY TABLE_SCHEMA, TABLE_NAME, ORDINAL_POSITION
+		SELECT c.TABLE_SCHEMA, c.TABLE_NAME, c.COLUMN_NAME, c.DATA_TYPE
+		FROM INFORMATION_SCHEMA.COLUMNS c
+		WHERE HAS_PERMS_BY_NAME(QUOTENAME(c.TABLE_SCHEMA) + '.' + QUOTENAME(c.TABLE_NAME), 'OBJECT', 'SELECT') = 1
+		ORDER BY c.TABLE_SCHEMA, c.TABLE_NAME, c.ORDINAL_POSITION
 	""")
 	tables = {}
 	for schema, table, col, dtype in rows:
@@ -152,14 +167,15 @@ def discover_name_sources():
 	for table, cols in tables.items():
 		code_cols = [c["name"] for c in cols if is_code(c["name"])]
 		name_cols = [c["name"] for c in cols if is_name(c["name"])]
-		if not code_cols or not name_cols:
+		if not code_cols:
 			continue
 		score = 0
 		score += 50 if "emp_code" in [c.lower() for c in code_cols] else 0
 		score += 40 if "employee" in table.lower() or "personnel" in table.lower() else 0
 		score += 20 if {"first_name", "last_name"} & {c.lower() for c in name_cols} else 0
+		score -= 60 if not name_cols else 0  # usable, but codes only
 		score -= 30 if any(w in table.lower() for w in ("log", "trans", "history", "audit")) else 0
-		found.append({"table": table, "code_columns": code_cols, "name_columns": name_cols,
+		found.append({"table": table, "code_columns": code_cols, "name_columns": name_cols, "has_names": bool(name_cols),
 		              "columns": [c["name"] for c in cols], "score": score})
 	found.sort(key=lambda t: (-t["score"], t["table"]))
 	return {"candidates": found[:40], "table_count": len(tables)}
@@ -203,7 +219,7 @@ def _students(conf):
 	field = "name" if conf.student_field == "name" else f"`{conf.student_field}`"
 	return frappe.db.sql(f"""
 		SELECT name, {field} AS match_key, registration_id, first_name, official_email_id,
-		       rfid_uid, student_status
+		       rfid_uid, student_status, programme_of_study, batch
 		FROM `tabStudent Master`
 	""", as_dict=True)
 
@@ -264,7 +280,7 @@ def _classify(records, conf, include_name_mismatch):
 
 		sm = matches[0]
 		row.update(student=sm.name, student_id=sm.registration_id, student_name=sm.first_name,
-		           student_email=sm.official_email_id)
+		           student_email=sm.official_email_id, programme=sm.programme_of_study, batch=sm.batch)
 		if device_name and sm.first_name:
 			row["name_check"] = "Same" if _names_same(device_name, sm.first_name) else "Different"
 
@@ -317,7 +333,7 @@ def preview(include_name_mismatch=None):
 	token = uuid.uuid4().hex
 	frappe.cache.set_value(CACHE_PREFIX + token, {"user": frappe.session.user, "records": records}, expires_in_sec=CACHE_SECS)
 	return {"token": token, "kpi": kpi, "rows": rows, "source": conf.source, "match_rule": conf.match_rule,
-	        "include_name_mismatch": include}
+	        "include_name_mismatch": include, "has_names": bool(conf.name_cols)}
 
 
 def _running_log():
@@ -368,8 +384,11 @@ def run_student_map(log_name, records, include_name_mismatch=0):
 	try:
 		conf = _config()
 		rows, _kpi = _classify(records, conf, cint(include_name_mismatch))
+		item_fields = {df.fieldname for df in frappe.get_meta(LOG_ITEM).fields}
 		for r in rows:
-			log.append("items", {**r, "status": "Pending" if r["status"] == "Ready" else r["status"]})
+			item = {k: v for k, v in r.items() if k in item_fields}
+			item["status"] = "Pending" if r["status"] == "Ready" else r["status"]
+			log.append("items", item)
 		log.total_records = len(rows)
 		log.save(ignore_permissions=True)
 		frappe.db.commit()

@@ -374,11 +374,11 @@
    "fieldname": "student_map_note",
    "fieldtype": "HTML",
    "label": "Student Map Note",
-   "options": "<div style=\"background:#f9f0f0;border-left:4px solid #920C24;border-radius:6px;padding:12px 16px;line-height:1.6\"><b>Student Map</b> reads every card code and name from the device database (etpdb) and links the card to the Student Master record whose field below has the same value (by default the Student ID).<br>Nothing is hard-coded: if the device software is upgraded or the table changes, use <b>Find Name Columns</b> to pick the new table/columns, then <b>Student Map</b> to preview before anything is saved.</div>"
+   "options": "<div style=\"background:#f9f0f0;border-left:4px solid #920C24;border-radius:6px;padding:12px 16px;line-height:1.6\"><b>Student Map</b> links each card code in the device database (etpdb) to the Student Master record whose field below has the same value (by default the Student ID). Names are only a cross-check — leave Name Column(s) empty to match by Student ID alone (e.g. Table <code>iclock_trans_ajim</code>, Code <code>emp_code</code>).<br>Use <b>Student Map Tools → Find Name Columns</b> to see what the SQL login can read, then <b>Student Map</b> to preview before anything is saved.<details style=\"margin-top:8px\"><summary><b>Names need read access — SQL for the SQL Server admin</b></summary><pre style=\"margin:8px 0 0;white-space:pre-wrap\">USE etpdb;\nGO\nCREATE VIEW dbo.personnel_names_ajim AS\n    SELECT emp_code, first_name, last_name\n    FROM dbo.personnel_employee;\nGO\nGRANT SELECT ON dbo.personnel_names_ajim TO ajim;\nGO</pre>Then set Names Table / View to <code>personnel_names_ajim</code> (or click Find Name Columns). Only these three columns are shared — same pattern as the existing <code>iclock_trans_ajim</code> view.</details></div>"
   },
   {
    "default": "personnel_employee",
-   "description": "Table or view in the device database that holds one row per person (e.g. personnel_employee or dbo.personnel_employee).",
+   "description": "Table or view in the device database the SQL login can read (e.g. personnel_names_ajim, or iclock_trans_ajim for codes only).",
    "fieldname": "map_source_table",
    "fieldtype": "Data",
    "label": "Names Table / View"
@@ -392,7 +392,7 @@
   },
   {
    "default": "first_name,last_name",
-   "description": "One or more columns, comma separated. They are joined with a space to make the name.",
+   "description": "One or more columns, comma separated; joined with a space to make the name. Leave empty to match by Student ID only (no name check).",
    "fieldname": "map_name_columns",
    "fieldtype": "Data",
    "label": "Name Column(s)"

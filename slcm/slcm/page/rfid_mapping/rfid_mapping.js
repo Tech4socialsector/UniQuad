@@ -647,7 +647,7 @@ function rf_html() {
 			</div>
 			<button class="rcm-btn rcm-btn-ghost" id="rcm-refresh"><i class="fa fa-refresh"></i> ${__("Pull now")}</button>
 			<button class="rcm-btn rcm-btn-primary" id="rcm-student-map" title="${__("Link cards to students using the names and codes in the device database")}">
-				<i class="fa fa-random"></i> ${__("Student Map")}</button>
+				<i class="fa fa-random"></i> ${__("Student Map (RFID)")}</button>
 		</div>
 	</header>
 	<div class="rcm-quicklinks">

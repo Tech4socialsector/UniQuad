@@ -41,7 +41,7 @@ frappe.ui.form.on("RFID SQL Agent Settings", {
 		frm.add_custom_button(__("Find Name Columns"), () => find_name_columns(frm), __("Student Map Tools"));
 		frm.add_custom_button(__("Student Map Log"), () => frappe.set_route("List", "RFID Student Map Log"), __("Student Map Tools"));
 		frm.add_custom_button(__("RFID UID Change Log"), () => frappe.set_route("List", "RFID UID Change Log"), __("Student Map Tools"));
-		frm.add_custom_button(__("Student Map"), () => {
+		frm.add_custom_button(__("Student Map (RFID)"), () => {
 			if (frm.is_dirty()) {
 				frappe.msgprint(__("Save the settings first so Student Map uses them."));
 				return;
@@ -65,7 +65,7 @@ function find_name_columns(frm) {
 				frappe.msgprint({
 					title: __("No table found"),
 					indicator: "orange",
-					message: __("None of the {0} tables in the device database has both a code column and a name column. Type the table and columns in the Student Map tab instead.", [res.table_count || 0]),
+					message: __("The SQL login can read {0} table(s), but none has a card code column (such as emp_code). Ask the SQL Server admin for read access — the Student Map tab shows the exact SQL.", [res.table_count || 0]),
 				});
 				return;
 			}
@@ -79,7 +79,7 @@ function find_name_columns(frm) {
 					{ fieldname: "table", fieldtype: "Select", label: __("Table"), reqd: 1,
 					  options: cands.map((c) => c.table),
 					  default: frm.doc.map_source_table && by_table[frm.doc.map_source_table] ? frm.doc.map_source_table : cands[0].table,
-					  description: __("Best guesses first, out of {0} tables.", [res.table_count]),
+					  description: __("Tables this SQL login can read ({0}), best guesses first.", [res.table_count]),
 					  onchange: () => fill_columns() },
 					{ fieldname: "code_column", fieldtype: "Select", label: __("Card code column"), reqd: 1 },
 					{ fieldname: "cb", fieldtype: "Column Break" },
@@ -90,15 +90,18 @@ function find_name_columns(frm) {
 				primary_action_label: __("Use these columns"),
 				primary_action(v) {
 					const names = d.fields_dict.name_columns.get_checked_options();
-					if (!names.length) {
-						frappe.msgprint(__("Tick at least one name column."));
-						return;
-					}
-					frm.set_value("map_source_table", v.table);
-					frm.set_value("map_code_column", v.code_column);
-					frm.set_value("map_name_columns", names.join(","));
-					d.hide();
-					frm.save().then(() => frm.scroll_to_field("map_source_table"));
+					const use = () => {
+						frm.set_value("map_source_table", v.table);
+						frm.set_value("map_code_column", v.code_column);
+						frm.set_value("map_name_columns", names.join(","));
+						d.hide();
+						frm.save().then(() => frm.scroll_to_field("map_source_table"));
+					};
+					if (names.length) use();
+					else frappe.confirm(
+						__("No name column is ticked. Student Map will match cards by Student ID only, without a name check. Continue?"),
+						use
+					);
 				},
 				secondary_action_label: __("Preview 10 rows"),
 				secondary_action: () => preview(),
@@ -119,8 +122,11 @@ function find_name_columns(frm) {
 					label: col, value: col,
 					checked: chosen.includes(col) || (!chosen.some((x) => c.name_columns.includes(x)) && ["first_name", "last_name"].includes(col.toLowerCase())),
 				}));
+				nm.df.description = c.has_names ? "" : __("This table has no name column.");
 				nm.refresh();
-				d.fields_dict.sample.$wrapper.html(`<div class="text-muted small">${__("Click Preview 10 rows to check the names look right.")}</div>`);
+				d.fields_dict.sample.$wrapper.html(c.has_names
+					? `<div class="text-muted small">${__("Click Preview 10 rows to check the names look right.")}</div>`
+					: `<div class="alert alert-warning small" style="margin:0">${__("This table has no name column. It can still be used — cards are matched by Student ID only. To get names, ask the SQL Server admin for read access to the people table (see the Student Map tab).")}</div>`);
 			}
 
 			function preview() {
@@ -132,11 +138,13 @@ function find_name_columns(frm) {
 					callback(r) {
 						const rows = r.message || [];
 						const esc = (s) => frappe.utils.escape_html(String(s == null ? "" : s));
-						d.fields_dict.sample.$wrapper.html(rows.length
+						const c = by_table[d.get_value("table")] || {};
+						const warn = c.has_names ? "" : `<div class="alert alert-warning small" style="margin-bottom:8px">${__("No names in this table — cards will be matched by Student ID only. For names, the SQL Server admin must give this login read access to the people table (SQL in the Student Map tab).")}</div>`;
+						d.fields_dict.sample.$wrapper.html(warn + (rows.length
 							? `<table class="table table-bordered table-sm" style="margin:0">
 								<thead><tr><th>${__("Card code")}</th><th>${__("Name")}</th></tr></thead>
 								<tbody>${rows.map((x) => `<tr><td><code>${esc(x.code)}</code></td><td>${esc(x.name) || "—"}</td></tr>`).join("")}</tbody></table>`
-							: `<div class="text-muted">${__("The table returned no rows.")}</div>`);
+							: `<div class="text-muted">${__("The table returned no rows.")}</div>`));
 					},
 				});
 			}
