@@ -14,6 +14,7 @@
   "source",
   "match_rule",
   "include_name_mismatch",
+  "scope",
   "error_message",
   "section_kpi",
   "summary_html",
@@ -89,6 +90,13 @@
    "fieldtype": "Check",
    "label": "Mapped Rows Whose Names Differ",
    "read_only": 1
+  },
+  {
+   "fieldname": "scope",
+   "fieldtype": "Small Text",
+   "label": "Filters",
+   "read_only": 1,
+   "description": "Programme / Batch / Academic Year / Section this run was limited to; blank = all students"
   },
   {
    "depends_on": "eval:doc.status=='Failed'",
@@ -193,7 +201,7 @@
  ],
  "in_create": 1,
  "links": [],
- "modified": "2026-11-11 12:00:00.000000",
+ "modified": "2026-11-11 19:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "RFID Student Map Log",

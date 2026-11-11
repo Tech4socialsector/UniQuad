@@ -25,7 +25,7 @@ import uuid
 
 import frappe
 from frappe import _
-from frappe.utils import cint, now_datetime
+from frappe.utils import add_days, cint, getdate, now_datetime
 
 from slcm.permissions import AAD_ROLES
 from slcm.slcm.utils.rfid_cards import UNMAP_REASONS, assign_card, change_source, unmap_card
@@ -39,6 +39,14 @@ INACTIVE_STUDENT = ("Graduated", "Dropped", "Alumni", "Withdrawn")
 MANUAL_OK = ("Not Matched", "Conflict", "Skipped", "Failed", "Unmapped")
 UNMAP_OK = ("Mapped", "Manually Mapped", "Already Mapped")
 _IDENT = re.compile(r"^[A-Za-z_][\w]*(\.[A-Za-z_][\w]*)*$")
+
+# Student Map can be limited to some students: filter key -> Student Master field
+SCOPE_FIELDS = {
+	"programme": ("programme_of_study", "Programme"),
+	"batch": ("batch", "Batch"),
+	"academic_year": ("academic_year", "Academic Year"),
+	"section": ("section", "Section"),
+}
 
 COUNT_FIELDS = {
 	"Mapped": "mapped",
@@ -222,9 +230,23 @@ def _students(conf):
 	field = "name" if conf.student_field == "name" else f"`{conf.student_field}`"
 	return frappe.db.sql(f"""
 		SELECT name, {field} AS match_key, registration_id, first_name, official_email_id,
-		       rfid_uid, student_status, programme_of_study, batch
+		       rfid_uid, student_status, programme_of_study, batch, academic_year, section
 		FROM `tabStudent Master`
 	""", as_dict=True)
+
+
+def _scope(scope):
+	"""{"programme": ..., "batch": ..., ...} with only the filters that are set (any one, or several together)."""
+	scope = frappe.parse_json(scope) if isinstance(scope, str) else (scope or {})
+	return {k: str(v).strip() for k, v in (scope or {}).items() if k in SCOPE_FIELDS and v and str(v).strip()}
+
+
+def _scope_label(scope):
+	return " · ".join(f"{_(label)}: {scope[k]}" for k, (_field, label) in SCOPE_FIELDS.items() if k in scope)
+
+
+def _in_scope(student, scope):
+	return all((student.get(SCOPE_FIELDS[k][0]) or "") == v for k, v in scope.items())
 
 
 def _card_owners():
@@ -255,8 +277,11 @@ def _removed_pairs():
 	return {pair for pair, linked in state.items() if not linked}
 
 
-def _classify(records, conf, include_name_mismatch):
-	"""Decide what happens to every device record. Status: Ready | Already Mapped | Not Matched | Conflict | Skipped."""
+def _classify(records, conf, include_name_mismatch, scope=None):
+	"""Decide what happens to every device record. Status: Ready | Already Mapped | Not Matched | Conflict | Skipped.
+	With a scope (Programme / Batch / Academic Year / Section), only records whose matched student is in it are
+	kept: a record that matches no student, or a student outside the scope, is left out and counted."""
+	scope = _scope(scope)
 	students = _students(conf)
 	by_key, by_name = {}, {}
 	for s in students:
@@ -285,9 +310,11 @@ def _classify(records, conf, include_name_mismatch):
 		rows.append(row)
 
 		matches = by_key.get(key, [])
+		row["_in_scope"] = not scope or any(_in_scope(m, scope) for m in matches)
 		if not matches:
 			holder = by_name.get(owners.get(code))
 			if holder and (holder.rfid_uid or "").strip() == code:  # linked earlier by hand
+				row["_in_scope"] = not scope or _in_scope(holder, scope)
 				row.update(student=holder.name, student_id=holder.registration_id, student_name=holder.first_name,
 				           student_email=holder.official_email_id, status="Already Mapped",
 				           message=_("Card already linked to this student (mapped by hand)"))
@@ -301,7 +328,8 @@ def _classify(records, conf, include_name_mismatch):
 
 		sm = matches[0]
 		row.update(student=sm.name, student_id=sm.registration_id, student_name=sm.first_name,
-		           student_email=sm.official_email_id, programme=sm.programme_of_study, batch=sm.batch)
+		           student_email=sm.official_email_id, programme=sm.programme_of_study, batch=sm.batch,
+		           academic_year=sm.academic_year, section=sm.section)
 		if device_name and sm.first_name:
 			row["name_check"] = "Same" if _names_same(device_name, sm.first_name) else "Different"
 
@@ -322,14 +350,18 @@ def _classify(records, conf, include_name_mismatch):
 		else:
 			row.update(status="Ready", message=_("Names differ — mapped by Student ID") if row["name_check"] == "Different" else "")
 
+	out_of_scope = sum(1 for r in rows if not r["_in_scope"])
+	rows = [r for r in rows if r.pop("_in_scope")]
 	not_on_device = sum(
 		1 for s in students
 		if _norm_key(s.match_key, conf.ignore_case)
 		and _norm_key(s.match_key, conf.ignore_case) not in device_keys
 		and not (s.rfid_uid or "").strip()
 		and (s.student_status or "Active") not in INACTIVE_STUDENT
+		and (not scope or _in_scope(s, scope))
 	)
 	kpi = {
+		"out_of_scope": out_of_scope,
 		"device_records": len(rows),
 		"ready": sum(r["status"] == "Ready" for r in rows),
 		"already_mapped": sum(r["status"] == "Already Mapped" for r in rows),
@@ -346,17 +378,24 @@ def _classify(records, conf, include_name_mismatch):
 # ── Preview / apply ───────────────────────────────────────────────
 
 @frappe.whitelist()
-def preview(include_name_mismatch=None):
+def preview(include_name_mismatch=None, scope=None, token=None):
+	"""Classify the device records. Pass the previous token to re-filter the records already read (changing the
+	Programme / Batch / Academic Year / Section filters) without reading the device database again."""
 	_check_access()
 	conf = _config()
 	include = conf.include_name_mismatch if include_name_mismatch in (None, "") else cint(include_name_mismatch)
-	records = _fetch_device_records(conf)
-	rows, kpi = _classify(records, conf, include)
-
-	token = uuid.uuid4().hex
+	scope = _scope(scope)
+	cached = frappe.cache.get_value(CACHE_PREFIX + token) if token else None
+	if cached and cached.get("user") == frappe.session.user:
+		records = cached["records"]
+	else:
+		records = _fetch_device_records(conf)
+		token = uuid.uuid4().hex
+	rows, kpi = _classify(records, conf, include, scope)
 	frappe.cache.set_value(CACHE_PREFIX + token, {"user": frappe.session.user, "records": records}, expires_in_sec=CACHE_SECS)
 	return {"token": token, "kpi": kpi, "rows": rows, "source": conf.source, "match_rule": conf.match_rule,
-	        "include_name_mismatch": include, "has_names": bool(conf.name_cols)}
+	        "include_name_mismatch": include, "has_names": bool(conf.name_cols),
+	        "scope": scope, "scope_label": _scope_label(scope)}
 
 
 def _running_log():
@@ -364,7 +403,7 @@ def _running_log():
 
 
 @frappe.whitelist()
-def apply(token, include_name_mismatch=0):
+def apply(token, include_name_mismatch=0, scope=None):
 	"""Start the mapping for the records shown in the preview. Returns the log name; work runs in the background."""
 	_check_access()
 	cached = frappe.cache.get_value(CACHE_PREFIX + (token or ""))
@@ -376,8 +415,10 @@ def apply(token, include_name_mismatch=0):
 			frappe.utils.get_link_to_form(LOG, running)))
 
 	conf = _config()
+	scope = _scope(scope)
 	log = frappe.get_doc({
 		"doctype": LOG,
+		"scope": _scope_label(scope),
 		"status": "In Progress",
 		"run_by": frappe.session.user,
 		"run_on": now_datetime(),
@@ -390,7 +431,7 @@ def apply(token, include_name_mismatch=0):
 	frappe.enqueue(
 		"slcm.slcm.rfid_sql_agent.student_map.run_student_map",
 		queue="long", timeout=3600, enqueue_after_commit=True,
-		log_name=log.name, records=cached["records"], include_name_mismatch=cint(include_name_mismatch),
+		log_name=log.name, records=cached["records"], include_name_mismatch=cint(include_name_mismatch), scope=scope,
 	)
 	return {"log": log.name}
 
@@ -401,12 +442,13 @@ def _publish(log_name, done, total, finished=False):
 	                        user=frappe.session.user, after_commit=False)
 
 
-def run_student_map(log_name, records, include_name_mismatch=0):
-	"""Background job: write every record to the log, then link the Ready ones one by one."""
+def run_student_map(log_name, records, include_name_mismatch=0, scope=None):
+	"""Background job: write every record (within the scope, if one was chosen) to the log, then link the Ready
+	ones one by one."""
 	log = frappe.get_doc(LOG, log_name)
 	try:
 		conf = _config()
-		rows, _kpi = _classify(records, conf, cint(include_name_mismatch))
+		rows, _kpi = _classify(records, conf, cint(include_name_mismatch), scope)
 		item_fields = {df.fieldname for df in frappe.get_meta(LOG_ITEM).fields}
 		for r in rows:
 			item = {k: v for k, v in r.items() if k in item_fields}
@@ -509,34 +551,81 @@ def manual_map(log_name, mappings):
 	return results
 
 
-@frappe.whitelist()
-def run_card_changes(log_name, student=None, txt=None, start=0, page_len=50):
-	"""Card changes newest first, a page at a time: those this log made (its run, manual mapping and unmapping),
-	or, when a student is given, every card change of that student from any screen. Returns {rows, total}."""
-	_check_access()
+CHANGE_TYPES = ("Assigned", "Changed", "Removed")
+EXPORT_LIMIT = 50000
+
+
+def _card_changes_query(log_name, student=None, txt=None, filters=None):
+	"""FROM/WHERE (and values) for card change rows. Default: the changes this log made (its run, manual mapping
+	and unmapping). A chosen student: every card change of that student. this_run = 0: every card change.
+	filters: Programme / Batch / Academic Year / Section of the student, Change, From / To Date."""
+	filters = frappe.parse_json(filters) if isinstance(filters, str) else (filters or {})
 	conditions, values = [], {}
 	if student:
 		conditions.append("log.student = %(student)s")
 		values["student"] = student
-	else:
+	elif cint(filters.get("this_run", 1)):
 		conditions.append("c.source LIKE %(source)s")
 		values["source"] = f"%{log_name}%"
-	if txt:
+	for key, (field, _label) in SCOPE_FIELDS.items():
+		if filters.get(key):
+			conditions.append(f"sm.`{field}` = %({key})s")
+			values[key] = filters[key]
+	if filters.get("change_type") in CHANGE_TYPES:
+		conditions.append("c.change_type = %(change_type)s")
+		values["change_type"] = filters["change_type"]
+	if filters.get("from_date"):
+		conditions.append("c.changed_on >= %(from_date)s")
+		values["from_date"] = getdate(filters["from_date"])
+	if filters.get("to_date"):
+		conditions.append("c.changed_on < %(to_date)s")
+		values["to_date"] = add_days(getdate(filters["to_date"]), 1)
+	if txt and txt.strip():
 		conditions.append("""(log.student_id LIKE %(txt)s OR log.student_name LIKE %(txt)s
 			OR c.old_rfid_uid LIKE %(txt)s OR c.new_rfid_uid LIKE %(txt)s)""")
 		values["txt"] = f"%{txt.strip()}%"
 	base = f"""FROM `tabRFID UID Change Log Entry` c
 		JOIN `tabRFID UID Change Log` log ON log.name = c.parent AND c.parenttype = 'RFID UID Change Log'
-		WHERE {" AND ".join(conditions)}"""
+		LEFT JOIN `tabStudent Master` sm ON sm.name = log.student
+		WHERE {" AND ".join(conditions) or "1 = 1"}"""
+	return base, values
+
+
+_CHANGE_FIELDS = """log.name AS log, log.student_id, log.student_name, c.change_type, c.old_rfid_uid, c.new_rfid_uid,
+	c.changed_on, c.changed_by, c.source"""
+
+
+@frappe.whitelist()
+def run_card_changes(log_name, student=None, txt=None, start=0, page_len=50, filters=None):
+	"""Card changes newest first, a page at a time (see _card_changes_query). Returns {rows, total}."""
+	_check_access()
+	base, values = _card_changes_query(log_name, student, txt, filters)
 	total = frappe.db.sql(f"SELECT COUNT(*) {base}", values)[0][0]
 	rows = frappe.db.sql(f"""
-		SELECT log.name AS log, log.student_id, log.student_name, c.change_type, c.old_rfid_uid, c.new_rfid_uid,
-		       c.changed_on, c.changed_by, c.source
+		SELECT {_CHANGE_FIELDS}
 		{base}
 		ORDER BY c.changed_on DESC, c.idx DESC
 		LIMIT %(page_len)s OFFSET %(start)s
 	""", {**values, "page_len": min(cint(page_len) or 50, 500), "start": max(cint(start), 0)}, as_dict=True)
 	return {"rows": rows, "total": total}
+
+
+@frappe.whitelist()
+def export_card_changes(log_name, student=None, txt=None, filters=None):
+	"""Every card change matching the dialog's filters (not only the page shown), with the student's programme,
+	batch, academic year and section, for a CSV export. Returns {rows, total, limit}."""
+	_check_access()
+	base, values = _card_changes_query(log_name, student, txt, filters)
+	total = frappe.db.sql(f"SELECT COUNT(*) {base}", values)[0][0]
+	rows = frappe.db.sql(f"""
+		SELECT {_CHANGE_FIELDS}, c.message, sm.programme_of_study AS programme, sm.batch, sm.academic_year, sm.section
+		{base}
+		ORDER BY c.changed_on DESC, c.idx DESC
+		LIMIT {EXPORT_LIMIT}
+	""", values, as_dict=True)
+	for r in rows:
+		r.changed_by_name = frappe.utils.get_fullname(r.changed_by) if r.changed_by else ""
+	return {"rows": rows, "total": total, "limit": EXPORT_LIMIT}
 
 
 @frappe.whitelist()

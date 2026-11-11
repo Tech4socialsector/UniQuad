@@ -125,10 +125,25 @@ frappe.provide("slcm.rfid_student_map");
 		let data = null, filter = "all", q = "", page = 0, include = null;
 		let log_name = null, poll = null;
 
+		// Programme / Batch / Academic Year / Section: any one or several limit the map to those students
+		const SCOPE = [
+			["programme", "Programme", __("Programme")],
+			["batch", "SLCM Batch", __("Batch")],
+			["academic_year", "Academic Year", __("Academic Year")],
+			["section", "Section", __("Section")],
+		];
+		let loaded_scope = null, scope_timer = null;
+		const scope_fields = [];
+		SCOPE.forEach(([fieldname, options, label], i) => {
+			if (i) scope_fields.push({ fieldname: `scope_cb_${i}`, fieldtype: "Column Break" });
+			scope_fields.push({ fieldname, fieldtype: "Link", options, label,
+				onchange: () => { clearTimeout(scope_timer); scope_timer = setTimeout(rescope, 250); } });
+		});
+
 		const d = new frappe.ui.Dialog({
 			title: __("Student Map"),
 			size: "extra-large",
-			fields: [{ fieldname: "body", fieldtype: "HTML" }],
+			fields: [...scope_fields, { fieldname: "scope_sb", fieldtype: "Section Break" }, { fieldname: "body", fieldtype: "HTML" }],
 			primary_action_label: __("Map students"),
 			primary_action: () => confirm_apply(),
 			secondary_action_label: __("Close"),
@@ -156,16 +171,37 @@ frappe.provide("slcm.rfid_student_map");
 			$b.html(`<div class="rsm-state"><i class="fa ${icon}"></i><h4>${title}</h4><p>${text}</p>${extra}</div>`);
 		}
 
+		function current_scope() {
+			const scope = {};
+			SCOPE.forEach(([f]) => { const v = d.get_value(f); if (v) scope[f] = v; });
+			return scope;
+		}
+
+		function show_filters(on) {
+			SCOPE.forEach(([f]) => d.set_df_property(f, "hidden", on ? 0 : 1));
+		}
+
+		// a filter changed: re-classify the records already read (no new read of etpdb)
+		function rescope() {
+			const now = JSON.stringify(current_scope());
+			if (now === loaded_scope || !data) return;
+			load();
+		}
+
 		function load() {
 			d.get_primary_btn().prop("disabled", true);
-			state("fa-circle-o-notch rsm-spin", __("Reading the device database…"),
-				__("Fetching every card code and name from etpdb and matching them to Student Master."));
+			const scope = current_scope();
+			const reuse = !!(data && data.token);
+			state("fa-circle-o-notch rsm-spin", reuse ? __("Applying filters…") : __("Reading the device database…"),
+				reuse ? __("Matching the card codes already read to the students in these filters.")
+					: __("Fetching every card code and name from etpdb and matching them to Student Master."));
 			frappe.call({
 				method: API + "preview",
-				args: { include_name_mismatch: include == null ? "" : include ? 1 : 0 },
+				args: { include_name_mismatch: include == null ? "" : include ? 1 : 0, scope: JSON.stringify(scope), token: reuse ? data.token : "" },
 				callback(r) {
 					if (!r.message) return;
 					data = r.message;
+					loaded_scope = JSON.stringify(scope);
 					data.kpi.all = data.kpi.device_records;
 					include = !!data.include_name_mismatch;
 					filter = "all"; q = ""; page = 0;
@@ -198,19 +234,23 @@ frappe.provide("slcm.rfid_student_map");
 					<span>${__("Source")}: <span class="rsm-code">${esc(data.source)}</span></span>
 					<span>${__("Rule")}: <b>${esc(data.match_rule)}</b></span>
 					${log_links()}
+					${data.scope_label ? `<span class="rsm-tag info" title="${__("Only students in these filters are shown and mapped")}">
+						<i class="fa fa-filter"></i> ${esc(data.scope_label)}</span>` : ""}
 					${data.has_names
 						? `<label class="rsm-toggle"><input type="checkbox" ${include ? "checked" : ""} data-act="include">
 							${__("Map even when names differ")}</label>`
 						: `<span class="rsm-toggle rsm-tag warn" style="cursor:default">${__("No names in this source — matching by Student ID only")}</span>`}
 				</div>
 				<div class="rsm-kpis">
-					${kpi("all", __("Device records"), "brand", __("people in etpdb"))}
+					${kpi("all", data.scope_label ? __("In these filters") : __("Device records"), "brand",
+						data.scope_label ? __("cards of students in the filters") : __("people in etpdb"))}
 					${kpi("ready", __("Ready to map"), "ok", __("matched by Student ID"))}
 					${kpi("already_mapped", __("Already mapped"), "", __("no change needed"))}
 					${kpi("not_matched", __("Not matched"), "warn", __("no student with this ID"))}
 					${kpi("conflicts", __("Conflicts"), "err", __("need a decision"))}
 					${data.has_names ? kpi("names_differ", __("Names differ"), "warn", include ? __("will still be mapped") : __("held back")) : ""}
 					${kpi("students_not_on_device", __("Students not in etpdb"), "", __("active, no card"), true)}
+					${data.scope_label ? kpi("out_of_scope", __("Outside the filters"), "", __("left out of this map"), true) : ""}
 				</div>
 				<div class="rsm-toolbar">
 					<input class="rsm-search" type="search" placeholder="${__("Search code, name, Student ID, email…")}" value="${esc(q)}">
@@ -288,9 +328,11 @@ frappe.provide("slcm.rfid_student_map");
 				`<div class="rsm-kpi static ${cls}"><b>${fmt(n)}</b><span>${label}</span>${hint ? `<small>${hint}</small>` : ""}</div>`;
 
 			d.set_title(__("Student Map — review before mapping"));
+			show_filters(false);
 			$b.html(`
 				<div class="rsm-meta">
 					<span>${__("These cards will be linked to the Student Master records below. Nothing has been saved yet.")}</span>
+					${data.scope_label ? `<span class="rsm-tag info"><i class="fa fa-filter"></i> ${esc(data.scope_label)}</span>` : ""}
 					${log_links()}
 				</div>
 				<div class="rsm-kpis">
@@ -338,6 +380,7 @@ frappe.provide("slcm.rfid_student_map");
 			d.set_secondary_action_label(__("Back"));
 			d.set_secondary_action(() => {
 				d.set_title(__("Student Map"));
+				show_filters(true);
 				d.set_secondary_action_label(__("Close"));
 				d.set_secondary_action(() => d.hide());
 				render();
@@ -348,7 +391,7 @@ frappe.provide("slcm.rfid_student_map");
 			d.get_primary_btn().prop("disabled", true);
 			frappe.call({
 				method: API + "apply",
-				args: { token: data.token, include_name_mismatch: include ? 1 : 0 },
+				args: { token: data.token, include_name_mismatch: include ? 1 : 0, scope: loaded_scope || "{}" }, // the filters the reviewed list was made with
 				freeze: true, freeze_message: __("Starting…"),
 				callback(r) {
 					if (!r.message) return;

@@ -71,6 +71,7 @@ function rsml_summary(frm) {
 				<span>${__("Run by")} <b>${frappe.utils.escape_html(frappe.user.full_name(doc.run_by) || doc.run_by || "")}</b></span>
 				<span>${__("on")} <b>${doc.run_on ? frappe.datetime.str_to_user(doc.run_on) : "—"}</b></span>
 				<span class="rsm-tag ${{ Completed: "ok", "Completed with Issues": "warn", Failed: "err" }[doc.status] || "info"}">${frappe.utils.escape_html(__(doc.status || ""))}</span>
+				${doc.scope ? `<span class="rsm-tag info"><i class="fa fa-filter"></i> ${frappe.utils.escape_html(doc.scope)}</span>` : ""}
 			</div>
 			<div class="rsm-kpis">
 				${tile(total, __("Device records"), "brand", __("rows read from etpdb"))}
@@ -291,14 +292,16 @@ function rsml_unmap_dialog(frm, linked) {
 	render();
 }
 
-// Card changes this log made, or every card change of one chosen student, 50 per page.
-// The rows live in each student's RFID UID Change Log.
+// Card changes this log made, every card change of one chosen student, or (This run only off) every card
+// change; narrowed by the student's Programme / Batch / Academic Year / Section, the change and the dates.
+// 50 per page on screen; Export downloads every matching row as CSV. Rows live in each student's RFID UID Change Log.
 const RSML_CHANGES_PAGE = 50;
 
 function rsml_changes_dialog(frm) {
 	const esc = (v) => frappe.utils.escape_html(String(v ?? ""));
 	const tone = { Assigned: "green", Changed: "blue", Removed: "red" };
 	let start = 0, total = 0, seq = 0;
+	const reload = () => { start = 0; load(); };
 
 	const d = new frappe.ui.Dialog({
 		title: __("Card changes from {0}", [frm.doc.name]),
@@ -306,14 +309,38 @@ function rsml_changes_dialog(frm) {
 		fields: [
 			{ fieldname: "student", fieldtype: "Link", options: "Student Master", label: __("Student"),
 			  description: __("Choose a student to see all their card changes, from any screen"),
-			  get_query: () => ({ query: RSML_API + "student_link_query" }),
-			  onchange: () => { start = 0; load(); } },
-			{ fieldname: "cb", fieldtype: "Column Break" },
+			  get_query: () => ({ query: RSML_API + "student_link_query" }), onchange: reload },
+			{ fieldname: "cb1", fieldtype: "Column Break" },
 			{ fieldname: "q", fieldtype: "Data", label: __("Search"), placeholder: __("Student ID, name or card code") },
-			{ fieldname: "sb", fieldtype: "Section Break" },
+			{ fieldname: "cb2", fieldtype: "Column Break" },
+			{ fieldname: "this_run", fieldtype: "Check", label: __("This run only"), default: 1, onchange: reload,
+			  description: __("Untick to see card changes from every screen") },
+			{ fieldname: "sb1", fieldtype: "Section Break", label: __("Filters"), collapsible: 1 },
+			{ fieldname: "programme", fieldtype: "Link", options: "Programme", label: __("Programme"), onchange: reload },
+			{ fieldname: "change_type", fieldtype: "Select", label: __("Change"), options: ["", "Assigned", "Changed", "Removed"], onchange: reload },
+			{ fieldname: "cb3", fieldtype: "Column Break" },
+			{ fieldname: "batch", fieldtype: "Link", options: "SLCM Batch", label: __("Batch"), onchange: reload },
+			{ fieldname: "from_date", fieldtype: "Date", label: __("From Date"), onchange: reload },
+			{ fieldname: "cb4", fieldtype: "Column Break" },
+			{ fieldname: "academic_year", fieldtype: "Link", options: "Academic Year", label: __("Academic Year"), onchange: reload },
+			{ fieldname: "to_date", fieldtype: "Date", label: __("To Date"), onchange: reload },
+			{ fieldname: "cb5", fieldtype: "Column Break" },
+			{ fieldname: "section", fieldtype: "Link", options: "Section", label: __("Section"), onchange: reload },
+			{ fieldname: "sb2", fieldtype: "Section Break" },
 			{ fieldname: "list", fieldtype: "HTML" },
 		],
+		primary_action_label: __("Export"),
+		primary_action: () => rsml_export_changes(frm, d, filters()),
 	});
+
+	function filters() {
+		const f = { this_run: d.get_value("this_run") ? 1 : 0 };
+		["programme", "batch", "academic_year", "section", "change_type", "from_date", "to_date"].forEach((k) => {
+			const v = d.get_value(k);
+			if (v) f[k] = v;
+		});
+		return f;
+	}
 	const $list = d.fields_dict.list.$wrapper;
 
 	function load() {
@@ -321,12 +348,14 @@ function rsml_changes_dialog(frm) {
 		const mine = ++seq; // ignore answers to older requests
 		frappe.call({
 			method: RSML_API + "run_card_changes",
-			args: { log_name: frm.doc.name, student, txt: d.get_value("q") || "", start, page_len: RSML_CHANGES_PAGE },
+			args: { log_name: frm.doc.name, student, txt: d.get_value("q") || "", start, page_len: RSML_CHANGES_PAGE, filters: filters() },
 			callback(r) {
 				if (mine !== seq) return;
 				const { rows = [], total: n = 0 } = r.message || {};
 				total = n;
-				d.set_title(student ? __("All card changes of {0}", [rows[0]?.student_name || student]) : __("Card changes from {0}", [frm.doc.name]));
+				d.set_title(student ? __("All card changes of {0}", [rows[0]?.student_name || student])
+					: d.get_value("this_run") ? __("Card changes from {0}", [frm.doc.name]) : __("All card changes"));
+				d.get_primary_btn().prop("disabled", !total).text(total ? __("Export {0}", [total.toLocaleString("en-IN")]) : __("Export"));
 				render(rows, student);
 			},
 		});
@@ -339,7 +368,7 @@ function rsml_changes_dialog(frm) {
 				<span class="text-muted small">${total
 					? __("{0}–{1} of {2} change(s), newest first. {3}", [start + 1, end, total,
 						student ? __("Clear Student to go back to this run.") : __("Click a student to see all their changes.")])
-					: (student ? __("No card changes for this student.") : __("Nothing matches. This run may not have changed any card yet."))}</span>
+					: (student ? __("No card changes for this student match these filters.") : __("Nothing matches these filters."))}</span>
 				<span>
 					<button class="btn btn-default btn-xs rsml-prev" ${start > 0 ? "" : "disabled"}>${__("Previous")}</button>
 					<button class="btn btn-default btn-xs rsml-next" ${end < total ? "" : "disabled"}>${__("Next")}</button>
@@ -371,4 +400,47 @@ function rsml_changes_dialog(frm) {
 	d.fields_dict.q.$input.on("input", frappe.utils.debounce(() => { start = 0; load(); }, 300));
 	d.show();
 	load();
+}
+
+// CSV of every card change matching the dialog (not only the page on screen)
+function rsml_export_changes(frm, d, filters) {
+	const student = d.get_value("student");
+	frappe.call({
+		method: RSML_API + "export_card_changes",
+		args: { log_name: frm.doc.name, student, txt: d.get_value("q") || "", filters },
+		freeze: true, freeze_message: __("Preparing export…"),
+		callback(r) {
+			const { rows = [], total = 0, limit = 0 } = r.message || {};
+			if (!rows.length) {
+				frappe.show_alert({ message: __("Nothing to export for these filters."), indicator: "orange" });
+				return;
+			}
+			const cols = [
+				["changed_on", __("Changed On")], ["student_id", __("Student ID")], ["student_name", __("Student Name")],
+				["change_type", __("Change")], ["old_rfid_uid", __("From RFID UID")], ["new_rfid_uid", __("To RFID UID")],
+				["changed_by_name", __("Changed By")], ["source", __("Changed From")], ["message", __("Message")],
+				["programme", __("Programme")], ["batch", __("Batch")], ["academic_year", __("Academic Year")], ["section", __("Section")],
+			];
+			const cell = (v) => {
+				let t = v == null ? "" : String(v);
+				if (/^[=+\-@\t\r]/.test(t)) t = "'" + t; // stop spreadsheet formula injection
+				return `"${t.replace(/"/g, '""')}"`;
+			};
+			const csv = [cols.map(([, label]) => cell(label)).join(",")]
+				.concat(rows.map((row) => cols.map(([key]) => cell(row[key])).join(","))).join("\r\n");
+			const who = student || (filters.this_run ? frm.doc.name : "all");
+			const url = URL.createObjectURL(new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" }));
+			const a = Object.assign(document.createElement("a"), { href: url, download: `rfid_card_changes_${who}_${frappe.datetime.get_today()}.csv` });
+			document.body.appendChild(a);
+			a.click();
+			a.remove();
+			setTimeout(() => URL.revokeObjectURL(url), 1000);
+			if (total > rows.length) {
+				frappe.msgprint({ title: __("Export limited"), indicator: "orange",
+					message: __("Exported the newest {0} of {1} changes. Narrow the filters to export the rest.", [limit.toLocaleString("en-IN"), total.toLocaleString("en-IN")]) });
+			} else {
+				frappe.show_alert({ message: __("Exported {0} change(s)", [rows.length]), indicator: "green" }, 5);
+			}
+		},
+	});
 }
