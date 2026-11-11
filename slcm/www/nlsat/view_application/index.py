@@ -30,7 +30,7 @@ def get_context(context):
     context.show_sidebar = False
     context.applicant = doc
     context.app_name = doc.name
-    context.applicant_id = doc.applicant_id or doc.name
+    context.applicant_id = doc.name
     context.status = doc.status or "Draft"
     context.program_name = frappe.db.get_value("Programme", doc.program, "program_name") or doc.program or "—"
     context.campus_name = frappe.db.get_value("Campus", doc.campus, "campus_name") if doc.campus else None

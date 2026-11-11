@@ -676,7 +676,7 @@ def get_context(context):
     # ── 7. New Portal Config Fields ──────────────────────────────────
     context.portal_tagline    = portal_config.get("portal_subtitle") or portal_config.get("portal_tagline") or ""
     context.institution_since = portal_config.get("institution_since") or ""
-    context.hero_cta_label    = portal_config.get("hero_cta_label") or "Explore Programs"
+    context.hero_cta_label    = portal_config.get("hero_cta_label") or "Explore Programmes"
     context.hero_cta2_label   = portal_config.get("hero_cta2_label") or "Virtual Tour"
     context.footer_address    = portal_config.get("footer_address") or ""
     context.footer_phone      = portal_config.get("footer_phone") or ""

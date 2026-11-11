@@ -59,7 +59,6 @@
   "column_break_iltt",
   "pincode",
   "section_break_azsq",
-  "applicant_id",
   "section_break_rnvz",
   "rejected_reason",
   "academic_qualification_tab",
@@ -1210,12 +1209,6 @@
    "label": "Agreement on Withdrawal Conditions"
   },
   {
-   "fieldname": "applicant_id",
-   "fieldtype": "Data",
-   "hidden": 1,
-   "label": "Applicant ID"
-  },
-  {
    "fieldname": "user_id",
    "fieldtype": "Link",
    "label": "User ID",
@@ -1356,7 +1349,7 @@
   }
  ],
  "make_attachments_public": 1,
- "modified": "2026-11-09 19:00:00.000000",
+ "modified": "2026-11-09 16:45:00.000000",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Applicant",

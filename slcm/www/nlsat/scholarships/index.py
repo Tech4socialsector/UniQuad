@@ -81,7 +81,7 @@ def get_context(context):
         _app_param = frappe.form_dict.get('app')
         
         # Match dashboard logic for finding applications
-        fields = ["name", "applicant_id", "candidate_name", "program", "campus", 
+        fields = ["name", "candidate_name", "program", "campus",
                   "admission_cycle", "status", "annual_house_hold_income", 
                   "percentage", "whether_scstobc_ncl", "pwd", "karnataka_category"]
         

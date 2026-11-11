@@ -1695,7 +1695,7 @@ def get_navigation():
 SEARCH_SOURCES = [
 	# doctype, fields searched, label field, extra fields for the subtitle, result kind
 	("Student Master", ["name", "first_name", "registration_id", "email"], "first_name", ["programme_of_study", "batch", "student_status"], "student"),
-	("Applicant", ["name", "candidate_name", "applicant_id", "email"], "candidate_name", ["program", "status"], "record"),
+	("Applicant", ["name", "candidate_name", "email"], "candidate_name", ["program", "status"], "record"),
 	("Faculty", ["faculty_id", "first_name", "last_name", "email"], "first_name", ["designation", "status"], "record"),
 	("Course", ["name", "course_name", "course_code"], "course_name", ["course_code", "status"], "record"),
 	("Programme", ["name", "program_name", "program_code"], "program_name", ["level_of_study", "program_status"], "record"),

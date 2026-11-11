@@ -33,7 +33,6 @@ def applicant_dict_for_multiprogram_copy(source_doc):
         "application_type",
         "intake_type",
         "program_level",
-        "applicant_id",
         "application_fee_status",
         "application_fee_amount",
         "fee_waived_by",

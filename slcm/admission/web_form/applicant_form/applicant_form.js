@@ -1091,7 +1091,7 @@ function collectDraftData() {
 	var PRESERVE = [
 		'name', 'program', 'admission_cycle', 'academic_year', 'admission_year',
 		'campus', 'status', 'application_fee_status',
-		'application_fee_amount', 'program_level', 'applicant_id',
+		'application_fee_amount', 'program_level',
 	];
 	var ref = frappe.reference_doc || {};
 	PRESERVE.forEach(function (k) {
@@ -4534,8 +4534,48 @@ function setupSlcmFieldErrorClear() {
 			var $t = $(this);
 			$t.removeClass('slcm-field-error');
 			$t.closest('.frappe-control').find('.slcm-field-error').removeClass('slcm-field-error');
+			// Another field's value may have made a conditionally-mandatory field optional
+			// (e.g. guardian_required → parents' details); drop their stale red outline too.
+			setTimeout(_slcmClearStaleConditionalErrors, 0);
+			setTimeout(_slcmClearStaleConditionalErrors, 400);
 		}
 	);
+}
+
+/**
+ * Remove the red outline from empty fields whose mandatory_depends_on no longer holds.
+ * Fields that are still required, or that hold a value (may carry a format error), are untouched.
+ */
+function _slcmClearStaleConditionalErrors() {
+	var wf = window.frappe && frappe.web_form;
+	if (!wf || !wf.fields_dict || !wf.doc) return;
+	Object.keys(wf.fields_dict).forEach(function (fieldname) {
+		var fw = wf.fields_dict[fieldname];
+		var df = fw && fw.df;
+		if (!df || df.reqd || !df.mandatory_depends_on || !fw.$wrapper) return;
+		var $err = fw.$wrapper.find('.slcm-field-error');
+		if (!$err.length) return;
+		var required = false;
+		try {
+			var expr = String(df.mandatory_depends_on).replace(/^eval:/, '');
+			// eslint-disable-next-line no-new-func
+			required = !!new Function('doc', 'return (' + expr + ')')(wf.doc);
+		} catch (e) {
+			return;
+		}
+		if (required) return;
+		var val;
+		try {
+			val = wf.get_value(fieldname);
+		} catch (e2) {
+			return;
+		}
+		var s = val === undefined || val === null ? '' : String(val).trim();
+		// Phone controls store just the country code ("+91-") when left blank
+		if (df.fieldtype === 'Phone' && s.indexOf('-') > -1 && !s.split('-').slice(1).join('').trim()) s = '';
+		if (s) return;
+		$err.removeClass('slcm-field-error');
+	});
 }
 
 /**
@@ -5653,12 +5693,35 @@ function _renderStepper(wf) {
 
 		if (targetIdx > currentIdx) {
 			const skip = _slcmStepperSkipForwardValidation(wf);
-			const check = skip ? { ok: true, missing: [] } : _validateStage(wf, $($pages.get(currentIdx)));
+			// Validate every visible step from the current one up to (not including) the target,
+			// like pressing Next repeatedly. Each page is shown before it is checked because
+			// _validateStage ignores fields on hidden pages. Stop on the first incomplete step.
+			let check = { ok: true, missing: [] };
+			let failedIdx = currentIdx;
+			if (!skip) {
+				const stepsArr = window._slcm_wf_steps || [];
+				for (let i = currentIdx; i < targetIdx; i++) {
+					const step = stepsArr.find(function (s) { return s.index === i; });
+					if (i !== currentIdx && step && !slcmEvalDependsOn(step.depends_on)) continue;
+					if (i !== currentIdx) goToWebFormPage(i);
+					check = _validateStage(wf, $($pages.get(i)));
+					if (!check.ok) {
+						failedIdx = i;
+						break;
+					}
+				}
+			}
 			if (check.ok) {
 				goToWebFormPage(targetIdx);
 				setTimeout(updateStepperUI, 50);
 			} else {
-				var base = __('Please fill all required fields before proceeding.');
+				setTimeout(updateStepperUI, 50);
+				var stepLabel = failedIdx !== currentIdx
+					? ($('.slcm-step[data-index="' + failedIdx + '"] .slcm-step-label').text() || '').trim()
+					: '';
+				var base = stepLabel
+					? __('Please complete "{0}" before moving ahead.', [stepLabel])
+					: __('Please fill all required fields before proceeding.');
 				if (check.missing && check.missing.length && typeof frappe !== 'undefined' && frappe.msgprint) {
 					frappe.msgprint({
 						title: __('Required fields'),
@@ -5908,6 +5971,31 @@ function _slcmWebFormLayoutFieldtype(ft) {
  * _validateStage — required (and conditionally required) fields on one page.
  * Returns an object with ok (boolean) and missing (string[]). This file is Jinja-rendered by Frappe Web Form — never use literal double-open-brace sequences in source.
  */
+/** "Whether Karnataka" = Yes: one option under "Which of the following applies to you" must be ticked. */
+var SLCM_KARNATAKA_OPTION_FIELDS = ['ka_study_7yrs', 'ka_defence_child', 'ka_govt_child', 'ka_ais_child', 'ka_capf_child'];
+function _slcmValidateKarnatakaOptionOnPage(wf, $page, missing) {
+	if (wf.get_value('karnataka_category') !== 'Yes') return;
+	if (!$page.find('[data-fieldname="ka_study_7yrs"]').length) return;
+	var ticked = SLCM_KARNATAKA_OPTION_FIELDS.some(function (f) {
+		return !!cint(wf.get_value(f));
+	});
+	if (ticked) return;
+	SLCM_KARNATAKA_OPTION_FIELDS.forEach(function (f) {
+		var fw = wf.fields_dict[f];
+		fw && fw.$wrapper && fw.$wrapper.find('input[type="checkbox"]').addClass('slcm-field-error');
+	});
+	missing.push(__('Which of the following applies to you: please select one option'));
+}
+if (window.jQuery) {
+	jQuery(document).on('change', SLCM_KARNATAKA_OPTION_FIELDS.map(function (f) {
+		return '[data-fieldname="' + f + '"] input[type="checkbox"]';
+	}).join(', '), function () {
+		jQuery(SLCM_KARNATAKA_OPTION_FIELDS.map(function (f) {
+			return '[data-fieldname="' + f + '"] input[type="checkbox"]';
+		}).join(', ')).removeClass('slcm-field-error');
+	});
+}
+
 /** Foreign nationals: every filled UG / PG degree row on this page needs a Country. */
 function _slcmValidateDegreeCountryOnPage(wf, $page, missing) {
 	if (wf.get_value('foriegn_national') !== 'Yes') return;
@@ -6000,6 +6088,7 @@ function _validateStage(wf, $page) {
 	_slcmValidateChildRowsOnPage(wf, $page, missing);
 	_slcmValidateApplicantFormatsOnPage(wf, $page, missing);
 	_slcmValidateDegreeCountryOnPage(wf, $page, missing);
+	_slcmValidateKarnatakaOptionOnPage(wf, $page, missing);
 
 	return { ok: missing.length === 0, missing };
 }
