@@ -249,17 +249,65 @@ def get_fee_preview(transcript_type, num_copies=1, urgency="Normal"):
 
 @frappe.whitelist()
 def create_request(transcript_type, num_copies=1, purpose="",
-                   delivery_mode="Soft Copy (PDF)", urgency="Normal"):
-    """Create a new Transcript Request for the logged-in student."""
+                   delivery_mode="Soft Copy (PDF)", urgency="Normal", reuse_unpaid=0):
+    """Create a new Transcript Request for the logged-in student.
+
+    reuse_unpaid=1 (Helpdesk pay-first panel): an earlier unpaid, unlinked attempt
+    for the same type is retried instead of blocking with "already have an open
+    request" — reused as-is when the fee inputs match, else cancelled and replaced.
+    """
     return _create_request(
         transcript_type, num_copies=num_copies, purpose=purpose,
         delivery_mode=delivery_mode, urgency=urgency,
+        reuse_unpaid=frappe.utils.cint(reuse_unpaid),
     )
+
+
+def _request_payload(name):
+    row = frappe.db.get_value(
+        "Transcript Request", name,
+        ["name", "status", "payment_required", "fee_amount", "transcript_type", "num_copies"],
+        as_dict=True,
+    )
+    return {
+        "name": row.name,
+        "status": row.status,
+        "payment_required": bool(row.payment_required),
+        "fee_amount": row.fee_amount or 0,
+        "transcript_type": row.transcript_type,
+        "num_copies": row.num_copies,
+    }
+
+
+def _retry_unpaid_request(student_name, transcript_type, num_copies, purpose, delivery_mode, urgency):
+    """Name of an unpaid, ticket-less attempt for this type that can be paid again, or None.
+    An attempt priced for different copies/urgency is cancelled instead (a checkout still open
+    for it then settles as a refund, never as payment for the new price)."""
+    row = frappe.db.get_value(
+        "Transcript Request",
+        {
+            "student": student_name,
+            "transcript_type": transcript_type,
+            "status": "Payment Pending",
+            "payment_status": ["!=", "Paid"],
+            "helpdesk_ticket": ["is", "not set"],
+        },
+        ["name", "num_copies", "urgency"],
+        as_dict=True,
+        order_by="creation desc",
+    )
+    if not row:
+        return None
+    if int(row.num_copies or 1) != num_copies or (row.urgency or "Normal") != urgency:
+        _set_status(row.name, {"status": "Cancelled"})
+        return None
+    _set_status(row.name, {"purpose": purpose, "delivery_mode": delivery_mode})
+    return row.name
 
 
 def _create_request(transcript_type, num_copies=1, purpose="",
                     delivery_mode="Soft Copy (PDF)", urgency="Normal",
-                    helpdesk_ticket=None):
+                    helpdesk_ticket=None, reuse_unpaid=0):
     """
     Shared implementation behind create_request(). helpdesk_ticket links the
     resulting doc back to the HD Ticket it was raised from (Helpdesk
@@ -293,6 +341,15 @@ def _create_request(transcript_type, num_copies=1, purpose="",
                     "completion. Your current academic status is '{0}'. "
                     "Please request an Interim Transcript instead, or contact the Academic Office."
                 ).format(acad_status or "Unknown"))
+
+    if reuse_unpaid:
+        retried = _retry_unpaid_request(
+            student_name, transcript_type, max(int(num_copies or 1), 1),
+            (purpose or "").strip(), delivery_mode or "Soft Copy (PDF)", urgency or "Normal",
+        )
+        if retried:
+            frappe.db.commit()
+            return _request_payload(retried)
 
     existing = frappe.db.get_value(
         "Transcript Request",
@@ -345,15 +402,21 @@ def _create_request(transcript_type, num_copies=1, purpose="",
     }
 
 
+# Pages an Easebuzz transcript checkout may return to: the portal Transcript Request page,
+# or the portal Helpdesk new-ticket form (pay-first "Transcript Request" tickets)
+_TRANSCRIPT_RETURN_PATHS = ("/student-portal/transcript-request", "/student-portal/support?new=1")
+
+
 @frappe.whitelist()
-def initiate_payment(request_name, gateway_aware=0):
+def initiate_payment(request_name, gateway_aware=0, return_path=None):
     """
     Called when the student clicks the Pay button.
 
     The gateway comes from Transcript Fee Settings. Razorpay: creates an order directly (no
     intermediate Payment Request doc) and returns checkout data. Easebuzz: returns
     {"gateway": "Easebuzz", "checkout_url"} for a full-page redirect — only for callers that pass
-    gateway_aware=1 (the Student Portal); the Helpdesk panel only speaks Razorpay.
+    gateway_aware=1 (Student Portal page, Helpdesk panel). return_path picks which page the
+    checkout comes back to (one of _TRANSCRIPT_RETURN_PATHS).
     """
     from slcm.slcm.fee import payment_gateway as gw
 
@@ -384,7 +447,8 @@ def initiate_payment(request_name, gateway_aware=0):
         try:
             return start_checkout(
                 "transcript", student_name, float(req.fee_amount), {"request_name": request_name},
-                f"Transcript Fee {req.transcript_type}", "/student-portal/transcript-request",
+                f"Transcript Fee {req.transcript_type}",
+                return_path if return_path in _TRANSCRIPT_RETURN_PATHS else _TRANSCRIPT_RETURN_PATHS[0],
                 reference=("Transcript Request", request_name),
             )
         except Exception:
@@ -684,6 +748,33 @@ def get_unlinked_paid_request():
         as_dict=True,
         order_by="creation desc",
     )
+    return row
+
+
+@frappe.whitelist()
+def get_gateway_return_request(payment_ref):
+    """
+    The Transcript Request an Easebuzz checkout (txnid payment_ref) was for, when it
+    comes back to the Helpdesk new-ticket form — so the form can carry on with that
+    request (paid: let the student submit; not paid: refill the form for a retry).
+    Only the payer's own, not-yet-ticketed request is returned.
+    """
+    from slcm.api.easebuzz_payment import _intent
+
+    student_name = _require_student()
+    data = _intent(payment_ref)
+    if not data or data.get("flow") != "transcript" or data.get("user") != frappe.session.user:
+        frappe.throw(_("Payment not found."), frappe.PermissionError)
+    _owned_request(data.get("request_name"), student_name)
+    row = frappe.db.get_value(
+        "Transcript Request", data.get("request_name"),
+        ["name", "status", "transcript_type", "num_copies", "purpose", "delivery_mode",
+         "fee_amount", "payment_required", "payment_status", "payment_reference",
+         "helpdesk_ticket"],
+        as_dict=True,
+    )
+    if row.helpdesk_ticket or row.status == "Cancelled":
+        return None
     return row
 
 

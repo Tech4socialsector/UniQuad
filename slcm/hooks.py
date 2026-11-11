@@ -16,6 +16,7 @@ after_migrate = [
     "slcm.install.after_migrate",
     "slcm.erpnext_bridge.install.after_migrate",
     "slcm.slcm.doctype.site_domain_settings.site_domain_settings.sync_after_migrate",
+    "slcm.setup.nlsiu_admin_role.sync",
 ]
 after_app_install = "slcm.erpnext_bridge.install.after_app_install"
 before_app_uninstall = "slcm.erpnext_bridge.install.before_app_uninstall"
@@ -45,7 +46,9 @@ app_include_js = [
     "/assets/slcm/js/student_workspace_redirect.js",
     "/assets/slcm/js/bulk_email_dialog.js",
     "/assets/slcm/js/sidebar_toggle.js?v=5",
-    "/assets/slcm/js/sidebar_fallback.js?v=1"
+    "/assets/slcm/js/sidebar_fallback.js?v=1",
+    # Company > View > Cost Centers / Chart of Accounts: open the tree of that company, not the cached one
+    "/assets/slcm/js/tree_route_filters.js?v=1"
 ]
 app_include_css = ["/assets/slcm/css/sidebar_toggle.css?v=5"]
 
@@ -419,10 +422,17 @@ doc_events = {
         ],
     },
     "Re Exam Payment Log": {
-        "on_update": "slcm.slcm.fee.payment_ledger.on_exam_payment_log",
+        "on_update": [
+            "slcm.slcm.fee.payment_ledger.on_exam_payment_log",
+            # counter (cash / cheque) payments → ERPNext
+            "slcm.erpnext_bridge.sync.enqueue_sync",
+        ],
     },
     "Improvement Exam Payment Log": {
-        "on_update": "slcm.slcm.fee.payment_ledger.on_exam_payment_log",
+        "on_update": [
+            "slcm.slcm.fee.payment_ledger.on_exam_payment_log",
+            "slcm.erpnext_bridge.sync.enqueue_sync",
+        ],
     },
     "Student Fee Payment Log": {
         "after_insert": "slcm.slcm.fee.payment_ledger.on_payment_log",
@@ -462,9 +472,22 @@ doc_events = {
         "after_insert": "slcm.erpnext_bridge.sync.enqueue_sync",
         "on_update": "slcm.erpnext_bridge.sync.enqueue_sync",
     },
+    # Hostel / mess office money (not submittable: posted on save, reversed when deleted)
+    "Mess Payment": {
+        "on_update": "slcm.erpnext_bridge.sync.enqueue_sync",
+        "on_trash": "slcm.erpnext_bridge.sync.enqueue_sync",
+    },
+    "Hostel Refund Request": {
+        "on_update": "slcm.erpnext_bridge.sync.enqueue_sync",
+        "on_trash": "slcm.erpnext_bridge.sync.enqueue_sync",
+    },
     # ERPNext Company (exists only with ERPNext): validates its "SLCM Fee Accounting" section.
     "Company": {
         "validate": "slcm.erpnext_bridge.company.validate_company",
+    },
+    # ERPNext Account: validates "SLCM Fee Components" and flags accounts that start taking SLCM fees by name.
+    "Account": {
+        "validate": "slcm.erpnext_bridge.company.validate_account",
     },
     "Student Master": {
         "before_save": "slcm.slcm.doctype.student_master.student_master.before_save_hook",

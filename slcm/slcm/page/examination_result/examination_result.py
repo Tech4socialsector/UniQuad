@@ -490,10 +490,19 @@ def course_link_query(doctype, txt, searchfield, start, page_len, filters):
 	filters = frappe.parse_json(filters) if isinstance(filters, str) else (filters or {})
 	programme = filters.get("programme")
 	trimester = filters.get("trimester")
+	exam_plan = filters.get("exam_plan")
 
-	conditions = ["(c.course_name LIKE %(txt)s OR c.course_code LIKE %(txt)s)"]
+	conditions = ["(c.name LIKE %(txt)s OR c.course_name LIKE %(txt)s OR c.course_code LIKE %(txt)s)"]
 	params = {"txt": f"%{txt}%", "start": int(start or 0), "page_len": int(page_len or 20)}
 	join = ""
+
+	if exam_plan:
+		# Courses of the plan: mapped to schemas, or holding marks in it
+		conditions.append(
+			"""(c.name IN (SELECT course FROM `tabCourse Schema Assignment` WHERE exam_plan = %(exam_plan)s)
+			    OR c.name IN (SELECT course FROM `tabStudent Course Marks` WHERE exam_plan = %(exam_plan)s))"""
+		)
+		params["exam_plan"] = exam_plan
 
 	if programme or trimester:
 		join = "JOIN `tabClasses` cl ON cl.course = c.name"

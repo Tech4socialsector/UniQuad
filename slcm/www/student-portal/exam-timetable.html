@@ -1,0 +1,191 @@
+{% extends "slcm/www/student-portal/_base.html" %}
+{% block title %}Exam Timetable{% endblock %}
+
+{% block extra_head %}
+<style>
+  .et-head {
+    background: var(--sp-card, #fff);
+    border: 1px solid var(--sp-border, #e5e7eb);
+    border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(16,24,40,0.04);
+    padding: 22px 28px;
+    margin-bottom: 20px;
+  }
+  .et-head-title { font-size: 18px; font-weight: 700; color: var(--sp-text-1); }
+  .et-head-sub { font-size: 13px; color: var(--sp-text-3); margin-top: 4px; }
+
+  .et-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .et-stat {
+    display: flex; gap: 14px; align-items: flex-start;
+    background: var(--sp-card, #fff); border: 1px solid var(--sp-border, #e5e7eb);
+    border-top: 3px solid var(--sp-primary); border-radius: 14px; padding: 18px 20px;
+  }
+  .et-stat-icon { width: 42px; height: 42px; border-radius: 10px; display: grid; place-items: center; background: var(--sp-primary-light); color: var(--sp-primary); flex-shrink: 0; }
+  .et-stat-label { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; font-weight: 700; color: var(--sp-text-3); }
+  .et-stat-value { font-size: 22px; font-weight: 700; color: var(--sp-text-1); margin-top: 2px; }
+  .et-stat-sub { font-size: 12.5px; color: var(--sp-text-3); }
+
+  .et-plan { background: var(--sp-card, #fff); border: 1px solid var(--sp-border, #e5e7eb); border-top: 3px solid var(--sp-primary); border-radius: 14px; margin-bottom: 24px; overflow: hidden; }
+  .et-plan-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; align-items: center; padding: 16px 20px; }
+  .et-plan-title { font-size: 16px; font-weight: 700; color: var(--sp-text-1); }
+  .et-plan-meta { font-size: 12.5px; color: var(--sp-text-3); margin-top: 2px; }
+
+  .et-table-wrap { overflow-x: auto; }
+  .et-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  .et-table th { text-align: left; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; font-weight: 700; color: var(--sp-text-2); background: var(--sp-primary-light); padding: 10px 16px; white-space: nowrap; }
+  .et-table td { padding: 12px 16px; border-top: 1px solid var(--sp-border, #e5e7eb); vertical-align: top; color: var(--sp-text-1); }
+  .et-table tr.et-past td { color: var(--sp-text-4); }
+  .et-date { font-weight: 600; white-space: nowrap; }
+  .et-sub { font-size: 12px; color: var(--sp-text-3); margin-top: 2px; }
+  .et-course { font-weight: 600; }
+
+  .et-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; border-radius: 20px; padding: 3px 10px; border: 1px solid transparent; white-space: nowrap; }
+  .et-badge-ok { background: var(--sp-success-bg); color: var(--sp-success); }
+  .et-badge-bad { background: rgba(220,38,38,0.08); color: #b91c1c; border-color: rgba(220,38,38,0.25); }
+  .et-badge-muted { background: rgba(0,0,0,0.04); color: var(--sp-text-3); border-color: var(--sp-border); }
+  .et-badge-re { background: rgba(217,119,6,0.1); color: #b45309; border-color: rgba(217,119,6,0.3); }
+
+  .et-note { padding: 14px 20px; border-top: 1px solid var(--sp-border, #e5e7eb); font-size: 13px; color: var(--sp-text-3); display: flex; gap: 8px; align-items: flex-start; }
+  .et-note .sp-ms { font-size: 18px; color: var(--sp-text-4); }
+  .et-empty { padding: 36px 20px; text-align: center; color: var(--sp-text-3); }
+  .et-empty .sp-ms { font-size: 36px; color: var(--sp-text-4); }
+  .et-empty-title { font-weight: 700; color: var(--sp-text-2); margin-top: 6px; }
+
+  @media (max-width: 700px) {
+    .et-stats { grid-template-columns: 1fr; }
+    .et-head { padding: 18px; }
+    .et-table thead { display: none; }
+    .et-table tr { display: block; border-top: 1px solid var(--sp-border, #e5e7eb); padding: 10px 4px; }
+    .et-table td { display: flex; gap: 12px; border: 0; padding: 4px 16px; }
+    .et-table td::before { content: attr(data-label); flex: 0 0 96px; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--sp-text-3); font-weight: 700; padding-top: 2px; }
+  }
+
+  body.sp-dark .et-badge-bad { background: rgba(248,113,113,0.12); color: #fca5a5; border-color: rgba(248,113,113,0.3); }
+  body.sp-dark .et-badge-muted { background: rgba(255,255,255,0.04); }
+  body.sp-dark .et-badge-re { background: rgba(251,146,60,0.12); color: #fdba74; border-color: rgba(251,146,60,0.35); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="et-head fade-in">
+  <div class="et-head-title">Exam Timetable</div>
+  <div class="et-head-sub">Your end-term and re-exam papers: date, time and your room. Quizzes, projects and submission deadlines are on Assessment Schedule.</div>
+</div>
+
+{% if no_student %}
+<div class="sp-alert sp-alert-warning fade-in">
+  <span class="sp-ms">warning</span>
+  <div><strong>No student record found.</strong> Please contact the Registrar's Office.</div>
+</div>
+{% else %}
+
+<div class="et-stats fade-in">
+  <div class="et-stat">
+    <div class="et-stat-icon"><span class="sp-ms">event_upcoming</span></div>
+    <div>
+      <div class="et-stat-label">Upcoming exams</div>
+      <div class="et-stat-value">{{ upcoming_count or 0 }}</div>
+      <div class="et-stat-sub">from today</div>
+    </div>
+  </div>
+  <div class="et-stat">
+    <div class="et-stat-icon"><span class="sp-ms">today</span></div>
+    <div>
+      <div class="et-stat-label">Next exam</div>
+      {% if next_exam %}
+      <div class="et-stat-value" style="font-size:18px">{{ next_exam.date }}</div>
+      <div class="et-stat-sub">{{ next_exam.course_name }}{% if next_exam.time %} · {{ next_exam.time }}{% endif %}{% if next_exam.room %} · {{ next_exam.room }}{% endif %}</div>
+      {% else %}
+      <div class="et-stat-value" style="color:var(--sp-text-4)">–</div>
+      <div class="et-stat-sub">none scheduled</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% if not plans %}
+<div class="et-plan fade-in">
+  <div class="et-empty">
+    <span class="sp-ms">event_busy</span>
+    <div class="et-empty-title">No exam timetable yet</div>
+    <div>Your exam dates appear here once the Examinations Office publishes the timetable.</div>
+  </div>
+</div>
+{% endif %}
+
+{% for plan in plans %}
+<div class="et-plan fade-in">
+  <div class="et-plan-head">
+    <div>
+      <div class="et-plan-title">{{ plan.exam_name }}</div>
+      <div class="et-plan-meta">{{ plan.term }}{% if plan.rows %} · {{ plan.rows | length }} paper{{ "s" if plan.rows | length != 1 else "" }}{% endif %}</div>
+    </div>
+    {% if plan.published %}
+    <span class="et-badge et-badge-ok"><span class="sp-ms" style="font-size:13px">check_circle</span>Published</span>
+    {% else %}
+    <span class="et-badge et-badge-muted">Not published yet</span>
+    {% endif %}
+  </div>
+
+  {% if not plan.published %}
+  <div class="et-empty">
+    <span class="sp-ms">schedule</span>
+    <div class="et-empty-title">Timetable not published yet</div>
+    <div>The Examinations Office will publish the dates, times and rooms when they are final.</div>
+  </div>
+  {% elif plan.rows %}
+  <div class="et-table-wrap">
+    <table class="et-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Session &amp; time</th>
+          <th>Course / paper</th>
+          <th>Room</th>
+          {% if plan.show_invigilator %}<th>Invigilator</th>{% endif %}
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in plan.rows %}
+        <tr class="{% if r.is_past %}et-past{% endif %}">
+          <td data-label="Date"><div class="et-date">{{ r.date or "To be announced" }}</div></td>
+          <td data-label="Session">
+            <div>{{ r.time or "To be announced" }}</div>
+            {% if r.session %}<div class="et-sub">{{ r.session }}</div>{% endif %}
+          </td>
+          <td data-label="Course">
+            <div class="et-course">{{ r.course_name }}</div>
+            <div class="et-sub">{{ r.course_code }}{% if r.paper %} · {{ r.paper }}{% endif %}</div>
+          </td>
+          <td data-label="Room">{{ r.room or "To be announced" }}</td>
+          {% if plan.show_invigilator %}<td data-label="Invigilator">{{ r.invigilator or "–" }}</td>{% endif %}
+          <td data-label="Status">
+            {% if r.detained %}
+            <span class="et-badge et-badge-bad">Detained</span>
+            {% elif r.is_reexam %}
+            <span class="et-badge et-badge-re">Re-exam</span>
+            {% elif r.is_past %}
+            <span class="et-badge et-badge-muted">Done</span>
+            {% else %}
+            <span class="et-badge et-badge-ok">Scheduled</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {% if plan.pending %}
+  <div class="et-note">
+    <span class="sp-ms">info</span>
+    <div>Not in the timetable yet: {{ plan.pending | join(", ") }}. The date will show here once it is added.</div>
+  </div>
+  {% endif %}
+</div>
+{% endfor %}
+
+{% endif %}
+{% endblock %}

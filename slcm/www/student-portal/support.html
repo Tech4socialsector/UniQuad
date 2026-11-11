@@ -34,7 +34,10 @@
       if (ticket) {
         frame.src = '/helpdesk/my-tickets/' + encodeURIComponent(ticket);
       } else if (isNew) {
-        frame.src = '/helpdesk/my-tickets/new';
+        // Back from an Easebuzz transcript checkout: hand its txnid to the form
+        var paymentRef = params.get('payment_ref');
+        frame.src = '/helpdesk/my-tickets/new' +
+          (paymentRef ? '?payment_ref=' + encodeURIComponent(paymentRef) : '');
       } else {
         frame.src = '/helpdesk/my-tickets';
       }

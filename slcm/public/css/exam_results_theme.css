@@ -31,7 +31,6 @@
 
 /* ── Brand accents ──────────────────────────────────────────────────────── */
 .er-theme .er2-page-icon { background: var(--er-brand) !important; }
-.er-theme ::selection { background: var(--er-brand-soft); color: var(--er-brand-dark); }
 .er-theme input[type="checkbox"], .er-theme input[type="radio"] { accent-color: var(--er-brand); }
 .er-theme .er2-lhdr input[type="checkbox"] { accent-color: #fff; }
 .er-theme a { color: var(--er-brand); }

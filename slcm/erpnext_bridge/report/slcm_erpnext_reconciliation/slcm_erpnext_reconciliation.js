@@ -30,6 +30,11 @@ frappe.query_reports["SLCM ERPNext Reconciliation"] = {
 				"FLE Payment Log",
 				"Stipend Payment",
 				"Refund Transaction",
+				"Re Exam Payment Log",
+				"Improvement Exam Payment Log",
+				"Mess Payment",
+				"Hostel Refund Request",
+				"Gateway Receipt",
 				"SLCM Payment Request",
 				"FLE Settlement",
 				"Student Credit Note",
@@ -77,23 +82,38 @@ frappe.query_reports["SLCM ERPNext Reconciliation"] = {
 							"FLE Payment Log",
 							"Stipend Payment",
 							"Refund Transaction",
+							"Re Exam Payment Log",
+							"Improvement Exam Payment Log",
+							"Mess Payment",
+							"Hostel Refund Request",
+							"Gateway Receipt",
 							"SLCM Payment Request",
 							"Student Credit Note",
 						],
 						reqd: 1,
+						// a Gateway Receipt is posted for an SLCM Payment Request
+						onchange: () =>
+							d.set_value(
+								"link_doctype",
+								d.get_value("reference_doctype") === "Gateway Receipt"
+									? "SLCM Payment Request"
+									: d.get_value("reference_doctype")
+							),
 					},
+					{ fieldname: "link_doctype", fieldtype: "Data", hidden: 1 },
 					{
 						fieldname: "reference_name",
 						label: __("SLCM Document"),
 						fieldtype: "Dynamic Link",
-						options: "reference_doctype",
+						options: "link_doctype",
 						reqd: 1,
 					},
 				],
 				primary_action_label: __("Re-post"),
 				primary_action(values) {
+					const args = { reference_doctype: values.reference_doctype, reference_name: values.reference_name };
 					frappe
-						.call({ method: "slcm.erpnext_bridge.company.repost", args: values, freeze: true })
+						.call({ method: "slcm.erpnext_bridge.company.repost", args, freeze: true })
 						.then((r) => {
 							d.hide();
 							frappe.show_alert({ message: __("Result: {0}", [r.message]), indicator: "green" });

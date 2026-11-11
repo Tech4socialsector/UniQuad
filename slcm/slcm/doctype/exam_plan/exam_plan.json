@@ -12,9 +12,11 @@
   "section_schedule",
   "course_schedules",
   "timetable_published",
+  "timetable_show_invigilator",
   "section_reexam",
   "reexam_schedules",
-  "reexam_timetable_published"
+  "reexam_timetable_published",
+  "reexam_show_invigilator"
  ],
  "fields": [
   {
@@ -76,12 +78,28 @@
    "label": "Publish re-exam timetable to students",
    "default": "0",
    "description": "Registered re-exam students see their re-exam date, time and room on the portal after this is ticked."
+  },
+  {
+   "fieldname": "timetable_show_invigilator",
+   "fieldtype": "Check",
+   "label": "Show invigilator names to students",
+   "default": "0",
+   "depends_on": "timetable_published",
+   "description": "Students also see who invigilates their exam room."
+  },
+  {
+   "fieldname": "reexam_show_invigilator",
+   "fieldtype": "Check",
+   "label": "Show invigilator names to students",
+   "default": "0",
+   "depends_on": "reexam_timetable_published",
+   "description": "Re-exam students also see who invigilates their room."
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-11-05 10:45:26.728553",
+ "modified": "2026-11-05 13:30:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Exam Plan",
